@@ -16,7 +16,7 @@ deliberate exception the reviewer sees; there is no silent allow-list.
 | **campaign** | Humanity's history as the player has unlocked it — the meta's progression. | tech tree, map (for the meta) |
 | **collection** | Every card the player owns, with the copies owned of each. | library, pool, inventory |
 | **civilization** | A playable identity: starting units, one passive rule, a look, and its deck. | people, faction, nation, civ, board |
-| **deck** | A civilization's set of cards, fixed for a run. | build, loadout |
+| **deck** | A civilization's set of cards, fixed for a chronicle. | build, loadout |
 | **technology** | A permanent unlock earned by an achievement: new cards, better buildings, better units. | tech, advancement, upgrade, research |
 | **achievement** | A goal a chronicle can reach; reaching it unlocks a technology. | mission, objective, quest, milestone |
 | **influence** | The meta-currency every chronicle pays, scaled by how the city fared. | gold, points, XP |
@@ -35,3 +35,14 @@ deliberate exception the reviewer sees; there is no silent allow-list.
 | **victory** | The end of a chronicle by passing the capstone. | win, success, triumph |
 | **defeat** | The end of a chronicle by the city's fall. | collapse, game over, loss, death |
 | **border** | The edge of the tiles the city holds; pushed out by culture. | frontier, territory |
+| **turn** | One pass of the cycle: events, draw, play, end, upkeep, enemy phase. | round |
+| **hand** | The cards drawn this turn; what is not played is discarded when the turn ends. | — |
+| **draw** | To take cards from the draw pile into the hand. | pull |
+| **play** | To put a card from the hand into effect, paying its cost. | cast, activate |
+| **discard** | To send a card from the hand to the discard pile. | throw away, dump |
+| **draw pile** | The cards not yet drawn this cycle; refilled from the discard pile when empty. | library |
+| **discard pile** | The cards played or discarded this cycle, waiting to be shuffled back. | graveyard, trash, bin |
+| **upkeep** | The step after the turn ends where standing things yield and act. | production phase, resolution, income |
+| **intent** | The attack an enemy declares one turn before executing it. | telegraph |
+| **sight** | The tiles the city and its units currently see. | vision, line of sight |
+| **fog** | Every tile outside sight; known terrain, unknown occupants. | fog of war, unexplored |
