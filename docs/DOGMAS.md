@@ -88,7 +88,7 @@ makes twice becomes a line here (the ratchet, at `/upkeep`).
 - **Tools are consumers of the core, never peers.** A simulator, an editor, a profiler reads the
   core through its public API; no tool-serving hook or field lands in game data or rules.
 - **Game logic is deterministic.** No ambient randomness; every random draw goes through a
-  seeded generator threaded in the state, so a run replays from its seed.
+  seeded generator threaded in the state, so a chronicle replays from its seed.
 - **Comments are for traps only.** A comment states a non-local constraint invisible at the point
   of reading. No paraphrase of the code, no history ("used to…", "step 3 of…"), no design
   rationale (that is `DESIGN.md`), no explanation of code elsewhere (a bare pointer at most — and

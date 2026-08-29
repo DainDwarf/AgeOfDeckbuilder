@@ -44,7 +44,7 @@ value read off the page, and a second model has nothing to add.
 whole, coherent state, never a patch of the fields you care about — a state the game itself
 never reaches produces bugs that may not be real.
 
-**Never play to earn state**, and never drive a run to completion. If the checklist can only be
+**Never play to earn state**, and never drive a chronicle to completion. If the checklist can only be
 satisfied by playing through, stop and say so; the caller hands it to a human.
 
 ## Never caveat the save
