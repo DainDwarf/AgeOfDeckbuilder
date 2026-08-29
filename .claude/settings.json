@@ -1,0 +1,62 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(git status *)",
+      "PowerShell(git diff *)",
+      "PowerShell(git log *)",
+      "PowerShell(git show *)",
+      "PowerShell(Get-ChildItem *)",
+      "PowerShell(Get-Content *)",
+      "PowerShell(Select-String *)",
+      "PowerShell(Select-Object *)",
+      "PowerShell(Measure-Object *)",
+      "PowerShell(Sort-Object *)",
+      "PowerShell(Group-Object *)",
+      "PowerShell(Format-Table *)",
+      "PowerShell(ConvertFrom-Json *)",
+      "PowerShell(Write-Output *)",
+      "Skill(intake)",
+      "Skill(ship)",
+      "Skill(upkeep)",
+      "Skill(run)",
+      "Skill(visual-check)",
+      "Artifact"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "^mcp__chrome-devtools__",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR}/.claude/hooks/devtools-subagent-guard.js\"",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "^(Edit|Write)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR}/.claude/hooks/todo-lint.js\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "^(Edit|Write)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR}/.claude/hooks/glossary-lint.js\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
