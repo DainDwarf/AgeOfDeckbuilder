@@ -57,8 +57,8 @@ deliberate exception the reviewer sees; there is no silent allow-list.
 | **claim** | To spend culture on a tile adjacent to one the city owns; free of cards. | buy, purchase, expand, annex |
 | **culture** | The resource that claims tiles. | — |
 | **health** | A unit's remaining life; at zero the unit is killed. | HP, hit points, hitpoints, life |
-| **attack** | A unit's stat, and the act: removing that much health from a target. | strength, power |
-| **damage** | Health removed by an attack. | harm, hurt |
+| **attack** | The act: a unit removes its damage from a target's health. | strike, hit |
+| **damage** | A unit's stat: the health its attack removes. | strength, power, harm |
 | **range** | The distance, in tiles, a unit attacks over; one for melee. | reach |
 | **move** | The tiles a unit crosses per order. | speed, mobility, movement points |
 | **military** | The resource that pays for military units, orders, actions and fortifications. | — |

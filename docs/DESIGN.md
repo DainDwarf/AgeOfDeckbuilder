@@ -110,7 +110,7 @@ A chronicle is a sequence of **turns**. Each turn, in this order:
 
 The map is hidden. The city and its units have **sight** over the tiles near them; every other
 tile is in **fog**. Terrain stays known once seen; what stands or moves on a tile — units,
-buildings, intents — is seen only in sight. An enemy that declares its intent in the fog strikes
+buildings, intents — is seen only in sight. An enemy that declares its intent in the fog attacks
 unseen.
 
 ### Cards ✅
@@ -171,9 +171,9 @@ later content.
 
 ### Units and combat ✅
 
-A unit has **health**, **attack**, **range** and **move**. An attack removes the attacker's
-attack from the target's health — its **damage** — and a unit at zero health is killed. There is
-no retaliation: the struck unit strikes back only when its own attack comes, so a fight is an
+A unit has **health**, **damage**, **range** and **move**. An **attack** removes the attacker's
+damage from the target's health, and a unit at zero health is killed. There is
+no retaliation: the target answers only when its own attack comes, so a fight is an
 exchange across turns, never within one blow.
 
 - **One attack rule.** At income every fighting unit attacks an enemy within its range; a melee
