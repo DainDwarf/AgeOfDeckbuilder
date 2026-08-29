@@ -98,7 +98,7 @@ makes twice becomes a line here (the ratchet, at `/upkeep`).
 ## Testing
 
 - **A test asserts a rule a player could state**, exercised through a move or a boundary (play a
-  card, end a turn, resolve an upkeep, load a save), on a **synthetic fixture** defined in the test
+  card, end a turn, resolve income, load a save), on a **synthetic fixture** defined in the test
   and pushed through the real code path. Never a function's signature, never a real piece of
   content's numbers.
 - **New mechanism → one such test. New content → coherence only.** Content that composes tested

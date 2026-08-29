@@ -97,7 +97,7 @@ A chronicle is a sequence of **turns**. Each turn, in this order:
    Nothing else limits play: the hand and the city's resources are the whole budget. A per-turn
    energy was rejected: a sixth economy fighting the five.
 4. **End.** The player ends the turn; the rest of the hand is discarded.
-5. **Upkeep.** Standing things do their standing thing: buildings and worked tiles yield their
+5. **Income.** Standing things do their standing thing: buildings and worked tiles yield their
    resources, and units act passively — a ranged unit attacks an enemy in range, a guarding unit
    protects. So what the player sees when drawing holds for the whole turn: a farm placed this
    turn feeds the next.
