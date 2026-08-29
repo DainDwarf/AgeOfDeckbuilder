@@ -145,3 +145,27 @@ it is staffing, not a change to the map. A unit card turns one population into a
 🔧 Population eats. At income every inhabitant consumes food; the surplus accumulates toward the
 next inhabitant, at steps that widen; a deficit starves one. Food as a plain spendable resource
 with growth elsewhere was rejected: the famine event would have nothing to bite.
+
+### The map ✅
+
+A tile is layers, and its income, movement cost and sight are the sum of what its layers say:
+
+- **Terrain** — one per tile, fixed unless terraformed: plain, forest, hills, … The list is
+  content and changes freely.
+- **Feature** — at most one, put there by the generator: a fertile plain, a river.
+- **Improvement** — laid by a worker through an action, any number of distinct ones per tile,
+  never the same one twice. A road is one; it runs under whatever building stands there.
+- **Building** — at most one per tile: the tile has one building slot. That slot is the whole
+  difference between a building and an improvement.
+
+🔧 A building's yield may read its neighbours. Nothing in the first playable does; the door
+is there so that adjacency is content when it comes.
+
+The city stands on one tile and owns the six around it. The player **claims** any tile adjacent
+to one the city owns by spending culture; claiming is free of cards, like assigning, and its
+cost rises with the tiles owned, in steps. There is no limit to how far the border reaches. A
+cost that also rises with distance was rejected until a chronicle shows fractal borders: a
+tendril is adjacent-only and exposed already.
+
+Units enter the map on the city's tile. 🔧 A building that adds an entry point is a keyword for
+later content.

@@ -6,7 +6,8 @@ reachable from here; a page earns existence only when the summary line pointing 
 shorter than what it holds.
 
 - [`DESIGN.md`](DESIGN.md) — the game: pitch, scope, systems, standing decisions. The pitch and
-  the first systems (turn, sight, cards, population) are written; scope and the rest are not.
+  the first systems (turn, sight, cards, population, map) are written; scope and the rest are
+  not.
 - [`DOGMAS.md`](DOGMAS.md) — how this project is built: working with the user, design principles,
   writing rules, code, testing, git, docs, tooling. `/intake` and the `egress-reviewer` check
   against it.
