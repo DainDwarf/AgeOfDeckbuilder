@@ -5,7 +5,8 @@ history, [`../CHANGELOG.md`](../CHANGELOG.md) holds what players were told. Ever
 reachable from here; a page earns existence only when the summary line pointing to it is much
 shorter than what it holds.
 
-- [`DESIGN.md`](DESIGN.md) — the game: scope, systems, standing decisions. Empty until designed.
+- [`DESIGN.md`](DESIGN.md) — the game: pitch, scope, systems, standing decisions. The pitch is
+  written; scope and systems are not.
 - [`DOGMAS.md`](DOGMAS.md) — how this project is built: working with the user, design principles,
   writing rules, code, testing, git, docs, tooling. `/intake` and the `egress-reviewer` check
   against it.
