@@ -98,8 +98,7 @@ A chronicle is a sequence of **turns**. Each turn, in this order:
    energy was rejected: a sixth economy fighting the five.
 4. **End.** The player ends the turn; the rest of the hand is discarded.
 5. **Income.** Standing things do their standing thing: assigned tiles and their buildings yield
-   their resources, and units act passively — a ranged unit attacks an enemy in range, a guarding unit
-   protects. So what the player sees when drawing holds for the whole turn: a farm placed this
+   their resources, and units act passively — a fighting unit attacks an enemy within its range. So what the player sees when drawing holds for the whole turn: a farm placed this
    turn feeds the next.
 6. **Enemy phase.** 🔧 Every enemy executes the **intent** it declared last turn; then neutrals and
    enemies move; then every enemy declares its intent for the next turn. An intent stays visible
@@ -169,3 +168,28 @@ tendril is adjacent-only and exposed already.
 
 Units enter the map on the city's tile. 🔧 A building that adds an entry point is a keyword for
 later content.
+
+### Units and combat ✅
+
+A unit has **health**, **attack**, **range** and **move**. An attack removes the attacker's
+attack from the target's health — its **damage** — and a unit at zero health is killed. There is
+no retaliation: the struck unit strikes back only when its own attack comes, so a fight is an
+exchange across turns, never within one blow.
+
+- **One attack rule.** At income every fighting unit attacks an enemy within its range; a melee
+  unit's range is one. An order that moves a fighting unit next to an enemy attacks on arrival
+  as well. A unit that stands still is a garrison by that rule alone.
+- **Targeting is a fixed rule, shown during the player's turn** like an intent; an order
+  overrides it. 🔧 The rule: the target with the least health. Random targeting was rejected: the
+  player's own units would be the one thing on the map they cannot read.
+- **One unit per tile.** A unit on a tile is a gate: an enemy must kill it to pass. Stacking was
+  rejected: piled units turn position into arithmetic.
+- **Enemies hurt the city by standing on it.** A tile the city owns yields nothing at income
+  while an enemy **occupies** it, and an enemy that **pillages** destroys the building or
+  improvement it stands on. Which enemies pillage is content.
+- **Defeat is capture.** An enemy that stands on the city's tile through a full player turn —
+  still there when the next enemy phase begins — **captures** the city. Population reaching zero
+  is the other defeat. A city with health of its own, worn down by attacks, was rejected:
+  attrition against a growing city finds an equilibrium where being raided every turn is stable.
+- **Military** is the resource that pays for military units, military orders and actions, and
+  fortifications.

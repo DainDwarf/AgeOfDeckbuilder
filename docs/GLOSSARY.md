@@ -56,3 +56,12 @@ deliberate exception the reviewer sees; there is no silent allow-list.
 | **improvement** | A layer a worker lays on a tile through an action; distinct ones stack, the same one never twice. | — |
 | **claim** | To spend culture on a tile adjacent to one the city owns; free of cards. | buy, purchase, expand, annex |
 | **culture** | The resource that claims tiles. | — |
+| **health** | A unit's remaining life; at zero the unit is killed. | HP, hit points, hitpoints, life |
+| **attack** | A unit's stat, and the act: removing that much health from a target. | strength, power |
+| **damage** | Health removed by an attack. | harm, hurt |
+| **range** | The distance, in tiles, a unit attacks over; one for melee. | reach |
+| **move** | The tiles a unit crosses per order. | speed, mobility, movement points |
+| **military** | The resource that pays for military units, orders, actions and fortifications. | — |
+| **occupy** | What an enemy does to a tile it stands on: the tile yields nothing. | blockade |
+| **pillage** | What some enemies do to the tile they stand on: its building or improvement is destroyed. | raze, loot, burn |
+| **capture** | What an enemy does to the city by standing on its tile through a full player turn: defeat. | conquer, seize, sack |
