@@ -76,9 +76,17 @@ Two axes of progression, as in *Prelude*:
 Real graphics, animation and idle animation, sound and music are the end goal — not the first
 build, but the stack is chosen with them in mind.
 
-## Scope
+## Scope ✅
 
-*(not yet designed)*
+- **Single-player, turn-based, untimed, offline.** No account, no server, no multiplayer — ever.
+- **One player city.** Other cities may stand on the map; none is the player's.
+- **The map is generated; everything else is authored.** Cards, events, enemies, capstones are
+  written by hand; nothing generates them.
+- **A chronicle can be left and resumed** — its save is its state and seed — and one chronicle is
+  in progress at a time.
+- **Debug commands ship inside the game**, off by default; there is no separate developer version.
+- **English only.** No language is planned; text is kept addable.
+- Not in scope: a map editor, modding, a level or scenario editor.
 
 ## Systems
 

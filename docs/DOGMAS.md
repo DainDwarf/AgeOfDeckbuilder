@@ -89,6 +89,8 @@ makes twice becomes a line here (the ratchet, at `/upkeep`).
   core through its public API; no tool-serving hook or field lands in game data or rules.
 - **Game logic is deterministic.** No ambient randomness; every random draw goes through a
   seeded generator threaded in the state, so a chronicle replays from its seed.
+- **Player-facing text is keyed data, never a literal in code.** A sentence is one entry, never
+  assembled from fragments. English is the only language; this keeps another one a file away.
 - **Comments are for traps only.** A comment states a non-local constraint invisible at the point
   of reading. No paraphrase of the code, no history ("used to…", "step 3 of…"), no design
   rationale (that is `DESIGN.md`), no explanation of code elsewhere (a bare pointer at most — and

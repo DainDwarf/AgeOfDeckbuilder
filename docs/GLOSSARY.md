@@ -21,7 +21,7 @@ deliberate exception the reviewer sees; there is no silent allow-list.
 | **achievement** | A goal a chronicle can reach; reaching it unlocks a technology. | mission, objective, quest, milestone |
 | **influence** | The meta-currency every chronicle pays, scaled by how the city fared. | gold, points, XP |
 | **chronicle** | One city's story through one age, from founding to victory or defeat — what a roguelite calls a run. | run, playthrough, attempt, session |
-| **city** | The player's single settlement; what a chronicle is about. | town, capital, base, settlement |
+| **city** | A settlement on the map; the player owns exactly one — *the* city, what a chronicle is about. | town, capital, base, settlement |
 | **map** | The hexagonal grid a chronicle is played on. | board, world, grid |
 | **tile** | One hexagon of the map, of one terrain. | hex, cell, square, territory |
 | **region** | The launch choice that biases map generation; the difficulty dial. | site, biome, location, start |
