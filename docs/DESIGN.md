@@ -193,3 +193,28 @@ exchange across turns, never within one blow.
   attrition against a growing city finds an equilibrium where being raided every turn is stable.
 - **Military** is the resource that pays for military units, military orders and actions, and
   fortifications.
+
+### Events and the capstone ✅
+
+Each age has a **schedule**: its set of events, each with a weight that shifts with the turn.
+The Events step draws from it, seeded, and the schedule escalates — a raid drawn late is larger
+than one drawn early, and the harshest entries carry no weight at first. How many events land
+per turn is numbers. An event is a script — spawn enemies, shock a resource, change tiles, take
+inhabitants — with, optionally, a choice made when it lands. The pitch's families (enemies,
+disasters, turmoil, fortunate) are tags on content, not rules.
+
+Events are not announced: the player learns the next one when it lands. Announcing them is
+something a technology or a civilization's rule can grant.
+
+**Enemies enter from camps.** The generator places **camps** on the map, each in the fog until
+seen. An event that spawns enemies spawns them at a camp, and they follow their script — the
+default one walks toward the nearest of the player's units or the city and declares an attack on
+it. Scouting is how a chronicle learns where the enemy comes from. A camp is captured the way
+the city is — kill what stands on it, stand on it through a full turn — and a captured camp
+spawns nothing again. 🔧 Its reward: a chronicle-only card, or influence. Spawning enemies on
+any fog tile was rejected: a raid out of a hollow that turns out empty reads as nothing.
+
+**The capstone lands on a fixed turn of the age**, known from the launch; that turn is the
+chronicle's length and the lever behind "shorter in the earlier ages". It is the last event —
+nothing is drawn after it — it may span several turns, and it ends with a pass condition: the
+chronicle ends there, in victory or defeat. What the trial is, is content, one per age.

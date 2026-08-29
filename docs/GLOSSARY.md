@@ -31,7 +31,9 @@ deliberate exception the reviewer sees; there is no silent allow-list.
 | **enemy** | A non-player unit that attacks. | barbarian, raider, hostile, invader, foe |
 | **killed** | What happens to a unit that loses: it leaves the map. | destroyed, slain, dead, lost |
 | **event** | One entry of the age's schedule; what the chronicle throws at the city. | disaster, threat, crisis, encounter |
-| **capstone** | The age's final trial; passing it is victory. | boss, finale, objective |
+| **capstone** | The age's final trial, on a fixed turn known from the launch; passing it is victory. | boss, finale, objective |
+| **schedule** | An age's set of events with their turn-shifting weights; what the Events step draws from. | timeline, calendar |
+| **camp** | A generated site enemies enter the map from; captured, it spawns nothing again. | lair, nest, spawn point, spawner |
 | **victory** | The end of a chronicle by passing the capstone. | win, success, triumph |
 | **defeat** | The end of a chronicle by the city's fall. | collapse, game over, loss, death |
 | **border** | The edge of the tiles the city holds; pushed out by culture. | frontier, territory |
@@ -51,7 +53,7 @@ deliberate exception the reviewer sees; there is no silent allow-list.
 | **worker** | A non-fighting unit that transforms tiles: raises buildings, terraforms, lays roads. | builder, engineer, labourer |
 | **population** | The city's inhabitants: assigned to tiles for income, turned into units by unit cards. | citizens, workforce, pops |
 | **assign** | To put one population on a tile inside the border; free, instant, reversible. | allocate |
-| **terrain** | A tile's base layer: plain, forest, hills, …; one per tile, changed only by terraforming. | tile type, biome, land |
+| **terrain** | A tile's base layer: plain, forest, hills, …; one per tile, changed only by terraforming. | tile type, biome |
 | **feature** | A generated extra on a tile: a fertile plain, a river. | bonus |
 | **improvement** | A layer a worker lays on a tile through an action; distinct ones stack, the same one never twice. | — |
 | **claim** | To spend culture on a tile adjacent to one the city owns; free of cards. | buy, purchase, expand, annex |
@@ -64,4 +66,4 @@ deliberate exception the reviewer sees; there is no silent allow-list.
 | **military** | The resource that pays for military units, orders, actions and fortifications. | — |
 | **occupy** | What an enemy does to a tile it stands on: the tile yields nothing. | blockade |
 | **pillage** | What some enemies do to the tile they stand on: its building or improvement is destroyed. | raze, loot, burn |
-| **capture** | What an enemy does to the city by standing on its tile through a full player turn: defeat. | conquer, seize, sack |
+| **capture** | To take a site by standing on its tile through a full turn: an enemy captures the city (defeat), the player captures a camp. | conquer, seize, sack |
