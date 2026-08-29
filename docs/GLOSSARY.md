@@ -46,3 +46,8 @@ deliberate exception the reviewer sees; there is no silent allow-list.
 | **intent** | The attack an enemy declares one turn before executing it. | telegraph |
 | **sight** | The tiles the city and its units currently see. | vision, line of sight |
 | **fog** | Every tile outside sight; known terrain, unknown occupants. | fog of war, unexplored |
+| **order** | A card that does one thing with one unit; the plain order moves it, and its nature acts on arrival. | command, move card |
+| **action** | A card with an immediate effect. | spell, effect card |
+| **worker** | A non-fighting unit that transforms tiles: raises buildings, terraforms, lays roads. | builder, engineer, labourer |
+| **population** | The city's inhabitants: assigned to tiles for income, turned into units by unit cards. | citizens, workforce, pops |
+| **assign** | To put one population on a tile inside the border; free, instant, reversible. | allocate |

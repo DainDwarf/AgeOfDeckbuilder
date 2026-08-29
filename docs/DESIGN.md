@@ -35,11 +35,11 @@ fiction's own word: *Chronicles of the mercantile civilization in the Age of Pow
   to the famine. A deck has a specialty; it never has an omission.
 - **Cards are the verbs; the map holds the nouns.** Buildings and units enter the map through
   cards, and immediate effects are cards. Standing things do their standing thing for free — a
-  garrison defends where it stands, a staffed farm produces — and **changing the map costs a
-  card**: marching, founding, working a new tile, terraforming, attacking, negotiating.
+  garrison defends where it stands, a farm with a person assigned produces — and **changing the
+  map costs a card**: marching, building, terraforming, attacking, negotiating.
 - The five core resources of *Prelude* return with much the same flavour: **food, production,
   military, money, science**. **Culture pushes the border out**, and the tiles inside it are the
-  city's; population is the workers on tiles and in buildings.
+  city's; population is the city's inhabitants, assigned to its tiles.
 - **Deterministic.** Every random draw comes from a seeded generator carried in the state, so a
   chronicle replays from its seed — for replay, undo and debugging first; a headless simulator is possible but
   not promised.
@@ -97,8 +97,8 @@ A chronicle is a sequence of **turns**. Each turn, in this order:
    Nothing else limits play: the hand and the city's resources are the whole budget. A per-turn
    energy was rejected: a sixth economy fighting the five.
 4. **End.** The player ends the turn; the rest of the hand is discarded.
-5. **Income.** Standing things do their standing thing: buildings and worked tiles yield their
-   resources, and units act passively — a ranged unit attacks an enemy in range, a guarding unit
+5. **Income.** Standing things do their standing thing: assigned tiles and their buildings yield
+   their resources, and units act passively — a ranged unit attacks an enemy in range, a guarding unit
    protects. So what the player sees when drawing holds for the whole turn: a farm placed this
    turn feeds the next.
 6. **Enemy phase.** 🔧 Every enemy executes the **intent** it declared last turn; then neutrals and
@@ -113,3 +113,35 @@ The map is hidden. The city and its units have **sight** over the tiles near the
 tile is in **fog**. Terrain stays known once seen; what stands or moves on a tile — units,
 buildings, intents — is seen only in sight. An enemy that declares its intent in the fog strikes
 unseen.
+
+### Cards ✅
+
+Four kinds. Every card has a resource cost, possibly none. Every kind cycles: played or
+discarded, a card goes to the discard pile and comes around again; *gone once played* is a
+keyword some cards carry, not a kind, and the map's gifts are chronicle-only by nature.
+
+- **Building** — raises a building on a tile inside the border where a worker stands. The map is
+  the cap: no free tile of the right terrain, no farm — and a building card with nowhere to go
+  is a blank draw, which is what keeps a deck from being all buildings. A copy bought in the meta
+  makes the deck faster, never the city bigger. Consuming a building card on play was rejected:
+  the deck would be the city's blueprint and the chronicle merely its placement.
+- **Unit** — puts a unit on the map, made of one population: an inhabitant leaves the tiles to
+  become the warrior, the worker, later the trader, and is gone when the unit is killed. Where a
+  unit enters is 🔧 until the map is designed.
+- **Order** — does one thing with one unit. The plain order moves it, and what it does on arrival
+  is its nature: a warrior fights what it reaches, a worker is in place to raise a building, a scout sees
+  from where it stops. Other orders trade that shape for an edge — twice the move and no attack,
+  twice the attack and no move — and are content, not kinds.
+- **Action** — an immediate effect: draw two, gain food, negotiate with a neutral, terraform a
+  tile where a worker stands. Everything that is neither a noun entering the map nor a noun
+  moving.
+
+### Population ✅
+
+**Population** is the city's inhabitants. Each may be **assigned** to a tile inside the border,
+and an assigned tile yields its income. Assigning is free, instant and reversible, never a card:
+it is staffing, not a change to the map. A unit card turns one population into a unit.
+
+🔧 Population eats. At income every inhabitant consumes food; the surplus accumulates toward the
+next inhabitant, at steps that widen; a deficit starves one. Food as a plain spendable resource
+with growth elsewhere was rejected: the famine event would have nothing to bite.
