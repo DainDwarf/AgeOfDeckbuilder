@@ -4,10 +4,9 @@ Guidance for Claude Code sessions in this repository.
 
 ## Project
 
-**Age of Deckbuilder** (working name) — a card game, designed from scratch as the successor to
-`../CivCardGame` (published as *Age of Deckbuilder: Prelude*). The game is **not designed yet** and
-the **stack is not chosen yet**; this repository currently holds the development harness only.
-The previous project is a reference for what worked, never a codebase to port from.
+**Age of Deckbuilder** (working name) — a card game, designed from scratch. The design is written
+at design altitude in `docs/DESIGN.md`; the **stack is not chosen yet**, and this repository
+currently holds the development harness and the docs only.
 
 ## Three lifespans
 

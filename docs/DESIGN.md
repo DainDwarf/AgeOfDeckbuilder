@@ -37,8 +37,7 @@ fiction's own word: *Chronicles of the mercantile civilization in the Age of Pow
   cards, and immediate effects are cards. Standing things do their standing thing for free — a
   garrison defends where it stands, a farm with a person assigned produces — and **changing the
   map costs a card**: marching, building, terraforming, attacking, negotiating.
-- The five core resources of *Prelude* return with much the same flavour: **food, production,
-  military, money, science**. **Culture pushes the border out**, and the tiles inside it are the
+- Five core resources: **food, production, military, money, science**. **Culture pushes the border out**, and the tiles inside it are the
   city's; population is the city's inhabitants, assigned to its tiles.
 - **Deterministic.** Every random draw comes from a seeded generator carried in the state, so a
   chronicle replays from its seed — for replay, undo and debugging first; a headless simulator is possible but
@@ -64,7 +63,7 @@ Four choices, each with one job:
 
 ### The meta — humanity's history ✅
 
-Two axes of progression, as in *Prelude*:
+Two axes of progression:
 
 - **Depth is achievements.** A goal reached during a chronicle unlocks a **technology**: new cards,
   better buildings, better units. A victory in an age unlocks the next age.
