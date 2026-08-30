@@ -93,6 +93,10 @@ makes twice becomes a line here (the ratchet, at `/upkeep`).
   the reminder: `Math.random()` and `Phaser.Math.RND` are one import away.
 - **Player-facing text is keyed data, never a literal in code.** A sentence is one entry, never
   assembled from fragments. English is the only language; this keeps another one a file away.
+- **Prefer the API's native convention.** Feed a library the coordinate space and data shape it
+  documents; never compensate with metadata — an origin zeroed, a sign flipped, an offset added.
+  Why: the compensation draws right while everything else that reads the object still trusts the
+  metadata.
 - **Comments are for traps only.** A comment states a non-local constraint invisible at the point
   of reading. No paraphrase of the code, no history ("used to…", "step 3 of…"), no design
   rationale (that is `DESIGN.md`), no explanation of code elsewhere (a bare pointer at most — and
