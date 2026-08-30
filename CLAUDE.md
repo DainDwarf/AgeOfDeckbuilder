@@ -5,8 +5,9 @@ Guidance for Claude Code sessions in this repository.
 ## Project
 
 **Age of Deckbuilder** (working name) — a card game, designed from scratch. The design is written
-at design altitude in `docs/DESIGN.md`; the **stack is not chosen yet**, and this repository
-currently holds the development harness and the docs only.
+at design altitude in `docs/DESIGN.md`; the game is TypeScript on Phaser 4, built by Vite, played
+in the browser. [`docs/DOGMAS.md`](docs/DOGMAS.md) → *Stack* holds the layout and the one
+architectural rule: `src/rules/` is pure, `src/ui/` only renders.
 
 ## Three lifespans
 
@@ -65,7 +66,16 @@ Full rules in [`docs/DOGMAS.md`](docs/DOGMAS.md). The ones no session may miss:
   here-string turns `''` into two literal apostrophes.
 - Long commands run with `run_in_background`; never a sleep poll. **After spawning a child agent
   or background task, finish any finite work and end the turn** — its completion resumes you.
+- Node 24 and npm are on PATH. **Rust is not installed**: anything needing it — Tauri, the desktop
+  build — is a board line of its own, never a step inside another one.
 
 ## Commands
 
-None yet — filled in when the stack is chosen.
+| Command | What it does |
+|---------|--------------|
+| `npm run dev` | Vite dev server. Background only; the `run` skill reads the URL from its output. |
+| `npm run check` | TypeScript, no emit. |
+| `npm test` | Vitest — the rules tests. |
+| `npm run e2e` | Playwright/Chromium — starts the dev server itself. |
+| `npm run lint` | Biome, lint and format check. `npx biome check --write .` fixes. |
+| `npm run build` | Vite build into `dist/`. |

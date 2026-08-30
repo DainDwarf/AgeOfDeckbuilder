@@ -26,7 +26,11 @@ process.stdin.on('end', () => {
   if (typeof added !== 'string' || !MARKER.test(added)) process.exit(0);
 
   // An Edit that merely carries an existing marker through unchanged is not a new one.
-  if (input.tool_name === 'Edit' && typeof ti.old_string === 'string' && MARKER.test(ti.old_string)) {
+  if (
+    input.tool_name === 'Edit' &&
+    typeof ti.old_string === 'string' &&
+    MARKER.test(ti.old_string)
+  ) {
     process.exit(0);
   }
 

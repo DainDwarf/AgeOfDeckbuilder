@@ -12,9 +12,6 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
-- **Choose the stack** — `docs/DOGMAS.md` → *Stack* names the language, framework, test runner and
-  build; `CLAUDE.md` → *Commands* lists the real commands; the `run` skill is no longer a stub.
-  Doc-impact: DOGMAS.md, CLAUDE.md.
 - **Settle UI verification** — once the stack is known: an agent and a skill that mechanically
   verify a UI change on the real app, so the user's playtime goes to feel only. Done when both
   exist, describe the real app, and `CLAUDE.md` → *Roles* names them. Doc-impact: DOGMAS.md,

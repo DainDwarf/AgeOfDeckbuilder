@@ -92,8 +92,14 @@ makes twice becomes a line here (the ratchet, at `/upkeep`).
 
 ## Testing
 
-*(not written — it follows the stack. What a test asserts, what it runs on, and what deleting one
-means go here once the stack is decided.)*
+- **A test asserts a rules behaviour**, and where randomness is involved it asserts it from a
+  seed. Never a Phaser detail, a pixel, a frame count or a coordinate on screen.
+- **Rules tests are Vitest, in Node**, co-located with the module they cover as `<module>.test.ts`.
+  UI verification is Playwright against the dev server in Chromium, and it checks that the app
+  boots, reaches the screen it should and logs nothing — not what it looks like.
+- **A test is never weakened to make it pass.** Deleting a test says that behaviour is no longer
+  promised, which is a design change made with the user. A failing check is reported failing, with
+  its output; never "should pass".
 
 ## Git
 
@@ -143,5 +149,42 @@ means go here once the stack is decided.)*
 
 ## Stack
 
-*(not chosen — a `BOARD.md` line. Language, framework, test runner, build, hosting, and the
-per-stack idioms go here once decided.)*
+| Layer | Choice |
+|-------|--------|
+| Language | TypeScript, `strict` |
+| Game framework | Phaser 4 |
+| Dev server and bundler | Vite 8 |
+| Rules tests | Vitest 4 |
+| UI verification | Playwright, Chromium only |
+| Lint and format | Biome, one `biome.json` |
+| Package manager | npm on Node 24; `package-lock.json` is committed |
+| Hosting | itch.io HTML5 page, the zipped `dist/`. No server, ever. |
+| Desktop wrapper | Tauri 2 — not installed; it needs Rust, and it is installed when the desktop target is taken |
+
+- **`src/rules/` never imports Phaser and never touches the DOM; `src/ui/` never mutates state.**
+  The game is one pure function, `apply(state, command) → state`, and the seeded generator's state
+  lives inside `state`. That single rule is what makes a chronicle replay from its seed, a save
+  the state serialised, and a headless simulator `apply` in a loop. Phaser renders a state and
+  emits commands, nothing else. Debug commands are commands like any other, behind a flag.
+- **All UI is Phaser** — inside a chronicle and outside it alike: launch, collection, deck
+  editing, codex. `index.html` holds the canvas and nothing else. Why: a card appears on every one
+  of those screens and must have exactly one renderer; a DOM menu layer would be a second one.
+- **The map's geometry lives in `src/rules/`**, in axial coordinates. A tile is drawn as an
+  ordinary Phaser object from those coordinates; Phaser's tilemap system is not used, because the
+  map is a rules structure the renderer reads, not a renderer structure the rules ask about.
+- **Every dependency is pinned exactly** in `package.json` — no `^`, no `~`. Why: a build that
+  changed because an upstream patch landed is a failure with no local cause.
+- **Assets carry a licence record.** A pack entering `public/assets/` gets its entry in
+  `public/assets/LICENSES.md` in the same unit of work; no entry, no ship.
+
+The layout, which embodies the rule above:
+
+```
+index.html        the canvas host, nothing else
+src/main.ts       boots the Phaser game
+src/rules/        pure TypeScript: state, commands, the seeded generator
+src/ui/           Phaser scenes
+e2e/              Playwright specs
+public/assets/    art, sound, music, each pack with its licence entry
+dist/             the build; what is zipped and uploaded
+```

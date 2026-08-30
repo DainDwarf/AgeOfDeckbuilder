@@ -39,7 +39,10 @@ process.stdin.on('end', () => {
     if (!m) continue;
     const term = m[1];
     if (/^-+$/.test(term) || term.toLowerCase() === 'term') continue;
-    const banned = m[2].split(',').map((s) => s.trim()).filter((s) => s && s !== '—' && s !== '-');
+    const banned = m[2]
+      .split(',')
+      .map((s) => s.trim())
+      .filter((s) => s && s !== '—' && s !== '-');
     if (banned.length) rules.push({ term, banned });
   }
   if (!rules.length) process.exit(0);

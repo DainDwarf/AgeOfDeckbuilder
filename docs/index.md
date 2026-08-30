@@ -8,8 +8,8 @@ shorter than what it holds.
 - [`DESIGN.md`](DESIGN.md) — the game: pitch, scope, systems, standing decisions. Pitch, scope and
   systems are written.
 - [`DOGMAS.md`](DOGMAS.md) — how this project is built: working with the user, design principles,
-  writing rules, code, testing, git, docs, tooling. `/intake` and the `egress-reviewer` check
-  against it.
+  writing rules, code, testing, git, docs, tooling, and the stack with its layout. `/intake` and
+  the `egress-reviewer` check against it.
 - [`GLOSSARY.md`](GLOSSARY.md) — the closed vocabulary of gameplay terms and the synonyms each
   one forbids.
 
