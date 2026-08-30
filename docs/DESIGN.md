@@ -78,6 +78,9 @@ build, but the stack is chosen with them in mind.
 ## Scope ✅
 
 - **Single-player, turn-based, untimed, offline.** No account, no server, no multiplayer — ever.
+- **Playable in the browser.** First contact is a tab on the game's page; the same code also
+  ships as a desktop application. An unknown game gets tried in a tab far more often than it
+  gets downloaded.
 - **One player city.** Other cities may stand on the map; none is the player's.
 - **The map is generated; everything else is authored.** Cards, events, enemies, capstones are
   written by hand; nothing generates them.
