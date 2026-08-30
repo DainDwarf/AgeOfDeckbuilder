@@ -12,4 +12,7 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
-*(empty)*
+- **Render at device pixels** — the canvas backing store matches its on-screen size ×
+  `devicePixelRatio` (no CSS upscaling of the bitmap); boot-scene text is crisp at 100% and 150%
+  display scaling per a ui-check pass (Playwright emulates `deviceScaleFactor`); the coordinate
+  rule in `.claude/agents/ui-check.md` matches the new mapping. Doc-impact: none.
