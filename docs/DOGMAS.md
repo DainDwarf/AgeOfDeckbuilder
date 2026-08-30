@@ -37,6 +37,8 @@ makes twice becomes a line here (the ratchet, at `/upkeep`).
   occasionally. No guard rails, no warnings against a demanding choice, no "are you sure". A
   concern about a demanding option is not written down either — a ⚠️ in a doc is the same
   paranoia in prose. Genuine bugs (a mathematically unplayable state, a typo) are still bugs.
+- **Committed rules live in `src/rules/`.** A disabled button is the UI's reflection of a rule,
+  never its enforcement.
 - **Price new content against what already does that job.** Strictly worse on every axis is dead
   on arrival, however good the flavour; "the balance pass will tune it" is not a licence to skip
   the comparison. Later-tier content may dominate earlier-tier content — that is progression.
@@ -84,6 +86,13 @@ makes twice becomes a line here (the ratchet, at `/upkeep`).
   seed data of the editable type; no parallel "custom" type survives.
 - **A named constant only for readers far apart.** Two adjacent lines cannot drift; inline the
   literal.
+- **Tools are consumers of `src/rules/`, never peers.** A simulator, an editor, a profiler reads
+  the rules through their public API; no tool-serving hook or field lands in game data or rules.
+- **Game logic is deterministic.** No ambient randomness in `src/rules/` — every random draw goes
+  through the seeded generator threaded in the state, so a chronicle replays from its seed. Why
+  the reminder: `Math.random()` and `Phaser.Math.RND` are one import away.
+- **Player-facing text is keyed data, never a literal in code.** A sentence is one entry, never
+  assembled from fragments. English is the only language; this keeps another one a file away.
 - **Comments are for traps only.** A comment states a non-local constraint invisible at the point
   of reading. No paraphrase of the code, no history ("used to…", "step 3 of…"), no design
   rationale (that is `DESIGN.md`), no explanation of code elsewhere (a bare pointer at most — and
@@ -92,11 +101,17 @@ makes twice becomes a line here (the ratchet, at `/upkeep`).
 
 ## Testing
 
-- **A test asserts a rules behaviour**, and where randomness is involved it asserts it from a
-  seed. Never a Phaser detail, a pixel, a frame count or a coordinate on screen.
+- **A test asserts a rule a player could state**, exercised through a move or a boundary (play a
+  card, end a turn, resolve income, load a save), on a **synthetic fixture** defined in the test
+  and pushed through the real code path; where randomness is involved, from a seed. Never a
+  function's signature, never a real piece of content's numbers, never a Phaser detail — a pixel,
+  a frame count, a coordinate on screen.
 - **Rules tests are Vitest, in Node**, co-located with the module they cover as `<module>.test.ts`.
   UI verification is Playwright against the dev server in Chromium, and it checks that the app
   boots, reaches the screen it should and logs nothing — not what it looks like.
+- **No mocks.** A pure `src/rules/` needs none; a mock that mirrors the code tests the code
+  against itself. Use real dependencies or don't test that path.
+- **Tests import their runner API explicitly** — Vitest's `globals` stays off.
 - **A test is never weakened to make it pass.** Deleting a test says that behaviour is no longer
   promised, which is a design change made with the user. A failing check is reported failing, with
   its output; never "should pass".
