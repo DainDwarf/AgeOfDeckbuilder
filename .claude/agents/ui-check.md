@@ -89,10 +89,43 @@ empty and die with the process. There is no cleanup step and no profile to reset
 screenshot taken before the first frame is an empty canvas. Settle for ~500 ms after load and
 ~300 ms after any click that changes the scene.
 
-**Keep the viewport at 1280x720.** The game is authored at 1280x720 and scaled to fit, so at that
-viewport a mouse coordinate is the scene coordinate a Phaser object was placed at, one to one. At
-any other size the canvas is scaled and letterboxed and the two stop agreeing, which turns every
-click into a guess.
+**Keep the viewport at 1280x720 for anything you click.** The game is authored in a 1280x720 design
+space that the camera maps onto the whole canvas, so at that viewport a mouse coordinate is the
+design coordinate a Phaser object was placed at, one to one. At any other size the canvas is scaled
+and letterboxed and the two stop agreeing, which turns every click into a guess.
+
+**`deviceScaleFactor` moves pixels, not clicks.** The canvas backing store is the design size times
+`deviceScaleFactor` times the factor the canvas is fitted by, which at the 1280x720 viewport is 1;
+so a context there with `deviceScaleFactor: 1.5` gives a 1920x1080 backing store and screenshots
+1920x1080 pixels wide. Mouse coordinates stay design coordinates; a coordinate you sample *pixels*
+at — the `sample()` helper below, any crop — multiplies by the factor. The backing store is
+assertable directly:
+
+```js
+const context = await browser.newContext({
+  viewport: { width: 1280, height: 720 },
+  deviceScaleFactor: 1.5,
+});
+// ...
+const backing = await page.evaluate(() => document.querySelector('canvas').width); // 1920
+```
+
+**A pixel-density check may run at a larger viewport** — 1920x1080, say — and is the one thing that
+may. Give it its own context, created at that size: the render factor is read once at page load, so
+resizing an already-loaded page measures a stale factor and reports a false FAIL. It is
+measurement-only: assert the backing store against the canvas's fitted on-screen size
+times `deviceScaleFactor`, and sample pixels at design coordinates multiplied by
+`deviceScaleFactor * Math.min(width / 1280, height / 720)`. **Never click in such a context** — the
+one-to-one coordinate mapping is what you gave up to get there.
+
+```js
+const density = await page.evaluate(() => {
+  const canvas = document.querySelector('canvas');
+  const box = canvas.getBoundingClientRect();
+  return { backing: canvas.width, css: box.width, ratio: canvas.width / box.width };
+});
+// ratio === deviceScaleFactor at every viewport size
+```
 
 ## The console
 

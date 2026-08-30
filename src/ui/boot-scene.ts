@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { addText, applyDesignSpace, DESIGN_HEIGHT, DESIGN_WIDTH } from './design-space';
 
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -6,8 +7,10 @@ export class BootScene extends Phaser.Scene {
   }
 
   create(): void {
-    const x = this.scale.width / 2;
-    const y = this.scale.height / 2;
+    applyDesignSpace(this);
+
+    const x = DESIGN_WIDTH / 2;
+    const y = DESIGN_HEIGHT / 2;
 
     const raw: number[] = [];
     for (let corner = 0; corner < 6; corner++) {
@@ -21,8 +24,9 @@ export class BootScene extends Phaser.Scene {
     const corners = raw.map((v, i) => (i % 2 === 0 ? v - minX : v - minY));
 
     this.add.polygon(x, y, corners, 0x2f6f4e).setStrokeStyle(3, 0x8fd6a8);
-    this.add
-      .text(x, y + 180, 'Age of Deckbuilder', { fontFamily: 'sans-serif', fontSize: '32px' })
-      .setOrigin(0.5);
+    addText(this, x, y + 180, 'Age of Deckbuilder', {
+      fontFamily: 'sans-serif',
+      fontSize: '32px',
+    }).setOrigin(0.5);
   }
 }

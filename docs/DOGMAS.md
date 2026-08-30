@@ -206,7 +206,7 @@ The layout, which embodies the rule above:
 index.html        the page Phaser puts its canvas in; no UI of its own
 src/main.ts       boots the Phaser game
 src/rules/        pure TypeScript: state, commands, the seeded generator
-src/ui/           Phaser scenes
+src/ui/           Phaser scenes, and the design space they lay out in
 e2e/              Playwright specs
 public/assets/    art, sound, music, each pack with its licence entry
 dist/             the build; what is zipped and uploaded

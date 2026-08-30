@@ -17,6 +17,10 @@ few, and gets no elaboration until `/intake` promotes it to a [`BOARD.md`](BOARD
   first content catalogue.
 - **Fleet-lite**: two or three sessions working parallel board lines on `main`, each claiming its
   line. Skipped for now — the bottleneck is design attention, not implementation throughput.
+- **The render factor can change after boot**: regrow the bitmap, re-zoom cameras, re-rasterize
+  text while the game runs. Four consumers: itch.io's fullscreen button, a settings render-scale
+  slider, monitor-hopping, resizing the window after boot. Decide after the art style locks —
+  pixel art would replace this whole strategy with integer scaling.
 
 ## Game
 
