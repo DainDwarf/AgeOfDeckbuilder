@@ -42,6 +42,10 @@ makes twice becomes a line here (the ratchet, at `/upkeep`).
   the comparison. Later-tier content may dominate earlier-tier content — that is progression.
 - **Compare rates on a common basis.** A per-play yield and a per-turn yield are only comparable
   after amortising the one-shot by how often it is drawn.
+- **No generative AI in assets.** Art, sound and music come from packs whose licence is recorded
+  the moment they enter the repository, or are primitives drawn by code; a generative model
+  produces none of it, placeholders included. Why: a part of the audience rejects genAI assets
+  outright, and a placeholder has a way of shipping.
 
 ## Writing rules
 
