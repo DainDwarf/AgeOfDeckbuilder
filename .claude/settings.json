@@ -21,10 +21,14 @@
       "PowerShell(npx playwright*)",
       "PowerShell(npx tsc*)",
       "PowerShell(npx biome*)",
+      "PowerShell(node *)",
+      "PowerShell(Invoke-WebRequest http://localhost:5173*)",
+      "PowerShell(Invoke-WebRequest -Uri http://localhost:5173*)",
       "Skill(intake)",
       "Skill(ship)",
       "Skill(upkeep)",
       "Skill(run)",
+      "Skill(visual-check)",
       "Artifact"
     ]
   },

@@ -12,7 +12,4 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
-- **Settle UI verification** — once the stack is known: an agent and a skill that mechanically
-  verify a UI change on the real app, so the user's playtime goes to feel only. Done when both
-  exist, describe the real app, and `CLAUDE.md` → *Roles* names them. Doc-impact: DOGMAS.md,
-  CLAUDE.md.
+*(empty)*

@@ -41,6 +41,8 @@ Nothing durable cites a board line, a task file or an idea.
   implement a board line inline when it has design latitude — it pitches, then delegates.
 - **`implementer`** (Opus): executes an agreed plan; reports deviations instead of coding them.
 - **`egress-reviewer`** (Opus, fresh context): reviews diff + docs + board line, nothing else.
+- **`ui-check`** (Sonnet): drives the running app with Playwright and reports what is broken on
+  screen; spawned by the `visual-check` skill, never from this session.
 
 ## Non-negotiables
 

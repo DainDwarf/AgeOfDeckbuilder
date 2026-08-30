@@ -7,10 +7,6 @@ few, and gets no elaboration until `/intake` promotes it to a [`BOARD.md`](BOARD
 
 ## Harness
 
-- **UI-check speed-ups** (once UI verification exists): a dev-only way to load a named fixture
-  state so a check is one step instead of playing up to it; checking one widget in isolation
-  without the game around it; screenshot regression for *unchanged* UI so the agent is only asked
-  about the new thing.
 - **Content-stage board**: when content exists, track each piece through
   Design (number-less) → Implement (provisional numbers) → Balance (measured + feel) → Polish
   (text, art, lore), one stage per session batched across pieces. Worked well before.

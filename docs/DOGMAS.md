@@ -107,8 +107,11 @@ makes twice becomes a line here (the ratchet, at `/upkeep`).
   function's signature, never a real piece of content's numbers, never a Phaser detail — a pixel,
   a frame count, a coordinate on screen.
 - **Rules tests are Vitest, in Node**, co-located with the module they cover as `<module>.test.ts`.
-  UI verification is Playwright against the dev server in Chromium, and it checks that the app
-  boots, reaches the screen it should and logs nothing — not what it looks like.
+- **UI is verified in two passes.** The standing suite is Playwright against the dev server in
+  Chromium: the app boots, reaches the screen it should, and logs nothing. What it *looks* like —
+  layout, overlap, clipping, contrast, colour-vision — is an on-demand mechanical pass through the
+  `ui-check` agent, driven by the `visual-check` skill. Whether it *feels* right is the user's
+  call and is never automated.
 - **No mocks.** A pure `src/rules/` needs none; a mock that mirrors the code tests the code
   against itself. Use real dependencies or don't test that path.
 - **Tests import their runner API explicitly** — Vitest's `globals` stays off.
