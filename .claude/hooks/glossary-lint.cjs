@@ -25,6 +25,13 @@ process.stdin.on('end', () => {
   const glossaryPath = path.join(root, 'docs', 'GLOSSARY.md');
   if (!target || path.resolve(target) === path.resolve(glossaryPath)) process.exit(0);
 
+  // Only gameplay-bearing paths: tooling files legitimately say "run" and "biome".
+  const rel = path.relative(root, path.resolve(target)).replace(/\\/g, '/');
+  const scoped =
+    ['docs/', 'src/', 'e2e/', 'board/'].some((p) => rel.startsWith(p)) ||
+    ['BOARD.md', 'IDEAS.md', 'CHANGELOG.md'].includes(rel);
+  if (!scoped) process.exit(0);
+
   let glossary;
   try {
     glossary = fs.readFileSync(glossaryPath, 'utf8');

@@ -35,7 +35,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${CLAUDE_PROJECT_DIR}/.claude/hooks/todo-lint.js\"",
+            "command": "node \"${CLAUDE_PROJECT_DIR}/.claude/hooks/todo-lint.cjs\"",
             "timeout": 10
           }
         ]
@@ -47,7 +47,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${CLAUDE_PROJECT_DIR}/.claude/hooks/glossary-lint.js\"",
+            "command": "node \"${CLAUDE_PROJECT_DIR}/.claude/hooks/glossary-lint.cjs\"",
             "timeout": 10
           }
         ]
