@@ -37,8 +37,7 @@ Check each and report only what fails:
   require it now rather than accept a follow-up. Growth on a first review is normal; on a second
   round it should be exceptional.
 - **Test suspicion** — a weakened or deleted test is blocking unless `docs/DESIGN.md` changed the
-  behaviour in this same diff. A new mechanism without a test through a move or boundary is a
-  finding; a test pinned to a function signature or to real content numbers is a finding.
+  behaviour in this same diff. A test that breaks `docs/DOGMAS.md` → *Testing* is a finding.
 
 ## Verdicts
 

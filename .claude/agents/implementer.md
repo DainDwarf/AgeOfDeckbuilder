@@ -37,10 +37,9 @@ into unrelated files because they were nearby.
 
 ## Working rules
 
-- Locality first; one choke point per invariant; data owns its behaviour; no shallow modules.
+- Locality first; one choke point per invariant; no shallow modules.
 - Gameplay terms come from `docs/GLOSSARY.md` — the exact word, in text and in identifiers.
-- A new mechanism gets one test through a move or a boundary on a synthetic fixture. New content
-  gets coherence checks only. Never weaken or delete a test to make it pass.
+- Tests follow `docs/DOGMAS.md` → *Testing*. Never weaken or delete a test to make it pass.
 - Comments are for traps only. No paraphrase, no history, no rationale, no `TODO`.
 - Update every `docs/` page in the doc-impact list in the same change. A pivot is an edit — the old
   fact is gone, not marked deprecated.

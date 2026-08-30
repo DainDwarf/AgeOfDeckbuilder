@@ -40,7 +40,6 @@ Nothing durable cites a board line, a task file or an idea.
   implement a board line inline when it has design latitude — it pitches, then delegates.
 - **`implementer`** (Opus): executes an agreed plan; reports deviations instead of coding them.
 - **`egress-reviewer`** (Opus, fresh context): reviews diff + docs + board line, nothing else.
-- **`ui-check`** (Sonnet): mechanical browser verification — only if the stack is a browser app.
 
 ## Non-negotiables
 

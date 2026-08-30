@@ -37,8 +37,6 @@ makes twice becomes a line here (the ratchet, at `/upkeep`).
   occasionally. No guard rails, no warnings against a demanding choice, no "are you sure". A
   concern about a demanding option is not written down either — a ⚠️ in a doc is the same
   paranoia in prose. Genuine bugs (a mathematically unplayable state, a typo) are still bugs.
-- **Committed rules live in the core.** A disabled button is the UI's reflection of a rule, never
-  its enforcement.
 - **Price new content against what already does that job.** Strictly worse on every axis is dead
   on arrival, however good the flavour; "the balance pass will tune it" is not a licence to skip
   the comparison. Later-tier content may dominate earlier-tier content — that is progression.
@@ -75,9 +73,6 @@ makes twice becomes a line here (the ratchet, at `/upkeep`).
   but generalise only the axis with a real second instance; no seams for zero instances. A special
   case that needs a guard comment to survive is the wrong design: uniformity beats a locally
   simpler shortcut, so remove the shortcut, not the comment.
-- **Data owns its behaviour.** A card's effect runs only through the resolver; its price only
-  through the cost seam. No parallel mini-interpreter reading a def's fields from a move, a tick,
-  or a component. Adding a mechanic means adding a hook on the data, not a branch in the engine.
 - **Data coherence is never deferred.** An id must resolve to real content, a seed must be
   attainable; these checks exist from day one regardless of how provisional the numbers are.
   One rejection vocabulary across all validators.
@@ -85,12 +80,6 @@ makes twice becomes a line here (the ratchet, at `/upkeep`).
   seed data of the editable type; no parallel "custom" type survives.
 - **A named constant only for readers far apart.** Two adjacent lines cannot drift; inline the
   literal.
-- **Tools are consumers of the core, never peers.** A simulator, an editor, a profiler reads the
-  core through its public API; no tool-serving hook or field lands in game data or rules.
-- **Game logic is deterministic.** No ambient randomness; every random draw goes through a
-  seeded generator threaded in the state, so a chronicle replays from its seed.
-- **Player-facing text is keyed data, never a literal in code.** A sentence is one entry, never
-  assembled from fragments. English is the only language; this keeps another one a file away.
 - **Comments are for traps only.** A comment states a non-local constraint invisible at the point
   of reading. No paraphrase of the code, no history ("used to…", "step 3 of…"), no design
   rationale (that is `DESIGN.md`), no explanation of code elsewhere (a bare pointer at most — and
@@ -99,22 +88,8 @@ makes twice becomes a line here (the ratchet, at `/upkeep`).
 
 ## Testing
 
-- **A test asserts a rule a player could state**, exercised through a move or a boundary (play a
-  card, end a turn, resolve income, load a save), on a **synthetic fixture** defined in the test
-  and pushed through the real code path. Never a function's signature, never a real piece of
-  content's numbers.
-- **New mechanism → one such test. New content → coherence only.** Content that composes tested
-  mechanisms needs no gameplay test; say so rather than padding a plan. Balance is a measurement
-  question, not a unit-test one.
-- **Coherence tests run over the whole catalogue**: ids resolve, references exist, seeds are
-  attainable, every entry carries what the display needs.
-- **No mocks.** A pure core needs none; a mock that mirrors the code tests the code against itself.
-  Use real dependencies or don't test that path.
-- **Fixtures derived from seed data go through the exported transform production uses**, never an
-  inline re-copy.
-- **Weakening or deleting a test is a rejection** unless `DESIGN.md` changed the behaviour in the
-  same unit of work.
-- **Tests import their runner API explicitly** — no globals.
+*(not written — it follows the stack. What a test asserts, what it runs on, and what deleting one
+means go here once the stack is decided.)*
 
 ## Git
 

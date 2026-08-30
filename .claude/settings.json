@@ -19,22 +19,11 @@
       "Skill(ship)",
       "Skill(upkeep)",
       "Skill(run)",
-      "Skill(visual-check)",
       "Artifact"
     ]
   },
   "hooks": {
     "PreToolUse": [
-      {
-        "matcher": "^mcp__chrome-devtools__",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node \"${CLAUDE_PROJECT_DIR}/.claude/hooks/devtools-subagent-guard.js\"",
-            "timeout": 10
-          }
-        ]
-      },
       {
         "matcher": "^(Edit|Write)$",
         "hooks": [
