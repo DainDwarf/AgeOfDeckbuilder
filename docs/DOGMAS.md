@@ -167,8 +167,9 @@ makes twice becomes a line here (the ratchet, at `/upkeep`).
   the state serialised, and a headless simulator `apply` in a loop. Phaser renders a state and
   emits commands, nothing else. Debug commands are commands like any other, behind a flag.
 - **All UI is Phaser** — inside a chronicle and outside it alike: launch, collection, deck
-  editing, codex. `index.html` holds the canvas and nothing else. Why: a card appears on every one
-  of those screens and must have exactly one renderer; a DOM menu layer would be a second one.
+  editing, codex. `index.html` carries no UI: a style reset, the script that boots Phaser, and
+  the canvas Phaser creates. Why: a card appears on every one of those screens and must have
+  exactly one renderer; a DOM menu layer would be a second one.
 - **The map's geometry lives in `src/rules/`**, in axial coordinates. A tile is drawn as an
   ordinary Phaser object from those coordinates; Phaser's tilemap system is not used, because the
   map is a rules structure the renderer reads, not a renderer structure the rules ask about.
@@ -180,7 +181,7 @@ makes twice becomes a line here (the ratchet, at `/upkeep`).
 The layout, which embodies the rule above:
 
 ```
-index.html        the canvas host, nothing else
+index.html        the page Phaser puts its canvas in; no UI of its own
 src/main.ts       boots the Phaser game
 src/rules/        pure TypeScript: state, commands, the seeded generator
 src/ui/           Phaser scenes
