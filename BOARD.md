@@ -12,9 +12,10 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
-- **Generated map** — from the chronicle seed, `src/rules` generates the map of stand-in
-  terrains with the city on its tile and the six tiles inside its starting border; the UI renders
-  the tiles as placeholder hexagons; same seed, same map, proven by test. Doc-impact: none.
+- **Generated map** — from the chronicle seed, `src/rules` generates the map in two layers
+  (region patches, then a per-region terrain scatter) with the city on its tile and the six tiles
+  inside its starting border; the UI renders the tiles as placeholder hexagons; same seed, same
+  map, proven by test. Doc-impact: `docs/DESIGN.md` (the two-layer generator).
 - **Turn skeleton and income** — the six-step turn runs as a pure sequence over chronicle state,
   events and enemy phase empty for now; resource panel and end-turn on screen; at income every
   tile inside the border yields as if worked (stand-in until assignment, v0.0.3). Doc-impact:
@@ -33,3 +34,6 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
   income under the one-attack rule; capture of the city or population at zero ends the chronicle
   on a defeat screen. Closes v0.0.1: version bump and release note. Doc-impact: `docs/ROADMAP.md`,
   `CHANGELOG.md`.
+- **Movable map** — the chronicle scene's camera pans by drag and zooms by wheel, bounded so the
+  map cannot leave the frame entirely; text stays crisp at every zoom; the standing e2e passes.
+  Doc-impact: none.
