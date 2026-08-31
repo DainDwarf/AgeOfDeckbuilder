@@ -37,7 +37,11 @@ fiction's own word: *Chronicles of the mercantile civilization in the Age of Pow
   cards, and immediate effects are cards. Standing things do their standing thing for free — a
   garrison defends where it stands, a farm with a person assigned produces — and **changing the
   map costs a card**: marching, building, terraforming, attacking, negotiating.
-- Five core resources: **food, production, military, money, science**. **Culture pushes the border out**, and the tiles inside it are the
+- Five core resources: **food, production, military, money, science**. 🔧 Their jobs: food feeds
+  and grows the population; production raises buildings and units and shapes tiles; military pays
+  for military units, orders, actions and fortifications; money trades for other goods and
+  accumulates; science pays for manipulating the cards — drawing, discarding and the like.
+  **Culture pushes the border out**, and the tiles inside it are the
   city's; population is the city's inhabitants, assigned to its tiles.
 - **Deterministic.** Every random draw comes from a seeded generator carried in the state, so a
   chronicle replays from its seed — for replay, undo and debugging first; a headless simulator is possible but

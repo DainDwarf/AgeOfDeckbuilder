@@ -76,7 +76,7 @@ export class ChronicleScene extends Phaser.Scene {
 
   private addEndTurn(bar: ResourceBar): void {
     const button = this.add.rectangle(0, 0, 1, 1, HELD_GOLD).setDepth(20);
-    const label = addText(this, 0, 0, text('button.end-turn'), {
+    const label = addText(this, 0, 0, '', {
       fontFamily: UI_FONT,
       fontSize: '18px',
       fontStyle: 'bold',
@@ -85,16 +85,38 @@ export class ChronicleScene extends Phaser.Scene {
       .setOrigin(0.5, 0.5)
       .setDepth(21);
 
-    const width = label.width + 56;
+    // Measured at both labels, so neither the hover swap nor a fourth digit in the turn resizes it.
+    label.setText(text('button.end-turn'));
+    const hoveredWidth = label.width;
+    label.setText(text('button.turn', { turn: 8888 }));
+    const width = Math.max(hoveredWidth, label.width) + 56;
     const height = label.height + 24;
     const x = DESIGN_WIDTH - 24 - width / 2;
     const y = DESIGN_HEIGHT - 24 - height / 2;
     button.setPosition(x, y).setSize(width, height).setInteractive({ useHandCursor: true });
     label.setPosition(x, y);
 
+    let hovered = false;
+    const paint = (): void => {
+      label.setText(
+        hovered ? text('button.end-turn') : text('button.turn', { turn: this.chronicle.turn }),
+      );
+    };
+
+    button.on('pointerover', () => {
+      hovered = true;
+      paint();
+    });
+    button.on('pointerout', () => {
+      hovered = false;
+      paint();
+    });
     button.on('pointerup', () => {
       this.chronicle = apply(this.chronicle, { type: 'end-turn' });
       bar.render(this.chronicle);
+      paint();
     });
+
+    paint();
   }
 }

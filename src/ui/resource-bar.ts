@@ -5,27 +5,29 @@ import { text } from './text';
 
 export const BAR_HEIGHT = 48;
 
-const PANEL_FILL = 0x0d1014;
-const PANEL_ALPHA = 0.88;
-const PANEL_EDGE = 0x2a2f36;
-const DIM = '#9aa3ad';
-const BRIGHT = '#e6e9ee';
+const PANEL_FILL = 0xd4d7db;
+const PANEL_EDGE = 0x6f757d;
+const WORD_STYLE = { fontFamily: UI_FONT, fontSize: '18px', color: '#4a5058' };
+const VALUE_STYLE = { fontFamily: UI_FONT, fontSize: '18px', color: '#0d1014' };
+
+const CHIP_TO_WORD = 18;
+const WORD_TO_VALUE = 8;
+const BETWEEN = 22;
+const MARGIN = 24;
 
 type Reading = Resource | 'population';
 
-/** The five core resources, then culture and population behind the divider. */
-const GROUPS: readonly (readonly { key: Reading; colour: number }[])[] = [
-  [
-    { key: 'food', colour: 0x7d9c55 },
-    { key: 'production', colour: 0xb0834a },
-    { key: 'military', colour: 0xb05252 },
-    { key: 'money', colour: 0xd9c26a },
-    { key: 'science', colour: 0x5f8fc0 },
-  ],
-  [
-    { key: 'culture', colour: 0x9a6fb8 },
-    { key: 'population', colour: 0xc2c2cf },
-  ],
+const LEFT: readonly { key: Reading; colour: number }[] = [
+  { key: 'food', colour: 0x7d9c55 },
+  { key: 'production', colour: 0xb0834a },
+  { key: 'military', colour: 0xb05252 },
+  { key: 'money', colour: 0xa08a1e },
+  { key: 'science', colour: 0x5f8fc0 },
+];
+
+const RIGHT: readonly { key: Reading; colour: number }[] = [
+  { key: 'culture', colour: 0x9a6fb8 },
+  { key: 'population', colour: 0x6b6b7d },
 ];
 
 type Entry = {
@@ -40,92 +42,85 @@ export type ResourceBar = { render(chronicle: Chronicle): void };
 
 export function createResourceBar(scene: Phaser.Scene): ResourceBar {
   const bar = scene.add.container(0, 0).setDepth(10);
-  bar.add(
-    scene.add.rectangle(0, 0, DESIGN_WIDTH, BAR_HEIGHT, PANEL_FILL, PANEL_ALPHA).setOrigin(0, 0),
-  );
+  bar.add(scene.add.rectangle(0, 0, DESIGN_WIDTH, BAR_HEIGHT, PANEL_FILL).setOrigin(0, 0));
   bar.add(scene.add.rectangle(0, BAR_HEIGHT - 1, DESIGN_WIDTH, 1, PANEL_EDGE).setOrigin(0, 0));
 
   const tooltip = createTooltip(scene);
+  const slot = digitSlot(scene);
 
-  const groups = GROUPS.map((group) =>
-    group.map(({ key, colour }): Entry => {
-      const chip = scene.add.rectangle(0, 0, 10, 10, colour).setAngle(45);
-      const word = addText(scene, 0, 0, text(`label.${key}`), {
-        fontFamily: UI_FONT,
-        fontSize: '18px',
-        color: DIM,
-      }).setOrigin(0, 0.5);
-      const value = addText(scene, 0, 0, '', {
-        fontFamily: UI_FONT,
-        fontSize: '18px',
-        color: BRIGHT,
-      }).setOrigin(0, 0.5);
-      const hover = scene.add.zone(0, 0, 1, BAR_HEIGHT).setOrigin(0, 0).setInteractive();
-      hover.on('pointerover', () => tooltip.show(key, hover.x));
-      hover.on('pointerout', () => tooltip.hide());
-      bar.add([chip, word, value, hover]);
-      return { key, chip, word, value, hover };
-    }),
-  );
+  const left = LEFT.map((reading) => createEntry(scene, bar, tooltip, reading));
+  const right = RIGHT.map((reading) => createEntry(scene, bar, tooltip, reading));
+  place(left, MARGIN, slot);
+  place(right, DESIGN_WIDTH - MARGIN - spanOf(right, slot), slot);
 
-  const dividers = GROUPS.slice(1).map(() =>
-    scene.add.rectangle(0, BAR_HEIGHT / 2, 1, BAR_HEIGHT - 20, PANEL_EDGE),
-  );
-  bar.add(dividers);
-
-  const turn = addText(scene, DESIGN_WIDTH - 24, BAR_HEIGHT / 2, '', {
-    fontFamily: UI_FONT,
-    fontSize: '18px',
-    color: DIM,
-  }).setOrigin(1, 0.5);
-  bar.add(turn);
-
+  const entries = [...left, ...right];
   return {
     render(chronicle: Chronicle): void {
-      for (const group of groups) {
-        for (const entry of group) entry.value.setText(String(readingOf(chronicle, entry.key)));
-      }
-      turn.setText(text('bar.turn', { turn: chronicle.turn }));
-      flow(groups, dividers);
+      for (const entry of entries) entry.value.setText(String(readingOf(chronicle, entry.key)));
     },
   };
+}
+
+/** The width every value grows rightward into: four digits, so no reading ever moves. */
+function digitSlot(scene: Phaser.Scene): number {
+  const digits = addText(scene, 0, 0, '0000', VALUE_STYLE);
+  const width = digits.width;
+  digits.destroy();
+  return width;
+}
+
+function createEntry(
+  scene: Phaser.Scene,
+  bar: Phaser.GameObjects.Container,
+  tooltip: Tooltip,
+  { key, colour }: { key: Reading; colour: number },
+): Entry {
+  const chip = scene.add.rectangle(0, 0, 10, 10, colour).setAngle(45);
+  const word = addText(scene, 0, 0, text(`label.${key}`), WORD_STYLE).setOrigin(0, 0.5);
+  const value = addText(scene, 0, 0, '', VALUE_STYLE).setOrigin(0, 0.5);
+  const hover = scene.add.zone(0, 0, 1, BAR_HEIGHT).setOrigin(0, 0).setInteractive();
+  hover.on('pointerover', () => tooltip.show(key, hover.x));
+  hover.on('pointerout', () => tooltip.hide());
+  bar.add([chip, word, value, hover]);
+  return { key, chip, word, value, hover };
+}
+
+function widthOf({ word }: Entry, slot: number): number {
+  return CHIP_TO_WORD + word.width + WORD_TO_VALUE + slot;
+}
+
+function spanOf(entries: Entry[], slot: number): number {
+  return entries.reduce(
+    (total, entry, index) => total + widthOf(entry, slot) + (index > 0 ? BETWEEN : 0),
+    0,
+  );
+}
+
+function place(entries: Entry[], from: number, slot: number): void {
+  const middle = BAR_HEIGHT / 2;
+  let x = from;
+  for (const entry of entries) {
+    const { chip, word, value, hover } = entry;
+    chip.setPosition(x + 5, middle);
+    word.setPosition(x + CHIP_TO_WORD, middle);
+    value.setPosition(x + CHIP_TO_WORD + word.width + WORD_TO_VALUE, middle);
+    hover.setPosition(x, 0).setSize(widthOf(entry, slot), BAR_HEIGHT);
+    x += widthOf(entry, slot) + BETWEEN;
+  }
 }
 
 function readingOf(chronicle: Chronicle, key: Reading): number {
   return key === 'population' ? chronicle.population : chronicle.resources[key];
 }
 
-function flow(groups: Entry[][], dividers: Phaser.GameObjects.Rectangle[]): void {
-  const middle = BAR_HEIGHT / 2;
-  let x = 24;
-  for (const [index, group] of groups.entries()) {
-    if (index > 0) {
-      dividers[index - 1].setPosition(x, middle);
-      x += 18;
-    }
-    for (const { chip, word, value, hover } of group) {
-      chip.setPosition(x + 5, middle);
-      word.setPosition(x + 18, middle);
-      value.setPosition(word.x + word.width + 8, middle);
-      hover.setPosition(x, 0).setSize(value.x + value.width - x, BAR_HEIGHT);
-      x = value.x + value.width + 22;
-    }
-  }
-}
+type Tooltip = { show(key: Reading, x: number): void; hide(): void };
 
-function createTooltip(scene: Phaser.Scene): {
-  show(key: Reading, x: number): void;
-  hide(): void;
-} {
+function createTooltip(scene: Phaser.Scene): Tooltip {
   const box = scene.add
-    .rectangle(0, 0, 1, 1, PANEL_FILL, PANEL_ALPHA)
+    .rectangle(0, 0, 1, 1, PANEL_FILL)
     .setOrigin(0, 0)
     .setStrokeStyle(1, PANEL_EDGE);
-  const label = addText(scene, 10, 7, '', {
-    fontFamily: UI_FONT,
-    fontSize: '14px',
-    color: BRIGHT,
-  });
+  const label = addText(scene, 10, 7, '', { ...VALUE_STYLE, fontSize: '14px' });
   const tooltip = scene.add.container(0, 0, [box, label]).setDepth(30).setVisible(false);
 
   return {
@@ -133,7 +128,7 @@ function createTooltip(scene: Phaser.Scene): {
       label.setText(text(`tooltip.${key}`));
       box.setSize(label.width + 20, label.height + 14);
       tooltip
-        .setPosition(Math.min(x, DESIGN_WIDTH - box.width - 24), BAR_HEIGHT + 8)
+        .setPosition(Math.min(x, DESIGN_WIDTH - MARGIN - box.width), BAR_HEIGHT + 8)
         .setVisible(true);
     },
     hide(): void {
