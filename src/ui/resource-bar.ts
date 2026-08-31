@@ -1,6 +1,6 @@
 import type Phaser from 'phaser';
 import type { Chronicle, Resource } from '../rules/chronicle';
-import { addText, DESIGN_WIDTH, UI_FONT } from './design-space';
+import { addText, DESIGN_WIDTH, MARGIN, UI_FONT } from './design-space';
 import { text } from './text';
 
 export const BAR_HEIGHT = 48;
@@ -16,22 +16,22 @@ const TAIL_HALF = 6;
 const CHIP_TO_WORD = 18;
 const WORD_TO_VALUE = 8;
 const BETWEEN = 22;
-const MARGIN = 24;
 
 type Reading = Resource | 'population';
 
-const LEFT: readonly { key: Reading; colour: number }[] = [
-  { key: 'food', colour: 0x7d9c55 },
-  { key: 'production', colour: 0xb0834a },
-  { key: 'military', colour: 0xb05252 },
-  { key: 'money', colour: 0xa08a1e },
-  { key: 'science', colour: 0x5f8fc0 },
-];
+/** The colour each reading is known by, in the bar and on every cost a card asks for. */
+export const RESOURCE_COLOURS: Record<Reading, number> = {
+  food: 0x7d9c55,
+  production: 0xb0834a,
+  military: 0xb05252,
+  money: 0xa08a1e,
+  science: 0x5f8fc0,
+  culture: 0x9a6fb8,
+  population: 0x6b6b7d,
+};
 
-const RIGHT: readonly { key: Reading; colour: number }[] = [
-  { key: 'culture', colour: 0x9a6fb8 },
-  { key: 'population', colour: 0x6b6b7d },
-];
+const LEFT: readonly Reading[] = ['food', 'production', 'military', 'money', 'science'];
+const RIGHT: readonly Reading[] = ['culture', 'population'];
 
 type Entry = {
   readonly key: Reading;
@@ -51,8 +51,8 @@ export function createResourceBar(scene: Phaser.Scene): ResourceBar {
   const tooltip = createTooltip(scene);
   const slot = digitSlot(scene);
 
-  const left = LEFT.map((reading) => createEntry(scene, bar, tooltip, reading));
-  const right = RIGHT.map((reading) => createEntry(scene, bar, tooltip, reading));
+  const left = LEFT.map((key) => createEntry(scene, bar, tooltip, key));
+  const right = RIGHT.map((key) => createEntry(scene, bar, tooltip, key));
   place(left, MARGIN, slot);
   place(right, DESIGN_WIDTH - MARGIN - spanOf(right, slot), slot);
 
@@ -76,9 +76,9 @@ function createEntry(
   scene: Phaser.Scene,
   bar: Phaser.GameObjects.Container,
   tooltip: Tooltip,
-  { key, colour }: { key: Reading; colour: number },
+  key: Reading,
 ): Entry {
-  const chip = scene.add.rectangle(0, 0, 10, 10, colour).setAngle(45);
+  const chip = scene.add.rectangle(0, 0, 10, 10, RESOURCE_COLOURS[key]).setAngle(45);
   const word = addText(scene, 0, 0, text(`label.${key}`), WORD_STYLE).setOrigin(0, 0.5);
   const value = addText(scene, 0, 0, '', VALUE_STYLE).setOrigin(0, 0.5);
   const hover = scene.add.zone(0, 0, 1, BAR_HEIGHT).setOrigin(0, 0).setInteractive();

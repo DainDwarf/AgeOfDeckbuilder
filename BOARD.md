@@ -12,9 +12,9 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
-- **Deck and hand** — the hardcoded stand-in deck: draw five, pay resource costs to play, discard
-  the rest at end, shuffle the discard pile into an empty draw pile; hand rendered, unaffordable
-  cards unplayable. Doc-impact: none.
+- **Browse and zoom** — clicking the draw pile browses its remaining cards sorted by kind then
+  name, never draw order; clicking the discard pile browses it newest first; clicking a hand card
+  zooms it with its rules text. Doc-impact: none.
 - **Unit and order** — the unit cards (worker and warrior) each turn one population into a unit
   on the city's tile; the plain order moves a unit and its nature acts on arrival; proven by test
   and playable on screen. Doc-impact: none.

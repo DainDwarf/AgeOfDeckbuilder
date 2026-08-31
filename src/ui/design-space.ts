@@ -5,6 +5,25 @@ export const DESIGN_HEIGHT = 720;
 
 export const UI_FONT = 'system-ui, "Segoe UI", sans-serif';
 
+/** How far anything laid against an edge of the screen stands off it. */
+export const MARGIN = 24;
+
+/** The one accent, on everything that is the player's: the border, the deck, the button. */
+export const ACCENT = 0xd9a441;
+
+// Phaser reads a polygon's corner list in min-(0, 0) space; corners about their own centre draw
+// displaced by half the shape.
+export function hexagon(size: number): number[] {
+  const raw: number[] = [];
+  for (let corner = 0; corner < 6; corner++) {
+    const angle = (Math.PI / 3) * corner - Math.PI / 6;
+    raw.push(size * Math.cos(angle), size * Math.sin(angle));
+  }
+  const minX = Math.min(...raw.filter((_, i) => i % 2 === 0));
+  const minY = Math.min(...raw.filter((_, i) => i % 2 === 1));
+  return raw.map((value, i) => (i % 2 === 0 ? value - minX : value - minY));
+}
+
 // `Phaser.Scale.FIT` in main.ts fits the canvas by this same min, which is what makes the backing
 // store equal the canvas's on-screen size in device pixels. Read once: a window resized after boot
 // is not re-applied.

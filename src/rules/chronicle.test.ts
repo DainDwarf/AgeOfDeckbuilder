@@ -1,4 +1,5 @@
 import { expect, test } from 'vitest';
+import { type CardId, DECK } from './cards';
 import { apply, beginChronicle, type Chronicle, RESOURCES } from './chronicle';
 import { TERRAIN_YIELDS, type Terrain, type TileCoords } from './map';
 import { seedRng } from './rng';
@@ -11,8 +12,8 @@ function distance(a: TileCoords, b: TileCoords): number {
   return (Math.abs(a.q - b.q) + Math.abs(a.r - b.r) + Math.abs(a.q + a.r - (b.q + b.r))) / 2;
 }
 
-/** A city on `inside`, tile by tile, with one plain lying outside the border. */
-function cityOf(inside: Terrain[]): Chronicle {
+/** A city on `inside`, tile by tile, with one plain lying outside the border and no cards. */
+function cityOf(inside: Terrain[], carrying: Partial<Chronicle> = {}): Chronicle {
   const held = inside.map((_, index) => ({ q: index, r: 0 }));
   return {
     seed: 7,
@@ -26,7 +27,15 @@ function cityOf(inside: Terrain[]): Chronicle {
     turn: 1,
     resources: { food: 0, production: 0, military: 0, money: 0, science: 0, culture: 0 },
     population: held.length,
+    drawPile: [],
+    hand: [],
+    discardPile: [],
+    ...carrying,
   };
+}
+
+function everyCard(chronicle: Chronicle): CardId[] {
+  return [...chronicle.drawPile, ...chronicle.hand, ...chronicle.discardPile].sort();
 }
 
 test('the same seed founds the same chronicle', () => {
@@ -106,6 +115,93 @@ test('ending the turn leaves the population alone', () => {
   const city = cityOf(['urban', 'plain', 'water']);
 
   expect(apply(city, { type: 'end-turn' }).population).toBe(city.population);
+});
+
+test('the hand holds five cards on founding, and five again after every turn', () => {
+  let chronicle = beginChronicle(4242);
+  expect(chronicle.hand).toHaveLength(5);
+
+  for (let turn = 0; turn < 6; turn++) {
+    chronicle = apply(chronicle, { type: 'end-turn' });
+    expect(chronicle.hand).toHaveLength(5);
+  }
+});
+
+test('playing a card pays its cost and sends it to the discard pile', () => {
+  const city = cityOf(['urban'], {
+    hand: ['PH_Harvest', 'PH_March'],
+    resources: { food: 0, production: 0, military: 0, money: 0, science: 3, culture: 0 },
+  });
+
+  const after = apply(city, { type: 'play', index: 0 });
+
+  expect(after.hand).toEqual(['PH_March']);
+  expect(after.discardPile).toEqual(['PH_Harvest']);
+  expect(after.resources.science).toBe(2);
+});
+
+test('a card the city cannot pay for stays in the hand and costs nothing', () => {
+  const penniless = cityOf(['urban'], { hand: ['PH_Warrior'] });
+  const halfway = cityOf(['urban'], {
+    hand: ['PH_Farm'],
+    resources: { food: 0, production: 2, military: 0, money: 0, science: 0, culture: 0 },
+  });
+
+  expect(apply(penniless, { type: 'play', index: 0 })).toEqual(penniless);
+  expect(apply(halfway, { type: 'play', index: 0 })).toEqual(halfway);
+});
+
+test('ending the turn discards what is left of the hand', () => {
+  const city = cityOf(['urban'], {
+    hand: ['PH_March', 'PH_Farm'],
+    drawPile: ['PH_Worker', 'PH_Worker', 'PH_Warrior', 'PH_Warrior', 'PH_Harvest'],
+  });
+
+  const after = apply(city, { type: 'end-turn' });
+
+  expect(after.discardPile).toEqual(['PH_March', 'PH_Farm']);
+  expect(after.hand).toEqual(city.drawPile);
+});
+
+test('an emptied draw pile is refilled by shuffling the discard pile into it', () => {
+  const spent = cityOf(['urban'], {
+    discardPile: [
+      'PH_Worker',
+      'PH_Warrior',
+      'PH_Farm',
+      'PH_March',
+      'PH_Harvest',
+      'PH_Worker',
+      'PH_Warrior',
+    ],
+  });
+
+  const after = apply(spent, { type: 'end-turn' });
+
+  expect(after.hand).toHaveLength(5);
+  expect(after.drawPile).toHaveLength(2);
+  expect(after.discardPile).toEqual([]);
+  expect(everyCard(after)).toEqual(everyCard(spent));
+  expect(apply(spent, { type: 'end-turn' }).hand).toEqual(after.hand);
+  expect(apply({ ...spent, rng: seedRng(99) }, { type: 'end-turn' }).hand).not.toEqual(after.hand);
+});
+
+test('a draw with nothing left anywhere draws what there is', () => {
+  const city = cityOf(['urban'], { drawPile: ['PH_March', 'PH_Harvest'] });
+
+  expect(apply(city, { type: 'end-turn' }).hand).toEqual(['PH_March', 'PH_Harvest']);
+});
+
+test('every card of the deck is in exactly one pile through a full cycle', () => {
+  let chronicle = beginChronicle(2026);
+  const deck = everyCard(chronicle);
+  expect(deck).toHaveLength(DECK.length);
+
+  for (let turn = 0; turn < 8; turn++) {
+    chronicle = apply(chronicle, { type: 'play', index: 0 });
+    chronicle = apply(chronicle, { type: 'end-turn' });
+    expect(everyCard(chronicle)).toEqual(deck);
+  }
 });
 
 test('the same command on the same chronicle gives the same chronicle back', () => {

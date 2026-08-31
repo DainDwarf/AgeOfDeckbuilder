@@ -18,6 +18,15 @@ const TEXT = {
     'The inhabitants of your city. Assign them to tiles, or turn them into units.',
   'button.turn': 'Turn {turn}',
   'button.end-turn': 'End turn',
+  'kind.unit': 'Unit',
+  'kind.building': 'Building',
+  'kind.order': 'Order',
+  'kind.action': 'Action',
+  'card.PH_Worker': 'Worker',
+  'card.PH_Warrior': 'Warrior',
+  'card.PH_Farm': 'Farm',
+  'card.PH_March': 'March',
+  'card.PH_Harvest': 'Harvest',
 } as const;
 
 export type TextKey = keyof typeof TEXT;

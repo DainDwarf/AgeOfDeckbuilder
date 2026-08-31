@@ -29,3 +29,16 @@ export function nextRng([a, b, c, d]: Rng): { rng: Rng; value: number } {
     value: (t >>> 0) / 4294967296,
   };
 }
+
+/** Fisher-Yates, in a copy: the same generator and the same items always give the same order. */
+export function shuffle<T>(initial: Rng, items: readonly T[]): { rng: Rng; items: T[] } {
+  let rng = initial;
+  const shuffled = [...items];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const step = nextRng(rng);
+    rng = step.rng;
+    const j = Math.floor(step.value * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return { rng, items: shuffled };
+}

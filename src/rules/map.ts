@@ -1,5 +1,5 @@
 import type { Resources } from './chronicle';
-import { nextRng, type Rng } from './rng';
+import { nextRng, type Rng, shuffle } from './rng';
 
 /** The weighted terrain table each biome scatters over the tiles it grows onto. */
 export const BIOME_TERRAINS = {
@@ -106,13 +106,12 @@ export function generateMap(initial: Rng): { rng: Rng; tiles: Tile[] } {
     edge.push(index);
   };
 
-  const elsewhere = coords.map((_, index) => index).filter((index) => index !== cityIndex);
-  for (let i = elsewhere.length - 1; i > 0; i--) {
-    const step = nextRng(rng);
-    rng = step.rng;
-    const j = Math.floor(step.value * (i + 1));
-    [elsewhere[i], elsewhere[j]] = [elsewhere[j], elsewhere[i]];
-  }
+  const scattered = shuffle(
+    rng,
+    coords.map((_, index) => index).filter((index) => index !== cityIndex),
+  );
+  rng = scattered.rng;
+  const elsewhere = scattered.items;
 
   const biomeCount = Math.max(minBiomes, Math.round(coords.length / tilesPerBiome));
   const dealt: Biome[] = [];

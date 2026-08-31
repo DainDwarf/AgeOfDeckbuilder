@@ -1,12 +1,23 @@
 import Phaser from 'phaser';
-import { apply, type Chronicle } from '../rules/chronicle';
+import { apply, type Chronicle, type Command } from '../rules/chronicle';
 import type { Terrain, TileCoords } from '../rules/map';
-import { addText, applyDesignSpace, DESIGN_HEIGHT, DESIGN_WIDTH, UI_FONT } from './design-space';
-import { createResourceBar, type ResourceBar } from './resource-bar';
+import { CARD_HEIGHT } from './card-face';
+import {
+  ACCENT,
+  addText,
+  applyDesignSpace,
+  DESIGN_HEIGHT,
+  DESIGN_WIDTH,
+  hexagon,
+  MARGIN,
+  UI_FONT,
+} from './design-space';
+import { createHand } from './hand';
+import { createPiles } from './piles';
+import { createResourceBar } from './resource-bar';
 import { text } from './text';
 
 const TILE_SIZE = 24;
-const HELD_GOLD = 0xd9a441;
 
 const TERRAIN_COLOURS: Record<Terrain, number> = {
   plain: 0x7d9c55,
@@ -16,18 +27,7 @@ const TERRAIN_COLOURS: Record<Terrain, number> = {
   urban: 0x8f8f9c,
 };
 
-// Phaser reads a polygon's points in min-(0, 0) space; points about their own centre draw
-// displaced by half the shape.
-function hexagon(size: number): number[] {
-  const raw: number[] = [];
-  for (let corner = 0; corner < 6; corner++) {
-    const angle = (Math.PI / 3) * corner - Math.PI / 6;
-    raw.push(size * Math.cos(angle), size * Math.sin(angle));
-  }
-  const minX = Math.min(...raw.filter((_, i) => i % 2 === 0));
-  const minY = Math.min(...raw.filter((_, i) => i % 2 === 1));
-  return raw.map((value, i) => (i % 2 === 0 ? value - minX : value - minY));
-}
+type Part = { render(chronicle: Chronicle): void };
 
 function positionOf({ q, r }: TileCoords): { x: number; y: number } {
   return {
@@ -49,9 +49,19 @@ export class ChronicleScene extends Phaser.Scene {
 
     this.drawMap();
 
-    const bar = createResourceBar(this);
-    bar.render(this.chronicle);
-    this.addEndTurn(bar);
+    const parts: Part[] = [];
+    const perform = (command: Command): void => {
+      this.chronicle = apply(this.chronicle, command);
+      for (const part of parts) part.render(this.chronicle);
+    };
+
+    parts.push(
+      createResourceBar(this),
+      createPiles(this),
+      createHand(this, (index) => perform({ type: 'play', index })),
+      this.addEndTurn(() => perform({ type: 'end-turn' })),
+    );
+    for (const part of parts) part.render(this.chronicle);
   }
 
   private drawMap(): void {
@@ -67,15 +77,15 @@ export class ChronicleScene extends Phaser.Scene {
     for (const coord of held) {
       const { x, y } = positionOf(coord);
       const isCity = coord.q === city.q && coord.r === city.r;
-      this.add.polygon(x, y, ring, 0, 0).setStrokeStyle(isCity ? 4 : 2, HELD_GOLD);
+      this.add.polygon(x, y, ring, 0, 0).setStrokeStyle(isCity ? 4 : 2, ACCENT);
     }
 
     const { x, y } = positionOf(city);
-    this.add.circle(x, y, 4, HELD_GOLD);
+    this.add.circle(x, y, 4, ACCENT);
   }
 
-  private addEndTurn(bar: ResourceBar): void {
-    const button = this.add.rectangle(0, 0, 1, 1, HELD_GOLD).setDepth(20);
+  private addEndTurn(endTurn: () => void): Part {
+    const button = this.add.rectangle(0, 0, 1, 1, ACCENT).setDepth(20);
     const label = addText(this, 0, 0, '', {
       fontFamily: UI_FONT,
       fontSize: '18px',
@@ -91,16 +101,15 @@ export class ChronicleScene extends Phaser.Scene {
     label.setText(text('button.turn', { turn: 8888 }));
     const width = Math.max(hoveredWidth, label.width) + 56;
     const height = label.height + 24;
-    const x = DESIGN_WIDTH - 24 - width / 2;
-    const y = DESIGN_HEIGHT - 24 - height / 2;
+    const x = DESIGN_WIDTH - MARGIN - width / 2;
+    const y = DESIGN_HEIGHT - (MARGIN + CARD_HEIGHT + 14) - height / 2;
     button.setPosition(x, y).setSize(width, height).setInteractive({ useHandCursor: true });
     label.setPosition(x, y);
 
     let hovered = false;
+    let turn = 1;
     const paint = (): void => {
-      label.setText(
-        hovered ? text('button.end-turn') : text('button.turn', { turn: this.chronicle.turn }),
-      );
+      label.setText(hovered ? text('button.end-turn') : text('button.turn', { turn }));
     };
 
     button.on('pointerover', () => {
@@ -111,12 +120,13 @@ export class ChronicleScene extends Phaser.Scene {
       hovered = false;
       paint();
     });
-    button.on('pointerup', () => {
-      this.chronicle = apply(this.chronicle, { type: 'end-turn' });
-      bar.render(this.chronicle);
-      paint();
-    });
+    button.on('pointerup', endTurn);
 
-    paint();
+    return {
+      render(chronicle: Chronicle): void {
+        turn = chronicle.turn;
+        paint();
+      },
+    };
   }
 }
