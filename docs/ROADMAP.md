@@ -9,8 +9,8 @@ The demo (v0.1.0) carries most if not all of [`DESIGN.md`](DESIGN.md) and covers
 ages: Stone, Bronze, ideally Iron.
 
 - **v0.0.1 — A chronicle that ends in defeat.** Generated hexagonal map, the six-step turn, a
-  hand from a hardcoded stand-in deck, one card of each kind, income, one enemy, capture.
-  Placeholder primitives throughout.
+  hand from a hardcoded stand-in deck, one card of each kind, income, one enemy, capture, the
+  steps after the turn ends staged in visible sequence. Placeholder primitives throughout.
 - **v0.0.2 — A chronicle that ends in victory.** The seeded event schedule and its escalation,
   camps, sight and fog, enemy intents, the capstone on its fixed turn. From here both endings exist, so feel is
   testable early — that is why victory comes second, not fifth.
@@ -23,7 +23,8 @@ ages: Stone, Bronze, ideally Iron.
   unlocking technologies, influence, deck editing, one civilization, save and resume.
 - **v0.0.6 — The look.** Art style locked, real assets, animation, sound, music. After the
   systems — every asset drawn earlier is drawn twice — but before the next age, so content can
-  be polished, not just built.
+  be polished, not just built. Animation here is craft — easing, flourish, idle motion; the
+  staging that makes a turn legible ships with v0.0.1, and only its visuals are redone here.
 - **v0.0.7 — The Bronze age.** The second age end to end: cards, events, capstone, age-victory
   unlocking it. The first age to pass through the full content pipeline — design, implement,
   balance, polish — whose polish stage exists only once the look does.

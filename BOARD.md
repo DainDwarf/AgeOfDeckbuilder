@@ -24,8 +24,10 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 - **The enemy and the fall** — one enemy arrives on a hardcoded turn, declares its intent, moves
   and attacks through the enemy phase, occupies the tile it stands on; player units attack at
   income under the one-attack rule; capture of the city or population at zero ends the chronicle
-  on a defeat screen. Closes v0.0.1: version bump and release note. Doc-impact: `docs/ROADMAP.md`,
-  `CHANGELOG.md`.
+  on a defeat screen. Doc-impact: none.
+- **The turn staged** — every step after the turn ends plays in visible sequence instead of
+  resolving at once: discard, draw, shuffle, income, enemy move and attack. Closes v0.0.1:
+  version bump and release note. Doc-impact: `docs/ROADMAP.md`, `CHANGELOG.md`.
 - **Movable map** — the chronicle scene's camera pans by drag and zooms by wheel, bounded so the
   map cannot leave the frame entirely; text stays crisp at every zoom; the standing e2e passes.
   Doc-impact: none.
