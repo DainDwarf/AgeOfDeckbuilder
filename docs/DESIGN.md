@@ -23,7 +23,7 @@ A **chronicle** is one city's story, told once — the roguelite's unit of play,
 fiction's own word: *Chronicles of the mercantile civilization in the Age of Powder*.
 
 - You found **one city** on a generated **hexagonal map** of varied terrain. Over the chronicle you extend
-  it over tiles, work and terraform them, raise buildings, field units that move, attack and protect,
+  it over tiles, work and terraform them, build buildings, field units that move, attack and protect,
   and deal with the neutrals and enemies on the map.
 - A chronicle spans **one age**, from its dawn to the threshold of the next. Its history is an
   **escalating schedule of events** — enemies, natural disasters, inner turmoil, plus neutral and
@@ -38,7 +38,7 @@ fiction's own word: *Chronicles of the mercantile civilization in the Age of Pow
   garrison defends where it stands, a farm with a person assigned produces — and **changing the
   map costs a card**: marching, building, terraforming, attacking, negotiating.
 - Five core resources: **food, production, military, money, science**. 🔧 Their jobs: food feeds
-  and grows the population; production raises buildings and units and shapes tiles; military pays
+  and grows the population; production builds buildings and units and shapes tiles; military pays
   for military units, orders, actions and fortifications; money trades for other goods and
   accumulates; science pays for manipulating the cards — drawing, discarding and the like.
   **Culture pushes the border out**, and the tiles inside it are the
@@ -133,7 +133,7 @@ Four kinds. Every card has a resource cost, possibly none. Every kind cycles: pl
 discarded, a card goes to the discard pile and comes around again; *gone once played* is a
 keyword some cards carry, not a kind, and the map's gifts are chronicle-only by nature.
 
-- **Building** — raises a building on a tile inside the border where a worker stands. The map is
+- **Building** — builds a building on a tile inside the border where a worker stands. The map is
   the cap: no free tile of the right terrain, no farm — and a building card with nowhere to go
   is a blank draw, which is what keeps a deck from being all buildings. A copy bought in the meta
   makes the deck faster, never the city bigger. Consuming a building card on play was rejected:
@@ -142,7 +142,7 @@ keyword some cards carry, not a kind, and the map's gifts are chronicle-only by 
   become the warrior, the worker, later the trader, and is gone when the unit is killed. Where a
   unit enters is 🔧 until the map is designed.
 - **Order** — does one thing with one unit. The plain order moves it, and what it does on arrival
-  is its nature: a warrior fights what it reaches, a worker is in place to raise a building, a scout sees
+  is its nature: a warrior fights what it reaches, a worker is in place to build a building, a scout sees
   from where it stops. Other orders trade that shape for an edge — twice the move and no attack,
   twice the attack and no move — and are content, not kinds.
 - **Action** — an immediate effect: draw two, gain food, negotiate with a neutral, terraform a
