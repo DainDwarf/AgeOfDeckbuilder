@@ -1,3 +1,4 @@
+import type { Resources } from './chronicle';
 import { nextRng, type Rng } from './rng';
 
 /** The weighted terrain table each biome scatters over the tiles it grows onto. */
@@ -13,6 +14,15 @@ export const CITY_TERRAIN = 'urban';
 export type Terrain =
   | { [B in Biome]: keyof (typeof BIOME_TERRAINS)[B] }[Biome]
   | typeof CITY_TERRAIN;
+
+/** What one tile of each terrain yields at income. */
+export const TERRAIN_YIELDS: Record<Terrain, Partial<Resources>> = {
+  plain: { food: 2 },
+  forest: { food: 1, production: 1 },
+  hills: { production: 2 },
+  water: { food: 1, money: 1 },
+  urban: { production: 1, money: 1, science: 1, culture: 1 },
+};
 
 /** How many biomes the map is cut into, and which kinds they are dealt. */
 export const MAP_COMPOSITION = {

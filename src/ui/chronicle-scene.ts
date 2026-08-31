@@ -1,7 +1,9 @@
 import Phaser from 'phaser';
-import type { Chronicle } from '../rules/chronicle';
+import { apply, type Chronicle } from '../rules/chronicle';
 import type { Terrain, TileCoords } from '../rules/map';
-import { applyDesignSpace, DESIGN_HEIGHT, DESIGN_WIDTH } from './design-space';
+import { addText, applyDesignSpace, DESIGN_HEIGHT, DESIGN_WIDTH, UI_FONT } from './design-space';
+import { createResourceBar, type ResourceBar } from './resource-bar';
+import { text } from './text';
 
 const TILE_SIZE = 24;
 const HELD_GOLD = 0xd9a441;
@@ -35,7 +37,7 @@ function positionOf({ q, r }: TileCoords): { x: number; y: number } {
 }
 
 export class ChronicleScene extends Phaser.Scene {
-  private readonly chronicle: Chronicle;
+  private chronicle: Chronicle;
 
   constructor(chronicle: Chronicle) {
     super('chronicle');
@@ -45,6 +47,14 @@ export class ChronicleScene extends Phaser.Scene {
   create(): void {
     applyDesignSpace(this);
 
+    this.drawMap();
+
+    const bar = createResourceBar(this);
+    bar.render(this.chronicle);
+    this.addEndTurn(bar);
+  }
+
+  private drawMap(): void {
     const { tiles, city, held } = this.chronicle;
 
     const face = hexagon(TILE_SIZE);
@@ -62,5 +72,29 @@ export class ChronicleScene extends Phaser.Scene {
 
     const { x, y } = positionOf(city);
     this.add.circle(x, y, 4, HELD_GOLD);
+  }
+
+  private addEndTurn(bar: ResourceBar): void {
+    const button = this.add.rectangle(0, 0, 1, 1, HELD_GOLD).setDepth(20);
+    const label = addText(this, 0, 0, text('button.end-turn'), {
+      fontFamily: UI_FONT,
+      fontSize: '18px',
+      fontStyle: 'bold',
+      color: '#0d1014',
+    })
+      .setOrigin(0.5, 0.5)
+      .setDepth(21);
+
+    const width = label.width + 56;
+    const height = label.height + 24;
+    const x = DESIGN_WIDTH - 24 - width / 2;
+    const y = DESIGN_HEIGHT - 24 - height / 2;
+    button.setPosition(x, y).setSize(width, height).setInteractive({ useHandCursor: true });
+    label.setPosition(x, y);
+
+    button.on('pointerup', () => {
+      this.chronicle = apply(this.chronicle, { type: 'end-turn' });
+      bar.render(this.chronicle);
+    });
   }
 }

@@ -3,6 +3,8 @@ import type Phaser from 'phaser';
 export const DESIGN_WIDTH = 1280;
 export const DESIGN_HEIGHT = 720;
 
+export const UI_FONT = 'system-ui, "Segoe UI", sans-serif';
+
 // `Phaser.Scale.FIT` in main.ts fits the canvas by this same min, which is what makes the backing
 // store equal the canvas's on-screen size in device pixels. Read once: a window resized after boot
 // is not re-applied.

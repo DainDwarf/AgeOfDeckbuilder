@@ -12,10 +12,6 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
-- **Turn skeleton and income** — the six-step turn runs as a pure sequence over chronicle state,
-  events and enemy phase empty for now; resource panel and end-turn on screen; at income every
-  tile inside the border yields as if worked (stand-in until assignment, v0.0.3). Doc-impact:
-  none.
 - **Deck and hand** — the hardcoded stand-in deck: draw five, pay resource costs to play, discard
   the rest at end, shuffle the discard pile into an empty draw pile; hand rendered, unaffordable
   cards unplayable. Doc-impact: none.

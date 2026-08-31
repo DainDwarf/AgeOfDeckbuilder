@@ -17,6 +17,9 @@ few, and gets no elaboration until `/intake` promotes it to a [`BOARD.md`](BOARD
   first content catalogue.
 - **Fleet-lite**: two or three sessions working parallel board lines on `main`, each claiming its
   line. Skipped for now — the bottleneck is design attention, not implementation throughput.
+- **e2e `reuseExistingServer`**: `playwright.config.ts` reuses a dev server already on port 5173,
+  so one left running from earlier work serves stale modules and fails (or falsely passes) the
+  suite; decide whether the flag stays.
 - **The render factor can change after boot**: regrow the bitmap, re-zoom cameras, re-rasterize
   text while the game runs. Four consumers: itch.io's fullscreen button, a settings render-scale
   slider, monitor-hopping, resizing the window after boot. Decide after the art style locks —
@@ -24,4 +27,6 @@ few, and gets no elaboration until `/intake` promotes it to a [`BOARD.md`](BOARD
 
 ## Game
 
-*(empty — the game is not designed yet)*
+- **Per-tile yield overlay**: "+x +y" glyphs on each tile showing what it yields, toggleable
+  because the information saturates; clicking a resource on the top bar filters the overlay to
+  that resource alone. Becomes truly informative once assignment exists (v0.0.3).
