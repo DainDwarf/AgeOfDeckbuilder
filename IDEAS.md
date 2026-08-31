@@ -17,13 +17,6 @@ few, and gets no elaboration until `/intake` promotes it to a [`BOARD.md`](BOARD
   first content catalogue.
 - **Fleet-lite**: two or three sessions working parallel board lines on `main`, each claiming its
   line. Skipped for now — the bottleneck is design attention, not implementation throughput.
-- **Boot spec can double-boot the game**: the e2e's `import('/src/main.ts')` is a different module
-  URL from the page's once Vite has hot-updated, so the entry evaluates twice and a second
-  `Phaser.Game` and canvas appear; either the spec stops importing the entry, or `main.ts` stops
-  booting on import; kin to the `reuseExistingServer` entry below.
-- **e2e `reuseExistingServer`**: `playwright.config.ts` reuses a dev server already on port 5173,
-  so one left running from earlier work serves stale modules and fails (or falsely passes) the
-  suite; decide whether the flag stays.
 - **The render factor can change after boot**: regrow the bitmap, re-zoom cameras, re-rasterize
   text while the game runs. Four consumers: itch.io's fullscreen button, a settings render-scale
   slider, monitor-hopping, resizing the window after boot. Decide after the art style locks —

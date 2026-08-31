@@ -6,5 +6,5 @@ export default defineConfig({
   testDir: 'e2e',
   use: { ...devices['Desktop Chrome'], baseURL: url },
   reporter: 'list',
-  webServer: { command: 'npm run dev', url, reuseExistingServer: true },
+  webServer: { command: 'npm run dev', url },
 });
