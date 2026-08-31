@@ -11,3 +11,25 @@ hazards, plan — written once, on the settled state, and deleted with the line.
 Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [task file]`
 
 ---
+
+- **Generated map** — from the chronicle seed, `src/rules` generates the map of stand-in
+  terrains with the city on its tile and the six tiles inside its starting border; the UI renders
+  the tiles as placeholder hexagons; same seed, same map, proven by test. Doc-impact: none.
+- **Turn skeleton and income** — the six-step turn runs as a pure sequence over chronicle state,
+  events and enemy phase empty for now; resource panel and end-turn on screen; at income every
+  tile inside the border yields as if worked (stand-in until assignment, v0.0.3). Doc-impact:
+  none.
+- **Deck and hand** — the hardcoded stand-in deck: draw five, pay resource costs to play, discard
+  the rest at end, shuffle the discard pile into an empty draw pile; hand rendered, unaffordable
+  cards unplayable. Doc-impact: none.
+- **Unit and order** — the unit cards (worker and warrior) each turn one population into a unit
+  on the city's tile; the plain order moves a unit and its nature acts on arrival; proven by test
+  and playable on screen. Doc-impact: none.
+- **Building and action** — the building card raises its building on a tile inside the border
+  where a worker stands; the action card does one immediate effect; all four kinds playable end
+  to end. Doc-impact: none.
+- **The enemy and the fall** — one enemy arrives on a hardcoded turn, declares its intent, moves
+  and attacks through the enemy phase, occupies the tile it stands on; player units attack at
+  income under the one-attack rule; capture of the city or population at zero ends the chronicle
+  on a defeat screen. Closes v0.0.1: version bump and release note. Doc-impact: `docs/ROADMAP.md`,
+  `CHANGELOG.md`.

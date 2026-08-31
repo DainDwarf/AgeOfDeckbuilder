@@ -12,7 +12,7 @@ ages: Stone, Bronze, ideally Iron.
   hand from a hardcoded stand-in deck, one card of each kind, income, one enemy, capture.
   Placeholder primitives throughout.
 - **v0.0.2 — A chronicle that ends in victory.** The seeded event schedule and its escalation,
-  camps, enemy intents, the capstone on its fixed turn. From here both endings exist, so feel is
+  camps, sight and fog, enemy intents, the capstone on its fixed turn. From here both endings exist, so feel is
   testable early — that is why victory comes second, not fifth.
 - **v0.0.3 — The city is a city.** Population that eats and grows, claiming with culture,
   assignment, improvements and terraforming, the full map-layer model.
