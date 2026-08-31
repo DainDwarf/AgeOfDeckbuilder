@@ -10,6 +10,9 @@ const PANEL_EDGE = 0x6f757d;
 const WORD_STYLE = { fontFamily: UI_FONT, fontSize: '18px', color: '#4a5058' };
 const VALUE_STYLE = { fontFamily: UI_FONT, fontSize: '18px', color: '#0d1014' };
 
+const TAIL_HEIGHT = 7;
+const TAIL_HALF = 6;
+
 const CHIP_TO_WORD = 18;
 const WORD_TO_VALUE = 8;
 const BETWEEN = 22;
@@ -79,7 +82,7 @@ function createEntry(
   const word = addText(scene, 0, 0, text(`label.${key}`), WORD_STYLE).setOrigin(0, 0.5);
   const value = addText(scene, 0, 0, '', VALUE_STYLE).setOrigin(0, 0.5);
   const hover = scene.add.zone(0, 0, 1, BAR_HEIGHT).setOrigin(0, 0).setInteractive();
-  hover.on('pointerover', () => tooltip.show(key, hover.x));
+  hover.on('pointerover', () => tooltip.show(key, hover.x, hover.x + hover.width / 2));
   hover.on('pointerout', () => tooltip.hide());
   bar.add([chip, word, value, hover]);
   return { key, chip, word, value, hover };
@@ -113,26 +116,51 @@ function readingOf(chronicle: Chronicle, key: Reading): number {
   return key === 'population' ? chronicle.population : chronicle.resources[key];
 }
 
-type Tooltip = { show(key: Reading, x: number): void; hide(): void };
+type Tooltip = { show(key: Reading, x: number, centre: number): void; hide(): void };
 
 function createTooltip(scene: Phaser.Scene): Tooltip {
-  const box = scene.add
-    .rectangle(0, 0, 1, 1, PANEL_FILL)
-    .setOrigin(0, 0)
-    .setStrokeStyle(1, PANEL_EDGE);
+  const bubble = scene.add.graphics();
   const label = addText(scene, 10, 7, '', { ...VALUE_STYLE, fontSize: '14px' });
-  const tooltip = scene.add.container(0, 0, [box, label]).setDepth(30).setVisible(false);
+  const tooltip = scene.add.container(0, 0, [bubble, label]).setDepth(30).setVisible(false);
 
   return {
-    show(key: Reading, x: number): void {
+    show(key: Reading, x: number, centre: number): void {
       label.setText(text(`tooltip.${key}`));
-      box.setSize(label.width + 20, label.height + 14);
-      tooltip
-        .setPosition(Math.min(x, DESIGN_WIDTH - MARGIN - box.width), BAR_HEIGHT + 8)
-        .setVisible(true);
+      const width = label.width + 20;
+      const left = Math.min(x, DESIGN_WIDTH - MARGIN - width);
+      drawBubble(bubble, width, label.height + 14, centre - left);
+      tooltip.setPosition(left, BAR_HEIGHT + 8).setVisible(true);
     },
     hide(): void {
       tooltip.setVisible(false);
     },
   };
+}
+
+/**
+ * The box and its tail as one closed path, so the fill is continuous and the stroke never crosses
+ * the seam. The tail rises into the gap above the box, and stays clear of both corners.
+ */
+function drawBubble(
+  bubble: Phaser.GameObjects.Graphics,
+  width: number,
+  height: number,
+  at: number,
+): void {
+  const tip = Math.min(Math.max(at, TAIL_HALF + 4), width - TAIL_HALF - 4);
+
+  bubble.clear();
+  bubble.fillStyle(PANEL_FILL);
+  bubble.lineStyle(1, PANEL_EDGE);
+  bubble.beginPath();
+  bubble.moveTo(0, 0);
+  bubble.lineTo(tip - TAIL_HALF, 0);
+  bubble.lineTo(tip, -TAIL_HEIGHT);
+  bubble.lineTo(tip + TAIL_HALF, 0);
+  bubble.lineTo(width, 0);
+  bubble.lineTo(width, height);
+  bubble.lineTo(0, height);
+  bubble.closePath();
+  bubble.fillPath();
+  bubble.strokePath();
 }
