@@ -77,7 +77,7 @@ Two axes of progression:
 ### Presentation 🔧
 
 Real graphics, animation and idle animation, sound and music are the end goal — not the first
-build, but the stack is chosen with them in mind.
+release, but the stack is chosen with them in mind.
 
 ## Scope ✅
 

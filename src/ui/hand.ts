@@ -8,7 +8,7 @@ import { DESIGN_HEIGHT, DESIGN_WIDTH, MARGIN } from './design-space';
 const LANE_PAD = 28;
 const GAP = 12;
 const FAN = 0.5;
-const RAISE = 32;
+const LIFT = 32;
 
 /** How far up a card has to come out of the hand before releasing it plays it. */
 const PLAY_HEIGHT = 110;
@@ -52,7 +52,7 @@ export function createHand(
   let dragged: Drag | undefined;
 
   const restingY = (slot: Slot): number =>
-    slot.home.y - (slot.hovered && slot.affordable ? RAISE : 0);
+    slot.home.y - (slot.hovered && slot.affordable ? LIFT : 0);
 
   const settle = (slot: Slot, duration: number): void => {
     scene.tweens.killTweensOf(slot.face.root);

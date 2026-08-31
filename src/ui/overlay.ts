@@ -9,7 +9,7 @@ import { text } from './text';
 const SCRIM = 0x0d1014;
 const SCRIM_ALPHA = 0.82;
 
-/** Above the tooltip, the end-turn button and every raised hand card. */
+/** Above the tooltip, the end-turn button and every lifted hand card. */
 const DEPTH = 100;
 
 const TITLE_INK = '#d4d7db';
