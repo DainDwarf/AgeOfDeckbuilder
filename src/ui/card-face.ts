@@ -18,8 +18,8 @@ function metricsOf(width: number): {
   return { height: Math.round(width * 1.4), em, pad: 0.55 * em, radius: 0.45 * em };
 }
 
-const TABLE = metricsOf(CARD_WIDTH);
-export const CARD_HEIGHT = TABLE.height;
+const ON_TABLE = metricsOf(CARD_WIDTH);
+export const CARD_HEIGHT = ON_TABLE.height;
 
 const EDGE = 0x6f757d;
 const KIND_INK = 0x4a5058;
@@ -43,8 +43,7 @@ export function createCardFace(
   scene: Phaser.Scene,
   id: CardId,
   unaffordable: readonly Resource[],
-  faded = false,
-  width = CARD_WIDTH,
+  { faded = false, width = CARD_WIDTH }: { faded?: boolean; width?: number } = {},
 ): CardFace {
   const { height, em, pad, radius } = metricsOf(width);
   const tone = faded ? dim : (colour: number): number => colour;
@@ -135,14 +134,14 @@ export function createCardBack(scene: Phaser.Scene, faded = false): Phaser.GameO
   const tone = faded ? dim : (colour: number): number => colour;
   const paper = scene.add.graphics();
   paper.fillStyle(tone(BACK));
-  paper.fillRoundedRect(-CARD_WIDTH / 2, -CARD_HEIGHT, CARD_WIDTH, CARD_HEIGHT, TABLE.radius);
+  paper.fillRoundedRect(-CARD_WIDTH / 2, -CARD_HEIGHT, CARD_WIDTH, CARD_HEIGHT, ON_TABLE.radius);
   paper.lineStyle(1, tone(EDGE));
   paper.strokeRoundedRect(
     -CARD_WIDTH / 2 + 0.5,
     -CARD_HEIGHT + 0.5,
     CARD_WIDTH - 1,
     CARD_HEIGHT - 1,
-    TABLE.radius,
+    ON_TABLE.radius,
   );
 
   const emblem = scene.add
@@ -163,7 +162,7 @@ export function createEmptySlot(scene: Phaser.Scene): Phaser.GameObjects.Contain
 /** The card's outline as a closed polyline, corner arcs sampled into short chords. */
 function cardOutline(): { x: number; y: number }[] {
   const half = CARD_WIDTH / 2;
-  const r = TABLE.radius;
+  const r = ON_TABLE.radius;
   const points: { x: number; y: number }[] = [];
   const corner = (cx: number, cy: number, from: number): void => {
     for (let i = 0; i <= 6; i++) {

@@ -55,7 +55,7 @@ export function createOverlay(scene: Phaser.Scene): Overlay {
     wipe();
     scrim.setVisible(true).setInteractive();
     zoomed = true;
-    const { root } = createCardFace(scene, id, unaffordable, false, ZOOM_WIDTH);
+    const { root } = createCardFace(scene, id, unaffordable, { width: ZOOM_WIDTH });
     root
       .setPosition(DESIGN_WIDTH / 2, (DESIGN_HEIGHT + Math.round(ZOOM_WIDTH * 1.4)) / 2)
       .setDepth(DEPTH + 1);
@@ -94,7 +94,7 @@ export function createOverlay(scene: Phaser.Scene): Overlay {
       const column = index % columns;
       const inRow = Math.min(columns, cards.length - row * columns);
       const spanX = inRow * BROWSE_WIDTH + (inRow - 1) * BROWSE_GAP;
-      const { root } = createCardFace(scene, id, [], false, BROWSE_WIDTH);
+      const { root } = createCardFace(scene, id, [], { width: BROWSE_WIDTH });
       root
         .setPosition(
           (DESIGN_WIDTH - spanX) / 2 + column * (BROWSE_WIDTH + BROWSE_GAP) + BROWSE_WIDTH / 2,

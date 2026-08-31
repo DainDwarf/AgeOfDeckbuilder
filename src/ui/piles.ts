@@ -33,7 +33,9 @@ export function createPiles(scene: Phaser.Scene, browse: (pile: PileKind) => voi
 
       const top = chronicle.discardPile[chronicle.discardPile.length - 1];
       discarded.show(
-        top === undefined ? createEmptySlot(scene) : createCardFace(scene, top, [], true).root,
+        top === undefined
+          ? createEmptySlot(scene)
+          : createCardFace(scene, top, [], { faded: true }).root,
         chronicle.discardPile.length,
       );
     },
