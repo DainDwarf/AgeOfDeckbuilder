@@ -1,6 +1,10 @@
 import Phaser from 'phaser';
-import { BootScene } from './ui/boot-scene';
+import { beginChronicle } from './rules/chronicle';
+import { ChronicleScene } from './ui/chronicle-scene';
 import { BACKING_HEIGHT, BACKING_WIDTH } from './ui/design-space';
+
+// The one place entropy enters the game: `src/rules/` draws only from the seed it is handed.
+const chronicle = beginChronicle((Math.random() * 2 ** 32) | 0);
 
 export const game = new Phaser.Game({
   type: Phaser.AUTO,
@@ -8,5 +12,5 @@ export const game = new Phaser.Game({
   height: BACKING_HEIGHT,
   backgroundColor: '#0d1117',
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
-  scene: [BootScene],
+  scene: [new ChronicleScene(chronicle)],
 });

@@ -24,7 +24,7 @@ deliberate exception the reviewer sees; there is no silent allow-list.
 | **city** | A settlement on the map; the player owns exactly one — *the* city, what a chronicle is about. | town, capital, base, settlement |
 | **map** | The hexagonal grid a chronicle is played on. | board, world, grid |
 | **tile** | One hexagon of the map, of one terrain. | hex, cell, square, territory |
-| **region** | The launch choice that biases map generation; the difficulty dial. | site, biome, location, start |
+| **region** | The launch choice that biases map generation; the difficulty dial. | site, location, start |
 | **unit** | A mobile piece on the map, the player's or not. | army, troop, piece, token |
 | **building** | A standing structure on a tile; one slot per tile. | structure |
 | **neutral** | A non-player unit that does not attack. | NPC, city-state, friendly |
@@ -53,7 +53,8 @@ deliberate exception the reviewer sees; there is no silent allow-list.
 | **worker** | A non-fighting unit that transforms tiles: raises buildings, terraforms, lays roads. | builder, engineer, labourer |
 | **population** | The city's inhabitants: assigned to tiles for income, turned into units by unit cards. | citizens, workforce, pops |
 | **assign** | To put one population on a tile inside the border; free, instant, reversible. | allocate |
-| **terrain** | A tile's base layer: plain, forest, hills, …; one per tile, changed only by terraforming. | tile type, biome |
+| **biome** | A stretch of map the generator grows as one kind — land, sea, … — weighting the terrain of each tile in it. | patch, zone, area, ecosystem |
+| **terrain** | A tile's base layer: plain, forest, hills, …; one per tile, changed only by terraforming. | tile type |
 | **feature** | A generated extra on a tile: a fertile plain, a river. | bonus |
 | **improvement** | A layer a worker lays on a tile through an action; distinct ones stack, the same one never twice. | — |
 | **claim** | To spend culture on a tile adjacent to one the city owns; free of cards. | buy, purchase, expand, annex |

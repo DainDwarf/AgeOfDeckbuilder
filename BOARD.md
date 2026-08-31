@@ -12,10 +12,6 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
-- **Generated map** — from the chronicle seed, `src/rules` generates the map in two layers
-  (region patches, then a per-region terrain scatter) with the city on its tile and the six tiles
-  inside its starting border; the UI renders the tiles as placeholder hexagons; same seed, same
-  map, proven by test. Doc-impact: `docs/DESIGN.md` (the two-layer generator).
 - **Turn skeleton and income** — the six-step turn runs as a pure sequence over chronicle state,
   events and enemy phase empty for now; resource panel and end-turn on screen; at income every
   tile inside the border yields as if worked (stand-in until assignment, v0.0.3). Doc-impact:

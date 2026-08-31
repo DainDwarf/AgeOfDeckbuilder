@@ -170,6 +170,18 @@ A tile is layers, and its income, movement cost and sight are the sum of what it
 🔧 A building's yield may read its neighbours. Nothing in the first playable does; the door
 is there so that adjacency is content when it comes.
 
+**The map is generated in two layers.** It is a hexagonal disc with the city's tile at its centre.
+First the **biomes**: origin tiles scattered over the disc grow outward until every tile belongs to
+one biome — land, sea, and whatever the list comes to hold. Their kinds are **dealt** as quotas
+rather than diced one by one, because independent dice can deal a map with no sea at all; the
+city's biome is dealt land, and its origin is the city's tile. Second, the **terrain scatter**:
+every tile draws its terrain from the weighted table of its biome, so a sea biome is water with
+the odd island in it and a land one is mixed. The city's tile is then **urban**, a terrain that
+today enters the map only where the city stands.
+
+Biomes and their tables are content, like the terrain list: they grow without a design decision,
+and the numbers in them are tuning.
+
 The city stands on one tile and owns the six around it. The player **claims** any tile adjacent
 to one the city owns by spending culture; claiming is free of cards, like assigning, and its
 cost rises with the tiles owned, in steps. There is no limit to how far the border reaches. A
