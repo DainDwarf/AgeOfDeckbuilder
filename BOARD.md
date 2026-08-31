@@ -27,6 +27,9 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 - **The turn staged** — every step after the turn ends plays in visible sequence instead of
   resolving at once: discard, draw, shuffle, income, enemy move and attack. Closes v0.0.1:
   version bump and release note. Doc-impact: `docs/ROADMAP.md`, `CHANGELOG.md`.
+- **The card face** — the card's design style is settled with the user and implemented: name and
+  cost both legible at hand size, art boxes equal height on every card, and the settled anatomy
+  recorded. Doc-impact: `docs/DESIGN.md`.
 - **Movable map** — the chronicle scene's camera pans by drag and zooms by wheel, bounded so the
   map cannot leave the frame entirely; text stays crisp at every zoom; the standing e2e passes.
   Doc-impact: none.
