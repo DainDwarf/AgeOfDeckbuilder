@@ -6,6 +6,10 @@ Paraphrase and synonyms are defects: *remove* is never *destroy*, *sacrifice* or
 *remove* is the term. A concept that has no term here has no term yet; adding one is a design
 decision made with the user, not a choice an implementer makes in passing.
 
+The vocabulary covers player-facing terms and the code that represents and manipulates those
+player-facing objects; development internals (the machinery under the game, such as `apply`'s
+command) are outside it.
+
 Each row lists the forbidden near-synonyms so the review and the lint hook can catch them.
 Prose that must mention a forbidden word for another reason (a card *named* "Sacrifice") is a
 deliberate exception the reviewer sees; there is no silent allow-list.
@@ -48,7 +52,7 @@ deliberate exception the reviewer sees; there is no silent allow-list.
 | **intent** | The attack an enemy declares one turn before executing it. | telegraph |
 | **sight** | The tiles the city and its units currently see. | vision, line of sight |
 | **fog** | Every tile outside sight; known terrain, unknown occupants. | fog of war, unexplored |
-| **order** | A card that does one thing with one unit; the plain order moves it, and its nature acts on arrival. | command, move card |
+| **order** | A card that does one thing with one unit; the plain order moves it, and its nature acts on arrival. | move card |
 | **action** | A card with an immediate effect. | spell, effect card |
 | **worker** | A non-fighting unit that transforms tiles: raises buildings, terraforms, lays roads. | builder, engineer, labourer |
 | **population** | The city's inhabitants: assigned to tiles for income, turned into units by unit cards. | citizens, workforce, pops |
