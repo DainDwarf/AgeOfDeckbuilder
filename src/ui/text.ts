@@ -22,11 +22,11 @@ const TEXT = {
   'kind.building': 'Building',
   'kind.order': 'Order',
   'kind.action': 'Action',
-  'card.PH_Worker': 'Worker',
-  'card.PH_Warrior': 'Warrior',
-  'card.PH_Farm': 'Farm',
-  'card.PH_March': 'March',
-  'card.PH_Harvest': 'Harvest',
+  'card.PH_Worker': 'PH_Worker',
+  'card.PH_Warrior': 'PH_Warrior',
+  'card.PH_Farm': 'PH_Farm',
+  'card.PH_March': 'PH_March',
+  'card.PH_Harvest': 'PH_Harvest',
 } as const;
 
 export type TextKey = keyof typeof TEXT;
