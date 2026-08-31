@@ -29,3 +29,11 @@ a [`BOARD.md`](BOARD.md) line. Say
 - **Per-tile yield overlay**: "+x +y" glyphs on each tile showing what it yields, toggleable
   because the information saturates; clicking a resource on the top bar filters the overlay to
   that resource alone. Becomes truly informative once assignment exists (v0.0.3).
+- **Colour ledger** (art-style pass scope): every UI colour resolves through one theme lookup,
+  so an alternate theme — colour-blind-friendly included — becomes content, not surgery.
+- **Colour never carries gameplay meaning alone** (art-style pass scope): resource chips and
+  anything gameplay-critical get shape/glyph redundancy, fixing colour-blindness in every theme
+  at once — including the default.
+- **Type-size floor, verified small** (art-style pass scope): minimum type sizes generous enough
+  that the smallest window we care about stays readable; ui-check verifies at that size. Uniform
+  window scaling plus card zoom covers the rest — no UI-scale slider unless playtesting demands it.
