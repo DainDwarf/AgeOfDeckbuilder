@@ -15,7 +15,7 @@ ages: Stone, Bronze, ideally Iron.
   camps, sight and fog, enemy intents, the capstone on its fixed turn. From here both endings exist, so feel is
   testable early — that is why victory comes second, not fifth.
 - **v0.0.3 — The city is a city.** Population that eats and grows, claiming with culture,
-  assignment, improvements and terraforming, the full map-layer model.
+  assignment, improvements and terraforming, the full map-layer model, rivers.
 - **v0.0.4 — The deck is data.** Cards become a content catalogue instead of hardcoded
   stand-ins — the deferred dogmas return with it — plus the map's gifts. First real content: the
   Stone age's cards, with provisional numbers at last.

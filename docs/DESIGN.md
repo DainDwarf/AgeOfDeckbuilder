@@ -182,6 +182,10 @@ today enters the map only where the city stands.
 Biomes and their tables are content, like the terrain list: they grow without a design decision,
 and the numbers in them are tuning.
 
+🔧 **Rivers** are generated with flow: each rises in a high biome — hills, a mountain range — and
+runs downhill until it reaches sea. The stated default makes a river a tile feature; a river
+running along the edges between tiles is the alternative to weigh when rivers are built.
+
 The city stands on one tile and owns the six around it. The player **claims** any tile adjacent
 to one the city owns by spending culture; claiming is free of cards, like assigning, and its
 cost rises with the tiles owned, in steps. There is no limit to how far the border reaches. A
