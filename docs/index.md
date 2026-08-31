@@ -12,6 +12,8 @@ shorter than what it holds.
   the `egress-reviewer` check against it.
 - [`GLOSSARY.md`](GLOSSARY.md) — the closed vocabulary of gameplay terms and the synonyms each
   one forbids.
+- [`ROADMAP.md`](ROADMAP.md) — the ladder of deliverables to the playable demo (v0.1.0),
+  consulted when the board is empty. Written in sand, never a promise.
 
 Domain pages (standing knowledge of the genre, the platform, the audience — each claim naming its
 source) are added here when there is a domain to describe.
