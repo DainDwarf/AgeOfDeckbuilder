@@ -15,12 +15,12 @@ const RADIUS = 0.45 * EM;
 
 const EDGE = 0x6f757d;
 const KIND_INK = 0x4a5058;
-const SHORT = 0xc0392b;
+const UNAFFORDABLE_MARK = 0xc0392b;
 const BACK = 0x232833;
 const EMPTY_EDGE = 0x4a5058;
 
-const PAYABLE = { face: 0xd4d7db, art: 0xb6bbc2, artEdge: 0x9aa0a8, ink: 0x0d1014 };
-const SHORT_OF = { face: 0xa7abb1, art: 0x8f959c, artEdge: 0x7c828a, ink: 0x3a3f45 };
+const AFFORDABLE = { face: 0xd4d7db, art: 0xb6bbc2, artEdge: 0x9aa0a8, ink: 0x0d1014 };
+const UNAFFORDABLE = { face: 0xa7abb1, art: 0x8f959c, artEdge: 0x7c828a, ink: 0x3a3f45 };
 
 export type CardFace = {
   readonly root: Phaser.GameObjects.Container;
@@ -29,16 +29,16 @@ export type CardFace = {
 
 /**
  * A card, drawn about its own bottom centre so a container's angle fans it from that corner.
- * `short` names the costs the city cannot pay; a card with any is drawn as the one it cannot play.
+ * `unaffordable` names the costs the city cannot afford; a card with any is drawn as unplayable.
  */
 export function createCardFace(
   scene: Phaser.Scene,
   id: CardId,
-  short: readonly Resource[],
+  unaffordable: readonly Resource[],
   faded = false,
 ): CardFace {
   const tone = faded ? dim : (colour: number): number => colour;
-  const palette = short.length > 0 ? SHORT_OF : PAYABLE;
+  const palette = unaffordable.length > 0 ? UNAFFORDABLE : AFFORDABLE;
 
   const left = -CARD_WIDTH / 2 + 1 + PAD;
   const right = CARD_WIDTH / 2 - 1 - PAD;
@@ -61,15 +61,15 @@ export function createCardFace(
   const middle = top + 0.55 * EM;
   let x = left;
   for (const { resource, amount } of costOf(id)) {
-    const lacking = short.includes(resource);
+    const marked = unaffordable.includes(resource);
     const chip = scene.add
       .rectangle(x + 0.4 * EM, middle, 0.8 * EM, 0.8 * EM, tone(RESOURCE_COLOURS[resource]))
       .setAngle(45);
     root.add(chip);
-    if (lacking) {
+    if (marked) {
       const ring = scene.add
         .rectangle(x + 0.4 * EM, middle, 0.8 * EM + 6, 0.8 * EM + 6)
-        .setStrokeStyle(2, tone(SHORT))
+        .setStrokeStyle(2, tone(UNAFFORDABLE_MARK))
         .setAngle(45);
       root.add(ring);
     }
@@ -77,7 +77,7 @@ export function createCardFace(
       fontFamily: UI_FONT,
       fontSize: `${EM}px`,
       fontStyle: 'bold',
-      color: css(tone(lacking ? SHORT : palette.ink)),
+      color: css(tone(marked ? UNAFFORDABLE_MARK : palette.ink)),
     }).setOrigin(0, 0.5);
     root.add(value);
     x = value.x + value.width + 0.35 * EM;

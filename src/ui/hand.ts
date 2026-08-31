@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { type Chronicle, unpayable } from '../rules/chronicle';
+import { type Chronicle, unaffordable } from '../rules/chronicle';
 import { CARD_HEIGHT, CARD_WIDTH, type CardFace, createCardFace } from './card-face';
 import { DESIGN_HEIGHT, DESIGN_WIDTH, MARGIN } from './design-space';
 
@@ -19,7 +19,7 @@ type Slot = {
   readonly face: CardFace;
   readonly index: number;
   readonly home: { x: number; y: number };
-  readonly payable: boolean;
+  readonly affordable: boolean;
   hovered: boolean;
 };
 
@@ -44,7 +44,8 @@ export function createHand(scene: Phaser.Scene, play: (index: number) => void): 
   let slots: Slot[] = [];
   let dragged: Drag | undefined;
 
-  const restingY = (slot: Slot): number => slot.home.y - (slot.hovered && slot.payable ? RAISE : 0);
+  const restingY = (slot: Slot): number =>
+    slot.home.y - (slot.hovered && slot.affordable ? RAISE : 0);
 
   const settle = (slot: Slot, duration: number): void => {
     scene.tweens.killTweensOf(slot.face.root);
@@ -68,9 +69,9 @@ export function createHand(scene: Phaser.Scene, play: (index: number) => void): 
     const away = { x: pointer.worldX - grabbed.x, y: pointer.worldY - grabbed.y };
     dragged.moved = Math.max(dragged.moved, Math.abs(away.x) + Math.abs(away.y));
 
-    const budge = slot.payable ? 1 : 0.1;
+    const budge = slot.affordable ? 1 : 0.1;
     slot.face.root.setPosition(lifted.x + away.x * budge, lifted.y + away.y * budge);
-    slot.face.arm(slot.payable && -away.y > PLAY_HEIGHT);
+    slot.face.arm(slot.affordable && -away.y > PLAY_HEIGHT);
   });
 
   scene.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
@@ -79,7 +80,7 @@ export function createHand(scene: Phaser.Scene, play: (index: number) => void): 
     dragged = undefined;
     slot.face.arm(false);
 
-    if (slot.payable && moved >= CLICK_SLACK && grabbed.y - pointer.worldY > PLAY_HEIGHT) {
+    if (slot.affordable && moved >= CLICK_SLACK && grabbed.y - pointer.worldY > PLAY_HEIGHT) {
       play(slot.index);
       return;
     }
@@ -97,16 +98,15 @@ export function createHand(scene: Phaser.Scene, play: (index: number) => void): 
       const first = laneLeft + (laneWidth - (CARD_WIDTH + (held - 1) * advance)) / 2;
 
       slots = chronicle.hand.map((id, index) => {
-        const short = unpayable(chronicle, id);
         const off = index - (held - 1) / 2;
         const slot: Slot = {
-          face: createCardFace(scene, id, short),
+          face: createCardFace(scene, id, unaffordable(chronicle, id)),
           index,
           home: {
             x: first + CARD_WIDTH / 2 + index * advance,
             y: baseline + off * off * FAN * 1.6,
           },
-          payable: short.length === 0,
+          affordable: unaffordable(chronicle, id).length === 0,
           hovered: false,
         };
 
@@ -122,7 +122,7 @@ export function createHand(scene: Phaser.Scene, play: (index: number) => void): 
               CARD_HEIGHT,
             ),
             hitAreaCallback: Phaser.Geom.Rectangle.Contains,
-            cursor: slot.payable ? 'pointer' : 'not-allowed',
+            cursor: slot.affordable ? 'pointer' : 'not-allowed',
           })
           .on('pointerover', () => {
             if (dragged !== undefined) return;

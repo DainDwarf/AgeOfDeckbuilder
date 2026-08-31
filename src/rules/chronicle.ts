@@ -81,7 +81,7 @@ export function costOf(id: CardId): { resource: Resource; amount: number }[] {
 }
 
 /** The resources this card's cost outruns; empty means the city can play it. */
-export function unpayable(chronicle: Chronicle, id: CardId): Resource[] {
+export function unaffordable(chronicle: Chronicle, id: CardId): Resource[] {
   return costOf(id)
     .filter(({ resource, amount }) => amount > chronicle.resources[resource])
     .map(({ resource }) => resource);
@@ -89,7 +89,7 @@ export function unpayable(chronicle: Chronicle, id: CardId): Resource[] {
 
 function play(chronicle: Chronicle, index: number): Chronicle {
   const id = chronicle.hand[index];
-  if (id === undefined || unpayable(chronicle, id).length > 0) return chronicle;
+  if (id === undefined || unaffordable(chronicle, id).length > 0) return chronicle;
 
   const resources = { ...chronicle.resources };
   for (const { resource, amount } of costOf(id)) resources[resource] -= amount;
