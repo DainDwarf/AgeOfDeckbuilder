@@ -17,6 +17,7 @@ const EDGE = 0x6f757d;
 const KIND_INK = 0x4a5058;
 const SHORT = 0xc0392b;
 const BACK = 0x232833;
+const EMPTY_EDGE = 0x4a5058;
 
 const PAYABLE = { face: 0xd4d7db, art: 0xb6bbc2, artEdge: 0x9aa0a8, ink: 0x0d1014 };
 const SHORT_OF = { face: 0xa7abb1, art: 0x8f959c, artEdge: 0x7c828a, ink: 0x3a3f45 };
@@ -123,12 +124,13 @@ export function createCardFace(
   };
 }
 
-/** The face-down card the draw pile shows, about its own bottom centre. */
-export function createCardBack(scene: Phaser.Scene): Phaser.GameObjects.Container {
+/** The face-down card the draw pile shows, about its own bottom centre; worn when the pile is dry. */
+export function createCardBack(scene: Phaser.Scene, faded = false): Phaser.GameObjects.Container {
+  const tone = faded ? dim : (colour: number): number => colour;
   const paper = scene.add.graphics();
-  paper.fillStyle(BACK);
+  paper.fillStyle(tone(BACK));
   paper.fillRoundedRect(-CARD_WIDTH / 2, -CARD_HEIGHT, CARD_WIDTH, CARD_HEIGHT, RADIUS);
-  paper.lineStyle(1, EDGE);
+  paper.lineStyle(1, tone(EDGE));
   paper.strokeRoundedRect(
     -CARD_WIDTH / 2 + 0.5,
     -CARD_HEIGHT + 0.5,
@@ -139,9 +141,69 @@ export function createCardBack(scene: Phaser.Scene): Phaser.GameObjects.Containe
 
   const emblem = scene.add
     .polygon(0, -CARD_HEIGHT / 2, hexagon(CARD_WIDTH * 0.28 - 3), 0, 0)
-    .setStrokeStyle(3, ACCENT);
+    .setStrokeStyle(3, tone(ACCENT));
 
   return scene.add.container(0, 0, [paper, emblem]);
+}
+
+/** Where a pile's top card would be: the card's own rounded outline, dashed. */
+export function createEmptySlot(scene: Phaser.Scene): Phaser.GameObjects.Container {
+  const outline = scene.add.graphics();
+  outline.lineStyle(2, EMPTY_EDGE);
+  dashAlong(outline, cardOutline());
+  return scene.add.container(0, 0, [outline]);
+}
+
+/** The card's outline as a closed polyline, corner arcs sampled into short chords. */
+function cardOutline(): { x: number; y: number }[] {
+  const half = CARD_WIDTH / 2;
+  const points: { x: number; y: number }[] = [];
+  const corner = (cx: number, cy: number, from: number): void => {
+    for (let i = 0; i <= 6; i++) {
+      const angle = from + (Math.PI / 2) * (i / 6);
+      points.push({ x: cx + RADIUS * Math.cos(angle), y: cy + RADIUS * Math.sin(angle) });
+    }
+  };
+  points.push({ x: -half + RADIUS, y: -CARD_HEIGHT });
+  corner(half - RADIUS, -CARD_HEIGHT + RADIUS, -Math.PI / 2);
+  corner(half - RADIUS, -RADIUS, 0);
+  corner(-half + RADIUS, -RADIUS, Math.PI / 2);
+  corner(-half + RADIUS, -CARD_HEIGHT + RADIUS, Math.PI);
+  points.push({ x: -half + RADIUS, y: -CARD_HEIGHT });
+  return points;
+}
+
+/** Dashes of six on, five off, stretched so a whole number of them spans the outline. */
+function dashAlong(outline: Phaser.GameObjects.Graphics, points: { x: number; y: number }[]): void {
+  const lengths: number[] = [];
+  let total = 0;
+  for (let i = 0; i + 1 < points.length; i++) {
+    lengths.push(Math.hypot(points[i + 1].x - points[i].x, points[i + 1].y - points[i].y));
+    total += lengths[i];
+  }
+  const step = total / Math.max(1, Math.round(total / 11));
+  const on = (step * 6) / 11;
+
+  let travelled = 0;
+  for (let i = 0; i + 1 < points.length; i++) {
+    const at = (t: number): { x: number; y: number } => ({
+      x: points[i].x + (points[i + 1].x - points[i].x) * t,
+      y: points[i].y + (points[i + 1].y - points[i].y) * t,
+    });
+    let along = 0;
+    while (along < lengths[i]) {
+      const phase = (travelled + along) % step;
+      const until = phase < on ? on - phase : step - phase;
+      const next = Math.min(lengths[i], along + until);
+      if (phase < on) {
+        const from = at(along / lengths[i]);
+        const to = at(next / lengths[i]);
+        outline.lineBetween(from.x, from.y, to.x, to.y);
+      }
+      along = next + 1e-6;
+    }
+    travelled += lengths[i];
+  }
 }
 
 function css(colour: number): string {
