@@ -28,6 +28,9 @@ makes twice becomes a line here (the ratchet, at `/upkeep`).
 - **A side finding gets one line and a pointer.** If it keeps growing across turns, stop.
 - **"jot: …"** appends one line to `IDEAS.md` and the current task continues. Offer to jot
   something you noticed; don't add your own without asking.
+- **A bug is never an idea.** `IDEAS.md` holds features that may or may not happen; a defect or
+  hazard in what already exists is reported to the user the turn it emerges and, unless fixed on
+  the spot, becomes a board line through `/intake`.
 - **Cut big steps into shippable substeps**, each self-contained enough for a cleared session to
   execute; name the shared mechanism that links them. Propose the cut before executing it.
 
