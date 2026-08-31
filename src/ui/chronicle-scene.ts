@@ -10,9 +10,11 @@ import {
   DESIGN_WIDTH,
   hexagon,
   MARGIN,
+  onClick,
   UI_FONT,
 } from './design-space';
 import { createHand } from './hand';
+import { createOverlay } from './overlay';
 import { createPiles } from './piles';
 import { createResourceBar } from './resource-bar';
 import { text } from './text';
@@ -55,10 +57,15 @@ export class ChronicleScene extends Phaser.Scene {
       for (const part of parts) part.render(this.chronicle);
     };
 
+    const overlay = createOverlay(this);
     parts.push(
       createResourceBar(this),
-      createPiles(this),
-      createHand(this, (index) => perform({ type: 'play', index })),
+      createPiles(this, (pile) => overlay.browse(pile, this.chronicle)),
+      createHand(
+        this,
+        (index) => perform({ type: 'play', index }),
+        (id, marked) => overlay.zoom(id, marked),
+      ),
       this.addEndTurn(() => perform({ type: 'end-turn' })),
     );
     for (const part of parts) part.render(this.chronicle);
@@ -120,7 +127,7 @@ export class ChronicleScene extends Phaser.Scene {
       hovered = false;
       paint();
     });
-    button.on('pointerup', endTurn);
+    onClick(button, endTurn);
 
     return {
       render(chronicle: Chronicle): void {

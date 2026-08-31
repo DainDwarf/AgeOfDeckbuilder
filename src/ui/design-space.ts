@@ -41,6 +41,27 @@ export function applyDesignSpace(scene: Phaser.Scene): void {
   scene.cameras.main.setZoom(factor).centerOn(DESIGN_WIDTH / 2, DESIGN_HEIGHT / 2);
 }
 
+/**
+ * A click: pressed and released on the same object. Phaser delivers `pointerup` to whatever lies
+ * under the pointer however far it travelled since the press, so a bare `pointerup` also fires on
+ * a card dragged onto the object from elsewhere, and on the release half of a click whose press
+ * dismissed something above it.
+ */
+export function onClick(target: Phaser.GameObjects.GameObject, handler: () => void): void {
+  let pressed = false;
+  target.on('pointerdown', () => {
+    pressed = true;
+  });
+  target.on('pointerup', () => {
+    if (pressed) handler();
+  });
+  // The scene sees every release, and after the target does. A press the target never sees
+  // released — it was hidden, disabled or removed meanwhile — would otherwise stay armed.
+  target.scene.input.on('pointerup', () => {
+    pressed = false;
+  });
+}
+
 export function addText(
   scene: Phaser.Scene,
   x: number,

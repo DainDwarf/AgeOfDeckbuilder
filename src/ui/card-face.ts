@@ -6,12 +6,20 @@ import { RESOURCE_COLOURS } from './resource-bar';
 import { text } from './text';
 
 export const CARD_WIDTH = 130;
-export const CARD_HEIGHT = Math.round(CARD_WIDTH * 1.4);
 
-/** Every measure inside a card is a multiple of this, so one width scales the whole face. */
-const EM = CARD_WIDTH * 0.13;
-const PAD = 0.55 * EM;
-const RADIUS = 0.45 * EM;
+/** Every measure inside a card is a multiple of `em`, so one width scales the whole face. */
+function metricsOf(width: number): {
+  height: number;
+  em: number;
+  pad: number;
+  radius: number;
+} {
+  const em = width * 0.13;
+  return { height: Math.round(width * 1.4), em, pad: 0.55 * em, radius: 0.45 * em };
+}
+
+const TABLE = metricsOf(CARD_WIDTH);
+export const CARD_HEIGHT = TABLE.height;
 
 const EDGE = 0x6f757d;
 const KIND_INK = 0x4a5058;
@@ -36,86 +44,84 @@ export function createCardFace(
   id: CardId,
   unaffordable: readonly Resource[],
   faded = false,
+  width = CARD_WIDTH,
 ): CardFace {
+  const { height, em, pad, radius } = metricsOf(width);
   const tone = faded ? dim : (colour: number): number => colour;
   const palette = unaffordable.length > 0 ? UNAFFORDABLE : AFFORDABLE;
 
-  const left = -CARD_WIDTH / 2 + 1 + PAD;
-  const right = CARD_WIDTH / 2 - 1 - PAD;
-  const top = -CARD_HEIGHT + 1 + PAD;
+  const left = -width / 2 + 1 + pad;
+  const right = width / 2 - 1 - pad;
+  const top = -height + 1 + pad;
 
   const root = scene.add.container(0, 0);
   const paper = scene.add.graphics();
   paper.fillStyle(tone(palette.face));
-  paper.fillRoundedRect(-CARD_WIDTH / 2, -CARD_HEIGHT, CARD_WIDTH, CARD_HEIGHT, RADIUS);
+  paper.fillRoundedRect(-width / 2, -height, width, height, radius);
   paper.lineStyle(1, tone(EDGE));
-  paper.strokeRoundedRect(
-    -CARD_WIDTH / 2 + 0.5,
-    -CARD_HEIGHT + 0.5,
-    CARD_WIDTH - 1,
-    CARD_HEIGHT - 1,
-    RADIUS,
-  );
+  paper.strokeRoundedRect(-width / 2 + 0.5, -height + 0.5, width - 1, height - 1, radius);
   root.add(paper);
 
-  const middle = top + 0.55 * EM;
+  const middle = top + 0.55 * em;
   let x = left;
   for (const { resource, amount } of costOf(id)) {
     const marked = unaffordable.includes(resource);
     const chip = scene.add
-      .rectangle(x + 0.4 * EM, middle, 0.8 * EM, 0.8 * EM, tone(RESOURCE_COLOURS[resource]))
+      .rectangle(x + 0.4 * em, middle, 0.8 * em, 0.8 * em, tone(RESOURCE_COLOURS[resource]))
       .setAngle(45);
     root.add(chip);
     if (marked) {
       const ring = scene.add
-        .rectangle(x + 0.4 * EM, middle, 0.8 * EM + 6, 0.8 * EM + 6)
-        .setStrokeStyle(2, tone(UNAFFORDABLE_MARK))
+        .rectangle(x + 0.4 * em, middle, 1.15 * em, 1.15 * em)
+        .setStrokeStyle(0.12 * em, tone(UNAFFORDABLE_MARK))
         .setAngle(45);
       root.add(ring);
     }
-    const value = addText(scene, x + 1.3 * EM, middle, String(amount), {
+    const value = addText(scene, x + 1.3 * em, middle, String(amount), {
       fontFamily: UI_FONT,
-      fontSize: `${EM}px`,
+      fontSize: `${em}px`,
       fontStyle: 'bold',
       color: css(tone(marked ? UNAFFORDABLE_MARK : palette.ink)),
     }).setOrigin(0, 0.5);
     root.add(value);
-    x = value.x + value.width + 0.35 * EM;
+    x = value.x + value.width + 0.35 * em;
   }
 
-  const name = addText(scene, 0, top + 1.45 * EM, text(`card.${id}`), {
+  const name = addText(scene, right, middle, text(`card.${id}`), {
     fontFamily: UI_FONT,
-    fontSize: `${1.05 * EM}px`,
+    fontSize: `${0.75 * em}px`,
     fontStyle: 'bold',
     color: css(tone(palette.ink)),
-  }).setOrigin(0.5, 0);
+  }).setOrigin(1, 0.5);
 
-  const kind = addText(scene, 0, -1 - PAD, text(`kind.${CARDS[id].kind}`).toUpperCase(), {
+  const kind = addText(scene, 0, -1 - pad, text(`kind.${CARDS[id].kind}`).toUpperCase(), {
     fontFamily: UI_FONT,
-    fontSize: `${0.65 * EM}px`,
+    fontSize: `${0.65 * em}px`,
     color: css(tone(KIND_INK)),
-    letterSpacing: 0.14 * 0.65 * EM,
+    letterSpacing: 0.14 * 0.65 * em,
   }).setOrigin(0.5, 1);
 
-  const artTop = name.y + name.height + 0.5 * EM;
-  const artHeight = kind.y - kind.height - 0.4 * EM - artTop;
+  const rules = addText(scene, 0, kind.y - kind.height - 0.45 * em, text(`rules.${id}`), {
+    fontFamily: UI_FONT,
+    fontSize: `${0.62 * em}px`,
+    color: css(tone(palette.ink)),
+    align: 'center',
+    wordWrap: { width: right - left },
+  }).setOrigin(0.5, 1);
+
+  const artTop = middle + 1.15 * em;
+  const artHeight = rules.y - rules.height - 0.45 * em - artTop;
   const art = scene.add.graphics();
   art.fillStyle(tone(palette.art));
-  art.fillRoundedRect(left, artTop, right - left, artHeight, 0.2 * EM);
+  art.fillRoundedRect(left, artTop, right - left, artHeight, 0.2 * em);
   art.lineStyle(1, tone(palette.artEdge));
-  art.strokeRoundedRect(left + 0.5, artTop + 0.5, right - left - 1, artHeight - 1, 0.2 * EM);
+  art.strokeRoundedRect(left + 0.5, artTop + 0.5, right - left - 1, artHeight - 1, 0.2 * em);
 
   const armed = scene.add.graphics().setVisible(false);
   armed.lineStyle(3, ACCENT);
-  armed.strokeRoundedRect(
-    -CARD_WIDTH / 2 - 3.5,
-    -CARD_HEIGHT - 3.5,
-    CARD_WIDTH + 7,
-    CARD_HEIGHT + 7,
-    RADIUS + 3.5,
-  );
+  armed.strokeRoundedRect(-width / 2 - 3.5, -height - 3.5, width + 7, height + 7, radius + 3.5);
 
-  root.add([art, name, kind, armed]);
+  root.add([art, name, kind, rules, armed]);
   return {
     root,
     arm(on: boolean): void {
@@ -129,14 +135,14 @@ export function createCardBack(scene: Phaser.Scene, faded = false): Phaser.GameO
   const tone = faded ? dim : (colour: number): number => colour;
   const paper = scene.add.graphics();
   paper.fillStyle(tone(BACK));
-  paper.fillRoundedRect(-CARD_WIDTH / 2, -CARD_HEIGHT, CARD_WIDTH, CARD_HEIGHT, RADIUS);
+  paper.fillRoundedRect(-CARD_WIDTH / 2, -CARD_HEIGHT, CARD_WIDTH, CARD_HEIGHT, TABLE.radius);
   paper.lineStyle(1, tone(EDGE));
   paper.strokeRoundedRect(
     -CARD_WIDTH / 2 + 0.5,
     -CARD_HEIGHT + 0.5,
     CARD_WIDTH - 1,
     CARD_HEIGHT - 1,
-    RADIUS,
+    TABLE.radius,
   );
 
   const emblem = scene.add
@@ -157,19 +163,20 @@ export function createEmptySlot(scene: Phaser.Scene): Phaser.GameObjects.Contain
 /** The card's outline as a closed polyline, corner arcs sampled into short chords. */
 function cardOutline(): { x: number; y: number }[] {
   const half = CARD_WIDTH / 2;
+  const r = TABLE.radius;
   const points: { x: number; y: number }[] = [];
   const corner = (cx: number, cy: number, from: number): void => {
     for (let i = 0; i <= 6; i++) {
       const angle = from + (Math.PI / 2) * (i / 6);
-      points.push({ x: cx + RADIUS * Math.cos(angle), y: cy + RADIUS * Math.sin(angle) });
+      points.push({ x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) });
     }
   };
-  points.push({ x: -half + RADIUS, y: -CARD_HEIGHT });
-  corner(half - RADIUS, -CARD_HEIGHT + RADIUS, -Math.PI / 2);
-  corner(half - RADIUS, -RADIUS, 0);
-  corner(-half + RADIUS, -RADIUS, Math.PI / 2);
-  corner(-half + RADIUS, -CARD_HEIGHT + RADIUS, Math.PI);
-  points.push({ x: -half + RADIUS, y: -CARD_HEIGHT });
+  points.push({ x: -half + r, y: -CARD_HEIGHT });
+  corner(half - r, -CARD_HEIGHT + r, -Math.PI / 2);
+  corner(half - r, -r, 0);
+  corner(-half + r, -r, Math.PI / 2);
+  corner(-half + r, -CARD_HEIGHT + r, Math.PI);
+  points.push({ x: -half + r, y: -CARD_HEIGHT });
   return points;
 }
 

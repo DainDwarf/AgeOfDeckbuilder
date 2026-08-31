@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
-import { type Chronicle, unaffordable } from '../rules/chronicle';
+import type { CardId } from '../rules/cards';
+import { type Chronicle, type Resource, unaffordable } from '../rules/chronicle';
 import { CARD_HEIGHT, CARD_WIDTH, type CardFace, createCardFace } from './card-face';
 import { DESIGN_HEIGHT, DESIGN_WIDTH, MARGIN } from './design-space';
 
@@ -17,8 +18,10 @@ const CLICK_SLACK = 8;
 
 type Slot = {
   readonly face: CardFace;
+  readonly id: CardId;
   readonly index: number;
   readonly home: { x: number; y: number };
+  readonly marked: readonly Resource[];
   readonly affordable: boolean;
   hovered: boolean;
 };
@@ -36,7 +39,11 @@ export type Hand = { render(chronicle: Chronicle): void };
  * The hand between the two piles. Cards keep their fixed gap until the lane runs out, then
  * compress evenly onto one another; the one under the pointer comes to the front.
  */
-export function createHand(scene: Phaser.Scene, play: (index: number) => void): Hand {
+export function createHand(
+  scene: Phaser.Scene,
+  play: (index: number) => void,
+  zoom: (id: CardId, unaffordable: readonly Resource[]) => void,
+): Hand {
   const laneLeft = MARGIN + CARD_WIDTH + LANE_PAD;
   const laneWidth = DESIGN_WIDTH - 2 * laneLeft;
   const baseline = DESIGN_HEIGHT - MARGIN;
@@ -80,11 +87,16 @@ export function createHand(scene: Phaser.Scene, play: (index: number) => void): 
     dragged = undefined;
     slot.face.arm(false);
 
-    if (slot.affordable && moved >= CLICK_SLACK && grabbed.y - pointer.worldY > PLAY_HEIGHT) {
+    if (moved < CLICK_SLACK) {
+      settle(slot, 0);
+      zoom(slot.id, slot.marked);
+      return;
+    }
+    if (slot.affordable && grabbed.y - pointer.worldY > PLAY_HEIGHT) {
       play(slot.index);
       return;
     }
-    settle(slot, moved < CLICK_SLACK ? 0 : 150);
+    settle(slot, 150);
   });
 
   return {
@@ -99,14 +111,17 @@ export function createHand(scene: Phaser.Scene, play: (index: number) => void): 
 
       slots = chronicle.hand.map((id, index) => {
         const off = index - (held - 1) / 2;
+        const marked = unaffordable(chronicle, id);
         const slot: Slot = {
-          face: createCardFace(scene, id, unaffordable(chronicle, id)),
+          face: createCardFace(scene, id, marked),
+          id,
           index,
           home: {
             x: first + CARD_WIDTH / 2 + index * advance,
             y: baseline + off * off * FAN * 1.6,
           },
-          affordable: unaffordable(chronicle, id).length === 0,
+          marked,
+          affordable: marked.length === 0,
           hovered: false,
         };
 
@@ -122,7 +137,7 @@ export function createHand(scene: Phaser.Scene, play: (index: number) => void): 
               CARD_HEIGHT,
             ),
             hitAreaCallback: Phaser.Geom.Rectangle.Contains,
-            cursor: slot.affordable ? 'pointer' : 'not-allowed',
+            cursor: 'pointer',
           })
           .on('pointerover', () => {
             if (dragged !== undefined) return;

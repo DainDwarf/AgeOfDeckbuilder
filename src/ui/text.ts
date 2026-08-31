@@ -8,7 +8,7 @@ const TEXT = {
   'label.culture': 'Culture',
   'label.population': 'Population',
   'tooltip.food': 'The most basic need. Feeds your population.',
-  'tooltip.production': 'Materials of every sort. Raise, improve, and shape the land.',
+  'tooltip.production': 'Materials of every sort. Build, improve, and shape the land.',
   'tooltip.military': 'A sad necessity. Defend and attack.',
   'tooltip.money': 'Exchange and opulence. Trade it for other goods, or amass it.',
   'tooltip.science':
@@ -27,6 +27,13 @@ const TEXT = {
   'card.PH_Farm': 'PH_Farm',
   'card.PH_March': 'PH_March',
   'card.PH_Harvest': 'PH_Harvest',
+  'rules.PH_Worker': 'Turn population into a worker',
+  'rules.PH_Warrior': 'Turn population into a warrior',
+  'rules.PH_Farm': 'Build a farm',
+  'rules.PH_March': 'Move a unit and act',
+  'rules.PH_Harvest': 'Gain 2 food',
+  'browse.draw-pile': 'Draw pile — {count}',
+  'browse.discard-pile': 'Discard pile — {count}',
 } as const;
 
 export type TextKey = keyof typeof TEXT;

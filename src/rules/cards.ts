@@ -1,6 +1,9 @@
 import type { Resources } from './chronicle';
 
-export type CardKind = 'unit' | 'building' | 'order' | 'action';
+/** The declared order of the kinds, which is the order a sorted list of cards reads in. */
+export const CARD_KINDS = ['unit', 'building', 'order', 'action'] as const;
+
+export type CardKind = (typeof CARD_KINDS)[number];
 
 export type Card = { readonly kind: CardKind; readonly cost: Partial<Resources> };
 

@@ -12,19 +12,18 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
-- **Browse and zoom** — clicking the draw pile browses its remaining cards sorted by kind then
-  name, never draw order; clicking the discard pile browses it newest first; clicking a hand card
-  zooms it with its rules text. Doc-impact: none.
 - **Unit and order** — the unit cards (worker and warrior) each turn one population into a unit
   on the city's tile; the plain order moves a unit and its nature acts on arrival; proven by test
   and playable on screen. Doc-impact: none.
-- **Building and action** — the building card raises its building on a tile inside the border
+- **Building and action** — the building card builds its building on a tile inside the border
   where a worker stands; the action card does one immediate effect; all four kinds playable end
   to end. Doc-impact: none.
 - **The enemy and the fall** — one enemy arrives on a hardcoded turn, declares its intent, moves
   and attacks through the enemy phase, occupies the tile it stands on; player units attack at
   income under the one-attack rule; capture of the city or population at zero ends the chronicle
   on a defeat screen. Doc-impact: none.
+- **Browse scrolling** — a pile browse whose cards overflow the frame scrolls by wheel, bounded
+  to its cards; proven with a deck larger than one screen. Doc-impact: none.
 - **The turn staged** — every step after the turn ends plays in visible sequence instead of
   resolving at once: discard, draw, shuffle, income, enemy move and attack. Closes v0.0.1:
   version bump and release note. Doc-impact: `docs/ROADMAP.md`, `CHANGELOG.md`.
