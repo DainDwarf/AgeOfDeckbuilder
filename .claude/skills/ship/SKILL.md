@@ -76,3 +76,9 @@ file, `git commit -F`. One commit per line. Do not push.
 
 Report to the user: what shipped, the commit, the deviations, the review verdict, what to inspect
 and how, and what the next line would do. Then stop — the next line is a new invocation.
+
+## Notifications
+
+Send a PushNotification at exactly the turns that block on the user: the pitch awaiting a green
+light, the hand-back awaiting the feel check, and a mid-run stop that needs their decision. One
+line naming what is waiting. No other turn notifies.
