@@ -28,6 +28,8 @@ a [`BOARD.md`](BOARD.md) line. Say
 
 - **Cache or precompute movement reachability**: today it is recomputed per order; measure before
   building anything.
+- **Seed selection at launch**: when the "launch a chronicle" menu exists, it offers starting on a
+  given seed — the player-facing door to replay-from-seed; `?seed=` stays the debug/e2e one.
 - **Per-tile yield overlay**: "+x +y" glyphs on each tile showing what it yields, toggleable
   because the information saturates; clicking a resource on the top bar filters the overlay to
   that resource alone. Becomes truly informative once assignment exists (v0.0.3).
