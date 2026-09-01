@@ -51,6 +51,9 @@ makes twice becomes a line here (the ratchet, at `/upkeep`).
   the moment they enter the repository, or are primitives drawn by code; a generative model
   produces none of it, placeholders included. Why: a part of the audience rejects genAI assets
   outright, and a placeholder has a way of shipping.
+- **A code-drawn placeholder is a flat polygon** — one fill, one outline, no curves, no gradients,
+  no detail work. A primitive that starts wanting beauty is an asset and waits for its pack. Why:
+  an elaborate mark authored by the model is genAI art in polygon clothing.
 
 ## Writing rules
 
