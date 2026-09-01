@@ -21,11 +21,16 @@ import { text } from './text';
 type Part = { render(chronicle: Chronicle): void };
 
 export class ChronicleScene extends Phaser.Scene {
-  private chronicle: Chronicle;
+  private current: Chronicle;
 
   constructor(chronicle: Chronicle) {
     super('chronicle');
-    this.chronicle = chronicle;
+    this.current = chronicle;
+  }
+
+  /** The chronicle as it stands, for whoever holds the game through `window.game`. */
+  get chronicle(): Chronicle {
+    return this.current;
   }
 
   create(): void {
@@ -33,17 +38,17 @@ export class ChronicleScene extends Phaser.Scene {
 
     const parts: Part[] = [];
     const perform = (command: Command): void => {
-      this.chronicle = apply(this.chronicle, command);
-      for (const part of parts) part.render(this.chronicle);
+      this.current = apply(this.current, command);
+      for (const part of parts) part.render(this.current);
     };
 
-    const view = createMapView(this, this.chronicle);
+    const view = createMapView(this, this.current);
     const overlay = createOverlay(this);
     const endTurn = this.addEndTurn(() => perform({ type: 'end-turn' }));
     parts.push(
       view,
       createResourceBar(this),
-      createPiles(this, (pile) => overlay.browse(pile, this.chronicle)),
+      createPiles(this, (pile) => overlay.browse(pile, this.current)),
       createHand(
         this,
         (index) => perform({ type: 'play', index }),
@@ -51,7 +56,7 @@ export class ChronicleScene extends Phaser.Scene {
           // The aiming catcher lies under the hand and the piles, so the button is the one thing
           // left on the table that has to be dead for the length of the aim.
           endTurn.live(false);
-          return view.aim(this.chronicle, (target) => {
+          return view.aim(this.current, (target) => {
             endTurn.live(true);
             if (target === undefined) released();
             else perform({ type: 'play', index, target });
@@ -61,11 +66,11 @@ export class ChronicleScene extends Phaser.Scene {
       ),
       endTurn,
     );
-    for (const part of parts) part.render(this.chronicle);
+    for (const part of parts) part.render(this.current);
   }
 
   private addEndTurn(endTurn: () => void): Part & { live(on: boolean): void } {
-    const button = this.add.rectangle(0, 0, 1, 1, ACCENT).setDepth(20);
+    const button = this.add.rectangle(0, 0, 1, 1, ACCENT).setName('end-turn').setDepth(20);
     const label = addText(this, 0, 0, '', {
       fontFamily: UI_FONT,
       fontSize: '18px',

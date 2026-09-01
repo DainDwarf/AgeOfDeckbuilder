@@ -162,6 +162,11 @@ function resolve(
       };
     case 'order':
       return order(chronicle, target);
+    case 'action': {
+      const resources = { ...chronicle.resources };
+      for (const resource of RESOURCES) resources[resource] += card.gain[resource] ?? 0;
+      return { ...chronicle, resources };
+    }
     default:
       return chronicle;
   }

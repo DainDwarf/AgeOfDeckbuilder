@@ -151,6 +151,7 @@ export function createHand(
         };
 
         slot.face.root
+          .setName(`hand-${index}`)
           .setPosition(slot.home.x, slot.home.y)
           .setRotation(Phaser.Math.DegToRad(off * FAN))
           .setDepth(5 + index)

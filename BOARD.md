@@ -12,8 +12,6 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
-- **Harvest and its e2e** — the harvest card gains its two food when played; a standing e2e
-  boots, plays it, and asserts the gain — the first e2e that plays a card. Doc-impact: none.
 - **The building card** — the building card builds its building on a tile inside the border
   where a worker stands; with it every card kind is playable end to end. Doc-impact: none.
 - **Unit panel** — clicking a unit while no order is aimed shows a panel with its stats — health,

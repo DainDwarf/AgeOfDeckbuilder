@@ -166,6 +166,17 @@ test('playing a card pays its cost and sends it to the discard pile', () => {
   expect(after.resources.science).toBe(2);
 });
 
+test('playing the harvest card gains its two food, on top of what the city already holds', () => {
+  const city = cityOf(['urban'], {
+    hand: ['PH_Harvest'],
+    resources: { food: 1, production: 0, military: 0, money: 0, science: 1, culture: 0 },
+  });
+
+  const after = apply(city, { type: 'play', index: 0 });
+
+  expect(after.resources.food).toBe(3);
+});
+
 test('a card the city cannot pay for stays in the hand and costs nothing', () => {
   const penniless = cityOf(['urban'], { hand: ['PH_Warrior'] });
   const halfway = cityOf(['urban'], {

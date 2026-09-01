@@ -6,11 +6,19 @@ export const CARD_KINDS = ['unit', 'building', 'order', 'action'] as const;
 
 export type CardKind = (typeof CARD_KINDS)[number];
 
-/** A unit card names the unit it puts on the map; no other kind carries one. */
+/**
+ * A unit card names the unit it puts on the map, an action card the resources it gains; no other
+ * kind carries either.
+ */
 export type Card =
   | { readonly kind: 'unit'; readonly cost: Partial<Resources>; readonly unitType: UnitTypeId }
   | {
-      readonly kind: Exclude<CardKind, 'unit'>;
+      readonly kind: 'action';
+      readonly cost: Partial<Resources>;
+      readonly gain: Partial<Resources>;
+    }
+  | {
+      readonly kind: Exclude<CardKind, 'unit' | 'action'>;
       readonly cost: Partial<Resources>;
     };
 
@@ -22,7 +30,7 @@ export const CARDS: Record<CardId, Card> = {
   PH_Warrior: { kind: 'unit', cost: { military: 2 }, unitType: 'PH_Warrior' },
   PH_Farm: { kind: 'building', cost: { production: 3 } },
   PH_March: { kind: 'order', cost: {} },
-  PH_Harvest: { kind: 'action', cost: { science: 1 } },
+  PH_Harvest: { kind: 'action', cost: { science: 1 }, gain: { food: 2 } },
 };
 
 /** The one deck there is: two copies of each card. */

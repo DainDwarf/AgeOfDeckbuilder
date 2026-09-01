@@ -11,8 +11,16 @@ declare global {
   }
 }
 
+/** The seed asked for in the address, so a chronicle can be replayed and a spec can be written. */
+function askedSeed(): number | undefined {
+  const asked = new URLSearchParams(window.location.search).get('seed');
+  if (asked === null || asked.trim() === '') return undefined;
+  const seed = Number(asked);
+  return Number.isInteger(seed) ? seed : undefined;
+}
+
 // The one place entropy enters the game: `src/rules/` draws only from the seed it is handed.
-const chronicle = beginChronicle((Math.random() * 2 ** 32) | 0);
+const chronicle = beginChronicle(askedSeed() ?? (Math.random() * 2 ** 32) | 0);
 
 window.game = new Phaser.Game({
   type: Phaser.AUTO,
