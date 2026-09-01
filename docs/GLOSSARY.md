@@ -19,7 +19,7 @@ deliberate exception the reviewer sees; there is no silent allow-list.
 | **age** | One span of history: the unit a chronicle plays through, the campaign unlocks, and content is partitioned by. | era, epoch, period, tier |
 | **campaign** | Humanity's history as the player has unlocked it — the meta's progression. | tech tree, map (for the meta) |
 | **collection** | Every card the player owns, with the copies owned of each. | library, pool, inventory |
-| **civilization** | A playable identity: starting units, one passive rule, a look, and its deck. | people, faction, nation, civ, board |
+| **civilization** | A playable identity: starting units, one passive rule, a look, and its deck. | people, nation, civ, board |
 | **deck** | A civilization's set of cards, fixed for a chronicle. | loadout |
 | **technology** | A permanent unlock earned by an achievement: new cards, better buildings, better units. | tech, advancement, upgrade, research |
 | **achievement** | A goal a chronicle can reach; reaching it unlocks a technology. | mission, objective, quest, milestone |
@@ -30,6 +30,7 @@ deliberate exception the reviewer sees; there is no silent allow-list.
 | **tile** | One hexagon of the map, of one terrain. | hex, cell, square, territory |
 | **region** | The launch choice that biases map generation; the difficulty dial. | site, location, start |
 | **unit** | A mobile piece on the map, the player's or not. | army, troop, piece, token |
+| **faction** | Who a unit acts for: the player, the enemies, or — when they exist — the neutrals. | side, team, owner, allegiance |
 | **building** | A standing structure on a tile; one slot per tile. | structure |
 | **build** | To put a building on a tile; what a building card does. | raise, construct, erect |
 | **neutral** | A non-player unit that does not attack. | NPC, city-state, friendly |

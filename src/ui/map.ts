@@ -1,7 +1,7 @@
 import type Phaser from 'phaser';
 import type { Chronicle, Target } from '../rules/chronicle';
 import type { Terrain, TileCoords } from '../rules/map';
-import { reachable, type Side, type UnitTypeId } from '../rules/units';
+import { type Faction, reachable, type UnitTypeId } from '../rules/units';
 import { ACCENT, corners, DESIGN_HEIGHT, DESIGN_WIDTH, hexagon } from './design-space';
 
 const TILE_SIZE = 24;
@@ -14,7 +14,7 @@ const TERRAIN_COLOURS: Record<Terrain, number> = {
   urban: 0x8f8f9c,
 };
 
-const OWNER_COLOURS: Record<Side, number> = { player: ACCENT, enemy: 0xb4453c };
+const FACTION_COLOURS: Record<Faction, number> = { player: ACCENT, enemy: 0xb4453c };
 
 /** Placeholder primitives until the art pass: the worker a block, the warrior a point. */
 const UNIT_MARKS: Record<UnitTypeId, number[]> = {
@@ -92,7 +92,7 @@ export function createMapView(scene: Phaser.Scene, chronicle: Chronicle): MapVie
       markers = current.units.map((unit) => {
         const { x, y } = positionOf(unit.tile);
         const marker = scene.add
-          .polygon(x, y, UNIT_MARKS[unit.unitType.id], OWNER_COLOURS[unit.owner])
+          .polygon(x, y, UNIT_MARKS[unit.unitType.id], FACTION_COLOURS[unit.faction])
           .setStrokeStyle(2, OUTLINE);
         layer.add(marker);
         return marker;
@@ -121,7 +121,7 @@ export function createMapView(scene: Phaser.Scene, chronicle: Chronicle): MapVie
           );
         }
         current.units.forEach((unit, index) => {
-          if (unit.owner !== 'player') return;
+          if (unit.faction !== 'player') return;
           const { x, y } = positionOf(unit.tile);
           glow.add(
             scene.add
@@ -155,7 +155,9 @@ export function createMapView(scene: Phaser.Scene, chronicle: Chronicle): MapVie
         const found =
           under === undefined
             ? -1
-            : current.units.findIndex((unit) => unit.owner === 'player' && same(unit.tile, under));
+            : current.units.findIndex(
+                (unit) => unit.faction === 'player' && same(unit.tile, under),
+              );
         grabbed = found === -1 ? undefined : found;
         if (grabbed !== undefined) select(grabbed);
       });

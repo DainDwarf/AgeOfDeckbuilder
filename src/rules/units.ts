@@ -1,7 +1,7 @@
 import { distance, neighbours, type Tile, type TileCoords, tileKey } from './map';
 
-/** Whose a unit is. The player commands theirs; an enemy attacks them. */
-export type Side = 'player' | 'enemy';
+/** Who a unit acts for. The player commands theirs; an enemy attacks them. */
+export type Faction = 'player' | 'enemy';
 
 /** `PH_` marks a stand-in: neither of these is authored content, and both of them go. */
 export type UnitTypeId = 'PH_Worker' | 'PH_Warrior';
@@ -26,7 +26,7 @@ export const UNIT_TYPES: Record<UnitTypeId, UnitType> = {
 
 export type Unit = {
   readonly unitType: UnitType;
-  readonly owner: Side;
+  readonly faction: Faction;
   readonly tile: TileCoords;
 };
 
@@ -42,7 +42,7 @@ export function reachable(
   unit: Unit,
 ): TileCoords[] {
   const terrain = new Map(tiles.map((tile) => [tileKey(tile), tile.terrain]));
-  const standing = new Map(units.map((other) => [tileKey(other.tile), other.owner]));
+  const standing = new Map(units.map((other) => [tileKey(other.tile), other.faction]));
 
   const seen = new Set([tileKey(unit.tile)]);
   const landings: TileCoords[] = [];
@@ -57,7 +57,7 @@ export function reachable(
         const ground = terrain.get(at);
         if (ground === undefined || ground === 'water') continue;
         const held = standing.get(at);
-        if (held !== undefined && held !== unit.owner) continue;
+        if (held !== undefined && held !== unit.faction) continue;
         seen.add(at);
         next.push(coord);
         if (held === undefined) landings.push(coord);
@@ -77,7 +77,7 @@ export function arrive(units: readonly Unit[], mover: number): Unit[] {
   let struck = -1;
   for (let index = 0; index < units.length; index++) {
     const other = units[index];
-    if (other.owner === acting.owner) continue;
+    if (other.faction === acting.faction) continue;
     if (distance(other.tile, acting.tile) > acting.unitType.range) continue;
     if (struck === -1 || other.unitType.health < units[struck].unitType.health) struck = index;
   }

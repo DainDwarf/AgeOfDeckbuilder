@@ -3,7 +3,7 @@ import { type CardId, DECK } from './cards';
 import { apply, beginChronicle, type Chronicle, type Command, RESOURCES } from './chronicle';
 import { distance, TERRAIN_YIELDS, type Terrain, type Tile, type TileCoords, tileKey } from './map';
 import { seedRng } from './rng';
-import type { Side, Unit, UnitType } from './units';
+import type { Faction, Unit, UnitType } from './units';
 
 const CITY: TileCoords = { q: 0, r: 0 };
 
@@ -47,10 +47,10 @@ function field(radius: number, water: TileCoords[] = []): Tile[] {
   return tiles;
 }
 
-function unitOf(owner: Side, tile: TileCoords, stats: Partial<UnitType> = {}): Unit {
+function unitOf(faction: Faction, tile: TileCoords, stats: Partial<UnitType> = {}): Unit {
   return {
     unitType: { id: 'PH_Warrior', health: 4, damage: 1, range: 1, move: 2, ...stats },
-    owner,
+    faction,
     tile,
   };
 }
@@ -250,7 +250,7 @@ test('a unit card turns one population into a unit on the city tile', () => {
   expect(after.population).toBe(city.population - 1);
   expect(after.units).toHaveLength(1);
   expect(after.units[0].tile).toEqual(CITY);
-  expect(after.units[0].owner).toBe('player');
+  expect(after.units[0].faction).toBe('player');
   expect(after.resources.food).toBe(0);
   expect(after.hand).toEqual([]);
   expect(after.discardPile).toEqual(['PH_Worker']);
@@ -310,7 +310,7 @@ test('water is impassable, and so is everything only water leads to', () => {
   expect(apply(city, march(0, { q: 1, r: 1 })).units[0].tile).toEqual({ q: 1, r: 1 });
 });
 
-test('a unit crosses its own side but never lands on it', () => {
+test('a unit crosses its own faction but never lands on it', () => {
   const city = cityOf(['urban'], {
     tiles: field(2),
     hand: ['PH_March'],
@@ -321,7 +321,7 @@ test('a unit crosses its own side but never lands on it', () => {
   expect(apply(city, march(0, { q: 2, r: 0 })).units[0].tile).toEqual({ q: 2, r: 0 });
 });
 
-test('the other side stops a unit where it stands', () => {
+test('the other faction stops a unit where it stands', () => {
   const city = cityOf(['urban'], {
     tiles: field(2),
     hand: ['PH_March'],

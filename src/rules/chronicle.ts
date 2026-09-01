@@ -119,7 +119,7 @@ function blocked(chronicle: Chronicle, id: CardId): boolean {
     case 'order':
       return !chronicle.units.some(
         (unit) =>
-          unit.owner === 'player' && reachable(chronicle.tiles, chronicle.units, unit).length > 0,
+          unit.faction === 'player' && reachable(chronicle.tiles, chronicle.units, unit).length > 0,
       );
     default:
       return false;
@@ -157,7 +157,7 @@ function resolve(
         population: chronicle.population - 1,
         units: [
           ...chronicle.units,
-          { unitType: { ...UNIT_TYPES[card.unitType] }, owner: 'player', tile: chronicle.city },
+          { unitType: { ...UNIT_TYPES[card.unitType] }, faction: 'player', tile: chronicle.city },
         ],
       };
     case 'order':
@@ -171,7 +171,7 @@ function resolve(
 function order(chronicle: Chronicle, target: Target | undefined): Chronicle | undefined {
   if (target === undefined) return undefined;
   const unit = chronicle.units[target.unit];
-  if (unit === undefined || unit.owner !== 'player') return undefined;
+  if (unit === undefined || unit.faction !== 'player') return undefined;
 
   const landings = reachable(chronicle.tiles, chronicle.units, unit);
   if (!landings.some((coord) => tileKey(coord) === tileKey(target.to))) return undefined;
