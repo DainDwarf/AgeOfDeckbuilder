@@ -22,6 +22,12 @@ import { text } from './text';
 
 type Part = { render(chronicle: Chronicle): void };
 
+/** Where the next click on the ringed tile lands: each layer in turn, then the bare ring again. */
+function nextLayer(shown: number | undefined, count: number): number | undefined {
+  if (shown === undefined) return 0;
+  return shown + 1 < count ? shown + 1 : undefined;
+}
+
 export class ChronicleScene extends Phaser.Scene {
   private current: Chronicle;
 
@@ -42,8 +48,8 @@ export class ChronicleScene extends Phaser.Scene {
     const view = createMapView(this, this.current);
     const panel = createInfoPanel(this);
 
-    /** The tile the panel is reading, and how deep into its layers the clicks have gone. */
-    let inspecting: { tile: TileCoords; index: number } | undefined;
+    /** The ringed tile, and which of its layers the panel is reading — none while it is only ringed. */
+    let inspecting: { tile: TileCoords; index: number | undefined } | undefined;
 
     /** Every state change and every aim goes through here: no inspection outlives one. */
     const dismiss = (): void => {
@@ -65,13 +71,14 @@ export class ChronicleScene extends Phaser.Scene {
         return;
       }
       const layers = layersOf(tile, this.current.units);
-      const shown =
+      const ringed =
         inspecting !== undefined && tileKey(inspecting.tile) === tileKey(tile)
-          ? inspecting.index
+          ? inspecting
           : undefined;
-      const index = shown === undefined ? 0 : (shown + 1) % layers.length;
+      const index = ringed === undefined ? undefined : nextLayer(ringed.index, layers.length);
+      if (index === undefined) panel.hide();
+      else panel.show(layers, index, found.at, ringed?.index !== undefined);
       inspecting = { tile: { q: tile.q, r: tile.r }, index };
-      panel.show(layers, index, found.at, shown !== undefined);
       view.markInspected(tile);
     });
     this.input.keyboard?.on('keydown-ESC', dismiss);

@@ -32,7 +32,20 @@ function shownLayer(page: Page): Promise<string | undefined> {
   });
 }
 
-test('clicking a tile cycles the infopanel through its layers, and clicking off the map dismisses it', async ({
+/** Which tile the map is ringing, or nothing while none is selected. */
+function ringedTile(page: Page): Promise<string | undefined> {
+  return page.evaluate(() => {
+    const scene = window.game?.scene.getScene<ChronicleScene>('chronicle');
+    const ring = scene?.children.getByName('inspected') as
+      | Phaser.GameObjects.Container
+      | null
+      | undefined;
+    if (ring === null || ring === undefined) throw new Error('the ring is not on the table');
+    return ring.getData('tile') as string | undefined;
+  });
+}
+
+test('a tile selects on the first click and reads out a layer per click after it, until a click off the map drops it', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -48,10 +61,15 @@ test('clicking a tile cycles the infopanel through its layers, and clicking off 
   );
 
   const entered = await chronicleOf(page);
-  const city = await onScreen(page, `tile-${tileKey(entered.units[0].tile)}`);
+  const cityTile = tileKey(entered.units[0].tile);
+  const city = await onScreen(page, `tile-${cityTile}`);
   expect(await shownLayer(page)).toBeUndefined();
+  expect(await ringedTile(page)).toBeUndefined();
 
   // The city's tile carries all three layers: the worker that just entered, the city, the terrain.
+  await page.mouse.click(city.x, city.y);
+  await expect.poll(() => ringedTile(page)).toBe(cityTile);
+  expect(await shownLayer(page)).toBeUndefined();
   await page.mouse.click(city.x, city.y);
   await expect.poll(() => shownLayer(page)).toBe('unit');
   await page.mouse.click(city.x, city.y);
@@ -59,17 +77,28 @@ test('clicking a tile cycles the infopanel through its layers, and clicking off 
   await page.mouse.click(city.x, city.y);
   await expect.poll(() => shownLayer(page)).toBe('terrain');
   await page.mouse.click(city.x, city.y);
+  await expect.poll(() => shownLayer(page)).toBeUndefined();
+  expect(await ringedTile(page)).toBe(cityTile);
+  await page.mouse.click(city.x, city.y);
   await expect.poll(() => shownLayer(page)).toBe('unit');
 
   // West of the city: nothing stands on it, and it is clear of the panel standing east of the city.
   const { q, r } = entered.units[0].tile;
-  const bare = await onScreen(page, `tile-${tileKey({ q: q - 1, r })}`);
+  const bareTile = tileKey({ q: q - 1, r });
+  const bare = await onScreen(page, `tile-${bareTile}`);
+  await page.mouse.click(bare.x, bare.y);
+  await expect.poll(() => shownLayer(page)).toBeUndefined();
+  expect(await ringedTile(page)).toBe(bareTile);
   await page.mouse.click(bare.x, bare.y);
   await expect.poll(() => shownLayer(page)).toBe('terrain');
+  await page.mouse.click(bare.x, bare.y);
+  await expect.poll(() => shownLayer(page)).toBeUndefined();
+  expect(await ringedTile(page)).toBe(bareTile);
 
   // Far enough up and left of the city for the nearest tile to be well outside the map's disc.
   await page.mouse.click(city.x - 440 * city.unit, city.y - 260 * city.unit);
-  await expect.poll(() => shownLayer(page)).toBeUndefined();
+  await expect.poll(() => ringedTile(page)).toBeUndefined();
+  expect(await shownLayer(page)).toBeUndefined();
 
   expect(problems).toEqual([]);
 });
