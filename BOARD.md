@@ -12,6 +12,13 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
+- **Select before inspect** — the first click on a tile with no order aimed rings it and shows
+  no infopanel; each further click on the same tile shows the next layer, and the click past the
+  last layer returns to the bare ring; the inspect e2e walks that sequence. Doc-impact: none.
+- **One surface for cards and infopanels** — the infopanel is drawn by the card face's
+  component: the card's rounded corners, edge and paper, in the card's box; what the tail and
+  the ghost stack become on a rounded card is settled with the user in the pitch. Doc-impact:
+  none.
 - **Tooltip rest delay** — a tooltip appears only once the pointer has rested still over its
   source for one shared delay constant; moving off or onward before that shows nothing. Applies
   to every tooltip through the one bubble module. Doc-impact: none.
