@@ -19,6 +19,7 @@ import { createOverlay } from './overlay';
 import { createPiles } from './piles';
 import { createResourceBar } from './resource-bar';
 import { text } from './text';
+import { createTooltip } from './tooltip';
 
 type Part = { render(chronicle: Chronicle): void };
 
@@ -46,7 +47,8 @@ export class ChronicleScene extends Phaser.Scene {
 
     const parts: Part[] = [];
     const view = createMapView(this, this.current);
-    const panel = createInfoPanel(this);
+    const tooltip = createTooltip(this);
+    const panel = createInfoPanel(this, tooltip);
 
     /** The ringed tile, and which of its layers the panel is reading — none while it is only ringed. */
     let inspecting: { tile: TileCoords; index: number | undefined } | undefined;
@@ -87,7 +89,7 @@ export class ChronicleScene extends Phaser.Scene {
     const endTurn = this.addEndTurn(() => perform({ type: 'end-turn' }));
     parts.push(
       view,
-      createResourceBar(this),
+      createResourceBar(this, tooltip),
       createPiles(this, (pile) => overlay.browse(pile, this.current)),
       createHand(
         this,

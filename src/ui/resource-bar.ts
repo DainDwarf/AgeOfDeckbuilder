@@ -2,7 +2,7 @@ import type Phaser from 'phaser';
 import type { Chronicle, Resource } from '../rules/chronicle';
 import { addText, DESIGN_WIDTH, MARGIN, PANEL_EDGE, PANEL_FILL, UI_FONT } from './design-space';
 import { text } from './text';
-import { createTooltip, type Tooltip } from './tooltip';
+import type { Tooltip } from './tooltip';
 
 export const BAR_HEIGHT = 48;
 
@@ -39,12 +39,11 @@ type Entry = {
 
 export type ResourceBar = { render(chronicle: Chronicle): void };
 
-export function createResourceBar(scene: Phaser.Scene): ResourceBar {
+export function createResourceBar(scene: Phaser.Scene, tooltip: Tooltip): ResourceBar {
   const bar = scene.add.container(0, 0).setDepth(10);
   bar.add(scene.add.rectangle(0, 0, DESIGN_WIDTH, BAR_HEIGHT, PANEL_FILL).setOrigin(0, 0));
   bar.add(scene.add.rectangle(0, BAR_HEIGHT - 1, DESIGN_WIDTH, 1, PANEL_EDGE).setOrigin(0, 0));
 
-  const tooltip = createTooltip(scene);
   const slot = digitSlot(scene);
 
   const left = LEFT.map((key) => createEntry(scene, bar, tooltip, key));

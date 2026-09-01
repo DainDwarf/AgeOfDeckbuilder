@@ -13,7 +13,7 @@ import { addText, DESIGN_HEIGHT, DESIGN_WIDTH, MARGIN, UI_FONT } from './design-
 import { buildingMark, TILE_SIZE, terrainMark, unitMark } from './map';
 import { BAR_HEIGHT } from './resource-bar';
 import { text } from './text';
-import { createTooltip, type Tooltip } from './tooltip';
+import type { Tooltip } from './tooltip';
 
 /** One thing a tile is made of, read off the map. A tile is its layers, outermost first. */
 export type Layer =
@@ -84,8 +84,7 @@ type Box = { readonly left: number; readonly top: number; readonly rightOfTile: 
  * it showing as ghosts under its corner. Every show rebuilds the layer, so nothing here follows a
  * state change — the panel is dismissed by whatever caused one.
  */
-export function createInfoPanel(scene: Phaser.Scene): InfoPanel {
-  const tooltip = createTooltip(scene);
+export function createInfoPanel(scene: Phaser.Scene, tooltip: Tooltip): InfoPanel {
   const ghosts = scene.add.graphics();
   const panel = scene.add
     .container(0, 0, [ghosts])

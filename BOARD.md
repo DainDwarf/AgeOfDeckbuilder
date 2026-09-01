@@ -12,9 +12,6 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
-- **Tooltip rest delay** — a tooltip appears only once the pointer has rested still over its
-  source for one shared delay constant; moving off or onward before that shows nothing. Applies
-  to every tooltip through the one bubble module. Doc-impact: none.
 - **The enemy and the fall** — one enemy arrives on a hardcoded turn, declares its intent, moves
   and attacks through the enemy phase, occupies the tile it stands on; player units attack at
   income under the one-attack rule; capture of the city or population at zero ends the chronicle
