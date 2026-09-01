@@ -1,10 +1,10 @@
 import type Phaser from 'phaser';
 import type { Chronicle, Target } from '../rules/chronicle';
 import { type BuildingTypeId, type Terrain, type TileCoords, tileKey } from '../rules/map';
-import { type Faction, reachable, type UnitTypeId } from '../rules/units';
+import { type Faction, reachable, type Unit, type UnitTypeId } from '../rules/units';
 import { ACCENT, corners, DESIGN_HEIGHT, DESIGN_WIDTH, hexagon } from './design-space';
 
-const TILE_SIZE = 24;
+export const TILE_SIZE = 24;
 
 const TERRAIN_COLOURS: Record<Terrain, number> = {
   plain: 0x7d9c55,
@@ -54,6 +54,12 @@ const BUILDING_DEPTH = 3;
 
 const UNIT_DEPTH = 4;
 
+/** A tile the pointer picked out, and where its centre sits for whatever floats beside it. */
+export type Inspection = {
+  readonly tile: TileCoords;
+  readonly at: { readonly x: number; readonly y: number };
+};
+
 export type MapView = {
   render(chronicle: Chronicle): void;
   /** Aims at a unit, then at where it lands, until a target is chosen or cancel is called. */
@@ -64,7 +70,22 @@ export type MapView = {
     tiles: TileCoords[],
     chosen: (target: Target | undefined) => void,
   ): () => void;
+  /**
+   * Reports the tile every click the table leaves lands on, or nothing when it lands off the map.
+   * Called once; while a card is aimed the map belongs to the aim and no click is reported.
+   */
+  inspect(inspected: (found: Inspection | undefined) => void): void;
+  /** Rings the tile being inspected, or clears the ring. */
+  markInspected(tile: TileCoords | undefined): void;
 };
+
+/** The one way a unit is drawn: its placeholder mark, in the colour of the faction it acts for. */
+export function unitMark(scene: Phaser.Scene, unit: Unit, scale = 1): Phaser.GameObjects.Polygon {
+  return scene.add
+    .polygon(0, 0, UNIT_MARKS[unit.stats.id], FACTION_COLOURS[unit.faction])
+    .setStrokeStyle(2 / scale, OUTLINE)
+    .setScale(scale);
+}
 
 function positionOf({ q, r }: TileCoords): { x: number; y: number } {
   return {
@@ -92,27 +113,14 @@ function same(a: TileCoords, b: TileCoords): boolean {
   return a.q === b.q && a.r === b.r;
 }
 
-/** The ground every aim runs on: a catcher for the presses the table leaves, and a glow to paint. */
-function openAim(scene: Phaser.Scene): {
-  catcher: Phaser.GameObjects.Zone;
-  glow: Phaser.GameObjects.Container;
-  close: () => void;
-} {
-  const catcher = scene.add
+/** A full-screen zone under the hand and the piles: it takes every press they do not. */
+function catcherZone(scene: Phaser.Scene, name: string): Phaser.GameObjects.Zone {
+  return scene.add
     .zone(0, 0, DESIGN_WIDTH, DESIGN_HEIGHT)
     .setOrigin(0, 0)
     .setDepth(AIM_DEPTH)
-    .setName('aim')
+    .setName(name)
     .setInteractive();
-  const glow = scene.add.container(0, 0).setDepth(GLOW_DEPTH);
-  return {
-    catcher,
-    glow,
-    close: (): void => {
-      catcher.destroy();
-      glow.destroy();
-    },
-  };
 }
 
 function litTile(scene: Phaser.Scene, coord: TileCoords): Phaser.GameObjects.Polygon {
@@ -142,8 +150,30 @@ export function createMapView(scene: Phaser.Scene, chronicle: Chronicle): MapVie
   }
 
   const built = scene.add.container(0, 0).setDepth(BUILDING_DEPTH).setName('buildings');
+  const inspected = scene.add.container(0, 0).setDepth(GLOW_DEPTH);
   const layer = scene.add.container(0, 0).setDepth(UNIT_DEPTH);
   let markers: Phaser.GameObjects.Polygon[] = [];
+  let inspector: Phaser.GameObjects.Zone | undefined;
+
+  /** The ground every aim runs on: its own catcher, a glow to paint, and inspection held off. */
+  const openAim = (): {
+    catcher: Phaser.GameObjects.Zone;
+    glow: Phaser.GameObjects.Container;
+    close: () => void;
+  } => {
+    inspector?.disableInteractive();
+    const catcher = catcherZone(scene, 'aim');
+    const glow = scene.add.container(0, 0).setDepth(GLOW_DEPTH);
+    return {
+      catcher,
+      glow,
+      close: (): void => {
+        catcher.destroy();
+        glow.destroy();
+        inspector?.setInteractive();
+      },
+    };
+  };
 
   return {
     render(current: Chronicle): void {
@@ -159,16 +189,39 @@ export function createMapView(scene: Phaser.Scene, chronicle: Chronicle): MapVie
       layer.removeAll(true);
       markers = current.units.map((unit) => {
         const { x, y } = positionOf(unit.tile);
-        const marker = scene.add
-          .polygon(x, y, UNIT_MARKS[unit.stats.id], FACTION_COLOURS[unit.faction])
-          .setStrokeStyle(2, OUTLINE);
+        const marker = unitMark(scene, unit).setPosition(x, y);
         layer.add(marker);
         return marker;
       });
     },
 
+    inspect(found: (inspection: Inspection | undefined) => void): void {
+      const catcher = catcherZone(scene, 'inspect');
+      inspector = catcher;
+
+      let pressed = false;
+      catcher.on('pointerdown', () => {
+        pressed = true;
+      });
+      // The press is the catcher's and the release the scene's, exactly as an aim reads one, so a
+      // press that travelled off the map before it came up still reads as a click on nothing.
+      scene.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
+        if (!pressed) return;
+        pressed = false;
+        const on = tileAt(chronicle, pointer.worldX, pointer.worldY);
+        found(on === undefined ? undefined : { tile: on, at: positionOf(on) });
+      });
+    },
+
+    markInspected(tile: TileCoords | undefined): void {
+      inspected.removeAll(true);
+      if (tile === undefined) return;
+      const { x, y } = positionOf(tile);
+      inspected.add(scene.add.polygon(x, y, hexagon(TILE_SIZE - 2), 0, 0).setStrokeStyle(4, LIT));
+    },
+
     aimUnitTile(current: Chronicle, chosen: (target: Target | undefined) => void): () => void {
-      const { catcher, glow, close } = openAim(scene);
+      const { catcher, glow, close } = openAim();
 
       let selected: number | undefined;
       let landings: TileCoords[] = [];
@@ -254,7 +307,7 @@ export function createMapView(scene: Phaser.Scene, chronicle: Chronicle): MapVie
       tiles: TileCoords[],
       chosen: (target: Target | undefined) => void,
     ): () => void {
-      const { catcher, glow, close } = openAim(scene);
+      const { catcher, glow, close } = openAim();
       for (const coord of tiles) glow.add(litTile(scene, coord));
 
       let pressed = false;

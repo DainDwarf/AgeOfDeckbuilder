@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { apply, type Chronicle, type Command, type Target, targetTiles } from '../rules/chronicle';
+import { unitAt } from '../rules/units';
 import { CARD_HEIGHT } from './card-face';
 import {
   ACCENT,
@@ -17,6 +18,7 @@ import { createOverlay } from './overlay';
 import { createPiles } from './piles';
 import { createResourceBar } from './resource-bar';
 import { text } from './text';
+import { createUnitPanel } from './unit-panel';
 
 type Part = { render(chronicle: Chronicle): void };
 
@@ -37,12 +39,30 @@ export class ChronicleScene extends Phaser.Scene {
     applyDesignSpace(this);
 
     const parts: Part[] = [];
+    const view = createMapView(this, this.current);
+    const panel = createUnitPanel(this);
+
+    /** Every state change and every aim goes through here: no inspection outlives one. */
+    const dismiss = (): void => {
+      panel.hide();
+      view.markInspected(undefined);
+    };
+
     const perform = (command: Command): void => {
+      dismiss();
       this.current = apply(this.current, command);
       for (const part of parts) part.render(this.current);
     };
 
-    const view = createMapView(this, this.current);
+    view.inspect((found) => {
+      const unit = found === undefined ? undefined : unitAt(this.current.units, found.tile);
+      dismiss();
+      if (found === undefined || unit === undefined) return;
+      panel.show(unit, found.at);
+      view.markInspected(found.tile);
+    });
+    this.input.keyboard?.on('keydown-ESC', dismiss);
+
     const overlay = createOverlay(this);
     const endTurn = this.addEndTurn(() => perform({ type: 'end-turn' }));
     parts.push(
@@ -56,6 +76,7 @@ export class ChronicleScene extends Phaser.Scene {
           // The aiming catcher lies under the hand and the piles, so the button is the one thing
           // left on the table that has to be dead for the length of the aim.
           endTurn.live(false);
+          dismiss();
           const chosen = (target: Target | undefined): void => {
             endTurn.live(true);
             if (target === undefined) released();

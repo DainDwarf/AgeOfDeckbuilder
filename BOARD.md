@@ -12,8 +12,6 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
-- **Unit panel** — clicking a unit while no order is aimed shows a panel with its stats — health,
-  damage, range, move — so a damaged unit's health is readable on screen. Doc-impact: none.
 - **Tile inspection** — clicking a tile with no order aimed cycles the infopanel through its
   layers — unit, building, then the tile itself with its improvements — wrapping past the last;
   panel content settled with the user and implemented. Doc-impact: none.

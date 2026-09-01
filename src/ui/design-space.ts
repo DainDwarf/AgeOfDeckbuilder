@@ -11,6 +11,10 @@ export const MARGIN = 24;
 /** The one accent, on everything that is the player's: the border, the deck, the button. */
 export const ACCENT = 0xd9a441;
 
+/** The panel language: every surface laid over the table is this fill inside this edge. */
+export const PANEL_FILL = 0xd4d7db;
+export const PANEL_EDGE = 0x6f757d;
+
 // Phaser reads a polygon's corner list in min-(0, 0) space; corners about their own centre draw
 // displaced by half the shape.
 export function corners(raw: number[]): number[] {
