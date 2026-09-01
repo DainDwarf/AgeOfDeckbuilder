@@ -62,8 +62,9 @@ export class ChronicleScene extends Phaser.Scene {
             if (target === undefined) released();
             else perform({ type: 'play', index, target });
           };
-          return CARDS[this.current.hand[index]].kind === 'building'
-            ? view.aimBuild(this.current, chosen)
+          const card = CARDS[this.current.hand[index]];
+          return card.kind === 'building'
+            ? view.aimBuild(this.current, card.building, chosen)
             : view.aimOrder(this.current, chosen);
         },
         (id, refusal) => overlay.zoom(id, refusal),

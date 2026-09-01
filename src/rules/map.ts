@@ -24,12 +24,16 @@ export const TERRAIN_YIELDS: Record<Terrain, Partial<Resources>> = {
   urban: { production: 1, military: 1, money: 1, science: 1, culture: 1 },
 };
 
-/** `PH_` marks a stand-in: this is not authored content, and it goes. */
-export type BuildingTypeId = 'PH_Farm';
+/** `PH_` marks a stand-in: neither of these is authored content, and both of them go. */
+export type BuildingTypeId = 'PH_City' | 'PH_Farm';
 
-/** What one building of each kind yields at income, on top of the terrain under it. */
-export const BUILDING_YIELDS: Record<BuildingTypeId, Partial<Resources>> = {
-  PH_Farm: { food: 1 },
+/** What a building of each kind stands on, and what it yields at income on top of that terrain. */
+export const BUILDINGS: Record<
+  BuildingTypeId,
+  { readonly terrain: Terrain; readonly yields: Partial<Resources> }
+> = {
+  PH_City: { terrain: 'urban', yields: {} },
+  PH_Farm: { terrain: 'plain', yields: { food: 1 } },
 };
 
 /** How many biomes the map is cut into, and which kinds they are dealt. */

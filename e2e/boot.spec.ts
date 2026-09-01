@@ -1,11 +1,8 @@
 import { expect, test } from '@playwright/test';
+import { watch } from './table';
 
 test('the page boots into the chronicle and logs nothing', async ({ page }) => {
-  const problems: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error') problems.push(`console: ${message.text()}`);
-  });
-  page.on('pageerror', (error) => problems.push(`page: ${error.message}`));
+  const problems = watch(page);
 
   await page.goto('/');
 

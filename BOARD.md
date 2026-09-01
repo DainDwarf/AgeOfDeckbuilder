@@ -37,5 +37,3 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 - **Movable map** — the chronicle scene's camera pans by drag and zooms by wheel, bounded so the
   map cannot leave the frame entirely; text stays crisp at every zoom; the standing e2e passes.
   Doc-impact: none.
-- **Order e2e** — a standing e2e arms the plain order, selects a unit, moves it, and asserts the
-  unit stands on its destination. Doc-impact: none.

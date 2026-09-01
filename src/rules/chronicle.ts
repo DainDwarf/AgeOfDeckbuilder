@@ -1,6 +1,6 @@
 import { CARDS, type CardId, DECK } from './cards';
 import {
-  BUILDING_YIELDS,
+  BUILDINGS,
   type BuildingTypeId,
   CITY_TILE,
   generateMap,
@@ -46,16 +46,22 @@ export type Command =
   | { readonly type: 'end-turn' }
   | { readonly type: 'play'; readonly index: number; readonly target?: Target };
 
-/** The founding: the seed generates the map, and the city holds its tile and the six around it. */
+/**
+ * The founding: the seed generates the map, the city fills the slot of the tile it stands on, and
+ * it holds that tile and the six around it.
+ */
 export function beginChronicle(seed: number): Chronicle {
   const map = generateMap(seedRng(seed));
   const deck = shuffle(map.rng, DECK);
   const held = [CITY_TILE, ...neighbours(CITY_TILE)];
+  const tiles: Tile[] = map.tiles.map((tile) =>
+    tileKey(tile) === tileKey(CITY_TILE) ? { ...tile, building: 'PH_City' } : tile,
+  );
   return draw(
     events({
       seed,
       rng: deck.rng,
-      tiles: map.tiles,
+      tiles,
       city: CITY_TILE,
       held,
       turn: 1,
@@ -117,15 +123,15 @@ function unaffordable(chronicle: Chronicle, id: CardId): Resource[] {
 }
 
 /**
- * Where a building card can build: a tile inside the border whose building slot is free and where
- * a worker of the player's stands. The city fills its own tile's slot, so it is never one of them.
+ * Where a building can be built: a tile inside the border, of the terrain that building stands on,
+ * whose building slot is free and where a worker of the player's stands.
  */
-export function buildable(chronicle: Chronicle): TileCoords[] {
+export function buildable(chronicle: Chronicle, building: BuildingTypeId): TileCoords[] {
   const held = new Set(chronicle.held.map(tileKey));
   return chronicle.tiles
     .filter((tile) => {
       if (!held.has(tileKey(tile)) || tile.building !== undefined) return false;
-      if (tileKey(tile) === tileKey(chronicle.city)) return false;
+      if (tile.terrain !== BUILDINGS[building].terrain) return false;
       const standing = unitAt(chronicle.units, tile);
       return standing?.faction === 'player' && standing.stats.id === 'PH_Worker';
     })
@@ -134,11 +140,12 @@ export function buildable(chronicle: Chronicle): TileCoords[] {
 
 /** A card the city can pay for that the map still refuses: there is nothing for it to resolve on. */
 function blocked(chronicle: Chronicle, id: CardId): boolean {
-  switch (CARDS[id].kind) {
+  const card = CARDS[id];
+  switch (card.kind) {
     case 'unit':
       return chronicle.population === 0 || unitAt(chronicle.units, chronicle.city) !== undefined;
     case 'building':
-      return buildable(chronicle).length === 0;
+      return buildable(chronicle, card.building).length === 0;
     case 'order':
       return !chronicle.units.some(
         (unit) =>
@@ -203,7 +210,7 @@ function build(
 ): Chronicle | undefined {
   if (target === undefined) return undefined;
   const at = tileKey(target.tile);
-  if (!buildable(chronicle).some((coord) => tileKey(coord) === at)) return undefined;
+  if (!buildable(chronicle, building).some((coord) => tileKey(coord) === at)) return undefined;
 
   return {
     ...chronicle,
@@ -264,7 +271,7 @@ function income(chronicle: Chronicle): Chronicle {
     if (!held.has(tileKey(tile))) continue;
     const yields = TERRAIN_YIELDS[tile.terrain];
     const built: Partial<Resources> =
-      tile.building === undefined ? {} : BUILDING_YIELDS[tile.building];
+      tile.building === undefined ? {} : BUILDINGS[tile.building].yields;
     for (const resource of RESOURCES) {
       resources[resource] += (yields[resource] ?? 0) + (built[resource] ?? 0);
     }

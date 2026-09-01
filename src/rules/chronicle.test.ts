@@ -3,6 +3,7 @@ import { type CardId, DECK } from './cards';
 import {
   apply,
   beginChronicle,
+  buildable,
   type Chronicle,
   type Command,
   playable,
@@ -31,7 +32,10 @@ function cityOf(inside: Terrain[], carrying: Partial<Chronicle> = {}): Chronicle
     seed: 7,
     rng: seedRng(7),
     tiles: [
-      ...inside.map((terrain, index) => ({ q: index, r: 0, terrain })),
+      ...inside.map(
+        (terrain, index): Tile =>
+          index === 0 ? { q: 0, r: 0, terrain, building: 'PH_City' } : { q: index, r: 0, terrain },
+      ),
       { q: 0, r: 5, terrain: 'plain' as Terrain },
     ],
     city: CITY,
@@ -47,18 +51,20 @@ function cityOf(inside: Terrain[], carrying: Partial<Chronicle> = {}): Chronicle
   };
 }
 
-/** A disc of plain around the city's urban tile, out to `radius`; `water` names the wet ones. */
+/**
+ * A disc of plain around the city, out to `radius`; `water` names the wet ones. The city stands on
+ * its urban tile as the founding leaves it: in that tile's building slot.
+ */
 function field(radius: number, water: TileCoords[] = []): Tile[] {
   const wet = new Set(water.map(tileKey));
   const tiles: Tile[] = [];
   for (let q = -radius; q <= radius; q++) {
     for (let r = Math.max(-radius, -q - radius); r <= Math.min(radius, -q + radius); r++) {
-      const terrain: Terrain = wet.has(tileKey({ q, r }))
-        ? 'water'
-        : q === 0 && r === 0
-          ? 'urban'
-          : 'plain';
-      tiles.push({ q, r, terrain });
+      if (q === 0 && r === 0) {
+        tiles.push({ q, r, terrain: 'urban', building: 'PH_City' });
+        continue;
+      }
+      tiles.push({ q, r, terrain: wet.has(tileKey({ q, r })) ? 'water' : 'plain' });
     }
   }
   return tiles;
@@ -550,16 +556,48 @@ test('a tile’s building slot takes one building and no more', () => {
   expect(playable(refusalOf(once, 'PH_Farm'))).toBe(false);
 });
 
+test('the founding fills the city tile’s slot with the city', () => {
+  const chronicle = beginChronicle(1234);
+
+  expect(buildingAt(chronicle, chronicle.city)).toBe('PH_City');
+});
+
+test('the city in its slot adds nothing to what the tile it stands on yields', () => {
+  const founded = apply(cityOf(['urban'], { tiles: field(1) }), { type: 'end-turn' });
+
+  for (const resource of RESOURCES) {
+    expect(founded.resources[resource]).toBe(TERRAIN_YIELDS.urban[resource] ?? 0);
+  }
+});
+
 test('the city fills its own tile’s slot, worker or no worker', () => {
-  const city = cityOf(['urban'], {
+  const city = cityOf(['urban', 'plain'], {
     tiles: field(2),
     hand: ['PH_Farm'],
     units: [worker(CITY)],
     resources: PRODUCTION,
   });
+  const overOne = { ...city, units: [worker({ q: 1, r: 0 })] };
 
+  expect(buildingAt(city, CITY)).toBe('PH_City');
+  expect(buildable(city, 'PH_Farm')).toEqual([]);
   expect(apply(city, buildOn(CITY))).toEqual(city);
   expect(playable(refusalOf(city, 'PH_Farm'))).toBe(false);
+  expect(playable(refusalOf(overOne, 'PH_Farm'))).toBe(true);
+});
+
+test('a farm stands on a plain and on no other terrain a worker reaches', () => {
+  for (const terrain of ['forest', 'hills', 'urban'] as Terrain[]) {
+    const city = cityOf(['urban', terrain], {
+      hand: ['PH_Farm'],
+      units: [worker({ q: 1, r: 0 })],
+      resources: PRODUCTION,
+    });
+
+    expect(buildable(city, 'PH_Farm')).toEqual([]);
+    expect(playable(refusalOf(city, 'PH_Farm'))).toBe(false);
+    expect(apply(city, buildOn({ q: 1, r: 0 }))).toEqual(city);
+  }
 });
 
 test('a farm standing on a tile adds its food to what that tile yields at income', () => {

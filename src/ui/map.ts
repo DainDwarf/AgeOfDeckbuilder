@@ -1,6 +1,6 @@
 import type Phaser from 'phaser';
 import { buildable, type Chronicle, type Target } from '../rules/chronicle';
-import type { BuildingTypeId, Terrain, TileCoords } from '../rules/map';
+import { type BuildingTypeId, type Terrain, type TileCoords, tileKey } from '../rules/map';
 import { type Faction, reachable, type UnitTypeId } from '../rules/units';
 import { ACCENT, corners, DESIGN_HEIGHT, DESIGN_WIDTH, hexagon } from './design-space';
 
@@ -22,8 +22,15 @@ const UNIT_MARKS: Record<UnitTypeId, number[]> = {
   PH_Warrior: corners([0, -14, 13, 9, -13, 9]),
 };
 
-/** Placeholder primitive until the art pass: the farm a house, wide enough to show under a unit. */
+/**
+ * Placeholder primitives until the art pass: the farm a house, the city a crenellated wall, both
+ * wide enough to show under a unit.
+ */
 const BUILDING_MARKS: Record<BuildingTypeId, number[]> = {
+  PH_City: corners([
+    -15, 10, -15, -12, -8, -12, -8, -6, -4, -6, -4, -12, 4, -12, 4, -6, 8, -6, 8, -12, 15, -12, 15,
+    10,
+  ]),
   PH_Farm: corners([-16, 8, -16, -2, 0, -13, 16, -2, 16, 8]),
 };
 
@@ -52,7 +59,11 @@ export type MapView = {
   /** Aims an order — a unit, then where it lands — until a target is chosen or cancel is called. */
   aimOrder(chronicle: Chronicle, chosen: (target: Target | undefined) => void): () => void;
   /** Aims a building card at the tiles it can build on, until a target is chosen or cancelled. */
-  aimBuild(chronicle: Chronicle, chosen: (target: Target | undefined) => void): () => void;
+  aimBuild(
+    chronicle: Chronicle,
+    building: BuildingTypeId,
+    chosen: (target: Target | undefined) => void,
+  ): () => void;
 };
 
 function positionOf({ q, r }: TileCoords): { x: number; y: number } {
@@ -91,6 +102,7 @@ function openAim(scene: Phaser.Scene): {
     .zone(0, 0, DESIGN_WIDTH, DESIGN_HEIGHT)
     .setOrigin(0, 0)
     .setDepth(AIM_DEPTH)
+    .setName('aim')
     .setInteractive();
   const glow = scene.add.container(0, 0).setDepth(GLOW_DEPTH);
   return {
@@ -117,7 +129,10 @@ export function createMapView(scene: Phaser.Scene, chronicle: Chronicle): MapVie
   const face = hexagon(TILE_SIZE);
   for (const tile of chronicle.tiles) {
     const { x, y } = positionOf(tile);
-    scene.add.polygon(x, y, face, TERRAIN_COLOURS[tile.terrain]).setStrokeStyle(1, OUTLINE);
+    scene.add
+      .polygon(x, y, face, TERRAIN_COLOURS[tile.terrain])
+      .setStrokeStyle(1, OUTLINE)
+      .setName(`tile-${tileKey(tile)}`);
   }
 
   const ring = hexagon(TILE_SIZE - 4);
@@ -126,10 +141,7 @@ export function createMapView(scene: Phaser.Scene, chronicle: Chronicle): MapVie
     scene.add.polygon(x, y, ring, 0, 0).setStrokeStyle(same(coord, chronicle.city) ? 4 : 2, ACCENT);
   }
 
-  const centre = positionOf(chronicle.city);
-  scene.add.circle(centre.x, centre.y, 4, ACCENT);
-
-  const built = scene.add.container(0, 0).setDepth(BUILDING_DEPTH);
+  const built = scene.add.container(0, 0).setDepth(BUILDING_DEPTH).setName('buildings');
   const layer = scene.add.container(0, 0).setDepth(UNIT_DEPTH);
   let markers: Phaser.GameObjects.Polygon[] = [];
 
@@ -237,9 +249,13 @@ export function createMapView(scene: Phaser.Scene, chronicle: Chronicle): MapVie
       return () => finish(undefined);
     },
 
-    aimBuild(current: Chronicle, chosen: (target: Target | undefined) => void): () => void {
+    aimBuild(
+      current: Chronicle,
+      building: BuildingTypeId,
+      chosen: (target: Target | undefined) => void,
+    ): () => void {
       const { catcher, glow, close } = openAim(scene);
-      const lit = buildable(current);
+      const lit = buildable(current, building);
       for (const coord of lit) glow.add(litTile(scene, coord));
 
       let pressed = false;
