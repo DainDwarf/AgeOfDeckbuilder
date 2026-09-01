@@ -18,8 +18,9 @@ function metricsOf(width: number): {
   return { height: Math.round(width * 1.4), em, pad: 0.55 * em, radius: 0.45 * em };
 }
 
-const ON_TABLE = metricsOf(CARD_WIDTH);
-export const CARD_HEIGHT = ON_TABLE.height;
+/** The card as it lies on the table: what anything laid out in the card's language measures by. */
+export const CARD_METRICS = metricsOf(CARD_WIDTH);
+export const CARD_HEIGHT = CARD_METRICS.height;
 
 const EDGE = 0x6f757d;
 const KIND_INK = 0x4a5058;
@@ -134,14 +135,20 @@ export function createCardBack(scene: Phaser.Scene, faded = false): Phaser.GameO
   const tone = faded ? dim : (colour: number): number => colour;
   const paper = scene.add.graphics();
   paper.fillStyle(tone(BACK));
-  paper.fillRoundedRect(-CARD_WIDTH / 2, -CARD_HEIGHT, CARD_WIDTH, CARD_HEIGHT, ON_TABLE.radius);
+  paper.fillRoundedRect(
+    -CARD_WIDTH / 2,
+    -CARD_HEIGHT,
+    CARD_WIDTH,
+    CARD_HEIGHT,
+    CARD_METRICS.radius,
+  );
   paper.lineStyle(1, tone(EDGE));
   paper.strokeRoundedRect(
     -CARD_WIDTH / 2 + 0.5,
     -CARD_HEIGHT + 0.5,
     CARD_WIDTH - 1,
     CARD_HEIGHT - 1,
-    ON_TABLE.radius,
+    CARD_METRICS.radius,
   );
 
   const emblem = scene.add
@@ -162,7 +169,7 @@ export function createEmptySlot(scene: Phaser.Scene): Phaser.GameObjects.Contain
 /** The card's outline as a closed polyline, corner arcs sampled into short chords. */
 function cardOutline(): { x: number; y: number }[] {
   const half = CARD_WIDTH / 2;
-  const r = ON_TABLE.radius;
+  const r = CARD_METRICS.radius;
   const points: { x: number; y: number }[] = [];
   const corner = (cx: number, cy: number, from: number): void => {
     for (let i = 0; i <= 6; i++) {

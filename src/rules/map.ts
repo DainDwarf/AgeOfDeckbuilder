@@ -80,6 +80,11 @@ export function distance(a: TileCoords, b: TileCoords): number {
   return (Math.abs(a.q - b.q) + Math.abs(a.r - b.r) + Math.abs(a.q + a.r - (b.q + b.r))) / 2;
 }
 
+/** The tile at a position, if the map reaches that far. */
+export function tileAt(tiles: readonly Tile[], coord: TileCoords): Tile | undefined {
+  return tiles.find((tile) => tile.q === coord.q && tile.r === coord.r);
+}
+
 /** The one way a tile is named in a set or a map keyed by position. */
 export function tileKey({ q, r }: TileCoords): string {
   return `${q},${r}`;

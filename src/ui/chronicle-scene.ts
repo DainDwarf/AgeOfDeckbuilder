@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { apply, type Chronicle, type Command, type Target, targetTiles } from '../rules/chronicle';
-import { unitAt } from '../rules/units';
+import { type TileCoords, tileAt, tileKey } from '../rules/map';
 import { CARD_HEIGHT } from './card-face';
 import {
   ACCENT,
@@ -13,12 +13,12 @@ import {
   UI_FONT,
 } from './design-space';
 import { createHand } from './hand';
+import { createInfoPanel, layersOf } from './infopanel';
 import { createMapView } from './map';
 import { createOverlay } from './overlay';
 import { createPiles } from './piles';
 import { createResourceBar } from './resource-bar';
 import { text } from './text';
-import { createUnitPanel } from './unit-panel';
 
 type Part = { render(chronicle: Chronicle): void };
 
@@ -40,10 +40,14 @@ export class ChronicleScene extends Phaser.Scene {
 
     const parts: Part[] = [];
     const view = createMapView(this, this.current);
-    const panel = createUnitPanel(this);
+    const panel = createInfoPanel(this);
+
+    /** The tile the panel is reading, and how deep into its layers the clicks have gone. */
+    let inspecting: { tile: TileCoords; index: number } | undefined;
 
     /** Every state change and every aim goes through here: no inspection outlives one. */
     const dismiss = (): void => {
+      inspecting = undefined;
       panel.hide();
       view.markInspected(undefined);
     };
@@ -55,11 +59,20 @@ export class ChronicleScene extends Phaser.Scene {
     };
 
     view.inspect((found) => {
-      const unit = found === undefined ? undefined : unitAt(this.current.units, found.tile);
-      dismiss();
-      if (found === undefined || unit === undefined) return;
-      panel.show(unit, found.at);
-      view.markInspected(found.tile);
+      const tile = found === undefined ? undefined : tileAt(this.current.tiles, found.tile);
+      if (found === undefined || tile === undefined) {
+        dismiss();
+        return;
+      }
+      const layers = layersOf(tile, this.current.units);
+      const shown =
+        inspecting !== undefined && tileKey(inspecting.tile) === tileKey(tile)
+          ? inspecting.index
+          : undefined;
+      const index = shown === undefined ? 0 : (shown + 1) % layers.length;
+      inspecting = { tile: { q: tile.q, r: tile.r }, index };
+      panel.show(layers, index, found.at, shown !== undefined);
+      view.markInspected(tile);
     });
     this.input.keyboard?.on('keydown-ESC', dismiss);
 

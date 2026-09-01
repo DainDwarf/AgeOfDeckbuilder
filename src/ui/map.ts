@@ -79,12 +79,26 @@ export type MapView = {
   markInspected(tile: TileCoords | undefined): void;
 };
 
+/** The one way a tile's terrain is drawn: the hexagonal face, at the size a tile is drawn at. */
+export function terrainMark(scene: Phaser.Scene, terrain: Terrain): Phaser.GameObjects.Polygon {
+  return scene.add
+    .polygon(0, 0, hexagon(TILE_SIZE), TERRAIN_COLOURS[terrain])
+    .setStrokeStyle(1, OUTLINE);
+}
+
+/** The one way a building is drawn: its placeholder mark, in the stone everything built is. */
+export function buildingMark(
+  scene: Phaser.Scene,
+  building: BuildingTypeId,
+): Phaser.GameObjects.Polygon {
+  return scene.add.polygon(0, 0, BUILDING_MARKS[building], BUILT).setStrokeStyle(2, OUTLINE);
+}
+
 /** The one way a unit is drawn: its placeholder mark, in the colour of the faction it acts for. */
-export function unitMark(scene: Phaser.Scene, unit: Unit, scale = 1): Phaser.GameObjects.Polygon {
+export function unitMark(scene: Phaser.Scene, unit: Unit): Phaser.GameObjects.Polygon {
   return scene.add
     .polygon(0, 0, UNIT_MARKS[unit.stats.id], FACTION_COLOURS[unit.faction])
-    .setStrokeStyle(2 / scale, OUTLINE)
-    .setScale(scale);
+    .setStrokeStyle(2, OUTLINE);
 }
 
 function positionOf({ q, r }: TileCoords): { x: number; y: number } {
@@ -95,7 +109,7 @@ function positionOf({ q, r }: TileCoords): { x: number; y: number } {
 }
 
 /** A hexagon is exactly the ground closer to its own centre than to any other centre. */
-function tileAt(chronicle: Chronicle, x: number, y: number): TileCoords | undefined {
+function tileUnder(chronicle: Chronicle, x: number, y: number): TileCoords | undefined {
   let nearest: TileCoords | undefined;
   let best = Infinity;
   for (const tile of chronicle.tiles) {
@@ -134,12 +148,10 @@ function litTile(scene: Phaser.Scene, coord: TileCoords): Phaser.GameObjects.Pol
  * never this file.
  */
 export function createMapView(scene: Phaser.Scene, chronicle: Chronicle): MapView {
-  const face = hexagon(TILE_SIZE);
   for (const tile of chronicle.tiles) {
     const { x, y } = positionOf(tile);
-    scene.add
-      .polygon(x, y, face, TERRAIN_COLOURS[tile.terrain])
-      .setStrokeStyle(1, OUTLINE)
+    terrainMark(scene, tile.terrain)
+      .setPosition(x, y)
       .setName(`tile-${tileKey(tile)}`);
   }
 
@@ -181,9 +193,7 @@ export function createMapView(scene: Phaser.Scene, chronicle: Chronicle): MapVie
       for (const tile of current.tiles) {
         if (tile.building === undefined) continue;
         const { x, y } = positionOf(tile);
-        built.add(
-          scene.add.polygon(x, y, BUILDING_MARKS[tile.building], BUILT).setStrokeStyle(2, OUTLINE),
-        );
+        built.add(buildingMark(scene, tile.building).setPosition(x, y));
       }
 
       layer.removeAll(true);
@@ -208,7 +218,7 @@ export function createMapView(scene: Phaser.Scene, chronicle: Chronicle): MapVie
       scene.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
         if (!pressed) return;
         pressed = false;
-        const on = tileAt(chronicle, pointer.worldX, pointer.worldY);
+        const on = tileUnder(chronicle, pointer.worldX, pointer.worldY);
         found(on === undefined ? undefined : { tile: on, at: positionOf(on) });
       });
     },
@@ -259,7 +269,7 @@ export function createMapView(scene: Phaser.Scene, chronicle: Chronicle): MapVie
       const release = (pointer: Phaser.Input.Pointer): void => {
         if (!pressed) return;
         pressed = false;
-        const to = tileAt(current, pointer.worldX, pointer.worldY);
+        const to = tileUnder(current, pointer.worldX, pointer.worldY);
         const held = grabbed;
         grabbed = undefined;
 
@@ -285,7 +295,7 @@ export function createMapView(scene: Phaser.Scene, chronicle: Chronicle): MapVie
 
       catcher.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
         pressed = true;
-        const under = tileAt(current, pointer.worldX, pointer.worldY);
+        const under = tileUnder(current, pointer.worldX, pointer.worldY);
         const found =
           under === undefined
             ? -1
@@ -321,7 +331,7 @@ export function createMapView(scene: Phaser.Scene, chronicle: Chronicle): MapVie
       const release = (pointer: Phaser.Input.Pointer): void => {
         if (!pressed) return;
         pressed = false;
-        const on = tileAt(current, pointer.worldX, pointer.worldY);
+        const on = tileUnder(current, pointer.worldX, pointer.worldY);
         if (on !== undefined && tiles.some((coord) => same(coord, on)))
           finish({ type: 'tile', tile: on });
       };

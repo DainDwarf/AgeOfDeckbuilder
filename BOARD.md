@@ -12,10 +12,6 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
-- **Tile inspection** — clicking a tile with no order aimed cycles the infopanel through its
-  layers — unit, building, then the tile itself with its improvements — wrapping past the last;
-  panel content settled with the user and implemented. Doc-impact: none.
-  [board/tile-inspection.md](board/tile-inspection.md)
 - **Tooltip rest delay** — a tooltip appears only once the pointer has rested still over its
   source for one shared delay constant; moving off or onward before that shows nothing. Applies
   to every tooltip through the one bubble module. Doc-impact: none.
