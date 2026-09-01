@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { CARDS, type CardId } from '../rules/cards';
+import { CARDS, type CardId, type TargetSort } from '../rules/cards';
 import { type Chronicle, playable, type Refusal, refusalOf } from '../rules/chronicle';
 import { CARD_HEIGHT, CARD_WIDTH, type CardFace, createCardFace } from './card-face';
 import { DESIGN_HEIGHT, DESIGN_WIDTH, MARGIN } from './design-space';
@@ -43,7 +43,7 @@ export type Hand = { render(chronicle: Chronicle): void };
 export function createHand(
   scene: Phaser.Scene,
   play: (index: number) => void,
-  aim: (index: number, released: () => void) => () => void,
+  aim: (index: number, sort: Exclude<TargetSort, 'none'>, released: () => void) => () => void,
   zoom: (id: CardId, refusal: Refusal) => void,
 ): Hand {
   const laneLeft = MARGIN + CARD_WIDTH + LANE_PAD;
@@ -102,11 +102,11 @@ export function createHand(
     if (slot.playable && grabbed.y - pointer.worldY > PLAY_HEIGHT) {
       // A card that takes a target is not played by the release: it waits, in its slot and armed,
       // while the map is aimed at, and comes back down only when the card itself is clicked.
-      const kind = CARDS[slot.id].kind;
-      if (kind === 'order' || kind === 'building') {
+      const sort = CARDS[slot.id].target;
+      if (sort !== 'none') {
         settle(slot, 150);
         slot.face.arm(true);
-        const cancel = aim(slot.index, () => {
+        const cancel = aim(slot.index, sort, () => {
           aiming = undefined;
           slot.face.arm(false);
           slot.hovered = false;

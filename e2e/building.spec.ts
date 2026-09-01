@@ -37,7 +37,11 @@ function farmedThisTurn(chronicle: Chronicle): TileCoords | undefined {
   if (march === -1 || !entered.hand.includes('PH_Farm')) return undefined;
 
   for (const tile of neighbours(entered.city)) {
-    const moved = apply(entered, { type: 'play', index: march, target: { unit: 0, tile } });
+    const moved = apply(entered, {
+      type: 'play',
+      index: march,
+      target: { sort: 'unit-tile', unit: 0, tile },
+    });
     if (moved === entered || !playable(refusalOf(moved, 'PH_Farm'))) continue;
     if (buildable(moved, 'PH_Farm').some((coord) => tileKey(coord) === tileKey(tile))) return tile;
   }

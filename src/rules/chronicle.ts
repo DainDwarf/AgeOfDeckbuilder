@@ -37,10 +37,12 @@ export type Chronicle = {
 };
 
 /**
- * The tile a play is aimed at — where an order sends its unit, where a building card builds — and,
- * for an order, which unit it acts on, by its place in `units`.
+ * What a play was aimed at, in the sort the card declares: the tile a building card builds on, or
+ * the unit an order acts on — by its place in `units` — and the tile it is sent to.
  */
-export type Target = { readonly tile: TileCoords; readonly unit?: number };
+export type Target =
+  | { readonly sort: 'tile'; readonly tile: TileCoords }
+  | { readonly sort: 'unit-tile'; readonly unit: number; readonly tile: TileCoords };
 
 export type Command =
   | { readonly type: 'end-turn' }
@@ -138,6 +140,19 @@ export function buildable(chronicle: Chronicle, building: BuildingTypeId): TileC
     .map(({ q, r }) => ({ q, r }));
 }
 
+/** The tiles a card of the `tile` sort can be aimed at. */
+export function targetTiles(chronicle: Chronicle, id: CardId): TileCoords[] {
+  const card = CARDS[id];
+  switch (card.kind) {
+    case 'building':
+      return buildable(chronicle, card.building);
+    case 'unit':
+    case 'order':
+    case 'action':
+      return [];
+  }
+}
+
 /** A card the city can pay for that the map still refuses: there is nothing for it to resolve on. */
 function blocked(chronicle: Chronicle, id: CardId): boolean {
   const card = CARDS[id];
@@ -208,7 +223,7 @@ function build(
   building: BuildingTypeId,
   target: Target | undefined,
 ): Chronicle | undefined {
-  if (target === undefined) return undefined;
+  if (target?.sort !== 'tile') return undefined;
   const at = tileKey(target.tile);
   if (!buildable(chronicle, building).some((coord) => tileKey(coord) === at)) return undefined;
 
@@ -220,7 +235,7 @@ function build(
 
 /** The plain order: the unit crosses to a tile within its move, and its nature acts where it lands. */
 function order(chronicle: Chronicle, target: Target | undefined): Chronicle | undefined {
-  if (target === undefined || target.unit === undefined) return undefined;
+  if (target?.sort !== 'unit-tile') return undefined;
   const mover = target.unit;
   const to = target.tile;
   const unit = chronicle.units[mover];

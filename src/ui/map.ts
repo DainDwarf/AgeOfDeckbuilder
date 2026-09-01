@@ -1,5 +1,5 @@
 import type Phaser from 'phaser';
-import { buildable, type Chronicle, type Target } from '../rules/chronicle';
+import type { Chronicle, Target } from '../rules/chronicle';
 import { type BuildingTypeId, type Terrain, type TileCoords, tileKey } from '../rules/map';
 import { type Faction, reachable, type UnitTypeId } from '../rules/units';
 import { ACCENT, corners, DESIGN_HEIGHT, DESIGN_WIDTH, hexagon } from './design-space';
@@ -56,12 +56,12 @@ const UNIT_DEPTH = 4;
 
 export type MapView = {
   render(chronicle: Chronicle): void;
-  /** Aims an order — a unit, then where it lands — until a target is chosen or cancel is called. */
-  aimOrder(chronicle: Chronicle, chosen: (target: Target | undefined) => void): () => void;
-  /** Aims a building card at the tiles it can build on, until a target is chosen or cancelled. */
-  aimBuild(
+  /** Aims at a unit, then at where it lands, until a target is chosen or cancel is called. */
+  aimUnitTile(chronicle: Chronicle, chosen: (target: Target | undefined) => void): () => void;
+  /** Lights the tiles it is given and aims at them, until a target is chosen or cancel is called. */
+  aimTile(
     chronicle: Chronicle,
-    building: BuildingTypeId,
+    tiles: TileCoords[],
     chosen: (target: Target | undefined) => void,
   ): () => void;
 };
@@ -167,7 +167,7 @@ export function createMapView(scene: Phaser.Scene, chronicle: Chronicle): MapVie
       });
     },
 
-    aimOrder(current: Chronicle, chosen: (target: Target | undefined) => void): () => void {
+    aimUnitTile(current: Chronicle, chosen: (target: Target | undefined) => void): () => void {
       const { catcher, glow, close } = openAim(scene);
 
       let selected: number | undefined;
@@ -216,7 +216,7 @@ export function createMapView(scene: Phaser.Scene, chronicle: Chronicle): MapVie
           if (to !== undefined && same(to, current.units[held].tile)) return;
         }
         if (selected !== undefined && to !== undefined && landings.some((c) => same(c, to))) {
-          finish({ unit: selected, tile: to });
+          finish({ sort: 'unit-tile', unit: selected, tile: to });
           return;
         }
         selected = undefined;
@@ -249,14 +249,13 @@ export function createMapView(scene: Phaser.Scene, chronicle: Chronicle): MapVie
       return () => finish(undefined);
     },
 
-    aimBuild(
+    aimTile(
       current: Chronicle,
-      building: BuildingTypeId,
+      tiles: TileCoords[],
       chosen: (target: Target | undefined) => void,
     ): () => void {
       const { catcher, glow, close } = openAim(scene);
-      const lit = buildable(current, building);
-      for (const coord of lit) glow.add(litTile(scene, coord));
+      for (const coord of tiles) glow.add(litTile(scene, coord));
 
       let pressed = false;
 
@@ -270,7 +269,8 @@ export function createMapView(scene: Phaser.Scene, chronicle: Chronicle): MapVie
         if (!pressed) return;
         pressed = false;
         const on = tileAt(current, pointer.worldX, pointer.worldY);
-        if (on !== undefined && lit.some((coord) => same(coord, on))) finish({ tile: on });
+        if (on !== undefined && tiles.some((coord) => same(coord, on)))
+          finish({ sort: 'tile', tile: on });
       };
 
       catcher.on('pointerdown', () => {

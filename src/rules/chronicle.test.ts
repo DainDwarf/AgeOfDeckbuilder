@@ -80,12 +80,12 @@ function unitOf(faction: Faction, tile: TileCoords, stats: Partial<UnitStats> = 
 
 /** An order aimed at a unit and a destination, ready to hand to `apply`. */
 function march(unit: number, to: TileCoords): Command {
-  return { type: 'play', index: 0, target: { unit, tile: to } };
+  return { type: 'play', index: 0, target: { sort: 'unit-tile', unit, tile: to } };
 }
 
 /** A building card aimed at a tile, ready to hand to `apply`. */
 function buildOn(tile: TileCoords): Command {
-  return { type: 'play', index: 0, target: { tile } };
+  return { type: 'play', index: 0, target: { sort: 'tile', tile } };
 }
 
 /** What the city pays for the farm card, and nothing besides. */
