@@ -26,6 +26,8 @@ a [`BOARD.md`](BOARD.md) line. Say
 
 ## Game
 
+- **Cache or precompute movement reachability**: today it is recomputed per order; measure before
+  building anything.
 - **Per-tile yield overlay**: "+x +y" glyphs on each tile showing what it yields, toggleable
   because the information saturates; clicking a resource on the top bar filters the overlay to
   that resource alone. Becomes truly informative once assignment exists (v0.0.3).
