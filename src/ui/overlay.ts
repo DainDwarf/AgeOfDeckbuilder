@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { CARD_KINDS, CARDS, type CardId } from '../rules/cards';
-import type { Chronicle, Resource } from '../rules/chronicle';
+import { type Chronicle, NO_REFUSAL, type Refusal } from '../rules/chronicle';
 import { createCardFace } from './card-face';
 import { addText, DESIGN_HEIGHT, DESIGN_WIDTH, MARGIN, onClick, UI_FONT } from './design-space';
 import { BAR_HEIGHT } from './resource-bar';
@@ -21,7 +21,7 @@ export type PileKind = 'draw-pile' | 'discard-pile';
 
 export type Overlay = {
   browse(pile: PileKind, chronicle: Chronicle): void;
-  zoom(id: CardId, unaffordable: readonly Resource[]): void;
+  zoom(id: CardId, refusal: Refusal): void;
 };
 
 /**
@@ -51,11 +51,11 @@ export function createOverlay(scene: Phaser.Scene): Overlay {
     scrim.setVisible(false).disableInteractive();
   };
 
-  const showZoom = (id: CardId, unaffordable: readonly Resource[]): void => {
+  const showZoom = (id: CardId, refusal: Refusal): void => {
     wipe();
     scrim.setVisible(true).setInteractive();
     zoomed = true;
-    const { root } = createCardFace(scene, id, unaffordable, { width: ZOOM_WIDTH });
+    const { root } = createCardFace(scene, id, refusal, { width: ZOOM_WIDTH });
     root
       .setPosition(DESIGN_WIDTH / 2, (DESIGN_HEIGHT + Math.round(ZOOM_WIDTH * 1.4)) / 2)
       .setDepth(DEPTH + 1);
@@ -94,7 +94,7 @@ export function createOverlay(scene: Phaser.Scene): Overlay {
       const column = index % columns;
       const inRow = Math.min(columns, cards.length - row * columns);
       const spanX = inRow * BROWSE_WIDTH + (inRow - 1) * BROWSE_GAP;
-      const { root } = createCardFace(scene, id, [], { width: BROWSE_WIDTH });
+      const { root } = createCardFace(scene, id, NO_REFUSAL, { width: BROWSE_WIDTH });
       root
         .setPosition(
           (DESIGN_WIDTH - spanX) / 2 + column * (BROWSE_WIDTH + BROWSE_GAP) + BROWSE_WIDTH / 2,
@@ -106,7 +106,7 @@ export function createOverlay(scene: Phaser.Scene): Overlay {
           hitAreaCallback: Phaser.Geom.Rectangle.Contains,
           cursor: 'pointer',
         });
-      onClick(root, () => showZoom(id, []));
+      onClick(root, () => showZoom(id, NO_REFUSAL));
       shown.push(root);
     });
   };

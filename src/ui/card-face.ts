@@ -1,6 +1,6 @@
 import type Phaser from 'phaser';
 import { CARDS, type CardId } from '../rules/cards';
-import { costOf, type Resource } from '../rules/chronicle';
+import { costOf, playable, type Refusal } from '../rules/chronicle';
 import { ACCENT, addText, hexagon, UI_FONT } from './design-space';
 import { RESOURCE_COLOURS } from './resource-bar';
 import { text } from './text';
@@ -36,18 +36,18 @@ export type CardFace = {
 };
 
 /**
- * A card, drawn about its own bottom centre so a container's angle fans it from that corner.
- * `unaffordable` names the costs the city cannot afford; a card with any is drawn as unplayable.
+ * A card, drawn about its own bottom centre so a container's angle fans it from that corner. The
+ * refusal marks the costs the city cannot pay, and any refusal at all draws the card unplayable.
  */
 export function createCardFace(
   scene: Phaser.Scene,
   id: CardId,
-  unaffordable: readonly Resource[],
+  refusal: Refusal,
   { faded = false, width = CARD_WIDTH }: { faded?: boolean; width?: number } = {},
 ): CardFace {
   const { height, em, pad, radius } = metricsOf(width);
   const tone = faded ? dim : (colour: number): number => colour;
-  const palette = unaffordable.length > 0 ? UNAFFORDABLE : AFFORDABLE;
+  const palette = playable(refusal) ? AFFORDABLE : UNAFFORDABLE;
 
   const left = -width / 2 + 1 + pad;
   const right = width / 2 - 1 - pad;
@@ -64,7 +64,7 @@ export function createCardFace(
   const middle = top + 0.55 * em;
   let x = left;
   for (const { resource, amount } of costOf(id)) {
-    const marked = unaffordable.includes(resource);
+    const marked = refusal.unaffordable.includes(resource);
     const chip = scene.add
       .rectangle(x + 0.4 * em, middle, 0.8 * em, 0.8 * em, tone(RESOURCE_COLOURS[resource]))
       .setAngle(45);

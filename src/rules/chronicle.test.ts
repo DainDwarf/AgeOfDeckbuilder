@@ -1,16 +1,11 @@
 import { expect, test } from 'vitest';
 import { type CardId, DECK } from './cards';
-import { apply, beginChronicle, type Chronicle, RESOURCES } from './chronicle';
-import { TERRAIN_YIELDS, type Terrain, type TileCoords } from './map';
+import { apply, beginChronicle, type Chronicle, type Command, RESOURCES } from './chronicle';
+import { distance, TERRAIN_YIELDS, type Terrain, type Tile, type TileCoords, tileKey } from './map';
 import { seedRng } from './rng';
+import type { Side, Unit, UnitType } from './units';
 
-function key({ q, r }: TileCoords): string {
-  return `${q},${r}`;
-}
-
-function distance(a: TileCoords, b: TileCoords): number {
-  return (Math.abs(a.q - b.q) + Math.abs(a.r - b.r) + Math.abs(a.q + a.r - (b.q + b.r))) / 2;
-}
+const CITY: TileCoords = { q: 0, r: 0 };
 
 /** A city on `inside`, tile by tile, with one plain lying outside the border and no cards. */
 function cityOf(inside: Terrain[], carrying: Partial<Chronicle> = {}): Chronicle {
@@ -22,16 +17,47 @@ function cityOf(inside: Terrain[], carrying: Partial<Chronicle> = {}): Chronicle
       ...inside.map((terrain, index) => ({ q: index, r: 0, terrain })),
       { q: 0, r: 5, terrain: 'plain' as Terrain },
     ],
-    city: { q: 0, r: 0 },
+    city: CITY,
     held,
     turn: 1,
     resources: { food: 0, production: 0, military: 0, money: 0, science: 0, culture: 0 },
     population: held.length,
+    units: [],
     drawPile: [],
     hand: [],
     discardPile: [],
     ...carrying,
   };
+}
+
+/** A disc of plain around the city's urban tile, out to `radius`; `water` names the wet ones. */
+function field(radius: number, water: TileCoords[] = []): Tile[] {
+  const wet = new Set(water.map(tileKey));
+  const tiles: Tile[] = [];
+  for (let q = -radius; q <= radius; q++) {
+    for (let r = Math.max(-radius, -q - radius); r <= Math.min(radius, -q + radius); r++) {
+      const terrain: Terrain = wet.has(tileKey({ q, r }))
+        ? 'water'
+        : q === 0 && r === 0
+          ? 'urban'
+          : 'plain';
+      tiles.push({ q, r, terrain });
+    }
+  }
+  return tiles;
+}
+
+function unitOf(owner: Side, tile: TileCoords, stats: Partial<UnitType> = {}): Unit {
+  return {
+    unitType: { id: 'PH_Warrior', health: 4, damage: 1, range: 1, move: 2, ...stats },
+    owner,
+    tile,
+  };
+}
+
+/** An order aimed at a unit and a destination, ready to hand to `apply`. */
+function march(unit: number, to: TileCoords): Command {
+  return { type: 'play', index: 0, target: { unit, to } };
 }
 
 function everyCard(chronicle: Chronicle): CardId[] {
@@ -53,11 +79,11 @@ test('a chronicle survives JSON and carries its generator on', () => {
 test('the city holds its own tile and every tile touching it', () => {
   for (const seed of [0, 1234, 0xdeadbeef | 0]) {
     const chronicle = beginChronicle(seed);
-    const held = new Set(chronicle.held.map(key));
+    const held = new Set(chronicle.held.map(tileKey));
 
     expect(held.size).toBe(7);
     for (const tile of chronicle.tiles) {
-      expect(held.has(key(tile))).toBe(distance(tile, chronicle.city) <= 1);
+      expect(held.has(tileKey(tile))).toBe(distance(tile, chronicle.city) <= 1);
     }
   }
 });
@@ -209,5 +235,213 @@ test('the same command on the same chronicle gives the same chronicle back', () 
   const untouched = structuredClone(city);
 
   expect(apply(city, { type: 'end-turn' })).toEqual(apply(city, { type: 'end-turn' }));
+  expect(city).toEqual(untouched);
+});
+
+test('a unit card turns one population into a unit on the city tile', () => {
+  const city = cityOf(['urban'], {
+    tiles: field(2),
+    hand: ['PH_Worker'],
+    resources: { food: 2, production: 0, military: 0, money: 0, science: 0, culture: 0 },
+  });
+
+  const after = apply(city, { type: 'play', index: 0 });
+
+  expect(after.population).toBe(city.population - 1);
+  expect(after.units).toHaveLength(1);
+  expect(after.units[0].tile).toEqual(CITY);
+  expect(after.units[0].owner).toBe('player');
+  expect(after.resources.food).toBe(0);
+  expect(after.hand).toEqual([]);
+  expect(after.discardPile).toEqual(['PH_Worker']);
+});
+
+test('a chronicle with units on the map survives JSON', () => {
+  const city = cityOf(['urban'], {
+    tiles: field(2),
+    units: [unitOf('player', CITY), unitOf('enemy', { q: 2, r: 0 })],
+  });
+
+  expect(JSON.parse(JSON.stringify(city))).toEqual(city);
+});
+
+test('a unit card is refused with no population left to make the unit of', () => {
+  const spent = cityOf(['urban'], {
+    tiles: field(2),
+    hand: ['PH_Worker'],
+    population: 0,
+    resources: { food: 2, production: 0, military: 0, money: 0, science: 0, culture: 0 },
+  });
+
+  expect(apply(spent, { type: 'play', index: 0 })).toEqual(spent);
+});
+
+test('a unit card is refused while a unit already stands on the city tile', () => {
+  const crowded = cityOf(['urban'], {
+    tiles: field(2),
+    hand: ['PH_Worker'],
+    units: [unitOf('player', CITY)],
+    resources: { food: 2, production: 0, military: 0, money: 0, science: 0, culture: 0 },
+  });
+
+  expect(apply(crowded, { type: 'play', index: 0 })).toEqual(crowded);
+});
+
+test('the plain order moves a unit within its move, and no further', () => {
+  const city = cityOf(['urban'], {
+    tiles: field(3),
+    hand: ['PH_March'],
+    units: [unitOf('player', CITY, { move: 2 })],
+  });
+
+  expect(apply(city, march(0, { q: 2, r: 0 })).units[0].tile).toEqual({ q: 2, r: 0 });
+  expect(apply(city, march(0, { q: 3, r: 0 }))).toEqual(city);
+});
+
+test('water is impassable, and so is everything only water leads to', () => {
+  const city = cityOf(['urban'], {
+    tiles: field(2, [{ q: 1, r: 0 }]),
+    hand: ['PH_March'],
+    units: [unitOf('player', CITY, { move: 2 })],
+  });
+
+  expect(apply(city, march(0, { q: 1, r: 0 }))).toEqual(city);
+  expect(apply(city, march(0, { q: 2, r: 0 }))).toEqual(city);
+  expect(apply(city, march(0, { q: 1, r: 1 })).units[0].tile).toEqual({ q: 1, r: 1 });
+});
+
+test('a unit crosses its own side but never lands on it', () => {
+  const city = cityOf(['urban'], {
+    tiles: field(2),
+    hand: ['PH_March'],
+    units: [unitOf('player', CITY, { move: 2 }), unitOf('player', { q: 1, r: 0 })],
+  });
+
+  expect(apply(city, march(0, { q: 1, r: 0 }))).toEqual(city);
+  expect(apply(city, march(0, { q: 2, r: 0 })).units[0].tile).toEqual({ q: 2, r: 0 });
+});
+
+test('the other side stops a unit where it stands', () => {
+  const city = cityOf(['urban'], {
+    tiles: field(2),
+    hand: ['PH_March'],
+    units: [unitOf('player', CITY, { move: 2, damage: 0 }), unitOf('enemy', { q: 1, r: 0 })],
+  });
+
+  expect(apply(city, march(0, { q: 1, r: 0 }))).toEqual(city);
+  expect(apply(city, march(0, { q: 2, r: 0 }))).toEqual(city);
+});
+
+test('an order with no target, or a target that is not the player’s, is refused', () => {
+  const city = cityOf(['urban'], {
+    tiles: field(2),
+    hand: ['PH_March'],
+    units: [unitOf('player', CITY, { move: 2 }), unitOf('enemy', { q: 2, r: 0 })],
+  });
+
+  expect(apply(city, { type: 'play', index: 0 })).toEqual(city);
+  expect(apply(city, march(1, { q: 2, r: 1 }))).toEqual(city);
+  expect(apply(city, march(4, { q: 1, r: 0 }))).toEqual(city);
+});
+
+test('an order is refused when no unit of the player’s has anywhere to go', () => {
+  const walled: TileCoords[] = [
+    { q: 1, r: 0 },
+    { q: 1, r: -1 },
+    { q: 0, r: -1 },
+    { q: -1, r: 0 },
+    { q: -1, r: 1 },
+    { q: 0, r: 1 },
+  ];
+  const city = cityOf(['urban'], {
+    tiles: field(2, walled),
+    hand: ['PH_March'],
+    units: [unitOf('player', CITY, { move: 2 })],
+  });
+
+  for (const to of walled) expect(apply(city, march(0, to))).toEqual(city);
+});
+
+test('a unit with damage attacks the enemy with the least health where it lands', () => {
+  const city = cityOf(['urban'], {
+    tiles: field(3),
+    hand: ['PH_March'],
+    units: [
+      unitOf('player', CITY, { move: 1, damage: 2, range: 1 }),
+      unitOf('enemy', { q: 2, r: 0 }, { health: 5 }),
+      unitOf('enemy', { q: 1, r: 1 }, { health: 3 }),
+    ],
+  });
+
+  const after = apply(city, march(0, { q: 1, r: 0 }));
+
+  expect(after.units).toHaveLength(3);
+  expect(after.units[1].unitType.health).toBe(5);
+  expect(after.units[2].unitType.health).toBe(1);
+});
+
+test('an enemy brought to zero health is killed and leaves the map', () => {
+  const city = cityOf(['urban'], {
+    tiles: field(3),
+    hand: ['PH_March'],
+    units: [
+      unitOf('player', CITY, { move: 1, damage: 2, range: 1 }),
+      unitOf('enemy', { q: 2, r: 0 }, { health: 5 }),
+      unitOf('enemy', { q: 1, r: 1 }, { health: 2 }),
+    ],
+  });
+
+  const after = apply(city, march(0, { q: 1, r: 0 }));
+
+  expect(after.units.map((unit) => unit.tile)).toEqual([
+    { q: 1, r: 0 },
+    { q: 2, r: 0 },
+  ]);
+});
+
+test('a worker arriving beside an enemy leaves it alone', () => {
+  const city = cityOf(['urban'], {
+    tiles: field(3),
+    hand: ['PH_March'],
+    units: [
+      unitOf('player', CITY, { id: 'PH_Worker', move: 1, damage: 0, range: 0 }),
+      unitOf('enemy', { q: 1, r: 1 }, { health: 3 }),
+    ],
+  });
+
+  const after = apply(city, march(0, { q: 1, r: 0 }));
+
+  expect(after.units[1].unitType.health).toBe(3);
+});
+
+test('an enemy out of range is left alone, and the order still resolves', () => {
+  const city = cityOf(['urban'], {
+    tiles: field(3),
+    hand: ['PH_March'],
+    units: [
+      unitOf('player', CITY, { move: 1, damage: 2, range: 1 }),
+      unitOf('enemy', { q: 3, r: 0 }, { health: 3 }),
+    ],
+  });
+
+  const after = apply(city, march(0, { q: 1, r: 0 }));
+
+  expect(after.units[0].tile).toEqual({ q: 1, r: 0 });
+  expect(after.units[1].unitType.health).toBe(3);
+  expect(after.discardPile).toEqual(['PH_March']);
+});
+
+test('the same order on the same chronicle gives the same chronicle back', () => {
+  const city = cityOf(['urban'], {
+    tiles: field(3),
+    hand: ['PH_March'],
+    units: [
+      unitOf('player', CITY, { move: 2, damage: 2, range: 1 }),
+      unitOf('enemy', { q: 2, r: 0 }, { health: 5 }),
+    ],
+  });
+  const untouched = structuredClone(city);
+
+  expect(apply(city, march(0, { q: 1, r: 0 }))).toEqual(apply(city, march(0, { q: 1, r: 0 })));
   expect(city).toEqual(untouched);
 });

@@ -57,6 +57,8 @@ makes twice becomes a line here (the ratchet, at `/upkeep`).
 - **Glossary verbs only.** Every gameplay term on a card, in the UI, in the codex and in code
   comes from `GLOSSARY.md`. No synonym, no paraphrase, no "elegant variation". A missing term is
   a design question for the user.
+- **A card name is content, not vocabulary.** Prose cites a card by its verbatim name; code reaches
+  it only through its text key, never a re-typed literal.
 - **Card text is the shortest phrasing that is unambiguous.** Then shorten it again.
 - **UI tooltips are glanceable one-liners** — what it is, where it comes from. They name no
   specific card or scenario and explain no mechanic; the codex is for learning, tooltips are for

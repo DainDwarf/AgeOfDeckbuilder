@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
-import type { CardId } from '../rules/cards';
-import { type Chronicle, type Resource, unaffordable } from '../rules/chronicle';
+import { CARDS, type CardId } from '../rules/cards';
+import { type Chronicle, playable, type Refusal, refusalOf } from '../rules/chronicle';
 import { CARD_HEIGHT, CARD_WIDTH, type CardFace, createCardFace } from './card-face';
 import { DESIGN_HEIGHT, DESIGN_WIDTH, MARGIN } from './design-space';
 
@@ -21,8 +21,8 @@ type Slot = {
   readonly id: CardId;
   readonly index: number;
   readonly home: { x: number; y: number };
-  readonly marked: readonly Resource[];
-  readonly affordable: boolean;
+  readonly refusal: Refusal;
+  readonly playable: boolean;
   hovered: boolean;
 };
 
@@ -42,7 +42,8 @@ export type Hand = { render(chronicle: Chronicle): void };
 export function createHand(
   scene: Phaser.Scene,
   play: (index: number) => void,
-  zoom: (id: CardId, unaffordable: readonly Resource[]) => void,
+  aim: (index: number, released: () => void) => void,
+  zoom: (id: CardId, refusal: Refusal) => void,
 ): Hand {
   const laneLeft = MARGIN + CARD_WIDTH + LANE_PAD;
   const laneWidth = DESIGN_WIDTH - 2 * laneLeft;
@@ -51,8 +52,7 @@ export function createHand(
   let slots: Slot[] = [];
   let dragged: Drag | undefined;
 
-  const restingY = (slot: Slot): number =>
-    slot.home.y - (slot.hovered && slot.affordable ? LIFT : 0);
+  const restingY = (slot: Slot): number => slot.home.y - (slot.hovered && slot.playable ? LIFT : 0);
 
   const settle = (slot: Slot, duration: number): void => {
     scene.tweens.killTweensOf(slot.face.root);
@@ -76,9 +76,9 @@ export function createHand(
     const away = { x: pointer.worldX - grabbed.x, y: pointer.worldY - grabbed.y };
     dragged.moved = Math.max(dragged.moved, Math.abs(away.x) + Math.abs(away.y));
 
-    const budge = slot.affordable ? 1 : 0.1;
+    const budge = slot.playable ? 1 : 0.1;
     slot.face.root.setPosition(lifted.x + away.x * budge, lifted.y + away.y * budge);
-    slot.face.arm(slot.affordable && -away.y > PLAY_HEIGHT);
+    slot.face.arm(slot.playable && -away.y > PLAY_HEIGHT);
   });
 
   scene.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
@@ -89,10 +89,22 @@ export function createHand(
 
     if (moved < CLICK_SLACK) {
       settle(slot, 0);
-      zoom(slot.id, slot.marked);
+      zoom(slot.id, slot.refusal);
       return;
     }
-    if (slot.affordable && grabbed.y - pointer.worldY > PLAY_HEIGHT) {
+    if (slot.playable && grabbed.y - pointer.worldY > PLAY_HEIGHT) {
+      // An order is not played by the release: it waits, held up and armed, while the map is
+      // aimed at, and comes back down only if nothing is chosen.
+      if (CARDS[slot.id].kind === 'order') {
+        settle(slot, 150);
+        slot.face.arm(true);
+        aim(slot.index, () => {
+          slot.face.arm(false);
+          slot.hovered = false;
+          settle(slot, 150);
+        });
+        return;
+      }
       play(slot.index);
       return;
     }
@@ -101,7 +113,10 @@ export function createHand(
 
   return {
     render(chronicle: Chronicle): void {
-      for (const slot of slots) slot.face.root.destroy();
+      for (const slot of slots) {
+        scene.tweens.killTweensOf(slot.face.root);
+        slot.face.root.destroy();
+      }
       dragged = undefined;
 
       const held = chronicle.hand.length;
@@ -111,17 +126,17 @@ export function createHand(
 
       slots = chronicle.hand.map((id, index) => {
         const off = index - (held - 1) / 2;
-        const marked = unaffordable(chronicle, id);
+        const refusal = refusalOf(chronicle, id);
         const slot: Slot = {
-          face: createCardFace(scene, id, marked),
+          face: createCardFace(scene, id, refusal),
           id,
           index,
           home: {
             x: first + CARD_WIDTH / 2 + index * advance,
             y: baseline + off * off * FAN * 1.6,
           },
-          marked,
-          affordable: marked.length === 0,
+          refusal,
+          playable: playable(refusal),
           hovered: false,
         };
 

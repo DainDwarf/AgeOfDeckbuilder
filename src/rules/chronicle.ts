@@ -6,9 +6,11 @@ import {
   TERRAIN_YIELDS,
   type Tile,
   type TileCoords,
+  tileKey,
 } from './map';
 import type { Rng } from './rng';
 import { seedRng, shuffle } from './rng';
+import { arrive, reachable, UNIT_TYPES, type Unit, unitAt } from './units';
 
 /** The five core resources, then culture. Population is inhabitants, not a store. */
 export const RESOURCES = ['food', 'production', 'military', 'money', 'science', 'culture'] as const;
@@ -26,14 +28,18 @@ export type Chronicle = {
   readonly turn: number;
   readonly resources: Resources;
   readonly population: number;
+  readonly units: Unit[];
   readonly drawPile: CardId[];
   readonly hand: CardId[];
   readonly discardPile: CardId[];
 };
 
+/** Which unit an order acts on, by its place in `units`, and the tile it is sent to. */
+export type Target = { readonly unit: number; readonly to: TileCoords };
+
 export type Command =
   | { readonly type: 'end-turn' }
-  | { readonly type: 'play'; readonly index: number };
+  | { readonly type: 'play'; readonly index: number; readonly target?: Target };
 
 /** The founding: the seed generates the map, and the city holds its tile and the six around it. */
 export function beginChronicle(seed: number): Chronicle {
@@ -50,6 +56,7 @@ export function beginChronicle(seed: number): Chronicle {
       turn: 1,
       resources: { food: 0, production: 0, military: 0, money: 0, science: 0, culture: 0 },
       population: held.length,
+      units: [],
       drawPile: deck.items,
       hand: [],
       discardPile: [],
@@ -61,7 +68,7 @@ export function beginChronicle(seed: number): Chronicle {
 export function apply(chronicle: Chronicle, command: Command): Chronicle {
   switch (command.type) {
     case 'play':
-      return play(chronicle, command.index);
+      return play(chronicle, command.index, command.target);
     case 'end-turn': {
       const closed = enemyPhase(income(end(chronicle)));
       return draw(events({ ...closed, turn: closed.turn + 1 }));
@@ -80,25 +87,99 @@ export function costOf(id: CardId): { resource: Resource; amount: number }[] {
   return entries;
 }
 
-/** The resources this card's cost outruns; empty means the city can play it. */
-export function unaffordable(chronicle: Chronicle, id: CardId): Resource[] {
+/** Everything standing between a card and being played: what the city cannot pay, and the map. */
+export type Refusal = {
+  readonly unaffordable: readonly Resource[];
+  readonly blocked: boolean;
+};
+
+/** What a card outside the hand is drawn as: nothing refuses it. */
+export const NO_REFUSAL: Refusal = { unaffordable: [], blocked: false };
+
+export function refusalOf(chronicle: Chronicle, id: CardId): Refusal {
+  return { unaffordable: unaffordable(chronicle, id), blocked: blocked(chronicle, id) };
+}
+
+export function playable(refusal: Refusal): boolean {
+  return refusal.unaffordable.length === 0 && !refusal.blocked;
+}
+
+/** The resources this card's cost outruns; empty means the city can pay for it. */
+function unaffordable(chronicle: Chronicle, id: CardId): Resource[] {
   return costOf(id)
     .filter(({ resource, amount }) => amount > chronicle.resources[resource])
     .map(({ resource }) => resource);
 }
 
-function play(chronicle: Chronicle, index: number): Chronicle {
-  const id = chronicle.hand[index];
-  if (id === undefined || unaffordable(chronicle, id).length > 0) return chronicle;
+/** A card the city can pay for that the map still refuses: there is nothing for it to resolve on. */
+function blocked(chronicle: Chronicle, id: CardId): boolean {
+  switch (CARDS[id].kind) {
+    case 'unit':
+      return chronicle.population === 0 || unitAt(chronicle.units, chronicle.city) !== undefined;
+    case 'order':
+      return !chronicle.units.some(
+        (unit) =>
+          unit.owner === 'player' && reachable(chronicle.tiles, chronicle.units, unit).length > 0,
+      );
+    default:
+      return false;
+  }
+}
 
-  const resources = { ...chronicle.resources };
+function play(chronicle: Chronicle, index: number, target: Target | undefined): Chronicle {
+  const id = chronicle.hand[index];
+  if (id === undefined || !playable(refusalOf(chronicle, id))) return chronicle;
+
+  const resolved = resolve(chronicle, id, target);
+  if (resolved === undefined) return chronicle;
+
+  const resources = { ...resolved.resources };
   for (const { resource, amount } of costOf(id)) resources[resource] -= amount;
   return {
-    ...chronicle,
+    ...resolved,
     resources,
-    hand: chronicle.hand.filter((_, at) => at !== index),
-    discardPile: [...chronicle.discardPile, id],
+    hand: resolved.hand.filter((_, at) => at !== index),
+    discardPile: [...resolved.discardPile, id],
   };
+}
+
+/** What the card does. `undefined` refuses the play, and nothing is paid or discarded. */
+function resolve(
+  chronicle: Chronicle,
+  id: CardId,
+  target: Target | undefined,
+): Chronicle | undefined {
+  const card = CARDS[id];
+  switch (card.kind) {
+    case 'unit':
+      return {
+        ...chronicle,
+        population: chronicle.population - 1,
+        units: [
+          ...chronicle.units,
+          { unitType: { ...UNIT_TYPES[card.unitType] }, owner: 'player', tile: chronicle.city },
+        ],
+      };
+    case 'order':
+      return order(chronicle, target);
+    default:
+      return chronicle;
+  }
+}
+
+/** The plain order: the unit crosses to a tile within its move, and its nature acts where it lands. */
+function order(chronicle: Chronicle, target: Target | undefined): Chronicle | undefined {
+  if (target === undefined) return undefined;
+  const unit = chronicle.units[target.unit];
+  if (unit === undefined || unit.owner !== 'player') return undefined;
+
+  const landings = reachable(chronicle.tiles, chronicle.units, unit);
+  if (!landings.some((coord) => tileKey(coord) === tileKey(target.to))) return undefined;
+
+  const moved = chronicle.units.map((other, at) =>
+    at === target.unit ? { ...other, tile: target.to } : other,
+  );
+  return { ...chronicle, units: arrive(moved, target.unit) };
 }
 
 function events(chronicle: Chronicle): Chronicle {
@@ -133,10 +214,10 @@ function end(chronicle: Chronicle): Chronicle {
 }
 
 function income(chronicle: Chronicle): Chronicle {
-  const held = new Set(chronicle.held.map(({ q, r }) => `${q},${r}`));
+  const held = new Set(chronicle.held.map(tileKey));
   const resources = { ...chronicle.resources };
   for (const tile of chronicle.tiles) {
-    if (!held.has(`${tile.q},${tile.r}`)) continue;
+    if (!held.has(tileKey(tile))) continue;
     const yields = TERRAIN_YIELDS[tile.terrain];
     for (const resource of RESOURCES) resources[resource] += yields[resource] ?? 0;
   }

@@ -21,7 +21,7 @@ export const TERRAIN_YIELDS: Record<Terrain, Partial<Resources>> = {
   forest: { food: 1, production: 1 },
   hills: { production: 2 },
   water: { food: 1, money: 1 },
-  urban: { production: 1, money: 1, science: 1, culture: 1 },
+  urban: { production: 1, military: 1, money: 1, science: 1, culture: 1 },
 };
 
 /** How many biomes the map is cut into, and which kinds they are dealt. */
@@ -58,7 +58,13 @@ export function neighbours({ q, r }: TileCoords): TileCoords[] {
   return DIRECTIONS.map((step) => ({ q: q + step.q, r: r + step.r }));
 }
 
-function key({ q, r }: TileCoords): string {
+/** How many tiles apart two are, in a straight line over whatever lies between them. */
+export function distance(a: TileCoords, b: TileCoords): number {
+  return (Math.abs(a.q - b.q) + Math.abs(a.r - b.r) + Math.abs(a.q + a.r - (b.q + b.r))) / 2;
+}
+
+/** The one way a tile is named in a set or a map keyed by position. */
+export function tileKey({ q, r }: TileCoords): string {
   return `${q},${r}`;
 }
 
@@ -94,8 +100,8 @@ export function generateMap(initial: Rng): { rng: Rng; tiles: Tile[] } {
       coords.push({ q, r });
     }
   }
-  const indexOf = new Map(coords.map((coord, index) => [key(coord), index]));
-  const cityIndex = coords.findIndex((coord) => key(coord) === key(CITY_TILE));
+  const indexOf = new Map(coords.map((coord, index) => [tileKey(coord), index]));
+  const cityIndex = coords.findIndex((coord) => tileKey(coord) === tileKey(CITY_TILE));
 
   const tileBiomes: Biome[] = new Array(coords.length);
   const assigned = new Set<number>();
@@ -130,7 +136,7 @@ export function generateMap(initial: Rng): { rng: Rng; tiles: Tile[] } {
     const slot = Math.floor(step.value * edge.length);
     const from = edge[slot];
     const open = neighbours(coords[from])
-      .map((coord) => indexOf.get(key(coord)))
+      .map((coord) => indexOf.get(tileKey(coord)))
       .filter((index): index is number => index !== undefined && !assigned.has(index));
     if (open.length === 0) {
       edge.splice(slot, 1);

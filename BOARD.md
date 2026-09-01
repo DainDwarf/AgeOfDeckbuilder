@@ -12,9 +12,6 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
-- **Unit and order** — the unit cards (worker and warrior) each turn one population into a unit
-  on the city's tile; the plain order moves a unit and its nature acts on arrival; proven by test
-  and playable on screen. Doc-impact: none.
 - **Building and action** — the building card builds its building on a tile inside the border
   where a worker stands; the action card does one immediate effect; all four kinds playable end
   to end. Doc-impact: none.

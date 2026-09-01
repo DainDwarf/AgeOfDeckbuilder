@@ -13,15 +13,19 @@ export const ACCENT = 0xd9a441;
 
 // Phaser reads a polygon's corner list in min-(0, 0) space; corners about their own centre draw
 // displaced by half the shape.
+export function corners(raw: number[]): number[] {
+  const minX = Math.min(...raw.filter((_, i) => i % 2 === 0));
+  const minY = Math.min(...raw.filter((_, i) => i % 2 === 1));
+  return raw.map((value, i) => (i % 2 === 0 ? value - minX : value - minY));
+}
+
 export function hexagon(size: number): number[] {
   const raw: number[] = [];
   for (let corner = 0; corner < 6; corner++) {
     const angle = (Math.PI / 3) * corner - Math.PI / 6;
     raw.push(size * Math.cos(angle), size * Math.sin(angle));
   }
-  const minX = Math.min(...raw.filter((_, i) => i % 2 === 0));
-  const minY = Math.min(...raw.filter((_, i) => i % 2 === 1));
-  return raw.map((value, i) => (i % 2 === 0 ? value - minX : value - minY));
+  return corners(raw);
 }
 
 // `Phaser.Scale.FIT` in main.ts fits the canvas by this same min, which is what makes the backing

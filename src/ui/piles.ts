@@ -1,5 +1,5 @@
 import type Phaser from 'phaser';
-import type { Chronicle } from '../rules/chronicle';
+import { type Chronicle, NO_REFUSAL } from '../rules/chronicle';
 import {
   CARD_HEIGHT,
   CARD_WIDTH,
@@ -35,7 +35,7 @@ export function createPiles(scene: Phaser.Scene, browse: (pile: PileKind) => voi
       discarded.show(
         top === undefined
           ? createEmptySlot(scene)
-          : createCardFace(scene, top, [], { faded: true }).root,
+          : createCardFace(scene, top, NO_REFUSAL, { faded: true }).root,
         chronicle.discardPile.length,
       );
     },

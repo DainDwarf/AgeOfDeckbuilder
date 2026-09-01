@@ -206,6 +206,9 @@ damage from the target's health, and a unit at zero health is killed. There is
 no retaliation: the target answers only when its own attack comes, so a fight is an
 exchange across turns, never within one blow.
 
+- **Moving costs one per tile.** An order moves a unit up to its move, every tile crossed costing
+  one. Water is impassable. A unit passes through the units of its own side and never through the
+  other's, and it lands only on a free tile.
 - **One attack rule.** At income every fighting unit attacks an enemy within its range; a melee
   unit's range is one. An order that moves a fighting unit next to an enemy attacks on arrival
   as well. A unit that stands still is a garrison by that rule alone.
