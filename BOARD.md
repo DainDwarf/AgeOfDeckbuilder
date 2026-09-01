@@ -12,6 +12,11 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
+- **The target seam** — a card's target sort (none; a tile; a unit and its destination) is
+  declared with the card in `src/rules/`; the hand's arming, the choice of aiming mode and the
+  `Target` type all read that one declaration, so the duplicated kind-lists in the UI are gone
+  and a card kind without a declaration cannot compile; existing tests and e2e pass unchanged.
+  Doc-impact: none.
 - **Unit panel** — clicking a unit while no order is aimed shows a panel with its stats — health,
   damage, range, move — so a damaged unit's health is readable on screen. Doc-impact: none.
 - **The enemy and the fall** — one enemy arrives on a hardcoded turn, declares its intent, moves
