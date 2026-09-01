@@ -157,6 +157,7 @@ export function createMapView(scene: Phaser.Scene, chronicle: Chronicle): MapVie
             ? -1
             : current.units.findIndex((unit) => unit.owner === 'player' && same(unit.tile, under));
         grabbed = found === -1 ? undefined : found;
+        if (grabbed !== undefined) select(grabbed);
       });
 
       catcher.on('pointerup', (pointer: Phaser.Input.Pointer) => {
@@ -164,15 +165,19 @@ export function createMapView(scene: Phaser.Scene, chronicle: Chronicle): MapVie
         const held = grabbed;
         grabbed = undefined;
 
-        // A press that began on one of the player's units chose that unit: a release anywhere but
-        // on one of its landings puts it back and selects it. Only a press that began on no unit
-        // of the player's is the click elsewhere that cancels.
+        // Only a press that began on no unit of the player's cancels: a drop nowhere valid
+        // returns aiming to bare instead of throwing the card away.
         if (held !== undefined) {
           const home = positionOf(current.units[held].tile);
           markers[held].setPosition(home.x, home.y);
-          const open = reachable(current.tiles, current.units, current.units[held]);
-          if (to !== undefined && open.some((coord) => same(coord, to))) finish({ unit: held, to });
-          else select(held);
+          if (to !== undefined && same(to, current.units[held].tile)) return;
+          if (to !== undefined && landings.some((coord) => same(coord, to))) {
+            finish({ unit: held, to });
+            return;
+          }
+          selected = undefined;
+          landings = [];
+          paint();
           return;
         }
 

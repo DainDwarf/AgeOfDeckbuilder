@@ -35,11 +35,7 @@ export function unitAt(units: readonly Unit[], coord: TileCoords): Unit | undefi
   return units.find((unit) => unit.tile.q === coord.q && unit.tile.r === coord.r);
 }
 
-/**
- * Where a unit can land: every tile within its move, each tile crossed costing one. Water is
- * impassable, a unit passes through its own side and never through the other's, and it lands only
- * on a free tile — so a tile an ally holds is crossed but never offered.
- */
+/** Where a unit can land: a tile one of its own holds is crossed but never offered. */
 export function reachable(
   tiles: readonly Tile[],
   units: readonly Unit[],
@@ -73,11 +69,7 @@ export function reachable(
   return landings;
 }
 
-/**
- * What a unit does where it lands: one with damage attacks the enemy within its range holding the
- * least health, once, and a unit brought to zero health is killed and leaves the map. There is no
- * retaliation, and a unit with no damage — a worker — does nothing at all.
- */
+/** What a unit does where it lands. A unit with no damage — a worker — does nothing at all. */
 export function arrive(units: readonly Unit[], mover: number): Unit[] {
   const acting = units[mover];
   if (acting.unitType.damage === 0) return [...units];
