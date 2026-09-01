@@ -216,7 +216,7 @@ export function createMapView(scene: Phaser.Scene, chronicle: Chronicle): MapVie
           if (to !== undefined && same(to, current.units[held].tile)) return;
         }
         if (selected !== undefined && to !== undefined && landings.some((c) => same(c, to))) {
-          finish({ sort: 'unit-tile', unit: selected, tile: to });
+          finish({ type: 'unit-tile', unit: selected, tile: to });
           return;
         }
         selected = undefined;
@@ -270,7 +270,7 @@ export function createMapView(scene: Phaser.Scene, chronicle: Chronicle): MapVie
         pressed = false;
         const on = tileAt(current, pointer.worldX, pointer.worldY);
         if (on !== undefined && tiles.some((coord) => same(coord, on)))
-          finish({ sort: 'tile', tile: on });
+          finish({ type: 'tile', tile: on });
       };
 
       catcher.on('pointerdown', () => {

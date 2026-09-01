@@ -40,7 +40,7 @@ function farmedThisTurn(chronicle: Chronicle): TileCoords | undefined {
     const moved = apply(entered, {
       type: 'play',
       index: march,
-      target: { sort: 'unit-tile', unit: 0, tile },
+      target: { type: 'unit-tile', unit: 0, tile },
     });
     if (moved === entered || !playable(refusalOf(moved, 'PH_Farm'))) continue;
     if (buildable(moved, 'PH_Farm').some((coord) => tileKey(coord) === tileKey(tile))) return tile;

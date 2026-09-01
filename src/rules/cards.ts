@@ -8,7 +8,7 @@ export const CARD_KINDS = ['unit', 'building', 'order', 'action'] as const;
 export type CardKind = (typeof CARD_KINDS)[number];
 
 /** What the player picks to play a card: nothing, a tile, or a unit and then the tile it goes to. */
-export type TargetSort = 'none' | 'tile' | 'unit-tile';
+export type TargetType = 'none' | 'tile' | 'unit-tile';
 
 /**
  * A unit card names the unit it puts on the map, a building card the building it builds, an action
@@ -18,25 +18,25 @@ export type Card =
   | {
       readonly kind: 'unit';
       readonly cost: Partial<Resources>;
-      readonly target: TargetSort;
+      readonly target: TargetType;
       readonly unitType: UnitTypeId;
     }
   | {
       readonly kind: 'building';
       readonly cost: Partial<Resources>;
-      readonly target: TargetSort;
+      readonly target: TargetType;
       readonly building: BuildingTypeId;
     }
   | {
       readonly kind: 'action';
       readonly cost: Partial<Resources>;
-      readonly target: TargetSort;
+      readonly target: TargetType;
       readonly gain: Partial<Resources>;
     }
   | {
       readonly kind: Exclude<CardKind, 'unit' | 'building' | 'action'>;
       readonly cost: Partial<Resources>;
-      readonly target: TargetSort;
+      readonly target: TargetType;
     };
 
 /** `PH_` marks a stand-in: none of these is authored content, and every one of them goes. */

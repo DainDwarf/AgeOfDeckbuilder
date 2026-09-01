@@ -52,7 +52,7 @@ export class ChronicleScene extends Phaser.Scene {
       createHand(
         this,
         (index) => perform({ type: 'play', index }),
-        (index, sort, released) => {
+        (index, targetType, released) => {
           // The aiming catcher lies under the hand and the piles, so the button is the one thing
           // left on the table that has to be dead for the length of the aim.
           endTurn.live(false);
@@ -61,7 +61,7 @@ export class ChronicleScene extends Phaser.Scene {
             if (target === undefined) released();
             else perform({ type: 'play', index, target });
           };
-          switch (sort) {
+          switch (targetType) {
             case 'tile':
               return view.aimTile(
                 this.current,

@@ -37,12 +37,12 @@ export type Chronicle = {
 };
 
 /**
- * What a play was aimed at, in the sort the card declares: the tile a building card builds on, or
+ * What a play was aimed at, in the type the card declares: the tile a building card builds on, or
  * the unit an order acts on — by its place in `units` — and the tile it is sent to.
  */
 export type Target =
-  | { readonly sort: 'tile'; readonly tile: TileCoords }
-  | { readonly sort: 'unit-tile'; readonly unit: number; readonly tile: TileCoords };
+  | { readonly type: 'tile'; readonly tile: TileCoords }
+  | { readonly type: 'unit-tile'; readonly unit: number; readonly tile: TileCoords };
 
 export type Command =
   | { readonly type: 'end-turn' }
@@ -140,7 +140,7 @@ export function buildable(chronicle: Chronicle, building: BuildingTypeId): TileC
     .map(({ q, r }) => ({ q, r }));
 }
 
-/** The tiles a card of the `tile` sort can be aimed at. */
+/** The tiles a card of the `tile` target type can be aimed at. */
 export function targetTiles(chronicle: Chronicle, id: CardId): TileCoords[] {
   const card = CARDS[id];
   switch (card.kind) {
@@ -223,7 +223,7 @@ function build(
   building: BuildingTypeId,
   target: Target | undefined,
 ): Chronicle | undefined {
-  if (target?.sort !== 'tile') return undefined;
+  if (target?.type !== 'tile') return undefined;
   const at = tileKey(target.tile);
   if (!buildable(chronicle, building).some((coord) => tileKey(coord) === at)) return undefined;
 
@@ -235,7 +235,7 @@ function build(
 
 /** The plain order: the unit crosses to a tile within its move, and its nature acts where it lands. */
 function order(chronicle: Chronicle, target: Target | undefined): Chronicle | undefined {
-  if (target?.sort !== 'unit-tile') return undefined;
+  if (target?.type !== 'unit-tile') return undefined;
   const mover = target.unit;
   const to = target.tile;
   const unit = chronicle.units[mover];
