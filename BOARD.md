@@ -13,8 +13,10 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 ---
 
 - **Building and action** — the building card builds its building on a tile inside the border
-  where a worker stands; the action card does one immediate effect; all four kinds playable end
-  to end. Doc-impact: none.
+  where a worker stands; the action card does one immediate effect, proven by a standing e2e;
+  all four kinds playable end to end. Doc-impact: none.
+- **Unit panel** — clicking a unit while no order is aimed shows a panel with its stats — health,
+  damage, range, move — so a damaged unit's health is readable on screen. Doc-impact: none.
 - **The enemy and the fall** — one enemy arrives on a hardcoded turn, declares its intent, moves
   and attacks through the enemy phase, occupies the tile it stands on; player units attack at
   income under the one-attack rule; capture of the city or population at zero ends the chronicle
@@ -33,3 +35,5 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 - **Movable map** — the chronicle scene's camera pans by drag and zooms by wheel, bounded so the
   map cannot leave the frame entirely; text stays crisp at every zoom; the standing e2e passes.
   Doc-impact: none.
+- **Order e2e** — a standing e2e arms the plain order, selects a unit, moves it, and asserts the
+  unit stands on its destination. Doc-impact: none.
