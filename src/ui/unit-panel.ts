@@ -4,9 +4,9 @@ import {
   addText,
   DESIGN_HEIGHT,
   DESIGN_WIDTH,
+  drawBubble,
   MARGIN,
   PANEL_EDGE,
-  PANEL_FILL,
   UI_FONT,
 } from './design-space';
 import { TILE_SIZE, unitMark } from './map';
@@ -20,7 +20,6 @@ const DEPTH = 25;
 const TITLE_STYLE = { fontFamily: UI_FONT, fontSize: '17px', fontStyle: 'bold', color: '#0d1014' };
 const LABEL_STYLE = { fontFamily: UI_FONT, fontSize: '15px', color: '#4a5058' };
 const VALUE_STYLE = { fontFamily: UI_FONT, fontSize: '15px', color: '#0d1014' };
-const MAX_STYLE = { fontFamily: UI_FONT, fontSize: '15px', color: '#4a5058' };
 
 const PAD = 12;
 
@@ -34,9 +33,6 @@ const ROW_GAP = 6;
 
 /** The clear water between a stat's name and its value. */
 const COLUMN_GAP = 28;
-
-const TAIL_LENGTH = 7;
-const TAIL_HALF = 6;
 
 /** How far the panel stands off the centre of the tile it points at. */
 const STANDOFF = TILE_SIZE + 12;
@@ -90,7 +86,7 @@ export function createUnitPanel(scene: Phaser.Scene): UnitPanel {
         value: addText(scene, 0, 0, String(unit.stats[stat]), VALUE_STYLE).setOrigin(1, 0.5),
         max:
           stat === 'health'
-            ? addText(scene, 0, 0, ` / ${UNIT_STATS[unit.stats.id].health}`, MAX_STYLE).setOrigin(
+            ? addText(scene, 0, 0, ` / ${UNIT_STATS[unit.stats.id].health}`, VALUE_STYLE).setOrigin(
                 1,
                 0.5,
               )
@@ -115,8 +111,8 @@ export function createUnitPanel(scene: Phaser.Scene): UnitPanel {
       name.setPosition(PAD + MARK_BOX + MARK_TO_NAME, PAD + titleHeight / 2);
       rule.setPosition(PAD, ruleY).setSize(inner, 1);
 
-      const beside = at.x + STANDOFF + width <= DESIGN_WIDTH - MARGIN;
-      const left = beside ? at.x + STANDOFF : at.x - STANDOFF - width;
+      const rightOfTile = at.x + STANDOFF + width <= DESIGN_WIDTH - MARGIN;
+      const left = rightOfTile ? at.x + STANDOFF : at.x - STANDOFF - width;
       const top = Math.min(
         Math.max(at.y - height / 2, BAR_HEIGHT + 8),
         DESIGN_HEIGHT - MARGIN - height,
@@ -129,15 +125,13 @@ export function createUnitPanel(scene: Phaser.Scene): UnitPanel {
         row.max?.setPosition(width - PAD, middle);
         row.value.setPosition(width - PAD - (row.max?.width ?? 0), middle);
         row.hover.setPosition(PAD, rowTop).setSize(row.label.width, rowHeight);
-        // Under the whole panel, as the resource bar's hangs under the whole bar: a bubble under
-        // the hovered row would cover the rows below it.
         row.hover.on('pointerover', () =>
-          tooltip.show(
-            text(`tooltip.${row.stat}`),
-            left + PAD,
-            left + PAD + row.label.width / 2,
-            top + height + 8,
-          ),
+          tooltip.beside(text(`tooltip.${row.stat}`), {
+            left,
+            right: left + width,
+            y: top + middle,
+            prefer: rightOfTile ? 'right' : 'left',
+          }),
         );
         row.hover.on('pointerout', () => tooltip.hide());
       }
@@ -154,46 +148,11 @@ export function createUnitPanel(scene: Phaser.Scene): UnitPanel {
       ];
       panel.add(contents);
 
-      drawBubble(bubble, width, height, at.y - top, beside);
+      drawBubble(bubble, width, height, {
+        edge: rightOfTile ? 'left' : 'right',
+        at: at.y - top,
+      });
       panel.setPosition(left, top).setVisible(true);
     },
   };
-}
-
-/**
- * The box and its tail as one closed path, so the fill is continuous and the stroke never crosses
- * the seam. The tail reaches out of the edge nearer the tile, and stays clear of both corners.
- */
-function drawBubble(
-  bubble: Phaser.GameObjects.Graphics,
-  width: number,
-  height: number,
-  at: number,
-  onLeft: boolean,
-): void {
-  const tip = Math.min(Math.max(at, TAIL_HALF + 4), height - TAIL_HALF - 4);
-
-  bubble.clear();
-  bubble.fillStyle(PANEL_FILL);
-  bubble.lineStyle(1, PANEL_EDGE);
-  bubble.beginPath();
-  bubble.moveTo(0, 0);
-  if (onLeft) {
-    bubble.lineTo(width, 0);
-    bubble.lineTo(width, height);
-    bubble.lineTo(0, height);
-    bubble.lineTo(0, tip + TAIL_HALF);
-    bubble.lineTo(-TAIL_LENGTH, tip);
-    bubble.lineTo(0, tip - TAIL_HALF);
-  } else {
-    bubble.lineTo(width, 0);
-    bubble.lineTo(width, tip - TAIL_HALF);
-    bubble.lineTo(width + TAIL_LENGTH, tip);
-    bubble.lineTo(width, tip + TAIL_HALF);
-    bubble.lineTo(width, height);
-    bubble.lineTo(0, height);
-  }
-  bubble.closePath();
-  bubble.fillPath();
-  bubble.strokePath();
 }

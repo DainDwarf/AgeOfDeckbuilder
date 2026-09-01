@@ -1,64 +1,66 @@
 import type Phaser from 'phaser';
-import { addText, DESIGN_WIDTH, MARGIN, PANEL_EDGE, PANEL_FILL, UI_FONT } from './design-space';
+import { addText, DESIGN_HEIGHT, DESIGN_WIDTH, drawBubble, MARGIN, UI_FONT } from './design-space';
 
-const TAIL_HEIGHT = 7;
-const TAIL_HALF = 6;
+/** The clear water between a tooltip and what it points at; its tail crosses most of that. */
+const STANDOFF = 8;
 
 /** Over every surface a hover can be raised from, under the overlay. */
 const DEPTH = 30;
 
 const STYLE = { fontFamily: UI_FONT, fontSize: '14px', color: '#0d1014' };
 
+/** The box a tooltip stands beside, and the side of it the bubble takes where the screen allows. */
+export type Beside = {
+  left: number;
+  right: number;
+  y: number;
+  prefer: 'left' | 'right';
+};
+
 export type Tooltip = {
-  /** `left` is where the bubble wants its left edge, `tip` the x its tail points up at. */
-  show(message: string, left: number, tip: number, top: number): void;
+  /** Hangs under what was hovered: `left` where the bubble wants its left edge, `tip` the x its tail points up at. */
+  under(message: string, left: number, tip: number, top: number): void;
+  /** Stands beside what was hovered, level with `y`, its tail pointing horizontally back at it. */
+  beside(message: string, box: Beside): void;
   hide(): void;
 };
 
-/** The one bubble every hover on the table raises, hanging under what was hovered. */
+/** The one bubble every hover on the table raises, under what was hovered or beside it. */
 export function createTooltip(scene: Phaser.Scene): Tooltip {
   const bubble = scene.add.graphics();
   const label = addText(scene, 10, 7, '', STYLE);
   const tooltip = scene.add.container(0, 0, [bubble, label]).setDepth(DEPTH).setVisible(false);
 
+  const measure = (message: string): { width: number; height: number } => {
+    label.setText(message);
+    return { width: label.width + 20, height: label.height + 14 };
+  };
+
   return {
-    show(message: string, left: number, tip: number, top: number): void {
-      label.setText(message);
-      const width = label.width + 20;
+    under(message: string, left: number, tip: number, top: number): void {
+      const { width, height } = measure(message);
       const x = Math.min(left, DESIGN_WIDTH - MARGIN - width);
-      drawBubble(bubble, width, label.height + 14, tip - x);
+      drawBubble(bubble, width, height, { edge: 'top', at: tip - x });
       tooltip.setPosition(x, top).setVisible(true);
     },
+
+    beside(message: string, box: Beside): void {
+      const { width, height } = measure(message);
+      const fitsRight = box.right + STANDOFF + width <= DESIGN_WIDTH - MARGIN;
+      const fitsLeft = box.left - STANDOFF - width >= MARGIN;
+      const onRight = box.prefer === 'right' ? fitsRight || !fitsLeft : !fitsLeft && fitsRight;
+
+      const x = Math.min(
+        Math.max(onRight ? box.right + STANDOFF : box.left - STANDOFF - width, MARGIN),
+        DESIGN_WIDTH - MARGIN - width,
+      );
+      const top = Math.min(Math.max(box.y - height / 2, MARGIN), DESIGN_HEIGHT - MARGIN - height);
+      drawBubble(bubble, width, height, { edge: onRight ? 'left' : 'right', at: box.y - top });
+      tooltip.setPosition(x, top).setVisible(true);
+    },
+
     hide(): void {
       tooltip.setVisible(false);
     },
   };
-}
-
-/**
- * The box and its tail as one closed path, so the fill is continuous and the stroke never crosses
- * the seam. The tail rises into the gap above the box, and stays clear of both corners.
- */
-function drawBubble(
-  bubble: Phaser.GameObjects.Graphics,
-  width: number,
-  height: number,
-  at: number,
-): void {
-  const tip = Math.min(Math.max(at, TAIL_HALF + 4), width - TAIL_HALF - 4);
-
-  bubble.clear();
-  bubble.fillStyle(PANEL_FILL);
-  bubble.lineStyle(1, PANEL_EDGE);
-  bubble.beginPath();
-  bubble.moveTo(0, 0);
-  bubble.lineTo(tip - TAIL_HALF, 0);
-  bubble.lineTo(tip, -TAIL_HEIGHT);
-  bubble.lineTo(tip + TAIL_HALF, 0);
-  bubble.lineTo(width, 0);
-  bubble.lineTo(width, height);
-  bubble.lineTo(0, height);
-  bubble.closePath();
-  bubble.fillPath();
-  bubble.strokePath();
 }

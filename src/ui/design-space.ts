@@ -32,6 +32,54 @@ export function hexagon(size: number): number[] {
   return corners(raw);
 }
 
+const TAIL_LENGTH = 7;
+const TAIL_HALF = 6;
+
+/** The edge a bubble's tail leaves by, and how far along that edge it points. */
+export type Tail = { edge: 'top' | 'left' | 'right'; at: number };
+
+/**
+ * A bubble in the panel language: the box and its tail as one closed path, so the fill is
+ * continuous and the stroke never crosses the seam. The tail reaches out of the edge nearer what
+ * the bubble belongs to, and stays clear of both corners.
+ */
+export function drawBubble(
+  bubble: Phaser.GameObjects.Graphics,
+  width: number,
+  height: number,
+  tail: Tail,
+): void {
+  const span = tail.edge === 'top' ? width : height;
+  const at = Math.min(Math.max(tail.at, TAIL_HALF + 4), span - TAIL_HALF - 4);
+
+  bubble.clear();
+  bubble.fillStyle(PANEL_FILL);
+  bubble.lineStyle(1, PANEL_EDGE);
+  bubble.beginPath();
+  bubble.moveTo(0, 0);
+  if (tail.edge === 'top') {
+    bubble.lineTo(at - TAIL_HALF, 0);
+    bubble.lineTo(at, -TAIL_LENGTH);
+    bubble.lineTo(at + TAIL_HALF, 0);
+  }
+  bubble.lineTo(width, 0);
+  if (tail.edge === 'right') {
+    bubble.lineTo(width, at - TAIL_HALF);
+    bubble.lineTo(width + TAIL_LENGTH, at);
+    bubble.lineTo(width, at + TAIL_HALF);
+  }
+  bubble.lineTo(width, height);
+  bubble.lineTo(0, height);
+  if (tail.edge === 'left') {
+    bubble.lineTo(0, at + TAIL_HALF);
+    bubble.lineTo(-TAIL_LENGTH, at);
+    bubble.lineTo(0, at - TAIL_HALF);
+  }
+  bubble.closePath();
+  bubble.fillPath();
+  bubble.strokePath();
+}
+
 // `Phaser.Scale.FIT` in main.ts fits the canvas by this same min, which is what makes the backing
 // store equal the canvas's on-screen size in device pixels. Read once: a window resized after boot
 // is not re-applied.
@@ -77,5 +125,9 @@ export function addText(
   content: string,
   style: Phaser.Types.GameObjects.Text.TextStyle,
 ): Phaser.GameObjects.Text {
-  return scene.add.text(x, y, content, { ...style, resolution: factor });
+  // Phaser sizes a Text's backing canvas as its measured size times `resolution`, and a canvas
+  // dimension is a whole number of pixels: a fractional product is truncated, and the row that
+  // falls off the bottom is the one the descenders sit in. The ceiling keeps that product exact
+  // and never rasterises below the screen's density.
+  return scene.add.text(x, y, content, { ...style, resolution: Math.ceil(factor) });
 }
