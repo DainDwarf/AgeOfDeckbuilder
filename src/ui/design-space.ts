@@ -125,14 +125,14 @@ export function addText(
   content: string,
   style: Phaser.Types.GameObjects.Text.TextStyle,
 ): Phaser.GameObjects.Text {
-  // Phaser sizes a Text's backing canvas from a box it measures at 1× but rasterises the glyphs
-  // at `resolution`, and a hinted outline is not proportional — 15px system-ui descends 3px where
-  // the same font at 30px descends 7 — so half a design pixel of a 'g' falls outside the canvas.
-  // The padding holds that overflow; being symmetric, a text centred on its y does not move. A
-  // fractional resolution would truncate the canvas to whole pixels, hence the ceiling.
+  // Phaser sizes a Text's backing canvas from a box it measures at 1× — sideways from the advance
+  // width rather than the ink box — but rasterises the glyphs at `resolution`, and a hinted outline
+  // is not proportional, so ink falls outside the canvas on every side, further sideways than
+  // vertically. The padding holds that overflow; being symmetric per axis, a centred text does not
+  // move. A fractional resolution would truncate the canvas to whole pixels, hence the ceiling.
   return scene.add.text(x, y, content, {
     ...style,
     resolution: Math.ceil(factor),
-    padding: { y: 1 },
+    padding: { x: 2, y: 1 },
   });
 }

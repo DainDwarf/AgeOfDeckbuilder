@@ -24,10 +24,6 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 - **The card face** — the card's design style is settled with the user and implemented: name and
   cost both legible at hand size, art boxes equal height on every card, and the settled anatomy
   recorded. Doc-impact: `docs/DESIGN.md`.
-- **Horizontal ink slack** — no text loses side ink columns at any render resolution (measured
-  today: the bold card name drops one device column per side at resolution 1, because Phaser
-  sizes the canvas from the advance width, not the ink box); the layouts that measure text
-  widths still read right. Doc-impact: none.
 - **Unplayable reasons on screen** — a card in hand that cannot be played shows why when zoomed:
   the unaffordable resources it already marks, joined by the blocked reasons (no free tile, no
   population, no valid target). Doc-impact: none.
