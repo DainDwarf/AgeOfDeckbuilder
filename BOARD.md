@@ -29,4 +29,6 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
   population, no valid target). Doc-impact: none.
 - **Movable map** — the chronicle scene's camera pans by drag and zooms by wheel, bounded so the
   map cannot leave the frame entirely; text stays crisp at every zoom; the standing e2e passes.
+  Stays a camera concern: the tile's drawn size is the map layer's fact alone, never a number the
+  rest of the UI leans on — the art pack dictates it later (`docs/ASSET-SOURCES.md`).
   Doc-impact: none.
