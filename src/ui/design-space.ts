@@ -11,7 +11,7 @@ export const MARGIN = 24;
 /** The one accent, on everything that is the player's: the border, the deck, the button. */
 export const ACCENT = 0xd9a441;
 
-/** The panel language: every surface laid over the table is this fill inside this edge. */
+/** The panel language: the tooltip bubbles and the resource bar are this fill inside this edge. */
 export const PANEL_FILL = 0xd4d7db;
 export const PANEL_EDGE = 0x6f757d;
 

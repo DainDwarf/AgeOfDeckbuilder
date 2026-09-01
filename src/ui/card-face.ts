@@ -22,7 +22,7 @@ function metricsOf(width: number): {
 export const CARD_METRICS = metricsOf(CARD_WIDTH);
 export const CARD_HEIGHT = CARD_METRICS.height;
 
-const EDGE = 0x6f757d;
+export const CARD_EDGE = 0x6f757d;
 const KIND_INK = 0x4a5058;
 const UNAFFORDABLE_MARK = 0xc0392b;
 const BACK = 0x232833;
@@ -30,6 +30,28 @@ const EMPTY_EDGE = 0x4a5058;
 
 const AFFORDABLE = { face: 0xd4d7db, art: 0xb6bbc2, artEdge: 0x9aa0a8, ink: 0x0d1014 };
 const UNAFFORDABLE = { face: 0xa7abb1, art: 0x8f959c, artEdge: 0x7c828a, ink: 0x3a3f45 };
+
+/**
+ * The paper and edge the card face, the card back and the infopanel with its ghosts are drawn on.
+ * `x` and `y` are the box's top-left corner, as `fillRoundedRect` reads them — cards themselves are
+ * drawn about their bottom centre, so a card passes its own corner.
+ */
+export function drawCardSurface(
+  surface: Phaser.GameObjects.Graphics,
+  x: number,
+  y: number,
+  {
+    width = CARD_WIDTH,
+    face = AFFORDABLE.face,
+    edge = CARD_EDGE,
+  }: { width?: number; face?: number; edge?: number } = {},
+): void {
+  const { height, radius } = metricsOf(width);
+  surface.fillStyle(face);
+  surface.fillRoundedRect(x, y, width, height, radius);
+  surface.lineStyle(1, edge);
+  surface.strokeRoundedRect(x + 0.5, y + 0.5, width - 1, height - 1, radius);
+}
 
 export type CardFace = {
   readonly root: Phaser.GameObjects.Container;
@@ -56,10 +78,11 @@ export function createCardFace(
 
   const root = scene.add.container(0, 0);
   const paper = scene.add.graphics();
-  paper.fillStyle(tone(palette.face));
-  paper.fillRoundedRect(-width / 2, -height, width, height, radius);
-  paper.lineStyle(1, tone(EDGE));
-  paper.strokeRoundedRect(-width / 2 + 0.5, -height + 0.5, width - 1, height - 1, radius);
+  drawCardSurface(paper, -width / 2, -height, {
+    width,
+    face: tone(palette.face),
+    edge: tone(CARD_EDGE),
+  });
   root.add(paper);
 
   const middle = top + 0.55 * em;
@@ -134,22 +157,10 @@ export function createCardFace(
 export function createCardBack(scene: Phaser.Scene, faded = false): Phaser.GameObjects.Container {
   const tone = faded ? dim : (colour: number): number => colour;
   const paper = scene.add.graphics();
-  paper.fillStyle(tone(BACK));
-  paper.fillRoundedRect(
-    -CARD_WIDTH / 2,
-    -CARD_HEIGHT,
-    CARD_WIDTH,
-    CARD_HEIGHT,
-    CARD_METRICS.radius,
-  );
-  paper.lineStyle(1, tone(EDGE));
-  paper.strokeRoundedRect(
-    -CARD_WIDTH / 2 + 0.5,
-    -CARD_HEIGHT + 0.5,
-    CARD_WIDTH - 1,
-    CARD_HEIGHT - 1,
-    CARD_METRICS.radius,
-  );
+  drawCardSurface(paper, -CARD_WIDTH / 2, -CARD_HEIGHT, {
+    face: tone(BACK),
+    edge: tone(CARD_EDGE),
+  });
 
   const emblem = scene.add
     .polygon(0, -CARD_HEIGHT / 2, hexagon(CARD_WIDTH * 0.28 - 3), 0, 0)

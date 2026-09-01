@@ -8,17 +8,8 @@ import {
   type Tile,
 } from '../rules/map';
 import { UNIT_STATS, type Unit, unitAt } from '../rules/units';
-import { CARD_HEIGHT, CARD_METRICS, CARD_WIDTH } from './card-face';
-import {
-  addText,
-  DESIGN_HEIGHT,
-  DESIGN_WIDTH,
-  drawBubble,
-  MARGIN,
-  PANEL_EDGE,
-  PANEL_FILL,
-  UI_FONT,
-} from './design-space';
+import { CARD_EDGE, CARD_HEIGHT, CARD_METRICS, CARD_WIDTH, drawCardSurface } from './card-face';
+import { addText, DESIGN_HEIGHT, DESIGN_WIDTH, MARGIN, UI_FONT } from './design-space';
 import { buildingMark, TILE_SIZE, terrainMark, unitMark } from './map';
 import { BAR_HEIGHT } from './resource-bar';
 import { text } from './text';
@@ -42,8 +33,8 @@ export function layersOf(tile: Tile, units: readonly Unit[]): Layer[] {
 
 export type InfoPanel = {
   /**
-   * The layer at `index`, in a bubble whose tail points at the tile, over one ghost per layer
-   * behind it. `cycling` dissolves it out of the layer already shown; anything else is instant.
+   * The layer at `index`, on a card of its own beside the tile, over one ghost per layer behind
+   * it. `cycling` dissolves it out of the layer already shown; anything else is instant.
    */
   show(layers: Layer[], index: number, at: { x: number; y: number }, cycling: boolean): void;
   hide(): void;
@@ -52,7 +43,7 @@ export type InfoPanel = {
 /** Over the table and the end-turn button, under the tooltips and the overlay. */
 const DEPTH = 25;
 
-/** How far the panel stands off the centre of the tile it points at. */
+/** How far the panel stands off the centre of the tile it reads. */
 const STANDOFF = TILE_SIZE + 12;
 
 /** How far each layer waiting behind the panel stands out of it, down and away from the tile. */
@@ -79,7 +70,7 @@ type Term = (typeof STATS)[number] | Resource;
 
 type Row = { readonly term: Term; readonly value: string };
 
-/** One layer drawn: its bubble, its contents, and the zones its rows raise tooltips from. */
+/** One layer drawn: its card, its contents, and the zones its rows raise tooltips from. */
 type Face = {
   readonly root: Phaser.GameObjects.Container;
   readonly hovers: Phaser.GameObjects.Zone[];
@@ -89,7 +80,7 @@ type Face = {
 type Box = { readonly left: number; readonly top: number; readonly rightOfTile: boolean };
 
 /**
- * What a tile is, read off the map: one layer at a time in a card-sized bubble, the layers behind
+ * What a tile is, read off the map: one layer at a time on a card of its own, the layers behind
  * it showing as ghosts under its corner. Every show rebuilds the layer, so nothing here follows a
  * state change — the panel is dismissed by whatever caused one.
  */
@@ -147,7 +138,7 @@ export function createInfoPanel(scene: Phaser.Scene): InfoPanel {
       const outgoing = standing;
       if (!cycling) outgoing?.root.destroy();
 
-      const face = buildFace(scene, tooltip, layers[index], { left, top, rightOfTile }, at.y - top);
+      const face = buildFace(scene, tooltip, layers[index], { left, top, rightOfTile });
       // Under the layer it replaces, so the dissolve uncovers it, and over the ghosts either way.
       panel.addAt(face.root, 1);
       standing = face;
@@ -169,11 +160,8 @@ export function createInfoPanel(scene: Phaser.Scene): InfoPanel {
       }
 
       ghosts.clear();
-      ghosts.fillStyle(PANEL_FILL);
-      ghosts.lineStyle(1, PANEL_EDGE);
       for (let depth = behind; depth >= 1; depth--) {
-        ghosts.fillRect(depth * away, depth * GHOST_OFFSET, CARD_WIDTH, CARD_HEIGHT);
-        ghosts.strokeRect(depth * away, depth * GHOST_OFFSET, CARD_WIDTH, CARD_HEIGHT);
+        drawCardSurface(ghosts, depth * away, depth * GHOST_OFFSET);
       }
 
       panel.setData('layer', layers[index].kind).setPosition(left, top).setVisible(true);
@@ -182,24 +170,15 @@ export function createInfoPanel(scene: Phaser.Scene): InfoPanel {
 }
 
 /** The layer's mark and name over its rows, laid out in the card's own type and spacing. */
-function buildFace(
-  scene: Phaser.Scene,
-  tooltip: Tooltip,
-  layer: Layer,
-  box: Box,
-  tail: number,
-): Face {
+function buildFace(scene: Phaser.Scene, tooltip: Tooltip, layer: Layer, box: Box): Face {
   const left = 1 + pad;
   const right = CARD_WIDTH - 1 - pad;
   const top = 1 + pad;
   const middle = top + 0.55 * em;
   const markBox = 1.15 * em;
 
-  const bubble = scene.add.graphics();
-  drawBubble(bubble, CARD_WIDTH, CARD_HEIGHT, {
-    edge: box.rightOfTile ? 'left' : 'right',
-    at: tail,
-  });
+  const paper = scene.add.graphics();
+  drawCardSurface(paper, 0, 0);
 
   const head = headOf(scene, layer);
   const mark = fitMark(head.mark, markBox).setPosition(left + markBox / 2, middle);
@@ -209,9 +188,9 @@ function buildFace(
   );
 
   const ruleY = Math.round(middle + 1.15 * em);
-  const rule = scene.add.rectangle(left, ruleY, right - left, 1, PANEL_EDGE).setOrigin(0, 0);
+  const rule = scene.add.rectangle(left, ruleY, right - left, 1, CARD_EDGE).setOrigin(0, 0);
 
-  const contents: Phaser.GameObjects.GameObject[] = [bubble, mark, name, rule];
+  const contents: Phaser.GameObjects.GameObject[] = [paper, mark, name, rule];
   const hovers: Phaser.GameObjects.Zone[] = [];
   const rows = rowsOf(layer);
   const firstRow = ruleY + 1 + 0.55 * em;

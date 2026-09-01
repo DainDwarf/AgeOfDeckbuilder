@@ -12,10 +12,6 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
-- **One surface for cards and infopanels** — the infopanel is drawn by the card face's
-  component: the card's rounded corners, edge and paper, in the card's box; what the tail and
-  the ghost stack become on a rounded card is settled with the user in the pitch. Doc-impact:
-  none.
 - **Tooltip rest delay** — a tooltip appears only once the pointer has rested still over its
   source for one shared delay constant; moving off or onward before that shows nothing. Applies
   to every tooltip through the one bubble module. Doc-impact: none.
