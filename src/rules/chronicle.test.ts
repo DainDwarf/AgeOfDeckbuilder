@@ -3,7 +3,7 @@ import { type CardId, DECK } from './cards';
 import { apply, beginChronicle, type Chronicle, type Command, RESOURCES } from './chronicle';
 import { distance, TERRAIN_YIELDS, type Terrain, type Tile, type TileCoords, tileKey } from './map';
 import { seedRng } from './rng';
-import type { Faction, Unit, UnitType } from './units';
+import type { Faction, Unit, UnitStats } from './units';
 
 const CITY: TileCoords = { q: 0, r: 0 };
 
@@ -47,9 +47,9 @@ function field(radius: number, water: TileCoords[] = []): Tile[] {
   return tiles;
 }
 
-function unitOf(faction: Faction, tile: TileCoords, stats: Partial<UnitType> = {}): Unit {
+function unitOf(faction: Faction, tile: TileCoords, stats: Partial<UnitStats> = {}): Unit {
   return {
-    unitType: { id: 'PH_Warrior', health: 4, damage: 1, range: 1, move: 2, ...stats },
+    stats: { id: 'PH_Warrior', health: 4, damage: 1, range: 1, move: 2, ...stats },
     faction,
     tile,
   };
@@ -376,8 +376,8 @@ test('a unit with damage attacks the enemy with the least health where it lands'
   const after = apply(city, march(0, { q: 1, r: 0 }));
 
   expect(after.units).toHaveLength(3);
-  expect(after.units[1].unitType.health).toBe(5);
-  expect(after.units[2].unitType.health).toBe(1);
+  expect(after.units[1].stats.health).toBe(5);
+  expect(after.units[2].stats.health).toBe(1);
 });
 
 test('an enemy brought to zero health is killed and leaves the map', () => {
@@ -411,7 +411,7 @@ test('a worker arriving beside an enemy leaves it alone', () => {
 
   const after = apply(city, march(0, { q: 1, r: 0 }));
 
-  expect(after.units[1].unitType.health).toBe(3);
+  expect(after.units[1].stats.health).toBe(3);
 });
 
 test('an enemy out of range is left alone, and the order still resolves', () => {
@@ -427,7 +427,7 @@ test('an enemy out of range is left alone, and the order still resolves', () => 
   const after = apply(city, march(0, { q: 1, r: 0 }));
 
   expect(after.units[0].tile).toEqual({ q: 1, r: 0 });
-  expect(after.units[1].unitType.health).toBe(3);
+  expect(after.units[1].stats.health).toBe(3);
   expect(after.discardPile).toEqual(['PH_March']);
 });
 

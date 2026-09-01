@@ -10,7 +10,7 @@ import {
 } from './map';
 import type { Rng } from './rng';
 import { seedRng, shuffle } from './rng';
-import { arrive, reachable, UNIT_TYPES, type Unit, unitAt } from './units';
+import { arrive, reachable, UNIT_STATS, type Unit, unitAt } from './units';
 
 /** The five core resources, then culture. Population is inhabitants, not a store. */
 export const RESOURCES = ['food', 'production', 'military', 'money', 'science', 'culture'] as const;
@@ -157,7 +157,7 @@ function resolve(
         population: chronicle.population - 1,
         units: [
           ...chronicle.units,
-          { unitType: { ...UNIT_TYPES[card.unitType] }, faction: 'player', tile: chronicle.city },
+          { stats: { ...UNIT_STATS[card.unitType] }, faction: 'player', tile: chronicle.city },
         ],
       };
     case 'order':

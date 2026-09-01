@@ -92,7 +92,7 @@ export function createMapView(scene: Phaser.Scene, chronicle: Chronicle): MapVie
       markers = current.units.map((unit) => {
         const { x, y } = positionOf(unit.tile);
         const marker = scene.add
-          .polygon(x, y, UNIT_MARKS[unit.unitType.id], FACTION_COLOURS[unit.faction])
+          .polygon(x, y, UNIT_MARKS[unit.stats.id], FACTION_COLOURS[unit.faction])
           .setStrokeStyle(2, OUTLINE);
         layer.add(marker);
         return marker;
