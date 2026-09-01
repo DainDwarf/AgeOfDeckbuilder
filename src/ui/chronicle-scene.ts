@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
-import { apply, type Chronicle, type Command } from '../rules/chronicle';
+import { CARDS } from '../rules/cards';
+import { apply, type Chronicle, type Command, type Target } from '../rules/chronicle';
 import { CARD_HEIGHT } from './card-face';
 import {
   ACCENT,
@@ -56,11 +57,14 @@ export class ChronicleScene extends Phaser.Scene {
           // The aiming catcher lies under the hand and the piles, so the button is the one thing
           // left on the table that has to be dead for the length of the aim.
           endTurn.live(false);
-          return view.aim(this.current, (target) => {
+          const chosen = (target: Target | undefined): void => {
             endTurn.live(true);
             if (target === undefined) released();
             else perform({ type: 'play', index, target });
-          });
+          };
+          return CARDS[this.current.hand[index]].kind === 'building'
+            ? view.aimBuild(this.current, chosen)
+            : view.aimOrder(this.current, chosen);
         },
         (id, refusal) => overlay.zoom(id, refusal),
       ),

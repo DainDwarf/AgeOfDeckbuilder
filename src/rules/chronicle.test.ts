@@ -1,7 +1,24 @@
 import { expect, test } from 'vitest';
 import { type CardId, DECK } from './cards';
-import { apply, beginChronicle, type Chronicle, type Command, RESOURCES } from './chronicle';
-import { distance, TERRAIN_YIELDS, type Terrain, type Tile, type TileCoords, tileKey } from './map';
+import {
+  apply,
+  beginChronicle,
+  type Chronicle,
+  type Command,
+  playable,
+  RESOURCES,
+  type Resources,
+  refusalOf,
+} from './chronicle';
+import {
+  type BuildingTypeId,
+  distance,
+  TERRAIN_YIELDS,
+  type Terrain,
+  type Tile,
+  type TileCoords,
+  tileKey,
+} from './map';
 import { seedRng } from './rng';
 import type { Faction, Unit, UnitStats } from './units';
 
@@ -57,7 +74,31 @@ function unitOf(faction: Faction, tile: TileCoords, stats: Partial<UnitStats> = 
 
 /** An order aimed at a unit and a destination, ready to hand to `apply`. */
 function march(unit: number, to: TileCoords): Command {
-  return { type: 'play', index: 0, target: { unit, to } };
+  return { type: 'play', index: 0, target: { unit, tile: to } };
+}
+
+/** A building card aimed at a tile, ready to hand to `apply`. */
+function buildOn(tile: TileCoords): Command {
+  return { type: 'play', index: 0, target: { tile } };
+}
+
+/** What the city pays for the farm card, and nothing besides. */
+const PRODUCTION: Resources = {
+  food: 0,
+  production: 3,
+  military: 0,
+  money: 0,
+  science: 0,
+  culture: 0,
+};
+
+function buildingAt(chronicle: Chronicle, { q, r }: TileCoords): BuildingTypeId | undefined {
+  return chronicle.tiles.find((tile) => tile.q === q && tile.r === r)?.building;
+}
+
+/** A worker of the player's, standing on a tile with nothing to fight with. */
+function worker(tile: TileCoords): Unit {
+  return unitOf('player', tile, { id: 'PH_Worker', damage: 0, range: 0 });
 }
 
 function everyCard(chronicle: Chronicle): CardId[] {
@@ -440,6 +481,99 @@ test('an enemy out of range is left alone, and the order still resolves', () => 
   expect(after.units[0].tile).toEqual({ q: 1, r: 0 });
   expect(after.units[1].stats.health).toBe(3);
   expect(after.discardPile).toEqual(['PH_March']);
+});
+
+test('a building card builds its building on a tile inside the border where a worker stands', () => {
+  const city = cityOf(['urban', 'plain'], {
+    tiles: field(2),
+    hand: ['PH_Farm'],
+    units: [worker({ q: 1, r: 0 })],
+    resources: PRODUCTION,
+  });
+
+  const after = apply(city, buildOn({ q: 1, r: 0 }));
+
+  expect(buildingAt(after, { q: 1, r: 0 })).toBe('PH_Farm');
+  expect(after.resources.production).toBe(0);
+  expect(after.hand).toEqual([]);
+  expect(after.discardPile).toEqual(['PH_Farm']);
+  expect(after.units).toEqual(city.units);
+});
+
+test('a building card is refused on a tile no worker stands on, and with no tile at all', () => {
+  const city = cityOf(['urban', 'plain', 'plain'], {
+    tiles: field(2),
+    hand: ['PH_Farm'],
+    units: [worker({ q: 1, r: 0 })],
+    resources: PRODUCTION,
+  });
+
+  expect(apply(city, buildOn({ q: 2, r: 0 }))).toEqual(city);
+  expect(apply(city, { type: 'play', index: 0 })).toEqual(city);
+});
+
+test('a building card is refused on a tile outside the border, worker standing or not', () => {
+  const city = cityOf(['urban'], {
+    tiles: field(2),
+    hand: ['PH_Farm'],
+    units: [worker({ q: 1, r: 0 })],
+    resources: PRODUCTION,
+  });
+
+  expect(apply(city, buildOn({ q: 1, r: 0 }))).toEqual(city);
+});
+
+test('a building card cannot be played with no worker of the player’s inside the border', () => {
+  const alone = cityOf(['urban', 'plain'], {
+    tiles: field(2),
+    hand: ['PH_Farm'],
+    resources: PRODUCTION,
+  });
+  const fighting = { ...alone, units: [unitOf('player', { q: 1, r: 0 })] };
+
+  expect(playable(refusalOf(alone, 'PH_Farm'))).toBe(false);
+  expect(playable(refusalOf(fighting, 'PH_Farm'))).toBe(false);
+  expect(apply(alone, buildOn({ q: 1, r: 0 }))).toEqual(alone);
+});
+
+test('a tile’s building slot takes one building and no more', () => {
+  const city = cityOf(['urban', 'plain'], {
+    tiles: field(2),
+    hand: ['PH_Farm', 'PH_Farm'],
+    units: [worker({ q: 1, r: 0 })],
+    resources: { ...PRODUCTION, production: 6 },
+  });
+
+  const once = apply(city, buildOn({ q: 1, r: 0 }));
+
+  expect(apply(once, buildOn({ q: 1, r: 0 }))).toEqual(once);
+  expect(playable(refusalOf(once, 'PH_Farm'))).toBe(false);
+});
+
+test('the city fills its own tile’s slot, worker or no worker', () => {
+  const city = cityOf(['urban'], {
+    tiles: field(2),
+    hand: ['PH_Farm'],
+    units: [worker(CITY)],
+    resources: PRODUCTION,
+  });
+
+  expect(apply(city, buildOn(CITY))).toEqual(city);
+  expect(playable(refusalOf(city, 'PH_Farm'))).toBe(false);
+});
+
+test('a farm standing on a tile adds its food to what that tile yields at income', () => {
+  const city = cityOf(['urban', 'plain'], {
+    tiles: field(2),
+    hand: ['PH_Farm'],
+    units: [worker({ q: 1, r: 0 })],
+    resources: PRODUCTION,
+  });
+
+  const bare = apply(city, { type: 'end-turn' });
+  const farmed = apply(apply(city, buildOn({ q: 1, r: 0 })), { type: 'end-turn' });
+
+  expect(farmed.resources.food).toBe(bare.resources.food + 1);
 });
 
 test('the same order on the same chronicle gives the same chronicle back', () => {

@@ -37,8 +37,8 @@ export type Hand = { render(chronicle: Chronicle): void };
 
 /**
  * The hand between the two piles. Cards keep their fixed gap until the lane runs out, then
- * compress evenly onto one another; the one under the pointer comes to the front. While an order
- * is aimed the hand is click-only: the armed card cancels, every other card zooms.
+ * compress evenly onto one another; the one under the pointer comes to the front. While a card is
+ * aimed the hand is click-only: the armed card cancels, every other card zooms.
  */
 export function createHand(
   scene: Phaser.Scene,
@@ -100,9 +100,10 @@ export function createHand(
     slot.face.arm(false);
 
     if (slot.playable && grabbed.y - pointer.worldY > PLAY_HEIGHT) {
-      // An order is not played by the release: it waits, in its slot and armed, while the map is
-      // aimed at, and comes back down only when the card itself is clicked.
-      if (CARDS[slot.id].kind === 'order') {
+      // A card that takes a target is not played by the release: it waits, in its slot and armed,
+      // while the map is aimed at, and comes back down only when the card itself is clicked.
+      const kind = CARDS[slot.id].kind;
+      if (kind === 'order' || kind === 'building') {
         settle(slot, 150);
         slot.face.arm(true);
         const cancel = aim(slot.index, () => {

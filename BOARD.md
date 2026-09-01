@@ -12,8 +12,6 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
-- **The building card** — the building card builds its building on a tile inside the border
-  where a worker stands; with it every card kind is playable end to end. Doc-impact: none.
 - **Unit panel** — clicking a unit while no order is aimed shows a panel with its stats — health,
   damage, range, move — so a damaged unit's health is readable on screen. Doc-impact: none.
 - **The enemy and the fall** — one enemy arrives on a hardcoded turn, declares its intent, moves

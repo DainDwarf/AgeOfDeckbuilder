@@ -1,5 +1,7 @@
 import { CARDS, type CardId, DECK } from './cards';
 import {
+  BUILDING_YIELDS,
+  type BuildingTypeId,
   CITY_TILE,
   generateMap,
   neighbours,
@@ -34,8 +36,11 @@ export type Chronicle = {
   readonly discardPile: CardId[];
 };
 
-/** Which unit an order acts on, by its place in `units`, and the tile it is sent to. */
-export type Target = { readonly unit: number; readonly to: TileCoords };
+/**
+ * The tile a play is aimed at — where an order sends its unit, where a building card builds — and,
+ * for an order, which unit it acts on, by its place in `units`.
+ */
+export type Target = { readonly tile: TileCoords; readonly unit?: number };
 
 export type Command =
   | { readonly type: 'end-turn' }
@@ -111,17 +116,35 @@ function unaffordable(chronicle: Chronicle, id: CardId): Resource[] {
     .map(({ resource }) => resource);
 }
 
+/**
+ * Where a building card can build: a tile inside the border whose building slot is free and where
+ * a worker of the player's stands. The city fills its own tile's slot, so it is never one of them.
+ */
+export function buildable(chronicle: Chronicle): TileCoords[] {
+  const held = new Set(chronicle.held.map(tileKey));
+  return chronicle.tiles
+    .filter((tile) => {
+      if (!held.has(tileKey(tile)) || tile.building !== undefined) return false;
+      if (tileKey(tile) === tileKey(chronicle.city)) return false;
+      const standing = unitAt(chronicle.units, tile);
+      return standing?.faction === 'player' && standing.stats.id === 'PH_Worker';
+    })
+    .map(({ q, r }) => ({ q, r }));
+}
+
 /** A card the city can pay for that the map still refuses: there is nothing for it to resolve on. */
 function blocked(chronicle: Chronicle, id: CardId): boolean {
   switch (CARDS[id].kind) {
     case 'unit':
       return chronicle.population === 0 || unitAt(chronicle.units, chronicle.city) !== undefined;
+    case 'building':
+      return buildable(chronicle).length === 0;
     case 'order':
       return !chronicle.units.some(
         (unit) =>
           unit.faction === 'player' && reachable(chronicle.tiles, chronicle.units, unit).length > 0,
       );
-    default:
+    case 'action':
       return false;
   }
 }
@@ -160,6 +183,8 @@ function resolve(
           { stats: { ...UNIT_STATS[card.unitType] }, faction: 'player', tile: chronicle.city },
         ],
       };
+    case 'building':
+      return build(chronicle, card.building, target);
     case 'order':
       return order(chronicle, target);
     case 'action': {
@@ -167,24 +192,38 @@ function resolve(
       for (const resource of RESOURCES) resources[resource] += card.gain[resource] ?? 0;
       return { ...chronicle, resources };
     }
-    default:
-      return chronicle;
   }
+}
+
+/** The building card: the building fills the slot of the tile it is aimed at. */
+function build(
+  chronicle: Chronicle,
+  building: BuildingTypeId,
+  target: Target | undefined,
+): Chronicle | undefined {
+  if (target === undefined) return undefined;
+  const at = tileKey(target.tile);
+  if (!buildable(chronicle).some((coord) => tileKey(coord) === at)) return undefined;
+
+  return {
+    ...chronicle,
+    tiles: chronicle.tiles.map((tile) => (tileKey(tile) === at ? { ...tile, building } : tile)),
+  };
 }
 
 /** The plain order: the unit crosses to a tile within its move, and its nature acts where it lands. */
 function order(chronicle: Chronicle, target: Target | undefined): Chronicle | undefined {
-  if (target === undefined) return undefined;
-  const unit = chronicle.units[target.unit];
+  if (target === undefined || target.unit === undefined) return undefined;
+  const mover = target.unit;
+  const to = target.tile;
+  const unit = chronicle.units[mover];
   if (unit === undefined || unit.faction !== 'player') return undefined;
 
   const landings = reachable(chronicle.tiles, chronicle.units, unit);
-  if (!landings.some((coord) => tileKey(coord) === tileKey(target.to))) return undefined;
+  if (!landings.some((coord) => tileKey(coord) === tileKey(to))) return undefined;
 
-  const moved = chronicle.units.map((other, at) =>
-    at === target.unit ? { ...other, tile: target.to } : other,
-  );
-  return { ...chronicle, units: arrive(moved, target.unit) };
+  const moved = chronicle.units.map((other, at) => (at === mover ? { ...other, tile: to } : other));
+  return { ...chronicle, units: arrive(moved, mover) };
 }
 
 function events(chronicle: Chronicle): Chronicle {
@@ -224,7 +263,11 @@ function income(chronicle: Chronicle): Chronicle {
   for (const tile of chronicle.tiles) {
     if (!held.has(tileKey(tile))) continue;
     const yields = TERRAIN_YIELDS[tile.terrain];
-    for (const resource of RESOURCES) resources[resource] += yields[resource] ?? 0;
+    const built: Partial<Resources> =
+      tile.building === undefined ? {} : BUILDING_YIELDS[tile.building];
+    for (const resource of RESOURCES) {
+      resources[resource] += (yields[resource] ?? 0) + (built[resource] ?? 0);
+    }
   }
   return { ...chronicle, resources };
 }

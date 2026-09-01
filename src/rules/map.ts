@@ -24,6 +24,14 @@ export const TERRAIN_YIELDS: Record<Terrain, Partial<Resources>> = {
   urban: { production: 1, military: 1, money: 1, science: 1, culture: 1 },
 };
 
+/** `PH_` marks a stand-in: this is not authored content, and it goes. */
+export type BuildingTypeId = 'PH_Farm';
+
+/** What one building of each kind yields at income, on top of the terrain under it. */
+export const BUILDING_YIELDS: Record<BuildingTypeId, Partial<Resources>> = {
+  PH_Farm: { food: 1 },
+};
+
 /** How many biomes the map is cut into, and which kinds they are dealt. */
 export const MAP_COMPOSITION = {
   radius: 8,
@@ -40,7 +48,12 @@ export const MAP_COMPOSITION = {
 };
 
 export type TileCoords = { readonly q: number; readonly r: number };
-export type Tile = TileCoords & { readonly terrain: Terrain };
+
+/** A tile is its layers: the terrain it is made of, and the one building slot it offers. */
+export type Tile = TileCoords & {
+  readonly terrain: Terrain;
+  readonly building?: BuildingTypeId;
+};
 
 export const CITY_TILE: TileCoords = { q: 0, r: 0 };
 

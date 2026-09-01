@@ -169,7 +169,8 @@ A tile is layers, and its income, movement cost and sight are the sum of what it
 - **Improvement** — laid by a worker through an action, any number of distinct ones per tile,
   never the same one twice. A road is one; it runs under whatever building stands there.
 - **Building** — at most one per tile: the tile has one building slot. That slot is the whole
-  difference between a building and an improvement.
+  difference between a building and an improvement. The city fills the slot of the tile it stands
+  on.
 
 🔧 A building's yield may read its neighbours. Nothing in the first playable does; the door
 is there so that adjacency is content when it comes.
