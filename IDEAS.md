@@ -42,7 +42,3 @@ a [`BOARD.md`](BOARD.md) line. Say
 - **Type-size floor, verified small** (art-style pass scope): minimum type sizes generous enough
   that the smallest window we care about stays readable; ui-check verifies at that size. Uniform
   window scaling plus card zoom covers the rest — no UI-scale slider unless playtesting demands it.
-- **Free asset sources** (art-style pass scope): start at Kenney (https://kenney.nl/assets, all
-  CC0: art, UI, sounds) and Game-icons.net (https://game-icons.net, CC BY, symbols). Fallbacks
-  when they run dry: OpenGameArt, itch.io free assets, Freesound, Incompetech, Google Fonts —
-  each with per-pack licences to read.

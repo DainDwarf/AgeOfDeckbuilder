@@ -14,6 +14,8 @@ shorter than what it holds.
   one forbids.
 - [`ROADMAP.md`](ROADMAP.md) — the ladder of deliverables to the playable demo (v0.1.0),
   consulted when the board is empty. Written in sand, never a promise.
+- [`ASSET-SOURCES.md`](ASSET-SOURCES.md) — where free art, sound, music and fonts come from, with
+  each site's licence terms. Browsed for creativity fuel; used when the look is built.
 
 Domain pages (standing knowledge of the genre, the platform, the audience — each claim naming its
 source) are added here when there is a domain to describe.
