@@ -39,6 +39,7 @@ export class ChronicleScene extends Phaser.Scene {
 
     const view = createMapView(this, this.chronicle);
     const overlay = createOverlay(this);
+    const endTurn = this.addEndTurn(() => perform({ type: 'end-turn' }));
     parts.push(
       view,
       createResourceBar(this),
@@ -46,19 +47,24 @@ export class ChronicleScene extends Phaser.Scene {
       createHand(
         this,
         (index) => perform({ type: 'play', index }),
-        (index, released) =>
-          view.aim(this.chronicle, (target) => {
+        (index, released) => {
+          // The aiming catcher lies under the hand and the piles, so the button is the one thing
+          // left on the table that has to be dead for the length of the aim.
+          endTurn.live(false);
+          return view.aim(this.chronicle, (target) => {
+            endTurn.live(true);
             if (target === undefined) released();
             else perform({ type: 'play', index, target });
-          }),
+          });
+        },
         (id, refusal) => overlay.zoom(id, refusal),
       ),
-      this.addEndTurn(() => perform({ type: 'end-turn' })),
+      endTurn,
     );
     for (const part of parts) part.render(this.chronicle);
   }
 
-  private addEndTurn(endTurn: () => void): Part {
+  private addEndTurn(endTurn: () => void): Part & { live(on: boolean): void } {
     const button = this.add.rectangle(0, 0, 1, 1, ACCENT).setDepth(20);
     const label = addText(this, 0, 0, '', {
       fontFamily: UI_FONT,
@@ -77,7 +83,7 @@ export class ChronicleScene extends Phaser.Scene {
     const height = label.height + 24;
     const x = DESIGN_WIDTH - MARGIN - width / 2;
     const y = DESIGN_HEIGHT - (MARGIN + CARD_HEIGHT + 14) - height / 2;
-    button.setPosition(x, y).setSize(width, height).setInteractive({ useHandCursor: true });
+    button.setPosition(x, y).setSize(width, height);
     label.setPosition(x, y);
 
     let hovered = false;
@@ -96,11 +102,19 @@ export class ChronicleScene extends Phaser.Scene {
     });
     onClick(button, endTurn);
 
-    return {
+    const part = {
       render(chronicle: Chronicle): void {
         turn = chronicle.turn;
         paint();
       },
+      live(on: boolean): void {
+        if (on) button.setInteractive({ useHandCursor: true });
+        else button.disableInteractive();
+        hovered = false;
+        paint();
+      },
     };
+    part.live(true);
+    return part;
   }
 }

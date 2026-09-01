@@ -27,14 +27,21 @@ const OUTLINE = 0x0d1014;
 /** Pale, not accent: the border rings are already accent, and aiming has to read over them. */
 const LIT = 0xf2f6ff;
 
-/** Above the hand and the end-turn button, so aiming an order has the table to itself. */
-const AIM_DEPTH = 60;
+/**
+ * Under the hand and the piles, which stay live while an order is aimed: the map takes every press
+ * they do not.
+ */
+const AIM_DEPTH = 1;
+
+/** Over the terrain and the border rings, under the units. */
+const GLOW_DEPTH = 2;
 
 const UNIT_DEPTH = 3;
 
 export type MapView = {
   render(chronicle: Chronicle): void;
-  aim(chronicle: Chronicle, chosen: (target: Target | undefined) => void): void;
+  /** Aims an order until a target is chosen or the returned cancel is called. */
+  aim(chronicle: Chronicle, chosen: (target: Target | undefined) => void): () => void;
 };
 
 function positionOf({ q, r }: TileCoords): { x: number; y: number } {
@@ -99,18 +106,18 @@ export function createMapView(scene: Phaser.Scene, chronicle: Chronicle): MapVie
       });
     },
 
-    aim(current: Chronicle, chosen: (target: Target | undefined) => void): void {
+    aim(current: Chronicle, chosen: (target: Target | undefined) => void): () => void {
       const catcher = scene.add
         .zone(0, 0, DESIGN_WIDTH, DESIGN_HEIGHT)
         .setOrigin(0, 0)
         .setDepth(AIM_DEPTH)
         .setInteractive();
-      const glow = scene.add.container(0, 0).setDepth(AIM_DEPTH + 1);
-      layer.setDepth(AIM_DEPTH + 2);
+      const glow = scene.add.container(0, 0).setDepth(GLOW_DEPTH);
 
       let selected: number | undefined;
       let landings: TileCoords[] = [];
       let grabbed: number | undefined;
+      let pressed = false;
 
       const paint = (): void => {
         glow.removeAll(true);
@@ -138,10 +145,33 @@ export function createMapView(scene: Phaser.Scene, chronicle: Chronicle): MapVie
 
       const finish = (target: Target | undefined): void => {
         scene.input.off('pointermove', drag);
+        scene.input.off('pointerup', release);
         catcher.destroy();
         glow.destroy();
-        layer.setDepth(UNIT_DEPTH);
         chosen(target);
+      };
+
+      // The press is the catcher's, so the hand and the piles keep theirs; the release is the
+      // scene's, so a unit dragged over them still comes home.
+      const release = (pointer: Phaser.Input.Pointer): void => {
+        if (!pressed) return;
+        pressed = false;
+        const to = tileAt(current, pointer.worldX, pointer.worldY);
+        const held = grabbed;
+        grabbed = undefined;
+
+        if (held !== undefined) {
+          const home = positionOf(current.units[held].tile);
+          markers[held].setPosition(home.x, home.y);
+          if (to !== undefined && same(to, current.units[held].tile)) return;
+        }
+        if (selected !== undefined && to !== undefined && landings.some((c) => same(c, to))) {
+          finish({ unit: selected, to });
+          return;
+        }
+        selected = undefined;
+        landings = [];
+        paint();
       };
 
       const select = (index: number): void => {
@@ -151,6 +181,7 @@ export function createMapView(scene: Phaser.Scene, chronicle: Chronicle): MapVie
       };
 
       catcher.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+        pressed = true;
         const under = tileAt(current, pointer.worldX, pointer.worldY);
         const found =
           under === undefined
@@ -162,36 +193,10 @@ export function createMapView(scene: Phaser.Scene, chronicle: Chronicle): MapVie
         if (grabbed !== undefined) select(grabbed);
       });
 
-      catcher.on('pointerup', (pointer: Phaser.Input.Pointer) => {
-        const to = tileAt(current, pointer.worldX, pointer.worldY);
-        const held = grabbed;
-        grabbed = undefined;
-
-        // Only a press that began on no unit of the player's cancels: a drop nowhere valid
-        // returns aiming to bare instead of throwing the card away.
-        if (held !== undefined) {
-          const home = positionOf(current.units[held].tile);
-          markers[held].setPosition(home.x, home.y);
-          if (to !== undefined && same(to, current.units[held].tile)) return;
-          if (to !== undefined && landings.some((coord) => same(coord, to))) {
-            finish({ unit: held, to });
-            return;
-          }
-          selected = undefined;
-          landings = [];
-          paint();
-          return;
-        }
-
-        if (selected !== undefined && to !== undefined && landings.some((c) => same(c, to))) {
-          finish({ unit: selected, to });
-          return;
-        }
-        finish(undefined);
-      });
-
       scene.input.on('pointermove', drag);
+      scene.input.on('pointerup', release);
       paint();
+      return () => finish(undefined);
     },
   };
 }

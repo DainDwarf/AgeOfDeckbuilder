@@ -37,12 +37,13 @@ export type Hand = { render(chronicle: Chronicle): void };
 
 /**
  * The hand between the two piles. Cards keep their fixed gap until the lane runs out, then
- * compress evenly onto one another; the one under the pointer comes to the front.
+ * compress evenly onto one another; the one under the pointer comes to the front. While an order
+ * is aimed the hand is click-only: the armed card cancels, every other card zooms.
  */
 export function createHand(
   scene: Phaser.Scene,
   play: (index: number) => void,
-  aim: (index: number, released: () => void) => void,
+  aim: (index: number, released: () => void) => () => void,
   zoom: (id: CardId, refusal: Refusal) => void,
 ): Hand {
   const laneLeft = MARGIN + CARD_WIDTH + LANE_PAD;
@@ -51,6 +52,7 @@ export function createHand(
 
   let slots: Slot[] = [];
   let dragged: Drag | undefined;
+  let aiming: { readonly slot: Slot; readonly cancel: () => void } | undefined;
 
   const restingY = (slot: Slot): number => slot.home.y - (slot.hovered && slot.playable ? LIFT : 0);
 
@@ -75,6 +77,8 @@ export function createHand(
     const { slot, grabbed, lifted } = dragged;
     const away = { x: pointer.worldX - grabbed.x, y: pointer.worldY - grabbed.y };
     dragged.moved = Math.max(dragged.moved, Math.abs(away.x) + Math.abs(away.y));
+    // Measured before the return: the release reads the travel to tell a click from a drag.
+    if (aiming !== undefined) return;
 
     const budge = slot.playable ? 1 : 0.1;
     slot.face.root.setPosition(lifted.x + away.x * budge, lifted.y + away.y * budge);
@@ -85,24 +89,29 @@ export function createHand(
     if (dragged === undefined) return;
     const { slot, grabbed, moved } = dragged;
     dragged = undefined;
-    slot.face.arm(false);
 
     if (moved < CLICK_SLACK) {
       settle(slot, 0);
-      zoom(slot.id, slot.refusal);
+      if (aiming !== undefined && slot === aiming.slot) aiming.cancel();
+      else zoom(slot.id, slot.refusal);
       return;
     }
+    if (aiming !== undefined) return;
+    slot.face.arm(false);
+
     if (slot.playable && grabbed.y - pointer.worldY > PLAY_HEIGHT) {
-      // An order is not played by the release: it waits, held up and armed, while the map is
-      // aimed at, and comes back down only if nothing is chosen.
+      // An order is not played by the release: it waits, in its slot and armed, while the map is
+      // aimed at, and comes back down only when the card itself is clicked.
       if (CARDS[slot.id].kind === 'order') {
         settle(slot, 150);
         slot.face.arm(true);
-        aim(slot.index, () => {
+        const cancel = aim(slot.index, () => {
+          aiming = undefined;
           slot.face.arm(false);
           slot.hovered = false;
           settle(slot, 150);
         });
+        aiming = { slot, cancel };
         return;
       }
       play(slot.index);
@@ -118,6 +127,7 @@ export function createHand(
         slot.face.root.destroy();
       }
       dragged = undefined;
+      aiming = undefined;
 
       const held = chronicle.hand.length;
       const advance =
