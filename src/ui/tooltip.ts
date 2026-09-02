@@ -89,6 +89,12 @@ export function createTooltip(scene: Phaser.Scene, on: Surface): Tooltip {
     rest();
   };
 
+  const hide = (): void => {
+    drop();
+    if (tooltip.visible) wentDown = scene.time.now;
+    tooltip.setVisible(false);
+  };
+
   const paintBeside = (message: string, x: number, y: number): void => {
     const { width, height } = measure(message);
     const unit = on.unit();
@@ -108,6 +114,10 @@ export function createTooltip(scene: Phaser.Scene, on: Surface): Tooltip {
     rest();
   });
 
+  // A pointer that leaves the canvas over an interactive object gets no `pointerout` from Phaser:
+  // the leave is announced on the scene's input plugin alone.
+  scene.input.on('gameout', hide);
+
   return {
     under(message: string, left: number, tip: number, top: number): void {
       raise(() => {
@@ -122,10 +132,6 @@ export function createTooltip(scene: Phaser.Scene, on: Surface): Tooltip {
       raise(() => paintBeside(message, x, y));
     },
 
-    hide(): void {
-      drop();
-      if (tooltip.visible) wentDown = scene.time.now;
-      tooltip.setVisible(false);
-    },
+    hide,
   };
 }

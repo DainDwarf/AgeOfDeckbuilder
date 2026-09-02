@@ -7,6 +7,7 @@ import {
   dragOut,
   endTurn,
   type OnScreen,
+  offCanvas,
   offsetOf,
   onScreen,
   onTable,
@@ -39,16 +40,6 @@ function playableRun(): { seed: number; turn: number } {
     }
   }
   throw new Error('no seed under a thousand opens a turn on a card that plays at nothing');
-}
-
-/** A point on the bare page above the canvas: a release there lands outside the game. */
-async function offCanvas(page: Page): Promise<{ x: number; y: number }> {
-  const band = await page.locator('canvas').evaluate((canvas: HTMLCanvasElement) => {
-    const rect = canvas.getBoundingClientRect();
-    return { x: rect.left + rect.width / 2, y: rect.top - 20, room: rect.top };
-  });
-  if (band.room < 40) throw new Error('the window leaves no bare page above the canvas');
-  return { x: band.x, y: band.y };
 }
 
 /** Whether a named object stands where it was measured, to the page pixel. */

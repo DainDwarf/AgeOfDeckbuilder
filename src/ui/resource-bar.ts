@@ -76,7 +76,11 @@ function createEntry(
   const chip = scene.add.rectangle(0, 0, 10, 10, RESOURCE_COLOURS[key]).setAngle(45);
   const word = addText(scene, 0, 0, text(`label.${key}`), WORD_STYLE).setOrigin(0, 0.5);
   const value = addText(scene, 0, 0, '', VALUE_STYLE).setOrigin(0, 0.5);
-  const hover = scene.add.zone(0, 0, 1, BAR_HEIGHT).setOrigin(0, 0).setInteractive();
+  const hover = scene.add
+    .zone(0, 0, 1, BAR_HEIGHT)
+    .setOrigin(0, 0)
+    .setName(`reading-${key}`)
+    .setInteractive();
   hover.on('pointerover', () =>
     tooltip.under(text(`tooltip.${key}`), hover.x, hover.x + hover.width / 2, BAR_HEIGHT + 8),
   );

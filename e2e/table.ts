@@ -124,6 +124,19 @@ export function onScreen(page: Page, name: string): Promise<OnScreen> {
   }, name);
 }
 
+/**
+ * A point on the bare page above the canvas, which a window taller than the design's ratio leaves
+ * letterboxed; the pointer is off the game there, and a press released there lands outside it.
+ */
+export async function offCanvas(page: Page): Promise<{ x: number; y: number }> {
+  const band = await page.locator('canvas').evaluate((canvas: HTMLCanvasElement) => {
+    const rect = canvas.getBoundingClientRect();
+    return { x: rect.left + rect.width / 2, y: rect.top - 20, room: rect.top };
+  });
+  if (band.room < 40) throw new Error('the window leaves no bare page above the canvas');
+  return { x: band.x, y: band.y };
+}
+
 /** Whether an object of that name stands on the table. */
 export function onTable(page: Page, name: string): Promise<boolean> {
   return page.evaluate((target) => window.named?.(target) !== undefined, name);
