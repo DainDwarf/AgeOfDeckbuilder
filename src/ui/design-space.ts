@@ -137,7 +137,10 @@ export function applyDesignSpace(scene: Phaser.Scene): void {
     // The main camera's own size is Phaser's business: its camera manager subscribed to RESIZE at
     // scene boot, ahead of this, and resizes every camera at the origin that had the old size.
     scene.cameras.main.setZoom(factor).centerOn(DESIGN_WIDTH / 2, DESIGN_HEIGHT / 2);
-    for (const label of textsIn(scene.children.list)) label.setResolution(Math.ceil(factor));
+    const resolution = Math.ceil(factor);
+    for (const label of textsIn(scene.children.list)) {
+      if (label.style.resolution !== resolution) label.setResolution(resolution);
+    }
   };
   place();
   follow(scene, place);
