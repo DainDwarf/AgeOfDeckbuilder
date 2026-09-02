@@ -17,13 +17,6 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 - **Unplayable reasons on screen** — a card in hand that cannot be played shows why when zoomed:
   the unaffordable resources it already marks, joined by the blocked reasons (no free tile, no
   population, no valid target). Doc-impact: none.
-- **A lost release ends the press** — when the window loses focus mid-press the browser delivers
-  no release, and Phaser's drag stays in flight: the card follows the pointer, the next press
-  starts nothing, and the release after that ends the old drag wherever it lands. On the game's
-  blur, every gesture ends the way a release off the canvas does and Phaser's drag state is
-  cleared, so the next press starts clean. Proven by an e2e that presses a hand card, blurs the
-  window, and asserts the card is home and the next press starts a fresh gesture.
-  Doc-impact: none.
 - **Movable map** — the chronicle scene's camera pans by drag and zooms by wheel, bounded so the
   map cannot leave the frame entirely; text stays crisp at every zoom; the standing e2e passes.
   Stays a camera concern: the tile's drawn size is the map layer's fact alone, never a number the

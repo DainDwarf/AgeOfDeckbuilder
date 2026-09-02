@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { CARDS, type CardId, DECKS, type DeckId } from './rules/cards';
 import { beginChronicle } from './rules/chronicle';
 import { ChronicleScene } from './ui/chronicle-scene';
-import { backingSize, followWindow } from './ui/design-space';
+import { backingSize, followWindow, releaseOnBlur } from './ui/design-space';
 
 // The e2e suite and browser-console debugging observe the running game through this handle;
 // it is optional because the window exists before the game does.
@@ -51,5 +51,6 @@ const game = new Phaser.Game({
   scene: [new ChronicleScene(chronicle)],
 });
 followWindow(game);
+releaseOnBlur(game);
 
 window.game = game;

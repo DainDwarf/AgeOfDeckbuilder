@@ -108,6 +108,21 @@ export function followWindow(game: Phaser.Game): void {
   });
 }
 
+/**
+ * The release the browser withholds: a window that loses focus mid-press delivers no `mouseup`, so
+ * Phaser's drag stays in flight and the next press starts nothing. Phaser reads a `mouseup` on the
+ * window whose target is not the canvas as a release off the canvas, and the point off the canvas
+ * leaves its hit test empty, so no press held at the blur becomes a click.
+ */
+export function releaseOnBlur(game: Phaser.Game): void {
+  game.events.on(Phaser.Core.Events.BLUR, () => {
+    if (game.input.mousePointer?.isDown !== true) return;
+    window.dispatchEvent(
+      new MouseEvent('mouseup', { bubbles: true, button: 0, buttons: 0, clientX: -1, clientY: -1 }),
+    );
+  });
+}
+
 // Everything here reads the window and the scale manager live, never the RESIZE event's size
 // arguments: the resize `followWindow` triggers emits RESIZE again, nested inside the one being
 // handled, so the outer arguments describe a backing store that is already gone.

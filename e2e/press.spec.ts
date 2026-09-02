@@ -4,6 +4,7 @@ import { apply, beginChronicle, type Chronicle, playable, refusalOf } from '../s
 import {
   browse,
   chronicleOf,
+  dragOut,
   endTurn,
   type OnScreen,
   offsetOf,
@@ -93,6 +94,78 @@ test('a hand card released off the canvas comes home, plays nothing, and leaves 
   await expect.poll(() => stillAt(page, card, home)).toBe(true);
   expect(await onTable(page, 'zoom')).toBe(false);
   expect((await chronicleOf(page)).hand).toEqual(opened.hand);
+
+  await page.mouse.click(home.x, home.y);
+  await expect.poll(() => onTable(page, 'zoom')).toBe(true);
+
+  expect(problems).toEqual([]);
+});
+
+test('a hand card whose release the blur swallowed comes home, and the next press plays it', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const run = playableRun();
+
+  await page.setViewportSize(WINDOW);
+  await open(page, run.seed, 'PH_LongDeck');
+  for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
+
+  const opened = await chronicleOf(page);
+  const index = atNothing(opened);
+  const card = `hand-${index}`;
+  const home = await onScreen(page, card);
+
+  await page.mouse.move(home.x, home.y);
+  await page.mouse.down();
+  await page.mouse.move(home.x, home.y - LIFTED * home.unit, { steps: 5 });
+  await expect.poll(() => stillAt(page, card, home)).toBe(false);
+
+  await page.evaluate(() => {
+    window.dispatchEvent(new Event('blur'));
+  });
+
+  await expect.poll(() => stillAt(page, card, home)).toBe(true);
+  expect((await chronicleOf(page)).hand).toEqual(opened.hand);
+
+  // The release the browser finally delivers, long after the gesture it belonged to ended.
+  await page.mouse.up();
+  expect(await stillAt(page, card, home)).toBe(true);
+  expect(await onTable(page, 'zoom')).toBe(false);
+  expect((await chronicleOf(page)).hand).toEqual(opened.hand);
+
+  await dragOut(page, index);
+  await expect.poll(async () => (await chronicleOf(page)).hand).not.toEqual(opened.hand);
+
+  expect(problems).toEqual([]);
+});
+
+test('a press the blur swallowed before it dragged is no click, and the next click zooms', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const run = playableRun();
+
+  await page.setViewportSize(WINDOW);
+  await open(page, run.seed, 'PH_LongDeck');
+  for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
+
+  const opened = await chronicleOf(page);
+  const card = `hand-${atNothing(opened)}`;
+  const home = await onScreen(page, card);
+
+  await page.mouse.move(home.x, home.y);
+  await page.mouse.down();
+  await page.evaluate(() => {
+    window.dispatchEvent(new Event('blur'));
+  });
+  await page.mouse.up();
+
+  expect(await onTable(page, 'zoom')).toBe(false);
+  expect((await chronicleOf(page)).hand).toEqual(opened.hand);
+
+  await page.mouse.move(home.x, home.y - 300 * home.unit, { steps: 5 });
+  await expect.poll(() => stillAt(page, card, home)).toBe(true);
 
   await page.mouse.click(home.x, home.y);
   await expect.poll(() => onTable(page, 'zoom')).toBe(true);
