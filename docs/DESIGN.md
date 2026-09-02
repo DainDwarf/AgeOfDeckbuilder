@@ -246,7 +246,7 @@ something a technology or a civilization's rule can grant.
 
 **Enemies enter from camps.** The generator places **camps** on the map, each in the fog until
 seen. An event that spawns enemies spawns them at a camp, and they follow their script — the
-default one walks toward the nearest of the player's units or the city and declares an attack on
+default one moves toward the nearest of the player's units or the city and declares an attack on
 it. Scouting is how a chronicle learns where the enemy comes from. A camp is captured the way
 the city is — kill what stands on it, stand on it through a full turn — and a captured camp
 spawns nothing again. 🔧 Its reward: a chronicle-only card, or influence. Spawning enemies on

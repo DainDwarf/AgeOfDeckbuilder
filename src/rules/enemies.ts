@@ -12,7 +12,7 @@ export type EnemyScriptId = 'PH_Advance';
  * script's own business.
  */
 export type EnemyScript = {
-  /** The tile it walks to, out of the tiles its move reaches and the one it already stands on. */
+  /** The tile it moves to, out of the tiles its move reaches and the one it already stands on. */
   moveTo(chronicle: Chronicle, enemy: number): TileCoords;
   /** The tile it aims its attack at, or nothing when it declares no intent. */
   intentOf(chronicle: Chronicle, enemy: number): TileCoords | undefined;
@@ -79,7 +79,7 @@ export function arrival(chronicle: Chronicle): Chronicle {
   };
 }
 
-/** What an enemy walks at: the player's unit or the city the fewest tiles of land away. */
+/** What an enemy moves toward: the player's unit or the city the fewest tiles of land away. */
 function nearest(chronicle: Chronicle, from: TileCoords): TileCoords | undefined {
   const gaps = landDistances(chronicle.tiles, from);
   const targets = chronicle.units

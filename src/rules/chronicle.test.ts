@@ -715,27 +715,27 @@ test('the enemy arrives on a free land tile of the rim, and on nothing else ther
   ).toEqual([]);
 });
 
-test('an enemy walks its move toward the city, turn after turn', () => {
+test('an enemy moves its move toward the city, turn after turn', () => {
   const city = cityOf(['urban'], {
     tiles: field(4),
     units: [unitOf('enemy', { q: 4, r: 0 }, { move: 2 })],
   });
 
-  const walked = apply(city, { type: 'end-turn' });
+  const moved = apply(city, { type: 'end-turn' });
 
-  expect(distance(walked.units[0].tile, CITY)).toBe(2);
-  expect(distance(apply(walked, { type: 'end-turn' }).units[0].tile, CITY)).toBe(0);
+  expect(distance(moved.units[0].tile, CITY)).toBe(2);
+  expect(distance(apply(moved, { type: 'end-turn' }).units[0].tile, CITY)).toBe(0);
 });
 
-test('an enemy walks at the nearest of the player’s units instead of the city', () => {
+test('an enemy moves toward the nearest of the player’s units instead of the city', () => {
   const city = cityOf(['urban'], {
     tiles: field(4),
     units: [worker({ q: 2, r: 0 }), unitOf('enemy', { q: 4, r: 0 }, { move: 2 })],
   });
 
-  const walked = apply(city, { type: 'end-turn' });
+  const moved = apply(city, { type: 'end-turn' });
 
-  expect(distance(walked.units[1].tile, { q: 2, r: 0 })).toBe(1);
+  expect(distance(moved.units[1].tile, { q: 2, r: 0 })).toBe(1);
 });
 
 test('an enemy declares its intent on a unit in range, and executes it in the next combat', () => {
@@ -824,7 +824,7 @@ test('an enemy on the city’s tile declares nothing, and captures the city the 
   expect(fallen.turn).toBe(stood.turn);
 });
 
-test('the enemy that walks in from the rim reaches the city and takes it', () => {
+test('the enemy that moves in from the rim reaches the city and captures it', () => {
   let chronicle = cityOf(['urban'], { tiles: field(MAP_COMPOSITION.radius) });
   for (let turn = 0; turn < 20 && chronicle.defeat === undefined; turn++) {
     chronicle = apply(chronicle, { type: 'end-turn' });

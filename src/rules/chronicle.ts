@@ -353,7 +353,7 @@ function income(chronicle: Chronicle): Chronicle {
 
 /**
  * The enemies' half of the turn: an enemy that stood on the city's tile through the whole turn
- * captures it and the chronicle ends there; otherwise every enemy walks its script, and then every
+ * captures it and the chronicle ends there; otherwise every enemy moves by its script, and then every
  * enemy declares the intent it executes in the next combat.
  */
 function enemyPhase(chronicle: Chronicle): Chronicle {

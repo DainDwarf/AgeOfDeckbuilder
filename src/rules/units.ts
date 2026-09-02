@@ -27,7 +27,7 @@ export const UNIT_STATS: Record<UnitTypeId, UnitStats> = {
 
 /**
  * A unit standing on the map. An enemy is the one that carries a script — the enemy phase asks it
- * where to walk and what to aim at — and the intent that phase left on it.
+ * where to move and what to aim at — and the intent that phase left on it.
  */
 export type Unit = { readonly stats: UnitStats; readonly tile: TileCoords } & (
   | { readonly faction: 'player' }
