@@ -12,6 +12,9 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
+- **No tooltip for a pointer off the canvas** — a pointer that leaves the canvas across a
+  resource-bar entry neither starts the tooltip's rest nor lets a running one finish: after the
+  rest time passes with the pointer outside, no tooltip stands; covered by an e2e. Doc-impact: none.
 - **The turn staged** — every step after the turn ends plays in visible sequence instead of
   resolving at once: discard, combat, income, enemy move and intent, draw, shuffle.
 - **Unplayable reasons on screen** — a card in hand that cannot be played shows why when zoomed:
