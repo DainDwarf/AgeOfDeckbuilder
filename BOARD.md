@@ -15,8 +15,7 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 - **Browse scrolling** — a pile browse whose cards overflow the frame scrolls by wheel, bounded
   to its cards; proven with a deck larger than one screen. Doc-impact: none.
 - **The turn staged** — every step after the turn ends plays in visible sequence instead of
-  resolving at once: discard, combat, income, enemy move and intent, draw, shuffle. Closes v0.0.1:
-  version bump and release note. Doc-impact: `docs/ROADMAP.md`, `CHANGELOG.md`.
+  resolving at once: discard, combat, income, enemy move and intent, draw, shuffle.
 - **The card face** — the card's design style is settled with the user and implemented: name and
   cost both legible at hand size, art boxes equal height on every card, and the settled anatomy
   recorded. Doc-impact: `docs/DESIGN.md`.
@@ -28,3 +27,4 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
   Stays a camera concern: the tile's drawn size is the map layer's fact alone, never a number the
   rest of the UI leans on — the art pack dictates it later (`docs/ASSET-SOURCES.md`).
   Doc-impact: none.
+- **Closes v0.0.1** — Only when the board is empty. Version bump and release note. Doc-impact: `docs/ROADMAP.md`, `CHANGELOG.md`.
