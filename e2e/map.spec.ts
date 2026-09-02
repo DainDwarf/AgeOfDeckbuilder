@@ -12,6 +12,7 @@ import {
   ringedTile,
   settled,
   shownLayer,
+  tooltipUp,
   watch,
 } from './table';
 
@@ -96,6 +97,40 @@ test('a pan and a zoom carry the ringed tile and the panel beside it', async ({ 
   // The tile keeps the ground it had under the pointer and grows, so the panel stands further off.
   expect(Math.abs(grown.x - panned.x)).toBeLessThan(2);
   expect(zoomed.x).toBeGreaterThan(carried.x);
+
+  expect(problems).toEqual([]);
+});
+
+test("a pan carries a panel row's tooltip along with the row", async ({ page }) => {
+  const problems = watch(page);
+  await open(page, 1, 'PH_Deck');
+
+  const tile = await onScreen(page, BARE.name);
+  await page.mouse.click(tile.x, tile.y);
+  await expect.poll(() => ringedTile(page)).toBe(BARE.key);
+  await page.mouse.click(tile.x, tile.y);
+  await expect.poll(() => shownLayer(page)).toBe('terrain');
+
+  const row = await onScreen(page, 'infopanel-row-0');
+  await page.mouse.move(row.x, row.y);
+  await expect.poll(() => tooltipUp(page)).toBe(true);
+  const panel = await onScreen(page, 'infopanel');
+  const bubble = await onScreen(page, 'tooltip');
+
+  // The pointer holds still, so the row keeps the hover the panel is carrying out from under it.
+  await page.keyboard.down('w');
+  await expect
+    .poll(() => onScreen(page, 'infopanel').then((at) => at.y))
+    .toBeGreaterThan(panel.y + 40);
+  await page.keyboard.up('w');
+  await settled(page);
+  await settled(page);
+
+  const carried = await onScreen(page, 'infopanel');
+  const stood = await onScreen(page, 'tooltip');
+  expect(await tooltipUp(page)).toBe(true);
+  expect(stood.x - carried.x).toBeCloseTo(bubble.x - panel.x, 0);
+  expect(stood.y - carried.y).toBeCloseTo(bubble.y - panel.y, 0);
 
   expect(problems).toEqual([]);
 });

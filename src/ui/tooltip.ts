@@ -1,13 +1,5 @@
 import type Phaser from 'phaser';
-import {
-  addText,
-  DESIGN_HEIGHT,
-  DESIGN_WIDTH,
-  drawBubble,
-  MARGIN,
-  type Surface,
-  UI_FONT,
-} from './design-space';
+import { addText, DESIGN_WIDTH, drawBubble, MARGIN, type Surface, UI_FONT } from './design-space';
 
 /** The clear water between a tooltip and what it points at; its tail crosses most of that. */
 const STANDOFF = 8;
@@ -37,8 +29,17 @@ export type Beside = {
 export type Tooltip = {
   /** Hangs under what was hovered: `left` where the bubble wants its left edge, `tip` the x its tail points up at. */
   under(message: string, left: number, tip: number, top: number): void;
-  /** Stands beside what was hovered, level with `y`, its tail pointing horizontally back at it. */
+  /**
+   * Stands beside what was hovered, level with `y`, its tail pointing horizontally back at it. The
+   * bubble goes where the box is, off the table included; only which side it takes reads the frame.
+   */
   beside(message: string, box: Beside): void;
+  /**
+   * Stands the bubble a `beside` raised beside its box again, wherever that box has moved to; one
+   * already up moves at once, one still waiting out its rest comes up at the new box. Does nothing
+   * when what stands came from anywhere else.
+   */
+  restand(box: Beside): void;
   hide(): void;
 };
 
@@ -51,7 +52,11 @@ export type Tooltip = {
 export function createTooltip(scene: Phaser.Scene, on: Surface): Tooltip {
   const bubble = scene.add.graphics();
   const label = addText(scene, 10, 7, '', STYLE);
-  const tooltip = scene.add.container(0, 0, [bubble, label]).setDepth(DEPTH).setVisible(false);
+  const tooltip = scene.add
+    .container(0, 0, [bubble, label])
+    .setDepth(DEPTH)
+    .setName('tooltip')
+    .setVisible(false);
 
   const measure = (message: string): { width: number; height: number } => {
     label.setText(message);
@@ -60,6 +65,8 @@ export function createTooltip(scene: Phaser.Scene, on: Surface): Tooltip {
 
   let resting: Phaser.Time.TimerEvent | undefined;
   let paint: (() => void) | undefined;
+  /** How to paint what a `beside` last asked for, at whatever box it is asked for again. */
+  let standing: ((box: Beside) => void) | undefined;
   let restX = 0;
   let restY = 0;
   let wentDown = Number.NEGATIVE_INFINITY;
@@ -92,6 +99,17 @@ export function createTooltip(scene: Phaser.Scene, on: Surface): Tooltip {
     rest();
   };
 
+  const paintBeside = (message: string, box: Beside): void => {
+    const { width, height } = measure(message);
+    const fitsRight = box.right + STANDOFF + width <= DESIGN_WIDTH - MARGIN;
+    const fitsLeft = box.left - STANDOFF - width >= MARGIN;
+    const onRight = box.prefer === 'right' ? fitsRight || !fitsLeft : !fitsLeft && fitsRight;
+
+    const x = onRight ? box.right + STANDOFF : box.left - STANDOFF - width;
+    drawBubble(bubble, width, height, { edge: onRight ? 'left' : 'right', at: height / 2 });
+    tooltip.setPosition(x, box.y - height / 2).setVisible(true);
+  };
+
   scene.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
     if (resting === undefined) return;
     const at = on.at(pointer.x, pointer.y);
@@ -103,6 +121,7 @@ export function createTooltip(scene: Phaser.Scene, on: Surface): Tooltip {
 
   return {
     under(message: string, left: number, tip: number, top: number): void {
+      standing = undefined;
       raise(() => {
         const { width, height } = measure(message);
         const x = Math.min(left, DESIGN_WIDTH - MARGIN - width);
@@ -112,23 +131,19 @@ export function createTooltip(scene: Phaser.Scene, on: Surface): Tooltip {
     },
 
     beside(message: string, box: Beside): void {
-      raise(() => {
-        const { width, height } = measure(message);
-        const fitsRight = box.right + STANDOFF + width <= DESIGN_WIDTH - MARGIN;
-        const fitsLeft = box.left - STANDOFF - width >= MARGIN;
-        const onRight = box.prefer === 'right' ? fitsRight || !fitsLeft : !fitsLeft && fitsRight;
+      standing = (moved) => paintBeside(message, moved);
+      raise(() => paintBeside(message, box));
+    },
 
-        const x = Math.min(
-          Math.max(onRight ? box.right + STANDOFF : box.left - STANDOFF - width, MARGIN),
-          DESIGN_WIDTH - MARGIN - width,
-        );
-        const top = Math.min(Math.max(box.y - height / 2, MARGIN), DESIGN_HEIGHT - MARGIN - height);
-        drawBubble(bubble, width, height, { edge: onRight ? 'left' : 'right', at: box.y - top });
-        tooltip.setPosition(x, top).setVisible(true);
-      });
+    restand(box: Beside): void {
+      const again = standing;
+      if (again === undefined) return;
+      paint = () => again(box);
+      if (tooltip.visible) paint();
     },
 
     hide(): void {
+      standing = undefined;
       drop();
       if (tooltip.visible) wentDown = scene.time.now;
       tooltip.setVisible(false);

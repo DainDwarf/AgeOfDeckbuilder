@@ -17,7 +17,8 @@ declare global {
   interface Window {
     /**
      * The named object and the camera that paints it, wherever on the table it stands. The scene's
-     * own display list carries only the two layers, so `children.getByName` finds nothing.
+     * own display list carries only the two layers, so `children.getByName` finds nothing, and a
+     * name may sit any depth down inside a container.
      */
     named?: (
       name: string,
@@ -50,15 +51,28 @@ export async function open(
   deck: DeckId | readonly CardId[],
 ): Promise<void> {
   await page.addInitScript(() => {
+    const within = (
+      list: Phaser.GameObjects.GameObject[],
+      name: string,
+    ): Phaser.GameObjects.GameObject | undefined => {
+      for (const child of list) {
+        if (child.name === name) return child;
+        const inside = (child as Phaser.GameObjects.Container).list;
+        const found = Array.isArray(inside) ? within(inside, name) : undefined;
+        if (found !== undefined) return found;
+      }
+      return undefined;
+    };
+
     window.named = (name) => {
       const scene = window.game?.scene.getScene('chronicle');
       if (scene === null || scene === undefined) return undefined;
       for (const child of scene.children.list) {
         if (child.type !== 'Layer') continue;
         const layer = child as Phaser.GameObjects.Layer;
-        const object = layer.getByName(name);
+        const object = within(layer.list, name);
         const camera = scene.cameras.getCamera(layer.name);
-        if (object === null || camera === null) continue;
+        if (object === undefined || camera === null) continue;
         return { object, camera };
       }
       return undefined;
@@ -171,6 +185,15 @@ export function shownLayer(page: Page): Promise<string | undefined> {
     const panel = window.named?.('infopanel')?.object as Phaser.GameObjects.Container | undefined;
     if (panel === undefined) throw new Error('the infopanel is not on the table');
     return panel.visible ? (panel.getData('layer') as string) : undefined;
+  });
+}
+
+/** Whether the one bubble stands over the table. */
+export function tooltipUp(page: Page): Promise<boolean> {
+  return page.evaluate(() => {
+    const bubble = window.named?.('tooltip')?.object as Phaser.GameObjects.Container | undefined;
+    if (bubble === undefined) throw new Error('the tooltip is not on the table');
+    return bubble.visible;
   });
 }
 

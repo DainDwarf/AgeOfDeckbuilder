@@ -9,11 +9,10 @@ import {
 } from '../rules/map';
 import { UNIT_STATS, type Unit, unitAt } from '../rules/units';
 import { CARD_EDGE, CARD_HEIGHT, CARD_METRICS, CARD_WIDTH, drawCardSurface } from './card-face';
-import { addText, DESIGN_HEIGHT, DESIGN_WIDTH, MARGIN, UI_FONT } from './design-space';
+import { addText, DESIGN_WIDTH, MARGIN, UI_FONT } from './design-space';
 import { buildingMark, type TileFace, terrainMark, unitMark } from './map';
-import { BAR_HEIGHT } from './resource-bar';
 import { text } from './text';
-import type { Tooltip } from './tooltip';
+import type { Beside, Tooltip } from './tooltip';
 
 /** One thing a tile is made of, read off the map. A tile is its layers, outermost first. */
 export type Layer =
@@ -37,7 +36,10 @@ export type InfoPanel = {
    * it. `cycling` dissolves it out of the layer already shown; anything else is instant.
    */
   show(layers: Layer[], index: number, at: TileFace, cycling: boolean): void;
-  /** Stands what it is showing beside the face again, wherever the map has carried that face. */
+  /**
+   * Stands what it is showing beside the face again, wherever the map has carried that face —
+   * off the table included — and re-stands the tooltip a row of it raised beside that row.
+   */
   place(at: TileFace): void;
   hide(): void;
 };
@@ -84,6 +86,12 @@ type Face = {
  */
 type Box = { left: number; top: number; rightOfTile: boolean };
 
+/** What a row does with the one bubble: raises it beside its own middle in the card, or lets it go. */
+type RowBubble = {
+  raise(centre: number, message: string): void;
+  drop(): void;
+};
+
 /**
  * What a tile is, read off the map: one layer at a time on a card of its own, the layers behind
  * it showing as ghosts under its corner. Every show rebuilds the layer, so nothing here follows a
@@ -102,22 +110,33 @@ export function createInfoPanel(scene: Phaser.Scene, tooltip: Tooltip): InfoPane
   /** How many layers wait behind the one standing: the ghosts, and the room they ask for. */
   let behind = 0;
   const box: Box = { left: 0, top: 0, rightOfTile: true };
+  /** The middle of the row whose tooltip stands, in the card, and nothing while none does. */
+  let raised: number | undefined;
 
-  /** Beside the face it reads, clear of its rim, with the layers behind it out of its corner. */
+  const bubble: RowBubble = {
+    raise(centre: number, message: string): void {
+      raised = centre;
+      tooltip.beside(message, besideRow(box, centre));
+    },
+    drop(): void {
+      raised = undefined;
+      tooltip.hide();
+    },
+  };
+
+  /** Level with the face it reads, clear of its rim, with the layers behind it out of its corner. */
   const stand = (at: TileFace): void => {
     const clear = at.radius + STANDOFF;
     box.rightOfTile = at.x + clear + CARD_WIDTH + behind * GHOST_OFFSET <= DESIGN_WIDTH - MARGIN;
     box.left = box.rightOfTile ? at.x + clear : at.x - clear - CARD_WIDTH;
-    box.top = Math.min(
-      Math.max(at.y - CARD_HEIGHT / 2, BAR_HEIGHT + 8),
-      DESIGN_HEIGHT - MARGIN - CARD_HEIGHT - behind * GHOST_OFFSET,
-    );
+    box.top = at.y - CARD_HEIGHT / 2;
 
     ghosts.clear();
     for (let depth = behind; depth >= 1; depth--) {
       drawCardSurface(ghosts, depth * ghostAway(box), depth * GHOST_OFFSET);
     }
     panel.setPosition(box.left, box.top);
+    if (raised !== undefined) tooltip.restand(besideRow(box, raised));
   };
 
   /** Ends a dissolve where it was headed: the layer coming in stands in place, the old one is gone. */
@@ -134,7 +153,7 @@ export function createInfoPanel(scene: Phaser.Scene, tooltip: Tooltip): InfoPane
   };
 
   const hide = (): void => {
-    tooltip.hide();
+    bubble.drop();
     settle();
     standing?.root.destroy();
     standing = undefined;
@@ -146,7 +165,7 @@ export function createInfoPanel(scene: Phaser.Scene, tooltip: Tooltip): InfoPane
     hide,
 
     show(layers: Layer[], index: number, at: TileFace, cycling: boolean): void {
-      tooltip.hide();
+      bubble.drop();
       settle();
 
       behind = layers.length - 1;
@@ -155,7 +174,7 @@ export function createInfoPanel(scene: Phaser.Scene, tooltip: Tooltip): InfoPane
       const outgoing = standing;
       if (!cycling) outgoing?.root.destroy();
 
-      const face = buildFace(scene, tooltip, layers[index], box);
+      const face = buildFace(scene, bubble, layers[index]);
       // Under the layer it replaces, so the dissolve uncovers it, and over the ghosts either way.
       panel.addAt(face.root, 1);
       standing = face;
@@ -191,8 +210,18 @@ function ghostAway(box: Box): number {
   return box.rightOfTile ? GHOST_OFFSET : -GHOST_OFFSET;
 }
 
+/** The card a row's tooltip stands beside, level with that row, on the side the panel took. */
+function besideRow(box: Box, centre: number): Beside {
+  return {
+    left: box.left,
+    right: box.left + CARD_WIDTH,
+    y: box.top + centre,
+    prefer: box.rightOfTile ? 'right' : 'left',
+  };
+}
+
 /** The layer's mark and name over its rows, laid out in the card's own type and spacing. */
-function buildFace(scene: Phaser.Scene, tooltip: Tooltip, layer: Layer, box: Box): Face {
+function buildFace(scene: Phaser.Scene, bubble: RowBubble, layer: Layer): Face {
   const left = 1 + pad;
   const right = CARD_WIDTH - 1 - pad;
   const top = 1 + pad;
@@ -232,16 +261,10 @@ function buildFace(scene: Phaser.Scene, tooltip: Tooltip, layer: Layer, box: Box
     const hover = scene.add
       .zone(left, rowTop, label.width, label.height)
       .setOrigin(0, 0)
+      .setName(`infopanel-row-${index}`)
       .setInteractive();
-    hover.on('pointerover', () =>
-      tooltip.beside(text(`tooltip.${row.term}`), {
-        left: box.left,
-        right: box.left + CARD_WIDTH,
-        y: box.top + centre,
-        prefer: box.rightOfTile ? 'right' : 'left',
-      }),
-    );
-    hover.on('pointerout', () => tooltip.hide());
+    hover.on('pointerover', () => bubble.raise(centre, text(`tooltip.${row.term}`)));
+    hover.on('pointerout', () => bubble.drop());
 
     contents.push(label, value, hover);
     hovers.push(hover);
