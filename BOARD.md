@@ -12,6 +12,11 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
+- **Design space follows the window** — after the window's size or device pixel ratio changes
+  post-boot (devtools, restore and maximise, browser zoom), the backing store equals the canvas's
+  on-screen size in device pixels and text is re-rasterised at the new factor; proven by an e2e
+  that boots in a small viewport, grows it, and asserts the backing equals the on-screen size.
+  Doc-impact: none.
 - **The turn staged** — every step after the turn ends plays in visible sequence instead of
   resolving at once: discard, combat, income, enemy move and intent, draw, shuffle.
 - **The card face** — the card's design style is settled with the user and implemented: name and
