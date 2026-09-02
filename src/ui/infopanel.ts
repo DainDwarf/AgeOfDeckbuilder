@@ -9,7 +9,7 @@ import {
 } from '../rules/map';
 import { UNIT_STATS, type Unit, unitAt } from '../rules/units';
 import { CARD_EDGE, CARD_HEIGHT, CARD_METRICS, CARD_WIDTH, drawCardSurface } from './card-face';
-import { addText, type Surface, UI_FONT } from './design-space';
+import { addText, onHover, type Surface, UI_FONT } from './design-space';
 import { buildingMark, type TileFace, terrainMark, unitMark } from './map';
 import { text } from './text';
 import { createTooltip } from './tooltip';
@@ -247,8 +247,11 @@ function buildFace(scene: Phaser.Scene, bubble: RowBubble, layer: Layer): Face {
       .setOrigin(0, 0)
       .setName(`infopanel-row-${index}`)
       .setInteractive();
-    hover.on('pointerover', () => bubble.raise(centre, text(`tooltip.${row.term}`)));
-    hover.on('pointerout', () => bubble.drop());
+    onHover(
+      hover,
+      () => bubble.raise(centre, text(`tooltip.${row.term}`)),
+      () => bubble.drop(),
+    );
 
     contents.push(label, value, hover);
     hovers.push(hover);

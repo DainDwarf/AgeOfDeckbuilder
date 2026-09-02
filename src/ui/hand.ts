@@ -7,6 +7,7 @@ import {
   DESIGN_WIDTH,
   MARGIN,
   onClick,
+  onHover,
   releasedOffCanvas,
   type Surface,
 } from './design-space';
@@ -122,16 +123,6 @@ export function createHand(
             cursor: 'pointer',
             draggable: true,
           })
-          .on('pointerover', () => {
-            if (dragged !== undefined) return;
-            slot.hovered = true;
-            settle(slot, 120);
-          })
-          .on('pointerout', () => {
-            if (dragged !== undefined) return;
-            slot.hovered = false;
-            settle(slot, 120);
-          })
           .on('dragstart', (pointer: Phaser.Input.Pointer) => {
             if (aiming !== undefined) return;
             slot.hovered = true;
@@ -182,6 +173,20 @@ export function createHand(
             }
             settle(slot, 150);
           });
+
+        onHover(
+          slot.face.root,
+          () => {
+            if (dragged !== undefined) return;
+            slot.hovered = true;
+            settle(slot, 120);
+          },
+          () => {
+            if (dragged !== undefined) return;
+            slot.hovered = false;
+            settle(slot, 120);
+          },
+        );
 
         onClick(slot.face.root, () => {
           settle(slot, 0);

@@ -347,6 +347,36 @@ export function onClick(
   });
 }
 
+/**
+ * A hover: entered when the pointer comes over the object, left when it goes — including when it
+ * goes by leaving the canvas. Phaser sends no `pointerout` to an object the pointer leaves the
+ * canvas over: that leave reaches the scene's input plugin alone, as `gameout`.
+ */
+export function onHover(
+  target: Phaser.GameObjects.GameObject,
+  enter: () => void,
+  leave: () => void,
+): void {
+  const input = target.scene.input;
+  let hovered = false;
+  const off = (): void => {
+    if (!hovered) return;
+    hovered = false;
+    leave();
+  };
+
+  target.on('pointerover', () => {
+    hovered = true;
+    enter();
+  });
+  target.on('pointerout', off);
+  // The scene outlives the target, so this one goes when the target does.
+  input.on('gameout', off);
+  target.once('destroy', () => {
+    input.off('gameout', off);
+  });
+}
+
 export function addText(
   scene: Phaser.Scene,
   x: number,

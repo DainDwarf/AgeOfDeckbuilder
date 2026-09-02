@@ -1,6 +1,14 @@
 import type Phaser from 'phaser';
 import type { Chronicle, Resource } from '../rules/chronicle';
-import { addText, DESIGN_WIDTH, MARGIN, PANEL_EDGE, PANEL_FILL, UI_FONT } from './design-space';
+import {
+  addText,
+  DESIGN_WIDTH,
+  MARGIN,
+  onHover,
+  PANEL_EDGE,
+  PANEL_FILL,
+  UI_FONT,
+} from './design-space';
 import { text } from './text';
 import type { Tooltip } from './tooltip';
 
@@ -81,10 +89,11 @@ function createEntry(
     .setOrigin(0, 0)
     .setName(`reading-${key}`)
     .setInteractive();
-  hover.on('pointerover', () =>
-    tooltip.under(text(`tooltip.${key}`), hover.x, hover.x + hover.width / 2, BAR_HEIGHT + 8),
+  onHover(
+    hover,
+    () => tooltip.under(text(`tooltip.${key}`), hover.x, hover.x + hover.width / 2, BAR_HEIGHT + 8),
+    () => tooltip.hide(),
   );
-  hover.on('pointerout', () => tooltip.hide());
   bar.add([chip, word, value, hover]);
   return { key, chip, word, value, hover };
 }

@@ -10,6 +10,7 @@ import {
   DESIGN_WIDTH,
   MARGIN,
   onClick,
+  onHover,
   UI_FONT,
 } from './design-space';
 import { createHand } from './hand';
@@ -135,6 +136,7 @@ export class ChronicleScene extends Phaser.Scene {
       color: '#0d1014',
     })
       .setOrigin(0.5, 0.5)
+      .setName('end-turn-label')
       .setDepth(21);
 
     // Measured at both labels, so neither the hover swap nor a fourth digit in the turn resizes it.
@@ -154,14 +156,17 @@ export class ChronicleScene extends Phaser.Scene {
       label.setText(hovered ? text('button.end-turn') : text('button.turn', { turn }));
     };
 
-    button.on('pointerover', () => {
-      hovered = true;
-      paint();
-    });
-    button.on('pointerout', () => {
-      hovered = false;
-      paint();
-    });
+    onHover(
+      button,
+      () => {
+        hovered = true;
+        paint();
+      },
+      () => {
+        hovered = false;
+        paint();
+      },
+    );
     onClick(button, endTurn);
 
     const part = {

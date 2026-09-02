@@ -12,11 +12,6 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
-- **Every hover ends at the canvas edge** — one hover helper, beside the click one, that every
-  hover source on the table goes through (resource readings, infopanel rows, the end-turn button,
-  hand cards); it ends the hover when the pointer leaves the canvas, so the tooltip module's own
-  leave listener goes; a pointer that leaves the canvas over the end-turn button reverts its label
-  and over a lifted card settles it, both covered by e2e. Doc-impact: none.
 - **The turn staged** — every step after the turn ends plays in visible sequence instead of
   resolving at once: discard, combat, income, enemy move and intent, draw, shuffle.
 - **Unplayable reasons on screen** — a card in hand that cannot be played shows why when zoomed:

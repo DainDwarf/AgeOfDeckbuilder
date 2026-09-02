@@ -210,6 +210,15 @@ export function tooltipUp(page: Page, name: string): Promise<boolean> {
   }, name);
 }
 
+/** What the end-turn button reads right now: the turn it stands on, or the hover's own word. */
+export function endTurnLabel(page: Page): Promise<string> {
+  return page.evaluate(() => {
+    const label = window.named?.('end-turn-label')?.object as Phaser.GameObjects.Text | undefined;
+    if (label === undefined) throw new Error('the end-turn button is not on the table');
+    return label.text;
+  });
+}
+
 /** Which tile the map is ringing, or nothing while none is selected. */
 export function ringedTile(page: Page): Promise<string | undefined> {
   return page.evaluate(() => {

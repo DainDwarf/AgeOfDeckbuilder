@@ -114,10 +114,6 @@ export function createTooltip(scene: Phaser.Scene, on: Surface): Tooltip {
     rest();
   });
 
-  // A pointer that leaves the canvas over an interactive object gets no `pointerout` from Phaser:
-  // the leave is announced on the scene's input plugin alone.
-  scene.input.on('gameout', hide);
-
   return {
     under(message: string, left: number, tip: number, top: number): void {
       raise(() => {
