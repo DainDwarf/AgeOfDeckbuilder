@@ -1,4 +1,4 @@
-import { CARDS, type CardId, DECK } from './cards';
+import { CARDS, type CardId } from './cards';
 import { arrival, ENEMY_SCRIPTS } from './enemies';
 import {
   BUILDINGS,
@@ -57,12 +57,13 @@ export type Command =
   | { readonly type: 'play'; readonly index: number; readonly target?: Target };
 
 /**
- * The founding: the seed generates the map, the city fills the slot of the tile it stands on, and
- * it holds that tile and the six around it.
+ * The founding: the seed generates the map, the city fills the slot of the tile it stands on, it
+ * holds that tile and the six around it, and the deck it is founded on is shuffled into its draw
+ * pile.
  */
-export function beginChronicle(seed: number): Chronicle {
+export function beginChronicle(seed: number, deck: readonly CardId[]): Chronicle {
   const map = generateMap(seedRng(seed));
-  const deck = shuffle(map.rng, DECK);
+  const shuffled = shuffle(map.rng, deck);
   const held = [CITY_TILE, ...neighbours(CITY_TILE)];
   const tiles: Tile[] = map.tiles.map((tile) =>
     tileKey(tile) === tileKey(CITY_TILE) ? { ...tile, building: 'PH_City' } : tile,
@@ -70,7 +71,7 @@ export function beginChronicle(seed: number): Chronicle {
   return draw(
     events({
       seed,
-      rng: deck.rng,
+      rng: shuffled.rng,
       tiles,
       city: CITY_TILE,
       held,
@@ -78,7 +79,7 @@ export function beginChronicle(seed: number): Chronicle {
       resources: { food: 0, production: 0, military: 0, money: 0, science: 0, culture: 0 },
       population: held.length,
       units: [],
-      drawPile: deck.items,
+      drawPile: shuffled.items,
       hand: [],
       discardPile: [],
     }),

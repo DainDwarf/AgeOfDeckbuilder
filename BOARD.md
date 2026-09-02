@@ -12,8 +12,6 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
-- **Browse scrolling** — a pile browse whose cards overflow the frame scrolls by wheel, bounded
-  to its cards; proven with a deck larger than one screen. Doc-impact: none.
 - **The turn staged** — every step after the turn ends plays in visible sequence instead of
   resolving at once: discard, combat, income, enemy move and intent, draw, shuffle.
 - **The card face** — the card's design style is settled with the user and implemented: name and

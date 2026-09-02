@@ -59,7 +59,7 @@ const require = createRequire(`${process.cwd()}/`);
 const { chromium } = require('playwright');
 
 const out = '<scratchpad>'; // forward slashes
-const url = 'http://localhost:5173';
+const url = 'http://localhost:5173/?deck=PH_Deck'; // the app boots on no address without a deck
 
 const browser = await chromium.launch();
 const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });

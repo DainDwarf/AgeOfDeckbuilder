@@ -1,5 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import type Phaser from 'phaser';
+import { DECKS } from '../src/rules/cards';
 import {
   apply,
   beginChronicle,
@@ -17,7 +18,7 @@ type Run = { readonly seed: number; readonly turn: number; readonly tile: TileCo
 
 function farmRun(): Run {
   for (let seed = 1; seed <= 1000; seed++) {
-    let chronicle = beginChronicle(seed);
+    let chronicle = beginChronicle(seed, DECKS.PH_Deck);
     for (let turn = 1; turn <= 8; turn++) {
       const tile = farmedThisTurn(chronicle);
       if (tile !== undefined) return { seed, turn, tile };
@@ -75,7 +76,7 @@ test('the farm card builds its farm where the worker marched to', async ({ page 
   const problems = watch(page);
   const run = farmRun();
 
-  await open(page, run.seed);
+  await open(page, run.seed, 'PH_Deck');
   for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
 
   const opened = await chronicleOf(page);

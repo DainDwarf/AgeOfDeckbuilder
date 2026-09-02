@@ -19,6 +19,9 @@ whoever asked.
    the turn.
 4. **Read the address out of the launch output** with the Read tool — Vite prints `Local: http://…`
    once it is listening. Report that line's URL, not an assumed one.
+5. **Complete it with a deck.** The app boots on no address that names no deck: append
+   `?deck=PH_Deck` (a deck id from `src/rules/cards.ts`, or a comma-separated list of card ids)
+   to the URL you report. `&seed=<integer>` replays a chronicle.
 
 ## Rules
 

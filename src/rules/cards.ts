@@ -50,5 +50,9 @@ export const CARDS: Record<CardId, Card> = {
   PH_Harvest: { kind: 'action', cost: { science: 1 }, target: 'none', gain: { food: 2 } },
 };
 
-/** The one deck there is: two copies of each card. */
-export const DECK: readonly CardId[] = (Object.keys(CARDS) as CardId[]).flatMap((id) => [id, id]);
+export type DeckId = 'PH_Deck';
+
+/** The decks a chronicle can be founded on. The one there is holds two copies of each card. */
+export const DECKS: Record<DeckId, readonly CardId[]> = {
+  PH_Deck: (Object.keys(CARDS) as CardId[]).flatMap((id) => [id, id]),
+};

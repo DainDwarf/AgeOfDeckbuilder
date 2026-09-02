@@ -1,5 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import type Phaser from 'phaser';
+import { DECKS } from '../src/rules/cards';
 import { apply, beginChronicle, playable, refusalOf } from '../src/rules/chronicle';
 import { tileKey } from '../src/rules/map';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
@@ -8,7 +9,7 @@ import { chronicleOf, dragOut, endTurn, onScreen, open, watch } from './table';
 /** The first seed with a turn in its first eight that opens on a worker the city can pay for. */
 function workerRun(): { seed: number; turn: number } {
   for (let seed = 1; seed <= 1000; seed++) {
-    let chronicle = beginChronicle(seed);
+    let chronicle = beginChronicle(seed, DECKS.PH_Deck);
     for (let turn = 1; turn <= 8; turn++) {
       if (chronicle.hand.includes('PH_Worker') && playable(refusalOf(chronicle, 'PH_Worker'))) {
         return { seed, turn };
@@ -51,7 +52,7 @@ test('a tile selects on the first click and reads out a layer per click after it
   const problems = watch(page);
   const run = workerRun();
 
-  await open(page, run.seed);
+  await open(page, run.seed, 'PH_Deck');
   for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
 
   const opened = await chronicleOf(page);

@@ -1,5 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import type Phaser from 'phaser';
+import { DECKS } from '../src/rules/cards';
 import { apply, beginChronicle } from '../src/rules/chronicle';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
 import { chronicleOf, endTurn, open, watch } from './table';
@@ -7,7 +8,7 @@ import { chronicleOf, endTurn, open, watch } from './table';
 /** The first seed whose city is captured inside twenty turns of ending the turn and nothing else. */
 function fallRun(): { seed: number; turns: number } {
   for (let seed = 1; seed <= 1000; seed++) {
-    let chronicle = beginChronicle(seed);
+    let chronicle = beginChronicle(seed, DECKS.PH_Deck);
     for (let turns = 1; turns <= 20 && chronicle.defeat === undefined; turns++) {
       chronicle = apply(chronicle, { type: 'end-turn' });
       if (chronicle.defeat?.cause === 'capture') return { seed, turns };
@@ -34,7 +35,7 @@ test('the enemy that reaches the city captures it, and the chronicle ends on the
   const problems = watch(page);
   const run = fallRun();
 
-  await open(page, run.seed);
+  await open(page, run.seed, 'PH_Deck');
   expect(await defeatShown(page)).toBe(false);
   for (let turn = 0; turn < run.turns; turn++) await endTurn(page);
 

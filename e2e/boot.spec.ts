@@ -4,7 +4,7 @@ import { watch } from './table';
 test('the page boots into the chronicle and logs nothing', async ({ page }) => {
   const problems = watch(page);
 
-  await page.goto('/');
+  await page.goto('/?deck=PH_Deck');
 
   const canvas = page.locator('canvas');
   await expect(canvas).toBeVisible();

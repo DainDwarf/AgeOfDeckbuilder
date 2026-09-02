@@ -1,5 +1,6 @@
 import type { Page } from '@playwright/test';
 import type Phaser from 'phaser';
+import type { CardId, DeckId } from '../src/rules/cards';
 import type { Chronicle } from '../src/rules/chronicle';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
 
@@ -19,9 +20,13 @@ export function watch(page: Page): string[] {
   return problems;
 }
 
-/** Opens the chronicle a seed founds, and waits for its scene to run. */
-export async function open(page: Page, seed: number): Promise<void> {
-  await page.goto(`/?seed=${seed}`);
+/** Opens the chronicle a seed and a deck found, and waits for its scene to run. */
+export async function open(
+  page: Page,
+  seed: number,
+  deck: DeckId | readonly CardId[],
+): Promise<void> {
+  await page.goto(`/?seed=${seed}&deck=${typeof deck === 'string' ? deck : deck.join(',')}`);
   await page.waitForFunction(() => window.game?.scene.isActive('chronicle') === true);
 }
 

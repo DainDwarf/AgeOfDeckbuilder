@@ -97,6 +97,43 @@ export function applyDesignSpace(scene: Phaser.Scene): void {
   scene.cameras.main.setZoom(factor).centerOn(DESIGN_WIDTH / 2, DESIGN_HEIGHT / 2);
 }
 
+/** A view of one design-space rectangle: what a scrolling object has outside it is not drawn. */
+export type Clip = {
+  /** Draws `only`, and nothing else the scene holds, inside the rectangle in design units. */
+  show(
+    only: Phaser.GameObjects.GameObject,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+  ): void;
+  hide(): void;
+};
+
+/**
+ * A clip is a camera of its own, its viewport the rectangle: Phaser 4's geometry mask clips under
+ * the canvas renderer alone, and this game renders through WebGL. Every camera draws the whole
+ * scene, so `show` hands this one everything on the display list but the object it is for — which
+ * is also why the camera is kept and re-pointed: a camera's ignore is never lifted, and an object
+ * the scene gains while the clip stands open would draw inside the rectangle.
+ */
+export function createClip(scene: Phaser.Scene): Clip {
+  const camera = scene.cameras.add(0, 0, 1, 1).setZoom(factor).setVisible(false);
+  return {
+    show(only, x, y, width, height): void {
+      camera
+        .setViewport(x * factor, y * factor, width * factor, height * factor)
+        .centerOn(x + width / 2, y + height / 2)
+        .setVisible(true);
+      camera.ignore(scene.children.list.filter((child) => child !== only));
+      scene.cameras.main.ignore(only);
+    },
+    hide(): void {
+      camera.setVisible(false);
+    },
+  };
+}
+
 /**
  * A click: pressed and released on the same object. Phaser delivers `pointerup` to whatever lies
  * under the pointer however far it travelled since the press, so a bare `pointerup` also fires on

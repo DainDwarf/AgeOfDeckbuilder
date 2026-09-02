@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { type CardId, DECK } from './cards';
+import { CARDS, type CardId, DECKS } from './cards';
 import {
   apply,
   beginChronicle,
@@ -25,6 +25,20 @@ import { seedRng } from './rng';
 import { type Faction, UNIT_STATS, type Unit, type UnitStats } from './units';
 
 const CITY: TileCoords = { q: 0, r: 0 };
+
+/** The deck the foundings below are played on: two of each card, enough to draw a hand and cycle. */
+const DECK: readonly CardId[] = [
+  'PH_Worker',
+  'PH_Worker',
+  'PH_Warrior',
+  'PH_Warrior',
+  'PH_Farm',
+  'PH_Farm',
+  'PH_March',
+  'PH_March',
+  'PH_Harvest',
+  'PH_Harvest',
+];
 
 /** A city on `inside`, tile by tile, with one plain lying outside the border and no cards. */
 function cityOf(inside: Terrain[], carrying: Partial<Chronicle> = {}): Chronicle {
@@ -141,12 +155,12 @@ function toFifthTurn(chronicle: Chronicle): Chronicle {
 }
 
 test('the same seed founds the same chronicle', () => {
-  expect(beginChronicle(1234)).toEqual(beginChronicle(1234));
-  expect(beginChronicle(1235)).not.toEqual(beginChronicle(1234));
+  expect(beginChronicle(1234, DECK)).toEqual(beginChronicle(1234, DECK));
+  expect(beginChronicle(1235, DECK)).not.toEqual(beginChronicle(1234, DECK));
 });
 
 test('a chronicle survives JSON and carries its generator on', () => {
-  const chronicle = beginChronicle(1234);
+  const chronicle = beginChronicle(1234, DECK);
 
   expect(JSON.parse(JSON.stringify(chronicle))).toEqual(chronicle);
   expect(chronicle.rng).not.toEqual(seedRng(chronicle.seed));
@@ -154,7 +168,7 @@ test('a chronicle survives JSON and carries its generator on', () => {
 
 test('the city holds its own tile and every tile touching it', () => {
   for (const seed of [0, 1234, 0xdeadbeef | 0]) {
-    const chronicle = beginChronicle(seed);
+    const chronicle = beginChronicle(seed, DECK);
     const held = new Set(chronicle.held.map(tileKey));
 
     expect(held.size).toBe(7);
@@ -165,7 +179,7 @@ test('the city holds its own tile and every tile touching it', () => {
 });
 
 test('a chronicle opens on turn one, with empty stores and a tile each for its inhabitants', () => {
-  const chronicle = beginChronicle(1234);
+  const chronicle = beginChronicle(1234, DECK);
 
   expect(chronicle.turn).toBe(1);
   for (const resource of RESOURCES) expect(chronicle.resources[resource]).toBe(0);
@@ -220,7 +234,7 @@ test('ending the turn leaves the population alone', () => {
 });
 
 test('the hand holds five cards on founding, and five again after every turn', () => {
-  let chronicle = beginChronicle(4242);
+  let chronicle = beginChronicle(4242, DECK);
   expect(chronicle.hand).toHaveLength(5);
 
   for (let turn = 0; turn < 6; turn++) {
@@ -306,7 +320,7 @@ test('a draw with nothing left anywhere draws what there is', () => {
 });
 
 test('every card of the deck is in exactly one pile through a full cycle', () => {
-  let chronicle = beginChronicle(2026);
+  let chronicle = beginChronicle(2026, DECK);
   const deck = everyCard(chronicle);
   expect(deck).toHaveLength(DECK.length);
 
@@ -315,6 +329,14 @@ test('every card of the deck is in exactly one pile through a full cycle', () =>
     chronicle = apply(chronicle, { type: 'end-turn' });
     expect(everyCard(chronicle)).toEqual(deck);
   }
+});
+
+test('the deck the game ships with founds a chronicle that draws a full hand from it', () => {
+  const chronicle = beginChronicle(2026, DECKS.PH_Deck);
+
+  expect(chronicle.hand).toHaveLength(5);
+  expect(everyCard(chronicle)).toHaveLength(DECKS.PH_Deck.length);
+  for (const id of everyCard(chronicle)) expect(CARDS[id]).toBeDefined();
 });
 
 test('the same command on the same chronicle gives the same chronicle back', () => {
@@ -586,7 +608,7 @@ test('a tile’s building slot takes one building and no more', () => {
 });
 
 test('the founding fills the city tile’s slot with the city', () => {
-  const chronicle = beginChronicle(1234);
+  const chronicle = beginChronicle(1234, DECK);
 
   expect(buildingAt(chronicle, chronicle.city)).toBe('PH_City');
 });

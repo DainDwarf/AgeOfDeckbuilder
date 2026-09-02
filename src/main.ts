@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { CARDS, type CardId, DECKS, type DeckId } from './rules/cards';
 import { beginChronicle } from './rules/chronicle';
 import { ChronicleScene } from './ui/chronicle-scene';
 import { BACKING_HEIGHT, BACKING_WIDTH } from './ui/design-space';
@@ -19,8 +20,26 @@ function askedSeed(): number | undefined {
   return Number.isInteger(seed) ? seed : undefined;
 }
 
+/**
+ * The deck asked for in the address: a deck by its id, or a list of card ids. There is no deck to
+ * fall back on, so anything else stops the boot.
+ */
+function askedDeck(): readonly CardId[] {
+  const asked = new URLSearchParams(window.location.search).get('deck');
+  if (asked === null || asked.trim() === '') {
+    throw new Error('no deck on the address: ?deck= a deck id, or a list of card ids');
+  }
+  if (Object.hasOwn(DECKS, asked)) return DECKS[asked as DeckId];
+
+  const cards = asked.split(',').map((id) => id.trim());
+  for (const id of cards) {
+    if (!Object.hasOwn(CARDS, id)) throw new Error(`${id} is neither a deck nor a card`);
+  }
+  return cards as CardId[];
+}
+
 // The one place entropy enters the game: `src/rules/` draws only from the seed it is handed.
-const chronicle = beginChronicle(askedSeed() ?? (Math.random() * 2 ** 32) | 0);
+const chronicle = beginChronicle(askedSeed() ?? (Math.random() * 2 ** 32) | 0, askedDeck());
 
 window.game = new Phaser.Game({
   type: Phaser.AUTO,

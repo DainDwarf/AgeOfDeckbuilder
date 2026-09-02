@@ -22,9 +22,12 @@ export type Piles = { render(chronicle: Chronicle): void };
 
 /** The draw pile face down on the left, the discard pile face up and worn on the right. */
 export function createPiles(scene: Phaser.Scene, browse: (pile: PileKind) => void): Piles {
-  const drawn = createPile(scene, MARGIN + CARD_WIDTH / 2, () => browse('draw-pile'));
-  const discarded = createPile(scene, DESIGN_WIDTH - MARGIN - CARD_WIDTH / 2, () =>
-    browse('discard-pile'),
+  const drawn = createPile(scene, 'draw-pile', MARGIN + CARD_WIDTH / 2, browse);
+  const discarded = createPile(
+    scene,
+    'discard-pile',
+    DESIGN_WIDTH - MARGIN - CARD_WIDTH / 2,
+    browse,
   );
 
   return {
@@ -44,15 +47,21 @@ export function createPiles(scene: Phaser.Scene, browse: (pile: PileKind) => voi
 
 type Pile = { show(card: Phaser.GameObjects.Container, count: number): void };
 
-function createPile(scene: Phaser.Scene, x: number, browse: () => void): Pile {
+function createPile(
+  scene: Phaser.Scene,
+  pile: PileKind,
+  x: number,
+  browse: (pile: PileKind) => void,
+): Pile {
   const y = DESIGN_HEIGHT - MARGIN;
   const pill = scene.add.graphics().setDepth(6);
   onClick(
     scene.add
       .zone(x, y - CARD_HEIGHT / 2, CARD_WIDTH, CARD_HEIGHT)
+      .setName(pile)
       .setDepth(8)
       .setInteractive({ useHandCursor: true }),
-    browse,
+    () => browse(pile),
   );
   const count = addText(scene, 0, 0, '', {
     fontFamily: UI_FONT,
