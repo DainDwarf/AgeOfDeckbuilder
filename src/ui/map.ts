@@ -18,7 +18,7 @@ import {
   hexagon,
   onResize,
   renderFactor,
-  type Surfaces,
+  type Surface,
 } from './design-space';
 
 const TILE_SIZE = 24;
@@ -95,11 +95,11 @@ const PAN_KEYS = [
   { keys: ['D', 'RIGHT'], x: 1, y: 0 },
 ] as const;
 
-/** Where a tile's face stands on the table's surface, for whatever floats beside it. */
+/** Where a tile's face stands on the map's own surface, for whatever stands beside it there. */
 export type TileFace = {
   readonly x: number;
   readonly y: number;
-  /** How far the face reaches from its middle, in design pixels: the zoom moves it. */
+  /** How far the face reaches from its middle, in map units. */
   readonly radius: number;
 };
 
@@ -120,12 +120,12 @@ export type MapView = {
     chosen: (target: Target | undefined) => void,
   ): () => void;
   /**
-   * Reports the tile every click the table leaves lands on, and nothing when it lands off the map;
-   * `moved` reports where the ringed tile's face stands again after every pan and every zoom, so
-   * whatever floats beside it follows. Called once; while a card is aimed the map belongs to the
-   * aim and no click is reported.
+   * Reports the tile every click the UI leaves lands on, and nothing when it lands off the map;
+   * `zoomed` fires whenever the zoom changes, so whatever stands on the map at a size of its own
+   * stands again. Called once; while a card is aimed the map belongs to the aim and no click is
+   * reported.
    */
-  inspect(inspected: (found: Inspection | undefined) => void, moved: (at: TileFace) => void): void;
+  inspect(inspected: (found: Inspection | undefined) => void, zoomed: () => void): void;
   /** Rings the tile being inspected, or clears the ring. */
   markInspected(tile: TileCoords | undefined): void;
   /** Whether the wheel and the pan keys reach the map; they do not while anything covers it. */
@@ -204,15 +204,11 @@ function litTile(scene: Phaser.Scene, coord: TileCoords): Phaser.GameObjects.Pol
 }
 
 /**
- * The map and everything standing on it, on a surface of its own that pans and zooms under the
- * table. The terrain is drawn once; the buildings and the units are redrawn on every state change;
- * and a card is aimed here — the rules say which tiles light up, never this file.
+ * The map and everything standing on it, on a surface of its own that pans and zooms under the UI.
+ * The terrain is drawn once; the buildings and the units are redrawn on every state change; and a
+ * card is aimed here — the rules say which tiles light up, never this file.
  */
-export function createMapView(
-  scene: Phaser.Scene,
-  { map, table }: Surfaces,
-  chronicle: Chronicle,
-): MapView {
+export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chronicle): MapView {
   const camera = map.camera;
   const layer = map.layer;
 
@@ -243,8 +239,7 @@ export function createMapView(
 
   let markers: Phaser.GameObjects.Polygon[] = [];
   let inspector: Phaser.GameObjects.Zone | undefined;
-  let ringed: TileCoords | undefined;
-  let followed: ((at: TileFace) => void) | undefined;
+  let rescale: (() => void) | undefined;
   let taking = true;
 
   const box = boxOf(chronicle.tiles);
@@ -271,23 +266,14 @@ export function createMapView(
   };
   onResize(scene, place);
 
-  /** Where a tile's face stands on the table, for the panel that floats beside it. */
-  const faceOf = (coord: TileCoords): TileFace => {
-    const middle = positionOf(coord);
-    const on = map.onCanvas(middle.x, middle.y);
-    const at = table.at(on.x, on.y);
-    return { x: at.x, y: at.y, radius: TILE_SIZE * zoom };
-  };
-
-  /** Every pan and every zoom: the ringed tile carries whatever floats beside it along. */
+  /** A pan carries what stands on the map by the camera; only a zoom changes what it measures in. */
   const moveTo = (x: number, y: number, next: number): void => {
-    const was = { x: centre.x, y: centre.y, zoom };
+    const was = zoom;
     centre.x = x;
     centre.y = y;
     zoom = next;
     place();
-    if (centre.x === was.x && centre.y === was.y && zoom === was.zoom) return;
-    if (ringed !== undefined) followed?.(faceOf(ringed));
+    if (zoom !== was) rescale?.();
   };
 
   /**
@@ -355,8 +341,8 @@ export function createMapView(
   };
 
   /**
-   * A zone over the whole frame, under everything the table draws: it takes every press the table
-   * does not. It is framed in map space, so it is re-cut to the frame on every pan and every zoom.
+   * A zone over the whole frame, under everything the UI draws: it takes every press the UI does
+   * not. It is framed in map space, so it is re-cut to the frame on every pan and every zoom.
    */
   const catcherZone = (name: string): Phaser.GameObjects.Zone => {
     const catcher = scene.add
@@ -459,11 +445,8 @@ export function createMapView(
       });
     },
 
-    inspect(
-      found: (inspection: Inspection | undefined) => void,
-      moved: (at: TileFace) => void,
-    ): void {
-      followed = moved;
+    inspect(found: (inspection: Inspection | undefined) => void, zoomed: () => void): void {
+      rescale = zoomed;
       const catcher = catcherZone('inspect');
       inspector = catcher;
 
@@ -471,13 +454,16 @@ export function createMapView(
         release: (pointer) => {
           const at = map.at(pointer.x, pointer.y);
           const on = tileUnder(chronicle, at.x, at.y);
-          found(on === undefined ? undefined : { tile: on, at: faceOf(on) });
+          found(
+            on === undefined
+              ? undefined
+              : { tile: on, at: { ...positionOf(on), radius: TILE_SIZE } },
+          );
         },
       });
     },
 
     markInspected(tile: TileCoords | undefined): void {
-      ringed = tile;
       inspected.removeAll(true);
       inspected.setData('tile', tile === undefined ? undefined : tileKey(tile));
       if (tile === undefined) return;

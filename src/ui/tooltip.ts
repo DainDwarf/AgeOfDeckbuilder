@@ -18,36 +18,27 @@ const JITTER = 3;
 
 const STYLE = { fontFamily: UI_FONT, fontSize: '14px', color: '#0d1014' };
 
-/** The box a tooltip stands beside, and the side of it the bubble takes where the screen allows. */
-export type Beside = {
-  left: number;
-  right: number;
-  y: number;
-  prefer: 'left' | 'right';
-};
-
 export type Tooltip = {
-  /** Hangs under what was hovered: `left` where the bubble wants its left edge, `tip` the x its tail points up at. */
+  /**
+   * Hangs under what was hovered, held inside the frame: `left` where the bubble wants its left
+   * edge, `tip` the x its tail points up at.
+   */
   under(message: string, left: number, tip: number, top: number): void;
   /**
-   * Stands beside what was hovered, level with `y`, its tail pointing horizontally back at it. The
-   * bubble goes where the box is, off the table included; only which side it takes reads the frame.
+   * Stands to the right of `x`, level with `y`, its tail pointing left back at them. The bubble
+   * goes wherever they are, off the frame included.
    */
-  beside(message: string, box: Beside): void;
-  /**
-   * Stands the bubble a `beside` raised beside its box again, wherever that box has moved to; one
-   * already up moves at once, one still waiting out its rest comes up at the new box. Does nothing
-   * when what stands came from anywhere else.
-   */
-  restand(box: Beside): void;
+  beside(message: string, x: number, y: number): void;
   hide(): void;
 };
 
 /**
- * The one bubble every hover on the table raises, under what was hovered or beside it — one per
- * scene, so the hand-over holds between any two sources. It waits for the pointer to rest: a hover
- * crossed on the way somewhere else raises nothing, and only a hover taken straight off the bubble
- * skips the wait.
+ * The one bubble every hover on a surface raises, under what was hovered or beside it — one per
+ * surface, so the hand-over holds between any two sources on it, and a bubble is carried by the
+ * camera that painted what raised it. Every coordinate is that surface's own, and the bubble keeps
+ * the size it was laid out at however far the surface has zoomed. It waits for the pointer to rest:
+ * a hover crossed on the way somewhere else raises nothing, and only a hover taken straight off the
+ * bubble skips the wait.
  */
 export function createTooltip(scene: Phaser.Scene, on: Surface): Tooltip {
   const bubble = scene.add.graphics();
@@ -55,8 +46,9 @@ export function createTooltip(scene: Phaser.Scene, on: Surface): Tooltip {
   const tooltip = scene.add
     .container(0, 0, [bubble, label])
     .setDepth(DEPTH)
-    .setName('tooltip')
+    .setName(`tooltip-${on.layer.name}`)
     .setVisible(false);
+  on.layer.add(tooltip);
 
   const measure = (message: string): { width: number; height: number } => {
     label.setText(message);
@@ -65,8 +57,6 @@ export function createTooltip(scene: Phaser.Scene, on: Surface): Tooltip {
 
   let resting: Phaser.Time.TimerEvent | undefined;
   let paint: (() => void) | undefined;
-  /** How to paint what a `beside` last asked for, at whatever box it is asked for again. */
-  let standing: ((box: Beside) => void) | undefined;
   let restX = 0;
   let restY = 0;
   let wentDown = Number.NEGATIVE_INFINITY;
@@ -99,15 +89,14 @@ export function createTooltip(scene: Phaser.Scene, on: Surface): Tooltip {
     rest();
   };
 
-  const paintBeside = (message: string, box: Beside): void => {
+  const paintBeside = (message: string, x: number, y: number): void => {
     const { width, height } = measure(message);
-    const fitsRight = box.right + STANDOFF + width <= DESIGN_WIDTH - MARGIN;
-    const fitsLeft = box.left - STANDOFF - width >= MARGIN;
-    const onRight = box.prefer === 'right' ? fitsRight || !fitsLeft : !fitsLeft && fitsRight;
-
-    const x = onRight ? box.right + STANDOFF : box.left - STANDOFF - width;
-    drawBubble(bubble, width, height, { edge: onRight ? 'left' : 'right', at: height / 2 });
-    tooltip.setPosition(x, box.y - height / 2).setVisible(true);
+    const unit = on.unit();
+    drawBubble(bubble, width, height, { edge: 'left', at: height / 2 });
+    tooltip
+      .setScale(unit)
+      .setPosition(x + STANDOFF * unit, y - (height / 2) * unit)
+      .setVisible(true);
   };
 
   scene.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
@@ -121,29 +110,19 @@ export function createTooltip(scene: Phaser.Scene, on: Surface): Tooltip {
 
   return {
     under(message: string, left: number, tip: number, top: number): void {
-      standing = undefined;
       raise(() => {
         const { width, height } = measure(message);
         const x = Math.min(left, DESIGN_WIDTH - MARGIN - width);
         drawBubble(bubble, width, height, { edge: 'top', at: tip - x });
-        tooltip.setPosition(x, top).setVisible(true);
+        tooltip.setScale(on.unit()).setPosition(x, top).setVisible(true);
       });
     },
 
-    beside(message: string, box: Beside): void {
-      standing = (moved) => paintBeside(message, moved);
-      raise(() => paintBeside(message, box));
-    },
-
-    restand(box: Beside): void {
-      const again = standing;
-      if (again === undefined) return;
-      paint = () => again(box);
-      if (tooltip.visible) paint();
+    beside(message: string, x: number, y: number): void {
+      raise(() => paintBeside(message, x, y));
     },
 
     hide(): void {
-      standing = undefined;
       drop();
       if (tooltip.visible) wentDown = scene.time.now;
       tooltip.setVisible(false);

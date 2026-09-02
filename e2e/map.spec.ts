@@ -113,9 +113,9 @@ test("a pan carries a panel row's tooltip along with the row", async ({ page }) 
 
   const row = await onScreen(page, 'infopanel-row-0');
   await page.mouse.move(row.x, row.y);
-  await expect.poll(() => tooltipUp(page)).toBe(true);
+  await expect.poll(() => tooltipUp(page, 'tooltip-map')).toBe(true);
   const panel = await onScreen(page, 'infopanel');
-  const bubble = await onScreen(page, 'tooltip');
+  const bubble = await onScreen(page, 'tooltip-map');
 
   // The pointer holds still, so the row keeps the hover the panel is carrying out from under it.
   await page.keyboard.down('w');
@@ -127,8 +127,8 @@ test("a pan carries a panel row's tooltip along with the row", async ({ page }) 
   await settled(page);
 
   const carried = await onScreen(page, 'infopanel');
-  const stood = await onScreen(page, 'tooltip');
-  expect(await tooltipUp(page)).toBe(true);
+  const stood = await onScreen(page, 'tooltip-map');
+  expect(await tooltipUp(page, 'tooltip-map')).toBe(true);
   expect(stood.x - carried.x).toBeCloseTo(bubble.x - panel.x, 0);
   expect(stood.y - carried.y).toBeCloseTo(bubble.y - panel.y, 0);
 

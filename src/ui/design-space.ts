@@ -162,12 +162,15 @@ export type Surface = {
   readonly camera: Phaser.Cameras.Scene2D.Camera;
   /** Where a canvas point falls on this surface. */
   at(x: number, y: number): { x: number; y: number };
-  /** Where a point on this surface falls on the canvas. */
-  onCanvas(x: number, y: number): { x: number; y: number };
+  /**
+   * How much of this surface one design pixel covers: what anything standing on it scales by to
+   * keep the size on screen it was laid out at. One on a surface that never zooms.
+   */
+  unit(): number;
 };
 
-/** The map moves under the table; the table does not move at all. */
-export type Surfaces = { readonly map: Surface; readonly table: Surface };
+/** The map moves under the UI; the UI does not move at all. */
+export type Surfaces = { readonly map: Surface; readonly ui: Surface };
 
 function surfaceOf(
   layer: Phaser.GameObjects.Layer,
@@ -185,12 +188,8 @@ function surfaceOf(
         y: camera.scrollY + half.y + (y - half.y) / camera.zoomY,
       };
     },
-    onCanvas(x, y) {
-      const half = middle();
-      return {
-        x: half.x + (x - camera.scrollX - half.x) * camera.zoomX,
-        y: half.y + (y - camera.scrollY - half.y) * camera.zoomY,
-      };
+    unit() {
+      return renderFactor() / camera.zoomX;
     },
   };
 }
@@ -199,8 +198,8 @@ function surfaceOf(
  * The design space, cut in two: each camera is blind to the other's layer, so one of them can be
  * panned and zoomed while the other holds still. Nothing may be left standing on the scene's own
  * display list, which carries no camera filter and so is painted by both cameras at once — hence
- * the table takes every object the game makes, and `map.ts` moves its own onto the map. Each layer
- * and the camera that paints it share a name.
+ * the UI takes every object the game makes, and whatever belongs on the map moves itself there.
+ * Each layer and the camera that paints it share a name.
  *
  * A scene's `scale.width` / `scale.height` report the backing store in device pixels, and a
  * pointer's `x` / `y` arrive in that same space; lay out against DESIGN_WIDTH and DESIGN_HEIGHT,
@@ -209,23 +208,23 @@ function surfaceOf(
 export function applyDesignSpace(scene: Phaser.Scene): Surfaces {
   const map = surfaceOf(scene.add.layer().setName('map'), scene.cameras.main.setName('map'));
   // Added after the map's, so it paints over it and the hit test reaches it first.
-  const table = surfaceOf(scene.add.layer().setName('table'), scene.cameras.add().setName('table'));
-  map.camera.ignore(table.layer);
-  table.camera.ignore(map.layer);
+  const ui = surfaceOf(scene.add.layer().setName('ui'), scene.cameras.add().setName('ui'));
+  map.camera.ignore(ui.layer);
+  ui.camera.ignore(map.layer);
 
   // A layer re-announces what it is handed on this same emitter, so the guard is what ends this:
   // the object arrives a second time already homed, and falls through.
   scene.events.on(Phaser.Scenes.Events.ADDED_TO_SCENE, (object: Phaser.GameObjects.GameObject) => {
     if (object instanceof Phaser.GameObjects.Layer) return;
     if (object.displayList !== scene.sys.displayList) return;
-    table.layer.add(object);
+    ui.layer.add(object);
   });
 
   onResize(scene, () => {
     const factor = renderFactor();
     // The cameras' own size is Phaser's business: the camera manager subscribed to RESIZE at scene
     // boot, ahead of this, and resizes every camera at the origin that had the old size.
-    table.camera.setZoom(factor).centerOn(DESIGN_WIDTH / 2, DESIGN_HEIGHT / 2);
+    ui.camera.setZoom(factor).centerOn(DESIGN_WIDTH / 2, DESIGN_HEIGHT / 2);
     // Phaser measures the drag threshold between raw pointer positions, in device pixels.
     scene.input.dragDistanceThreshold = DRAG_SLACK * factor;
     const resolution = Math.ceil(factor);
@@ -234,7 +233,7 @@ export function applyDesignSpace(scene: Phaser.Scene): Surfaces {
     }
   });
 
-  return { map, table };
+  return { map, ui };
 }
 
 /** Whether the press a pointer is holding has travelled far enough to be a drag and not a click. */

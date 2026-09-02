@@ -188,13 +188,13 @@ export function shownLayer(page: Page): Promise<string | undefined> {
   });
 }
 
-/** Whether the one bubble stands over the table. */
-export function tooltipUp(page: Page): Promise<boolean> {
-  return page.evaluate(() => {
-    const bubble = window.named?.('tooltip')?.object as Phaser.GameObjects.Container | undefined;
-    if (bubble === undefined) throw new Error('the tooltip is not on the table');
+/** Whether the named bubble stands; there is one per surface, named after it. */
+export function tooltipUp(page: Page, name: string): Promise<boolean> {
+  return page.evaluate((target) => {
+    const bubble = window.named?.(target)?.object as Phaser.GameObjects.Container | undefined;
+    if (bubble === undefined) throw new Error(`there is no ${target}`);
     return bubble.visible;
-  });
+  }, name);
 }
 
 /** Which tile the map is ringing, or nothing while none is selected. */
