@@ -12,6 +12,12 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
+- **The panel lies on the map** — the inspection panel and its row tooltip are objects of the map
+  layer, carried by the map camera: nothing re-places them on a pan. The panel stands to the right
+  of its tile, placed at ring time on the map's own geometry, never reading the frame. A zoom
+  re-stands it at its unchanged on-screen size. The resource bar keeps a tooltip of its own on the
+  UI layer, and the fixed surface is named `ui` throughout. The standing map e2e passes.
+  Doc-impact: none.
 - **No tooltip for a pointer off the canvas** — a pointer that leaves the canvas across a
   resource-bar entry neither starts the tooltip's rest nor lets a running one finish: after the
   rest time passes with the pointer outside, no tooltip stands; covered by an e2e. Doc-impact: none.
