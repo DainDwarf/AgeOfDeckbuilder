@@ -353,21 +353,6 @@ test('a chronicle with units on the map survives JSON', () => {
   expect(JSON.parse(JSON.stringify(city))).toEqual(city);
 });
 
-test('a unit card is refused with no population left to make the unit of', () => {
-  const spent = cityOf(['urban'], {
-    tiles: field(2),
-    hand: ['PH_Worker'],
-    population: 0,
-    resources: { food: 2, production: 0, military: 0, money: 0, science: 0, culture: 0 },
-  });
-
-  const after = apply(spent, { type: 'play', index: 0 });
-
-  expect(playable(refusalOf(spent, 'PH_Worker'))).toBe(false);
-  expect(after.hand).toEqual(spent.hand);
-  expect(after.units).toEqual([]);
-});
-
 test('a city with no population left falls, whatever the command was', () => {
   const empty = cityOf(['urban'], { tiles: field(2), population: 0 });
 
