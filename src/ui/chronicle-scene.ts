@@ -43,11 +43,12 @@ export class ChronicleScene extends Phaser.Scene {
   }
 
   create(): void {
-    applyDesignSpace(this);
+    const surfaces = applyDesignSpace(this);
+    const table = surfaces.table;
 
     const parts: Part[] = [];
-    const view = createMapView(this, this.current);
-    const tooltip = createTooltip(this);
+    const view = createMapView(this, surfaces, this.current);
+    const tooltip = createTooltip(this, table);
     const panel = createInfoPanel(this, tooltip);
 
     /** The ringed tile, and which of its layers the panel is reading — none while it is only ringed. */
@@ -85,7 +86,7 @@ export class ChronicleScene extends Phaser.Scene {
     });
     this.input.keyboard?.on('keydown-ESC', dismiss);
 
-    const overlay = createOverlay(this);
+    const overlay = createOverlay(this, table, (covered) => view.live(!covered));
     const endTurn = this.addEndTurn(() => perform({ type: 'end-turn' }));
     parts.push(
       view,
@@ -93,6 +94,7 @@ export class ChronicleScene extends Phaser.Scene {
       createPiles(this, (pile) => overlay.browse(pile, this.current)),
       createHand(
         this,
+        table,
         (index) => perform({ type: 'play', index }),
         (index, targetType, released) => {
           // The aiming catcher lies under the hand and the piles, so the button is the one thing

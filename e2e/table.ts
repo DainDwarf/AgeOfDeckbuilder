@@ -5,6 +5,20 @@ import type { Chronicle } from '../src/rules/chronicle';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
 import type { PileKind } from '../src/ui/overlay';
 
+declare global {
+  interface Window {
+    /**
+     * The named object and the camera that paints it, wherever on the table it stands. The scene's
+     * own display list carries only the two layers, so `children.getByName` finds nothing.
+     */
+    named?: (
+      name: string,
+    ) =>
+      | { object: Phaser.GameObjects.GameObject; camera: Phaser.Cameras.Scene2D.Camera }
+      | undefined;
+  }
+}
+
 /** How far up a card comes before the release plays or arms it, in design units, and then some. */
 const DRAG = 140;
 
@@ -27,8 +41,34 @@ export async function open(
   seed: number,
   deck: DeckId | readonly CardId[],
 ): Promise<void> {
+  await page.addInitScript(() => {
+    window.named = (name) => {
+      const scene = window.game?.scene.getScene('chronicle');
+      if (scene === null || scene === undefined) return undefined;
+      for (const child of scene.children.list) {
+        if (child.type !== 'Layer') continue;
+        const layer = child as Phaser.GameObjects.Layer;
+        const object = layer.getByName(name);
+        const camera = scene.cameras.getCamera(layer.name);
+        if (object === null || camera === null) continue;
+        return { object, camera };
+      }
+      return undefined;
+    };
+  });
   await page.goto(`/?seed=${seed}&deck=${typeof deck === 'string' ? deck : deck.join(',')}`);
   await page.waitForFunction(() => window.game?.scene.isActive('chronicle') === true);
+  await settled(page);
+}
+
+/** Waits for a drawn frame, so a camera moved since answers for where it now stands. */
+export function settled(page: Page): Promise<void> {
+  return page.evaluate(
+    () =>
+      new Promise<void>((done) => {
+        requestAnimationFrame(() => requestAnimationFrame(() => done()));
+      }),
+  );
 }
 
 export function chronicleOf(page: Page): Promise<Chronicle> {
@@ -41,20 +81,16 @@ export function chronicleOf(page: Page): Promise<Chronicle> {
 
 export function onScreen(page: Page, name: string): Promise<OnScreen> {
   return page.evaluate((target) => {
-    const scene = window.game?.scene.getScene<ChronicleScene>('chronicle');
-    const object = scene?.children.getByName(target) as
-      | (Phaser.GameObjects.GameObject & Phaser.GameObjects.Components.GetBounds)
-      | null
-      | undefined;
-    if (scene === undefined || object === null || object === undefined) {
-      throw new Error(`nothing named ${target} is on the table`);
-    }
+    const found = window.named?.(target);
+    if (found === undefined) throw new Error(`nothing named ${target} is on the table`);
+    const object = found.object as Phaser.GameObjects.GameObject &
+      Phaser.GameObjects.Components.GetBounds;
 
-    // The camera converts canvas pixels into the design space; two points walk that backwards.
-    const camera = scene.cameras.main;
+    // The camera converts canvas pixels into its own surface; two points walk that backwards.
+    const camera = found.camera;
     const origin = camera.getWorldPoint(0, 0);
     const stepped = camera.getWorldPoint(1, 1);
-    const canvas = scene.game.canvas;
+    const canvas = camera.scene.game.canvas;
     const rect = canvas.getBoundingClientRect();
     const unit = rect.width / canvas.width / (stepped.x - origin.x);
     const bounds = object.getBounds();
@@ -68,22 +104,24 @@ export function onScreen(page: Page, name: string): Promise<OnScreen> {
 
 /** Whether an object of that name stands on the table. */
 export function onTable(page: Page, name: string): Promise<boolean> {
-  return page.evaluate((target) => {
-    const scene = window.game?.scene.getScene<ChronicleScene>('chronicle');
-    return scene?.children.getByName(target) != null;
-  }, name);
+  return page.evaluate((target) => window.named?.(target) !== undefined, name);
 }
 
 /** How far the browse's grid stands scrolled, and how far it can: the grid scrolls by its own `y`. */
 export function scrolled(page: Page): Promise<{ offset: number; overflow: number }> {
   return page.evaluate(() => {
-    const scene = window.game?.scene.getScene<ChronicleScene>('chronicle');
-    const grid = scene?.children.getByName('browse') as
-      | Phaser.GameObjects.Container
-      | null
-      | undefined;
-    if (grid === null || grid === undefined) throw new Error('no browse is open');
+    const grid = window.named?.('browse')?.object as Phaser.GameObjects.Container | undefined;
+    if (grid === undefined) throw new Error('no browse is open');
     return { offset: -grid.y, overflow: grid.getData('overflow') as number };
+  });
+}
+
+/** Which tile the map is ringing, or nothing while none is selected. */
+export function ringedTile(page: Page): Promise<string | undefined> {
+  return page.evaluate(() => {
+    const ring = window.named?.('inspected')?.object;
+    if (ring === undefined) throw new Error('the ring is not on the table');
+    return ring.getData('tile') as string | undefined;
   });
 }
 

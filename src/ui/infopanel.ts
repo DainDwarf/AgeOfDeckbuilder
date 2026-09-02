@@ -10,7 +10,7 @@ import {
 import { UNIT_STATS, type Unit, unitAt } from '../rules/units';
 import { CARD_EDGE, CARD_HEIGHT, CARD_METRICS, CARD_WIDTH, drawCardSurface } from './card-face';
 import { addText, DESIGN_HEIGHT, DESIGN_WIDTH, MARGIN, UI_FONT } from './design-space';
-import { buildingMark, TILE_SIZE, terrainMark, unitMark } from './map';
+import { buildingMark, type TileFace, terrainMark, unitMark } from './map';
 import { BAR_HEIGHT } from './resource-bar';
 import { text } from './text';
 import type { Tooltip } from './tooltip';
@@ -36,15 +36,15 @@ export type InfoPanel = {
    * The layer at `index`, on a card of its own beside the tile, over one ghost per layer behind
    * it. `cycling` dissolves it out of the layer already shown; anything else is instant.
    */
-  show(layers: Layer[], index: number, at: { x: number; y: number }, cycling: boolean): void;
+  show(layers: Layer[], index: number, at: TileFace, cycling: boolean): void;
   hide(): void;
 };
 
 /** Over the table and the end-turn button, under the tooltips and the overlay. */
 const DEPTH = 25;
 
-/** How far the panel stands off the centre of the tile it reads. */
-const STANDOFF = TILE_SIZE + 12;
+/** How far the panel stands clear of the face it reads. */
+const STANDOFF = 12;
 
 /** How far each layer waiting behind the panel stands out of it, down and away from the tile. */
 const GHOST_OFFSET = 4;
@@ -120,15 +120,16 @@ export function createInfoPanel(scene: Phaser.Scene, tooltip: Tooltip): InfoPane
   return {
     hide,
 
-    show(layers: Layer[], index: number, at: { x: number; y: number }, cycling: boolean): void {
+    show(layers: Layer[], index: number, at: TileFace, cycling: boolean): void {
       tooltip.hide();
       settle();
 
       const behind = layers.length - 1;
+      const clear = at.radius + STANDOFF;
       const rightOfTile =
-        at.x + STANDOFF + CARD_WIDTH + behind * GHOST_OFFSET <= DESIGN_WIDTH - MARGIN;
+        at.x + clear + CARD_WIDTH + behind * GHOST_OFFSET <= DESIGN_WIDTH - MARGIN;
       const away = rightOfTile ? GHOST_OFFSET : -GHOST_OFFSET;
-      const left = rightOfTile ? at.x + STANDOFF : at.x - STANDOFF - CARD_WIDTH;
+      const left = rightOfTile ? at.x + clear : at.x - clear - CARD_WIDTH;
       const top = Math.min(
         Math.max(at.y - CARD_HEIGHT / 2, BAR_HEIGHT + 8),
         DESIGN_HEIGHT - MARGIN - CARD_HEIGHT - behind * GHOST_OFFSET,

@@ -2,7 +2,6 @@ import { expect, type Page, test } from '@playwright/test';
 import type Phaser from 'phaser';
 import { DECKS } from '../src/rules/cards';
 import { apply, beginChronicle } from '../src/rules/chronicle';
-import type { ChronicleScene } from '../src/ui/chronicle-scene';
 import { chronicleOf, endTurn, open, watch } from './table';
 
 /** The first seed whose city is captured inside twenty turns of ending the turn and nothing else. */
@@ -20,11 +19,7 @@ function fallRun(): { seed: number; turns: number } {
 /** Whether the defeat screen stands over the table. */
 function defeatShown(page: Page): Promise<boolean> {
   return page.evaluate(() => {
-    const scene = window.game?.scene.getScene<ChronicleScene>('chronicle');
-    const screen = scene?.children.getByName('defeat') as
-      | Phaser.GameObjects.Container
-      | null
-      | undefined;
+    const screen = window.named?.('defeat')?.object as Phaser.GameObjects.Container | undefined;
     return screen?.visible === true;
   });
 }

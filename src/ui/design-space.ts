@@ -82,7 +82,8 @@ export function drawBubble(
 
 // `Phaser.Scale.FIT` in main.ts fits the canvas by this same min, which is what makes the backing
 // store equal the canvas's on-screen size in device pixels.
-function factorNow(): number {
+/** How many device pixels one design pixel is drawn across. */
+export function renderFactor(): number {
   return (
     window.devicePixelRatio *
     Math.min(window.innerWidth / DESIGN_WIDTH, window.innerHeight / DESIGN_HEIGHT)
@@ -91,7 +92,7 @@ function factorNow(): number {
 
 /** The backing store the window calls for, in device pixels. */
 export function backingSize(): { width: number; height: number } {
-  const factor = factorNow();
+  const factor = renderFactor();
   return { width: Math.round(DESIGN_WIDTH * factor), height: Math.round(DESIGN_HEIGHT * factor) };
 }
 
@@ -126,53 +127,120 @@ export function releaseOnBlur(game: Phaser.Game): void {
 // Everything here reads the window and the scale manager live, never the RESIZE event's size
 // arguments: the resize `followWindow` triggers emits RESIZE again, nested inside the one being
 // handled, so the outer arguments describe a backing store that is already gone.
-function follow(scene: Phaser.Scene, place: () => void): void {
+/** Lays something out now, and again after every change of window. */
+export function onResize(scene: Phaser.Scene, place: () => void): void {
+  place();
   scene.scale.on(Phaser.Scale.Events.RESIZE, place);
   scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
     scene.scale.off(Phaser.Scale.Events.RESIZE, place);
   });
 }
 
-/** Every Text the scene holds, however deep in containers it sits. */
+/** Every Text the scene holds, however deep in layers and containers it sits. */
 function* textsIn(
   objects: readonly Phaser.GameObjects.GameObject[],
 ): Generator<Phaser.GameObjects.Text> {
   for (const object of objects) {
     if (object instanceof Phaser.GameObjects.Text) yield object;
     else if (object instanceof Phaser.GameObjects.Container) yield* textsIn(object.list);
+    else if (object instanceof Phaser.GameObjects.Layer) yield* textsIn(object.list);
   }
 }
 
 /** How far a press travels before it is a drag and no longer a click, in design units. */
 const DRAG_SLACK = 8;
 
-// A scene's `scale.width` / `scale.height` report the backing store in device pixels, and a
-// pointer's `x` / `y` arrive in that same space; lay out against DESIGN_WIDTH and DESIGN_HEIGHT,
-// and read `pointer.worldX` / `pointer.worldY` for the design-space pointer. Phaser measures the
-// drag threshold between the raw pointer positions, so it is set in that space and follows the
-// window with the zoom.
-export function applyDesignSpace(scene: Phaser.Scene): void {
-  const place = (): void => {
-    const factor = factorNow();
-    // The main camera's own size is Phaser's business: its camera manager subscribed to RESIZE at
-    // scene boot, ahead of this, and resizes every camera at the origin that had the old size.
-    scene.cameras.main.setZoom(factor).centerOn(DESIGN_WIDTH / 2, DESIGN_HEIGHT / 2);
+/**
+ * One of the two surfaces the game is drawn on: everything standing on it, and the camera that
+ * paints that and nothing else. The two conversions read the camera as it stands, which neither
+ * `pointer.worldX` nor the camera's own `getWorldPoint` does — the pointer carries whichever camera
+ * its last hit test found it over, and a camera's matrix is rebuilt once a frame, so both of those
+ * answer for a pan or a zoom that has since happened.
+ */
+export type Surface = {
+  readonly layer: Phaser.GameObjects.Layer;
+  readonly camera: Phaser.Cameras.Scene2D.Camera;
+  /** Where a canvas point falls on this surface. */
+  at(x: number, y: number): { x: number; y: number };
+  /** Where a point on this surface falls on the canvas. */
+  onCanvas(x: number, y: number): { x: number; y: number };
+};
+
+/** The map moves under the table; the table does not move at all. */
+export type Surfaces = { readonly map: Surface; readonly table: Surface };
+
+function surfaceOf(
+  layer: Phaser.GameObjects.Layer,
+  camera: Phaser.Cameras.Scene2D.Camera,
+): Surface {
+  // Both cameras fill the canvas from its origin, so the point each turns about is its middle.
+  const middle = (): { x: number; y: number } => ({ x: camera.width / 2, y: camera.height / 2 });
+  return {
+    layer,
+    camera,
+    at(x, y) {
+      const half = middle();
+      return {
+        x: camera.scrollX + half.x + (x - half.x) / camera.zoomX,
+        y: camera.scrollY + half.y + (y - half.y) / camera.zoomY,
+      };
+    },
+    onCanvas(x, y) {
+      const half = middle();
+      return {
+        x: half.x + (x - camera.scrollX - half.x) * camera.zoomX,
+        y: half.y + (y - camera.scrollY - half.y) * camera.zoomY,
+      };
+    },
+  };
+}
+
+/**
+ * The design space, cut in two: each camera is blind to the other's layer, so one of them can be
+ * panned and zoomed while the other holds still. Nothing may be left standing on the scene's own
+ * display list, which carries no camera filter and so is painted by both cameras at once — hence
+ * the table takes every object the game makes, and `map.ts` moves its own onto the map. Each layer
+ * and the camera that paints it share a name.
+ *
+ * A scene's `scale.width` / `scale.height` report the backing store in device pixels, and a
+ * pointer's `x` / `y` arrive in that same space; lay out against DESIGN_WIDTH and DESIGN_HEIGHT,
+ * and read a surface's `at` for the pointer in either surface's own space.
+ */
+export function applyDesignSpace(scene: Phaser.Scene): Surfaces {
+  const map = surfaceOf(scene.add.layer().setName('map'), scene.cameras.main.setName('map'));
+  // Added after the map's, so it paints over it and the hit test reaches it first.
+  const table = surfaceOf(scene.add.layer().setName('table'), scene.cameras.add().setName('table'));
+  map.camera.ignore(table.layer);
+  table.camera.ignore(map.layer);
+
+  // A layer re-announces what it is handed on this same emitter, so the guard is what ends this:
+  // the object arrives a second time already homed, and falls through.
+  scene.events.on(Phaser.Scenes.Events.ADDED_TO_SCENE, (object: Phaser.GameObjects.GameObject) => {
+    if (object instanceof Phaser.GameObjects.Layer) return;
+    if (object.displayList !== scene.sys.displayList) return;
+    table.layer.add(object);
+  });
+
+  onResize(scene, () => {
+    const factor = renderFactor();
+    // The cameras' own size is Phaser's business: the camera manager subscribed to RESIZE at scene
+    // boot, ahead of this, and resizes every camera at the origin that had the old size.
+    table.camera.setZoom(factor).centerOn(DESIGN_WIDTH / 2, DESIGN_HEIGHT / 2);
+    // Phaser measures the drag threshold between raw pointer positions, in device pixels.
     scene.input.dragDistanceThreshold = DRAG_SLACK * factor;
     const resolution = Math.ceil(factor);
     for (const label of textsIn(scene.children.list)) {
       if (label.style.resolution !== resolution) label.setResolution(resolution);
     }
-  };
-  place();
-  follow(scene, place);
+  });
+
+  return { map, table };
 }
 
-/** Where the press a pointer is still holding landed, in design space. */
-export function pressedAt(
-  scene: Phaser.Scene,
-  pointer: Phaser.Input.Pointer,
-): { x: number; y: number } {
-  return scene.cameras.main.getWorldPoint(pointer.downX, pointer.downY);
+/** Whether the press a pointer is holding has travelled far enough to be a drag and not a click. */
+export function dragged(scene: Phaser.Scene, pointer: Phaser.Input.Pointer): boolean {
+  const travel = Phaser.Math.Distance.Between(pointer.downX, pointer.downY, pointer.x, pointer.y);
+  return travel >= scene.input.dragDistanceThreshold;
 }
 
 // A release off the canvas is known by the element it landed on, never by a coordinate: the pointer
@@ -195,19 +263,32 @@ export type Clip = {
 };
 
 /**
+ * Everything the scene draws, walked into its layers. The layers themselves are never yielded: a
+ * camera told to ignore a layer is blind to every object standing on it.
+ */
+function* objectsIn(
+  objects: readonly Phaser.GameObjects.GameObject[],
+): Generator<Phaser.GameObjects.GameObject> {
+  for (const object of objects) {
+    if (object instanceof Phaser.GameObjects.Layer) yield* objectsIn(object.list);
+    else yield object;
+  }
+}
+
+/**
  * A clip is a camera of its own, its viewport the rectangle: Phaser 4's geometry mask clips under
  * the canvas renderer alone, and this game renders through WebGL. Every camera draws the whole
- * scene, so `show` hands this one everything on the display list but the object it is for — which
- * is also why the camera is kept and re-pointed: a camera's ignore is never lifted, and an object
- * the scene gains while the clip stands open would draw inside the rectangle.
+ * scene, so `show` hands this one everything the scene holds but the object it is for — which is
+ * also why the camera is kept and re-pointed: a camera's ignore is never lifted, and an object the
+ * scene gains while the clip stands open would draw inside the rectangle.
  */
-export function createClip(scene: Phaser.Scene): Clip {
+export function createClip(scene: Phaser.Scene, on: Surface): Clip {
   const camera = scene.cameras.add(0, 0, 1, 1).setVisible(false);
   /** The rectangle in design units while it is shown, and nothing while it is not. */
   let frame: { x: number; y: number; width: number; height: number } | undefined;
 
   const place = (): void => {
-    const factor = factorNow();
+    const factor = renderFactor();
     camera.setZoom(factor);
     if (frame === undefined) return;
     const { x, y, width, height } = frame;
@@ -215,16 +296,15 @@ export function createClip(scene: Phaser.Scene): Clip {
       .setViewport(x * factor, y * factor, width * factor, height * factor)
       .centerOn(x + width / 2, y + height / 2);
   };
-  place();
-  follow(scene, place);
+  onResize(scene, place);
 
   return {
     show(only, x, y, width, height): void {
       frame = { x, y, width, height };
       place();
       camera.setVisible(true);
-      camera.ignore(scene.children.list.filter((child) => child !== only));
-      scene.cameras.main.ignore(only);
+      camera.ignore([...objectsIn(scene.children.list)].filter((child) => child !== only));
+      on.camera.ignore(only);
     },
     hide(): void {
       frame = undefined;
@@ -282,7 +362,7 @@ export function addText(
   // move. A fractional resolution would truncate the canvas to whole pixels, hence the ceiling.
   return scene.add.text(x, y, content, {
     ...style,
-    resolution: Math.ceil(factorNow()),
+    resolution: Math.ceil(renderFactor()),
     padding: { x: 2, y: 1 },
   });
 }

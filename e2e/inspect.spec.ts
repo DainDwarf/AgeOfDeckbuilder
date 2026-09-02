@@ -4,7 +4,7 @@ import { DECKS } from '../src/rules/cards';
 import { apply, beginChronicle, playable, refusalOf } from '../src/rules/chronicle';
 import { tileKey } from '../src/rules/map';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
-import { chronicleOf, dragOut, endTurn, onScreen, open, watch } from './table';
+import { chronicleOf, dragOut, endTurn, onScreen, open, ringedTile, watch } from './table';
 
 /** The first seed with a turn in its first eight that opens on a worker the city can pay for. */
 function workerRun(): { seed: number; turn: number } {
@@ -23,26 +23,9 @@ function workerRun(): { seed: number; turn: number } {
 /** Which layer the infopanel is reading, or nothing while it is dismissed. */
 function shownLayer(page: Page): Promise<string | undefined> {
   return page.evaluate(() => {
-    const scene = window.game?.scene.getScene<ChronicleScene>('chronicle');
-    const panel = scene?.children.getByName('infopanel') as
-      | Phaser.GameObjects.Container
-      | null
-      | undefined;
-    if (panel === null || panel === undefined) throw new Error('the infopanel is not on the table');
+    const panel = window.named?.('infopanel')?.object as Phaser.GameObjects.Container | undefined;
+    if (panel === undefined) throw new Error('the infopanel is not on the table');
     return panel.visible ? (panel.getData('layer') as string) : undefined;
-  });
-}
-
-/** Which tile the map is ringing, or nothing while none is selected. */
-function ringedTile(page: Page): Promise<string | undefined> {
-  return page.evaluate(() => {
-    const scene = window.game?.scene.getScene<ChronicleScene>('chronicle');
-    const ring = scene?.children.getByName('inspected') as
-      | Phaser.GameObjects.Container
-      | null
-      | undefined;
-    if (ring === null || ring === undefined) throw new Error('the ring is not on the table');
-    return ring.getData('tile') as string | undefined;
   });
 }
 

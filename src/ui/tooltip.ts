@@ -1,5 +1,13 @@
 import type Phaser from 'phaser';
-import { addText, DESIGN_HEIGHT, DESIGN_WIDTH, drawBubble, MARGIN, UI_FONT } from './design-space';
+import {
+  addText,
+  DESIGN_HEIGHT,
+  DESIGN_WIDTH,
+  drawBubble,
+  MARGIN,
+  type Surface,
+  UI_FONT,
+} from './design-space';
 
 /** The clear water between a tooltip and what it points at; its tail crosses most of that. */
 const STANDOFF = 8;
@@ -40,7 +48,7 @@ export type Tooltip = {
  * crossed on the way somewhere else raises nothing, and only a hover taken straight off the bubble
  * skips the wait.
  */
-export function createTooltip(scene: Phaser.Scene): Tooltip {
+export function createTooltip(scene: Phaser.Scene, on: Surface): Tooltip {
   const bubble = scene.add.graphics();
   const label = addText(scene, 10, 7, '', STYLE);
   const tooltip = scene.add.container(0, 0, [bubble, label]).setDepth(DEPTH).setVisible(false);
@@ -77,18 +85,19 @@ export function createTooltip(scene: Phaser.Scene): Tooltip {
       draw();
       return;
     }
-    restX = scene.input.activePointer.worldX;
-    restY = scene.input.activePointer.worldY;
+    const pointer = scene.input.activePointer;
+    const at = on.at(pointer.x, pointer.y);
+    restX = at.x;
+    restY = at.y;
     rest();
   };
 
   scene.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
     if (resting === undefined) return;
-    if (Math.abs(pointer.worldX - restX) < JITTER && Math.abs(pointer.worldY - restY) < JITTER) {
-      return;
-    }
-    restX = pointer.worldX;
-    restY = pointer.worldY;
+    const at = on.at(pointer.x, pointer.y);
+    if (Math.abs(at.x - restX) < JITTER && Math.abs(at.y - restY) < JITTER) return;
+    restX = at.x;
+    restY = at.y;
     rest();
   });
 

@@ -52,24 +52,15 @@ function farmedThisTurn(chronicle: Chronicle): TileCoords | undefined {
 /** How many buildings stand drawn on the map. */
 function marks(page: Page): Promise<number> {
   return page.evaluate(() => {
-    const scene = window.game?.scene.getScene<ChronicleScene>('chronicle');
-    const layer = scene?.children.getByName('buildings') as
-      | Phaser.GameObjects.Container
-      | null
-      | undefined;
-    if (layer === null || layer === undefined)
-      throw new Error('the buildings are not on the table');
-    return layer.list.length;
+    const built = window.named?.('buildings')?.object as Phaser.GameObjects.Container | undefined;
+    if (built === undefined) throw new Error('the buildings are not on the table');
+    return built.list.length;
   });
 }
 
 /** Waits for the armed card to lay its catcher over the map, which the press that aims lands on. */
 async function aimed(page: Page): Promise<void> {
-  await page.waitForFunction(() => {
-    const scene = window.game?.scene.getScene<ChronicleScene>('chronicle');
-    const catcher = scene?.children.getByName('aim');
-    return catcher !== null && catcher !== undefined;
-  });
+  await page.waitForFunction(() => window.named?.('aim') !== undefined);
 }
 
 test('the farm card builds its farm where the worker marched to', async ({ page }) => {

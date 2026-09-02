@@ -9,8 +9,8 @@ import {
   DESIGN_WIDTH,
   MARGIN,
   onClick,
-  pressedAt,
   releasedOffCanvas,
+  type Surface,
   UI_FONT,
 } from './design-space';
 import { BAR_HEIGHT } from './resource-bar';
@@ -65,15 +65,20 @@ type Scroll = {
 /**
  * The scrim and what stands on it: a pile's cards laid out, one card large, or the defeat screen.
  * The scrim swallows every pointer beneath it, so the table is inert while any of them is open —
- * and the defeat screen never comes back down.
+ * and the defeat screen never comes back down. `covering` is told as it goes up and comes down,
+ * for whatever the scrim cannot swallow: the wheel and the keyboard reach past it.
  */
-export function createOverlay(scene: Phaser.Scene): Overlay {
+export function createOverlay(
+  scene: Phaser.Scene,
+  on: Surface,
+  covering: (covered: boolean) => void,
+): Overlay {
   const scrim = scene.add
     .rectangle(0, 0, DESIGN_WIDTH, DESIGN_HEIGHT, SCRIM, SCRIM_ALPHA)
     .setOrigin(0, 0)
     .setDepth(DEPTH)
     .setVisible(false);
-  const clip = createClip(scene);
+  const clip = createClip(scene, on);
 
   let shown: Phaser.GameObjects.GameObject[] = [];
   let browsing: { pile: PileKind; cards: readonly CardId[] } | undefined;
@@ -99,11 +104,17 @@ export function createOverlay(scene: Phaser.Scene): Overlay {
     browsing = undefined;
     zoomed = false;
     scrim.setVisible(false).disableInteractive();
+    covering(false);
+  };
+
+  const cover = (): void => {
+    scrim.setVisible(true).setInteractive();
+    covering(true);
   };
 
   const showZoom = (id: CardId, refusal: Refusal): void => {
     wipe();
-    scrim.setVisible(true).setInteractive();
+    cover();
     zoomed = true;
     const { root } = createCardFace(scene, id, refusal, { width: ZOOM_WIDTH });
     root
@@ -122,7 +133,7 @@ export function createOverlay(scene: Phaser.Scene): Overlay {
 
   const showBrowse = (pile: PileKind, cards: readonly CardId[]): void => {
     wipe();
-    scrim.setVisible(true).setInteractive();
+    cover();
     browsing = { pile, cards };
     zoomed = false;
 
@@ -159,13 +170,14 @@ export function createOverlay(scene: Phaser.Scene): Overlay {
       fling = 0;
     });
     frame.on('dragstart', (pointer: Phaser.Input.Pointer) => {
-      scrolling = { y: pressedAt(scene, pointer).y, from: offset, trail: [] };
+      scrolling = { y: on.at(pointer.downX, pointer.downY).y, from: offset, trail: [] };
     });
     frame.on('drag', (pointer: Phaser.Input.Pointer) => {
       if (scrolling === undefined) return;
-      scrolling.trail.push({ time: scene.time.now, y: pointer.worldY });
+      const at = on.at(pointer.x, pointer.y);
+      scrolling.trail.push({ time: scene.time.now, y: at.y });
       if (scrolling.trail.length > 8) scrolling.trail.shift();
-      scrollTo(scrolling.from - (pointer.worldY - scrolling.y));
+      scrollTo(scrolling.from - (at.y - scrolling.y));
     });
     frame.on('dragend', (pointer: Phaser.Input.Pointer) => {
       const dragged = scrolling;
@@ -175,7 +187,8 @@ export function createOverlay(scene: Phaser.Scene): Overlay {
     });
     onClick(frame, (pointer) => {
       if (grid === undefined) return;
-      const card = cardAt(grid, pointer.worldX, pointer.worldY);
+      const at = on.at(pointer.x, pointer.y);
+      const card = cardAt(grid, at.x, at.y);
       if (card === undefined) back();
       else showZoom(card, NO_REFUSAL);
     });
@@ -210,7 +223,7 @@ export function createOverlay(scene: Phaser.Scene): Overlay {
 
   const showDefeat = (defeat: Defeat): void => {
     wipe();
-    scrim.setVisible(true).setInteractive();
+    cover();
     browsing = undefined;
     zoomed = false;
     fallen = true;

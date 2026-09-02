@@ -7,8 +7,8 @@ import {
   DESIGN_WIDTH,
   MARGIN,
   onClick,
-  pressedAt,
   releasedOffCanvas,
+  type Surface,
 } from './design-space';
 
 /** The clear water between a pile and the lane the hand fans out in. */
@@ -45,6 +45,7 @@ export type Hand = { render(chronicle: Chronicle): void };
  */
 export function createHand(
   scene: Phaser.Scene,
+  on: Surface,
   play: (index: number) => void,
   aim: (index: number, targetType: Exclude<TargetType, 'none'>, released: () => void) => () => void,
   zoom: (id: CardId, refusal: Refusal) => void,
@@ -136,14 +137,15 @@ export function createHand(
             slot.hovered = true;
             settle(slot, 0);
             dragged = {
-              grabbed: pressedAt(scene, pointer),
+              grabbed: on.at(pointer.downX, pointer.downY),
               lifted: { x: slot.home.x, y: restingY(slot) },
             };
           })
           .on('drag', (pointer: Phaser.Input.Pointer) => {
             if (dragged === undefined) return;
             const { grabbed, lifted } = dragged;
-            const away = { x: pointer.worldX - grabbed.x, y: pointer.worldY - grabbed.y };
+            const at = on.at(pointer.x, pointer.y);
+            const away = { x: at.x - grabbed.x, y: at.y - grabbed.y };
             const budge = slot.playable ? 1 : 0.1;
             slot.face.root.setPosition(lifted.x + away.x * budge, lifted.y + away.y * budge);
             slot.face.arm(slot.playable && -away.y > PLAY_HEIGHT);
@@ -159,7 +161,7 @@ export function createHand(
               settle(slot, 150);
               return;
             }
-            if (slot.playable && grabbed.y - pointer.worldY > PLAY_HEIGHT) {
+            if (slot.playable && grabbed.y - on.at(pointer.x, pointer.y).y > PLAY_HEIGHT) {
               // A card that takes a target is not played by the release: it waits, in its slot and
               // armed, while the map is aimed at, and comes down only when the card is clicked.
               const targetType = CARDS[slot.id].target;
