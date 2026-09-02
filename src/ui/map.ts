@@ -311,7 +311,6 @@ export function createMapView(scene: Phaser.Scene, chronicle: Chronicle): MapVie
         chosen(target);
       };
 
-      /** Nothing was chosen: the unit goes back on its tile and its reach goes dark. */
       const letGo = (): void => {
         if (grabbed !== undefined) {
           const home = positionOf(current.units[grabbed].tile);

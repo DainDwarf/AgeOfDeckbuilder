@@ -241,8 +241,6 @@ export function onClick(
   target.on('pointerup', (pointer: Phaser.Input.Pointer) => {
     if (pressed) handler(pointer);
   });
-  // A press Phaser has taken for a drag is no longer a click; one that stays inside the drag
-  // threshold never starts one, and its release over the target is the click.
   target.on('dragstart', disarm);
   // The scene sees every release, on the canvas and off it, and after the target does. A press the
   // target never sees released — it was hidden, disabled or removed meanwhile — would otherwise

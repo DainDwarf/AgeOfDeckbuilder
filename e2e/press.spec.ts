@@ -80,12 +80,10 @@ test('a hand card released off the canvas comes home, plays nothing, and leaves 
   await expect.poll(() => stillAt(page, card, home)).toBe(true);
   expect((await chronicleOf(page)).hand).toEqual(opened.hand);
 
-  // The gesture is over, so the card no longer follows the pointer back onto the table.
   await page.mouse.move(home.x, home.y - 300 * home.unit, { steps: 5 });
   expect(await stillAt(page, card, home)).toBe(true);
   expect((await chronicleOf(page)).hand).toEqual(opened.hand);
 
-  // A card taken out and brought back was dragged, so its release on itself is no click either.
   await page.mouse.move(home.x, home.y);
   await page.mouse.down();
   await page.mouse.move(home.x, home.y - LIFTED * home.unit, { steps: 5 });
