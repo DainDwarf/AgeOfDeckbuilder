@@ -347,6 +347,13 @@ export function onClick(
   });
 }
 
+export type Hover = {
+  /** Whether the pointer is over the object, as far as the hover knows. */
+  readonly hovered: boolean;
+  /** The owner ends the hover it knows is over: Phaser sends no `pointerout` for a disable. */
+  end(): void;
+};
+
 /**
  * A hover: entered when the pointer comes over the object, left when it goes — including when it
  * goes by leaving the canvas. Phaser sends no `pointerout` to an object the pointer leaves the
@@ -356,7 +363,7 @@ export function onHover(
   target: Phaser.GameObjects.GameObject,
   enter: () => void,
   leave: () => void,
-): void {
+): Hover {
   const input = target.scene.input;
   let hovered = false;
   const off = (): void => {
@@ -375,6 +382,13 @@ export function onHover(
   target.once('destroy', () => {
     input.off('gameout', off);
   });
+
+  return {
+    get hovered() {
+      return hovered;
+    },
+    end: off,
+  };
 }
 
 export function addText(

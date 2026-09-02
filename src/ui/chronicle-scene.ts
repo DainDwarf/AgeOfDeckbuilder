@@ -150,23 +150,12 @@ export class ChronicleScene extends Phaser.Scene {
     button.setPosition(x, y).setSize(width, height);
     label.setPosition(x, y);
 
-    let hovered = false;
     let turn = 1;
     const paint = (): void => {
-      label.setText(hovered ? text('button.end-turn') : text('button.turn', { turn }));
+      label.setText(hover.hovered ? text('button.end-turn') : text('button.turn', { turn }));
     };
 
-    onHover(
-      button,
-      () => {
-        hovered = true;
-        paint();
-      },
-      () => {
-        hovered = false;
-        paint();
-      },
-    );
+    const hover = onHover(button, paint, paint);
     onClick(button, endTurn);
 
     const part = {
@@ -177,8 +166,7 @@ export class ChronicleScene extends Phaser.Scene {
       live(on: boolean): void {
         if (on) button.setInteractive({ useHandCursor: true });
         else button.disableInteractive();
-        hovered = false;
-        paint();
+        hover.end();
       },
     };
     part.live(true);
