@@ -128,15 +128,21 @@ function* textsIn(
   }
 }
 
+/** How far a press travels before it is a drag and no longer a click, in design units. */
+const DRAG_SLACK = 8;
+
 // A scene's `scale.width` / `scale.height` report the backing store in device pixels, and a
 // pointer's `x` / `y` arrive in that same space; lay out against DESIGN_WIDTH and DESIGN_HEIGHT,
-// and read `pointer.worldX` / `pointer.worldY` for the design-space pointer.
+// and read `pointer.worldX` / `pointer.worldY` for the design-space pointer. Phaser measures the
+// drag threshold between the raw pointer positions, so it is set in that space and follows the
+// window with the zoom.
 export function applyDesignSpace(scene: Phaser.Scene): void {
   const place = (): void => {
     const factor = factorNow();
     // The main camera's own size is Phaser's business: its camera manager subscribed to RESIZE at
     // scene boot, ahead of this, and resizes every camera at the origin that had the old size.
     scene.cameras.main.setZoom(factor).centerOn(DESIGN_WIDTH / 2, DESIGN_HEIGHT / 2);
+    scene.input.dragDistanceThreshold = DRAG_SLACK * factor;
     const resolution = Math.ceil(factor);
     for (const label of textsIn(scene.children.list)) {
       if (label.style.resolution !== resolution) label.setResolution(resolution);
@@ -144,6 +150,20 @@ export function applyDesignSpace(scene: Phaser.Scene): void {
   };
   place();
   follow(scene, place);
+}
+
+/** Where the press a pointer is still holding landed, in design space. */
+export function pressedAt(
+  scene: Phaser.Scene,
+  pointer: Phaser.Input.Pointer,
+): { x: number; y: number } {
+  return scene.cameras.main.getWorldPoint(pointer.downX, pointer.downY);
+}
+
+// A release off the canvas is known by the element it landed on, never by a coordinate: the pointer
+// only reads a camera while it is over one, so `worldX` / `worldY` are left where it went out.
+export function releasedOffCanvas(pointer: Phaser.Input.Pointer): boolean {
+  return pointer.upElement !== pointer.manager.game.canvas;
 }
 
 /** A view of one design-space rectangle: what a scrolling object has outside it is not drawn. */
@@ -199,23 +219,39 @@ export function createClip(scene: Phaser.Scene): Clip {
 }
 
 /**
- * A click: pressed and released on the same object. Phaser delivers `pointerup` to whatever lies
- * under the pointer however far it travelled since the press, so a bare `pointerup` also fires on
- * a card dragged onto the object from elsewhere, and on the release half of a click whose press
- * dismissed something above it.
+ * A click: pressed and released on the same object, with no drag in between. Phaser delivers
+ * `pointerup` to whatever lies under the pointer however far it travelled since the press, so a
+ * bare `pointerup` also fires on a card dragged onto the object from elsewhere, on the object a
+ * drag of its own just ended over, and on the release half of a click whose press dismissed
+ * something above it.
  */
-export function onClick(target: Phaser.GameObjects.GameObject, handler: () => void): void {
+export function onClick(
+  target: Phaser.GameObjects.GameObject,
+  handler: (pointer: Phaser.Input.Pointer) => void,
+): void {
+  const input = target.scene.input;
   let pressed = false;
+  const disarm = (): void => {
+    pressed = false;
+  };
+
   target.on('pointerdown', () => {
     pressed = true;
   });
-  target.on('pointerup', () => {
-    if (pressed) handler();
+  target.on('pointerup', (pointer: Phaser.Input.Pointer) => {
+    if (pressed) handler(pointer);
   });
-  // The scene sees every release, and after the target does. A press the target never sees
-  // released — it was hidden, disabled or removed meanwhile — would otherwise stay armed.
-  target.scene.input.on('pointerup', () => {
-    pressed = false;
+  // A press Phaser has taken for a drag is no longer a click; one that stays inside the drag
+  // threshold never starts one, and its release over the target is the click.
+  target.on('dragstart', disarm);
+  // The scene sees every release, on the canvas and off it, and after the target does. A press the
+  // target never sees released — it was hidden, disabled or removed meanwhile — would otherwise
+  // stay armed. The scene outlives the target, so those two go when the target does.
+  input.on('pointerup', disarm);
+  input.on('pointerupoutside', disarm);
+  target.once('destroy', () => {
+    input.off('pointerup', disarm);
+    input.off('pointerupoutside', disarm);
   });
 }
 

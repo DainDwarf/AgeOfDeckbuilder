@@ -137,6 +137,47 @@ function catcherZone(scene: Phaser.Scene, name: string): Phaser.GameObjects.Zone
     .setInteractive();
 }
 
+/**
+ * The press a catcher takes and the scene resolves: the press is the catcher's, so the hand and
+ * the piles keep theirs, while the release is the scene's, so a press that travelled off the
+ * catcher still ends — on the canvas as a release, off it as an abandon. Hands back the way to
+ * take the two scene listeners off again.
+ */
+function takePress(
+  scene: Phaser.Scene,
+  catcher: Phaser.GameObjects.Zone,
+  on: {
+    down?: (pointer: Phaser.Input.Pointer) => void;
+    release: (pointer: Phaser.Input.Pointer) => void;
+    abandon?: () => void;
+  },
+): () => void {
+  let pressed = false;
+
+  catcher.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+    pressed = true;
+    on.down?.(pointer);
+  });
+
+  const release = (pointer: Phaser.Input.Pointer): void => {
+    if (!pressed) return;
+    pressed = false;
+    on.release(pointer);
+  };
+  const abandon = (): void => {
+    if (!pressed) return;
+    pressed = false;
+    on.abandon?.();
+  };
+
+  scene.input.on('pointerup', release);
+  scene.input.on('pointerupoutside', abandon);
+  return () => {
+    scene.input.off('pointerup', release);
+    scene.input.off('pointerupoutside', abandon);
+  };
+}
+
 function litTile(scene: Phaser.Scene, coord: TileCoords): Phaser.GameObjects.Polygon {
   const { x, y } = positionOf(coord);
   return scene.add.polygon(x, y, hexagon(TILE_SIZE - 2), LIT, 0.4).setStrokeStyle(2, LIT, 0.9);
@@ -221,17 +262,11 @@ export function createMapView(scene: Phaser.Scene, chronicle: Chronicle): MapVie
       const catcher = catcherZone(scene, 'inspect');
       inspector = catcher;
 
-      let pressed = false;
-      catcher.on('pointerdown', () => {
-        pressed = true;
-      });
-      // The press is the catcher's and the release the scene's, exactly as an aim reads one, so a
-      // press that travelled off the map before it came up still reads as a click on nothing.
-      scene.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
-        if (!pressed) return;
-        pressed = false;
-        const on = tileUnder(chronicle, pointer.worldX, pointer.worldY);
-        found(on === undefined ? undefined : { tile: on, at: positionOf(on) });
+      takePress(scene, catcher, {
+        release: (pointer) => {
+          const on = tileUnder(chronicle, pointer.worldX, pointer.worldY);
+          found(on === undefined ? undefined : { tile: on, at: positionOf(on) });
+        },
       });
     },
 
@@ -249,7 +284,6 @@ export function createMapView(scene: Phaser.Scene, chronicle: Chronicle): MapVie
       let selected: number | undefined;
       let landings: TileCoords[] = [];
       let grabbed: number | undefined;
-      let pressed = false;
 
       const paint = (): void => {
         glow.removeAll(true);
@@ -272,28 +306,17 @@ export function createMapView(scene: Phaser.Scene, chronicle: Chronicle): MapVie
 
       const finish = (target: Target | undefined): void => {
         scene.input.off('pointermove', drag);
-        scene.input.off('pointerup', release);
+        stop();
         close();
         chosen(target);
       };
 
-      // The press is the catcher's, so the hand and the piles keep theirs; the release is the
-      // scene's, so a unit dragged over them still comes home.
-      const release = (pointer: Phaser.Input.Pointer): void => {
-        if (!pressed) return;
-        pressed = false;
-        const to = tileUnder(current, pointer.worldX, pointer.worldY);
-        const held = grabbed;
-        grabbed = undefined;
-
-        if (held !== undefined) {
-          const home = positionOf(current.units[held].tile);
-          markers[held].setPosition(home.x, home.y);
-          if (to !== undefined && same(to, current.units[held].tile)) return;
-        }
-        if (selected !== undefined && to !== undefined && landings.some((c) => same(c, to))) {
-          finish({ type: 'unit-tile', unit: selected, tile: to });
-          return;
+      /** Nothing was chosen: the unit goes back on its tile and its reach goes dark. */
+      const letGo = (): void => {
+        if (grabbed !== undefined) {
+          const home = positionOf(current.units[grabbed].tile);
+          markers[grabbed].setPosition(home.x, home.y);
+          grabbed = undefined;
         }
         selected = undefined;
         landings = [];
@@ -306,21 +329,38 @@ export function createMapView(scene: Phaser.Scene, chronicle: Chronicle): MapVie
         paint();
       };
 
-      catcher.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-        pressed = true;
-        const under = tileUnder(current, pointer.worldX, pointer.worldY);
-        const found =
-          under === undefined
-            ? -1
-            : current.units.findIndex(
-                (unit) => unit.faction === 'player' && same(unit.tile, under),
-              );
-        grabbed = found === -1 ? undefined : found;
-        if (grabbed !== undefined) select(grabbed);
+      const stop = takePress(scene, catcher, {
+        down: (pointer) => {
+          const under = tileUnder(current, pointer.worldX, pointer.worldY);
+          const found =
+            under === undefined
+              ? -1
+              : current.units.findIndex(
+                  (unit) => unit.faction === 'player' && same(unit.tile, under),
+                );
+          grabbed = found === -1 ? undefined : found;
+          if (grabbed !== undefined) select(grabbed);
+        },
+        release: (pointer) => {
+          const to = tileUnder(current, pointer.worldX, pointer.worldY);
+          const held = grabbed;
+
+          if (held !== undefined) {
+            const home = positionOf(current.units[held].tile);
+            markers[held].setPosition(home.x, home.y);
+            grabbed = undefined;
+            if (to !== undefined && same(to, current.units[held].tile)) return;
+          }
+          if (selected !== undefined && to !== undefined && landings.some((c) => same(c, to))) {
+            finish({ type: 'unit-tile', unit: selected, tile: to });
+            return;
+          }
+          letGo();
+        },
+        abandon: letGo,
       });
 
       scene.input.on('pointermove', drag);
-      scene.input.on('pointerup', release);
       paint();
       return () => finish(undefined);
     },
@@ -333,27 +373,20 @@ export function createMapView(scene: Phaser.Scene, chronicle: Chronicle): MapVie
       const { catcher, glow, close } = openAim();
       for (const coord of tiles) glow.add(litTile(scene, coord));
 
-      let pressed = false;
-
       const finish = (target: Target | undefined): void => {
-        scene.input.off('pointerup', release);
+        stop();
         close();
         chosen(target);
       };
 
-      const release = (pointer: Phaser.Input.Pointer): void => {
-        if (!pressed) return;
-        pressed = false;
-        const on = tileUnder(current, pointer.worldX, pointer.worldY);
-        if (on !== undefined && tiles.some((coord) => same(coord, on)))
-          finish({ type: 'tile', tile: on });
-      };
-
-      catcher.on('pointerdown', () => {
-        pressed = true;
+      const stop = takePress(scene, catcher, {
+        release: (pointer) => {
+          const on = tileUnder(current, pointer.worldX, pointer.worldY);
+          if (on !== undefined && tiles.some((coord) => same(coord, on)))
+            finish({ type: 'tile', tile: on });
+        },
       });
 
-      scene.input.on('pointerup', release);
       return () => finish(undefined);
     },
   };

@@ -2,7 +2,14 @@ import Phaser from 'phaser';
 import { CARDS, type CardId, type TargetType } from '../rules/cards';
 import { type Chronicle, playable, type Refusal, refusalOf } from '../rules/chronicle';
 import { CARD_HEIGHT, CARD_WIDTH, type CardFace, createCardFace } from './card-face';
-import { DESIGN_HEIGHT, DESIGN_WIDTH, MARGIN } from './design-space';
+import {
+  DESIGN_HEIGHT,
+  DESIGN_WIDTH,
+  MARGIN,
+  onClick,
+  pressedAt,
+  releasedOffCanvas,
+} from './design-space';
 
 /** The clear water between a pile and the lane the hand fans out in. */
 const LANE_PAD = 28;
@@ -12,9 +19,6 @@ const LIFT = 32;
 
 /** How far up a card has to come out of the hand before releasing it plays it. */
 const PLAY_HEIGHT = 110;
-
-/** Under this much travel the pointer was clicking, not dragging, and nothing is played. */
-const CLICK_SLACK = 8;
 
 type Slot = {
   readonly face: CardFace;
@@ -26,11 +30,10 @@ type Slot = {
   hovered: boolean;
 };
 
+/** Where the card was taken hold of, and where it stood at that moment. */
 type Drag = {
-  readonly slot: Slot;
   readonly grabbed: { x: number; y: number };
   readonly lifted: { x: number; y: number };
-  moved: number;
 };
 
 export type Hand = { render(chronicle: Chronicle): void };
@@ -71,55 +74,6 @@ export function createHand(
       ease: 'Sine.easeInOut',
     });
   };
-
-  scene.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
-    if (dragged === undefined) return;
-    const { slot, grabbed, lifted } = dragged;
-    const away = { x: pointer.worldX - grabbed.x, y: pointer.worldY - grabbed.y };
-    dragged.moved = Math.max(dragged.moved, Math.abs(away.x) + Math.abs(away.y));
-    // Measured before the return: the release reads the travel to tell a click from a drag.
-    if (aiming !== undefined) return;
-
-    const budge = slot.playable ? 1 : 0.1;
-    slot.face.root.setPosition(lifted.x + away.x * budge, lifted.y + away.y * budge);
-    slot.face.arm(slot.playable && -away.y > PLAY_HEIGHT);
-  });
-
-  scene.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
-    if (dragged === undefined) return;
-    const { slot, grabbed, moved } = dragged;
-    dragged = undefined;
-
-    if (moved < CLICK_SLACK) {
-      settle(slot, 0);
-      if (aiming !== undefined && slot === aiming.slot) aiming.cancel();
-      else zoom(slot.id, slot.refusal);
-      return;
-    }
-    if (aiming !== undefined) return;
-    slot.face.arm(false);
-
-    if (slot.playable && grabbed.y - pointer.worldY > PLAY_HEIGHT) {
-      // A card that takes a target is not played by the release: it waits, in its slot and armed,
-      // while the map is aimed at, and comes back down only when the card itself is clicked.
-      const targetType = CARDS[slot.id].target;
-      if (targetType !== 'none') {
-        settle(slot, 150);
-        slot.face.arm(true);
-        const cancel = aim(slot.index, targetType, () => {
-          aiming = undefined;
-          slot.face.arm(false);
-          slot.hovered = false;
-          settle(slot, 150);
-        });
-        aiming = { slot, cancel };
-        return;
-      }
-      play(slot.index);
-      return;
-    }
-    settle(slot, 150);
-  });
 
   return {
     render(chronicle: Chronicle): void {
@@ -165,6 +119,7 @@ export function createHand(
             ),
             hitAreaCallback: Phaser.Geom.Rectangle.Contains,
             cursor: 'pointer',
+            draggable: true,
           })
           .on('pointerover', () => {
             if (dragged !== undefined) return;
@@ -176,16 +131,61 @@ export function createHand(
             slot.hovered = false;
             settle(slot, 120);
           })
-          .on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+          .on('dragstart', (pointer: Phaser.Input.Pointer) => {
+            if (aiming !== undefined) return;
             slot.hovered = true;
             settle(slot, 0);
             dragged = {
-              slot,
-              grabbed: { x: pointer.worldX, y: pointer.worldY },
+              grabbed: pressedAt(scene, pointer),
               lifted: { x: slot.home.x, y: restingY(slot) },
-              moved: 0,
             };
+          })
+          .on('drag', (pointer: Phaser.Input.Pointer) => {
+            if (dragged === undefined) return;
+            const { grabbed, lifted } = dragged;
+            const away = { x: pointer.worldX - grabbed.x, y: pointer.worldY - grabbed.y };
+            const budge = slot.playable ? 1 : 0.1;
+            slot.face.root.setPosition(lifted.x + away.x * budge, lifted.y + away.y * budge);
+            slot.face.arm(slot.playable && -away.y > PLAY_HEIGHT);
+          })
+          .on('dragend', (pointer: Phaser.Input.Pointer) => {
+            if (dragged === undefined) return;
+            const { grabbed } = dragged;
+            dragged = undefined;
+            slot.face.arm(false);
+
+            if (releasedOffCanvas(pointer)) {
+              slot.hovered = false;
+              settle(slot, 150);
+              return;
+            }
+            if (slot.playable && grabbed.y - pointer.worldY > PLAY_HEIGHT) {
+              // A card that takes a target is not played by the release: it waits, in its slot and
+              // armed, while the map is aimed at, and comes down only when the card is clicked.
+              const targetType = CARDS[slot.id].target;
+              if (targetType !== 'none') {
+                settle(slot, 150);
+                slot.face.arm(true);
+                const cancel = aim(slot.index, targetType, () => {
+                  aiming = undefined;
+                  slot.face.arm(false);
+                  slot.hovered = false;
+                  settle(slot, 150);
+                });
+                aiming = { slot, cancel };
+                return;
+              }
+              play(slot.index);
+              return;
+            }
+            settle(slot, 150);
           });
+
+        onClick(slot.face.root, () => {
+          settle(slot, 0);
+          if (aiming !== undefined && slot === aiming.slot) aiming.cancel();
+          else zoom(slot.id, slot.refusal);
+        });
 
         return slot;
       });

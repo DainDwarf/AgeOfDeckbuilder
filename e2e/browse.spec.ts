@@ -1,9 +1,17 @@
-import { expect, type Page, test } from '@playwright/test';
-import type Phaser from 'phaser';
+import { expect, test } from '@playwright/test';
 import type { CardId } from '../src/rules/cards';
 import { apply, beginChronicle } from '../src/rules/chronicle';
-import type { ChronicleScene } from '../src/ui/chronicle-scene';
-import { endTurn, onScreen, open, watch } from './table';
+import {
+  browse,
+  endTurn,
+  offsetOf,
+  onScreen,
+  onTable,
+  open,
+  scrolled,
+  watch,
+  wheel,
+} from './table';
 
 /** Five copies of each card: a pile of these lays out taller than the browse's frame. */
 const DECK: readonly CardId[] = (
@@ -18,44 +26,6 @@ function browseSeed(): number {
     if (chronicle.defeat === undefined && chronicle.discardPile.length === 15) return seed;
   }
   throw new Error('no seed under a thousand ends three turns standing on fifteen discarded cards');
-}
-
-function browsing(page: Page): Promise<boolean> {
-  return page.evaluate(() => {
-    const scene = window.game?.scene.getScene<ChronicleScene>('chronicle');
-    return scene?.children.getByName('browse') != null;
-  });
-}
-
-/** How far the browse's grid stands scrolled, and how far it can: the grid scrolls by its own `y`. */
-function scrolled(page: Page): Promise<{ offset: number; overflow: number }> {
-  return page.evaluate(() => {
-    const scene = window.game?.scene.getScene<ChronicleScene>('chronicle');
-    const grid = scene?.children.getByName('browse') as
-      | Phaser.GameObjects.Container
-      | null
-      | undefined;
-    if (grid === null || grid === undefined) throw new Error('no browse is open');
-    return { offset: -grid.y, overflow: grid.getData('overflow') as number };
-  });
-}
-
-function offsetOf(page: Page): Promise<number> {
-  return scrolled(page).then(({ offset }) => offset);
-}
-
-/** Opens a pile's browse, and waits for its cards to be laid out. */
-async function browse(page: Page, pile: 'draw-pile' | 'discard-pile'): Promise<void> {
-  const at = await onScreen(page, pile);
-  await page.mouse.click(at.x, at.y);
-  await expect.poll(() => browsing(page)).toBe(true);
-}
-
-/** Wheels over the browse's frame, from the middle of it. */
-async function wheel(page: Page, by: number): Promise<void> {
-  const frame = await onScreen(page, 'browse-frame');
-  await page.mouse.move(frame.x, frame.y);
-  await page.mouse.wheel(0, by);
 }
 
 test('a pile of more cards than the frame holds scrolls, and stops on its first and last row', async ({
@@ -85,10 +55,10 @@ test('a pile of more cards than the frame holds scrolls, and stops on its first 
   await page.mouse.up();
 
   await expect.poll(() => offsetOf(page)).toBeGreaterThanOrEqual(120);
-  expect(await browsing(page)).toBe(true);
+  expect(await onTable(page, 'browse')).toBe(true);
 
   await page.keyboard.press('Escape');
-  await expect.poll(() => browsing(page)).toBe(false);
+  await expect.poll(() => onTable(page, 'browse')).toBe(false);
 
   for (let turn = 0; turn < 3; turn++) await endTurn(page);
   await browse(page, 'discard-pile');

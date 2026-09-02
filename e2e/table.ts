@@ -1,8 +1,9 @@
-import type { Page } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 import type Phaser from 'phaser';
 import type { CardId, DeckId } from '../src/rules/cards';
 import type { Chronicle } from '../src/rules/chronicle';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
+import type { PileKind } from '../src/ui/overlay';
 
 /** How far up a card comes before the release plays or arms it, in design units, and then some. */
 const DRAG = 140;
@@ -63,6 +64,45 @@ export function onScreen(page: Page, name: string): Promise<OnScreen> {
       unit,
     };
   }, name);
+}
+
+/** Whether an object of that name stands on the table. */
+export function onTable(page: Page, name: string): Promise<boolean> {
+  return page.evaluate((target) => {
+    const scene = window.game?.scene.getScene<ChronicleScene>('chronicle');
+    return scene?.children.getByName(target) != null;
+  }, name);
+}
+
+/** How far the browse's grid stands scrolled, and how far it can: the grid scrolls by its own `y`. */
+export function scrolled(page: Page): Promise<{ offset: number; overflow: number }> {
+  return page.evaluate(() => {
+    const scene = window.game?.scene.getScene<ChronicleScene>('chronicle');
+    const grid = scene?.children.getByName('browse') as
+      | Phaser.GameObjects.Container
+      | null
+      | undefined;
+    if (grid === null || grid === undefined) throw new Error('no browse is open');
+    return { offset: -grid.y, overflow: grid.getData('overflow') as number };
+  });
+}
+
+export function offsetOf(page: Page): Promise<number> {
+  return scrolled(page).then(({ offset }) => offset);
+}
+
+/** Opens a pile's browse, and waits for its cards to be laid out. */
+export async function browse(page: Page, pile: PileKind): Promise<void> {
+  const at = await onScreen(page, pile);
+  await page.mouse.click(at.x, at.y);
+  await expect.poll(() => onTable(page, 'browse')).toBe(true);
+}
+
+/** Wheels over the browse's frame, from the middle of it. */
+export async function wheel(page: Page, by: number): Promise<void> {
+  const frame = await onScreen(page, 'browse-frame');
+  await page.mouse.move(frame.x, frame.y);
+  await page.mouse.wheel(0, by);
 }
 
 /** The gesture that takes a card out of the hand; what the release does is the card's kind. */

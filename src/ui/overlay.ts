@@ -9,6 +9,8 @@ import {
   DESIGN_WIDTH,
   MARGIN,
   onClick,
+  pressedAt,
+  releasedOffCanvas,
   UI_FONT,
 } from './design-space';
 import { BAR_HEIGHT } from './resource-bar';
@@ -24,9 +26,6 @@ const TITLE_INK = '#d4d7db';
 const BROWSE_WIDTH = 180;
 const BROWSE_GAP = 26;
 const ZOOM_WIDTH = 380;
-
-/** How far a press travels, in design units, before it is a drag and no longer a click. */
-const DRAG_SLOP = 6;
 
 /** The pointer's travel over these last milliseconds is the speed a release flings the grid at. */
 const FLING_WINDOW = 80;
@@ -56,11 +55,10 @@ type Grid = {
   readonly overflow: number;
 };
 
-/** Where the pointer was pressed, what the grid stood at, and how the pointer has moved since. */
-type Press = {
+/** Where a drag of the grid was pressed, what the grid stood at, and where the pointer has been. */
+type Scroll = {
   readonly y: number;
   readonly from: number;
-  dragging: boolean;
   readonly trail: { time: number; y: number }[];
 };
 
@@ -83,7 +81,7 @@ export function createOverlay(scene: Phaser.Scene): Overlay {
   /** How far the grid is scrolled, kept while a card taken off it is zoomed. */
   let offset = 0;
   let fling = 0;
-  let press: Press | undefined;
+  let scrolling: Scroll | undefined;
   let zoomed = false;
   let fallen = false;
 
@@ -91,7 +89,7 @@ export function createOverlay(scene: Phaser.Scene): Overlay {
     for (const object of shown) object.destroy();
     shown = [];
     grid = undefined;
-    press = undefined;
+    scrolling = undefined;
     fling = 0;
     clip.hide();
   };
@@ -109,6 +107,7 @@ export function createOverlay(scene: Phaser.Scene): Overlay {
     zoomed = true;
     const { root } = createCardFace(scene, id, refusal, { width: ZOOM_WIDTH });
     root
+      .setName('zoom')
       .setPosition(DESIGN_WIDTH / 2, (DESIGN_HEIGHT + Math.round(ZOOM_WIDTH * 1.4)) / 2)
       .setDepth(DEPTH + 1);
     shown.push(root);
@@ -154,10 +153,31 @@ export function createOverlay(scene: Phaser.Scene): Overlay {
       .zone(DESIGN_WIDTH / 2, top + frameHeight / 2, DESIGN_WIDTH - 2 * MARGIN, frameHeight)
       .setName('browse-frame')
       .setDepth(DEPTH + 2)
-      .setInteractive({ cursor: 'pointer' });
-    frame.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      .setInteractive({ cursor: 'pointer', draggable: true });
+
+    frame.on('pointerdown', () => {
       fling = 0;
-      press = { y: pointer.worldY, from: offset, dragging: false, trail: [] };
+    });
+    frame.on('dragstart', (pointer: Phaser.Input.Pointer) => {
+      scrolling = { y: pressedAt(scene, pointer).y, from: offset, trail: [] };
+    });
+    frame.on('drag', (pointer: Phaser.Input.Pointer) => {
+      if (scrolling === undefined) return;
+      scrolling.trail.push({ time: scene.time.now, y: pointer.worldY });
+      if (scrolling.trail.length > 8) scrolling.trail.shift();
+      scrollTo(scrolling.from - (pointer.worldY - scrolling.y));
+    });
+    frame.on('dragend', (pointer: Phaser.Input.Pointer) => {
+      const dragged = scrolling;
+      scrolling = undefined;
+      if (dragged === undefined || releasedOffCanvas(pointer)) return;
+      fling = -speedOf(dragged.trail, scene.time.now);
+    });
+    onClick(frame, (pointer) => {
+      if (grid === undefined) return;
+      const card = cardAt(grid, pointer.worldX, pointer.worldY);
+      if (card === undefined) back();
+      else showZoom(card, NO_REFUSAL);
     });
 
     const placed = cards.map((id, index): Placed => {
@@ -236,29 +256,6 @@ export function createOverlay(scene: Phaser.Scene): Overlay {
       scrollTo(offset + dy);
     },
   );
-
-  scene.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
-    if (press === undefined) return;
-    const travelled = pointer.worldY - press.y;
-    if (Math.abs(travelled) > DRAG_SLOP) press.dragging = true;
-    if (!press.dragging) return;
-    press.trail.push({ time: scene.time.now, y: pointer.worldY });
-    if (press.trail.length > 8) press.trail.shift();
-    scrollTo(press.from - travelled);
-  });
-
-  scene.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
-    const released = press;
-    press = undefined;
-    if (released === undefined || grid === undefined) return;
-    if (released.dragging) {
-      fling = -speedOf(released.trail, scene.time.now);
-      return;
-    }
-    const card = cardAt(grid, pointer.worldX, pointer.worldY);
-    if (card === undefined) back();
-    else showZoom(card, NO_REFUSAL);
-  });
 
   scene.events.on(Phaser.Scenes.Events.UPDATE, (_time: number, delta: number) => {
     if (fling === 0 || grid === undefined) return;
