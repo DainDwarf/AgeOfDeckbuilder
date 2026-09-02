@@ -1,3 +1,4 @@
+import type { EnemyScriptId } from './enemies';
 import { distance, neighbours, type Tile, type TileCoords, tileKey } from './map';
 
 /** Who a unit acts for. The player commands theirs; an enemy attacks them. */
@@ -24,11 +25,18 @@ export const UNIT_STATS: Record<UnitTypeId, UnitStats> = {
   PH_Warrior: { id: 'PH_Warrior', health: 5, damage: 2, range: 1, move: 2 },
 };
 
-export type Unit = {
-  readonly stats: UnitStats;
-  readonly faction: Faction;
-  readonly tile: TileCoords;
-};
+/**
+ * A unit standing on the map. An enemy is the one that carries a script — the enemy phase asks it
+ * where to walk and what to aim at — and the intent that phase left on it.
+ */
+export type Unit = { readonly stats: UnitStats; readonly tile: TileCoords } & (
+  | { readonly faction: 'player' }
+  | {
+      readonly faction: 'enemy';
+      readonly script: EnemyScriptId;
+      readonly intent?: TileCoords;
+    }
+);
 
 /** The one unit standing on a tile, if one does. */
 export function unitAt(units: readonly Unit[], coord: TileCoords): Unit | undefined {
@@ -69,23 +77,36 @@ export function reachable(
   return landings;
 }
 
-/** What a unit does where it lands. A unit with no damage — a worker — does nothing at all. */
-export function arrive(units: readonly Unit[], mover: number): Unit[] {
-  const acting = units[mover];
-  if (acting.stats.damage === 0) return [...units];
+/**
+ * Who a unit attacks: the target of another faction within its range holding the least health, and
+ * nothing when none is there or the unit has no damage to remove.
+ */
+export function leastHealth(units: readonly Unit[], attacker: number): number | undefined {
+  const acting = units[attacker];
+  if (acting.stats.damage === 0) return undefined;
 
-  let struck = -1;
+  let target: number | undefined;
   for (let index = 0; index < units.length; index++) {
     const other = units[index];
     if (other.faction === acting.faction) continue;
     if (distance(other.tile, acting.tile) > acting.stats.range) continue;
-    if (struck === -1 || other.stats.health < units[struck].stats.health) struck = index;
+    if (target === undefined || other.stats.health < units[target].stats.health) target = index;
   }
-  if (struck === -1) return [...units];
+  return target;
+}
 
-  const health = units[struck].stats.health - acting.stats.damage;
-  if (health <= 0) return units.filter((_, index) => index !== struck);
-  return units.map((unit, index) =>
-    index === struck ? { ...unit, stats: { ...unit.stats, health } } : unit,
-  );
+/** The one attack there is: the target loses the attacker's damage, and at zero health it is killed. */
+export function attack(units: readonly Unit[], attacker: number, target: number): Unit[] {
+  const targeted = units[target];
+  const health = targeted.stats.health - units[attacker].stats.damage;
+  if (health <= 0) return units.filter((_, index) => index !== target);
+
+  const hurt: Unit = { ...targeted, stats: { ...targeted.stats, health } };
+  return units.map((unit, index) => (index === target ? hurt : unit));
+}
+
+/** What a unit does where it lands. A unit with no damage — a worker — does nothing at all. */
+export function arrive(units: readonly Unit[], mover: number): Unit[] {
+  const target = leastHealth(units, mover);
+  return target === undefined ? [...units] : attack(units, mover, target);
 }

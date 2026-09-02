@@ -233,7 +233,7 @@ function headOf(
 ): { mark: Phaser.GameObjects.Polygon; name: string } {
   switch (layer.kind) {
     case 'unit':
-      return { mark: unitMark(scene, layer.unit), name: text(`card.${layer.unit.stats.id}`) };
+      return { mark: unitMark(scene, layer.unit), name: text(`unit.${layer.unit.stats.id}`) };
     case 'building':
       return {
         mark: buildingMark(scene, layer.building),

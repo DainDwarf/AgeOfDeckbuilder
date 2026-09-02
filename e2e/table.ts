@@ -70,13 +70,13 @@ export async function dragOut(page: Page, index: number): Promise<void> {
   await page.mouse.up();
 }
 
-/** Ends the turn on the button, and waits for the next one to open. */
+/** Ends the turn on the button, and waits for the next one to open — or for the chronicle to end. */
 export async function endTurn(page: Page): Promise<void> {
   const { turn } = await chronicleOf(page);
   const button = await onScreen(page, 'end-turn');
   await page.mouse.click(button.x, button.y);
-  await page.waitForFunction(
-    (next) => window.game?.scene.getScene<ChronicleScene>('chronicle').chronicle.turn === next,
-    turn + 1,
-  );
+  await page.waitForFunction((next) => {
+    const current = window.game?.scene.getScene<ChronicleScene>('chronicle').chronicle;
+    return current?.turn === next || current?.defeat !== undefined;
+  }, turn + 1);
 }

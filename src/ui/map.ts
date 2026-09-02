@@ -162,6 +162,7 @@ export function createMapView(scene: Phaser.Scene, chronicle: Chronicle): MapVie
   }
 
   const built = scene.add.container(0, 0).setDepth(BUILDING_DEPTH).setName('buildings');
+  const intents = scene.add.container(0, 0).setDepth(GLOW_DEPTH).setName('intents');
   const inspected = scene.add.container(0, 0).setDepth(GLOW_DEPTH).setName('inspected');
   const layer = scene.add.container(0, 0).setDepth(UNIT_DEPTH);
   let markers: Phaser.GameObjects.Polygon[] = [];
@@ -194,6 +195,17 @@ export function createMapView(scene: Phaser.Scene, chronicle: Chronicle): MapVie
         if (tile.building === undefined) continue;
         const { x, y } = positionOf(tile);
         built.add(buildingMark(scene, tile.building).setPosition(x, y));
+      }
+
+      intents.removeAll(true);
+      for (const unit of current.units) {
+        if (unit.faction !== 'enemy' || unit.intent === undefined) continue;
+        const { x, y } = positionOf(unit.intent);
+        intents.add(
+          scene.add
+            .polygon(x, y, hexagon(TILE_SIZE - 2), 0, 0)
+            .setStrokeStyle(4, FACTION_COLOURS.enemy),
+        );
       }
 
       layer.removeAll(true);

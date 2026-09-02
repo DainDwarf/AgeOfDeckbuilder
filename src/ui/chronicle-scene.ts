@@ -118,6 +118,7 @@ export class ChronicleScene extends Phaser.Scene {
         (id, refusal) => overlay.zoom(id, refusal),
       ),
       endTurn,
+      overlay,
     );
     for (const part of parts) part.render(this.current);
   }

@@ -8,7 +8,7 @@ no detail here: its board lines are cut when its turn comes. Versions are themes
 The demo (v0.1.0) carries most if not all of [`DESIGN.md`](DESIGN.md) and covers the first
 ages: Stone, Bronze, ideally Iron.
 
-- **v0.0.1 — A chronicle that ends in defeat.** Generated hexagonal map, the six-step turn, a
+- **v0.0.1 — A chronicle that ends in defeat.** Generated hexagonal map, the seven-step turn, a
   hand from a hardcoded stand-in deck, one card of each kind, income, one enemy, capture, the
   steps after the turn ends staged in visible sequence. Placeholder primitives throughout.
 - **v0.0.2 — A chronicle that ends in victory.** The seeded event schedule and its escalation,

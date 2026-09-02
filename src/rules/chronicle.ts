@@ -1,4 +1,5 @@
 import { CARDS, type CardId, DECK } from './cards';
+import { arrival, ENEMY_SCRIPTS } from './enemies';
 import {
   BUILDINGS,
   type BuildingTypeId,
@@ -12,13 +13,19 @@ import {
 } from './map';
 import type { Rng } from './rng';
 import { seedRng, shuffle } from './rng';
-import { arrive, reachable, UNIT_STATS, type Unit, unitAt } from './units';
+import { arrive, attack, leastHealth, reachable, UNIT_STATS, type Unit, unitAt } from './units';
 
 /** The five core resources, then culture. Population is inhabitants, not a store. */
 export const RESOURCES = ['food', 'production', 'military', 'money', 'science', 'culture'] as const;
 
 export type Resource = (typeof RESOURCES)[number];
 export type Resources = Record<Resource, number>;
+
+/** What took the city: an enemy captured it, or it was left without population. */
+export type DefeatCause = 'capture' | 'population';
+
+/** The city's fall, recorded on the chronicle it ended: what took it, and the turn it fell on. */
+export type Defeat = { readonly cause: DefeatCause; readonly turn: number };
 
 /** Everything one city's story is made of, and the generator every later draw comes from. */
 export type Chronicle = {
@@ -34,6 +41,7 @@ export type Chronicle = {
   readonly drawPile: CardId[];
   readonly hand: CardId[];
   readonly discardPile: CardId[];
+  readonly defeat?: Defeat;
 };
 
 /**
@@ -77,16 +85,34 @@ export function beginChronicle(seed: number): Chronicle {
   );
 }
 
-/** The one way a chronicle changes: every command the player has goes through here. */
+/**
+ * The one way a chronicle changes: every command the player has goes through here. A chronicle
+ * that has ended takes none of them, and a city left without population falls whatever the
+ * command was.
+ */
 export function apply(chronicle: Chronicle, command: Command): Chronicle {
+  if (chronicle.defeat !== undefined) return chronicle;
+
+  const after = perform(chronicle, command);
+  if (after.defeat !== undefined || after.population > 0) return after;
+  return fall(after, 'population');
+}
+
+function perform(chronicle: Chronicle, command: Command): Chronicle {
   switch (command.type) {
     case 'play':
       return play(chronicle, command.index, command.target);
     case 'end-turn': {
-      const closed = enemyPhase(income(end(chronicle)));
+      const closed = enemyPhase(income(combat(end(chronicle))));
+      if (closed.defeat !== undefined) return closed;
       return draw(events({ ...closed, turn: closed.turn + 1 }));
     }
   }
+}
+
+/** The city's fall: the chronicle records what took it and on which turn, and ends there. */
+function fall(chronicle: Chronicle, cause: DefeatCause): Chronicle {
+  return { ...chronicle, defeat: { cause, turn: chronicle.turn } };
 }
 
 /** What a card costs, resource by resource, in the order the resource bar reads. */
@@ -158,7 +184,7 @@ function blocked(chronicle: Chronicle, id: CardId): boolean {
   const card = CARDS[id];
   switch (card.kind) {
     case 'unit':
-      return chronicle.population === 0 || unitAt(chronicle.units, chronicle.city) !== undefined;
+      return chronicle.population <= 1 || unitAt(chronicle.units, chronicle.city) !== undefined;
     case 'building':
       return buildable(chronicle, card.building).length === 0;
     case 'order':
@@ -248,8 +274,9 @@ function order(chronicle: Chronicle, target: Target | undefined): Chronicle | un
   return { ...chronicle, units: arrive(moved, mover) };
 }
 
+/** The schedule stands in at one event: `PH_Arrival` brings an enemy to the rim every fifth turn. */
 function events(chronicle: Chronicle): Chronicle {
-  return chronicle;
+  return chronicle.turn % 5 === 0 ? arrival(chronicle) : chronicle;
 }
 
 function draw(chronicle: Chronicle): Chronicle {
@@ -279,11 +306,41 @@ function end(chronicle: Chronicle): Chronicle {
   };
 }
 
+/**
+ * Combat: the player's fighting units attack in unit order, each by the one attack rule, and then
+ * every enemy still standing executes the intent it declared.
+ */
+function combat(chronicle: Chronicle): Chronicle {
+  let units = chronicle.units;
+  // Combat moves nobody, so the tile a unit stands on names it as the killed leave the list.
+  const standing = (at: TileCoords): number =>
+    units.findIndex((unit) => tileKey(unit.tile) === tileKey(at));
+
+  for (const unit of chronicle.units) {
+    if (unit.faction !== 'player') continue;
+    const attacker = standing(unit.tile);
+    if (attacker === -1) continue;
+    const target = leastHealth(units, attacker);
+    if (target !== undefined) units = attack(units, attacker, target);
+  }
+
+  for (const unit of chronicle.units) {
+    if (unit.faction !== 'enemy' || unit.intent === undefined) continue;
+    const attacker = standing(unit.tile);
+    const target = standing(unit.intent);
+    if (attacker === -1 || target === -1) continue;
+    if (units[target].faction !== unit.faction) units = attack(units, attacker, target);
+  }
+
+  return { ...chronicle, units };
+}
+
 function income(chronicle: Chronicle): Chronicle {
   const held = new Set(chronicle.held.map(tileKey));
   const resources = { ...chronicle.resources };
   for (const tile of chronicle.tiles) {
     if (!held.has(tileKey(tile))) continue;
+    if (unitAt(chronicle.units, tile)?.faction === 'enemy') continue;
     const yields = TERRAIN_YIELDS[tile.terrain];
     const built: Partial<Resources> =
       tile.building === undefined ? {} : BUILDINGS[tile.building].yields;
@@ -294,6 +351,26 @@ function income(chronicle: Chronicle): Chronicle {
   return { ...chronicle, resources };
 }
 
+/**
+ * The enemies' half of the turn: an enemy that stood on the city's tile through the whole turn
+ * captures it and the chronicle ends there; otherwise every enemy walks its script, and then every
+ * enemy declares the intent it executes in the next combat.
+ */
 function enemyPhase(chronicle: Chronicle): Chronicle {
-  return chronicle;
+  if (unitAt(chronicle.units, chronicle.city)?.faction === 'enemy') {
+    return fall(chronicle, 'capture');
+  }
+
+  const units = [...chronicle.units];
+  for (const [index, unit] of units.entries()) {
+    if (unit.faction !== 'enemy') continue;
+    const to = ENEMY_SCRIPTS[unit.script].moveTo({ ...chronicle, units }, index);
+    units[index] = { ...unit, tile: to };
+  }
+  for (const [index, unit] of units.entries()) {
+    if (unit.faction !== 'enemy') continue;
+    const intent = ENEMY_SCRIPTS[unit.script].intentOf({ ...chronicle, units }, index);
+    units[index] = { ...unit, intent };
+  }
+  return { ...chronicle, units };
 }

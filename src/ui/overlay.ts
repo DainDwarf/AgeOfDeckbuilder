@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { CARD_KINDS, CARDS, type CardId } from '../rules/cards';
-import { type Chronicle, NO_REFUSAL, type Refusal } from '../rules/chronicle';
+import { type Chronicle, type Defeat, NO_REFUSAL, type Refusal } from '../rules/chronicle';
 import { createCardFace } from './card-face';
 import { addText, DESIGN_HEIGHT, DESIGN_WIDTH, MARGIN, onClick, UI_FONT } from './design-space';
 import { BAR_HEIGHT } from './resource-bar';
@@ -22,11 +22,14 @@ export type PileKind = 'draw-pile' | 'discard-pile';
 export type Overlay = {
   browse(pile: PileKind, chronicle: Chronicle): void;
   zoom(id: CardId, refusal: Refusal): void;
+  /** Raises the defeat screen once the chronicle has ended, and nothing while it runs. */
+  render(chronicle: Chronicle): void;
 };
 
 /**
- * The scrim and what stands on it: a pile's cards laid out, or one card large. The scrim swallows
- * every pointer beneath it, so the table is inert while either is open.
+ * The scrim and what stands on it: a pile's cards laid out, one card large, or the defeat screen.
+ * The scrim swallows every pointer beneath it, so the table is inert while any of them is open —
+ * and the defeat screen never comes back down.
  */
 export function createOverlay(scene: Phaser.Scene): Overlay {
   const scrim = scene.add
@@ -38,6 +41,7 @@ export function createOverlay(scene: Phaser.Scene): Overlay {
   let shown: Phaser.GameObjects.GameObject[] = [];
   let browsing: { pile: PileKind; cards: readonly CardId[] } | undefined;
   let zoomed = false;
+  let fallen = false;
 
   const wipe = (): void => {
     for (const object of shown) object.destroy();
@@ -111,7 +115,37 @@ export function createOverlay(scene: Phaser.Scene): Overlay {
     });
   };
 
+  const showDefeat = (defeat: Defeat): void => {
+    wipe();
+    scrim.setVisible(true).setInteractive();
+    browsing = undefined;
+    zoomed = false;
+    fallen = true;
+
+    const title = addText(scene, DESIGN_WIDTH / 2, DESIGN_HEIGHT / 2 - 12, text('defeat.title'), {
+      fontFamily: UI_FONT,
+      fontSize: '72px',
+      fontStyle: 'bold',
+      color: TITLE_INK,
+    }).setOrigin(0.5, 1);
+    const cause = addText(
+      scene,
+      DESIGN_WIDTH / 2,
+      DESIGN_HEIGHT / 2 + 12,
+      text(`defeat.${defeat.cause}`, { turn: defeat.turn }),
+      { fontFamily: UI_FONT, fontSize: '22px', color: TITLE_INK },
+    ).setOrigin(0.5, 0);
+
+    shown.push(
+      scene.add
+        .container(0, 0, [title, cause])
+        .setDepth(DEPTH + 1)
+        .setName('defeat'),
+    );
+  };
+
   const back = (): void => {
+    if (fallen) return;
     if (zoomed && browsing !== undefined) showBrowse(browsing.pile, browsing.cards);
     else close();
   };
@@ -126,6 +160,9 @@ export function createOverlay(scene: Phaser.Scene): Overlay {
       showBrowse(pile, cardsOf(pile, chronicle));
     },
     zoom: showZoom,
+    render(chronicle: Chronicle): void {
+      if (chronicle.defeat !== undefined && !fallen) showDefeat(chronicle.defeat);
+    },
   };
 }
 

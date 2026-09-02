@@ -43,7 +43,7 @@ deliberate exception the reviewer sees; there is no silent allow-list.
 | **victory** | The end of a chronicle by passing the capstone. | win, success, triumph |
 | **defeat** | The end of a chronicle by the city's fall. | collapse, game over, loss, death |
 | **border** | The edge of the tiles the city holds; pushed out by culture. | frontier, territory |
-| **turn** | One pass of the cycle: events, draw, play, end, income, enemy phase. | round |
+| **turn** | One pass of the cycle: events, draw, play, end, combat, income, enemy phase. | round |
 | **hand** | The cards drawn this turn; what is not played is discarded when the turn ends. | — |
 | **draw** | To take cards from the draw pile into the hand. | pull |
 | **play** | To put a card from the hand into effect, paying its cost. | cast, activate |
@@ -51,7 +51,8 @@ deliberate exception the reviewer sees; there is no silent allow-list.
 | **discard** | To send a card from the hand to the discard pile. | throw away, dump |
 | **draw pile** | The cards not yet drawn this cycle; refilled from the discard pile when empty. | library |
 | **discard pile** | The cards played or discarded this cycle, waiting to be shuffled back. | graveyard, trash, bin |
-| **income** | The step after the turn ends where standing things yield and act. | upkeep, production phase, resolution |
+| **combat** | The step after the turn ends where every fighting unit attacks: the player's, then the enemies' declared intents. | battle, fight, skirmish, war |
+| **income** | The step after combat where standing things yield. | upkeep, production phase, resolution |
 | **intent** | The attack an enemy declares one turn before executing it. | telegraph |
 | **sight** | The tiles the city and its units currently see. | vision, line of sight |
 | **fog** | Every tile outside sight; known terrain, unknown occupants. | fog of war, unexplored |

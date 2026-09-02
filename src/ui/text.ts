@@ -38,6 +38,8 @@ const TEXT = {
   'kind.building': 'Building',
   'kind.order': 'Order',
   'kind.action': 'Action',
+  'unit.PH_Worker': 'PH_Worker',
+  'unit.PH_Warrior': 'PH_Warrior',
   'card.PH_Worker': 'PH_Worker',
   'card.PH_Warrior': 'PH_Warrior',
   'card.PH_Farm': 'PH_Farm',
@@ -50,6 +52,9 @@ const TEXT = {
   'rules.PH_Harvest': 'Gain 2 food',
   'browse.draw-pile': 'Draw pile — {count}',
   'browse.discard-pile': 'Discard pile — {count}',
+  'defeat.title': 'Defeat',
+  'defeat.capture': 'An enemy captured the city on turn {turn}.',
+  'defeat.population': "The city's population reached zero on turn {turn}.",
 } as const;
 
 export type TextKey = keyof typeof TEXT;

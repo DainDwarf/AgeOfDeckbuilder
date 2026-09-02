@@ -111,14 +111,18 @@ A chronicle is a sequence of **turns**. Each turn, in this order:
    Nothing else limits play: the hand and the city's resources are the whole budget. A per-turn
    energy was rejected: a sixth economy fighting the five.
 4. **End.** The player ends the turn; the rest of the hand is discarded.
-5. **Income.** Standing things do their standing thing: assigned tiles and their buildings yield
-   their resources, and units act passively — a fighting unit attacks an enemy within its range. So what the player sees when drawing holds for the whole turn: a farm placed this
-   turn feeds the next.
-6. **Enemy phase.** 🔧 Every enemy executes the **intent** it declared last turn; then neutrals and
-   enemies move; then every enemy declares its intent for the next turn. An intent stays visible
-   through the whole player turn, wherever the city has sight. Killing the enemy cancels its intent;
-   moving the target out of it dodges. Intents that re-target as the player moves were rejected:
-   the puzzle is in answering a fixed plan with a hand that cannot answer all of it.
+5. **Combat.** Every fighting unit attacks: the player's units first, each at an enemy within its
+   range, then every enemy executes the **intent** it declared last turn. Combat comes before
+   income so that an enemy killed here occupies nothing when the tiles yield.
+6. **Income.** Standing things do their standing thing: assigned tiles and their buildings yield
+   their resources. So what the player sees when drawing holds for the whole turn: a farm placed
+   this turn feeds the next.
+7. **Enemy phase.** 🔧 Neutrals and enemies move; then every enemy declares its intent for the next
+   turn. An intent stays visible through the whole player turn, wherever the city has sight.
+   Killing the enemy cancels its intent; moving the target out of it dodges. An enemy standing on
+   the city's tile declares nothing: it is there to capture. Intents that re-target as the player
+   moves were rejected: the puzzle is in answering a fixed plan with a hand that cannot answer all
+   of it.
 
 ### Sight ✅
 
@@ -138,9 +142,9 @@ keyword some cards carry, not a kind, and the map's gifts are chronicle-only by 
   is a blank draw, which is what keeps a deck from being all buildings. A copy bought in the meta
   makes the deck faster, never the city bigger. Consuming a building card on play was rejected:
   the deck would be the city's blueprint and the chronicle merely its placement.
-- **Unit** — puts a unit on the map, made of one population: an inhabitant leaves the tiles to
-  become the warrior, the worker, later the trader, and is gone when the unit is killed. Where a
-  unit enters is 🔧 until the map is designed.
+- **Unit** — puts a unit on the map, made of one population, never the city's last: an
+  inhabitant leaves the tiles to become the warrior, the worker, later the trader, and is gone
+  when the unit is killed. Where a unit enters is 🔧 until the map is designed.
 - **Order** — does one thing with one unit. The plain order moves it, and what it does on arrival
   is its nature: a warrior fights what it reaches, a worker is in place to build a building, a scout sees
   from where it stops. Other orders trade that shape for an edge — twice the move and no attack,
@@ -210,7 +214,7 @@ exchange across turns, never within one blow.
 - **Moving costs one per tile.** An order moves a unit up to its move, every tile crossed costing
   one. Water is impassable. A unit passes through the units of its own faction and never through
   another's, and it lands only on a free tile.
-- **One attack rule.** At income every fighting unit attacks an enemy within its range; a melee
+- **One attack rule.** In combat every fighting unit attacks an enemy within its range; a melee
   unit's range is one. An order that moves a fighting unit next to an enemy attacks on arrival
   as well. A unit that stands still is a garrison by that rule alone.
 - **Targeting is a fixed rule, shown during the player's turn** like an intent; an order
