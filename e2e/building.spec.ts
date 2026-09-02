@@ -1,53 +1,8 @@
 import { expect, type Page, test } from '@playwright/test';
 import type Phaser from 'phaser';
-import { DECKS } from '../src/rules/cards';
-import {
-  apply,
-  beginChronicle,
-  buildable,
-  type Chronicle,
-  playable,
-  refusalOf,
-} from '../src/rules/chronicle';
-import { neighbours, type TileCoords, tileKey } from '../src/rules/map';
+import { tileKey } from '../src/rules/map';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
-import { chronicleOf, dragOut, endTurn, onScreen, open, watch } from './table';
-
-/** A chronicle whose turn `turn` can enter a worker, march it onto `tile` and build a farm there. */
-type Run = { readonly seed: number; readonly turn: number; readonly tile: TileCoords };
-
-function farmRun(): Run {
-  for (let seed = 1; seed <= 1000; seed++) {
-    let chronicle = beginChronicle(seed, DECKS.PH_Deck);
-    for (let turn = 1; turn <= 8; turn++) {
-      const tile = farmedThisTurn(chronicle);
-      if (tile !== undefined) return { seed, turn, tile };
-      chronicle = apply(chronicle, { type: 'end-turn' });
-    }
-  }
-  throw new Error('no seed under a thousand opens a turn on a worker, a march and a farm');
-}
-
-/** Where the farm lands when this hand plays its worker, its march and its farm in that order. */
-function farmedThisTurn(chronicle: Chronicle): TileCoords | undefined {
-  const enter = chronicle.hand.indexOf('PH_Worker');
-  if (enter === -1 || !playable(refusalOf(chronicle, 'PH_Worker'))) return undefined;
-  const entered = apply(chronicle, { type: 'play', index: enter });
-
-  const march = entered.hand.indexOf('PH_March');
-  if (march === -1 || !entered.hand.includes('PH_Farm')) return undefined;
-
-  for (const tile of neighbours(entered.city)) {
-    const moved = apply(entered, {
-      type: 'play',
-      index: march,
-      target: { type: 'unit-tile', unit: 0, tile },
-    });
-    if (moved === entered || !playable(refusalOf(moved, 'PH_Farm'))) continue;
-    if (buildable(moved, 'PH_Farm').some((coord) => tileKey(coord) === tileKey(tile))) return tile;
-  }
-  return undefined;
-}
+import { aimed, chronicleOf, dragOut, endTurn, farmRun, onScreen, open, watch } from './table';
 
 /** How many buildings stand drawn on the map. */
 function marks(page: Page): Promise<number> {
@@ -56,11 +11,6 @@ function marks(page: Page): Promise<number> {
     if (built === undefined) throw new Error('the buildings are not on the table');
     return built.list.length;
   });
-}
-
-/** Waits for the armed card to lay its catcher over the map, which the press that aims lands on. */
-async function aimed(page: Page): Promise<void> {
-  await page.waitForFunction(() => window.named?.('aim') !== undefined);
 }
 
 test('the farm card builds its farm where the worker marched to', async ({ page }) => {

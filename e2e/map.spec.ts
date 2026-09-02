@@ -1,5 +1,19 @@
 import { expect, type Page, test } from '@playwright/test';
-import { onScreen, open, ringedTile, settled, watch } from './table';
+import { tileKey } from '../src/rules/map';
+import {
+  aimed,
+  chronicleOf,
+  dragOut,
+  endTurn,
+  farmRun,
+  onScreen,
+  onTable,
+  open,
+  ringedTile,
+  settled,
+  shownLayer,
+  watch,
+} from './table';
 
 /** A tile on bare map, clear of the resource bar, the piles and the hand. */
 const BARE = { name: 'tile-0,-3', key: '0,-3' };
@@ -46,6 +60,137 @@ test('a drag on bare map carries the map with it, and picks out no tile', async 
 
   await page.mouse.click(after.x, after.y);
   await expect.poll(() => ringedTile(page)).toBe(BARE.key);
+
+  expect(problems).toEqual([]);
+});
+
+test('a pan and a zoom carry the ringed tile and the panel beside it', async ({ page }) => {
+  const problems = watch(page);
+  await open(page, 1, 'PH_Deck');
+
+  const tile = await onScreen(page, BARE.name);
+  await page.mouse.click(tile.x, tile.y);
+  await expect.poll(() => ringedTile(page)).toBe(BARE.key);
+  await page.mouse.click(tile.x, tile.y);
+  await expect.poll(() => shownLayer(page)).toBe('terrain');
+
+  const panel = await onScreen(page, 'infopanel');
+  await drag(page, tile, { x: 120, y: -80 });
+
+  const panned = await onScreen(page, BARE.name);
+  const carried = await onScreen(page, 'infopanel');
+  expect(await ringedTile(page)).toBe(BARE.key);
+  expect(await shownLayer(page)).toBe('terrain');
+  expect(panned.x - tile.x).toBeCloseTo(120, 0);
+  expect(carried.x - panel.x).toBeCloseTo(120, 0);
+  expect(carried.y - panel.y).toBeCloseTo(-80, 0);
+
+  await page.mouse.move(panned.x, panned.y);
+  await page.mouse.wheel(0, -100);
+  await settled(page);
+
+  const zoomed = await onScreen(page, 'infopanel');
+  const grown = await onScreen(page, BARE.name);
+  expect(await ringedTile(page)).toBe(BARE.key);
+  expect(await shownLayer(page)).toBe('terrain');
+  // The tile keeps the ground it had under the pointer and grows, so the panel stands further off.
+  expect(Math.abs(grown.x - panned.x)).toBeLessThan(2);
+  expect(zoomed.x).toBeGreaterThan(carried.x);
+
+  expect(problems).toEqual([]);
+});
+
+test('a drag during a move aim pans the map, unless it presses the unit', async ({ page }) => {
+  const problems = watch(page);
+  const run = farmRun();
+
+  await open(page, run.seed, 'PH_Deck');
+  for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
+
+  const opened = await chronicleOf(page);
+  await dragOut(page, opened.hand.indexOf('PH_Worker'));
+  await expect.poll(async () => (await chronicleOf(page)).units.length).toBe(1);
+
+  const entered = await chronicleOf(page);
+  await dragOut(page, entered.hand.indexOf('PH_March'));
+  await aimed(page);
+
+  const before = await onScreen(page, BARE.name);
+  await drag(page, before, { x: 100, y: 60 });
+
+  const after = await onScreen(page, BARE.name);
+  expect(after.x - before.x).toBeCloseTo(100, 0);
+  expect(after.y - before.y).toBeCloseTo(60, 0);
+  expect(await onTable(page, 'aim')).toBe(true);
+  const panned = await chronicleOf(page);
+  expect(panned.hand).toEqual(entered.hand);
+  expect(panned.units[0].tile).toEqual(entered.units[0].tile);
+
+  const city = await onScreen(page, `tile-${tileKey(entered.city)}`);
+  const destination = await onScreen(page, `tile-${tileKey(run.tile)}`);
+  await drag(page, city, { x: destination.x - city.x, y: destination.y - city.y });
+
+  await expect
+    .poll(async () => tileKey((await chronicleOf(page)).units[0].tile))
+    .toBe(tileKey(run.tile));
+  expect(await onTable(page, 'aim')).toBe(false);
+  // The press that grabbed the unit left the map where it stood.
+  const held = await onScreen(page, BARE.name);
+  expect(held.x).toBeCloseTo(after.x, 0);
+  expect(held.y).toBeCloseTo(after.y, 0);
+
+  expect(problems).toEqual([]);
+});
+
+test('a drag during a tile aim pans the map, and the aim still builds after it', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const run = farmRun();
+
+  await open(page, run.seed, 'PH_Deck');
+  for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
+
+  const opened = await chronicleOf(page);
+  await dragOut(page, opened.hand.indexOf('PH_Worker'));
+  await expect.poll(async () => (await chronicleOf(page)).units.length).toBe(1);
+
+  const entered = await chronicleOf(page);
+  const city = await onScreen(page, `tile-${tileKey(entered.city)}`);
+  const marched = await onScreen(page, `tile-${tileKey(run.tile)}`);
+  await dragOut(page, entered.hand.indexOf('PH_March'));
+  await aimed(page);
+  await drag(page, city, { x: marched.x - city.x, y: marched.y - city.y });
+  await expect
+    .poll(async () => tileKey((await chronicleOf(page)).units[0].tile))
+    .toBe(tileKey(run.tile));
+
+  const aiming = await chronicleOf(page);
+  await dragOut(page, aiming.hand.indexOf('PH_Farm'));
+  await aimed(page);
+
+  const before = await onScreen(page, BARE.name);
+  await drag(page, before, { x: -90, y: 40 });
+
+  const after = await onScreen(page, BARE.name);
+  expect(after.x - before.x).toBeCloseTo(-90, 0);
+  expect(after.y - before.y).toBeCloseTo(40, 0);
+  expect(await onTable(page, 'aim')).toBe(true);
+  const panned = await chronicleOf(page);
+  expect(panned.hand).toEqual(aiming.hand);
+  expect(
+    panned.tiles.find((tile) => tileKey(tile) === tileKey(run.tile))?.building,
+  ).toBeUndefined();
+
+  const target = await onScreen(page, `tile-${tileKey(run.tile)}`);
+  await page.mouse.click(target.x, target.y);
+  await expect
+    .poll(
+      async () =>
+        (await chronicleOf(page)).tiles.find((tile) => tileKey(tile) === tileKey(run.tile))
+          ?.building,
+    )
+    .toBe('PH_Farm');
 
   expect(problems).toEqual([]);
 });

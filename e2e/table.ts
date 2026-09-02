@@ -1,7 +1,15 @@
 import { expect, type Page } from '@playwright/test';
 import type Phaser from 'phaser';
-import type { CardId, DeckId } from '../src/rules/cards';
-import type { Chronicle } from '../src/rules/chronicle';
+import { type CardId, DECKS, type DeckId } from '../src/rules/cards';
+import {
+  apply,
+  beginChronicle,
+  buildable,
+  type Chronicle,
+  playable,
+  refusalOf,
+} from '../src/rules/chronicle';
+import { neighbours, type TileCoords, tileKey } from '../src/rules/map';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
 import type { PileKind } from '../src/ui/overlay';
 
@@ -113,6 +121,56 @@ export function scrolled(page: Page): Promise<{ offset: number; overflow: number
     const grid = window.named?.('browse')?.object as Phaser.GameObjects.Container | undefined;
     if (grid === undefined) throw new Error('no browse is open');
     return { offset: -grid.y, overflow: grid.getData('overflow') as number };
+  });
+}
+
+/** A chronicle whose turn `turn` can enter a worker, march it onto `tile` and build a farm there. */
+export type Run = { readonly seed: number; readonly turn: number; readonly tile: TileCoords };
+
+export function farmRun(): Run {
+  for (let seed = 1; seed <= 1000; seed++) {
+    let chronicle = beginChronicle(seed, DECKS.PH_Deck);
+    for (let turn = 1; turn <= 8; turn++) {
+      const tile = farmedThisTurn(chronicle);
+      if (tile !== undefined) return { seed, turn, tile };
+      chronicle = apply(chronicle, { type: 'end-turn' });
+    }
+  }
+  throw new Error('no seed under a thousand opens a turn on a worker, a march and a farm');
+}
+
+/** Where the farm lands when this hand plays its worker, its march and its farm in that order. */
+function farmedThisTurn(chronicle: Chronicle): TileCoords | undefined {
+  const enter = chronicle.hand.indexOf('PH_Worker');
+  if (enter === -1 || !playable(refusalOf(chronicle, 'PH_Worker'))) return undefined;
+  const entered = apply(chronicle, { type: 'play', index: enter });
+
+  const march = entered.hand.indexOf('PH_March');
+  if (march === -1 || !entered.hand.includes('PH_Farm')) return undefined;
+
+  for (const tile of neighbours(entered.city)) {
+    const moved = apply(entered, {
+      type: 'play',
+      index: march,
+      target: { type: 'unit-tile', unit: 0, tile },
+    });
+    if (moved === entered || !playable(refusalOf(moved, 'PH_Farm'))) continue;
+    if (buildable(moved, 'PH_Farm').some((coord) => tileKey(coord) === tileKey(tile))) return tile;
+  }
+  return undefined;
+}
+
+/** Waits for the armed card to lay its catcher over the map, which the press that aims lands on. */
+export async function aimed(page: Page): Promise<void> {
+  await page.waitForFunction(() => window.named?.('aim') !== undefined);
+}
+
+/** Which layer the infopanel is reading, or nothing while it is dismissed. */
+export function shownLayer(page: Page): Promise<string | undefined> {
+  return page.evaluate(() => {
+    const panel = window.named?.('infopanel')?.object as Phaser.GameObjects.Container | undefined;
+    if (panel === undefined) throw new Error('the infopanel is not on the table');
+    return panel.visible ? (panel.getData('layer') as string) : undefined;
   });
 }
 

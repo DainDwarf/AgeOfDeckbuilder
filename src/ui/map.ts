@@ -120,11 +120,12 @@ export type MapView = {
     chosen: (target: Target | undefined) => void,
   ): () => void;
   /**
-   * Reports the tile every click the table leaves lands on, nothing when it lands off the map, and
-   * nothing again whenever the map moves under the inspection. Called once; while a card is aimed
-   * the map belongs to the aim and no click is reported.
+   * Reports the tile every click the table leaves lands on, and nothing when it lands off the map;
+   * `moved` reports where the ringed tile's face stands again after every pan and every zoom, so
+   * whatever floats beside it follows. Called once; while a card is aimed the map belongs to the
+   * aim and no click is reported.
    */
-  inspect(inspected: (found: Inspection | undefined) => void): void;
+  inspect(inspected: (found: Inspection | undefined) => void, moved: (at: TileFace) => void): void;
   /** Rings the tile being inspected, or clears the ring. */
   markInspected(tile: TileCoords | undefined): void;
   /** Whether the wheel and the pan keys reach the map; they do not while anything covers it. */
@@ -197,47 +198,6 @@ function same(a: TileCoords, b: TileCoords): boolean {
   return a.q === b.q && a.r === b.r;
 }
 
-/**
- * The press a catcher takes and the scene resolves: the press is the catcher's, so the hand and
- * the piles keep theirs, while the release is the scene's, so a press that travelled off the
- * catcher still ends — on the canvas as a release, off it as an abandon. Hands back the way to
- * take the two scene listeners off again.
- */
-function takePress(
-  scene: Phaser.Scene,
-  catcher: Phaser.GameObjects.Zone,
-  on: {
-    down?: (pointer: Phaser.Input.Pointer) => void;
-    release: (pointer: Phaser.Input.Pointer) => void;
-    abandon?: () => void;
-  },
-): () => void {
-  let pressed = false;
-
-  catcher.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-    pressed = true;
-    on.down?.(pointer);
-  });
-
-  const release = (pointer: Phaser.Input.Pointer): void => {
-    if (!pressed) return;
-    pressed = false;
-    on.release(pointer);
-  };
-  const abandon = (): void => {
-    if (!pressed) return;
-    pressed = false;
-    on.abandon?.();
-  };
-
-  scene.input.on('pointerup', release);
-  scene.input.on('pointerupoutside', abandon);
-  return () => {
-    scene.input.off('pointerup', release);
-    scene.input.off('pointerupoutside', abandon);
-  };
-}
-
 function litTile(scene: Phaser.Scene, coord: TileCoords): Phaser.GameObjects.Polygon {
   const { x, y } = positionOf(coord);
   return scene.add.polygon(x, y, hexagon(TILE_SIZE - 2), LIT, 0.4).setStrokeStyle(2, LIT, 0.9);
@@ -283,7 +243,8 @@ export function createMapView(
 
   let markers: Phaser.GameObjects.Polygon[] = [];
   let inspector: Phaser.GameObjects.Zone | undefined;
-  let reported: ((found: Inspection | undefined) => void) | undefined;
+  let ringed: TileCoords | undefined;
+  let followed: ((at: TileFace) => void) | undefined;
   let taking = true;
 
   const box = boxOf(chronicle.tiles);
@@ -310,7 +271,15 @@ export function createMapView(
   };
   onResize(scene, place);
 
-  /** Every pan and every zoom: no inspection outlives one, as none outlives a state change. */
+  /** Where a tile's face stands on the table, for the panel that floats beside it. */
+  const faceOf = (coord: TileCoords): TileFace => {
+    const middle = positionOf(coord);
+    const on = map.onCanvas(middle.x, middle.y);
+    const at = table.at(on.x, on.y);
+    return { x: at.x, y: at.y, radius: TILE_SIZE * zoom };
+  };
+
+  /** Every pan and every zoom: the ringed tile carries whatever floats beside it along. */
   const moveTo = (x: number, y: number, next: number): void => {
     const was = { x: centre.x, y: centre.y, zoom };
     centre.x = x;
@@ -318,7 +287,71 @@ export function createMapView(
     zoom = next;
     place();
     if (centre.x === was.x && centre.y === was.y && zoom === was.zoom) return;
-    reported?.(undefined);
+    if (ringed !== undefined) followed?.(faceOf(ringed));
+  };
+
+  /**
+   * The press a catcher takes and the scene resolves: the press is the catcher's, so the hand and
+   * the piles keep theirs, while the release is the scene's, so a press that travelled off the
+   * catcher still ends — on the canvas as a release, off it as an abandon. Past the drag slack the
+   * press carries the map instead, and one that panned reaches neither `release` nor `abandon`:
+   * this is the only place a pan is told from a choice. Hands back the way to take the three scene
+   * listeners off again.
+   */
+  const takePress = (
+    catcher: Phaser.GameObjects.Zone,
+    on: {
+      /** Whether this press may carry the map: one that takes hold of something answers false. */
+      down?: (pointer: Phaser.Input.Pointer) => boolean;
+      release: (pointer: Phaser.Input.Pointer) => void;
+      abandon?: () => void;
+    },
+  ): (() => void) => {
+    let pressed = false;
+    /** Where the press landed on the canvas, and the middle the map held then, while it may pan. */
+    let from: { x: number; y: number; centre: { x: number; y: number } } | undefined;
+    let panned = false;
+
+    catcher.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      pressed = true;
+      panned = false;
+      const mayPan = on.down?.(pointer) ?? true;
+      from = mayPan
+        ? { x: pointer.x, y: pointer.y, centre: { x: centre.x, y: centre.y } }
+        : undefined;
+    });
+
+    const pan = (pointer: Phaser.Input.Pointer): void => {
+      if (from === undefined) return;
+      if (!panned && !dragged(scene, pointer)) return;
+      panned = true;
+      const was = map.at(from.x, from.y);
+      const to = map.at(pointer.x, pointer.y);
+      moveTo(from.centre.x - (to.x - was.x), from.centre.y - (to.y - was.y), zoom);
+    };
+
+    /** Lets the press go, and says whether anything is left to choose by. */
+    const ended = (): boolean => {
+      if (!pressed) return false;
+      pressed = false;
+      from = undefined;
+      return !panned;
+    };
+    const release = (pointer: Phaser.Input.Pointer): void => {
+      if (ended()) on.release(pointer);
+    };
+    const abandon = (): void => {
+      if (ended()) on.abandon?.();
+    };
+
+    scene.input.on('pointermove', pan);
+    scene.input.on('pointerup', release);
+    scene.input.on('pointerupoutside', abandon);
+    return () => {
+      scene.input.off('pointermove', pan);
+      scene.input.off('pointerup', release);
+      scene.input.off('pointerupoutside', abandon);
+    };
   };
 
   /**
@@ -371,14 +404,6 @@ export function createMapView(
     const step = (PAN_SPEED * delta) / 1000 / zoom / Math.hypot(x, y);
     moveTo(centre.x + x * step, centre.y + y * step, zoom);
   });
-
-  /** Where a tile's face stands on the table, for the panel that floats beside it. */
-  const faceOf = (coord: TileCoords): TileFace => {
-    const middle = positionOf(coord);
-    const on = map.onCanvas(middle.x, middle.y);
-    const at = table.at(on.x, on.y);
-    return { x: at.x, y: at.y, radius: TILE_SIZE * zoom };
-  };
 
   /** The ground every aim runs on: its own catcher, a glow to paint, and inspection held off. */
   const openAim = (): {
@@ -434,45 +459,25 @@ export function createMapView(
       });
     },
 
-    inspect(found: (inspection: Inspection | undefined) => void): void {
-      reported = found;
+    inspect(
+      found: (inspection: Inspection | undefined) => void,
+      moved: (at: TileFace) => void,
+    ): void {
+      followed = moved;
       const catcher = catcherZone('inspect');
       inspector = catcher;
 
-      /** Where the press landed on the canvas, and the middle the map held then, while it pans. */
-      let press: { x: number; y: number; from: { x: number; y: number } } | undefined;
-      let panned = false;
-
-      const pan = (pointer: Phaser.Input.Pointer): void => {
-        if (press === undefined) return;
-        if (!panned && !dragged(scene, pointer)) return;
-        panned = true;
-        const from = map.at(press.x, press.y);
-        const to = map.at(pointer.x, pointer.y);
-        moveTo(press.from.x - (to.x - from.x), press.from.y - (to.y - from.y), zoom);
-      };
-
-      takePress(scene, catcher, {
-        down: (pointer) => {
-          press = { x: pointer.x, y: pointer.y, from: { x: centre.x, y: centre.y } };
-          panned = false;
-        },
+      takePress(catcher, {
         release: (pointer) => {
-          press = undefined;
-          if (panned) return;
           const at = map.at(pointer.x, pointer.y);
           const on = tileUnder(chronicle, at.x, at.y);
           found(on === undefined ? undefined : { tile: on, at: faceOf(on) });
         },
-        abandon: () => {
-          press = undefined;
-        },
       });
-
-      scene.input.on('pointermove', pan);
     },
 
     markInspected(tile: TileCoords | undefined): void {
+      ringed = tile;
       inspected.removeAll(true);
       inspected.setData('tile', tile === undefined ? undefined : tileKey(tile));
       if (tile === undefined) return;
@@ -531,7 +536,7 @@ export function createMapView(
         paint();
       };
 
-      const stop = takePress(scene, catcher, {
+      const stop = takePress(catcher, {
         down: (pointer) => {
           const at = map.at(pointer.x, pointer.y);
           const under = tileUnder(current, at.x, at.y);
@@ -542,7 +547,9 @@ export function createMapView(
                   (unit) => unit.faction === 'player' && same(unit.tile, under),
                 );
           grabbed = found === -1 ? undefined : found;
-          if (grabbed !== undefined) select(grabbed);
+          if (grabbed === undefined) return true;
+          select(grabbed);
+          return false;
         },
         release: (pointer) => {
           const at = map.at(pointer.x, pointer.y);
@@ -583,7 +590,7 @@ export function createMapView(
         chosen(target);
       };
 
-      const stop = takePress(scene, catcher, {
+      const stop = takePress(catcher, {
         release: (pointer) => {
           const at = map.at(pointer.x, pointer.y);
           const on = tileUnder(current, at.x, at.y);

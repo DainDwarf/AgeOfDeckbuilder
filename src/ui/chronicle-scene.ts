@@ -67,23 +67,26 @@ export class ChronicleScene extends Phaser.Scene {
       for (const part of parts) part.render(this.current);
     };
 
-    view.inspect((found) => {
-      const tile = found === undefined ? undefined : tileAt(this.current.tiles, found.tile);
-      if (found === undefined || tile === undefined) {
-        dismiss();
-        return;
-      }
-      const layers = layersOf(tile, this.current.units);
-      const ringed =
-        inspecting !== undefined && tileKey(inspecting.tile) === tileKey(tile)
-          ? inspecting
-          : undefined;
-      const index = ringed === undefined ? undefined : nextLayer(ringed.index, layers.length);
-      if (index === undefined) panel.hide();
-      else panel.show(layers, index, found.at, ringed?.index !== undefined);
-      inspecting = { tile: { q: tile.q, r: tile.r }, index };
-      view.markInspected(tile);
-    });
+    view.inspect(
+      (found) => {
+        const tile = found === undefined ? undefined : tileAt(this.current.tiles, found.tile);
+        if (found === undefined || tile === undefined) {
+          dismiss();
+          return;
+        }
+        const layers = layersOf(tile, this.current.units);
+        const ringed =
+          inspecting !== undefined && tileKey(inspecting.tile) === tileKey(tile)
+            ? inspecting
+            : undefined;
+        const index = ringed === undefined ? undefined : nextLayer(ringed.index, layers.length);
+        if (index === undefined) panel.hide();
+        else panel.show(layers, index, found.at, ringed?.index !== undefined);
+        inspecting = { tile: { q: tile.q, r: tile.r }, index };
+        view.markInspected(tile);
+      },
+      (at) => panel.place(at),
+    );
     this.input.keyboard?.on('keydown-ESC', dismiss);
 
     const overlay = createOverlay(this, table, (covered) => view.live(!covered));

@@ -1,10 +1,18 @@
-import { expect, type Page, test } from '@playwright/test';
-import type Phaser from 'phaser';
+import { expect, test } from '@playwright/test';
 import { DECKS } from '../src/rules/cards';
 import { apply, beginChronicle, playable, refusalOf } from '../src/rules/chronicle';
 import { tileKey } from '../src/rules/map';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
-import { chronicleOf, dragOut, endTurn, onScreen, open, ringedTile, watch } from './table';
+import {
+  chronicleOf,
+  dragOut,
+  endTurn,
+  onScreen,
+  open,
+  ringedTile,
+  shownLayer,
+  watch,
+} from './table';
 
 /** The first seed with a turn in its first eight that opens on a worker the city can pay for. */
 function workerRun(): { seed: number; turn: number } {
@@ -18,15 +26,6 @@ function workerRun(): { seed: number; turn: number } {
     }
   }
   throw new Error('no seed under a thousand opens a turn on a playable worker');
-}
-
-/** Which layer the infopanel is reading, or nothing while it is dismissed. */
-function shownLayer(page: Page): Promise<string | undefined> {
-  return page.evaluate(() => {
-    const panel = window.named?.('infopanel')?.object as Phaser.GameObjects.Container | undefined;
-    if (panel === undefined) throw new Error('the infopanel is not on the table');
-    return panel.visible ? (panel.getData('layer') as string) : undefined;
-  });
 }
 
 test('a tile selects on the first click and reads out a layer per click after it, until a click off the map drops it', async ({

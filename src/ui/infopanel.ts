@@ -37,6 +37,8 @@ export type InfoPanel = {
    * it. `cycling` dissolves it out of the layer already shown; anything else is instant.
    */
   show(layers: Layer[], index: number, at: TileFace, cycling: boolean): void;
+  /** Stands what it is showing beside the face again, wherever the map has carried that face. */
+  place(at: TileFace): void;
   hide(): void;
 };
 
@@ -76,8 +78,11 @@ type Face = {
   readonly hovers: Phaser.GameObjects.Zone[];
 };
 
-/** Where the panel stands, for the tooltips its rows raise beside it. */
-type Box = { readonly left: number; readonly top: number; readonly rightOfTile: boolean };
+/**
+ * Where the panel stands, for the tooltips its rows raise beside it. One box outlives every layer
+ * drawn on it: a pan rewrites it under the rows already standing.
+ */
+type Box = { left: number; top: number; rightOfTile: boolean };
 
 /**
  * What a tile is, read off the map: one layer at a time on a card of its own, the layers behind
@@ -94,6 +99,26 @@ export function createInfoPanel(scene: Phaser.Scene, tooltip: Tooltip): InfoPane
 
   let standing: Face | undefined;
   let leaving: Face | undefined;
+  /** How many layers wait behind the one standing: the ghosts, and the room they ask for. */
+  let behind = 0;
+  const box: Box = { left: 0, top: 0, rightOfTile: true };
+
+  /** Beside the face it reads, clear of its rim, with the layers behind it out of its corner. */
+  const stand = (at: TileFace): void => {
+    const clear = at.radius + STANDOFF;
+    box.rightOfTile = at.x + clear + CARD_WIDTH + behind * GHOST_OFFSET <= DESIGN_WIDTH - MARGIN;
+    box.left = box.rightOfTile ? at.x + clear : at.x - clear - CARD_WIDTH;
+    box.top = Math.min(
+      Math.max(at.y - CARD_HEIGHT / 2, BAR_HEIGHT + 8),
+      DESIGN_HEIGHT - MARGIN - CARD_HEIGHT - behind * GHOST_OFFSET,
+    );
+
+    ghosts.clear();
+    for (let depth = behind; depth >= 1; depth--) {
+      drawCardSurface(ghosts, depth * ghostAway(box), depth * GHOST_OFFSET);
+    }
+    panel.setPosition(box.left, box.top);
+  };
 
   /** Ends a dissolve where it was headed: the layer coming in stands in place, the old one is gone. */
   const settle = (): void => {
@@ -124,21 +149,13 @@ export function createInfoPanel(scene: Phaser.Scene, tooltip: Tooltip): InfoPane
       tooltip.hide();
       settle();
 
-      const behind = layers.length - 1;
-      const clear = at.radius + STANDOFF;
-      const rightOfTile =
-        at.x + clear + CARD_WIDTH + behind * GHOST_OFFSET <= DESIGN_WIDTH - MARGIN;
-      const away = rightOfTile ? GHOST_OFFSET : -GHOST_OFFSET;
-      const left = rightOfTile ? at.x + clear : at.x - clear - CARD_WIDTH;
-      const top = Math.min(
-        Math.max(at.y - CARD_HEIGHT / 2, BAR_HEIGHT + 8),
-        DESIGN_HEIGHT - MARGIN - CARD_HEIGHT - behind * GHOST_OFFSET,
-      );
+      behind = layers.length - 1;
+      stand(at);
 
       const outgoing = standing;
       if (!cycling) outgoing?.root.destroy();
 
-      const face = buildFace(scene, tooltip, layers[index], { left, top, rightOfTile });
+      const face = buildFace(scene, tooltip, layers[index], box);
       // Under the layer it replaces, so the dissolve uncovers it, and over the ghosts either way.
       panel.addAt(face.root, 1);
       standing = face;
@@ -146,7 +163,7 @@ export function createInfoPanel(scene: Phaser.Scene, tooltip: Tooltip): InfoPane
       if (cycling && outgoing !== undefined) {
         leaving = outgoing;
         for (const zone of outgoing.hovers) zone.disableInteractive();
-        face.root.setPosition(away, GHOST_OFFSET).setAlpha(0);
+        face.root.setPosition(ghostAway(box), GHOST_OFFSET).setAlpha(0);
         scene.tweens.add({ targets: face.root, x: 0, y: 0, alpha: 1, duration: CYCLE_MS });
         scene.tweens.add({
           targets: outgoing.root,
@@ -159,14 +176,19 @@ export function createInfoPanel(scene: Phaser.Scene, tooltip: Tooltip): InfoPane
         });
       }
 
-      ghosts.clear();
-      for (let depth = behind; depth >= 1; depth--) {
-        drawCardSurface(ghosts, depth * away, depth * GHOST_OFFSET);
-      }
+      panel.setData('layer', layers[index].kind).setVisible(true);
+    },
 
-      panel.setData('layer', layers[index].kind).setPosition(left, top).setVisible(true);
+    place(at: TileFace): void {
+      if (standing === undefined) return;
+      stand(at);
     },
   };
+}
+
+/** Which way the layers behind the panel stand out of it: down, and away from the tile it reads. */
+function ghostAway(box: Box): number {
+  return box.rightOfTile ? GHOST_OFFSET : -GHOST_OFFSET;
 }
 
 /** The layer's mark and name over its rows, laid out in the card's own type and spacing. */
