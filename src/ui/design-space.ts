@@ -1,4 +1,4 @@
-import type Phaser from 'phaser';
+import Phaser from 'phaser';
 
 export const DESIGN_WIDTH = 1280;
 export const DESIGN_HEIGHT = 720;
@@ -81,20 +81,66 @@ export function drawBubble(
 }
 
 // `Phaser.Scale.FIT` in main.ts fits the canvas by this same min, which is what makes the backing
-// store equal the canvas's on-screen size in device pixels. Read once: a window resized after boot
-// is not re-applied.
-const factor =
-  window.devicePixelRatio *
-  Math.min(window.innerWidth / DESIGN_WIDTH, window.innerHeight / DESIGN_HEIGHT);
+// store equal the canvas's on-screen size in device pixels.
+function factorNow(): number {
+  return (
+    window.devicePixelRatio *
+    Math.min(window.innerWidth / DESIGN_WIDTH, window.innerHeight / DESIGN_HEIGHT)
+  );
+}
 
-export const BACKING_WIDTH = Math.round(DESIGN_WIDTH * factor);
-export const BACKING_HEIGHT = Math.round(DESIGN_HEIGHT * factor);
+/** The backing store the window calls for, in device pixels. */
+export function backingSize(): { width: number; height: number } {
+  const factor = factorNow();
+  return { width: Math.round(DESIGN_WIDTH * factor), height: Math.round(DESIGN_HEIGHT * factor) };
+}
+
+/**
+ * The backing store follows the window: Phaser's scale manager already refits the canvas on a
+ * window resize, a devtools dock, a browser zoom and a fullscreen change, and this resizes the
+ * backing to what the new window calls for.
+ */
+export function followWindow(game: Phaser.Game): void {
+  game.scale.on(Phaser.Scale.Events.RESIZE, () => {
+    const backing = backingSize();
+    if (game.scale.width === backing.width && game.scale.height === backing.height) return;
+    game.scale.resize(backing.width, backing.height);
+  });
+}
+
+// Everything here reads the window and the scale manager live, never the RESIZE event's size
+// arguments: the resize `followWindow` triggers emits RESIZE again, nested inside the one being
+// handled, so the outer arguments describe a backing store that is already gone.
+function follow(scene: Phaser.Scene, place: () => void): void {
+  scene.scale.on(Phaser.Scale.Events.RESIZE, place);
+  scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+    scene.scale.off(Phaser.Scale.Events.RESIZE, place);
+  });
+}
+
+/** Every Text the scene holds, however deep in containers it sits. */
+function* textsIn(
+  objects: readonly Phaser.GameObjects.GameObject[],
+): Generator<Phaser.GameObjects.Text> {
+  for (const object of objects) {
+    if (object instanceof Phaser.GameObjects.Text) yield object;
+    else if (object instanceof Phaser.GameObjects.Container) yield* textsIn(object.list);
+  }
+}
 
 // A scene's `scale.width` / `scale.height` report the backing store in device pixels, and a
 // pointer's `x` / `y` arrive in that same space; lay out against DESIGN_WIDTH and DESIGN_HEIGHT,
 // and read `pointer.worldX` / `pointer.worldY` for the design-space pointer.
 export function applyDesignSpace(scene: Phaser.Scene): void {
-  scene.cameras.main.setZoom(factor).centerOn(DESIGN_WIDTH / 2, DESIGN_HEIGHT / 2);
+  const place = (): void => {
+    const factor = factorNow();
+    // The main camera's own size is Phaser's business: its camera manager subscribed to RESIZE at
+    // scene boot, ahead of this, and resizes every camera at the origin that had the old size.
+    scene.cameras.main.setZoom(factor).centerOn(DESIGN_WIDTH / 2, DESIGN_HEIGHT / 2);
+    for (const label of textsIn(scene.children.list)) label.setResolution(Math.ceil(factor));
+  };
+  place();
+  follow(scene, place);
 }
 
 /** A view of one design-space rectangle: what a scrolling object has outside it is not drawn. */
@@ -118,17 +164,32 @@ export type Clip = {
  * the scene gains while the clip stands open would draw inside the rectangle.
  */
 export function createClip(scene: Phaser.Scene): Clip {
-  const camera = scene.cameras.add(0, 0, 1, 1).setZoom(factor).setVisible(false);
+  const camera = scene.cameras.add(0, 0, 1, 1).setVisible(false);
+  /** The rectangle in design units while it is shown, and nothing while it is not. */
+  let frame: { x: number; y: number; width: number; height: number } | undefined;
+
+  const place = (): void => {
+    const factor = factorNow();
+    camera.setZoom(factor);
+    if (frame === undefined) return;
+    const { x, y, width, height } = frame;
+    camera
+      .setViewport(x * factor, y * factor, width * factor, height * factor)
+      .centerOn(x + width / 2, y + height / 2);
+  };
+  place();
+  follow(scene, place);
+
   return {
     show(only, x, y, width, height): void {
-      camera
-        .setViewport(x * factor, y * factor, width * factor, height * factor)
-        .centerOn(x + width / 2, y + height / 2)
-        .setVisible(true);
+      frame = { x, y, width, height };
+      place();
+      camera.setVisible(true);
       camera.ignore(scene.children.list.filter((child) => child !== only));
       scene.cameras.main.ignore(only);
     },
     hide(): void {
+      frame = undefined;
       camera.setVisible(false);
     },
   };
@@ -169,7 +230,7 @@ export function addText(
   // move. A fractional resolution would truncate the canvas to whole pixels, hence the ceiling.
   return scene.add.text(x, y, content, {
     ...style,
-    resolution: Math.ceil(factor),
+    resolution: Math.ceil(factorNow()),
     padding: { x: 2, y: 1 },
   });
 }
