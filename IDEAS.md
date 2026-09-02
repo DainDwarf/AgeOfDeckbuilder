@@ -30,7 +30,8 @@ a [`BOARD.md`](BOARD.md) line. Say
   building anything.
 - **Seed selection at launch**: when the "launch a chronicle" menu exists, it offers starting on a
   given seed — the player-facing door to replay-from-seed; `?seed=` stays the debug/e2e one.
-- **Remappable inputs**: the player rebinds keys and mouse gestures.
+- **Remappable mouse gestures**: the player rebinds drag, wheel and click, the way keys rebind
+  in the menu.
 - **Per-tile yield overlay**: "+x +y" glyphs on each tile showing what it yields, toggleable
   because the information saturates; clicking a resource on the top bar filters the overlay to
   that resource alone. Becomes truly informative once assignment exists (v0.0.3).
