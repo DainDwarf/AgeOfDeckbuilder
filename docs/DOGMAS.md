@@ -124,6 +124,10 @@ makes twice becomes a line here (the ratchet, at `/upkeep`).
   layout, overlap, clipping, contrast, colour-vision — is an on-demand mechanical pass through the
   `ui-check` agent, driven by the `visual-check` skill. Whether it *feels* right is the user's
   call and is never automated.
+- **The Playwright suite is CI's.** It runs on every push to `main`, one worker, no retries;
+  locally the cap is four workers, so a timeout means a bug either way. A session runs only the
+  spec its line adds or touches (`npx playwright test e2e/<spec>.spec.ts`); the whole suite runs
+  locally on demand.
 - **No mocks.** A pure `src/rules/` needs none; a mock that mirrors the code tests the code
   against itself. Use real dependencies or don't test that path.
 - **Tests import their runner API explicitly** — Vitest's `globals` stays off.
@@ -186,6 +190,7 @@ makes twice becomes a line here (the ratchet, at `/upkeep`).
 | Dev server and bundler | Vite 8 |
 | Rules tests | Vitest 4 |
 | UI verification | Playwright, Chromium only |
+| CI | GitHub Actions on push to main: typecheck, lint, rules tests, e2e |
 | Lint and format | Biome, one `biome.json` |
 | Package manager | npm on Node 24; `package-lock.json` is committed |
 | Hosting | itch.io HTML5 page, the zipped `dist/`. No server, ever. |
@@ -211,11 +216,12 @@ makes twice becomes a line here (the ratchet, at `/upkeep`).
 The layout, which embodies the rule above:
 
 ```
-index.html        the page Phaser puts its canvas in; no UI of its own
-src/main.ts       boots the Phaser game
-src/rules/        pure TypeScript: state, commands, the seeded generator
-src/ui/           Phaser scenes, and the design space they lay out in
-e2e/              Playwright specs
-public/assets/    art, sound, music, each pack with its licence entry
-dist/             the build; what is zipped and uploaded
+index.html          the page Phaser puts its canvas in; no UI of its own
+src/main.ts         boots the Phaser game
+src/rules/          pure TypeScript: state, commands, the seeded generator
+src/ui/             Phaser scenes, and the design space they lay out in
+e2e/                Playwright specs
+.github/workflows/  the CI check
+public/assets/      art, sound, music, each pack with its licence entry
+dist/               the build; what is zipped and uploaded
 ```

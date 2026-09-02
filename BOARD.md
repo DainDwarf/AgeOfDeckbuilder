@@ -12,11 +12,6 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
-- **The e2e suite is deterministic** — `npm run e2e` at its defaults passes every run on this
-  machine: at eight workers the nine specs each take 13–28 s against a 30 s timeout and two runs
-  in three fail on a plain pointer move; at four workers each takes 1–10 s and all pass. Settled
-  in `playwright.config.ts` by a worker cap or a timeout, whichever keeps a failure meaning a
-  bug. Doc-impact: none.
 - **The turn staged** — every step after the turn ends plays in visible sequence instead of
   resolving at once: discard, combat, income, enemy move and intent, draw, shuffle.
 - **The card face** — the card's design style is settled with the user and implemented: name and
