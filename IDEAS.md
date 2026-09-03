@@ -17,8 +17,6 @@ a [`BOARD.md`](BOARD.md) line. Say
   *data owns its behaviour* comes back with the card model; *mechanism vs content testing*,
   *catalogue coherence tests* and *fixtures through the exported transform* come back with the
   first content catalogue.
-- **Fleet-lite**: two or three sessions working parallel board lines on `main`, each claiming its
-  line. Skipped for now — the bottleneck is design attention, not implementation throughput.
 - **The render factor can change after boot**: regrow the bitmap, re-zoom cameras, re-rasterize
   text while the game runs. Four consumers: itch.io's fullscreen button, a settings render-scale
   slider, monitor-hopping, resizing the window after boot. Decide after the art style locks —
