@@ -78,8 +78,9 @@ test('a tile selects on the first click and reads out a layer per click after it
   await expect.poll(() => shownLayer(page)).toBeUndefined();
   expect(await ringedTile(page)).toBe(bareTile);
 
-  // Far enough up and left of the city for the nearest tile to be well outside the map's disc.
-  await page.mouse.click(city.x - 440 * city.unit, city.y - 260 * city.unit);
+  // Up and left of the city: inside the map's frame, which starts under the resource bar, and far
+  // enough out for the nearest tile to be well outside the map's disc.
+  await page.mouse.click(city.x - 440 * city.unit, city.y - 160 * city.unit);
   await expect.poll(() => ringedTile(page)).toBeUndefined();
   expect(await shownLayer(page)).toBeUndefined();
 

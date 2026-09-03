@@ -141,6 +141,27 @@ export function onScreen(page: Page, name: string): Promise<OnScreen> {
   }, name);
 }
 
+/** A rectangle on the page. */
+export type Frame = { x: number; y: number; width: number; height: number };
+
+/** Where the map's frame stands on the page: the rectangle its camera is cropped to. */
+export function mapFrame(page: Page): Promise<Frame> {
+  return page.evaluate(() => {
+    const camera = window.game?.scene.getScene('chronicle')?.cameras.getCamera('map');
+    if (camera === null || camera === undefined) throw new Error('the map camera is not running');
+    // A camera's viewport is measured in the backing store the canvas is drawn scaled down from.
+    const canvas = camera.scene.game.canvas;
+    const rect = canvas.getBoundingClientRect();
+    const unit = rect.width / canvas.width;
+    return {
+      x: rect.left + camera.x * unit,
+      y: rect.top + camera.y * unit,
+      width: camera.width * unit,
+      height: camera.height * unit,
+    };
+  });
+}
+
 /**
  * A point on the bare page above the canvas, which a window taller than the design's ratio leaves
  * letterboxed; the pointer is off the game there, and a press released there lands outside it.

@@ -56,7 +56,12 @@ export type ResourceBar = {
 export function createResourceBar(scene: Phaser.Scene, tooltip: Tooltip): ResourceBar {
   const bar = scene.add.container(0, 0).setDepth(10);
   bar.add(scene.add.rectangle(0, 0, DESIGN_WIDTH, BAR_HEIGHT, PANEL_FILL).setOrigin(0, 0));
-  bar.add(scene.add.rectangle(0, BAR_HEIGHT - 1, DESIGN_WIDTH, 1, PANEL_EDGE).setOrigin(0, 0));
+  bar.add(
+    scene.add
+      .rectangle(0, BAR_HEIGHT - 1, DESIGN_WIDTH, 1, PANEL_EDGE)
+      .setOrigin(0, 0)
+      .setName('bar-edge'),
+  );
 
   const slot = digitSlot(scene);
 

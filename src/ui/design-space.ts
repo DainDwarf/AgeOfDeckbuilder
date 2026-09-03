@@ -176,16 +176,16 @@ function surfaceOf(
   layer: Phaser.GameObjects.Layer,
   camera: Phaser.Cameras.Scene2D.Camera,
 ): Surface {
-  // Both cameras fill the canvas from its origin, so the point each turns about is its middle.
-  const middle = (): { x: number; y: number } => ({ x: camera.width / 2, y: camera.height / 2 });
+  // A camera turns about the middle of its viewport, which is where `centerOn` puts what it holds;
+  // a viewport narrower than the canvas stands off the canvas's origin by the camera's own x and y.
   return {
     layer,
     camera,
     at(x, y) {
-      const half = middle();
+      const half = { x: camera.width / 2, y: camera.height / 2 };
       return {
-        x: camera.scrollX + half.x + (x - half.x) / camera.zoomX,
-        y: camera.scrollY + half.y + (y - half.y) / camera.zoomY,
+        x: camera.scrollX + half.x + (x - camera.x - half.x) / camera.zoomX,
+        y: camera.scrollY + half.y + (y - camera.y - half.y) / camera.zoomY,
       };
     },
     unit() {

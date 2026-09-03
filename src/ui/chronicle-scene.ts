@@ -9,6 +9,7 @@ import {
   targetTiles,
 } from '../rules/chronicle';
 import { type TileCoords, tileAt, tileKey } from '../rules/map';
+import { createBand } from './band';
 import { CARD_HEIGHT } from './card-face';
 import { EASE, ended } from './card-motion';
 import {
@@ -71,6 +72,7 @@ export class ChronicleScene extends Phaser.Scene {
 
   create(): void {
     const { map, ui } = applyDesignSpace(this);
+    createBand(this);
 
     const parts: Part[] = [];
     const view = createMapView(this, map, this.current);

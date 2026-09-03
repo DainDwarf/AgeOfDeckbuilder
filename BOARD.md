@@ -12,9 +12,6 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
-- **The hand's band** — a flat band on the UI layer stands behind the hand and the piles, and the
-  map's camera is cropped to the frame above it, so no tile is ever held under a card; the cards'
-  tops clear the band's top by a small gap. The standing e2e passes. Doc-impact: none.
 - **Unplayable reasons on screen** — a card in hand that cannot be played shows why when zoomed:
   the unaffordable resources it already marks, joined by the blocked reasons (no free tile, no
   population, no valid target). Doc-impact: none.

@@ -9,6 +9,7 @@ import {
   tileKey,
 } from '../rules/map';
 import { type Faction, reachable, type Unit, type UnitTypeId, unitAt } from '../rules/units';
+import { MAP_FRAME } from './band';
 import { EASE, ended } from './card-motion';
 import {
   ACCENT,
@@ -280,8 +281,17 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
 
   /** The one place the camera is written: the zoom and the middle it holds, and what it frames. */
   const place = (): void => {
-    camera.setZoom(renderFactor() * zoom);
-    const span = { x: DESIGN_WIDTH / zoom, y: DESIGN_HEIGHT / zoom };
+    const factor = renderFactor();
+    // Phaser's camera manager resizes only the cameras that filled the old canvas, so a camera
+    // cropped to a viewport is re-placed here on every resize.
+    camera.setViewport(
+      MAP_FRAME.x * factor,
+      MAP_FRAME.y * factor,
+      MAP_FRAME.width * factor,
+      MAP_FRAME.height * factor,
+    );
+    camera.setZoom(factor * zoom);
+    const span = { x: MAP_FRAME.width / zoom, y: MAP_FRAME.height / zoom };
     centre.x = bounded(centre.x, box.left, box.right, span.x);
     centre.y = bounded(centre.y, box.top, box.bottom, span.y);
     camera.centerOn(centre.x, centre.y);
@@ -323,8 +333,8 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
     const xs = at.map((point) => point.x);
     const ys = at.map((point) => point.y);
     const to = {
-      x: holding(centre.x, Math.min(...xs), Math.max(...xs), DESIGN_WIDTH / zoom),
-      y: holding(centre.y, Math.min(...ys), Math.max(...ys), DESIGN_HEIGHT / zoom),
+      x: holding(centre.x, Math.min(...xs), Math.max(...xs), MAP_FRAME.width / zoom),
+      y: holding(centre.y, Math.min(...ys), Math.max(...ys), MAP_FRAME.height / zoom),
     };
     const away = Math.hypot(to.x - centre.x, to.y - centre.y) * zoom;
     if (away === 0) return undefined;

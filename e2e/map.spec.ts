@@ -7,7 +7,9 @@ import {
   chronicleOf,
   dragOut,
   endTurn,
+  type Frame,
   farmRun,
+  mapFrame,
   onScreen,
   onTable,
   open,
@@ -30,7 +32,6 @@ const SOUTH = 'tile-0,8';
 const NOTCH = 1.3;
 
 type Point = { x: number; y: number };
-type Frame = Point & { width: number; height: number };
 
 /** Five ends of turn, every stage of each played out, and the drags between them. */
 const FIVE_TURNS = 60_000;
@@ -43,13 +44,6 @@ async function drag(page: Page, from: Point, by: Point): Promise<void> {
   await page.mouse.move(from.x + by.x, from.y + by.y, { steps: 5 });
   await page.mouse.up();
   await settled(page);
-}
-
-/** Where the canvas sits on the page. */
-async function frameOf(page: Page): Promise<Frame> {
-  const box = await page.locator('canvas').boundingBox();
-  if (box === null) throw new Error('the canvas is not on the page');
-  return box;
 }
 
 function inside(at: Point, frame: Frame): boolean {
@@ -66,7 +60,7 @@ function inside(at: Point, frame: Frame): boolean {
  * the map's own bounds keep a tile near the middle of one axis from ever leaving by that axis.
  */
 async function pushOut(page: Page, name: string): Promise<void> {
-  const frame = await frameOf(page);
+  const frame = await mapFrame(page);
   const middle = { x: frame.x + frame.width / 2, y: frame.y + frame.height / 2 };
   for (const step of [
     { x: frame.width / 3, y: 0 },
@@ -102,6 +96,25 @@ function moveRun(): { seed: number; turns: number; from: TileCoords; to: TileCoo
   }
   throw new Error('no seed under a thousand crosses an enemy inside eight ends of turn');
 }
+
+test('the map is framed between the resource bar and the band, on the city', async ({ page }) => {
+  const problems = watch(page);
+  await open(page, 1, 'PH_Deck');
+
+  const frame = await mapFrame(page);
+  const bar = await onScreen(page, 'bar-edge');
+  const band = await onScreen(page, 'band-edge');
+  expect(Math.abs(frame.y - bar.y)).toBeLessThan(2);
+  expect(Math.abs(frame.y + frame.height - band.y)).toBeLessThan(2);
+  expect((await onScreen(page, 'band')).y).toBeGreaterThan(frame.y + frame.height);
+
+  const city = await chronicleOf(page).then((chronicle) => chronicle.city);
+  const at = await onScreen(page, `tile-${tileKey(city)}`);
+  expect(Math.abs(at.x - (frame.x + frame.width / 2))).toBeLessThan(2);
+  expect(Math.abs(at.y - (frame.y + frame.height / 2))).toBeLessThan(2);
+
+  expect(problems).toEqual([]);
+});
 
 test('a drag on bare map carries the map with it, and picks out no tile', async ({ page }) => {
   const problems = watch(page);
@@ -335,7 +348,7 @@ test('a held pan key moves the map, and lets go of it when it is released', asyn
 test('however far the map is dragged, it cannot leave the frame', async ({ page }) => {
   const problems = watch(page);
   await open(page, 1, 'PH_Deck');
-  const frame = await frameOf(page);
+  const frame = await mapFrame(page);
 
   // Passes the width and the height of the frame at a time, well past the whole map's own size.
   const west = { x: frame.x + frame.width - 40, y: frame.y + frame.height / 3 };
@@ -370,7 +383,7 @@ test('a stage on tiles the frame already holds pans nothing', async ({ page }) =
   await open(page, run.seed, 'PH_Deck');
   for (let turn = 0; turn < run.turns; turn++) await endTurn(page);
 
-  const frame = await frameOf(page);
+  const frame = await mapFrame(page);
   const crossed = `tile-${tileKey(run.to)}`;
   const at = await onScreen(page, crossed);
   expect(inside(at, frame)).toBe(true);
@@ -402,7 +415,7 @@ test('a stage on tiles the frame does not show is brought into it', async ({ pag
   await open(page, run.seed, 'PH_Deck');
   for (let turn = 0; turn < run.turns; turn++) await endTurn(page);
 
-  const frame = await frameOf(page);
+  const frame = await mapFrame(page);
   const crossed = `tile-${tileKey(run.to)}`;
   await pushOut(page, crossed);
   expect(inside(await onScreen(page, crossed), frame)).toBe(false);
