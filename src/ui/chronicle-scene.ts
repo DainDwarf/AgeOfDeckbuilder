@@ -244,7 +244,7 @@ export class ChronicleScene extends Phaser.Scene {
     const roll = async (chronicle: Chronicle): Promise<void> => {
       const carried = addText(this, x, y, label.text, LABEL_STYLE)
         .setOrigin(0.5, 0.5)
-        .setName('end-turn-label')
+        .setName('end-turn-leaving')
         .setDepth(21);
       leaving = carried;
       turn = chronicle.turn;

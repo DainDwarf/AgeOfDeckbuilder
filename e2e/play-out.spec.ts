@@ -98,7 +98,7 @@ test('a motion that throws still ends the turn and gives the table back', async 
     Object.fromEntries(Object.entries(readings).map(([key, count]) => [key, String(count)])),
   );
   expect(await endTurnLabel(page)).toBe(text('button.turn', { turn: committed.turn }));
-  expect(await counted(page, 'end-turn-label')).toBe(1);
+  expect(await counted(page, 'end-turn-leaving')).toBe(0);
 
   await endTurn(page);
   expect((await chronicleOf(page)).turn).toBe(opened.turn + 2);
