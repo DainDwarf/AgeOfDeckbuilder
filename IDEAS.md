@@ -43,6 +43,8 @@ a [`BOARD.md`](BOARD.md) line. Say
 - **Animation speed settings**: the player sets how fast the staged motions play.
 - **Copy a replay**: one action puts version, seed, deck, the commands played and the last error
   on the clipboard, so any game a player pastes back can be replayed to the turn.
+- **Income flies in from the tiles** (economy and city-management version): at income, each
+  yielding tile sends its resource to the bar, so the player sees where the numbers come from.
 - **Type-size floor, verified small** (art-style pass scope): minimum type sizes generous enough
   that the smallest window we care about stays readable; ui-check verifies at that size. Uniform
   window scaling plus card zoom covers the rest — no UI-scale slider unless playtesting demands it.
