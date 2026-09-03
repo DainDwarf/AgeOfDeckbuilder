@@ -12,9 +12,6 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
-- **The map holds the action** — before a stage plays on tiles the frame does not show, the map
-  pans to hold them and only then the motion starts; a stage on tiles already in the frame pans
-  nothing. The standing e2e passes. Doc-impact: none.
 - **The hand's band** — a flat band on the UI layer stands behind the hand and the piles, and the
   map's camera is cropped to the frame above it, so no tile is ever held under a card; the cards'
   tops clear the band's top by a small gap. The standing e2e passes. Doc-impact: none.

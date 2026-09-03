@@ -85,6 +85,13 @@ const PAN_SPEED = 1200;
 /** How much of the map stays inside the frame however far it is panned, in design pixels. */
 const KEPT = 360;
 
+/** How far clear of every border a tile a stage plays on is brought, in design pixels. */
+const CLEARANCE = 24;
+
+/** How long the pan that brings a stage into the frame lasts, however far it has to go. */
+const HOLD_LEAST = 200;
+const HOLD_MOST = 600;
+
 /**
  * Every key that pans the frame, each direction's first and its second, all live at once. This is
  * the one table rebinding replaces.
@@ -292,6 +299,48 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
     zoom = next;
     place();
     if (zoom !== was) rescale?.();
+  };
+
+  /**
+   * Where the middle of the frame goes on one axis for the tiles between `lo` and `hi` to stand
+   * clear of both borders: the shortest move that does it, or the middle of them when the frame is
+   * too small for all of them.
+   */
+  const holding = (at: number, lo: number, hi: number, span: number): number => {
+    const room = span / 2 - TILE_SIZE - CLEARANCE / zoom;
+    if (hi - lo > 2 * room) return (lo + hi) / 2;
+    return Math.min(Math.max(at, hi - room), lo + room);
+  };
+
+  /**
+   * Brings the frame to hold every tile a stage plays on, and answers nothing when it holds them
+   * all already. The map is not taken for this: a drag or a held key writes the same middle while
+   * it runs, and the two fight until the pan ends.
+   */
+  const hold = (tiles: readonly TileCoords[]): Promise<void> | undefined => {
+    if (tiles.length === 0) return undefined;
+    const at = tiles.map(positionOf);
+    const xs = at.map((point) => point.x);
+    const ys = at.map((point) => point.y);
+    const to = {
+      x: holding(centre.x, Math.min(...xs), Math.max(...xs), DESIGN_WIDTH / zoom),
+      y: holding(centre.y, Math.min(...ys), Math.max(...ys), DESIGN_HEIGHT / zoom),
+    };
+    const away = Math.hypot(to.x - centre.x, to.y - centre.y) * zoom;
+    if (away === 0) return undefined;
+
+    const moving = { x: centre.x, y: centre.y };
+    return ended(
+      scene,
+      scene.tweens.add({
+        targets: moving,
+        x: to.x,
+        y: to.y,
+        duration: Math.min(Math.max((away / PAN_SPEED) * 1000, HOLD_LEAST), HOLD_MOST),
+        ease: EASE,
+        onUpdate: () => moveTo(moving.x, moving.y, zoom),
+      }),
+    );
   };
 
   /**
@@ -550,10 +599,21 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
     ).then(() => settle(token, chronicle));
   };
 
+  /** The tiles the chronicle is aimed at that the map is not already ringing. */
+  const declared = (chronicle: Chronicle): TileCoords[] => {
+    const standing = new Set(aimedAt(shown?.units ?? []).map(tileKey));
+    return aimedAt(chronicle.units).filter((coord) => !standing.has(tileKey(coord)));
+  };
+
+  /** The units of the chronicle standing on tiles the map shows none on. */
+  const arrivals = (chronicle: Chronicle): Unit[] => {
+    const standing = new Set((shown?.units ?? []).map((unit) => tileKey(unit.tile)));
+    return chronicle.units.filter((unit) => !standing.has(tileKey(unit.tile)));
+  };
+
   /** The declarations: every ring the enemies did not already stand behind fades in. */
   const declare = (chronicle: Chronicle): Promise<void> | undefined => {
-    const standing = new Set(aimedAt(shown?.units ?? []).map(tileKey));
-    const fresh = aimedAt(chronicle.units).filter((coord) => !standing.has(tileKey(coord)));
+    const fresh = declared(chronicle);
     if (fresh.length === 0) return undefined;
 
     const token = takeOff();
@@ -571,8 +631,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
 
   /** The arrival: every unit the map was not already showing grows onto its tile. */
   const arriving = (chronicle: Chronicle): Promise<void> | undefined => {
-    const standing = new Set((shown?.units ?? []).map((unit) => tileKey(unit.tile)));
-    const arrived = chronicle.units.filter((unit) => !standing.has(tileKey(unit.tile)));
+    const arrived = arrivals(chronicle);
     if (arrived.length === 0) return undefined;
 
     const token = takeOff();
@@ -589,6 +648,25 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
     ).then(() => settle(token, chronicle));
   };
 
+  /**
+   * One stage: the frame comes to hold the tiles it plays on, and the motion starts once it does.
+   * A pan paints nothing, so a stage whose motion had nothing to animate is rendered here — the
+   * scene renders only the stages the map answers nothing for.
+   */
+  const staged = (
+    tiles: readonly TileCoords[],
+    chronicle: Chronicle,
+    motion: () => Promise<void> | undefined,
+  ): Promise<void> | undefined => {
+    const panning = hold(tiles);
+    if (panning === undefined) return motion();
+    return panning.then(() => {
+      const played = motion();
+      if (played === undefined) render(chronicle);
+      return played;
+    });
+  };
+
   return {
     live(on: boolean): void {
       taking = on;
@@ -599,13 +677,21 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
     play(stage: Stage): Promise<void> | undefined {
       switch (stage.name) {
         case 'attack':
-          return strike(stage.attacker, stage.target, stage.chronicle);
+          return staged([stage.attacker, stage.target], stage.chronicle, () =>
+            strike(stage.attacker, stage.target, stage.chronicle),
+          );
         case 'move':
-          return slide(stage.from, stage.to, stage.chronicle);
+          return staged([stage.from, stage.to], stage.chronicle, () =>
+            slide(stage.from, stage.to, stage.chronicle),
+          );
         case 'intents':
-          return declare(stage.chronicle);
+          return staged(declared(stage.chronicle), stage.chronicle, () => declare(stage.chronicle));
         case 'events':
-          return arriving(stage.chronicle);
+          return staged(
+            arrivals(stage.chronicle).map((unit) => unit.tile),
+            stage.chronicle,
+            () => arriving(stage.chronicle),
+          );
         default:
           return undefined;
       }
