@@ -69,6 +69,8 @@ export function createHand(
   const baseline = DESIGN_HEIGHT - MARGIN;
 
   let slots: Slot[] = [];
+  /** What the hand has in the air and no slot holds; a render owns it and takes it down. */
+  let flying: Phaser.GameObjects.Container[] = [];
   let dragged: Drag | undefined;
   let aiming: { readonly slot: Slot; readonly cancel: () => void } | undefined;
   /** Whether the hand takes the pointer at all; the end of turn puts it down while it plays. */
@@ -101,10 +103,11 @@ export function createHand(
   };
 
   const render = (chronicle: Chronicle): void => {
-    for (const slot of slots) {
-      scene.tweens.killTweensOf(slot.face.root);
-      slot.face.root.destroy();
+    for (const face of [...flying, ...slots.map((slot) => slot.face.root)]) {
+      scene.tweens.killTweensOf(face);
+      face.destroy();
     }
+    flying = [];
     dragged = undefined;
     aiming = undefined;
 
@@ -226,18 +229,19 @@ export function createHand(
    * a stagger behind the one before it, and the emptied hand is laid out where they all land.
    */
   const toDiscardPile = async (chronicle: Chronicle): Promise<void> => {
-    const leaving = slots;
+    const leaving = slots.map((slot) => slot.face.root);
+    flying = leaving;
     slots = [];
     await Promise.all(
-      leaving.map((slot, index) => {
-        scene.tweens.killTweensOf(slot.face.root);
-        slot.face.root.setDepth(IN_FLIGHT + index);
+      leaving.map((face, index) => {
+        scene.tweens.killTweensOf(face);
+        face.setDepth(IN_FLIGHT + index);
         const to = { ...PILE_PLACE['discard-pile'], rotation: 0 };
-        return travel(scene, slot.face.root, to, index * STAGGER);
+        return travel(scene, face, to, index * STAGGER);
       }),
     );
-    for (const slot of leaving) slot.face.root.destroy();
-    render(chronicle);
+    // A render while these were in the air took them down and painted the hand it stands on.
+    if (flying === leaving) render(chronicle);
   };
 
   /**
@@ -266,6 +270,7 @@ export function createHand(
         const back = createCardBack(scene)
           .setPosition(PILE_PLACE['draw-pile'].x, PILE_PLACE['draw-pile'].y)
           .setDepth(IN_FLIGHT + index);
+        flying.push(back);
         return travel(scene, back, home, (index - standing.length) * STAGGER).then(() =>
           turnOver(scene, back, face),
         );

@@ -25,6 +25,8 @@ declare global {
     ) =>
       | { object: Phaser.GameObjects.GameObject; camera: Phaser.Cameras.Scene2D.Camera }
       | undefined;
+    /** How many objects of that name stand on the table: a repainted table leaves no second one. */
+    counted?: (name: string) => number;
   }
 }
 
@@ -54,29 +56,36 @@ export async function open(
     const within = (
       list: Phaser.GameObjects.GameObject[],
       name: string,
-    ): Phaser.GameObjects.GameObject | undefined => {
+      found: Phaser.GameObjects.GameObject[],
+    ): Phaser.GameObjects.GameObject[] => {
       for (const child of list) {
-        if (child.name === name) return child;
+        if (child.name === name) found.push(child);
         const inside = (child as Phaser.GameObjects.Container).list;
-        const found = Array.isArray(inside) ? within(inside, name) : undefined;
-        if (found !== undefined) return found;
+        if (Array.isArray(inside)) within(inside, name, found);
       }
-      return undefined;
+      return found;
+    };
+
+    const layers = (): Phaser.GameObjects.Layer[] => {
+      const scene = window.game?.scene.getScene('chronicle');
+      if (scene === null || scene === undefined) return [];
+      return scene.children.list.filter(
+        (child) => child.type === 'Layer',
+      ) as Phaser.GameObjects.Layer[];
     };
 
     window.named = (name) => {
-      const scene = window.game?.scene.getScene('chronicle');
-      if (scene === null || scene === undefined) return undefined;
-      for (const child of scene.children.list) {
-        if (child.type !== 'Layer') continue;
-        const layer = child as Phaser.GameObjects.Layer;
-        const object = within(layer.list, name);
-        const camera = scene.cameras.getCamera(layer.name);
+      for (const layer of layers()) {
+        const object = within(layer.list, name, [])[0];
+        const camera = layer.scene.cameras.getCamera(layer.name);
         if (object === undefined || camera === null) continue;
         return { object, camera };
       }
       return undefined;
     };
+
+    window.counted = (name) =>
+      layers().reduce((total, layer) => total + within(layer.list, name, []).length, 0);
   });
   await page.goto(`/?seed=${seed}&deck=${typeof deck === 'string' ? deck : deck.join(',')}`);
   await page.waitForFunction(() => window.game?.scene.isActive('chronicle') === true);
@@ -147,6 +156,14 @@ export async function offCanvas(page: Page): Promise<{ x: number; y: number }> {
 /** Whether an object of that name stands on the table. */
 export function onTable(page: Page, name: string): Promise<boolean> {
   return page.evaluate((target) => window.named?.(target) !== undefined, name);
+}
+
+/** How many objects of that name stand on the table: one the table still paints, plus any left over. */
+export function counted(page: Page, name: string): Promise<number> {
+  return page.evaluate((target) => {
+    if (window.counted === undefined) throw new Error('no chronicle was opened on this page');
+    return window.counted(target);
+  }, name);
 }
 
 /** How far the browse's grid stands scrolled, and how far it can: the grid scrolls by its own `y`. */

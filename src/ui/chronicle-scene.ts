@@ -91,34 +91,40 @@ export class ChronicleScene extends Phaser.Scene {
     /**
      * The end of turn, stage by stage: each part is offered the stage, one with no motion for it
      * renders at once, and the next stage waits on every motion the stage did raise. The button
-     * and the hand are dead for the whole of it — a card played or hovered mid-play would be
+     * and the hand are dead for the whole of it — a card played or hovered under it would be
      * animated and then reverted, and would kill the very tweens the stages are waiting on. The
      * map stays live.
+     *
+     * However the play-out ends, the tail commits the turn and paints it: `apply` needs no motion
+     * to have completed, and a part's render takes down whatever that part left in the air.
      */
     const playOut = async (): Promise<void> => {
       if (this.sequence) return;
       this.sequence = true;
-      endTurn.live(false);
-      hand.live(false);
-      dismiss();
 
       const opened = this.current;
-      for (const stage of endOfTurn(opened)) {
-        this.current = stage.chronicle;
-        const motions: Promise<void>[] = [];
-        for (const part of parts) {
-          const motion = part.play?.(stage);
-          if (motion === undefined) part.render(this.current);
-          else motions.push(motion);
-        }
-        await Promise.all(motions);
-      }
+      try {
+        endTurn.live(false);
+        hand.live(false);
+        dismiss();
 
-      this.current = apply(opened, { type: 'end-turn' });
-      paint();
-      hand.live(true);
-      endTurn.live(true);
-      this.sequence = false;
+        for (const stage of endOfTurn(opened)) {
+          this.current = stage.chronicle;
+          const motions: Promise<void>[] = [];
+          for (const part of parts) {
+            const motion = part.play?.(stage);
+            if (motion === undefined) part.render(this.current);
+            else motions.push(motion);
+          }
+          await Promise.all(motions);
+        }
+      } finally {
+        this.current = apply(opened, { type: 'end-turn' });
+        paint();
+        hand.live(true);
+        endTurn.live(true);
+        this.sequence = false;
+      }
     };
 
     view.inspect(

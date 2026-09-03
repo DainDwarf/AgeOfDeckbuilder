@@ -20,13 +20,6 @@ export function blockLength(cards: number): number {
   return cards === 0 ? 0 : TRAVEL + (cards - 1) * STAGGER;
 }
 
-/** Nothing, `delay` from now on the scene's clock. */
-export function after(scene: Phaser.Scene, delay: number): Promise<void> {
-  return new Promise((done) => {
-    scene.time.delayedCall(delay, () => done());
-  });
-}
-
 /**
  * A tween as a promise, settling however the tween ended. Every motion of the end of turn goes
  * through here: a tween killed by someone else's `killTweensOf` is destroyed on the spot, with its

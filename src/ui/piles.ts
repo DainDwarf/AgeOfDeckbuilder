@@ -8,7 +8,7 @@ import {
   createCardFace,
   createEmptySlot,
 } from './card-face';
-import { after, blockLength, EASE, ended, IN_FLIGHT, SHUFFLE, travel } from './card-motion';
+import { blockLength, EASE, ended, IN_FLIGHT, SHUFFLE, travel } from './card-motion';
 import {
   ACCENT,
   addText,
@@ -42,6 +42,9 @@ export function createPiles(scene: Phaser.Scene, browse: (pile: PileKind) => voi
 
   /** The chronicle the piles stand on: how many cards are in the air is read from it. */
   let shown: Chronicle | undefined;
+  /** What the piles have in the air; a render owns both and takes them down. */
+  let waiting: { readonly event: Phaser.Time.TimerEvent; readonly done: () => void } | undefined;
+  let carrier: Phaser.GameObjects.Container | undefined;
 
   const topOf = (id: CardId | undefined): Phaser.GameObjects.Container =>
     id === undefined
@@ -49,6 +52,15 @@ export function createPiles(scene: Phaser.Scene, browse: (pile: PileKind) => voi
       : createCardFace(scene, id, NO_REFUSAL, { faded: true }).root;
 
   const render = (chronicle: Chronicle): void => {
+    // Whoever is waiting on the wait is let go, so a cancelled one leaves nothing hanging on it.
+    waiting?.event.remove();
+    waiting?.done();
+    waiting = undefined;
+    if (carrier !== undefined) {
+      scene.tweens.killTweensOf(carrier);
+      carrier.destroy();
+      carrier = undefined;
+    }
     shown = chronicle;
     drawn.show(createCardBack(scene, chronicle.drawPile.length === 0), chronicle.drawPile.length);
     discarded.show(
@@ -62,15 +74,16 @@ export function createPiles(scene: Phaser.Scene, browse: (pile: PileKind) => voi
     const carried = (discarded.lift() ?? createEmptySlot(scene)).setPosition(0, 0);
     const back = createCardBack(scene).setVisible(false);
     const from = PILE_PLACE['discard-pile'];
-    const carrier = scene.add.container(from.x, from.y, [carried, back]).setDepth(IN_FLIGHT);
+    const carrying = scene.add.container(from.x, from.y, [carried, back]).setDepth(IN_FLIGHT);
+    carrier = carrying;
     discarded.show(createEmptySlot(scene), 0);
 
     await Promise.all([
-      travel(scene, carrier, { ...PILE_PLACE['draw-pile'], rotation: 0 }, 0, SHUFFLE),
+      travel(scene, carrying, { ...PILE_PLACE['draw-pile'], rotation: 0 }, 0, SHUFFLE),
       ended(
         scene,
         scene.tweens.add({
-          targets: carrier,
+          targets: carrying,
           scaleX: 0,
           duration: SHUFFLE / 2,
           ease: EASE,
@@ -83,19 +96,27 @@ export function createPiles(scene: Phaser.Scene, browse: (pile: PileKind) => voi
       ),
     ]);
 
-    carrier.destroy();
-    shown = chronicle;
-    drawn.show(createCardBack(scene), chronicle.drawPile.length);
+    // A render while this was in the air took it down and painted the piles it stands on.
+    if (carrier === carrying) render(chronicle);
   };
+
+  /** The hand's block lands on the discard pile all at once, once the last card is down. */
+  const landed = (chronicle: Chronicle): Promise<void> =>
+    new Promise((done) => {
+      const event = scene.time.delayedCall(blockLength(shown?.hand.length ?? 0), () => {
+        waiting = undefined;
+        render(chronicle);
+        done();
+      });
+      waiting = { event, done };
+    });
 
   return {
     render,
     play(stage: Stage): Promise<void> | undefined {
       switch (stage.name) {
         case 'discard':
-          return after(scene, blockLength(shown?.hand.length ?? 0)).then(() =>
-            render(stage.chronicle),
-          );
+          return landed(stage.chronicle);
         case 'shuffle':
           return shuffle(stage.chronicle);
         default:
@@ -129,6 +150,7 @@ function createPile(scene: Phaser.Scene, pile: PileKind, browse: (pile: PileKind
     color: '#0d1014',
   })
     .setOrigin(0.5, 0.5)
+    .setName(`${pile}-count`)
     .setDepth(7);
 
   let shown: Phaser.GameObjects.Container | undefined;
