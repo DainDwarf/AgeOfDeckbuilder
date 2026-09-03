@@ -8,11 +8,8 @@ no detail here: its board lines are cut when its turn comes. Versions are themes
 The demo (v0.1.0) carries most if not all of [`DESIGN.md`](DESIGN.md) and covers the first
 ages: Stone, Bronze, ideally Iron.
 
-- **v0.0.1 — A chronicle that ends in defeat.** Generated hexagonal map, the seven-step turn, a
-  hand from a hardcoded stand-in deck, one card of each kind, income, one enemy, capture, the
-  steps after the turn ends staged in visible sequence. Placeholder primitives throughout.
 - **v0.0.2 — A chronicle that ends in victory.** The seeded event schedule and its escalation,
-  camps, sight and fog, enemy intents, the capstone on its fixed turn. From here both endings exist, so feel is
+  camps, sight and fog, the capstone on its fixed turn. From here both endings exist, so feel is
   testable early — that is why victory comes second, not fifth.
 - **v0.0.3 — The city is a city.** Population that eats and grows, claiming with culture,
   assignment, improvements and terraforming, the full map-layer model, rivers.
@@ -31,4 +28,4 @@ ages: Stone, Bronze, ideally Iron.
 - **v0.0.8 — The Iron age.** Placed last among content so that a demo that must ship sooner
   cuts this rung and still looks finished.
 - **v0.1.0 — The demo.** Balance measured across the ages, polish, the itch.io publish, the
-  first real [`CHANGELOG.md`](../CHANGELOG.md) entry.
+  first published [`CHANGELOG.md`](../CHANGELOG.md) entry.

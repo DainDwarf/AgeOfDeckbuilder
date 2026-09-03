@@ -11,5 +11,3 @@ hazards, plan — written once, on the settled state, and deleted with the line.
 Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [task file]`
 
 ---
-
-- **Closes v0.0.1** — Only when the board is empty. Version bump and release note. Doc-impact: `docs/ROADMAP.md`, `CHANGELOG.md`.
