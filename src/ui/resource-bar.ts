@@ -1,6 +1,6 @@
 import type Phaser from 'phaser';
 import type { Chronicle, Resource, Stage } from '../rules/chronicle';
-import { EASE, ended } from './card-motion';
+import { EASE, ended, stopMotion } from './card-motion';
 import {
   addText,
   DESIGN_WIDTH,
@@ -86,7 +86,7 @@ export function createResourceBar(
   let rising: Entry[] = [];
 
   const render = (chronicle: Chronicle): void => {
-    for (const entry of rising) scene.tweens.killTweensOf(entry.ticking);
+    for (const entry of rising) stopMotion(scene, entry.ticking);
     rising = [];
     for (const entry of entries) {
       entry.ticking.count = readingOf(chronicle, entry.key);
@@ -105,7 +105,6 @@ export function createResourceBar(
     return Promise.all(
       ticking.map((entry) =>
         ended(
-          scene,
           scene.tweens.add({
             targets: entry.ticking,
             count: readingOf(chronicle, entry.key),
@@ -135,7 +134,7 @@ export function createResourceBar(
  * table: a new chronicle is how a player leaves a defeat.
  */
 function createMenuButton(scene: Phaser.Scene, pressed: () => void): number {
-  const label = addText(scene, 0, 0, text('button.menu'), VALUE_STYLE).setOrigin(0.5, 0.5);
+  const label = addText(scene, 0, 0, text('menu.menu'), VALUE_STYLE).setOrigin(0.5, 0.5);
   const width = label.width + 2 * MENU_PADDING;
   const x = DESIGN_WIDTH - MARGIN - width / 2;
   const y = BAR_HEIGHT / 2;

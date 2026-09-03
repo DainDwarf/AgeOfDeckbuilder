@@ -10,7 +10,7 @@ import {
 } from '../rules/map';
 import { type Faction, reachable, type Unit, type UnitTypeId, unitAt } from '../rules/units';
 import { MAP_FRAME } from './band';
-import { EASE, ended } from './card-motion';
+import { EASE, ended, stopMotion } from './card-motion';
 import {
   ACCENT,
   corners,
@@ -342,7 +342,6 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
 
     const moving = { x: centre.x, y: centre.y };
     return ended(
-      scene,
       scene.tweens.add({
         targets: moving,
         x: to.x,
@@ -508,11 +507,11 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
 
     // What is about to be destroyed loses its tweens first: a motion left running on a destroyed
     // marker never completes, and the stage waiting on it would never end.
-    scene.tweens.killTweensOf(intents.list);
+    stopMotion(scene, intents.list);
     intents.removeAll(true);
     for (const coord of aimedAt(current.units)) intents.add(intentMark(scene, coord));
 
-    scene.tweens.killTweensOf(marks.list);
+    stopMotion(scene, marks.list);
     marks.removeAll(true);
     markers = current.units.map((unit) => {
       const { x, y } = positionOf(unit.tile);
@@ -547,7 +546,6 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
     token: symbol,
   ): Promise<void> => {
     await ended(
-      scene,
       scene.tweens.add({
         targets: marker,
         scale: 1.35,
@@ -558,7 +556,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
       }),
     );
     if (!killed || flight !== token) return;
-    await ended(scene, scene.tweens.add({ targets: marker, scale: 0, duration: 200, ease: EASE }));
+    await ended(scene.tweens.add({ targets: marker, scale: 0, duration: 200, ease: EASE }));
   };
 
   /** One attack: the attacker lunges halfway at the tile it aimed at, and what stands there takes it. */
@@ -575,7 +573,6 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
     const from = positionOf(attacker);
     const to = positionOf(target);
     const lunge = ended(
-      scene,
       scene.tweens.add({
         targets: lunging,
         x: (from.x + to.x) / 2,
@@ -605,7 +602,6 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
     const at = positionOf(to);
 
     return ended(
-      scene,
       scene.tweens.add({ targets: marker, x: at.x, y: at.y, duration: 350, ease: EASE }),
     ).then(() => settle(token, chronicle));
   };
@@ -634,10 +630,9 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
       return ring;
     });
 
-    return ended(
-      scene,
-      scene.tweens.add({ targets: rings, alpha: 1, duration: 250, ease: EASE }),
-    ).then(() => settle(token, chronicle));
+    return ended(scene.tweens.add({ targets: rings, alpha: 1, duration: 250, ease: EASE })).then(
+      () => settle(token, chronicle),
+    );
   };
 
   /** The arrival: every unit the map was not already showing grows onto its tile. */
@@ -653,10 +648,9 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
       return marker;
     });
 
-    return ended(
-      scene,
-      scene.tweens.add({ targets: entering, scale: 1, duration: 250, ease: EASE }),
-    ).then(() => settle(token, chronicle));
+    return ended(scene.tweens.add({ targets: entering, scale: 1, duration: 250, ease: EASE })).then(
+      () => settle(token, chronicle),
+    );
   };
 
   /**

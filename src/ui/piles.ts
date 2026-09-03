@@ -9,7 +9,7 @@ import {
   createCardFace,
   createEmptySlot,
 } from './card-face';
-import { blockLength, EASE, ended, IN_FLIGHT, SHUFFLE, travel } from './card-motion';
+import { blockLength, EASE, ended, IN_FLIGHT, SHUFFLE, stopMotion, travel } from './card-motion';
 import { ACCENT, addText, DESIGN_WIDTH, MARGIN, onClick, UI_FONT } from './design-space';
 import type { PileKind } from './overlay';
 
@@ -50,7 +50,7 @@ export function createPiles(scene: Phaser.Scene, browse: (pile: PileKind) => voi
     waiting?.done();
     waiting = undefined;
     if (carrier !== undefined) {
-      scene.tweens.killTweensOf(carrier);
+      stopMotion(scene, carrier);
       carrier.destroy();
       carrier = undefined;
     }
@@ -74,7 +74,6 @@ export function createPiles(scene: Phaser.Scene, browse: (pile: PileKind) => voi
     await Promise.all([
       travel(scene, carrying, { ...PILE_PLACE['draw-pile'], rotation: 0 }, 0, SHUFFLE),
       ended(
-        scene,
         scene.tweens.add({
           targets: carrying,
           scaleX: 0,

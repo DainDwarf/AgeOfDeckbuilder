@@ -58,7 +58,7 @@ export function createWindow(
   pressed: (press: MenuPress) => void,
 ): Phaser.GameObjects.Container {
   const { buttons } = WINDOWS[which];
-  const title = addText(scene, 0, 0, text(`window.${which}`), TITLE_STYLE).setOrigin(0.5, 0);
+  const title = addText(scene, 0, 0, text(`menu.${which}`), TITLE_STYLE).setOrigin(0.5, 0);
 
   const stacked =
     buttons.length === 0

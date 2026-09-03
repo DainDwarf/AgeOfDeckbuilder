@@ -9,6 +9,7 @@ import {
 } from '../rules/map';
 import { UNIT_STATS, type Unit, unitAt } from '../rules/units';
 import { CARD_EDGE, CARD_HEIGHT, CARD_METRICS, CARD_WIDTH, drawCardSurface } from './card-face';
+import { stopMotion } from './card-motion';
 import { addText, onHover, type Surface, UI_FONT } from './design-space';
 import { buildingMark, type TileFace, terrainMark, unitMark } from './map';
 import { text } from './text';
@@ -139,12 +140,12 @@ export function createInfoPanel(scene: Phaser.Scene, on: Surface): InfoPanel {
   /** Ends a dissolve where it was headed: the layer coming in stands in place, the old one is gone. */
   const settle = (): void => {
     if (leaving !== undefined) {
-      scene.tweens.killTweensOf(leaving.root);
+      stopMotion(scene, leaving.root);
       leaving.root.destroy();
       leaving = undefined;
     }
     if (standing !== undefined) {
-      scene.tweens.killTweensOf(standing.root);
+      stopMotion(scene, standing.root);
       standing.root.setPosition(0, 0).setAlpha(1);
     }
   };

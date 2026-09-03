@@ -21,22 +21,34 @@ export function blockLength(cards: number): number {
 }
 
 /**
- * A tween as a promise, settling however the tween ended. Every motion of the end of turn goes
- * through here: a tween killed by someone else's `killTweensOf` is destroyed on the spot, with its
- * listeners removed and its callbacks nulled, so an `onComplete` alone would leave the caller
- * waiting for a tween that no longer exists.
+ * A tween as a promise, settling however the tween ended: at its own completion, or at the stop
+ * that takes it off its target early. Those two are the only ends a tween announces — Phaser's
+ * `killTweensOf` destroys one where it stands, listeners removed and nothing dispatched, so a
+ * motion taken down that way would leave whoever waits here waiting for ever. `stopMotion` is the
+ * one way this game takes a motion down.
  */
-export function ended(scene: Phaser.Scene, tween: Phaser.Tweens.Tween): Promise<void> {
+export function ended(tween: Phaser.Tweens.Tween): Promise<void> {
   return new Promise((done) => {
-    const over = (): void => {
-      if (tween.isActive() || tween.isPending() || tween.isStartDelayed() || tween.isPaused()) {
-        return;
-      }
-      scene.events.off(Phaser.Scenes.Events.UPDATE, over);
-      done();
-    };
-    scene.events.on(Phaser.Scenes.Events.UPDATE, over);
+    const over = (): void => done();
+    tween.once(Phaser.Tweens.Events.TWEEN_COMPLETE, over);
+    tween.once(Phaser.Tweens.Events.TWEEN_STOP, over);
   });
+}
+
+/**
+ * The motion on these targets ended where it stands, leaving them exactly where it carried them.
+ * A stopped tween announces itself and writes nothing more; the manager takes it off the next frame.
+ */
+export function stopMotion(scene: Phaser.Scene, targets: object | object[]): void {
+  for (const tween of scene.tweens.getTweensOf(targets)) tween.stop();
+}
+
+/**
+ * Every motion the scene has in the air ended: what a table being taken down owes whoever waits on
+ * it, since the shutdown that follows destroys them all in silence.
+ */
+export function stopAllMotion(scene: Phaser.Scene): void {
+  for (const tween of scene.tweens.getTweens()) tween.stop();
 }
 
 /** A card carried to a place at an angle, resolving where it settles. */
@@ -48,7 +60,6 @@ export function travel(
   duration = TRAVEL,
 ): Promise<void> {
   return ended(
-    scene,
     scene.tweens.add({
       targets: card,
       x: to.x,
@@ -72,9 +83,9 @@ export async function turnOver(
   shows: Phaser.GameObjects.Container,
 ): Promise<void> {
   const half = { duration: TURN_OVER / 2, ease: EASE };
-  await ended(scene, scene.tweens.add({ targets: hides, scaleX: 0, ...half }));
+  await ended(scene.tweens.add({ targets: hides, scaleX: 0, ...half }));
   hides.destroy();
   shows.setScale(0, 1).setVisible(true);
-  await ended(scene, scene.tweens.add({ targets: shows, scaleX: 1, ...half }));
+  await ended(scene.tweens.add({ targets: shows, scaleX: 1, ...half }));
   shows.setScale(1, 1);
 }

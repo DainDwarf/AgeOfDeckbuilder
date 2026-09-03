@@ -2,12 +2,15 @@ import { expect, type Page, test } from '@playwright/test';
 import { DECKS } from '../src/rules/cards';
 import { apply, beginChronicle, type Chronicle, outcome } from '../src/rules/chronicle';
 import {
+  aimed,
   browse,
   chronicleOf,
   click,
   counted,
+  dragOut,
   endTurn,
   fallRun,
+  farmRun,
   onTable,
   open,
   watch,
@@ -89,6 +92,30 @@ test('Escape raises the menu on a bare table, and backs out of a browse without 
   await page.keyboard.press('Escape');
   await expect.poll(() => onTable(page, 'browse')).toBe(false);
   expect(await onTable(page, 'menu')).toBe(false);
+
+  expect(problems).toEqual([]);
+});
+
+test('Escape lets go of the card being aimed before it raises the menu', async ({ page }) => {
+  const problems = watch(page);
+  const run = farmRun();
+
+  await open(page, run.seed, 'PH_Deck');
+  for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
+
+  const opened = await chronicleOf(page);
+  await dragOut(page, opened.hand.indexOf('PH_Worker'));
+  const entered = await chronicleOf(page);
+  await dragOut(page, entered.hand.indexOf('PH_March'));
+  await aimed(page);
+
+  await page.keyboard.press('Escape');
+  await expect.poll(() => onTable(page, 'aim')).toBe(false);
+  expect(await onTable(page, 'menu')).toBe(false);
+  expect((await chronicleOf(page)).hand).toEqual(entered.hand);
+
+  await page.keyboard.press('Escape');
+  await expect.poll(() => onTable(page, 'menu')).toBe(true);
 
   expect(problems).toEqual([]);
 });

@@ -9,7 +9,7 @@ import {
   createCardBack,
   createCardFace,
 } from './card-face';
-import { ended, IN_FLIGHT, STAGGER, travel, turnOver } from './card-motion';
+import { ended, IN_FLIGHT, STAGGER, stopMotion, travel, turnOver } from './card-motion';
 import {
   DESIGN_WIDTH,
   MARGIN,
@@ -51,6 +51,8 @@ export type Hand = {
   play(stage: Stage): Promise<void> | undefined;
   /** The one gate on the hand's pointer: no hover, no click and no drag while it is shut. */
   live(on: boolean): void;
+  /** Lets go of the card that is armed and aiming, and answers whether one was. */
+  cancelAim(): boolean;
 };
 
 /**
@@ -91,14 +93,13 @@ export function createHand(
 
   /** The card back where it rests, at once or over that long; the promise settles when it is home. */
   const settle = (slot: Slot, duration: number): Promise<void> => {
-    scene.tweens.killTweensOf(slot.face.root);
+    stopMotion(scene, slot.face.root);
     slot.face.root.setDepth(slot.hovered ? 40 : 5 + slot.index);
     if (duration === 0) {
       slot.face.root.setPosition(slot.home.x, restingY(slot));
       return Promise.resolve();
     }
     return ended(
-      scene,
       scene.tweens.add({
         targets: slot.face.root,
         x: slot.home.x,
@@ -112,7 +113,7 @@ export function createHand(
   const render = (chronicle: Chronicle): void => {
     note.hide();
     for (const face of [...flying, ...slots.map((slot) => slot.face.root)]) {
-      scene.tweens.killTweensOf(face);
+      stopMotion(scene, face);
       face.destroy();
     }
     flying = [];
@@ -253,7 +254,7 @@ export function createHand(
     slots = [];
     await Promise.all(
       leaving.map((face, index) => {
-        scene.tweens.killTweensOf(face);
+        stopMotion(scene, face);
         face.setDepth(IN_FLIGHT + index);
         const to = { ...PILE_PLACE['discard-pile'], rotation: 0 };
         return travel(scene, face, to, index * STAGGER);
@@ -310,6 +311,12 @@ export function createHand(
   return {
     render,
     live,
+    cancelAim(): boolean {
+      if (aiming === undefined) return false;
+      // The cancel runs the aim's own release: the card comes home exactly as clicking it does.
+      aiming.cancel();
+      return true;
+    },
     play(stage: Stage): Promise<void> | undefined {
       switch (stage.name) {
         case 'discard':

@@ -101,8 +101,10 @@ A **Menu** button stands on the table and opens the menu over it. The menu lists
 the city was living through, victory, defeat or the middle of a turn. **Settings** is where
 everything the player sets lives, and **Controls** is its first entry.
 
-A window closes back one step, to the window it was opened from and then to the table. Nothing
-pauses, because nothing runs: the game is untimed, and a menu over the table is the table waiting.
+A window closes back one step, to the window it was opened from and then to the table. Escape backs
+out of whatever is open or pending — a window, a card being aimed, a tile being read — one step per
+press, and raises the menu only from a clean table. Nothing pauses, because nothing runs: the game
+is untimed, and a menu over the table is the table waiting.
 
 ## Systems
 

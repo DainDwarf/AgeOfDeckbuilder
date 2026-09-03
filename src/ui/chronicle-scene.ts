@@ -13,7 +13,7 @@ import {
 import { type TileCoords, tileAt, tileKey } from '../rules/map';
 import { createBand } from './band';
 import { CARD_BASELINE, CARD_HEIGHT } from './card-face';
-import { EASE, ended } from './card-motion';
+import { EASE, ended, stopAllMotion, stopMotion } from './card-motion';
 import {
   ACCENT,
   addText,
@@ -89,8 +89,9 @@ export class ChronicleScene extends Phaser.Scene {
    * play-out the old table was in the middle of is let go of here, and its tail commits nothing.
    */
   private newChronicle(): void {
-    this.current = this.begin(undefined);
     this.sequence = undefined;
+    this.current = this.begin(undefined);
+    stopAllMotion(this);
     this.scene.restart();
   }
 
@@ -189,14 +190,6 @@ export class ChronicleScene extends Phaser.Scene {
       () => this.newChronicle(),
     );
 
-    // The one Escape on the table: it takes back the outermost thing that is up, and with nothing
-    // up at all it raises the menu. Every other listener for it is a second answer to one press.
-    this.input.keyboard?.on('keydown-ESC', () => {
-      if (overlay.back()) return;
-      if (inspecting !== undefined) dismiss();
-      else overlay.menu();
-    });
-
     const endTurn = this.addEndTurn(() => {
       void playOut({ type: 'end-turn' });
     });
@@ -229,9 +222,25 @@ export class ChronicleScene extends Phaser.Scene {
       },
       (id, refusal) => overlay.zoom(id, refusal),
     );
+
+    /** The menu, from the Menu button or from a clean table: an armed card is let go of first. */
+    const menu = (): void => {
+      hand.cancelAim();
+      overlay.menu();
+    };
+
+    // The one Escape on the table: one press takes back one thing, the outermost that is up or
+    // pending, and only a table with nothing on it raises the menu. Every other listener for it
+    // would be a second answer to the one press.
+    this.input.keyboard?.on('keydown-ESC', () => {
+      if (overlay.back() || hand.cancelAim()) return;
+      if (inspecting !== undefined) dismiss();
+      else menu();
+    });
+
     parts.push(
       view,
-      createResourceBar(this, createTooltip(this, ui), () => overlay.menu()),
+      createResourceBar(this, createTooltip(this, ui), menu),
       createPiles(this, (pile) => overlay.browse(pile, this.current)),
       hand,
       endTurn,
@@ -270,9 +279,9 @@ export class ChronicleScene extends Phaser.Scene {
     let leaving: Phaser.GameObjects.Text | undefined;
 
     const render = (chronicle: Chronicle): void => {
-      this.tweens.killTweensOf(label);
+      stopMotion(this, label);
       if (leaving !== undefined) {
-        this.tweens.killTweensOf(leaving);
+        stopMotion(this, leaving);
         leaving.destroy();
         leaving = undefined;
       }
@@ -294,8 +303,8 @@ export class ChronicleScene extends Phaser.Scene {
 
       const rolling = { duration: 400, ease: EASE };
       await Promise.all([
-        ended(this, this.tweens.add({ targets: carried, y: y - 24, alpha: 0, ...rolling })),
-        ended(this, this.tweens.add({ targets: label, y, alpha: 1, ...rolling })),
+        ended(this.tweens.add({ targets: carried, y: y - 24, alpha: 0, ...rolling })),
+        ended(this.tweens.add({ targets: label, y, alpha: 1, ...rolling })),
       ]);
       // A render while the roll was in the air took it down and painted the turn it stands on.
       if (leaving === carried) render(chronicle);

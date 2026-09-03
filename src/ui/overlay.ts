@@ -8,7 +8,7 @@ import {
   type Stage,
 } from '../rules/chronicle';
 import { createCardFace } from './card-face';
-import { EASE, ended } from './card-motion';
+import { EASE, ended, stopMotion } from './card-motion';
 import {
   addText,
   createClip,
@@ -129,7 +129,7 @@ export function createOverlay(
 
   // The defeat's rise brings the scrim up from nothing, so every cover states the alpha it wants.
   const cover = (): void => {
-    scene.tweens.killTweensOf(scrim);
+    stopMotion(scene, scrim);
     scrim.setVisible(true).setAlpha(SCRIM_ALPHA).setInteractive();
     covering(true);
   };
@@ -284,8 +284,8 @@ export function createOverlay(
 
     const climb = { duration: 1200, ease: EASE };
     return Promise.all([
-      ended(scene, scene.tweens.add({ targets: scrim, alpha: SCRIM_ALPHA, ...climb })),
-      ended(scene, scene.tweens.add({ targets: screen, alpha: 1, y: 0, ...climb })),
+      ended(scene.tweens.add({ targets: scrim, alpha: SCRIM_ALPHA, ...climb })),
+      ended(scene.tweens.add({ targets: screen, alpha: 1, y: 0, ...climb })),
     ]).then(() => {
       if (rising === screen) rising = undefined;
     });
@@ -296,8 +296,8 @@ export function createOverlay(
     const screen = rising;
     if (screen === undefined) return;
     rising = undefined;
-    scene.tweens.killTweensOf(scrim);
-    scene.tweens.killTweensOf(screen);
+    stopMotion(scene, scrim);
+    stopMotion(scene, screen);
     scrim.setAlpha(SCRIM_ALPHA);
     screen.setAlpha(1).setY(0);
   };
