@@ -191,7 +191,7 @@ export function createHand(
             if (!slot.playable) {
               slot.hovered = false;
               settle(slot, 150);
-              note.raise(slot.id, slot.refusal, at.x, at.y);
+              note.raise(slot.id, slot.refusal, slot.home.x, slot.home.y - LIFT - CARD_HEIGHT);
               return;
             }
             // A card that takes a target is not played by the release: it waits, in its slot and

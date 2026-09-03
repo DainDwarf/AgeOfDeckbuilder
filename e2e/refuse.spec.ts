@@ -54,7 +54,7 @@ function reasons(chronicle: Chronicle, id: CardId): string[] {
 /** The card the run's turn opens on, dragged past the play height and released on the canvas. */
 async function letGo(
   page: Page,
-): Promise<{ opened: Chronicle; card: CardId; name: string; home: OnScreen }> {
+): Promise<{ opened: Chronicle; card: CardId; index: number; name: string; home: OnScreen }> {
   const run = refusedRun();
   await open(page, run.seed, 'PH_Deck');
   for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
@@ -64,19 +64,32 @@ async function letGo(
   const name = `hand-${index}`;
   const home = await onScreen(page, name);
   await dragOut(page, index);
-  return { opened, card: opened.hand[index], name, home };
+  return { opened, card: opened.hand[index], index, name, home };
 }
 
-test('a card the rules refuse comes home, plays nothing, and says why', async ({ page }) => {
+/** Longer than any move on the table takes to play out, so nothing is still on its way. */
+const A_WHILE = 2000;
+
+test('a card the rules refuse comes home, plays nothing, and stands its note over it', async ({
+  page,
+}) => {
   const problems = watch(page);
 
-  const { opened, card, name, home } = await letGo(page);
+  const { opened, card, index, name, home } = await letGo(page);
+  const said = reasons(opened, card);
 
   expect((await chronicleOf(page)).hand).toEqual(opened.hand);
-  expect(await refusalLines(page)).toEqual(reasons(opened, card));
+  expect(await refusalLines(page)).toEqual(said);
 
   await expect.poll(() => onScreen(page, name).then((at) => Math.round(at.y - home.y))).toBe(0);
-  await expect.poll(() => onTable(page, 'refusal')).toBe(false);
+
+  const note = await onScreen(page, 'refusal');
+  const beside = await onScreen(page, `hand-${index === 0 ? 1 : index - 1}`);
+  expect(note.y).toBeLessThan(home.y);
+  expect(Math.abs(note.x - home.x)).toBeLessThan(Math.abs(beside.x - home.x));
+
+  await page.waitForTimeout(A_WHILE);
+  expect(await refusalLines(page)).toEqual(said);
 
   expect(problems).toEqual([]);
 });
