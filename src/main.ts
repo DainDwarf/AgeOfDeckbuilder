@@ -1,6 +1,5 @@
 import Phaser from 'phaser';
 import { CARDS, type CardId, DECKS, type DeckId } from './rules/cards';
-import { beginChronicle } from './rules/chronicle';
 import { ChronicleScene } from './ui/chronicle-scene';
 import { backingSize, followWindow, releaseOnBlur } from './ui/design-space';
 
@@ -38,9 +37,6 @@ function askedDeck(): readonly CardId[] {
   return cards as CardId[];
 }
 
-// The one place entropy enters the game: `src/rules/` draws only from the seed it is handed.
-const chronicle = beginChronicle(askedSeed() ?? (Math.random() * 2 ** 32) | 0, askedDeck());
-
 const backing = backingSize();
 const game = new Phaser.Game({
   type: Phaser.AUTO,
@@ -48,7 +44,7 @@ const game = new Phaser.Game({
   height: backing.height,
   backgroundColor: '#0d1117',
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
-  scene: [new ChronicleScene(chronicle)],
+  scene: [new ChronicleScene(askedSeed(), askedDeck())],
 });
 followWindow(game);
 releaseOnBlur(game);

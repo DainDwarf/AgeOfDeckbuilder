@@ -212,6 +212,18 @@ export function farmRun(): Run {
   throw new Error('no seed under a thousand opens a turn on a worker, a march and a farm');
 }
 
+/** The first seed whose city is captured inside twenty turns of ending the turn and nothing else. */
+export function fallRun(): { seed: number; turns: number } {
+  for (let seed = 1; seed <= 1000; seed++) {
+    let chronicle = beginChronicle(seed, DECKS.PH_Deck);
+    for (let turns = 1; turns <= 20 && chronicle.defeat === undefined; turns++) {
+      chronicle = outcome(apply(chronicle, { type: 'end-turn' }));
+      if (chronicle.defeat?.cause === 'capture') return { seed, turns };
+    }
+  }
+  throw new Error('no seed under a thousand is captured inside twenty turns');
+}
+
 /** Where the farm lands when this hand plays its worker, its march and its farm in that order. */
 function farmedThisTurn(chronicle: Chronicle): TileCoords | undefined {
   const enter = chronicle.hand.indexOf('PH_Worker');
@@ -291,10 +303,15 @@ export function offsetOf(page: Page): Promise<number> {
   return scrolled(page).then(({ offset }) => offset);
 }
 
+/** Clicks the named object where it stands on the page. */
+export async function click(page: Page, name: string): Promise<void> {
+  const at = await onScreen(page, name);
+  await page.mouse.click(at.x, at.y);
+}
+
 /** Opens a pile's browse, and waits for its cards to be laid out. */
 export async function browse(page: Page, pile: PileKind): Promise<void> {
-  const at = await onScreen(page, pile);
-  await page.mouse.click(at.x, at.y);
+  await click(page, pile);
   await expect.poll(() => onTable(page, 'browse')).toBe(true);
 }
 
@@ -339,8 +356,7 @@ export async function dragOut(page: Page, index: number): Promise<void> {
  */
 export async function endTurn(page: Page): Promise<void> {
   const { turn } = await chronicleOf(page);
-  const button = await onScreen(page, 'end-turn');
-  await page.mouse.click(button.x, button.y);
+  await click(page, 'end-turn');
   await page.waitForFunction((next) => {
     const scene = window.game?.scene.getScene<ChronicleScene>('chronicle');
     if (scene === null || scene === undefined || scene.playing) return false;

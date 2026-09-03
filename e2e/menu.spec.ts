@@ -1,0 +1,140 @@
+import { expect, type Page, test } from '@playwright/test';
+import { DECKS } from '../src/rules/cards';
+import { apply, beginChronicle, type Chronicle, outcome } from '../src/rules/chronicle';
+import {
+  browse,
+  chronicleOf,
+  click,
+  counted,
+  endTurn,
+  fallRun,
+  onTable,
+  open,
+  watch,
+} from './table';
+
+/** The first seed that stands its city through three ended turns. */
+function standingRun(): number {
+  for (let seed = 1; seed <= 1000; seed++) {
+    let chronicle = beginChronicle(seed, DECKS.PH_Deck);
+    for (let turn = 0; turn < 3; turn++) {
+      chronicle = outcome(apply(chronicle, { type: 'end-turn' }));
+    }
+    if (chronicle.defeat === undefined) return seed;
+  }
+  throw new Error('no seed under a thousand stands its city through three ended turns');
+}
+
+/** Every card the chronicle holds, wherever it stands: the deck it was founded on. */
+function deckOf(chronicle: Chronicle): string[] {
+  return [...chronicle.drawPile, ...chronicle.hand, ...chronicle.discardPile].sort();
+}
+
+/** Waits for the table a new chronicle raised: the menu gone, and one hand laid out on it. */
+async function raised(page: Page): Promise<void> {
+  await expect.poll(() => onTable(page, 'menu')).toBe(false);
+  await expect.poll(() => counted(page, 'hand-0')).toBe(1);
+}
+
+/** Nine ends of turn, every stage of each played out, and the new chronicle after them. */
+const A_FALL = 60_000;
+
+test('the menu walks in to Controls and closes back one step at a time', async ({ page }) => {
+  const problems = watch(page);
+
+  await open(page, 1, 'PH_Deck');
+  expect(await onTable(page, 'menu')).toBe(false);
+
+  await click(page, 'menu-button');
+  await expect.poll(() => onTable(page, 'menu')).toBe(true);
+
+  await click(page, 'menu-settings');
+  await expect.poll(() => onTable(page, 'settings')).toBe(true);
+  expect(await onTable(page, 'menu')).toBe(false);
+
+  await click(page, 'settings-controls');
+  await expect.poll(() => onTable(page, 'controls')).toBe(true);
+  expect(await onTable(page, 'settings')).toBe(false);
+
+  await page.keyboard.press('Escape');
+  await expect.poll(() => onTable(page, 'settings')).toBe(true);
+  await page.keyboard.press('Escape');
+  await expect.poll(() => onTable(page, 'menu')).toBe(true);
+  await page.keyboard.press('Escape');
+  await expect.poll(() => onTable(page, 'menu')).toBe(false);
+  expect(await onTable(page, 'settings')).toBe(false);
+  expect(await onTable(page, 'controls')).toBe(false);
+
+  expect(problems).toEqual([]);
+});
+
+test('Escape raises the menu on a bare table, and backs out of a browse without it', async ({
+  page,
+}) => {
+  const problems = watch(page);
+
+  await open(page, 1, 'PH_Deck');
+
+  await page.keyboard.press('Escape');
+  await expect.poll(() => onTable(page, 'menu')).toBe(true);
+  await page.keyboard.press('Escape');
+  await expect.poll(() => onTable(page, 'menu')).toBe(false);
+
+  await click(page, 'menu-button');
+  await expect.poll(() => onTable(page, 'menu')).toBe(true);
+  await click(page, 'menu-button');
+  await expect.poll(() => onTable(page, 'menu')).toBe(false);
+
+  await browse(page, 'draw-pile');
+  await page.keyboard.press('Escape');
+  await expect.poll(() => onTable(page, 'browse')).toBe(false);
+  expect(await onTable(page, 'menu')).toBe(false);
+
+  expect(problems).toEqual([]);
+});
+
+test('a new chronicle deals the same deck a fresh seed, on turn 1', async ({ page }) => {
+  const problems = watch(page);
+
+  await open(page, standingRun(), 'PH_Deck');
+  for (let turn = 0; turn < 3; turn++) await endTurn(page);
+  const played = await chronicleOf(page);
+  expect(played.turn).toBeGreaterThan(1);
+
+  await click(page, 'menu-button');
+  await expect.poll(() => onTable(page, 'menu')).toBe(true);
+  await click(page, 'menu-new-chronicle');
+  await raised(page);
+
+  const fresh = await chronicleOf(page);
+  expect(fresh.turn).toBe(1);
+  expect(fresh.seed).not.toBe(played.seed);
+  expect(deckOf(fresh)).toEqual(deckOf(played));
+
+  expect(problems).toEqual([]);
+});
+
+test('the menu opens over the defeat screen, and a new chronicle takes the table back', async ({
+  page,
+}) => {
+  test.setTimeout(A_FALL);
+  const problems = watch(page);
+  const run = fallRun();
+
+  await open(page, run.seed, 'PH_Deck');
+  for (let turn = 0; turn < run.turns; turn++) await endTurn(page);
+  await expect.poll(() => onTable(page, 'defeat')).toBe(true);
+
+  await click(page, 'menu-button');
+  await expect.poll(() => onTable(page, 'menu')).toBe(true);
+
+  await click(page, 'menu-new-chronicle');
+  await raised(page);
+
+  const fresh = await chronicleOf(page);
+  expect(fresh.defeat).toBeUndefined();
+  expect(fresh.turn).toBe(1);
+  expect(await onTable(page, 'defeat')).toBe(false);
+
+  expect(problems).toEqual([]);
+});

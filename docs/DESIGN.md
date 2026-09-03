@@ -94,6 +94,16 @@ release, but the stack is chosen with them in mind.
 - **English only.** No language is planned; text is kept addable.
 - Not in scope: a map editor, modding, a level or scenario editor.
 
+### The menu ✅
+
+A **Menu** button stands on the table and opens the menu over it. The menu lists **Settings** and
+**New chronicle**: a new chronicle begins one on a fresh seed with the same deck, leaving whatever
+the city was living through, victory, defeat or the middle of a turn. **Settings** is where
+everything the player sets lives, and **Controls** is its first entry.
+
+A window closes back one step, to the window it was opened from and then to the table. Nothing
+pauses, because nothing runs: the game is untimed, and a menu over the table is the table waiting.
+
 ## Systems
 
 ### The turn ✅

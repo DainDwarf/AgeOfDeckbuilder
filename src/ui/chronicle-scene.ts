@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
+import type { CardId } from '../rules/cards';
 import {
   apply,
+  beginChronicle,
   type Chronicle,
   type Command,
   outcome,
@@ -51,12 +53,15 @@ function nextLayer(shown: number | undefined, count: number): number | undefined
 }
 
 export class ChronicleScene extends Phaser.Scene {
+  private readonly deck: readonly CardId[];
   private current: Chronicle;
-  private sequence = false;
+  /** The play-out running on the table as it stands, and nothing while none is. */
+  private sequence: symbol | undefined;
 
-  constructor(chronicle: Chronicle) {
+  constructor(seed: number | undefined, deck: readonly CardId[]) {
     super('chronicle');
-    this.current = chronicle;
+    this.deck = deck;
+    this.current = this.begin(seed);
   }
 
   /** The chronicle as it stands, for whoever holds the game through `window.game`. */
@@ -66,7 +71,27 @@ export class ChronicleScene extends Phaser.Scene {
 
   /** Whether a command is still playing out its stages: the chronicle moves on under it. */
   get playing(): boolean {
-    return this.sequence;
+    return this.sequence !== undefined;
+  }
+
+  /**
+   * A chronicle on this table's deck, from the seed it was asked for or from a fresh one. The fresh
+   * one is the one place entropy enters the game: `src/rules/` draws only from the seed it is
+   * handed.
+   */
+  private begin(seed: number | undefined): Chronicle {
+    return beginChronicle(seed ?? (Math.random() * 2 ** 32) | 0, this.deck);
+  }
+
+  /**
+   * A fresh chronicle on a new seed and the same deck, on a table raised from nothing: the scene's
+   * restart takes down every object, listener, tween and timer the old table left standing. The
+   * play-out the old table was in the middle of is let go of here, and its tail commits nothing.
+   */
+  private newChronicle(): void {
+    this.current = this.begin(undefined);
+    this.sequence = undefined;
+    this.scene.restart();
   }
 
   create(): void {
@@ -100,12 +125,15 @@ export class ChronicleScene extends Phaser.Scene {
      *
      * However the play-out ends, the tail commits the last stage's chronicle and paints it: it
      * needs no motion to have completed, and a part's render takes down whatever that part left in
-     * the air.
+     * the air. A play-out the table has let go of — a new chronicle was begun under it — commits
+     * nothing: the objects it was playing on are gone, and the chronicle it would commit is not
+     * the one on the table.
      */
     const playOut = async (command: Command): Promise<void> => {
-      if (this.sequence) return;
+      if (this.sequence !== undefined) return;
       const stages = apply(this.current, command);
-      this.sequence = true;
+      const running = Symbol('play-out');
+      this.sequence = running;
 
       try {
         endTurn.live(false);
@@ -113,6 +141,7 @@ export class ChronicleScene extends Phaser.Scene {
         dismiss();
 
         for (const stage of stages) {
+          if (this.sequence !== running) return;
           this.current = stage.chronicle;
           const motions: Promise<void>[] = [];
           for (const part of parts) {
@@ -123,11 +152,13 @@ export class ChronicleScene extends Phaser.Scene {
           await Promise.all(motions);
         }
       } finally {
-        this.current = outcome(stages);
-        paint();
-        hand.live(true);
-        endTurn.live(true);
-        this.sequence = false;
+        if (this.sequence === running) {
+          this.current = outcome(stages);
+          paint();
+          hand.live(true);
+          endTurn.live(true);
+          this.sequence = undefined;
+        }
       }
     };
 
@@ -151,9 +182,21 @@ export class ChronicleScene extends Phaser.Scene {
       },
       () => panel.rescale(),
     );
-    this.input.keyboard?.on('keydown-ESC', dismiss);
+    const overlay = createOverlay(
+      this,
+      ui,
+      (covered) => view.live(!covered),
+      () => this.newChronicle(),
+    );
 
-    const overlay = createOverlay(this, ui, (covered) => view.live(!covered));
+    // The one Escape on the table: it takes back the outermost thing that is up, and with nothing
+    // up at all it raises the menu. Every other listener for it is a second answer to one press.
+    this.input.keyboard?.on('keydown-ESC', () => {
+      if (overlay.back()) return;
+      if (inspecting !== undefined) dismiss();
+      else overlay.menu();
+    });
+
     const endTurn = this.addEndTurn(() => {
       void playOut({ type: 'end-turn' });
     });
@@ -188,7 +231,7 @@ export class ChronicleScene extends Phaser.Scene {
     );
     parts.push(
       view,
-      createResourceBar(this, createTooltip(this, ui)),
+      createResourceBar(this, createTooltip(this, ui), () => overlay.menu()),
       createPiles(this, (pile) => overlay.browse(pile, this.current)),
       hand,
       endTurn,

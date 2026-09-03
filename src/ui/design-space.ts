@@ -15,6 +15,14 @@ export const ACCENT = 0xd9a441;
 export const PANEL_FILL = 0xd4d7db;
 export const PANEL_EDGE = 0x6f757d;
 
+/**
+ * The two depths the scrim divides the table at: everything the table lays out is below the scrim,
+ * and the Menu button alone stands over it, so it is pressable while a window or the defeat screen
+ * covers the table. What the scrim carries stands between them.
+ */
+export const SCRIM_DEPTH = 100;
+export const OVER_SCRIM_DEPTH = 110;
+
 // Phaser reads a polygon's corner list in min-(0, 0) space; corners about their own centre draw
 // displaced by half the shape.
 export function corners(raw: number[]): number[] {
@@ -141,6 +149,22 @@ export function onResize(scene: Phaser.Scene, place: () => void): void {
   });
 }
 
+/**
+ * A listener on the scene's own events, for as long as the scene is up. A scene's emitter outlives
+ * its shutdown, so one left on it is called again by the table a restart raises — holding every
+ * object the table it was made on has since destroyed.
+ */
+export function whileUp<A extends unknown[]>(
+  scene: Phaser.Scene,
+  event: string,
+  handler: (...args: A) => void,
+): void {
+  scene.events.on(event, handler);
+  scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+    scene.events.off(event, handler);
+  });
+}
+
 /** Every Text the scene holds, however deep in layers and containers it sits. */
 function* textsIn(
   objects: readonly Phaser.GameObjects.GameObject[],
@@ -219,7 +243,7 @@ export function applyDesignSpace(scene: Phaser.Scene): Surfaces {
 
   // A layer re-announces what it is handed on this same emitter, so the guard is what ends this:
   // the object arrives a second time already homed, and falls through.
-  scene.events.on(Phaser.Scenes.Events.ADDED_TO_SCENE, (object: Phaser.GameObjects.GameObject) => {
+  whileUp(scene, Phaser.Scenes.Events.ADDED_TO_SCENE, (object: Phaser.GameObjects.GameObject) => {
     if (object instanceof Phaser.GameObjects.Layer) return;
     if (object.displayList !== scene.sys.displayList) return;
     ui.layer.add(object);

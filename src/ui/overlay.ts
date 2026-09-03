@@ -17,17 +17,17 @@ import {
   MARGIN,
   onClick,
   releasedOffCanvas,
+  SCRIM_DEPTH,
   type Surface,
   UI_FONT,
+  whileUp,
 } from './design-space';
+import { behind, createWindow, type MenuWindow } from './menu';
 import { BAR_HEIGHT } from './resource-bar';
 import { text } from './text';
 
 const SCRIM = 0x0d1014;
 const SCRIM_ALPHA = 0.82;
-
-/** Above the tooltip, the end-turn button and every lifted hand card. */
-const DEPTH = 100;
 
 const TITLE_INK = '#d4d7db';
 const BROWSE_WIDTH = 180;
@@ -46,6 +46,10 @@ export type PileKind = 'draw-pile' | 'discard-pile';
 export type Overlay = {
   browse(pile: PileKind, chronicle: Chronicle): void;
   zoom(id: CardId, refusal: Refusal): void;
+  /** The Menu button: raises the menu over whatever stands, and takes the whole menu back down. */
+  menu(): void;
+  /** Takes what stands on the scrim back one step, and answers whether anything stood. */
+  back(): boolean;
   /** Raises the defeat screen once the chronicle has ended, and nothing while it runs. */
   render(chronicle: Chronicle): void;
   play(stage: Stage): Promise<void> | undefined;
@@ -71,20 +75,22 @@ type Scroll = {
 };
 
 /**
- * The scrim and what stands on it: a pile's cards laid out, one card large, or the defeat screen.
- * The scrim swallows every pointer beneath it, so the table is inert while any of them is open —
- * and the defeat screen never comes back down. `covering` is told as it goes up and comes down,
- * for whatever the scrim cannot swallow: the wheel and the keyboard reach past it.
+ * The scrim and what stands on it: a pile's cards laid out, one card large, a window of the menu,
+ * or the defeat screen. The scrim swallows every pointer beneath it, so the table is inert while
+ * any of them is open, and only the menu comes up over the defeat screen — the city that fell is
+ * left behind by a new chronicle alone. `covering` is told as the scrim goes up and comes down, for
+ * whatever it cannot swallow: the wheel and the keyboard reach past it.
  */
 export function createOverlay(
   scene: Phaser.Scene,
   on: Surface,
   covering: (covered: boolean) => void,
+  newChronicle: () => void,
 ): Overlay {
   const scrim = scene.add
     .rectangle(0, 0, DESIGN_WIDTH, DESIGN_HEIGHT, SCRIM, SCRIM_ALPHA)
     .setOrigin(0, 0)
-    .setDepth(DEPTH)
+    .setDepth(SCRIM_DEPTH)
     .setVisible(false);
   const clip = createClip(scene, on);
 
@@ -96,7 +102,10 @@ export function createOverlay(
   let fling = 0;
   let scrolling: Scroll | undefined;
   let zoomed = false;
-  let fallen = false;
+  /** The window of the menu that stands, and nothing while none does. */
+  let opened: MenuWindow | undefined;
+  /** The fall the defeat screen was raised on, kept so the menu can close back onto it. */
+  let fallen: Defeat | undefined;
   /** The defeat screen still coming up; a render owns the rise and takes it down. */
   let rising: Phaser.GameObjects.Container | undefined;
 
@@ -113,6 +122,7 @@ export function createOverlay(
     wipe();
     browsing = undefined;
     zoomed = false;
+    opened = undefined;
     scrim.setVisible(false).disableInteractive();
     covering(false);
   };
@@ -128,11 +138,12 @@ export function createOverlay(
     wipe();
     cover();
     zoomed = true;
+    opened = undefined;
     const { root } = createCardFace(scene, id, refusal, { width: ZOOM_WIDTH });
     root
       .setName('zoom')
       .setPosition(DESIGN_WIDTH / 2, (DESIGN_HEIGHT + Math.round(ZOOM_WIDTH * 1.4)) / 2)
-      .setDepth(DEPTH + 1);
+      .setDepth(SCRIM_DEPTH + 1);
     shown.push(root);
   };
 
@@ -148,6 +159,7 @@ export function createOverlay(
     cover();
     browsing = { pile, cards };
     zoomed = false;
+    opened = undefined;
 
     const title = addText(
       scene,
@@ -157,7 +169,7 @@ export function createOverlay(
       { fontFamily: UI_FONT, fontSize: '26px', fontStyle: 'bold', color: TITLE_INK },
     )
       .setOrigin(0.5, 0)
-      .setDepth(DEPTH + 1);
+      .setDepth(SCRIM_DEPTH + 1);
     shown.push(title);
 
     const height = Math.round(BROWSE_WIDTH * 1.4);
@@ -175,7 +187,7 @@ export function createOverlay(
     const frame = scene.add
       .zone(DESIGN_WIDTH / 2, top + frameHeight / 2, DESIGN_WIDTH - 2 * MARGIN, frameHeight)
       .setName('browse-frame')
-      .setDepth(DEPTH + 2)
+      .setDepth(SCRIM_DEPTH + 2)
       .setInteractive({ cursor: 'pointer', draggable: true });
 
     frame.on('pointerdown', () => {
@@ -220,7 +232,7 @@ export function createOverlay(
     const root = scene.add
       .container(0, 0)
       .setName('browse')
-      .setDepth(DEPTH + 1)
+      .setDepth(SCRIM_DEPTH + 1)
       .setData('overflow', overflow);
     for (const card of placed) {
       const face = createCardFace(scene, card.id, NO_REFUSAL, { width: BROWSE_WIDTH });
@@ -233,13 +245,14 @@ export function createOverlay(
     clip.show(root, MARGIN, top, DESIGN_WIDTH - 2 * MARGIN, frameHeight);
   };
 
-  /** The city fallen: the scrim and the screen rise together, out of nothing and a little low. */
-  const showDefeat = (defeat: Defeat): Promise<void> => {
+  /** The city fallen, on the screen that says so; the caller decides whether it rises or stands. */
+  const showDefeat = (defeat: Defeat): Phaser.GameObjects.Container => {
     wipe();
     cover();
     browsing = undefined;
     zoomed = false;
-    fallen = true;
+    opened = undefined;
+    fallen = defeat;
 
     const title = addText(scene, DESIGN_WIDTH / 2, DESIGN_HEIGHT / 2 - 12, text('defeat.title'), {
       fontFamily: UI_FONT,
@@ -256,11 +269,16 @@ export function createOverlay(
     ).setOrigin(0.5, 0);
 
     const screen = scene.add
-      .container(0, 12, [title, cause])
-      .setDepth(DEPTH + 1)
-      .setName('defeat')
-      .setAlpha(0);
+      .container(0, 0, [title, cause])
+      .setDepth(SCRIM_DEPTH + 1)
+      .setName('defeat');
     shown.push(screen);
+    return screen;
+  };
+
+  /** The fall as it lands: the scrim and the screen rise together, out of nothing and a little low. */
+  const raiseDefeat = (defeat: Defeat): Promise<void> => {
+    const screen = showDefeat(defeat).setAlpha(0).setY(12);
     rising = screen;
     scrim.setAlpha(0);
 
@@ -284,16 +302,40 @@ export function createOverlay(
     screen.setAlpha(1).setY(0);
   };
 
-  const back = (): void => {
-    if (fallen) return;
+  const showWindow = (which: MenuWindow): void => {
+    wipe();
+    cover();
+    browsing = undefined;
+    zoomed = false;
+    opened = which;
+    shown.push(
+      createWindow(scene, which, (press) => {
+        if (press === 'new-chronicle') newChronicle();
+        else showWindow(press);
+      }).setDepth(SCRIM_DEPTH + 1),
+    );
+  };
+
+  /** The menu gone: back to the table, or back onto the screen of the city that fell under it. */
+  const shut = (): void => {
+    if (fallen === undefined) close();
+    else showDefeat(fallen);
+  };
+
+  const back = (): boolean => {
+    if (opened !== undefined) {
+      const step = behind(opened);
+      if (step === undefined) shut();
+      else showWindow(step);
+      return true;
+    }
+    if (fallen !== undefined || !scrim.visible) return false;
     if (zoomed && browsing !== undefined) showBrowse(browsing.pile, browsing.cards);
     else close();
+    return true;
   };
 
   onClick(scrim, back);
-  scene.input.keyboard?.on('keydown-ESC', () => {
-    if (scrim.visible) back();
-  });
 
   scene.input.on(
     'wheel',
@@ -304,7 +346,7 @@ export function createOverlay(
     },
   );
 
-  scene.events.on(Phaser.Scenes.Events.UPDATE, (_time: number, delta: number) => {
+  whileUp(scene, Phaser.Scenes.Events.UPDATE, (_time: number, delta: number) => {
     if (fling === 0 || grid === undefined) return;
     const to = offset + fling * delta;
     scrollTo(to);
@@ -317,13 +359,19 @@ export function createOverlay(
       showBrowse(pile, cardsOf(pile, chronicle));
     },
     zoom: showZoom,
+    menu(): void {
+      if (opened === undefined) showWindow('menu');
+      else shut();
+    },
+    back,
     render(chronicle: Chronicle): void {
-      if (chronicle.defeat !== undefined && !fallen) void showDefeat(chronicle.defeat);
+      if (chronicle.defeat !== undefined && fallen === undefined)
+        void raiseDefeat(chronicle.defeat);
       else stand();
     },
     play(stage: Stage): Promise<void> | undefined {
-      if (stage.chronicle.defeat === undefined || fallen) return undefined;
-      return showDefeat(stage.chronicle.defeat);
+      if (stage.chronicle.defeat === undefined || fallen !== undefined) return undefined;
+      return raiseDefeat(stage.chronicle.defeat);
     },
   };
 }

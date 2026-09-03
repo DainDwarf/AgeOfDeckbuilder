@@ -5,6 +5,8 @@ import {
   addText,
   DESIGN_WIDTH,
   MARGIN,
+  OVER_SCRIM_DEPTH,
+  onClick,
   onHover,
   PANEL_EDGE,
   PANEL_FILL,
@@ -21,6 +23,9 @@ const VALUE_STYLE = { fontFamily: UI_FONT, fontSize: '18px', color: '#0d1014' };
 const CHIP_TO_WORD = 18;
 const WORD_TO_VALUE = 8;
 const BETWEEN = 22;
+
+const MENU_HEIGHT = 32;
+const MENU_PADDING = 12;
 
 type Reading = Resource | 'population';
 
@@ -53,7 +58,11 @@ export type ResourceBar = {
   play(stage: Stage): Promise<void> | undefined;
 };
 
-export function createResourceBar(scene: Phaser.Scene, tooltip: Tooltip): ResourceBar {
+export function createResourceBar(
+  scene: Phaser.Scene,
+  tooltip: Tooltip,
+  menu: () => void,
+): ResourceBar {
   const bar = scene.add.container(0, 0).setDepth(10);
   bar.add(scene.add.rectangle(0, 0, DESIGN_WIDTH, BAR_HEIGHT, PANEL_FILL).setOrigin(0, 0));
   bar.add(
@@ -65,10 +74,12 @@ export function createResourceBar(scene: Phaser.Scene, tooltip: Tooltip): Resour
 
   const slot = digitSlot(scene);
 
+  const menuWidth = createMenuButton(scene, menu);
+
   const left = LEFT.map((key) => createEntry(scene, bar, tooltip, key));
   const right = RIGHT.map((key) => createEntry(scene, bar, tooltip, key));
   place(left, MARGIN, slot);
-  place(right, DESIGN_WIDTH - MARGIN - spanOf(right, slot), slot);
+  place(right, DESIGN_WIDTH - MARGIN - menuWidth - BETWEEN - spanOf(right, slot), slot);
 
   const entries = [...left, ...right];
   /** The readings the bar has ticking; a render owns them and takes them down. */
@@ -116,6 +127,30 @@ export function createResourceBar(scene: Phaser.Scene, tooltip: Tooltip): Resour
       return stage.name === 'income' ? rise(stage.chronicle) : undefined;
     },
   };
+}
+
+/**
+ * The Menu button at the bar's right end, and how wide it came out. It stands over the scrim
+ * instead of in the bar, so it is still pressable while a window or the defeat screen covers the
+ * table: a new chronicle is how a player leaves a defeat.
+ */
+function createMenuButton(scene: Phaser.Scene, pressed: () => void): number {
+  const label = addText(scene, 0, 0, text('button.menu'), VALUE_STYLE).setOrigin(0.5, 0.5);
+  const width = label.width + 2 * MENU_PADDING;
+  const x = DESIGN_WIDTH - MARGIN - width / 2;
+  const y = BAR_HEIGHT / 2;
+
+  const button = scene.add
+    .rectangle(x, y, width, MENU_HEIGHT, PANEL_FILL)
+    .setStrokeStyle(1, PANEL_EDGE)
+    .setName('menu-button')
+    .setInteractive({ useHandCursor: true });
+  label.setPosition(x, y);
+  // The label is added after the fill: equal depths draw in the order they were added, so a label
+  // standing beside the button rather than inside it would be painted over by it.
+  scene.add.container(0, 0, [button, label]).setDepth(OVER_SCRIM_DEPTH);
+  onClick(button, pressed);
+  return width;
 }
 
 /** The width every value grows rightward into: four digits, so no reading ever moves. */

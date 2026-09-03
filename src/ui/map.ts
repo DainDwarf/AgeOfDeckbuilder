@@ -21,6 +21,7 @@ import {
   onResize,
   renderFactor,
   type Surface,
+  whileUp,
 } from './design-space';
 
 const TILE_SIZE = 24;
@@ -454,7 +455,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
     keys: pan.keys.map((name) => keyboard?.addKey(name)),
   }));
 
-  scene.events.on(Phaser.Scenes.Events.UPDATE, (_time: number, delta: number) => {
+  whileUp(scene, Phaser.Scenes.Events.UPDATE, (_time: number, delta: number) => {
     if (!taking) return;
     let x = 0;
     let y = 0;
