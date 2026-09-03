@@ -12,11 +12,6 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
-- **The units staged** — the player's attacks, the enemies' intents executed, the enemies' moves,
-  the intents declared and the arrival each play on the map in the rules' order: markers move,
-  a hit shows, a killed unit leaves, an intent ring appears and is spent; a step that did not
-  happen is not shown. The fall spec's timeout is raised to hold the motion it now waits on.
-  The standing e2e passes. Doc-impact: none.
 - **Unplayable reasons on screen** — a card in hand that cannot be played shows why when zoomed:
   the unaffordable resources it already marks, joined by the blocked reasons (no free tile, no
   population, no valid target). Doc-impact: none.

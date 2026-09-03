@@ -24,9 +24,13 @@ function defeatShown(page: Page): Promise<boolean> {
   });
 }
 
+/** Nine ends of turn, every stage of each played out: 22 seconds alone, 29 beside the local suite. */
+const NINE_TURNS = 60_000;
+
 test('the enemy that reaches the city captures it, and the chronicle ends on the defeat screen', async ({
   page,
 }) => {
+  test.setTimeout(NINE_TURNS);
   const problems = watch(page);
   const run = fallRun();
 

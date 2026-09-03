@@ -112,7 +112,9 @@ A chronicle is a sequence of **turns**. Each turn, in this order:
    energy was rejected: a sixth economy fighting the five.
 4. **End.** The player ends the turn; the rest of the hand is discarded.
 5. **Combat.** Every fighting unit attacks: the player's units first, each at an enemy within its
-   range, then every enemy executes the **intent** it declared last turn. Combat comes before
+   range, then every enemy executes the **intent** it declared last turn. Executing an intent
+   spends it — one whose target has left the tile is executed on the empty tile all the same, and
+   no enemy carries an intent until the enemy phase declares again. Combat comes before
    income so that an enemy killed here occupies nothing when the tiles yield.
 6. **Income.** Standing things do their standing thing: assigned tiles and their buildings yield
    their resources. So what the player sees when drawing holds for the whole turn: a farm placed

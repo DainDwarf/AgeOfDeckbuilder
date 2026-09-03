@@ -141,6 +141,28 @@ function intentOf(chronicle: Chronicle, index: number): TileCoords | undefined {
   return unit.intent;
 }
 
+/** Every attack the end of turn stages, as the tile each was made from and the tile it was aimed at. */
+function attacksOf(chronicle: Chronicle): string[][] {
+  return endOfTurn(chronicle).flatMap((stage) =>
+    stage.name === 'attack' ? [[tileKey(stage.attacker), tileKey(stage.target)]] : [],
+  );
+}
+
+/** Every move the end of turn stages, as the tile each enemy left and the tile it reached. */
+function movesOf(chronicle: Chronicle): string[][] {
+  return endOfTurn(chronicle).flatMap((stage) =>
+    stage.name === 'move' ? [[tileKey(stage.from), tileKey(stage.to)]] : [],
+  );
+}
+
+/** The chronicle combat leaves behind: the one the last attack of the end of turn stands on. */
+function afterCombat(chronicle: Chronicle): Chronicle {
+  const attacks = endOfTurn(chronicle).filter((stage) => stage.name === 'attack');
+  const last = attacks[attacks.length - 1];
+  if (last === undefined) throw new Error('nothing attacked in this end of turn');
+  return last.chronicle;
+}
+
 /** Every tile of a disc at its rim: the ring an arrival draws from. */
 function rimOf(radius: number): TileCoords[] {
   return field(radius)
@@ -334,7 +356,8 @@ test('the end of turn resolves in order, and its last stage is where the turn en
   expect(stages.map((stage) => stage.name)).toEqual([
     'discard',
     'income',
-    'enemy-phase',
+    'move',
+    'intents',
     'turn',
     'draw',
     'shuffle',
@@ -353,7 +376,7 @@ test('a stage of the end of turn that changed nothing is left out of it', () => 
   expect(endOfTurn(quiet).map((stage) => stage.name)).toEqual(['income', 'turn', 'draw']);
 });
 
-test('a capture ends the end of turn on the enemy phase, with the defeat set', () => {
+test('a capture ends the end of turn on its own stage, with the defeat set', () => {
   const overrun = cityOf(['urban'], {
     tiles: field(2),
     hand: ['PH_Harvest'],
@@ -364,7 +387,7 @@ test('a capture ends the end of turn on the enemy phase, with the defeat set', (
   const stages = endOfTurn(overrun);
   const last = stages[stages.length - 1];
 
-  expect(stages.map((stage) => stage.name)).toEqual(['discard', 'enemy-phase']);
+  expect(stages.map((stage) => stage.name)).toEqual(['discard', 'capture']);
   expect(last.chronicle.defeat).toEqual({ cause: 'capture', turn: overrun.turn });
   expect(last.chronicle.turn).toBe(overrun.turn);
   expect(last.chronicle.hand).toEqual([]);
@@ -834,6 +857,86 @@ test('an intent aimed at a tile its target has left attacks nothing', () => {
   const dodged = apply(apply(city, march(0, { q: 0, r: 1 })), { type: 'end-turn' });
 
   expect(dodged.units[0].stats.health).toBe(city.units[0].stats.health);
+});
+
+test('every attack of combat is staged on its own, the player’s before the enemies’', () => {
+  const city = cityOf(['urban'], {
+    tiles: field(3),
+    units: [
+      unitOf('player', { q: 1, r: 0 }, { damage: 1 }),
+      aiming({ q: 2, r: 0 }, { q: 1, r: 0 }, { health: 5, damage: 1 }),
+      aiming({ q: 2, r: -1 }, { q: 1, r: 0 }, { health: 5, damage: 1 }),
+    ],
+  });
+
+  expect(attacksOf(city)).toEqual([
+    ['1,0', '2,0'],
+    ['2,0', '1,0'],
+    ['2,-1', '1,0'],
+  ]);
+});
+
+test('an intent executed in combat is spent, and the enemy carries none out of it', () => {
+  const city = cityOf(['urban'], {
+    tiles: field(3),
+    units: [worker({ q: 1, r: 0 }), aiming({ q: 2, r: 0 }, { q: 1, r: 0 }, { damage: 1 })],
+  });
+
+  const fought = afterCombat(city);
+
+  expect(attacksOf(city)).toEqual([['2,0', '1,0']]);
+  expect(fought.units[0].stats.health).toBe(city.units[0].stats.health - 1);
+  expect(intentOf(fought, 1)).toBeUndefined();
+});
+
+test('an intent whose target has left is executed on the empty tile, and spent there', () => {
+  const city = cityOf(['urban'], {
+    tiles: field(3),
+    hand: ['PH_March'],
+    units: [worker({ q: 1, r: 0 }), aiming({ q: 2, r: 0 }, { q: 1, r: 0 }, { damage: 2 })],
+  });
+
+  const dodged = apply(city, march(0, { q: 0, r: 1 }));
+  const fought = afterCombat(dodged);
+
+  expect(attacksOf(dodged)).toEqual([['2,0', '1,0']]);
+  expect(fought.units[0].stats.health).toBe(city.units[0].stats.health);
+  expect(intentOf(fought, 1)).toBeUndefined();
+});
+
+test('an enemy that moves stages the tile it left and the one it reached; a stuck one stages nothing', () => {
+  const moat: TileCoords[] = [
+    { q: 2, r: 0 },
+    { q: 3, r: -1 },
+    { q: 2, r: 1 },
+  ];
+  const city = cityOf(['urban'], {
+    tiles: field(3, moat),
+    units: [
+      unitOf('enemy', { q: 3, r: 0 }, { move: 1 }),
+      unitOf('enemy', { q: 0, r: 3 }, { move: 1 }),
+    ],
+  });
+
+  expect(movesOf(city)).toEqual([['0,3', '0,2']]);
+});
+
+test('the intents the enemy phase declares come as one stage, after every move it made', () => {
+  const city = cityOf(['urban'], {
+    tiles: field(3),
+    units: [
+      worker({ q: 1, r: 1 }),
+      unitOf('enemy', { q: 3, r: 0 }, { move: 1 }),
+      unitOf('enemy', { q: 0, r: 3 }, { move: 1 }),
+    ],
+  });
+
+  const stages = endOfTurn(city);
+  const declared = stages[stages.length - 2];
+
+  expect(stages.map((stage) => stage.name)).toEqual(['income', 'move', 'move', 'intents', 'turn']);
+  expect(intentOf(declared.chronicle, 1)).toEqual({ q: 1, r: 1 });
+  expect(intentOf(declared.chronicle, 2)).toEqual({ q: 1, r: 1 });
 });
 
 test('a fighting unit that stands still attacks the enemy with the least health', () => {

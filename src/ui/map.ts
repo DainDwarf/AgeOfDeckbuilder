@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import type { Chronicle, Target } from '../rules/chronicle';
+import type { Chronicle, Stage, Target } from '../rules/chronicle';
 import {
   type BuildingTypeId,
   CITY_TILE,
@@ -8,7 +8,8 @@ import {
   type TileCoords,
   tileKey,
 } from '../rules/map';
-import { type Faction, reachable, type Unit, type UnitTypeId } from '../rules/units';
+import { type Faction, reachable, type Unit, type UnitTypeId, unitAt } from '../rules/units';
+import { EASE, ended } from './card-motion';
 import {
   ACCENT,
   corners,
@@ -111,6 +112,8 @@ export type Inspection = {
 
 export type MapView = {
   render(chronicle: Chronicle): void;
+  /** What the map plays for the stage; nothing means the scene renders it at once. */
+  play(stage: Stage): Promise<void> | undefined;
   /** Aims at a unit, then at where it lands, until a target is chosen or cancel is called. */
   aimUnitTile(chronicle: Chronicle, chosen: (target: Target | undefined) => void): () => void;
   /** Lights the tiles it is given and aims at them, until a target is chosen or cancel is called. */
@@ -152,6 +155,21 @@ export function unitMark(scene: Phaser.Scene, unit: Unit): Phaser.GameObjects.Po
   return scene.add
     .polygon(0, 0, UNIT_MARKS[unit.stats.id], FACTION_COLOURS[unit.faction])
     .setStrokeStyle(2, OUTLINE);
+}
+
+/** The one way an intent is drawn: the enemy's ring around the tile its attack is aimed at. */
+function intentMark(scene: Phaser.Scene, coord: TileCoords): Phaser.GameObjects.Polygon {
+  const { x, y } = positionOf(coord);
+  return scene.add
+    .polygon(x, y, hexagon(TILE_SIZE - 2), 0, 0)
+    .setStrokeStyle(4, FACTION_COLOURS.enemy);
+}
+
+/** Every tile the enemies of a chronicle are aiming at, one ring's worth each. */
+function aimedAt(units: readonly Unit[]): TileCoords[] {
+  return units.flatMap((unit) =>
+    unit.faction === 'enemy' && unit.intent !== undefined ? [unit.intent] : [],
+  );
 }
 
 function positionOf({ q, r }: TileCoords): { x: number; y: number } {
@@ -412,37 +430,185 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
     };
   };
 
+  /** The chronicle the map stands on: which marker is whose is read from it. */
+  let shown: Chronicle | undefined;
+  /** What the map has in the air; a render owns it and takes it down. */
+  let flight: symbol | undefined;
+
+  const render = (current: Chronicle): void => {
+    flight = undefined;
+    shown = current;
+
+    built.removeAll(true);
+    for (const tile of current.tiles) {
+      if (tile.building === undefined) continue;
+      const { x, y } = positionOf(tile);
+      built.add(buildingMark(scene, tile.building).setPosition(x, y));
+    }
+
+    // What is about to be destroyed loses its tweens first: a motion left running on a destroyed
+    // marker never completes, and the stage waiting on it would never end.
+    scene.tweens.killTweensOf(intents.list);
+    intents.removeAll(true);
+    for (const coord of aimedAt(current.units)) intents.add(intentMark(scene, coord));
+
+    scene.tweens.killTweensOf(marks.list);
+    marks.removeAll(true);
+    markers = current.units.map((unit) => {
+      const { x, y } = positionOf(unit.tile);
+      const marker = unitMark(scene, unit).setPosition(x, y);
+      marks.add(marker);
+      return marker;
+    });
+  };
+
+  /** Takes the map for one stage's motion, and hands back the token that settles it. */
+  const takeOff = (): symbol => {
+    const token = Symbol('motion');
+    flight = token;
+    return token;
+  };
+
+  const settle = (token: symbol, chronicle: Chronicle): void => {
+    // A render while this was in the air took it down and painted the map it stands on.
+    if (flight === token) render(chronicle);
+  };
+
+  /** The marker standing on a tile, and nothing where the map shows none. */
+  const markerOn = (coord: TileCoords): Phaser.GameObjects.Polygon | undefined => {
+    const index = shown?.units.findIndex((unit) => same(unit.tile, coord)) ?? -1;
+    return index === -1 ? undefined : markers[index];
+  };
+
+  /** What a target does: a bump where it was hit, and a shrink off the map if it was killed. */
+  const struck = async (
+    marker: Phaser.GameObjects.Polygon,
+    killed: boolean,
+    token: symbol,
+  ): Promise<void> => {
+    await ended(
+      scene,
+      scene.tweens.add({
+        targets: marker,
+        scale: 1.35,
+        delay: 150,
+        duration: 60,
+        ease: EASE,
+        yoyo: true,
+      }),
+    );
+    if (!killed || flight !== token) return;
+    await ended(scene, scene.tweens.add({ targets: marker, scale: 0, duration: 200, ease: EASE }));
+  };
+
+  /** One attack: the attacker lunges halfway at the tile it aimed at, and what stands there takes it. */
+  const strike = (
+    attacker: TileCoords,
+    target: TileCoords,
+    chronicle: Chronicle,
+  ): Promise<void> | undefined => {
+    const lunging = markerOn(attacker);
+    if (lunging === undefined) return undefined;
+    const hit = markerOn(target);
+    const token = takeOff();
+
+    const from = positionOf(attacker);
+    const to = positionOf(target);
+    const lunge = ended(
+      scene,
+      scene.tweens.add({
+        targets: lunging,
+        x: (from.x + to.x) / 2,
+        y: (from.y + to.y) / 2,
+        duration: 150,
+        ease: EASE,
+        yoyo: true,
+      }),
+    );
+    const taken =
+      hit === undefined
+        ? Promise.resolve()
+        : struck(hit, unitAt(chronicle.units, target) === undefined, token);
+
+    return Promise.all([lunge, taken]).then(() => settle(token, chronicle));
+  };
+
+  /** One enemy's move: its marker slides from the tile it left to the one it reached. */
+  const slide = (
+    from: TileCoords,
+    to: TileCoords,
+    chronicle: Chronicle,
+  ): Promise<void> | undefined => {
+    const marker = markerOn(from);
+    if (marker === undefined) return undefined;
+    const token = takeOff();
+    const at = positionOf(to);
+
+    return ended(
+      scene,
+      scene.tweens.add({ targets: marker, x: at.x, y: at.y, duration: 350, ease: EASE }),
+    ).then(() => settle(token, chronicle));
+  };
+
+  /** The declarations: every ring the enemies did not already stand behind fades in. */
+  const declare = (chronicle: Chronicle): Promise<void> | undefined => {
+    const standing = new Set(aimedAt(shown?.units ?? []).map(tileKey));
+    const fresh = aimedAt(chronicle.units).filter((coord) => !standing.has(tileKey(coord)));
+    if (fresh.length === 0) return undefined;
+
+    const token = takeOff();
+    const rings = fresh.map((coord) => {
+      const ring = intentMark(scene, coord).setAlpha(0);
+      intents.add(ring);
+      return ring;
+    });
+
+    return ended(
+      scene,
+      scene.tweens.add({ targets: rings, alpha: 1, duration: 250, ease: EASE }),
+    ).then(() => settle(token, chronicle));
+  };
+
+  /** The arrival: every unit the map was not already showing grows onto its tile. */
+  const arriving = (chronicle: Chronicle): Promise<void> | undefined => {
+    const standing = new Set((shown?.units ?? []).map((unit) => tileKey(unit.tile)));
+    const arrived = chronicle.units.filter((unit) => !standing.has(tileKey(unit.tile)));
+    if (arrived.length === 0) return undefined;
+
+    const token = takeOff();
+    const entering = arrived.map((unit) => {
+      const { x, y } = positionOf(unit.tile);
+      const marker = unitMark(scene, unit).setPosition(x, y).setScale(0);
+      marks.add(marker);
+      return marker;
+    });
+
+    return ended(
+      scene,
+      scene.tweens.add({ targets: entering, scale: 1, duration: 250, ease: EASE }),
+    ).then(() => settle(token, chronicle));
+  };
+
   return {
     live(on: boolean): void {
       taking = on;
     },
 
-    render(current: Chronicle): void {
-      built.removeAll(true);
-      for (const tile of current.tiles) {
-        if (tile.building === undefined) continue;
-        const { x, y } = positionOf(tile);
-        built.add(buildingMark(scene, tile.building).setPosition(x, y));
-      }
+    render,
 
-      intents.removeAll(true);
-      for (const unit of current.units) {
-        if (unit.faction !== 'enemy' || unit.intent === undefined) continue;
-        const { x, y } = positionOf(unit.intent);
-        intents.add(
-          scene.add
-            .polygon(x, y, hexagon(TILE_SIZE - 2), 0, 0)
-            .setStrokeStyle(4, FACTION_COLOURS.enemy),
-        );
+    play(stage: Stage): Promise<void> | undefined {
+      switch (stage.name) {
+        case 'attack':
+          return strike(stage.attacker, stage.target, stage.chronicle);
+        case 'move':
+          return slide(stage.from, stage.to, stage.chronicle);
+        case 'intents':
+          return declare(stage.chronicle);
+        case 'events':
+          return arriving(stage.chronicle);
+        default:
+          return undefined;
       }
-
-      marks.removeAll(true);
-      markers = current.units.map((unit) => {
-        const { x, y } = positionOf(unit.tile);
-        const marker = unitMark(scene, unit).setPosition(x, y);
-        marks.add(marker);
-        return marker;
-      });
     },
 
     inspect(found: (inspection: Inspection | undefined) => void, zoomed: () => void): void {
