@@ -84,9 +84,12 @@ makes twice becomes a line here (the ratchet, at `/upkeep`).
   never factor on resemblance.
 - **One choke point per invariant.** A rule is enforced by the one function every path goes
   through, not by convention at each call site. Fix the mechanism, not the case that surfaced it —
-  but generalise only the axis with a real second instance; no seams for zero instances. A special
-  case that needs a guard comment to survive is the wrong design: uniformity beats a locally
-  simpler shortcut, so remove the shortcut, not the comment.
+  but generalise only the axis with a real second instance; no seams for zero instances. That
+  governs code machinery. The shape of a content declaration may be sized against content the
+  design foresees, but only the user sizes it: the futures are put to them in the pitch, and the
+  implementer never widens a declaration for content that does not exist yet. A special case that
+  needs a guard comment to survive is the wrong design: uniformity beats a locally simpler
+  shortcut, so remove the shortcut, not the comment.
 - **Data coherence is never deferred.** An id must resolve to real content, a seed must be
   attainable; these checks exist from day one regardless of how provisional the numbers are.
   One rejection vocabulary across all validators.
