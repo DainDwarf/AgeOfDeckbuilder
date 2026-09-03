@@ -282,8 +282,8 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
   /** The one place the camera is written: the zoom and the middle it holds, and what it frames. */
   const place = (): void => {
     const factor = renderFactor();
-    // Phaser's camera manager resizes only the cameras that filled the old canvas, so a camera
-    // cropped to a viewport is re-placed here on every resize.
+    // Phaser's camera manager resizes only the cameras that filled the old canvas: a cropped
+    // camera is cut here or not at all.
     camera.setViewport(
       MAP_FRAME.x * factor,
       MAP_FRAME.y * factor,

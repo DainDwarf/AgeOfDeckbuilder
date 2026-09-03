@@ -7,9 +7,9 @@ import { BAR_HEIGHT } from './resource-bar';
 const CLEARED = 24;
 
 /** The band's top edge, and with it the bottom of everything the map is drawn in. */
-export const BAND_TOP = CARD_BASELINE - CARD_HEIGHT + CLEARED;
+const BAND_TOP = CARD_BASELINE - CARD_HEIGHT + CLEARED;
 
-/** What the map is cropped to, in design units: the whole width between the bar and the band. */
+/** In design units: whoever cuts the camera to it applies the render factor. */
 export const MAP_FRAME = {
   x: 0,
   y: BAR_HEIGHT,
