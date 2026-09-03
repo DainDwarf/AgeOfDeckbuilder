@@ -119,6 +119,8 @@ makes twice becomes a line here (the ratchet, at `/upkeep`).
   function's signature, never a real piece of content's numbers, never a Phaser detail — a pixel,
   a frame count, a coordinate on screen.
 - **Rules tests are Vitest, in Node**, co-located with the module they cover as `<module>.test.ts`.
+  So is a pure function on the UI side — a settings rule, a layout computation — that a Playwright
+  spec would only assert slowly; the on-screen half of the same feature stays with Playwright.
 - **UI is verified in two passes.** The standing suite is Playwright against the dev server in
   Chromium: the app boots, reaches the screen it should, and logs nothing. What it *looks* like —
   layout, overlap, clipping, contrast, colour-vision — is an on-demand mechanical pass through the
