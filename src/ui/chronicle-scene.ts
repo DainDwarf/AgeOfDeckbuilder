@@ -10,6 +10,7 @@ import {
 } from '../rules/chronicle';
 import { type TileCoords, tileAt, tileKey } from '../rules/map';
 import { CARD_HEIGHT } from './card-face';
+import { EASE, ended } from './card-motion';
 import {
   ACCENT,
   addText,
@@ -34,6 +35,13 @@ type Part = {
   render(chronicle: Chronicle): void;
   /** What this part plays for the stage; nothing means the scene renders it at once. */
   play?(stage: Stage): Promise<void> | undefined;
+};
+
+const LABEL_STYLE = {
+  fontFamily: UI_FONT,
+  fontSize: '18px',
+  fontStyle: 'bold',
+  color: '#0d1014',
 };
 
 /** Where the next click on the ringed tile lands: each layer in turn, then the bare ring again. */
@@ -193,12 +201,7 @@ export class ChronicleScene extends Phaser.Scene {
 
   private addEndTurn(endTurn: () => void): Part & { live(on: boolean): void } {
     const button = this.add.rectangle(0, 0, 1, 1, ACCENT).setName('end-turn').setDepth(20);
-    const label = addText(this, 0, 0, '', {
-      fontFamily: UI_FONT,
-      fontSize: '18px',
-      fontStyle: 'bold',
-      color: '#0d1014',
-    })
+    const label = addText(this, 0, 0, '', LABEL_STYLE)
       .setOrigin(0.5, 0.5)
       .setName('end-turn-label')
       .setDepth(21);
@@ -222,10 +225,45 @@ export class ChronicleScene extends Phaser.Scene {
     const hover = onHover(button, paint, paint);
     onClick(button, endTurn);
 
+    /** The label a roll is carrying off the button; a render owns it and takes it down. */
+    let leaving: Phaser.GameObjects.Text | undefined;
+
+    const render = (chronicle: Chronicle): void => {
+      this.tweens.killTweensOf(label);
+      if (leaving !== undefined) {
+        this.tweens.killTweensOf(leaving);
+        leaving.destroy();
+        leaving = undefined;
+      }
+      label.setPosition(x, y).setAlpha(1);
+      turn = chronicle.turn;
+      paint();
+    };
+
+    /** The turn rolling over: the label that stood rises out as the next turn's rises in. */
+    const roll = async (chronicle: Chronicle): Promise<void> => {
+      const carried = addText(this, x, y, label.text, LABEL_STYLE)
+        .setOrigin(0.5, 0.5)
+        .setName('end-turn-label')
+        .setDepth(21);
+      leaving = carried;
+      turn = chronicle.turn;
+      paint();
+      label.setPosition(x, y + 24).setAlpha(0);
+
+      const rolling = { duration: 400, ease: EASE };
+      await Promise.all([
+        ended(this, this.tweens.add({ targets: carried, y: y - 24, alpha: 0, ...rolling })),
+        ended(this, this.tweens.add({ targets: label, y, alpha: 1, ...rolling })),
+      ]);
+      // A render while the roll was in the air took it down and painted the turn it stands on.
+      if (leaving === carried) render(chronicle);
+    };
+
     const part = {
-      render(chronicle: Chronicle): void {
-        turn = chronicle.turn;
-        paint();
+      render,
+      play(stage: Stage): Promise<void> | undefined {
+        return stage.name === 'turn' ? roll(stage.chronicle) : undefined;
       },
       live(on: boolean): void {
         if (on) button.setInteractive({ useHandCursor: true });

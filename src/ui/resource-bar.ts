@@ -1,5 +1,6 @@
 import type Phaser from 'phaser';
-import type { Chronicle, Resource } from '../rules/chronicle';
+import type { Chronicle, Resource, Stage } from '../rules/chronicle';
+import { EASE, ended } from './card-motion';
 import {
   addText,
   DESIGN_WIDTH,
@@ -42,10 +43,15 @@ type Entry = {
   readonly chip: Phaser.GameObjects.Rectangle;
   readonly word: Phaser.GameObjects.Text;
   readonly value: Phaser.GameObjects.Text;
+  /** What the value reads, as the number a rise ticks through; the text follows it. */
+  readonly ticking: { count: number };
   readonly hover: Phaser.GameObjects.Zone;
 };
 
-export type ResourceBar = { render(chronicle: Chronicle): void };
+export type ResourceBar = {
+  render(chronicle: Chronicle): void;
+  play(stage: Stage): Promise<void> | undefined;
+};
 
 export function createResourceBar(scene: Phaser.Scene, tooltip: Tooltip): ResourceBar {
   const bar = scene.add.container(0, 0).setDepth(10);
@@ -60,9 +66,49 @@ export function createResourceBar(scene: Phaser.Scene, tooltip: Tooltip): Resour
   place(right, DESIGN_WIDTH - MARGIN - spanOf(right, slot), slot);
 
   const entries = [...left, ...right];
+  /** The readings the bar has ticking; a render owns them and takes them down. */
+  let rising: Entry[] = [];
+
+  const render = (chronicle: Chronicle): void => {
+    for (const entry of rising) scene.tweens.killTweensOf(entry.ticking);
+    rising = [];
+    for (const entry of entries) {
+      entry.ticking.count = readingOf(chronicle, entry.key);
+      entry.value.setText(String(entry.ticking.count));
+    }
+  };
+
+  /** The income arriving: every reading that changed ticks up to what it now stands at. */
+  const rise = (chronicle: Chronicle): Promise<void> | undefined => {
+    const ticking = entries.filter(
+      (entry) => entry.ticking.count !== readingOf(chronicle, entry.key),
+    );
+    if (ticking.length === 0) return undefined;
+    rising = ticking;
+
+    return Promise.all(
+      ticking.map((entry) =>
+        ended(
+          scene,
+          scene.tweens.add({
+            targets: entry.ticking,
+            count: readingOf(chronicle, entry.key),
+            duration: 400,
+            ease: EASE,
+            onUpdate: () => entry.value.setText(String(Math.round(entry.ticking.count))),
+          }),
+        ),
+      ),
+    ).then(() => {
+      // A render while these were ticking took them down and painted the readings it stands on.
+      if (rising === ticking) render(chronicle);
+    });
+  };
+
   return {
-    render(chronicle: Chronicle): void {
-      for (const entry of entries) entry.value.setText(String(readingOf(chronicle, entry.key)));
+    render,
+    play(stage: Stage): Promise<void> | undefined {
+      return stage.name === 'income' ? rise(stage.chronicle) : undefined;
     },
   };
 }
@@ -83,7 +129,9 @@ function createEntry(
 ): Entry {
   const chip = scene.add.rectangle(0, 0, 10, 10, RESOURCE_COLOURS[key]).setAngle(45);
   const word = addText(scene, 0, 0, text(`label.${key}`), WORD_STYLE).setOrigin(0, 0.5);
-  const value = addText(scene, 0, 0, '', VALUE_STYLE).setOrigin(0, 0.5);
+  const value = addText(scene, 0, 0, '', VALUE_STYLE)
+    .setOrigin(0, 0.5)
+    .setName(`reading-${key}-value`);
   const hover = scene.add
     .zone(0, 0, 1, BAR_HEIGHT)
     .setOrigin(0, 0)
@@ -95,7 +143,7 @@ function createEntry(
     () => tooltip.hide(),
   );
   bar.add([chip, word, value, hover]);
-  return { key, chip, word, value, hover };
+  return { key, chip, word, value, ticking: { count: 0 }, hover };
 }
 
 function widthOf({ word }: Entry, slot: number): number {

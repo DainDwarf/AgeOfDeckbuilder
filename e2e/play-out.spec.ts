@@ -1,6 +1,16 @@
 import { expect, type Page, test } from '@playwright/test';
 import type Phaser from 'phaser';
-import { chronicleOf, counted, endTurn, onScreen, open, playing, watch } from './table';
+import { text } from '../src/ui/text';
+import {
+  chronicleOf,
+  counted,
+  endTurn,
+  endTurnLabel,
+  onScreen,
+  open,
+  playing,
+  watch,
+} from './table';
 
 /** No enemy arrives before the fifth turn, so the two turns this ends are safe on any seed. */
 const SEED = 1;
@@ -42,6 +52,23 @@ function paintedPiles(page: Page): Promise<{ draw: string; discard: string }> {
   });
 }
 
+/** What the bar reads for each of those readings. */
+function paintedReadings(page: Page, readings: readonly string[]): Promise<Record<string, string>> {
+  return page.evaluate(
+    (keys) =>
+      Object.fromEntries(
+        keys.map((key) => {
+          const value = window.named?.(`reading-${key}-value`)?.object as
+            | Phaser.GameObjects.Text
+            | undefined;
+          if (value === undefined) throw new Error(`there is no reading for ${key}`);
+          return [key, value.text];
+        }),
+      ),
+    readings,
+  );
+}
+
 test('a motion that throws still ends the turn and gives the table back', async ({ page }) => {
   const problems = watch(page);
 
@@ -65,6 +92,13 @@ test('a motion that throws still ends the turn and gives the table back', async 
   const faces = await Promise.all(committed.hand.map((_, index) => counted(page, `hand-${index}`)));
   expect(faces).toEqual(committed.hand.map(() => 1));
   expect(await counted(page, `hand-${committed.hand.length}`)).toBe(0);
+
+  const readings = { ...committed.resources, population: committed.population };
+  expect(await paintedReadings(page, Object.keys(readings))).toEqual(
+    Object.fromEntries(Object.entries(readings).map(([key, count]) => [key, String(count)])),
+  );
+  expect(await endTurnLabel(page)).toBe(text('button.turn', { turn: committed.turn }));
+  expect(await counted(page, 'end-turn-label')).toBe(1);
 
   await endTurn(page);
   expect((await chronicleOf(page)).turn).toBe(opened.turn + 2);

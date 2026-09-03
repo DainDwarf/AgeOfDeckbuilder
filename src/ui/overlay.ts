@@ -1,7 +1,14 @@
 import Phaser from 'phaser';
 import { CARD_KINDS, CARDS, type CardId } from '../rules/cards';
-import { type Chronicle, type Defeat, NO_REFUSAL, type Refusal } from '../rules/chronicle';
+import {
+  type Chronicle,
+  type Defeat,
+  NO_REFUSAL,
+  type Refusal,
+  type Stage,
+} from '../rules/chronicle';
 import { createCardFace } from './card-face';
+import { EASE, ended } from './card-motion';
 import {
   addText,
   createClip,
@@ -41,6 +48,7 @@ export type Overlay = {
   zoom(id: CardId, refusal: Refusal): void;
   /** Raises the defeat screen once the chronicle has ended, and nothing while it runs. */
   render(chronicle: Chronicle): void;
+  play(stage: Stage): Promise<void> | undefined;
 };
 
 /** Where one card of a browse was laid out: about its own bottom centre, as a card is drawn. */
@@ -89,6 +97,8 @@ export function createOverlay(
   let scrolling: Scroll | undefined;
   let zoomed = false;
   let fallen = false;
+  /** The defeat screen still coming up; a render owns the rise and takes it down. */
+  let rising: Phaser.GameObjects.Container | undefined;
 
   const wipe = (): void => {
     for (const object of shown) object.destroy();
@@ -107,8 +117,10 @@ export function createOverlay(
     covering(false);
   };
 
+  // The defeat's rise brings the scrim up from nothing, so every cover states the alpha it wants.
   const cover = (): void => {
-    scrim.setVisible(true).setInteractive();
+    scene.tweens.killTweensOf(scrim);
+    scrim.setVisible(true).setAlpha(SCRIM_ALPHA).setInteractive();
     covering(true);
   };
 
@@ -221,7 +233,8 @@ export function createOverlay(
     clip.show(root, MARGIN, top, DESIGN_WIDTH - 2 * MARGIN, frameHeight);
   };
 
-  const showDefeat = (defeat: Defeat): void => {
+  /** The city fallen: the scrim and the screen rise together, out of nothing and a little low. */
+  const showDefeat = (defeat: Defeat): Promise<void> => {
     wipe();
     cover();
     browsing = undefined;
@@ -242,12 +255,33 @@ export function createOverlay(
       { fontFamily: UI_FONT, fontSize: '22px', color: TITLE_INK },
     ).setOrigin(0.5, 0);
 
-    shown.push(
-      scene.add
-        .container(0, 0, [title, cause])
-        .setDepth(DEPTH + 1)
-        .setName('defeat'),
-    );
+    const screen = scene.add
+      .container(0, 12, [title, cause])
+      .setDepth(DEPTH + 1)
+      .setName('defeat')
+      .setAlpha(0);
+    shown.push(screen);
+    rising = screen;
+    scrim.setAlpha(0);
+
+    const climb = { duration: 1200, ease: EASE };
+    return Promise.all([
+      ended(scene, scene.tweens.add({ targets: scrim, alpha: SCRIM_ALPHA, ...climb })),
+      ended(scene, scene.tweens.add({ targets: screen, alpha: 1, y: 0, ...climb })),
+    ]).then(() => {
+      if (rising === screen) rising = undefined;
+    });
+  };
+
+  /** The rise cut short and stood up where it was going: a render leaves the screen full. */
+  const stand = (): void => {
+    const screen = rising;
+    if (screen === undefined) return;
+    rising = undefined;
+    scene.tweens.killTweensOf(scrim);
+    scene.tweens.killTweensOf(screen);
+    scrim.setAlpha(SCRIM_ALPHA);
+    screen.setAlpha(1).setY(0);
   };
 
   const back = (): void => {
@@ -284,7 +318,12 @@ export function createOverlay(
     },
     zoom: showZoom,
     render(chronicle: Chronicle): void {
-      if (chronicle.defeat !== undefined && !fallen) showDefeat(chronicle.defeat);
+      if (chronicle.defeat !== undefined && !fallen) void showDefeat(chronicle.defeat);
+      else stand();
+    },
+    play(stage: Stage): Promise<void> | undefined {
+      if (stage.chronicle.defeat === undefined || fallen) return undefined;
+      return showDefeat(stage.chronicle.defeat);
     },
   };
 }

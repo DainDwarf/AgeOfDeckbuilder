@@ -16,11 +16,11 @@ function fallRun(): { seed: number; turns: number } {
   throw new Error('no seed under a thousand is captured inside twenty turns');
 }
 
-/** Whether the defeat screen stands over the table. */
+/** Whether the defeat screen has risen over the table: the rise ends at its full alpha. */
 function defeatShown(page: Page): Promise<boolean> {
   return page.evaluate(() => {
     const screen = window.named?.('defeat')?.object as Phaser.GameObjects.Container | undefined;
-    return screen?.visible === true;
+    return screen?.visible === true && screen.alpha === 1;
   });
 }
 
