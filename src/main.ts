@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { CARDS, type CardId, DECKS, type DeckId } from './rules/cards';
 import { ChronicleScene } from './ui/chronicle-scene';
 import { backingSize, followWindow, releaseOnBlur } from './ui/design-space';
+import { readMouseKeys } from './ui/keys';
 
 // The e2e suite and browser-console debugging observe the running game through this handle;
 // it is optional because the window exists before the game does.
@@ -43,10 +44,12 @@ const game = new Phaser.Game({
   width: backing.width,
   height: backing.height,
   backgroundColor: '#0d1117',
+  disableContextMenu: true,
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
   scene: [new ChronicleScene(askedSeed(), askedDeck())],
 });
 followWindow(game);
 releaseOnBlur(game);
+readMouseKeys(game);
 
 window.game = game;

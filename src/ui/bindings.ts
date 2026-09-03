@@ -18,7 +18,7 @@ export const DEFAULTS: Bindings = {
   'pan-left': ['A', 'ArrowLeft'],
   'pan-down': ['S', 'ArrowDown'],
   'pan-right': ['D', 'ArrowRight'],
-  back: ['Escape', undefined],
+  back: ['Escape', 'Mouse2'],
 };
 
 /** Where the browser keeps the bindings; the origin is shared with whatever else the host serves. */
@@ -39,6 +39,10 @@ const NAMED: Record<string, TextKey> = {
   ArrowDown: 'key.arrow-down',
   ArrowRight: 'key.arrow-right',
   ' ': 'key.space',
+  Mouse1: 'key.mouse-1',
+  Mouse2: 'key.mouse-2',
+  Mouse3: 'key.mouse-3',
+  Mouse4: 'key.mouse-4',
 };
 
 /** How a bound key reads: the named ones by their entry, every other by the label it carries. */

@@ -11,7 +11,7 @@ const AS_FOUND = [
   ['A', '←'],
   ['S', '↓'],
   ['D', '→'],
-  ['Escape', '—'],
+  ['Escape', 'Right click'],
 ];
 
 const LISTED = ['pan-up', 'pan-left', 'pan-down', 'pan-right', 'back'];
@@ -53,6 +53,28 @@ async function heldBy(page: Page, key: string): Promise<number> {
   await settled(page);
   await settled(page);
   return (await onScreen(page, BARE)).y - before.y;
+}
+
+/** How far the map moved down the screen under a mouse button held for a dozen frames. */
+async function heldByButton(page: Page, button: 'middle' | 'right'): Promise<number> {
+  const before = await onScreen(page, BARE);
+  await page.mouse.move(before.x, before.y);
+  await page.mouse.down({ button });
+  for (let frame = 0; frame < 12; frame++) await settled(page);
+  await page.mouse.up({ button });
+  await settled(page);
+  await settled(page);
+  return (await onScreen(page, BARE)).y - before.y;
+}
+
+/** Out of Controls and back to a bare table, on the back key. */
+async function outOfControls(page: Page): Promise<void> {
+  await page.keyboard.press('Escape');
+  await expect.poll(() => onTable(page, 'settings')).toBe(true);
+  await page.keyboard.press('Escape');
+  await expect.poll(() => onTable(page, 'menu')).toBe(true);
+  await page.keyboard.press('Escape');
+  await expect.poll(() => onTable(page, 'menu')).toBe(false);
 }
 
 test('a slot takes the next key pressed, and keeps it across a reload', async ({ page }) => {
@@ -115,9 +137,9 @@ test('the back key binds like any other, and the Back button closes without it',
   await page.keyboard.press('Escape');
   await expect.poll(() => slotReads(page, 'pan-down', 1)).toBe('Escape');
   expect(await slotReads(page, 'back', 0)).toBe('—');
-  expect(await slotReads(page, 'back', 1)).toBe('—');
+  expect(await slotReads(page, 'back', 1)).toBe('Right click');
 
-  // Nothing backs out any more, so the key that used to leaves the window standing.
+  // Escape backs nothing out any more, so the key that used to leaves the window standing.
   await page.keyboard.press('Escape');
   await settled(page);
   await settled(page);
@@ -166,6 +188,54 @@ test('Default puts every key back where it began', async ({ page }) => {
 
   await click(page, 'controls-default');
   await expect.poll(() => rows(page)).toEqual(AS_FOUND);
+
+  expect(problems).toEqual([]);
+});
+
+test('a slot takes a mouse button, and the button then pans the way a key does', async ({
+  page,
+}) => {
+  const problems = watch(page);
+
+  await open(page, 1, 'PH_Deck');
+  await intoControls(page);
+
+  await click(page, 'controls-pan-up-1');
+  await expect.poll(() => slotReads(page, 'pan-up', 1)).toBe('Press a key');
+  const slot = await onScreen(page, 'controls-pan-up-1');
+  await page.mouse.click(slot.x, slot.y, { button: 'middle' });
+  await expect.poll(() => slotReads(page, 'pan-up', 1)).toBe('Middle click');
+  expect(await slotReads(page, 'pan-up', 0)).toBe('W');
+
+  await outOfControls(page);
+
+  // The frame pans up, so what stands on the map comes down the screen.
+  expect(await heldByButton(page, 'middle')).toBeGreaterThan(40);
+
+  expect(problems).toEqual([]);
+});
+
+test('a right click backs out one step, and raises the menu from a bare table', async ({
+  page,
+}) => {
+  const problems = watch(page);
+
+  await open(page, 1, 'PH_Deck');
+  await intoControls(page);
+
+  // The middle of the design space: the windows stand on it, and bare map lies under them.
+  const middle = await onScreen(page, 'controls');
+  const rightClick = (): Promise<void> => page.mouse.click(middle.x, middle.y, { button: 'right' });
+
+  await rightClick();
+  await expect.poll(() => onTable(page, 'settings')).toBe(true);
+  await rightClick();
+  await expect.poll(() => onTable(page, 'menu')).toBe(true);
+  await rightClick();
+  await expect.poll(() => onTable(page, 'menu')).toBe(false);
+
+  await rightClick();
+  await expect.poll(() => onTable(page, 'menu')).toBe(true);
 
   expect(problems).toEqual([]);
 });

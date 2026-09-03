@@ -10,7 +10,7 @@ import {
 } from '../rules/map';
 import { type Faction, reachable, type Unit, type UnitTypeId, unitAt } from '../rules/units';
 import { MAP_FRAME } from './band';
-import { bindings, type Control, keyOf } from './bindings';
+import { bindings, type Control } from './bindings';
 import { EASE, ended, stopMotion } from './card-motion';
 import {
   ACCENT,
@@ -24,6 +24,7 @@ import {
   type Surface,
   whileUp,
 } from './design-space';
+import { onKeyDown, onKeyUp } from './keys';
 
 const TILE_SIZE = 24;
 
@@ -447,9 +448,12 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
 
   /** Every key held down right now, by the label it binds under. */
   const held = new Set<string>();
-  const keyboard = scene.input.keyboard;
-  keyboard?.on('keydown', (event: KeyboardEvent) => held.add(keyOf(event.key)));
-  keyboard?.on('keyup', (event: KeyboardEvent) => held.delete(keyOf(event.key)));
+  onKeyDown(scene, (key) => {
+    held.add(key);
+  });
+  onKeyUp(scene, (key) => {
+    held.delete(key);
+  });
 
   // A window that loses focus under a held key is never sent that key's release, and the frame
   // would pan on for ever.

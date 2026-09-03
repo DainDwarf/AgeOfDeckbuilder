@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
 import { DECKS } from '../src/rules/cards';
 import { apply, beginChronicle, outcome, playable, refusalOf } from '../src/rules/chronicle';
 import { tileKey } from '../src/rules/map';
@@ -8,11 +8,40 @@ import {
   dragOut,
   endTurn,
   onScreen,
+  onTable,
   open,
   ringedTile,
   shownLayer,
   watch,
 } from './table';
+
+/** A tile on bare map, clear of the resource bar, the piles and the hand. */
+const BARE = { name: 'tile-0,-3', key: '0,-3' };
+
+declare global {
+  interface Window {
+    /** Whether the game cancelled the browser's own menu, once the browser has asked for one. */
+    browserMenu?: boolean;
+  }
+}
+
+/** Listens for the browser asking for a menu of its own; nothing is asked for until it is. */
+function watchBrowserMenu(page: Page): Promise<void> {
+  return page.evaluate(() => {
+    window.addEventListener(
+      'contextmenu',
+      (event) => {
+        window.browserMenu = event.defaultPrevented;
+      },
+      { once: true },
+    );
+  });
+}
+
+/** Whether the browser asked for a menu, and whether the game cancelled the one it asked for. */
+function browserMenu(page: Page): Promise<boolean | undefined> {
+  return page.evaluate(() => window.browserMenu);
+}
 
 /** The first seed with a turn in its first eight that opens on a worker the city can pay for. */
 function workerRun(): { seed: number; turn: number } {
@@ -27,6 +56,33 @@ function workerRun(): { seed: number; turn: number } {
   }
   throw new Error('no seed under a thousand opens a turn on a playable worker');
 }
+
+test('a right click picks out no tile: it backs the reading out, and no browser menu shows', async ({
+  page,
+}) => {
+  const problems = watch(page);
+
+  await open(page, 1, 'PH_Deck');
+  const bare = await onScreen(page, BARE.name);
+  await page.mouse.click(bare.x, bare.y);
+  await expect.poll(() => ringedTile(page)).toBe(BARE.key);
+
+  const city = await chronicleOf(page).then((chronicle) =>
+    onScreen(page, `tile-${tileKey(chronicle.city)}`),
+  );
+  await watchBrowserMenu(page);
+  await page.mouse.click(city.x, city.y, { button: 'right' });
+
+  await expect.poll(() => browserMenu(page)).toBe(true);
+  await expect.poll(() => ringedTile(page)).toBeUndefined();
+  expect(await onTable(page, 'menu')).toBe(false);
+  // The press carried the map nowhere either: the tile stands where it stood.
+  const after = await onScreen(page, BARE.name);
+  expect(after.x).toBeCloseTo(bare.x, 0);
+  expect(after.y).toBeCloseTo(bare.y, 0);
+
+  expect(problems).toEqual([]);
+});
 
 test('a tile selects on the first click and reads out a layer per click after it, until a click off the map drops it', async ({
   page,

@@ -27,6 +27,7 @@ import {
 } from './design-space';
 import { createHand } from './hand';
 import { createInfoPanel, layersOf } from './infopanel';
+import { onKeyDown } from './keys';
 import { createMapView } from './map';
 import { createOverlay } from './overlay';
 import { createPiles } from './piles';
@@ -230,13 +231,13 @@ export class ChronicleScene extends Phaser.Scene {
       overlay.menu();
     };
 
-    // The one place a press is answered: a slot of the Controls window listening takes it, whatever
-    // it is; otherwise the back key takes back one thing, the outermost that is up or pending, and
-    // only a table with nothing on it raises the menu. A second listener that acted on a press would
-    // be a second answer to the one press; the map's own listener only records which keys are held.
-    this.input.keyboard?.on('keydown', (event: KeyboardEvent) => {
-      if (overlay.binds(event.key)) return;
-      if (!boundTo(event.key, 'back')) return;
+    // The one place a key is answered: a slot of the Controls window listening takes it, whatever it
+    // is; otherwise the back key takes back one thing, the outermost that is up or pending, and only
+    // a table with nothing on it raises the menu. A second listener that acted on a key would be a
+    // second answer to the one press; the map's own listener only records which keys are held.
+    onKeyDown(this, (key) => {
+      if (overlay.binds(key)) return;
+      if (!boundTo(key, 'back')) return;
       if (overlay.back() || hand.cancelAim()) return;
       if (inspecting !== undefined) dismiss();
       else menu();

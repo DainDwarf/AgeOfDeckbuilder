@@ -35,7 +35,7 @@ describe('binding a key', () => {
 
   it('binds the back key like any other, and moves it off the control that had it', () => {
     const after = bound(DEFAULTS, 'pan-down', 1, 'Escape');
-    expect(after.back).toEqual([undefined, undefined]);
+    expect(after.back).toEqual([undefined, 'Mouse2']);
     expect(after['pan-down']).toEqual(['S', 'Escape']);
   });
 
@@ -46,7 +46,7 @@ describe('binding a key', () => {
   it('leaves the defaults standing, so they are there to be put back', () => {
     bound(bound(DEFAULTS, 'pan-up', 0, 'k'), 'back', 0, 'b');
     expect(DEFAULTS['pan-up']).toEqual(['W', 'ArrowUp']);
-    expect(DEFAULTS.back).toEqual(['Escape', undefined]);
+    expect(DEFAULTS.back).toEqual(['Escape', 'Mouse2']);
   });
 });
 
