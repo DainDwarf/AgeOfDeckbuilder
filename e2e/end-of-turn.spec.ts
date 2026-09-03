@@ -4,7 +4,7 @@ import { beginChronicle, endOfTurn } from '../src/rules/chronicle';
 import { chronicleOf, endTurn, onScreen, open, playing, watch } from './table';
 
 /**
- * Seven cards, so the first end of turn deals its next hand either side of a refill: two off what
+ * Seven cards, so the first end of turn deals its next hand either side of a shuffle: two off what
  * the draw pile has left, the discard pile shuffled back into it, then the other three.
  */
 const DECK: readonly CardId[] = [

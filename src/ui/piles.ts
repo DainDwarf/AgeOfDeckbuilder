@@ -8,7 +8,7 @@ import {
   createCardFace,
   createEmptySlot,
 } from './card-face';
-import { after, blockLength, CROSSING, EASE, ended, IN_FLIGHT, travel } from './card-motion';
+import { after, blockLength, EASE, ended, IN_FLIGHT, SHUFFLE, travel } from './card-motion';
 import {
   ACCENT,
   addText,
@@ -33,8 +33,8 @@ export type Piles = {
 
 /**
  * The draw pile face down on the left, the discard pile face up and worn on the right. The discard
- * pile takes the hand's cards only once the last of them has landed, and a refill crosses the table
- * as one card, so neither count ever reads ahead of what is on the way.
+ * pile takes the hand's cards only once the last of them has landed, and the shuffle carries the
+ * discard pile over as one card, so neither count ever reads ahead of what is on the way.
  */
 export function createPiles(scene: Phaser.Scene, browse: (pile: PileKind) => void): Piles {
   const drawn = createPile(scene, 'draw-pile', browse);
@@ -57,8 +57,8 @@ export function createPiles(scene: Phaser.Scene, browse: (pile: PileKind) => voi
     );
   };
 
-  /** The refill: the discard pile's top crosses to the draw pile's place, turning over on the way. */
-  const cross = async (chronicle: Chronicle): Promise<void> => {
+  /** The shuffle: the discard pile's top is carried to the draw pile's place, turning over on the way. */
+  const shuffle = async (chronicle: Chronicle): Promise<void> => {
     const carried = (discarded.lift() ?? createEmptySlot(scene)).setPosition(0, 0);
     const back = createCardBack(scene).setVisible(false);
     const from = PILE_PLACE['discard-pile'];
@@ -66,13 +66,13 @@ export function createPiles(scene: Phaser.Scene, browse: (pile: PileKind) => voi
     discarded.show(createEmptySlot(scene), 0);
 
     await Promise.all([
-      travel(scene, carrier, { ...PILE_PLACE['draw-pile'], rotation: 0 }, 0, CROSSING),
+      travel(scene, carrier, { ...PILE_PLACE['draw-pile'], rotation: 0 }, 0, SHUFFLE),
       ended(
         scene,
         scene.tweens.add({
           targets: carrier,
           scaleX: 0,
-          duration: CROSSING / 2,
+          duration: SHUFFLE / 2,
           ease: EASE,
           yoyo: true,
           onYoyo: () => {
@@ -97,7 +97,7 @@ export function createPiles(scene: Phaser.Scene, browse: (pile: PileKind) => voi
             render(stage.chronicle),
           );
         case 'shuffle':
-          return cross(stage.chronicle);
+          return shuffle(stage.chronicle);
         default:
           return undefined;
       }

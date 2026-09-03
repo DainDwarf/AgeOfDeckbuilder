@@ -12,7 +12,7 @@ import {
   tileKey,
 } from './map';
 import type { Rng } from './rng';
-import { seedRng, shuffle } from './rng';
+import { seedRng, shuffle as shuffleItems } from './rng';
 import { arrive, attack, leastHealth, reachable, UNIT_STATS, type Unit, unitAt } from './units';
 
 /** The five core resources, then culture. Population is inhabitants, not a store. */
@@ -80,13 +80,13 @@ export type Stage = { readonly name: StageName; readonly chronicle: Chronicle };
  */
 export function beginChronicle(seed: number, deck: readonly CardId[]): Chronicle {
   const map = generateMap(seedRng(seed));
-  const shuffled = shuffle(map.rng, deck);
+  const shuffled = shuffleItems(map.rng, deck);
   const held = [CITY_TILE, ...neighbours(CITY_TILE)];
   const tiles: Tile[] = map.tiles.map((tile) =>
     tileKey(tile) === tileKey(CITY_TILE) ? { ...tile, building: 'PH_City' } : tile,
   );
   return draw(
-    refill(
+    shuffle(
       draw(
         events({
           seed,
@@ -154,7 +154,7 @@ export function endOfTurn(chronicle: Chronicle): Stage[] {
   staged('turn', { ...standing, turn: standing.turn + 1 });
   staged('events', events(standing));
   staged('draw', draw(standing));
-  staged('shuffle', refill(standing));
+  staged('shuffle', shuffle(standing));
   staged('draw', draw(standing));
   return stages;
 }
@@ -340,12 +340,12 @@ function draw(chronicle: Chronicle): Chronicle {
 }
 
 /** The discard pile shuffled into a draw pile that ran out, while the hand is still short. */
-function refill(chronicle: Chronicle): Chronicle {
+function shuffle(chronicle: Chronicle): Chronicle {
   if (chronicle.hand.length >= HAND_SIZE) return chronicle;
   if (chronicle.drawPile.length > 0 || chronicle.discardPile.length === 0) return chronicle;
 
-  const refilled = shuffle(chronicle.rng, chronicle.discardPile);
-  return { ...chronicle, rng: refilled.rng, drawPile: refilled.items, discardPile: [] };
+  const shuffled = shuffleItems(chronicle.rng, chronicle.discardPile);
+  return { ...chronicle, rng: shuffled.rng, drawPile: shuffled.items, discardPile: [] };
 }
 
 /** The end of the turn: what is left of the hand goes to the discard pile. */

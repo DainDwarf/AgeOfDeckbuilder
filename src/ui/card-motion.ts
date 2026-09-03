@@ -1,11 +1,11 @@
 import Phaser from 'phaser';
 
-/** How long one card takes to cross the table, and how far behind the one before it leaves. */
+/** How long one card takes to travel the table, and how far behind the one before it leaves. */
 export const TRAVEL = 250;
 export const STAGGER = 20;
 
-/** How long the discard pile's top takes to cross to the draw pile. */
-export const CROSSING = 300;
+/** How long the shuffle takes: the discard pile's top carried to the draw pile. */
+export const SHUFFLE = 300;
 
 /** How long a card takes to turn over where it lands. */
 export const TURN_OVER = 120;
