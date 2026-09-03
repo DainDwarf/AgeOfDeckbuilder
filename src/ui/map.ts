@@ -10,6 +10,7 @@ import {
 } from '../rules/map';
 import { type Faction, reachable, type Unit, type UnitTypeId, unitAt } from '../rules/units';
 import { MAP_FRAME } from './band';
+import { bindings, type Control, keyOf } from './bindings';
 import { EASE, ended, stopMotion } from './card-motion';
 import {
   ACCENT,
@@ -94,16 +95,13 @@ const CLEARANCE = 24;
 const HOLD_LEAST = 200;
 const HOLD_MOST = 600;
 
-/**
- * Every key that pans the frame, each direction's first and its second, all live at once. This is
- * the one table rebinding replaces.
- */
-const PAN_KEYS = [
-  { keys: ['W', 'UP'], x: 0, y: -1 },
-  { keys: ['A', 'LEFT'], x: -1, y: 0 },
-  { keys: ['S', 'DOWN'], x: 0, y: 1 },
-  { keys: ['D', 'RIGHT'], x: 1, y: 0 },
-] as const;
+/** The four controls that pan, and the way each one carries the frame. */
+const PANS: readonly { control: Control; x: number; y: number }[] = [
+  { control: 'pan-up', x: 0, y: -1 },
+  { control: 'pan-left', x: -1, y: 0 },
+  { control: 'pan-down', x: 0, y: 1 },
+  { control: 'pan-right', x: 1, y: 0 },
+];
 
 /** Where a tile's face stands on the map's own surface, for whatever stands beside it there. */
 export type TileFace = {
@@ -447,19 +445,27 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
     },
   );
 
+  /** Every key held down right now, by the label it binds under. */
+  const held = new Set<string>();
   const keyboard = scene.input.keyboard;
-  const panning = PAN_KEYS.map((pan) => ({
-    x: pan.x,
-    y: pan.y,
-    keys: pan.keys.map((name) => keyboard?.addKey(name)),
-  }));
+  keyboard?.on('keydown', (event: KeyboardEvent) => held.add(keyOf(event.key)));
+  keyboard?.on('keyup', (event: KeyboardEvent) => held.delete(keyOf(event.key)));
+
+  // A window that loses focus under a held key is never sent that key's release, and the frame
+  // would pan on for ever.
+  const letGo = (): void => held.clear();
+  scene.game.events.on(Phaser.Core.Events.BLUR, letGo);
+  scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+    scene.game.events.off(Phaser.Core.Events.BLUR, letGo);
+  });
 
   whileUp(scene, Phaser.Scenes.Events.UPDATE, (_time: number, delta: number) => {
     if (!taking) return;
+    const keys = bindings();
     let x = 0;
     let y = 0;
-    for (const pan of panning) {
-      if (!pan.keys.some((key) => key?.isDown === true)) continue;
+    for (const pan of PANS) {
+      if (!keys[pan.control].some((key) => key !== undefined && held.has(key))) continue;
       x += pan.x;
       y += pan.y;
     }

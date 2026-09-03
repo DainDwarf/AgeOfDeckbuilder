@@ -22,7 +22,7 @@ import {
   UI_FONT,
   whileUp,
 } from './design-space';
-import { behind, createWindow, type MenuWindow } from './menu';
+import { behind, createWindow, type MenuWindow, type Opened } from './menu';
 import { BAR_HEIGHT } from './resource-bar';
 import { text } from './text';
 
@@ -50,6 +50,8 @@ export type Overlay = {
   menu(): void;
   /** Takes what stands on the scrim back one step, and answers whether anything stood. */
   back(): boolean;
+  /** A key pressed while a slot of the Controls window listens binds there, and is taken. */
+  binds(key: string): boolean;
   /** Raises the defeat screen once the chronicle has ended, and nothing while it runs. */
   render(chronicle: Chronicle): void;
   play(stage: Stage): Promise<void> | undefined;
@@ -104,6 +106,8 @@ export function createOverlay(
   let zoomed = false;
   /** The window of the menu that stands, and nothing while none does. */
   let opened: MenuWindow | undefined;
+  /** The window as it was laid out, for the keys it takes; it goes down with everything shown. */
+  let standing: Opened | undefined;
   /** The fall the defeat screen was raised on, kept so the menu can close back onto it. */
   let fallen: Defeat | undefined;
   /** The defeat screen still coming up; a render owns the rise and takes it down. */
@@ -112,6 +116,7 @@ export function createOverlay(
   const wipe = (): void => {
     for (const object of shown) object.destroy();
     shown = [];
+    standing = undefined;
     grid = undefined;
     scrolling = undefined;
     fling = 0;
@@ -308,12 +313,17 @@ export function createOverlay(
     browsing = undefined;
     zoomed = false;
     opened = which;
-    shown.push(
-      createWindow(scene, which, (press) => {
+    const laid = createWindow(scene, which, {
+      press: (press) => {
         if (press === 'new-chronicle') newChronicle();
         else showWindow(press);
-      }).setDepth(SCRIM_DEPTH + 1),
-    );
+      },
+      back: () => {
+        back();
+      },
+    });
+    standing = laid;
+    shown.push(laid.root.setDepth(SCRIM_DEPTH + 1));
   };
 
   /** The menu gone: back to the table, or back onto the screen of the city that fell under it. */
@@ -364,6 +374,9 @@ export function createOverlay(
       else shut();
     },
     back,
+    binds(key: string): boolean {
+      return standing?.binds(key) ?? false;
+    },
     render(chronicle: Chronicle): void {
       if (chronicle.defeat !== undefined && fallen === undefined)
         void raiseDefeat(chronicle.defeat);

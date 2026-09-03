@@ -101,10 +101,16 @@ A **Menu** button stands on the table and opens the menu over it. The menu lists
 the city was living through, victory, defeat or the middle of a turn. **Settings** is where
 everything the player sets lives, and **Controls** is its first entry.
 
-A window closes back one step, to the window it was opened from and then to the table. Escape backs
-out of whatever is open or pending — a window, a card being aimed, a tile being read — one step per
-press, and raises the menu only from a clean table. Nothing pauses, because nothing runs: the game
-is untimed, and a menu over the table is the table waiting.
+A window closes back one step, to the window it was opened from and then to the table. The **back
+key**, Escape until it is rebound, backs out of whatever is open or pending — a window, a card being
+aimed, a tile being read — one step per press, and raises the menu only from a clean table. Nothing
+pauses, because nothing runs: the game is untimed, and a menu over the table is the table waiting.
+
+**Controls** lists every key the game binds — the four directions the map pans, and the back key —
+with two slots to each. A key is rebound by pressing its slot and then the key itself, whatever that
+key is; a key already bound elsewhere moves, leaving the slot that had it empty. **Default** puts
+every key back where it began, **Back** closes the window, and what the player binds is kept in the
+browser from one launch to the next.
 
 ## Systems
 

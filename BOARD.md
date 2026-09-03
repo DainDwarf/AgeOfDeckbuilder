@@ -12,7 +12,4 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
-- **Rebinding keys** — the Controls window lists every bound key, each rebound by pressing the
-  new key, and the bindings survive a reload; the standing e2e passes. Doc-impact:
-  `docs/DESIGN.md`.
 - **Closes v0.0.1** — Only when the board is empty. Version bump and release note. Doc-impact: `docs/ROADMAP.md`, `CHANGELOG.md`.
