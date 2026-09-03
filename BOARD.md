@@ -12,6 +12,14 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
+- **Every command staged** — the rules expose the stages any command resolves as, and `apply`
+  answers the last of them, as the end of turn already does; the scene plays a card the way it
+  plays the end of turn, so the plain order's move and its arrival attack are the same `move` and
+  `attack` stages combat and the enemy phase raise, and no state change reaches the map by any
+  other path. The standing e2e passes. Doc-impact: none.
+- **The map holds the action** — before a stage plays on tiles the frame does not show, the map
+  pans to hold them and only then the motion starts; a stage on tiles already in the frame pans
+  nothing. The standing e2e passes. Doc-impact: none.
 - **Unplayable reasons on screen** — a card in hand that cannot be played shows why when zoomed:
   the unaffordable resources it already marks, joined by the blocked reasons (no free tile, no
   population, no valid target). Doc-impact: none.
