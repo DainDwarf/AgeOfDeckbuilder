@@ -10,7 +10,7 @@ import {
   open,
   playing,
   watch,
-} from './table';
+} from './chronicle-screen';
 
 /** No enemy arrives before the fifth turn, so the two turns this ends are safe on any seed. */
 const SEED = 1;
@@ -22,8 +22,9 @@ const THROWN = 'this motion was broken from outside';
 const IN_THE_AIR = 1500;
 
 /**
- * Breaks the next motion the table raises: the first tween asked for puts the manager back and
- * throws instead, so one stage of the end of turn fails and every motion after it is sound again.
+ * Breaks the next motion the chronicle screen raises: the first tween asked for puts the manager
+ * back and throws instead, so one stage of the end of turn fails and every motion after it is
+ * sound again.
  */
 async function breakNextMotion(page: Page): Promise<void> {
   await page.evaluate((thrown) => {
@@ -40,7 +41,7 @@ async function breakNextMotion(page: Page): Promise<void> {
   }, THROWN);
 }
 
-/** What the two piles read on the table. */
+/** What the two piles read on the chronicle screen. */
 function paintedPiles(page: Page): Promise<{ draw: string; discard: string }> {
   return page.evaluate(() => {
     const reading = (name: string): string => {
@@ -69,7 +70,9 @@ function paintedReadings(page: Page, readings: readonly string[]): Promise<Recor
   );
 }
 
-test('a motion that throws still ends the turn and gives the table back', async ({ page }) => {
+test('a motion that throws still ends the turn and gives the chronicle screen back', async ({
+  page,
+}) => {
   const problems = watch(page);
 
   await open(page, SEED, 'PH_LongDeck');

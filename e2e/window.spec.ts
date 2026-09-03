@@ -1,5 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
-import { open, watch } from './table';
+import { open, watch } from './chronicle-screen';
 
 /** The canvas's backing store, and the room it takes on screen measured in the same device pixels. */
 type Backing = { width: number; height: number; onWidth: number; onHeight: number };

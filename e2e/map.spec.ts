@@ -11,15 +11,15 @@ import {
   farmRun,
   mapFrame,
   onScreen,
-  onTable,
   open,
   playedOut,
   ringedTile,
   settled,
   shownLayer,
+  standing,
   tooltipUp,
   watch,
-} from './table';
+} from './chronicle-screen';
 
 /** A tile on bare map, clear of the resource bar, the piles and the hand. */
 const BARE = { name: 'tile-0,-3', key: '0,-3' };
@@ -225,7 +225,7 @@ test('a drag during a move aim pans the map, unless it presses the unit', async 
   const after = await onScreen(page, BARE.name);
   expect(after.x - before.x).toBeCloseTo(100, 0);
   expect(after.y - before.y).toBeCloseTo(60, 0);
-  expect(await onTable(page, 'aim')).toBe(true);
+  expect(await standing(page, 'aim')).toBe(true);
   const panned = await chronicleOf(page);
   expect(panned.hand).toEqual(entered.hand);
   expect(panned.units[0].tile).toEqual(entered.units[0].tile);
@@ -238,7 +238,7 @@ test('a drag during a move aim pans the map, unless it presses the unit', async 
   await expect
     .poll(async () => tileKey((await chronicleOf(page)).units[0].tile))
     .toBe(tileKey(run.tile));
-  expect(await onTable(page, 'aim')).toBe(false);
+  expect(await standing(page, 'aim')).toBe(false);
   // The press that grabbed the unit left the map where it stood.
   const held = await onScreen(page, BARE.name);
   expect(held.x).toBeCloseTo(after.x, 0);
@@ -281,7 +281,7 @@ test('a drag during a tile aim pans the map, and the aim still builds after it',
   const after = await onScreen(page, BARE.name);
   expect(after.x - before.x).toBeCloseTo(-90, 0);
   expect(after.y - before.y).toBeCloseTo(40, 0);
-  expect(await onTable(page, 'aim')).toBe(true);
+  expect(await standing(page, 'aim')).toBe(true);
   const panned = await chronicleOf(page);
   expect(panned.hand).toEqual(aiming.hand);
   expect(

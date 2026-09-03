@@ -34,7 +34,8 @@ function reasons(id: CardId, refusal: Refusal): string[] {
 /**
  * The bubble the refused play answers with, standing on the UI in the panel language with its tail
  * pointing down at the card in its slot, and staying up until it is taken down. One stands at a
- * time: a second refusal replaces the first, and any press on the table takes down whichever is up.
+ * time: a second refusal replaces the first, and any press on the chronicle screen takes down
+ * whichever is up.
  */
 export function createRefusalNote(scene: Phaser.Scene): RefusalNote {
   let note: Phaser.GameObjects.Container | undefined;

@@ -1,8 +1,8 @@
 import { expect, type Page, test } from '@playwright/test';
 import type Phaser from 'phaser';
-import { chronicleOf, endTurn, fallRun, open, watch } from './table';
+import { chronicleOf, endTurn, fallRun, open, watch } from './chronicle-screen';
 
-/** Whether the defeat screen has risen over the table: the rise ends at its full alpha. */
+/** Whether the defeat screen has risen over the chronicle screen: the rise ends at full alpha. */
 function defeatShown(page: Page): Promise<boolean> {
   return page.evaluate(() => {
     const screen = window.named?.('defeat')?.object as Phaser.GameObjects.Container | undefined;

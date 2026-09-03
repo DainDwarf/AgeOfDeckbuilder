@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { watch } from './table';
+import { watch } from './chronicle-screen';
 
 test('the page boots into the chronicle and logs nothing', async ({ page }) => {
   const problems = watch(page);

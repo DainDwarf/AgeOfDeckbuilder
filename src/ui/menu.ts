@@ -20,7 +20,8 @@ export type MenuPress = Exclude<MenuWindow, 'menu'> | 'new-chronicle';
 
 /**
  * The windows: what each one lists, in the order it lists them, and the one it closes back to. The
- * menu closes back to nothing, which is the table. Controls lists the bindings instead of buttons.
+ * menu closes back to nothing, which is the chronicle screen. Controls lists the bindings instead
+ * of buttons.
  */
 const WINDOWS: Record<
   MenuWindow,
@@ -31,7 +32,7 @@ const WINDOWS: Record<
   controls: { buttons: [], from: 'settings' },
 };
 
-/** The window this one closes back to, and nothing for the one that closes back to the table. */
+/** The window this one closes back to; nothing for the one that closes back to the chronicle screen. */
 export function behind(which: MenuWindow): MenuWindow | undefined {
   return WINDOWS[which].from;
 }

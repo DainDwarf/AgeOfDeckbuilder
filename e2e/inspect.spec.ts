@@ -8,12 +8,12 @@ import {
   dragOut,
   endTurn,
   onScreen,
-  onTable,
   open,
   ringedTile,
   shownLayer,
+  standing,
   watch,
-} from './table';
+} from './chronicle-screen';
 
 /** A tile on bare map, clear of the resource bar, the piles and the hand. */
 const BARE = { name: 'tile-0,-3', key: '0,-3' };
@@ -75,7 +75,7 @@ test('a right click picks out no tile: it backs the reading out, and no browser 
 
   await expect.poll(() => browserMenu(page)).toBe(true);
   await expect.poll(() => ringedTile(page)).toBeUndefined();
-  expect(await onTable(page, 'menu')).toBe(false);
+  expect(await standing(page, 'menu')).toBe(false);
   // The press carried the map nowhere either: the tile stands where it stood.
   const after = await onScreen(page, BARE.name);
   expect(after.x).toBeCloseTo(bare.x, 0);

@@ -1,6 +1,14 @@
 import { expect, test } from '@playwright/test';
 import { text } from '../src/ui/text';
-import { chronicleOf, endTurnLabel, offCanvas, onScreen, open, tooltipUp, watch } from './table';
+import {
+  chronicleOf,
+  endTurnLabel,
+  offCanvas,
+  onScreen,
+  open,
+  tooltipUp,
+  watch,
+} from './chronicle-screen';
 
 /** Taller than the design aspect, so the canvas letterboxes and bare page is left above it. */
 const WINDOW = { width: 1280, height: 900 };

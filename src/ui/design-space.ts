@@ -16,9 +16,10 @@ export const PANEL_FILL = 0xd4d7db;
 export const PANEL_EDGE = 0x6f757d;
 
 /**
- * The two depths the scrim divides the table at: everything the table lays out is below the scrim,
- * and the Menu button alone stands over it, so it is pressable while a window or the defeat screen
- * covers the table. What the scrim carries stands between them.
+ * The two depths the scrim divides the chronicle screen at: everything the chronicle screen lays
+ * out is below the scrim, and the Menu button alone stands over it, so it is pressable while a
+ * window or the defeat screen covers the chronicle screen. What the scrim carries stands between
+ * them.
  */
 export const SCRIM_DEPTH = 100;
 export const OVER_SCRIM_DEPTH = 110;
@@ -140,7 +141,8 @@ export function releaseOnBlur(game: Phaser.Game): void {
 /**
  * A listener for as long as the scene is up. Every emitter the scene listens on — its own, the
  * scale manager's, the game's — outlives its shutdown, so one left on any of them is called again
- * by the table a restart raises, holding every object the table it was made on has since destroyed.
+ * by the chronicle screen a restart raises, holding every object the chronicle screen it was made
+ * on has since destroyed.
  */
 export function whileUp<A extends unknown[]>(
   scene: Phaser.Scene,
@@ -222,8 +224,8 @@ function surfaceOf(
 }
 
 /**
- * The design space, cut in two: each camera is blind to the other's layer, so one of them can be
- * panned and zoomed while the other holds still. Nothing may be left standing on the scene's own
+ * The chronicle screen, cut in two: each camera is blind to the other's layer, so one of them can
+ * be panned and zoomed while the other holds still. Nothing may be left standing on the scene's own
  * display list, which carries no camera filter and so is painted by both cameras at once — hence
  * the UI takes every object the game makes, and whatever belongs on the map moves itself there.
  * Each layer and the camera that paints it share a name.

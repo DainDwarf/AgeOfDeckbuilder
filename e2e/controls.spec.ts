@@ -1,6 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import type Phaser from 'phaser';
-import { click, onScreen, onTable, open, settled, watch } from './table';
+import { click, onScreen, open, settled, standing, watch } from './chronicle-screen';
 
 /** A tile on bare map, clear of the resource bar, the piles and the hand. */
 const BARE = 'tile-0,-3';
@@ -39,14 +39,14 @@ async function rows(page: Page): Promise<string[][]> {
   return read;
 }
 
-/** From the table into Controls, the way the player walks there. */
+/** From the chronicle screen into Controls, the way the player walks there. */
 async function intoControls(page: Page): Promise<void> {
   await click(page, 'menu-button');
-  await expect.poll(() => onTable(page, 'menu')).toBe(true);
+  await expect.poll(() => standing(page, 'menu')).toBe(true);
   await click(page, 'menu-settings');
-  await expect.poll(() => onTable(page, 'settings')).toBe(true);
+  await expect.poll(() => standing(page, 'settings')).toBe(true);
   await click(page, 'settings-controls');
-  await expect.poll(() => onTable(page, 'controls')).toBe(true);
+  await expect.poll(() => standing(page, 'controls')).toBe(true);
 }
 
 /** How far the map moved down the screen under a key held for a dozen frames. */
@@ -82,14 +82,14 @@ async function grewBy(page: Page, gesture: () => Promise<void>): Promise<number>
   return (await onScreen(page, BARE)).unit / before.unit;
 }
 
-/** Out of Controls and back to a bare table, on the back key. */
+/** Out of Controls and back to a bare chronicle screen, on the back key. */
 async function outOfControls(page: Page): Promise<void> {
   await page.keyboard.press('Escape');
-  await expect.poll(() => onTable(page, 'settings')).toBe(true);
+  await expect.poll(() => standing(page, 'settings')).toBe(true);
   await page.keyboard.press('Escape');
-  await expect.poll(() => onTable(page, 'menu')).toBe(true);
+  await expect.poll(() => standing(page, 'menu')).toBe(true);
   await page.keyboard.press('Escape');
-  await expect.poll(() => onTable(page, 'menu')).toBe(false);
+  await expect.poll(() => standing(page, 'menu')).toBe(false);
 }
 
 test('a slot takes the next key pressed, and keeps it across a reload', async ({ page }) => {
@@ -112,11 +112,11 @@ test('a slot takes the next key pressed, and keeps it across a reload', async ({
   expect(await slotReads(page, 'pan-up', 0)).toBe('W');
 
   await click(page, 'controls-back');
-  await expect.poll(() => onTable(page, 'settings')).toBe(true);
+  await expect.poll(() => standing(page, 'settings')).toBe(true);
   await page.keyboard.press('Escape');
-  await expect.poll(() => onTable(page, 'menu')).toBe(true);
+  await expect.poll(() => standing(page, 'menu')).toBe(true);
   await page.keyboard.press('Escape');
-  await expect.poll(() => onTable(page, 'menu')).toBe(false);
+  await expect.poll(() => standing(page, 'menu')).toBe(false);
 
   // The frame pans up, so what stands on the map comes down the screen.
   expect(await heldBy(page, 'k')).toBeGreaterThan(40);
@@ -158,19 +158,19 @@ test('the back key binds like any other, and the Back button closes without it',
   await page.keyboard.press('Escape');
   await settled(page);
   await settled(page);
-  expect(await onTable(page, 'controls')).toBe(true);
+  expect(await standing(page, 'controls')).toBe(true);
 
   await click(page, 'controls-back');
-  await expect.poll(() => onTable(page, 'settings')).toBe(true);
+  await expect.poll(() => standing(page, 'settings')).toBe(true);
   await click(page, 'settings-controls');
-  await expect.poll(() => onTable(page, 'controls')).toBe(true);
+  await expect.poll(() => standing(page, 'controls')).toBe(true);
 
   await click(page, 'controls-back-0');
   await page.keyboard.press('b');
   await expect.poll(() => slotReads(page, 'back', 0)).toBe('B');
 
   await page.keyboard.press('b');
-  await expect.poll(() => onTable(page, 'settings')).toBe(true);
+  await expect.poll(() => standing(page, 'settings')).toBe(true);
 
   expect(problems).toEqual([]);
 });
@@ -274,7 +274,7 @@ test('a key bound to a zoom zooms the map, and the wheel moved off it stops zoom
   expect(problems).toEqual([]);
 });
 
-test('a right click backs out one step, and raises the menu from a bare table', async ({
+test('a right click backs out one step, and raises the menu from a bare chronicle screen', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -287,14 +287,14 @@ test('a right click backs out one step, and raises the menu from a bare table', 
   const rightClick = (): Promise<void> => page.mouse.click(middle.x, middle.y, { button: 'right' });
 
   await rightClick();
-  await expect.poll(() => onTable(page, 'settings')).toBe(true);
+  await expect.poll(() => standing(page, 'settings')).toBe(true);
   await rightClick();
-  await expect.poll(() => onTable(page, 'menu')).toBe(true);
+  await expect.poll(() => standing(page, 'menu')).toBe(true);
   await rightClick();
-  await expect.poll(() => onTable(page, 'menu')).toBe(false);
+  await expect.poll(() => standing(page, 'menu')).toBe(false);
 
   await rightClick();
-  await expect.poll(() => onTable(page, 'menu')).toBe(true);
+  await expect.poll(() => standing(page, 'menu')).toBe(true);
 
   expect(problems).toEqual([]);
 });

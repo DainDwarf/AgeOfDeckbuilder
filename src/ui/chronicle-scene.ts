@@ -57,7 +57,7 @@ function nextLayer(shown: number | undefined, count: number): number | undefined
 export class ChronicleScene extends Phaser.Scene {
   private readonly deck: readonly CardId[];
   private current: Chronicle;
-  /** The play-out running on the table as it stands, and nothing while none is. */
+  /** The play-out running on the chronicle screen as it stands, and nothing while none is. */
   private sequence: symbol | undefined;
 
   constructor(seed: number | undefined, deck: readonly CardId[]) {
@@ -77,18 +77,19 @@ export class ChronicleScene extends Phaser.Scene {
   }
 
   /**
-   * A chronicle on this table's deck, from the seed it was asked for or from a fresh one. The fresh
-   * one is the one place entropy enters the game: `src/rules/` draws only from the seed it is
-   * handed.
+   * A chronicle on this chronicle screen's deck, from the seed it was asked for or from a fresh
+   * one. The fresh one is the one place entropy enters the game: `src/rules/` draws only from the
+   * seed it is handed.
    */
   private begin(seed: number | undefined): Chronicle {
     return beginChronicle(seed ?? (Math.random() * 2 ** 32) | 0, this.deck);
   }
 
   /**
-   * A fresh chronicle on a new seed and the same deck, on a table raised from nothing: the scene's
-   * restart takes down every object, listener, tween and timer the old table left standing. The
-   * play-out the old table was in the middle of is let go of here, and its tail commits nothing.
+   * A fresh chronicle on a new seed and the same deck, on a chronicle screen raised from nothing:
+   * the scene's restart takes down every object, listener, tween and timer the old chronicle
+   * screen left standing. The play-out the old chronicle screen was in the middle of is let go of
+   * here, and its tail commits nothing.
    */
   private newChronicle(): void {
     this.sequence = undefined;
@@ -128,9 +129,9 @@ export class ChronicleScene extends Phaser.Scene {
      *
      * However the play-out ends, the tail commits the last stage's chronicle and paints it: it
      * needs no motion to have completed, and a part's render takes down whatever that part left in
-     * the air. A play-out the table has let go of — a new chronicle was begun under it — commits
-     * nothing: the objects it was playing on are gone, and the chronicle it would commit is not
-     * the one on the table.
+     * the air. A play-out the chronicle screen has let go of — a new chronicle was begun under it
+     * — commits nothing: the objects it was playing on are gone, and the chronicle it would commit
+     * is not the one on the chronicle screen.
      */
     const playOut = async (command: Command): Promise<void> => {
       if (this.sequence !== undefined) return;
@@ -225,7 +226,7 @@ export class ChronicleScene extends Phaser.Scene {
       (id, refusal) => overlay.zoom(id, refusal),
     );
 
-    /** The menu, from the Menu button or from a clean table: an armed card is let go of first. */
+    /** The menu, from the Menu button or a clean chronicle screen: an armed card is let go of first. */
     const menu = (): void => {
       hand.cancelAim();
       overlay.menu();
@@ -233,9 +234,9 @@ export class ChronicleScene extends Phaser.Scene {
 
     // The one place the back key is answered: a slot of the Controls window listening takes the key
     // first, whatever it is; otherwise the back key takes back one thing, the outermost that is up
-    // or pending, and only a table with nothing on it raises the menu. A second listener that acted
-    // on the back key would be a second answer to the one press; the map's own listener answers the
-    // pan and zoom keys and no other.
+    // or pending, and only a chronicle screen with nothing on it raises the menu. A second listener
+    // that acted on the back key would be a second answer to the one press; the map's own listener
+    // answers the pan and zoom keys and no other.
     onKeyDown(this, (key) => {
       if (overlay.binds(key)) return;
       if (!boundTo(key, 'back')) return;

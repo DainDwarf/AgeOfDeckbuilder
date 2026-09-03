@@ -17,11 +17,11 @@ import {
   mapFrame,
   type OnScreen,
   onScreen,
-  onTable,
   open,
   refusalLines,
+  standing,
   watch,
-} from './table';
+} from './chronicle-screen';
 
 /** Where a card the rules refuse lies in the hand, or -1. */
 function refused(chronicle: Chronicle): number {
@@ -67,7 +67,7 @@ async function letGo(
   return { opened, card: opened.hand[index], index, name, home };
 }
 
-/** Longer than any move on the table takes to play out, so nothing is still on its way. */
+/** Longer than any motion on the chronicle screen takes to play out, so nothing is still on its way. */
 const A_WHILE = 2000;
 
 test('a card the rules refuse comes home, plays nothing, and stands its note over it', async ({
@@ -94,16 +94,16 @@ test('a card the rules refuse comes home, plays nothing, and stands its note ove
   expect(problems).toEqual([]);
 });
 
-test('a press on the table takes the refusal note down at once', async ({ page }) => {
+test('a press on the chronicle screen takes the refusal note down at once', async ({ page }) => {
   const problems = watch(page);
 
   await letGo(page);
-  expect(await onTable(page, 'refusal')).toBe(true);
+  expect(await standing(page, 'refusal')).toBe(true);
 
   const frame = await mapFrame(page);
   await page.mouse.click(frame.x + frame.width / 2, frame.y + 10);
 
-  expect(await onTable(page, 'refusal')).toBe(false);
+  expect(await standing(page, 'refusal')).toBe(false);
 
   expect(problems).toEqual([]);
 });

@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import type { CardId } from '../src/rules/cards';
 import { apply, beginChronicle } from '../src/rules/chronicle';
-import { chronicleOf, endTurn, onScreen, open, playing, watch } from './table';
+import { chronicleOf, endTurn, onScreen, open, playing, watch } from './chronicle-screen';
 
 /**
  * Seven cards, so the first end of turn deals its next hand either side of a shuffle: two off what
@@ -20,7 +20,7 @@ const DECK: readonly CardId[] = [
 /** No enemy arrives before the fifth turn, so the two turns this ends are safe on any seed. */
 const SEED = 1;
 
-test('a pointer sweeping the hand while the end of turn plays leaves the table live behind it', async ({
+test('a pointer sweeping the hand while the end of turn plays leaves the chronicle screen live behind it', async ({
   page,
 }) => {
   const problems = watch(page);

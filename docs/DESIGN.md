@@ -96,22 +96,24 @@ release, but the stack is chosen with them in mind.
 
 ### The menu ✅
 
-A **Menu** button stands on the table and opens the menu over it. The menu lists **Settings** and
-**New chronicle**: a new chronicle begins one on a fresh seed with the same deck, leaving whatever
-the city was living through, victory, defeat or the middle of a turn. **Settings** is where
-everything the player sets lives, and **Controls** is its first entry.
+A **Menu** button stands on the chronicle screen and opens the menu over it; a card being aimed
+is let go of first. The menu lists **Settings** and **New chronicle**: a new chronicle begins one
+on a fresh seed with the same deck, leaving whatever the city was living through, victory, defeat
+or the middle of a turn. **Settings** is where everything the player sets lives, and **Controls**
+is its first entry.
 
-A window closes back one step, to the window it was opened from and then to the table. The **back
-key**, Escape and a right click until they are rebound, backs out of whatever is open or pending — a
-window, a card being aimed, a tile being read — one step per press, and raises the menu only from a
-clean table. Nothing pauses, because nothing runs: the game is untimed, and a menu over the table is
-the table waiting.
+A window closes back one step, to the window it was opened from and then to the chronicle screen.
+The **back key**, Escape and a right click until they are rebound, backs out of whatever is open or
+pending — a window, a card being aimed, a tile being read — one step per press, and raises the menu
+only from a clean chronicle screen. Nothing pauses, because nothing runs: the game is untimed, and
+a menu over the chronicle screen is the chronicle screen waiting.
 
 **Controls** lists every key the game binds — the four directions the map pans, the two it zooms,
 and the back key — with two slots to each. A key is rebound by pressing its slot and then the key
 itself, whatever that key is; a key already bound elsewhere moves, leaving the slot that had it
-empty. Every mouse button but the one that presses the table binds there like a key, and presses
-nothing on the table; the browser's own menu never shows over the game. A notch of the wheel binds
+empty. Every mouse button but the one that presses the chronicle screen binds there like a key,
+and presses nothing on the chronicle screen; the browser's own menu never shows over the game. A
+notch of the wheel binds
 like a key too, one key each way; the map zooms one notch a press, and only through the two zooms —
 a wheel notch up and a wheel notch down until they are rebound. **Default** puts every key back
 where it began, **Back** closes the window, and what the player binds is kept in the browser from

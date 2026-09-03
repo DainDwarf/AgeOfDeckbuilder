@@ -78,10 +78,10 @@ type Scroll = {
 
 /**
  * The scrim and what stands on it: a pile's cards laid out, one card large, a window of the menu,
- * or the defeat screen. The scrim swallows every pointer beneath it, so the table is inert while
- * any of them is open, and only the menu comes up over the defeat screen — the city that fell is
- * left behind by a new chronicle alone. `covering` is told as the scrim goes up and comes down, for
- * whatever it cannot swallow: the wheel and the keyboard reach past it.
+ * or the defeat screen. The scrim swallows every pointer beneath it, so the chronicle screen is
+ * inert while any of them is open, and only the menu comes up over the defeat screen — the city
+ * that fell is left behind by a new chronicle alone. `covering` is told as the scrim goes up and
+ * comes down, for whatever it cannot swallow: the wheel and the keyboard reach past it.
  */
 export function createOverlay(
   scene: Phaser.Scene,
@@ -326,7 +326,7 @@ export function createOverlay(
     shown.push(laid.root.setDepth(SCRIM_DEPTH + 1));
   };
 
-  /** The menu gone: back to the table, or back onto the screen of the city that fell under it. */
+  /** The menu gone: back to the chronicle screen, or onto the defeat screen that stood under it. */
   const shut = (): void => {
     if (fallen === undefined) close();
     else showDefeat(fallen);

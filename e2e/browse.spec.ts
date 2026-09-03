@@ -6,12 +6,12 @@ import {
   endTurn,
   offsetOf,
   onScreen,
-  onTable,
   open,
   scrolled,
+  standing,
   watch,
   wheel,
-} from './table';
+} from './chronicle-screen';
 
 /** Five copies of each card: a pile of these lays out taller than the browse's frame. */
 const DECK: readonly CardId[] = (
@@ -57,10 +57,10 @@ test('a pile of more cards than the frame holds scrolls, and stops on its first 
   await page.mouse.up();
 
   await expect.poll(() => offsetOf(page)).toBeGreaterThanOrEqual(120);
-  expect(await onTable(page, 'browse')).toBe(true);
+  expect(await standing(page, 'browse')).toBe(true);
 
   await page.keyboard.press('Escape');
-  await expect.poll(() => onTable(page, 'browse')).toBe(false);
+  await expect.poll(() => standing(page, 'browse')).toBe(false);
 
   for (let turn = 0; turn < 3; turn++) await endTurn(page);
   await browse(page, 'discard-pile');

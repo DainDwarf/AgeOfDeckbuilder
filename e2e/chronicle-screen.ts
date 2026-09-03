@@ -17,16 +17,16 @@ import type { PileKind } from '../src/ui/overlay';
 declare global {
   interface Window {
     /**
-     * The named object and the camera that paints it, wherever on the table it stands. The scene's
-     * own display list carries only the two layers, so `children.getByName` finds nothing, and a
-     * name may sit any depth down inside a container.
+     * The named object and the camera that paints it, wherever on the chronicle screen it stands.
+     * The scene's own display list carries only the two layers, so `children.getByName` finds
+     * nothing, and a name may sit any depth down inside a container.
      */
     named?: (
       name: string,
     ) =>
       | { object: Phaser.GameObjects.GameObject; camera: Phaser.Cameras.Scene2D.Camera }
       | undefined;
-    /** How many objects of that name stand on the table: a repainted table leaves no second one. */
+    /** How many objects of that name stand on the chronicle screen: a repaint leaves no second one. */
     counted?: (name: string) => number;
   }
 }
@@ -121,7 +121,7 @@ export function playing(page: Page): Promise<boolean> {
 export function onScreen(page: Page, name: string): Promise<OnScreen> {
   return page.evaluate((target) => {
     const found = window.named?.(target);
-    if (found === undefined) throw new Error(`nothing named ${target} is on the table`);
+    if (found === undefined) throw new Error(`nothing named ${target} is on the chronicle screen`);
     const object = found.object as Phaser.GameObjects.GameObject &
       Phaser.GameObjects.Components.GetBounds;
 
@@ -175,12 +175,12 @@ export async function offCanvas(page: Page): Promise<{ x: number; y: number }> {
   return { x: band.x, y: band.y };
 }
 
-/** Whether an object of that name stands on the table. */
-export function onTable(page: Page, name: string): Promise<boolean> {
+/** Whether an object of that name stands on the chronicle screen. */
+export function standing(page: Page, name: string): Promise<boolean> {
   return page.evaluate((target) => window.named?.(target) !== undefined, name);
 }
 
-/** How many objects of that name stand on the table: one the table still paints, plus any left over. */
+/** How many objects of that name stand on the chronicle screen: one still painted, plus any left over. */
 export function counted(page: Page, name: string): Promise<number> {
   return page.evaluate((target) => {
     if (window.counted === undefined) throw new Error('no chronicle was opened on this page');
@@ -256,7 +256,7 @@ export async function aimed(page: Page): Promise<void> {
 export function shownLayer(page: Page): Promise<string | undefined> {
   return page.evaluate(() => {
     const panel = window.named?.('infopanel')?.object as Phaser.GameObjects.Container | undefined;
-    if (panel === undefined) throw new Error('the infopanel is not on the table');
+    if (panel === undefined) throw new Error('the infopanel is not on the chronicle screen');
     return panel.visible ? (panel.getData('layer') as string) : undefined;
   });
 }
@@ -285,7 +285,7 @@ export function refusalLines(page: Page): Promise<string[] | undefined> {
 export function endTurnLabel(page: Page): Promise<string> {
   return page.evaluate(() => {
     const label = window.named?.('end-turn-label')?.object as Phaser.GameObjects.Text | undefined;
-    if (label === undefined) throw new Error('the end-turn button is not on the table');
+    if (label === undefined) throw new Error('the end-turn button is not on the chronicle screen');
     return label.text;
   });
 }
@@ -294,7 +294,7 @@ export function endTurnLabel(page: Page): Promise<string> {
 export function ringedTile(page: Page): Promise<string | undefined> {
   return page.evaluate(() => {
     const ring = window.named?.('inspected')?.object;
-    if (ring === undefined) throw new Error('the ring is not on the table');
+    if (ring === undefined) throw new Error('the ring is not on the chronicle screen');
     return ring.getData('tile') as string | undefined;
   });
 }
@@ -312,7 +312,7 @@ export async function click(page: Page, name: string): Promise<void> {
 /** Opens a pile's browse, and waits for its cards to be laid out. */
 export async function browse(page: Page, pile: PileKind): Promise<void> {
   await click(page, pile);
-  await expect.poll(() => onTable(page, 'browse')).toBe(true);
+  await expect.poll(() => standing(page, 'browse')).toBe(true);
 }
 
 /** Wheels over the browse's frame, from the middle of it. */
@@ -323,9 +323,9 @@ export async function wheel(page: Page, by: number): Promise<void> {
 }
 
 /**
- * Waits for the table to have played out whatever the last gesture handed it, first giving that
- * gesture a frame to reach the scene: the hand and the button are dead for the length of a play-out,
- * so a spec that presses either of them straight after would press nothing.
+ * Waits for the chronicle screen to have played out whatever the last gesture handed it, first
+ * giving that gesture a frame to reach the scene: the hand and the button are dead for the length
+ * of a play-out, so a spec that presses either of them straight after would press nothing.
  */
 export async function playedOut(page: Page): Promise<void> {
   await settled(page);
@@ -352,7 +352,7 @@ export async function dragOut(page: Page, index: number): Promise<void> {
 /**
  * Ends the turn on the button, and waits for the end of turn to finish playing out — the next turn
  * open, or the chronicle ended. The turn moves on partway through the sequence, so both hold before
- * the hand it deals is on the table.
+ * the hand it deals is on the chronicle screen.
  */
 export async function endTurn(page: Page): Promise<void> {
   const { turn } = await chronicleOf(page);

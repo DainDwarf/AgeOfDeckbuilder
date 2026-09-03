@@ -27,6 +27,7 @@ deliberate exception the reviewer sees; there is no silent allow-list.
 | **chronicle** | One city's story through one age, from founding to victory or defeat — what a roguelite calls a run. | run, playthrough, attempt, session |
 | **city** | A settlement on the map; the player owns exactly one — *the* city, what a chronicle is about. | town, capital, base, settlement |
 | **map** | The hexagonal grid a chronicle is played on. | board, world, grid |
+| **chronicle screen** | The surface a chronicle is played on — the map, the hand, the piles, the resource bar, the infopanel; what a window opens over and closes back to. | table, playfield, play area |
 | **tile** | One hexagon of the map, of one terrain. | hex, cell, square, territory |
 | **region** | The launch choice that biases map generation; the difficulty dial. | site, location, start |
 | **unit** | A mobile piece on the map, the player's or not. | army, troop, piece, token |

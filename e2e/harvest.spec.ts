@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { DECKS } from '../src/rules/cards';
 import { apply, beginChronicle, outcome, playable, refusalOf } from '../src/rules/chronicle';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
-import { chronicleOf, dragOut, endTurn, open, watch } from './table';
+import { chronicleOf, dragOut, endTurn, open, watch } from './chronicle-screen';
 
 /** The first seed whose second turn opens on a harvest card the city can pay for. */
 function harvestSeed(): number {

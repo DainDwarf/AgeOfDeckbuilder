@@ -26,12 +26,13 @@ const NOTCH = 100;
 const NOTCH_WINDOW = 200;
 
 /**
- * The mouse as a set of keys: every button but the one that presses the table binds like a key and
- * presses nothing, and a notch of the wheel either way binds like a key too. Phaser's mouse manager
- * passes over an event whose default is already prevented, so preventing it here is what takes the
- * press off the table — and it is only the press: the browser's own menu comes of the `contextmenu`
- * event, which the game's `disableContextMenu` kills. The wheel's own default is left standing, so
- * Phaser still hears the wheel that scrolls a pile being browsed.
+ * The mouse as a set of keys: every button but the one that presses the chronicle screen binds
+ * like a key and presses nothing, and a notch of the wheel either way binds like a key too.
+ * Phaser's mouse manager passes over an event whose default is already prevented, so preventing it
+ * here is what takes the press off the chronicle screen — and it is only the press: the browser's
+ * own menu comes of the `contextmenu` event, which the game's `disableContextMenu` kills. The
+ * wheel's own default is left standing, so Phaser still hears the wheel that scrolls a pile being
+ * browsed.
  *
  * Heard on the way down, ahead of Phaser's listeners on the canvas; a button's release is heard
  * wherever it lands, so one pressed on the canvas and let go of off it still comes up. A notch has

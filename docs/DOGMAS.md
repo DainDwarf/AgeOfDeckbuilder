@@ -202,8 +202,8 @@ makes twice becomes a line here (the ratchet, at `/upkeep`).
   the command ends on. The seeded generator's state lives inside `state`. That single rule is what
   makes a chronicle replay from its seed, a save the state serialised, and a headless simulator
   `apply` in a loop keeping the last stage's state. Why stages and not the state alone: what
-  happened — which tile attacked which — is not in the state that follows it, and the table has to
-  play it. Phaser renders a state and emits commands, nothing else. Debug commands are commands
+  happened — which tile attacked which — is not in the state that follows it, and the chronicle
+  screen has to play it. Phaser renders a state and emits commands, nothing else. Debug commands are commands
   like any other, behind a flag.
 - **All UI is Phaser** — inside a chronicle and outside it alike: launch, collection, deck
   editing, codex. `index.html` carries no UI: a style reset, the script that boots Phaser, and

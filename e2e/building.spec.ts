@@ -12,13 +12,13 @@ import {
   open,
   playedOut,
   watch,
-} from './table';
+} from './chronicle-screen';
 
 /** How many buildings stand drawn on the map. */
 function marks(page: Page): Promise<number> {
   return page.evaluate(() => {
     const built = window.named?.('buildings')?.object as Phaser.GameObjects.Container | undefined;
-    if (built === undefined) throw new Error('the buildings are not on the table');
+    if (built === undefined) throw new Error('the buildings are not on the chronicle screen');
     return built.list.length;
   });
 }

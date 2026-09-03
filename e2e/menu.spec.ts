@@ -11,10 +11,10 @@ import {
   endTurn,
   fallRun,
   farmRun,
-  onTable,
   open,
+  standing,
   watch,
-} from './table';
+} from './chronicle-screen';
 
 /** The first seed that stands its city through three ended turns. */
 function standingRun(): number {
@@ -33,9 +33,9 @@ function deckOf(chronicle: Chronicle): string[] {
   return [...chronicle.drawPile, ...chronicle.hand, ...chronicle.discardPile].sort();
 }
 
-/** Waits for the table a new chronicle raised: the menu gone, and one hand laid out on it. */
+/** Waits for the chronicle screen a new chronicle raised: the menu gone, one hand laid out on it. */
 async function raised(page: Page): Promise<void> {
-  await expect.poll(() => onTable(page, 'menu')).toBe(false);
+  await expect.poll(() => standing(page, 'menu')).toBe(false);
   await expect.poll(() => counted(page, 'hand-0')).toBe(1);
 }
 
@@ -46,32 +46,32 @@ test('the menu walks in to Controls and closes back one step at a time', async (
   const problems = watch(page);
 
   await open(page, 1, 'PH_Deck');
-  expect(await onTable(page, 'menu')).toBe(false);
+  expect(await standing(page, 'menu')).toBe(false);
 
   await click(page, 'menu-button');
-  await expect.poll(() => onTable(page, 'menu')).toBe(true);
+  await expect.poll(() => standing(page, 'menu')).toBe(true);
 
   await click(page, 'menu-settings');
-  await expect.poll(() => onTable(page, 'settings')).toBe(true);
-  expect(await onTable(page, 'menu')).toBe(false);
+  await expect.poll(() => standing(page, 'settings')).toBe(true);
+  expect(await standing(page, 'menu')).toBe(false);
 
   await click(page, 'settings-controls');
-  await expect.poll(() => onTable(page, 'controls')).toBe(true);
-  expect(await onTable(page, 'settings')).toBe(false);
+  await expect.poll(() => standing(page, 'controls')).toBe(true);
+  expect(await standing(page, 'settings')).toBe(false);
 
   await page.keyboard.press('Escape');
-  await expect.poll(() => onTable(page, 'settings')).toBe(true);
+  await expect.poll(() => standing(page, 'settings')).toBe(true);
   await page.keyboard.press('Escape');
-  await expect.poll(() => onTable(page, 'menu')).toBe(true);
+  await expect.poll(() => standing(page, 'menu')).toBe(true);
   await page.keyboard.press('Escape');
-  await expect.poll(() => onTable(page, 'menu')).toBe(false);
-  expect(await onTable(page, 'settings')).toBe(false);
-  expect(await onTable(page, 'controls')).toBe(false);
+  await expect.poll(() => standing(page, 'menu')).toBe(false);
+  expect(await standing(page, 'settings')).toBe(false);
+  expect(await standing(page, 'controls')).toBe(false);
 
   expect(problems).toEqual([]);
 });
 
-test('Escape raises the menu on a bare table, and backs out of a browse without it', async ({
+test('Escape raises the menu on a bare chronicle screen, and backs out of a browse without it', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -79,19 +79,19 @@ test('Escape raises the menu on a bare table, and backs out of a browse without 
   await open(page, 1, 'PH_Deck');
 
   await page.keyboard.press('Escape');
-  await expect.poll(() => onTable(page, 'menu')).toBe(true);
+  await expect.poll(() => standing(page, 'menu')).toBe(true);
   await page.keyboard.press('Escape');
-  await expect.poll(() => onTable(page, 'menu')).toBe(false);
+  await expect.poll(() => standing(page, 'menu')).toBe(false);
 
   await click(page, 'menu-button');
-  await expect.poll(() => onTable(page, 'menu')).toBe(true);
+  await expect.poll(() => standing(page, 'menu')).toBe(true);
   await click(page, 'menu-button');
-  await expect.poll(() => onTable(page, 'menu')).toBe(false);
+  await expect.poll(() => standing(page, 'menu')).toBe(false);
 
   await browse(page, 'draw-pile');
   await page.keyboard.press('Escape');
-  await expect.poll(() => onTable(page, 'browse')).toBe(false);
-  expect(await onTable(page, 'menu')).toBe(false);
+  await expect.poll(() => standing(page, 'browse')).toBe(false);
+  expect(await standing(page, 'menu')).toBe(false);
 
   expect(problems).toEqual([]);
 });
@@ -110,12 +110,12 @@ test('Escape lets go of the card being aimed before it raises the menu', async (
   await aimed(page);
 
   await page.keyboard.press('Escape');
-  await expect.poll(() => onTable(page, 'aim')).toBe(false);
-  expect(await onTable(page, 'menu')).toBe(false);
+  await expect.poll(() => standing(page, 'aim')).toBe(false);
+  expect(await standing(page, 'menu')).toBe(false);
   expect((await chronicleOf(page)).hand).toEqual(entered.hand);
 
   await page.keyboard.press('Escape');
-  await expect.poll(() => onTable(page, 'menu')).toBe(true);
+  await expect.poll(() => standing(page, 'menu')).toBe(true);
 
   expect(problems).toEqual([]);
 });
@@ -129,7 +129,7 @@ test('a new chronicle deals the same deck a fresh seed, on turn 1', async ({ pag
   expect(played.turn).toBeGreaterThan(1);
 
   await click(page, 'menu-button');
-  await expect.poll(() => onTable(page, 'menu')).toBe(true);
+  await expect.poll(() => standing(page, 'menu')).toBe(true);
   await click(page, 'menu-new-chronicle');
   await raised(page);
 
@@ -141,7 +141,7 @@ test('a new chronicle deals the same deck a fresh seed, on turn 1', async ({ pag
   expect(problems).toEqual([]);
 });
 
-test('the menu opens over the defeat screen, and a new chronicle takes the table back', async ({
+test('the menu opens over the defeat screen, and a new chronicle takes the chronicle screen back', async ({
   page,
 }) => {
   test.setTimeout(A_FALL);
@@ -150,10 +150,10 @@ test('the menu opens over the defeat screen, and a new chronicle takes the table
 
   await open(page, run.seed, 'PH_Deck');
   for (let turn = 0; turn < run.turns; turn++) await endTurn(page);
-  await expect.poll(() => onTable(page, 'defeat')).toBe(true);
+  await expect.poll(() => standing(page, 'defeat')).toBe(true);
 
   await click(page, 'menu-button');
-  await expect.poll(() => onTable(page, 'menu')).toBe(true);
+  await expect.poll(() => standing(page, 'menu')).toBe(true);
 
   await click(page, 'menu-new-chronicle');
   await raised(page);
@@ -161,7 +161,7 @@ test('the menu opens over the defeat screen, and a new chronicle takes the table
   const fresh = await chronicleOf(page);
   expect(fresh.defeat).toBeUndefined();
   expect(fresh.turn).toBe(1);
-  expect(await onTable(page, 'defeat')).toBe(false);
+  expect(await standing(page, 'defeat')).toBe(false);
 
   expect(problems).toEqual([]);
 });

@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 
-/** How long one card takes to travel the table, and how far behind the one before it leaves. */
+/** How long one card takes to cross the chronicle screen, and how far behind the one before it leaves. */
 export const TRAVEL = 250;
 export const STAGGER = 20;
 
@@ -12,7 +12,7 @@ export const TURN_OVER = 120;
 
 export const EASE = 'Sine.easeInOut';
 
-/** Above the piles, the button and everything else the table lays out. */
+/** Above the piles, the button and everything else the chronicle screen lays out. */
 export const IN_FLIGHT = 30;
 
 /** How long a block of that many cards is in the air, from the first leaving to the last landing. */
@@ -44,8 +44,8 @@ export function stopMotion(scene: Phaser.Scene, targets: object | object[]): voi
 }
 
 /**
- * Every motion the scene has in the air ended: what a table being taken down owes whoever waits on
- * it, since the shutdown that follows destroys them all in silence.
+ * Every motion the scene has in the air ended: what a chronicle screen being taken down owes
+ * whoever waits on it, since the shutdown that follows destroys them all in silence.
  */
 export function stopAllMotion(scene: Phaser.Scene): void {
   for (const tween of scene.tweens.getTweens()) tween.stop();

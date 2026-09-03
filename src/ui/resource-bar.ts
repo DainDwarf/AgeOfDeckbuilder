@@ -131,7 +131,7 @@ export function createResourceBar(
 /**
  * The Menu button at the bar's right end, and how wide it came out. It stands over the scrim
  * instead of in the bar, so it is still pressable while a window or the defeat screen covers the
- * table: a new chronicle is how a player leaves a defeat.
+ * chronicle screen: a new chronicle is how a player leaves a defeat.
  */
 function createMenuButton(scene: Phaser.Scene, pressed: () => void): number {
   const label = addText(scene, 0, 0, text('menu.menu'), VALUE_STYLE).setOrigin(0.5, 0.5);

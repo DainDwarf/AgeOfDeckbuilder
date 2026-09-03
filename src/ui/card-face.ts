@@ -18,11 +18,11 @@ function metricsOf(width: number): {
   return { height: Math.round(width * 1.4), em, pad: 0.55 * em, radius: 0.45 * em };
 }
 
-/** The card as it lies on the table: what anything laid out in the card's language measures by. */
+/** The card as it lies on the chronicle screen: what anything in the card's language measures by. */
 export const CARD_METRICS = metricsOf(CARD_WIDTH);
 export const CARD_HEIGHT = CARD_METRICS.height;
 
-/** Where a card lying on the table rests: its bottom edge, one margin off the screen's bottom. */
+/** Where a card lying on the chronicle screen rests: its bottom edge, one margin off the bottom. */
 export const CARD_BASELINE = DESIGN_HEIGHT - MARGIN;
 
 export const CARD_EDGE = 0x6f757d;
