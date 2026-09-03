@@ -38,6 +38,8 @@ into unrelated files because they were nearby.
 ## Working rules
 
 - Locality first; one choke point per invariant; no shallow modules.
+- When you add or touch a choke point, grep for every path the invariant covers and route each
+  one through it before reporting; a path you leave outside goes under Deviations.
 - Gameplay terms come from `docs/GLOSSARY.md` — the exact word, in text and in identifiers.
 - Tests follow `docs/DOGMAS.md` → *Testing*. Never weaken or delete a test to make it pass.
 - Comments are for traps only. No paraphrase, no history, no rationale, no `TODO`.
