@@ -3,7 +3,7 @@ import {
   apply,
   type Chronicle,
   type Command,
-  endOfTurn,
+  outcome,
   type Stage,
   type Target,
   targetTiles,
@@ -64,7 +64,7 @@ export class ChronicleScene extends Phaser.Scene {
     return this.current;
   }
 
-  /** Whether the end of turn is still playing out its stages: the chronicle moves on under it. */
+  /** Whether a command is still playing out its stages: the chronicle moves on under it. */
   get playing(): boolean {
     return this.sequence;
   }
@@ -90,33 +90,28 @@ export class ChronicleScene extends Phaser.Scene {
       for (const part of parts) part.render(this.current);
     };
 
-    const perform = (command: Command): void => {
-      dismiss();
-      this.current = apply(this.current, command);
-      paint();
-    };
-
     /**
-     * The end of turn, stage by stage: each part is offered the stage, one with no motion for it
-     * renders at once, and the next stage waits on every motion the stage did raise. The button
+     * A command played out, stage by stage: each part is offered the stage, one with no motion for
+     * it renders at once, and the next stage waits on every motion the stage did raise. The button
      * and the hand are dead for the whole of it — a card played or hovered under it would be
      * animated and then reverted, and would kill the very tweens the stages are waiting on. The
      * map stays live.
      *
-     * However the play-out ends, the tail commits the turn and paints it: `apply` needs no motion
-     * to have completed, and a part's render takes down whatever that part left in the air.
+     * However the play-out ends, the tail commits the last stage's chronicle and paints it: it
+     * needs no motion to have completed, and a part's render takes down whatever that part left in
+     * the air.
      */
-    const playOut = async (): Promise<void> => {
+    const playOut = async (command: Command): Promise<void> => {
       if (this.sequence) return;
+      const stages = apply(this.current, command);
       this.sequence = true;
 
-      const opened = this.current;
       try {
         endTurn.live(false);
         hand.live(false);
         dismiss();
 
-        for (const stage of endOfTurn(opened)) {
+        for (const stage of stages) {
           this.current = stage.chronicle;
           const motions: Promise<void>[] = [];
           for (const part of parts) {
@@ -127,7 +122,7 @@ export class ChronicleScene extends Phaser.Scene {
           await Promise.all(motions);
         }
       } finally {
-        this.current = apply(opened, { type: 'end-turn' });
+        this.current = outcome(stages);
         paint();
         hand.live(true);
         endTurn.live(true);
@@ -159,12 +154,14 @@ export class ChronicleScene extends Phaser.Scene {
 
     const overlay = createOverlay(this, ui, (covered) => view.live(!covered));
     const endTurn = this.addEndTurn(() => {
-      void playOut();
+      void playOut({ type: 'end-turn' });
     });
     const hand = createHand(
       this,
       ui,
-      (index) => perform({ type: 'play', index }),
+      (index) => {
+        void playOut({ type: 'play', index });
+      },
       (index, targetType, released) => {
         // The aiming catcher lies under the hand and the piles, so the button is the one thing
         // left on the UI that has to be dead for the length of the aim.
@@ -173,7 +170,7 @@ export class ChronicleScene extends Phaser.Scene {
         const chosen = (target: Target | undefined): void => {
           endTurn.live(true);
           if (target === undefined) released();
-          else perform({ type: 'play', index, target });
+          else void playOut({ type: 'play', index, target });
         };
         switch (targetType) {
           case 'tile':

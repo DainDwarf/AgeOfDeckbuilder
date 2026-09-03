@@ -104,9 +104,3 @@ export function attack(units: readonly Unit[], attacker: number, target: number)
   const hurt: Unit = { ...targeted, stats: { ...targeted.stats, health } };
   return units.map((unit, index) => (index === target ? hurt : unit));
 }
-
-/** What a unit does where it lands. A unit with no damage — a worker — does nothing at all. */
-export function arrive(units: readonly Unit[], mover: number): Unit[] {
-  const target = leastHealth(units, mover);
-  return target === undefined ? [...units] : attack(units, mover, target);
-}

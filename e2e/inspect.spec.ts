@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { DECKS } from '../src/rules/cards';
-import { apply, beginChronicle, playable, refusalOf } from '../src/rules/chronicle';
+import { apply, beginChronicle, outcome, playable, refusalOf } from '../src/rules/chronicle';
 import { tileKey } from '../src/rules/map';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
 import {
@@ -22,7 +22,7 @@ function workerRun(): { seed: number; turn: number } {
       if (chronicle.hand.includes('PH_Worker') && playable(refusalOf(chronicle, 'PH_Worker'))) {
         return { seed, turn };
       }
-      chronicle = apply(chronicle, { type: 'end-turn' });
+      chronicle = outcome(apply(chronicle, { type: 'end-turn' }));
     }
   }
   throw new Error('no seed under a thousand opens a turn on a playable worker');

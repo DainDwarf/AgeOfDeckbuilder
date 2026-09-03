@@ -9,6 +9,7 @@ import {
   onScreen,
   onTable,
   open,
+  playedOut,
   ringedTile,
   settled,
   shownLayer,
@@ -164,6 +165,7 @@ test('a drag during a move aim pans the map, unless it presses the unit', async 
   const city = await onScreen(page, `tile-${tileKey(entered.city)}`);
   const destination = await onScreen(page, `tile-${tileKey(run.tile)}`);
   await drag(page, city, { x: destination.x - city.x, y: destination.y - city.y });
+  await playedOut(page);
 
   await expect
     .poll(async () => tileKey((await chronicleOf(page)).units[0].tile))
@@ -196,6 +198,7 @@ test('a drag during a tile aim pans the map, and the aim still builds after it',
   await dragOut(page, entered.hand.indexOf('PH_March'));
   await aimed(page);
   await drag(page, city, { x: marched.x - city.x, y: marched.y - city.y });
+  await playedOut(page);
   await expect
     .poll(async () => tileKey((await chronicleOf(page)).units[0].tile))
     .toBe(tileKey(run.tile));
@@ -219,6 +222,7 @@ test('a drag during a tile aim pans the map, and the aim still builds after it',
 
   const target = await onScreen(page, `tile-${tileKey(run.tile)}`);
   await page.mouse.click(target.x, target.y);
+  await playedOut(page);
   await expect
     .poll(
       async () =>

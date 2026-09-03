@@ -8,7 +8,7 @@ import {
   createCardBack,
   createCardFace,
 } from './card-face';
-import { IN_FLIGHT, STAGGER, travel, turnOver } from './card-motion';
+import { ended, IN_FLIGHT, STAGGER, travel, turnOver } from './card-motion';
 import {
   DESIGN_HEIGHT,
   DESIGN_WIDTH,
@@ -73,7 +73,9 @@ export function createHand(
   let flying: Phaser.GameObjects.Container[] = [];
   let dragged: Drag | undefined;
   let aiming: { readonly slot: Slot; readonly cancel: () => void } | undefined;
-  /** Whether the hand takes the pointer at all; the end of turn puts it down while it plays. */
+  /** The card the hand has let go of, waiting on the stages its play resolves as. */
+  let letGo: Slot | undefined;
+  /** Whether the hand takes the pointer at all; a play-out puts it down for as long as it runs. */
   let taking = true;
 
   const live = (on: boolean): void => {
@@ -86,20 +88,24 @@ export function createHand(
 
   const restingY = (slot: Slot): number => slot.home.y - (slot.hovered && slot.playable ? LIFT : 0);
 
-  const settle = (slot: Slot, duration: number): void => {
+  /** The card back where it rests, at once or over that long; the promise settles when it is home. */
+  const settle = (slot: Slot, duration: number): Promise<void> => {
     scene.tweens.killTweensOf(slot.face.root);
     slot.face.root.setDepth(slot.hovered ? 40 : 5 + slot.index);
     if (duration === 0) {
       slot.face.root.setPosition(slot.home.x, restingY(slot));
-      return;
+      return Promise.resolve();
     }
-    scene.tweens.add({
-      targets: slot.face.root,
-      x: slot.home.x,
-      y: restingY(slot),
-      duration,
-      ease: 'Sine.easeInOut',
-    });
+    return ended(
+      scene,
+      scene.tweens.add({
+        targets: slot.face.root,
+        x: slot.home.x,
+        y: restingY(slot),
+        duration,
+        ease: 'Sine.easeInOut',
+      }),
+    );
   };
 
   const render = (chronicle: Chronicle): void => {
@@ -110,6 +116,7 @@ export function createHand(
     flying = [];
     dragged = undefined;
     aiming = undefined;
+    letGo = undefined;
 
     const held = chronicle.hand.length;
     const advance =
@@ -184,8 +191,10 @@ export function createHand(
             if (targetType !== 'none') {
               settle(slot, 150);
               slot.face.arm(true);
+              letGo = slot;
               const cancel = aim(slot.index, targetType, () => {
                 aiming = undefined;
+                letGo = undefined;
                 slot.face.arm(false);
                 slot.hovered = false;
                 settle(slot, 150);
@@ -193,6 +202,7 @@ export function createHand(
               aiming = { slot, cancel };
               return;
             }
+            letGo = slot;
             play(slot.index);
             return;
           }
@@ -278,6 +288,16 @@ export function createHand(
     );
   };
 
+  /** The play the rules refused: the card the hand let go of comes back down into its slot. */
+  const comeHome = (): Promise<void> | undefined => {
+    const slot = letGo;
+    letGo = undefined;
+    if (slot === undefined) return undefined;
+    slot.face.arm(false);
+    slot.hovered = false;
+    return settle(slot, 150);
+  };
+
   return {
     render,
     live,
@@ -287,6 +307,8 @@ export function createHand(
           return toDiscardPile(stage.chronicle);
         case 'draw':
           return fromDrawPile(stage.chronicle);
+        case 'refused':
+          return comeHome();
         default:
           return undefined;
       }

@@ -1,13 +1,13 @@
 import { expect, test } from '@playwright/test';
 import { DECKS } from '../src/rules/cards';
-import { apply, beginChronicle, playable, refusalOf } from '../src/rules/chronicle';
+import { apply, beginChronicle, outcome, playable, refusalOf } from '../src/rules/chronicle';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
 import { chronicleOf, dragOut, endTurn, open, watch } from './table';
 
 /** The first seed whose second turn opens on a harvest card the city can pay for. */
 function harvestSeed(): number {
   for (let seed = 1; seed <= 1000; seed++) {
-    const chronicle = apply(beginChronicle(seed, DECKS.PH_Deck), { type: 'end-turn' });
+    const chronicle = outcome(apply(beginChronicle(seed, DECKS.PH_Deck), { type: 'end-turn' }));
     if (chronicle.hand.includes('PH_Harvest') && playable(refusalOf(chronicle, 'PH_Harvest'))) {
       return seed;
     }

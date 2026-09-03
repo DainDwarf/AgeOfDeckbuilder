@@ -6,7 +6,7 @@ import {
   buildable,
   type Chronicle,
   type Command,
-  endOfTurn,
+  outcome,
   playable,
   RESOURCES,
   type Resources,
@@ -141,23 +141,28 @@ function intentOf(chronicle: Chronicle, index: number): TileCoords | undefined {
   return unit.intent;
 }
 
+/** What every stage of the command is called, in the order the command resolves them. */
+function stagedBy(chronicle: Chronicle, command: Command): string[] {
+  return apply(chronicle, command).map((stage) => stage.name);
+}
+
 /** Every attack the end of turn stages, as the tile each was made from and the tile it was aimed at. */
 function attacksOf(chronicle: Chronicle): string[][] {
-  return endOfTurn(chronicle).flatMap((stage) =>
+  return apply(chronicle, { type: 'end-turn' }).flatMap((stage) =>
     stage.name === 'attack' ? [[tileKey(stage.attacker), tileKey(stage.target)]] : [],
   );
 }
 
 /** Every move the end of turn stages, as the tile each enemy left and the tile it reached. */
 function movesOf(chronicle: Chronicle): string[][] {
-  return endOfTurn(chronicle).flatMap((stage) =>
+  return apply(chronicle, { type: 'end-turn' }).flatMap((stage) =>
     stage.name === 'move' ? [[tileKey(stage.from), tileKey(stage.to)]] : [],
   );
 }
 
 /** The chronicle combat leaves behind: the one the last attack of the end of turn stands on. */
 function afterCombat(chronicle: Chronicle): Chronicle {
-  const attacks = endOfTurn(chronicle).filter((stage) => stage.name === 'attack');
+  const attacks = apply(chronicle, { type: 'end-turn' }).filter((stage) => stage.name === 'attack');
   const last = attacks[attacks.length - 1];
   if (last === undefined) throw new Error('nothing attacked in this end of turn');
   return last.chronicle;
@@ -173,7 +178,7 @@ function rimOf(radius: number): TileCoords[] {
 /** Four ends of turn on: the chronicle stands on turn five, with that turn's events resolved. */
 function toFifthTurn(chronicle: Chronicle): Chronicle {
   let standing = chronicle;
-  for (let turn = 1; turn < 5; turn++) standing = apply(standing, { type: 'end-turn' });
+  for (let turn = 1; turn < 5; turn++) standing = outcome(apply(standing, { type: 'end-turn' }));
   return standing;
 }
 
@@ -212,7 +217,7 @@ test('a chronicle opens on turn one, with empty stores and a tile each for its i
 test('income yields every tile inside the border, and nothing outside it', () => {
   const inside: Terrain[] = ['urban', 'plain', 'forest', 'hills', 'water'];
 
-  const after = apply(cityOf(inside), { type: 'end-turn' });
+  const after = outcome(apply(cityOf(inside), { type: 'end-turn' }));
 
   for (const resource of RESOURCES) {
     const yielded = inside.reduce(
@@ -224,8 +229,8 @@ test('income yields every tile inside the border, and nothing outside it', () =>
 });
 
 test('a second tile of the same terrain yields as much again', () => {
-  const once = apply(cityOf(['forest']), { type: 'end-turn' });
-  const twice = apply(cityOf(['forest', 'forest']), { type: 'end-turn' });
+  const once = outcome(apply(cityOf(['forest']), { type: 'end-turn' }));
+  const twice = outcome(apply(cityOf(['forest', 'forest']), { type: 'end-turn' }));
 
   for (const resource of RESOURCES) {
     expect(twice.resources[resource]).toBe(once.resources[resource] * 2);
@@ -235,8 +240,9 @@ test('a second tile of the same terrain yields as much again', () => {
 test('resources accumulate over consecutive turns', () => {
   const city = cityOf(['urban', 'plain', 'hills']);
 
-  const first = apply(city, { type: 'end-turn' });
-  const third = apply(apply(first, { type: 'end-turn' }), { type: 'end-turn' });
+  const first = outcome(apply(city, { type: 'end-turn' }));
+  const second = outcome(apply(first, { type: 'end-turn' }));
+  const third = outcome(apply(second, { type: 'end-turn' }));
 
   for (const resource of RESOURCES) {
     expect(third.resources[resource]).toBe(first.resources[resource] * 3);
@@ -245,15 +251,16 @@ test('resources accumulate over consecutive turns', () => {
 
 test('ending the turn moves the chronicle on to the next one', () => {
   const city = cityOf(['urban']);
+  const second = outcome(apply(city, { type: 'end-turn' }));
 
-  expect(apply(city, { type: 'end-turn' }).turn).toBe(2);
-  expect(apply(apply(city, { type: 'end-turn' }), { type: 'end-turn' }).turn).toBe(3);
+  expect(second.turn).toBe(2);
+  expect(outcome(apply(second, { type: 'end-turn' })).turn).toBe(3);
 });
 
 test('ending the turn leaves the population alone', () => {
   const city = cityOf(['urban', 'plain', 'water']);
 
-  expect(apply(city, { type: 'end-turn' }).population).toBe(city.population);
+  expect(outcome(apply(city, { type: 'end-turn' })).population).toBe(city.population);
 });
 
 test('the hand holds five cards on founding, and five again after every turn', () => {
@@ -261,7 +268,7 @@ test('the hand holds five cards on founding, and five again after every turn', (
   expect(chronicle.hand).toHaveLength(5);
 
   for (let turn = 0; turn < 6; turn++) {
-    chronicle = apply(chronicle, { type: 'end-turn' });
+    chronicle = outcome(apply(chronicle, { type: 'end-turn' }));
     expect(chronicle.hand).toHaveLength(5);
   }
 });
@@ -272,7 +279,7 @@ test('playing a card pays its cost and sends it to the discard pile', () => {
     resources: { food: 0, production: 0, military: 0, money: 0, science: 3, culture: 0 },
   });
 
-  const after = apply(city, { type: 'play', index: 0 });
+  const after = outcome(apply(city, { type: 'play', index: 0 }));
 
   expect(after.hand).toEqual(['PH_March']);
   expect(after.discardPile).toEqual(['PH_Harvest']);
@@ -285,7 +292,7 @@ test('playing the harvest card gains its two food, on top of what the city alrea
     resources: { food: 1, production: 0, military: 0, money: 0, science: 1, culture: 0 },
   });
 
-  const after = apply(city, { type: 'play', index: 0 });
+  const after = outcome(apply(city, { type: 'play', index: 0 }));
 
   expect(after.resources.food).toBe(3);
 });
@@ -297,8 +304,82 @@ test('a card the city cannot pay for stays in the hand and costs nothing', () =>
     resources: { food: 0, production: 2, military: 0, money: 0, science: 0, culture: 0 },
   });
 
-  expect(apply(penniless, { type: 'play', index: 0 })).toEqual(penniless);
-  expect(apply(halfway, { type: 'play', index: 0 })).toEqual(halfway);
+  expect(outcome(apply(penniless, { type: 'play', index: 0 }))).toEqual(penniless);
+  expect(outcome(apply(halfway, { type: 'play', index: 0 }))).toEqual(halfway);
+});
+
+test('a play the rules refuse is one refused stage, on the chronicle as it stood', () => {
+  const penniless = cityOf(['urban'], { hand: ['PH_Warrior'] });
+  const command: Command = { type: 'play', index: 0 };
+
+  expect(stagedBy(penniless, command)).toEqual(['refused']);
+  expect(outcome(apply(penniless, command))).toBe(penniless);
+  expect(stagedBy(penniless, { type: 'play', index: 3 })).toEqual(['refused']);
+});
+
+test('a card that lands whole is played in the one stage, the effect already in it', () => {
+  const city = cityOf(['urban'], {
+    hand: ['PH_Harvest'],
+    resources: { food: 1, production: 0, military: 0, money: 0, science: 1, culture: 0 },
+  });
+
+  const stages = apply(city, { type: 'play', index: 0 });
+
+  expect(stages.map((stage) => stage.name)).toEqual(['played']);
+  expect(stages[0].chronicle.resources).toEqual({ ...city.resources, food: 3, science: 0 });
+  expect(stages[0].chronicle.discardPile).toEqual(['PH_Harvest']);
+});
+
+test('an order is played, then the move it makes, then the attack it makes on arrival', () => {
+  const city = cityOf(['urban'], {
+    tiles: field(3),
+    hand: ['PH_March', 'PH_Harvest'],
+    units: [
+      unitOf('player', CITY, { move: 1, damage: 2, range: 1 }),
+      unitOf('enemy', { q: 1, r: 1 }, { health: 3 }),
+    ],
+  });
+
+  const stages = apply(city, march(0, { q: 1, r: 0 }));
+  const [played, moved, struck] = stages;
+  if (moved.name !== 'move' || struck.name !== 'attack') {
+    throw new Error('the order staged no move and no attack');
+  }
+
+  expect(stages.map((stage) => stage.name)).toEqual(['played', 'move', 'attack']);
+
+  // The card leaves the hand before the unit leaves its tile.
+  expect(played.chronicle.hand).toEqual(['PH_Harvest']);
+  expect(played.chronicle.discardPile).toEqual(['PH_March']);
+  expect(played.chronicle.units[0].tile).toEqual(CITY);
+
+  expect(moved.from).toEqual(CITY);
+  expect(moved.to).toEqual({ q: 1, r: 0 });
+  expect(moved.chronicle.units[0].tile).toEqual({ q: 1, r: 0 });
+  expect(moved.chronicle.units[1].stats.health).toBe(3);
+
+  expect(struck.attacker).toEqual({ q: 1, r: 0 });
+  expect(struck.target).toEqual({ q: 1, r: 1 });
+  expect(struck.chronicle.units[1].stats.health).toBe(1);
+});
+
+test('an order whose arrival attacks nothing stops on the move it made', () => {
+  const far = cityOf(['urban'], {
+    tiles: field(3),
+    hand: ['PH_March'],
+    units: [
+      unitOf('player', CITY, { move: 1, damage: 2, range: 1 }),
+      unitOf('enemy', { q: 3, r: 0 }, { health: 3 }),
+    ],
+  });
+  const unarmed = cityOf(['urban'], {
+    tiles: field(3),
+    hand: ['PH_March'],
+    units: [worker(CITY), unitOf('enemy', { q: 1, r: 1 }, { health: 3 })],
+  });
+
+  expect(stagedBy(far, march(0, { q: 1, r: 0 }))).toEqual(['played', 'move']);
+  expect(stagedBy(unarmed, march(0, { q: 1, r: 0 }))).toEqual(['played', 'move']);
 });
 
 test('ending the turn discards what is left of the hand', () => {
@@ -307,7 +388,7 @@ test('ending the turn discards what is left of the hand', () => {
     drawPile: ['PH_Worker', 'PH_Worker', 'PH_Warrior', 'PH_Warrior', 'PH_Harvest'],
   });
 
-  const after = apply(city, { type: 'end-turn' });
+  const after = outcome(apply(city, { type: 'end-turn' }));
 
   expect(after.discardPile).toEqual(['PH_March', 'PH_Farm']);
   expect(after.hand).toEqual(city.drawPile);
@@ -326,20 +407,22 @@ test('an emptied draw pile is refilled by shuffling the discard pile into it', (
     ],
   });
 
-  const after = apply(spent, { type: 'end-turn' });
+  const after = outcome(apply(spent, { type: 'end-turn' }));
 
   expect(after.hand).toHaveLength(5);
   expect(after.drawPile).toHaveLength(2);
   expect(after.discardPile).toEqual([]);
   expect(everyCard(after)).toEqual(everyCard(spent));
-  expect(apply(spent, { type: 'end-turn' }).hand).toEqual(after.hand);
-  expect(apply({ ...spent, rng: seedRng(99) }, { type: 'end-turn' }).hand).not.toEqual(after.hand);
+  expect(outcome(apply(spent, { type: 'end-turn' })).hand).toEqual(after.hand);
+  expect(outcome(apply({ ...spent, rng: seedRng(99) }, { type: 'end-turn' })).hand).not.toEqual(
+    after.hand,
+  );
 });
 
 test('a draw with nothing left anywhere draws what there is', () => {
   const city = cityOf(['urban'], { drawPile: ['PH_March', 'PH_Harvest'] });
 
-  expect(apply(city, { type: 'end-turn' }).hand).toEqual(['PH_March', 'PH_Harvest']);
+  expect(outcome(apply(city, { type: 'end-turn' })).hand).toEqual(['PH_March', 'PH_Harvest']);
 });
 
 test('the end of turn resolves in order, and its last stage is where the turn ends', () => {
@@ -351,7 +434,8 @@ test('the end of turn resolves in order, and its last stage is where the turn en
     units: [worker({ q: 1, r: 0 }), unitOf('enemy', { q: 2, r: 0 })],
   });
 
-  const stages = endOfTurn(city);
+  const stages = apply(city, { type: 'end-turn' });
+  const ended = stages[stages.length - 1].chronicle;
 
   expect(stages.map((stage) => stage.name)).toEqual([
     'discard',
@@ -363,7 +447,9 @@ test('the end of turn resolves in order, and its last stage is where the turn en
     'shuffle',
     'draw',
   ]);
-  expect(stages[stages.length - 1].chronicle).toEqual(apply(city, { type: 'end-turn' }));
+  expect(ended).toEqual(outcome(stages));
+  expect(ended.turn).toBe(city.turn + 1);
+  expect(ended.hand).toHaveLength(5);
 });
 
 test('a stage of the end of turn that changed nothing is left out of it', () => {
@@ -373,7 +459,7 @@ test('a stage of the end of turn that changed nothing is left out of it', () => 
     discardPile: ['PH_Harvest'],
   });
 
-  expect(endOfTurn(quiet).map((stage) => stage.name)).toEqual(['income', 'turn', 'draw']);
+  expect(stagedBy(quiet, { type: 'end-turn' })).toEqual(['income', 'turn', 'draw']);
 });
 
 test('a capture ends the end of turn on its own stage, with the defeat set', () => {
@@ -384,7 +470,7 @@ test('a capture ends the end of turn on its own stage, with the defeat set', () 
     units: [unitOf('enemy', CITY)],
   });
 
-  const stages = endOfTurn(overrun);
+  const stages = apply(overrun, { type: 'end-turn' });
   const last = stages[stages.length - 1];
 
   expect(stages.map((stage) => stage.name)).toEqual(['discard', 'capture']);
@@ -399,8 +485,8 @@ test('every card of the deck is in exactly one pile through a full cycle', () =>
   expect(deck).toHaveLength(DECK.length);
 
   for (let turn = 0; turn < 8; turn++) {
-    chronicle = apply(chronicle, { type: 'play', index: 0 });
-    chronicle = apply(chronicle, { type: 'end-turn' });
+    chronicle = outcome(apply(chronicle, { type: 'play', index: 0 }));
+    chronicle = outcome(apply(chronicle, { type: 'end-turn' }));
     expect(everyCard(chronicle)).toEqual(deck);
   }
 });
@@ -417,7 +503,9 @@ test('the same command on the same chronicle gives the same chronicle back', () 
   const city = cityOf(['urban', 'plain', 'forest', 'hills', 'water']);
   const untouched = structuredClone(city);
 
-  expect(apply(city, { type: 'end-turn' })).toEqual(apply(city, { type: 'end-turn' }));
+  expect(outcome(apply(city, { type: 'end-turn' }))).toEqual(
+    outcome(apply(city, { type: 'end-turn' })),
+  );
   expect(city).toEqual(untouched);
 });
 
@@ -429,7 +517,7 @@ test('a unit card turns one population into a unit on the city tile', () => {
     resources: { food: 2, production: 0, military: 0, money: 0, science: 0, culture: 0 },
   });
 
-  const after = apply(city, { type: 'play', index: 0 });
+  const after = outcome(apply(city, { type: 'play', index: 0 }));
 
   expect(after.population).toBe(city.population - 1);
   expect(after.units).toHaveLength(1);
@@ -452,10 +540,12 @@ test('a chronicle with units on the map survives JSON', () => {
 test('a city with no population left falls, whatever the command was', () => {
   const empty = cityOf(['urban'], { tiles: field(2), population: 0 });
 
-  expect(apply(empty, { type: 'play', index: 0 }).defeat).toEqual({
+  expect(outcome(apply(empty, { type: 'play', index: 0 })).defeat).toEqual({
     cause: 'population',
     turn: empty.turn,
   });
+  // The fall rides the last stage the command resolved as, refused though that play was.
+  expect(stagedBy(empty, { type: 'play', index: 0 })).toEqual(['refused']);
 });
 
 test('a unit card is refused while a unit already stands on the city tile', () => {
@@ -467,7 +557,7 @@ test('a unit card is refused while a unit already stands on the city tile', () =
     resources: { food: 2, production: 0, military: 0, money: 0, science: 0, culture: 0 },
   });
 
-  expect(apply(crowded, { type: 'play', index: 0 })).toEqual(crowded);
+  expect(outcome(apply(crowded, { type: 'play', index: 0 }))).toEqual(crowded);
 });
 
 test('the plain order moves a unit within its move, and no further', () => {
@@ -477,8 +567,8 @@ test('the plain order moves a unit within its move, and no further', () => {
     units: [unitOf('player', CITY, { move: 2 })],
   });
 
-  expect(apply(city, march(0, { q: 2, r: 0 })).units[0].tile).toEqual({ q: 2, r: 0 });
-  expect(apply(city, march(0, { q: 3, r: 0 }))).toEqual(city);
+  expect(outcome(apply(city, march(0, { q: 2, r: 0 }))).units[0].tile).toEqual({ q: 2, r: 0 });
+  expect(outcome(apply(city, march(0, { q: 3, r: 0 })))).toEqual(city);
 });
 
 test('water is impassable, and so is everything only water leads to', () => {
@@ -488,9 +578,9 @@ test('water is impassable, and so is everything only water leads to', () => {
     units: [unitOf('player', CITY, { move: 2 })],
   });
 
-  expect(apply(city, march(0, { q: 1, r: 0 }))).toEqual(city);
-  expect(apply(city, march(0, { q: 2, r: 0 }))).toEqual(city);
-  expect(apply(city, march(0, { q: 1, r: 1 })).units[0].tile).toEqual({ q: 1, r: 1 });
+  expect(outcome(apply(city, march(0, { q: 1, r: 0 })))).toEqual(city);
+  expect(outcome(apply(city, march(0, { q: 2, r: 0 })))).toEqual(city);
+  expect(outcome(apply(city, march(0, { q: 1, r: 1 }))).units[0].tile).toEqual({ q: 1, r: 1 });
 });
 
 test('a unit crosses its own faction but never lands on it', () => {
@@ -500,8 +590,8 @@ test('a unit crosses its own faction but never lands on it', () => {
     units: [unitOf('player', CITY, { move: 2 }), unitOf('player', { q: 1, r: 0 })],
   });
 
-  expect(apply(city, march(0, { q: 1, r: 0 }))).toEqual(city);
-  expect(apply(city, march(0, { q: 2, r: 0 })).units[0].tile).toEqual({ q: 2, r: 0 });
+  expect(outcome(apply(city, march(0, { q: 1, r: 0 })))).toEqual(city);
+  expect(outcome(apply(city, march(0, { q: 2, r: 0 }))).units[0].tile).toEqual({ q: 2, r: 0 });
 });
 
 test('the other faction stops a unit where it stands', () => {
@@ -511,8 +601,8 @@ test('the other faction stops a unit where it stands', () => {
     units: [unitOf('player', CITY, { move: 2, damage: 0 }), unitOf('enemy', { q: 1, r: 0 })],
   });
 
-  expect(apply(city, march(0, { q: 1, r: 0 }))).toEqual(city);
-  expect(apply(city, march(0, { q: 2, r: 0 }))).toEqual(city);
+  expect(outcome(apply(city, march(0, { q: 1, r: 0 })))).toEqual(city);
+  expect(outcome(apply(city, march(0, { q: 2, r: 0 })))).toEqual(city);
 });
 
 test('an order with no target, or a target that is not the player’s, is refused', () => {
@@ -522,9 +612,9 @@ test('an order with no target, or a target that is not the player’s, is refuse
     units: [unitOf('player', CITY, { move: 2 }), unitOf('enemy', { q: 2, r: 0 })],
   });
 
-  expect(apply(city, { type: 'play', index: 0 })).toEqual(city);
-  expect(apply(city, march(1, { q: 2, r: 1 }))).toEqual(city);
-  expect(apply(city, march(4, { q: 1, r: 0 }))).toEqual(city);
+  expect(outcome(apply(city, { type: 'play', index: 0 }))).toEqual(city);
+  expect(outcome(apply(city, march(1, { q: 2, r: 1 })))).toEqual(city);
+  expect(outcome(apply(city, march(4, { q: 1, r: 0 })))).toEqual(city);
 });
 
 test('an order is refused when no unit of the player’s has anywhere to go', () => {
@@ -542,7 +632,7 @@ test('an order is refused when no unit of the player’s has anywhere to go', ()
     units: [unitOf('player', CITY, { move: 2 })],
   });
 
-  for (const to of walled) expect(apply(city, march(0, to))).toEqual(city);
+  for (const to of walled) expect(outcome(apply(city, march(0, to)))).toEqual(city);
 });
 
 test('a unit with damage attacks the enemy with the least health where it lands', () => {
@@ -556,7 +646,7 @@ test('a unit with damage attacks the enemy with the least health where it lands'
     ],
   });
 
-  const after = apply(city, march(0, { q: 1, r: 0 }));
+  const after = outcome(apply(city, march(0, { q: 1, r: 0 })));
 
   expect(after.units).toHaveLength(3);
   expect(after.units[1].stats.health).toBe(5);
@@ -574,7 +664,7 @@ test('an enemy brought to zero health is killed and leaves the map', () => {
     ],
   });
 
-  const after = apply(city, march(0, { q: 1, r: 0 }));
+  const after = outcome(apply(city, march(0, { q: 1, r: 0 })));
 
   expect(after.units.map((unit) => unit.tile)).toEqual([
     { q: 1, r: 0 },
@@ -592,7 +682,7 @@ test('a worker arriving beside an enemy leaves it alone', () => {
     ],
   });
 
-  const after = apply(city, march(0, { q: 1, r: 0 }));
+  const after = outcome(apply(city, march(0, { q: 1, r: 0 })));
 
   expect(after.units[1].stats.health).toBe(3);
 });
@@ -607,7 +697,7 @@ test('an enemy out of range is left alone, and the order still resolves', () => 
     ],
   });
 
-  const after = apply(city, march(0, { q: 1, r: 0 }));
+  const after = outcome(apply(city, march(0, { q: 1, r: 0 })));
 
   expect(after.units[0].tile).toEqual({ q: 1, r: 0 });
   expect(after.units[1].stats.health).toBe(3);
@@ -622,7 +712,7 @@ test('a building card builds its building on a tile inside the border where a wo
     resources: PRODUCTION,
   });
 
-  const after = apply(city, buildOn({ q: 1, r: 0 }));
+  const after = outcome(apply(city, buildOn({ q: 1, r: 0 })));
 
   expect(buildingAt(after, { q: 1, r: 0 })).toBe('PH_Farm');
   expect(after.resources.production).toBe(0);
@@ -639,8 +729,8 @@ test('a building card is refused on a tile no worker stands on, and with no tile
     resources: PRODUCTION,
   });
 
-  expect(apply(city, buildOn({ q: 2, r: 0 }))).toEqual(city);
-  expect(apply(city, { type: 'play', index: 0 })).toEqual(city);
+  expect(outcome(apply(city, buildOn({ q: 2, r: 0 })))).toEqual(city);
+  expect(outcome(apply(city, { type: 'play', index: 0 }))).toEqual(city);
 });
 
 test('a building card is refused on a tile outside the border, worker standing or not', () => {
@@ -651,7 +741,7 @@ test('a building card is refused on a tile outside the border, worker standing o
     resources: PRODUCTION,
   });
 
-  expect(apply(city, buildOn({ q: 1, r: 0 }))).toEqual(city);
+  expect(outcome(apply(city, buildOn({ q: 1, r: 0 })))).toEqual(city);
 });
 
 test('a building card cannot be played with no worker of the player’s inside the border', () => {
@@ -664,7 +754,7 @@ test('a building card cannot be played with no worker of the player’s inside t
 
   expect(playable(refusalOf(alone, 'PH_Farm'))).toBe(false);
   expect(playable(refusalOf(fighting, 'PH_Farm'))).toBe(false);
-  expect(apply(alone, buildOn({ q: 1, r: 0 }))).toEqual(alone);
+  expect(outcome(apply(alone, buildOn({ q: 1, r: 0 })))).toEqual(alone);
 });
 
 test('a tile’s building slot takes one building and no more', () => {
@@ -675,9 +765,9 @@ test('a tile’s building slot takes one building and no more', () => {
     resources: { ...PRODUCTION, production: 6 },
   });
 
-  const once = apply(city, buildOn({ q: 1, r: 0 }));
+  const once = outcome(apply(city, buildOn({ q: 1, r: 0 })));
 
-  expect(apply(once, buildOn({ q: 1, r: 0 }))).toEqual(once);
+  expect(outcome(apply(once, buildOn({ q: 1, r: 0 })))).toEqual(once);
   expect(playable(refusalOf(once, 'PH_Farm'))).toBe(false);
 });
 
@@ -688,7 +778,7 @@ test('the founding fills the city tile’s slot with the city', () => {
 });
 
 test('the city in its slot adds nothing to what the tile it stands on yields', () => {
-  const founded = apply(cityOf(['urban'], { tiles: field(1) }), { type: 'end-turn' });
+  const founded = outcome(apply(cityOf(['urban'], { tiles: field(1) }), { type: 'end-turn' }));
 
   for (const resource of RESOURCES) {
     expect(founded.resources[resource]).toBe(TERRAIN_YIELDS.urban[resource] ?? 0);
@@ -706,7 +796,7 @@ test('the city fills its own tile’s slot, worker or no worker', () => {
 
   expect(buildingAt(city, CITY)).toBe('PH_City');
   expect(buildable(city, 'PH_Farm')).toEqual([]);
-  expect(apply(city, buildOn(CITY))).toEqual(city);
+  expect(outcome(apply(city, buildOn(CITY)))).toEqual(city);
   expect(playable(refusalOf(city, 'PH_Farm'))).toBe(false);
   expect(playable(refusalOf(overOne, 'PH_Farm'))).toBe(true);
 });
@@ -721,7 +811,7 @@ test('a farm stands on a plain and on no other terrain a worker reaches', () => 
 
     expect(buildable(city, 'PH_Farm')).toEqual([]);
     expect(playable(refusalOf(city, 'PH_Farm'))).toBe(false);
-    expect(apply(city, buildOn({ q: 1, r: 0 }))).toEqual(city);
+    expect(outcome(apply(city, buildOn({ q: 1, r: 0 })))).toEqual(city);
   }
 });
 
@@ -733,8 +823,9 @@ test('a farm standing on a tile adds its food to what that tile yields at income
     resources: PRODUCTION,
   });
 
-  const bare = apply(city, { type: 'end-turn' });
-  const farmed = apply(apply(city, buildOn({ q: 1, r: 0 })), { type: 'end-turn' });
+  const bare = outcome(apply(city, { type: 'end-turn' }));
+  const built = outcome(apply(city, buildOn({ q: 1, r: 0 })));
+  const farmed = outcome(apply(built, { type: 'end-turn' }));
 
   expect(farmed.resources.food).toBe(bare.resources.food + 1);
 });
@@ -749,19 +840,19 @@ test('a unit card never takes the city’s last population', () => {
   const spare = { ...last, population: 2 };
 
   expect(playable(refusalOf(last, 'PH_Worker'))).toBe(false);
-  expect(apply(last, { type: 'play', index: 0 })).toEqual(last);
-  expect(apply(spare, { type: 'play', index: 0 }).population).toBe(1);
+  expect(outcome(apply(last, { type: 'play', index: 0 }))).toEqual(last);
+  expect(outcome(apply(spare, { type: 'play', index: 0 })).population).toBe(1);
 });
 
 test('an enemy arrives on the rim of the map on every fifth turn, and on no turn between', () => {
   let chronicle = cityOf(['urban'], { tiles: field(MAP_COMPOSITION.radius) });
 
   for (let turn = 2; turn <= 4; turn++) {
-    chronicle = apply(chronicle, { type: 'end-turn' });
+    chronicle = outcome(apply(chronicle, { type: 'end-turn' }));
     expect(chronicle.turn).toBe(turn);
     expect(chronicle.units).toEqual([]);
   }
-  chronicle = apply(chronicle, { type: 'end-turn' });
+  chronicle = outcome(apply(chronicle, { type: 'end-turn' }));
 
   expect(chronicle.turn).toBe(5);
   expect(chronicle.units).toHaveLength(1);
@@ -802,10 +893,10 @@ test('an enemy moves its move toward the city, turn after turn', () => {
     units: [unitOf('enemy', { q: 4, r: 0 }, { move: 2 })],
   });
 
-  const moved = apply(city, { type: 'end-turn' });
+  const moved = outcome(apply(city, { type: 'end-turn' }));
 
   expect(distance(moved.units[0].tile, CITY)).toBe(2);
-  expect(distance(apply(moved, { type: 'end-turn' }).units[0].tile, CITY)).toBe(0);
+  expect(distance(outcome(apply(moved, { type: 'end-turn' })).units[0].tile, CITY)).toBe(0);
 });
 
 test('an enemy moves toward the nearest of the player’s units instead of the city', () => {
@@ -814,7 +905,7 @@ test('an enemy moves toward the nearest of the player’s units instead of the c
     units: [worker({ q: 2, r: 0 }), unitOf('enemy', { q: 4, r: 0 }, { move: 2 })],
   });
 
-  const moved = apply(city, { type: 'end-turn' });
+  const moved = outcome(apply(city, { type: 'end-turn' }));
 
   expect(distance(moved.units[1].tile, { q: 2, r: 0 })).toBe(1);
 });
@@ -825,10 +916,10 @@ test('an enemy declares its intent on a unit in range, and executes it in the ne
     units: [worker({ q: 2, r: 0 }), unitOf('enemy', { q: 4, r: 0 }, { move: 2, damage: 2 })],
   });
 
-  const declared = apply(city, { type: 'end-turn' });
+  const declared = outcome(apply(city, { type: 'end-turn' }));
   expect(intentOf(declared, 1)).toEqual({ q: 2, r: 0 });
 
-  const attacked = apply(declared, { type: 'end-turn' });
+  const attacked = outcome(apply(declared, { type: 'end-turn' }));
   expect(attacked.units[0].stats.health).toBe(city.units[0].stats.health - 2);
 });
 
@@ -841,7 +932,7 @@ test('a killed enemy’s intent dies with it', () => {
     ],
   });
 
-  const after = apply(city, { type: 'end-turn' });
+  const after = outcome(apply(city, { type: 'end-turn' }));
 
   expect(after.units).toHaveLength(1);
   expect(after.units[0].stats.health).toBe(city.units[0].stats.health);
@@ -854,7 +945,8 @@ test('an intent aimed at a tile its target has left attacks nothing', () => {
     units: [worker({ q: 1, r: 0 }), aiming({ q: 2, r: 0 }, { q: 1, r: 0 }, { damage: 2 })],
   });
 
-  const dodged = apply(apply(city, march(0, { q: 0, r: 1 })), { type: 'end-turn' });
+  const marched = outcome(apply(city, march(0, { q: 0, r: 1 })));
+  const dodged = outcome(apply(marched, { type: 'end-turn' }));
 
   expect(dodged.units[0].stats.health).toBe(city.units[0].stats.health);
 });
@@ -896,7 +988,7 @@ test('an intent whose target has left is executed on the empty tile, and spent t
     units: [worker({ q: 1, r: 0 }), aiming({ q: 2, r: 0 }, { q: 1, r: 0 }, { damage: 2 })],
   });
 
-  const dodged = apply(city, march(0, { q: 0, r: 1 }));
+  const dodged = outcome(apply(city, march(0, { q: 0, r: 1 })));
   const fought = afterCombat(dodged);
 
   expect(attacksOf(dodged)).toEqual([['2,0', '1,0']]);
@@ -931,7 +1023,7 @@ test('the intents the enemy phase declares come as one stage, after every move i
     ],
   });
 
-  const stages = endOfTurn(city);
+  const stages = apply(city, { type: 'end-turn' });
   const declared = stages[stages.length - 2];
 
   expect(stages.map((stage) => stage.name)).toEqual(['income', 'move', 'move', 'intents', 'turn']);
@@ -949,7 +1041,7 @@ test('a fighting unit that stands still attacks the enemy with the least health'
     ],
   });
 
-  const after = apply(city, { type: 'end-turn' });
+  const after = outcome(apply(city, { type: 'end-turn' }));
 
   expect(after.units[1].stats.health).toBe(5);
   expect(after.units[2].stats.health).toBe(1);
@@ -959,8 +1051,8 @@ test('a tile an enemy occupies yields nothing at income', () => {
   const bare = cityOf(['urban', 'plain']);
   const occupied = { ...bare, units: [unitOf('enemy', { q: 1, r: 0 })] };
 
-  const free = apply(bare, { type: 'end-turn' });
-  const held = apply(occupied, { type: 'end-turn' });
+  const free = outcome(apply(bare, { type: 'end-turn' }));
+  const held = outcome(apply(occupied, { type: 'end-turn' }));
 
   for (const resource of RESOURCES) {
     expect(held.resources[resource]).toBe(
@@ -975,12 +1067,12 @@ test('an enemy on the city’s tile declares nothing, and captures the city the 
     units: [unitOf('enemy', { q: 1, r: 0 }, { move: 1 })],
   });
 
-  const stood = apply(city, { type: 'end-turn' });
+  const stood = outcome(apply(city, { type: 'end-turn' }));
   expect(stood.units[0].tile).toEqual(CITY);
   expect(intentOf(stood, 0)).toBeUndefined();
   expect(stood.defeat).toBeUndefined();
 
-  const fallen = apply(stood, { type: 'end-turn' });
+  const fallen = outcome(apply(stood, { type: 'end-turn' }));
   expect(fallen.defeat).toEqual({ cause: 'capture', turn: stood.turn });
   expect(fallen.turn).toBe(stood.turn);
 });
@@ -988,7 +1080,7 @@ test('an enemy on the city’s tile declares nothing, and captures the city the 
 test('the enemy that moves in from the rim reaches the city and captures it', () => {
   let chronicle = cityOf(['urban'], { tiles: field(MAP_COMPOSITION.radius) });
   for (let turn = 0; turn < 20 && chronicle.defeat === undefined; turn++) {
-    chronicle = apply(chronicle, { type: 'end-turn' });
+    chronicle = outcome(apply(chronicle, { type: 'end-turn' }));
   }
 
   expect(chronicle.defeat?.cause).toBe('capture');
@@ -1003,9 +1095,11 @@ test('a chronicle that has ended takes no command at all', () => {
   });
   const fallen: Chronicle = { ...city, defeat: { cause: 'capture', turn: city.turn } };
 
-  expect(apply(city, { type: 'play', index: 0 }).resources.food).toBeGreaterThan(0);
-  expect(apply(fallen, { type: 'end-turn' })).toBe(fallen);
-  expect(apply(fallen, { type: 'play', index: 0 })).toBe(fallen);
+  expect(outcome(apply(city, { type: 'play', index: 0 })).resources.food).toBeGreaterThan(0);
+  expect(outcome(apply(fallen, { type: 'end-turn' }))).toBe(fallen);
+  expect(outcome(apply(fallen, { type: 'play', index: 0 }))).toBe(fallen);
+  expect(stagedBy(fallen, { type: 'end-turn' })).toEqual(['refused']);
+  expect(stagedBy(fallen, { type: 'play', index: 0 })).toEqual(['refused']);
 });
 
 test('a chronicle with enemies on the map survives JSON', () => {
@@ -1028,6 +1122,8 @@ test('the same order on the same chronicle gives the same chronicle back', () =>
   });
   const untouched = structuredClone(city);
 
-  expect(apply(city, march(0, { q: 1, r: 0 }))).toEqual(apply(city, march(0, { q: 1, r: 0 })));
+  expect(outcome(apply(city, march(0, { q: 1, r: 0 })))).toEqual(
+    outcome(apply(city, march(0, { q: 1, r: 0 }))),
+  );
   expect(city).toEqual(untouched);
 });

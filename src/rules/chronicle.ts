@@ -13,7 +13,7 @@ import {
 } from './map';
 import type { Rng } from './rng';
 import { seedRng, shuffle as shuffleItems } from './rng';
-import { arrive, attack, leastHealth, reachable, UNIT_STATS, type Unit, unitAt } from './units';
+import { attack, leastHealth, reachable, UNIT_STATS, type Unit, unitAt } from './units';
 
 /** The five core resources, then culture. Population is inhabitants, not a store. */
 export const RESOURCES = ['food', 'production', 'military', 'money', 'science', 'culture'] as const;
@@ -60,11 +60,14 @@ export type Command =
 const HAND_SIZE = 5;
 
 /**
- * One step of the end of turn that carries nothing but the chronicle it left. `turn` is the tick
- * alone, `events` is what the schedule lands, `intents` is the enemy phase's declarations, and
- * `capture` is the city falling to an enemy that stood on its tile.
+ * A step that carries nothing but the chronicle it left. `played` is the card gone from the hand
+ * with its cost paid, `refused` is the play the rules turned down, `turn` is the tick alone,
+ * `events` is what the schedule lands, `intents` is the enemy phase's declarations, and `capture`
+ * is the city falling to an enemy that stood on its tile.
  */
 export type PlainStage =
+  | 'played'
+  | 'refused'
   | 'discard'
   | 'income'
   | 'intents'
@@ -75,9 +78,10 @@ export type PlainStage =
   | 'shuffle';
 
 /**
- * A step of the end of turn, and the chronicle it leaves behind. Combat is one `attack` per attack
- * and the enemy phase one `move` per enemy that moved, each naming the tiles it happened between:
- * what the chronicle after the step cannot say is carried on the step itself.
+ * The shape every command resolves as: one step, and the chronicle it leaves behind. An `attack` is
+ * one attack, combat's or an order's arrival alike, and a `move` is one unit crossing, the enemy
+ * phase's or an order's alike; each names the tiles it happened between, because what the chronicle
+ * after the step cannot say is carried on the step itself.
  */
 export type Stage = { readonly chronicle: Chronicle } & (
   | { readonly name: PlainStage }
@@ -120,35 +124,34 @@ export function beginChronicle(seed: number, deck: readonly CardId[]): Chronicle
 }
 
 /**
- * The one way a chronicle changes: every command the player has goes through here. A chronicle
- * that has ended takes none of them, and a city left without population falls whatever the
- * command was.
+ * The one way a chronicle changes: every command the player has goes through here, and answers the
+ * stages it resolves as — never none. A chronicle that has ended refuses them all, and a city left
+ * without population falls on the last stage whatever the command was.
  */
-export function apply(chronicle: Chronicle, command: Command): Chronicle {
-  if (chronicle.defeat !== undefined) return chronicle;
+export function apply(chronicle: Chronicle, command: Command): Stage[] {
+  if (chronicle.defeat !== undefined) return [{ name: 'refused', chronicle }];
 
-  const after = perform(chronicle, command);
-  if (after.defeat !== undefined || after.population > 0) return after;
-  return fall(after, 'population');
+  const stages =
+    command.type === 'end-turn'
+      ? endOfTurn(chronicle)
+      : play(chronicle, command.index, command.target);
+
+  const last = stages[stages.length - 1];
+  if (last.chronicle.defeat !== undefined || last.chronicle.population > 0) return stages;
+  return [...stages.slice(0, -1), { ...last, chronicle: fall(last.chronicle, 'population') }];
 }
 
-function perform(chronicle: Chronicle, command: Command): Chronicle {
-  switch (command.type) {
-    case 'play':
-      return play(chronicle, command.index, command.target);
-    case 'end-turn': {
-      const stages = endOfTurn(chronicle);
-      return stages[stages.length - 1]?.chronicle ?? chronicle;
-    }
-  }
+/** The chronicle a command left: the last stage's, for whoever wants the state and not the play. */
+export function outcome(stages: readonly Stage[]): Chronicle {
+  return stages[stages.length - 1].chronicle;
 }
 
 /**
  * The end of turn, step by ordered step, each with the chronicle it leaves: a step that changed
  * nothing is absent, and the list ends at the capture when the city falls in the enemy phase. The
- * chronicle after the last stage is what the `end-turn` command answers.
+ * turn always ticks, so there is always a stage.
  */
-export function endOfTurn(chronicle: Chronicle): Stage[] {
+function endOfTurn(chronicle: Chronicle): Stage[] {
   const stages: Stage[] = [];
   let standing = chronicle;
   const staged = (name: PlainStage, next: Chronicle): void => {
@@ -265,48 +268,58 @@ function blocked(chronicle: Chronicle, id: CardId): boolean {
   }
 }
 
-function play(chronicle: Chronicle, index: number, target: Target | undefined): Chronicle {
+/**
+ * One card played: the play opens on the `played` stage, where the card has left the hand for the
+ * discard pile and its cost is paid, and what the card does follows. A play the hand, the city or
+ * the map refuses is one `refused` stage on the chronicle as it stood.
+ */
+function play(chronicle: Chronicle, index: number, target: Target | undefined): Stage[] {
   const id = chronicle.hand[index];
-  if (id === undefined || !playable(refusalOf(chronicle, id))) return chronicle;
+  if (id === undefined || !playable(refusalOf(chronicle, id))) {
+    return [{ name: 'refused', chronicle }];
+  }
 
-  const resolved = resolve(chronicle, id, target);
-  if (resolved === undefined) return chronicle;
-
-  const resources = { ...resolved.resources };
+  const resources = { ...chronicle.resources };
   for (const { resource, amount } of costOf(id)) resources[resource] -= amount;
-  return {
-    ...resolved,
+  const paid: Chronicle = {
+    ...chronicle,
     resources,
-    hand: resolved.hand.filter((_, at) => at !== index),
-    discardPile: [...resolved.discardPile, id],
+    hand: chronicle.hand.filter((_, at) => at !== index),
+    discardPile: [...chronicle.discardPile, id],
   };
+
+  return resolve(paid, id, target) ?? [{ name: 'refused', chronicle }];
 }
 
-/** What the card does. `undefined` refuses the play, and nothing is paid or discarded. */
-function resolve(
-  chronicle: Chronicle,
-  id: CardId,
-  target: Target | undefined,
-): Chronicle | undefined {
+/**
+ * What the card does, on the chronicle its cost is already paid on: the stages it resolves as,
+ * opening with the `played` one. An effect that lands whole is inside that stage and raises no
+ * other. `undefined` refuses the play, and nothing is paid or discarded.
+ */
+function resolve(paid: Chronicle, id: CardId, target: Target | undefined): Stage[] | undefined {
   const card = CARDS[id];
   switch (card.kind) {
-    case 'unit':
-      return {
-        ...chronicle,
-        population: chronicle.population - 1,
+    case 'unit': {
+      const entered: Chronicle = {
+        ...paid,
+        population: paid.population - 1,
         units: [
-          ...chronicle.units,
-          { stats: { ...UNIT_STATS[card.unitType] }, faction: 'player', tile: chronicle.city },
+          ...paid.units,
+          { stats: { ...UNIT_STATS[card.unitType] }, faction: 'player', tile: paid.city },
         ],
       };
-    case 'building':
-      return build(chronicle, card.building, target);
+      return [{ name: 'played', chronicle: entered }];
+    }
+    case 'building': {
+      const built = build(paid, card.building, target);
+      return built === undefined ? undefined : [{ name: 'played', chronicle: built }];
+    }
     case 'order':
-      return order(chronicle, target);
+      return order(paid, target);
     case 'action': {
-      const resources = { ...chronicle.resources };
+      const resources = { ...paid.resources };
       for (const resource of RESOURCES) resources[resource] += card.gain[resource] ?? 0;
-      return { ...chronicle, resources };
+      return [{ name: 'played', chronicle: { ...paid, resources } }];
     }
   }
 }
@@ -327,19 +340,39 @@ function build(
   };
 }
 
-/** The plain order: the unit crosses to a tile within its move, and its nature acts where it lands. */
-function order(chronicle: Chronicle, target: Target | undefined): Chronicle | undefined {
+/**
+ * The plain order: the unit crosses to a tile within its move, and its nature acts where it lands.
+ * The crossing is the same `move` stage the enemy phase raises, the arrival the same `attack` stage
+ * combat raises; a unit with no damage, or with none of the other faction in range, lands and does
+ * nothing.
+ */
+function order(paid: Chronicle, target: Target | undefined): Stage[] | undefined {
   if (target?.type !== 'unit-tile') return undefined;
   const mover = target.unit;
   const to = target.tile;
-  const unit = chronicle.units[mover];
+  const unit = paid.units[mover];
   if (unit === undefined || unit.faction !== 'player') return undefined;
 
-  const landings = reachable(chronicle.tiles, chronicle.units, unit);
+  const landings = reachable(paid.tiles, paid.units, unit);
   if (!landings.some((coord) => tileKey(coord) === tileKey(to))) return undefined;
 
-  const moved = chronicle.units.map((other, at) => (at === mover ? { ...other, tile: to } : other));
-  return { ...chronicle, units: arrive(moved, mover) };
+  const moved = paid.units.map((other, at) => (at === mover ? { ...other, tile: to } : other));
+  const stages: Stage[] = [
+    { name: 'played', chronicle: paid },
+    { name: 'move', from: unit.tile, to, chronicle: { ...paid, units: moved } },
+  ];
+
+  const struck = leastHealth(moved, mover);
+  if (struck === undefined) return stages;
+  return [
+    ...stages,
+    {
+      name: 'attack',
+      attacker: to,
+      target: moved[struck].tile,
+      chronicle: { ...paid, units: attack(moved, mover, struck) },
+    },
+  ];
 }
 
 /** The schedule stands in at one event: `PH_Arrival` brings an enemy to the rim every fifth turn. */

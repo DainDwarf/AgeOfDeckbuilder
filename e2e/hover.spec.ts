@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { DECKS } from '../src/rules/cards';
-import { apply, beginChronicle, playable, refusalOf } from '../src/rules/chronicle';
+import { apply, beginChronicle, outcome, playable, refusalOf } from '../src/rules/chronicle';
 import { text } from '../src/ui/text';
 import {
   chronicleOf,
@@ -29,7 +29,7 @@ function liftRun(): { seed: number; turn: number; index: number } {
     for (let turn = 1; turn <= 8; turn++) {
       const index = chronicle.hand.findIndex((id) => playable(refusalOf(chronicle, id)));
       if (index !== -1) return { seed, turn, index };
-      chronicle = apply(chronicle, { type: 'end-turn' });
+      chronicle = outcome(apply(chronicle, { type: 'end-turn' }));
     }
   }
   throw new Error('no seed under a thousand opens a turn on a card the city can play');

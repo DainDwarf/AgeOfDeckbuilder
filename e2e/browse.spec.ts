@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { CardId } from '../src/rules/cards';
-import { apply, beginChronicle } from '../src/rules/chronicle';
+import { apply, beginChronicle, outcome } from '../src/rules/chronicle';
 import {
   browse,
   endTurn,
@@ -22,7 +22,9 @@ const DECK: readonly CardId[] = (
 function browseSeed(): number {
   for (let seed = 1; seed <= 1000; seed++) {
     let chronicle = beginChronicle(seed, DECK);
-    for (let turn = 0; turn < 3; turn++) chronicle = apply(chronicle, { type: 'end-turn' });
+    for (let turn = 0; turn < 3; turn++) {
+      chronicle = outcome(apply(chronicle, { type: 'end-turn' }));
+    }
     if (chronicle.defeat === undefined && chronicle.discardPile.length === 15) return seed;
   }
   throw new Error('no seed under a thousand ends three turns standing on fifteen discarded cards');

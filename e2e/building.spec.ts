@@ -2,7 +2,17 @@ import { expect, type Page, test } from '@playwright/test';
 import type Phaser from 'phaser';
 import { tileKey } from '../src/rules/map';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
-import { aimed, chronicleOf, dragOut, endTurn, farmRun, onScreen, open, watch } from './table';
+import {
+  aimed,
+  chronicleOf,
+  dragOut,
+  endTurn,
+  farmRun,
+  onScreen,
+  open,
+  playedOut,
+  watch,
+} from './table';
 
 /** How many buildings stand drawn on the map. */
 function marks(page: Page): Promise<number> {
@@ -35,6 +45,7 @@ test('the farm card builds its farm where the worker marched to', async ({ page 
   await page.mouse.down();
   await page.mouse.move(destination.x, destination.y, { steps: 5 });
   await page.mouse.up();
+  await playedOut(page);
   await page.waitForFunction((on) => {
     const unit = window.game?.scene.getScene<ChronicleScene>('chronicle').chronicle.units[0];
     return unit?.tile.q === on.q && unit.tile.r === on.r;
@@ -45,6 +56,7 @@ test('the farm card builds its farm where the worker marched to', async ({ page 
   await dragOut(page, marched.hand.indexOf('PH_Farm'));
   await aimed(page);
   await page.mouse.click(destination.x, destination.y);
+  await playedOut(page);
   await page.waitForFunction(
     (held) =>
       window.game?.scene.getScene<ChronicleScene>('chronicle').chronicle.hand.length === held,

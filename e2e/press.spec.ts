@@ -1,6 +1,13 @@
 import { expect, type Page, test } from '@playwright/test';
 import { CARDS, DECKS } from '../src/rules/cards';
-import { apply, beginChronicle, type Chronicle, playable, refusalOf } from '../src/rules/chronicle';
+import {
+  apply,
+  beginChronicle,
+  type Chronicle,
+  outcome,
+  playable,
+  refusalOf,
+} from '../src/rules/chronicle';
 import {
   browse,
   chronicleOf,
@@ -36,7 +43,7 @@ function playableRun(): { seed: number; turn: number } {
     let chronicle = beginChronicle(seed, DECKS.PH_LongDeck);
     for (let turn = 1; turn <= 8; turn++) {
       if (atNothing(chronicle) !== -1) return { seed, turn };
-      chronicle = apply(chronicle, { type: 'end-turn' });
+      chronicle = outcome(apply(chronicle, { type: 'end-turn' }));
     }
   }
   throw new Error('no seed under a thousand opens a turn on a card that plays at nothing');

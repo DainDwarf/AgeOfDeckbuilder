@@ -6,6 +6,7 @@ import {
   beginChronicle,
   buildable,
   type Chronicle,
+  outcome,
   playable,
   refusalOf,
 } from '../src/rules/chronicle';
@@ -184,7 +185,7 @@ export function farmRun(): Run {
     for (let turn = 1; turn <= 8; turn++) {
       const tile = farmedThisTurn(chronicle);
       if (tile !== undefined) return { seed, turn, tile };
-      chronicle = apply(chronicle, { type: 'end-turn' });
+      chronicle = outcome(apply(chronicle, { type: 'end-turn' }));
     }
   }
   throw new Error('no seed under a thousand opens a turn on a worker, a march and a farm');
@@ -194,17 +195,19 @@ export function farmRun(): Run {
 function farmedThisTurn(chronicle: Chronicle): TileCoords | undefined {
   const enter = chronicle.hand.indexOf('PH_Worker');
   if (enter === -1 || !playable(refusalOf(chronicle, 'PH_Worker'))) return undefined;
-  const entered = apply(chronicle, { type: 'play', index: enter });
+  const entered = outcome(apply(chronicle, { type: 'play', index: enter }));
 
   const march = entered.hand.indexOf('PH_March');
   if (march === -1 || !entered.hand.includes('PH_Farm')) return undefined;
 
   for (const tile of neighbours(entered.city)) {
-    const moved = apply(entered, {
-      type: 'play',
-      index: march,
-      target: { type: 'unit-tile', unit: 0, tile },
-    });
+    const moved = outcome(
+      apply(entered, {
+        type: 'play',
+        index: march,
+        target: { type: 'unit-tile', unit: 0, tile },
+      }),
+    );
     if (moved === entered || !playable(refusalOf(moved, 'PH_Farm'))) continue;
     if (buildable(moved, 'PH_Farm').some((coord) => tileKey(coord) === tileKey(tile))) return tile;
   }
@@ -270,7 +273,23 @@ export async function wheel(page: Page, by: number): Promise<void> {
   await page.mouse.wheel(0, by);
 }
 
-/** The gesture that takes a card out of the hand; what the release does is the card's kind. */
+/**
+ * Waits for the table to have played out whatever the last gesture handed it, first giving that
+ * gesture a frame to reach the scene: the hand and the button are dead for the length of a play-out,
+ * so a spec that presses either of them straight after would press nothing.
+ */
+export async function playedOut(page: Page): Promise<void> {
+  await settled(page);
+  await page.waitForFunction(
+    () => window.game?.scene.getScene<ChronicleScene>('chronicle').playing === false,
+  );
+}
+
+/**
+ * The gesture that takes a card out of the hand; what the release does is the card's kind. A card
+ * that plays at nothing is played out here and now; one that takes a target is left armed, and its
+ * play-out waits on the aim.
+ */
 export async function dragOut(page: Page, index: number): Promise<void> {
   const card = await onScreen(page, `hand-${index}`);
   await page.mouse.move(card.x, card.y);
@@ -278,6 +297,7 @@ export async function dragOut(page: Page, index: number): Promise<void> {
   await page.mouse.move(card.x, card.y - (DRAG / 2) * card.unit, { steps: 5 });
   await page.mouse.move(card.x, card.y - DRAG * card.unit, { steps: 5 });
   await page.mouse.up();
+  await playedOut(page);
 }
 
 /**

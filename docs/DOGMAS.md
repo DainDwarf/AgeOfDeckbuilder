@@ -197,10 +197,14 @@ makes twice becomes a line here (the ratchet, at `/upkeep`).
 | Desktop wrapper | Tauri 2 — not installed; it needs Rust, and it is installed when the desktop target is taken |
 
 - **`src/rules/` never imports Phaser and never touches the DOM; `src/ui/` never mutates state.**
-  The game is one pure function, `apply(state, command) → state`, and the seeded generator's state
-  lives inside `state`. That single rule is what makes a chronicle replay from its seed, a save
-  the state serialised, and a headless simulator `apply` in a loop. Phaser renders a state and
-  emits commands, nothing else. Debug commands are commands like any other, behind a flag.
+  The game is one pure function, `apply(state, command) → stages`: the ordered steps the command
+  resolves as, never none, each carrying the state it leaves, the last of them carrying the state
+  the command ends on. The seeded generator's state lives inside `state`. That single rule is what
+  makes a chronicle replay from its seed, a save the state serialised, and a headless simulator
+  `apply` in a loop keeping the last stage's state. Why stages and not the state alone: what
+  happened — which tile attacked which — is not in the state that follows it, and the table has to
+  play it. Phaser renders a state and emits commands, nothing else. Debug commands are commands
+  like any other, behind a flag.
 - **All UI is Phaser** — inside a chronicle and outside it alike: launch, collection, deck
   editing, codex. `index.html` carries no UI: a style reset, the script that boots Phaser, and
   the canvas Phaser creates. Why: a card appears on every one of those screens and must have
