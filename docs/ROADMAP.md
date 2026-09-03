@@ -22,7 +22,7 @@ ages: Stone, Bronze, ideally Iron.
 - **v0.0.6 — The look.** Art style locked, real assets, animation, sound, music. After the
   systems — every asset drawn earlier is drawn twice — but before the next age, so content can
   be polished, not just built. Animation here is craft — easing, flourish, idle motion; the
-  staging that makes a turn legible ships with v0.0.1, and only its visuals are redone here.
+  staging that makes a turn legible shipped in v0.0.1, and only its visuals are redone here.
 - **v0.0.7 — The Bronze age.** The second age end to end: cards, events, capstone, age-victory
   unlocking it. The first age to pass through the full content pipeline — design, implement,
   balance, polish — whose polish stage exists only once the look does.

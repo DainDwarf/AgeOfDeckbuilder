@@ -584,7 +584,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
   };
 
   /** One attack: the attacker lunges halfway at the tile it aimed at, and what stands there takes it. */
-  const strike = (
+  const attack = (
     attacker: TileCoords,
     target: TileCoords,
     chronicle: Chronicle,
@@ -707,7 +707,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
       switch (stage.name) {
         case 'attack':
           return staged([stage.attacker, stage.target], stage.chronicle, () =>
-            strike(stage.attacker, stage.target, stage.chronicle),
+            attack(stage.attacker, stage.target, stage.chronicle),
           );
         case 'move':
           return staged([stage.from, stage.to], stage.chronicle, () =>
