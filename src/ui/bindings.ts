@@ -1,11 +1,12 @@
-/**
- * Every key the game binds, and what it does. A binding is a key's label, never its place on the
- * keyboard, so a layout that moves a letter moves the binding with it.
- */
-export type Control = 'pan-up' | 'pan-left' | 'pan-down' | 'pan-right' | 'back';
+import { type TextKey, text } from './text';
 
-/** The controls in the order the Controls window lists them. */
+/**
+ * Every control the game binds, in the order the Controls window lists them. A binding is a key's
+ * label, never its place on the keyboard, so a layout that moves a letter moves the binding with it.
+ */
 export const CONTROLS = ['pan-up', 'pan-left', 'pan-down', 'pan-right', 'back'] as const;
+
+export type Control = (typeof CONTROLS)[number];
 
 /** The two keys a control is bound to; a slot holds nothing once its key has moved elsewhere. */
 export type Slots = readonly [string | undefined, string | undefined];
@@ -31,16 +32,19 @@ export function keyOf(label: string): string {
   return label.length === 1 ? label.toUpperCase() : label;
 }
 
-const GLYPHS: Record<string, string> = {
-  ArrowUp: '↑',
-  ArrowLeft: '←',
-  ArrowDown: '↓',
-  ArrowRight: '→',
+/** The keys whose own label is unreadable on a slot: the space bar's is a blank one. */
+const NAMED: Record<string, TextKey> = {
+  ArrowUp: 'key.arrow-up',
+  ArrowLeft: 'key.arrow-left',
+  ArrowDown: 'key.arrow-down',
+  ArrowRight: 'key.arrow-right',
+  ' ': 'key.space',
 };
 
-/** How a bound key reads: the arrows by their glyph, every other key by the label it carries. */
+/** How a bound key reads: the named ones by their entry, every other by the label it carries. */
 export function keyLabel(key: string): string {
-  return GLYPHS[key] ?? key;
+  const named = NAMED[key];
+  return named === undefined ? key : text(named);
 }
 
 /** A key moved onto one slot: whichever slot held it, of any control, is left empty. */

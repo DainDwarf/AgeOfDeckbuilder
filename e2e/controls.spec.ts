@@ -138,6 +138,19 @@ test('the back key binds like any other, and the Back button closes without it',
   expect(problems).toEqual([]);
 });
 
+test('a slot bound to the space bar says so, instead of reading empty', async ({ page }) => {
+  const problems = watch(page);
+
+  await open(page, 1, 'PH_Deck');
+  await intoControls(page);
+
+  await click(page, 'controls-pan-up-0');
+  await page.keyboard.press('Space');
+  await expect.poll(() => slotReads(page, 'pan-up', 0)).toBe('Space');
+
+  expect(problems).toEqual([]);
+});
+
 test('Default puts every key back where it began', async ({ page }) => {
   const problems = watch(page);
 

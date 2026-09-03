@@ -48,6 +48,9 @@ const SLOT_HEIGHT = 34;
 const SLOT_GAP = 10;
 const ROW_GAP = 8;
 
+/** How far the rows of slots reach below the top of the Controls window's body. */
+const ROWS_HEIGHT = CONTROLS.length * SLOT_HEIGHT + (CONTROLS.length - 1) * ROW_GAP;
+
 /** The panel's own dark ink: a window stands in the panel language, not on the scrim. */
 const INK = '#0d1014';
 
@@ -87,10 +90,7 @@ function pressable(
 
 /** How far below the title a window's own content reaches, the padding above it included. */
 function bodyHeight(which: MenuWindow): number {
-  if (which === 'controls') {
-    const rows = CONTROLS.length * SLOT_HEIGHT + (CONTROLS.length - 1) * ROW_GAP;
-    return PADDING + rows + PADDING + BUTTON_HEIGHT;
-  }
+  if (which === 'controls') return PADDING + ROWS_HEIGHT + PADDING + BUTTON_HEIGHT;
   const { buttons } = WINDOWS[which];
   if (buttons.length === 0) return 0;
   return PADDING + buttons.length * BUTTON_HEIGHT + (buttons.length - 1) * BUTTON_GAP;
@@ -160,12 +160,7 @@ function layControls(
   });
 
   const width = (WIDTH - 2 * PADDING - BUTTON_GAP) / 2;
-  const y =
-    top +
-    CONTROLS.length * SLOT_HEIGHT +
-    (CONTROLS.length - 1) * ROW_GAP +
-    PADDING +
-    BUTTON_HEIGHT / 2;
+  const y = top + ROWS_HEIGHT + PADDING + BUTTON_HEIGHT / 2;
   const buttons: [string, string, () => void][] = [
     [
       'controls-default',

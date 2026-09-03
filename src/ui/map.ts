@@ -453,13 +453,9 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
 
   // A window that loses focus under a held key is never sent that key's release, and the frame
   // would pan on for ever.
-  const letGo = (): void => held.clear();
-  scene.game.events.on(Phaser.Core.Events.BLUR, letGo);
-  scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-    scene.game.events.off(Phaser.Core.Events.BLUR, letGo);
-  });
+  whileUp(scene, scene.game.events, Phaser.Core.Events.BLUR, () => held.clear());
 
-  whileUp(scene, Phaser.Scenes.Events.UPDATE, (_time: number, delta: number) => {
+  whileUp(scene, scene.events, Phaser.Scenes.Events.UPDATE, (_time: number, delta: number) => {
     if (!taking) return;
     const keys = bindings();
     let x = 0;

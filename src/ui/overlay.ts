@@ -356,7 +356,7 @@ export function createOverlay(
     },
   );
 
-  whileUp(scene, Phaser.Scenes.Events.UPDATE, (_time: number, delta: number) => {
+  whileUp(scene, scene.events, Phaser.Scenes.Events.UPDATE, (_time: number, delta: number) => {
     if (fling === 0 || grid === undefined) return;
     const to = offset + fling * delta;
     scrollTo(to);

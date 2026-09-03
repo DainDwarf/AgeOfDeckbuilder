@@ -137,32 +137,30 @@ export function releaseOnBlur(game: Phaser.Game): void {
   });
 }
 
+/**
+ * A listener for as long as the scene is up. Every emitter the scene listens on — its own, the
+ * scale manager's, the game's — outlives its shutdown, so one left on any of them is called again
+ * by the table a restart raises, holding every object the table it was made on has since destroyed.
+ */
+export function whileUp<A extends unknown[]>(
+  scene: Phaser.Scene,
+  on: Phaser.Events.EventEmitter,
+  event: string,
+  handler: (...args: A) => void,
+): void {
+  on.on(event, handler);
+  scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+    on.off(event, handler);
+  });
+}
+
 // Everything here reads the window and the scale manager live, never the RESIZE event's size
 // arguments: the resize `followWindow` triggers emits RESIZE again, nested inside the one being
 // handled, so the outer arguments describe a backing store that is already gone.
 /** Lays something out now, and again after every change of window. */
 export function onResize(scene: Phaser.Scene, place: () => void): void {
   place();
-  scene.scale.on(Phaser.Scale.Events.RESIZE, place);
-  scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-    scene.scale.off(Phaser.Scale.Events.RESIZE, place);
-  });
-}
-
-/**
- * A listener on the scene's own events, for as long as the scene is up. A scene's emitter outlives
- * its shutdown, so one left on it is called again by the table a restart raises — holding every
- * object the table it was made on has since destroyed.
- */
-export function whileUp<A extends unknown[]>(
-  scene: Phaser.Scene,
-  event: string,
-  handler: (...args: A) => void,
-): void {
-  scene.events.on(event, handler);
-  scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-    scene.events.off(event, handler);
-  });
+  whileUp(scene, scene.scale, Phaser.Scale.Events.RESIZE, place);
 }
 
 /** Every Text the scene holds, however deep in layers and containers it sits. */
@@ -243,11 +241,16 @@ export function applyDesignSpace(scene: Phaser.Scene): Surfaces {
 
   // A layer re-announces what it is handed on this same emitter, so the guard is what ends this:
   // the object arrives a second time already homed, and falls through.
-  whileUp(scene, Phaser.Scenes.Events.ADDED_TO_SCENE, (object: Phaser.GameObjects.GameObject) => {
-    if (object instanceof Phaser.GameObjects.Layer) return;
-    if (object.displayList !== scene.sys.displayList) return;
-    ui.layer.add(object);
-  });
+  whileUp(
+    scene,
+    scene.events,
+    Phaser.Scenes.Events.ADDED_TO_SCENE,
+    (object: Phaser.GameObjects.GameObject) => {
+      if (object instanceof Phaser.GameObjects.Layer) return;
+      if (object.displayList !== scene.sys.displayList) return;
+      ui.layer.add(object);
+    },
+  );
 
   onResize(scene, () => {
     const factor = renderFactor();
