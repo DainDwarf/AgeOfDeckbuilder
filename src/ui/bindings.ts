@@ -4,7 +4,15 @@ import { type TextKey, text } from './text';
  * Every control the game binds, in the order the Controls window lists them. A binding is a key's
  * label, never its place on the keyboard, so a layout that moves a letter moves the binding with it.
  */
-export const CONTROLS = ['pan-up', 'pan-left', 'pan-down', 'pan-right', 'back'] as const;
+export const CONTROLS = [
+  'pan-up',
+  'pan-left',
+  'pan-down',
+  'pan-right',
+  'zoom-in',
+  'zoom-out',
+  'back',
+] as const;
 
 export type Control = (typeof CONTROLS)[number];
 
@@ -18,6 +26,8 @@ export const DEFAULTS: Bindings = {
   'pan-left': ['A', 'ArrowLeft'],
   'pan-down': ['S', 'ArrowDown'],
   'pan-right': ['D', 'ArrowRight'],
+  'zoom-in': ['WheelUp', undefined],
+  'zoom-out': ['WheelDown', undefined],
   back: ['Escape', 'Mouse2'],
 };
 
@@ -43,6 +53,8 @@ const NAMED: Record<string, TextKey> = {
   Mouse2: 'key.mouse-2',
   Mouse3: 'key.mouse-3',
   Mouse4: 'key.mouse-4',
+  WheelUp: 'key.wheel-up',
+  WheelDown: 'key.wheel-down',
 };
 
 /** How a bound key reads: the named ones by their entry, every other by the label it carries. */

@@ -231,10 +231,11 @@ export class ChronicleScene extends Phaser.Scene {
       overlay.menu();
     };
 
-    // The one place a key is answered: a slot of the Controls window listening takes it, whatever it
-    // is; otherwise the back key takes back one thing, the outermost that is up or pending, and only
-    // a table with nothing on it raises the menu. A second listener that acted on a key would be a
-    // second answer to the one press; the map's own listener only records which keys are held.
+    // The one place the back key is answered: a slot of the Controls window listening takes the key
+    // first, whatever it is; otherwise the back key takes back one thing, the outermost that is up
+    // or pending, and only a table with nothing on it raises the menu. A second listener that acted
+    // on the back key would be a second answer to the one press; the map's own listener answers the
+    // pan and zoom keys and no other.
     onKeyDown(this, (key) => {
       if (overlay.binds(key)) return;
       if (!boundTo(key, 'back')) return;

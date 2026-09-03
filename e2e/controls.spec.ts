@@ -11,10 +11,15 @@ const AS_FOUND = [
   ['A', '←'],
   ['S', '↓'],
   ['D', '→'],
+  ['Wheel up', '—'],
+  ['Wheel down', '—'],
   ['Escape', 'Right click'],
 ];
 
-const LISTED = ['pan-up', 'pan-left', 'pan-down', 'pan-right', 'back'];
+const LISTED = ['pan-up', 'pan-left', 'pan-down', 'pan-right', 'zoom-in', 'zoom-out', 'back'];
+
+/** What one press of a zoom key multiplies the map's size by. */
+const NOTCH = 1.3;
 
 /** What one slot of the Controls window reads. */
 function slotReads(page: Page, control: string, slot: number): Promise<string> {
@@ -65,6 +70,16 @@ async function heldByButton(page: Page, button: 'middle' | 'right'): Promise<num
   await settled(page);
   await settled(page);
   return (await onScreen(page, BARE)).y - before.y;
+}
+
+/** How much larger the map stands after a gesture made with the pointer over a bare tile. */
+async function grewBy(page: Page, gesture: () => Promise<void>): Promise<number> {
+  const before = await onScreen(page, BARE);
+  await page.mouse.move(before.x, before.y);
+  await gesture();
+  await settled(page);
+  await settled(page);
+  return (await onScreen(page, BARE)).unit / before.unit;
 }
 
 /** Out of Controls and back to a bare table, on the back key. */
@@ -211,6 +226,50 @@ test('a slot takes a mouse button, and the button then pans the way a key does',
 
   // The frame pans up, so what stands on the map comes down the screen.
   expect(await heldByButton(page, 'middle')).toBeGreaterThan(40);
+
+  expect(problems).toEqual([]);
+});
+
+test('a key bound to a zoom zooms the map, and the wheel moved off it stops zooming', async ({
+  page,
+}) => {
+  const problems = watch(page);
+
+  await open(page, 1, 'PH_Deck');
+  await intoControls(page);
+
+  await click(page, 'controls-zoom-in-1');
+  await page.keyboard.press('e');
+  await expect.poll(() => slotReads(page, 'zoom-in', 1)).toBe('E');
+  await outOfControls(page);
+
+  expect(await grewBy(page, () => page.keyboard.press('e'))).toBeCloseTo(NOTCH, 2);
+  expect(await grewBy(page, () => page.mouse.wheel(0, -100))).toBeCloseTo(NOTCH, 2);
+
+  await intoControls(page);
+  await click(page, 'controls-pan-up-1');
+  await expect.poll(() => slotReads(page, 'pan-up', 1)).toBe('Press a key');
+
+  // The slot is listening, so the notch is the key it takes and not the zoom it used to be.
+  expect(await grewBy(page, () => page.mouse.wheel(0, -100))).toBeCloseTo(1, 2);
+  expect(await slotReads(page, 'pan-up', 1)).toBe('Wheel up');
+  expect(await slotReads(page, 'zoom-in', 0)).toBe('—');
+  await outOfControls(page);
+
+  // A notch is a press and a release at once, so it pans the one frame that follows it: the frame
+  // goes up, what stands on the map comes down the screen, and nothing about it zooms.
+  const before = await onScreen(page, BARE);
+  await page.mouse.move(before.x, before.y);
+  await page.mouse.wheel(0, -100);
+  await settled(page);
+  await settled(page);
+
+  const nudged = await onScreen(page, BARE);
+  expect(nudged.unit / before.unit).toBeCloseTo(1, 2);
+  expect(nudged.y - before.y).toBeGreaterThan(0);
+  expect(nudged.y - before.y).toBeLessThan(await heldBy(page, 'w'));
+
+  expect(await grewBy(page, () => page.keyboard.press('e'))).toBeCloseTo(NOTCH, 2);
 
   expect(problems).toEqual([]);
 });

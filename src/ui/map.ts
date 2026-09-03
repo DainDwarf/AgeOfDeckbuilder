@@ -10,7 +10,7 @@ import {
 } from '../rules/map';
 import { type Faction, reachable, type Unit, type UnitTypeId, unitAt } from '../rules/units';
 import { MAP_FRAME } from './band';
-import { bindings, type Control } from './bindings';
+import { bindings, boundTo, type Control } from './bindings';
 import { EASE, ended, stopMotion } from './card-motion';
 import {
   ACCENT,
@@ -80,7 +80,7 @@ const UNIT_DEPTH = 4;
 const MIN_ZOOM = 0.75;
 const MAX_ZOOM = 3.5;
 
-/** What one wheel notch multiplies the zoom by; the wheel measures a notch as 100 of its delta. */
+/** What one press of a zoom key multiplies the zoom by. */
 const ZOOM_PER_NOTCH = 1.3;
 
 /** How fast a held key pans the frame, in design pixels a second. */
@@ -139,7 +139,7 @@ export type MapView = {
   inspect(inspected: (found: Inspection | undefined) => void, zoomed: () => void): void;
   /** Rings the tile being inspected, or clears the ring. */
   markInspected(tile: TileCoords | undefined): void;
-  /** Whether the wheel and the pan keys reach the map; they do not while anything covers it. */
+  /** Whether the pan and zoom keys reach the map; they do not while anything covers it. */
   live(on: boolean): void;
 };
 
@@ -434,22 +434,31 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
     return catcher;
   };
 
-  scene.input.on(
-    'wheel',
-    (pointer: Phaser.Input.Pointer, _over: unknown, _dx: number, dy: number) => {
-      if (!taking) return;
-      const next = Math.min(Math.max(zoom * ZOOM_PER_NOTCH ** (-dy / 100), MIN_ZOOM), MAX_ZOOM);
-      // The zoom is about the pointer: what the map showed under it before shows under it after.
-      const at = map.at(pointer.x, pointer.y);
-      const away = zoom / next;
-      moveTo(at.x - (at.x - centre.x) * away, at.y - (at.y - centre.y) * away, next);
-    },
-  );
+  /** One notch of zoom, about the pointer: what the map showed under it before shows under it now. */
+  const zoomBy = (by: number): void => {
+    const next = Math.min(Math.max(zoom * by, MIN_ZOOM), MAX_ZOOM);
+    const pointer = scene.input.activePointer;
+    const at = map.at(pointer.x, pointer.y);
+    const away = zoom / next;
+    moveTo(at.x - (at.x - centre.x) * away, at.y - (at.y - centre.y) * away, next);
+  };
 
   /** Every key held down right now, by the label it binds under. */
   const held = new Set<string>();
+
+  /**
+   * Every key pressed since the last frame, held or let go of again. A notch of the wheel is pressed
+   * and released at once, so it is never in `held` on any frame, and a pan bound to it would read
+   * nothing.
+   */
+  const tapped = new Set<string>();
+
   onKeyDown(scene, (key) => {
     held.add(key);
+    tapped.add(key);
+    if (!taking) return;
+    if (boundTo(key, 'zoom-in')) zoomBy(ZOOM_PER_NOTCH);
+    else if (boundTo(key, 'zoom-out')) zoomBy(1 / ZOOM_PER_NOTCH);
   });
   onKeyUp(scene, (key) => {
     held.delete(key);
@@ -457,18 +466,27 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
 
   // A window that loses focus under a held key is never sent that key's release, and the frame
   // would pan on for ever.
-  whileUp(scene, scene.game.events, Phaser.Core.Events.BLUR, () => held.clear());
+  whileUp(scene, scene.game.events, Phaser.Core.Events.BLUR, () => {
+    held.clear();
+    tapped.clear();
+  });
+
+  /** Whether a key carries its control this frame: one held down, or one tapped since the last. */
+  const pressing = (key: string | undefined): boolean =>
+    key !== undefined && (held.has(key) || tapped.has(key));
 
   whileUp(scene, scene.events, Phaser.Scenes.Events.UPDATE, (_time: number, delta: number) => {
-    if (!taking) return;
-    const keys = bindings();
     let x = 0;
     let y = 0;
-    for (const pan of PANS) {
-      if (!keys[pan.control].some((key) => key !== undefined && held.has(key))) continue;
-      x += pan.x;
-      y += pan.y;
+    if (taking) {
+      const keys = bindings();
+      for (const pan of PANS) {
+        if (!keys[pan.control].some(pressing)) continue;
+        x += pan.x;
+        y += pan.y;
+      }
     }
+    tapped.clear();
     if (x === 0 && y === 0) return;
     const step = (PAN_SPEED * delta) / 1000 / zoom / Math.hypot(x, y);
     moveTo(centre.x + x * step, centre.y + y * step, zoom);

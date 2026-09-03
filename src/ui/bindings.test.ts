@@ -39,6 +39,18 @@ describe('binding a key', () => {
     expect(after['pan-down']).toEqual(['S', 'Escape']);
   });
 
+  it('binds a wheel notch like any other key, and moves it off the zoom that had it', () => {
+    const after = bound(DEFAULTS, 'pan-up', 1, 'WheelUp');
+    expect(after['zoom-in']).toEqual([undefined, undefined]);
+    expect(after['zoom-out']).toEqual(['WheelDown', undefined]);
+    expect(after['pan-up']).toEqual(['W', 'WheelUp']);
+  });
+
+  it('fills a zoom that stands on one key alone', () => {
+    const after = bound(DEFAULTS, 'zoom-in', 1, 'e');
+    expect(after['zoom-in']).toEqual(['WheelUp', 'E']);
+  });
+
   it('reads a key in either case as the one key', () => {
     expect(bound(DEFAULTS, 'back', 1, 'k').back[1]).toBe(keyOf('K'));
   });
