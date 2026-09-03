@@ -8,11 +8,12 @@ no detail here: its board lines are cut when its turn comes. Versions are themes
 The demo (v0.1.0) carries most if not all of [`DESIGN.md`](DESIGN.md) and covers the first
 ages: Stone, Bronze, ideally Iron.
 
-- **v0.0.2 — A chronicle that ends in victory.** The seeded event schedule and its escalation,
+- **v0.0.2 — The city is a city.** Population that eats and grows, claiming with culture,
+  assignment, improvements and terraforming, the full map-layer model, rivers. The economy comes
+  before the world outside: the city is a city first, then goes outwards.
+- **v0.0.3 — A chronicle that ends in victory.** The seeded event schedule and its escalation,
   camps, sight and fog, the capstone on its fixed turn. From here both endings exist, so feel is
-  testable early — that is why victory comes second, not fifth.
-- **v0.0.3 — The city is a city.** Population that eats and grows, claiming with culture,
-  assignment, improvements and terraforming, the full map-layer model, rivers.
+  testable early — that is why victory comes third, not fifth.
 - **v0.0.4 — The deck is data.** Cards become a content catalogue instead of hardcoded
   stand-ins — the deferred dogmas return with it — plus the map's gifts. First real content: the
   Stone age's cards, with provisional numbers at last.

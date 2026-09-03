@@ -32,7 +32,7 @@ a [`BOARD.md`](BOARD.md) line. Say
   given seed — the player-facing door to replay-from-seed; `?seed=` stays the debug/e2e one.
 - **Per-tile yield overlay**: "+x +y" glyphs on each tile showing what it yields, toggleable
   because the information saturates; clicking a resource on the top bar filters the overlay to
-  that resource alone. Becomes truly informative once assignment exists (v0.0.3).
+  that resource alone. Becomes truly informative once assignment exists (v0.0.2).
 - **Colour ledger** (art-style pass scope): every UI colour resolves through one theme lookup,
   so an alternate theme — colour-blind-friendly included — becomes content, not surgery.
 - **Colour never carries gameplay meaning alone** (art-style pass scope): resource chips and
