@@ -40,6 +40,7 @@ a [`BOARD.md`](BOARD.md) line. Say
 - **Colour never carries gameplay meaning alone** (art-style pass scope): resource chips and
   anything gameplay-critical get shape/glyph redundancy, fixing colour-blindness in every theme
   at once — including the default.
+- **Animation speed settings**: the player sets how fast the staged motions play.
 - **Type-size floor, verified small** (art-style pass scope): minimum type sizes generous enough
   that the smallest window we care about stays readable; ui-check verifies at that size. Uniform
   window scaling plus card zoom covers the rest — no UI-scale slider unless playtesting demands it.
