@@ -41,6 +41,8 @@ a [`BOARD.md`](BOARD.md) line. Say
   anything gameplay-critical get shape/glyph redundancy, fixing colour-blindness in every theme
   at once — including the default.
 - **Animation speed settings**: the player sets how fast the staged motions play.
+- **Copy a replay**: one action puts version, seed, deck, the commands played and the last error
+  on the clipboard, so any game a player pastes back can be replayed to the turn.
 - **Type-size floor, verified small** (art-style pass scope): minimum type sizes generous enough
   that the smallest window we care about stays readable; ui-check verifies at that size. Uniform
   window scaling plus card zoom covers the rest — no UI-scale slider unless playtesting demands it.
