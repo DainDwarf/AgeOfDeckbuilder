@@ -1,7 +1,7 @@
 import type Phaser from 'phaser';
 import { CARDS, type CardId } from '../rules/cards';
 import { costOf, playable, type Refusal } from '../rules/chronicle';
-import { ACCENT, addText, hexagon, UI_FONT } from './design-space';
+import { ACCENT, addText, DESIGN_HEIGHT, hexagon, MARGIN, UI_FONT } from './design-space';
 import { RESOURCE_COLOURS } from './resource-bar';
 import { text } from './text';
 
@@ -21,6 +21,9 @@ function metricsOf(width: number): {
 /** The card as it lies on the table: what anything laid out in the card's language measures by. */
 export const CARD_METRICS = metricsOf(CARD_WIDTH);
 export const CARD_HEIGHT = CARD_METRICS.height;
+
+/** Where a card lying on the table rests: its bottom edge, one margin off the screen's bottom. */
+export const CARD_BASELINE = DESIGN_HEIGHT - MARGIN;
 
 export const CARD_EDGE = 0x6f757d;
 const KIND_INK = 0x4a5058;

@@ -10,13 +10,12 @@ import {
 } from '../rules/chronicle';
 import { type TileCoords, tileAt, tileKey } from '../rules/map';
 import { createBand } from './band';
-import { CARD_HEIGHT } from './card-face';
+import { CARD_BASELINE, CARD_HEIGHT } from './card-face';
 import { EASE, ended } from './card-motion';
 import {
   ACCENT,
   addText,
   applyDesignSpace,
-  DESIGN_HEIGHT,
   DESIGN_WIDTH,
   MARGIN,
   onClick,
@@ -212,7 +211,7 @@ export class ChronicleScene extends Phaser.Scene {
     const width = Math.max(hoveredWidth, label.width) + 56;
     const height = label.height + 24;
     const x = DESIGN_WIDTH - MARGIN - width / 2;
-    const y = DESIGN_HEIGHT - (MARGIN + CARD_HEIGHT + 14) - height / 2;
+    const y = CARD_BASELINE - CARD_HEIGHT - 14 - height / 2;
     button.setPosition(x, y).setSize(width, height);
     label.setPosition(x, y);
 

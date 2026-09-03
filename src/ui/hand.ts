@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { CARDS, type CardId, type TargetType } from '../rules/cards';
 import { type Chronicle, playable, type Refusal, refusalOf, type Stage } from '../rules/chronicle';
 import {
+  CARD_BASELINE,
   CARD_HEIGHT,
   CARD_WIDTH,
   type CardFace,
@@ -10,7 +11,6 @@ import {
 } from './card-face';
 import { ended, IN_FLIGHT, STAGGER, travel, turnOver } from './card-motion';
 import {
-  DESIGN_HEIGHT,
   DESIGN_WIDTH,
   MARGIN,
   onClick,
@@ -66,7 +66,6 @@ export function createHand(
 ): Hand {
   const laneLeft = MARGIN + CARD_WIDTH + LANE_PAD;
   const laneWidth = DESIGN_WIDTH - 2 * laneLeft;
-  const baseline = DESIGN_HEIGHT - MARGIN;
 
   let slots: Slot[] = [];
   /** What the hand has in the air and no slot holds; a render owns it and takes it down. */
@@ -132,7 +131,7 @@ export function createHand(
         index,
         home: {
           x: first + CARD_WIDTH / 2 + index * advance,
-          y: baseline + off * off * FAN * 1.6,
+          y: CARD_BASELINE + off * off * FAN * 1.6,
         },
         refusal,
         playable: playable(refusal),

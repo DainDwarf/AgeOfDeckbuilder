@@ -2,6 +2,7 @@ import type Phaser from 'phaser';
 import type { CardId } from '../rules/cards';
 import { type Chronicle, NO_REFUSAL, type Stage } from '../rules/chronicle';
 import {
+  CARD_BASELINE,
   CARD_HEIGHT,
   CARD_WIDTH,
   createCardBack,
@@ -9,21 +10,13 @@ import {
   createEmptySlot,
 } from './card-face';
 import { blockLength, EASE, ended, IN_FLIGHT, SHUFFLE, travel } from './card-motion';
-import {
-  ACCENT,
-  addText,
-  DESIGN_HEIGHT,
-  DESIGN_WIDTH,
-  MARGIN,
-  onClick,
-  UI_FONT,
-} from './design-space';
+import { ACCENT, addText, DESIGN_WIDTH, MARGIN, onClick, UI_FONT } from './design-space';
 import type { PileKind } from './overlay';
 
 /** Where each pile's top card lies, about its own bottom centre, as a card is drawn. */
 export const PILE_PLACE: Record<PileKind, { readonly x: number; readonly y: number }> = {
-  'draw-pile': { x: MARGIN + CARD_WIDTH / 2, y: DESIGN_HEIGHT - MARGIN },
-  'discard-pile': { x: DESIGN_WIDTH - MARGIN - CARD_WIDTH / 2, y: DESIGN_HEIGHT - MARGIN },
+  'draw-pile': { x: MARGIN + CARD_WIDTH / 2, y: CARD_BASELINE },
+  'discard-pile': { x: DESIGN_WIDTH - MARGIN - CARD_WIDTH / 2, y: CARD_BASELINE },
 };
 
 export type Piles = {

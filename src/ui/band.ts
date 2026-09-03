@@ -1,13 +1,13 @@
 import type Phaser from 'phaser';
-import { CARD_HEIGHT } from './card-face';
-import { DESIGN_HEIGHT, DESIGN_WIDTH, MARGIN, PANEL_EDGE, PANEL_FILL } from './design-space';
+import { CARD_BASELINE, CARD_HEIGHT } from './card-face';
+import { DESIGN_HEIGHT, DESIGN_WIDTH, PANEL_EDGE, PANEL_FILL } from './design-space';
 import { BAR_HEIGHT } from './resource-bar';
 
 /** How far the resting cards' tops rise above the band: they stand in it as in a tray. */
 const CLEARED = 24;
 
 /** The band's top edge, and with it the bottom of everything the map is drawn in. */
-export const BAND_TOP = DESIGN_HEIGHT - MARGIN - CARD_HEIGHT + CLEARED;
+export const BAND_TOP = CARD_BASELINE - CARD_HEIGHT + CLEARED;
 
 /** What the map is cropped to, in design units: the whole width between the bar and the band. */
 export const MAP_FRAME = {
