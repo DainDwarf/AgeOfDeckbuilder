@@ -36,7 +36,7 @@ const TAIL_LENGTH = 7;
 const TAIL_HALF = 6;
 
 /** The edge a bubble's tail leaves by, and how far along that edge it points. */
-export type Tail = { edge: 'top' | 'left' | 'right'; at: number };
+export type Tail = { edge: 'top' | 'bottom' | 'left' | 'right'; at: number };
 
 /**
  * A bubble in the panel language: the box and its tail as one closed path, so the fill is
@@ -49,7 +49,7 @@ export function drawBubble(
   height: number,
   tail: Tail,
 ): void {
-  const span = tail.edge === 'top' ? width : height;
+  const span = tail.edge === 'top' || tail.edge === 'bottom' ? width : height;
   const at = Math.min(Math.max(tail.at, TAIL_HALF + 4), span - TAIL_HALF - 4);
 
   bubble.clear();
@@ -69,6 +69,11 @@ export function drawBubble(
     bubble.lineTo(width, at + TAIL_HALF);
   }
   bubble.lineTo(width, height);
+  if (tail.edge === 'bottom') {
+    bubble.lineTo(at + TAIL_HALF, height);
+    bubble.lineTo(at, height + TAIL_LENGTH);
+    bubble.lineTo(at - TAIL_HALF, height);
+  }
   bubble.lineTo(0, height);
   if (tail.edge === 'left') {
     bubble.lineTo(0, at + TAIL_HALF);

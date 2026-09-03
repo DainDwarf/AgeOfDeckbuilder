@@ -12,9 +12,6 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
-- **Unplayable reasons on screen** — a card in hand that cannot be played shows why when zoomed:
-  the unaffordable resources it already marks, joined by the blocked reasons (no free tile, no
-  population, no valid target). Doc-impact: none.
 - **The menu** — a menu opens over the table and closes back to it, drawn in Phaser like
   everything else; its first page lists every bound key, each rebound by pressing the new key,
   and the bindings survive a reload; the standing e2e passes. Doc-impact: `docs/DESIGN.md`.

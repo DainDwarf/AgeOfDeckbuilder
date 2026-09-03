@@ -197,21 +197,27 @@ export function costOf(id: CardId): { resource: Resource; amount: number }[] {
   return entries;
 }
 
+/**
+ * What the city or the map has against a card the cost alone would let through: no population to
+ * turn into a unit, a unit already on the city tile, no tile to build on, no unit to move.
+ */
+export type Block = 'population' | 'city' | 'tile' | 'unit';
+
 /** Everything standing between a card and being played: what the city cannot pay, and the map. */
 export type Refusal = {
   readonly unaffordable: readonly Resource[];
-  readonly blocked: boolean;
+  readonly blocked: readonly Block[];
 };
 
 /** What a card outside the hand is drawn as: nothing refuses it. */
-export const NO_REFUSAL: Refusal = { unaffordable: [], blocked: false };
+export const NO_REFUSAL: Refusal = { unaffordable: [], blocked: [] };
 
 export function refusalOf(chronicle: Chronicle, id: CardId): Refusal {
   return { unaffordable: unaffordable(chronicle, id), blocked: blocked(chronicle, id) };
 }
 
 export function playable(refusal: Refusal): boolean {
-  return refusal.unaffordable.length === 0 && !refusal.blocked;
+  return refusal.unaffordable.length === 0 && refusal.blocked.length === 0;
 }
 
 /** The resources this card's cost outruns; empty means the city can pay for it. */
@@ -250,21 +256,30 @@ export function targetTiles(chronicle: Chronicle, id: CardId): TileCoords[] {
   }
 }
 
-/** A card the city can pay for that the map still refuses: there is nothing for it to resolve on. */
-function blocked(chronicle: Chronicle, id: CardId): boolean {
+/**
+ * Every block a card the city can pay for still stands against: there is nothing for it to resolve
+ * on. A unit card can be held up by both of its at once, and answers them in that order.
+ */
+function blocked(chronicle: Chronicle, id: CardId): Block[] {
   const card = CARDS[id];
   switch (card.kind) {
-    case 'unit':
-      return chronicle.population <= 1 || unitAt(chronicle.units, chronicle.city) !== undefined;
+    case 'unit': {
+      const blocks: Block[] = [];
+      if (chronicle.population <= 1) blocks.push('population');
+      if (unitAt(chronicle.units, chronicle.city) !== undefined) blocks.push('city');
+      return blocks;
+    }
     case 'building':
-      return buildable(chronicle, card.building).length === 0;
+      return buildable(chronicle, card.building).length === 0 ? ['tile'] : [];
     case 'order':
-      return !chronicle.units.some(
+      return chronicle.units.some(
         (unit) =>
           unit.faction === 'player' && reachable(chronicle.tiles, chronicle.units, unit).length > 0,
-      );
+      )
+        ? []
+        : ['unit'];
     case 'action':
-      return false;
+      return [];
   }
 }
 

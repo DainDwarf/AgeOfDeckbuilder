@@ -121,6 +121,9 @@ const PRODUCTION: Resources = {
   culture: 0,
 };
 
+/** What the city pays for the worker card, and nothing besides. */
+const FOOD: Resources = { food: 2, production: 0, military: 0, money: 0, science: 0, culture: 0 };
+
 function buildingAt(chronicle: Chronicle, { q, r }: TileCoords): BuildingTypeId | undefined {
   return chronicle.tiles.find((tile) => tile.q === q && tile.r === r)?.building;
 }
@@ -835,13 +838,68 @@ test('a unit card never takes the city’s last population', () => {
     tiles: field(2),
     hand: ['PH_Worker'],
     population: 1,
-    resources: { food: 2, production: 0, military: 0, money: 0, science: 0, culture: 0 },
+    resources: FOOD,
   });
   const spare = { ...last, population: 2 };
 
   expect(playable(refusalOf(last, 'PH_Worker'))).toBe(false);
   expect(outcome(apply(last, { type: 'play', index: 0 }))).toEqual(last);
   expect(outcome(apply(spare, { type: 'play', index: 0 })).population).toBe(1);
+});
+
+test('a unit card the city has no population to spare for is refused for the population', () => {
+  const last = cityOf(['urban'], { tiles: field(2), population: 1, resources: FOOD });
+
+  expect(refusalOf(last, 'PH_Worker').blocked).toEqual(['population']);
+});
+
+test('a unit card is refused for the city while a unit of the player’s stands on it', () => {
+  const held = cityOf(['urban', 'plain'], {
+    tiles: field(2),
+    units: [worker(CITY)],
+    resources: FOOD,
+  });
+
+  expect(refusalOf(held, 'PH_Worker').blocked).toEqual(['city']);
+});
+
+test('a unit card refused for the population and for the city names both', () => {
+  const both = cityOf(['urban'], {
+    tiles: field(2),
+    population: 1,
+    units: [worker(CITY)],
+    resources: FOOD,
+  });
+
+  expect(refusalOf(both, 'PH_Worker').blocked).toEqual(['population', 'city']);
+});
+
+test('a building card with no tile it could stand on is refused for the tile', () => {
+  const alone = cityOf(['urban', 'plain'], { tiles: field(2), resources: PRODUCTION });
+  const worked = { ...alone, units: [worker({ q: 1, r: 0 })] };
+
+  expect(refusalOf(alone, 'PH_Farm').blocked).toEqual(['tile']);
+  expect(refusalOf(worked, 'PH_Farm').blocked).toEqual([]);
+});
+
+test('an order with no unit that can move is refused for the unit', () => {
+  const empty = cityOf(['urban'], { tiles: field(2) });
+  const standing = { ...empty, units: [worker({ q: 1, r: 0 })] };
+
+  expect(refusalOf(empty, 'PH_March').blocked).toEqual(['unit']);
+  expect(refusalOf(standing, 'PH_March').blocked).toEqual([]);
+});
+
+test('a card the city falls short for is refused for the resource it is short of', () => {
+  const short = cityOf(['urban', 'plain'], {
+    tiles: field(2),
+    units: [worker({ q: 1, r: 0 })],
+    resources: { ...PRODUCTION, production: PRODUCTION.production - 1 },
+  });
+  const paid = { ...short, resources: PRODUCTION };
+
+  expect(refusalOf(short, 'PH_Farm').unaffordable).toEqual(['production']);
+  expect(refusalOf(paid, 'PH_Farm')).toEqual({ unaffordable: [], blocked: [] });
 });
 
 test('an enemy arrives on the rim of the map on every fifth turn, and on no turn between', () => {

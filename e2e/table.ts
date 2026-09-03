@@ -258,6 +258,17 @@ export function tooltipUp(page: Page, name: string): Promise<boolean> {
   }, name);
 }
 
+/** What the refusal note says, line by line, or nothing while none stands. */
+export function refusalLines(page: Page): Promise<string[] | undefined> {
+  return page.evaluate(() => {
+    const note = window.named?.('refusal')?.object as Phaser.GameObjects.Container | undefined;
+    if (note === undefined) return undefined;
+    return note.list
+      .filter((line) => line.type === 'Text')
+      .map((line) => (line as Phaser.GameObjects.Text).text);
+  });
+}
+
 /** What the end-turn button reads right now: the turn it stands on, or the hover's own word. */
 export function endTurnLabel(page: Page): Promise<string> {
   return page.evaluate(() => {

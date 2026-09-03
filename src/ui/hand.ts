@@ -19,6 +19,7 @@ import {
   type Surface,
 } from './design-space';
 import { PILE_PLACE } from './piles';
+import { createRefusalNote } from './refusal-note';
 
 /** The clear water between a pile and the lane the hand fans out in. */
 const LANE_PAD = 28;
@@ -66,6 +67,7 @@ export function createHand(
 ): Hand {
   const laneLeft = MARGIN + CARD_WIDTH + LANE_PAD;
   const laneWidth = DESIGN_WIDTH - 2 * laneLeft;
+  const note = createRefusalNote(scene);
 
   let slots: Slot[] = [];
   /** What the hand has in the air and no slot holds; a render owns it and takes it down. */
@@ -85,7 +87,7 @@ export function createHand(
     }
   };
 
-  const restingY = (slot: Slot): number => slot.home.y - (slot.hovered && slot.playable ? LIFT : 0);
+  const restingY = (slot: Slot): number => slot.home.y - (slot.hovered ? LIFT : 0);
 
   /** The card back where it rests, at once or over that long; the promise settles when it is home. */
   const settle = (slot: Slot, duration: number): Promise<void> => {
@@ -108,6 +110,7 @@ export function createHand(
   };
 
   const render = (chronicle: Chronicle): void => {
+    note.hide();
     for (const face of [...flying, ...slots.map((slot) => slot.face.root)]) {
       scene.tweens.killTweensOf(face);
       face.destroy();
@@ -167,10 +170,8 @@ export function createHand(
           if (dragged === undefined) return;
           const { grabbed, lifted } = dragged;
           const at = on.at(pointer.x, pointer.y);
-          const away = { x: at.x - grabbed.x, y: at.y - grabbed.y };
-          const budge = slot.playable ? 1 : 0.1;
-          slot.face.root.setPosition(lifted.x + away.x * budge, lifted.y + away.y * budge);
-          slot.face.arm(slot.playable && -away.y > PLAY_HEIGHT);
+          slot.face.root.setPosition(lifted.x + at.x - grabbed.x, lifted.y + at.y - grabbed.y);
+          slot.face.arm(grabbed.y - at.y > PLAY_HEIGHT);
         })
         .on('dragend', (pointer: Phaser.Input.Pointer) => {
           if (dragged === undefined) return;
@@ -183,7 +184,16 @@ export function createHand(
             settle(slot, 150);
             return;
           }
-          if (slot.playable && grabbed.y - on.at(pointer.x, pointer.y).y > PLAY_HEIGHT) {
+          const at = on.at(pointer.x, pointer.y);
+          if (grabbed.y - at.y > PLAY_HEIGHT) {
+            // Nothing has changed since the render, so the refusal the slot holds is still the
+            // rules' answer and no play is sent for one they would only refuse again.
+            if (!slot.playable) {
+              slot.hovered = false;
+              settle(slot, 150);
+              note.raise(slot.id, slot.refusal, at.x, at.y);
+              return;
+            }
             // A card that takes a target is not played by the release: it waits, in its slot and
             // armed, while the map is aimed at, and comes down only when the card is clicked.
             const targetType = CARDS[slot.id].target;
