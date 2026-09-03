@@ -1,5 +1,13 @@
 import Phaser from 'phaser';
-import { apply, type Chronicle, type Command, type Target, targetTiles } from '../rules/chronicle';
+import {
+  apply,
+  type Chronicle,
+  type Command,
+  endOfTurn,
+  type Stage,
+  type Target,
+  targetTiles,
+} from '../rules/chronicle';
 import { type TileCoords, tileAt, tileKey } from '../rules/map';
 import { CARD_HEIGHT } from './card-face';
 import {
@@ -22,7 +30,11 @@ import { createResourceBar } from './resource-bar';
 import { text } from './text';
 import { createTooltip } from './tooltip';
 
-type Part = { render(chronicle: Chronicle): void };
+type Part = {
+  render(chronicle: Chronicle): void;
+  /** What this part plays for the stage; nothing means the scene renders it at once. */
+  play?(stage: Stage): Promise<void> | undefined;
+};
 
 /** Where the next click on the ringed tile lands: each layer in turn, then the bare ring again. */
 function nextLayer(shown: number | undefined, count: number): number | undefined {
@@ -32,6 +44,7 @@ function nextLayer(shown: number | undefined, count: number): number | undefined
 
 export class ChronicleScene extends Phaser.Scene {
   private current: Chronicle;
+  private sequence = false;
 
   constructor(chronicle: Chronicle) {
     super('chronicle');
@@ -41,6 +54,11 @@ export class ChronicleScene extends Phaser.Scene {
   /** The chronicle as it stands, for whoever holds the game through `window.game`. */
   get chronicle(): Chronicle {
     return this.current;
+  }
+
+  /** Whether the end of turn is still playing out its stages: the chronicle moves on under it. */
+  get playing(): boolean {
+    return this.sequence;
   }
 
   create(): void {
@@ -60,10 +78,47 @@ export class ChronicleScene extends Phaser.Scene {
       view.markInspected(undefined);
     };
 
+    const paint = (): void => {
+      for (const part of parts) part.render(this.current);
+    };
+
     const perform = (command: Command): void => {
       dismiss();
       this.current = apply(this.current, command);
-      for (const part of parts) part.render(this.current);
+      paint();
+    };
+
+    /**
+     * The end of turn, stage by stage: each part is offered the stage, one with no motion for it
+     * renders at once, and the next stage waits on every motion the stage did raise. The button
+     * and the hand are dead for the whole of it — a card played or hovered mid-play would be
+     * animated and then reverted, and would kill the very tweens the stages are waiting on. The
+     * map stays live.
+     */
+    const playOut = async (): Promise<void> => {
+      if (this.sequence) return;
+      this.sequence = true;
+      endTurn.live(false);
+      hand.live(false);
+      dismiss();
+
+      const opened = this.current;
+      for (const stage of endOfTurn(opened)) {
+        this.current = stage.chronicle;
+        const motions: Promise<void>[] = [];
+        for (const part of parts) {
+          const motion = part.play?.(stage);
+          if (motion === undefined) part.render(this.current);
+          else motions.push(motion);
+        }
+        await Promise.all(motions);
+      }
+
+      this.current = apply(opened, { type: 'end-turn' });
+      paint();
+      hand.live(true);
+      endTurn.live(true);
+      this.sequence = false;
     };
 
     view.inspect(
@@ -89,42 +144,45 @@ export class ChronicleScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown-ESC', dismiss);
 
     const overlay = createOverlay(this, ui, (covered) => view.live(!covered));
-    const endTurn = this.addEndTurn(() => perform({ type: 'end-turn' }));
+    const endTurn = this.addEndTurn(() => {
+      void playOut();
+    });
+    const hand = createHand(
+      this,
+      ui,
+      (index) => perform({ type: 'play', index }),
+      (index, targetType, released) => {
+        // The aiming catcher lies under the hand and the piles, so the button is the one thing
+        // left on the UI that has to be dead for the length of the aim.
+        endTurn.live(false);
+        dismiss();
+        const chosen = (target: Target | undefined): void => {
+          endTurn.live(true);
+          if (target === undefined) released();
+          else perform({ type: 'play', index, target });
+        };
+        switch (targetType) {
+          case 'tile':
+            return view.aimTile(
+              this.current,
+              targetTiles(this.current, this.current.hand[index]),
+              chosen,
+            );
+          case 'unit-tile':
+            return view.aimUnitTile(this.current, chosen);
+        }
+      },
+      (id, refusal) => overlay.zoom(id, refusal),
+    );
     parts.push(
       view,
       createResourceBar(this, createTooltip(this, ui)),
       createPiles(this, (pile) => overlay.browse(pile, this.current)),
-      createHand(
-        this,
-        ui,
-        (index) => perform({ type: 'play', index }),
-        (index, targetType, released) => {
-          // The aiming catcher lies under the hand and the piles, so the button is the one thing
-          // left on the UI that has to be dead for the length of the aim.
-          endTurn.live(false);
-          dismiss();
-          const chosen = (target: Target | undefined): void => {
-            endTurn.live(true);
-            if (target === undefined) released();
-            else perform({ type: 'play', index, target });
-          };
-          switch (targetType) {
-            case 'tile':
-              return view.aimTile(
-                this.current,
-                targetTiles(this.current, this.current.hand[index]),
-                chosen,
-              );
-            case 'unit-tile':
-              return view.aimUnitTile(this.current, chosen);
-          }
-        },
-        (id, refusal) => overlay.zoom(id, refusal),
-      ),
+      hand,
       endTurn,
       overlay,
     );
-    for (const part of parts) part.render(this.current);
+    paint();
   }
 
   private addEndTurn(endTurn: () => void): Part & { live(on: boolean): void } {

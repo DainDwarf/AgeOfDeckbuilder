@@ -101,6 +101,13 @@ export function chronicleOf(page: Page): Promise<Chronicle> {
   });
 }
 
+/** Whether the end of turn is still playing out its stages. */
+export function playing(page: Page): Promise<boolean> {
+  return page.evaluate(
+    () => window.game?.scene.getScene<ChronicleScene>('chronicle').playing === true,
+  );
+}
+
 export function onScreen(page: Page, name: string): Promise<OnScreen> {
   return page.evaluate((target) => {
     const found = window.named?.(target);
@@ -256,13 +263,18 @@ export async function dragOut(page: Page, index: number): Promise<void> {
   await page.mouse.up();
 }
 
-/** Ends the turn on the button, and waits for the next one to open — or for the chronicle to end. */
+/**
+ * Ends the turn on the button, and waits for the end of turn to finish playing out — the next turn
+ * open, or the chronicle ended. The turn moves on partway through the sequence, so both hold before
+ * the hand it deals is on the table.
+ */
 export async function endTurn(page: Page): Promise<void> {
   const { turn } = await chronicleOf(page);
   const button = await onScreen(page, 'end-turn');
   await page.mouse.click(button.x, button.y);
   await page.waitForFunction((next) => {
-    const current = window.game?.scene.getScene<ChronicleScene>('chronicle').chronicle;
-    return current?.turn === next || current?.defeat !== undefined;
+    const scene = window.game?.scene.getScene<ChronicleScene>('chronicle');
+    if (scene === null || scene === undefined || scene.playing) return false;
+    return scene.chronicle.turn === next || scene.chronicle.defeat !== undefined;
   }, turn + 1);
 }

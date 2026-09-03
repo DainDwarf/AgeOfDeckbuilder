@@ -6,6 +6,7 @@ import {
   buildable,
   type Chronicle,
   type Command,
+  endOfTurn,
   playable,
   RESOURCES,
   type Resources,
@@ -317,6 +318,56 @@ test('a draw with nothing left anywhere draws what there is', () => {
   const city = cityOf(['urban'], { drawPile: ['PH_March', 'PH_Harvest'] });
 
   expect(apply(city, { type: 'end-turn' }).hand).toEqual(['PH_March', 'PH_Harvest']);
+});
+
+test('the end of turn resolves in order, and its last stage is where the turn ends', () => {
+  const city = cityOf(['urban', 'plain', 'forest'], {
+    tiles: field(2),
+    hand: ['PH_March', 'PH_Farm'],
+    drawPile: ['PH_Worker', 'PH_Warrior', 'PH_Harvest'],
+    discardPile: ['PH_Harvest', 'PH_Worker'],
+    units: [worker({ q: 1, r: 0 }), unitOf('enemy', { q: 2, r: 0 })],
+  });
+
+  const stages = endOfTurn(city);
+
+  expect(stages.map((stage) => stage.name)).toEqual([
+    'discard',
+    'income',
+    'enemy-phase',
+    'turn',
+    'draw',
+    'shuffle',
+    'draw',
+  ]);
+  expect(stages[stages.length - 1].chronicle).toEqual(apply(city, { type: 'end-turn' }));
+});
+
+test('a stage of the end of turn that changed nothing is left out of it', () => {
+  const quiet = cityOf(['urban', 'plain'], {
+    tiles: field(1),
+    drawPile: ['PH_Worker', 'PH_Warrior', 'PH_Farm', 'PH_March', 'PH_Harvest'],
+    discardPile: ['PH_Harvest'],
+  });
+
+  expect(endOfTurn(quiet).map((stage) => stage.name)).toEqual(['income', 'turn', 'draw']);
+});
+
+test('a capture ends the end of turn on the enemy phase, with the defeat set', () => {
+  const overrun = cityOf(['urban'], {
+    tiles: field(2),
+    hand: ['PH_Harvest'],
+    drawPile: ['PH_Worker', 'PH_Warrior'],
+    units: [unitOf('enemy', CITY)],
+  });
+
+  const stages = endOfTurn(overrun);
+  const last = stages[stages.length - 1];
+
+  expect(stages.map((stage) => stage.name)).toEqual(['discard', 'enemy-phase']);
+  expect(last.chronicle.defeat).toEqual({ cause: 'capture', turn: overrun.turn });
+  expect(last.chronicle.turn).toBe(overrun.turn);
+  expect(last.chronicle.hand).toEqual([]);
 });
 
 test('every card of the deck is in exactly one pile through a full cycle', () => {

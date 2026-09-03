@@ -56,6 +56,23 @@ export type Command =
   | { readonly type: 'end-turn' }
   | { readonly type: 'play'; readonly index: number; readonly target?: Target };
 
+/** A full hand. */
+const HAND_SIZE = 5;
+
+/** One step of the end of turn. `turn` is the tick alone; `events` is what the schedule lands. */
+export type StageName =
+  | 'discard'
+  | 'combat'
+  | 'income'
+  | 'enemy-phase'
+  | 'turn'
+  | 'events'
+  | 'draw'
+  | 'shuffle';
+
+/** A step of the end of turn, and the chronicle it leaves behind. */
+export type Stage = { readonly name: StageName; readonly chronicle: Chronicle };
+
 /**
  * The founding: the seed generates the map, the city fills the slot of the tile it stands on, it
  * holds that tile and the six around it, and the deck it is founded on is shuffled into its draw
@@ -69,20 +86,24 @@ export function beginChronicle(seed: number, deck: readonly CardId[]): Chronicle
     tileKey(tile) === tileKey(CITY_TILE) ? { ...tile, building: 'PH_City' } : tile,
   );
   return draw(
-    events({
-      seed,
-      rng: shuffled.rng,
-      tiles,
-      city: CITY_TILE,
-      held,
-      turn: 1,
-      resources: { food: 0, production: 0, military: 0, money: 0, science: 0, culture: 0 },
-      population: held.length,
-      units: [],
-      drawPile: shuffled.items,
-      hand: [],
-      discardPile: [],
-    }),
+    refill(
+      draw(
+        events({
+          seed,
+          rng: shuffled.rng,
+          tiles,
+          city: CITY_TILE,
+          held,
+          turn: 1,
+          resources: { food: 0, production: 0, military: 0, money: 0, science: 0, culture: 0 },
+          population: held.length,
+          units: [],
+          drawPile: shuffled.items,
+          hand: [],
+          discardPile: [],
+        }),
+      ),
+    ),
   );
 }
 
@@ -104,11 +125,38 @@ function perform(chronicle: Chronicle, command: Command): Chronicle {
     case 'play':
       return play(chronicle, command.index, command.target);
     case 'end-turn': {
-      const closed = enemyPhase(income(combat(end(chronicle))));
-      if (closed.defeat !== undefined) return closed;
-      return draw(events({ ...closed, turn: closed.turn + 1 }));
+      const stages = endOfTurn(chronicle);
+      return stages[stages.length - 1]?.chronicle ?? chronicle;
     }
   }
+}
+
+/**
+ * The end of turn, step by ordered step, each with the chronicle it leaves: a step that changed
+ * nothing is absent, and the list ends at the enemy phase when the city falls there. The chronicle
+ * after the last stage is what the `end-turn` command answers.
+ */
+export function endOfTurn(chronicle: Chronicle): Stage[] {
+  const stages: Stage[] = [];
+  let standing = chronicle;
+  const staged = (name: StageName, next: Chronicle): void => {
+    if (next === standing) return;
+    standing = next;
+    stages.push({ name, chronicle: next });
+  };
+
+  staged('discard', discard(standing));
+  staged('combat', combat(standing));
+  staged('income', income(standing));
+  staged('enemy-phase', enemyPhase(standing));
+  if (standing.defeat !== undefined) return stages;
+
+  staged('turn', { ...standing, turn: standing.turn + 1 });
+  staged('events', events(standing));
+  staged('draw', draw(standing));
+  staged('shuffle', refill(standing));
+  staged('draw', draw(standing));
+  return stages;
 }
 
 /** The city's fall: the chronicle records what took it and on which turn, and ends there. */
@@ -280,26 +328,29 @@ function events(chronicle: Chronicle): Chronicle {
   return chronicle.turn % 5 === 0 ? arrival(chronicle) : chronicle;
 }
 
+/** Cards off the draw pile into the hand, up to a full hand or as far as the pile goes. */
 function draw(chronicle: Chronicle): Chronicle {
-  let { rng, drawPile, discardPile } = chronicle;
-  const hand = [...chronicle.hand];
-
-  while (hand.length < 5) {
-    if (drawPile.length === 0) {
-      if (discardPile.length === 0) break;
-      const refilled = shuffle(rng, discardPile);
-      rng = refilled.rng;
-      drawPile = refilled.items;
-      discardPile = [];
-    }
-    hand.push(drawPile[0]);
-    drawPile = drawPile.slice(1);
-  }
-
-  return { ...chronicle, rng, drawPile, hand, discardPile };
+  const taken = Math.min(HAND_SIZE - chronicle.hand.length, chronicle.drawPile.length);
+  if (taken <= 0) return chronicle;
+  return {
+    ...chronicle,
+    hand: [...chronicle.hand, ...chronicle.drawPile.slice(0, taken)],
+    drawPile: chronicle.drawPile.slice(taken),
+  };
 }
 
-function end(chronicle: Chronicle): Chronicle {
+/** The discard pile shuffled into a draw pile that ran out, while the hand is still short. */
+function refill(chronicle: Chronicle): Chronicle {
+  if (chronicle.hand.length >= HAND_SIZE) return chronicle;
+  if (chronicle.drawPile.length > 0 || chronicle.discardPile.length === 0) return chronicle;
+
+  const refilled = shuffle(chronicle.rng, chronicle.discardPile);
+  return { ...chronicle, rng: refilled.rng, drawPile: refilled.items, discardPile: [] };
+}
+
+/** The end of the turn: what is left of the hand goes to the discard pile. */
+function discard(chronicle: Chronicle): Chronicle {
+  if (chronicle.hand.length === 0) return chronicle;
   return {
     ...chronicle,
     hand: [],
@@ -333,7 +384,7 @@ function combat(chronicle: Chronicle): Chronicle {
     if (units[target].faction !== unit.faction) units = attack(units, attacker, target);
   }
 
-  return { ...chronicle, units };
+  return units === chronicle.units ? chronicle : { ...chronicle, units };
 }
 
 function income(chronicle: Chronicle): Chronicle {
@@ -349,7 +400,9 @@ function income(chronicle: Chronicle): Chronicle {
       resources[resource] += (yields[resource] ?? 0) + (built[resource] ?? 0);
     }
   }
-  return { ...chronicle, resources };
+  return RESOURCES.every((resource) => resources[resource] === chronicle.resources[resource])
+    ? chronicle
+    : { ...chronicle, resources };
 }
 
 /**
@@ -373,5 +426,15 @@ function enemyPhase(chronicle: Chronicle): Chronicle {
     const intent = ENEMY_SCRIPTS[unit.script].intentOf({ ...chronicle, units }, index);
     units[index] = { ...unit, intent };
   }
-  return { ...chronicle, units };
+
+  const stirred = units.some(
+    (unit, index) => tileAndIntent(unit) !== tileAndIntent(chronicle.units[index]),
+  );
+  return stirred ? { ...chronicle, units } : chronicle;
+}
+
+/** All an enemy phase can leave changed on a unit: the tile it stands on, the tile it aims at. */
+function tileAndIntent(unit: Unit): string {
+  const intent = unit.faction === 'enemy' && unit.intent !== undefined ? tileKey(unit.intent) : '';
+  return `${tileKey(unit.tile)}>${intent}`;
 }
