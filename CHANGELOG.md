@@ -1,7 +1,7 @@
 # Changelog
 
-Player-facing release notes. Written at a version bump, for the people who play the game; never a
-development log, and never the source another document cites for what is. Loosely follows
+Player-facing release notes. Written at a version bump, for players; never a development log, and
+never the source another document cites for what is. Loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
