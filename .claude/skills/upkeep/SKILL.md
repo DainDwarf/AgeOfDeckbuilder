@@ -29,8 +29,9 @@ Read every page reachable from `docs/index.md`. For each, check:
 
 Oldest first. For each `BOARD.md` line untouched for 20 cycles: still wanted, still completable,
 still correctly scoped? Propose delete, demote to `IDEAS.md`, or keep with the reason. For each
-`IDEAS.md` entry untouched for 20 cycles: propose delete or promote through `/intake`. A task
-file in `board/` whose line is gone is deleted now.
+`IDEAS.md` entry untouched for 20 cycles: restate it in one line so the user sees it again, and
+propose promotion through `/intake` where it has become due. Age alone never evicts an idea;
+`IDEAS.md` is a long-term document. A task file in `board/` whose line is gone is deleted now.
 
 ## 3. Harness ratchet
 
