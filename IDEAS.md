@@ -45,6 +45,8 @@ a [`BOARD.md`](BOARD.md) line. Say
   on the clipboard, so any game a player pastes back can be replayed to the turn.
 - **Income flies in from the tiles** (economy and city-management version): at income, each
   yielding tile sends its resource to the bar, so the player sees where the numbers come from.
+- **Combat log**: a readable record of what the end of turn did — who attacked whom, what was
+  killed, who moved where — for a player who missed the motion or wants it in words.
 - **Type-size floor, verified small** (art-style pass scope): minimum type sizes generous enough
   that the smallest window we care about stays readable; ui-check verifies at that size. Uniform
   window scaling plus card zoom covers the rest — no UI-scale slider unless playtesting demands it.
