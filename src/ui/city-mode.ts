@@ -9,7 +9,15 @@ const DEPTH = 2;
 /** How wide the frame's stroke is; Phaser centres a stroke on its path, hence the half-width inset. */
 const STROKE = 8;
 
-const CHIP = { x: 24, y: 60, width: 118, height: 30 };
+/** How far the chip stands clear of the stroke's inner edge, above it and to its right. */
+const CLEAR = 16;
+
+const CHIP = {
+  width: 118,
+  height: 30,
+  x: MAP_FRAME.x + MAP_FRAME.width - STROKE - CLEAR - 118,
+  y: MAP_FRAME.y + STROKE + CLEAR,
+};
 
 const LABEL_STYLE = { fontFamily: UI_FONT, fontSize: '16px', fontStyle: 'bold', color: '#0d1014' };
 
