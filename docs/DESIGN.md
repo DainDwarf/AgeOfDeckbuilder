@@ -245,17 +245,19 @@ A tile is layers, and its income, movement cost and sight are the sum of what it
 🔧 A building's yield may read its neighbours. Nothing in the first playable does; the door
 is there so that adjacency is content when it comes.
 
-**The map is generated in two layers.** It is a hexagonal disc with the city's tile at its centre.
+**The map is generated in three layers.** It is a hexagonal disc with the city's tile at its centre.
 First the **biomes**: origin tiles scattered over the disc spread outward until every tile belongs to
 one biome — land, sea, and whatever the list comes to hold. Their kinds are **dealt** as quotas
 rather than diced one by one, because independent dice can deal a map with no sea at all; the
 city's biome is dealt land, and its origin is the city's tile. Second, the **terrain scatter**:
 every tile draws its terrain from the weighted table of its biome, so a sea biome is water with
 the odd island in it and a land one is mixed. The city's tile is then **urban**, a terrain that
-today enters the map only where the city stands.
+today enters the map only where the city stands. Third, the **feature deal**: each feature names
+the terrain it lies on and is dealt onto a share of the tiles of that terrain, the city's tile
+never among them, for the same reason the biomes are dealt.
 
-Biomes and their tables are content, like the terrain list: they grow without a design decision,
-and the numbers in them are tuning.
+Biomes and their tables are content, like the terrain and feature lists: they grow without a
+design decision, and the numbers in them are tuning.
 
 🔧 **Rivers** are generated with flow: each rises in a high biome — hills, a mountain range — and
 runs downhill until it reaches sea. The stated default makes a river a tile feature; a river
