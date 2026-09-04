@@ -12,6 +12,7 @@ export const CONTROLS = [
   'zoom-in',
   'zoom-out',
   'city',
+  'yields',
   'back',
 ] as const;
 
@@ -30,6 +31,7 @@ export const DEFAULTS: Bindings = {
   'zoom-in': ['WheelUp', undefined],
   'zoom-out': ['WheelDown', undefined],
   city: ['C', undefined],
+  yields: ['Tab', undefined],
   back: ['Escape', 'Mouse2'],
 };
 

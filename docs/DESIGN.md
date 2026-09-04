@@ -35,7 +35,7 @@ fiction's own word: *Chronicles of the mercantile civilization in the Age of Pow
   to the famine. A deck has a specialty; it never has an omission.
 - **Cards are the verbs; the map holds the nouns.** Buildings and units enter the map through
   cards, and immediate effects are cards. Standing things do their standing thing for free — a
-  garrison defends where it stands, a farm with a person assigned produces — and **changing the
+  garrison defends where it stands, a farm with a person assigned yields — and **changing the
   map costs a card**: marching, building, terraforming, attacking, negotiating.
 - Five core resources: **food, production, military, money, science**. 🔧 Their jobs: food feeds
   and grows the population; production builds buildings and units and shapes tiles; military pays
@@ -109,14 +109,14 @@ raises the menu only from a clean chronicle screen. Nothing pauses, because noth
 is untimed, and a menu over the chronicle screen is the chronicle screen waiting.
 
 **Controls** lists every key the game binds — the four directions the map pans, the two it zooms,
-the city key, and the back key — with two slots to each. A key is rebound by pressing its slot and
-then the key itself, whatever that key is; a key already bound elsewhere moves, leaving the slot
-that had it empty. Every mouse button but the one that presses the chronicle screen binds there
-like a key, and presses nothing on the chronicle screen; the browser's own menu never shows over
-the game. A notch of the wheel binds like a key too, one key each way; the map zooms one notch a
-press, and only through the two zooms — a wheel notch up and a wheel notch down until they are
-rebound. **Default** puts every key back where it began, **Back** closes the window, and what the
-player binds is kept in the browser from one launch to the next.
+the city key, the yield key, and the back key — with two slots to each. A key is rebound by
+pressing its slot and then the key itself, whatever that key is; a key already bound elsewhere
+moves, leaving the slot that had it empty. Every mouse button but the one that presses the
+chronicle screen binds there like a key, and presses nothing on the chronicle screen; the browser's
+own menu never shows over the game. A notch of the wheel binds like a key too, one key each way;
+the map zooms one notch a press, and only through the two zooms — a wheel notch up and a wheel
+notch down until they are rebound. **Default** puts every key back where it began, **Back** closes
+the window, and what the player binds is kept in the browser from one launch to the next.
 
 ## Systems
 
@@ -198,6 +198,17 @@ that key, by the back key, or by the chip naming the mode; the map's frame drawn
 that chip are how the chronicle screen shows the mode is on. Coming into city mode lets go of a card
 being aimed and of a tile being read, and a window standing over the chronicle screen takes the city
 key instead.
+
+### The yield overlay ✅
+
+The **yield overlay** shows what every tile yields: a glyph for each point of each resource, in the
+colour that resource is known by, over a map dimmed under them. It reads the tile's layers and
+nothing else — whoever stands there and whatever occupies it change what the tile gives at income,
+never what the overlay shows. Pressing one of the five core readings on the resource bar toggles
+that resource in or out of the overlay, several at a time, and the reading of a resource shown is
+latched down in the bar; the **yield key** clears the overlay, or, from nothing, shows every
+resource, culture included. It is a display and not a mode: the back key leaves it standing, city
+mode stands with it, and either is entered and left without touching the other.
 
 ### The map ✅
 

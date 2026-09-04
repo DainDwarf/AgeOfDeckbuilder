@@ -6,10 +6,10 @@ import {
   CITY_TILE,
   generateMap,
   neighbours,
-  TERRAIN_YIELDS,
   type Tile,
   type TileCoords,
   tileKey,
+  tileYield,
 } from './map';
 import type { Rng } from './rng';
 import { seedRng, shuffle as shuffleItems } from './rng';
@@ -478,12 +478,8 @@ function income(chronicle: Chronicle): Chronicle {
   for (const tile of chronicle.tiles) {
     if (!held.has(tileKey(tile))) continue;
     if (unitAt(chronicle.units, tile)?.faction === 'enemy') continue;
-    const yields = TERRAIN_YIELDS[tile.terrain];
-    const built: Partial<Resources> =
-      tile.building === undefined ? {} : BUILDINGS[tile.building].yields;
-    for (const resource of RESOURCES) {
-      resources[resource] += (yields[resource] ?? 0) + (built[resource] ?? 0);
-    }
+    const yields = tileYield(tile);
+    for (const resource of RESOURCES) resources[resource] += yields[resource] ?? 0;
   }
   return RESOURCES.every((resource) => resources[resource] === chronicle.resources[resource])
     ? chronicle

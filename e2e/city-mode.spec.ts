@@ -1,5 +1,4 @@
 import { expect, type Page, test } from '@playwright/test';
-import type Phaser from 'phaser';
 import {
   click,
   onScreen,
@@ -7,23 +6,13 @@ import {
   ringedTile,
   settled,
   shownLayer,
+  shows,
   standing,
   watch,
 } from './chronicle-screen';
 
 /** A tile on bare map, clear of the resource bar, the piles and the hand. */
 const BARE = { name: 'tile-0,-3', key: '0,-3' };
-
-/** Whether the named object is shown; city mode's marks stand there hidden while it is off. */
-function shows(page: Page, name: string): Promise<boolean> {
-  return page.evaluate((target) => {
-    const found = window.named?.(target)?.object as Phaser.GameObjects.GameObject & {
-      visible: boolean;
-    };
-    if (found === undefined) throw new Error(`there is no ${target}`);
-    return found.visible;
-  }, name);
-}
 
 /** Whether the chronicle screen shows city mode is on: both marks stand, or neither does. */
 async function inCityMode(page: Page): Promise<boolean> {

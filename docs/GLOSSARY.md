@@ -67,6 +67,7 @@ deliberate exception the reviewer sees; there is no silent allow-list.
 | **terrain** | A tile's base layer: plain, forest, hills, …; one per tile, changed only by terraforming. | tile type |
 | **feature** | A generated extra on a tile: a fertile plain, a river. | bonus |
 | **improvement** | A layer a worker lays on a tile through an action; distinct ones stack, the same one never twice. | — |
+| **yield** | What a tile's layers give at income, resource by resource. | output, produce, harvest |
 | **claim** | To spend culture on a tile adjacent to one the city owns; free of cards. | buy, purchase, expand, annex |
 | **culture** | The resource that claims tiles. | — |
 | **health** | A unit's remaining life; at zero the unit is killed. | HP, hit points, hitpoints, life |

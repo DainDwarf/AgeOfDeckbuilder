@@ -74,6 +74,7 @@ const TEXT = {
   'control.zoom-in': 'Zoom in',
   'control.zoom-out': 'Zoom out',
   'control.city': 'City mode',
+  'control.yields': 'Yield overlay',
   'control.back': 'Back',
   'controls.press': 'Press a key',
   'controls.empty': '—',

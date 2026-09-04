@@ -17,7 +17,11 @@ import type { Tooltip } from './tooltip';
 
 export const BAR_HEIGHT = 48;
 
-const WORD_STYLE = { fontFamily: UI_FONT, fontSize: '18px', color: '#4a5058' };
+/** The word of a reading, and the ink it is lifted to while the reading is latched down. */
+const WORD_INK = '#4a5058';
+const SUNK_WORD_INK = '#0d1014';
+
+const WORD_STYLE = { fontFamily: UI_FONT, fontSize: '18px', color: WORD_INK };
 const VALUE_STYLE = { fontFamily: UI_FONT, fontSize: '18px', color: '#0d1014' };
 
 const CHIP_TO_WORD = 18;
@@ -26,6 +30,16 @@ const BETWEEN = 22;
 
 const MENU_HEIGHT = 32;
 const MENU_PADDING = 12;
+
+/** How far a latched reading's well reaches past the reading on either side. */
+const WELL_MARGIN = 10;
+
+/** The well a latched reading sits in: its floor, the edge it is cut into, and the light beneath. */
+const WELL_FILL = 0xb4b9c0;
+const WELL_LIGHT = 0xeef0f3;
+
+/** How far a latched reading is pressed down and to the right. */
+const SUNK = 1;
 
 type Reading = Resource | 'population';
 
@@ -44,13 +58,22 @@ const LEFT: readonly Reading[] = ['food', 'production', 'military', 'money', 'sc
 const RIGHT: readonly Reading[] = ['culture', 'population'];
 
 /** The readings the city is managed by: pressing either of them enters city mode. */
-const CITY_READINGS: readonly Reading[] = ['culture', 'population'];
+const CITY_READINGS = ['culture', 'population'] as const;
+
+/** Whether a press on this reading enters city mode instead of toggling its resource. */
+function managesCity(key: Reading): key is (typeof CITY_READINGS)[number] {
+  return CITY_READINGS.some((reading) => reading === key);
+}
 
 type Entry = {
   readonly key: Reading;
   readonly chip: Phaser.GameObjects.Rectangle;
   readonly word: Phaser.GameObjects.Text;
   readonly value: Phaser.GameObjects.Text;
+  /** The chip, the word and the value together: what the latch presses into the bar. */
+  readonly face: Phaser.GameObjects.Container;
+  /** The well the reading sits in while it is latched down; it stands only then. */
+  readonly well: Phaser.GameObjects.Container;
   /** What the value reads, as the number a rise ticks through; the text follows it. */
   readonly ticking: { count: number };
   readonly hover: Phaser.GameObjects.Zone;
@@ -59,6 +82,8 @@ type Entry = {
 export type ResourceBar = {
   render(chronicle: Chronicle): void;
   play(stage: Stage): Promise<void> | undefined;
+  /** Latches down the readings of these resources, and lets every other one back up. */
+  latch(shown: ReadonlySet<Resource>): void;
 };
 
 export function createResourceBar(
@@ -66,6 +91,7 @@ export function createResourceBar(
   tooltip: Tooltip,
   menu: () => void,
   cityMode: () => void,
+  toggleYield: (resource: Resource) => void,
 ): ResourceBar {
   const bar = scene.add.container(0, 0).setDepth(10);
   bar.add(scene.add.rectangle(0, 0, DESIGN_WIDTH, BAR_HEIGHT, PANEL_FILL).setOrigin(0, 0));
@@ -87,7 +113,9 @@ export function createResourceBar(
 
   const entries = [...left, ...right];
   for (const entry of entries) {
-    if (CITY_READINGS.includes(entry.key)) onClick(entry.hover, cityMode);
+    const { key } = entry;
+    if (managesCity(key)) onClick(entry.hover, cityMode);
+    else onClick(entry.hover, () => toggleYield(key));
   }
 
   /** The readings the bar has ticking; a render owns them and takes them down. */
@@ -133,6 +161,14 @@ export function createResourceBar(
     play(stage: Stage): Promise<void> | undefined {
       return stage.name === 'income' ? rise(stage.chronicle) : undefined;
     },
+    latch(shown: ReadonlySet<Resource>): void {
+      for (const entry of entries) {
+        const down = entry.key !== 'population' && shown.has(entry.key);
+        entry.well.setVisible(down);
+        entry.face.setPosition(down ? SUNK : 0, down ? SUNK : 0);
+        entry.word.setColor(down ? SUNK_WORD_INK : WORD_INK);
+      }
+    },
   };
 }
 
@@ -168,6 +204,28 @@ function digitSlot(scene: Phaser.Scene): number {
   return width;
 }
 
+/**
+ * The well of one reading: the floor it sits on, the edge it is cut into above and to the left, and
+ * the light that catches below and to the right. Laid out where the reading is placed.
+ */
+function createWell(scene: Phaser.Scene, key: Reading): Phaser.GameObjects.Container {
+  const parts = [WELL_FILL, PANEL_EDGE, PANEL_EDGE, WELL_LIGHT, WELL_LIGHT].map((colour) =>
+    scene.add.rectangle(0, 0, 1, 1, colour).setOrigin(0, 0),
+  );
+  return scene.add.container(0, 0, parts).setName(`reading-${key}-well`).setVisible(false);
+}
+
+/** The well's five rectangles laid over the reading's own zone: the floor, then the four edges. */
+function placeWell(well: Phaser.GameObjects.Container, x: number, width: number): void {
+  const height = BAR_HEIGHT - 1;
+  const [floor, top, left, bottom, right] = well.list as Phaser.GameObjects.Rectangle[];
+  floor.setPosition(x, 0).setSize(width, height);
+  top.setPosition(x, 0).setSize(width, 1);
+  left.setPosition(x, 0).setSize(1, height);
+  bottom.setPosition(x, height - 1).setSize(width, 1);
+  right.setPosition(x + width - 1, 0).setSize(1, height);
+}
+
 function createEntry(
   scene: Phaser.Scene,
   bar: Phaser.GameObjects.Container,
@@ -189,8 +247,11 @@ function createEntry(
     () => tooltip.under(text(`tooltip.${key}`), hover.x, hover.x + hover.width / 2, BAR_HEIGHT + 8),
     () => tooltip.hide(),
   );
-  bar.add([chip, word, value, hover]);
-  return { key, chip, word, value, ticking: { count: 0 }, hover };
+  // The well is added first, so the reading it holds is painted inside it.
+  const well = createWell(scene, key);
+  const face = scene.add.container(0, 0, [chip, word, value]);
+  bar.add([well, face, hover]);
+  return { key, chip, word, value, face, well, ticking: { count: 0 }, hover };
 }
 
 function widthOf({ word }: Entry, slot: number): number {
@@ -208,11 +269,15 @@ function place(entries: Entry[], from: number, slot: number): void {
   const middle = BAR_HEIGHT / 2;
   let x = from;
   for (const entry of entries) {
-    const { chip, word, value, hover } = entry;
+    const { chip, word, value, hover, well } = entry;
     chip.setPosition(x + 5, middle);
     word.setPosition(x + CHIP_TO_WORD, middle);
     value.setPosition(x + CHIP_TO_WORD + word.width + WORD_TO_VALUE, middle);
-    hover.setPosition(x, 0).setSize(widthOf(entry, slot), BAR_HEIGHT);
+    // The press reaches as far as the well the latch draws, so a reading is pressed where it looks.
+    const wellX = x - WELL_MARGIN;
+    const wellWidth = widthOf(entry, slot) + 2 * WELL_MARGIN;
+    placeWell(well, wellX, wellWidth);
+    hover.setPosition(wellX, 0).setSize(wellWidth, BAR_HEIGHT - 1);
     x += widthOf(entry, slot) + BETWEEN;
   }
 }

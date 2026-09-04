@@ -1,4 +1,4 @@
-import type { Resources } from './chronicle';
+import type { Resource, Resources } from './chronicle';
 import { nextRng, type Rng, shuffle } from './rng';
 
 /** The weighted terrain table each biome scatters over the tiles it grows onto. */
@@ -60,6 +60,22 @@ export type Tile = TileCoords & {
 };
 
 export const CITY_TILE: TileCoords = { q: 0, r: 0 };
+
+/**
+ * What a tile's layers give at income, resource by resource: the one answer income and the yield
+ * overlay both read. A resource left out is none of it.
+ */
+export function tileYield(tile: Tile): Partial<Resources> {
+  const summed: Partial<Resources> = { ...TERRAIN_YIELDS[tile.terrain] };
+  if (tile.building === undefined) return summed;
+  for (const [resource, amount] of Object.entries(BUILDINGS[tile.building].yields) as [
+    Resource,
+    number,
+  ][]) {
+    summed[resource] = (summed[resource] ?? 0) + amount;
+  }
+  return summed;
+}
 
 const DIRECTIONS: readonly TileCoords[] = [
   { q: 1, r: 0 },

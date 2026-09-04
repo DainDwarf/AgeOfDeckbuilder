@@ -14,6 +14,7 @@ const AS_FOUND = [
   ['Wheel up', '—'],
   ['Wheel down', '—'],
   ['C', '—'],
+  ['Tab', '—'],
   ['Escape', 'Right click'],
 ];
 
@@ -25,6 +26,7 @@ const LISTED = [
   'zoom-in',
   'zoom-out',
   'city',
+  'yields',
   'back',
 ];
 
@@ -181,6 +183,27 @@ test('the back key binds like any other, and the Back button closes without it',
 
   await page.keyboard.press('b');
   await expect.poll(() => standing(page, 'settings')).toBe(true);
+
+  expect(problems).toEqual([]);
+});
+
+// Tab is the browser's key to move on with, and the game keeps it: a slot listening takes it like
+// any other, and it stays where the player put it.
+test('a slot takes the Tab key, which the game holds on to', async ({ page }) => {
+  const problems = watch(page);
+
+  await open(page, 1, 'PH_Deck');
+  await intoControls(page);
+
+  await click(page, 'controls-pan-up-1');
+  await page.keyboard.press('Tab');
+  await expect.poll(() => slotReads(page, 'pan-up', 1)).toBe('Tab');
+  expect(await slotReads(page, 'yields', 0)).toBe('—');
+
+  await outOfControls(page);
+
+  // The frame pans up, so what stands on the map comes down the screen.
+  expect(await heldBy(page, 'Tab')).toBeGreaterThan(40);
 
   expect(problems).toEqual([]);
 });

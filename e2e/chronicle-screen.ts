@@ -180,6 +180,17 @@ export function standing(page: Page, name: string): Promise<boolean> {
   return page.evaluate((target) => window.named?.(target) !== undefined, name);
 }
 
+/** Whether the named object is shown; what a mode raises stands there hidden while it is off. */
+export function shows(page: Page, name: string): Promise<boolean> {
+  return page.evaluate((target) => {
+    const found = window.named?.(target)?.object as
+      | (Phaser.GameObjects.GameObject & { visible: boolean })
+      | undefined;
+    if (found === undefined) throw new Error(`there is no ${target}`);
+    return found.visible;
+  }, name);
+}
+
 /** How many objects of that name stand on the chronicle screen: one still painted, plus any left over. */
 export function counted(page: Page, name: string): Promise<number> {
   return page.evaluate((target) => {

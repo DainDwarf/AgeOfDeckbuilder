@@ -1,5 +1,5 @@
 import type Phaser from 'phaser';
-import { keyOf } from './bindings';
+import { boundTo, CONTROLS, keyOf } from './bindings';
 import { whileUp } from './design-space';
 
 /** The two the game reads its controls from, wherever the press came from. */
@@ -85,9 +85,28 @@ export function readMouseKeys(game: Phaser.Game): void {
   );
 }
 
-/** Every key pressed while the scene is up, from the keyboard and from the mouse alike. */
+/**
+ * Whether this press is the game's to keep the browser out of: a key one of the controls stands on,
+ * pressed on its own. A binding is one key's label and never a chord, so a press under Ctrl, Meta or
+ * Alt is the browser's shortcut — Ctrl+S saves the page — however the letter under it is bound.
+ */
+function carries(event: KeyboardEvent, key: string): boolean {
+  if (event.ctrlKey || event.metaKey || event.altKey) return false;
+  return CONTROLS.some((control) => boundTo(key, control));
+}
+
+/**
+ * Every key pressed while the scene is up, from the keyboard and from the mouse alike. A key the
+ * game binds keeps the browser out of it — Tab would move the focus off the canvas, the arrows and
+ * the space bar would scroll the page. Read after the press has been answered: a slot of the
+ * Controls window binds the very key that opened it, and that key is the game's from then on.
+ */
 export function onKeyDown(scene: Phaser.Scene, pressed: (key: string) => void): void {
-  scene.input.keyboard?.on('keydown', (event: KeyboardEvent) => pressed(keyOf(event.key)));
+  scene.input.keyboard?.on('keydown', (event: KeyboardEvent) => {
+    const key = keyOf(event.key);
+    pressed(key);
+    if (carries(event, key)) event.preventDefault();
+  });
   whileUp(scene, scene.game.events, DOWN, pressed);
 }
 

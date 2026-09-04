@@ -6,6 +6,8 @@ import {
   type Chronicle,
   type Command,
   outcome,
+  RESOURCES,
+  type Resource,
   type Stage,
   type Target,
   targetTiles,
@@ -268,17 +270,54 @@ export class ChronicleScene extends Phaser.Scene {
       return true;
     };
 
-    // The one place the city key and the back key are answered: a slot of the Controls window
-    // listening takes either key first, whatever it is, and anything standing over the map swallows
-    // the city key. Otherwise the back key takes back one thing, the outermost that is up or
-    // pending, and only a chronicle screen with nothing on it raises the menu. A second listener
-    // that acted on these keys would be a second answer to the one press; the map's own listener
-    // answers the pan and zoom keys and no other.
+    const bar = createResourceBar(
+      this,
+      createTooltip(this, ui),
+      menu,
+      enterCityMode,
+      (resource) => {
+        toggleYield(resource);
+      },
+    );
+
+    /**
+     * The resources the yield overlay shows, empty while it is off. It is a display and not a mode:
+     * city mode, an aim, a tile read and a state change all leave it exactly as it stands.
+     */
+    let yields = new Set<Resource>();
+
+    const showYields = (): void => {
+      view.showYields(yields);
+      bar.latch(yields);
+    };
+
+    /** One resource in or out of the overlay: the bar's five core readings each toggle their own. */
+    const toggleYield = (resource: Resource): void => {
+      if (!yields.delete(resource)) yields.add(resource);
+      showYields();
+    };
+
+    /** The yield key: everything the overlay shows is cleared, or, from nothing, every resource. */
+    const toggleYields = (): void => {
+      yields = yields.size > 0 ? new Set() : new Set(RESOURCES);
+      showYields();
+    };
+
+    // The one place the city key, the yield key and the back key are answered: a slot of the
+    // Controls window listening takes any of them first, whatever it is, and anything standing over
+    // the map swallows the city key and the yield key. Otherwise the back key takes back one thing,
+    // the outermost that is up or pending, and only a chronicle screen with nothing on it raises the
+    // menu. A second listener that acted on these keys would be a second answer to the one press;
+    // the map's own listener answers the pan and zoom keys and no other.
     onKeyDown(this, (key) => {
       if (overlay.binds(key)) return;
       if (boundTo(key, 'city')) {
         if (covered) return;
         if (!leaveCityMode()) enterCityMode();
+        return;
+      }
+      if (boundTo(key, 'yields')) {
+        if (!covered) toggleYields();
         return;
       }
       if (!boundTo(key, 'back')) return;
@@ -289,7 +328,7 @@ export class ChronicleScene extends Phaser.Scene {
 
     parts.push(
       view,
-      createResourceBar(this, createTooltip(this, ui), menu, enterCityMode),
+      bar,
       createPiles(this, (pile) => overlay.browse(pile, this.current)),
       hand,
       endTurn,

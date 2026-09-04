@@ -1,5 +1,11 @@
 import Phaser from 'phaser';
-import type { Chronicle, Stage, Target } from '../rules/chronicle';
+import {
+  type Chronicle,
+  RESOURCES,
+  type Resource,
+  type Stage,
+  type Target,
+} from '../rules/chronicle';
 import {
   type BuildingTypeId,
   CITY_TILE,
@@ -7,6 +13,7 @@ import {
   type Tile,
   type TileCoords,
   tileKey,
+  tileYield,
 } from '../rules/map';
 import { type Faction, reachable, type Unit, type UnitTypeId, unitAt } from '../rules/units';
 import { MAP_FRAME } from './band';
@@ -25,6 +32,7 @@ import {
   whileUp,
 } from './design-space';
 import { onKeyDown, onKeyUp } from './keys';
+import { RESOURCE_COLOURS } from './resource-bar';
 
 const TILE_SIZE = 24;
 
@@ -75,6 +83,24 @@ const GLOW_DEPTH = 2;
 const BUILDING_DEPTH = 3;
 
 const UNIT_DEPTH = 4;
+
+/** Over everything the map draws, while the yield overlay stands. */
+const DIM_DEPTH = 5;
+
+/** Over the dim: what the map keeps at full strength through it. */
+const OVER_DIM_DEPTH = 6;
+
+const YIELD_DEPTH = 7;
+
+/** How much of the map is left showing under the yield overlay's dim. */
+const DIM_ALPHA = 0.6;
+
+/** One glyph, corner to corner, and how far apart the glyphs of a tile stand. */
+const GLYPH = 6;
+const GLYPH_PITCH = 8;
+
+/** How many glyphs a row of them holds before the next row starts. */
+const GLYPH_ROW = 3;
 
 /** How close the map comes and how far it goes, on top of the factor the design space renders at. */
 const MIN_ZOOM = 0.75;
@@ -139,6 +165,11 @@ export type MapView = {
   inspect(inspected: (found: Inspection | undefined) => void, zoomed: () => void): void;
   /** Rings the tile being inspected, or clears the ring. */
   markInspected(tile: TileCoords | undefined): void;
+  /**
+   * Shows what every tile yields of these resources, a glyph for each point of it, over a dimmed
+   * map; an empty set takes the overlay down.
+   */
+  showYields(shown: ReadonlySet<Resource>): void;
   /** Whether the pan and zoom keys reach the map; they do not while anything covers it. */
   live(on: boolean): void;
 };
@@ -163,6 +194,19 @@ export function unitMark(scene: Phaser.Scene, unit: Unit): Phaser.GameObjects.Po
   return scene.add
     .polygon(0, 0, UNIT_MARKS[unit.stats.id], FACTION_COLOURS[unit.faction])
     .setStrokeStyle(2, OUTLINE);
+}
+
+// Phaser's WebGL stroke skips a polygon point whose origin-shifted position lands on the raw point
+// before it, which a centred diamond always has once, whatever order its corners are given in: the
+// glyph is a square turned, never a polygon, or its outline comes out open and cut across.
+/** The one way a point of yield is drawn: a diamond in the colour its resource is known by. */
+function yieldMark(scene: Phaser.Scene, resource: Resource): Phaser.GameObjects.Rectangle {
+  const side = GLYPH / Math.SQRT2;
+  return scene.add
+    .rectangle(0, 0, side, side, RESOURCE_COLOURS[resource])
+    .setStrokeStyle(1, OUTLINE)
+    .setAngle(45)
+    .setName(`yield-${resource}`);
 }
 
 /** The one way an intent is drawn: the enemy's ring around the tile its attack is aimed at. */
@@ -261,7 +305,14 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
   const intents = scene.add.container(0, 0).setDepth(GLOW_DEPTH).setName('intents');
   const inspected = scene.add.container(0, 0).setDepth(GLOW_DEPTH).setName('inspected');
   const marks = scene.add.container(0, 0).setDepth(UNIT_DEPTH);
-  layer.add([built, intents, inspected, marks]);
+  const dim = scene.add
+    .rectangle(0, 0, 1, 1, OUTLINE, DIM_ALPHA)
+    .setOrigin(0, 0)
+    .setDepth(DIM_DEPTH)
+    .setName('yield-dim')
+    .setVisible(false);
+  const glyphs = scene.add.container(0, 0).setDepth(YIELD_DEPTH).setName('yields');
+  layer.add([built, intents, inspected, marks, dim, glyphs]);
 
   let markers: Phaser.GameObjects.Polygon[] = [];
   let inspector: Phaser.GameObjects.Zone | undefined;
@@ -298,6 +349,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
     for (const catcher of catchers) {
       catcher.setPosition(centre.x - span.x / 2, centre.y - span.y / 2).setSize(span.x, span.y);
     }
+    dim.setPosition(centre.x - span.x / 2, centre.y - span.y / 2).setSize(span.x, span.y);
   };
   onResize(scene, place);
 
@@ -492,6 +544,21 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
     moveTo(centre.x + x * step, centre.y + y * step, zoom);
   });
 
+  /** The resources the yield overlay is showing; empty while it is off. */
+  let showing: ReadonlySet<Resource> = new Set();
+
+  /**
+   * What the dim is laid under rather than over: the ring on the tile being read and the glow a
+   * card is aimed by, which the player answers the overlay with. Everything else the map draws
+   * dims, so these are lifted only while the dim stands.
+   */
+  const overDim = new Set<Phaser.GameObjects.Container>([inspected]);
+
+  const liftOverDim = (): void => {
+    const over = showing.size > 0;
+    for (const object of overDim) object.setDepth(over ? OVER_DIM_DEPTH : GLOW_DEPTH);
+  };
+
   /** The ground every aim runs on: its own catcher, a glow to paint, and inspection held off. */
   const openAim = (): {
     catcher: Phaser.GameObjects.Zone;
@@ -502,11 +569,14 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
     const catcher = catcherZone('aim');
     const glow = scene.add.container(0, 0).setDepth(GLOW_DEPTH);
     layer.add(glow);
+    overDim.add(glow);
+    liftOverDim();
     return {
       catcher,
       glow,
       close: (): void => {
         catcher.destroy();
+        overDim.delete(glow);
         glow.destroy();
         inspector?.setInteractive();
       },
@@ -517,6 +587,40 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
   let shown: Chronicle | undefined;
   /** What the map has in the air; a render owns it and takes it down. */
   let flight: symbol | undefined;
+
+  /**
+   * The overlay repainted on the chronicle the map stands on: a building changes what its tile
+   * yields, so this follows every render as the buildings do.
+   */
+  const paintYields = (): void => {
+    glyphs.removeAll(true);
+    dim.setVisible(showing.size > 0);
+    liftOverDim();
+    if (shown === undefined || showing.size === 0) return;
+
+    for (const tile of shown.tiles) {
+      const yields = tileYield(tile);
+      const owed: Resource[] = [];
+      for (const resource of RESOURCES) {
+        if (!showing.has(resource)) continue;
+        for (let left = yields[resource] ?? 0; left > 0; left--) owed.push(resource);
+      }
+      if (owed.length === 0) continue;
+
+      const { x, y } = positionOf(tile);
+      const rows = Math.ceil(owed.length / GLYPH_ROW);
+      owed.forEach((resource, index) => {
+        const row = Math.floor(index / GLYPH_ROW);
+        const inRow = Math.min(GLYPH_ROW, owed.length - row * GLYPH_ROW);
+        glyphs.add(
+          yieldMark(scene, resource).setPosition(
+            x + ((index % GLYPH_ROW) - (inRow - 1) / 2) * GLYPH_PITCH,
+            y + (row - (rows - 1) / 2) * GLYPH_PITCH,
+          ),
+        );
+      });
+    }
+  };
 
   const render = (current: Chronicle): void => {
     flight = undefined;
@@ -543,6 +647,8 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
       marks.add(marker);
       return marker;
     });
+
+    paintYields();
   };
 
   /** Takes the map for one stage's motion, and hands back the token that settles it. */
@@ -750,6 +856,11 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
       if (tile === undefined) return;
       const { x, y } = positionOf(tile);
       inspected.add(scene.add.polygon(x, y, hexagon(TILE_SIZE - 2), 0, 0).setStrokeStyle(4, LIT));
+    },
+
+    showYields(shownResources: ReadonlySet<Resource>): void {
+      showing = shownResources;
+      paintYields();
     },
 
     aimUnitTile(current: Chronicle, chosen: (target: Target | undefined) => void): () => void {
