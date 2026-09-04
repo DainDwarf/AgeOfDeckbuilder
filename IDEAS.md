@@ -41,6 +41,14 @@ a [`BOARD.md`](BOARD.md) line. Say
   that reads into movement.
 - **Combat log**: a readable record of what the end of turn did — who attacked whom, what was
   killed, who moved where — for a player who missed the motion or wants it in words.
+- **The card-versus-management razor** (reconsider once the whole loop runs on real content):
+  which verbs are cards and which are city management is undecided. Two candidate razors: *the
+  hand is the only scarcity* (claiming and growth become cards, every resource has a card sink,
+  chores crowd the hand) versus *cards change what is on the map, management changes what is the
+  city's* (layers and units are cards; the border, staffing and growth are management). Settled
+  either way: assignment is management; buildings, improvements and unit spawn are cards. Free
+  unit movement is the same question. Each switch is the same rules function behind a different
+  input, plus the design page, the glossary and a rebalance.
 - **Type-size floor, verified small** (art-style pass scope): minimum type sizes generous enough
   that the smallest window we care about stays readable; ui-check verifies at that size. Uniform
   window scaling plus card zoom covers the rest — no UI-scale slider unless playtesting demands it.
