@@ -49,6 +49,8 @@ a [`BOARD.md`](BOARD.md) line. Say
   either way: assignment is management; buildings, improvements and unit spawn are cards. Free
   unit movement is the same question. Each switch is the same rules function behind a different
   input, plus the design page, the glossary and a rebalance.
+- **Consuming the worker on building**: a building card spends the worker that stands on the tile,
+  so workers are a scarcity of their own and the city's population pays for its buildings twice.
 - **Type-size floor, verified small** (art-style pass scope): minimum type sizes generous enough
   that the smallest window we care about stays readable; ui-check verifies at that size. Uniform
   window scaling plus card zoom covers the rest — no UI-scale slider unless playtesting demands it.

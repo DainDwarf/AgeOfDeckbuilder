@@ -1,5 +1,5 @@
 import type { Resources } from './chronicle';
-import type { BuildingTypeId } from './map';
+import type { BuildingTypeId, ImprovementId, Terrain } from './map';
 import type { UnitTypeId } from './units';
 
 /** The declared order of the kinds, which is the order a sorted list of cards reads in. */
@@ -11,8 +11,25 @@ export type CardKind = (typeof CARD_KINDS)[number];
 export type TargetType = 'none' | 'tile' | 'unit-tile';
 
 /**
+ * The one effect an action card has: resources into the city's stores, the improvement it improves
+ * a tile with, or the terrain it terraforms into the other. A card that takes a tile aims at `tile`
+ * and one that lands whole at `none`.
+ */
+export type ActionEffect =
+  | { readonly effect: 'gain'; readonly gain: Partial<Resources> }
+  | { readonly effect: 'improve'; readonly improvement: ImprovementId }
+  | { readonly effect: 'terraform'; readonly from: Terrain; readonly to: Terrain };
+
+/** An action card: its cost, what it is aimed at, and the one effect it resolves as. */
+export type ActionCard = {
+  readonly kind: 'action';
+  readonly cost: Partial<Resources>;
+  readonly target: TargetType;
+} & ActionEffect;
+
+/**
  * A unit card names the unit it puts on the map, a building card the building it builds, an action
- * card the resources it gains; no other kind carries any of them.
+ * card its one effect; no other kind carries any of them.
  */
 export type Card =
   | {
@@ -27,12 +44,7 @@ export type Card =
       readonly target: TargetType;
       readonly building: BuildingTypeId;
     }
-  | {
-      readonly kind: 'action';
-      readonly cost: Partial<Resources>;
-      readonly target: TargetType;
-      readonly gain: Partial<Resources>;
-    }
+  | ActionCard
   | {
       readonly kind: Exclude<CardKind, 'unit' | 'building' | 'action'>;
       readonly cost: Partial<Resources>;
@@ -40,14 +52,42 @@ export type Card =
     };
 
 /** `PH_` marks a stand-in: none of these is authored content, and every one of them goes. */
-export type CardId = 'PH_Worker' | 'PH_Warrior' | 'PH_Farm' | 'PH_March' | 'PH_Harvest';
+export type CardId =
+  | 'PH_Worker'
+  | 'PH_Warrior'
+  | 'PH_Farm'
+  | 'PH_March'
+  | 'PH_Harvest'
+  | 'PH_Mine'
+  | 'PH_Urbanisation';
 
 export const CARDS: Record<CardId, Card> = {
   PH_Worker: { kind: 'unit', cost: { food: 2 }, target: 'none', unitType: 'PH_Worker' },
   PH_Warrior: { kind: 'unit', cost: { military: 2 }, target: 'none', unitType: 'PH_Warrior' },
   PH_Farm: { kind: 'building', cost: { production: 3 }, target: 'tile', building: 'PH_Farm' },
   PH_March: { kind: 'order', cost: {}, target: 'unit-tile' },
-  PH_Harvest: { kind: 'action', cost: { science: 1 }, target: 'none', gain: { food: 2 } },
+  PH_Harvest: {
+    kind: 'action',
+    cost: { science: 1 },
+    target: 'none',
+    effect: 'gain',
+    gain: { food: 2 },
+  },
+  PH_Mine: {
+    kind: 'action',
+    cost: { production: 3 },
+    target: 'tile',
+    effect: 'improve',
+    improvement: 'PH_Mine',
+  },
+  PH_Urbanisation: {
+    kind: 'action',
+    cost: { production: 5 },
+    target: 'tile',
+    effect: 'terraform',
+    from: 'plain',
+    to: 'urban',
+  },
 };
 
 export type DeckId = 'PH_Deck' | 'PH_LongDeck';

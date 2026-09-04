@@ -46,9 +46,12 @@ export const FEATURES: Record<
   PH_Fertile: { terrain: 'plain', yields: { food: 1 } },
 };
 
-/** What an improvement of each kind yields at income on the tile it is laid on. */
-export const IMPROVEMENTS: Record<ImprovementId, { readonly yields: Partial<Resources> }> = {
-  PH_Mine: { yields: { production: 1 } },
+/** What terrain an improvement of each kind goes on, and what it yields at income on top of it. */
+export const IMPROVEMENTS: Record<
+  ImprovementId,
+  { readonly terrain: Terrain; readonly yields: Partial<Resources> }
+> = {
+  PH_Mine: { terrain: 'hills', yields: { production: 1 } },
 };
 
 /** How many biomes the map is cut into, which kinds they are dealt, and which features follow. */
@@ -72,8 +75,8 @@ export type TileCoords = { readonly q: number; readonly r: number };
 
 /**
  * A tile is its layers: the terrain it is made of, the one feature the generator may have put on
- * it, the improvements laid on it — distinct ones, never the same twice — and the one building slot
- * it offers.
+ * it, the improvements it has been improved with — distinct ones, never the same twice — and the
+ * one building slot it offers.
  */
 export type Tile = TileCoords & {
   readonly terrain: Terrain;
@@ -150,8 +153,8 @@ function pickTerrain(
 
 /**
  * The map of a chronicle: a hexagonal disc of tiles in axial coordinates, the city at its centre,
- * laid in two layers — biomes spread from their origins, then a terrain scattered from each
- * biome's table — with one feature dealt over a share of the terrain each kind lies on.
+ * generated in three layers: biomes spread from their origins, a terrain scattered from each
+ * biome's table, and each feature dealt over a share of the terrain it lies on.
  */
 export function generateMap(initial: Rng): { rng: Rng; tiles: Tile[] } {
   const { radius, tilesPerBiome, minBiomes, cityBiome, biomeShares, featureShares } =

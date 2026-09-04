@@ -117,7 +117,7 @@ const DIM_ALPHA = 0.6;
 const GLYPH = 6;
 const GLYPH_PITCH = 8;
 
-/** How far above a tile's middle its feature stands: inside the face, clear of a building mark. */
+/** How far above a tile's middle its feature and its improvements stand: clear of a building mark. */
 const FEATURE_RISE = 16;
 
 /** The mark of an assigned tile, corner to corner, and how far below the tile's middle it stands. */
@@ -363,32 +363,19 @@ function litTile(scene: Phaser.Scene, coord: TileCoords): Phaser.GameObjects.Pol
 
 /**
  * The map and everything standing on it, on a surface of its own that pans and zooms under the UI.
- * The terrain and the features are drawn once, both fixed at generation; the border, the buildings
- * and the units are redrawn on every state change; and a card is aimed here — the rules say which
- * tiles light up, never this file.
+ * Every layer of every tile, the border and the units are redrawn on each state change; and a card
+ * is aimed here — the rules say which tiles light up, never this file.
  */
 export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chronicle): MapView {
   const camera = map.camera;
   const layer = map.layer;
 
-  for (const tile of chronicle.tiles) {
-    const { x, y } = positionOf(tile);
-    layer.add(
-      terrainMark(scene, tile.terrain)
-        .setPosition(x, y)
-        .setName(`tile-${tileKey(tile)}`),
-    );
-    if (tile.feature === undefined) continue;
-    layer.add(
-      featureMark(scene, tile.feature)
-        .setPosition(x, y - FEATURE_RISE)
-        .setName(`feature-${tileKey(tile)}`),
-    );
-  }
-
-  // Over the terrain, which is drawn once and never redrawn: equal depths paint in the order they
-  // were added.
+  // Equal depths paint in the order they were added, which is what keeps the terrain under the
+  // rings and the features under what is built on them.
+  const ground = scene.add.container(0, 0).setName('terrain');
+  const features = scene.add.container(0, 0).setName('features');
   const rings = scene.add.container(0, 0).setName('border');
+  const improved = scene.add.container(0, 0).setDepth(BUILDING_DEPTH).setName('improvements');
   const built = scene.add.container(0, 0).setDepth(BUILDING_DEPTH).setName('buildings');
   const intents = scene.add.container(0, 0).setDepth(GLOW_DEPTH).setName('intents');
   const inspected = scene.add.container(0, 0).setDepth(GLOW_DEPTH).setName('inspected');
@@ -401,7 +388,19 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
     .setVisible(false);
   const cityMarks = scene.add.container(0, 0).setDepth(CITY_DEPTH).setName('city-marks');
   const glyphs = scene.add.container(0, 0).setDepth(YIELD_DEPTH).setName('yields');
-  layer.add([rings, built, intents, inspected, marks, cityMarks, dim, glyphs]);
+  layer.add([
+    ground,
+    features,
+    rings,
+    improved,
+    built,
+    intents,
+    inspected,
+    marks,
+    cityMarks,
+    dim,
+    glyphs,
+  ]);
 
   let markers: Phaser.GameObjects.Polygon[] = [];
   let inspector: Phaser.GameObjects.Zone | undefined;
@@ -742,6 +741,38 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
     }
   };
 
+  /**
+   * The three layers under the buildings repainted on the chronicle the map stands on: a terraform
+   * changes a tile's terrain and takes its feature with it, and an improvement is improved onto it,
+   * so all three follow every render. An improvement stands where a feature stands, the two never
+   * sharing a terrain.
+   */
+  const paintTiles = (): void => {
+    ground.removeAll(true);
+    features.removeAll(true);
+    improved.removeAll(true);
+    if (shown === undefined) return;
+
+    for (const tile of shown.tiles) {
+      const { x, y } = positionOf(tile);
+      ground.add(
+        terrainMark(scene, tile.terrain)
+          .setPosition(x, y)
+          .setName(`tile-${tileKey(tile)}`),
+      );
+      if (tile.feature !== undefined) {
+        features.add(
+          featureMark(scene, tile.feature)
+            .setPosition(x, y - FEATURE_RISE)
+            .setName(`feature-${tileKey(tile)}`),
+        );
+      }
+      for (const improvement of tile.improvements) {
+        improved.add(improvementMark(scene, improvement).setPosition(x, y - FEATURE_RISE));
+      }
+    }
+  };
+
   /** The border repainted on the chronicle the map stands on: a claim moves it, so a render does. */
   const paintBorder = (): void => {
     rings.removeAll(true);
@@ -755,6 +786,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
     flight = undefined;
     shown = current;
 
+    paintTiles();
     paintBorder();
 
     built.removeAll(true);

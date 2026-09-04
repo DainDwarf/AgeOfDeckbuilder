@@ -4,15 +4,15 @@ import { type CardId, DECKS, type DeckId } from '../src/rules/cards';
 import {
   apply,
   beginChronicle,
-  buildable,
   type Chronicle,
   outcome,
   playable,
   RESOURCES,
   type Resource,
   refusalOf,
+  targetTiles,
 } from '../src/rules/chronicle';
-import { neighbours, type TileCoords, tileKey } from '../src/rules/map';
+import { neighbours, type Tile, type TileCoords, tileAt, tileKey } from '../src/rules/map';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
 import type { PileKind } from '../src/ui/overlay';
 
@@ -201,6 +201,15 @@ export function counted(page: Page, name: string): Promise<number> {
   }, name);
 }
 
+/** How many marks the named container of the map is showing. */
+export function marksIn(page: Page, name: string): Promise<number> {
+  return page.evaluate((target) => {
+    const container = window.named?.(target)?.object as Phaser.GameObjects.Container | undefined;
+    if (container === undefined) throw new Error(`there is no ${target} on the chronicle screen`);
+    return container.list.length;
+  }, name);
+}
+
 /** How many yield glyphs of each resource: what the map shows, or what a set of tiles is owed. */
 export type Glyphs = Record<Resource, number>;
 
@@ -224,19 +233,23 @@ export function scrolled(page: Page): Promise<{ offset: number; overflow: number
   });
 }
 
-/** A chronicle whose turn `turn` can enter a worker, march it onto `tile` and build a farm there. */
+/** A chronicle whose turn `turn` can enter a worker, march it onto `tile` and play a card there. */
 export type Run = { readonly seed: number; readonly turn: number; readonly tile: TileCoords };
 
-export function farmRun(): Run {
+/**
+ * The first seed with a turn in its first eight that opens on such a run; `on` narrows which tile
+ * counts, for a spec that needs a particular layer standing on it.
+ */
+export function workerRun(card: CardId, on: (tile: Tile) => boolean = () => true): Run {
   for (let seed = 1; seed <= 1000; seed++) {
     let chronicle = beginChronicle(seed, DECKS.PH_Deck);
     for (let turn = 1; turn <= 8; turn++) {
-      const tile = farmedThisTurn(chronicle);
+      const tile = workedThisTurn(chronicle, card, on);
       if (tile !== undefined) return { seed, turn, tile };
       chronicle = outcome(apply(chronicle, { type: 'end-turn' }));
     }
   }
-  throw new Error('no seed under a thousand opens a turn on a worker, a march and a farm');
+  throw new Error(`no seed under a thousand opens a turn on a worker, a march and ${card}`);
 }
 
 /** The first seed whose city is captured inside twenty turns of ending the turn and nothing else. */
@@ -251,14 +264,18 @@ export function fallRun(): { seed: number; turns: number } {
   throw new Error('no seed under a thousand is captured inside twenty turns');
 }
 
-/** Where the farm lands when this hand plays its worker, its march and its farm in that order. */
-function farmedThisTurn(chronicle: Chronicle): TileCoords | undefined {
+/** Where the card lands when this hand plays its worker, its march and then the card, in that order. */
+function workedThisTurn(
+  chronicle: Chronicle,
+  card: CardId,
+  on: (tile: Tile) => boolean,
+): TileCoords | undefined {
   const enter = chronicle.hand.indexOf('PH_Worker');
   if (enter === -1 || !playable(refusalOf(chronicle, 'PH_Worker'))) return undefined;
   const entered = outcome(apply(chronicle, { type: 'play', index: enter }));
 
   const march = entered.hand.indexOf('PH_March');
-  if (march === -1 || !entered.hand.includes('PH_Farm')) return undefined;
+  if (march === -1 || !entered.hand.includes(card)) return undefined;
 
   for (const tile of neighbours(entered.city)) {
     const moved = outcome(
@@ -268,8 +285,10 @@ function farmedThisTurn(chronicle: Chronicle): TileCoords | undefined {
         target: { type: 'unit-tile', unit: 0, tile },
       }),
     );
-    if (moved === entered || !playable(refusalOf(moved, 'PH_Farm'))) continue;
-    if (buildable(moved, 'PH_Farm').some((coord) => tileKey(coord) === tileKey(tile))) return tile;
+    if (moved === entered || !playable(refusalOf(moved, card))) continue;
+    const standing = tileAt(moved.tiles, tile);
+    if (standing === undefined || !on(standing)) continue;
+    if (targetTiles(moved, card).some((coord) => tileKey(coord) === tileKey(tile))) return tile;
   }
   return undefined;
 }

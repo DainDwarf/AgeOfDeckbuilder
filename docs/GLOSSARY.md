@@ -61,7 +61,7 @@ deliberate exception the reviewer sees; there is no silent allow-list.
 | **fog** | Every tile outside sight; known terrain, unknown occupants. | fog of war, unexplored |
 | **order** | A card that does one thing with one unit; the plain order moves it, and its nature acts on arrival. | move card |
 | **action** | A card with an immediate effect. | spell, effect card |
-| **worker** | A non-fighting unit that transforms tiles: builds buildings, terraforms, lays roads. | builder, engineer, labourer |
+| **worker** | A non-fighting unit that changes tiles: builds buildings, terraforms them, improves them with roads. | builder, engineer, labourer |
 | **population** | The city's inhabitants: assigned to tiles for income, turned into units by unit cards. | citizens, workforce, pops |
 | **assign** | To put one population on a tile inside the border; free, instant, reversible. | allocate |
 | **unassign** | To take one population off the tile it stands on; the reverse of assign. | remove, free up, release |
@@ -70,8 +70,10 @@ deliberate exception the reviewer sees; there is no silent allow-list.
 | **growth threshold** | The food the next inhabitant needs; spent when the stock reaches it, and wider each time. | step, growth cost, food cap |
 | **biome** | A stretch of map the generator spreads as one kind — land, sea, … — weighting the terrain of each tile in it. | patch, zone, area, ecosystem |
 | **terrain** | A tile's base layer: plain, forest, hills, …; one per tile, changed only by terraforming. | tile type |
+| **terraform** | To change a tile's terrain into another, where a worker stands; what a terraform action does. | transform, convert, reshape |
 | **feature** | A generated extra on a tile: a fertile plain, a river. | bonus |
-| **improvement** | A layer a worker lays on a tile through an action; distinct ones stack, the same one never twice. | — |
+| **improvement** | A layer a worker improves a tile with through an action; distinct ones stack, the same one never twice. | — |
+| **improve** | To put an improvement on a tile where a worker stands; what an improvement action does. | lay, build, place, install |
 | **yield** | What a tile's layers give at income, resource by resource. | output, produce, harvest |
 | **claim** | To spend culture on a tile adjacent to one the city owns; free of cards. | buy, purchase, expand, annex |
 | **culture** | The resource that claims tiles. | — |

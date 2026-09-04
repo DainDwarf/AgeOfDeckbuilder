@@ -10,10 +10,10 @@ import {
   dragOut,
   endTurn,
   fallRun,
-  farmRun,
   open,
   standing,
   watch,
+  workerRun,
 } from './chronicle-screen';
 
 /** The first seed that stands its city through three ended turns. */
@@ -98,7 +98,7 @@ test('Escape raises the menu on a bare chronicle screen, and backs out of a brow
 
 test('Escape lets go of the card being aimed before it raises the menu', async ({ page }) => {
   const problems = watch(page);
-  const run = farmRun();
+  const run = workerRun('PH_Farm');
 
   await open(page, run.seed, 'PH_Deck');
   for (let turn = 1; turn < run.turn; turn++) await endTurn(page);

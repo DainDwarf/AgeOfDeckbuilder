@@ -235,12 +235,19 @@ A tile is layers, and its income, movement cost and sight are the sum of what it
 
 - **Terrain** — one per tile, fixed unless terraformed: plain, forest, hills, … The list is
   content and changes freely.
-- **Feature** — at most one, put there by the generator: a fertile plain, a river.
-- **Improvement** — laid by a worker through an action, any number of distinct ones per tile,
-  never the same one twice. A road is one; it runs under whatever building stands there.
+- **Feature** — at most one, put there by the generator: a fertile plain, a river. A feature lies
+  on its terrain, so it is gone when its tile is terraformed.
+- **Improvement** — what a worker improves a tile with through an action, any number of distinct
+  ones per tile, never the same one twice. Each names the terrain it goes on, as a feature and a
+  building do, and stays through a terraform. A road is one; it runs under whatever building stands
+  there.
 - **Building** — at most one per tile: the tile has one building slot. That slot is the whole
   difference between a building and an improvement. The city fills the slot of the tile it stands
   on.
+
+**Improving and terraforming reach any tile a worker of the player's stands on**, inside the border
+or not — unlike building, which is inside the border only. A tile whose building slot is filled is
+not terraformed, and the worker stays where it stands through either.
 
 🔧 A building's yield may read its neighbours. Nothing in the first playable does; the door
 is there so that adjacency is content when it comes.
@@ -251,10 +258,10 @@ one biome — land, sea, and whatever the list comes to hold. Their kinds are **
 rather than diced one by one, because independent dice can deal a map with no sea at all; the
 city's biome is dealt land, and its origin is the city's tile. Second, the **terrain scatter**:
 every tile draws its terrain from the weighted table of its biome, so a sea biome is water with
-the odd island in it and a land one is mixed. The city's tile is then **urban**, a terrain that
-today enters the map only where the city stands. Third, the **feature deal**: each feature names
-the terrain it lies on and is dealt onto a share of the tiles of that terrain, the city's tile
-never among them, for the same reason the biomes are dealt.
+the odd island in it and a land one is mixed. The city's tile is then **urban**, the one tile the
+generator puts that terrain on. Third, the **feature deal**: each feature names the terrain it lies
+on and is dealt onto a share of the tiles of that terrain, the city's tile never among them, for the
+same reason the biomes are dealt.
 
 Biomes and their tables are content, like the terrain and feature lists: they grow without a
 design decision, and the numbers in them are tuning.

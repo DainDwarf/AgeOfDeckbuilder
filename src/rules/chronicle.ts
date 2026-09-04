@@ -1,11 +1,14 @@
-import { CARDS, type CardId } from './cards';
+import { type ActionCard, CARDS, type CardId } from './cards';
 import { arrival, ENEMY_SCRIPTS } from './enemies';
 import {
   BUILDINGS,
   type BuildingTypeId,
   CITY_TILE,
   generateMap,
+  IMPROVEMENTS,
+  type ImprovementId,
   neighbours,
+  type Terrain,
   type Tile,
   type TileCoords,
   tileKey,
@@ -284,7 +287,7 @@ export function costOf(id: CardId): Cost[] {
 /**
  * What the city or the map has against a card or a claim the cost alone would let through: the city
  * down to the last inhabitant it keeps, no inhabitant idle to turn into a unit or to stand on a
- * tile, a unit already on the city tile, no tile to build on, no unit to move.
+ * tile, a unit already on the city tile, no tile to aim at, no unit to move.
  */
 export type Block = 'population' | 'idle' | 'city' | 'tile' | 'unit';
 
@@ -371,6 +374,12 @@ function unaffordable(chronicle: Chronicle, costs: readonly Cost[]): Resource[] 
     .map(({ resource }) => resource);
 }
 
+/** The one thing every card aimed at a tile asks of it: a worker of the player's standing there. */
+function worked(chronicle: Chronicle, tile: TileCoords): boolean {
+  const standing = unitAt(chronicle.units, tile);
+  return standing?.faction === 'player' && standing.stats.id === 'PH_Worker';
+}
+
 /**
  * Where a building can be built: a tile inside the border, of the terrain that building stands on,
  * whose building slot is free and where a worker of the player's stands.
@@ -378,13 +387,53 @@ function unaffordable(chronicle: Chronicle, costs: readonly Cost[]): Resource[] 
 export function buildable(chronicle: Chronicle, building: BuildingTypeId): TileCoords[] {
   const held = new Set(chronicle.held.map(tileKey));
   return chronicle.tiles
-    .filter((tile) => {
-      if (!held.has(tileKey(tile)) || tile.building !== undefined) return false;
-      if (tile.terrain !== BUILDINGS[building].terrain) return false;
-      const standing = unitAt(chronicle.units, tile);
-      return standing?.faction === 'player' && standing.stats.id === 'PH_Worker';
-    })
+    .filter(
+      (tile) =>
+        held.has(tileKey(tile)) &&
+        tile.building === undefined &&
+        tile.terrain === BUILDINGS[building].terrain &&
+        worked(chronicle, tile),
+    )
     .map(({ q, r }) => ({ q, r }));
+}
+
+/**
+ * Where an improvement can be improved: a tile of the terrain that improvement goes on, inside the
+ * border or not, where a worker of the player's stands and which does not carry it already.
+ */
+export function improvable(chronicle: Chronicle, improvement: ImprovementId): TileCoords[] {
+  return chronicle.tiles
+    .filter(
+      (tile) =>
+        tile.terrain === IMPROVEMENTS[improvement].terrain &&
+        !tile.improvements.includes(improvement) &&
+        worked(chronicle, tile),
+    )
+    .map(({ q, r }) => ({ q, r }));
+}
+
+/**
+ * Where a terrain can be terraformed: a tile of that terrain, inside the border or not, whose
+ * building slot is empty and where a worker of the player's stands.
+ */
+export function terraformable(chronicle: Chronicle, from: Terrain): TileCoords[] {
+  return chronicle.tiles
+    .filter(
+      (tile) => tile.terrain === from && tile.building === undefined && worked(chronicle, tile),
+    )
+    .map(({ q, r }) => ({ q, r }));
+}
+
+/** The tiles an action can be aimed at; one that lands whole is aimed at none. */
+function actionTiles(chronicle: Chronicle, card: ActionCard): TileCoords[] {
+  switch (card.effect) {
+    case 'gain':
+      return [];
+    case 'improve':
+      return improvable(chronicle, card.improvement);
+    case 'terraform':
+      return terraformable(chronicle, card.from);
+  }
 }
 
 /** The tiles a card of the `tile` target type can be aimed at. */
@@ -393,9 +442,10 @@ export function targetTiles(chronicle: Chronicle, id: CardId): TileCoords[] {
   switch (card.kind) {
     case 'building':
       return buildable(chronicle, card.building);
+    case 'action':
+      return actionTiles(chronicle, card);
     case 'unit':
     case 'order':
-    case 'action':
       return [];
   }
 }
@@ -415,7 +465,8 @@ function blocked(chronicle: Chronicle, id: CardId): Block[] {
       return blocks;
     }
     case 'building':
-      return buildable(chronicle, card.building).length === 0 ? ['tile'] : [];
+    case 'action':
+      return card.target === 'tile' && targetTiles(chronicle, id).length === 0 ? ['tile'] : [];
     case 'order':
       return chronicle.units.some(
         (unit) =>
@@ -423,8 +474,6 @@ function blocked(chronicle: Chronicle, id: CardId): Block[] {
       )
         ? []
         : ['unit'];
-    case 'action':
-      return [];
   }
 }
 
@@ -477,11 +526,33 @@ function resolve(paid: Chronicle, id: CardId, target: Target | undefined): Stage
     case 'order':
       return order(paid, target);
     case 'action': {
-      const resources = { ...paid.resources };
-      for (const resource of RESOURCES) resources[resource] += card.gain[resource] ?? 0;
-      return [{ name: 'played', chronicle: { ...paid, resources } }];
+      const acted = act(paid, card, target);
+      return acted === undefined ? undefined : [{ name: 'played', chronicle: acted }];
     }
   }
+}
+
+/**
+ * The action card's one effect: the resources it gains land in the stores, and the improvement or
+ * the terraform lands on the tile it was aimed at — the worker that stands there stays where it is,
+ * and a terraformed tile loses the feature that lay on the terrain it was.
+ */
+function act(paid: Chronicle, card: ActionCard, target: Target | undefined): Chronicle | undefined {
+  if (card.effect === 'gain') {
+    const resources = { ...paid.resources };
+    for (const resource of RESOURCES) resources[resource] += card.gain[resource] ?? 0;
+    return { ...paid, resources };
+  }
+
+  if (target?.type !== 'tile') return undefined;
+  const at = tileKey(target.tile);
+  if (!actionTiles(paid, card).some((coord) => tileKey(coord) === at)) return undefined;
+
+  const after = (tile: Tile): Tile =>
+    card.effect === 'improve'
+      ? { ...tile, improvements: [...tile.improvements, card.improvement] }
+      : { ...tile, terrain: card.to, feature: undefined };
+  return { ...paid, tiles: paid.tiles.map((tile) => (tileKey(tile) === at ? after(tile) : tile)) };
 }
 
 /** The building card: the building fills the slot of the tile it is aimed at. */

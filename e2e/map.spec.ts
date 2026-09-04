@@ -8,7 +8,6 @@ import {
   dragOut,
   endTurn,
   type Frame,
-  farmRun,
   mapFrame,
   onScreen,
   open,
@@ -19,6 +18,7 @@ import {
   standing,
   tooltipUp,
   watch,
+  workerRun,
 } from './chronicle-screen';
 
 /** A tile on bare map, clear of the resource bar, the piles and the hand. */
@@ -206,7 +206,7 @@ test("a pan carries a panel row's tooltip along with the row", async ({ page }) 
 
 test('a drag during a move aim pans the map, unless it presses the unit', async ({ page }) => {
   const problems = watch(page);
-  const run = farmRun();
+  const run = workerRun('PH_Farm');
 
   await open(page, run.seed, 'PH_Deck');
   for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
@@ -251,7 +251,7 @@ test('a drag during a tile aim pans the map, and the aim still builds after it',
   page,
 }) => {
   const problems = watch(page);
-  const run = farmRun();
+  const run = workerRun('PH_Farm');
 
   await open(page, run.seed, 'PH_Deck');
   for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
