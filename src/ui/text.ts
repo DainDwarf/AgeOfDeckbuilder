@@ -12,7 +12,7 @@ const TEXT = {
   'label.range': 'Range',
   'label.move': 'Move',
   'reading.over': '{count}/{over}',
-  'tooltip.food': 'The most basic need. Reaching the growth threshold grows your population.',
+  'tooltip.food': 'The most basic need. Grows your population toward the growth threshold.',
   'tooltip.production': 'Materials of every sort. Build, improve, and shape the land.',
   'tooltip.military': 'A sad necessity. Defend and attack.',
   'tooltip.money': 'Exchange and opulence. Trade it for other goods, or amass it.',

@@ -1,6 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import { DECKS } from '../src/rules/cards';
-import { beginChronicle, RESOURCES, type Resource } from '../src/rules/chronicle';
+import { beginChronicle, RESOURCES } from '../src/rules/chronicle';
 import { distance, tileKey, tileYield } from '../src/rules/map';
 import { text } from '../src/ui/text';
 import {
@@ -8,6 +8,9 @@ import {
   click,
   counted,
   endTurn,
+  type Glyphs,
+  glyphs,
+  noGlyphs,
   onScreen,
   open,
   playedOut,
@@ -50,19 +53,6 @@ async function inCityMode(page: Page): Promise<boolean> {
 async function answered(page: Page): Promise<void> {
   await settled(page);
   await settled(page);
-}
-
-type Glyphs = Record<Resource, number>;
-
-function noGlyphs(): Glyphs {
-  return Object.fromEntries(RESOURCES.map((resource) => [resource, 0])) as Glyphs;
-}
-
-/** How many glyphs of each resource stand on the map. */
-async function glyphs(page: Page): Promise<Glyphs> {
-  const shown = noGlyphs();
-  for (const resource of RESOURCES) shown[resource] = await counted(page, `yield-${resource}`);
-  return shown;
 }
 
 /** What the tiles inside the border yield, point by point, and what the whole map yields. */

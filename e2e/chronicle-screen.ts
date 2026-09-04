@@ -8,6 +8,8 @@ import {
   type Chronicle,
   outcome,
   playable,
+  RESOURCES,
+  type Resource,
   refusalOf,
 } from '../src/rules/chronicle';
 import { neighbours, type TileCoords, tileKey } from '../src/rules/map';
@@ -197,6 +199,20 @@ export function counted(page: Page, name: string): Promise<number> {
     if (window.counted === undefined) throw new Error('no chronicle was opened on this page');
     return window.counted(target);
   }, name);
+}
+
+/** How many yield glyphs of each resource: what the map shows, or what a set of tiles is owed. */
+export type Glyphs = Record<Resource, number>;
+
+export function noGlyphs(): Glyphs {
+  return Object.fromEntries(RESOURCES.map((resource) => [resource, 0])) as Glyphs;
+}
+
+/** How many yield glyphs of each resource stand on the map. */
+export async function glyphs(page: Page): Promise<Glyphs> {
+  const shown = noGlyphs();
+  for (const resource of RESOURCES) shown[resource] = await counted(page, `yield-${resource}`);
+  return shown;
 }
 
 /** How far the browse's grid stands scrolled, and how far it can: the grid scrolls by its own `y`. */

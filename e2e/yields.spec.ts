@@ -4,8 +4,10 @@ import { tileKey, tileYield } from '../src/rules/map';
 import {
   chronicleOf,
   click,
-  counted,
   endTurn,
+  type Glyphs,
+  glyphs,
+  noGlyphs,
   open,
   settled,
   shows,
@@ -19,16 +21,10 @@ async function answered(page: Page): Promise<void> {
   await settled(page);
 }
 
-type Glyphs = Record<Resource, number>;
-
-function none(): Glyphs {
-  return Object.fromEntries(RESOURCES.map((resource) => [resource, 0])) as Glyphs;
-}
-
 /** How many glyphs each resource is owed: one for every point the tiles of the map yield of it. */
 async function owed(page: Page): Promise<Glyphs> {
   const { tiles } = await chronicleOf(page);
-  const total = none();
+  const total = noGlyphs();
   for (const tile of tiles) {
     const yields = tileYield(tile);
     for (const resource of RESOURCES) total[resource] += yields[resource] ?? 0;
@@ -36,17 +32,10 @@ async function owed(page: Page): Promise<Glyphs> {
   return total;
 }
 
-/** How many glyphs of each resource the overlay is showing. */
-async function glyphs(page: Page): Promise<Glyphs> {
-  const shown = none();
-  for (const resource of RESOURCES) shown[resource] = await counted(page, `yield-${resource}`);
-  return shown;
-}
-
 /** What the overlay would show with these resources on it, and nothing of every other. */
 async function only(page: Page, ...resources: Resource[]): Promise<Glyphs> {
   const all = await owed(page);
-  const shown = none();
+  const shown = noGlyphs();
   for (const resource of resources) shown[resource] = all[resource];
   return shown;
 }
@@ -58,7 +47,7 @@ async function only(page: Page, ...resources: Resource[]): Promise<Glyphs> {
 async function withCityMode(page: Page, ...resources: Resource[]): Promise<Glyphs> {
   const { tiles, held } = await chronicleOf(page);
   const inside = new Set(held.map(tileKey));
-  const shown = none();
+  const shown = noGlyphs();
   for (const tile of tiles) {
     const yields = tileYield(tile);
     for (const resource of inside.has(tileKey(tile)) ? RESOURCES : resources) {
@@ -81,7 +70,7 @@ test('the yield key shows what every tile yields, and clears it again', async ({
   const problems = watch(page);
 
   await open(page, 1, 'PH_Deck');
-  expect(await glyphs(page)).toEqual(none());
+  expect(await glyphs(page)).toEqual(noGlyphs());
   expect(await shows(page, 'yield-dim')).toBe(false);
 
   await page.keyboard.press('Tab');
@@ -91,7 +80,7 @@ test('the yield key shows what every tile yields, and clears it again', async ({
 
   await page.keyboard.press('Tab');
   await expect.poll(() => shows(page, 'yield-dim')).toBe(false);
-  expect(await glyphs(page)).toEqual(none());
+  expect(await glyphs(page)).toEqual(noGlyphs());
   expect(await latched(page)).toEqual([]);
 
   expect(problems).toEqual([]);
@@ -120,7 +109,7 @@ test('a press on a reading shows that resource alone, and a second press takes i
 
   await click(page, 'reading-production');
   await expect.poll(() => shows(page, 'yield-dim')).toBe(false);
-  expect(await glyphs(page)).toEqual(none());
+  expect(await glyphs(page)).toEqual(noGlyphs());
 
   expect(problems).toEqual([]);
 });
@@ -137,7 +126,7 @@ test('the yield key clears an overlay a reading raised, and fills one from nothi
 
   await page.keyboard.press('Tab');
   await expect.poll(() => shows(page, 'yield-dim')).toBe(false);
-  expect(await glyphs(page)).toEqual(none());
+  expect(await glyphs(page)).toEqual(noGlyphs());
 
   await page.keyboard.press('Tab');
   await expect.poll(() => latched(page)).toEqual([...RESOURCES]);

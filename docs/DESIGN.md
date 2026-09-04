@@ -209,11 +209,12 @@ out of it a click reads the tile. A click on a tile the city neither holds nor c
 nothing and says nothing; a click the city refuses says why, in the note a refused card raises. The
 map marks the tiles the city can claim for as long as the mode is on, and every tile inside the
 border shows what it yields — every resource, whatever the yield overlay is showing, the dim of a
-tile nobody stands on no exception. It is entered by the **city key** or by pressing culture or
-population on the resource bar, and left by that key, by the back key, or by the chip naming the
-mode; the map's frame drawn in the accent and that chip are how the chronicle screen shows the mode
-is on. Coming into city mode lets go of a card being aimed and of a tile being read, and a window
-standing over the chronicle screen takes the city key instead.
+tile nobody stands on no exception, and with no dim over the map: that dim is the overlay's alone.
+It is entered by the **city key** or by pressing culture or population on the resource bar, and
+left by that key, by the back key, or by the chip naming the mode; the map's frame drawn in the
+accent and that chip are how the chronicle screen shows the mode is on. Coming into city mode lets
+go of a card being aimed and of a tile being read, and a window standing over the chronicle screen
+takes the city key instead.
 
 ### The yield overlay ✅
 
