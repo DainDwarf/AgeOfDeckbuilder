@@ -207,7 +207,9 @@ nothing else — whoever stands there and whatever occupies it change what the t
 never what the overlay shows. Pressing one of the five core readings on the resource bar toggles
 that resource in or out of the overlay, several at a time, and the reading of a resource shown is
 latched down in the bar; the **yield key** clears the overlay, or, from nothing, shows every
-resource, culture included. It is a display and not a mode: the back key leaves it standing, city
+resource, culture included, and a window standing over the chronicle screen takes the key instead.
+Three things stand over the dim, undimmed: the tile being read, its ring and its infopanel, and
+the tiles a card is aimed at. It is a display and not a mode: the back key leaves it standing, city
 mode stands with it, and either is entered and left without touching the other.
 
 ### The map ✅

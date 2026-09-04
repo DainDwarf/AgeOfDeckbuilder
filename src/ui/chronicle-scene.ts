@@ -298,7 +298,7 @@ export class ChronicleScene extends Phaser.Scene {
     };
 
     /** The yield key: everything the overlay shows is cleared, or, from nothing, every resource. */
-    const toggleYields = (): void => {
+    const clearOrShowAllYields = (): void => {
       yields = yields.size > 0 ? new Set() : new Set(RESOURCES);
       showYields();
     };
@@ -317,7 +317,7 @@ export class ChronicleScene extends Phaser.Scene {
         return;
       }
       if (boundTo(key, 'yields')) {
-        if (!covered) toggleYields();
+        if (!covered) clearOrShowAllYields();
         return;
       }
       if (!boundTo(key, 'back')) return;
