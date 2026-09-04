@@ -38,11 +38,11 @@ fiction's own word: *Chronicles of the mercantile civilization in the Age of Pow
   garrison defends where it stands, a farm with a person assigned yields — and **changing the
   map costs a card**: marching, building, terraforming, attacking, negotiating.
 - Five core resources: **food, production, military, money, science**. 🔧 Their jobs: food grows
-  the population; production builds buildings and units and shapes tiles; military pays
-  for military units, orders, actions and fortifications; money trades for other goods and
+  the population; production builds buildings and units and shapes tiles; military pays for
+  military units, orders, actions and fortifications; money trades for other goods and
   accumulates; science pays for manipulating the cards — drawing, discarding and the like.
-  **Culture pushes the border out**, and the tiles inside it are the
-  city's; population is the city's inhabitants, assigned to its tiles.
+  **Culture pushes the border out**, and the tiles inside it are the city's; population is the
+  city's inhabitants, assigned to its tiles.
 - **Deterministic.** Every random draw comes from a seeded generator carried in the state, so a
   chronicle replays from its seed — for replay, undo and debugging first; a headless simulator is possible but
   not promised.
@@ -143,7 +143,9 @@ A chronicle is a sequence of **turns**. Each turn, in this order:
 6. **Income.** Standing things do their standing thing: assigned tiles and their buildings yield
    their resources. So what the player sees when drawing holds for the whole turn: a farm placed
    this turn feeds the next.
-7. **Enemy phase.** 🔧 Neutrals and enemies move; then every enemy declares its intent for the next
+7. **Growth.** A food stock that has reached the step is spent on one idle inhabitant, at most
+   one a turn.
+8. **Enemy phase.** 🔧 Neutrals and enemies move; then every enemy declares its intent for the next
    turn. An intent stays visible through the whole player turn, wherever the city has sight.
    Killing the enemy cancels its intent; moving the target out of it dodges. An enemy standing on
    the city's tile declares nothing: it is there to capture. Intents that re-target as the player
@@ -239,7 +241,7 @@ A tile is layers, and its income, movement cost and sight are the sum of what it
 is there so that adjacency is content when it comes.
 
 **The map is generated in two layers.** It is a hexagonal disc with the city's tile at its centre.
-First the **biomes**: origin tiles scattered over the disc grow outward until every tile belongs to
+First the **biomes**: origin tiles scattered over the disc spread outward until every tile belongs to
 one biome — land, sea, and whatever the list comes to hold. Their kinds are **dealt** as quotas
 rather than diced one by one, because independent dice can deal a map with no sea at all; the
 city's biome is dealt land, and its origin is the city's tile. Second, the **terrain scatter**:

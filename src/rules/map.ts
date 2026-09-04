@@ -1,7 +1,7 @@
 import type { Resource, Resources } from './chronicle';
 import { nextRng, type Rng, shuffle } from './rng';
 
-/** The weighted terrain table each biome scatters over the tiles it grows onto. */
+/** The weighted terrain table each biome scatters over the tiles it spreads onto. */
 export const BIOME_TERRAINS = {
   land: { plain: 0.55, forest: 0.25, hills: 0.2 },
   sea: { water: 0.92, plain: 0.08 },
@@ -126,7 +126,8 @@ function pickTerrain(
 
 /**
  * The map of a chronicle: a hexagonal disc of tiles in axial coordinates, the city at its centre,
- * grown in two layers — biomes, then a terrain scattered from each biome's table.
+ * laid in two layers — biomes spread from their origins, then a terrain scattered from each
+ * biome's table.
  */
 export function generateMap(initial: Rng): { rng: Rng; tiles: Tile[] } {
   const { radius, tilesPerBiome, minBiomes, cityBiome, biomeShares } = MAP_COMPOSITION;
@@ -144,7 +145,7 @@ export function generateMap(initial: Rng): { rng: Rng; tiles: Tile[] } {
   const tileBiomes: Biome[] = new Array(coords.length);
   const assigned = new Set<number>();
   const edge: number[] = [];
-  const grow = (index: number, biome: Biome): void => {
+  const spread = (index: number, biome: Biome): void => {
     tileBiomes[index] = biome;
     assigned.add(index);
     edge.push(index);
@@ -165,8 +166,8 @@ export function generateMap(initial: Rng): { rng: Rng; tiles: Tile[] } {
   }
   while (dealt.length < biomeCount - 1) dealt.push(cityBiome);
 
-  grow(cityIndex, cityBiome);
-  for (let i = 0; i < dealt.length; i++) grow(elsewhere[i], dealt[i]);
+  spread(cityIndex, cityBiome);
+  for (let i = 0; i < dealt.length; i++) spread(elsewhere[i], dealt[i]);
 
   while (edge.length > 0) {
     const step = nextRng(rng);
@@ -182,7 +183,7 @@ export function generateMap(initial: Rng): { rng: Rng; tiles: Tile[] } {
     }
     const target = nextRng(rng);
     rng = target.rng;
-    grow(open[Math.floor(target.value * open.length)], tileBiomes[from]);
+    spread(open[Math.floor(target.value * open.length)], tileBiomes[from]);
   }
 
   const terrains: Terrain[] = new Array(coords.length);

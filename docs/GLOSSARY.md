@@ -45,7 +45,7 @@ deliberate exception the reviewer sees; there is no silent allow-list.
 | **victory** | The end of a chronicle by passing the capstone. | win, success, triumph |
 | **defeat** | The end of a chronicle by the city's fall. | collapse, game over, loss, death |
 | **border** | The edge of the tiles the city holds; pushed out by culture. | frontier, territory |
-| **turn** | One pass of the cycle: events, draw, play, end, combat, income, enemy phase. | round |
+| **turn** | One pass of the cycle: events, draw, play, end, combat, income, growth, enemy phase. | round |
 | **hand** | The cards drawn this turn; what is not played is discarded when the turn ends. | — |
 | **draw** | To take cards from the draw pile into the hand. | pull |
 | **play** | To put a card from the hand into effect, paying its cost. | cast, activate |
@@ -66,7 +66,7 @@ deliberate exception the reviewer sees; there is no silent allow-list.
 | **unassign** | To take one population off the tile it stands on; the reverse of assign. | remove, free up, release |
 | **idle** | An inhabitant assigned to no tile; what a unit card takes. | unemployed, spare, unassigned (as a noun) |
 | **grow** | What the food stock reaching the step does at income: the city gains one idle inhabitant. | birth, breed, spawn (for population), expand |
-| **biome** | A stretch of map the generator grows as one kind — land, sea, … — weighting the terrain of each tile in it. | patch, zone, area, ecosystem |
+| **biome** | A stretch of map the generator spreads as one kind — land, sea, … — weighting the terrain of each tile in it. | patch, zone, area, ecosystem |
 | **terrain** | A tile's base layer: plain, forest, hills, …; one per tile, changed only by terraforming. | tile type |
 | **feature** | A generated extra on a tile: a fertile plain, a river. | bonus |
 | **improvement** | A layer a worker lays on a tile through an action; distinct ones stack, the same one never twice. | — |
