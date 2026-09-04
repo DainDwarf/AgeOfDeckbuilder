@@ -28,9 +28,6 @@ a [`BOARD.md`](BOARD.md) line. Say
   building anything.
 - **Seed selection at launch**: when the "launch a chronicle" menu exists, it offers starting on a
   given seed — the player-facing door to replay-from-seed; `?seed=` stays the debug/e2e one.
-- **Per-tile yield overlay**: "+x +y" glyphs on each tile showing what it yields, toggleable
-  because the information saturates; clicking a resource on the top bar filters the overlay to
-  that resource alone. Becomes truly informative once assignment exists (v0.0.2).
 - **Colour ledger** (art-style pass scope): every UI colour resolves through one theme lookup,
   so an alternate theme — colour-blind-friendly included — becomes content, not surgery.
 - **Colour never carries gameplay meaning alone** (art-style pass scope): resource chips and
@@ -39,8 +36,9 @@ a [`BOARD.md`](BOARD.md) line. Say
 - **Animation speed settings**: the player sets how fast the staged motions play.
 - **Copy a replay**: one action puts version, seed, deck, the commands played and the last error
   on the clipboard, so any game a player pastes back can be replayed to the turn.
-- **Income flies in from the tiles** (economy and city-management version): at income, each
-  yielding tile sends its resource to the bar, so the player sees where the numbers come from.
+- **Placeholder road card** (v0.0.3, with the movement-cost re-evaluation and fog): a stand-in
+  improvement that changes a tile's movement cost, to check the scaffolding of an improvement
+  that reads into movement.
 - **Combat log**: a readable record of what the end of turn did — who attacked whom, what was
   killed, who moved where — for a player who missed the motion or wants it in words.
 - **Type-size floor, verified small** (art-style pass scope): minimum type sizes generous enough
