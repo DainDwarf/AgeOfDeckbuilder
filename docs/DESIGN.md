@@ -197,11 +197,12 @@ with growth elsewhere was rejected: the famine event would have nothing to bite.
 
 The chronicle screen has two modes. In **city mode** a tile click acts on the city — assigns an idle
 inhabitant to the tile or unassigns the one on it, claims a tile — instead of reading the tile out;
-out of it a click reads the tile. A click the city refuses says why, in the note a refused card
-raises, and the map marks the tiles the city can claim for as long as the mode is on. It is
-entered by the **city key** or by pressing culture or population on the resource bar, and left by
-that key, by the back key, or by the chip naming the mode; the map's frame drawn in the accent and
-that chip are how the chronicle screen shows the mode is on. Coming into city mode lets go of a card
+out of it a click reads the tile. A click on a tile the city neither holds nor can claim does
+nothing and says nothing; a click the city refuses says why, in the note a refused card raises. The
+map marks the tiles the city can claim for as long as the mode is on. It is entered by the **city
+key** or by pressing culture or population on the resource bar, and left by that key, by the back
+key, or by the chip naming the mode; the map's frame drawn in the accent and that chip are how the
+chronicle screen shows the mode is on. Coming into city mode lets go of a card
 being aimed and of a tile being read, and a window standing over the chronicle screen takes the city
 key instead.
 

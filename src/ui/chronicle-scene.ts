@@ -198,19 +198,18 @@ export class ChronicleScene extends Phaser.Scene {
 
     /**
      * The city acting on the tile a city-mode click landed on: the rules say which command that is,
-     * and a click they refuse plays nothing and stands its note over the tile instead.
+     * a click they refuse plays nothing and stands its note over the tile instead, and a tile the
+     * city has no act on takes the click without a word.
      */
     const act = (found: Inspection): void => {
+      const refusal = tileRefusal(this.current, found.tile);
+      if (refusal === undefined) return;
       const command = cityCommand(this.current, found.tile);
       if (command !== undefined) {
         void playOut(command);
         return;
       }
-      note.overTile(
-        tileCost(this.current, found.tile),
-        tileRefusal(this.current, found.tile),
-        found.at,
-      );
+      note.overTile(tileCost(this.current, found.tile), refusal, found.at);
     };
 
     view.inspect(

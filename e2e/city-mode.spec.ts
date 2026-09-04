@@ -166,7 +166,7 @@ test('city mode marks every tile the city can claim, and leaving it takes the ma
   expect(problems).toEqual([]);
 });
 
-test('a city-mode click the rules refuse says why, and one the city can pay for claims the tile', async ({
+test('a city-mode click the rules refuse says why, one on no act of the city’s says nothing, and one the city can pay for claims the tile', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -182,7 +182,8 @@ test('a city-mode click the rules refuse says why, and one the city can pay for 
   await expect.poll(() => refusalLines(page)).toEqual([text('refusal.culture', { cost: 1 })]);
 
   await page.mouse.click(far.x, far.y);
-  await expect.poll(() => refusalLines(page)).toContain(text('refusal.border'));
+  await answered(page);
+  expect(await refusalLines(page)).toBeUndefined();
 
   await endTurn(page);
   expect((await chronicleOf(page)).resources.culture).toBe(1);

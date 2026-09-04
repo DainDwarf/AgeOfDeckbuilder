@@ -281,10 +281,9 @@ export function costOf(id: CardId): Cost[] {
 /**
  * What the city or the map has against a card or a claim the cost alone would let through: the city
  * down to the last inhabitant it keeps, no inhabitant idle to turn into a unit or to stand on a
- * tile, a unit already on the city tile, no tile to build on, no unit to move, a tile no tile the
- * city holds touches.
+ * tile, a unit already on the city tile, no tile to build on, no unit to move.
  */
-export type Block = 'population' | 'idle' | 'city' | 'tile' | 'unit' | 'border';
+export type Block = 'population' | 'idle' | 'city' | 'tile' | 'unit';
 
 /** Everything standing between the city and a card or a claim: what it cannot pay, and the map. */
 export type Refusal = {
@@ -336,28 +335,27 @@ export function tileCost(chronicle: Chronicle, tile: TileCoords): Cost[] {
 }
 
 /**
- * Everything standing between the city and the tile a city-mode click lands on: the idle inhabitant
- * an assign has none of, and the culture and the border a claim falls short of.
+ * Everything standing between the city and the tile a city-mode click lands on: the idle population
+ * an assign has none of, and the culture a claim falls short of. A tile the city neither holds nor
+ * may claim is no act of the city's at all, and answers nothing.
  */
-export function tileRefusal(chronicle: Chronicle, tile: TileCoords): Refusal {
+export function tileRefusal(chronicle: Chronicle, tile: TileCoords): Refusal | undefined {
   if (holds(chronicle, tile)) {
     const standing = chronicle.assigned.some((coord) => tileKey(coord) === tileKey(tile));
     return { unaffordable: [], blocked: standing || idle(chronicle) > 0 ? [] : ['idle'] };
   }
-  const touching = claimable(chronicle).some((coord) => tileKey(coord) === tileKey(tile));
-  return {
-    unaffordable: unaffordable(chronicle, tileCost(chronicle, tile)),
-    blocked: touching ? [] : ['border'],
-  };
+  if (!claimable(chronicle).some((coord) => tileKey(coord) === tileKey(tile))) return undefined;
+  return { unaffordable: unaffordable(chronicle, tileCost(chronicle, tile)), blocked: [] };
 }
 
 /**
- * What a city-mode click on a tile sends: an assign on a tile the city holds, a claim on any other,
- * and nothing at all when the rules refuse it. The one decision both the chronicle screen and
- * `apply` answer that click by.
+ * What a city-mode click on a tile sends: an assign on a tile the city holds, a claim on one it may
+ * claim, and nothing at all on a tile it has no act on or when the rules refuse the act. The one
+ * decision both the chronicle screen and `apply` answer that click by.
  */
 export function cityCommand(chronicle: Chronicle, tile: TileCoords): Command | undefined {
-  if (!playable(tileRefusal(chronicle, tile))) return undefined;
+  const refusal = tileRefusal(chronicle, tile);
+  if (refusal === undefined || !playable(refusal)) return undefined;
   return { type: holds(chronicle, tile) ? 'assign' : 'claim', tile };
 }
 

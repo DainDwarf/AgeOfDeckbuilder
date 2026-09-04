@@ -1083,16 +1083,24 @@ test('a city-mode click assigns on a tile the city holds and claims on any other
   expect(cityCommand(city, { q: 3, r: 0 })).toBeUndefined();
 });
 
-test('a city-mode click is refused for the culture it costs and for the border it is off', () => {
+test('a city-mode click is refused for the culture it costs, and a tile off the border refuses nothing', () => {
   const city = founded(3);
   const paid = founded(3, { resources: culture(1) });
 
   expect(tileCost(city, { q: 2, r: 0 })).toEqual([{ resource: 'culture', amount: 1 }]);
   expect(tileRefusal(city, { q: 2, r: 0 })).toEqual({ unaffordable: ['culture'], blocked: [] });
   expect(tileRefusal(paid, { q: 2, r: 0 })).toEqual({ unaffordable: [], blocked: [] });
-  expect(tileRefusal(paid, { q: 3, r: 0 })).toEqual({ unaffordable: [], blocked: ['border'] });
   expect(tileCost(paid, CITY)).toEqual([]);
   expect(tileRefusal(paid, CITY)).toEqual({ unaffordable: [], blocked: [] });
+});
+
+test('a tile the city neither holds nor can claim is no act of the city’s, and refuses a claim', () => {
+  const city = founded(3, { resources: culture(9) });
+
+  expect(tileRefusal(city, { q: 3, r: 0 })).toBeUndefined();
+  expect(tileRefusal(city, { q: 9, r: 9 })).toBeUndefined();
+  expect(cityCommand(city, { q: 3, r: 0 })).toBeUndefined();
+  expect(stagedBy(city, claimOf({ q: 3, r: 0 }))).toEqual(['refused']);
 });
 
 test('a city-mode click on a held tile nobody stands on is refused while nobody is idle', () => {
