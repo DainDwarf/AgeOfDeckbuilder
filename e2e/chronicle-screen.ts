@@ -298,7 +298,7 @@ export async function aimed(page: Page): Promise<void> {
   await page.waitForFunction(() => window.named?.('aim') !== undefined);
 }
 
-/** Which layer the infopanel is reading, or nothing while it is dismissed. */
+/** Which layer the infopanel is inspecting, or nothing while it stands down. */
 export function shownLayer(page: Page): Promise<string | undefined> {
   return page.evaluate(() => {
     const panel = window.named?.('infopanel')?.object as Phaser.GameObjects.Container | undefined;
@@ -339,7 +339,7 @@ export function endTurnLabel(page: Page): Promise<string> {
 /** Which tile the map is ringing, or nothing while none is selected. */
 export function ringedTile(page: Page): Promise<string | undefined> {
   return page.evaluate(() => {
-    const ring = window.named?.('inspected')?.object;
+    const ring = window.named?.('selected')?.object;
     if (ring === undefined) throw new Error('the ring is not on the chronicle screen');
     return ring.getData('tile') as string | undefined;
   });

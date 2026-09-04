@@ -49,6 +49,20 @@ async function inCityMode(page: Page): Promise<boolean> {
   return chip;
 }
 
+/** A tile the founding leaves bare: its terrain and nothing else, well clear of the border. */
+async function bareTile(page: Page): Promise<string> {
+  const chronicle = await chronicleOf(page);
+  const found = chronicle.tiles.find(
+    (tile) =>
+      distance(tile, chronicle.city) === 3 &&
+      tile.feature === undefined &&
+      tile.building === undefined &&
+      tile.improvements.length === 0,
+  );
+  if (found === undefined) throw new Error('the founding leaves no bare tile three tiles out');
+  return tileKey(found);
+}
+
 /** Two frames, so whatever the last gesture handed the chronicle screen has been answered. */
 async function answered(page: Page): Promise<void> {
   await settled(page);
@@ -72,7 +86,7 @@ async function yielded(page: Page): Promise<{ inside: Glyphs; map: Glyphs }> {
   return { inside, map };
 }
 
-test('the city key enters city mode, where a tile click reads nothing, and the back key leaves it', async ({
+test('the city key enters city mode, where a tile click selects nothing, and the back key leaves it', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -98,7 +112,7 @@ test('the city key enters city mode, where a tile click reads nothing, and the b
   expect(problems).toEqual([]);
 });
 
-test('city mode lets go of the tile being read as it comes on', async ({ page }) => {
+test('city mode lets go of the selection as it comes on', async ({ page }) => {
   const problems = watch(page);
 
   await open(page, 1, 'PH_Deck');
@@ -109,6 +123,47 @@ test('city mode lets go of the tile being read as it comes on', async ({ page })
   await page.keyboard.press('c');
   await expect.poll(() => inCityMode(page)).toBe(true);
   expect(await ringedTile(page)).toBeUndefined();
+
+  expect(problems).toEqual([]);
+});
+
+test('a right click in city mode inspects the tile under it without selecting, and leaving the mode drops it', async ({
+  page,
+}) => {
+  const problems = watch(page);
+
+  await open(page, 1, 'PH_Deck');
+  await page.keyboard.press('c');
+  await expect.poll(() => inCityMode(page)).toBe(true);
+
+  const at = await onScreen(page, `tile-${await bareTile(page)}`);
+  await page.mouse.click(at.x, at.y, { button: 'right' });
+  await expect.poll(() => shownLayer(page)).toBe('terrain');
+  expect(await ringedTile(page)).toBeUndefined();
+
+  // Its terrain is the whole of it, so the step after it is the bare tile again.
+  await page.mouse.click(at.x, at.y, { button: 'right' });
+  await expect.poll(() => shownLayer(page)).toBeUndefined();
+  await page.mouse.click(at.x, at.y, { button: 'right' });
+  await expect.poll(() => shownLayer(page)).toBe('terrain');
+  expect(await ringedTile(page)).toBeUndefined();
+
+  // The first back key takes the infopanel down; the mode stands until the next one.
+  await page.keyboard.press('Escape');
+  await answered(page);
+  expect(await shownLayer(page)).toBeUndefined();
+  expect(await inCityMode(page)).toBe(true);
+  await page.keyboard.press('Escape');
+  await expect.poll(() => inCityMode(page)).toBe(false);
+
+  // What the mode is left on goes down with it, however it is left.
+  await page.keyboard.press('c');
+  await expect.poll(() => inCityMode(page)).toBe(true);
+  await page.mouse.click(at.x, at.y, { button: 'right' });
+  await expect.poll(() => shownLayer(page)).toBe('terrain');
+  await page.keyboard.press('c');
+  await expect.poll(() => inCityMode(page)).toBe(false);
+  expect(await shownLayer(page)).toBeUndefined();
 
   expect(problems).toEqual([]);
 });

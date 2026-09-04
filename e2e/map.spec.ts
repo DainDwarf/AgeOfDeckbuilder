@@ -141,7 +141,7 @@ test('a pan and a zoom carry the ringed tile and the panel beside it', async ({ 
   const tile = await onScreen(page, BARE.name);
   await page.mouse.click(tile.x, tile.y);
   await expect.poll(() => ringedTile(page)).toBe(BARE.key);
-  await page.mouse.click(tile.x, tile.y);
+  await page.keyboard.press('i');
   await expect.poll(() => shownLayer(page)).toBe('terrain');
 
   const panel = await onScreen(page, 'infopanel');
@@ -177,7 +177,7 @@ test("a pan carries a panel row's tooltip along with the row", async ({ page }) 
   const tile = await onScreen(page, BARE.name);
   await page.mouse.click(tile.x, tile.y);
   await expect.poll(() => ringedTile(page)).toBe(BARE.key);
-  await page.mouse.click(tile.x, tile.y);
+  await page.keyboard.press('i');
   await expect.poll(() => shownLayer(page)).toBe('terrain');
 
   const row = await onScreen(page, 'infopanel-row-0');

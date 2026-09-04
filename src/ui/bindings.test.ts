@@ -35,8 +35,12 @@ describe('binding a key', () => {
 
   it('binds the back key like any other, and moves it off the control that had it', () => {
     const after = bound(DEFAULTS, 'pan-down', 1, 'Escape');
-    expect(after.back).toEqual([undefined, 'Mouse2']);
+    expect(after.back).toEqual([undefined, undefined]);
     expect(after['pan-down']).toEqual(['S', 'Escape']);
+  });
+
+  it('opens the inspection key on I, with a slot free beside it', () => {
+    expect(DEFAULTS.inspect).toEqual(['I', undefined]);
   });
 
   it('binds a wheel notch like any other key, and moves it off the zoom that had it', () => {
@@ -58,7 +62,7 @@ describe('binding a key', () => {
   it('leaves the defaults standing, so they are there to be put back', () => {
     bound(bound(DEFAULTS, 'pan-up', 0, 'k'), 'back', 0, 'b');
     expect(DEFAULTS['pan-up']).toEqual(['W', 'ArrowUp']);
-    expect(DEFAULTS.back).toEqual(['Escape', 'Mouse2']);
+    expect(DEFAULTS.back).toEqual(['Escape', undefined]);
   });
 });
 
@@ -76,6 +80,12 @@ describe('the bindings kept in the browser', () => {
     for (const kept of ['', 'not json at all', '[]', '"W"', '{"pan-up":7}']) {
       expect(parseBindings(kept)).toEqual(DEFAULTS);
     }
+  });
+
+  it('leave the slot empty where what was kept is a button that presses the chronicle screen', () => {
+    const parsed = parseBindings('{"back":["Escape","Mouse2"],"city":["Mouse0","C"]}');
+    expect(parsed.back).toEqual(['Escape', undefined]);
+    expect(parsed.city).toEqual([undefined, 'C']);
   });
 
   it('stand at their default for every control the kept bindings do not cover', () => {

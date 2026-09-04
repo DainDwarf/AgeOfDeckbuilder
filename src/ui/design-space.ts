@@ -270,9 +270,15 @@ export function applyDesignSpace(scene: Phaser.Scene): Surfaces {
   return { map, ui };
 }
 
+// A pointer records `downX` / `downY` for its primary button alone, so where a press landed is the
+// taker's to remember: a right press would measure from wherever the last left press landed.
 /** Whether the press a pointer is holding has travelled far enough to be a drag and not a click. */
-export function dragged(scene: Phaser.Scene, pointer: Phaser.Input.Pointer): boolean {
-  const travel = Phaser.Math.Distance.Between(pointer.downX, pointer.downY, pointer.x, pointer.y);
+export function dragged(
+  scene: Phaser.Scene,
+  from: { x: number; y: number },
+  pointer: Phaser.Input.Pointer,
+): boolean {
+  const travel = Phaser.Math.Distance.Between(from.x, from.y, pointer.x, pointer.y);
   return travel >= scene.input.dragDistanceThreshold;
 }
 
@@ -347,11 +353,12 @@ export function createClip(scene: Phaser.Scene, on: Surface): Clip {
 }
 
 /**
- * A click: pressed and released on the same object, with no drag in between. Phaser delivers
- * `pointerup` to whatever lies under the pointer however far it travelled since the press, so a
- * bare `pointerup` also fires on a card dragged onto the object from elsewhere, on the object a
- * drag of its own just ended over, and on the release half of a click whose press dismissed
- * something above it.
+ * A click: the left button pressed and released on the same object, with no drag in between. The
+ * right button presses the chronicle screen and nothing else, so everything the UI lays out answers
+ * the left alone. Phaser delivers `pointerup` to whatever lies under the pointer however far it
+ * travelled since the press, so a bare `pointerup` also fires on a card dragged onto the object
+ * from elsewhere, on the object a drag of its own just ended over, and on the release half of a
+ * click whose press dismissed something above it.
  */
 export function onClick(
   target: Phaser.GameObjects.GameObject,
@@ -363,11 +370,11 @@ export function onClick(
     pressed = false;
   };
 
-  target.on('pointerdown', () => {
-    pressed = true;
+  target.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+    if (pointer.button === 0) pressed = true;
   });
   target.on('pointerup', (pointer: Phaser.Input.Pointer) => {
-    if (pressed) handler(pointer);
+    if (pressed && pointer.button === 0) handler(pointer);
   });
   target.on('dragstart', disarm);
   // The scene sees every release, on the canvas and off it, and after the target does. A press the

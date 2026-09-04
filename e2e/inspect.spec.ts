@@ -1,18 +1,20 @@
 import { expect, type Page, test } from '@playwright/test';
 import { DECKS } from '../src/rules/cards';
-import { apply, beginChronicle, outcome, playable, refusalOf } from '../src/rules/chronicle';
+import { beginChronicle } from '../src/rules/chronicle';
 import { neighbours, tileKey } from '../src/rules/map';
-import type { ChronicleScene } from '../src/ui/chronicle-scene';
 import {
+  aimed,
   chronicleOf,
   dragOut,
   endTurn,
   onScreen,
   open,
   ringedTile,
+  settled,
   shownLayer,
   standing,
   watch,
+  workerRun,
 } from './chronicle-screen';
 
 /** A tile on bare map, clear of the resource bar, the piles and the hand. */
@@ -43,18 +45,10 @@ function browserMenu(page: Page): Promise<boolean | undefined> {
   return page.evaluate(() => window.browserMenu);
 }
 
-/** The first seed with a turn in its first eight that opens on a worker the city can pay for. */
-function workerRun(): { seed: number; turn: number } {
-  for (let seed = 1; seed <= 1000; seed++) {
-    let chronicle = beginChronicle(seed, DECKS.PH_Deck);
-    for (let turn = 1; turn <= 8; turn++) {
-      if (chronicle.hand.includes('PH_Worker') && playable(refusalOf(chronicle, 'PH_Worker'))) {
-        return { seed, turn };
-      }
-      chronicle = outcome(apply(chronicle, { type: 'end-turn' }));
-    }
-  }
-  throw new Error('no seed under a thousand opens a turn on a playable worker');
+/** Two frames, so whatever the last gesture handed the chronicle screen has been answered. */
+async function answered(page: Page): Promise<void> {
+  await settled(page);
+  await settled(page);
 }
 
 /** The first seed whose generator put a feature on a tile touching the city, well inside the frame. */
@@ -68,7 +62,7 @@ function featureRun(): { seed: number; key: string } {
   throw new Error('no seed under a thousand puts a feature beside the city');
 }
 
-test('a tile the generator gave a feature shows its mark, and reads out as a layer of its own', async ({
+test('a tile the generator gave a feature shows its mark, and inspects as a layer of its own', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -81,55 +75,26 @@ test('a tile the generator gave a feature shows its mark, and reads out as a lay
   const at = await onScreen(page, `tile-${run.key}`);
   await page.mouse.click(at.x, at.y);
   await expect.poll(() => ringedTile(page)).toBe(run.key);
-  await page.mouse.click(at.x, at.y);
+  await page.keyboard.press('i');
   await expect.poll(() => shownLayer(page)).toBe('feature');
-  await page.mouse.click(at.x, at.y);
+  await page.keyboard.press('i');
   await expect.poll(() => shownLayer(page)).toBe('terrain');
 
   expect(problems).toEqual([]);
 });
 
-test('a right click picks out no tile: it backs the reading out, and no browser menu shows', async ({
+test('a click selects a tile, the inspection key steps its layers, and the back key drops each in turn', async ({
   page,
 }) => {
   const problems = watch(page);
-
-  await open(page, 1, 'PH_Deck');
-  const bare = await onScreen(page, BARE.name);
-  await page.mouse.click(bare.x, bare.y);
-  await expect.poll(() => ringedTile(page)).toBe(BARE.key);
-
-  const city = await chronicleOf(page).then((chronicle) =>
-    onScreen(page, `tile-${tileKey(chronicle.city)}`),
-  );
-  await watchBrowserMenu(page);
-  await page.mouse.click(city.x, city.y, { button: 'right' });
-
-  await expect.poll(() => browserMenu(page)).toBe(true);
-  await expect.poll(() => ringedTile(page)).toBeUndefined();
-  expect(await standing(page, 'menu')).toBe(false);
-  // The press carried the map nowhere either: the tile stands where it stood.
-  const after = await onScreen(page, BARE.name);
-  expect(after.x).toBeCloseTo(bare.x, 0);
-  expect(after.y).toBeCloseTo(bare.y, 0);
-
-  expect(problems).toEqual([]);
-});
-
-test('a tile selects on the first click and reads out a layer per click after it, until a click off the map drops it', async ({
-  page,
-}) => {
-  const problems = watch(page);
-  const run = workerRun();
+  const run = workerRun('PH_Farm');
 
   await open(page, run.seed, 'PH_Deck');
   for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
 
   const opened = await chronicleOf(page);
   await dragOut(page, opened.hand.indexOf('PH_Worker'));
-  await page.waitForFunction(
-    () => window.game?.scene.getScene<ChronicleScene>('chronicle').chronicle.units.length === 1,
-  );
+  await expect.poll(async () => (await chronicleOf(page)).units.length).toBe(1);
 
   const entered = await chronicleOf(page);
   const cityTile = tileKey(entered.units[0].tile);
@@ -137,39 +102,127 @@ test('a tile selects on the first click and reads out a layer per click after it
   expect(await shownLayer(page)).toBeUndefined();
   expect(await ringedTile(page)).toBeUndefined();
 
+  // With nothing selected the inspection key has no tile to step.
+  await page.keyboard.press('i');
+  await answered(page);
+  expect(await shownLayer(page)).toBeUndefined();
+  expect(await ringedTile(page)).toBeUndefined();
+
   // The city's tile carries all three layers: the worker that just entered, the city, the terrain.
   await page.mouse.click(city.x, city.y);
   await expect.poll(() => ringedTile(page)).toBe(cityTile);
   expect(await shownLayer(page)).toBeUndefined();
-  await page.mouse.click(city.x, city.y);
+  await page.keyboard.press('i');
   await expect.poll(() => shownLayer(page)).toBe('unit');
-  await page.mouse.click(city.x, city.y);
+  await page.keyboard.press('i');
   await expect.poll(() => shownLayer(page)).toBe('building');
-  await page.mouse.click(city.x, city.y);
+  await page.keyboard.press('i');
   await expect.poll(() => shownLayer(page)).toBe('terrain');
-  await page.mouse.click(city.x, city.y);
+  await page.keyboard.press('i');
   await expect.poll(() => shownLayer(page)).toBeUndefined();
   expect(await ringedTile(page)).toBe(cityTile);
-  await page.mouse.click(city.x, city.y);
+  await page.keyboard.press('i');
   await expect.poll(() => shownLayer(page)).toBe('unit');
+
+  // A click on the tile already selected selects nothing afresh, and the layer stands.
+  await page.mouse.click(city.x, city.y);
+  await answered(page);
+  expect(await shownLayer(page)).toBe('unit');
+  expect(await ringedTile(page)).toBe(cityTile);
+
+  // One step per press of the back key: the infopanel first, the ring after it.
+  await page.keyboard.press('Escape');
+  await expect.poll(() => shownLayer(page)).toBeUndefined();
+  expect(await ringedTile(page)).toBe(cityTile);
+  await page.keyboard.press('Escape');
+  await expect.poll(() => ringedTile(page)).toBeUndefined();
+  expect(await standing(page, 'menu')).toBe(false);
 
   // West of the city: nothing stands on it, and it is clear of the panel standing east of the city.
   const { q, r } = entered.units[0].tile;
   const bareTile = tileKey({ q: q - 1, r });
   const bare = await onScreen(page, `tile-${bareTile}`);
   await page.mouse.click(bare.x, bare.y);
-  await expect.poll(() => shownLayer(page)).toBeUndefined();
-  expect(await ringedTile(page)).toBe(bareTile);
-  await page.mouse.click(bare.x, bare.y);
+  await expect.poll(() => ringedTile(page)).toBe(bareTile);
+  expect(await shownLayer(page)).toBeUndefined();
+  await page.keyboard.press('i');
   await expect.poll(() => shownLayer(page)).toBe('terrain');
-  await page.mouse.click(bare.x, bare.y);
-  await expect.poll(() => shownLayer(page)).toBeUndefined();
-  expect(await ringedTile(page)).toBe(bareTile);
+
+  // A click on another tile selects it, and the inspection standing on the last one is let go of.
+  await page.mouse.click(city.x, city.y);
+  await expect.poll(() => ringedTile(page)).toBe(cityTile);
+  expect(await shownLayer(page)).toBeUndefined();
 
   // Up and left of the city: inside the map's frame, which starts under the resource bar, and far
   // enough out for the nearest tile to be well outside the map's disc.
   await page.mouse.click(city.x - 440 * city.unit, city.y - 160 * city.unit);
   await expect.poll(() => ringedTile(page)).toBeUndefined();
+  expect(await shownLayer(page)).toBeUndefined();
+
+  expect(problems).toEqual([]);
+});
+
+test('a right click selects and inspects in the one press, steps on where it stands, and shows no browser menu', async ({
+  page,
+}) => {
+  const problems = watch(page);
+
+  await open(page, 1, 'PH_Deck');
+  const bare = await onScreen(page, BARE.name);
+  const city = await chronicleOf(page).then((chronicle) =>
+    onScreen(page, `tile-${tileKey(chronicle.city)}`),
+  );
+
+  await watchBrowserMenu(page);
+  await page.mouse.click(bare.x, bare.y, { button: 'right' });
+  await expect.poll(() => shownLayer(page)).toBe('terrain');
+  expect(await ringedTile(page)).toBe(BARE.key);
+  await expect.poll(() => browserMenu(page)).toBe(true);
+
+  // Nothing stands on it and nothing is built on it: after its terrain comes the bare ring again.
+  await page.mouse.click(bare.x, bare.y, { button: 'right' });
+  await expect.poll(() => shownLayer(page)).toBeUndefined();
+  expect(await ringedTile(page)).toBe(BARE.key);
+  await page.mouse.click(bare.x, bare.y, { button: 'right' });
+  await expect.poll(() => shownLayer(page)).toBe('terrain');
+
+  // The press carried the map nowhere either: the tile stands where it stood.
+  const after = await onScreen(page, BARE.name);
+  expect(after.x).toBeCloseTo(bare.x, 0);
+  expect(after.y).toBeCloseTo(bare.y, 0);
+
+  await page.mouse.click(city.x - 440 * city.unit, city.y - 160 * city.unit, { button: 'right' });
+  await expect.poll(() => ringedTile(page)).toBeUndefined();
+  expect(await shownLayer(page)).toBeUndefined();
+  expect(await standing(page, 'menu')).toBe(false);
+
+  expect(problems).toEqual([]);
+});
+
+test('a right press while a card is aimed lets the card go', async ({ page }) => {
+  const problems = watch(page);
+  const run = workerRun('PH_Farm');
+
+  await open(page, run.seed, 'PH_Deck');
+  for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
+
+  const opened = await chronicleOf(page);
+  await dragOut(page, opened.hand.indexOf('PH_Worker'));
+  await expect.poll(async () => (await chronicleOf(page)).units.length).toBe(1);
+
+  const entered = await chronicleOf(page);
+  await dragOut(page, entered.hand.indexOf('PH_March'));
+  await aimed(page);
+
+  const bare = await onScreen(page, BARE.name);
+  await page.mouse.click(bare.x, bare.y, { button: 'right' });
+
+  await expect.poll(() => standing(page, 'aim')).toBe(false);
+  const released = await chronicleOf(page);
+  expect(released.hand).toEqual(entered.hand);
+  expect(released.units[0].tile).toEqual(entered.units[0].tile);
+  // The aim held the tile presses off, so the one that let the card go picked out no tile.
+  expect(await ringedTile(page)).toBeUndefined();
   expect(await shownLayer(page)).toBeUndefined();
 
   expect(problems).toEqual([]);

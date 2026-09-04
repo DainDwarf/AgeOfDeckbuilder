@@ -1,6 +1,15 @@
 import { expect, type Page, test } from '@playwright/test';
 import type Phaser from 'phaser';
-import { click, onScreen, open, settled, standing, watch } from './chronicle-screen';
+import {
+  click,
+  onScreen,
+  open,
+  ringedTile,
+  settled,
+  shownLayer,
+  standing,
+  watch,
+} from './chronicle-screen';
 
 /** A tile on bare map, clear of the resource bar, the piles and the hand. */
 const BARE = 'tile-0,-3';
@@ -15,7 +24,8 @@ const AS_FOUND = [
   ['Wheel down', '—'],
   ['C', '—'],
   ['Tab', '—'],
-  ['Escape', 'Right click'],
+  ['I', '—'],
+  ['Escape', '—'],
 ];
 
 const LISTED = [
@@ -27,6 +37,7 @@ const LISTED = [
   'zoom-out',
   'city',
   'yields',
+  'inspect',
   'back',
 ];
 
@@ -78,6 +89,19 @@ async function heldByButton(page: Page, button: 'middle' | 'right'): Promise<num
   await page.mouse.move(before.x, before.y);
   await page.mouse.down({ button });
   for (let frame = 0; frame < 12; frame++) await settled(page);
+  await page.mouse.up({ button });
+  await settled(page);
+  await settled(page);
+  return (await onScreen(page, BARE)).y - before.y;
+}
+
+/** How far a drag of a bare tile with that button carried the map down the screen. */
+async function draggedBy(page: Page, button: 'left' | 'right', by: number): Promise<number> {
+  const before = await onScreen(page, BARE);
+  await page.mouse.move(before.x, before.y);
+  await page.mouse.down({ button });
+  await page.mouse.move(before.x, before.y + by / 2, { steps: 5 });
+  await page.mouse.move(before.x, before.y + by, { steps: 5 });
   await page.mouse.up({ button });
   await settled(page);
   await settled(page);
@@ -164,7 +188,7 @@ test('the back key binds like any other, and the Back button closes without it',
   await page.keyboard.press('Escape');
   await expect.poll(() => slotReads(page, 'pan-down', 1)).toBe('Escape');
   expect(await slotReads(page, 'back', 0)).toBe('—');
-  expect(await slotReads(page, 'back', 1)).toBe('Right click');
+  expect(await slotReads(page, 'back', 1)).toBe('—');
 
   // Escape backs nothing out any more, so the key that used to leaves the window standing.
   await page.keyboard.press('Escape');
@@ -307,7 +331,7 @@ test('a key bound to a zoom zooms the map, and the wheel moved off it stops zoom
   expect(problems).toEqual([]);
 });
 
-test('a right click backs out one step, and raises the menu from a bare chronicle screen', async ({
+test('a right click leaves a window standing, and the back key still steps out of it', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -317,17 +341,33 @@ test('a right click backs out one step, and raises the menu from a bare chronicl
 
   // The middle of the design space: the windows stand on it, and bare map lies under them.
   const middle = await onScreen(page, 'controls');
-  const rightClick = (): Promise<void> => page.mouse.click(middle.x, middle.y, { button: 'right' });
+  await page.mouse.click(middle.x, middle.y, { button: 'right' });
+  await settled(page);
+  await settled(page);
+  expect(await standing(page, 'controls')).toBe(true);
 
-  await rightClick();
-  await expect.poll(() => standing(page, 'settings')).toBe(true);
-  await rightClick();
-  await expect.poll(() => standing(page, 'menu')).toBe(true);
-  await rightClick();
-  await expect.poll(() => standing(page, 'menu')).toBe(false);
+  await outOfControls(page);
 
-  await rightClick();
+  await page.keyboard.press('Escape');
   await expect.poll(() => standing(page, 'menu')).toBe(true);
+
+  expect(problems).toEqual([]);
+});
+
+test('a right drag carries the map as a left drag does, and the button on its own binds nothing', async ({
+  page,
+}) => {
+  const problems = watch(page);
+
+  await open(page, 1, 'PH_Deck');
+
+  expect(await draggedBy(page, 'left', 120)).toBeCloseTo(120, 0);
+  expect(await draggedBy(page, 'right', -120)).toBeCloseTo(-120, 0);
+  // A drag is no press on the tile it started over, whichever button carried it.
+  expect(await ringedTile(page)).toBeUndefined();
+  expect(await shownLayer(page)).toBeUndefined();
+
+  expect(Math.abs(await heldByButton(page, 'right'))).toBeLessThan(1);
 
   expect(problems).toEqual([]);
 });

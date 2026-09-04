@@ -26,7 +26,7 @@ import {
 import { text } from './text';
 import { createTooltip } from './tooltip';
 
-/** One thing a tile is made of, read off the map. A tile is its layers, outermost first. */
+/** One thing a tile is made of. A tile is its layers, outermost first. */
 export type Layer =
   | { readonly kind: 'unit'; readonly unit: Unit }
   | { readonly kind: 'building'; readonly building: BuildingTypeId }
@@ -106,9 +106,9 @@ type RowBubble = {
 };
 
 /**
- * What a tile is, read off the map: one layer at a time on a card of its own, the layers behind
- * it showing as ghosts under its corner. It stands on the map itself, so a pan carries it with the
- * tile it reads and nothing here hears about one. Every show rebuilds the layer, so nothing here
+ * A tile inspected: one layer at a time on a card of its own, the layers behind it showing as
+ * ghosts under its corner. It stands on the map itself, so a pan carries it with the tile it
+ * inspects and nothing here hears about one. Every show rebuilds the layer, so nothing here
  * follows a state change — the panel is dismissed by whatever caused one.
  */
 export function createInfoPanel(scene: Phaser.Scene, on: Surface): InfoPanel {

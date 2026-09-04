@@ -103,15 +103,15 @@ or the middle of a turn. **Settings** is where everything the player sets lives,
 is its first entry.
 
 A window closes back one step, to the window it was opened from and then to the chronicle screen.
-The **back key**, Escape and a right click until they are rebound, backs out of whatever is open or
-pending — a window, a card being aimed, a tile being read, city mode — one step per press, and
+The **back key**, Escape until it is rebound, backs out of whatever is open or pending — a window, a
+card being aimed, a tile's inspection, the selection under it, city mode — one step per press, and
 raises the menu only from a clean chronicle screen. Nothing pauses, because nothing runs: the game
 is untimed, and a menu over the chronicle screen is the chronicle screen waiting.
 
 **Controls** lists every key the game binds — the four directions the map pans, the two it zooms,
-the city key, the yield key, and the back key — with two slots to each. A key is rebound by
-pressing its slot and then the key itself, whatever that key is; a key already bound elsewhere
-moves, leaving the slot that had it empty. Every mouse button but the one that presses the
+the city key, the yield key, the inspection key, and the back key — with two slots to each. A key is
+rebound by pressing its slot and then the key itself, whatever that key is; a key already bound
+elsewhere moves, leaving the slot that had it empty. Every mouse button but the two that press the
 chronicle screen binds there like a key, and presses nothing on the chronicle screen; the browser's
 own menu never shows over the game. A notch of the wheel binds like a key too, one key each way;
 the map zooms one notch a press, and only through the two zooms — a wheel notch up and a wheel
@@ -203,18 +203,28 @@ events are the whole of the pressure on the population.
 
 ### City mode ✅
 
-The chronicle screen has two modes. In **city mode** a tile click acts on the city — assigns an idle
-inhabitant to the tile or unassigns the one on it, claims a tile — instead of reading the tile out;
-out of it a click reads the tile. A click on a tile the city neither holds nor can claim does
-nothing and says nothing; a click the city refuses says why, in the note a refused card raises. The
+The chronicle screen has two modes. Out of city mode a click on a tile **selects** it: the map rings
+it, and nothing more. The **inspection key** then **inspects** the selection — one of its layers in
+the infopanel per press, outermost first, and after the last of them the bare ring again. A right
+click is a press on the chronicle screen and not a key, so it binds to nothing and Controls does not
+list it: on a tile it selects and inspects in the one press, and pressed again on the tile already
+selected it inspects on without selecting afresh; off the map it drops the selection, and while a
+card is being aimed it lets the card go.
+
+In **city mode** a tile click acts on the city — assigns an idle inhabitant to the tile or unassigns
+the one on it, claims a tile — and selects nothing; a right click there inspects the tile under the
+cursor without selecting it, which is the only way to inspect in city mode; a right click off the
+map drops that inspection, and so does leaving the mode. A click on a tile the city neither holds
+nor can claim does nothing and says nothing; a click the city refuses says why, in the note a
+refused card raises. The
 map marks the tiles the city can claim for as long as the mode is on, and every tile inside the
 border shows what it yields — every resource, whatever the yield overlay is showing, the dim of a
 tile nobody stands on no exception, and with no dim over the map: that dim is the overlay's alone.
 It is entered by the **city key** or by pressing culture or population on the resource bar, and
 left by that key, by the back key, or by the chip naming the mode; the map's frame drawn in the
 accent and that chip are how the chronicle screen shows the mode is on. Coming into city mode lets
-go of a card being aimed and of a tile being read, and a window standing over the chronicle screen
-takes the city key instead.
+go of a card being aimed, of the selection and of its inspection, and a window standing over the
+chronicle screen takes the city key instead.
 
 ### The yield overlay ✅
 
@@ -225,8 +235,8 @@ never what the overlay shows. Pressing one of the five core readings on the reso
 that resource in or out of the overlay, several at a time, and the reading of a resource shown is
 latched down in the bar; the **yield key** clears the overlay, or, from nothing, shows every
 resource, culture included, and a window standing over the chronicle screen takes the key instead.
-Three things stand over the dim, undimmed: the tile being read, its ring and its infopanel, and
-the tiles a card is aimed at. It is a display and not a mode: the back key leaves it standing, city
+Three things stand over the dim, undimmed: the selection's ring, the infopanel of the tile being
+inspected, and the tiles a card is aimed at. It is a display and not a mode: the back key leaves it standing, city
 mode stands with it, and either is entered and left without touching the other.
 
 ### The map ✅

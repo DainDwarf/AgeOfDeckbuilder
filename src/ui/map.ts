@@ -173,8 +173,11 @@ export type TileFace = {
   readonly radius: number;
 };
 
-/** A tile the pointer picked out, and where it stands for whatever floats beside it. */
-export type Inspection = {
+/** Which of the two buttons that press the chronicle screen a press came from. */
+export type Press = 'left' | 'right';
+
+/** A tile a press landed on, and where it stands for whatever floats beside it. */
+export type PressedTile = {
   readonly tile: TileCoords;
   readonly at: TileFace;
 };
@@ -183,7 +186,10 @@ export type MapView = {
   render(chronicle: Chronicle): void;
   /** What the map plays for the stage; nothing means the scene renders it at once. */
   play(stage: Stage): Promise<void> | undefined;
-  /** Aims at a unit, then at where it lands, until a target is chosen or cancel is called. */
+  /**
+   * Aims at a unit, then at where it lands, until a target is chosen or cancel is called. A right
+   * press on either aim lets it go, exactly as cancel does.
+   */
   aimUnitTile(chronicle: Chronicle, chosen: (target: Target | undefined) => void): () => void;
   /** Lights the tiles it is given and aims at them, until a target is chosen or cancel is called. */
   aimTile(
@@ -192,14 +198,17 @@ export type MapView = {
     chosen: (target: Target | undefined) => void,
   ): () => void;
   /**
-   * Reports the tile every click the UI leaves lands on, and nothing when it lands off the map;
-   * `zoomed` fires whenever the zoom changes, so whatever stands on the map at a size of its own
-   * stands again. Called once; while a card is aimed the map belongs to the aim and no click is
-   * reported.
+   * Reports the tile every press the UI leaves lands on and the button it came from, and nothing
+   * when it lands off the map; `zoomed` fires whenever the zoom changes, so whatever stands on the
+   * map at a size of its own stands again. Called once; while a card is aimed the map belongs to
+   * the aim and no press is reported.
    */
-  inspect(inspected: (found: Inspection | undefined) => void, zoomed: () => void): void;
-  /** Rings the tile being inspected, or clears the ring. */
-  markInspected(tile: TileCoords | undefined): void;
+  onPress(
+    pressed: (found: PressedTile | undefined, press: Press) => void,
+    zoomed: () => void,
+  ): void;
+  /** Rings the selected tile, or clears the ring. */
+  markSelected(tile: TileCoords | undefined): void;
   /**
    * Shows what every tile yields of these resources, a glyph for each point of it, over a dimmed
    * map; an empty set takes the overlay down.
@@ -356,6 +365,11 @@ function same(a: TileCoords, b: TileCoords): boolean {
   return a.q === b.q && a.r === b.r;
 }
 
+/** Which button a press came from; no other button reaches Phaser, they all read as keys. */
+function pressOf(pointer: Phaser.Input.Pointer): Press {
+  return pointer.button === 2 ? 'right' : 'left';
+}
+
 function litTile(scene: Phaser.Scene, coord: TileCoords): Phaser.GameObjects.Polygon {
   const { x, y } = positionOf(coord);
   return scene.add.polygon(x, y, hexagon(TILE_SIZE - 2), LIT, 0.4).setStrokeStyle(2, LIT, 0.9);
@@ -378,7 +392,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
   const improved = scene.add.container(0, 0).setDepth(BUILDING_DEPTH).setName('improvements');
   const built = scene.add.container(0, 0).setDepth(BUILDING_DEPTH).setName('buildings');
   const intents = scene.add.container(0, 0).setDepth(GLOW_DEPTH).setName('intents');
-  const inspected = scene.add.container(0, 0).setDepth(GLOW_DEPTH).setName('inspected');
+  const selected = scene.add.container(0, 0).setDepth(GLOW_DEPTH).setName('selected');
   const marks = scene.add.container(0, 0).setDepth(UNIT_DEPTH);
   const dim = scene.add
     .rectangle(0, 0, 1, 1, OUTLINE, DIM_ALPHA)
@@ -395,7 +409,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
     improved,
     built,
     intents,
-    inspected,
+    selected,
     marks,
     cityMarks,
     dim,
@@ -403,7 +417,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
   ]);
 
   let markers: Phaser.GameObjects.Polygon[] = [];
-  let inspector: Phaser.GameObjects.Zone | undefined;
+  let presser: Phaser.GameObjects.Zone | undefined;
   let rescale: (() => void) | undefined;
   let taking = true;
 
@@ -497,27 +511,34 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
    * the piles keep theirs, while the release is the scene's, so a press that travelled off the
    * catcher still ends — on the canvas as a release, off it as an abandon. Past the drag slack the
    * press carries the map instead, and one that panned reaches neither `release` nor `abandon`:
-   * this is the only place a pan is told from a choice. Hands back the way to take the three scene
+   * this is the only place a pan is told from a choice. A press is taken by the button that landed
+   * it and let go of by that same button's release, while an abandon lets go of it whichever button
+   * the release the browser finally delivers names. Hands back the way to take the three scene
    * listeners off again.
    */
   const takePress = (
     catcher: Phaser.GameObjects.Zone,
     on: {
-      /** Whether this press may carry the map: one that takes hold of something answers false. */
+      /**
+       * Whether this press may carry the map: one that takes hold of something answers false. Asked
+       * of a left press alone — a right press takes hold of nothing, so it always may pan.
+       */
       down?: (pointer: Phaser.Input.Pointer) => boolean;
-      release: (pointer: Phaser.Input.Pointer) => void;
+      release: (pointer: Phaser.Input.Pointer, press: Press) => void;
       abandon?: () => void;
     },
   ): (() => void) => {
-    let pressed = false;
+    /** Which button is holding the press, and nothing while none is. */
+    let taken: Press | undefined;
     /** Where the press landed on the canvas, and the middle the map held then, while it may pan. */
     let from: { x: number; y: number; centre: { x: number; y: number } } | undefined;
     let panned = false;
 
     catcher.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-      pressed = true;
+      const press = pressOf(pointer);
+      taken = press;
       panned = false;
-      const mayPan = on.down?.(pointer) ?? true;
+      const mayPan = press === 'right' || (on.down?.(pointer) ?? true);
       from = mayPan
         ? { x: pointer.x, y: pointer.y, centre: { x: centre.x, y: centre.y } }
         : undefined;
@@ -525,7 +546,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
 
     const pan = (pointer: Phaser.Input.Pointer): void => {
       if (from === undefined) return;
-      if (!panned && !dragged(scene, pointer)) return;
+      if (!panned && !dragged(scene, from, pointer)) return;
       panned = true;
       const was = map.at(from.x, from.y);
       const to = map.at(pointer.x, pointer.y);
@@ -534,13 +555,15 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
 
     /** Lets the press go, and says whether anything is left to choose by. */
     const ended = (): boolean => {
-      if (!pressed) return false;
-      pressed = false;
+      if (taken === undefined) return false;
+      taken = undefined;
       from = undefined;
       return !panned;
     };
     const release = (pointer: Phaser.Input.Pointer): void => {
-      if (ended()) on.release(pointer);
+      const press = pressOf(pointer);
+      if (press !== taken) return;
+      if (ended()) on.release(pointer, press);
     };
     const abandon = (): void => {
       if (ended()) on.abandon?.();
@@ -639,24 +662,24 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
   let marking = false;
 
   /**
-   * What the dim is laid under rather than over: the ring on the tile being read and the glow a
-   * card is aimed by, which the player answers the overlay with. Everything else the map draws
-   * dims, so these are lifted only while the dim stands.
+   * What the dim is laid under rather than over: the ring on the selected tile and the glow a card
+   * is aimed by, which the player answers the overlay with. Everything else the map draws dims, so
+   * these are lifted only while the dim stands.
    */
-  const overDim = new Set<Phaser.GameObjects.Container>([inspected]);
+  const overDim = new Set<Phaser.GameObjects.Container>([selected]);
 
   const liftOverDim = (): void => {
     const over = showing.size > 0;
     for (const object of overDim) object.setDepth(over ? OVER_DIM_DEPTH : GLOW_DEPTH);
   };
 
-  /** The ground every aim runs on: its own catcher, a glow to paint, and inspection held off. */
+  /** The ground every aim runs on: its own catcher, a glow to paint, and the tile presses held off. */
   const openAim = (): {
     catcher: Phaser.GameObjects.Zone;
     glow: Phaser.GameObjects.Container;
     close: () => void;
   } => {
-    inspector?.disableInteractive();
+    presser?.disableInteractive();
     const catcher = catcherZone('aim');
     const glow = scene.add.container(0, 0).setDepth(GLOW_DEPTH);
     layer.add(glow);
@@ -669,7 +692,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
         catcher.destroy();
         overDim.delete(glow);
         glow.destroy();
-        inspector?.setInteractive();
+        presser?.setInteractive();
       },
     };
   };
@@ -996,30 +1019,34 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
       }
     },
 
-    inspect(found: (inspection: Inspection | undefined) => void, zoomed: () => void): void {
+    onPress(
+      pressed: (found: PressedTile | undefined, press: Press) => void,
+      zoomed: () => void,
+    ): void {
       rescale = zoomed;
-      const catcher = catcherZone('inspect');
-      inspector = catcher;
+      const catcher = catcherZone('press');
+      presser = catcher;
 
       takePress(catcher, {
-        release: (pointer) => {
+        release: (pointer, press) => {
           const at = map.at(pointer.x, pointer.y);
           const on = tileUnder(chronicle, at.x, at.y);
-          found(
+          pressed(
             on === undefined
               ? undefined
               : { tile: on, at: { ...positionOf(on), radius: TILE_SIZE } },
+            press,
           );
         },
       });
     },
 
-    markInspected(tile: TileCoords | undefined): void {
-      inspected.removeAll(true);
-      inspected.setData('tile', tile === undefined ? undefined : tileKey(tile));
+    markSelected(tile: TileCoords | undefined): void {
+      selected.removeAll(true);
+      selected.setData('tile', tile === undefined ? undefined : tileKey(tile));
       if (tile === undefined) return;
       const { x, y } = positionOf(tile);
-      inspected.add(scene.add.polygon(x, y, hexagon(TILE_SIZE - 2), 0, 0).setStrokeStyle(4, LIT));
+      selected.add(scene.add.polygon(x, y, hexagon(TILE_SIZE - 2), 0, 0).setStrokeStyle(4, LIT));
     },
 
     showYields(shownResources: ReadonlySet<Resource>): void {
@@ -1036,7 +1063,8 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
     aimUnitTile(current: Chronicle, chosen: (target: Target | undefined) => void): () => void {
       const { catcher, glow, close } = openAim();
 
-      let selected: number | undefined;
+      /** Which unit the aim is on, and where it may land; nothing while it is on none. */
+      let aiming: number | undefined;
       let landings: TileCoords[] = [];
       let grabbed: number | undefined;
 
@@ -1049,7 +1077,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
           glow.add(
             scene.add
               .polygon(x, y, hexagon(TILE_SIZE - 2), 0, 0)
-              .setStrokeStyle(index === selected ? 4 : 2, LIT),
+              .setStrokeStyle(index === aiming ? 4 : 2, LIT),
           );
         });
       };
@@ -1073,13 +1101,13 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
           markers[grabbed].setPosition(home.x, home.y);
           grabbed = undefined;
         }
-        selected = undefined;
+        aiming = undefined;
         landings = [];
         paint();
       };
 
-      const select = (index: number): void => {
-        selected = index;
+      const aimAt = (index: number): void => {
+        aiming = index;
         landings = reachable(current.tiles, current.units, current.units[index]);
         paint();
       };
@@ -1096,10 +1124,15 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
                 );
           grabbed = found === -1 ? undefined : found;
           if (grabbed === undefined) return true;
-          select(grabbed);
+          aimAt(grabbed);
           return false;
         },
-        release: (pointer) => {
+        release: (pointer, press) => {
+          if (press === 'right') {
+            letGo();
+            finish(undefined);
+            return;
+          }
           const at = map.at(pointer.x, pointer.y);
           const to = tileUnder(current, at.x, at.y);
           const held = grabbed;
@@ -1110,8 +1143,8 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
             grabbed = undefined;
             if (to !== undefined && same(to, current.units[held].tile)) return;
           }
-          if (selected !== undefined && to !== undefined && landings.some((c) => same(c, to))) {
-            finish({ type: 'unit-tile', unit: selected, tile: to });
+          if (aiming !== undefined && to !== undefined && landings.some((c) => same(c, to))) {
+            finish({ type: 'unit-tile', unit: aiming, tile: to });
             return;
           }
           letGo();
@@ -1139,7 +1172,11 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
       };
 
       const stop = takePress(catcher, {
-        release: (pointer) => {
+        release: (pointer, press) => {
+          if (press === 'right') {
+            finish(undefined);
+            return;
+          }
           const at = map.at(pointer.x, pointer.y);
           const on = tileUnder(current, at.x, at.y);
           if (on !== undefined && tiles.some((coord) => same(coord, on)))

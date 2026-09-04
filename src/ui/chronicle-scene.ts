@@ -15,7 +15,7 @@ import {
   tileCost,
   tileRefusal,
 } from '../rules/chronicle';
-import { type TileCoords, tileAt, tileKey } from '../rules/map';
+import { tileAt, tileKey } from '../rules/map';
 import { createBand } from './band';
 import { boundTo } from './bindings';
 import { CARD_BASELINE, CARD_HEIGHT } from './card-face';
@@ -34,7 +34,7 @@ import {
 import { createHand } from './hand';
 import { createInfoPanel, layersOf } from './infopanel';
 import { onKeyDown } from './keys';
-import { createMapView, type Inspection } from './map';
+import { createMapView, type PressedTile } from './map';
 import { createOverlay } from './overlay';
 import { createPiles } from './piles';
 import { createRefusalNote } from './refusal-note';
@@ -54,12 +54,6 @@ const LABEL_STYLE = {
   fontStyle: 'bold',
   color: '#0d1014',
 };
-
-/** Where the next click on the ringed tile lands: each layer in turn, then the bare ring again. */
-function nextLayer(shown: number | undefined, count: number): number | undefined {
-  if (shown === undefined) return 0;
-  return shown + 1 < count ? shown + 1 : undefined;
-}
 
 export class ChronicleScene extends Phaser.Scene {
   private readonly deck: readonly CardId[];
@@ -114,14 +108,23 @@ export class ChronicleScene extends Phaser.Scene {
     const panel = createInfoPanel(this, map);
     const note = createRefusalNote(this, map);
 
-    /** The ringed tile, and which of its layers the panel is reading — none while it is only ringed. */
-    let inspecting: { tile: TileCoords; index: number | undefined } | undefined;
+    /** The tile the ring stands on, and nothing while none is selected; city mode selects none. */
+    let selection: PressedTile | undefined;
 
-    /** Every state change and every aim goes through here: no inspection outlives one. */
-    const dismiss = (): void => {
-      inspecting = undefined;
+    /** The tile the infopanel is inspecting and which of its layers it shows. */
+    let inspection: { on: PressedTile; layer: number } | undefined;
+
+    /** The inspection let go of on its own: the infopanel down, whatever is selected still ringed. */
+    const uninspect = (): void => {
+      inspection = undefined;
       panel.hide();
-      view.markInspected(undefined);
+    };
+
+    /** Every state change and every aim goes through here: neither verb outlives one. */
+    const dismiss = (): void => {
+      selection = undefined;
+      uninspect();
+      view.markSelected(undefined);
     };
 
     const paint = (): void => {
@@ -174,26 +177,45 @@ export class ChronicleScene extends Phaser.Scene {
       }
     };
 
-    /** The tile read out: ringed by the click that picks it, then a layer per click after it. */
-    const read = (found: Inspection | undefined): void => {
-      const tile = found === undefined ? undefined : tileAt(this.current.tiles, found.tile);
-      if (found === undefined || tile === undefined) {
-        dismiss();
+    /**
+     * The one place a tile becomes the selection: it takes the ring, and the inspection standing on
+     * whatever was selected before is let go of.
+     */
+    const select = (found: PressedTile | undefined): void => {
+      if (
+        found !== undefined &&
+        selection !== undefined &&
+        tileKey(found.tile) === tileKey(selection.tile)
+      ) {
         return;
       }
-      const layers = layersOf(tile, this.current.units);
-      const ringed =
-        inspecting !== undefined && tileKey(inspecting.tile) === tileKey(tile)
-          ? inspecting
-          : undefined;
-      const index = ringed === undefined ? undefined : nextLayer(ringed.index, layers.length);
-      if (index === undefined) panel.hide();
-      else panel.show(layers, index, found.at, ringed?.index !== undefined);
-      inspecting = { tile: { q: tile.q, r: tile.r }, index };
-      view.markInspected(tile);
+      selection = found;
+      uninspect();
+      view.markSelected(found?.tile);
     };
 
-    /** Whether city mode is on: a tile click acts on the city instead of reading the tile. */
+    /**
+     * One step of the inspection on a tile: the next of its layers in the infopanel, and after the
+     * last of them the bare tile again. The one place the infopanel is shown.
+     */
+    const inspect = (on: PressedTile): void => {
+      const tile = tileAt(this.current.tiles, on.tile);
+      const stepped =
+        tile === undefined ||
+        inspection === undefined ||
+        tileKey(inspection.on.tile) !== tileKey(on.tile)
+          ? 0
+          : inspection.layer + 1;
+      const layers = tile === undefined ? [] : layersOf(tile, this.current.units);
+      if (stepped >= layers.length) {
+        uninspect();
+        return;
+      }
+      panel.show(layers, stepped, on.at, stepped > 0);
+      inspection = { on, layer: stepped };
+    };
+
+    /** Whether city mode is on: a tile click acts on the city instead of selecting the tile. */
     let cityMode = false;
 
     /**
@@ -201,7 +223,7 @@ export class ChronicleScene extends Phaser.Scene {
      * a click they refuse plays nothing and stands its note over the tile instead, and a tile the
      * city has no act on takes the click without a word.
      */
-    const act = (found: Inspection): void => {
+    const act = (found: PressedTile): void => {
       const refusal = tileRefusal(this.current, found.tile);
       if (refusal === undefined) return;
       const command = cityCommand(this.current, found.tile);
@@ -212,10 +234,17 @@ export class ChronicleScene extends Phaser.Scene {
       note.overTile(tileCost(this.current, found.tile), refusal, found.at);
     };
 
-    view.inspect(
-      (found) => {
-        if (!cityMode) read(found);
-        else if (found !== undefined) act(found);
+    view.onPress(
+      (found, press) => {
+        if (cityMode) {
+          if (press === 'left') {
+            if (found !== undefined) act(found);
+          } else if (found === undefined) uninspect();
+          else inspect(found);
+          return;
+        }
+        select(found);
+        if (press === 'right' && found !== undefined) inspect(found);
       },
       () => {
         panel.rescale();
@@ -293,6 +322,7 @@ export class ChronicleScene extends Phaser.Scene {
       if (!cityMode) return false;
       cityMode = false;
       note.hide();
+      dismiss();
       marks.show(false);
       view.showCityMarks(false);
       return true;
@@ -310,7 +340,7 @@ export class ChronicleScene extends Phaser.Scene {
 
     /**
      * The resources the yield overlay shows, empty while it is off. It is a display and not a mode:
-     * city mode, an aim, a tile read and a state change all leave it exactly as it stands.
+     * city mode, an aim, an inspection and a state change all leave it exactly as it stands.
      */
     let yields = new Set<Resource>();
 
@@ -332,9 +362,9 @@ export class ChronicleScene extends Phaser.Scene {
       showYields();
     };
 
-    // The one place the city key, the yield key and the back key are answered: a slot of the
-    // Controls window listening takes any of them first, whatever it is, and anything standing over
-    // the map swallows the city key and the yield key. Otherwise the back key takes back one thing,
+    // The one place the city key, the yield key, the inspection key and the back key are answered: a
+    // slot of the Controls window listening takes any of them first, whatever it is, and anything
+    // standing over the map swallows the other three. Otherwise the back key takes back one thing,
     // the outermost that is up or pending, and only a chronicle screen with nothing on it raises the
     // menu. A second listener that acted on these keys would be a second answer to the one press;
     // the map's own listener answers the pan and zoom keys and no other.
@@ -349,9 +379,14 @@ export class ChronicleScene extends Phaser.Scene {
         if (!covered) clearOrShowAllYields();
         return;
       }
+      if (boundTo(key, 'inspect')) {
+        if (!covered && selection !== undefined) inspect(selection);
+        return;
+      }
       if (!boundTo(key, 'back')) return;
       if (overlay.back() || hand.cancelAim()) return;
-      if (inspecting !== undefined) dismiss();
+      if (inspection !== undefined) uninspect();
+      else if (selection !== undefined) select(undefined);
       else if (!leaveCityMode()) menu();
     });
 

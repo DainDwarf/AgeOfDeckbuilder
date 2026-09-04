@@ -13,6 +13,7 @@ export const CONTROLS = [
   'zoom-out',
   'city',
   'yields',
+  'inspect',
   'back',
 ] as const;
 
@@ -32,8 +33,22 @@ export const DEFAULTS: Bindings = {
   'zoom-out': ['WheelDown', undefined],
   city: ['C', undefined],
   yields: ['Tab', undefined],
-  back: ['Escape', 'Mouse2'],
+  inspect: ['I', undefined],
+  back: ['Escape', undefined],
 };
+
+/** How a mouse button reads as a key: the button, by the number the browser gives it. */
+export function mouseKey(button: number): string {
+  return `Mouse${button}`;
+}
+
+/**
+ * The two mouse buttons that press the chronicle screen. Neither reads as a key, so neither binds:
+ * one kept in a slot from a launch that still bound it leaves that slot empty.
+ */
+export const PRESS_BUTTONS: readonly number[] = [0, 2];
+
+const UNBINDABLE: ReadonlySet<string> = new Set(PRESS_BUTTONS.map(mouseKey));
 
 /** Where the browser keeps the bindings; the origin is shared with whatever else the host serves. */
 const STORED = 'age-of-deckbuilder.controls';
@@ -54,7 +69,6 @@ const NAMED: Record<string, TextKey> = {
   ArrowRight: 'key.arrow-right',
   ' ': 'key.space',
   Mouse1: 'key.mouse-1',
-  Mouse2: 'key.mouse-2',
   Mouse3: 'key.mouse-3',
   Mouse4: 'key.mouse-4',
   WheelUp: 'key.wheel-up',
@@ -80,14 +94,19 @@ export function bound(bindings: Bindings, control: Control, slot: number, label:
   return moved;
 }
 
-/** One control's stored pair, and nothing when what was stored cannot be a pair of keys. */
+/**
+ * One control's stored pair, and nothing when what was stored cannot be a pair of keys. A key that
+ * no longer binds leaves its slot empty rather than the whole control at its default.
+ */
 function slotsOf(stored: unknown): Slots | undefined {
   if (!Array.isArray(stored) || stored.length !== 2) return undefined;
   const pair: (string | undefined)[] = [];
   for (const entry of stored) {
     if (entry === null) pair.push(undefined);
-    else if (typeof entry === 'string' && entry.length > 0) pair.push(keyOf(entry));
-    else return undefined;
+    else if (typeof entry === 'string' && entry.length > 0) {
+      const key = keyOf(entry);
+      pair.push(UNBINDABLE.has(key) ? undefined : key);
+    } else return undefined;
   }
   return [pair[0], pair[1]];
 }

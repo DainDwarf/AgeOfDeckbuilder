@@ -1,15 +1,10 @@
 import type Phaser from 'phaser';
-import { boundTo, CONTROLS, keyOf } from './bindings';
+import { boundTo, CONTROLS, keyOf, mouseKey, PRESS_BUTTONS } from './bindings';
 import { whileUp } from './design-space';
 
 /** The two the game reads its controls from, wherever the press came from. */
 const DOWN = 'key-down';
 const UP = 'key-up';
-
-/** How a mouse button reads as a key: the button, by the number the browser gives it. */
-function mouseKey(button: number): string {
-  return `Mouse${button}`;
-}
 
 /** How a wheel notch reads as a key: the way the wheel turned. */
 const WHEEL_UP = 'WheelUp';
@@ -26,7 +21,7 @@ const NOTCH = 100;
 const NOTCH_WINDOW = 200;
 
 /**
- * The mouse as a set of keys: every button but the one that presses the chronicle screen binds
+ * The mouse as a set of keys: every button but the two that press the chronicle screen binds
  * like a key and presses nothing, and a notch of the wheel either way binds like a key too.
  * Phaser's mouse manager passes over an event whose default is already prevented, so preventing it
  * here is what takes the press off the chronicle screen — and it is only the press: the browser's
@@ -44,7 +39,7 @@ export function readMouseKeys(game: Phaser.Game): void {
   window.addEventListener(
     'mousedown',
     (event) => {
-      if (event.button === 0 || event.target !== game.canvas) return;
+      if (PRESS_BUTTONS.includes(event.button) || event.target !== game.canvas) return;
       event.preventDefault();
       held.add(event.button);
       game.events.emit(DOWN, mouseKey(event.button));
