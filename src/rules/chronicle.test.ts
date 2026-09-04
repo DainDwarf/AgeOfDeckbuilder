@@ -147,8 +147,8 @@ function founded(radius: number, carrying: Partial<Chronicle> = {}): Chronicle {
 }
 
 /**
- * A population no fixture below piles up the food for: the step stands out of reach, so income
- * accumulates untouched under every test that is not about growth.
+ * A population no fixture below piles up the food for: the growth threshold stands out of reach,
+ * so income accumulates untouched under every test that is not about growth.
  */
 const NO_GROWTH: Partial<Chronicle> = { population: 99 };
 
@@ -306,7 +306,7 @@ test('ending the turn moves the chronicle on to the next one', () => {
   expect(outcome(apply(second, { type: 'end-turn' })).turn).toBe(3);
 });
 
-test('a food stock short of the step grows nobody, and the stock is kept', () => {
+test('a food stock short of the growth threshold grows nobody, and the stock is kept', () => {
   const city = cityOf(['urban', 'plain', 'water'], NO_GROWTH);
 
   const after = outcome(apply(city, { type: 'end-turn' }));
@@ -316,7 +316,7 @@ test('a food stock short of the step grows nobody, and the stock is kept', () =>
   expect(stagedBy(city, { type: 'end-turn' })).not.toContain('grow');
 });
 
-test('the food stock reaching the step is spent on one inhabitant, and that one is idle', () => {
+test('the food stock reaching the growth threshold is spent on one inhabitant, and that one is idle', () => {
   const city = cityOf(['urban', 'plain'], {
     population: 3,
     resources: { food: 1, production: 0, military: 0, money: 0, science: 0, culture: 0 },
@@ -330,7 +330,7 @@ test('the food stock reaching the step is spent on one inhabitant, and that one 
   expect(idle(after)).toBe(idle(city) + 1);
 });
 
-test('a food stock worth several steps grows one inhabitant and no more', () => {
+test('a food stock worth several growth thresholds grows one inhabitant and no more', () => {
   const city = cityOf(['urban'], {
     population: 2,
     resources: { food: 9, production: 0, military: 0, money: 0, science: 0, culture: 0 },
@@ -342,7 +342,7 @@ test('a food stock worth several steps grows one inhabitant and no more', () => 
   expect(after.resources.food).toBe(7);
 });
 
-test('the step widens with the population: the next inhabitant costs one food more', () => {
+test('the growth threshold widens with the population: the next inhabitant costs one food more', () => {
   const city = cityOf(['urban'], {
     population: 2,
     resources: { food: 5, production: 0, military: 0, money: 0, science: 0, culture: 0 },

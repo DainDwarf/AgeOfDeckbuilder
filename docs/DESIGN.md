@@ -143,8 +143,8 @@ A chronicle is a sequence of **turns**. Each turn, in this order:
 6. **Income.** Standing things do their standing thing: assigned tiles and their buildings yield
    their resources. So what the player sees when drawing holds for the whole turn: a farm placed
    this turn feeds the next.
-7. **Growth.** A food stock that has reached the step is spent on one idle inhabitant, at most
-   one a turn.
+7. **Growth.** A food stock that has reached the growth threshold is spent on one idle
+   inhabitant, at most one a turn.
 8. **Enemy phase.** 🔧 Neutrals and enemies move; then every enemy declares its intent for the next
    turn. An intent stays visible through the whole player turn, wherever the city has sight.
    Killing the enemy cancels its intent; moving the target out of it dodges. An enemy standing on
@@ -191,12 +191,13 @@ assigns an inhabitant to each of the seven tiles the city holds, and has two mor
 Assigning is free, instant and reversible, never a card: it is staffing, not a change to the map.
 In city mode the map marks the assigned tiles and dims the held ones that are not.
 
-Population **grows**. At income a food stock that has reached the **step** is spent, and the city
-gains one inhabitant, who arrives idle; at most one an income, and whatever the step leaves stays in
-the stock. The step widens with the population, so each inhabitant is dearer than the one before.
-Nobody eats and nobody starves. Food as a plain spendable resource with growth elsewhere was
-rejected: the famine event would have nothing to bite. Inhabitants consuming food was rejected too:
-the widening step and the schedule's events are the whole of the pressure on the population.
+Population **grows**. At income a food stock that has reached the **growth threshold** is spent,
+and the city gains one inhabitant, who arrives idle; at most one an income, and whatever the
+threshold leaves stays in the stock. The growth threshold widens with the population, so each
+inhabitant is dearer than the one before. Nobody eats and nobody starves. Food as a plain spendable
+resource with growth elsewhere was rejected: the famine event would have nothing to bite.
+Inhabitants consuming food was rejected too: the widening growth threshold and the schedule's
+events are the whole of the pressure on the population.
 
 ### City mode ✅
 
@@ -257,8 +258,9 @@ runs downhill until it reaches sea. The stated default makes a river a tile feat
 running along the edges between tiles is the alternative to weigh when rivers are built.
 
 The city stands on one tile and owns the six around it. The player **claims** any tile adjacent
-to one the city owns by spending culture; claiming is free of cards, like assigning, and its
-cost rises with the tiles owned, in steps. A claimed tile takes an idle inhabitant at once when
+to one the city owns by spending culture; claiming is free of cards, like assigning, and the
+**culture threshold**, what a claim costs, rises with the tiles owned. A claimed tile takes an
+idle inhabitant at once when
 the city has one. There is no limit to how far the border reaches. A cost that also rises with
 distance was rejected until a chronicle shows fractal borders: a tendril is adjacent-only and
 exposed already.
@@ -297,7 +299,7 @@ exchange across turns, never within one blow.
 ### Events and the capstone ✅
 
 Each age has a **schedule**: its set of events, each with a weight that shifts with the turn.
-The Events step draws from it, seeded, and the schedule escalates — a raid drawn late is larger
+The Events phase draws from it, seeded, and the schedule escalates — a raid drawn late is larger
 than one drawn early, and the harshest entries carry no weight at first. How many events land
 per turn is numbers. An event is a script — spawn enemies, shock a resource, change tiles, take
 inhabitants — with, optionally, a choice made when it lands. The pitch's families (enemies,

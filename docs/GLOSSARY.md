@@ -40,12 +40,13 @@ deliberate exception the reviewer sees; there is no silent allow-list.
 | **killed** | What happens to a unit that loses: it leaves the map. | destroyed, slain, dead, lost |
 | **event** | One entry of the age's schedule; what the chronicle throws at the city. | disaster, threat, crisis, encounter |
 | **capstone** | The age's final trial, on a fixed turn known from the launch; passing it is victory. | boss, finale, objective |
-| **schedule** | An age's set of events with their turn-shifting weights; what the Events step draws from. | timeline, calendar |
+| **schedule** | An age's set of events with their turn-shifting weights; what the Events phase draws from. | timeline, calendar |
 | **camp** | A generated site enemies enter the map from; captured, it spawns nothing again. | lair, nest, spawn point, spawner |
 | **victory** | The end of a chronicle by passing the capstone. | win, success, triumph |
 | **defeat** | The end of a chronicle by the city's fall. | collapse, game over, loss, death |
 | **border** | The edge of the tiles the city holds; pushed out by culture. | frontier, territory |
 | **turn** | One pass of the cycle: events, draw, play, end, combat, income, growth, enemy phase. | round |
+| **phase** | One part of the turn's cycle, in its fixed order; what the turn list names. | step, stage (in prose), section |
 | **hand** | The cards drawn this turn; what is not played is discarded when the turn ends. | — |
 | **draw** | To take cards from the draw pile into the hand. | pull |
 | **play** | To put a card from the hand into effect, paying its cost. | cast, activate |
@@ -53,8 +54,8 @@ deliberate exception the reviewer sees; there is no silent allow-list.
 | **discard** | To send a card from the hand to the discard pile. | throw away, dump |
 | **draw pile** | The cards not yet drawn this cycle; refilled from the discard pile when empty. | library |
 | **discard pile** | The cards played or discarded this cycle, waiting to be shuffled back. | graveyard, trash, bin |
-| **combat** | The step after the turn ends where every fighting unit attacks: the player's, then the enemies' declared intents. | battle, fight, skirmish, war |
-| **income** | The step after combat where standing things yield. | upkeep, production phase, resolution |
+| **combat** | The phase after the turn ends where every fighting unit attacks: the player's, then the enemies' declared intents. | battle, fight, skirmish, war |
+| **income** | The phase after combat where standing things yield. | upkeep, production phase, resolution |
 | **intent** | The attack an enemy declares one turn before executing it. | telegraph |
 | **sight** | The tiles the city and its units currently see. | vision, line of sight |
 | **fog** | Every tile outside sight; known terrain, unknown occupants. | fog of war, unexplored |
@@ -65,7 +66,8 @@ deliberate exception the reviewer sees; there is no silent allow-list.
 | **assign** | To put one population on a tile inside the border; free, instant, reversible. | allocate |
 | **unassign** | To take one population off the tile it stands on; the reverse of assign. | remove, free up, release |
 | **idle** | An inhabitant assigned to no tile; what a unit card takes. | unemployed, spare, unassigned (as a noun) |
-| **grow** | What the food stock reaching the step does at income: the city gains one idle inhabitant. | birth, breed, spawn (for population), expand |
+| **grow** | What the food stock reaching the growth threshold does at income: the city gains one idle inhabitant. | birth, breed, spawn (for population), expand |
+| **growth threshold** | The food the next inhabitant needs; spent when the stock reaches it, and wider each time. | step, growth cost, food cap |
 | **biome** | A stretch of map the generator spreads as one kind — land, sea, … — weighting the terrain of each tile in it. | patch, zone, area, ecosystem |
 | **terrain** | A tile's base layer: plain, forest, hills, …; one per tile, changed only by terraforming. | tile type |
 | **feature** | A generated extra on a tile: a fertile plain, a river. | bonus |
@@ -73,6 +75,7 @@ deliberate exception the reviewer sees; there is no silent allow-list.
 | **yield** | What a tile's layers give at income, resource by resource. | output, produce, harvest |
 | **claim** | To spend culture on a tile adjacent to one the city owns; free of cards. | buy, purchase, expand, annex |
 | **culture** | The resource that claims tiles. | — |
+| **culture threshold** | The culture the next claim costs; rises with the tiles the city holds. | claim cost, step, price |
 | **health** | A unit's remaining life; at zero the unit is killed. | HP, hit points, hitpoints, life |
 | **attack** | The act: a unit removes its damage from a target's health. | strike, hit |
 | **damage** | A unit's stat: the health its attack removes. | strength, power, harm |

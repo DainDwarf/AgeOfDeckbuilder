@@ -74,9 +74,9 @@ const IDLE_FOUNDED = 2;
 /** What the founding holds: the city's own tile and the six around it. */
 const FOUNDING_HELD: readonly TileCoords[] = [CITY_TILE, ...neighbours(CITY_TILE)];
 
-/** What the first claim past the founding's tiles costs, and how many claims each step lasts. */
+/** What the first claim past the founding's tiles costs, and how many claims each rise lasts. */
 const CLAIM_FIRST = 1;
-const CLAIM_STEP = 3;
+const CLAIMS_PER_RISE = 3;
 
 /**
  * A step that carries nothing but the chronicle it left. `played` is the card gone from the hand
@@ -212,7 +212,7 @@ function claim(chronicle: Chronicle, tile: TileCoords): Stage[] {
         ...chronicle,
         resources: {
           ...chronicle.resources,
-          culture: chronicle.resources.culture - claimCost(chronicle),
+          culture: chronicle.resources.culture - cultureThreshold(chronicle),
         },
         held: [...chronicle.held, taken],
         assigned: staffed ? [...chronicle.assigned, taken] : chronicle.assigned,
@@ -321,12 +321,12 @@ export function claimable(chronicle: Chronicle): TileCoords[] {
 }
 
 /**
- * What the next claim costs: one culture, and one more for every three tiles claimed past the seven
- * the founding holds.
+ * The culture threshold, what the next claim costs: one culture, and one more for every three tiles
+ * claimed past the seven the founding holds.
  */
-function claimCost(chronicle: Chronicle): number {
+function cultureThreshold(chronicle: Chronicle): number {
   const claimed = Math.max(0, chronicle.held.length - FOUNDING_HELD.length);
-  return CLAIM_FIRST + Math.floor(claimed / CLAIM_STEP);
+  return CLAIM_FIRST + Math.floor(claimed / CLAIMS_PER_RISE);
 }
 
 /**
@@ -334,7 +334,9 @@ function claimCost(chronicle: Chronicle): number {
  * claim asks for, and nothing at all on a tile the city already holds.
  */
 export function tileCost(chronicle: Chronicle, tile: TileCoords): Cost[] {
-  return holds(chronicle, tile) ? [] : [{ resource: 'culture', amount: claimCost(chronicle) }];
+  return holds(chronicle, tile)
+    ? []
+    : [{ resource: 'culture', amount: cultureThreshold(chronicle) }];
 }
 
 /**
@@ -630,14 +632,14 @@ function income(chronicle: Chronicle): Chronicle {
     : { ...chronicle, resources };
 }
 
-/** Growth: the step the food stock has to reach is the population the inhabitant joins. */
+/** Growth: the growth threshold the food stock has to reach is the population the inhabitant joins. */
 function grow(chronicle: Chronicle): Chronicle {
-  const step = chronicle.population;
-  // A step of nothing every stock reaches: a city of nobody would grow one and undo its own fall.
-  if (step === 0 || chronicle.resources.food < step) return chronicle;
+  const threshold = chronicle.population;
+  // A threshold of nothing every stock reaches: a city of nobody would grow one and undo its fall.
+  if (threshold === 0 || chronicle.resources.food < threshold) return chronicle;
   return {
     ...chronicle,
-    resources: { ...chronicle.resources, food: chronicle.resources.food - step },
+    resources: { ...chronicle.resources, food: chronicle.resources.food - threshold },
     population: chronicle.population + 1,
   };
 }
