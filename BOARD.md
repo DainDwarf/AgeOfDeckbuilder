@@ -12,7 +12,6 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
-- **City mode** — the chronicle screen has a second mode, entered and left by a control and left by the back key, in which a tile click manages the city instead of reading the tile; the screen shows which mode is on, and a Playwright spec enters and leaves it. Doc-impact: `docs/DESIGN.md`, `docs/GLOSSARY.md`.
 - **Per-tile yield overlay** — every tile shows what it yields as glyphs; the overlay toggles, and clicking a resource on the bar filters it to that resource alone. Doc-impact: `docs/DESIGN.md`.
 - **Assignment** — in city mode a tile click assigns an idle inhabitant to a held tile or unassigns one; at income only assigned tiles yield, the city's tile no exception; rules tests cover both. Doc-impact: `docs/DESIGN.md`.
 - **Claiming with culture** — in city mode a click on a tile adjacent to the border claims it for culture, at a cost rising in steps with the tiles held; an unaffordable claim is refused with its reason. Doc-impact: none.

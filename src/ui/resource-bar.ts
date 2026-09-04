@@ -43,6 +43,9 @@ export const RESOURCE_COLOURS: Record<Reading, number> = {
 const LEFT: readonly Reading[] = ['food', 'production', 'military', 'money', 'science'];
 const RIGHT: readonly Reading[] = ['culture', 'population'];
 
+/** The readings the city is managed by: pressing either of them enters city mode. */
+const CITY_READINGS: readonly Reading[] = ['culture', 'population'];
+
 type Entry = {
   readonly key: Reading;
   readonly chip: Phaser.GameObjects.Rectangle;
@@ -62,6 +65,7 @@ export function createResourceBar(
   scene: Phaser.Scene,
   tooltip: Tooltip,
   menu: () => void,
+  cityMode: () => void,
 ): ResourceBar {
   const bar = scene.add.container(0, 0).setDepth(10);
   bar.add(scene.add.rectangle(0, 0, DESIGN_WIDTH, BAR_HEIGHT, PANEL_FILL).setOrigin(0, 0));
@@ -82,6 +86,10 @@ export function createResourceBar(
   place(right, DESIGN_WIDTH - MARGIN - menuWidth - BETWEEN - spanOf(right, slot), slot);
 
   const entries = [...left, ...right];
+  for (const entry of entries) {
+    if (CITY_READINGS.includes(entry.key)) onClick(entry.hover, cityMode);
+  }
+
   /** The readings the bar has ticking; a render owns them and takes them down. */
   let rising: Entry[] = [];
 

@@ -13,10 +13,20 @@ const AS_FOUND = [
   ['D', '→'],
   ['Wheel up', '—'],
   ['Wheel down', '—'],
+  ['C', '—'],
   ['Escape', 'Right click'],
 ];
 
-const LISTED = ['pan-up', 'pan-left', 'pan-down', 'pan-right', 'zoom-in', 'zoom-out', 'back'];
+const LISTED = [
+  'pan-up',
+  'pan-left',
+  'pan-down',
+  'pan-right',
+  'zoom-in',
+  'zoom-out',
+  'city',
+  'back',
+];
 
 /** What one press of a zoom key multiplies the map's size by. */
 const NOTCH = 1.3;

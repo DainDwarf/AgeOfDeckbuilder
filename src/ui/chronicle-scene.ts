@@ -15,6 +15,7 @@ import { createBand } from './band';
 import { boundTo } from './bindings';
 import { CARD_BASELINE, CARD_HEIGHT } from './card-face';
 import { EASE, ended, stopAllMotion, stopMotion } from './card-motion';
+import { createCityMode } from './city-mode';
 import {
   ACCENT,
   addText,
@@ -28,7 +29,7 @@ import {
 import { createHand } from './hand';
 import { createInfoPanel, layersOf } from './infopanel';
 import { onKeyDown } from './keys';
-import { createMapView } from './map';
+import { createMapView, type Inspection } from './map';
 import { createOverlay } from './overlay';
 import { createPiles } from './piles';
 import { createResourceBar } from './resource-bar';
@@ -166,30 +167,44 @@ export class ChronicleScene extends Phaser.Scene {
       }
     };
 
+    /** The tile read out: ringed by the click that picks it, then a layer per click after it. */
+    const read = (found: Inspection | undefined): void => {
+      const tile = found === undefined ? undefined : tileAt(this.current.tiles, found.tile);
+      if (found === undefined || tile === undefined) {
+        dismiss();
+        return;
+      }
+      const layers = layersOf(tile, this.current.units);
+      const ringed =
+        inspecting !== undefined && tileKey(inspecting.tile) === tileKey(tile)
+          ? inspecting
+          : undefined;
+      const index = ringed === undefined ? undefined : nextLayer(ringed.index, layers.length);
+      if (index === undefined) panel.hide();
+      else panel.show(layers, index, found.at, ringed?.index !== undefined);
+      inspecting = { tile: { q: tile.q, r: tile.r }, index };
+      view.markInspected(tile);
+    };
+
+    /** Whether city mode is on: a tile click acts on the city instead of reading the tile. */
+    let cityMode = false;
+
     view.inspect(
       (found) => {
-        const tile = found === undefined ? undefined : tileAt(this.current.tiles, found.tile);
-        if (found === undefined || tile === undefined) {
-          dismiss();
-          return;
-        }
-        const layers = layersOf(tile, this.current.units);
-        const ringed =
-          inspecting !== undefined && tileKey(inspecting.tile) === tileKey(tile)
-            ? inspecting
-            : undefined;
-        const index = ringed === undefined ? undefined : nextLayer(ringed.index, layers.length);
-        if (index === undefined) panel.hide();
-        else panel.show(layers, index, found.at, ringed?.index !== undefined);
-        inspecting = { tile: { q: tile.q, r: tile.r }, index };
-        view.markInspected(tile);
+        if (!cityMode) read(found);
       },
       () => panel.rescale(),
     );
+
+    /** Whether a window, a browse, a card zoomed or the defeat screen stands over the map. */
+    let covered = false;
     const overlay = createOverlay(
       this,
       ui,
-      (covered) => view.live(!covered),
+      (over) => {
+        covered = over;
+        view.live(!over);
+      },
       () => this.newChronicle(),
     );
 
@@ -232,22 +247,49 @@ export class ChronicleScene extends Phaser.Scene {
       overlay.menu();
     };
 
-    // The one place the back key is answered: a slot of the Controls window listening takes the key
-    // first, whatever it is; otherwise the back key takes back one thing, the outermost that is up
-    // or pending, and only a chronicle screen with nothing on it raises the menu. A second listener
-    // that acted on the back key would be a second answer to the one press; the map's own listener
+    const marks = createCityMode(this, () => {
+      leaveCityMode();
+    });
+
+    /** City mode raised: what was pending on the chronicle screen is let go of and it passes. */
+    const enterCityMode = (): void => {
+      if (cityMode) return;
+      hand.cancelAim();
+      dismiss();
+      cityMode = true;
+      marks.show(true);
+    };
+
+    /** City mode left, and whether it was on: the one way out, for the key, the chip and the back. */
+    const leaveCityMode = (): boolean => {
+      if (!cityMode) return false;
+      cityMode = false;
+      marks.show(false);
+      return true;
+    };
+
+    // The one place the city key and the back key are answered: a slot of the Controls window
+    // listening takes either key first, whatever it is, and anything standing over the map swallows
+    // the city key. Otherwise the back key takes back one thing, the outermost that is up or
+    // pending, and only a chronicle screen with nothing on it raises the menu. A second listener
+    // that acted on these keys would be a second answer to the one press; the map's own listener
     // answers the pan and zoom keys and no other.
     onKeyDown(this, (key) => {
       if (overlay.binds(key)) return;
+      if (boundTo(key, 'city')) {
+        if (covered) return;
+        if (!leaveCityMode()) enterCityMode();
+        return;
+      }
       if (!boundTo(key, 'back')) return;
       if (overlay.back() || hand.cancelAim()) return;
       if (inspecting !== undefined) dismiss();
-      else menu();
+      else if (!leaveCityMode()) menu();
     });
 
     parts.push(
       view,
-      createResourceBar(this, createTooltip(this, ui), menu),
+      createResourceBar(this, createTooltip(this, ui), menu, enterCityMode),
       createPiles(this, (pile) => overlay.browse(pile, this.current)),
       hand,
       endTurn,

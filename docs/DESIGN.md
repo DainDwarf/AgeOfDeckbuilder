@@ -104,20 +104,19 @@ is its first entry.
 
 A window closes back one step, to the window it was opened from and then to the chronicle screen.
 The **back key**, Escape and a right click until they are rebound, backs out of whatever is open or
-pending — a window, a card being aimed, a tile being read — one step per press, and raises the menu
-only from a clean chronicle screen. Nothing pauses, because nothing runs: the game is untimed, and
-a menu over the chronicle screen is the chronicle screen waiting.
+pending — a window, a card being aimed, a tile being read, city mode — one step per press, and
+raises the menu only from a clean chronicle screen. Nothing pauses, because nothing runs: the game
+is untimed, and a menu over the chronicle screen is the chronicle screen waiting.
 
 **Controls** lists every key the game binds — the four directions the map pans, the two it zooms,
-and the back key — with two slots to each. A key is rebound by pressing its slot and then the key
-itself, whatever that key is; a key already bound elsewhere moves, leaving the slot that had it
-empty. Every mouse button but the one that presses the chronicle screen binds there like a key,
-and presses nothing on the chronicle screen; the browser's own menu never shows over the game. A
-notch of the wheel binds
-like a key too, one key each way; the map zooms one notch a press, and only through the two zooms —
-a wheel notch up and a wheel notch down until they are rebound. **Default** puts every key back
-where it began, **Back** closes the window, and what the player binds is kept in the browser from
-one launch to the next.
+the city key, and the back key — with two slots to each. A key is rebound by pressing its slot and
+then the key itself, whatever that key is; a key already bound elsewhere moves, leaving the slot
+that had it empty. Every mouse button but the one that presses the chronicle screen binds there
+like a key, and presses nothing on the chronicle screen; the browser's own menu never shows over
+the game. A notch of the wheel binds like a key too, one key each way; the map zooms one notch a
+press, and only through the two zooms — a wheel notch up and a wheel notch down until they are
+rebound. **Default** puts every key back where it began, **Back** closes the window, and what the
+player binds is kept in the browser from one launch to the next.
 
 ## Systems
 
@@ -189,6 +188,16 @@ it is staffing, not a change to the map. A unit card turns one population into a
 🔧 Population eats. At income every inhabitant consumes food; the surplus accumulates toward the
 next inhabitant, at steps that widen; a deficit starves one. Food as a plain spendable resource
 with growth elsewhere was rejected: the famine event would have nothing to bite.
+
+### City mode ✅
+
+The chronicle screen has two modes. In **city mode** a tile click acts on the city — assigns an
+inhabitant, claims a tile — instead of reading the tile out; out of it a click reads the tile. It is
+entered by the **city key** or by pressing culture or population on the resource bar, and left by
+that key, by the back key, or by the chip naming the mode; the map's frame drawn in the accent and
+that chip are how the chronicle screen shows the mode is on. Coming into city mode lets go of a card
+being aimed and of a tile being read, and a window standing over the chronicle screen takes the city
+key instead.
 
 ### The map ✅
 
