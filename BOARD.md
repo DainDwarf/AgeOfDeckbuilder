@@ -12,7 +12,6 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
-- **The four-layer tile** — a tile carries feature and improvement layers, income sums all four, the generator deals one feature, and the infopanel reads the four layers. Doc-impact: none.
 - **Worker actions** — two stand-in action cards, one laying an improvement and one terraforming, each aimed at a tile where a worker stands. Doc-impact: none.
 - **Rivers** — a high biome, rivers rising in it and flowing to sea, and the feature-versus-edge decision made on the design page. Doc-impact: `docs/DESIGN.md`.
 - **Income flies in from the tiles** — at the income stage each yielding tile sends its resource to the bar. Doc-impact: none.

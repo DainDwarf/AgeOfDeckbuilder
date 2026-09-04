@@ -10,6 +10,8 @@ import {
 import {
   type BuildingTypeId,
   CITY_TILE,
+  type FeatureId,
+  type ImprovementId,
   type Terrain,
   type Tile,
   type TileCoords,
@@ -65,6 +67,18 @@ const BUILDING_MARKS: Record<BuildingTypeId, number[]> = {
   PH_Farm: corners([-16, 8, -16, -2, 0, -13, 16, -2, 16, 8]),
 };
 
+/** Placeholder primitives until the art pass: the fertile plain a small hexagon of its own green. */
+const FEATURE_MARKS: Record<FeatureId, number[]> = {
+  PH_Fertile: hexagon(4),
+};
+
+const FEATURE_COLOURS: Record<FeatureId, number> = { PH_Fertile: 0x4a7a2d };
+
+/** Placeholder primitives until the art pass: the mine a cut into the ground. */
+const IMPROVEMENT_MARKS: Record<ImprovementId, number[]> = {
+  PH_Mine: corners([-8, 7, -4, -7, 4, -7, 8, 7]),
+};
+
 const BUILT = 0xcfc6b4;
 
 const OUTLINE = 0x0d1014;
@@ -102,6 +116,9 @@ const DIM_ALPHA = 0.6;
 /** One glyph, corner to corner, and how far apart the glyphs of a tile stand. */
 const GLYPH = 6;
 const GLYPH_PITCH = 8;
+
+/** How far above a tile's middle its feature stands: inside the face, clear of a building mark. */
+const FEATURE_RISE = 16;
 
 /** The mark of an assigned tile, corner to corner, and how far below the tile's middle it stands. */
 const ASSIGNED_GLYPH = 12;
@@ -211,6 +228,21 @@ export function buildingMark(
   building: BuildingTypeId,
 ): Phaser.GameObjects.Polygon {
   return scene.add.polygon(0, 0, BUILDING_MARKS[building], BUILT).setStrokeStyle(2, OUTLINE);
+}
+
+/** The one way a feature is drawn: its placeholder mark, in the colour that feature is known by. */
+export function featureMark(scene: Phaser.Scene, feature: FeatureId): Phaser.GameObjects.Polygon {
+  return scene.add
+    .polygon(0, 0, FEATURE_MARKS[feature], FEATURE_COLOURS[feature])
+    .setStrokeStyle(1, OUTLINE);
+}
+
+/** The one way an improvement is drawn: its placeholder mark, in the stone everything worked is. */
+export function improvementMark(
+  scene: Phaser.Scene,
+  improvement: ImprovementId,
+): Phaser.GameObjects.Polygon {
+  return scene.add.polygon(0, 0, IMPROVEMENT_MARKS[improvement], BUILT).setStrokeStyle(2, OUTLINE);
 }
 
 /** The one way a unit is drawn: its placeholder mark, in the colour of the faction it acts for. */
@@ -331,8 +363,9 @@ function litTile(scene: Phaser.Scene, coord: TileCoords): Phaser.GameObjects.Pol
 
 /**
  * The map and everything standing on it, on a surface of its own that pans and zooms under the UI.
- * The terrain is drawn once; the border, the buildings and the units are redrawn on every state
- * change; and a card is aimed here — the rules say which tiles light up, never this file.
+ * The terrain and the features are drawn once, both fixed at generation; the border, the buildings
+ * and the units are redrawn on every state change; and a card is aimed here — the rules say which
+ * tiles light up, never this file.
  */
 export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chronicle): MapView {
   const camera = map.camera;
@@ -344,6 +377,12 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
       terrainMark(scene, tile.terrain)
         .setPosition(x, y)
         .setName(`tile-${tileKey(tile)}`),
+    );
+    if (tile.feature === undefined) continue;
+    layer.add(
+      featureMark(scene, tile.feature)
+        .setPosition(x, y - FEATURE_RISE)
+        .setName(`feature-${tileKey(tile)}`),
     );
   }
 

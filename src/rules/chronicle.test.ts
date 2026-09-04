@@ -19,8 +19,11 @@ import {
   tileRefusal,
 } from './chronicle';
 import {
+  BUILDINGS,
   type BuildingTypeId,
   distance,
+  FEATURES,
+  IMPROVEMENTS,
   MAP_COMPOSITION,
   neighbours,
   TERRAIN_YIELDS,
@@ -60,9 +63,11 @@ function cityOf(inside: Terrain[], carrying: Partial<Chronicle> = {}): Chronicle
     tiles: [
       ...inside.map(
         (terrain, index): Tile =>
-          index === 0 ? { q: 0, r: 0, terrain, building: 'PH_City' } : { q: index, r: 0, terrain },
+          index === 0
+            ? { q: 0, r: 0, terrain, improvements: [], building: 'PH_City' }
+            : { q: index, r: 0, terrain, improvements: [] },
       ),
-      { q: 0, r: 5, terrain: 'plain' as Terrain },
+      { q: 0, r: 5, terrain: 'plain' as Terrain, improvements: [] },
     ],
     city: CITY,
     held,
@@ -88,10 +93,15 @@ function field(radius: number, water: TileCoords[] = []): Tile[] {
   for (let q = -radius; q <= radius; q++) {
     for (let r = Math.max(-radius, -q - radius); r <= Math.min(radius, -q + radius); r++) {
       if (q === 0 && r === 0) {
-        tiles.push({ q, r, terrain: 'urban', building: 'PH_City' });
+        tiles.push({ q, r, terrain: 'urban', improvements: [], building: 'PH_City' });
         continue;
       }
-      tiles.push({ q, r, terrain: wet.has(tileKey({ q, r })) ? 'water' : 'plain' });
+      tiles.push({
+        q,
+        r,
+        terrain: wet.has(tileKey({ q, r })) ? 'water' : 'plain',
+        improvements: [],
+      });
     }
   }
   return tiles;
@@ -284,6 +294,39 @@ test('a second tile of the same terrain yields as much again', () => {
 
   for (const resource of RESOURCES) {
     expect(twice.resources[resource]).toBe(once.resources[resource] * 2);
+  }
+});
+
+test('an assigned tile yields what all four of its layers declare, summed', () => {
+  const layered: Tile = {
+    q: 1,
+    r: 0,
+    terrain: FEATURES.PH_Fertile.terrain,
+    feature: 'PH_Fertile',
+    improvements: ['PH_Mine'],
+    building: 'PH_Farm',
+  };
+  const city = cityOf(['urban', layered.terrain], NO_GROWTH);
+
+  const after = outcome(
+    apply(
+      {
+        ...city,
+        tiles: city.tiles.map((tile) => (tileKey(tile) === tileKey(layered) ? layered : tile)),
+      },
+      { type: 'end-turn' },
+    ),
+  );
+
+  for (const resource of RESOURCES) {
+    expect(after.resources[resource]).toBe(
+      (TERRAIN_YIELDS.urban[resource] ?? 0) +
+        (BUILDINGS.PH_City.yields[resource] ?? 0) +
+        (TERRAIN_YIELDS[layered.terrain][resource] ?? 0) +
+        (FEATURES.PH_Fertile.yields[resource] ?? 0) +
+        (IMPROVEMENTS.PH_Mine.yields[resource] ?? 0) +
+        (BUILDINGS.PH_Farm.yields[resource] ?? 0),
+    );
   }
 });
 

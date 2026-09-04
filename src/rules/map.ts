@@ -24,8 +24,10 @@ export const TERRAIN_YIELDS: Record<Terrain, Partial<Resources>> = {
   urban: { production: 1, military: 1, money: 1, science: 1, culture: 1 },
 };
 
-/** `PH_` marks a stand-in: neither of these is authored content, and both of them go. */
+/** `PH_` marks a stand-in: none of these is authored content, and all of them go. */
 export type BuildingTypeId = 'PH_City' | 'PH_Farm';
+export type FeatureId = 'PH_Fertile';
+export type ImprovementId = 'PH_Mine';
 
 /** What a building of each kind stands on, and what it yields at income on top of that terrain. */
 export const BUILDINGS: Record<
@@ -36,26 +38,47 @@ export const BUILDINGS: Record<
   PH_Farm: { terrain: 'plain', yields: { food: 1 } },
 };
 
-/** How many biomes the map is cut into, and which kinds they are dealt. */
+/** What a feature of each kind lies on, and what it yields at income on top of that terrain. */
+export const FEATURES: Record<
+  FeatureId,
+  { readonly terrain: Terrain; readonly yields: Partial<Resources> }
+> = {
+  PH_Fertile: { terrain: 'plain', yields: { food: 1 } },
+};
+
+/** What an improvement of each kind yields at income on the tile it is laid on. */
+export const IMPROVEMENTS: Record<ImprovementId, { readonly yields: Partial<Resources> }> = {
+  PH_Mine: { yields: { production: 1 } },
+};
+
+/** How many biomes the map is cut into, which kinds they are dealt, and which features follow. */
 export const MAP_COMPOSITION = {
   radius: 8,
   tilesPerBiome: 26,
   minBiomes: 5,
   cityBiome: 'land',
   biomeShares: [{ biome: 'sea', share: 0.3 }],
+  featureShares: [{ feature: 'PH_Fertile', share: 1 / 6 }],
 } satisfies {
   radius: number;
   tilesPerBiome: number;
   minBiomes: number;
   cityBiome: Biome;
   biomeShares: { biome: Biome; share: number }[];
+  featureShares: { feature: FeatureId; share: number }[];
 };
 
 export type TileCoords = { readonly q: number; readonly r: number };
 
-/** A tile is its layers: the terrain it is made of, and the one building slot it offers. */
+/**
+ * A tile is its layers: the terrain it is made of, the one feature the generator may have put on
+ * it, the improvements laid on it — distinct ones, never the same twice — and the one building slot
+ * it offers.
+ */
 export type Tile = TileCoords & {
   readonly terrain: Terrain;
+  readonly feature?: FeatureId;
+  readonly improvements: readonly ImprovementId[];
   readonly building?: BuildingTypeId;
 };
 
@@ -67,13 +90,14 @@ export const CITY_TILE: TileCoords = { q: 0, r: 0 };
  */
 export function tileYield(tile: Tile): Partial<Resources> {
   const summed: Partial<Resources> = { ...TERRAIN_YIELDS[tile.terrain] };
-  if (tile.building === undefined) return summed;
-  for (const [resource, amount] of Object.entries(BUILDINGS[tile.building].yields) as [
-    Resource,
-    number,
-  ][]) {
-    summed[resource] = (summed[resource] ?? 0) + amount;
-  }
+  const add = (yields: Partial<Resources>): void => {
+    for (const [resource, amount] of Object.entries(yields) as [Resource, number][]) {
+      summed[resource] = (summed[resource] ?? 0) + amount;
+    }
+  };
+  if (tile.feature !== undefined) add(FEATURES[tile.feature].yields);
+  for (const improvement of tile.improvements) add(IMPROVEMENTS[improvement].yields);
+  if (tile.building !== undefined) add(BUILDINGS[tile.building].yields);
   return summed;
 }
 
@@ -127,10 +151,11 @@ function pickTerrain(
 /**
  * The map of a chronicle: a hexagonal disc of tiles in axial coordinates, the city at its centre,
  * laid in two layers — biomes spread from their origins, then a terrain scattered from each
- * biome's table.
+ * biome's table — with one feature dealt over a share of the terrain each kind lies on.
  */
 export function generateMap(initial: Rng): { rng: Rng; tiles: Tile[] } {
-  const { radius, tilesPerBiome, minBiomes, cityBiome, biomeShares } = MAP_COMPOSITION;
+  const { radius, tilesPerBiome, minBiomes, cityBiome, biomeShares, featureShares } =
+    MAP_COMPOSITION;
   let rng = initial;
 
   const coords: TileCoords[] = [];
@@ -194,8 +219,31 @@ export function generateMap(initial: Rng): { rng: Rng; tiles: Tile[] } {
   }
   terrains[cityIndex] = CITY_TERRAIN;
 
+  const features: (FeatureId | undefined)[] = new Array(coords.length);
+  for (const { feature, share } of featureShares) {
+    const eligible = coords
+      .map((_, index) => index)
+      .filter(
+        (index) =>
+          index !== cityIndex &&
+          features[index] === undefined &&
+          terrains[index] === FEATURES[feature].terrain,
+      );
+    const order = shuffle(rng, eligible);
+    rng = order.rng;
+    for (const index of order.items.slice(0, Math.round(share * eligible.length))) {
+      features[index] = feature;
+    }
+  }
+
   return {
     rng,
-    tiles: coords.map(({ q, r }, index) => ({ q, r, terrain: terrains[index] })),
+    tiles: coords.map(({ q, r }, index) => ({
+      q,
+      r,
+      terrain: terrains[index],
+      feature: features[index],
+      improvements: [],
+    })),
   };
 }

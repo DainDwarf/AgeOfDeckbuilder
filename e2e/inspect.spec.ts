@@ -1,7 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
 import { DECKS } from '../src/rules/cards';
 import { apply, beginChronicle, outcome, playable, refusalOf } from '../src/rules/chronicle';
-import { tileKey } from '../src/rules/map';
+import { neighbours, tileKey } from '../src/rules/map';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
 import {
   chronicleOf,
@@ -56,6 +56,38 @@ function workerRun(): { seed: number; turn: number } {
   }
   throw new Error('no seed under a thousand opens a turn on a playable worker');
 }
+
+/** The first seed whose generator put a feature on a tile touching the city, well inside the frame. */
+function featureRun(): { seed: number; key: string } {
+  for (let seed = 1; seed <= 1000; seed++) {
+    const { tiles, city } = beginChronicle(seed, DECKS.PH_Deck);
+    const touching = new Set(neighbours(city).map(tileKey));
+    const found = tiles.find((tile) => tile.feature !== undefined && touching.has(tileKey(tile)));
+    if (found !== undefined) return { seed, key: tileKey(found) };
+  }
+  throw new Error('no seed under a thousand puts a feature beside the city');
+}
+
+test('a tile the generator gave a feature shows its mark, and reads out as a layer of its own', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const run = featureRun();
+
+  await open(page, run.seed, 'PH_Deck');
+  expect(await standing(page, `feature-${run.key}`)).toBe(true);
+
+  // Nothing stands on it and nothing is built on it: the feature and the terrain are all it is.
+  const at = await onScreen(page, `tile-${run.key}`);
+  await page.mouse.click(at.x, at.y);
+  await expect.poll(() => ringedTile(page)).toBe(run.key);
+  await page.mouse.click(at.x, at.y);
+  await expect.poll(() => shownLayer(page)).toBe('feature');
+  await page.mouse.click(at.x, at.y);
+  await expect.poll(() => shownLayer(page)).toBe('terrain');
+
+  expect(problems).toEqual([]);
+});
 
 test('a right click picks out no tile: it backs the reading out, and no browser menu shows', async ({
   page,

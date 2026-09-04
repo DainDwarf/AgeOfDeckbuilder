@@ -3,6 +3,10 @@ import { RESOURCES, type Resource, type Resources } from '../rules/chronicle';
 import {
   BUILDINGS,
   type BuildingTypeId,
+  FEATURES,
+  type FeatureId,
+  IMPROVEMENTS,
+  type ImprovementId,
   TERRAIN_YIELDS,
   type Terrain,
   type Tile,
@@ -11,7 +15,14 @@ import { UNIT_STATS, type Unit, unitAt } from '../rules/units';
 import { CARD_EDGE, CARD_HEIGHT, CARD_METRICS, CARD_WIDTH, drawCardSurface } from './card-face';
 import { stopMotion } from './card-motion';
 import { addText, onHover, type Surface, UI_FONT } from './design-space';
-import { buildingMark, type TileFace, terrainMark, unitMark } from './map';
+import {
+  buildingMark,
+  featureMark,
+  improvementMark,
+  type TileFace,
+  terrainMark,
+  unitMark,
+} from './map';
 import { text } from './text';
 import { createTooltip } from './tooltip';
 
@@ -19,6 +30,8 @@ import { createTooltip } from './tooltip';
 export type Layer =
   | { readonly kind: 'unit'; readonly unit: Unit }
   | { readonly kind: 'building'; readonly building: BuildingTypeId }
+  | { readonly kind: 'improvement'; readonly improvement: ImprovementId }
+  | { readonly kind: 'feature'; readonly feature: FeatureId }
   | { readonly kind: 'terrain'; readonly terrain: Terrain };
 
 /** What a tile is made of right now: the layers it has, the absent ones left out. */
@@ -27,6 +40,8 @@ export function layersOf(tile: Tile, units: readonly Unit[]): Layer[] {
   const layers: Layer[] = [];
   if (unit !== undefined) layers.push({ kind: 'unit', unit });
   if (tile.building !== undefined) layers.push({ kind: 'building', building: tile.building });
+  for (const improvement of tile.improvements) layers.push({ kind: 'improvement', improvement });
+  if (tile.feature !== undefined) layers.push({ kind: 'feature', feature: tile.feature });
   layers.push({ kind: 'terrain', terrain: tile.terrain });
   return layers;
 }
@@ -273,6 +288,13 @@ function headOf(
         mark: buildingMark(scene, layer.building),
         name: text(`building.${layer.building}`),
       };
+    case 'improvement':
+      return {
+        mark: improvementMark(scene, layer.improvement),
+        name: text(`improvement.${layer.improvement}`),
+      };
+    case 'feature':
+      return { mark: featureMark(scene, layer.feature), name: text(`feature.${layer.feature}`) };
     case 'terrain':
       return { mark: terrainMark(scene, layer.terrain), name: text(`terrain.${layer.terrain}`) };
   }
@@ -290,6 +312,10 @@ function rowsOf(layer: Layer): Row[] {
       }));
     case 'building':
       return yieldRows(BUILDINGS[layer.building].yields);
+    case 'improvement':
+      return yieldRows(IMPROVEMENTS[layer.improvement].yields);
+    case 'feature':
+      return yieldRows(FEATURES[layer.feature].yields);
     case 'terrain':
       return yieldRows(TERRAIN_YIELDS[layer.terrain]);
   }

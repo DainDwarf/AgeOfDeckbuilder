@@ -30,6 +30,8 @@ const TEXT = {
   'terrain.hills': 'Hills',
   'terrain.water': 'Water',
   'terrain.urban': 'Urban',
+  'feature.PH_Fertile': 'PH_Fertile',
+  'improvement.PH_Mine': 'PH_Mine',
   'building.PH_City': 'PH_City',
   'building.PH_Farm': 'PH_Farm',
   'panel.no-yield': 'No yield',

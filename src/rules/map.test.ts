@@ -3,9 +3,11 @@ import {
   BIOME_TERRAINS,
   CITY_TERRAIN,
   CITY_TILE,
+  FEATURES,
   generateMap,
   MAP_COMPOSITION,
   type Tile,
+  tileKey,
 } from './map';
 import { seedRng } from './rng';
 
@@ -61,5 +63,30 @@ test('every tile carries a terrain one of the biomes can scatter', () => {
 test('every map has water, because sea is dealt and never diced', () => {
   for (const seed of SEEDS) {
     expect(mapOf(seed).some((tile) => tile.terrain === 'water')).toBe(true);
+  }
+});
+
+test('every map is dealt a share of every feature, so none of them is ever missing', () => {
+  for (const seed of SEEDS) {
+    const tiles = mapOf(seed);
+    for (const { feature } of MAP_COMPOSITION.featureShares) {
+      expect(tiles.some((tile) => tile.feature === feature)).toBe(true);
+    }
+  }
+});
+
+test("a feature lies on the terrain it belongs to, and never on the city's tile", () => {
+  for (const seed of SEEDS) {
+    for (const tile of mapOf(seed)) {
+      if (tile.feature === undefined) continue;
+      expect(tile.terrain).toBe(FEATURES[tile.feature].terrain);
+      expect(tileKey(tile)).not.toBe(tileKey(CITY_TILE));
+    }
+  }
+});
+
+test('the generator lays no improvement: every tile of a fresh map is bare of them', () => {
+  for (const seed of SEEDS) {
+    for (const tile of mapOf(seed)) expect(tile.improvements).toEqual([]);
   }
 });
