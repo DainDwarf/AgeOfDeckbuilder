@@ -37,6 +37,8 @@ export type Chronicle = {
   readonly turn: number;
   readonly resources: Resources;
   readonly population: number;
+  /** The tiles an inhabitant stands on, at most one to a tile; every other inhabitant is idle. */
+  readonly assigned: TileCoords[];
   readonly units: Unit[];
   readonly drawPile: CardId[];
   readonly hand: CardId[];
@@ -54,20 +56,31 @@ export type Target =
 
 export type Command =
   | { readonly type: 'end-turn' }
-  | { readonly type: 'play'; readonly index: number; readonly target?: Target };
+  | { readonly type: 'play'; readonly index: number; readonly target?: Target }
+  | { readonly type: 'assign'; readonly tile: TileCoords };
+
+/** The inhabitants on no tile: what a unit card takes, and what an assign has to give a tile. */
+export function idle(chronicle: Chronicle): number {
+  return chronicle.population - chronicle.assigned.length;
+}
 
 /** A full hand. */
 const HAND_SIZE = 5;
 
+/** How many inhabitants the founding leaves on no tile, on top of one for each tile it holds. */
+const IDLE_FOUNDED = 2;
+
 /**
  * A step that carries nothing but the chronicle it left. `played` is the card gone from the hand
- * with its cost paid, `refused` is the play the rules turned down, `turn` is the tick alone,
- * `events` is what the schedule lands, `intents` is the enemy phase's declarations, and `capture`
- * is the city falling to an enemy that stood on its tile.
+ * with its cost paid, `refused` is the play the rules turned down, `assign` is an inhabitant put on
+ * a tile or taken off one, `turn` is the tick alone, `events` is what the schedule lands, `intents`
+ * is the enemy phase's declarations, and `capture` is the city falling to an enemy that stood on
+ * its tile.
  */
 export type PlainStage =
   | 'played'
   | 'refused'
+  | 'assign'
   | 'discard'
   | 'income'
   | 'intents'
@@ -91,8 +104,8 @@ export type Stage = { readonly chronicle: Chronicle } & (
 
 /**
  * The founding: the seed generates the map, the city fills the slot of the tile it stands on, it
- * holds that tile and the six around it, and the deck it is founded on is shuffled into its draw
- * pile.
+ * holds that tile and the six around it with an inhabitant assigned to each and two idle besides,
+ * and the deck it is founded on is shuffled into its draw pile.
  */
 export function beginChronicle(seed: number, deck: readonly CardId[]): Chronicle {
   const map = generateMap(seedRng(seed));
@@ -112,7 +125,8 @@ export function beginChronicle(seed: number, deck: readonly CardId[]): Chronicle
           held,
           turn: 1,
           resources: { food: 0, production: 0, military: 0, money: 0, science: 0, culture: 0 },
-          population: held.length,
+          population: held.length + IDLE_FOUNDED,
+          assigned: [...held],
           units: [],
           drawPile: shuffled.items,
           hand: [],
@@ -131,14 +145,41 @@ export function beginChronicle(seed: number, deck: readonly CardId[]): Chronicle
 export function apply(chronicle: Chronicle, command: Command): Stage[] {
   if (chronicle.defeat !== undefined) return [{ name: 'refused', chronicle }];
 
-  const stages =
-    command.type === 'end-turn'
-      ? endOfTurn(chronicle)
-      : play(chronicle, command.index, command.target);
+  const stages = stagesOf(chronicle, command);
 
   const last = stages[stages.length - 1];
   if (last.chronicle.defeat !== undefined || last.chronicle.population > 0) return stages;
   return [...stages.slice(0, -1), { ...last, chronicle: fall(last.chronicle, 'population') }];
+}
+
+/** What each command resolves as, before the fall the city may have come to on the last of them. */
+function stagesOf(chronicle: Chronicle, command: Command): Stage[] {
+  switch (command.type) {
+    case 'end-turn':
+      return endOfTurn(chronicle);
+    case 'play':
+      return play(chronicle, command.index, command.target);
+    case 'assign':
+      return assign(chronicle, command.tile);
+  }
+}
+
+/**
+ * One tile assigned or unassigned: the inhabitant already on it comes off, and an idle one goes on
+ * a tile the city holds. Anything else — a tile the city does not hold, or none idle — is refused.
+ */
+function assign(chronicle: Chronicle, tile: TileCoords): Stage[] {
+  const at = tileKey(tile);
+  const on = chronicle.assigned.filter((coord) => tileKey(coord) !== at);
+  if (on.length < chronicle.assigned.length) {
+    return [{ name: 'assign', chronicle: { ...chronicle, assigned: on } }];
+  }
+  if (!chronicle.held.some((coord) => tileKey(coord) === at) || idle(chronicle) <= 0) {
+    return [{ name: 'refused', chronicle }];
+  }
+  return [
+    { name: 'assign', chronicle: { ...chronicle, assigned: [...on, { q: tile.q, r: tile.r }] } },
+  ];
 }
 
 /** The chronicle a command left: the last stage's, for whoever wants the state and not the play. */
@@ -198,10 +239,11 @@ export function costOf(id: CardId): { resource: Resource; amount: number }[] {
 }
 
 /**
- * What the city or the map has against a card the cost alone would let through: no population to
- * turn into a unit, a unit already on the city tile, no tile to build on, no unit to move.
+ * What the city or the map has against a card the cost alone would let through: the city down to
+ * the last inhabitant it keeps, no inhabitant idle to turn into a unit, a unit already on the city
+ * tile, no tile to build on, no unit to move.
  */
-export type Block = 'population' | 'city' | 'tile' | 'unit';
+export type Block = 'population' | 'idle' | 'city' | 'tile' | 'unit';
 
 /** Everything standing between a card and being played: what the city cannot pay, and the map. */
 export type Refusal = {
@@ -258,7 +300,7 @@ export function targetTiles(chronicle: Chronicle, id: CardId): TileCoords[] {
 
 /**
  * Every block a card the city can pay for still stands against: there is nothing for it to resolve
- * on. A unit card can be held up by both of its at once, and answers them in that order.
+ * on. A unit card can be held up by all three of its at once, and answers them in that order.
  */
 function blocked(chronicle: Chronicle, id: CardId): Block[] {
   const card = CARDS[id];
@@ -266,6 +308,7 @@ function blocked(chronicle: Chronicle, id: CardId): Block[] {
     case 'unit': {
       const blocks: Block[] = [];
       if (chronicle.population <= 1) blocks.push('population');
+      if (idle(chronicle) <= 0) blocks.push('idle');
       if (unitAt(chronicle.units, chronicle.city) !== undefined) blocks.push('city');
       return blocks;
     }
@@ -472,11 +515,12 @@ function spent(units: readonly Unit[], at: TileCoords): Unit[] {
   );
 }
 
+/** Income: an assigned tile yields what its layers give, the city's own tile no exception. */
 function income(chronicle: Chronicle): Chronicle {
-  const held = new Set(chronicle.held.map(tileKey));
+  const assigned = new Set(chronicle.assigned.map(tileKey));
   const resources = { ...chronicle.resources };
   for (const tile of chronicle.tiles) {
-    if (!held.has(tileKey(tile))) continue;
+    if (!assigned.has(tileKey(tile))) continue;
     if (unitAt(chronicle.units, tile)?.faction === 'enemy') continue;
     const yields = tileYield(tile);
     for (const resource of RESOURCES) resources[resource] += yields[resource] ?? 0;

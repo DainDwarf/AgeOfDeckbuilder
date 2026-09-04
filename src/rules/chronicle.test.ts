@@ -6,6 +6,7 @@ import {
   buildable,
   type Chronicle,
   type Command,
+  idle,
   outcome,
   playable,
   RESOURCES,
@@ -41,7 +42,10 @@ const DECK: readonly CardId[] = [
   'PH_Harvest',
 ];
 
-/** A city on `inside`, tile by tile, with one plain lying outside the border and no cards. */
+/**
+ * A city on `inside`, tile by tile, with one plain lying outside the border and no cards. Its
+ * inhabitants stand where the founding leaves them: one on each tile the city holds.
+ */
 function cityOf(inside: Terrain[], carrying: Partial<Chronicle> = {}): Chronicle {
   const held = inside.map((_, index) => ({ q: index, r: 0 }));
   return {
@@ -59,6 +63,7 @@ function cityOf(inside: Terrain[], carrying: Partial<Chronicle> = {}): Chronicle
     turn: 1,
     resources: { food: 0, production: 0, military: 0, money: 0, science: 0, culture: 0 },
     population: held.length,
+    assigned: [...held],
     units: [],
     drawPile: [],
     hand: [],
@@ -109,6 +114,11 @@ function march(unit: number, to: TileCoords): Command {
 /** A building card aimed at a tile, ready to hand to `apply`. */
 function buildOn(tile: TileCoords): Command {
   return { type: 'play', index: 0, target: { type: 'tile', tile } };
+}
+
+/** The command city mode sends for a tile: an inhabitant on it, or the one on it off. */
+function assignTo(tile: TileCoords): Command {
+  return { type: 'assign', tile };
 }
 
 /** What the city pays for the farm card, and nothing besides. */
@@ -209,12 +219,12 @@ test('the city holds its own tile and every tile touching it', () => {
   }
 });
 
-test('a chronicle opens on turn one, with empty stores and a tile each for its inhabitants', () => {
+test('a chronicle opens on turn one, with empty stores and more inhabitants than tiles', () => {
   const chronicle = beginChronicle(1234, DECK);
 
   expect(chronicle.turn).toBe(1);
   for (const resource of RESOURCES) expect(chronicle.resources[resource]).toBe(0);
-  expect(chronicle.population).toBe(chronicle.held.length);
+  expect(chronicle.population).toBe(chronicle.held.length + 2);
 });
 
 test('income yields every tile inside the border, and nothing outside it', () => {
@@ -840,22 +850,31 @@ test('a unit card never takes the city’s last population', () => {
     population: 1,
     resources: FOOD,
   });
-  const spare = { ...last, population: 2 };
+  const idling = { ...last, population: 2 };
 
   expect(playable(refusalOf(last, 'PH_Worker'))).toBe(false);
   expect(outcome(apply(last, { type: 'play', index: 0 }))).toEqual(last);
-  expect(outcome(apply(spare, { type: 'play', index: 0 })).population).toBe(1);
+  expect(outcome(apply(idling, { type: 'play', index: 0 })).population).toBe(1);
 });
 
-test('a unit card the city has no population to spare for is refused for the population', () => {
+test('a unit card is refused for the population when only the city’s last inhabitant is left', () => {
+  const last = cityOf(['urban'], { tiles: field(2), population: 1, assigned: [], resources: FOOD });
+
+  expect(idle(last)).toBe(1);
+  expect(refusalOf(last, 'PH_Worker').blocked).toEqual(['population']);
+});
+
+test('a unit card refused for the population and for the idle inhabitant names both', () => {
   const last = cityOf(['urban'], { tiles: field(2), population: 1, resources: FOOD });
 
-  expect(refusalOf(last, 'PH_Worker').blocked).toEqual(['population']);
+  expect(idle(last)).toBe(0);
+  expect(refusalOf(last, 'PH_Worker').blocked).toEqual(['population', 'idle']);
 });
 
 test('a unit card is refused for the city while a unit of the player’s stands on it', () => {
   const held = cityOf(['urban', 'plain'], {
     tiles: field(2),
+    population: 3,
     units: [worker(CITY)],
     resources: FOOD,
   });
@@ -867,11 +886,101 @@ test('a unit card refused for the population and for the city names both', () =>
   const both = cityOf(['urban'], {
     tiles: field(2),
     population: 1,
+    assigned: [],
     units: [worker(CITY)],
     resources: FOOD,
   });
 
   expect(refusalOf(both, 'PH_Worker').blocked).toEqual(['population', 'city']);
+});
+
+test('the founding puts an inhabitant on every tile the city holds, and leaves two idle', () => {
+  const chronicle = beginChronicle(1234, DECK);
+
+  expect([...chronicle.assigned].map(tileKey).sort()).toEqual(
+    [...chronicle.held].map(tileKey).sort(),
+  );
+  expect(idle(chronicle)).toBe(2);
+});
+
+test('an assign takes the inhabitant off a tile, and a second one puts it back', () => {
+  const city = cityOf(['urban', 'plain']);
+  const tile = { q: 1, r: 0 };
+
+  const off = outcome(apply(city, assignTo(tile)));
+  const back = outcome(apply(off, assignTo(tile)));
+
+  expect(stagedBy(city, assignTo(tile))).toEqual(['assign']);
+  expect(off.assigned.map(tileKey)).toEqual(['0,0']);
+  expect(idle(off)).toBe(1);
+  expect(back.assigned.map(tileKey).sort()).toEqual(['0,0', '1,0']);
+  expect(idle(back)).toBe(0);
+});
+
+test('an assign on a tile the city does not hold is refused', () => {
+  const city = cityOf(['urban', 'plain'], { population: 4 });
+
+  expect(stagedBy(city, assignTo({ q: 0, r: 5 }))).toEqual(['refused']);
+  expect(outcome(apply(city, assignTo({ q: 0, r: 5 })))).toBe(city);
+  expect(stagedBy(city, assignTo({ q: 9, r: 9 }))).toEqual(['refused']);
+});
+
+test('an assign with no inhabitant idle is refused', () => {
+  const spent = cityOf(['urban', 'plain', 'forest'], {
+    population: 2,
+    assigned: [CITY, { q: 1, r: 0 }],
+  });
+
+  expect(idle(spent)).toBe(0);
+  expect(stagedBy(spent, assignTo({ q: 2, r: 0 }))).toEqual(['refused']);
+  expect(outcome(apply(spent, assignTo({ q: 2, r: 0 })))).toBe(spent);
+});
+
+test('an assigned tile yields at income, and an unassigned one yields nothing', () => {
+  const city = cityOf(['urban', 'plain']);
+  const off = outcome(apply(city, assignTo({ q: 1, r: 0 })));
+
+  const worked = outcome(apply(city, { type: 'end-turn' }));
+  const bare = outcome(apply(off, { type: 'end-turn' }));
+
+  for (const resource of RESOURCES) {
+    expect(bare.resources[resource]).toBe(
+      worked.resources[resource] - (TERRAIN_YIELDS.plain[resource] ?? 0),
+    );
+  }
+});
+
+test('the city’s own tile unassigned yields nothing at income, like any other', () => {
+  const city = cityOf(['urban', 'plain']);
+  const off = outcome(apply(city, assignTo(CITY)));
+
+  const worked = outcome(apply(city, { type: 'end-turn' }));
+  const bare = outcome(apply(off, { type: 'end-turn' }));
+
+  for (const resource of RESOURCES) {
+    expect(bare.resources[resource]).toBe(
+      worked.resources[resource] - (TERRAIN_YIELDS.urban[resource] ?? 0),
+    );
+  }
+});
+
+test('a unit card takes an idle inhabitant, and is refused while every one is assigned', () => {
+  const full = cityOf(['urban', 'plain'], {
+    tiles: field(2),
+    hand: ['PH_Worker'],
+    resources: FOOD,
+  });
+  const freed = outcome(apply(full, assignTo({ q: 1, r: 0 })));
+
+  expect(idle(full)).toBe(0);
+  expect(refusalOf(full, 'PH_Worker').blocked).toEqual(['idle']);
+  expect(outcome(apply(full, { type: 'play', index: 0 }))).toEqual(full);
+
+  const entered = outcome(apply(freed, { type: 'play', index: 0 }));
+
+  expect(entered.population).toBe(freed.population - 1);
+  expect(entered.assigned).toEqual(freed.assigned);
+  expect(entered.units).toHaveLength(1);
 });
 
 test('a building card with no tile it could stand on is refused for the tile', () => {

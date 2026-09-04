@@ -1,8 +1,10 @@
 import { expect, type Page, test } from '@playwright/test';
 import {
   click,
+  counted,
   onScreen,
   open,
+  playedOut,
   ringedTile,
   settled,
   shownLayer,
@@ -13,6 +15,12 @@ import {
 
 /** A tile on bare map, clear of the resource bar, the piles and the hand. */
 const BARE = { name: 'tile-0,-3', key: '0,-3' };
+
+/** A tile the city holds, and an inhabitant stands on from the founding. */
+const HELD = 'tile-0,-1';
+
+/** How many tiles the city holds from the founding, one inhabitant on each. */
+const FOUNDED = 7;
 
 /** Whether the chronicle screen shows city mode is on: both marks stand, or neither does. */
 async function inCityMode(page: Page): Promise<boolean> {
@@ -88,6 +96,37 @@ test('a press on culture or population enters city mode, and the chip leaves it'
 
   await click(page, 'reading-population');
   await expect.poll(() => inCityMode(page)).toBe(true);
+
+  expect(problems).toEqual([]);
+});
+
+test('city mode marks every tile an inhabitant stands on, and a click takes one off and puts it back', async ({
+  page,
+}) => {
+  const problems = watch(page);
+
+  await open(page, 1, 'PH_Deck');
+  expect(await counted(page, 'assigned')).toBe(0);
+
+  await page.keyboard.press('c');
+  await expect.poll(() => inCityMode(page)).toBe(true);
+  expect(await counted(page, 'assigned')).toBe(FOUNDED);
+  expect(await counted(page, 'city-dim')).toBe(0);
+
+  const held = await onScreen(page, HELD);
+  await page.mouse.click(held.x, held.y);
+  await playedOut(page);
+  expect(await counted(page, 'assigned')).toBe(FOUNDED - 1);
+  expect(await counted(page, 'city-dim')).toBe(1);
+
+  await page.mouse.click(held.x, held.y);
+  await playedOut(page);
+  expect(await counted(page, 'assigned')).toBe(FOUNDED);
+  expect(await counted(page, 'city-dim')).toBe(0);
+
+  await page.keyboard.press('Escape');
+  await expect.poll(() => inCityMode(page)).toBe(false);
+  expect(await counted(page, 'assigned')).toBe(0);
 
   expect(problems).toEqual([]);
 });

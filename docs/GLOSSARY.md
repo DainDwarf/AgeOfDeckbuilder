@@ -28,7 +28,7 @@ deliberate exception the reviewer sees; there is no silent allow-list.
 | **city** | A settlement on the map; the player owns exactly one — *the* city, what a chronicle is about. | town, capital, base, settlement |
 | **map** | The hexagonal grid a chronicle is played on. | board, world, grid |
 | **chronicle screen** | The surface a chronicle is played on — the map, the hand, the piles, the resource bar, the infopanel; what a window opens over and closes back to. | table, playfield, play area |
-| **city mode** | The chronicle screen's second mode, in which a tile click acts on the city — assigns, claims — instead of reading the tile. | build mode, manage mode, edit mode, planning mode |
+| **city mode** | The chronicle screen's second mode, in which a tile click acts on the city — assigns, unassigns, claims — instead of reading the tile. | build mode, manage mode, edit mode, planning mode |
 | **tile** | One hexagon of the map, of one terrain. | hex, cell, square, territory |
 | **region** | The launch choice that biases map generation; the difficulty dial. | site, location, start |
 | **unit** | A mobile piece on the map, the player's or not. | army, troop, piece, token |
@@ -63,6 +63,8 @@ deliberate exception the reviewer sees; there is no silent allow-list.
 | **worker** | A non-fighting unit that transforms tiles: builds buildings, terraforms, lays roads. | builder, engineer, labourer |
 | **population** | The city's inhabitants: assigned to tiles for income, turned into units by unit cards. | citizens, workforce, pops |
 | **assign** | To put one population on a tile inside the border; free, instant, reversible. | allocate |
+| **unassign** | To take one population off the tile it stands on; the reverse of assign. | remove, free up, release |
+| **idle** | An inhabitant assigned to no tile; what a unit card takes. | unemployed, spare, unassigned (as a noun) |
 | **biome** | A stretch of map the generator grows as one kind — land, sea, … — weighting the terrain of each tile in it. | patch, zone, area, ecosystem |
 | **terrain** | A tile's base layer: plain, forest, hills, …; one per tile, changed only by terraforming. | tile type |
 | **feature** | A generated extra on a tile: a fertile plain, a river. | bonus |

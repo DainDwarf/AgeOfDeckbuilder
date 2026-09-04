@@ -194,6 +194,7 @@ export class ChronicleScene extends Phaser.Scene {
     view.inspect(
       (found) => {
         if (!cityMode) read(found);
+        else if (found !== undefined) void playOut({ type: 'assign', tile: found.tile });
       },
       () => panel.rescale(),
     );
@@ -260,6 +261,7 @@ export class ChronicleScene extends Phaser.Scene {
       dismiss();
       cityMode = true;
       marks.show(true);
+      view.showAssignment(true);
     };
 
     /** City mode left, and whether it was on: the one way out, for the key, the chip and the back. */
@@ -267,6 +269,7 @@ export class ChronicleScene extends Phaser.Scene {
       if (!cityMode) return false;
       cityMode = false;
       marks.show(false);
+      view.showAssignment(false);
       return true;
     };
 

@@ -168,8 +168,8 @@ keyword some cards carry, not a kind, and the map's gifts are chronicle-only by 
   is a blank draw, which is what keeps a deck from being all buildings. A copy bought in the meta
   makes the deck faster, never the city bigger. Consuming a building card on play was rejected:
   the deck would be the city's blueprint and the chronicle merely its placement.
-- **Unit** — puts a unit on the map, made of one population, never the city's last: an
-  inhabitant leaves the tiles to become the warrior, the worker, later the trader, and is gone
+- **Unit** — puts a unit on the map, made of one idle inhabitant, never the city's last: an
+  inhabitant off the tiles becomes the warrior, the worker, later the trader, and is gone
   when the unit is killed. Where a unit enters is 🔧 until the map is designed.
 - **Order** — does one thing with one unit. The plain order moves it, and what it does on arrival
   is its nature: a warrior fights what it reaches, a worker is in place to build a building, a scout sees
@@ -181,9 +181,13 @@ keyword some cards carry, not a kind, and the map's gifts are chronicle-only by 
 
 ### Population ✅
 
-**Population** is the city's inhabitants. Each may be **assigned** to a tile inside the border,
-and an assigned tile yields its income. Assigning is free, instant and reversible, never a card:
-it is staffing, not a change to the map. A unit card turns one population into a unit.
+**Population** is the city's inhabitants. Each may be **assigned** to a tile inside the border, at
+most one to a tile, and only an assigned tile yields its income — the city's own tile no exception.
+An inhabitant assigned to no tile is **idle**: a unit card turns one idle inhabitant into a unit,
+and is refused when none is idle, or when the inhabitant would be the city's last. 🔧 The founding
+assigns an inhabitant to each of the seven tiles the city holds, and has two more idle besides.
+Assigning is free, instant and reversible, never a card: it is staffing, not a change to the map.
+In city mode the map marks the assigned tiles and dims the held ones that are not.
 
 🔧 Population eats. At income every inhabitant consumes food; the surplus accumulates toward the
 next inhabitant, at steps that widen; a deficit starves one. Food as a plain spendable resource
@@ -191,8 +195,9 @@ with growth elsewhere was rejected: the famine event would have nothing to bite.
 
 ### City mode ✅
 
-The chronicle screen has two modes. In **city mode** a tile click acts on the city — assigns an
-inhabitant, claims a tile — instead of reading the tile out; out of it a click reads the tile. It is
+The chronicle screen has two modes. In **city mode** a tile click acts on the city — assigns an idle
+inhabitant to the tile or unassigns the one on it, claims a tile — instead of reading the tile out;
+out of it a click reads the tile. A click the city refuses does nothing and says nothing. It is
 entered by the **city key** or by pressing culture or population on the resource bar, and left by
 that key, by the back key, or by the chip naming the mode; the map's frame drawn in the accent and
 that chip are how the chronicle screen shows the mode is on. Coming into city mode lets go of a card

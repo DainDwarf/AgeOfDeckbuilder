@@ -84,13 +84,16 @@ const BUILDING_DEPTH = 3;
 
 const UNIT_DEPTH = 4;
 
+/** Over what stands on the tiles, while city mode is on. */
+const CITY_DEPTH = 5;
+
 /** Over everything the map draws, while the yield overlay stands. */
-const DIM_DEPTH = 5;
+const DIM_DEPTH = 6;
 
 /** Over the dim: what the map keeps at full strength through it. */
-const OVER_DIM_DEPTH = 6;
+const OVER_DIM_DEPTH = 7;
 
-const YIELD_DEPTH = 7;
+const YIELD_DEPTH = 8;
 
 /** How dark the yield overlay's dim paints the map: the scrim's alpha. */
 const DIM_ALPHA = 0.6;
@@ -98,6 +101,13 @@ const DIM_ALPHA = 0.6;
 /** One glyph, corner to corner, and how far apart the glyphs of a tile stand. */
 const GLYPH = 6;
 const GLYPH_PITCH = 8;
+
+/** The mark of an assigned tile, corner to corner, and how far below the tile's middle it stands. */
+const ASSIGNED_GLYPH = 12;
+const ASSIGNED_DROP = 16;
+
+/** How dark city mode paints a held tile nobody stands on: the scrim's alpha. */
+const UNASSIGNED_ALPHA = 0.6;
 
 /** How many glyphs a row of them holds before the next row starts. */
 const GLYPH_ROW = 3;
@@ -170,6 +180,8 @@ export type MapView = {
    * map; an empty set takes the overlay down.
    */
   showYields(shown: ReadonlySet<Resource>): void;
+  /** Marks the tiles an inhabitant stands on and dims the held ones with nobody on them. */
+  showAssignment(on: boolean): void;
   /** Whether the pan and zoom keys reach the map; they do not while anything covers it. */
   live(on: boolean): void;
 };
@@ -197,8 +209,10 @@ export function unitMark(scene: Phaser.Scene, unit: Unit): Phaser.GameObjects.Po
 }
 
 // Phaser's WebGL stroke skips a polygon point whose origin-shifted position lands on the raw point
-// before it, which a centred diamond always has once, whatever order its corners are given in: the
-// glyph is a square turned, never a polygon, or its outline comes out open and cut across.
+// before it, which a centred diamond always has once, whatever order its corners are given in:
+// every diamond below is a square turned, never a polygon, or its outline comes out open and cut
+// across.
+
 /** The one way a point of yield is drawn: a diamond in the colour its resource is known by. */
 function yieldMark(scene: Phaser.Scene, resource: Resource): Phaser.GameObjects.Rectangle {
   const side = GLYPH / Math.SQRT2;
@@ -207,6 +221,22 @@ function yieldMark(scene: Phaser.Scene, resource: Resource): Phaser.GameObjects.
     .setStrokeStyle(1, OUTLINE)
     .setAngle(45)
     .setName(`yield-${resource}`);
+}
+
+/** The one way an assigned tile is marked: a diamond in the colour population is known by. */
+function assignedMark(scene: Phaser.Scene): Phaser.GameObjects.Rectangle {
+  const side = ASSIGNED_GLYPH / Math.SQRT2;
+  return scene.add
+    .rectangle(0, 0, side, side, RESOURCE_COLOURS.population)
+    .setStrokeStyle(1, OUTLINE)
+    .setAngle(45)
+    .setName('assigned');
+}
+
+/** The one way a held tile with nobody on it is dimmed: a scrim over it and all it carries. */
+function cityDim(scene: Phaser.Scene, coord: TileCoords): Phaser.GameObjects.Polygon {
+  const { x, y } = positionOf(coord);
+  return scene.add.polygon(x, y, hexagon(TILE_SIZE), OUTLINE, UNASSIGNED_ALPHA).setName('city-dim');
 }
 
 /** The one way an intent is drawn: the enemy's ring around the tile its attack is aimed at. */
@@ -311,8 +341,9 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
     .setDepth(DIM_DEPTH)
     .setName('yield-dim')
     .setVisible(false);
+  const assignment = scene.add.container(0, 0).setDepth(CITY_DEPTH).setName('assignment');
   const glyphs = scene.add.container(0, 0).setDepth(YIELD_DEPTH).setName('yields');
-  layer.add([built, intents, inspected, marks, dim, glyphs]);
+  layer.add([built, intents, inspected, marks, assignment, dim, glyphs]);
 
   let markers: Phaser.GameObjects.Polygon[] = [];
   let inspector: Phaser.GameObjects.Zone | undefined;
@@ -547,6 +578,9 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
   /** The resources the yield overlay is showing; empty while it is off. */
   let showing: ReadonlySet<Resource> = new Set();
 
+  /** Whether the tiles the city has inhabitants on are marked: they are while city mode is on. */
+  let assigning = false;
+
   /**
    * What the dim is laid under rather than over: the ring on the tile being read and the glow a
    * card is aimed by, which the player answers the overlay with. Everything else the map draws
@@ -622,6 +656,26 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
     }
   };
 
+  /**
+   * City mode's tiles repainted on the chronicle the map stands on: a mark under every tile an
+   * inhabitant stands on, a scrim over every held tile with nobody on it. An assign changes both,
+   * so this follows every render.
+   */
+  const paintAssignment = (): void => {
+    assignment.removeAll(true);
+    if (!assigning || shown === undefined) return;
+
+    const assigned = new Set(shown.assigned.map(tileKey));
+    for (const coord of shown.held) {
+      if (!assigned.has(tileKey(coord))) {
+        assignment.add(cityDim(scene, coord));
+        continue;
+      }
+      const { x, y } = positionOf(coord);
+      assignment.add(assignedMark(scene).setPosition(x, y + ASSIGNED_DROP));
+    }
+  };
+
   const render = (current: Chronicle): void => {
     flight = undefined;
     shown = current;
@@ -648,6 +702,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
       return marker;
     });
 
+    paintAssignment();
     paintYields();
   };
 
@@ -861,6 +916,11 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
     showYields(shownResources: ReadonlySet<Resource>): void {
       showing = shownResources;
       paintYields();
+    },
+
+    showAssignment(on: boolean): void {
+      assigning = on;
+      paintAssignment();
     },
 
     aimUnitTile(current: Chronicle, chosen: (target: Target | undefined) => void): () => void {

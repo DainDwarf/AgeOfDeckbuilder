@@ -12,7 +12,6 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
-- **Assignment** — in city mode a tile click assigns an idle inhabitant to a held tile or unassigns one; at income only assigned tiles yield, the city's tile no exception; rules tests cover both. Doc-impact: `docs/DESIGN.md`.
 - **Claiming with culture** — in city mode a click on a tile adjacent to the border claims it for culture, at a cost rising in steps with the tiles held; an unaffordable claim is refused with its reason. Doc-impact: none.
 - **Population eats and grows** — at income every inhabitant consumes food, the surplus accumulates toward the next inhabitant at steps that widen, a deficit starves one, and population reaching zero is a defeat the defeat screen names. Doc-impact: `docs/DESIGN.md`.
 - **Assigned and idle shown** — the population chip shows assigned and idle inhabitants apart, with its tooltip. Doc-impact: none.
