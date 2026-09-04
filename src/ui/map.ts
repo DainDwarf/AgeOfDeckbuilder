@@ -92,7 +92,7 @@ const OVER_DIM_DEPTH = 6;
 
 const YIELD_DEPTH = 7;
 
-/** How much of the map is left showing under the yield overlay's dim. */
+/** How dark the yield overlay's dim paints the map: the scrim's alpha. */
 const DIM_ALPHA = 0.6;
 
 /** One glyph, corner to corner, and how far apart the glyphs of a tile stand. */
