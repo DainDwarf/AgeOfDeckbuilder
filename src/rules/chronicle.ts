@@ -632,9 +632,14 @@ function income(chronicle: Chronicle): Chronicle {
     : { ...chronicle, resources };
 }
 
-/** Growth: the growth threshold the food stock has to reach is the population the inhabitant joins. */
+/** The growth threshold, what the next inhabitant costs: the population it joins. */
+export function growthThreshold(chronicle: Chronicle): number {
+  return chronicle.population;
+}
+
+/** Growth: the food stock that has reached the growth threshold is spent on one idle inhabitant. */
 function grow(chronicle: Chronicle): Chronicle {
-  const threshold = chronicle.population;
+  const threshold = growthThreshold(chronicle);
   // A threshold of nothing every stock reaches: a city of nobody would grow one and undo its fall.
   if (threshold === 0 || chronicle.resources.food < threshold) return chronicle;
   return {

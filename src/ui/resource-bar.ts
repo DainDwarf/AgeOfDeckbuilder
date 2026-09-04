@@ -1,5 +1,11 @@
 import type Phaser from 'phaser';
-import type { Chronicle, Resource, Stage } from '../rules/chronicle';
+import {
+  type Chronicle,
+  growthThreshold,
+  idle,
+  type Resource,
+  type Stage,
+} from '../rules/chronicle';
 import { EASE, ended, stopMotion } from './card-motion';
 import {
   addText,
@@ -125,31 +131,33 @@ export function createResourceBar(
     for (const entry of rising) stopMotion(scene, entry.ticking);
     rising = [];
     for (const entry of entries) {
-      entry.ticking.count = readingOf(chronicle, entry.key);
-      entry.value.setText(String(entry.ticking.count));
+      const { count, over } = readingOf(chronicle, entry.key);
+      entry.ticking.count = count;
+      entry.value.setText(readsAs(count, over));
     }
   };
 
   /** The income arriving, or the growth after it: every reading that changed ticks to where it stands. */
   const rise = (chronicle: Chronicle): Promise<void> | undefined => {
     const ticking = entries.filter(
-      (entry) => entry.ticking.count !== readingOf(chronicle, entry.key),
+      (entry) => entry.ticking.count !== readingOf(chronicle, entry.key).count,
     );
     if (ticking.length === 0) return undefined;
     rising = ticking;
 
     return Promise.all(
-      ticking.map((entry) =>
-        ended(
+      ticking.map((entry) => {
+        const { count, over } = readingOf(chronicle, entry.key);
+        return ended(
           scene.tweens.add({
             targets: entry.ticking,
-            count: readingOf(chronicle, entry.key),
+            count,
             duration: 400,
             ease: EASE,
-            onUpdate: () => entry.value.setText(String(Math.round(entry.ticking.count))),
+            onUpdate: () => entry.value.setText(readsAs(Math.round(entry.ticking.count), over)),
           }),
-        ),
-      ),
+        );
+      }),
     ).then(() => {
       // A render while these were ticking took them down and painted the readings it stands on.
       if (rising === ticking) render(chronicle);
@@ -196,9 +204,13 @@ function createMenuButton(scene: Phaser.Scene, pressed: () => void): number {
   return width;
 }
 
-/** The width every value grows rightward into: four digits, so no reading ever moves. */
+/**
+ * The width every value grows rightward into, so no reading ever moves: two numbers of two digits
+ * read over each other, which is four digits and the stroke between them. A value wider than that
+ * grows into the gap before the next reading instead of moving it.
+ */
 function digitSlot(scene: Phaser.Scene): number {
-  const digits = addText(scene, 0, 0, '0000', VALUE_STYLE);
+  const digits = addText(scene, 0, 0, '00/00', VALUE_STYLE);
   const width = digits.width;
   digits.destroy();
   return width;
@@ -282,6 +294,22 @@ function place(entries: Entry[], from: number, slot: number): void {
   }
 }
 
-function readingOf(chronicle: Chronicle, key: Reading): number {
-  return key === 'population' ? chronicle.population : chronicle.resources[key];
+/**
+ * What a reading reads: the number a rise ticks through, and the whole it stands against, where it
+ * has one — the idle inhabitants over all of them, the food stock over the growth threshold.
+ */
+function readingOf(chronicle: Chronicle, key: Reading): { count: number; over?: number } {
+  switch (key) {
+    case 'population':
+      return { count: idle(chronicle), over: chronicle.population };
+    case 'food':
+      return { count: chronicle.resources.food, over: growthThreshold(chronicle) };
+    default:
+      return { count: chronicle.resources[key] };
+  }
+}
+
+/** How a reading paints: the number alone, or the number over the whole it stands against. */
+function readsAs(count: number, over: number | undefined): string {
+  return over === undefined ? String(count) : text('reading.over', { count, over });
 }

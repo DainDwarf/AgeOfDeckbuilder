@@ -1,5 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import type Phaser from 'phaser';
+import { growthThreshold, idle } from '../src/rules/chronicle';
 import { text } from '../src/ui/text';
 import {
   chronicleOf,
@@ -96,10 +97,17 @@ test('a motion that throws still ends the turn and gives the chronicle screen ba
   expect(faces).toEqual(committed.hand.map(() => 1));
   expect(await counted(page, `hand-${committed.hand.length}`)).toBe(0);
 
-  const readings = { ...committed.resources, population: committed.population };
-  expect(await paintedReadings(page, Object.keys(readings))).toEqual(
-    Object.fromEntries(Object.entries(readings).map(([key, count]) => [key, String(count)])),
-  );
+  const readings: Record<string, string> = {
+    ...Object.fromEntries(
+      Object.entries(committed.resources).map(([key, count]) => [key, String(count)]),
+    ),
+    food: text('reading.over', {
+      count: committed.resources.food,
+      over: growthThreshold(committed),
+    }),
+    population: text('reading.over', { count: idle(committed), over: committed.population }),
+  };
+  expect(await paintedReadings(page, Object.keys(readings))).toEqual(readings);
   expect(await endTurnLabel(page)).toBe(text('button.turn', { turn: committed.turn }));
   expect(await counted(page, 'end-turn-leaving')).toBe(0);
 

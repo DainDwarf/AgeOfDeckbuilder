@@ -1,6 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import { RESOURCES, type Resource } from '../src/rules/chronicle';
-import { tileYield } from '../src/rules/map';
+import { tileKey, tileYield } from '../src/rules/map';
 import {
   chronicleOf,
   click,
@@ -48,6 +48,23 @@ async function only(page: Page, ...resources: Resource[]): Promise<Glyphs> {
   const all = await owed(page);
   const shown = none();
   for (const resource of resources) shown[resource] = all[resource];
+  return shown;
+}
+
+/**
+ * What the map shows with these resources on the overlay while city mode is on: every tile inside
+ * the border shows its whole yield, and every other tile what the overlay is asked for.
+ */
+async function withCityMode(page: Page, ...resources: Resource[]): Promise<Glyphs> {
+  const { tiles, held } = await chronicleOf(page);
+  const inside = new Set(held.map(tileKey));
+  const shown = none();
+  for (const tile of tiles) {
+    const yields = tileYield(tile);
+    for (const resource of inside.has(tileKey(tile)) ? RESOURCES : resources) {
+      shown[resource] += yields[resource] ?? 0;
+    }
+  }
   return shown;
 }
 
@@ -152,6 +169,29 @@ test('the overlay is a display, not a mode: city mode and the back key leave it 
   await page.keyboard.press('Escape');
   await answered(page);
   expect(await shows(page, 'yield-dim')).toBe(true);
+
+  expect(problems).toEqual([]);
+});
+
+test('a tile inside the border shows its whole yield while city mode stands with the overlay', async ({
+  page,
+}) => {
+  const problems = watch(page);
+
+  await open(page, 1, 'PH_Deck');
+
+  await click(page, 'reading-food');
+  await expect.poll(() => shows(page, 'yield-dim')).toBe(true);
+  expect(await glyphs(page)).toEqual(await only(page, 'food'));
+
+  await page.keyboard.press('c');
+  await expect.poll(() => shows(page, 'city-chip')).toBe(true);
+  expect(await shows(page, 'yield-dim')).toBe(true);
+  expect(await glyphs(page)).toEqual(await withCityMode(page, 'food'));
+
+  await page.keyboard.press('Escape');
+  await expect.poll(() => shows(page, 'city-chip')).toBe(false);
+  expect(await glyphs(page)).toEqual(await only(page, 'food'));
 
   expect(problems).toEqual([]);
 });

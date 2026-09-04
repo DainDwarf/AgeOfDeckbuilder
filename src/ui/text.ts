@@ -11,7 +11,8 @@ const TEXT = {
   'label.damage': 'Damage',
   'label.range': 'Range',
   'label.move': 'Move',
-  'tooltip.food': 'The most basic need. Grows your population.',
+  'reading.over': '{count}/{over}',
+  'tooltip.food': 'The most basic need. Reaching the growth threshold grows your population.',
   'tooltip.production': 'Materials of every sort. Build, improve, and shape the land.',
   'tooltip.military': 'A sad necessity. Defend and attack.',
   'tooltip.money': 'Exchange and opulence. Trade it for other goods, or amass it.',
@@ -19,7 +20,7 @@ const TEXT = {
     'The never-ending ingenuity of humanity. Draw, discard, and manipulate your cards.',
   'tooltip.culture': 'What the city creates and believes. Claims tiles, pushing the border out.',
   'tooltip.population':
-    'The inhabitants of your city. Assign them to tiles, or turn them into units.',
+    'Idle inhabitants, over all of them. Assign them to tiles, or turn them into units.',
   'tooltip.health': 'What the unit has left before it is killed.',
   'tooltip.damage': "The health this unit's attack removes.",
   'tooltip.range': 'The distance, in tiles, this unit attacks over.',

@@ -8,6 +8,7 @@ import {
   type Command,
   cityCommand,
   claimable,
+  growthThreshold,
   idle,
   outcome,
   playable,
@@ -328,6 +329,22 @@ test('the food stock reaching the growth threshold is spent on one inhabitant, a
   expect(after.resources.food).toBe(0);
   expect(after.assigned).toEqual(city.assigned);
   expect(idle(after)).toBe(idle(city) + 1);
+});
+
+test('the growth threshold is the food the next inhabitant needs: one short of it grows nobody', () => {
+  const city = cityOf(['urban', 'plain'], { population: 5, assigned: [] });
+  const stocked = (food: number): Chronicle => ({
+    ...city,
+    resources: { ...city.resources, food },
+  });
+
+  const short = outcome(apply(stocked(growthThreshold(city) - 1), { type: 'end-turn' }));
+  const reached = outcome(apply(stocked(growthThreshold(city)), { type: 'end-turn' }));
+
+  expect(short.population).toBe(city.population);
+  expect(short.resources.food).toBe(growthThreshold(city) - 1);
+  expect(reached.population).toBe(city.population + 1);
+  expect(reached.resources.food).toBe(0);
 });
 
 test('a food stock worth several growth thresholds grows one inhabitant and no more', () => {

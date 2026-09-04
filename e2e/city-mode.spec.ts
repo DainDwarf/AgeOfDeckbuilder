@@ -1,7 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
 import { DECKS } from '../src/rules/cards';
-import { beginChronicle } from '../src/rules/chronicle';
-import { distance, tileKey } from '../src/rules/map';
+import { beginChronicle, RESOURCES, type Resource } from '../src/rules/chronicle';
+import { distance, tileKey, tileYield } from '../src/rules/map';
 import { text } from '../src/ui/text';
 import {
   chronicleOf,
@@ -50,6 +50,36 @@ async function inCityMode(page: Page): Promise<boolean> {
 async function answered(page: Page): Promise<void> {
   await settled(page);
   await settled(page);
+}
+
+type Glyphs = Record<Resource, number>;
+
+function noGlyphs(): Glyphs {
+  return Object.fromEntries(RESOURCES.map((resource) => [resource, 0])) as Glyphs;
+}
+
+/** How many glyphs of each resource stand on the map. */
+async function glyphs(page: Page): Promise<Glyphs> {
+  const shown = noGlyphs();
+  for (const resource of RESOURCES) shown[resource] = await counted(page, `yield-${resource}`);
+  return shown;
+}
+
+/** What the tiles inside the border yield, point by point, and what the whole map yields. */
+async function yielded(page: Page): Promise<{ inside: Glyphs; map: Glyphs }> {
+  const chronicle = await chronicleOf(page);
+  const held = new Set(chronicle.held.map(tileKey));
+  const inside = noGlyphs();
+  const map = noGlyphs();
+  for (const tile of chronicle.tiles) {
+    const yields = tileYield(tile);
+    for (const resource of RESOURCES) {
+      const points = yields[resource] ?? 0;
+      map[resource] += points;
+      if (held.has(tileKey(tile))) inside[resource] += points;
+    }
+  }
+  return { inside, map };
 }
 
 test('the city key enters city mode, where a tile click reads nothing, and the back key leaves it', async ({
@@ -200,6 +230,28 @@ test('a city-mode click the rules refuse says why, one on no act of the city’s
   // The border has moved out: the tile it did not touch before is a tile the city can pay for now.
   await page.mouse.click(far.x, far.y);
   await expect.poll(() => refusalLines(page)).toEqual([text('refusal.culture', { cost: 1 })]);
+
+  expect(problems).toEqual([]);
+});
+
+test('city mode shows what every tile inside the border yields, and nothing of any other tile', async ({
+  page,
+}) => {
+  const problems = watch(page);
+
+  await open(page, 1, 'PH_Deck');
+  expect(await glyphs(page)).toEqual(noGlyphs());
+
+  await page.keyboard.press('c');
+  await expect.poll(() => inCityMode(page)).toBe(true);
+  const { inside, map } = await yielded(page);
+  expect(inside).not.toEqual(map);
+  expect(await glyphs(page)).toEqual(inside);
+  expect(await shows(page, 'yield-dim')).toBe(false);
+
+  await page.keyboard.press('Escape');
+  await expect.poll(() => inCityMode(page)).toBe(false);
+  expect(await glyphs(page)).toEqual(noGlyphs());
 
   expect(problems).toEqual([]);
 });

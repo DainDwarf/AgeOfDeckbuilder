@@ -117,6 +117,9 @@ const UNASSIGNED_ALPHA = 0.6;
 /** How many glyphs a row of them holds before the next row starts. */
 const GLYPH_ROW = 3;
 
+/** What a tile inside the border shows of itself while city mode is on: every resource it yields. */
+const EVERY_RESOURCE: ReadonlySet<Resource> = new Set(RESOURCES);
+
 /** How close the map comes and how far it goes, on top of the factor the design space renders at. */
 const MIN_ZOOM = 0.75;
 const MAX_ZOOM = 3.5;
@@ -186,8 +189,9 @@ export type MapView = {
    */
   showYields(shown: ReadonlySet<Resource>): void;
   /**
-   * Marks the tiles an inhabitant stands on, dims the held ones with nobody on them, and rings the
-   * ones the city may claim: what the map shows while city mode is on.
+   * Marks the tiles an inhabitant stands on, dims the held ones with nobody on them, rings the ones
+   * the city may claim, and shows what every tile inside the border yields, whatever the overlay is
+   * showing: what the map shows while city mode is on.
    */
   showCityMarks(on: boolean): void;
   /** Whether the pan and zoom keys reach the map; they do not while anything covers it. */
@@ -638,20 +642,24 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
   let flight: symbol | undefined;
 
   /**
-   * The overlay repainted on the chronicle the map stands on: a building changes what its tile
-   * yields, so this follows every render as the buildings do.
+   * The glyphs of every tile repainted on the chronicle the map stands on: a building changes what
+   * its tile yields, so this follows every render as the buildings do. The one place a tile's
+   * glyphs are decided — a tile inside the border shows what it yields of every resource while city
+   * mode is on, and every other tile shows what the overlay is asked for, if anything.
    */
   const paintYields = (): void => {
     glyphs.removeAll(true);
     dim.setVisible(showing.size > 0);
     liftOverDim();
-    if (shown === undefined || showing.size === 0) return;
+    if (shown === undefined) return;
 
+    const inside = new Set(marking ? shown.held.map(tileKey) : []);
     for (const tile of shown.tiles) {
+      const asked = inside.has(tileKey(tile)) ? EVERY_RESOURCE : showing;
       const yields = tileYield(tile);
       const owed: Resource[] = [];
       for (const resource of RESOURCES) {
-        if (!showing.has(resource)) continue;
+        if (!asked.has(resource)) continue;
         for (let left = yields[resource] ?? 0; left > 0; left--) owed.push(resource);
       }
       if (owed.length === 0) continue;
@@ -951,6 +959,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
     showCityMarks(on: boolean): void {
       marking = on;
       paintCityMarks();
+      paintYields();
     },
 
     aimUnitTile(current: Chronicle, chosen: (target: Target | undefined) => void): () => void {
