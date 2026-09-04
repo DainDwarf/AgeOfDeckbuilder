@@ -12,7 +12,6 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
-- **Claiming with culture** — in city mode a click on a tile adjacent to the border claims it for culture, at a cost rising in steps with the tiles held; an unaffordable claim is refused with its reason. Doc-impact: none.
 - **Population eats and grows** — at income every inhabitant consumes food, the surplus accumulates toward the next inhabitant at steps that widen, a deficit starves one, and population reaching zero is a defeat the defeat screen names. Doc-impact: `docs/DESIGN.md`.
 - **Assigned and idle shown** — the population chip shows assigned and idle inhabitants apart, with its tooltip, and in city mode every tile inside the border shows its yield. Doc-impact: `docs/DESIGN.md`.
 - **The four-layer tile** — a tile carries feature and improvement layers, income sums all four, the generator deals one feature, and the infopanel reads the four layers. Doc-impact: none.

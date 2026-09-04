@@ -1,6 +1,13 @@
 import Phaser from 'phaser';
 import { CARDS, type CardId, type TargetType } from '../rules/cards';
-import { type Chronicle, playable, type Refusal, refusalOf, type Stage } from '../rules/chronicle';
+import {
+  type Chronicle,
+  costOf,
+  playable,
+  type Refusal,
+  refusalOf,
+  type Stage,
+} from '../rules/chronicle';
 import {
   CARD_BASELINE,
   CARD_HEIGHT,
@@ -69,7 +76,7 @@ export function createHand(
 ): Hand {
   const laneLeft = MARGIN + CARD_WIDTH + LANE_PAD;
   const laneWidth = DESIGN_WIDTH - 2 * laneLeft;
-  const note = createRefusalNote(scene);
+  const note = createRefusalNote(scene, on);
 
   let slots: Slot[] = [];
   /** What the hand has in the air and no slot holds; a render owns it and takes it down. */
@@ -192,7 +199,12 @@ export function createHand(
             if (!slot.playable) {
               slot.hovered = false;
               settle(slot, 150);
-              note.raise(slot.id, slot.refusal, slot.home.x, slot.home.y - LIFT - CARD_HEIGHT);
+              note.overCard(
+                costOf(slot.id),
+                slot.refusal,
+                slot.home.x,
+                slot.home.y - LIFT - CARD_HEIGHT,
+              );
               return;
             }
             // A card that takes a target is not played by the release: it waits, in its slot and

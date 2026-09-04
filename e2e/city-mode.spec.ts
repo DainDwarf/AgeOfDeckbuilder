@@ -1,10 +1,17 @@
 import { expect, type Page, test } from '@playwright/test';
+import { DECKS } from '../src/rules/cards';
+import { beginChronicle } from '../src/rules/chronicle';
+import { distance, tileKey } from '../src/rules/map';
+import { text } from '../src/ui/text';
 import {
+  chronicleOf,
   click,
   counted,
+  endTurn,
   onScreen,
   open,
   playedOut,
+  refusalLines,
   ringedTile,
   settled,
   shownLayer,
@@ -13,14 +20,23 @@ import {
   watch,
 } from './chronicle-screen';
 
-/** A tile on bare map, clear of the resource bar, the piles and the hand. */
+/** A tile on bare map the founding's border does not touch, clear of the bar, the piles and the hand. */
 const BARE = { name: 'tile-0,-3', key: '0,-3' };
+
+/** A tile on bare map the founding's border touches: what a claim takes first. */
+const TOUCHING = { name: 'tile-0,-2', key: '0,-2' };
 
 /** A tile the city holds, and an inhabitant stands on from the founding. */
 const HELD = 'tile-0,-1';
 
 /** How many tiles the city holds from the founding, one inhabitant on each. */
 const FOUNDED = 7;
+
+/** How many tiles the founding's border touches: the ring two out, as far as the map reaches. */
+function touching(): number {
+  const founding = beginChronicle(1, DECKS.PH_Deck);
+  return founding.tiles.filter((tile) => distance(tile, founding.city) === 2).length;
+}
 
 /** Whether the chronicle screen shows city mode is on: both marks stand, or neither does. */
 async function inCityMode(page: Page): Promise<boolean> {
@@ -127,6 +143,62 @@ test('city mode marks every tile an inhabitant stands on, and a click takes one 
   await page.keyboard.press('Escape');
   await expect.poll(() => inCityMode(page)).toBe(false);
   expect(await counted(page, 'assigned')).toBe(0);
+
+  expect(problems).toEqual([]);
+});
+
+test('city mode marks every tile the city can claim, and leaving it takes the marks down', async ({
+  page,
+}) => {
+  const problems = watch(page);
+
+  await open(page, 1, 'PH_Deck');
+  expect(await counted(page, 'claimable')).toBe(0);
+
+  await page.keyboard.press('c');
+  await expect.poll(() => inCityMode(page)).toBe(true);
+  expect(await counted(page, 'claimable')).toBe(touching());
+
+  await page.keyboard.press('Escape');
+  await expect.poll(() => inCityMode(page)).toBe(false);
+  expect(await counted(page, 'claimable')).toBe(0);
+
+  expect(problems).toEqual([]);
+});
+
+test('a city-mode click the rules refuse says why, and one the city can pay for claims the tile', async ({
+  page,
+}) => {
+  const problems = watch(page);
+
+  await open(page, 1, 'PH_Deck');
+  await page.keyboard.press('c');
+  await expect.poll(() => inCityMode(page)).toBe(true);
+
+  const near = await onScreen(page, TOUCHING.name);
+  const far = await onScreen(page, BARE.name);
+
+  await page.mouse.click(near.x, near.y);
+  await expect.poll(() => refusalLines(page)).toEqual([text('refusal.culture', { cost: 1 })]);
+
+  await page.mouse.click(far.x, far.y);
+  await expect.poll(() => refusalLines(page)).toContain(text('refusal.border'));
+
+  await endTurn(page);
+  expect((await chronicleOf(page)).resources.culture).toBe(1);
+
+  await page.mouse.click(near.x, near.y);
+  await playedOut(page);
+  const claimed = await chronicleOf(page);
+
+  expect(claimed.held.map(tileKey)).toContain(TOUCHING.key);
+  expect(claimed.resources.culture).toBe(0);
+  expect(await counted(page, 'assigned')).toBe(FOUNDED + 1);
+  expect(await counted(page, 'claimable')).toBeGreaterThan(touching());
+
+  // The border has moved out: the tile it did not touch before is a tile the city can pay for now.
+  await page.mouse.click(far.x, far.y);
+  await expect.poll(() => refusalLines(page)).toEqual([text('refusal.culture', { cost: 1 })]);
 
   expect(problems).toEqual([]);
 });

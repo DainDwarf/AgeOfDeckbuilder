@@ -5,12 +5,15 @@ import {
   beginChronicle,
   type Chronicle,
   type Command,
+  cityCommand,
   outcome,
   RESOURCES,
   type Resource,
   type Stage,
   type Target,
   targetTiles,
+  tileCost,
+  tileRefusal,
 } from '../rules/chronicle';
 import { type TileCoords, tileAt, tileKey } from '../rules/map';
 import { createBand } from './band';
@@ -34,6 +37,7 @@ import { onKeyDown } from './keys';
 import { createMapView, type Inspection } from './map';
 import { createOverlay } from './overlay';
 import { createPiles } from './piles';
+import { createRefusalNote } from './refusal-note';
 import { createResourceBar } from './resource-bar';
 import { text } from './text';
 import { createTooltip } from './tooltip';
@@ -108,6 +112,7 @@ export class ChronicleScene extends Phaser.Scene {
     const parts: Part[] = [];
     const view = createMapView(this, map, this.current);
     const panel = createInfoPanel(this, map);
+    const note = createRefusalNote(this, map);
 
     /** The ringed tile, and which of its layers the panel is reading — none while it is only ringed. */
     let inspecting: { tile: TileCoords; index: number | undefined } | undefined;
@@ -191,12 +196,32 @@ export class ChronicleScene extends Phaser.Scene {
     /** Whether city mode is on: a tile click acts on the city instead of reading the tile. */
     let cityMode = false;
 
+    /**
+     * The city acting on the tile a city-mode click landed on: the rules say which command that is,
+     * and a click they refuse plays nothing and stands its note over the tile instead.
+     */
+    const act = (found: Inspection): void => {
+      const command = cityCommand(this.current, found.tile);
+      if (command !== undefined) {
+        void playOut(command);
+        return;
+      }
+      note.overTile(
+        tileCost(this.current, found.tile),
+        tileRefusal(this.current, found.tile),
+        found.at,
+      );
+    };
+
     view.inspect(
       (found) => {
         if (!cityMode) read(found);
-        else if (found !== undefined) void playOut({ type: 'assign', tile: found.tile });
+        else if (found !== undefined) act(found);
       },
-      () => panel.rescale(),
+      () => {
+        panel.rescale();
+        note.rescale();
+      },
     );
 
     /** Whether a window, a browse, a card zoomed or the defeat screen stands over the map. */
@@ -261,15 +286,16 @@ export class ChronicleScene extends Phaser.Scene {
       dismiss();
       cityMode = true;
       marks.show(true);
-      view.showAssignment(true);
+      view.showCityMarks(true);
     };
 
     /** City mode left, and whether it was on: the one way out, for the key, the chip and the back. */
     const leaveCityMode = (): boolean => {
       if (!cityMode) return false;
       cityMode = false;
+      note.hide();
       marks.show(false);
-      view.showAssignment(false);
+      view.showCityMarks(false);
       return true;
     };
 

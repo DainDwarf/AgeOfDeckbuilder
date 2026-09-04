@@ -6,17 +6,22 @@ import {
   buildable,
   type Chronicle,
   type Command,
+  cityCommand,
+  claimable,
   idle,
   outcome,
   playable,
   RESOURCES,
   type Resources,
   refusalOf,
+  tileCost,
+  tileRefusal,
 } from './chronicle';
 import {
   type BuildingTypeId,
   distance,
   MAP_COMPOSITION,
+  neighbours,
   TERRAIN_YIELDS,
   type Terrain,
   type Tile,
@@ -119,6 +124,31 @@ function buildOn(tile: TileCoords): Command {
 /** The command city mode sends for a tile: an inhabitant on it, or the one on it off. */
 function assignTo(tile: TileCoords): Command {
   return { type: 'assign', tile };
+}
+
+/** The command city mode sends for a tile the city does not hold: culture for the tile. */
+function claimOf(tile: TileCoords): Command {
+  return { type: 'claim', tile };
+}
+
+/**
+ * A city on a disc of plain out to `radius`, holding the seven tiles the founding holds with an
+ * inhabitant on each and two idle besides.
+ */
+function founded(radius: number, carrying: Partial<Chronicle> = {}): Chronicle {
+  const held = [CITY, ...neighbours(CITY)];
+  return cityOf(['urban'], {
+    tiles: field(radius),
+    held,
+    population: held.length + 2,
+    assigned: [...held],
+    ...carrying,
+  });
+}
+
+/** What the city holds to claim with, and nothing besides. */
+function culture(amount: number): Resources {
+  return { food: 0, production: 0, military: 0, money: 0, science: 0, culture: amount };
 }
 
 /** What the city pays for the farm card, and nothing besides. */
@@ -962,6 +992,132 @@ test('the city’s own tile unassigned yields nothing at income, like any other'
       worked.resources[resource] - (TERRAIN_YIELDS.urban[resource] ?? 0),
     );
   }
+});
+
+test('a claim pays its culture, takes the tile inside the border, and puts an idle inhabitant on it', () => {
+  const city = founded(3, { resources: culture(2) });
+  const tile = { q: 2, r: 0 };
+
+  const stages = apply(city, claimOf(tile));
+  const after = outcome(stages);
+
+  expect(stages.map((stage) => stage.name)).toEqual(['claim']);
+  expect(after.held.map(tileKey)).toContain('2,0');
+  expect(after.resources.culture).toBe(1);
+  expect(after.assigned.map(tileKey)).toContain('2,0');
+  expect(idle(after)).toBe(idle(city) - 1);
+});
+
+test('a claim made with nobody idle takes the tile with no inhabitant on it', () => {
+  const full = founded(3, { resources: culture(2), population: 7 });
+
+  const after = outcome(apply(full, claimOf({ q: 2, r: 0 })));
+
+  expect(idle(full)).toBe(0);
+  expect(after.held.map(tileKey)).toContain('2,0');
+  expect(after.assigned.map(tileKey)).not.toContain('2,0');
+  expect(idle(after)).toBe(0);
+});
+
+test('a claimed tile an inhabitant stands on yields at the next income', () => {
+  const city = founded(3, { resources: culture(1) });
+  const claimed = outcome(apply(city, claimOf({ q: 2, r: 0 })));
+
+  const bare = outcome(apply(city, { type: 'end-turn' }));
+  const wider = outcome(apply(claimed, { type: 'end-turn' }));
+
+  expect(wider.resources.food).toBe(bare.resources.food + (TERRAIN_YIELDS.plain.food ?? 0));
+});
+
+test('a claim on a tile the border does not touch, off the map, or already held is refused', () => {
+  const city = founded(3, { resources: culture(9) });
+
+  expect(stagedBy(city, claimOf({ q: 3, r: 0 }))).toEqual(['refused']);
+  expect(outcome(apply(city, claimOf({ q: 3, r: 0 })))).toBe(city);
+  expect(stagedBy(city, claimOf({ q: 9, r: 9 }))).toEqual(['refused']);
+  expect(stagedBy(city, claimOf({ q: 1, r: 0 }))).toEqual(['refused']);
+});
+
+test('a claim the city cannot pay for is refused, and one it can just pay for goes through', () => {
+  const penniless = founded(3);
+  const exact = founded(3, { resources: culture(1) });
+
+  expect(stagedBy(penniless, claimOf({ q: 2, r: 0 }))).toEqual(['refused']);
+  expect(outcome(apply(penniless, claimOf({ q: 2, r: 0 })))).toBe(penniless);
+  expect(stagedBy(exact, claimOf({ q: 2, r: 0 }))).toEqual(['claim']);
+  expect(outcome(apply(exact, claimOf({ q: 2, r: 0 }))).resources.culture).toBe(0);
+});
+
+test('a claim costs one culture, and one more for every three tiles claimed', () => {
+  let chronicle = founded(4, { resources: culture(20), population: 40 });
+  const touching = field(4)
+    .filter((tile) => distance(tile, CITY) === 2)
+    .slice(0, 7);
+
+  const paid = touching.map((tile) => {
+    const before = chronicle.resources.culture;
+    chronicle = outcome(apply(chronicle, claimOf(tile)));
+    return before - chronicle.resources.culture;
+  });
+
+  expect(paid).toEqual([1, 1, 1, 2, 2, 2, 3]);
+  expect(chronicle.held).toHaveLength(14);
+});
+
+test('the city may claim every tile touching the border, and no other', () => {
+  const city = founded(3);
+
+  expect(claimable(city).map(tileKey).sort()).toEqual(
+    field(3)
+      .filter((tile) => distance(tile, CITY) === 2)
+      .map(tileKey)
+      .sort(),
+  );
+});
+
+test('a city-mode click assigns on a tile the city holds and claims on any other', () => {
+  const city = founded(3, { resources: culture(1) });
+
+  expect(cityCommand(city, { q: 1, r: 0 })).toEqual(assignTo({ q: 1, r: 0 }));
+  expect(cityCommand(city, { q: 2, r: 0 })).toEqual(claimOf({ q: 2, r: 0 }));
+  expect(cityCommand(city, { q: 3, r: 0 })).toBeUndefined();
+});
+
+test('a city-mode click is refused for the culture it costs and for the border it is off', () => {
+  const city = founded(3);
+  const paid = founded(3, { resources: culture(1) });
+
+  expect(tileCost(city, { q: 2, r: 0 })).toEqual([{ resource: 'culture', amount: 1 }]);
+  expect(tileRefusal(city, { q: 2, r: 0 })).toEqual({ unaffordable: ['culture'], blocked: [] });
+  expect(tileRefusal(paid, { q: 2, r: 0 })).toEqual({ unaffordable: [], blocked: [] });
+  expect(tileRefusal(paid, { q: 3, r: 0 })).toEqual({ unaffordable: [], blocked: ['border'] });
+  expect(tileCost(paid, CITY)).toEqual([]);
+  expect(tileRefusal(paid, CITY)).toEqual({ unaffordable: [], blocked: [] });
+});
+
+test('a city-mode click on a held tile nobody stands on is refused while nobody is idle', () => {
+  const spent = founded(3, { population: 6, assigned: [CITY, ...neighbours(CITY).slice(1)] });
+  const empty = { q: 1, r: 0 };
+
+  expect(idle(spent)).toBe(0);
+  expect(tileRefusal(spent, empty)).toEqual({ unaffordable: [], blocked: ['idle'] });
+  expect(cityCommand(spent, empty)).toBeUndefined();
+  expect(stagedBy(spent, assignTo(empty))).toEqual(['refused']);
+
+  const freed = outcome(apply(spent, assignTo(CITY)));
+
+  expect(tileRefusal(freed, empty)).toEqual({ unaffordable: [], blocked: [] });
+  expect(stagedBy(freed, assignTo(empty))).toEqual(['assign']);
+});
+
+test('the same claim on the same chronicle gives the same chronicle back', () => {
+  const city = founded(3, { resources: culture(3) });
+  const untouched = structuredClone(city);
+
+  expect(outcome(apply(city, claimOf({ q: 2, r: 0 })))).toEqual(
+    outcome(apply(city, claimOf({ q: 2, r: 0 }))),
+  );
+  expect(city).toEqual(untouched);
 });
 
 test('a unit card takes an idle inhabitant, and is refused while every one is assigned', () => {

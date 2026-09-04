@@ -62,6 +62,7 @@ const TEXT = {
   'refusal.city': 'A unit already stands on the city.',
   'refusal.tile': 'No tile to build on.',
   'refusal.unit': 'No unit can move.',
+  'refusal.border': 'The tile does not touch the border.',
   'browse.draw-pile': 'Draw pile — {count}',
   'browse.discard-pile': 'Discard pile — {count}',
   'menu.menu': 'Menu',

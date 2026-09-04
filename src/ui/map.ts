@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import {
   type Chronicle,
+  claimable,
   RESOURCES,
   type Resource,
   type Stage,
@@ -106,6 +107,10 @@ const GLYPH_PITCH = 8;
 const ASSIGNED_GLYPH = 12;
 const ASSIGNED_DROP = 16;
 
+/** How heavy the ring around the city's own tile is, against the one every other tile takes. */
+const CITY_RING = 4;
+const RING = 2;
+
 /** How dark city mode paints a held tile nobody stands on: the scrim's alpha. */
 const UNASSIGNED_ALPHA = 0.6;
 
@@ -180,8 +185,11 @@ export type MapView = {
    * map; an empty set takes the overlay down.
    */
   showYields(shown: ReadonlySet<Resource>): void;
-  /** Marks the tiles an inhabitant stands on and dims the held ones with nobody on them. */
-  showAssignment(on: boolean): void;
+  /**
+   * Marks the tiles an inhabitant stands on, dims the held ones with nobody on them, and rings the
+   * ones the city may claim: what the map shows while city mode is on.
+   */
+  showCityMarks(on: boolean): void;
   /** Whether the pan and zoom keys reach the map; they do not while anything covers it. */
   live(on: boolean): void;
 };
@@ -221,6 +229,20 @@ function yieldMark(scene: Phaser.Scene, resource: Resource): Phaser.GameObjects.
     .setStrokeStyle(1, OUTLINE)
     .setAngle(45)
     .setName(`yield-${resource}`);
+}
+
+/**
+ * The one way a tile is ringed: a hexagon just inside its face, in the colour of whoever rings it —
+ * the accent on every tile the city holds, culture's own on every tile it may claim.
+ */
+function ringMark(
+  scene: Phaser.Scene,
+  coord: TileCoords,
+  colour: number,
+  weight: number,
+): Phaser.GameObjects.Polygon {
+  const { x, y } = positionOf(coord);
+  return scene.add.polygon(x, y, hexagon(TILE_SIZE - 4), 0, 0).setStrokeStyle(weight, colour);
 }
 
 /** The one way an assigned tile is marked: a diamond in the colour population is known by. */
@@ -305,8 +327,8 @@ function litTile(scene: Phaser.Scene, coord: TileCoords): Phaser.GameObjects.Pol
 
 /**
  * The map and everything standing on it, on a surface of its own that pans and zooms under the UI.
- * The terrain is drawn once; the buildings and the units are redrawn on every state change; and a
- * card is aimed here — the rules say which tiles light up, never this file.
+ * The terrain is drawn once; the border, the buildings and the units are redrawn on every state
+ * change; and a card is aimed here — the rules say which tiles light up, never this file.
  */
 export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chronicle): MapView {
   const camera = map.camera;
@@ -321,16 +343,9 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
     );
   }
 
-  const ring = hexagon(TILE_SIZE - 4);
-  for (const coord of chronicle.held) {
-    const { x, y } = positionOf(coord);
-    layer.add(
-      scene.add
-        .polygon(x, y, ring, 0, 0)
-        .setStrokeStyle(same(coord, chronicle.city) ? 4 : 2, ACCENT),
-    );
-  }
-
+  // Over the terrain, which is drawn once and never redrawn: equal depths paint in the order they
+  // were added.
+  const rings = scene.add.container(0, 0).setName('border');
   const built = scene.add.container(0, 0).setDepth(BUILDING_DEPTH).setName('buildings');
   const intents = scene.add.container(0, 0).setDepth(GLOW_DEPTH).setName('intents');
   const inspected = scene.add.container(0, 0).setDepth(GLOW_DEPTH).setName('inspected');
@@ -341,9 +356,9 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
     .setDepth(DIM_DEPTH)
     .setName('yield-dim')
     .setVisible(false);
-  const assignment = scene.add.container(0, 0).setDepth(CITY_DEPTH).setName('assignment');
+  const cityMarks = scene.add.container(0, 0).setDepth(CITY_DEPTH).setName('city-marks');
   const glyphs = scene.add.container(0, 0).setDepth(YIELD_DEPTH).setName('yields');
-  layer.add([built, intents, inspected, marks, assignment, dim, glyphs]);
+  layer.add([rings, built, intents, inspected, marks, cityMarks, dim, glyphs]);
 
   let markers: Phaser.GameObjects.Polygon[] = [];
   let inspector: Phaser.GameObjects.Zone | undefined;
@@ -578,8 +593,8 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
   /** The resources the yield overlay is showing; empty while it is off. */
   let showing: ReadonlySet<Resource> = new Set();
 
-  /** Whether the tiles the city has inhabitants on are marked: they are while city mode is on. */
-  let assigning = false;
+  /** Whether the map is showing what city mode marks: it is while the mode is on. */
+  let marking = false;
 
   /**
    * What the dim is laid under rather than over: the ring on the tile being read and the glow a
@@ -658,27 +673,42 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
 
   /**
    * City mode's tiles repainted on the chronicle the map stands on: a mark under every tile an
-   * inhabitant stands on, a scrim over every held tile with nobody on it. An assign changes both,
-   * so this follows every render.
+   * inhabitant stands on, a scrim over every held tile with nobody on it, and culture's own ring
+   * around every tile the city may claim. An assign and a claim change them, so this follows every
+   * render.
    */
-  const paintAssignment = (): void => {
-    assignment.removeAll(true);
-    if (!assigning || shown === undefined) return;
+  const paintCityMarks = (): void => {
+    cityMarks.removeAll(true);
+    if (!marking || shown === undefined) return;
 
     const assigned = new Set(shown.assigned.map(tileKey));
     for (const coord of shown.held) {
       if (!assigned.has(tileKey(coord))) {
-        assignment.add(cityDim(scene, coord));
+        cityMarks.add(cityDim(scene, coord));
         continue;
       }
       const { x, y } = positionOf(coord);
-      assignment.add(assignedMark(scene).setPosition(x, y + ASSIGNED_DROP));
+      cityMarks.add(assignedMark(scene).setPosition(x, y + ASSIGNED_DROP));
+    }
+    for (const coord of claimable(shown)) {
+      cityMarks.add(ringMark(scene, coord, RESOURCE_COLOURS.culture, RING).setName('claimable'));
+    }
+  };
+
+  /** The border repainted on the chronicle the map stands on: a claim moves it, so a render does. */
+  const paintBorder = (): void => {
+    rings.removeAll(true);
+    if (shown === undefined) return;
+    for (const coord of shown.held) {
+      rings.add(ringMark(scene, coord, ACCENT, same(coord, shown.city) ? CITY_RING : RING));
     }
   };
 
   const render = (current: Chronicle): void => {
     flight = undefined;
     shown = current;
+
+    paintBorder();
 
     built.removeAll(true);
     for (const tile of current.tiles) {
@@ -702,7 +732,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
       return marker;
     });
 
-    paintAssignment();
+    paintCityMarks();
     paintYields();
   };
 
@@ -918,9 +948,9 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
       paintYields();
     },
 
-    showAssignment(on: boolean): void {
-      assigning = on;
-      paintAssignment();
+    showCityMarks(on: boolean): void {
+      marking = on;
+      paintCityMarks();
     },
 
     aimUnitTile(current: Chronicle, chosen: (target: Target | undefined) => void): () => void {
