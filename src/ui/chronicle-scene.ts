@@ -293,6 +293,7 @@ export class ChronicleScene extends Phaser.Scene {
 
     /** One resource in or out of the overlay: the bar's five core readings each toggle their own. */
     const toggleYield = (resource: Resource): void => {
+      yields = new Set(yields);
       if (!yields.delete(resource)) yields.add(resource);
       showYields();
     };
