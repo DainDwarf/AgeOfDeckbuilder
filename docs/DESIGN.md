@@ -37,8 +37,8 @@ fiction's own word: *Chronicles of the mercantile civilization in the Age of Pow
   cards, and immediate effects are cards. Standing things do their standing thing for free — a
   garrison defends where it stands, a farm with a person assigned yields — and **changing the
   map costs a card**: marching, building, terraforming, attacking, negotiating.
-- Five core resources: **food, production, military, money, science**. 🔧 Their jobs: food feeds
-  and grows the population; production builds buildings and units and shapes tiles; military pays
+- Five core resources: **food, production, military, money, science**. 🔧 Their jobs: food grows
+  the population; production builds buildings and units and shapes tiles; military pays
   for military units, orders, actions and fortifications; money trades for other goods and
   accumulates; science pays for manipulating the cards — drawing, discarding and the like.
   **Culture pushes the border out**, and the tiles inside it are the
@@ -189,9 +189,12 @@ assigns an inhabitant to each of the seven tiles the city holds, and has two mor
 Assigning is free, instant and reversible, never a card: it is staffing, not a change to the map.
 In city mode the map marks the assigned tiles and dims the held ones that are not.
 
-🔧 Population eats. At income every inhabitant consumes food; the surplus accumulates toward the
-next inhabitant, at steps that widen; a deficit starves one. Food as a plain spendable resource
-with growth elsewhere was rejected: the famine event would have nothing to bite.
+Population **grows**. At income a food stock that has reached the **step** is spent, and the city
+gains one inhabitant, who arrives idle; at most one an income, and whatever the step leaves stays in
+the stock. The step widens with the population, so each inhabitant is dearer than the one before.
+Nobody eats and nobody starves. Food as a plain spendable resource with growth elsewhere was
+rejected: the famine event would have nothing to bite. Inhabitants consuming food was rejected too:
+the widening step and the schedule's events are the whole of the pressure on the population.
 
 ### City mode ✅
 

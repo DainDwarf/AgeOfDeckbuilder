@@ -11,7 +11,7 @@ const TEXT = {
   'label.damage': 'Damage',
   'label.range': 'Range',
   'label.move': 'Move',
-  'tooltip.food': 'The most basic need. Feeds your population.',
+  'tooltip.food': 'The most basic need. Grows your population.',
   'tooltip.production': 'Materials of every sort. Build, improve, and shape the land.',
   'tooltip.military': 'A sad necessity. Defend and attack.',
   'tooltip.money': 'Exchange and opulence. Trade it for other goods, or amass it.',

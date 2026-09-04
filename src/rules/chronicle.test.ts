@@ -146,6 +146,12 @@ function founded(radius: number, carrying: Partial<Chronicle> = {}): Chronicle {
   });
 }
 
+/**
+ * A population no fixture below piles up the food for: the step stands out of reach, so income
+ * accumulates untouched under every test that is not about growth.
+ */
+const NO_GROWTH: Partial<Chronicle> = { population: 99 };
+
 /** What the city holds to claim with, and nothing besides. */
 function culture(amount: number): Resources {
   return { food: 0, production: 0, military: 0, money: 0, science: 0, culture: amount };
@@ -260,7 +266,7 @@ test('a chronicle opens on turn one, with empty stores and more inhabitants than
 test('income yields every tile inside the border, and nothing outside it', () => {
   const inside: Terrain[] = ['urban', 'plain', 'forest', 'hills', 'water'];
 
-  const after = outcome(apply(cityOf(inside), { type: 'end-turn' }));
+  const after = outcome(apply(cityOf(inside, NO_GROWTH), { type: 'end-turn' }));
 
   for (const resource of RESOURCES) {
     const yielded = inside.reduce(
@@ -272,8 +278,8 @@ test('income yields every tile inside the border, and nothing outside it', () =>
 });
 
 test('a second tile of the same terrain yields as much again', () => {
-  const once = outcome(apply(cityOf(['forest']), { type: 'end-turn' }));
-  const twice = outcome(apply(cityOf(['forest', 'forest']), { type: 'end-turn' }));
+  const once = outcome(apply(cityOf(['forest'], NO_GROWTH), { type: 'end-turn' }));
+  const twice = outcome(apply(cityOf(['forest', 'forest'], NO_GROWTH), { type: 'end-turn' }));
 
   for (const resource of RESOURCES) {
     expect(twice.resources[resource]).toBe(once.resources[resource] * 2);
@@ -281,7 +287,7 @@ test('a second tile of the same terrain yields as much again', () => {
 });
 
 test('resources accumulate over consecutive turns', () => {
-  const city = cityOf(['urban', 'plain', 'hills']);
+  const city = cityOf(['urban', 'plain', 'hills'], NO_GROWTH);
 
   const first = outcome(apply(city, { type: 'end-turn' }));
   const second = outcome(apply(first, { type: 'end-turn' }));
@@ -300,10 +306,71 @@ test('ending the turn moves the chronicle on to the next one', () => {
   expect(outcome(apply(second, { type: 'end-turn' })).turn).toBe(3);
 });
 
-test('ending the turn leaves the population alone', () => {
-  const city = cityOf(['urban', 'plain', 'water']);
+test('a food stock short of the step grows nobody, and the stock is kept', () => {
+  const city = cityOf(['urban', 'plain', 'water'], NO_GROWTH);
 
-  expect(outcome(apply(city, { type: 'end-turn' })).population).toBe(city.population);
+  const after = outcome(apply(city, { type: 'end-turn' }));
+
+  expect(after.population).toBe(city.population);
+  expect(after.resources.food).toBe(3);
+  expect(stagedBy(city, { type: 'end-turn' })).not.toContain('grow');
+});
+
+test('the food stock reaching the step is spent on one inhabitant, and that one is idle', () => {
+  const city = cityOf(['urban', 'plain'], {
+    population: 3,
+    resources: { food: 1, production: 0, military: 0, money: 0, science: 0, culture: 0 },
+  });
+
+  const after = outcome(apply(city, { type: 'end-turn' }));
+
+  expect(after.population).toBe(city.population + 1);
+  expect(after.resources.food).toBe(0);
+  expect(after.assigned).toEqual(city.assigned);
+  expect(idle(after)).toBe(idle(city) + 1);
+});
+
+test('a food stock worth several steps grows one inhabitant and no more', () => {
+  const city = cityOf(['urban'], {
+    population: 2,
+    resources: { food: 9, production: 0, military: 0, money: 0, science: 0, culture: 0 },
+  });
+
+  const after = outcome(apply(city, { type: 'end-turn' }));
+
+  expect(after.population).toBe(city.population + 1);
+  expect(after.resources.food).toBe(7);
+});
+
+test('the step widens with the population: the next inhabitant costs one food more', () => {
+  const city = cityOf(['urban'], {
+    population: 2,
+    resources: { food: 5, production: 0, military: 0, money: 0, science: 0, culture: 0 },
+  });
+
+  const first = outcome(apply(city, { type: 'end-turn' }));
+  const second = outcome(apply(first, { type: 'end-turn' }));
+
+  expect(first.population).toBe(3);
+  expect(first.resources.food).toBe(3);
+  expect(second.population).toBe(4);
+  expect(second.resources.food).toBe(0);
+});
+
+test('growth is staged right after the income it comes from, and before the enemy phase', () => {
+  const city = cityOf(['urban', 'plain'], {
+    tiles: field(3),
+    population: 2,
+    units: [worker({ q: 1, r: 1 }), unitOf('enemy', { q: 3, r: 0 }, { move: 1 })],
+  });
+
+  expect(stagedBy(city, { type: 'end-turn' })).toEqual([
+    'income',
+    'grow',
+    'move',
+    'intents',
+    'turn',
+  ]);
 });
 
 test('the hand holds five cards on founding, and five again after every turn', () => {
@@ -497,6 +564,7 @@ test('the end of turn resolves in order, and its last stage is where the turn en
 
 test('a stage of the end of turn that changed nothing is left out of it', () => {
   const quiet = cityOf(['urban', 'plain'], {
+    ...NO_GROWTH,
     tiles: field(1),
     drawPile: ['PH_Worker', 'PH_Warrior', 'PH_Farm', 'PH_March', 'PH_Harvest'],
     discardPile: ['PH_Harvest'],
@@ -589,6 +657,11 @@ test('a city with no population left falls, whatever the command was', () => {
   });
   // The fall rides the last stage the command resolved as, refused though that play was.
   expect(stagedBy(empty, { type: 'play', index: 0 })).toEqual(['refused']);
+
+  const ended = outcome(apply(empty, { type: 'end-turn' }));
+
+  expect(ended.population).toBe(0);
+  expect(ended.defeat).toEqual({ cause: 'population', turn: ended.turn });
 });
 
 test('a unit card is refused while a unit already stands on the city tile', () => {
@@ -860,6 +933,7 @@ test('a farm stands on a plain and on no other terrain a worker reaches', () => 
 
 test('a farm standing on a tile adds its food to what that tile yields at income', () => {
   const city = cityOf(['urban', 'plain'], {
+    ...NO_GROWTH,
     tiles: field(2),
     hand: ['PH_Farm'],
     units: [worker({ q: 1, r: 0 })],
@@ -967,7 +1041,7 @@ test('an assign with no inhabitant idle is refused', () => {
 });
 
 test('an assigned tile yields at income, and an unassigned one yields nothing', () => {
-  const city = cityOf(['urban', 'plain']);
+  const city = cityOf(['urban', 'plain'], NO_GROWTH);
   const off = outcome(apply(city, assignTo({ q: 1, r: 0 })));
 
   const worked = outcome(apply(city, { type: 'end-turn' }));
@@ -981,7 +1055,7 @@ test('an assigned tile yields at income, and an unassigned one yields nothing', 
 });
 
 test('the city’s own tile unassigned yields nothing at income, like any other', () => {
-  const city = cityOf(['urban', 'plain']);
+  const city = cityOf(['urban', 'plain'], NO_GROWTH);
   const off = outcome(apply(city, assignTo(CITY)));
 
   const worked = outcome(apply(city, { type: 'end-turn' }));
@@ -1020,7 +1094,7 @@ test('a claim made with nobody idle takes the tile with no inhabitant on it', ()
 });
 
 test('a claimed tile an inhabitant stands on yields at the next income', () => {
-  const city = founded(3, { resources: culture(1) });
+  const city = founded(3, { ...NO_GROWTH, resources: culture(1) });
   const claimed = outcome(apply(city, claimOf({ q: 2, r: 0 })));
 
   const bare = outcome(apply(city, { type: 'end-turn' }));
@@ -1379,7 +1453,7 @@ test('a fighting unit that stands still attacks the enemy with the least health'
 });
 
 test('a tile an enemy occupies yields nothing at income', () => {
-  const bare = cityOf(['urban', 'plain']);
+  const bare = cityOf(['urban', 'plain'], NO_GROWTH);
   const occupied = { ...bare, units: [unitOf('enemy', { q: 1, r: 0 })] };
 
   const free = outcome(apply(bare, { type: 'end-turn' }));

@@ -65,6 +65,7 @@ deliberate exception the reviewer sees; there is no silent allow-list.
 | **assign** | To put one population on a tile inside the border; free, instant, reversible. | allocate |
 | **unassign** | To take one population off the tile it stands on; the reverse of assign. | remove, free up, release |
 | **idle** | An inhabitant assigned to no tile; what a unit card takes. | unemployed, spare, unassigned (as a noun) |
+| **grow** | What the food stock reaching the step does at income: the city gains one idle inhabitant. | birth, breed, spawn (for population), expand |
 | **biome** | A stretch of map the generator grows as one kind — land, sea, … — weighting the terrain of each tile in it. | patch, zone, area, ecosystem |
 | **terrain** | A tile's base layer: plain, forest, hills, …; one per tile, changed only by terraforming. | tile type |
 | **feature** | A generated extra on a tile: a fertile plain, a river. | bonus |

@@ -82,8 +82,9 @@ const CLAIM_STEP = 3;
  * A step that carries nothing but the chronicle it left. `played` is the card gone from the hand
  * with its cost paid, `refused` is the command the rules turned down, `assign` is an inhabitant put
  * on a tile or taken off one, `claim` is a tile bought with culture and taken inside the border,
- * `turn` is the tick alone, `events` is what the schedule lands, `intents` is the enemy phase's
- * declarations, and `capture` is the city falling to an enemy that stood on its tile.
+ * `grow` is the food stock spent on one more inhabitant, `turn` is the tick alone, `events` is what
+ * the schedule lands, `intents` is the enemy phase's declarations, and `capture` is the city falling
+ * to an enemy that stood on its tile.
  */
 export type PlainStage =
   | 'played'
@@ -92,6 +93,7 @@ export type PlainStage =
   | 'claim'
   | 'discard'
   | 'income'
+  | 'grow'
   | 'intents'
   | 'capture'
   | 'turn'
@@ -248,6 +250,7 @@ function endOfTurn(chronicle: Chronicle): Stage[] {
   staged('discard', discard(standing));
   raised(combat(standing));
   staged('income', income(standing));
+  staged('grow', grow(standing));
   raised(enemyPhase(standing));
   if (standing.defeat !== undefined) return stages;
 
@@ -625,6 +628,18 @@ function income(chronicle: Chronicle): Chronicle {
   return RESOURCES.every((resource) => resources[resource] === chronicle.resources[resource])
     ? chronicle
     : { ...chronicle, resources };
+}
+
+/** Growth: the step the food stock has to reach is the population the inhabitant joins. */
+function grow(chronicle: Chronicle): Chronicle {
+  const step = chronicle.population;
+  // A step of nothing every stock reaches: a city of nobody would grow one and undo its own fall.
+  if (step === 0 || chronicle.resources.food < step) return chronicle;
+  return {
+    ...chronicle,
+    resources: { ...chronicle.resources, food: chronicle.resources.food - step },
+    population: chronicle.population + 1,
+  };
 }
 
 /**

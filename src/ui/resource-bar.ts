@@ -130,7 +130,7 @@ export function createResourceBar(
     }
   };
 
-  /** The income arriving: every reading that changed ticks up to what it now stands at. */
+  /** The income arriving, or the growth after it: every reading that changed ticks to where it stands. */
   const rise = (chronicle: Chronicle): Promise<void> | undefined => {
     const ticking = entries.filter(
       (entry) => entry.ticking.count !== readingOf(chronicle, entry.key),
@@ -159,7 +159,7 @@ export function createResourceBar(
   return {
     render,
     play(stage: Stage): Promise<void> | undefined {
-      return stage.name === 'income' ? rise(stage.chronicle) : undefined;
+      return stage.name === 'income' || stage.name === 'grow' ? rise(stage.chronicle) : undefined;
     },
     latch(shown: ReadonlySet<Resource>): void {
       for (const entry of entries) {
