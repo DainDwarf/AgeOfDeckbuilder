@@ -32,7 +32,7 @@ import {
   UI_FONT,
 } from './design-space';
 import { createHand } from './hand';
-import { createInfoPanel, layersOf } from './infopanel';
+import { cardsOf, createInfoPanel } from './infopanel';
 import { onKeyDown } from './keys';
 import { createMapView, type PressedTile } from './map';
 import { createOverlay } from './overlay';
@@ -111,8 +111,8 @@ export class ChronicleScene extends Phaser.Scene {
     /** The tile the ring stands on, and nothing while none is selected; city mode selects none. */
     let selection: PressedTile | undefined;
 
-    /** The tile the infopanel is inspecting and which of its layers it shows. */
-    let inspection: { on: PressedTile; layer: number } | undefined;
+    /** The tile the infopanel is inspecting and which of its cards it shows. */
+    let inspection: { on: PressedTile; card: number } | undefined;
 
     /** The inspection let go of on its own: the infopanel down, whatever is selected still ringed. */
     const uninspect = (): void => {
@@ -195,26 +195,24 @@ export class ChronicleScene extends Phaser.Scene {
     };
 
     /**
-     * One step of the inspection on a tile: the next of its layers in the infopanel, the river
-     * running along it after them, and then the bare tile again. The one place the infopanel is
-     * shown.
+     * One step of the inspection on a tile: the next of its cards in the infopanel, and after the
+     * last of them the first again. The one place the infopanel is shown.
      */
     const inspect = (on: PressedTile): void => {
       const tile = tileAt(this.current.tiles, on.tile);
-      const stepped =
-        tile === undefined ||
-        inspection === undefined ||
-        tileKey(inspection.on.tile) !== tileKey(on.tile)
-          ? 0
-          : inspection.layer + 1;
-      const layers =
-        tile === undefined ? [] : layersOf(tile, this.current.units, this.current.rivers);
-      if (stepped >= layers.length) {
+      if (tile === undefined) {
         uninspect();
         return;
       }
-      panel.show(layers, stepped, on.at, stepped > 0);
-      inspection = { on, layer: stepped };
+      const cards = cardsOf(tile, this.current.units, this.current.rivers);
+      const already =
+        inspection !== undefined && tileKey(inspection.on.tile) === tileKey(on.tile)
+          ? inspection
+          : undefined;
+      if (already !== undefined && cards.length === 1) return;
+      const stepped = already === undefined ? 0 : (already.card + 1) % cards.length;
+      panel.show(cards, stepped, on.at, already !== undefined);
+      inspection = { on, card: stepped };
     };
 
     /** Whether city mode is on: a tile click acts on the city instead of selecting the tile. */

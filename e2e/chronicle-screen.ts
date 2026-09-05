@@ -302,12 +302,12 @@ export async function aimed(page: Page): Promise<void> {
   await page.waitForFunction(() => window.named?.('aim') !== undefined);
 }
 
-/** Which layer the infopanel is inspecting, or nothing while it stands down. */
-export function shownLayer(page: Page): Promise<string | undefined> {
+/** Which card of the tile the infopanel is showing, or nothing while it stands down. */
+export function shownCard(page: Page): Promise<string | undefined> {
   return page.evaluate(() => {
     const panel = window.named?.('infopanel')?.object as Phaser.GameObjects.Container | undefined;
     if (panel === undefined) throw new Error('the infopanel is not on the chronicle screen');
-    return panel.visible ? (panel.getData('layer') as string) : undefined;
+    return panel.visible ? (panel.getData('card') as string) : undefined;
   });
 }
 

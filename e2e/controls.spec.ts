@@ -6,7 +6,7 @@ import {
   open,
   ringedTile,
   settled,
-  shownLayer,
+  shownCard,
   standing,
   watch,
 } from './chronicle-screen';
@@ -365,7 +365,7 @@ test('a right drag carries the map as a left drag does, and the button on its ow
   expect(await draggedBy(page, 'right', -120)).toBeCloseTo(-120, 0);
   // A drag is no press on the tile it started over, whichever button carried it.
   expect(await ringedTile(page)).toBeUndefined();
-  expect(await shownLayer(page)).toBeUndefined();
+  expect(await shownCard(page)).toBeUndefined();
 
   expect(Math.abs(await heldByButton(page, 'right'))).toBeLessThan(1);
 

@@ -11,5 +11,3 @@ hazards, plan — written once, on the settled state, and deleted with the line.
 Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [task file]`
 
 ---
-
-- **Three inspection cards** — the design page states the inspection cycle as at most three cards, the unit, the building with the tile's improvements, and the terrain with its feature and the river running along it, a card absent when nothing fills it; the infopanel steps exactly those and each card shows what its layers give. Doc-impact: `docs/DESIGN.md`, `docs/GLOSSARY.md`.

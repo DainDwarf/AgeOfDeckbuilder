@@ -17,7 +17,7 @@ import {
   refusalLines,
   ringedTile,
   settled,
-  shownLayer,
+  shownCard,
   shows,
   standing,
   watch,
@@ -105,7 +105,7 @@ test('the city key enters city mode, where a tile click selects nothing, and the
   await page.mouse.click(bare.x, bare.y);
   await answered(page);
   expect(await ringedTile(page)).toBeUndefined();
-  expect(await shownLayer(page)).toBeUndefined();
+  expect(await shownCard(page)).toBeUndefined();
 
   await page.keyboard.press('Escape');
   await expect.poll(() => inCityMode(page)).toBe(false);
@@ -142,20 +142,19 @@ test('a right click in city mode inspects the tile under it without selecting, a
 
   const at = await onScreen(page, `tile-${await bareTile(page)}`);
   await page.mouse.click(at.x, at.y, { button: 'right' });
-  await expect.poll(() => shownLayer(page)).toBe('terrain');
+  await expect.poll(() => shownCard(page)).toBe('terrain');
   expect(await ringedTile(page)).toBeUndefined();
 
-  // Its terrain is the whole of it, so the step after it is the bare tile again.
+  // Its terrain card is the whole of it, so a further press leaves that card standing.
   await page.mouse.click(at.x, at.y, { button: 'right' });
-  await expect.poll(() => shownLayer(page)).toBeUndefined();
-  await page.mouse.click(at.x, at.y, { button: 'right' });
-  await expect.poll(() => shownLayer(page)).toBe('terrain');
+  await answered(page);
+  expect(await shownCard(page)).toBe('terrain');
   expect(await ringedTile(page)).toBeUndefined();
 
   // The first back key takes the infopanel down; the mode stands until the next one.
   await page.keyboard.press('Escape');
   await answered(page);
-  expect(await shownLayer(page)).toBeUndefined();
+  expect(await shownCard(page)).toBeUndefined();
   expect(await inCityMode(page)).toBe(true);
   await page.keyboard.press('Escape');
   await expect.poll(() => inCityMode(page)).toBe(false);
@@ -164,10 +163,10 @@ test('a right click in city mode inspects the tile under it without selecting, a
   await page.keyboard.press('c');
   await expect.poll(() => inCityMode(page)).toBe(true);
   await page.mouse.click(at.x, at.y, { button: 'right' });
-  await expect.poll(() => shownLayer(page)).toBe('terrain');
+  await expect.poll(() => shownCard(page)).toBe('terrain');
   await page.keyboard.press('c');
   await expect.poll(() => inCityMode(page)).toBe(false);
-  expect(await shownLayer(page)).toBeUndefined();
+  expect(await shownCard(page)).toBeUndefined();
 
   expect(problems).toEqual([]);
 });

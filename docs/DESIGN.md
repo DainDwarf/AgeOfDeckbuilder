@@ -204,14 +204,19 @@ events are the whole of the pressure on the population.
 ### City mode ✅
 
 The chronicle screen has two modes. Out of city mode a click on a tile **selects** it: the map rings
-it, and nothing more. The **inspection key** then **inspects** the selection — one of its layers in
-the infopanel per press, outermost first; for a tile a river runs along, the river follows the last
-of them as a card of its own, showing what it gives that tile; and after those the bare ring
-again. A right
-click is a press on the chronicle screen and not a key, so it binds to nothing and Controls does not
-list it: on a tile it selects and inspects in the one press, and pressed again on the tile already
-selected it inspects on without selecting afresh; off the map it drops the selection, and while a
-card is being aimed it lets the card go.
+it, and nothing more. The **inspection key** then **inspects** the selection — one card in the
+infopanel per press. A tile has at most three, in this order: the unit standing on it; the building
+with the tile's improvements; and the terrain with its feature and the river running along it. A
+card is absent when nothing fills it, and the terrain card never is. The unit card reads the unit's
+stats; the other two are headed by their outermost layer and show a row per thing they hold — the
+river's among them on the terrain card — with what it gives at income, a row that gives nothing
+saying so. After the last card comes the first again, and a tile of a single card holds it: the
+cycle never falls back to the bare ring.
+
+A right click is a press on the chronicle screen and not a key, so it binds to nothing and Controls
+does not list it: on a tile it selects and inspects in the one press, and pressed again on the tile
+already selected it inspects on without selecting afresh; off the map it drops the selection, and
+while a card is being aimed it lets the card go.
 
 In **city mode** a tile click acts on the city — assigns an idle inhabitant to the tile or unassigns
 the one on it, claims a tile — and selects nothing; a right click there inspects the tile under the

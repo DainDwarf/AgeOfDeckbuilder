@@ -27,43 +27,54 @@ import {
   terrainMark,
   unitMark,
 } from './map';
+import { RESOURCE_COLOURS } from './resource-bar';
 import { text } from './text';
 import { createTooltip } from './tooltip';
 
-/**
- * One card an inspection steps through: a tile's layers, outermost first, and after the last of
- * them the river running along the tile. The river's own card carries the terrain it gives on.
- */
-export type Layer =
-  | { readonly kind: 'unit'; readonly unit: Unit }
+/** One line of a card's ledger: what it is drawn and named by, and what it gives at income. */
+type Row =
   | { readonly kind: 'building'; readonly building: BuildingTypeId }
   | { readonly kind: 'improvement'; readonly improvement: ImprovementId }
   | { readonly kind: 'feature'; readonly feature: FeatureId }
   | { readonly kind: 'terrain'; readonly terrain: Terrain }
   | { readonly kind: 'river'; readonly terrain: Terrain };
 
+/** One card an inspection steps through, headed by the first of the rows it holds. */
+export type Card =
+  | { readonly kind: 'unit'; readonly unit: Unit }
+  | { readonly kind: 'building'; readonly rows: readonly Row[] }
+  | { readonly kind: 'terrain'; readonly rows: readonly Row[] };
+
 /**
- * What a tile is made of right now: the layers it has, the absent ones left out, and the river
- * running along it after them.
+ * What a tile is made of right now, as the cards an inspection steps: the unit, the building with
+ * the tile's improvements, and the terrain with its feature and the river running along it. The
+ * first two are left out when nothing fills them; the terrain card always stands.
  */
-export function layersOf(tile: Tile, units: readonly Unit[], rivers: readonly River[]): Layer[] {
+export function cardsOf(tile: Tile, units: readonly Unit[], rivers: readonly River[]): Card[] {
+  const cards: Card[] = [];
+
   const unit = unitAt(units, tile);
-  const layers: Layer[] = [];
-  if (unit !== undefined) layers.push({ kind: 'unit', unit });
-  if (tile.building !== undefined) layers.push({ kind: 'building', building: tile.building });
-  for (const improvement of tile.improvements) layers.push({ kind: 'improvement', improvement });
-  if (tile.feature !== undefined) layers.push({ kind: 'feature', feature: tile.feature });
-  layers.push({ kind: 'terrain', terrain: tile.terrain });
-  if (runsAlong(rivers, tile)) layers.push({ kind: 'river', terrain: tile.terrain });
-  return layers;
+  if (unit !== undefined) cards.push({ kind: 'unit', unit });
+
+  const built: Row[] = [];
+  if (tile.building !== undefined) built.push({ kind: 'building', building: tile.building });
+  for (const improvement of tile.improvements) built.push({ kind: 'improvement', improvement });
+  if (built.length > 0) cards.push({ kind: 'building', rows: built });
+
+  const ground: Row[] = [{ kind: 'terrain', terrain: tile.terrain }];
+  if (tile.feature !== undefined) ground.push({ kind: 'feature', feature: tile.feature });
+  if (runsAlong(rivers, tile)) ground.push({ kind: 'river', terrain: tile.terrain });
+  cards.push({ kind: 'terrain', rows: ground });
+
+  return cards;
 }
 
 export type InfoPanel = {
   /**
-   * The layer at `index`, on a card of its own beside the tile, over one ghost per layer behind
-   * it. `cycling` dissolves it out of the layer already shown; anything else is instant.
+   * The card at `index`, beside the tile, over one ghost per card behind it. `cycling` dissolves it
+   * out of the card already shown; anything else is instant.
    */
-  show(layers: Layer[], index: number, at: TileFace, cycling: boolean): void;
+  show(cards: Card[], index: number, at: TileFace, cycling: boolean): void;
   /**
    * Stands what it is showing beside the same face again, at the size on screen it already had:
    * the map now measures in a different unit. Whatever bubble a row had raised goes down.
@@ -78,10 +89,10 @@ const DEPTH = 25;
 /** How far the panel stands clear of the face it reads, in design pixels. */
 const STANDOFF = 12;
 
-/** How far each layer waiting behind the panel stands out of it, down and to the right. */
+/** How far each card waiting behind the panel stands out of it, down and to the right. */
 const GHOST_OFFSET = 4;
 
-/** How long one layer takes to dissolve into the next. */
+/** How long one card takes to dissolve into the next. */
 const CYCLE_MS = 150;
 
 const { em, pad } = CARD_METRICS;
@@ -94,15 +105,14 @@ const TITLE_STYLE = {
 };
 const LABEL_STYLE = { fontFamily: UI_FONT, fontSize: `${0.62 * em}px`, color: '#4a5058' };
 const VALUE_STYLE = { fontFamily: UI_FONT, fontSize: `${0.62 * em}px`, color: '#0d1014' };
+const CHIP_STYLE = { ...VALUE_STYLE, fontStyle: 'bold' };
 
 const STATS = ['health', 'damage', 'range', 'move'] as const;
 
-/** What a row of any layer is named by: one `label.` and one `tooltip.` entry each. */
+/** What a row of a card is named by: one `label.` and one `tooltip.` entry each. */
 type Term = (typeof STATS)[number] | Resource;
 
-type Row = { readonly term: Term; readonly value: string };
-
-/** One layer drawn: its card, its contents, and the zones its rows raise tooltips from. */
+/** One card drawn: its face, its contents, and the zones its rows raise tooltips from. */
 type Face = {
   readonly root: Phaser.GameObjects.Container;
   readonly hovers: Phaser.GameObjects.Zone[];
@@ -118,10 +128,10 @@ type RowBubble = {
 };
 
 /**
- * A tile inspected: one layer at a time on a card of its own, the layers behind it showing as
- * ghosts under its corner. It stands on the map itself, so a pan carries it with the tile it
- * inspects and nothing here hears about one. Every show rebuilds the layer, so nothing here
- * follows a state change — the panel is dismissed by whatever caused one.
+ * A tile inspected: one card at a time, the cards behind it showing as ghosts under its corner. It
+ * stands on the map itself, so a pan carries it with the tile it inspects and nothing here hears
+ * about one. Every show rebuilds the card, so nothing here follows a state change — the panel is
+ * dismissed by whatever caused one.
  */
 export function createInfoPanel(scene: Phaser.Scene, on: Surface): InfoPanel {
   const tooltip = createTooltip(scene, on);
@@ -135,7 +145,7 @@ export function createInfoPanel(scene: Phaser.Scene, on: Surface): InfoPanel {
 
   let standing: Face | undefined;
   let leaving: Face | undefined;
-  /** How many layers wait behind the one standing: the ghosts, and the room they ask for. */
+  /** How many cards wait behind the one standing: the ghosts, and the room they ask for. */
   let behind = 0;
   const box: Box = { left: 0, top: 0, unit: 1 };
   /** The face the panel is standing beside, and nothing while it stands nowhere. */
@@ -164,7 +174,7 @@ export function createInfoPanel(scene: Phaser.Scene, on: Surface): InfoPanel {
     panel.setScale(box.unit).setPosition(box.left, box.top);
   };
 
-  /** Ends a dissolve where it was headed: the layer coming in stands in place, the old one is gone. */
+  /** Ends a dissolve where it was headed: the card coming in stands in place, the old one is gone. */
   const settle = (): void => {
     if (leaving !== undefined) {
       stopMotion(scene, leaving.root);
@@ -190,18 +200,18 @@ export function createInfoPanel(scene: Phaser.Scene, on: Surface): InfoPanel {
   return {
     hide,
 
-    show(layers: Layer[], index: number, at: TileFace, cycling: boolean): void {
+    show(cards: Card[], index: number, at: TileFace, cycling: boolean): void {
       bubble.drop();
       settle();
 
-      behind = layers.length - 1;
+      behind = cards.length - 1;
       stand(at);
 
       const outgoing = standing;
       if (!cycling) outgoing?.root.destroy();
 
-      const face = buildFace(scene, bubble, layers[index]);
-      // Under the layer it replaces, so the dissolve uncovers it, and over the ghosts either way.
+      const face = buildFace(scene, bubble, cards[index]);
+      // Under the card it replaces, so the dissolve uncovers it, and over the ghosts either way.
       panel.addAt(face.root, 1);
       standing = face;
 
@@ -221,7 +231,7 @@ export function createInfoPanel(scene: Phaser.Scene, on: Surface): InfoPanel {
         });
       }
 
-      panel.setData('layer', layers[index].kind).setVisible(true);
+      panel.setData('card', cards[index].kind).setVisible(true);
     },
 
     rescale(): void {
@@ -232,8 +242,8 @@ export function createInfoPanel(scene: Phaser.Scene, on: Surface): InfoPanel {
   };
 }
 
-/** The layer's mark and name over its rows, laid out in the card's own type and spacing. */
-function buildFace(scene: Phaser.Scene, bubble: RowBubble, layer: Layer): Face {
+/** The card's head over its rows, laid out in the card's own type and spacing. */
+function buildFace(scene: Phaser.Scene, bubble: RowBubble, card: Card): Face {
   const left = 1 + pad;
   const right = CARD_WIDTH - 1 - pad;
   const top = 1 + pad;
@@ -243,7 +253,7 @@ function buildFace(scene: Phaser.Scene, bubble: RowBubble, layer: Layer): Face {
   const paper = scene.add.graphics();
   drawCardSurface(paper, 0, 0);
 
-  const head = headOf(scene, layer);
+  const head = headOf(scene, card);
   const mark = fitMark(head.mark, markBox).setPosition(left + markBox / 2, middle);
   const name = addText(scene, left + markBox + 0.5 * em, middle, head.name, TITLE_STYLE).setOrigin(
     0,
@@ -255,96 +265,180 @@ function buildFace(scene: Phaser.Scene, bubble: RowBubble, layer: Layer): Face {
 
   const contents: Phaser.GameObjects.GameObject[] = [paper, mark, name, rule];
   const hovers: Phaser.GameObjects.Zone[] = [];
-  const rows = rowsOf(layer);
-  const firstRow = ruleY + 1 + 0.55 * em;
 
-  if (rows.length === 0) {
-    contents.push(addText(scene, left, firstRow, text('panel.no-yield'), LABEL_STYLE));
-  }
-
-  for (const [index, row] of rows.entries()) {
-    const label = addText(scene, left, 0, text(`label.${row.term}`), LABEL_STYLE).setOrigin(0, 0.5);
-    const value = addText(scene, right, 0, row.value, VALUE_STYLE).setOrigin(1, 0.5);
-    const rowTop = firstRow + index * (label.height + 0.35 * em);
-    const centre = rowTop + label.height / 2;
-    label.setY(centre);
-    value.setY(centre);
-
+  /** The box a term raises its bubble from, named so a spec finds the rows in the order drawn. */
+  const listen = (x: number, rowTop: number, width: number, height: number, term: Term): void => {
     const hover = scene.add
-      .zone(left, rowTop, label.width, label.height)
+      .zone(x, rowTop, width, height)
       .setOrigin(0, 0)
-      .setName(`infopanel-row-${index}`)
+      .setName(`infopanel-row-${hovers.length}`)
       .setInteractive();
     onHover(
       hover,
-      () => bubble.raise(centre, text(`tooltip.${row.term}`)),
+      () => bubble.raise(rowTop + height / 2, text(`tooltip.${term}`)),
       () => bubble.drop(),
     );
-
-    contents.push(label, value, hover);
+    contents.push(hover);
     hovers.push(hover);
+  };
+
+  let rowTop = ruleY + 1 + 0.55 * em;
+
+  if (card.kind === 'unit') {
+    for (const stat of STATS) {
+      const label = addText(scene, left, 0, text(`label.${stat}`), LABEL_STYLE).setOrigin(0, 0.5);
+      const reading =
+        stat === 'health'
+          ? `${card.unit.stats.health} / ${UNIT_STATS[card.unit.stats.id].health}`
+          : String(card.unit.stats[stat]);
+      const value = addText(scene, right, 0, reading, VALUE_STYLE).setOrigin(1, 0.5);
+      label.setY(rowTop + label.height / 2);
+      value.setY(rowTop + label.height / 2);
+      contents.push(label, value);
+      listen(left, rowTop, label.width, label.height, stat);
+      rowTop += label.height + 0.35 * em;
+    }
+    return { root: scene.add.container(0, 0, contents), hovers };
+  }
+
+  for (const row of card.rows) {
+    const rowName = addText(
+      scene,
+      left + 0.75 * em + 0.3 * em,
+      0,
+      nameOf(row),
+      LABEL_STYLE,
+    ).setOrigin(0, 0.5);
+    const line = rowName.height;
+    rowName.setY(rowTop + line / 2);
+    contents.push(
+      fitMark(markOf(scene, row), 0.75 * em).setPosition(left + 0.375 * em, rowTop + line / 2),
+    );
+    contents.push(rowName);
+
+    const gives = yieldsOf(row);
+    if (gives.length === 0) {
+      contents.push(
+        addText(scene, right, rowTop + line / 2, text('panel.no-yield'), LABEL_STYLE).setOrigin(
+          1,
+          0.5,
+        ),
+      );
+      rowTop += line + 0.35 * em;
+      continue;
+    }
+
+    const chips = gives.map(({ resource, amount }) => {
+      const value = addText(scene, 0, 0, `+${amount}`, CHIP_STYLE).setOrigin(0, 0.5);
+      return { resource, value, width: 0.7 * em + value.width };
+    });
+
+    /** What the line being laid out has for its chips: the row's width, less the name beside them. */
+    let room = right - (rowName.x + rowName.width + 0.3 * em);
+    const together =
+      chips.reduce((total, chip) => total + chip.width, 0) + 0.3 * em * (chips.length - 1);
+    if (together > room) {
+      rowTop += line + 0.35 * em;
+      room = right - left;
+    }
+
+    let first = 0;
+    while (first < chips.length) {
+      let taken = 0;
+      let width = 0;
+      while (taken < 3 && first + taken < chips.length) {
+        const grown = width + chips[first + taken].width + (taken === 0 ? 0 : 0.3 * em);
+        if (taken > 0 && grown > room) break;
+        width = grown;
+        taken++;
+      }
+
+      const centre = rowTop + line / 2;
+      let x = right - width;
+      for (const { resource, value } of chips.slice(first, first + taken)) {
+        // A diamond is a square turned, never a polygon: see the trap over `yieldMark` in `map.ts`.
+        const chip = scene.add
+          .rectangle(x + 0.25 * em, centre, 0.5 * em, 0.5 * em, RESOURCE_COLOURS[resource])
+          .setAngle(45);
+        value.setPosition(x + 0.7 * em, centre);
+        contents.push(chip, value);
+        listen(x, rowTop, 0.7 * em + value.width, line, resource);
+        x += 0.7 * em + value.width + 0.3 * em;
+      }
+      rowTop += line + 0.35 * em;
+      first += taken;
+      room = right - left;
+    }
   }
 
   return { root: scene.add.container(0, 0, contents), hovers };
 }
 
+/** What the card is headed by: the unit it stands for, or the first row it holds. */
 function headOf(
   scene: Phaser.Scene,
-  layer: Layer,
+  card: Card,
 ): { mark: Phaser.GameObjects.Polygon; name: string } {
-  switch (layer.kind) {
-    case 'unit':
-      return { mark: unitMark(scene, layer.unit), name: text(`unit.${layer.unit.stats.id}`) };
+  if (card.kind === 'unit') {
+    return { mark: unitMark(scene, card.unit), name: text(`unit.${card.unit.stats.id}`) };
+  }
+  return { mark: markOf(scene, card.rows[0]), name: nameOf(card.rows[0]) };
+}
+
+function markOf(scene: Phaser.Scene, row: Row): Phaser.GameObjects.Polygon {
+  switch (row.kind) {
     case 'building':
-      return {
-        mark: buildingMark(scene, layer.building),
-        name: text(`building.${layer.building}`),
-      };
+      return buildingMark(scene, row.building);
     case 'improvement':
-      return {
-        mark: improvementMark(scene, layer.improvement),
-        name: text(`improvement.${layer.improvement}`),
-      };
+      return improvementMark(scene, row.improvement);
     case 'feature':
-      return { mark: featureMark(scene, layer.feature), name: text(`feature.${layer.feature}`) };
+      return featureMark(scene, row.feature);
     case 'terrain':
-      return { mark: terrainMark(scene, layer.terrain), name: text(`terrain.${layer.terrain}`) };
+      return terrainMark(scene, row.terrain);
     case 'river':
-      return { mark: riverMark(scene), name: text('panel.river') };
+      return riverMark(scene);
   }
 }
 
-function rowsOf(layer: Layer): Row[] {
-  switch (layer.kind) {
-    case 'unit':
-      return STATS.map((stat) => ({
-        term: stat,
-        value:
-          stat === 'health'
-            ? `${layer.unit.stats.health} / ${UNIT_STATS[layer.unit.stats.id].health}`
-            : String(layer.unit.stats[stat]),
-      }));
+function nameOf(row: Row): string {
+  switch (row.kind) {
     case 'building':
-      return yieldRows(BUILDINGS[layer.building].yields);
+      return text(`building.${row.building}`);
     case 'improvement':
-      return yieldRows(IMPROVEMENTS[layer.improvement].yields);
+      return text(`improvement.${row.improvement}`);
     case 'feature':
-      return yieldRows(FEATURES[layer.feature].yields);
+      return text(`feature.${row.feature}`);
     case 'terrain':
-      return yieldRows(TERRAIN_YIELDS[layer.terrain]);
+      return text(`terrain.${row.terrain}`);
     case 'river':
-      return yieldRows(RIVER_YIELDS[layer.terrain] ?? {});
+      return text('panel.river');
   }
 }
 
-/** What the layer yields at income, in the order the resource bar reads. */
-function yieldRows(yields: Partial<Resources>): Row[] {
-  const rows: Row[] = [];
+function yieldsIn(row: Row): Partial<Resources> {
+  switch (row.kind) {
+    case 'building':
+      return BUILDINGS[row.building].yields;
+    case 'improvement':
+      return IMPROVEMENTS[row.improvement].yields;
+    case 'feature':
+      return FEATURES[row.feature].yields;
+    case 'terrain':
+      return TERRAIN_YIELDS[row.terrain];
+    case 'river':
+      return RIVER_YIELDS[row.terrain] ?? {};
+  }
+}
+
+/** What the row gives at income, in the order the resource bar reads. */
+function yieldsOf(row: Row): { resource: Resource; amount: number }[] {
+  const yields = yieldsIn(row);
+  const given: { resource: Resource; amount: number }[] = [];
   for (const resource of RESOURCES) {
     const amount = yields[resource];
-    if (amount !== undefined) rows.push({ term: resource, value: `+${amount}` });
+    if (amount !== undefined) given.push({ resource, amount });
   }
-  return rows;
+  return given;
 }
 
 /** A mark drawn at the size it has on the map, brought into a box; its outline keeps its weight. */

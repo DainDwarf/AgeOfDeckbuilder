@@ -14,7 +14,7 @@ import {
   playedOut,
   ringedTile,
   settled,
-  shownLayer,
+  shownCard,
   standing,
   tooltipUp,
   watch,
@@ -142,7 +142,7 @@ test('a pan and a zoom carry the ringed tile and the panel beside it', async ({ 
   await page.mouse.click(tile.x, tile.y);
   await expect.poll(() => ringedTile(page)).toBe(BARE.key);
   await page.keyboard.press('i');
-  await expect.poll(() => shownLayer(page)).toBe('terrain');
+  await expect.poll(() => shownCard(page)).toBe('terrain');
 
   const panel = await onScreen(page, 'infopanel');
   await drag(page, tile, { x: 120, y: -80 });
@@ -150,7 +150,7 @@ test('a pan and a zoom carry the ringed tile and the panel beside it', async ({ 
   const panned = await onScreen(page, BARE.name);
   const carried = await onScreen(page, 'infopanel');
   expect(await ringedTile(page)).toBe(BARE.key);
-  expect(await shownLayer(page)).toBe('terrain');
+  expect(await shownCard(page)).toBe('terrain');
   expect(panned.x - tile.x).toBeCloseTo(120, 0);
   expect(carried.x - panel.x).toBeCloseTo(120, 0);
   expect(carried.y - panel.y).toBeCloseTo(-80, 0);
@@ -162,7 +162,7 @@ test('a pan and a zoom carry the ringed tile and the panel beside it', async ({ 
   const zoomed = await onScreen(page, 'infopanel');
   const grown = await onScreen(page, BARE.name);
   expect(await ringedTile(page)).toBe(BARE.key);
-  expect(await shownLayer(page)).toBe('terrain');
+  expect(await shownCard(page)).toBe('terrain');
   // The tile keeps the ground it had under the pointer and grows, so the panel stands further off.
   expect(Math.abs(grown.x - panned.x)).toBeLessThan(2);
   expect(zoomed.x).toBeGreaterThan(carried.x);
@@ -178,7 +178,7 @@ test("a pan carries a panel row's tooltip along with the row", async ({ page }) 
   await page.mouse.click(tile.x, tile.y);
   await expect.poll(() => ringedTile(page)).toBe(BARE.key);
   await page.keyboard.press('i');
-  await expect.poll(() => shownLayer(page)).toBe('terrain');
+  await expect.poll(() => shownCard(page)).toBe('terrain');
 
   const row = await onScreen(page, 'infopanel-row-0');
   await page.mouse.move(row.x, row.y);
