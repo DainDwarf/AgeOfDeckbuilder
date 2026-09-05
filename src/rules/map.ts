@@ -1,19 +1,49 @@
 import type { Resource, Resources } from './chronicle';
 import { nextRng, type Rng, shuffle } from './rng';
 
-/** The weighted terrain table each biome scatters over the tiles it spreads onto. */
-export const BIOME_TERRAINS = {
-  land: { plain: 0.55, forest: 0.25, hills: 0.2 },
-  sea: { water: 0.92, plain: 0.08 },
-  mountain: { mountain: 0.7, hills: 0.3 },
-} satisfies Record<string, Record<string, number>>;
+const LAND_TERRAINS = { plain: 0.55, forest: 0.25, hills: 0.2 } as const;
 
-export type Biome = keyof typeof BIOME_TERRAINS;
+/**
+ * What each biome is made of: the terrain its origin tile is outright, the weighted table its
+ * interior tiles scatter from, the table the tiles on its rim draw from instead, and the weight of
+ * each edge width in tiles, no edge at all first. Land edges on nothing: its widths make every one
+ * of its tiles interior, and its edge table is its interior one.
+ */
+export const BIOMES = {
+  land: { origin: 'plain', interior: LAND_TERRAINS, edge: LAND_TERRAINS, edgeWidths: [1] },
+  sea: {
+    origin: 'deep',
+    interior: { deep: 0.92, plain: 0.08 },
+    edge: { coast: 1 },
+    edgeWidths: [0.2, 0.5, 0.3],
+  },
+  mountain: {
+    origin: 'mountain',
+    interior: { mountain: 0.7, hills: 0.3 },
+    edge: { hills: 1 },
+    edgeWidths: [0.4, 0.6],
+  },
+} as const satisfies Record<
+  string,
+  {
+    origin: string;
+    interior: Readonly<Record<string, number>>;
+    edge: Readonly<Record<string, number>>;
+    edgeWidths: readonly number[];
+  }
+>;
+
+export type Biome = keyof typeof BIOMES;
 
 export const CITY_TERRAIN = 'urban';
 
 export type Terrain =
-  | { [B in Biome]: keyof (typeof BIOME_TERRAINS)[B] }[Biome]
+  | {
+      [B in Biome]:
+        | (typeof BIOMES)[B]['origin']
+        | keyof (typeof BIOMES)[B]['interior']
+        | keyof (typeof BIOMES)[B]['edge'];
+    }[Biome]
   | typeof CITY_TERRAIN;
 
 /** What one tile of each terrain yields at income. */
@@ -22,7 +52,8 @@ export const TERRAIN_YIELDS: Record<Terrain, Partial<Resources>> = {
   forest: { food: 1, production: 1 },
   hills: { production: 2 },
   mountain: { production: 1 },
-  water: { food: 1, money: 1 },
+  coast: { food: 1, money: 1 },
+  deep: { food: 1 },
   urban: { production: 1, military: 1, money: 1, science: 1, culture: 1 },
 };
 
@@ -32,7 +63,8 @@ const TERRAIN_PASSABLE: Record<Terrain, boolean> = {
   forest: true,
   hills: true,
   mountain: false,
-  water: false,
+  coast: false,
+  deep: false,
   urban: true,
 };
 
@@ -153,28 +185,36 @@ export function tileKey({ q, r }: TileCoords): string {
   return `${q},${r}`;
 }
 
-function pickTerrain(
+/** The one weighted draw of the generator: one roll of the seeded generator over the weights given. */
+function pickWeighted<T>(
   rng: Rng,
-  table: Partial<Record<Terrain, number>>,
-): { rng: Rng; terrain: Terrain } {
-  const entries = Object.entries(table) as [Terrain, number][];
+  entries: readonly (readonly [T, number])[],
+): { rng: Rng; picked: T } {
   const step = nextRng(rng);
   let roll = step.value * entries.reduce((total, [, weight]) => total + weight, 0);
-  let terrain = entries[entries.length - 1][0];
+  let picked = entries[entries.length - 1][0];
   for (const [id, weight] of entries) {
     roll -= weight;
     if (roll < 0) {
-      terrain = id;
+      picked = id;
       break;
     }
   }
-  return { rng: step.rng, terrain };
+  return { rng: step.rng, picked };
+}
+
+function pickTerrain(
+  rng: Rng,
+  table: Readonly<Record<string, number>>,
+): { rng: Rng; picked: Terrain } {
+  return pickWeighted(rng, Object.entries(table) as [Terrain, number][]);
 }
 
 /**
  * The map of a chronicle: a hexagonal disc of tiles in axial coordinates, the city at its centre,
- * generated in three layers: biomes spread from their origins, a terrain scattered from each
- * biome's table, and each feature dealt over a share of the terrain it lies on.
+ * generated in four layers: biomes spread from their origins, an edge marked around every biome
+ * that touches a biome of another kind, a terrain scattered from each biome's table — the edge one
+ * where the edge reaches — and each feature dealt over a share of the terrain it lies on.
  */
 export function generateMap(initial: Rng): { rng: Rng; tiles: Tile[] } {
   const { radius, tilesPerBiome, minBiomes, cityBiome, biomeShares, featureShares } =
@@ -192,11 +232,11 @@ export function generateMap(initial: Rng): { rng: Rng; tiles: Tile[] } {
 
   const tileBiomes: Biome[] = new Array(coords.length);
   const assigned = new Set<number>();
-  const edge: number[] = [];
+  const growing: number[] = [];
   const spread = (index: number, biome: Biome): void => {
     tileBiomes[index] = biome;
     assigned.add(index);
-    edge.push(index);
+    growing.push(index);
   };
 
   const scattered = shuffle(
@@ -214,19 +254,23 @@ export function generateMap(initial: Rng): { rng: Rng; tiles: Tile[] } {
   }
   while (dealt.length < biomeCount - 1) dealt.push(cityBiome);
 
+  const origins = new Set<number>([cityIndex]);
   spread(cityIndex, cityBiome);
-  for (let i = 0; i < dealt.length; i++) spread(elsewhere[i], dealt[i]);
+  for (let i = 0; i < dealt.length; i++) {
+    origins.add(elsewhere[i]);
+    spread(elsewhere[i], dealt[i]);
+  }
 
-  while (edge.length > 0) {
+  while (growing.length > 0) {
     const step = nextRng(rng);
     rng = step.rng;
-    const slot = Math.floor(step.value * edge.length);
-    const from = edge[slot];
+    const slot = Math.floor(step.value * growing.length);
+    const from = growing[slot];
     const open = neighbours(coords[from])
       .map((coord) => indexOf.get(tileKey(coord)))
       .filter((index): index is number => index !== undefined && !assigned.has(index));
     if (open.length === 0) {
-      edge.splice(slot, 1);
+      growing.splice(slot, 1);
       continue;
     }
     const target = nextRng(rng);
@@ -234,11 +278,35 @@ export function generateMap(initial: Rng): { rng: Rng; tiles: Tile[] } {
     spread(open[Math.floor(target.value * open.length)], tileBiomes[from]);
   }
 
+  const edged = new Set<number>();
+  for (let index = 0; index < coords.length; index++) {
+    const biome = tileBiomes[index];
+    const onRim = neighbours(coords[index]).some((coord) => {
+      const neighbour = indexOf.get(tileKey(coord));
+      return neighbour !== undefined && tileBiomes[neighbour] !== biome;
+    });
+    if (!onRim) continue;
+    const roll = pickWeighted(
+      rng,
+      BIOMES[biome].edgeWidths.map((weight, width) => [width, weight] as const),
+    );
+    rng = roll.rng;
+    for (let reached = 0; reached < coords.length; reached++) {
+      if (tileBiomes[reached] !== biome) continue;
+      if (distance(coords[index], coords[reached]) < roll.picked) edged.add(reached);
+    }
+  }
+
   const terrains: Terrain[] = new Array(coords.length);
   for (let index = 0; index < coords.length; index++) {
-    const step = pickTerrain(rng, BIOME_TERRAINS[tileBiomes[index]]);
+    const biome = BIOMES[tileBiomes[index]];
+    if (origins.has(index)) {
+      terrains[index] = biome.origin;
+      continue;
+    }
+    const step = pickTerrain(rng, edged.has(index) ? biome.edge : biome.interior);
     rng = step.rng;
-    terrains[index] = step.terrain;
+    terrains[index] = step.picked;
   }
   terrains[cityIndex] = CITY_TERRAIN;
 

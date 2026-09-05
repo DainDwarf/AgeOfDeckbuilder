@@ -262,19 +262,26 @@ not terraformed, and the worker stays where it stands through either.
 🔧 A building's yield may read its neighbours. Nothing in the first playable does; the door
 is there so that adjacency is content when it comes.
 
-**The map is generated in three layers.** It is a hexagonal disc with the city's tile at its centre.
+**The map is generated in four layers.** It is a hexagonal disc with the city's tile at its centre.
 First the **biomes**: origin tiles scattered over the disc spread outward until every tile belongs to
-one biome — land, sea, and whatever the list comes to hold. Their kinds are **dealt** as quotas
-rather than diced one by one, because independent dice can deal a map with no sea at all; the
-city's biome is dealt land, and its origin is the city's tile. Second, the **terrain scatter**:
-every tile draws its terrain from the weighted table of its biome, so a sea biome is water with
-the odd island in it and a land one is mixed. The city's tile is then **urban**, the one tile the
-generator puts that terrain on. Third, the **feature deal**: each feature names the terrain it lies
-on and is dealt onto a share of the tiles of that terrain, the city's tile never among them, for the
-same reason the biomes are dealt.
+one biome — land, sea, mountain, and whatever the list comes to hold. Their kinds are **dealt** as
+quotas rather than diced one by one, because independent dice can deal a map with no sea at all; the
+city's biome is dealt land, and its origin is the city's tile. Second, the **edge**: a tile one of
+whose neighbours belongs to a biome of another kind is on its biome's rim, and every rim tile rolls
+a width from its biome's odds — the tiles of that biome within that width take the biome's edge
+table instead of its interior one. So a sea is edged with coast, zero to two tiles wide, and a
+mountain range with hills, zero to one; where two biomes of the same kind meet there is no edge,
+and neither is the outer ring of the disc one. Third, the **terrain scatter**: every tile draws its
+terrain from the weighted table it took, so a sea biome is deep water with the odd island in it and
+a land one is mixed. A biome's origin tile is its kind's terrain outright, immune to the edge and
+the scatter, so every sea holds deep water and every range mountain. The city's tile is then
+**urban**, the one tile the generator puts that terrain on. Fourth, the **feature deal**: each
+feature names the terrain it lies on and is dealt onto a share of the tiles of that terrain, the
+city's tile never among them, for the same reason the biomes are dealt.
 
-Biomes and their tables are content, like the terrain and feature lists: they grow without a
-design decision, and the numbers in them are tuning.
+Biomes are content, like the terrain and feature lists: they grow without a design decision, and
+what each one holds — its origin terrain, its interior and edge tables, its edge widths — is
+tuning.
 
 🔧 **Rivers** are generated with flow: each rises in a high biome — hills, a mountain range — and
 runs downhill until it reaches sea. The stated default makes a river a tile feature; a river
@@ -299,8 +306,8 @@ no retaliation: the target answers only when its own attack comes, so a fight is
 exchange across turns, never within one blow.
 
 - **Moving costs one per tile.** An order moves a unit up to its move, every tile crossed costing
-  one. Water and mountain are impassable. A unit passes through the units of its own faction and
-  never through another's, and it lands only on a free tile.
+  one. Coast, deep water and mountain are impassable. A unit passes through the units of its own
+  faction and never through another's, and it lands only on a free tile.
 - **One attack rule.** In combat every fighting unit attacks an enemy within its range; a melee
   unit's range is one. An order that moves a fighting unit next to an enemy attacks on arrival
   as well. A unit that stands still is a garrison by that rule alone.

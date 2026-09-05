@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 import {
-  BIOME_TERRAINS,
+  BIOMES,
   CITY_TERRAIN,
   CITY_TILE,
   FEATURES,
@@ -50,25 +50,33 @@ test('the city stands on its tile', () => {
   for (const seed of SEEDS) expect(at(mapOf(seed), CITY_TILE)?.terrain).toBe(CITY_TERRAIN);
 });
 
-test('every tile carries a terrain one of the biomes can scatter', () => {
+test('every tile carries a terrain one of the biomes can produce', () => {
   const known = new Set<string>([CITY_TERRAIN]);
-  for (const table of Object.values(BIOME_TERRAINS)) {
-    for (const terrain of Object.keys(table)) known.add(terrain);
+  for (const biome of Object.values(BIOMES)) {
+    known.add(biome.origin);
+    for (const terrain of Object.keys(biome.interior)) known.add(terrain);
+    for (const terrain of Object.keys(biome.edge)) known.add(terrain);
   }
   for (const seed of SEEDS) {
     for (const tile of mapOf(seed)) expect(known).toContain(tile.terrain);
   }
 });
 
-test('every map has water, because sea is dealt and never diced', () => {
+test('every map has deep water, because a sea is dealt and its origin is deep water outright', () => {
   for (const seed of SEEDS) {
-    expect(mapOf(seed).some((tile) => tile.terrain === 'water')).toBe(true);
+    expect(mapOf(seed).some((tile) => tile.terrain === 'deep')).toBe(true);
   }
 });
 
-test('every map has mountain, because the mountain biome is dealt and never diced', () => {
+test('every map has mountain, because a range is dealt and its origin is mountain outright', () => {
   for (const seed of SEEDS) {
     expect(mapOf(seed).some((tile) => tile.terrain === 'mountain')).toBe(true);
+  }
+});
+
+test('a sea is edged with coast, the terrain no biome scatters over its interior', () => {
+  for (const seed of SEEDS) {
+    expect(mapOf(seed).some((tile) => tile.terrain === 'coast')).toBe(true);
   }
 });
 

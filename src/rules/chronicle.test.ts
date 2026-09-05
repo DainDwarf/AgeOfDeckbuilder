@@ -87,11 +87,11 @@ function cityOf(inside: Terrain[], carrying: Partial<Chronicle> = {}): Chronicle
 }
 
 /**
- * A disc of plain around the city, out to `radius`; `water` names the wet ones. The city stands on
+ * A disc of plain around the city, out to `radius`; `coast` names the wet ones. The city stands on
  * its urban tile as the founding leaves it: in that tile's building slot.
  */
-function field(radius: number, water: TileCoords[] = []): Tile[] {
-  const wet = new Set(water.map(tileKey));
+function field(radius: number, coast: TileCoords[] = []): Tile[] {
+  const wet = new Set(coast.map(tileKey));
   const tiles: Tile[] = [];
   for (let q = -radius; q <= radius; q++) {
     for (let r = Math.max(-radius, -q - radius); r <= Math.min(radius, -q + radius); r++) {
@@ -102,7 +102,7 @@ function field(radius: number, water: TileCoords[] = []): Tile[] {
       tiles.push({
         q,
         r,
-        terrain: wet.has(tileKey({ q, r })) ? 'water' : 'plain',
+        terrain: wet.has(tileKey({ q, r })) ? 'coast' : 'plain',
         improvements: [],
       });
     }
@@ -304,7 +304,7 @@ test('a chronicle opens on turn one, with empty stores and more inhabitants than
 });
 
 test('income yields every tile inside the border, and nothing outside it', () => {
-  const inside: Terrain[] = ['urban', 'plain', 'forest', 'hills', 'mountain', 'water'];
+  const inside: Terrain[] = ['urban', 'plain', 'forest', 'hills', 'mountain', 'coast'];
 
   const after = outcome(apply(cityOf(inside, NO_GROWTH), { type: 'end-turn' }));
 
@@ -372,7 +372,7 @@ test('ending the turn moves the chronicle on to the next one', () => {
 });
 
 test('a food stock short of the growth threshold grows nobody, and the stock is kept', () => {
-  const city = cityOf(['urban', 'plain', 'water'], NO_GROWTH);
+  const city = cityOf(['urban', 'plain', 'coast'], NO_GROWTH);
 
   const after = outcome(apply(city, { type: 'end-turn' }));
 
@@ -692,7 +692,7 @@ test('the deck the game ships with founds a chronicle that draws a full hand fro
 });
 
 test('the same command on the same chronicle gives the same chronicle back', () => {
-  const city = cityOf(['urban', 'plain', 'forest', 'hills', 'water']);
+  const city = cityOf(['urban', 'plain', 'forest', 'hills', 'coast']);
   const untouched = structuredClone(city);
 
   expect(outcome(apply(city, { type: 'end-turn' }))).toEqual(
@@ -768,7 +768,7 @@ test('the plain order moves a unit within its move, and no further', () => {
   expect(outcome(apply(city, march(0, { q: 3, r: 0 })))).toEqual(city);
 });
 
-test('water is impassable, and so is everything only water leads to', () => {
+test('coast is impassable, and so is everything only coast leads to', () => {
   const city = cityOf(['urban'], {
     tiles: field(2, [{ q: 1, r: 0 }]),
     hand: ['PH_March'],
@@ -1075,7 +1075,7 @@ test('the mine card is refused on a tile no worker of the player’s stands on',
 
 test('the mine card is refused on every terrain but the hills it goes on', () => {
   const at = { q: 1, r: 0 };
-  for (const terrain of ['plain', 'forest', 'mountain', 'water', 'urban'] as Terrain[]) {
+  for (const terrain of ['plain', 'forest', 'mountain', 'coast', 'deep', 'urban'] as Terrain[]) {
     const city = workedTile(at, terrain, { hand: ['PH_Mine'], resources: production(3) });
 
     expect(improvable(city, 'PH_Mine')).toEqual([]);
@@ -1156,7 +1156,7 @@ test('a tile with a building in its slot is not terraformed', () => {
 
 test('the urbanisation card is refused on every terrain but the plain it terraforms', () => {
   const at = { q: 1, r: 0 };
-  for (const terrain of ['forest', 'hills', 'mountain', 'water', 'urban'] as Terrain[]) {
+  for (const terrain of ['forest', 'hills', 'mountain', 'coast', 'deep', 'urban'] as Terrain[]) {
     const city = workedTile(at, terrain, { hand: ['PH_Urbanisation'], resources: production(5) });
 
     expect(terraformable(city, 'plain')).toEqual([]);
@@ -1516,7 +1516,7 @@ test('where the enemy arrives is drawn from the seeded generator', () => {
 test('the enemy arrives on a free tile of the rim it can stand on, and on nothing else there is', () => {
   const rim = rimOf(MAP_COMPOSITION.radius);
   const onlyOpen = rim[3];
-  /** A disc whose named rim tiles are impassable, half of them water and half of them mountain. */
+  /** A disc whose named rim tiles are impassable, half of them coast and half of them mountain. */
   const shut = (coords: TileCoords[]): Tile[] =>
     madeOf(
       field(MAP_COMPOSITION.radius, coords),
