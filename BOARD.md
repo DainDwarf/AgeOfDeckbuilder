@@ -11,3 +11,11 @@ hazards, plan — written once, on the settled state, and deleted with the line.
 Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [task file]`
 
 ---
+
+- **A chord is the browser's** — a bound key pressed with Ctrl, Meta or Alt held does nothing on
+  the chronicle screen, and a slot of the Controls window binds nothing from such a press; the
+  design's Controls paragraph says so, and a controls spec covers a held modifier. Doc-impact:
+  `docs/DESIGN.md`.
+- **The right-click spec scans for its bare tile** — the right-click test in `e2e/inspect.spec.ts`
+  takes its tile from a seed scan that checks the tile holds only its terrain card, as the file's
+  other tests do, and no hand-picked seed or tile key remains in it. Doc-impact: none.
