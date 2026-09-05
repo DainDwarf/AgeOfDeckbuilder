@@ -53,7 +53,7 @@ into unrelated files because they were nearby.
 Run exactly the commands the brief names and report their real result. A failing check is
 reported as failing, with the output; never described as passing, never "should pass".
 
-Locally you run only the specs this working tree touches, one at a time
+Locally you run one spec at a time, the one the brief names or this working tree touches
 (`npx playwright test e2e/<spec>.spec.ts`); the whole suite is CI's and is never run here.
 
 ## Children and waiting

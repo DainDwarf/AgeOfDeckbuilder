@@ -49,7 +49,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${CLAUDE_PROJECT_DIR}/.claude/hooks/touched-specs.cjs\"",
+            "command": "node \"${CLAUDE_PROJECT_DIR}/.claude/hooks/named-spec.cjs\"",
             "timeout": 10
           }
         ]

@@ -130,9 +130,10 @@ makes twice becomes a line here (the ratchet, at `/upkeep`).
   `ui-check` agent, driven by the `visual-check` skill. Whether it *feels* right is the user's
   call and is never automated.
 - **The Playwright suite is CI's.** It runs on every push to `main`, one worker, no retries;
-  locally the cap is four workers, so a timeout means a bug either way. A session runs only the
-  spec its line adds or touches (`npx playwright test e2e/<spec>.spec.ts`), and a hook refuses any
-  other local run; the whole suite runs locally only when the user runs it in their own terminal.
+  locally the cap is four workers, so a timeout means a bug either way. A session runs one spec at
+  a time, the one its line adds, touches or names (`npx playwright test e2e/<spec>.spec.ts`), and
+  a hook refuses a local run that names no spec; the whole suite runs locally only when the user
+  runs it in their own terminal.
 - **No mocks.** A pure `src/rules/` needs none; a mock that mirrors the code tests the code
   against itself. Use real dependencies or don't test that path.
 - **Tests import their runner API explicitly** — Vitest's `globals` stays off.
