@@ -302,6 +302,26 @@ export async function aimed(page: Page): Promise<void> {
   await page.waitForFunction(() => window.named?.('aim') !== undefined);
 }
 
+/**
+ * What the card the infopanel is standing reads, in the order it was drawn: its texts, and every
+ * yield chip by the resource it is named for.
+ */
+export function panelLines(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const panel = window.named?.('infopanel')?.object as Phaser.GameObjects.Container | undefined;
+    if (panel === undefined) throw new Error('the infopanel is not on the chronicle screen');
+    return panel.list
+      .filter((object) => object.type === 'Container')
+      .flatMap((card) =>
+        (card as Phaser.GameObjects.Container).list
+          .filter((part) => part.type === 'Text' || part.name.startsWith('panel-yield-'))
+          .map((part) =>
+            part.type === 'Text' ? (part as Phaser.GameObjects.Text).text : part.name,
+          ),
+      );
+  });
+}
+
 /** Which card of the tile the infopanel is showing, or nothing while it stands down. */
 export function shownCard(page: Page): Promise<string | undefined> {
   return page.evaluate(() => {

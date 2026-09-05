@@ -1,8 +1,9 @@
 import { expect, type Page, test } from '@playwright/test';
 import type { CardId } from '../src/rules/cards';
 import type { Chronicle } from '../src/rules/chronicle';
-import { type TileCoords, tileKey } from '../src/rules/map';
+import { IMPROVEMENTS, type TileCoords, tileKey } from '../src/rules/map';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
+import { text } from '../src/ui/text';
 import {
   aimed,
   chronicleOf,
@@ -11,8 +12,11 @@ import {
   marksIn,
   onScreen,
   open,
+  panelLines,
   playedOut,
   type Run,
+  ringedTile,
+  shownCard,
   standing,
   watch,
   workerRun,
@@ -81,6 +85,40 @@ test('the mine card improves the hills the worker marched to', async ({ page }) 
   expect(await marksIn(page, 'improvements')).toBe(before + 1);
   expect(after.resources.production).toBe(marched.resources.production - 3);
   expect(after.units[0].tile).toEqual(run.tile);
+  expect(problems).toEqual([]);
+});
+
+test('the tile the mine improved inspects the mine on a card of its own, before its terrain', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const run = workerRun('PH_Mine');
+
+  const marched = await marchOut(page, run);
+  await aimAt(page, marched.hand, 'PH_Mine', run.tile);
+
+  // The worker that laid it still stands there, so the mine's card comes after the unit's.
+  const at = await onScreen(page, `tile-${tileKey(run.tile)}`);
+  await page.mouse.click(at.x, at.y);
+  await expect.poll(() => ringedTile(page)).toBe(tileKey(run.tile));
+  await page.keyboard.press('i');
+  await expect.poll(() => shownCard(page)).toBe('unit');
+  await page.keyboard.press('i');
+  await expect.poll(() => shownCard(page)).toBe('building');
+
+  // Nothing is built on it, so the mine heads the card and its one row says what it gives.
+  await expect
+    .poll(() => panelLines(page))
+    .toEqual([
+      text('improvement.PH_Mine'),
+      text('improvement.PH_Mine'),
+      'panel-yield-production',
+      `+${IMPROVEMENTS.PH_Mine.yields.production}`,
+    ]);
+
+  await page.keyboard.press('i');
+  await expect.poll(() => shownCard(page)).toBe('terrain');
+
   expect(problems).toEqual([]);
 });
 

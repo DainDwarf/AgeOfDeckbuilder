@@ -209,9 +209,8 @@ export class ChronicleScene extends Phaser.Scene {
         inspection !== undefined && tileKey(inspection.on.tile) === tileKey(on.tile)
           ? inspection
           : undefined;
-      if (already !== undefined && cards.length === 1) return;
       const stepped = already === undefined ? 0 : (already.card + 1) % cards.length;
-      panel.show(cards, stepped, on.at, already !== undefined);
+      panel.show(cards, stepped, on.at, already !== undefined && stepped !== already.card);
       inspection = { on, card: stepped };
     };
 

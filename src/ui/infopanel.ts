@@ -359,7 +359,8 @@ function buildFace(scene: Phaser.Scene, bubble: RowBubble, card: Card): Face {
         // A diamond is a square turned, never a polygon: see the trap over `yieldMark` in `map.ts`.
         const chip = scene.add
           .rectangle(x + 0.25 * em, centre, 0.5 * em, 0.5 * em, RESOURCE_COLOURS[resource])
-          .setAngle(45);
+          .setAngle(45)
+          .setName(`panel-yield-${resource}`);
         value.setPosition(x + 0.7 * em, centre);
         contents.push(chip, value);
         listen(x, rowTop, 0.7 * em + value.width, line, resource);

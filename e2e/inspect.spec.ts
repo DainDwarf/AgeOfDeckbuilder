@@ -20,6 +20,7 @@ import {
   endTurn,
   onScreen,
   open,
+  panelLines,
   ringedTile,
   settled,
   shownCard,
@@ -114,19 +115,10 @@ function riverRun(): { seed: number; key: string; terrain: Terrain } {
   throw new Error('no seed under a thousand runs a river along a fed tile beside the city');
 }
 
-/** What the card the infopanel is standing reads, line by line: its name, then its rows. */
-function panelLines(page: Page): Promise<string[]> {
-  return page.evaluate(() => {
-    const panel = window.named?.('infopanel')?.object as Phaser.GameObjects.Container | undefined;
-    if (panel === undefined) throw new Error('the infopanel is not on the chronicle screen');
-    return panel.list
-      .filter((object) => object.type === 'Container')
-      .flatMap((card) =>
-        (card as Phaser.GameObjects.Container).list
-          .filter((part) => part.type === 'Text')
-          .map((part) => (part as Phaser.GameObjects.Text).text),
-      );
-  });
+/** The three lines a ledger row reads from `name` on: its name, its chip, and what the chip counts. */
+async function rowFrom(page: Page, name: string): Promise<string[]> {
+  const lines = await panelLines(page);
+  return lines.slice(lines.indexOf(name), lines.indexOf(name) + 3);
 }
 
 test('a tile the generator gave a feature shows its mark, and the terrain card gives it a row of its own', async ({
@@ -145,10 +137,13 @@ test('a tile the generator gave a feature shows its mark, and the terrain card g
   await page.keyboard.press('i');
   await expect.poll(() => shownCard(page)).toBe('terrain');
 
-  const lines = await panelLines(page);
-  const row = lines.indexOf(text(`feature.${run.feature}`));
-  expect(row).toBeGreaterThan(0);
-  expect(lines[row + 1]).toBe(`+${FEATURES[run.feature].yields.food}`);
+  await expect
+    .poll(() => rowFrom(page, text(`feature.${run.feature}`)))
+    .toEqual([
+      text(`feature.${run.feature}`),
+      'panel-yield-food',
+      `+${FEATURES[run.feature].yields.food}`,
+    ]);
 
   expect(problems).toEqual([]);
 });
@@ -168,10 +163,9 @@ test('a tile a river runs along gives the river a row of the terrain card, on wh
   await page.keyboard.press('i');
   await expect.poll(() => shownCard(page)).toBe('terrain');
 
-  const lines = await panelLines(page);
-  const row = lines.indexOf(text('panel.river'));
-  expect(row).toBeGreaterThan(0);
-  expect(lines[row + 1]).toBe(`+${RIVER_YIELDS[run.terrain]?.food}`);
+  await expect
+    .poll(() => rowFrom(page, text('panel.river')))
+    .toEqual([text('panel.river'), 'panel-yield-food', `+${RIVER_YIELDS[run.terrain]?.food}`]);
 
   // The tile holds that one card, so a further press leaves it standing.
   await page.keyboard.press('i');
@@ -223,7 +217,7 @@ test('a click selects a tile, the inspection key steps its cards, and the back k
   await expect.poll(() => shownCard(page)).toBe('unit');
   expect(await ringedTile(page)).toBe(cityTile);
 
-  // A click on the tile already selected selects nothing afresh, and the layer stands.
+  // A click on the tile already selected selects nothing afresh, and the card stands.
   await page.mouse.click(city.x, city.y);
   await answered(page);
   expect(await shownCard(page)).toBe('unit');
