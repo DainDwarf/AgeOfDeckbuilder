@@ -453,12 +453,17 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
   ]);
 
   // Nothing a chronicle does moves a river, so they are stroked here and no render repaints them.
-  // Every outline goes down before any water, so two rivers meeting read as one course.
-  const courses = scene.add.graphics();
-  rivers.add(courses);
+  // Every outline goes down on one surface under all the water, so two rivers meeting read as one
+  // course; the water above it is a surface per river, which is what carries the name.
+  const outlines = scene.add.graphics();
+  rivers.add(outlines);
   const along = chronicle.rivers.map((river) => river.map(cornerAt));
-  for (const river of along) strokeRiver(courses, river, OUTLINE, RIVER_OUTLINE_WIDTH);
-  for (const river of along) strokeRiver(courses, river, RIVER_COLOUR, RIVER_WIDTH);
+  for (const river of along) strokeRiver(outlines, river, OUTLINE, RIVER_OUTLINE_WIDTH);
+  for (const river of along) {
+    const water = scene.add.graphics().setName('river');
+    rivers.add(water);
+    strokeRiver(water, river, RIVER_COLOUR, RIVER_WIDTH);
+  }
 
   let markers: Phaser.GameObjects.Polygon[] = [];
   let presser: Phaser.GameObjects.Zone | undefined;
