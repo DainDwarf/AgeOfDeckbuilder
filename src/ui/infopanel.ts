@@ -310,7 +310,7 @@ function headOf(
     case 'terrain':
       return { mark: terrainMark(scene, layer.terrain), name: text(`terrain.${layer.terrain}`) };
     case 'river':
-      return { mark: riverMark(scene), name: text('river') };
+      return { mark: riverMark(scene), name: text('panel.river') };
   }
 }
 

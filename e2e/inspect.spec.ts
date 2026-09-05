@@ -168,7 +168,7 @@ test('a tile a river runs along inspects the river after its terrain, on what th
   await expect.poll(() => shownLayer(page)).toBe('river');
   await expect
     .poll(() => panelLines(page))
-    .toEqual([text('river'), text('label.food'), `+${RIVER_YIELDS[run.terrain]?.food}`]);
+    .toEqual([text('panel.river'), text('label.food'), `+${RIVER_YIELDS[run.terrain]?.food}`]);
 
   await page.keyboard.press('i');
   await expect.poll(() => shownLayer(page)).toBeUndefined();

@@ -192,8 +192,7 @@ export const CITY_TILE: TileCoords = { q: 0, r: 0 };
 
 /**
  * What a tile's layers and the river running along it give at income, resource by resource: the one
- * answer income and the yield overlay both read. A resource left out is none of it. However many
- * edges the rivers run along, the tile takes what its terrain draws from them once.
+ * answer income and the yield overlay both read. A resource left out is none of it.
  */
 export function tileYield(tile: Tile, rivers: readonly River[]): Partial<Resources> {
   const summed: Partial<Resources> = { ...TERRAIN_YIELDS[tile.terrain] };

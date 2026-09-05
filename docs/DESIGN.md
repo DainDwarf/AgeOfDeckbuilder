@@ -244,7 +244,7 @@ mode stands with it, and either is entered and left without touching the other.
 ### The map ✅
 
 A tile is layers, and its income, movement cost and sight are the sum of what its layers say, with a
-river running along the tile adding to its income on top of them:
+river running along the tile adding to its yield on top of them:
 
 - **Terrain** — one per tile, fixed unless terraformed: plain, forest, hills, … The list is
   content and changes freely.
