@@ -51,6 +51,9 @@ a [`BOARD.md`](BOARD.md) line. Say
   input, plus the design page, the glossary and a rebalance.
 - **Consuming the worker on building**: a building card spends the worker that stands on the tile,
   so workers are a scarcity of their own and the city's population pays for its buildings twice.
+- **Bundle the UI font** (art-style pass scope): `system-ui` resolves to a different typeface on
+  every machine, so CI, the player and the developer lay out different games from the same code —
+  every width in the UI is a measured text width. A font shipped with the build ends that.
 - **Type-size floor, verified small** (art-style pass scope): minimum type sizes generous enough
   that the smallest window we care about stays readable; ui-check verifies at that size. Uniform
   window scaling plus card zoom covers the rest — no UI-scale slider unless playtesting demands it.
