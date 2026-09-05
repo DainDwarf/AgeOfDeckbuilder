@@ -132,7 +132,7 @@ test('the generator improves nothing: every tile of a fresh map is bare of impro
 });
 
 test('a range dealt clear of the water runs the two rivers it is worth, whole courses both', () => {
-  const ranges = dealtBiomes().filter((biome) => biome === 'mountain').length;
+  const ranges = dealtBiomes(mapOf(0).length).filter((biome) => biome === 'mountain').length;
   const rivers = riversOf(0);
 
   expect(rivers).toHaveLength(RIVER_FLOW.perRange * ranges);
@@ -198,7 +198,7 @@ test('a river runs along no more than four edges of any one tile, so it never ri
 });
 
 test('a map holds at most two rivers for every mountain range it is dealt', () => {
-  const ranges = dealtBiomes().filter((biome) => biome === 'mountain').length;
+  const ranges = dealtBiomes(mapOf(0).length).filter((biome) => biome === 'mountain').length;
   for (const seed of SEEDS) {
     expect(riversOf(seed).length).toBeLessThanOrEqual(RIVER_FLOW.perRange * ranges);
   }

@@ -151,11 +151,10 @@ export const MAP_COMPOSITION = {
 };
 
 /**
- * How the river layer runs: how far the relief lifts a tile that stands over the water and how hard
- * the roll roughens it, how many rivers one range dealt is worth, how far one edge may climb, how
- * sharply the drop weights the draw and what repeating a turn multiplies it by, how many edges of
- * one tile one river runs along at most, the fewest edges a river is kept at, and how many sources
- * are drawn before the layer gives up.
+ * How the river layer runs. `relief`: how far a hills tile stands above its distance to water,
+ * mountain twice that. `roughness`: the most a tile's rolled lift adds to its height. `meander`: an
+ * edge's drop is weighted as exp(drop / meander), so a small value makes the steep way near-certain.
+ * `curl`: what repeating the last turn multiplies an edge's weight by.
  */
 export const RIVER_FLOW = {
   relief: 1.5,
@@ -323,10 +322,9 @@ function pickTerrain(
  * kind for whatever is left over. Dealt as quotas rather than diced one by one, because independent
  * dice deal a map with no sea at all.
  */
-export function dealtBiomes(): Biome[] {
-  const { radius, tilesPerBiome, minBiomes, cityBiome, biomeShares } = MAP_COMPOSITION;
-  const tiles = 3 * radius * radius + 3 * radius + 1;
-  const biomeCount = Math.max(minBiomes, Math.round(tiles / tilesPerBiome));
+export function dealtBiomes(tileCount: number): Biome[] {
+  const { tilesPerBiome, minBiomes, cityBiome, biomeShares } = MAP_COMPOSITION;
+  const biomeCount = Math.max(minBiomes, Math.round(tileCount / tilesPerBiome));
 
   const dealt: Biome[] = [];
   for (const { biome, share } of biomeShares) {
@@ -511,7 +509,7 @@ export function generateMap(initial: Rng): { rng: Rng; tiles: Tile[]; rivers: Ri
   rng = scattered.rng;
   const elsewhere = scattered.items;
 
-  const dealt = dealtBiomes();
+  const dealt = dealtBiomes(coords.length);
 
   const origins = new Set<number>([cityIndex]);
   spread(cityIndex, cityBiome);
