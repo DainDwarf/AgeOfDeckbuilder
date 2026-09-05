@@ -29,8 +29,8 @@ import {
   workerRun,
 } from './chronicle-screen';
 
-/** A tile on bare map, clear of the resource bar, the piles and the hand. */
-const BARE = { name: 'tile-0,-3', key: '0,-3' };
+/** A point on the map clear of the resource bar, the piles and the hand; nothing is read off it. */
+const BARE = 'tile-0,-3';
 
 declare global {
   interface Window {
@@ -113,6 +113,26 @@ function riverRun(): { seed: number; key: string; terrain: Terrain } {
     if (found !== undefined) return { seed, key: tileKey(found), terrain: found.terrain };
   }
   throw new Error('no seed under a thousand runs a river along a fed tile beside the city');
+}
+
+/**
+ * The first seed leaving a tile touching the city, and so well inside the frame, bare of feature,
+ * building and improvement; a river may run along it, being a row of its terrain card, not a card.
+ */
+function bareRun(): { seed: number; key: string } {
+  for (let seed = 1; seed <= 1000; seed++) {
+    const { tiles, city } = beginChronicle(seed, DECKS.PH_Deck);
+    const touching = new Set(neighbours(city).map(tileKey));
+    const found = tiles.find(
+      (tile) =>
+        touching.has(tileKey(tile)) &&
+        tile.feature === undefined &&
+        tile.building === undefined &&
+        tile.improvements.length === 0,
+    );
+    if (found !== undefined) return { seed, key: tileKey(found) };
+  }
+  throw new Error('no seed under a thousand leaves a tile beside the city bare');
 }
 
 /** The three lines a ledger row reads from `name` on: its name, its chip, and what the chip counts. */
@@ -261,9 +281,10 @@ test('a right click selects and inspects in the one press, steps on where it sta
   page,
 }) => {
   const problems = watch(page);
+  const run = bareRun();
 
-  await open(page, 1, 'PH_Deck');
-  const bare = await onScreen(page, BARE.name);
+  await open(page, run.seed, 'PH_Deck');
+  const bare = await onScreen(page, `tile-${run.key}`);
   const city = await chronicleOf(page).then((chronicle) =>
     onScreen(page, `tile-${tileKey(chronicle.city)}`),
   );
@@ -271,17 +292,17 @@ test('a right click selects and inspects in the one press, steps on where it sta
   await watchBrowserMenu(page);
   await page.mouse.click(bare.x, bare.y, { button: 'right' });
   await expect.poll(() => shownCard(page)).toBe('terrain');
-  expect(await ringedTile(page)).toBe(BARE.key);
+  expect(await ringedTile(page)).toBe(run.key);
   await expect.poll(() => browserMenu(page)).toBe(true);
 
   // Nothing stands on it and nothing is built on it: its terrain card is the whole of its cycle.
   await page.mouse.click(bare.x, bare.y, { button: 'right' });
   await answered(page);
   expect(await shownCard(page)).toBe('terrain');
-  expect(await ringedTile(page)).toBe(BARE.key);
+  expect(await ringedTile(page)).toBe(run.key);
 
   // The press carried the map nowhere either: the tile stands where it stood.
-  const after = await onScreen(page, BARE.name);
+  const after = await onScreen(page, `tile-${run.key}`);
   expect(after.x).toBeCloseTo(bare.x, 0);
   expect(after.y).toBeCloseTo(bare.y, 0);
 
@@ -308,7 +329,7 @@ test('a right press while a card is aimed lets the card go', async ({ page }) =>
   await dragOut(page, entered.hand.indexOf('PH_March'));
   await aimed(page);
 
-  const bare = await onScreen(page, BARE.name);
+  const bare = await onScreen(page, BARE);
   await page.mouse.click(bare.x, bare.y, { button: 'right' });
 
   await expect.poll(() => standing(page, 'aim')).toBe(false);

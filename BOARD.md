@@ -11,7 +11,3 @@ hazards, plan — written once, on the settled state, and deleted with the line.
 Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [task file]`
 
 ---
-
-- **The right-click spec scans for its bare tile** — the right-click test in `e2e/inspect.spec.ts`
-  takes its tile from a seed scan that checks the tile holds only its terrain card, as the file's
-  other tests do, and no hand-picked seed or tile key remains in it. Doc-impact: none.
