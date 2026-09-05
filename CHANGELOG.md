@@ -26,8 +26,8 @@ Every chronicle ends in defeat — victory does not exist yet.
   the way.
 - End the turn and the steps that follow play out one at a time: discard, combat, income, the
   enemies moving and declaring their intents, then the next turn's draw.
-- An enemy lands on the outer ring of the map every fifth turn, advances on the city, rings the
-  tile its attack is aimed at, and captures the city by standing on it through a whole turn.
+- An enemy lands on the rim of the map every fifth turn, advances on the city, rings the tile its
+  attack is aimed at, and captures the city by standing on it through a whole turn.
 - The defeat screen, naming what took the city and the turn it fell on.
 - Click a tile to read it layer by layer — the unit standing on it, the building, the terrain —
   each on a card of its own, with what it yields at income or the unit's health, damage, range and
