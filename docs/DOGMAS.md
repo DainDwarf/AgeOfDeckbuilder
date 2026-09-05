@@ -33,6 +33,10 @@ makes twice becomes a line here (the ratchet, at `/upkeep`).
   the spot, becomes a board line through `/intake`.
 - **Cut big steps into shippable substeps**, each self-contained enough for a cleared session to
   execute; name the shared mechanism that links them. Propose the cut before executing it.
+- **A generator change is pitched running.** Its intake line says whether the process is fixed or
+  rolled, and how wide it may vary; its pitch shows the generator ported into the mockup and run
+  on the project's seeds, the port checked against the rules tests first. Why: a diagram reads
+  straight, and a straight reading of a rolled process has cost a pitch round twice.
 
 ## Design principles
 

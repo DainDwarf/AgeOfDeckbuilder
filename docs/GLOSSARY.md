@@ -63,12 +63,12 @@ deliberate exception the reviewer sees; there is no silent allow-list.
 | **fog** | Every tile outside sight; known terrain, unknown occupants. | fog of war, unexplored |
 | **order** | A card that does one thing with one unit; the plain order moves it, and its nature acts on arrival. | move card |
 | **action** | A card with an immediate effect. | spell, effect card |
-| **worker** | A non-fighting unit that changes tiles: builds buildings, terraforms them, improves them with roads. | builder, engineer, labourer |
+| **worker** | A non-fighting unit that changes tiles: builds buildings, terraforms them, improves them. | builder, engineer, labourer |
 | **population** | The city's inhabitants: assigned to tiles for income, turned into units by unit cards. | citizens, workforce, pops |
 | **assign** | To put one population on a tile inside the border; free, instant, reversible. | allocate |
 | **unassign** | To take one population off the tile it stands on; the reverse of assign. | remove, free up, release |
 | **idle** | An inhabitant assigned to no tile; what a unit card takes. | unemployed, spare, unassigned (as a noun) |
-| **grow** | What the food stock reaching the growth threshold does at income: the city gains one idle inhabitant. | birth, breed, spawn (for population), expand |
+| **grow** | What the food stock reaching the growth threshold does at the growth phase: the city gains one idle inhabitant. | birth, breed, spawn (for population), expand |
 | **growth threshold** | The food the next inhabitant needs; spent when the stock reaches it, and wider each time. | step, growth cost, food cap |
 | **biome** | A stretch of map the generator spreads as one kind — land, sea, … — weighting the terrain of each tile in it. | patch, zone, area, ecosystem |
 | **terrain** | A tile's base layer: plain, forest, hills, …; one per tile, changed only by terraforming. | tile type |

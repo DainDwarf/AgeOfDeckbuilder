@@ -42,7 +42,9 @@ into unrelated files because they were nearby.
   one through it before reporting; a path you leave outside goes under Deviations.
 - Gameplay terms come from `docs/GLOSSARY.md` — the exact word, in text and in identifiers.
 - Tests follow `docs/DOGMAS.md` → *Testing*. Never weaken or delete a test to make it pass.
-- Comments are for traps only. No paraphrase, no history, no rationale, no `TODO`.
+- Comments are for traps only. No paraphrase, no history, no rationale, no `TODO`. Before
+  reporting, reread every comment and docstring the diff adds or touches against that rule, and
+  cut what paraphrases the code, narrates, or restates a rule a `docs/` page already holds.
 - Update every `docs/` page in the doc-impact list in the same change. A pivot is an edit — the old
   fact is gone, not marked deprecated.
 - Delete the board line and its task file as the last step, once verification passes.

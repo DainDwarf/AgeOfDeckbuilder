@@ -22,7 +22,9 @@ Run these four checks, in order, and stop at the first that decides the outcome:
    valid work — the line's done-condition is then the docs edit — but silently violating one is
    not. A duplicate merges into the existing line.
 2. **Completability.** Does it have a done-condition — a state of the repo someone can check?
-   If not, it is docs content (a standing fact, a domain claim) or an idea. Route it there.
+   If not, it is docs content (a standing fact, a domain claim) or an idea. Route it there. A
+   line on the map generator also says whether the process is fixed or rolled, and how wide it
+   may vary; ask when the request does not say.
 3. **Scope.** Can one session hold the whole thing in context? Split only on a real abstraction
    boundary; never split to defer the hard part. Each part gets its own line and done-condition.
 4. **Doc-impact.** Name the `docs/` pages the work will change, or "none". The reviewer checks this.

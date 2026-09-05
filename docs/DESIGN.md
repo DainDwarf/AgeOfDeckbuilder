@@ -191,15 +191,14 @@ assigns an inhabitant to each of the seven tiles the city holds, and has two mor
 Assigning is free, instant and reversible, never a card: it is staffing, not a change to the map.
 In city mode the map marks the assigned tiles and dims the held ones that are not.
 
-Population **grows**. At income a food stock that has reached the **growth threshold** is spent,
-and the city gains one inhabitant, who arrives idle; at most one an income, and whatever the
-threshold leaves stays in the stock. The growth threshold widens with the population, so each
+Population **grows**. At the growth phase a food stock that has reached the **growth threshold**
+is spent, and the city gains one inhabitant, who arrives idle; at most one a turn, and whatever
+the threshold leaves stays in the stock. The growth threshold widens with the population, so each
 inhabitant is dearer than the one before. Nobody eats and nobody starves. The resource bar reads
 population as the idle inhabitants over all of them, and food as the stock over the growth
 threshold. Food as a plain spendable resource with growth elsewhere was rejected: the famine event
-would have nothing to bite.
-Inhabitants consuming food was rejected too: the widening growth threshold and the schedule's
-events are the whole of the pressure on the population.
+would have nothing to bite. Inhabitants consuming food was rejected too: the widening growth
+threshold and the schedule's events are the whole of the pressure on the population.
 
 ### City mode ✅
 
@@ -223,28 +222,28 @@ the one on it, claims a tile — and selects nothing; a right click there inspec
 cursor without selecting it, which is the only way to inspect in city mode; a right click off the
 map drops that inspection, and so does leaving the mode. A click on a tile the city neither holds
 nor can claim does nothing and says nothing; a click the city refuses says why, in the note a
-refused card raises. The
-map marks the tiles the city can claim for as long as the mode is on, and every tile inside the
-border shows what it yields — every resource, whatever the yield overlay is showing, the dim of a
-tile nobody stands on no exception, and with no dim over the map: that dim is the overlay's alone.
-It is entered by the **city key** or by pressing culture or population on the resource bar, and
-left by that key, by the back key, or by the chip naming the mode; the map's frame drawn in the
-accent and that chip are how the chronicle screen shows the mode is on. Coming into city mode lets
-go of a card being aimed, of the selection and of its inspection, and a window standing over the
-chronicle screen takes the city key instead.
+refused card raises. The map marks the tiles the city can claim for as long as the mode is on, and
+every tile inside the border shows what it yields — every resource, whatever the yield overlay is
+showing, the dim of a tile nobody stands on no exception, and with no dim over the map: that dim is
+the overlay's alone. It is entered by the **city key** or by pressing culture or population on the
+resource bar, and left by that key, by the back key, or by the chip naming the mode; the map's
+frame drawn in the accent and that chip are how the chronicle screen shows the mode is on. Coming
+into city mode lets go of a card being aimed, of the selection and of its inspection, and a window
+standing over the chronicle screen takes the city key instead.
 
 ### The yield overlay ✅
 
 The **yield overlay** shows what every tile yields: a glyph for each point of each resource, in the
 colour that resource is known by, over a map dimmed under them. It reads the tile's layers and the
-river running along it, and nothing else — whoever stands there and whatever occupies it change what the tile gives at income,
-never what the overlay shows. Pressing one of the five core readings on the resource bar toggles
-that resource in or out of the overlay, several at a time, and the reading of a resource shown is
-latched down in the bar; the **yield key** clears the overlay, or, from nothing, shows every
-resource, culture included, and a window standing over the chronicle screen takes the key instead.
-Three things stand over the dim, undimmed: the selection's ring, the infopanel of the tile being
-inspected, and the tiles a card is aimed at. It is a display and not a mode: the back key leaves it standing, city
-mode stands with it, and either is entered and left without touching the other.
+river running along it, and nothing else — whoever stands there and whatever occupies it change
+what the tile gives at income, never what the overlay shows. Pressing one of the five core readings
+on the resource bar toggles that resource in or out of the overlay, several at a time, and the
+reading of a resource shown is latched down in the bar; the **yield key** clears the overlay, or,
+from nothing, shows every resource, culture included, and a window standing over the chronicle
+screen takes the key instead. Three things stand over the dim, undimmed: the selection's ring, the
+infopanel of the tile being inspected, and the tiles a card is aimed at. It is a display and not a
+mode: the back key leaves it standing, city mode stands with it, and either is entered and left
+without touching the other.
 
 ### The map ✅
 
@@ -318,10 +317,9 @@ what a river costs to cross is open.
 The city stands on one tile and owns the six around it. The player **claims** any tile adjacent
 to one the city owns by spending culture; claiming is free of cards, like assigning, and the
 **culture threshold**, what a claim costs, rises with the tiles owned. A claimed tile takes an
-idle inhabitant at once when
-the city has one. There is no limit to how far the border reaches. A cost that also rises with
-distance was rejected until a chronicle shows fractal borders: a tendril is adjacent-only and
-exposed already.
+idle inhabitant at once when the city has one. There is no limit to how far the border reaches. A
+cost that also rises with distance was rejected until a chronicle shows fractal borders: a tendril
+is adjacent-only and exposed already.
 
 Units enter the map on the city's tile. 🔧 A building that adds an entry point is a keyword for
 later content.
