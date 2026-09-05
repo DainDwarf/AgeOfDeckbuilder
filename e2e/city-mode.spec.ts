@@ -1,7 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
 import { DECKS } from '../src/rules/cards';
 import { beginChronicle, RESOURCES } from '../src/rules/chronicle';
-import { distance, tileKey, tileYield } from '../src/rules/map';
+import { distance, runsAlong, tileKey, tileYield } from '../src/rules/map';
 import { text } from '../src/ui/text';
 import {
   chronicleOf,
@@ -49,7 +49,10 @@ async function inCityMode(page: Page): Promise<boolean> {
   return chip;
 }
 
-/** A tile the founding leaves bare: its terrain and nothing else, well clear of the border. */
+/**
+ * A tile the founding leaves bare: its terrain and nothing else, no river running along it, well
+ * clear of the border. So it inspects its terrain and steps to the bare tile from there.
+ */
 async function bareTile(page: Page): Promise<string> {
   const chronicle = await chronicleOf(page);
   const found = chronicle.tiles.find(
@@ -57,7 +60,8 @@ async function bareTile(page: Page): Promise<string> {
       distance(tile, chronicle.city) === 3 &&
       tile.feature === undefined &&
       tile.building === undefined &&
-      tile.improvements.length === 0,
+      tile.improvements.length === 0 &&
+      !runsAlong(chronicle.rivers, tile),
   );
   if (found === undefined) throw new Error('the founding leaves no bare tile three tiles out');
   return tileKey(found);
@@ -76,7 +80,7 @@ async function yielded(page: Page): Promise<{ inside: Glyphs; map: Glyphs }> {
   const inside = noGlyphs();
   const map = noGlyphs();
   for (const tile of chronicle.tiles) {
-    const yields = tileYield(tile);
+    const yields = tileYield(tile, chronicle.rivers);
     for (const resource of RESOURCES) {
       const points = yields[resource] ?? 0;
       map[resource] += points;

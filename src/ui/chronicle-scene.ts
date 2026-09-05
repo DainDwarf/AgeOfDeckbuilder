@@ -195,8 +195,9 @@ export class ChronicleScene extends Phaser.Scene {
     };
 
     /**
-     * One step of the inspection on a tile: the next of its layers in the infopanel, and after the
-     * last of them the bare tile again. The one place the infopanel is shown.
+     * One step of the inspection on a tile: the next of its layers in the infopanel, the river
+     * running along it after them, and then the bare tile again. The one place the infopanel is
+     * shown.
      */
     const inspect = (on: PressedTile): void => {
       const tile = tileAt(this.current.tiles, on.tile);
@@ -206,7 +207,8 @@ export class ChronicleScene extends Phaser.Scene {
         tileKey(inspection.on.tile) !== tileKey(on.tile)
           ? 0
           : inspection.layer + 1;
-      const layers = tile === undefined ? [] : layersOf(tile, this.current.units);
+      const layers =
+        tile === undefined ? [] : layersOf(tile, this.current.units, this.current.rivers);
       if (stepped >= layers.length) {
         uninspect();
         return;

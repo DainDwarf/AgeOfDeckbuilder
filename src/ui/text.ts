@@ -32,6 +32,7 @@ const TEXT = {
   'terrain.coast': 'Coast',
   'terrain.deep': 'Deep water',
   'terrain.urban': 'Urban',
+  river: 'River',
   'feature.PH_Fertile': 'PH_Fertile',
   'improvement.PH_Mine': 'PH_Mine',
   'building.PH_City': 'PH_City',

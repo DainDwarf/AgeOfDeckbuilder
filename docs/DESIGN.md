@@ -205,7 +205,9 @@ events are the whole of the pressure on the population.
 
 The chronicle screen has two modes. Out of city mode a click on a tile **selects** it: the map rings
 it, and nothing more. The **inspection key** then **inspects** the selection — one of its layers in
-the infopanel per press, outermost first, and after the last of them the bare ring again. A right
+the infopanel per press, outermost first; for a tile a river runs along, the river follows the last
+of them as a card of its own, showing what it gives that tile; and after those the bare ring
+again. A right
 click is a press on the chronicle screen and not a key, so it binds to nothing and Controls does not
 list it: on a tile it selects and inspects in the one press, and pressed again on the tile already
 selected it inspects on without selecting afresh; off the map it drops the selection, and while a
@@ -229,8 +231,8 @@ chronicle screen takes the city key instead.
 ### The yield overlay ✅
 
 The **yield overlay** shows what every tile yields: a glyph for each point of each resource, in the
-colour that resource is known by, over a map dimmed under them. It reads the tile's layers and
-nothing else — whoever stands there and whatever occupies it change what the tile gives at income,
+colour that resource is known by, over a map dimmed under them. It reads the tile's layers and the
+river running along it, and nothing else — whoever stands there and whatever occupies it change what the tile gives at income,
 never what the overlay shows. Pressing one of the five core readings on the resource bar toggles
 that resource in or out of the overlay, several at a time, and the reading of a resource shown is
 latched down in the bar; the **yield key** clears the overlay, or, from nothing, shows every
@@ -241,7 +243,8 @@ mode stands with it, and either is entered and left without touching the other.
 
 ### The map ✅
 
-A tile is layers, and its income, movement cost and sight are the sum of what its layers say:
+A tile is layers, and its income, movement cost and sight are the sum of what its layers say, with a
+river running along the tile adding to its income on top of them:
 
 - **Terrain** — one per tile, fixed unless terraformed: plain, forest, hills, … The list is
   content and changes freely.
@@ -298,8 +301,14 @@ tuning.
 
 A **river** runs along the edges between tiles, the lines two tiles share, from a corner in a
 mountain range down to the sea. It lies on no tile, so it is no feature and no layer of one, and a
-terraform leaves it exactly where it runs. 🔧 What a river gives at income, and what it costs to
-cross, are open.
+terraform leaves it exactly where it runs. A river gives a tile it runs along **one food** where that
+tile is plain or forest, and nothing to a tile of any other terrain. It gives it once per tile:
+however many of the tile's edges a river runs along, and however many rivers meet at the tile, the
+tile takes one food. The terrain decides, so terraforming a plain a river runs along into urban ends
+what the river gives it while the river stays exactly where it runs. A yield per edge was rejected:
+a river hugging four edges of a plain would hand out the map's best tile by the generator's choice
+rather than the player's. 🔧 Which terrains a river feeds and what it gives them are tuning, and
+what a river costs to cross is open.
 
 The city stands on one tile and owns the six around it. The player **claims** any tile adjacent
 to one the city owns by spending culture; claiming is free of cards, like assigning, and the

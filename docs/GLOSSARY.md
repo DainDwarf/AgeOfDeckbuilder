@@ -30,7 +30,7 @@ deliberate exception the reviewer sees; there is no silent allow-list.
 | **chronicle screen** | The surface a chronicle is played on — the map, the hand, the piles, the resource bar, the infopanel; what a window opens over and closes back to. | table, playfield, play area |
 | **city mode** | The chronicle screen's second mode, in which a tile click acts on the city — assigns, unassigns, claims — instead of selecting the tile. | build mode, manage mode, edit mode, planning mode |
 | **select** | To make a tile the selection: the one tile the map rings and the inspection key steps. | pick, highlight, focus, target (for a tile) |
-| **inspect** | To show a tile's layers in the infopanel, one layer per step, then the bare tile again. | read (a tile), examine, view, look at |
+| **inspect** | To show a tile's layers in the infopanel, one layer per step, then the river running along it if one does, then the bare tile again. | read (a tile), examine, view, look at |
 | **tile** | One hexagon of the map, of one terrain. | hex, cell, square, territory |
 | **region** | The launch choice that biases map generation; the difficulty dial. | site, location, start |
 | **unit** | A mobile piece on the map, the player's or not. | army, troop, piece, token |
@@ -77,7 +77,7 @@ deliberate exception the reviewer sees; there is no silent allow-list.
 | **river** | A watercourse the generator runs along the edges between tiles, from a mountain range to the sea. | stream, creek, waterway |
 | **improvement** | A layer a worker improves a tile with through an action; distinct ones stack, the same one never twice. | — |
 | **improve** | To put an improvement on a tile where a worker stands; what an improvement action does. | lay, build, place, install |
-| **yield** | What a tile's layers give at income, resource by resource. | output, produce, harvest |
+| **yield** | What a tile's layers and the river running along it give at income, resource by resource. | output, produce, harvest |
 | **claim** | To spend culture on a tile adjacent to one the city owns; free of cards. | buy, purchase, expand, annex |
 | **culture** | The resource that claims tiles. | — |
 | **culture threshold** | The culture the next claim costs; rises with the tiles the city holds. | claim cost, step, price |

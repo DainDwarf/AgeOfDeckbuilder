@@ -692,14 +692,17 @@ function spent(units: readonly Unit[], at: TileCoords): Unit[] {
   );
 }
 
-/** Income: an assigned tile yields what its layers give, the city's own tile no exception. */
+/**
+ * Income: an assigned tile yields what its layers and the river running along it give, the city's
+ * own tile no exception.
+ */
 function income(chronicle: Chronicle): Chronicle {
   const assigned = new Set(chronicle.assigned.map(tileKey));
   const resources = { ...chronicle.resources };
   for (const tile of chronicle.tiles) {
     if (!assigned.has(tileKey(tile))) continue;
     if (unitAt(chronicle.units, tile)?.faction === 'enemy') continue;
-    const yields = tileYield(tile);
+    const yields = tileYield(tile, chronicle.rivers);
     for (const resource of RESOURCES) resources[resource] += yields[resource] ?? 0;
   }
   return RESOURCES.every((resource) => resources[resource] === chronicle.resources[resource])

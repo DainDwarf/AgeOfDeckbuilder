@@ -7,6 +7,9 @@ import {
   type FeatureId,
   IMPROVEMENTS,
   type ImprovementId,
+  RIVER_YIELDS,
+  type River,
+  runsAlong,
   TERRAIN_YIELDS,
   type Terrain,
   type Tile,
@@ -19,6 +22,7 @@ import {
   buildingMark,
   featureMark,
   improvementMark,
+  riverMark,
   type TileFace,
   terrainMark,
   unitMark,
@@ -26,16 +30,23 @@ import {
 import { text } from './text';
 import { createTooltip } from './tooltip';
 
-/** One thing a tile is made of. A tile is its layers, outermost first. */
+/**
+ * One card an inspection steps through: a tile's layers, outermost first, and after the last of
+ * them the river running along the tile. The river's own card carries the terrain it gives on.
+ */
 export type Layer =
   | { readonly kind: 'unit'; readonly unit: Unit }
   | { readonly kind: 'building'; readonly building: BuildingTypeId }
   | { readonly kind: 'improvement'; readonly improvement: ImprovementId }
   | { readonly kind: 'feature'; readonly feature: FeatureId }
-  | { readonly kind: 'terrain'; readonly terrain: Terrain };
+  | { readonly kind: 'terrain'; readonly terrain: Terrain }
+  | { readonly kind: 'river'; readonly terrain: Terrain };
 
-/** What a tile is made of right now: the layers it has, the absent ones left out. */
-export function layersOf(tile: Tile, units: readonly Unit[]): Layer[] {
+/**
+ * What a tile is made of right now: the layers it has, the absent ones left out, and the river
+ * running along it after them.
+ */
+export function layersOf(tile: Tile, units: readonly Unit[], rivers: readonly River[]): Layer[] {
   const unit = unitAt(units, tile);
   const layers: Layer[] = [];
   if (unit !== undefined) layers.push({ kind: 'unit', unit });
@@ -43,6 +54,7 @@ export function layersOf(tile: Tile, units: readonly Unit[]): Layer[] {
   for (const improvement of tile.improvements) layers.push({ kind: 'improvement', improvement });
   if (tile.feature !== undefined) layers.push({ kind: 'feature', feature: tile.feature });
   layers.push({ kind: 'terrain', terrain: tile.terrain });
+  if (runsAlong(rivers, tile)) layers.push({ kind: 'river', terrain: tile.terrain });
   return layers;
 }
 
@@ -297,6 +309,8 @@ function headOf(
       return { mark: featureMark(scene, layer.feature), name: text(`feature.${layer.feature}`) };
     case 'terrain':
       return { mark: terrainMark(scene, layer.terrain), name: text(`terrain.${layer.terrain}`) };
+    case 'river':
+      return { mark: riverMark(scene), name: text('river') };
   }
 }
 
@@ -318,6 +332,8 @@ function rowsOf(layer: Layer): Row[] {
       return yieldRows(FEATURES[layer.feature].yields);
     case 'terrain':
       return yieldRows(TERRAIN_YIELDS[layer.terrain]);
+    case 'river':
+      return yieldRows(RIVER_YIELDS[layer.terrain] ?? {});
   }
 }
 

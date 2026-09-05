@@ -77,10 +77,14 @@ const FEATURE_MARKS: Record<FeatureId, number[]> = {
 
 const FEATURE_COLOURS: Record<FeatureId, number> = { PH_Fertile: 0x4a7a2d };
 
-/** Placeholder primitives until the art pass: a river a line along its corners, in its own blue. */
+/**
+ * Placeholder primitives until the art pass: a river a line along its corners on the map, and a
+ * bent band where it stands as a mark of its own, both in its own blue.
+ */
 const RIVER_COLOUR = 0x62a9e0;
 const RIVER_WIDTH = 5;
 const RIVER_OUTLINE_WIDTH = 7;
+const RIVER_MARK: number[] = corners([-12, -12, -4, 0, 4, -8, 12, 4, 12, 12, 4, 0, -4, 8, -12, -4]);
 
 /** Placeholder primitives until the art pass: the mine a cut into the ground. */
 const IMPROVEMENT_MARKS: Record<ImprovementId, number[]> = {
@@ -252,6 +256,11 @@ export function featureMark(scene: Phaser.Scene, feature: FeatureId): Phaser.Gam
   return scene.add
     .polygon(0, 0, FEATURE_MARKS[feature], FEATURE_COLOURS[feature])
     .setStrokeStyle(1, OUTLINE);
+}
+
+/** The one way a river is drawn off the map: its placeholder mark, in the blue a river runs in. */
+export function riverMark(scene: Phaser.Scene): Phaser.GameObjects.Polygon {
+  return scene.add.polygon(0, 0, RIVER_MARK, RIVER_COLOUR).setStrokeStyle(1, OUTLINE);
 }
 
 /** The one way an improvement is drawn: its placeholder mark, in the stone everything worked is. */
@@ -766,7 +775,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
     const inside = new Set(marking ? shown.held.map(tileKey) : []);
     for (const tile of shown.tiles) {
       const asked = inside.has(tileKey(tile)) ? EVERY_RESOURCE : showing;
-      const yields = tileYield(tile);
+      const yields = tileYield(tile, shown.rivers);
       const owed: Resource[] = [];
       for (const resource of RESOURCES) {
         if (!asked.has(resource)) continue;

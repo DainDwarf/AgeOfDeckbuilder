@@ -237,10 +237,14 @@ export function scrolled(page: Page): Promise<{ offset: number; overflow: number
 export type Run = { readonly seed: number; readonly turn: number; readonly tile: TileCoords };
 
 /**
- * The first seed with a turn in its first eight that opens on such a run; `on` narrows which tile
- * counts, for a spec that needs a particular layer standing on it.
+ * The first seed with a turn in its first eight that opens on such a run; `on` narrows which run
+ * counts — the tile the march lands on, and the chronicle it lands in — for a spec that needs a
+ * particular layer standing on that tile, or the generator to have left another one clear.
  */
-export function workerRun(card: CardId, on: (tile: Tile) => boolean = () => true): Run {
+export function workerRun(
+  card: CardId,
+  on: (tile: Tile, chronicle: Chronicle) => boolean = () => true,
+): Run {
   for (let seed = 1; seed <= 1000; seed++) {
     let chronicle = beginChronicle(seed, DECKS.PH_Deck);
     for (let turn = 1; turn <= 8; turn++) {
@@ -268,7 +272,7 @@ export function fallRun(): { seed: number; turns: number } {
 function workedThisTurn(
   chronicle: Chronicle,
   card: CardId,
-  on: (tile: Tile) => boolean,
+  on: (tile: Tile, chronicle: Chronicle) => boolean,
 ): TileCoords | undefined {
   const enter = chronicle.hand.indexOf('PH_Worker');
   if (enter === -1 || !playable(refusalOf(chronicle, 'PH_Worker'))) return undefined;
@@ -287,7 +291,7 @@ function workedThisTurn(
     );
     if (moved === entered || !playable(refusalOf(moved, card))) continue;
     const standing = tileAt(moved.tiles, tile);
-    if (standing === undefined || !on(standing)) continue;
+    if (standing === undefined || !on(standing, moved)) continue;
     if (targetTiles(moved, card).some((coord) => tileKey(coord) === tileKey(tile))) return tile;
   }
   return undefined;

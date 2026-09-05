@@ -23,10 +23,10 @@ async function answered(page: Page): Promise<void> {
 
 /** How many glyphs each resource is owed: one for every point the tiles of the map yield of it. */
 async function owed(page: Page): Promise<Glyphs> {
-  const { tiles } = await chronicleOf(page);
+  const { tiles, rivers } = await chronicleOf(page);
   const total = noGlyphs();
   for (const tile of tiles) {
-    const yields = tileYield(tile);
+    const yields = tileYield(tile, rivers);
     for (const resource of RESOURCES) total[resource] += yields[resource] ?? 0;
   }
   return total;
@@ -45,11 +45,11 @@ async function only(page: Page, ...resources: Resource[]): Promise<Glyphs> {
  * the border shows its whole yield, and every other tile what the overlay is asked for.
  */
 async function withCityMode(page: Page, ...resources: Resource[]): Promise<Glyphs> {
-  const { tiles, held } = await chronicleOf(page);
+  const { tiles, held, rivers } = await chronicleOf(page);
   const inside = new Set(held.map(tileKey));
   const shown = noGlyphs();
   for (const tile of tiles) {
-    const yields = tileYield(tile);
+    const yields = tileYield(tile, rivers);
     for (const resource of inside.has(tileKey(tile)) ? RESOURCES : resources) {
       shown[resource] += yields[resource] ?? 0;
     }

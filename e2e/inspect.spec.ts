@@ -1,7 +1,16 @@
 import { expect, type Page, test } from '@playwright/test';
 import { DECKS } from '../src/rules/cards';
-import { beginChronicle } from '../src/rules/chronicle';
-import { neighbours, tileKey } from '../src/rules/map';
+import { beginChronicle, type Chronicle } from '../src/rules/chronicle';
+import {
+  neighbours,
+  RIVER_YIELDS,
+  runsAlong,
+  type Terrain,
+  type TileCoords,
+  tileAt,
+  tileKey,
+} from '../src/rules/map';
+import { text } from '../src/ui/text';
 import {
   aimed,
   chronicleOf,
@@ -62,6 +71,63 @@ function featureRun(): { seed: number; key: string } {
   throw new Error('no seed under a thousand puts a feature beside the city');
 }
 
+/** The tile west of one: the panel stands east of the tile it reads, so this one is clear of it. */
+function westOf({ q, r }: TileCoords): TileCoords {
+  return { q: q - 1, r };
+}
+
+/**
+ * A chronicle whose city tile and the tile west of it hold nothing but what the spec steps: no
+ * river runs along either, and the west one is bare, so each ends on the bare ring after its
+ * terrain.
+ */
+function stepsClear(chronicle: Chronicle): boolean {
+  const west = tileAt(chronicle.tiles, westOf(chronicle.city));
+  return (
+    west !== undefined &&
+    west.feature === undefined &&
+    west.building === undefined &&
+    west.improvements.length === 0 &&
+    !runsAlong(chronicle.rivers, chronicle.city) &&
+    !runsAlong(chronicle.rivers, west)
+  );
+}
+
+/**
+ * The first seed whose generator runs a river along a bare tile of a terrain a river feeds, touching
+ * the city and so well inside the frame.
+ */
+function riverRun(): { seed: number; key: string; terrain: Terrain } {
+  for (let seed = 1; seed <= 1000; seed++) {
+    const { tiles, city, rivers } = beginChronicle(seed, DECKS.PH_Deck);
+    const touching = new Set(neighbours(city).map(tileKey));
+    const found = tiles.find(
+      (tile) =>
+        touching.has(tileKey(tile)) &&
+        tile.feature === undefined &&
+        RIVER_YIELDS[tile.terrain] !== undefined &&
+        runsAlong(rivers, tile),
+    );
+    if (found !== undefined) return { seed, key: tileKey(found), terrain: found.terrain };
+  }
+  throw new Error('no seed under a thousand runs a river along a fed tile beside the city');
+}
+
+/** What the card the infopanel is standing reads, line by line: its name, then its rows. */
+function panelLines(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const panel = window.named?.('infopanel')?.object as Phaser.GameObjects.Container | undefined;
+    if (panel === undefined) throw new Error('the infopanel is not on the chronicle screen');
+    return panel.list
+      .filter((object) => object.type === 'Container')
+      .flatMap((card) =>
+        (card as Phaser.GameObjects.Container).list
+          .filter((part) => part.type === 'Text')
+          .map((part) => (part as Phaser.GameObjects.Text).text),
+      );
+  });
+}
+
 test('a tile the generator gave a feature shows its mark, and inspects as a layer of its own', async ({
   page,
 }) => {
@@ -83,11 +149,39 @@ test('a tile the generator gave a feature shows its mark, and inspects as a laye
   expect(problems).toEqual([]);
 });
 
+test('a tile a river runs along inspects the river after its terrain, on what the river gives it', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const run = riverRun();
+
+  await open(page, run.seed, 'PH_Deck');
+
+  // Nothing stands on it and nothing is built on it: the terrain and the river are all it inspects.
+  const at = await onScreen(page, `tile-${run.key}`);
+  await page.mouse.click(at.x, at.y);
+  await expect.poll(() => ringedTile(page)).toBe(run.key);
+  await page.keyboard.press('i');
+  await expect.poll(() => shownLayer(page)).toBe('terrain');
+
+  await page.keyboard.press('i');
+  await expect.poll(() => shownLayer(page)).toBe('river');
+  await expect
+    .poll(() => panelLines(page))
+    .toEqual([text('river'), text('label.food'), `+${RIVER_YIELDS[run.terrain]?.food}`]);
+
+  await page.keyboard.press('i');
+  await expect.poll(() => shownLayer(page)).toBeUndefined();
+  expect(await ringedTile(page)).toBe(run.key);
+
+  expect(problems).toEqual([]);
+});
+
 test('a click selects a tile, the inspection key steps its layers, and the back key drops each in turn', async ({
   page,
 }) => {
   const problems = watch(page);
-  const run = workerRun('PH_Farm');
+  const run = workerRun('PH_Farm', (_, chronicle) => stepsClear(chronicle));
 
   await open(page, run.seed, 'PH_Deck');
   for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
@@ -138,9 +232,8 @@ test('a click selects a tile, the inspection key steps its layers, and the back 
   await expect.poll(() => ringedTile(page)).toBeUndefined();
   expect(await standing(page, 'menu')).toBe(false);
 
-  // West of the city: nothing stands on it, and it is clear of the panel standing east of the city.
-  const { q, r } = entered.units[0].tile;
-  const bareTile = tileKey({ q: q - 1, r });
+  // West of the city: the run leaves nothing on it, and it is clear of the panel the city raises.
+  const bareTile = tileKey(westOf(entered.city));
   const bare = await onScreen(page, `tile-${bareTile}`);
   await page.mouse.click(bare.x, bare.y);
   await expect.poll(() => ringedTile(page)).toBe(bareTile);

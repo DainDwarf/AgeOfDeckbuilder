@@ -57,6 +57,12 @@ export const TERRAIN_YIELDS: Record<Terrain, Partial<Resources>> = {
   urban: { production: 1, military: 1, money: 1, science: 1, culture: 1 },
 };
 
+/** What a river adds to a tile it runs along, terrain by terrain: a terrain left out takes nothing. */
+export const RIVER_YIELDS: Partial<Record<Terrain, Partial<Resources>>> = {
+  plain: { food: 1 },
+  forest: { food: 1 },
+};
+
 /** Which terrains a unit crosses and stands on, terrain by terrain. */
 const TERRAIN_PASSABLE: Record<Terrain, boolean> = {
   plain: true,
@@ -185,10 +191,11 @@ export type Tile = TileCoords & {
 export const CITY_TILE: TileCoords = { q: 0, r: 0 };
 
 /**
- * What a tile's layers give at income, resource by resource: the one answer income and the yield
- * overlay both read. A resource left out is none of it.
+ * What a tile's layers and the river running along it give at income, resource by resource: the one
+ * answer income and the yield overlay both read. A resource left out is none of it. However many
+ * edges the rivers run along, the tile takes what its terrain draws from them once.
  */
-export function tileYield(tile: Tile): Partial<Resources> {
+export function tileYield(tile: Tile, rivers: readonly River[]): Partial<Resources> {
   const summed: Partial<Resources> = { ...TERRAIN_YIELDS[tile.terrain] };
   const add = (yields: Partial<Resources>): void => {
     for (const [resource, amount] of Object.entries(yields) as [Resource, number][]) {
@@ -198,6 +205,7 @@ export function tileYield(tile: Tile): Partial<Resources> {
   if (tile.feature !== undefined) add(FEATURES[tile.feature].yields);
   for (const improvement of tile.improvements) add(IMPROVEMENTS[improvement].yields);
   if (tile.building !== undefined) add(BUILDINGS[tile.building].yields);
+  if (runsAlong(rivers, tile)) add(RIVER_YIELDS[tile.terrain] ?? {});
   return summed;
 }
 
@@ -290,6 +298,20 @@ export function cornersBeside(corner: Corner): Corner[] {
 export function tilesOfEdge(from: Corner, to: Corner): TileCoords[] {
   const beside = new Set(tilesAtCorner(to).map(tileKey));
   return tilesAtCorner(from).filter((coord) => beside.has(tileKey(coord)));
+}
+
+/**
+ * Whether one of the rivers runs along the tile. A river's corners stand one edge apart, so two
+ * consecutive ones that are both corners of the tile are one of its six edges.
+ */
+export function runsAlong(rivers: readonly River[], coord: TileCoords): boolean {
+  const around = new Set(cornersOf(coord).map(cornerKey));
+  return rivers.some((river) =>
+    river.some(
+      (corner, at) =>
+        at > 0 && around.has(cornerKey(river[at - 1])) && around.has(cornerKey(corner)),
+    ),
+  );
 }
 
 /** The one weighted draw of the generator: one roll of the seeded generator over the weights given. */
