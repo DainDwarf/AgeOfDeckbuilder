@@ -3,9 +3,11 @@ import {
   type Chronicle,
   growthThreshold,
   idle,
+  RESOURCES,
   type Resource,
   type Stage,
 } from '../rules/chronicle';
+import { layOutBar, type Placed, type Zone } from './bar-layout';
 import { EASE, ended, stopMotion } from './card-motion';
 import {
   addText,
@@ -32,13 +34,9 @@ const VALUE_STYLE = { fontFamily: UI_FONT, fontSize: '18px', color: '#0d1014' };
 
 const CHIP_TO_WORD = 18;
 const WORD_TO_VALUE = 8;
-const BETWEEN = 22;
 
 const MENU_HEIGHT = 32;
 const MENU_PADDING = 12;
-
-/** How far a latched reading's well reaches past the reading on either side. */
-const WELL_MARGIN = 10;
 
 /** The well a latched reading sits in: its floor, the edge it is cut into, and the light beneath. */
 const WELL_FILL = 0xb4b9c0;
@@ -60,8 +58,8 @@ export const RESOURCE_COLOURS: Record<Reading, number> = {
   population: 0x6b6b7d,
 };
 
-const LEFT: readonly Reading[] = ['food', 'production', 'military', 'money', 'science'];
-const RIGHT: readonly Reading[] = ['culture', 'population'];
+/** The readings the bar carries, in the order it reads them. */
+const READINGS: readonly Reading[] = [...RESOURCES, 'population'];
 
 /** The readings the city is managed by: pressing either of them enters city mode. */
 const CITY_READINGS = ['culture', 'population'] as const;
@@ -110,14 +108,17 @@ export function createResourceBar(
 
   const slot = digitSlot(scene);
 
-  const menuWidth = createMenuButton(scene, menu);
+  const label = menuLabel(scene);
+  const entries = READINGS.map((key) => createEntry(scene, bar, tooltip, key));
+  const layout = layOutBar({
+    readings: entries.map((entry) => widthOf(entry, slot)),
+    menu: label.width + 2 * MENU_PADDING,
+    width: DESIGN_WIDTH,
+    margin: MARGIN,
+  });
+  createMenuButton(scene, label, layout.menu, menu);
+  for (const [index, placed] of layout.readings.entries()) place(entries[index], placed);
 
-  const left = LEFT.map((key) => createEntry(scene, bar, tooltip, key));
-  const right = RIGHT.map((key) => createEntry(scene, bar, tooltip, key));
-  place(left, MARGIN, slot);
-  place(right, DESIGN_WIDTH - MARGIN - menuWidth - BETWEEN - spanOf(right, slot), slot);
-
-  const entries = [...left, ...right];
   for (const entry of entries) {
     const { key } = entry;
     if (managesCity(key)) onClick(entry.hover, cityMode);
@@ -180,19 +181,27 @@ export function createResourceBar(
   };
 }
 
+/** The Menu button's label, measured before the bar is laid out: the flow ends at its width. */
+function menuLabel(scene: Phaser.Scene): Phaser.GameObjects.Text {
+  return addText(scene, 0, 0, text('menu.menu'), VALUE_STYLE).setOrigin(0.5, 0.5);
+}
+
 /**
- * The Menu button at the bar's right end, and how wide it came out. It stands over the scrim
+ * The Menu button, in the zone the layout gave it at the bar's right end. It stands over the scrim
  * instead of in the bar, so it is still pressable while a window or the defeat screen covers the
  * chronicle screen: a new chronicle is how a player leaves a defeat.
  */
-function createMenuButton(scene: Phaser.Scene, pressed: () => void): number {
-  const label = addText(scene, 0, 0, text('menu.menu'), VALUE_STYLE).setOrigin(0.5, 0.5);
-  const width = label.width + 2 * MENU_PADDING;
-  const x = DESIGN_WIDTH - MARGIN - width / 2;
+function createMenuButton(
+  scene: Phaser.Scene,
+  label: Phaser.GameObjects.Text,
+  zone: Zone,
+  pressed: () => void,
+): void {
+  const x = zone.x + zone.width / 2;
   const y = BAR_HEIGHT / 2;
 
   const button = scene.add
-    .rectangle(x, y, width, MENU_HEIGHT, PANEL_FILL)
+    .rectangle(x, y, zone.width, MENU_HEIGHT, PANEL_FILL)
     .setStrokeStyle(1, PANEL_EDGE)
     .setName('menu-button')
     .setInteractive({ useHandCursor: true });
@@ -201,7 +210,6 @@ function createMenuButton(scene: Phaser.Scene, pressed: () => void): number {
   // standing beside the button rather than inside it would be painted over by it.
   scene.add.container(0, 0, [button, label]).setDepth(OVER_SCRIM_DEPTH);
   onClick(button, pressed);
-  return width;
 }
 
 /**
@@ -270,28 +278,15 @@ function widthOf({ word }: Entry, slot: number): number {
   return CHIP_TO_WORD + word.width + WORD_TO_VALUE + slot;
 }
 
-function spanOf(entries: Entry[], slot: number): number {
-  return entries.reduce(
-    (total, entry, index) => total + widthOf(entry, slot) + (index > 0 ? BETWEEN : 0),
-    0,
-  );
-}
-
-function place(entries: Entry[], from: number, slot: number): void {
+/** One reading where the layout stands it: the press covers the zone the well is drawn in. */
+function place(entry: Entry, { at, zone }: Placed): void {
   const middle = BAR_HEIGHT / 2;
-  let x = from;
-  for (const entry of entries) {
-    const { chip, word, value, hover, well } = entry;
-    chip.setPosition(x + 5, middle);
-    word.setPosition(x + CHIP_TO_WORD, middle);
-    value.setPosition(x + CHIP_TO_WORD + word.width + WORD_TO_VALUE, middle);
-    // The press reaches as far as the well the latch draws, so a reading is pressed where it looks.
-    const wellX = x - WELL_MARGIN;
-    const wellWidth = widthOf(entry, slot) + 2 * WELL_MARGIN;
-    placeWell(well, wellX, wellWidth);
-    hover.setPosition(wellX, 0).setSize(wellWidth, BAR_HEIGHT - 1);
-    x += widthOf(entry, slot) + BETWEEN;
-  }
+  const { chip, word, value, hover, well } = entry;
+  chip.setPosition(at + 5, middle);
+  word.setPosition(at + CHIP_TO_WORD, middle);
+  value.setPosition(at + CHIP_TO_WORD + word.width + WORD_TO_VALUE, middle);
+  placeWell(well, zone.x, zone.width);
+  hover.setPosition(zone.x, 0).setSize(zone.width, BAR_HEIGHT - 1);
 }
 
 /**

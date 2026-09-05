@@ -39,6 +39,10 @@ a [`BOARD.md`](BOARD.md) line. Say
 - **Placeholder road card** (v0.0.3, with the movement-cost re-evaluation and fog): a stand-in
   improvement that changes a tile's movement cost, to check the scaffolding of an improvement
   that reads into movement.
+- **Biome growth weight** (v0.0.4, when the starting data sheds its placeholders and is balanced):
+  one number per biome in its table that weights the frontier draw of the spread, so a slow biome
+  comes out as a small compact patch and a fast one large and ragged; today every biome grows at
+  the same rate and only where its origin fell decides its size.
 - **Combat log**: a readable record of what the end of turn did — who attacked whom, what was
   killed, who moved where — for a player who missed the motion or wants it in words.
 - **The card-versus-management razor** (reconsider once the whole loop runs on real content):
