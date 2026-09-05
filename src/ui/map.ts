@@ -454,7 +454,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
 
   // Nothing a chronicle does moves a river, so they are stroked here and no render repaints them.
   // Every outline goes down on one surface under all the water, so two rivers meeting read as one
-  // course; the water above it is a surface per river, which is what carries the name.
+  // course.
   const outlines = scene.add.graphics();
   rivers.add(outlines);
   const along = chronicle.rivers.map((river) => river.map(cornerAt));
