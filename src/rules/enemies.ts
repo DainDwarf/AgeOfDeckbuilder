@@ -1,5 +1,13 @@
 import type { Chronicle } from './chronicle';
-import { distance, MAP_COMPOSITION, neighbours, type Tile, type TileCoords, tileKey } from './map';
+import {
+  distance,
+  MAP_COMPOSITION,
+  neighbours,
+  passable,
+  type Tile,
+  type TileCoords,
+  tileKey,
+} from './map';
 import { nextRng } from './rng';
 import { leastHealth, reachable, UNIT_STATS, unitAt } from './units';
 
@@ -26,7 +34,7 @@ export const ENEMY_SCRIPTS: Record<EnemyScriptId, EnemyScript> = {
       const target = nearest(chronicle, unit.tile);
       if (target === undefined) return unit.tile;
 
-      const away = landDistances(chronicle.tiles, target);
+      const away = pathDistances(chronicle.tiles, target);
       const landings = [unit.tile, ...reachable(chronicle.tiles, chronicle.units, unit)];
       let chosen = unit.tile;
       let shortest = Number.POSITIVE_INFINITY;
@@ -50,14 +58,14 @@ export const ENEMY_SCRIPTS: Record<EnemyScriptId, EnemyScript> = {
 };
 
 /**
- * `PH_Arrival`, the one event the stand-in schedule holds: one enemy lands on a free land tile of
- * the map's rim, drawn from the seeded generator. With no rim tile free it places nothing.
+ * `PH_Arrival`, the one event the stand-in schedule holds: one enemy lands on a free tile of the
+ * map's rim it can stand on, drawn from the seeded generator. With no such tile it places nothing.
  */
 export function arrival(chronicle: Chronicle): Chronicle {
   const rim = chronicle.tiles.filter(
     (tile) =>
       distance(tile, chronicle.city) === MAP_COMPOSITION.radius &&
-      tile.terrain !== 'water' &&
+      passable(tile.terrain) &&
       unitAt(chronicle.units, tile) === undefined,
   );
   if (rim.length === 0) return chronicle;
@@ -79,9 +87,9 @@ export function arrival(chronicle: Chronicle): Chronicle {
   };
 }
 
-/** What an enemy moves toward: the player's unit or the city the fewest tiles of land away. */
+/** What an enemy moves toward: the player's unit or the city the fewest tiles away it can cross to. */
 function nearest(chronicle: Chronicle, from: TileCoords): TileCoords | undefined {
-  const gaps = landDistances(chronicle.tiles, from);
+  const gaps = pathDistances(chronicle.tiles, from);
   const targets = chronicle.units
     .filter((unit) => unit.faction === 'player')
     .map((unit) => unit.tile);
@@ -105,10 +113,10 @@ function inTileOrder(tiles: readonly Tile[], coords: readonly TileCoords[]): Til
 }
 
 /**
- * How many tiles of land every tile lies from a start, whatever stands on them. A tile no land path
- * reaches is absent, and so is water.
+ * How many tiles every tile lies from a start over ground a unit crosses, whatever stands on them.
+ * A tile no such path reaches is absent, and so is every impassable one.
  */
-function landDistances(tiles: readonly Tile[], from: TileCoords): Map<string, number> {
+function pathDistances(tiles: readonly Tile[], from: TileCoords): Map<string, number> {
   const ground = new Map(tiles.map((tile) => [tileKey(tile), tile.terrain]));
   const gaps = new Map([[tileKey(from), 0]]);
 
@@ -119,8 +127,7 @@ function landDistances(tiles: readonly Tile[], from: TileCoords): Map<string, nu
       for (const coord of neighbours(at)) {
         const key = tileKey(coord);
         if (gaps.has(key)) continue;
-        const terrain = ground.get(key);
-        if (terrain === undefined || terrain === 'water') continue;
+        if (!passable(ground.get(key))) continue;
         gaps.set(key, step);
         next.push(coord);
       }

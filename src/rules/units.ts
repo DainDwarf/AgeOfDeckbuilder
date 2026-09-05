@@ -1,5 +1,5 @@
 import type { EnemyScriptId } from './enemies';
-import { distance, neighbours, type Tile, type TileCoords, tileKey } from './map';
+import { distance, neighbours, passable, type Tile, type TileCoords, tileKey } from './map';
 
 /** Who a unit acts for. The player commands theirs; an enemy attacks them. */
 export type Faction = 'player' | 'enemy';
@@ -62,8 +62,7 @@ export function reachable(
       for (const coord of neighbours(from)) {
         const at = tileKey(coord);
         if (seen.has(at)) continue;
-        const ground = terrain.get(at);
-        if (ground === undefined || ground === 'water') continue;
+        if (!passable(terrain.get(at))) continue;
         const held = standing.get(at);
         if (held !== undefined && held !== unit.faction) continue;
         seen.add(at);

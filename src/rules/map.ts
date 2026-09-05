@@ -5,6 +5,7 @@ import { nextRng, type Rng, shuffle } from './rng';
 export const BIOME_TERRAINS = {
   land: { plain: 0.55, forest: 0.25, hills: 0.2 },
   sea: { water: 0.92, plain: 0.08 },
+  mountain: { mountain: 0.7, hills: 0.3 },
 } satisfies Record<string, Record<string, number>>;
 
 export type Biome = keyof typeof BIOME_TERRAINS;
@@ -20,9 +21,25 @@ export const TERRAIN_YIELDS: Record<Terrain, Partial<Resources>> = {
   plain: { food: 2 },
   forest: { food: 1, production: 1 },
   hills: { production: 2 },
+  mountain: { production: 1 },
   water: { food: 1, money: 1 },
   urban: { production: 1, military: 1, money: 1, science: 1, culture: 1 },
 };
+
+/** Which terrains a unit crosses and stands on, terrain by terrain. */
+const TERRAIN_PASSABLE: Record<Terrain, boolean> = {
+  plain: true,
+  forest: true,
+  hills: true,
+  mountain: false,
+  water: false,
+  urban: true,
+};
+
+/** Whether a unit can cross a terrain: the one answer every path over the map asks. Off the map is not. */
+export function passable(terrain: Terrain | undefined): boolean {
+  return terrain !== undefined && TERRAIN_PASSABLE[terrain];
+}
 
 /** `PH_` marks a stand-in: none of these is authored content, and all of them go. */
 export type BuildingTypeId = 'PH_City' | 'PH_Farm';
@@ -60,7 +77,10 @@ export const MAP_COMPOSITION = {
   tilesPerBiome: 26,
   minBiomes: 5,
   cityBiome: 'land',
-  biomeShares: [{ biome: 'sea', share: 0.3 }],
+  biomeShares: [
+    { biome: 'sea', share: 0.3 },
+    { biome: 'mountain', share: 0.1 },
+  ],
   featureShares: [{ feature: 'PH_Fertile', share: 1 / 6 }],
 } satisfies {
   radius: number;

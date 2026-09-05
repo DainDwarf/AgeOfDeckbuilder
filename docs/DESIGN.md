@@ -299,8 +299,8 @@ no retaliation: the target answers only when its own attack comes, so a fight is
 exchange across turns, never within one blow.
 
 - **Moving costs one per tile.** An order moves a unit up to its move, every tile crossed costing
-  one. Water is impassable. A unit passes through the units of its own faction and never through
-  another's, and it lands only on a free tile.
+  one. Water and mountain are impassable. A unit passes through the units of its own faction and
+  never through another's, and it lands only on a free tile.
 - **One attack rule.** In combat every fighting unit attacks an enemy within its range; a melee
   unit's range is one. An order that moves a fighting unit next to an enemy attacks on arrival
   as well. A unit that stands still is a garrison by that rule alone.

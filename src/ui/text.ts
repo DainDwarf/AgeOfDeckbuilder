@@ -28,6 +28,7 @@ const TEXT = {
   'terrain.plain': 'Plain',
   'terrain.forest': 'Forest',
   'terrain.hills': 'Hills',
+  'terrain.mountain': 'Mountain',
   'terrain.water': 'Water',
   'terrain.urban': 'Urban',
   'feature.PH_Fertile': 'PH_Fertile',

@@ -43,6 +43,7 @@ const TERRAIN_COLOURS: Record<Terrain, number> = {
   plain: 0x7d9c55,
   forest: 0x2f6f4e,
   hills: 0x9a8555,
+  mountain: 0x6b5f57,
   water: 0x3d6d9e,
   urban: 0x8f8f9c,
 };

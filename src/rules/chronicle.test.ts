@@ -110,6 +110,12 @@ function field(radius: number, water: TileCoords[] = []): Tile[] {
   return tiles;
 }
 
+/** The same tiles, with the terrain of the named ones replaced. */
+function madeOf(tiles: Tile[], terrain: Terrain, coords: TileCoords[]): Tile[] {
+  const named = new Set(coords.map(tileKey));
+  return tiles.map((tile) => (named.has(tileKey(tile)) ? { ...tile, terrain } : tile));
+}
+
 function statsOf(stats: Partial<UnitStats>): UnitStats {
   return { id: 'PH_Warrior', health: 4, damage: 1, range: 1, move: 2, ...stats };
 }
@@ -207,7 +213,7 @@ function workedTile(
   carrying: Partial<Chronicle> = {},
 ): Chronicle {
   return founded(2, {
-    tiles: field(2).map((tile) => (tileKey(tile) === tileKey(at) ? { ...tile, terrain } : tile)),
+    tiles: madeOf(field(2), terrain, [at]),
     units: [worker(at)],
     ...carrying,
   });
@@ -298,7 +304,7 @@ test('a chronicle opens on turn one, with empty stores and more inhabitants than
 });
 
 test('income yields every tile inside the border, and nothing outside it', () => {
-  const inside: Terrain[] = ['urban', 'plain', 'forest', 'hills', 'water'];
+  const inside: Terrain[] = ['urban', 'plain', 'forest', 'hills', 'mountain', 'water'];
 
   const after = outcome(apply(cityOf(inside, NO_GROWTH), { type: 'end-turn' }));
 
@@ -774,6 +780,18 @@ test('water is impassable, and so is everything only water leads to', () => {
   expect(outcome(apply(city, march(0, { q: 1, r: 1 }))).units[0].tile).toEqual({ q: 1, r: 1 });
 });
 
+test('a mountain is impassable, and so is everything only a mountain leads to', () => {
+  const city = cityOf(['urban'], {
+    tiles: madeOf(field(2), 'mountain', [{ q: 1, r: 0 }]),
+    hand: ['PH_March'],
+    units: [unitOf('player', CITY, { move: 2 })],
+  });
+
+  expect(outcome(apply(city, march(0, { q: 1, r: 0 })))).toEqual(city);
+  expect(outcome(apply(city, march(0, { q: 2, r: 0 })))).toEqual(city);
+  expect(outcome(apply(city, march(0, { q: 1, r: 1 }))).units[0].tile).toEqual({ q: 1, r: 1 });
+});
+
 test('a unit crosses its own faction but never lands on it', () => {
   const city = cityOf(['urban'], {
     tiles: field(2),
@@ -1057,7 +1075,7 @@ test('the mine card is refused on a tile no worker of the player’s stands on',
 
 test('the mine card is refused on every terrain but the hills it goes on', () => {
   const at = { q: 1, r: 0 };
-  for (const terrain of ['plain', 'forest', 'water', 'urban'] as Terrain[]) {
+  for (const terrain of ['plain', 'forest', 'mountain', 'water', 'urban'] as Terrain[]) {
     const city = workedTile(at, terrain, { hand: ['PH_Mine'], resources: production(3) });
 
     expect(improvable(city, 'PH_Mine')).toEqual([]);
@@ -1138,7 +1156,7 @@ test('a tile with a building in its slot is not terraformed', () => {
 
 test('the urbanisation card is refused on every terrain but the plain it terraforms', () => {
   const at = { q: 1, r: 0 };
-  for (const terrain of ['forest', 'hills', 'water', 'urban'] as Terrain[]) {
+  for (const terrain of ['forest', 'hills', 'mountain', 'water', 'urban'] as Terrain[]) {
     const city = workedTile(at, terrain, { hand: ['PH_Urbanisation'], resources: production(5) });
 
     expect(terraformable(city, 'plain')).toEqual([]);
@@ -1495,21 +1513,23 @@ test('where the enemy arrives is drawn from the seeded generator', () => {
   expect(arrivalOf(7)).not.toEqual(arrivalOf(8));
 });
 
-test('the enemy arrives on a free land tile of the rim, and on nothing else there is', () => {
+test('the enemy arrives on a free tile of the rim it can stand on, and on nothing else there is', () => {
   const rim = rimOf(MAP_COMPOSITION.radius);
-  const onlyDry = rim[3];
-  const dry = cityOf(['urban'], {
-    tiles: field(
-      MAP_COMPOSITION.radius,
-      rim.filter((coord) => tileKey(coord) !== tileKey(onlyDry)),
-    ),
+  const onlyOpen = rim[3];
+  /** A disc whose named rim tiles are impassable, half of them water and half of them mountain. */
+  const shut = (coords: TileCoords[]): Tile[] =>
+    madeOf(
+      field(MAP_COMPOSITION.radius, coords),
+      'mountain',
+      coords.filter((_, index) => index % 2 === 0),
+    );
+  const open = cityOf(['urban'], {
+    tiles: shut(rim.filter((coord) => tileKey(coord) !== tileKey(onlyOpen))),
   });
 
-  expect(toFifthTurn(dry).units[0].tile).toEqual(onlyDry);
-  expect(toFifthTurn({ ...dry, units: [worker(onlyDry)] }).units).toHaveLength(1);
-  expect(
-    toFifthTurn(cityOf(['urban'], { tiles: field(MAP_COMPOSITION.radius, rim) })).units,
-  ).toEqual([]);
+  expect(toFifthTurn(open).units[0].tile).toEqual(onlyOpen);
+  expect(toFifthTurn({ ...open, units: [worker(onlyOpen)] }).units).toHaveLength(1);
+  expect(toFifthTurn(cityOf(['urban'], { tiles: shut(rim) })).units).toEqual([]);
 });
 
 test('an enemy moves its move toward the city, turn after turn', () => {

@@ -66,6 +66,12 @@ test('every map has water, because sea is dealt and never diced', () => {
   }
 });
 
+test('every map has mountain, because the mountain biome is dealt and never diced', () => {
+  for (const seed of SEEDS) {
+    expect(mapOf(seed).some((tile) => tile.terrain === 'mountain')).toBe(true);
+  }
+});
+
 test('every map is dealt a share of every feature, so none of them is ever missing', () => {
   for (const seed of SEEDS) {
     const tiles = mapOf(seed);
