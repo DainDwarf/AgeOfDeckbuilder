@@ -23,6 +23,7 @@ import {
 import {
   BUILDINGS,
   type BuildingTypeId,
+  cornersOf,
   distance,
   FEATURES,
   IMPROVEMENTS,
@@ -72,6 +73,7 @@ function cityOf(inside: Terrain[], carrying: Partial<Chronicle> = {}): Chronicle
       ),
       { q: 0, r: 5, terrain: 'plain' as Terrain, improvements: [] },
     ],
+    rivers: [],
     city: CITY,
     held,
     turn: 1,
@@ -257,8 +259,8 @@ function afterCombat(chronicle: Chronicle): Chronicle {
   return last.chronicle;
 }
 
-/** Every tile of a disc at its rim: the ring an arrival draws from. */
-function rimOf(radius: number): TileCoords[] {
+/** Every tile of a disc at its outer ring: what an arrival draws from. */
+function outerRingOf(radius: number): TileCoords[] {
   return field(radius)
     .filter((tile) => distance(tile, CITY) === radius)
     .map(({ q, r }) => ({ q, r }));
@@ -1142,6 +1144,22 @@ test('a terraformed tile loses its feature and keeps the improvements on it', ()
   expect(after?.improvements).toEqual(['PH_Mine']);
 });
 
+test('a terraform leaves the rivers where they run: a river lies on no tile', () => {
+  const at = { q: 1, r: 0 };
+  /** A river along the edges of the tile that is terraformed: five corners of its own hexagon. */
+  const river = cornersOf(at).slice(0, 5);
+  const city = workedTile(at, 'plain', {
+    hand: ['PH_Urbanisation'],
+    resources: production(5),
+    rivers: [river],
+  });
+
+  const after = outcome(apply(city, aimedAt(at)));
+
+  expect(tileAt(after.tiles, at)?.terrain).toBe('urban');
+  expect(after.rivers).toEqual([river]);
+});
+
 test('a tile with a building in its slot is not terraformed', () => {
   const at = { q: 1, r: 0 };
   const city = withTile(
@@ -1487,7 +1505,7 @@ test('a card the city falls short for is refused for the resource it is short of
   expect(refusalOf(paid, 'PH_Farm')).toEqual({ unaffordable: [], blocked: [] });
 });
 
-test('an enemy arrives on the rim of the map on every fifth turn, and on no turn between', () => {
+test('an enemy arrives on the outer ring of the map on every fifth turn, and on no turn between', () => {
   let chronicle = cityOf(['urban'], { tiles: field(MAP_COMPOSITION.radius) });
 
   for (let turn = 2; turn <= 4; turn++) {
@@ -1513,10 +1531,10 @@ test('where the enemy arrives is drawn from the seeded generator', () => {
   expect(arrivalOf(7)).not.toEqual(arrivalOf(8));
 });
 
-test('the enemy arrives on a free tile of the rim it can stand on, and on nothing else there is', () => {
-  const rim = rimOf(MAP_COMPOSITION.radius);
-  const onlyOpen = rim[3];
-  /** A disc whose named rim tiles are impassable, half of them coast and half of them mountain. */
+test('the enemy arrives on a free tile of the outer ring it can stand on, and on nothing else', () => {
+  const ring = outerRingOf(MAP_COMPOSITION.radius);
+  const onlyOpen = ring[3];
+  /** A disc whose named outer tiles are impassable, half of them coast and half of them mountain. */
   const shut = (coords: TileCoords[]): Tile[] =>
     madeOf(
       field(MAP_COMPOSITION.radius, coords),
@@ -1524,12 +1542,12 @@ test('the enemy arrives on a free tile of the rim it can stand on, and on nothin
       coords.filter((_, index) => index % 2 === 0),
     );
   const open = cityOf(['urban'], {
-    tiles: shut(rim.filter((coord) => tileKey(coord) !== tileKey(onlyOpen))),
+    tiles: shut(ring.filter((coord) => tileKey(coord) !== tileKey(onlyOpen))),
   });
 
   expect(toFifthTurn(open).units[0].tile).toEqual(onlyOpen);
   expect(toFifthTurn({ ...open, units: [worker(onlyOpen)] }).units).toHaveLength(1);
-  expect(toFifthTurn(cityOf(['urban'], { tiles: shut(rim) })).units).toEqual([]);
+  expect(toFifthTurn(cityOf(['urban'], { tiles: shut(ring) })).units).toEqual([]);
 });
 
 test('an enemy moves its move toward the city, turn after turn', () => {
@@ -1722,7 +1740,7 @@ test('an enemy on the city’s tile declares nothing, and captures the city the 
   expect(fallen.turn).toBe(stood.turn);
 });
 
-test('the enemy that moves in from the rim reaches the city and captures it', () => {
+test('the enemy that moves in from the outer ring reaches the city and captures it', () => {
   let chronicle = cityOf(['urban'], { tiles: field(MAP_COMPOSITION.radius) });
   for (let turn = 0; turn < 20 && chronicle.defeat === undefined; turn++) {
     chronicle = outcome(apply(chronicle, { type: 'end-turn' }));

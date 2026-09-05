@@ -8,6 +8,7 @@ import {
   IMPROVEMENTS,
   type ImprovementId,
   neighbours,
+  type River,
   type Terrain,
   type Tile,
   type TileCoords,
@@ -35,6 +36,8 @@ export type Chronicle = {
   readonly seed: number;
   readonly rng: Rng;
   readonly tiles: Tile[];
+  /** The rivers the generator ran, each the corners it passes through along the edges between tiles. */
+  readonly rivers: River[];
   readonly city: TileCoords;
   readonly held: TileCoords[];
   readonly turn: number;
@@ -135,6 +138,7 @@ export function beginChronicle(seed: number, deck: readonly CardId[]): Chronicle
           seed,
           rng: shuffled.rng,
           tiles,
+          rivers: map.rivers,
           city: CITY_TILE,
           held,
           turn: 1,
@@ -606,7 +610,7 @@ function order(paid: Chronicle, target: Target | undefined): Stage[] | undefined
   ];
 }
 
-/** The schedule stands in at one event: `PH_Arrival` brings an enemy to the rim every fifth turn. */
+/** The schedule stands in at one event: `PH_Arrival` brings an enemy to the outer ring every fifth turn. */
 function events(chronicle: Chronicle): Chronicle {
   return chronicle.turn % 5 === 0 ? arrival(chronicle) : chronicle;
 }

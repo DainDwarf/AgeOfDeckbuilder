@@ -54,11 +54,11 @@ export function reachable(
 
   const seen = new Set([tileKey(unit.tile)]);
   const landings: TileCoords[] = [];
-  let edge: TileCoords[] = [unit.tile];
+  let front: TileCoords[] = [unit.tile];
 
   for (let step = 0; step < unit.stats.move; step++) {
     const next: TileCoords[] = [];
-    for (const from of edge) {
+    for (const from of front) {
       for (const coord of neighbours(from)) {
         const at = tileKey(coord);
         if (seen.has(at)) continue;
@@ -70,7 +70,7 @@ export function reachable(
         if (held === undefined) landings.push(coord);
       }
     }
-    edge = next;
+    front = next;
   }
 
   return landings;

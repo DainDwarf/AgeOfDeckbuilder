@@ -10,6 +10,7 @@ import {
 import {
   type BuildingTypeId,
   CITY_TILE,
+  type Corner,
   type FeatureId,
   type ImprovementId,
   type Terrain,
@@ -75,6 +76,11 @@ const FEATURE_MARKS: Record<FeatureId, number[]> = {
 };
 
 const FEATURE_COLOURS: Record<FeatureId, number> = { PH_Fertile: 0x4a7a2d };
+
+/** Placeholder primitives until the art pass: a river a line along its corners, in its own blue. */
+const RIVER_COLOUR = 0x62a9e0;
+const RIVER_WIDTH = 5;
+const RIVER_OUTLINE_WIDTH = 7;
 
 /** Placeholder primitives until the art pass: the mine a cut into the ground. */
 const IMPROVEMENT_MARKS: Record<ImprovementId, number[]> = {
@@ -330,6 +336,32 @@ function positionOf({ q, r }: TileCoords): { x: number; y: number } {
   };
 }
 
+/** Where a corner of the tile lattice stands on the map's own surface. */
+function cornerAt({ x, y }: Corner): Phaser.Math.Vector2 {
+  const middle = positionOf(CITY_TILE);
+  return new Phaser.Math.Vector2(
+    middle.x + x * (Math.sqrt(3) / 2) * TILE_SIZE,
+    middle.y + (y * TILE_SIZE) / 2,
+  );
+}
+
+/**
+ * The one way a river is stroked: a line along its corners, in one colour at one width. Phaser
+ * bevels the joints of a stroked path and leaves its ends square, so a disc at every corner rounds
+ * both.
+ */
+function strokeRiver(
+  surface: Phaser.GameObjects.Graphics,
+  along: Phaser.Math.Vector2[],
+  colour: number,
+  width: number,
+): void {
+  surface.lineStyle(width, colour);
+  surface.strokePoints(along, false);
+  surface.fillStyle(colour);
+  for (const at of along) surface.fillCircle(at.x, at.y, width / 2);
+}
+
 /** Everything the map covers in its own space: the faces of its tiles, and nothing else. */
 function boxOf(tiles: readonly Tile[]): {
   left: number;
@@ -389,6 +421,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
   // Equal depths paint in the order they were added, which is what keeps the terrain under the
   // rings and the features under what is built on them.
   const ground = scene.add.container(0, 0).setName('terrain');
+  const rivers = scene.add.container(0, 0).setName('rivers');
   const features = scene.add.container(0, 0).setName('features');
   const rings = scene.add.container(0, 0).setName('border');
   const improved = scene.add.container(0, 0).setDepth(BUILDING_DEPTH).setName('improvements');
@@ -406,6 +439,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
   const glyphs = scene.add.container(0, 0).setDepth(YIELD_DEPTH).setName('yields');
   layer.add([
     ground,
+    rivers,
     features,
     rings,
     improved,
@@ -417,6 +451,14 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
     dim,
     glyphs,
   ]);
+
+  // Nothing a chronicle does moves a river, so they are stroked here and no render repaints them.
+  // Every outline goes down before any water, so two rivers meeting read as one course.
+  const courses = scene.add.graphics();
+  rivers.add(courses);
+  const along = chronicle.rivers.map((river) => river.map(cornerAt));
+  for (const river of along) strokeRiver(courses, river, OUTLINE, RIVER_OUTLINE_WIDTH);
+  for (const river of along) strokeRiver(courses, river, RIVER_COLOUR, RIVER_WIDTH);
 
   let markers: Phaser.GameObjects.Polygon[] = [];
   let presser: Phaser.GameObjects.Zone | undefined;

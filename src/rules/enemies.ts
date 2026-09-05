@@ -59,19 +59,20 @@ export const ENEMY_SCRIPTS: Record<EnemyScriptId, EnemyScript> = {
 
 /**
  * `PH_Arrival`, the one event the stand-in schedule holds: one enemy lands on a free tile of the
- * map's rim it can stand on, drawn from the seeded generator. With no such tile it places nothing.
+ * map's outer ring it can stand on, drawn from the seeded generator. With no such tile it places
+ * nothing.
  */
 export function arrival(chronicle: Chronicle): Chronicle {
-  const rim = chronicle.tiles.filter(
+  const ring = chronicle.tiles.filter(
     (tile) =>
       distance(tile, chronicle.city) === MAP_COMPOSITION.radius &&
       passable(tile.terrain) &&
       unitAt(chronicle.units, tile) === undefined,
   );
-  if (rim.length === 0) return chronicle;
+  if (ring.length === 0) return chronicle;
 
   const step = nextRng(chronicle.rng);
-  const { q, r } = rim[Math.floor(step.value * rim.length)];
+  const { q, r } = ring[Math.floor(step.value * ring.length)];
   return {
     ...chronicle,
     rng: step.rng,
@@ -120,10 +121,10 @@ function pathDistances(tiles: readonly Tile[], from: TileCoords): Map<string, nu
   const ground = new Map(tiles.map((tile) => [tileKey(tile), tile.terrain]));
   const gaps = new Map([[tileKey(from), 0]]);
 
-  let edge = [from];
-  for (let step = 1; edge.length > 0; step++) {
+  let front = [from];
+  for (let step = 1; front.length > 0; step++) {
     const next: TileCoords[] = [];
-    for (const at of edge) {
+    for (const at of front) {
       for (const coord of neighbours(at)) {
         const key = tileKey(coord);
         if (gaps.has(key)) continue;
@@ -132,7 +133,7 @@ function pathDistances(tiles: readonly Tile[], from: TileCoords): Map<string, nu
         next.push(coord);
       }
     }
-    edge = next;
+    front = next;
   }
   return gaps;
 }

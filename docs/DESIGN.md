@@ -245,7 +245,7 @@ A tile is layers, and its income, movement cost and sight are the sum of what it
 
 - **Terrain** — one per tile, fixed unless terraformed: plain, forest, hills, … The list is
   content and changes freely.
-- **Feature** — at most one, put there by the generator: a fertile plain, a river. A feature lies
+- **Feature** — at most one, put there by the generator: a fertile plain. A feature lies
   on its terrain, so it is gone when its tile is terraformed.
 - **Improvement** — what a worker improves a tile with through an action, any number of distinct
   ones per tile, never the same one twice. Each names the terrain it goes on, as a feature and a
@@ -262,30 +262,44 @@ not terraformed, and the worker stays where it stands through either.
 🔧 A building's yield may read its neighbours. Nothing in the first playable does; the door
 is there so that adjacency is content when it comes.
 
-**The map is generated in four layers.** It is a hexagonal disc with the city's tile at its centre.
+**The map is generated in five layers.** It is a hexagonal disc with the city's tile at its centre.
 First the **biomes**: origin tiles scattered over the disc spread outward until every tile belongs to
 one biome — land, sea, mountain, and whatever the list comes to hold. Their kinds are **dealt** as
 quotas rather than diced one by one, because independent dice can deal a map with no sea at all; the
-city's biome is dealt land, and its origin is the city's tile. Second, the **edge**: a tile one of
+city's biome is dealt land, and its origin is the city's tile. Second, the **rim**: a tile one of
 whose neighbours belongs to a biome of another kind is on its biome's rim, and every rim tile rolls
-a width from its biome's odds — the tiles of that biome within that width take the biome's edge
-table instead of its interior one. So a sea is edged with coast, zero to two tiles wide, and a
-mountain range with hills, zero to one; where two biomes of the same kind meet there is no edge,
+a width from its biome's odds — the tiles of that biome within that width take the biome's rim
+table instead of its interior one. So a sea is rimmed with coast, zero to two tiles wide, and a
+mountain range with hills, zero to one; where two biomes of the same kind meet there is no rim,
 and neither is the outer ring of the disc one. Third, the **terrain scatter**: every tile draws its
 terrain from the weighted table it took, so a sea biome is deep water with the odd island in it and
-a land one is mixed. A biome's origin tile is its kind's terrain outright, immune to the edge and
+a land one is mixed. A biome's origin tile is its kind's terrain outright, immune to the rim and
 the scatter, so every sea holds deep water and every range mountain. The city's tile is then
 **urban**, the one tile the generator puts that terrain on. Fourth, the **feature deal**: each
 feature names the terrain it lies on and is dealt onto a share of the tiles of that terrain, the
 city's tile never among them, for the same reason the biomes are dealt.
 
+Fifth, the **rivers**. Every tile takes a height — how far it lies from the nearest water, lifted
+where the ground is hills or mountain and roughened by a roll — and the corner where three tiles
+meet stands at the mean of theirs. A river rises at a corner of a mountain range that is not at the
+water already, drawn by its height so the high ground is likelier, and runs edge by edge: at each
+corner it takes one of the two edges ahead, weighted so the steeper drop is likelier but never
+certain, with a mild preference against repeating the turn it just made. It may climb a little but
+not much, never crosses its own course, never runs along more than four edges of one tile, and never
+leaves the disc. It ends where it reaches water or a river already run. A course that dies inland or
+comes out shorter than the minimum is thrown away and another source drawn; every range dealt is
+worth up to two rivers, so a range hugging the coast may yield fewer, and that is accepted. How far
+the relief lifts the ground, how far one edge may climb, how sharply the drop weights the draw, how
+short is too short and how many rivers a range is worth are tuning.
+
 Biomes are content, like the terrain and feature lists: they grow without a design decision, and
-what each one holds — its origin terrain, its interior and edge tables, its edge widths — is
+what each one holds — its origin terrain, its interior and rim tables, its rim widths — is
 tuning.
 
-🔧 **Rivers** are generated with flow: each rises in a high biome — hills, a mountain range — and
-runs downhill until it reaches sea. The stated default makes a river a tile feature; a river
-running along the edges between tiles is the alternative to weigh when rivers are built.
+A **river** runs along the edges between tiles, the lines two tiles share, from a corner in a
+mountain range down to the sea. It lies on no tile, so it is no feature and no layer of one, and a
+terraform leaves it exactly where it runs. 🔧 What a river gives at income, and what it costs to
+cross, are open.
 
 The city stands on one tile and owns the six around it. The player **claims** any tile adjacent
 to one the city owns by spending culture; claiming is free of cards, like assigning, and the

@@ -6,30 +6,30 @@ const LAND_TERRAINS = { plain: 0.55, forest: 0.25, hills: 0.2 } as const;
 /**
  * What each biome is made of: the terrain its origin tile is outright, the weighted table its
  * interior tiles scatter from, the table the tiles on its rim draw from instead, and the weight of
- * each edge width in tiles, no edge at all first. Land edges on nothing: its widths make every one
- * of its tiles interior, and its edge table is its interior one.
+ * each rim width in tiles, no rim at all first. Land rims on nothing: its widths make every one of
+ * its tiles interior, and its rim table is its interior one.
  */
 export const BIOMES = {
-  land: { origin: 'plain', interior: LAND_TERRAINS, edge: LAND_TERRAINS, edgeWidths: [1] },
+  land: { origin: 'plain', interior: LAND_TERRAINS, rim: LAND_TERRAINS, rimWidths: [1] },
   sea: {
     origin: 'deep',
     interior: { deep: 0.92, plain: 0.08 },
-    edge: { coast: 1 },
-    edgeWidths: [0.2, 0.5, 0.3],
+    rim: { coast: 1 },
+    rimWidths: [0.2, 0.5, 0.3],
   },
   mountain: {
     origin: 'mountain',
     interior: { mountain: 0.7, hills: 0.3 },
-    edge: { hills: 1 },
-    edgeWidths: [0.4, 0.6],
+    rim: { hills: 1 },
+    rimWidths: [0.4, 0.6],
   },
 } as const satisfies Record<
   string,
   {
     origin: string;
     interior: Readonly<Record<string, number>>;
-    edge: Readonly<Record<string, number>>;
-    edgeWidths: readonly number[];
+    rim: Readonly<Record<string, number>>;
+    rimWidths: readonly number[];
   }
 >;
 
@@ -42,7 +42,7 @@ export type Terrain =
       [B in Biome]:
         | (typeof BIOMES)[B]['origin']
         | keyof (typeof BIOMES)[B]['interior']
-        | keyof (typeof BIOMES)[B]['edge'];
+        | keyof (typeof BIOMES)[B]['rim'];
     }[Biome]
   | typeof CITY_TERRAIN;
 
@@ -72,6 +72,33 @@ const TERRAIN_PASSABLE: Record<Terrain, boolean> = {
 export function passable(terrain: Terrain | undefined): boolean {
   return terrain !== undefined && TERRAIN_PASSABLE[terrain];
 }
+
+/** Which terrains are water, terrain by terrain. */
+const TERRAIN_WATER: Record<Terrain, boolean> = {
+  plain: false,
+  forest: false,
+  hills: false,
+  mountain: false,
+  coast: true,
+  deep: true,
+  urban: false,
+};
+
+/** Whether a terrain is water: what a river runs to, and what height is measured from. */
+export function water(terrain: Terrain | undefined): boolean {
+  return terrain !== undefined && TERRAIN_WATER[terrain];
+}
+
+/** How far each terrain stands over the water: what the river layer's relief multiplies. */
+const TERRAIN_LIFT: Record<Terrain, number> = {
+  plain: 0,
+  forest: 0,
+  hills: 1,
+  mountain: 2,
+  coast: 0,
+  deep: 0,
+  urban: 0,
+};
 
 /** `PH_` marks a stand-in: none of these is authored content, and all of them go. */
 export type BuildingTypeId = 'PH_City' | 'PH_Farm';
@@ -121,6 +148,25 @@ export const MAP_COMPOSITION = {
   cityBiome: Biome;
   biomeShares: { biome: Biome; share: number }[];
   featureShares: { feature: FeatureId; share: number }[];
+};
+
+/**
+ * How the river layer runs: how far the relief lifts a tile that stands over the water and how hard
+ * the roll roughens it, how many rivers one range dealt is worth, how far one edge may climb, how
+ * sharply the drop weights the draw and what repeating a turn multiplies it by, how many edges of
+ * one tile one river runs along at most, the fewest edges a river is kept at, and how many sources
+ * are drawn before the layer gives up.
+ */
+export const RIVER_FLOW = {
+  relief: 1.5,
+  roughness: 0.5,
+  perRange: 2,
+  climb: 0.5,
+  meander: 1.5,
+  curl: 0.75,
+  edgesPerTile: 4,
+  leastEdges: 6,
+  draws: 60,
 };
 
 export type TileCoords = { readonly q: number; readonly r: number };
@@ -185,6 +231,68 @@ export function tileKey({ q, r }: TileCoords): string {
   return `${q},${r}`;
 }
 
+/**
+ * A point where three tiles meet, on a lattice of its own: a tile's middle is (2q + r, 3r) and each
+ * of its six corners stands one step off that, so a corner has one identity however it is reached.
+ * The line between two corners one step apart is an edge, the line two tiles share.
+ */
+export type Corner = { readonly x: number; readonly y: number };
+
+/** A river: the corners it runs through in order, one edge between each pair of them. */
+export type River = readonly Corner[];
+
+/** The six arms of a tile's middle, in the order its faces turn: each corner stands one arm off it. */
+const ARMS: readonly Corner[] = [
+  { x: 1, y: -1 },
+  { x: 1, y: 1 },
+  { x: 0, y: 2 },
+  { x: -1, y: 1 },
+  { x: -1, y: -1 },
+  { x: 0, y: -2 },
+];
+
+/** Which three arms a corner carries: the lattice holds two rows of corners, and these are theirs. */
+const UP_ARMS: readonly Corner[] = [ARMS[0], ARMS[2], ARMS[4]];
+const DOWN_ARMS: readonly Corner[] = [ARMS[1], ARMS[3], ARMS[5]];
+
+/**
+ * The three arms of a corner, the row of the lattice it stands in deciding them: taken off the
+ * corner they give the middles of its three tiles, added to it the three corners one edge away.
+ */
+function armsOf({ y }: Corner): readonly Corner[] {
+  return ((y % 3) + 3) % 3 === 2 ? UP_ARMS : DOWN_ARMS;
+}
+
+/** The one way a corner is named in a set or a map keyed by it. */
+export function cornerKey({ x, y }: Corner): string {
+  return `${x},${y}`;
+}
+
+/** The six corners of a tile, in the order its faces turn. */
+export function cornersOf({ q, r }: TileCoords): Corner[] {
+  const middle = { x: 2 * q + r, y: 3 * r };
+  return ARMS.map(({ x, y }) => ({ x: middle.x + x, y: middle.y + y }));
+}
+
+/** The three tiles a corner is a corner of, on the map or not. */
+export function tilesAtCorner(corner: Corner): TileCoords[] {
+  return armsOf(corner).map((arm) => {
+    const r = (corner.y - arm.y) / 3;
+    return { q: (corner.x - arm.x - r) / 2, r };
+  });
+}
+
+/** The three corners one edge away from a corner, wherever those edges lead. */
+export function cornersBeside(corner: Corner): Corner[] {
+  return armsOf(corner).map((arm) => ({ x: corner.x + arm.x, y: corner.y + arm.y }));
+}
+
+/** The two tiles the edge between two corners lies between, on the map or not. */
+export function tilesOfEdge(from: Corner, to: Corner): TileCoords[] {
+  const beside = new Set(tilesAtCorner(to).map(tileKey));
+  return tilesAtCorner(from).filter((coord) => beside.has(tileKey(coord)));
+}
+
 /** The one weighted draw of the generator: one roll of the seeded generator over the weights given. */
 function pickWeighted<T>(
   rng: Rng,
@@ -211,14 +319,171 @@ function pickTerrain(
 }
 
 /**
- * The map of a chronicle: a hexagonal disc of tiles in axial coordinates, the city at its centre,
- * generated in four layers: biomes spread from their origins, an edge marked around every biome
- * that touches a biome of another kind, a terrain scattered from each biome's table — the edge one
- * where the edge reaches — and each feature dealt over a share of the terrain it lies on.
+ * Which biomes a map is dealt, the city's own aside: the quota each share is worth, and the city's
+ * kind for whatever is left over. Dealt as quotas rather than diced one by one, because independent
+ * dice deal a map with no sea at all.
  */
-export function generateMap(initial: Rng): { rng: Rng; tiles: Tile[] } {
-  const { radius, tilesPerBiome, minBiomes, cityBiome, biomeShares, featureShares } =
-    MAP_COMPOSITION;
+export function dealtBiomes(): Biome[] {
+  const { radius, tilesPerBiome, minBiomes, cityBiome, biomeShares } = MAP_COMPOSITION;
+  const tiles = 3 * radius * radius + 3 * radius + 1;
+  const biomeCount = Math.max(minBiomes, Math.round(tiles / tilesPerBiome));
+
+  const dealt: Biome[] = [];
+  for (const { biome, share } of biomeShares) {
+    const quota = Math.min(Math.round((biomeCount - 1) * share), biomeCount - 1 - dealt.length);
+    for (let i = 0; i < quota; i++) dealt.push(biome);
+  }
+  while (dealt.length < biomeCount - 1) dealt.push(cityBiome);
+  return dealt;
+}
+
+/**
+ * The river layer: every tile takes a height — how far it lies from water, lifted by its relief and
+ * roughened by a roll — a corner takes the mean of its tiles', and a river is walked down that field
+ * from a corner of the mountain range to the water or to a river already run. A walk that dies
+ * inland or comes out short is thrown away and another source drawn.
+ */
+function flowRivers(
+  initial: Rng,
+  coords: readonly TileCoords[],
+  indexOf: ReadonlyMap<string, number>,
+  terrains: readonly Terrain[],
+  tileBiomes: readonly Biome[],
+  ranges: number,
+): { rng: Rng; rivers: River[] } {
+  const { relief, roughness, perRange, climb, meander, curl, edgesPerTile, leastEdges, draws } =
+    RIVER_FLOW;
+  let rng = initial;
+
+  const dist: number[] = new Array(coords.length).fill(Number.POSITIVE_INFINITY);
+  let front: number[] = [];
+  for (let index = 0; index < coords.length; index++) {
+    if (!water(terrains[index])) continue;
+    dist[index] = 0;
+    front.push(index);
+  }
+  for (let step = 1; front.length > 0; step++) {
+    const next: number[] = [];
+    for (const at of front) {
+      for (const coord of neighbours(coords[at])) {
+        const found = indexOf.get(tileKey(coord));
+        if (found === undefined || dist[found] < Number.POSITIVE_INFINITY) continue;
+        dist[found] = step;
+        next.push(found);
+      }
+    }
+    front = next;
+  }
+
+  const heights: number[] = new Array(coords.length);
+  for (let index = 0; index < coords.length; index++) {
+    const step = nextRng(rng);
+    rng = step.rng;
+    heights[index] = dist[index] + relief * TERRAIN_LIFT[terrains[index]] + roughness * step.value;
+  }
+
+  const onMap = (corner: Corner): number[] =>
+    tilesAtCorner(corner)
+      .map((coord) => indexOf.get(tileKey(coord)))
+      .filter((index): index is number => index !== undefined);
+
+  const heightAt = (corner: Corner): number => {
+    const around = onMap(corner);
+    return around.reduce((total, index) => total + heights[index], 0) / around.length;
+  };
+
+  const touchesWater = (corner: Corner): boolean =>
+    onMap(corner).some((index) => dist[index] === 0);
+
+  const pool: { corner: Corner; height: number }[] = [];
+  const pooled = new Set<string>();
+  for (let index = 0; index < coords.length; index++) {
+    if (tileBiomes[index] !== 'mountain') continue;
+    for (const corner of cornersOf(coords[index])) {
+      const key = cornerKey(corner);
+      if (pooled.has(key)) continue;
+      pooled.add(key);
+      if (onMap(corner).length < 3 || touchesWater(corner)) continue;
+      pool.push({ corner, height: heightAt(corner) });
+    }
+  }
+
+  /** Every corner every river already run passes through: what a walk ends on, and never starts on. */
+  const run = new Set<string>();
+
+  const walkFrom = (source: Corner): River | undefined => {
+    const path: Corner[] = [source];
+    const visited = new Set<string>([cornerKey(source)]);
+    const along = new Map<number, number>();
+    let turned: number | undefined;
+
+    for (;;) {
+      const at = path[path.length - 1];
+      // The corner arrived by is already visited, so the two edges ahead are all that is left.
+      const arrived = path[path.length - 2];
+      const candidates: [{ to: Corner; banks: number[]; turn: number | undefined }, number][] = [];
+
+      for (const to of cornersBeside(at)) {
+        if (visited.has(cornerKey(to))) continue;
+        const tiles = tilesOfEdge(at, to).map((coord) => indexOf.get(tileKey(coord)));
+        if (tiles.some((index) => index === undefined)) continue;
+        const banks = tiles as number[];
+        if (banks.some((index) => (along.get(index) ?? 0) >= edgesPerTile)) continue;
+        const drop = heightAt(at) - heightAt(to);
+        if (-drop > climb) continue;
+        const turn =
+          arrived === undefined
+            ? undefined
+            : Math.sign((at.x - arrived.x) * (to.y - at.y) - (at.y - arrived.y) * (to.x - at.x));
+        const weight =
+          Math.exp(drop / meander) * (turn !== undefined && turn === turned ? curl : 1);
+        candidates.push([{ to, banks, turn }, weight]);
+      }
+      if (candidates.length === 0) return undefined;
+
+      const pick = pickWeighted(rng, candidates);
+      rng = pick.rng;
+      const { to, banks, turn } = pick.picked;
+      path.push(to);
+      visited.add(cornerKey(to));
+      for (const index of banks) along.set(index, (along.get(index) ?? 0) + 1);
+      turned = turn;
+
+      if (touchesWater(to) || run.has(cornerKey(to))) {
+        return path.length - 1 >= leastEdges ? path : undefined;
+      }
+    }
+  };
+
+  const rivers: River[] = [];
+  const wanted = perRange * ranges;
+  for (let draw = 0; draw < draws && rivers.length < wanted && pool.length > 0; draw++) {
+    const pick = pickWeighted(
+      rng,
+      pool.map((entry, at) => [at, entry.height] as const),
+    );
+    rng = pick.rng;
+    const [{ corner }] = pool.splice(pick.picked, 1);
+    if (run.has(cornerKey(corner))) continue;
+
+    const river = walkFrom(corner);
+    if (river === undefined) continue;
+    rivers.push(river);
+    for (const at of river) run.add(cornerKey(at));
+  }
+
+  return { rng, rivers };
+}
+
+/**
+ * The map of a chronicle: a hexagonal disc of tiles in axial coordinates, the city at its centre,
+ * generated in five layers: biomes spread from their origins, a rim marked around every biome that
+ * touches a biome of another kind, a terrain scattered from each biome's table — the rim one where
+ * the rim reaches — each feature dealt over a share of the terrain it lies on, and rivers walked
+ * down from the mountain range along the edges between tiles.
+ */
+export function generateMap(initial: Rng): { rng: Rng; tiles: Tile[]; rivers: River[] } {
+  const { radius, cityBiome, featureShares } = MAP_COMPOSITION;
   let rng = initial;
 
   const coords: TileCoords[] = [];
@@ -246,13 +511,7 @@ export function generateMap(initial: Rng): { rng: Rng; tiles: Tile[] } {
   rng = scattered.rng;
   const elsewhere = scattered.items;
 
-  const biomeCount = Math.max(minBiomes, Math.round(coords.length / tilesPerBiome));
-  const dealt: Biome[] = [];
-  for (const { biome, share } of biomeShares) {
-    const quota = Math.min(Math.round((biomeCount - 1) * share), biomeCount - 1 - dealt.length);
-    for (let i = 0; i < quota; i++) dealt.push(biome);
-  }
-  while (dealt.length < biomeCount - 1) dealt.push(cityBiome);
+  const dealt = dealtBiomes();
 
   const origins = new Set<number>([cityIndex]);
   spread(cityIndex, cityBiome);
@@ -278,7 +537,7 @@ export function generateMap(initial: Rng): { rng: Rng; tiles: Tile[] } {
     spread(open[Math.floor(target.value * open.length)], tileBiomes[from]);
   }
 
-  const edged = new Set<number>();
+  const rimmed = new Set<number>();
   for (let index = 0; index < coords.length; index++) {
     const biome = tileBiomes[index];
     const onRim = neighbours(coords[index]).some((coord) => {
@@ -288,12 +547,12 @@ export function generateMap(initial: Rng): { rng: Rng; tiles: Tile[] } {
     if (!onRim) continue;
     const roll = pickWeighted(
       rng,
-      BIOMES[biome].edgeWidths.map((weight, width) => [width, weight] as const),
+      BIOMES[biome].rimWidths.map((weight, width) => [width, weight] as const),
     );
     rng = roll.rng;
     for (let reached = 0; reached < coords.length; reached++) {
       if (tileBiomes[reached] !== biome) continue;
-      if (distance(coords[index], coords[reached]) < roll.picked) edged.add(reached);
+      if (distance(coords[index], coords[reached]) < roll.picked) rimmed.add(reached);
     }
   }
 
@@ -304,7 +563,7 @@ export function generateMap(initial: Rng): { rng: Rng; tiles: Tile[] } {
       terrains[index] = biome.origin;
       continue;
     }
-    const step = pickTerrain(rng, edged.has(index) ? biome.edge : biome.interior);
+    const step = pickTerrain(rng, rimmed.has(index) ? biome.rim : biome.interior);
     rng = step.rng;
     terrains[index] = step.picked;
   }
@@ -327,8 +586,19 @@ export function generateMap(initial: Rng): { rng: Rng; tiles: Tile[] } {
     }
   }
 
+  const flowed = flowRivers(
+    rng,
+    coords,
+    indexOf,
+    terrains,
+    tileBiomes,
+    dealt.filter((biome) => biome === 'mountain').length,
+  );
+  rng = flowed.rng;
+
   return {
     rng,
+    rivers: flowed.rivers,
     tiles: coords.map(({ q, r }, index) => ({
       q,
       r,

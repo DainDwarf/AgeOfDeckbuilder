@@ -12,5 +12,4 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
-- **Rivers** — rivers rising in the mountain biome and flowing to sea, and the feature-versus-edge decision made on the design page. Doc-impact: `docs/DESIGN.md`.
 - **Income flies in from the tiles** — at the income stage each yielding tile sends its resource to the bar. Doc-impact: none.

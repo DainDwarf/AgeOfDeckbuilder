@@ -73,7 +73,8 @@ deliberate exception the reviewer sees; there is no silent allow-list.
 | **biome** | A stretch of map the generator spreads as one kind — land, sea, … — weighting the terrain of each tile in it. | patch, zone, area, ecosystem |
 | **terrain** | A tile's base layer: plain, forest, hills, …; one per tile, changed only by terraforming. | tile type |
 | **terraform** | To change a tile's terrain into another, where a worker stands; what a terraform action does. | transform, convert, reshape |
-| **feature** | A generated extra on a tile: a fertile plain, a river. | bonus |
+| **feature** | A generated extra on a tile: a fertile plain. | bonus |
+| **river** | A watercourse the generator runs along the edges between tiles, from a mountain range to the sea. | stream, creek, waterway |
 | **improvement** | A layer a worker improves a tile with through an action; distinct ones stack, the same one never twice. | — |
 | **improve** | To put an improvement on a tile where a worker stands; what an improvement action does. | lay, build, place, install |
 | **yield** | What a tile's layers give at income, resource by resource. | output, produce, harvest |
