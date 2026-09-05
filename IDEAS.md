@@ -34,6 +34,8 @@ a [`BOARD.md`](BOARD.md) line. Say
   anything gameplay-critical get shape/glyph redundancy, fixing colour-blindness in every theme
   at once — including the default.
 - **Animation speed settings**: the player sets how fast the staged motions play.
+- **Income flies in from the tiles** (v0.0.6, the look): at the income stage each yielding tile
+  sends its resource to the bar.
 - **Copy a replay**: one action puts version, seed, deck, the commands played and the last error
   on the clipboard, so any game a player pastes back can be replayed to the turn.
 - **Placeholder road card** (v0.0.3, with the movement-cost re-evaluation and fog): a stand-in
