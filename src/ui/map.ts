@@ -21,7 +21,7 @@ import {
 } from '../rules/map';
 import { type Faction, reachable, type Unit, type UnitTypeId, unitAt } from '../rules/units';
 import { MAP_FRAME } from './band';
-import { bindings, boundTo, type Control } from './bindings';
+import { bindings, boundTo, type Control, PRESSES, type Press } from './bindings';
 import { EASE, ended, stopMotion } from './card-motion';
 import {
   ACCENT,
@@ -184,9 +184,6 @@ export type TileFace = {
   /** How far the face reaches from its middle, in map units. */
   readonly radius: number;
 };
-
-/** Which of the two buttons that press the chronicle screen a press came from. */
-export type Press = 'left' | 'right';
 
 /** A tile a press landed on, and where it stands for whatever floats beside it. */
 export type PressedTile = {
@@ -408,9 +405,8 @@ function same(a: TileCoords, b: TileCoords): boolean {
   return a.q === b.q && a.r === b.r;
 }
 
-/** Which button a press came from; no other button reaches Phaser, they all read as keys. */
-function pressOf(pointer: Phaser.Input.Pointer): Press {
-  return pointer.button === 2 ? 'right' : 'left';
+function pressOf(pointer: Phaser.Input.Pointer): Press | undefined {
+  return PRESSES.get(pointer.button);
 }
 
 function litTile(scene: Phaser.Scene, coord: TileCoords): Phaser.GameObjects.Polygon {
@@ -594,6 +590,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
 
     catcher.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       const press = pressOf(pointer);
+      if (press === undefined) return;
       taken = press;
       panned = false;
       const mayPan = press === 'right' || (on.down?.(pointer) ?? true);
@@ -620,7 +617,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
     };
     const release = (pointer: Phaser.Input.Pointer): void => {
       const press = pressOf(pointer);
-      if (press !== taken) return;
+      if (press === undefined || press !== taken) return;
       if (ended()) on.release(pointer, press);
     };
     const abandon = (): void => {

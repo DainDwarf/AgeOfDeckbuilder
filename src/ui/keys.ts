@@ -1,5 +1,5 @@
 import type Phaser from 'phaser';
-import { boundTo, CONTROLS, keyOf, mouseKey, PRESS_BUTTONS } from './bindings';
+import { boundTo, CONTROLS, keyOf, mouseKey, PRESSES } from './bindings';
 import { whileUp } from './design-space';
 
 /** The two the game reads its controls from, wherever the press came from. */
@@ -21,13 +21,22 @@ const NOTCH = 100;
 const NOTCH_WINDOW = 200;
 
 /**
+ * Whether the press is a chord, and so the browser's: Ctrl+S saves the page, Ctrl+wheel zooms it.
+ * A modifier held reads on every event under it, the modifier key's own press included, so bare
+ * Ctrl, Meta and Alt are chords too.
+ */
+function chorded(event: { ctrlKey: boolean; metaKey: boolean; altKey: boolean }): boolean {
+  return event.ctrlKey || event.metaKey || event.altKey;
+}
+
+/**
  * The mouse as a set of keys: every button but the two that press the chronicle screen binds
  * like a key and presses nothing, and a notch of the wheel either way binds like a key too.
  * Phaser's mouse manager passes over an event whose default is already prevented, so preventing it
- * here is what takes the press off the chronicle screen — and it is only the press: the browser's
- * own menu comes of the `contextmenu` event, which the game's `disableContextMenu` kills. The
- * wheel's own default is left standing, so Phaser still hears the wheel that scrolls a pile being
- * browsed.
+ * here — before a chord is dropped, or the chord would reach Phaser as a press — is what takes the
+ * press off the chronicle screen, and it is only the press: the browser's own menu comes of the
+ * `contextmenu` event, which the game's `disableContextMenu` kills. The wheel's own default is left
+ * standing, so Phaser still hears the wheel that scrolls a pile being browsed.
  *
  * Heard on the way down, ahead of Phaser's listeners on the canvas; a button's release is heard
  * wherever it lands, so one pressed on the canvas and let go of off it still comes up. A notch has
@@ -39,8 +48,9 @@ export function readMouseKeys(game: Phaser.Game): void {
   window.addEventListener(
     'mousedown',
     (event) => {
-      if (PRESS_BUTTONS.includes(event.button) || event.target !== game.canvas) return;
+      if (PRESSES.has(event.button) || event.target !== game.canvas) return;
       event.preventDefault();
+      if (chorded(event)) return;
       held.add(event.button);
       game.events.emit(DOWN, mouseKey(event.button));
     },
@@ -62,7 +72,7 @@ export function readMouseKeys(game: Phaser.Game): void {
   window.addEventListener(
     'wheel',
     (event) => {
-      if (event.target !== game.canvas || event.deltaY === 0) return;
+      if (event.target !== game.canvas || event.deltaY === 0 || chorded(event)) return;
       const lapsed = event.timeStamp - turned > NOTCH_WINDOW;
       turned = event.timeStamp;
       if (lapsed || Math.sign(event.deltaY) !== Math.sign(rolled)) rolled = 0;
@@ -80,13 +90,8 @@ export function readMouseKeys(game: Phaser.Game): void {
   );
 }
 
-/**
- * Whether this press is the game's to keep the browser out of: a key one of the controls stands on,
- * pressed on its own. A binding is one key's label and never a chord, so a press under Ctrl, Meta or
- * Alt is the browser's shortcut — Ctrl+S saves the page — however the letter under it is bound.
- */
-function carries(event: KeyboardEvent, key: string): boolean {
-  if (event.ctrlKey || event.metaKey || event.altKey) return false;
+/** Whether one of the controls stands on this key, and the browser is to be kept out of it. */
+function carries(key: string): boolean {
   return CONTROLS.some((control) => boundTo(key, control));
 }
 
@@ -98,14 +103,19 @@ function carries(event: KeyboardEvent, key: string): boolean {
  */
 export function onKeyDown(scene: Phaser.Scene, pressed: (key: string) => void): void {
   scene.input.keyboard?.on('keydown', (event: KeyboardEvent) => {
+    if (chorded(event)) return;
     const key = keyOf(event.key);
     pressed(key);
-    if (carries(event, key)) event.preventDefault();
+    if (carries(key)) event.preventDefault();
   });
   whileUp(scene, scene.game.events, DOWN, pressed);
 }
 
-/** Every key released while the scene is up; one held as the scene goes down is never released. */
+/**
+ * Every key released while the scene is up; one held as the scene goes down is never released. A
+ * release is never dropped for a chord: a key pressed bare and let go of under a modifier would
+ * otherwise stay held, and the frame would pan on for ever.
+ */
 export function onKeyUp(scene: Phaser.Scene, released: (key: string) => void): void {
   scene.input.keyboard?.on('keyup', (event: KeyboardEvent) => released(keyOf(event.key)));
   whileUp(scene, scene.game.events, UP, released);

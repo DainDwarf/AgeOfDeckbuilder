@@ -42,13 +42,20 @@ export function mouseKey(button: number): string {
   return `Mouse${button}`;
 }
 
-/**
- * The two mouse buttons that press the chronicle screen. Neither reads as a key, so neither binds:
- * one kept in a slot from a launch that still bound it leaves that slot empty.
- */
-export const PRESS_BUTTONS: readonly number[] = [0, 2];
+/** Which of the two buttons that press the chronicle screen a press came from. */
+export type Press = 'left' | 'right';
 
-const UNBINDABLE: ReadonlySet<string> = new Set(PRESS_BUTTONS.map(mouseKey));
+/**
+ * The two mouse buttons that press the chronicle screen, and the press each makes. Neither reads as
+ * a key, so neither binds: one kept in a slot from a launch that still bound it leaves that slot
+ * empty.
+ */
+export const PRESSES: ReadonlyMap<number, Press> = new Map([
+  [0, 'left'],
+  [2, 'right'],
+]);
+
+const UNBINDABLE: ReadonlySet<string> = new Set([...PRESSES.keys()].map(mouseKey));
 
 /** Where the browser keeps the bindings; the origin is shared with whatever else the host serves. */
 const STORED = 'age-of-deckbuilder.controls';

@@ -72,24 +72,32 @@ async function intoControls(page: Page): Promise<void> {
   await expect.poll(() => standing(page, 'controls')).toBe(true);
 }
 
-/** How far the map moved down the screen under a key held for a dozen frames. */
-async function heldBy(page: Page, key: string): Promise<number> {
+/** How far the map moved down the screen under a key held for a dozen frames, under a modifier or not. */
+async function heldBy(page: Page, key: string, under?: string): Promise<number> {
   const before = await onScreen(page, BARE);
+  if (under !== undefined) await page.keyboard.down(under);
   await page.keyboard.down(key);
   for (let frame = 0; frame < 12; frame++) await settled(page);
   await page.keyboard.up(key);
+  if (under !== undefined) await page.keyboard.up(under);
   await settled(page);
   await settled(page);
   return (await onScreen(page, BARE)).y - before.y;
 }
 
 /** How far the map moved down the screen under a mouse button held for a dozen frames. */
-async function heldByButton(page: Page, button: 'middle' | 'right'): Promise<number> {
+async function heldByButton(
+  page: Page,
+  button: 'middle' | 'right',
+  under?: string,
+): Promise<number> {
   const before = await onScreen(page, BARE);
   await page.mouse.move(before.x, before.y);
+  if (under !== undefined) await page.keyboard.down(under);
   await page.mouse.down({ button });
   for (let frame = 0; frame < 12; frame++) await settled(page);
   await page.mouse.up({ button });
+  if (under !== undefined) await page.keyboard.up(under);
   await settled(page);
   await settled(page);
   return (await onScreen(page, BARE)).y - before.y;
@@ -228,6 +236,65 @@ test('a slot takes the Tab key, which the game holds on to', async ({ page }) =>
 
   // The frame pans up, so what stands on the map comes down the screen.
   expect(await heldBy(page, 'Tab')).toBeGreaterThan(40);
+
+  expect(problems).toEqual([]);
+});
+
+test("a chord is the browser's, and binds nothing", async ({ page }) => {
+  const problems = watch(page);
+
+  await open(page, 1, 'PH_Deck');
+  await intoControls(page);
+
+  await click(page, 'controls-pan-up-1');
+  await expect.poll(() => slotReads(page, 'pan-up', 1)).toBe('Press a key');
+
+  await page.keyboard.press('Control+k');
+  await settled(page);
+  await settled(page);
+  expect(await slotReads(page, 'pan-up', 1)).toBe('Press a key');
+
+  await page.keyboard.press('Control');
+  await settled(page);
+  await settled(page);
+  expect(await slotReads(page, 'pan-up', 1)).toBe('Press a key');
+
+  await page.keyboard.press('k');
+  await expect.poll(() => slotReads(page, 'pan-up', 1)).toBe('K');
+
+  await click(page, 'controls-pan-down-0');
+  const slot = await onScreen(page, 'controls-pan-down-0');
+  await page.mouse.click(slot.x, slot.y, { button: 'middle' });
+  await expect.poll(() => slotReads(page, 'pan-down', 0)).toBe('Middle click');
+
+  await outOfControls(page);
+
+  // The button binds a pan and presses nothing on the map; under a chord it does neither.
+  const tile = await onScreen(page, BARE);
+  await page.keyboard.down('Control');
+  await page.mouse.click(tile.x, tile.y, { button: 'middle' });
+  await page.keyboard.up('Control');
+  await settled(page);
+  await settled(page);
+  expect(await ringedTile(page)).toBeUndefined();
+  expect(await shownCard(page)).toBeUndefined();
+
+  expect(await grewBy(page, () => page.mouse.wheel(0, -100))).toBeCloseTo(NOTCH, 2);
+  expect(
+    await grewBy(page, async () => {
+      await page.keyboard.down('Control');
+      await page.mouse.wheel(0, -100);
+      await page.keyboard.up('Control');
+    }),
+  ).toBeCloseTo(1, 2);
+
+  expect(Math.abs(await heldBy(page, 'k', 'Control'))).toBeLessThan(1);
+  // The frame pans up, so what stands on the map comes down the screen.
+  expect(await heldBy(page, 'k')).toBeGreaterThan(40);
+
+  expect(Math.abs(await heldByButton(page, 'middle', 'Control'))).toBeLessThan(1);
+  // The button pans the frame back down, so what stands on the map goes up the screen again.
+  expect(await heldByButton(page, 'middle')).toBeLessThan(-40);
 
   expect(problems).toEqual([]);
 });
