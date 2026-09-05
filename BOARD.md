@@ -12,4 +12,6 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
+- **A river seed in the standing suite** — one Playwright spec opens a seed whose map runs rivers and finds them drawn, with nothing logged; today every spec lands on seed 1, which has none. Doc-impact: none.
 - **Income flies in from the tiles** — at the income stage each yielding tile sends its resource to the bar. Doc-impact: none.
+- **What a river gives** — the design page decides what a tile a river runs along yields, the rules yield it at income and the yield overlay and infopanel show it. Doc-impact: `docs/DESIGN.md`.
