@@ -12,6 +12,12 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
+- **The order kind goes** — an order is an instant aimed at a unit: the Cards section lists three
+  kinds, `PH_March` is an instant with a unit target that refreshes move points, its refusals
+  unchanged, and the code, the text keys and the tests carry no order kind. The glossary's *order*
+  row goes, the *instant* row absorbs "one thing with one unit", and every mention of orders
+  (military's job, the refresh rows) is edited. Rules tests pin the refresh and its refusals as an
+  instant. Doc-impact: `docs/DESIGN.md`, `docs/GLOSSARY.md`.
 - **Enemies move and attack at once** — the intent goes: in the enemy phase each enemy moves by
   its script and attacks a unit of the player's within its range in the same phase, from the
   same pool a warrior has, and the combat phase is gone from the turn; capture stays as it is.
