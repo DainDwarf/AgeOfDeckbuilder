@@ -94,6 +94,10 @@ makes twice becomes a line here (the ratchet, at `/upkeep`).
   implementer never widens a declaration for content that does not exist yet. A special case that
   needs a guard comment to survive is the wrong design: uniformity beats a locally simpler
   shortcut, so remove the shortcut, not the comment.
+- **A closed set is switched, never tested.** Where a value is one member of a closed union, branch
+  with a `switch` over every member and no `default`, so the typecheck refuses the member added
+  later; an `if` or a ternary with an otherwise-branch takes the new member silently. Why: the
+  otherwise reads as a fallback and is a hole.
 - **An aim predicate and an effect closure are pure over the chronicle**, and an effect changes it
   only through the rules' named helpers, so an invariant stays behind one door. Closures live on
   content, never in the state: a save is the state serialised, and no closure survives that.
