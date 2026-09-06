@@ -200,12 +200,14 @@ export type MapView = {
   play(stage: Stage): Promise<void> | undefined;
   /**
    * Lights the tiles it is given and aims at them, until one is chosen or cancel is called. A right
-   * press lets it go, exactly as cancel does.
+   * press lets it go, exactly as cancel does. A left press on any other tile of the map is `refused`
+   * with where that tile stands, and the aim goes on standing; one off the map does nothing.
    */
   aimTile(
     chronicle: Chronicle,
     tiles: TileCoords[],
     chosen: (tile: TileCoords | undefined) => void,
+    refused: (at: PressedTile) => void,
   ): () => void;
   /**
    * Reports the tile every press the UI leaves lands on and the button it came from, and nothing
@@ -1249,6 +1251,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
       current: Chronicle,
       tiles: TileCoords[],
       chosen: (tile: TileCoords | undefined) => void,
+      refused: (at: PressedTile) => void,
     ): () => void {
       const { catcher, glow, close } = openAim();
       for (const coord of tiles) glow.add(glowTile(scene, coord, LIT));
@@ -1267,7 +1270,9 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
           }
           const at = map.at(pointer.x, pointer.y);
           const on = tileUnder(current, at.x, at.y);
-          if (on !== undefined && tiles.some((coord) => same(coord, on))) finish(on);
+          if (on === undefined) return;
+          if (tiles.some((coord) => same(coord, on))) finish(on);
+          else refused({ tile: on, at: { ...positionOf(on), radius: TILE_SIZE } });
         },
       });
 

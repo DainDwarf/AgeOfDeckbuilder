@@ -9,7 +9,7 @@ import {
   tileKey,
 } from './map';
 import { RESOURCES, type Resources } from './resources';
-import { type Block, type CardId, type Chronicle, holds, idle } from './state';
+import { type Block, type CardId, type Chronicle, holds, idle, type TileBlock } from './state';
 import { refreshedMovePoints, UNIT_STATS, type UnitTypeId, unitAt } from './units';
 
 /** The declared order of the kinds, which is the order a sorted list of cards reads in. */
@@ -19,9 +19,9 @@ export type CardKind = (typeof CARD_KINDS)[number];
 
 /**
  * What a card is played at, and what it does with what it was played at. An aim of `none` lands
- * whole, and names what blocks it where the map or the city can hold it up; a `tile` aim admits the
- * tiles its predicate lets through, is blocked when it admits none, and hands its effect the one
- * that was chosen. The effect takes the chronicle the card's cost is paid on.
+ * whole, and names what blocks it where the map or the city can hold it up; a `tile` aim answers the
+ * first reason it refuses a tile for and nothing at all on one it admits, and hands its effect the
+ * tile that was chosen. The effect takes the chronicle the card's cost is paid on.
  */
 type Aim =
   | {
@@ -31,7 +31,7 @@ type Aim =
     }
   | {
       readonly aim: 'tile';
-      readonly admits: (chronicle: Chronicle, tile: Tile) => boolean;
+      readonly refuses: (chronicle: Chronicle, tile: Tile) => TileBlock | undefined;
       readonly effect: (paid: Chronicle, at: TileCoords) => Chronicle;
     };
 
@@ -45,27 +45,46 @@ export type Card = { readonly kind: CardKind; readonly cost: Partial<Resources> 
 /** A card the player picks a tile for: what the hand arms and the finder lists candidates for. */
 export type AimedCard = Card & { readonly aim: 'tile' };
 
+/** The first check that refuses, in the order the aim hands them over: the one reason it answers. */
+function firstRefusal(...checks: readonly (TileBlock | undefined)[]): TileBlock | undefined {
+  return checks.find((reason) => reason !== undefined);
+}
+
 /** A worker of the player's standing on the tile: what a card played through a worker composes. */
-function worked(chronicle: Chronicle, tile: TileCoords): boolean {
+function worked(chronicle: Chronicle, tile: TileCoords): TileBlock | undefined {
   const standing = unitAt(chronicle.units, tile);
-  return standing?.faction === 'player' && standing.stats.id === 'PH_Worker';
+  return standing?.faction === 'player' && standing.stats.id === 'PH_Worker' ? undefined : 'worker';
 }
 
-/** Whether a tile's one building slot is free: what a building fills and a terraform needs empty. */
-function slotFree(tile: Tile): boolean {
-  return tile.building === undefined;
+/** The tile inside the city's border: what a building card asks for and an instant does not. */
+function inside(chronicle: Chronicle, tile: TileCoords): TileBlock | undefined {
+  return holds(chronicle, tile) ? undefined : 'border';
 }
 
-/** Where a building of this kind stands: the terrain it is built on, and a slot nothing fills. */
-function buildable(tile: Tile, building: BuildingTypeId): boolean {
-  return slotFree(tile) && tile.terrain === BUILDINGS[building].terrain;
+/** The terrain a building stands on, an improvement lies on, or a terraform starts from. */
+function made(tile: Tile, terrain: Terrain): TileBlock | undefined {
+  return tile.terrain === terrain ? undefined : 'terrain';
 }
 
-/** Where an improvement of this kind goes: the terrain it lies on, and no copy of it there already. */
-function improvable(tile: Tile, improvement: ImprovementId): boolean {
-  return (
-    tile.terrain === IMPROVEMENTS[improvement].terrain && !tile.improvements.includes(improvement)
-  );
+/** A tile's one building slot, free: what a building fills and a terraform needs empty. */
+function slotFree(tile: Tile): TileBlock | undefined {
+  return tile.building === undefined ? undefined : 'slot';
+}
+
+/** No copy of this improvement on the tile: distinct ones stack, the same one never twice. */
+function unimproved(tile: Tile, improvement: ImprovementId): TileBlock | undefined {
+  return tile.improvements.includes(improvement) ? 'improvement' : undefined;
+}
+
+/** A unit of the player's standing on the tile: what an instant played on one unit composes. */
+function unitThere(chronicle: Chronicle, tile: TileCoords): TileBlock | undefined {
+  return unitAt(chronicle.units, tile)?.faction === 'player' ? undefined : 'unit';
+}
+
+/** Move points a refresh has room to bring back up: a unit that has spent none is already full. */
+function movePointsSpent(chronicle: Chronicle, tile: TileCoords): TileBlock | undefined {
+  const standing = unitAt(chronicle.units, tile);
+  return standing !== undefined && standing.movePoints < standing.stats.move ? undefined : 'move';
 }
 
 /**
@@ -149,18 +168,21 @@ export const CARDS: Record<CardId, Card> = {
     kind: 'building',
     cost: { production: 3 },
     aim: 'tile',
-    admits: (chronicle, tile) =>
-      holds(chronicle, tile) && buildable(tile, 'PH_Farm') && worked(chronicle, tile),
+    refuses: (chronicle, tile) =>
+      firstRefusal(
+        worked(chronicle, tile),
+        inside(chronicle, tile),
+        made(tile, BUILDINGS.PH_Farm.terrain),
+        slotFree(tile),
+      ),
     effect: (paid, at) => built(paid, at, 'PH_Farm'),
   },
   PH_March: {
     kind: 'instant',
     cost: {},
     aim: 'tile',
-    admits: (chronicle, tile) => {
-      const standing = unitAt(chronicle.units, tile);
-      return standing?.faction === 'player' && standing.movePoints < standing.stats.move;
-    },
+    refuses: (chronicle, tile) =>
+      firstRefusal(unitThere(chronicle, tile), movePointsSpent(chronicle, tile)),
     effect: refreshed,
   },
   PH_Harvest: {
@@ -173,15 +195,20 @@ export const CARDS: Record<CardId, Card> = {
     kind: 'instant',
     cost: { production: 3 },
     aim: 'tile',
-    admits: (chronicle, tile) => improvable(tile, 'PH_Mine') && worked(chronicle, tile),
+    refuses: (chronicle, tile) =>
+      firstRefusal(
+        worked(chronicle, tile),
+        made(tile, IMPROVEMENTS.PH_Mine.terrain),
+        unimproved(tile, 'PH_Mine'),
+      ),
     effect: (paid, at) => improved(paid, at, 'PH_Mine'),
   },
   PH_Urbanisation: {
     kind: 'instant',
     cost: { production: 5 },
     aim: 'tile',
-    admits: (chronicle, tile) =>
-      tile.terrain === 'plain' && slotFree(tile) && worked(chronicle, tile),
+    refuses: (chronicle, tile) =>
+      firstRefusal(worked(chronicle, tile), made(tile, 'plain'), slotFree(tile)),
     effect: (paid, at) => terraformed(paid, at, 'urban'),
   },
 };

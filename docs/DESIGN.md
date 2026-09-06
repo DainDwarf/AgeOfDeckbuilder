@@ -180,8 +180,12 @@ keyword some cards carry, not a kind, and the map's gifts are chronicle-only by 
 - **Instant** — an immediate effect: draw two, gain food, negotiate with a neutral, terraform a
   tile where a worker stands, **refresh** a unit's move points. The refresh takes one unit, so a
   unit that has spent its move points crosses again in the same turn; it is refused on a unit
-  whose move points are full, and blocked when no unit has spent any. Everything that is not a
-  noun entering the map.
+  whose move points are full. Everything that is not a noun entering the map.
+
+A card played at a tile is armed as soon as the city can pay for it, whatever the map holds. The
+map lights the tiles its aim admits; a press on any other tile lands nowhere and says why — the one
+reason that tile is turned down, over that tile, in the note a refused card raises — and the card
+stays armed. A card aimed at nothing lands nowhere.
 
 ### Population ✅
 

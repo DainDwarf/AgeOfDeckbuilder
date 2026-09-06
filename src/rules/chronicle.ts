@@ -338,19 +338,28 @@ function unaffordable(chronicle: Chronicle, costs: readonly Cost[]): Resource[] 
 }
 
 /**
+ * The one reason a card's aim refuses this tile — the first its checks answer, in the order the aim
+ * composes them — and nothing at all on a tile it admits. The one door the map's glow, the play and
+ * the note a refused press raises all read the aim through.
+ */
+export function tileBlock(chronicle: Chronicle, card: AimedCard, tile: Tile): Block | undefined {
+  return card.refuses(chronicle, tile);
+}
+
+/**
  * Every tile a card's aim admits, the aim's own predicate the whole of the filter. The one list the
- * block, the play and the map a card is aimed over all read.
+ * play and the map a card is aimed over both read.
  */
 export function admitted(chronicle: Chronicle, card: AimedCard): TileCoords[] {
   return chronicle.tiles
-    .filter((tile) => card.admits(chronicle, tile))
+    .filter((tile) => tileBlock(chronicle, card, tile) === undefined)
     .map(({ q, r }) => ({ q, r }));
 }
 
 /**
  * Every block a card the city can pay for still stands against: there is nothing for it to resolve
- * on. An aimed card is blocked for the tile when its aim admits none; a card that lands whole
- * answers with the blocks it declares, in the order it declares them.
+ * on. A card that lands whole answers with the blocks it declares, in the order it declares them; an
+ * aimed one answers with none, the map being no part of what the hand arms it against.
  */
 function blocked(chronicle: Chronicle, id: CardId): Block[] {
   const card = CARDS[id];
@@ -358,7 +367,7 @@ function blocked(chronicle: Chronicle, id: CardId): Block[] {
     case 'none':
       return card.blocked?.(chronicle) ?? [];
     case 'tile':
-      return admitted(chronicle, card).length === 0 ? ['tile'] : [];
+      return [];
   }
 }
 

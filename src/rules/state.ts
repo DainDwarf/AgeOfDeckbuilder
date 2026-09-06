@@ -41,11 +41,18 @@ export type Chronicle = {
 };
 
 /**
+ * What a card's aim has against one tile: no worker of the player's standing there, the tile
+ * outside the border, the wrong terrain, the building slot filled, the improvement already laid, no
+ * unit of the player's standing there, its move points full.
+ */
+export type TileBlock = 'worker' | 'border' | 'terrain' | 'slot' | 'improvement' | 'unit' | 'move';
+
+/**
  * What the city or the map has against a card or a claim the cost alone would let through: the city
  * down to the last inhabitant it keeps, no inhabitant idle to turn into a unit or to stand on a
- * tile, a unit already on the city tile, no tile to aim at.
+ * tile, a unit already on the city tile, and every reason an aim turns a tile down.
  */
-export type Block = 'population' | 'idle' | 'city' | 'tile';
+export type Block = 'population' | 'idle' | 'city' | TileBlock;
 
 /** Whether the tile is inside the city's border: what a card's aim and a city-mode click both ask. */
 export function holds(chronicle: Chronicle, tile: TileCoords): boolean {
