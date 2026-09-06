@@ -136,7 +136,7 @@ makes twice becomes a line here (the ratchet, at `/upkeep`).
   layout, overlap, clipping, contrast, colour-vision — is an on-demand mechanical pass through the
   `ui-check` agent, driven by the `visual-check` skill. Whether it *feels* right is the user's
   call and is never automated.
-- **The Playwright suite is CI's.** It runs on every push to `main`, one worker, no retries;
+- **The Playwright suite is CI's.** It runs on every push, any branch, one worker, no retries;
   locally the cap is four workers, so a timeout means a bug either way. A session runs one spec at
   a time, the one its line adds, touches or names (`npx playwright test e2e/<spec>.spec.ts`), and
   a hook refuses a local run that names no spec; the whole suite runs locally only when the user
@@ -161,7 +161,7 @@ makes twice becomes a line here (the ratchet, at `/upkeep`).
   once that the tree carries the change; never roll back or ask keep-or-revert mid-pass.
 - **Git is the backup.** No scratchpad copies of tracked files; `git checkout <file>` reverts, and
   `git status --porcelain <file>` confirms it printed nothing.
-- **Never push unless asked.** The repository is public; a push is a publication.
+- **Never push unless asked.** The repository will be public; a push is a publication.
 - Commit messages end with `Co-Authored-By: Claude <model> <noreply@anthropic.com>`.
 
 ## Docs
@@ -203,7 +203,7 @@ makes twice becomes a line here (the ratchet, at `/upkeep`).
 | Dev server and bundler | Vite 8 |
 | Rules tests | Vitest 4 |
 | UI verification | Playwright, Chromium only |
-| CI | GitHub Actions on push to main: typecheck, lint, rules tests, e2e |
+| CI | GitHub Actions on every push, any branch: typecheck, lint, rules tests, e2e |
 | Lint and format | Biome, one `biome.json` |
 | Package manager | npm on Node 24; `package-lock.json` is committed |
 | Hosting | itch.io HTML5 page, the zipped `dist/`. No server, ever. |

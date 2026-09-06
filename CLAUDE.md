@@ -78,6 +78,6 @@ Full rules in [`docs/DOGMAS.md`](docs/DOGMAS.md). The ones no session may miss:
 | `npm run dev` | Vite dev server. Background only; the `run` skill reads the URL from its output. |
 | `npm run check` | TypeScript, no emit. |
 | `npm test` | Vitest — the rules tests. |
-| `npm run e2e` | The whole Playwright/Chromium suite, starting the dev server itself; this is the CI check on push to main, and a hook refuses it from a session. A session runs one spec, the one its line touches or names: `npx playwright test e2e/<spec>.spec.ts`. |
+| `npm run e2e` | The whole Playwright/Chromium suite, starting the dev server itself; this is the CI check on every push, and a hook refuses it from a session. A session runs one spec, the one its line touches or names: `npx playwright test e2e/<spec>.spec.ts`. |
 | `npm run lint` | Biome, lint and format check. `npx biome check --write .` fixes. |
 | `npm run build` | Vite build into `dist/`. |
