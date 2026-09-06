@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { CARDS, type CardId, type TargetType } from '../rules/cards';
+import { type AimedCard, CARDS, type CardId } from '../rules/cards';
 import {
   type Chronicle,
   costOf,
@@ -71,7 +71,7 @@ export function createHand(
   scene: Phaser.Scene,
   on: Surface,
   play: (index: number) => void,
-  aim: (index: number, targetType: Exclude<TargetType, 'none'>, released: () => void) => () => void,
+  aim: (index: number, card: AimedCard, released: () => void) => () => void,
   zoom: (id: CardId, refusal: Refusal) => void,
 ): Hand {
   const laneLeft = MARGIN + CARD_WIDTH + LANE_PAD;
@@ -209,12 +209,12 @@ export function createHand(
             }
             // A card that takes a target is not played by the release: it waits, in its slot and
             // armed, while the map is aimed at, and comes down only when the card is clicked.
-            const targetType = CARDS[slot.id].target;
-            if (targetType !== 'none') {
+            const card = CARDS[slot.id];
+            if (card.aim !== 'none') {
               settle(slot, 150);
               slot.face.arm(true);
               letGo = slot;
-              const cancel = aim(slot.index, targetType, () => {
+              const cancel = aim(slot.index, card, () => {
                 aiming = undefined;
                 letGo = undefined;
                 slot.face.arm(false);

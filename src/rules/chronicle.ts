@@ -1,15 +1,10 @@
-import { CARDS, type CardId, type InstantCard } from './cards';
+import { type AimedCard, CARDS, type Card, type CardId } from './cards';
 import { arrival, ENEMY_SCRIPTS } from './enemies';
 import {
-  BUILDINGS,
-  type BuildingTypeId,
   CITY_TILE,
   generateMap,
-  IMPROVEMENTS,
-  type ImprovementId,
   neighbours,
   type River,
-  type Terrain,
   type Tile,
   type TileCoords,
   tileKey,
@@ -23,7 +18,6 @@ import {
   reachable,
   refreshedAction,
   refreshedMovePoints,
-  UNIT_STATS,
   type Unit,
   unitAt,
 } from './units';
@@ -334,7 +328,8 @@ export function playable(refusal: Refusal): boolean {
   return refusal.unaffordable.length === 0 && refusal.blocked.length === 0;
 }
 
-function holds(chronicle: Chronicle, tile: TileCoords): boolean {
+/** Whether the tile is inside the city's border: what a card's aim and a city-mode click both ask. */
+export function holds(chronicle: Chronicle, tile: TileCoords): boolean {
   return chronicle.held.some((coord) => tileKey(coord) === tileKey(tile));
 }
 
@@ -400,139 +395,40 @@ function unaffordable(chronicle: Chronicle, costs: readonly Cost[]): Resource[] 
     .map(({ resource }) => resource);
 }
 
-/** The one thing every card aimed at a tile asks of it: a worker of the player's standing there. */
-function worked(chronicle: Chronicle, tile: TileCoords): boolean {
-  const standing = unitAt(chronicle.units, tile);
-  return standing?.faction === 'player' && standing.stats.id === 'PH_Worker';
-}
-
 /**
- * Where a building can be built: a tile inside the border, of the terrain that building stands on,
- * whose building slot is free and where a worker of the player's stands.
+ * Everything a card's aim admits, the aim's own predicate the whole of the filter: the tiles a tile
+ * aim lists, the units a unit aim lists by their place in `units`. The one list the block, the play
+ * and the map a card is aimed over all read.
  */
-export function buildable(chronicle: Chronicle, building: BuildingTypeId): TileCoords[] {
-  const held = new Set(chronicle.held.map(tileKey));
-  return chronicle.tiles
-    .filter(
-      (tile) =>
-        held.has(tileKey(tile)) &&
-        tile.building === undefined &&
-        tile.terrain === BUILDINGS[building].terrain &&
-        worked(chronicle, tile),
-    )
-    .map(({ q, r }) => ({ q, r }));
-}
-
-/**
- * Where an improvement can be improved: a tile of the terrain that improvement goes on, inside the
- * border or not, where a worker of the player's stands and which does not carry it already.
- */
-export function improvable(chronicle: Chronicle, improvement: ImprovementId): TileCoords[] {
-  return chronicle.tiles
-    .filter(
-      (tile) =>
-        tile.terrain === IMPROVEMENTS[improvement].terrain &&
-        !tile.improvements.includes(improvement) &&
-        worked(chronicle, tile),
-    )
-    .map(({ q, r }) => ({ q, r }));
-}
-
-/**
- * Where a terrain can be terraformed: a tile of that terrain, inside the border or not, whose
- * building slot is empty and where a worker of the player's stands.
- */
-export function terraformable(chronicle: Chronicle, from: Terrain): TileCoords[] {
-  return chronicle.tiles
-    .filter(
-      (tile) => tile.terrain === from && tile.building === undefined && worked(chronicle, tile),
-    )
-    .map(({ q, r }) => ({ q, r }));
-}
-
-/** The tiles an instant can be aimed at; one that lands whole is aimed at none. */
-function instantTiles(chronicle: Chronicle, card: InstantCard): TileCoords[] {
-  switch (card.effect) {
-    case 'gain':
-    case 'refresh':
-      return [];
-    case 'improve':
-      return improvable(chronicle, card.improvement);
-    case 'terraform':
-      return terraformable(chronicle, card.from);
-  }
-}
-
-/** The units an instant can be aimed at, each by its place in `units`. */
-function instantUnits(chronicle: Chronicle, card: InstantCard): number[] {
-  switch (card.effect) {
-    case 'gain':
-    case 'improve':
-    case 'terraform':
-      return [];
-    case 'refresh':
-      return chronicle.units.flatMap((unit, at) =>
-        unit.faction === 'player' && unit.movePoints < unit.stats.move ? [at] : [],
-      );
-  }
-}
-
-/** The tiles a card of the `tile` target type can be aimed at. */
-export function targetTiles(chronicle: Chronicle, id: CardId): TileCoords[] {
-  const card = CARDS[id];
-  switch (card.kind) {
-    case 'building':
-      return buildable(chronicle, card.building);
-    case 'instant':
-      return instantTiles(chronicle, card);
-    case 'unit':
-      return [];
-  }
-}
-
-/** The units a card of the `unit` target type can be aimed at, each by its place in `units`. */
-export function targetUnits(chronicle: Chronicle, id: CardId): number[] {
-  const card = CARDS[id];
-  switch (card.kind) {
-    case 'instant':
-      return instantUnits(chronicle, card);
-    case 'building':
-    case 'unit':
-      return [];
-  }
+export function admitted(chronicle: Chronicle, card: Card & { readonly aim: 'tile' }): TileCoords[];
+export function admitted(chronicle: Chronicle, card: Card & { readonly aim: 'unit' }): number[];
+export function admitted(chronicle: Chronicle, card: AimedCard): TileCoords[] | number[] {
+  return card.aim === 'tile'
+    ? chronicle.tiles.filter((tile) => card.admits(chronicle, tile)).map(({ q, r }) => ({ q, r }))
+    : chronicle.units.flatMap((unit, at) => (card.admits(chronicle, unit) ? [at] : []));
 }
 
 /**
  * Every block a card the city can pay for still stands against: there is nothing for it to resolve
- * on. A unit card can be held up by all three of its at once, and answers them in that order.
+ * on. An aimed card is blocked by the type it aims at when its aim admits nothing; a card that
+ * lands whole answers with the blocks it declares, in the order it declares them.
  */
 function blocked(chronicle: Chronicle, id: CardId): Block[] {
   const card = CARDS[id];
-  switch (card.kind) {
-    case 'unit': {
-      const blocks: Block[] = [];
-      if (chronicle.population <= 1) blocks.push('population');
-      if (idle(chronicle) <= 0) blocks.push('idle');
-      if (unitAt(chronicle.units, chronicle.city) !== undefined) blocks.push('city');
-      return blocks;
-    }
-    case 'building':
-    case 'instant':
-      switch (card.target) {
-        case 'none':
-          return [];
-        case 'tile':
-          return targetTiles(chronicle, id).length === 0 ? ['tile'] : [];
-        case 'unit':
-          return targetUnits(chronicle, id).length === 0 ? ['unit'] : [];
-      }
+  switch (card.aim) {
+    case 'none':
+      return card.blocked?.(chronicle) ?? [];
+    case 'tile':
+      return admitted(chronicle, card).length === 0 ? ['tile'] : [];
+    case 'unit':
+      return admitted(chronicle, card).length === 0 ? ['unit'] : [];
   }
 }
 
 /**
- * One card played: the play opens on the `played` stage, where the card has left the hand for the
- * discard pile and its cost is paid, and what the card does follows. A play the hand, the city or
- * the map refuses is one `refused` stage on the chronicle as it stood.
+ * One card played: on the one `played` stage the card has left the hand for the discard pile, its
+ * cost is paid and its effect has landed. A play the hand, the city or the map refuses is one
+ * `refused` stage on the chronicle as it stood.
  */
 function play(chronicle: Chronicle, index: number, target: Target | undefined): Stage[] {
   const id = chronicle.hand[index];
@@ -549,103 +445,33 @@ function play(chronicle: Chronicle, index: number, target: Target | undefined): 
     discardPile: [...chronicle.discardPile, id],
   };
 
-  return resolve(paid, id, target) ?? [{ name: 'refused', chronicle }];
+  const played = resolve(paid, id, target);
+  return played === undefined
+    ? [{ name: 'refused', chronicle }]
+    : [{ name: 'played', chronicle: played }];
 }
 
 /**
- * What the card does, on the chronicle its cost is already paid on: the stages it resolves as,
- * opening with the `played` one. An effect that lands whole is inside that stage and raises no
- * other. `undefined` refuses the play, and nothing is paid or discarded.
+ * The card's effect, on the chronicle its cost is already paid on. An aimed card takes the one
+ * candidate its aim admits and nothing else; a card that lands whole takes no target at all.
+ * `undefined` refuses the play, and nothing is paid or discarded.
  */
-function resolve(paid: Chronicle, id: CardId, target: Target | undefined): Stage[] | undefined {
+function resolve(paid: Chronicle, id: CardId, target: Target | undefined): Chronicle | undefined {
   const card = CARDS[id];
-  switch (card.kind) {
-    case 'unit': {
-      const entered: Chronicle = {
-        ...paid,
-        population: paid.population - 1,
-        units: [
-          ...paid.units,
-          {
-            stats: { ...UNIT_STATS[card.unitType] },
-            faction: 'player',
-            tile: paid.city,
-            movePoints: UNIT_STATS[card.unitType].move,
-            action: UNIT_STATS[card.unitType].action,
-          },
-        ],
-      };
-      return [{ name: 'played', chronicle: entered }];
-    }
-    case 'building': {
-      const built = build(paid, card.building, target);
-      return built === undefined ? undefined : [{ name: 'played', chronicle: built }];
-    }
-    case 'instant': {
-      const landed = instant(paid, card, target);
-      return landed === undefined ? undefined : [{ name: 'played', chronicle: landed }];
-    }
-  }
-}
-
-/**
- * The instant card's one effect: the resources it gains land in the stores, the unit it was aimed at
- * has its move points refreshed, and the improvement or the terraform lands on the tile it was aimed
- * at — the worker that stands there stays where it is, and a terraformed tile loses the feature that
- * lay on the terrain it was.
- */
-function instant(
-  paid: Chronicle,
-  card: InstantCard,
-  target: Target | undefined,
-): Chronicle | undefined {
-  switch (card.effect) {
-    case 'gain': {
-      const resources = { ...paid.resources };
-      for (const resource of RESOURCES) resources[resource] += card.gain[resource] ?? 0;
-      return { ...paid, resources };
-    }
-    case 'refresh': {
-      if (target?.type !== 'unit') return undefined;
-      const aimed = target.unit;
-      if (!instantUnits(paid, card).includes(aimed)) return undefined;
-      return {
-        ...paid,
-        units: paid.units.map((unit, at) => (at === aimed ? refreshedMovePoints(unit) : unit)),
-      };
-    }
-    case 'improve':
-    case 'terraform': {
+  switch (card.aim) {
+    case 'none':
+      return card.effect(paid);
+    case 'tile': {
       if (target?.type !== 'tile') return undefined;
       const at = tileKey(target.tile);
-      if (!instantTiles(paid, card).some((coord) => tileKey(coord) === at)) return undefined;
-
-      const after = (tile: Tile): Tile =>
-        card.effect === 'improve'
-          ? { ...tile, improvements: [...tile.improvements, card.improvement] }
-          : { ...tile, terrain: card.to, feature: undefined };
-      return {
-        ...paid,
-        tiles: paid.tiles.map((tile) => (tileKey(tile) === at ? after(tile) : tile)),
-      };
+      if (!admitted(paid, card).some((coord) => tileKey(coord) === at)) return undefined;
+      return card.effect(paid, target.tile);
     }
+    case 'unit':
+      if (target?.type !== 'unit') return undefined;
+      if (!admitted(paid, card).includes(target.unit)) return undefined;
+      return card.effect(paid, target.unit);
   }
-}
-
-/** The building card: the building fills the slot of the tile it is aimed at. */
-function build(
-  chronicle: Chronicle,
-  building: BuildingTypeId,
-  target: Target | undefined,
-): Chronicle | undefined {
-  if (target?.type !== 'tile') return undefined;
-  const at = tileKey(target.tile);
-  if (!buildable(chronicle, building).some((coord) => tileKey(coord) === at)) return undefined;
-
-  return {
-    ...chronicle,
-    tiles: chronicle.tiles.map((tile) => (tileKey(tile) === at ? { ...tile, building } : tile)),
-  };
 }
 
 /**

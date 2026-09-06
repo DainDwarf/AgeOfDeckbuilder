@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import type { CardId } from '../rules/cards';
 import {
+  admitted,
   apply,
   beginChronicle,
   type Chronicle,
@@ -11,8 +12,6 @@ import {
   type Resource,
   type Stage,
   type Target,
-  targetTiles,
-  targetUnits,
   tileCost,
   tileRefusal,
   type UnitCommand,
@@ -294,7 +293,7 @@ export class ChronicleScene extends Phaser.Scene {
       (index) => {
         void playOut({ type: 'play', index });
       },
-      (index, targetType, released) => {
+      (index, card, released) => {
         // The aiming catcher lies under the hand and the piles, so the button is the one thing
         // left on the UI that has to be dead for the length of the aim.
         endTurn.live(false);
@@ -304,19 +303,11 @@ export class ChronicleScene extends Phaser.Scene {
           if (target === undefined) released();
           else void playOut({ type: 'play', index, target });
         };
-        switch (targetType) {
+        switch (card.aim) {
           case 'tile':
-            return view.aimTile(
-              this.current,
-              targetTiles(this.current, this.current.hand[index]),
-              chosen,
-            );
+            return view.aimTile(this.current, admitted(this.current, card), chosen);
           case 'unit':
-            return view.aimUnit(
-              this.current,
-              targetUnits(this.current, this.current.hand[index]),
-              chosen,
-            );
+            return view.aimUnit(this.current, admitted(this.current, card), chosen);
         }
       },
       (id, refusal) => overlay.zoom(id, refusal),

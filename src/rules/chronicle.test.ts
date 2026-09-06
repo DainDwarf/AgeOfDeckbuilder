@@ -1,22 +1,20 @@
 import { expect, test } from 'vitest';
 import { CARDS, type CardId, DECKS } from './cards';
 import {
+  admitted,
   apply,
   beginChronicle,
-  buildable,
   type Chronicle,
   type Command,
   cityCommand,
   claimable,
   growthThreshold,
   idle,
-  improvable,
   outcome,
   playable,
   RESOURCES,
   type Resources,
   refusalOf,
-  terraformable,
   tileCost,
   tileRefusal,
 } from './chronicle';
@@ -184,6 +182,13 @@ function actionOf(chronicle: Chronicle, unit: number): number {
 /** A card aimed at a tile, ready to hand to `apply`. */
 function aimedAt(tile: TileCoords): Command {
   return { type: 'play', index: 0, target: { type: 'tile', tile } };
+}
+
+/** The tiles the named card's aim admits, for a card that is aimed at a tile. */
+function admittedTiles(chronicle: Chronicle, id: CardId): TileCoords[] {
+  const card = CARDS[id];
+  if (card.aim !== 'tile') throw new Error(`${id} is aimed at no tile`);
+  return admitted(chronicle, card);
 }
 
 /** The chronicle with the tile at those coordinates replaced, layer for layer. */
@@ -1278,7 +1283,7 @@ test('the city fills its own tile’s slot, worker or no worker', () => {
   const overOne = { ...city, units: [worker({ q: 1, r: 0 })] };
 
   expect(buildingAt(city, CITY)).toBe('PH_City');
-  expect(buildable(city, 'PH_Farm')).toEqual([]);
+  expect(admittedTiles(city, 'PH_Farm')).toEqual([]);
   expect(outcome(apply(city, aimedAt(CITY)))).toEqual(city);
   expect(playable(refusalOf(city, 'PH_Farm'))).toBe(false);
   expect(playable(refusalOf(overOne, 'PH_Farm'))).toBe(true);
@@ -1292,7 +1297,7 @@ test('a farm stands on a plain and on no other terrain a worker reaches', () => 
       resources: production(3),
     });
 
-    expect(buildable(city, 'PH_Farm')).toEqual([]);
+    expect(admittedTiles(city, 'PH_Farm')).toEqual([]);
     expect(playable(refusalOf(city, 'PH_Farm'))).toBe(false);
     expect(outcome(apply(city, aimedAt({ q: 1, r: 0 })))).toEqual(city);
   }
@@ -1340,7 +1345,7 @@ test('the mine card is refused on a tile no worker of the player’s stands on',
   });
   const fighting = { ...bare, units: [unitOf('player', at)] };
 
-  expect(improvable(bare, 'PH_Mine')).toEqual([]);
+  expect(admittedTiles(bare, 'PH_Mine')).toEqual([]);
   expect(refusalOf(bare, 'PH_Mine').blocked).toEqual(['tile']);
   expect(refusalOf(fighting, 'PH_Mine').blocked).toEqual(['tile']);
   expect(outcome(apply(bare, aimedAt(at)))).toEqual(bare);
@@ -1352,7 +1357,7 @@ test('the mine card is refused on every terrain but the hills it goes on', () =>
   for (const terrain of ['plain', 'forest', 'mountain', 'coast', 'deep', 'urban'] as Terrain[]) {
     const city = workedTile(at, terrain, { hand: ['PH_Mine'], resources: production(3) });
 
-    expect(improvable(city, 'PH_Mine')).toEqual([]);
+    expect(admittedTiles(city, 'PH_Mine')).toEqual([]);
     expect(playable(refusalOf(city, 'PH_Mine'))).toBe(false);
     expect(outcome(apply(city, aimedAt(at)))).toEqual(city);
   }
@@ -1367,7 +1372,7 @@ test('a tile takes the same improvement once and never a second time', () => {
 
   const once = outcome(apply(city, aimedAt(at)));
 
-  expect(improvable(once, 'PH_Mine')).toEqual([]);
+  expect(admittedTiles(once, 'PH_Mine')).toEqual([]);
   expect(playable(refusalOf(once, 'PH_Mine'))).toBe(false);
   expect(outcome(apply(once, aimedAt(at)))).toEqual(once);
 });
@@ -1439,7 +1444,7 @@ test('a tile with a building in its slot is not terraformed', () => {
     { ...at, terrain: 'plain', improvements: [], building: 'PH_Farm' },
   );
 
-  expect(terraformable(city, 'plain')).toEqual([]);
+  expect(admittedTiles(city, 'PH_Urbanisation')).toEqual([]);
   expect(playable(refusalOf(city, 'PH_Urbanisation'))).toBe(false);
   expect(outcome(apply(city, aimedAt(at)))).toEqual(city);
 });
@@ -1449,7 +1454,7 @@ test('the urbanisation card is refused on every terrain but the plain it terrafo
   for (const terrain of ['forest', 'hills', 'mountain', 'coast', 'deep', 'urban'] as Terrain[]) {
     const city = workedTile(at, terrain, { hand: ['PH_Urbanisation'], resources: production(5) });
 
-    expect(terraformable(city, 'plain')).toEqual([]);
+    expect(admittedTiles(city, 'PH_Urbanisation')).toEqual([]);
     expect(playable(refusalOf(city, 'PH_Urbanisation'))).toBe(false);
     expect(outcome(apply(city, aimedAt(at)))).toEqual(city);
   }

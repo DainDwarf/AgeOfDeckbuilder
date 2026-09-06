@@ -1,7 +1,8 @@
 import { expect, type Page } from '@playwright/test';
 import type Phaser from 'phaser';
-import { type CardId, DECKS, type DeckId } from '../src/rules/cards';
+import { CARDS, type Card, type CardId, DECKS, type DeckId } from '../src/rules/cards';
 import {
+  admitted,
   apply,
   beginChronicle,
   type Chronicle,
@@ -10,7 +11,6 @@ import {
   RESOURCES,
   type Resource,
   refusalOf,
-  targetTiles,
 } from '../src/rules/chronicle';
 import { neighbours, type Tile, type TileCoords, tileAt, tileKey } from '../src/rules/map';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
@@ -245,10 +245,13 @@ export function workerRun(
   card: CardId,
   on: (tile: Tile, chronicle: Chronicle) => boolean = () => true,
 ): Run {
+  const aimed = CARDS[card];
+  if (aimed.aim !== 'tile') throw new Error(`${card} is aimed at no tile`);
+
   for (let seed = 1; seed <= 1000; seed++) {
     let chronicle = beginChronicle(seed, DECKS.PH_Deck);
     for (let turn = 1; turn <= 8; turn++) {
-      const tile = workedThisTurn(chronicle, card, on);
+      const tile = workedThisTurn(chronicle, card, aimed, on);
       if (tile !== undefined) return { seed, turn, tile };
       chronicle = outcome(apply(chronicle, { type: 'end-turn' }));
     }
@@ -276,6 +279,7 @@ export function fallRun(): { seed: number; turns: number } {
 function workedThisTurn(
   chronicle: Chronicle,
   card: CardId,
+  aimed: Card & { readonly aim: 'tile' },
   on: (tile: Tile, chronicle: Chronicle) => boolean,
 ): TileCoords | undefined {
   const enter = chronicle.hand.indexOf('PH_Worker');
@@ -288,7 +292,7 @@ function workedThisTurn(
     if (moved === entered || !playable(refusalOf(moved, card))) continue;
     const standing = tileAt(moved.tiles, tile);
     if (standing === undefined || !on(standing, moved)) continue;
-    if (targetTiles(moved, card).some((coord) => tileKey(coord) === tileKey(tile))) return tile;
+    if (admitted(moved, aimed).some((coord) => tileKey(coord) === tileKey(tile))) return tile;
   }
   return undefined;
 }

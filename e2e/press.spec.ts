@@ -33,7 +33,7 @@ const LIFTED = 140;
 /** Where a card the city can pay for and play at nothing lies in the hand, or -1. */
 function atNothing(chronicle: Chronicle): number {
   return chronicle.hand.findIndex(
-    (id) => CARDS[id].target === 'none' && playable(refusalOf(chronicle, id)),
+    (id) => CARDS[id].aim === 'none' && playable(refusalOf(chronicle, id)),
   );
 }
 
