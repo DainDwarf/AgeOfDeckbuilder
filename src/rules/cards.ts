@@ -73,32 +73,34 @@ function improvable(tile: Tile, improvement: ImprovementId): boolean {
 }
 
 /**
- * What the city has against one more unit, whatever it can pay: the last inhabitant it keeps, no
- * inhabitant idle to turn into a unit, and a unit standing on the city's tile already.
+ * How a unit card enters its unit, the block and the effect as one pair so neither is written
+ * without the other: the city keeps its last inhabitant, needs one idle to turn into the unit, and
+ * needs its own tile free; then one idle inhabitant becomes the unit, on the city's tile.
  */
-function entryBlocks(chronicle: Chronicle): Block[] {
-  const blocks: Block[] = [];
-  if (chronicle.population <= 1) blocks.push('population');
-  if (idle(chronicle) <= 0) blocks.push('idle');
-  if (unitAt(chronicle.units, chronicle.city) !== undefined) blocks.push('city');
-  return blocks;
-}
-
-/** The unit a unit card puts on the map: one idle inhabitant becomes it, on the city's own tile. */
-function entered(paid: Chronicle, type: UnitTypeId): Chronicle {
+function enters(type: UnitTypeId): Aim & { readonly aim: 'none' } {
   return {
-    ...paid,
-    population: paid.population - 1,
-    units: [
-      ...paid.units,
-      {
-        stats: { ...UNIT_STATS[type] },
-        faction: 'player',
-        tile: paid.city,
-        movePoints: UNIT_STATS[type].move,
-        action: UNIT_STATS[type].action,
-      },
-    ],
+    aim: 'none',
+    blocked: (chronicle) => {
+      const blocks: Block[] = [];
+      if (chronicle.population <= 1) blocks.push('population');
+      if (idle(chronicle) <= 0) blocks.push('idle');
+      if (unitAt(chronicle.units, chronicle.city) !== undefined) blocks.push('city');
+      return blocks;
+    },
+    effect: (paid) => ({
+      ...paid,
+      population: paid.population - 1,
+      units: [
+        ...paid.units,
+        {
+          stats: { ...UNIT_STATS[type] },
+          faction: 'player',
+          tile: paid.city,
+          movePoints: UNIT_STATS[type].move,
+          action: UNIT_STATS[type].action,
+        },
+      ],
+    }),
   };
 }
 
@@ -152,20 +154,8 @@ export type CardId =
   | 'PH_Urbanisation';
 
 export const CARDS: Record<CardId, Card> = {
-  PH_Worker: {
-    kind: 'unit',
-    cost: { food: 2 },
-    aim: 'none',
-    blocked: entryBlocks,
-    effect: (paid) => entered(paid, 'PH_Worker'),
-  },
-  PH_Warrior: {
-    kind: 'unit',
-    cost: { military: 2 },
-    aim: 'none',
-    blocked: entryBlocks,
-    effect: (paid) => entered(paid, 'PH_Warrior'),
-  },
+  PH_Worker: { kind: 'unit', cost: { food: 2 }, ...enters('PH_Worker') },
+  PH_Warrior: { kind: 'unit', cost: { military: 2 }, ...enters('PH_Warrior') },
   PH_Farm: {
     kind: 'building',
     cost: { production: 3 },
