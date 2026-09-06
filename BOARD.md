@@ -12,6 +12,13 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
+- **The card seam: aim and effect** — a card is a declarative cost, an aim (its type, which the
+  hand reads, and a predicate, which the one finder filters by) and an effect closure from the
+  paid chronicle and the chosen target to the chronicle after; the `target` column and the
+  effect union go, and no switch in the engine asks what a card does. Nouns keep their tables
+  and a noun's placement is a predicate the aim composes. Every rules and e2e test on the seven
+  cards passes unchanged, and the dogmas gain the purity line for closures.
+  Doc-impact: `docs/DOGMAS.md`. [board/card-seam.md](board/card-seam.md)
 - **Units carry an id** — every unit is named by a number dealt from a counter in the chronicle
   state, through the one function the unit card and an arrival both enter a unit by; the move and
   attack commands, the unit target and the target-finders address a unit by id, the list staying
