@@ -16,7 +16,6 @@ import {
   reachable,
   type Unit,
   unitAt,
-  unitOf,
 } from './units';
 
 /**
@@ -62,8 +61,7 @@ export const ENEMY_SCRIPTS: Record<EnemyScriptId, EnemyScript> = {
 
     intentOf(chronicle: Chronicle, enemy: Unit): TileCoords | undefined {
       if (tileKey(enemy.tile) === tileKey(chronicle.city)) return undefined;
-      const target = leastHealth(chronicle.units, enemy);
-      return target === undefined ? undefined : unitOf(chronicle.units, target)?.tile;
+      return leastHealth(chronicle.units, enemy)?.tile;
     },
   },
 };

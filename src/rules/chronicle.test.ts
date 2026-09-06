@@ -132,7 +132,7 @@ function madeOf(tiles: Tile[], terrain: Terrain, coords: TileCoords[]): Tile[] {
 }
 
 function statsOf(stats: Partial<UnitStats>): UnitStats {
-  return { id: 'PH_Warrior', health: 4, damage: 1, range: 1, move: 2, action: 1, ...stats };
+  return { type: 'PH_Warrior', health: 4, damage: 1, range: 1, move: 2, action: 1, ...stats };
 }
 
 /**
@@ -293,7 +293,7 @@ function buildingAt(chronicle: Chronicle, { q, r }: TileCoords): BuildingTypeId 
 
 /** A worker of the player's, standing on a tile with nothing to fight with and no action to fight on. */
 function worker(tile: TileCoords): Unit {
-  return unitOf('player', tile, { id: 'PH_Worker', damage: 0, range: 0, action: 0 });
+  return unitOf('player', tile, { type: 'PH_Worker', damage: 0, range: 0, action: 0 });
 }
 
 /**

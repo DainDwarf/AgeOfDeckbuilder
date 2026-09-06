@@ -68,7 +68,9 @@ function firstRefusal(...checks: readonly (TileBlock | undefined)[]): TileBlock 
 /** A worker of the player's standing on the tile: what a card played through a worker composes. */
 function worked(chronicle: Chronicle, tile: TileCoords): TileBlock | undefined {
   const standing = unitAt(chronicle.units, tile);
-  return standing?.faction === 'player' && standing.stats.id === 'PH_Worker' ? undefined : 'worker';
+  return standing?.faction === 'player' && standing.stats.type === 'PH_Worker'
+    ? undefined
+    : 'worker';
 }
 
 /** The tile inside the city's border: what a building card asks for and an instant does not. */

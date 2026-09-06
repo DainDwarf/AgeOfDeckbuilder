@@ -279,7 +279,7 @@ export function improvementMark(
 /** The one way a unit is drawn: its placeholder mark, in the colour of the faction it acts for. */
 export function unitMark(scene: Phaser.Scene, unit: Unit): Phaser.GameObjects.Polygon {
   return scene.add
-    .polygon(0, 0, UNIT_MARKS[unit.stats.id], FACTION_COLOURS[unit.faction])
+    .polygon(0, 0, UNIT_MARKS[unit.stats.type], FACTION_COLOURS[unit.faction])
     .setStrokeStyle(2, OUTLINE);
 }
 
@@ -895,11 +895,10 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
       tile === undefined || current === undefined ? undefined : unitAt(current.units, tile);
     lit = undefined;
     if (current !== undefined && standing?.faction === 'player') {
-      const aimed = new Set(attackable(current.units, standing));
       lit = {
         unit: standing.id,
         landings: reachable(current.tiles, current.units, standing),
-        targets: current.units.filter((other) => aimed.has(other.id)).map((other) => other.tile),
+        targets: attackable(current.units, standing).map((other) => other.tile),
       };
     }
 
@@ -1150,13 +1149,11 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
 
       /** The marker of the unit the press has hold of, back on the tile that unit stands on. */
       const bringHome = (): void => {
-        const held =
-          grabbed === undefined || shown === undefined
-            ? undefined
-            : unitOf(shown.units, grabbed.unit);
+        if (grabbed === undefined || shown === undefined) return;
+        const held = unitOf(shown.units, grabbed.unit);
         if (held === undefined) return;
         const home = positionOf(held.tile);
-        markers.get(held.id)?.setPosition(home.x, home.y);
+        markers.get(grabbed.unit)?.setPosition(home.x, home.y);
       };
 
       const carry = (pointer: Phaser.Input.Pointer): void => {

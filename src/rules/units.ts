@@ -14,7 +14,7 @@ export type EnemyScriptId = 'PH_Advance';
  * card resolves, so from then on the numbers are that unit's own and change with it.
  */
 export type UnitStats = {
-  readonly id: UnitTypeId;
+  readonly type: UnitTypeId;
   readonly health: number;
   readonly damage: number;
   readonly range: number;
@@ -24,16 +24,16 @@ export type UnitStats = {
 
 /** The stats a unit of each kind enters the map with. */
 export const UNIT_STATS: Record<UnitTypeId, UnitStats> = {
-  PH_Worker: { id: 'PH_Worker', health: 2, damage: 0, range: 0, move: 2, action: 0 },
-  PH_Warrior: { id: 'PH_Warrior', health: 5, damage: 2, range: 1, move: 2, action: 1 },
+  PH_Worker: { type: 'PH_Worker', health: 2, damage: 0, range: 0, move: 2, action: 0 },
+  PH_Warrior: { type: 'PH_Warrior', health: 5, damage: 2, range: 1, move: 2, action: 1 },
 };
 
 /**
  * A unit standing on the map, with the move points it has left to cross tiles on and the action it
  * has left to attack on. An enemy is the one that carries a script — the enemy phase asks it where
  * to move and what to aim at — and the intent that phase left on it. `id` is the number the
- * chronicle dealt it as it entered: what every command and every finder names it by, whoever else
- * enters or is killed around it.
+ * chronicle dealt it as it entered: what every command names it by, whoever else enters or is
+ * killed around it.
  */
 export type Unit = {
   readonly id: number;
@@ -106,10 +106,10 @@ export function reachable(tiles: readonly Tile[], units: readonly Unit[], unit: 
 }
 
 /**
- * What a unit an enemy script aims at, by its number: the unit of another faction within its range
- * holding the least health, and nothing when none is there or the unit has no damage to remove.
+ * What a unit an enemy script aims at: the unit of another faction within its range holding the
+ * least health, and nothing when none is there or the unit has no damage to remove.
  */
-export function leastHealth(units: readonly Unit[], attacker: Unit): number | undefined {
+export function leastHealth(units: readonly Unit[], attacker: Unit): Unit | undefined {
   if (attacker.stats.damage === 0) return undefined;
 
   let target: Unit | undefined;
@@ -118,29 +118,29 @@ export function leastHealth(units: readonly Unit[], attacker: Unit): number | un
     if (distance(other.tile, attacker.tile) > attacker.stats.range) continue;
     if (target === undefined || other.stats.health < target.stats.health) target = other;
   }
-  return target?.id;
+  return target;
 }
 
 /**
- * What a unit can attack, each by its number: every unit of another faction within its range, while
- * it has the action an attack spends. A unit with none attacks nothing.
+ * What a unit can attack: every unit of another faction within its range, while it has the action an
+ * attack spends. A unit with none attacks nothing.
  */
-export function attackable(units: readonly Unit[], attacker: Unit): number[] {
+export function attackable(units: readonly Unit[], attacker: Unit): Unit[] {
   if (attacker.action <= 0) return [];
 
-  const targets: number[] = [];
+  const targets: Unit[] = [];
   for (const other of units) {
     if (other.faction === attacker.faction) continue;
     if (distance(other.tile, attacker.tile) > attacker.stats.range) continue;
-    targets.push(other.id);
+    targets.push(other);
   }
   return targets;
 }
 
 /** The one attack there is: the target loses the attacker's damage, and at zero health it is killed. */
-export function attacked(units: readonly Unit[], attacker: Unit, target: number): Unit[] {
+export function attacked(units: readonly Unit[], attacker: Unit, target: Unit): Unit[] {
   return units.flatMap((unit) => {
-    if (unit.id !== target) return [unit];
+    if (unit.id !== target.id) return [unit];
     const health = unit.stats.health - attacker.stats.damage;
     if (health <= 0) return [];
     const hurt: Unit = { ...unit, stats: { ...unit.stats, health } };

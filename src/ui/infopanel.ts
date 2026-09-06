@@ -114,7 +114,7 @@ type Term = (typeof STATS)[number] | Resource;
 
 /** What a stat's row reads: what the unit has left over its own number, where it has two. */
 function readingOf(unit: Unit, stat: (typeof STATS)[number]): string {
-  if (stat === 'health') return `${unit.stats.health} / ${UNIT_STATS[unit.stats.id].health}`;
+  if (stat === 'health') return `${unit.stats.health} / ${UNIT_STATS[unit.stats.type].health}`;
   if (stat === 'move') return `${unit.movePoints} / ${unit.stats.move}`;
   if (stat === 'action') return `${unit.action} / ${unit.stats.action}`;
   return String(unit.stats[stat]);
@@ -386,7 +386,7 @@ function headOf(
   card: Card,
 ): { mark: Phaser.GameObjects.Polygon; name: string } {
   if (card.kind === 'unit') {
-    return { mark: unitMark(scene, card.unit), name: text(`unit.${card.unit.stats.id}`) };
+    return { mark: unitMark(scene, card.unit), name: text(`unit.${card.unit.stats.type}`) };
   }
   return { mark: markOf(scene, card.rows[0]), name: nameOf(card.rows[0]) };
 }

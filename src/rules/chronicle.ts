@@ -481,13 +481,12 @@ function attack(chronicle: Chronicle, attacker: number, at: TileCoords): Stage[]
   const unit = unitOf(chronicle.units, attacker);
   if (unit === undefined || unit.faction !== 'player') return [{ name: 'refused', chronicle }];
 
-  const aimed = attackable(chronicle.units, unit);
-  const target = chronicle.units.find(
-    (other) => aimed.includes(other.id) && tileKey(other.tile) === tileKey(at),
+  const target = attackable(chronicle.units, unit).find(
+    (other) => tileKey(other.tile) === tileKey(at),
   );
   if (target === undefined) return [{ name: 'refused', chronicle }];
 
-  const struck = attacked(chronicle.units, unit, target.id).map((other) =>
+  const struck = attacked(chronicle.units, unit, target).map((other) =>
     other.id === attacker ? { ...other, action: other.action - 1 } : other,
   );
   return [
@@ -553,7 +552,7 @@ function combat(chronicle: Chronicle): Stage[] {
     const struck =
       target === undefined || target.faction === attacker.faction
         ? units
-        : attacked(units, attacker, target.id);
+        : attacked(units, attacker, target);
     units = spent(struck, attacker.id);
     stages.push({
       name: 'attack',
