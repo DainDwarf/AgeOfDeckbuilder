@@ -17,11 +17,20 @@ a [`BOARD.md`](BOARD.md) line. Say
   *data owns its behaviour* comes back with the card model; *mechanism vs content testing*,
   *catalogue coherence tests* and *fixtures through the exported transform* come back with the
   first content catalogue.
-- **Fixture content** (v0.0.4, with the content catalogue): the rules read their improvements,
-  buildings, features and unit stats from an input instead of module constants, so a test hands
-  in a synthetic catalogue — a building that stands on hills, a unit kind with its own numbers —
-  and no fixture writes a tile or a unit the real content could not produce. First consumers: the
-  four-layer yield test, the terraform-keeps-improvements test, the unit builders' synthetic stats.
+- **Fixture content** (v0.0.4, with the content catalogue — settled 2026-09-07, to be executed
+  then): the rules today are deterministic and side-effect free but not parametric in their
+  content — cards, improvements, buildings, features and unit stats are module constants the
+  rules read. With the catalogue, the content becomes an argument the rules receive, and the
+  game is one function of content, state and command. It is never a field of the state: cards
+  carry their aim predicate and effect closure, and closures never live in the state; the pure
+  tables could, but content split across two homes is the interdependency the code dogmas
+  forbid — one catalogue, one door. Two things follow. A test hands in a synthetic catalogue — a
+  building that stands on hills, a unit kind with its own numbers — so no fixture writes a tile or
+  a unit the real content could not produce, and no test reads its oracle from the code's own
+  table; first consumers are the four-layer yield test, the terraform-keeps-improvements test
+  and the unit builders' synthetic stats. A save names its content version, since the state
+  cannot carry the content, and a replay is the triple of content, seed and commands. The
+  `DOGMAS.md` Stack line gains its third word the same day.
 - **The render factor can change after boot**: regrow the bitmap, re-zoom cameras, re-rasterize
   text while the game runs. Four consumers: itch.io's fullscreen button, a settings render-scale
   slider, monitor-hopping, resizing the window after boot. Decide after the art style locks —
