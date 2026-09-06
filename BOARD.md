@@ -12,12 +12,6 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
-- **A card is aimed at a tile or at nothing** — the unit aim goes: a unit stands on one tile, so
-  a card aimed at a unit is aimed at its tile, its predicate reads the unit standing there and its
-  effect finds it at resolution; the play target is a tile, the finder has one branch, the block
-  one name, and the map one aiming gesture; the refusal text keyed to the unit block goes. Every
-  rules and e2e test on the seven cards passes, the refresh's refusals unchanged.
-  Doc-impact: none.
 - **A stand-in instant takes a card back from the discard pile** — for two science, the card's
   effect offers the discard pile and the player takes one card of it into the hand: the chronicle
   holds the choice while it stands, one command takes, every other command is refused meanwhile,

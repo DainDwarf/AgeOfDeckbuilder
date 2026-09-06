@@ -201,7 +201,7 @@ export function createHand(
               );
               return;
             }
-            // A card that takes a target is not played by the release: it waits, in its slot and
+            // A card that takes a tile is not played by the release: it waits, in its slot and
             // armed, while the map is aimed at, and comes down only when the card is clicked.
             const card = CARDS[slot.id];
             if (card.aim !== 'none') {

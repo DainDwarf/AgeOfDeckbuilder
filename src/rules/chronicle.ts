@@ -1,4 +1,4 @@
-import { type AimedCard, CARDS, type Card } from './cards';
+import { type AimedCard, CARDS } from './cards';
 import { arrival, ENEMY_SCRIPTS } from './enemies';
 import {
   CITY_TILE,
@@ -22,17 +22,9 @@ import {
   unitAt,
 } from './units';
 
-/**
- * What a play was aimed at, in the type the card declares: the tile a building card builds on, or
- * the unit an instant acts on, by its place in `units`.
- */
-export type Target =
-  | { readonly type: 'tile'; readonly tile: TileCoords }
-  | { readonly type: 'unit'; readonly unit: number };
-
 export type Command =
   | { readonly type: 'end-turn' }
-  | { readonly type: 'play'; readonly index: number; readonly target?: Target }
+  | { readonly type: 'play'; readonly index: number; readonly tile?: TileCoords }
   | { readonly type: 'move'; readonly unit: number; readonly tile: TileCoords }
   | { readonly type: 'attack'; readonly unit: number; readonly tile: TileCoords }
   | { readonly type: 'assign'; readonly tile: TileCoords }
@@ -146,7 +138,7 @@ function stagesOf(chronicle: Chronicle, command: Command): Stage[] {
     case 'end-turn':
       return endOfTurn(chronicle);
     case 'play':
-      return play(chronicle, command.index, command.target);
+      return play(chronicle, command.index, command.tile);
     case 'move':
       return move(chronicle, command.unit, command.tile);
     case 'attack':
@@ -346,22 +338,19 @@ function unaffordable(chronicle: Chronicle, costs: readonly Cost[]): Resource[] 
 }
 
 /**
- * Everything a card's aim admits, the aim's own predicate the whole of the filter: the tiles a tile
- * aim lists, the units a unit aim lists by their place in `units`. The one list the block, the play
- * and the map a card is aimed over all read.
+ * Every tile a card's aim admits, the aim's own predicate the whole of the filter. The one list the
+ * block, the play and the map a card is aimed over all read.
  */
-export function admitted(chronicle: Chronicle, card: Card & { readonly aim: 'tile' }): TileCoords[];
-export function admitted(chronicle: Chronicle, card: Card & { readonly aim: 'unit' }): number[];
-export function admitted(chronicle: Chronicle, card: AimedCard): TileCoords[] | number[] {
-  return card.aim === 'tile'
-    ? chronicle.tiles.filter((tile) => card.admits(chronicle, tile)).map(({ q, r }) => ({ q, r }))
-    : chronicle.units.flatMap((unit, at) => (card.admits(chronicle, unit) ? [at] : []));
+export function admitted(chronicle: Chronicle, card: AimedCard): TileCoords[] {
+  return chronicle.tiles
+    .filter((tile) => card.admits(chronicle, tile))
+    .map(({ q, r }) => ({ q, r }));
 }
 
 /**
  * Every block a card the city can pay for still stands against: there is nothing for it to resolve
- * on. An aimed card is blocked by the type it aims at when its aim admits nothing; a card that
- * lands whole answers with the blocks it declares, in the order it declares them.
+ * on. An aimed card is blocked for the tile when its aim admits none; a card that lands whole
+ * answers with the blocks it declares, in the order it declares them.
  */
 function blocked(chronicle: Chronicle, id: CardId): Block[] {
   const card = CARDS[id];
@@ -370,8 +359,6 @@ function blocked(chronicle: Chronicle, id: CardId): Block[] {
       return card.blocked?.(chronicle) ?? [];
     case 'tile':
       return admitted(chronicle, card).length === 0 ? ['tile'] : [];
-    case 'unit':
-      return admitted(chronicle, card).length === 0 ? ['unit'] : [];
   }
 }
 
@@ -380,7 +367,7 @@ function blocked(chronicle: Chronicle, id: CardId): Block[] {
  * cost is paid and its effect has landed. A play the hand, the city or the map refuses is one
  * `refused` stage on the chronicle as it stood.
  */
-function play(chronicle: Chronicle, index: number, target: Target | undefined): Stage[] {
+function play(chronicle: Chronicle, index: number, tile: TileCoords | undefined): Stage[] {
   const id = chronicle.hand[index];
   if (id === undefined || !playable(refusalOf(chronicle, id))) {
     return [{ name: 'refused', chronicle }];
@@ -395,32 +382,28 @@ function play(chronicle: Chronicle, index: number, target: Target | undefined): 
     discardPile: [...chronicle.discardPile, id],
   };
 
-  const played = resolve(paid, id, target);
+  const played = resolve(paid, id, tile);
   return played === undefined
     ? [{ name: 'refused', chronicle }]
     : [{ name: 'played', chronicle: played }];
 }
 
 /**
- * The card's effect, on the chronicle its cost is already paid on. An aimed card takes the one
- * candidate its aim admits and nothing else; a card that lands whole takes no target at all.
- * `undefined` refuses the play, and nothing is paid or discarded.
+ * The card's effect, on the chronicle its cost is already paid on. An aimed card takes one tile its
+ * aim admits and no other; a card that lands whole takes no tile at all. `undefined` refuses the
+ * play, and nothing is paid or discarded.
  */
-function resolve(paid: Chronicle, id: CardId, target: Target | undefined): Chronicle | undefined {
+function resolve(paid: Chronicle, id: CardId, tile: TileCoords | undefined): Chronicle | undefined {
   const card = CARDS[id];
   switch (card.aim) {
     case 'none':
       return card.effect(paid);
     case 'tile': {
-      if (target?.type !== 'tile') return undefined;
-      const at = tileKey(target.tile);
+      if (tile === undefined) return undefined;
+      const at = tileKey(tile);
       if (!admitted(paid, card).some((coord) => tileKey(coord) === at)) return undefined;
-      return card.effect(paid, target.tile);
+      return card.effect(paid, tile);
     }
-    case 'unit':
-      if (target?.type !== 'unit') return undefined;
-      if (!admitted(paid, card).includes(target.unit)) return undefined;
-      return card.effect(paid, target.unit);
   }
 }
 

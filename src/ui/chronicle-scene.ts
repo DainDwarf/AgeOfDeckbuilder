@@ -7,7 +7,6 @@ import {
   cityCommand,
   outcome,
   type Stage,
-  type Target,
   tileCost,
   tileRefusal,
   type UnitCommand,
@@ -296,17 +295,11 @@ export class ChronicleScene extends Phaser.Scene {
         // left on the UI that has to be dead for the length of the aim.
         endTurn.live(false);
         dismiss();
-        const chosen = (target: Target | undefined): void => {
+        return view.aimTile(this.current, admitted(this.current, card), (tile) => {
           endTurn.live(true);
-          if (target === undefined) released();
-          else void playOut({ type: 'play', index, target });
-        };
-        switch (card.aim) {
-          case 'tile':
-            return view.aimTile(this.current, admitted(this.current, card), chosen);
-          case 'unit':
-            return view.aimUnit(this.current, admitted(this.current, card), chosen);
-        }
+          if (tile === undefined) released();
+          else void playOut({ type: 'play', index, tile });
+        });
       },
       (id, refusal) => overlay.zoom(id, refusal),
     );

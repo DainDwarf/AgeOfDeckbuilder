@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { claimable, type Stage, type Target, type UnitCommand } from '../rules/chronicle';
+import { claimable, type Stage, type UnitCommand } from '../rules/chronicle';
 import {
   type BuildingTypeId,
   CITY_TILE,
@@ -199,19 +199,13 @@ export type MapView = {
   /** What the map plays for the stage; nothing means the scene renders it at once. */
   play(stage: Stage): Promise<void> | undefined;
   /**
-   * Rings the units it is given, each by its place in `units`, and aims at them until a target is
-   * chosen or cancel is called. A right press lets it go, exactly as cancel does.
+   * Lights the tiles it is given and aims at them, until one is chosen or cancel is called. A right
+   * press lets it go, exactly as cancel does.
    */
-  aimUnit(
-    chronicle: Chronicle,
-    units: number[],
-    chosen: (target: Target | undefined) => void,
-  ): () => void;
-  /** Lights the tiles it is given and aims at them, until a target is chosen or cancel is called. */
   aimTile(
     chronicle: Chronicle,
     tiles: TileCoords[],
-    chosen: (target: Target | undefined) => void,
+    chosen: (tile: TileCoords | undefined) => void,
   ): () => void;
   /**
    * Reports the tile every press the UI leaves lands on and the button it came from, and nothing
@@ -1251,54 +1245,18 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
       paintYields();
     },
 
-    aimUnit(
-      current: Chronicle,
-      units: number[],
-      chosen: (target: Target | undefined) => void,
-    ): () => void {
-      const { catcher, glow, close } = openAim();
-
-      const aimed = units.map((index) => ({ index, tile: current.units[index].tile }));
-      for (const { tile } of aimed) {
-        const { x, y } = positionOf(tile);
-        glow.add(scene.add.polygon(x, y, hexagon(TILE_SIZE - 2), 0, 0).setStrokeStyle(4, LIT));
-      }
-
-      const finish = (target: Target | undefined): void => {
-        stop();
-        close();
-        chosen(target);
-      };
-
-      const stop = takePress(catcher, {
-        release: (pointer, press) => {
-          if (press === 'right') {
-            finish(undefined);
-            return;
-          }
-          const at = map.at(pointer.x, pointer.y);
-          const on = tileUnder(current, at.x, at.y);
-          if (on === undefined) return;
-          const found = aimed.find((unit) => same(unit.tile, on));
-          if (found !== undefined) finish({ type: 'unit', unit: found.index });
-        },
-      });
-
-      return () => finish(undefined);
-    },
-
     aimTile(
       current: Chronicle,
       tiles: TileCoords[],
-      chosen: (target: Target | undefined) => void,
+      chosen: (tile: TileCoords | undefined) => void,
     ): () => void {
       const { catcher, glow, close } = openAim();
       for (const coord of tiles) glow.add(glowTile(scene, coord, LIT));
 
-      const finish = (target: Target | undefined): void => {
+      const finish = (tile: TileCoords | undefined): void => {
         stop();
         close();
-        chosen(target);
+        chosen(tile);
       };
 
       const stop = takePress(catcher, {
@@ -1309,8 +1267,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
           }
           const at = map.at(pointer.x, pointer.y);
           const on = tileUnder(current, at.x, at.y);
-          if (on !== undefined && tiles.some((coord) => same(coord, on)))
-            finish({ type: 'tile', tile: on });
+          if (on !== undefined && tiles.some((coord) => same(coord, on))) finish(on);
         },
       });
 

@@ -162,11 +162,6 @@ function attackOn(unit: number, at: TileCoords): Command {
   return { type: 'attack', unit, tile: at };
 }
 
-/** The instant that refreshes, aimed at a unit, ready to hand to `apply`. */
-function refreshOf(unit: number): Command {
-  return { type: 'play', index: 0, target: { type: 'unit', unit } };
-}
-
 /** What a unit has left of its move points. */
 function pointsOf(chronicle: Chronicle, unit: number): number {
   return chronicle.units[unit].movePoints;
@@ -179,7 +174,7 @@ function actionOf(chronicle: Chronicle, unit: number): number {
 
 /** A card aimed at a tile, ready to hand to `apply`. */
 function aimedAt(tile: TileCoords): Command {
-  return { type: 'play', index: 0, target: { type: 'tile', tile } };
+  return { type: 'play', index: 0, tile };
 }
 
 /** The tiles the named card's aim admits, for a card that is aimed at a tile. */
@@ -744,7 +739,7 @@ test('the refresh instant refreshes one unit of the player’s that has spent mo
     ],
   });
 
-  const stages = apply(city, refreshOf(0));
+  const stages = apply(city, aimedAt(CITY));
 
   expect(stages.map((stage) => stage.name)).toEqual(['played']);
   expect(pointsOf(outcome(stages), 0)).toBe(2);
@@ -752,7 +747,7 @@ test('the refresh instant refreshes one unit of the player’s that has spent mo
   expect(outcome(stages).discardPile).toEqual(['PH_March']);
 });
 
-test('the refresh instant is refused on a unit whose move points are full, on an enemy and with no unit', () => {
+test('the refresh instant is refused on a unit whose move points are full, on an enemy, on a tile nobody stands on and at nothing', () => {
   const city = cityOf(['urban'], {
     tiles: field(3),
     hand: ['PH_March'],
@@ -763,13 +758,13 @@ test('the refresh instant is refused on a unit whose move points are full, on an
     ],
   });
 
-  expect(stagedBy(city, refreshOf(1))).toEqual(['refused']);
-  expect(stagedBy(city, refreshOf(2))).toEqual(['refused']);
-  expect(stagedBy(city, refreshOf(9))).toEqual(['refused']);
+  expect(stagedBy(city, aimedAt({ q: 1, r: 1 }))).toEqual(['refused']);
+  expect(stagedBy(city, aimedAt({ q: 2, r: 0 }))).toEqual(['refused']);
+  expect(stagedBy(city, aimedAt({ q: 0, r: 1 }))).toEqual(['refused']);
   expect(stagedBy(city, { type: 'play', index: 0 })).toEqual(['refused']);
-  expect(outcome(apply(city, refreshOf(1)))).toBe(city);
-  expect(outcome(apply(city, refreshOf(2)))).toBe(city);
-  expect(outcome(apply(city, refreshOf(9)))).toBe(city);
+  expect(outcome(apply(city, aimedAt({ q: 1, r: 1 })))).toBe(city);
+  expect(outcome(apply(city, aimedAt({ q: 2, r: 0 })))).toBe(city);
+  expect(outcome(apply(city, aimedAt({ q: 0, r: 1 })))).toBe(city);
   expect(outcome(apply(city, { type: 'play', index: 0 }))).toBe(city);
 });
 
@@ -887,7 +882,7 @@ test('the refresh instant refreshes move points alone, and leaves a spent action
     units: [unitOf('player', CITY, { move: 2, action: 1 }, 0, 0)],
   });
 
-  const refreshed = outcome(apply(city, refreshOf(0)));
+  const refreshed = outcome(apply(city, aimedAt(CITY)));
 
   expect(pointsOf(refreshed, 0)).toBe(2);
   expect(actionOf(refreshed, 0)).toBe(0);
@@ -900,8 +895,8 @@ test('the refresh instant is refused on a unit whose move points are full, its a
     units: [unitOf('player', CITY, { move: 2, action: 1 }, 2, 0)],
   });
 
-  expect(stagedBy(city, refreshOf(0))).toEqual(['refused']);
-  expect(outcome(apply(city, refreshOf(0)))).toBe(city);
+  expect(stagedBy(city, aimedAt(CITY))).toEqual(['refused']);
+  expect(outcome(apply(city, aimedAt(CITY)))).toBe(city);
 });
 
 test('an attack spends no move points and a step no action: either follows the other', () => {
@@ -1760,13 +1755,13 @@ test('a building card with no tile it could stand on is refused for the tile', (
   expect(refusalOf(worked, 'PH_Farm').blocked).toEqual([]);
 });
 
-test('the refresh instant is refused for the unit while no unit of the player’s has spent a move point', () => {
+test('the refresh instant is refused for the tile while no unit of the player’s has spent a move point', () => {
   const empty = cityOf(['urban'], { tiles: field(2) });
   const full = { ...empty, units: [worker({ q: 1, r: 0 })] };
   const spent = { ...empty, units: [unitOf('player', { q: 1, r: 0 }, { move: 2 }, 1)] };
 
-  expect(refusalOf(empty, 'PH_March').blocked).toEqual(['unit']);
-  expect(refusalOf(full, 'PH_March').blocked).toEqual(['unit']);
+  expect(refusalOf(empty, 'PH_March').blocked).toEqual(['tile']);
+  expect(refusalOf(full, 'PH_March').blocked).toEqual(['tile']);
   expect(refusalOf(spent, 'PH_March').blocked).toEqual([]);
 });
 

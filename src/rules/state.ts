@@ -43,9 +43,9 @@ export type Chronicle = {
 /**
  * What the city or the map has against a card or a claim the cost alone would let through: the city
  * down to the last inhabitant it keeps, no inhabitant idle to turn into a unit or to stand on a
- * tile, a unit already on the city tile, no tile to aim at, no unit to refresh.
+ * tile, a unit already on the city tile, no tile to aim at.
  */
-export type Block = 'population' | 'idle' | 'city' | 'tile' | 'unit';
+export type Block = 'population' | 'idle' | 'city' | 'tile';
 
 /** Whether the tile is inside the city's border: what a card's aim and a city-mode click both ask. */
 export function holds(chronicle: Chronicle, tile: TileCoords): boolean {

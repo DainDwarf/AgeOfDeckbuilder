@@ -10,7 +10,7 @@ import {
 } from './map';
 import { RESOURCES, type Resources } from './resources';
 import { type Block, type CardId, type Chronicle, holds, idle } from './state';
-import { refreshedMovePoints, UNIT_STATS, type Unit, type UnitTypeId, unitAt } from './units';
+import { refreshedMovePoints, UNIT_STATS, type UnitTypeId, unitAt } from './units';
 
 /** The declared order of the kinds, which is the order a sorted list of cards reads in. */
 export const CARD_KINDS = ['unit', 'building', 'instant'] as const;
@@ -19,9 +19,9 @@ export type CardKind = (typeof CARD_KINDS)[number];
 
 /**
  * What a card is played at, and what it does with what it was played at. An aim of `none` lands
- * whole, and names what blocks it where the map or the city can hold it up; a `tile` or a `unit` aim
- * admits the candidates its predicate lets through, is blocked when it admits none, and hands its
- * effect the one that was chosen. The effect takes the chronicle the card's cost is paid on.
+ * whole, and names what blocks it where the map or the city can hold it up; a `tile` aim admits the
+ * tiles its predicate lets through, is blocked when it admits none, and hands its effect the one
+ * that was chosen. The effect takes the chronicle the card's cost is paid on.
  */
 type Aim =
   | {
@@ -33,11 +33,6 @@ type Aim =
       readonly aim: 'tile';
       readonly admits: (chronicle: Chronicle, tile: Tile) => boolean;
       readonly effect: (paid: Chronicle, at: TileCoords) => Chronicle;
-    }
-  | {
-      readonly aim: 'unit';
-      readonly admits: (chronicle: Chronicle, unit: Unit) => boolean;
-      readonly effect: (paid: Chronicle, at: number) => Chronicle;
     };
 
 /**
@@ -47,8 +42,8 @@ type Aim =
  */
 export type Card = { readonly kind: CardKind; readonly cost: Partial<Resources> } & Aim;
 
-/** A card the player picks something for: what the hand arms and the finder lists candidates for. */
-export type AimedCard = Card & { readonly aim: 'tile' | 'unit' };
+/** A card the player picks a tile for: what the hand arms and the finder lists candidates for. */
+export type AimedCard = Card & { readonly aim: 'tile' };
 
 /** A worker of the player's standing on the tile: what a card played through a worker composes. */
 function worked(chronicle: Chronicle, tile: TileCoords): boolean {
@@ -129,11 +124,14 @@ function terraformed(paid: Chronicle, at: TileCoords, to: Terrain): Chronicle {
   return retiled(paid, at, (tile) => ({ ...tile, terrain: to, feature: undefined }));
 }
 
-/** The move points an instant refreshes, on the one unit it was aimed at. */
-function refreshed(paid: Chronicle, at: number): Chronicle {
+/** The move points an instant refreshes, on the unit standing on the tile it was aimed at. */
+function refreshed(paid: Chronicle, at: TileCoords): Chronicle {
+  const key = tileKey(at);
   return {
     ...paid,
-    units: paid.units.map((unit, index) => (index === at ? refreshedMovePoints(unit) : unit)),
+    units: paid.units.map((unit) =>
+      tileKey(unit.tile) === key ? refreshedMovePoints(unit) : unit,
+    ),
   };
 }
 
@@ -158,8 +156,11 @@ export const CARDS: Record<CardId, Card> = {
   PH_March: {
     kind: 'instant',
     cost: {},
-    aim: 'unit',
-    admits: (_chronicle, unit) => unit.faction === 'player' && unit.movePoints < unit.stats.move,
+    aim: 'tile',
+    admits: (chronicle, tile) => {
+      const standing = unitAt(chronicle.units, tile);
+      return standing?.faction === 'player' && standing.movePoints < standing.stats.move;
+    },
     effect: refreshed,
   },
   PH_Harvest: {

@@ -72,7 +72,6 @@ const TEXT = {
   'refusal.idle': 'No idle population.',
   'refusal.city': 'A unit already stands on the city.',
   'refusal.tile': 'No tile to aim at.',
-  'refusal.unit': 'No unit to refresh.',
   'browse.draw-pile': 'Draw pile — {count}',
   'browse.discard-pile': 'Discard pile — {count}',
   'menu.menu': 'Menu',

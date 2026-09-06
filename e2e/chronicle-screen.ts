@@ -1,6 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 import type Phaser from 'phaser';
-import { CARDS, type Card, DECKS, type DeckId } from '../src/rules/cards';
+import { type AimedCard, CARDS, DECKS, type DeckId } from '../src/rules/cards';
 import {
   admitted,
   apply,
@@ -278,7 +278,7 @@ export function fallRun(): { seed: number; turns: number } {
 function workedThisTurn(
   chronicle: Chronicle,
   card: CardId,
-  aimed: Card & { readonly aim: 'tile' },
+  aimed: AimedCard,
   on: (tile: Tile, chronicle: Chronicle) => boolean,
 ): TileCoords | undefined {
   const enter = chronicle.hand.indexOf('PH_Worker');
