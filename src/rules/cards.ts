@@ -3,7 +3,7 @@ import type { BuildingTypeId, ImprovementId, Terrain } from './map';
 import type { UnitTypeId } from './units';
 
 /** The declared order of the kinds, which is the order a sorted list of cards reads in. */
-export const CARD_KINDS = ['unit', 'building', 'order', 'instant'] as const;
+export const CARD_KINDS = ['unit', 'building', 'instant'] as const;
 
 export type CardKind = (typeof CARD_KINDS)[number];
 
@@ -12,13 +12,14 @@ export type TargetType = 'none' | 'tile' | 'unit';
 
 /**
  * The one effect an instant card has: resources into the city's stores, the improvement it improves
- * a tile with, or the terrain it terraforms into the other. A card that takes a tile aims at `tile`
- * and one that lands whole at `none`.
+ * a tile with, the terrain it terraforms into the other, or the move points it refreshes. A card
+ * that takes a tile aims at `tile`, one that takes a unit at `unit`, one that lands whole at `none`.
  */
 export type InstantEffect =
   | { readonly effect: 'gain'; readonly gain: Partial<Resources> }
   | { readonly effect: 'improve'; readonly improvement: ImprovementId }
-  | { readonly effect: 'terraform'; readonly from: Terrain; readonly to: Terrain };
+  | { readonly effect: 'terraform'; readonly from: Terrain; readonly to: Terrain }
+  | { readonly effect: 'refresh' };
 
 /** An instant card: its cost, what it is aimed at, and the one effect it resolves as. */
 export type InstantCard = {
@@ -29,7 +30,7 @@ export type InstantCard = {
 
 /**
  * A unit card names the unit it puts on the map, a building card the building it builds, an instant
- * card its one effect; no other kind carries any of them.
+ * card its one effect.
  */
 export type Card =
   | {
@@ -44,12 +45,7 @@ export type Card =
       readonly target: TargetType;
       readonly building: BuildingTypeId;
     }
-  | InstantCard
-  | {
-      readonly kind: Exclude<CardKind, 'unit' | 'building' | 'instant'>;
-      readonly cost: Partial<Resources>;
-      readonly target: TargetType;
-    };
+  | InstantCard;
 
 /** `PH_` marks a stand-in: none of these is authored content, and every one of them goes. */
 export type CardId =
@@ -65,7 +61,7 @@ export const CARDS: Record<CardId, Card> = {
   PH_Worker: { kind: 'unit', cost: { food: 2 }, target: 'none', unitType: 'PH_Worker' },
   PH_Warrior: { kind: 'unit', cost: { military: 2 }, target: 'none', unitType: 'PH_Warrior' },
   PH_Farm: { kind: 'building', cost: { production: 3 }, target: 'tile', building: 'PH_Farm' },
-  PH_March: { kind: 'order', cost: {}, target: 'unit' },
+  PH_March: { kind: 'instant', cost: {}, target: 'unit', effect: 'refresh' },
   PH_Harvest: {
     kind: 'instant',
     cost: { science: 1 },

@@ -63,7 +63,7 @@ export type Chronicle = {
 
 /**
  * What a play was aimed at, in the type the card declares: the tile a building card builds on, or
- * the unit an order acts on, by its place in `units`.
+ * the unit an instant acts on, by its place in `units`.
  */
 export type Target =
   | { readonly type: 'tile'; readonly tile: TileCoords }
@@ -454,11 +454,26 @@ export function terraformable(chronicle: Chronicle, from: Terrain): TileCoords[]
 function instantTiles(chronicle: Chronicle, card: InstantCard): TileCoords[] {
   switch (card.effect) {
     case 'gain':
+    case 'refresh':
       return [];
     case 'improve':
       return improvable(chronicle, card.improvement);
     case 'terraform':
       return terraformable(chronicle, card.from);
+  }
+}
+
+/** The units an instant can be aimed at, each by its place in `units`. */
+function instantUnits(chronicle: Chronicle, card: InstantCard): number[] {
+  switch (card.effect) {
+    case 'gain':
+    case 'improve':
+    case 'terraform':
+      return [];
+    case 'refresh':
+      return chronicle.units.flatMap((unit, at) =>
+        unit.faction === 'player' && unit.movePoints < unit.stats.move ? [at] : [],
+      );
   }
 }
 
@@ -471,7 +486,18 @@ export function targetTiles(chronicle: Chronicle, id: CardId): TileCoords[] {
     case 'instant':
       return instantTiles(chronicle, card);
     case 'unit':
-    case 'order':
+      return [];
+  }
+}
+
+/** The units a card of the `unit` target type can be aimed at, each by its place in `units`. */
+export function targetUnits(chronicle: Chronicle, id: CardId): number[] {
+  const card = CARDS[id];
+  switch (card.kind) {
+    case 'instant':
+      return instantUnits(chronicle, card);
+    case 'building':
+    case 'unit':
       return [];
   }
 }
@@ -492,13 +518,14 @@ function blocked(chronicle: Chronicle, id: CardId): Block[] {
     }
     case 'building':
     case 'instant':
-      return card.target === 'tile' && targetTiles(chronicle, id).length === 0 ? ['tile'] : [];
-    case 'order':
-      return chronicle.units.some(
-        (unit) => unit.faction === 'player' && unit.movePoints < unit.stats.move,
-      )
-        ? []
-        : ['unit'];
+      switch (card.target) {
+        case 'none':
+          return [];
+        case 'tile':
+          return targetTiles(chronicle, id).length === 0 ? ['tile'] : [];
+        case 'unit':
+          return targetUnits(chronicle, id).length === 0 ? ['unit'] : [];
+      }
   }
 }
 
@@ -554,10 +581,6 @@ function resolve(paid: Chronicle, id: CardId, target: Target | undefined): Stage
       const built = build(paid, card.building, target);
       return built === undefined ? undefined : [{ name: 'played', chronicle: built }];
     }
-    case 'order': {
-      const ordered = order(paid, target);
-      return ordered === undefined ? undefined : [{ name: 'played', chronicle: ordered }];
-    }
     case 'instant': {
       const landed = instant(paid, card, target);
       return landed === undefined ? undefined : [{ name: 'played', chronicle: landed }];
@@ -566,9 +589,10 @@ function resolve(paid: Chronicle, id: CardId, target: Target | undefined): Stage
 }
 
 /**
- * The instant card's one effect: the resources it gains land in the stores, and the improvement or
- * the terraform lands on the tile it was aimed at — the worker that stands there stays where it is,
- * and a terraformed tile loses the feature that lay on the terrain it was.
+ * The instant card's one effect: the resources it gains land in the stores, the unit it was aimed at
+ * has its move points refreshed, and the improvement or the terraform lands on the tile it was aimed
+ * at — the worker that stands there stays where it is, and a terraformed tile loses the feature that
+ * lay on the terrain it was.
  */
 function instant(
   paid: Chronicle,
@@ -579,6 +603,16 @@ function instant(
     const resources = { ...paid.resources };
     for (const resource of RESOURCES) resources[resource] += card.gain[resource] ?? 0;
     return { ...paid, resources };
+  }
+
+  if (card.effect === 'refresh') {
+    if (target?.type !== 'unit') return undefined;
+    const aimed = target.unit;
+    if (!instantUnits(paid, card).includes(aimed)) return undefined;
+    return {
+      ...paid,
+      units: paid.units.map((unit, at) => (at === aimed ? refreshedMovePoints(unit) : unit)),
+    };
   }
 
   if (target?.type !== 'tile') return undefined;
@@ -665,23 +699,6 @@ function attack(chronicle: Chronicle, attacker: number, at: TileCoords): Stage[]
       chronicle: { ...chronicle, units: attacked(spending, attacker, target) },
     },
   ];
-}
-
-/**
- * The plain order: one unit of the player's that has spent move points has them refreshed, as the
- * tick refreshes every unit's. A unit that is not the player's, one whose move points are full, and
- * no unit at all refuse the play.
- */
-function order(paid: Chronicle, target: Target | undefined): Chronicle | undefined {
-  if (target?.type !== 'unit') return undefined;
-  const unit = paid.units[target.unit];
-  if (unit === undefined || unit.faction !== 'player') return undefined;
-  if (unit.movePoints >= unit.stats.move) return undefined;
-
-  return {
-    ...paid,
-    units: paid.units.map((other, at) => (at === target.unit ? refreshedMovePoints(other) : other)),
-  };
 }
 
 /** The schedule stands in at one event: `PH_Arrival` brings an enemy to the outer ring every fifth turn. */

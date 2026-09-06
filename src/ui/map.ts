@@ -205,10 +205,14 @@ export type MapView = {
   /** What the map plays for the stage; nothing means the scene renders it at once. */
   play(stage: Stage): Promise<void> | undefined;
   /**
-   * Rings the units a card of the `unit` target type can be played on and aims at them, until a
-   * target is chosen or cancel is called. A right press lets it go, exactly as cancel does.
+   * Rings the units it is given, each by its place in `units`, and aims at them until a target is
+   * chosen or cancel is called. A right press lets it go, exactly as cancel does.
    */
-  aimUnit(chronicle: Chronicle, chosen: (target: Target | undefined) => void): () => void;
+  aimUnit(
+    chronicle: Chronicle,
+    units: number[],
+    chosen: (target: Target | undefined) => void,
+  ): () => void;
   /** Lights the tiles it is given and aims at them, until a target is chosen or cancel is called. */
   aimTile(
     chronicle: Chronicle,
@@ -1253,15 +1257,14 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
       paintYields();
     },
 
-    aimUnit(current: Chronicle, chosen: (target: Target | undefined) => void): () => void {
+    aimUnit(
+      current: Chronicle,
+      units: number[],
+      chosen: (target: Target | undefined) => void,
+    ): () => void {
       const { catcher, glow, close } = openAim();
 
-      /** The units the card may be played on, each by its place in `units`. */
-      const aimed = current.units.flatMap((unit, index) =>
-        unit.faction === 'player' && unit.movePoints < unit.stats.move
-          ? [{ index, tile: unit.tile }]
-          : [],
-      );
+      const aimed = units.map((index) => ({ index, tile: current.units[index].tile }));
       for (const { tile } of aimed) {
         const { x, y } = positionOf(tile);
         glow.add(scene.add.polygon(x, y, hexagon(TILE_SIZE - 2), 0, 0).setStrokeStyle(4, LIT));

@@ -326,7 +326,7 @@ test('a right press while a card is aimed lets the card go', async ({ page }) =>
   await dragOut(page, opened.hand.indexOf('PH_Worker'));
   await expect.poll(async () => (await chronicleOf(page)).units.length).toBe(1);
 
-  // The order card is aimed at a unit that has spent move points, so the worker moves out first.
+  // The refresh instant is aimed at a unit that has spent move points, so the worker moves out first.
   const standingStill = await chronicleOf(page);
   await dragUnit(page, standingStill.city, run.tile);
 

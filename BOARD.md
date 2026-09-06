@@ -12,12 +12,6 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
-- **The order kind goes** — an order is an instant aimed at a unit: the Cards section lists three
-  kinds, `PH_March` is an instant with a unit target that refreshes move points, its refusals
-  unchanged, and the code, the text keys and the tests carry no order kind. The glossary's *order*
-  row goes, the *instant* row absorbs "one thing with one unit", and every mention of orders
-  (military's job, the refresh rows) is edited. Rules tests pin the refresh and its refusals as an
-  instant. Doc-impact: `docs/DESIGN.md`, `docs/GLOSSARY.md`.
 - **Units carry an id** — every unit is named by a number dealt from a counter in the chronicle
   state, through the one function the unit card and an arrival both enter a unit by; the move and
   attack commands, the unit target and the target-finders address a unit by id, the list staying

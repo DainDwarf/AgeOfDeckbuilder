@@ -166,7 +166,7 @@ function attackOn(unit: number, at: TileCoords): Command {
   return { type: 'attack', unit, tile: at };
 }
 
-/** The order card aimed at a unit, ready to hand to `apply`. */
+/** The instant that refreshes, aimed at a unit, ready to hand to `apply`. */
 function refreshOf(unit: number): Command {
   return { type: 'play', index: 0, target: { type: 'unit', unit } };
 }
@@ -731,7 +731,7 @@ test('a unit entering by its card enters with its move points full, and moves th
   expect(pointsOf(moved, 0)).toBe(UNIT_STATS.PH_Worker.move - 1);
 });
 
-test('the order card refreshes one unit of the player’s that has spent move points', () => {
+test('the refresh instant refreshes one unit of the player’s that has spent move points', () => {
   const city = cityOf(['urban'], {
     tiles: field(3),
     hand: ['PH_March'],
@@ -749,7 +749,7 @@ test('the order card refreshes one unit of the player’s that has spent move po
   expect(outcome(stages).discardPile).toEqual(['PH_March']);
 });
 
-test('the order card is refused on a unit whose move points are full, on an enemy and with no unit', () => {
+test('the refresh instant is refused on a unit whose move points are full, on an enemy and with no unit', () => {
   const city = cityOf(['urban'], {
     tiles: field(3),
     hand: ['PH_March'],
@@ -761,6 +761,9 @@ test('the order card is refused on a unit whose move points are full, on an enem
   });
 
   expect(stagedBy(city, refreshOf(1))).toEqual(['refused']);
+  expect(stagedBy(city, refreshOf(2))).toEqual(['refused']);
+  expect(stagedBy(city, refreshOf(9))).toEqual(['refused']);
+  expect(stagedBy(city, { type: 'play', index: 0 })).toEqual(['refused']);
   expect(outcome(apply(city, refreshOf(1)))).toBe(city);
   expect(outcome(apply(city, refreshOf(2)))).toBe(city);
   expect(outcome(apply(city, refreshOf(9)))).toBe(city);
@@ -874,20 +877,20 @@ test('the turn refreshes every unit to its action, and never past it', () => {
   expect(actionOf(ticked, 2)).toBe(1);
 });
 
-test('the order card refreshes move points alone, and leaves a spent action spent', () => {
+test('the refresh instant refreshes move points alone, and leaves a spent action spent', () => {
   const city = cityOf(['urban'], {
     tiles: field(3),
     hand: ['PH_March'],
     units: [unitOf('player', CITY, { move: 2, action: 1 }, 0, 0)],
   });
 
-  const ordered = outcome(apply(city, refreshOf(0)));
+  const refreshed = outcome(apply(city, refreshOf(0)));
 
-  expect(pointsOf(ordered, 0)).toBe(2);
-  expect(actionOf(ordered, 0)).toBe(0);
+  expect(pointsOf(refreshed, 0)).toBe(2);
+  expect(actionOf(refreshed, 0)).toBe(0);
 });
 
-test('the order card is refused on a unit whose move points are full, its action spent', () => {
+test('the refresh instant is refused on a unit whose move points are full, its action spent', () => {
   const city = cityOf(['urban'], {
     tiles: field(3),
     hand: ['PH_March'],
@@ -1754,7 +1757,7 @@ test('a building card with no tile it could stand on is refused for the tile', (
   expect(refusalOf(worked, 'PH_Farm').blocked).toEqual([]);
 });
 
-test('the order card is refused for the unit while no unit of the player’s has spent a move point', () => {
+test('the refresh instant is refused for the unit while no unit of the player’s has spent a move point', () => {
   const empty = cityOf(['urban'], { tiles: field(2) });
   const full = { ...empty, units: [worker({ q: 1, r: 0 })] };
   const spent = { ...empty, units: [unitOf('player', { q: 1, r: 0 }, { move: 2 }, 1)] };

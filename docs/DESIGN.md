@@ -41,8 +41,8 @@ fiction's own word: *Chronicles of the mercantile civilization in the Age of Pow
   either.
 - Five core resources: **food, production, military, money, science**. 🔧 Their jobs: food grows
   the population; production builds buildings and units and shapes tiles; military pays for
-  military units, orders, instants and fortifications; money trades for other goods and
-  accumulates; science pays for manipulating the cards — drawing, discarding and the like.
+  military units, instants and fortifications; money trades for other goods and accumulates;
+  science pays for manipulating the cards — drawing, discarding and the like.
   **Culture pushes the border out**, and the tiles inside it are the city's; population is the
   city's inhabitants, assigned to its tiles.
 - **Deterministic.** Every random draw comes from a seeded generator carried in the state, so a
@@ -165,7 +165,7 @@ unseen.
 
 ### Cards ✅
 
-Four kinds. Every card has a resource cost, possibly none. Every kind cycles: played or
+Three kinds. Every card has a resource cost, possibly none. Every kind cycles: played or
 discarded, a card goes to the discard pile and comes around again; *gone once played* is a
 keyword some cards carry, not a kind, and the map's gifts are chronicle-only by nature.
 
@@ -177,13 +177,11 @@ keyword some cards carry, not a kind, and the map's gifts are chronicle-only by 
 - **Unit** — puts a unit on the map, made of one idle inhabitant, never the city's last: an
   inhabitant off the tiles becomes the warrior, the worker, later the trader, and is gone
   when the unit is killed. Where a unit enters is 🔧 until the map is designed.
-- **Order** — does one thing with one unit. The plain order **refreshes** a unit's move points, so
-  a unit that has spent them crosses again in the same turn; it is refused on a unit whose move
-  points are full, and blocked when no unit has spent any. Other orders do other things with one
-  unit, and are content, not kinds.
 - **Instant** — an immediate effect: draw two, gain food, negotiate with a neutral, terraform a
-  tile where a worker stands. Everything that is neither a noun entering the map nor a noun
-  moving.
+  tile where a worker stands, **refresh** a unit's move points. The refresh takes one unit, so a
+  unit that has spent its move points crosses again in the same turn; it is refused on a unit
+  whose move points are full, and blocked when no unit has spent any. Everything that is not a
+  noun entering the map.
 
 ### Population ✅
 
@@ -345,7 +343,7 @@ exchange across turns, never within one blow.
 
 - **A unit moves on its own move points.** It holds **move points**, refreshed to its move at the
   start of the player's turn and lost at the end of it, and spends one per tile crossed, in as many
-  steps as the player likes; the plain order refreshes them. Coast, deep water and mountain are
+  steps as the player likes; an instant can refresh them. Coast, deep water and mountain are
   impassable. A unit passes through the units of its own faction and never through another's, and
   it lands only on a free tile.
 - **A unit attacks on its own action.** It holds **action**, refreshed at the same tick as its move
@@ -353,7 +351,7 @@ exchange across turns, never within one blow.
   range is one. The player attacks by the same press as a move — the target standing on the tile is
   what makes it an attack — and the two pools are independent: an attack spends no move points, a
   step spends no action, and either follows the other in a turn. A worker holds no action and
-  attacks nothing. The plain order refreshes move points only.
+  attacks nothing. An instant that refreshes a unit refreshes its move points, never its action.
 - **One unit per tile.** A unit on a tile is a gate: an enemy must kill it to pass. Stacking was
   rejected: piled units turn position into arithmetic.
 - **Enemies hurt the city by standing on it.** A tile the city owns yields nothing at income
@@ -363,8 +361,7 @@ exchange across turns, never within one blow.
   still there when the next enemy phase begins — **captures** the city. Population reaching zero
   is the other defeat. A city with health of its own, worn down by attacks, was rejected:
   attrition against a growing city finds an equilibrium where being raided every turn is stable.
-- **Military** is the resource that pays for military units, military orders and instants, and
-  fortifications.
+- **Military** is the resource that pays for military units, instants and fortifications.
 
 ### Events and the capstone ✅
 

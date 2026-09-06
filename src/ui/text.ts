@@ -45,7 +45,6 @@ const TEXT = {
   'button.city-mode': 'City mode',
   'kind.unit': 'Unit',
   'kind.building': 'Building',
-  'kind.order': 'Order',
   'kind.instant': 'Instant',
   'unit.PH_Worker': 'PH_Worker',
   'unit.PH_Warrior': 'PH_Warrior',

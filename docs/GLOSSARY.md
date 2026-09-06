@@ -61,8 +61,7 @@ deliberate exception the reviewer sees; there is no silent allow-list.
 | **intent** | The attack an enemy declares one turn before executing it. | telegraph |
 | **sight** | The tiles the city and its units currently see. | vision, line of sight |
 | **fog** | Every tile outside sight; known terrain, unknown occupants. | fog of war, unexplored |
-| **order** | A card that does one thing with one unit; the plain order refreshes its move points. | move card |
-| **instant** | A card with an immediate effect. | action (for a card), spell, effect card |
+| **instant** | A card with an immediate effect: on the city, on a tile, or one thing with one unit. | action (for a card), spell, effect card |
 | **worker** | A non-fighting unit that changes tiles: builds buildings, terraforms them, improves them. | builder, engineer, labourer |
 | **population** | The city's inhabitants: assigned to tiles for income, turned into units by unit cards. | citizens, workforce, pops |
 | **assign** | To put one population on a tile inside the border; free, instant, reversible. | allocate |
@@ -89,8 +88,8 @@ deliberate exception the reviewer sees; there is no silent allow-list.
 | **move** | A unit's stat: the move points it refreshes to. | speed, mobility, movement points |
 | **move points** | What a unit spends to cross tiles, one per tile; refreshed to its move. | movement points, steps, stamina |
 | **action** | A unit's stat, and what it spends to attack, one per attack; refreshed to its action. | action points, energy, attack pool |
-| **refresh** | To bring a unit's spendable stat back to its full value — its move points to its move, its action to its action. The turn refreshes both on every unit when it ticks over; the plain order refreshes one unit's move points. Health is never refreshed but healed. | restore, replenish, reset, recharge, recover, regain |
-| **military** | The resource that pays for military units, orders, instants and fortifications. | — |
+| **refresh** | To bring a unit's spendable stat back to its full value — its move points to its move, its action to its action. The turn refreshes both on every unit when it ticks over; an instant refreshes one unit's move points. Health is never refreshed but healed. | restore, replenish, reset, recharge, recover, regain |
+| **military** | The resource that pays for military units, instants and fortifications. | — |
 | **occupy** | What an enemy does to a tile it stands on: the tile yields nothing. | blockade |
 | **pillage** | What some enemies do to the tile they stand on: its building or improvement is destroyed. | raze, loot, burn |
 | **capture** | To take a site by standing on its tile through a full turn: an enemy captures the city (defeat), the player captures a camp. | conquer, seize, sack |

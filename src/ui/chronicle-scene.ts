@@ -12,6 +12,7 @@ import {
   type Stage,
   type Target,
   targetTiles,
+  targetUnits,
   tileCost,
   tileRefusal,
   type UnitCommand,
@@ -311,7 +312,11 @@ export class ChronicleScene extends Phaser.Scene {
               chosen,
             );
           case 'unit':
-            return view.aimUnit(this.current, chosen);
+            return view.aimUnit(
+              this.current,
+              targetUnits(this.current, this.current.hand[index]),
+              chosen,
+            );
         }
       },
       (id, refusal) => overlay.zoom(id, refusal),
