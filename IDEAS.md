@@ -17,6 +17,11 @@ a [`BOARD.md`](BOARD.md) line. Say
   *data owns its behaviour* comes back with the card model; *mechanism vs content testing*,
   *catalogue coherence tests* and *fixtures through the exported transform* come back with the
   first content catalogue.
+- **Fixture content** (v0.0.4, with the content catalogue): the rules read their improvements,
+  buildings, features and unit stats from an input instead of module constants, so a test hands
+  in a synthetic catalogue — a building that stands on hills, a unit kind with its own numbers —
+  and no fixture writes a tile or a unit the real content could not produce. First consumers: the
+  four-layer yield test, the terraform-keeps-improvements test, the unit builders' synthetic stats.
 - **The render factor can change after boot**: regrow the bitmap, re-zoom cameras, re-rasterize
   text while the game runs. Four consumers: itch.io's fullscreen button, a settings render-scale
   slider, monitor-hopping, resizing the window after boot. Decide after the art style locks —
