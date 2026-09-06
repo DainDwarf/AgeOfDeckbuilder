@@ -1782,11 +1782,12 @@ test('every card aimed at a tile is armed whatever the map holds, and blocked on
   expect(playable(refusalOf(empty, 'PH_Urbanisation'))).toBe(false);
 });
 
-test('the farm card names the first of its four reasons: worker, border, terrain, then slot', () => {
+test('the farm card names the first of its four reasons: worker, terrain, border, then slot', () => {
   const at = { q: 1, r: 0 };
   const out = { q: 2, r: 0 };
   const rock = founded(2, { tiles: madeOf(field(2), 'mountain', [at, out]) });
-  const worked = founded(2, { units: [worker(at)] });
+  const flat = founded(2, { tiles: madeOf(field(2), 'plain', [at, out]) });
+  const worked = { ...flat, units: [worker(at)] };
   const filled = withTile(worked, {
     ...at,
     terrain: 'plain',
@@ -1795,8 +1796,9 @@ test('the farm card names the first of its four reasons: worker, border, terrain
   });
 
   expect(refusedFor(rock, 'PH_Farm', out)).toBe('worker');
-  expect(refusedFor({ ...rock, units: [worker(out)] }, 'PH_Farm', out)).toBe('border');
+  expect(refusedFor({ ...rock, units: [worker(out)] }, 'PH_Farm', out)).toBe('terrain');
   expect(refusedFor({ ...rock, units: [worker(at)] }, 'PH_Farm', at)).toBe('terrain');
+  expect(refusedFor({ ...flat, units: [worker(out)] }, 'PH_Farm', out)).toBe('border');
   expect(refusedFor(filled, 'PH_Farm', at)).toBe('slot');
   expect(refusedFor(worked, 'PH_Farm', at)).toBeUndefined();
 });

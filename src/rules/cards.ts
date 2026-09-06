@@ -171,8 +171,8 @@ export const CARDS: Record<CardId, Card> = {
     refuses: (chronicle, tile) =>
       firstRefusal(
         worked(chronicle, tile),
-        inside(chronicle, tile),
         made(tile, BUILDINGS.PH_Farm.terrain),
+        inside(chronicle, tile),
         slotFree(tile),
       ),
     effect: (paid, at) => built(paid, at, 'PH_Farm'),
