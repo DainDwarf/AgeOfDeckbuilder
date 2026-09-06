@@ -54,7 +54,9 @@ test('a press on a card of the aim window recalls it into the hand', async ({ pa
 
   const before = await aimingAtThePile(page);
   const index = before.hand.indexOf('PH_Recall');
+  const newest = before.discardPile.length - 1;
 
+  // The window lays the pile out newest first, so its first card is the pile's last.
   await click(page, 'aim-window-card-0');
   await page.waitForFunction(
     (science) =>
@@ -67,9 +69,9 @@ test('a press on a card of the aim window recalls it into the hand', async ({ pa
   expect(after.hand).toEqual([
     ...before.hand.slice(0, index),
     ...before.hand.slice(index + 1),
-    before.discardPile[0],
+    before.discardPile[newest],
   ]);
-  expect(after.discardPile).toEqual([...before.discardPile.slice(1), 'PH_Recall']);
+  expect(after.discardPile).toEqual([...before.discardPile.slice(0, newest), 'PH_Recall']);
   expect(await standing(page, 'aim-window')).toBe(false);
 
   expect(problems).toEqual([]);

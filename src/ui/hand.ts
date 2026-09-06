@@ -59,8 +59,9 @@ export type Hand = {
 /**
  * The hand between the two piles. Cards keep their fixed gap until the lane runs out, then
  * compress evenly onto one another; the one under the pointer comes to the front. While a card is
- * aimed the hand is click-only: the armed card cancels, every other card zooms. Each aim is handed
- * the card's place in the hand and the way to let it go, and answers the way to let it go from here.
+ * aimed at a tile the hand is click-only: the armed card cancels, every other card zooms; aimed at
+ * the discard pile, the hand lies under the window's scrim. Each aim is handed the card's place in
+ * the hand and the way to let it go, and answers the way to let it go from here.
  */
 export function createHand(
   scene: Phaser.Scene,
@@ -217,10 +218,15 @@ export function createHand(
                 slot.hovered = false;
                 settle(slot, 150);
               };
-              const cancel =
-                card.aim === 'tile'
-                  ? aimTile(slot.index, card, released)
-                  : aimDiscardPile(slot.index, released);
+              let cancel: () => void;
+              switch (card.aim) {
+                case 'tile':
+                  cancel = aimTile(slot.index, card, released);
+                  break;
+                case 'discard-pile':
+                  cancel = aimDiscardPile(slot.index, released);
+                  break;
+              }
               aiming = { slot, cancel };
               return;
             }

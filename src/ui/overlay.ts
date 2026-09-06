@@ -133,7 +133,8 @@ export function createOverlay(
 
   const wipe = (): void => {
     // Nothing takes the aim window down without the card it stands for coming home: this is the one
-    // door everything the scrim carries is replaced through.
+    // door everything the scrim carries is replaced through. Letting go closes, and closing comes
+    // back through here once, finding nothing left to let go of.
     letGoOfAim();
     for (const object of shown) object.destroy();
     shown = [];
@@ -207,8 +208,9 @@ export function createOverlay(
   /**
    * A pile's cards laid out below `top`, and the frame that scrolls and flings them: `pressed` takes
    * the number the card under the press was offered as, and nothing where the press landed between
-   * them. Every card face is named after the grid and that same number. Nothing may be added to the
-   * scene after this: the clip's camera draws whatever it was not told to ignore inside the frame.
+   * them. Every card face is named after the grid and its place on the screen, the first drawn
+   * first, and carries the number it was offered as in its data. Nothing may be added to the scene
+   * after this: the clip's camera draws whatever it was not told to ignore inside the frame.
    */
   const layGrid = (
     name: string,
@@ -275,9 +277,14 @@ export function createOverlay(
       .setName(name)
       .setDepth(SCRIM_DEPTH + 1)
       .setData('overflow', overflow);
-    for (const card of placed) {
+    for (const [index, card] of placed.entries()) {
       const face = createCardFace(scene, card.id, NO_REFUSAL, { width: BROWSE_WIDTH });
-      root.add(face.root.setPosition(card.x, card.y).setName(`${name}-card-${card.at}`));
+      root.add(
+        face.root
+          .setPosition(card.x, card.y)
+          .setName(`${name}-card-${index}`)
+          .setData('at', card.at),
+      );
     }
     shown.push(frame, root);
 

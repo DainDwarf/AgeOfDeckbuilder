@@ -72,7 +72,7 @@ export type Presses = {
   back(): void;
 };
 
-/** An accent face carrying a label: the one shape everything pressable in a window is drawn as. */
+/** An accent face carrying a label: the one shape every button over the scrim is drawn as. */
 export function pressable(
   scene: Phaser.Scene,
   at: { x: number; y: number; width: number; height: number },
