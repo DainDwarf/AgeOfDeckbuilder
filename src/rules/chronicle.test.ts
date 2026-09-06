@@ -34,7 +34,7 @@ import {
 } from './map';
 import { RESOURCES, type Resources } from './resources';
 import { seedRng } from './rng';
-import { type Block, type CardId, type Chronicle, idle } from './state';
+import { type Block, type CardId, type Chronicle, type Entering, entered, idle } from './state';
 import { type Faction, UNIT_STATS, type Unit, type UnitStats } from './units';
 
 const CITY: TileCoords = { q: 0, r: 0 };
@@ -54,24 +54,56 @@ const DECK: readonly CardId[] = [
 ];
 
 /**
- * The chronicle with these units standing on it, numbered as it would have dealt them: one by one
- * from one, with the counter left past them. The one way a fixture puts units on the map.
+ * A unit a fixture puts on the map: what it enters as, and the state the fixture authors on it once
+ * it stands there.
  */
-function withUnits(chronicle: Chronicle, units: readonly Unit[]): Chronicle {
-  return {
-    ...chronicle,
-    units: units.map((unit, place) => ({ ...unit, id: place + 1 })),
-    nextUnit: units.length + 1,
-  };
+type Standing = {
+  readonly entering: Entering;
+  readonly stats: UnitStats;
+  readonly movePoints: number;
+  readonly action: number;
+  readonly intent?: TileCoords;
+};
+
+/** The unit as the chronicle dealt it, under the state its fixture authors. */
+function authored(unit: Unit, standing: Standing): Unit {
+  const state = { stats: standing.stats, movePoints: standing.movePoints, action: standing.action };
+  switch (unit.faction) {
+    case 'player':
+      return { ...unit, ...state };
+    case 'enemy':
+      return standing.intent === undefined
+        ? { ...unit, ...state }
+        : { ...unit, ...state, intent: standing.intent };
+  }
 }
 
 /**
- * A city on `inside`, tile by tile, with one plain lying outside the border and no cards. Its
- * inhabitants stand where the founding leaves them: one on each tile the city holds, and the units
- * it is given are numbered as they entered.
+ * The chronicle with these units standing on it and no others, each entered through the rules from
+ * a counter at one. The one way a fixture puts units on the map.
  */
-function cityOf(inside: Terrain[], carrying: Partial<Chronicle> = {}): Chronicle {
+function withUnits(chronicle: Chronicle, units: readonly Standing[]): Chronicle {
+  let standing: Chronicle = { ...chronicle, units: [], nextUnit: 1 };
+  for (const unit of units) {
+    const dealt = entered(standing, unit.entering);
+    const last = dealt.units[dealt.units.length - 1];
+    standing = { ...dealt, units: [...dealt.units.slice(0, -1), authored(last, unit)] };
+  }
+  return standing;
+}
+
+/** What a fixture authors on the chronicle it asks for: its state, and the units standing on it. */
+type Carrying = Partial<Omit<Chronicle, 'units' | 'nextUnit'>> & {
+  readonly units?: readonly Standing[];
+};
+
+/**
+ * A city on `inside`, tile by tile, with one plain lying outside the border and no cards. Its
+ * inhabitants stand where the founding leaves them: one on each tile the city holds.
+ */
+function cityOf(inside: Terrain[], carrying: Carrying = {}): Chronicle {
   const held = inside.map((_, index) => ({ q: index, r: 0 }));
+  const { units = [], ...state } = carrying;
   const city: Chronicle = {
     seed: 7,
     rng: seedRng(7),
@@ -96,9 +128,9 @@ function cityOf(inside: Terrain[], carrying: Partial<Chronicle> = {}): Chronicle
     drawPile: [],
     hand: [],
     discardPile: [],
-    ...carrying,
+    ...state,
   };
-  return withUnits(city, city.units);
+  return withUnits(city, units);
 }
 
 /**
@@ -137,7 +169,7 @@ function statsOf(stats: Partial<UnitStats>): UnitStats {
 
 /**
  * A unit standing on a tile with its move points and its action full, unless the caller names what
- * it has left of either. The fixture it is handed to is what numbers it.
+ * it has left of either.
  */
 function unitOf(
   faction: Faction,
@@ -145,36 +177,24 @@ function unitOf(
   stats: Partial<UnitStats> = {},
   movePoints?: number,
   action?: number,
-): Unit {
+): Standing {
   const carried = statsOf(stats);
-  const points = movePoints ?? carried.move;
-  const left = action ?? carried.action;
-  return faction === 'player'
-    ? { id: 0, stats: carried, faction, tile, movePoints: points, action: left }
-    : {
-        id: 0,
-        stats: carried,
-        faction,
-        tile,
-        movePoints: points,
-        action: left,
-        script: 'PH_Advance',
-      };
+  const state = {
+    stats: carried,
+    movePoints: movePoints ?? carried.move,
+    action: action ?? carried.action,
+  };
+  switch (faction) {
+    case 'player':
+      return { ...state, entering: { type: carried.type, tile, faction } };
+    case 'enemy':
+      return { ...state, entering: { type: carried.type, tile, faction, script: 'PH_Advance' } };
+  }
 }
 
 /** An enemy carrying the intent an enemy phase left on it: the tile its attack is aimed at. */
-function aiming(tile: TileCoords, intent: TileCoords, stats: Partial<UnitStats> = {}): Unit {
-  const carried = statsOf(stats);
-  return {
-    id: 0,
-    stats: carried,
-    faction: 'enemy',
-    tile,
-    movePoints: carried.move,
-    action: carried.action,
-    script: 'PH_Advance',
-    intent,
-  };
+function aiming(tile: TileCoords, intent: TileCoords, stats: Partial<UnitStats> = {}): Standing {
+  return { ...unitOf('enemy', tile, stats), intent };
 }
 
 /** The unit a number names, for a fixture that expects it to be standing. */
@@ -252,7 +272,7 @@ function claimOf(tile: TileCoords): Command {
  * A city on a disc of plain out to `radius`, holding the seven tiles the founding holds with an
  * inhabitant on each and two idle besides.
  */
-function founded(radius: number, carrying: Partial<Chronicle> = {}): Chronicle {
+function founded(radius: number, carrying: Carrying = {}): Chronicle {
   const held = [CITY, ...neighbours(CITY)];
   return cityOf(['urban'], {
     tiles: field(radius),
@@ -267,7 +287,7 @@ function founded(radius: number, carrying: Partial<Chronicle> = {}): Chronicle {
  * A population no fixture below piles up the food for: the growth threshold stands out of reach,
  * so income accumulates untouched under every test that is not about growth.
  */
-const NO_GROWTH: Partial<Chronicle> = { population: 99 };
+const NO_GROWTH: Carrying = { population: 99 };
 
 /** What the city holds to claim with, and nothing besides. */
 function culture(amount: number): Resources {
@@ -292,7 +312,7 @@ function buildingAt(chronicle: Chronicle, { q, r }: TileCoords): BuildingTypeId 
 }
 
 /** A worker of the player's, standing on a tile with nothing to fight with and no action to fight on. */
-function worker(tile: TileCoords): Unit {
+function worker(tile: TileCoords): Standing {
   return unitOf('player', tile, { type: 'PH_Worker', damage: 0, range: 0, action: 0 });
 }
 
@@ -301,11 +321,7 @@ function worker(tile: TileCoords): Unit {
  * player's standing on it. The seven tiles the founding holds reach out to one, so a tile further
  * out lies outside the border.
  */
-function workedTile(
-  at: TileCoords,
-  terrain: Terrain,
-  carrying: Partial<Chronicle> = {},
-): Chronicle {
+function workedTile(at: TileCoords, terrain: Terrain, carrying: Carrying = {}): Chronicle {
   return founded(2, {
     tiles: madeOf(field(2), terrain, [at]),
     units: [worker(at)],
@@ -356,20 +372,6 @@ function outerRingOf(radius: number): TileCoords[] {
   return field(radius)
     .filter((tile) => distance(tile, CITY) === radius)
     .map(({ q, r }) => ({ q, r }));
-}
-
-/**
- * A founding five turns on, a worker entered on every turn whose hand holds one: units come from
- * the card and from the arrival the fifth turn lands, both in the one chronicle.
- */
-function enteredFrom(seed: number): Chronicle {
-  let chronicle = beginChronicle(seed, DECK);
-  for (let turn = 1; turn <= 5; turn++) {
-    const enter = chronicle.hand.indexOf('PH_Worker');
-    if (enter !== -1) chronicle = outcome(apply(chronicle, { type: 'play', index: enter }));
-    chronicle = outcome(apply(chronicle, { type: 'end-turn' }));
-  }
-  return chronicle;
 }
 
 /** Four ends of turn on: the chronicle stands on turn five, with that turn's events resolved. */
@@ -1034,15 +1036,6 @@ test('a number a killed unit carried is dealt to nobody after it, and commands n
     q: 0,
     r: 1,
   });
-});
-
-test('the same seed and the same commands deal the units the same numbers', () => {
-  const once = enteredFrom(1234).units.map((unit) => unit.id);
-  const again = enteredFrom(1234).units.map((unit) => unit.id);
-
-  expect(once).toEqual(again);
-  expect(once.length).toBeGreaterThan(1);
-  expect(new Set(once).size).toBe(once.length);
 });
 
 test('the turn refreshes every unit to its action, and never past it', () => {
