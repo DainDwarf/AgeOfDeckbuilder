@@ -599,31 +599,37 @@ function instant(
   card: InstantCard,
   target: Target | undefined,
 ): Chronicle | undefined {
-  if (card.effect === 'gain') {
-    const resources = { ...paid.resources };
-    for (const resource of RESOURCES) resources[resource] += card.gain[resource] ?? 0;
-    return { ...paid, resources };
+  switch (card.effect) {
+    case 'gain': {
+      const resources = { ...paid.resources };
+      for (const resource of RESOURCES) resources[resource] += card.gain[resource] ?? 0;
+      return { ...paid, resources };
+    }
+    case 'refresh': {
+      if (target?.type !== 'unit') return undefined;
+      const aimed = target.unit;
+      if (!instantUnits(paid, card).includes(aimed)) return undefined;
+      return {
+        ...paid,
+        units: paid.units.map((unit, at) => (at === aimed ? refreshedMovePoints(unit) : unit)),
+      };
+    }
+    case 'improve':
+    case 'terraform': {
+      if (target?.type !== 'tile') return undefined;
+      const at = tileKey(target.tile);
+      if (!instantTiles(paid, card).some((coord) => tileKey(coord) === at)) return undefined;
+
+      const after = (tile: Tile): Tile =>
+        card.effect === 'improve'
+          ? { ...tile, improvements: [...tile.improvements, card.improvement] }
+          : { ...tile, terrain: card.to, feature: undefined };
+      return {
+        ...paid,
+        tiles: paid.tiles.map((tile) => (tileKey(tile) === at ? after(tile) : tile)),
+      };
+    }
   }
-
-  if (card.effect === 'refresh') {
-    if (target?.type !== 'unit') return undefined;
-    const aimed = target.unit;
-    if (!instantUnits(paid, card).includes(aimed)) return undefined;
-    return {
-      ...paid,
-      units: paid.units.map((unit, at) => (at === aimed ? refreshedMovePoints(unit) : unit)),
-    };
-  }
-
-  if (target?.type !== 'tile') return undefined;
-  const at = tileKey(target.tile);
-  if (!instantTiles(paid, card).some((coord) => tileKey(coord) === at)) return undefined;
-
-  const after = (tile: Tile): Tile =>
-    card.effect === 'improve'
-      ? { ...tile, improvements: [...tile.improvements, card.improvement] }
-      : { ...tile, terrain: card.to, feature: undefined };
-  return { ...paid, tiles: paid.tiles.map((tile) => (tileKey(tile) === at ? after(tile) : tile)) };
 }
 
 /** The building card: the building fills the slot of the tile it is aimed at. */

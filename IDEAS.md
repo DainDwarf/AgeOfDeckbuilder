@@ -24,7 +24,7 @@ a [`BOARD.md`](BOARD.md) line. Say
 
 ## Game
 
-- **Cache or precompute movement reachability**: today it is recomputed per order; measure before
+- **Cache or precompute movement reachability**: today it is recomputed per command; measure before
   building anything.
 - **Seed selection at launch**: when the "launch a chronicle" menu exists, it offers starting on a
   given seed — the player-facing door to replay-from-seed; `?seed=` stays the debug/e2e one.
