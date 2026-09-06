@@ -887,7 +887,7 @@ test('the order card refreshes move points alone, and leaves a spent action spen
   expect(actionOf(ordered, 0)).toBe(0);
 });
 
-test('the order card is refused on a unit whose move points are full, its action spent or not', () => {
+test('the order card is refused on a unit whose move points are full, its action spent', () => {
   const city = cityOf(['urban'], {
     tiles: field(3),
     hand: ['PH_March'],
