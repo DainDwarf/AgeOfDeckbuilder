@@ -79,11 +79,11 @@ function authored(unit: Unit, standing: Standing): Unit {
 }
 
 /**
- * The chronicle with these units standing on it and no others, each entered through the rules from
- * a counter at one. The one way a fixture puts units on the map.
+ * The chronicle with these units entered on it through the rules, after whatever already stands
+ * there. The one way a fixture puts units on the map.
  */
 function withUnits(chronicle: Chronicle, units: readonly Standing[]): Chronicle {
-  let standing: Chronicle = { ...chronicle, units: [], nextUnit: 1 };
+  let standing = chronicle;
   for (const unit of units) {
     const dealt = entered(standing, unit.entering);
     const last = dealt.units[dealt.units.length - 1];
@@ -1447,13 +1447,13 @@ test('the city in its slot adds nothing to what the tile it stands on yields', (
 });
 
 test('the city fills its own tile’s slot, worker or no worker', () => {
-  const city = cityOf(['urban', 'plain'], {
+  const bare = cityOf(['urban', 'plain'], {
     tiles: field(2),
     hand: ['PH_Farm'],
-    units: [worker(CITY)],
     resources: production(3),
   });
-  const overOne = withUnits(city, [worker({ q: 1, r: 0 })]);
+  const city = withUnits(bare, [worker(CITY)]);
+  const overOne = withUnits(bare, [worker({ q: 1, r: 0 })]);
 
   expect(buildingAt(city, CITY)).toBe('PH_City');
   expect(admittedTiles(city, 'PH_Farm')).toEqual([]);
