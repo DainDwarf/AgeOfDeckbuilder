@@ -12,21 +12,13 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
-- **Units attack by hand** — the player's half of the combat phase goes: a unit carries a second
-  per-turn pool, refreshed with its move points, that a warrior spends to attack a non-player
-  unit within its range by the same drag or click as a move, the target on the tile making it an
-  attack; a worker has none. The pool's word is a design question settled at the pitch, since
-  *action* is a card kind. The enemies' intents still execute in the combat phase until the next
-  line; the fixed targeting rule and the garrison by standing still leave the design. Rules tests
-  pin the attack, the spent pool and the worker's refusal; an e2e spec attacks by drag.
-  Doc-impact: `docs/DESIGN.md`, `docs/GLOSSARY.md`.
 - **Enemies move and attack at once** — the intent goes: in the enemy phase each enemy moves by
   its script and attacks a unit of the player's within its range in the same phase, from the
   same pool a warrior has, and the combat phase is gone from the turn; capture stays as it is.
   The turn list, the sight section, and the glossary's *intent* and *combat* are edited. Rules
   tests pin an enemy reaching and attacking in one phase and the capture unchanged; the intent
   rings leave the map. Doc-impact: `docs/DESIGN.md`, `docs/GLOSSARY.md`.
-- **Sight is a line over the ground** — sight is a unit's fifth stat and the city's own number;
+- **Sight is a line over the ground** — sight is a unit's stat and the city's own number;
   every terrain has an elevation, and a tile within a unit's sight is seen when a line from the
   unit runs over flat ground and meets no raised tile as high as the unit's own before it, the
   target's own height never hiding it; every held tile is in sight. Rules tests on a synthetic

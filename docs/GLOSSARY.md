@@ -56,13 +56,13 @@ deliberate exception the reviewer sees; there is no silent allow-list.
 | **discard** | To send a card from the hand to the discard pile. | throw away, dump |
 | **draw pile** | The cards not yet drawn this cycle; refilled from the discard pile when empty. | library |
 | **discard pile** | The cards played or discarded this cycle, waiting to be shuffled back. | graveyard, trash, bin |
-| **combat** | The phase after the turn ends where every fighting unit attacks: the player's, then the enemies' declared intents. | battle, fight, skirmish, war |
+| **combat** | The phase after the turn ends where every enemy executes its declared intent. | battle, fight, skirmish, war |
 | **income** | The phase after combat where standing things yield. | upkeep, production phase, resolution |
 | **intent** | The attack an enemy declares one turn before executing it. | telegraph |
 | **sight** | The tiles the city and its units currently see. | vision, line of sight |
 | **fog** | Every tile outside sight; known terrain, unknown occupants. | fog of war, unexplored |
 | **order** | A card that does one thing with one unit; the plain order refreshes its move points. | move card |
-| **action** | A card with an immediate effect. | spell, effect card |
+| **instant** | A card with an immediate effect. | action (for a card), spell, effect card |
 | **worker** | A non-fighting unit that changes tiles: builds buildings, terraforms them, improves them. | builder, engineer, labourer |
 | **population** | The city's inhabitants: assigned to tiles for income, turned into units by unit cards. | citizens, workforce, pops |
 | **assign** | To put one population on a tile inside the border; free, instant, reversible. | allocate |
@@ -72,11 +72,11 @@ deliberate exception the reviewer sees; there is no silent allow-list.
 | **growth threshold** | The food the next inhabitant needs; spent when the stock reaches it, and wider each time. | step, growth cost, food cap |
 | **biome** | A stretch of map the generator spreads as one kind — land, sea, … — weighting the terrain of each tile in it. | patch, zone, area, ecosystem |
 | **terrain** | A tile's base layer: plain, forest, hills, …; one per tile, changed only by terraforming. | tile type |
-| **terraform** | To change a tile's terrain into another, where a worker stands; what a terraform action does. | transform, convert, reshape |
+| **terraform** | To change a tile's terrain into another, where a worker stands; what a terraform instant does. | transform, convert, reshape |
 | **feature** | A generated extra on a tile: a fertile plain. | bonus |
 | **river** | A watercourse the generator runs along the edges between tiles, from a mountain range to the sea. | stream, creek, waterway |
-| **improvement** | A layer a worker improves a tile with through an action; distinct ones stack, the same one never twice. | — |
-| **improve** | To put an improvement on a tile where a worker stands; what an improvement action does. | lay, build, place, install |
+| **improvement** | A layer a worker improves a tile with through an instant; distinct ones stack, the same one never twice. | — |
+| **improve** | To put an improvement on a tile where a worker stands; what an improvement instant does. | lay, build, place, install |
 | **yield** | What a tile's layers and the river running along it give at income, resource by resource. | output, produce, harvest |
 | **claim** | To spend culture on a tile adjacent to one the city owns; free of cards. | buy, purchase, expand, annex |
 | **culture** | The resource that claims tiles. | — |
@@ -87,9 +87,10 @@ deliberate exception the reviewer sees; there is no silent allow-list.
 | **damage** | A unit's stat: the health its attack removes. | strength, power, harm |
 | **range** | The distance, in tiles, a unit attacks over; one for melee. | reach |
 | **move** | A unit's stat: the move points it refreshes to. | speed, mobility, movement points |
-| **move points** | What a unit spends to cross tiles, one per tile; refreshed to its move. | movement points, steps, stamina, action points |
-| **refresh** | To bring a unit's spendable stat back to its full value — its move points to its move; what the turn does to every unit when it ticks over, and what the plain order does to one unit. Health is never refreshed but healed. | restore, replenish, reset, recharge, recover, regain |
-| **military** | The resource that pays for military units, orders, actions and fortifications. | — |
+| **move points** | What a unit spends to cross tiles, one per tile; refreshed to its move. | movement points, steps, stamina |
+| **action** | A unit's stat, and what it spends to attack, one per attack; refreshed to its action. | action points, energy, attack pool |
+| **refresh** | To bring a unit's spendable stat back to its full value — its move points to its move, its action to its action. The turn refreshes both on every unit when it ticks over; the plain order refreshes one unit's move points. Health is never refreshed but healed. | restore, replenish, reset, recharge, recover, regain |
+| **military** | The resource that pays for military units, orders, instants and fortifications. | — |
 | **occupy** | What an enemy does to a tile it stands on: the tile yields nothing. | blockade |
 | **pillage** | What some enemies do to the tile they stand on: its building or improvement is destroyed. | raze, loot, burn |
 | **capture** | To take a site by standing on its tile through a full turn: an enemy captures the city (defeat), the player captures a camp. | conquer, seize, sack |

@@ -1,4 +1,4 @@
-import { type ActionCard, CARDS, type CardId } from './cards';
+import { CARDS, type CardId, type InstantCard } from './cards';
 import { arrival, ENEMY_SCRIPTS } from './enemies';
 import {
   BUILDINGS,
@@ -17,7 +17,16 @@ import {
 } from './map';
 import type { Rng } from './rng';
 import { seedRng, shuffle as shuffleItems } from './rng';
-import { attack, leastHealth, reachable, refreshed, UNIT_STATS, type Unit, unitAt } from './units';
+import {
+  attackable,
+  attacked,
+  reachable,
+  refreshedAction,
+  refreshedMovePoints,
+  UNIT_STATS,
+  type Unit,
+  unitAt,
+} from './units';
 
 /** The five core resources, then culture. Population is inhabitants, not a store. */
 export const RESOURCES = ['food', 'production', 'military', 'money', 'science', 'culture'] as const;
@@ -64,8 +73,12 @@ export type Command =
   | { readonly type: 'end-turn' }
   | { readonly type: 'play'; readonly index: number; readonly target?: Target }
   | { readonly type: 'move'; readonly unit: number; readonly tile: TileCoords }
+  | { readonly type: 'attack'; readonly unit: number; readonly tile: TileCoords }
   | { readonly type: 'assign'; readonly tile: TileCoords }
   | { readonly type: 'claim'; readonly tile: TileCoords };
+
+/** What one unit of the player's is commanded by hand: crossing to a tile, or attacking on one. */
+export type UnitCommand = Extract<Command, { readonly unit: number }>;
 
 /** The inhabitants on no tile: what a unit card takes, and what an assign has to give a tile. */
 export function idle(chronicle: Chronicle): number {
@@ -89,9 +102,9 @@ const CLAIMS_PER_RISE = 3;
  * A step that carries nothing but the chronicle it left. `played` is the card gone from the hand
  * with its cost paid, `refused` is the command the rules turned down, `assign` is an inhabitant put
  * on a tile or taken off one, `claim` is a tile bought with culture and taken inside the border,
- * `grow` is the food stock spent on one more inhabitant, `turn` is the tick, where every unit's
- * move points are refreshed to its move, `events` is what the schedule lands, `intents` is the
- * enemy phase's declarations, and `capture` is the city falling to an enemy that stood on its tile.
+ * `grow` is the food stock spent on one more inhabitant, `turn` is the tick, where every unit's move
+ * points and action are refreshed, `events` is what the schedule lands, `intents` is the enemy
+ * phase's declarations, and `capture` is the city falling to an enemy that stood on its tile.
  */
 export type PlainStage =
   | 'played'
@@ -110,9 +123,9 @@ export type PlainStage =
 
 /**
  * The shape every command resolves as: one step, and the chronicle it leaves behind. An `attack` is
- * one attack of combat's, and a `move` is one unit crossing, the player's or the enemy phase's
- * alike; each names the tiles it happened between, because what the chronicle after the step cannot
- * say is carried on the step itself.
+ * one unit's attack, the player's by hand or an enemy's intent executed in combat, and a `move` is
+ * one unit crossing, the player's or the enemy phase's alike; each names the tiles it happened
+ * between, because what the chronicle after the step cannot say is carried on the step itself.
  */
 export type Stage = { readonly chronicle: Chronicle } & (
   | { readonly name: PlainStage }
@@ -180,6 +193,8 @@ function stagesOf(chronicle: Chronicle, command: Command): Stage[] {
       return play(chronicle, command.index, command.target);
     case 'move':
       return move(chronicle, command.unit, command.tile);
+    case 'attack':
+      return attack(chronicle, command.unit, command.tile);
     case 'assign':
       return assign(chronicle, command.tile);
     case 'claim':
@@ -264,7 +279,11 @@ function endOfTurn(chronicle: Chronicle): Stage[] {
   raised(enemyPhase(standing));
   if (standing.defeat !== undefined) return stages;
 
-  staged('turn', { ...standing, turn: standing.turn + 1, units: standing.units.map(refreshed) });
+  staged('turn', {
+    ...standing,
+    turn: standing.turn + 1,
+    units: standing.units.map((unit) => refreshedAction(refreshedMovePoints(unit))),
+  });
   staged('events', events(standing));
   staged('draw', draw(standing));
   staged('shuffle', shuffle(standing));
@@ -431,8 +450,8 @@ export function terraformable(chronicle: Chronicle, from: Terrain): TileCoords[]
     .map(({ q, r }) => ({ q, r }));
 }
 
-/** The tiles an action can be aimed at; one that lands whole is aimed at none. */
-function actionTiles(chronicle: Chronicle, card: ActionCard): TileCoords[] {
+/** The tiles an instant can be aimed at; one that lands whole is aimed at none. */
+function instantTiles(chronicle: Chronicle, card: InstantCard): TileCoords[] {
   switch (card.effect) {
     case 'gain':
       return [];
@@ -449,8 +468,8 @@ export function targetTiles(chronicle: Chronicle, id: CardId): TileCoords[] {
   switch (card.kind) {
     case 'building':
       return buildable(chronicle, card.building);
-    case 'action':
-      return actionTiles(chronicle, card);
+    case 'instant':
+      return instantTiles(chronicle, card);
     case 'unit':
     case 'order':
       return [];
@@ -472,7 +491,7 @@ function blocked(chronicle: Chronicle, id: CardId): Block[] {
       return blocks;
     }
     case 'building':
-    case 'action':
+    case 'instant':
       return card.target === 'tile' && targetTiles(chronicle, id).length === 0 ? ['tile'] : [];
     case 'order':
       return chronicle.units.some(
@@ -525,6 +544,7 @@ function resolve(paid: Chronicle, id: CardId, target: Target | undefined): Stage
             faction: 'player',
             tile: paid.city,
             movePoints: UNIT_STATS[card.unitType].move,
+            action: UNIT_STATS[card.unitType].action,
           },
         ],
       };
@@ -538,19 +558,23 @@ function resolve(paid: Chronicle, id: CardId, target: Target | undefined): Stage
       const ordered = order(paid, target);
       return ordered === undefined ? undefined : [{ name: 'played', chronicle: ordered }];
     }
-    case 'action': {
-      const acted = act(paid, card, target);
-      return acted === undefined ? undefined : [{ name: 'played', chronicle: acted }];
+    case 'instant': {
+      const landed = instant(paid, card, target);
+      return landed === undefined ? undefined : [{ name: 'played', chronicle: landed }];
     }
   }
 }
 
 /**
- * The action card's one effect: the resources it gains land in the stores, and the improvement or
+ * The instant card's one effect: the resources it gains land in the stores, and the improvement or
  * the terraform lands on the tile it was aimed at — the worker that stands there stays where it is,
  * and a terraformed tile loses the feature that lay on the terrain it was.
  */
-function act(paid: Chronicle, card: ActionCard, target: Target | undefined): Chronicle | undefined {
+function instant(
+  paid: Chronicle,
+  card: InstantCard,
+  target: Target | undefined,
+): Chronicle | undefined {
   if (card.effect === 'gain') {
     const resources = { ...paid.resources };
     for (const resource of RESOURCES) resources[resource] += card.gain[resource] ?? 0;
@@ -559,7 +583,7 @@ function act(paid: Chronicle, card: ActionCard, target: Target | undefined): Chr
 
   if (target?.type !== 'tile') return undefined;
   const at = tileKey(target.tile);
-  if (!actionTiles(paid, card).some((coord) => tileKey(coord) === at)) return undefined;
+  if (!instantTiles(paid, card).some((coord) => tileKey(coord) === at)) return undefined;
 
   const after = (tile: Tile): Tile =>
     card.effect === 'improve'
@@ -614,9 +638,39 @@ function move(chronicle: Chronicle, mover: number, to: TileCoords): Stage[] {
 }
 
 /**
- * The plain order: one unit of the player's that has spent move points is refreshed, as the tick
- * refreshes every unit. A unit that is not the player's, one whose move points are full, and no
- * unit at all refuse the play.
+ * One unit of the player's attacking what stands on a tile its range reaches: the attacker spends
+ * one of its action, and the target loses the attacker's damage or is killed by it. Nobody moves. A
+ * unit that is not the player's, one with no action left, and a tile no unit of another faction
+ * within range stands on are one `refused` stage.
+ */
+function attack(chronicle: Chronicle, attacker: number, at: TileCoords): Stage[] {
+  const unit = chronicle.units[attacker];
+  if (unit === undefined || unit.faction !== 'player') return [{ name: 'refused', chronicle }];
+
+  const target = attackable(chronicle.units, unit).find(
+    (index) => tileKey(chronicle.units[index].tile) === tileKey(at),
+  );
+  if (target === undefined) return [{ name: 'refused', chronicle }];
+
+  // The attacker's action is spent before the blow, because a killed target leaves the list and
+  // carries every place after it one down — the attacker's own among them.
+  const spending = chronicle.units.map((other, index) =>
+    index === attacker ? { ...other, action: other.action - 1 } : other,
+  );
+  return [
+    {
+      name: 'attack',
+      attacker: unit.tile,
+      target: chronicle.units[target].tile,
+      chronicle: { ...chronicle, units: attacked(spending, attacker, target) },
+    },
+  ];
+}
+
+/**
+ * The plain order: one unit of the player's that has spent move points has them refreshed, as the
+ * tick refreshes every unit's. A unit that is not the player's, one whose move points are full, and
+ * no unit at all refuse the play.
  */
 function order(paid: Chronicle, target: Target | undefined): Chronicle | undefined {
   if (target?.type !== 'unit') return undefined;
@@ -626,7 +680,7 @@ function order(paid: Chronicle, target: Target | undefined): Chronicle | undefin
 
   return {
     ...paid,
-    units: paid.units.map((other, at) => (at === target.unit ? refreshed(other) : other)),
+    units: paid.units.map((other, at) => (at === target.unit ? refreshedMovePoints(other) : other)),
   };
 }
 
@@ -666,9 +720,9 @@ function discard(chronicle: Chronicle): Chronicle {
 }
 
 /**
- * Combat, one stage per attack: the player's fighting units attack in unit order, each by the one
- * attack rule, and then every enemy still standing executes the intent it declared. Executing an
- * intent spends it, whether or not anything was still standing on the tile it was aimed at.
+ * Combat, one stage per attack: every enemy still standing executes the intent it declared, in unit
+ * order. Executing an intent spends it, whether or not anything was still standing on the tile it
+ * was aimed at. The player's own attacks are made by hand during the turn and none is made here.
  */
 function combat(chronicle: Chronicle): Stage[] {
   const stages: Stage[] = [];
@@ -683,21 +737,16 @@ function combat(chronicle: Chronicle): Stage[] {
   };
 
   for (const unit of chronicle.units) {
-    if (unit.faction !== 'player') continue;
-    const attacker = standing(unit.tile);
-    if (attacker === -1) continue;
-    const target = leastHealth(units, attacker);
-    if (target === undefined) continue;
-    landed(unit.tile, units[target].tile, attack(units, attacker, target));
-  }
-
-  for (const unit of chronicle.units) {
     if (unit.faction !== 'enemy' || unit.intent === undefined) continue;
     const attacker = standing(unit.tile);
     if (attacker === -1) continue;
     const target = standing(unit.intent);
     const hit = target !== -1 && units[target].faction !== unit.faction;
-    landed(unit.tile, unit.intent, spent(hit ? attack(units, attacker, target) : units, unit.tile));
+    landed(
+      unit.tile,
+      unit.intent,
+      spent(hit ? attacked(units, attacker, target) : units, unit.tile),
+    );
   }
 
   return stages;

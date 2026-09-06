@@ -14,8 +14,9 @@ import {
   targetTiles,
   tileCost,
   tileRefusal,
+  type UnitCommand,
 } from '../rules/chronicle';
-import { type TileCoords, tileAt, tileKey } from '../rules/map';
+import { tileAt, tileKey } from '../rules/map';
 import { createBand } from './band';
 import { boundTo } from './bindings';
 import { CARD_BASELINE, CARD_HEIGHT } from './card-face';
@@ -234,15 +235,20 @@ export class ChronicleScene extends Phaser.Scene {
     };
 
     /**
-     * One step of a unit, chosen on the map: the play-out runs, and the unit is selected again
-     * where it landed, so the next step is one more press on a tile the map lights. A press that
-     * landed while another command was playing out moved nothing, and selects nothing either.
+     * One step or one attack of a unit, chosen on the map: the play-out runs, and the unit is
+     * selected again on the tile it now stands on — the one it landed on, or the one it attacked
+     * from and never left — so the next command is one more press on a tile the map lights. A
+     * press that landed while another command was playing out did nothing, and selects nothing
+     * either.
      */
-    const step = async (unit: number, tile: TileCoords): Promise<void> => {
-      await playOut({ type: 'move', unit, tile });
+    const commandUnit = async (command: UnitCommand): Promise<void> => {
+      // An attack that kills carries every place after the target's one down, the attacker's among
+      // them, so the tile it stood on is what names it after the play-out and not its place.
+      const from = this.current.units[command.unit]?.tile;
+      await playOut(command);
       if (this.playing) return;
-      const landed = this.current.units[unit];
-      if (landed !== undefined) select({ tile: landed.tile, at: view.faceOf(landed.tile) });
+      const on = command.type === 'move' ? this.current.units[command.unit]?.tile : from;
+      if (on !== undefined) select({ tile: on, at: view.faceOf(on) });
     };
 
     view.onPress(
@@ -261,8 +267,8 @@ export class ChronicleScene extends Phaser.Scene {
         panel.rescale();
         note.rescale();
       },
-      (unit, tile) => {
-        void step(unit, tile);
+      (command) => {
+        void commandUnit(command);
       },
     );
 

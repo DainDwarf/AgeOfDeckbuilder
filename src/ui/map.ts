@@ -6,6 +6,7 @@ import {
   type Resource,
   type Stage,
   type Target,
+  type UnitCommand,
 } from '../rules/chronicle';
 import {
   type BuildingTypeId,
@@ -20,6 +21,7 @@ import {
   tileYield,
 } from '../rules/map';
 import {
+  attackable,
   type Faction,
   type Landing,
   reachable,
@@ -216,16 +218,16 @@ export type MapView = {
   /**
    * Reports the tile every press the UI leaves lands on and the button it came from, and nothing
    * when it lands off the map; `zoomed` fires whenever the zoom changes, so whatever stands on the
-   * map at a size of its own stands again. `moved` is the unit a press sent to one of its lit
-   * landings, by its place in `units`, which is no tile press. Called once; while a card is aimed
-   * the map belongs to the aim and no press is reported.
+   * map at a size of its own stands again. `commanded` is the command a press on one of the lit
+   * unit's tiles is — its step onto a landing, or its attack on a unit glowed — which is no tile
+   * press. Called once; while a card is aimed the map belongs to the aim and no press is reported.
    */
   onPress(
     pressed: (found: PressedTile | undefined, press: Press) => void,
     zoomed: () => void,
-    moved: (unit: number, tile: TileCoords) => void,
+    commanded: (command: UnitCommand) => void,
   ): void;
-  /** Rings the selected tile and lights the landings of the unit of the player's on it, or clears both. */
+  /** Rings the selected tile and lights what the unit of the player's on it can do, or clears both. */
   markSelected(tile: TileCoords | undefined): void;
   /** Where a tile's face stands, for whatever floats beside a tile no press picked out. */
   faceOf(tile: TileCoords): TileFace;
@@ -420,9 +422,19 @@ function pressOf(pointer: Phaser.Input.Pointer): Press | undefined {
   return PRESSES.get(pointer.button);
 }
 
-function litTile(scene: Phaser.Scene, coord: TileCoords): Phaser.GameObjects.Polygon {
+/**
+ * The one way a tile is glowed: its face in the colour of whoever offers it — the pale one on a
+ * landing and on a tile a card is aimed at, the enemies' own on a unit an attack can be made on.
+ */
+function glowTile(
+  scene: Phaser.Scene,
+  coord: TileCoords,
+  colour: number,
+): Phaser.GameObjects.Polygon {
   const { x, y } = positionOf(coord);
-  return scene.add.polygon(x, y, hexagon(TILE_SIZE - 2), LIT, 0.4).setStrokeStyle(2, LIT, 0.9);
+  return scene.add
+    .polygon(x, y, hexagon(TILE_SIZE - 2), colour, 0.4)
+    .setStrokeStyle(2, colour, 0.9);
 }
 
 /**
@@ -444,7 +456,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
   const built = scene.add.container(0, 0).setDepth(BUILDING_DEPTH).setName('buildings');
   const intents = scene.add.container(0, 0).setDepth(GLOW_DEPTH).setName('intents');
   const selected = scene.add.container(0, 0).setDepth(GLOW_DEPTH).setName('selected');
-  const lighted = scene.add.container(0, 0).setDepth(GLOW_DEPTH).setName('landings');
+  const lighted = scene.add.container(0, 0).setDepth(GLOW_DEPTH).setName('lit');
   const marks = scene.add.container(0, 0).setDepth(UNIT_DEPTH);
   const dim = scene.add
     .rectangle(0, 0, 1, 1, OUTLINE, DIM_ALPHA)
@@ -730,7 +742,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
   let marking = false;
 
   /**
-   * What the dim is laid under rather than over: the ring on the selected tile, the landings lit
+   * What the dim is laid under rather than over: the ring on the selected tile, the tiles glowed
    * under it and the glow a card is aimed by, which the player answers the overlay with. Everything
    * else the map draws dims, so these are lifted only while the dim stands.
    */
@@ -867,26 +879,42 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
   /** The tile the map rings, and nothing while none is selected. */
   let selection: TileCoords | undefined;
 
-  /** Which unit's landings the map is lighting and where they lie; nothing while none is lit. */
-  let lit: { readonly unit: number; readonly landings: Landing[] } | undefined;
+  /**
+   * Which unit the map is lighting the map for, where its landings lie and which tiles hold a unit
+   * it can attack; nothing while none is lit.
+   */
+  let lit:
+    | { readonly unit: number; readonly landings: Landing[]; readonly targets: TileCoords[] }
+    | undefined;
 
   /**
-   * The landings of the unit of the player's standing on a tile lit, and nothing lit for a tile
-   * that holds none: the one place a move is offered on the map. A move changes them, so this
-   * follows every render.
+   * What the unit of the player's standing on a tile can do, and nothing at all for a tile that
+   * holds none: every tile its move points reach lit, and every unit its attack reaches glowed in
+   * the enemies' own colour. The one place a move or an attack is offered on the map. Either
+   * changes them, so this follows every render.
    */
-  const lightLandings = (tile: TileCoords | undefined): void => {
+  const lightUnit = (tile: TileCoords | undefined): void => {
+    const current = shown;
     const on =
-      tile === undefined || shown === undefined
+      tile === undefined || current === undefined
         ? -1
-        : shown.units.findIndex((unit) => unit.faction === 'player' && same(unit.tile, tile));
+        : current.units.findIndex((unit) => unit.faction === 'player' && same(unit.tile, tile));
     lit =
-      on === -1 || shown === undefined
+      on === -1 || current === undefined
         ? undefined
-        : { unit: on, landings: reachable(shown.tiles, shown.units, shown.units[on]) };
+        : {
+            unit: on,
+            landings: reachable(current.tiles, current.units, current.units[on]),
+            targets: attackable(current.units, current.units[on]).map(
+              (index) => current.units[index].tile,
+            ),
+          };
 
     lighted.removeAll(true);
-    for (const landing of lit?.landings ?? []) lighted.add(litTile(scene, landing.tile));
+    for (const landing of lit?.landings ?? []) lighted.add(glowTile(scene, landing.tile, LIT));
+    for (const coord of lit?.targets ?? []) {
+      lighted.add(glowTile(scene, coord, FACTION_COLOURS.enemy));
+    }
   };
 
   /** The border repainted on the chronicle the map stands on: a claim moves it, so a render does. */
@@ -929,7 +957,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
 
     paintCityMarks();
     paintYields();
-    lightLandings(selection);
+    lightUnit(selection);
   };
 
   /** Takes the map for one stage's motion, and hands back the token that settles it. */
@@ -1116,7 +1144,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
     onPress(
       pressed: (found: PressedTile | undefined, press: Press) => void,
       zoomed: () => void,
-      moved: (unit: number, tile: TileCoords) => void,
+      commanded: (command: UnitCommand) => void,
     ): void {
       rescale = zoomed;
       const catcher = catcherZone('press');
@@ -1144,7 +1172,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
       const letGo = (): void => {
         bringHome();
         grabbed = undefined;
-        lightLandings(selection);
+        lightUnit(selection);
       };
 
       takePress(catcher, {
@@ -1158,7 +1186,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
           );
           if (unit === -1) return true;
           grabbed = { unit, from: { x: pointer.x, y: pointer.y }, dragging: false };
-          lightLandings(under);
+          lightUnit(under);
           return false;
         },
         release: (pointer, press) => {
@@ -1170,19 +1198,20 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
             grabbed = undefined;
           }
 
-          const mover = held?.unit ?? (press === 'left' ? lit?.unit : undefined);
-          if (
-            mover !== undefined &&
-            on !== undefined &&
-            lit?.unit === mover &&
-            lit.landings.some((landing) => same(landing.tile, on))
-          ) {
-            moved(mover, on);
-            return;
+          const acting = held?.unit ?? (press === 'left' ? lit?.unit : undefined);
+          if (acting !== undefined && on !== undefined && lit?.unit === acting) {
+            if (lit.landings.some((landing) => same(landing.tile, on))) {
+              commanded({ type: 'move', unit: acting, tile: on });
+              return;
+            }
+            if (lit.targets.some((coord) => same(coord, on))) {
+              commanded({ type: 'attack', unit: acting, tile: on });
+              return;
+            }
           }
 
           if (held !== undefined) {
-            lightLandings(selection);
+            lightUnit(selection);
             if (held.dragging) return;
           }
           pressed(
@@ -1206,7 +1235,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
         const { x, y } = positionOf(tile);
         selected.add(scene.add.polygon(x, y, hexagon(TILE_SIZE - 2), 0, 0).setStrokeStyle(4, LIT));
       }
-      lightLandings(selection);
+      lightUnit(selection);
     },
 
     faceOf(tile: TileCoords): TileFace {
@@ -1267,7 +1296,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
       chosen: (target: Target | undefined) => void,
     ): () => void {
       const { catcher, glow, close } = openAim();
-      for (const coord of tiles) glow.add(litTile(scene, coord));
+      for (const coord of tiles) glow.add(glowTile(scene, coord, LIT));
 
       const finish = (target: Target | undefined): void => {
         stop();

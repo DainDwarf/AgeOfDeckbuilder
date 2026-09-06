@@ -17,23 +17,25 @@ export type UnitStats = {
   readonly damage: number;
   readonly range: number;
   readonly move: number;
+  readonly action: number;
 };
 
 /** The stats a unit of each kind enters the map with. */
 export const UNIT_STATS: Record<UnitTypeId, UnitStats> = {
-  PH_Worker: { id: 'PH_Worker', health: 2, damage: 0, range: 0, move: 2 },
-  PH_Warrior: { id: 'PH_Warrior', health: 5, damage: 2, range: 1, move: 2 },
+  PH_Worker: { id: 'PH_Worker', health: 2, damage: 0, range: 0, move: 2, action: 0 },
+  PH_Warrior: { id: 'PH_Warrior', health: 5, damage: 2, range: 1, move: 2, action: 1 },
 };
 
 /**
- * A unit standing on the map, with the move points it has left to cross tiles on. An enemy is the
- * one that carries a script — the enemy phase asks it where to move and what to aim at — and the
- * intent that phase left on it.
+ * A unit standing on the map, with the move points it has left to cross tiles on and the action it
+ * has left to attack on. An enemy is the one that carries a script — the enemy phase asks it where
+ * to move and what to aim at — and the intent that phase left on it.
  */
 export type Unit = {
   readonly stats: UnitStats;
   readonly tile: TileCoords;
   readonly movePoints: number;
+  readonly action: number;
 } & (
   | { readonly faction: 'player' }
   | {
@@ -46,12 +48,14 @@ export type Unit = {
 /** A tile a unit can land on, and the move points crossing to it spends. */
 export type Landing = { readonly tile: TileCoords; readonly cost: number };
 
-/**
- * A unit refreshed: its move points back to its move, whatever it had left of them. The one way a
- * spendable stat comes back to full — the turn's tick does it to every unit, the plain order to one.
- */
-export function refreshed(unit: Unit): Unit {
+/** A unit's move points refreshed to its move, whatever it had left of them. */
+export function refreshedMovePoints(unit: Unit): Unit {
   return { ...unit, movePoints: unit.stats.move };
+}
+
+/** A unit's action refreshed to its own action, whatever it had left of it. */
+export function refreshedAction(unit: Unit): Unit {
+  return { ...unit, action: unit.stats.action };
 }
 
 /** The one unit standing on a tile, if one does. */
@@ -92,8 +96,8 @@ export function reachable(tiles: readonly Tile[], units: readonly Unit[], unit: 
 }
 
 /**
- * Who a unit attacks: the target of another faction within its range holding the least health, and
- * nothing when none is there or the unit has no damage to remove.
+ * What a unit an enemy script aims at: the unit of another faction within its range holding the
+ * least health, and nothing when none is there or the unit has no damage to remove.
  */
 export function leastHealth(units: readonly Unit[], attacker: number): number | undefined {
   const acting = units[attacker];
@@ -109,8 +113,25 @@ export function leastHealth(units: readonly Unit[], attacker: number): number | 
   return target;
 }
 
+/**
+ * What a unit can attack, each by its place in `units`: every unit of another faction within its
+ * range, while it has the action an attack spends. A unit with none attacks nothing.
+ */
+export function attackable(units: readonly Unit[], attacker: Unit): number[] {
+  if (attacker.action <= 0) return [];
+
+  const targets: number[] = [];
+  for (let index = 0; index < units.length; index++) {
+    const other = units[index];
+    if (other.faction === attacker.faction) continue;
+    if (distance(other.tile, attacker.tile) > attacker.stats.range) continue;
+    targets.push(index);
+  }
+  return targets;
+}
+
 /** The one attack there is: the target loses the attacker's damage, and at zero health it is killed. */
-export function attack(units: readonly Unit[], attacker: number, target: number): Unit[] {
+export function attacked(units: readonly Unit[], attacker: number, target: number): Unit[] {
   const targeted = units[target];
   const health = targeted.stats.health - units[attacker].stats.damage;
   if (health <= 0) return units.filter((_, index) => index !== target);

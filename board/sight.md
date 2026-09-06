@@ -5,8 +5,8 @@ Hidden*, run on seeds 1 and 2.
 
 ## Scope
 
-- **Sight** is a unit's fifth stat, beside health, damage, range and move; the city has a sight of
-  its own. A tile's layers may add to a unit's sight, as the design's map section already says;
+- **Sight** is a unit's stat, beside health, damage, range, move and action; the city has a sight
+  of its own. A tile's layers may add to a unit's sight, as the design's map section already says;
   no content does yet, and the implementer widens no declaration for it.
 - **Elevation** is one number per terrain: plain, coast, deep and urban 0; forest 1; hills 2;
   mountain 3. Not a fork: the user settled the table.
@@ -26,7 +26,7 @@ Hidden*, run on seeds 1 and 2.
 ## Doc-impact
 
 - `docs/DESIGN.md`: the Sight section rewritten to the line rule with the elevation table and the
-  provisional numbers; the units section lists sight as the fifth stat; the map section's "sight
+  provisional numbers; the units section lists sight among the stats; the map section's "sight
   is the sum of its layers" becomes the modifier added to the unit's.
 - `docs/GLOSSARY.md`: **sight** redefined as the stat and the tiles it reaches ("line of sight"
   stays forbidden: prose says "a line from the unit"); **elevation** added.

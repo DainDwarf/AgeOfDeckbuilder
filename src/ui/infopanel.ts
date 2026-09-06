@@ -107,7 +107,7 @@ const LABEL_STYLE = { fontFamily: UI_FONT, fontSize: `${0.62 * em}px`, color: '#
 const VALUE_STYLE = { fontFamily: UI_FONT, fontSize: `${0.62 * em}px`, color: '#0d1014' };
 const CHIP_STYLE = { ...VALUE_STYLE, fontStyle: 'bold' };
 
-const STATS = ['health', 'damage', 'range', 'move'] as const;
+const STATS = ['health', 'damage', 'range', 'move', 'action'] as const;
 
 /** What a row of a card is named by: one `label.` and one `tooltip.` entry each. */
 type Term = (typeof STATS)[number] | Resource;
@@ -116,6 +116,7 @@ type Term = (typeof STATS)[number] | Resource;
 function readingOf(unit: Unit, stat: (typeof STATS)[number]): string {
   if (stat === 'health') return `${unit.stats.health} / ${UNIT_STATS[unit.stats.id].health}`;
   if (stat === 'move') return `${unit.movePoints} / ${unit.stats.move}`;
+  if (stat === 'action') return `${unit.action} / ${unit.stats.action}`;
   return String(unit.stats[stat]);
 }
 

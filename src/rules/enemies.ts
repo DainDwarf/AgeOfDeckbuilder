@@ -67,8 +67,8 @@ export const ENEMY_SCRIPTS: Record<EnemyScriptId, EnemyScript> = {
 
 /**
  * `PH_Arrival`, the one event the stand-in schedule holds: one enemy lands on a free tile of the
- * map's outer ring it can stand on, drawn from the seeded generator, with its move points full.
- * With no such tile it places nothing.
+ * map's outer ring it can stand on, drawn from the seeded generator, with its move points and its
+ * action full. With no such tile it places nothing.
  */
 export function arrival(chronicle: Chronicle): Chronicle {
   const ring = chronicle.tiles.filter(
@@ -91,6 +91,7 @@ export function arrival(chronicle: Chronicle): Chronicle {
         faction: 'enemy',
         tile: { q, r },
         movePoints: UNIT_STATS.PH_Warrior.move,
+        action: UNIT_STATS.PH_Warrior.action,
         script: 'PH_Advance',
       },
     ],

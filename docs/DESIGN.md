@@ -35,12 +35,13 @@ fiction's own word: *Chronicles of the mercantile civilization in the Age of Pow
   to the famine. A deck has a specialty; it never has an omission.
 - **Cards are the verbs; the map holds the nouns.** Buildings and units enter the map through
   cards, and immediate effects are cards. Standing things do their standing thing for free — a
-  garrison defends where it stands, a farm with a person assigned yields — and **changing the
-  map costs a card**: building, terraforming, attacking, negotiating. Moving is the exception a
-  unit carries with it: it crosses the map on its own move points, and no card is spent on that.
+  farm with a person assigned yields — and **changing the map costs a card**: building,
+  terraforming, negotiating. What a unit does with itself is the exception it carries with it: it
+  crosses the map on its own move points and attacks on its own action, and no card is spent on
+  either.
 - Five core resources: **food, production, military, money, science**. 🔧 Their jobs: food grows
   the population; production builds buildings and units and shapes tiles; military pays for
-  military units, orders, actions and fortifications; money trades for other goods and
+  military units, orders, instants and fortifications; money trades for other goods and
   accumulates; science pays for manipulating the cards — drawing, discarding and the like.
   **Culture pushes the border out**, and the tiles inside it are the city's; population is the
   city's inhabitants, assigned to its tiles.
@@ -134,12 +135,12 @@ A chronicle is a sequence of **turns**. Each turn, in this order:
 2. **Draw.** The player draws a **hand** of **five** cards from the draw pile. 🔧 Buildings, a
    civilization or an effect may change the number. An empty draw pile is refilled by shuffling
    the discard pile into it.
-3. **Play.** The player plays cards from the hand, in any order, paying each card's resource cost.
-   Nothing else limits play: the hand and the city's resources are the whole budget. A per-turn
-   energy was rejected: a sixth economy fighting the five.
+3. **Play.** The player plays cards from the hand, in any order, paying each card's resource cost,
+   and moves and attacks with the units on the map. Nothing else limits play: the hand, the city's
+   resources and what the units hold are the whole budget. A per-turn energy was rejected: a sixth
+   economy fighting the five.
 4. **End.** The player ends the turn; the rest of the hand is discarded.
-5. **Combat.** Every fighting unit attacks: the player's units first, each at an enemy within its
-   range, then every enemy executes the **intent** it declared last turn. Executing an intent
+5. **Combat.** Every enemy executes the **intent** it declared last turn. Executing an intent
    spends it — one whose target has left the tile is executed on the empty tile all the same, and
    no enemy carries an intent until the enemy phase declares again. Combat comes before
    income so that an enemy killed here occupies nothing when the tiles yield.
@@ -180,7 +181,7 @@ keyword some cards carry, not a kind, and the map's gifts are chronicle-only by 
   a unit that has spent them crosses again in the same turn; it is refused on a unit whose move
   points are full, and blocked when no unit has spent any. Other orders do other things with one
   unit, and are content, not kinds.
-- **Action** — an immediate effect: draw two, gain food, negotiate with a neutral, terraform a
+- **Instant** — an immediate effect: draw two, gain food, negotiate with a neutral, terraform a
   tile where a worker stands. Everything that is neither a noun entering the map nor a noun
   moving.
 
@@ -206,19 +207,22 @@ threshold and the schedule's events are the whole of the pressure on the populat
 ### City mode ✅
 
 The chronicle screen has two modes. Out of city mode a click on a tile **selects** it: the map rings
-it and, when a unit of the player's stands there, lights every tile its move points reach. A click
-on a lit tile is that unit's next step and selects nothing; the selection follows the unit to where
-it lands, its landings lit again. A drag from the unit onto a lit tile is the same step; let go
-anywhere else, the unit comes home, and a unit that can go nowhere is grabbed and comes home just
-the same, without a word. Nothing more. The **inspection key** then **inspects** the selection —
-one card in the infopanel per press. A tile has at most three, in this order: the unit standing on
-it; the building
-with the tile's improvements; and the terrain with its feature and the river running along it. A
-card is absent when nothing fills it, and the terrain card never is. The unit card reads the unit's
-stats; the other two are headed by their outermost layer and show a row per thing they hold — the
-river's among them on the terrain card — with what it gives at income, a row that gives nothing
-saying so. After the last card comes the first again, and a tile of a single card holds it: the
-cycle never falls back to the bare ring.
+it and, when a unit of the player's stands there, lights every tile its move points reach and glows,
+in the enemies' own colour, every unit its attack reaches. A click on a lit tile is that unit's next
+step and selects nothing; a click on a unit glowed is that unit's attack on it, and selects nothing
+either. The selection follows the unit to where it stands after either — where it landed, or where
+it attacked from and never left — lit and glowed again. A drag from the unit onto a lit or glowed
+tile is the same step or the same attack; let go anywhere else, the unit comes home, and a unit that
+can do nothing is grabbed and comes home just the same, without a word. A unit with no action left
+glows nothing, and a press on the enemy beside it selects that tile like any other. Nothing more.
+The **inspection key** then **inspects** the selection — one card in the infopanel per press. A tile
+has at most three, in this order: the unit standing on it; the building with the tile's
+improvements; and the terrain with its feature and the river running along it. A card is absent
+when nothing fills it, and the terrain card never is. The unit card reads the unit's stats; the
+other two are headed by their outermost layer and show a row per thing they hold — the river's
+among them on the terrain card — with what it gives at income, a row that gives nothing saying so.
+After the last card comes the first again, and a tile of a single card holds it: the cycle never
+falls back to the bare ring.
 
 A right click is a press on the chronicle screen and not a key, so it binds to nothing and Controls
 does not list it: on a tile it selects and inspects in the one press, and pressed again on the tile
@@ -262,7 +266,7 @@ river running along the tile adding to its yield on top of them:
   content and changes freely.
 - **Feature** — at most one, put there by the generator: a fertile plain. A feature lies
   on its terrain, so it is gone when its tile is terraformed.
-- **Improvement** — what a worker improves a tile with through an action, any number of distinct
+- **Improvement** — what a worker improves a tile with through an instant, any number of distinct
   ones per tile, never the same one twice. Each names the terrain it goes on, as a feature and a
   building do, and stays through a terraform. A road is one; it runs under whatever building stands
   there.
@@ -334,8 +338,8 @@ later content.
 
 ### Units and combat ✅
 
-A unit has **health**, **damage**, **range** and **move**. An **attack** removes the attacker's
-damage from the target's health, and a unit at zero health is killed. There is
+A unit has **health**, **damage**, **range**, **move** and **action**. An **attack** removes the
+attacker's damage from the target's health, and a unit at zero health is killed. There is
 no retaliation: the target answers only when its own attack comes, so a fight is an
 exchange across turns, never within one blow.
 
@@ -344,11 +348,12 @@ exchange across turns, never within one blow.
   steps as the player likes; the plain order refreshes them. Coast, deep water and mountain are
   impassable. A unit passes through the units of its own faction and never through another's, and
   it lands only on a free tile.
-- **One attack rule.** In combat every fighting unit attacks an enemy within its range; a melee
-  unit's range is one. A unit that stands still is a garrison by that rule alone.
-- **Targeting is a fixed rule, shown during the player's turn** like an intent. 🔧 The rule: the
-  target with the least health. Random targeting was rejected: the player's own units would be the
-  one thing on the map they cannot read.
+- **A unit attacks on its own action.** It holds **action**, refreshed at the same tick as its move
+  points, and spends one per attack on a unit of another faction within its range; a melee unit's
+  range is one. The player attacks by the same press as a move — the target standing on the tile is
+  what makes it an attack — and the two pools are independent: an attack spends no move points, a
+  step spends no action, and either follows the other in a turn. A worker holds no action and
+  attacks nothing. The plain order refreshes move points only.
 - **One unit per tile.** A unit on a tile is a gate: an enemy must kill it to pass. Stacking was
   rejected: piled units turn position into arithmetic.
 - **Enemies hurt the city by standing on it.** A tile the city owns yields nothing at income
@@ -358,7 +363,7 @@ exchange across turns, never within one blow.
   still there when the next enemy phase begins — **captures** the city. Population reaching zero
   is the other defeat. A city with health of its own, worn down by attacks, was rejected:
   attrition against a growing city finds an equilibrium where being raided every turn is stable.
-- **Military** is the resource that pays for military units, military orders and actions, and
+- **Military** is the resource that pays for military units, military orders and instants, and
   fortifications.
 
 ### Events and the capstone ✅

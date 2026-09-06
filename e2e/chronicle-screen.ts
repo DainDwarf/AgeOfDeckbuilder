@@ -416,10 +416,10 @@ export async function dragOut(page: Page, index: number): Promise<void> {
 }
 
 /**
- * The gesture that moves a unit by hand: the press takes hold of it on the tile it stands on and
- * carries it to the tile it lands on, and the move plays out from there.
+ * The gesture that commands a unit by hand: the press takes hold of it on the tile it stands on and
+ * lets it go on another, and whatever that release commands plays out from there.
  */
-export async function dragUnit(page: Page, from: TileCoords, to: TileCoords): Promise<void> {
+export async function dragTiles(page: Page, from: TileCoords, to: TileCoords): Promise<void> {
   const held = await onScreen(page, `tile-${tileKey(from)}`);
   const landing = await onScreen(page, `tile-${tileKey(to)}`);
   await page.mouse.move(held.x, held.y);
@@ -428,6 +428,11 @@ export async function dragUnit(page: Page, from: TileCoords, to: TileCoords): Pr
   await page.mouse.move(landing.x, landing.y, { steps: 5 });
   await page.mouse.up();
   await playedOut(page);
+}
+
+/** The same gesture onto a tile the unit lands on, waited out until it stands there. */
+export async function dragUnit(page: Page, from: TileCoords, to: TileCoords): Promise<void> {
+  await dragTiles(page, from, to);
   await page.waitForFunction((on) => {
     const chronicle = window.game?.scene.getScene<ChronicleScene>('chronicle').chronicle;
     return chronicle?.units.some((unit) => unit.tile.q === on.q && unit.tile.r === on.r) === true;

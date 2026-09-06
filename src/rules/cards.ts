@@ -3,7 +3,7 @@ import type { BuildingTypeId, ImprovementId, Terrain } from './map';
 import type { UnitTypeId } from './units';
 
 /** The declared order of the kinds, which is the order a sorted list of cards reads in. */
-export const CARD_KINDS = ['unit', 'building', 'order', 'action'] as const;
+export const CARD_KINDS = ['unit', 'building', 'order', 'instant'] as const;
 
 export type CardKind = (typeof CARD_KINDS)[number];
 
@@ -11,24 +11,24 @@ export type CardKind = (typeof CARD_KINDS)[number];
 export type TargetType = 'none' | 'tile' | 'unit';
 
 /**
- * The one effect an action card has: resources into the city's stores, the improvement it improves
+ * The one effect an instant card has: resources into the city's stores, the improvement it improves
  * a tile with, or the terrain it terraforms into the other. A card that takes a tile aims at `tile`
  * and one that lands whole at `none`.
  */
-export type ActionEffect =
+export type InstantEffect =
   | { readonly effect: 'gain'; readonly gain: Partial<Resources> }
   | { readonly effect: 'improve'; readonly improvement: ImprovementId }
   | { readonly effect: 'terraform'; readonly from: Terrain; readonly to: Terrain };
 
-/** An action card: its cost, what it is aimed at, and the one effect it resolves as. */
-export type ActionCard = {
-  readonly kind: 'action';
+/** An instant card: its cost, what it is aimed at, and the one effect it resolves as. */
+export type InstantCard = {
+  readonly kind: 'instant';
   readonly cost: Partial<Resources>;
   readonly target: TargetType;
-} & ActionEffect;
+} & InstantEffect;
 
 /**
- * A unit card names the unit it puts on the map, a building card the building it builds, an action
+ * A unit card names the unit it puts on the map, a building card the building it builds, an instant
  * card its one effect; no other kind carries any of them.
  */
 export type Card =
@@ -44,9 +44,9 @@ export type Card =
       readonly target: TargetType;
       readonly building: BuildingTypeId;
     }
-  | ActionCard
+  | InstantCard
   | {
-      readonly kind: Exclude<CardKind, 'unit' | 'building' | 'action'>;
+      readonly kind: Exclude<CardKind, 'unit' | 'building' | 'instant'>;
       readonly cost: Partial<Resources>;
       readonly target: TargetType;
     };
@@ -67,21 +67,21 @@ export const CARDS: Record<CardId, Card> = {
   PH_Farm: { kind: 'building', cost: { production: 3 }, target: 'tile', building: 'PH_Farm' },
   PH_March: { kind: 'order', cost: {}, target: 'unit' },
   PH_Harvest: {
-    kind: 'action',
+    kind: 'instant',
     cost: { science: 1 },
     target: 'none',
     effect: 'gain',
     gain: { food: 2 },
   },
   PH_Mine: {
-    kind: 'action',
+    kind: 'instant',
     cost: { production: 3 },
     target: 'tile',
     effect: 'improve',
     improvement: 'PH_Mine',
   },
   PH_Urbanisation: {
-    kind: 'action',
+    kind: 'instant',
     cost: { production: 5 },
     target: 'tile',
     effect: 'terraform',
