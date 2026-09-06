@@ -38,12 +38,9 @@ a [`BOARD.md`](BOARD.md) line. Say
   sends its resource to the bar.
 - **Copy a replay**: one action puts version, seed, deck, the commands played and the last error
   on the clipboard, so any game a player pastes back can be replayed to the turn.
-- **Placeholder road card** (v0.0.3, with the movement-cost re-evaluation and fog): a stand-in
-  improvement that changes a tile's movement cost, to check the scaffolding of an improvement
-  that reads into movement.
-- **What a river costs to cross** (v0.0.3, with the movement-cost re-evaluation): the design page
-  decides what moving across a river edge costs, and the rules enforce it on every path over the
-  map.
+- **A scout card** (v0.0.4, with the first real cards): v0.0.3 ships sight and fog with no card that
+  answers them — every stand-in unit is a worker or a warrior. A scout sees further from where it
+  stops, and is what makes finding a camp a play rather than a wait.
 - **Biome growth weight** (v0.0.4, when the starting data sheds its placeholders and is balanced):
   one number per biome in its table that weights the frontier draw of the spread, so a slow biome
   comes out as a small compact patch and a fast one large and ragged; today every biome grows at
