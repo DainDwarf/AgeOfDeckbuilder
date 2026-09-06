@@ -24,6 +24,7 @@ import {
   IMPROVEMENTS,
   MAP_COMPOSITION,
   neighbours,
+  passable,
   RIVER_YIELDS,
   TERRAIN_YIELDS,
   type Terrain,
@@ -318,13 +319,13 @@ function worker(tile: TileCoords): Standing {
 
 /**
  * The founding on a disc out to two, with the tile at `at` made of `terrain` and a worker of the
- * player's standing on it. The seven tiles the founding holds reach out to one, so a tile further
- * out lies outside the border.
+ * player's standing on it where a unit can stand at all: impassable ground holds nobody. The seven
+ * tiles the founding holds reach out to one, so a tile further out lies outside the border.
  */
 function workedTile(at: TileCoords, terrain: Terrain, carrying: Carrying = {}): Chronicle {
   return founded(2, {
     tiles: madeOf(field(2), terrain, [at]),
-    units: [worker(at)],
+    units: passable(terrain) ? [worker(at)] : [],
     ...carrying,
   });
 }
@@ -1532,7 +1533,7 @@ test('the mine card is refused on every terrain but the hills it goes on', () =>
     const city = workedTile(at, terrain, { hand: ['PH_Mine'], resources: production(3) });
 
     expect(admittedTiles(city, 'PH_Mine')).toEqual([]);
-    expect(refusedFor(city, 'PH_Mine', at)).toBe('terrain');
+    expect(refusedFor(city, 'PH_Mine', at)).toBe(passable(terrain) ? 'terrain' : 'worker');
     expect(outcome(apply(city, aimedAt(at)))).toEqual(city);
   }
 });
@@ -1629,7 +1630,7 @@ test('the urbanisation card is refused on every terrain but the plain it terrafo
     const city = workedTile(at, terrain, { hand: ['PH_Urbanisation'], resources: production(5) });
 
     expect(admittedTiles(city, 'PH_Urbanisation')).toEqual([]);
-    expect(refusedFor(city, 'PH_Urbanisation', at)).toBe('terrain');
+    expect(refusedFor(city, 'PH_Urbanisation', at)).toBe(passable(terrain) ? 'terrain' : 'worker');
     expect(outcome(apply(city, aimedAt(at)))).toEqual(city);
   }
 });
@@ -1955,7 +1956,7 @@ test('every card aimed at a tile is armed whatever the map holds, and blocked on
 test('the farm card names the first of its four reasons: worker, terrain, border, then slot', () => {
   const at = { q: 1, r: 0 };
   const out = { q: 2, r: 0 };
-  const rock = founded(2, { tiles: madeOf(field(2), 'mountain', [at, out]) });
+  const hilly = founded(2, { tiles: madeOf(field(2), 'hills', [at, out]) });
   const flat = founded(2, { tiles: madeOf(field(2), 'plain', [at, out]) });
   const worked = withUnits(flat, [worker(at)]);
   const filled = withTile(worked, {
@@ -1965,9 +1966,9 @@ test('the farm card names the first of its four reasons: worker, terrain, border
     building: 'PH_Farm',
   });
 
-  expect(refusedFor(rock, 'PH_Farm', out)).toBe('worker');
-  expect(refusedFor(withUnits(rock, [worker(out)]), 'PH_Farm', out)).toBe('terrain');
-  expect(refusedFor(withUnits(rock, [worker(at)]), 'PH_Farm', at)).toBe('terrain');
+  expect(refusedFor(hilly, 'PH_Farm', out)).toBe('worker');
+  expect(refusedFor(withUnits(hilly, [worker(out)]), 'PH_Farm', out)).toBe('terrain');
+  expect(refusedFor(withUnits(hilly, [worker(at)]), 'PH_Farm', at)).toBe('terrain');
   expect(refusedFor(withUnits(flat, [worker(out)]), 'PH_Farm', out)).toBe('border');
   expect(refusedFor(filled, 'PH_Farm', at)).toBe('slot');
   expect(refusedFor(worked, 'PH_Farm', at)).toBeUndefined();
@@ -1991,7 +1992,7 @@ test('the urbanisation card names the first of its three reasons: worker, terrai
   const at = { q: 1, r: 0 };
   const plain = founded(2);
   const worked = founded(2, { units: [worker(at)] });
-  const rock = { ...worked, tiles: madeOf(field(2), 'mountain', [at]) };
+  const wooded = { ...worked, tiles: madeOf(field(2), 'forest', [at]) };
   const filled = withTile(worked, {
     ...at,
     terrain: 'plain',
@@ -2000,8 +2001,8 @@ test('the urbanisation card names the first of its three reasons: worker, terrai
   });
 
   expect(refusedFor(plain, 'PH_Urbanisation', at)).toBe('worker');
-  expect(refusedFor({ ...rock, units: [] }, 'PH_Urbanisation', at)).toBe('worker');
-  expect(refusedFor(rock, 'PH_Urbanisation', at)).toBe('terrain');
+  expect(refusedFor({ ...wooded, units: [] }, 'PH_Urbanisation', at)).toBe('worker');
+  expect(refusedFor(wooded, 'PH_Urbanisation', at)).toBe('terrain');
   expect(refusedFor({ ...filled, units: [] }, 'PH_Urbanisation', at)).toBe('worker');
   expect(refusedFor(filled, 'PH_Urbanisation', at)).toBe('slot');
   expect(refusedFor(worked, 'PH_Urbanisation', at)).toBeUndefined();
