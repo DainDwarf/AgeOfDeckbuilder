@@ -12,6 +12,11 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
+- **The state has a module of its own** — the chronicle type, the resource list, the block
+  vocabulary and the readings a card's closures need (held tiles, idle inhabitants) move to a
+  rules module that imports no content; the cards module imports state and never the engine, the
+  engine imports both, and no cycle runs between rules modules. Every rules and e2e test passes
+  unchanged. Doc-impact: none.
 - **Units carry an id** — every unit is named by a number dealt from a counter in the chronicle
   state, through the one function the unit card and an arrival both enter a unit by; the move and
   attack commands, the unit target and the target-finders address a unit by id, the list staying
