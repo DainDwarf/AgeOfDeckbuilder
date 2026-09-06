@@ -12,6 +12,16 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
+- **An aimed card is refused at the tile, not at the hand** — a payable aimed card is armed from
+  the hand whatever the map holds, and the hand's `tile` block goes; a press on a tile its aim
+  does not admit raises the refusal note over that tile with one reason, the first the aim's
+  helpers refuse on in the order the predicate composes them (no worker of the player's standing
+  there, outside the border, the wrong terrain, the slot filled, the improvement already laid, no
+  unit of the player's, its move points full), each reason its own sentence in the text table; the
+  admitted tiles glow as they do now and the card stays armed. The design's cards section says a
+  card aimed at nothing lands nowhere and its refresh sentence is re-worded. Rules tests pin every
+  reason and the order on a synthetic fixture; an e2e spec presses a refused tile and reads the
+  note. Doc-impact: `docs/DESIGN.md`.
 - **A stand-in instant takes a card back from the discard pile** — for two science, the card's
   effect offers the discard pile and the player takes one card of it into the hand: the chronicle
   holds the choice while it stands, one command takes, every other command is refused meanwhile,
