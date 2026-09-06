@@ -28,6 +28,10 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
   their trap comments gone; the enemy phase walks units by id. Rules tests pin that a kill leaves
   every other unit addressable and that the same seed and commands deal the same ids.
   Doc-impact: none.
+- **One seed search for the specs** — the fourteen searches across ten spec files that walk seeds
+  one to a thousand for the first meeting a condition become one helper in the spec helpers that
+  takes the condition and the complaint, every spec reading its seed through it and none walking
+  seeds on its own; every Playwright spec still passes. Doc-impact: none.
 - **Enemies move and attack at once** — the intent goes: in the enemy phase each enemy moves by
   its script and attacks a unit of the player's within its range in the same phase, from the
   same pool a warrior has, and the combat phase is gone from the turn; capture stays as it is.
