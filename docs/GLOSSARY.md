@@ -23,7 +23,7 @@ deliberate exception the reviewer sees; there is no silent allow-list.
 | **deck** | A civilization's set of cards, fixed for a chronicle. | loadout |
 | **technology** | A permanent unlock earned by an achievement: new cards, better buildings, better units. | tech, advancement, upgrade, research |
 | **achievement** | A goal a chronicle can reach; reaching it unlocks a technology. | mission, objective, quest, milestone |
-| **influence** | The meta-currency every chronicle pays, scaled by how the city fared. | gold, points, XP |
+| **influence** | The meta-currency every chronicle pays, scaled by how the city fared. | gold, XP |
 | **chronicle** | One city's story through one age, from founding to victory or defeat — what a roguelite calls a run. | run, playthrough, attempt, session |
 | **city** | A settlement on the map; the player owns exactly one — *the* city, what a chronicle is about. | town, capital, base, settlement |
 | **map** | The hexagonal grid a chronicle is played on. | board, world, grid |

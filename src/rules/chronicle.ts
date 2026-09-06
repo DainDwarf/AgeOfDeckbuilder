@@ -17,7 +17,7 @@ import {
 } from './map';
 import type { Rng } from './rng';
 import { seedRng, shuffle as shuffleItems } from './rng';
-import { attack, leastHealth, reachable, UNIT_STATS, type Unit, unitAt } from './units';
+import { attack, leastHealth, reachable, refreshed, UNIT_STATS, type Unit, unitAt } from './units';
 
 /** The five core resources, then culture. Population is inhabitants, not a store. */
 export const RESOURCES = ['food', 'production', 'military', 'money', 'science', 'culture'] as const;
@@ -264,23 +264,12 @@ function endOfTurn(chronicle: Chronicle): Stage[] {
   raised(enemyPhase(standing));
   if (standing.defeat !== undefined) return stages;
 
-  staged('turn', refreshed({ ...standing, turn: standing.turn + 1 }));
+  staged('turn', { ...standing, turn: standing.turn + 1, units: standing.units.map(refreshed) });
   staged('events', events(standing));
   staged('draw', draw(standing));
   staged('shuffle', shuffle(standing));
   staged('draw', draw(standing));
   return stages;
-}
-
-/**
- * The turn ticking over for every unit on the map: its move points come back to its move, whatever
- * it had left of them.
- */
-function refreshed(chronicle: Chronicle): Chronicle {
-  return {
-    ...chronicle,
-    units: chronicle.units.map((unit) => ({ ...unit, movePoints: unit.stats.move })),
-  };
 }
 
 /** The city's fall: the chronicle records what took it and on which turn, and ends there. */
@@ -546,8 +535,8 @@ function resolve(paid: Chronicle, id: CardId, target: Target | undefined): Stage
       return built === undefined ? undefined : [{ name: 'played', chronicle: built }];
     }
     case 'order': {
-      const refreshed = refresh(paid, target);
-      return refreshed === undefined ? undefined : [{ name: 'played', chronicle: refreshed }];
+      const ordered = order(paid, target);
+      return ordered === undefined ? undefined : [{ name: 'played', chronicle: ordered }];
     }
     case 'action': {
       const acted = act(paid, card, target);
@@ -625,11 +614,11 @@ function move(chronicle: Chronicle, mover: number, to: TileCoords): Stage[] {
 }
 
 /**
- * The plain order: one unit of the player's that has spent move points has them refreshed to its
- * move. A unit that is not the player's, one whose move points are full, and no unit at all refuse
- * the play.
+ * The plain order: one unit of the player's that has spent move points is refreshed, as the tick
+ * refreshes every unit. A unit that is not the player's, one whose move points are full, and no
+ * unit at all refuse the play.
  */
-function refresh(paid: Chronicle, target: Target | undefined): Chronicle | undefined {
+function order(paid: Chronicle, target: Target | undefined): Chronicle | undefined {
   if (target?.type !== 'unit') return undefined;
   const unit = paid.units[target.unit];
   if (unit === undefined || unit.faction !== 'player') return undefined;
@@ -637,9 +626,7 @@ function refresh(paid: Chronicle, target: Target | undefined): Chronicle | undef
 
   return {
     ...paid,
-    units: paid.units.map((other, at) =>
-      at === target.unit ? { ...other, movePoints: other.stats.move } : other,
-    ),
+    units: paid.units.map((other, at) => (at === target.unit ? refreshed(other) : other)),
   };
 }
 

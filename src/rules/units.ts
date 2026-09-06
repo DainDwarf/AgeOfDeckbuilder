@@ -46,6 +46,14 @@ export type Unit = {
 /** A tile a unit can land on, and the move points crossing to it spends. */
 export type Landing = { readonly tile: TileCoords; readonly cost: number };
 
+/**
+ * A unit refreshed: its move points back to its move, whatever it had left of them. The one way a
+ * spendable stat comes back to full — the turn's tick does it to every unit, the plain order to one.
+ */
+export function refreshed(unit: Unit): Unit {
+  return { ...unit, movePoints: unit.stats.move };
+}
+
 /** The one unit standing on a tile, if one does. */
 export function unitAt(units: readonly Unit[], coord: TileCoords): Unit | undefined {
   return units.find((unit) => unit.tile.q === coord.q && unit.tile.r === coord.r);

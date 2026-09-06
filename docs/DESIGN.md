@@ -177,7 +177,8 @@ keyword some cards carry, not a kind, and the map's gifts are chronicle-only by 
   inhabitant off the tiles becomes the warrior, the worker, later the trader, and is gone
   when the unit is killed. Where a unit enters is 🔧 until the map is designed.
 - **Order** — does one thing with one unit. The plain order **refreshes** a unit's move points, so
-  a unit that has spent them crosses again in the same turn. Other orders do other things with one
+  a unit that has spent them crosses again in the same turn; it is refused on a unit whose move
+  points are full, and blocked when no unit has spent any. Other orders do other things with one
   unit, and are content, not kinds.
 - **Action** — an immediate effect: draw two, gain food, negotiate with a neutral, terraform a
   tile where a worker stands. Everything that is neither a noun entering the map nor a noun
