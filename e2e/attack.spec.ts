@@ -31,8 +31,8 @@ type AttackRun = {
   readonly enemy: TileCoords;
 };
 
-/** Nine ends of turn, every stage of each played out, and two drags on top of them. */
-const NINE_TURNS = 90_000;
+/** What one end of turn may take, every stage played out; the run's own count sets the budget. */
+const TURN_MS = 10_000;
 
 /** The first seed under a thousand that opens on such a run. */
 function attackRun(): AttackRun {
@@ -79,9 +79,10 @@ async function unitOn(page: Page, tile: TileCoords): Promise<Unit | undefined> {
 test('a warrior dragged onto an enemy attacks it, and its spent action refuses a second attack', async ({
   page,
 }) => {
-  test.setTimeout(NINE_TURNS);
   const problems = watch(page);
   const run = attackRun();
+  // The ends of turn before the warrior and after it, and one more turn's worth for the two drags.
+  test.setTimeout(TURN_MS * (run.turn + run.turns));
 
   await open(page, run.seed, 'PH_Deck');
   for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
