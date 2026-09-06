@@ -12,11 +12,42 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
-- **The map is hidden** — the city and every unit have sight over the tiles near them; a tile's
-  terrain stays known once seen, and what stands on it is seen only in sight. Rules tests pin that
-  sight follows the units and that terrain stays known; the map draws the three states — never
-  seen, known and out of sight, in sight — and an e2e spec on a fixed seed reads all three.
-  Doc-impact: `docs/DESIGN.md`.
+- **Units move themselves** — a unit has move points, refreshed at the start of the player's
+  turn, spent tile by tile in as many steps as the player likes, and lost at the end of turn; it
+  is moved by the two inputs the march aim has today, a drag on the map or a click on the unit
+  and then on the tile, and no card. The plain order becomes the card that refreshes a unit's move
+  points. The design's thesis that marching costs a card, the unit section and the order kind are
+  edited. Rules tests pin the refresh, the steps and the loss; an e2e spec moves a unit in two
+  steps. Doc-impact: `docs/DESIGN.md`, `docs/GLOSSARY.md`.
+- **Units attack by hand** — attack on arrival and the player's half of the combat phase go: a
+  unit carries a second per-turn pool, refreshed with its move points, that a warrior spends to
+  attack a non-player unit within its range by the same drag or click as a move, the target on
+  the tile making it an attack; a worker has none. The pool's word is a design question settled
+  at the pitch, since *action* is a card kind. The enemies' intents still execute in the combat
+  phase until the next line; the fixed targeting rule and the garrison by standing still leave
+  the design. Rules tests pin the attack, the spent pool and the worker's refusal; an e2e spec
+  attacks by drag. Doc-impact: `docs/DESIGN.md`, `docs/GLOSSARY.md`.
+- **Enemies move and attack at once** — the intent goes: in the enemy phase each enemy moves by
+  its script and attacks a unit of the player's within its range in the same phase, from the
+  same pool a warrior has, and the combat phase is gone from the turn; capture stays as it is.
+  The turn list, the sight section, and the glossary's *intent* and *combat* are edited. Rules
+  tests pin an enemy reaching and attacking in one phase and the capture unchanged; the intent
+  rings leave the map. Doc-impact: `docs/DESIGN.md`, `docs/GLOSSARY.md`.
+- **Sight is a line over the ground** — sight is a unit's fifth stat and the city's own number;
+  every terrain has an elevation, and a tile within a unit's sight is seen when a line from the
+  unit runs over flat ground and meets no raised tile as high as the unit's own before it, the
+  target's own height never hiding it; every held tile is in sight. Rules tests on a synthetic
+  fixture pin flat ground running free, a forest stopping a plain, hills seeing over a forest and
+  stopped by hills, the far mountain seen, and a tile on two paths seen when either is clear; the
+  infopanel's unit card gains the row. Doc-impact: `docs/DESIGN.md`, `docs/GLOSSARY.md`.
+  [board/sight.md](board/sight.md)
+- **The map is hidden** — the chronicle keeps a snapshot of every tile that has been in sight,
+  taken after every stage; the map draws a tile in sight live, a tile in fog as its snapshot under
+  a scrim, and an uncharted tile not at all, the disc's rim a grey line; a unit is not moved onto
+  an uncharted tile, and a stage on tiles out of sight moves neither marker nor frame. Rules tests
+  pin that the snapshot keeps what was seen after the unit leaves, that a killed unit reveals
+  nothing more, and the refused move; an e2e spec on a fixed deck reads all three states.
+  Doc-impact: `docs/DESIGN.md`, `docs/GLOSSARY.md`. [board/map-hidden.md](board/map-hidden.md)
 - **Two debug commands for the fog** — the game's first debug commands, off by default: one shows
   what has never been seen, one shows what is out of sight. Both reachable in the running game and
   stepped by an e2e spec. Doc-impact: `docs/DESIGN.md`.

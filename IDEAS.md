@@ -52,9 +52,11 @@ a [`BOARD.md`](BOARD.md) line. Say
   hand is the only scarcity* (claiming and growth become cards, every resource has a card sink,
   chores crowd the hand) versus *cards change what is on the map, management changes what is the
   city's* (layers and units are cards; the border, staffing and growth are management). Settled
-  either way: assignment is management; buildings, improvements and unit spawn are cards. Free
-  unit movement is the same question. Each switch is the same rules function behind a different
+  either way: assignment is management; buildings, improvements and unit spawn are cards; unit
+  movement and attacks are management. Each switch is the same rules function behind a different
   input, plus the design page, the glossary and a rebalance.
+- **Worker actions**: a worker spends its per-turn pool to gain the yield of the tile it stands
+  on. Only a tile the city does not own? Buildings included or not?
 - **Consuming the worker on building**: a building card spends the worker that stands on the tile,
   so workers are a scarcity of their own and the city's population pays for its buildings twice.
 - **Bundle the UI font** (art-style pass scope): `system-ui` resolves to a different typeface on
