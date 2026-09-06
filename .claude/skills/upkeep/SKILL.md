@@ -1,11 +1,11 @@
 ---
 name: upkeep
-description: The maintenance loop — docs lint, board and ideas eviction, and the harness ratchet that turns recurring corrections into DOGMAS.md lines. Run every 20 shipped board lines or monthly, whichever first, or when asked.
+description: The maintenance loop — docs lint, board and ideas eviction, the harness ratchet that turns recurring corrections into DOGMAS.md lines, and the memory lint. Run every 20 shipped board lines or monthly, whichever first, or when asked.
 ---
 
 # Upkeep
 
-A recurring pass over three surfaces. Findings become board lines through `/intake` or edits made
+A recurring pass over four surfaces. Findings become board lines through `/intake` or edits made
 now; the pass itself changes nothing silently — every change is listed in the report.
 
 Count cycles from the git log: one cycle is one commit that deleted a board line. Note the
@@ -48,7 +48,26 @@ edit — as a board line through `/intake`, or make the edit now if it is a one-
 already stated twice. A feedback memory promoted to a dogma is deleted from memory in the same
 pass; memory keeps only facts about the user, not rules for the repo.
 
+## 4. Memory lint
+
+Read every file in the project memory directory. Memory holds what the repo does not: who the
+user is, how they want the work done, calls and intents the docs do not carry, questions they
+have not answered. For each file:
+
+- **Repeats the repo** — a commit hash, a shipped line, a settled number, a call that became a
+  `docs/` page or a board line: cut it. Git, `docs/` and `BOARD.md` hold it.
+- **Journal shape** — a paragraph per pitch or per session: rewrite as facts, one line each,
+  grouped by what they are (standing calls, parked intents, open questions, candidates).
+- **Stale pointer** — a file, function, flag or line it names: verify against the tree, fix or
+  drop.
+- **Wrong or overtaken** — the user reversed it, or the code moved on: delete.
+- **Index** — `MEMORY.md` has one line per file and no content; each description line still
+  says what the file holds.
+
+Every cut is listed in the report by file and gist.
+
 ## Report
 
 One block per surface: what was checked, what was found, what was changed, what went to the
-board. "Nothing found" is a valid and common result.
+board. "Nothing found" is a valid and common result on the first three; the memory lint usually
+finds something.

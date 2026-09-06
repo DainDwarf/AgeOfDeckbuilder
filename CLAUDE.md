@@ -32,8 +32,8 @@ Nothing durable cites a board line, a task file or an idea.
 - **`/ship`** — take one board line, pitch the plan, implement through the `implementer` agent,
   land the trinity (code + `docs/` pages + line deleted), get the `egress-reviewer`'s verdict,
   commit, stop.
-- **`/upkeep`** — every 20 shipped lines or monthly: docs lint, board eviction, and the
-  **ratchet** — recurring corrections become `DOGMAS.md` lines.
+- **`/upkeep`** — every 20 shipped lines or monthly: docs lint, board eviction, the
+  **ratchet** — recurring corrections become `DOGMAS.md` lines — and the memory lint.
 
 ## Roles
 
