@@ -22,6 +22,7 @@ import {
   type Unit,
   type UnitTypeId,
   unitAt,
+  unitOf,
 } from '../rules/units';
 import { MAP_FRAME } from './band';
 import { bindings, boundTo, type Control, PRESSES, type Press } from './bindings';
@@ -489,7 +490,8 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
     strokeRiver(water, river, RIVER_COLOUR, RIVER_WIDTH);
   }
 
-  let markers: Phaser.GameObjects.Polygon[] = [];
+  /** The mark drawn for each unit the map shows, by the number that unit is named by. */
+  let markers = new Map<number, Phaser.GameObjects.Polygon>();
   let presser: Phaser.GameObjects.Zone | undefined;
   let rescale: (() => void) | undefined;
   let taking = true;
@@ -874,8 +876,8 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
   let selection: TileCoords | undefined;
 
   /**
-   * Which unit the map is lighting the map for, where its landings lie and which tiles hold a unit
-   * it can attack; nothing while none is lit.
+   * Which unit the map is lighting for, by the number it is named by, where its landings lie and
+   * which tiles hold a unit it can attack; nothing while none is lit.
    */
   let lit:
     | { readonly unit: number; readonly landings: Landing[]; readonly targets: TileCoords[] }
@@ -889,20 +891,17 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
    */
   const lightUnit = (tile: TileCoords | undefined): void => {
     const current = shown;
-    const on =
-      tile === undefined || current === undefined
-        ? -1
-        : current.units.findIndex((unit) => unit.faction === 'player' && same(unit.tile, tile));
-    lit =
-      on === -1 || current === undefined
-        ? undefined
-        : {
-            unit: on,
-            landings: reachable(current.tiles, current.units, current.units[on]),
-            targets: attackable(current.units, current.units[on]).map(
-              (index) => current.units[index].tile,
-            ),
-          };
+    const standing =
+      tile === undefined || current === undefined ? undefined : unitAt(current.units, tile);
+    lit = undefined;
+    if (current !== undefined && standing?.faction === 'player') {
+      const aimed = new Set(attackable(current.units, standing));
+      lit = {
+        unit: standing.id,
+        landings: reachable(current.tiles, current.units, standing),
+        targets: current.units.filter((other) => aimed.has(other.id)).map((other) => other.tile),
+      };
+    }
 
     lighted.removeAll(true);
     for (const landing of lit?.landings ?? []) lighted.add(glowTile(scene, landing.tile, LIT));
@@ -942,12 +941,14 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
 
     stopMotion(scene, marks.list);
     marks.removeAll(true);
-    markers = current.units.map((unit) => {
-      const { x, y } = positionOf(unit.tile);
-      const marker = unitMark(scene, unit).setPosition(x, y);
-      marks.add(marker);
-      return marker;
-    });
+    markers = new Map(
+      current.units.map((unit) => {
+        const { x, y } = positionOf(unit.tile);
+        const marker = unitMark(scene, unit).setPosition(x, y);
+        marks.add(marker);
+        return [unit.id, marker];
+      }),
+    );
 
     paintCityMarks();
     paintYields();
@@ -968,8 +969,8 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
 
   /** The marker standing on a tile, and nothing where the map shows none. */
   const markerOn = (coord: TileCoords): Phaser.GameObjects.Polygon | undefined => {
-    const index = shown?.units.findIndex((unit) => same(unit.tile, coord)) ?? -1;
-    return index === -1 ? undefined : markers[index];
+    const standing = shown === undefined ? undefined : unitAt(shown.units, coord);
+    return standing === undefined ? undefined : markers.get(standing.id);
   };
 
   /** What a target does: a bump where it was hit, and a shrink off the map if it was killed. */
@@ -1149,9 +1150,13 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
 
       /** The marker of the unit the press has hold of, back on the tile that unit stands on. */
       const bringHome = (): void => {
-        if (grabbed === undefined || shown === undefined) return;
-        const home = positionOf(shown.units[grabbed.unit].tile);
-        markers[grabbed.unit]?.setPosition(home.x, home.y);
+        const held =
+          grabbed === undefined || shown === undefined
+            ? undefined
+            : unitOf(shown.units, grabbed.unit);
+        if (held === undefined) return;
+        const home = positionOf(held.tile);
+        markers.get(held.id)?.setPosition(home.x, home.y);
       };
 
       const carry = (pointer: Phaser.Input.Pointer): void => {
@@ -1159,7 +1164,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
         if (!grabbed.dragging && !dragged(scene, grabbed.from, pointer)) return;
         grabbed.dragging = true;
         const at = map.at(pointer.x, pointer.y);
-        markers[grabbed.unit]?.setPosition(at.x, at.y);
+        markers.get(grabbed.unit)?.setPosition(at.x, at.y);
       };
       scene.input.on('pointermove', carry);
 
@@ -1175,11 +1180,9 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
           const at = map.at(pointer.x, pointer.y);
           const under = tileUnder(shown, at.x, at.y);
           if (under === undefined) return true;
-          const unit = shown.units.findIndex(
-            (standing) => standing.faction === 'player' && same(standing.tile, under),
-          );
-          if (unit === -1) return true;
-          grabbed = { unit, from: { x: pointer.x, y: pointer.y }, dragging: false };
+          const standing = unitAt(shown.units, under);
+          if (standing?.faction !== 'player') return true;
+          grabbed = { unit: standing.id, from: { x: pointer.x, y: pointer.y }, dragging: false };
           lightUnit(under);
           return false;
         },

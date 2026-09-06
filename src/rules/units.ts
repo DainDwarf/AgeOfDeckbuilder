@@ -31,9 +31,12 @@ export const UNIT_STATS: Record<UnitTypeId, UnitStats> = {
 /**
  * A unit standing on the map, with the move points it has left to cross tiles on and the action it
  * has left to attack on. An enemy is the one that carries a script — the enemy phase asks it where
- * to move and what to aim at — and the intent that phase left on it.
+ * to move and what to aim at — and the intent that phase left on it. `id` is the number the
+ * chronicle dealt it as it entered: what every command and every finder names it by, whoever else
+ * enters or is killed around it.
  */
 export type Unit = {
+  readonly id: number;
   readonly stats: UnitStats;
   readonly tile: TileCoords;
   readonly movePoints: number;
@@ -63,6 +66,11 @@ export function refreshedAction(unit: Unit): Unit {
 /** The one unit standing on a tile, if one does. */
 export function unitAt(units: readonly Unit[], coord: TileCoords): Unit | undefined {
   return units.find((unit) => unit.tile.q === coord.q && unit.tile.r === coord.r);
+}
+
+/** The unit a number names, and nothing once that unit has left the map. */
+export function unitOf(units: readonly Unit[], id: number): Unit | undefined {
+  return units.find((unit) => unit.id === id);
 }
 
 /**
@@ -98,46 +106,44 @@ export function reachable(tiles: readonly Tile[], units: readonly Unit[], unit: 
 }
 
 /**
- * What a unit an enemy script aims at: the unit of another faction within its range holding the
- * least health, and nothing when none is there or the unit has no damage to remove.
+ * What a unit an enemy script aims at, by its number: the unit of another faction within its range
+ * holding the least health, and nothing when none is there or the unit has no damage to remove.
  */
-export function leastHealth(units: readonly Unit[], attacker: number): number | undefined {
-  const acting = units[attacker];
-  if (acting.stats.damage === 0) return undefined;
+export function leastHealth(units: readonly Unit[], attacker: Unit): number | undefined {
+  if (attacker.stats.damage === 0) return undefined;
 
-  let target: number | undefined;
-  for (let index = 0; index < units.length; index++) {
-    const other = units[index];
-    if (other.faction === acting.faction) continue;
-    if (distance(other.tile, acting.tile) > acting.stats.range) continue;
-    if (target === undefined || other.stats.health < units[target].stats.health) target = index;
+  let target: Unit | undefined;
+  for (const other of units) {
+    if (other.faction === attacker.faction) continue;
+    if (distance(other.tile, attacker.tile) > attacker.stats.range) continue;
+    if (target === undefined || other.stats.health < target.stats.health) target = other;
   }
-  return target;
+  return target?.id;
 }
 
 /**
- * What a unit can attack, each by its place in `units`: every unit of another faction within its
- * range, while it has the action an attack spends. A unit with none attacks nothing.
+ * What a unit can attack, each by its number: every unit of another faction within its range, while
+ * it has the action an attack spends. A unit with none attacks nothing.
  */
 export function attackable(units: readonly Unit[], attacker: Unit): number[] {
   if (attacker.action <= 0) return [];
 
   const targets: number[] = [];
-  for (let index = 0; index < units.length; index++) {
-    const other = units[index];
+  for (const other of units) {
     if (other.faction === attacker.faction) continue;
     if (distance(other.tile, attacker.tile) > attacker.stats.range) continue;
-    targets.push(index);
+    targets.push(other.id);
   }
   return targets;
 }
 
 /** The one attack there is: the target loses the attacker's damage, and at zero health it is killed. */
-export function attacked(units: readonly Unit[], attacker: number, target: number): Unit[] {
-  const targeted = units[target];
-  const health = targeted.stats.health - units[attacker].stats.damage;
-  if (health <= 0) return units.filter((_, index) => index !== target);
-
-  const hurt: Unit = { ...targeted, stats: { ...targeted.stats, health } };
-  return units.map((unit, index) => (index === target ? hurt : unit));
+export function attacked(units: readonly Unit[], attacker: Unit, target: number): Unit[] {
+  return units.flatMap((unit) => {
+    if (unit.id !== target) return [unit];
+    const health = unit.stats.health - attacker.stats.damage;
+    if (health <= 0) return [];
+    const hurt: Unit = { ...unit, stats: { ...unit.stats, health } };
+    return [hurt];
+  });
 }

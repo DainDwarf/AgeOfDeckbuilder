@@ -9,8 +9,16 @@ import {
   tileKey,
 } from './map';
 import { RESOURCES, type Resources } from './resources';
-import { type Block, type CardId, type Chronicle, holds, idle, type TileBlock } from './state';
-import { refreshedMovePoints, UNIT_STATS, type UnitTypeId, unitAt } from './units';
+import {
+  type Block,
+  type CardId,
+  type Chronicle,
+  entered,
+  holds,
+  idle,
+  type TileBlock,
+} from './state';
+import { refreshedMovePoints, type UnitTypeId, unitAt } from './units';
 
 /** The declared order of the kinds, which is the order a sorted list of cards reads in. */
 export const CARD_KINDS = ['unit', 'building', 'instant'] as const;
@@ -109,20 +117,15 @@ function enters(type: UnitTypeId): Aim & { readonly aim: 'none' } {
       if (unitAt(chronicle.units, chronicle.city) !== undefined) blocks.push('city');
       return blocks;
     },
-    effect: (paid) => ({
-      ...paid,
-      population: paid.population - 1,
-      units: [
-        ...paid.units,
+    effect: (paid) =>
+      entered(
+        { ...paid, population: paid.population - 1 },
         {
-          stats: { ...UNIT_STATS[type] },
+          type,
           faction: 'player',
           tile: paid.city,
-          movePoints: UNIT_STATS[type].move,
-          action: UNIT_STATS[type].action,
         },
-      ],
-    }),
+      ),
   };
 }
 
@@ -152,12 +155,10 @@ function terraformed(paid: Chronicle, at: TileCoords, to: Terrain): Chronicle {
 
 /** The move points an instant refreshes, on the unit standing on the tile it was aimed at. */
 function refreshed(paid: Chronicle, at: TileCoords): Chronicle {
-  const key = tileKey(at);
+  const marching = unitAt(paid.units, at)?.id;
   return {
     ...paid,
-    units: paid.units.map((unit) =>
-      tileKey(unit.tile) === key ? refreshedMovePoints(unit) : unit,
-    ),
+    units: paid.units.map((unit) => (unit.id === marching ? refreshedMovePoints(unit) : unit)),
   };
 }
 

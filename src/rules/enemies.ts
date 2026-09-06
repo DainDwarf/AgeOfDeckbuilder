@@ -8,19 +8,20 @@ import {
   tileKey,
 } from './map';
 import { nextRng } from './rng';
-import type { Chronicle } from './state';
+import { type Chronicle, entered } from './state';
 import {
   type EnemyScriptId,
   type Landing,
   leastHealth,
   reachable,
-  UNIT_STATS,
+  type Unit,
   unitAt,
+  unitOf,
 } from './units';
 
 /**
- * What an enemy does in the enemy phase, asked of it by its place in `chronicle.units`. The phase
- * takes every enemy's move first and every enemy's intent after; how either is chosen is the
+ * What an enemy does in the enemy phase, asked of the enemy itself as the phase stands it. The
+ * phase takes every enemy's move first and every enemy's intent after; how either is chosen is the
  * script's own business.
  */
 export type EnemyScript = {
@@ -28,22 +29,21 @@ export type EnemyScript = {
    * The landing it moves to, out of the tiles its move points reach and the one it already stands
    * on, which costs it nothing.
    */
-  moveTo(chronicle: Chronicle, enemy: number): Landing;
+  moveTo(chronicle: Chronicle, enemy: Unit): Landing;
   /** The tile it aims its attack at, or nothing when it declares no intent. */
-  intentOf(chronicle: Chronicle, enemy: number): TileCoords | undefined;
+  intentOf(chronicle: Chronicle, enemy: Unit): TileCoords | undefined;
 };
 
 /** Every script an enemy can carry. An enemy names one of these, and the enemy phase asks it. */
 export const ENEMY_SCRIPTS: Record<EnemyScriptId, EnemyScript> = {
   PH_Advance: {
-    moveTo(chronicle: Chronicle, enemy: number): Landing {
-      const unit = chronicle.units[enemy];
-      const stay: Landing = { tile: unit.tile, cost: 0 };
-      const target = nearest(chronicle, unit.tile);
+    moveTo(chronicle: Chronicle, enemy: Unit): Landing {
+      const stay: Landing = { tile: enemy.tile, cost: 0 };
+      const target = nearest(chronicle, enemy.tile);
       if (target === undefined) return stay;
 
       const away = pathDistances(chronicle.tiles, target);
-      const landings = [stay, ...reachable(chronicle.tiles, chronicle.units, unit)];
+      const landings = [stay, ...reachable(chronicle.tiles, chronicle.units, enemy)];
       const spent = new Map(landings.map((landing) => [tileKey(landing.tile), landing.cost]));
 
       let chosen = stay;
@@ -60,11 +60,10 @@ export const ENEMY_SCRIPTS: Record<EnemyScriptId, EnemyScript> = {
       return chosen;
     },
 
-    intentOf(chronicle: Chronicle, enemy: number): TileCoords | undefined {
-      const unit = chronicle.units[enemy];
-      if (tileKey(unit.tile) === tileKey(chronicle.city)) return undefined;
+    intentOf(chronicle: Chronicle, enemy: Unit): TileCoords | undefined {
+      if (tileKey(enemy.tile) === tileKey(chronicle.city)) return undefined;
       const target = leastHealth(chronicle.units, enemy);
-      return target === undefined ? undefined : chronicle.units[target].tile;
+      return target === undefined ? undefined : unitOf(chronicle.units, target)?.tile;
     },
   },
 };
@@ -85,21 +84,10 @@ export function arrival(chronicle: Chronicle): Chronicle {
 
   const step = nextRng(chronicle.rng);
   const { q, r } = ring[Math.floor(step.value * ring.length)];
-  return {
-    ...chronicle,
-    rng: step.rng,
-    units: [
-      ...chronicle.units,
-      {
-        stats: { ...UNIT_STATS.PH_Warrior },
-        faction: 'enemy',
-        tile: { q, r },
-        movePoints: UNIT_STATS.PH_Warrior.move,
-        action: UNIT_STATS.PH_Warrior.action,
-        script: 'PH_Advance',
-      },
-    ],
-  };
+  return entered(
+    { ...chronicle, rng: step.rng },
+    { type: 'PH_Warrior', faction: 'enemy', tile: { q, r }, script: 'PH_Advance' },
+  );
 }
 
 /** What an enemy moves toward: the player's unit or the city the fewest tiles away it can cross to. */

@@ -273,7 +273,7 @@ export function fallRun(): { seed: number; turns: number } {
 /**
  * Where the card lands when this hand plays its worker, moves it one tile by hand and then plays
  * the card, in that order. The worker has to be the only unit on the map, so every spec built on
- * the run finds it first in `units`.
+ * the run finds it first in `units`, and the chronicle has dealt it the first number of all: one.
  */
 function workedThisTurn(
   chronicle: Chronicle,
@@ -287,7 +287,7 @@ function workedThisTurn(
   if (entered.units.length !== 1 || !entered.hand.includes(card)) return undefined;
 
   for (const tile of neighbours(entered.city)) {
-    const moved = outcome(apply(entered, { type: 'move', unit: 0, tile }));
+    const moved = outcome(apply(entered, { type: 'move', unit: 1, tile }));
     if (moved === entered || !playable(refusalOf(moved, card))) continue;
     const standing = tileAt(moved.tiles, tile);
     if (standing === undefined || !on(standing, moved)) continue;

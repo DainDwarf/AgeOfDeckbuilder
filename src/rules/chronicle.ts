@@ -20,6 +20,7 @@ import {
   refreshedMovePoints,
   type Unit,
   unitAt,
+  unitOf,
 } from './units';
 
 export type Command =
@@ -39,7 +40,10 @@ export type Command =
   | { readonly type: 'assign'; readonly tile: TileCoords }
   | { readonly type: 'claim'; readonly tile: TileCoords };
 
-/** What one unit of the player's is commanded by hand: crossing to a tile, or attacking on one. */
+/**
+ * What one unit of the player's, named by its number, is commanded by hand: crossing to a tile, or
+ * attacking on one.
+ */
 export type UnitCommand = Extract<Command, { readonly unit: number }>;
 
 /** One card of the hand played, with whatever its aim was aimed at. */
@@ -120,6 +124,7 @@ export function beginChronicle(seed: number, deck: readonly CardId[]): Chronicle
           population: held.length + IDLE_FOUNDED,
           assigned: [...held],
           units: [],
+          nextUnit: 1,
           drawPile: shuffled.items,
           hand: [],
           discardPile: [],
@@ -443,7 +448,7 @@ function resolve(paid: Chronicle, id: CardId, command: PlayCommand): Chronicle |
  * raises. A unit that is not the player's, or a tile it cannot land on, is one `refused` stage.
  */
 function move(chronicle: Chronicle, mover: number, to: TileCoords): Stage[] {
-  const unit = chronicle.units[mover];
+  const unit = unitOf(chronicle.units, mover);
   if (unit === undefined || unit.faction !== 'player') return [{ name: 'refused', chronicle }];
 
   const landing = reachable(chronicle.tiles, chronicle.units, unit).find(
@@ -451,8 +456,8 @@ function move(chronicle: Chronicle, mover: number, to: TileCoords): Stage[] {
   );
   if (landing === undefined) return [{ name: 'refused', chronicle }];
 
-  const crossed = chronicle.units.map((other, at) =>
-    at === mover
+  const crossed = chronicle.units.map((other) =>
+    other.id === mover
       ? { ...other, tile: landing.tile, movePoints: other.movePoints - landing.cost }
       : other,
   );
@@ -473,25 +478,24 @@ function move(chronicle: Chronicle, mover: number, to: TileCoords): Stage[] {
  * within range stands on are one `refused` stage.
  */
 function attack(chronicle: Chronicle, attacker: number, at: TileCoords): Stage[] {
-  const unit = chronicle.units[attacker];
+  const unit = unitOf(chronicle.units, attacker);
   if (unit === undefined || unit.faction !== 'player') return [{ name: 'refused', chronicle }];
 
-  const target = attackable(chronicle.units, unit).find(
-    (index) => tileKey(chronicle.units[index].tile) === tileKey(at),
+  const aimed = attackable(chronicle.units, unit);
+  const target = chronicle.units.find(
+    (other) => aimed.includes(other.id) && tileKey(other.tile) === tileKey(at),
   );
   if (target === undefined) return [{ name: 'refused', chronicle }];
 
-  // The attacker's action is spent before the blow, because a killed target leaves the list and
-  // carries every place after it one down — the attacker's own among them.
-  const spending = chronicle.units.map((other, index) =>
-    index === attacker ? { ...other, action: other.action - 1 } : other,
+  const struck = attacked(chronicle.units, unit, target.id).map((other) =>
+    other.id === attacker ? { ...other, action: other.action - 1 } : other,
   );
   return [
     {
       name: 'attack',
       attacker: unit.tile,
-      target: chronicle.units[target].tile,
-      chronicle: { ...chronicle, units: attacked(spending, attacker, target) },
+      target: target.tile,
+      chronicle: { ...chronicle, units: struck },
     },
   ];
 }
@@ -539,37 +543,33 @@ function discard(chronicle: Chronicle): Chronicle {
 function combat(chronicle: Chronicle): Stage[] {
   const stages: Stage[] = [];
   let units = chronicle.units;
-  // Combat moves nobody, so the tile a unit stands on names it as the killed leave the list.
-  const standing = (at: TileCoords): number =>
-    units.findIndex((unit) => tileKey(unit.tile) === tileKey(at));
 
-  const landed = (attacker: TileCoords, target: TileCoords, after: Unit[]): void => {
-    units = after;
-    stages.push({ name: 'attack', attacker, target, chronicle: { ...chronicle, units } });
-  };
+  for (const enemy of chronicle.units) {
+    if (enemy.faction !== 'enemy' || enemy.intent === undefined) continue;
+    const attacker = unitOf(units, enemy.id);
+    if (attacker === undefined) continue;
 
-  for (const unit of chronicle.units) {
-    if (unit.faction !== 'enemy' || unit.intent === undefined) continue;
-    const attacker = standing(unit.tile);
-    if (attacker === -1) continue;
-    const target = standing(unit.intent);
-    const hit = target !== -1 && units[target].faction !== unit.faction;
-    landed(
-      unit.tile,
-      unit.intent,
-      spent(hit ? attacked(units, attacker, target) : units, unit.tile),
-    );
+    const target = unitAt(units, enemy.intent);
+    const struck =
+      target === undefined || target.faction === attacker.faction
+        ? units
+        : attacked(units, attacker, target.id);
+    units = spent(struck, attacker.id);
+    stages.push({
+      name: 'attack',
+      attacker: enemy.tile,
+      target: enemy.intent,
+      chronicle: { ...chronicle, units },
+    });
   }
 
   return stages;
 }
 
-/** An intent executed is an intent gone: the enemy on that tile carries none into the next turn. */
-function spent(units: readonly Unit[], at: TileCoords): Unit[] {
+/** An intent executed is an intent gone: the enemy that made the attack carries none into the next turn. */
+function spent(units: readonly Unit[], attacker: number): Unit[] {
   return units.map((unit) =>
-    unit.faction === 'enemy' && tileKey(unit.tile) === tileKey(at)
-      ? { ...unit, intent: undefined }
-      : unit,
+    unit.faction === 'enemy' && unit.id === attacker ? { ...unit, intent: undefined } : unit,
   );
 }
 
@@ -621,32 +621,29 @@ function enemyPhase(chronicle: Chronicle): Stage[] {
   }
 
   const stages: Stage[] = [];
-  const units = [...chronicle.units];
-  for (const [index, unit] of units.entries()) {
+  let units = chronicle.units;
+  for (const unit of chronicle.units) {
     if (unit.faction !== 'enemy') continue;
-    const landing = ENEMY_SCRIPTS[unit.script].moveTo({ ...chronicle, units }, index);
+    const landing = ENEMY_SCRIPTS[unit.script].moveTo({ ...chronicle, units }, unit);
     if (tileKey(landing.tile) === tileKey(unit.tile)) continue;
-    units[index] = {
-      ...unit,
-      tile: landing.tile,
-      movePoints: unit.movePoints - landing.cost,
-    };
+    const crossed = { ...unit, tile: landing.tile, movePoints: unit.movePoints - landing.cost };
+    units = units.map((other) => (other.id === unit.id ? crossed : other));
     stages.push({
       name: 'move',
       from: unit.tile,
       to: landing.tile,
-      chronicle: { ...chronicle, units: [...units] },
+      chronicle: { ...chronicle, units },
     });
   }
 
-  const declared = [...units];
-  for (const [index, unit] of declared.entries()) {
+  let declared = units;
+  for (const unit of units) {
     if (unit.faction !== 'enemy') continue;
-    const intent = ENEMY_SCRIPTS[unit.script].intentOf({ ...chronicle, units: declared }, index);
-    declared[index] = { ...unit, intent };
+    const intent = ENEMY_SCRIPTS[unit.script].intentOf({ ...chronicle, units: declared }, unit);
+    declared = declared.map((other) => (other.id === unit.id ? { ...unit, intent } : other));
   }
 
-  const stirred = declared.some((unit, index) => aimKey(unit) !== aimKey(units[index]));
+  const stirred = declared.some((unit, place) => aimKey(unit) !== aimKey(units[place]));
   if (stirred) stages.push({ name: 'intents', chronicle: { ...chronicle, units: declared } });
   return stages;
 }

@@ -15,6 +15,7 @@ import {
 import { tileAt, tileKey } from '../rules/map';
 import { RESOURCES, type Resource } from '../rules/resources';
 import type { CardId, Chronicle } from '../rules/state';
+import { unitOf } from '../rules/units';
 import { createBand } from './band';
 import { boundTo } from './bindings';
 import { CARD_BASELINE, CARD_HEIGHT } from './card-face';
@@ -240,12 +241,9 @@ export class ChronicleScene extends Phaser.Scene {
      * either.
      */
     const commandUnit = async (command: UnitCommand): Promise<void> => {
-      // An attack that kills carries every place after the target's one down, the attacker's among
-      // them, so the tile it stood on is what names it after the play-out and not its place.
-      const from = this.current.units[command.unit]?.tile;
       await playOut(command);
       if (this.playing) return;
-      const on = command.type === 'move' ? this.current.units[command.unit]?.tile : from;
+      const on = unitOf(this.current.units, command.unit)?.tile;
       if (on !== undefined) select({ tile: on, at: view.faceOf(on) });
     };
 

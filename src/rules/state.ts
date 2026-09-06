@@ -1,7 +1,7 @@
 import { type River, type Tile, type TileCoords, tileKey } from './map';
 import type { Resources } from './resources';
 import type { Rng } from './rng';
-import type { Unit } from './units';
+import { type EnemyScriptId, UNIT_STATS, type Unit, type UnitTypeId } from './units';
 
 /** What took the city: an enemy captured it, or it was left without population. */
 export type DefeatCause = 'capture' | 'population';
@@ -35,6 +35,11 @@ export type Chronicle = {
   /** The tiles an inhabitant stands on, at most one to a tile; every other inhabitant is idle. */
   readonly assigned: TileCoords[];
   readonly units: Unit[];
+  /**
+   * The number the next unit to enter is named by. It only counts up, so a killed unit's number is
+   * never dealt again, and the first unit of a chronicle is one — never zero.
+   */
+  readonly nextUnit: number;
   readonly drawPile: CardId[];
   readonly hand: CardId[];
   readonly discardPile: CardId[];
@@ -64,4 +69,37 @@ export function holds(chronicle: Chronicle, tile: TileCoords): boolean {
 /** The inhabitants on no tile: what a unit card takes, and what an assign has to give a tile. */
 export function idle(chronicle: Chronicle): number {
   return chronicle.population - chronicle.assigned.length;
+}
+
+/** What a unit entering the map is: its kind, the tile it stands on, and who it acts for. */
+export type Entering = { readonly type: UnitTypeId; readonly tile: TileCoords } & (
+  | { readonly faction: 'player' }
+  | { readonly faction: 'enemy'; readonly script: EnemyScriptId }
+);
+
+/**
+ * The one way a unit enters the map: it takes the next number off the chronicle's counter, carries
+ * its own copy of its kind's stats, and stands with its move points and its action full.
+ */
+export function entered(chronicle: Chronicle, entering: Entering): Chronicle {
+  const stats = { ...UNIT_STATS[entering.type] };
+  const carried = {
+    id: chronicle.nextUnit,
+    stats,
+    tile: entering.tile,
+    movePoints: stats.move,
+    action: stats.action,
+  };
+  const dealt = (unit: Unit): Chronicle => ({
+    ...chronicle,
+    nextUnit: chronicle.nextUnit + 1,
+    units: [...chronicle.units, unit],
+  });
+
+  switch (entering.faction) {
+    case 'player':
+      return dealt({ ...carried, faction: 'player' });
+    case 'enemy':
+      return dealt({ ...carried, faction: 'enemy', script: entering.script });
+  }
 }

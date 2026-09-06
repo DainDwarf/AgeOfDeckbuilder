@@ -37,7 +37,10 @@ function stepRun(): StepRun {
   throw new Error('no seed under a thousand opens a turn on a worker and two steps');
 }
 
-/** The two tiles this hand's worker crosses to, one step at a time, and nothing when it cannot. */
+/**
+ * The two tiles this hand's worker crosses to, one step at a time, and nothing when it cannot. The
+ * worker is the only unit on the map, so the chronicle has dealt it the first number of all: one.
+ */
 function steppedThisTurn(
   chronicle: Chronicle,
 ): { first: TileCoords; second: TileCoords } | undefined {
@@ -47,11 +50,11 @@ function steppedThisTurn(
   if (entered.units.length !== 1) return undefined;
 
   for (const first of neighbours(entered.city)) {
-    const stepped = outcome(apply(entered, { type: 'move', unit: 0, tile: first }));
+    const stepped = outcome(apply(entered, { type: 'move', unit: 1, tile: first }));
     if (stepped === entered) continue;
     for (const second of neighbours(first)) {
       if (tileKey(second) === tileKey(entered.city)) continue;
-      if (outcome(apply(stepped, { type: 'move', unit: 0, tile: second })) !== stepped) {
+      if (outcome(apply(stepped, { type: 'move', unit: 1, tile: second })) !== stepped) {
         return { first, second };
       }
     }

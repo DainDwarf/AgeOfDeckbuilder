@@ -12,13 +12,6 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
-- **Units carry an id** — every unit is named by a number dealt from a counter in the chronicle
-  state, through the one function the unit card and an arrival both enter a unit by; the move and
-  attack commands, the unit target and the target-finders address a unit by id, the list staying
-  a list; the attack no longer spends before the blow and the scene no longer reselects by tile,
-  their trap comments gone; the enemy phase walks units by id. Rules tests pin that a kill leaves
-  every other unit addressable and that the same seed and commands deal the same ids.
-  Doc-impact: none.
 - **One seed search for the specs** — the fourteen searches across ten spec files that walk seeds
   one to a thousand for the first meeting a condition become one helper in the spec helpers that
   takes the condition and the complaint, every spec reading its seed through it and none walking
