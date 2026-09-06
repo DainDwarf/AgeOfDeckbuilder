@@ -9,7 +9,7 @@ import {
   tileKey,
 } from './map';
 import { nextRng } from './rng';
-import { leastHealth, reachable, UNIT_STATS, unitAt } from './units';
+import { type Landing, leastHealth, reachable, UNIT_STATS, unitAt } from './units';
 
 /** `PH_` marks a stand-in: this script is not authored content, and it goes with the enemies it drives. */
 export type EnemyScriptId = 'PH_Advance';
@@ -20,8 +20,11 @@ export type EnemyScriptId = 'PH_Advance';
  * script's own business.
  */
 export type EnemyScript = {
-  /** The tile it moves to, out of the tiles its move reaches and the one it already stands on. */
-  moveTo(chronicle: Chronicle, enemy: number): TileCoords;
+  /**
+   * The landing it moves to, out of the tiles its move points reach and the one it already stands
+   * on, which costs it nothing.
+   */
+  moveTo(chronicle: Chronicle, enemy: number): Landing;
   /** The tile it aims its attack at, or nothing when it declares no intent. */
   intentOf(chronicle: Chronicle, enemy: number): TileCoords | undefined;
 };
@@ -29,21 +32,26 @@ export type EnemyScript = {
 /** Every script an enemy can carry. An enemy names one of these, and the enemy phase asks it. */
 export const ENEMY_SCRIPTS: Record<EnemyScriptId, EnemyScript> = {
   PH_Advance: {
-    moveTo(chronicle: Chronicle, enemy: number): TileCoords {
+    moveTo(chronicle: Chronicle, enemy: number): Landing {
       const unit = chronicle.units[enemy];
+      const stay: Landing = { tile: unit.tile, cost: 0 };
       const target = nearest(chronicle, unit.tile);
-      if (target === undefined) return unit.tile;
+      if (target === undefined) return stay;
 
       const away = pathDistances(chronicle.tiles, target);
-      const landings = [unit.tile, ...reachable(chronicle.tiles, chronicle.units, unit)];
-      let chosen = unit.tile;
+      const landings = [stay, ...reachable(chronicle.tiles, chronicle.units, unit)];
+      const spent = new Map(landings.map((landing) => [tileKey(landing.tile), landing.cost]));
+
+      let chosen = stay;
       let shortest = Number.POSITIVE_INFINITY;
-      for (const coord of inTileOrder(chronicle.tiles, landings)) {
-        const gap = away.get(tileKey(coord));
-        if (gap !== undefined && gap < shortest) {
-          shortest = gap;
-          chosen = coord;
-        }
+      for (const tile of inTileOrder(
+        chronicle.tiles,
+        landings.map((landing) => landing.tile),
+      )) {
+        const gap = away.get(tileKey(tile));
+        if (gap === undefined || gap >= shortest) continue;
+        shortest = gap;
+        chosen = { tile, cost: spent.get(tileKey(tile)) ?? 0 };
       }
       return chosen;
     },
@@ -59,8 +67,8 @@ export const ENEMY_SCRIPTS: Record<EnemyScriptId, EnemyScript> = {
 
 /**
  * `PH_Arrival`, the one event the stand-in schedule holds: one enemy lands on a free tile of the
- * map's outer ring it can stand on, drawn from the seeded generator. With no such tile it places
- * nothing.
+ * map's outer ring it can stand on, drawn from the seeded generator, with its move points full.
+ * With no such tile it places nothing.
  */
 export function arrival(chronicle: Chronicle): Chronicle {
   const ring = chronicle.tiles.filter(
@@ -82,6 +90,7 @@ export function arrival(chronicle: Chronicle): Chronicle {
         stats: { ...UNIT_STATS.PH_Warrior },
         faction: 'enemy',
         tile: { q, r },
+        movePoints: UNIT_STATS.PH_Warrior.move,
         script: 'PH_Advance',
       },
     ],

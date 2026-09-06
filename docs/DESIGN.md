@@ -36,7 +36,8 @@ fiction's own word: *Chronicles of the mercantile civilization in the Age of Pow
 - **Cards are the verbs; the map holds the nouns.** Buildings and units enter the map through
   cards, and immediate effects are cards. Standing things do their standing thing for free — a
   garrison defends where it stands, a farm with a person assigned yields — and **changing the
-  map costs a card**: marching, building, terraforming, attacking, negotiating.
+  map costs a card**: building, terraforming, attacking, negotiating. Moving is the exception a
+  unit carries with it: it crosses the map on its own move points, and no card is spent on that.
 - Five core resources: **food, production, military, money, science**. 🔧 Their jobs: food grows
   the population; production builds buildings and units and shapes tiles; military pays for
   military units, orders, actions and fortifications; money trades for other goods and
@@ -175,10 +176,9 @@ keyword some cards carry, not a kind, and the map's gifts are chronicle-only by 
 - **Unit** — puts a unit on the map, made of one idle inhabitant, never the city's last: an
   inhabitant off the tiles becomes the warrior, the worker, later the trader, and is gone
   when the unit is killed. Where a unit enters is 🔧 until the map is designed.
-- **Order** — does one thing with one unit. The plain order moves it, and what it does on arrival
-  is its nature: a warrior fights what it reaches, a worker is in place to build a building, a scout sees
-  from where it stops. Other orders trade that shape for an edge — twice the move and no attack,
-  twice the attack and no move — and are content, not kinds.
+- **Order** — does one thing with one unit. The plain order **refreshes** a unit's move points, so
+  a unit that has spent them crosses again in the same turn. Other orders do other things with one
+  unit, and are content, not kinds.
 - **Action** — an immediate effect: draw two, gain food, negotiate with a neutral, terraform a
   tile where a worker stands. Everything that is neither a noun entering the map nor a noun
   moving.
@@ -205,8 +205,13 @@ threshold and the schedule's events are the whole of the pressure on the populat
 ### City mode ✅
 
 The chronicle screen has two modes. Out of city mode a click on a tile **selects** it: the map rings
-it, and nothing more. The **inspection key** then **inspects** the selection — one card in the
-infopanel per press. A tile has at most three, in this order: the unit standing on it; the building
+it and, when a unit of the player's stands there, lights every tile its move points reach. A click
+on a lit tile is that unit's next step and selects nothing; the selection follows the unit to where
+it lands, its landings lit again. A drag from the unit onto a lit tile is the same step; let go
+anywhere else, the unit comes home, and a unit that can go nowhere is grabbed and comes home just
+the same, without a word. Nothing more. The **inspection key** then **inspects** the selection —
+one card in the infopanel per press. A tile has at most three, in this order: the unit standing on
+it; the building
 with the tile's improvements; and the terrain with its feature and the river running along it. A
 card is absent when nothing fills it, and the terrain card never is. The unit card reads the unit's
 stats; the other two are headed by their outermost layer and show a row per thing they hold — the
@@ -242,10 +247,10 @@ what the tile gives at income, never what the overlay shows. Pressing one of the
 on the resource bar toggles that resource in or out of the overlay, several at a time, and the
 reading of a resource shown is latched down in the bar; the **yield key** clears the overlay, or,
 from nothing, shows every resource, culture included, and a window standing over the chronicle
-screen takes the key instead. Three things stand over the dim, undimmed: the selection's ring, the
-infopanel of the tile being inspected, and the tiles a card is aimed at. It is a display and not a
-mode: the back key leaves it standing, city mode stands with it, and either is entered and left
-without touching the other.
+screen takes the key instead. Four things stand over the dim, undimmed: the selection's ring, the
+tiles lit under it, the infopanel of the tile being inspected, and the tiles a card is aimed at. It
+is a display and not a mode: the back key leaves it standing, city mode stands with it, and either
+is entered and left without touching the other.
 
 ### The map ✅
 
@@ -333,15 +338,16 @@ damage from the target's health, and a unit at zero health is killed. There is
 no retaliation: the target answers only when its own attack comes, so a fight is an
 exchange across turns, never within one blow.
 
-- **Moving costs one per tile.** An order moves a unit up to its move, every tile crossed costing
-  one. Coast, deep water and mountain are impassable. A unit passes through the units of its own
-  faction and never through another's, and it lands only on a free tile.
+- **A unit moves on its own move points.** It holds **move points**, refreshed to its move at the
+  start of the player's turn and lost at the end of it, and spends one per tile crossed, in as many
+  steps as the player likes; the plain order refreshes them. Coast, deep water and mountain are
+  impassable. A unit passes through the units of its own faction and never through another's, and
+  it lands only on a free tile.
 - **One attack rule.** In combat every fighting unit attacks an enemy within its range; a melee
-  unit's range is one. An order that moves a fighting unit next to an enemy attacks on arrival
-  as well. A unit that stands still is a garrison by that rule alone.
-- **Targeting is a fixed rule, shown during the player's turn** like an intent; an order
-  overrides it. 🔧 The rule: the target with the least health. Random targeting was rejected: the
-  player's own units would be the one thing on the map they cannot read.
+  unit's range is one. A unit that stands still is a garrison by that rule alone.
+- **Targeting is a fixed rule, shown during the player's turn** like an intent. 🔧 The rule: the
+  target with the least health. Random targeting was rejected: the player's own units would be the
+  one thing on the map they cannot read.
 - **One unit per tile.** A unit on a tile is a gate: an enemy must kill it to pass. Stacking was
   rejected: piled units turn position into arithmetic.
 - **Enemies hurt the city by standing on it.** A tile the city owns yields nothing at income

@@ -26,10 +26,15 @@ export const UNIT_STATS: Record<UnitTypeId, UnitStats> = {
 };
 
 /**
- * A unit standing on the map. An enemy is the one that carries a script — the enemy phase asks it
- * where to move and what to aim at — and the intent that phase left on it.
+ * A unit standing on the map, with the move points it has left to cross tiles on. An enemy is the
+ * one that carries a script — the enemy phase asks it where to move and what to aim at — and the
+ * intent that phase left on it.
  */
-export type Unit = { readonly stats: UnitStats; readonly tile: TileCoords } & (
+export type Unit = {
+  readonly stats: UnitStats;
+  readonly tile: TileCoords;
+  readonly movePoints: number;
+} & (
   | { readonly faction: 'player' }
   | {
       readonly faction: 'enemy';
@@ -38,25 +43,27 @@ export type Unit = { readonly stats: UnitStats; readonly tile: TileCoords } & (
     }
 );
 
+/** A tile a unit can land on, and the move points crossing to it spends. */
+export type Landing = { readonly tile: TileCoords; readonly cost: number };
+
 /** The one unit standing on a tile, if one does. */
 export function unitAt(units: readonly Unit[], coord: TileCoords): Unit | undefined {
   return units.find((unit) => unit.tile.q === coord.q && unit.tile.r === coord.r);
 }
 
-/** Where a unit can land: a tile one of its own holds is crossed but never offered. */
-export function reachable(
-  tiles: readonly Tile[],
-  units: readonly Unit[],
-  unit: Unit,
-): TileCoords[] {
+/**
+ * Where a unit can land on the move points it has left, and what each landing spends: a tile one of
+ * its own holds is crossed but never offered.
+ */
+export function reachable(tiles: readonly Tile[], units: readonly Unit[], unit: Unit): Landing[] {
   const terrain = new Map(tiles.map((tile) => [tileKey(tile), tile.terrain]));
   const standing = new Map(units.map((other) => [tileKey(other.tile), other.faction]));
 
   const seen = new Set([tileKey(unit.tile)]);
-  const landings: TileCoords[] = [];
+  const landings: Landing[] = [];
   let front: TileCoords[] = [unit.tile];
 
-  for (let step = 0; step < unit.stats.move; step++) {
+  for (let cost = 1; cost <= unit.movePoints; cost++) {
     const next: TileCoords[] = [];
     for (const from of front) {
       for (const coord of neighbours(from)) {
@@ -67,7 +74,7 @@ export function reachable(
         if (held !== undefined && held !== unit.faction) continue;
         seen.add(at);
         next.push(coord);
-        if (held === undefined) landings.push(coord);
+        if (held === undefined) landings.push({ tile: coord, cost });
       }
     }
     front = next;

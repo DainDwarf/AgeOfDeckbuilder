@@ -17,6 +17,7 @@ import {
   aimed,
   chronicleOf,
   dragOut,
+  dragUnit,
   endTurn,
   onScreen,
   open,
@@ -316,7 +317,7 @@ test('a right click selects and inspects in the one press, steps on where it sta
 
 test('a right press while a card is aimed lets the card go', async ({ page }) => {
   const problems = watch(page);
-  const run = workerRun('PH_Farm');
+  const run = workerRun('PH_Farm', (_, chronicle) => chronicle.hand.includes('PH_March'));
 
   await open(page, run.seed, 'PH_Deck');
   for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
@@ -324,6 +325,10 @@ test('a right press while a card is aimed lets the card go', async ({ page }) =>
   const opened = await chronicleOf(page);
   await dragOut(page, opened.hand.indexOf('PH_Worker'));
   await expect.poll(async () => (await chronicleOf(page)).units.length).toBe(1);
+
+  // The order card is aimed at a unit that has spent move points, so the worker moves out first.
+  const standingStill = await chronicleOf(page);
+  await dragUnit(page, standingStill.city, run.tile);
 
   const entered = await chronicleOf(page);
   await dragOut(page, entered.hand.indexOf('PH_March'));

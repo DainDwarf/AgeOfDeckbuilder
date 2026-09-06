@@ -19,7 +19,14 @@ import {
   tileKey,
   tileYield,
 } from '../rules/map';
-import { type Faction, reachable, type Unit, type UnitTypeId, unitAt } from '../rules/units';
+import {
+  type Faction,
+  type Landing,
+  reachable,
+  type Unit,
+  type UnitTypeId,
+  unitAt,
+} from '../rules/units';
 import { MAP_FRAME } from './band';
 import { bindings, boundTo, type Control, PRESSES, type Press } from './bindings';
 import { EASE, ended, stopMotion } from './card-motion';
@@ -196,10 +203,10 @@ export type MapView = {
   /** What the map plays for the stage; nothing means the scene renders it at once. */
   play(stage: Stage): Promise<void> | undefined;
   /**
-   * Aims at a unit, then at where it lands, until a target is chosen or cancel is called. A right
-   * press on either aim lets it go, exactly as cancel does.
+   * Rings the units a card of the `unit` target type can be played on and aims at them, until a
+   * target is chosen or cancel is called. A right press lets it go, exactly as cancel does.
    */
-  aimUnitTile(chronicle: Chronicle, chosen: (target: Target | undefined) => void): () => void;
+  aimUnit(chronicle: Chronicle, chosen: (target: Target | undefined) => void): () => void;
   /** Lights the tiles it is given and aims at them, until a target is chosen or cancel is called. */
   aimTile(
     chronicle: Chronicle,
@@ -209,15 +216,19 @@ export type MapView = {
   /**
    * Reports the tile every press the UI leaves lands on and the button it came from, and nothing
    * when it lands off the map; `zoomed` fires whenever the zoom changes, so whatever stands on the
-   * map at a size of its own stands again. Called once; while a card is aimed the map belongs to
-   * the aim and no press is reported.
+   * map at a size of its own stands again. `moved` is the unit a press sent to one of its lit
+   * landings, by its place in `units`, which is no tile press. Called once; while a card is aimed
+   * the map belongs to the aim and no press is reported.
    */
   onPress(
     pressed: (found: PressedTile | undefined, press: Press) => void,
     zoomed: () => void,
+    moved: (unit: number, tile: TileCoords) => void,
   ): void;
-  /** Rings the selected tile, or clears the ring. */
+  /** Rings the selected tile and lights the landings of the unit of the player's on it, or clears both. */
   markSelected(tile: TileCoords | undefined): void;
+  /** Where a tile's face stands, for whatever floats beside a tile no press picked out. */
+  faceOf(tile: TileCoords): TileFace;
   /**
    * Shows what every tile yields of these resources, a glyph for each point of it, over a dimmed
    * map; an empty set takes the overlay down.
@@ -433,6 +444,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
   const built = scene.add.container(0, 0).setDepth(BUILDING_DEPTH).setName('buildings');
   const intents = scene.add.container(0, 0).setDepth(GLOW_DEPTH).setName('intents');
   const selected = scene.add.container(0, 0).setDepth(GLOW_DEPTH).setName('selected');
+  const lighted = scene.add.container(0, 0).setDepth(GLOW_DEPTH).setName('landings');
   const marks = scene.add.container(0, 0).setDepth(UNIT_DEPTH);
   const dim = scene.add
     .rectangle(0, 0, 1, 1, OUTLINE, DIM_ALPHA)
@@ -450,6 +462,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
     improved,
     built,
     intents,
+    lighted,
     selected,
     marks,
     cityMarks,
@@ -717,11 +730,11 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
   let marking = false;
 
   /**
-   * What the dim is laid under rather than over: the ring on the selected tile and the glow a card
-   * is aimed by, which the player answers the overlay with. Everything else the map draws dims, so
-   * these are lifted only while the dim stands.
+   * What the dim is laid under rather than over: the ring on the selected tile, the landings lit
+   * under it and the glow a card is aimed by, which the player answers the overlay with. Everything
+   * else the map draws dims, so these are lifted only while the dim stands.
    */
-  const overDim = new Set<Phaser.GameObjects.Container>([selected]);
+  const overDim = new Set<Phaser.GameObjects.Container>([selected, lighted]);
 
   const liftOverDim = (): void => {
     const over = showing.size > 0;
@@ -851,6 +864,31 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
     }
   };
 
+  /** The tile the map rings, and nothing while none is selected. */
+  let selection: TileCoords | undefined;
+
+  /** Which unit's landings the map is lighting and where they lie; nothing while none is lit. */
+  let lit: { readonly unit: number; readonly landings: Landing[] } | undefined;
+
+  /**
+   * The landings of the unit of the player's standing on a tile lit, and nothing lit for a tile
+   * that holds none: the one place a move is offered on the map. A move changes them, so this
+   * follows every render.
+   */
+  const lightLandings = (tile: TileCoords | undefined): void => {
+    const on =
+      tile === undefined || shown === undefined
+        ? -1
+        : shown.units.findIndex((unit) => unit.faction === 'player' && same(unit.tile, tile));
+    lit =
+      on === -1 || shown === undefined
+        ? undefined
+        : { unit: on, landings: reachable(shown.tiles, shown.units, shown.units[on]) };
+
+    lighted.removeAll(true);
+    for (const landing of lit?.landings ?? []) lighted.add(litTile(scene, landing.tile));
+  };
+
   /** The border repainted on the chronicle the map stands on: a claim moves it, so a render does. */
   const paintBorder = (): void => {
     rings.removeAll(true);
@@ -891,6 +929,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
 
     paintCityMarks();
     paintYields();
+    lightLandings(selection);
   };
 
   /** Takes the map for one stage's motion, and hands back the token that settles it. */
@@ -1077,15 +1116,75 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
     onPress(
       pressed: (found: PressedTile | undefined, press: Press) => void,
       zoomed: () => void,
+      moved: (unit: number, tile: TileCoords) => void,
     ): void {
       rescale = zoomed;
       const catcher = catcherZone('press');
       presser = catcher;
 
+      /** The unit a left press has hold of, where it landed, and whether it has been dragged. */
+      let grabbed: { unit: number; from: { x: number; y: number }; dragging: boolean } | undefined;
+
+      /** The marker of the unit the press has hold of, back on the tile that unit stands on. */
+      const bringHome = (): void => {
+        if (grabbed === undefined || shown === undefined) return;
+        const home = positionOf(shown.units[grabbed.unit].tile);
+        markers[grabbed.unit]?.setPosition(home.x, home.y);
+      };
+
+      const carry = (pointer: Phaser.Input.Pointer): void => {
+        if (grabbed === undefined) return;
+        if (!grabbed.dragging && !dragged(scene, grabbed.from, pointer)) return;
+        grabbed.dragging = true;
+        const at = map.at(pointer.x, pointer.y);
+        markers[grabbed.unit]?.setPosition(at.x, at.y);
+      };
+      scene.input.on('pointermove', carry);
+
+      const letGo = (): void => {
+        bringHome();
+        grabbed = undefined;
+        lightLandings(selection);
+      };
+
       takePress(catcher, {
+        down: (pointer) => {
+          if (marking || shown === undefined) return true;
+          const at = map.at(pointer.x, pointer.y);
+          const under = tileUnder(shown, at.x, at.y);
+          if (under === undefined) return true;
+          const unit = shown.units.findIndex(
+            (standing) => standing.faction === 'player' && same(standing.tile, under),
+          );
+          if (unit === -1) return true;
+          grabbed = { unit, from: { x: pointer.x, y: pointer.y }, dragging: false };
+          lightLandings(under);
+          return false;
+        },
         release: (pointer, press) => {
           const at = map.at(pointer.x, pointer.y);
-          const on = tileUnder(chronicle, at.x, at.y);
+          const on = tileUnder(shown ?? chronicle, at.x, at.y);
+          const held = grabbed;
+          if (held !== undefined) {
+            bringHome();
+            grabbed = undefined;
+          }
+
+          const mover = held?.unit ?? (press === 'left' ? lit?.unit : undefined);
+          if (
+            mover !== undefined &&
+            on !== undefined &&
+            lit?.unit === mover &&
+            lit.landings.some((landing) => same(landing.tile, on))
+          ) {
+            moved(mover, on);
+            return;
+          }
+
+          if (held !== undefined) {
+            lightLandings(selection);
+            if (held.dragging) return;
+          }
           pressed(
             on === undefined
               ? undefined
@@ -1093,15 +1192,25 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
             press,
           );
         },
+        abandon: () => {
+          if (grabbed !== undefined) letGo();
+        },
       });
     },
 
     markSelected(tile: TileCoords | undefined): void {
+      selection = tile === undefined ? undefined : { q: tile.q, r: tile.r };
       selected.removeAll(true);
       selected.setData('tile', tile === undefined ? undefined : tileKey(tile));
-      if (tile === undefined) return;
-      const { x, y } = positionOf(tile);
-      selected.add(scene.add.polygon(x, y, hexagon(TILE_SIZE - 2), 0, 0).setStrokeStyle(4, LIT));
+      if (tile !== undefined) {
+        const { x, y } = positionOf(tile);
+        selected.add(scene.add.polygon(x, y, hexagon(TILE_SIZE - 2), 0, 0).setStrokeStyle(4, LIT));
+      }
+      lightLandings(selection);
+    },
+
+    faceOf(tile: TileCoords): TileFace {
+      return { ...positionOf(tile), radius: TILE_SIZE };
     },
 
     showYields(shownResources: ReadonlySet<Resource>): void {
@@ -1115,100 +1224,40 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
       paintYields();
     },
 
-    aimUnitTile(current: Chronicle, chosen: (target: Target | undefined) => void): () => void {
+    aimUnit(current: Chronicle, chosen: (target: Target | undefined) => void): () => void {
       const { catcher, glow, close } = openAim();
 
-      /** Which unit the aim is on, and where it may land; nothing while it is on none. */
-      let aiming: number | undefined;
-      let landings: TileCoords[] = [];
-      let grabbed: number | undefined;
-
-      const paint = (): void => {
-        glow.removeAll(true);
-        for (const coord of landings) glow.add(litTile(scene, coord));
-        current.units.forEach((unit, index) => {
-          if (unit.faction !== 'player') return;
-          const { x, y } = positionOf(unit.tile);
-          glow.add(
-            scene.add
-              .polygon(x, y, hexagon(TILE_SIZE - 2), 0, 0)
-              .setStrokeStyle(index === aiming ? 4 : 2, LIT),
-          );
-        });
-      };
-
-      const drag = (pointer: Phaser.Input.Pointer): void => {
-        if (grabbed === undefined) return;
-        const at = map.at(pointer.x, pointer.y);
-        markers[grabbed].setPosition(at.x, at.y);
-      };
+      /** The units the card may be played on, each by its place in `units`. */
+      const aimed = current.units.flatMap((unit, index) =>
+        unit.faction === 'player' && unit.movePoints < unit.stats.move
+          ? [{ index, tile: unit.tile }]
+          : [],
+      );
+      for (const { tile } of aimed) {
+        const { x, y } = positionOf(tile);
+        glow.add(scene.add.polygon(x, y, hexagon(TILE_SIZE - 2), 0, 0).setStrokeStyle(4, LIT));
+      }
 
       const finish = (target: Target | undefined): void => {
-        scene.input.off('pointermove', drag);
         stop();
         close();
         chosen(target);
       };
 
-      const letGo = (): void => {
-        if (grabbed !== undefined) {
-          const home = positionOf(current.units[grabbed].tile);
-          markers[grabbed].setPosition(home.x, home.y);
-          grabbed = undefined;
-        }
-        aiming = undefined;
-        landings = [];
-        paint();
-      };
-
-      const aimAt = (index: number): void => {
-        aiming = index;
-        landings = reachable(current.tiles, current.units, current.units[index]);
-        paint();
-      };
-
       const stop = takePress(catcher, {
-        down: (pointer) => {
-          const at = map.at(pointer.x, pointer.y);
-          const under = tileUnder(current, at.x, at.y);
-          const found =
-            under === undefined
-              ? -1
-              : current.units.findIndex(
-                  (unit) => unit.faction === 'player' && same(unit.tile, under),
-                );
-          grabbed = found === -1 ? undefined : found;
-          if (grabbed === undefined) return true;
-          aimAt(grabbed);
-          return false;
-        },
         release: (pointer, press) => {
           if (press === 'right') {
-            letGo();
             finish(undefined);
             return;
           }
           const at = map.at(pointer.x, pointer.y);
-          const to = tileUnder(current, at.x, at.y);
-          const held = grabbed;
-
-          if (held !== undefined) {
-            const home = positionOf(current.units[held].tile);
-            markers[held].setPosition(home.x, home.y);
-            grabbed = undefined;
-            if (to !== undefined && same(to, current.units[held].tile)) return;
-          }
-          if (aiming !== undefined && to !== undefined && landings.some((c) => same(c, to))) {
-            finish({ type: 'unit-tile', unit: aiming, tile: to });
-            return;
-          }
-          letGo();
+          const on = tileUnder(current, at.x, at.y);
+          if (on === undefined) return;
+          const found = aimed.find((unit) => same(unit.tile, on));
+          if (found !== undefined) finish({ type: 'unit', unit: found.index });
         },
-        abandon: letGo,
       });
 
-      scene.input.on('pointermove', drag);
-      paint();
       return () => finish(undefined);
     },
 

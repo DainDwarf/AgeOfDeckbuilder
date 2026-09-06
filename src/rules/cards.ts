@@ -7,8 +7,8 @@ export const CARD_KINDS = ['unit', 'building', 'order', 'action'] as const;
 
 export type CardKind = (typeof CARD_KINDS)[number];
 
-/** What the player picks to play a card: nothing, a tile, or a unit and then the tile it goes to. */
-export type TargetType = 'none' | 'tile' | 'unit-tile';
+/** What the player picks to play a card: nothing, a tile, or a unit. */
+export type TargetType = 'none' | 'tile' | 'unit';
 
 /**
  * The one effect an action card has: resources into the city's stores, the improvement it improves
@@ -65,7 +65,7 @@ export const CARDS: Record<CardId, Card> = {
   PH_Worker: { kind: 'unit', cost: { food: 2 }, target: 'none', unitType: 'PH_Worker' },
   PH_Warrior: { kind: 'unit', cost: { military: 2 }, target: 'none', unitType: 'PH_Warrior' },
   PH_Farm: { kind: 'building', cost: { production: 3 }, target: 'tile', building: 'PH_Farm' },
-  PH_March: { kind: 'order', cost: {}, target: 'unit-tile' },
+  PH_March: { kind: 'order', cost: {}, target: 'unit' },
   PH_Harvest: {
     kind: 'action',
     cost: { science: 1 },

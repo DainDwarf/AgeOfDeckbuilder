@@ -8,6 +8,7 @@ import {
   click,
   counted,
   dragOut,
+  dragUnit,
   endTurn,
   fallRun,
   open,
@@ -98,13 +99,19 @@ test('Escape raises the menu on a bare chronicle screen, and backs out of a brow
 
 test('Escape lets go of the card being aimed before it raises the menu', async ({ page }) => {
   const problems = watch(page);
-  const run = workerRun('PH_Farm');
+  const run = workerRun('PH_Farm', (_, chronicle) => chronicle.hand.includes('PH_March'));
 
   await open(page, run.seed, 'PH_Deck');
   for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
 
   const opened = await chronicleOf(page);
   await dragOut(page, opened.hand.indexOf('PH_Worker'));
+  await expect.poll(async () => (await chronicleOf(page)).units.length).toBe(1);
+
+  // The order card is aimed at a unit that has spent move points, so the worker moves out first.
+  const standingStill = await chronicleOf(page);
+  await dragUnit(page, standingStill.city, run.tile);
+
   const entered = await chronicleOf(page);
   await dragOut(page, entered.hand.indexOf('PH_March'));
   await aimed(page);

@@ -15,7 +15,7 @@ import {
   tileCost,
   tileRefusal,
 } from '../rules/chronicle';
-import { tileAt, tileKey } from '../rules/map';
+import { type TileCoords, tileAt, tileKey } from '../rules/map';
 import { createBand } from './band';
 import { boundTo } from './bindings';
 import { CARD_BASELINE, CARD_HEIGHT } from './card-face';
@@ -233,6 +233,18 @@ export class ChronicleScene extends Phaser.Scene {
       note.overTile(tileCost(this.current, found.tile), refusal, found.at);
     };
 
+    /**
+     * One step of a unit, chosen on the map: the play-out runs, and the unit is selected again
+     * where it landed, so the next step is one more press on a tile the map lights. A press that
+     * landed while another command was playing out moved nothing, and selects nothing either.
+     */
+    const step = async (unit: number, tile: TileCoords): Promise<void> => {
+      await playOut({ type: 'move', unit, tile });
+      if (this.playing) return;
+      const landed = this.current.units[unit];
+      if (landed !== undefined) select({ tile: landed.tile, at: view.faceOf(landed.tile) });
+    };
+
     view.onPress(
       (found, press) => {
         if (cityMode) {
@@ -248,6 +260,9 @@ export class ChronicleScene extends Phaser.Scene {
       () => {
         panel.rescale();
         note.rescale();
+      },
+      (unit, tile) => {
+        void step(unit, tile);
       },
     );
 
@@ -289,8 +304,8 @@ export class ChronicleScene extends Phaser.Scene {
               targetTiles(this.current, this.current.hand[index]),
               chosen,
             );
-          case 'unit-tile':
-            return view.aimUnitTile(this.current, chosen);
+          case 'unit':
+            return view.aimUnit(this.current, chosen);
         }
       },
       (id, refusal) => overlay.zoom(id, refusal),

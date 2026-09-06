@@ -8,6 +8,7 @@ import {
   aimed,
   chronicleOf,
   dragOut,
+  dragUnit,
   endTurn,
   marksIn,
   onScreen,
@@ -22,8 +23,8 @@ import {
   workerRun,
 } from './chronicle-screen';
 
-/** The run's turn opened, a worker entered and marched onto the tile the run found. */
-async function marchOut(page: Page, run: Run): Promise<Chronicle> {
+/** The run's turn opened, a worker entered and moved by hand onto the tile the run found. */
+async function moveOut(page: Page, run: Run): Promise<Chronicle> {
   await open(page, run.seed, 'PH_Deck');
   for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
 
@@ -34,19 +35,7 @@ async function marchOut(page: Page, run: Run): Promise<Chronicle> {
   );
 
   const entered = await chronicleOf(page);
-  const city = await onScreen(page, `tile-${tileKey(entered.city)}`);
-  const destination = await onScreen(page, `tile-${tileKey(run.tile)}`);
-  await dragOut(page, entered.hand.indexOf('PH_March'));
-  await aimed(page);
-  await page.mouse.move(city.x, city.y);
-  await page.mouse.down();
-  await page.mouse.move(destination.x, destination.y, { steps: 5 });
-  await page.mouse.up();
-  await playedOut(page);
-  await page.waitForFunction((on) => {
-    const unit = window.game?.scene.getScene<ChronicleScene>('chronicle').chronicle.units[0];
-    return unit?.tile.q === on.q && unit.tile.r === on.r;
-  }, run.tile);
+  await dragUnit(page, entered.city, run.tile);
 
   return chronicleOf(page);
 }
@@ -70,20 +59,20 @@ async function aimAt(
   );
 }
 
-test('the mine card improves the hills the worker marched to', async ({ page }) => {
+test('the mine card improves the hills the worker moved to', async ({ page }) => {
   const problems = watch(page);
   const run = workerRun('PH_Mine');
 
-  const marched = await marchOut(page, run);
+  const moved = await moveOut(page, run);
   const before = await marksIn(page, 'improvements');
-  await aimAt(page, marched.hand, 'PH_Mine', run.tile);
+  await aimAt(page, moved.hand, 'PH_Mine', run.tile);
 
   const after = await chronicleOf(page);
   const improved = after.tiles.find((tile) => tileKey(tile) === tileKey(run.tile));
 
   expect(improved?.improvements).toEqual(['PH_Mine']);
   expect(await marksIn(page, 'improvements')).toBe(before + 1);
-  expect(after.resources.production).toBe(marched.resources.production - 3);
+  expect(after.resources.production).toBe(moved.resources.production - 3);
   expect(after.units[0].tile).toEqual(run.tile);
   expect(problems).toEqual([]);
 });
@@ -94,8 +83,8 @@ test('the tile the mine improved inspects the mine on a card of its own, before 
   const problems = watch(page);
   const run = workerRun('PH_Mine');
 
-  const marched = await marchOut(page, run);
-  await aimAt(page, marched.hand, 'PH_Mine', run.tile);
+  const moved = await moveOut(page, run);
+  await aimAt(page, moved.hand, 'PH_Mine', run.tile);
 
   // The worker that laid it still stands there, so the mine's card comes after the unit's.
   const at = await onScreen(page, `tile-${tileKey(run.tile)}`);
@@ -122,17 +111,17 @@ test('the tile the mine improved inspects the mine on a card of its own, before 
   expect(problems).toEqual([]);
 });
 
-test('the urbanisation card terraforms the plain the worker marched to, feature and all', async ({
+test('the urbanisation card terraforms the plain the worker moved to, feature and all', async ({
   page,
 }) => {
   const problems = watch(page);
   const run = workerRun('PH_Urbanisation', (tile) => tile.feature !== undefined);
   const mark = `feature-${tileKey(run.tile)}`;
 
-  const marched = await marchOut(page, run);
+  const moved = await moveOut(page, run);
   expect(await standing(page, mark)).toBe(true);
 
-  await aimAt(page, marched.hand, 'PH_Urbanisation', run.tile);
+  await aimAt(page, moved.hand, 'PH_Urbanisation', run.tile);
 
   const after = await chronicleOf(page);
   const worked = after.tiles.find((tile) => tileKey(tile) === tileKey(run.tile));
@@ -140,7 +129,7 @@ test('the urbanisation card terraforms the plain the worker marched to, feature 
   expect(worked?.terrain).toBe('urban');
   expect(worked?.feature).toBeUndefined();
   expect(await standing(page, mark)).toBe(false);
-  expect(after.resources.production).toBe(marched.resources.production - 5);
+  expect(after.resources.production).toBe(moved.resources.production - 5);
   expect(after.units[0].tile).toEqual(run.tile);
   expect(problems).toEqual([]);
 });

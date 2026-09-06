@@ -112,6 +112,13 @@ const STATS = ['health', 'damage', 'range', 'move'] as const;
 /** What a row of a card is named by: one `label.` and one `tooltip.` entry each. */
 type Term = (typeof STATS)[number] | Resource;
 
+/** What a stat's row reads: what the unit has left over its own number, where it has two. */
+function readingOf(unit: Unit, stat: (typeof STATS)[number]): string {
+  if (stat === 'health') return `${unit.stats.health} / ${UNIT_STATS[unit.stats.id].health}`;
+  if (stat === 'move') return `${unit.movePoints} / ${unit.stats.move}`;
+  return String(unit.stats[stat]);
+}
+
 /** One card drawn: its face, its contents, and the zones its rows raise tooltips from. */
 type Face = {
   readonly root: Phaser.GameObjects.Container;
@@ -287,10 +294,7 @@ function buildFace(scene: Phaser.Scene, bubble: RowBubble, card: Card): Face {
   if (card.kind === 'unit') {
     for (const stat of STATS) {
       const label = addText(scene, left, 0, text(`label.${stat}`), LABEL_STYLE).setOrigin(0, 0.5);
-      const reading =
-        stat === 'health'
-          ? `${card.unit.stats.health} / ${UNIT_STATS[card.unit.stats.id].health}`
-          : String(card.unit.stats[stat]);
+      const reading = readingOf(card.unit, stat);
       const value = addText(scene, right, 0, reading, VALUE_STYLE).setOrigin(1, 0.5);
       label.setY(rowTop + label.height / 2);
       value.setY(rowTop + label.height / 2);

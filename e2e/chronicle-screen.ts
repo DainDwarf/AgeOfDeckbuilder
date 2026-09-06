@@ -233,12 +233,12 @@ export function scrolled(page: Page): Promise<{ offset: number; overflow: number
   });
 }
 
-/** A chronicle whose turn `turn` can enter a worker, march it onto `tile` and play a card there. */
+/** A chronicle whose turn `turn` can enter a worker, move it onto `tile` and play a card there. */
 export type Run = { readonly seed: number; readonly turn: number; readonly tile: TileCoords };
 
 /**
  * The first seed with a turn in its first eight that opens on such a run; `on` narrows which run
- * counts — the tile the march lands on, and the chronicle it lands in — for a spec that needs a
+ * counts — the tile the unit lands on, and the chronicle it lands in — for a spec that needs a
  * particular layer standing on that tile, or the generator to have left another one clear.
  */
 export function workerRun(
@@ -253,7 +253,7 @@ export function workerRun(
       chronicle = outcome(apply(chronicle, { type: 'end-turn' }));
     }
   }
-  throw new Error(`no seed under a thousand opens a turn on a worker, a march and ${card}`);
+  throw new Error(`no seed under a thousand opens a turn on a worker, a move and ${card}`);
 }
 
 /** The first seed whose city is captured inside twenty turns of ending the turn and nothing else. */
@@ -268,7 +268,11 @@ export function fallRun(): { seed: number; turns: number } {
   throw new Error('no seed under a thousand is captured inside twenty turns');
 }
 
-/** Where the card lands when this hand plays its worker, its march and then the card, in that order. */
+/**
+ * Where the card lands when this hand plays its worker, moves it one tile by hand and then plays
+ * the card, in that order. The worker has to be the only unit on the map, so every spec built on
+ * the run finds it first in `units`.
+ */
 function workedThisTurn(
   chronicle: Chronicle,
   card: CardId,
@@ -277,18 +281,10 @@ function workedThisTurn(
   const enter = chronicle.hand.indexOf('PH_Worker');
   if (enter === -1 || !playable(refusalOf(chronicle, 'PH_Worker'))) return undefined;
   const entered = outcome(apply(chronicle, { type: 'play', index: enter }));
-
-  const march = entered.hand.indexOf('PH_March');
-  if (march === -1 || !entered.hand.includes(card)) return undefined;
+  if (entered.units.length !== 1 || !entered.hand.includes(card)) return undefined;
 
   for (const tile of neighbours(entered.city)) {
-    const moved = outcome(
-      apply(entered, {
-        type: 'play',
-        index: march,
-        target: { type: 'unit-tile', unit: 0, tile },
-      }),
-    );
+    const moved = outcome(apply(entered, { type: 'move', unit: 0, tile }));
     if (moved === entered || !playable(refusalOf(moved, card))) continue;
     const standing = tileAt(moved.tiles, tile);
     if (standing === undefined || !on(standing, moved)) continue;
@@ -417,6 +413,25 @@ export async function dragOut(page: Page, index: number): Promise<void> {
   await page.mouse.move(card.x, card.y - DRAG * card.unit, { steps: 5 });
   await page.mouse.up();
   await playedOut(page);
+}
+
+/**
+ * The gesture that moves a unit by hand: the press takes hold of it on the tile it stands on and
+ * carries it to the tile it lands on, and the move plays out from there.
+ */
+export async function dragUnit(page: Page, from: TileCoords, to: TileCoords): Promise<void> {
+  const held = await onScreen(page, `tile-${tileKey(from)}`);
+  const landing = await onScreen(page, `tile-${tileKey(to)}`);
+  await page.mouse.move(held.x, held.y);
+  await page.mouse.down();
+  await page.mouse.move((held.x + landing.x) / 2, (held.y + landing.y) / 2, { steps: 5 });
+  await page.mouse.move(landing.x, landing.y, { steps: 5 });
+  await page.mouse.up();
+  await playedOut(page);
+  await page.waitForFunction((on) => {
+    const chronicle = window.game?.scene.getScene<ChronicleScene>('chronicle').chronicle;
+    return chronicle?.units.some((unit) => unit.tile.q === on.q && unit.tile.r === on.r) === true;
+  }, to);
 }
 
 /**

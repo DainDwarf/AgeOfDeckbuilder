@@ -12,21 +12,14 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
-- **Units move themselves** — a unit has move points, refreshed at the start of the player's
-  turn, spent tile by tile in as many steps as the player likes, and lost at the end of turn; it
-  is moved by the two inputs the march aim has today, a drag on the map or a click on the unit
-  and then on the tile, and no card. The plain order becomes the card that refreshes a unit's move
-  points. The design's thesis that marching costs a card, the unit section and the order kind are
-  edited. Rules tests pin the refresh, the steps and the loss; an e2e spec moves a unit in two
-  steps. Doc-impact: `docs/DESIGN.md`, `docs/GLOSSARY.md`.
-- **Units attack by hand** — attack on arrival and the player's half of the combat phase go: a
-  unit carries a second per-turn pool, refreshed with its move points, that a warrior spends to
-  attack a non-player unit within its range by the same drag or click as a move, the target on
-  the tile making it an attack; a worker has none. The pool's word is a design question settled
-  at the pitch, since *action* is a card kind. The enemies' intents still execute in the combat
-  phase until the next line; the fixed targeting rule and the garrison by standing still leave
-  the design. Rules tests pin the attack, the spent pool and the worker's refusal; an e2e spec
-  attacks by drag. Doc-impact: `docs/DESIGN.md`, `docs/GLOSSARY.md`.
+- **Units attack by hand** — the player's half of the combat phase goes: a unit carries a second
+  per-turn pool, refreshed with its move points, that a warrior spends to attack a non-player
+  unit within its range by the same drag or click as a move, the target on the tile making it an
+  attack; a worker has none. The pool's word is a design question settled at the pitch, since
+  *action* is a card kind. The enemies' intents still execute in the combat phase until the next
+  line; the fixed targeting rule and the garrison by standing still leave the design. Rules tests
+  pin the attack, the spent pool and the worker's refusal; an e2e spec attacks by drag.
+  Doc-impact: `docs/DESIGN.md`, `docs/GLOSSARY.md`.
 - **Enemies move and attack at once** — the intent goes: in the enemy phase each enemy moves by
   its script and attacks a unit of the player's within its range in the same phase, from the
   same pool a warrior has, and the combat phase is gone from the turn; capture stays as it is.

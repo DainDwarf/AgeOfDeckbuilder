@@ -61,7 +61,7 @@ deliberate exception the reviewer sees; there is no silent allow-list.
 | **intent** | The attack an enemy declares one turn before executing it. | telegraph |
 | **sight** | The tiles the city and its units currently see. | vision, line of sight |
 | **fog** | Every tile outside sight; known terrain, unknown occupants. | fog of war, unexplored |
-| **order** | A card that does one thing with one unit; the plain order moves it, and its nature acts on arrival. | move card |
+| **order** | A card that does one thing with one unit; the plain order refreshes its move points. | move card |
 | **action** | A card with an immediate effect. | spell, effect card |
 | **worker** | A non-fighting unit that changes tiles: builds buildings, terraforms them, improves them. | builder, engineer, labourer |
 | **population** | The city's inhabitants: assigned to tiles for income, turned into units by unit cards. | citizens, workforce, pops |
@@ -82,10 +82,13 @@ deliberate exception the reviewer sees; there is no silent allow-list.
 | **culture** | The resource that claims tiles. | — |
 | **culture threshold** | The culture the next claim costs; rises with the tiles the city holds. | claim cost, step, price |
 | **health** | A unit's remaining life; at zero the unit is killed. | HP, hit points, hitpoints, life |
+| **heal** | To bring a unit's health back up. | refresh (of health), repair, restore, regenerate, cure |
 | **attack** | The act: a unit removes its damage from a target's health. | strike, hit |
 | **damage** | A unit's stat: the health its attack removes. | strength, power, harm |
 | **range** | The distance, in tiles, a unit attacks over; one for melee. | reach |
-| **move** | The tiles a unit crosses per order. | speed, mobility, movement points |
+| **move** | A unit's stat: the move points it refreshes to. | speed, mobility, movement points |
+| **move points** | What a unit spends to cross tiles, one per tile; refreshed to its move. | movement points, steps, stamina, action points |
+| **refresh** | To bring a unit's spendable stat back to its full value — its move points to its move; what the turn does to every unit when it ticks over, and what the plain order does to one unit. Health is never refreshed but healed. | restore, replenish, reset, recharge, recover, regain |
 | **military** | The resource that pays for military units, orders, actions and fortifications. | — |
 | **occupy** | What an enemy does to a tile it stands on: the tile yields nothing. | blockade |
 | **pillage** | What some enemies do to the tile they stand on: its building or improvement is destroyed. | raze, loot, burn |

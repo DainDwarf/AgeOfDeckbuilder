@@ -6,6 +6,7 @@ import {
   aimed,
   chronicleOf,
   dragOut,
+  dragUnit,
   endTurn,
   type Frame,
   mapFrame,
@@ -204,7 +205,7 @@ test("a pan carries a panel row's tooltip along with the row", async ({ page }) 
   expect(problems).toEqual([]);
 });
 
-test('a drag during a move aim pans the map, unless it presses the unit', async ({ page }) => {
+test('a drag on bare ground pans the map, and a drag from the unit moves it', async ({ page }) => {
   const problems = watch(page);
   const run = workerRun('PH_Farm');
 
@@ -216,18 +217,13 @@ test('a drag during a move aim pans the map, unless it presses the unit', async 
   await expect.poll(async () => (await chronicleOf(page)).units.length).toBe(1);
 
   const entered = await chronicleOf(page);
-  await dragOut(page, entered.hand.indexOf('PH_March'));
-  await aimed(page);
-
   const before = await onScreen(page, BARE.name);
   await drag(page, before, { x: 100, y: 60 });
 
   const after = await onScreen(page, BARE.name);
   expect(after.x - before.x).toBeCloseTo(100, 0);
   expect(after.y - before.y).toBeCloseTo(60, 0);
-  expect(await standing(page, 'aim')).toBe(true);
   const panned = await chronicleOf(page);
-  expect(panned.hand).toEqual(entered.hand);
   expect(panned.units[0].tile).toEqual(entered.units[0].tile);
 
   const city = await onScreen(page, `tile-${tileKey(entered.city)}`);
@@ -238,8 +234,7 @@ test('a drag during a move aim pans the map, unless it presses the unit', async 
   await expect
     .poll(async () => tileKey((await chronicleOf(page)).units[0].tile))
     .toBe(tileKey(run.tile));
-  expect(await standing(page, 'aim')).toBe(false);
-  // The press that grabbed the unit left the map where it stood.
+  // The press that took hold of the unit left the map where it stood.
   const held = await onScreen(page, BARE.name);
   expect(held.x).toBeCloseTo(after.x, 0);
   expect(held.y).toBeCloseTo(after.y, 0);
@@ -261,15 +256,7 @@ test('a drag during a tile aim pans the map, and the aim still builds after it',
   await expect.poll(async () => (await chronicleOf(page)).units.length).toBe(1);
 
   const entered = await chronicleOf(page);
-  const city = await onScreen(page, `tile-${tileKey(entered.city)}`);
-  const marched = await onScreen(page, `tile-${tileKey(run.tile)}`);
-  await dragOut(page, entered.hand.indexOf('PH_March'));
-  await aimed(page);
-  await drag(page, city, { x: marched.x - city.x, y: marched.y - city.y });
-  await playedOut(page);
-  await expect
-    .poll(async () => tileKey((await chronicleOf(page)).units[0].tile))
-    .toBe(tileKey(run.tile));
+  await dragUnit(page, entered.city, run.tile);
 
   const aiming = await chronicleOf(page);
   await dragOut(page, aiming.hand.indexOf('PH_Farm'));

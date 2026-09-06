@@ -5,6 +5,7 @@ import {
   aimed,
   chronicleOf,
   dragOut,
+  dragUnit,
   endTurn,
   marksIn,
   onScreen,
@@ -14,7 +15,7 @@ import {
   workerRun,
 } from './chronicle-screen';
 
-test('the farm card builds its farm where the worker marched to', async ({ page }) => {
+test('the farm card builds its farm where the worker moved to', async ({ page }) => {
   const problems = watch(page);
   const run = workerRun('PH_Farm');
 
@@ -28,30 +29,19 @@ test('the farm card builds its farm where the worker marched to', async ({ page 
   );
 
   const entered = await chronicleOf(page);
-  const city = await onScreen(page, `tile-${tileKey(entered.city)}`);
-  const destination = await onScreen(page, `tile-${tileKey(run.tile)}`);
-  await dragOut(page, entered.hand.indexOf('PH_March'));
-  await aimed(page);
-  await page.mouse.move(city.x, city.y);
-  await page.mouse.down();
-  await page.mouse.move(destination.x, destination.y, { steps: 5 });
-  await page.mouse.up();
-  await playedOut(page);
-  await page.waitForFunction((on) => {
-    const unit = window.game?.scene.getScene<ChronicleScene>('chronicle').chronicle.units[0];
-    return unit?.tile.q === on.q && unit.tile.r === on.r;
-  }, run.tile);
+  await dragUnit(page, entered.city, run.tile);
 
-  const marched = await chronicleOf(page);
+  const moved = await chronicleOf(page);
   const standing = await marksIn(page, 'buildings');
-  await dragOut(page, marched.hand.indexOf('PH_Farm'));
+  const destination = await onScreen(page, `tile-${tileKey(run.tile)}`);
+  await dragOut(page, moved.hand.indexOf('PH_Farm'));
   await aimed(page);
   await page.mouse.click(destination.x, destination.y);
   await playedOut(page);
   await page.waitForFunction(
     (held) =>
       window.game?.scene.getScene<ChronicleScene>('chronicle').chronicle.hand.length === held,
-    marched.hand.length - 1,
+    moved.hand.length - 1,
   );
 
   const after = await chronicleOf(page);
@@ -59,7 +49,7 @@ test('the farm card builds its farm where the worker marched to', async ({ page 
 
   expect(built?.building).toBe('PH_Farm');
   expect(await marksIn(page, 'buildings')).toBe(standing + 1);
-  expect(after.resources.production).toBe(marched.resources.production - 3);
+  expect(after.resources.production).toBe(moved.resources.production - 3);
   expect(after.units[0].tile).toEqual(run.tile);
   expect(problems).toEqual([]);
 });
