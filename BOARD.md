@@ -17,6 +17,12 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
   rules module that imports no content; the cards module imports state and never the engine, the
   engine imports both, and no cycle runs between rules modules. Every rules and e2e test passes
   unchanged. Doc-impact: none.
+- **A card is aimed at a tile or at nothing** — the unit aim goes: a unit stands on one tile, so
+  a card aimed at a unit is aimed at its tile, its predicate reads the unit standing there and its
+  effect finds it at resolution; the play target is a tile, the finder has one branch, the block
+  one name, and the map one aiming gesture; the refusal text keyed to the unit block goes. Every
+  rules and e2e test on the seven cards passes, the refresh's refusals unchanged.
+  Doc-impact: none.
 - **Units carry an id** — every unit is named by a number dealt from a counter in the chronicle
   state, through the one function the unit card and an arrival both enter a unit by; the move and
   attack commands, the unit target and the target-finders address a unit by id, the list staying
