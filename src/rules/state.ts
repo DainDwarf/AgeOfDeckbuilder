@@ -17,7 +17,8 @@ export type CardId =
   | 'PH_March'
   | 'PH_Harvest'
   | 'PH_Mine'
-  | 'PH_Urbanisation';
+  | 'PH_Urbanisation'
+  | 'PH_Recall';
 
 /** Everything one city's story is made of, and the generator every later draw comes from. */
 export type Chronicle = {
@@ -50,9 +51,10 @@ export type TileBlock = 'worker' | 'border' | 'terrain' | 'slot' | 'improvement'
 /**
  * What the city or the map has against a card or a claim the cost alone would let through: the city
  * down to the last inhabitant it keeps, no inhabitant idle to turn into a unit or to stand on a
- * tile, a unit already on the city tile, and every reason an aim turns a tile down.
+ * tile, a unit already on the city tile, an empty discard pile with no card to come back out of it,
+ * and every reason an aim turns a tile down.
  */
-export type Block = 'population' | 'idle' | 'city' | TileBlock;
+export type Block = 'population' | 'idle' | 'city' | 'discard-pile' | TileBlock;
 
 /** Whether the tile is inside the city's border: what a card's aim and a city-mode click both ask. */
 export function holds(chronicle: Chronicle, tile: TileCoords): boolean {

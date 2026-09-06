@@ -12,15 +12,6 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
-- **A stand-in instant takes a card back from the discard pile** — for two science, the card's
-  effect offers the discard pile and the player takes one card of it into the hand: the chronicle
-  holds the choice while it stands, one command takes, every other command is refused meanwhile,
-  and an empty discard pile blocks the card; the mechanism is the one the events phase will deal
-  its choice through. The design says what a choice is and the glossary names the taking and the
-  verb for a card coming back from the discard pile, both settled in the pitch; the pitch also
-  settles whether the card just played offers itself. Rules tests pin the take, the refusals
-  while the choice stands and the block; an e2e spec takes a card through the window.
-  Doc-impact: `docs/DESIGN.md`, `docs/GLOSSARY.md`.
 - **Units carry an id** — every unit is named by a number dealt from a counter in the chronicle
   state, through the one function the unit card and an arrival both enter a unit by; the move and
   attack commands, the unit target and the target-finders address a unit by id, the list staying

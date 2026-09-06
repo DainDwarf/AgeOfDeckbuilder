@@ -178,14 +178,22 @@ keyword some cards carry, not a kind, and the map's gifts are chronicle-only by 
   inhabitant off the tiles becomes the warrior, the worker, later the trader, and is gone
   when the unit is killed. Where a unit enters is 🔧 until the map is designed.
 - **Instant** — an immediate effect: draw two, gain food, negotiate with a neutral, terraform a
-  tile where a worker stands, **refresh** a unit's move points. The refresh takes one unit, so a
-  unit that has spent its move points crosses again in the same turn; it is refused on a unit
-  whose move points are full. Everything that is not a noun entering the map.
+  tile where a worker stands, **refresh** a unit's move points, **recall** a card from the discard
+  pile. The refresh takes one unit, so a unit that has spent its move points crosses again in the
+  same turn; it is refused on a unit whose move points are full. Everything that is not a noun
+  entering the map.
 
 A card played at a tile is armed as soon as the city can pay for it, whatever the map holds. The
 map lights the tiles its aim admits; a press on any other tile lands nowhere and says why — the one
 reason that tile is turned down, over that tile, in the note a refused card raises — and the card
 stays armed. A card aimed at nothing lands nowhere.
+
+A card played at the discard pile is aimed the same way. The pile's cards are offered in a window,
+newest first, and a press on one plays the card at it; the card being aimed is in the hand, so the
+pile never offers it. Only the back key and the window's Cancel let the card go, a press beside the
+cards and a right click doing nothing, and a card let go of stays in the hand with nothing paid. An
+empty discard pile blocks the card in the hand: a refused tile has a tile to say its reason over, an
+empty pile has nowhere.
 
 ### Population ✅
 

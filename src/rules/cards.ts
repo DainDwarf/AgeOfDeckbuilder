@@ -21,7 +21,9 @@ export type CardKind = (typeof CARD_KINDS)[number];
  * What a card is played at, and what it does with what it was played at. An aim of `none` lands
  * whole, and names what blocks it where the map or the city can hold it up; a `tile` aim answers the
  * first reason it refuses a tile for and nothing at all on one it admits, and hands its effect the
- * tile that was chosen. The effect takes the chronicle the card's cost is paid on.
+ * tile that was chosen; a `discard-pile` aim names what blocks it the same way, and hands its effect
+ * where in the discard pile the card that was chosen lies. The effect takes the chronicle the card's
+ * cost is paid on.
  */
 type Aim =
   | {
@@ -33,6 +35,11 @@ type Aim =
       readonly aim: 'tile';
       readonly refuses: (chronicle: Chronicle, tile: Tile) => TileBlock | undefined;
       readonly effect: (paid: Chronicle, at: TileCoords) => Chronicle;
+    }
+  | {
+      readonly aim: 'discard-pile';
+      readonly blocked: (chronicle: Chronicle) => Block[];
+      readonly effect: (paid: Chronicle, at: number) => Chronicle;
     };
 
 /**
@@ -154,6 +161,15 @@ function refreshed(paid: Chronicle, at: TileCoords): Chronicle {
   };
 }
 
+/** The card a recall brings back: it leaves the discard pile for the back of the hand. */
+function recalled(paid: Chronicle, at: number): Chronicle {
+  return {
+    ...paid,
+    hand: [...paid.hand, paid.discardPile[at]],
+    discardPile: paid.discardPile.filter((_, index) => index !== at),
+  };
+}
+
 /** The resources an instant gains: they land in the city's stores. */
 function gained(paid: Chronicle, gain: Partial<Resources>): Chronicle {
   const resources = { ...paid.resources };
@@ -210,6 +226,13 @@ export const CARDS: Record<CardId, Card> = {
     refuses: (chronicle, tile) =>
       firstRefusal(worked(chronicle, tile), made(tile, 'plain'), slotFree(tile)),
     effect: (paid, at) => terraformed(paid, at, 'urban'),
+  },
+  PH_Recall: {
+    kind: 'instant',
+    cost: { science: 2 },
+    aim: 'discard-pile',
+    blocked: (chronicle) => (chronicle.discardPile.length === 0 ? ['discard-pile'] : []),
+    effect: recalled,
   },
 };
 

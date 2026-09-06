@@ -73,7 +73,7 @@ export type Presses = {
 };
 
 /** An accent face carrying a label: the one shape everything pressable in a window is drawn as. */
-function pressable(
+export function pressable(
   scene: Phaser.Scene,
   at: { x: number; y: number; width: number; height: number },
   name: string,

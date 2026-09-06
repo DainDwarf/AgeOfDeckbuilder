@@ -59,13 +59,15 @@ export type Hand = {
 /**
  * The hand between the two piles. Cards keep their fixed gap until the lane runs out, then
  * compress evenly onto one another; the one under the pointer comes to the front. While a card is
- * aimed the hand is click-only: the armed card cancels, every other card zooms.
+ * aimed the hand is click-only: the armed card cancels, every other card zooms. Each aim is handed
+ * the card's place in the hand and the way to let it go, and answers the way to let it go from here.
  */
 export function createHand(
   scene: Phaser.Scene,
   on: Surface,
   play: (index: number) => void,
-  aim: (index: number, card: AimedCard, released: () => void) => () => void,
+  aimTile: (index: number, card: AimedCard, released: () => void) => () => void,
+  aimDiscardPile: (index: number, released: () => void) => () => void,
   zoom: (id: CardId, refusal: Refusal) => void,
 ): Hand {
   const laneLeft = MARGIN + CARD_WIDTH + LANE_PAD;
@@ -201,20 +203,24 @@ export function createHand(
               );
               return;
             }
-            // A card that takes a tile is not played by the release: it waits, in its slot and
-            // armed, while the map is aimed at, and comes down only when the card is clicked.
+            // A card that takes a target is not played by the release: it waits, in its slot and
+            // armed, while the target is aimed at, and comes down only when the aim is let go of.
             const card = CARDS[slot.id];
             if (card.aim !== 'none') {
               settle(slot, 150);
               slot.face.arm(true);
               letGo = slot;
-              const cancel = aim(slot.index, card, () => {
+              const released = (): void => {
                 aiming = undefined;
                 letGo = undefined;
                 slot.face.arm(false);
                 slot.hovered = false;
                 settle(slot, 150);
-              });
+              };
+              const cancel =
+                card.aim === 'tile'
+                  ? aimTile(slot.index, card, released)
+                  : aimDiscardPile(slot.index, released);
               aiming = { slot, cancel };
               return;
             }

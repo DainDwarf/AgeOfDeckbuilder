@@ -178,6 +178,11 @@ function aimedAt(tile: TileCoords): Command {
   return { type: 'play', index: 0, tile };
 }
 
+/** A card aimed at where a card lies in the discard pile, ready to hand to `apply`. */
+function aimedAtPile(card: number): Command {
+  return { type: 'play', index: 0, card };
+}
+
 /** The tiles the named card's aim admits, for a card that is aimed at a tile. */
 function admittedTiles(chronicle: Chronicle, id: CardId): TileCoords[] {
   const card = CARDS[id];
@@ -241,6 +246,11 @@ function culture(amount: number): Resources {
 /** What the city holds to build and to work tiles with, and nothing besides. */
 function production(amount: number): Resources {
   return { food: 0, production: amount, military: 0, money: 0, science: 0, culture: 0 };
+}
+
+/** What the city holds to play a science instant with, and nothing besides. */
+function science(amount: number): Resources {
+  return { food: 0, production: 0, military: 0, money: 0, science: amount, culture: 0 };
 }
 
 /** What the city pays for the worker card, and nothing besides. */
@@ -776,6 +786,76 @@ test('the refresh instant is refused on a unit whose move points are full, on an
   expect(outcome(apply(city, aimedAt({ q: 2, r: 0 })))).toBe(city);
   expect(outcome(apply(city, aimedAt({ q: 0, r: 1 })))).toBe(city);
   expect(outcome(apply(city, { type: 'play', index: 0 }))).toBe(city);
+});
+
+test('the recall instant takes the card it is aimed at out of the discard pile and into the hand', () => {
+  const city = cityOf(['urban'], {
+    hand: ['PH_Recall'],
+    discardPile: ['PH_Farm', 'PH_Harvest', 'PH_Mine'],
+    resources: science(2),
+  });
+
+  const stages = apply(city, aimedAtPile(1));
+  const after = outcome(stages);
+
+  expect(stages.map((stage) => stage.name)).toEqual(['played']);
+  expect(after.hand).toEqual(['PH_Harvest']);
+  expect(after.discardPile).toEqual(['PH_Farm', 'PH_Mine', 'PH_Recall']);
+  expect(after.resources.science).toBe(0);
+  expect(everyCard(after)).toEqual(everyCard(city));
+});
+
+test('the recall instant is refused at a card the discard pile does not hold, and at nothing', () => {
+  const city = cityOf(['urban'], {
+    hand: ['PH_Recall'],
+    discardPile: ['PH_Farm', 'PH_Harvest'],
+    resources: science(2),
+  });
+
+  expect(stagedBy(city, { type: 'play', index: 0 })).toEqual(['refused']);
+  expect(stagedBy(city, aimedAtPile(-1))).toEqual(['refused']);
+  expect(stagedBy(city, aimedAtPile(2))).toEqual(['refused']);
+  expect(outcome(apply(city, { type: 'play', index: 0 }))).toBe(city);
+  expect(outcome(apply(city, aimedAtPile(-1)))).toBe(city);
+  expect(outcome(apply(city, aimedAtPile(2)))).toBe(city);
+});
+
+test('the recall instant never brings back the card it sent to the discard pile itself', () => {
+  const city = cityOf(['urban'], {
+    hand: ['PH_Recall'],
+    discardPile: ['PH_Farm'],
+    resources: science(2),
+  });
+
+  expect(stagedBy(city, aimedAtPile(1))).toEqual(['refused']);
+  expect(outcome(apply(city, aimedAtPile(1)))).toBe(city);
+  expect(outcome(apply(city, aimedAtPile(0))).hand).toEqual(['PH_Farm']);
+});
+
+test('an empty discard pile blocks the recall instant in the hand', () => {
+  const empty = cityOf(['urban'], { hand: ['PH_Recall'], resources: science(2) });
+  const holding = cityOf(['urban'], {
+    hand: ['PH_Recall'],
+    discardPile: ['PH_Farm'],
+    resources: science(2),
+  });
+
+  expect(refusalOf(empty, 'PH_Recall').blocked).toEqual(['discard-pile']);
+  expect(playable(refusalOf(empty, 'PH_Recall'))).toBe(false);
+  expect(stagedBy(empty, aimedAtPile(0))).toEqual(['refused']);
+  expect(outcome(apply(empty, aimedAtPile(0)))).toBe(empty);
+  expect(playable(refusalOf(holding, 'PH_Recall'))).toBe(true);
+});
+
+test('a recall the city cannot pay for stays in the hand and costs nothing', () => {
+  const short = cityOf(['urban'], {
+    hand: ['PH_Recall'],
+    discardPile: ['PH_Farm'],
+    resources: science(1),
+  });
+
+  expect(stagedBy(short, aimedAtPile(0))).toEqual(['refused']);
+  expect(outcome(apply(short, aimedAtPile(0)))).toBe(short);
 });
 
 test('an attack by hand takes the attacker’s damage off the target and spends one action', () => {

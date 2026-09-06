@@ -312,6 +312,18 @@ export class ChronicleScene extends Phaser.Scene {
           },
         );
       },
+      (index, released) => {
+        // The scrim the window stands on swallows the button, the hand and the piles along with the
+        // map, so nothing here has to be put down for the length of this aim.
+        dismiss();
+        return overlay.aimDiscardPile(
+          this.current,
+          (card) => {
+            void playOut({ type: 'play', index, card });
+          },
+          released,
+        );
+      },
       (id, refusal) => overlay.zoom(id, refusal),
     );
 

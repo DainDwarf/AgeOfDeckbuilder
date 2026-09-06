@@ -17,7 +17,7 @@ import {
   UI_FONT,
   whileUp,
 } from './design-space';
-import { behind, createWindow, type MenuWindow, type Opened } from './menu';
+import { behind, createWindow, type MenuWindow, type Opened, pressable } from './menu';
 import { BAR_HEIGHT } from './resource-bar';
 import { text } from './text';
 
@@ -25,6 +25,14 @@ const SCRIM = 0x0d1014;
 const SCRIM_ALPHA = 0.82;
 
 const TITLE_INK = '#d4d7db';
+
+const CANCEL_STYLE = {
+  fontFamily: UI_FONT,
+  fontSize: '18px',
+  fontStyle: 'bold',
+  color: '#0d1014',
+};
+
 const BROWSE_WIDTH = 180;
 const BROWSE_GAP = 26;
 const ZOOM_WIDTH = 380;
@@ -40,6 +48,16 @@ export type PileKind = 'draw-pile' | 'discard-pile';
 
 export type Overlay = {
   browse(pile: PileKind, chronicle: Chronicle): void;
+  /**
+   * The discard pile offered to a card aimed at it: a press on one of its cards lands the aim where
+   * that card lies in the pile, the back key and the Cancel button let the aimed card go, and a
+   * press off the cards does nothing at all. Answers the way to let it go from outside.
+   */
+  aimDiscardPile(
+    chronicle: Chronicle,
+    chosen: (at: number) => void,
+    released: () => void,
+  ): () => void;
   zoom(id: CardId, refusal: Refusal): void;
   /** The Menu button: raises the menu over whatever stands, and takes the whole menu back down. */
   menu(): void;
@@ -52,10 +70,13 @@ export type Overlay = {
   play(stage: Stage): Promise<void> | undefined;
 };
 
-/** Where one card of a browse was laid out: about its own bottom centre, as a card is drawn. */
-type Placed = { readonly id: CardId; readonly x: number; readonly y: number };
+/** One card offered on the scrim, and the number a press on it answers by. */
+type Offered = { readonly id: CardId; readonly at: number };
 
-/** The grid of cards a browse stands on, and how far it moves. */
+/** Where one offered card was laid out: about its own bottom centre, as a card is drawn. */
+type Placed = Offered & { readonly x: number; readonly y: number };
+
+/** The grid of cards a browse or an aim stands on, and how far it moves. */
 type Grid = {
   readonly root: Phaser.GameObjects.Container;
   readonly placed: readonly Placed[];
@@ -99,6 +120,8 @@ export function createOverlay(
   let fling = 0;
   let scrolling: Scroll | undefined;
   let zoomed = false;
+  /** How the card the aim window stands for is let go of, and nothing while no aim window stands. */
+  let releasing: (() => void) | undefined;
   /** The window of the menu that stands, and nothing while none does. */
   let opened: MenuWindow | undefined;
   /** The window as it was laid out, for the keys it takes; it goes down with everything shown. */
@@ -109,6 +132,9 @@ export function createOverlay(
   let rising: Phaser.GameObjects.Container | undefined;
 
   const wipe = (): void => {
+    // Nothing takes the aim window down without the card it stands for coming home: this is the one
+    // door everything the scrim carries is replaced through.
+    letGoOfAim();
     for (const object of shown) object.destroy();
     shown = [];
     standing = undefined;
@@ -122,9 +148,19 @@ export function createOverlay(
     wipe();
     browsing = undefined;
     zoomed = false;
+    releasing = undefined;
     opened = undefined;
     scrim.setVisible(false).disableInteractive();
     covering(false);
+  };
+
+  /** The aim window down and the aimed card let go of: the one path, whichever way it was let go. */
+  const letGoOfAim = (): void => {
+    const release = releasing;
+    releasing = undefined;
+    if (release === undefined) return;
+    close();
+    release();
   };
 
   // The defeat's rise brings the scrim up from nothing, so every cover states the alpha it wants.
@@ -154,26 +190,33 @@ export function createOverlay(
     grid.root.setY(-offset);
   };
 
-  const showBrowse = (pile: PileKind, cards: readonly CardId[]): void => {
-    wipe();
-    cover();
-    browsing = { pile, cards };
-    zoomed = false;
-    opened = undefined;
-
-    const title = addText(
-      scene,
-      DESIGN_WIDTH / 2,
-      BAR_HEIGHT + MARGIN,
-      text(`browse.${pile}`, { count: cards.length }),
-      { fontFamily: UI_FONT, fontSize: '26px', fontStyle: 'bold', color: TITLE_INK },
-    )
+  /** The heading a pile's cards stand under; the caller stands whatever else belongs beside it. */
+  const raiseTitle = (heading: string): Phaser.GameObjects.Text => {
+    const title = addText(scene, DESIGN_WIDTH / 2, BAR_HEIGHT + MARGIN, heading, {
+      fontFamily: UI_FONT,
+      fontSize: '26px',
+      fontStyle: 'bold',
+      color: TITLE_INK,
+    })
       .setOrigin(0.5, 0)
       .setDepth(SCRIM_DEPTH + 1);
     shown.push(title);
+    return title;
+  };
 
+  /**
+   * A pile's cards laid out below `top`, and the frame that scrolls and flings them: `pressed` takes
+   * the number the card under the press was offered as, and nothing where the press landed between
+   * them. Every card face is named after the grid and that same number. Nothing may be added to the
+   * scene after this: the clip's camera draws whatever it was not told to ignore inside the frame.
+   */
+  const layGrid = (
+    name: string,
+    cards: readonly Offered[],
+    top: number,
+    pressed: (at: number | undefined) => void,
+  ): void => {
     const height = Math.round(BROWSE_WIDTH * 1.4);
-    const top = title.y + title.height + MARGIN;
     const frameHeight = DESIGN_HEIGHT - MARGIN - top;
     const columns = Math.max(
       1,
@@ -186,7 +229,7 @@ export function createOverlay(
 
     const frame = scene.add
       .zone(DESIGN_WIDTH / 2, top + frameHeight / 2, DESIGN_WIDTH - 2 * MARGIN, frameHeight)
-      .setName('browse-frame')
+      .setName(`${name}-frame`)
       .setDepth(SCRIM_DEPTH + 2)
       .setInteractive({ cursor: 'pointer', draggable: true });
 
@@ -212,18 +255,16 @@ export function createOverlay(
     onClick(frame, (pointer) => {
       if (grid === undefined) return;
       const at = on.at(pointer.x, pointer.y);
-      const card = cardAt(grid, at.x, at.y);
-      if (card === undefined) back();
-      else showZoom(card, NO_REFUSAL);
+      pressed(cardAt(grid, at.x, at.y)?.at);
     });
 
-    const placed = cards.map((id, index): Placed => {
+    const placed = cards.map((card, index): Placed => {
       const row = Math.floor(index / columns);
       const column = index % columns;
       const inRow = Math.min(columns, cards.length - row * columns);
       const spanX = inRow * BROWSE_WIDTH + (inRow - 1) * BROWSE_GAP;
       return {
-        id,
+        ...card,
         x: (DESIGN_WIDTH - spanX) / 2 + column * (BROWSE_WIDTH + BROWSE_GAP) + BROWSE_WIDTH / 2,
         y: firstY + row * (height + BROWSE_GAP) + height,
       };
@@ -231,18 +272,83 @@ export function createOverlay(
 
     const root = scene.add
       .container(0, 0)
-      .setName('browse')
+      .setName(name)
       .setDepth(SCRIM_DEPTH + 1)
       .setData('overflow', overflow);
     for (const card of placed) {
       const face = createCardFace(scene, card.id, NO_REFUSAL, { width: BROWSE_WIDTH });
-      root.add(face.root.setPosition(card.x, card.y));
+      root.add(face.root.setPosition(card.x, card.y).setName(`${name}-card-${card.at}`));
     }
     shown.push(frame, root);
 
     grid = { root, placed, height, overflow };
     scrollTo(offset);
     clip.show(root, MARGIN, top, DESIGN_WIDTH - 2 * MARGIN, frameHeight);
+  };
+
+  const showBrowse = (pile: PileKind, cards: readonly CardId[]): void => {
+    wipe();
+    cover();
+    browsing = { pile, cards };
+    zoomed = false;
+    opened = undefined;
+
+    const title = raiseTitle(text(`browse.${pile}`, { count: cards.length }));
+    layGrid(
+      'browse',
+      cards.map((id, at): Offered => ({ id, at })),
+      title.y + title.height + MARGIN,
+      (at) => {
+        if (at === undefined) back();
+        else showZoom(cards[at], NO_REFUSAL);
+      },
+    );
+  };
+
+  /**
+   * The discard pile offered to the card aimed at it, newest card first, as the browse offers it.
+   * The aimed card is in the hand, so the pile never holds it and never offers it.
+   */
+  const showAim = (
+    chronicle: Chronicle,
+    chosen: (at: number) => void,
+    released: () => void,
+  ): void => {
+    wipe();
+    cover();
+    browsing = undefined;
+    zoomed = false;
+    opened = undefined;
+    releasing = released;
+    offset = 0;
+
+    const cards = chronicle.discardPile.map((id, at): Offered => ({ id, at })).reverse();
+    const title = raiseTitle(text('browse.discard-pile', { count: cards.length }));
+    const width = 120;
+    const { face, label } = pressable(
+      scene,
+      {
+        x: title.x + title.width / 2 + MARGIN + width / 2,
+        y: title.y + title.height / 2,
+        width,
+        height: 36,
+      },
+      'aim-cancel',
+      CANCEL_STYLE,
+      letGoOfAim,
+    );
+    shown.push(
+      face.setDepth(SCRIM_DEPTH + 1),
+      label.setText(text('aim.cancel')).setDepth(SCRIM_DEPTH + 1),
+    );
+
+    layGrid('aim-window', cards, title.y + title.height + MARGIN, (at) => {
+      if (at === undefined) return;
+      // The aim landed, so the window comes down without the card it stood for coming home.
+      releasing = undefined;
+      close();
+      chosen(at);
+    });
   };
 
   /** The city fallen, on the screen that says so; the caller decides whether it rises or stands. */
@@ -335,12 +441,16 @@ export function createOverlay(
       return true;
     }
     if (fallen !== undefined || !scrim.visible) return false;
-    if (zoomed && browsing !== undefined) showBrowse(browsing.pile, browsing.cards);
+    if (releasing !== undefined) letGoOfAim();
+    else if (zoomed && browsing !== undefined) showBrowse(browsing.pile, browsing.cards);
     else close();
     return true;
   };
 
-  onClick(scrim, back);
+  // The aim window is let go of by the back key and its own Cancel alone.
+  onClick(scrim, () => {
+    if (releasing === undefined) back();
+  });
 
   scene.input.on(
     'wheel',
@@ -362,6 +472,10 @@ export function createOverlay(
     browse(pile: PileKind, chronicle: Chronicle): void {
       offset = 0;
       showBrowse(pile, cardsOf(pile, chronicle));
+    },
+    aimDiscardPile(chronicle, chosen, released): () => void {
+      showAim(chronicle, chosen, released);
+      return letGoOfAim;
     },
     zoom: showZoom,
     menu(): void {
@@ -385,12 +499,12 @@ export function createOverlay(
 }
 
 /** The card lying under a design-space point, and nothing where the point falls between cards. */
-function cardAt(grid: Grid, x: number, y: number): CardId | undefined {
+function cardAt(grid: Grid, x: number, y: number): Placed | undefined {
   const local = y - grid.root.y;
   return grid.placed.find(
     (card) =>
       Math.abs(x - card.x) <= BROWSE_WIDTH / 2 && local <= card.y && local >= card.y - grid.height,
-  )?.id;
+  );
 }
 
 /** How fast the pointer was travelling as it was released, in design units per millisecond. */

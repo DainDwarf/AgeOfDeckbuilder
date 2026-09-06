@@ -54,6 +54,7 @@ deliberate exception the reviewer sees; there is no silent allow-list.
 | **play** | To put a card from the hand into effect, paying its cost. | cast, activate |
 | **unaffordable** | A card or a claim whose cost exceeds what the city holds; the city cannot pay for it. | unpayable, short, lacking, too expensive |
 | **discard** | To send a card from the hand to the discard pile. | throw away, dump |
+| **recall** | To put a card from the discard pile into the hand; what a recall instant does. | retrieve, recover, return, reclaim, salvage |
 | **draw pile** | The cards not yet drawn this cycle; refilled from the discard pile when empty. | library |
 | **discard pile** | The cards played or discarded this cycle, waiting to be shuffled back. | graveyard, trash, bin |
 | **combat** | The phase after the turn ends where every enemy executes its declared intent. | battle, fight, skirmish, war |
