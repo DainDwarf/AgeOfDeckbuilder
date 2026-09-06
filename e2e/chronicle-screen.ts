@@ -1,18 +1,17 @@
 import { expect, type Page } from '@playwright/test';
 import type Phaser from 'phaser';
-import { CARDS, type Card, type CardId, DECKS, type DeckId } from '../src/rules/cards';
+import { CARDS, type Card, DECKS, type DeckId } from '../src/rules/cards';
 import {
   admitted,
   apply,
   beginChronicle,
-  type Chronicle,
   outcome,
   playable,
-  RESOURCES,
-  type Resource,
   refusalOf,
 } from '../src/rules/chronicle';
 import { neighbours, type Tile, type TileCoords, tileAt, tileKey } from '../src/rules/map';
+import { RESOURCES, type Resource } from '../src/rules/resources';
+import type { CardId, Chronicle } from '../src/rules/state';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
 import type { PileKind } from '../src/ui/overlay';
 

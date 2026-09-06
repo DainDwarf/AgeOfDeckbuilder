@@ -1,13 +1,5 @@
 import Phaser from 'phaser';
-import {
-  type Chronicle,
-  claimable,
-  RESOURCES,
-  type Resource,
-  type Stage,
-  type Target,
-  type UnitCommand,
-} from '../rules/chronicle';
+import { claimable, type Stage, type Target, type UnitCommand } from '../rules/chronicle';
 import {
   type BuildingTypeId,
   CITY_TILE,
@@ -20,6 +12,8 @@ import {
   tileKey,
   tileYield,
 } from '../rules/map';
+import { RESOURCES, type Resource } from '../rules/resources';
+import type { Chronicle } from '../rules/state';
 import {
   attackable,
   type Faction,

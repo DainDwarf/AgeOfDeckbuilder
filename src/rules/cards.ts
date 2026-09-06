@@ -1,4 +1,3 @@
-import { type Block, type Chronicle, holds, idle, RESOURCES, type Resources } from './chronicle';
 import {
   BUILDINGS,
   type BuildingTypeId,
@@ -9,6 +8,8 @@ import {
   type TileCoords,
   tileKey,
 } from './map';
+import { RESOURCES, type Resources } from './resources';
+import { type Block, type CardId, type Chronicle, holds, idle } from './state';
 import { refreshedMovePoints, UNIT_STATS, type Unit, type UnitTypeId, unitAt } from './units';
 
 /** The declared order of the kinds, which is the order a sorted list of cards reads in. */
@@ -142,16 +143,6 @@ function gained(paid: Chronicle, gain: Partial<Resources>): Chronicle {
   for (const resource of RESOURCES) resources[resource] += gain[resource] ?? 0;
   return { ...paid, resources };
 }
-
-/** `PH_` marks a stand-in: none of these is authored content, and every one of them goes. */
-export type CardId =
-  | 'PH_Worker'
-  | 'PH_Warrior'
-  | 'PH_Farm'
-  | 'PH_March'
-  | 'PH_Harvest'
-  | 'PH_Mine'
-  | 'PH_Urbanisation';
 
 export const CARDS: Record<CardId, Card> = {
   PH_Worker: { kind: 'unit', cost: { food: 2 }, ...enters('PH_Worker') },

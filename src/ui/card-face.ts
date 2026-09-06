@@ -1,6 +1,7 @@
 import type Phaser from 'phaser';
-import { CARDS, type CardId } from '../rules/cards';
+import { CARDS } from '../rules/cards';
 import { costOf, playable, type Refusal } from '../rules/chronicle';
+import type { CardId } from '../rules/state';
 import { ACCENT, addText, DESIGN_HEIGHT, hexagon, MARGIN, UI_FONT } from './design-space';
 import { RESOURCE_COLOURS } from './resource-bar';
 import { text } from './text';

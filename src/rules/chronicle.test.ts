@@ -1,19 +1,15 @@
 import { expect, test } from 'vitest';
-import { CARDS, type CardId, DECKS } from './cards';
+import { CARDS, DECKS } from './cards';
 import {
   admitted,
   apply,
   beginChronicle,
-  type Chronicle,
   type Command,
   cityCommand,
   claimable,
   growthThreshold,
-  idle,
   outcome,
   playable,
-  RESOURCES,
-  type Resources,
   refusalOf,
   tileCost,
   tileRefusal,
@@ -35,7 +31,9 @@ import {
   tileAt,
   tileKey,
 } from './map';
+import { RESOURCES, type Resources } from './resources';
 import { seedRng } from './rng';
+import { type CardId, type Chronicle, idle } from './state';
 import { type Faction, UNIT_STATS, type Unit, type UnitStats } from './units';
 
 const CITY: TileCoords = { q: 0, r: 0 };

@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
-import type { CardId } from '../src/rules/cards';
 import { apply, beginChronicle } from '../src/rules/chronicle';
+import type { CardId } from '../src/rules/state';
 import { chronicleOf, endTurn, onScreen, open, playing, watch } from './chronicle-screen';
 
 /**

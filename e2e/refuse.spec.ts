@@ -1,14 +1,14 @@
 import { expect, type Page, test } from '@playwright/test';
-import { type CardId, DECKS } from '../src/rules/cards';
+import { DECKS } from '../src/rules/cards';
 import {
   apply,
   beginChronicle,
-  type Chronicle,
   costOf,
   outcome,
   playable,
   refusalOf,
 } from '../src/rules/chronicle';
+import type { CardId, Chronicle } from '../src/rules/state';
 import { text } from '../src/ui/text';
 import {
   chronicleOf,

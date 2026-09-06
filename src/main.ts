@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
-import { CARDS, type CardId, DECKS, type DeckId } from './rules/cards';
+import { CARDS, DECKS, type DeckId } from './rules/cards';
+import type { CardId } from './rules/state';
 import { ChronicleScene } from './ui/chronicle-scene';
 import { backingSize, followWindow, releaseOnBlur } from './ui/design-space';
 import { readMouseKeys } from './ui/keys';

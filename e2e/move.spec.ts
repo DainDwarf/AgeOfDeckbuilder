@@ -1,14 +1,8 @@
 import { expect, test } from '@playwright/test';
 import { DECKS } from '../src/rules/cards';
-import {
-  apply,
-  beginChronicle,
-  type Chronicle,
-  outcome,
-  playable,
-  refusalOf,
-} from '../src/rules/chronicle';
+import { apply, beginChronicle, outcome, playable, refusalOf } from '../src/rules/chronicle';
 import { neighbours, type TileCoords, tileKey } from '../src/rules/map';
+import type { Chronicle } from '../src/rules/state';
 import { UNIT_STATS } from '../src/rules/units';
 import {
   chronicleOf,

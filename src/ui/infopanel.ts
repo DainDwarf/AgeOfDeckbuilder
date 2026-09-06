@@ -1,5 +1,4 @@
 import type Phaser from 'phaser';
-import { RESOURCES, type Resource, type Resources } from '../rules/chronicle';
 import {
   BUILDINGS,
   type BuildingTypeId,
@@ -14,6 +13,7 @@ import {
   type Terrain,
   type Tile,
 } from '../rules/map';
+import { RESOURCES, type Resource, type Resources } from '../rules/resources';
 import { UNIT_STATS, type Unit, unitAt } from '../rules/units';
 import { CARD_EDGE, CARD_HEIGHT, CARD_METRICS, CARD_WIDTH, drawCardSurface } from './card-face';
 import { stopMotion } from './card-motion';

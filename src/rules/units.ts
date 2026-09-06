@@ -1,4 +1,3 @@
-import type { EnemyScriptId } from './enemies';
 import { distance, neighbours, passable, type Tile, type TileCoords, tileKey } from './map';
 
 /** Who a unit acts for. The player commands theirs; an enemy attacks them. */
@@ -6,6 +5,9 @@ export type Faction = 'player' | 'enemy';
 
 /** `PH_` marks a stand-in: neither of these is authored content, and both of them go. */
 export type UnitTypeId = 'PH_Worker' | 'PH_Warrior';
+
+/** `PH_` marks a stand-in: this script is not authored content, and it goes with the enemies it drives. */
+export type EnemyScriptId = 'PH_Advance';
 
 /**
  * What a unit is and what it can do. A unit carries its own copy, taken from `UNIT_STATS` when the

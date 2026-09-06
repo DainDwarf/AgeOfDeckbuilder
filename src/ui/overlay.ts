@@ -1,12 +1,7 @@
 import Phaser from 'phaser';
-import { CARD_KINDS, CARDS, type CardId } from '../rules/cards';
-import {
-  type Chronicle,
-  type Defeat,
-  NO_REFUSAL,
-  type Refusal,
-  type Stage,
-} from '../rules/chronicle';
+import { CARD_KINDS, CARDS } from '../rules/cards';
+import { NO_REFUSAL, type Refusal, type Stage } from '../rules/chronicle';
+import type { CardId, Chronicle, Defeat } from '../rules/state';
 import { createCardFace } from './card-face';
 import { EASE, ended, stopMotion } from './card-motion';
 import {

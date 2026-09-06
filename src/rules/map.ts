@@ -1,4 +1,4 @@
-import type { Resource, Resources } from './chronicle';
+import type { Resource, Resources } from './resources';
 import { nextRng, type Rng, shuffle } from './rng';
 
 const LAND_TERRAINS = { plain: 0.55, forest: 0.25, hills: 0.2 } as const;

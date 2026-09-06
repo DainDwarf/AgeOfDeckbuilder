@@ -1,6 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
-import { RESOURCES, type Resource } from '../src/rules/chronicle';
 import { tileKey, tileYield } from '../src/rules/map';
+import { RESOURCES, type Resource } from '../src/rules/resources';
 import {
   chronicleOf,
   click,

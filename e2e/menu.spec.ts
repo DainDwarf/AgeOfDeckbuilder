@@ -1,6 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
 import { DECKS } from '../src/rules/cards';
-import { apply, beginChronicle, type Chronicle, outcome } from '../src/rules/chronicle';
+import { apply, beginChronicle, outcome } from '../src/rules/chronicle';
+import type { Chronicle } from '../src/rules/state';
 import {
   aimed,
   browse,

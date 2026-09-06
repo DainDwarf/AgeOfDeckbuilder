@@ -1,12 +1,7 @@
 import type Phaser from 'phaser';
-import {
-  type Chronicle,
-  growthThreshold,
-  idle,
-  RESOURCES,
-  type Resource,
-  type Stage,
-} from '../rules/chronicle';
+import { growthThreshold, type Stage } from '../rules/chronicle';
+import { RESOURCES, type Resource } from '../rules/resources';
+import { type Chronicle, idle } from '../rules/state';
 import { layOutBar, type Placed, type Zone } from './bar-layout';
 import { EASE, ended, stopMotion } from './card-motion';
 import {

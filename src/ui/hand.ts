@@ -1,13 +1,7 @@
 import Phaser from 'phaser';
-import { type AimedCard, CARDS, type CardId } from '../rules/cards';
-import {
-  type Chronicle,
-  costOf,
-  playable,
-  type Refusal,
-  refusalOf,
-  type Stage,
-} from '../rules/chronicle';
+import { type AimedCard, CARDS } from '../rules/cards';
+import { costOf, playable, type Refusal, refusalOf, type Stage } from '../rules/chronicle';
+import type { CardId, Chronicle } from '../rules/state';
 import {
   CARD_BASELINE,
   CARD_HEIGHT,

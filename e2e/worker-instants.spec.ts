@@ -1,7 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
-import type { CardId } from '../src/rules/cards';
-import type { Chronicle } from '../src/rules/chronicle';
 import { IMPROVEMENTS, type TileCoords, tileKey } from '../src/rules/map';
+import type { CardId, Chronicle } from '../src/rules/state';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
 import { text } from '../src/ui/text';
 import {

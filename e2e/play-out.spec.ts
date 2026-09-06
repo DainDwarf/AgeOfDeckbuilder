@@ -1,6 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
 import type Phaser from 'phaser';
-import { growthThreshold, idle } from '../src/rules/chronicle';
+import { growthThreshold } from '../src/rules/chronicle';
+import { idle } from '../src/rules/state';
 import { text } from '../src/ui/text';
 import {
   chronicleOf,

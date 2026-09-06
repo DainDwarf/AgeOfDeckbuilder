@@ -12,11 +12,6 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
-- **The state has a module of its own** — the chronicle type, the resource list, the block
-  vocabulary and the readings a card's closures need (held tiles, idle inhabitants) move to a
-  rules module that imports no content; the cards module imports state and never the engine, the
-  engine imports both, and no cycle runs between rules modules. Every rules and e2e test passes
-  unchanged. Doc-impact: none.
 - **A card is aimed at a tile or at nothing** — the unit aim goes: a unit stands on one tile, so
   a card aimed at a unit is aimed at its tile, its predicate reads the unit standing there and its
   effect finds it at resolution; the play target is a tile, the finder has one branch, the block

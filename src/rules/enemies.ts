@@ -1,4 +1,3 @@
-import type { Chronicle } from './chronicle';
 import {
   distance,
   MAP_COMPOSITION,
@@ -9,10 +8,15 @@ import {
   tileKey,
 } from './map';
 import { nextRng } from './rng';
-import { type Landing, leastHealth, reachable, UNIT_STATS, unitAt } from './units';
-
-/** `PH_` marks a stand-in: this script is not authored content, and it goes with the enemies it drives. */
-export type EnemyScriptId = 'PH_Advance';
+import type { Chronicle } from './state';
+import {
+  type EnemyScriptId,
+  type Landing,
+  leastHealth,
+  reachable,
+  UNIT_STATS,
+  unitAt,
+} from './units';
 
 /**
  * What an enemy does in the enemy phase, asked of it by its place in `chronicle.units`. The phase
