@@ -18,6 +18,13 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
   row goes, the *instant* row absorbs "one thing with one unit", and every mention of orders
   (military's job, the refresh rows) is edited. Rules tests pin the refresh and its refusals as an
   instant. Doc-impact: `docs/DESIGN.md`, `docs/GLOSSARY.md`.
+- **Units carry an id** — every unit is named by a number dealt from a counter in the chronicle
+  state, through the one function the unit card and an arrival both enter a unit by; the move and
+  attack commands, the unit target and the target-finders address a unit by id, the list staying
+  a list; the attack no longer spends before the blow and the scene no longer reselects by tile,
+  their trap comments gone; the enemy phase walks units by id. Rules tests pin that a kill leaves
+  every other unit addressable and that the same seed and commands deal the same ids.
+  Doc-impact: none.
 - **Enemies move and attack at once** — the intent goes: in the enemy phase each enemy moves by
   its script and attacks a unit of the player's within its range in the same phase, from the
   same pool a warrior has, and the combat phase is gone from the turn; capture stays as it is.
