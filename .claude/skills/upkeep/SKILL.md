@@ -24,6 +24,10 @@ Read every page reachable from `docs/index.md`. For each, check:
 - **Domain claims** have no code to lint against: check their named source still says so; flag
   an interview-sourced claim older than three months for re-interview.
 - **`CLAUDE.md` length** — if it has grown past ~150 lines, propose what moves to a `docs/` page.
+- **Page shape** — a page whose table of contents no longer reads at a glance, or whose level-2
+  sections have grown into documents of their own: propose the split, naming the seams and the
+  files. Never make it in this pass; a split of a `docs/` page is a design of its own and goes to
+  the user, then through `/intake`.
 
 ## 2. Board and ideas eviction
 
