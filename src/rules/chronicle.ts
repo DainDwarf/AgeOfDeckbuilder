@@ -390,15 +390,18 @@ function blocked(chronicle: Chronicle, id: CardId): Block[] {
 }
 
 /**
- * One card played: on the one `played` stage the card has left the hand for the discard pile, its
+ * One card played: the aim is judged on the chronicle as it stands, the same one the map lit its
+ * tiles from; then, on the one `played` stage, the card has left the hand for the discard pile, its
  * cost is paid and its effect has landed. A play the hand, the city, the map or the discard pile
- * refuses is one `refused` stage on the chronicle as it stood.
+ * refuses is one `refused` stage on the chronicle as it stood, nothing paid or discarded.
  */
 function play(chronicle: Chronicle, command: PlayCommand): Stage[] {
   const id = chronicle.hand[command.index];
   if (id === undefined || !playable(refusalOf(chronicle, id))) {
     return [{ name: 'refused', chronicle }];
   }
+  const effect = aimedEffect(chronicle, id, command);
+  if (effect === undefined) return [{ name: 'refused', chronicle }];
 
   const resources = { ...chronicle.resources };
   for (const { resource, amount } of costOf(id)) resources[resource] -= amount;
@@ -408,36 +411,37 @@ function play(chronicle: Chronicle, command: PlayCommand): Stage[] {
     hand: chronicle.hand.filter((_, at) => at !== command.index),
     discardPile: [...chronicle.discardPile, id],
   };
-
-  const played = resolve(paid, id, command);
-  return played === undefined
-    ? [{ name: 'refused', chronicle }]
-    : [{ name: 'played', chronicle: played }];
+  return [{ name: 'played', chronicle: effect(paid) }];
 }
 
 /**
- * The card's effect, on the chronicle its cost is already paid on. A play aimed another way than
- * the card is aimed lands nowhere. A card aimed at a tile takes one the aim admits and no other; one
- * aimed at the discard pile takes a card the pile held before this play sent its own there, which is
- * every place but the last; a card that lands whole takes nothing at all. `undefined` refuses the
- * play, and nothing is paid or discarded.
+ * The card's effect with what the play aimed it at, judged on the chronicle before anything is paid,
+ * ready for the chronicle its cost is paid on. A play aimed another way than the card is aimed lands
+ * nowhere. A card aimed at a tile takes one the aim admits and no other; one aimed at the discard
+ * pile takes a place the pile holds as it stands; a card that lands whole takes nothing at all.
+ * `undefined` refuses the play.
  */
-function resolve(paid: Chronicle, id: CardId, command: PlayCommand): Chronicle | undefined {
+function aimedEffect(
+  chronicle: Chronicle,
+  id: CardId,
+  command: PlayCommand,
+): ((paid: Chronicle) => Chronicle) | undefined {
   const card = CARDS[id];
   switch (card.aim) {
     case 'none':
-      return command.aim === 'none' ? card.effect(paid) : undefined;
+      return command.aim === 'none' ? card.effect : undefined;
     case 'tile': {
       if (command.aim !== 'tile') return undefined;
-      const at = tileKey(command.tile);
-      if (!admitted(paid, card).some((coord) => tileKey(coord) === at)) return undefined;
-      return card.effect(paid, command.tile);
+      const { tile } = command;
+      const at = tileKey(tile);
+      if (!admitted(chronicle, card).some((coord) => tileKey(coord) === at)) return undefined;
+      return (paid) => card.effect(paid, tile);
     }
     case 'discard-pile': {
       if (command.aim !== 'discard-pile') return undefined;
       const at = command.card;
-      if (at < 0 || at >= paid.discardPile.length - 1) return undefined;
-      return card.effect(paid, at);
+      if (at < 0 || at >= chronicle.discardPile.length) return undefined;
+      return (paid) => card.effect(paid, at);
     }
   }
 }

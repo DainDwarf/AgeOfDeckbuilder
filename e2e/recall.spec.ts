@@ -2,7 +2,6 @@ import { expect, type Page, test } from '@playwright/test';
 import { DECKS } from '../src/rules/cards';
 import { apply, beginChronicle, outcome, playable, refusalOf } from '../src/rules/chronicle';
 import type { Chronicle } from '../src/rules/state';
-import type { ChronicleScene } from '../src/ui/chronicle-scene';
 import {
   chronicleOf,
   click,
@@ -58,12 +57,7 @@ test('a press on a card of the aim window recalls it into the hand', async ({ pa
 
   // The window lays the pile out newest first, so its first card is the pile's last.
   await click(page, 'aim-window-card-0');
-  await page.waitForFunction(
-    (science) =>
-      window.game?.scene.getScene<ChronicleScene>('chronicle').chronicle.resources.science ===
-      science,
-    before.resources.science - 2,
-  );
+  await expect.poll(async () => (await chronicleOf(page)).discardPile.at(-1)).toBe('PH_Recall');
 
   const after = await chronicleOf(page);
   expect(after.hand).toEqual([

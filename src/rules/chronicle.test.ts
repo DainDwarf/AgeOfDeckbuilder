@@ -1984,7 +1984,13 @@ test('the mine card names the first of its three reasons: worker, terrain, then 
   const mined = withTile(worked, { ...at, terrain: 'hills', improvements: ['PH_Mine'] });
 
   expect(refusedFor(plain, 'PH_Mine', at)).toBe('worker');
-  expect(refusedFor({ ...mined, units: [] }, 'PH_Mine', at)).toBe('worker');
+  expect(
+    refusedFor(
+      withTile(hills, { ...at, terrain: 'hills', improvements: ['PH_Mine'] }),
+      'PH_Mine',
+      at,
+    ),
+  ).toBe('worker');
   expect(refusedFor(withUnits(plain, [worker(at)]), 'PH_Mine', at)).toBe('terrain');
   expect(refusedFor(mined, 'PH_Mine', at)).toBe('improvement');
   expect(refusedFor(worked, 'PH_Mine', at)).toBeUndefined();
@@ -1993,19 +1999,16 @@ test('the mine card names the first of its three reasons: worker, terrain, then 
 test('the urbanisation card names the first of its three reasons: worker, terrain, then slot', () => {
   const at = { q: 1, r: 0 };
   const plain = founded(2);
-  const worked = founded(2, { units: [worker(at)] });
-  const wooded = { ...worked, tiles: madeOf(field(2), 'forest', [at]) };
-  const filled = withTile(worked, {
-    ...at,
-    terrain: 'plain',
-    improvements: [],
-    building: 'PH_Farm',
-  });
+  const forest = founded(2, { tiles: madeOf(field(2), 'forest', [at]) });
+  const built = withTile(plain, { ...at, terrain: 'plain', improvements: [], building: 'PH_Farm' });
+  const worked = withUnits(plain, [worker(at)]);
+  const wooded = withUnits(forest, [worker(at)]);
+  const filled = withUnits(built, [worker(at)]);
 
   expect(refusedFor(plain, 'PH_Urbanisation', at)).toBe('worker');
-  expect(refusedFor({ ...wooded, units: [] }, 'PH_Urbanisation', at)).toBe('worker');
+  expect(refusedFor(forest, 'PH_Urbanisation', at)).toBe('worker');
   expect(refusedFor(wooded, 'PH_Urbanisation', at)).toBe('terrain');
-  expect(refusedFor({ ...filled, units: [] }, 'PH_Urbanisation', at)).toBe('worker');
+  expect(refusedFor(built, 'PH_Urbanisation', at)).toBe('worker');
   expect(refusedFor(filled, 'PH_Urbanisation', at)).toBe('slot');
   expect(refusedFor(worked, 'PH_Urbanisation', at)).toBeUndefined();
 });
