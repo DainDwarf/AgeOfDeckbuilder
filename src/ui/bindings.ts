@@ -1,3 +1,4 @@
+import type Phaser from 'phaser';
 import { type TextKey, text } from './text';
 
 /**
@@ -63,6 +64,11 @@ export const PRESSES: ReadonlyMap<number, Press> = new Map([
 ]);
 
 const UNBINDABLE: ReadonlySet<string> = new Set([...PRESSES.keys()].map(mouseCode));
+
+/** Which press a pointer is making, and nothing for a button that presses the screen with neither. */
+export function pressOf(pointer: Phaser.Input.Pointer): Press | undefined {
+  return PRESSES.get(pointer.button);
+}
 
 /** Where the browser keeps the bindings; the origin is shared with whatever else the host serves. */
 const STORED = 'age-of-deckbuilder.controls';

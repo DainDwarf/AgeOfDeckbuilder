@@ -31,7 +31,7 @@ import {
   unitOf,
 } from '../rules/units';
 import { MAP_FRAME } from './band';
-import { type Bind, bindings, boundTo, type Control, PRESSES, type Press } from './bindings';
+import { type Bind, bindings, boundTo, type Control, type Press, pressOf } from './bindings';
 import { EASE, ended, stopMotion } from './card-motion';
 import {
   ACCENT,
@@ -424,10 +424,6 @@ function boxOf(tiles: readonly Tile[]): {
 
 function same(a: TileCoords, b: TileCoords): boolean {
   return a.q === b.q && a.r === b.r;
-}
-
-function pressOf(pointer: Phaser.Input.Pointer): Press | undefined {
-  return PRESSES.get(pointer.button);
 }
 
 /**

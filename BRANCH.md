@@ -22,9 +22,6 @@ with it.
   hand included; the inspection key shows the selected card large; the drag is unchanged. A click
   on the card being aimed no longer lets it go, and the code says *selected* where it said
   *armed*. E2e on `e2e/press.spec.ts` and `e2e/refuse.spec.ts`. Doc-impact: none.
-- **The right click shows a hand card large** — a right click on any card of the hand, selected or
-  not, while a card is being aimed or not, shows it large; the left click no longer does. E2e on
-  `e2e/press.spec.ts`. Doc-impact: none.
 - **The right click never selects** — on a tile it inspects without selecting, and pressed again
   on the same tile steps on; off the map it drops the inspection and leaves the selection standing;
   the inspection key moves the inspection to the selection when they differ. E2e on

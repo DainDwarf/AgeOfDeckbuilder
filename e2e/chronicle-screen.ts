@@ -335,6 +335,25 @@ export function workerRun(
   });
 }
 
+/** Where an aimed card the city can pay for lies in the hand, or -1. */
+export function armed(chronicle: Chronicle): number {
+  return chronicle.hand.findIndex(
+    (id) => CARDS[id].aim === 'tile' && playable(refusalOf(chronicle, id)),
+  );
+}
+
+/** The first seed with a turn in its first eight that opens on such a card. */
+export function armedRun(): { seed: number; turn: number } {
+  return firstSeed('opens a turn on an aimed card the city can pay for', (seed) => {
+    let chronicle = beginChronicle(seed, DECKS.PH_Deck);
+    for (let turn = 1; turn <= 8; turn++) {
+      if (armed(chronicle) !== -1) return { seed, turn };
+      chronicle = outcome(apply(chronicle, { type: 'end-turn' }));
+    }
+    return undefined;
+  });
+}
+
 /** The first seed whose city is captured inside twenty turns of ending the turn and nothing else. */
 export function fallRun(): { seed: number; turns: number } {
   return firstSeed('is captured inside twenty turns', (seed) => {

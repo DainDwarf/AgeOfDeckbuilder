@@ -3,6 +3,9 @@ import { CARDS, DECKS } from '../src/rules/cards';
 import { apply, beginChronicle, outcome, playable, refusalOf } from '../src/rules/chronicle';
 import type { Chronicle } from '../src/rules/state';
 import {
+  aimed,
+  armed,
+  armedRun,
   browse,
   chronicleOf,
   dragOut,
@@ -14,6 +17,7 @@ import {
   onScreen,
   open,
   scrolled,
+  settled,
   standing,
   watch,
   wheel,
@@ -89,6 +93,10 @@ test('a hand card released off the canvas comes home, plays nothing, and leaves 
   expect((await chronicleOf(page)).hand).toEqual(opened.hand);
 
   await page.mouse.click(home.x, home.y);
+  await settled(page);
+  expect(await standing(page, 'inspection')).toBe(false);
+
+  await page.mouse.click(home.x, home.y, { button: 'right' });
   await expect.poll(() => standing(page, 'inspection')).toBe(true);
 
   expect(problems).toEqual([]);
@@ -133,7 +141,7 @@ test('a hand card whose release the blur swallowed comes home, and the next pres
   expect(problems).toEqual([]);
 });
 
-test('a press the blur swallowed before it dragged is no click, and the next click inspects', async ({
+test('a press the blur swallowed before it dragged is no click, and the next right click inspects', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -160,8 +168,34 @@ test('a press the blur swallowed before it dragged is no click, and the next cli
   await page.mouse.move(home.x, home.y - 300 * home.unit, { steps: 5 });
   await expect.poll(() => stillAt(page, card, home)).toBe(true);
 
-  await page.mouse.click(home.x, home.y);
+  await page.mouse.click(home.x, home.y, { button: 'right' });
   await expect.poll(() => standing(page, 'inspection')).toBe(true);
+
+  expect(problems).toEqual([]);
+});
+
+test('a right click on the card being aimed shows it large, and the back key leaves the aim standing', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const run = armedRun();
+
+  await open(page, run.seed, 'PH_Deck');
+  for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
+
+  const opened = await chronicleOf(page);
+  const index = armed(opened);
+  await dragOut(page, index);
+  await aimed(page);
+
+  const card = await onScreen(page, `hand-${index}`);
+  await page.mouse.click(card.x, card.y, { button: 'right' });
+  await expect.poll(() => standing(page, 'inspection')).toBe(true);
+
+  await page.keyboard.press('Escape');
+  await expect.poll(() => standing(page, 'inspection')).toBe(false);
+  expect(await standing(page, 'aim')).toBe(true);
+  expect(await chronicleOf(page)).toEqual(opened);
 
   expect(problems).toEqual([]);
 });

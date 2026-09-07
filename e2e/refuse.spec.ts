@@ -13,6 +13,8 @@ import type { CardId, Chronicle } from '../src/rules/state';
 import { text } from '../src/ui/text';
 import {
   aimed,
+  armed,
+  armedRun,
   chronicleOf,
   dragOut,
   endTurn,
@@ -97,25 +99,6 @@ test('a card the rules refuse comes home, plays nothing, and stands its note ove
 
   expect(problems).toEqual([]);
 });
-
-/** Where an aimed card the city can pay for lies in the hand, or -1. */
-function armed(chronicle: Chronicle): number {
-  return chronicle.hand.findIndex(
-    (id) => CARDS[id].aim === 'tile' && playable(refusalOf(chronicle, id)),
-  );
-}
-
-/** The first seed with a turn in its first eight that opens on such a card. */
-function armedRun(): { seed: number; turn: number } {
-  return firstSeed('opens a turn on an aimed card the city can pay for', (seed) => {
-    let chronicle = beginChronicle(seed, DECKS.PH_Deck);
-    for (let turn = 1; turn <= 8; turn++) {
-      if (armed(chronicle) !== -1) return { seed, turn };
-      chronicle = outcome(apply(chronicle, { type: 'end-turn' }));
-    }
-    return undefined;
-  });
-}
 
 test('a press on a tile an aim refuses says one reason over it, and the card stays armed', async ({
   page,
