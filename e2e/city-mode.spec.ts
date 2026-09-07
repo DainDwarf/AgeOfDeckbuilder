@@ -1,14 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
 import { DECKS } from '../src/rules/cards';
 import { beginChronicle, claimable } from '../src/rules/chronicle';
-import {
-  CITY_TILE,
-  distance,
-  runsAlong,
-  type TileCoords,
-  tileKey,
-  tileYield,
-} from '../src/rules/map';
+import { distance, runsAlong, type TileCoords, tileKey, tileYield } from '../src/rules/map';
 import { RESOURCES } from '../src/rules/resources';
 import { text } from '../src/ui/text';
 import {
@@ -154,9 +147,10 @@ test('a second left click on the city’s own tile enters city mode, and on any 
   const problems = watch(page);
 
   await open(page, 1, 'PH_Deck');
-  const city = await tileOnScreen(page, CITY_TILE);
+  const founded = (await chronicleOf(page)).city;
+  const city = await tileOnScreen(page, founded);
   await page.mouse.click(city.x, city.y);
-  await expect.poll(() => ringedTile(page)).toBe(tileKey(CITY_TILE));
+  await expect.poll(() => ringedTile(page)).toBe(tileKey(founded));
   expect(await inCityMode(page)).toBe(false);
 
   await page.mouse.click(city.x, city.y);
