@@ -70,13 +70,13 @@ function seenFrom(
 }
 
 /**
- * The tiles the city and the units of the player's see: every tile the city holds, and every tile
- * within a sight of theirs that a line over the ground reaches. The one answer to what is in sight.
+ * The tiles the city and the units of the player's see, by their keys: every tile the city holds,
+ * and every tile within a sight of theirs that a line over the ground reaches. The one answer to
+ * what is in sight.
  */
-export function inSight(chronicle: Chronicle): TileCoords[] {
+export function inSight(chronicle: Chronicle): ReadonlySet<string> {
   const terrains = new Map(chronicle.tiles.map((tile) => [tileKey(tile), tile.terrain]));
-  const seen = new Map<string, TileCoords>();
-  for (const coord of chronicle.held) seen.set(tileKey(coord), coord);
+  const seen = new Set(chronicle.held.map(tileKey));
 
   const watching = [{ from: chronicle.city, sight: CITY_SIGHT }];
   for (const unit of chronicle.units) {
@@ -87,9 +87,9 @@ export function inSight(chronicle: Chronicle): TileCoords[] {
     for (const { q, r } of chronicle.tiles) {
       const coord = { q, r };
       if (seen.has(tileKey(coord)) || distance(from, coord) > sight) continue;
-      if (seenFrom(terrains, from, coord)) seen.set(tileKey(coord), coord);
+      if (seenFrom(terrains, from, coord)) seen.add(tileKey(coord));
     }
   }
 
-  return [...seen.values()];
+  return seen;
 }

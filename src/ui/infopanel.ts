@@ -114,10 +114,18 @@ type Term = (typeof STATS)[number] | Resource;
 
 /** What a stat's row reads: what the unit has left over its own number, where it has two. */
 function readingOf(unit: Unit, stat: (typeof STATS)[number]): string {
-  if (stat === 'health') return `${unit.stats.health} / ${UNIT_STATS[unit.stats.type].health}`;
-  if (stat === 'move') return `${unit.movePoints} / ${unit.stats.move}`;
-  if (stat === 'action') return `${unit.action} / ${unit.stats.action}`;
-  return String(unit.stats[stat]);
+  switch (stat) {
+    case 'health':
+      return `${unit.stats.health} / ${UNIT_STATS[unit.stats.type].health}`;
+    case 'move':
+      return `${unit.movePoints} / ${unit.stats.move}`;
+    case 'action':
+      return `${unit.action} / ${unit.stats.action}`;
+    case 'damage':
+    case 'range':
+    case 'sight':
+      return String(unit.stats[stat]);
+  }
 }
 
 /** One card drawn: its face, its contents, and the zones its rows raise tooltips from. */

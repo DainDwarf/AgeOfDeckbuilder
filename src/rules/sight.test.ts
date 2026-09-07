@@ -83,7 +83,7 @@ function watching(chronicle: Chronicle, tile: TileCoords, sight: number): Chroni
 
 /** Whether a tile is in sight. */
 function sees(chronicle: Chronicle, coord: TileCoords): boolean {
-  return inSight(chronicle).some((seen) => tileKey(seen) === tileKey(coord));
+  return inSight(chronicle).has(tileKey(coord));
 }
 
 test('over flat ground a unit sees every tile within its sight, and none beyond it', () => {
