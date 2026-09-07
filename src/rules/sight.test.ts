@@ -217,16 +217,16 @@ test('a killed unit charts nothing more: what it alone saw stands as it stood wh
 });
 
 test('a unit of the player’s neither lands on an uncharted tile nor crosses one to reach past it', () => {
-  const hidden = off(2, 0);
+  const uncharted = off(2, 0);
   const beyond = off(3, 0);
   const chronicle = watching(founded(ground(['forest', [off(1, 0)]]), [beyond]), WATCHER, {
     sight: SIGHT,
     move: 3,
   });
-  expect(snapshotOf(chronicle, hidden)).toBeUndefined();
+  expect(snapshotOf(chronicle, uncharted)).toBeUndefined();
   expect(snapshotOf(chronicle, beyond)).toBeDefined();
 
-  const onto = apply(chronicle, { type: 'move', unit: 1, tile: hidden });
+  const onto = apply(chronicle, { type: 'move', unit: 1, tile: uncharted });
   const past = apply(chronicle, { type: 'move', unit: 1, tile: beyond });
 
   expect(onto.map((stage) => stage.name)).toEqual(['refused']);

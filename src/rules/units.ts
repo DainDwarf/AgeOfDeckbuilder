@@ -87,7 +87,8 @@ type Crossed = {
 export function reachable(chronicle: Crossed, unit: Unit): Landing[] {
   const terrain = new Map(chronicle.tiles.map((tile) => [tileKey(tile), tile.terrain]));
   const standing = new Map(chronicle.units.map((other) => [tileKey(other.tile), other.faction]));
-  const charted = unit.faction === 'player' ? new Set(chronicle.snapshots.map(tileKey)) : undefined;
+  const chartedTiles =
+    unit.faction === 'player' ? new Set(chronicle.snapshots.map(tileKey)) : undefined;
 
   const seen = new Set([tileKey(unit.tile)]);
   const landings: Landing[] = [];
@@ -100,7 +101,7 @@ export function reachable(chronicle: Crossed, unit: Unit): Landing[] {
         const at = tileKey(coord);
         if (seen.has(at)) continue;
         if (!passable(terrain.get(at))) continue;
-        if (charted !== undefined && !charted.has(at)) continue;
+        if (chartedTiles !== undefined && !chartedTiles.has(at)) continue;
         const held = standing.get(at);
         if (held !== undefined && held !== unit.faction) continue;
         seen.add(at);

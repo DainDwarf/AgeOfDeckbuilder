@@ -27,7 +27,7 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 - **Placeholder road card** — a stand-in improvement card lays a road that lowers its tile's
   movement cost; a rules test shows a unit reaching further over it than beside it.
   Doc-impact: none.
-- **Camps on the map** — the generator places camps, each hidden until seen, and an event that
+- **Camps on the map** — the generator places camps, each uncharted until seen, and an event that
   spawns enemies spawns them at a camp instead of the outer ring. Rules test on a fixed seed plus
   an e2e spec. Doc-impact: `docs/DESIGN.md`.
 - **Capturing a camp** — a unit standing on a camp through a full turn captures it; a captured camp

@@ -162,9 +162,9 @@ rim is all that says how far the map goes.
 **Fog draws the tile as it was last seen.** The chronicle keeps a snapshot of every tile that has
 ever been in sight — its terrain, its feature, its improvements, its building, and the non-player
 unit standing on it. Rivers never move, so none is kept; a unit of the player's carries sight with
-it and is never stale, so none is kept either. The snapshot is taken again after every step a
-command resolves as, so an enemy crossing in sight is recorded step by step, and a unit killed
-reveals nothing after the step that killed it.
+it and is never stale, so none is kept either. The snapshot is taken again each time a command
+changes the chronicle, so an enemy crossing in sight is recorded as it crosses, and a unit killed
+reveals nothing after the attack that killed it.
 
 **A unit in the snapshot stays there until its tile is seen again** 🔧: the player is told where it
 last stood, not where it is. The end of the turn wiping units out of the snapshot is one rule away.
