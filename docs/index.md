@@ -5,7 +5,7 @@ history, [`../CHANGELOG.md`](../CHANGELOG.md) holds what players were told. Ever
 reachable from here; a page earns existence only when the summary line pointing to it is much
 shorter than what it holds.
 
-- [`DESIGN.md`](DESIGN.md) — the game: pitch, scope, systems; every section marked decided or
+- [`DESIGN.md`](DESIGN.md) — the game: pitch and scope, interface, systems; every section marked decided or
   provisional, its rationale inline.
 - [`DOGMAS.md`](DOGMAS.md) — how this project is built: working with the user, design principles,
   writing rules, code, testing, git, docs, tooling, and the stack with its layout. `/intake` and

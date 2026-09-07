@@ -76,12 +76,7 @@ Two axes of progression:
 - **Breadth is influence**, the meta-currency every chronicle pays, victory or defeat, scaled by how the city
   fared. It buys copies of owned cards, modifications to owned cards, and faster starts.
 
-### Presentation 🔧
-
-Real graphics, animation and idle animation, sound and music are the end goal — not the first
-release, but the stack is chosen with them in mind.
-
-## Scope ✅
+### Scope ✅
 
 - **Single-player, turn-based, untimed, offline.** No account, no server, no multiplayer — ever.
 - **Playable in the browser.** First contact is a tab on the game's page; the same code also
@@ -97,6 +92,11 @@ release, but the stack is chosen with them in mind.
   console and closes it again.
 - **English only.** No language is planned; text is kept addable.
 - Not in scope: a map editor, modding, a level or scenario editor.
+
+🔧 Real graphics, animation and idle animation, sound and music are the end goal — not the first
+release, but the stack is chosen with them in mind.
+
+## Interface
 
 ### The menu ✅
 
@@ -278,7 +278,7 @@ threshold. Food as a plain spendable resource with growth elsewhere was rejected
 would have nothing to bite. Inhabitants consuming food was rejected too: the widening growth
 threshold and the schedule's events are the whole of the pressure on the population.
 
-### City mode ✅
+### The chronicle screen ✅
 
 The chronicle screen has two modes. Out of city mode a click on a tile **selects** it: the map rings
 it and, when a unit of the player's stands there, lights every tile its move points reach and glows,
