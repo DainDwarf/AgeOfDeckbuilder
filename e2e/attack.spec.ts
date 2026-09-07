@@ -29,7 +29,7 @@ type AttackRun = {
 /** What one end of turn may take, every stage played out; the run's own count sets the budget. */
 const TURN_MS = 10_000;
 
-/** The first seed under a thousand that opens on such a run. */
+/** The first seed that opens on such a run. */
 function attackRun(): AttackRun {
   return firstSeed('brings an enemy within reach of a standing warrior', (seed) => {
     let chronicle = beginChronicle(seed, DECKS.PH_Deck);
