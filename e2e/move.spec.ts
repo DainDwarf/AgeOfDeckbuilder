@@ -46,7 +46,7 @@ function steppedThisTurn(
 ): { first: TileCoords; second: TileCoords } | undefined {
   const enter = chronicle.hand.indexOf('PH_Worker');
   if (enter === -1 || !playable(refusalOf(chronicle, 'PH_Worker'))) return undefined;
-  const entered = outcome(apply(chronicle, { type: 'play', index: enter }));
+  const entered = outcome(apply(chronicle, { type: 'play', index: enter, aim: 'none' }));
   if (entered.units.length !== 1) return undefined;
 
   for (const first of neighbours(entered.city)) {

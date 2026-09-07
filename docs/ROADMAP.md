@@ -13,10 +13,11 @@ ages: Stone, Bronze, ideally Iron.
   testable early — that is why victory comes third, not fifth.
 - **v0.0.4 — The deck is data.** Cards become a content catalogue instead of hardcoded
   stand-ins — the deferred dogmas return with it — plus the map's gifts. The catalogue is an
-  argument the rules receive, never a field of the state, and the rules become one function of
-  content, state and command; the settled reasoning is the *fixture content* entry in
-  [`IDEAS.md`](../IDEAS.md). First real content: the Stone age's cards, with provisional numbers
-  at last.
+  argument the rules receive, never a field of the state: a card carries its aim predicate and
+  its effect closure, and no closure survives a save. The rules become one function of content,
+  state and command, so a save names its content version and a replay is content, seed and
+  commands; a test hands in synthetic content of its own. First real content: the Stone age's
+  cards, with provisional numbers at last.
 - **v0.0.5 — The meta.** The launch screen (age, region, civilization, deck), achievements
   unlocking technologies, influence, deck editing, one civilization, save and resume.
 - **v0.0.6 — The look.** Art style locked, real assets, animation, sound, music. After the

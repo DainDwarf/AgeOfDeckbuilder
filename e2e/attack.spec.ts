@@ -48,7 +48,7 @@ function attackRun(): AttackRun {
 function besieged(chronicle: Chronicle): { turns: number; enemy: TileCoords } | undefined {
   const enter = chronicle.hand.indexOf('PH_Warrior');
   if (enter === -1 || !playable(refusalOf(chronicle, 'PH_Warrior'))) return undefined;
-  let standing = outcome(apply(chronicle, { type: 'play', index: enter }));
+  let standing = outcome(apply(chronicle, { type: 'play', index: enter, aim: 'none' }));
   if (standing.units.length !== 1) return undefined;
 
   for (let turns = 1; turns <= 20; turns++) {

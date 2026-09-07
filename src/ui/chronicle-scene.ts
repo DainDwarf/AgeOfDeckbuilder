@@ -7,7 +7,6 @@ import {
   cityCommand,
   outcome,
   type Stage,
-  tileBlock,
   tileCost,
   tileRefusal,
   type UnitCommand,
@@ -287,7 +286,7 @@ export class ChronicleScene extends Phaser.Scene {
       this,
       ui,
       (index) => {
-        void playOut({ type: 'play', index });
+        void playOut({ type: 'play', index, aim: 'none' });
       },
       (index, card, released) => {
         // The aiming catcher lies under the hand and the piles, so the button is the one thing
@@ -300,11 +299,11 @@ export class ChronicleScene extends Phaser.Scene {
           (tile) => {
             endTurn.live(true);
             if (tile === undefined) released();
-            else void playOut({ type: 'play', index, tile });
+            else void playOut({ type: 'play', index, aim: 'tile', tile });
           },
           (found) => {
             const tile = tileAt(this.current.tiles, found.tile);
-            const block = tile === undefined ? undefined : tileBlock(this.current, card, tile);
+            const block = tile === undefined ? undefined : card.refuses(this.current, tile);
             if (block === undefined) return;
             note.overTile([], { unaffordable: [], blocked: [block] }, found.at);
           },
@@ -317,7 +316,7 @@ export class ChronicleScene extends Phaser.Scene {
         return overlay.aimDiscardPile(
           this.current,
           (card) => {
-            void playOut({ type: 'play', index, card });
+            void playOut({ type: 'play', index, aim: 'discard-pile', card });
           },
           released,
         );

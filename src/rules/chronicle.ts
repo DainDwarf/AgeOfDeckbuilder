@@ -25,15 +25,22 @@ import {
 
 export type Command =
   | { readonly type: 'end-turn' }
+  | { readonly type: 'play'; readonly index: number; readonly aim: 'none' }
   | {
       readonly type: 'play';
       readonly index: number;
-      readonly tile?: TileCoords;
+      readonly aim: 'tile';
+      readonly tile: TileCoords;
+    }
+  | {
+      readonly type: 'play';
+      readonly index: number;
+      readonly aim: 'discard-pile';
       /**
        * Where in the discard pile the card aimed at it lies, in the pile as it stood before the
        * play: the play sends the card being played to the pile before the effect resolves.
        */
-      readonly card?: number;
+      readonly card: number;
     }
   | { readonly type: 'move'; readonly unit: number; readonly tile: TileCoords }
   | { readonly type: 'attack'; readonly unit: number; readonly tile: TileCoords }
@@ -46,7 +53,7 @@ export type Command =
  */
 export type UnitCommand = Extract<Command, { readonly unit: number }>;
 
-/** One card of the hand played, with whatever its aim was aimed at. */
+/** One card of the hand played, aimed the way the card is aimed: at nothing, a tile or the discard pile. */
 type PlayCommand = Extract<Command, { readonly type: 'play' }>;
 
 /** A full hand. */
@@ -355,21 +362,12 @@ function unaffordable(chronicle: Chronicle, costs: readonly Cost[]): Resource[] 
 }
 
 /**
- * The one reason a card's aim refuses this tile — the first its checks answer, in the order the aim
- * composes them — and nothing at all on a tile it admits. The one door the map's glow, the play and
- * the note a refused press raises all read the aim through.
- */
-export function tileBlock(chronicle: Chronicle, card: AimedCard, tile: Tile): Block | undefined {
-  return card.refuses(chronicle, tile);
-}
-
-/**
  * Every tile a card's aim admits, the aim's own predicate the whole of the filter. The one list the
  * play and the map a card is aimed over both read.
  */
 export function admitted(chronicle: Chronicle, card: AimedCard): TileCoords[] {
   return chronicle.tiles
-    .filter((tile) => tileBlock(chronicle, card, tile) === undefined)
+    .filter((tile) => card.refuses(chronicle, tile) === undefined)
     .map(({ q, r }) => ({ q, r }));
 }
 
@@ -418,25 +416,27 @@ function play(chronicle: Chronicle, command: PlayCommand): Stage[] {
 }
 
 /**
- * The card's effect, on the chronicle its cost is already paid on. A card aimed at a tile takes one
- * the aim admits and no other; one aimed at the discard pile takes a card the pile held before this
- * play sent its own there, which is every place but the last; a card that lands whole takes nothing
- * at all. `undefined` refuses the play, and nothing is paid or discarded.
+ * The card's effect, on the chronicle its cost is already paid on. A play aimed another way than
+ * the card is aimed lands nowhere. A card aimed at a tile takes one the aim admits and no other; one
+ * aimed at the discard pile takes a card the pile held before this play sent its own there, which is
+ * every place but the last; a card that lands whole takes nothing at all. `undefined` refuses the
+ * play, and nothing is paid or discarded.
  */
 function resolve(paid: Chronicle, id: CardId, command: PlayCommand): Chronicle | undefined {
   const card = CARDS[id];
   switch (card.aim) {
     case 'none':
-      return card.effect(paid);
+      return command.aim === 'none' ? card.effect(paid) : undefined;
     case 'tile': {
-      if (command.tile === undefined) return undefined;
+      if (command.aim !== 'tile') return undefined;
       const at = tileKey(command.tile);
       if (!admitted(paid, card).some((coord) => tileKey(coord) === at)) return undefined;
       return card.effect(paid, command.tile);
     }
     case 'discard-pile': {
+      if (command.aim !== 'discard-pile') return undefined;
       const at = command.card;
-      if (at === undefined || at < 0 || at >= paid.discardPile.length - 1) return undefined;
+      if (at < 0 || at >= paid.discardPile.length - 1) return undefined;
       return card.effect(paid, at);
     }
   }

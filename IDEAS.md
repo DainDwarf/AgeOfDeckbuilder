@@ -19,25 +19,21 @@ a [`BOARD.md`](BOARD.md) line. Say
   *catalogue coherence tests* come back with the first content the compiler does not check — a
   stand-in in a closed TypeScript record is already checked. *Fixtures through the exported
   transform* returned on 2026-09-07, after a fixture that mirrored the rules bit.
-- **Fixture content** (v0.0.4, with the content catalogue — settled 2026-09-07, to be executed
-  then): the rules today are deterministic and side-effect free but not parametric in their
-  content — cards, improvements, buildings, features and unit stats are module constants the
-  rules read. With the catalogue, the content becomes an argument the rules receive, and the
-  game is one function of content, state and command. It is never a field of the state: cards
-  carry their aim predicate and effect closure, and closures never live in the state; the pure
-  tables could, but content split across two homes is the interdependency the code dogmas
-  forbid — one catalogue, one door. Two things follow. A test hands in a synthetic catalogue — a
-  building that stands on hills, a unit kind with its own numbers — so no fixture writes a tile or
-  a unit the real content could not produce, and no test reads its oracle from the code's own
-  table; first consumers are the four-layer yield test, the terraform-keeps-improvements test
-  and the unit builders' synthetic stats. A save names its content version, since the state
-  cannot carry the content, and a replay is the triple of content, seed and commands. The
-  `DOGMAS.md` Stack line gains its third word the same day, and the *mechanism vs content*
-  dogma returns to its Testing section as soon as the work permits: a new mechanism gets one
-  test on synthetic content; new content gets coherence checks only, never a gameplay test; a
-  test that reads its oracle from the code's own table, or seeds exactly a real card's price,
-  is a content test wearing a mechanism title. The chronicle tests hold about fifteen of the
-  first kind and six of the second today, all on stand-ins; they convert with the catalogue.
+- **Fixture content** (v0.0.4, with the content catalogue; the settled shape is that rung of
+  `docs/ROADMAP.md`): the rules today are deterministic and side-effect free but not parametric
+  in their content — cards, improvements, buildings, features and unit stats are module constants
+  the rules read. Why one catalogue and not the pure tables in the state with the closures beside
+  them: content split across two homes is the interdependency the code dogmas forbid. What the
+  rung executes: a test hands in a synthetic catalogue — a building that stands on hills, a unit
+  kind with its own numbers — so no fixture writes a tile or a unit the real content could not
+  produce, and no test reads its oracle from the code's own table; first consumers are the
+  four-layer yield test, the terraform-keeps-improvements test and the unit builders' synthetic
+  stats. The `DOGMAS.md` Stack line gains its third word the same day, and the *mechanism vs
+  content* dogma returns to its Testing section as soon as the work permits: a new mechanism gets
+  one test on synthetic content; new content gets coherence checks only, never a gameplay test; a
+  test that reads its oracle from the code's own table, or seeds exactly a real card's price, is
+  a content test wearing a mechanism title. The chronicle tests hold about fifteen of the first
+  kind and six of the second today, all on stand-ins; they convert with the catalogue.
 - **The render factor can change after boot**: regrow the bitmap, re-zoom cameras, re-rasterize
   text while the game runs. Four consumers: itch.io's fullscreen button, a settings render-scale
   slider, monitor-hopping, resizing the window after boot. Decide after the art style locks —
