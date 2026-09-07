@@ -6,14 +6,14 @@ import {
   type Control,
   DEFAULTS,
   keyLabel,
+  keyPressed,
   parseBindings,
-  pressOf,
   serialiseBindings,
 } from './bindings';
 
 /** A press, as the browser reports one: the place the key stands on, and what that key printed. */
 function press(code: string, printed: string): Bind {
-  return pressOf({ code, key: printed });
+  return keyPressed({ code, key: printed });
 }
 
 /** What one slot reads on the Controls window; a control standing on no key there reads nothing. */

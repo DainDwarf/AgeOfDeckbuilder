@@ -77,7 +77,7 @@ const UNPRINTED: ReadonlySet<string> = new Set(['Dead', 'Unidentified']);
  * The one place a press becomes a key. A one-character label stands for both of its cases, so a
  * shifted press and a bare one read alike.
  */
-export function pressOf(event: { code: string; key: string }): Bind {
+export function keyPressed(event: { code: string; key: string }): Bind {
   if (UNPRINTED.has(event.key)) return { code: event.code };
   return {
     code: event.code,

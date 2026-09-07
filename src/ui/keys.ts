@@ -1,5 +1,5 @@
 import type Phaser from 'phaser';
-import { type Bind, boundTo, CONTROLS, mouseCode, PRESSES, pressOf } from './bindings';
+import { type Bind, boundTo, CONTROLS, keyPressed, mouseCode, PRESSES } from './bindings';
 import { whileUp } from './design-space';
 
 /** The two the game reads its controls from, wherever the press came from. */
@@ -104,7 +104,7 @@ function carries(press: Bind): boolean {
 export function onKeyDown(scene: Phaser.Scene, pressed: (press: Bind) => void): void {
   scene.input.keyboard?.on('keydown', (event: KeyboardEvent) => {
     if (chorded(event)) return;
-    const press = pressOf(event);
+    const press = keyPressed(event);
     pressed(press);
     if (carries(press)) event.preventDefault();
   });
@@ -117,6 +117,6 @@ export function onKeyDown(scene: Phaser.Scene, pressed: (press: Bind) => void): 
  * otherwise stay held, and the frame would pan on for ever.
  */
 export function onKeyUp(scene: Phaser.Scene, released: (press: Bind) => void): void {
-  scene.input.keyboard?.on('keyup', (event: KeyboardEvent) => released(pressOf(event)));
+  scene.input.keyboard?.on('keyup', (event: KeyboardEvent) => released(keyPressed(event)));
   whileUp(scene, scene.game.events, UP, released);
 }
