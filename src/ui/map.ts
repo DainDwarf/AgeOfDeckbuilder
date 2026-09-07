@@ -18,7 +18,7 @@ import {
 } from '../rules/map';
 import { RESOURCES, type Resource } from '../rules/resources';
 import { inSight } from '../rules/sight';
-import type { Chronicle, Snapshot, SnapshotUnit } from '../rules/state';
+import type { Chronicle, Snapshot } from '../rules/state';
 import {
   attackable,
   type Faction,
@@ -46,6 +46,7 @@ import {
 } from './design-space';
 import { onKeyDown, onKeyUp } from './keys';
 import { RESOURCE_COLOURS } from './resource-bar';
+import { VEILS_ON, type Veils } from './veils';
 
 const TILE_SIZE = 24;
 
@@ -196,17 +197,6 @@ const PANS: readonly { control: Control; x: number; y: number }[] = [
   { control: 'pan-right', x: 1, y: 0 },
 ];
 
-/**
- * One of the two states a tile hides in, named by the word that switches what the map draws of it.
- */
-export type Layer = 'uncharted' | 'fog';
-
-/** Which layers the map still draws under: one taken off draws what that layer was hiding. */
-export type Layers = Readonly<Record<Layer, boolean>>;
-
-/** Both layers standing: the map as the game is played on it, and where a chronicle opens. */
-export const LAYERS_ON: Layers = { uncharted: true, fog: true };
-
 /** Where a tile's face stands on the map's own surface, for whatever stands beside it there. */
 export type TileFace = {
   readonly x: number;
@@ -263,8 +253,8 @@ export type MapView = {
    * showing: what the map shows while city mode is on.
    */
   showCityMarks(on: boolean): void;
-  /** Draws the map under these layers: what the console's two switches take off and put back. */
-  showLayers(layers: Layers): void;
+  /** Draws the map under these veils: what the console's two switches take off and put back. */
+  showVeils(veils: Veils): void;
   /** Whether the pan and zoom keys reach the map; they do not while anything covers it. */
   live(on: boolean): void;
 };
@@ -432,13 +422,6 @@ function tileUnder(chronicle: Chronicle, x: number, y: number): TileCoords | und
     }
   }
   return best <= TILE_SIZE ? nearest : undefined;
-}
-
-/** Whoever stands on a tile, as a snapshot would have kept them: what a tile with no snapshot draws. */
-function standingAs(chronicle: Chronicle, tile: TileCoords): SnapshotUnit | undefined {
-  const standing = unitAt(chronicle.units, tile);
-  if (standing === undefined) return undefined;
-  return { type: standing.stats.type, faction: standing.faction };
 }
 
 function same(a: TileCoords, b: TileCoords): boolean {
@@ -813,16 +796,16 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
   /** What the map draws of that chronicle, and what of it it draws live, by tile key. */
   let drawn: ReadonlySet<string> = new Set();
   let live: ReadonlySet<string> = new Set();
-  /** The layers the map draws under; both stand until the console takes one off. */
-  let layers: Layers = LAYERS_ON;
+  /** The veils the map draws under; both stand until the console takes one off. */
+  let veils: Veils = VEILS_ON;
   /** What the map has in the air; a render owns it and takes it down. */
   let flight: symbol | undefined;
 
   /**
    * The one rule for what the map draws of a chronicle: a tile in sight is drawn live, a tile
    * charted is drawn as its snapshot has it, in fog, and an uncharted tile is not drawn at all —
-   * and each layer taken off widens one of those. The uncharted layer off draws every tile of the
-   * disc; the fog layer off draws every tile the map draws at all live. Answered for whichever
+   * and each veil taken off widens one of those. The uncharted veil off draws every tile of the
+   * disc; the fog veil off draws every tile the map draws at all live. Answered for whichever
    * chronicle is asked about, which is not always the one the map stands on.
    */
   const drawing = (
@@ -832,9 +815,9 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
     const kept = new Set(chronicle.snapshots.map(tileKey));
     const keys = chronicle.tiles.map(tileKey);
     const shownKeys = new Set(
-      layers.uncharted ? keys.filter((key) => seen.has(key) || kept.has(key)) : keys,
+      veils.uncharted ? keys.filter((key) => seen.has(key) || kept.has(key)) : keys,
     );
-    return { drawn: shownKeys, live: layers.fog ? seen : shownKeys };
+    return { drawn: shownKeys, live: veils.fog ? seen : shownKeys };
   };
 
   /**
@@ -943,10 +926,14 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
       }
       if (asStands) continue;
       // A snapshot answers for its tile whole: one taken of an empty tile hides the unit that has
-      // walked onto it since, which is the whole of what fog is.
-      const stood = snapshot === undefined ? standingAs(shown, tile) : snapshot.unit;
-      if (stood !== undefined) {
-        marks.add(unitMark(scene, stood.type, stood.faction).setPosition(x, y));
+      // walked onto it since.
+      if (snapshot === undefined) {
+        const standing = unitAt(shown.units, tile);
+        if (standing !== undefined) {
+          marks.add(unitMark(scene, standing.stats.type, standing.faction).setPosition(x, y));
+        }
+      } else if (snapshot.unit !== undefined) {
+        marks.add(unitMark(scene, snapshot.unit.type, snapshot.unit.faction).setPosition(x, y));
       }
       fog.add(fogScrim(scene, tile));
     }
@@ -1324,8 +1311,8 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
       paintYields();
     },
 
-    showLayers(next: Layers): void {
-      layers = next;
+    showVeils(next: Veils): void {
+      veils = next;
       if (shown !== undefined) render(shown);
     },
 

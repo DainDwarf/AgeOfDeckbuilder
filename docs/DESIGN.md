@@ -207,14 +207,14 @@ the arithmetic fell on.
 
 **Every tile the city holds is in sight** 🔧: an inhabitant works it.
 
-**The debug console switches the two states that hide a tile**, one entry to each: `uncharted` and
-`fog`. Both hide until a switch takes one off, and each answers the state its own is left in; they
-change what is drawn and nothing the rules read. With the **uncharted layer** off, every tile of the
-disc is drawn, one never seen included, and the rivers along them with it; a tile out of sight is
-still darkened, and one that has no snapshot is drawn as it stands. With the **fog layer** off,
-every tile the map draws is drawn live — as it stands, with whoever stands on it, and darkened by
-nothing — so the map shows every tile charted clearly and leaves the never-seen ones out. Both off
-draw the whole map as the rules hold it.
+**The debug console switches the two veils that hide a tile**, one entry to each: `uncharted` and
+`fog`. Both veils stand until a switch takes one off, and each answers the state its own is left in;
+they change what is drawn and nothing the rules read. With the **uncharted veil** off, every tile of
+the disc is drawn, one never seen included, and the rivers along them with it; a tile out of sight is
+still darkened, and one that has no snapshot is drawn as it stands. With the **fog veil** off, every
+tile the map draws is drawn live — as it stands, with whoever stands on it, and darkened by nothing —
+so the map shows every tile charted clearly and leaves the never-seen ones out. Both off draw the
+whole map as the rules hold it.
 
 Melee needs no rule of its own — an adjacent tile is always in sight — and whether a ranged attack
 needs its target in sight waits for the first ranged unit. The enemies read the whole map: their

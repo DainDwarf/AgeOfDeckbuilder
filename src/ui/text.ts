@@ -118,10 +118,10 @@ const TEXT = {
   'defeat.population': "The city's population reached zero on turn {turn}.",
   'console.line': '> {line}',
   'console.no-entry': 'no such entry: {word}',
-  'console.uncharted-on': 'uncharted layer: on',
-  'console.uncharted-off': 'uncharted layer: off',
-  'console.fog-on': 'fog layer: on',
-  'console.fog-off': 'fog layer: off',
+  'console.uncharted-veil-on': 'uncharted veil: on',
+  'console.uncharted-veil-off': 'uncharted veil: off',
+  'console.fog-veil-on': 'fog veil: on',
+  'console.fog-veil-off': 'fog veil: off',
 } as const;
 
 export type TextKey = keyof typeof TEXT;

@@ -9,9 +9,9 @@ import {
   PANEL_FILL,
 } from './design-space';
 import { readsKeyboard } from './keys';
-import { LAYERS_ON, type Layers } from './map';
 import { BAR_HEIGHT } from './resource-bar';
 import { text } from './text';
+import { VEILS_ON, type Veils } from './veils';
 
 /** The place the key that opens the console stands on: the one above Tab, whatever it prints. */
 const CONSOLE_KEY = 'Backquote';
@@ -53,9 +53,9 @@ type Line = { readonly line: string; readonly answer: boolean };
  * The debug console: a panel the key above Tab drops over the top of the chronicle screen, the lines
  * last run standing over the line being typed. While it stands the keyboard is its and nothing the
  * game binds hears a key; the pointer is not its, so the map still pans and zooms under it. It goes
- * down with the chronicle screen it was raised on, and every layer stands again on the next.
+ * down with the chronicle screen it was raised on, and every veil stands again on the next.
  */
-export function createDebugConsole(scene: Phaser.Scene, layered: (layers: Layers) => void): void {
+export function createDebugConsole(scene: Phaser.Scene, veiled: (veils: Veils) => void): void {
   const root = scene.add.container(0, 0).setName('console').setDepth(CONSOLE_DEPTH);
   root.add([
     scene.add.rectangle(0, 0, DESIGN_WIDTH, HEIGHT, PANEL, PANEL_ALPHA).setOrigin(0, 0),
@@ -85,7 +85,7 @@ export function createDebugConsole(scene: Phaser.Scene, layered: (layers: Layers
   /** What has been typed since the last line was run. */
   let typed = '';
   const history: Line[] = [];
-  let layers = LAYERS_ON;
+  let veils = VEILS_ON;
 
   const paint = (): void => {
     const first = HISTORY - history.length;
@@ -106,14 +106,14 @@ export function createDebugConsole(scene: Phaser.Scene, layered: (layers: Layers
   const run = (): void => {
     const line = typed;
     typed = '';
-    const ran = runLine(line, layers);
+    const ran = runLine(line, veils);
     if (ran.answer !== undefined) {
       keep(text('console.line', { line }), false);
       keep(ran.answer, true);
     }
-    if (ran.layers !== layers) {
-      layers = ran.layers;
-      layered(layers);
+    if (ran.veils !== veils) {
+      veils = ran.veils;
+      veiled(veils);
     }
     paint();
   };

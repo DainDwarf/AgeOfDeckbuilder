@@ -418,8 +418,8 @@ export class ChronicleScene extends Phaser.Scene {
       else if (!leaveCityMode()) menu();
     });
 
-    createDebugConsole(this, (layers) => {
-      view.showLayers(layers);
+    createDebugConsole(this, (veils) => {
+      view.showVeils(veils);
     });
 
     parts.push(

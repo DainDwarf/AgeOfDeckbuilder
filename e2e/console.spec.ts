@@ -26,7 +26,7 @@ type Run = { readonly seed: number; readonly turns: number; readonly enemy: Tile
 
 /**
  * The first seed whose first ends of turn put an enemy on a tile the map draws nothing of: it stands
- * uncharted, so neither the enemy nor the ground under it is drawn until a layer comes off.
+ * uncharted, so neither the enemy nor the ground under it is drawn until a veil comes off.
  */
 function unchartedEnemy(): Run {
   return firstSeed('stands an enemy on an uncharted tile inside eight turns', (seed) => {
@@ -164,7 +164,7 @@ test('the two switches draw the whole map, and put the fog back where it was', a
 
   await consoleKey(page);
   await enter(page, 'uncharted');
-  expect(await consoleLines(page)).toEqual(['', '', '> uncharted', 'uncharted layer: off', '> ']);
+  expect(await consoleLines(page)).toEqual(['', '', '> uncharted', 'uncharted veil: off', '> ']);
   await consoleKey(page);
 
   // Every tile of the disc is drawn now, and every one of them out of sight stands under a scrim.
@@ -175,7 +175,7 @@ test('the two switches draw the whole map, and put the fog back where it was', a
   await consoleKey(page);
   await enter(page, 'fog');
   expect(await typedLine(page)).toBe('> ');
-  expect((await consoleLines(page))[3]).toBe('fog layer: off');
+  expect((await consoleLines(page))[3]).toBe('fog veil: off');
   await consoleKey(page);
 
   // Nothing is darkened any more, and every unit on the map stands as it is, the enemies included.
@@ -187,14 +187,14 @@ test('the two switches draw the whole map, and put the fog back where it was', a
   await enter(page, 'fog');
   expect(await consoleLines(page)).toEqual([
     '> uncharted',
-    'uncharted layer: on',
+    'uncharted veil: on',
     '> fog',
-    'fog layer: on',
+    'fog veil: on',
     '> ',
   ]);
   await consoleKey(page);
 
-  // Both layers back: the map draws what it has charted, and no more.
+  // Both veils back: the map draws what it has charted, and no more.
   expect(await standing(page, `tile-${tileKey(run.enemy)}`)).toBe(false);
   expect(await marksIn(page, 'terrain')).toBe(stood.snapshots.length);
   expect(await marksIn(page, 'fog')).toBe(fogged);
