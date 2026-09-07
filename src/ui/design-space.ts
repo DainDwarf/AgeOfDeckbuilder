@@ -354,33 +354,29 @@ export function createClip(scene: Phaser.Scene, on: Surface): Clip {
 }
 
 /**
- * A click: one press landed and released on the same object, without travelling far enough between
- * the two to be a drag. It answers the one press it is given, so an object that answers both takes
- * one of these for each. Phaser delivers `pointerup` to whatever lies under the pointer however far
- * it travelled since the press, so a bare `pointerup` also fires on a card dragged onto the object
- * from elsewhere, on the object a drag of its own just ended over, and on the release half of a
- * click whose press dismissed something above it.
+ * A click: one press landed and released on the same object, however far the pointer travelled
+ * between the two; a drag of the object begun by that press is not one. It answers the one press it
+ * is given, so an object that answers both takes one of these for each. Phaser delivers `pointerup`
+ * to whatever lies under the pointer however far it travelled since the press, so a bare `pointerup`
+ * also fires on a card dragged onto the object from elsewhere, on the object a drag of its own just
+ * ended over, and on the release half of a click whose press dismissed something above it.
  */
 export function onClick(
   target: Phaser.GameObjects.GameObject,
   handler: (pointer: Phaser.Input.Pointer) => void,
   press: Press = 'left',
 ): void {
-  const scene = target.scene;
-  const input = scene.input;
-  /** Where the press landed, and nothing while none is held. */
-  let from: { x: number; y: number } | undefined;
+  const input = target.scene.input;
+  let pressed = false;
   const disarm = (): void => {
-    from = undefined;
+    pressed = false;
   };
 
   target.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-    if (pressOf(pointer) === press) from = { x: pointer.x, y: pointer.y };
+    if (pressOf(pointer) === press) pressed = true;
   });
   target.on('pointerup', (pointer: Phaser.Input.Pointer) => {
-    if (from === undefined || pressOf(pointer) !== press) return;
-    if (dragged(scene, from, pointer)) return;
-    handler(pointer);
+    if (pressed && pressOf(pointer) === press) handler(pointer);
   });
   target.on('dragstart', disarm);
   // The scene sees every release, on the canvas and off it, and after the target does. A press the
