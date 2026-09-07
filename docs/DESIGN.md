@@ -92,7 +92,8 @@ release, but the stack is chosen with them in mind.
   written by hand; nothing generates them.
 - **A chronicle can be left and resumed** — its save is its state and seed — and one chronicle is
   in progress at a time.
-- **Debug commands ship inside the game**, off by default; there is no separate developer version.
+- **A debug console ships inside the game** — the kind a key opens and a developer types into;
+  there is no separate developer version.
 - **English only.** No language is planned; text is kept addable.
 - Not in scope: a map editor, modding, a level or scenario editor.
 
