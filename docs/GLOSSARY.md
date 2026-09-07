@@ -29,7 +29,7 @@ deliberate exception the reviewer sees; there is no silent allow-list.
 | **map** | The hexagonal grid a chronicle is played on. | board, world, grid |
 | **chronicle screen** | The surface a chronicle is played on — the map, the hand, the piles, the resource bar, the infopanel; what a window opens over and closes back to. | table, playfield, play area |
 | **city mode** | The chronicle screen's second mode, in which a tile click acts on the city — assigns, unassigns, claims — instead of selecting the tile. | build mode, manage mode, edit mode, planning mode |
-| **select** | To make a tile or a card the selection: the one thing a screen holds — the tile the map rings, or the card lifted, in the hand or in a browse — and what the inspection key inspects. | pick, highlight, focus, arm, target (for a tile or a card) |
+| **select** | To make a tile or a card the selection: the one thing a screen holds — the tile the map rings, the card lifted in the hand, or the card ringed in a browse — and what the inspection key inspects. | pick, highlight, focus, arm, target (for a tile or a card) |
 | **inspect** | To show a tile's cards in the infopanel, one per step — the unit, the building with the improvements, the terrain with the feature and the river; after the last the first again — or to show a card large. | read (a tile), examine, view, look at, zoom (for a card) |
 | **tile** | One hexagon of the map, of one terrain. | hex, cell, square, territory |
 | **region** | The launch choice that biases map generation; the difficulty dial. | site, location, start |
@@ -52,6 +52,7 @@ deliberate exception the reviewer sees; there is no silent allow-list.
 | **hand** | The cards drawn this turn; what is not played is discarded when the turn ends. | — |
 | **draw** | To take cards from the draw pile into the hand. | pull |
 | **play** | To put a card from the hand into effect, paying its cost. | cast, activate |
+| **aim** | What a card is played at: a drawn tile, a card of the discard pile, or nothing. The window offering the discard pile's cards to a card aimed there is the **aim window**. A card is **being aimed** while it is selected and the things its aim admits are offered — the map lighting them, or the aim window standing. | target (for a card's aim), targeting (for a card's aim), cast at, pointed at, destination |
 | **unaffordable** | A card or a claim whose cost exceeds what the city holds; the city cannot pay for it. | unpayable, short, lacking, too expensive |
 | **discard** | To send a card from the hand to the discard pile. | throw away, dump |
 | **recall** | To put a card from the discard pile into the hand; what a recall instant does. | retrieve, recover, return, reclaim, salvage |
