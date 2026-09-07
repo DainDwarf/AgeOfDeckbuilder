@@ -12,6 +12,10 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
+- **Unified presses** — on the branch `unified-presses`, [`BRANCH.md`](BRANCH.md) holds the design
+  of the three presses and the lines that make the code agree; the branch merges into `main` when
+  it holds no line, and this line and that file go with the merge. Doc-impact: `docs/DESIGN.md`,
+  `docs/GLOSSARY.md`.
 - **Movement costs what the tile says** — the flat one-per-tile goes; every terrain names its
   movement cost and `reachable` charges it, so the map's and the units' sections of the design
   agree on one rule. Rules tests on a fixed seed. Doc-impact: `docs/DESIGN.md`, `docs/GLOSSARY.md`.
