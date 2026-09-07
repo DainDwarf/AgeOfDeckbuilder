@@ -29,8 +29,8 @@ deliberate exception the reviewer sees; there is no silent allow-list.
 | **map** | The hexagonal grid a chronicle is played on. | board, world, grid |
 | **chronicle screen** | The surface a chronicle is played on — the map, the hand, the piles, the resource bar, the infopanel; what a window opens over and closes back to. | table, playfield, play area |
 | **city mode** | The chronicle screen's second mode, in which a tile click acts on the city — assigns, unassigns, claims — instead of selecting the tile. | build mode, manage mode, edit mode, planning mode |
-| **select** | To make a tile the selection: the one tile the map rings and the inspection key steps. | pick, highlight, focus, target (for a tile) |
-| **inspect** | To show a tile's cards in the infopanel, one per step: the unit, the building with the improvements, the terrain with the feature and the river; after the last the first again. | read (a tile), examine, view, look at |
+| **select** | To make a tile or a card the selection: the one thing a screen holds — the tile the map rings, or the card lifted, in the hand or in a browse — and what the inspection key inspects. | pick, highlight, focus, arm, target (for a tile or a card) |
+| **inspect** | To show a tile's cards in the infopanel, one per step — the unit, the building with the improvements, the terrain with the feature and the river; after the last the first again — or to show a card large. | read (a tile), examine, view, look at, zoom (for a card) |
 | **tile** | One hexagon of the map, of one terrain. | hex, cell, square, territory |
 | **region** | The launch choice that biases map generation; the difficulty dial. | site, location, start |
 | **unit** | A mobile piece on the map, the player's or not. | army, troop, piece, token |
@@ -57,6 +57,7 @@ deliberate exception the reviewer sees; there is no silent allow-list.
 | **recall** | To put a card from the discard pile into the hand; what a recall instant does. | retrieve, recover, return, reclaim, salvage |
 | **draw pile** | The cards not yet drawn this cycle; refilled from the discard pile when empty. | library |
 | **discard pile** | The cards played or discarded this cycle, waiting to be shuffled back. | graveyard, trash, bin |
+| **browse** | A window offering a pile's cards to be read, opened by a left click on that pile; the window a card aimed at the discard pile opens is the aim window and not one. | pile window, viewer, gallery, preview, list (of a pile) |
 | **combat** | Units attacking one another: the player's by hand in play, the enemies' in the enemy phase. | battle, fight, skirmish, war |
 | **income** | The phase after the turn ends where standing things yield. | upkeep, production phase, resolution |
 | **sight** | A unit's stat and the city's own number: how far it sees, and the tiles a line from it reaches over the ground. | vision, line of sight |

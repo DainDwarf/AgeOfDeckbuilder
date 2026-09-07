@@ -63,13 +63,6 @@ the city's purse is asked.
 
 ## Lines
 
-- **The design writes the presses** — `docs/DESIGN.md` carries the design above as the chronicle
-  screen's presses: the hand's presses, which the design never wrote; the right click's one rule
-  in place of the three at *City mode* and *Cards*; the aim window's presses; the back key's list
-  with the selected card and the card shown large; the city's tile clicked twice among the doors
-  into city mode; "armed" gone from the *Cards* section.
-  `docs/GLOSSARY.md` widens *select* and *inspect* to cards. No code changes; the lines below make
-  the code agree. Doc-impact: `docs/DESIGN.md`, `docs/GLOSSARY.md`.
 - **The city's tile clicked twice enters city mode** — a left click on the city's tile while it is
   the selection enters city mode as the city key does; a second click on any other selected tile
   changes nothing. E2e on `e2e/city-mode.spec.ts`. Doc-impact: none.

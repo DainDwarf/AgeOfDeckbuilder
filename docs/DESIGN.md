@@ -100,16 +100,13 @@ release, but the stack is chosen with them in mind.
 
 ### The menu ✅
 
-A **Menu** button stands on the chronicle screen and opens the menu over it; a card being aimed
-is let go of first. The menu lists **Settings** and **New chronicle**: a new chronicle begins one
-on a fresh seed with the same deck, leaving whatever the city was living through, victory, defeat
-or the middle of a turn. **Settings** is where everything the player sets lives, and **Controls**
-is its first entry.
+The menu lists **Settings** and **New chronicle**: a new chronicle begins one on a fresh seed with
+the same deck, leaving whatever the city was living through, victory, defeat or the middle of a
+turn. **Settings** is where everything the player sets lives, and **Controls** is its first entry.
 
-A window closes back one step, to the window it was opened from and then to the chronicle screen.
-The **back key**, Escape until it is rebound, backs out of whatever is open or pending — a window, a
-card being aimed, a tile's inspection, the selection under it, city mode — one step per press, and
-raises the menu only from a clean chronicle screen. Nothing pauses, because nothing runs: the game
+A window closes back one step, to the window it was opened from and then to the screen under it.
+The **back key**, Escape until it is rebound, backs out of whatever is open or pending, one step per
+press, and raises the menu only from a clean screen. Nothing pauses, because nothing runs: the game
 is untimed, and a menu over the chronicle screen is the chronicle screen waiting.
 
 **Controls** lists every key the game binds — the four directions the map pans, the two it zooms,
@@ -136,6 +133,33 @@ binds hears a key meanwhile. The pointer is not its: the map still pans and zoom
 is one word and Enter, and it is answered in one line; a word the console holds no entry for is
 answered `no such entry: <word>`. The console binds no key of the player's and stands in no Controls
 window, and a new chronicle raises it with every entry back where it began.
+
+### The presses ✅
+
+Three presses work every screen: the **left click** selects, the **right click** inspects, and the
+**inspection key** inspects the selection. The two clicks press the screen and are not keys: neither
+binds to anything, and Controls lists neither.
+
+**The selection is one thing, a tile or a card, and the left click makes it.** A press on a thing
+selects it, a new selection drops the old one whatever it was, and a press beside the things drops
+it. A left click on the selection acts on it, and what it does is the selected thing's own.
+
+**The right click inspects and never selects.** It inspects the thing under it — a tile in the
+infopanel, a card shown large — and pressed again on the same thing it steps on; a press beside the
+things drops the inspection. It does this in every state the screen can be in, so nothing half done
+has to be undone to inspect a thing.
+
+**The inspection key inspects the selection**, and moves the inspection there when a right click had
+put it elsewhere. With no selection, or under a window, it does nothing.
+
+**A window that offers things to select keeps a selection of its own**, which dies with the window;
+the screen's selection waits under it.
+
+The **back key** walks these back in this order: the window or the thing shown large, then the
+inspection, then the selection.
+
+Two verbs cover it all. **Select** is the tile ringed or the card lifted; **inspect** is the tile in
+the infopanel and the card shown large. "Zoom" stays the map's word.
 
 ## Systems
 
@@ -247,17 +271,13 @@ keyword some cards carry, not a kind, and the map's gifts are chronicle-only by 
   same turn; it is refused on a unit whose move points are full. Everything that is not a noun
   entering the map.
 
-A card played at a tile is armed as soon as the city can pay for it, whatever the map holds. The
-map lights the tiles its aim admits; a press on any other tile lands nowhere and says why — the one
-reason that tile is turned down, over that tile, in the note a refused card raises — and the card
-stays armed. A card aimed at nothing lands nowhere.
+A card **aimed** at a tile lands on no tile its aim does not admit, and the map lights the tiles it
+does. A card aimed at nothing lands nowhere.
 
-A card played at the discard pile is aimed the same way. The pile's cards are offered in a window,
-newest first, and a press on one plays the card at it; the card being aimed is in the hand, so the
-pile never offers it. Only the back key and the window's Cancel let the card go, a press beside the
-cards and a right click doing nothing, and a card let go of stays in the hand with nothing paid. An
-empty discard pile blocks the card in the hand: a refused tile has a tile to say its reason over, an
-empty pile has nowhere.
+A card aimed at the discard pile is offered the pile's cards in a window, newest first, and lands on
+one of them; the aimed card is in the hand, so the pile never offers it. An empty discard pile
+blocks the card in the hand: a refused tile has a tile to say its reason over, an empty pile has
+nowhere.
 
 ### Population ✅
 
@@ -280,7 +300,7 @@ threshold and the schedule's events are the whole of the pressure on the populat
 
 ### The chronicle screen ✅
 
-The chronicle screen has two modes. Out of city mode a click on a tile **selects** it: the map rings
+The chronicle screen has two modes. Out of city mode a left click on a tile selects it: the map rings
 it and, when a unit of the player's stands there, lights every tile its move points reach and glows,
 in the enemies' own colour, every unit its attack reaches. A click on a lit tile is that unit's next
 step and selects nothing; a click on a unit glowed is that unit's attack on it, and selects nothing
@@ -288,32 +308,67 @@ either. The selection follows the unit to where it stands after either — where
 it attacked from and never left — lit and glowed again. A drag from the unit onto a lit or glowed
 tile is the same step or the same attack; let go anywhere else, the unit comes home, and a unit that
 can do nothing is grabbed and comes home just the same, without a word. A unit with no action left
-glows nothing, and a press on the enemy beside it selects that tile like any other. Nothing more.
-The **inspection key** then **inspects** the selection — one card in the infopanel per press. A tile
-has at most three, in this order: the unit standing on it; the building with the tile's
-improvements; and the terrain with its feature and the river running along it. A card is absent
+glows nothing, and a press on the enemy beside it selects that tile like any other. A second left
+click on a selected tile changes nothing, the city's own tile excepted. Nothing more.
+
+An inspected tile shows one card in the infopanel per step. A tile has at most three, in this order:
+the unit standing on it; the building with the tile's improvements; and the terrain with its feature
+and the river running along it. A card is absent
 when nothing fills it, and the terrain card never is. The unit card reads the unit's stats; the
 other two are headed by their outermost layer and show a row per thing they hold — the river's
 among them on the terrain card — with what it gives at income, a row that gives nothing saying so.
 After the last card comes the first again, and a tile of a single card holds it: the cycle never
 falls back to the bare ring.
 
-A right click is a press on the chronicle screen and not a key, so it binds to nothing and Controls
-does not list it: on a tile it selects and inspects in the one press, and pressed again on the tile
-already selected it inspects on without selecting afresh; off the map it drops the selection, and
-while a card is being aimed it lets the card go.
+A left click selects a card of the hand, whether or not the city can pay for it. A selected card
+that aims at a tile is **being aimed** from that moment: the map is already there, and lights the
+tiles its aim admits. A second click plays the card where it stands — a card that aims at nothing is
+played, and refused over the card with its reason when the city cannot pay for it; a card that aims
+at a tile lands nowhere, so it stays selected; a card that aims at the discard
+pile raises the pile's window and is being aimed from then. That window waits for the second click
+because it would stand over the hand, and a card is inspected from the hand before it is played.
 
-In **city mode** a tile click acts on the city — assigns an idle inhabitant to the tile or unassigns
-the one on it, claims a tile — and selects nothing; a right click there inspects the tile under the
-cursor without selecting it, which is the only way to inspect in city mode; a right click off the
-map drops that inspection, and so does leaving the mode. A click on a tile the city neither holds
-nor can claim does nothing and says nothing; a click the city refuses says why, in the note a
-refused card raises. The map marks the tiles the city can claim for as long as the mode is on, and
+**A card being aimed filters every left click by what its aim admits.** A press on a thing it admits
+is the play attempted there, and the rules answer: a play refused says why over that thing — the one
+reason it is turned down, in the note a refused card raises — and the card stays selected. A press
+on anything else lets the card go and then lands, in the one press, as it would on a clean screen: a
+tile is selected, another card of the hand is selected, a press off the map drops the selection with
+it. A card that aims at a tile admits a drawn tile, a recall admits a card of the discard pile's
+window, and a card aimed at the hand — none is written yet — would admit another card of the hand.
+
+**The drag is the two clicks in one gesture.** A card lifted clear of the hand and released there is
+selected and played at once: one that aims at a tile stays selected, being aimed; one that aims at
+the discard pile raises the window; one the city cannot pay for comes home under its refusal note.
+
+The **aim window** is the discard pile offered to a card aimed at it. A left click on one of its
+cards is the play attempted there; a press beside its cards closes it, as the back key does, leaving
+the card selected in the hand with nothing paid.
+
+A left click on a pile opens its **browse**, the pile's cards laid out face up: the discard pile's
+newest first, the draw pile's by kind and then by name, so the draw order is given away to nobody.
+A pile is not a card, so a right click on one does nothing.
+
+The right click finds a tile, a card of the hand, a card in a browse or one in the aim window, in
+city mode and while a card is being aimed alike; a tile it lands on afresh comes up at its first
+card.
+
+The back key takes one step more here than the presses name: after the selection comes city mode. A
+card being aimed at a tile is let go of as the selection it is.
+
+A **Menu** button stands on the chronicle screen and opens the menu over it; a card being aimed is
+let go of first.
+
+In **city mode** a left click on a tile acts on the city — assigns an idle inhabitant to the tile or
+unassigns the one on it, claims a tile — and selects nothing, so the right click is the only way to
+inspect there; leaving the mode drops that inspection. A click on a tile the city neither holds nor
+can claim does nothing and says nothing; a click the city refuses says why, in the note a refused
+card raises. The map marks the tiles the city can claim for as long as the mode is on, and
 every tile inside the border shows what it yields — every resource, whatever the yield overlay is
 showing, the dim of a tile nobody stands on no exception, and with no dim over the map: that dim is
-the overlay's alone. It is entered by the **city key** or by pressing culture or population on the
-resource bar, and left by that key, by the back key, or by the chip naming the mode; the map's
-frame drawn in the accent and that chip are how the chronicle screen shows the mode is on. Coming
+the overlay's alone. It is entered by the **city key**, by a second left click on the city's own
+tile, or by pressing culture or population on the resource bar, and left by that key, by the back
+key, or by the chip naming the mode; the map's frame drawn in the accent and that chip are how the
+chronicle screen shows the mode is on. Coming
 into city mode lets go of a card being aimed, of the selection and of its inspection, and a window
 standing over the chronicle screen takes the city key instead.
 
