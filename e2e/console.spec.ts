@@ -59,6 +59,27 @@ async function typedLine(page: Page): Promise<string> {
   return lines[lines.length - 1];
 }
 
+/** How far down the resource bar reaches, and the highest line the console writes, on the screen. */
+function bandAndLines(page: Page): Promise<{ bar: number; highest: number }> {
+  return page.evaluate(() => {
+    const boundsOf = (name: string): Phaser.Geom.Rectangle => {
+      const found = window.named?.(name)?.object as
+        | (Phaser.GameObjects.GameObject & Phaser.GameObjects.Components.GetBounds)
+        | undefined;
+      if (found === undefined) throw new Error(`nothing named ${name} is on the chronicle screen`);
+      return found.getBounds();
+    };
+    const written = ['console-line-0', 'console-line-1', 'console-line-2', 'console-line-3'];
+    return {
+      bar: boundsOf('reading-food').bottom,
+      highest: Math.min(
+        ...written.map((name) => boundsOf(name).top),
+        boundsOf('console-input').top,
+      ),
+    };
+  });
+}
+
 /** The key above Tab, pressed by its place. */
 async function consoleKey(page: Page): Promise<void> {
   await page.keyboard.press('Backquote');
@@ -96,6 +117,11 @@ test('the key above Tab opens the console, which then holds the keyboard', async
 
   await consoleKey(page);
   expect(await shows(page, 'console')).toBe(true);
+
+  // The panel is not opaque, so the resource bar reads dimly through the top of it: no line the
+  // console writes stands in that strip, whichever of the five it is and however full the history.
+  const laid = await bandAndLines(page);
+  expect(laid.highest).toBeGreaterThanOrEqual(laid.bar);
 
   // The key is the console's now: it types, and the map stands exactly where it was.
   expect(Math.abs(await heldBy(page, 'w'))).toBeLessThan(1);

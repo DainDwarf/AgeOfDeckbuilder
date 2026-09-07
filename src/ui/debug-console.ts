@@ -10,6 +10,7 @@ import {
 } from './design-space';
 import { readsKeyboard } from './keys';
 import { LAYERS_ON, type Layers } from './map';
+import { BAR_HEIGHT } from './resource-bar';
 import { text } from './text';
 
 /** The place the key that opens the console stands on: the one above Tab, whatever it prints. */
@@ -28,7 +29,13 @@ const ANSWER_INK = '#9aa1a9';
 const LINE = 18;
 const PAD = 10;
 
-const HEIGHT = 2 * PAD + (HISTORY + 1) * LINE;
+// The panel is not opaque: everything it drops over reads dimly through it, and the resource bar is
+// a panel of words. The console writes below the strip the bar is drawn in, or its own lines and the
+// bar's readings are painted through each other.
+/** Where the console's own lines begin: under the whole of the resource bar. */
+const LINES_TOP = BAR_HEIGHT + PAD;
+
+const HEIGHT = LINES_TOP + PAD + (HISTORY + 1) * LINE;
 
 const CONSOLE_STYLE = {
   fontFamily: 'ui-monospace, Consolas, "Courier New", monospace',
@@ -57,18 +64,18 @@ export function createDebugConsole(scene: Phaser.Scene, layered: (layers: Layers
 
   const lines: Phaser.GameObjects.Text[] = [];
   for (let at = 0; at < HISTORY; at++) {
-    const label = addText(scene, MARGIN, PAD + at * LINE, '', CONSOLE_STYLE)
+    const label = addText(scene, MARGIN, LINES_TOP + at * LINE, '', CONSOLE_STYLE)
       .setOrigin(0, 0)
       .setName(`console-line-${at}`);
     lines.push(label);
     root.add(label);
   }
 
-  const input = addText(scene, MARGIN, PAD + HISTORY * LINE, '', CONSOLE_STYLE)
+  const input = addText(scene, MARGIN, LINES_TOP + HISTORY * LINE, '', CONSOLE_STYLE)
     .setOrigin(0, 0)
     .setName('console-input');
   const caret = scene.add
-    .rectangle(MARGIN, PAD + HISTORY * LINE + 3, 7, LINE - 8, PANEL_FILL)
+    .rectangle(MARGIN, LINES_TOP + HISTORY * LINE + 3, 7, LINE - 8, PANEL_FILL)
     .setOrigin(0, 0)
     .setName('console-caret');
   root.add([input, caret]);

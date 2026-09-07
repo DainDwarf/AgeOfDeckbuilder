@@ -127,9 +127,10 @@ zooms one notch a press, and only through the two zooms — a wheel notch up and
 until they are rebound. **Default** puts every key back where it began, **Back** closes the window,
 and what the player binds is kept in the browser from one launch to the next.
 
-The **debug console** is a dark panel down the top of the screen, over the resource bar and over
-everything else the screen carries, a window and the defeat screen included: the last lines run
-stand above the line being typed. While it stands the keyboard is its — every key types, Backspace
+The **debug console** is a dark panel down the top of the screen, standing over everything the
+screen carries — the resource bar, a window and the defeat screen included — with the last lines run
+above the line being typed. What it covers reads dimly through it, so the bar is still there to be
+read and the console writes clear of it. While it stands the keyboard is its — every key types, Backspace
 deletes, Enter runs the line, and Escape or the key that opened it closes it — so nothing the game
 binds hears a key meanwhile. The pointer is not its: the map still pans and zooms under it. An entry
 is one word and Enter, and it is answered in one line; a word the console holds no entry for is
