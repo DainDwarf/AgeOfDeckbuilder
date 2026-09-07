@@ -52,7 +52,8 @@ export function readMouseKeys(game: Phaser.Game): void {
       event.preventDefault();
       if (chorded(event)) return;
       held.add(event.button);
-      game.events.emit(DOWN, { code: mouseCode(event.button) });
+      const press: Bind = { code: mouseCode(event.button) };
+      game.events.emit(DOWN, press);
     },
     true,
   );
@@ -61,7 +62,8 @@ export function readMouseKeys(game: Phaser.Game): void {
     (event) => {
       if (!held.delete(event.button)) return;
       event.preventDefault();
-      game.events.emit(UP, { code: mouseCode(event.button) });
+      const press: Bind = { code: mouseCode(event.button) };
+      game.events.emit(UP, press);
     },
     true,
   );
@@ -80,7 +82,7 @@ export function readMouseKeys(game: Phaser.Game): void {
 
       const notches = Math.trunc(rolled / NOTCH);
       rolled -= notches * NOTCH;
-      const turn = { code: notches < 0 ? WHEEL_UP : WHEEL_DOWN };
+      const turn: Bind = { code: notches < 0 ? WHEEL_UP : WHEEL_DOWN };
       for (let notch = Math.abs(notches); notch > 0; notch--) {
         game.events.emit(DOWN, turn);
         game.events.emit(UP, turn);

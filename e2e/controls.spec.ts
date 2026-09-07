@@ -73,17 +73,34 @@ async function intoControls(page: Page): Promise<void> {
   await expect.poll(() => standing(page, 'controls')).toBe(true);
 }
 
-/** How far the map moved down the screen under a key held for a dozen frames, under a modifier or not. */
-async function heldBy(page: Page, key: string, under?: string): Promise<number> {
+/** How far the map moved down the screen under a press held for a dozen frames. */
+async function heldThrough(
+  page: Page,
+  down: () => Promise<void>,
+  up: () => Promise<void>,
+): Promise<number> {
   const before = await tileOnScreen(page, BARE);
-  if (under !== undefined) await page.keyboard.down(under);
-  await page.keyboard.down(key);
+  await down();
   for (let frame = 0; frame < 12; frame++) await settled(page);
-  await page.keyboard.up(key);
-  if (under !== undefined) await page.keyboard.up(under);
+  await up();
   await settled(page);
   await settled(page);
   return (await tileOnScreen(page, BARE)).y - before.y;
+}
+
+/** How far the map moved down the screen under a key held, under a modifier or not. */
+function heldBy(page: Page, key: string, under?: string): Promise<number> {
+  return heldThrough(
+    page,
+    async () => {
+      if (under !== undefined) await page.keyboard.down(under);
+      await page.keyboard.down(key);
+    },
+    async () => {
+      await page.keyboard.up(key);
+      if (under !== undefined) await page.keyboard.up(under);
+    },
+  );
 }
 
 /**
@@ -100,33 +117,34 @@ function sendKey(page: Page, type: 'keydown' | 'keyup', code: string, key: strin
   );
 }
 
-/** How far the map moved down the screen under such a place held for a dozen frames. */
-async function heldAs(page: Page, code: string, key: string): Promise<number> {
-  const before = await tileOnScreen(page, BARE);
-  await sendKey(page, 'keydown', code, key);
-  for (let frame = 0; frame < 12; frame++) await settled(page);
-  await sendKey(page, 'keyup', code, key);
-  await settled(page);
-  await settled(page);
-  return (await tileOnScreen(page, BARE)).y - before.y;
+/** How far the map moved down the screen under such a place held. */
+function heldAs(page: Page, code: string, key: string): Promise<number> {
+  return heldThrough(
+    page,
+    () => sendKey(page, 'keydown', code, key),
+    () => sendKey(page, 'keyup', code, key),
+  );
 }
 
-/** How far the map moved down the screen under a mouse button held for a dozen frames. */
+/** How far the map moved down the screen under a mouse button held over a bare tile. */
 async function heldByButton(
   page: Page,
   button: 'middle' | 'right',
   under?: string,
 ): Promise<number> {
-  const before = await tileOnScreen(page, BARE);
-  await page.mouse.move(before.x, before.y);
-  if (under !== undefined) await page.keyboard.down(under);
-  await page.mouse.down({ button });
-  for (let frame = 0; frame < 12; frame++) await settled(page);
-  await page.mouse.up({ button });
-  if (under !== undefined) await page.keyboard.up(under);
-  await settled(page);
-  await settled(page);
-  return (await tileOnScreen(page, BARE)).y - before.y;
+  const over = await tileOnScreen(page, BARE);
+  await page.mouse.move(over.x, over.y);
+  return heldThrough(
+    page,
+    async () => {
+      if (under !== undefined) await page.keyboard.down(under);
+      await page.mouse.down({ button });
+    },
+    async () => {
+      await page.mouse.up({ button });
+      if (under !== undefined) await page.keyboard.up(under);
+    },
+  );
 }
 
 /** How far a drag of a bare tile with that button carried the map down the screen. */
