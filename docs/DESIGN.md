@@ -216,6 +216,12 @@ tile the map draws is drawn live — as it stands, with whoever stands on it, an
 so the map shows every tile charted clearly and leaves the never-seen ones out. Both off draw the
 whole map as the rules hold it.
 
+**The rest of the screen reads what the map draws.** The yield overlay glyphs the tiles the map
+draws, each from the face it draws of it, so a tile in fog shows what it yielded when it was last
+seen. An inspection reads that same face, and a tile in fog holds no unit card: the unit its
+snapshot keeps is a mark and not a card. A press on an uncharted tile lands off the map — it selects
+nothing, inspects nothing and acts on nothing. Each veil taken off widens all of it with the map.
+
 Melee needs no rule of its own — an adjacent tile is always in sight — and whether a ranged attack
 needs its target in sight waits for the first ranged unit. The enemies read the whole map: their
 scripts ignore sight, and no tile is uncharted to them.
@@ -312,10 +318,11 @@ standing over the chronicle screen takes the city key instead.
 
 ### The yield overlay ✅
 
-The **yield overlay** shows what every tile yields: a glyph for each point of each resource, in the
-colour that resource is known by, over a map dimmed under them. It reads the tile's layers and the
-river running along it, and nothing else — whoever stands there and whatever occupies it change
-what the tile gives at income, never what the overlay shows. Pressing one of the five core readings
+The **yield overlay** shows what every tile the map draws yields: a glyph for each point of each
+resource, in the colour that resource is known by, over a map dimmed under them. It reads the layers
+of the face the map draws and the river running along the tile, and nothing else — whoever stands
+there and whatever occupies it change what the tile gives at income, never what the overlay shows,
+and a tile in fog shows what it yielded when it was last seen. Pressing one of the five core readings
 on the resource bar toggles that resource in or out of the overlay, several at a time, and the
 reading of a resource shown is latched down in the bar; the **yield key** clears the overlay, or,
 from nothing, shows every resource, culture included, and a window standing over the chronicle
@@ -396,12 +403,12 @@ a river hugging four edges of a plain would hand out the map's best tile by the 
 rather than the player's. 🔧 Which terrains a river feeds and what it gives them are tuning, and
 what a river costs to cross is open.
 
-The city stands on one tile and owns the six around it. The player **claims** any tile adjacent
-to one the city owns by spending culture; claiming is free of cards, like assigning, and the
-**culture threshold**, what a claim costs, rises with the tiles owned. A claimed tile takes an
-idle inhabitant at once when the city has one. There is no limit to how far the border reaches. A
-cost that also rises with distance was rejected until a chronicle shows fractal borders: a tendril
-is adjacent-only and exposed already.
+The city stands on one tile and owns the six around it. The player **claims** any charted tile
+adjacent to one the city owns by spending culture — a tile never seen is not claimed, as it is not
+walked onto; claiming is free of cards, like assigning, and the **culture threshold**, what a claim
+costs, rises with the tiles owned. A claimed tile takes an idle inhabitant at once when the city
+has one. There is no limit to how far the border reaches. A cost that also rises with distance was
+rejected until a chronicle shows fractal borders: a tendril is adjacent-only and exposed already.
 
 Units enter the map on the city's tile. 🔧 A building that adds an entry point is a keyword for
 later content.

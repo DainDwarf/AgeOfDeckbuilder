@@ -7,7 +7,9 @@ import { inSight } from '../src/rules/sight';
 import {
   budget,
   chronicleOf,
+  consoleKey,
   endTurn,
+  enter,
   firstSeed,
   marksIn,
   open,
@@ -78,19 +80,6 @@ function bandAndLines(page: Page): Promise<{ bar: number; highest: number }> {
       ),
     };
   });
-}
-
-/** The key above Tab, pressed by its place. */
-async function consoleKey(page: Page): Promise<void> {
-  await page.keyboard.press('Backquote');
-  await settled(page);
-}
-
-/** One entry run at the console, and the map redrawn under whatever it changed. */
-async function enter(page: Page, line: string): Promise<void> {
-  await page.keyboard.type(line);
-  await page.keyboard.press('Enter');
-  await settled(page);
 }
 
 /** How far the map moved down the screen under a key held for a dozen frames. */

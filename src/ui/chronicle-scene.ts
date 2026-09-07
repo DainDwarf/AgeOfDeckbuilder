@@ -199,12 +199,12 @@ export class ChronicleScene extends Phaser.Scene {
      * last of them the first again. The one place the infopanel is shown.
      */
     const inspect = (on: PressedTile): void => {
-      const tile = tileAt(this.current.tiles, on.tile);
-      if (tile === undefined) {
+      const face = view.drawnAs(on.tile);
+      if (face === undefined) {
         uninspect();
         return;
       }
-      const cards = cardsOf(tile, this.current.units, this.current.rivers);
+      const cards = cardsOf(face.tile, face.live ? this.current.units : [], this.current.rivers);
       const already =
         inspection !== undefined && tileKey(inspection.on.tile) === tileKey(on.tile)
           ? inspection
@@ -295,7 +295,6 @@ export class ChronicleScene extends Phaser.Scene {
         endTurn.live(false);
         dismiss();
         return view.aimTile(
-          this.current,
           admitted(this.current, card),
           (tile) => {
             endTurn.live(true);

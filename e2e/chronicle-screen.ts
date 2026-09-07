@@ -12,11 +12,13 @@ import {
 import {
   CITY_TILE,
   neighbours,
+  type River,
   riversAlong,
   type Tile,
   type TileCoords,
   tileAt,
   tileKey,
+  tileYield,
 } from '../src/rules/map';
 import { RESOURCES, type Resource } from '../src/rules/resources';
 import type { CardId, Chronicle } from '../src/rules/state';
@@ -166,8 +168,8 @@ export function onScreen(page: Page, name: string): Promise<OnScreen> {
 
 /**
  * Where a tile's face stands on the page, whether the map draws it or not: the map lays its tiles on
- * two axes, and the city's own face with the two beside it — always in sight — give both. What a
- * press on a tile in fog or on an uncharted one lands on.
+ * two axes, and the city's own face with the two beside it — always in sight — give both. Where a
+ * spec presses for a tile the map may be drawing nothing of, a press that lands off the map.
  */
 export async function tileOnScreen(page: Page, coord: TileCoords): Promise<OnScreen> {
   const origin = await onScreen(page, `tile-${tileKey(CITY_TILE)}`);
@@ -261,6 +263,24 @@ export async function glyphs(page: Page): Promise<Glyphs> {
   const shown = noGlyphs();
   for (const resource of RESOURCES) shown[resource] = await counted(page, `yield-${resource}`);
   return shown;
+}
+
+/**
+ * Every face the map draws of a chronicle: the tile a snapshot holds is the tile itself while it is
+ * in sight, and the tile as it was last seen once it is not.
+ */
+export function drawnFaces(chronicle: Chronicle): Tile[] {
+  return chronicle.snapshots.map((snapshot) => snapshot.tile);
+}
+
+/** How many glyphs each resource is owed for these faces: one for every point they yield of it. */
+export function glyphsOf(faces: readonly Tile[], rivers: readonly River[]): Glyphs {
+  const owed = noGlyphs();
+  for (const face of faces) {
+    const yields = tileYield(face, rivers);
+    for (const resource of RESOURCES) owed[resource] += yields[resource] ?? 0;
+  }
+  return owed;
 }
 
 /** How far the browse's grid stands scrolled, and how far it can: the grid scrolls by its own `y`. */
@@ -427,6 +447,19 @@ export function ringedTile(page: Page): Promise<string | undefined> {
 
 export function offsetOf(page: Page): Promise<number> {
   return scrolled(page).then(({ offset }) => offset);
+}
+
+/** The key above Tab, pressed by its place: the console opens under it, and closes again. */
+export async function consoleKey(page: Page): Promise<void> {
+  await page.keyboard.press('Backquote');
+  await settled(page);
+}
+
+/** One entry run at the open console, and the map redrawn under whatever it changed. */
+export async function enter(page: Page, line: string): Promise<void> {
+  await page.keyboard.type(line);
+  await page.keyboard.press('Enter');
+  await settled(page);
 }
 
 /** Clicks the named object where it stands on the page. */

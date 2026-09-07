@@ -357,6 +357,30 @@ function outerRingOf(radius: number): TileCoords[] {
     .map(({ q, r }) => ({ q, r }));
 }
 
+/** A tile of a generated map that touches the border and has never been in sight. */
+function unchartedTouching(chronicle: Chronicle): TileCoords {
+  const seen = new Set(chronicle.snapshots.map(tileKey));
+  const found = chronicle.tiles.find(
+    (tile) => distance(tile, chronicle.city) === 2 && !seen.has(tileKey(tile)),
+  );
+  if (found === undefined) throw new Error('every tile touching this border has been in sight');
+  return { q: found.q, r: found.r };
+}
+
+/**
+ * The chronicle with a worker entered and stepped onto a tile between the city and `tile`, from
+ * where it charts it.
+ */
+function withWorkerBeside(chronicle: Chronicle, tile: TileCoords): Chronicle {
+  const at = chronicle.hand.indexOf('PH_Worker');
+  if (at === -1) throw new Error('this hand holds no worker to enter');
+  const entered = outcome(apply(chronicle, { type: 'play', index: at, aim: 'none' }));
+  const worker = entered.units[entered.units.length - 1];
+  const between = neighbours(entered.city).find((coord) => distance(coord, tile) === 1);
+  if (between === undefined) throw new Error(`no tile of the border touches ${tileKey(tile)}`);
+  return outcome(apply(entered, { type: 'move', unit: worker.id, tile: between }));
+}
+
 /** Four ends of turn on: the chronicle stands on turn five, with that turn's events resolved. */
 function toFifthTurn(chronicle: Chronicle): Chronicle {
   let standing = chronicle;
@@ -1840,6 +1864,29 @@ test('the city may claim every tile touching the border, and no other', () => {
       .map(tileKey)
       .sort(),
   );
+});
+
+test('a tile touching the border the city has never seen is no claim of its own', () => {
+  const opened = outcome(apply(beginChronicle(1, DECK), { type: 'end-turn' }));
+  const dark = unchartedTouching(opened);
+
+  expect(opened.resources.culture).toBeGreaterThanOrEqual(1);
+  expect(claimable(opened).map(tileKey)).not.toContain(tileKey(dark));
+  expect(tileRefusal(opened, dark)).toBeUndefined();
+  expect(cityCommand(opened, dark)).toBeUndefined();
+  expect(stagedBy(opened, claimOf(dark))).toEqual(['refused']);
+  expect(outcome(apply(opened, claimOf(dark)))).toBe(opened);
+});
+
+test('a unit that charts that tile makes it a claim the city can make', () => {
+  const opened = outcome(apply(beginChronicle(1, DECK), { type: 'end-turn' }));
+  const dark = unchartedTouching(opened);
+  const charting = withWorkerBeside(opened, dark);
+
+  expect(claimable(charting).map(tileKey)).toContain(tileKey(dark));
+  expect(cityCommand(charting, dark)).toEqual(claimOf(dark));
+  expect(stagedBy(charting, claimOf(dark))).toEqual(['claim']);
+  expect(outcome(apply(charting, claimOf(dark))).held.map(tileKey)).toContain(tileKey(dark));
 });
 
 test('a city-mode click assigns on a tile the city holds and claims on any other', () => {

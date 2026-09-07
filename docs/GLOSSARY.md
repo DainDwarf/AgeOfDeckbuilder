@@ -79,7 +79,7 @@ deliberate exception the reviewer sees; there is no silent allow-list.
 | **improvement** | A layer a worker improves a tile with through an instant; distinct ones stack, the same one never twice. | — |
 | **improve** | To put an improvement on a tile where a worker stands; what an improvement instant does. | lay, build, place, install |
 | **yield** | What a tile's layers and the river running along it give at income, resource by resource. | output, produce, harvest |
-| **claim** | To spend culture on a tile adjacent to one the city owns; free of cards. | buy, purchase, expand, annex |
+| **claim** | To spend culture on a charted tile adjacent to one the city owns; free of cards. | buy, purchase, expand, annex |
 | **culture** | The resource that claims tiles. | — |
 | **culture threshold** | The culture the next claim costs; rises with the tiles the city holds. | claim cost, step, price |
 | **health** | A unit's remaining life; at zero the unit is killed. | HP, hit points, hitpoints, life |

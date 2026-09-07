@@ -13,6 +13,7 @@ import {
   type Terrain,
   type Tile,
   type TileCoords,
+  tileAt,
   tileKey,
   tileYield,
 } from '../rules/map';
@@ -211,6 +212,13 @@ export type PressedTile = {
   readonly at: TileFace;
 };
 
+/** What the map draws of a tile: the face it draws, and whether that face is the tile as it stands. */
+export type Drawn = {
+  readonly tile: Tile;
+  /** Whether what stands on the face is live too: a snapshot answers for its tile whole. */
+  readonly live: boolean;
+};
+
 export type MapView = {
   render(chronicle: Chronicle): void;
   /** What the map plays for the stage; nothing means the scene renders it at once. */
@@ -221,7 +229,6 @@ export type MapView = {
    * with where that tile stands, and the aim goes on standing; one off the map does nothing.
    */
   aimTile(
-    chronicle: Chronicle,
     tiles: TileCoords[],
     chosen: (tile: TileCoords | undefined) => void,
     refused: (at: PressedTile) => void,
@@ -242,6 +249,8 @@ export type MapView = {
   markSelected(tile: TileCoords | undefined): void;
   /** Where a tile's face stands, for whatever floats beside a tile no press picked out. */
   faceOf(tile: TileCoords): TileFace;
+  /** The face the map draws of a tile, and nothing at all for a tile it draws none of. */
+  drawnAs(tile: TileCoords): Drawn | undefined;
   /**
    * Shows what every tile yields of these resources, a glyph for each point of it, over a dimmed
    * map; an empty set takes the overlay down.
@@ -407,21 +416,6 @@ function boxOf(tiles: readonly Tile[]): {
     top: Math.min(...ys) - TILE_SIZE,
     bottom: Math.max(...ys) + TILE_SIZE,
   };
-}
-
-/** A hexagon is exactly the ground closer to its own centre than to any other centre. */
-function tileUnder(chronicle: Chronicle, x: number, y: number): TileCoords | undefined {
-  let nearest: TileCoords | undefined;
-  let best = Infinity;
-  for (const tile of chronicle.tiles) {
-    const at = positionOf(tile);
-    const gap = Math.hypot(at.x - x, at.y - y);
-    if (gap < best) {
-      best = gap;
-      nearest = { q: tile.q, r: tile.r };
-    }
-  }
-  return best <= TILE_SIZE ? nearest : undefined;
 }
 
 function same(a: TileCoords, b: TileCoords): boolean {
@@ -821,10 +815,42 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
   };
 
   /**
-   * The glyphs of every tile repainted on the chronicle the map stands on: a building changes what
-   * its tile yields, so this follows every render as the buildings do. The one place a tile's
-   * glyphs are decided — a tile inside the border shows what it yields of every resource while city
-   * mode is on, and every other tile shows what the overlay is asked for, if anything.
+   * The one face the map draws of a tile, which everything the chronicle screen reads off the map
+   * reads too: the tile as it stands where the map draws it live or has no snapshot of it to draw,
+   * and the tile its snapshot last saw where it draws it in fog. Nothing for a tile it draws none of.
+   */
+  const drawnOf = (tile: Tile): Drawn | undefined => {
+    const key = tileKey(tile);
+    if (!drawn.has(key)) return undefined;
+    const snapshot = charted.get(key);
+    if (live.has(key) || snapshot === undefined) return { tile, live: true };
+    return { tile: snapshot.tile, live: false };
+  };
+
+  /**
+   * The tile a press lands on: the one the map draws whose face it landed inside, and nothing where
+   * the map draws none. A hexagon is exactly the ground closer to its own centre than to any other.
+   */
+  const tileUnder = (x: number, y: number): TileCoords | undefined => {
+    let nearest: TileCoords | undefined;
+    let best = Infinity;
+    for (const tile of shown?.tiles ?? []) {
+      if (!drawn.has(tileKey(tile))) continue;
+      const at = positionOf(tile);
+      const gap = Math.hypot(at.x - x, at.y - y);
+      if (gap < best) {
+        best = gap;
+        nearest = { q: tile.q, r: tile.r };
+      }
+    }
+    return best <= TILE_SIZE ? nearest : undefined;
+  };
+
+  /**
+   * The glyphs of every tile the map draws, repainted on the chronicle it stands on: a building
+   * changes what its tile yields, so this follows every render as the buildings do. The one place a
+   * tile's glyphs are decided — a tile inside the border shows what it yields of every resource
+   * while city mode is on, and every other tile shows what the overlay is asked for, if anything.
    */
   const paintYields = (): void => {
     glyphs.removeAll(true);
@@ -834,8 +860,10 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
 
     const inside = new Set(marking ? shown.held.map(tileKey) : []);
     for (const tile of shown.tiles) {
+      const face = drawnOf(tile);
+      if (face === undefined) continue;
       const asked = inside.has(tileKey(tile)) ? EVERY_RESOURCE : showing;
-      const yields = tileYield(tile, shown.rivers);
+      const yields = tileYield(face.tile, shown.rivers);
       const owed: Resource[] = [];
       for (const resource of RESOURCES) {
         if (!asked.has(resource)) continue;
@@ -900,10 +928,9 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
     if (shown === undefined) return;
 
     for (const tile of shown.tiles) {
-      if (!drawn.has(tileKey(tile))) continue;
-      const asStands = live.has(tileKey(tile));
-      const snapshot = charted.get(tileKey(tile));
-      const face = asStands ? tile : (snapshot?.tile ?? tile);
+      const drawing = drawnOf(tile);
+      if (drawing === undefined) continue;
+      const face = drawing.tile;
 
       const { x, y } = positionOf(tile);
       ground.add(
@@ -924,16 +951,18 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
       if (face.building !== undefined) {
         built.add(buildingMark(scene, face.building).setPosition(x, y));
       }
-      if (asStands) continue;
+      if (live.has(tileKey(tile))) continue;
       // A snapshot answers for its tile whole: one taken of an empty tile hides the unit that has
       // walked onto it since.
-      if (snapshot === undefined) {
+      if (drawing.live) {
         const standing = unitAt(shown.units, tile);
         if (standing !== undefined) {
           marks.add(unitMark(scene, standing.stats.type, standing.faction).setPosition(x, y));
         }
-      } else if (snapshot.unit !== undefined) {
-        marks.add(unitMark(scene, snapshot.unit.type, snapshot.unit.faction).setPosition(x, y));
+      } else {
+        const kept = charted.get(tileKey(tile))?.unit;
+        if (kept !== undefined)
+          marks.add(unitMark(scene, kept.type, kept.faction).setPosition(x, y));
       }
       fog.add(fogScrim(scene, tile));
     }
@@ -1239,7 +1268,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
         down: (pointer) => {
           if (marking || shown === undefined) return true;
           const at = map.at(pointer.x, pointer.y);
-          const under = tileUnder(shown, at.x, at.y);
+          const under = tileUnder(at.x, at.y);
           if (under === undefined) return true;
           const standing = unitAt(shown.units, under);
           if (standing?.faction !== 'player') return true;
@@ -1249,7 +1278,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
         },
         release: (pointer, press) => {
           const at = map.at(pointer.x, pointer.y);
-          const on = tileUnder(shown ?? chronicle, at.x, at.y);
+          const on = tileUnder(at.x, at.y);
           const held = grabbed;
           if (held !== undefined) {
             bringHome();
@@ -1300,6 +1329,11 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
       return { ...positionOf(tile), radius: TILE_SIZE };
     },
 
+    drawnAs(tile: TileCoords): Drawn | undefined {
+      const standing = shown === undefined ? undefined : tileAt(shown.tiles, tile);
+      return standing === undefined ? undefined : drawnOf(standing);
+    },
+
     showYields(shownResources: ReadonlySet<Resource>): void {
       showing = shownResources;
       paintYields();
@@ -1317,7 +1351,6 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
     },
 
     aimTile(
-      current: Chronicle,
       tiles: TileCoords[],
       chosen: (tile: TileCoords | undefined) => void,
       refused: (at: PressedTile) => void,
@@ -1338,7 +1371,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
             return;
           }
           const at = map.at(pointer.x, pointer.y);
-          const on = tileUnder(current, at.x, at.y);
+          const on = tileUnder(at.x, at.y);
           if (on === undefined) return;
           if (tiles.some((coord) => same(coord, on))) finish(on);
           else refused({ tile: on, at: { ...positionOf(on), radius: TILE_SIZE } });

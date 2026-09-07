@@ -1,14 +1,17 @@
 import { expect, type Page, test } from '@playwright/test';
 import { DECKS } from '../src/rules/cards';
-import { beginChronicle } from '../src/rules/chronicle';
+import { beginChronicle, claimable } from '../src/rules/chronicle';
 import { distance, runsAlong, type TileCoords, tileKey, tileYield } from '../src/rules/map';
 import { RESOURCES } from '../src/rules/resources';
 import { text } from '../src/ui/text';
 import {
   chronicleOf,
   click,
+  consoleKey,
   counted,
+  drawnFaces,
   endTurn,
+  enter,
   type Glyphs,
   glyphs,
   noGlyphs,
@@ -25,11 +28,11 @@ import {
   watch,
 } from './chronicle-screen';
 
-/** A tile on bare map the founding's border does not touch, clear of the bar, the piles and the hand. */
-const BARE = { at: { q: 0, r: -3 }, key: '0,-3' };
+/** A tile the founding's border touches and the city has charted: what a claim takes first. */
+const TOUCHING = { at: { q: 1, r: -2 }, key: '1,-2' };
 
-/** A tile on bare map the founding's border touches: what a claim takes first. */
-const TOUCHING = { at: { q: 0, r: -2 }, key: '0,-2' };
+/** A tile beside that one the founding's border does not touch and the city has never seen. */
+const FAR = { at: { q: 1, r: -3 }, key: '1,-3' };
 
 /** A tile the city holds, and an inhabitant stands on from the founding. */
 const HELD = 'tile-0,-1';
@@ -37,10 +40,13 @@ const HELD = 'tile-0,-1';
 /** How many tiles the city holds from the founding, one inhabitant on each. */
 const FOUNDED = 7;
 
-/** How many tiles the founding's border touches: the ring two out, as far as the map reaches. */
+/** How many tiles the founding's border touches and has charted: the claims it opens on. */
 function touching(): number {
   const founding = beginChronicle(1, DECKS.PH_Deck);
-  return founding.tiles.filter((tile) => distance(tile, founding.city) === 2).length;
+  const seen = new Set(founding.snapshots.map(tileKey));
+  return founding.tiles.filter(
+    (tile) => distance(tile, founding.city) === 2 && seen.has(tileKey(tile)),
+  ).length;
 }
 
 /** Whether the chronicle screen shows city mode is on: both marks stand, or neither does. */
@@ -52,20 +58,22 @@ async function inCityMode(page: Page): Promise<boolean> {
 }
 
 /**
- * A tile the founding leaves bare: its terrain and nothing else, no river running along it, well
- * clear of the border. So it inspects its terrain and steps to the bare tile from there.
+ * A tile the founding charts and leaves bare: its terrain and nothing else, no river running along
+ * it, outside the border. So it inspects its terrain, and a right click on it claims nothing.
  */
 async function bareTile(page: Page): Promise<TileCoords> {
   const chronicle = await chronicleOf(page);
+  const seen = new Set(chronicle.snapshots.map(tileKey));
   const found = chronicle.tiles.find(
     (tile) =>
-      distance(tile, chronicle.city) === 3 &&
+      distance(tile, chronicle.city) === 2 &&
+      seen.has(tileKey(tile)) &&
       tile.feature === undefined &&
       tile.building === undefined &&
       tile.improvements.length === 0 &&
       !runsAlong(chronicle.rivers, tile),
   );
-  if (found === undefined) throw new Error('the founding leaves no bare tile three tiles out');
+  if (found === undefined) throw new Error('the founding charts no bare tile two tiles out');
   return { q: found.q, r: found.r };
 }
 
@@ -75,21 +83,21 @@ async function answered(page: Page): Promise<void> {
   await settled(page);
 }
 
-/** What the tiles inside the border yield, point by point, and what the whole map yields. */
-async function yielded(page: Page): Promise<{ inside: Glyphs; map: Glyphs }> {
+/** What the tiles inside the border yield, point by point, and what every tile the map draws does. */
+async function yielded(page: Page): Promise<{ inside: Glyphs; drawn: Glyphs }> {
   const chronicle = await chronicleOf(page);
   const held = new Set(chronicle.held.map(tileKey));
   const inside = noGlyphs();
-  const map = noGlyphs();
-  for (const tile of chronicle.tiles) {
-    const yields = tileYield(tile, chronicle.rivers);
+  const drawn = noGlyphs();
+  for (const face of drawnFaces(chronicle)) {
+    const yields = tileYield(face, chronicle.rivers);
     for (const resource of RESOURCES) {
       const points = yields[resource] ?? 0;
-      map[resource] += points;
-      if (held.has(tileKey(tile))) inside[resource] += points;
+      drawn[resource] += points;
+      if (held.has(tileKey(face))) inside[resource] += points;
     }
   }
-  return { inside, map };
+  return { inside, drawn };
 }
 
 test('the city key enters city mode, where a tile click selects nothing, and the back key leaves it', async ({
@@ -103,8 +111,8 @@ test('the city key enters city mode, where a tile click selects nothing, and the
   await page.keyboard.press('c');
   await expect.poll(() => inCityMode(page)).toBe(true);
 
-  const bare = await tileOnScreen(page, BARE.at);
-  await page.mouse.click(bare.x, bare.y);
+  const near = await tileOnScreen(page, TOUCHING.at);
+  await page.mouse.click(near.x, near.y);
   await answered(page);
   expect(await ringedTile(page)).toBeUndefined();
   expect(await shownCard(page)).toBeUndefined();
@@ -112,8 +120,8 @@ test('the city key enters city mode, where a tile click selects nothing, and the
   await page.keyboard.press('Escape');
   await expect.poll(() => inCityMode(page)).toBe(false);
 
-  await page.mouse.click(bare.x, bare.y);
-  await expect.poll(() => ringedTile(page)).toBe(BARE.key);
+  await page.mouse.click(near.x, near.y);
+  await expect.poll(() => ringedTile(page)).toBe(TOUCHING.key);
 
   expect(problems).toEqual([]);
 });
@@ -122,9 +130,9 @@ test('city mode lets go of the selection as it comes on', async ({ page }) => {
   const problems = watch(page);
 
   await open(page, 1, 'PH_Deck');
-  const bare = await tileOnScreen(page, BARE.at);
-  await page.mouse.click(bare.x, bare.y);
-  await expect.poll(() => ringedTile(page)).toBe(BARE.key);
+  const near = await tileOnScreen(page, TOUCHING.at);
+  await page.mouse.click(near.x, near.y);
+  await expect.poll(() => ringedTile(page)).toBe(TOUCHING.key);
 
   await page.keyboard.press('c');
   await expect.poll(() => inCityMode(page)).toBe(true);
@@ -255,8 +263,13 @@ test('a city-mode click the rules refuse says why, one on no act of the city’s
   await page.keyboard.press('c');
   await expect.poll(() => inCityMode(page)).toBe(true);
 
+  // The uncharted veil off, so the press on the far tile lands on it and the rules answer it.
+  await consoleKey(page);
+  await enter(page, 'uncharted');
+  await consoleKey(page);
+
   const near = await tileOnScreen(page, TOUCHING.at);
-  const far = await tileOnScreen(page, BARE.at);
+  const far = await tileOnScreen(page, FAR.at);
 
   await page.mouse.click(near.x, near.y);
   await expect.poll(() => refusalLines(page)).toEqual([text('refusal.culture', { cost: 1 })]);
@@ -275,11 +288,13 @@ test('a city-mode click the rules refuse says why, one on no act of the city’s
   expect(claimed.held.map(tileKey)).toContain(TOUCHING.key);
   expect(claimed.resources.culture).toBe(0);
   expect(await counted(page, 'assigned')).toBe(FOUNDED + 1);
-  expect(await counted(page, 'claimable')).toBeGreaterThan(touching());
+  // The tile claimed is a claim no longer, and the border has moved out onto nothing it has seen.
+  expect(await counted(page, 'claimable')).toBe(touching() - 1);
 
-  // The border has moved out: the tile it did not touch before is a tile the city can pay for now.
   await page.mouse.click(far.x, far.y);
-  await expect.poll(() => refusalLines(page)).toEqual([text('refusal.culture', { cost: 1 })]);
+  await answered(page);
+  expect(await refusalLines(page)).toBeUndefined();
+  expect(claimable(claimed).map(tileKey)).not.toContain(FAR.key);
 
   expect(problems).toEqual([]);
 });
@@ -294,8 +309,8 @@ test('city mode shows what every tile inside the border yields, and nothing of a
 
   await page.keyboard.press('c');
   await expect.poll(() => inCityMode(page)).toBe(true);
-  const { inside, map } = await yielded(page);
-  expect(inside).not.toEqual(map);
+  const { inside, drawn } = await yielded(page);
+  expect(inside).not.toEqual(drawn);
   expect(await glyphs(page)).toEqual(inside);
   expect(await shows(page, 'yield-dim')).toBe(false);
 

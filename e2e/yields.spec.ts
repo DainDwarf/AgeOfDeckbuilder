@@ -4,9 +4,11 @@ import { RESOURCES, type Resource } from '../src/rules/resources';
 import {
   chronicleOf,
   click,
+  drawnFaces,
   endTurn,
   type Glyphs,
   glyphs,
+  glyphsOf,
   noGlyphs,
   open,
   settled,
@@ -21,15 +23,10 @@ async function answered(page: Page): Promise<void> {
   await settled(page);
 }
 
-/** How many glyphs each resource is owed: one for every point the tiles of the map yield of it. */
+/** How many glyphs each resource is owed: one for every point the tiles the map draws yield of it. */
 async function owed(page: Page): Promise<Glyphs> {
-  const { tiles, rivers } = await chronicleOf(page);
-  const total = noGlyphs();
-  for (const tile of tiles) {
-    const yields = tileYield(tile, rivers);
-    for (const resource of RESOURCES) total[resource] += yields[resource] ?? 0;
-  }
-  return total;
+  const chronicle = await chronicleOf(page);
+  return glyphsOf(drawnFaces(chronicle), chronicle.rivers);
 }
 
 /** What the overlay would show with these resources on it, and nothing of every other. */
@@ -42,15 +39,15 @@ async function only(page: Page, ...resources: Resource[]): Promise<Glyphs> {
 
 /**
  * What the map shows with these resources on the overlay while city mode is on: every tile inside
- * the border shows its whole yield, and every other tile what the overlay is asked for.
+ * the border shows its whole yield, and every other tile the map draws what the overlay is asked for.
  */
 async function withCityMode(page: Page, ...resources: Resource[]): Promise<Glyphs> {
-  const { tiles, held, rivers } = await chronicleOf(page);
-  const inside = new Set(held.map(tileKey));
+  const chronicle = await chronicleOf(page);
+  const inside = new Set(chronicle.held.map(tileKey));
   const shown = noGlyphs();
-  for (const tile of tiles) {
-    const yields = tileYield(tile, rivers);
-    for (const resource of inside.has(tileKey(tile)) ? RESOURCES : resources) {
+  for (const face of drawnFaces(chronicle)) {
+    const yields = tileYield(face, chronicle.rivers);
+    for (const resource of inside.has(tileKey(face)) ? RESOURCES : resources) {
       shown[resource] += yields[resource] ?? 0;
     }
   }

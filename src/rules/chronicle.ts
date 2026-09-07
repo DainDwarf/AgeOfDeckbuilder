@@ -335,13 +335,16 @@ export function playable(refusal: Refusal): boolean {
   return refusal.unaffordable.length === 0 && refusal.blocked.length === 0;
 }
 
-/** The tiles the city may claim: on the map, not held, and touching a tile it holds. */
+/** The tiles the city may claim: charted, not held, and touching a tile it holds. */
 export function claimable(chronicle: Chronicle): TileCoords[] {
   const held = new Set(chronicle.held.map(tileKey));
+  const chartedTiles = new Set(chronicle.snapshots.map(tileKey));
   return chronicle.tiles
     .filter(
       (tile) =>
-        !held.has(tileKey(tile)) && neighbours(tile).some((coord) => held.has(tileKey(coord))),
+        chartedTiles.has(tileKey(tile)) &&
+        !held.has(tileKey(tile)) &&
+        neighbours(tile).some((coord) => held.has(tileKey(coord))),
     )
     .map(({ q, r }) => ({ q, r }));
 }
@@ -368,7 +371,7 @@ export function tileCost(chronicle: Chronicle, tile: TileCoords): Cost[] {
 /**
  * Everything standing between the city and the tile a city-mode click lands on: the idle population
  * an assign has none of, and the culture a claim falls short of. A tile the city neither holds nor
- * may claim is no act of the city's at all, and answers nothing.
+ * may claim — an uncharted one among them — is no act of the city's at all, and answers nothing.
  */
 export function tileRefusal(chronicle: Chronicle, tile: TileCoords): Refusal | undefined {
   if (holds(chronicle, tile)) {

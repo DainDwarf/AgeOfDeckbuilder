@@ -26,8 +26,11 @@ import {
   workerRun,
 } from './chronicle-screen';
 
-/** A tile on bare map, clear of the resource bar, the piles and the hand. */
+/** A point on bare map, clear of the resource bar, the piles and the hand; no tile is read off it. */
 const BARE = { at: { q: 0, r: -3 }, key: '0,-3' };
+
+/** A bare tile the founding charts, clear of the same three: what a press picks out. */
+const CHARTED = { at: { q: 1, r: -2 }, key: '1,-2' };
 
 /** The tiles furthest east and furthest south: the last of the map to leave the frame. */
 const EAST: TileCoords = { q: 8, r: 0 };
@@ -134,16 +137,16 @@ test('a drag on bare map carries the map with it, and picks out no tile', async 
   const problems = watch(page);
   await open(page, 1, 'PH_Deck');
 
-  const before = await tileOnScreen(page, BARE.at);
+  const before = await tileOnScreen(page, CHARTED.at);
   await drag(page, before, { x: 120, y: -80 });
 
-  const after = await tileOnScreen(page, BARE.at);
+  const after = await tileOnScreen(page, CHARTED.at);
   expect(after.x - before.x).toBeCloseTo(120, 0);
   expect(after.y - before.y).toBeCloseTo(-80, 0);
   expect(await ringedTile(page)).toBeUndefined();
 
   await page.mouse.click(after.x, after.y);
-  await expect.poll(() => ringedTile(page)).toBe(BARE.key);
+  await expect.poll(() => ringedTile(page)).toBe(CHARTED.key);
 
   expect(problems).toEqual([]);
 });
@@ -152,18 +155,18 @@ test('a pan and a zoom carry the ringed tile and the panel beside it', async ({ 
   const problems = watch(page);
   await open(page, 1, 'PH_Deck');
 
-  const tile = await tileOnScreen(page, BARE.at);
+  const tile = await tileOnScreen(page, CHARTED.at);
   await page.mouse.click(tile.x, tile.y);
-  await expect.poll(() => ringedTile(page)).toBe(BARE.key);
+  await expect.poll(() => ringedTile(page)).toBe(CHARTED.key);
   await page.keyboard.press('i');
   await expect.poll(() => shownCard(page)).toBe('terrain');
 
   const panel = await onScreen(page, 'infopanel');
   await drag(page, tile, { x: 120, y: -80 });
 
-  const panned = await tileOnScreen(page, BARE.at);
+  const panned = await tileOnScreen(page, CHARTED.at);
   const carried = await onScreen(page, 'infopanel');
-  expect(await ringedTile(page)).toBe(BARE.key);
+  expect(await ringedTile(page)).toBe(CHARTED.key);
   expect(await shownCard(page)).toBe('terrain');
   expect(panned.x - tile.x).toBeCloseTo(120, 0);
   expect(carried.x - panel.x).toBeCloseTo(120, 0);
@@ -174,8 +177,8 @@ test('a pan and a zoom carry the ringed tile and the panel beside it', async ({ 
   await settled(page);
 
   const zoomed = await onScreen(page, 'infopanel');
-  const grown = await tileOnScreen(page, BARE.at);
-  expect(await ringedTile(page)).toBe(BARE.key);
+  const grown = await tileOnScreen(page, CHARTED.at);
+  expect(await ringedTile(page)).toBe(CHARTED.key);
   expect(await shownCard(page)).toBe('terrain');
   // The tile keeps the ground it had under the pointer and grows, so the panel stands further off.
   expect(Math.abs(grown.x - panned.x)).toBeLessThan(2);
@@ -188,9 +191,9 @@ test("a pan carries a panel row's tooltip along with the row", async ({ page }) 
   const problems = watch(page);
   await open(page, 1, 'PH_Deck');
 
-  const tile = await tileOnScreen(page, BARE.at);
+  const tile = await tileOnScreen(page, CHARTED.at);
   await page.mouse.click(tile.x, tile.y);
-  await expect.poll(() => ringedTile(page)).toBe(BARE.key);
+  await expect.poll(() => ringedTile(page)).toBe(CHARTED.key);
   await page.keyboard.press('i');
   await expect.poll(() => shownCard(page)).toBe('terrain');
 

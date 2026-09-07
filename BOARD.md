@@ -12,9 +12,6 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
-- **Fog on the rest of the screen** — the yield overlay, the infopanel and city mode stop reading
-  through fog: no glyphs on a tile never seen, no occupant on a card outside sight. Pinned by an
-  e2e spec on a fixed seed. Doc-impact: `docs/DESIGN.md`.
 - **Movement costs what the tile says** — the flat one-per-tile goes; every terrain names its
   movement cost and `reachable` charges it, so the map's and the units' sections of the design
   agree on one rule. Rules tests on a fixed seed. Doc-impact: `docs/DESIGN.md`, `docs/GLOSSARY.md`.
