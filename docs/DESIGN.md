@@ -153,9 +153,25 @@ A chronicle is a sequence of **turns**. Each turn, in this order:
 
 ### Sight ✅
 
-The map is hidden. The city and its units have **sight** over the tiles near them; every other
-tile is in **fog**. Terrain stays known once seen; what stands or moves on a tile — units,
-buildings — is seen only in sight.
+The map is hidden. The city and its units have **sight** over the tiles near them, and every tile
+of the disc stands in one of three states: **in sight**, **fog** — seen before, out of sight now —
+or **uncharted**, never seen at all. A tile in sight is drawn live. A tile in fog is drawn as it
+was last seen, darkened, with nothing live on it. An uncharted tile is not drawn at all: the disc's
+rim is all that says how far the map goes.
+
+**Fog draws the tile as it was last seen.** The chronicle keeps a snapshot of every tile that has
+ever been in sight — its terrain, its feature, its improvements, its building, and the non-player
+unit standing on it. Rivers never move, so none is kept; a unit of the player's carries sight with
+it and is never stale, so none is kept either. The snapshot is taken again after every step a
+command resolves as, so an enemy crossing in sight is recorded step by step, and a unit killed
+reveals nothing after the step that killed it.
+
+**A unit in the snapshot stays there until its tile is seen again** 🔧: the player is told where it
+last stood, not where it is. The end of the turn wiping units out of the snapshot is one rule away.
+
+**A unit of the player's is not moved onto an uncharted tile**, nor across one to reach past it.
+Every tile beside a unit is in sight, so this shuts nobody in — walking into the dark costs a step,
+never a plan.
 
 **Sight is a unit's stat**, how far in tiles it sees, and the city has a sight of its own. 🔧 A
 worker and a warrior see two tiles, and so does the city.
@@ -176,7 +192,7 @@ the arithmetic fell on.
 
 Melee needs no rule of its own — an adjacent tile is always in sight — and whether a ranged attack
 needs its target in sight waits for the first ranged unit. The enemies read the whole map: their
-scripts ignore sight.
+scripts ignore sight, and no tile is uncharted to them.
 
 ### Cards ✅
 
@@ -406,12 +422,12 @@ disasters, turmoil, fortunate) are tags on content, not rules.
 Events are not announced: the player learns the next one when it lands. Announcing them is
 something a technology or a civilization's rule can grant.
 
-**Enemies enter from camps.** The generator places **camps** on the map, each in the fog until
+**Enemies enter from camps.** The generator places **camps** on the map, each uncharted until
 seen. An event that spawns enemies spawns them at a camp, and they follow their script — the
 default one moves toward the nearest of the player's units or the city and attacks it. Scouting is how a chronicle learns where the enemy comes from. A camp is captured the way
 the city is — kill what stands on it, stand on it through a full turn — and a captured camp
 spawns nothing again. 🔧 Its reward: a chronicle-only card, or influence. Spawning enemies on
-any fog tile was rejected: a raid out of a hollow that turns out empty reads as nothing.
+any tile out of sight was rejected: a raid out of a hollow that turns out empty reads as nothing.
 
 **The capstone lands on a fixed turn of the age**, known from the launch; that turn is the
 chronicle's length and the lever behind "shorter in the earlier ages". It is the last event —

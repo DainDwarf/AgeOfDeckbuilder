@@ -1,7 +1,7 @@
 import { type River, type Tile, type TileCoords, tileKey } from './map';
 import type { Resources } from './resources';
 import type { Rng } from './rng';
-import { type EnemyScriptId, UNIT_STATS, type Unit, type UnitTypeId } from './units';
+import { type EnemyScriptId, type Faction, UNIT_STATS, type Unit, type UnitTypeId } from './units';
 
 /** What took the city: an enemy captured it, or it was left without population. */
 export type DefeatCause = 'capture' | 'population';
@@ -20,11 +20,25 @@ export type CardId =
   | 'PH_Urbanisation'
   | 'PH_Recall';
 
+/** What a snapshot keeps of the unit that stood on the tile: what its mark is drawn from. */
+export type SnapshotUnit = { readonly type: UnitTypeId; readonly faction: Faction };
+
+/**
+ * One tile as it was last in sight, and the unit standing on it then. The player's own units carry
+ * sight with them and are never stale, so none of them is ever kept here.
+ */
+export type Snapshot = TileCoords & { readonly tile: Tile; readonly unit?: SnapshotUnit };
+
 /** Everything one city's story is made of, and the generator every later draw comes from. */
 export type Chronicle = {
   readonly seed: number;
   readonly rng: Rng;
   readonly tiles: Tile[];
+  /**
+   * Every tile that has been in sight, as it was last seen: what the map draws of a tile in fog. A
+   * tile absent from it is uncharted. Rivers never move, so no snapshot keeps one.
+   */
+  readonly snapshots: Snapshot[];
   /** The rivers the generator ran, each the corners it passes through along the edges between tiles. */
   readonly rivers: River[];
   readonly city: TileCoords;

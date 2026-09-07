@@ -70,12 +70,24 @@ export function unitOf(units: readonly Unit[], id: number): Unit | undefined {
 }
 
 /**
- * Where a unit can land on the move points it has left, and what each landing spends: a tile one of
- * its own holds is crossed but never offered.
+ * What a path over the map is read from: the ground it runs over, who stands on it, and which of it
+ * has ever been in sight. The chronicle answers for all three.
  */
-export function reachable(tiles: readonly Tile[], units: readonly Unit[], unit: Unit): Landing[] {
-  const terrain = new Map(tiles.map((tile) => [tileKey(tile), tile.terrain]));
-  const standing = new Map(units.map((other) => [tileKey(other.tile), other.faction]));
+type Crossed = {
+  readonly tiles: readonly Tile[];
+  readonly units: readonly Unit[];
+  readonly snapshots: readonly TileCoords[];
+};
+
+/**
+ * Where a unit can land on the move points it has left, and what each landing spends: a tile one of
+ * its own holds is crossed but never offered. A unit of the player's neither lands on an uncharted
+ * tile nor crosses one, while the enemies read the whole map and cross it charted or not.
+ */
+export function reachable(chronicle: Crossed, unit: Unit): Landing[] {
+  const terrain = new Map(chronicle.tiles.map((tile) => [tileKey(tile), tile.terrain]));
+  const standing = new Map(chronicle.units.map((other) => [tileKey(other.tile), other.faction]));
+  const charted = unit.faction === 'player' ? new Set(chronicle.snapshots.map(tileKey)) : undefined;
 
   const seen = new Set([tileKey(unit.tile)]);
   const landings: Landing[] = [];
@@ -88,6 +100,7 @@ export function reachable(tiles: readonly Tile[], units: readonly Unit[], unit: 
         const at = tileKey(coord);
         if (seen.has(at)) continue;
         if (!passable(terrain.get(at))) continue;
+        if (charted !== undefined && !charted.has(at)) continue;
         const held = standing.get(at);
         if (held !== undefined && held !== unit.faction) continue;
         seen.add(at);

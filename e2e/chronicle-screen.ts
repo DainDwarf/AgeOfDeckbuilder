@@ -9,7 +9,14 @@ import {
   playable,
   refusalOf,
 } from '../src/rules/chronicle';
-import { neighbours, type Tile, type TileCoords, tileAt, tileKey } from '../src/rules/map';
+import {
+  CITY_TILE,
+  neighbours,
+  type Tile,
+  type TileCoords,
+  tileAt,
+  tileKey,
+} from '../src/rules/map';
 import { RESOURCES, type Resource } from '../src/rules/resources';
 import type { CardId, Chronicle } from '../src/rules/state';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
@@ -154,6 +161,24 @@ export function onScreen(page: Page, name: string): Promise<OnScreen> {
       unit,
     };
   }, name);
+}
+
+/**
+ * Where a tile's face stands on the page, whether the map draws it or not: the map lays its tiles on
+ * two axes, and the city's own face with the two beside it — always in sight — give both. What a
+ * press on a tile in fog or on an uncharted one lands on.
+ */
+export async function tileOnScreen(page: Page, coord: TileCoords): Promise<OnScreen> {
+  const origin = await onScreen(page, `tile-${tileKey(CITY_TILE)}`);
+  const alongQ = await onScreen(page, `tile-${tileKey({ q: CITY_TILE.q + 1, r: CITY_TILE.r })}`);
+  const alongR = await onScreen(page, `tile-${tileKey({ q: CITY_TILE.q, r: CITY_TILE.r + 1 })}`);
+  const q = coord.q - CITY_TILE.q;
+  const r = coord.r - CITY_TILE.r;
+  return {
+    x: origin.x + q * (alongQ.x - origin.x) + r * (alongR.x - origin.x),
+    y: origin.y + q * (alongQ.y - origin.y) + r * (alongR.y - origin.y),
+    unit: origin.unit,
+  };
 }
 
 /** A rectangle on the page. */

@@ -2,6 +2,7 @@ import { expect, type Page, test } from '@playwright/test';
 import { DECKS } from '../src/rules/cards';
 import { apply, beginChronicle, outcome } from '../src/rules/chronicle';
 import { type TileCoords, tileKey } from '../src/rules/map';
+import { inSight } from '../src/rules/sight';
 import {
   aimed,
   budget,
@@ -19,17 +20,18 @@ import {
   settled,
   shownCard,
   standing,
+  tileOnScreen,
   tooltipUp,
   watch,
   workerRun,
 } from './chronicle-screen';
 
 /** A tile on bare map, clear of the resource bar, the piles and the hand. */
-const BARE = { name: 'tile-0,-3', key: '0,-3' };
+const BARE = { at: { q: 0, r: -3 }, key: '0,-3' };
 
 /** The tiles furthest east and furthest south: the last of the map to leave the frame. */
-const EAST = 'tile-8,0';
-const SOUTH = 'tile-0,8';
+const EAST: TileCoords = { q: 8, r: 0 };
+const SOUTH: TileCoords = { q: 0, r: 8 };
 
 /** What one wheel notch multiplies the zoom by. */
 const NOTCH = 1.3;
@@ -56,18 +58,23 @@ function inside(at: Point, frame: Frame): boolean {
 }
 
 /**
- * Drags the map until the named tile stands off the frame: sideways first, then up or down, since
- * the map's own bounds keep a tile near the middle of one axis from ever leaving by that axis.
+ * Drags the map until the tile stands off the frame: the map is zoomed in first, since its own
+ * bounds keep a frame at full width from ever carrying a tile near the middle of the disc out of
+ * itself; then sideways, and up or down after it.
  */
-async function pushOut(page: Page, name: string): Promise<void> {
+async function pushOut(page: Page, coord: TileCoords): Promise<void> {
   const frame = await mapFrame(page);
   const middle = { x: frame.x + frame.width / 2, y: frame.y + frame.height / 2 };
+  await page.mouse.move(middle.x, middle.y);
+  for (let notch = 0; notch < 2; notch++) await page.mouse.wheel(0, -100);
+  await settled(page);
+
   for (const step of [
     { x: frame.width / 3, y: 0 },
     { x: 0, y: frame.height / 4 },
   ]) {
-    for (let pass = 0; pass < 4; pass++) {
-      const at = await onScreen(page, name);
+    for (let pass = 0; pass < 6; pass++) {
+      const at = await tileOnScreen(page, coord);
       if (!inside(at, frame)) return;
       const way = Math.sign(step.x === 0 ? at.y - middle.y : at.x - middle.x) || 1;
       await drag(page, middle, { x: step.x * way, y: step.y * way });
@@ -76,20 +83,27 @@ async function pushOut(page: Page, name: string): Promise<void> {
 }
 
 /**
- * The first seed whose enemy crosses the map in an end of turn all to itself — one move, and no
- * arrival landing in the same end of turn to carry the frame off after it — and how many ends of
- * turn stand before that one.
+ * The first seed whose enemy crosses the map in an end of turn all to itself — one move, no arrival
+ * landing in the same end of turn to carry the frame off after it, and a tile of the crossing in
+ * sight, so that the map plays it at all — and how many ends of turn stand before that one.
  */
 function moveRun(): { seed: number; turns: number; from: TileCoords; to: TileCoords } {
-  return firstSeed('crosses an enemy inside eight ends of turn', (seed) => {
+  return firstSeed('crosses an enemy in sight inside eight ends of turn', (seed) => {
     let chronicle = beginChronicle(seed, DECKS.PH_Deck);
     for (let turns = 0; turns <= 8 && chronicle.defeat === undefined; turns++) {
       const stages = apply(chronicle, { type: 'end-turn' });
       const moves = stages.flatMap((stage) =>
-        stage.name === 'move' ? [{ from: stage.from, to: stage.to }] : [],
+        stage.name === 'move'
+          ? [{ from: stage.from, to: stage.to, seen: inSight(stage.chronicle) }]
+          : [],
       );
-      if (moves.length === 1 && !stages.some((stage) => stage.name === 'events')) {
-        return { seed, turns, ...moves[0] };
+      const [crossing] = moves;
+      if (
+        moves.length === 1 &&
+        !stages.some((stage) => stage.name === 'events') &&
+        (crossing.seen.has(tileKey(crossing.from)) || crossing.seen.has(tileKey(crossing.to)))
+      ) {
+        return { seed, turns, from: crossing.from, to: crossing.to };
       }
       chronicle = outcome(stages);
     }
@@ -120,10 +134,10 @@ test('a drag on bare map carries the map with it, and picks out no tile', async 
   const problems = watch(page);
   await open(page, 1, 'PH_Deck');
 
-  const before = await onScreen(page, BARE.name);
+  const before = await tileOnScreen(page, BARE.at);
   await drag(page, before, { x: 120, y: -80 });
 
-  const after = await onScreen(page, BARE.name);
+  const after = await tileOnScreen(page, BARE.at);
   expect(after.x - before.x).toBeCloseTo(120, 0);
   expect(after.y - before.y).toBeCloseTo(-80, 0);
   expect(await ringedTile(page)).toBeUndefined();
@@ -138,7 +152,7 @@ test('a pan and a zoom carry the ringed tile and the panel beside it', async ({ 
   const problems = watch(page);
   await open(page, 1, 'PH_Deck');
 
-  const tile = await onScreen(page, BARE.name);
+  const tile = await tileOnScreen(page, BARE.at);
   await page.mouse.click(tile.x, tile.y);
   await expect.poll(() => ringedTile(page)).toBe(BARE.key);
   await page.keyboard.press('i');
@@ -147,7 +161,7 @@ test('a pan and a zoom carry the ringed tile and the panel beside it', async ({ 
   const panel = await onScreen(page, 'infopanel');
   await drag(page, tile, { x: 120, y: -80 });
 
-  const panned = await onScreen(page, BARE.name);
+  const panned = await tileOnScreen(page, BARE.at);
   const carried = await onScreen(page, 'infopanel');
   expect(await ringedTile(page)).toBe(BARE.key);
   expect(await shownCard(page)).toBe('terrain');
@@ -160,7 +174,7 @@ test('a pan and a zoom carry the ringed tile and the panel beside it', async ({ 
   await settled(page);
 
   const zoomed = await onScreen(page, 'infopanel');
-  const grown = await onScreen(page, BARE.name);
+  const grown = await tileOnScreen(page, BARE.at);
   expect(await ringedTile(page)).toBe(BARE.key);
   expect(await shownCard(page)).toBe('terrain');
   // The tile keeps the ground it had under the pointer and grows, so the panel stands further off.
@@ -174,7 +188,7 @@ test("a pan carries a panel row's tooltip along with the row", async ({ page }) 
   const problems = watch(page);
   await open(page, 1, 'PH_Deck');
 
-  const tile = await onScreen(page, BARE.name);
+  const tile = await tileOnScreen(page, BARE.at);
   await page.mouse.click(tile.x, tile.y);
   await expect.poll(() => ringedTile(page)).toBe(BARE.key);
   await page.keyboard.press('i');
@@ -216,10 +230,10 @@ test('a drag on bare ground pans the map, and a drag from the unit moves it', as
   await expect.poll(async () => (await chronicleOf(page)).units.length).toBe(1);
 
   const entered = await chronicleOf(page);
-  const before = await onScreen(page, BARE.name);
+  const before = await tileOnScreen(page, BARE.at);
   await drag(page, before, { x: 100, y: 60 });
 
-  const after = await onScreen(page, BARE.name);
+  const after = await tileOnScreen(page, BARE.at);
   expect(after.x - before.x).toBeCloseTo(100, 0);
   expect(after.y - before.y).toBeCloseTo(60, 0);
   const panned = await chronicleOf(page);
@@ -234,7 +248,7 @@ test('a drag on bare ground pans the map, and a drag from the unit moves it', as
     .poll(async () => tileKey((await chronicleOf(page)).units[0].tile))
     .toBe(tileKey(run.tile));
   // The press that took hold of the unit left the map where it stood.
-  const held = await onScreen(page, BARE.name);
+  const held = await tileOnScreen(page, BARE.at);
   expect(held.x).toBeCloseTo(after.x, 0);
   expect(held.y).toBeCloseTo(after.y, 0);
 
@@ -261,10 +275,10 @@ test('a drag during a tile aim pans the map, and the aim still builds after it',
   await dragOut(page, aiming.hand.indexOf('PH_Farm'));
   await aimed(page);
 
-  const before = await onScreen(page, BARE.name);
+  const before = await tileOnScreen(page, BARE.at);
   await drag(page, before, { x: -90, y: 40 });
 
-  const after = await onScreen(page, BARE.name);
+  const after = await tileOnScreen(page, BARE.at);
   expect(after.x - before.x).toBeCloseTo(-90, 0);
   expect(after.y - before.y).toBeCloseTo(40, 0);
   expect(await standing(page, 'aim')).toBe(true);
@@ -292,14 +306,14 @@ test('a wheel notch zooms the map about the pointer', async ({ page }) => {
   const problems = watch(page);
   await open(page, 1, 'PH_Deck');
 
-  const before = await onScreen(page, BARE.name);
-  const east = await onScreen(page, EAST);
+  const before = await tileOnScreen(page, BARE.at);
+  const east = await tileOnScreen(page, EAST);
   await page.mouse.move(before.x, before.y);
   await page.mouse.wheel(0, -100);
   await settled(page);
 
-  const after = await onScreen(page, BARE.name);
-  const eastAfter = await onScreen(page, EAST);
+  const after = await tileOnScreen(page, BARE.at);
+  const eastAfter = await tileOnScreen(page, EAST);
 
   // What the pointer stood on stays under it, and the map grows out from there by one notch.
   expect(Math.abs(after.x - before.x)).toBeLessThan(2);
@@ -314,19 +328,19 @@ test('a held pan key moves the map, and lets go of it when it is released', asyn
   const problems = watch(page);
   await open(page, 1, 'PH_Deck');
 
-  const before = await onScreen(page, BARE.name);
+  const before = await tileOnScreen(page, BARE.at);
   await page.keyboard.down('w');
   // The frame pans up, so what stands on the map comes down the screen.
   await expect
-    .poll(() => onScreen(page, BARE.name).then((at) => at.y))
+    .poll(() => tileOnScreen(page, BARE.at).then((at) => at.y))
     .toBeGreaterThan(before.y + 40);
   await page.keyboard.up('w');
 
   await settled(page);
   await settled(page);
-  const stopped = await onScreen(page, BARE.name);
+  const stopped = await tileOnScreen(page, BARE.at);
   await settled(page);
-  expect((await onScreen(page, BARE.name)).y).toBe(stopped.y);
+  expect((await tileOnScreen(page, BARE.at)).y).toBe(stopped.y);
 
   expect(problems).toEqual([]);
 });
@@ -342,8 +356,8 @@ test('however far the map is dragged, it cannot leave the frame', async ({ page 
   const north = { x: frame.x + frame.width / 2, y: frame.y + frame.height / 3 };
   for (let pass = 0; pass < 4; pass++) await drag(page, north, { x: 0, y: -frame.height / 3 });
 
-  const east = await onScreen(page, EAST);
-  const south = await onScreen(page, SOUTH);
+  const east = await tileOnScreen(page, EAST);
+  const south = await tileOnScreen(page, SOUTH);
   for (const at of [east, south]) {
     expect(at.x).toBeGreaterThan(frame.x);
     expect(at.x).toBeLessThan(frame.x + frame.width);
@@ -354,7 +368,7 @@ test('however far the map is dragged, it cannot leave the frame', async ({ page 
   // One more of each pass finds the map already against its bounds.
   await drag(page, west, { x: 80 - frame.width, y: 0 });
   await drag(page, north, { x: 0, y: -frame.height / 3 });
-  const again = await onScreen(page, EAST);
+  const again = await tileOnScreen(page, EAST);
   expect(again.x).toBeCloseTo(east.x, 0);
   expect(again.y).toBeCloseTo(east.y, 0);
 
@@ -371,8 +385,7 @@ test('a stage on tiles the frame already holds pans nothing', async ({ page }) =
   for (let turn = 0; turn < run.turns; turn++) await endTurn(page);
 
   const frame = await mapFrame(page);
-  const crossed = `tile-${tileKey(run.to)}`;
-  const at = await onScreen(page, crossed);
+  const at = await tileOnScreen(page, run.to);
   expect(inside(at, frame)).toBe(true);
   // Onto the middle of the frame, so both tiles the move plays on stand well inside it.
   await drag(page, at, {
@@ -380,11 +393,11 @@ test('a stage on tiles the frame already holds pans nothing', async ({ page }) =
     y: frame.y + frame.height / 2 - at.y,
   });
 
-  const before = await onScreen(page, crossed);
-  expect(inside(await onScreen(page, `tile-${tileKey(run.from)}`), frame)).toBe(true);
+  const before = await tileOnScreen(page, run.to);
+  expect(inside(await tileOnScreen(page, run.from), frame)).toBe(true);
   await endTurn(page);
 
-  const after = await onScreen(page, crossed);
+  const after = await tileOnScreen(page, run.to);
   expect(after.x).toBeCloseTo(before.x, 1);
   expect(after.y).toBeCloseTo(before.y, 1);
   expect(
@@ -404,13 +417,12 @@ test('a stage on tiles the frame does not show is brought into it', async ({ pag
   for (let turn = 0; turn < run.turns; turn++) await endTurn(page);
 
   const frame = await mapFrame(page);
-  const crossed = `tile-${tileKey(run.to)}`;
-  await pushOut(page, crossed);
-  expect(inside(await onScreen(page, crossed), frame)).toBe(false);
+  await pushOut(page, run.to);
+  expect(inside(await tileOnScreen(page, run.to), frame)).toBe(false);
 
   await endTurn(page);
 
-  expect(inside(await onScreen(page, crossed), frame)).toBe(true);
+  expect(inside(await tileOnScreen(page, run.to), frame)).toBe(true);
   expect(
     (await chronicleOf(page)).units.some((unit) => tileKey(unit.tile) === tileKey(run.to)),
   ).toBe(true);

@@ -42,7 +42,7 @@ export const ENEMY_SCRIPTS: Record<EnemyScriptId, EnemyScript> = {
       if (target === undefined) return stay;
 
       const away = pathDistances(chronicle.tiles, target);
-      const landings = [stay, ...reachable(chronicle.tiles, chronicle.units, enemy)];
+      const landings = [stay, ...reachable(chronicle, enemy)];
       const spent = new Map(landings.map((landing) => [tileKey(landing.tile), landing.cost]));
 
       let chosen = stay;

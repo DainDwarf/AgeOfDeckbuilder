@@ -1,8 +1,10 @@
 import { expect, test } from 'vitest';
+import { apply, outcome } from './chronicle';
 import { distance, neighbours, type Terrain, type Tile, type TileCoords, tileKey } from './map';
 import { seedRng } from './rng';
-import { CITY_SIGHT, inSight } from './sight';
-import { type Chronicle, entered } from './state';
+import { CITY_SIGHT, charted, inSight } from './sight';
+import { type Chronicle, entered, type Snapshot } from './state';
+import type { UnitStats } from './units';
 
 const CITY: TileCoords = { q: 0, r: 0 };
 
@@ -52,10 +54,11 @@ function ground(...relief: readonly Relief[]): Tile[] {
  */
 function founded(tiles: Tile[], claimed: readonly TileCoords[] = []): Chronicle {
   const held = [CITY, ...neighbours(CITY), ...claimed];
-  return {
+  return charted({
     seed: 7,
     rng: seedRng(7),
     tiles,
+    snapshots: [],
     rivers: [],
     city: CITY,
     held,
@@ -68,17 +71,28 @@ function founded(tiles: Tile[], claimed: readonly TileCoords[] = []): Chronicle 
     drawPile: [],
     hand: [],
     discardPile: [],
-  };
+  });
 }
 
-/** The chronicle with a unit of the player's entered on a tile through the rules, seeing that far. */
-function watching(chronicle: Chronicle, tile: TileCoords, sight: number): Chronicle {
+/**
+ * The chronicle with a unit of the player's entered on a tile through the rules, carrying the stats
+ * the test names on top of its kind's, its move points full from them.
+ */
+function watching(chronicle: Chronicle, tile: TileCoords, carried: Partial<UnitStats>): Chronicle {
   const dealt = entered(chronicle, { type: 'PH_Warrior', tile, faction: 'player' });
   const last = dealt.units[dealt.units.length - 1];
-  return {
+  const stats = { ...last.stats, ...carried };
+  return charted({
     ...dealt,
-    units: [...dealt.units.slice(0, -1), { ...last, stats: { ...last.stats, sight } }],
-  };
+    units: [...dealt.units.slice(0, -1), { ...last, stats, movePoints: stats.move }],
+  });
+}
+
+/** The chronicle with an enemy entered on a tile through the rules, on the one script there is. */
+function raiding(chronicle: Chronicle, tile: TileCoords): Chronicle {
+  return charted(
+    entered(chronicle, { type: 'PH_Warrior', tile, faction: 'enemy', script: 'PH_Advance' }),
+  );
 }
 
 /** Whether a tile is in sight. */
@@ -86,8 +100,13 @@ function sees(chronicle: Chronicle, coord: TileCoords): boolean {
   return inSight(chronicle).has(tileKey(coord));
 }
 
+/** What the chronicle's snapshot of a tile holds, and nothing at all while the tile is uncharted. */
+function snapshotOf(chronicle: Chronicle, coord: TileCoords): Snapshot | undefined {
+  return chronicle.snapshots.find((snapshot) => tileKey(snapshot) === tileKey(coord));
+}
+
 test('over flat ground a unit sees every tile within its sight, and none beyond it', () => {
-  const chronicle = watching(founded(ground()), WATCHER, SIGHT);
+  const chronicle = watching(founded(ground()), WATCHER, { sight: SIGHT });
 
   for (const tile of chronicle.tiles) {
     if (distance(WATCHER, tile) > SIGHT) continue;
@@ -97,34 +116,36 @@ test('over flat ground a unit sees every tile within its sight, and none beyond 
 });
 
 test('a forest hides the tile behind it from a unit standing on the plain', () => {
-  const chronicle = watching(founded(ground(['forest', [off(1, 0)]])), WATCHER, SIGHT);
+  const chronicle = watching(founded(ground(['forest', [off(1, 0)]])), WATCHER, { sight: SIGHT });
 
   expect(sees(chronicle, off(2, 0))).toBe(false);
   expect(sees(chronicle, off(1, 0))).toBe(true);
 });
 
 test('a unit on the hills sees over a forest, and no further than the next hills', () => {
-  const over = watching(
-    founded(ground(['hills', [WATCHER]], ['forest', [off(1, 0)]])),
-    WATCHER,
-    SIGHT,
-  );
-  const stopped = watching(founded(ground(['hills', [WATCHER, off(1, 0)]])), WATCHER, SIGHT);
+  const over = watching(founded(ground(['hills', [WATCHER]], ['forest', [off(1, 0)]])), WATCHER, {
+    sight: SIGHT,
+  });
+  const stopped = watching(founded(ground(['hills', [WATCHER, off(1, 0)]])), WATCHER, {
+    sight: SIGHT,
+  });
 
   expect(sees(over, off(2, 0))).toBe(true);
   expect(sees(stopped, off(2, 0))).toBe(false);
 });
 
 test("a mountain within a unit's sight is seen: what a tile is made of never hides the tile", () => {
-  const chronicle = watching(founded(ground(['mountain', [off(2, 0)]])), WATCHER, SIGHT);
+  const chronicle = watching(founded(ground(['mountain', [off(2, 0)]])), WATCHER, { sight: SIGHT });
 
   expect(sees(chronicle, off(2, 0))).toBe(true);
 });
 
 test('a tile the line reaches two ways is seen when either way is clear', () => {
-  const one = watching(founded(ground(['forest', [off(1, -1)]])), WATCHER, SIGHT);
-  const other = watching(founded(ground(['forest', [off(1, 0)]])), WATCHER, SIGHT);
-  const both = watching(founded(ground(['forest', [off(1, -1), off(1, 0)]])), WATCHER, SIGHT);
+  const one = watching(founded(ground(['forest', [off(1, -1)]])), WATCHER, { sight: SIGHT });
+  const other = watching(founded(ground(['forest', [off(1, 0)]])), WATCHER, { sight: SIGHT });
+  const both = watching(founded(ground(['forest', [off(1, -1), off(1, 0)]])), WATCHER, {
+    sight: SIGHT,
+  });
 
   expect(sees(one, off(2, -1))).toBe(true);
   expect(sees(other, off(2, -1))).toBe(true);
@@ -136,10 +157,10 @@ test('two units on the same ground see each other alike, whichever way the line 
   const half: Relief = ['forest', [off(1, -1)]];
   const whole: Relief = ['forest', [off(1, -1), off(1, 0)]];
 
-  expect(sees(watching(founded(ground(half)), WATCHER, SIGHT), there)).toBe(true);
-  expect(sees(watching(founded(ground(half)), there, SIGHT), WATCHER)).toBe(true);
-  expect(sees(watching(founded(ground(whole)), WATCHER, SIGHT), there)).toBe(false);
-  expect(sees(watching(founded(ground(whole)), there, SIGHT), WATCHER)).toBe(false);
+  expect(sees(watching(founded(ground(half)), WATCHER, { sight: SIGHT }), there)).toBe(true);
+  expect(sees(watching(founded(ground(half)), there, { sight: SIGHT }), WATCHER)).toBe(true);
+  expect(sees(watching(founded(ground(whole)), WATCHER, { sight: SIGHT }), there)).toBe(false);
+  expect(sees(watching(founded(ground(whole)), there, { sight: SIGHT }), WATCHER)).toBe(false);
 });
 
 test('a tile the city holds is in sight, however far out it lies and whatever stands before it', () => {
@@ -160,4 +181,58 @@ test('the city sees over the ground as a unit does: a forest beside it hides wha
 
   expect(sees(open, behind)).toBe(true);
   expect(sees(hidden, behind)).toBe(false);
+});
+
+test('the snapshot keeps a tile as it was last seen once the unit that saw it has left', () => {
+  const seen = off(2, 0);
+  const away = off(0, -2);
+  const watched = watching(founded(ground(['hills', [seen]])), WATCHER, { sight: SIGHT });
+  expect(sees(watched, seen)).toBe(true);
+
+  const left = outcome(apply(watched, { type: 'move', unit: 1, tile: away }));
+
+  expect(sees(left, seen)).toBe(false);
+  expect(snapshotOf(left, seen)?.tile.terrain).toBe('hills');
+  expect(snapshotOf(left, off(3, 0))).toBeUndefined();
+});
+
+test('a killed unit charts nothing more: what it alone saw stands as it stood when it died', () => {
+  const stood = off(0, 1);
+  const raided = raiding(
+    watching(founded(ground()), WATCHER, { sight: SIGHT, health: 1 }),
+    off(0, 3),
+  );
+
+  const killed = outcome(apply(raided, { type: 'end-turn' }));
+  expect(killed.units.every((unit) => unit.faction === 'enemy')).toBe(true);
+  // The enemy crossed in sight, so the tile it landed on was charted with it standing there.
+  expect(snapshotOf(killed, stood)?.unit).toEqual({ type: 'PH_Warrior', faction: 'enemy' });
+  expect(snapshotOf(killed, off(0, 3))).toBeUndefined();
+
+  const on = outcome(apply(killed, { type: 'end-turn' }));
+
+  expect(tileKey(on.units[0].tile)).toBe(tileKey(off(0, -1)));
+  expect(snapshotOf(on, off(0, -1))?.unit).toBeUndefined();
+  expect(snapshotOf(on, stood)?.unit).toEqual({ type: 'PH_Warrior', faction: 'enemy' });
+});
+
+test('a unit of the player’s neither lands on an uncharted tile nor crosses one to reach past it', () => {
+  const hidden = off(2, 0);
+  const beyond = off(3, 0);
+  const chronicle = watching(founded(ground(['forest', [off(1, 0)]]), [beyond]), WATCHER, {
+    sight: SIGHT,
+    move: 3,
+  });
+  expect(snapshotOf(chronicle, hidden)).toBeUndefined();
+  expect(snapshotOf(chronicle, beyond)).toBeDefined();
+
+  const onto = apply(chronicle, { type: 'move', unit: 1, tile: hidden });
+  const past = apply(chronicle, { type: 'move', unit: 1, tile: beyond });
+
+  expect(onto.map((stage) => stage.name)).toEqual(['refused']);
+  expect(past.map((stage) => stage.name)).toEqual(['refused']);
+  // The charting is the whole of the refusal: the same distance over charted ground is crossed.
+  expect(
+    apply(chronicle, { type: 'move', unit: 1, tile: off(0, -3) }).map((stage) => stage.name),
+  ).toEqual(['move']);
 });

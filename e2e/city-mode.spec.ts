@@ -1,7 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
 import { DECKS } from '../src/rules/cards';
 import { beginChronicle } from '../src/rules/chronicle';
-import { distance, runsAlong, tileKey, tileYield } from '../src/rules/map';
+import { distance, runsAlong, type TileCoords, tileKey, tileYield } from '../src/rules/map';
 import { RESOURCES } from '../src/rules/resources';
 import { text } from '../src/ui/text';
 import {
@@ -21,14 +21,15 @@ import {
   shownCard,
   shows,
   standing,
+  tileOnScreen,
   watch,
 } from './chronicle-screen';
 
 /** A tile on bare map the founding's border does not touch, clear of the bar, the piles and the hand. */
-const BARE = { name: 'tile-0,-3', key: '0,-3' };
+const BARE = { at: { q: 0, r: -3 }, key: '0,-3' };
 
 /** A tile on bare map the founding's border touches: what a claim takes first. */
-const TOUCHING = { name: 'tile-0,-2', key: '0,-2' };
+const TOUCHING = { at: { q: 0, r: -2 }, key: '0,-2' };
 
 /** A tile the city holds, and an inhabitant stands on from the founding. */
 const HELD = 'tile-0,-1';
@@ -54,7 +55,7 @@ async function inCityMode(page: Page): Promise<boolean> {
  * A tile the founding leaves bare: its terrain and nothing else, no river running along it, well
  * clear of the border. So it inspects its terrain and steps to the bare tile from there.
  */
-async function bareTile(page: Page): Promise<string> {
+async function bareTile(page: Page): Promise<TileCoords> {
   const chronicle = await chronicleOf(page);
   const found = chronicle.tiles.find(
     (tile) =>
@@ -65,7 +66,7 @@ async function bareTile(page: Page): Promise<string> {
       !runsAlong(chronicle.rivers, tile),
   );
   if (found === undefined) throw new Error('the founding leaves no bare tile three tiles out');
-  return tileKey(found);
+  return { q: found.q, r: found.r };
 }
 
 /** Two frames, so whatever the last gesture handed the chronicle screen has been answered. */
@@ -102,7 +103,7 @@ test('the city key enters city mode, where a tile click selects nothing, and the
   await page.keyboard.press('c');
   await expect.poll(() => inCityMode(page)).toBe(true);
 
-  const bare = await onScreen(page, BARE.name);
+  const bare = await tileOnScreen(page, BARE.at);
   await page.mouse.click(bare.x, bare.y);
   await answered(page);
   expect(await ringedTile(page)).toBeUndefined();
@@ -121,7 +122,7 @@ test('city mode lets go of the selection as it comes on', async ({ page }) => {
   const problems = watch(page);
 
   await open(page, 1, 'PH_Deck');
-  const bare = await onScreen(page, BARE.name);
+  const bare = await tileOnScreen(page, BARE.at);
   await page.mouse.click(bare.x, bare.y);
   await expect.poll(() => ringedTile(page)).toBe(BARE.key);
 
@@ -141,7 +142,7 @@ test('a right click in city mode inspects the tile under it without selecting, a
   await page.keyboard.press('c');
   await expect.poll(() => inCityMode(page)).toBe(true);
 
-  const at = await onScreen(page, `tile-${await bareTile(page)}`);
+  const at = await tileOnScreen(page, await bareTile(page));
   await page.mouse.click(at.x, at.y, { button: 'right' });
   await expect.poll(() => shownCard(page)).toBe('terrain');
   expect(await ringedTile(page)).toBeUndefined();
@@ -254,8 +255,8 @@ test('a city-mode click the rules refuse says why, one on no act of the city’s
   await page.keyboard.press('c');
   await expect.poll(() => inCityMode(page)).toBe(true);
 
-  const near = await onScreen(page, TOUCHING.name);
-  const far = await onScreen(page, BARE.name);
+  const near = await tileOnScreen(page, TOUCHING.at);
+  const far = await tileOnScreen(page, BARE.at);
 
   await page.mouse.click(near.x, near.y);
   await expect.poll(() => refusalLines(page)).toEqual([text('refusal.culture', { cost: 1 })]);

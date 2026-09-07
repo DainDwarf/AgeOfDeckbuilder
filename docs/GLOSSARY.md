@@ -61,7 +61,8 @@ deliberate exception the reviewer sees; there is no silent allow-list.
 | **income** | The phase after the turn ends where standing things yield. | upkeep, production phase, resolution |
 | **sight** | A unit's stat and the city's own number: how far it sees, and the tiles a line from it reaches over the ground. | vision, line of sight |
 | **elevation** | How high a terrain stands over the ground: a raised tile at least as high as the one a unit is on stops the line from it there. | altitude, tallness |
-| **fog** | Every tile outside sight; known terrain, unknown occupants. | fog of war, unexplored |
+| **fog** | A tile seen before and out of sight now; drawn as it was last seen, darkened. | fog of war, shroud, dimmed, remembered |
+| **uncharted** | A tile never yet in sight; drawn not at all, and a unit of the player's is not moved onto one. | unexplored, unknown, unrevealed, black |
 | **instant** | A card with an immediate effect: on the city, on a tile, or one thing with one unit. | action (for a card), spell, effect card |
 | **worker** | A non-fighting unit that changes tiles: builds buildings, terraforms them, improves them. | builder, engineer, labourer |
 | **population** | The city's inhabitants: assigned to tiles for income, turned into units by unit cards. | citizens, workforce, pops |

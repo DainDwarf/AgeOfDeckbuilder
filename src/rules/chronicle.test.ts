@@ -34,6 +34,7 @@ import {
 } from './map';
 import { RESOURCES, type Resources } from './resources';
 import { seedRng } from './rng';
+import { charted } from './sight';
 import { type CardId, type Chronicle, type Entering, entered, idle, type TileBlock } from './state';
 import { type Faction, UNIT_STATS, type Unit, type UnitStats } from './units';
 
@@ -65,8 +66,8 @@ type Standing = {
 };
 
 /**
- * The chronicle with these units entered on it through the rules, after whatever already stands
- * there. The one way a fixture puts units on the map.
+ * The chronicle with these units entered on it through the rules and the map charted of what they
+ * see. The one way a fixture puts units on the map.
  */
 function withUnits(chronicle: Chronicle, units: readonly Standing[]): Chronicle {
   let stood = chronicle;
@@ -81,7 +82,7 @@ function withUnits(chronicle: Chronicle, units: readonly Standing[]): Chronicle 
     };
     stood = { ...dealt, units: [...dealt.units.slice(0, -1), authored] };
   }
-  return stood;
+  return charted(stood);
 }
 
 /** What a fixture authors on the chronicle it asks for: its state, and the units standing on it. */
@@ -99,6 +100,7 @@ function cityOf(inside: Terrain[], carrying: Carrying = {}): Chronicle {
   const city: Chronicle = {
     seed: 7,
     rng: seedRng(7),
+    snapshots: [],
     tiles: [
       ...inside.map(
         (terrain, index): Tile =>
@@ -248,10 +250,10 @@ function refusedFor(chronicle: Chronicle, id: CardId, at: TileCoords): TileBlock
 
 /** The chronicle with the tile at those coordinates replaced, layer for layer. */
 function withTile(chronicle: Chronicle, tile: Tile): Chronicle {
-  return {
+  return charted({
     ...chronicle,
     tiles: chronicle.tiles.map((other) => (tileKey(other) === tileKey(tile) ? tile : other)),
-  };
+  });
 }
 
 /** The command city mode sends for a tile: an inhabitant on it, or the one on it off. */

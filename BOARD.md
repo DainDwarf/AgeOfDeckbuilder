@@ -12,13 +12,6 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
-- **The map is hidden** — the chronicle keeps a snapshot of every tile that has been in sight,
-  taken after every stage; the map draws a tile in sight live, a tile in fog as its snapshot under
-  a scrim, and an uncharted tile not at all, the disc's rim a grey line; a unit is not moved onto
-  an uncharted tile, and a stage on tiles out of sight moves neither marker nor frame. Rules tests
-  pin that the snapshot keeps what was seen after the unit leaves, that a killed unit reveals
-  nothing more, and the refused move; an e2e spec on a fixed deck reads all three states.
-  Doc-impact: `docs/DESIGN.md`, `docs/GLOSSARY.md`. [board/map-hidden.md](board/map-hidden.md)
 - **Two debug commands for the fog** — the game's first debug commands, off by default: one shows
   what has never been seen, one shows what is out of sight. Both reachable in the running game and
   stepped by an e2e spec. Doc-impact: `docs/DESIGN.md`.

@@ -28,12 +28,13 @@ import {
   settled,
   shownCard,
   standing,
+  tileOnScreen,
   watch,
   workerRun,
 } from './chronicle-screen';
 
 /** A point on the map clear of the resource bar, the piles and the hand; nothing is read off it. */
-const BARE = 'tile-0,-3';
+const BARE: TileCoords = { q: 0, r: -3 };
 
 declare global {
   interface Window {
@@ -335,7 +336,7 @@ test('a right press while a card is aimed lets the card go', async ({ page }) =>
   await dragOut(page, entered.hand.indexOf('PH_March'));
   await aimed(page);
 
-  const bare = await onScreen(page, BARE);
+  const bare = await tileOnScreen(page, BARE);
   await page.mouse.click(bare.x, bare.y, { button: 'right' });
 
   await expect.poll(() => standing(page, 'aim')).toBe(false);

@@ -1,5 +1,6 @@
 import { distance, elevation, type Terrain, type TileCoords, tileKey } from './map';
-import type { Chronicle } from './state';
+import type { Chronicle, Snapshot } from './state';
+import { unitAt } from './units';
 
 /** How far the city sees, the way a unit sees on its own sight. */
 export const CITY_SIGHT = 2;
@@ -92,4 +93,46 @@ export function inSight(chronicle: Chronicle): ReadonlySet<string> {
   }
 
   return seen;
+}
+
+/**
+ * Whether a snapshot already records what the tile and whoever stands on it now show. A tile whose
+ * layers did not change is the very object it was: every path that layers a tile over rebuilds that
+ * one tile and leaves the others as they stand.
+ */
+function records(snapshot: Snapshot | undefined, taken: Snapshot): boolean {
+  return (
+    snapshot !== undefined &&
+    snapshot.tile === taken.tile &&
+    snapshot.unit?.type === taken.unit?.type &&
+    snapshot.unit?.faction === taken.unit?.faction
+  );
+}
+
+/**
+ * The chronicle with a snapshot taken of every tile in sight, over whatever it was last seen as:
+ * the one place the map is charted, and every stage a command resolves as goes through it. A tile
+ * in sight with nobody on it is recorded with nobody on it, and a unit of the player's is never
+ * recorded at all. A chronicle the snapshots already answer for is handed straight back, so a
+ * command that charted nothing answers the very chronicle it was given.
+ */
+export function charted(chronicle: Chronicle): Chronicle {
+  const seen = inSight(chronicle);
+  const kept = new Map(chronicle.snapshots.map((snapshot) => [tileKey(snapshot), snapshot]));
+  let charting = false;
+
+  for (const tile of chronicle.tiles) {
+    if (!seen.has(tileKey(tile))) continue;
+    const standing = unitAt(chronicle.units, tile);
+    const at: Snapshot = { q: tile.q, r: tile.r, tile };
+    const taken: Snapshot =
+      standing === undefined || standing.faction === 'player'
+        ? at
+        : { ...at, unit: { type: standing.stats.type, faction: standing.faction } };
+    if (records(kept.get(tileKey(tile)), taken)) continue;
+    kept.set(tileKey(tile), taken);
+    charting = true;
+  }
+
+  return charting ? { ...chronicle, snapshots: [...kept.values()] } : chronicle;
 }

@@ -8,11 +8,12 @@ import {
   settled,
   shownCard,
   standing,
+  tileOnScreen,
   watch,
 } from './chronicle-screen';
 
-/** A tile on bare map, clear of the resource bar, the piles and the hand. */
-const BARE = 'tile-0,-3';
+/** A tile on bare map, clear of the resource bar, the piles and the hand; the founding never sees it. */
+const BARE = { q: 0, r: -3 };
 
 /** Every slot of the Controls window as it reads before a single key has been rebound. */
 const AS_FOUND = [
@@ -74,7 +75,7 @@ async function intoControls(page: Page): Promise<void> {
 
 /** How far the map moved down the screen under a key held for a dozen frames, under a modifier or not. */
 async function heldBy(page: Page, key: string, under?: string): Promise<number> {
-  const before = await onScreen(page, BARE);
+  const before = await tileOnScreen(page, BARE);
   if (under !== undefined) await page.keyboard.down(under);
   await page.keyboard.down(key);
   for (let frame = 0; frame < 12; frame++) await settled(page);
@@ -82,7 +83,7 @@ async function heldBy(page: Page, key: string, under?: string): Promise<number> 
   if (under !== undefined) await page.keyboard.up(under);
   await settled(page);
   await settled(page);
-  return (await onScreen(page, BARE)).y - before.y;
+  return (await tileOnScreen(page, BARE)).y - before.y;
 }
 
 /** How far the map moved down the screen under a mouse button held for a dozen frames. */
@@ -91,7 +92,7 @@ async function heldByButton(
   button: 'middle' | 'right',
   under?: string,
 ): Promise<number> {
-  const before = await onScreen(page, BARE);
+  const before = await tileOnScreen(page, BARE);
   await page.mouse.move(before.x, before.y);
   if (under !== undefined) await page.keyboard.down(under);
   await page.mouse.down({ button });
@@ -100,12 +101,12 @@ async function heldByButton(
   if (under !== undefined) await page.keyboard.up(under);
   await settled(page);
   await settled(page);
-  return (await onScreen(page, BARE)).y - before.y;
+  return (await tileOnScreen(page, BARE)).y - before.y;
 }
 
 /** How far a drag of a bare tile with that button carried the map down the screen. */
 async function draggedBy(page: Page, button: 'left' | 'right', by: number): Promise<number> {
-  const before = await onScreen(page, BARE);
+  const before = await tileOnScreen(page, BARE);
   await page.mouse.move(before.x, before.y);
   await page.mouse.down({ button });
   await page.mouse.move(before.x, before.y + by / 2, { steps: 5 });
@@ -113,17 +114,17 @@ async function draggedBy(page: Page, button: 'left' | 'right', by: number): Prom
   await page.mouse.up({ button });
   await settled(page);
   await settled(page);
-  return (await onScreen(page, BARE)).y - before.y;
+  return (await tileOnScreen(page, BARE)).y - before.y;
 }
 
 /** How much larger the map stands after a gesture made with the pointer over a bare tile. */
 async function grewBy(page: Page, gesture: () => Promise<void>): Promise<number> {
-  const before = await onScreen(page, BARE);
+  const before = await tileOnScreen(page, BARE);
   await page.mouse.move(before.x, before.y);
   await gesture();
   await settled(page);
   await settled(page);
-  return (await onScreen(page, BARE)).unit / before.unit;
+  return (await tileOnScreen(page, BARE)).unit / before.unit;
 }
 
 /** Out of Controls and back to a bare chronicle screen, on the back key. */
@@ -270,7 +271,7 @@ test("a chord is the browser's, and binds nothing", async ({ page }) => {
   await outOfControls(page);
 
   // The button binds a pan and presses nothing on the map; under a chord it does neither.
-  const tile = await onScreen(page, BARE);
+  const tile = await tileOnScreen(page, BARE);
   await page.keyboard.down('Control');
   await page.mouse.click(tile.x, tile.y, { button: 'middle' });
   await page.keyboard.up('Control');
@@ -382,13 +383,13 @@ test('a key bound to a zoom zooms the map, and the wheel moved off it stops zoom
 
   // A notch is a press and a release at once, so it pans the one frame that follows it: the frame
   // goes up, what stands on the map comes down the screen, and nothing about it zooms.
-  const before = await onScreen(page, BARE);
+  const before = await tileOnScreen(page, BARE);
   await page.mouse.move(before.x, before.y);
   await page.mouse.wheel(0, -100);
   await settled(page);
   await settled(page);
 
-  const nudged = await onScreen(page, BARE);
+  const nudged = await tileOnScreen(page, BARE);
   expect(nudged.unit / before.unit).toBeCloseTo(1, 2);
   expect(nudged.y - before.y).toBeGreaterThan(0);
   expect(nudged.y - before.y).toBeLessThan(await heldBy(page, 'w'));

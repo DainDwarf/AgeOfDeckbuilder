@@ -394,7 +394,10 @@ function headOf(
   card: Card,
 ): { mark: Phaser.GameObjects.Polygon; name: string } {
   if (card.kind === 'unit') {
-    return { mark: unitMark(scene, card.unit), name: text(`unit.${card.unit.stats.type}`) };
+    return {
+      mark: unitMark(scene, card.unit.stats.type, card.unit.faction),
+      name: text(`unit.${card.unit.stats.type}`),
+    };
   }
   return { mark: markOf(scene, card.rows[0]), name: nameOf(card.rows[0]) };
 }

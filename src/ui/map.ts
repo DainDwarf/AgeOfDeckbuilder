@@ -4,8 +4,11 @@ import {
   type BuildingTypeId,
   CITY_TILE,
   type Corner,
+  cornerKey,
+  cornersOf,
   type FeatureId,
   type ImprovementId,
+  neighbours,
   type Terrain,
   type Tile,
   type TileCoords,
@@ -13,6 +16,7 @@ import {
   tileYield,
 } from '../rules/map';
 import { RESOURCES, type Resource } from '../rules/resources';
+import { inSight } from '../rules/sight';
 import type { Chronicle } from '../rules/state';
 import {
   attackable,
@@ -99,6 +103,10 @@ const BUILT = 0xcfc6b4;
 
 const OUTLINE = 0x0d1014;
 
+/** Placeholder primitive until the art pass: the disc's rim a plain grey line around the map. */
+const RIM = 0x5c6068;
+const RIM_WIDTH = 2;
+
 /** Pale, not accent: the border rings are already accent, and aiming has to read over them. */
 const LIT = 0xf2f6ff;
 
@@ -115,19 +123,25 @@ const BUILDING_DEPTH = 3;
 
 const UNIT_DEPTH = 4;
 
+/** Over a tile in fog and everything the map draws on it. */
+const FOG_DEPTH = 5;
+
 /** Over what stands on the tiles, while city mode is on. */
-const CITY_DEPTH = 5;
+const CITY_DEPTH = 6;
 
 /** Over everything the map draws, while the yield overlay stands. */
-const DIM_DEPTH = 6;
+const DIM_DEPTH = 7;
 
 /** Over the dim: what the map keeps at full strength through it. */
-const OVER_DIM_DEPTH = 7;
+const OVER_DIM_DEPTH = 8;
 
-const YIELD_DEPTH = 8;
+const YIELD_DEPTH = 9;
 
 /** How dark the yield overlay's dim paints the map: the scrim's alpha. */
 const DIM_ALPHA = 0.6;
+
+/** How dark a tile in fog is painted: the scrim's alpha. */
+const FOG_ALPHA = 0.6;
 
 /** One glyph, corner to corner, and how far apart the glyphs of a tile stand. */
 const GLYPH = 6;
@@ -277,9 +291,13 @@ export function improvementMark(
 }
 
 /** The one way a unit is drawn: its placeholder mark, in the colour of the faction it acts for. */
-export function unitMark(scene: Phaser.Scene, unit: Unit): Phaser.GameObjects.Polygon {
+export function unitMark(
+  scene: Phaser.Scene,
+  type: UnitTypeId,
+  faction: Faction,
+): Phaser.GameObjects.Polygon {
   return scene.add
-    .polygon(0, 0, UNIT_MARKS[unit.stats.type], FACTION_COLOURS[unit.faction])
+    .polygon(0, 0, UNIT_MARKS[type], FACTION_COLOURS[faction])
     .setStrokeStyle(2, OUTLINE);
 }
 
@@ -326,6 +344,14 @@ function assignedMark(scene: Phaser.Scene): Phaser.GameObjects.Rectangle {
 function cityDim(scene: Phaser.Scene, coord: TileCoords): Phaser.GameObjects.Polygon {
   const { x, y } = positionOf(coord);
   return scene.add.polygon(x, y, hexagon(TILE_SIZE), OUTLINE, UNASSIGNED_ALPHA).setName('city-dim');
+}
+
+/** The one way a tile in fog is darkened: a scrim over the tile as it was last seen. */
+function fogScrim(scene: Phaser.Scene, coord: TileCoords): Phaser.GameObjects.Polygon {
+  const { x, y } = positionOf(coord);
+  return scene.add
+    .polygon(x, y, hexagon(TILE_SIZE), OUTLINE, FOG_ALPHA)
+    .setName(`fog-${tileKey(coord)}`);
 }
 
 function positionOf({ q, r }: TileCoords): { x: number; y: number } {
@@ -429,6 +455,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
   // Equal depths paint in the order they were added, which is what keeps the terrain under the
   // rings and the features under what is built on them.
   const ground = scene.add.container(0, 0).setName('terrain');
+  const rim = scene.add.graphics().setName('rim');
   const rivers = scene.add.container(0, 0).setName('rivers');
   const features = scene.add.container(0, 0).setName('features');
   const rings = scene.add.container(0, 0).setName('border');
@@ -437,6 +464,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
   const selected = scene.add.container(0, 0).setDepth(GLOW_DEPTH).setName('selected');
   const lighted = scene.add.container(0, 0).setDepth(GLOW_DEPTH).setName('lit');
   const marks = scene.add.container(0, 0).setDepth(UNIT_DEPTH);
+  const fog = scene.add.container(0, 0).setDepth(FOG_DEPTH).setName('fog');
   const dim = scene.add
     .rectangle(0, 0, 1, 1, OUTLINE, DIM_ALPHA)
     .setOrigin(0, 0)
@@ -447,6 +475,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
   const glyphs = scene.add.container(0, 0).setDepth(YIELD_DEPTH).setName('yields');
   layer.add([
     ground,
+    rim,
     rivers,
     features,
     rings,
@@ -455,10 +484,23 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
     lighted,
     selected,
     marks,
+    fog,
     cityMarks,
     dim,
     glyphs,
   ]);
+
+  // Nothing a chronicle does moves the disc's rim, so it is stroked here and no render repaints it.
+  const onMap = new Set(chronicle.tiles.map(tileKey));
+  rim.lineStyle(RIM_WIDTH, RIM);
+  for (const tile of chronicle.tiles) {
+    const around = new Set(cornersOf(tile).map(cornerKey));
+    for (const coord of neighbours(tile)) {
+      if (onMap.has(tileKey(coord))) continue;
+      const shared = cornersOf(coord).filter((corner) => around.has(cornerKey(corner)));
+      rim.strokePoints(shared.map(cornerAt), false);
+    }
+  }
 
   // Nothing a chronicle does moves a river, so they are stroked here and no render repaints them.
   // Every outline goes down on one surface under all the water, so two rivers meeting read as one
@@ -758,6 +800,8 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
 
   /** The chronicle the map stands on: which marker is whose is read from it. */
   let shown: Chronicle | undefined;
+  /** The tiles in sight on that chronicle, by their keys: what the map draws live. */
+  let seen: ReadonlySet<string> = new Set();
   /** What the map has in the air; a render owns it and takes it down. */
   let flight: symbol | undefined;
 
@@ -824,34 +868,53 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
   };
 
   /**
-   * The three layers under the buildings repainted on the chronicle the map stands on: a terraform
-   * changes a tile's terrain and takes its feature with it, and an improvement is improved onto it,
-   * so all three follow every render. An improvement stands where a feature stands, the two never
-   * sharing a terrain.
+   * Every layer of every tile repainted on the chronicle the map stands on: a tile in sight is drawn
+   * live, a tile in fog is drawn from the snapshot it was last seen as — the unit that stood on it
+   * among them — under a scrim, and an uncharted tile is not drawn at all. A terraform changes a
+   * tile's terrain and takes its feature with it, an improvement is improved onto it and a building
+   * is built on it, so every layer follows every render. An improvement stands where a feature
+   * stands, the two never sharing a terrain. The marks of the units in sight are hung after this.
    */
   const paintTiles = (): void => {
     ground.removeAll(true);
     features.removeAll(true);
     improved.removeAll(true);
+    built.removeAll(true);
+    fog.removeAll(true);
     if (shown === undefined) return;
 
+    const snapshots = new Map(shown.snapshots.map((snapshot) => [tileKey(snapshot), snapshot]));
     for (const tile of shown.tiles) {
+      const live = seen.has(tileKey(tile));
+      const snapshot = snapshots.get(tileKey(tile));
+      const face = live ? tile : snapshot?.tile;
+      if (face === undefined) continue;
+
       const { x, y } = positionOf(tile);
       ground.add(
-        terrainMark(scene, tile.terrain)
+        terrainMark(scene, face.terrain)
           .setPosition(x, y)
           .setName(`tile-${tileKey(tile)}`),
       );
-      if (tile.feature !== undefined) {
+      if (face.feature !== undefined) {
         features.add(
-          featureMark(scene, tile.feature)
+          featureMark(scene, face.feature)
             .setPosition(x, y - FEATURE_RISE)
             .setName(`feature-${tileKey(tile)}`),
         );
       }
-      for (const improvement of tile.improvements) {
+      for (const improvement of face.improvements) {
         improved.add(improvementMark(scene, improvement).setPosition(x, y - FEATURE_RISE));
       }
+      if (face.building !== undefined) {
+        built.add(buildingMark(scene, face.building).setPosition(x, y));
+      }
+      if (live) continue;
+      const stood = snapshot?.unit;
+      if (stood !== undefined) {
+        marks.add(unitMark(scene, stood.type, stood.faction).setPosition(x, y));
+      }
+      fog.add(fogScrim(scene, tile));
     }
   };
 
@@ -880,7 +943,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
     if (current !== undefined && standing?.faction === 'player') {
       lit = {
         unit: standing.id,
-        landings: reachable(current.tiles, current.units, standing),
+        landings: reachable(current, standing),
         targets: attackable(current.units, standing).map((other) => other.tile),
       };
     }
@@ -904,27 +967,23 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
   const render = (current: Chronicle): void => {
     flight = undefined;
     shown = current;
-
-    paintTiles();
-    paintBorder();
-
-    built.removeAll(true);
-    for (const tile of current.tiles) {
-      if (tile.building === undefined) continue;
-      const { x, y } = positionOf(tile);
-      built.add(buildingMark(scene, tile.building).setPosition(x, y));
-    }
+    seen = inSight(current);
 
     // What is about to be destroyed loses its tweens first: a motion left running on a destroyed
     // marker never completes, and the stage waiting on it would never end.
     stopMotion(scene, marks.list);
     marks.removeAll(true);
+
+    paintTiles();
+    paintBorder();
+
     markers = new Map(
-      current.units.map((unit) => {
+      current.units.flatMap((unit): [number, Phaser.GameObjects.Polygon][] => {
+        if (!seen.has(tileKey(unit.tile))) return [];
         const { x, y } = positionOf(unit.tile);
-        const marker = unitMark(scene, unit).setPosition(x, y);
+        const marker = unitMark(scene, unit.stats.type, unit.faction).setPosition(x, y);
         marks.add(marker);
-        return [unit.id, marker];
+        return [[unit.id, marker]];
       }),
     );
 
@@ -1018,10 +1077,13 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
     ).then(() => settle(token, chronicle));
   };
 
-  /** The units of the chronicle standing on tiles the map shows none on. */
+  /** The units in sight of the chronicle standing on tiles the map shows none on. */
   const arrivals = (chronicle: Chronicle): Unit[] => {
     const standing = new Set((shown?.units ?? []).map((unit) => tileKey(unit.tile)));
-    return chronicle.units.filter((unit) => !standing.has(tileKey(unit.tile)));
+    const watched = inSight(chronicle);
+    return chronicle.units.filter(
+      (unit) => watched.has(tileKey(unit.tile)) && !standing.has(tileKey(unit.tile)),
+    );
   };
 
   /** The arrival: every unit the map was not already showing grows onto its tile. */
@@ -1032,7 +1094,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
     const token = takeOff();
     const entering = arrived.map((unit) => {
       const { x, y } = positionOf(unit.tile);
-      const marker = unitMark(scene, unit).setPosition(x, y).setScale(0);
+      const marker = unitMark(scene, unit.stats.type, unit.faction).setPosition(x, y).setScale(0);
       marks.add(marker);
       return marker;
     });
@@ -1044,14 +1106,19 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
 
   /**
    * One stage: the frame comes to hold the tiles it plays on, and the motion starts once it does.
-   * A pan paints nothing, so a stage whose motion had nothing to animate is rendered here — the
-   * scene renders only the stages the map answers nothing for.
+   * A stage with no tile in sight on the chronicle it leaves moves neither marker nor frame and is
+   * answered with nothing, so the scene renders the state it ends on. A pan paints nothing, so a
+   * stage whose motion had nothing to animate is rendered here — the scene renders only the stages
+   * the map answers nothing for.
    */
   const staged = (
     tiles: readonly TileCoords[],
     chronicle: Chronicle,
     motion: () => Promise<void> | undefined,
   ): Promise<void> | undefined => {
+    const watched = inSight(chronicle);
+    if (!tiles.some((tile) => watched.has(tileKey(tile)))) return undefined;
+
     const panning = hold(tiles);
     if (panning === undefined) return motion();
     return panning.then(() => {

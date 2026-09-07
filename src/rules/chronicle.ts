@@ -11,7 +11,16 @@ import {
 } from './map';
 import { RESOURCES, type Resource } from './resources';
 import { seedRng, shuffle as shuffleItems } from './rng';
-import { type Block, type CardId, type Chronicle, type DefeatCause, holds, idle } from './state';
+import { charted } from './sight';
+import {
+  type Block,
+  type CardId,
+  type Chronicle,
+  type DefeatCause,
+  holds,
+  idle,
+  type Snapshot,
+} from './state';
 import {
   attackable,
   attacked,
@@ -105,7 +114,8 @@ export type Stage = { readonly chronicle: Chronicle } & (
 /**
  * The founding: the seed generates the map, the city fills the slot of the tile it stands on, it
  * holds that tile and the six around it with an inhabitant assigned to each and two idle besides,
- * and the deck it is founded on is shuffled into its draw pile.
+ * the deck it is founded on is shuffled into its draw pile, and the map is charted of what the city
+ * sees from the first turn.
  */
 export function beginChronicle(seed: number, deck: readonly CardId[]): Chronicle {
   const map = generateMap(seedRng(seed));
@@ -114,26 +124,29 @@ export function beginChronicle(seed: number, deck: readonly CardId[]): Chronicle
   const tiles: Tile[] = map.tiles.map((tile) =>
     tileKey(tile) === tileKey(CITY_TILE) ? { ...tile, building: 'PH_City' } : tile,
   );
-  return draw(
-    shuffle(
-      draw(
-        events({
-          seed,
-          rng: shuffled.rng,
-          tiles,
-          rivers: map.rivers,
-          city: CITY_TILE,
-          held,
-          turn: 1,
-          resources: { food: 0, production: 0, military: 0, money: 0, science: 0, culture: 0 },
-          population: held.length + IDLE_FOUNDED,
-          assigned: [...held],
-          units: [],
-          nextUnit: 1,
-          drawPile: shuffled.items,
-          hand: [],
-          discardPile: [],
-        }),
+  return charted(
+    draw(
+      shuffle(
+        draw(
+          events({
+            seed,
+            rng: shuffled.rng,
+            tiles,
+            snapshots: [],
+            rivers: map.rivers,
+            city: CITY_TILE,
+            held,
+            turn: 1,
+            resources: { food: 0, production: 0, military: 0, money: 0, science: 0, culture: 0 },
+            population: held.length + IDLE_FOUNDED,
+            assigned: [...held],
+            units: [],
+            nextUnit: 1,
+            drawPile: shuffled.items,
+            hand: [],
+            discardPile: [],
+          }),
+        ),
       ),
     ),
   );
@@ -141,10 +154,17 @@ export function beginChronicle(seed: number, deck: readonly CardId[]): Chronicle
 
 /**
  * The one way a chronicle changes: every command the player has goes through here, and answers the
- * stages it resolves as — never none. A chronicle that has ended refuses them all, and a city left
- * without population falls on the last stage whatever the command was.
+ * stages it resolves as — never none, each of them charted of what stood in sight when it ended.
  */
 export function apply(chronicle: Chronicle, command: Command): Stage[] {
+  return charting(chronicle.snapshots, resolved(chronicle, command));
+}
+
+/**
+ * The stages a command resolves as before the map is charted. A chronicle that has ended refuses
+ * every command, and a city left without population falls on the last stage whatever it was.
+ */
+function resolved(chronicle: Chronicle, command: Command): Stage[] {
   if (chronicle.defeat !== undefined) return [{ name: 'refused', chronicle }];
 
   const stages = stagesOf(chronicle, command);
@@ -152,6 +172,25 @@ export function apply(chronicle: Chronicle, command: Command): Stage[] {
   const last = stages[stages.length - 1];
   if (last.chronicle.defeat !== undefined || last.chronicle.population > 0) return stages;
   return [...stages.slice(0, -1), { ...last, chronicle: fall(last.chronicle, 'population') }];
+}
+
+/**
+ * Every stage with its own chronicle charted, each carrying on from the snapshots the stage before
+ * it left. Every stage a command resolves as is built off the chronicle the command started on, so
+ * the snapshots the first of them carries are already the ones it started with, and a command that
+ * charted nothing hands back the very stage it was given.
+ */
+function charting(taken: Snapshot[], stages: readonly Stage[]): Stage[] {
+  let standing = taken;
+  return stages.map((stage) => {
+    const carried =
+      stage.chronicle.snapshots === standing
+        ? stage.chronicle
+        : { ...stage.chronicle, snapshots: standing };
+    const seen = charted(carried);
+    standing = seen.snapshots;
+    return seen === stage.chronicle ? stage : { ...stage, chronicle: seen };
+  });
 }
 
 /** What each command resolves as, before the fall the city may have come to on the last of them. */
@@ -446,13 +485,14 @@ function aimedEffect(
 /**
  * One unit of the player's crossing to a tile its move points reach, in as many steps as the player
  * likes: the tiles crossed are spent, and the crossing is the same `move` stage the enemy phase
- * raises. A unit that is not the player's, or a tile it cannot land on, is one `refused` stage.
+ * raises. A unit that is not the player's, or a tile it cannot land on — an uncharted one among
+ * them — is one `refused` stage.
  */
 function move(chronicle: Chronicle, mover: number, to: TileCoords): Stage[] {
   const unit = unitOf(chronicle.units, mover);
   if (unit === undefined || unit.faction !== 'player') return [{ name: 'refused', chronicle }];
 
-  const landing = reachable(chronicle.tiles, chronicle.units, unit).find(
+  const landing = reachable(chronicle, unit).find(
     (reached) => tileKey(reached.tile) === tileKey(to),
   );
   if (landing === undefined) return [{ name: 'refused', chronicle }];
