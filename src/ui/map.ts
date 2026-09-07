@@ -9,6 +9,7 @@ import {
   type FeatureId,
   type ImprovementId,
   neighbours,
+  riversAlong,
   type Terrain,
   type Tile,
   type TileCoords,
@@ -17,7 +18,7 @@ import {
 } from '../rules/map';
 import { RESOURCES, type Resource } from '../rules/resources';
 import { inSight } from '../rules/sight';
-import type { Chronicle } from '../rules/state';
+import type { Chronicle, Snapshot } from '../rules/state';
 import {
   attackable,
   type Faction,
@@ -502,19 +503,6 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
     }
   }
 
-  // Nothing a chronicle does moves a river, so they are stroked here and no render repaints them.
-  // Every outline goes down on one surface under all the water, so two rivers meeting read as one
-  // course.
-  const outlines = scene.add.graphics();
-  rivers.add(outlines);
-  const along = chronicle.rivers.map((river) => river.map(cornerAt));
-  for (const river of along) strokeRiver(outlines, river, OUTLINE, RIVER_OUTLINE_WIDTH);
-  for (const river of along) {
-    const water = scene.add.graphics().setName('river');
-    rivers.add(water);
-    strokeRiver(water, river, RIVER_COLOUR, RIVER_WIDTH);
-  }
-
   /** The mark drawn for each unit the map shows, by the number that unit is named by. */
   let markers = new Map<number, Phaser.GameObjects.Polygon>();
   let presser: Phaser.GameObjects.Zone | undefined;
@@ -802,6 +790,8 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
   let shown: Chronicle | undefined;
   /** The tiles in sight on that chronicle, by their keys: what the map draws live. */
   let seen: ReadonlySet<string> = new Set();
+  /** The snapshot of every tile charted on that chronicle, by its key: what the map draws in fog. */
+  let charted: ReadonlyMap<string, Snapshot> = new Map();
   /** What the map has in the air; a render owns it and takes it down. */
   let flight: symbol | undefined;
 
@@ -883,10 +873,9 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
     fog.removeAll(true);
     if (shown === undefined) return;
 
-    const snapshots = new Map(shown.snapshots.map((snapshot) => [tileKey(snapshot), snapshot]));
     for (const tile of shown.tiles) {
       const live = seen.has(tileKey(tile));
-      const snapshot = snapshots.get(tileKey(tile));
+      const snapshot = charted.get(tileKey(tile));
       const face = live ? tile : snapshot?.tile;
       if (face === undefined) continue;
 
@@ -915,6 +904,28 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
         marks.add(unitMark(scene, stood.type, stood.faction).setPosition(x, y));
       }
       fog.add(fogScrim(scene, tile));
+    }
+  };
+
+  /**
+   * The rivers repainted on the chronicle the map stands on, cut to the runs along the tiles it has
+   * charted: charting one draws the water beside it, so this follows every render. Every outline
+   * goes down on one surface under all the water, so two rivers meeting read as one course.
+   */
+  const paintRivers = (): void => {
+    rivers.removeAll(true);
+    if (shown === undefined) return;
+
+    const along = riversAlong(shown.rivers, new Set(charted.keys())).map((run) =>
+      run.map(cornerAt),
+    );
+    const outlines = scene.add.graphics();
+    rivers.add(outlines);
+    for (const run of along) strokeRiver(outlines, run, OUTLINE, RIVER_OUTLINE_WIDTH);
+    for (const run of along) {
+      const water = scene.add.graphics().setName('river');
+      rivers.add(water);
+      strokeRiver(water, run, RIVER_COLOUR, RIVER_WIDTH);
     }
   };
 
@@ -968,6 +979,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
     flight = undefined;
     shown = current;
     seen = inSight(current);
+    charted = new Map(current.snapshots.map((snapshot) => [tileKey(snapshot), snapshot]));
 
     // What is about to be destroyed loses its tweens first: a motion left running on a destroyed
     // marker never completes, and the stage waiting on it would never end.
@@ -975,6 +987,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
     marks.removeAll(true);
 
     paintTiles();
+    paintRivers();
     paintBorder();
 
     markers = new Map(

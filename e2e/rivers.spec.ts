@@ -1,27 +1,36 @@
 import { expect, test } from '@playwright/test';
 import { DECKS } from '../src/rules/cards';
 import { beginChronicle } from '../src/rules/chronicle';
-import { chronicleOf, counted, endTurn, firstSeed, open, watch } from './chronicle-screen';
+import {
+  chronicleOf,
+  counted,
+  endTurn,
+  firstSeed,
+  open,
+  riverRuns,
+  watch,
+} from './chronicle-screen';
 
-/** The first seed whose map runs a river. */
+/** The first seed whose map runs a river along a tile the founding has charted. */
 function riverSeed(): number {
-  return firstSeed('runs a river', (seed) =>
-    beginChronicle(seed, DECKS.PH_Deck).rivers.length > 0 ? seed : undefined,
+  return firstSeed('runs a river along a charted tile', (seed) =>
+    riverRuns(beginChronicle(seed, DECKS.PH_Deck)) > 0 ? seed : undefined,
   );
 }
 
-test('the map draws every river the chronicle runs, and an ended turn leaves them', async ({
+test('the map draws every run of river along a charted tile, and an ended turn leaves them', async ({
   page,
 }) => {
   const problems = watch(page);
   await open(page, riverSeed(), 'PH_Deck');
 
   const chronicle = await chronicleOf(page);
-  expect(chronicle.rivers.length).toBeGreaterThan(0);
-  expect(await counted(page, 'river')).toBe(chronicle.rivers.length);
+  expect(riverRuns(chronicle)).toBeGreaterThan(0);
+  expect(await counted(page, 'river')).toBe(riverRuns(chronicle));
 
   await endTurn(page);
-  expect(await counted(page, 'river')).toBe(chronicle.rivers.length);
+  const ended = await chronicleOf(page);
+  expect(await counted(page, 'river')).toBe(riverRuns(ended));
 
   expect(problems).toEqual([]);
 });

@@ -7,12 +7,14 @@ import type { Chronicle } from '../src/rules/state';
 import {
   budget,
   chronicleOf,
+  counted,
   dragOut,
   dragUnit,
   endTurn,
   firstSeed,
   marksIn,
   open,
+  riverRuns,
   standing,
   watch,
 } from './chronicle-screen';
@@ -70,6 +72,45 @@ function steppedThisTurn(chronicle: Chronicle): Omit<Run, 'seed' | 'turn'> | und
   return undefined;
 }
 
+/** The turn a worker's one step charts a river the map was drawing nothing of. */
+type Charting = {
+  readonly seed: number;
+  readonly turn: number;
+  /** The tile the worker steps onto: a river runs along it, and no river was charted before. */
+  readonly out: TileCoords;
+};
+
+/**
+ * The first seed with a turn in its first eight whose worker, stepping one tile off the city, charts
+ * a tile a river runs along, on a map whose rivers all lie between uncharted tiles until then.
+ */
+function riverCharting(): Charting {
+  return firstSeed('opens a turn on a worker whose step charts a river', (seed) => {
+    let chronicle = beginChronicle(seed, DECKS.PH_Deck);
+    for (let turn = 1; turn <= 8; turn++) {
+      const charted = chartedThisTurn(chronicle);
+      if (charted !== undefined) return { seed, turn, out: charted };
+      chronicle = outcome(apply(chronicle, { type: 'end-turn' }));
+    }
+    return undefined;
+  });
+}
+
+/** Where this hand's worker steps to chart a river, on a chronicle whose map draws none yet. */
+function chartedThisTurn(chronicle: Chronicle): TileCoords | undefined {
+  const at = chronicle.hand.indexOf('PH_Worker');
+  if (at === -1 || !playable(refusalOf(chronicle, 'PH_Worker'))) return undefined;
+  if (chronicle.rivers.length === 0 || riverRuns(chronicle) > 0) return undefined;
+  const entered = outcome(apply(chronicle, { type: 'play', index: at, aim: 'none' }));
+  if (entered.units.length !== 1) return undefined;
+
+  for (const out of neighbours(entered.city)) {
+    const stepped = outcome(apply(entered, { type: 'move', unit: 1, tile: out }));
+    if (stepped !== entered && riverRuns(stepped) > 0) return out;
+  }
+  return undefined;
+}
+
 test('the map draws a tile in sight live, a tile in fog under its scrim, and an uncharted tile not at all', async ({
   page,
 }) => {
@@ -108,6 +149,34 @@ test('the map draws a tile in sight live, a tile in fog under its scrim, and an 
   expect(await marksIn(page, 'fog')).toBe(
     stood.snapshots.filter((snapshot) => !seen.has(tileKey(snapshot))).length,
   );
+
+  expect(problems).toEqual([]);
+});
+
+test('the map draws no river between two uncharted tiles, and draws one along a tile just charted', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const run = riverCharting();
+  // The run's ends of turn, and the step the worker takes on the turn it opens.
+  test.setTimeout(budget(run.turn + 1));
+
+  await open(page, run.seed, 'PH_Deck');
+  for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
+
+  // The map runs rivers, and every edge of them lies between two tiles nobody has charted yet.
+  const opened = await chronicleOf(page);
+  expect(opened.rivers.length).toBeGreaterThan(0);
+  expect(riverRuns(opened)).toBe(0);
+  expect(await counted(page, 'river')).toBe(0);
+
+  await dragOut(page, opened.hand.indexOf('PH_Worker'));
+  const entered = await chronicleOf(page);
+  await dragUnit(page, entered.city, run.out);
+
+  const stepped = await chronicleOf(page);
+  expect(riverRuns(stepped)).toBeGreaterThan(0);
+  expect(await counted(page, 'river')).toBe(riverRuns(stepped));
 
   expect(problems).toEqual([]);
 });

@@ -12,6 +12,7 @@ import {
 import {
   CITY_TILE,
   neighbours,
+  riversAlong,
   type Tile,
   type TileCoords,
   tileAt,
@@ -269,6 +270,11 @@ export function scrolled(page: Page): Promise<{ offset: number; overflow: number
     if (grid === undefined) throw new Error('no browse is open');
     return { offset: -grid.y, overflow: grid.getData('overflow') as number };
   });
+}
+
+/** How many pieces of river the map draws on a chronicle: one for each run along a tile it charted. */
+export function riverRuns(chronicle: Chronicle): number {
+  return riversAlong(chronicle.rivers, new Set(chronicle.snapshots.map(tileKey))).length;
 }
 
 /**

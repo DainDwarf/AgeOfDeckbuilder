@@ -329,6 +329,30 @@ export function runsAlong(rivers: readonly River[], coord: TileCoords): boolean 
   );
 }
 
+/**
+ * The rivers cut to the parts running along the tiles named, each part a run of corners of one
+ * river: every edge of a run lies between two tiles at least one of which is named, and a river
+ * whose middle runs elsewhere answers as one run for each stretch of it that does, so nothing joins
+ * two stretches across the gap.
+ */
+export function riversAlong(rivers: readonly River[], tiles: ReadonlySet<string>): River[] {
+  const runs: River[] = [];
+  for (const river of rivers) {
+    let run: Corner[] = [];
+    for (let at = 1; at < river.length; at++) {
+      if (tilesOfEdge(river[at - 1], river[at]).some((coord) => tiles.has(tileKey(coord)))) {
+        if (run.length === 0) run.push(river[at - 1]);
+        run.push(river[at]);
+        continue;
+      }
+      if (run.length > 0) runs.push(run);
+      run = [];
+    }
+    if (run.length > 0) runs.push(run);
+  }
+  return runs;
+}
+
 /** The one weighted draw of the generator: one roll of the seeded generator over the weights given. */
 function pickWeighted<T>(
   rng: Rng,

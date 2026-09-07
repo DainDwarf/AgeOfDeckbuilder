@@ -6,11 +6,13 @@ import {
   type Corner,
   cornerKey,
   dealtBiomes,
+  distance,
   FEATURES,
   generateMap,
   MAP_COMPOSITION,
   RIVER_FLOW,
   type River,
+  riversAlong,
   type Tile,
   tileAt,
   tileKey,
@@ -45,6 +47,30 @@ function tilesOn(tiles: Tile[], corner: Corner): Tile[] {
 /** Every edge a river runs along: the pair of corners each one lies between. */
 function edgesOf(river: River): { from: Corner; to: Corner }[] {
   return river.slice(1).map((to, index) => ({ from: river[index], to }));
+}
+
+/** The one way an edge is named here, the way its river runs it. */
+function edgeKey({ from, to }: { from: Corner; to: Corner }): string {
+  return `${cornerKey(from)}|${cornerKey(to)}`;
+}
+
+/** The tiles of a map so many steps from the city: a stand-in for the tiles a chronicle has charted. */
+function within(seed: number, steps: number): Set<string> {
+  return new Set(
+    mapOf(seed)
+      .filter((tile) => distance(CITY_TILE, tile) <= steps)
+      .map(tileKey),
+  );
+}
+
+/** Whether the run is a stretch of the river, corner for corner, exactly as the river runs it. */
+function stretchOf(river: River, run: River): boolean {
+  return river.some((_, at) =>
+    run.every(
+      (corner, step) =>
+        river[at + step] !== undefined && cornerKey(river[at + step]) === cornerKey(corner),
+    ),
+  );
 }
 
 test('the same seed generates the same map', () => {
@@ -207,6 +233,48 @@ test('a map holds at most two rivers for every mountain range it is dealt', () =
 test('the same seed runs the same rivers, and a different seed runs others', () => {
   for (const seed of SEEDS) expect(riversOf(seed)).toEqual(riversOf(seed));
   expect(riversOf(1234)).not.toEqual(riversOf(1235));
+});
+
+test('a river runs along the tiles named exactly where an edge of it has one of them on a side', () => {
+  for (const seed of SEEDS) {
+    const near = within(seed, 3);
+    const along = (edge: { from: Corner; to: Corner }): boolean =>
+      tilesOfEdge(edge.from, edge.to).some((coord) => near.has(tileKey(coord)));
+
+    const kept = new Set(riversAlong(riversOf(seed), near).flatMap(edgesOf).map(edgeKey));
+    for (const river of riversOf(seed)) {
+      for (const edge of edgesOf(river)) expect(kept.has(edgeKey(edge))).toBe(along(edge));
+    }
+    for (const run of riversAlong(riversOf(seed), near)) {
+      expect(riversOf(seed).some((river) => stretchOf(river, run))).toBe(true);
+    }
+  }
+});
+
+test('a river running out of the tiles named and back answers as two runs, joined by nothing', () => {
+  const river = riversOf(0)[0];
+  const edges = edgesOf(river);
+  const ends = new Set(
+    [edges[0], edges[edges.length - 1]].flatMap(({ from, to }) =>
+      tilesOfEdge(from, to).map(tileKey),
+    ),
+  );
+
+  const runs = riversAlong([river], ends);
+
+  expect(runs).toHaveLength(2);
+  expect(runs[0][0]).toEqual(river[0]);
+  expect(runs[1][runs[1].length - 1]).toEqual(river[river.length - 1]);
+});
+
+test('with every tile of the map named, the rivers answer whole', () => {
+  for (const seed of SEEDS) {
+    expect(riversAlong(riversOf(seed), new Set(mapOf(seed).map(tileKey)))).toEqual(riversOf(seed));
+  }
+});
+
+test('with no tile named, no river answers at all', () => {
+  for (const seed of SEEDS) expect(riversAlong(riversOf(seed), new Set())).toEqual([]);
 });
 
 test('the rivers of a map survive JSON and come back the same', () => {

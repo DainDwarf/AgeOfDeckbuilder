@@ -157,7 +157,9 @@ The map is hidden. The city and its units have **sight** over the tiles near the
 of the disc stands in one of three states: **in sight**, **fog** — seen before, out of sight now —
 or **uncharted**, never seen at all. A tile in sight is drawn live. A tile in fog is drawn as it
 was last seen, darkened, with nothing live on it. An uncharted tile is not drawn at all: the disc's
-rim is all that says how far the map goes.
+rim is all that says how far the map goes. A river runs along the edge between two tiles and is
+drawn where either of them is drawn, so a course through the dark shows only the stretches the
+player has charted.
 
 **Fog draws the tile as it was last seen.** The chronicle keeps a snapshot of every tile that has
 ever been in sight — its terrain, its feature, its improvements, its building, and the non-player
