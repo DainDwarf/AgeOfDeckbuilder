@@ -86,6 +86,31 @@ async function heldBy(page: Page, key: string, under?: string): Promise<number> 
   return (await tileOnScreen(page, BARE)).y - before.y;
 }
 
+/**
+ * One press of a place, under a layout that prints something else on it. Playwright's own keyboard
+ * prints what the US layout does on the place it types, so a press the two disagree on is sent to
+ * the page itself.
+ */
+function sendKey(page: Page, type: 'keydown' | 'keyup', code: string, key: string): Promise<void> {
+  return page.evaluate(
+    ([type, code, key]) => {
+      window.dispatchEvent(new KeyboardEvent(type, { code, key, bubbles: true, cancelable: true }));
+    },
+    [type, code, key],
+  );
+}
+
+/** How far the map moved down the screen under such a place held for a dozen frames. */
+async function heldAs(page: Page, code: string, key: string): Promise<number> {
+  const before = await tileOnScreen(page, BARE);
+  await sendKey(page, 'keydown', code, key);
+  for (let frame = 0; frame < 12; frame++) await settled(page);
+  await sendKey(page, 'keyup', code, key);
+  await settled(page);
+  await settled(page);
+  return (await tileOnScreen(page, BARE)).y - before.y;
+}
+
 /** How far the map moved down the screen under a mouse button held for a dozen frames. */
 async function heldByButton(
   page: Page,
@@ -166,6 +191,26 @@ test('a slot takes the next key pressed, and keeps it across a reload', async ({
   // The frame pans up, so what stands on the map comes down the screen.
   expect(await heldBy(page, 'k')).toBeGreaterThan(40);
   expect(Math.abs(await heldBy(page, 'ArrowUp'))).toBeLessThan(1);
+
+  expect(problems).toEqual([]);
+});
+
+test("a control fires on its key's place, and a key that prints nothing binds there", async ({
+  page,
+}) => {
+  const problems = watch(page);
+
+  await open(page, 1, 'PH_Deck');
+
+  // The place W stands on in the US layout, under a layout that prints Z on it. The frame pans up,
+  // so what stands on the map comes down the screen.
+  expect(await heldAs(page, 'KeyW', 'z')).toBeGreaterThan(40);
+
+  await intoControls(page);
+  await click(page, 'controls-city-1');
+  await expect.poll(() => slotReads(page, 'city', 1)).toBe('Press a key');
+  await sendKey(page, 'keydown', 'BracketLeft', 'Dead');
+  await expect.poll(() => slotReads(page, 'city', 1)).toBe('[');
 
   expect(problems).toEqual([]);
 });

@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { CARD_KINDS, CARDS } from '../rules/cards';
 import { NO_REFUSAL, type Refusal, type Stage } from '../rules/chronicle';
 import type { CardId, Chronicle, Defeat } from '../rules/state';
+import type { Bind } from './bindings';
 import { createCardFace } from './card-face';
 import { EASE, ended, stopMotion } from './card-motion';
 import {
@@ -64,7 +65,7 @@ export type Overlay = {
   /** Takes what stands on the scrim back one step, and answers whether anything stood. */
   back(): boolean;
   /** A key pressed while a slot of the Controls window listens binds there, and is taken. */
-  binds(key: string): boolean;
+  binds(press: Bind): boolean;
   /** Raises the defeat screen once the chronicle has ended, and nothing while it runs. */
   render(chronicle: Chronicle): void;
   play(stage: Stage): Promise<void> | undefined;
@@ -490,8 +491,8 @@ export function createOverlay(
       else shut();
     },
     back,
-    binds(key: string): boolean {
-      return standing?.binds(key) ?? false;
+    binds(press: Bind): boolean {
+      return standing?.binds(press) ?? false;
     },
     render(chronicle: Chronicle): void {
       if (chronicle.defeat !== undefined && fallen === undefined)

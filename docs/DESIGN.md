@@ -114,14 +114,17 @@ is untimed, and a menu over the chronicle screen is the chronicle screen waiting
 **Controls** lists every key the game binds — the four directions the map pans, the two it zooms,
 the city key, the yield key, the inspection key, and the back key — with two slots to each. A key is
 rebound by pressing its slot and then the key itself, whatever that key is; a key already bound
-elsewhere moves, leaving the slot that had it empty. A key pressed with Ctrl, Meta or Alt held is
-the browser's: it does nothing on the chronicle screen, and a slot listening does not take it. Every
-mouse button but the two that press the chronicle screen binds there like a key, and presses nothing
-on the chronicle screen; the browser's own menu never shows over the game. A notch of the wheel
-binds like a key too, one key each way; the map zooms one notch a press, and only through the two
-zooms — a wheel notch up and a wheel notch down until they are rebound. **Default** puts every key
-back where it began, **Back** closes the window, and what the player binds is kept in the browser
-from one launch to the next.
+elsewhere moves, leaving the slot that had it empty. A control stands on the key's place on the
+keyboard and not on what that key prints, so a layout that moves a letter leaves the control where
+the key is; a slot reads what its key printed when it was bound, a key never rebound reads the US
+keycap of its place, and a key that prints nothing binds like any other and reads its place too. A
+key pressed with Ctrl, Meta or Alt held is the browser's: it does nothing on the chronicle screen,
+and a slot listening does not take it. Every mouse button but the two that press the chronicle
+screen binds there like a key, and presses nothing on the chronicle screen; the browser's own menu
+never shows over the game. A notch of the wheel binds like a key too, one key each way; the map
+zooms one notch a press, and only through the two zooms — a wheel notch up and a wheel notch down
+until they are rebound. **Default** puts every key back where it began, **Back** closes the window,
+and what the player binds is kept in the browser from one launch to the next.
 
 ## Systems
 

@@ -1,12 +1,12 @@
 import type Phaser from 'phaser';
-import { boundTo, CONTROLS, keyOf, mouseKey, PRESSES } from './bindings';
+import { type Bind, boundTo, CONTROLS, mouseCode, PRESSES, pressOf } from './bindings';
 import { whileUp } from './design-space';
 
 /** The two the game reads its controls from, wherever the press came from. */
 const DOWN = 'key-down';
 const UP = 'key-up';
 
-/** How a wheel notch reads as a key: the way the wheel turned. */
+/** The code of a wheel notch's place: the way the wheel turned. */
 const WHEEL_UP = 'WheelUp';
 const WHEEL_DOWN = 'WheelDown';
 
@@ -52,7 +52,7 @@ export function readMouseKeys(game: Phaser.Game): void {
       event.preventDefault();
       if (chorded(event)) return;
       held.add(event.button);
-      game.events.emit(DOWN, mouseKey(event.button));
+      game.events.emit(DOWN, { code: mouseCode(event.button) });
     },
     true,
   );
@@ -61,7 +61,7 @@ export function readMouseKeys(game: Phaser.Game): void {
     (event) => {
       if (!held.delete(event.button)) return;
       event.preventDefault();
-      game.events.emit(UP, mouseKey(event.button));
+      game.events.emit(UP, { code: mouseCode(event.button) });
     },
     true,
   );
@@ -80,10 +80,10 @@ export function readMouseKeys(game: Phaser.Game): void {
 
       const notches = Math.trunc(rolled / NOTCH);
       rolled -= notches * NOTCH;
-      const key = notches < 0 ? WHEEL_UP : WHEEL_DOWN;
+      const turn = { code: notches < 0 ? WHEEL_UP : WHEEL_DOWN };
       for (let notch = Math.abs(notches); notch > 0; notch--) {
-        game.events.emit(DOWN, key);
-        game.events.emit(UP, key);
+        game.events.emit(DOWN, turn);
+        game.events.emit(UP, turn);
       }
     },
     true,
@@ -91,8 +91,8 @@ export function readMouseKeys(game: Phaser.Game): void {
 }
 
 /** Whether one of the controls stands on this key, and the browser is to be kept out of it. */
-function carries(key: string): boolean {
-  return CONTROLS.some((control) => boundTo(key, control));
+function carries(press: Bind): boolean {
+  return CONTROLS.some((control) => boundTo(press, control));
 }
 
 /**
@@ -101,12 +101,12 @@ function carries(key: string): boolean {
  * the space bar would scroll the page. Read after the press has been answered: a slot of the
  * Controls window binds the very key that opened it, and that key is the game's from then on.
  */
-export function onKeyDown(scene: Phaser.Scene, pressed: (key: string) => void): void {
+export function onKeyDown(scene: Phaser.Scene, pressed: (press: Bind) => void): void {
   scene.input.keyboard?.on('keydown', (event: KeyboardEvent) => {
     if (chorded(event)) return;
-    const key = keyOf(event.key);
-    pressed(key);
-    if (carries(key)) event.preventDefault();
+    const press = pressOf(event);
+    pressed(press);
+    if (carries(press)) event.preventDefault();
   });
   whileUp(scene, scene.game.events, DOWN, pressed);
 }
@@ -116,7 +116,7 @@ export function onKeyDown(scene: Phaser.Scene, pressed: (key: string) => void): 
  * release is never dropped for a chord: a key pressed bare and let go of under a modifier would
  * otherwise stay held, and the frame would pan on for ever.
  */
-export function onKeyUp(scene: Phaser.Scene, released: (key: string) => void): void {
-  scene.input.keyboard?.on('keyup', (event: KeyboardEvent) => released(keyOf(event.key)));
+export function onKeyUp(scene: Phaser.Scene, released: (press: Bind) => void): void {
+  scene.input.keyboard?.on('keyup', (event: KeyboardEvent) => released(pressOf(event)));
   whileUp(scene, scene.game.events, UP, released);
 }

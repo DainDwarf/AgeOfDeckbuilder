@@ -395,22 +395,22 @@ export class ChronicleScene extends Phaser.Scene {
     // the outermost that is up or pending, and only a chronicle screen with nothing on it raises the
     // menu. A second listener that acted on these keys would be a second answer to the one press;
     // the map's own listener answers the pan and zoom keys and no other.
-    onKeyDown(this, (key) => {
-      if (overlay.binds(key)) return;
-      if (boundTo(key, 'city')) {
+    onKeyDown(this, (press) => {
+      if (overlay.binds(press)) return;
+      if (boundTo(press, 'city')) {
         if (covered) return;
         if (!leaveCityMode()) enterCityMode();
         return;
       }
-      if (boundTo(key, 'yields')) {
+      if (boundTo(press, 'yields')) {
         if (!covered) clearOrShowAllYields();
         return;
       }
-      if (boundTo(key, 'inspect')) {
+      if (boundTo(press, 'inspect')) {
         if (!covered && selection !== undefined) inspect(selection);
         return;
       }
-      if (!boundTo(key, 'back')) return;
+      if (!boundTo(press, 'back')) return;
       if (overlay.back() || hand.cancelAim()) return;
       if (inspection !== undefined) uninspect();
       else if (selection !== undefined) select(undefined);

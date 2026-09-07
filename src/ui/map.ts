@@ -30,7 +30,7 @@ import {
   unitOf,
 } from '../rules/units';
 import { MAP_FRAME } from './band';
-import { bindings, boundTo, type Control, PRESSES, type Press } from './bindings';
+import { type Bind, bindings, boundTo, type Control, PRESSES, type Press } from './bindings';
 import { EASE, ended, stopMotion } from './card-motion';
 import {
   ACCENT,
@@ -695,7 +695,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
     moveTo(at.x - (at.x - centre.x) * away, at.y - (at.y - centre.y) * away, next);
   };
 
-  /** Every key held down right now, by the label it binds under. */
+  /** Every key held down right now, by the code of the place it binds under. */
   const held = new Set<string>();
 
   /**
@@ -705,15 +705,15 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
    */
   const tapped = new Set<string>();
 
-  onKeyDown(scene, (key) => {
-    held.add(key);
-    tapped.add(key);
+  onKeyDown(scene, (press) => {
+    held.add(press.code);
+    tapped.add(press.code);
     if (!taking) return;
-    if (boundTo(key, 'zoom-in')) zoomBy(ZOOM_PER_NOTCH);
-    else if (boundTo(key, 'zoom-out')) zoomBy(1 / ZOOM_PER_NOTCH);
+    if (boundTo(press, 'zoom-in')) zoomBy(ZOOM_PER_NOTCH);
+    else if (boundTo(press, 'zoom-out')) zoomBy(1 / ZOOM_PER_NOTCH);
   });
-  onKeyUp(scene, (key) => {
-    held.delete(key);
+  onKeyUp(scene, (press) => {
+    held.delete(press.code);
   });
 
   // A window that loses focus under a held key is never sent that key's release, and the frame
@@ -724,8 +724,8 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
   });
 
   /** Whether a key carries its control this frame: one held down, or one tapped since the last. */
-  const pressing = (key: string | undefined): boolean =>
-    key !== undefined && (held.has(key) || tapped.has(key));
+  const pressing = (slot: Bind | undefined): boolean =>
+    slot !== undefined && (held.has(slot.code) || tapped.has(slot.code));
 
   whileUp(scene, scene.events, Phaser.Scenes.Events.UPDATE, (_time: number, delta: number) => {
     let x = 0;

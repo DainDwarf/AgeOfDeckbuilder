@@ -1,5 +1,13 @@
 import type Phaser from 'phaser';
-import { bindings, CONTROLS, type Control, keyLabel, rebind, restoreDefaults } from './bindings';
+import {
+  type Bind,
+  bindings,
+  CONTROLS,
+  type Control,
+  keyLabel,
+  rebind,
+  restoreDefaults,
+} from './bindings';
 import {
   ACCENT,
   addText,
@@ -63,7 +71,7 @@ const SLOT_STYLE = { fontFamily: UI_FONT, fontSize: '16px', fontStyle: 'bold', c
 export type Opened = {
   readonly root: Phaser.GameObjects.Container;
   /** A key pressed while a slot listens binds there and is taken; nothing listens, nothing taken. */
-  binds(key: string): boolean;
+  binds(press: Bind): boolean;
 };
 
 /** What a window is pressed for: a button of its own, or the step back the Back button takes. */
@@ -107,7 +115,7 @@ function layControls(
   root: Phaser.GameObjects.Container,
   top: number,
   back: () => void,
-): (key: string) => boolean {
+): (press: Bind) => boolean {
   const middle = DESIGN_WIDTH / 2;
   /** The slot waiting for a key, and nothing while none waits. */
   let listening: { control: Control; slot: number } | undefined;
@@ -116,14 +124,14 @@ function layControls(
   const paint = (): void => {
     const held = bindings();
     for (const each of slots) {
-      const key = held[each.control][each.slot];
+      const bind = held[each.control][each.slot];
       const waiting = listening?.control === each.control && listening.slot === each.slot;
       each.label.setText(
         waiting
           ? text('controls.press')
-          : key === undefined
+          : bind === undefined
             ? text('controls.empty')
-            : keyLabel(key),
+            : keyLabel(bind),
       );
     }
   };
@@ -198,9 +206,9 @@ function layControls(
   });
 
   paint();
-  return (key: string): boolean => {
+  return (press: Bind): boolean => {
     if (listening === undefined) return false;
-    rebind(listening.control, listening.slot, key);
+    rebind(listening.control, listening.slot, press);
     listening = undefined;
     paint();
     return true;

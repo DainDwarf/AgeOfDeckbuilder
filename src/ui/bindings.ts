@@ -2,7 +2,8 @@ import { type TextKey, text } from './text';
 
 /**
  * Every control the game binds, in the order the Controls window lists them. A binding is a key's
- * label, never its place on the keyboard, so a layout that moves a letter moves the binding with it.
+ * place on the keyboard, never what it prints, so a layout that moves a letter leaves the binding
+ * standing where the key is.
  */
 export const CONTROLS = [
   'pan-up',
@@ -19,26 +20,32 @@ export const CONTROLS = [
 
 export type Control = (typeof CONTROLS)[number];
 
+/**
+ * A key, as it binds and as it reads: the browser's code for its place, and what it printed when it
+ * was pressed. The label is read and never compared — two places that print alike are two keys.
+ */
+export type Bind = { readonly code: string; readonly printed?: string };
+
 /** The two keys a control is bound to; a slot holds nothing once its key has moved elsewhere. */
-export type Slots = readonly [string | undefined, string | undefined];
+export type Slots = readonly [Bind | undefined, Bind | undefined];
 
 export type Bindings = Readonly<Record<Control, Slots>>;
 
 export const DEFAULTS: Bindings = {
-  'pan-up': ['W', 'ArrowUp'],
-  'pan-left': ['A', 'ArrowLeft'],
-  'pan-down': ['S', 'ArrowDown'],
-  'pan-right': ['D', 'ArrowRight'],
-  'zoom-in': ['WheelUp', undefined],
-  'zoom-out': ['WheelDown', undefined],
-  city: ['C', undefined],
-  yields: ['Tab', undefined],
-  inspect: ['I', undefined],
-  back: ['Escape', undefined],
+  'pan-up': [{ code: 'KeyW' }, { code: 'ArrowUp' }],
+  'pan-left': [{ code: 'KeyA' }, { code: 'ArrowLeft' }],
+  'pan-down': [{ code: 'KeyS' }, { code: 'ArrowDown' }],
+  'pan-right': [{ code: 'KeyD' }, { code: 'ArrowRight' }],
+  'zoom-in': [{ code: 'WheelUp' }, undefined],
+  'zoom-out': [{ code: 'WheelDown' }, undefined],
+  city: [{ code: 'KeyC' }, undefined],
+  yields: [{ code: 'Tab' }, undefined],
+  inspect: [{ code: 'KeyI' }, undefined],
+  back: [{ code: 'Escape' }, undefined],
 };
 
-/** How a mouse button reads as a key: the button, by the number the browser gives it. */
-export function mouseKey(button: number): string {
+/** The code of a mouse button's place: the button, by the number the browser gives it. */
+export function mouseCode(button: number): string {
   return `Mouse${button}`;
 }
 
@@ -55,17 +62,27 @@ export const PRESSES: ReadonlyMap<number, Press> = new Map([
   [2, 'right'],
 ]);
 
-const UNBINDABLE: ReadonlySet<string> = new Set([...PRESSES.keys()].map(mouseKey));
+const UNBINDABLE: ReadonlySet<string> = new Set([...PRESSES.keys()].map(mouseCode));
 
 /** Where the browser keeps the bindings; the origin is shared with whatever else the host serves. */
 const STORED = 'age-of-deckbuilder.controls';
 
 /**
- * The one form a key is held and compared in: a one-character label stands for both of its cases,
- * so a shifted press binds and fires the same slot. Idempotent, so every entry point may call it.
+ * What the browser prints for a key that prints nothing: one that composes the key after it, and one
+ * it cannot name at all.
  */
-export function keyOf(label: string): string {
-  return label.length === 1 ? label.toUpperCase() : label;
+const UNPRINTED: ReadonlySet<string> = new Set(['Dead', 'Unidentified']);
+
+/**
+ * The one place a press becomes a key. A one-character label stands for both of its cases, so a
+ * shifted press and a bare one read alike.
+ */
+export function pressOf(event: { code: string; key: string }): Bind {
+  if (UNPRINTED.has(event.key)) return { code: event.code };
+  return {
+    code: event.code,
+    printed: event.key.length === 1 ? event.key.toUpperCase() : event.key,
+  };
 }
 
 /** The keys whose own label is unreadable on a slot: the space bar's is a blank one. */
@@ -74,7 +91,7 @@ const NAMED: Record<string, TextKey> = {
   ArrowLeft: 'key.arrow-left',
   ArrowDown: 'key.arrow-down',
   ArrowRight: 'key.arrow-right',
-  ' ': 'key.space',
+  Space: 'key.space',
   Mouse1: 'key.mouse-1',
   Mouse3: 'key.mouse-3',
   Mouse4: 'key.mouse-4',
@@ -82,23 +99,60 @@ const NAMED: Record<string, TextKey> = {
   WheelDown: 'key.wheel-down',
 };
 
-/** How a bound key reads: the named ones by their entry, every other by the label it carries. */
-export function keyLabel(key: string): string {
-  const named = NAMED[key];
-  return named === undefined ? key : text(named);
+/** The glyph a US keyboard prints on the punctuation places. */
+const GLYPHS: Record<string, string> = {
+  Backquote: '`',
+  Minus: '-',
+  Equal: '=',
+  BracketLeft: '[',
+  BracketRight: ']',
+  Backslash: '\\',
+  Semicolon: ';',
+  Quote: "'",
+  Comma: ',',
+  Period: '.',
+  Slash: '/',
+  IntlBackslash: '\\',
+};
+
+/** What a place prints on a US keyboard; a place with no keycap of its own reads as its code. */
+function keycap(code: string): string {
+  const printed = /^(?:Key|Digit)(.)$/.exec(code);
+  if (printed !== null) return printed[1];
+  return GLYPHS[code] ?? code;
 }
 
-/** A key moved onto one slot: whichever slot held it, of any control, is left empty. */
-export function bound(bindings: Bindings, control: Control, slot: number, label: string): Bindings {
-  const key = keyOf(label);
+/**
+ * How a bound key reads. A default and a key that printed nothing carry no label of their own, so
+ * both read by the US keycap of their place.
+ */
+export function keyLabel(bind: Bind): string {
+  const named = NAMED[bind.code];
+  if (named !== undefined) return text(named);
+  return bind.printed ?? keycap(bind.code);
+}
+
+/** A key moved onto one slot: whichever slot held its place, of any control, is left empty. */
+export function bound(bindings: Bindings, control: Control, slot: number, press: Bind): Bindings {
+  const elsewhere = (held: Bind | undefined): Bind | undefined =>
+    held?.code === press.code ? undefined : held;
   const moved = {} as Record<Control, Slots>;
   for (const each of CONTROLS) {
     const [first, second] = bindings[each];
-    moved[each] = [first === key ? undefined : first, second === key ? undefined : second];
+    moved[each] = [elsewhere(first), elsewhere(second)];
   }
   const [first, second] = moved[control];
-  moved[control] = slot === 0 ? [key, second] : [first, key];
+  moved[control] = slot === 0 ? [press, second] : [first, press];
   return moved;
+}
+
+/** One stored slot's key, and nothing when what was stored cannot be one. */
+function bindOf(stored: unknown): Bind | undefined {
+  if (typeof stored !== 'object' || stored === null || Array.isArray(stored)) return undefined;
+  const { code, printed } = stored as { code: unknown; printed: unknown };
+  if (typeof code !== 'string' || code.length === 0) return undefined;
+  if (printed === undefined) return { code };
+  return typeof printed === 'string' && printed.length > 0 ? { code, printed } : undefined;
 }
 
 /**
@@ -107,13 +161,15 @@ export function bound(bindings: Bindings, control: Control, slot: number, label:
  */
 function slotsOf(stored: unknown): Slots | undefined {
   if (!Array.isArray(stored) || stored.length !== 2) return undefined;
-  const pair: (string | undefined)[] = [];
+  const pair: (Bind | undefined)[] = [];
   for (const entry of stored) {
-    if (entry === null) pair.push(undefined);
-    else if (typeof entry === 'string' && entry.length > 0) {
-      const key = keyOf(entry);
-      pair.push(UNBINDABLE.has(key) ? undefined : key);
-    } else return undefined;
+    if (entry === null) {
+      pair.push(undefined);
+      continue;
+    }
+    const bind = bindOf(entry);
+    if (bind === undefined) return undefined;
+    pair.push(UNBINDABLE.has(bind.code) ? undefined : bind);
   }
   return [pair[0], pair[1]];
 }
@@ -138,8 +194,8 @@ export function serialiseBindings(bindings: Bindings): string {
   );
 }
 
-function nulled(key: string | undefined): string | null {
-  return key ?? null;
+function nulled(bind: Bind | undefined): Bind | null {
+  return bind ?? null;
 }
 
 /** The bindings the game runs on, read from the browser the first time they are asked for. */
@@ -156,16 +212,15 @@ function keep(next: Bindings): void {
   window.localStorage.setItem(STORED, serialiseBindings(next));
 }
 
-export function rebind(control: Control, slot: number, label: string): void {
-  keep(bound(bindings(), control, slot, label));
+export function rebind(control: Control, slot: number, press: Bind): void {
+  keep(bound(bindings(), control, slot, press));
 }
 
 export function restoreDefaults(): void {
   keep(DEFAULTS);
 }
 
-/** Whether the key pressed is one of the two a control stands on. */
-export function boundTo(label: string, control: Control): boolean {
-  const key = keyOf(label);
-  return bindings()[control].some((slot) => slot === key);
+/** Whether the key pressed stands in one of the two places a control is bound to. */
+export function boundTo(press: Bind, control: Control): boolean {
+  return bindings()[control].some((slot) => slot?.code === press.code);
 }
