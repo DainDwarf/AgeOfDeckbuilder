@@ -156,7 +156,16 @@ function madeOf(tiles: Tile[], terrain: Terrain, coords: TileCoords[]): Tile[] {
 }
 
 function statsOf(stats: Partial<UnitStats>): UnitStats {
-  return { type: 'PH_Warrior', health: 4, damage: 1, range: 1, move: 2, action: 1, ...stats };
+  return {
+    type: 'PH_Warrior',
+    health: 4,
+    damage: 1,
+    range: 1,
+    move: 2,
+    action: 1,
+    sight: 2,
+    ...stats,
+  };
 }
 
 /**

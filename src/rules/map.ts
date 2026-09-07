@@ -95,6 +95,22 @@ export function water(terrain: Terrain | undefined): boolean {
   return terrain !== undefined && TERRAIN_WATER[terrain];
 }
 
+/** How high each terrain stands over the ground, terrain by terrain. */
+const TERRAIN_ELEVATION: Record<Terrain, number> = {
+  plain: 0,
+  forest: 1,
+  hills: 2,
+  mountain: 3,
+  coast: 0,
+  deep: 0,
+  urban: 0,
+};
+
+/** How high a terrain stands: what a unit sees over, and what stops it. Off the map is flat. */
+export function elevation(terrain: Terrain | undefined): number {
+  return terrain === undefined ? 0 : TERRAIN_ELEVATION[terrain];
+}
+
 /** How far each terrain stands over the water: what the river layer's relief multiplies. */
 const TERRAIN_LIFT: Record<Terrain, number> = {
   plain: 0,

@@ -20,12 +20,13 @@ export type UnitStats = {
   readonly range: number;
   readonly move: number;
   readonly action: number;
+  readonly sight: number;
 };
 
 /** The stats a unit of each kind enters the map with. */
 export const UNIT_STATS: Record<UnitTypeId, UnitStats> = {
-  PH_Worker: { type: 'PH_Worker', health: 2, damage: 0, range: 0, move: 2, action: 0 },
-  PH_Warrior: { type: 'PH_Warrior', health: 5, damage: 2, range: 1, move: 2, action: 1 },
+  PH_Worker: { type: 'PH_Worker', health: 2, damage: 0, range: 0, move: 2, action: 0, sight: 2 },
+  PH_Warrior: { type: 'PH_Warrior', health: 5, damage: 2, range: 1, move: 2, action: 1, sight: 2 },
 };
 
 /**

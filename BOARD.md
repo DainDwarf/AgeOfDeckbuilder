@@ -12,14 +12,6 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
-- **Sight is a line over the ground** — sight is a unit's stat and the city's own number;
-  every terrain has an elevation, and a tile within a unit's sight is seen when a line from the
-  unit runs over flat ground and meets no raised tile as high as the unit's own before it, the
-  target's own height never hiding it; every held tile is in sight. Rules tests on a synthetic
-  fixture pin flat ground running free, a forest stopping a plain, hills seeing over a forest and
-  stopped by hills, the far mountain seen, and a tile on two paths seen when either is clear; the
-  infopanel's unit card gains the row. Doc-impact: `docs/DESIGN.md`, `docs/GLOSSARY.md`.
-  [board/sight.md](board/sight.md)
 - **The map is hidden** — the chronicle keeps a snapshot of every tile that has been in sight,
   taken after every stage; the map draws a tile in sight live, a tile in fog as its snapshot under
   a scrim, and an uncharted tile not at all, the disc's rim a grey line; a unit is not moved onto

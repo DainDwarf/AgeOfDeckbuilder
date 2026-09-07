@@ -157,6 +157,27 @@ The map is hidden. The city and its units have **sight** over the tiles near the
 tile is in **fog**. Terrain stays known once seen; what stands or moves on a tile — units,
 buildings — is seen only in sight.
 
+**Sight is a unit's stat**, how far in tiles it sees, and the city has a sight of its own. 🔧 A
+worker and a warrior see two tiles, and so does the city.
+
+**Every terrain has an elevation**, how high it stands over the ground: plain, coast, deep water
+and urban 0, forest 1, hills 2, mountain 3. 🔧
+
+**Sight is a line over the ground.** A tile within a unit's sight is seen when the line from the
+unit's tile to it meets no tile between them that is raised — an elevation above 0 — and stands at
+least as high as the tile the unit is on. So flat ground never stops a line; a forest hides what
+lies behind it from a unit on the plain but not from one on the hills; and hills stop hills. The
+target's own elevation is never checked, or no mountain would ever be seen. Where the line runs
+exactly along the edge two tiles share it has two ways to go, and the tile is seen when **either**
+of them is clear — the generous reading, so that a tile is never hidden by which side of an edge
+the arithmetic fell on.
+
+**Every tile the city holds is in sight** 🔧: an inhabitant works it.
+
+Melee needs no rule of its own — an adjacent tile is always in sight — and whether a ranged attack
+needs its target in sight waits for the first ranged unit. The enemies read the whole map: their
+scripts ignore sight.
+
 ### Cards ✅
 
 Three kinds. Every card has a resource cost, possibly none. Every kind cycles: played or
@@ -263,7 +284,7 @@ is entered and left without touching the other.
 
 ### The map ✅
 
-A tile is layers, and its income, movement cost and sight are the sum of what its layers say, with a
+A tile is layers, and its income and movement cost are the sum of what its layers say, with a
 river running along the tile adding to its yield on top of them:
 
 - **Terrain** — one per tile, fixed unless terraformed: plain, forest, hills, … The list is
@@ -284,6 +305,9 @@ not terraformed, and the worker stays where it stands through either.
 
 🔧 A building's yield may read its neighbours. Nothing in the first playable does; the door
 is there so that adjacency is content when it comes.
+
+🔧 A tile's layers may add to the sight of a unit standing on it. Nothing does; the door is there
+so that seeing further from a tile is content when it comes.
 
 **The map is generated in five layers.** It is a hexagonal disc with the city's tile at its centre.
 First the **biomes**: origin tiles scattered over the disc spread outward until every tile belongs to
@@ -342,10 +366,10 @@ later content.
 
 ### Units and combat ✅
 
-A unit has **health**, **damage**, **range**, **move** and **action**. An **attack** removes the
-attacker's damage from the target's health, and a unit at zero health is killed. There is
-no retaliation: the target answers only when its own attack comes, so a fight is an
-exchange across turns, never within one blow.
+A unit has **health**, **damage**, **range**, **move**, **action** and **sight**. An **attack**
+removes the attacker's damage from the target's health, and a unit at zero health is killed. There
+is no retaliation: the target answers only when its own attack comes, so a fight is an exchange
+across turns, never within one blow.
 
 - **A unit moves on its own move points.** It holds **move points**, refreshed to its move at the
   start of the player's turn and lost at the end of it, and spends one per tile crossed, in as many

@@ -59,7 +59,8 @@ deliberate exception the reviewer sees; there is no silent allow-list.
 | **discard pile** | The cards played or discarded this cycle, waiting to be shuffled back. | graveyard, trash, bin |
 | **combat** | Units attacking one another: the player's by hand in play, the enemies' in the enemy phase. | battle, fight, skirmish, war |
 | **income** | The phase after the turn ends where standing things yield. | upkeep, production phase, resolution |
-| **sight** | The tiles the city and its units currently see. | vision, line of sight |
+| **sight** | A unit's stat and the city's own number: how far it sees, and the tiles a line from it reaches over the ground. | vision, line of sight |
+| **elevation** | How high a terrain stands over the ground: a raised tile at least as high as the one a unit is on stops the line from it there. | altitude, tallness |
 | **fog** | Every tile outside sight; known terrain, unknown occupants. | fog of war, unexplored |
 | **instant** | A card with an immediate effect: on the city, on a tile, or one thing with one unit. | action (for a card), spell, effect card |
 | **worker** | A non-fighting unit that changes tiles: builds buildings, terraforms them, improves them. | builder, engineer, labourer |

@@ -107,7 +107,7 @@ const LABEL_STYLE = { fontFamily: UI_FONT, fontSize: `${0.62 * em}px`, color: '#
 const VALUE_STYLE = { fontFamily: UI_FONT, fontSize: `${0.62 * em}px`, color: '#0d1014' };
 const CHIP_STYLE = { ...VALUE_STYLE, fontStyle: 'bold' };
 
-const STATS = ['health', 'damage', 'range', 'move', 'action'] as const;
+const STATS = ['health', 'damage', 'range', 'move', 'action', 'sight'] as const;
 
 /** What a row of a card is named by: one `label.` and one `tooltip.` entry each. */
 type Term = (typeof STATS)[number] | Resource;
