@@ -20,6 +20,7 @@ import {
   dragOut,
   dragUnit,
   endTurn,
+  firstSeed,
   onScreen,
   open,
   panelLines,
@@ -67,13 +68,13 @@ async function answered(page: Page): Promise<void> {
 
 /** The first seed whose generator put a feature on a tile touching the city, well inside the frame. */
 function featureRun(): { seed: number; key: string; feature: FeatureId } {
-  for (let seed = 1; seed <= 1000; seed++) {
+  return firstSeed('puts a feature beside the city', (seed) => {
     const { tiles, city } = beginChronicle(seed, DECKS.PH_Deck);
     const touching = new Set(neighbours(city).map(tileKey));
     const found = tiles.find((tile) => tile.feature !== undefined && touching.has(tileKey(tile)));
-    if (found?.feature !== undefined) return { seed, key: tileKey(found), feature: found.feature };
-  }
-  throw new Error('no seed under a thousand puts a feature beside the city');
+    if (found?.feature === undefined) return undefined;
+    return { seed, key: tileKey(found), feature: found.feature };
+  });
 }
 
 /** The tile west of one: the panel stands east of the tile it reads, so this one is clear of it. */
@@ -102,7 +103,7 @@ function stepsClear(chronicle: Chronicle): boolean {
  * the city and so well inside the frame.
  */
 function riverRun(): { seed: number; key: string; terrain: Terrain } {
-  for (let seed = 1; seed <= 1000; seed++) {
+  return firstSeed('runs a river along a fed tile beside the city', (seed) => {
     const { tiles, city, rivers } = beginChronicle(seed, DECKS.PH_Deck);
     const touching = new Set(neighbours(city).map(tileKey));
     const found = tiles.find(
@@ -112,9 +113,9 @@ function riverRun(): { seed: number; key: string; terrain: Terrain } {
         RIVER_YIELDS[tile.terrain] !== undefined &&
         runsAlong(rivers, tile),
     );
-    if (found !== undefined) return { seed, key: tileKey(found), terrain: found.terrain };
-  }
-  throw new Error('no seed under a thousand runs a river along a fed tile beside the city');
+    if (found === undefined) return undefined;
+    return { seed, key: tileKey(found), terrain: found.terrain };
+  });
 }
 
 /**
@@ -122,7 +123,7 @@ function riverRun(): { seed: number; key: string; terrain: Terrain } {
  * building and improvement; a river may run along it, being a row of its terrain card, not a card.
  */
 function bareRun(): { seed: number; key: string } {
-  for (let seed = 1; seed <= 1000; seed++) {
+  return firstSeed('leaves a tile beside the city bare', (seed) => {
     const { tiles, city } = beginChronicle(seed, DECKS.PH_Deck);
     const touching = new Set(neighbours(city).map(tileKey));
     const found = tiles.find(
@@ -132,9 +133,8 @@ function bareRun(): { seed: number; key: string } {
         tile.building === undefined &&
         tile.improvements.length === 0,
     );
-    if (found !== undefined) return { seed, key: tileKey(found) };
-  }
-  throw new Error('no seed under a thousand leaves a tile beside the city bare');
+    return found === undefined ? undefined : { seed, key: tileKey(found) };
+  });
 }
 
 /** The three lines a ledger row reads from `name` on: its name, its chip, and what the chip counts. */

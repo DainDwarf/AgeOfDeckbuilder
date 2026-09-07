@@ -12,10 +12,6 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
-- **One seed search for the specs** — the fourteen searches across ten spec files that walk seeds
-  one to a thousand for the first meeting a condition become one helper in the spec helpers that
-  takes the condition and the complaint, every spec reading its seed through it and none walking
-  seeds on its own; every Playwright spec still passes. Doc-impact: none.
 - **One budget for a long spec** — the five hand-set timeouts across four specs (attack, fall,
   map, menu) become one helper in the spec helpers that takes the number of ends of turn and
   answers a cold-start allowance plus a per-turn budget, both named once there; no spec carries a

@@ -4,6 +4,7 @@ import type { CardId } from '../src/rules/state';
 import {
   browse,
   endTurn,
+  firstSeed,
   offsetOf,
   onScreen,
   open,
@@ -20,14 +21,13 @@ const DECK: readonly CardId[] = (
 
 /** The first seed whose three ended turns leave the city standing on fifteen discarded cards. */
 function browseSeed(): number {
-  for (let seed = 1; seed <= 1000; seed++) {
+  return firstSeed('ends three turns standing on fifteen discarded cards', (seed) => {
     let chronicle = beginChronicle(seed, DECK);
     for (let turn = 0; turn < 3; turn++) {
       chronicle = outcome(apply(chronicle, { type: 'end-turn' }));
     }
-    if (chronicle.defeat === undefined && chronicle.discardPile.length === 15) return seed;
-  }
-  throw new Error('no seed under a thousand ends three turns standing on fifteen discarded cards');
+    return chronicle.defeat === undefined && chronicle.discardPile.length === 15 ? seed : undefined;
+  });
 }
 
 test('a pile of more cards than the frame holds scrolls, and stops on its first and last row', async ({

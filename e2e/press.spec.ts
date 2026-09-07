@@ -7,6 +7,7 @@ import {
   chronicleOf,
   dragOut,
   endTurn,
+  firstSeed,
   type OnScreen,
   offCanvas,
   offsetOf,
@@ -33,14 +34,14 @@ function atNothing(chronicle: Chronicle): number {
 
 /** The first seed with a turn in its first eight that opens on such a card. */
 function playableRun(): { seed: number; turn: number } {
-  for (let seed = 1; seed <= 1000; seed++) {
+  return firstSeed('opens a turn on a card that plays at nothing', (seed) => {
     let chronicle = beginChronicle(seed, DECKS.PH_LongDeck);
     for (let turn = 1; turn <= 8; turn++) {
       if (atNothing(chronicle) !== -1) return { seed, turn };
       chronicle = outcome(apply(chronicle, { type: 'end-turn' }));
     }
-  }
-  throw new Error('no seed under a thousand opens a turn on a card that plays at nothing');
+    return undefined;
+  });
 }
 
 /** Whether a named object stands where it was measured, to the page pixel. */

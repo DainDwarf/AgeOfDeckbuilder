@@ -10,6 +10,7 @@ import {
   dragOut,
   dragUnit,
   endTurn,
+  firstSeed,
   open,
   playedOut,
   ringedTile,
@@ -26,15 +27,15 @@ type StepRun = {
 
 /** The first seed with a turn in its first eight that opens on such a run. */
 function stepRun(): StepRun {
-  for (let seed = 1; seed <= 1000; seed++) {
+  return firstSeed('opens a turn on a worker and two steps', (seed) => {
     let chronicle = beginChronicle(seed, DECKS.PH_Deck);
     for (let turn = 1; turn <= 8; turn++) {
       const steps = steppedThisTurn(chronicle);
       if (steps !== undefined) return { seed, turn, ...steps };
       chronicle = outcome(apply(chronicle, { type: 'end-turn' }));
     }
-  }
-  throw new Error('no seed under a thousand opens a turn on a worker and two steps');
+    return undefined;
+  });
 }
 
 /**

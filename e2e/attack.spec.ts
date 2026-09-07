@@ -9,6 +9,7 @@ import {
   dragOut,
   dragTiles,
   endTurn,
+  firstSeed,
   open,
   ringedTile,
   watch,
@@ -30,15 +31,15 @@ const TURN_MS = 10_000;
 
 /** The first seed under a thousand that opens on such a run. */
 function attackRun(): AttackRun {
-  for (let seed = 1; seed <= 1000; seed++) {
+  return firstSeed('brings an enemy within reach of a standing warrior', (seed) => {
     let chronicle = beginChronicle(seed, DECKS.PH_Deck);
     for (let turn = 1; turn <= 8; turn++) {
       const met = besieged(chronicle);
       if (met !== undefined) return { seed, turn, ...met };
       chronicle = outcome(apply(chronicle, { type: 'end-turn' }));
     }
-  }
-  throw new Error('no seed under a thousand brings an enemy within reach of a standing warrior');
+    return undefined;
+  });
 }
 
 /**

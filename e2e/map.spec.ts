@@ -9,6 +9,7 @@ import {
   dragUnit,
   endTurn,
   type Frame,
+  firstSeed,
   mapFrame,
   onScreen,
   open,
@@ -82,7 +83,7 @@ async function pushOut(page: Page, name: string): Promise<void> {
  * turn stand before that one.
  */
 function moveRun(): { seed: number; turns: number; from: TileCoords; to: TileCoords } {
-  for (let seed = 1; seed <= 1000; seed++) {
+  return firstSeed('crosses an enemy inside eight ends of turn', (seed) => {
     let chronicle = beginChronicle(seed, DECKS.PH_Deck);
     for (let turns = 0; turns <= 8 && chronicle.defeat === undefined; turns++) {
       const stages = apply(chronicle, { type: 'end-turn' });
@@ -94,8 +95,8 @@ function moveRun(): { seed: number; turns: number; from: TileCoords; to: TileCoo
       }
       chronicle = outcome(stages);
     }
-  }
-  throw new Error('no seed under a thousand crosses an enemy inside eight ends of turn');
+    return undefined;
+  });
 }
 
 test('the map is framed between the resource bar and the band, on the city', async ({ page }) => {

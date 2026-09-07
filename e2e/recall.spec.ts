@@ -7,6 +7,7 @@ import {
   click,
   dragOut,
   endTurn,
+  firstSeed,
   onScreen,
   open,
   settled,
@@ -16,16 +17,15 @@ import {
 
 /** The first seed whose third turn opens on a recall card the city can pay for. */
 function recallSeed(): number {
-  for (let seed = 1; seed <= 1000; seed++) {
+  return firstSeed('opens its third turn on a playable recall card', (seed) => {
     let chronicle = beginChronicle(seed, DECKS.PH_Deck);
     for (let turn = 1; turn < 3; turn++) {
       chronicle = outcome(apply(chronicle, { type: 'end-turn' }));
     }
-    if (chronicle.hand.includes('PH_Recall') && playable(refusalOf(chronicle, 'PH_Recall'))) {
-      return seed;
-    }
-  }
-  throw new Error('no seed under a thousand opens its third turn on a playable recall card');
+    const found =
+      chronicle.hand.includes('PH_Recall') && playable(refusalOf(chronicle, 'PH_Recall'));
+    return found ? seed : undefined;
+  });
 }
 
 /** That third turn, with the recall card dragged out of the hand and the window standing. */

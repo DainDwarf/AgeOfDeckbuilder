@@ -16,6 +16,7 @@ import {
   chronicleOf,
   dragOut,
   endTurn,
+  firstSeed,
   mapFrame,
   type OnScreen,
   onScreen,
@@ -33,14 +34,14 @@ function refused(chronicle: Chronicle): number {
 
 /** The first seed with a turn in its first eight that opens on such a card. */
 function refusedRun(): { seed: number; turn: number } {
-  for (let seed = 1; seed <= 1000; seed++) {
+  return firstSeed('opens a turn on a card the rules refuse', (seed) => {
     let chronicle = beginChronicle(seed, DECKS.PH_Deck);
     for (let turn = 1; turn <= 8; turn++) {
       if (refused(chronicle) !== -1) return { seed, turn };
       chronicle = outcome(apply(chronicle, { type: 'end-turn' }));
     }
-  }
-  throw new Error('no seed under a thousand opens a turn on a card the rules refuse');
+    return undefined;
+  });
 }
 
 /** Every reason the rules refuse this card, in the words the note says them in. */
@@ -106,14 +107,14 @@ function armed(chronicle: Chronicle): number {
 
 /** The first seed with a turn in its first eight that opens on such a card. */
 function armedRun(): { seed: number; turn: number } {
-  for (let seed = 1; seed <= 1000; seed++) {
+  return firstSeed('opens a turn on an aimed card the city can pay for', (seed) => {
     let chronicle = beginChronicle(seed, DECKS.PH_Deck);
     for (let turn = 1; turn <= 8; turn++) {
       if (armed(chronicle) !== -1) return { seed, turn };
       chronicle = outcome(apply(chronicle, { type: 'end-turn' }));
     }
-  }
-  throw new Error('no seed under a thousand opens a turn on an aimed card the city can pay for');
+    return undefined;
+  });
 }
 
 test('a press on a tile an aim refuses says one reason over it, and the card stays armed', async ({

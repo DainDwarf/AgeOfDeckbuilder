@@ -12,6 +12,7 @@ import {
   dragUnit,
   endTurn,
   fallRun,
+  firstSeed,
   open,
   standing,
   watch,
@@ -20,14 +21,13 @@ import {
 
 /** The first seed that stands its city through three ended turns. */
 function standingRun(): number {
-  for (let seed = 1; seed <= 1000; seed++) {
+  return firstSeed('stands its city through three ended turns', (seed) => {
     let chronicle = beginChronicle(seed, DECKS.PH_Deck);
     for (let turn = 0; turn < 3; turn++) {
       chronicle = outcome(apply(chronicle, { type: 'end-turn' }));
     }
-    if (chronicle.defeat === undefined) return seed;
-  }
-  throw new Error('no seed under a thousand stands its city through three ended turns');
+    return chronicle.defeat === undefined ? seed : undefined;
+  });
 }
 
 /** Every card the chronicle holds, wherever it stands: the deck it was founded on. */

@@ -232,6 +232,18 @@ export function scrolled(page: Page): Promise<{ offset: number; overflow: number
   });
 }
 
+/**
+ * What the first seed of one to a thousand answers; the complaint tails `no seed under a thousand`
+ * in the throw when none of them answers at all.
+ */
+export function firstSeed<T>(complaint: string, answer: (seed: number) => T | undefined): T {
+  for (let seed = 1; seed <= 1000; seed++) {
+    const found = answer(seed);
+    if (found !== undefined) return found;
+  }
+  throw new Error(`no seed under a thousand ${complaint}`);
+}
+
 /** A chronicle whose turn `turn` can enter a worker, move it onto `tile` and play a card there. */
 export type Run = { readonly seed: number; readonly turn: number; readonly tile: TileCoords };
 
@@ -247,27 +259,27 @@ export function workerRun(
   const aimed = CARDS[card];
   if (aimed.aim !== 'tile') throw new Error(`${card} is aimed at no tile`);
 
-  for (let seed = 1; seed <= 1000; seed++) {
+  return firstSeed(`opens a turn on a worker, a move and ${card}`, (seed) => {
     let chronicle = beginChronicle(seed, DECKS.PH_Deck);
     for (let turn = 1; turn <= 8; turn++) {
       const tile = workedThisTurn(chronicle, card, aimed, on);
       if (tile !== undefined) return { seed, turn, tile };
       chronicle = outcome(apply(chronicle, { type: 'end-turn' }));
     }
-  }
-  throw new Error(`no seed under a thousand opens a turn on a worker, a move and ${card}`);
+    return undefined;
+  });
 }
 
 /** The first seed whose city is captured inside twenty turns of ending the turn and nothing else. */
 export function fallRun(): { seed: number; turns: number } {
-  for (let seed = 1; seed <= 1000; seed++) {
+  return firstSeed('is captured inside twenty turns', (seed) => {
     let chronicle = beginChronicle(seed, DECKS.PH_Deck);
     for (let turns = 1; turns <= 20 && chronicle.defeat === undefined; turns++) {
       chronicle = outcome(apply(chronicle, { type: 'end-turn' }));
       if (chronicle.defeat?.cause === 'capture') return { seed, turns };
     }
-  }
-  throw new Error('no seed under a thousand is captured inside twenty turns');
+    return undefined;
+  });
 }
 
 /**
