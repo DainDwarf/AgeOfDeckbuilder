@@ -14,9 +14,6 @@ with it.
 
 ## Lines
 
-- **The city's tile clicked twice enters city mode** — a left click on the city's tile while it is
-  the selection enters city mode as the city key does; a second click on any other selected tile
-  changes nothing. E2e on `e2e/city-mode.spec.ts`. Doc-impact: none.
 - **The card shown large is inspected, not zoomed** — the code says *inspect* where it says *zoom*
   for a card: the overlay's `zoom`, `showZoom` and `zoomed`, the hand's `zoom`, the scene's "a card
   zoomed", the object named `zoom` that `e2e/press.spec.ts` looks for; afterwards `zoom` in `src/`

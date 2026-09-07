@@ -260,6 +260,16 @@ export class ChronicleScene extends Phaser.Scene {
           else inspect(found);
           return;
         }
+        if (
+          press === 'left' &&
+          found !== undefined &&
+          selection !== undefined &&
+          tileKey(found.tile) === tileKey(selection.tile) &&
+          tileKey(found.tile) === tileKey(this.current.city)
+        ) {
+          enterCityMode();
+          return;
+        }
         select(found);
         if (press === 'right' && found !== undefined) inspect(found);
       },
