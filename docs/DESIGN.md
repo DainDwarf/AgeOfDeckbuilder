@@ -210,17 +210,18 @@ the arithmetic fell on.
 **The debug console switches the two veils that hide a tile**, one entry to each: `uncharted` and
 `fog`. Both veils stand until a switch takes one off, and each answers the state its own is left in;
 they change what is drawn and nothing the rules read. With the **uncharted veil** off, every tile of
-the disc is drawn, one never seen included, and the rivers along them with it; a tile out of sight is
+the disc is drawn, an uncharted one included, and the rivers along them with it; a tile out of sight is
 still darkened, and one that has no snapshot is drawn as it stands. With the **fog veil** off, every
 tile the map draws is drawn live — as it stands, with whoever stands on it, and darkened by nothing —
-so the map shows every tile charted clearly and leaves the never-seen ones out. Both off draw the
+so the map shows every tile charted clearly and leaves the uncharted ones out. Both off draw the
 whole map as the rules hold it.
 
 **The rest of the screen reads what the map draws.** The yield overlay glyphs the tiles the map
 draws, each from the face it draws of it, so a tile in fog shows what it yielded when it was last
 seen. An inspection reads that same face, and a tile in fog holds no unit card: the unit its
 snapshot keeps is a mark and not a card. A press on an uncharted tile lands off the map — it selects
-nothing, inspects nothing and acts on nothing. Each veil taken off widens all of it with the map.
+nothing, inspects nothing and acts on nothing — and no card is aimed at one: the map lights only the
+tiles it draws. Each veil taken off widens all of it with the map.
 
 Melee needs no rule of its own — an adjacent tile is always in sight — and whether a ranged attack
 needs its target in sight waits for the first ranged unit. The enemies read the whole map: their
@@ -404,8 +405,8 @@ rather than the player's. 🔧 Which terrains a river feeds and what it gives th
 what a river costs to cross is open.
 
 The city stands on one tile and owns the six around it. The player **claims** any charted tile
-adjacent to one the city owns by spending culture — a tile never seen is not claimed, as it is not
-walked onto; claiming is free of cards, like assigning, and the **culture threshold**, what a claim
+adjacent to one the city owns by spending culture — an uncharted tile is not claimed, as it is not
+walked onto, so the border grows only where a unit has seen 🔧; claiming is free of cards, like assigning, and the **culture threshold**, what a claim
 costs, rises with the tiles owned. A claimed tile takes an idle inhabitant at once when the city
 has one. There is no limit to how far the border reaches. A cost that also rises with distance was
 rejected until a chronicle shows fractal borders: a tendril is adjacent-only and exposed already.

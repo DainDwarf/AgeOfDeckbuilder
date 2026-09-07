@@ -1866,7 +1866,7 @@ test('the city may claim every tile touching the border, and no other', () => {
   );
 });
 
-test('a tile touching the border the city has never seen is no claim of its own', () => {
+test('an uncharted tile touching the border is no claim of the city’s', () => {
   const opened = outcome(apply(beginChronicle(1, DECK), { type: 'end-turn' }));
   const dark = unchartedTouching(opened);
 

@@ -282,7 +282,7 @@ test('the overlay, the inspection and a press read what the map draws, and widen
     expect(card).not.toBe('unit');
   }
 
-  // A press on a tile never seen lands off the map: it rings nothing and inspects nothing.
+  // A press on an uncharted tile lands off the map: it rings nothing and inspects nothing.
   const dark = await tileOnScreen(page, run.uncharted);
   await page.mouse.click(dark.x, dark.y);
   await settled(page);

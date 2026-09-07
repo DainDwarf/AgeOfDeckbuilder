@@ -31,7 +31,7 @@ import {
 /** A tile the founding's border touches and the city has charted: what a claim takes first. */
 const TOUCHING = { at: { q: 1, r: -2 }, key: '1,-2' };
 
-/** A tile beside that one the founding's border does not touch and the city has never seen. */
+/** A tile beside that one the founding's border does not touch, uncharted at the founding. */
 const FAR = { at: { q: 1, r: -3 }, key: '1,-3' };
 
 /** A tile the city holds, and an inhabitant stands on from the founding. */

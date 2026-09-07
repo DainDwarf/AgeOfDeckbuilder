@@ -215,8 +215,11 @@ export type PressedTile = {
 /** What the map draws of a tile: the face it draws, and whether that face is the tile as it stands. */
 export type Drawn = {
   readonly tile: Tile;
-  /** Whether what stands on the face is live too: a snapshot answers for its tile whole. */
-  readonly live: boolean;
+  /**
+   * Whether the face is the tile as it stands, whoever stands on it included, rather than its
+   * snapshot: a snapshot answers for its tile whole.
+   */
+  readonly asStands: boolean;
 };
 
 export type MapView = {
@@ -224,9 +227,10 @@ export type MapView = {
   /** What the map plays for the stage; nothing means the scene renders it at once. */
   play(stage: Stage): Promise<void> | undefined;
   /**
-   * Lights the tiles it is given and aims at them, until one is chosen or cancel is called. A right
-   * press lets it go, exactly as cancel does. A left press on any other tile of the map is `refused`
-   * with where that tile stands, and the aim goes on standing; one off the map does nothing.
+   * Lights those of the tiles it is given that the map draws and aims at them, until one is chosen
+   * or cancel is called; a tile the map does not draw is never aimed at. A right press lets it go,
+   * exactly as cancel does. A left press on any other tile of the map is `refused` with where that
+   * tile stands, and the aim goes on standing; one off the map does nothing.
    */
   aimTile(
     tiles: TileCoords[],
@@ -823,8 +827,8 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
     const key = tileKey(tile);
     if (!drawn.has(key)) return undefined;
     const snapshot = charted.get(key);
-    if (live.has(key) || snapshot === undefined) return { tile, live: true };
-    return { tile: snapshot.tile, live: false };
+    if (live.has(key) || snapshot === undefined) return { tile, asStands: true };
+    return { tile: snapshot.tile, asStands: false };
   };
 
   /**
@@ -911,13 +915,13 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
   };
 
   /**
-   * Every layer of every tile the map draws, on the chronicle it stands on: a tile drawn live is
-   * drawn as it stands, and one drawn in fog is drawn from the snapshot it was last seen as — the
-   * unit that stood on it among them — under a scrim, or as it stands where it has no snapshot at
-   * all. A terraform changes a tile's terrain and takes its feature with it, an improvement is
-   * improved onto it and a building is built on it, so every layer follows every render. An
-   * improvement stands where a feature stands, the two never sharing a terrain. The marks of the
-   * units on the tiles drawn live are hung after this.
+   * Every layer of every tile the map draws, on the chronicle it stands on. A tile in sight is
+   * drawn as it stands, and the marks of the units on it are hung after this. A tile out of sight
+   * stands under a scrim, its unit drawn here with its layers: from the snapshot it was last seen
+   * as where it is drawn in fog, and from the chronicle where the map draws it as it stands with no
+   * snapshot to draw. A terraform changes a tile's terrain and takes its feature with it, an
+   * improvement is improved onto it and a building is built on it, so every layer follows every
+   * render. An improvement stands where a feature stands, the two never sharing a terrain.
    */
   const paintTiles = (): void => {
     ground.removeAll(true);
@@ -954,7 +958,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
       if (live.has(tileKey(tile))) continue;
       // A snapshot answers for its tile whole: one taken of an empty tile hides the unit that has
       // walked onto it since.
-      if (drawing.live) {
+      if (drawing.asStands) {
         const standing = unitAt(shown.units, tile);
         if (standing !== undefined) {
           marks.add(unitMark(scene, standing.stats.type, standing.faction).setPosition(x, y));
@@ -1356,7 +1360,8 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
       refused: (at: PressedTile) => void,
     ): () => void {
       const { catcher, glow, close } = openAim();
-      for (const coord of tiles) glow.add(glowTile(scene, coord, LIT));
+      const lit = tiles.filter((coord) => drawn.has(tileKey(coord)));
+      for (const coord of lit) glow.add(glowTile(scene, coord, LIT));
 
       const finish = (tile: TileCoords | undefined): void => {
         stop();
@@ -1373,7 +1378,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
           const at = map.at(pointer.x, pointer.y);
           const on = tileUnder(at.x, at.y);
           if (on === undefined) return;
-          if (tiles.some((coord) => same(coord, on))) finish(on);
+          if (lit.some((coord) => same(coord, on))) finish(on);
           else refused({ tile: on, at: { ...positionOf(on), radius: TILE_SIZE } });
         },
       });

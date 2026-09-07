@@ -204,7 +204,11 @@ export class ChronicleScene extends Phaser.Scene {
         uninspect();
         return;
       }
-      const cards = cardsOf(face.tile, face.live ? this.current.units : [], this.current.rivers);
+      const cards = cardsOf(
+        face.tile,
+        face.asStands ? this.current.units : [],
+        this.current.rivers,
+      );
       const already =
         inspection !== undefined && tileKey(inspection.on.tile) === tileKey(on.tile)
           ? inspection
