@@ -1,6 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import type Phaser from 'phaser';
-import { chronicleOf, endTurn, fallRun, open, watch } from './chronicle-screen';
+import { budget, chronicleOf, endTurn, fallRun, open, watch } from './chronicle-screen';
 
 /** Whether the defeat screen has risen over the chronicle screen: the rise ends at full alpha. */
 function defeatShown(page: Page): Promise<boolean> {
@@ -10,15 +10,12 @@ function defeatShown(page: Page): Promise<boolean> {
   });
 }
 
-/** Nine ends of turn, every stage of each played out: 22 seconds alone, 29 beside the local suite. */
-const NINE_TURNS = 60_000;
-
 test('the enemy that reaches the city captures it, and the chronicle ends on the defeat screen', async ({
   page,
 }) => {
-  test.setTimeout(NINE_TURNS);
   const problems = watch(page);
   const run = fallRun();
+  test.setTimeout(budget(run.turns));
 
   await open(page, run.seed, 'PH_Deck');
   expect(await defeatShown(page)).toBe(false);

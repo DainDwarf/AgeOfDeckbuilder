@@ -12,11 +12,6 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
-- **One budget for a long spec** — the five hand-set timeouts across four specs (attack, fall,
-  map, menu) become one helper in the spec helpers that takes the number of ends of turn and
-  answers a cold-start allowance plus a per-turn budget, both named once there; no spec carries a
-  millisecond total of its own, and a spec run cold, on the dev server's first transform, passes.
-  Doc-impact: none.
 - **Enemies move and attack at once** — the intent goes: in the enemy phase each enemy moves by
   its script and attacks a unit of the player's within its range in the same phase, from the
   same pool a warrior has, and the combat phase is gone from the turn; capture stays as it is.

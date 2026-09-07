@@ -5,6 +5,7 @@ import { distance, type TileCoords, tileKey } from '../src/rules/map';
 import type { Chronicle } from '../src/rules/state';
 import { UNIT_STATS, type Unit, unitAt } from '../src/rules/units';
 import {
+  budget,
   chronicleOf,
   dragOut,
   dragTiles,
@@ -25,9 +26,6 @@ type AttackRun = {
   readonly turns: number;
   readonly enemy: TileCoords;
 };
-
-/** What one end of turn may take, every stage played out; the run's own count sets the budget. */
-const TURN_MS = 10_000;
 
 /** The first seed that opens on such a run. */
 function attackRun(): AttackRun {
@@ -77,7 +75,7 @@ test('a warrior dragged onto an enemy attacks it, and its spent action refuses a
   const problems = watch(page);
   const run = attackRun();
   // The ends of turn before the warrior and after it, and one more turn's worth for the two drags.
-  test.setTimeout(TURN_MS * (run.turn + run.turns));
+  test.setTimeout(budget(run.turn + run.turns));
 
   await open(page, run.seed, 'PH_Deck');
   for (let turn = 1; turn < run.turn; turn++) await endTurn(page);

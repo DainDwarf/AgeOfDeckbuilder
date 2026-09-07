@@ -5,6 +5,7 @@ import type { Chronicle } from '../src/rules/state';
 import {
   aimed,
   browse,
+  budget,
   chronicleOf,
   click,
   counted,
@@ -40,9 +41,6 @@ async function raised(page: Page): Promise<void> {
   await expect.poll(() => standing(page, 'menu')).toBe(false);
   await expect.poll(() => counted(page, 'hand-0')).toBe(1);
 }
-
-/** Nine ends of turn, every stage of each played out, and the new chronicle after them. */
-const A_FALL = 60_000;
 
 test('the menu walks in to Controls and closes back one step at a time', async ({ page }) => {
   const problems = watch(page);
@@ -152,9 +150,10 @@ test('a new chronicle deals the same deck a fresh seed, on turn 1', async ({ pag
 test('the menu opens over the defeat screen, and a new chronicle takes the chronicle screen back', async ({
   page,
 }) => {
-  test.setTimeout(A_FALL);
   const problems = watch(page);
   const run = fallRun();
+  // The ends of turn the city falls on, and the new chronicle raised over the defeat screen after.
+  test.setTimeout(budget(run.turns + 1));
 
   await open(page, run.seed, 'PH_Deck');
   for (let turn = 0; turn < run.turns; turn++) await endTurn(page);

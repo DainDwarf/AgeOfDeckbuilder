@@ -4,6 +4,7 @@ import { apply, beginChronicle, outcome } from '../src/rules/chronicle';
 import { type TileCoords, tileKey } from '../src/rules/map';
 import {
   aimed,
+  budget,
   chronicleOf,
   dragOut,
   dragUnit,
@@ -34,9 +35,6 @@ const SOUTH = 'tile-0,8';
 const NOTCH = 1.3;
 
 type Point = { x: number; y: number };
-
-/** Five ends of turn, every stage of each played out, and the drags between them. */
-const FIVE_TURNS = 60_000;
 
 /** Drags from a page point by a page offset, well past the slack that tells a drag from a click. */
 async function drag(page: Page, from: Point, by: Point): Promise<void> {
@@ -364,9 +362,10 @@ test('however far the map is dragged, it cannot leave the frame', async ({ page 
 });
 
 test('a stage on tiles the frame already holds pans nothing', async ({ page }) => {
-  test.setTimeout(FIVE_TURNS);
   const problems = watch(page);
   const run = moveRun();
+  // The run's ends of turn, the one the test ends after them, and the drag between the two.
+  test.setTimeout(budget(run.turns + 2));
 
   await open(page, run.seed, 'PH_Deck');
   for (let turn = 0; turn < run.turns; turn++) await endTurn(page);
@@ -396,9 +395,10 @@ test('a stage on tiles the frame already holds pans nothing', async ({ page }) =
 });
 
 test('a stage on tiles the frame does not show is brought into it', async ({ page }) => {
-  test.setTimeout(FIVE_TURNS);
   const problems = watch(page);
   const run = moveRun();
+  // The run's ends of turn, the one the test ends after them, and the drag that pushes the tile out.
+  test.setTimeout(budget(run.turns + 2));
 
   await open(page, run.seed, 'PH_Deck');
   for (let turn = 0; turn < run.turns; turn++) await endTurn(page);
