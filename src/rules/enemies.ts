@@ -19,9 +19,9 @@ import {
 } from './units';
 
 /**
- * What an enemy does in the enemy phase, asked of the enemy itself as the phase stands it. The
- * phase takes every enemy's move first and every enemy's intent after; how either is chosen is the
- * script's own business.
+ * What an enemy does in the enemy phase, asked of the enemy itself as the phase stands it. The phase
+ * takes one enemy at a time — its move, then an attack for each of its action — and asks again on
+ * the chronicle the last answer left; how either is chosen is the script's own business.
  */
 export type EnemyScript = {
   /**
@@ -29,8 +29,8 @@ export type EnemyScript = {
    * on, which costs it nothing.
    */
   moveTo(chronicle: Chronicle, enemy: Unit): Landing;
-  /** The tile it aims its attack at, or nothing when it declares no intent. */
-  intentOf(chronicle: Chronicle, enemy: Unit): TileCoords | undefined;
+  /** The unit it attacks now, and nothing when it attacks none. */
+  attacks(chronicle: Chronicle, enemy: Unit): Unit | undefined;
 };
 
 /** Every script an enemy can carry. An enemy names one of these, and the enemy phase asks it. */
@@ -59,9 +59,9 @@ export const ENEMY_SCRIPTS: Record<EnemyScriptId, EnemyScript> = {
       return chosen;
     },
 
-    intentOf(chronicle: Chronicle, enemy: Unit): TileCoords | undefined {
+    attacks(chronicle: Chronicle, enemy: Unit): Unit | undefined {
       if (tileKey(enemy.tile) === tileKey(chronicle.city)) return undefined;
-      return leastHealth(chronicle.units, enemy)?.tile;
+      return leastHealth(chronicle.units, enemy);
     },
   },
 };

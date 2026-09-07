@@ -18,7 +18,6 @@ import {
   reachable,
   refreshedAction,
   refreshedMovePoints,
-  type Unit,
   unitAt,
   unitOf,
 } from './units';
@@ -74,8 +73,8 @@ const CLAIMS_PER_RISE = 3;
  * with its cost paid, `refused` is the command the rules turned down, `assign` is an inhabitant put
  * on a tile or taken off one, `claim` is a tile bought with culture and taken inside the border,
  * `grow` is the food stock spent on one more inhabitant, `turn` is the tick, where every unit's move
- * points and action are refreshed, `events` is what the schedule lands, `intents` is the enemy
- * phase's declarations, and `capture` is the city falling to an enemy that stood on its tile.
+ * points and action are refreshed, `events` is what the schedule lands, and `capture` is the city
+ * falling to an enemy that stood on its tile.
  */
 export type PlainStage =
   | 'played'
@@ -85,7 +84,6 @@ export type PlainStage =
   | 'discard'
   | 'income'
   | 'grow'
-  | 'intents'
   | 'capture'
   | 'turn'
   | 'events'
@@ -94,9 +92,9 @@ export type PlainStage =
 
 /**
  * The shape every command resolves as: one step, and the chronicle it leaves behind. An `attack` is
- * one unit's attack, the player's by hand or an enemy's intent executed in combat, and a `move` is
- * one unit crossing, the player's or the enemy phase's alike; each names the tiles it happened
- * between, because what the chronicle after the step cannot say is carried on the step itself.
+ * one unit's attack, the player's by hand or an enemy's in the enemy phase, and a `move` is one unit
+ * crossing, the player's or the enemy phase's alike; each names the tiles it happened between,
+ * because what the chronicle after the step cannot say is carried on the step itself.
  */
 export type Stage = { readonly chronicle: Chronicle } & (
   | { readonly name: PlainStage }
@@ -245,7 +243,6 @@ function endOfTurn(chronicle: Chronicle): Stage[] {
   };
 
   staged('discard', discard(standing));
-  raised(combat(standing));
   staged('income', income(standing));
   staged('grow', grow(standing));
   raised(enemyPhase(standing));
@@ -539,44 +536,6 @@ function discard(chronicle: Chronicle): Chronicle {
 }
 
 /**
- * Combat, one stage per attack: every enemy still standing executes the intent it declared, in unit
- * order. Executing an intent spends it, whether or not anything was still standing on the tile it
- * was aimed at. The player's own attacks are made by hand during the turn and none is made here.
- */
-function combat(chronicle: Chronicle): Stage[] {
-  const stages: Stage[] = [];
-  let units = chronicle.units;
-
-  for (const enemy of chronicle.units) {
-    if (enemy.faction !== 'enemy' || enemy.intent === undefined) continue;
-    const attacker = unitOf(units, enemy.id);
-    if (attacker === undefined) continue;
-
-    const target = unitAt(units, enemy.intent);
-    const struck =
-      target === undefined || target.faction === attacker.faction
-        ? units
-        : attacked(units, attacker, target);
-    units = spent(struck, attacker.id);
-    stages.push({
-      name: 'attack',
-      attacker: enemy.tile,
-      target: enemy.intent,
-      chronicle: { ...chronicle, units },
-    });
-  }
-
-  return stages;
-}
-
-/** An intent executed is an intent gone: the enemy that made the attack carries none into the next turn. */
-function spent(units: readonly Unit[], attacker: number): Unit[] {
-  return units.map((unit) =>
-    unit.faction === 'enemy' && unit.id === attacker ? { ...unit, intent: undefined } : unit,
-  );
-}
-
-/**
  * Income: an assigned tile yields what its layers and the river running along it give, the city's
  * own tile no exception.
  */
@@ -613,10 +572,10 @@ function grow(chronicle: Chronicle): Chronicle {
 
 /**
  * The enemies' half of the turn: an enemy that stood on the city's tile through the whole turn
- * captures it and the chronicle ends there; otherwise every enemy moves by its script on the move
- * points it holds, spending the tiles it crosses — one stage each, and none for an enemy that
- * stayed — and then every enemy declares the intent it executes in the next combat, all of them in
- * the one stage that closes the phase.
+ * captures it and the chronicle ends there; otherwise every enemy acts in unit order, on the
+ * chronicle the one before it left — it moves by its script on the move points it holds, spending
+ * the tiles it crosses, and then attacks the unit its script names while it holds action, one attack
+ * a point. A stage each, and none for a move it did not make or an attack aimed at nobody.
  */
 function enemyPhase(chronicle: Chronicle): Stage[] {
   if (unitAt(chronicle.units, chronicle.city)?.faction === 'enemy') {
@@ -625,33 +584,33 @@ function enemyPhase(chronicle: Chronicle): Stage[] {
 
   const stages: Stage[] = [];
   let units = chronicle.units;
-  for (const unit of chronicle.units) {
-    if (unit.faction !== 'enemy') continue;
-    const landing = ENEMY_SCRIPTS[unit.script].moveTo({ ...chronicle, units }, unit);
-    if (tileKey(landing.tile) === tileKey(unit.tile)) continue;
-    const crossed = { ...unit, tile: landing.tile, movePoints: unit.movePoints - landing.cost };
-    units = units.map((other) => (other.id === unit.id ? crossed : other));
-    stages.push({
-      name: 'move',
-      from: unit.tile,
-      to: landing.tile,
-      chronicle: { ...chronicle, units },
-    });
+  for (const enemy of chronicle.units) {
+    if (enemy.faction !== 'enemy') continue;
+    const script = ENEMY_SCRIPTS[enemy.script];
+    let acting = enemy;
+
+    const landing = script.moveTo({ ...chronicle, units }, acting);
+    if (tileKey(landing.tile) !== tileKey(acting.tile)) {
+      const from = acting.tile;
+      acting = { ...acting, tile: landing.tile, movePoints: acting.movePoints - landing.cost };
+      units = units.map((other) => (other.id === acting.id ? acting : other));
+      stages.push({ name: 'move', from, to: acting.tile, chronicle: { ...chronicle, units } });
+    }
+
+    while (acting.action > 0) {
+      const target = script.attacks({ ...chronicle, units }, acting);
+      if (target === undefined) break;
+      const struck = attacked(units, acting, target);
+      acting = { ...acting, action: acting.action - 1 };
+      units = struck.map((other) => (other.id === acting.id ? acting : other));
+      stages.push({
+        name: 'attack',
+        attacker: acting.tile,
+        target: target.tile,
+        chronicle: { ...chronicle, units },
+      });
+    }
   }
 
-  let declared = units;
-  for (const unit of units) {
-    if (unit.faction !== 'enemy') continue;
-    const intent = ENEMY_SCRIPTS[unit.script].intentOf({ ...chronicle, units: declared }, unit);
-    declared = declared.map((other) => (other.id === unit.id ? { ...unit, intent } : other));
-  }
-
-  const stirred = declared.some((unit, place) => aimKey(unit) !== aimKey(units[place]));
-  if (stirred) stages.push({ name: 'intents', chronicle: { ...chronicle, units: declared } });
   return stages;
-}
-
-/** All the declarations can leave changed on a unit: the tile its attack is aimed at. */
-function aimKey(unit: Unit): string {
-  return unit.faction === 'enemy' && unit.intent !== undefined ? tileKey(unit.intent) : '';
 }

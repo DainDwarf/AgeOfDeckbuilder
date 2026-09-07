@@ -328,21 +328,6 @@ function cityDim(scene: Phaser.Scene, coord: TileCoords): Phaser.GameObjects.Pol
   return scene.add.polygon(x, y, hexagon(TILE_SIZE), OUTLINE, UNASSIGNED_ALPHA).setName('city-dim');
 }
 
-/** The one way an intent is drawn: the enemy's ring around the tile its attack is aimed at. */
-function intentMark(scene: Phaser.Scene, coord: TileCoords): Phaser.GameObjects.Polygon {
-  const { x, y } = positionOf(coord);
-  return scene.add
-    .polygon(x, y, hexagon(TILE_SIZE - 2), 0, 0)
-    .setStrokeStyle(4, FACTION_COLOURS.enemy);
-}
-
-/** Every tile the enemies of a chronicle are aiming at, one ring's worth each. */
-function aimedAt(units: readonly Unit[]): TileCoords[] {
-  return units.flatMap((unit) =>
-    unit.faction === 'enemy' && unit.intent !== undefined ? [unit.intent] : [],
-  );
-}
-
 function positionOf({ q, r }: TileCoords): { x: number; y: number } {
   return {
     x: DESIGN_WIDTH / 2 + Math.sqrt(3) * TILE_SIZE * (q + r / 2),
@@ -449,7 +434,6 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
   const rings = scene.add.container(0, 0).setName('border');
   const improved = scene.add.container(0, 0).setDepth(BUILDING_DEPTH).setName('improvements');
   const built = scene.add.container(0, 0).setDepth(BUILDING_DEPTH).setName('buildings');
-  const intents = scene.add.container(0, 0).setDepth(GLOW_DEPTH).setName('intents');
   const selected = scene.add.container(0, 0).setDepth(GLOW_DEPTH).setName('selected');
   const lighted = scene.add.container(0, 0).setDepth(GLOW_DEPTH).setName('lit');
   const marks = scene.add.container(0, 0).setDepth(UNIT_DEPTH);
@@ -468,7 +452,6 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
     rings,
     improved,
     built,
-    intents,
     lighted,
     selected,
     marks,
@@ -934,10 +917,6 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
 
     // What is about to be destroyed loses its tweens first: a motion left running on a destroyed
     // marker never completes, and the stage waiting on it would never end.
-    stopMotion(scene, intents.list);
-    intents.removeAll(true);
-    for (const coord of aimedAt(current.units)) intents.add(intentMark(scene, coord));
-
     stopMotion(scene, marks.list);
     marks.removeAll(true);
     markers = new Map(
@@ -1039,33 +1018,10 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
     ).then(() => settle(token, chronicle));
   };
 
-  /** The tiles the chronicle is aimed at that the map is not already ringing. */
-  const declared = (chronicle: Chronicle): TileCoords[] => {
-    const standing = new Set(aimedAt(shown?.units ?? []).map(tileKey));
-    return aimedAt(chronicle.units).filter((coord) => !standing.has(tileKey(coord)));
-  };
-
   /** The units of the chronicle standing on tiles the map shows none on. */
   const arrivals = (chronicle: Chronicle): Unit[] => {
     const standing = new Set((shown?.units ?? []).map((unit) => tileKey(unit.tile)));
     return chronicle.units.filter((unit) => !standing.has(tileKey(unit.tile)));
-  };
-
-  /** The declarations: every ring the enemies did not already stand behind fades in. */
-  const declare = (chronicle: Chronicle): Promise<void> | undefined => {
-    const fresh = declared(chronicle);
-    if (fresh.length === 0) return undefined;
-
-    const token = takeOff();
-    const rings = fresh.map((coord) => {
-      const ring = intentMark(scene, coord).setAlpha(0);
-      intents.add(ring);
-      return ring;
-    });
-
-    return ended(scene.tweens.add({ targets: rings, alpha: 1, duration: 250, ease: EASE })).then(
-      () => settle(token, chronicle),
-    );
   };
 
   /** The arrival: every unit the map was not already showing grows onto its tile. */
@@ -1122,8 +1078,6 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
           return staged([stage.from, stage.to], stage.chronicle, () =>
             slide(stage.from, stage.to, stage.chronicle),
           );
-        case 'intents':
-          return staged(declared(stage.chronicle), stage.chronicle, () => declare(stage.chronicle));
         case 'events':
           return staged(
             arrivals(stage.chronicle).map((unit) => unit.tile),

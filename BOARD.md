@@ -12,12 +12,6 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
-- **Enemies move and attack at once** — the intent goes: in the enemy phase each enemy moves by
-  its script and attacks a unit of the player's within its range in the same phase, from the
-  same pool a warrior has, and the combat phase is gone from the turn; capture stays as it is.
-  The turn list, the sight section, and the glossary's *intent* and *combat* are edited. Rules
-  tests pin an enemy reaching and attacking in one phase and the capture unchanged; the intent
-  rings leave the map. Doc-impact: `docs/DESIGN.md`, `docs/GLOSSARY.md`.
 - **Sight is a line over the ground** — sight is a unit's stat and the city's own number;
   every terrain has an elevation, and a tile within a unit's sight is seen when a line from the
   unit runs over flat ground and meets no raised tile as high as the unit's own before it, the

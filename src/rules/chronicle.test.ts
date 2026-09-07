@@ -62,21 +62,7 @@ type Standing = {
   readonly stats: UnitStats;
   readonly movePoints: number;
   readonly action: number;
-  readonly intent?: TileCoords;
 };
-
-/** The unit as the chronicle dealt it, under the state its fixture authors. */
-function authored(unit: Unit, standing: Standing): Unit {
-  const state = { stats: standing.stats, movePoints: standing.movePoints, action: standing.action };
-  switch (unit.faction) {
-    case 'player':
-      return { ...unit, ...state };
-    case 'enemy':
-      return standing.intent === undefined
-        ? { ...unit, ...state }
-        : { ...unit, ...state, intent: standing.intent };
-  }
-}
 
 /**
  * The chronicle with these units entered on it through the rules, after whatever already stands
@@ -87,7 +73,13 @@ function withUnits(chronicle: Chronicle, units: readonly Standing[]): Chronicle 
   for (const unit of units) {
     const dealt = entered(stood, unit.entering);
     const last = dealt.units[dealt.units.length - 1];
-    stood = { ...dealt, units: [...dealt.units.slice(0, -1), authored(last, unit)] };
+    const authored: Unit = {
+      ...last,
+      stats: unit.stats,
+      movePoints: unit.movePoints,
+      action: unit.action,
+    };
+    stood = { ...dealt, units: [...dealt.units.slice(0, -1), authored] };
   }
   return stood;
 }
@@ -190,11 +182,6 @@ function standing(
     case 'enemy':
       return { ...state, entering: { type: carried.type, tile, faction, script: 'PH_Advance' } };
   }
-}
-
-/** An enemy carrying the intent an enemy phase left on it: the tile its attack is aimed at. */
-function aiming(tile: TileCoords, intent: TileCoords, stats: Partial<UnitStats> = {}): Standing {
-  return { ...standing('enemy', tile, stats), intent };
 }
 
 /** The unit a number names, for a fixture that expects it to be standing. */
@@ -333,13 +320,6 @@ function everyCard(chronicle: Chronicle): CardId[] {
   return [...chronicle.drawPile, ...chronicle.hand, ...chronicle.discardPile].sort();
 }
 
-/** What the enemy that number names is aiming at, and nothing when it declared no intent. */
-function intentOf(chronicle: Chronicle, unit: number): TileCoords | undefined {
-  const named = unitNamed(chronicle, unit);
-  if (named.faction !== 'enemy') throw new Error(`the unit numbered ${unit} is not an enemy`);
-  return named.intent;
-}
-
 /** What every stage of the command is called, in the order the command resolves them. */
 function stagedBy(chronicle: Chronicle, command: Command): string[] {
   return apply(chronicle, command).map((stage) => stage.name);
@@ -357,14 +337,6 @@ function movesOf(chronicle: Chronicle): string[][] {
   return apply(chronicle, { type: 'end-turn' }).flatMap((stage) =>
     stage.name === 'move' ? [[tileKey(stage.from), tileKey(stage.to)]] : [],
   );
-}
-
-/** The chronicle combat leaves behind: the one the last attack of the end of turn stands on. */
-function afterCombat(chronicle: Chronicle): Chronicle {
-  const attacks = apply(chronicle, { type: 'end-turn' }).filter((stage) => stage.name === 'attack');
-  const last = attacks[attacks.length - 1];
-  if (last === undefined) throw new Error('nothing attacked in this end of turn');
-  return last.chronicle;
 }
 
 /** Every tile of a disc at its outer ring: what an arrival draws from. */
@@ -629,7 +601,7 @@ test('growth is staged right after the income it comes from, and before the enem
     'income',
     'grow',
     'move',
-    'intents',
+    'attack',
     'turn',
   ]);
 });
@@ -1163,7 +1135,7 @@ test('the end of turn resolves in order, and its last stage is where the turn en
     'discard',
     'income',
     'move',
-    'intents',
+    'attack',
     'turn',
     'draw',
     'shuffle',
@@ -2151,25 +2123,77 @@ test('an enemy moves toward the nearest of the player’s units instead of the c
   expect(distance(moved.units[1].tile, { q: 2, r: 0 })).toBe(1);
 });
 
-test('an enemy declares its intent on a unit in range, and executes it in the next combat', () => {
+test('an enemy moves within range of a unit and attacks it in the same enemy phase', () => {
   const city = cityOf(['urban'], {
     tiles: field(4),
-    units: [worker({ q: 2, r: 0 }), standing('enemy', { q: 4, r: 0 }, { move: 2, damage: 2 })],
+    units: [worker({ q: 2, r: 0 }), standing('enemy', { q: 4, r: 0 }, { move: 1, damage: 2 })],
   });
 
-  const declared = outcome(apply(city, { type: 'end-turn' }));
-  expect(intentOf(declared, 2)).toEqual({ q: 2, r: 0 });
+  const after = outcome(apply(city, { type: 'end-turn' }));
 
-  const attacked = outcome(apply(declared, { type: 'end-turn' }));
-  expect(attacked.units[0].stats.health).toBe(city.units[0].stats.health - 2);
+  expect(stagedBy(city, { type: 'end-turn' })).toEqual(['income', 'move', 'attack', 'turn']);
+  expect(movesOf(city)).toEqual([['4,0', '3,0']]);
+  expect(attacksOf(city)).toEqual([['3,0', '2,0']]);
+  expect(after.units[0].stats.health).toBe(city.units[0].stats.health - 2);
 });
 
-test('a killed enemy’s intent dies with it', () => {
+test('an enemy its move leaves out of range attacks nothing', () => {
+  const city = cityOf(['urban'], {
+    tiles: field(4),
+    units: [worker({ q: 1, r: 0 }), standing('enemy', { q: 4, r: 0 }, { move: 1, damage: 2 })],
+  });
+
+  const after = outcome(apply(city, { type: 'end-turn' }));
+
+  expect(stagedBy(city, { type: 'end-turn' })).toEqual(['income', 'move', 'turn']);
+  expect(after.units[0].stats.health).toBe(city.units[0].stats.health);
+});
+
+test('an enemy attacks once for each of its action, and one with none attacks nothing', () => {
+  const beset = (action: number): Chronicle =>
+    cityOf(['urban'], {
+      tiles: field(2),
+      units: [
+        worker({ q: 1, r: 0 }),
+        standing('enemy', { q: 2, r: 0 }, { move: 0, damage: 1, action }),
+      ],
+    });
+
+  expect(attacksOf(beset(0))).toEqual([]);
+  expect(attacksOf(beset(1))).toEqual([['2,0', '1,0']]);
+  expect(attacksOf(beset(2))).toEqual([
+    ['2,0', '1,0'],
+    ['2,0', '1,0'],
+  ]);
+  for (const action of [0, 1, 2]) {
+    const city = beset(action);
+    const after = outcome(apply(city, { type: 'end-turn' }));
+    expect(after.units[0].stats.health).toBe(city.units[0].stats.health - action);
+  }
+});
+
+test('each enemy acts on the chronicle the enemy before it left, and no unit of the player’s acts at all', () => {
+  const city = cityOf(['urban'], {
+    tiles: field(2),
+    units: [
+      standing('player', { q: 1, r: 0 }, { health: 4, damage: 3 }),
+      standing('enemy', { q: 2, r: 0 }, { move: 0, damage: 4 }),
+      standing('enemy', { q: 1, r: 1 }, { move: 0, damage: 4 }),
+    ],
+  });
+
+  const after = outcome(apply(city, { type: 'end-turn' }));
+
+  expect(attacksOf(city)).toEqual([['2,0', '1,0']]);
+  expect(after.units.map((unit) => unit.id)).toEqual([2, 3]);
+});
+
+test('a killed enemy attacks no more', () => {
   const city = cityOf(['urban'], {
     tiles: field(3),
     units: [
       standing('player', { q: 1, r: 0 }, { damage: 3 }),
-      aiming({ q: 2, r: 0 }, { q: 1, r: 0 }, { health: 3, damage: 2 }),
+      standing('enemy', { q: 2, r: 0 }, { health: 3, damage: 2 }),
     ],
   });
 
@@ -2180,66 +2204,6 @@ test('a killed enemy’s intent dies with it', () => {
 
   expect(attacksOf(killed)).toEqual([]);
   expect(after.units[0].stats.health).toBe(city.units[0].stats.health);
-});
-
-test('an intent aimed at a tile its target has left attacks nothing', () => {
-  const city = cityOf(['urban'], {
-    tiles: field(3),
-    units: [worker({ q: 1, r: 0 }), aiming({ q: 2, r: 0 }, { q: 1, r: 0 }, { damage: 2 })],
-  });
-
-  const marched = outcome(apply(city, moveTo(1, { q: 0, r: 1 })));
-  const dodged = outcome(apply(marched, { type: 'end-turn' }));
-
-  expect(dodged.units[0].stats.health).toBe(city.units[0].stats.health);
-});
-
-test('combat stages one attack per enemy intent, and none of the player’s own', () => {
-  const city = cityOf(['urban'], {
-    tiles: field(3),
-    units: [
-      standing('player', { q: 1, r: 0 }, { health: 5, damage: 1 }),
-      aiming({ q: 2, r: 0 }, { q: 1, r: 0 }, { health: 5, damage: 1 }),
-      aiming({ q: 2, r: -1 }, { q: 1, r: 0 }, { health: 5, damage: 1 }),
-    ],
-  });
-
-  const fought = afterCombat(city);
-
-  expect(attacksOf(city)).toEqual([
-    ['2,0', '1,0'],
-    ['2,-1', '1,0'],
-  ]);
-  expect(fought.units[0].stats.health).toBe(3);
-  expect(fought.units[1].stats.health).toBe(5);
-  expect(fought.units[2].stats.health).toBe(5);
-});
-
-test('an intent executed in combat is spent, and the enemy carries none out of it', () => {
-  const city = cityOf(['urban'], {
-    tiles: field(3),
-    units: [worker({ q: 1, r: 0 }), aiming({ q: 2, r: 0 }, { q: 1, r: 0 }, { damage: 1 })],
-  });
-
-  const fought = afterCombat(city);
-
-  expect(attacksOf(city)).toEqual([['2,0', '1,0']]);
-  expect(fought.units[0].stats.health).toBe(city.units[0].stats.health - 1);
-  expect(intentOf(fought, 2)).toBeUndefined();
-});
-
-test('an intent whose target has left is executed on the empty tile, and spent there', () => {
-  const city = cityOf(['urban'], {
-    tiles: field(3),
-    units: [worker({ q: 1, r: 0 }), aiming({ q: 2, r: 0 }, { q: 1, r: 0 }, { damage: 2 })],
-  });
-
-  const dodged = outcome(apply(city, moveTo(1, { q: 0, r: 1 })));
-  const fought = afterCombat(dodged);
-
-  expect(attacksOf(dodged)).toEqual([['2,0', '1,0']]);
-  expect(fought.units[0].stats.health).toBe(city.units[0].stats.health);
-  expect(intentOf(fought, 2)).toBeUndefined();
 });
 
 test('an enemy that moves stages the tile it left and the one it reached; a stuck one stages nothing', () => {
@@ -2259,22 +2223,24 @@ test('an enemy that moves stages the tile it left and the one it reached; a stuc
   expect(movesOf(city)).toEqual([['0,3', '0,2']]);
 });
 
-test('the intents the enemy phase declares come as one stage, after every move it made', () => {
+test('each enemy stages its own move and its own attacks, before the next enemy acts', () => {
   const city = cityOf(['urban'], {
     tiles: field(3),
     units: [
       worker({ q: 1, r: 1 }),
-      standing('enemy', { q: 3, r: 0 }, { move: 1 }),
-      standing('enemy', { q: 0, r: 3 }, { move: 1 }),
+      standing('enemy', { q: 3, r: 0 }, { move: 1, damage: 1 }),
+      standing('enemy', { q: 0, r: 3 }, { move: 1, damage: 1 }),
     ],
   });
 
-  const stages = apply(city, { type: 'end-turn' });
-  const declared = stages[stages.length - 2];
-
-  expect(stages.map((stage) => stage.name)).toEqual(['income', 'move', 'move', 'intents', 'turn']);
-  expect(intentOf(declared.chronicle, 2)).toEqual({ q: 1, r: 1 });
-  expect(intentOf(declared.chronicle, 3)).toEqual({ q: 1, r: 1 });
+  expect(stagedBy(city, { type: 'end-turn' })).toEqual([
+    'income',
+    'move',
+    'attack',
+    'move',
+    'attack',
+    'turn',
+  ]);
 });
 
 test('a tile an enemy occupies yields nothing at income', () => {
@@ -2291,15 +2257,16 @@ test('a tile an enemy occupies yields nothing at income', () => {
   }
 });
 
-test('an enemy on the city’s tile declares nothing, and captures the city the turn after', () => {
+test('an enemy on the city’s tile attacks nothing, and captures the city the turn after', () => {
   const city = cityOf(['urban'], {
     tiles: field(2),
-    units: [standing('enemy', { q: 1, r: 0 }, { move: 1 })],
+    units: [worker({ q: 0, r: 1 }), standing('enemy', { q: 1, r: 0 }, { move: 1, damage: 1 })],
   });
 
   const stood = outcome(apply(city, { type: 'end-turn' }));
-  expect(stood.units[0].tile).toEqual(CITY);
-  expect(intentOf(stood, 1)).toBeUndefined();
+  expect(stood.units[1].tile).toEqual(CITY);
+  expect(attacksOf(city)).toEqual([]);
+  expect(stood.units[0].stats.health).toBe(city.units[0].stats.health);
   expect(stood.defeat).toBeUndefined();
 
   const fallen = outcome(apply(stood, { type: 'end-turn' }));
@@ -2337,7 +2304,7 @@ test('a chronicle that has ended takes no command at all', () => {
 test('a chronicle with enemies on the map survives JSON', () => {
   const city = cityOf(['urban'], {
     tiles: field(3),
-    units: [worker({ q: 1, r: 0 }), aiming({ q: 2, r: 0 }, { q: 1, r: 0 })],
+    units: [worker({ q: 1, r: 0 }), standing('enemy', { q: 2, r: 0 })],
   });
 
   expect(JSON.parse(JSON.stringify(city))).toEqual(city);

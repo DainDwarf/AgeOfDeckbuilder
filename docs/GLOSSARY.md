@@ -47,7 +47,7 @@ deliberate exception the reviewer sees; there is no silent allow-list.
 | **victory** | The end of a chronicle by passing the capstone. | win, success, triumph |
 | **defeat** | The end of a chronicle by the city's fall. | collapse, game over, loss, death |
 | **border** | The edge of the tiles the city holds; pushed out by culture. | frontier, territory |
-| **turn** | One pass of the cycle: events, draw, play, end, combat, income, growth, enemy phase. | round |
+| **turn** | One pass of the cycle: events, draw, play, end, income, growth, enemy phase. | round |
 | **phase** | One part of the turn's cycle, in its fixed order; what the turn list names. | step, stage (in prose), section |
 | **hand** | The cards drawn this turn; what is not played is discarded when the turn ends. | — |
 | **draw** | To take cards from the draw pile into the hand. | pull |
@@ -57,9 +57,8 @@ deliberate exception the reviewer sees; there is no silent allow-list.
 | **recall** | To put a card from the discard pile into the hand; what a recall instant does. | retrieve, recover, return, reclaim, salvage |
 | **draw pile** | The cards not yet drawn this cycle; refilled from the discard pile when empty. | library |
 | **discard pile** | The cards played or discarded this cycle, waiting to be shuffled back. | graveyard, trash, bin |
-| **combat** | The phase after the turn ends where every enemy executes its declared intent. | battle, fight, skirmish, war |
-| **income** | The phase after combat where standing things yield. | upkeep, production phase, resolution |
-| **intent** | The attack an enemy declares one turn before executing it. | telegraph |
+| **combat** | Units attacking one another: the player's by hand in play, the enemies' in the enemy phase. | battle, fight, skirmish, war |
+| **income** | The phase after the turn ends where standing things yield. | upkeep, production phase, resolution |
 | **sight** | The tiles the city and its units currently see. | vision, line of sight |
 | **fog** | Every tile outside sight; known terrain, unknown occupants. | fog of war, unexplored |
 | **instant** | A card with an immediate effect: on the city, on a tile, or one thing with one unit. | action (for a card), spell, effect card |

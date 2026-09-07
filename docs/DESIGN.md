@@ -140,28 +140,22 @@ A chronicle is a sequence of **turns**. Each turn, in this order:
    resources and what the units hold are the whole budget. A per-turn energy was rejected: a sixth
    economy fighting the five.
 4. **End.** The player ends the turn; the rest of the hand is discarded.
-5. **Combat.** Every enemy executes the **intent** it declared last turn. Executing an intent
-   spends it — one whose target has left the tile is executed on the empty tile all the same, and
-   no enemy carries an intent until the enemy phase declares again. Combat comes before
-   income so that an enemy killed here occupies nothing when the tiles yield.
-6. **Income.** Standing things do their standing thing: assigned tiles and their buildings yield
+5. **Income.** Standing things do their standing thing: assigned tiles and their buildings yield
    their resources. So what the player sees when drawing holds for the whole turn: a farm placed
    this turn feeds the next.
-7. **Growth.** A food stock that has reached the growth threshold is spent on one idle
+6. **Growth.** A food stock that has reached the growth threshold is spent on one idle
    inhabitant, at most one a turn.
-8. **Enemy phase.** 🔧 Neutrals and enemies move; then every enemy declares its intent for the next
-   turn. An intent stays visible through the whole player turn, wherever the city has sight.
-   Killing the enemy cancels its intent; moving the target out of it dodges. An enemy standing on
-   the city's tile declares nothing: it is there to capture. Intents that re-target as the player
-   moves were rejected: the puzzle is in answering a fixed plan with a hand that cannot answer all
-   of it.
+7. **Enemy phase.** 🔧 Neutrals move; each enemy moves by its script and then attacks a unit of
+   the player's within its range, spending its action as any unit does. An enemy standing
+   on the city's tile attacks nothing: it is there to capture. An attack declared a turn before it
+   lands was rejected: it only bites when the player's movement is limited, and units that move
+   freely by hand step out of a plan declared a turn ahead for nothing.
 
 ### Sight ✅
 
 The map is hidden. The city and its units have **sight** over the tiles near them; every other
 tile is in **fog**. Terrain stays known once seen; what stands or moves on a tile — units,
-buildings, intents — is seen only in sight. An enemy that declares its intent in the fog attacks
-unseen.
+buildings — is seen only in sight.
 
 ### Cards ✅
 
@@ -357,7 +351,8 @@ exchange across turns, never within one blow.
   start of the player's turn and lost at the end of it, and spends one per tile crossed, in as many
   steps as the player likes; an instant can refresh them. Coast, deep water and mountain are
   impassable. A unit passes through the units of its own faction and never through another's, and
-  it lands only on a free tile.
+  it lands only on a free tile. Movement bound to the cards was tried and felt more limiting than
+  empowering in play.
 - **A unit attacks on its own action.** It holds **action**, refreshed at the same tick as its move
   points, and spends one per attack on a unit of another faction within its range; a melee unit's
   range is one. The player attacks by the same press as a move — the target standing on the tile is
@@ -389,8 +384,7 @@ something a technology or a civilization's rule can grant.
 
 **Enemies enter from camps.** The generator places **camps** on the map, each in the fog until
 seen. An event that spawns enemies spawns them at a camp, and they follow their script — the
-default one moves toward the nearest of the player's units or the city and declares an attack on
-it. Scouting is how a chronicle learns where the enemy comes from. A camp is captured the way
+default one moves toward the nearest of the player's units or the city and attacks it. Scouting is how a chronicle learns where the enemy comes from. A camp is captured the way
 the city is — kill what stands on it, stand on it through a full turn — and a captured camp
 spawns nothing again. 🔧 Its reward: a chronicle-only card, or influence. Spawning enemies on
 any fog tile was rejected: a raid out of a hollow that turns out empty reads as nothing.

@@ -31,9 +31,8 @@ export const UNIT_STATS: Record<UnitTypeId, UnitStats> = {
 /**
  * A unit standing on the map, with the move points it has left to cross tiles on and the action it
  * has left to attack on. An enemy is the one that carries a script — the enemy phase asks it where
- * to move and what to aim at — and the intent that phase left on it. `id` is the number the
- * chronicle dealt it as it entered: what every command names it by, whoever else enters or is
- * killed around it.
+ * to move and what to attack. `id` is the number the chronicle dealt it as it entered: what every
+ * command names it by, whoever else enters or is killed around it.
  */
 export type Unit = {
   readonly id: number;
@@ -43,11 +42,7 @@ export type Unit = {
   readonly action: number;
 } & (
   | { readonly faction: 'player' }
-  | {
-      readonly faction: 'enemy';
-      readonly script: EnemyScriptId;
-      readonly intent?: TileCoords;
-    }
+  | { readonly faction: 'enemy'; readonly script: EnemyScriptId }
 );
 
 /** A tile a unit can land on, and the move points crossing to it spends. */
@@ -106,7 +101,7 @@ export function reachable(tiles: readonly Tile[], units: readonly Unit[], unit: 
 }
 
 /**
- * What a unit an enemy script aims at: the unit of another faction within its range holding the
+ * What a unit an enemy script attacks: the unit of another faction within its range holding the
  * least health, and nothing when none is there or the unit has no damage to remove.
  */
 export function leastHealth(units: readonly Unit[], attacker: Unit): Unit | undefined {
