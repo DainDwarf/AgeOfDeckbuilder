@@ -20,6 +20,7 @@ import { boundTo } from './bindings';
 import { CARD_BASELINE, CARD_HEIGHT } from './card-face';
 import { EASE, ended, stopAllMotion, stopMotion } from './card-motion';
 import { createCityMode } from './city-mode';
+import { createDebugConsole } from './debug-console';
 import {
   ACCENT,
   addText,
@@ -415,6 +416,10 @@ export class ChronicleScene extends Phaser.Scene {
       if (inspection !== undefined) uninspect();
       else if (selection !== undefined) select(undefined);
       else if (!leaveCityMode()) menu();
+    });
+
+    createDebugConsole(this, (layers) => {
+      view.showLayers(layers);
     });
 
     parts.push(

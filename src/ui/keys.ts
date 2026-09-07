@@ -1,4 +1,4 @@
-import type Phaser from 'phaser';
+import Phaser from 'phaser';
 import { type Bind, boundTo, CONTROLS, keyPressed, mouseCode, PRESSES } from './bindings';
 import { whileUp } from './design-space';
 
@@ -111,6 +111,25 @@ export function onKeyDown(scene: Phaser.Scene, pressed: (press: Bind) => void): 
     if (carries(press)) event.preventDefault();
   });
   whileUp(scene, scene.game.events, DOWN, pressed);
+}
+
+/**
+ * The one reader the keyboard may belong to, for as long as the scene is up: every key pressed is
+ * offered to it in the raw, ahead of everything the game binds, and a key it takes reaches none of
+ * them. Two things make that hold — the window's capture phase runs before Phaser's own listener on
+ * it, and Phaser's keyboard manager drops an event whose default is already prevented — so a taken
+ * key is out of the game's reach whatever order the scene's listeners went on in. A chord is the
+ * browser's and is never offered.
+ */
+export function readsKeyboard(scene: Phaser.Scene, reads: (event: KeyboardEvent) => boolean): void {
+  const reader = (event: KeyboardEvent): void => {
+    if (chorded(event)) return;
+    if (reads(event)) event.preventDefault();
+  };
+  window.addEventListener('keydown', reader, true);
+  scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+    window.removeEventListener('keydown', reader, true);
+  });
 }
 
 /**

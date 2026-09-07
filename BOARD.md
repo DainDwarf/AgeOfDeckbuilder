@@ -12,11 +12,6 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
-- **The debug console, with two switches for the fog** — the console a key opens over the running
-  game and a developer types into; its first two entries
-  are switches, both off by default: one shows what has never been seen, one shows what is out of
-  sight. Neither touches the chronicle — they change what is drawn, nothing the rules see. Stepped
-  by an e2e spec. Doc-impact: `docs/DESIGN.md`.
 - **Fog on the rest of the screen** — the yield overlay, the infopanel and city mode stop reading
   through fog: no glyphs on a tile never seen, no occupant on a card outside sight. Pinned by an
   e2e spec on a fixed seed. Doc-impact: `docs/DESIGN.md`.

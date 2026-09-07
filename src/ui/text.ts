@@ -116,10 +116,16 @@ const TEXT = {
   'defeat.title': 'Defeat',
   'defeat.capture': 'An enemy captured the city on turn {turn}.',
   'defeat.population': "The city's population reached zero on turn {turn}.",
+  'console.line': '> {line}',
+  'console.no-entry': 'no such entry: {word}',
+  'console.uncharted-on': 'uncharted layer: on',
+  'console.uncharted-off': 'uncharted layer: off',
+  'console.fog-on': 'fog layer: on',
+  'console.fog-off': 'fog layer: off',
 } as const;
 
 export type TextKey = keyof typeof TEXT;
 
-export function text(key: TextKey, values: Record<string, number> = {}): string {
+export function text(key: TextKey, values: Record<string, string | number> = {}): string {
   return TEXT[key].replace(/\{(\w+)\}/g, (_, name: string) => String(values[name]));
 }

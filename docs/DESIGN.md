@@ -93,7 +93,8 @@ release, but the stack is chosen with them in mind.
 - **A chronicle can be left and resumed** — its save is its state and seed — and one chronicle is
   in progress at a time.
 - **A debug console ships inside the game** — the kind a key opens and a developer types into;
-  there is no separate developer version.
+  there is no separate developer version. The key above Tab, wherever the layout puts it, opens the
+  console and closes it again.
 - **English only.** No language is planned; text is kept addable.
 - Not in scope: a map editor, modding, a level or scenario editor.
 
@@ -125,6 +126,15 @@ never shows over the game. A notch of the wheel binds like a key too, one key ea
 zooms one notch a press, and only through the two zooms — a wheel notch up and a wheel notch down
 until they are rebound. **Default** puts every key back where it began, **Back** closes the window,
 and what the player binds is kept in the browser from one launch to the next.
+
+The **debug console** is a dark panel down the top of the screen, over the resource bar and over
+everything else the screen carries, a window and the defeat screen included: the last lines run
+stand above the line being typed. While it stands the keyboard is its — every key types, Backspace
+deletes, Enter runs the line, and Escape or the key that opened it closes it — so nothing the game
+binds hears a key meanwhile. The pointer is not its: the map still pans and zooms under it. An entry
+is one word and Enter, and it is answered in one line; a word the console holds no entry for is
+answered `no such entry: <word>`. The console binds no key of the player's and stands in no Controls
+window, and a new chronicle raises it with every entry back where it began.
 
 ## Systems
 
@@ -195,6 +205,15 @@ of them is clear — the generous reading, so that a tile is never hidden by whi
 the arithmetic fell on.
 
 **Every tile the city holds is in sight** 🔧: an inhabitant works it.
+
+**The debug console switches the two states that hide a tile**, one entry to each: `uncharted` and
+`fog`. Both hide until a switch takes one off, and each answers the state its own is left in; they
+change what is drawn and nothing the rules read. With the **uncharted layer** off, every tile of the
+disc is drawn, one never seen included, and the rivers along them with it; a tile out of sight is
+still darkened, and one that has no snapshot is drawn as it stands. With the **fog layer** off,
+every tile the map draws is drawn live — as it stands, with whoever stands on it, and darkened by
+nothing — so the map shows every tile charted clearly and leaves the never-seen ones out. Both off
+draw the whole map as the rules hold it.
 
 Melee needs no rule of its own — an adjacent tile is always in sight — and whether a ranged attack
 needs its target in sight waits for the first ranged unit. The enemies read the whole map: their
