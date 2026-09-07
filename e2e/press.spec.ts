@@ -85,11 +85,11 @@ test('a hand card released off the canvas comes home, plays nothing, and leaves 
   await page.mouse.up();
   await page.mouse.move(home.x, home.y - 300 * home.unit, { steps: 5 });
   await expect.poll(() => stillAt(page, card, home)).toBe(true);
-  expect(await standing(page, 'zoom')).toBe(false);
+  expect(await standing(page, 'inspection')).toBe(false);
   expect((await chronicleOf(page)).hand).toEqual(opened.hand);
 
   await page.mouse.click(home.x, home.y);
-  await expect.poll(() => standing(page, 'zoom')).toBe(true);
+  await expect.poll(() => standing(page, 'inspection')).toBe(true);
 
   expect(problems).toEqual([]);
 });
@@ -124,7 +124,7 @@ test('a hand card whose release the blur swallowed comes home, and the next pres
   // The release the browser finally delivers, long after the gesture it belonged to ended.
   await page.mouse.up();
   expect(await stillAt(page, card, home)).toBe(true);
-  expect(await standing(page, 'zoom')).toBe(false);
+  expect(await standing(page, 'inspection')).toBe(false);
   expect((await chronicleOf(page)).hand).toEqual(opened.hand);
 
   await dragOut(page, index);
@@ -133,7 +133,7 @@ test('a hand card whose release the blur swallowed comes home, and the next pres
   expect(problems).toEqual([]);
 });
 
-test('a press the blur swallowed before it dragged is no click, and the next click zooms', async ({
+test('a press the blur swallowed before it dragged is no click, and the next click inspects', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -154,14 +154,14 @@ test('a press the blur swallowed before it dragged is no click, and the next cli
   });
   await page.mouse.up();
 
-  expect(await standing(page, 'zoom')).toBe(false);
+  expect(await standing(page, 'inspection')).toBe(false);
   expect((await chronicleOf(page)).hand).toEqual(opened.hand);
 
   await page.mouse.move(home.x, home.y - 300 * home.unit, { steps: 5 });
   await expect.poll(() => stillAt(page, card, home)).toBe(true);
 
   await page.mouse.click(home.x, home.y);
-  await expect.poll(() => standing(page, 'zoom')).toBe(true);
+  await expect.poll(() => standing(page, 'inspection')).toBe(true);
 
   expect(problems).toEqual([]);
 });

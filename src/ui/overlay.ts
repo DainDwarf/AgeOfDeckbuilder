@@ -36,7 +36,7 @@ const CANCEL_STYLE = {
 
 const BROWSE_WIDTH = 180;
 const BROWSE_GAP = 26;
-const ZOOM_WIDTH = 380;
+const INSPECTION_WIDTH = 380;
 
 /** The pointer's travel over these last milliseconds is the speed a release flings the grid at. */
 const FLING_WINDOW = 80;
@@ -59,7 +59,7 @@ export type Overlay = {
     chosen: (at: number) => void,
     released: () => void,
   ): () => void;
-  zoom(id: CardId, refusal: Refusal): void;
+  inspect(id: CardId, refusal: Refusal): void;
   /** The Menu button: raises the menu over whatever stands, and takes the whole menu back down. */
   menu(): void;
   /** Takes what stands on the scrim back one step, and answers whether anything stood. */
@@ -116,11 +116,11 @@ export function createOverlay(
   let shown: Phaser.GameObjects.GameObject[] = [];
   let browsing: { pile: PileKind; cards: readonly CardId[] } | undefined;
   let grid: Grid | undefined;
-  /** How far the grid is scrolled, kept while a card taken off it is zoomed. */
+  /** How far the grid is scrolled, kept while a card taken off it is inspected. */
   let offset = 0;
   let fling = 0;
   let scrolling: Scroll | undefined;
-  let zoomed = false;
+  let inspecting = false;
   /** How the card the aim window stands for is let go of, and nothing while no aim window stands. */
   let releasing: (() => void) | undefined;
   /** The window of the menu that stands, and nothing while none does. */
@@ -149,7 +149,7 @@ export function createOverlay(
   const close = (): void => {
     wipe();
     browsing = undefined;
-    zoomed = false;
+    inspecting = false;
     releasing = undefined;
     opened = undefined;
     scrim.setVisible(false).disableInteractive();
@@ -172,15 +172,15 @@ export function createOverlay(
     covering(true);
   };
 
-  const showZoom = (id: CardId, refusal: Refusal): void => {
+  const showInspection = (id: CardId, refusal: Refusal): void => {
     wipe();
     cover();
-    zoomed = true;
+    inspecting = true;
     opened = undefined;
-    const { root } = createCardFace(scene, id, refusal, { width: ZOOM_WIDTH });
+    const { root } = createCardFace(scene, id, refusal, { width: INSPECTION_WIDTH });
     root
-      .setName('zoom')
-      .setPosition(DESIGN_WIDTH / 2, (DESIGN_HEIGHT + Math.round(ZOOM_WIDTH * 1.4)) / 2)
+      .setName('inspection')
+      .setPosition(DESIGN_WIDTH / 2, (DESIGN_HEIGHT + Math.round(INSPECTION_WIDTH * 1.4)) / 2)
       .setDepth(SCRIM_DEPTH + 1);
     shown.push(root);
   };
@@ -298,7 +298,7 @@ export function createOverlay(
     wipe();
     cover();
     browsing = { pile, cards };
-    zoomed = false;
+    inspecting = false;
     opened = undefined;
 
     const title = raiseTitle(text(`browse.${pile}`, { count: cards.length }));
@@ -308,7 +308,7 @@ export function createOverlay(
       title.y + title.height + MARGIN,
       (at) => {
         if (at === undefined) back();
-        else showZoom(cards[at], NO_REFUSAL);
+        else showInspection(cards[at], NO_REFUSAL);
       },
     );
   };
@@ -325,7 +325,7 @@ export function createOverlay(
     wipe();
     cover();
     browsing = undefined;
-    zoomed = false;
+    inspecting = false;
     opened = undefined;
     releasing = released;
     offset = 0;
@@ -364,7 +364,7 @@ export function createOverlay(
     wipe();
     cover();
     browsing = undefined;
-    zoomed = false;
+    inspecting = false;
     opened = undefined;
     fallen = defeat;
 
@@ -420,7 +420,7 @@ export function createOverlay(
     wipe();
     cover();
     browsing = undefined;
-    zoomed = false;
+    inspecting = false;
     opened = which;
     const laid = createWindow(scene, which, {
       press: (press) => {
@@ -450,7 +450,7 @@ export function createOverlay(
     }
     if (fallen !== undefined || !scrim.visible) return false;
     if (releasing !== undefined) letGoOfAim();
-    else if (zoomed && browsing !== undefined) showBrowse(browsing.pile, browsing.cards);
+    else if (inspecting && browsing !== undefined) showBrowse(browsing.pile, browsing.cards);
     else close();
     return true;
   };
@@ -485,7 +485,7 @@ export function createOverlay(
       showAim(chronicle, chosen, released);
       return letGoOfAim;
     },
-    zoom: showZoom,
+    inspect: showInspection,
     menu(): void {
       if (opened === undefined) showWindow('menu');
       else shut();

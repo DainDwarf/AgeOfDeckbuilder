@@ -59,9 +59,9 @@ export type Hand = {
 /**
  * The hand between the two piles. Cards keep their fixed gap until the lane runs out, then
  * compress evenly onto one another; the one under the pointer comes to the front. While a card is
- * aimed at a tile the hand is click-only: the armed card cancels, every other card zooms; aimed at
- * the discard pile, the hand lies under the window's scrim. Each aim is handed the card's place in
- * the hand and the way to let it go, and answers the way to let it go from here.
+ * aimed at a tile the hand is click-only: the armed card cancels, every other card is inspected;
+ * aimed at the discard pile, the hand lies under the window's scrim. Each aim is handed the card's
+ * place in the hand and the way to let it go, and answers the way to let it go from here.
  */
 export function createHand(
   scene: Phaser.Scene,
@@ -69,7 +69,7 @@ export function createHand(
   play: (index: number) => void,
   aimTile: (index: number, card: AimedCard, released: () => void) => () => void,
   aimDiscardPile: (index: number, released: () => void) => () => void,
-  zoom: (id: CardId, refusal: Refusal) => void,
+  inspect: (id: CardId, refusal: Refusal) => void,
 ): Hand {
   const laneLeft = MARGIN + CARD_WIDTH + LANE_PAD;
   const laneWidth = DESIGN_WIDTH - 2 * laneLeft;
@@ -254,7 +254,7 @@ export function createHand(
       onClick(slot.face.root, () => {
         settle(slot, 0);
         if (aiming !== undefined && slot === aiming.slot) aiming.cancel();
-        else zoom(slot.id, slot.refusal);
+        else inspect(slot.id, slot.refusal);
       });
 
       return slot;

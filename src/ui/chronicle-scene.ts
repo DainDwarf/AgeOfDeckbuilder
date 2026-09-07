@@ -282,7 +282,7 @@ export class ChronicleScene extends Phaser.Scene {
       },
     );
 
-    /** Whether a window, a browse, a card zoomed or the defeat screen stands over the map. */
+    /** Whether a window, a browse, a card inspected or the defeat screen stands over the map. */
     let covered = false;
     const overlay = createOverlay(
       this,
@@ -335,7 +335,7 @@ export class ChronicleScene extends Phaser.Scene {
           released,
         );
       },
-      (id, refusal) => overlay.zoom(id, refusal),
+      (id, refusal) => overlay.inspect(id, refusal),
     );
 
     /** The menu, from the Menu button or a clean chronicle screen: an armed card is let go of first. */
