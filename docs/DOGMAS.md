@@ -147,6 +147,11 @@ makes twice becomes a line here (the ratchet, at `/upkeep`).
   runs it in their own terminal.
 - **No mocks.** A pure `src/rules/` needs none; a mock that mirrors the code tests the code
   against itself. Use real dependencies or don't test that path.
+- **A fixture goes through the transform production uses.** What the rules build — a unit
+  entered, a chronicle begun, a map dealt — a test builds by calling that exported function,
+  never by an inline re-copy of it. A helper that mirrors a rule, or wipes, resets or renumbers
+  what already stands to make room for its fixture, is a defect, whatever test it serves; a
+  stand-in is content enough for this rule to hold.
 - **Tests import their runner API explicitly** — Vitest's `globals` stays off.
 - **A test is never weakened to make it pass.** Deleting a test says that behaviour is no longer
   promised, which is a design change made with the user. A failing check is reported failing, with

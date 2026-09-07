@@ -14,9 +14,11 @@ a [`BOARD.md`](BOARD.md) line. Say
   (text, art, lore), one stage per session batched across pieces. Worked well before.
 - **Headless balance simulator**: only run when asked; reports numbers, not diagnoses.
 - **Deferred dogmas return with their objects** (removed in `b5ea45a`, kept out on purpose):
-  *data owns its behaviour* comes back with the card model; *mechanism vs content testing*,
-  *catalogue coherence tests* and *fixtures through the exported transform* come back with the
-  first content catalogue.
+  *data owns its behaviour* comes back with the card model; *mechanism vs content testing* comes
+  back with the *fixture content* entry below, the day its synthetic catalogue lets a test obey it;
+  *catalogue coherence tests* come back with the first content the compiler does not check — a
+  stand-in in a closed TypeScript record is already checked. *Fixtures through the exported
+  transform* returned on 2026-09-07, after a fixture that mirrored the rules bit.
 - **Fixture content** (v0.0.4, with the content catalogue — settled 2026-09-07, to be executed
   then): the rules today are deterministic and side-effect free but not parametric in their
   content — cards, improvements, buildings, features and unit stats are module constants the
@@ -30,7 +32,12 @@ a [`BOARD.md`](BOARD.md) line. Say
   table; first consumers are the four-layer yield test, the terraform-keeps-improvements test
   and the unit builders' synthetic stats. A save names its content version, since the state
   cannot carry the content, and a replay is the triple of content, seed and commands. The
-  `DOGMAS.md` Stack line gains its third word the same day.
+  `DOGMAS.md` Stack line gains its third word the same day, and the *mechanism vs content*
+  dogma returns to its Testing section as soon as the work permits: a new mechanism gets one
+  test on synthetic content; new content gets coherence checks only, never a gameplay test; a
+  test that reads its oracle from the code's own table, or seeds exactly a real card's price,
+  is a content test wearing a mechanism title. The chronicle tests hold about fifteen of the
+  first kind and six of the second today, all on stand-ins; they convert with the catalogue.
 - **The render factor can change after boot**: regrow the bitmap, re-zoom cameras, re-rasterize
   text while the game runs. Four consumers: itch.io's fullscreen button, a settings render-scale
   slider, monitor-hopping, resizing the window after boot. Decide after the art style locks —
