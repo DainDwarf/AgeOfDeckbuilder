@@ -18,8 +18,9 @@ drops the selection. Making a new selection drops the old one, whatever it was. 
 that aims is **being aimed** from the moment it is selected: the map lights the tiles its aim
 admits, or the discard pile's window opens.
 
-**A left click on the selection plays it.** A selected tile clicked again stays selected. A
-selected card clicked again is played where it stands: a card that aims at nothing is played, and
+**A left click on the selection plays it.** A selected tile clicked again stays selected, except
+the city's own tile: clicked again it enters city mode, as the city key does, and the selection
+goes as city mode always takes it. A selected card clicked again is played where it stands: a card that aims at nothing is played, and
 refused over the card with its reason when the city cannot pay; a card that aims lands nowhere, so
 it stays selected. This is the design's "a card aimed at nothing lands nowhere".
 
@@ -60,9 +61,13 @@ the city's purse is asked.
 - **The design writes the presses** — `docs/DESIGN.md` carries the design above as the chronicle
   screen's presses: the hand's presses, which the design never wrote; the right click's one rule
   in place of the three at *City mode* and *Cards*; the aim window's presses; the back key's list
-  with the selected card and the card shown large; "armed" gone from the *Cards* section.
+  with the selected card and the card shown large; the city's tile clicked twice among the doors
+  into city mode; "armed" gone from the *Cards* section.
   `docs/GLOSSARY.md` widens *select* and *inspect* to cards. No code changes; the lines below make
   the code agree. Doc-impact: `docs/DESIGN.md`, `docs/GLOSSARY.md`.
+- **The city's tile clicked twice enters city mode** — a left click on the city's tile while it is
+  the selection enters city mode as the city key does; a second click on any other selected tile
+  changes nothing. E2e on `e2e/city-mode.spec.ts`. Doc-impact: none.
 - **The hand selects by click** — a left click selects any card of the hand, payable or not, and a
   card that aims is being aimed from then; a second click plays a selected no-aim card, or raises
   the refusal note over one the city cannot pay for; a card being aimed clicked again stays
