@@ -152,13 +152,14 @@ drops the inspection and leaves the selection standing. It does this in every st
 be in, so nothing half done has to be undone to inspect a thing.
 
 **The inspection key inspects the selection**, and moves the inspection there when a right click had
-put it elsewhere. With no selection, or under a window, it does nothing.
+put it elsewhere on the screen. With no selection, or while a card stands large, it does nothing;
+under a window it inspects the window's own selection and never the screen's.
 
 **A window that offers things to select keeps a selection of its own**, which dies with the window;
 the screen's selection waits under it.
 
-The **back key** walks these back in this order: the window or the thing shown large, then the
-inspection, then the selection.
+The **back key** walks these back in this order: the thing shown large, then a window's own
+selection and then the window, then the inspection, then the selection.
 
 Two verbs cover it all. **Select** is the tile the map rings, the card lifted out of the hand, or
 the card ringed in a browse; **inspect** is the tile in the infopanel and the card shown large.

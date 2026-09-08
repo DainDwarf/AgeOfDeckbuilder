@@ -119,9 +119,10 @@ test('a click rings a browsed card, a right click and the inspection key show it
   await expect.poll(() => cardOf(page, 'inspection')).toBe(first);
   expect(await standing(page, 'browse')).toBe(false);
 
-  // The right click put the inspection elsewhere; the inspection key moves it to the selection.
+  // A card stands large, so the inspection key does nothing.
   await page.keyboard.press('KeyI');
-  await expect.poll(() => cardOf(page, 'inspection')).toBe(read[other - 1]);
+  await settled(page);
+  expect(await cardOf(page, 'inspection')).toBe(first);
 
   // The right click never selects, so the back key finds the browse's own selection standing.
   await page.keyboard.press('Escape');

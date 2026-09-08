@@ -190,21 +190,6 @@ export function createOverlay(
     }
   };
 
-  /** The browse wherever it stands: on the scrim, or under a card it is showing large. */
-  const browseStanding = (what: Carried | undefined): Browsing | undefined => {
-    if (what === undefined) return undefined;
-    switch (what.stands) {
-      case 'browse':
-        return what;
-      case 'inspection':
-        return browseStanding(what.over);
-      case 'aim-window':
-      case 'window':
-      case 'defeat':
-        return undefined;
-    }
-  };
-
   /** The window of the menu standing, and nothing while anything else stands, or nothing at all. */
   const windowStanding = (): { which: MenuWindow; laid: Opened } | undefined => {
     if (carried === undefined) return undefined;
@@ -585,10 +570,19 @@ export function createOverlay(
       showInspection(id, refusal, undefined);
     },
     inspectSelection(): void {
-      const browsing = browseStanding(carried);
-      const at = browsing?.selected;
-      if (browsing === undefined || at === undefined) return;
-      showInspection(browsing.cards[at], NO_REFUSAL, browsing);
+      if (carried === undefined) return;
+      switch (carried.stands) {
+        case 'browse': {
+          const at = carried.selected;
+          if (at !== undefined) showInspection(carried.cards[at], NO_REFUSAL, carried);
+          return;
+        }
+        case 'aim-window':
+        case 'inspection':
+        case 'window':
+        case 'defeat':
+          return;
+      }
     },
     menu(): void {
       if (windowStanding() === undefined) showWindow('menu');
