@@ -79,6 +79,11 @@ a [`BOARD.md`](BOARD.md) line. Say
 - **Bundle the UI font** (art-style pass scope): `system-ui` resolves to a different typeface on
   every machine, so CI, the player and the developer lay out different games from the same code —
   every width in the UI is a measured text width. A font shipped with the build ends that.
+- **One diamond for every resource glyph** (art-style pass scope, when the glyphs become icons):
+  the map draws its three turned squares through one helper; the card face's and the infopanel's
+  cost glyphs and the resource bar's chip each hand-roll their own. The day the glyphs become
+  icons, one renderer of a resource's glyph takes all six, and the WebGL-stroke trap goes with
+  the turned square.
 - **Type-size floor, verified small** (art-style pass scope): minimum type sizes generous enough
   that the smallest window we care about stays readable; ui-check verifies at that size. Uniform
   window scaling plus card zoom covers the rest — no UI-scale slider unless playtesting demands it.
