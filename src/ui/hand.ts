@@ -2,9 +2,11 @@ import Phaser from 'phaser';
 import { type AimedCard, CARDS } from '../rules/cards';
 import { costOf, playable, type Refusal, refusalOf, type Stage } from '../rules/chronicle';
 import type { CardId, Chronicle } from '../rules/state';
+import { createAimLine } from './aim-line';
 import {
   CARD_BASELINE,
   CARD_HEIGHT,
+  CARD_LIFT,
   CARD_WIDTH,
   type CardFace,
   createCardBack,
@@ -26,7 +28,6 @@ import { createRefusalNote } from './refusal-note';
 const LANE_PAD = 28;
 const GAP = 12;
 const FAN = 0.5;
-const LIFT = 32;
 
 /** How far up a card has to come out of the hand before releasing it plays it. */
 const PLAY_HEIGHT = 110;
@@ -89,6 +90,7 @@ export function createHand(scene: Phaser.Scene, on: Surface, presses: HandPresse
   const laneLeft = MARGIN + CARD_WIDTH + LANE_PAD;
   const laneWidth = DESIGN_WIDTH - 2 * laneLeft;
   const note = createRefusalNote(scene, on);
+  const line = createAimLine(scene, on);
 
   let slots: Slot[] = [];
   /** What the hand has in the air and no slot holds; a render owns it and takes it down. */
@@ -112,7 +114,7 @@ export function createHand(scene: Phaser.Scene, on: Surface, presses: HandPresse
   /** Whether a card stands out of the lane: the one under the pointer, and the selected one. */
   const raised = (slot: Slot): boolean => slot.hovered || selected?.slot === slot;
 
-  const restingY = (slot: Slot): number => slot.home.y - (raised(slot) ? LIFT : 0);
+  const restingY = (slot: Slot): number => slot.home.y - (raised(slot) ? CARD_LIFT : 0);
 
   /** The card back where it rests, at once or over that long; the promise settles when it is home. */
   const settle = (slot: Slot, duration: number): Promise<void> => {
@@ -135,11 +137,29 @@ export function createHand(scene: Phaser.Scene, on: Surface, presses: HandPresse
 
   /** Every reason the rules refuse this card, over it and clear of the lift a selection gives it. */
   const refuse = (slot: Slot): void => {
-    note.overCard(costOf(slot.id), slot.refusal, slot.home.x, slot.home.y - LIFT - CARD_HEIGHT);
+    note.overCard(
+      costOf(slot.id),
+      slot.refusal,
+      slot.home.x,
+      slot.home.y - CARD_LIFT - CARD_HEIGHT,
+    );
+  };
+
+  /** The card aimed at a tile or at a unit says so: the point on its ring, the line over the hand. */
+  const aiming = (slot: Slot, aim: AimedCard['aim']): void => {
+    slot.face.aim(true);
+    line.show(slot.id, aim);
+  };
+
+  /** The card is being aimed no longer: the point comes off its ring and the line goes with it. */
+  const aimedNoMore = (slot: Slot): void => {
+    slot.face.aim(false);
+    line.hide();
   };
 
   /** The card let go of: it comes down into the lane, unringed, whatever it was doing out of it. */
   const letGoOf = (slot: Slot): Promise<void> => {
+    aimedNoMore(slot);
     slot.face.select(false);
     slot.hovered = false;
     return settle(slot, 150);
@@ -180,8 +200,8 @@ export function createHand(scene: Phaser.Scene, on: Surface, presses: HandPresse
 
   /**
    * The card the hand takes as the selection: whatever it held comes home, the card lifts out of the
-   * lane and takes the ring, and one that aims at a tile is being aimed from here. A card aimed at
-   * the discard pile waits for its second press to raise the window.
+   * lane and takes the ring, and one that aims at a tile or at a unit is being aimed from here. A
+   * card aimed at the discard pile waits for its second press to raise the window.
    */
   const select = (slot: Slot): Selected => {
     unselect();
@@ -197,15 +217,17 @@ export function createHand(scene: Phaser.Scene, on: Surface, presses: HandPresse
       case 'discard-pile':
         break;
       case 'tile':
+      case 'unit':
         standing.cancel = presses.aimTile(slot.index, card, releasing(slot));
+        aiming(slot, card.aim);
         break;
     }
     return standing;
   };
 
   /**
-   * The press on the selection, which is the selected card's own act; one aimed at a tile is being
-   * aimed already and stays as it stands. Nothing has changed since the render, so the refusal the
+   * The press on the selection, which is the selected card's own act; one aimed at a tile or at a
+   * unit is being aimed already and stays as it stands. Nothing has changed since the render, so the refusal the
    * slot holds is still the rules' answer: the card the city cannot pay for says so over itself and
    * stays selected, and no play is sent for one the rules would only refuse again.
    */
@@ -225,6 +247,7 @@ export function createHand(scene: Phaser.Scene, on: Surface, presses: HandPresse
         standing.cancel = presses.aimDiscardPile(slot.index, closing(slot));
         break;
       case 'tile':
+      case 'unit':
         break;
     }
   };

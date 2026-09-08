@@ -477,6 +477,17 @@ export function refusalLines(page: Page): Promise<string[] | undefined> {
   });
 }
 
+/** What the line over the hand says the card being aimed is played at, or nothing while none stands. */
+export function aimLine(page: Page): Promise<string | undefined> {
+  return page.evaluate(() => {
+    const line = window.named?.('aim-line')?.object as Phaser.GameObjects.Container | undefined;
+    if (line === undefined) return undefined;
+    return line.list
+      .filter((part) => part.type === 'Text')
+      .map((part) => (part as Phaser.GameObjects.Text).text)[0];
+  });
+}
+
 /** What the end-turn button reads right now: the turn it stands on, or the hover's own word. */
 export function endTurnLabel(page: Page): Promise<string> {
   return page.evaluate(() => {

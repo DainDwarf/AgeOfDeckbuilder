@@ -66,6 +66,8 @@ const TEXT = {
   'rules.PH_Mine': 'Improve hills with a mine',
   'rules.PH_Urbanisation': 'Terraform a plain into urban',
   'rules.PH_Recall': 'Recall a card from the discard pile',
+  'aim.tile': 'Play {card} at a tile',
+  'aim.unit': 'Play {card} at a unit',
   'refusal.food': 'Costs {cost} food.',
   'refusal.production': 'Costs {cost} production.',
   'refusal.military': 'Costs {cost} military.',

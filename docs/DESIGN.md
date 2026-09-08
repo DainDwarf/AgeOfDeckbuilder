@@ -275,7 +275,9 @@ keyword some cards carry, not a kind, and the map's gifts are chronicle-only by 
   entering the map.
 
 A card **aimed** at a tile lands on no tile its aim does not admit, and the map lights the tiles it
-does. A card that aims at nothing needs nothing of the map: it is played where it stands.
+does. A card aimed at a **unit** is aimed at the tile a unit of the player's stands on and admits no
+other; what the card itself asks of that tile is asked after. A card that aims at nothing needs
+nothing of the map: it is played where it stands.
 
 A card aimed at the discard pile is offered the pile's cards in the **aim window**, newest first,
 and lands on one of them; the aimed card is in the hand, so the pile never offers it. An empty
@@ -331,13 +333,21 @@ lying under a card in the hand, so it stays selected; one that aims at the disca
 aim window and is being aimed from then. That window waits for the second click because it would
 stand over the hand, and a card is inspected from the hand before it is played.
 
+**A card aimed at a tile or at a unit says so on the card itself.** It wears a point on its ring,
+over its top edge and towards the map, and one line stands over the hand naming what it is played
+at: `Play <card> at a tile` or `Play <card> at a unit`, `<card>` being the card's own name. Point
+and line come up the moment the card is being aimed and go when it is let go of, so a card selected
+and waiting to be played reads apart from one being aimed without reading the map. A card aimed at
+the discard pile wears neither: the aim window standing is how that aim reads.
+
 **A card being aimed filters every left click by its aim.** A press on a thing the aim admits is the
 play attempted there, and the rules answer: a play refused says why over that thing — the one reason
 it is turned down, in the note a refused card raises — and the card stays selected. A press on
 anything else lets the card go and then lands, in the one press, as it would on a clean screen: a
 tile is selected, another card of the hand is selected. A card that aims at a tile admits a drawn
-tile, a recall admits a card of the aim window, and a card aimed at the hand — none is written yet —
-would admit another card of the hand.
+tile, one that aims at a unit a drawn tile a unit of the player's stands on, a recall admits a card
+of the aim window, and a card aimed at the hand — none is written yet — would admit another card of
+the hand.
 
 **The drag is the two clicks in one gesture.** A card lifted clear of the hand and released there is
 selected and played at once: one that aims at a tile stays selected, being aimed; one that aims at

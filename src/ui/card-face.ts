@@ -2,7 +2,16 @@ import type Phaser from 'phaser';
 import { CARDS } from '../rules/cards';
 import { costOf, playable, type Refusal } from '../rules/chronicle';
 import type { CardId } from '../rules/state';
-import { ACCENT, addText, DESIGN_HEIGHT, hexagon, MARGIN, UI_FONT } from './design-space';
+import {
+  ACCENT,
+  addText,
+  corners,
+  css,
+  DESIGN_HEIGHT,
+  hexagon,
+  MARGIN,
+  UI_FONT,
+} from './design-space';
 import { RESOURCE_COLOURS } from './resource-bar';
 import { text } from './text';
 
@@ -25,6 +34,21 @@ export const CARD_HEIGHT = CARD_METRICS.height;
 
 /** Where a card lying on the chronicle screen rests: its bottom edge, one margin off the bottom. */
 export const CARD_BASELINE = DESIGN_HEIGHT - MARGIN;
+
+/** How far a card comes out of the lane it lies in: the lift a hover gives it, and the selection's. */
+export const CARD_LIFT = 32;
+
+/** The ring the selection wears: this far outside the card's own edge, stroked this wide. */
+const RING_STANDOFF = 3.5;
+const RING_WEIGHT = 3;
+
+/** The point a card being aimed wears, its base on the ring's outer edge and its apex towards the map. */
+const POINT_WIDTH = 18;
+const POINT_HEIGHT = 12;
+const POINT_EDGE = 0x0d1014;
+
+/** How far the point on a card being aimed reaches above the card's own top edge, ring included. */
+export const AIM_POINT_REACH = RING_STANDOFF + RING_WEIGHT / 2 + POINT_HEIGHT;
 
 export const CARD_EDGE = 0x6f757d;
 const KIND_INK = 0x4a5058;
@@ -61,6 +85,8 @@ export type CardFace = {
   readonly root: Phaser.GameObjects.Container;
   /** Draws the card as the selection, or as one more card lying where it lies. */
   select(selected: boolean): void;
+  /** Draws the card as the one being aimed: the point on its ring, or no point at all. */
+  aim(beingAimed: boolean): void;
 };
 
 /**
@@ -146,14 +172,39 @@ export function createCardFace(
   art.strokeRoundedRect(left + 0.5, artTop + 0.5, right - left - 1, artHeight - 1, 0.2 * em);
 
   const ring = scene.add.graphics().setVisible(false);
-  ring.lineStyle(3, ACCENT);
-  ring.strokeRoundedRect(-width / 2 - 3.5, -height - 3.5, width + 7, height + 7, radius + 3.5);
+  ring.lineStyle(RING_WEIGHT, ACCENT);
+  ring.strokeRoundedRect(
+    -width / 2 - RING_STANDOFF,
+    -height - RING_STANDOFF,
+    width + 2 * RING_STANDOFF,
+    height + 2 * RING_STANDOFF,
+    radius + RING_STANDOFF,
+  );
 
   root.add([art, name, kind, rules, ring]);
+
+  /** The point while the card is being aimed, and nothing at all on the card while it is not. */
+  let point: Phaser.GameObjects.Polygon | undefined;
+
   return {
     root,
     select(on: boolean): void {
       ring.setVisible(on);
+    },
+    aim(on: boolean): void {
+      point?.destroy();
+      point = undefined;
+      if (!on) return;
+      point = scene.add
+        .polygon(
+          0,
+          -height - RING_STANDOFF - RING_WEIGHT / 2 - POINT_HEIGHT / 2,
+          corners([-POINT_WIDTH / 2, POINT_HEIGHT, POINT_WIDTH / 2, POINT_HEIGHT, 0, 0]),
+          ACCENT,
+        )
+        .setStrokeStyle(1, POINT_EDGE)
+        .setName('aim-point');
+      root.add(point);
     },
   };
 }
@@ -233,10 +284,6 @@ function dashAlong(outline: Phaser.GameObjects.Graphics, points: { x: number; y:
     }
     travelled += lengths[i];
   }
-}
-
-function css(colour: number): string {
-  return `#${colour.toString(16).padStart(6, '0')}`;
 }
 
 /** What the discard pile's top card is worn down to: CSS `grayscale(0.35) brightness(0.75)`. */

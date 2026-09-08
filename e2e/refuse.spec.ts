@@ -1,5 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
-import { CARDS, DECKS } from '../src/rules/cards';
+import { CARDS, DECKS, refuses } from '../src/rules/cards';
 import {
   apply,
   beginChronicle,
@@ -133,7 +133,7 @@ test('a press on a tile an aim refuses says one reason over it, and the card sta
   if (card.aim !== 'tile') throw new Error(`${opened.hand[index]} is aimed at no tile`);
   const tile = tileAt(opened.tiles, opened.city);
   if (tile === undefined) throw new Error('the city stands on no tile of the map');
-  const block = card.refuses(opened, tile);
+  const block = refuses(opened, card, tile);
   if (block === undefined) throw new Error(`${opened.hand[index]} admits the city's own tile`);
 
   const face = await onScreen(page, `tile-${tileKey(opened.city)}`);

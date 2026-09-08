@@ -1,4 +1,4 @@
-import { type AimedCard, CARDS } from './cards';
+import { type AimedCard, CARDS, refuses } from './cards';
 import { arrival, ENEMY_SCRIPTS } from './enemies';
 import {
   CITY_TILE,
@@ -43,6 +43,13 @@ export type Command =
   | {
       readonly type: 'play';
       readonly index: number;
+      readonly aim: 'unit';
+      /** The tile the unit it is aimed at stands on: a unit is played at through the map. */
+      readonly tile: TileCoords;
+    }
+  | {
+      readonly type: 'play';
+      readonly index: number;
       readonly aim: 'discard-pile';
       /**
        * Where in the discard pile the card aimed at it lies, in the pile as it stood before the
@@ -61,7 +68,7 @@ export type Command =
  */
 export type UnitCommand = Extract<Command, { readonly unit: number }>;
 
-/** One card of the hand played, aimed the way the card is aimed: at nothing, a tile or the discard pile. */
+/** One card of the hand played, aimed the way the card is: at nothing, a tile, a unit or the discard pile. */
 type PlayCommand = Extract<Command, { readonly type: 'play' }>;
 
 /** A full hand. */
@@ -401,20 +408,20 @@ function unaffordable(chronicle: Chronicle, costs: readonly Cost[]): Resource[] 
 }
 
 /**
- * Every tile a card's aim admits, the aim's own predicate the whole of the filter. The one list the
+ * Every tile a card's aim admits, what the aim refuses the whole of the filter. The one list the
  * play and the map a card is aimed over both read.
  */
 export function admitted(chronicle: Chronicle, card: AimedCard): TileCoords[] {
   return chronicle.tiles
-    .filter((tile) => card.refuses(chronicle, tile) === undefined)
+    .filter((tile) => refuses(chronicle, card, tile) === undefined)
     .map(({ q, r }) => ({ q, r }));
 }
 
 /**
  * Every block a card the city can pay for still stands against: there is nothing for it to resolve
  * on. A card that lands whole and one aimed at the discard pile answer with the blocks they declare,
- * in the order they declare them; a card aimed at a tile answers with none, the map being no part of
- * what the hand judges it by.
+ * in the order they declare them; a card aimed at a tile or at a unit answers with none, the map
+ * being no part of what the hand judges it by.
  */
 function blocked(chronicle: Chronicle, id: CardId): Block[] {
   const card = CARDS[id];
@@ -424,6 +431,7 @@ function blocked(chronicle: Chronicle, id: CardId): Block[] {
     case 'discard-pile':
       return card.blocked(chronicle);
     case 'tile':
+    case 'unit':
       return [];
   }
 }
@@ -456,9 +464,9 @@ function play(chronicle: Chronicle, command: PlayCommand): Stage[] {
 /**
  * The card's effect with what the play aimed it at, judged on the chronicle before anything is paid,
  * ready for the chronicle its cost is paid on. A play aimed another way than the card is aimed lands
- * nowhere. A card aimed at a tile takes one the aim admits and no other; one aimed at the discard
- * pile takes a place the pile holds as it stands; a card that lands whole takes nothing at all.
- * `undefined` refuses the play.
+ * nowhere. A card aimed at a tile or at a unit takes one the aim admits and no other; one aimed at
+ * the discard pile takes a place the pile holds as it stands; a card that lands whole takes nothing
+ * at all. `undefined` refuses the play.
  */
 function aimedEffect(
   chronicle: Chronicle,
@@ -469,9 +477,10 @@ function aimedEffect(
   switch (card.aim) {
     case 'none':
       return command.aim === 'none' ? card.effect : undefined;
-    case 'tile': {
-      if (command.aim !== 'tile') return undefined;
-      const { tile } = command;
+    case 'tile':
+    case 'unit': {
+      const tile = aimedTile(command, card.aim);
+      if (tile === undefined) return undefined;
       const at = tileKey(tile);
       if (!admitted(chronicle, card).some((coord) => tileKey(coord) === at)) return undefined;
       return (paid) => card.effect(paid, tile);
@@ -482,6 +491,21 @@ function aimedEffect(
       if (at < 0 || at >= chronicle.discardPile.length) return undefined;
       return (paid) => card.effect(paid, at);
     }
+  }
+}
+
+/**
+ * The tile a play sent a card to, and nothing at all when the play named another aim than the card's
+ * own: the two aims the map answers each take the play that names them and no other.
+ */
+function aimedTile(command: PlayCommand, aim: AimedCard['aim']): TileCoords | undefined {
+  switch (command.aim) {
+    case 'none':
+    case 'discard-pile':
+      return undefined;
+    case 'tile':
+    case 'unit':
+      return command.aim === aim ? command.tile : undefined;
   }
 }
 

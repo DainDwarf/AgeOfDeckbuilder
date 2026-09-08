@@ -16,6 +16,11 @@ export const ACCENT = 0xd9a441;
 export const PANEL_FILL = 0xd4d7db;
 export const PANEL_EDGE = 0x6f757d;
 
+/** A colour in the notation a text style takes it in. */
+export function css(colour: number): string {
+  return `#${colour.toString(16).padStart(6, '0')}`;
+}
+
 /**
  * The two depths the scrim divides the chronicle screen at: everything the chronicle screen lays
  * out is below the scrim, and the Menu button alone stands over it, so it is pressable while a

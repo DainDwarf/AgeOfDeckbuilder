@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { CARDS, DECKS } from './cards';
+import { type AimedCard, CARDS, DECKS, refuses } from './cards';
 import {
   admitted,
   apply,
@@ -227,25 +227,33 @@ function aimedAt(tile: TileCoords): Command {
   return { type: 'play', index: 0, aim: 'tile', tile };
 }
 
+/** A card aimed at the unit standing on a tile, ready to hand to `apply`. */
+function aimedAtUnit(tile: TileCoords): Command {
+  return { type: 'play', index: 0, aim: 'unit', tile };
+}
+
 /** A card aimed at where a card lies in the discard pile, ready to hand to `apply`. */
 function aimedAtPile(card: number): Command {
   return { type: 'play', index: 0, aim: 'discard-pile', card };
 }
 
-/** The tiles the named card's aim admits, for a card that is aimed at a tile. */
-function admittedTiles(chronicle: Chronicle, id: CardId): TileCoords[] {
+/** The named card, for a fixture that expects it to be aimed at a tile or at a unit. */
+function aimedCard(id: CardId): AimedCard {
   const card = CARDS[id];
-  if (card.aim !== 'tile') throw new Error(`${id} is aimed at no tile`);
-  return admitted(chronicle, card);
+  if (card.aim !== 'tile' && card.aim !== 'unit') throw new Error(`${id} is aimed at no tile`);
+  return card;
+}
+
+/** The tiles the named card's aim admits, for a card aimed at a tile or at a unit. */
+function admittedTiles(chronicle: Chronicle, id: CardId): TileCoords[] {
+  return admitted(chronicle, aimedCard(id));
 }
 
 /** The one reason the named card's aim refuses this tile of the map, and nothing when it admits it. */
 function refusedFor(chronicle: Chronicle, id: CardId, at: TileCoords): TileBlock | undefined {
-  const card = CARDS[id];
-  if (card.aim !== 'tile') throw new Error(`${id} is aimed at no tile`);
   const tile = tileAt(chronicle.tiles, at);
   if (tile === undefined) throw new Error(`${tileKey(at)} is no tile of the map`);
-  return card.refuses(chronicle, tile);
+  return refuses(chronicle, aimedCard(id), tile);
 }
 
 /** The chronicle with the tile at those coordinates replaced, layer for layer. */
@@ -816,7 +824,7 @@ test('the refresh instant refreshes one unit of the player’s that has spent mo
     ],
   });
 
-  const stages = apply(city, aimedAt(CITY));
+  const stages = apply(city, aimedAtUnit(CITY));
 
   expect(stages.map((stage) => stage.name)).toEqual(['played']);
   expect(pointsOf(outcome(stages), 1)).toBe(2);
@@ -835,13 +843,13 @@ test('the refresh instant is refused on a unit whose move points are full, on an
     ],
   });
 
-  expect(stagedBy(city, aimedAt({ q: 1, r: 1 }))).toEqual(['refused']);
-  expect(stagedBy(city, aimedAt({ q: 2, r: 0 }))).toEqual(['refused']);
-  expect(stagedBy(city, aimedAt({ q: 0, r: 1 }))).toEqual(['refused']);
+  expect(stagedBy(city, aimedAtUnit({ q: 1, r: 1 }))).toEqual(['refused']);
+  expect(stagedBy(city, aimedAtUnit({ q: 2, r: 0 }))).toEqual(['refused']);
+  expect(stagedBy(city, aimedAtUnit({ q: 0, r: 1 }))).toEqual(['refused']);
   expect(stagedBy(city, { type: 'play', index: 0, aim: 'none' })).toEqual(['refused']);
-  expect(outcome(apply(city, aimedAt({ q: 1, r: 1 })))).toBe(city);
-  expect(outcome(apply(city, aimedAt({ q: 2, r: 0 })))).toBe(city);
-  expect(outcome(apply(city, aimedAt({ q: 0, r: 1 })))).toBe(city);
+  expect(outcome(apply(city, aimedAtUnit({ q: 1, r: 1 })))).toBe(city);
+  expect(outcome(apply(city, aimedAtUnit({ q: 2, r: 0 })))).toBe(city);
+  expect(outcome(apply(city, aimedAtUnit({ q: 0, r: 1 })))).toBe(city);
   expect(outcome(apply(city, { type: 'play', index: 0, aim: 'none' }))).toBe(city);
 });
 
@@ -1072,7 +1080,7 @@ test('the refresh instant refreshes move points alone, and leaves a spent action
     units: [standing('player', CITY, { move: 2, action: 1 }, 0, 0)],
   });
 
-  const refreshed = outcome(apply(city, aimedAt(CITY)));
+  const refreshed = outcome(apply(city, aimedAtUnit(CITY)));
 
   expect(pointsOf(refreshed, 1)).toBe(2);
   expect(actionOf(refreshed, 1)).toBe(0);
@@ -1085,8 +1093,8 @@ test('the refresh instant is refused on a unit whose move points are full, its a
     units: [standing('player', CITY, { move: 2, action: 1 }, 2, 0)],
   });
 
-  expect(stagedBy(city, aimedAt(CITY))).toEqual(['refused']);
-  expect(outcome(apply(city, aimedAt(CITY)))).toBe(city);
+  expect(stagedBy(city, aimedAtUnit(CITY))).toEqual(['refused']);
+  expect(outcome(apply(city, aimedAtUnit(CITY)))).toBe(city);
 });
 
 test('an attack spends no move points and a step no action: either follows the other', () => {
@@ -1973,7 +1981,7 @@ test('a building card with nowhere to stand is playable all the same, and every 
   expect(refusalOf(worked, 'PH_Farm').blocked).toEqual([]);
 });
 
-test('every card aimed at a tile is playable whatever the map holds, and blocked only by its cost', () => {
+test('every card the map answers for is playable whatever the map holds, and blocked only by its cost', () => {
   const empty = cityOf(['urban'], { tiles: field(2), resources: production(3) });
 
   for (const id of ['PH_Farm', 'PH_March', 'PH_Mine', 'PH_Urbanisation'] as CardId[]) {
@@ -2041,6 +2049,32 @@ test('the urbanisation card names the first of its three reasons: worker, terrai
   expect(refusedFor(built, 'PH_Urbanisation', at)).toBe('worker');
   expect(refusedFor(filled, 'PH_Urbanisation', at)).toBe('slot');
   expect(refusedFor(worked, 'PH_Urbanisation', at)).toBeUndefined();
+});
+
+test('a card aimed at a unit admits the tiles the player’s units stand on, and no others', () => {
+  const spent = { q: 1, r: 0 };
+  const held = { q: 2, r: 0 };
+  const city = founded(2, {
+    units: [standing('player', spent, { move: 2 }, 1), standing('enemy', held, { move: 2 }, 1)],
+  });
+
+  expect(admittedTiles(city, 'PH_March')).toEqual([spent]);
+  expect(refusedFor(city, 'PH_March', held)).toBe('unit');
+  expect(refusedFor(city, 'PH_March', { q: 0, r: 1 })).toBe('unit');
+  expect(admittedTiles(founded(2), 'PH_March')).toEqual([]);
+});
+
+test('a card aimed at a unit lands on the play that aims at a unit, and nowhere on one that aims at a tile', () => {
+  const at = { q: 1, r: 0 };
+  const city = founded(2, {
+    hand: ['PH_March'],
+    units: [standing('player', at, { move: 2 }, 1)],
+  });
+
+  expect(stagedBy(city, aimedAt(at))).toEqual(['refused']);
+  expect(outcome(apply(city, aimedAt(at)))).toBe(city);
+  expect(stagedBy(city, aimedAtUnit(at))).toEqual(['played']);
+  expect(pointsOf(outcome(apply(city, aimedAtUnit(at))), 1)).toBe(2);
 });
 
 test('the refresh instant names the first of its two reasons: the unit, then its move points', () => {

@@ -3,13 +3,17 @@ import { CARDS, DECKS } from '../src/rules/cards';
 import { apply, beginChronicle, outcome, playable, refusalOf } from '../src/rules/chronicle';
 import { tileKey } from '../src/rules/map';
 import type { Chronicle } from '../src/rules/state';
+import { text } from '../src/ui/text';
 import {
   aimed,
+  aimLine,
   atTile,
   atTileRun,
   browse,
+  budget,
   chronicleOf,
   dragOut,
+  dragUnit,
   endTurn,
   firstSeed,
   mapFrame,
@@ -26,6 +30,7 @@ import {
   standing,
   watch,
   wheel,
+  workerRun,
 } from './chronicle-screen';
 
 /** Taller than the design aspect, so the canvas letterboxes and bare page is left to release on. */
@@ -312,6 +317,75 @@ test('a click aims a card at the tiles it admits, and a click on another card ta
   expect(await standing(page, 'aim')).toBe(false);
   expect((await chronicleOf(page)).hand).toEqual(opened.hand);
   expect(await selected(page, other, beside)).toBe(true);
+
+  expect(problems).toEqual([]);
+});
+
+test('the card being aimed wears a point and says what it is played at, and a card merely selected neither', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const run = bothKindsRun();
+  test.setTimeout(budget(run.turn));
+
+  await open(page, run.seed, 'PH_Deck');
+  for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
+
+  const opened = await chronicleOf(page);
+  const other = atNothing(opened);
+  const beside = await onScreen(page, `hand-${other}`);
+
+  await page.mouse.click(beside.x, beside.y);
+  await settled(page);
+  expect(await selected(page, other, beside)).toBe(true);
+  expect(await standing(page, 'aim-point')).toBe(false);
+  expect(await aimLine(page)).toBeUndefined();
+
+  const index = atTile(opened);
+  const card = await onScreen(page, `hand-${index}`);
+  await page.mouse.click(card.x, card.y);
+  await aimed(page);
+
+  expect(await standing(page, 'aim-point')).toBe(true);
+  expect(await aimLine(page)).toBe(text('aim.tile', { card: text(`card.${opened.hand[index]}`) }));
+
+  const point = await onScreen(page, 'aim-point');
+  expect(point.y).toBeLessThan(card.y);
+  expect(Math.abs(point.x - card.x)).toBeLessThan(30 * card.unit);
+
+  await page.keyboard.press('Escape');
+  await expect.poll(() => standing(page, 'aim')).toBe(false);
+  expect(await standing(page, 'aim-point')).toBe(false);
+  expect(await aimLine(page)).toBeUndefined();
+  expect(await chronicleOf(page)).toEqual(opened);
+
+  expect(problems).toEqual([]);
+});
+
+test('a card aimed at a unit says it is played at a unit', async ({ page }) => {
+  const problems = watch(page);
+  const run = workerRun('PH_Farm', (_, chronicle) => chronicle.hand.includes('PH_March'));
+  // The run's ends of turn, the worker entered on the turn it opens, and the step it takes.
+  test.setTimeout(budget(run.turn + 2));
+
+  await open(page, run.seed, 'PH_Deck');
+  for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
+
+  const opened = await chronicleOf(page);
+  await dragOut(page, opened.hand.indexOf('PH_Worker'));
+  await expect.poll(async () => (await chronicleOf(page)).units.length).toBe(1);
+
+  // The refresh instant admits the tile of a unit that has spent move points, so the worker moves first.
+  const entered = await chronicleOf(page);
+  await dragUnit(page, entered.city, run.tile);
+
+  const moved = await chronicleOf(page);
+  const home = await onScreen(page, `hand-${moved.hand.indexOf('PH_March')}`);
+  await page.mouse.click(home.x, home.y);
+  await aimed(page);
+
+  expect(await standing(page, 'aim-point')).toBe(true);
+  expect(await aimLine(page)).toBe(text('aim.unit', { card: text('card.PH_March') }));
 
   expect(problems).toEqual([]);
 });

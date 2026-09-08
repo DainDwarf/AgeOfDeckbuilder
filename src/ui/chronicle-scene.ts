@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { refuses } from '../rules/cards';
 import {
   admitted,
   apply,
@@ -327,11 +328,11 @@ export class ChronicleScene extends Phaser.Scene {
               return;
             }
             hand.unselect();
-            void playOut({ type: 'play', index, aim: 'tile', tile });
+            void playOut({ type: 'play', index, aim: card.aim, tile });
           },
           (found) => {
             const tile = tileAt(this.current.tiles, found.tile);
-            const block = tile === undefined ? undefined : card.refuses(this.current, tile);
+            const block = tile === undefined ? undefined : refuses(this.current, card, tile);
             if (block === undefined) return;
             note.overTile([], { unaffordable: [], blocked: [block] }, found.at);
           },

@@ -14,10 +14,6 @@ with it.
 
 ## Lines
 
-- **A card being aimed says so** — the design settles how a card being aimed reads on the card
-  itself, apart from a card selected and waiting to be played, and the face draws it, so the map
-  lighting nothing is no longer the only tell; an e2e on `e2e/press.spec.ts` tells the two
-  apart by that mark. Doc-impact: `docs/DESIGN.md`.
 - **The browse selects** — a left click on a browsed card selects it, ringed; a right click or the
   inspection key shows it large; a press beside the cards drops the selection, and with none
   standing closes the browse; the back key walks the same steps; the selection dies with the

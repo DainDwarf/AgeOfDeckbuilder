@@ -29,9 +29,10 @@ export type CardKind = (typeof CARD_KINDS)[number];
  * What a card is played at, and what it does with what it was played at. An aim of `none` lands
  * whole, and names what blocks it where the map or the city can hold it up; a `tile` aim answers the
  * first reason it refuses a tile for and nothing at all on one it admits, and hands its effect the
- * tile that was chosen; a `discard-pile` aim names what blocks it the same way, and hands its effect
- * where in the discard pile the card that was chosen lies. The effect takes the chronicle the card's
- * cost is paid on.
+ * tile that was chosen; a `unit` aim is the same over the tiles a unit of the player's stands on,
+ * which it is asked of before its own reasons; a `discard-pile` aim names what blocks it the way an
+ * aim of `none` does, and hands its effect where in the discard pile the card that was chosen lies.
+ * The effect takes the chronicle the card's cost is paid on.
  */
 type Aim =
   | {
@@ -41,6 +42,11 @@ type Aim =
     }
   | {
       readonly aim: 'tile';
+      readonly refuses: (chronicle: Chronicle, tile: Tile) => TileBlock | undefined;
+      readonly effect: (paid: Chronicle, at: TileCoords) => Chronicle;
+    }
+  | {
+      readonly aim: 'unit';
       readonly refuses: (chronicle: Chronicle, tile: Tile) => TileBlock | undefined;
       readonly effect: (paid: Chronicle, at: TileCoords) => Chronicle;
     }
@@ -58,7 +64,21 @@ type Aim =
 export type Card = { readonly kind: CardKind; readonly cost: Partial<Resources> } & Aim;
 
 /** A card the player picks a tile for: what the hand aims and the finder lists candidates for. */
-export type AimedCard = Card & { readonly aim: 'tile' };
+export type AimedCard = Card & { readonly aim: 'tile' | 'unit' };
+
+/**
+ * The one reason a card aimed at a tile refuses this one, and nothing at all on a tile it admits:
+ * what the aim's kind asks of the tile, then what the card's own aim does. Every path that lights a
+ * tile, plays on one or says why it was turned down asks here.
+ */
+export function refuses(chronicle: Chronicle, card: AimedCard, tile: Tile): TileBlock | undefined {
+  switch (card.aim) {
+    case 'tile':
+      return card.refuses(chronicle, tile);
+    case 'unit':
+      return firstRefusal(unitThere(chronicle, tile), card.refuses(chronicle, tile));
+  }
+}
 
 /** The first check that refuses, in the order the aim hands them over: the one reason it answers. */
 function firstRefusal(...checks: readonly (TileBlock | undefined)[]): TileBlock | undefined {
@@ -93,7 +113,7 @@ function unimproved(tile: Tile, improvement: ImprovementId): TileBlock | undefin
   return tile.improvements.includes(improvement) ? 'improvement' : undefined;
 }
 
-/** A unit of the player's standing on the tile: what an instant played on one unit composes. */
+/** A unit of the player's standing on the tile: the whole of what a card aimed at a unit admits. */
 function unitThere(chronicle: Chronicle, tile: TileCoords): TileBlock | undefined {
   return unitAt(chronicle.units, tile)?.faction === 'player' ? undefined : 'unit';
 }
@@ -199,9 +219,8 @@ export const CARDS: Record<CardId, Card> = {
   PH_March: {
     kind: 'instant',
     cost: {},
-    aim: 'tile',
-    refuses: (chronicle, tile) =>
-      firstRefusal(unitThere(chronicle, tile), movePointsSpent(chronicle, tile)),
+    aim: 'unit',
+    refuses: movePointsSpent,
     effect: refreshed,
   },
   PH_Harvest: {
