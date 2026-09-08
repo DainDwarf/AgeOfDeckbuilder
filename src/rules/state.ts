@@ -80,6 +80,14 @@ export function holds(chronicle: Chronicle, tile: TileCoords): boolean {
   return chronicle.held.some((coord) => tileKey(coord) === tileKey(tile));
 }
 
+/**
+ * Whether an inhabitant stands on the tile: what an assign, a drag in city mode and the mark the map
+ * puts on a tile all ask.
+ */
+export function assignedTo(chronicle: Chronicle, tile: TileCoords): boolean {
+  return chronicle.assigned.some((coord) => tileKey(coord) === tileKey(tile));
+}
+
 /** The inhabitants on no tile: what a unit card takes, and what an assign has to give a tile. */
 export function idle(chronicle: Chronicle): number {
   return chronicle.population - chronicle.assigned.length;

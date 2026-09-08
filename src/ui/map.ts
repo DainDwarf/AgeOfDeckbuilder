@@ -1,5 +1,12 @@
 import Phaser from 'phaser';
-import { type Cost, claimable, type Stage, type UnitCommand } from '../rules/chronicle';
+import {
+  type Cost,
+  cityDrag,
+  claimable,
+  type ReassignCommand,
+  type Stage,
+  type UnitCommand,
+} from '../rules/chronicle';
 import {
   type BuildingTypeId,
   CITY_TILE,
@@ -19,7 +26,7 @@ import {
 } from '../rules/map';
 import { RESOURCES, type Resource } from '../rules/resources';
 import { inSight } from '../rules/sight';
-import type { Chronicle, Snapshot } from '../rules/state';
+import { assignedTo, type Chronicle, type Snapshot } from '../rules/state';
 import {
   attackable,
   type Faction,
@@ -263,14 +270,17 @@ export type MapView = {
    * Reports the tile every press the UI leaves lands on and the button it came from, and nothing
    * when it lands off the map; `zoomed` fires whenever the zoom changes, so whatever stands on the
    * map at a size of its own stands again. `commanded` is the command a press on one of the lit
-   * unit's tiles is — its step onto a landing, or its attack on a unit glowed — which is no tile
-   * press. Called once; while a card is aimed the aim takes the left press and this hears the right
-   * one alone.
+   * unit's tiles is — its step onto a landing, or its attack on a unit glowed — and `reassigned` the
+   * one a drag in city mode is, from the tile an inhabitant stands on onto a tile the city holds and
+   * nobody stands on; neither is a tile press. A drag that lands anywhere else brings what it took
+   * hold of home and is no press either. Called once; while a card is aimed the aim takes the left
+   * press and this hears the right one alone.
    */
   onPress(
     pressed: (found: PressedTile | undefined, press: Press) => void,
     zoomed: () => void,
     commanded: (command: UnitCommand) => void,
+    reassigned: (command: ReassignCommand) => void,
   ): void;
   /**
    * Rings the selected tile and lights what the unit of the player's on it can do, or clears both.
@@ -432,6 +442,12 @@ function faceAt(tile: TileCoords): TileFace {
   return { ...positionOf(tile), radius: TILE_SIZE };
 }
 
+/** Where the mark of a tile an inhabitant stands on lies: below the middle of that tile. */
+function assignedAt(tile: TileCoords): { x: number; y: number } {
+  const { x, y } = positionOf(tile);
+  return { x, y: y + ASSIGNED_DROP };
+}
+
 /** The one way a tile a press landed on is named: where its face stands goes with it. */
 function pressedOn(tile: TileCoords): PressedTile {
   return { tile, at: faceAt(tile) };
@@ -563,6 +579,21 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
 
   /** The mark drawn for each unit the map shows, by the number that unit is named by. */
   let markers = new Map<number, Phaser.GameObjects.Polygon>();
+  /** The mark drawn on each tile an inhabitant stands on while city mode is on, by its tile's key. */
+  let assignedMarks = new Map<string, Phaser.GameObjects.Rectangle>();
+
+  /**
+   * The tile whose inhabitant a left press in city mode has hold of, where the press landed, and
+   * whether it has been dragged. It stands beside the marks it carries one of, and goes with them.
+   */
+  let lifted: { tile: TileCoords; from: { x: number; y: number }; dragging: boolean } | undefined;
+
+  /** The mark the press has hold of, back on the tile its inhabitant stands on. */
+  const layDown = (): void => {
+    if (lifted === undefined) return;
+    const home = assignedAt(lifted.tile);
+    assignedMarks.get(tileKey(lifted.tile))?.setPosition(home.x, home.y);
+  };
   let presser: Phaser.GameObjects.Zone | undefined;
   /** Where the map reports a press; an aim reports its right press through it too. */
   let report: ((found: PressedTile | undefined, press: Press) => void) | undefined;
@@ -982,16 +1013,18 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
    */
   const paintCityMarks = (): void => {
     cityMarks.removeAll(true);
+    assignedMarks = new Map();
     if (!marking || shown === undefined) return;
 
-    const assigned = new Set(shown.assigned.map(tileKey));
     for (const coord of shown.held) {
-      if (!assigned.has(tileKey(coord))) {
+      if (!assignedTo(shown, coord)) {
         cityMarks.add(cityDim(scene, coord));
         continue;
       }
-      const { x, y } = positionOf(coord);
-      cityMarks.add(assignedMark(scene).setPosition(x, y + ASSIGNED_DROP));
+      const at = assignedAt(coord);
+      const mark = assignedMark(scene).setPosition(at.x, at.y);
+      cityMarks.add(mark);
+      assignedMarks.set(tileKey(coord), mark);
     }
     for (const coord of claimable(shown)) {
       cityMarks.add(ringMark(scene, coord, RESOURCE_COLOURS.culture, RING).setName('claimable'));
@@ -1323,6 +1356,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
       pressed: (found: PressedTile | undefined, press: Press) => void,
       zoomed: () => void,
       commanded: (command: UnitCommand) => void,
+      reassigned: (command: ReassignCommand) => void,
     ): void {
       rescale = zoomed;
       report = pressed;
@@ -1331,6 +1365,16 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
 
       /** The unit a left press has hold of, where it landed, and whether it has been dragged. */
       let grabbed: { unit: number; from: { x: number; y: number }; dragging: boolean } | undefined;
+
+      /** Whether a press has come far enough to be a drag; it stays one once it has. */
+      const travelled = (
+        grab: { readonly from: { x: number; y: number }; dragging: boolean },
+        pointer: Phaser.Input.Pointer,
+      ): boolean => {
+        if (!grab.dragging && !dragged(scene, grab.from, pointer)) return false;
+        grab.dragging = true;
+        return true;
+      };
 
       /** The marker of the unit the press has hold of, back on the tile that unit stands on. */
       const bringHome = (): void => {
@@ -1342,26 +1386,36 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
       };
 
       const carry = (pointer: Phaser.Input.Pointer): void => {
-        if (grabbed === undefined) return;
-        if (!grabbed.dragging && !dragged(scene, grabbed.from, pointer)) return;
-        grabbed.dragging = true;
+        if (grabbed === undefined && lifted === undefined) return;
         const at = map.at(pointer.x, pointer.y);
-        markers.get(grabbed.unit)?.setPosition(at.x, at.y);
+        if (grabbed !== undefined && travelled(grabbed, pointer)) {
+          markers.get(grabbed.unit)?.setPosition(at.x, at.y);
+        }
+        if (lifted !== undefined && travelled(lifted, pointer)) {
+          assignedMarks.get(tileKey(lifted.tile))?.setPosition(at.x, at.y);
+        }
       };
       scene.input.on('pointermove', carry);
 
       const letGo = (): void => {
         bringHome();
         grabbed = undefined;
+        layDown();
+        lifted = undefined;
         lightUnit(selection);
       };
 
       takePress(catcher, {
         down: (pointer) => {
-          if (marking || shown === undefined) return true;
+          if (shown === undefined) return true;
           const at = map.at(pointer.x, pointer.y);
           const under = tileUnder(at.x, at.y);
           if (under === undefined) return true;
+          if (marking) {
+            if (!assignedMarks.has(tileKey(under))) return true;
+            lifted = { tile: under, from: { x: pointer.x, y: pointer.y }, dragging: false };
+            return false;
+          }
           const standing = unitAt(shown.units, under);
           if (standing?.faction !== 'player') return true;
           grabbed = { unit: standing.id, from: { x: pointer.x, y: pointer.y }, dragging: false };
@@ -1375,6 +1429,19 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
           if (held !== undefined) {
             bringHome();
             grabbed = undefined;
+          }
+          const carried = lifted;
+          if (carried !== undefined) {
+            layDown();
+            lifted = undefined;
+          }
+
+          if (carried !== undefined && on !== undefined && shown !== undefined) {
+            const command = cityDrag(shown, carried.tile, on);
+            if (command !== undefined) {
+              reassigned(command);
+              return;
+            }
           }
 
           const acting = held?.unit ?? (press === 'left' ? lit?.unit : undefined);
@@ -1393,10 +1460,11 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
             lightUnit(selection);
             if (held.dragging) return;
           }
+          if (carried?.dragging === true) return;
           pressed(on === undefined ? undefined : pressedOn(on), press);
         },
         abandon: () => {
-          if (grabbed !== undefined) letGo();
+          if (grabbed !== undefined || lifted !== undefined) letGo();
         },
       });
     },
@@ -1432,6 +1500,10 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
 
     showCityMarks(on: boolean): void {
       marking = on;
+      // A key leaves the mode under a press still holding an inhabitant, and the release of that
+      // press is a whole scene away: the hold goes with the marks it carries one of.
+      layDown();
+      lifted = undefined;
       paintCityMarks();
       paintYields();
       lightUnit(selection);

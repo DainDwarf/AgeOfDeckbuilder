@@ -13,6 +13,7 @@ import { RESOURCES, type Resource } from './resources';
 import { seedRng, shuffle as shuffleItems } from './rng';
 import { charted } from './sight';
 import {
+  assignedTo,
   type Block,
   type CardId,
   type Chronicle,
@@ -60,6 +61,12 @@ export type Command =
   | { readonly type: 'move'; readonly unit: number; readonly tile: TileCoords }
   | { readonly type: 'attack'; readonly unit: number; readonly tile: TileCoords }
   | { readonly type: 'assign'; readonly tile: TileCoords }
+  | {
+      readonly type: 'reassign';
+      /** The tile the inhabitant stands on, and the tile it stands on once this has resolved. */
+      readonly from: TileCoords;
+      readonly to: TileCoords;
+    }
   | { readonly type: 'claim'; readonly tile: TileCoords };
 
 /**
@@ -67,6 +74,9 @@ export type Command =
  * attacking on one.
  */
 export type UnitCommand = Extract<Command, { readonly unit: number }>;
+
+/** One inhabitant taken off the tile it stands on and put on another, in the one gesture. */
+export type ReassignCommand = Extract<Command, { readonly type: 'reassign' }>;
 
 /** One card of the hand played, aimed the way the card is: at nothing, a tile, a unit or the discard pile. */
 type PlayCommand = Extract<Command, { readonly type: 'play' }>;
@@ -87,7 +97,8 @@ const CLAIMS_PER_RISE = 3;
 /**
  * A step that carries nothing but the chronicle it left. `played` is the card gone from the hand
  * with its cost paid, `refused` is the command the rules turned down, `assign` is an inhabitant put
- * on a tile or taken off one, `claim` is a tile bought with culture and taken inside the border,
+ * on a tile, taken off one, or taken off one and put on another, `claim` is a tile bought with
+ * culture and taken inside the border,
  * `grow` is the food stock spent on one more inhabitant, `turn` is the tick, where every unit's move
  * points and action are refreshed, `events` is what the schedule lands, and `capture` is the city
  * falling to an enemy that stood on its tile.
@@ -213,6 +224,8 @@ function stagesOf(chronicle: Chronicle, command: Command): Stage[] {
       return attack(chronicle, command.unit, command.tile);
     case 'assign':
       return assign(chronicle, command.tile);
+    case 'reassign':
+      return reassign(chronicle, command.from, command.to);
     case 'claim':
       return claim(chronicle, command.tile);
   }
@@ -233,6 +246,29 @@ function assign(chronicle: Chronicle, tile: TileCoords): Stage[] {
   }
   return [
     { name: 'assign', chronicle: { ...chronicle, assigned: [...on, { q: tile.q, r: tile.r }] } },
+  ];
+}
+
+/**
+ * One inhabitant off the tile it stands on and onto another: the one drag in city mode is the one
+ * `assign` stage, so the chronicle is left with the same population and the same idle count. A drag
+ * the rules have no act of the city's for is one `refused` stage on the chronicle as it stood.
+ */
+function reassign(chronicle: Chronicle, from: TileCoords, to: TileCoords): Stage[] {
+  if (cityDrag(chronicle, from, to) === undefined) return [{ name: 'refused', chronicle }];
+
+  const off = tileKey(from);
+  return [
+    {
+      name: 'assign',
+      chronicle: {
+        ...chronicle,
+        assigned: [
+          ...chronicle.assigned.filter((coord) => tileKey(coord) !== off),
+          { q: to.q, r: to.r },
+        ],
+      },
+    },
   ];
 }
 
@@ -382,7 +418,7 @@ export function tileCost(chronicle: Chronicle, tile: TileCoords): Cost[] {
  */
 export function tileRefusal(chronicle: Chronicle, tile: TileCoords): Refusal | undefined {
   if (holds(chronicle, tile)) {
-    const standing = chronicle.assigned.some((coord) => tileKey(coord) === tileKey(tile));
+    const standing = assignedTo(chronicle, tile);
     return { unaffordable: [], blocked: standing || idle(chronicle) > 0 ? [] : ['idle'] };
   }
   if (!claimable(chronicle).some((coord) => tileKey(coord) === tileKey(tile))) return undefined;
@@ -399,6 +435,22 @@ export function cityCommand(chronicle: Chronicle, tile: TileCoords): Command | u
   const refusal = tileRefusal(chronicle, tile);
   if (refusal === undefined || !playable(refusal)) return undefined;
   return { type: holds(chronicle, tile) ? 'assign' : 'claim', tile };
+}
+
+/**
+ * What a drag in city mode sends — the press taken on one tile and let go on another: the
+ * inhabitant off the tile it stands on and onto the tile it was let go on, which the city has to
+ * hold with nobody standing on it. Nothing at all for any other pair of tiles, the same tile twice
+ * among them. The one decision both the chronicle screen and `apply` answer that drag by.
+ */
+export function cityDrag(
+  chronicle: Chronicle,
+  from: TileCoords,
+  to: TileCoords,
+): ReassignCommand | undefined {
+  if (!assignedTo(chronicle, from)) return undefined;
+  if (!holds(chronicle, to) || assignedTo(chronicle, to)) return undefined;
+  return { type: 'reassign', from, to };
 }
 
 /** The resources a cost outruns; empty means the city can pay it. */

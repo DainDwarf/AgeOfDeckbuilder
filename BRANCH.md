@@ -13,8 +13,3 @@ Interface → *The presses* and Systems → *The chronicle screen*. The lines be
 with it.
 
 ## Lines
-
-- **Population drags in city mode** — an inhabitant dragged from the tile it works to a tile the
-  city holds and nobody works moves there in the one gesture; let go anywhere else it comes home
-  and nothing changes. E2e on
-  `e2e/city-mode.spec.ts`. Doc-impact: `docs/DESIGN.md`.

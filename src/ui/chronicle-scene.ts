@@ -10,6 +10,7 @@ import {
   costOf,
   outcome,
   playable,
+  type ReassignCommand,
   refusalOf,
   type Stage,
   tileCost,
@@ -275,6 +276,17 @@ export class ChronicleScene extends Phaser.Scene {
       if (on !== undefined) select({ tile: on, at: view.faceOf(on) });
     };
 
+    /**
+     * One inhabitant carried onto another tile by a drag in city mode: the play-out runs, and the
+     * tile it landed on is selected, so the next press on it is the city's next act there. A drag
+     * that landed while another command was playing out did nothing, and selects nothing either.
+     */
+    const reassign = async (command: ReassignCommand): Promise<void> => {
+      await playOut(command);
+      if (this.playing) return;
+      select({ tile: command.to, at: view.faceOf(command.to) });
+    };
+
     view.onPress(
       (found, press) => {
         switch (press) {
@@ -302,6 +314,9 @@ export class ChronicleScene extends Phaser.Scene {
       },
       (command) => {
         void commandUnit(command);
+      },
+      (command) => {
+        void reassign(command);
       },
     );
 

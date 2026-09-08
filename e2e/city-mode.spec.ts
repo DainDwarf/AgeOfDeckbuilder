@@ -12,6 +12,7 @@ import {
   consoleKey,
   counted,
   dragOut,
+  dragTiles,
   drawnFaces,
   endTurn,
   enter,
@@ -42,7 +43,10 @@ const TOUCHING = { at: { q: 1, r: -2 }, key: '1,-2' };
 const FAR = { at: { q: 1, r: -3 }, key: '1,-3' };
 
 /** A tile the city holds, and an inhabitant stands on from the founding. */
-const HELD = { name: 'tile-0,-1', key: '0,-1' };
+const HELD = { at: { q: 0, r: -1 }, name: 'tile-0,-1', key: '0,-1' };
+
+/** Another one of them, on the other side of the city: what a drag carries an inhabitant from. */
+const WORKED = { at: { q: 0, r: 1 }, key: '0,1' };
 
 /** How many tiles the city holds from the founding, one inhabitant on each. */
 const FOUNDED = 7;
@@ -325,6 +329,69 @@ test('city mode marks every tile an inhabitant stands on, and a second click on 
   await page.keyboard.press('Escape');
   await expect.poll(() => inCityMode(page)).toBe(false);
   expect(await counted(page, 'assigned')).toBe(0);
+
+  expect(problems).toEqual([]);
+});
+
+test('a drag in city mode carries the inhabitant onto the tile the city holds and nobody stands on, and selects it', async ({
+  page,
+}) => {
+  const problems = watch(page);
+
+  await open(page, 1, 'PH_Deck');
+  await page.keyboard.press('c');
+  await expect.poll(() => inCityMode(page)).toBe(true);
+
+  const held = await onScreen(page, HELD.name);
+  await page.mouse.click(held.x, held.y);
+  await expect.poll(() => ringedTile(page)).toBe(HELD.key);
+  await page.mouse.click(held.x, held.y);
+  await playedOut(page);
+  expect(await counted(page, 'assigned')).toBe(FOUNDED - 1);
+  expect(await counted(page, 'city-dim')).toBe(1);
+
+  const worked = await tileOnScreen(page, WORKED.at);
+  await page.mouse.click(worked.x, worked.y);
+  await expect.poll(() => ringedTile(page)).toBe(WORKED.key);
+
+  await dragTiles(page, WORKED.at, HELD.at);
+  const carried = await chronicleOf(page);
+
+  expect(carried.assigned.map(tileKey)).toContain(HELD.key);
+  expect(carried.assigned.map(tileKey)).not.toContain(WORKED.key);
+  expect(await counted(page, 'assigned')).toBe(FOUNDED - 1);
+  expect(await counted(page, 'city-dim')).toBe(1);
+  // The tile it landed on takes the ring, so the next press on it is the city's next act there.
+  await expect.poll(() => ringedTile(page)).toBe(HELD.key);
+
+  expect(problems).toEqual([]);
+});
+
+test('a drag in city mode let go anywhere else changes nothing and leaves the selection where it was', async ({
+  page,
+}) => {
+  const problems = watch(page);
+
+  await open(page, 1, 'PH_Deck');
+  await page.keyboard.press('c');
+  await expect.poll(() => inCityMode(page)).toBe(true);
+
+  const held = await onScreen(page, HELD.name);
+  await page.mouse.click(held.x, held.y);
+  await expect.poll(() => ringedTile(page)).toBe(HELD.key);
+  const before = await chronicleOf(page);
+
+  await dragTiles(page, WORKED.at, TOUCHING.at);
+  await answered(page);
+  expect(await chronicleOf(page)).toEqual(before);
+  expect(await counted(page, 'assigned')).toBe(FOUNDED);
+  expect(await ringedTile(page)).toBe(HELD.key);
+
+  await dragTiles(page, WORKED.at, HELD.at);
+  await answered(page);
+  expect(await chronicleOf(page)).toEqual(before);
+  expect(await counted(page, 'assigned')).toBe(FOUNDED);
+  expect(await ringedTile(page)).toBe(HELD.key);
 
   expect(problems).toEqual([]);
 });

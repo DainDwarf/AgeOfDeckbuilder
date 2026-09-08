@@ -6,6 +6,7 @@ import {
   beginChronicle,
   type Command,
   cityCommand,
+  cityDrag,
   claimable,
   growthThreshold,
   outcome,
@@ -273,6 +274,11 @@ function assignTo(tile: TileCoords): Command {
 /** The command city mode sends for a tile the city does not hold: culture for the tile. */
 function claimOf(tile: TileCoords): Command {
   return { type: 'claim', tile };
+}
+
+/** The command a drag in city mode sends: the inhabitant off one tile and onto another. */
+function reassignTo(from: TileCoords, to: TileCoords): Command {
+  return { type: 'reassign', from, to };
 }
 
 /**
@@ -1764,6 +1770,44 @@ test('an assign with no inhabitant idle is refused', () => {
   expect(idle(spent)).toBe(0);
   expect(stagedBy(spent, assignTo({ q: 2, r: 0 }))).toEqual(['refused']);
   expect(outcome(apply(spent, assignTo({ q: 2, r: 0 })))).toBe(spent);
+});
+
+test('a drag takes the inhabitant off the tile it stands on and puts it on the tile it lands on', () => {
+  const founding = beginChronicle(1, DECK);
+  const [from, to] = neighbours(founding.city);
+  const freed = outcome(apply(founding, assignTo(to)));
+
+  const stages = apply(freed, reassignTo(from, to));
+  const after = outcome(stages);
+
+  expect(cityDrag(freed, from, to)).toEqual(reassignTo(from, to));
+  expect(stages.map((stage) => stage.name)).toEqual(['assign']);
+  expect(after.assigned.map(tileKey)).not.toContain(tileKey(from));
+  expect(after.assigned.map(tileKey)).toContain(tileKey(to));
+  expect(after.population).toBe(freed.population);
+  expect(idle(after)).toBe(idle(freed));
+});
+
+test('a drag onto a tile an inhabitant stands on, onto one the city does not hold, or onto the tile it started from is refused', () => {
+  const founding = beginChronicle(1, DECK);
+  const [from, worked] = neighbours(founding.city);
+  const outside = claimable(founding)[0];
+
+  expect(cityDrag(founding, from, worked)).toBeUndefined();
+  expect(stagedBy(founding, reassignTo(from, worked))).toEqual(['refused']);
+  expect(outcome(apply(founding, reassignTo(from, worked)))).toBe(founding);
+  expect(stagedBy(founding, reassignTo(from, outside))).toEqual(['refused']);
+  expect(stagedBy(founding, reassignTo(from, from))).toEqual(['refused']);
+});
+
+test('a drag from a tile nobody stands on is refused', () => {
+  const founding = beginChronicle(1, DECK);
+  const [bare, empty] = neighbours(founding.city);
+  const freed = outcome(apply(outcome(apply(founding, assignTo(bare))), assignTo(empty)));
+
+  expect(cityDrag(freed, bare, empty)).toBeUndefined();
+  expect(stagedBy(freed, reassignTo(bare, empty))).toEqual(['refused']);
+  expect(outcome(apply(freed, reassignTo(bare, empty)))).toBe(freed);
 });
 
 test('an assigned tile yields at income, and an unassigned one yields nothing', () => {
