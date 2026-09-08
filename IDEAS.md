@@ -72,9 +72,6 @@ a [`BOARD.md`](BOARD.md) line. Say
   either way: assignment is management; buildings, improvements and unit spawn are cards; unit
   movement and attacks are management. Each switch is the same rules function behind a different
   input, plus the design page, the glossary and a rebalance.
-- **Population drags in city mode**: an inhabitant dragged from the tile it works to a tile the
-  city holds and nobody works moves there in the one gesture, a shortcut past selecting and
-  toggling each tile; after city mode selects, then acts.
 - **Worker actions**: a worker spends its per-turn pool to gain the yield of the tile it stands
   on. Only a tile the city does not own? Buildings included or not?
 - **Consuming the worker on building**: a building card spends the worker that stands on the tile,
