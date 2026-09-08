@@ -15,6 +15,7 @@ import {
 import type { Chronicle } from '../src/rules/state';
 import { text } from '../src/ui/text';
 import {
+  besideTiles,
   chronicleOf,
   dragOut,
   endTurn,
@@ -265,9 +266,8 @@ test('a click selects a tile, the inspection key steps its cards, and the back k
   await expect.poll(() => ringedTile(page)).toBe(cityTile);
   expect(await shownCard(page)).toBeUndefined();
 
-  // Up and left of the city: inside the map's frame, which starts under the resource bar, and far
-  // enough out for the nearest tile to be well outside the map's disc.
-  await page.mouse.click(city.x - 440 * city.unit, city.y - 160 * city.unit);
+  const beside = await besideTiles(page);
+  await page.mouse.click(beside.x, beside.y);
   await expect.poll(() => ringedTile(page)).toBeUndefined();
   expect(await shownCard(page)).toBeUndefined();
 
@@ -311,9 +311,8 @@ test('a right click inspects and never selects, shows no browser menu, and the i
   await expect.poll(() => shownCard(page)).toBe('terrain');
   expect(await ringedTile(page)).toBe(cityTile);
 
-  // Up and left of the city: inside the map's frame, which starts under the resource bar, and far
-  // enough out for the nearest tile to be well outside the map's disc.
-  await page.mouse.click(city.x - 440 * city.unit, city.y - 160 * city.unit, { button: 'right' });
+  const beside = await besideTiles(page);
+  await page.mouse.click(beside.x, beside.y, { button: 'right' });
   await expect.poll(() => shownCard(page)).toBeUndefined();
   expect(await ringedTile(page)).toBe(cityTile);
   expect(await standing(page, 'menu')).toBe(false);

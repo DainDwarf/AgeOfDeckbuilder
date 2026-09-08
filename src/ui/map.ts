@@ -382,9 +382,14 @@ function positionOf({ q, r }: TileCoords): { x: number; y: number } {
   };
 }
 
+/** Where a tile's face stands, at the size every tile is drawn at. */
+function faceAt(tile: TileCoords): TileFace {
+  return { ...positionOf(tile), radius: TILE_SIZE };
+}
+
 /** The one way a tile a press landed on is named: where its face stands goes with it. */
 function pressedOn(tile: TileCoords): PressedTile {
-  return { tile, at: { ...positionOf(tile), radius: TILE_SIZE } };
+  return { tile, at: faceAt(tile) };
 }
 
 /** Where a corner of the tile lattice stands on the map's own surface. */
@@ -1333,7 +1338,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
     },
 
     faceOf(tile: TileCoords): TileFace {
-      return pressedOn(tile).at;
+      return faceAt(tile);
     },
 
     drawnAs(tile: TileCoords): Drawn | undefined {

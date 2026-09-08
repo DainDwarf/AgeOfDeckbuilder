@@ -3,6 +3,7 @@ import { tileKey } from '../src/rules/map';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
 import {
   aimed,
+  besideTiles,
   chronicleOf,
   dragOut,
   dragUnit,
@@ -74,7 +75,7 @@ test('a right click while the farm card is aimed inspects, and the card stays ai
 
   const moved = await chronicleOf(page);
   const destination = await onScreen(page, `tile-${tileKey(run.tile)}`);
-  const city = await onScreen(page, `tile-${tileKey(moved.city)}`);
+  const beside = await besideTiles(page);
   await dragOut(page, moved.hand.indexOf('PH_Farm'));
   await aimed(page);
 
@@ -84,9 +85,7 @@ test('a right click while the farm card is aimed inspects, and the card stays ai
   expect(await standing(page, 'aim')).toBe(true);
   expect((await chronicleOf(page)).hand).toEqual(moved.hand);
 
-  // Up and left of the city: inside the map's frame, which starts under the resource bar, and far
-  // enough out for the nearest tile to be well outside the map's disc.
-  await page.mouse.click(city.x - 440 * city.unit, city.y - 160 * city.unit, { button: 'right' });
+  await page.mouse.click(beside.x, beside.y, { button: 'right' });
   await expect.poll(() => shownCard(page)).toBeUndefined();
   expect(await standing(page, 'aim')).toBe(true);
   expect((await chronicleOf(page)).hand).toEqual(moved.hand);

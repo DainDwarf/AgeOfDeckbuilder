@@ -184,6 +184,15 @@ export async function tileOnScreen(page: Page, coord: TileCoords): Promise<OnScr
   };
 }
 
+/**
+ * A point beside the tiles: up and left of the city, inside the map's frame, which starts under the
+ * resource bar, and far enough out for the nearest tile to be well outside the map's disc.
+ */
+export async function besideTiles(page: Page): Promise<{ x: number; y: number }> {
+  const city = await onScreen(page, `tile-${tileKey(CITY_TILE)}`);
+  return { x: city.x - 440 * city.unit, y: city.y - 160 * city.unit };
+}
+
 /** A rectangle on the page. */
 export type Frame = { x: number; y: number; width: number; height: number };
 
