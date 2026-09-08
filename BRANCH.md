@@ -21,7 +21,9 @@ with it.
 - **The browse selects** — a left click on a browsed card selects it, ringed; a right click or the
   inspection key shows it large; a press beside the cards drops the selection, and with none
   standing closes the browse; the back key walks the same steps; the selection dies with the
-  window. E2e on `e2e/browse.spec.ts`. Doc-impact: none.
+  window. With it, what the scrim carries becomes one discriminated value in place of the flags
+  each raise sets by hand, and the grid's press callback takes the press instead of the grid
+  handing back its frame. E2e on `e2e/browse.spec.ts`. Doc-impact: none.
 - **City mode selects, then acts** — a left click in city mode selects the tile as anywhere else,
   lighting no unit and moving none; a second click on the selection is the city's act on it: a
   claim, after which the tile stays selected, or an inhabitant assigned and unassigned by turns,
