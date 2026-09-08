@@ -22,10 +22,9 @@ with it.
   tile it inspects the tile, on a card it shows the card large, off the map it drops the
   inspection, and the card stays selected through all three. E2e on `e2e/building.spec.ts`.
   Doc-impact: none.
-- **The aim window follows the presses** — the window opens on the second click or the drag, not
-  on selection; a press beside its cards or the back key closes it and leaves the card selected in
-  the hand; a right click on one of its cards shows it large; the Cancel button goes. E2e on
-  `e2e/recall.spec.ts`. Doc-impact: none.
+- **The aim window follows the presses** — a press beside its cards or the back key closes it and
+  leaves the card selected in the hand; a right click on one of its cards shows it large; the
+  Cancel button goes. E2e on `e2e/recall.spec.ts`. Doc-impact: none.
 - **A card being aimed says so** — the design settles how a card being aimed reads on the card
   itself, apart from a card selected and waiting to be played, and the face draws it, so the map
   lighting nothing is no longer the only tell; an e2e on `e2e/press.spec.ts` tells the two

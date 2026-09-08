@@ -341,7 +341,7 @@ would admit another card of the hand.
 
 **The drag is the two clicks in one gesture.** A card lifted clear of the hand and released there is
 selected and played at once: one that aims at a tile stays selected, being aimed; one that aims at
-the discard pile raises the aim window; an unaffordable one comes home under its refusal note.
+the discard pile raises the aim window; an unaffordable one stays selected under its refusal note.
 
 A left click on one of the aim window's cards is the play attempted there; a press beside its cards
 closes it, as the back key does, leaving the card selected in the hand with nothing paid.

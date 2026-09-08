@@ -26,6 +26,7 @@ import {
   onScreen,
   open,
   refusalLines,
+  selected,
   settled,
   standing,
   unaffordableRun,
@@ -47,9 +48,12 @@ function refusedAtNothing(chronicle: Chronicle): number {
   );
 }
 
-/** The first seed with a turn in its first eight that opens on such a card. */
-function refusedRun(lies: (chronicle: Chronicle) => number): { seed: number; turn: number } {
-  return firstSeed('opens a turn on a card the rules refuse', (seed) => {
+/** The first seed with a turn in its first eight that opens on the card `lies` finds, named `such`. */
+function refusedRun(
+  such: string,
+  lies: (chronicle: Chronicle) => number,
+): { seed: number; turn: number } {
+  return firstSeed(`opens a turn on ${such}`, (seed) => {
     let chronicle = beginChronicle(seed, DECKS.PH_Deck);
     for (let turn = 1; turn <= 8; turn++) {
       if (lies(chronicle) !== -1) return { seed, turn };
@@ -74,7 +78,7 @@ function reasons(chronicle: Chronicle, id: CardId): string[] {
 async function letGo(
   page: Page,
 ): Promise<{ opened: Chronicle; card: CardId; index: number; name: string; home: OnScreen }> {
-  const run = refusedRun(refused);
+  const run = refusedRun('a card the rules refuse', refused);
   await open(page, run.seed, 'PH_Deck');
   for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
 
@@ -89,18 +93,17 @@ async function letGo(
 /** Longer than any motion on the chronicle screen takes to play out, so nothing is still on its way. */
 const A_WHILE = 2000;
 
-test('a card the rules refuse comes home, plays nothing, and stands its note over it', async ({
+test('a card the rules refuse stays selected, plays nothing, and stands its note over it', async ({
   page,
 }) => {
   const problems = watch(page);
 
-  const { opened, card, index, name, home } = await letGo(page);
+  const { opened, card, index, home } = await letGo(page);
   const said = reasons(opened, card);
 
   expect((await chronicleOf(page)).hand).toEqual(opened.hand);
   expect(await refusalLines(page)).toEqual(said);
-
-  await expect.poll(() => onScreen(page, name).then((at) => Math.round(at.y - home.y))).toBe(0);
+  expect(await selected(page, index, home)).toBe(true);
 
   const note = await onScreen(page, 'refusal');
   const beside = await onScreen(page, `hand-${index === 0 ? 1 : index - 1}`);
@@ -154,7 +157,7 @@ test('a second click on a card the city cannot pay for says why over it, and it 
   page,
 }) => {
   const problems = watch(page);
-  const run = refusedRun(refusedAtNothing);
+  const run = refusedRun('a card the rules refuse that plays at nothing', refusedAtNothing);
 
   await open(page, run.seed, 'PH_Deck');
   for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
@@ -174,10 +177,7 @@ test('a second click on a card the city cannot pay for says why over it, and it 
   expect(await refusalLines(page)).toEqual(said);
   expect((await chronicleOf(page)).hand).toEqual(opened.hand);
 
-  // Off the card, so the lift it stands on is the selection's and no hover of its own.
-  const beside = await onScreen(page, `hand-${index === 0 ? 1 : index - 1}`);
-  await page.mouse.move(beside.x, beside.y - 200 * beside.unit);
-  await expect.poll(() => onScreen(page, name).then((at) => at.y)).toBeLessThan(home.y);
+  expect(await selected(page, index, home)).toBe(true);
   expect(await refusalLines(page)).toEqual(said);
 
   expect(problems).toEqual([]);

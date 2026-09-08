@@ -587,3 +587,15 @@ export async function endTurn(page: Page): Promise<void> {
     return scene.chronicle.turn === next || scene.chronicle.defeat !== undefined;
   }, turn + 1);
 }
+
+/**
+ * Whether the card at this place in the hand stands lifted out of the lane with nothing under the
+ * pointer: the lift a hover gives it is gone, so the one it keeps is the selection's.
+ */
+export async function selected(page: Page, index: number, home: OnScreen): Promise<boolean> {
+  const beside = await onScreen(page, `hand-${index === 0 ? 1 : index - 1}`);
+  await page.mouse.move(beside.x, beside.y - 200 * beside.unit);
+  await settled(page);
+  const now = await onScreen(page, `hand-${index}`);
+  return now.y < home.y;
+}

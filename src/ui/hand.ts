@@ -217,13 +217,13 @@ export function createHand(scene: Phaser.Scene, on: Surface, presses: HandPresse
 
   const render = (chronicle: Chronicle): void => {
     note.hide();
+    unselect();
     for (const face of [...flying, ...slots.map((slot) => slot.face.root)]) {
       stopMotion(scene, face);
       face.destroy();
     }
     flying = [];
     dragged = undefined;
-    selected = undefined;
     letGo = undefined;
 
     const held = chronicle.hand.length;
@@ -293,14 +293,6 @@ export function createHand(scene: Phaser.Scene, on: Surface, presses: HandPresse
           const at = on.at(pointer.x, pointer.y);
           if (grabbed.y - at.y <= PLAY_HEIGHT) {
             settle(slot, 150);
-            return;
-          }
-          // The card the city cannot pay for is the one place the drag is not the two clicks: it
-          // comes home under its note where a second click would leave it selected under one.
-          if (!slot.playable) {
-            slot.hovered = false;
-            settle(slot, 150);
-            refuse(slot);
             return;
           }
           act(select(slot));

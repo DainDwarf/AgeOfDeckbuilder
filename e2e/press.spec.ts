@@ -19,6 +19,7 @@ import {
   open,
   playedOut,
   scrolled,
+  selected,
   settled,
   standing,
   watch,
@@ -72,18 +73,6 @@ function bothKindsRun(): { seed: number; turn: number } {
 async function stillAt(page: Page, name: string, was: OnScreen): Promise<boolean> {
   const now = await onScreen(page, name);
   return Math.round(now.x - was.x) === 0 && Math.round(now.y - was.y) === 0;
-}
-
-/**
- * Whether the card stands lifted out of the lane with nothing under the pointer: the lift a hover
- * gives it is gone, so the one it keeps is the selection's.
- */
-async function selected(page: Page, index: number, home: OnScreen): Promise<boolean> {
-  const beside = await onScreen(page, `hand-${index === 0 ? 1 : index - 1}`);
-  await page.mouse.move(beside.x, beside.y - 200 * beside.unit);
-  await settled(page);
-  const now = await onScreen(page, `hand-${index}`);
-  return now.y < home.y;
 }
 
 test('a hand card released off the canvas comes home, plays nothing, and leaves the next press clean', async ({
