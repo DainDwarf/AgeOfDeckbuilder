@@ -70,7 +70,7 @@ export type HandPresses = {
   play(index: number): void;
   /** The hand has taken the selection: whatever else the screen selects or inspects goes. */
   dismiss(): void;
-  /** The map lit for the card's aim; `released` says the aim is off it and the card is free. */
+  /** The map lit for the card's aim; `released` says the aim is off it and the card let go of. */
   aimTile(index: number, card: AimedCard, released: () => void): () => void;
   /** The aim window raised on the discard pile; `closed` says it came down with nothing paid. */
   aimDiscardPile(index: number, closed: () => void): () => void;
