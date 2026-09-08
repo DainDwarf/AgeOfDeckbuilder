@@ -57,7 +57,7 @@ type Aim =
  */
 export type Card = { readonly kind: CardKind; readonly cost: Partial<Resources> } & Aim;
 
-/** A card the player picks a tile for: what the hand arms and the finder lists candidates for. */
+/** A card the player picks a tile for: what the hand aims and the finder lists candidates for. */
 export type AimedCard = Card & { readonly aim: 'tile' };
 
 /** The first check that refuses, in the order the aim hands them over: the one reason it answers. */

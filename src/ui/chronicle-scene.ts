@@ -5,7 +5,10 @@ import {
   beginChronicle,
   type Command,
   cityCommand,
+  costOf,
   outcome,
+  playable,
+  refusalOf,
   type Stage,
   tileCost,
   tileRefusal,
@@ -120,11 +123,12 @@ export class ChronicleScene extends Phaser.Scene {
       panel.hide();
     };
 
-    /** Every state change and every aim goes through here: neither verb outlives one. */
+    /**
+     * Nothing selected and nothing inspected. Every state change goes through here, and so does the
+     * hand before it takes the selection: neither verb outlives one, on a tile or on a card.
+     */
     const dismiss = (): void => {
-      selection = undefined;
-      uninspect();
-      view.markSelected(undefined);
+      select(undefined);
     };
 
     const paint = (): void => {
@@ -178,8 +182,9 @@ export class ChronicleScene extends Phaser.Scene {
     };
 
     /**
-     * The one place a tile becomes the selection: it takes the ring, and the inspection standing on
-     * whatever was selected before is let go of.
+     * The one place the screen's selection changes: the tile takes the ring, or nothing does, and
+     * the card the hand held and the inspection standing on whatever was selected before are let go
+     * of. The selection is one thing, a tile or a card.
      */
     const select = (found: PressedTile | undefined): void => {
       if (
@@ -191,6 +196,7 @@ export class ChronicleScene extends Phaser.Scene {
       }
       selection = found;
       uninspect();
+      hand.unselect();
       view.markSelected(found?.tile);
     };
 
@@ -297,23 +303,28 @@ export class ChronicleScene extends Phaser.Scene {
     const endTurn = this.addEndTurn(() => {
       void playOut({ type: 'end-turn' });
     });
-    const hand = createHand(
-      this,
-      ui,
-      (index) => {
+    const hand = createHand(this, ui, {
+      play: (index) => {
         void playOut({ type: 'play', index, aim: 'none' });
       },
-      (index, card, released) => {
+      dismiss,
+      aimTile: (index, card, released) => {
         // The aiming catcher lies under the hand and the piles, so the button is the one thing
         // left on the UI that has to be dead for the length of the aim.
         endTurn.live(false);
-        dismiss();
+        // Nothing changes the chronicle while an aim stands, so the refusal it opens on is still the
+        // rules' answer at the press that lands it, and no play is sent for one they would refuse.
+        const id = this.current.hand[index];
+        const refusal = refusalOf(this.current, id);
         return view.aimTile(
           admitted(this.current, card),
           (tile) => {
-            endTurn.live(true);
-            if (tile === undefined) released();
-            else void playOut({ type: 'play', index, aim: 'tile', tile });
+            if (!playable(refusal)) {
+              note.overTile(costOf(id), refusal, view.faceOf(tile));
+              return;
+            }
+            hand.unselect();
+            void playOut({ type: 'play', index, aim: 'tile', tile });
           },
           (found) => {
             const tile = tileAt(this.current.tiles, found.tile);
@@ -321,12 +332,15 @@ export class ChronicleScene extends Phaser.Scene {
             if (block === undefined) return;
             note.overTile([], { unaffordable: [], blocked: [block] }, found.at);
           },
+          () => {
+            endTurn.live(true);
+            released();
+          },
         );
       },
-      (index, released) => {
+      aimDiscardPile: (index, released) => {
         // The scrim the window stands on swallows the button, the hand and the piles along with the
         // map, so nothing here has to be put down for the length of this aim.
-        dismiss();
         return overlay.aimDiscardPile(
           this.current,
           (card) => {
@@ -335,12 +349,12 @@ export class ChronicleScene extends Phaser.Scene {
           released,
         );
       },
-      (id, refusal) => overlay.inspect(id, refusal),
-    );
+      inspect: (id, refusal) => overlay.inspect(id, refusal),
+    });
 
-    /** The menu, from the Menu button or a clean chronicle screen: an armed card is let go of first. */
+    /** The menu, from the Menu button or a clean chronicle screen: a selected card is let go first. */
     const menu = (): void => {
-      hand.cancelAim();
+      hand.unselect();
       overlay.menu();
     };
 
@@ -351,7 +365,6 @@ export class ChronicleScene extends Phaser.Scene {
     /** City mode raised: what was pending on the chronicle screen is let go of and it passes. */
     const enterCityMode = (): void => {
       if (cityMode) return;
-      hand.cancelAim();
       dismiss();
       cityMode = true;
       marks.show(true);
@@ -421,11 +434,14 @@ export class ChronicleScene extends Phaser.Scene {
         return;
       }
       if (boundTo(press, 'inspect')) {
-        if (!covered && selection !== undefined) inspect(selection);
+        if (covered) return;
+        const card = hand.selection();
+        if (card !== undefined) overlay.inspect(card.id, card.refusal);
+        else if (selection !== undefined) inspect(selection);
         return;
       }
       if (!boundTo(press, 'back')) return;
-      if (overlay.back() || hand.cancelAim()) return;
+      if (overlay.back() || hand.unselect()) return;
       if (inspection !== undefined) uninspect();
       else if (selection !== undefined) select(undefined);
       else if (!leaveCityMode()) menu();

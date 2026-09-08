@@ -59,7 +59,8 @@ export function drawCardSurface(
 
 export type CardFace = {
   readonly root: Phaser.GameObjects.Container;
-  arm(armed: boolean): void;
+  /** Draws the card as the selection, or as one more card lying where it lies. */
+  select(selected: boolean): void;
 };
 
 /**
@@ -144,15 +145,15 @@ export function createCardFace(
   art.lineStyle(1, tone(palette.artEdge));
   art.strokeRoundedRect(left + 0.5, artTop + 0.5, right - left - 1, artHeight - 1, 0.2 * em);
 
-  const armed = scene.add.graphics().setVisible(false);
-  armed.lineStyle(3, ACCENT);
-  armed.strokeRoundedRect(-width / 2 - 3.5, -height - 3.5, width + 7, height + 7, radius + 3.5);
+  const ring = scene.add.graphics().setVisible(false);
+  ring.lineStyle(3, ACCENT);
+  ring.strokeRoundedRect(-width / 2 - 3.5, -height - 3.5, width + 7, height + 7, radius + 3.5);
 
-  root.add([art, name, kind, rules, armed]);
+  root.add([art, name, kind, rules, ring]);
   return {
     root,
-    arm(on: boolean): void {
-      armed.setVisible(on);
+    select(on: boolean): void {
+      ring.setVisible(on);
     },
   };
 }

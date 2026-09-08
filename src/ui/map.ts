@@ -227,15 +227,18 @@ export type MapView = {
   /** What the map plays for the stage; nothing means the scene renders it at once. */
   play(stage: Stage): Promise<void> | undefined;
   /**
-   * Lights those of the tiles it is given that the map draws and aims at them, until one is chosen
-   * or cancel is called; a tile the map does not draw is never aimed at. A right press lets it go,
-   * exactly as cancel does. A left press on any other tile of the map is `refused` with where that
-   * tile stands, and the aim goes on standing; one off the map does nothing.
+   * Lights those of the tiles it is given that the map draws and aims at them until it is let go of;
+   * a tile the map does not draw is never aimed at. A left press on a lit tile is `chosen`, and the
+   * aim goes on standing: whoever raised it decides what that press lands as and cancels it. A left
+   * press on any other tile of the map is `refused` with where that tile stands, and the aim goes on
+   * standing too. A left press on no tile at all lets the aim go, as a right press and the cancel
+   * do, and `released` says so.
    */
   aimTile(
     tiles: TileCoords[],
-    chosen: (tile: TileCoords | undefined) => void,
+    chosen: (tile: TileCoords) => void,
     refused: (at: PressedTile) => void,
+    released: () => void,
   ): () => void;
   /**
    * Reports the tile every press the UI leaves lands on and the button it came from, and nothing
@@ -1352,34 +1355,35 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
 
     aimTile(
       tiles: TileCoords[],
-      chosen: (tile: TileCoords | undefined) => void,
+      chosen: (tile: TileCoords) => void,
       refused: (at: PressedTile) => void,
+      released: () => void,
     ): () => void {
       const { catcher, glow, close } = openAim();
       const lit = tiles.filter((coord) => drawn.has(tileKey(coord)));
       for (const coord of lit) glow.add(glowTile(scene, coord, LIT));
 
-      const finish = (tile: TileCoords | undefined): void => {
+      const letGo = (): void => {
         stop();
         close();
-        chosen(tile);
+        released();
       };
 
       const stop = takePress(catcher, {
         release: (pointer, press) => {
           if (press === 'right') {
-            finish(undefined);
+            letGo();
             return;
           }
           const at = map.at(pointer.x, pointer.y);
           const on = tileUnder(at.x, at.y);
-          if (on === undefined) return;
-          if (lit.some((coord) => same(coord, on))) finish(on);
+          if (on === undefined) letGo();
+          else if (lit.some((coord) => same(coord, on))) chosen(on);
           else refused({ tile: on, at: { ...positionOf(on), radius: TILE_SIZE } });
         },
       });
 
-      return () => finish(undefined);
+      return letGo;
     },
   };
 }

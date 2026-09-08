@@ -14,16 +14,6 @@ with it.
 
 ## Lines
 
-- **The hand selects by click** — a left click selects any card of the hand, unaffordable or not,
-  and a card that aims at a tile is being aimed from then; a second click plays a selected no-aim
-  card, or raises the refusal note over an unaffordable one, or raises the aim window for a card
-  that aims there; a card being aimed at a tile clicked again stays selected; a left click on
-  anything its aim does not admit lets it go and lands as on a clean screen, another card of the
-  hand included; the inspection key shows the selected card large; a drag of another card of the
-  hand while one is being aimed lets the aimed card go and lifts the new one, and the drag is
-  otherwise unchanged. A click on the card being aimed no longer lets it go, the hand no longer
-  refuses a drag while a card is being aimed, and the code says *selected* where it said *armed*.
-  E2e on `e2e/press.spec.ts` and `e2e/refuse.spec.ts`. Doc-impact: none.
 - **The right click never selects** — on a tile it inspects without selecting, and pressed again
   on the same tile steps on; off the map it drops the inspection and leaves the selection standing;
   the inspection key moves the inspection to the selection when they differ. E2e on

@@ -42,7 +42,7 @@ declare global {
   }
 }
 
-/** How far up a card comes before the release plays or arms it, in design units, and then some. */
+/** How far up a card comes before the release plays it or aims it, in design units, and then some. */
 const DRAG = 140;
 
 /** What the dev server's first transform costs the spec that opens on it, and then some. */
@@ -313,21 +313,43 @@ export function firstSeed<T>(complaint: string, answer: (seed: number) => T | un
 export type Run = { readonly seed: number; readonly turn: number; readonly tile: TileCoords };
 
 /**
- * The first seed with a turn in its first eight that opens on such a run; `on` narrows which run
- * counts — the tile the unit lands on, and the chronicle it lands in — for a spec that needs a
- * particular layer standing on that tile, or the generator to have left another one clear.
+ * The first seed with a turn in its first eight that opens on such a run, for a card the city can
+ * pay for; `on` narrows which run counts — the tile the unit lands on, and the chronicle it lands
+ * in — for a spec that needs a particular layer standing on that tile, or the generator to have
+ * left another one clear.
  */
 export function workerRun(
   card: CardId,
   on: (tile: Tile, chronicle: Chronicle) => boolean = () => true,
 ): Run {
+  return runOn(
+    card,
+    `opens a turn on a worker, a move and ${card}`,
+    (tile, chronicle) => playable(refusalOf(chronicle, card)) && on(tile, chronicle),
+  );
+}
+
+/** The same run for a card the city cannot pay for: what a play it has no cost for is aimed at. */
+export function unaffordableRun(card: CardId): Run {
+  return runOn(
+    card,
+    `opens a turn on a worker, a move and ${card} unpaid for`,
+    (_, chronicle) => !playable(refusalOf(chronicle, card)),
+  );
+}
+
+function runOn(
+  card: CardId,
+  complaint: string,
+  keeps: (tile: Tile, chronicle: Chronicle) => boolean,
+): Run {
   const aimed = CARDS[card];
   if (aimed.aim !== 'tile') throw new Error(`${card} is aimed at no tile`);
 
-  return firstSeed(`opens a turn on a worker, a move and ${card}`, (seed) => {
+  return firstSeed(complaint, (seed) => {
     let chronicle = beginChronicle(seed, DECKS.PH_Deck);
     for (let turn = 1; turn <= 8; turn++) {
-      const tile = workedThisTurn(chronicle, card, aimed, on);
+      const tile = workedThisTurn(chronicle, card, aimed, keeps);
       if (tile !== undefined) return { seed, turn, tile };
       chronicle = outcome(apply(chronicle, { type: 'end-turn' }));
     }
@@ -335,19 +357,19 @@ export function workerRun(
   });
 }
 
-/** Where an aimed card the city can pay for lies in the hand, or -1. */
-export function armed(chronicle: Chronicle): number {
+/** Where a card aimed at a tile that the city can pay for lies in the hand, or -1. */
+export function atTile(chronicle: Chronicle): number {
   return chronicle.hand.findIndex(
     (id) => CARDS[id].aim === 'tile' && playable(refusalOf(chronicle, id)),
   );
 }
 
 /** The first seed with a turn in its first eight that opens on such a card. */
-export function armedRun(): { seed: number; turn: number } {
-  return firstSeed('opens a turn on an aimed card the city can pay for', (seed) => {
+export function atTileRun(): { seed: number; turn: number } {
+  return firstSeed('opens a turn on a card aimed at a tile the city can pay for', (seed) => {
     let chronicle = beginChronicle(seed, DECKS.PH_Deck);
     for (let turn = 1; turn <= 8; turn++) {
-      if (armed(chronicle) !== -1) return { seed, turn };
+      if (atTile(chronicle) !== -1) return { seed, turn };
       chronicle = outcome(apply(chronicle, { type: 'end-turn' }));
     }
     return undefined;
@@ -367,15 +389,15 @@ export function fallRun(): { seed: number; turns: number } {
 }
 
 /**
- * Where the card lands when this hand plays its worker, moves it one tile by hand and then plays
- * the card, in that order. The worker has to be the only unit on the map, so every spec built on
- * the run finds it first in `units`, and the chronicle has dealt it the first number of all: one.
+ * Where the card lands when this hand plays its worker, moves it one tile by hand and then aims
+ * the card there, in that order. The worker has to be the only unit on the map, so every spec built
+ * on the run finds it first in `units`, and the chronicle has dealt it the first number of all: one.
  */
 function workedThisTurn(
   chronicle: Chronicle,
   card: CardId,
   aimed: AimedCard,
-  on: (tile: Tile, chronicle: Chronicle) => boolean,
+  keeps: (tile: Tile, chronicle: Chronicle) => boolean,
 ): TileCoords | undefined {
   const enter = chronicle.hand.indexOf('PH_Worker');
   if (enter === -1 || !playable(refusalOf(chronicle, 'PH_Worker'))) return undefined;
@@ -384,15 +406,15 @@ function workedThisTurn(
 
   for (const tile of neighbours(entered.city)) {
     const moved = outcome(apply(entered, { type: 'move', unit: 1, tile }));
-    if (moved === entered || !playable(refusalOf(moved, card))) continue;
+    if (moved === entered) continue;
     const standing = tileAt(moved.tiles, tile);
-    if (standing === undefined || !on(standing, moved)) continue;
+    if (standing === undefined || !keeps(standing, moved)) continue;
     if (admitted(moved, aimed).some((coord) => tileKey(coord) === tileKey(tile))) return tile;
   }
   return undefined;
 }
 
-/** Waits for the armed card to lay its catcher over the map, which the press that aims lands on. */
+/** Waits for the card being aimed to lay its catcher over the map, which a press aims on. */
 export async function aimed(page: Page): Promise<void> {
   await page.waitForFunction(() => window.named?.('aim') !== undefined);
 }
@@ -514,8 +536,8 @@ export async function playedOut(page: Page): Promise<void> {
 
 /**
  * The gesture that takes a card out of the hand; what the release does is the card's kind. A card
- * that plays at nothing is played out here and now; one that takes a target is left armed, and its
- * play-out waits on the aim.
+ * that plays at nothing is played out here and now; one that aims at a tile is left selected and
+ * being aimed, one aimed at the discard pile raises its window, and their play-out waits on the aim.
  */
 export async function dragOut(page: Page, index: number): Promise<void> {
   const card = await onScreen(page, `hand-${index}`);

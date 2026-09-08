@@ -414,7 +414,7 @@ export function admitted(chronicle: Chronicle, card: AimedCard): TileCoords[] {
  * Every block a card the city can pay for still stands against: there is nothing for it to resolve
  * on. A card that lands whole and one aimed at the discard pile answer with the blocks they declare,
  * in the order they declare them; a card aimed at a tile answers with none, the map being no part of
- * what the hand arms it against.
+ * what the hand judges it by.
  */
 function blocked(chronicle: Chronicle, id: CardId): Block[] {
   const card = CARDS[id];

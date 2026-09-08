@@ -13,10 +13,12 @@ import type { CardId, Chronicle } from '../src/rules/state';
 import { text } from '../src/ui/text';
 import {
   aimed,
-  armed,
-  armedRun,
+  atTile,
+  atTileRun,
+  budget,
   chronicleOf,
   dragOut,
+  dragUnit,
   endTurn,
   firstSeed,
   mapFrame,
@@ -26,20 +28,31 @@ import {
   refusalLines,
   settled,
   standing,
+  unaffordableRun,
   watch,
 } from './chronicle-screen';
+
+/** The dearest card of the deck aimed at a tile: what a city in its first turns cannot pay for. */
+const UNPAID: CardId = 'PH_Urbanisation';
 
 /** Where a card the rules refuse lies in the hand, or -1. */
 function refused(chronicle: Chronicle): number {
   return chronicle.hand.findIndex((id) => !playable(refusalOf(chronicle, id)));
 }
 
+/** Where a card the rules refuse that plays at nothing lies in the hand, or -1. */
+function refusedAtNothing(chronicle: Chronicle): number {
+  return chronicle.hand.findIndex(
+    (id) => CARDS[id].aim === 'none' && !playable(refusalOf(chronicle, id)),
+  );
+}
+
 /** The first seed with a turn in its first eight that opens on such a card. */
-function refusedRun(): { seed: number; turn: number } {
+function refusedRun(lies: (chronicle: Chronicle) => number): { seed: number; turn: number } {
   return firstSeed('opens a turn on a card the rules refuse', (seed) => {
     let chronicle = beginChronicle(seed, DECKS.PH_Deck);
     for (let turn = 1; turn <= 8; turn++) {
-      if (refused(chronicle) !== -1) return { seed, turn };
+      if (lies(chronicle) !== -1) return { seed, turn };
       chronicle = outcome(apply(chronicle, { type: 'end-turn' }));
     }
     return undefined;
@@ -61,7 +74,7 @@ function reasons(chronicle: Chronicle, id: CardId): string[] {
 async function letGo(
   page: Page,
 ): Promise<{ opened: Chronicle; card: CardId; index: number; name: string; home: OnScreen }> {
-  const run = refusedRun();
+  const run = refusedRun(refused);
   await open(page, run.seed, 'PH_Deck');
   for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
 
@@ -100,11 +113,11 @@ test('a card the rules refuse comes home, plays nothing, and stands its note ove
   expect(problems).toEqual([]);
 });
 
-test('a press on a tile an aim refuses says one reason over it, and the card stays armed', async ({
+test('a press on a tile an aim refuses says one reason over it, and the card stays selected', async ({
   page,
 }) => {
   const problems = watch(page);
-  const run = armedRun();
+  const run = atTileRun();
 
   await open(page, run.seed, 'PH_Deck');
   for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
@@ -112,7 +125,7 @@ test('a press on a tile an aim refuses says one reason over it, and the card sta
   // The city's own tile: on screen wherever the map stands, and refused by every aim in the deck,
   // no worker and no unit of the player's having entered yet.
   const opened = await chronicleOf(page);
-  const index = armed(opened);
+  const index = atTile(opened);
   const card = CARDS[opened.hand[index]];
   if (card.aim !== 'tile') throw new Error(`${opened.hand[index]} is aimed at no tile`);
   const tile = tileAt(opened.tiles, opened.city);
@@ -133,6 +146,77 @@ test('a press on a tile an aim refuses says one reason over it, and the card sta
   const note = await onScreen(page, 'refusal');
   expect(note.y).toBeLessThan(face.y);
   expect(Math.round(note.x - face.x)).toBe(0);
+
+  expect(problems).toEqual([]);
+});
+
+test('a second click on a card the city cannot pay for says why over it, and it stays selected', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const run = refusedRun(refusedAtNothing);
+
+  await open(page, run.seed, 'PH_Deck');
+  for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
+
+  const opened = await chronicleOf(page);
+  const index = refusedAtNothing(opened);
+  const name = `hand-${index}`;
+  const home = await onScreen(page, name);
+  const said = reasons(opened, opened.hand[index]);
+
+  await page.mouse.click(home.x, home.y);
+  await settled(page);
+  expect(await refusalLines(page)).toBeUndefined();
+
+  await page.mouse.click(home.x, home.y);
+  await settled(page);
+  expect(await refusalLines(page)).toEqual(said);
+  expect((await chronicleOf(page)).hand).toEqual(opened.hand);
+
+  // Off the card, so the lift it stands on is the selection's and no hover of its own.
+  const beside = await onScreen(page, `hand-${index === 0 ? 1 : index - 1}`);
+  await page.mouse.move(beside.x, beside.y - 200 * beside.unit);
+  await expect.poll(() => onScreen(page, name).then((at) => at.y)).toBeLessThan(home.y);
+  expect(await refusalLines(page)).toEqual(said);
+
+  expect(problems).toEqual([]);
+});
+
+test('a press on a lit tile the city cannot pay for says the cost over it, and the aim stands', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const run = unaffordableRun(UNPAID);
+  // The run's ends of turn, the worker entered on the turn it opens, and the step it takes.
+  test.setTimeout(budget(run.turn + 2));
+
+  await open(page, run.seed, 'PH_Deck');
+  for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
+
+  const opened = await chronicleOf(page);
+  await dragOut(page, opened.hand.indexOf('PH_Worker'));
+  await expect.poll(async () => (await chronicleOf(page)).units.length).toBe(1);
+
+  const entered = await chronicleOf(page);
+  await dragUnit(page, entered.city, run.tile);
+
+  const aiming = await chronicleOf(page);
+  const card = await onScreen(page, `hand-${aiming.hand.indexOf(UNPAID)}`);
+  await page.mouse.click(card.x, card.y);
+  await aimed(page);
+
+  const face = await onScreen(page, `tile-${tileKey(run.tile)}`);
+  await page.mouse.click(face.x, face.y);
+  await settled(page);
+
+  expect(await refusalLines(page)).toEqual(reasons(aiming, UNPAID));
+  expect(await standing(page, 'aim')).toBe(true);
+  expect(await chronicleOf(page)).toEqual(aiming);
+
+  const note = await onScreen(page, 'refusal');
+  expect(note.y).toBeLessThan(face.y);
+  expect(note.x - face.x).toBeCloseTo(0, 0);
 
   expect(problems).toEqual([]);
 });

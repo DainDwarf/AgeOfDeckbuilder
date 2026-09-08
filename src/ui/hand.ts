@@ -47,30 +47,43 @@ type Drag = {
   readonly lifted: { x: number; y: number };
 };
 
+/** The selected card, and how the aim it is being aimed by is taken down while one stands. */
+type Selected = { readonly slot: Slot; cancel: (() => void) | undefined };
+
 export type Hand = {
   render(chronicle: Chronicle): void;
   play(stage: Stage): Promise<void> | undefined;
   /** The one gate on the hand's pointer: no hover, no click and no drag while it is shut. */
   live(on: boolean): void;
-  /** Lets go of the card that is armed and aiming, and answers whether one was. */
-  cancelAim(): boolean;
+  /** The card the hand has selected, for whoever shows it large; nothing while none is. */
+  selection(): { readonly id: CardId; readonly refusal: Refusal } | undefined;
+  /** Lets the selected card go, the aim it stands on with it, and answers whether one was. */
+  unselect(): boolean;
+};
+
+/**
+ * What the presses on the hand are answered by. Each aim is handed the card's place in the hand and
+ * the way to let it go, and answers the way to let it go from outside.
+ */
+export type HandPresses = {
+  /** Plays the card at this place in the hand, which aims at nothing. */
+  play(index: number): void;
+  /** The hand has taken the selection: whatever else the screen selects or inspects goes. */
+  dismiss(): void;
+  aimTile(index: number, card: AimedCard, released: () => void): () => void;
+  aimDiscardPile(index: number, released: () => void): () => void;
+  inspect(id: CardId, refusal: Refusal): void;
 };
 
 /**
  * The hand between the two piles. Cards keep their fixed gap until the lane runs out, then
- * compress evenly onto one another; the one under the pointer comes to the front. A right click on
- * a card shows it large, whatever else stands; a left click on the armed card lets it go. While a
- * card is aimed at the discard pile the hand lies under the window's scrim. Each aim is handed the
- * card's place in the hand and the way to let it go, and answers the way to let it go from here.
+ * compress evenly onto one another; the one under the pointer comes to the front. A left click
+ * takes a card as the selection, lifted out of the lane and ringed, and a second one on it is that
+ * card's own act; a drag is the two clicks in one gesture. A right click on a card shows it large,
+ * whatever else stands. While a card is aimed at the discard pile the hand lies under the window's
+ * scrim.
  */
-export function createHand(
-  scene: Phaser.Scene,
-  on: Surface,
-  play: (index: number) => void,
-  aimTile: (index: number, card: AimedCard, released: () => void) => () => void,
-  aimDiscardPile: (index: number, released: () => void) => () => void,
-  inspect: (id: CardId, refusal: Refusal) => void,
-): Hand {
+export function createHand(scene: Phaser.Scene, on: Surface, presses: HandPresses): Hand {
   const laneLeft = MARGIN + CARD_WIDTH + LANE_PAD;
   const laneWidth = DESIGN_WIDTH - 2 * laneLeft;
   const note = createRefusalNote(scene, on);
@@ -79,7 +92,8 @@ export function createHand(
   /** What the hand has in the air and no slot holds; a render owns it and takes it down. */
   let flying: Phaser.GameObjects.Container[] = [];
   let dragged: Drag | undefined;
-  let aiming: { readonly slot: Slot; readonly cancel: () => void } | undefined;
+  /** The card the hand has selected, and the way to take down the aim it is being aimed by. */
+  let selected: Selected | undefined;
   /** The card the hand has let go of, waiting on the stages its play resolves as. */
   let letGo: Slot | undefined;
   /** Whether the hand takes the pointer at all; a play-out puts it down for as long as it runs. */
@@ -93,12 +107,15 @@ export function createHand(
     }
   };
 
-  const restingY = (slot: Slot): number => slot.home.y - (slot.hovered ? LIFT : 0);
+  /** Whether a card stands out of the lane: the one under the pointer, and the selected one. */
+  const raised = (slot: Slot): boolean => slot.hovered || selected?.slot === slot;
+
+  const restingY = (slot: Slot): number => slot.home.y - (raised(slot) ? LIFT : 0);
 
   /** The card back where it rests, at once or over that long; the promise settles when it is home. */
   const settle = (slot: Slot, duration: number): Promise<void> => {
     stopMotion(scene, slot.face.root);
-    slot.face.root.setDepth(slot.hovered ? 40 : 5 + slot.index);
+    slot.face.root.setDepth(raised(slot) ? 40 : 5 + slot.index);
     if (duration === 0) {
       slot.face.root.setPosition(slot.home.x, restingY(slot));
       return Promise.resolve();
@@ -114,6 +131,90 @@ export function createHand(
     );
   };
 
+  /** Every reason the rules refuse this card, over it and clear of the lift a selection gives it. */
+  const refuse = (slot: Slot): void => {
+    note.overCard(costOf(slot.id), slot.refusal, slot.home.x, slot.home.y - LIFT - CARD_HEIGHT);
+  };
+
+  /** The card let go of: it comes down into the lane, unringed, whatever it was doing out of it. */
+  const letGoOf = (slot: Slot): Promise<void> => {
+    slot.face.select(false);
+    slot.hovered = false;
+    return settle(slot, 150);
+  };
+
+  /**
+   * How an aim says it was let go of where it stands — a right press, the window's own Cancel, the
+   * back key: the card comes home, unless the hand let it go and took the aim down itself.
+   */
+  const releasing =
+    (slot: Slot): (() => void) =>
+    () => {
+      if (selected?.slot !== slot) return;
+      selected = undefined;
+      letGoOf(slot);
+    };
+
+  const unselect = (): boolean => {
+    const standing = selected;
+    if (standing === undefined) return false;
+    selected = undefined;
+    standing.cancel?.();
+    letGoOf(standing.slot);
+    return true;
+  };
+
+  /**
+   * The card the hand takes as the selection: whatever it held comes home, the card lifts out of the
+   * lane and takes the ring, and one that aims at a tile is being aimed from here. A card aimed at
+   * the discard pile waits for its second press to raise the window.
+   */
+  const select = (slot: Slot): Selected => {
+    unselect();
+    presses.dismiss();
+    const standing: Selected = { slot, cancel: undefined };
+    selected = standing;
+    slot.face.select(true);
+    settle(slot, 120);
+
+    const card = CARDS[slot.id];
+    switch (card.aim) {
+      case 'none':
+      case 'discard-pile':
+        break;
+      case 'tile':
+        standing.cancel = presses.aimTile(slot.index, card, releasing(slot));
+        break;
+    }
+    return standing;
+  };
+
+  /**
+   * The press on the selection, which is the selected card's own act; one aimed at a tile is being
+   * aimed already and stays as it stands. Nothing has changed since the render, so the refusal the
+   * slot holds is still the rules' answer: the card the city cannot pay for says so over itself and
+   * stays selected, and no play is sent for one the rules would only refuse again.
+   */
+  const act = (standing: Selected): void => {
+    const { slot } = standing;
+    if (!slot.playable) {
+      refuse(slot);
+      return;
+    }
+    const card = CARDS[slot.id];
+    switch (card.aim) {
+      case 'none':
+        letGo = slot;
+        presses.play(slot.index);
+        break;
+      case 'discard-pile':
+        standing.cancel = presses.aimDiscardPile(slot.index, releasing(slot));
+        break;
+      case 'tile':
+        break;
+    }
+  };
+
   const render = (chronicle: Chronicle): void => {
     note.hide();
     for (const face of [...flying, ...slots.map((slot) => slot.face.root)]) {
@@ -122,7 +223,7 @@ export function createHand(
     }
     flying = [];
     dragged = undefined;
-    aiming = undefined;
+    selected = undefined;
     letGo = undefined;
 
     const held = chronicle.hand.length;
@@ -163,7 +264,7 @@ export function createHand(
           draggable: true,
         })
         .on('dragstart', (pointer: Phaser.Input.Pointer) => {
-          if (aiming !== undefined) return;
+          unselect();
           slot.hovered = true;
           settle(slot, 0);
           dragged = {
@@ -176,13 +277,13 @@ export function createHand(
           const { grabbed, lifted } = dragged;
           const at = on.at(pointer.x, pointer.y);
           slot.face.root.setPosition(lifted.x + at.x - grabbed.x, lifted.y + at.y - grabbed.y);
-          slot.face.arm(grabbed.y - at.y > PLAY_HEIGHT);
+          slot.face.select(grabbed.y - at.y > PLAY_HEIGHT);
         })
         .on('dragend', (pointer: Phaser.Input.Pointer) => {
           if (dragged === undefined) return;
           const { grabbed } = dragged;
           dragged = undefined;
-          slot.face.arm(false);
+          slot.face.select(false);
 
           if (releasedOffCanvas(pointer)) {
             slot.hovered = false;
@@ -190,51 +291,19 @@ export function createHand(
             return;
           }
           const at = on.at(pointer.x, pointer.y);
-          if (grabbed.y - at.y > PLAY_HEIGHT) {
-            // Nothing has changed since the render, so the refusal the slot holds is still the
-            // rules' answer and no play is sent for one they would only refuse again.
-            if (!slot.playable) {
-              slot.hovered = false;
-              settle(slot, 150);
-              note.overCard(
-                costOf(slot.id),
-                slot.refusal,
-                slot.home.x,
-                slot.home.y - LIFT - CARD_HEIGHT,
-              );
-              return;
-            }
-            // A card that takes a target is not played by the release: it waits, in its slot and
-            // armed, while the target is aimed at, and comes down only when the aim is let go of.
-            const card = CARDS[slot.id];
-            if (card.aim !== 'none') {
-              settle(slot, 150);
-              slot.face.arm(true);
-              letGo = slot;
-              const released = (): void => {
-                aiming = undefined;
-                letGo = undefined;
-                slot.face.arm(false);
-                slot.hovered = false;
-                settle(slot, 150);
-              };
-              let cancel: () => void;
-              switch (card.aim) {
-                case 'tile':
-                  cancel = aimTile(slot.index, card, released);
-                  break;
-                case 'discard-pile':
-                  cancel = aimDiscardPile(slot.index, released);
-                  break;
-              }
-              aiming = { slot, cancel };
-              return;
-            }
-            letGo = slot;
-            play(slot.index);
+          if (grabbed.y - at.y <= PLAY_HEIGHT) {
+            settle(slot, 150);
             return;
           }
-          settle(slot, 150);
+          // The card the city cannot pay for is the one place the drag is not the two clicks: it
+          // comes home under its note where a second click would leave it selected under one.
+          if (!slot.playable) {
+            slot.hovered = false;
+            settle(slot, 150);
+            refuse(slot);
+            return;
+          }
+          act(select(slot));
         });
 
       onHover(
@@ -252,15 +321,15 @@ export function createHand(
       );
 
       onClick(slot.face.root, () => {
-        if (aiming === undefined || slot !== aiming.slot) return;
-        settle(slot, 0);
-        aiming.cancel();
+        const standing = selected;
+        if (standing?.slot === slot) act(standing);
+        else select(slot);
       });
 
       onClick(
         slot.face.root,
         () => {
-          inspect(slot.id, slot.refusal);
+          presses.inspect(slot.id, slot.refusal);
         },
         'right',
       );
@@ -329,20 +398,17 @@ export function createHand(
     const slot = letGo;
     letGo = undefined;
     if (slot === undefined) return undefined;
-    slot.face.arm(false);
-    slot.hovered = false;
-    return settle(slot, 150);
+    return letGoOf(slot);
   };
 
   return {
     render,
     live,
-    cancelAim(): boolean {
-      if (aiming === undefined) return false;
-      // The cancel runs the aim's own release: the card comes home exactly as clicking it does.
-      aiming.cancel();
-      return true;
+    selection(): { readonly id: CardId; readonly refusal: Refusal } | undefined {
+      if (selected === undefined) return undefined;
+      return { id: selected.slot.id, refusal: selected.slot.refusal };
     },
+    unselect,
     play(stage: Stage): Promise<void> | undefined {
       switch (stage.name) {
         case 'discard':

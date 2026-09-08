@@ -368,7 +368,7 @@ export function onClick(
 ): void {
   const input = target.scene.input;
   let pressed = false;
-  const disarm = (): void => {
+  const drop = (): void => {
     pressed = false;
   };
 
@@ -378,15 +378,15 @@ export function onClick(
   target.on('pointerup', (pointer: Phaser.Input.Pointer) => {
     if (pressed && pressOf(pointer) === press) handler(pointer);
   });
-  target.on('dragstart', disarm);
+  target.on('dragstart', drop);
   // The scene sees every release, on the canvas and off it, and after the target does. A press the
   // target never sees released — it was hidden, disabled or removed meanwhile — would otherwise
-  // stay armed. The scene outlives the target, so those two go when the target does.
-  input.on('pointerup', disarm);
-  input.on('pointerupoutside', disarm);
+  // stay held. The scene outlives the target, so those two go when the target does.
+  input.on('pointerup', drop);
+  input.on('pointerupoutside', drop);
   target.once('destroy', () => {
-    input.off('pointerup', disarm);
-    input.off('pointerupoutside', disarm);
+    input.off('pointerup', drop);
+    input.off('pointerupoutside', drop);
   });
 }
 

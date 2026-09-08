@@ -1961,7 +1961,7 @@ test('a unit card takes an idle inhabitant, and is refused while every one is as
   expect(entered.units).toHaveLength(1);
 });
 
-test('a building card with nowhere to stand is armed all the same, and every tile refuses it', () => {
+test('a building card with nowhere to stand is playable all the same, and every tile refuses it', () => {
   const at = { q: 1, r: 0 };
   const alone = cityOf(['urban', 'plain'], { tiles: field(2), resources: production(3) });
   const worked = withUnits(alone, [worker(at)]);
@@ -1973,7 +1973,7 @@ test('a building card with nowhere to stand is armed all the same, and every til
   expect(refusalOf(worked, 'PH_Farm').blocked).toEqual([]);
 });
 
-test('every card aimed at a tile is armed whatever the map holds, and blocked only by its cost', () => {
+test('every card aimed at a tile is playable whatever the map holds, and blocked only by its cost', () => {
   const empty = cityOf(['urban'], { tiles: field(2), resources: production(3) });
 
   for (const id of ['PH_Farm', 'PH_March', 'PH_Mine', 'PH_Urbanisation'] as CardId[]) {
