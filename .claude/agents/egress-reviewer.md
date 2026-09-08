@@ -3,6 +3,7 @@ name: egress-reviewer
 description: Fresh-context review of one shipped board line against the docs. Receives the diff, the doc-impact `docs/` pages, and the board line text — never the implementation conversation. Returns blocking and advisory findings, or "looks good".
 tools: Read, Glob, Grep, Bash, PowerShell
 model: opus
+effort: high
 color: yellow
 ---
 

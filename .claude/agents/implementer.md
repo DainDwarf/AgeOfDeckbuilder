@@ -3,6 +3,7 @@ name: implementer
 description: Executes one agreed board line — code, tests, doc-impact `docs/` pages — and reports deviations instead of resolving them. Give it the line, the plan or task file, the spec pages, the doc-impact list, and the verification commands.
 tools: Read, Edit, Write, Glob, Grep, Bash, PowerShell, Agent
 model: opus
+effort: high
 color: green
 ---
 

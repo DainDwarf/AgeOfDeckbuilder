@@ -30,7 +30,8 @@ Spawn the `implementer` agent with a brief containing:
 
 - the board line and its done-condition, verbatim;
 - the agreed plan, or the task file path;
-- the `docs/` pages that are the spec for this change, by path;
+- the `docs/` pages that are the spec for this change, by path and section heading — the
+  implementer reads the sections named, not the whole page;
 - the doc-impact list;
 - what to run to verify (typecheck, tests, the relevant command);
 - the standing instruction: *the design is the spec; a gap is a Deviation in your report, not a
@@ -61,9 +62,10 @@ Spawn the `egress-reviewer` with: the diff (`git diff` plus the list of untracke
 `docs/` page paths in the doc-impact, the board line text, and nothing about the implementation
 conversation. End the turn; its verdict resumes you.
 
-- **Blocking findings** go back to the implementer as a new brief, with the finding quoted.
-  After two rejection rounds, stop and hand the disagreement to the user compressed to its
-  inflexion point.
+- **Blocking findings** go back to the implementer agent that did the work, continued with
+  SendMessage so it keeps its context, with the finding quoted. A fresh implementer is spawned
+  only when that agent is gone. After two rejection rounds, stop and hand the disagreement to
+  the user compressed to its inflexion point.
 - **Advisory findings** are relayed in one line each, not acted on unless the user says so.
 
 ## 6. Commit
