@@ -17,6 +17,7 @@ import {
   enter,
   type Glyphs,
   glyphs,
+  glyphsOf,
   marksIn,
   noGlyphs,
   onScreen,
@@ -29,6 +30,7 @@ import {
   shows,
   standing,
   stepRun,
+  thresholdShown,
   tileOnScreen,
   watch,
 } from './chronicle-screen';
@@ -45,8 +47,11 @@ const HELD = { name: 'tile-0,-1', key: '0,-1' };
 /** How many tiles the city holds from the founding, one inhabitant on each. */
 const FOUNDED = 7;
 
-/** The culture threshold at the founding, in the words the note says it in. */
-const CLAIM = [text('refusal.culture', { cost: 1 })];
+/** The culture threshold at the founding, as the tile the city may claim wears it. */
+const THRESHOLD = text('threshold.culture', { culture: 1 });
+
+/** What the note says over a tile whose claim the city cannot pay for. */
+const UNPAID = [text('refusal.claim')];
 
 /** How many tiles the founding's border touches and has charted: the claims it opens on. */
 function touching(): number {
@@ -108,7 +113,7 @@ async function yielded(page: Page): Promise<{ inside: Glyphs; drawn: Glyphs }> {
   return { inside, drawn };
 }
 
-test('the city key enters city mode, where a click rings a tile and says what claiming it costs, and the back key drops both', async ({
+test('the city key enters city mode, where a click rings a tile and stands the culture threshold on it, and the back key drops both', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -122,13 +127,14 @@ test('the city key enters city mode, where a click rings a tile and says what cl
   const near = await tileOnScreen(page, TOUCHING.at);
   await page.mouse.click(near.x, near.y);
   await expect.poll(() => ringedTile(page)).toBe(TOUCHING.key);
-  expect(await refusalLines(page)).toEqual(CLAIM);
+  expect(await thresholdShown(page)).toBe(THRESHOLD);
+  expect(await refusalLines(page)).toBeUndefined();
   expect((await chronicleOf(page)).held.map(tileKey)).not.toContain(TOUCHING.key);
 
-  // The first back key drops the selection and what it said; the mode stands until the next one.
+  // The first back key drops the selection and what it wore; the mode stands until the next one.
   await page.keyboard.press('Escape');
   await expect.poll(() => ringedTile(page)).toBeUndefined();
-  expect(await refusalLines(page)).toBeUndefined();
+  expect(await thresholdShown(page)).toBeUndefined();
   expect(await inCityMode(page)).toBe(true);
 
   await page.keyboard.press('Escape');
@@ -291,6 +297,8 @@ test('city mode marks every tile an inhabitant stands on, and a second click on 
   await expect.poll(() => ringedTile(page)).toBe(HELD.key);
   expect(await counted(page, 'assigned')).toBe(FOUNDED);
   expect(await refusalLines(page)).toBeUndefined();
+  // The city holds it, so there is no claim on it to ask for anything.
+  expect(await thresholdShown(page)).toBeUndefined();
 
   await page.mouse.click(held.x, held.y);
   await playedOut(page);
@@ -371,7 +379,7 @@ test('city mode marks every tile the city can claim, and leaving it takes the ma
   expect(problems).toEqual([]);
 });
 
-test('a second click the city cannot pay for claims nothing and says the cost again, one it can pay for claims the tile, and one on no act of the city’s says nothing', async ({
+test('a second click the city cannot pay for claims nothing and says so, one it can pay for claims the tile, and one on no act of the city’s says nothing', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -389,27 +397,32 @@ test('a second click the city cannot pay for claims nothing and says the cost ag
   const far = await tileOnScreen(page, FAR.at);
 
   await page.mouse.click(near.x, near.y);
-  await expect.poll(() => refusalLines(page)).toEqual(CLAIM);
+  await expect.poll(() => thresholdShown(page)).toBe(THRESHOLD);
+  expect(await refusalLines(page)).toBeUndefined();
 
   await page.mouse.click(near.x, near.y);
   await answered(page);
-  expect(await refusalLines(page)).toEqual(CLAIM);
+  expect(await refusalLines(page)).toEqual(UNPAID);
+  // The tile goes on wearing what the claim asks for, under the note.
+  expect(await thresholdShown(page)).toBe(THRESHOLD);
   expect((await chronicleOf(page)).held.map(tileKey)).not.toContain(TOUCHING.key);
 
   await page.mouse.click(far.x, far.y);
   await expect.poll(() => ringedTile(page)).toBe(FAR.key);
+  expect(await thresholdShown(page)).toBeUndefined();
   expect(await refusalLines(page)).toBeUndefined();
 
   await page.mouse.click(far.x, far.y);
   await answered(page);
   expect(await ringedTile(page)).toBe(FAR.key);
+  expect(await thresholdShown(page)).toBeUndefined();
   expect(await refusalLines(page)).toBeUndefined();
 
   await endTurn(page);
   expect((await chronicleOf(page)).resources.culture).toBe(1);
 
   await page.mouse.click(near.x, near.y);
-  await expect.poll(() => refusalLines(page)).toEqual(CLAIM);
+  await expect.poll(() => thresholdShown(page)).toBe(THRESHOLD);
   await page.mouse.click(near.x, near.y);
   await playedOut(page);
   const claimed = await chronicleOf(page);
@@ -421,6 +434,7 @@ test('a second click the city cannot pay for claims nothing and says the cost ag
   expect(await counted(page, 'claimable')).toBe(touching() - 1);
   // The tile the claim took stays selected, and asks for nothing more.
   await expect.poll(() => ringedTile(page)).toBe(TOUCHING.key);
+  expect(await thresholdShown(page)).toBeUndefined();
   expect(await refusalLines(page)).toBeUndefined();
 
   await page.mouse.click(far.x, far.y);
@@ -449,6 +463,38 @@ test('city mode shows what every tile inside the border yields, and nothing of a
   await page.keyboard.press('Escape');
   await expect.poll(() => inCityMode(page)).toBe(false);
   expect(await glyphs(page)).toEqual(noGlyphs());
+
+  expect(problems).toEqual([]);
+});
+
+test('the tile wearing the culture threshold shows none of the overlay’s glyphs, and shows them again once the selection drops', async ({
+  page,
+}) => {
+  const problems = watch(page);
+
+  await open(page, 1, 'PH_Deck');
+  await page.keyboard.press('Tab');
+  await page.keyboard.press('c');
+  await expect.poll(() => inCityMode(page)).toBe(true);
+
+  const chronicle = await chronicleOf(page);
+  const faces = drawnFaces(chronicle);
+  const all = glyphsOf(faces, chronicle.rivers);
+  const bare = glyphsOf(
+    faces.filter((face) => tileKey(face) !== TOUCHING.key),
+    chronicle.rivers,
+  );
+  expect(bare).not.toEqual(all);
+  expect(await glyphs(page)).toEqual(all);
+
+  const near = await tileOnScreen(page, TOUCHING.at);
+  await page.mouse.click(near.x, near.y);
+  await expect.poll(() => thresholdShown(page)).toBe(THRESHOLD);
+  expect(await glyphs(page)).toEqual(bare);
+
+  await page.keyboard.press('Escape');
+  await expect.poll(() => thresholdShown(page)).toBeUndefined();
+  expect(await glyphs(page)).toEqual(all);
 
   expect(problems).toEqual([]);
 });

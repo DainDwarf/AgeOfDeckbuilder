@@ -553,6 +553,17 @@ export function refusalLines(page: Page): Promise<string[] | undefined> {
   });
 }
 
+/** What the culture threshold on the map reads, or nothing while no tile wears one. */
+export function thresholdShown(page: Page): Promise<string | undefined> {
+  return page.evaluate(() => {
+    const mark = window.named?.('threshold')?.object as Phaser.GameObjects.Container | undefined;
+    if (mark === undefined) return undefined;
+    return mark.list
+      .filter((part) => part.type === 'Text')
+      .map((part) => (part as Phaser.GameObjects.Text).text)[0];
+  });
+}
+
 /**
  * What the named window's title reads — a title is named after the window it heads — or nothing
  * while that window stands down.

@@ -35,7 +35,9 @@ import { type Bind, bindings, boundTo, type Control, type Press, pressOf } from 
 import { EASE, ended, stopMotion } from './card-motion';
 import {
   ACCENT,
+  addText,
   corners,
+  css,
   DESIGN_HEIGHT,
   DESIGN_WIDTH,
   dragged,
@@ -43,10 +45,12 @@ import {
   onResize,
   renderFactor,
   type Surface,
+  UI_FONT,
   whileUp,
 } from './design-space';
 import { onKeyDown, onKeyUp } from './keys';
 import { RESOURCE_COLOURS } from './resource-bar';
+import { text } from './text';
 import { VEILS_ON, type Veils } from './veils';
 
 const TILE_SIZE = 24;
@@ -140,6 +144,9 @@ const OVER_DIM_DEPTH = 8;
 
 const YIELD_DEPTH = 9;
 
+/** Over everything a tile carries: its unit, the fog, city mode's dim, the overlay's dim and glyphs. */
+const THRESHOLD_DEPTH = 10;
+
 /** How dark the yield overlay's dim paints the map: the scrim's alpha. */
 const DIM_ALPHA = 0.6;
 
@@ -156,6 +163,18 @@ const FEATURE_RISE = 16;
 /** The mark of an assigned tile, corner to corner, and how far below the tile's middle it stands. */
 const ASSIGNED_GLYPH = 12;
 const ASSIGNED_DROP = 16;
+
+/** The culture threshold on a tile: how the number reads, and the glyph beside it with its gap. */
+const THRESHOLD_STYLE = {
+  fontFamily: UI_FONT,
+  fontSize: '12px',
+  fontStyle: 'bold',
+  color: css(LIT),
+  stroke: css(OUTLINE),
+  strokeThickness: 2.5,
+};
+const THRESHOLD_GLYPH = 8;
+const THRESHOLD_GAP = 3;
 
 /** How heavy the ring around the city's own tile is, against the one every other tile takes. */
 const CITY_RING = 4;
@@ -253,8 +272,12 @@ export type MapView = {
     zoomed: () => void,
     commanded: (command: UnitCommand) => void,
   ): void;
-  /** Rings the selected tile and lights what the unit of the player's on it can do, or clears both. */
-  markSelected(tile: TileCoords | undefined): void;
+  /**
+   * Rings the selected tile and lights what the unit of the player's on it can do, or clears both.
+   * `culture` is the threshold the tile wears in its middle, over everything else it carries and in
+   * place of its yield glyphs; nothing leaves it bare.
+   */
+  markSelected(tile: TileCoords | undefined, culture: number | undefined): void;
   /** Where a tile's face stands, for whatever floats beside a tile no press picked out. */
   faceOf(tile: TileCoords): TileFace;
   /** The face the map draws of a tile, and nothing at all for a tile it draws none of. */
@@ -359,6 +382,32 @@ function assignedMark(scene: Phaser.Scene): Phaser.GameObjects.Rectangle {
     .setStrokeStyle(1, OUTLINE)
     .setAngle(45)
     .setName('assigned');
+}
+
+/**
+ * The one way the culture a claim asks for stands on its tile: the threshold as a minus and its
+ * number, culture's own diamond beside it, the pair centred on the tile's middle.
+ */
+function thresholdMark(
+  scene: Phaser.Scene,
+  coord: TileCoords,
+  culture: number,
+  resolution: number,
+): Phaser.GameObjects.Container {
+  const number = addText(scene, 0, 0, text('threshold.culture', { culture }), THRESHOLD_STYLE)
+    .setResolution(resolution)
+    .setOrigin(0.5, 0.5);
+  const side = THRESHOLD_GLYPH / Math.SQRT2;
+  const glyph = scene.add
+    .rectangle(0, 0, side, side, RESOURCE_COLOURS.culture)
+    .setStrokeStyle(1, OUTLINE)
+    .setAngle(45);
+
+  const width = number.width + THRESHOLD_GAP + THRESHOLD_GLYPH;
+  number.setX((number.width - width) / 2);
+  glyph.setX((width - THRESHOLD_GLYPH) / 2);
+  const { x, y } = positionOf(coord);
+  return scene.add.container(x, y, [number, glyph]).setName('threshold');
 }
 
 /** The one way a held tile with nobody on it is dimmed: a scrim over it and all it carries. */
@@ -485,6 +534,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
     .setVisible(false);
   const cityMarks = scene.add.container(0, 0).setDepth(CITY_DEPTH).setName('city-marks');
   const glyphs = scene.add.container(0, 0).setDepth(YIELD_DEPTH).setName('yields');
+  const thresholds = scene.add.container(0, 0).setDepth(THRESHOLD_DEPTH).setName('thresholds');
   layer.add([
     ground,
     rim,
@@ -500,6 +550,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
     cityMarks,
     dim,
     glyphs,
+    thresholds,
   ]);
 
   // Nothing a chronicle does moves the disc's rim, so it is stroked here and no render repaints it.
@@ -563,7 +614,9 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
     centre.y = y;
     zoom = next;
     place();
-    if (zoom !== was) rescale?.();
+    if (zoom === was) return;
+    paintThreshold();
+    rescale?.();
   };
 
   /**
@@ -763,6 +816,9 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
   /** Whether the map is showing what city mode marks: it is while the mode is on. */
   let marking = false;
 
+  /** The tile wearing the culture threshold and what it asks for; nothing while no tile wears one. */
+  let threshold: { readonly tile: TileCoords; readonly culture: number } | undefined;
+
   /**
    * What the dim is laid under rather than over: the ring on the selected tile, the tiles glowed
    * under it and the glow a card is aimed by, which the player answers the overlay with. Everything
@@ -865,8 +921,9 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
   /**
    * The glyphs of every tile the map draws, repainted on the chronicle it stands on: a building
    * changes what its tile yields, so this follows every render as the buildings do. The one place a
-   * tile's glyphs are decided — a tile inside the border shows what it yields of every resource
-   * while city mode is on, and every other tile shows what the overlay is asked for, if anything.
+   * tile's glyphs are decided — the tile wearing the culture threshold shows none, a tile inside the
+   * border shows what it yields of every resource while city mode is on, and every other tile shows
+   * what the overlay is asked for, if anything.
    */
   const paintYields = (): void => {
     glyphs.removeAll(true);
@@ -876,6 +933,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
 
     const inside = new Set(marking ? shown.held.map(tileKey) : []);
     for (const tile of shown.tiles) {
+      if (threshold !== undefined && same(tile, threshold.tile)) continue;
       const face = drawnOf(tile);
       if (face === undefined) continue;
       const asked = inside.has(tileKey(tile)) ? EVERY_RESOURCE : showing;
@@ -901,6 +959,22 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
       });
     }
   };
+
+  /**
+   * The culture threshold on the tile that wears it: what the selection changes, and nothing else.
+   * A text is rasterised once and scaled after, so the map's own zoom goes into the resolution it is
+   * raised at, and it is raised again whenever that zoom changes.
+   */
+  const paintThreshold = (): void => {
+    thresholds.removeAll(true);
+    if (threshold === undefined) return;
+    const resolution = Math.ceil(renderFactor() * zoom);
+    thresholds.add(thresholdMark(scene, threshold.tile, threshold.culture, resolution));
+  };
+
+  // The design space re-rasterises every text the scene holds at its own factor when the window
+  // changes, and subscribed to that ahead of the map: this raises the threshold again after it.
+  onResize(scene, paintThreshold);
 
   /**
    * City mode's tiles repainted on the chronicle the map stands on: a mark under every tile an
@@ -1329,14 +1403,18 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
       });
     },
 
-    markSelected(tile: TileCoords | undefined): void {
+    markSelected(tile: TileCoords | undefined, culture: number | undefined): void {
       selection = tile === undefined ? undefined : { q: tile.q, r: tile.r };
+      threshold =
+        culture === undefined || selection === undefined ? undefined : { tile: selection, culture };
       selected.removeAll(true);
       selected.setData('tile', tile === undefined ? undefined : tileKey(tile));
       if (tile !== undefined) {
         const { x, y } = positionOf(tile);
         selected.add(scene.add.polygon(x, y, hexagon(TILE_SIZE - 2), 0, 0).setStrokeStyle(4, LIT));
       }
+      paintThreshold();
+      paintYields();
       lightUnit(selection);
     },
 

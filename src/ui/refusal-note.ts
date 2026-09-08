@@ -19,8 +19,8 @@ type Place = (width: number, height: number, unit: number) => Placement;
 /** The note's own corner, and how far along its bottom edge the tail comes down. */
 type Placement = { left: number; top: number; at: number };
 
-/** What a note says: what is asked for in resources, and what stands in the way. */
-export type Said = { readonly costs: readonly Cost[]; readonly blocked: readonly Block[] };
+/** What a note says: one sentence per reason, in the order the bubble reads them. */
+export type Said = readonly string[];
 
 export type RefusalNote = {
   /**
@@ -35,20 +35,36 @@ export type RefusalNote = {
   hide(): void;
 };
 
-/** What a refused card's note says: of what the card costs, only what the city cannot pay. */
-export function refusedCard(costs: readonly Cost[], refusal: Refusal): Said {
-  return {
-    costs: costs.filter(({ resource }) => refusal.unaffordable.includes(resource)),
-    blocked: refusal.blocked,
-  };
+/** The sentence one thing standing in the way says. */
+function blocking(block: Block): string {
+  return text(`refusal.${block}`);
 }
 
-/** The lines, one sentence each: the costs first, then what stands in the way. */
-function reasons({ costs, blocked }: Said): string[] {
+/** What a refused card's note says: of what the card costs, only what the city cannot pay. */
+export function refusedCard(costs: readonly Cost[], refusal: Refusal): Said {
   return [
-    ...costs.map(({ resource, amount }) => text(`refusal.${resource}`, { cost: amount })),
-    ...blocked.map((block) => text(`refusal.${block}`)),
+    ...costs
+      .filter(({ resource }) => refusal.unaffordable.includes(resource))
+      .map(({ resource, amount }) => text(`refusal.${resource}`, { cost: amount })),
+    ...refusal.blocked.map(blocking),
   ];
+}
+
+/**
+ * What the note over a tile says of the city's act on it refused: a claim it cannot pay for in the
+ * one sentence that says so — the tile itself wears the culture it asks for — and what stands in
+ * the way of an assign.
+ */
+export function refusedAct(refusal: Refusal): Said {
+  return [
+    ...(refusal.unaffordable.length > 0 ? [text('refusal.claim')] : []),
+    ...refusal.blocked.map(blocking),
+  ];
+}
+
+/** What the note over a tile a card is aimed at says: the one thing the aim has against it. */
+export function refusedAim(block: Block): Said {
+  return [blocking(block)];
 }
 
 /**
@@ -74,11 +90,10 @@ export function createRefusalNote(scene: Phaser.Scene, on: Surface): RefusalNote
 
   const raise = (said: Said, place: Place): void => {
     hide();
-    const lines = reasons(said);
-    if (lines.length === 0) return;
+    if (said.length === 0) return;
 
     const bubble = scene.add.graphics();
-    const labels = lines.map((reason) => addText(scene, 0, 0, reason, STYLE));
+    const labels = said.map((reason) => addText(scene, 0, 0, reason, STYLE));
 
     let line = 7;
     for (const label of labels) {

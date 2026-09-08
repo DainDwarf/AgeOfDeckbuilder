@@ -41,7 +41,7 @@ import { onKeyDown } from './keys';
 import { createMapView, type PressedTile } from './map';
 import { createOverlay } from './overlay';
 import { createPiles } from './piles';
-import { createRefusalNote, refusedCard } from './refusal-note';
+import { createRefusalNote, refusedAct, refusedAim, refusedCard } from './refusal-note';
 import { createResourceBar } from './resource-bar';
 import { text } from './text';
 import { createTooltip } from './tooltip';
@@ -186,13 +186,14 @@ export class ChronicleScene extends Phaser.Scene {
     };
 
     /**
-     * What the city's act on the tile selected in city mode asks for, standing over it before
-     * anything is paid: the culture threshold. A tile the city holds asks for nothing and a tile
-     * it has no act on answers nothing, so neither says a word.
+     * The culture a claim on the tile selected in city mode asks for, which the tile wears from the
+     * moment it is selected. A tile the city holds asks for nothing and a tile it has no act on
+     * answers nothing, so neither wears anything; nor does any tile outside city mode.
      */
-    const showCost = (found: PressedTile): void => {
-      if (tileRefusal(this.current, found.tile) === undefined) return;
-      note.overTile({ costs: tileCost(this.current, found.tile), blocked: [] }, found.at);
+    const thresholdOn = (found: PressedTile | undefined): number | undefined => {
+      if (!cityMode || found === undefined) return undefined;
+      if (tileRefusal(this.current, found.tile) === undefined) return undefined;
+      return tileCost(this.current, found.tile)[0]?.amount;
     };
 
     /**
@@ -212,8 +213,7 @@ export class ChronicleScene extends Phaser.Scene {
       note.hide();
       uninspect();
       hand.unselect();
-      view.markSelected(found?.tile);
-      if (cityMode && found !== undefined) showCost(found);
+      view.markSelected(found?.tile, thresholdOn(found));
     };
 
     /**
@@ -242,20 +242,17 @@ export class ChronicleScene extends Phaser.Scene {
 
     /**
      * The city acting on the tile selected in city mode: the rules say which command that is, an act
-     * they refuse plays nothing and says the cost and the reason over the tile instead, and a tile
-     * the city has no act on takes the press without a word. The tile is selected again once the act
-     * has played out — unless the chronicle screen let that play-out go — so the next press on it is
-     * the next act.
+     * they refuse plays nothing and says its reason over the tile instead, and a tile the city has
+     * no act on takes the press without a word. The tile is selected again once the act has played
+     * out — unless the chronicle screen let that play-out go — so the next press on it is the next
+     * act.
      */
     const act = async (found: PressedTile): Promise<void> => {
       const refusal = tileRefusal(this.current, found.tile);
       if (refusal === undefined) return;
       const command = cityCommand(this.current, found.tile);
       if (command === undefined) {
-        note.overTile(
-          { costs: tileCost(this.current, found.tile), blocked: refusal.blocked },
-          found.at,
-        );
+        note.overTile(refusedAct(refusal), found.at);
         return;
       }
       await playOut(command);
@@ -349,7 +346,7 @@ export class ChronicleScene extends Phaser.Scene {
             const tile = tileAt(this.current.tiles, found.tile);
             const block = tile === undefined ? undefined : refuses(this.current, card, tile);
             if (block === undefined) return;
-            note.overTile({ costs: [], blocked: [block] }, found.at);
+            note.overTile(refusedAim(block), found.at);
           },
           () => {
             endTurn.live(true);

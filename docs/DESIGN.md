@@ -381,19 +381,21 @@ In **city mode** a left click on a tile selects it as anywhere else, and lights 
 there moves one or attacks with one. A left click on the selection is the city's act on that tile —
 an idle inhabitant assigned to it, or the one standing there unassigned, by turns, the city's own
 tile among the tiles it works; or the tile claimed; it stays selected after any of them. A tile the
-city may claim shows the culture threshold over it from the moment it is selected, in the note a
-refused card raises, before anything is paid, and an act the rules refuse plays nothing and adds its
-reason there. A click on a tile the city neither holds nor can claim selects it like any other and
-acts on nothing. A press beside the tiles leaves the mode standing; leaving the mode drops the selection and
-the inspection with it. The map marks the tiles the city can claim for as long as the mode is on,
-and every tile inside the border shows what it yields — every resource, whatever the yield overlay
-is showing, the dim of a tile nobody stands on no exception, and with no dim over the map: that dim
-is the overlay's alone. It is entered by the **city key**, by a second left click on the city's own
-tile, or by pressing culture or population on the resource bar, and left by that key, by the back
-key, or by the chip naming the mode; the map's frame drawn in the accent and that chip are how the
-chronicle screen shows the mode is on. Coming into city mode lets go of a card being aimed, of the
-selection and of its inspection, and a window standing over the chronicle screen takes the city key
-instead.
+city may claim wears the culture threshold in its middle from the moment it is selected — a minus,
+the number and culture's glyph — standing over everything that tile carries, its yield glyphs
+stepping aside for it, and it raises no note. An act the rules refuse plays nothing and says why over
+the tile, in the note a refused card raises; a claim the city cannot pay for says so in one sentence,
+the tile already wearing the culture it asks for. A click on a tile the city neither holds nor can
+claim selects it like any other and acts on nothing. A press beside the tiles leaves the mode
+standing; leaving the mode drops the selection and the inspection with it. The map marks the tiles
+the city can claim for as long as the mode is on, and every tile inside the border shows what it
+yields — every resource, whatever the yield overlay is showing, the dim of a tile nobody stands on no
+exception, and with no dim over the map: that dim is the overlay's alone. It is entered by the
+**city key**, by a second left click on the city's own tile, or by pressing culture or population on
+the resource bar, and left by that key, by the back key, or by the chip naming the mode; the map's
+frame drawn in the accent and that chip are how the chronicle screen shows the mode is on. Coming
+into city mode lets go of a card being aimed, of the selection and of its inspection, and a window
+standing over the chronicle screen takes the city key instead.
 
 ### The yield overlay ✅
 
@@ -405,10 +407,11 @@ and a tile in fog shows what it yielded when it was last seen. Pressing one of t
 on the resource bar toggles that resource in or out of the overlay, several at a time, and the
 reading of a resource shown is latched down in the bar; the **yield key** clears the overlay, or,
 from nothing, shows every resource, culture included, and a window standing over the chronicle
-screen takes the key instead. Four things stand over the dim, undimmed: the selection's ring, the
-tiles lit under it, the infopanel of the tile being inspected, and the tiles a card is aimed at. It
-is a display and not a mode: the back key leaves it standing, city mode stands with it, and either
-is entered and left without touching the other.
+screen takes the key instead. Five things stand over the dim, undimmed: the selection's ring, the
+culture threshold the selected tile wears, the tiles lit under the ring, the infopanel of the tile
+being inspected, and the tiles a card is aimed at. It is a display and not a mode: the back key
+leaves it standing, city mode stands with it, and either is entered and left without touching the
+other.
 
 ### The map ✅
 
