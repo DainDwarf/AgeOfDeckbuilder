@@ -3,6 +3,7 @@ import { DECKS } from '../src/rules/cards';
 import { apply, beginChronicle, outcome, playable, refusalOf } from '../src/rules/chronicle';
 import type { Chronicle } from '../src/rules/state';
 import {
+  besideTheCards,
   chronicleOf,
   click,
   dragOut,
@@ -45,14 +46,6 @@ async function aimingAtThePile(page: Page): Promise<Raised> {
   await dragOut(page, index);
   await expect.poll(() => standing(page, 'aim-window')).toBe(true);
   return { before, index, home };
-}
-
-/** The corner of the canvas the resource bar stands in: on the scrim, beside the window's cards. */
-function besideTheCards(page: Page): Promise<{ x: number; y: number }> {
-  return page.locator('canvas').evaluate((canvas: HTMLCanvasElement) => {
-    const rect = canvas.getBoundingClientRect();
-    return { x: rect.left + 10, y: rect.top + 10 };
-  });
 }
 
 test('a press on a card of the aim window recalls it into the hand', async ({ page }) => {

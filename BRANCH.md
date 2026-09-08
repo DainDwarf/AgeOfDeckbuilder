@@ -14,12 +14,6 @@ with it.
 
 ## Lines
 
-- **The browse selects** — a left click on a browsed card selects it, ringed; a right click or the
-  inspection key shows it large; a press beside the cards drops the selection, and with none
-  standing closes the browse; the back key walks the same steps; the selection dies with the
-  window. With it, what the scrim carries becomes one discriminated value in place of the flags
-  each raise sets by hand, and the grid's press callback takes the press instead of the grid
-  handing back its frame. E2e on `e2e/browse.spec.ts`. Doc-impact: none.
 - **The aim window names its card** — the aim window's title says which card is being aimed at the
   discard pile and what it is played at, in place of the pile's count title the browse uses; the
   verb is settled at the pitch against the glossary. An e2e on `e2e/recall.spec.ts` reads the title.

@@ -171,7 +171,7 @@ export function createCardFace(
   art.lineStyle(1, tone(palette.artEdge));
   art.strokeRoundedRect(left + 0.5, artTop + 0.5, right - left - 1, artHeight - 1, 0.2 * em);
 
-  const ring = scene.add.graphics().setVisible(false);
+  const ring = scene.add.graphics().setName('ring').setVisible(false);
   ring.lineStyle(RING_WEIGHT, ACCENT);
   ring.strokeRoundedRect(
     -width / 2 - RING_STANDOFF,

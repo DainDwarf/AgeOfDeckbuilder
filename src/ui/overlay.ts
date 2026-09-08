@@ -2,8 +2,8 @@ import Phaser from 'phaser';
 import { CARD_KINDS, CARDS } from '../rules/cards';
 import { NO_REFUSAL, type Refusal, type Stage } from '../rules/chronicle';
 import type { CardId, Chronicle, Defeat } from '../rules/state';
-import type { Bind } from './bindings';
-import { createCardFace } from './card-face';
+import type { Bind, Press } from './bindings';
+import { type CardFace, createCardFace } from './card-face';
 import { EASE, ended, stopMotion } from './card-motion';
 import {
   addText,
@@ -55,6 +55,8 @@ export type Overlay = {
     closed: () => void,
   ): () => void;
   inspect(id: CardId, refusal: Refusal): void;
+  /** The inspection key, pressed while the scrim covers: shows a browse's selection large. */
+  inspectSelection(): void;
   /** The Menu button: raises the menu over whatever stands, and takes the whole menu back down. */
   menu(): void;
   /** Takes what stands on the scrim back one step, and answers whether anything stood. */
@@ -69,8 +71,12 @@ export type Overlay = {
 /** One card offered on the scrim, and the number a press on it answers by. */
 type Offered = { readonly id: CardId; readonly at: number };
 
-/** Where one offered card was laid out: about its own bottom centre, as a card is drawn. */
-type Placed = Offered & { readonly x: number; readonly y: number };
+/** Where one offered card was laid out — about its own bottom centre, as a card is drawn — and its face. */
+type Placed = Offered & {
+  readonly x: number;
+  readonly y: number;
+  readonly face: CardFace;
+};
 
 /** The grid of cards a browse or an aim stands on, and how far it moves. */
 type Grid = {
@@ -88,6 +94,31 @@ type Aiming = {
   readonly closed: () => void;
 };
 
+/** A pile's cards on the scrim, and which of them the browse has selected. */
+type Browsing = {
+  readonly stands: 'browse';
+  readonly pile: PileKind;
+  readonly cards: readonly CardId[];
+  /** The number the ringed card was offered as, and nothing while none is ringed. */
+  selected: number | undefined;
+};
+
+/** The aim window on the scrim, over what it offers. */
+type AimWindow = { readonly stands: 'aim-window'; readonly aim: Aiming };
+
+/** What a card shown large was taken off, and nothing when it came from the hand. */
+type Under = Browsing | AimWindow;
+
+/**
+ * What the scrim carries: a pile's cards, the aim window, one card shown large over what it was
+ * taken off, a window of the menu, or the defeat screen.
+ */
+type Carried =
+  | Under
+  | { readonly stands: 'inspection'; readonly over: Under | undefined }
+  | { readonly stands: 'window'; readonly which: MenuWindow; readonly laid: Opened }
+  | { readonly stands: 'defeat' };
+
 /** Where a drag of the grid was pressed, what the grid stood at, and where the pointer has been. */
 type Scroll = {
   readonly y: number;
@@ -96,9 +127,8 @@ type Scroll = {
 };
 
 /**
- * The scrim and what stands on it: a pile's cards laid out, one card large, a window of the menu,
- * or the defeat screen. The scrim swallows every pointer beneath it, so the chronicle screen is
- * inert while any of them is open, and only the menu comes up over the defeat screen — the city
+ * The scrim and what stands on it. The scrim swallows every pointer beneath it, so the chronicle
+ * screen is inert while anything is up, and only the menu comes up over the defeat screen — the city
  * that fell is left behind by a new chronicle alone. `covering` is told as the scrim goes up and
  * comes down, for whatever it cannot swallow: the wheel and the keyboard reach past it.
  */
@@ -116,19 +146,13 @@ export function createOverlay(
   const clip = createClip(scene, on);
 
   let shown: Phaser.GameObjects.GameObject[] = [];
-  let browsing: { pile: PileKind; cards: readonly CardId[] } | undefined;
+  /** What stands on the scrim, and nothing while the scrim is down. */
+  let carried: Carried | undefined;
   let grid: Grid | undefined;
   /** How far the grid is scrolled, kept while a card taken off it is inspected. */
   let offset = 0;
   let fling = 0;
   let scrolling: Scroll | undefined;
-  let inspecting = false;
-  /** What the aim window stands on, and nothing while none stands; it outlives a card shown large. */
-  let aiming: Aiming | undefined;
-  /** The window of the menu that stands, and nothing while none does. */
-  let opened: MenuWindow | undefined;
-  /** The window as it was laid out, for the keys it takes; it goes down with everything shown. */
-  let standing: Opened | undefined;
   /** The fall the defeat screen was raised on, kept so the menu can close back onto it. */
   let fallen: Defeat | undefined;
   /** The defeat screen still coming up; a render owns the rise and takes it down. */
@@ -138,7 +162,6 @@ export function createOverlay(
   const wipe = (): void => {
     for (const object of shown) object.destroy();
     shown = [];
-    standing = undefined;
     grid = undefined;
     scrolling = undefined;
     fling = 0;
@@ -147,17 +170,58 @@ export function createOverlay(
 
   const close = (): void => {
     wipe();
-    browsing = undefined;
-    inspecting = false;
-    aiming = undefined;
-    opened = undefined;
+    carried = undefined;
     scrim.setVisible(false).disableInteractive();
     covering(false);
   };
 
+  /** The aim window wherever it stands: on the scrim, or under a card it is showing large. */
+  const aimStanding = (what: Carried | undefined): Aiming | undefined => {
+    if (what === undefined) return undefined;
+    switch (what.stands) {
+      case 'aim-window':
+        return what.aim;
+      case 'inspection':
+        return aimStanding(what.over);
+      case 'browse':
+      case 'window':
+      case 'defeat':
+        return undefined;
+    }
+  };
+
+  /** The browse wherever it stands: on the scrim, or under a card it is showing large. */
+  const browseStanding = (what: Carried | undefined): Browsing | undefined => {
+    if (what === undefined) return undefined;
+    switch (what.stands) {
+      case 'browse':
+        return what;
+      case 'inspection':
+        return browseStanding(what.over);
+      case 'aim-window':
+      case 'window':
+      case 'defeat':
+        return undefined;
+    }
+  };
+
+  /** The window of the menu standing, and nothing while anything else stands, or nothing at all. */
+  const windowStanding = (): { which: MenuWindow; laid: Opened } | undefined => {
+    if (carried === undefined) return undefined;
+    switch (carried.stands) {
+      case 'window':
+        return carried;
+      case 'browse':
+      case 'aim-window':
+      case 'inspection':
+      case 'defeat':
+        return undefined;
+    }
+  };
+
   /** The aim window closed with nothing paid: the one path, whichever way it was closed. */
   const closeAim = (): void => {
-    const aim = aiming;
+    const aim = aimStanding(carried);
     if (aim === undefined) return;
     close();
     aim.closed();
@@ -170,14 +234,14 @@ export function createOverlay(
     covering(true);
   };
 
-  const showInspection = (id: CardId, refusal: Refusal): void => {
+  const showInspection = (id: CardId, refusal: Refusal, over: Under | undefined): void => {
     wipe();
     cover();
-    inspecting = true;
-    opened = undefined;
+    carried = { stands: 'inspection', over };
     const { root } = createCardFace(scene, id, refusal, { width: INSPECTION_WIDTH });
     root
       .setName('inspection')
+      .setData('card', id)
       .setPosition(DESIGN_WIDTH / 2, (DESIGN_HEIGHT + Math.round(INSPECTION_WIDTH * 1.4)) / 2)
       .setDepth(SCRIM_DEPTH + 1);
     shown.push(root);
@@ -213,18 +277,18 @@ export function createOverlay(
 
   /**
    * A pile's cards laid out below `top`, and the frame that scrolls and flings them: `pressed` takes
-   * the number the card under the left click was offered as, and nothing where the click landed
-   * between them. The frame is answered, for whoever wants a press of its own on it. Every card face
-   * is named after the grid and its place on the screen, the first drawn first, and carries the
-   * number it was offered as in its data. Nothing may be added to the scene after this: the clip's
-   * camera draws whatever it was not told to ignore inside the frame.
+   * the press and the number the card under it was offered as, and nothing where it landed between
+   * them. Every card face is named after the grid and its place on the screen, the first drawn
+   * first, and carries the card it stands and the number it was offered as in its data. Nothing may
+   * be added to the scene after this: the clip's camera draws whatever it was not told to ignore
+   * inside the frame.
    */
   const layGrid = (
     name: string,
     cards: readonly Offered[],
     top: number,
-    pressed: (at: number | undefined) => void,
-  ): Phaser.GameObjects.Zone => {
+    pressed: (at: number | undefined, press: Press) => void,
+  ): void => {
     const height = Math.round(BROWSE_WIDTH * 1.4);
     const frameHeight = DESIGN_HEIGHT - MARGIN - top;
     const columns = Math.max(
@@ -262,100 +326,123 @@ export function createOverlay(
       fling = -speedOf(dragged.trail, scene.time.now);
     });
     onClick(frame, (pointer) => {
-      pressed(under(pointer)?.at);
+      pressed(under(pointer)?.at, 'left');
     });
-
-    const placed = cards.map((card, index): Placed => {
-      const row = Math.floor(index / columns);
-      const column = index % columns;
-      const inRow = Math.min(columns, cards.length - row * columns);
-      const spanX = inRow * BROWSE_WIDTH + (inRow - 1) * BROWSE_GAP;
-      return {
-        ...card,
-        x: (DESIGN_WIDTH - spanX) / 2 + column * (BROWSE_WIDTH + BROWSE_GAP) + BROWSE_WIDTH / 2,
-        y: firstY + row * (height + BROWSE_GAP) + height,
-      };
-    });
+    onClick(
+      frame,
+      (pointer) => {
+        pressed(under(pointer)?.at, 'right');
+      },
+      'right',
+    );
 
     const root = scene.add
       .container(0, 0)
       .setName(name)
       .setDepth(SCRIM_DEPTH + 1)
       .setData('overflow', overflow);
-    for (const [index, card] of placed.entries()) {
+
+    const placed = cards.map((card, index): Placed => {
+      const row = Math.floor(index / columns);
+      const column = index % columns;
+      const inRow = Math.min(columns, cards.length - row * columns);
+      const spanX = inRow * BROWSE_WIDTH + (inRow - 1) * BROWSE_GAP;
+      const x =
+        (DESIGN_WIDTH - spanX) / 2 + column * (BROWSE_WIDTH + BROWSE_GAP) + BROWSE_WIDTH / 2;
+      const y = firstY + row * (height + BROWSE_GAP) + height;
       const face = createCardFace(scene, card.id, NO_REFUSAL, { width: BROWSE_WIDTH });
       root.add(
         face.root
-          .setPosition(card.x, card.y)
+          .setPosition(x, y)
           .setName(`${name}-card-${index}`)
-          .setData('at', card.at),
+          .setData({ at: card.at, card: card.id }),
       );
-    }
+      return { ...card, x, y, face };
+    });
     shown.push(frame, root);
 
     grid = { root, placed, height, overflow };
     scrollTo(offset);
     clip.show(root, MARGIN, top, DESIGN_WIDTH - 2 * MARGIN, frameHeight);
-    return frame;
   };
 
-  const showBrowse = (pile: PileKind, cards: readonly CardId[]): void => {
+  /** The one card of a browse ringed, and none ringed at all where nothing is selected. */
+  const ring = (browsing: Browsing, at: number | undefined): void => {
+    browsing.selected = at;
+    for (const card of grid?.placed ?? []) card.face.select(card.at === at);
+  };
+
+  /** A browse raised, and raised again where the back from a card shown large brings it. */
+  const showBrowse = (browsing: Browsing): void => {
     wipe();
     cover();
-    browsing = { pile, cards };
-    aiming = undefined;
-    inspecting = false;
-    opened = undefined;
+    carried = browsing;
 
-    const title = raiseTitle(text(`browse.${pile}`, { count: cards.length }));
+    const title = raiseTitle(text(`browse.${browsing.pile}`, { count: browsing.cards.length }));
     layGrid(
       'browse',
-      cards.map((id, at): Offered => ({ id, at })),
+      browsing.cards.map((id, at): Offered => ({ id, at })),
       title.y + title.height + MARGIN,
-      (at) => {
-        if (at === undefined) back();
-        else showInspection(cards[at], NO_REFUSAL);
+      (at, press) => {
+        switch (press) {
+          case 'left':
+            if (at === undefined) back();
+            else ring(browsing, at);
+            return;
+          case 'right':
+            if (at !== undefined) showInspection(browsing.cards[at], NO_REFUSAL, browsing);
+            return;
+        }
       },
     );
+    ring(browsing, browsing.selected);
   };
 
   /** The aim window raised, and raised again where the back from a card shown large brings it. */
   const showAim = (aim: Aiming): void => {
     wipe();
     cover();
-    browsing = undefined;
-    inspecting = false;
-    opened = undefined;
-    aiming = aim;
+    const raised: AimWindow = { stands: 'aim-window', aim };
+    carried = raised;
 
     const title = raiseTitle(text('browse.discard-pile', { count: aim.cards.length }));
-    const frame = layGrid('aim-window', aim.cards, title.y + title.height + MARGIN, (at) => {
-      if (at === undefined) {
-        closeAim();
-        return;
+    layGrid('aim-window', aim.cards, title.y + title.height + MARGIN, (at, press) => {
+      switch (press) {
+        case 'left':
+          if (at === undefined) {
+            closeAim();
+            return;
+          }
+          // The aim landed, so the window closes without saying it closed with nothing paid.
+          close();
+          aim.chosen(at);
+          return;
+        case 'right': {
+          const card = aim.cards.find((offered) => offered.at === at);
+          if (card !== undefined) showInspection(card.id, NO_REFUSAL, raised);
+          return;
+        }
       }
-      // The aim landed, so the window closes without saying it closed with nothing paid.
-      close();
-      aim.chosen(at);
     });
-    onClick(
-      frame,
-      (pointer) => {
-        const card = under(pointer);
-        if (card !== undefined) showInspection(card.id, NO_REFUSAL);
-      },
-      'right',
-    );
+  };
+
+  /** A browse or the aim window raised again, as the card it was showing large is put back. */
+  const raise = (what: Under): void => {
+    switch (what.stands) {
+      case 'browse':
+        showBrowse(what);
+        return;
+      case 'aim-window':
+        showAim(what.aim);
+        return;
+    }
   };
 
   /** The city fallen, on the screen that says so; the caller decides whether it rises or stands. */
   const showDefeat = (defeat: Defeat): Phaser.GameObjects.Container => {
     wipe();
     cover();
-    browsing = undefined;
-    aiming = undefined;
-    inspecting = false;
-    opened = undefined;
+    carried = { stands: 'defeat' };
     fallen = defeat;
 
     const title = addText(scene, DESIGN_WIDTH / 2, DESIGN_HEIGHT / 2 - 12, text('defeat.title'), {
@@ -409,10 +496,6 @@ export function createOverlay(
   const showWindow = (which: MenuWindow): void => {
     wipe();
     cover();
-    browsing = undefined;
-    aiming = undefined;
-    inspecting = false;
-    opened = which;
     const laid = createWindow(scene, which, {
       press: (press) => {
         if (press === 'new-chronicle') newChronicle();
@@ -422,7 +505,7 @@ export function createOverlay(
         back();
       },
     });
-    standing = laid;
+    carried = { stands: 'window', which, laid };
     shown.push(laid.root.setDepth(SCRIM_DEPTH + 1));
   };
 
@@ -433,18 +516,30 @@ export function createOverlay(
   };
 
   const back = (): boolean => {
-    if (opened !== undefined) {
-      const step = behind(opened);
-      if (step === undefined) shut();
-      else showWindow(step);
-      return true;
+    if (carried === undefined) return false;
+    switch (carried.stands) {
+      case 'window': {
+        const step = behind(carried.which);
+        if (step === undefined) shut();
+        else showWindow(step);
+        return true;
+      }
+      case 'inspection': {
+        const over = carried.over;
+        if (over === undefined) close();
+        else raise(over);
+        return true;
+      }
+      case 'browse':
+        if (carried.selected === undefined) close();
+        else ring(carried, undefined);
+        return true;
+      case 'aim-window':
+        closeAim();
+        return true;
+      case 'defeat':
+        return false;
     }
-    if (fallen !== undefined || !scrim.visible) return false;
-    if (inspecting && browsing !== undefined) showBrowse(browsing.pile, browsing.cards);
-    else if (inspecting && aiming !== undefined) showAim(aiming);
-    else if (aiming !== undefined) closeAim();
-    else close();
-    return true;
   };
 
   onClick(scrim, () => {
@@ -470,7 +565,12 @@ export function createOverlay(
   return {
     browse(pile: PileKind, chronicle: Chronicle): void {
       offset = 0;
-      showBrowse(pile, cardsOf(pile, chronicle));
+      showBrowse({
+        stands: 'browse',
+        pile,
+        cards: cardsOf(pile, chronicle),
+        selected: undefined,
+      });
     },
     aimDiscardPile(chronicle, chosen, closed): () => void {
       offset = 0;
@@ -481,14 +581,22 @@ export function createOverlay(
       });
       return closeAim;
     },
-    inspect: showInspection,
+    inspect(id: CardId, refusal: Refusal): void {
+      showInspection(id, refusal, undefined);
+    },
+    inspectSelection(): void {
+      const browsing = browseStanding(carried);
+      const at = browsing?.selected;
+      if (browsing === undefined || at === undefined) return;
+      showInspection(browsing.cards[at], NO_REFUSAL, browsing);
+    },
     menu(): void {
-      if (opened === undefined) showWindow('menu');
+      if (windowStanding() === undefined) showWindow('menu');
       else shut();
     },
     back,
     binds(press: Bind): boolean {
-      return standing?.binds(press) ?? false;
+      return windowStanding()?.laid.binds(press) ?? false;
     },
     render(chronicle: Chronicle): void {
       if (chronicle.defeat !== undefined && fallen === undefined)

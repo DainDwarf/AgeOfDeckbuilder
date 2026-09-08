@@ -423,7 +423,8 @@ export class ChronicleScene extends Phaser.Scene {
 
     // The one place the city key, the yield key, the inspection key and the back key are answered: a
     // slot of the Controls window listening takes any of them first, whatever it is, and anything
-    // standing over the map swallows the other three. A second listener that acted on these keys
+    // standing over the map swallows the other three, the inspection key going to what stands
+    // instead of the screen's own selection. A second listener that acted on these keys
     // would be a second answer to the one press; the map's own listener answers the pan and zoom
     // keys and no other.
     onKeyDown(this, (press) => {
@@ -438,7 +439,10 @@ export class ChronicleScene extends Phaser.Scene {
         return;
       }
       if (boundTo(press, 'inspect')) {
-        if (covered) return;
+        if (covered) {
+          overlay.inspectSelection();
+          return;
+        }
         const card = hand.selection();
         if (card !== undefined) overlay.inspect(card.id, card.refusal);
         else if (selection !== undefined) inspect(selection);

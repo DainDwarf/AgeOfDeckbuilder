@@ -227,9 +227,39 @@ export async function offCanvas(page: Page): Promise<{ x: number; y: number }> {
   return { x: band.x, y: band.y };
 }
 
+/** The corner of the canvas the resource bar stands in: on the scrim, beside a window's cards. */
+export function besideTheCards(page: Page): Promise<{ x: number; y: number }> {
+  return page.locator('canvas').evaluate((canvas: HTMLCanvasElement) => {
+    const rect = canvas.getBoundingClientRect();
+    return { x: rect.left + 10, y: rect.top + 10 };
+  });
+}
+
 /** Whether an object of that name stands on the chronicle screen. */
 export function standing(page: Page, name: string): Promise<boolean> {
   return page.evaluate((target) => window.named?.(target) !== undefined, name);
+}
+
+/**
+ * Which card the named face stands, and nothing where no such face is up: a browse's cards and the
+ * card shown large each carry theirs.
+ */
+export function cardOf(page: Page, name: string): Promise<string | undefined> {
+  return page.evaluate((target) => {
+    const face = window.named?.(target)?.object;
+    return face === undefined ? undefined : (face.getData('card') as string);
+  }, name);
+}
+
+/** Whether the named card face wears the ring: every one carries it, shown while it is selected. */
+export function ringed(page: Page, name: string): Promise<boolean> {
+  return page.evaluate((target) => {
+    const card = window.named?.(target)?.object as Phaser.GameObjects.Container | undefined;
+    if (card === undefined) throw new Error(`there is no ${target} on the chronicle screen`);
+    const ring = card.list.find((part) => part.name === 'ring');
+    if (ring === undefined) throw new Error(`${target} is no card face`);
+    return (ring as Phaser.GameObjects.GameObject & { visible: boolean }).visible;
+  }, name);
 }
 
 /** Whether the named object is shown; what a mode raises stands there hidden while it is off. */
