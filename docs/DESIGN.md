@@ -380,11 +380,11 @@ being aimed included, is let go of first, and the inspection with it.
 In **city mode** a left click on a tile selects it as anywhere else, and lights no unit: no press
 there moves one or attacks with one. A left click on the selection is the city's act on that tile —
 an idle inhabitant assigned to it, or the one standing there unassigned, by turns, the city's own
-tile among the tiles it works; or the tile claimed, after which it stays selected. A tile the city
-may claim shows the culture threshold over it from the moment it is selected, in the note a refused
-card raises, before anything is paid, and an act the rules refuse plays nothing and adds its reason
-there. A click on a tile the city neither holds nor can claim selects it like any other and acts on
-nothing. A press beside the tiles leaves the mode standing; leaving the mode drops the selection and
+tile among the tiles it works; or the tile claimed; it stays selected after any of them. A tile the
+city may claim shows the culture threshold over it from the moment it is selected, in the note a
+refused card raises, before anything is paid, and an act the rules refuse plays nothing and adds its
+reason there. A click on a tile the city neither holds nor can claim selects it like any other and
+acts on nothing. A press beside the tiles leaves the mode standing; leaving the mode drops the selection and
 the inspection with it. The map marks the tiles the city can claim for as long as the mode is on,
 and every tile inside the border shows what it yields — every resource, whatever the yield overlay
 is showing, the dim of a tile nobody stands on no exception, and with no dim over the map: that dim

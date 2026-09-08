@@ -19,26 +19,32 @@ type Place = (width: number, height: number, unit: number) => Placement;
 /** The note's own corner, and how far along its bottom edge the tail comes down. */
 type Placement = { left: number; top: number; at: number };
 
+/** What a note says: what is asked for in resources, and what stands in the way. */
+export type Said = { readonly costs: readonly Cost[]; readonly blocked: readonly Block[] };
+
 export type RefusalNote = {
   /**
    * Says its lines standing over the card: `x` is where the card is at home and `top` the edge the
    * note keeps clear of — the card's top once a hover has lifted it.
    */
-  overCard(costs: readonly Cost[], blocked: readonly Block[], x: number, top: number): void;
+  overCard(said: Said, x: number, top: number): void;
   /** Says its lines standing over the face a press landed on, with its tail down on the tile. */
-  overTile(costs: readonly Cost[], blocked: readonly Block[], at: TileFace): void;
+  overTile(said: Said, at: TileFace): void;
   /** Stands what it is saying over the same place again, at the size on screen it already had. */
   rescale(): void;
   hide(): void;
 };
 
-/** Of what a card costs, what the city cannot pay: the only cost lines a refused card's note says. */
-export function unaffordableCosts(costs: readonly Cost[], refusal: Refusal): Cost[] {
-  return costs.filter(({ resource }) => refusal.unaffordable.includes(resource));
+/** What a refused card's note says: of what the card costs, only what the city cannot pay. */
+export function refusedCard(costs: readonly Cost[], refusal: Refusal): Said {
+  return {
+    costs: costs.filter(({ resource }) => refusal.unaffordable.includes(resource)),
+    blocked: refusal.blocked,
+  };
 }
 
-/** The lines, one sentence each: what is asked for in resources first, then what stands in the way. */
-function reasons(costs: readonly Cost[], blocked: readonly Block[]): string[] {
+/** The lines, one sentence each: the costs first, then what stands in the way. */
+function reasons({ costs, blocked }: Said): string[] {
   return [
     ...costs.map(({ resource, amount }) => text(`refusal.${resource}`, { cost: amount })),
     ...blocked.map((block) => text(`refusal.${block}`)),
@@ -66,13 +72,13 @@ export function createRefusalNote(scene: Phaser.Scene, on: Surface): RefusalNote
 
   scene.input.on('pointerdown', hide);
 
-  const raise = (costs: readonly Cost[], blocked: readonly Block[], place: Place): void => {
+  const raise = (said: Said, place: Place): void => {
     hide();
-    const said = reasons(costs, blocked);
-    if (said.length === 0) return;
+    const lines = reasons(said);
+    if (lines.length === 0) return;
 
     const bubble = scene.add.graphics();
-    const labels = said.map((reason) => addText(scene, 0, 0, reason, STYLE));
+    const labels = lines.map((reason) => addText(scene, 0, 0, reason, STYLE));
 
     let line = 7;
     for (const label of labels) {
@@ -99,15 +105,15 @@ export function createRefusalNote(scene: Phaser.Scene, on: Surface): RefusalNote
   };
 
   return {
-    overCard(costs: readonly Cost[], blocked: readonly Block[], x: number, top: number): void {
-      raise(costs, blocked, (width, height) => {
+    overCard(said: Said, x: number, top: number): void {
+      raise(said, (width, height) => {
         const left = Math.min(Math.max(x - width / 2, MARGIN), DESIGN_WIDTH - MARGIN - width);
         return { left, top: top - STANDOFF - height, at: x - left };
       });
     },
 
-    overTile(costs: readonly Cost[], blocked: readonly Block[], at: TileFace): void {
-      raise(costs, blocked, (width, height, unit) => ({
+    overTile(said: Said, at: TileFace): void {
+      raise(said, (width, height, unit) => ({
         left: at.x - (width / 2) * unit,
         top: at.y - at.radius - (STANDOFF + height) * unit,
         at: width / 2,

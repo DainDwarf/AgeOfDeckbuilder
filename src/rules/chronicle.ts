@@ -366,8 +366,8 @@ function cultureThreshold(chronicle: Chronicle): number {
 }
 
 /**
- * What a city-mode click on this tile costs, in the shape a card's cost comes in: the culture a
- * claim asks for, and nothing at all on a tile the city already holds.
+ * What the city's act on this tile costs, in the shape a card's cost comes in: the culture a claim
+ * asks for, and nothing at all on a tile the city already holds.
  */
 export function tileCost(chronicle: Chronicle, tile: TileCoords): Cost[] {
   return holds(chronicle, tile)
@@ -376,9 +376,9 @@ export function tileCost(chronicle: Chronicle, tile: TileCoords): Cost[] {
 }
 
 /**
- * Everything standing between the city and the tile a city-mode click lands on: the idle population
- * an assign has none of, and the culture a claim falls short of. A tile the city neither holds nor
- * may claim — an uncharted one among them — is no act of the city's at all, and answers nothing.
+ * Everything standing between the city and its act on this tile: the idle population an assign has
+ * none of, and the culture a claim falls short of. A tile the city neither holds nor may claim — an
+ * uncharted one among them — is no act of the city's at all, and answers nothing.
  */
 export function tileRefusal(chronicle: Chronicle, tile: TileCoords): Refusal | undefined {
   if (holds(chronicle, tile)) {
@@ -390,9 +390,10 @@ export function tileRefusal(chronicle: Chronicle, tile: TileCoords): Refusal | u
 }
 
 /**
- * What a city-mode click on a tile sends: an assign on a tile the city holds, a claim on one it may
- * claim, and nothing at all on a tile it has no act on or when the rules refuse the act. The one
- * decision both the chronicle screen and `apply` answer that click by.
+ * What the city's act on a tile sends — the second left click on the selection in city mode: an
+ * assign on a tile the city holds, a claim on one it may claim, and nothing at all on a tile it has
+ * no act on or when the rules refuse the act. The one decision both the chronicle screen and `apply`
+ * answer that click by.
  */
 export function cityCommand(chronicle: Chronicle, tile: TileCoords): Command | undefined {
   const refusal = tileRefusal(chronicle, tile);

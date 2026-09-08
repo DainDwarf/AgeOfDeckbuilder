@@ -41,7 +41,7 @@ import { onKeyDown } from './keys';
 import { createMapView, type PressedTile } from './map';
 import { createOverlay } from './overlay';
 import { createPiles } from './piles';
-import { createRefusalNote, unaffordableCosts } from './refusal-note';
+import { createRefusalNote, refusedCard } from './refusal-note';
 import { createResourceBar } from './resource-bar';
 import { text } from './text';
 import { createTooltip } from './tooltip';
@@ -192,7 +192,7 @@ export class ChronicleScene extends Phaser.Scene {
      */
     const showCost = (found: PressedTile): void => {
       if (tileRefusal(this.current, found.tile) === undefined) return;
-      note.overTile(tileCost(this.current, found.tile), [], found.at);
+      note.overTile({ costs: tileCost(this.current, found.tile), blocked: [] }, found.at);
     };
 
     /**
@@ -252,7 +252,10 @@ export class ChronicleScene extends Phaser.Scene {
       if (refusal === undefined) return;
       const command = cityCommand(this.current, found.tile);
       if (command === undefined) {
-        note.overTile(tileCost(this.current, found.tile), refusal.blocked, found.at);
+        note.overTile(
+          { costs: tileCost(this.current, found.tile), blocked: refusal.blocked },
+          found.at,
+        );
         return;
       }
       await playOut(command);
@@ -336,11 +339,7 @@ export class ChronicleScene extends Phaser.Scene {
           admitted(this.current, card),
           (tile) => {
             if (!playable(refusal)) {
-              note.overTile(
-                unaffordableCosts(costOf(id), refusal),
-                refusal.blocked,
-                view.faceOf(tile),
-              );
+              note.overTile(refusedCard(costOf(id), refusal), view.faceOf(tile));
               return;
             }
             hand.unselect();
@@ -350,7 +349,7 @@ export class ChronicleScene extends Phaser.Scene {
             const tile = tileAt(this.current.tiles, found.tile);
             const block = tile === undefined ? undefined : refuses(this.current, card, tile);
             if (block === undefined) return;
-            note.overTile([], [block], found.at);
+            note.overTile({ costs: [], blocked: [block] }, found.at);
           },
           () => {
             endTurn.live(true);
