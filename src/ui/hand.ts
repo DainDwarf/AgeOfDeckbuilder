@@ -226,10 +226,9 @@ export function createHand(scene: Phaser.Scene, on: Surface, presses: HandPresse
   };
 
   /**
-   * The press on the selection, which is the selected card's own act; one aimed at a tile or at a
-   * unit is being aimed already and stays as it stands. Nothing has changed since the render, so the refusal the
-   * slot holds is still the rules' answer: the card the city cannot pay for says so over itself and
-   * stays selected, and no play is sent for one the rules would only refuse again.
+   * The press on the selection, the selected card's own act; one already being aimed stays as it
+   * stands. Nothing has changed since the render, so the refusal the slot holds is still the rules'
+   * answer.
    */
   const act = (standing: Selected): void => {
     const { slot } = standing;

@@ -325,20 +325,21 @@ a row per thing they hold — the river's among them on the terrain card — wit
 income, a row that gives nothing saying so. After the last card comes the first again, and a tile of
 a single card holds it: the cycle never falls back to the bare ring.
 
-A left click selects a card of the hand, unaffordable or not. A selected card that aims at a tile is
-**being aimed** from that moment: the map is already there, and lights the tiles its aim admits. A
-second click plays the card — one that aims at nothing is played where it stands, and refused over
-the card with its reason when it is unaffordable; one that aims at a tile lands nowhere, no tile
-lying under a card in the hand, so it stays selected; one that aims at the discard pile raises the
-aim window and is being aimed from then. That window waits for the second click because it would
-stand over the hand, and a card is inspected from the hand before it is played.
+A left click selects a card of the hand, unaffordable or not. A selected card that aims at a tile or
+at a unit is **being aimed** from that moment: the map is already there, and lights the tiles its
+aim admits. A second click plays the card — one that aims at nothing is played where it stands, and
+refused over the card with its reason when it is unaffordable; one that aims at a tile or at a unit
+lands nowhere, no tile lying under a card in the hand, so it stays selected; one that aims at the
+discard pile raises the aim window and is being aimed from then. That window waits for the second
+click because it would stand over the hand, and a card is inspected from the hand before it is
+played.
 
 **A card aimed at a tile or at a unit says so on the card itself.** It wears a point on its ring,
-over its top edge and towards the map, and one line stands over the hand naming what it is played
-at: `Play <card> at a tile` or `Play <card> at a unit`, `<card>` being the card's own name. Point
-and line come up the moment the card is being aimed and go when it is let go of, so a card selected
-and waiting to be played reads apart from one being aimed without reading the map. A card aimed at
-the discard pile wears neither: the aim window standing is how that aim reads.
+over its top edge and towards the map, and one line stands over the hand, naming the card by its own
+name and what it is played at, a tile or a unit. Point and line come up the moment the card is being
+aimed and go when it is let go of, so a card selected and waiting to be played reads apart from one
+being aimed without reading the map. A card aimed at the discard pile wears neither: the aim window
+standing is how that aim reads.
 
 **A card being aimed filters every left click by its aim.** A press on a thing the aim admits is the
 play attempted there, and the rules answer: a play refused says why over that thing — the one reason
@@ -350,8 +351,9 @@ of the aim window, and a card aimed at the hand — none is written yet — woul
 the hand.
 
 **The drag is the two clicks in one gesture.** A card lifted clear of the hand and released there is
-selected and played at once: one that aims at a tile stays selected, being aimed; one that aims at
-the discard pile raises the aim window; an unaffordable one stays selected under its refusal note.
+selected and played at once: one that aims at a tile or at a unit stays selected, being aimed; one
+that aims at the discard pile raises the aim window; an unaffordable one stays selected under its
+refusal note.
 
 A left click on one of the aim window's cards is the play attempted there; a press beside its cards
 closes it, as the back key does, leaving the card selected in the hand with nothing paid.

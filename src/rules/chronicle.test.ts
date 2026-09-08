@@ -240,7 +240,8 @@ function aimedAtPile(card: number): Command {
 /** The named card, for a fixture that expects it to be aimed at a tile or at a unit. */
 function aimedCard(id: CardId): AimedCard {
   const card = CARDS[id];
-  if (card.aim !== 'tile' && card.aim !== 'unit') throw new Error(`${id} is aimed at no tile`);
+  if (card.aim !== 'tile' && card.aim !== 'unit')
+    throw new Error(`${id} is aimed at neither a tile nor a unit`);
   return card;
 }
 

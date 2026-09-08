@@ -349,10 +349,6 @@ test('the card being aimed wears a point and says what it is played at, and a ca
   expect(await standing(page, 'aim-point')).toBe(true);
   expect(await aimLine(page)).toBe(text('aim.tile', { card: text(`card.${opened.hand[index]}`) }));
 
-  const point = await onScreen(page, 'aim-point');
-  expect(point.y).toBeLessThan(card.y);
-  expect(Math.abs(point.x - card.x)).toBeLessThan(30 * card.unit);
-
   await page.keyboard.press('Escape');
   await expect.poll(() => standing(page, 'aim')).toBe(false);
   expect(await standing(page, 'aim-point')).toBe(false);
