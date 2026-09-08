@@ -340,8 +340,8 @@ over its top edge and towards the map, and one line stands over the hand, naming
 name and what it is played at, a tile or a unit. Point and line come up the moment the card is being
 aimed and go when it is let go of, so a card selected and waiting to be played reads apart from one
 being aimed without reading the map. A card aimed at the discard pile wears neither: the aim window's
-title says that same sentence instead, naming the card by its own name and what it is played at, a
-card of the discard pile.
+title says that same sentence instead, with a card of the discard pile in place of the tile or the
+unit.
 
 **A card being aimed filters every left click by its aim.** A press on a thing the aim admits is the
 play attempted there, and the rules answer: a play refused says why over that thing — the one reason
