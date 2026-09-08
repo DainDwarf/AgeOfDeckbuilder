@@ -68,6 +68,7 @@ const TEXT = {
   'rules.PH_Recall': 'Recall a card from the discard pile',
   'aim.tile': 'Play {card} at a tile',
   'aim.unit': 'Play {card} at a unit',
+  'aim.discard-pile': 'Play {card} at a card of the discard pile',
   'refusal.food': 'Costs {cost} food.',
   'refusal.production': 'Costs {cost} production.',
   'refusal.military': 'Costs {cost} military.',

@@ -46,11 +46,12 @@ export type Overlay = {
    * The discard pile offered to a card aimed at it, newest card first as the browse offers it: a
    * press on one of its cards lands the aim where that card lies in the pile, a right click on one
    * shows it large, and a press beside them or the back key closes the window with nothing paid.
-   * The aimed card is in the hand, so the pile never holds it and never offers it. Answers the way
-   * to close it from outside.
+   * The card being aimed, which the window's title names, is in the hand, so the pile never holds
+   * it and never offers it. Answers the way to close it from outside.
    */
   aimDiscardPile(
     chronicle: Chronicle,
+    aimed: CardId,
     chosen: (at: number) => void,
     closed: () => void,
   ): () => void;
@@ -87,8 +88,12 @@ type Grid = {
   readonly overflow: number;
 };
 
-/** What the aim window stands on: the cards it offers, and what a press on one of them plays. */
+/**
+ * What the aim window stands on: the card being aimed, the cards it offers, and what a press on one
+ * of them plays.
+ */
 type Aiming = {
+  readonly aimed: CardId;
   readonly cards: readonly Offered[];
   readonly chosen: (at: number) => void;
   readonly closed: () => void;
@@ -239,14 +244,18 @@ export function createOverlay(
     grid.root.setY(-offset);
   };
 
-  /** The heading a pile's cards stand under; the caller stands whatever else belongs beside it. */
-  const raiseTitle = (heading: string): Phaser.GameObjects.Text => {
+  /**
+   * The heading a window's cards stand under, named after the window it heads; the caller stands
+   * whatever else belongs beside it.
+   */
+  const raiseTitle = (name: string, heading: string): Phaser.GameObjects.Text => {
     const title = addText(scene, DESIGN_WIDTH / 2, BAR_HEIGHT + MARGIN, heading, {
       fontFamily: UI_FONT,
       fontSize: '26px',
       fontStyle: 'bold',
       color: TITLE_INK,
     })
+      .setName(`${name}-title`)
       .setOrigin(0.5, 0)
       .setDepth(SCRIM_DEPTH + 1);
     shown.push(title);
@@ -363,7 +372,10 @@ export function createOverlay(
     cover();
     carried = browsing;
 
-    const title = raiseTitle(text(`browse.${browsing.pile}`, { count: browsing.cards.length }));
+    const title = raiseTitle(
+      'browse',
+      text(`browse.${browsing.pile}`, { count: browsing.cards.length }),
+    );
     layGrid(
       'browse',
       browsing.cards.map((id, at): Offered => ({ id, at })),
@@ -390,7 +402,10 @@ export function createOverlay(
     const raised: AimWindow = { stands: 'aim-window', aim };
     carried = raised;
 
-    const title = raiseTitle(text('browse.discard-pile', { count: aim.cards.length }));
+    const title = raiseTitle(
+      'aim-window',
+      text('aim.discard-pile', { card: text(`card.${aim.aimed}`) }),
+    );
     layGrid('aim-window', aim.cards, title.y + title.height + MARGIN, (at, press) => {
       switch (press) {
         case 'left':
@@ -557,9 +572,10 @@ export function createOverlay(
         selected: undefined,
       });
     },
-    aimDiscardPile(chronicle, chosen, closed): () => void {
+    aimDiscardPile(chronicle, aimed, chosen, closed): () => void {
       offset = 0;
       showAim({
+        aimed,
         cards: chronicle.discardPile.map((id, at): Offered => ({ id, at })).reverse(),
         chosen,
         closed,

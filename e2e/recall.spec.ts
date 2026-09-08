@@ -2,6 +2,7 @@ import { expect, type Page, test } from '@playwright/test';
 import { DECKS } from '../src/rules/cards';
 import { apply, beginChronicle, outcome, playable, refusalOf } from '../src/rules/chronicle';
 import type { Chronicle } from '../src/rules/state';
+import { text } from '../src/ui/text';
 import {
   besideTheCards,
   chronicleOf,
@@ -15,6 +16,7 @@ import {
   selected,
   settled,
   standing,
+  titleOf,
   watch,
 } from './chronicle-screen';
 
@@ -30,6 +32,9 @@ function recallSeed(): number {
     return found ? seed : undefined;
   });
 }
+
+/** What the aim window's title reads while the recall card is being aimed at the discard pile. */
+const AIMED_TITLE = text('aim.discard-pile', { card: text('card.PH_Recall') });
 
 /** The chronicle the window stands on, where the recall card lies in the hand, and where it rests. */
 type Raised = { before: Chronicle; index: number; home: OnScreen };
@@ -47,6 +52,17 @@ async function aimingAtThePile(page: Page): Promise<Raised> {
   await expect.poll(() => standing(page, 'aim-window')).toBe(true);
   return { before, index, home };
 }
+
+test('the aim window is titled with the card being aimed and what it is played at', async ({
+  page,
+}) => {
+  const problems = watch(page);
+
+  await aimingAtThePile(page);
+  expect(await titleOf(page, 'aim-window')).toBe(AIMED_TITLE);
+
+  expect(problems).toEqual([]);
+});
 
 test('a press on a card of the aim window recalls it into the hand', async ({ page }) => {
   const problems = watch(page);
@@ -122,6 +138,7 @@ test('a right click on a card of the aim window shows it large, and the back key
   await page.keyboard.press('Escape');
   await expect.poll(() => standing(page, 'aim-window')).toBe(true);
   expect(await standing(page, 'inspection')).toBe(false);
+  expect(await titleOf(page, 'aim-window')).toBe(AIMED_TITLE);
   expect(await chronicleOf(page)).toEqual(before);
 
   expect(problems).toEqual([]);

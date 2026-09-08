@@ -14,10 +14,6 @@ with it.
 
 ## Lines
 
-- **The aim window names its card** — the aim window's title says which card is being aimed at the
-  discard pile and what it is played at, in place of the pile's count title the browse uses; the
-  verb is settled at the pitch against the glossary. An e2e on `e2e/recall.spec.ts` reads the title.
-  Doc-impact: `docs/DESIGN.md`, `docs/GLOSSARY.md` if the verb is new.
 - **A right press beside the card shown large drops it** — a right click on the scrim while a card
   stands large takes the card down as the back key would, leaving what it stood over — the browse
   with its selection, the aim window, the card selected in the hand — as it stands; a right click

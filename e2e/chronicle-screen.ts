@@ -507,6 +507,17 @@ export function refusalLines(page: Page): Promise<string[] | undefined> {
   });
 }
 
+/**
+ * What the named window's title reads — a title is named after the window it heads — or nothing
+ * while that window stands down.
+ */
+export function titleOf(page: Page, name: string): Promise<string | undefined> {
+  return page.evaluate((target) => {
+    const title = window.named?.(target)?.object as Phaser.GameObjects.Text | undefined;
+    return title?.text;
+  }, `${name}-title`);
+}
+
 /** What the line over the hand says the card being aimed is played at, or nothing while none stands. */
 export function aimLine(page: Page): Promise<string | undefined> {
   return page.evaluate(() => {

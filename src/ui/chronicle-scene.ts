@@ -348,6 +348,7 @@ export class ChronicleScene extends Phaser.Scene {
         // stands over the scrim, and it lets the selection go, which is what closes the window.
         return overlay.aimDiscardPile(
           this.current,
+          this.current.hand[index],
           (card) => {
             void playOut({ type: 'play', index, aim: 'discard-pile', card });
           },
