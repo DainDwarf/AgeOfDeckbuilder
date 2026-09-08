@@ -352,9 +352,9 @@ export class ChronicleScene extends Phaser.Scene {
       inspect: (id, refusal) => overlay.inspect(id, refusal),
     });
 
-    /** The menu, from the Menu button or a clean chronicle screen: a selected card is let go first. */
+    /** The menu, from the Menu button or a clean chronicle screen: the selection is let go of first. */
     const menu = (): void => {
-      hand.unselect();
+      dismiss();
       overlay.menu();
     };
 

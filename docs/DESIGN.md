@@ -359,8 +359,8 @@ card.
 The back key takes one step more here than the presses name: after the selection comes city mode. A
 card being aimed at a tile is let go of as the selection it is.
 
-A **Menu** button stands on the chronicle screen and opens the menu over it; a card being aimed is
-let go of first.
+A **Menu** button stands on the chronicle screen and opens the menu over it; the selection, a card
+being aimed included, is let go of first, and the inspection with it.
 
 In **city mode** a left click on a tile acts on the city — assigns an idle inhabitant to the tile or
 unassigns the one on it, claims a tile — and selects nothing, so the right click is the only way to

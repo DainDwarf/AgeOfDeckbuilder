@@ -1,6 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
 import { DECKS } from '../src/rules/cards';
 import { apply, beginChronicle, outcome } from '../src/rules/chronicle';
+import { tileKey } from '../src/rules/map';
 import type { Chronicle } from '../src/rules/state';
 import {
   aimed,
@@ -15,6 +16,7 @@ import {
   fallRun,
   firstSeed,
   open,
+  ringedTile,
   standing,
   watch,
   workerRun,
@@ -122,6 +124,25 @@ test('Escape lets go of the card being aimed before it raises the menu', async (
 
   await page.keyboard.press('Escape');
   await expect.poll(() => standing(page, 'menu')).toBe(true);
+
+  expect(problems).toEqual([]);
+});
+
+test('the Menu button drops the selected tile before it raises the menu', async ({ page }) => {
+  const problems = watch(page);
+
+  await open(page, 1, 'PH_Deck');
+  const opened = await chronicleOf(page);
+  await click(page, `tile-${tileKey(opened.city)}`);
+  await expect.poll(() => ringedTile(page)).toBe(tileKey(opened.city));
+
+  await click(page, 'menu-button');
+  await expect.poll(() => standing(page, 'menu')).toBe(true);
+  expect(await ringedTile(page)).toBeUndefined();
+
+  await page.keyboard.press('Escape');
+  await expect.poll(() => standing(page, 'menu')).toBe(false);
+  expect(await ringedTile(page)).toBeUndefined();
 
   expect(problems).toEqual([]);
 });
