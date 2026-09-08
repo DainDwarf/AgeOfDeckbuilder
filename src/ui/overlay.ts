@@ -3,7 +3,7 @@ import { CARD_KINDS, CARDS } from '../rules/cards';
 import { NO_REFUSAL, type Refusal, type Stage } from '../rules/chronicle';
 import type { CardId, Chronicle, Defeat } from '../rules/state';
 import type { Bind, Press } from './bindings';
-import { type CardFace, createCardFace } from './card-face';
+import { type CardFace, createCardFace, heightOf } from './card-face';
 import { EASE, ended, stopMotion } from './card-motion';
 import {
   addText,
@@ -228,7 +228,7 @@ export function createOverlay(
     wipe();
     cover();
     carried = { stands: 'inspection', over };
-    const height = Math.round(INSPECTION_WIDTH * 1.4);
+    const height = heightOf(INSPECTION_WIDTH);
     const { root } = createCardFace(scene, id, refusal, { width: INSPECTION_WIDTH });
     root
       .setName('inspection')
@@ -295,7 +295,7 @@ export function createOverlay(
     top: number,
     pressed: (at: number | undefined, press: Press) => void,
   ): void => {
-    const height = Math.round(BROWSE_WIDTH * 1.4);
+    const height = heightOf(BROWSE_WIDTH);
     const frameHeight = DESIGN_HEIGHT - MARGIN - top;
     const columns = Math.max(
       1,

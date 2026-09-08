@@ -116,7 +116,7 @@ test('a press beside the aim window cards closes it, the card still selected in 
   expect(problems).toEqual([]);
 });
 
-test('a right click on a card of the aim window shows it large, and the back key brings the window back', async ({
+test('a right click on a card of the aim window shows it large, and a press beside it or the back key brings the window back', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -134,6 +134,17 @@ test('a right click on a card of the aim window shows it large, and the back key
   await page.mouse.click(large.x, large.y, { button: 'right' });
   await settled(page);
   expect(await standing(page, 'inspection')).toBe(true);
+
+  const away = await besideTheCards(page);
+  await page.mouse.click(away.x, away.y, { button: 'right' });
+  await expect.poll(() => standing(page, 'aim-window')).toBe(true);
+  expect(await standing(page, 'inspection')).toBe(false);
+  expect(await titleOf(page, 'aim-window')).toBe(AIMED_TITLE);
+  expect(await chronicleOf(page)).toEqual(before);
+
+  const again = await onScreen(page, 'aim-window-card-0');
+  await page.mouse.click(again.x, again.y, { button: 'right' });
+  await expect.poll(() => standing(page, 'inspection')).toBe(true);
 
   await page.keyboard.press('Escape');
   await expect.poll(() => standing(page, 'aim-window')).toBe(true);

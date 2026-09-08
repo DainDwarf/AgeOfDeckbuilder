@@ -485,7 +485,7 @@ test('a right press beside the card shown large takes it down and leaves the car
   await page.mouse.click(home.x, home.y, { button: 'right' });
   await expect.poll(() => cardOf(page, 'inspection')).toBe(opened.hand[index]);
 
-  // A card has but the one card, so a second right click on the card shown large steps nothing.
+  // A card has but the one, so a second right click on the card shown large steps nowhere.
   const large = await onScreen(page, 'inspection');
   await page.mouse.click(large.x, large.y, { button: 'right' });
   await settled(page);

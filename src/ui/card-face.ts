@@ -17,6 +17,11 @@ import { text } from './text';
 
 export const CARD_WIDTH = 130;
 
+/** The card's height at that width: the one aspect a card is drawn at, wherever it is drawn. */
+export function heightOf(width: number): number {
+  return Math.round(width * 1.4);
+}
+
 /** Every measure inside a card is a multiple of `em`, so one width scales the whole face. */
 function metricsOf(width: number): {
   height: number;
@@ -25,7 +30,7 @@ function metricsOf(width: number): {
   radius: number;
 } {
   const em = width * 0.13;
-  return { height: Math.round(width * 1.4), em, pad: 0.55 * em, radius: 0.45 * em };
+  return { height: heightOf(width), em, pad: 0.55 * em, radius: 0.45 * em };
 }
 
 /** The card as it lies on the chronicle screen: what anything in the card's language measures by. */
