@@ -259,25 +259,28 @@ export class ChronicleScene extends Phaser.Scene {
 
     view.onPress(
       (found, press) => {
-        if (cityMode) {
-          if (press === 'left') {
-            if (found !== undefined) act(found);
-          } else if (found === undefined) uninspect();
-          else inspect(found);
-          return;
+        switch (press) {
+          case 'right':
+            if (found === undefined) uninspect();
+            else inspect(found);
+            return;
+          case 'left':
+            if (cityMode) {
+              if (found !== undefined) act(found);
+              return;
+            }
+            if (
+              found !== undefined &&
+              selection !== undefined &&
+              tileKey(found.tile) === tileKey(selection.tile) &&
+              tileKey(found.tile) === tileKey(this.current.city)
+            ) {
+              enterCityMode();
+              return;
+            }
+            select(found);
+            return;
         }
-        if (
-          press === 'left' &&
-          found !== undefined &&
-          selection !== undefined &&
-          tileKey(found.tile) === tileKey(selection.tile) &&
-          tileKey(found.tile) === tileKey(this.current.city)
-        ) {
-          enterCityMode();
-          return;
-        }
-        select(found);
-        if (press === 'right' && found !== undefined) inspect(found);
       },
       () => {
         panel.rescale();
@@ -418,10 +421,9 @@ export class ChronicleScene extends Phaser.Scene {
 
     // The one place the city key, the yield key, the inspection key and the back key are answered: a
     // slot of the Controls window listening takes any of them first, whatever it is, and anything
-    // standing over the map swallows the other three. Otherwise the back key takes back one thing,
-    // the outermost that is up or pending, and only a chronicle screen with nothing on it raises the
-    // menu. A second listener that acted on these keys would be a second answer to the one press;
-    // the map's own listener answers the pan and zoom keys and no other.
+    // standing over the map swallows the other three. A second listener that acted on these keys
+    // would be a second answer to the one press; the map's own listener answers the pan and zoom
+    // keys and no other.
     onKeyDown(this, (press) => {
       if (overlay.binds(press)) return;
       if (boundTo(press, 'city')) {
@@ -441,10 +443,17 @@ export class ChronicleScene extends Phaser.Scene {
         return;
       }
       if (!boundTo(press, 'back')) return;
-      if (overlay.back() || hand.unselect()) return;
-      if (inspection !== undefined) uninspect();
-      else if (selection !== undefined) select(undefined);
-      else if (!leaveCityMode()) menu();
+      if (overlay.back()) return;
+      if (inspection !== undefined) {
+        uninspect();
+        return;
+      }
+      if (hand.unselect()) return;
+      if (selection !== undefined) {
+        select(undefined);
+        return;
+      }
+      if (!leaveCityMode()) menu();
     });
 
     createDebugConsole(this, (veils) => {

@@ -14,10 +14,6 @@ with it.
 
 ## Lines
 
-- **The right click never selects** — on a tile it inspects without selecting, and pressed again
-  on the same tile steps on; off the map it drops the inspection and leaves the selection standing;
-  the inspection key moves the inspection to the selection when they differ. E2e on
-  `e2e/inspect.spec.ts` and `e2e/press.spec.ts`. Doc-impact: none.
 - **The right click inspects while a card is being aimed** — it no longer lets the card go: on a
   tile it inspects the tile, on a card it shows the card large, off the map it drops the
   inspection, and the card stays selected through all three. E2e on `e2e/building.spec.ts`.

@@ -1,6 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
 import { CARDS, DECKS } from '../src/rules/cards';
 import { apply, beginChronicle, outcome, playable, refusalOf } from '../src/rules/chronicle';
+import { tileKey } from '../src/rules/map';
 import type { Chronicle } from '../src/rules/state';
 import {
   aimed,
@@ -21,6 +22,7 @@ import {
   scrolled,
   selected,
   settled,
+  shownCard,
   standing,
   watch,
   wheel,
@@ -242,6 +244,42 @@ test('a click selects a card that plays at nothing, and a second click plays it'
   await page.mouse.click(home.x, home.y);
   await playedOut(page);
   await expect.poll(async () => (await chronicleOf(page)).hand).not.toEqual(opened.hand);
+
+  expect(problems).toEqual([]);
+});
+
+test('a right click inspects a tile while a card is selected, and the back key takes the inspection first', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const run = playableRun();
+
+  await open(page, run.seed, 'PH_LongDeck');
+  for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
+
+  const opened = await chronicleOf(page);
+  const index = atNothing(opened);
+  const home = await onScreen(page, `hand-${index}`);
+
+  await page.mouse.click(home.x, home.y);
+  await settled(page);
+  expect(await selected(page, index, home)).toBe(true);
+
+  // The city's own tile: the map centres on it, so the press lands clear of the hand and the bar,
+  // and nothing stands on it this early, so the first card of its cycle is what is built there.
+  const city = await onScreen(page, `tile-${tileKey(opened.city)}`);
+  await page.mouse.click(city.x, city.y, { button: 'right' });
+  await expect.poll(() => shownCard(page)).toBe('building');
+  expect(await selected(page, index, home)).toBe(true);
+  expect((await chronicleOf(page)).hand).toEqual(opened.hand);
+
+  await page.keyboard.press('Escape');
+  await expect.poll(() => shownCard(page)).toBeUndefined();
+  expect(await selected(page, index, home)).toBe(true);
+
+  await page.keyboard.press('Escape');
+  await expect.poll(() => selected(page, index, home)).toBe(false);
+  expect((await chronicleOf(page)).hand).toEqual(opened.hand);
 
   expect(problems).toEqual([]);
 });

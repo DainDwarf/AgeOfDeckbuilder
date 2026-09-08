@@ -240,12 +240,6 @@ test('a click selects a tile, the inspection key steps its cards, and the back k
   await expect.poll(() => shownCard(page)).toBe('unit');
   expect(await ringedTile(page)).toBe(cityTile);
 
-  // A click on the tile already selected selects nothing afresh, and the card stands.
-  await page.mouse.click(city.x, city.y);
-  await answered(page);
-  expect(await shownCard(page)).toBe('unit');
-  expect(await ringedTile(page)).toBe(cityTile);
-
   // One step per press of the back key: the infopanel first, the ring after it.
   await page.keyboard.press('Escape');
   await expect.poll(() => shownCard(page)).toBeUndefined();
@@ -266,6 +260,12 @@ test('a click selects a tile, the inspection key steps its cards, and the back k
   await answered(page);
   expect(await shownCard(page)).toBe('terrain');
 
+  // A click on the tile already selected selects nothing afresh, and the card stands.
+  await page.mouse.click(bare.x, bare.y);
+  await answered(page);
+  expect(await shownCard(page)).toBe('terrain');
+  expect(await ringedTile(page)).toBe(bareTile);
+
   // A click on another tile selects it, and the inspection standing on the last one is let go of.
   await page.mouse.click(city.x, city.y);
   await expect.poll(() => ringedTile(page)).toBe(cityTile);
@@ -280,7 +280,7 @@ test('a click selects a tile, the inspection key steps its cards, and the back k
   expect(problems).toEqual([]);
 });
 
-test('a right click selects and inspects in the one press, steps on where it stands, and shows no browser menu', async ({
+test('a right click inspects and never selects, shows no browser menu, and the inspection key moves the inspection to the selection', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -288,31 +288,48 @@ test('a right click selects and inspects in the one press, steps on where it sta
 
   await open(page, run.seed, 'PH_Deck');
   const bare = await onScreen(page, `tile-${run.key}`);
-  const city = await chronicleOf(page).then((chronicle) =>
-    onScreen(page, `tile-${tileKey(chronicle.city)}`),
-  );
+  const cityTile = await chronicleOf(page).then((chronicle) => tileKey(chronicle.city));
+  const city = await onScreen(page, `tile-${cityTile}`);
 
   await watchBrowserMenu(page);
   await page.mouse.click(bare.x, bare.y, { button: 'right' });
   await expect.poll(() => shownCard(page)).toBe('terrain');
-  expect(await ringedTile(page)).toBe(run.key);
+  expect(await ringedTile(page)).toBeUndefined();
   await expect.poll(() => browserMenu(page)).toBe(true);
 
   // Nothing stands on it and nothing is built on it: its terrain card is the whole of its cycle.
   await page.mouse.click(bare.x, bare.y, { button: 'right' });
   await answered(page);
   expect(await shownCard(page)).toBe('terrain');
-  expect(await ringedTile(page)).toBe(run.key);
+  expect(await ringedTile(page)).toBeUndefined();
 
   // The press carried the map nowhere either: the tile stands where it stood.
   const after = await onScreen(page, `tile-${run.key}`);
   expect(after.x).toBeCloseTo(bare.x, 0);
   expect(after.y).toBeCloseTo(bare.y, 0);
 
-  await page.mouse.click(city.x - 440 * city.unit, city.y - 160 * city.unit, { button: 'right' });
-  await expect.poll(() => ringedTile(page)).toBeUndefined();
+  // One left click on the city's own tile selects it; a second would enter city mode.
+  await page.mouse.click(city.x, city.y);
+  await expect.poll(() => ringedTile(page)).toBe(cityTile);
   expect(await shownCard(page)).toBeUndefined();
+
+  await page.mouse.click(bare.x, bare.y, { button: 'right' });
+  await expect.poll(() => shownCard(page)).toBe('terrain');
+  expect(await ringedTile(page)).toBe(cityTile);
+
+  // Up and left of the city: inside the map's frame, which starts under the resource bar, and far
+  // enough out for the nearest tile to be well outside the map's disc.
+  await page.mouse.click(city.x - 440 * city.unit, city.y - 160 * city.unit, { button: 'right' });
+  await expect.poll(() => shownCard(page)).toBeUndefined();
+  expect(await ringedTile(page)).toBe(cityTile);
   expect(await standing(page, 'menu')).toBe(false);
+
+  // Nothing stands on the city this early, so the first card of its cycle is what is built there.
+  await page.mouse.click(bare.x, bare.y, { button: 'right' });
+  await expect.poll(() => shownCard(page)).toBe('terrain');
+  await page.keyboard.press('i');
+  await expect.poll(() => shownCard(page)).toBe('building');
+  expect(await ringedTile(page)).toBe(cityTile);
 
   expect(problems).toEqual([]);
 });
