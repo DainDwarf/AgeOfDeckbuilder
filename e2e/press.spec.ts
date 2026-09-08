@@ -9,9 +9,12 @@ import {
   aimLine,
   atTile,
   atTileRun,
+  besideTheCards,
   browse,
   budget,
+  cardOf,
   chronicleOf,
+  click,
   dragOut,
   dragUnit,
   endTurn,
@@ -23,6 +26,7 @@ import {
   onScreen,
   open,
   playedOut,
+  ringed,
   scrolled,
   selected,
   settled,
@@ -457,6 +461,82 @@ test('the inspection key shows the selected card large, and the back key leaves 
   await expect.poll(() => standing(page, 'inspection')).toBe(false);
   expect(await selected(page, index, home)).toBe(true);
   expect((await chronicleOf(page)).hand).toEqual(opened.hand);
+
+  expect(problems).toEqual([]);
+});
+
+test('a right press beside the card shown large takes it down and leaves the card selected in the hand', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const run = playableRun();
+
+  await open(page, run.seed, 'PH_LongDeck');
+  for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
+
+  const opened = await chronicleOf(page);
+  const index = atNothing(opened);
+  const home = await onScreen(page, `hand-${index}`);
+
+  await page.mouse.click(home.x, home.y);
+  await settled(page);
+  expect(await selected(page, index, home)).toBe(true);
+
+  await page.mouse.click(home.x, home.y, { button: 'right' });
+  await expect.poll(() => cardOf(page, 'inspection')).toBe(opened.hand[index]);
+
+  // A card has but the one card, so a second right click on the card shown large steps nothing.
+  const large = await onScreen(page, 'inspection');
+  await page.mouse.click(large.x, large.y, { button: 'right' });
+  await settled(page);
+  expect(await standing(page, 'inspection')).toBe(true);
+
+  // A left click on the card takes it down, as one beside it does.
+  await page.mouse.click(large.x, large.y);
+  await expect.poll(() => standing(page, 'inspection')).toBe(false);
+  expect(await selected(page, index, home)).toBe(true);
+
+  await page.mouse.click(home.x, home.y, { button: 'right' });
+  await expect.poll(() => standing(page, 'inspection')).toBe(true);
+
+  const away = await besideTheCards(page);
+  await page.mouse.click(away.x, away.y, { button: 'right' });
+  await expect.poll(() => standing(page, 'inspection')).toBe(false);
+  expect(await selected(page, index, home)).toBe(true);
+  expect((await chronicleOf(page)).hand).toEqual(opened.hand);
+
+  expect(problems).toEqual([]);
+});
+
+test('a right press beside the cards drops the card a browse shows large, and does nothing while none stands', async ({
+  page,
+}) => {
+  const problems = watch(page);
+
+  await open(page, 1, 'PH_LongDeck');
+  const before = await chronicleOf(page);
+  await browse(page, 'draw-pile');
+
+  await click(page, 'browse-card-0');
+  await expect.poll(() => ringed(page, 'browse-card-0')).toBe(true);
+
+  // Nothing stands large, so the right press beside the cards has nothing to take down.
+  const away = await besideTheCards(page);
+  await page.mouse.click(away.x, away.y, { button: 'right' });
+  await settled(page);
+  expect(await standing(page, 'browse')).toBe(true);
+  expect(await ringed(page, 'browse-card-0')).toBe(true);
+
+  const other = await onScreen(page, 'browse-card-1');
+  await page.mouse.click(other.x, other.y, { button: 'right' });
+  await expect.poll(() => standing(page, 'inspection')).toBe(true);
+  expect(await standing(page, 'browse')).toBe(false);
+
+  await page.mouse.click(away.x, away.y, { button: 'right' });
+  await expect.poll(() => standing(page, 'browse')).toBe(true);
+  expect(await standing(page, 'inspection')).toBe(false);
+  expect(await ringed(page, 'browse-card-0')).toBe(true);
+  expect(await chronicleOf(page)).toEqual(before);
 
   expect(problems).toEqual([]);
 });

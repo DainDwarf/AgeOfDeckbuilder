@@ -228,12 +228,27 @@ export function createOverlay(
     wipe();
     cover();
     carried = { stands: 'inspection', over };
+    const height = Math.round(INSPECTION_WIDTH * 1.4);
     const { root } = createCardFace(scene, id, refusal, { width: INSPECTION_WIDTH });
     root
       .setName('inspection')
       .setData('card', id)
-      .setPosition(DESIGN_WIDTH / 2, (DESIGN_HEIGHT + Math.round(INSPECTION_WIDTH * 1.4)) / 2)
-      .setDepth(SCRIM_DEPTH + 1);
+      .setPosition(DESIGN_WIDTH / 2, (DESIGN_HEIGHT + height) / 2)
+      .setDepth(SCRIM_DEPTH + 1)
+      // The card takes both presses off the scrim beneath: the left one is answered below, as the
+      // scrim answers one beside it, and the right one is swallowed.
+      .setInteractive({
+        hitArea: new Phaser.Geom.Rectangle(
+          -INSPECTION_WIDTH / 2,
+          -height,
+          INSPECTION_WIDTH,
+          height,
+        ),
+        hitAreaCallback: Phaser.Geom.Rectangle.Contains,
+      });
+    onClick(root, () => {
+      dropInspection(over);
+    });
     shown.push(root);
   };
 
@@ -515,6 +530,12 @@ export function createOverlay(
     else showDefeat(fallen);
   };
 
+  /** The card shown large taken down, onto what it was taken off: the one path, whichever press. */
+  const dropInspection = (over: Offering | undefined): void => {
+    if (over === undefined) close();
+    else raise(over);
+  };
+
   const back = (): boolean => {
     if (carried === undefined) return false;
     switch (carried.stands) {
@@ -524,12 +545,9 @@ export function createOverlay(
         else showWindow(step);
         return true;
       }
-      case 'inspection': {
-        const over = carried.over;
-        if (over === undefined) close();
-        else raise(over);
+      case 'inspection':
+        dropInspection(carried.over);
         return true;
-      }
       case 'browse':
         if (carried.selected === undefined) close();
         else ring(carried, undefined);
@@ -545,6 +563,24 @@ export function createOverlay(
   onClick(scrim, () => {
     back();
   });
+
+  onClick(
+    scrim,
+    () => {
+      if (carried === undefined) return;
+      switch (carried.stands) {
+        case 'inspection':
+          dropInspection(carried.over);
+          return;
+        case 'browse':
+        case 'aim-window':
+        case 'window':
+        case 'defeat':
+          return;
+      }
+    },
+    'right',
+  );
 
   scene.input.on(
     'wheel',

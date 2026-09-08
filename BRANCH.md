@@ -14,10 +14,6 @@ with it.
 
 ## Lines
 
-- **A right press beside the card shown large drops it** — a right click on the scrim while a card
-  stands large takes the card down as the back key would, leaving what it stood over — the browse
-  with its selection, the aim window, the card selected in the hand — as it stands; a right click
-  on the scrim with nothing shown large does nothing. E2e on `e2e/press.spec.ts`. Doc-impact: none.
 - **City mode selects, then acts** — a left click in city mode selects the tile as anywhere else,
   lighting no unit and moving none; a second click on the selection is the city's act on it: a
   claim, after which the tile stays selected, or an inhabitant assigned and unassigned by turns,
