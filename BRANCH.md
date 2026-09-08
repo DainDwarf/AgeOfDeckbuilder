@@ -20,6 +20,10 @@ with it.
   window. With it, what the scrim carries becomes one discriminated value in place of the flags
   each raise sets by hand, and the grid's press callback takes the press instead of the grid
   handing back its frame. E2e on `e2e/browse.spec.ts`. Doc-impact: none.
+- **The aim window names its card** — the aim window's title says which card is being aimed at the
+  discard pile and what it is played at, in place of the pile's count title the browse uses; the
+  verb is settled at the pitch against the glossary. An e2e on `e2e/recall.spec.ts` reads the title.
+  Doc-impact: `docs/DESIGN.md`, `docs/GLOSSARY.md` if the verb is new.
 - **City mode selects, then acts** — a left click in city mode selects the tile as anywhere else,
   lighting no unit and moving none; a second click on the selection is the city's act on it: a
   claim, after which the tile stays selected, or an inhabitant assigned and unassigned by turns,
