@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { claimable, type Stage, type UnitCommand } from '../rules/chronicle';
+import { type Cost, claimable, type Stage, type UnitCommand } from '../rules/chronicle';
 import {
   type BuildingTypeId,
   CITY_TILE,
@@ -274,10 +274,10 @@ export type MapView = {
   ): void;
   /**
    * Rings the selected tile and lights what the unit of the player's on it can do, or clears both.
-   * `culture` is the threshold the tile wears in its middle, over everything else it carries and in
+   * `cost` is the threshold the tile wears in its middle, over everything else it carries and in
    * place of its yield glyphs; nothing leaves it bare.
    */
-  markSelected(tile: TileCoords | undefined, culture: number | undefined): void;
+  markSelected(tile: TileCoords | undefined, cost: Cost | undefined): void;
   /** Where a tile's face stands, for whatever floats beside a tile no press picked out. */
   faceOf(tile: TileCoords): TileFace;
   /** The face the map draws of a tile, and nothing at all for a tile it draws none of. */
@@ -346,18 +346,17 @@ export function unitMark(
 }
 
 // Phaser's WebGL stroke skips a polygon point whose origin-shifted position lands on the raw point
-// before it, which a centred diamond always has once, whatever order its corners are given in:
-// every diamond below is a square turned, never a polygon, or its outline comes out open and cut
-// across.
+// before it, which a centred diamond always has once, whatever order its corners are given in: a
+// square turned is the only shape that outlines whole, a polygon comes out open and cut across.
+/** The one way a diamond is drawn: `span` corner to corner, in the colour given. */
+function diamond(scene: Phaser.Scene, span: number, colour: number): Phaser.GameObjects.Rectangle {
+  const side = span / Math.SQRT2;
+  return scene.add.rectangle(0, 0, side, side, colour).setStrokeStyle(1, OUTLINE).setAngle(45);
+}
 
 /** The one way a point of yield is drawn: a diamond in the colour its resource is known by. */
 function yieldMark(scene: Phaser.Scene, resource: Resource): Phaser.GameObjects.Rectangle {
-  const side = GLYPH / Math.SQRT2;
-  return scene.add
-    .rectangle(0, 0, side, side, RESOURCE_COLOURS[resource])
-    .setStrokeStyle(1, OUTLINE)
-    .setAngle(45)
-    .setName(`yield-${resource}`);
+  return diamond(scene, GLYPH, RESOURCE_COLOURS[resource]).setName(`yield-${resource}`);
 }
 
 /**
@@ -376,32 +375,29 @@ function ringMark(
 
 /** The one way an assigned tile is marked: a diamond in the colour population is known by. */
 function assignedMark(scene: Phaser.Scene): Phaser.GameObjects.Rectangle {
-  const side = ASSIGNED_GLYPH / Math.SQRT2;
-  return scene.add
-    .rectangle(0, 0, side, side, RESOURCE_COLOURS.population)
-    .setStrokeStyle(1, OUTLINE)
-    .setAngle(45)
-    .setName('assigned');
+  return diamond(scene, ASSIGNED_GLYPH, RESOURCE_COLOURS.population).setName('assigned');
 }
 
 /**
- * The one way the culture a claim asks for stands on its tile: the threshold as a minus and its
- * number, culture's own diamond beside it, the pair centred on the tile's middle.
+ * The one way what a claim asks for stands on its tile: the threshold as a minus and its number,
+ * its resource's own diamond beside it, the pair centred on the tile's middle.
  */
 function thresholdMark(
   scene: Phaser.Scene,
   coord: TileCoords,
-  culture: number,
+  cost: Cost,
   resolution: number,
 ): Phaser.GameObjects.Container {
-  const number = addText(scene, 0, 0, text('threshold.culture', { culture }), THRESHOLD_STYLE)
+  const number = addText(
+    scene,
+    0,
+    0,
+    text('threshold.culture', { culture: cost.amount }),
+    THRESHOLD_STYLE,
+  )
     .setResolution(resolution)
     .setOrigin(0.5, 0.5);
-  const side = THRESHOLD_GLYPH / Math.SQRT2;
-  const glyph = scene.add
-    .rectangle(0, 0, side, side, RESOURCE_COLOURS.culture)
-    .setStrokeStyle(1, OUTLINE)
-    .setAngle(45);
+  const glyph = diamond(scene, THRESHOLD_GLYPH, RESOURCE_COLOURS[cost.resource]);
 
   const width = number.width + THRESHOLD_GAP + THRESHOLD_GLYPH;
   number.setX((number.width - width) / 2);
@@ -817,12 +813,14 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
   let marking = false;
 
   /** The tile wearing the culture threshold and what it asks for; nothing while no tile wears one. */
-  let threshold: { readonly tile: TileCoords; readonly culture: number } | undefined;
+  let threshold: { readonly tile: TileCoords; readonly cost: Cost } | undefined;
 
   /**
    * What the dim is laid under rather than over: the ring on the selected tile, the tiles glowed
    * under it and the glow a card is aimed by, which the player answers the overlay with. Everything
-   * else the map draws dims, so these are lifted only while the dim stands.
+   * else the map draws dims, so these are lifted only while the dim stands. The threshold is not
+   * here and never dims either: it stands at THRESHOLD_DEPTH, over the units and the fog whether a
+   * dim is up or not.
    */
   const overDim = new Set<Phaser.GameObjects.Container>([selected, lighted]);
 
@@ -969,7 +967,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
     thresholds.removeAll(true);
     if (threshold === undefined) return;
     const resolution = Math.ceil(renderFactor() * zoom);
-    thresholds.add(thresholdMark(scene, threshold.tile, threshold.culture, resolution));
+    thresholds.add(thresholdMark(scene, threshold.tile, threshold.cost, resolution));
   };
 
   // The design space re-rasterises every text the scene holds at its own factor when the window
@@ -1403,10 +1401,10 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
       });
     },
 
-    markSelected(tile: TileCoords | undefined, culture: number | undefined): void {
+    markSelected(tile: TileCoords | undefined, cost: Cost | undefined): void {
       selection = tile === undefined ? undefined : { q: tile.q, r: tile.r };
       threshold =
-        culture === undefined || selection === undefined ? undefined : { tile: selection, culture };
+        cost === undefined || selection === undefined ? undefined : { tile: selection, cost };
       selected.removeAll(true);
       selected.setData('tile', tile === undefined ? undefined : tileKey(tile));
       if (tile !== undefined) {

@@ -5,6 +5,7 @@ import {
   apply,
   beginChronicle,
   type Command,
+  type Cost,
   cityCommand,
   costOf,
   outcome,
@@ -186,14 +187,14 @@ export class ChronicleScene extends Phaser.Scene {
     };
 
     /**
-     * The culture a claim on the tile selected in city mode asks for, which the tile wears from the
-     * moment it is selected. A tile the city holds asks for nothing and a tile it has no act on
-     * answers nothing, so neither wears anything; nor does any tile outside city mode.
+     * What a claim on the tile selected in city mode asks for, which the tile wears from the moment
+     * it is selected. A tile the city holds asks for nothing and a tile it has no act on answers
+     * nothing, so neither wears anything; nor does any tile outside city mode.
      */
-    const thresholdOn = (found: PressedTile | undefined): number | undefined => {
+    const thresholdOn = (found: PressedTile | undefined): Cost | undefined => {
       if (!cityMode || found === undefined) return undefined;
       if (tileRefusal(this.current, found.tile) === undefined) return undefined;
-      return tileCost(this.current, found.tile)[0]?.amount;
+      return tileCost(this.current, found.tile).find(({ resource }) => resource === 'culture');
     };
 
     /**
