@@ -98,10 +98,9 @@ const CLAIMS_PER_RISE = 3;
  * A step that carries nothing but the chronicle it left. `played` is the card gone from the hand
  * with its cost paid, `refused` is the command the rules turned down, `assign` is an inhabitant put
  * on a tile, taken off one, or taken off one and put on another, `claim` is a tile bought with
- * culture and taken inside the border,
- * `grow` is the food stock spent on one more inhabitant, `turn` is the tick, where every unit's move
- * points and action are refreshed, `events` is what the schedule lands, and `capture` is the city
- * falling to an enemy that stood on its tile.
+ * culture and taken inside the border, `grow` is the food stock spent on one more inhabitant,
+ * `turn` is the tick, where every unit's move points and action are refreshed, `events` is what
+ * the schedule lands, and `capture` is the city falling to an enemy that stood on its tile.
  */
 export type PlainStage =
   | 'played'

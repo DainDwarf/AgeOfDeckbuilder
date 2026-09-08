@@ -517,6 +517,16 @@ function glowTile(
 }
 
 /**
+ * What one left press has hold of on the map — a unit by the number it is named by, or an inhabitant
+ * by the tile it is assigned to — with where the press landed and whether it has come past the slack
+ * that tells a drag from a click. A press holds one of them or nothing at all.
+ */
+type Grab = { readonly from: { x: number; y: number }; dragging: boolean } & (
+  | { readonly kind: 'unit'; readonly unit: number }
+  | { readonly kind: 'inhabitant'; readonly tile: TileCoords }
+);
+
+/**
  * The map and everything standing on it, on a surface of its own that pans and zooms under the UI.
  * Every layer of every tile, the border and the units are redrawn on each state change; and a card
  * is aimed here — the rules say which tiles light up, never this file.
@@ -582,18 +592,31 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
   /** The mark drawn on each tile an inhabitant stands on while city mode is on, by its tile's key. */
   let assignedMarks = new Map<string, Phaser.GameObjects.Rectangle>();
 
-  /**
-   * The tile whose inhabitant a left press in city mode has hold of, where the press landed, and
-   * whether it has been dragged. It stands beside the marks it carries one of, and goes with them.
-   */
-  let lifted: { tile: TileCoords; from: { x: number; y: number }; dragging: boolean } | undefined;
+  /** What the left press on the map has hold of; nothing while it holds nothing. */
+  let grabbed: Grab | undefined;
 
-  /** The mark the press has hold of, back on the tile its inhabitant stands on. */
-  const layDown = (): void => {
-    if (lifted === undefined) return;
-    const home = assignedAt(lifted.tile);
-    assignedMarks.get(tileKey(lifted.tile))?.setPosition(home.x, home.y);
+  /**
+   * What the press has hold of, back where the map draws it standing: the unit on the tile it stands
+   * on, the inhabitant under the tile it is assigned to.
+   */
+  const bringHome = (): void => {
+    if (grabbed === undefined) return;
+    switch (grabbed.kind) {
+      case 'unit': {
+        const standing = shown === undefined ? undefined : unitOf(shown.units, grabbed.unit);
+        if (standing === undefined) return;
+        const home = positionOf(standing.tile);
+        markers.get(grabbed.unit)?.setPosition(home.x, home.y);
+        return;
+      }
+      case 'inhabitant': {
+        const home = assignedAt(grabbed.tile);
+        assignedMarks.get(tileKey(grabbed.tile))?.setPosition(home.x, home.y);
+        return;
+      }
+    }
   };
+
   let presser: Phaser.GameObjects.Zone | undefined;
   /** Where the map reports a press; an aim reports its right press through it too. */
   let report: ((found: PressedTile | undefined, press: Press) => void) | undefined;
@@ -1363,36 +1386,23 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
       const catcher = catcherZone('press');
       presser = catcher;
 
-      /** The unit a left press has hold of, where it landed, and whether it has been dragged. */
-      let grabbed: { unit: number; from: { x: number; y: number }; dragging: boolean } | undefined;
-
       /** Whether a press has come far enough to be a drag; it stays one once it has. */
-      const travelled = (
-        grab: { readonly from: { x: number; y: number }; dragging: boolean },
-        pointer: Phaser.Input.Pointer,
-      ): boolean => {
+      const travelled = (grab: Grab, pointer: Phaser.Input.Pointer): boolean => {
         if (!grab.dragging && !dragged(scene, grab.from, pointer)) return false;
         grab.dragging = true;
         return true;
       };
 
-      /** The marker of the unit the press has hold of, back on the tile that unit stands on. */
-      const bringHome = (): void => {
-        if (grabbed === undefined || shown === undefined) return;
-        const held = unitOf(shown.units, grabbed.unit);
-        if (held === undefined) return;
-        const home = positionOf(held.tile);
-        markers.get(grabbed.unit)?.setPosition(home.x, home.y);
-      };
-
       const carry = (pointer: Phaser.Input.Pointer): void => {
-        if (grabbed === undefined && lifted === undefined) return;
+        if (grabbed === undefined || !travelled(grabbed, pointer)) return;
         const at = map.at(pointer.x, pointer.y);
-        if (grabbed !== undefined && travelled(grabbed, pointer)) {
-          markers.get(grabbed.unit)?.setPosition(at.x, at.y);
-        }
-        if (lifted !== undefined && travelled(lifted, pointer)) {
-          assignedMarks.get(tileKey(lifted.tile))?.setPosition(at.x, at.y);
+        switch (grabbed.kind) {
+          case 'unit':
+            markers.get(grabbed.unit)?.setPosition(at.x, at.y);
+            return;
+          case 'inhabitant':
+            assignedMarks.get(tileKey(grabbed.tile))?.setPosition(at.x, at.y);
+            return;
         }
       };
       scene.input.on('pointermove', carry);
@@ -1400,9 +1410,21 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
       const letGo = (): void => {
         bringHome();
         grabbed = undefined;
-        layDown();
-        lifted = undefined;
         lightUnit(selection);
+      };
+
+      /** The step or the attack a release on a tile is for the unit the map has lit, and nothing else. */
+      const commandUnitOn = (unit: number, on: TileCoords): boolean => {
+        if (lit?.unit !== unit) return false;
+        if (lit.landings.some((landing) => same(landing.tile, on))) {
+          commanded({ type: 'move', unit, tile: on });
+          return true;
+        }
+        if (lit.targets.some((coord) => same(coord, on))) {
+          commanded({ type: 'attack', unit, tile: on });
+          return true;
+        }
+        return false;
       };
 
       takePress(catcher, {
@@ -1411,60 +1433,55 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
           const at = map.at(pointer.x, pointer.y);
           const under = tileUnder(at.x, at.y);
           if (under === undefined) return true;
+          const from = { x: pointer.x, y: pointer.y };
           if (marking) {
-            if (!assignedMarks.has(tileKey(under))) return true;
-            lifted = { tile: under, from: { x: pointer.x, y: pointer.y }, dragging: false };
+            if (!assignedTo(shown, under)) return true;
+            grabbed = { kind: 'inhabitant', tile: under, from, dragging: false };
             return false;
           }
           const standing = unitAt(shown.units, under);
           if (standing?.faction !== 'player') return true;
-          grabbed = { unit: standing.id, from: { x: pointer.x, y: pointer.y }, dragging: false };
+          grabbed = { kind: 'unit', unit: standing.id, from, dragging: false };
           lightUnit(under);
           return false;
         },
         release: (pointer, press) => {
           const at = map.at(pointer.x, pointer.y);
           const on = tileUnder(at.x, at.y);
-          const held = grabbed;
-          if (held !== undefined) {
-            bringHome();
-            grabbed = undefined;
-          }
-          const carried = lifted;
-          if (carried !== undefined) {
-            layDown();
-            lifted = undefined;
+          const holding = grabbed;
+          if (holding === undefined) {
+            if (press === 'left' && on !== undefined && lit !== undefined) {
+              if (commandUnitOn(lit.unit, on)) return;
+            }
+            pressed(on === undefined ? undefined : pressedOn(on), press);
+            return;
           }
 
-          if (carried !== undefined && on !== undefined && shown !== undefined) {
-            const command = cityDrag(shown, carried.tile, on);
-            if (command !== undefined) {
-              reassigned(command);
-              return;
+          bringHome();
+          grabbed = undefined;
+          switch (holding.kind) {
+            case 'unit':
+              if (on !== undefined && commandUnitOn(holding.unit, on)) return;
+              lightUnit(selection);
+              break;
+            case 'inhabitant': {
+              const command =
+                on === undefined || shown === undefined
+                  ? undefined
+                  : cityDrag(shown, holding.tile, on);
+              if (command !== undefined) {
+                reassigned(command);
+                return;
+              }
+              break;
             }
           }
 
-          const acting = held?.unit ?? (press === 'left' ? lit?.unit : undefined);
-          if (acting !== undefined && on !== undefined && lit?.unit === acting) {
-            if (lit.landings.some((landing) => same(landing.tile, on))) {
-              commanded({ type: 'move', unit: acting, tile: on });
-              return;
-            }
-            if (lit.targets.some((coord) => same(coord, on))) {
-              commanded({ type: 'attack', unit: acting, tile: on });
-              return;
-            }
-          }
-
-          if (held !== undefined) {
-            lightUnit(selection);
-            if (held.dragging) return;
-          }
-          if (carried?.dragging === true) return;
+          if (holding.dragging) return;
           pressed(on === undefined ? undefined : pressedOn(on), press);
         },
         abandon: () => {
-          if (grabbed !== undefined || lifted !== undefined) letGo();
+          if (grabbed !== undefined) letGo();
         },
       });
     },
@@ -1501,9 +1518,18 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
     showCityMarks(on: boolean): void {
       marking = on;
       // A key leaves the mode under a press still holding an inhabitant, and the release of that
-      // press is a whole scene away: the hold goes with the marks it carries one of.
-      layDown();
-      lifted = undefined;
+      // press is a whole scene away: that hold is the mode's and goes with its marks, while a
+      // unit's is held outside the mode and stands.
+      if (grabbed !== undefined) {
+        switch (grabbed.kind) {
+          case 'unit':
+            break;
+          case 'inhabitant':
+            bringHome();
+            grabbed = undefined;
+            break;
+        }
+      }
       paintCityMarks();
       paintYields();
       lightUnit(selection);

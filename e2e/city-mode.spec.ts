@@ -21,7 +21,6 @@ import {
   glyphsOf,
   marksIn,
   noGlyphs,
-  onScreen,
   open,
   playedOut,
   refusalLines,
@@ -43,7 +42,7 @@ const TOUCHING = { at: { q: 1, r: -2 }, key: '1,-2' };
 const FAR = { at: { q: 1, r: -3 }, key: '1,-3' };
 
 /** A tile the city holds, and an inhabitant stands on from the founding. */
-const HELD = { at: { q: 0, r: -1 }, name: 'tile-0,-1', key: '0,-1' };
+const HELD = { at: { q: 0, r: -1 }, key: '0,-1' };
 
 /** Another one of them, on the other side of the city: what a drag carries an inhabitant from. */
 const WORKED = { at: { q: 0, r: 1 }, key: '0,1' };
@@ -296,7 +295,7 @@ test('city mode marks every tile an inhabitant stands on, and a second click on 
   expect(await counted(page, 'assigned')).toBe(FOUNDED);
   expect(await counted(page, 'city-dim')).toBe(0);
 
-  const held = await onScreen(page, HELD.name);
+  const held = await tileOnScreen(page, HELD.at);
   await page.mouse.click(held.x, held.y);
   await expect.poll(() => ringedTile(page)).toBe(HELD.key);
   expect(await counted(page, 'assigned')).toBe(FOUNDED);
@@ -342,7 +341,7 @@ test('a drag in city mode carries the inhabitant onto the tile the city holds an
   await page.keyboard.press('c');
   await expect.poll(() => inCityMode(page)).toBe(true);
 
-  const held = await onScreen(page, HELD.name);
+  const held = await tileOnScreen(page, HELD.at);
   await page.mouse.click(held.x, held.y);
   await expect.poll(() => ringedTile(page)).toBe(HELD.key);
   await page.mouse.click(held.x, held.y);
@@ -376,7 +375,7 @@ test('a drag in city mode let go anywhere else changes nothing and leaves the se
   await page.keyboard.press('c');
   await expect.poll(() => inCityMode(page)).toBe(true);
 
-  const held = await onScreen(page, HELD.name);
+  const held = await tileOnScreen(page, HELD.at);
   await page.mouse.click(held.x, held.y);
   await expect.poll(() => ringedTile(page)).toBe(HELD.key);
   const before = await chronicleOf(page);

@@ -81,8 +81,8 @@ export function holds(chronicle: Chronicle, tile: TileCoords): boolean {
 }
 
 /**
- * Whether an inhabitant stands on the tile: what an assign, a drag in city mode and the mark the map
- * puts on a tile all ask.
+ * Whether an inhabitant stands on the tile: what an assign, both ends of a drag in city mode and the
+ * mark the map puts on a tile all ask.
  */
 export function assignedTo(chronicle: Chronicle, tile: TileCoords): boolean {
   return chronicle.assigned.some((coord) => tileKey(coord) === tileKey(tile));

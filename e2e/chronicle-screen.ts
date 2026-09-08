@@ -668,8 +668,9 @@ export async function dragOut(page: Page, index: number): Promise<void> {
 }
 
 /**
- * The gesture that commands a unit by hand: the press takes hold of it on the tile it stands on and
- * lets it go on another, and whatever that release commands plays out from there.
+ * The gesture that carries what one tile holds onto another: the press takes hold on the tile it
+ * lands on and lets go on the tile it ends on, and whatever that release commands plays out from
+ * there.
  */
 export async function dragTiles(page: Page, from: TileCoords, to: TileCoords): Promise<void> {
   const held = await onScreen(page, `tile-${tileKey(from)}`);
