@@ -16,6 +16,9 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
   of the three presses and the lines that make the code agree; the branch merges into `main` when
   it holds no line, and this line and that file go with the merge. Doc-impact: `docs/DESIGN.md`,
   `docs/GLOSSARY.md`.
+- **The selection ring stands over fog and city mode's dim** — the ring on the selected tile is
+  drawn undarkened over a tile in fog and over a held tile nobody works in city mode, as it is over
+  the yield overlay's dim. Checked through `visual-check`. Doc-impact: `docs/DESIGN.md`.
 - **Movement costs what the tile says** — the flat one-per-tile goes; every terrain names its
   movement cost and `reachable` charges it, so the map's and the units' sections of the design
   agree on one rule. Rules tests on a fixed seed. Doc-impact: `docs/DESIGN.md`, `docs/GLOSSARY.md`.
