@@ -106,16 +106,16 @@ type Browsing = {
 /** The aim window on the scrim, over what it offers. */
 type AimWindow = { readonly stands: 'aim-window'; readonly aim: Aiming };
 
-/** What a card shown large was taken off, and nothing when it came from the hand. */
-type Under = Browsing | AimWindow;
+/** The two windows that offer cards, which a card shown large is taken off. */
+type Offering = Browsing | AimWindow;
 
 /**
  * What the scrim carries: a pile's cards, the aim window, one card shown large over what it was
  * taken off, a window of the menu, or the defeat screen.
  */
 type Carried =
-  | Under
-  | { readonly stands: 'inspection'; readonly over: Under | undefined }
+  | Offering
+  | { readonly stands: 'inspection'; readonly over: Offering | undefined }
   | { readonly stands: 'window'; readonly which: MenuWindow; readonly laid: Opened }
   | { readonly stands: 'defeat' };
 
@@ -219,7 +219,7 @@ export function createOverlay(
     covering(true);
   };
 
-  const showInspection = (id: CardId, refusal: Refusal, over: Under | undefined): void => {
+  const showInspection = (id: CardId, refusal: Refusal, over: Offering | undefined): void => {
     wipe();
     cover();
     carried = { stands: 'inspection', over };
@@ -412,7 +412,7 @@ export function createOverlay(
   };
 
   /** A browse or the aim window raised again, as the card it was showing large is put back. */
-  const raise = (what: Under): void => {
+  const raise = (what: Offering): void => {
     switch (what.stands) {
       case 'browse':
         showBrowse(what);

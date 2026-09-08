@@ -146,6 +146,7 @@ test('a click rings a browsed card, a right click and the inspection key show it
   await page.mouse.click(away.x, away.y);
   await expect.poll(() => standing(page, 'browse')).toBe(false);
 
+  // The selection dies with the window.
   await browse(page, 'draw-pile');
   expect(await ringed(page, selection)).toBe(false);
 
@@ -156,10 +157,6 @@ test('a click rings a browsed card, a right click and the inspection key show it
   expect(await standing(page, 'browse')).toBe(true);
   await page.keyboard.press('Escape');
   await expect.poll(() => standing(page, 'browse')).toBe(false);
-
-  // The selection dies with the window.
-  await browse(page, 'draw-pile');
-  expect(await ringed(page, 'browse-card-0')).toBe(false);
 
   expect(await chronicleOf(page)).toEqual(before);
   expect(problems).toEqual([]);
