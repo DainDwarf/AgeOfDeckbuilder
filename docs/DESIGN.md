@@ -414,10 +414,11 @@ and a tile in fog shows what it yielded when it was last seen. Pressing one of t
 on the resource bar toggles that resource in or out of the overlay, several at a time, and the
 reading of a resource shown is latched down in the bar; the **yield key** clears the overlay, or,
 from nothing, shows every resource, culture included, and a window standing over the chronicle
-screen takes the key instead. Four things stand over the dim, undimmed: the culture threshold the
-selected tile wears, the tiles lit under the ring, the infopanel of the tile being inspected, and
-the tiles a card is aimed at. It is a display and not a mode: the back key leaves it standing, city
-mode stands with it, and either is entered and left without touching the other.
+screen takes the key instead. The ring stands over this dim as it stands over every other; four
+things more stand over it undimmed: the culture threshold the selected tile wears, the tiles lit
+under the ring, the infopanel of the tile being inspected, and the tiles a card is aimed at. It is a
+display and not a mode: the back key leaves it standing, city mode stands with it, and either is
+entered and left without touching the other.
 
 ### The map ✅
 

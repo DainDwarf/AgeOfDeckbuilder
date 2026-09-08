@@ -876,11 +876,11 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
   let threshold: { readonly tile: TileCoords; readonly cost: Cost } | undefined;
 
   /**
-   * What the dim is laid under rather than over: the tiles glowed under the selection and the glow
-   * a card is aimed by, which the player answers the overlay with. Everything else the map draws
-   * dims, so these are lifted only while the dim stands. The ring on the selected tile and the
-   * threshold are not here and never dim either: they stand at SELECTED_DEPTH and THRESHOLD_DEPTH,
-   * over the units, the fog and city mode's dim whether the overlay's dim is up or not.
+   * What the dim is laid under rather than over: the tiles lit and the units glowed under the
+   * selection, and the glow a card is aimed by, which the player answers the overlay with.
+   * Everything else the map draws dims, so these are lifted only while the dim stands. The ring on
+   * the selected tile and the threshold are deliberately not here; they stand at depths of their
+   * own.
    */
   const overDim = new Set<Phaser.GameObjects.Container>([lighted]);
 
