@@ -14,13 +14,6 @@ with it.
 
 ## Lines
 
-- **City mode selects, then acts** — a left click in city mode selects the tile as anywhere else,
-  lighting no unit and moving none; a second click on the selection is the city's act on it: a
-  claim, after which the tile stays selected, or an inhabitant assigned and unassigned by turns,
-  the city's own tile among the tiles it works; a claimable tile selected shows its culture cost
-  over it in the refusal note before anything is paid, and a refused act adds its reason there; a
-  press beside the tiles drops the selection and the inspection with it. E2e on
-  `e2e/city-mode.spec.ts`. Doc-impact: `docs/DESIGN.md`, `docs/GLOSSARY.md`.
 - **Population drags in city mode** — an inhabitant dragged from the tile it works to a tile the
   city holds and nobody works moves there in the one gesture; let go anywhere else it comes home
   and nothing changes. E2e on

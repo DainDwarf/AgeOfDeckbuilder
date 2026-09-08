@@ -41,7 +41,7 @@ import { onKeyDown } from './keys';
 import { createMapView, type PressedTile } from './map';
 import { createOverlay } from './overlay';
 import { createPiles } from './piles';
-import { createRefusalNote } from './refusal-note';
+import { createRefusalNote, unaffordableCosts } from './refusal-note';
 import { createResourceBar } from './resource-bar';
 import { text } from './text';
 import { createTooltip } from './tooltip';
@@ -112,8 +112,11 @@ export class ChronicleScene extends Phaser.Scene {
     const panel = createInfoPanel(this, map);
     const note = createRefusalNote(this, map);
 
-    /** The tile the ring stands on, and nothing while none is selected; city mode selects none. */
+    /** The tile the ring stands on, and nothing while none is selected. */
     let selection: PressedTile | undefined;
+
+    /** Whether city mode is on: a left click on the selection is the city's act on that tile. */
+    let cityMode = false;
 
     /** The tile the infopanel is inspecting and which of its cards it shows. */
     let inspection: { on: PressedTile; card: number } | undefined;
@@ -183,9 +186,19 @@ export class ChronicleScene extends Phaser.Scene {
     };
 
     /**
+     * What the city's act on the tile selected in city mode asks for, standing over it before
+     * anything is paid: the culture threshold. A tile the city holds asks for nothing and a tile
+     * it has no act on answers nothing, so neither says a word.
+     */
+    const showCost = (found: PressedTile): void => {
+      if (tileRefusal(this.current, found.tile) === undefined) return;
+      note.overTile(tileCost(this.current, found.tile), [], found.at);
+    };
+
+    /**
      * The one place the screen's selection changes: the tile takes the ring, or nothing does, and
-     * the card the hand held and the inspection standing on whatever was selected before are let go
-     * of. The selection is one thing, a tile or a card.
+     * the card the hand held, the inspection standing on whatever was selected before and the note
+     * over it are let go of. The selection is one thing, a tile or a card.
      */
     const select = (found: PressedTile | undefined): void => {
       if (
@@ -196,9 +209,11 @@ export class ChronicleScene extends Phaser.Scene {
         return;
       }
       selection = found;
+      note.hide();
       uninspect();
       hand.unselect();
       view.markSelected(found?.tile);
+      if (cityMode && found !== undefined) showCost(found);
     };
 
     /**
@@ -225,23 +240,24 @@ export class ChronicleScene extends Phaser.Scene {
       inspection = { on, card: stepped };
     };
 
-    /** Whether city mode is on: a tile click acts on the city instead of selecting the tile. */
-    let cityMode = false;
-
     /**
-     * The city acting on the tile a city-mode click landed on: the rules say which command that is,
-     * a click they refuse plays nothing and stands its note over the tile instead, and a tile the
-     * city has no act on takes the click without a word.
+     * The city acting on the tile selected in city mode: the rules say which command that is, an act
+     * they refuse plays nothing and says the cost and the reason over the tile instead, and a tile
+     * the city has no act on takes the press without a word. The tile is selected again once the act
+     * has played out — unless the chronicle screen let that play-out go — so the next press on it is
+     * the next act.
      */
-    const act = (found: PressedTile): void => {
+    const act = async (found: PressedTile): Promise<void> => {
       const refusal = tileRefusal(this.current, found.tile);
       if (refusal === undefined) return;
       const command = cityCommand(this.current, found.tile);
-      if (command !== undefined) {
-        void playOut(command);
+      if (command === undefined) {
+        note.overTile(tileCost(this.current, found.tile), refusal.blocked, found.at);
         return;
       }
-      note.overTile(tileCost(this.current, found.tile), refusal, found.at);
+      await playOut(command);
+      if (this.playing) return;
+      select({ tile: found.tile, at: view.faceOf(found.tile) });
     };
 
     /**
@@ -266,20 +282,16 @@ export class ChronicleScene extends Phaser.Scene {
             else inspect(found);
             return;
           case 'left':
-            if (cityMode) {
-              if (found !== undefined) act(found);
-              return;
-            }
             if (
-              found !== undefined &&
-              selection !== undefined &&
-              tileKey(found.tile) === tileKey(selection.tile) &&
-              tileKey(found.tile) === tileKey(this.current.city)
+              found === undefined ||
+              selection === undefined ||
+              tileKey(found.tile) !== tileKey(selection.tile)
             ) {
-              enterCityMode();
+              select(found);
               return;
             }
-            select(found);
+            if (cityMode) void act(found);
+            else if (tileKey(found.tile) === tileKey(this.current.city)) enterCityMode();
             return;
         }
       },
@@ -324,7 +336,11 @@ export class ChronicleScene extends Phaser.Scene {
           admitted(this.current, card),
           (tile) => {
             if (!playable(refusal)) {
-              note.overTile(costOf(id), refusal, view.faceOf(tile));
+              note.overTile(
+                unaffordableCosts(costOf(id), refusal),
+                refusal.blocked,
+                view.faceOf(tile),
+              );
               return;
             }
             hand.unselect();
@@ -334,7 +350,7 @@ export class ChronicleScene extends Phaser.Scene {
             const tile = tileAt(this.current.tiles, found.tile);
             const block = tile === undefined ? undefined : refuses(this.current, card, tile);
             if (block === undefined) return;
-            note.overTile([], { unaffordable: [], blocked: [block] }, found.at);
+            note.overTile([], [block], found.at);
           },
           () => {
             endTurn.live(true);
@@ -381,7 +397,6 @@ export class ChronicleScene extends Phaser.Scene {
     const leaveCityMode = (): boolean => {
       if (!cityMode) return false;
       cityMode = false;
-      note.hide();
       dismiss();
       marks.show(false);
       view.showCityMarks(false);

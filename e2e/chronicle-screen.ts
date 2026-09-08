@@ -396,6 +396,52 @@ function runOn(
   });
 }
 
+/** A chronicle whose turn `turn` can enter a worker and step it onto `first` and then `second`. */
+export type StepRun = {
+  readonly seed: number;
+  readonly turn: number;
+  readonly first: TileCoords;
+  readonly second: TileCoords;
+};
+
+/** The first seed with a turn in its first eight that opens on such a run. */
+export function stepRun(): StepRun {
+  return firstSeed('opens a turn on a worker and two steps', (seed) => {
+    let chronicle = beginChronicle(seed, DECKS.PH_Deck);
+    for (let turn = 1; turn <= 8; turn++) {
+      const steps = steppedThisTurn(chronicle);
+      if (steps !== undefined) return { seed, turn, ...steps };
+      chronicle = outcome(apply(chronicle, { type: 'end-turn' }));
+    }
+    return undefined;
+  });
+}
+
+/**
+ * The two tiles this hand's worker crosses to, one step at a time, and nothing when it cannot. The
+ * worker is the only unit on the map, so the chronicle has dealt it the first number of all: one.
+ */
+function steppedThisTurn(
+  chronicle: Chronicle,
+): { first: TileCoords; second: TileCoords } | undefined {
+  const enter = chronicle.hand.indexOf('PH_Worker');
+  if (enter === -1 || !playable(refusalOf(chronicle, 'PH_Worker'))) return undefined;
+  const entered = outcome(apply(chronicle, { type: 'play', index: enter, aim: 'none' }));
+  if (entered.units.length !== 1) return undefined;
+
+  for (const first of neighbours(entered.city)) {
+    const stepped = outcome(apply(entered, { type: 'move', unit: 1, tile: first }));
+    if (stepped === entered) continue;
+    for (const second of neighbours(first)) {
+      if (tileKey(second) === tileKey(entered.city)) continue;
+      if (outcome(apply(stepped, { type: 'move', unit: 1, tile: second })) !== stepped) {
+        return { first, second };
+      }
+    }
+  }
+  return undefined;
+}
+
 /** Where a card aimed at a tile that the city can pay for lies in the hand, or -1. */
 export function atTile(chronicle: Chronicle): number {
   return chronicle.hand.findIndex(

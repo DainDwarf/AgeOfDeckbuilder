@@ -1018,13 +1018,16 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
   /**
    * What the unit of the player's standing on a tile can do, and nothing at all for a tile that
    * holds none: every tile its move points reach lit, and every unit its attack reaches glowed in
-   * the enemies' own colour. The one place a move or an attack is offered on the map. Either
+   * the enemies' own colour. The one place a move or an attack is offered on the map — while the
+   * city marks stand, none is, and the release below commands only a unit it has lit. Either
    * changes them, so this follows every render.
    */
   const lightUnit = (tile: TileCoords | undefined): void => {
     const current = shown;
     const standing =
-      tile === undefined || current === undefined ? undefined : unitAt(current.units, tile);
+      tile === undefined || current === undefined || marking
+        ? undefined
+        : unitAt(current.units, tile);
     lit = undefined;
     if (current !== undefined && standing?.faction === 'player') {
       lit = {
@@ -1355,6 +1358,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
       marking = on;
       paintCityMarks();
       paintYields();
+      lightUnit(selection);
     },
 
     showVeils(next: Veils): void {

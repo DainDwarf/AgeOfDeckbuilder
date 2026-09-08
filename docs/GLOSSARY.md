@@ -28,7 +28,7 @@ deliberate exception the reviewer sees; there is no silent allow-list.
 | **city** | A settlement on the map; the player owns exactly one — *the* city, what a chronicle is about. | town, capital, base, settlement |
 | **map** | The hexagonal grid a chronicle is played on. | board, world, grid |
 | **chronicle screen** | The surface a chronicle is played on — the map, the hand, the piles, the resource bar, the infopanel; what a window opens over and closes back to. | table, playfield, play area |
-| **city mode** | The chronicle screen's second mode, in which a tile click acts on the city — assigns, unassigns, claims — instead of selecting the tile. | build mode, manage mode, edit mode, planning mode |
+| **city mode** | The chronicle screen's second mode, in which a left click on the selected tile acts on the city — assigns, unassigns, claims. | build mode, manage mode, edit mode, planning mode |
 | **select** | To make a tile or a card the selection: the one thing a screen holds — the tile the map rings, the card lifted in the hand, or the card ringed in a browse — and what the inspection key inspects. | pick, highlight, focus, arm, target (for a tile or a card) |
 | **inspect** | To show a tile's cards in the infopanel, one per step — the unit, the building with the improvements, the terrain with the feature and the river; after the last the first again — or to show a card large. | read (a tile), examine, view, look at, zoom (for a card) |
 | **tile** | One hexagon of the map, of one terrain. | hex, cell, square, territory |

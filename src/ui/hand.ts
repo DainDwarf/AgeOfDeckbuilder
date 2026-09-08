@@ -22,7 +22,7 @@ import {
   type Surface,
 } from './design-space';
 import { PILE_PLACE } from './piles';
-import { createRefusalNote } from './refusal-note';
+import { createRefusalNote, unaffordableCosts } from './refusal-note';
 
 /** The clear water between a pile and the lane the hand fans out in. */
 const LANE_PAD = 28;
@@ -138,8 +138,8 @@ export function createHand(scene: Phaser.Scene, on: Surface, presses: HandPresse
   /** Every reason the rules refuse this card, over it and clear of the lift a selection gives it. */
   const refuse = (slot: Slot): void => {
     note.overCard(
-      costOf(slot.id),
-      slot.refusal,
+      unaffordableCosts(costOf(slot.id), slot.refusal),
+      slot.refusal.blocked,
       slot.home.x,
       slot.home.y - CARD_LIFT - CARD_HEIGHT,
     );

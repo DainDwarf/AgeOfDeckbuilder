@@ -1,5 +1,6 @@
 import type Phaser from 'phaser';
 import type { Cost, Refusal } from '../rules/chronicle';
+import type { Block } from '../rules/state';
 import { addText, DESIGN_WIDTH, drawBubble, MARGIN, type Surface, UI_FONT } from './design-space';
 import type { TileFace } from './map';
 import { text } from './text';
@@ -20,36 +21,36 @@ type Placement = { left: number; top: number; at: number };
 
 export type RefusalNote = {
   /**
-   * Says every reason the rules refuse the card, standing over it: `x` is where the card is at home
-   * and `top` the edge the note keeps clear of — the card's top once a hover has lifted it.
+   * Says its lines standing over the card: `x` is where the card is at home and `top` the edge the
+   * note keeps clear of — the card's top once a hover has lifted it.
    */
-  overCard(costs: readonly Cost[], refusal: Refusal, x: number, top: number): void;
-  /**
-   * Says every reason the rules refuse a city-mode click, standing over the face it landed on with
-   * its tail down on the tile.
-   */
-  overTile(costs: readonly Cost[], refusal: Refusal, at: TileFace): void;
+  overCard(costs: readonly Cost[], blocked: readonly Block[], x: number, top: number): void;
+  /** Says its lines standing over the face a press landed on, with its tail down on the tile. */
+  overTile(costs: readonly Cost[], blocked: readonly Block[], at: TileFace): void;
   /** Stands what it is saying over the same place again, at the size on screen it already had. */
   rescale(): void;
   hide(): void;
 };
 
-/** Every reason, one sentence each: what the city cannot pay first, then what stands in the way. */
-function reasons(costs: readonly Cost[], refusal: Refusal): string[] {
+/** Of what a card costs, what the city cannot pay: the only cost lines a refused card's note says. */
+export function unaffordableCosts(costs: readonly Cost[], refusal: Refusal): Cost[] {
+  return costs.filter(({ resource }) => refusal.unaffordable.includes(resource));
+}
+
+/** The lines, one sentence each: what is asked for in resources first, then what stands in the way. */
+function reasons(costs: readonly Cost[], blocked: readonly Block[]): string[] {
   return [
-    ...costs
-      .filter(({ resource }) => refusal.unaffordable.includes(resource))
-      .map(({ resource, amount }) => text(`refusal.${resource}`, { cost: amount })),
-    ...refusal.blocked.map((block) => text(`refusal.${block}`)),
+    ...costs.map(({ resource, amount }) => text(`refusal.${resource}`, { cost: amount })),
+    ...blocked.map((block) => text(`refusal.${block}`)),
   ];
 }
 
 /**
- * The bubble a refusal answers with, standing on the surface it was raised from in the panel
- * language, its tail pointing down at what the rules refused, and staying up until it is taken
- * down. One stands per surface: a second refusal replaces the first, and any press on the chronicle
- * screen takes down whichever is up. It keeps the size on screen it was laid out at however far its
- * surface has zoomed, so a zoom stands it again.
+ * The bubble a cost and a refusal answer with, standing on the surface it was raised from in the
+ * panel language, its tail pointing down at what it speaks for, and staying up until it is taken
+ * down. One stands per surface: a second note replaces the first, and any press on the chronicle
+ * screen takes down whichever is up. Nothing to say takes it down as well. It keeps the size on
+ * screen it was laid out at however far its surface has zoomed, so a zoom stands it again.
  */
 export function createRefusalNote(scene: Phaser.Scene, on: Surface): RefusalNote {
   let note: Phaser.GameObjects.Container | undefined;
@@ -65,10 +66,13 @@ export function createRefusalNote(scene: Phaser.Scene, on: Surface): RefusalNote
 
   scene.input.on('pointerdown', hide);
 
-  const raise = (costs: readonly Cost[], refusal: Refusal, place: Place): void => {
+  const raise = (costs: readonly Cost[], blocked: readonly Block[], place: Place): void => {
     hide();
+    const said = reasons(costs, blocked);
+    if (said.length === 0) return;
+
     const bubble = scene.add.graphics();
-    const labels = reasons(costs, refusal).map((reason) => addText(scene, 0, 0, reason, STYLE));
+    const labels = said.map((reason) => addText(scene, 0, 0, reason, STYLE));
 
     let line = 7;
     for (const label of labels) {
@@ -95,15 +99,15 @@ export function createRefusalNote(scene: Phaser.Scene, on: Surface): RefusalNote
   };
 
   return {
-    overCard(costs: readonly Cost[], refusal: Refusal, x: number, top: number): void {
-      raise(costs, refusal, (width, height) => {
+    overCard(costs: readonly Cost[], blocked: readonly Block[], x: number, top: number): void {
+      raise(costs, blocked, (width, height) => {
         const left = Math.min(Math.max(x - width / 2, MARGIN), DESIGN_WIDTH - MARGIN - width);
         return { left, top: top - STANDOFF - height, at: x - left };
       });
     },
 
-    overTile(costs: readonly Cost[], refusal: Refusal, at: TileFace): void {
-      raise(costs, refusal, (width, height, unit) => ({
+    overTile(costs: readonly Cost[], blocked: readonly Block[], at: TileFace): void {
+      raise(costs, blocked, (width, height, unit) => ({
         left: at.x - (width / 2) * unit,
         top: at.y - at.radius - (STANDOFF + height) * unit,
         at: width / 2,
