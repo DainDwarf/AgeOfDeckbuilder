@@ -63,15 +63,17 @@ export type Hand = {
 
 /**
  * What the presses on the hand are answered by. Each aim is handed the card's place in the hand and
- * the way to let it go, and answers the way to let it go from outside.
+ * what to call when it comes down, and answers the way to take it down from outside.
  */
 export type HandPresses = {
   /** Plays the card at this place in the hand, which aims at nothing. */
   play(index: number): void;
   /** The hand has taken the selection: whatever else the screen selects or inspects goes. */
   dismiss(): void;
+  /** The map lit for the card's aim; `released` says the aim is off it and the card is free. */
   aimTile(index: number, card: AimedCard, released: () => void): () => void;
-  aimDiscardPile(index: number, released: () => void): () => void;
+  /** The aim window raised on the discard pile; `closed` says it came down with nothing paid. */
+  aimDiscardPile(index: number, closed: () => void): () => void;
   inspect(id: CardId, refusal: Refusal): void;
 };
 
@@ -144,9 +146,8 @@ export function createHand(scene: Phaser.Scene, on: Surface, presses: HandPresse
   };
 
   /**
-   * How an aim says it was let go of where it stands — a press beside the tiles, the window's own
-   * Cancel, the back key: the card comes home, unless the hand let it go and took the aim down
-   * itself.
+   * How the aim on the map says it was let go of where it stands — a press beside the tiles, the
+   * back key: the card comes home, unless the hand let it go and took the aim down itself.
    */
   const releasing =
     (slot: Slot): (() => void) =>
@@ -154,6 +155,18 @@ export function createHand(scene: Phaser.Scene, on: Surface, presses: HandPresse
       if (selected?.slot !== slot) return;
       selected = undefined;
       letGoOf(slot);
+    };
+
+  /**
+   * How the aim window says it closed with nothing paid: the card keeps the selection it was aimed
+   * from, so the next press on it raises the window again, and the way to close it goes with it.
+   */
+  const closing =
+    (slot: Slot): (() => void) =>
+    () => {
+      const standing = selected;
+      if (standing === undefined || standing.slot !== slot) return;
+      standing.cancel = undefined;
     };
 
   const unselect = (): boolean => {
@@ -209,7 +222,7 @@ export function createHand(scene: Phaser.Scene, on: Surface, presses: HandPresse
         presses.play(slot.index);
         break;
       case 'discard-pile':
-        standing.cancel = presses.aimDiscardPile(slot.index, releasing(slot));
+        standing.cancel = presses.aimDiscardPile(slot.index, closing(slot));
         break;
       case 'tile':
         break;

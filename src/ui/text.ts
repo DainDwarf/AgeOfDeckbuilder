@@ -85,7 +85,6 @@ const TEXT = {
   'refusal.discard-pile': 'The discard pile is empty.',
   'browse.draw-pile': 'Draw pile — {count}',
   'browse.discard-pile': 'Discard pile — {count}',
-  'aim.cancel': 'Cancel',
   'menu.menu': 'Menu',
   'menu.settings': 'Settings',
   'menu.controls': 'Controls',

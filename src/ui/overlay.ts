@@ -18,7 +18,7 @@ import {
   UI_FONT,
   whileUp,
 } from './design-space';
-import { behind, createWindow, type MenuWindow, type Opened, pressable } from './menu';
+import { behind, createWindow, type MenuWindow, type Opened } from './menu';
 import { BAR_HEIGHT } from './resource-bar';
 import { text } from './text';
 
@@ -26,13 +26,6 @@ const SCRIM = 0x0d1014;
 const SCRIM_ALPHA = 0.82;
 
 const TITLE_INK = '#d4d7db';
-
-const CANCEL_STYLE = {
-  fontFamily: UI_FONT,
-  fontSize: '18px',
-  fontStyle: 'bold',
-  color: '#0d1014',
-};
 
 const BROWSE_WIDTH = 180;
 const BROWSE_GAP = 26;
@@ -50,14 +43,16 @@ export type PileKind = 'draw-pile' | 'discard-pile';
 export type Overlay = {
   browse(pile: PileKind, chronicle: Chronicle): void;
   /**
-   * The discard pile offered to a card aimed at it: a press on one of its cards lands the aim where
-   * that card lies in the pile, the back key and the Cancel button let the aimed card go, and a
-   * press off the cards does nothing at all. Answers the way to let it go from outside.
+   * The discard pile offered to a card aimed at it, newest card first as the browse offers it: a
+   * press on one of its cards lands the aim where that card lies in the pile, a right click on one
+   * shows it large, and a press beside them or the back key closes the window with nothing paid.
+   * The aimed card is in the hand, so the pile never holds it and never offers it. Answers the way
+   * to close it from outside.
    */
   aimDiscardPile(
     chronicle: Chronicle,
     chosen: (at: number) => void,
-    released: () => void,
+    closed: () => void,
   ): () => void;
   inspect(id: CardId, refusal: Refusal): void;
   /** The Menu button: raises the menu over whatever stands, and takes the whole menu back down. */
@@ -84,6 +79,13 @@ type Grid = {
   readonly height: number;
   /** The furthest the cards scroll; zero when they all fit inside the frame. */
   readonly overflow: number;
+};
+
+/** What the aim window stands on: the cards it offers, and what a press on one of them plays. */
+type Aiming = {
+  readonly cards: readonly Offered[];
+  readonly chosen: (at: number) => void;
+  readonly closed: () => void;
 };
 
 /** Where a drag of the grid was pressed, what the grid stood at, and where the pointer has been. */
@@ -121,8 +123,8 @@ export function createOverlay(
   let fling = 0;
   let scrolling: Scroll | undefined;
   let inspecting = false;
-  /** How the card the aim window stands for is let go of, and nothing while no aim window stands. */
-  let releasing: (() => void) | undefined;
+  /** What the aim window stands on, and nothing while none stands; it outlives a card shown large. */
+  let aiming: Aiming | undefined;
   /** The window of the menu that stands, and nothing while none does. */
   let opened: MenuWindow | undefined;
   /** The window as it was laid out, for the keys it takes; it goes down with everything shown. */
@@ -132,11 +134,8 @@ export function createOverlay(
   /** The defeat screen still coming up; a render owns the rise and takes it down. */
   let rising: Phaser.GameObjects.Container | undefined;
 
+  /** What the scrim carries taken down, the scrim itself left up: every raise replaces through here. */
   const wipe = (): void => {
-    // Nothing takes the aim window down without the card it stands for coming home: this is the one
-    // door everything the scrim carries is replaced through. Letting go closes, and closing comes
-    // back through here once, finding nothing left to let go of.
-    letGoOfAim();
     for (const object of shown) object.destroy();
     shown = [];
     standing = undefined;
@@ -150,19 +149,18 @@ export function createOverlay(
     wipe();
     browsing = undefined;
     inspecting = false;
-    releasing = undefined;
+    aiming = undefined;
     opened = undefined;
     scrim.setVisible(false).disableInteractive();
     covering(false);
   };
 
-  /** The aim window down and the aimed card let go of: the one path, whichever way it was let go. */
-  const letGoOfAim = (): void => {
-    const release = releasing;
-    releasing = undefined;
-    if (release === undefined) return;
+  /** The aim window closed with nothing paid: the one path, whichever way it was closed. */
+  const closeAim = (): void => {
+    const aim = aiming;
+    if (aim === undefined) return;
     close();
-    release();
+    aim.closed();
   };
 
   // The defeat's rise brings the scrim up from nothing, so every cover states the alpha it wants.
@@ -206,19 +204,27 @@ export function createOverlay(
     return title;
   };
 
+  /** The card of the standing grid a press landed on, and nothing where it landed between them. */
+  const under = (pointer: Phaser.Input.Pointer): Placed | undefined => {
+    if (grid === undefined) return undefined;
+    const at = on.at(pointer.x, pointer.y);
+    return cardAt(grid, at.x, at.y);
+  };
+
   /**
    * A pile's cards laid out below `top`, and the frame that scrolls and flings them: `pressed` takes
-   * the number the card under the press was offered as, and nothing where the press landed between
-   * them. Every card face is named after the grid and its place on the screen, the first drawn
-   * first, and carries the number it was offered as in its data. Nothing may be added to the scene
-   * after this: the clip's camera draws whatever it was not told to ignore inside the frame.
+   * the number the card under the left click was offered as, and nothing where the click landed
+   * between them. The frame is answered, for whoever wants a press of its own on it. Every card face
+   * is named after the grid and its place on the screen, the first drawn first, and carries the
+   * number it was offered as in its data. Nothing may be added to the scene after this: the clip's
+   * camera draws whatever it was not told to ignore inside the frame.
    */
   const layGrid = (
     name: string,
     cards: readonly Offered[],
     top: number,
     pressed: (at: number | undefined) => void,
-  ): void => {
+  ): Phaser.GameObjects.Zone => {
     const height = Math.round(BROWSE_WIDTH * 1.4);
     const frameHeight = DESIGN_HEIGHT - MARGIN - top;
     const columns = Math.max(
@@ -256,9 +262,7 @@ export function createOverlay(
       fling = -speedOf(dragged.trail, scene.time.now);
     });
     onClick(frame, (pointer) => {
-      if (grid === undefined) return;
-      const at = on.at(pointer.x, pointer.y);
-      pressed(cardAt(grid, at.x, at.y)?.at);
+      pressed(under(pointer)?.at);
     });
 
     const placed = cards.map((card, index): Placed => {
@@ -292,12 +296,14 @@ export function createOverlay(
     grid = { root, placed, height, overflow };
     scrollTo(offset);
     clip.show(root, MARGIN, top, DESIGN_WIDTH - 2 * MARGIN, frameHeight);
+    return frame;
   };
 
   const showBrowse = (pile: PileKind, cards: readonly CardId[]): void => {
     wipe();
     cover();
     browsing = { pile, cards };
+    aiming = undefined;
     inspecting = false;
     opened = undefined;
 
@@ -313,50 +319,33 @@ export function createOverlay(
     );
   };
 
-  /**
-   * The discard pile offered to the card aimed at it, newest card first, as the browse offers it.
-   * The aimed card is in the hand, so the pile never holds it and never offers it.
-   */
-  const showAim = (
-    chronicle: Chronicle,
-    chosen: (at: number) => void,
-    released: () => void,
-  ): void => {
+  /** The aim window raised, and raised again where the back from a card shown large brings it. */
+  const showAim = (aim: Aiming): void => {
     wipe();
     cover();
     browsing = undefined;
     inspecting = false;
     opened = undefined;
-    releasing = released;
-    offset = 0;
+    aiming = aim;
 
-    const cards = chronicle.discardPile.map((id, at): Offered => ({ id, at })).reverse();
-    const title = raiseTitle(text('browse.discard-pile', { count: cards.length }));
-    const width = 120;
-    const { face, label } = pressable(
-      scene,
-      {
-        x: title.x + title.width / 2 + MARGIN + width / 2,
-        y: title.y + title.height / 2,
-        width,
-        height: 36,
-      },
-      'aim-cancel',
-      CANCEL_STYLE,
-      letGoOfAim,
-    );
-    shown.push(
-      face.setDepth(SCRIM_DEPTH + 1),
-      label.setText(text('aim.cancel')).setDepth(SCRIM_DEPTH + 1),
-    );
-
-    layGrid('aim-window', cards, title.y + title.height + MARGIN, (at) => {
-      if (at === undefined) return;
-      // The aim landed, so the window comes down without the card it stood for coming home.
-      releasing = undefined;
+    const title = raiseTitle(text('browse.discard-pile', { count: aim.cards.length }));
+    const frame = layGrid('aim-window', aim.cards, title.y + title.height + MARGIN, (at) => {
+      if (at === undefined) {
+        closeAim();
+        return;
+      }
+      // The aim landed, so the window closes without saying it closed with nothing paid.
       close();
-      chosen(at);
+      aim.chosen(at);
     });
+    onClick(
+      frame,
+      (pointer) => {
+        const card = under(pointer);
+        if (card !== undefined) showInspection(card.id, NO_REFUSAL);
+      },
+      'right',
+    );
   };
 
   /** The city fallen, on the screen that says so; the caller decides whether it rises or stands. */
@@ -364,6 +353,7 @@ export function createOverlay(
     wipe();
     cover();
     browsing = undefined;
+    aiming = undefined;
     inspecting = false;
     opened = undefined;
     fallen = defeat;
@@ -420,6 +410,7 @@ export function createOverlay(
     wipe();
     cover();
     browsing = undefined;
+    aiming = undefined;
     inspecting = false;
     opened = which;
     const laid = createWindow(scene, which, {
@@ -449,15 +440,15 @@ export function createOverlay(
       return true;
     }
     if (fallen !== undefined || !scrim.visible) return false;
-    if (releasing !== undefined) letGoOfAim();
-    else if (inspecting && browsing !== undefined) showBrowse(browsing.pile, browsing.cards);
+    if (inspecting && browsing !== undefined) showBrowse(browsing.pile, browsing.cards);
+    else if (inspecting && aiming !== undefined) showAim(aiming);
+    else if (aiming !== undefined) closeAim();
     else close();
     return true;
   };
 
-  // The aim window is let go of by the back key and its own Cancel alone.
   onClick(scrim, () => {
-    if (releasing === undefined) back();
+    back();
   });
 
   scene.input.on(
@@ -481,9 +472,14 @@ export function createOverlay(
       offset = 0;
       showBrowse(pile, cardsOf(pile, chronicle));
     },
-    aimDiscardPile(chronicle, chosen, released): () => void {
-      showAim(chronicle, chosen, released);
-      return letGoOfAim;
+    aimDiscardPile(chronicle, chosen, closed): () => void {
+      offset = 0;
+      showAim({
+        cards: chronicle.discardPile.map((id, at): Offered => ({ id, at })).reverse(),
+        chosen,
+        closed,
+      });
+      return closeAim;
     },
     inspect: showInspection,
     menu(): void {
