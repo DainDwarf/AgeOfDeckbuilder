@@ -491,13 +491,11 @@ test('a right press beside the card shown large takes it down and leaves the car
   await settled(page);
   expect(await standing(page, 'inspection')).toBe(true);
 
-  // A left click on the card takes it down, as one beside it does.
   await page.mouse.click(large.x, large.y);
-  await expect.poll(() => standing(page, 'inspection')).toBe(false);
+  await settled(page);
+  expect(await standing(page, 'inspection')).toBe(true);
   expect(await selected(page, index, home)).toBe(true);
-
-  await page.mouse.click(home.x, home.y, { button: 'right' });
-  await expect.poll(() => standing(page, 'inspection')).toBe(true);
+  expect((await chronicleOf(page)).hand).toEqual(opened.hand);
 
   const away = await besideTheCards(page);
   await page.mouse.click(away.x, away.y, { button: 'right' });

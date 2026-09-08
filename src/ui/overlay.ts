@@ -235,8 +235,8 @@ export function createOverlay(
       .setData('card', id)
       .setPosition(DESIGN_WIDTH / 2, (DESIGN_HEIGHT + height) / 2)
       .setDepth(SCRIM_DEPTH + 1)
-      // The card takes both presses off the scrim beneath: the left one is answered below, as the
-      // scrim answers one beside it, and the right one is swallowed.
+      // The card is interactive so that both presses on it reach nothing beneath, the scrim
+      // included; it answers neither.
       .setInteractive({
         hitArea: new Phaser.Geom.Rectangle(
           -INSPECTION_WIDTH / 2,
@@ -246,9 +246,6 @@ export function createOverlay(
         ),
         hitAreaCallback: Phaser.Geom.Rectangle.Contains,
       });
-    onClick(root, () => {
-      dropInspection(over);
-    });
     shown.push(root);
   };
 
@@ -530,7 +527,7 @@ export function createOverlay(
     else showDefeat(fallen);
   };
 
-  /** The card shown large taken down, onto what it was taken off: the one path, whichever press. */
+  /** The card shown large taken down, onto what it was taken off: the one path, whichever way. */
   const dropInspection = (over: Offering | undefined): void => {
     if (over === undefined) close();
     else raise(over);

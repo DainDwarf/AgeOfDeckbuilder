@@ -147,7 +147,8 @@ selected thing's own.
 
 **The right click inspects and never selects.** It inspects the thing under it — a tile in the
 infopanel, a card shown large — and pressed again on the same thing steps its cards on; a card has
-but the one, so a second right click on a card shown large does nothing. A press beside the things
+but the one, so a second right click on a card shown large does nothing, and neither does a left
+click on it: a press beside it, or the back key, takes it down. A press beside the things
 drops the inspection and leaves the selection standing. It does this in every state the screen can
 be in, so nothing half done has to be undone to inspect a thing.
 
