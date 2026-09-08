@@ -319,6 +319,10 @@ unit with no action left glows nothing, and a press on the enemy beside it selec
 any other. A second left click on a selected tile changes nothing, the city's own tile excepted.
 Nothing more.
 
+**The ring stands undarkened over everything that darkens its tile**: a tile in fog, a held tile
+nobody works in city mode, and the map under the yield overlay's dim. The selection reads at full
+strength wherever it lands.
+
 An inspected tile shows one card in the infopanel per step. A tile has at most three, in this order:
 the unit standing on it; the building with the tile's improvements; and the terrain with its feature
 and the river running along it. A card is absent when nothing fills it, and the terrain card never
@@ -410,11 +414,10 @@ and a tile in fog shows what it yielded when it was last seen. Pressing one of t
 on the resource bar toggles that resource in or out of the overlay, several at a time, and the
 reading of a resource shown is latched down in the bar; the **yield key** clears the overlay, or,
 from nothing, shows every resource, culture included, and a window standing over the chronicle
-screen takes the key instead. Five things stand over the dim, undimmed: the selection's ring, the
-culture threshold the selected tile wears, the tiles lit under the ring, the infopanel of the tile
-being inspected, and the tiles a card is aimed at. It is a display and not a mode: the back key
-leaves it standing, city mode stands with it, and either is entered and left without touching the
-other.
+screen takes the key instead. Four things stand over the dim, undimmed: the culture threshold the
+selected tile wears, the tiles lit under the ring, the infopanel of the tile being inspected, and
+the tiles a card is aimed at. It is a display and not a mode: the back key leaves it standing, city
+mode stands with it, and either is entered and left without touching the other.
 
 ### The map ✅
 

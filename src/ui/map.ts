@@ -149,10 +149,16 @@ const DIM_DEPTH = 7;
 /** Over the dim: what the map keeps at full strength through it. */
 const OVER_DIM_DEPTH = 8;
 
-const YIELD_DEPTH = 9;
+/** Over everything that darkens a tile: the fog, city mode's dim and the overlay's dim. */
+const SELECTED_DEPTH = 9;
 
-/** Over everything a tile carries: its unit, the fog, city mode's dim, the overlay's dim and glyphs. */
-const THRESHOLD_DEPTH = 10;
+const YIELD_DEPTH = 10;
+
+/**
+ * Over everything a tile carries: its unit, the fog, city mode's dim, the selection's ring, the
+ * overlay's dim and glyphs.
+ */
+const THRESHOLD_DEPTH = 11;
 
 /** How dark the yield overlay's dim paints the map: the scrim's alpha. */
 const DIM_ALPHA = 0.6;
@@ -544,7 +550,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
   const rings = scene.add.container(0, 0).setName('border');
   const improved = scene.add.container(0, 0).setDepth(BUILDING_DEPTH).setName('improvements');
   const built = scene.add.container(0, 0).setDepth(BUILDING_DEPTH).setName('buildings');
-  const selected = scene.add.container(0, 0).setDepth(GLOW_DEPTH).setName('selected');
+  const selected = scene.add.container(0, 0).setDepth(SELECTED_DEPTH).setName('selected');
   const lighted = scene.add.container(0, 0).setDepth(GLOW_DEPTH).setName('lit');
   const marks = scene.add.container(0, 0).setDepth(UNIT_DEPTH).setName('units');
   const fog = scene.add.container(0, 0).setDepth(FOG_DEPTH).setName('fog');
@@ -566,11 +572,11 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
     improved,
     built,
     lighted,
-    selected,
     marks,
     fog,
     cityMarks,
     dim,
+    selected,
     glyphs,
     thresholds,
   ]);
@@ -870,13 +876,13 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
   let threshold: { readonly tile: TileCoords; readonly cost: Cost } | undefined;
 
   /**
-   * What the dim is laid under rather than over: the ring on the selected tile, the tiles glowed
-   * under it and the glow a card is aimed by, which the player answers the overlay with. Everything
-   * else the map draws dims, so these are lifted only while the dim stands. The threshold is not
-   * here and never dims either: it stands at THRESHOLD_DEPTH, over the units and the fog whether a
-   * dim is up or not.
+   * What the dim is laid under rather than over: the tiles glowed under the selection and the glow
+   * a card is aimed by, which the player answers the overlay with. Everything else the map draws
+   * dims, so these are lifted only while the dim stands. The ring on the selected tile and the
+   * threshold are not here and never dim either: they stand at SELECTED_DEPTH and THRESHOLD_DEPTH,
+   * over the units, the fog and city mode's dim whether the overlay's dim is up or not.
    */
-  const overDim = new Set<Phaser.GameObjects.Container>([selected, lighted]);
+  const overDim = new Set<Phaser.GameObjects.Container>([lighted]);
 
   const liftOverDim = (): void => {
     const over = showing.size > 0;
