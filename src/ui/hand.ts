@@ -144,8 +144,9 @@ export function createHand(scene: Phaser.Scene, on: Surface, presses: HandPresse
   };
 
   /**
-   * How an aim says it was let go of where it stands — a right press, the window's own Cancel, the
-   * back key: the card comes home, unless the hand let it go and took the aim down itself.
+   * How an aim says it was let go of where it stands — a press beside the tiles, the window's own
+   * Cancel, the back key: the card comes home, unless the hand let it go and took the aim down
+   * itself.
    */
   const releasing =
     (slot: Slot): (() => void) =>

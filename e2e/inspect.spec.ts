@@ -15,10 +15,8 @@ import {
 import type { Chronicle } from '../src/rules/state';
 import { text } from '../src/ui/text';
 import {
-  aimed,
   chronicleOf,
   dragOut,
-  dragUnit,
   endTurn,
   firstSeed,
   onScreen,
@@ -28,13 +26,9 @@ import {
   settled,
   shownCard,
   standing,
-  tileOnScreen,
   watch,
   workerRun,
 } from './chronicle-screen';
-
-/** A point on the map clear of the resource bar, the piles and the hand; nothing is read off it. */
-const BARE: TileCoords = { q: 0, r: -3 };
 
 declare global {
   interface Window {
@@ -330,39 +324,6 @@ test('a right click inspects and never selects, shows no browser menu, and the i
   await page.keyboard.press('i');
   await expect.poll(() => shownCard(page)).toBe('building');
   expect(await ringedTile(page)).toBe(cityTile);
-
-  expect(problems).toEqual([]);
-});
-
-test('a right press while a card is aimed lets the card go', async ({ page }) => {
-  const problems = watch(page);
-  const run = workerRun('PH_Farm', (_, chronicle) => chronicle.hand.includes('PH_March'));
-
-  await open(page, run.seed, 'PH_Deck');
-  for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
-
-  const opened = await chronicleOf(page);
-  await dragOut(page, opened.hand.indexOf('PH_Worker'));
-  await expect.poll(async () => (await chronicleOf(page)).units.length).toBe(1);
-
-  // The refresh instant admits the tile of a unit that has spent move points, so the worker moves out first.
-  const standingStill = await chronicleOf(page);
-  await dragUnit(page, standingStill.city, run.tile);
-
-  const entered = await chronicleOf(page);
-  await dragOut(page, entered.hand.indexOf('PH_March'));
-  await aimed(page);
-
-  const bare = await tileOnScreen(page, BARE);
-  await page.mouse.click(bare.x, bare.y, { button: 'right' });
-
-  await expect.poll(() => standing(page, 'aim')).toBe(false);
-  const released = await chronicleOf(page);
-  expect(released.hand).toEqual(entered.hand);
-  expect(released.units[0].tile).toEqual(entered.units[0].tile);
-  // The aim held the tile presses off, so the one that let the card go picked out no tile.
-  expect(await ringedTile(page)).toBeUndefined();
-  expect(await shownCard(page)).toBeUndefined();
 
   expect(problems).toEqual([]);
 });

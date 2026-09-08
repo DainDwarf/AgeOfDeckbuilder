@@ -231,8 +231,8 @@ export type MapView = {
    * a tile the map does not draw is never aimed at. A left press on a lit tile is `chosen`, and the
    * aim goes on standing: whoever raised it decides what that press lands as and cancels it. A left
    * press on any other tile of the map is `refused` with where that tile stands, and the aim goes on
-   * standing too. A left press on no tile at all lets the aim go, as a right press and the cancel
-   * do, and `released` says so.
+   * standing too. A left press on no tile at all lets the aim go, as the cancel does, and `released`
+   * says so. A right press is reported to `onPress` as any other is and leaves the aim standing.
    */
   aimTile(
     tiles: TileCoords[],
@@ -245,7 +245,8 @@ export type MapView = {
    * when it lands off the map; `zoomed` fires whenever the zoom changes, so whatever stands on the
    * map at a size of its own stands again. `commanded` is the command a press on one of the lit
    * unit's tiles is — its step onto a landing, or its attack on a unit glowed — which is no tile
-   * press. Called once; while a card is aimed the map belongs to the aim and no press is reported.
+   * press. Called once; while a card is aimed the aim takes the left press and this hears the right
+   * one alone.
    */
   onPress(
     pressed: (found: PressedTile | undefined, press: Press) => void,
@@ -381,6 +382,11 @@ function positionOf({ q, r }: TileCoords): { x: number; y: number } {
   };
 }
 
+/** The one way a tile a press landed on is named: where its face stands goes with it. */
+function pressedOn(tile: TileCoords): PressedTile {
+  return { tile, at: { ...positionOf(tile), radius: TILE_SIZE } };
+}
+
 /** Where a corner of the tile lattice stands on the map's own surface. */
 function cornerAt({ x, y }: Corner): Phaser.Math.Vector2 {
   const middle = positionOf(CITY_TILE);
@@ -506,6 +512,8 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
   /** The mark drawn for each unit the map shows, by the number that unit is named by. */
   let markers = new Map<number, Phaser.GameObjects.Polygon>();
   let presser: Phaser.GameObjects.Zone | undefined;
+  /** Where the map reports a press; an aim reports its right press through it too. */
+  let report: ((found: PressedTile | undefined, press: Press) => void) | undefined;
   let rescale: (() => void) | undefined;
   let taking = true;
 
@@ -1237,6 +1245,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
       commanded: (command: UnitCommand) => void,
     ): void {
       rescale = zoomed;
+      report = pressed;
       const catcher = catcherZone('press');
       presser = catcher;
 
@@ -1304,12 +1313,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
             lightUnit(selection);
             if (held.dragging) return;
           }
-          pressed(
-            on === undefined
-              ? undefined
-              : { tile: on, at: { ...positionOf(on), radius: TILE_SIZE } },
-            press,
-          );
+          pressed(on === undefined ? undefined : pressedOn(on), press);
         },
         abandon: () => {
           if (grabbed !== undefined) letGo();
@@ -1329,7 +1333,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
     },
 
     faceOf(tile: TileCoords): TileFace {
-      return { ...positionOf(tile), radius: TILE_SIZE };
+      return pressedOn(tile).at;
     },
 
     drawnAs(tile: TileCoords): Drawn | undefined {
@@ -1371,15 +1375,18 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
 
       const stop = takePress(catcher, {
         release: (pointer, press) => {
-          if (press === 'right') {
-            letGo();
-            return;
-          }
           const at = map.at(pointer.x, pointer.y);
           const on = tileUnder(at.x, at.y);
-          if (on === undefined) letGo();
-          else if (lit.some((coord) => same(coord, on))) chosen(on);
-          else refused({ tile: on, at: { ...positionOf(on), radius: TILE_SIZE } });
+          switch (press) {
+            case 'right':
+              report?.(on === undefined ? undefined : pressedOn(on), press);
+              return;
+            case 'left':
+              if (on === undefined) letGo();
+              else if (lit.some((coord) => same(coord, on))) chosen(on);
+              else refused(pressedOn(on));
+              return;
+          }
         },
       });
 

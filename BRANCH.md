@@ -14,10 +14,6 @@ with it.
 
 ## Lines
 
-- **The right click inspects while a card is being aimed** — it no longer lets the card go: on a
-  tile it inspects the tile, on a card it shows the card large, off the map it drops the
-  inspection, and the card stays selected through all three. E2e on `e2e/building.spec.ts`.
-  Doc-impact: none.
 - **The aim window follows the presses** — a press beside its cards or the back key closes it and
   leaves the card selected in the hand; a right click on one of its cards shows it large; the
   Cancel button goes. E2e on `e2e/recall.spec.ts`. Doc-impact: none.
