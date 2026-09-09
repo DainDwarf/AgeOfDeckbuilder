@@ -17,6 +17,7 @@ export type CardId =
   | 'PH_March'
   | 'PH_Harvest'
   | 'PH_Mine'
+  | 'PH_Road'
   | 'PH_Urbanisation'
   | 'PH_Recall';
 

@@ -23,6 +23,7 @@ import {
   distance,
   FEATURES,
   IMPROVEMENTS,
+  type ImprovementId,
   MAP_COMPOSITION,
   MOVE_POINT,
   neighbours,
@@ -173,6 +174,16 @@ function riverBetween(a: TileCoords, b: TileCoords): River {
 function madeOf(tiles: Tile[], terrain: Terrain, coords: TileCoords[]): Tile[] {
   const named = new Set(coords.map(tileKey));
   return tiles.map((tile) => (named.has(tileKey(tile)) ? { ...tile, terrain } : tile));
+}
+
+/** The same tiles, with the named ones carrying the improvement. */
+function improvedWith(tiles: Tile[], improvement: ImprovementId, coords: TileCoords[]): Tile[] {
+  const named = new Set(coords.map(tileKey));
+  return tiles.map((tile) =>
+    named.has(tileKey(tile))
+      ? { ...tile, improvements: [...tile.improvements, improvement] }
+      : tile,
+  );
 }
 
 function statsOf(stats: Partial<UnitStats>): UnitStats {
@@ -1402,6 +1413,63 @@ test('a unit crosses a river only where the move points it has left cover the fa
   expect(pointsOf(crossed, 1)).toBe(0);
 });
 
+test('a unit crosses further over a road than beside it: half a move point to the tile', () => {
+  const road = [
+    { q: 1, r: 0 },
+    { q: 2, r: 0 },
+    { q: 3, r: 0 },
+    { q: 4, r: 0 },
+  ];
+  const city = cityOf(['urban'], {
+    tiles: improvedWith(field(4), 'PH_Road', road),
+    units: [standing('player', CITY, { move: 2 * MOVE_POINT, sight: 4 })],
+  });
+
+  const along = outcome(apply(city, moveTo(1, { q: 4, r: 0 })));
+
+  expect(along.units[0].tile).toEqual({ q: 4, r: 0 });
+  expect(pointsOf(along, 1)).toBe(0);
+  expect(outcome(apply(city, moveTo(1, { q: 2, r: 1 }))).units[0].tile).toEqual({ q: 2, r: 1 });
+  expect(outcome(apply(city, moveTo(1, { q: 3, r: 1 })))).toEqual(city);
+});
+
+test('a river edge with a road on both banks is a bridge, crossed as if no river ran there', () => {
+  const bank = { q: 1, r: 0 };
+  const across = { q: 2, r: 0 };
+  const on = { q: 3, r: 0 };
+  const city = cityOf(['urban'], {
+    tiles: improvedWith(field(3), 'PH_Road', [bank, across]),
+    rivers: [riverBetween(bank, across)],
+    units: [standing('player', CITY, { move: 2 * MOVE_POINT, sight: 4 })],
+  });
+
+  const crossed = outcome(apply(city, moveTo(1, across)));
+
+  expect(crossed.units[0].tile).toEqual(across);
+  expect(pointsOf(crossed, 1)).toBe(MOVE_POINT);
+  expect(outcome(apply(crossed, moveTo(1, on))).units[0].tile).toEqual(on);
+});
+
+test('a road on one bank alone leaves the crossing spending every move point', () => {
+  const bank = { q: 1, r: 0 };
+  const across = { q: 2, r: 0 };
+  const on = { q: 3, r: 0 };
+  const shore = (roads: TileCoords[]): Chronicle =>
+    cityOf(['urban'], {
+      tiles: improvedWith(field(3), 'PH_Road', roads),
+      rivers: [riverBetween(bank, across)],
+      units: [standing('player', CITY, { move: 2 * MOVE_POINT, sight: 4 })],
+    });
+
+  for (const roads of [[bank], [across]]) {
+    const crossed = outcome(apply(shore(roads), moveTo(1, across)));
+
+    expect(crossed.units[0].tile).toEqual(across);
+    expect(pointsOf(crossed, 1)).toBe(0);
+    expect(outcome(apply(crossed, moveTo(1, on)))).toEqual(crossed);
+  }
+});
+
 test('a unit crosses to a tile the cheapest way, not the fewest tiles', () => {
   /** A hill the whole disc is in sight from, two forests on the straight line east of it. */
   const watch = { q: 0, r: -1 };
@@ -1702,6 +1770,32 @@ test('a mine improved onto a tile adds its production to what that tile yields a
   const mined = outcome(apply(outcome(apply(city, aimedAt(at))), { type: 'end-turn' }));
 
   expect(mined.resources.production).toBe(bare.resources.production + 1);
+});
+
+test('the road card improves every terrain a worker of the player’s stands on', () => {
+  const at = { q: 1, r: 0 };
+  for (const terrain of ['plain', 'forest', 'hills', 'urban'] as Terrain[]) {
+    const city = workedTile(at, terrain, { hand: ['PH_Road'], resources: production(2) });
+
+    const after = outcome(apply(city, aimedAt(at)));
+
+    expect(admittedTiles(city, 'PH_Road')).toEqual([at]);
+    expect(tileAt(after.tiles, at)?.improvements).toEqual(['PH_Road']);
+    expect(after.resources.production).toBe(0);
+    expect(after.discardPile).toEqual(['PH_Road']);
+    expect(after.units).toEqual(city.units);
+  }
+});
+
+test('the road card is refused on the ground no worker of the player’s stands on', () => {
+  const at = { q: 1, r: 0 };
+  for (const terrain of ['mountain', 'coast', 'deep'] as Terrain[]) {
+    const city = workedTile(at, terrain, { hand: ['PH_Road'], resources: production(2) });
+
+    expect(admittedTiles(city, 'PH_Road')).toEqual([]);
+    expect(refusedFor(city, 'PH_Road', at)).toBe('worker');
+    expect(outcome(apply(city, aimedAt(at)))).toEqual(city);
+  }
 });
 
 test('the urbanisation card terraforms the plain a worker stands on, inside the border and outside it', () => {
@@ -2145,7 +2239,7 @@ test('a building card with nowhere to stand is playable all the same, and every 
 test('every card the map answers for is playable whatever the map holds, and blocked only by its cost', () => {
   const empty = cityOf(['urban'], { tiles: field(2), resources: production(3) });
 
-  for (const id of ['PH_Farm', 'PH_March', 'PH_Mine', 'PH_Urbanisation'] as CardId[]) {
+  for (const id of ['PH_Farm', 'PH_March', 'PH_Mine', 'PH_Road', 'PH_Urbanisation'] as CardId[]) {
     expect(admittedTiles(empty, id)).toEqual([]);
     expect(refusalOf(empty, id).blocked).toEqual([]);
   }

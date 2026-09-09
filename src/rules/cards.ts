@@ -98,9 +98,9 @@ function inside(chronicle: Chronicle, tile: TileCoords): TileBlock | undefined {
   return holds(chronicle, tile) ? undefined : 'border';
 }
 
-/** The terrain a building stands on, an improvement lies on, or a terraform starts from. */
-function made(tile: Tile, terrain: Terrain): TileBlock | undefined {
-  return tile.terrain === terrain ? undefined : 'terrain';
+/** The terrains a building stands on, an improvement lies on, or a terraform starts from. */
+function made(tile: Tile, terrains: readonly Terrain[]): TileBlock | undefined {
+  return terrains.includes(tile.terrain) ? undefined : 'terrain';
 }
 
 /** A tile's one building slot, free: what a building fills and a terraform needs empty. */
@@ -210,7 +210,7 @@ export const CARDS: Record<CardId, Card> = {
     refuses: (chronicle, tile) =>
       firstRefusal(
         worked(chronicle, tile),
-        made(tile, BUILDINGS.PH_Farm.terrain),
+        made(tile, [BUILDINGS.PH_Farm.terrain]),
         inside(chronicle, tile),
         slotFree(tile),
       ),
@@ -236,17 +236,29 @@ export const CARDS: Record<CardId, Card> = {
     refuses: (chronicle, tile) =>
       firstRefusal(
         worked(chronicle, tile),
-        made(tile, IMPROVEMENTS.PH_Mine.terrain),
+        made(tile, IMPROVEMENTS.PH_Mine.terrains),
         unimproved(tile, 'PH_Mine'),
       ),
     effect: (paid, at) => improved(paid, at, 'PH_Mine'),
+  },
+  PH_Road: {
+    kind: 'instant',
+    cost: { production: 2 },
+    aim: 'tile',
+    refuses: (chronicle, tile) =>
+      firstRefusal(
+        worked(chronicle, tile),
+        made(tile, IMPROVEMENTS.PH_Road.terrains),
+        unimproved(tile, 'PH_Road'),
+      ),
+    effect: (paid, at) => improved(paid, at, 'PH_Road'),
   },
   PH_Urbanisation: {
     kind: 'instant',
     cost: { production: 5 },
     aim: 'tile',
     refuses: (chronicle, tile) =>
-      firstRefusal(worked(chronicle, tile), made(tile, 'plain'), slotFree(tile)),
+      firstRefusal(worked(chronicle, tile), made(tile, ['plain']), slotFree(tile)),
     effect: (paid, at) => terraformed(paid, at, 'urban'),
   },
   PH_Recall: {

@@ -423,17 +423,17 @@ entered and left without touching the other.
 
 ### The map ✅
 
-A tile is layers, and its income and movement cost are the sum of what its layers say, with a
-river running along the tile adding to its yield on top of them:
+A tile is layers: its income is the sum of what its layers say, and so is its movement cost unless
+a layer names that outright, with a river running along the tile adding to its yield on top of them:
 
 - **Terrain** — one per tile, fixed unless terraformed: plain, forest, hills, … The list is
   content and changes freely.
 - **Feature** — at most one, put there by the generator: a fertile plain. A feature lies
   on its terrain, so it is gone when its tile is terraformed.
 - **Improvement** — what a worker improves a tile with through an instant, any number of distinct
-  ones per tile, never the same one twice. Each names the terrain it goes on, as a feature and a
-  building do, and stays through a terraform. A road is one; it runs under whatever building stands
-  there.
+  ones per tile, never the same one twice. Each names the terrains it goes on — one or several, where
+  a feature and a building name the one theirs lies on — and stays through a terraform. A **road** is
+  one, and names the terrains a worker reaches; it runs under whatever building stands there.
 - **Building** — at most one per tile: the tile has one building slot. That slot is the whole
   difference between a building and an improvement. The city fills the slot of the tile it stands
   on.
@@ -516,13 +516,15 @@ across turns, never within one blow.
   them until the refresh — no step is taken on credit — and a tile costing more than a unit's move
   is beyond that unit for good. Crossing to a tile costs the cheapest way there, and the tile a unit
   already stands on costs it nothing. Coast and deep water name no movement cost at all and are
-  crossed by nothing. A step over an edge a river runs along spends every move point the unit has
-  left, and is taken only where those cover the tile it enters in full; no tile is entered for
-  nothing, so a crossing is the last step of that unit's turn. An enemy reading a walk over the whole
-  map has no points to drain and weighs a crossing as the walking unit's whole move, which is what
-  the drain costs at worst. A unit passes through the units of its own faction and never through
-  another's, and it lands only on a free tile. Movement by the cards alone was rejected: in play it
-  limited more than it empowered.
+  crossed by nothing. A **road** names its tile's cost outright over the sum its layers make: half a
+  move point to enter, whatever lies under it. No layer takes a tile lower, for no tile is entered
+  for nothing. A step over an edge a river runs along spends every move point the unit has left, and
+  is taken only where those cover the tile it enters in full, so a crossing is the last step of that
+  unit's turn. A river edge with a road on both banks is a **bridge**, crossed as if no river ran
+  there. An enemy reading a walk over the whole map has no points to drain and weighs a crossing as
+  the walking unit's whole move, which is what the drain costs at worst. A unit passes through the
+  units of its own faction and never through another's, and it lands only on a free tile. Movement by
+  the cards alone was rejected: in play it limited more than it empowered.
 - **A unit attacks on its own action.** It holds **action**, refreshed at the same tick as its move
   points, and spends one per attack on a unit of another faction within its range; a melee unit's
   range is one. The player attacks by the same press as a move — the target standing on the tile is

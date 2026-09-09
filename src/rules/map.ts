@@ -77,12 +77,21 @@ const TERRAIN_MOVEMENT_COST: Record<Terrain, number | undefined> = {
   urban: MOVE_POINT,
 };
 
+/** Whether a road runs on a tile: what names the tile's own cost, and what a bridge needs on both banks. */
+function roaded(tile: Tile | undefined): boolean {
+  return tile?.improvements.includes('PH_Road') ?? false;
+}
+
 /**
  * What entering a tile spends of a unit's move points: the one answer every path over the map asks.
- * Water names no movement cost and is crossed by nothing, and neither is a tile off the map.
+ * Water names no movement cost and is crossed by nothing, and neither is a tile off the map. A road
+ * names its tile's cost outright over what the layers under it sum to.
  */
 export function movementCost(tile: Tile | undefined): number | undefined {
-  return tile === undefined ? undefined : TERRAIN_MOVEMENT_COST[tile.terrain];
+  if (tile === undefined) return undefined;
+  const ground = TERRAIN_MOVEMENT_COST[tile.terrain];
+  if (ground === undefined) return undefined;
+  return roaded(tile) ? MOVE_POINT / 2 : ground;
 }
 
 /** Which terrains are water, terrain by terrain. */
@@ -131,7 +140,7 @@ const TERRAIN_LIFT: Record<Terrain, number> = {
 /** `PH_` marks a stand-in: none of these is authored content, and all of them go. */
 export type BuildingTypeId = 'PH_City' | 'PH_Farm';
 export type FeatureId = 'PH_Fertile';
-export type ImprovementId = 'PH_Mine';
+export type ImprovementId = 'PH_Mine' | 'PH_Road';
 
 /** What a building of each kind stands on, and what it yields at income on top of that terrain. */
 export const BUILDINGS: Record<
@@ -150,12 +159,13 @@ export const FEATURES: Record<
   PH_Fertile: { terrain: 'plain', yields: { food: 1 } },
 };
 
-/** What terrain an improvement of each kind goes on, and what it yields at income on top of it. */
+/** What terrains an improvement of each kind goes on, and what it yields at income on top of them. */
 export const IMPROVEMENTS: Record<
   ImprovementId,
-  { readonly terrain: Terrain; readonly yields: Partial<Resources> }
+  { readonly terrains: readonly Terrain[]; readonly yields: Partial<Resources> }
 > = {
-  PH_Mine: { terrain: 'hills', yields: { production: 1 } },
+  PH_Mine: { terrains: ['hills'], yields: { production: 1 } },
+  PH_Road: { terrains: ['plain', 'forest', 'hills', 'urban'], yields: {} },
 };
 
 /** How many biomes the map is cut into, which kinds they are dealt, and which features follow. */
@@ -287,7 +297,8 @@ function spentOn(walk: Walk, paid: number, cost: number, river: boolean): number
 /**
  * What the cheapest route to each tile costs from a start, the start itself nothing: every step
  * spends what the walk says, and `shut` keeps a route off the tiles the mover may not cross for
- * reasons of its own. A tile no route reaches is absent from the answer, and so is every tile no
+ * reasons of its own. A river edge with a road on both banks is a bridge, stepped over as if no
+ * river ran there. A tile no route reaches is absent from the answer, and so is every tile no
  * movement cost is named for.
  */
 export function pathCosts(
@@ -307,11 +318,14 @@ export function pathCosts(
     for (const [at, paid] of front) {
       // A tile the walk reached again for less stands on the front twice; the dearer one is dropped.
       if (spent.get(tileKey(at)) !== paid) continue;
+      const nearBank = roaded(ground.get(tileKey(at)));
       for (const coord of neighbours(at)) {
         const key = tileKey(coord);
-        const cost = movementCost(ground.get(key));
+        const onto = ground.get(key);
+        const cost = movementCost(onto);
         if (cost === undefined || shut(coord)) continue;
-        const total = spentOn(walk, paid, cost, crossings.has(edgeKey(at, coord)));
+        const bridged = nearBank && roaded(onto);
+        const total = spentOn(walk, paid, cost, crossings.has(edgeKey(at, coord)) && !bridged);
         if (total === undefined) continue;
         const before = spent.get(key);
         if (before !== undefined && before <= total) continue;

@@ -108,9 +108,10 @@ const RIVER_WIDTH = 5;
 const RIVER_OUTLINE_WIDTH = 7;
 const RIVER_MARK: number[] = corners([-12, -12, -4, 0, 4, -8, 12, 4, 12, 12, 4, 0, -4, 8, -12, -4]);
 
-/** Placeholder primitives until the art pass: the mine a cut into the ground. */
+/** Placeholder primitives until the art pass: the mine a cut into the ground, the road a straight band. */
 const IMPROVEMENT_MARKS: Record<ImprovementId, number[]> = {
   PH_Mine: corners([-8, 7, -4, -7, 4, -7, 8, 7]),
+  PH_Road: corners([-8, -2, 8, -2, 8, 2, -8, 2]),
 };
 
 const BUILT = 0xcfc6b4;

@@ -12,11 +12,6 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
-- **Placeholder road card** — a stand-in improvement card lays a road on plain, forest, hills or
-  urban; a road's tile costs half a move point to enter whatever lies under it, a river edge with a
-  road on both banks is a bridge, crossed as if no river ran there, and the map marks a road above
-  its tile. Rules tests show a unit reaching further over a road than beside it and across a bridge
-  undrained. Doc-impact: `docs/DESIGN.md`, `docs/GLOSSARY.md`. [board/road.md](board/road.md)
 - **The terrain card reads the movement cost** — the inspected tile's terrain card carries a small
   "Mv X" in its top-right corner, X being the tile's movement cost, a road's read as 0.5; a water
   tile's reading is settled at the pitch. An e2e spec reads it off a tile.
