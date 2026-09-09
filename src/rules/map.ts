@@ -63,15 +63,18 @@ export const RIVER_YIELDS: Partial<Record<Terrain, Partial<Resources>>> = {
   forest: { food: 1 },
 };
 
+/** One move point, in the hundredths every move stat, move point and movement cost counts in. */
+export const MOVE_POINT = 100;
+
 /** What entering a tile of each terrain costs, terrain by terrain; water names none. */
 const TERRAIN_MOVEMENT_COST: Record<Terrain, number | undefined> = {
-  plain: 1,
-  forest: 2,
-  hills: 2,
-  mountain: 6,
+  plain: MOVE_POINT,
+  forest: 2 * MOVE_POINT,
+  hills: 2 * MOVE_POINT,
+  mountain: 6 * MOVE_POINT,
   coast: undefined,
   deep: undefined,
-  urban: 1,
+  urban: MOVE_POINT,
 };
 
 /**

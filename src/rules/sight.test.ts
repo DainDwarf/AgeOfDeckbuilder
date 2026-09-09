@@ -1,6 +1,14 @@
 import { expect, test } from 'vitest';
 import { apply, outcome } from './chronicle';
-import { distance, neighbours, type Terrain, type Tile, type TileCoords, tileKey } from './map';
+import {
+  distance,
+  MOVE_POINT,
+  neighbours,
+  type Terrain,
+  type Tile,
+  type TileCoords,
+  tileKey,
+} from './map';
 import { seedRng } from './rng';
 import { CITY_SIGHT, charted, inSight } from './sight';
 import { type Chronicle, entered, type Snapshot } from './state';
@@ -221,7 +229,7 @@ test('a unit of the player’s neither lands on an uncharted tile nor crosses on
   const beyond = off(3, 0);
   const chronicle = watching(founded(ground(['forest', [off(1, 0)]]), [beyond]), WATCHER, {
     sight: SIGHT,
-    move: 3,
+    move: 3 * MOVE_POINT,
   });
   expect(snapshotOf(chronicle, uncharted)).toBeUndefined();
   expect(snapshotOf(chronicle, beyond)).toBeDefined();

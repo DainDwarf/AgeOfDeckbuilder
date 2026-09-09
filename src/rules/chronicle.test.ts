@@ -24,6 +24,7 @@ import {
   FEATURES,
   IMPROVEMENTS,
   MAP_COMPOSITION,
+  MOVE_POINT,
   neighbours,
   RIVER_YIELDS,
   type River,
@@ -180,7 +181,7 @@ function statsOf(stats: Partial<UnitStats>): UnitStats {
     health: 4,
     damage: 1,
     range: 1,
-    move: 2,
+    move: 2 * MOVE_POINT,
     action: 1,
     sight: 2,
     ...stats,
@@ -664,7 +665,7 @@ test('growth is staged right after the income it comes from, and before the enem
   const city = cityOf(['urban', 'plain'], {
     tiles: field(3),
     population: 2,
-    units: [worker({ q: 1, r: 1 }), standing('enemy', { q: 3, r: 0 }, { move: 1 })],
+    units: [worker({ q: 1, r: 1 }), standing('enemy', { q: 3, r: 0 }, { move: MOVE_POINT })],
   });
 
   expect(stagedBy(city, { type: 'end-turn' })).toEqual([
@@ -747,7 +748,7 @@ test('a move is one stage, naming the tile the unit left and the one it reached'
   const city = cityOf(['urban'], {
     tiles: field(3),
     units: [
-      standing('player', CITY, { move: 2 }),
+      standing('player', CITY, { move: 2 * MOVE_POINT }),
       standing('enemy', { q: 1, r: 1 }, { health: 3 }),
     ],
   });
@@ -767,12 +768,12 @@ test('a move is one stage, naming the tile the unit left and the one it reached'
 test('a unit steps tile by tile, in as many steps as it has move points', () => {
   const city = cityOf(['urban'], {
     tiles: field(3),
-    units: [standing('player', CITY, { move: 2 })],
+    units: [standing('player', CITY, { move: 2 * MOVE_POINT })],
   });
 
   const first = outcome(apply(city, moveTo(1, { q: 1, r: 0 })));
   expect(first.units[0].tile).toEqual({ q: 1, r: 0 });
-  expect(pointsOf(first, 1)).toBe(1);
+  expect(pointsOf(first, 1)).toBe(MOVE_POINT);
 
   const second = outcome(apply(first, moveTo(1, { q: 2, r: 0 })));
   expect(second.units[0].tile).toEqual({ q: 2, r: 0 });
@@ -785,14 +786,14 @@ test('a unit steps tile by tile, in as many steps as it has move points', () => 
 test('a unit with no move points left crosses nothing until the turn ticks', () => {
   const spent = cityOf(['urban'], {
     tiles: field(3),
-    units: [standing('player', CITY, { move: 2 }, 0)],
+    units: [standing('player', CITY, { move: 2 * MOVE_POINT }, 0)],
   });
 
   expect(stagedBy(spent, moveTo(1, { q: 1, r: 0 }))).toEqual(['refused']);
 
   const ticked = outcome(apply(spent, { type: 'end-turn' }));
 
-  expect(pointsOf(ticked, 1)).toBe(2);
+  expect(pointsOf(ticked, 1)).toBe(2 * MOVE_POINT);
   expect(outcome(apply(ticked, moveTo(1, { q: 1, r: 0 }))).units[0].tile).toEqual({ q: 1, r: 0 });
 });
 
@@ -800,17 +801,17 @@ test('the turn refreshes every unit to its move, and never past it', () => {
   const city = cityOf(['urban'], {
     tiles: field(4),
     units: [
-      standing('player', CITY, { move: 2 }, 0),
-      standing('player', { q: 1, r: 1 }, { move: 3 }),
-      standing('enemy', { q: 4, r: 0 }, { move: 2 }, 1),
+      standing('player', CITY, { move: 2 * MOVE_POINT }, 0),
+      standing('player', { q: 1, r: 1 }, { move: 3 * MOVE_POINT }),
+      standing('enemy', { q: 4, r: 0 }, { move: 2 * MOVE_POINT }, MOVE_POINT),
     ],
   });
 
   const ticked = outcome(apply(city, { type: 'end-turn' }));
 
-  expect(pointsOf(ticked, 1)).toBe(2);
-  expect(pointsOf(ticked, 2)).toBe(3);
-  expect(pointsOf(ticked, 3)).toBe(2);
+  expect(pointsOf(ticked, 1)).toBe(2 * MOVE_POINT);
+  expect(pointsOf(ticked, 2)).toBe(3 * MOVE_POINT);
+  expect(pointsOf(ticked, 3)).toBe(2 * MOVE_POINT);
 });
 
 test('a unit entering by its card enters with its move points full, and moves the same turn', () => {
@@ -828,7 +829,7 @@ test('a unit entering by its card enters with its move points full, and moves th
   const moved = outcome(apply(entered, moveTo(1, { q: 1, r: 0 })));
 
   expect(moved.units[0].tile).toEqual({ q: 1, r: 0 });
-  expect(pointsOf(moved, 1)).toBe(UNIT_STATS.PH_Worker.move - 1);
+  expect(pointsOf(moved, 1)).toBe(UNIT_STATS.PH_Worker.move - MOVE_POINT);
 });
 
 test('the refresh instant refreshes one unit of the player’s that has spent move points', () => {
@@ -836,16 +837,16 @@ test('the refresh instant refreshes one unit of the player’s that has spent mo
     tiles: field(3),
     hand: ['PH_March'],
     units: [
-      standing('player', CITY, { move: 2 }, 0),
-      standing('player', { q: 1, r: 1 }, { move: 2 }, 1),
+      standing('player', CITY, { move: 2 * MOVE_POINT }, 0),
+      standing('player', { q: 1, r: 1 }, { move: 2 * MOVE_POINT }, MOVE_POINT),
     ],
   });
 
   const stages = apply(city, aimedAtUnit(CITY));
 
   expect(stages.map((stage) => stage.name)).toEqual(['played']);
-  expect(pointsOf(outcome(stages), 1)).toBe(2);
-  expect(pointsOf(outcome(stages), 2)).toBe(1);
+  expect(pointsOf(outcome(stages), 1)).toBe(2 * MOVE_POINT);
+  expect(pointsOf(outcome(stages), 2)).toBe(MOVE_POINT);
   expect(outcome(stages).discardPile).toEqual(['PH_March']);
 });
 
@@ -854,9 +855,9 @@ test('the refresh instant is refused on a unit whose move points are full, on an
     tiles: field(3),
     hand: ['PH_March'],
     units: [
-      standing('player', CITY, { move: 2 }, 1),
-      standing('player', { q: 1, r: 1 }, { move: 2 }),
-      standing('enemy', { q: 2, r: 0 }, { move: 2 }, 0),
+      standing('player', CITY, { move: 2 * MOVE_POINT }, MOVE_POINT),
+      standing('player', { q: 1, r: 1 }, { move: 2 * MOVE_POINT }),
+      standing('enemy', { q: 2, r: 0 }, { move: 2 * MOVE_POINT }, 0),
     ],
   });
 
@@ -944,7 +945,7 @@ test('an attack by hand takes the attacker’s damage off the target and spends 
   const city = cityOf(['urban'], {
     tiles: field(3),
     units: [
-      standing('player', { q: 1, r: 0 }, { damage: 2, move: 2 }),
+      standing('player', { q: 1, r: 0 }, { damage: 2, move: 2 * MOVE_POINT }),
       standing('enemy', { q: 2, r: 0 }, { health: 5 }),
     ],
   });
@@ -959,7 +960,7 @@ test('an attack by hand takes the attacker’s damage off the target and spends 
   expect(landed.chronicle.units[1].stats.health).toBe(3);
   expect(landed.chronicle.units[0].tile).toEqual({ q: 1, r: 0 });
   expect(actionOf(landed.chronicle, 1)).toBe(0);
-  expect(pointsOf(landed.chronicle, 1)).toBe(2);
+  expect(pointsOf(landed.chronicle, 1)).toBe(2 * MOVE_POINT);
 });
 
 test('a unit attacks on the action it holds, and a second attack the same turn is refused', () => {
@@ -1035,7 +1036,7 @@ test('a kill leaves every unit still standing commanded by the number it entered
     tiles: field(3),
     units: [
       standing('enemy', { q: 2, r: 0 }, { health: 3 }),
-      standing('player', { q: 1, r: 0 }, { damage: 3, move: 2 }),
+      standing('player', { q: 1, r: 0 }, { damage: 3, move: 2 * MOVE_POINT }),
       worker({ q: 0, r: 1 }),
     ],
   });
@@ -1094,12 +1095,12 @@ test('the refresh instant refreshes move points alone, and leaves a spent action
   const city = cityOf(['urban'], {
     tiles: field(3),
     hand: ['PH_March'],
-    units: [standing('player', CITY, { move: 2, action: 1 }, 0, 0)],
+    units: [standing('player', CITY, { move: 2 * MOVE_POINT, action: 1 }, 0, 0)],
   });
 
   const refreshed = outcome(apply(city, aimedAtUnit(CITY)));
 
-  expect(pointsOf(refreshed, 1)).toBe(2);
+  expect(pointsOf(refreshed, 1)).toBe(2 * MOVE_POINT);
   expect(actionOf(refreshed, 1)).toBe(0);
 });
 
@@ -1107,7 +1108,7 @@ test('the refresh instant is refused on a unit whose move points are full, its a
   const city = cityOf(['urban'], {
     tiles: field(3),
     hand: ['PH_March'],
-    units: [standing('player', CITY, { move: 2, action: 1 }, 2, 0)],
+    units: [standing('player', CITY, { move: 2 * MOVE_POINT, action: 1 }, 2 * MOVE_POINT, 0)],
   });
 
   expect(stagedBy(city, aimedAtUnit(CITY))).toEqual(['refused']);
@@ -1118,13 +1119,13 @@ test('an attack spends no move points and a step no action: either follows the o
   const city = cityOf(['urban'], {
     tiles: field(3),
     units: [
-      standing('player', { q: 1, r: 0 }, { move: 2, damage: 1, range: 1 }),
+      standing('player', { q: 1, r: 0 }, { move: 2 * MOVE_POINT, damage: 1, range: 1 }),
       standing('enemy', { q: 2, r: 0 }, { health: 5 }),
     ],
   });
 
   const attackedFirst = outcome(apply(city, attackOn(1, { q: 2, r: 0 })));
-  expect(pointsOf(attackedFirst, 1)).toBe(2);
+  expect(pointsOf(attackedFirst, 1)).toBe(2 * MOVE_POINT);
   const andStepped = outcome(apply(attackedFirst, moveTo(1, { q: 1, r: 1 })));
   expect(andStepped.units[0].tile).toEqual({ q: 1, r: 1 });
   expect(andStepped.units[1].stats.health).toBe(4);
@@ -1133,7 +1134,7 @@ test('an attack spends no move points and a step no action: either follows the o
   expect(actionOf(steppedFirst, 1)).toBe(1);
   const andAttacked = outcome(apply(steppedFirst, attackOn(1, { q: 2, r: 0 })));
   expect(andAttacked.units[1].stats.health).toBe(4);
-  expect(pointsOf(andAttacked, 1)).toBe(1);
+  expect(pointsOf(andAttacked, 1)).toBe(MOVE_POINT);
 });
 
 test('ending the turn discards what is left of the hand', () => {
@@ -1323,7 +1324,7 @@ test('a unit card is refused while a unit already stands on the city tile', () =
 test('a unit crosses within its move points, and no further', () => {
   const city = cityOf(['urban'], {
     tiles: field(3),
-    units: [standing('player', CITY, { move: 2 })],
+    units: [standing('player', CITY, { move: 2 * MOVE_POINT })],
   });
 
   expect(outcome(apply(city, moveTo(1, { q: 2, r: 0 }))).units[0].tile).toEqual({ q: 2, r: 0 });
@@ -1333,7 +1334,7 @@ test('a unit crosses within its move points, and no further', () => {
 test('a unit spends what the tile it enters costs: two plains for the one forest beside them', () => {
   const city = cityOf(['urban'], {
     tiles: madeOf(field(2), 'forest', [{ q: 1, r: -1 }]),
-    units: [standing('player', CITY, { move: 2 })],
+    units: [standing('player', CITY, { move: 2 * MOVE_POINT })],
   });
 
   const overPlains = outcome(apply(city, moveTo(1, { q: 2, r: 0 })));
@@ -1348,12 +1349,12 @@ test('a unit spends what the tile it enters costs: two plains for the one forest
 test('a unit with fewer move points left than a tile costs does not enter it', () => {
   const city = cityOf(['urban'], {
     tiles: madeOf(field(2), 'forest', [{ q: 2, r: -1 }]),
-    units: [standing('player', CITY, { move: 2 })],
+    units: [standing('player', CITY, { move: 2 * MOVE_POINT })],
   });
 
   const stepped = outcome(apply(city, moveTo(1, { q: 1, r: -1 })));
 
-  expect(pointsOf(stepped, 1)).toBe(1);
+  expect(pointsOf(stepped, 1)).toBe(MOVE_POINT);
   expect(outcome(apply(stepped, moveTo(1, { q: 2, r: -1 })))).toEqual(stepped);
   expect(outcome(apply(stepped, moveTo(1, { q: 2, r: -2 }))).units[0].tile).toEqual({
     q: 2,
@@ -1367,7 +1368,7 @@ test('a unit crossing a river spends every move point it has left, and steps no 
   const city = cityOf(['urban'], {
     tiles: only(2, [CITY, bank, on]),
     rivers: [riverBetween(CITY, bank)],
-    units: [standing('player', CITY, { move: 3 })],
+    units: [standing('player', CITY, { move: 3 * MOVE_POINT })],
   });
 
   const crossed = outcome(apply(city, moveTo(1, bank)));
@@ -1389,14 +1390,14 @@ test('a unit crosses a river only where the move points it has left cover the fa
       units: [standing('player', CITY, { move })],
     });
 
-  const short = outcome(apply(shore(2), moveTo(1, bank)));
-  const long = outcome(apply(shore(4), moveTo(1, bank)));
+  const short = outcome(apply(shore(2 * MOVE_POINT), moveTo(1, bank)));
+  const long = outcome(apply(shore(4 * MOVE_POINT), moveTo(1, bank)));
   const crossed = outcome(apply(long, moveTo(1, across)));
 
-  expect(pointsOf(short, 1)).toBe(1);
+  expect(pointsOf(short, 1)).toBe(MOVE_POINT);
   expect(outcome(apply(short, moveTo(1, across)))).toEqual(short);
   expect(outcome(apply(short, moveTo(1, beside))).units[0].tile).toEqual(beside);
-  expect(pointsOf(long, 1)).toBe(3);
+  expect(pointsOf(long, 1)).toBe(3 * MOVE_POINT);
   expect(crossed.units[0].tile).toEqual(across);
   expect(pointsOf(crossed, 1)).toBe(0);
 });
@@ -1413,7 +1414,7 @@ test('a unit crosses to a tile the cheapest way, not the fewest tiles', () => {
       'hills',
       [watch],
     ),
-    units: [standing('player', watch, { move: 4, sight: 4 })],
+    units: [standing('player', watch, { move: 4 * MOVE_POINT, sight: 4 })],
   });
 
   // The three tiles straight there cost five; the four round the forests cost four.
@@ -1426,7 +1427,7 @@ test('a unit crosses to a tile the cheapest way, not the fewest tiles', () => {
 test('water is crossed by nobody, and so is everything only water leads to', () => {
   const city = cityOf(['urban'], {
     tiles: field(2, [{ q: 1, r: 0 }]),
-    units: [standing('player', CITY, { move: 2 })],
+    units: [standing('player', CITY, { move: 2 * MOVE_POINT })],
   });
 
   expect(outcome(apply(city, moveTo(1, { q: 1, r: 0 })))).toEqual(city);
@@ -1437,23 +1438,23 @@ test('water is crossed by nobody, and so is everything only water leads to', () 
 test('a tile costing more than a unit’s move is beyond it, however often it refreshes', () => {
   const city = cityOf(['urban'], {
     tiles: madeOf(field(2), 'forest', [{ q: 1, r: 0 }]),
-    units: [standing('player', CITY, { move: 1 })],
+    units: [standing('player', CITY, { move: MOVE_POINT })],
   });
 
-  expect(pointsOf(city, 1)).toBe(1);
+  expect(pointsOf(city, 1)).toBe(MOVE_POINT);
   expect(outcome(apply(city, moveTo(1, { q: 1, r: 0 })))).toEqual(city);
   expect(outcome(apply(city, moveTo(1, { q: 0, r: 1 }))).units[0].tile).toEqual({ q: 0, r: 1 });
 
   const ticked = outcome(apply(city, { type: 'end-turn' }));
 
-  expect(pointsOf(ticked, 1)).toBe(1);
+  expect(pointsOf(ticked, 1)).toBe(MOVE_POINT);
   expect(outcome(apply(ticked, moveTo(1, { q: 1, r: 0 })))).toEqual(ticked);
 });
 
 test('a unit crosses its own faction but never lands on it', () => {
   const city = cityOf(['urban'], {
     tiles: field(2),
-    units: [standing('player', CITY, { move: 2 }), standing('player', { q: 1, r: 0 })],
+    units: [standing('player', CITY, { move: 2 * MOVE_POINT }), standing('player', { q: 1, r: 0 })],
   });
 
   expect(outcome(apply(city, moveTo(1, { q: 1, r: 0 })))).toEqual(city);
@@ -1463,7 +1464,10 @@ test('a unit crosses its own faction but never lands on it', () => {
 test('the other faction stops a unit where it stands', () => {
   const city = cityOf(['urban'], {
     tiles: field(2),
-    units: [standing('player', CITY, { move: 2, damage: 0 }), standing('enemy', { q: 1, r: 0 })],
+    units: [
+      standing('player', CITY, { move: 2 * MOVE_POINT, damage: 0 }),
+      standing('enemy', { q: 1, r: 0 }),
+    ],
   });
 
   expect(outcome(apply(city, moveTo(1, { q: 1, r: 0 })))).toEqual(city);
@@ -1473,7 +1477,7 @@ test('the other faction stops a unit where it stands', () => {
 test('a move of a unit that is not the player’s, or of no unit at all, is refused', () => {
   const city = cityOf(['urban'], {
     tiles: field(2),
-    units: [standing('player', CITY, { move: 2 }), standing('enemy', { q: 2, r: 0 })],
+    units: [standing('player', CITY, { move: 2 * MOVE_POINT }), standing('enemy', { q: 2, r: 0 })],
   });
 
   expect(stagedBy(city, moveTo(2, { q: 2, r: 1 }))).toEqual(['refused']);
@@ -1492,7 +1496,7 @@ test('a unit walled in by water crosses nowhere at all', () => {
   ];
   const city = cityOf(['urban'], {
     tiles: field(2, walled),
-    units: [standing('player', CITY, { move: 2 })],
+    units: [standing('player', CITY, { move: 2 * MOVE_POINT })],
   });
 
   for (const to of walled) expect(outcome(apply(city, moveTo(1, to)))).toEqual(city);
@@ -2212,7 +2216,10 @@ test('a card aimed at a unit admits the tiles the player’s units stand on, and
   const spent = { q: 1, r: 0 };
   const held = { q: 2, r: 0 };
   const city = founded(2, {
-    units: [standing('player', spent, { move: 2 }, 1), standing('enemy', held, { move: 2 }, 1)],
+    units: [
+      standing('player', spent, { move: 2 * MOVE_POINT }, MOVE_POINT),
+      standing('enemy', held, { move: 2 * MOVE_POINT }, MOVE_POINT),
+    ],
   });
 
   expect(admittedTiles(city, 'PH_March')).toEqual([spent]);
@@ -2225,13 +2232,13 @@ test('a card aimed at a unit lands on the play that aims at a unit, and nowhere 
   const at = { q: 1, r: 0 };
   const city = founded(2, {
     hand: ['PH_March'],
-    units: [standing('player', at, { move: 2 }, 1)],
+    units: [standing('player', at, { move: 2 * MOVE_POINT }, MOVE_POINT)],
   });
 
   expect(stagedBy(city, aimedAt(at))).toEqual(['refused']);
   expect(outcome(apply(city, aimedAt(at)))).toBe(city);
   expect(stagedBy(city, aimedAtUnit(at))).toEqual(['played']);
-  expect(pointsOf(outcome(apply(city, aimedAtUnit(at))), 1)).toBe(2);
+  expect(pointsOf(outcome(apply(city, aimedAtUnit(at))), 1)).toBe(2 * MOVE_POINT);
 });
 
 test('the refresh instant names the first of its two reasons: the unit, then its move points', () => {
@@ -2239,7 +2246,7 @@ test('the refresh instant names the first of its two reasons: the unit, then its
   const bare = founded(2);
   const enemy = withUnits(bare, [standing('enemy', at)]);
   const full = withUnits(bare, [worker(at)]);
-  const spent = withUnits(bare, [standing('player', at, { move: 2 }, 1)]);
+  const spent = withUnits(bare, [standing('player', at, { move: 2 * MOVE_POINT }, MOVE_POINT)]);
 
   expect(refusedFor(bare, 'PH_March', at)).toBe('unit');
   expect(refusedFor(enemy, 'PH_March', at)).toBe('unit');
@@ -2338,7 +2345,7 @@ test('the enemy arrives on a free tile of the outer ring it can stand on, and on
 test('an enemy moves its move toward the city, turn after turn', () => {
   const city = cityOf(['urban'], {
     tiles: field(4),
-    units: [standing('enemy', { q: 4, r: 0 }, { move: 2 })],
+    units: [standing('enemy', { q: 4, r: 0 }, { move: 2 * MOVE_POINT })],
   });
 
   const moved = outcome(apply(city, { type: 'end-turn' }));
@@ -2350,7 +2357,7 @@ test('an enemy moves its move toward the city, turn after turn', () => {
 test('an enemy spends the move points it crosses on, and carries them into the turn refreshed', () => {
   const city = cityOf(['urban'], {
     tiles: field(4),
-    units: [standing('enemy', { q: 4, r: 0 }, { move: 2 })],
+    units: [standing('enemy', { q: 4, r: 0 }, { move: 2 * MOVE_POINT })],
   });
 
   const stages = apply(city, { type: 'end-turn' });
@@ -2358,13 +2365,13 @@ test('an enemy spends the move points it crosses on, and carries them into the t
   if (crossed === undefined) throw new Error('the enemy phase staged no move');
 
   expect(pointsOf(crossed.chronicle, 1)).toBe(0);
-  expect(pointsOf(outcome(stages), 1)).toBe(2);
+  expect(pointsOf(outcome(stages), 1)).toBe(2 * MOVE_POINT);
 });
 
 test('a forest on an enemy’s way costs it what the tile says, and keeps it off the city', () => {
   /** One corridor to the city, forked: the straight way through one tile, the way round through two. */
   const corridor = [CITY, { q: 1, r: 0 }, { q: 2, r: 0 }, { q: 2, r: -1 }, { q: 1, r: -1 }];
-  const raider = standing('enemy', { q: 2, r: 0 }, { move: 2, damage: 0 });
+  const raider = standing('enemy', { q: 2, r: 0 }, { move: 2 * MOVE_POINT, damage: 0 });
   const plains = cityOf(['urban'], { tiles: only(2, corridor), units: [raider] });
   const wooded = cityOf(['urban'], {
     tiles: madeOf(only(2, corridor), 'forest', [{ q: 1, r: 0 }]),
@@ -2384,7 +2391,10 @@ test('an enemy weighs a crossing as its whole move, and turns for the city inste
     cityOf(['urban'], {
       tiles: only(5, corridor),
       rivers,
-      units: [standing('player', across), standing('enemy', { q: 3, r: 0 }, { move: 3 })],
+      units: [
+        standing('player', across),
+        standing('enemy', { q: 3, r: 0 }, { move: 3 * MOVE_POINT }),
+      ],
     });
 
   expect(movesOf(beset([]))).toEqual([['3,0', '4,0']]);
@@ -2394,7 +2404,7 @@ test('an enemy weighs a crossing as its whole move, and turns for the city inste
 test('an enemy moves toward the nearest of the player’s units instead of the city', () => {
   const city = cityOf(['urban'], {
     tiles: field(4),
-    units: [worker({ q: 2, r: 0 }), standing('enemy', { q: 4, r: 0 }, { move: 2 })],
+    units: [worker({ q: 2, r: 0 }), standing('enemy', { q: 4, r: 0 }, { move: 2 * MOVE_POINT })],
   });
 
   const moved = outcome(apply(city, { type: 'end-turn' }));
@@ -2405,7 +2415,10 @@ test('an enemy moves toward the nearest of the player’s units instead of the c
 test('an enemy moves within range of a unit and attacks it in the same enemy phase', () => {
   const city = cityOf(['urban'], {
     tiles: field(4),
-    units: [worker({ q: 2, r: 0 }), standing('enemy', { q: 4, r: 0 }, { move: 1, damage: 2 })],
+    units: [
+      worker({ q: 2, r: 0 }),
+      standing('enemy', { q: 4, r: 0 }, { move: MOVE_POINT, damage: 2 }),
+    ],
   });
 
   const after = outcome(apply(city, { type: 'end-turn' }));
@@ -2419,7 +2432,10 @@ test('an enemy moves within range of a unit and attacks it in the same enemy pha
 test('an enemy its move leaves out of range attacks nothing', () => {
   const city = cityOf(['urban'], {
     tiles: field(4),
-    units: [worker({ q: 1, r: 0 }), standing('enemy', { q: 4, r: 0 }, { move: 1, damage: 2 })],
+    units: [
+      worker({ q: 1, r: 0 }),
+      standing('enemy', { q: 4, r: 0 }, { move: MOVE_POINT, damage: 2 }),
+    ],
   });
 
   const after = outcome(apply(city, { type: 'end-turn' }));
@@ -2494,8 +2510,8 @@ test('an enemy that moves stages the tile it left and the one it reached; a stuc
   const city = cityOf(['urban'], {
     tiles: field(3, moat),
     units: [
-      standing('enemy', { q: 3, r: 0 }, { move: 1 }),
-      standing('enemy', { q: 0, r: 3 }, { move: 1 }),
+      standing('enemy', { q: 3, r: 0 }, { move: MOVE_POINT }),
+      standing('enemy', { q: 0, r: 3 }, { move: MOVE_POINT }),
     ],
   });
 
@@ -2507,8 +2523,8 @@ test('each enemy stages its own move and its own attacks, before the next enemy 
     tiles: field(3),
     units: [
       worker({ q: 1, r: 1 }),
-      standing('enemy', { q: 3, r: 0 }, { move: 1, damage: 1 }),
-      standing('enemy', { q: 0, r: 3 }, { move: 1, damage: 1 }),
+      standing('enemy', { q: 3, r: 0 }, { move: MOVE_POINT, damage: 1 }),
+      standing('enemy', { q: 0, r: 3 }, { move: MOVE_POINT, damage: 1 }),
     ],
   });
 
@@ -2539,7 +2555,10 @@ test('a tile an enemy occupies yields nothing at income', () => {
 test('an enemy on the city’s tile attacks nothing, and captures the city the turn after', () => {
   const city = cityOf(['urban'], {
     tiles: field(2),
-    units: [worker({ q: 0, r: 1 }), standing('enemy', { q: 1, r: 0 }, { move: 1, damage: 1 })],
+    units: [
+      worker({ q: 0, r: 1 }),
+      standing('enemy', { q: 1, r: 0 }, { move: MOVE_POINT, damage: 1 }),
+    ],
   });
 
   const stood = outcome(apply(city, { type: 'end-turn' }));
@@ -2593,7 +2612,7 @@ test('the same move on the same chronicle gives the same chronicle back', () => 
   const city = cityOf(['urban'], {
     tiles: field(3),
     units: [
-      standing('player', CITY, { move: 2, damage: 2, range: 1 }),
+      standing('player', CITY, { move: 2 * MOVE_POINT, damage: 2, range: 1 }),
       standing('enemy', { q: 2, r: 0 }, { health: 5 }),
     ],
   });

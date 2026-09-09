@@ -108,6 +108,11 @@ makes twice becomes a line here (the ratchet, at `/upkeep`).
   seed data of the editable type; no parallel "custom" type survives.
 - **A named constant only for readers far apart.** Two adjacent lines cannot drift; inline the
   literal.
+- **A fractional quantity is fixed-point.** A rules value that needs fractions over a known, narrow
+  range counts in integers of its smallest unit, with one named constant giving the scale and one
+  formatter reading it back as a decimal at the screen. Floating point is for a range genuinely wide
+  enough to need it. Why: repeated sums and `<=` on floats drift, and a rule decided by a comparison
+  has to be exact.
 - **Tools are consumers of `src/rules/`, never peers.** A simulator, an editor, a profiler reads
   the rules through their public API; no tool-serving hook or field lands in game data or rules.
 - **Game logic is deterministic.** No ambient randomness in `src/rules/` — every random draw goes

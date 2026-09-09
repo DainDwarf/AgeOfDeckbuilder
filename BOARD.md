@@ -12,10 +12,6 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
-- **Move points count in hundredths** — every move stat, move point and movement cost in
-  `src/rules/` is an integer counting hundredths of a move point, content tables included, and the
-  unit card formats them as decimals with trailing zeros trimmed, so today's readings hold; the
-  existing tests and specs pass with their numbers scaled. Doc-impact: `docs/DOGMAS.md`.
 - **Placeholder road card** — a stand-in improvement card lays a road on plain, forest, hills or
   urban; a road's tile costs half a move point to enter whatever lies under it, a river edge with a
   road on both banks is a bridge, crossed as if no river ran there, and the map marks a road above

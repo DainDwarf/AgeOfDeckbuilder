@@ -6,6 +6,7 @@ import {
   type FeatureId,
   IMPROVEMENTS,
   type ImprovementId,
+  MOVE_POINT,
   RIVER_YIELDS,
   type River,
   runsAlong,
@@ -112,13 +113,18 @@ const STATS = ['health', 'damage', 'range', 'move', 'action', 'sight'] as const;
 /** What a row of a card is named by: one `label.` and one `tooltip.` entry each. */
 type Term = (typeof STATS)[number] | Resource;
 
+/** A count of hundredths as the move points it is worth: what every card reads one by. */
+function inMovePoints(hundredths: number): string {
+  return (hundredths / MOVE_POINT).toString();
+}
+
 /** What a stat's row reads: what the unit has left over its own number, where it has two. */
 function readingOf(unit: Unit, stat: (typeof STATS)[number]): string {
   switch (stat) {
     case 'health':
       return `${unit.stats.health} / ${UNIT_STATS[unit.stats.type].health}`;
     case 'move':
-      return `${unit.movePoints} / ${unit.stats.move}`;
+      return `${inMovePoints(unit.movePoints)} / ${inMovePoints(unit.stats.move)}`;
     case 'action':
       return `${unit.action} / ${unit.stats.action}`;
     case 'damage':

@@ -1,5 +1,6 @@
 import {
   distance,
+  MOVE_POINT,
   movementCost,
   pathCosts,
   type River,
@@ -19,7 +20,8 @@ export type EnemyScriptId = 'PH_Advance';
 
 /**
  * What a unit is and what it can do. A unit carries its own copy, taken from `UNIT_STATS` when the
- * card resolves, so from then on the numbers are that unit's own and change with it.
+ * card resolves, so from then on the numbers are that unit's own and change with it. `move` counts
+ * in `MOVE_POINT` hundredths, alone among these: every other stat here is a whole number.
  */
 export type UnitStats = {
   readonly type: UnitTypeId;
@@ -33,8 +35,24 @@ export type UnitStats = {
 
 /** The stats a unit of each kind enters the map with. */
 export const UNIT_STATS: Record<UnitTypeId, UnitStats> = {
-  PH_Worker: { type: 'PH_Worker', health: 2, damage: 0, range: 0, move: 2, action: 0, sight: 2 },
-  PH_Warrior: { type: 'PH_Warrior', health: 5, damage: 2, range: 1, move: 2, action: 1, sight: 2 },
+  PH_Worker: {
+    type: 'PH_Worker',
+    health: 2,
+    damage: 0,
+    range: 0,
+    move: 2 * MOVE_POINT,
+    action: 0,
+    sight: 2,
+  },
+  PH_Warrior: {
+    type: 'PH_Warrior',
+    health: 5,
+    damage: 2,
+    range: 1,
+    move: 2 * MOVE_POINT,
+    action: 1,
+    sight: 2,
+  },
 };
 
 /**
