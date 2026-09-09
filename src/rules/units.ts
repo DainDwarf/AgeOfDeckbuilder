@@ -1,4 +1,12 @@
-import { distance, movementCost, pathCosts, type Tile, type TileCoords, tileKey } from './map';
+import {
+  distance,
+  movementCost,
+  pathCosts,
+  type River,
+  type Tile,
+  type TileCoords,
+  tileKey,
+} from './map';
 
 /** Who a unit acts for. The player commands theirs; an enemy attacks them. */
 export type Faction = 'player' | 'enemy';
@@ -79,32 +87,40 @@ export function standsOn(stats: UnitStats, tile: Tile | undefined): boolean {
 }
 
 /**
- * What a path over the map is read from: the ground it runs over, who stands on it, and which of it
- * has ever been in sight. The chronicle answers for all three.
+ * What a path over the map is read from: the ground it runs over, the rivers cutting it, who stands
+ * on it, and which of it has ever been in sight. The chronicle answers for all four.
  */
 type Crossed = {
   readonly tiles: readonly Tile[];
+  readonly rivers: readonly River[];
   readonly units: readonly Unit[];
   readonly snapshots: readonly TileCoords[];
 };
 
 /**
  * Where a unit can land on the move points it has left, and what each landing spends: entering a
- * tile spends its movement cost, and a landing costs the cheapest route to it. A tile one of its own
- * holds is crossed but never offered. A unit of the player's neither lands on an uncharted tile nor
- * crosses one, while the enemies read the whole map and cross it charted or not.
+ * tile spends its movement cost, a step over a river edge every point the unit has left, and a
+ * landing costs the cheapest route to it. A tile one of its own holds is crossed but never offered.
+ * A unit of the player's neither lands on an uncharted tile nor crosses one, while the enemies read
+ * the whole map and cross it charted or not.
  */
 export function reachable(chronicle: Crossed, unit: Unit): Landing[] {
   const standing = new Map(chronicle.units.map((other) => [tileKey(other.tile), other.faction]));
   const chartedTiles =
     unit.faction === 'player' ? new Set(chronicle.snapshots.map(tileKey)) : undefined;
 
-  const spent = pathCosts(chronicle.tiles, unit.tile, unit.movePoints, (coord) => {
-    const at = tileKey(coord);
-    if (chartedTiles !== undefined && !chartedTiles.has(at)) return true;
-    const held = standing.get(at);
-    return held !== undefined && held !== unit.faction;
-  });
+  const spent = pathCosts(
+    chronicle.tiles,
+    chronicle.rivers,
+    unit.tile,
+    { kind: 'unit', points: unit.movePoints },
+    (coord) => {
+      const at = tileKey(coord);
+      if (chartedTiles !== undefined && !chartedTiles.has(at)) return true;
+      const held = standing.get(at);
+      return held !== undefined && held !== unit.faction;
+    },
+  );
 
   return chronicle.tiles.flatMap(({ q, r }) => {
     const at = tileKey({ q, r });

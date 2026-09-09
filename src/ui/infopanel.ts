@@ -338,50 +338,57 @@ function buildFace(scene: Phaser.Scene, bubble: RowBubble, card: Card): Face {
         ),
       );
       rowTop += line + 0.35 * em;
-      continue;
-    }
+    } else {
+      const chips = gives.map(({ resource, amount }) => {
+        const value = addText(scene, 0, 0, `+${amount}`, CHIP_STYLE).setOrigin(0, 0.5);
+        return { resource, value, width: 0.7 * em + value.width };
+      });
 
-    const chips = gives.map(({ resource, amount }) => {
-      const value = addText(scene, 0, 0, `+${amount}`, CHIP_STYLE).setOrigin(0, 0.5);
-      return { resource, value, width: 0.7 * em + value.width };
-    });
-
-    /** What the line being laid out has for its chips: the row's width, less the name beside them. */
-    let room = right - (rowName.x + rowName.width + 0.3 * em);
-    const together =
-      chips.reduce((total, chip) => total + chip.width, 0) + 0.3 * em * (chips.length - 1);
-    if (together > room) {
-      rowTop += line + 0.35 * em;
-      room = right - left;
-    }
-
-    let first = 0;
-    while (first < chips.length) {
-      let taken = 0;
-      let width = 0;
-      while (taken < 3 && first + taken < chips.length) {
-        const grown = width + chips[first + taken].width + (taken === 0 ? 0 : 0.3 * em);
-        if (taken > 0 && grown > room) break;
-        width = grown;
-        taken++;
+      /** What the line being laid out has for its chips: the row's width, less the name beside them. */
+      let room = right - (rowName.x + rowName.width + 0.3 * em);
+      const together =
+        chips.reduce((total, chip) => total + chip.width, 0) + 0.3 * em * (chips.length - 1);
+      if (together > room) {
+        rowTop += line + 0.35 * em;
+        room = right - left;
       }
 
-      const centre = rowTop + line / 2;
-      let x = right - width;
-      for (const { resource, value } of chips.slice(first, first + taken)) {
-        // A diamond is a square turned, never a polygon: see the trap over `yieldMark` in `map.ts`.
-        const chip = scene.add
-          .rectangle(x + 0.25 * em, centre, 0.5 * em, 0.5 * em, RESOURCE_COLOURS[resource])
-          .setAngle(45)
-          .setName(`panel-yield-${resource}`);
-        value.setPosition(x + 0.7 * em, centre);
-        contents.push(chip, value);
-        listen(x, rowTop, 0.7 * em + value.width, line, resource);
-        x += 0.7 * em + value.width + 0.3 * em;
+      let first = 0;
+      while (first < chips.length) {
+        let taken = 0;
+        let width = 0;
+        while (taken < 3 && first + taken < chips.length) {
+          const grown = width + chips[first + taken].width + (taken === 0 ? 0 : 0.3 * em);
+          if (taken > 0 && grown > room) break;
+          width = grown;
+          taken++;
+        }
+
+        const centre = rowTop + line / 2;
+        let x = right - width;
+        for (const { resource, value } of chips.slice(first, first + taken)) {
+          // A diamond is a square turned, never a polygon: see the trap over `yieldMark` in `map.ts`.
+          const chip = scene.add
+            .rectangle(x + 0.25 * em, centre, 0.5 * em, 0.5 * em, RESOURCE_COLOURS[resource])
+            .setAngle(45)
+            .setName(`panel-yield-${resource}`);
+          value.setPosition(x + 0.7 * em, centre);
+          contents.push(chip, value);
+          listen(x, rowTop, 0.7 * em + value.width, line, resource);
+          x += 0.7 * em + value.width + 0.3 * em;
+        }
+        rowTop += line + 0.35 * em;
+        first += taken;
+        room = right - left;
       }
+    }
+
+    const note = noteOf(row);
+    if (note !== undefined) {
+      contents.push(
+        addText(scene, rowName.x, rowTop + line / 2, note, LABEL_STYLE).setOrigin(0, 0.5),
+      );
       rowTop += line + 0.35 * em;
-      first += taken;
-      room = right - left;
     }
   }
 
@@ -429,6 +436,19 @@ function nameOf(row: Row): string {
       return text(`terrain.${row.terrain}`);
     case 'river':
       return text('panel.river');
+  }
+}
+
+/** What a row says under itself of what it does to a move, and nothing for a row that does none. */
+function noteOf(row: Row): string | undefined {
+  switch (row.kind) {
+    case 'building':
+    case 'improvement':
+    case 'feature':
+    case 'terrain':
+      return undefined;
+    case 'river':
+      return text('panel.crossing');
   }
 }
 

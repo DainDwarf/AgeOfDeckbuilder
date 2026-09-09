@@ -41,10 +41,10 @@ export const ENEMY_SCRIPTS: Record<EnemyScriptId, EnemyScript> = {
   PH_Advance: {
     moveTo(chronicle: Chronicle, enemy: Unit): Landing {
       const stay: Landing = { tile: enemy.tile, cost: 0 };
-      const target = nearest(chronicle, enemy.tile);
+      const target = nearest(chronicle, enemy);
       if (target === undefined) return stay;
 
-      const outward = costsFrom(chronicle.tiles, target);
+      const outward = costsFrom(chronicle, target, enemy);
       const landings = [stay, ...reachable(chronicle, enemy)];
       const spent = new Map(landings.map((landing) => [tileKey(landing.tile), landing.cost]));
 
@@ -99,8 +99,8 @@ export function arrival(chronicle: Chronicle): Chronicle {
 }
 
 /** What an enemy moves toward: the player's unit or the city it crosses to for the least it can. */
-function nearest(chronicle: Chronicle, from: TileCoords): TileCoords | undefined {
-  const costs = costsFrom(chronicle.tiles, from);
+function nearest(chronicle: Chronicle, walker: Unit): TileCoords | undefined {
+  const costs = costsFrom(chronicle, walker.tile, walker);
   const targets = chronicle.units
     .filter((unit) => unit.faction === 'player')
     .map((unit) => unit.tile);
@@ -124,10 +124,17 @@ function inTileOrder(tiles: readonly Tile[], coords: readonly TileCoords[]): Til
 }
 
 /**
- * What crossing to every tile from a start costs, whatever stands on them and however far off they
- * lie: a script reads the whole map, so no move points cap the walk. A tile no route reaches is
+ * What crossing to every tile from a start costs the walking unit, whatever stands on them and
+ * however far off they lie: a script reads the whole map, so no move points cap the walk and a river
+ * edge weighs the walker's whole move, what a crossing drains at worst. A tile no route reaches is
  * absent.
  */
-function costsFrom(tiles: readonly Tile[], from: TileCoords): Map<string, number> {
-  return pathCosts(tiles, from, Number.POSITIVE_INFINITY, () => false);
+function costsFrom(chronicle: Chronicle, from: TileCoords, walker: Unit): Map<string, number> {
+  return pathCosts(
+    chronicle.tiles,
+    chronicle.rivers,
+    from,
+    { kind: 'whole-map', move: walker.stats.move },
+    () => false,
+  );
 }

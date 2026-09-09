@@ -257,18 +257,45 @@ export function tileKey({ q, r }: TileCoords): string {
 }
 
 /**
- * What the cheapest route to each tile costs from a start, the start itself nothing: entering a tile
- * spends that tile's movement cost, no route spends more than `points`, and `shut` keeps a route off
- * the tiles the mover may not cross for reasons of its own. A tile no route reaches that far is
- * absent from the answer, and so is every tile no movement cost is named for.
+ * What bounds a walk over the map and what a step over a river edge costs it. `unit`: the move
+ * points a unit has left, which a crossing spends every one of. `whole-map`: the walk a script reads
+ * the whole map by, which nothing bounds and a crossing is charged a whole move.
+ */
+export type Walk =
+  | { readonly kind: 'unit'; readonly points: number }
+  | { readonly kind: 'whole-map'; readonly move: number };
+
+/**
+ * What a step to a neighbouring tile leaves the walk having spent, and nothing where the walk does
+ * not take that step: entering a tile spends its movement cost, and a step over an edge a river runs
+ * along spends every move point the unit has left, taken only where those cover the tile entered in
+ * full. A walk over the whole map has no points to drain, so a crossing is charged a whole move.
+ */
+function spentOn(walk: Walk, paid: number, cost: number, river: boolean): number | undefined {
+  switch (walk.kind) {
+    case 'unit':
+      if (river) return walk.points - paid >= cost ? walk.points : undefined;
+      return paid + cost <= walk.points ? paid + cost : undefined;
+    case 'whole-map':
+      return paid + (river ? walk.move : cost);
+  }
+}
+
+/**
+ * What the cheapest route to each tile costs from a start, the start itself nothing: every step
+ * spends what the walk says, and `shut` keeps a route off the tiles the mover may not cross for
+ * reasons of its own. A tile no route reaches is absent from the answer, and so is every tile no
+ * movement cost is named for.
  */
 export function pathCosts(
   tiles: readonly Tile[],
+  rivers: readonly River[],
   from: TileCoords,
-  points: number,
+  walk: Walk,
   shut: (coord: TileCoords) => boolean,
 ): Map<string, number> {
   const ground = new Map(tiles.map((tile) => [tileKey(tile), tile]));
+  const crossings = riverEdges(rivers);
   const spent = new Map([[tileKey(from), 0]]);
 
   let front: [TileCoords, number][] = [[from, 0]];
@@ -280,11 +307,13 @@ export function pathCosts(
       for (const coord of neighbours(at)) {
         const key = tileKey(coord);
         const cost = movementCost(ground.get(key));
-        if (cost === undefined || paid + cost > points || shut(coord)) continue;
+        if (cost === undefined || shut(coord)) continue;
+        const total = spentOn(walk, paid, cost, crossings.has(edgeKey(at, coord)));
+        if (total === undefined) continue;
         const before = spent.get(key);
-        if (before !== undefined && before <= paid + cost) continue;
-        spent.set(key, paid + cost);
-        next.push([coord, paid + cost]);
+        if (before !== undefined && before <= total) continue;
+        spent.set(key, total);
+        next.push([coord, total]);
       }
     }
     front = next;
@@ -352,6 +381,28 @@ export function cornersBeside(corner: Corner): Corner[] {
 export function tilesOfEdge(from: Corner, to: Corner): TileCoords[] {
   const beside = new Set(tilesAtCorner(to).map(tileKey));
   return tilesAtCorner(from).filter((coord) => beside.has(tileKey(coord)));
+}
+
+/** The one way the edge two tiles share is named in a set, from whichever of the two it is asked. */
+function edgeKey(a: TileCoords, b: TileCoords): string {
+  const one = tileKey(a);
+  const other = tileKey(b);
+  return one < other ? `${one}|${other}` : `${other}|${one}`;
+}
+
+/**
+ * Every edge a river runs along, named by the two tiles it lies between: what a walk asks of a step
+ * it takes. A river's corners stand one edge apart, so each consecutive pair of them is one edge.
+ */
+function riverEdges(rivers: readonly River[]): Set<string> {
+  const edges = new Set<string>();
+  for (const river of rivers) {
+    for (let at = 1; at < river.length; at++) {
+      const [one, other] = tilesOfEdge(river[at - 1], river[at]);
+      edges.add(edgeKey(one, other));
+    }
+  }
+  return edges;
 }
 
 /**

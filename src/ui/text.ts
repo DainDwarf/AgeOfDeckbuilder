@@ -38,6 +38,7 @@ const TEXT = {
   'terrain.deep': 'Deep water',
   'terrain.urban': 'Urban',
   'panel.river': 'River',
+  'panel.crossing': 'Crossing ends the move.',
   'feature.PH_Fertile': 'PH_Fertile',
   'improvement.PH_Mine': 'PH_Mine',
   'building.PH_City': 'PH_City',

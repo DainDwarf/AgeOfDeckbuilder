@@ -328,8 +328,9 @@ the unit standing on it; the building with the tile's improvements; and the terr
 and the river running along it. A card is absent when nothing fills it, and the terrain card never
 is. The unit card reads the unit's stats; the other two are headed by their outermost layer and show
 a row per thing they hold — the river's among them on the terrain card — with what it gives at
-income, a row that gives nothing saying so. After the last card comes the first again, and a tile of
-a single card holds it: the cycle never falls back to the bare ring.
+income, a row that gives nothing saying so. The river's row carries one line under it: a crossing
+ends the move. After the last card comes the first again, and a tile of a single card holds it: the
+cycle never falls back to the bare ring.
 
 A left click selects a card of the hand, unaffordable or not. A selected card that aims at a tile or
 at a unit is **being aimed** from that moment: the map is already there, and lights the tiles its
@@ -489,8 +490,7 @@ however many of the tile's edges a river runs along, and however many rivers mee
 tile takes one food. The terrain decides, so terraforming a plain a river runs along into urban ends
 what the river gives it while the river stays exactly where it runs. A yield per edge was rejected:
 a river hugging four edges of a plain would hand out the map's best tile by the generator's choice
-rather than the player's. 🔧 Which terrains a river feeds and what it gives them are tuning, and
-what a river costs to cross is open.
+rather than the player's. 🔧 Which terrains a river feeds and what it gives them are tuning.
 
 The city stands on one tile and owns the six around it. The player **claims** any charted tile
 adjacent to one the city owns by spending culture — an uncharted tile is not claimed, as it is not
@@ -516,7 +516,11 @@ across turns, never within one blow.
   them until the refresh — no step is taken on credit — and a tile costing more than a unit's move
   is beyond that unit for good. Crossing to a tile costs the cheapest way there, and the tile a unit
   already stands on costs it nothing. Coast and deep water name no movement cost at all and are
-  crossed by nothing. A unit passes through the units of its own faction and never through
+  crossed by nothing. A step over an edge a river runs along spends every move point the unit has
+  left, and is taken only where those cover the tile it enters in full; no tile is entered for
+  nothing, so a crossing is the last step of that unit's turn. An enemy reading a walk over the whole
+  map has no points to drain and weighs a crossing as the walking unit's whole move, which is what
+  the drain costs at worst. A unit passes through the units of its own faction and never through
   another's, and it lands only on a free tile. Movement by the cards alone was rejected: in play it
   limited more than it empowered.
 - **A unit attacks on its own action.** It holds **action**, refreshed at the same tick as its move

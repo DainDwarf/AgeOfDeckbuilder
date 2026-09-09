@@ -12,11 +12,6 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
-- **Crossing a river drains the move** — a step over a river edge spends every move point the unit
-  has left, taken only where those points cover the far tile's cost in full, and the enemy's walk
-  weighs a crossing as its own full move; the terrain card's river row says the crossing ends the
-  move. The design page settles all three, and rules tests pin the drain, the refused crossing and
-  the enemy's weighing. Doc-impact: `docs/DESIGN.md`.
 - **Placeholder road card** — a stand-in improvement card lays a road that lowers its tile's
   movement cost, and a river edge with a road on both banks is crossed as if it were none; rules
   tests show a unit reaching further over a road than beside it and across a bridged edge undrained.

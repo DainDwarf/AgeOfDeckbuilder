@@ -18,6 +18,7 @@ import {
 import {
   BUILDINGS,
   type BuildingTypeId,
+  cornerKey,
   cornersOf,
   distance,
   FEATURES,
@@ -25,6 +26,7 @@ import {
   MAP_COMPOSITION,
   neighbours,
   RIVER_YIELDS,
+  type River,
   TERRAIN_YIELDS,
   type Terrain,
   type Tile,
@@ -158,6 +160,12 @@ function only(radius: number, land: TileCoords[]): Tile[] {
     radius,
     field(radius).filter((tile) => !kept.has(tileKey(tile))),
   );
+}
+
+/** A river running along the edge two tiles share: the two corners both of them carry. */
+function riverBetween(a: TileCoords, b: TileCoords): River {
+  const beside = new Set(cornersOf(b).map(cornerKey));
+  return cornersOf(a).filter((corner) => beside.has(cornerKey(corner)));
 }
 
 /** The same tiles, with the terrain of the named ones replaced. */
@@ -1353,6 +1361,46 @@ test('a unit with fewer move points left than a tile costs does not enter it', (
   });
 });
 
+test('a unit crossing a river spends every move point it has left, and steps no further', () => {
+  const bank = { q: 1, r: 0 };
+  const on = { q: 2, r: 0 };
+  const city = cityOf(['urban'], {
+    tiles: only(2, [CITY, bank, on]),
+    rivers: [riverBetween(CITY, bank)],
+    units: [standing('player', CITY, { move: 3 })],
+  });
+
+  const crossed = outcome(apply(city, moveTo(1, bank)));
+
+  expect(crossed.units[0].tile).toEqual(bank);
+  expect(pointsOf(crossed, 1)).toBe(0);
+  expect(outcome(apply(crossed, moveTo(1, on)))).toEqual(crossed);
+});
+
+test('a unit crosses a river only where the move points it has left cover the far tile in full', () => {
+  const bank = { q: 1, r: 0 };
+  const across = { q: 2, r: 0 };
+  const beside = { q: 1, r: -1 };
+  /** One forest across a river, the plain on this bank it is reached from, and a plain to turn to. */
+  const shore = (move: number): Chronicle =>
+    cityOf(['urban'], {
+      tiles: madeOf(only(2, [CITY, bank, across, beside]), 'forest', [across]),
+      rivers: [riverBetween(bank, across)],
+      units: [standing('player', CITY, { move })],
+    });
+
+  const short = outcome(apply(shore(2), moveTo(1, bank)));
+  const long = outcome(apply(shore(4), moveTo(1, bank)));
+  const crossed = outcome(apply(long, moveTo(1, across)));
+
+  expect(pointsOf(short, 1)).toBe(1);
+  expect(outcome(apply(short, moveTo(1, across)))).toEqual(short);
+  expect(outcome(apply(short, moveTo(1, beside))).units[0].tile).toEqual(beside);
+  expect(pointsOf(long, 1)).toBe(3);
+  expect(crossed.units[0].tile).toEqual(across);
+  expect(pointsOf(crossed, 1)).toBe(0);
+});
+
 test('a unit crosses to a tile the cheapest way, not the fewest tiles', () => {
   /** A hill the whole disc is in sight from, two forests on the straight line east of it. */
   const watch = { q: 0, r: -1 };
@@ -2325,6 +2373,22 @@ test('a forest on an enemy’s way costs it what the tile says, and keeps it off
 
   expect(movesOf(plains)).toEqual([['2,0', '0,0']]);
   expect(movesOf(wooded)).toEqual([['2,0', '1,-1']]);
+});
+
+test('an enemy weighs a crossing as its whole move, and turns for the city instead of taking it', () => {
+  const bank = { q: 4, r: 0 };
+  const across = { q: 5, r: 0 };
+  /** One corridor east of the city, with the player's unit on the far end of it. */
+  const corridor = [CITY, { q: 1, r: 0 }, { q: 2, r: 0 }, { q: 3, r: 0 }, bank, across];
+  const beset = (rivers: River[]): Chronicle =>
+    cityOf(['urban'], {
+      tiles: only(5, corridor),
+      rivers,
+      units: [standing('player', across), standing('enemy', { q: 3, r: 0 }, { move: 3 })],
+    });
+
+  expect(movesOf(beset([]))).toEqual([['3,0', '4,0']]);
+  expect(movesOf(beset([riverBetween(bank, across)]))).toEqual([['3,0', '0,0']]);
 });
 
 test('an enemy moves toward the nearest of the player’s units instead of the city', () => {
