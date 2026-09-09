@@ -54,7 +54,8 @@ export type Command =
       readonly aim: 'discard-pile';
       /**
        * Where in the discard pile the card aimed at it lies, in the pile as it stood before the
-       * play: the play sends the card being played to the pile before the effect resolves.
+       * play: the play sends the card being played to the pile, unless it is single use, before the
+       * effect resolves.
        */
       readonly card: number;
     }
@@ -118,14 +119,16 @@ export type PlainStage =
 
 /**
  * The shape every command resolves as: one step, and the chronicle it leaves behind. An `attack` is
- * one unit's attack, the player's by hand or an enemy's in the enemy phase, and a `move` is one unit
- * crossing, the player's or the enemy phase's alike; each names the tiles it happened between,
- * because what the chronicle after the step cannot say is carried on the step itself.
+ * one unit's attack, the player's by hand or an enemy's in the enemy phase, a `move` is one unit
+ * crossing, the player's or the enemy phase's alike, and a `camp-capture` is one camp taken by the
+ * unit standing on it; each names the tiles it happened between or on, because what the chronicle
+ * after the step cannot say is carried on the step itself.
  */
 export type Stage = { readonly chronicle: Chronicle } & (
   | { readonly name: PlainStage }
   | { readonly name: 'attack'; readonly attacker: TileCoords; readonly target: TileCoords }
   | { readonly name: 'move'; readonly from: TileCoords; readonly to: TileCoords }
+  | { readonly name: 'camp-capture'; readonly tile: TileCoords }
 );
 
 /**
@@ -328,6 +331,7 @@ function endOfTurn(chronicle: Chronicle): Stage[] {
   staged('grow', grow(standing));
   raised(enemyPhase(standing));
   if (standing.defeat !== undefined) return stages;
+  raised(captures(standing));
 
   staged('turn', {
     ...standing,
@@ -490,9 +494,10 @@ function blocked(chronicle: Chronicle, id: CardId): Block[] {
 
 /**
  * One card played: the aim is judged on the chronicle as it stands, the same one the map lit its
- * tiles from; then, on the one `played` stage, the card has left the hand for the discard pile, its
- * cost is paid and its effect has landed. A play the hand, the city, the map or the discard pile
- * refuses is one `refused` stage on the chronicle as it stood, nothing paid or discarded.
+ * tiles from; then, on the one `played` stage, the card has left the hand for the discard pile — or
+ * for nowhere at all, single use as it is — its cost is paid and its effect has landed. A play the
+ * hand, the city, the map or the discard pile refuses is one `refused` stage on the chronicle as it
+ * stood, nothing paid or discarded.
  */
 function play(chronicle: Chronicle, command: PlayCommand): Stage[] {
   const id = chronicle.hand[command.index];
@@ -508,7 +513,7 @@ function play(chronicle: Chronicle, command: PlayCommand): Stage[] {
     ...chronicle,
     resources,
     hand: chronicle.hand.filter((_, at) => at !== command.index),
-    discardPile: [...chronicle.discardPile, id],
+    discardPile: CARDS[id].singleUse ? chronicle.discardPile : [...chronicle.discardPile, id],
   };
   return [{ name: 'played', chronicle: effect(paid) }];
 }
@@ -731,5 +736,30 @@ function enemyPhase(chronicle: Chronicle): Stage[] {
     }
   }
 
+  return stages;
+}
+
+/**
+ * The camps captured, in tile order: a camp a unit of the player's is still standing on once the
+ * enemy phase is over leaves its tile's building slot, and its reward card is laid in the discard
+ * pile. A stage each, carrying the tile the camp stood on.
+ */
+function captures(chronicle: Chronicle): Stage[] {
+  const stages: Stage[] = [];
+  let standing = chronicle;
+  for (const { q, r, building } of chronicle.tiles) {
+    if (building !== 'PH_Camp') continue;
+    if (unitAt(chronicle.units, { q, r })?.faction !== 'player') continue;
+
+    const at = tileKey({ q, r });
+    standing = {
+      ...standing,
+      tiles: standing.tiles.map((tile) =>
+        tileKey(tile) === at ? { ...tile, building: undefined } : tile,
+      ),
+      discardPile: [...standing.discardPile, 'PH_Spoils'],
+    };
+    stages.push({ name: 'camp-capture', tile: { q, r }, chronicle: standing });
+  }
   return stages;
 }

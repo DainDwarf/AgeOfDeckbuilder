@@ -413,6 +413,18 @@ function movesOf(chronicle: Chronicle): string[][] {
   );
 }
 
+/** Every camp the end of turn stages a capture of, as the tile each stood on. */
+function capturesOf(chronicle: Chronicle): string[] {
+  return apply(chronicle, { type: 'end-turn' }).flatMap((stage) =>
+    stage.name === 'camp-capture' ? [tileKey(stage.tile)] : [],
+  );
+}
+
+/** Cards enough for the end of turn to draw a full hand, so its shuffle leaves the discard pile be. */
+function fullDraw(): CardId[] {
+  return ['PH_Worker', 'PH_Warrior', 'PH_Farm', 'PH_March', 'PH_Harvest'];
+}
+
 /** A tile of a generated map that touches the border and has never been in sight. */
 function unchartedTouching(chronicle: Chronicle): TileCoords {
   const seen = new Set(chronicle.snapshots.map(tileKey));
@@ -2439,6 +2451,146 @@ test('the enemy arrives on a camp no unit stands on, and on nothing else at all'
   expect(CAMPS.map(tileKey)).toContain(tileKey(toFifthTurn(open).units[0].tile));
   expect(toFifthTurn(stoodOn(taken)).units[taken.length].tile).toEqual(onlyOpen);
   expect(toFifthTurn(stoodOn(CAMPS)).units).toHaveLength(CAMPS.length);
+});
+
+test('a unit of the player’s standing on a camp when the turn ends captures it', () => {
+  const camp = { q: 4, r: 0 };
+  const besieging = cityOf(['urban'], {
+    ...NO_GROWTH,
+    tiles: camped(field(4), [camp]),
+    drawPile: fullDraw(),
+    units: [standing('player', camp)],
+  });
+
+  const taken = outcome(apply(besieging, { type: 'end-turn' }));
+
+  expect(stagedBy(besieging, { type: 'end-turn' })).toEqual([
+    'income',
+    'camp-capture',
+    'turn',
+    'draw',
+  ]);
+  expect(capturesOf(besieging)).toEqual([tileKey(camp)]);
+  expect(buildingAt(taken, camp)).toBeUndefined();
+  expect(taken.discardPile).toEqual(['PH_Spoils']);
+});
+
+test('a worker of the player’s captures a camp as any unit does', () => {
+  const camp = { q: 4, r: 0 };
+  const worked = cityOf(['urban'], {
+    ...NO_GROWTH,
+    tiles: camped(field(4), [camp]),
+    drawPile: fullDraw(),
+    units: [worker(camp)],
+  });
+
+  const taken = outcome(apply(worked, { type: 'end-turn' }));
+
+  expect(buildingAt(taken, camp)).toBeUndefined();
+  expect(taken.discardPile).toEqual(['PH_Spoils']);
+});
+
+test('a unit killed in the enemy phase captures the camp it stood on no longer', () => {
+  const camp = { q: 4, r: 0 };
+  const besieging = cityOf(['urban'], {
+    ...NO_GROWTH,
+    tiles: camped(field(4), [camp]),
+    units: [worker(camp), standing('enemy', { q: 3, r: 0 }, { damage: WORKER.health })],
+  });
+
+  const taken = outcome(apply(besieging, { type: 'end-turn' }));
+
+  expect(taken.units.some((unit) => unit.faction === 'player')).toBe(false);
+  expect(buildingAt(taken, camp)).toBe('PH_Camp');
+  expect(taken.discardPile).toEqual([]);
+});
+
+test('a chronicle that fell in the enemy phase captures no camp', () => {
+  const camp = { q: 4, r: 0 };
+  const overrun = cityOf(['urban'], {
+    tiles: camped(field(4), [camp]),
+    units: [standing('player', camp), standing('enemy', CITY)],
+  });
+
+  const fallen = outcome(apply(overrun, { type: 'end-turn' }));
+
+  expect(stagedBy(overrun, { type: 'end-turn' })).toEqual(['capture']);
+  expect(buildingAt(fallen, camp)).toBe('PH_Camp');
+  expect(fallen.discardPile).toEqual([]);
+});
+
+test('a captured camp is silent: the arrival lands on a camp still standing', () => {
+  const [kept, ...besieged] = CAMPS;
+  const held = cityOf(['urban'], {
+    tiles: camped(field(4), CAMPS),
+    units: besieged.map(worker),
+  });
+
+  const fifth = toFifthTurn(held);
+
+  for (const camp of besieged) expect(buildingAt(fifth, camp)).toBeUndefined();
+  expect(buildingAt(fifth, kept)).toBe('PH_Camp');
+  expect(fifth.units.find((unit) => unit.faction === 'enemy')?.tile).toEqual(kept);
+});
+
+test('a chronicle whose every camp is captured takes no arrival at all', () => {
+  const held = cityOf(['urban'], { tiles: camped(field(4), CAMPS), units: CAMPS.map(worker) });
+
+  const fifth = toFifthTurn(held);
+
+  expect(fifth.tiles.some((tile) => tile.building === 'PH_Camp')).toBe(false);
+  expect(fifth.units.every((unit) => unit.faction === 'player')).toBe(true);
+});
+
+test('two camps captured in one turn lay two cards in the discard pile', () => {
+  const camps = [
+    { q: 4, r: 0 },
+    { q: 0, r: 4 },
+  ];
+  const besieging = cityOf(['urban'], {
+    ...NO_GROWTH,
+    tiles: camped(field(4), camps),
+    drawPile: fullDraw(),
+    units: camps.map((camp) => standing('player', camp)),
+  });
+
+  const taken = outcome(apply(besieging, { type: 'end-turn' }));
+
+  expect(capturesOf(besieging)).toEqual(
+    besieging.tiles.filter((tile) => tile.building === 'PH_Camp').map(tileKey),
+  );
+  for (const camp of camps) expect(buildingAt(taken, camp)).toBeUndefined();
+  expect(taken.discardPile).toEqual(['PH_Spoils', 'PH_Spoils']);
+});
+
+test('the camp’s reward card is single use: played, it gains and leaves the chronicle', () => {
+  const city = cityOf(['urban'], { hand: ['PH_Spoils'] });
+
+  const played = outcome(apply(city, { type: 'play', index: 0, aim: 'none' }));
+
+  expect(stagedBy(city, { type: 'play', index: 0, aim: 'none' })).toEqual(['played']);
+  expect(played.resources).toEqual({
+    food: 10,
+    production: 10,
+    military: 10,
+    money: 10,
+    science: 10,
+    culture: 0,
+  });
+  expect(everyCard(played)).toEqual([]);
+});
+
+test('the camp’s reward card discarded unplayed comes around like any card', () => {
+  const city = cityOf(['urban'], { ...NO_GROWTH, hand: ['PH_Spoils'], drawPile: fullDraw() });
+
+  const ended = outcome(apply(city, { type: 'end-turn' }));
+
+  expect(ended.discardPile).toEqual(['PH_Spoils']);
+  expect(everyCard(outcome(apply(ended, { type: 'end-turn' })))).toContain('PH_Spoils');
+});
+
+test('no deck a chronicle is founded on holds the camp’s reward card', () => {
+  for (const deck of Object.values(DECKS)) expect(deck).not.toContain('PH_Spoils');
 });
 
 test('an enemy moves its move toward the city, turn after turn', () => {

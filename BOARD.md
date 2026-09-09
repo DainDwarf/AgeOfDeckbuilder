@@ -12,11 +12,6 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
-- **Capturing a camp** — a unit of the player's still standing on a camp when the enemy phase ends
-  captures it: the camp leaves its slot and the stand-in reward card is laid in the discard pile,
-  an instant of no cost, single use, that gains ten of each core resource. Rules tests pin the
-  capture, the silenced camp, the card's arrival and its single use. Doc-impact: none, the design
-  is written. [board/camp-capture.md](board/camp-capture.md)
 - **A claim refuses a camp and an occupied tile** — `claimable` turns down the tile a camp fills and
   the tile an enemy occupies, so the border grows around neither and neither takes an inhabitant;
   a camp's tile is claimed like any other once a capture empties its slot. Rules tests pin both

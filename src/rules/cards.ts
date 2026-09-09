@@ -61,7 +61,11 @@ type Aim =
  * is played through. The noun a card names — the unit it puts on the map, the building it builds —
  * is named by its effect and nowhere else.
  */
-export type Card = { readonly kind: CardKind; readonly cost: Partial<Resources> } & Aim;
+export type Card = {
+  readonly kind: CardKind;
+  readonly cost: Partial<Resources>;
+  readonly singleUse?: true;
+} & Aim;
 
 /** A card the player picks a tile for: what the hand aims and the finder lists candidates for. */
 export type AimedCard = Card & { readonly aim: 'tile' | 'unit' };
@@ -268,16 +272,37 @@ export const CARDS: Record<CardId, Card> = {
     blocked: (chronicle) => (chronicle.discardPile.length === 0 ? ['discard-pile'] : []),
     effect: recalled,
   },
+  PH_Spoils: {
+    kind: 'instant',
+    cost: {},
+    singleUse: true,
+    aim: 'none',
+    effect: (paid) =>
+      gained(paid, { food: 10, production: 10, military: 10, money: 10, science: 10 }),
+  },
 };
 
 export type DeckId = 'PH_Deck' | 'PH_LongDeck';
 
-/** The decks a chronicle can be founded on: two copies of each card, or five. */
+/** What the decks are built from: a card won on the map joins a chronicle and no deck. */
+const FOUNDING_CARDS: readonly CardId[] = [
+  'PH_Worker',
+  'PH_Warrior',
+  'PH_Farm',
+  'PH_March',
+  'PH_Harvest',
+  'PH_Mine',
+  'PH_Road',
+  'PH_Urbanisation',
+  'PH_Recall',
+];
+
+/** The decks a chronicle can be founded on: two copies of each card above, or five. */
 export const DECKS: Record<DeckId, readonly CardId[]> = {
   PH_Deck: copies(2),
   PH_LongDeck: copies(5),
 };
 
 function copies(count: number): readonly CardId[] {
-  return (Object.keys(CARDS) as CardId[]).flatMap((id) => Array<CardId>(count).fill(id));
+  return FOUNDING_CARDS.flatMap((id) => Array<CardId>(count).fill(id));
 }
