@@ -1,13 +1,4 @@
-import {
-  distance,
-  MAP_COMPOSITION,
-  movementCost,
-  pathCosts,
-  type Tile,
-  type TileCoords,
-  tileAt,
-  tileKey,
-} from './map';
+import { movementCost, pathCosts, type Tile, type TileCoords, tileAt, tileKey } from './map';
 import { nextRng } from './rng';
 import { type Chronicle, entered } from './state';
 import {
@@ -15,11 +6,17 @@ import {
   type Landing,
   leastHealth,
   reachable,
-  standsOn,
   UNIT_STATS,
   type Unit,
   unitAt,
 } from './units';
+
+/**
+ * The enemy every arrival lands. Every terrain a camp names has to be ground this unit stands on, or
+ * a camp lands where its own enemy cannot: nothing holds the two together, and the test in
+ * `map.test.ts` is what raises a list that has drifted.
+ */
+export const ARRIVING = UNIT_STATS.PH_Warrior;
 
 /**
  * What an enemy does in the enemy phase, asked of the enemy itself as the phase stands it. The phase
@@ -76,25 +73,21 @@ export const ENEMY_SCRIPTS: Record<EnemyScriptId, EnemyScript> = {
 };
 
 /**
- * `PH_Arrival`, the one event the stand-in schedule holds: one enemy lands on a free tile of the
- * map's outer ring it can stand on, drawn from the seeded generator, with its move points and its
- * action full. With no such tile it places nothing.
+ * `PH_Arrival`, the one event the stand-in schedule holds: one enemy lands on a camp whose tile no
+ * unit stands on, drawn from the seeded generator, with its move points and its action full. With
+ * no such camp it places nothing and draws nothing.
  */
 export function arrival(chronicle: Chronicle): Chronicle {
-  const arriving = UNIT_STATS.PH_Warrior;
-  const ring = chronicle.tiles.filter(
-    (tile) =>
-      distance(tile, chronicle.city) === MAP_COMPOSITION.radius &&
-      standsOn(arriving, tile) &&
-      unitAt(chronicle.units, tile) === undefined,
+  const camps = chronicle.tiles.filter(
+    (tile) => tile.building === 'PH_Camp' && unitAt(chronicle.units, tile) === undefined,
   );
-  if (ring.length === 0) return chronicle;
+  if (camps.length === 0) return chronicle;
 
   const step = nextRng(chronicle.rng);
-  const { q, r } = ring[Math.floor(step.value * ring.length)];
+  const { q, r } = camps[Math.floor(step.value * camps.length)];
   return entered(
     { ...chronicle, rng: step.rng },
-    { type: arriving.type, faction: 'enemy', tile: { q, r }, script: 'PH_Advance' },
+    { type: ARRIVING.type, faction: 'enemy', tile: { q, r }, script: 'PH_Advance' },
   );
 }
 

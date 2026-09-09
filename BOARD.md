@@ -12,11 +12,6 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
-- **Camps on the map** — the generator fills the building slot of three rolled tiles with a camp,
-  each uncharted until seen and drawn as the city's mark in enemy red, and the arrival enters its
-  enemy on a camp whose tile is free instead of the outer ring. Rules tests on a fixed seed pin the
-  placement, the spawn and the silence with no free camp; an e2e spec finds the camp marks and the
-  fifth turn's enemy on one. Doc-impact: none, the design is written. [board/camps.md](board/camps.md)
 - **Capturing a camp** — a unit of the player's still standing on a camp when the enemy phase ends
   captures it: the camp leaves its slot and the stand-in reward card is laid in the discard pile,
   an instant of no cost, single use, that gains ten of each core resource. Rules tests pin the

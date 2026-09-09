@@ -176,6 +176,22 @@ function madeOf(tiles: Tile[], terrain: Terrain, coords: TileCoords[]): Tile[] {
   return tiles.map((tile) => (named.has(tileKey(tile)) ? { ...tile, terrain } : tile));
 }
 
+/** The camps a fixture deals over a disc out to four: one on each of the six directions. */
+const CAMPS: TileCoords[] = [
+  { q: 4, r: 0 },
+  { q: -4, r: 0 },
+  { q: 0, r: 4 },
+  { q: 0, r: -4 },
+  { q: 4, r: -4 },
+  { q: -4, r: 4 },
+];
+
+/** The same tiles, with a camp filling the building slot of the named ones. */
+function camped(tiles: Tile[], coords: TileCoords[]): Tile[] {
+  const named = new Set(coords.map(tileKey));
+  return tiles.map((tile) => (named.has(tileKey(tile)) ? { ...tile, building: 'PH_Camp' } : tile));
+}
+
 /** The same tiles, with the named ones carrying the improvement. */
 function improvedWith(tiles: Tile[], improvement: ImprovementId, coords: TileCoords[]): Tile[] {
   const named = new Set(coords.map(tileKey));
@@ -395,13 +411,6 @@ function movesOf(chronicle: Chronicle): string[][] {
   return apply(chronicle, { type: 'end-turn' }).flatMap((stage) =>
     stage.name === 'move' ? [[tileKey(stage.from), tileKey(stage.to)]] : [],
   );
-}
-
-/** Every tile of a disc at its outer ring: what an arrival draws from. */
-function outerRingOf(radius: number): TileCoords[] {
-  return field(radius)
-    .filter((tile) => distance(tile, CITY) === radius)
-    .map(({ q, r }) => ({ q, r }));
 }
 
 /** A tile of a generated map that touches the border and has never been in sight. */
@@ -2130,7 +2139,7 @@ test('the city may claim every tile touching the border, and no other', () => {
 });
 
 test('an uncharted tile touching the border is no claim of the city’s', () => {
-  const opened = outcome(apply(beginChronicle(1, DECK), { type: 'end-turn' }));
+  const opened = outcome(apply(beginChronicle(4, DECK), { type: 'end-turn' }));
   const dark = unchartedTouching(opened);
 
   expect(opened.resources.culture).toBeGreaterThanOrEqual(1);
@@ -2142,7 +2151,7 @@ test('an uncharted tile touching the border is no claim of the city’s', () => 
 });
 
 test('a unit that charts that tile makes it a claim the city can make', () => {
-  const opened = outcome(apply(beginChronicle(1, DECK), { type: 'end-turn' }));
+  const opened = outcome(apply(beginChronicle(4, DECK), { type: 'end-turn' }));
   const dark = unchartedTouching(opened);
   const charting = withWorkerBeside(opened, dark);
 
@@ -2391,8 +2400,9 @@ test('a card the city falls short for is refused for the resource it is short of
   expect(refusalOf(paid, 'PH_Farm')).toEqual({ unaffordable: [], blocked: [] });
 });
 
-test('an enemy arrives on the outer ring of the map on every fifth turn, and on no turn between', () => {
-  let chronicle = cityOf(['urban'], { tiles: field(MAP_COMPOSITION.radius) });
+test('an enemy arrives on a camp of the map on every fifth turn, and on no turn between', () => {
+  const camp = { q: 4, r: 0 };
+  let chronicle = cityOf(['urban'], { tiles: camped(field(4), [camp]) });
 
   for (let turn = 2; turn <= 4; turn++) {
     chronicle = outcome(apply(chronicle, { type: 'end-turn' }));
@@ -2405,11 +2415,11 @@ test('an enemy arrives on the outer ring of the map on every fifth turn, and on 
   expect(chronicle.units).toHaveLength(1);
   expect(chronicle.units[0].faction).toBe('enemy');
   expect(chronicle.units[0].stats).toEqual(UNIT_STATS.PH_Warrior);
-  expect(distance(chronicle.units[0].tile, CITY)).toBe(MAP_COMPOSITION.radius);
+  expect(chronicle.units[0].tile).toEqual(camp);
 });
 
-test('where the enemy arrives is drawn from the seeded generator', () => {
-  const disc = field(MAP_COMPOSITION.radius);
+test('which camp the enemy arrives on is drawn from the seeded generator', () => {
+  const disc = camped(field(4), CAMPS);
   const arrivalOf = (seed: number): TileCoords =>
     toFifthTurn(cityOf(['urban'], { tiles: disc, rng: seedRng(seed) })).units[0].tile;
 
@@ -2417,23 +2427,18 @@ test('where the enemy arrives is drawn from the seeded generator', () => {
   expect(arrivalOf(7)).not.toEqual(arrivalOf(8));
 });
 
-test('the enemy arrives on a free tile of the outer ring it can stand on, and on nothing else', () => {
-  const ring = outerRingOf(MAP_COMPOSITION.radius);
-  const onlyOpen = ring[3];
-  /** A disc no unit stands on the named outer tiles of: half of them coast, half of them mountain. */
-  const shut = (coords: TileCoords[]): Tile[] =>
-    madeOf(
-      field(MAP_COMPOSITION.radius, coords),
-      'mountain',
-      coords.filter((_, index) => index % 2 === 0),
+test('the enemy arrives on a camp no unit stands on, and on nothing else at all', () => {
+  const open = cityOf(['urban'], { tiles: camped(field(4), CAMPS) });
+  const [onlyOpen, ...taken] = CAMPS;
+  const stoodOn = (camps: TileCoords[]): Chronicle =>
+    withUnits(
+      open,
+      camps.map((camp) => worker(camp)),
     );
-  const open = cityOf(['urban'], {
-    tiles: shut(ring.filter((coord) => tileKey(coord) !== tileKey(onlyOpen))),
-  });
 
-  expect(toFifthTurn(open).units[0].tile).toEqual(onlyOpen);
-  expect(toFifthTurn(withUnits(open, [worker(onlyOpen)])).units).toHaveLength(1);
-  expect(toFifthTurn(cityOf(['urban'], { tiles: shut(ring) })).units).toEqual([]);
+  expect(CAMPS.map(tileKey)).toContain(tileKey(toFifthTurn(open).units[0].tile));
+  expect(toFifthTurn(stoodOn(taken)).units[taken.length].tile).toEqual(onlyOpen);
+  expect(toFifthTurn(stoodOn(CAMPS)).units).toHaveLength(CAMPS.length);
 });
 
 test('an enemy moves its move toward the city, turn after turn', () => {
@@ -2666,8 +2671,11 @@ test('an enemy on the city’s tile attacks nothing, and captures the city the t
   expect(fallen.turn).toBe(stood.turn);
 });
 
-test('the enemy that moves in from the outer ring reaches the city and captures it', () => {
-  let chronicle = cityOf(['urban'], { tiles: field(MAP_COMPOSITION.radius) });
+test('the enemy that moves in from its camp reaches the city and captures it', () => {
+  const radius = MAP_COMPOSITION.radius;
+  let chronicle = cityOf(['urban'], {
+    tiles: camped(field(radius), [{ q: radius, r: 0 }]),
+  });
   for (let turn = 0; turn < 20 && chronicle.defeat === undefined; turn++) {
     chronicle = outcome(apply(chronicle, { type: 'end-turn' }));
   }

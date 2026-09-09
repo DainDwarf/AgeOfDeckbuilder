@@ -435,9 +435,9 @@ a layer names that outright, with a river running along the tile adding to its y
 - **Feature** — at most one, put there by the generator: a fertile plain. A feature lies
   on its terrain, so it is gone when its tile is terraformed.
 - **Improvement** — what a worker improves a tile with through an instant, any number of distinct
-  ones per tile, never the same one twice. Each names the terrains it goes on — one or several, where
-  a feature and a building name the one theirs lies on — and stays through a terraform. A **road** is
-  one, and names the terrains a worker reaches; it runs under whatever building stands there.
+  ones per tile, never the same one twice. Each names the terrains it goes on — one or several, as a
+  building does, where a feature names the one it lies on — and stays through a terraform. A **road**
+  is one, and names the terrains a worker reaches; it runs under whatever building stands there.
 - **Building** — at most one per tile: the tile has one building slot. That slot is the whole
   difference between a building and an improvement. The city fills the slot of the tile it stands
   on, and so does a camp: no building goes on a camp's tile, and no terraform, until the camp is
@@ -484,10 +484,10 @@ the relief lifts the ground, how far one edge may climb, how sharply the drop we
 short is too short and how many rivers a range is worth are tuning.
 
 Sixth, the **camps**: a fixed number of them 🔧, each drawn from the seeded generator among the
-tiles a warrior stands on that the city is reached from over the ground, at least some distance from
-the city and from every camp already placed 🔧, so that none is in sight at the founding. When the
-tiles run out the map holds fewer, and that is accepted. How many camps there are and how far they
-keep are tuning.
+tiles of the terrains a camp names that the city is reached from over the ground, at least some
+distance from the city and from every camp already placed 🔧, so that none is in sight at the
+founding. When the tiles run out the map holds fewer, and that is accepted. How many camps there are
+and how far they keep are tuning.
 
 Biomes are content, like the terrain and feature lists: they grow without a design decision, and
 what each one holds — its origin terrain, its interior and rim tables, its rim widths — is

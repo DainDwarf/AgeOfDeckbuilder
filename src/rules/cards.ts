@@ -210,7 +210,7 @@ export const CARDS: Record<CardId, Card> = {
     refuses: (chronicle, tile) =>
       firstRefusal(
         worked(chronicle, tile),
-        made(tile, [BUILDINGS.PH_Farm.terrain]),
+        made(tile, BUILDINGS.PH_Farm.terrains),
         inside(chronicle, tile),
         slotFree(tile),
       ),

@@ -46,6 +46,7 @@ const TEXT = {
   'improvement.PH_Road': 'PH_Road',
   'building.PH_City': 'PH_City',
   'building.PH_Farm': 'PH_Farm',
+  'building.PH_Camp': 'PH_Camp',
   'panel.no-yield': 'No yield',
   'button.turn': 'Turn {turn}',
   'button.end-turn': 'End turn',

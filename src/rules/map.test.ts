@@ -1,6 +1,8 @@
 import { expect, test } from 'vitest';
+import { ARRIVING } from './enemies';
 import {
   BIOMES,
+  BUILDINGS,
   CITY_TERRAIN,
   CITY_TILE,
   type Corner,
@@ -10,6 +12,8 @@ import {
   FEATURES,
   generateMap,
   MAP_COMPOSITION,
+  MOVE_POINT,
+  pathCosts,
   RIVER_FLOW,
   type River,
   riversAlong,
@@ -21,6 +25,7 @@ import {
   water,
 } from './map';
 import { seedRng } from './rng';
+import { standsOn } from './units';
 
 const SEEDS = [0, 1, 1234, 0xdeadbeef | 0, 424242];
 
@@ -30,6 +35,11 @@ function mapOf(seed: number): Tile[] {
 
 function riversOf(seed: number): River[] {
   return generateMap(seedRng(seed)).rivers;
+}
+
+/** The camps a map was dealt, in the order its tiles list them. */
+function campsOf(tiles: Tile[]): Tile[] {
+  return tiles.filter((tile) => tile.building === 'PH_Camp');
 }
 
 function at(tiles: Tile[], { q, r }: { q: number; r: number }): Tile | undefined {
@@ -280,4 +290,49 @@ test('with no tile named, no river answers at all', () => {
 test('the rivers of a map survive JSON and come back the same', () => {
   const rivers = riversOf(1234);
   expect(JSON.parse(JSON.stringify(rivers))).toEqual(rivers);
+});
+
+test('every map is dealt its camps, each keeping its distance from the city and from the others', () => {
+  const { camps, campFromCity, campsApart } = MAP_COMPOSITION;
+  for (const seed of SEEDS) {
+    const placed = campsOf(mapOf(seed));
+    expect(placed).toHaveLength(camps);
+    for (const camp of placed) {
+      expect(distance(camp, CITY_TILE)).toBeGreaterThanOrEqual(campFromCity);
+      for (const other of placed) {
+        if (tileKey(other) === tileKey(camp)) continue;
+        expect(distance(camp, other)).toBeGreaterThanOrEqual(campsApart);
+      }
+    }
+  }
+});
+
+test('a camp lies on ground the enemy that comes from it can stand on', () => {
+  for (const terrain of BUILDINGS.PH_Camp.terrains) {
+    expect(standsOn(ARRIVING, { q: 0, r: 0, terrain, improvements: [] })).toBe(true);
+  }
+});
+
+test('a camp stands where the ground runs to the city, never across the water', () => {
+  for (const seed of SEEDS) {
+    const map = generateMap(seedRng(seed));
+    const walked = pathCosts(
+      map.tiles,
+      map.rivers,
+      CITY_TILE,
+      { kind: 'whole-map', move: MOVE_POINT },
+      () => false,
+    );
+    for (const camp of campsOf(map.tiles)) expect(walked.has(tileKey(camp))).toBe(true);
+  }
+});
+
+test('the generator fills a building slot with a camp and with nothing else', () => {
+  for (const seed of SEEDS) {
+    for (const tile of mapOf(seed)) {
+      if (tile.building === undefined) continue;
+      expect(tile.building).toBe('PH_Camp');
+      expect(BUILDINGS.PH_Camp.terrains).toContain(tile.terrain);
+    }
+  }
 });

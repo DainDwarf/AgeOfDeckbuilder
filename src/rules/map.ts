@@ -138,17 +138,18 @@ const TERRAIN_LIFT: Record<Terrain, number> = {
 };
 
 /** `PH_` marks a stand-in: none of these is authored content, and all of them go. */
-export type BuildingTypeId = 'PH_City' | 'PH_Farm';
+export type BuildingTypeId = 'PH_City' | 'PH_Farm' | 'PH_Camp';
 export type FeatureId = 'PH_Fertile';
 export type ImprovementId = 'PH_Mine' | 'PH_Road';
 
-/** What a building of each kind stands on, and what it yields at income on top of that terrain. */
+/** What terrains a building of each kind stands on, and what it yields at income on top of them. */
 export const BUILDINGS: Record<
   BuildingTypeId,
-  { readonly terrain: Terrain; readonly yields: Partial<Resources> }
+  { readonly terrains: readonly Terrain[]; readonly yields: Partial<Resources> }
 > = {
-  PH_City: { terrain: 'urban', yields: {} },
-  PH_Farm: { terrain: 'plain', yields: { food: 1 } },
+  PH_City: { terrains: ['urban'], yields: {} },
+  PH_Farm: { terrains: ['plain'], yields: { food: 1 } },
+  PH_Camp: { terrains: ['plain', 'forest', 'hills'], yields: {} },
 };
 
 /** What a feature of each kind lies on, and what it yields at income on top of that terrain. */
@@ -168,7 +169,11 @@ export const IMPROVEMENTS: Record<
   PH_Road: { terrains: ['plain', 'forest', 'hills', 'urban'], yields: {} },
 };
 
-/** How many biomes the map is cut into, which kinds they are dealt, and which features follow. */
+/**
+ * How many biomes the map is cut into, which kinds they are dealt, which features follow, and how
+ * the camps stand: how many of them the map is worth, how far each keeps from the city, and how far
+ * from every camp already placed.
+ */
 export const MAP_COMPOSITION = {
   radius: 8,
   tilesPerBiome: 26,
@@ -179,6 +184,9 @@ export const MAP_COMPOSITION = {
     { biome: 'mountain', share: 0.1 },
   ],
   featureShares: [{ feature: 'PH_Fertile', share: 1 / 6 }],
+  camps: 3,
+  campFromCity: 4,
+  campsApart: 3,
 } satisfies {
   radius: number;
   tilesPerBiome: number;
@@ -186,6 +194,9 @@ export const MAP_COMPOSITION = {
   cityBiome: Biome;
   biomeShares: { biome: Biome; share: number }[];
   featureShares: { feature: FeatureId; share: number }[];
+  camps: number;
+  campFromCity: number;
+  campsApart: number;
 };
 
 /**
@@ -642,11 +653,60 @@ function flowRivers(
 }
 
 /**
+ * Where the camps stand, one at a time: each is drawn uniformly from the tiles of the terrains a
+ * camp lies on that the ground runs to the city from, far enough from the city and from every camp
+ * already placed, and the candidates are filtered again after each. When they run out the map holds
+ * fewer camps than the composition asks for. Nothing else on the tile changes.
+ */
+function campsOn(
+  initial: Rng,
+  tiles: readonly Tile[],
+  rivers: readonly River[],
+): { rng: Rng; tiles: Tile[] } {
+  const { camps, campFromCity, campsApart } = MAP_COMPOSITION;
+  // Only which tiles the walk reached is read here, never what reaching them cost, so the move a
+  // crossing is charged against shows nowhere.
+  const reached = pathCosts(
+    tiles,
+    rivers,
+    CITY_TILE,
+    { kind: 'whole-map', move: MOVE_POINT },
+    () => false,
+  );
+
+  let rng = initial;
+  const placed: TileCoords[] = [];
+  for (let camp = 0; camp < camps; camp++) {
+    const candidates = tiles.filter(
+      (tile) =>
+        BUILDINGS.PH_Camp.terrains.includes(tile.terrain) &&
+        reached.has(tileKey(tile)) &&
+        distance(tile, CITY_TILE) >= campFromCity &&
+        placed.every((other) => distance(tile, other) >= campsApart),
+    );
+    if (candidates.length === 0) break;
+
+    const step = nextRng(rng);
+    rng = step.rng;
+    placed.push(candidates[Math.floor(step.value * candidates.length)]);
+  }
+
+  const camped = new Set(placed.map(tileKey));
+  return {
+    rng,
+    tiles: tiles.map((tile) =>
+      camped.has(tileKey(tile)) ? { ...tile, building: 'PH_Camp' } : tile,
+    ),
+  };
+}
+
+/**
  * The map of a chronicle: a hexagonal disc of tiles in axial coordinates, the city at its centre,
- * generated in five layers: biomes spread from their origins, a rim marked around every biome that
+ * generated in six layers: biomes spread from their origins, a rim marked around every biome that
  * touches a biome of another kind, a terrain scattered from each biome's table — the rim one where
- * the rim reaches — each feature dealt over a share of the terrain it lies on, and rivers walked
- * down from the mountain range along the edges between tiles.
+ * the rim reaches — each feature dealt over a share of the terrain it lies on, rivers walked down
+ * from the mountain range along the edges between tiles, and the camps dealt over the ground they
+ * name that the city is walked to from.
  */
 export function generateMap(initial: Rng): { rng: Rng; tiles: Tile[]; rivers: River[] } {
   const { radius, cityBiome, featureShares } = MAP_COMPOSITION;
@@ -762,15 +822,17 @@ export function generateMap(initial: Rng): { rng: Rng; tiles: Tile[]; rivers: Ri
   );
   rng = flowed.rng;
 
-  return {
+  const camped = campsOn(
     rng,
-    rivers: flowed.rivers,
-    tiles: coords.map(({ q, r }, index) => ({
+    coords.map(({ q, r }, index) => ({
       q,
       r,
       terrain: terrains[index],
       feature: features[index],
       improvements: [],
     })),
-  };
+    flowed.rivers,
+  );
+
+  return { rng: camped.rng, rivers: flowed.rivers, tiles: camped.tiles };
 }

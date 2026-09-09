@@ -80,16 +80,20 @@ const UNIT_MARKS: Record<UnitTypeId, number[]> = {
   PH_Warrior: corners([0, -14, 13, 9, -13, 9]),
 };
 
+/** The wall the city is drawn as, and the camp with it: a camp is the city's mark in enemy red. */
+const WALL: number[] = corners([
+  -15, 10, -15, -12, -8, -12, -8, -6, -4, -6, -4, -12, 4, -12, 4, -6, 8, -6, 8, -12, 15, -12, 15,
+  10,
+]);
+
 /**
- * Placeholder primitives until the art pass: the farm a house, the city a crenellated wall, both
- * wide enough to show under a unit.
+ * Placeholder primitives until the art pass: the farm a house, the city and the camp a crenellated
+ * wall, all of them wide enough to show under a unit.
  */
 const BUILDING_MARKS: Record<BuildingTypeId, number[]> = {
-  PH_City: corners([
-    -15, 10, -15, -12, -8, -12, -8, -6, -4, -6, -4, -12, 4, -12, 4, -6, 8, -6, 8, -12, 15, -12, 15,
-    10,
-  ]),
+  PH_City: WALL,
   PH_Farm: corners([-16, 8, -16, -2, 0, -13, 16, -2, 16, 8]),
+  PH_Camp: WALL,
 };
 
 /** Placeholder primitives until the art pass: the fertile plain a small hexagon of its own green. */
@@ -115,6 +119,13 @@ const IMPROVEMENT_MARKS: Record<ImprovementId, number[]> = {
 };
 
 const BUILT = 0xcfc6b4;
+
+/** What each building's mark is painted in: the stone everything built is, a camp the enemy's red. */
+const BUILDING_COLOURS: Record<BuildingTypeId, number> = {
+  PH_City: BUILT,
+  PH_Farm: BUILT,
+  PH_Camp: FACTION_COLOURS.enemy,
+};
 
 const OUTLINE = 0x0d1014;
 
@@ -323,12 +334,14 @@ export function terrainMark(scene: Phaser.Scene, terrain: Terrain): Phaser.GameO
     .setStrokeStyle(1, OUTLINE);
 }
 
-/** The one way a building is drawn: its placeholder mark, in the stone everything built is. */
+/** The one way a building is drawn: its placeholder mark, in the colour that building is known by. */
 export function buildingMark(
   scene: Phaser.Scene,
   building: BuildingTypeId,
 ): Phaser.GameObjects.Polygon {
-  return scene.add.polygon(0, 0, BUILDING_MARKS[building], BUILT).setStrokeStyle(2, OUTLINE);
+  return scene.add
+    .polygon(0, 0, BUILDING_MARKS[building], BUILDING_COLOURS[building])
+    .setStrokeStyle(2, OUTLINE);
 }
 
 /** The one way a feature is drawn: its placeholder mark, in the colour that feature is known by. */
@@ -1100,7 +1113,11 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
         improved.add(improvementMark(scene, improvement).setPosition(x, y - FEATURE_RISE));
       }
       if (face.building !== undefined) {
-        built.add(buildingMark(scene, face.building).setPosition(x, y));
+        built.add(
+          buildingMark(scene, face.building)
+            .setPosition(x, y)
+            .setName(`building-${tileKey(tile)}`),
+        );
       }
       if (live.has(tileKey(tile))) continue;
       // A snapshot answers for its tile whole: one taken of an empty tile hides the unit that has
