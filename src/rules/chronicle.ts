@@ -54,8 +54,7 @@ export type Command =
       readonly aim: 'discard-pile';
       /**
        * Where in the discard pile the card aimed at it lies, in the pile as it stood before the
-       * play: the play sends the card being played to the pile, unless it is single use, before the
-       * effect resolves.
+       * play: the play sends the card being played to the pile before the effect resolves.
        */
       readonly card: number;
     }

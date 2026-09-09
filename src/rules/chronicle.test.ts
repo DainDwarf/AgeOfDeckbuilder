@@ -1243,7 +1243,7 @@ test('a stage of the end of turn that changed nothing is left out of it', () => 
   const quiet = cityOf(['urban', 'plain'], {
     ...NO_GROWTH,
     tiles: field(1),
-    drawPile: ['PH_Worker', 'PH_Warrior', 'PH_Farm', 'PH_March', 'PH_Harvest'],
+    drawPile: fullDraw(),
     discardPile: ['PH_Harvest'],
   });
 
