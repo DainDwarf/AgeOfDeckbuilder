@@ -12,13 +12,18 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
-- **Placeholder road card** — a stand-in improvement card lays a road that lowers its tile's
-  movement cost, and a river edge with a road on both banks is crossed as if it were none; rules
-  tests show a unit reaching further over a road than beside it and across a bridged edge undrained.
-  Doc-impact: `docs/DESIGN.md`.
+- **Move points count in hundredths** — every move stat, move point and movement cost in
+  `src/rules/` is an integer counting hundredths of a move point, content tables included, and the
+  unit card formats them as decimals with trailing zeros trimmed, so today's readings hold; the
+  existing tests and specs pass with their numbers scaled. Doc-impact: `docs/DOGMAS.md`.
+- **Placeholder road card** — a stand-in improvement card lays a road on plain, forest, hills or
+  urban; a road's tile costs half a move point to enter whatever lies under it, a river edge with a
+  road on both banks is a bridge, crossed as if no river ran there, and the map marks a road above
+  its tile. Rules tests show a unit reaching further over a road than beside it and across a bridge
+  undrained. Doc-impact: `docs/DESIGN.md`, `docs/GLOSSARY.md`. [board/road.md](board/road.md)
 - **The terrain card reads the movement cost** — the inspected tile's terrain card carries a small
-  "Mv X" in its top-right corner, X being the tile's summed movement cost over every layer, roads
-  included; a water tile's reading is settled at the pitch. An e2e spec reads it off a tile.
+  "Mv X" in its top-right corner, X being the tile's movement cost, a road's read as 0.5; a water
+  tile's reading is settled at the pitch. An e2e spec reads it off a tile.
   Doc-impact: `docs/DESIGN.md`.
 - **Camps on the map** — the generator places camps, each uncharted until seen, and an event that
   spawns enemies spawns them at a camp instead of the outer ring. Rules test on a fixed seed plus
