@@ -12,10 +12,6 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
-- **The terrain card reads the movement cost** — the inspected tile's terrain card carries a small
-  "Mv X" in its top-right corner, X being the tile's movement cost, a road's read as 0.5; a water
-  tile's reading is settled at the pitch. An e2e spec reads it off a tile.
-  Doc-impact: `docs/DESIGN.md`.
 - **Camps on the map** — the generator places camps, each uncharted until seen, and an event that
   spawns enemies spawns them at a camp instead of the outer ring. Rules test on a fixed seed plus
   an e2e spec. Doc-impact: `docs/DESIGN.md`.

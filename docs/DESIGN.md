@@ -328,9 +328,11 @@ the unit standing on it; the building with the tile's improvements; and the terr
 and the river running along it. A card is absent when nothing fills it, and the terrain card never
 is. The unit card reads the unit's stats; the other two are headed by their outermost layer and show
 a row per thing they hold — the river's among them on the terrain card — with what it gives at
-income, a row that gives nothing saying so. The river's row carries one line under it: a crossing
-ends the move. After the last card comes the first again, and a tile of a single card holds it: the
-cycle never falls back to the bare ring.
+income, a row that gives nothing saying so. The terrain card reads the tile's movement cost small in
+the top-right corner of its head, in move points, "Mv" before it, and a dash where nothing crosses
+the tile at all; "Mv" stands in until the look brings a movement glyph. The river's row carries one
+line under it: a crossing ends the move. After the last card comes the first again, and a tile of a
+single card holds it: the cycle never falls back to the bare ring.
 
 A left click selects a card of the hand, unaffordable or not. A selected card that aims at a tile or
 at a unit is **being aimed** from that moment: the map is already there, and lights the tiles its

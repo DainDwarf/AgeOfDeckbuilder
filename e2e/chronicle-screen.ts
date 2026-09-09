@@ -524,6 +524,14 @@ export function panelLines(page: Page): Promise<string[]> {
   });
 }
 
+/** What the card the infopanel is standing reads of the tile's movement cost, or nothing on one that reads none. */
+export function panelMovement(page: Page): Promise<string | undefined> {
+  return page.evaluate(() => {
+    const reading = window.named?.('panel-movement')?.object as Phaser.GameObjects.Text | undefined;
+    return reading?.text;
+  });
+}
+
 /** Which card of the tile the infopanel is showing, or nothing while it stands down. */
 export function shownCard(page: Page): Promise<string | undefined> {
   return page.evaluate(() => {

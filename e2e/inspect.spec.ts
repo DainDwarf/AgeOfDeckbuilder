@@ -4,6 +4,8 @@ import { beginChronicle } from '../src/rules/chronicle';
 import {
   FEATURES,
   type FeatureId,
+  MOVE_POINT,
+  movementCost,
   neighbours,
   RIVER_YIELDS,
   runsAlong,
@@ -11,6 +13,7 @@ import {
   type TileCoords,
   tileAt,
   tileKey,
+  water,
 } from '../src/rules/map';
 import type { Chronicle } from '../src/rules/state';
 import { text } from '../src/ui/text';
@@ -23,6 +26,7 @@ import {
   onScreen,
   open,
   panelLines,
+  panelMovement,
   ringedTile,
   settled,
   shownCard,
@@ -133,6 +137,33 @@ function bareRun(): { seed: number; key: string } {
   });
 }
 
+/**
+ * The first seed whose generator leaves a tile costing two move points beside the city, bare and
+ * with nobody on it so its terrain card is the whole of its cycle, and charts a water tile from the
+ * founding.
+ */
+function costRun(): { seed: number; land: string; water: string } {
+  return firstSeed(
+    'leaves a tile costing two move points beside the city, and water in sight',
+    (seed) => {
+      const chronicle = beginChronicle(seed, DECKS.PH_Deck);
+      const touching = new Set(neighbours(chronicle.city).map(tileKey));
+      const stood = new Set(chronicle.units.map((unit) => tileKey(unit.tile)));
+      const land = chronicle.tiles.find(
+        (tile) =>
+          touching.has(tileKey(tile)) &&
+          !stood.has(tileKey(tile)) &&
+          tile.building === undefined &&
+          tile.improvements.length === 0 &&
+          movementCost(tile) === 2 * MOVE_POINT,
+      );
+      const wet = chronicle.snapshots.find((snapshot) => water(snapshot.tile.terrain));
+      if (land === undefined || wet === undefined) return undefined;
+      return { seed, land: tileKey(land), water: tileKey(wet) };
+    },
+  );
+}
+
 /** The three lines a ledger row reads from `name` on: its name, its chip, and what the chip counts. */
 async function rowFrom(page: Page, name: string): Promise<string[]> {
   const lines = await panelLines(page);
@@ -190,6 +221,28 @@ test('a tile a river runs along gives the river a row of the terrain card, on wh
   await answered(page);
   expect(await shownCard(page)).toBe('terrain');
   expect(await ringedTile(page)).toBe(run.key);
+
+  expect(problems).toEqual([]);
+});
+
+test('the terrain card reads what entering the tile costs, and a dash on a tile nothing crosses', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const run = costRun();
+
+  await open(page, run.seed, 'PH_Deck');
+
+  // Nothing stands on it and nothing is built on it: the terrain card is the whole of its cycle.
+  const land = await onScreen(page, `tile-${run.land}`);
+  await page.mouse.click(land.x, land.y, { button: 'right' });
+  await expect.poll(() => shownCard(page)).toBe('terrain');
+  expect(await panelMovement(page)).toBe(text('panel.movement', { cost: 2 }));
+
+  const wet = await onScreen(page, `tile-${run.water}`);
+  await page.mouse.click(wet.x, wet.y, { button: 'right' });
+  await expect.poll(() => panelMovement(page)).toBe(text('panel.no-movement'));
+  expect(await shownCard(page)).toBe('terrain');
 
   expect(problems).toEqual([]);
 });

@@ -7,6 +7,7 @@ import {
   IMPROVEMENTS,
   type ImprovementId,
   MOVE_POINT,
+  movementCost,
   RIVER_YIELDS,
   type River,
   runsAlong,
@@ -44,7 +45,11 @@ type Row =
 export type Card =
   | { readonly kind: 'unit'; readonly unit: Unit }
   | { readonly kind: 'building'; readonly rows: readonly Row[] }
-  | { readonly kind: 'terrain'; readonly rows: readonly Row[] };
+  | {
+      readonly kind: 'terrain';
+      readonly rows: readonly Row[];
+      readonly movementCost: number | undefined;
+    };
 
 /**
  * What a tile is made of right now, as the cards an inspection steps: the unit, the building with
@@ -65,7 +70,7 @@ export function cardsOf(tile: Tile, units: readonly Unit[], rivers: readonly Riv
   const ground: Row[] = [{ kind: 'terrain', terrain: tile.terrain }];
   if (tile.feature !== undefined) ground.push({ kind: 'feature', feature: tile.feature });
   if (runsAlong(rivers, tile)) ground.push({ kind: 'river', terrain: tile.terrain });
-  cards.push({ kind: 'terrain', rows: ground });
+  cards.push({ kind: 'terrain', rows: ground, movementCost: movementCost(tile) });
 
   return cards;
 }
@@ -107,6 +112,7 @@ const TITLE_STYLE = {
 const LABEL_STYLE = { fontFamily: UI_FONT, fontSize: `${0.62 * em}px`, color: '#4a5058' };
 const VALUE_STYLE = { fontFamily: UI_FONT, fontSize: `${0.62 * em}px`, color: '#0d1014' };
 const CHIP_STYLE = { ...VALUE_STYLE, fontStyle: 'bold' };
+const MOVEMENT_STYLE = { ...LABEL_STYLE, fontSize: `${0.55 * em}px` };
 
 const STATS = ['health', 'damage', 'range', 'move', 'action', 'sight'] as const;
 
@@ -288,6 +294,15 @@ function buildFace(scene: Phaser.Scene, bubble: RowBubble, card: Card): Face {
   const contents: Phaser.GameObjects.GameObject[] = [paper, mark, name, rule];
   const hovers: Phaser.GameObjects.Zone[] = [];
 
+  const movement = movementOf(card);
+  if (movement !== undefined) {
+    contents.push(
+      addText(scene, right, middle, movement, MOVEMENT_STYLE)
+        .setOrigin(1, 0.5)
+        .setName('panel-movement'),
+    );
+  }
+
   /** The box a term raises its bubble from, named so a spec finds the rows in the order drawn. */
   const listen = (x: number, rowTop: number, width: number, height: number, term: Term): void => {
     const hover = scene.add
@@ -411,6 +426,22 @@ function headOf(
     };
   }
   return { mark: markOf(scene, card.rows[0]), name: nameOf(card.rows[0]) };
+}
+
+/**
+ * What the card reads in the corner of its head: what entering the tile costs on the terrain card, a
+ * dash where nothing crosses it, and nothing at all on the cards of what stands there.
+ */
+function movementOf(card: Card): string | undefined {
+  switch (card.kind) {
+    case 'unit':
+    case 'building':
+      return undefined;
+    case 'terrain':
+      return card.movementCost === undefined
+        ? text('panel.no-movement')
+        : text('panel.movement', { cost: inMovePoints(card.movementCost) });
+  }
 }
 
 function markOf(scene: Phaser.Scene, row: Row): Phaser.GameObjects.Polygon {
