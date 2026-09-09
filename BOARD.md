@@ -12,13 +12,16 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
-- **Camps on the map** — the generator places camps, each uncharted until seen, and an event that
-  spawns enemies spawns them at a camp instead of the outer ring. Rules test on a fixed seed plus
-  an e2e spec. Doc-impact: `docs/DESIGN.md`.
-- **Capturing a camp** — a unit standing on a camp through a full turn captures it; a captured camp
-  spawns nothing again and pays a one-use stand-in card that joins the chronicle's deck and is gone
-  when played. Rules tests for the capture, the silenced camp and the card's one use.
-  Doc-impact: `docs/DESIGN.md`.
+- **Camps on the map** — the generator fills the building slot of three rolled tiles with a camp,
+  each uncharted until seen and drawn as the city's mark in enemy red, and the arrival enters its
+  enemy on a camp whose tile is free instead of the outer ring. Rules tests on a fixed seed pin the
+  placement, the spawn and the silence with no free camp; an e2e spec finds the camp marks and the
+  fifth turn's enemy on one. Doc-impact: none, the design is written. [board/camps.md](board/camps.md)
+- **Capturing a camp** — a unit of the player's still standing on a camp when the enemy phase ends
+  captures it: the camp leaves its slot and the stand-in reward card is laid in the discard pile,
+  an instant of no cost, single use, that gains ten of each core resource. Rules tests pin the
+  capture, the silenced camp, the card's arrival and its single use. Doc-impact: none, the design
+  is written. [board/camp-capture.md](board/camp-capture.md)
 - **The schedule** — events become a weighted table whose weights shift with the turn, drawn from
   the chronicle's own generator: the same seed deals the same schedule, the harshest entries carry
   no weight early, and a raid drawn late is larger than one drawn early. Rules tests pin all three.
@@ -30,6 +33,6 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
   chronicle screen; the end-turn button's readout is re-judged against it.
   Doc-impact: `docs/DESIGN.md`.
 - **The capstone, and victory** — `PH_Siege` lands on its fixed turn, spans its turns and ends the
-  chronicle: victory while the city holds, defeat when it does not. A victory screen mirrors the
-  defeat screen, and rules tests pin both endings. Doc-impact: `docs/DESIGN.md`,
-  `docs/GLOSSARY.md`.
+  chronicle: victory while the city holds, defeat when it does not. Its intake decides how the
+  siege enters a chronicle whose every camp is captured. A victory screen mirrors the defeat
+  screen, and rules tests pin both endings. Doc-impact: `docs/DESIGN.md`, `docs/GLOSSARY.md`.

@@ -259,8 +259,10 @@ scripts ignore sight, and no tile is uncharted to them.
 ### Cards ✅
 
 Three kinds. Every card has a resource cost, possibly none. Every kind cycles: played or
-discarded, a card goes to the discard pile and comes around again; *gone once played* is a
-keyword some cards carry, not a kind, and the map's gifts are chronicle-only by nature.
+discarded, a card goes to the discard pile and comes around again. **Single use** is a keyword some
+cards carry, not a kind: played, such a card leaves the chronicle instead of going to the discard
+pile; discarded unplayed, it comes around like any other. The map's gifts are chronicle-only by
+nature.
 
 - **Building** — builds a building on a tile inside the border where a worker stands. The map is
   the cap: no free tile of the right terrain, no farm — and a building card with nowhere to go
@@ -438,7 +440,8 @@ a layer names that outright, with a river running along the tile adding to its y
   one, and names the terrains a worker reaches; it runs under whatever building stands there.
 - **Building** — at most one per tile: the tile has one building slot. That slot is the whole
   difference between a building and an improvement. The city fills the slot of the tile it stands
-  on.
+  on, and so does a camp: no building goes on a camp's tile, and no terraform, until the camp is
+  captured.
 
 **Improving and terraforming reach any tile a worker of the player's stands on**, inside the border
 or not — unlike building, which is inside the border only. A tile whose building slot is filled is
@@ -450,7 +453,7 @@ is there so that adjacency is content when it comes.
 🔧 A tile's layers may add to the sight of a unit standing on it. Nothing does; the door is there
 so that seeing further from a tile is content when it comes.
 
-**The map is generated in five layers.** It is a hexagonal disc with the city's tile at its centre.
+**The map is generated in six layers.** It is a hexagonal disc with the city's tile at its centre.
 First the **biomes**: origin tiles scattered over the disc spread outward until every tile belongs to
 one biome — land, sea, mountain, and whatever the list comes to hold. Their kinds are **dealt** as
 quotas rather than diced one by one, because independent dice can deal a map with no sea at all; the
@@ -479,6 +482,12 @@ comes out shorter than the minimum is thrown away and another source drawn; ever
 worth up to two rivers, so a range hugging the coast may yield fewer, and that is accepted. How far
 the relief lifts the ground, how far one edge may climb, how sharply the drop weights the draw, how
 short is too short and how many rivers a range is worth are tuning.
+
+Sixth, the **camps**: a fixed number of them 🔧, each drawn from the seeded generator among the
+tiles a warrior stands on that the city is reached from over the ground, at least some distance from
+the city and from every camp already placed 🔧, so that none is in sight at the founding. When the
+tiles run out the map holds fewer, and that is accepted. How many camps there are and how far they
+keep are tuning.
 
 Biomes are content, like the terrain and feature lists: they grow without a design decision, and
 what each one holds — its origin terrain, its interior and rim tables, its rim widths — is
@@ -556,12 +565,18 @@ disasters, turmoil, fortunate) are tags on content, not rules.
 Events are not announced: the player learns the next one when it lands. Announcing them is
 something a technology or a civilization's rule can grant.
 
-**Enemies enter from camps.** The generator places **camps** on the map, each uncharted until
-seen. An event that spawns enemies spawns them at a camp, and they follow their script — the
-default one moves toward the nearest of the player's units or the city and attacks it. Scouting is how a chronicle learns where the enemy comes from. A camp is captured the way
-the city is — kill what stands on it, stand on it through a full turn — and a captured camp
-spawns nothing again. 🔧 Its reward: a chronicle-only card, or influence. Spawning enemies on
-any tile out of sight was rejected: a raid out of a hollow that turns out empty reads as nothing.
+**Enemies enter from camps.** The generator places **camps** on the map, each filling its tile's
+building slot, each uncharted until seen. An event that spawns enemies draws a camp whose tile is
+free, seeded, and the enemy enters on it; with no camp's tile free it spawns nothing. The enemy
+follows its script — the default one moves toward the nearest of the player's units or the city and
+attacks it. Scouting is how a chronicle learns where the enemy comes from. A camp is **captured**
+the way the city is, mirrored: a unit of the player's, any unit, that stands on it through the enemy
+phase — still there when the next turn begins — captures it. A captured camp leaves the map, its
+slot empty, so it spawns nothing again, and no raid enters a chronicle whose every camp is captured.
+Its reward is a card that joins the chronicle's deck, laid in the discard pile at the capture. 🔧
+Until the deck is data the card is a stand-in: an instant, single use, that gains some of every core
+resource. Spawning enemies on any tile out of sight was rejected: a raid out of a hollow that turns
+out empty reads as nothing.
 
 **The capstone lands on a fixed turn of the age**, known from the launch; that turn is the
 chronicle's length and the lever behind "shorter in the earlier ages". It is the last event —

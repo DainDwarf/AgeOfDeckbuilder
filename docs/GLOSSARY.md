@@ -43,7 +43,7 @@ deliberate exception the reviewer sees; there is no silent allow-list.
 | **event** | One entry of the age's schedule; what the chronicle throws at the city. | disaster, threat, crisis, encounter |
 | **capstone** | The age's final trial, on a fixed turn known from the launch; passing it is victory. | boss, finale, objective |
 | **schedule** | An age's set of events with their turn-shifting weights; what the Events phase draws from. | timeline, calendar |
-| **camp** | A generated site enemies enter the map from; captured, it spawns nothing again. | lair, nest, spawn point, spawner |
+| **camp** | A generated site enemies enter the map from, filling its tile's building slot; captured, it leaves the map. | lair, nest, spawn point, spawner |
 | **victory** | The end of a chronicle by passing the capstone. | win, success, triumph |
 | **defeat** | The end of a chronicle by the city's fall. | collapse, game over, loss, death |
 | **border** | The edge of the tiles the city holds; pushed out by culture. | frontier, territory |
@@ -56,6 +56,7 @@ deliberate exception the reviewer sees; there is no silent allow-list.
 | **unaffordable** | A card or a claim whose cost exceeds what the city holds; the city cannot pay for it. | unpayable, short, lacking, too expensive |
 | **discard** | To send a card from the hand to the discard pile. | throw away, dump |
 | **recall** | To put a card from the discard pile into the hand; what a recall instant does. | retrieve, recover, return, reclaim, salvage |
+| **single use** | A keyword on a card: played, it leaves the chronicle instead of going to the discard pile. | one-use, gone once played, consumed, exhaust, burn, exile |
 | **draw pile** | The cards not yet drawn this cycle; refilled from the discard pile when empty. | library |
 | **discard pile** | The cards played or discarded this cycle, waiting to be shuffled back. | graveyard, trash, bin |
 | **browse** | A window offering a pile's cards to be read, opened by a left click on that pile; the window a card aimed at the discard pile opens is the aim window and not one. | pile window, viewer, gallery, preview, list (of a pile) |
