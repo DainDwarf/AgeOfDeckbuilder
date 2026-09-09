@@ -75,7 +75,7 @@ const TEXT = {
   'rules.PH_Road': 'Improve a tile with a road',
   'rules.PH_Urbanisation': 'Terraform a plain into urban',
   'rules.PH_Recall': 'Recall a card from the discard pile',
-  'rules.PH_Spoils': 'Single use. Gain 10 of each core resource',
+  'rules.PH_Spoils': 'Single use.\n10[food] 10[production] 10[military] 10[money] 10[science]',
   'aim.tile': 'Play {card} at a tile',
   'aim.unit': 'Play {card} at a unit',
   'aim.discard-pile': 'Play {card} at a card of the discard pile',

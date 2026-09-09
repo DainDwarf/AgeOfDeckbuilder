@@ -439,6 +439,14 @@ export function onHover(
   };
 }
 
+// Phaser sizes a Text's backing canvas from a box it measures at 1× — sideways from the advance
+// width rather than the ink box — but rasterises the glyphs at `resolution`, and a hinted outline
+// is not proportional, so ink falls outside the canvas on every side, further sideways than
+// vertically. The padding holds that overflow; being symmetric per axis, a centred text does not
+// move.
+/** How far outside its own box a text is padded: what a caller measuring one takes back out. */
+export const TEXT_INSET = { x: 2, y: 1 };
+
 export function addText(
   scene: Phaser.Scene,
   x: number,
@@ -446,14 +454,10 @@ export function addText(
   content: string,
   style: Phaser.Types.GameObjects.Text.TextStyle,
 ): Phaser.GameObjects.Text {
-  // Phaser sizes a Text's backing canvas from a box it measures at 1× — sideways from the advance
-  // width rather than the ink box — but rasterises the glyphs at `resolution`, and a hinted outline
-  // is not proportional, so ink falls outside the canvas on every side, further sideways than
-  // vertically. The padding holds that overflow; being symmetric per axis, a centred text does not
-  // move. A fractional resolution would truncate the canvas to whole pixels, hence the ceiling.
+  // A fractional resolution would truncate the backing canvas to whole pixels, hence the ceiling.
   return scene.add.text(x, y, content, {
     ...style,
     resolution: Math.ceil(renderFactor()),
-    padding: { x: 2, y: 1 },
+    padding: TEXT_INSET,
   });
 }

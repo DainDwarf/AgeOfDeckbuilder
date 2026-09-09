@@ -10,10 +10,12 @@ import {
   DESIGN_HEIGHT,
   hexagon,
   MARGIN,
+  TEXT_INSET,
   UI_FONT,
 } from './design-space';
 import { RESOURCE_COLOURS } from './resource-bar';
 import { text } from './text';
+import { layOutRun } from './text-run';
 
 export const CARD_WIDTH = 130;
 
@@ -160,13 +162,38 @@ export function createCardFace(
     letterSpacing: 0.14 * 0.65 * em,
   }).setOrigin(0.5, 1);
 
-  const rules = addText(scene, 0, kind.y - kind.height - 0.45 * em, text(`rules.${id}`), {
-    fontFamily: UI_FONT,
-    fontSize: `${0.62 * em}px`,
-    color: css(tone(palette.ink)),
+  const size = 0.62 * em;
+  const span = (2 / 3) * size;
+  const ruleStyle = { fontFamily: UI_FONT, fontSize: `${size}px`, color: css(tone(palette.ink)) };
+  const ruler = addText(scene, 0, 0, '', ruleStyle);
+  const measure = (content: string): number => ruler.setText(content).width - 2 * TEXT_INSET.x;
+  const run = layOutRun(text(`rules.${id}`), measure, {
+    width: right - left,
+    glyph: span,
+    bearing: size / 4,
+    // A line is measured to the whole pixel, so one space alone is too coarse to lay glyphs by.
+    space: measure(' '.repeat(20)) / 20,
+  });
+  ruler.destroy();
+
+  const rules = addText(scene, 0, kind.y - kind.height - 0.45 * em, run.content, {
+    ...ruleStyle,
     align: 'center',
-    wordWrap: { width: right - left },
   }).setOrigin(0.5, 1);
+
+  const lineHeight = (rules.height - 2 * TEXT_INSET.y) / run.lines;
+  const runTop = rules.y - rules.height + TEXT_INSET.y;
+  const glyphs = run.glyphs.map((glyph) =>
+    scene.add
+      .rectangle(
+        glyph.x,
+        runTop + (glyph.line + 0.5) * lineHeight,
+        span / Math.SQRT2,
+        span / Math.SQRT2,
+        tone(RESOURCE_COLOURS[glyph.resource]),
+      )
+      .setAngle(45),
+  );
 
   const artTop = middle + 1.15 * em;
   const artHeight = rules.y - rules.height - 0.45 * em - artTop;
@@ -186,7 +213,7 @@ export function createCardFace(
     radius + RING_STANDOFF,
   );
 
-  root.add([art, name, kind, rules, ring]);
+  root.add([art, name, kind, rules, ...glyphs, ring]);
 
   /** The point while the card is being aimed, and nothing at all on the card while it is not. */
   let point: Phaser.GameObjects.Polygon | undefined;
