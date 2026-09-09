@@ -12,12 +12,19 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
-- **What a river costs to cross** — the design settles what crossing a river edge costs, and every
-  path over the map pays it. A rules test on a seed whose river cuts a unit's reach.
-  Doc-impact: `docs/DESIGN.md`.
+- **Crossing a river drains the move** — a step over a river edge spends every move point the unit
+  has left, taken only where those points cover the far tile's cost in full, and the enemy's walk
+  weighs a crossing as its own full move; the terrain card's river row says the crossing ends the
+  move. The design page settles all three, and rules tests pin the drain, the refused crossing and
+  the enemy's weighing. Doc-impact: `docs/DESIGN.md`.
 - **Placeholder road card** — a stand-in improvement card lays a road that lowers its tile's
-  movement cost; a rules test shows a unit reaching further over it than beside it.
-  Doc-impact: none.
+  movement cost, and a river edge with a road on both banks is crossed as if it were none; rules
+  tests show a unit reaching further over a road than beside it and across a bridged edge undrained.
+  Doc-impact: `docs/DESIGN.md`.
+- **The terrain card reads the movement cost** — the inspected tile's terrain card carries a small
+  "Mv X" in its top-right corner, X being the tile's summed movement cost over every layer, roads
+  included; a water tile's reading is settled at the pitch. An e2e spec reads it off a tile.
+  Doc-impact: `docs/DESIGN.md`.
 - **Camps on the map** — the generator places camps, each uncharted until seen, and an event that
   spawns enemies spawns them at a camp instead of the outer ring. Rules test on a fixed seed plus
   an e2e spec. Doc-impact: `docs/DESIGN.md`.

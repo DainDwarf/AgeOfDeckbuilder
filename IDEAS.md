@@ -41,6 +41,9 @@ a [`BOARD.md`](BOARD.md) line. Say
 
 ## Game
 
+- **Bridges are a technology**: the placeholder road line lets roads on both banks of a river edge
+  lift the crossing's drain; in the end design that bridge is gated behind a technology the player
+  unlocks, and roads alone do not span a river.
 - **Cache or precompute movement reachability**: today it is recomputed per command; measure before
   building anything.
 - **Seed selection at launch**: when the "launch a chronicle" menu exists, it offers starting on a
