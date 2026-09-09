@@ -1,4 +1,13 @@
-import { distance, MAP_COMPOSITION, pathCosts, type Tile, type TileCoords, tileKey } from './map';
+import {
+  distance,
+  MAP_COMPOSITION,
+  movementCost,
+  pathCosts,
+  type Tile,
+  type TileCoords,
+  tileAt,
+  tileKey,
+} from './map';
 import { nextRng } from './rng';
 import { type Chronicle, entered } from './state';
 import {
@@ -35,7 +44,7 @@ export const ENEMY_SCRIPTS: Record<EnemyScriptId, EnemyScript> = {
       const target = nearest(chronicle, enemy.tile);
       if (target === undefined) return stay;
 
-      const away = costsFrom(chronicle.tiles, target);
+      const outward = costsFrom(chronicle.tiles, target);
       const landings = [stay, ...reachable(chronicle, enemy)];
       const spent = new Map(landings.map((landing) => [tileKey(landing.tile), landing.cost]));
 
@@ -45,10 +54,16 @@ export const ENEMY_SCRIPTS: Record<EnemyScriptId, EnemyScript> = {
         chronicle.tiles,
         landings.map((landing) => landing.tile),
       )) {
-        const left = away.get(tileKey(tile));
-        if (left === undefined || left >= cheapest) continue;
-        cheapest = left;
-        chosen = { tile, cost: spent.get(tileKey(tile)) ?? 0 };
+        const at = tileKey(tile);
+        const reached = outward.get(at);
+        const own = movementCost(tileAt(chronicle.tiles, tile));
+        if (reached === undefined || own === undefined) continue;
+        // The walk out charges the landing's own cost and not the target's; crossing back charges
+        // the other way about, and the target's cost is the same for every landing weighed here.
+        const away = reached - own;
+        if (away >= cheapest) continue;
+        cheapest = away;
+        chosen = { tile, cost: spent.get(at) ?? 0 };
       }
       return chosen;
     },

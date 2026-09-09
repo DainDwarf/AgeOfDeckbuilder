@@ -1386,17 +1386,20 @@ test('water is crossed by nobody, and so is everything only water leads to', () 
   expect(outcome(apply(city, moveTo(1, { q: 1, r: 1 }))).units[0].tile).toEqual({ q: 1, r: 1 });
 });
 
-test('a mountain costs more than any unit’s move, so none of them enters one', () => {
-  for (const stats of Object.values(UNIT_STATS)) {
-    const city = cityOf(['urban'], {
-      tiles: madeOf(field(2), 'mountain', [{ q: 1, r: 0 }]),
-      units: [standing('player', CITY, stats)],
-    });
+test('a tile costing more than a unit’s move is beyond it, however often it refreshes', () => {
+  const city = cityOf(['urban'], {
+    tiles: madeOf(field(2), 'forest', [{ q: 1, r: 0 }]),
+    units: [standing('player', CITY, { move: 1 })],
+  });
 
-    expect(outcome(apply(city, moveTo(1, { q: 1, r: 0 })))).toEqual(city);
-    expect(outcome(apply(city, moveTo(1, { q: 2, r: 0 })))).toEqual(city);
-    expect(outcome(apply(city, moveTo(1, { q: 1, r: 1 }))).units[0].tile).toEqual({ q: 1, r: 1 });
-  }
+  expect(pointsOf(city, 1)).toBe(1);
+  expect(outcome(apply(city, moveTo(1, { q: 1, r: 0 })))).toEqual(city);
+  expect(outcome(apply(city, moveTo(1, { q: 0, r: 1 }))).units[0].tile).toEqual({ q: 0, r: 1 });
+
+  const ticked = outcome(apply(city, { type: 'end-turn' }));
+
+  expect(pointsOf(ticked, 1)).toBe(1);
+  expect(outcome(apply(ticked, moveTo(1, { q: 1, r: 0 })))).toEqual(ticked);
 });
 
 test('a unit crosses its own faction but never lands on it', () => {
@@ -2310,7 +2313,7 @@ test('an enemy spends the move points it crosses on, and carries them into the t
   expect(pointsOf(outcome(stages), 1)).toBe(2);
 });
 
-test('an enemy takes the plains round a forest, and the forest keeps it off the city a turn', () => {
+test('a forest on an enemy’s way costs it what the tile says, and keeps it off the city', () => {
   /** One corridor to the city, forked: the straight way through one tile, the way round through two. */
   const corridor = [CITY, { q: 1, r: 0 }, { q: 2, r: 0 }, { q: 2, r: -1 }, { q: 1, r: -1 }];
   const raider = standing('enemy', { q: 2, r: 0 }, { move: 2, damage: 0 });
