@@ -2450,7 +2450,7 @@ test('an enemy attacks once for each of its action, and one with none attacks no
       tiles: field(2),
       units: [
         worker({ q: 1, r: 0 }),
-        standing('enemy', { q: 2, r: 0 }, { move: 0, damage: 1, action }),
+        standing('enemy', { q: 2, r: 0 }, { move: 0 * MOVE_POINT, damage: 1, action }),
       ],
     });
 
@@ -2472,8 +2472,8 @@ test('each enemy acts on the chronicle the enemy before it left, and no unit of 
     tiles: field(2),
     units: [
       standing('player', { q: 1, r: 0 }, { health: 4, damage: 3 }),
-      standing('enemy', { q: 2, r: 0 }, { move: 0, damage: 4 }),
-      standing('enemy', { q: 1, r: 1 }, { move: 0, damage: 4 }),
+      standing('enemy', { q: 2, r: 0 }, { move: 0 * MOVE_POINT, damage: 4 }),
+      standing('enemy', { q: 1, r: 1 }, { move: 0 * MOVE_POINT, damage: 4 }),
     ],
   });
 
