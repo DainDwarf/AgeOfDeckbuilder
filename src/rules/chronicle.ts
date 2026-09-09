@@ -380,7 +380,10 @@ export function playable(refusal: Refusal): boolean {
   return refusal.unaffordable.length === 0 && refusal.blocked.length === 0;
 }
 
-/** The tiles the city may claim: charted, not held, and touching a tile it holds. */
+/**
+ * The tiles the city may claim: charted, not held, touching a tile it holds, with no camp filling
+ * the slot and no enemy occupying it.
+ */
 export function claimable(chronicle: Chronicle): TileCoords[] {
   const held = new Set(chronicle.held.map(tileKey));
   const chartedTiles = new Set(chronicle.snapshots.map(tileKey));
@@ -389,6 +392,8 @@ export function claimable(chronicle: Chronicle): TileCoords[] {
       (tile) =>
         chartedTiles.has(tileKey(tile)) &&
         !held.has(tileKey(tile)) &&
+        tile.building !== 'PH_Camp' &&
+        unitAt(chronicle.units, tile)?.faction !== 'enemy' &&
         neighbours(tile).some((coord) => held.has(tileKey(coord))),
     )
     .map(({ q, r }) => ({ q, r }));

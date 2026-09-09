@@ -12,10 +12,6 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
-- **A claim refuses a camp and an occupied tile** — `claimable` turns down the tile a camp fills and
-  the tile an enemy occupies, so the border grows around neither and neither takes an inhabitant;
-  a camp's tile is claimed like any other once a capture empties its slot. Rules tests pin both
-  refusals and the tile a capture frees. Doc-impact: `docs/DESIGN.md`.
 - **The rules line wraps through Phaser** — the card's rules line is laid out by a
   `wordWrapCallback` on the one `Text` that draws it, measured through that `Text`'s own context,
   and the per-face ruler `Text` is gone; every rule `text-run.test.ts` pins still holds and the

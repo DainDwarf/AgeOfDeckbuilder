@@ -2173,6 +2173,55 @@ test('a unit that charts that tile makes it a claim the city can make', () => {
   expect(outcome(apply(charting, claimOf(dark))).held.map(tileKey)).toContain(tileKey(dark));
 });
 
+test('a camp’s tile touching the border is no claim of the city’s', () => {
+  const camp = { q: 2, r: 0 };
+  const city = founded(3, { tiles: camped(field(3), [camp]), resources: culture(9) });
+
+  expect(claimable(city).map(tileKey)).not.toContain(tileKey(camp));
+  expect(tileRefusal(city, camp)).toBeUndefined();
+  expect(cityCommand(city, camp)).toBeUndefined();
+  expect(stagedBy(city, claimOf(camp))).toEqual(['refused']);
+  expect(outcome(apply(city, claimOf(camp)))).toBe(city);
+});
+
+test('a tile an enemy occupies is no claim of the city’s, and a unit of the player’s refuses none', () => {
+  const occupied = { q: 2, r: 0 };
+  const stood = { q: 0, r: 2 };
+  const city = founded(3, {
+    resources: culture(9),
+    units: [standing('enemy', occupied), standing('player', stood)],
+  });
+
+  expect(claimable(city).map(tileKey)).not.toContain(tileKey(occupied));
+  expect(tileRefusal(city, occupied)).toBeUndefined();
+  expect(cityCommand(city, occupied)).toBeUndefined();
+  expect(stagedBy(city, claimOf(occupied))).toEqual(['refused']);
+  expect(outcome(apply(city, claimOf(occupied)))).toBe(city);
+
+  expect(claimable(city).map(tileKey)).toContain(tileKey(stood));
+  expect(cityCommand(city, stood)).toEqual(claimOf(stood));
+  expect(stagedBy(city, claimOf(stood))).toEqual(['claim']);
+});
+
+test('a camp captured at the end of the turn leaves its tile claimed like any other', () => {
+  const camp = { q: 2, r: 0 };
+  const besieging = founded(3, {
+    ...NO_GROWTH,
+    tiles: camped(field(3), [camp]),
+    resources: culture(9),
+    drawPile: fullDraw(),
+    units: [standing('player', camp)],
+  });
+
+  const taken = outcome(apply(besieging, { type: 'end-turn' }));
+
+  expect(capturesOf(besieging)).toEqual([tileKey(camp)]);
+  expect(claimable(taken).map(tileKey)).toContain(tileKey(camp));
+  expect(cityCommand(taken, camp)).toEqual(claimOf(camp));
+  expect(stagedBy(taken, claimOf(camp))).toEqual(['claim']);
+  expect(outcome(apply(taken, claimOf(camp))).held.map(tileKey)).toContain(tileKey(camp));
+});
+
 test('a city-mode click assigns on a tile the city holds and claims on any other', () => {
   const city = founded(3, { resources: culture(1) });
 

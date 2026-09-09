@@ -98,6 +98,6 @@ deliberate exception the reviewer sees; there is no silent allow-list.
 | **action** | A unit's stat, and what it spends to attack, one per attack; refreshed to its action. | action points, energy, attack pool |
 | **refresh** | To bring a unit's spendable stat back to its full value — its move points to its move, its action to its action. The turn refreshes both on every unit when it ticks over; an instant refreshes one unit's move points. Health is never refreshed but healed. | restore, replenish, reset, recharge, recover, regain |
 | **military** | The resource that pays for military units, instants and fortifications. | — |
-| **occupy** | What an enemy does to a tile it stands on: the tile yields nothing. | blockade |
+| **occupy** | What an enemy does to a tile it stands on: the tile yields nothing and is not claimable. | blockade |
 | **pillage** | What some enemies do to the tile they stand on: its building or improvement is destroyed. | raze, loot, burn |
 | **capture** | To take a site by standing on its tile through a full turn: an enemy captures the city (defeat), the player captures a camp. | conquer, seize, sack |
