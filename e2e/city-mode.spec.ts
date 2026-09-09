@@ -56,13 +56,9 @@ const THRESHOLD = text('threshold.culture', { culture: 1 });
 /** What the note says over a tile whose claim the city cannot pay for. */
 const UNPAID = [text('refusal.claim')];
 
-/** How many tiles the founding's border touches and has charted: the claims it opens on. */
-function touching(): number {
-  const founding = beginChronicle(1, DECKS.PH_Deck);
-  const seen = new Set(founding.snapshots.map(tileKey));
-  return founding.tiles.filter(
-    (tile) => distance(tile, founding.city) === 2 && seen.has(tileKey(tile)),
-  ).length;
+/** How many claims the founding opens on, by the rules' own count: one mark to be drawn for each. */
+function claims(): number {
+  return claimable(beginChronicle(1, DECKS.PH_Deck)).length;
 }
 
 /** Whether the chronicle screen shows city mode is on: both marks stand, or neither does. */
@@ -436,7 +432,7 @@ test('city mode marks every tile the city can claim, and leaving it takes the ma
 
   await page.keyboard.press('c');
   await expect.poll(() => inCityMode(page)).toBe(true);
-  expect(await counted(page, 'claimable')).toBe(touching());
+  expect(await counted(page, 'claimable')).toBe(claims());
 
   await page.keyboard.press('Escape');
   await expect.poll(() => inCityMode(page)).toBe(false);
@@ -497,7 +493,7 @@ test('a second click the city cannot pay for claims nothing and says so, one it 
   expect(claimed.resources.culture).toBe(0);
   expect(await counted(page, 'assigned')).toBe(FOUNDED + 1);
   // The tile claimed is a claim no longer, and the border has moved out onto nothing it has seen.
-  expect(await counted(page, 'claimable')).toBe(touching() - 1);
+  expect(await counted(page, 'claimable')).toBe(claims() - 1);
   // The tile the claim took stays selected, and asks for nothing more.
   await expect.poll(() => ringedTile(page)).toBe(TOUCHING.key);
   expect(await thresholdShown(page)).toBeUndefined();

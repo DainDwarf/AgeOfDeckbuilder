@@ -25,6 +25,7 @@ import {
 import {
   attackable,
   attacked,
+  occupied,
   reachable,
   refreshedAction,
   refreshedMovePoints,
@@ -393,7 +394,7 @@ export function claimable(chronicle: Chronicle): TileCoords[] {
         chartedTiles.has(tileKey(tile)) &&
         !held.has(tileKey(tile)) &&
         tile.building !== 'PH_Camp' &&
-        unitAt(chronicle.units, tile)?.faction !== 'enemy' &&
+        !occupied(chronicle.units, tile) &&
         neighbours(tile).some((coord) => held.has(tileKey(coord))),
     )
     .map(({ q, r }) => ({ q, r }));
@@ -672,7 +673,7 @@ function income(chronicle: Chronicle): Chronicle {
   const resources = { ...chronicle.resources };
   for (const tile of chronicle.tiles) {
     if (!assigned.has(tileKey(tile))) continue;
-    if (unitAt(chronicle.units, tile)?.faction === 'enemy') continue;
+    if (occupied(chronicle.units, tile)) continue;
     const yields = tileYield(tile, chronicle.rivers);
     for (const resource of RESOURCES) resources[resource] += yields[resource] ?? 0;
   }
@@ -706,7 +707,7 @@ function grow(chronicle: Chronicle): Chronicle {
  * one attack a point. A stage each, and none for a move it did not make or an attack aimed at nobody.
  */
 function enemyPhase(chronicle: Chronicle): Stage[] {
-  if (unitAt(chronicle.units, chronicle.city)?.faction === 'enemy') {
+  if (occupied(chronicle.units, chronicle.city)) {
     return [{ name: 'capture', chronicle: fall(chronicle, 'capture') }];
   }
 

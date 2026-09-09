@@ -505,15 +505,14 @@ rather than the player's. 🔧 Which terrains a river feeds and what it gives th
 
 The city stands on one tile and owns the six around it. The player **claims** any charted tile
 adjacent to one the city owns by spending culture — an uncharted tile is not claimed, as it is not
-walked onto, so the border grows only where a unit has seen 🔧; claiming is free of cards, like assigning, and the **culture threshold**, what a claim
-costs, rises with the tiles owned. A claimed tile takes an idle inhabitant at once when the city
-has one. A tile a camp fills is not claimed, and neither is a tile an enemy occupies: the border
-grows around both, and neither takes an inhabitant. A camp's tile is claimed like any other once its
-capture empties the slot, and an occupied tile the turn the enemy walks off it. Claiming under an
-enemy was rejected: the tile yields nothing while the enemy stands there, so the culture and the
-inhabitant would both go to a tile that gives nothing back. There is no limit to how far the border
-reaches. A cost that also rises with distance was rejected until a chronicle shows fractal borders:
-a tendril is adjacent-only and exposed already.
+walked onto, so the border grows only where a unit has seen 🔧; claiming is free of cards, like
+assigning, and the **culture threshold**, what a claim costs, rises with the tiles owned. A claimed
+tile takes an idle inhabitant at once when the city has one. A tile a camp fills is not claimed,
+and neither is a tile an enemy occupies: the border grows around them, never onto them, and neither
+takes an inhabitant. A camp's tile is claimed like any other once its capture empties the slot, and
+an occupied tile the turn the enemy walks off it. There is no limit to how far the border reaches. A
+cost that also rises with distance was rejected until a chronicle shows fractal borders: a tendril
+is adjacent-only and exposed already.
 
 Units enter the map on the city's tile. 🔧 A building that adds an entry point is a keyword for
 later content.
