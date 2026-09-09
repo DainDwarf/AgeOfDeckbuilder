@@ -17,6 +17,10 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
   an instant of no cost, single use, that gains ten of each core resource. Rules tests pin the
   capture, the silenced camp, the card's arrival and its single use. Doc-impact: none, the design
   is written. [board/camp-capture.md](board/camp-capture.md)
+- **A claim refuses a camp and an occupied tile** — `claimable` turns down the tile a camp fills and
+  the tile an enemy occupies, so the border grows around neither and neither takes an inhabitant;
+  a camp's tile is claimed like any other once a capture empties its slot. Rules tests pin both
+  refusals and the tile a capture frees. Doc-impact: `docs/DESIGN.md`.
 - **The schedule** — events become a weighted table whose weights shift with the turn, drawn from
   the chronicle's own generator: the same seed deals the same schedule, the harshest entries carry
   no weight early, and a raid drawn late is larger than one drawn early. Rules tests pin all three.
