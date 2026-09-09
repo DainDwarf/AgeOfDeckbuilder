@@ -385,9 +385,7 @@ function buildFace(scene: Phaser.Scene, bubble: RowBubble, card: Card): Face {
 
     const note = noteOf(row);
     if (note !== undefined) {
-      contents.push(
-        addText(scene, rowName.x, rowTop + line / 2, note, LABEL_STYLE).setOrigin(0, 0.5),
-      );
+      contents.push(addText(scene, left, rowTop + line / 2, note, LABEL_STYLE).setOrigin(0, 0.5));
       rowTop += line + 0.35 * em;
     }
   }
