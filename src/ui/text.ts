@@ -1,3 +1,5 @@
+// A `rules.` entry may mark a resource glyph `[resource]`, which only a card face draws: anything
+// else reading one puts the brackets on the screen.
 /** Every player-facing sentence, one entry each. English is the only language. */
 const TEXT = {
   'label.food': 'Food',

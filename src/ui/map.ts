@@ -378,7 +378,9 @@ export function unitMark(
 // Phaser's WebGL stroke skips a polygon point whose origin-shifted position lands on the raw point
 // before it, which a centred diamond always has once, whatever order its corners are given in: a
 // square turned is the only shape that outlines whole, a polygon comes out open and cut across.
-/** The one way a diamond is drawn: `span` corner to corner, in the colour given. */
+// That is what forces the shape here and nowhere else — a diamond drawn without an outline, as the
+// card face draws its own, meets none of it.
+/** The one way a diamond the map outlines is drawn: `span` corner to corner, in the colour given. */
 function diamond(scene: Phaser.Scene, span: number, colour: number): Phaser.GameObjects.Rectangle {
   const side = span / Math.SQRT2;
   return scene.add.rectangle(0, 0, side, side, colour).setStrokeStyle(1, OUTLINE).setAngle(45);
