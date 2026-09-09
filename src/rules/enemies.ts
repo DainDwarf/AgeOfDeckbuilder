@@ -1,12 +1,4 @@
-import {
-  distance,
-  MAP_COMPOSITION,
-  neighbours,
-  passable,
-  type Tile,
-  type TileCoords,
-  tileKey,
-} from './map';
+import { distance, MAP_COMPOSITION, pathCosts, type Tile, type TileCoords, tileKey } from './map';
 import { nextRng } from './rng';
 import { type Chronicle, entered } from './state';
 import {
@@ -14,6 +6,8 @@ import {
   type Landing,
   leastHealth,
   reachable,
+  standsOn,
+  UNIT_STATS,
   type Unit,
   unitAt,
 } from './units';
@@ -41,19 +35,19 @@ export const ENEMY_SCRIPTS: Record<EnemyScriptId, EnemyScript> = {
       const target = nearest(chronicle, enemy.tile);
       if (target === undefined) return stay;
 
-      const away = pathDistances(chronicle.tiles, target);
+      const away = costsFrom(chronicle.tiles, target);
       const landings = [stay, ...reachable(chronicle, enemy)];
       const spent = new Map(landings.map((landing) => [tileKey(landing.tile), landing.cost]));
 
       let chosen = stay;
-      let shortest = Number.POSITIVE_INFINITY;
+      let cheapest = Number.POSITIVE_INFINITY;
       for (const tile of inTileOrder(
         chronicle.tiles,
         landings.map((landing) => landing.tile),
       )) {
-        const gap = away.get(tileKey(tile));
-        if (gap === undefined || gap >= shortest) continue;
-        shortest = gap;
+        const left = away.get(tileKey(tile));
+        if (left === undefined || left >= cheapest) continue;
+        cheapest = left;
         chosen = { tile, cost: spent.get(tileKey(tile)) ?? 0 };
       }
       return chosen;
@@ -72,10 +66,11 @@ export const ENEMY_SCRIPTS: Record<EnemyScriptId, EnemyScript> = {
  * action full. With no such tile it places nothing.
  */
 export function arrival(chronicle: Chronicle): Chronicle {
+  const arriving = UNIT_STATS.PH_Warrior;
   const ring = chronicle.tiles.filter(
     (tile) =>
       distance(tile, chronicle.city) === MAP_COMPOSITION.radius &&
-      passable(tile.terrain) &&
+      standsOn(arriving, tile) &&
       unitAt(chronicle.units, tile) === undefined,
   );
   if (ring.length === 0) return chronicle;
@@ -84,23 +79,23 @@ export function arrival(chronicle: Chronicle): Chronicle {
   const { q, r } = ring[Math.floor(step.value * ring.length)];
   return entered(
     { ...chronicle, rng: step.rng },
-    { type: 'PH_Warrior', faction: 'enemy', tile: { q, r }, script: 'PH_Advance' },
+    { type: arriving.type, faction: 'enemy', tile: { q, r }, script: 'PH_Advance' },
   );
 }
 
-/** What an enemy moves toward: the player's unit or the city the fewest tiles away it can cross to. */
+/** What an enemy moves toward: the player's unit or the city it crosses to for the least it can. */
 function nearest(chronicle: Chronicle, from: TileCoords): TileCoords | undefined {
-  const gaps = pathDistances(chronicle.tiles, from);
+  const costs = costsFrom(chronicle.tiles, from);
   const targets = chronicle.units
     .filter((unit) => unit.faction === 'player')
     .map((unit) => unit.tile);
 
   let chosen: TileCoords | undefined;
-  let shortest = Number.POSITIVE_INFINITY;
+  let cheapest = Number.POSITIVE_INFINITY;
   for (const coord of inTileOrder(chronicle.tiles, [...targets, chronicle.city])) {
-    const gap = gaps.get(tileKey(coord));
-    if (gap !== undefined && gap < shortest) {
-      shortest = gap;
+    const cost = costs.get(tileKey(coord));
+    if (cost !== undefined && cost < cheapest) {
+      cheapest = cost;
       chosen = coord;
     }
   }
@@ -114,26 +109,10 @@ function inTileOrder(tiles: readonly Tile[], coords: readonly TileCoords[]): Til
 }
 
 /**
- * How many tiles every tile lies from a start over ground a unit crosses, whatever stands on them.
- * A tile no such path reaches is absent, and so is every impassable one.
+ * What crossing to every tile from a start costs, whatever stands on them and however far off they
+ * lie: a script reads the whole map, so no move points cap the walk. A tile no route reaches is
+ * absent.
  */
-function pathDistances(tiles: readonly Tile[], from: TileCoords): Map<string, number> {
-  const ground = new Map(tiles.map((tile) => [tileKey(tile), tile.terrain]));
-  const gaps = new Map([[tileKey(from), 0]]);
-
-  let front = [from];
-  for (let step = 1; front.length > 0; step++) {
-    const next: TileCoords[] = [];
-    for (const at of front) {
-      for (const coord of neighbours(at)) {
-        const key = tileKey(coord);
-        if (gaps.has(key)) continue;
-        if (!passable(ground.get(key))) continue;
-        gaps.set(key, step);
-        next.push(coord);
-      }
-    }
-    front = next;
-  }
-  return gaps;
+function costsFrom(tiles: readonly Tile[], from: TileCoords): Map<string, number> {
+  return pathCosts(tiles, from, Number.POSITIVE_INFINITY, () => false);
 }

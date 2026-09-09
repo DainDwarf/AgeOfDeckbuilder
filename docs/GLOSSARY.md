@@ -75,6 +75,7 @@ deliberate exception the reviewer sees; there is no silent allow-list.
 | **growth threshold** | The food the next inhabitant needs; spent when the stock reaches it, and wider each time. | step, growth cost, food cap |
 | **biome** | A stretch of map the generator spreads as one kind — land, sea, … — weighting the terrain of each tile in it. | patch, zone, area, ecosystem |
 | **terrain** | A tile's base layer: plain, forest, hills, …; one per tile, changed only by terraforming. | tile type |
+| **movement cost** | What entering a tile spends of a unit's move points, summed from the tile's layers; water names none and is crossed by nothing. | move cost, terrain cost, travel cost, difficulty, impassable |
 | **terraform** | To change a tile's terrain into another, where a worker stands; what a terraform instant does. | transform, convert, reshape |
 | **feature** | A generated extra on a tile: a fertile plain. | bonus |
 | **river** | A watercourse the generator runs along the edges between tiles, from a mountain range to the sea. | stream, creek, waterway |
@@ -90,7 +91,7 @@ deliberate exception the reviewer sees; there is no silent allow-list.
 | **damage** | A unit's stat: the health its attack removes. | strength, power, harm |
 | **range** | The distance, in tiles, a unit attacks over; one for melee. | reach |
 | **move** | A unit's stat: the move points it refreshes to. | speed, mobility, movement points |
-| **move points** | What a unit spends to cross tiles, one per tile; refreshed to its move. | movement points, steps, stamina |
+| **move points** | What a unit spends to cross tiles, a tile's movement cost to enter it; refreshed to its move. | movement points, steps, stamina |
 | **action** | A unit's stat, and what it spends to attack, one per attack; refreshed to its action. | action points, energy, attack pool |
 | **refresh** | To bring a unit's spendable stat back to its full value — its move points to its move, its action to its action. The turn refreshes both on every unit when it ticks over; an instant refreshes one unit's move points. Health is never refreshed but healed. | restore, replenish, reset, recharge, recover, regain |
 | **military** | The resource that pays for military units, instants and fortifications. | — |

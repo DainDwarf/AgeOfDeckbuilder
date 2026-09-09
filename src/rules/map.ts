@@ -63,20 +63,23 @@ export const RIVER_YIELDS: Partial<Record<Terrain, Partial<Resources>>> = {
   forest: { food: 1 },
 };
 
-/** Which terrains a unit crosses and stands on, terrain by terrain. */
-const TERRAIN_PASSABLE: Record<Terrain, boolean> = {
-  plain: true,
-  forest: true,
-  hills: true,
-  mountain: false,
-  coast: false,
-  deep: false,
-  urban: true,
+/** What entering a tile of each terrain costs, terrain by terrain; water names none. */
+const TERRAIN_MOVEMENT_COST: Record<Terrain, number | undefined> = {
+  plain: 1,
+  forest: 2,
+  hills: 2,
+  mountain: 6,
+  coast: undefined,
+  deep: undefined,
+  urban: 1,
 };
 
-/** Whether a unit can cross a terrain: the one answer every path over the map asks. Off the map is not. */
-export function passable(terrain: Terrain | undefined): boolean {
-  return terrain !== undefined && TERRAIN_PASSABLE[terrain];
+/**
+ * What entering a tile spends of a unit's move points: the one answer every path over the map asks.
+ * Water names no movement cost and is crossed by nothing, and neither is a tile off the map.
+ */
+export function movementCost(tile: Tile | undefined): number | undefined {
+  return tile === undefined ? undefined : TERRAIN_MOVEMENT_COST[tile.terrain];
 }
 
 /** Which terrains are water, terrain by terrain. */
@@ -251,6 +254,42 @@ export function tileAt(tiles: readonly Tile[], coord: TileCoords): Tile | undefi
 /** The one way a tile is named in a set or a map keyed by position. */
 export function tileKey({ q, r }: TileCoords): string {
   return `${q},${r}`;
+}
+
+/**
+ * What the cheapest route to each tile costs from a start, the start itself nothing: entering a tile
+ * spends that tile's movement cost, no route spends more than `points`, and `shut` keeps a route off
+ * the tiles the mover may not cross for reasons of its own. A tile no route reaches that far is
+ * absent from the answer, and so is every tile no movement cost is named for.
+ */
+export function pathCosts(
+  tiles: readonly Tile[],
+  from: TileCoords,
+  points: number,
+  shut: (coord: TileCoords) => boolean,
+): Map<string, number> {
+  const ground = new Map(tiles.map((tile) => [tileKey(tile), tile]));
+  const spent = new Map([[tileKey(from), 0]]);
+
+  let front: [TileCoords, number][] = [[from, 0]];
+  while (front.length > 0) {
+    const next: [TileCoords, number][] = [];
+    for (const [at, paid] of front) {
+      // A tile the walk reached again for less stands on the front twice; the dearer one is dropped.
+      if (spent.get(tileKey(at)) !== paid) continue;
+      for (const coord of neighbours(at)) {
+        const key = tileKey(coord);
+        const cost = movementCost(ground.get(key));
+        if (cost === undefined || paid + cost > points || shut(coord)) continue;
+        const before = spent.get(key);
+        if (before !== undefined && before <= paid + cost) continue;
+        spent.set(key, paid + cost);
+        next.push([coord, paid + cost]);
+      }
+    }
+    front = next;
+  }
+  return spent;
 }
 
 /**

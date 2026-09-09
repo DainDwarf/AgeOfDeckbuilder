@@ -12,9 +12,6 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
-- **Movement costs what the tile says** — the flat one-per-tile goes; every terrain names its
-  movement cost and `reachable` charges it, so the map's and the units' sections of the design
-  agree on one rule. Rules tests on a fixed seed. Doc-impact: `docs/DESIGN.md`, `docs/GLOSSARY.md`.
 - **What a river costs to cross** — the design settles what crossing a river edge costs, and every
   path over the map pays it. A rules test on a seed whose river cuts a unit's reach.
   Doc-impact: `docs/DESIGN.md`.

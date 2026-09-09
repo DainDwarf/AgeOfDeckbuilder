@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
-import { tileKey } from '../src/rules/map';
+import { movementCost, type TileCoords, tileAt, tileKey } from '../src/rules/map';
+import type { Chronicle } from '../src/rules/state';
 import { UNIT_STATS } from '../src/rules/units';
 import {
   chronicleOf,
@@ -13,6 +14,13 @@ import {
   stepRun,
   watch,
 } from './chronicle-screen';
+
+/** What entering a tile of this chronicle costs; the run steps onto tiles a unit enters at all. */
+function costOf(chronicle: Chronicle, coord: TileCoords): number {
+  const cost = movementCost(tileAt(chronicle.tiles, coord));
+  if (cost === undefined) throw new Error(`nothing crosses onto ${tileKey(coord)}`);
+  return cost;
+}
 
 test('a unit crosses two tiles in two steps, and the turn refreshes what it spent', async ({
   page,
@@ -40,7 +48,7 @@ test('a unit crosses two tiles in two steps, and the turn refreshes what it spen
     .toBe(tileKey(run.first));
 
   const stepped = await chronicleOf(page);
-  expect(stepped.units[0].movePoints).toBe(UNIT_STATS.PH_Worker.move - 1);
+  expect(stepped.units[0].movePoints).toBe(UNIT_STATS.PH_Worker.move - costOf(entered, run.first));
   // The unit is selected again where it landed, so one more click is the next step.
   await expect.poll(() => ringedTile(page)).toBe(tileKey(run.first));
 
@@ -49,7 +57,9 @@ test('a unit crosses two tiles in two steps, and the turn refreshes what it spen
 
   const twice = await chronicleOf(page);
   expect(tileKey(twice.units[0].tile)).toBe(tileKey(run.second));
-  expect(twice.units[0].movePoints).toBe(UNIT_STATS.PH_Worker.move - 2);
+  expect(twice.units[0].movePoints).toBe(
+    UNIT_STATS.PH_Worker.move - costOf(entered, run.first) - costOf(entered, run.second),
+  );
 
   await endTurn(page);
 

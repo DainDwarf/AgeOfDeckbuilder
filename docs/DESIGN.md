@@ -510,11 +510,15 @@ is no retaliation: the target answers only when its own attack comes, so a fight
 across turns, never within one blow.
 
 - **A unit moves on its own move points.** It holds **move points**, refreshed to its move at the
-  start of the player's turn and lost at the end of it, and spends one per tile crossed, in as many
-  steps as the player likes; an instant can refresh them. Coast, deep water and mountain are
-  impassable. A unit passes through the units of its own faction and never through another's, and
-  it lands only on a free tile. Movement by the cards alone was rejected: in play it limited more
-  than it empowered.
+  start of the player's turn and lost at the end of it, and spends a tile's **movement cost** to
+  enter it, in as many steps as the player likes; an instant can refresh them. A unit enters a tile
+  only where the move points it has left cover that cost in full, so a unit left with fewer strands
+  them until the refresh — no step is taken on credit — and a tile costing more than a unit's move is
+  beyond that unit for good. Crossing to a tile costs the cheapest way there, and the tile a unit
+  already stands on costs it nothing. Coast and deep water name no movement cost at all and are
+  crossed by nothing. A unit passes through the units of its own faction and never
+  through another's, and it lands only on a free tile. Movement by the cards alone was rejected: in
+  play it limited more than it empowered.
 - **A unit attacks on its own action.** It holds **action**, refreshed at the same tick as its move
   points, and spends one per attack on a unit of another faction within its range; a melee unit's
   range is one. The player attacks by the same press as a move — the target standing on the tile is

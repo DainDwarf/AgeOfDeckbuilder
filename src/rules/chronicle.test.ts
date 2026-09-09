@@ -24,7 +24,6 @@ import {
   IMPROVEMENTS,
   MAP_COMPOSITION,
   neighbours,
-  passable,
   RIVER_YIELDS,
   TERRAIN_YIELDS,
   type Terrain,
@@ -37,7 +36,7 @@ import { RESOURCES, type Resources } from './resources';
 import { seedRng } from './rng';
 import { charted } from './sight';
 import { type CardId, type Chronicle, type Entering, entered, idle, type TileBlock } from './state';
-import { type Faction, UNIT_STATS, type Unit, type UnitStats } from './units';
+import { type Faction, standsOn, UNIT_STATS, type Unit, type UnitStats } from './units';
 
 const CITY: TileCoords = { q: 0, r: 0 };
 
@@ -150,6 +149,15 @@ function field(radius: number, coast: TileCoords[] = []): Tile[] {
     }
   }
   return tiles;
+}
+
+/** The same disc with every tile but the named ones under water: what leaves a fixture one corridor. */
+function only(radius: number, land: TileCoords[]): Tile[] {
+  const kept = new Set(land.map(tileKey));
+  return field(
+    radius,
+    field(radius).filter((tile) => !kept.has(tileKey(tile))),
+  );
 }
 
 /** The same tiles, with the terrain of the named ones replaced. */
@@ -329,15 +337,19 @@ function worker(tile: TileCoords): Standing {
   return standing('player', tile, { type: 'PH_Worker', damage: 0, range: 0, action: 0 });
 }
 
+/** What a worker of these fixtures carries: what says which tiles one of them can stand on. */
+const WORKER = worker(CITY).stats;
+
 /**
  * The founding on a disc out to two, with the tile at `at` made of `terrain` and a worker of the
- * player's standing on it where a unit can stand at all: impassable ground holds nobody. The seven
- * tiles the founding holds reach out to one, so a tile further out lies outside the border.
+ * player's standing on it wherever a worker can stand at all: ground no worker enters holds nobody.
+ * The seven tiles the founding holds reach out to one, so a tile further out lies outside the border.
  */
 function workedTile(at: TileCoords, terrain: Terrain, carrying: Carrying = {}): Chronicle {
+  const tiles = madeOf(field(2), terrain, [at]);
   return founded(2, {
-    tiles: madeOf(field(2), terrain, [at]),
-    units: passable(terrain) ? [worker(at)] : [],
+    tiles,
+    units: standsOn(WORKER, tileAt(tiles, at)) ? [worker(at)] : [],
     ...carrying,
   });
 }
@@ -760,16 +772,6 @@ test('a unit steps tile by tile, in as many steps as it has move points', () => 
 
   expect(stagedBy(second, moveTo(1, { q: 3, r: 0 }))).toEqual(['refused']);
   expect(outcome(apply(second, moveTo(1, { q: 3, r: 0 })))).toBe(second);
-});
-
-test('a move of two tiles spends two move points, and one of one spends one', () => {
-  const city = cityOf(['urban'], {
-    tiles: field(3),
-    units: [standing('player', CITY, { move: 2 })],
-  });
-
-  expect(pointsOf(outcome(apply(city, moveTo(1, { q: 2, r: 0 }))), 1)).toBe(0);
-  expect(pointsOf(outcome(apply(city, moveTo(1, { q: 1, r: 0 }))), 1)).toBe(1);
 });
 
 test('a unit with no move points left crosses nothing until the turn ticks', () => {
@@ -1320,7 +1322,60 @@ test('a unit crosses within its move points, and no further', () => {
   expect(outcome(apply(city, moveTo(1, { q: 3, r: 0 })))).toEqual(city);
 });
 
-test('coast is impassable, and so is everything only coast leads to', () => {
+test('a unit spends what the tile it enters costs: two plains for the one forest beside them', () => {
+  const city = cityOf(['urban'], {
+    tiles: madeOf(field(2), 'forest', [{ q: 1, r: -1 }]),
+    units: [standing('player', CITY, { move: 2 })],
+  });
+
+  const overPlains = outcome(apply(city, moveTo(1, { q: 2, r: 0 })));
+  const intoForest = outcome(apply(city, moveTo(1, { q: 1, r: -1 })));
+
+  expect(overPlains.units[0].tile).toEqual({ q: 2, r: 0 });
+  expect(pointsOf(overPlains, 1)).toBe(0);
+  expect(intoForest.units[0].tile).toEqual({ q: 1, r: -1 });
+  expect(pointsOf(intoForest, 1)).toBe(0);
+});
+
+test('a unit with fewer move points left than a tile costs does not enter it', () => {
+  const city = cityOf(['urban'], {
+    tiles: madeOf(field(2), 'forest', [{ q: 2, r: -1 }]),
+    units: [standing('player', CITY, { move: 2 })],
+  });
+
+  const stepped = outcome(apply(city, moveTo(1, { q: 1, r: -1 })));
+
+  expect(pointsOf(stepped, 1)).toBe(1);
+  expect(outcome(apply(stepped, moveTo(1, { q: 2, r: -1 })))).toEqual(stepped);
+  expect(outcome(apply(stepped, moveTo(1, { q: 2, r: -2 }))).units[0].tile).toEqual({
+    q: 2,
+    r: -2,
+  });
+});
+
+test('a unit crosses to a tile the cheapest way, not the fewest tiles', () => {
+  /** A hill the whole disc is in sight from, two forests on the straight line east of it. */
+  const watch = { q: 0, r: -1 };
+  const city = cityOf(['urban'], {
+    tiles: madeOf(
+      madeOf(field(3), 'forest', [
+        { q: 1, r: -1 },
+        { q: 2, r: -1 },
+      ]),
+      'hills',
+      [watch],
+    ),
+    units: [standing('player', watch, { move: 4, sight: 4 })],
+  });
+
+  // The three tiles straight there cost five; the four round the forests cost four.
+  const round = outcome(apply(city, moveTo(1, { q: 3, r: -1 })));
+
+  expect(round.units[0].tile).toEqual({ q: 3, r: -1 });
+  expect(pointsOf(round, 1)).toBe(0);
+});
+
+test('water is crossed by nobody, and so is everything only water leads to', () => {
   const city = cityOf(['urban'], {
     tiles: field(2, [{ q: 1, r: 0 }]),
     units: [standing('player', CITY, { move: 2 })],
@@ -1331,15 +1386,17 @@ test('coast is impassable, and so is everything only coast leads to', () => {
   expect(outcome(apply(city, moveTo(1, { q: 1, r: 1 }))).units[0].tile).toEqual({ q: 1, r: 1 });
 });
 
-test('a mountain is impassable, and so is everything only a mountain leads to', () => {
-  const city = cityOf(['urban'], {
-    tiles: madeOf(field(2), 'mountain', [{ q: 1, r: 0 }]),
-    units: [standing('player', CITY, { move: 2 })],
-  });
+test('a mountain costs more than any unit’s move, so none of them enters one', () => {
+  for (const stats of Object.values(UNIT_STATS)) {
+    const city = cityOf(['urban'], {
+      tiles: madeOf(field(2), 'mountain', [{ q: 1, r: 0 }]),
+      units: [standing('player', CITY, stats)],
+    });
 
-  expect(outcome(apply(city, moveTo(1, { q: 1, r: 0 })))).toEqual(city);
-  expect(outcome(apply(city, moveTo(1, { q: 2, r: 0 })))).toEqual(city);
-  expect(outcome(apply(city, moveTo(1, { q: 1, r: 1 }))).units[0].tile).toEqual({ q: 1, r: 1 });
+    expect(outcome(apply(city, moveTo(1, { q: 1, r: 0 })))).toEqual(city);
+    expect(outcome(apply(city, moveTo(1, { q: 2, r: 0 })))).toEqual(city);
+    expect(outcome(apply(city, moveTo(1, { q: 1, r: 1 }))).units[0].tile).toEqual({ q: 1, r: 1 });
+  }
 });
 
 test('a unit crosses its own faction but never lands on it', () => {
@@ -1373,7 +1430,7 @@ test('a move of a unit that is not the player’s, or of no unit at all, is refu
   expect(outcome(apply(city, moveTo(5, { q: 1, r: 0 })))).toEqual(city);
 });
 
-test('a unit walled in by impassable ground crosses nowhere at all', () => {
+test('a unit walled in by water crosses nowhere at all', () => {
   const walled: TileCoords[] = [
     { q: 1, r: 0 },
     { q: 1, r: -1 },
@@ -1557,7 +1614,9 @@ test('the mine card is refused on every terrain but the hills it goes on', () =>
     const city = workedTile(at, terrain, { hand: ['PH_Mine'], resources: production(3) });
 
     expect(admittedTiles(city, 'PH_Mine')).toEqual([]);
-    expect(refusedFor(city, 'PH_Mine', at)).toBe(passable(terrain) ? 'terrain' : 'worker');
+    expect(refusedFor(city, 'PH_Mine', at)).toBe(
+      standsOn(WORKER, tileAt(city.tiles, at)) ? 'terrain' : 'worker',
+    );
     expect(outcome(apply(city, aimedAt(at)))).toEqual(city);
   }
 });
@@ -1654,7 +1713,9 @@ test('the urbanisation card is refused on every terrain but the plain it terrafo
     const city = workedTile(at, terrain, { hand: ['PH_Urbanisation'], resources: production(5) });
 
     expect(admittedTiles(city, 'PH_Urbanisation')).toEqual([]);
-    expect(refusedFor(city, 'PH_Urbanisation', at)).toBe(passable(terrain) ? 'terrain' : 'worker');
+    expect(refusedFor(city, 'PH_Urbanisation', at)).toBe(
+      standsOn(WORKER, tileAt(city.tiles, at)) ? 'terrain' : 'worker',
+    );
     expect(outcome(apply(city, aimedAt(at)))).toEqual(city);
   }
 });
@@ -2207,7 +2268,7 @@ test('where the enemy arrives is drawn from the seeded generator', () => {
 test('the enemy arrives on a free tile of the outer ring it can stand on, and on nothing else', () => {
   const ring = outerRingOf(MAP_COMPOSITION.radius);
   const onlyOpen = ring[3];
-  /** A disc whose named outer tiles are impassable, half of them coast and half of them mountain. */
+  /** A disc no unit stands on the named outer tiles of: half of them coast, half of them mountain. */
   const shut = (coords: TileCoords[]): Tile[] =>
     madeOf(
       field(MAP_COMPOSITION.radius, coords),
@@ -2247,6 +2308,20 @@ test('an enemy spends the move points it crosses on, and carries them into the t
 
   expect(pointsOf(crossed.chronicle, 1)).toBe(0);
   expect(pointsOf(outcome(stages), 1)).toBe(2);
+});
+
+test('an enemy takes the plains round a forest, and the forest keeps it off the city a turn', () => {
+  /** One corridor to the city, forked: the straight way through one tile, the way round through two. */
+  const corridor = [CITY, { q: 1, r: 0 }, { q: 2, r: 0 }, { q: 2, r: -1 }, { q: 1, r: -1 }];
+  const raider = standing('enemy', { q: 2, r: 0 }, { move: 2, damage: 0 });
+  const plains = cityOf(['urban'], { tiles: only(2, corridor), units: [raider] });
+  const wooded = cityOf(['urban'], {
+    tiles: madeOf(only(2, corridor), 'forest', [{ q: 1, r: 0 }]),
+    units: [raider],
+  });
+
+  expect(movesOf(plains)).toEqual([['2,0', '0,0']]);
+  expect(movesOf(wooded)).toEqual([['2,0', '1,-1']]);
 });
 
 test('an enemy moves toward the nearest of the player’s units instead of the city', () => {

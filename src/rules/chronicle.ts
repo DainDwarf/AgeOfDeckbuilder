@@ -563,9 +563,9 @@ function aimedTile(command: PlayCommand, aim: AimedCard['aim']): TileCoords | un
 
 /**
  * One unit of the player's crossing to a tile its move points reach, in as many steps as the player
- * likes: the tiles crossed are spent, and the crossing is the same `move` stage the enemy phase
- * raises. A unit that is not the player's, or a tile it cannot land on — an uncharted one among
- * them — is one `refused` stage.
+ * likes: the cheapest route there is spent, and the crossing is the same `move` stage the enemy
+ * phase raises. A unit that is not the player's, or a tile it cannot land on — an uncharted one
+ * among them — is one `refused` stage.
  */
 function move(chronicle: Chronicle, mover: number, to: TileCoords): Stage[] {
   const unit = unitOf(chronicle.units, mover);
@@ -693,8 +693,8 @@ function grow(chronicle: Chronicle): Chronicle {
  * The enemies' half of the turn: an enemy that stood on the city's tile through the whole turn
  * captures it and the chronicle ends there; otherwise every enemy acts in unit order, on the
  * chronicle the one before it left — it moves by its script on the move points it holds, spending
- * the tiles it crosses, and then attacks the unit its script names while it holds action, one attack
- * a point. A stage each, and none for a move it did not make or an attack aimed at nobody.
+ * what the tiles it crosses cost, and then attacks the unit its script names while it holds action,
+ * one attack a point. A stage each, and none for a move it did not make or an attack aimed at nobody.
  */
 function enemyPhase(chronicle: Chronicle): Stage[] {
   if (unitAt(chronicle.units, chronicle.city)?.faction === 'enemy') {
