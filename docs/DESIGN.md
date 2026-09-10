@@ -559,19 +559,26 @@ across turns, never within one blow.
 
 ### Events and the capstone ✅
 
-Each age has a **schedule**: its set of events, each with a weight that shifts with the turn.
-The Events phase draws from it, seeded, and the schedule escalates — a raid drawn late is larger
-than one drawn early, and the harshest entries carry no weight at first. How many events land
-per turn is numbers. An event is a script — spawn enemies, shock a resource, change tiles, take
-inhabitants — with, optionally, a choice made when it lands. The pitch's families (enemies,
-disasters, turmoil, fortunate) are tags on content, not rules.
+Each age has a **schedule**: its set of events, each with a weight that shifts with the turn, and
+the spacing between them. An event lands every few turns, one at a time, never two on one turn:
+when one lands the schedule draws, seeded, how many turns on the next is due, and the chronicle
+carries that turn. The Events phase draws the due event from the entries, seeded, and the schedule
+escalates in what lands, never in how often — a raid drawn late is larger than one drawn early,
+and the harshest entries carry no weight at first, so they cannot land. How far apart events land
+and how the weights shift are numbers. An event is a script — spawn enemies, shock a resource,
+change tiles, take inhabitants — with, optionally, a choice made when it lands. The pitch's
+families (enemies, disasters, turmoil, fortunate) are tags on content, not rules. Several events a
+turn was rejected: choosing between hardships three times a turn is tedium. 🔧 Until the deck is
+data the schedule is a stand-in of two entries: a raid, whose warriors each enter on a free camp,
+and a famine that empties the food stock.
 
 Events are not announced: the player learns the next one when it lands. Announcing them is
 something a technology or a civilization's rule can grant.
 
 **Enemies enter from camps.** The generator places **camps** on the map, each filling its tile's
-building slot, each uncharted until seen. An event that spawns enemies draws a camp whose tile is
-free, seeded, and the enemy enters on it; with no camp's tile free it spawns nothing. The enemy
+building slot, each uncharted until seen. An event that spawns enemies draws, for each of them, a
+camp whose tile is free, seeded, and the enemy enters on it; with no camp's tile free nothing
+more enters. The enemy
 follows its script — the default one moves toward the nearest of the player's units or the city and
 attacks it. Scouting is how a chronicle learns where the enemy comes from. A camp is **captured**
 the way the city is, mirrored: a unit of the player's, any unit, that stands on it through the enemy
