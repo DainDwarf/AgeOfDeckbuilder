@@ -298,6 +298,20 @@ export function fullDraw(): CardId[] {
   return ['PH_Worker', 'PH_Warrior', 'PH_Farm', 'PH_March', 'PH_Harvest'];
 }
 
+/** The deck these foundings are played on: two of each card, enough to draw a hand and cycle. */
+export const DECK: readonly CardId[] = [
+  'PH_Worker',
+  'PH_Worker',
+  'PH_Warrior',
+  'PH_Warrior',
+  'PH_Farm',
+  'PH_Farm',
+  'PH_March',
+  'PH_March',
+  'PH_Harvest',
+  'PH_Harvest',
+];
+
 /** How many turns these fixtures end before they give up on a schedule that has landed nothing. */
 export const SCHEDULE_BOUND = 30;
 

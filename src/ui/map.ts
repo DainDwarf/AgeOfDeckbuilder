@@ -1,12 +1,6 @@
 import Phaser from 'phaser';
-import {
-  type Cost,
-  cityDrag,
-  claimable,
-  type ReassignCommand,
-  type Stage,
-  type UnitCommand,
-} from '../rules/chronicle';
+import type { Stage, UnitCommand } from '../rules/chronicle';
+import { cityDrag, claimable, type ReassignCommand } from '../rules/city';
 import {
   type BuildingTypeId,
   CITY_TILE,
@@ -26,7 +20,7 @@ import {
 } from '../rules/map';
 import { RESOURCES, type Resource } from '../rules/resources';
 import { inSight } from '../rules/sight';
-import { assignedTo, type Chronicle, type Snapshot } from '../rules/state';
+import { assignedTo, type Chronicle, type Cost, type Snapshot } from '../rules/state';
 import {
   attackable,
   type Faction,

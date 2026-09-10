@@ -1,6 +1,5 @@
 import type Phaser from 'phaser';
-import type { Cost, Refusal } from '../rules/chronicle';
-import type { Block } from '../rules/state';
+import type { Block, Cost, Refusal } from '../rules/state';
 import { addText, DESIGN_WIDTH, drawBubble, MARGIN, type Surface, UI_FONT } from './design-space';
 import type { TileFace } from './map';
 import { text } from './text';

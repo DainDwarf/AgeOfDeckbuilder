@@ -1,5 +1,5 @@
 import { type River, type Tile, type TileCoords, tileKey } from './map';
-import type { Resources } from './resources';
+import type { Resource, Resources } from './resources';
 import type { Rng } from './rng';
 import { type EnemyScriptId, type Faction, UNIT_STATS, type Unit, type UnitTypeId } from './units';
 
@@ -81,6 +81,29 @@ export type TileBlock = 'worker' | 'border' | 'terrain' | 'slot' | 'improvement'
  * and every reason an aim turns a tile down.
  */
 export type Block = 'population' | 'idle' | 'city' | 'discard-pile' | TileBlock;
+
+/** What one thing asks for of one resource: a card's cost line by line, a claim's culture. */
+export type Cost = { readonly resource: Resource; readonly amount: number };
+
+/** Everything standing between the city and a card or a claim: what it cannot pay, and the map. */
+export type Refusal = {
+  readonly unaffordable: readonly Resource[];
+  readonly blocked: readonly Block[];
+};
+
+/** What a card outside the hand is drawn as: nothing refuses it. */
+export const NO_REFUSAL: Refusal = { unaffordable: [], blocked: [] };
+
+export function playable(refusal: Refusal): boolean {
+  return refusal.unaffordable.length === 0 && refusal.blocked.length === 0;
+}
+
+/** The resources a cost outruns; empty means the city can pay it. */
+export function unaffordable(chronicle: Chronicle, costs: readonly Cost[]): Resource[] {
+  return costs
+    .filter(({ resource, amount }) => amount > chronicle.resources[resource])
+    .map(({ resource }) => resource);
+}
 
 /** Whether the tile is inside the city's border: what a card's aim and a city-mode click both ask. */
 export function holds(chronicle: Chronicle, tile: TileCoords): boolean {

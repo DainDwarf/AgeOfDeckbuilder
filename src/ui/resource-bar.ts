@@ -1,5 +1,6 @@
 import type Phaser from 'phaser';
-import { growthThreshold, type Stage } from '../rules/chronicle';
+import type { Stage } from '../rules/chronicle';
+import { growthThreshold } from '../rules/city';
 import { RESOURCES, type Resource } from '../rules/resources';
 import { type Chronicle, idle } from '../rules/state';
 import { layOutBar, type Placed, type Zone } from './bar-layout';

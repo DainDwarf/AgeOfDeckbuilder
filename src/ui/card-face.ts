@@ -1,7 +1,7 @@
 import type Phaser from 'phaser';
 import { CARDS } from '../rules/cards';
-import { costOf, playable, type Refusal } from '../rules/chronicle';
-import type { CardId } from '../rules/state';
+import { costOf } from '../rules/chronicle';
+import { type CardId, playable, type Refusal } from '../rules/state';
 import {
   ACCENT,
   addText,

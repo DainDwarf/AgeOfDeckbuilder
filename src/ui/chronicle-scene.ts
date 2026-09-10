@@ -5,21 +5,16 @@ import {
   apply,
   beginChronicle,
   type Command,
-  type Cost,
-  cityCommand,
   costOf,
   outcome,
-  playable,
-  type ReassignCommand,
   refusalOf,
   type Stage,
-  tileCost,
-  tileRefusal,
   type UnitCommand,
 } from '../rules/chronicle';
+import { cityCommand, type ReassignCommand, tileCost, tileRefusal } from '../rules/city';
 import { tileAt, tileKey } from '../rules/map';
 import { RESOURCES, type Resource } from '../rules/resources';
-import type { CardId, Chronicle } from '../rules/state';
+import { type CardId, type Chronicle, type Cost, playable } from '../rules/state';
 import { unitOf } from '../rules/units';
 import { createBand } from './band';
 import { boundTo } from './bindings';

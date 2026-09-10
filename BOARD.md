@@ -12,13 +12,6 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
-- **The city's rules leave `chronicle.ts`** — `src/rules/city.ts` holds the border, the inhabitants
-  and what they yield: income, growth, assign, reassign, claim, and the readers the chronicle screen
-  asks (`claimable`, `cityCommand`, `cityDrag`, `tileCost`, `tileRefusal`, `growthThreshold`).
-  `chronicle.ts` keeps `apply`, the turn's stages and the piles, and reaches the city through that
-  one interface; `city.test.ts` takes the matching tests out of `chronicle.test.ts` unchanged. The
-  plan says how `city.ts` answers without importing `Stage` and `Command` back — Biome refuses the
-  cycle. Suite green, no test body changes. Doc-impact: none.
 - **The events phase deals a choice** — the phase offers several of the schedule's events as cards
   and the player takes one, which resolves; this replaces the design's "land and resolve at once".
   An e2e spec plays a turn through the deal. Doc-impact: `docs/DESIGN.md`, `docs/GLOSSARY.md`.

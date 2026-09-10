@@ -1,6 +1,7 @@
 import { expect, test } from 'vitest';
 import { DECKS } from './cards';
-import { apply, cityCommand, claimable, outcome } from './chronicle';
+import { apply, outcome } from './chronicle';
+import { cityCommand, claimable } from './city';
 import {
   attackOn,
   buildingAt,

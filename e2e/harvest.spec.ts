@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { DECKS } from '../src/rules/cards';
-import { apply, beginChronicle, outcome, playable, refusalOf } from '../src/rules/chronicle';
+import { apply, beginChronicle, outcome, refusalOf } from '../src/rules/chronicle';
+import { playable } from '../src/rules/state';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
 import { chronicleOf, dragOut, endTurn, firstSeed, open, watch } from './chronicle-screen';
 

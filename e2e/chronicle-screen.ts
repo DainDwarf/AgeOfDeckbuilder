@@ -1,14 +1,7 @@
 import { expect, type Page } from '@playwright/test';
 import type Phaser from 'phaser';
 import { type AimedCard, CARDS, DECKS, type DeckId } from '../src/rules/cards';
-import {
-  admitted,
-  apply,
-  beginChronicle,
-  outcome,
-  playable,
-  refusalOf,
-} from '../src/rules/chronicle';
+import { admitted, apply, beginChronicle, outcome, refusalOf } from '../src/rules/chronicle';
 import {
   CITY_TILE,
   neighbours,
@@ -21,7 +14,7 @@ import {
   tileYield,
 } from '../src/rules/map';
 import { RESOURCES, type Resource } from '../src/rules/resources';
-import type { CardId, Chronicle } from '../src/rules/state';
+import { type CardId, type Chronicle, playable } from '../src/rules/state';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
 import type { PileKind } from '../src/ui/overlay';
 

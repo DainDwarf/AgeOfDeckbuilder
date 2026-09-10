@@ -1,7 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
 import { DECKS } from '../src/rules/cards';
-import { apply, beginChronicle, outcome, playable, refusalOf } from '../src/rules/chronicle';
-import type { Chronicle } from '../src/rules/state';
+import { apply, beginChronicle, outcome, refusalOf } from '../src/rules/chronicle';
+import { type Chronicle, playable } from '../src/rules/state';
 import { text } from '../src/ui/text';
 import {
   besideTheCards,

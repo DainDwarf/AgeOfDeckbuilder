@@ -1,14 +1,6 @@
 import { expect, test } from 'vitest';
 import { type AimedCard, CARDS, DECKS, refuses } from './cards';
-import {
-  admitted,
-  apply,
-  beginChronicle,
-  type Command,
-  outcome,
-  playable,
-  refusalOf,
-} from './chronicle';
+import { admitted, apply, beginChronicle, type Command, outcome, refusalOf } from './chronicle';
 import {
   actionOf,
   assignTo,
@@ -41,7 +33,7 @@ import {
   tileKey,
 } from './map';
 import { RESOURCES, type Resources } from './resources';
-import { type CardId, type Chronicle, idle, type TileBlock } from './state';
+import { type CardId, type Chronicle, idle, playable, type TileBlock } from './state';
 import { standsOn } from './units';
 
 /** A card aimed at a tile, ready to hand to `apply`. */

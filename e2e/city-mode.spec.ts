@@ -1,6 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
 import { DECKS } from '../src/rules/cards';
-import { beginChronicle, claimable } from '../src/rules/chronicle';
+import { beginChronicle } from '../src/rules/chronicle';
+import { claimable } from '../src/rules/city';
 import { distance, runsAlong, type TileCoords, tileKey, tileYield } from '../src/rules/map';
 import { RESOURCES } from '../src/rules/resources';
 import { text } from '../src/ui/text';

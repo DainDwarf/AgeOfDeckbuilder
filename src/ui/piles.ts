@@ -1,6 +1,6 @@
 import type Phaser from 'phaser';
-import { NO_REFUSAL, type Stage } from '../rules/chronicle';
-import type { CardId, Chronicle } from '../rules/state';
+import type { Stage } from '../rules/chronicle';
+import { type CardId, type Chronicle, NO_REFUSAL } from '../rules/state';
 import {
   CARD_BASELINE,
   CARD_HEIGHT,

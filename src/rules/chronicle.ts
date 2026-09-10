@@ -1,27 +1,21 @@
 import { type AimedCard, CARDS, refuses } from './cards';
+import { assign, type CityCommand, claim, founding, grow, income, reassign } from './city';
 import { ENEMY_SCRIPTS } from './enemies';
-import {
-  CITY_TILE,
-  generateMap,
-  neighbours,
-  type Tile,
-  type TileCoords,
-  tileKey,
-  tileYield,
-} from './map';
-import { RESOURCES, type Resource } from './resources';
+import { CITY_TILE, generateMap, type Tile, type TileCoords, tileKey } from './map';
+import { RESOURCES } from './resources';
 import { seedRng, shuffle as shuffleItems } from './rng';
 import { events, scheduled } from './schedule';
 import { charted } from './sight';
 import {
-  assignedTo,
   type Block,
   type CardId,
   type Chronicle,
+  type Cost,
   type DefeatCause,
-  holds,
-  idle,
+  playable,
+  type Refusal,
   type Snapshot,
+  unaffordable,
 } from './state';
 import {
   attackable,
@@ -62,14 +56,7 @@ export type Command =
     }
   | { readonly type: 'move'; readonly unit: number; readonly tile: TileCoords }
   | { readonly type: 'attack'; readonly unit: number; readonly tile: TileCoords }
-  | { readonly type: 'assign'; readonly tile: TileCoords }
-  | {
-      readonly type: 'reassign';
-      /** The tile the inhabitant stands on, and the tile it stands on once this has resolved. */
-      readonly from: TileCoords;
-      readonly to: TileCoords;
-    }
-  | { readonly type: 'claim'; readonly tile: TileCoords };
+  | CityCommand;
 
 /**
  * What one unit of the player's, named by its number, is commanded by hand: crossing to a tile, or
@@ -77,24 +64,11 @@ export type Command =
  */
 export type UnitCommand = Extract<Command, { readonly unit: number }>;
 
-/** One inhabitant taken off the tile it stands on and put on another, in the one gesture. */
-export type ReassignCommand = Extract<Command, { readonly type: 'reassign' }>;
-
 /** One card of the hand played, aimed the way the card is: at nothing, a tile, a unit or the discard pile. */
 type PlayCommand = Extract<Command, { readonly type: 'play' }>;
 
 /** A full hand. */
 const HAND_SIZE = 5;
-
-/** How many inhabitants the founding leaves on no tile, on top of one for each tile it holds. */
-const IDLE_FOUNDED = 2;
-
-/** What the founding holds: the city's own tile and the six around it. */
-const FOUNDING_HELD: readonly TileCoords[] = [CITY_TILE, ...neighbours(CITY_TILE)];
-
-/** What the first claim past the founding's tiles costs, and how many claims each rise lasts. */
-const CLAIM_FIRST = 1;
-const CLAIMS_PER_RISE = 3;
 
 /**
  * A step that carries nothing but the chronicle it left. `played` is the card gone from the hand
@@ -133,15 +107,13 @@ export type Stage = { readonly chronicle: Chronicle } & (
 );
 
 /**
- * The founding: the seed generates the map, the city fills the slot of the tile it stands on, it
- * holds that tile and the six around it with an inhabitant assigned to each and two idle besides,
- * the deck it is founded on is shuffled into its draw pile, and the map is charted of what the city
- * sees from the first turn.
+ * The founding: the seed generates the map, the city fills the slot of the tile it stands on, the
+ * border and the inhabitants inside it are what a founding starts on, the deck it is founded on is
+ * shuffled into its draw pile, and the map is charted of what the city sees from the first turn.
  */
 export function beginChronicle(seed: number, deck: readonly CardId[]): Chronicle {
   const map = generateMap(seedRng(seed));
   const shuffled = shuffleItems(map.rng, deck);
-  const held = [...FOUNDING_HELD];
   const tiles: Tile[] = map.tiles.map((tile) =>
     tileKey(tile) === tileKey(CITY_TILE) ? { ...tile, building: 'PH_City' } : tile,
   );
@@ -156,11 +128,9 @@ export function beginChronicle(seed: number, deck: readonly CardId[]): Chronicle
             snapshots: [],
             rivers: map.rivers,
             city: CITY_TILE,
-            held,
+            ...founding(),
             turn: 1,
             resources: { food: 0, production: 0, military: 0, money: 0, science: 0, culture: 0 },
-            population: held.length + IDLE_FOUNDED,
-            assigned: [...held],
             units: [],
             nextUnit: 1,
             drawPile: shuffled.items,
@@ -226,79 +196,25 @@ function stagesOf(chronicle: Chronicle, command: Command): Stage[] {
     case 'attack':
       return attack(chronicle, command.unit, command.tile);
     case 'assign':
-      return assign(chronicle, command.tile);
+      return acted(chronicle, 'assign', assign(chronicle, command.tile));
     case 'reassign':
-      return reassign(chronicle, command.from, command.to);
+      return acted(chronicle, 'assign', reassign(chronicle, command.from, command.to));
     case 'claim':
-      return claim(chronicle, command.tile);
+      return acted(chronicle, 'claim', claim(chronicle, command.tile));
   }
 }
 
 /**
- * One tile assigned or unassigned: the inhabitant already on it comes off, and an idle one goes on
- * a tile the city holds. Anything the city-mode click on that tile is not, or is refused for, is
- * one `refused` stage on the chronicle as it stood.
+ * One act of the city's staged: the chronicle the rules answered with under the name the act is
+ * staged as, and one `refused` stage on the chronicle as it stood where they answered nothing.
  */
-function assign(chronicle: Chronicle, tile: TileCoords): Stage[] {
-  if (cityCommand(chronicle, tile)?.type !== 'assign') return [{ name: 'refused', chronicle }];
-
-  const at = tileKey(tile);
-  const on = chronicle.assigned.filter((coord) => tileKey(coord) !== at);
-  if (on.length < chronicle.assigned.length) {
-    return [{ name: 'assign', chronicle: { ...chronicle, assigned: on } }];
-  }
-  return [
-    { name: 'assign', chronicle: { ...chronicle, assigned: [...on, { q: tile.q, r: tile.r }] } },
-  ];
-}
-
-/**
- * One inhabitant off the tile it stands on and onto another: the one drag in city mode is the one
- * `assign` stage, so the chronicle is left with the same population and the same idle count. A drag
- * the rules have no act of the city's for is one `refused` stage on the chronicle as it stood.
- */
-function reassign(chronicle: Chronicle, from: TileCoords, to: TileCoords): Stage[] {
-  if (cityDrag(chronicle, from, to) === undefined) return [{ name: 'refused', chronicle }];
-
-  const off = tileKey(from);
-  return [
-    {
-      name: 'assign',
-      chronicle: {
-        ...chronicle,
-        assigned: [
-          ...chronicle.assigned.filter((coord) => tileKey(coord) !== off),
-          { q: to.q, r: to.r },
-        ],
-      },
-    },
-  ];
-}
-
-/**
- * One tile claimed: the culture is paid, the tile joins the tiles the city holds, and an idle
- * inhabitant stands on it at once when the city has one. Anything the city-mode click on that tile
- * is not, or is refused for, is one `refused` stage on the chronicle as it stood.
- */
-function claim(chronicle: Chronicle, tile: TileCoords): Stage[] {
-  if (cityCommand(chronicle, tile)?.type !== 'claim') return [{ name: 'refused', chronicle }];
-
-  const taken = { q: tile.q, r: tile.r };
-  const staffed = idle(chronicle) > 0;
-  return [
-    {
-      name: 'claim',
-      chronicle: {
-        ...chronicle,
-        resources: {
-          ...chronicle.resources,
-          culture: chronicle.resources.culture - cultureThreshold(chronicle),
-        },
-        held: [...chronicle.held, taken],
-        assigned: staffed ? [...chronicle.assigned, taken] : chronicle.assigned,
-      },
-    },
-  ];
+function acted(
+  chronicle: Chronicle,
+  name: 'assign' | 'claim',
+  left: Chronicle | undefined,
+): Stage[] {
+  if (left === undefined) return [{ name: 'refused', chronicle }];
+  return [{ name, chronicle: left }];
 }
 
 /** The chronicle a command left: the last stage's, for whoever wants the state and not the play. */
@@ -351,9 +267,6 @@ function fall(chronicle: Chronicle, cause: DefeatCause): Chronicle {
   return { ...chronicle, defeat: { cause, turn: chronicle.turn } };
 }
 
-/** What one thing asks for of one resource: a card's cost line by line, a claim's culture. */
-export type Cost = { readonly resource: Resource; readonly amount: number };
-
 /** What a card costs, resource by resource, in the order the resource bar reads. */
 export function costOf(id: CardId): Cost[] {
   const { cost } = CARDS[id];
@@ -365,108 +278,8 @@ export function costOf(id: CardId): Cost[] {
   return entries;
 }
 
-/** Everything standing between the city and a card or a claim: what it cannot pay, and the map. */
-export type Refusal = {
-  readonly unaffordable: readonly Resource[];
-  readonly blocked: readonly Block[];
-};
-
-/** What a card outside the hand is drawn as: nothing refuses it. */
-export const NO_REFUSAL: Refusal = { unaffordable: [], blocked: [] };
-
 export function refusalOf(chronicle: Chronicle, id: CardId): Refusal {
   return { unaffordable: unaffordable(chronicle, costOf(id)), blocked: blocked(chronicle, id) };
-}
-
-export function playable(refusal: Refusal): boolean {
-  return refusal.unaffordable.length === 0 && refusal.blocked.length === 0;
-}
-
-/**
- * The tiles the city may claim: charted, not held, touching a tile it holds, with no camp filling
- * the slot and no enemy occupying it.
- */
-export function claimable(chronicle: Chronicle): TileCoords[] {
-  const held = new Set(chronicle.held.map(tileKey));
-  const chartedTiles = new Set(chronicle.snapshots.map(tileKey));
-  return chronicle.tiles
-    .filter(
-      (tile) =>
-        chartedTiles.has(tileKey(tile)) &&
-        !held.has(tileKey(tile)) &&
-        tile.building !== 'PH_Camp' &&
-        !occupied(chronicle.units, tile) &&
-        neighbours(tile).some((coord) => held.has(tileKey(coord))),
-    )
-    .map(({ q, r }) => ({ q, r }));
-}
-
-/**
- * The culture threshold, what the next claim costs: one culture, and one more for every three tiles
- * claimed past the seven the founding holds.
- */
-function cultureThreshold(chronicle: Chronicle): number {
-  const claimed = Math.max(0, chronicle.held.length - FOUNDING_HELD.length);
-  return CLAIM_FIRST + Math.floor(claimed / CLAIMS_PER_RISE);
-}
-
-/**
- * What the city's act on this tile costs, in the shape a card's cost comes in: the culture a claim
- * asks for, and nothing at all on a tile the city already holds.
- */
-export function tileCost(chronicle: Chronicle, tile: TileCoords): Cost[] {
-  return holds(chronicle, tile)
-    ? []
-    : [{ resource: 'culture', amount: cultureThreshold(chronicle) }];
-}
-
-/**
- * Everything standing between the city and its act on this tile: the idle population an assign has
- * none of, and the culture a claim falls short of. A tile the city neither holds nor may claim — an
- * uncharted one among them — is no act of the city's at all, and answers nothing.
- */
-export function tileRefusal(chronicle: Chronicle, tile: TileCoords): Refusal | undefined {
-  if (holds(chronicle, tile)) {
-    const standing = assignedTo(chronicle, tile);
-    return { unaffordable: [], blocked: standing || idle(chronicle) > 0 ? [] : ['idle'] };
-  }
-  if (!claimable(chronicle).some((coord) => tileKey(coord) === tileKey(tile))) return undefined;
-  return { unaffordable: unaffordable(chronicle, tileCost(chronicle, tile)), blocked: [] };
-}
-
-/**
- * What the city's act on a tile sends — the second left click on the selection in city mode: an
- * assign on a tile the city holds, a claim on one it may claim, and nothing at all on a tile it has
- * no act on or when the rules refuse the act. The one decision both the chronicle screen and `apply`
- * answer that click by.
- */
-export function cityCommand(chronicle: Chronicle, tile: TileCoords): Command | undefined {
-  const refusal = tileRefusal(chronicle, tile);
-  if (refusal === undefined || !playable(refusal)) return undefined;
-  return { type: holds(chronicle, tile) ? 'assign' : 'claim', tile };
-}
-
-/**
- * What a drag in city mode sends — the press taken on one tile and let go on another: the
- * inhabitant off the tile it stands on and onto the tile it was let go on, which the city has to
- * hold with nobody standing on it. Nothing at all for any other pair of tiles, the same tile twice
- * among them. The one decision both the chronicle screen and `apply` answer that drag by.
- */
-export function cityDrag(
-  chronicle: Chronicle,
-  from: TileCoords,
-  to: TileCoords,
-): ReassignCommand | undefined {
-  if (!assignedTo(chronicle, from)) return undefined;
-  if (!holds(chronicle, to) || assignedTo(chronicle, to)) return undefined;
-  return { type: 'reassign', from, to };
-}
-
-/** The resources a cost outruns; empty means the city can pay it. */
-function unaffordable(chronicle: Chronicle, costs: readonly Cost[]): Resource[] {
-  return costs
-    .filter(({ resource, amount }) => amount > chronicle.resources[resource])
-    .map(({ resource }) => resource);
 }
 
 /**
@@ -657,41 +470,6 @@ function discard(chronicle: Chronicle): Chronicle {
     ...chronicle,
     hand: [],
     discardPile: [...chronicle.discardPile, ...chronicle.hand],
-  };
-}
-
-/**
- * Income: an assigned tile yields what its layers and the river running along it give, the city's
- * own tile no exception.
- */
-function income(chronicle: Chronicle): Chronicle {
-  const assigned = new Set(chronicle.assigned.map(tileKey));
-  const resources = { ...chronicle.resources };
-  for (const tile of chronicle.tiles) {
-    if (!assigned.has(tileKey(tile))) continue;
-    if (occupied(chronicle.units, tile)) continue;
-    const yields = tileYield(tile, chronicle.rivers);
-    for (const resource of RESOURCES) resources[resource] += yields[resource] ?? 0;
-  }
-  return RESOURCES.every((resource) => resources[resource] === chronicle.resources[resource])
-    ? chronicle
-    : { ...chronicle, resources };
-}
-
-/** The growth threshold, what the next inhabitant costs: the population it joins. */
-export function growthThreshold(chronicle: Chronicle): number {
-  return chronicle.population;
-}
-
-/** Growth: the food stock that has reached the growth threshold is spent on one idle inhabitant. */
-function grow(chronicle: Chronicle): Chronicle {
-  const threshold = growthThreshold(chronicle);
-  // A threshold of nothing every stock reaches: a city of nobody would grow one and undo its fall.
-  if (threshold === 0 || chronicle.resources.food < threshold) return chronicle;
-  return {
-    ...chronicle,
-    resources: { ...chronicle.resources, food: chronicle.resources.food - threshold },
-    population: chronicle.population + 1,
   };
 }
 

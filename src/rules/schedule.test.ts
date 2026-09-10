@@ -1,5 +1,6 @@
 import { expect, test } from 'vitest';
-import { apply, growthThreshold, outcome } from './chronicle';
+import { apply, outcome } from './chronicle';
+import { growthThreshold } from './city';
 import {
   CAMPS,
   type Carrying,
