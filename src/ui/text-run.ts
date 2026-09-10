@@ -2,10 +2,6 @@
  * An entry read as a run: the words it holds, and a resource glyph wherever it marks one. A glyph
  * is marked `[resource]` — `text` substitutes `{name}` from the values it is handed, so a brace
  * here would leave `undefined` on the screen of every caller that hands it none.
- *
- * A run is one string, its glyphs standing in spaces of it, and never a Text for each piece: with a
- * few dozen Texts on the screen at once the renderer starts drawing one of them with another's
- * letters, and a hand of cards is most of that budget already.
  */
 
 import { RESOURCES, type Resource } from '../rules/resources';
@@ -117,7 +113,8 @@ export function layOutRun(entry: string, measure: Measure, metrics: Metrics): Ru
 
   const glyphs: Glyph[] = [];
   for (const [index, line] of lines.entries()) {
-    const width = measure(line.drawn);
+    // A Text centres each line on its width ceiled to the pixel, so a glyph is placed from that.
+    const width = Math.ceil(measure(line.drawn));
     for (const { resource, at } of line.glyphs) {
       const middle = measure(line.drawn.slice(0, at)) + (spaces * metrics.space) / 2;
       glyphs.push({ resource, x: middle - width / 2, line: index });

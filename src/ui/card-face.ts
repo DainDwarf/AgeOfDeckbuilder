@@ -15,7 +15,7 @@ import {
 } from './design-space';
 import { RESOURCE_COLOURS } from './resource-bar';
 import { text } from './text';
-import { layOutRun } from './text-run';
+import { layOutRun, type Run } from './text-run';
 
 export const CARD_WIDTH = 130;
 
@@ -164,21 +164,25 @@ export function createCardFace(
 
   const size = 0.62 * em;
   const span = (2 / 3) * size;
-  const ruleStyle = { fontFamily: UI_FONT, fontSize: `${size}px`, color: css(tone(palette.ink)) };
-  const ruler = addText(scene, 0, 0, '', ruleStyle);
-  const measure = (content: string): number => ruler.setText(content).width - 2 * TEXT_INSET.x;
-  const run = layOutRun(text(`rules.${id}`), measure, {
-    width: right - left,
-    glyph: span,
-    bearing: size / 4,
-    // A line is measured to the whole pixel, so one space alone is too coarse to lay glyphs by.
-    space: measure(' '.repeat(20)) / 20,
-  });
-  ruler.destroy();
-
-  const rules = addText(scene, 0, kind.y - kind.height - 0.45 * em, run.content, {
-    ...ruleStyle,
+  // Phaser runs the callback from inside updateText, on a context whose font it has just synced.
+  let run!: Run;
+  const rules = addText(scene, 0, kind.y - kind.height - 0.45 * em, text(`rules.${id}`), {
+    fontFamily: UI_FONT,
+    fontSize: `${size}px`,
+    color: css(tone(palette.ink)),
     align: 'center',
+    wordWrap: {
+      callback: (content, textObject) => {
+        const measure = (drawn: string): number => textObject.context.measureText(drawn).width;
+        run = layOutRun(content, measure, {
+          width: right - left,
+          glyph: span,
+          bearing: size / 4,
+          space: measure(' '),
+        });
+        return run.content.split('\n');
+      },
+    },
   }).setOrigin(0.5, 1);
 
   const lineHeight = (rules.height - 2 * TEXT_INSET.y) / run.lines;

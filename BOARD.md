@@ -12,10 +12,6 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
-- **The rules line wraps through Phaser** — the card's rules line is laid out by a
-  `wordWrapCallback` on the one `Text` that draws it, measured through that `Text`'s own context,
-  and the per-face ruler `Text` is gone; every rule `text-run.test.ts` pins still holds and the
-  card reads as it reads now. Doc-impact: none. [board/rules-line-wrap.md](board/rules-line-wrap.md)
 - **The schedule** — events become a weighted table whose weights shift with the turn, drawn from
   the chronicle's own generator: the same seed deals the same schedule, the harshest entries carry
   no weight early, and a raid drawn late is larger than one drawn early. Rules tests pin all three.
