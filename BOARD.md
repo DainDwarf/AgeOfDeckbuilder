@@ -12,12 +12,6 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
-- **The chronicle's tests split by the module they cover** — `chronicle.test.ts` (3067 lines, 179
-  tests) breaks up: the schedule's tests to `schedule.test.ts`, the camp and enemy tests to
-  `enemies.test.ts`, the card tests to `cards.test.ts`, and the fixtures the resulting files share
-  into one module beside them. No test body changes and the same 179 tests run. `DOGMAS.md` →
-  *Testing* gains the fixture module's shape, a fixture no longer being "defined in the test".
-  Doc-impact: `docs/DOGMAS.md`.
 - **The city's rules leave `chronicle.ts`** — `src/rules/city.ts` holds the border, the inhabitants
   and what they yield: income, growth, assign, reassign, claim, and the readers the chronicle screen
   asks (`claimable`, `cityCommand`, `cityDrag`, `tileCost`, `tileRefusal`, `growthThreshold`).
