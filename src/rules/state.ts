@@ -46,6 +46,11 @@ export type Chronicle = {
   readonly city: TileCoords;
   readonly held: TileCoords[];
   readonly turn: number;
+  /**
+   * The turn the schedule's next event is due, rolled at the founding and again each time one lands:
+   * the events phase draws on that turn and on no other.
+   */
+  readonly nextEvent: number;
   readonly resources: Resources;
   readonly population: number;
   /** The tiles an inhabitant stands on, at most one to a tile; every other inhabitant is idle. */

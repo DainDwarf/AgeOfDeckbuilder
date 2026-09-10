@@ -30,6 +30,24 @@ export function nextRng([a, b, c, d]: Rng): { rng: Rng; value: number } {
   };
 }
 
+/** The one weighted draw of the generator: one roll over the weights given. */
+export function pickWeighted<T>(
+  rng: Rng,
+  entries: readonly (readonly [T, number])[],
+): { rng: Rng; picked: T } {
+  const step = nextRng(rng);
+  let roll = step.value * entries.reduce((total, [, weight]) => total + weight, 0);
+  let picked = entries[entries.length - 1][0];
+  for (const [id, weight] of entries) {
+    roll -= weight;
+    if (roll < 0) {
+      picked = id;
+      break;
+    }
+  }
+  return { rng: step.rng, picked };
+}
+
 /** Fisher-Yates, in a copy: the same generator and the same items always give the same order. */
 export function shuffle<T>(initial: Rng, items: readonly T[]): { rng: Rng; items: T[] } {
   let rng = initial;

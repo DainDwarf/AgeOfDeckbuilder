@@ -1,5 +1,5 @@
 import { type AimedCard, CARDS, refuses } from './cards';
-import { arrival, ENEMY_SCRIPTS } from './enemies';
+import { ENEMY_SCRIPTS } from './enemies';
 import {
   CITY_TILE,
   generateMap,
@@ -11,6 +11,7 @@ import {
 } from './map';
 import { RESOURCES, type Resource } from './resources';
 import { seedRng, shuffle as shuffleItems } from './rng';
+import { events, scheduled } from './schedule';
 import { charted } from './sight';
 import {
   assignedTo,
@@ -150,7 +151,7 @@ export function beginChronicle(seed: number, deck: readonly CardId[]): Chronicle
         draw(
           events({
             seed,
-            rng: shuffled.rng,
+            ...scheduled(shuffled.rng),
             tiles,
             snapshots: [],
             rivers: map.rivers,
@@ -627,11 +628,6 @@ function attack(chronicle: Chronicle, attacker: number, at: TileCoords): Stage[]
       chronicle: { ...chronicle, units: struck },
     },
   ];
-}
-
-/** The schedule stands in at one event: `PH_Arrival` brings an enemy to the outer ring every fifth turn. */
-function events(chronicle: Chronicle): Chronicle {
-  return chronicle.turn % 5 === 0 ? arrival(chronicle) : chronicle;
 }
 
 /** Cards off the draw pile into the hand, up to a full hand or as far as the pile goes. */

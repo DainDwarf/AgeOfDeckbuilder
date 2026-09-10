@@ -1,5 +1,5 @@
 import type { Resource, Resources } from './resources';
-import { nextRng, type Rng, shuffle } from './rng';
+import { nextRng, pickWeighted, type Rng, shuffle } from './rng';
 
 const LAND_TERRAINS = { plain: 0.55, forest: 0.25, hills: 0.2 } as const;
 
@@ -469,24 +469,6 @@ export function riversAlong(rivers: readonly River[], tiles: ReadonlySet<string>
     if (run.length > 0) runs.push(run);
   }
   return runs;
-}
-
-/** The one weighted draw of the generator: one roll of the seeded generator over the weights given. */
-function pickWeighted<T>(
-  rng: Rng,
-  entries: readonly (readonly [T, number])[],
-): { rng: Rng; picked: T } {
-  const step = nextRng(rng);
-  let roll = step.value * entries.reduce((total, [, weight]) => total + weight, 0);
-  let picked = entries[entries.length - 1][0];
-  for (const [id, weight] of entries) {
-    roll -= weight;
-    if (roll < 0) {
-      picked = id;
-      break;
-    }
-  }
-  return { rng: step.rng, picked };
 }
 
 function pickTerrain(

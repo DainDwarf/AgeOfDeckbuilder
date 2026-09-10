@@ -10,6 +10,7 @@ import {
   tileKey,
 } from './map';
 import { seedRng } from './rng';
+import { scheduled } from './schedule';
 import { CITY_SIGHT, charted, inSight } from './sight';
 import { type Chronicle, entered, type Snapshot } from './state';
 import type { UnitStats } from './units';
@@ -64,7 +65,7 @@ function founded(tiles: Tile[], claimed: readonly TileCoords[] = []): Chronicle 
   const held = [CITY, ...neighbours(CITY), ...claimed];
   return charted({
     seed: 7,
-    rng: seedRng(7),
+    ...scheduled(seedRng(7)),
     tiles,
     snapshots: [],
     rivers: [],

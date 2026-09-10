@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { ARRIVING } from './enemies';
+import { CAMP_ENEMY } from './enemies';
 import {
   BIOMES,
   BUILDINGS,
@@ -309,7 +309,7 @@ test('every map is dealt its camps, each keeping its distance from the city and 
 
 test('a camp lies on ground the enemy that comes from it can stand on', () => {
   for (const terrain of BUILDINGS.PH_Camp.terrains) {
-    expect(standsOn(ARRIVING, { q: 0, r: 0, terrain, improvements: [] })).toBe(true);
+    expect(standsOn(CAMP_ENEMY, { q: 0, r: 0, terrain, improvements: [] })).toBe(true);
   }
 });
 

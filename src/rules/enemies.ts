@@ -12,11 +12,11 @@ import {
 } from './units';
 
 /**
- * The enemy every arrival lands. Every terrain a camp names has to be ground this unit stands on, or
- * a camp lands where its own enemy cannot: nothing holds the two together, and the test in
+ * The enemy a camp enters. Every terrain a camp names has to be ground this unit stands on, or a
+ * camp lands where its own enemy cannot: nothing holds the two together, and the test in
  * `map.test.ts` is what raises a list that has drifted.
  */
-export const ARRIVING = UNIT_STATS.PH_Warrior;
+export const CAMP_ENEMY = UNIT_STATS.PH_Warrior;
 
 /**
  * What an enemy does in the enemy phase, asked of the enemy itself as the phase stands it. The phase
@@ -73,11 +73,11 @@ export const ENEMY_SCRIPTS: Record<EnemyScriptId, EnemyScript> = {
 };
 
 /**
- * `PH_Arrival`, the one event the stand-in schedule holds: one enemy lands on a camp whose tile no
- * unit stands on, drawn from the seeded generator, with its move points and its action full. With
- * no such camp it places nothing and draws nothing.
+ * One enemy entering the map from a camp: it stands on a camp whose tile no unit stands on, drawn
+ * from the seeded generator, with its move points and its action full. With no such camp it enters
+ * nowhere and draws nothing.
  */
-export function arrival(chronicle: Chronicle): Chronicle {
+export function enteredFromCamp(chronicle: Chronicle): Chronicle {
   const camps = chronicle.tiles.filter(
     (tile) => tile.building === 'PH_Camp' && unitAt(chronicle.units, tile) === undefined,
   );
@@ -87,7 +87,7 @@ export function arrival(chronicle: Chronicle): Chronicle {
   const { q, r } = camps[Math.floor(step.value * camps.length)];
   return entered(
     { ...chronicle, rng: step.rng },
-    { type: ARRIVING.type, faction: 'enemy', tile: { q, r }, script: 'PH_Advance' },
+    { type: CAMP_ENEMY.type, faction: 'enemy', tile: { q, r }, script: 'PH_Advance' },
   );
 }
 

@@ -12,11 +12,6 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
-- **The schedule** — an event lands every few turns, the turn the next is due rolled when one
-  lands and carried by the chronicle, the event drawn from a weighted table whose weights shift
-  with the turn: the same seed deals the same schedule, the famine carries no weight early, and a
-  raid drawn late is larger than one drawn early. Rules tests pin all three. Doc-impact: none, the
-  design is written. [board/the-schedule.md](board/the-schedule.md)
 - **The events phase deals a choice** — the phase offers several of the schedule's events as cards
   and the player takes one, which resolves; this replaces the design's "land and resolve at once".
   An e2e spec plays a turn through the deal. Doc-impact: `docs/DESIGN.md`, `docs/GLOSSARY.md`.

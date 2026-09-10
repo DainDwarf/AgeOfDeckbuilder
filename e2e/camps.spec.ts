@@ -1,4 +1,6 @@
 import { expect, test } from '@playwright/test';
+import { DECKS } from '../src/rules/cards';
+import { beginChronicle } from '../src/rules/chronicle';
 import { MAP_COMPOSITION, type TileCoords, tileKey } from '../src/rules/map';
 import type { Chronicle } from '../src/rules/state';
 import {
@@ -16,6 +18,12 @@ import {
 /** The seed this spec opens on: its map is dealt every camp the composition asks for. */
 const SEED = 1;
 
+/**
+ * The turn this seed's schedule lands its first event on. It is a raid — the famine weighs nothing
+ * that early — and every camp's tile is free for it, the city having entered no unit of its own.
+ */
+const RAID = beginChronicle(SEED, DECKS.PH_Deck).nextEvent;
+
 /** The tiles the generator put a camp on, in the order the map lists them. */
 function campsOf(chronicle: Chronicle): TileCoords[] {
   return chronicle.tiles
@@ -23,12 +31,11 @@ function campsOf(chronicle: Chronicle): TileCoords[] {
     .map(({ q, r }) => ({ q, r }));
 }
 
-test('the map draws the camps it was dealt, and the fifth turn’s enemy stands on one', async ({
+test('the map draws the camps it was dealt, and the raid’s warrior stands on one', async ({
   page,
 }) => {
   const problems = watch(page);
-  // The four ends of turn it takes to reach the fifth.
-  test.setTimeout(budget(4));
+  test.setTimeout(budget(RAID - 1));
 
   await open(page, SEED, 'PH_Deck');
 
@@ -50,13 +57,13 @@ test('the map draws the camps it was dealt, and the fifth turn’s enemy stands 
   // The whole disc drawn, the buildings on it are the camps and the city's own wall.
   expect(await marksIn(page, 'buildings')).toBe(camps.length + 1);
 
-  for (let turn = 0; turn < 4; turn++) await endTurn(page);
+  for (let turn = opened.turn; turn < RAID; turn++) await endTurn(page);
 
-  const fifth = await chronicleOf(page);
-  const enemy = fifth.units.find((unit) => unit.faction === 'enemy');
+  const raided = await chronicleOf(page);
+  const enemy = raided.units.find((unit) => unit.faction === 'enemy');
 
-  expect(fifth.turn).toBe(5);
+  expect(raided.turn).toBe(RAID);
   expect(enemy).toBeDefined();
-  expect(camps.map(tileKey)).toContain(tileKey(enemy?.tile ?? fifth.city));
+  expect(camps.map(tileKey)).toContain(tileKey(enemy?.tile ?? raided.city));
   expect(problems).toEqual([]);
 });
