@@ -4,6 +4,7 @@ import {
   buildingAt,
   cityOf,
   DECK,
+  endedTurn,
   everyCard,
   field,
   fullDraw,
@@ -65,7 +66,7 @@ test('the hand holds five cards on founding, and five again after every turn', (
   expect(chronicle.hand).toHaveLength(5);
 
   for (let turn = 0; turn < 6; turn++) {
-    chronicle = outcome(apply(chronicle, { type: 'end-turn' }));
+    chronicle = endedTurn(chronicle);
     expect(chronicle.hand).toHaveLength(5);
   }
 });
@@ -180,7 +181,7 @@ test('every card of the deck is in exactly one pile through a full cycle', () =>
 
   for (let turn = 0; turn < 8; turn++) {
     chronicle = outcome(apply(chronicle, { type: 'play', index: 0, aim: 'none' }));
-    chronicle = outcome(apply(chronicle, { type: 'end-turn' }));
+    chronicle = endedTurn(chronicle);
     expect(everyCard(chronicle)).toEqual(deck);
   }
 });

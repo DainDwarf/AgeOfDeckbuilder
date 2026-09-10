@@ -9,6 +9,7 @@ import {
   chronicleOf,
   dragOut,
   dragTiles,
+  endedTurn,
   endTurn,
   firstSeed,
   open,
@@ -34,7 +35,7 @@ function attackRun(): AttackRun {
     for (let turn = 1; turn <= 8; turn++) {
       const met = besieged(chronicle);
       if (met !== undefined) return { seed, turn, ...met };
-      chronicle = outcome(apply(chronicle, { type: 'end-turn' }));
+      chronicle = endedTurn(chronicle);
     }
     return undefined;
   });
@@ -51,7 +52,7 @@ function besieged(chronicle: Chronicle): { turns: number; enemy: TileCoords } | 
   if (standing.units.length !== 1) return undefined;
 
   for (let turns = 1; turns <= 20; turns++) {
-    standing = outcome(apply(standing, { type: 'end-turn' }));
+    standing = endedTurn(standing);
     if (standing.defeat !== undefined) return undefined;
     const warrior = standing.units.find((unit) => unit.faction === 'player');
     if (warrior === undefined || warrior.action < warrior.stats.action) return undefined;

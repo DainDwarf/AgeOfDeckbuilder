@@ -19,7 +19,7 @@ import type { Resources } from './resources';
 import { seedRng } from './rng';
 import { scheduled } from './schedule';
 import { charted } from './sight';
-import { type CardId, type Chronicle, type Entering, entered } from './state';
+import { type CardId, type Chronicle, type Entering, type EventId, entered } from './state';
 import type { Faction, Unit, UnitStats } from './units';
 
 export const CITY: TileCoords = { q: 0, r: 0 };
@@ -84,6 +84,7 @@ export function cityOf(inside: Terrain[], carrying: Carrying = {}): Chronicle {
     city: CITY,
     held,
     turn: 1,
+    deal: [],
     resources: { food: 0, production: 0, military: 0, money: 0, science: 0, culture: 0 },
     population: held.length,
     assigned: [...held],
@@ -315,27 +316,42 @@ export const DECK: readonly CardId[] = [
 /** How many turns these fixtures end before they give up on a schedule that has landed nothing. */
 export const SCHEDULE_BOUND = 30;
 
-/** The chronicle every event landed on over thirty ends of turn, in the order they landed. */
-export function landings(chronicle: Chronicle): Chronicle[] {
+/**
+ * One whole turn: the end of turn, and the entry taken of the deal it may stop on — `wanted` where
+ * this deal holds it, and the first entry dealt where it does not. Every fixture that ends turns
+ * goes through here, because a chronicle waiting on a deal refuses every other command.
+ */
+export function endedTurn(chronicle: Chronicle, wanted?: EventId): Chronicle {
+  const ended = outcome(apply(chronicle, { type: 'end-turn' }));
+  if (ended.deal.length === 0) return ended;
+  const taken = wanted !== undefined && ended.deal.includes(wanted) ? wanted : ended.deal[0];
+  return outcome(apply(ended, { type: 'take', event: taken }));
+}
+
+/**
+ * The chronicle every event landed on over thirty whole turns, in the order they landed; `wanted`
+ * is the entry taken wherever the deal offers it.
+ */
+export function landings(chronicle: Chronicle, wanted?: EventId): Chronicle[] {
   let standing = chronicle;
   const landed: Chronicle[] = [];
   for (let turn = 0; turn < SCHEDULE_BOUND; turn++) {
-    const stages = apply(standing, { type: 'end-turn' });
-    standing = outcome(stages);
-    if (stages.some((stage) => stage.name === 'events')) landed.push(standing);
+    const dealt = standing.nextEvent;
+    standing = endedTurn(standing, wanted);
+    if (standing.nextEvent !== dealt) landed.push(standing);
   }
   return landed;
 }
 
 /**
- * End of turn after end of turn until a raid enters an enemy, and the chronicle that turn left. A
- * fixture with no camp free gives up instead: the famine draws as often as the raid on every turn,
- * and the enemy standing is what tells which of them landed.
+ * Whole turn after whole turn until a raid enters an enemy, and the chronicle that turn left: the
+ * raid is taken wherever it is dealt. A fixture with no camp free gives up instead, the raid it
+ * takes entering nobody.
  */
 export function toFirstRaid(chronicle: Chronicle): Chronicle {
   let standing = chronicle;
   for (let turn = 0; turn < SCHEDULE_BOUND; turn++) {
-    standing = outcome(apply(standing, { type: 'end-turn' }));
+    standing = endedTurn(standing, 'PH_Raid');
     if (enemiesOf(standing).length > 0) return standing;
   }
   throw new Error(`this schedule entered no raider in ${SCHEDULE_BOUND} turns`);
@@ -346,7 +362,7 @@ export function toFirstRaid(chronicle: Chronicle): Chronicle {
  * on is read through, there being no landing of its own for it to stop at.
  */
 export function throughSchedule(chronicle: Chronicle): Chronicle {
-  const landed = landings(chronicle);
+  const landed = landings(chronicle, 'PH_Raid');
   if (landed.length === 0) {
     throw new Error(`this schedule landed no event in ${SCHEDULE_BOUND} turns`);
   }

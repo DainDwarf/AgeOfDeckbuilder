@@ -383,7 +383,7 @@ function runOn(
     for (let turn = 1; turn <= 8; turn++) {
       const tile = workedThisTurn(chronicle, card, aimed, keeps);
       if (tile !== undefined) return { seed, turn, tile };
-      chronicle = outcome(apply(chronicle, { type: 'end-turn' }));
+      chronicle = endedTurn(chronicle);
     }
     return undefined;
   });
@@ -404,7 +404,7 @@ export function stepRun(): StepRun {
     for (let turn = 1; turn <= 8; turn++) {
       const steps = steppedThisTurn(chronicle);
       if (steps !== undefined) return { seed, turn, ...steps };
-      chronicle = outcome(apply(chronicle, { type: 'end-turn' }));
+      chronicle = endedTurn(chronicle);
     }
     return undefined;
   });
@@ -448,7 +448,7 @@ export function atTileRun(): { seed: number; turn: number } {
     let chronicle = beginChronicle(seed, DECKS.PH_Deck);
     for (let turn = 1; turn <= 8; turn++) {
       if (atTile(chronicle) !== -1) return { seed, turn };
-      chronicle = outcome(apply(chronicle, { type: 'end-turn' }));
+      chronicle = endedTurn(chronicle);
     }
     return undefined;
   });
@@ -459,7 +459,7 @@ export function fallRun(): { seed: number; turns: number } {
   return firstSeed('is captured inside twenty turns', (seed) => {
     let chronicle = beginChronicle(seed, DECKS.PH_Deck);
     for (let turns = 1; turns <= 20 && chronicle.defeat === undefined; turns++) {
-      chronicle = outcome(apply(chronicle, { type: 'end-turn' }));
+      chronicle = endedTurn(chronicle);
       if (chronicle.defeat?.cause === 'capture') return { seed, turns };
     }
     return undefined;
@@ -695,10 +695,10 @@ export async function dragUnit(page: Page, from: TileCoords, to: TileCoords): Pr
 
 /**
  * Ends the turn on the button, and waits for the end of turn to finish playing out — the next turn
- * open, or the chronicle ended. The turn moves on partway through the sequence, so both hold before
- * the hand it deals is on the chronicle screen.
+ * open, the deal it stopped on standing, or the chronicle ended. The turn moves on partway through
+ * the sequence, so all three hold before the hand it deals is on the chronicle screen.
  */
-export async function endTurn(page: Page): Promise<void> {
+export async function stoppedTurn(page: Page): Promise<void> {
   const { turn } = await chronicleOf(page);
   await click(page, 'end-turn');
   await page.waitForFunction((next) => {
@@ -706,6 +706,33 @@ export async function endTurn(page: Page): Promise<void> {
     if (scene === null || scene === undefined || scene.playing) return false;
     return scene.chronicle.turn === next || scene.chronicle.defeat !== undefined;
   }, turn + 1);
+}
+
+/**
+ * One whole turn: the end of turn, and the first entry of the deal it may stop on taken through the
+ * window's own presses. What every spec that only wants the next turn open ends the turn with.
+ */
+export async function endTurn(page: Page): Promise<void> {
+  await stoppedTurn(page);
+  if (await standing(page, 'deal')) await take(page, 0);
+}
+
+/** Takes the entry the deal window offers in that place: one press rings it, a second takes it. */
+export async function take(page: Page, at: number): Promise<void> {
+  await click(page, `deal-card-${at}`);
+  await click(page, `deal-card-${at}`);
+  await playedOut(page);
+}
+
+/**
+ * The chronicle one whole turn leaves, played through the rules: the end of turn, and the first
+ * entry of the deal it may stop on taken, as the window's presses take it. What every seed a spec
+ * searches for is run forward with, a chronicle waiting on a deal taking no other command.
+ */
+export function endedTurn(chronicle: Chronicle): Chronicle {
+  const ended = outcome(apply(chronicle, { type: 'end-turn' }));
+  if (ended.deal.length === 0) return ended;
+  return outcome(apply(ended, { type: 'take', event: ended.deal[0] }));
 }
 
 /**

@@ -1,9 +1,23 @@
 import Phaser from 'phaser';
 import { CARD_KINDS, CARDS } from '../rules/cards';
 import type { Stage } from '../rules/chronicle';
-import { type CardId, type Chronicle, type Defeat, NO_REFUSAL, type Refusal } from '../rules/state';
+import {
+  type CardId,
+  type Chronicle,
+  type Defeat,
+  type EventId,
+  NO_REFUSAL,
+  type Refusal,
+} from '../rules/state';
 import type { Bind, Press } from './bindings';
-import { type CardFace, createCardFace, heightOf } from './card-face';
+import {
+  type CardFace,
+  cardFace,
+  createCardFace,
+  eventFace,
+  type Face,
+  heightOf,
+} from './card-face';
 import { EASE, ended, stopMotion } from './card-motion';
 import {
   addText,
@@ -56,7 +70,7 @@ export type Overlay = {
     closed: () => void,
   ): () => void;
   inspect(id: CardId, refusal: Refusal): void;
-  /** The inspection key, pressed while the scrim covers: shows a browse's selection large. */
+  /** The inspection key, pressed while the scrim covers: shows the ringed card of a window large. */
   inspectSelection(): void;
   /** The Menu button: raises the menu over whatever stands, and takes the whole menu back down. */
   menu(): void;
@@ -64,19 +78,22 @@ export type Overlay = {
   back(): boolean;
   /** A key pressed while a slot of the Controls window listens binds there, and is taken. */
   binds(press: Bind): boolean;
-  /** Raises the defeat screen once the chronicle has ended, and nothing while it runs. */
+  /**
+   * Raises the deal window while the chronicle waits on a deal and the defeat screen once it has
+   * ended, and nothing while it runs.
+   */
   render(chronicle: Chronicle): void;
   play(stage: Stage): Promise<void> | undefined;
 };
 
-/** One card offered on the scrim, and the number a press on it answers by. */
-type Offered = { readonly id: CardId; readonly at: number };
+/** One face offered on the scrim, and the number a press on it answers by. */
+type Offered = { readonly face: Face; readonly at: number };
 
-/** Where one offered card was laid out — about its own bottom centre, as a card is drawn — and its face. */
+/** Where one offered face was laid out — about its own bottom centre, as a card is drawn — and its drawing. */
 type Placed = Offered & {
   readonly x: number;
   readonly y: number;
-  readonly face: CardFace;
+  readonly drawn: CardFace;
 };
 
 /** The grid of cards a browse or an aim stands on, and how far it moves. */
@@ -111,12 +128,26 @@ type Browsing = {
 /** The aim window on the scrim, over what it offers. */
 type AimWindow = { readonly stands: 'aim-window'; readonly aim: Aiming };
 
-/** The two windows that offer cards, which a card shown large is taken off. */
-type Offering = Browsing | AimWindow;
+/**
+ * The deal window on the scrim: the chronicle the events phase dealt on, which its entries read
+ * their numbers off, and which of them is ringed. It closes on the take alone.
+ */
+type Dealing = {
+  readonly stands: 'deal';
+  readonly on: Chronicle;
+  /** The number the ringed entry was offered as, and nothing while none is ringed. */
+  selected: number | undefined;
+};
+
+/** The windows that offer cards, which a card shown large is taken off. */
+type Offering = Browsing | AimWindow | Dealing;
+
+/** The two windows that ring one of the cards they offer. */
+type Ringing = Browsing | Dealing;
 
 /**
- * What the scrim carries: a pile's cards, the aim window, one card shown large over what it was
- * taken off, a window of the menu, or the defeat screen.
+ * What the scrim carries: a pile's cards, the aim window, the deal window, one card shown large over
+ * what it was taken off, a window of the menu, or the defeat screen.
  */
 type Carried =
   | Offering
@@ -142,6 +173,7 @@ export function createOverlay(
   on: Surface,
   covering: (covered: boolean) => void,
   newChronicle: () => void,
+  take: (event: EventId) => void,
 ): Overlay {
   const scrim = scene.add
     .rectangle(0, 0, DESIGN_WIDTH, DESIGN_HEIGHT, SCRIM, SCRIM_ALPHA)
@@ -160,6 +192,8 @@ export function createOverlay(
   let scrolling: Scroll | undefined;
   /** The fall the defeat screen was raised on, kept so the menu can close back onto it. */
   let fallen: Defeat | undefined;
+  /** The deal standing, kept so the menu can close back onto its window; the take lets it go. */
+  let dealing: Dealing | undefined;
   /** The defeat screen still coming up; a render owns the rise and takes it down. */
   let rising: Phaser.GameObjects.Container | undefined;
 
@@ -189,6 +223,7 @@ export function createOverlay(
       case 'inspection':
         return aimStanding(what.over);
       case 'browse':
+      case 'deal':
       case 'window':
       case 'defeat':
         return undefined;
@@ -203,6 +238,7 @@ export function createOverlay(
         return carried;
       case 'browse':
       case 'aim-window':
+      case 'deal':
       case 'inspection':
       case 'defeat':
         return undefined;
@@ -224,15 +260,15 @@ export function createOverlay(
     covering(true);
   };
 
-  const showInspection = (id: CardId, refusal: Refusal, over: Offering | undefined): void => {
+  const showInspection = (face: Face, refusal: Refusal, over: Offering | undefined): void => {
     wipe();
     cover();
     carried = { stands: 'inspection', over };
     const height = heightOf(INSPECTION_WIDTH);
-    const { root } = createCardFace(scene, id, refusal, { width: INSPECTION_WIDTH });
+    const { root } = createCardFace(scene, face, refusal, { width: INSPECTION_WIDTH });
     root
       .setName('inspection')
-      .setData('card', id)
+      .setData('card', face.id)
       .setPosition(DESIGN_WIDTH / 2, (DESIGN_HEIGHT + height) / 2)
       .setDepth(SCRIM_DEPTH + 1)
       // The card is interactive so that both presses on it reach nothing beneath, the scrim
@@ -348,7 +384,7 @@ export function createOverlay(
       .setDepth(SCRIM_DEPTH + 1)
       .setData('overflow', overflow);
 
-    const placed = cards.map((card, index): Placed => {
+    const placed = cards.map((offered, index): Placed => {
       const row = Math.floor(index / columns);
       const column = index % columns;
       const inRow = Math.min(columns, cards.length - row * columns);
@@ -356,14 +392,14 @@ export function createOverlay(
       const x =
         (DESIGN_WIDTH - spanX) / 2 + column * (BROWSE_WIDTH + BROWSE_GAP) + BROWSE_WIDTH / 2;
       const y = firstY + row * (height + BROWSE_GAP) + height;
-      const face = createCardFace(scene, card.id, NO_REFUSAL, { width: BROWSE_WIDTH });
+      const drawn = createCardFace(scene, offered.face, NO_REFUSAL, { width: BROWSE_WIDTH });
       root.add(
-        face.root
+        drawn.root
           .setPosition(x, y)
           .setName(`${name}-card-${index}`)
-          .setData({ at: card.at, card: card.id }),
+          .setData({ at: offered.at, card: offered.face.id }),
       );
-      return { ...card, x, y, face };
+      return { ...offered, x, y, drawn };
     });
     shown.push(frame, root);
 
@@ -372,10 +408,10 @@ export function createOverlay(
     clip.show(root, MARGIN, top, DESIGN_WIDTH - 2 * MARGIN, frameHeight);
   };
 
-  /** The one card of a browse ringed, and none ringed at all where nothing is selected. */
-  const ring = (browsing: Browsing, at: number | undefined): void => {
-    browsing.selected = at;
-    for (const card of grid?.placed ?? []) card.face.select(card.at === at);
+  /** The one card of a window ringed, and none ringed at all where nothing is selected. */
+  const ring = (ringing: Ringing, at: number | undefined): void => {
+    ringing.selected = at;
+    for (const card of grid?.placed ?? []) card.drawn.select(card.at === at);
   };
 
   /** A browse raised, and raised again where the back from a card shown large brings it. */
@@ -390,7 +426,7 @@ export function createOverlay(
     );
     layGrid(
       'browse',
-      browsing.cards.map((id, at): Offered => ({ id, at })),
+      browsing.cards.map((id, at): Offered => ({ face: cardFace(id), at })),
       title.y + title.height + MARGIN,
       (at, press) => {
         switch (press) {
@@ -399,12 +435,51 @@ export function createOverlay(
             else ring(browsing, at);
             return;
           case 'right':
-            if (at !== undefined) showInspection(browsing.cards[at], NO_REFUSAL, browsing);
+            if (at !== undefined)
+              showInspection(cardFace(browsing.cards[at]), NO_REFUSAL, browsing);
             return;
         }
       },
     );
     ring(browsing, browsing.selected);
+  };
+
+  /**
+   * The deal window raised, and raised again where the back from a card shown large or from the menu
+   * brings it. A press on an entry rings it and a press on the ringed entry takes it: the window
+   * closes on the take, and the landing plays out under the caller.
+   */
+  const showDeal = (deal: Dealing): void => {
+    wipe();
+    cover();
+    carried = deal;
+    dealing = deal;
+
+    const title = raiseTitle('deal', text('deal.title'));
+    layGrid(
+      'deal',
+      deal.on.deal.map((id, at): Offered => ({ face: eventFace(deal.on, id), at })),
+      title.y + title.height + MARGIN,
+      (at, press) => {
+        switch (press) {
+          case 'left':
+            if (at === undefined || at !== deal.selected) {
+              ring(deal, at);
+              return;
+            }
+            dealing = undefined;
+            close();
+            take(deal.on.deal[at]);
+            return;
+          case 'right':
+            if (at !== undefined) {
+              showInspection(eventFace(deal.on, deal.on.deal[at]), NO_REFUSAL, deal);
+            }
+            return;
+        }
+      },
+    );
+    ring(deal, deal.selected);
   };
 
   /** The aim window raised, and raised again where the back from a card shown large brings it. */
@@ -431,14 +506,14 @@ export function createOverlay(
           return;
         case 'right': {
           const card = aim.cards.find((offered) => offered.at === at);
-          if (card !== undefined) showInspection(card.id, NO_REFUSAL, raised);
+          if (card !== undefined) showInspection(card.face, NO_REFUSAL, raised);
           return;
         }
       }
     });
   };
 
-  /** A browse or the aim window raised again, as the card it was showing large is put back. */
+  /** A window raised again, as the card it was showing large is put back. */
   const raise = (what: Offering): void => {
     switch (what.stands) {
       case 'browse':
@@ -446,6 +521,9 @@ export function createOverlay(
         return;
       case 'aim-window':
         showAim(what.aim);
+        return;
+      case 'deal':
+        showDeal(what);
         return;
     }
   };
@@ -521,10 +599,14 @@ export function createOverlay(
     shown.push(laid.root.setDepth(SCRIM_DEPTH + 1));
   };
 
-  /** The menu gone: back to the chronicle screen, or onto the defeat screen that stood under it. */
+  /**
+   * The menu gone: back to the chronicle screen, or onto the deal window or the defeat screen that
+   * stood under it.
+   */
   const shut = (): void => {
-    if (fallen === undefined) close();
-    else showDefeat(fallen);
+    if (fallen !== undefined) showDefeat(fallen);
+    else if (dealing !== undefined) showDeal(dealing);
+    else close();
   };
 
   /** The card shown large taken down, onto what it was taken off: the one path, whichever way. */
@@ -552,14 +634,38 @@ export function createOverlay(
       case 'aim-window':
         closeAim();
         return true;
+      case 'deal':
+        // The menu is raised here and not left to the chronicle screen's own back: the window
+        // stands until the take, so nothing under it may answer this key.
+        if (carried.selected === undefined) showWindow('menu');
+        else ring(carried, undefined);
+        return true;
       case 'defeat':
         return false;
     }
   };
 
-  onClick(scrim, () => {
-    back();
-  });
+  /**
+   * A left press beside the things a window offers: it takes the window back one step, as the back
+   * key does, and drops the ring and no more than that on the deal window.
+   */
+  const beside = (): void => {
+    if (carried === undefined) return;
+    switch (carried.stands) {
+      case 'deal':
+        ring(carried, undefined);
+        return;
+      case 'browse':
+      case 'aim-window':
+      case 'inspection':
+      case 'window':
+      case 'defeat':
+        back();
+        return;
+    }
+  };
+
+  onClick(scrim, beside);
 
   onClick(
     scrim,
@@ -571,6 +677,7 @@ export function createOverlay(
           return;
         case 'browse':
         case 'aim-window':
+        case 'deal':
         case 'window':
         case 'defeat':
           return;
@@ -609,21 +716,30 @@ export function createOverlay(
       offset = 0;
       showAim({
         aimed,
-        cards: chronicle.discardPile.map((id, at): Offered => ({ id, at })).reverse(),
+        cards: chronicle.discardPile
+          .map((id, at): Offered => ({ face: cardFace(id), at }))
+          .reverse(),
         chosen,
         closed,
       });
       return closeAim;
     },
     inspect(id: CardId, refusal: Refusal): void {
-      showInspection(id, refusal, undefined);
+      showInspection(cardFace(id), refusal, undefined);
     },
     inspectSelection(): void {
       if (carried === undefined) return;
       switch (carried.stands) {
         case 'browse': {
           const at = carried.selected;
-          if (at !== undefined) showInspection(carried.cards[at], NO_REFUSAL, carried);
+          if (at !== undefined) showInspection(cardFace(carried.cards[at]), NO_REFUSAL, carried);
+          return;
+        }
+        case 'deal': {
+          const at = carried.selected;
+          if (at !== undefined) {
+            showInspection(eventFace(carried.on, carried.on.deal[at]), NO_REFUSAL, carried);
+          }
           return;
         }
         case 'aim-window':
@@ -644,6 +760,8 @@ export function createOverlay(
     render(chronicle: Chronicle): void {
       if (chronicle.defeat !== undefined && fallen === undefined)
         void raiseDefeat(chronicle.defeat);
+      else if (chronicle.deal.length > 0 && dealing === undefined)
+        showDeal({ stands: 'deal', on: chronicle, selected: undefined });
       else stand();
     },
     play(stage: Stage): Promise<void> | undefined {

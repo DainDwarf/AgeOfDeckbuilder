@@ -1,19 +1,20 @@
 import { enteredFromCamp } from './enemies';
 import { nextRng, pickWeighted, type Rng } from './rng';
-import type { Chronicle } from './state';
-
-/** `PH_` marks a stand-in: neither of these is authored content, and both of them go. */
-export type EventId = 'PH_Raid' | 'PH_Famine';
+import type { Chronicle, EventId } from './state';
 
 /**
  * One entry of the schedule: what it weighs on a turn, nothing at all on a turn it may not land on,
- * and what it does to the chronicle it lands on. A draw of its own steps the generator that
- * chronicle carries.
+ * what its rules entry reads of the turn it is dealt on, and what it does to the chronicle it lands
+ * on. A draw of its own steps the generator that chronicle carries.
  */
 export type ScheduledEvent = {
   readonly weight: (turn: number) => number;
+  readonly reads: (chronicle: Chronicle) => Record<string, number>;
   readonly lands: (chronicle: Chronicle) => Chronicle;
 };
+
+/** How many of the schedule's entries a due turn deals, for the player to take one of. */
+const DEAL = 2;
 
 /** The least and the most a span of turns rolls, both ends included. */
 type Span = readonly [number, number];
@@ -27,10 +28,12 @@ export const SCHEDULE: {
   events: {
     PH_Raid: {
       weight: () => 1,
-      lands: (chronicle) => raid(chronicle, 1 + Math.floor(chronicle.turn / 10)),
+      reads: (chronicle) => ({ warriors: raiders(chronicle.turn) }),
+      lands: (chronicle) => raid(chronicle, raiders(chronicle.turn)),
     },
     PH_Famine: {
       weight: () => 1,
+      reads: () => ({}),
       lands: (chronicle) => ({
         ...chronicle,
         resources: { ...chronicle.resources, food: 0 },
@@ -49,16 +52,37 @@ export function scheduled(rng: Rng): { rng: Rng; nextEvent: number } {
 }
 
 /**
- * The events phase: a turn the schedule has nothing due on changes nothing and draws nothing, so the
- * end of turn raises no stage for it. On the due turn one entry is drawn among those weighing
- * anything on this turn, it lands, and the turn the next is due is rolled — in that order, which a
- * replay of the chronicle pins.
+ * The events phase: a turn the schedule has nothing due on, and one no entry weighs anything on,
+ * change nothing and draw nothing, so the end of turn raises no stage for either. On the due turn
+ * the entries weighing anything are drawn one after another, never the same one twice, and the
+ * chronicle carries the deal in the order dealt; a turn fewer of them weigh anything on deals what
+ * there is. Nothing lands until one of them is taken.
  */
 export function events(chronicle: Chronicle): Chronicle {
-  if (chronicle.turn < chronicle.nextEvent) return chronicle;
+  const weighing = weighed(chronicle.turn);
+  if (chronicle.turn < chronicle.nextEvent || weighing.length === 0) return chronicle;
 
-  const drawn = pickWeighted(chronicle.rng, weighed(chronicle.turn));
-  const landed = SCHEDULE.events[drawn.picked].lands({ ...chronicle, rng: drawn.rng });
+  let rng = chronicle.rng;
+  const deal: EventId[] = [];
+  while (deal.length < DEAL && weighing.length > 0) {
+    const drawn = pickWeighted(rng, weighing);
+    rng = drawn.rng;
+    deal.push(drawn.picked);
+    weighing.splice(
+      weighing.findIndex(([id]) => id === drawn.picked),
+      1,
+    );
+  }
+  return { ...chronicle, rng, deal };
+}
+
+/**
+ * One dealt entry taken: it lands on the chronicle the deal stood on, which is left with no deal,
+ * and the turn the next event is due is rolled — deal, land, roll, in that order, which a replay of
+ * the chronicle pins.
+ */
+export function taken(chronicle: Chronicle, event: EventId): Chronicle {
+  const landed = SCHEDULE.events[event].lands({ ...chronicle, deal: [] });
   const rolled = withinSpan(landed.rng, SCHEDULE.spacing);
   return { ...landed, rng: rolled.rng, nextEvent: landed.turn + rolled.turns };
 }
@@ -75,6 +99,11 @@ function weighed(turn: number): [EventId, number][] {
 function withinSpan(rng: Rng, [least, most]: Span): { rng: Rng; turns: number } {
   const step = nextRng(rng);
   return { rng: step.rng, turns: least + Math.floor(step.value * (most - least + 1)) };
+}
+
+/** What a raid enters on this turn: one warrior, and one more for every ten turns. */
+function raiders(turn: number): number {
+  return 1 + Math.floor(turn / 10);
 }
 
 /**

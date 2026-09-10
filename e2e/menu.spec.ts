@@ -1,6 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import { DECKS } from '../src/rules/cards';
-import { apply, beginChronicle, outcome } from '../src/rules/chronicle';
+import { beginChronicle } from '../src/rules/chronicle';
 import { tileKey } from '../src/rules/map';
 import type { Chronicle } from '../src/rules/state';
 import {
@@ -12,6 +12,7 @@ import {
   counted,
   dragOut,
   dragUnit,
+  endedTurn,
   endTurn,
   fallRun,
   firstSeed,
@@ -27,7 +28,7 @@ function standingRun(): number {
   return firstSeed('stands its city through three ended turns', (seed) => {
     let chronicle = beginChronicle(seed, DECKS.PH_Deck);
     for (let turn = 0; turn < 3; turn++) {
-      chronicle = outcome(apply(chronicle, { type: 'end-turn' }));
+      chronicle = endedTurn(chronicle);
     }
     return chronicle.defeat === undefined ? seed : undefined;
   });

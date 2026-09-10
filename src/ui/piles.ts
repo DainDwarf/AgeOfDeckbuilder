@@ -5,6 +5,7 @@ import {
   CARD_BASELINE,
   CARD_HEIGHT,
   CARD_WIDTH,
+  cardFace,
   createCardBack,
   createCardFace,
   createEmptySlot,
@@ -42,7 +43,7 @@ export function createPiles(scene: Phaser.Scene, browse: (pile: PileKind) => voi
   const topOf = (id: CardId | undefined): Phaser.GameObjects.Container =>
     id === undefined
       ? createEmptySlot(scene)
-      : createCardFace(scene, id, NO_REFUSAL, { faded: true }).root;
+      : createCardFace(scene, cardFace(id), NO_REFUSAL, { faded: true }).root;
 
   const render = (chronicle: Chronicle): void => {
     // Whoever is waiting on the wait is let go, so a cancelled one leaves nothing hanging on it.

@@ -72,6 +72,7 @@ function founded(tiles: Tile[], claimed: readonly TileCoords[] = []): Chronicle 
     city: CITY,
     held,
     turn: 1,
+    deal: [],
     resources: { food: 0, production: 0, military: 0, money: 0, science: 0, culture: 0 },
     population: held.length,
     assigned: [...held],

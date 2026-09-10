@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { apply, beginChronicle, outcome } from '../src/rules/chronicle';
+import { beginChronicle } from '../src/rules/chronicle';
 import type { CardId } from '../src/rules/state';
 import {
   besideTheCards,
@@ -7,6 +7,7 @@ import {
   cardOf,
   chronicleOf,
   click,
+  endedTurn,
   endTurn,
   firstSeed,
   offsetOf,
@@ -30,7 +31,7 @@ function browseSeed(): number {
   return firstSeed('ends three turns standing on fifteen discarded cards', (seed) => {
     let chronicle = beginChronicle(seed, DECK);
     for (let turn = 0; turn < 3; turn++) {
-      chronicle = outcome(apply(chronicle, { type: 'end-turn' }));
+      chronicle = endedTurn(chronicle);
     }
     return chronicle.defeat === undefined && chronicle.discardPile.length === 15 ? seed : undefined;
   });

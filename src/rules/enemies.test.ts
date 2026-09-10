@@ -11,6 +11,7 @@ import {
   cityOf,
   claimOf,
   culture,
+  endedTurn,
   enemiesOf,
   everyCard,
   field,
@@ -474,7 +475,7 @@ test('the enemy that moves in from its camp reaches the city and captures it', (
     tiles: camped(field(radius), [{ q: radius, r: 0 }]),
   });
   for (let turn = 0; turn < 20 && chronicle.defeat === undefined; turn++) {
-    chronicle = outcome(apply(chronicle, { type: 'end-turn' }));
+    chronicle = endedTurn(chronicle, 'PH_Raid');
   }
 
   expect(chronicle.defeat?.cause).toBe('capture');

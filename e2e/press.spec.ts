@@ -1,6 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import { CARDS, DECKS } from '../src/rules/cards';
-import { apply, beginChronicle, outcome, refusalOf } from '../src/rules/chronicle';
+import { beginChronicle, refusalOf } from '../src/rules/chronicle';
 import { tileKey } from '../src/rules/map';
 import { type Chronicle, playable } from '../src/rules/state';
 import { text } from '../src/ui/text';
@@ -17,6 +17,7 @@ import {
   click,
   dragOut,
   dragUnit,
+  endedTurn,
   endTurn,
   firstSeed,
   mapFrame,
@@ -56,7 +57,7 @@ function playableRun(): { seed: number; turn: number } {
     let chronicle = beginChronicle(seed, DECKS.PH_LongDeck);
     for (let turn = 1; turn <= 8; turn++) {
       if (atNothing(chronicle) !== -1) return { seed, turn };
-      chronicle = outcome(apply(chronicle, { type: 'end-turn' }));
+      chronicle = endedTurn(chronicle);
     }
     return undefined;
   });
@@ -73,7 +74,7 @@ function bothKindsRun(): { seed: number; turn: number } {
       let chronicle = beginChronicle(seed, DECKS.PH_Deck);
       for (let turn = 1; turn <= 8; turn++) {
         if (atTile(chronicle) !== -1 && atNothing(chronicle) !== -1) return { seed, turn };
-        chronicle = outcome(apply(chronicle, { type: 'end-turn' }));
+        chronicle = endedTurn(chronicle);
       }
       return undefined;
     },

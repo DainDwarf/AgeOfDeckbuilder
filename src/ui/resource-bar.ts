@@ -21,6 +21,9 @@ import type { Tooltip } from './tooltip';
 
 export const BAR_HEIGHT = 48;
 
+/** Where the bar stands on the chronicle screen: over the map and the hand, under the scrim. */
+const BAR_DEPTH = 10;
+
 /** The word of a reading, and the ink it is lifted to while the reading is latched down. */
 const WORD_INK = '#4a5058';
 const SUNK_WORD_INK = '#0d1014';
@@ -93,7 +96,7 @@ export function createResourceBar(
   cityMode: () => void,
   toggleYield: (resource: Resource) => void,
 ): ResourceBar {
-  const bar = scene.add.container(0, 0).setDepth(10);
+  const bar = scene.add.container(0, 0).setDepth(BAR_DEPTH);
   bar.add(scene.add.rectangle(0, 0, DESIGN_WIDTH, BAR_HEIGHT, PANEL_FILL).setOrigin(0, 0));
   bar.add(
     scene.add
@@ -104,8 +107,15 @@ export function createResourceBar(
 
   const slot = digitSlot(scene);
 
+  /**
+   * Whether the bar stands over the scrim, which it does while a deal waits to be taken. The map is
+   * under the scrim there, so the readings that act on it — the yield overlay's five, city mode's
+   * two — answer no press while it does.
+   */
+  let overScrim = false;
+
   const label = menuLabel(scene);
-  const entries = READINGS.map((key) => createEntry(scene, bar, tooltip, key));
+  const entries = READINGS.map((key) => createEntry(scene, bar, tooltip, key, () => overScrim));
   const layout = layOutBar({
     readings: entries.map((entry) => widthOf(entry, slot)),
     menu: label.width + 2 * MENU_PADDING,
@@ -117,14 +127,19 @@ export function createResourceBar(
 
   for (const entry of entries) {
     const { key } = entry;
-    if (managesCity(key)) onClick(entry.hover, cityMode);
-    else onClick(entry.hover, () => toggleYield(key));
+    onClick(entry.hover, () => {
+      if (overScrim) return;
+      if (managesCity(key)) cityMode();
+      else toggleYield(key);
+    });
   }
 
   /** The readings the bar has ticking; a render owns them and takes them down. */
   let rising: Entry[] = [];
 
   const render = (chronicle: Chronicle): void => {
+    overScrim = chronicle.deal.length > 0;
+    bar.setDepth(overScrim ? OVER_SCRIM_DEPTH : BAR_DEPTH);
     for (const entry of rising) stopMotion(scene, entry.ticking);
     rising = [];
     for (const entry of entries) {
@@ -247,6 +262,7 @@ function createEntry(
   bar: Phaser.GameObjects.Container,
   tooltip: Tooltip,
   key: Reading,
+  quiet: () => boolean,
 ): Entry {
   const chip = scene.add.rectangle(0, 0, 10, 10, RESOURCE_COLOURS[key]).setAngle(45);
   const word = addText(scene, 0, 0, text(`label.${key}`), WORD_STYLE).setOrigin(0, 0.5);
@@ -260,7 +276,11 @@ function createEntry(
     .setInteractive();
   onHover(
     hover,
-    () => tooltip.under(text(`tooltip.${key}`), hover.x, hover.x + hover.width / 2, BAR_HEIGHT + 8),
+    () => {
+      // The bubble stands under the scrim wherever the bar stands, so it is not raised over one.
+      if (quiet()) return;
+      tooltip.under(text(`tooltip.${key}`), hover.x, hover.x + hover.width / 2, BAR_HEIGHT + 8);
+    },
     () => tooltip.hide(),
   );
   // The well is added first, so the reading it holds is painted inside it.

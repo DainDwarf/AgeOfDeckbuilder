@@ -12,6 +12,7 @@ import {
   dragOut,
   dragUnit,
   drawnFaces,
+  endedTurn,
   endTurn,
   enter,
   firstSeed,
@@ -52,7 +53,7 @@ function fogRun(): Run {
       for (let turn = 1; turn <= 8; turn++) {
         const stepped = steppedThisTurn(chronicle);
         if (stepped !== undefined) return { seed, turn, ...stepped };
-        chronicle = outcome(apply(chronicle, { type: 'end-turn' }));
+        chronicle = endedTurn(chronicle);
       }
       return undefined;
     },
@@ -118,7 +119,7 @@ function enemyInFog(): EnemyRun {
     for (let turn = 1; turn <= 8; turn++) {
       const stepped = foggedThisTurn(chronicle);
       if (stepped !== undefined) return { seed, turn, ...stepped };
-      chronicle = outcome(apply(chronicle, { type: 'end-turn' }));
+      chronicle = endedTurn(chronicle);
       if (chronicle.defeat !== undefined) return undefined;
     }
     return undefined;
@@ -180,7 +181,7 @@ function riverCharting(): Charting {
     for (let turn = 1; turn <= 8; turn++) {
       const charted = chartedThisTurn(chronicle);
       if (charted !== undefined) return { seed, turn, out: charted };
-      chronicle = outcome(apply(chronicle, { type: 'end-turn' }));
+      chronicle = endedTurn(chronicle);
     }
     return undefined;
   });

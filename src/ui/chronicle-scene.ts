@@ -325,6 +325,9 @@ export class ChronicleScene extends Phaser.Scene {
         view.live(!over);
       },
       () => this.newChronicle(),
+      (event) => {
+        void playOut({ type: 'take', event });
+      },
     );
 
     const endTurn = this.addEndTurn(() => {

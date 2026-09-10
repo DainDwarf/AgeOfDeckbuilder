@@ -106,7 +106,8 @@ turn. **Settings** is where everything the player sets lives, and **Controls** i
 
 A window closes back one step, to the window it was opened from and then to the screen under it.
 The **back key**, Escape until it is rebound, backs out of whatever is open or pending, one step per
-press, and raises the menu only from a clean screen. Nothing pauses, because nothing runs: the game
+press, and raises the menu only from a clean screen — or from the events phase's deal window, which
+closes on nothing but the take. Nothing pauses, because nothing runs: the game
 is untimed, and a menu over the chronicle screen is the chronicle screen waiting.
 
 **Controls** lists every key the game binds — the four directions the map pans, the two it zooms,
@@ -160,7 +161,9 @@ under a window it inspects the window's own selection and never the screen's.
 the screen's selection waits under it.
 
 The **back key** walks these back in this order: the thing shown large, then a window's own
-selection and then the window, then the inspection, then the selection.
+selection and then the window, then the inspection, then the selection. Every window goes back this
+way but the events phase's deal window, which closes on nothing but the take and raises the menu
+where this order would have closed it.
 
 Two verbs cover it all. **Select** is the tile the map rings, the card lifted out of the hand, or
 the card ringed in a browse; **inspect** is the tile in the infopanel and the card shown large.
@@ -172,10 +175,10 @@ the card ringed in a browse; **inspect** is the tile in the infopanel and the ca
 
 A chronicle is a sequence of **turns**. Each turn, in this order:
 
-1. **Events.** The schedule's due events land and resolve at once; one that offers a choice is
-   decided now, on what the city has. Events land before the draw so the hand always answers a
-   known map — a deck has to hold up under whichever event comes, not under the one its hand
-   happened to fit.
+1. **Events.** On a due turn the schedule deals **two** 🔧 of its entries as cards and the player
+   takes one, which lands and resolves at once, on what the city has; the draw waits on the take.
+   Events land before the draw so the hand always answers a known map — a deck has to hold up under
+   whichever event comes, not under the one its hand happened to fit.
 2. **Draw.** The player draws a **hand** of **five** cards from the draw pile. 🔧 Buildings, a
    civilization or an effect may change the number. An empty draw pile is refilled by shuffling
    the discard pile into it.
@@ -376,6 +379,21 @@ left click on one of its cards selects it, ringed; clicked again it does nothing
 browse is there to be seen and no more — and a press beside the cards closes the browse once no card
 is selected. A pile is not a card, so a right click on one does nothing.
 
+The events phase's deal stands in a **window of its own**, which the end of turn's play-out ends on,
+and which a chronicle opened on a deal opens on. The entries dealt stand in one row, centred, as
+cards at the browse's width, in the order dealt, under a title asking for one of them. An event's
+card carries no cost, and reads its name, `EVENT` where a card reads its kind, and what it does on
+this turn — how many warriors the raid enters, that the famine empties the food stock. A left click
+rings one; a left click on the ringed one is the take, and the window closes on it with the landing
+and the draw playing out after; a press beside the cards drops the ring and nothing else. The right
+click shows a card large over the window, and a press beside it or the back key takes it down onto
+the window. The back key takes down the card shown large, else drops the ring, else raises the menu
+as it does from a clean chronicle screen: the window closes on nothing but the take, the menu opens
+over it and closes back onto it, and a new chronicle leaves it behind like anything else. The
+resource bar reads over its scrim — the choice is decided on what the city has, and a famine at an
+empty stock costs nothing — while the map stays under the scrim, so the bar's readings act on
+nothing for as long as the window stands.
+
 The right click finds a tile, a card of the hand, a card in a browse or one in the aim window, in
 city mode and while a card is being aimed alike; a tile it lands on afresh comes up at its first
 card.
@@ -562,15 +580,18 @@ across turns, never within one blow.
 Each age has a **schedule**: its set of events, each with a weight that shifts with the turn, and
 the spacing between them. An event lands every few turns, one at a time, never two on one turn:
 when one lands the schedule draws, seeded, how many turns on the next is due, and the chronicle
-carries that turn. The Events phase draws the due event from the entries, seeded, and the schedule
-escalates in what lands, never in how often — a raid drawn late is larger than one drawn early,
-and the harshest entries carry no weight at first, so they cannot land. How far apart events land
-and how the weights shift are numbers. An event is a script — spawn enemies, shock a resource,
-change tiles, take inhabitants — with, optionally, a choice made when it lands. The pitch's
-families (enemies, disasters, turmoil, fortunate) are tags on content, not rules. Several events a
-turn was rejected: choosing between hardships three times a turn is tedium. 🔧 Until the deck is
-data the schedule is a stand-in of two entries: a raid, whose warriors each enter on a free camp,
-and a famine that empties the food stock.
+carries that turn. On the due turn the Events phase deals two 🔧 of the entries weighing
+anything on that turn — drawn seeded and weighted, never the same one twice, and what there is
+where fewer weigh anything — and the player takes one of them, which lands. The turn stops on
+the deal: no hand is drawn, and the chronicle takes no command but the take until one is taken. The
+schedule escalates in what lands, never in how often — a raid drawn late is larger than one drawn
+early, and the harshest entries carry no weight at first, so they cannot land. How far apart events
+land, how many are dealt and how the weights shift are numbers. An event is a script — spawn
+enemies, shock a resource, change tiles, take inhabitants — with, optionally, a choice made when it
+lands. The pitch's families (enemies, disasters, turmoil, fortunate) are tags on content, not rules.
+Several events a turn was rejected: choosing between hardships three times a turn is tedium — a deal
+is one landing. 🔧 Until the deck is data the schedule is a stand-in of two entries: a raid, whose
+warriors each enter on a free camp, and a famine that empties the food stock.
 
 Events are not announced: the player learns the next one when it lands. Announcing them is
 something a technology or a civilization's rule can grant.

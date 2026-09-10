@@ -9,6 +9,7 @@ import {
   CARD_LIFT,
   CARD_WIDTH,
   type CardFace,
+  cardFace,
   createCardBack,
   createCardFace,
 } from './card-face';
@@ -270,7 +271,7 @@ export function createHand(scene: Phaser.Scene, on: Surface, presses: HandPresse
       const off = index - (held - 1) / 2;
       const refusal = refusalOf(chronicle, id);
       const slot: Slot = {
-        face: createCardFace(scene, id, refusal),
+        face: createCardFace(scene, cardFace(id), refusal),
         id,
         index,
         home: {

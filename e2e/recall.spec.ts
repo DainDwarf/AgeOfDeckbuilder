@@ -1,6 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import { DECKS } from '../src/rules/cards';
-import { apply, beginChronicle, outcome, refusalOf } from '../src/rules/chronicle';
+import { beginChronicle, refusalOf } from '../src/rules/chronicle';
 import { type Chronicle, playable } from '../src/rules/state';
 import { text } from '../src/ui/text';
 import {
@@ -8,6 +8,7 @@ import {
   chronicleOf,
   click,
   dragOut,
+  endedTurn,
   endTurn,
   firstSeed,
   type OnScreen,
@@ -25,7 +26,7 @@ function recallSeed(): number {
   return firstSeed('opens its third turn on a playable recall card', (seed) => {
     let chronicle = beginChronicle(seed, DECKS.PH_Deck);
     for (let turn = 1; turn < 3; turn++) {
-      chronicle = outcome(apply(chronicle, { type: 'end-turn' }));
+      chronicle = endedTurn(chronicle);
     }
     const found =
       chronicle.hand.includes('PH_Recall') && playable(refusalOf(chronicle, 'PH_Recall'));

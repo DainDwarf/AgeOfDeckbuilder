@@ -4,7 +4,7 @@ import { ENEMY_SCRIPTS } from './enemies';
 import { CITY_TILE, generateMap, type Tile, type TileCoords, tileKey } from './map';
 import { RESOURCES } from './resources';
 import { seedRng, shuffle as shuffleItems } from './rng';
-import { events, scheduled } from './schedule';
+import { events, scheduled, taken } from './schedule';
 import { charted } from './sight';
 import {
   type Block,
@@ -12,6 +12,7 @@ import {
   type Chronicle,
   type Cost,
   type DefeatCause,
+  type EventId,
   playable,
   type Refusal,
   type Snapshot,
@@ -30,6 +31,8 @@ import {
 
 export type Command =
   | { readonly type: 'end-turn' }
+  /** One entry of the deal the events phase left standing, taken to land. */
+  | { readonly type: 'take'; readonly event: EventId }
   | { readonly type: 'play'; readonly index: number; readonly aim: 'none' }
   | {
       readonly type: 'play';
@@ -75,8 +78,9 @@ const HAND_SIZE = 5;
  * with its cost paid, `refused` is the command the rules turned down, `assign` is an inhabitant put
  * on a tile, taken off one, or taken off one and put on another, `claim` is a tile bought with
  * culture and taken inside the border, `grow` is the food stock spent on one more inhabitant,
- * `turn` is the tick, where every unit's move points and action are refreshed, `events` is what
- * the schedule lands, and `capture` is the city falling to an enemy that stood on its tile.
+ * `turn` is the tick, where every unit's move points and action are refreshed, `deal` is what the
+ * schedule offers on a due turn, `events` is the entry taken landing, and `capture` is the city
+ * falling to an enemy that stood on its tile.
  */
 export type PlainStage =
   | 'played'
@@ -88,6 +92,7 @@ export type PlainStage =
   | 'grow'
   | 'capture'
   | 'turn'
+  | 'deal'
   | 'events'
   | 'draw'
   | 'shuffle';
@@ -130,6 +135,7 @@ export function beginChronicle(seed: number, deck: readonly CardId[]): Chronicle
             city: CITY_TILE,
             ...founding(),
             turn: 1,
+            deal: [],
             resources: { food: 0, production: 0, military: 0, money: 0, science: 0, culture: 0 },
             units: [],
             nextUnit: 1,
@@ -153,10 +159,14 @@ export function apply(chronicle: Chronicle, command: Command): Stage[] {
 
 /**
  * The stages a command resolves as before the map is charted. A chronicle that has ended refuses
- * every command, and a city left without population falls on the last stage whatever it was.
+ * every command and one waiting on a deal every command but the take, and a city left without
+ * population falls on the last stage whatever it was.
  */
 function resolved(chronicle: Chronicle, command: Command): Stage[] {
   if (chronicle.defeat !== undefined) return [{ name: 'refused', chronicle }];
+  if (chronicle.deal.length > 0 && command.type !== 'take') {
+    return [{ name: 'refused', chronicle }];
+  }
 
   const stages = stagesOf(chronicle, command);
 
@@ -189,6 +199,8 @@ function stagesOf(chronicle: Chronicle, command: Command): Stage[] {
   switch (command.type) {
     case 'end-turn':
       return endOfTurn(chronicle);
+    case 'take':
+      return take(chronicle, command.event);
     case 'play':
       return play(chronicle, command);
     case 'move':
@@ -224,8 +236,9 @@ export function outcome(stages: readonly Stage[]): Chronicle {
 
 /**
  * The end of turn, step by ordered step, each with the chronicle it leaves: a step that changed
- * nothing is absent, and the list ends at the capture when the city falls in the enemy phase. The
- * turn always ticks, so there is always a stage.
+ * nothing is absent, and the list ends at the capture when the city falls in the enemy phase, or at
+ * the deal a due turn's events phase leaves standing — the hand waits on the take. The turn always
+ * ticks, so there is always a stage.
  */
 function endOfTurn(chronicle: Chronicle): Stage[] {
   const stages: Stage[] = [];
@@ -255,7 +268,37 @@ function endOfTurn(chronicle: Chronicle): Stage[] {
     turn: standing.turn + 1,
     units: standing.units.map((unit) => refreshedAction(refreshedMovePoints(unit))),
   });
-  staged('events', events(standing));
+  staged('deal', events(standing));
+  if (standing.deal.length > 0) return stages;
+  raised(drawn(standing));
+  return stages;
+}
+
+/**
+ * One dealt entry taken: it lands in the one `events` stage, and the hand is drawn on the chronicle
+ * it leaves. An entry the deal does not hold, and a take made while no deal stands, are one
+ * `refused` stage on the chronicle as it stood.
+ */
+function take(chronicle: Chronicle, event: EventId): Stage[] {
+  if (!chronicle.deal.includes(event)) return [{ name: 'refused', chronicle }];
+
+  const landed = taken(chronicle, event);
+  return [{ name: 'events', chronicle: landed }, ...drawn(landed)];
+}
+
+/**
+ * The steps that fill the hand, each with the chronicle it leaves: the draw, the shuffle a dry draw
+ * pile needs, and the draw that follows it. A step that changed nothing is absent.
+ */
+function drawn(chronicle: Chronicle): Stage[] {
+  const stages: Stage[] = [];
+  let standing = chronicle;
+  const staged = (name: PlainStage, next: Chronicle): void => {
+    if (next === standing) return;
+    standing = next;
+    stages.push({ name, chronicle: next });
+  };
+
   staged('draw', draw(standing));
   staged('shuffle', shuffle(standing));
   staged('draw', draw(standing));

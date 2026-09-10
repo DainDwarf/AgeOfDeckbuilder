@@ -12,6 +12,8 @@ import {
   marksIn,
   open,
   standing,
+  stoppedTurn,
+  take,
   watch,
 } from './chronicle-screen';
 
@@ -19,8 +21,8 @@ import {
 const SEED = 1;
 
 /**
- * The turn this seed's schedule lands its first event on. It draws the raid, and every camp's tile
- * is free for it, the city having entered no unit of its own.
+ * The turn this seed's schedule deals its first event on. The raid is among what it offers, and
+ * every camp's tile is free for it, the city having entered no unit of its own.
  */
 const RAID = beginChronicle(SEED, DECKS.PH_Deck).nextEvent;
 
@@ -57,7 +59,11 @@ test('the map draws the camps it was dealt, and the raid’s warrior stands on o
   // The whole disc drawn, the buildings on it are the camps and the city's own wall.
   expect(await marksIn(page, 'buildings')).toBe(camps.length + 1);
 
-  for (let turn = opened.turn; turn < RAID; turn++) await endTurn(page);
+  for (let turn = opened.turn; turn < RAID - 1; turn++) await endTurn(page);
+  await stoppedTurn(page);
+
+  const dealt = await chronicleOf(page);
+  await take(page, dealt.deal.indexOf('PH_Raid'));
 
   const raided = await chronicleOf(page);
   const enemy = raided.units.find((unit) => unit.faction === 'enemy');

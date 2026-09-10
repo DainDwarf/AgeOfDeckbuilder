@@ -1,13 +1,14 @@
 import { expect, type Page, test } from '@playwright/test';
 import type Phaser from 'phaser';
 import { DECKS } from '../src/rules/cards';
-import { apply, beginChronicle, outcome } from '../src/rules/chronicle';
+import { beginChronicle } from '../src/rules/chronicle';
 import { type TileCoords, tileKey } from '../src/rules/map';
 import { inSight } from '../src/rules/sight';
 import {
   budget,
   chronicleOf,
   consoleKey,
+  endedTurn,
   endTurn,
   enter,
   firstSeed,
@@ -34,7 +35,7 @@ function unchartedEnemy(): Run {
   return firstSeed('stands an enemy on an uncharted tile inside eight turns', (seed) => {
     let chronicle = beginChronicle(seed, DECKS.PH_Deck);
     for (let turns = 1; turns <= 8; turns++) {
-      chronicle = outcome(apply(chronicle, { type: 'end-turn' }));
+      chronicle = endedTurn(chronicle);
       if (chronicle.defeat !== undefined) return undefined;
       const charted = new Set(chronicle.snapshots.map(tileKey));
       const enemy = chronicle.units.find((unit) => !charted.has(tileKey(unit.tile)));

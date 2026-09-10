@@ -9,6 +9,9 @@ export type DefeatCause = 'capture' | 'population';
 /** The city's fall, recorded on the chronicle it ended: what took it, and the turn it fell on. */
 export type Defeat = { readonly cause: DefeatCause; readonly turn: number };
 
+/** `PH_` marks a stand-in: neither of these is authored content, and both of them go. */
+export type EventId = 'PH_Raid' | 'PH_Famine';
+
 /** `PH_` marks a stand-in: none of these is authored content, and every one of them goes. */
 export type CardId =
   | 'PH_Worker'
@@ -51,6 +54,12 @@ export type Chronicle = {
    * the events phase draws on that turn and on no other.
    */
   readonly nextEvent: number;
+  /**
+   * The entries the events phase dealt, in the order dealt, and none at all while no deal stands.
+   * While one does the chronicle waits on the take: it has no hand, and every other command is
+   * refused.
+   */
+  readonly deal: readonly EventId[];
   readonly resources: Resources;
   readonly population: number;
   /** The tiles an inhabitant stands on, at most one to a tile; every other inhabitant is idle. */

@@ -1,6 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import { DECKS } from '../src/rules/cards';
-import { apply, beginChronicle, outcome } from '../src/rules/chronicle';
+import { apply, beginChronicle } from '../src/rules/chronicle';
 import { type TileCoords, tileKey } from '../src/rules/map';
 import { inSight } from '../src/rules/sight';
 import {
@@ -9,6 +9,7 @@ import {
   chronicleOf,
   dragOut,
   dragUnit,
+  endedTurn,
   endTurn,
   type Frame,
   firstSeed,
@@ -86,9 +87,10 @@ async function pushOut(page: Page, coord: TileCoords): Promise<void> {
 }
 
 /**
- * The first seed whose enemy crosses the map in an end of turn all to itself — one move, no arrival
- * landing in the same end of turn to carry the frame off after it, and a tile of the crossing in
- * sight, so that the map plays it at all — and how many ends of turn stand before that one.
+ * The first seed whose enemy crosses the map in an end of turn all to itself — one move, no deal in
+ * the same end of turn whose taking would land arrivals to carry the frame off after it, and a tile
+ * of the crossing in sight, so that the map plays it at all — and how many ends of turn stand before
+ * that one.
  */
 function moveRun(): { seed: number; turns: number; from: TileCoords; to: TileCoords } {
   return firstSeed('crosses an enemy in sight inside eight ends of turn', (seed) => {
@@ -103,12 +105,12 @@ function moveRun(): { seed: number; turns: number; from: TileCoords; to: TileCoo
       const [crossing] = moves;
       if (
         moves.length === 1 &&
-        !stages.some((stage) => stage.name === 'events') &&
+        !stages.some((stage) => stage.name === 'deal') &&
         (crossing.seen.has(tileKey(crossing.from)) || crossing.seen.has(tileKey(crossing.to)))
       ) {
         return { seed, turns, from: crossing.from, to: crossing.to };
       }
-      chronicle = outcome(stages);
+      chronicle = endedTurn(chronicle);
     }
     return undefined;
   });

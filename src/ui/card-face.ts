@@ -1,7 +1,15 @@
 import type Phaser from 'phaser';
 import { CARDS } from '../rules/cards';
 import { costOf } from '../rules/chronicle';
-import { type CardId, playable, type Refusal } from '../rules/state';
+import { SCHEDULE } from '../rules/schedule';
+import {
+  type CardId,
+  type Chronicle,
+  type Cost,
+  type EventId,
+  playable,
+  type Refusal,
+} from '../rules/state';
 import {
   ACCENT,
   addText,
@@ -88,6 +96,44 @@ export function drawCardSurface(
   surface.strokeRoundedRect(x + 0.5, y + 0.5, width - 1, height - 1, radius);
 }
 
+/**
+ * What a face reads: what it stands, for whoever reads that back off the object it is drawn on; its
+ * name; the kind it is labelled by; its rules entry; and what it costs, in the order the resource
+ * bar reads the resources.
+ */
+export type Face = {
+  readonly id: string;
+  readonly name: string;
+  readonly kind: string;
+  readonly rules: string;
+  readonly costs: readonly Cost[];
+};
+
+/** The face a card of the deck is drawn as. */
+export function cardFace(id: CardId): Face {
+  return {
+    id,
+    name: text(`card.${id}`),
+    kind: text(`kind.${CARDS[id].kind}`),
+    rules: text(`rules.${id}`),
+    costs: costOf(id),
+  };
+}
+
+/**
+ * The face one entry of a deal is drawn as: an event costs nothing, and its rules entry reads the
+ * numbers of the turn it was dealt on.
+ */
+export function eventFace(chronicle: Chronicle, id: EventId): Face {
+  return {
+    id,
+    name: text(`event.${id}`),
+    kind: text('kind.event'),
+    rules: text(`rules.${id}`, SCHEDULE.events[id].reads(chronicle)),
+    costs: [],
+  };
+}
+
 export type CardFace = {
   readonly root: Phaser.GameObjects.Container;
   /** Draws the card as the selection, or as one more card lying where it lies. */
@@ -97,12 +143,12 @@ export type CardFace = {
 };
 
 /**
- * A card, drawn about its own bottom centre so a container's angle fans it from that corner. The
- * refusal marks the costs the city cannot pay, and any refusal at all draws the card unplayable.
+ * A face, drawn about its own bottom centre so a container's angle fans it from that corner. The
+ * refusal marks the costs the city cannot pay, and any refusal at all draws the face unplayable.
  */
 export function createCardFace(
   scene: Phaser.Scene,
-  id: CardId,
+  face: Face,
   refusal: Refusal,
   { faded = false, width = CARD_WIDTH }: { faded?: boolean; width?: number } = {},
 ): CardFace {
@@ -125,7 +171,7 @@ export function createCardFace(
 
   const middle = top + 0.55 * em;
   let x = left;
-  for (const { resource, amount } of costOf(id)) {
+  for (const { resource, amount } of face.costs) {
     const marked = refusal.unaffordable.includes(resource);
     const chip = scene.add
       .rectangle(x + 0.4 * em, middle, 0.8 * em, 0.8 * em, tone(RESOURCE_COLOURS[resource]))
@@ -148,14 +194,14 @@ export function createCardFace(
     x = value.x + value.width + 0.35 * em;
   }
 
-  const name = addText(scene, right, middle, text(`card.${id}`), {
+  const name = addText(scene, right, middle, face.name, {
     fontFamily: UI_FONT,
     fontSize: `${0.75 * em}px`,
     fontStyle: 'bold',
     color: css(tone(palette.ink)),
   }).setOrigin(1, 0.5);
 
-  const kind = addText(scene, 0, -1 - pad, text(`kind.${CARDS[id].kind}`).toUpperCase(), {
+  const kind = addText(scene, 0, -1 - pad, face.kind.toUpperCase(), {
     fontFamily: UI_FONT,
     fontSize: `${0.65 * em}px`,
     color: css(tone(KIND_INK)),
@@ -166,7 +212,7 @@ export function createCardFace(
   const span = (2 / 3) * size;
   // Phaser runs the callback from inside updateText, on a context whose font it has just synced.
   let run!: Run;
-  const rules = addText(scene, 0, kind.y - kind.height - 0.45 * em, text(`rules.${id}`), {
+  const rules = addText(scene, 0, kind.y - kind.height - 0.45 * em, face.rules, {
     fontFamily: UI_FONT,
     fontSize: `${size}px`,
     color: css(tone(palette.ink)),

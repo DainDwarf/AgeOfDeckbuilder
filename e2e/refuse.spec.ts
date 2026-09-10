@@ -1,6 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import { CARDS, DECKS, refuses } from '../src/rules/cards';
-import { apply, beginChronicle, costOf, outcome, refusalOf } from '../src/rules/chronicle';
+import { beginChronicle, costOf, refusalOf } from '../src/rules/chronicle';
 import { tileAt, tileKey } from '../src/rules/map';
 import { type CardId, type Chronicle, playable } from '../src/rules/state';
 import { text } from '../src/ui/text';
@@ -12,6 +12,7 @@ import {
   chronicleOf,
   dragOut,
   dragUnit,
+  endedTurn,
   endTurn,
   firstSeed,
   mapFrame,
@@ -50,7 +51,7 @@ function refusedRun(
     let chronicle = beginChronicle(seed, DECKS.PH_Deck);
     for (let turn = 1; turn <= 8; turn++) {
       if (lies(chronicle) !== -1) return { seed, turn };
-      chronicle = outcome(apply(chronicle, { type: 'end-turn' }));
+      chronicle = endedTurn(chronicle);
     }
     return undefined;
   });
