@@ -25,6 +25,17 @@ Proven on 2026-09-10 with in-page probes: not related to how many Texts exist, t
 `BatchHandlerQuad#batch` are exact; the loss is in the shader. The upstream `master` still
 compares with `==`, and 4.2.1 is the latest release.
 
+## Where it shows, and where it does not
+
+Whether the drift is visible depends on the rasteriser. It **tears under SwiftShader**, the
+software WebGL that headless Chromium uses: the `ui-check` agent, every e2e spec, and CI all
+render there, and that is where the garbling was seen. It **renders correctly on the user's
+NVIDIA RTX 3080 Ti through ANGLE D3D11**, headed or headless. Nothing is known about mobile or
+integrated GPUs. So this line changes nothing the user sees on their own machine today; it keeps
+the verification surface honest (a fanned card's text can be judged from a screenshot again), and
+it protects whatever hardware interpolates the way SwiftShader does. The user knows this and kept
+the line.
+
 ## Scope
 
 - **`maxTextures: 1` in the game config**, `src/main.ts:43-51`. With one texture per batch the

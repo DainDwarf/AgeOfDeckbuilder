@@ -23,7 +23,9 @@ Phaser 4.2.1 shader defect, reported by the user as
 board line *Rotated Texts stop tearing* (`board/rotated-texts.md`), which ships **before** this
 one. In short: a rotated textured quad in a multi-texture batch loses fragments to a float
 equality test in the fragment shader. The fanned hand rotates its cards, so their Texts tear;
-more Texts per card meant more tearing, which is what a `Text` per word showed. Nothing in this
+more Texts per card meant more tearing, which is what a `Text` per word showed. It shows on the
+software WebGL that headless Chromium renders with (the `ui-check` agent, the e2e suite, CI), not
+on the user's own GPU, which interpolates exactly. Nothing in this
 line touches that. If a rules line looks torn while this line is being verified, the workaround
 line has not shipped or was undone; it is not this line's defect.
 
