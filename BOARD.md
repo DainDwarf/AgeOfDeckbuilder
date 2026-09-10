@@ -12,6 +12,12 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
+- **The chronicle's tests split by the module they cover** — `chronicle.test.ts` (3067 lines, 179
+  tests) breaks up: the schedule's tests to `schedule.test.ts`, the camp and enemy tests to
+  `enemies.test.ts`, the card tests to `cards.test.ts`, and the fixtures the resulting files share
+  into one module beside them. No test body changes and the same 179 tests run. `DOGMAS.md` →
+  *Testing* gains the fixture module's shape, a fixture no longer being "defined in the test".
+  Doc-impact: `docs/DOGMAS.md`.
 - **The events phase deals a choice** — the phase offers several of the schedule's events as cards
   and the player takes one, which resolves; this replaces the design's "land and resolve at once".
   An e2e spec plays a turn through the deal. Doc-impact: `docs/DESIGN.md`, `docs/GLOSSARY.md`.

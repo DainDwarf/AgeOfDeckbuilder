@@ -75,6 +75,10 @@ a [`BOARD.md`](BOARD.md) line. Say
   either way: assignment is management; buildings, improvements and unit spawn are cards; unit
   movement and attacks are management. Each switch is the same rules function behind a different
   input, plus the design page, the glossary and a rebalance.
+- **The famine deals a card, not a number**: the stand-in famine empties the food stock; instead
+  an event's script could lay a card in the chronicle's deck — the mechanism the design already
+  gives a captured camp's reward. Which card, whether it is a burden the player has to play out or
+  draw around, and whether events deal cards generally, is undesigned.
 - **Worker actions**: a worker spends its per-turn pool to gain the yield of the tile it stands
   on. Only a tile the city does not own? Buildings included or not?
 - **Consuming the worker on building**: a building card spends the worker that stands on the tile,
