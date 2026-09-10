@@ -127,6 +127,32 @@ const density = await page.evaluate(() => {
 // ratio === deviceScaleFactor at every viewport size
 ```
 
+## The renderer you see is not the user's
+
+Headless Chromium draws WebGL with **SwiftShader**, a software rasteriser. The user's browser
+draws with a GPU. They differ in ways that show on the canvas: a rotated textured quad — the
+text on a fanned card — can lose triangles to transparent wedges or show a neighbouring texture
+on SwiftShader while the same frame is whole on hardware (Phaser 4.2.1,
+[phaserjs/phaser#7372](https://github.com/phaserjs/phaser/issues/7372)). Other GPUs may sit on
+either side; nobody has measured them.
+
+So: **read the renderer once per run and write it into your report**, from the driver script —
+
+```js
+const renderer = await page.evaluate(() => {
+  const gl = document.querySelector('canvas').getContext('webgl2') || document.querySelector('canvas').getContext('webgl');
+  const ext = gl.getExtension('WEBGL_debug_renderer_info');
+  return ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER);
+});
+log.push(`renderer: ${renderer}`);
+```
+
+— and **report every rendering defect you see, never softened**: a torn quad, a wedge cut out of
+text, a letter from another object, a missing triangle. Label it as *seen on <renderer>;
+hardware unverified*. It is a finding either way — the caller asks the user whether their screen
+shows the same, and that answer decides what it is. Never silently drop it, and never adjust the
+check to avoid it.
+
 ## The console
 
 Errors and warnings are always checked. A clean screenshot over a throwing console is a **FAIL**.

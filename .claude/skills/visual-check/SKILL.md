@@ -29,6 +29,25 @@ on — so it is on the session to keep the line.
    the user's save; the agent drives its own empty profile and cannot reach it.
 5. **Hand the app to the user** for the feel check, with what to look at.
 
+## A rendering defect the agent saw
+
+The agent renders on SwiftShader, software WebGL; the user renders on a GPU, and the two can
+disagree at the pixel level (a rotated card's text tearing on one and not the other,
+phaserjs/phaser#7372). When the report holds a **rendering** defect — a torn quad, a wedge cut
+out of text, a letter from another object, a missing triangle, as opposed to a layout, overlap or
+logic finding — relay it as the agent labelled it, *seen on <renderer>; hardware unverified*, and
+**ask the user whether their display shows the same** at the place named. Their answer decides
+what it is:
+
+- They see it: a bug, into `/intake` as one.
+- They do not: a rasteriser-dependent defect, still into `/intake` — it will break on some other
+  GPU, OS or configuration, and it blinds every screenshot the agent takes of that place — but as
+  its own line with its own workaround, the way the tearing became *Rotated Texts stop tearing*.
+
+Never code around it inside the line being shipped, and never let it change what the line was
+meant to build. A workaround chosen without the user's answer is how a hand-rolled word wrap
+once entered this repository.
+
 ## Scope
 
 A check must be reachable in a few clicks from a fresh load. If it needs prior progress, the agent
