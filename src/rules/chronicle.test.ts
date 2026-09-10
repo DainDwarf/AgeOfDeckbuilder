@@ -453,18 +453,42 @@ function withWorkerBeside(chronicle: Chronicle, tile: TileCoords): Chronicle {
 /** How many turns these fixtures end before they give up on a schedule that has landed nothing. */
 const SCHEDULE_BOUND = 30;
 
-/**
- * End of turn after end of turn until the schedule lands an event, and the chronicle that turn left.
- * The famine weighs nothing until the fifteenth turn, so the event it stops at is the first raid.
- */
-function toFirstEvent(chronicle: Chronicle): Chronicle {
+/** The chronicle every event landed on over thirty ends of turn, in the order they landed. */
+function landings(chronicle: Chronicle): Chronicle[] {
   let standing = chronicle;
+  const landed: Chronicle[] = [];
   for (let turn = 0; turn < SCHEDULE_BOUND; turn++) {
     const stages = apply(standing, { type: 'end-turn' });
     standing = outcome(stages);
-    if (stages.some((stage) => stage.name === 'events')) return standing;
+    if (stages.some((stage) => stage.name === 'events')) landed.push(standing);
   }
-  throw new Error(`this schedule landed no event in ${SCHEDULE_BOUND} turns`);
+  return landed;
+}
+
+/**
+ * End of turn after end of turn until a raid enters an enemy, and the chronicle that turn left. A
+ * fixture with no camp free gives up instead: the famine draws as often as the raid on every turn,
+ * and the enemy standing is what tells which of them landed.
+ */
+function toFirstRaid(chronicle: Chronicle): Chronicle {
+  let standing = chronicle;
+  for (let turn = 0; turn < SCHEDULE_BOUND; turn++) {
+    standing = outcome(apply(standing, { type: 'end-turn' }));
+    if (enemiesOf(standing).length > 0) return standing;
+  }
+  throw new Error(`this schedule entered no raider in ${SCHEDULE_BOUND} turns`);
+}
+
+/**
+ * The chronicle the last of thirty turns' landings left: what a fixture no raid can enter a warrior
+ * on is read through, there being no landing of its own for it to stop at.
+ */
+function throughSchedule(chronicle: Chronicle): Chronicle {
+  const landed = landings(chronicle);
+  if (landed.length === 0) {
+    throw new Error(`this schedule landed no event in ${SCHEDULE_BOUND} turns`);
+  }
+  return landed[landed.length - 1];
 }
 
 /**
@@ -473,16 +497,9 @@ function toFirstEvent(chronicle: Chronicle): Chronicle {
  * the city: what a landing leaves to read is its turn, against the food the plain tile keeps giving.
  */
 function scheduleOf(seed: number): { turn: number; emptied: boolean }[] {
-  let standing = cityOf(['urban', 'plain'], { ...NO_GROWTH, ...scheduled(seedRng(seed)) });
-  const landed: { turn: number; emptied: boolean }[] = [];
-  for (let turn = 0; turn < SCHEDULE_BOUND; turn++) {
-    const stages = apply(standing, { type: 'end-turn' });
-    standing = outcome(stages);
-    if (stages.some((stage) => stage.name === 'events')) {
-      landed.push({ turn: standing.turn, emptied: standing.resources.food === 0 });
-    }
-  }
-  return landed;
+  return landings(cityOf(['urban', 'plain'], { ...NO_GROWTH, ...scheduled(seedRng(seed)) })).map(
+    (landed) => ({ turn: landed.turn, emptied: landed.resources.food === 0 }),
+  );
 }
 
 /** The seeds a test over the whole schedule runs: enough of them for both entries to be drawn. */
@@ -2516,11 +2533,11 @@ test('a card the city falls short for is refused for the resource it is short of
   expect(refusalOf(paid, 'PH_Farm')).toEqual({ unaffordable: [], blocked: [] });
 });
 
-test('an event lands on the fifth turn to the seventh, and the next three to seven turns after', () => {
+test('an event lands on the third turn to the seventh, and the next three to seven turns after', () => {
   for (const seed of SEEDS) {
     const turns = scheduleOf(seed).map((landed) => landed.turn);
 
-    expect(turns[0]).toBeGreaterThanOrEqual(5);
+    expect(turns[0]).toBeGreaterThanOrEqual(3);
     expect(turns[0]).toBeLessThanOrEqual(7);
     for (let at = 1; at < turns.length; at++) {
       expect(turns[at] - turns[at - 1]).toBeGreaterThanOrEqual(3);
@@ -2557,7 +2574,7 @@ test('the schedule lands nothing before its due turn, and its raid enters a warr
 test('which camp the raid enters a warrior on is drawn from the seeded generator', () => {
   const disc = camped(field(4), CAMPS);
   const raidOf = (seed: number): TileCoords =>
-    toFirstEvent(cityOf(['urban'], { tiles: disc, rng: seedRng(seed) })).units[0].tile;
+    toFirstRaid(cityOf(['urban'], { tiles: disc, rng: seedRng(seed) })).units[0].tile;
 
   expect(raidOf(7)).toEqual(raidOf(7));
   expect(new Set(SEEDS.map((seed) => tileKey(raidOf(seed)))).size).toBeGreaterThan(1);
@@ -2572,9 +2589,9 @@ test('the raid enters its warrior on a camp no unit stands on, and on nothing el
       camps.map((camp) => worker(camp)),
     );
 
-  expect(CAMPS.map(tileKey)).toContain(tileKey(toFirstEvent(open).units[0].tile));
-  expect(toFirstEvent(stoodOn(taken)).units[taken.length].tile).toEqual(onlyOpen);
-  expect(toFirstEvent(stoodOn(CAMPS)).units).toHaveLength(CAMPS.length);
+  expect(CAMPS.map(tileKey)).toContain(tileKey(toFirstRaid(open).units[0].tile));
+  expect(toFirstRaid(stoodOn(taken)).units[taken.length].tile).toEqual(onlyOpen);
+  expect(throughSchedule(stoodOn(CAMPS)).units).toHaveLength(CAMPS.length);
 });
 
 test('a raid enters one warrior, and one more for every ten turns', () => {
@@ -2585,8 +2602,11 @@ test('a raid enters one warrior, and one more for every ten turns', () => {
           .length,
     ).filter((entered) => entered > 0);
 
-  for (let due = 5; due <= 9; due++) {
-    expect(raiders(due)).toEqual(SEEDS.map(() => 1));
+  for (let due = 3; due <= 9; due++) {
+    const early = raiders(due);
+
+    expect(early.length).toBeGreaterThan(0);
+    expect([...new Set(early)]).toEqual([1]);
   }
   for (let due = 20; due <= 29; due++) {
     const late = raiders(due);
@@ -2613,18 +2633,17 @@ test('a raid with more warriors than camps to enter on enters what it can', () =
   expect([...new Set(raiders)]).toEqual([two.length]);
 });
 
-test('no famine lands before the fifteenth turn, and one lands after it', () => {
+test('a famine lands as readily on the third turn as the twentieth, and empties the stock', () => {
   const stocks = (due: number): number[] =>
     SEEDS.map(
       (seed) =>
         outcome(apply(awaiting(due, { rng: seedRng(seed) }), { type: 'end-turn' })).resources.food,
     );
 
-  const after = stocks(15);
-
-  expect(stocks(14)).toEqual(SEEDS.map(() => STOCKED));
-  expect(after).toContain(0);
-  for (const food of after) expect([0, STOCKED]).toContain(food);
+  for (const due of [3, 14, 20]) {
+    expect(stocks(due)).toContain(0);
+    for (const food of stocks(due)) expect([0, STOCKED]).toContain(food);
+  }
 });
 
 test('the famine empties the food stock, and leaves the population and its threshold alone', () => {
@@ -2714,7 +2733,7 @@ test('a captured camp is silent: the raid enters on a camp still standing', () =
     units: besieged.map(worker),
   });
 
-  const raided = toFirstEvent(held);
+  const raided = toFirstRaid(held);
 
   for (const camp of besieged) expect(buildingAt(raided, camp)).toBeUndefined();
   expect(buildingAt(raided, kept)).toBe('PH_Camp');
@@ -2724,7 +2743,7 @@ test('a captured camp is silent: the raid enters on a camp still standing', () =
 test('a chronicle whose every camp is captured takes no raider at all', () => {
   const held = cityOf(['urban'], { tiles: camped(field(4), CAMPS), units: CAMPS.map(worker) });
 
-  const raided = toFirstEvent(held);
+  const raided = throughSchedule(held);
 
   expect(raided.tiles.some((tile) => tile.building === 'PH_Camp')).toBe(false);
   expect(enemiesOf(raided)).toEqual([]);

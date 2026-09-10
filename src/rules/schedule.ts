@@ -20,17 +20,17 @@ type Span = readonly [number, number];
 
 /** The age's schedule: how far apart its events land, and every entry it draws from. */
 export const SCHEDULE: {
-  readonly spacing: { readonly first: Span; readonly next: Span };
+  readonly spacing: Span;
   readonly events: Record<EventId, ScheduledEvent>;
 } = {
-  spacing: { first: [5, 7], next: [3, 7] },
+  spacing: [3, 7],
   events: {
     PH_Raid: {
-      weight: (turn) => (turn >= 5 ? 1 : 0),
+      weight: () => 1,
       lands: (chronicle) => raid(chronicle, 1 + Math.floor(chronicle.turn / 10)),
     },
     PH_Famine: {
-      weight: (turn) => (turn >= 15 ? 1 : 0),
+      weight: () => 1,
       lands: (chronicle) => ({
         ...chronicle,
         resources: { ...chronicle.resources, food: 0 },
@@ -44,7 +44,7 @@ export const SCHEDULE: {
  * opens: the roll is taken before that chronicle's first events phase runs.
  */
 export function scheduled(rng: Rng): { rng: Rng; nextEvent: number } {
-  const rolled = withinSpan(rng, SCHEDULE.spacing.first);
+  const rolled = withinSpan(rng, SCHEDULE.spacing);
   return { rng: rolled.rng, nextEvent: rolled.turns };
 }
 
@@ -59,7 +59,7 @@ export function events(chronicle: Chronicle): Chronicle {
 
   const drawn = pickWeighted(chronicle.rng, weighed(chronicle.turn));
   const landed = SCHEDULE.events[drawn.picked].lands({ ...chronicle, rng: drawn.rng });
-  const rolled = withinSpan(landed.rng, SCHEDULE.spacing.next);
+  const rolled = withinSpan(landed.rng, SCHEDULE.spacing);
   return { ...landed, rng: rolled.rng, nextEvent: landed.turn + rolled.turns };
 }
 

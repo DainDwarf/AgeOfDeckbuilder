@@ -17,7 +17,10 @@ const DECK: readonly CardId[] = [
   'PH_March',
 ];
 
-/** No enemy arrives before the fifth turn, so the two turns this ends are safe on any seed. */
+/**
+ * The two turns this ends are safe on any seed: no event lands before the third turn, and a raid
+ * landing on it enters its warriors on camps too far off to cross to the city by then.
+ */
 const SEED = 1;
 
 test('a pointer sweeping the hand while the end of turn plays leaves the chronicle screen live behind it', async ({

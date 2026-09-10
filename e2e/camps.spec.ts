@@ -19,8 +19,8 @@ import {
 const SEED = 1;
 
 /**
- * The turn this seed's schedule lands its first event on. It is a raid — the famine weighs nothing
- * that early — and every camp's tile is free for it, the city having entered no unit of its own.
+ * The turn this seed's schedule lands its first event on. It draws the raid, and every camp's tile
+ * is free for it, the city having entered no unit of its own.
  */
 const RAID = beginChronicle(SEED, DECKS.PH_Deck).nextEvent;
 
