@@ -19,15 +19,15 @@ API rather than go around it; the line does that and drops the ruler.
 The commit that introduced the ruler said a `Text` per word "garbled other cards' text", and the
 first version of this dossier read that as a misuse of `Text`. It was not. The garbling is a
 Phaser 4.2.1 shader defect, reported by the user as
-[phaserjs/phaser#7372](https://github.com/phaserjs/phaser/issues/7372) and worked around by the
-board line *Rotated Texts stop tearing* (`board/rotated-texts.md`), which ships **before** this
-one. In short: a rotated textured quad in a multi-texture batch loses fragments to a float
-equality test in the fragment shader. The fanned hand rotates its cards, so their Texts tear;
-more Texts per card meant more tearing, which is what a `Text` per word showed. It shows on the
-software WebGL that headless Chromium renders with (the `ui-check` agent, the e2e suite, CI), not
-on the user's own GPU, which interpolates exactly. Nothing in this
-line touches that. If a rules line looks torn while this line is being verified, the workaround
-line has not shipped or was undone; it is not this line's defect.
+[phaserjs/phaser#7372](https://github.com/phaserjs/phaser/issues/7372) and worked around in
+`a6bc00b` by `maxTextures: 1` in `src/main.ts`; `board/rotated-texts.md` holds the full finding
+and is deleted with this line. In short: a rotated textured quad in a multi-texture batch loses
+fragments to a float equality test in the fragment shader. The fanned hand rotates its cards, so
+their Texts tear; more Texts per card meant more tearing, which is what a `Text` per word showed.
+It shows on the software WebGL that headless Chromium renders with (the `ui-check` agent, the e2e
+suite, CI), not on the user's own GPU, which interpolates exactly. Nothing in this line touches
+that. If a rules line looks torn while this line is being verified, the workaround was undone; it
+is not this line's defect.
 
 So: one `Text` per rules line stays because it is the simplest shape, not because several would
 garble. The ruler goes because the API has a place for the measurement. The report has nothing
