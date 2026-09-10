@@ -15,6 +15,11 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 - **The events phase deals a choice** — the phase offers several of the schedule's events as cards
   and the player takes one, which resolves; this replaces the design's "land and resolve at once".
   An e2e spec plays a turn through the deal. Doc-impact: `docs/DESIGN.md`, `docs/GLOSSARY.md`.
+- **The famine deals a card** — the stand-in famine lays a card on top of the draw pile instead of
+  emptying the food stock: an instant, single use, carrying a **hazard** — the keyword for what a
+  card does at the end of any turn it is still in the hand, before the hand is discarded — that
+  empties the food stock; played for its cost, it leaves the chronicle. Rules tests pin both fates
+  and the landing. Doc-impact: `docs/DESIGN.md`, `docs/GLOSSARY.md`.
 - **The chronicle has a length** — the capstone's turn is fixed at the founding and read on the
   chronicle screen; the end-turn button's readout is re-judged against it.
   Doc-impact: `docs/DESIGN.md`.
