@@ -46,6 +46,10 @@ const game = new Phaser.Game({
   height: backing.height,
   backgroundColor: '#0d1117',
   disableContextMenu: true,
+  // Phaser 4.2.1 picks a batch's sampler by exact float equality on an interpolated varying, so a
+  // rotated Text tears (phaserjs/phaser#7372). One texture per batch skips the comparison; the
+  // line goes when a release fixes the shader.
+  maxTextures: 1,
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
   scene: [new ChronicleScene(askedSeed(), askedDeck())],
 });

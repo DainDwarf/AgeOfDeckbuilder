@@ -12,12 +12,6 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
-- **Rotated Texts stop tearing** — the game boots with `maxTextures: 1`, so every batch draws one
-  texture and no fragment picks its sampler by comparing an interpolated float; a trap comment on
-  that config line names phaserjs/phaser#7372 as what the setting works around and when it goes.
-  A `ui-check` pass on a fanned hand shows no torn letter and no letter from another card (the
-  tearing shows on the software WebGL headless Chromium renders with, not on the user's GPU).
-  Doc-impact: none. [board/rotated-texts.md](board/rotated-texts.md)
 - **The rules line wraps through Phaser** — the card's rules line is laid out by a
   `wordWrapCallback` on the one `Text` that draws it, measured through that `Text`'s own context,
   and the per-face ruler `Text` is gone; every rule `text-run.test.ts` pins still holds and the
