@@ -137,9 +137,10 @@ makes twice becomes a line here (the ratchet, at `/upkeep`).
   the test file, or in a fixture module beside it — and pushed through the real code path; where
   randomness is involved, from a seed. Never a function's signature, never a real piece of content's
   numbers, never a Phaser detail — a pixel, a frame count, a coordinate on screen.
-- **A shared fixture lives in `src/rules/fixtures.ts`**, beside the tests: a helper two or more test
-  files use moves there and is exported, one a single file uses stays in that file. Nothing outside
-  a test imports the module.
+- **A shared fixture lives in `src/rules/fixtures.ts`**, beside the tests: a helper moves there
+  when two or more test files use it, or when a fixture already there needs it; one a single test
+  file uses and nothing shared depends on stays in that file. What a test names is exported, what
+  only the module uses is not, and nothing outside a test imports it.
 - **Rules tests are Vitest, in Node**, co-located with the module they cover as `<module>.test.ts`.
   So is a pure function on the UI side — a settings rule, a layout computation — that a Playwright
   spec would only assert slowly; the on-screen half of the same feature stays with Playwright.

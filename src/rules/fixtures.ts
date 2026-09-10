@@ -28,7 +28,7 @@ export const CITY: TileCoords = { q: 0, r: 0 };
  * A unit a fixture puts on the map: what it enters as, and the state the fixture authors on it once
  * it stands there.
  */
-export type Standing = {
+type Standing = {
   readonly entering: Entering;
   readonly stats: UnitStats;
   readonly movePoints: number;
@@ -158,7 +158,7 @@ export function camped(tiles: Tile[], coords: TileCoords[]): Tile[] {
   return tiles.map((tile) => (named.has(tileKey(tile)) ? { ...tile, building: 'PH_Camp' } : tile));
 }
 
-export function statsOf(stats: Partial<UnitStats>): UnitStats {
+function statsOf(stats: Partial<UnitStats>): UnitStats {
   return {
     type: 'PH_Warrior',
     health: 4,
