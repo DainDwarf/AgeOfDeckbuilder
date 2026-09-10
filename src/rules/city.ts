@@ -13,7 +13,7 @@ import {
 import { occupied } from './units';
 
 /** One idle inhabitant put on a tile the city holds, or the one standing on that tile taken off. */
-export type AssignCommand = { readonly type: 'assign'; readonly tile: TileCoords };
+type AssignCommand = { readonly type: 'assign'; readonly tile: TileCoords };
 
 /** One inhabitant taken off the tile it stands on and put on another, in the one gesture. */
 export type ReassignCommand = {
@@ -24,7 +24,7 @@ export type ReassignCommand = {
 };
 
 /** One tile outside the border bought with culture and taken inside it. */
-export type ClaimCommand = { readonly type: 'claim'; readonly tile: TileCoords };
+type ClaimCommand = { readonly type: 'claim'; readonly tile: TileCoords };
 
 /** Everything the player commands the city by: its inhabitants, and the border they stand inside. */
 export type CityCommand = AssignCommand | ReassignCommand | ClaimCommand;

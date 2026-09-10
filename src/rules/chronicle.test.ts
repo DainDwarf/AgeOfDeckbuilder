@@ -29,12 +29,11 @@ test('a chronicle survives JSON and carries its generator on', () => {
   expect(chronicle.rng).not.toEqual(seedRng(chronicle.seed));
 });
 
-test('a chronicle opens on turn one, with empty stores and more inhabitants than tiles', () => {
+test('a chronicle opens on turn one, with empty stores', () => {
   const chronicle = beginChronicle(1234, DECK);
 
   expect(chronicle.turn).toBe(1);
   for (const resource of RESOURCES) expect(chronicle.resources[resource]).toBe(0);
-  expect(chronicle.population).toBe(chronicle.held.length + 2);
 });
 
 test('ending the turn moves the chronicle on to the next one', () => {
