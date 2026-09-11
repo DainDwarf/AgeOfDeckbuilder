@@ -28,7 +28,17 @@ a [`BOARD.md`](BOARD.md) line. Say
   kind with its own numbers — so no fixture writes a tile or a unit the real content could not
   produce, and no test reads its oracle from the code's own table; first consumers are the
   four-layer yield test, the terraform-keeps-improvements test and the unit builders' synthetic
-  stats. The `DOGMAS.md` Stack line gains its third word the same day, and the *mechanism vs
+  stats. A schedule is content too, and the e2e is what asks loudest: reaching an ending screen
+  today means a chronicle played to turn 32-odd, on one of the 13 seeds under a thousand whose map
+  grows no camp at all — so the victory screen shipped with no spec covering it, a risk the user
+  took knowingly. A fixture schedule dealing a fixture capstone on turn 2 tests the scaffolding in
+  three turns, needs nobody to learn to play, and is what closes that hole. It closes the other one
+  in the same stroke: `SCHEDULE_BOUND = 30` in `src/rules/fixtures.ts` and its three walkers —
+  `landings`, `toFirstRaid`, `throughSchedule` — end turn after turn until the schedule happens to
+  do something, and seven tests across `schedule.test.ts` and `enemies.test.ts` are built on them.
+  A schedule handed in deals what the test asked for on the turn it asked for it, and no test walks
+  to find out.
+  The `DOGMAS.md` Stack line gains its third word the same day, and the *mechanism vs
   content* dogma returns to its Testing section as soon as the work permits: a new mechanism gets
   one test on synthetic content; new content gets coherence checks only, never a gameplay test; a
   test that reads its oracle from the code's own table, or seeds exactly a real card's price, is
