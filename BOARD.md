@@ -11,9 +11,3 @@ traps, plan — written once, on the settled state, and deleted with the line.
 Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [task file]`
 
 ---
-
-- **The capstone is announced at the founding** — the chronicle screen opens on a window over the
-  scrim showing the capstone's card and a title saying it comes on a turn unknown; a left click on
-  the card or the back key closes it, once, and the right click shows the card large over the
-  window as the deal window does. The e2e boot helper closes it for every spec.
-  Doc-impact: `docs/DESIGN.md`.

@@ -90,6 +90,7 @@ const TEXT = {
   'rules.PH_Siege': '{camps} camps are placed near the city, a warrior on each',
   'deal.title': 'An event lands. Take one.',
   'deal.capstone': 'The capstone lands. Take it.',
+  'capstone.title': 'The age ends on this capstone.',
   'aim.tile': 'Play {card} at a tile',
   'aim.unit': 'Play {card} at a unit',
   'aim.discard-pile': 'Play {card} at a card of the discard pile',

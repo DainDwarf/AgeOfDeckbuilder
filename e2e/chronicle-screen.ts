@@ -65,8 +65,24 @@ export function watch(page: Page): string[] {
   return problems;
 }
 
-/** Opens the chronicle a seed and a deck found, and waits for its scene to run. */
+/**
+ * Opens the chronicle a seed and a deck found, waits for its scene to run, and closes the capstone's
+ * window every founding opens on, leaving the chronicle screen bare. The card and not the back key
+ * closes it: that key is rebindable, and specs rebind it.
+ */
 export async function open(
+  page: Page,
+  seed: number,
+  deck: DeckId | readonly CardId[],
+): Promise<void> {
+  await openOnCapstone(page, seed, deck);
+  await click(page, 'capstone-card-0');
+  await expect.poll(() => standing(page, 'capstone')).toBe(false);
+  await settled(page);
+}
+
+/** The same, with the capstone's window left standing as the founding raised it. */
+export async function openOnCapstone(
   page: Page,
   seed: number,
   deck: DeckId | readonly CardId[],
@@ -109,6 +125,7 @@ export async function open(
   await page.goto(`/?seed=${seed}&deck=${typeof deck === 'string' ? deck : deck.join(',')}`);
   await page.waitForFunction(() => window.game?.scene.isActive('chronicle') === true);
   await settled(page);
+  await expect.poll(() => standing(page, 'capstone')).toBe(true);
 }
 
 /** Waits for a drawn frame, so a camera moved since answers for where it now stands. */

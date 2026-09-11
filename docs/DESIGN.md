@@ -401,6 +401,15 @@ like anything else. The resource bar reads over its scrim — the choice is deci
 has — while the map stays under the scrim, so the bar's readings act on nothing for as long as the
 window stands.
 
+The capstone gets a **window of its own** at the founding, which every chronicle screen opens on: its
+card alone, drawn as the deal window draws an entry and at the same width, under a title saying the
+age ends on that capstone and nothing of the turn it lands on. The window offers nothing to take, so
+no press rings its card and the inspection key does nothing while it stands; a left click on the
+card closes it, as the back key and a press beside the card do, and it is closed for good — the
+chronicle screen it stood on never raises it again, while a new chronicle opens on its own. The right
+click shows the card large over the window, and a press beside it or the back key takes it down onto
+the window, as on the deal. The menu opens over the window and closes back onto it.
+
 A chronicle that has ended stands on its **ending screen**, which rises with its scrim out of nothing
 as the last stage plays out and never comes down: it reads the outcome — victory, or defeat with what
 took the city and the turn it fell on. The scrim swallows every press, the menu alone opens over the
