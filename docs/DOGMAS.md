@@ -64,6 +64,20 @@ makes twice becomes a line here (the ratchet, at `/upkeep`).
 - **Glossary verbs only.** Every gameplay term on a card, in the UI, in the codex and in code
   comes from `GLOSSARY.md`. No synonym, no paraphrase, no "elegant variation". A missing term is
   a design question for the user.
+- **A glossary term is the simplest, most natural English for the thing it names.** A player says
+  these words out loud about a mechanic; the right one is what a person would call it without being
+  taught, not the cleverest, the most evocative, or the most precise-sounding. **Assume English is
+  not the player's first language**: a common word beats a vivid one, a plain word beats an idiom,
+  and a word a learner meets early beats one they meet late. A term that has to be translated
+  before it can be played is the wrong term, however well it reads.
+- **Glossary candidates are drawn free of every constraint, and checked for collisions only
+  afterwards.** Suggest from plain English alone — never filtered against the glossary, the design
+  or the code, and never trimmed because a word is already spoken for. Once the term is chosen, look
+  up what it collides with and hand the user that list as a warning, not as an objection. The new
+  term wins: an older glossary row, a design sentence or a code identifier holding that word yields
+  and is renamed in the same unit of work. Why: filtering candidates by what is unclaimed yields the
+  best *available* word, which is not the right one, and the name is permanent while the rename is
+  cheap.
 - **A card name is content, not vocabulary.** Prose cites a card by its verbatim name; code reaches
   it only through its text key, never a re-typed literal.
 - **Card text is the shortest phrasing that is unambiguous.** Then shorten it again.
