@@ -67,6 +67,7 @@ deliberate exception the reviewer sees; there is no silent allow-list.
 | **fog** | A tile seen before and out of sight now; drawn as it was last seen, darkened. | fog of war, shroud, dimmed, remembered |
 | **uncharted** | A tile never yet in sight; drawn not at all, and a unit of the player's is not moved onto one. Its opposite, **charted**, is a tile in sight or in fog. | unexplored, unknown, unrevealed, black, explored, revealed, discovered, known |
 | **instant** | A card with an immediate effect: on the city, on a tile, or one thing with one unit. | action (for a card), spell, effect card |
+| **hazard** | A card of the one kind that is not the player's own: it sits in no deck and enters a chronicle from an event. It **bites** — does what it says to the chronicle — at the end of any turn it is still in the hand, before the hand is discarded. Played, it is aimed at nothing, does nothing, and paying its cost takes it out of the chronicle. | penalty, curse, drawback, upkeep, affliction, bane |
 | **worker** | A non-fighting unit that changes tiles: builds buildings, terraforms them, improves them. | builder, engineer, labourer |
 | **population** | The city's inhabitants: assigned to tiles for income, turned into units by unit cards. | citizens, workforce, pops |
 | **assign** | To put one population on a tile inside the border; free, instant, reversible. | allocate |

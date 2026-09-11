@@ -38,7 +38,7 @@ Insert into `BOARD.md` at its priority position:
 ```
 
 A line that needs more than a sentence of context links a task file `board/<slug>.md` holding
-scope, doc-impact, hazards, and plan. Write the task file once the plan is settled with the user,
+scope, doc-impact, traps, and plan. Write the task file once the plan is settled with the user,
 not while it is being discussed.
 
 ## Outcomes

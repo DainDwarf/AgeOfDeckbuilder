@@ -1,5 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
-import { CARDS, DECKS } from '../src/rules/cards';
+import { aimOf, CARDS, DECKS } from '../src/rules/cards';
 import { beginChronicle, refusalOf } from '../src/rules/chronicle';
 import { tileKey } from '../src/rules/map';
 import { type Chronicle, playable } from '../src/rules/state';
@@ -47,7 +47,7 @@ const LIFTED = 140;
 /** Where a card the city can pay for and play at nothing lies in the hand, or -1. */
 function atNothing(chronicle: Chronicle): number {
   return chronicle.hand.findIndex(
-    (id) => CARDS[id].aim === 'none' && playable(refusalOf(chronicle, id)),
+    (id) => aimOf(CARDS[id]).aim === 'none' && playable(refusalOf(chronicle, id)),
   );
 }
 

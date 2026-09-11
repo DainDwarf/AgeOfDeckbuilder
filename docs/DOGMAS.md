@@ -29,7 +29,7 @@ makes twice becomes a line here (the ratchet, at `/upkeep`).
 - **"jot: …"** appends one line to `IDEAS.md` and the current task continues. Offer to jot
   something you noticed; don't add your own without asking.
 - **A bug is never an idea.** `IDEAS.md` holds features that may or may not happen; a defect or
-  hazard in what already exists is reported to the user the turn it emerges and, unless fixed on
+  trap in what already exists is reported to the user the turn it emerges and, unless fixed on
   the spot, becomes a board line through `/intake`.
 - **Cut big steps into shippable substeps**, each self-contained enough for a cleared session to
   execute; name the shared mechanism that links them. Propose the cut before executing it.
@@ -79,9 +79,9 @@ makes twice becomes a line here (the ratchet, at `/upkeep`).
   pass. Extract a module only behind an interface much narrower than what it hides. Layering
   ceremony (clean-arch, hexagonal indirection) is an anti-pattern here: shallow modules are token
   cost and misuse surface.
-- **KISS is hazard avoidance.** Difficulty is not human hours — a big rewrite is cheap. What is
-  expensive is hazard: non-local interdependencies, behaviour not evident from the code where it
-  lives, traps for a session without today's context. Prefer the design a fresh session
+- **KISS is trap avoidance.** Difficulty is not human hours — a big rewrite is cheap. What is
+  expensive is the trap: non-local interdependencies, behaviour not evident from the code where it
+  lives, a snare set for a session without today's context. Prefer the design a fresh session
   understands from the files in front of it.
 - **Single source of truth for facts; repetition for shape.** Schemas, constants, protocol rules
   live in one place. Code that merely *looks* similar but is causally unrelated stays repeated;

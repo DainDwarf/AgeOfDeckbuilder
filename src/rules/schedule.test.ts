@@ -9,6 +9,7 @@ import {
   cityOf,
   endedTurn,
   enemiesOf,
+  everyCard,
   field,
   fullDraw,
   landings,
@@ -27,14 +28,17 @@ import type { Chronicle } from './state';
 import { UNIT_STATS } from './units';
 
 /**
- * Every event a seed's schedule dealt over thirty turns, the turn it was dealt on and whether the
- * entry taken emptied the food stock. The city holds no camp, so a raid enters nobody and nothing
- * ever reaches the city: what a landing leaves to read is its turn, against the food the plain tile
- * keeps giving.
+ * Every event a seed's schedule dealt over thirty turns, the turn it was dealt on and how many
+ * hunger cards the chronicle holds by then. The city holds no camp, so a raid enters nobody and
+ * nothing ever reaches the city: what a landing leaves to read is its turn, against the hazards the
+ * famines have laid.
  */
-function scheduleOf(seed: number): { turn: number; emptied: boolean }[] {
+function scheduleOf(seed: number): { turn: number; hungers: number }[] {
   return landings(cityOf(['urban', 'plain'], { ...NO_GROWTH, ...scheduled(seedRng(seed)) })).map(
-    (landed) => ({ turn: landed.turn, emptied: landed.resources.food === 0 }),
+    (landed) => ({
+      turn: landed.turn,
+      hungers: everyCard(landed).filter((id) => id === 'PH_Hunger').length,
+    }),
   );
 }
 
@@ -148,25 +152,29 @@ test('a raid with more warriors than camps to enter on enters what it can', () =
   expect([...new Set(raiders)]).toEqual([two.length]);
 });
 
-test('a famine is dealt as readily on the third turn as the twentieth, and empties the stock', () => {
+test('a famine is dealt as readily on the third turn as the twentieth, and lays its hazard', () => {
   for (const due of [3, 14, 20]) {
     for (const seed of SEEDS) {
       const standing = dealtBy(due, { rng: seedRng(seed) });
+      const landed = endedTurn(awaiting(due, { rng: seedRng(seed) }), 'PH_Famine');
 
       expect(standing.deal).toContain('PH_Famine');
       expect(standing.resources.food).toBe(STOCKED);
-      expect(endedTurn(awaiting(due, { rng: seedRng(seed) }), 'PH_Famine').resources.food).toBe(0);
+      expect(landed.resources.food).toBe(STOCKED);
+      expect(landed.hand).toEqual(['PH_Hunger']);
     }
   }
 });
 
-test('the famine empties the food stock, and leaves the population and its threshold alone', () => {
-  const starving = awaiting(15);
-  const after = endedTurn(starving, 'PH_Famine');
+test('the famine lays its hazard on top of the draw pile, and leaves the city as it stood', () => {
+  const waiting = awaiting(15, { drawPile: fullDraw() });
+  const after = endedTurn(waiting, 'PH_Famine');
 
-  expect(after.resources.food).toBe(0);
-  expect(after.population).toBe(starving.population);
-  expect(growthThreshold(after)).toBe(growthThreshold(starving));
+  expect(after.hand).toEqual(['PH_Hunger', ...fullDraw().slice(0, 4)]);
+  expect(after.drawPile).toEqual(fullDraw().slice(4));
+  expect(after.resources.food).toBe(STOCKED);
+  expect(after.population).toBe(waiting.population);
+  expect(growthThreshold(after)).toBe(growthThreshold(waiting));
   expect(enemiesOf(after)).toEqual([]);
 });
 
@@ -192,12 +200,12 @@ test('the take lands the entry taken and no other, rolls the next due turn, and 
 
   expect(stagedBy(standing, { type: 'take', event: 'PH_Raid' })).toEqual(['events', 'draw']);
   expect(enemiesOf(raided)).toHaveLength(1);
-  expect(raided.resources.food).toBe(STOCKED);
+  expect(raided.hand).toEqual(fullDraw());
   expect(enemiesOf(starved)).toEqual([]);
-  expect(starved.resources.food).toBe(0);
+  expect(starved.hand).toEqual(['PH_Hunger', ...fullDraw().slice(0, 4)]);
   for (const after of [raided, starved]) {
     expect(after.deal).toEqual([]);
-    expect(after.hand).toEqual(fullDraw());
+    expect(after.resources.food).toBe(STOCKED);
     expect(after.nextEvent - after.turn).toBeGreaterThanOrEqual(3);
     expect(after.nextEvent - after.turn).toBeLessThanOrEqual(7);
   }

@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { type AimedCard, CARDS } from '../rules/cards';
+import { type AimedCard, aimOf, CARDS } from '../rules/cards';
 import { costOf, refusalOf, type Stage } from '../rules/chronicle';
 import { type CardId, type Chronicle, playable, type Refusal } from '../rules/state';
 import { createAimLine } from './aim-line';
@@ -211,7 +211,7 @@ export function createHand(scene: Phaser.Scene, on: Surface, presses: HandPresse
     slot.face.select(true);
     settle(slot, 120);
 
-    const card = CARDS[slot.id];
+    const card = aimOf(CARDS[slot.id]);
     switch (card.aim) {
       case 'none':
       case 'discard-pile':
@@ -236,7 +236,7 @@ export function createHand(scene: Phaser.Scene, on: Surface, presses: HandPresse
       refuse(slot);
       return;
     }
-    const card = CARDS[slot.id];
+    const card = aimOf(CARDS[slot.id]);
     switch (card.aim) {
       case 'none':
         letGo = slot;

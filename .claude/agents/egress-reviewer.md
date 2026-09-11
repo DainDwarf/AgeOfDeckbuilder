@@ -15,14 +15,14 @@ and `docs/GLOSSARY.md` yourself; they are the charter.
 
 The review is constructive, not adversarial. **"Looks good" is a valid and common verdict.** You
 are not here to justify yourself by finding something. You are here to catch what a fresh reader
-catches: hazards, contradictions, bloat, drift.
+catches: traps, contradictions, bloat, drift.
 
 ## Charter
 
 Check each and report only what fails:
 
 - **Done-condition satisfied** — the board line's condition, read literally, is now true.
-- **No new hazard** — no non-local interdependency, no behaviour a reader cannot see from the file
+- **No new trap** — no non-local interdependency, no behaviour a reader cannot see from the file
   it lives in, no trap for a session without today's context.
 - **Trinity respected** — every doc-impact page updated, or its absence justified; the design page
   was not edited down to match the code; the board line is gone; no `TODO` entered the code.

@@ -261,11 +261,11 @@ scripts ignore sight, and no tile is uncharted to them.
 
 ### Cards ✅
 
-Three kinds. Every card has a resource cost, possibly none. Every kind cycles: played or
-discarded, a card goes to the discard pile and comes around again. **Single use** is a keyword some
-cards carry, not a kind: played, such a card leaves the chronicle instead of going to the discard
-pile; discarded unplayed, it comes around like any other. The map's gifts are chronicle-only by
-nature.
+Four kinds, three of them the player's own. Every card has a resource cost, possibly none. Every
+kind cycles: played or discarded, a card goes to the discard pile and comes around again. **Single
+use** is a keyword some cards carry, not a kind: played, such a card leaves the chronicle instead of
+going to the discard pile; discarded unplayed, it comes around like any other. The map's gifts are
+chronicle-only by nature.
 
 - **Building** — builds a building on a tile inside the border where a worker stands. The map is
   the cap: no free tile of the right terrain, no farm — and a building card with nowhere to go
@@ -280,6 +280,13 @@ nature.
   pile. The refresh takes one unit, so a unit that has spent its move points crosses again in the
   same turn; it is refused on a unit whose move points are full. Everything that is not a noun
   entering the map.
+- **Hazard** — the kind that is not the player's own. It sits in no deck: a hazard enters a
+  chronicle from an event, and from there cycles like any other card. It **bites** at the end of
+  any turn it is still in the hand, before the hand is discarded — and again every cycle it comes
+  around, so a hazard left unanswered taxes the city until it is dealt with. Playing it is how it
+  is dealt with: aimed at nothing, it does nothing at all, and paying its cost is what takes it out
+  of the chronicle. That cost is the whole of the card's decision — what the city gives up to stop
+  paying the bite.
 
 A card **aimed** at a tile lands on no tile its aim does not admit, and the map lights the tiles it
 does. A card aimed at a **unit** is aimed at the tile a unit of the player's stands on and admits no
@@ -383,16 +390,16 @@ The events phase's deal stands in a **window of its own**, which the end of turn
 and which a chronicle opened on a deal opens on. The entries dealt stand in one row, centred, as
 cards at the browse's width, in the order dealt, under a title asking for one of them. An event's
 card carries no cost, and reads its name, `EVENT` where a card reads its kind, and what it does on
-this turn — how many warriors the raid enters, that the famine empties the food stock. A left click
-rings one; a left click on the ringed one is the take, and the window closes on it with the landing
-and the draw playing out after; a press beside the cards drops the ring and nothing else. The right
-click shows a card large over the window, and a press beside it or the back key takes it down onto
-the window. The back key takes down the card shown large, else drops the ring, else raises the menu
-as it does from a clean chronicle screen: the window closes on nothing but the take, the menu opens
-over it and closes back onto it, and a new chronicle leaves it behind like anything else. The
-resource bar reads over its scrim — the choice is decided on what the city has, and a famine at an
-empty stock costs nothing — while the map stays under the scrim, so the bar's readings act on
-nothing for as long as the window stands.
+this turn — how many warriors the raid enters, that the famine lays PH_Hunger on top of the draw
+pile. A left click rings one; a left click on the ringed one is the take, and the window closes on
+it with the landing and the draw playing out after; a press beside the cards drops the ring and
+nothing else. The right click shows a card large over the window, and a press beside it or the back
+key takes it down onto the window. The back key takes down the card shown large, else drops the
+ring, else raises the menu as it does from a clean chronicle screen: the window closes on nothing
+but the take, the menu opens over it and closes back onto it, and a new chronicle leaves it behind
+like anything else. The resource bar reads over its scrim — the choice is decided on what the city
+has — while the map stays under the scrim, so the bar's readings act on nothing for as long as the
+window stands.
 
 The right click finds a tile, a card of the hand, a card in a browse or one in the aim window, in
 city mode and while a card is being aimed alike; a tile it lands on afresh comes up at its first
@@ -587,11 +594,14 @@ the deal: no hand is drawn, and the chronicle takes no command but the take unti
 schedule escalates in what lands, never in how often — a raid drawn late is larger than one drawn
 early, and the harshest entries carry no weight at first, so they cannot land. How far apart events
 land, how many are dealt and how the weights shift are numbers. An event is a script — spawn
-enemies, shock a resource, change tiles, take inhabitants — with, optionally, a choice made when it
-lands. The pitch's families (enemies, disasters, turmoil, fortunate) are tags on content, not rules.
-Several events a turn was rejected: choosing between hardships three times a turn is tedium — a deal
-is one landing. 🔧 Until the deck is data the schedule is a stand-in of two entries: a raid, whose
-warriors each enter on a free camp, and a famine that empties the food stock.
+enemies, shock a resource, change tiles, take inhabitants, lay a card on the draw pile — with,
+optionally, a choice made when it lands. A card an event lays on top of the draw pile is drawn into
+the hand the landing draws, so the player has it in hand for the turn that follows. The pitch's
+families (enemies, disasters, turmoil, fortunate) are tags on content, not rules. Several events a
+turn was rejected: choosing between hardships three times a turn is tedium — a deal is one landing.
+🔧 Until the deck is data the schedule is a stand-in of two entries: a raid, whose warriors each
+enter on a free camp, and a famine that lays PH_Hunger — a hazard costing production, whose bite
+empties the food stock — on top of the draw pile.
 
 Events are not announced: the player learns the next one when it lands. Announcing them is
 something a technology or a civilization's rule can grant.

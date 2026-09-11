@@ -1,5 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
-import { CARDS, DECKS, refuses } from '../src/rules/cards';
+import { aimOf, CARDS, DECKS, refuses } from '../src/rules/cards';
 import { beginChronicle, costOf, refusalOf } from '../src/rules/chronicle';
 import { tileAt, tileKey } from '../src/rules/map';
 import { type CardId, type Chronicle, playable } from '../src/rules/state';
@@ -38,7 +38,7 @@ function refused(chronicle: Chronicle): number {
 /** Where a card the rules refuse that plays at nothing lies in the hand, or -1. */
 function refusedAtNothing(chronicle: Chronicle): number {
   return chronicle.hand.findIndex(
-    (id) => CARDS[id].aim === 'none' && !playable(refusalOf(chronicle, id)),
+    (id) => aimOf(CARDS[id]).aim === 'none' && !playable(refusalOf(chronicle, id)),
   );
 }
 
@@ -123,7 +123,7 @@ test('a press on a tile an aim refuses says one reason over it, and the card sta
   // no worker and no unit of the player's having entered yet.
   const opened = await chronicleOf(page);
   const index = atTile(opened);
-  const card = CARDS[opened.hand[index]];
+  const card = aimOf(CARDS[opened.hand[index]]);
   if (card.aim !== 'tile') throw new Error(`${opened.hand[index]} is aimed at no tile`);
   const tile = tileAt(opened.tiles, opened.city);
   if (tile === undefined) throw new Error('the city stands on no tile of the map');

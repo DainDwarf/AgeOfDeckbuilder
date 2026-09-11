@@ -21,7 +21,7 @@ import {
 import { refreshedMovePoints, type UnitTypeId, unitAt } from './units';
 
 /** The declared order of the kinds, which is the order a sorted list of cards reads in. */
-export const CARD_KINDS = ['unit', 'building', 'instant'] as const;
+export const CARD_KINDS = ['unit', 'building', 'instant', 'hazard'] as const;
 
 export type CardKind = (typeof CARD_KINDS)[number];
 
@@ -34,7 +34,7 @@ export type CardKind = (typeof CARD_KINDS)[number];
  * aim of `none` does, and hands its effect where in the discard pile the card that was chosen lies.
  * The effect takes the chronicle the card's cost is paid on.
  */
-type Aim =
+export type Aim =
   | {
       readonly aim: 'none';
       readonly blocked?: (chronicle: Chronicle) => Block[];
@@ -57,18 +57,76 @@ type Aim =
     };
 
 /**
- * A card: its kind, which a list of cards sorts and labels by, its cost, and the aim and effect it
- * is played through. The noun a card names — the unit it puts on the map, the building it builds —
- * is named by its effect and nowhere else.
+ * A card: its kind, which a list of cards sorts and labels by, and its cost. The three kinds the
+ * player's deck holds declare the aim and effect they are played through, and the noun such a card
+ * names — the unit it puts on the map, the building it builds — is named by its effect and nowhere
+ * else. A hazard declares its bite alone, its kind fixing everything else about it.
  */
-export type Card = {
-  readonly kind: CardKind;
-  readonly cost: Partial<Resources>;
-  readonly singleUse?: true;
-} & Aim;
+export type Card = { readonly cost: Partial<Resources> } & (
+  | ({
+      readonly kind: 'unit' | 'building' | 'instant';
+      readonly singleUse?: true;
+    } & Aim)
+  | {
+      readonly kind: 'hazard';
+      /** What it does to the chronicle at the end of a turn it is still in the hand. */
+      readonly bites: (chronicle: Chronicle) => Chronicle;
+    }
+);
 
-/** A card the player picks a tile for: what the hand aims and the finder lists candidates for. */
-export type AimedCard = Card & { readonly aim: 'tile' | 'unit' };
+/** How a card the player picks a tile for is played: what the hand aims and the map lights for. */
+export type AimedCard = Extract<Aim, { readonly aim: 'tile' | 'unit' }>;
+
+/**
+ * How a card is played, whatever its kind: what it is aimed at, and what it does with what it was
+ * aimed at. A hazard is aimed at nothing and does nothing when it is played.
+ */
+export function aimOf(card: Card): Aim {
+  switch (card.kind) {
+    case 'unit':
+    case 'building':
+    case 'instant':
+      return card;
+    case 'hazard':
+      return { aim: 'none', effect: (paid) => paid };
+  }
+}
+
+/**
+ * Whether a card played leaves the chronicle instead of going to the discard pile: what single use
+ * says of the card carrying it, and what paying a hazard is.
+ */
+export function leavesChronicle(card: Card): boolean {
+  switch (card.kind) {
+    case 'unit':
+    case 'building':
+    case 'instant':
+      return card.singleUse === true;
+    case 'hazard':
+      return true;
+  }
+}
+
+/**
+ * The hazards of the hand biting, in hand order, each on the chronicle the one before it left, and
+ * the chronicle untouched where the hand holds none.
+ */
+export function bitten(chronicle: Chronicle): Chronicle {
+  let standing = chronicle;
+  for (const id of chronicle.hand) {
+    const card = CARDS[id];
+    switch (card.kind) {
+      case 'unit':
+      case 'building':
+      case 'instant':
+        break;
+      case 'hazard':
+        standing = card.bites(standing);
+        break;
+    }
+  }
+  return standing;
+}
 
 /**
  * The one reason a card aimed at a tile refuses this one, and nothing at all on a tile it admits:
@@ -279,6 +337,14 @@ export const CARDS: Record<CardId, Card> = {
     aim: 'none',
     effect: (paid) =>
       gained(paid, { food: 10, production: 10, military: 10, money: 10, science: 10 }),
+  },
+  PH_Hunger: {
+    kind: 'hazard',
+    cost: { production: 3 },
+    bites: (chronicle) => ({
+      ...chronicle,
+      resources: { ...chronicle.resources, food: 0 },
+    }),
   },
 };
 

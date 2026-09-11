@@ -36,7 +36,7 @@ export const SCHEDULE: {
       reads: () => ({}),
       lands: (chronicle) => ({
         ...chronicle,
-        resources: { ...chronicle.resources, food: 0 },
+        drawPile: ['PH_Hunger', ...chronicle.drawPile],
       }),
     },
   },

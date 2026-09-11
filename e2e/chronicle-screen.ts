@@ -1,6 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 import type Phaser from 'phaser';
-import { type AimedCard, CARDS, DECKS, type DeckId } from '../src/rules/cards';
+import { type AimedCard, aimOf, CARDS, DECKS, type DeckId } from '../src/rules/cards';
 import { admitted, apply, beginChronicle, outcome, refusalOf } from '../src/rules/chronicle';
 import {
   CITY_TILE,
@@ -375,7 +375,7 @@ function runOn(
   complaint: string,
   keeps: (tile: Tile, chronicle: Chronicle) => boolean,
 ): Run {
-  const aimed = CARDS[card];
+  const aimed = aimOf(CARDS[card]);
   if (aimed.aim !== 'tile') throw new Error(`${card} is aimed at no tile`);
 
   return firstSeed(complaint, (seed) => {
@@ -438,7 +438,7 @@ function steppedThisTurn(
 /** Where a card aimed at a tile that the city can pay for lies in the hand, or -1. */
 export function atTile(chronicle: Chronicle): number {
   return chronicle.hand.findIndex(
-    (id) => CARDS[id].aim === 'tile' && playable(refusalOf(chronicle, id)),
+    (id) => aimOf(CARDS[id]).aim === 'tile' && playable(refusalOf(chronicle, id)),
   );
 }
 

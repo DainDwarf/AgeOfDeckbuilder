@@ -23,7 +23,8 @@ export type CardId =
   | 'PH_Road'
   | 'PH_Urbanisation'
   | 'PH_Recall'
-  | 'PH_Spoils';
+  | 'PH_Spoils'
+  | 'PH_Hunger';
 
 /** What a snapshot keeps of the unit that stood on the tile: what its mark is drawn from. */
 export type SnapshotUnit = { readonly type: UnitTypeId; readonly faction: Faction };

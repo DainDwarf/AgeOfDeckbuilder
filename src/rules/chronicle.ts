@@ -1,4 +1,4 @@
-import { type AimedCard, CARDS, refuses } from './cards';
+import { type AimedCard, aimOf, bitten, CARDS, leavesChronicle, refuses } from './cards';
 import { assign, type CityCommand, claim, founding, grow, income, reassign } from './city';
 import { ENEMY_SCRIPTS } from './enemies';
 import { CITY_TILE, generateMap, type Tile, type TileCoords, tileKey } from './map';
@@ -79,14 +79,15 @@ const HAND_SIZE = 5;
  * on a tile, taken off one, or taken off one and put on another, `claim` is a tile bought with
  * culture and taken inside the border, `grow` is the food stock spent on one more inhabitant,
  * `turn` is the tick, where every unit's move points and action are refreshed, `deal` is what the
- * schedule offers on a due turn, `events` is the entry taken landing, and `capture` is the city
- * falling to an enemy that stood on its tile.
+ * schedule offers on a due turn, `events` is the entry taken landing, `hazard` is every hazard the
+ * hand still holds biting, and `capture` is the city falling to an enemy that stood on its tile.
  */
 export type PlainStage =
   | 'played'
   | 'refused'
   | 'assign'
   | 'claim'
+  | 'hazard'
   | 'discard'
   | 'income'
   | 'grow'
@@ -256,6 +257,7 @@ function endOfTurn(chronicle: Chronicle): Stage[] {
     }
   };
 
+  staged('hazard', bitten(standing));
   staged('discard', discard(standing));
   staged('income', income(standing));
   staged('grow', grow(standing));
@@ -342,7 +344,7 @@ export function admitted(chronicle: Chronicle, card: AimedCard): TileCoords[] {
  * being no part of what the hand judges it by.
  */
 function blocked(chronicle: Chronicle, id: CardId): Block[] {
-  const card = CARDS[id];
+  const card = aimOf(CARDS[id]);
   switch (card.aim) {
     case 'none':
       return card.blocked?.(chronicle) ?? [];
@@ -357,9 +359,9 @@ function blocked(chronicle: Chronicle, id: CardId): Block[] {
 /**
  * One card played: the aim is judged on the chronicle as it stands, the same one the map lit its
  * tiles from; then, on the one `played` stage, the card has left the hand for the discard pile — or
- * for nowhere at all, single use as it is — its cost is paid and its effect has landed. A play the
- * hand, the city, the map or the discard pile refuses is one `refused` stage on the chronicle as it
- * stood, nothing paid or discarded.
+ * for nowhere at all, single use or hazard as it is — its cost is paid and its effect has landed. A
+ * play the hand, the city, the map or the discard pile refuses is one `refused` stage on the
+ * chronicle as it stood, nothing paid or discarded.
  */
 function play(chronicle: Chronicle, command: PlayCommand): Stage[] {
   const id = chronicle.hand[command.index];
@@ -375,7 +377,9 @@ function play(chronicle: Chronicle, command: PlayCommand): Stage[] {
     ...chronicle,
     resources,
     hand: chronicle.hand.filter((_, at) => at !== command.index),
-    discardPile: CARDS[id].singleUse ? chronicle.discardPile : [...chronicle.discardPile, id],
+    discardPile: leavesChronicle(CARDS[id])
+      ? chronicle.discardPile
+      : [...chronicle.discardPile, id],
   };
   return [{ name: 'played', chronicle: effect(paid) }];
 }
@@ -392,7 +396,7 @@ function aimedEffect(
   id: CardId,
   command: PlayCommand,
 ): ((paid: Chronicle) => Chronicle) | undefined {
-  const card = CARDS[id];
+  const card = aimOf(CARDS[id]);
   switch (card.aim) {
     case 'none':
       return command.aim === 'none' ? card.effect : undefined;
