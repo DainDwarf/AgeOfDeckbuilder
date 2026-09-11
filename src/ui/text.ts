@@ -143,6 +143,8 @@ const TEXT = {
   'defeat.title': 'Defeat',
   'defeat.capture': 'An enemy captured the city on turn {turn}.',
   'defeat.population': "The city's population reached zero on turn {turn}.",
+  'victory.title': 'Victory',
+  'victory.survived': 'The city survived the siege.',
   'console.line': '> {line}',
   'console.no-entry': 'no such entry: {word}',
   'console.uncharted-veil-on': 'uncharted veil: on',

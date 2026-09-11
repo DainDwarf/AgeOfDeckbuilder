@@ -12,12 +12,6 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
-- **The siege spans six turns, and victory** — on each of the 🔧 five turns after the landing the
-  events phase enters a warrior on every camp whose tile is free, before any deal due that turn; at
-  the tick ending the sixth turn with the city standing the chronicle ends in victory, carried like
-  a defeat, every command refused after. A victory screen mirrors the defeat screen. Rules tests
-  pin the spawning and both endings; an e2e spec reaches the victory screen.
-  Doc-impact: `docs/DESIGN.md`, `docs/GLOSSARY.md`.
 - **The capstone is announced at the founding** — the chronicle screen opens on a window over the
   scrim showing the capstone's card and a title saying it comes on a turn unknown; a left click on
   the card or the back key closes it, once, and the right click shows the card large over the

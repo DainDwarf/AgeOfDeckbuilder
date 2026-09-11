@@ -6,8 +6,14 @@ import { type EnemyScriptId, type Faction, UNIT_STATS, type Unit, type UnitTypeI
 /** What took the city: an enemy captured it, or it was left without population. */
 export type DefeatCause = 'capture' | 'population';
 
-/** The city's fall, recorded on the chronicle it ended: what took it, and the turn it fell on. */
-export type Defeat = { readonly cause: DefeatCause; readonly turn: number };
+/**
+ * How a chronicle ended and the turn it ended on: in victory, the capstone passed, or in defeat,
+ * the city fallen to what the cause names.
+ */
+export type Ending = { readonly turn: number } & (
+  | { readonly outcome: 'victory' }
+  | { readonly outcome: 'defeat'; readonly cause: DefeatCause }
+);
 
 /** `PH_` marks a stand-in: none of these is authored content, and every one of them goes. */
 export type EventId = 'PH_Raid' | 'PH_Famine' | 'PH_Siege';
@@ -79,7 +85,8 @@ export type Chronicle = {
   readonly drawPile: CardId[];
   readonly hand: CardId[];
   readonly discardPile: CardId[];
-  readonly defeat?: Defeat;
+  /** How the chronicle ended, and nothing at all while it runs: an ended one takes no command. */
+  readonly ending?: Ending;
 };
 
 /**

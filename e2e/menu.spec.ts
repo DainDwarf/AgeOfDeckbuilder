@@ -30,7 +30,7 @@ function standingRun(): number {
     for (let turn = 0; turn < 3; turn++) {
       chronicle = endedTurn(chronicle);
     }
-    return chronicle.defeat === undefined ? seed : undefined;
+    return chronicle.ending === undefined ? seed : undefined;
   });
 }
 
@@ -188,7 +188,7 @@ test('the menu opens over the defeat screen, and a new chronicle takes the chron
   await raised(page);
 
   const fresh = await chronicleOf(page);
-  expect(fresh.defeat).toBeUndefined();
+  expect(fresh.ending).toBeUndefined();
   expect(fresh.turn).toBe(1);
   expect(await standing(page, 'defeat')).toBe(false);
 

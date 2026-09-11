@@ -33,7 +33,7 @@ function browseSeed(): number {
     for (let turn = 0; turn < 3; turn++) {
       chronicle = endedTurn(chronicle);
     }
-    return chronicle.defeat === undefined && chronicle.discardPile.length === 15 ? seed : undefined;
+    return chronicle.ending === undefined && chronicle.discardPile.length === 15 ? seed : undefined;
   });
 }
 

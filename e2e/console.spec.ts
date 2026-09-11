@@ -36,7 +36,7 @@ function unchartedEnemy(): Run {
     let chronicle = beginChronicle(seed, DECKS.PH_Deck);
     for (let turns = 1; turns <= 8; turns++) {
       chronicle = endedTurn(chronicle);
-      if (chronicle.defeat !== undefined) return undefined;
+      if (chronicle.ending !== undefined) return undefined;
       const charted = new Set(chronicle.snapshots.map(tileKey));
       const enemy = chronicle.units.find((unit) => !charted.has(tileKey(unit.tile)));
       if (enemy !== undefined) return { seed, turns, enemy: enemy.tile };

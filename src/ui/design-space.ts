@@ -24,7 +24,7 @@ export function css(colour: number): string {
 /**
  * The two depths the scrim divides the chronicle screen at: everything the chronicle screen lays
  * out is below the scrim, and the Menu button stands over it, so it is pressable while a window or
- * the defeat screen covers the chronicle screen. The resource bar rises to that depth too for as
+ * the ending screen covers the chronicle screen. The resource bar rises to that depth too for as
  * long as a deal waits to be taken, and answers no press while it stands there. What the scrim
  * carries stands between the two depths.
  */

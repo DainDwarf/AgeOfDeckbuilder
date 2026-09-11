@@ -199,7 +199,8 @@ test('the same command on the same chronicle gives the same chronicle back', () 
 test('a city with no population left falls, whatever the command was', () => {
   const empty = cityOf(['urban'], { tiles: field(2), population: 0 });
 
-  expect(outcome(apply(empty, { type: 'play', index: 0, aim: 'none' })).defeat).toEqual({
+  expect(outcome(apply(empty, { type: 'play', index: 0, aim: 'none' })).ending).toEqual({
+    outcome: 'defeat',
     cause: 'population',
     turn: empty.turn,
   });
@@ -209,7 +210,7 @@ test('a city with no population left falls, whatever the command was', () => {
   const ended = outcome(apply(empty, { type: 'end-turn' }));
 
   expect(ended.population).toBe(0);
-  expect(ended.defeat).toEqual({ cause: 'population', turn: ended.turn });
+  expect(ended.ending).toEqual({ outcome: 'defeat', cause: 'population', turn: ended.turn });
 });
 
 test('the founding fills the city tile’s slot with the city', () => {
@@ -224,7 +225,10 @@ test('a chronicle that has ended takes no command at all', () => {
     hand: ['PH_Harvest'],
     resources: { food: 0, production: 0, military: 0, money: 0, science: 1, culture: 0 },
   });
-  const fallen: Chronicle = { ...city, defeat: { cause: 'capture', turn: city.turn } };
+  const fallen: Chronicle = {
+    ...city,
+    ending: { outcome: 'defeat', cause: 'capture', turn: city.turn },
+  };
 
   expect(
     outcome(apply(city, { type: 'play', index: 0, aim: 'none' })).resources.food,

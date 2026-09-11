@@ -32,6 +32,9 @@ type Span = readonly [number, number];
 /** 🔧 What the siege lands: how many camps it draws, and how far from the city each stands. */
 const SIEGE = { camps: 5, fromCity: [3, 5] as Span };
 
+/** 🔧 How many turns the siege spans, the turn it lands on the first of them. */
+const SIEGE_SPAN = 6;
+
 /**
  * The age's schedule: how far apart its events land, which entry is its capstone and the window of
  * turns the capstone's own turn is rolled from, and every entry it draws from.
@@ -83,6 +86,14 @@ export function dealsCapstone(chronicle: Chronicle): boolean {
 }
 
 /**
+ * Whether the capstone has been stood out: the chronicle is on the last turn of the siege's span,
+ * which no chronicle reaches without the capstone having landed on it.
+ */
+export function survived(chronicle: Chronicle): boolean {
+  return chronicle.turn === chronicle.capstoneTurn + SIEGE_SPAN - 1;
+}
+
+/**
  * The events phase: a turn the schedule has nothing due on, and one no entry weighs anything on,
  * change nothing and draw nothing, so the end of turn raises no stage for either. On the due turn
  * the entries weighing anything are drawn one after another, never the same one twice, and the
@@ -111,6 +122,24 @@ export function events(chronicle: Chronicle): Chronicle {
     );
   }
   return { ...chronicle, rng, deal };
+}
+
+/**
+ * 🔧 The siege's reinforcement, on every turn after the one the capstone landed on: a warrior enters
+ * on every camp whose tile is free, in tile order, the generator's camps as much as the siege's own,
+ * and none at all on a camp a unit stands on. It draws nothing, and must not: every later draw of the
+ * chronicle would move with it.
+ */
+export function reinforced(chronicle: Chronicle): Chronicle {
+  if (chronicle.turn <= chronicle.capstoneTurn) return chronicle;
+
+  let standing = chronicle;
+  for (const { q, r, building } of chronicle.tiles) {
+    if (building !== 'PH_Camp') continue;
+    if (unitAt(standing.units, { q, r }) !== undefined) continue;
+    standing = enteredOnCamp(standing, { q, r });
+  }
+  return standing;
 }
 
 /**

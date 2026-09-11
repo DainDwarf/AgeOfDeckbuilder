@@ -1385,6 +1385,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
             slide(stage.from, stage.to, stage.chronicle),
           );
         case 'events':
+        case 'reinforce':
           return staged(
             arrivals(stage.chronicle).map((unit) => unit.tile),
             stage.chronicle,

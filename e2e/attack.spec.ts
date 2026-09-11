@@ -53,7 +53,7 @@ function besieged(chronicle: Chronicle): { turns: number; enemy: TileCoords } | 
 
   for (let turns = 1; turns <= 20; turns++) {
     standing = endedTurn(standing);
-    if (standing.defeat !== undefined) return undefined;
+    if (standing.ending !== undefined) return undefined;
     const warrior = standing.units.find((unit) => unit.faction === 'player');
     if (warrior === undefined || warrior.action < warrior.stats.action) return undefined;
     const enemy = standing.units.find(

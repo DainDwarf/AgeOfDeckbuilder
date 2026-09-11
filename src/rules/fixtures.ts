@@ -28,7 +28,7 @@ export const CITY: TileCoords = { q: 0, r: 0 };
  * A unit a fixture puts on the map: what it enters as, and the state the fixture authors on it once
  * it stands there.
  */
-type Standing = {
+export type Standing = {
   readonly entering: Entering;
   readonly stats: UnitStats;
   readonly movePoints: number;

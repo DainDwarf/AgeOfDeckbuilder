@@ -23,8 +23,7 @@ test('the enemy that reaches the city captures it, and the chronicle ends on the
 
   const fallen = await chronicleOf(page);
 
-  expect(fallen.defeat?.cause).toBe('capture');
-  expect(fallen.defeat?.turn).toBe(fallen.turn);
+  expect(fallen.ending).toEqual({ outcome: 'defeat', cause: 'capture', turn: fallen.turn });
   await expect.poll(() => defeatShown(page)).toBe(true);
   expect(problems).toEqual([]);
 });

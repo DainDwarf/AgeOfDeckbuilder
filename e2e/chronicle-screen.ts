@@ -458,9 +458,10 @@ export function atTileRun(): { seed: number; turn: number } {
 export function fallRun(): { seed: number; turns: number } {
   return firstSeed('is captured inside twenty turns', (seed) => {
     let chronicle = beginChronicle(seed, DECKS.PH_Deck);
-    for (let turns = 1; turns <= 20 && chronicle.defeat === undefined; turns++) {
+    for (let turns = 1; turns <= 20 && chronicle.ending === undefined; turns++) {
       chronicle = endedTurn(chronicle);
-      if (chronicle.defeat?.cause === 'capture') return { seed, turns };
+      const ending = chronicle.ending;
+      if (ending?.outcome === 'defeat' && ending.cause === 'capture') return { seed, turns };
     }
     return undefined;
   });
@@ -704,7 +705,7 @@ export async function stoppedTurn(page: Page): Promise<void> {
   await page.waitForFunction((next) => {
     const scene = window.game?.scene.getScene<ChronicleScene>('chronicle');
     if (scene === null || scene === undefined || scene.playing) return false;
-    return scene.chronicle.turn === next || scene.chronicle.defeat !== undefined;
+    return scene.chronicle.turn === next || scene.chronicle.ending !== undefined;
   }, turn + 1);
 }
 

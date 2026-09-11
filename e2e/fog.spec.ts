@@ -120,7 +120,7 @@ function enemyInFog(): EnemyRun {
       const stepped = foggedThisTurn(chronicle);
       if (stepped !== undefined) return { seed, turn, ...stepped };
       chronicle = endedTurn(chronicle);
-      if (chronicle.defeat !== undefined) return undefined;
+      if (chronicle.ending !== undefined) return undefined;
     }
     return undefined;
   });

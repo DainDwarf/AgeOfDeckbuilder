@@ -4,7 +4,7 @@ import { ENEMY_SCRIPTS } from './enemies';
 import { CITY_TILE, generateMap, type Tile, type TileCoords, tileKey } from './map';
 import { RESOURCES } from './resources';
 import { seedRng, shuffle as shuffleItems } from './rng';
-import { events, scheduled, taken } from './schedule';
+import { events, reinforced, scheduled, survived, taken } from './schedule';
 import { charted } from './sight';
 import {
   type Block,
@@ -78,9 +78,11 @@ const HAND_SIZE = 5;
  * with its cost paid, `refused` is the command the rules turned down, `assign` is an inhabitant put
  * on a tile, taken off one, or taken off one and put on another, `claim` is a tile bought with
  * culture and taken inside the border, `grow` is the food stock spent on one more inhabitant,
- * `turn` is the tick, where every unit's move points and action are refreshed, `deal` is what the
- * schedule offers on a due turn, `events` is the entry taken landing, `strike` is every hazard the
- * hand still holds striking, and `capture` is the city falling to an enemy that stood on its tile.
+ * `turn` is the tick, where every unit's move points and action are refreshed, `reinforce` is the
+ * capstone's warriors entering on the camps, `deal` is what the schedule offers on a due turn,
+ * `events` is the entry taken landing, `strike` is every hazard the hand still holds striking,
+ * `capture` is the city falling to an enemy that stood on its tile, and `victory` is the city still
+ * standing at the end of the capstone's last turn.
  */
 export type PlainStage =
   | 'played'
@@ -92,7 +94,9 @@ export type PlainStage =
   | 'income'
   | 'grow'
   | 'capture'
+  | 'victory'
   | 'turn'
+  | 'reinforce'
   | 'deal'
   | 'events'
   | 'draw'
@@ -164,7 +168,7 @@ export function apply(chronicle: Chronicle, command: Command): Stage[] {
  * population falls on the last stage whatever it was.
  */
 function resolved(chronicle: Chronicle, command: Command): Stage[] {
-  if (chronicle.defeat !== undefined) return [{ name: 'refused', chronicle }];
+  if (chronicle.ending !== undefined) return [{ name: 'refused', chronicle }];
   if (chronicle.deal.length > 0 && command.type !== 'take') {
     return [{ name: 'refused', chronicle }];
   }
@@ -172,7 +176,7 @@ function resolved(chronicle: Chronicle, command: Command): Stage[] {
   const stages = stagesOf(chronicle, command);
 
   const last = stages[stages.length - 1];
-  if (last.chronicle.defeat !== undefined || last.chronicle.population > 0) return stages;
+  if (last.chronicle.ending !== undefined || last.chronicle.population > 0) return stages;
   return [...stages.slice(0, -1), { ...last, chronicle: fall(last.chronicle, 'population') }];
 }
 
@@ -237,9 +241,10 @@ export function outcome(stages: readonly Stage[]): Chronicle {
 
 /**
  * The end of turn, step by ordered step, each with the chronicle it leaves: a step that changed
- * nothing is absent, and the list ends at the capture when the city falls in the enemy phase, or at
- * the deal a due turn's events phase leaves standing — the hand waits on the take. The turn always
- * ticks, so there is always a stage.
+ * nothing is absent, and the list ends at the capture when the city falls in the enemy phase, at the
+ * victory when the city is still standing once the capstone's last turn is over, or at the deal a due
+ * turn's events phase leaves standing — the hand waits on the take. The turn always ticks, so there
+ * is always a stage.
  */
 function endOfTurn(chronicle: Chronicle): Stage[] {
   const stages: Stage[] = [];
@@ -262,14 +267,19 @@ function endOfTurn(chronicle: Chronicle): Stage[] {
   staged('income', income(standing));
   staged('grow', grow(standing));
   raised(enemyPhase(standing));
-  if (standing.defeat !== undefined) return stages;
+  if (standing.ending !== undefined) return stages;
   raised(captures(standing));
+  if (survived(standing)) {
+    staged('victory', victory(standing));
+    return stages;
+  }
 
   staged('turn', {
     ...standing,
     turn: standing.turn + 1,
     units: standing.units.map((unit) => refreshedAction(refreshedMovePoints(unit))),
   });
+  staged('reinforce', reinforced(standing));
   staged('deal', events(standing));
   if (standing.deal.length > 0) return stages;
   raised(drawn(standing));
@@ -309,7 +319,12 @@ function drawn(chronicle: Chronicle): Stage[] {
 
 /** The city's fall: the chronicle records what took it and on which turn, and ends there. */
 function fall(chronicle: Chronicle, cause: DefeatCause): Chronicle {
-  return { ...chronicle, defeat: { cause, turn: chronicle.turn } };
+  return { ...chronicle, ending: { outcome: 'defeat', cause, turn: chronicle.turn } };
+}
+
+/** The capstone stood out: the chronicle records the turn it ended on, and ends there. */
+function victory(chronicle: Chronicle): Chronicle {
+  return { ...chronicle, ending: { outcome: 'victory', turn: chronicle.turn } };
 }
 
 /** What a card costs, resource by resource, in the order the resource bar reads. */

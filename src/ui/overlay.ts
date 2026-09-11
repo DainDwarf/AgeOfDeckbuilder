@@ -5,7 +5,7 @@ import { dealsCapstone } from '../rules/schedule';
 import {
   type CardId,
   type Chronicle,
-  type Defeat,
+  type Ending,
   type EventId,
   NO_REFUSAL,
   type Refusal,
@@ -80,7 +80,7 @@ export type Overlay = {
   /** A key pressed while a slot of the Controls window listens binds there, and is taken. */
   binds(press: Bind): boolean;
   /**
-   * Raises the deal window while the chronicle waits on a deal and the defeat screen once it has
+   * Raises the deal window while the chronicle waits on a deal and the ending screen once it has
    * ended, and nothing while it runs.
    */
   render(chronicle: Chronicle): void;
@@ -148,13 +148,13 @@ type Ringing = Browsing | Dealing;
 
 /**
  * What the scrim carries: a pile's cards, the aim window, the deal window, one card shown large over
- * what it was taken off, a window of the menu, or the defeat screen.
+ * what it was taken off, a window of the menu, or the ending screen.
  */
 type Carried =
   | Offering
   | { readonly stands: 'inspection'; readonly over: Offering | undefined }
   | { readonly stands: 'window'; readonly which: MenuWindow; readonly laid: Opened }
-  | { readonly stands: 'defeat' };
+  | { readonly stands: 'ending' };
 
 /** Where a drag of the grid was pressed, what the grid stood at, and where the pointer has been. */
 type Scroll = {
@@ -165,9 +165,9 @@ type Scroll = {
 
 /**
  * The scrim and what stands on it. The scrim swallows every pointer beneath it, so the chronicle
- * screen is inert while anything is up, and only the menu comes up over the defeat screen — the city
- * that fell is left behind by a new chronicle alone. `covering` is told as the scrim goes up and
- * comes down, for whatever it cannot swallow: the wheel and the keyboard reach past it.
+ * screen is inert while anything is up, and only the menu comes up over the ending screen — a
+ * chronicle that has ended is left behind by a new one alone. `covering` is told as the scrim goes up
+ * and comes down, for whatever it cannot swallow: the wheel and the keyboard reach past it.
  */
 export function createOverlay(
   scene: Phaser.Scene,
@@ -191,11 +191,11 @@ export function createOverlay(
   let offset = 0;
   let fling = 0;
   let scrolling: Scroll | undefined;
-  /** The fall the defeat screen was raised on, kept so the menu can close back onto it. */
-  let fallen: Defeat | undefined;
+  /** The ending the screen was raised on, kept so the menu can close back onto it. */
+  let raisedOn: Ending | undefined;
   /** The deal standing, kept so the menu can close back onto its window; the take lets it go. */
   let dealing: Dealing | undefined;
-  /** The defeat screen still coming up; a render owns the rise and takes it down. */
+  /** The ending screen still coming up; a render owns the rise and takes it down. */
   let rising: Phaser.GameObjects.Container | undefined;
 
   /** What the scrim carries taken down, the scrim itself left up: every raise replaces through here. */
@@ -226,7 +226,7 @@ export function createOverlay(
       case 'browse':
       case 'deal':
       case 'window':
-      case 'defeat':
+      case 'ending':
         return undefined;
     }
   };
@@ -241,7 +241,7 @@ export function createOverlay(
       case 'aim-window':
       case 'deal':
       case 'inspection':
-      case 'defeat':
+      case 'ending':
         return undefined;
     }
   };
@@ -254,7 +254,7 @@ export function createOverlay(
     aim.closed();
   };
 
-  // The defeat's rise brings the scrim up from nothing, so every cover states the alpha it wants.
+  // The ending's rise brings the scrim up from nothing, so every cover states the alpha it wants.
   const cover = (): void => {
     stopMotion(scene, scrim);
     scrim.setVisible(true).setAlpha(SCRIM_ALPHA).setInteractive();
@@ -529,38 +529,37 @@ export function createOverlay(
     }
   };
 
-  /** The city fallen, on the screen that says so; the caller decides whether it rises or stands. */
-  const showDefeat = (defeat: Defeat): Phaser.GameObjects.Container => {
+  /** The chronicle ended, on the screen that says so; the caller decides whether it rises or stands. */
+  const showEnding = (ending: Ending): Phaser.GameObjects.Container => {
     wipe();
     cover();
-    carried = { stands: 'defeat' };
-    fallen = defeat;
+    carried = { stands: 'ending' };
+    raisedOn = ending;
 
-    const title = addText(scene, DESIGN_WIDTH / 2, DESIGN_HEIGHT / 2 - 12, text('defeat.title'), {
+    const said = says(ending);
+    const title = addText(scene, DESIGN_WIDTH / 2, DESIGN_HEIGHT / 2 - 12, said.title, {
       fontFamily: UI_FONT,
       fontSize: '72px',
       fontStyle: 'bold',
       color: TITLE_INK,
     }).setOrigin(0.5, 1);
-    const cause = addText(
-      scene,
-      DESIGN_WIDTH / 2,
-      DESIGN_HEIGHT / 2 + 12,
-      text(`defeat.${defeat.cause}`, { turn: defeat.turn }),
-      { fontFamily: UI_FONT, fontSize: '22px', color: TITLE_INK },
-    ).setOrigin(0.5, 0);
+    const line = addText(scene, DESIGN_WIDTH / 2, DESIGN_HEIGHT / 2 + 12, said.line, {
+      fontFamily: UI_FONT,
+      fontSize: '22px',
+      color: TITLE_INK,
+    }).setOrigin(0.5, 0);
 
     const screen = scene.add
-      .container(0, 0, [title, cause])
+      .container(0, 0, [title, line])
       .setDepth(SCRIM_DEPTH + 1)
-      .setName('defeat');
+      .setName(ending.outcome);
     shown.push(screen);
     return screen;
   };
 
-  /** The fall as it lands: the scrim and the screen rise together, out of nothing and a little low. */
-  const raiseDefeat = (defeat: Defeat): Promise<void> => {
-    const screen = showDefeat(defeat).setAlpha(0).setY(12);
+  /** The ending as it lands: the scrim and the screen rise together, out of nothing and a little low. */
+  const raiseEnding = (ending: Ending): Promise<void> => {
+    const screen = showEnding(ending).setAlpha(0).setY(12);
     rising = screen;
     scrim.setAlpha(0);
 
@@ -601,11 +600,11 @@ export function createOverlay(
   };
 
   /**
-   * The menu gone: back to the chronicle screen, or onto the deal window or the defeat screen that
+   * The menu gone: back to the chronicle screen, or onto the deal window or the ending screen that
    * stood under it.
    */
   const shut = (): void => {
-    if (fallen !== undefined) showDefeat(fallen);
+    if (raisedOn !== undefined) showEnding(raisedOn);
     else if (dealing !== undefined) showDeal(dealing);
     else close();
   };
@@ -641,7 +640,7 @@ export function createOverlay(
         if (carried.selected === undefined) showWindow('menu');
         else ring(carried, undefined);
         return true;
-      case 'defeat':
+      case 'ending':
         return false;
     }
   };
@@ -660,7 +659,7 @@ export function createOverlay(
       case 'aim-window':
       case 'inspection':
       case 'window':
-      case 'defeat':
+      case 'ending':
         back();
         return;
     }
@@ -680,7 +679,7 @@ export function createOverlay(
         case 'aim-window':
         case 'deal':
         case 'window':
-        case 'defeat':
+        case 'ending':
           return;
       }
     },
@@ -746,7 +745,7 @@ export function createOverlay(
         case 'aim-window':
         case 'inspection':
         case 'window':
-        case 'defeat':
+        case 'ending':
           return;
       }
     },
@@ -759,17 +758,30 @@ export function createOverlay(
       return windowStanding()?.laid.binds(press) ?? false;
     },
     render(chronicle: Chronicle): void {
-      if (chronicle.defeat !== undefined && fallen === undefined)
-        void raiseDefeat(chronicle.defeat);
+      if (chronicle.ending !== undefined && raisedOn === undefined)
+        void raiseEnding(chronicle.ending);
       else if (chronicle.deal.length > 0 && dealing === undefined)
         showDeal({ stands: 'deal', on: chronicle, selected: undefined });
       else stand();
     },
     play(stage: Stage): Promise<void> | undefined {
-      if (stage.chronicle.defeat === undefined || fallen !== undefined) return undefined;
-      return raiseDefeat(stage.chronicle.defeat);
+      if (stage.chronicle.ending === undefined || raisedOn !== undefined) return undefined;
+      return raiseEnding(stage.chronicle.ending);
     },
   };
+}
+
+/** What the ending screen reads: its title, and the one line under it. */
+function says(ending: Ending): { title: string; line: string } {
+  switch (ending.outcome) {
+    case 'victory':
+      return { title: text('victory.title'), line: text('victory.survived') };
+    case 'defeat':
+      return {
+        title: text('defeat.title'),
+        line: text(`defeat.${ending.cause}`, { turn: ending.turn }),
+      };
+  }
 }
 
 /** The card lying under a design-space point, and nothing where the point falls between cards. */

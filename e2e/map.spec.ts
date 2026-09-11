@@ -95,7 +95,7 @@ async function pushOut(page: Page, coord: TileCoords): Promise<void> {
 function moveRun(): { seed: number; turns: number; from: TileCoords; to: TileCoords } {
   return firstSeed('crosses an enemy in sight inside eight ends of turn', (seed) => {
     let chronicle = beginChronicle(seed, DECKS.PH_Deck);
-    for (let turns = 0; turns <= 8 && chronicle.defeat === undefined; turns++) {
+    for (let turns = 0; turns <= 8 && chronicle.ending === undefined; turns++) {
       const stages = apply(chronicle, { type: 'end-turn' });
       const moves = stages.flatMap((stage) =>
         stage.name === 'move'

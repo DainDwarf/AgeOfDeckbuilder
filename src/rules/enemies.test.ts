@@ -64,7 +64,7 @@ function capturesOf(chronicle: Chronicle): string[] {
   );
 }
 
-test('a capture ends the end of turn on its own stage, with the defeat set', () => {
+test('a capture ends the end of turn on its own stage, with the ending set', () => {
   const overrun = cityOf(['urban'], {
     tiles: field(2),
     hand: ['PH_Harvest'],
@@ -76,7 +76,11 @@ test('a capture ends the end of turn on its own stage, with the defeat set', () 
   const last = stages[stages.length - 1];
 
   expect(stages.map((stage) => stage.name)).toEqual(['discard', 'capture']);
-  expect(last.chronicle.defeat).toEqual({ cause: 'capture', turn: overrun.turn });
+  expect(last.chronicle.ending).toEqual({
+    outcome: 'defeat',
+    cause: 'capture',
+    turn: overrun.turn,
+  });
   expect(last.chronicle.turn).toBe(overrun.turn);
   expect(last.chronicle.hand).toEqual([]);
 });
@@ -467,10 +471,10 @@ test('an enemy on the city’s tile attacks nothing, and captures the city the t
   expect(stood.units[1].tile).toEqual(CITY);
   expect(attacksOf(city)).toEqual([]);
   expect(stood.units[0].stats.health).toBe(city.units[0].stats.health);
-  expect(stood.defeat).toBeUndefined();
+  expect(stood.ending).toBeUndefined();
 
   const fallen = outcome(apply(stood, { type: 'end-turn' }));
-  expect(fallen.defeat).toEqual({ cause: 'capture', turn: stood.turn });
+  expect(fallen.ending).toEqual({ outcome: 'defeat', cause: 'capture', turn: stood.turn });
   expect(fallen.turn).toBe(stood.turn);
 });
 
@@ -479,12 +483,15 @@ test('the enemy that moves in from its camp reaches the city and captures it', (
   let chronicle = cityOf(['urban'], {
     tiles: camped(field(radius), [{ q: radius, r: 0 }]),
   });
-  for (let turn = 0; turn < 20 && chronicle.defeat === undefined; turn++) {
+  for (let turn = 0; turn < 20 && chronicle.ending === undefined; turn++) {
     chronicle = endedTurn(chronicle, 'PH_Raid');
   }
 
-  expect(chronicle.defeat?.cause).toBe('capture');
-  expect(chronicle.defeat?.turn).toBe(chronicle.turn);
+  expect(chronicle.ending).toEqual({
+    outcome: 'defeat',
+    cause: 'capture',
+    turn: chronicle.turn,
+  });
 });
 
 test('a chronicle with enemies on the map survives JSON', () => {

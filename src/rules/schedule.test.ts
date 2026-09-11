@@ -21,17 +21,19 @@ import {
   NO_GROWTH,
   only,
   SCHEDULE_BOUND,
+  type Standing,
   stagedBy,
+  standing,
   throughSchedule,
   toFirstRaid,
   withUnits,
   worker,
 } from './fixtures';
-import { distance, MAP_COMPOSITION, type TileCoords, tileKey } from './map';
+import { distance, MAP_COMPOSITION, neighbours, type TileCoords, tileKey } from './map';
 import { seedRng } from './rng';
 import { scheduled } from './schedule';
 import type { Chronicle } from './state';
-import { UNIT_STATS } from './units';
+import { UNIT_STATS, unitAt } from './units';
 
 /**
  * Every event a seed's schedule dealt over thirty turns, the turn it was dealt on and how many
@@ -296,6 +298,47 @@ function corridor(carrying: Carrying = {}): Chronicle {
   return besieged({ tiles: only(6, CORRIDOR), ...carrying });
 }
 
+/** How many turns of the siege's span follow the one it lands on: what a city stands out to win. */
+const REINFORCED = 5;
+
+/**
+ * A worker of the player's with health no siege runs through, and nothing to fight back with: what a
+ * fixture stands where it wants the enemies of the span to spend their turns.
+ */
+function unkillable(tile: TileCoords): Standing {
+  return standing('player', tile, {
+    type: 'PH_Worker',
+    damage: 0,
+    range: 0,
+    action: 0,
+    health: 99,
+  });
+}
+
+/** The disc with water around the city: no ground runs to it, so the siege places no camp of its own. */
+const MOATED = field(6, neighbours(CITY));
+
+/** A camp of the generator's out on that disc. */
+const STANDING_CAMP: TileCoords = { q: 6, r: 0 };
+
+/**
+ * The tile the worker the camp's enemies walk to stands on: two tiles off the camp, with room enough
+ * around it for five of them, so every warrior entered leaves the camp it entered on.
+ */
+const LURE: TileCoords = { q: 4, r: 0 };
+
+/** The moated city with the siege landed on it, a camp of the generator's standing out of its reach. */
+function moated(carrying: Carrying = {}): Chronicle {
+  return besieged({ tiles: camped(MOATED, [STANDING_CAMP]), ...carrying });
+}
+
+/** That city ending turn after turn to the end of the siege's span: the chronicle it left. */
+function stoodOut(): Chronicle {
+  let besieging = moated({ units: [unkillable(LURE)] });
+  for (let turn = 0; turn <= REINFORCED; turn++) besieging = endedTurn(besieging, 'PH_Famine');
+  return besieging;
+}
+
 test('the capstone lands on a turn rolled at the founding, between the twenty-seventh and the thirty-third', () => {
   const turns = SEEDS.map((seed) => beginChronicle(seed, DECK).capstoneTurn);
 
@@ -316,24 +359,6 @@ test('the capstone turn deals the capstone alone, whatever turn the next event w
     expect(dealt.deal).toEqual(['PH_Siege']);
     expect(dealt.turn).toBe(CAPSTONE);
     expect(dealt.hand).toEqual([]);
-  }
-});
-
-test('the capstone is taken as any deal is: it rolls the next due turn, and is dealt no second time', () => {
-  const dealt = outcome(apply(awaitingCapstone({ drawPile: fullDraw() }), { type: 'end-turn' }));
-  const landed = outcome(apply(dealt, { type: 'take', event: 'PH_Siege' }));
-
-  expect(stagedBy(dealt, { type: 'take', event: 'PH_Siege' })).toEqual(['events', 'draw']);
-  expect(landed.deal).toEqual([]);
-  expect(landed.hand).toEqual(fullDraw());
-  expect(landed.nextEvent - CAPSTONE).toBeGreaterThanOrEqual(3);
-  expect(landed.nextEvent - CAPSTONE).toBeLessThanOrEqual(7);
-
-  let standing = landed;
-  const camps = campsOf(standing);
-  for (let turn = 0; turn < SCHEDULE_BOUND; turn++) {
-    standing = endedTurn(standing, 'PH_Famine');
-    expect(campsOf(standing)).toEqual(camps);
   }
 });
 
@@ -408,5 +433,83 @@ test('the siege places no camp on ground a camp does not lie on, or the city is 
   for (const after of [rough, moat]) {
     expect(campsOf(after)).toEqual([]);
     expect(enemiesOf(after)).toEqual([]);
+  }
+});
+
+test('each of the five turns after the landing enters a warrior on the camp standing, and no turn more', () => {
+  let besieging = moated({ units: [unkillable(LURE)] });
+  expect(enemiesOf(besieging)).toEqual([]);
+
+  for (let turn = 1; turn <= REINFORCED; turn++) {
+    besieging = endedTurn(besieging, 'PH_Famine');
+
+    expect(besieging.turn).toBe(CAPSTONE + turn);
+    expect(enemiesOf(besieging)).toHaveLength(turn);
+    expect(unitAt(besieging.units, STANDING_CAMP)?.faction).toBe('enemy');
+  }
+  expect(enemiesOf(stoodOut())).toHaveLength(REINFORCED);
+});
+
+test('the reinforcement is a stage of its own, raised after the tick and ahead of the deal', () => {
+  let besieging = moated({ rng: seedRng(1), units: [unkillable(LURE)] });
+  expect(besieging.nextEvent).toBeLessThanOrEqual(CAPSTONE + REINFORCED);
+
+  while (besieging.turn < besieging.nextEvent - 1) {
+    const staged = stagedBy(besieging, { type: 'end-turn' });
+    expect(staged.slice(staged.indexOf('turn'))).toEqual(['turn', 'reinforce']);
+    besieging = endedTurn(besieging, 'PH_Famine');
+  }
+  const due = stagedBy(besieging, { type: 'end-turn' });
+
+  expect(due.slice(due.indexOf('turn'))).toEqual(['turn', 'reinforce', 'deal']);
+});
+
+test('the siege’s own camps are reinforced as the camps standing are', () => {
+  const besieging = besieged({ units: [unkillable(CITY)] });
+  const camps = campsOf(besieging);
+  const after = endedTurn(besieging, 'PH_Famine');
+
+  expect(enemiesOf(besieging)).toHaveLength(camps.length);
+  expect(enemiesOf(after)).toHaveLength(2 * camps.length);
+  for (const camp of camps) expect(unitAt(after.units, camp)?.faction).toBe('enemy');
+});
+
+test('the reinforcement enters no warrior on a camp a unit stands on', () => {
+  let besieging = moated({ units: [standing('enemy', STANDING_CAMP)] });
+  const entered = unitAt(besieging.units, STANDING_CAMP)?.id;
+
+  for (let turn = 1; turn <= REINFORCED; turn++) {
+    besieging = endedTurn(besieging, 'PH_Famine');
+
+    expect(enemiesOf(besieging)).toHaveLength(1);
+    expect(unitAt(besieging.units, STANDING_CAMP)?.id).toBe(entered);
+  }
+});
+
+test('the city standing at the end of the siege’s sixth turn ends the chronicle in victory', () => {
+  let besieging = moated({ units: [unkillable(LURE)] });
+
+  for (let turn = 1; turn <= REINFORCED; turn++) {
+    besieging = endedTurn(besieging, 'PH_Famine');
+    expect(besieging.turn).toBe(CAPSTONE + turn);
+    expect(besieging.ending).toBeUndefined();
+  }
+  const staged = stagedBy(besieging, { type: 'end-turn' });
+  const survived = stoodOut();
+
+  expect(staged[staged.length - 1]).toBe('victory');
+  expect(staged).not.toContain('turn');
+  expect(survived.turn).toBe(CAPSTONE + REINFORCED);
+  expect(survived.ending).toEqual({ outcome: 'victory', turn: CAPSTONE + REINFORCED });
+});
+
+test('a chronicle that ended in victory takes no command at all', () => {
+  const survived = stoodOut();
+  const refused: Command[] = [{ type: 'end-turn' }, assignTo(CITY)];
+
+  expect(stagedBy(moated(), assignTo(CITY))).toEqual(['assign']);
+  for (const command of refused) {
+    expect(stagedBy(survived, command)).toEqual(['refused']);
+    expect(outcome(apply(survived, command))).toBe(survived);
   }
 });

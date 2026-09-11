@@ -126,7 +126,7 @@ until they are rebound. **Default** puts every key back where it began, **Back**
 and what the player binds is kept in the browser from one launch to the next.
 
 The **debug console** is a dark panel down the top of the screen, standing over everything the
-screen carries — the resource bar, a window and the defeat screen included — with the last lines run
+screen carries — the resource bar, a window and the ending screen included — with the last lines run
 above the line being typed. What it covers reads dimly through it, so the bar is still there to be
 read and the console writes clear of it. While it stands the keyboard is its — every key types, Backspace
 deletes, Enter runs the line, and Escape or the key that opened it closes it — so nothing the game
@@ -401,6 +401,11 @@ like anything else. The resource bar reads over its scrim — the choice is deci
 has — while the map stays under the scrim, so the bar's readings act on nothing for as long as the
 window stands.
 
+A chronicle that has ended stands on its **ending screen**, which rises with its scrim out of nothing
+as the last stage plays out and never comes down: it reads the outcome — victory, or defeat with what
+took the city and the turn it fell on. The scrim swallows every press, the menu alone opens over the
+screen and closes back onto it, and a new chronicle is the way out.
+
 The right click finds a tile, a card of the hand, a card in a browse or one in the aim window, in
 city mode and while a card is being aimed alike; a tile it lands on afresh comes up at its first
 card.
@@ -627,11 +632,15 @@ window is the lever behind "shorter in the earlier ages". The player knows what 
 the founding and never when: the chronicle screen opens on the capstone's card, and the window is
 shown nowhere. On its turn the events phase deals the capstone alone, whatever else was due, the
 player takes it as any deal, and the schedule rolls the next due turn from its landing as from any.
-🔧 The schedule keeps dealing through the capstone and after it — the fewest special rules until play
-says which feel best. It may span several turns, and it ends with a pass condition: the chronicle
-ends there, in victory or defeat. What the trial is, is content, one per age. 🔧 Until the deck is
-data the capstone is a stand-in, PH_Siege: it places five camps on the tiles three to five from the
-city that a camp may fill and the ground runs to the city from, keeping the generator's spacing from
-every camp standing, fewer where the tiles run out, and a warrior enters on each. A fixed turn known
-from the launch was rejected: a countdown the player can read turns the whole chronicle into
-arithmetic toward it.
+🔧 The schedule keeps dealing through the capstone's own turns — the fewest special rules until play
+says which feel best. The capstone spans several turns, and it ends with a pass condition: the
+chronicle ends there, in victory or defeat. What the trial is, is content, one per age. 🔧 Until the
+deck is data the capstone is a stand-in, PH_Siege, spanning six turns with the turn it lands on the
+first of them: it places five camps on the tiles three to five from the city that a camp may fill and
+the ground runs to the city from, keeping the generator's spacing from every camp standing, fewer
+where the tiles run out, and a warrior enters on each. On each of the five turns after, the events
+phase enters a warrior on every camp whose tile is free — the generator's camps as much as the
+siege's own — before whatever that turn deals, and those warriors enter the map the way an event's
+do. A city still standing when the sixth turn ends is victory: the chronicle ends at that end of
+turn, before the turn ticks over, and carries the ending as it carries a defeat. A fixed turn known from the launch was rejected: a countdown the player can
+read turns the whole chronicle into arithmetic toward it.

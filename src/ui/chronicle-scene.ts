@@ -315,7 +315,7 @@ export class ChronicleScene extends Phaser.Scene {
       },
     );
 
-    /** Whether a window, a browse, a card inspected or the defeat screen stands over the map. */
+    /** Whether a window, a browse, a card inspected or the ending screen stands over the map. */
     let covered = false;
     const overlay = createOverlay(
       this,

@@ -199,8 +199,8 @@ function menuLabel(scene: Phaser.Scene): Phaser.GameObjects.Text {
 
 /**
  * The Menu button, in the zone the layout gave it at the bar's right end. It stands over the scrim
- * instead of in the bar, so it is still pressable while a window or the defeat screen covers the
- * chronicle screen: a new chronicle is how a player leaves a defeat.
+ * instead of in the bar, so it is still pressable while a window or the ending screen covers the
+ * chronicle screen: a new chronicle is how a player leaves a chronicle that has ended.
  */
 function createMenuButton(
   scene: Phaser.Scene,
