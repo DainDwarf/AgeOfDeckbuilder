@@ -41,7 +41,7 @@ deliberate exception the reviewer sees; there is no silent allow-list.
 | **enemy** | A non-player unit that attacks. | barbarian, raider, hostile, invader, foe |
 | **killed** | What happens to a unit that loses: it leaves the map. | destroyed, slain, dead, lost |
 | **event** | One entry of the age's schedule; what the chronicle throws at the city. | disaster, threat, crisis, encounter |
-| **capstone** | The age's final trial, on a fixed turn known from the launch; passing it is victory. | boss, finale, objective |
+| **capstone** | The age's final trial, known from the founding on a turn that is not; passing it is victory. | boss, finale, objective |
 | **schedule** | An age's set of events with their turn-shifting weights; what the Events phase draws from. | timeline, calendar |
 | **camp** | A generated site enemies enter the map from, filling its tile's building slot; captured, it leaves the map. | lair, nest, spawn point, spawner |
 | **victory** | The end of a chronicle by passing the capstone. | win, success, triumph |

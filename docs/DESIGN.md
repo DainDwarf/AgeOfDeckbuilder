@@ -604,7 +604,8 @@ enter on a free camp, and a famine that lays PH_Hunger — a hazard costing prod
 empties the food stock — on top of the draw pile.
 
 Events are not announced: the player learns the next one when it lands. Announcing them is
-something a technology or a civilization's rule can grant.
+something a technology or a civilization's rule can grant. The capstone is the exception in what,
+never in when: the player knows the trial from the founding and learns its turn when it lands.
 
 **Enemies enter from camps.** The generator places **camps** on the map, each filling its tile's
 building slot, each uncharted until seen. An event that spawns enemies draws, for each of them, a
@@ -620,7 +621,13 @@ Until the deck is data the card is a stand-in: an instant, single use, that gain
 resource. Spawning enemies on any tile out of sight was rejected: a raid out of a hollow that turns
 out empty reads as nothing.
 
-**The capstone lands on a fixed turn of the age**, known from the launch; that turn is the
-chronicle's length and the lever behind "shorter in the earlier ages". It is the last event —
-nothing is drawn after it — it may span several turns, and it ends with a pass condition: the
-chronicle ends there, in victory or defeat. What the trial is, is content, one per age.
+**The capstone lands on a turn drawn at the founding**, seeded, from a window of turns the age's
+schedule names 🔧; the chronicle carries the turn, and the window is the lever behind "shorter in
+the earlier ages". The player knows what the capstone is from the founding and never when: the
+chronicle screen opens on the capstone's card, and the window is shown nowhere. On its turn the
+events phase deals the capstone alone, whatever else was due, the player takes it as any deal, and
+the schedule rolls the next due turn from its landing as from any. 🔧 The schedule keeps dealing
+through the capstone and after it — the fewest special rules until play says which feel best. It
+may span several turns, and it ends with a pass condition: the chronicle ends there, in victory or
+defeat. What the trial is, is content, one per age. A fixed turn known from the launch was
+rejected: a countdown the player can read turns the whole chronicle into arithmetic toward it.
