@@ -195,7 +195,7 @@ A chronicle is a sequence of **turns**. Each turn, in this order:
 7. **Enemy phase.** 🔧 Neutrals move; each enemy moves by its script and then attacks a unit of
    the player's within its range, spending its action as any unit does. An enemy standing
    on the city's tile attacks nothing: it is there to capture. An attack declared a turn before it
-   lands was rejected: it only bites when the player's movement is limited, and units that move
+   lands was rejected: it only matters when the player’s movement is limited, and units that move
    freely by hand step out of a plan declared a turn ahead for nothing.
 
 ### Sight ✅
@@ -281,12 +281,12 @@ chronicle-only by nature.
   same turn; it is refused on a unit whose move points are full. Everything that is not a noun
   entering the map.
 - **Hazard** — the kind that is not the player's own. It sits in no deck: a hazard enters a
-  chronicle from an event, and from there cycles like any other card. It **bites** at the end of
+  chronicle from an event, and from there cycles like any other card. It **strikes** at the end of
   any turn it is still in the hand, before the hand is discarded — and again every cycle it comes
   around, so a hazard left unanswered taxes the city until it is dealt with. Playing it is how it
   is dealt with: aimed at nothing, it does nothing at all, and paying its cost is what takes it out
   of the chronicle. That cost is the whole of the card's decision — what the city gives up to stop
-  paying the bite.
+  paying the strike.
 
 A card **aimed** at a tile lands on no tile its aim does not admit, and the map lights the tiles it
 does. A card aimed at a **unit** is aimed at the tile a unit of the player's stands on and admits no
@@ -314,7 +314,7 @@ the threshold leaves stays in the stock. The growth threshold widens with the po
 inhabitant is dearer than the one before. Nobody eats and nobody starves. The resource bar reads
 population as the idle inhabitants over all of them, and food as the stock over the growth
 threshold. Food as a plain spendable resource with growth elsewhere was rejected: the famine event
-would have nothing to bite. Inhabitants consuming food was rejected too: the widening growth
+would have nothing to empty. Inhabitants consuming food was rejected too: the widening growth
 threshold and the schedule's events are the whole of the pressure on the population.
 
 ### The chronicle screen ✅
@@ -600,7 +600,7 @@ the hand the landing draws, so the player has it in hand for the turn that follo
 families (enemies, disasters, turmoil, fortunate) are tags on content, not rules. Several events a
 turn was rejected: choosing between hardships three times a turn is tedium — a deal is one landing.
 🔧 Until the deck is data the schedule is a stand-in of two entries: a raid, whose warriors each
-enter on a free camp, and a famine that lays PH_Hunger — a hazard costing production, whose bite
+enter on a free camp, and a famine that lays PH_Hunger — a hazard costing production, whose strike
 empties the food stock — on top of the draw pile.
 
 Events are not announced: the player learns the next one when it lands. Announcing them is

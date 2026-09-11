@@ -1249,8 +1249,8 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
     return standing === undefined ? undefined : markers.get(standing.id);
   };
 
-  /** What a target does: a bump where it was hit, and a shrink off the map if it was killed. */
-  const struck = async (
+  /** What a target does: a bump where it was attacked, and a shrink off the map if it was killed. */
+  const bumped = async (
     marker: Phaser.GameObjects.Polygon,
     killed: boolean,
     token: symbol,
@@ -1295,7 +1295,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
     const taken =
       hit === undefined
         ? Promise.resolve()
-        : struck(hit, unitAt(chronicle.units, target) === undefined, token);
+        : bumped(hit, unitAt(chronicle.units, target) === undefined, token);
 
     return Promise.all([lunge, taken]).then(() => settle(token, chronicle));
   };

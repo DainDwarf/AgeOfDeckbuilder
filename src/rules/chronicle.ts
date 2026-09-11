@@ -1,4 +1,4 @@
-import { type AimedCard, aimOf, bitten, CARDS, leavesChronicle, refuses } from './cards';
+import { type AimedCard, aimOf, CARDS, leavesChronicle, refuses, struck } from './cards';
 import { assign, type CityCommand, claim, founding, grow, income, reassign } from './city';
 import { ENEMY_SCRIPTS } from './enemies';
 import { CITY_TILE, generateMap, type Tile, type TileCoords, tileKey } from './map';
@@ -79,15 +79,15 @@ const HAND_SIZE = 5;
  * on a tile, taken off one, or taken off one and put on another, `claim` is a tile bought with
  * culture and taken inside the border, `grow` is the food stock spent on one more inhabitant,
  * `turn` is the tick, where every unit's move points and action are refreshed, `deal` is what the
- * schedule offers on a due turn, `events` is the entry taken landing, `hazard` is every hazard the
- * hand still holds biting, and `capture` is the city falling to an enemy that stood on its tile.
+ * schedule offers on a due turn, `events` is the entry taken landing, `strike` is every hazard the
+ * hand still holds striking, and `capture` is the city falling to an enemy that stood on its tile.
  */
 export type PlainStage =
   | 'played'
   | 'refused'
   | 'assign'
   | 'claim'
-  | 'hazard'
+  | 'strike'
   | 'discard'
   | 'income'
   | 'grow'
@@ -257,7 +257,7 @@ function endOfTurn(chronicle: Chronicle): Stage[] {
     }
   };
 
-  staged('hazard', bitten(standing));
+  staged('strike', struck(standing));
   staged('discard', discard(standing));
   staged('income', income(standing));
   staged('grow', grow(standing));
@@ -477,7 +477,7 @@ function attack(chronicle: Chronicle, attacker: number, at: TileCoords): Stage[]
   );
   if (target === undefined) return [{ name: 'refused', chronicle }];
 
-  const struck = attacked(chronicle.units, unit, target).map((other) =>
+  const damaged = attacked(chronicle.units, unit, target).map((other) =>
     other.id === attacker ? { ...other, action: other.action - 1 } : other,
   );
   return [
@@ -485,7 +485,7 @@ function attack(chronicle: Chronicle, attacker: number, at: TileCoords): Stage[]
       name: 'attack',
       attacker: unit.tile,
       target: target.tile,
-      chronicle: { ...chronicle, units: struck },
+      chronicle: { ...chronicle, units: damaged },
     },
   ];
 }
@@ -550,9 +550,9 @@ function enemyPhase(chronicle: Chronicle): Stage[] {
     while (acting.action > 0) {
       const target = script.attacks({ ...chronicle, units }, acting);
       if (target === undefined) break;
-      const struck = attacked(units, acting, target);
+      const damaged = attacked(units, acting, target);
       acting = { ...acting, action: acting.action - 1 };
-      units = struck.map((other) => (other.id === acting.id ? acting : other));
+      units = damaged.map((other) => (other.id === acting.id ? acting : other));
       stages.push({
         name: 'attack',
         attacker: acting.tile,

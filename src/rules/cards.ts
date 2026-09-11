@@ -60,7 +60,7 @@ export type Aim =
  * A card: its kind, which a list of cards sorts and labels by, and its cost. The three kinds the
  * player's deck holds declare the aim and effect they are played through, and the noun such a card
  * names — the unit it puts on the map, the building it builds — is named by its effect and nowhere
- * else. A hazard declares its bite alone, its kind fixing everything else about it.
+ * else. A hazard declares its strike alone, its kind fixing everything else about it.
  */
 export type Card = { readonly cost: Partial<Resources> } & (
   | ({
@@ -70,7 +70,7 @@ export type Card = { readonly cost: Partial<Resources> } & (
   | {
       readonly kind: 'hazard';
       /** What it does to the chronicle at the end of a turn it is still in the hand. */
-      readonly bites: (chronicle: Chronicle) => Chronicle;
+      readonly strikes: (chronicle: Chronicle) => Chronicle;
     }
 );
 
@@ -108,10 +108,10 @@ export function leavesChronicle(card: Card): boolean {
 }
 
 /**
- * The hazards of the hand biting, in hand order, each on the chronicle the one before it left, and
+ * The hazards of the hand striking, in hand order, each on the chronicle the one before it left, and
  * the chronicle untouched where the hand holds none.
  */
-export function bitten(chronicle: Chronicle): Chronicle {
+export function struck(chronicle: Chronicle): Chronicle {
   let standing = chronicle;
   for (const id of chronicle.hand) {
     const card = CARDS[id];
@@ -121,7 +121,7 @@ export function bitten(chronicle: Chronicle): Chronicle {
       case 'instant':
         break;
       case 'hazard':
-        standing = card.bites(standing);
+        standing = card.strikes(standing);
         break;
     }
   }
@@ -341,7 +341,7 @@ export const CARDS: Record<CardId, Card> = {
   PH_Hunger: {
     kind: 'hazard',
     cost: { production: 3 },
-    bites: (chronicle) => ({
+    strikes: (chronicle) => ({
       ...chronicle,
       resources: { ...chronicle.resources, food: 0 },
     }),

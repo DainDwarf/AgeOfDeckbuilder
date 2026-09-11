@@ -865,7 +865,7 @@ test('a play aimed at a tile the aim refuses, or at nothing, lands nowhere', () 
   expect(outcome(nowhere)).toEqual(city);
 });
 
-test('a hazard bites at the end of a turn it is still in the hand, before the income and the discard', () => {
+test('a hazard strikes at the end of a turn it is still in the hand, before the income and the discard', () => {
   const stocked = cityOf(['urban', 'plain'], {
     ...NO_GROWTH,
     hand: ['PH_Hunger', 'PH_Harvest'],
@@ -877,14 +877,14 @@ test('a hazard bites at the end of a turn it is still in the hand, before the in
   const ended = outcome(apply(stocked, { type: 'end-turn' }));
   const yielded = outcome(apply(bare, { type: 'end-turn' })).resources.food;
 
-  expect(stagedBy(stocked, { type: 'end-turn' })[0]).toBe('hazard');
+  expect(stagedBy(stocked, { type: 'end-turn' })[0]).toBe('strike');
   expect(yielded).toBeGreaterThan(0);
   expect(ended.resources.food).toBe(yielded);
   expect(ended.hand).toEqual(fullDraw());
   expect(ended.discardPile).toEqual(['PH_Hunger', 'PH_Harvest']);
 });
 
-test('a hazard discarded unplayed comes around and bites again', () => {
+test('a hazard discarded unplayed comes around and strikes again', () => {
   const city = cityOf(['urban', 'plain'], {
     ...NO_GROWTH,
     hand: ['PH_Hunger'],
@@ -900,7 +900,7 @@ test('a hazard discarded unplayed comes around and bites again', () => {
   expect(again.resources.food).toBe(cycled.resources.food);
 });
 
-test('a hazard played for its cost leaves the chronicle, and bites nothing that turn', () => {
+test('a hazard played for its cost leaves the chronicle, and strikes nothing that turn', () => {
   const city = cityOf(['urban', 'plain'], {
     ...NO_GROWTH,
     hand: ['PH_Hunger'],
@@ -915,11 +915,11 @@ test('a hazard played for its cost leaves the chronicle, and bites nothing that 
   expect(stagedBy(city, { type: 'play', index: 0, aim: 'none' })).toEqual(['played']);
   expect(played.resources.production).toBe(0);
   expect(everyCard(played)).toEqual([]);
-  expect(stagedBy(played, { type: 'end-turn' })).not.toContain('hazard');
+  expect(stagedBy(played, { type: 'end-turn' })).not.toContain('strike');
   expect(ended.resources.food).toBe(STOCKED.food + yielded);
 });
 
-test('a hazard bites from the hand alone, and never from a pile', () => {
+test('a hazard strikes from the hand alone, and never from a pile', () => {
   const piled = cityOf(['urban', 'plain'], {
     ...NO_GROWTH,
     drawPile: ['PH_Hunger'],
@@ -931,7 +931,7 @@ test('a hazard bites from the hand alone, and never from a pile', () => {
   const ended = outcome(apply(piled, { type: 'end-turn' }));
   const yielded = outcome(apply(bare, { type: 'end-turn' })).resources.food;
 
-  expect(stagedBy(piled, { type: 'end-turn' })).not.toContain('hazard');
+  expect(stagedBy(piled, { type: 'end-turn' })).not.toContain('strike');
   expect(ended.resources.food).toBe(STOCKED.food + yielded);
 });
 
