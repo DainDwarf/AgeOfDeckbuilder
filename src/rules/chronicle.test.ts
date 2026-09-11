@@ -181,7 +181,7 @@ test('every card of the deck is in exactly one pile through a full cycle', () =>
 
   for (let turn = 0; turn < 8; turn++) {
     chronicle = outcome(apply(chronicle, { type: 'play', index: 0, aim: 'none' }));
-    chronicle = endedTurn(chronicle);
+    chronicle = endedTurn(chronicle, 'PH_Raid');
     expect(everyCard(chronicle)).toEqual(deck);
   }
 });

@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { CARD_KINDS, CARDS } from '../rules/cards';
 import type { Stage } from '../rules/chronicle';
+import { dealsCapstone } from '../rules/schedule';
 import {
   type CardId,
   type Chronicle,
@@ -455,7 +456,7 @@ export function createOverlay(
     carried = deal;
     dealing = deal;
 
-    const title = raiseTitle('deal', text('deal.title'));
+    const title = raiseTitle('deal', text(dealsCapstone(deal.on) ? 'deal.capstone' : 'deal.title'));
     layGrid(
       'deal',
       deal.on.deal.map((id, at): Offered => ({ face: eventFace(deal.on, id), at })),

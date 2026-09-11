@@ -622,12 +622,16 @@ resource. Spawning enemies on any tile out of sight was rejected: a raid out of 
 out empty reads as nothing.
 
 **The capstone lands on a turn drawn at the founding**, seeded, from a window of turns the age's
-schedule names 🔧; the chronicle carries the turn, and the window is the lever behind "shorter in
-the earlier ages". The player knows what the capstone is from the founding and never when: the
-chronicle screen opens on the capstone's card, and the window is shown nowhere. On its turn the
-events phase deals the capstone alone, whatever else was due, the player takes it as any deal, and
-the schedule rolls the next due turn from its landing as from any. 🔧 The schedule keeps dealing
-through the capstone and after it — the fewest special rules until play says which feel best. It
-may span several turns, and it ends with a pass condition: the chronicle ends there, in victory or
-defeat. What the trial is, is content, one per age. A fixed turn known from the launch was
-rejected: a countdown the player can read turns the whole chronicle into arithmetic toward it.
+schedule names — 🔧 the twenty-seventh to the thirty-third; the chronicle carries the turn, and the
+window is the lever behind "shorter in the earlier ages". The player knows what the capstone is from
+the founding and never when: the chronicle screen opens on the capstone's card, and the window is
+shown nowhere. On its turn the events phase deals the capstone alone, whatever else was due, the
+player takes it as any deal, and the schedule rolls the next due turn from its landing as from any.
+🔧 The schedule keeps dealing through the capstone and after it — the fewest special rules until play
+says which feel best. It may span several turns, and it ends with a pass condition: the chronicle
+ends there, in victory or defeat. What the trial is, is content, one per age. 🔧 Until the deck is
+data the capstone is a stand-in, PH_Siege: it places five camps on the tiles three to five from the
+city that a camp may fill and the ground runs to the city from, keeping the generator's spacing from
+every camp standing, fewer where the tiles run out, and a warrior enters on each. A fixed turn known
+from the launch was rejected: a countdown the player can read turns the whole chronicle into
+arithmetic toward it.

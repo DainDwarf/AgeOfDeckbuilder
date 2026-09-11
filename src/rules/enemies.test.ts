@@ -17,6 +17,7 @@ import {
   field,
   founded,
   fullDraw,
+  LATE_CAPSTONE,
   madeOf,
   NO_GROWTH,
   only,
@@ -180,7 +181,11 @@ test('a captured camp is silent: the raid enters on a camp still standing', () =
 });
 
 test('a chronicle whose every camp is captured takes no raider at all', () => {
-  const held = cityOf(['urban'], { tiles: camped(field(4), CAMPS), units: CAMPS.map(worker) });
+  const held = cityOf(['urban'], {
+    ...LATE_CAPSTONE,
+    tiles: camped(field(4), CAMPS),
+    units: CAMPS.map(worker),
+  });
 
   const raided = throughSchedule(held);
 

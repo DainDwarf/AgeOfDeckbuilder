@@ -12,14 +12,6 @@ Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [
 
 ---
 
-- **The siege lands** — the schedule names the capstone, `PH_Siege`, and its window of turns 🔧
-  27–33; the founding rolls the capstone's turn from it and the chronicle carries it. On that turn
-  the events phase deals the capstone alone, whatever turn the next event was due, and its take
-  rolls the next due turn as any landing does. Taken, the siege draws 🔧 five camps on tiles three
-  to five from the city that a camp may fill, not held, no unit on them, keeping the generator's
-  spacing from every camp standing, fewer when the tiles run out, and enters a warrior on each. The
-  deal window's title reads for the capstone. Rules tests pin the roll, the lone deal, the reroll,
-  the placement and the warriors. Doc-impact: `docs/DESIGN.md`.
 - **The siege spans six turns, and victory** — on each of the 🔧 five turns after the landing the
   events phase enters a warrior on every camp whose tile is free, before any deal due that turn; at
   the tick ending the sixth turn with the city standing the chronicle ends in victory, carried like

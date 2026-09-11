@@ -153,10 +153,15 @@ export const CAMPS: TileCoords[] = [
   { q: -4, r: 4 },
 ];
 
+/** The same tiles, with a building of that kind filling the slot of the named ones. */
+export function built(tiles: Tile[], building: BuildingTypeId, coords: TileCoords[]): Tile[] {
+  const named = new Set(coords.map(tileKey));
+  return tiles.map((tile) => (named.has(tileKey(tile)) ? { ...tile, building } : tile));
+}
+
 /** The same tiles, with a camp filling the building slot of the named ones. */
 export function camped(tiles: Tile[], coords: TileCoords[]): Tile[] {
-  const named = new Set(coords.map(tileKey));
-  return tiles.map((tile) => (named.has(tileKey(tile)) ? { ...tile, building: 'PH_Camp' } : tile));
+  return built(tiles, 'PH_Camp', coords);
 }
 
 function statsOf(stats: Partial<UnitStats>): UnitStats {
@@ -315,6 +320,12 @@ export const DECK: readonly CardId[] = [
 
 /** How many turns these fixtures end before they give up on a schedule that has landed nothing. */
 export const SCHEDULE_BOUND = 30;
+
+/**
+ * A capstone standing past every turn a walk of the schedule below reaches: what a fixture about the
+ * ordinary cadence carries, so no siege is dealt in the middle of the turns it ends.
+ */
+export const LATE_CAPSTONE: Carrying = { capstoneTurn: SCHEDULE_BOUND * 2 };
 
 /**
  * One whole turn: the end of turn, and the entry taken of the deal it may stop on — `wanted` where

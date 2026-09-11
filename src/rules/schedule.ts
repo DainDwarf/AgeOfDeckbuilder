@@ -1,6 +1,16 @@
-import { enteredFromCamp } from './enemies';
+import { enteredFromCamp, enteredOnCamp } from './enemies';
+import {
+  BUILDINGS,
+  distance,
+  MAP_COMPOSITION,
+  MOVE_POINT,
+  pathCosts,
+  type TileCoords,
+  tileKey,
+} from './map';
 import { nextRng, pickWeighted, type Rng } from './rng';
-import type { Chronicle, EventId } from './state';
+import { type Chronicle, type EventId, holds } from './state';
+import { unitAt } from './units';
 
 /**
  * One entry of the schedule: what it weighs on a turn, nothing at all on a turn it may not land on,
@@ -16,15 +26,23 @@ export type ScheduledEvent = {
 /** How many of the schedule's entries a due turn deals, for the player to take one of. */
 const DEAL = 2;
 
-/** The least and the most a span of turns rolls, both ends included. */
+/** The least and the most a span rolls, both ends included. */
 type Span = readonly [number, number];
 
-/** The age's schedule: how far apart its events land, and every entry it draws from. */
+/** 🔧 What the siege lands: how many camps it draws, and how far from the city each stands. */
+const SIEGE = { camps: 5, fromCity: [3, 5] as Span };
+
+/**
+ * The age's schedule: how far apart its events land, which entry is its capstone and the window of
+ * turns the capstone's own turn is rolled from, and every entry it draws from.
+ */
 export const SCHEDULE: {
   readonly spacing: Span;
+  readonly capstone: { readonly event: EventId; readonly window: Span };
   readonly events: Record<EventId, ScheduledEvent>;
 } = {
   spacing: [3, 7],
+  capstone: { event: 'PH_Siege', window: [27, 33] },
   events: {
     PH_Raid: {
       weight: () => 1,
@@ -39,16 +57,29 @@ export const SCHEDULE: {
         drawPile: ['PH_Hunger', ...chronicle.drawPile],
       }),
     },
+    PH_Siege: {
+      // Its own turn is what deals it; the weight of nothing keeps it out of every other deal.
+      weight: () => 0,
+      reads: () => ({ camps: SIEGE.camps }),
+      lands: (chronicle) => siege(chronicle),
+    },
   },
 };
 
 /**
- * The generator and the turn the first event is due, as the founding lays them on the chronicle it
- * opens: the roll is taken before that chronicle's first events phase runs.
+ * The generator, the turn the first event is due and the turn the capstone lands on, as the founding
+ * lays them on the chronicle it opens: both rolls are taken before that chronicle's first events
+ * phase runs.
  */
-export function scheduled(rng: Rng): { rng: Rng; nextEvent: number } {
+export function scheduled(rng: Rng): { rng: Rng; nextEvent: number; capstoneTurn: number } {
   const rolled = withinSpan(rng, SCHEDULE.spacing);
-  return { rng: rolled.rng, nextEvent: rolled.turns };
+  const capstone = withinSpan(rolled.rng, SCHEDULE.capstone.window);
+  return { rng: capstone.rng, nextEvent: rolled.turns, capstoneTurn: capstone.turns };
+}
+
+/** Whether the deal standing is the capstone's: what the deal window reads its title from. */
+export function dealsCapstone(chronicle: Chronicle): boolean {
+  return chronicle.deal.includes(SCHEDULE.capstone.event);
 }
 
 /**
@@ -56,9 +87,15 @@ export function scheduled(rng: Rng): { rng: Rng; nextEvent: number } {
  * change nothing and draw nothing, so the end of turn raises no stage for either. On the due turn
  * the entries weighing anything are drawn one after another, never the same one twice, and the
  * chronicle carries the deal in the order dealt; a turn fewer of them weigh anything on deals what
- * there is. Nothing lands until one of them is taken.
+ * there is. The capstone's turn deals the capstone alone, whatever turn the next event was due, and
+ * draws nothing; its take rolls that turn again as any landing does. Nothing lands until one of the
+ * entries dealt is taken.
  */
 export function events(chronicle: Chronicle): Chronicle {
+  if (chronicle.turn === chronicle.capstoneTurn) {
+    return { ...chronicle, deal: [SCHEDULE.capstone.event] };
+  }
+
   const weighing = weighed(chronicle.turn);
   if (chronicle.turn < chronicle.nextEvent || weighing.length === 0) return chronicle;
 
@@ -114,4 +151,60 @@ function raid(chronicle: Chronicle, warriors: number): Chronicle {
   let standing = chronicle;
   for (let warrior = 0; warrior < warriors; warrior++) standing = enteredFromCamp(standing);
   return standing;
+}
+
+/**
+ * The siege the capstone lands: its camps are drawn one at a time, each uniformly from the tiles of
+ * the terrains a camp lies on whose slot is empty, that the ground runs to the city from, within the
+ * siege's reach of the city, held by nobody, no unit standing on them, and far enough from every
+ * camp standing — the generator's and the ones already drawn here alike; the candidates are filtered
+ * again after each. When they run out the siege places what it can. Then a warrior enters on each
+ * camp it placed, on that camp and on no other, so the draws of the placement are the only ones.
+ */
+function siege(chronicle: Chronicle): Chronicle {
+  const [near, far] = SIEGE.fromCity;
+  // Only which tiles the walk reached is read here, never what reaching them cost, so the move a
+  // crossing is charged against shows nowhere.
+  const reached = pathCosts(
+    chronicle.tiles,
+    chronicle.rivers,
+    chronicle.city,
+    { kind: 'whole-map', move: MOVE_POINT },
+    () => false,
+  );
+
+  let rng = chronicle.rng;
+  const standing: TileCoords[] = chronicle.tiles.filter((tile) => tile.building === 'PH_Camp');
+  const placed: TileCoords[] = [];
+  for (let camp = 0; camp < SIEGE.camps; camp++) {
+    const candidates = chronicle.tiles.filter(
+      (tile) =>
+        tile.building === undefined &&
+        BUILDINGS.PH_Camp.terrains.includes(tile.terrain) &&
+        reached.has(tileKey(tile)) &&
+        distance(tile, chronicle.city) >= near &&
+        distance(tile, chronicle.city) <= far &&
+        !holds(chronicle, tile) &&
+        unitAt(chronicle.units, tile) === undefined &&
+        standing.every((other) => distance(tile, other) >= MAP_COMPOSITION.campsApart),
+    );
+    if (candidates.length === 0) break;
+
+    const step = nextRng(rng);
+    rng = step.rng;
+    const drawn = candidates[Math.floor(step.value * candidates.length)];
+    standing.push(drawn);
+    placed.push({ q: drawn.q, r: drawn.r });
+  }
+
+  const camped = new Set(placed.map(tileKey));
+  let besieged: Chronicle = {
+    ...chronicle,
+    rng,
+    tiles: chronicle.tiles.map((tile) =>
+      camped.has(tileKey(tile)) ? { ...tile, building: 'PH_Camp' } : tile,
+    ),
+  };
+  for (const tile of placed) besieged = enteredOnCamp(besieged, tile);
+  return besieged;
 }

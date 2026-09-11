@@ -85,10 +85,17 @@ export function enteredFromCamp(chronicle: Chronicle): Chronicle {
 
   const step = nextRng(chronicle.rng);
   const { q, r } = camps[Math.floor(step.value * camps.length)];
-  return entered(
-    { ...chronicle, rng: step.rng },
-    { type: CAMP_ENEMY.type, faction: 'enemy', tile: { q, r }, script: 'PH_Advance' },
-  );
+  return enteredOnCamp({ ...chronicle, rng: step.rng }, { q, r });
+}
+
+/** The one enemy a camp enters, on the camp's own tile: what it is, and what it follows. */
+export function enteredOnCamp(chronicle: Chronicle, tile: TileCoords): Chronicle {
+  return entered(chronicle, {
+    type: CAMP_ENEMY.type,
+    faction: 'enemy',
+    tile,
+    script: 'PH_Advance',
+  });
 }
 
 /** What an enemy moves toward: the player's unit or the city it crosses to for the least it can. */
