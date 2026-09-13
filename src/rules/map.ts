@@ -644,7 +644,7 @@ function campsOn(
   initial: Rng,
   tiles: readonly Tile[],
   rivers: readonly River[],
-): { rng: Rng; tiles: Tile[] } {
+): { rng: Rng; tiles: Tile[]; placed: number } {
   const { camps, campFromCity, campsApart } = MAP_COMPOSITION;
   // Only which tiles the walk reached is read here, never what reaching them cost, so the move a
   // crossing is charged against shows nowhere.
@@ -679,6 +679,7 @@ function campsOn(
     tiles: tiles.map((tile) =>
       camped.has(tileKey(tile)) ? { ...tile, building: 'PH_Camp' } : tile,
     ),
+    placed: placed.length,
   };
 }
 
@@ -689,17 +690,20 @@ function campsOn(
  * the rim reaches — each feature dealt over a share of the terrain it lies on, rivers walked down
  * from the mountain range along the edges between tiles, and the camps dealt over the ground they
  * name that the city is walked to from. A deal holding fewer camps than the composition asks is
- * thrown away and another dealt from the generator state it leaves.
+ * thrown away and another dealt from the generator state it leaves; a tenth deal short of them
+ * throws.
  */
 export function generateMap(initial: Rng): { rng: Rng; tiles: Tile[]; rivers: River[] } {
+  const { camps } = MAP_COMPOSITION;
   let deal = dealMap(initial);
-  while (deal.tiles.filter((tile) => tile.building === 'PH_Camp').length < MAP_COMPOSITION.camps) {
+  for (let dealt = 1; deal.placed < camps; dealt++) {
+    if (dealt === 10) throw new Error(`this map was dealt 10 times and never held ${camps} camps`);
     deal = dealMap(deal.rng);
   }
-  return deal;
+  return { rng: deal.rng, tiles: deal.tiles, rivers: deal.rivers };
 }
 
-function dealMap(initial: Rng): { rng: Rng; tiles: Tile[]; rivers: River[] } {
+function dealMap(initial: Rng): { rng: Rng; tiles: Tile[]; rivers: River[]; placed: number } {
   const { radius, cityBiome, featureShares } = MAP_COMPOSITION;
   let rng = initial;
 
@@ -825,5 +829,5 @@ function dealMap(initial: Rng): { rng: Rng; tiles: Tile[]; rivers: River[] } {
     flowed.rivers,
   );
 
-  return { rng: camped.rng, rivers: flowed.rivers, tiles: camped.tiles };
+  return { rng: camped.rng, rivers: flowed.rivers, tiles: camped.tiles, placed: camped.placed };
 }
