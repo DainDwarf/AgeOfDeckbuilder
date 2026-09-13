@@ -14,8 +14,7 @@ After intake: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or no
 
 ---
 
-- **The wrap linter** — docs wrapping becomes a lint, through an existing tool, so no session wraps
-  a paragraph by hand again.
+- **The wrap linter** — every markdown file in the repo is one line per paragraph, `npm run lint` fails on a hand-wrapped paragraph in any of them, and `npm run fmt` unwraps it. Doc-impact: DOGMAS.md, CLAUDE.md. [board/the-wrap-linter.md](board/the-wrap-linter.md)
 - **The design page split** — DESIGN.md's interface prose leaves the Systems section for a page of
   its own.
 - **Sentences authored by the implementer** — a player-facing sentence or a design sentence the
