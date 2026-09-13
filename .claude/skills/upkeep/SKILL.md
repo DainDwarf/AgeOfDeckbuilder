@@ -1,6 +1,6 @@
 ---
 name: upkeep
-description: The maintenance loop — docs lint, board and ideas eviction, the harness ratchet that turns recurring corrections into DOGMAS.md lines, the memory lint, and the upstream traps. Run every 20 shipped board lines or monthly, whichever first, when a hand-back takes the parked leftovers past 100 lines, or when asked.
+description: The maintenance loop — docs lint, board and ideas eviction, the harness ratchet that turns recurring corrections into DOGMAS.md lines, the memory lint, and the upstream traps. Run when asked — the ship hand-back reminds the user once 20 lines have shipped or 30 days have passed since the last upkeep, or the parked leftovers pass 100 lines.
 ---
 
 # Upkeep
@@ -8,8 +8,9 @@ description: The maintenance loop — docs lint, board and ideas eviction, the h
 A recurring pass over five surfaces. Findings become board lines through `/todo` on the user's
 word, or edits made now; the pass itself changes nothing silently — every change is listed in the report.
 
-Count cycles from the git log: one cycle is one commit that deleted a board line. Note the
-date and commit of this pass at the top of the report so the next pass knows where to count from.
+Count cycles from the git log: one cycle is one commit that deleted a board line. The pass
+commits under an `Upkeep:` subject — that commit is where the next pass, and the ship hand-back's
+reminder, count from.
 
 ## 1. Docs lint
 

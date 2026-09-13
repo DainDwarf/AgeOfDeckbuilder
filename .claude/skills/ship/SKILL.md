@@ -74,7 +74,13 @@ shave or a `/todo`; the next line is a new invocation.
 
 What the user leaves unordered — an advisory, a discovery, a question they did not answer — is
 parked in the project memory's `project-status.md`, one line under its heading, for `/upkeep`'s
-triage. When parking takes that file past 100 lines, the hand-back proposes an `/upkeep` now.
+triage.
+
+The hand-back ends with the upkeep reminder when one is due: count the `Ship:` commits since the
+last `Upkeep:` commit, and the days since it. At 20 lines or more, 30 days or more, or parked
+leftovers past 100 lines, the report's last line says so with the numbers — *"23 lines and 34 days
+since the last upkeep."* It is a reminder, never a stop: the hand-back ends as it would, the next
+`/ship` runs as it would, and the reminder returns at every hand-back until an upkeep lands.
 
 ## Notifications
 
