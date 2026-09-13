@@ -15,7 +15,6 @@ After intake: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or no
 ---
 
 - **The wrap linter** — every markdown file in the repo is one line per paragraph, `npm run lint` fails on a hand-wrapped paragraph in any of them, and `npm run fmt` unwraps it. Doc-impact: DOGMAS.md, CLAUDE.md. [board/the-wrap-linter.md](board/the-wrap-linter.md)
-- **The design page split** — DESIGN.md's interface prose leaves the Systems section for a page of
-  its own.
+- **The design page split** — `docs/DESIGN.md` keeps the pitch, `docs/INTERFACE.md` holds how any screen is worked, `docs/CHRONICLE.md` holds what exists only inside a chronicle, every moved paragraph lands verbatim, and every reference to the spec names the design pages. Doc-impact: DESIGN.md, INTERFACE.md, CHRONICLE.md, index.md, DOGMAS.md, ROADMAP.md, CLAUDE.md. [board/the-design-page-split.md](board/the-design-page-split.md)
 - **Sentences authored by the implementer** — a player-facing sentence or a design sentence the
   implementer wrote is put to the user at the hand-back, never left unconfirmed.
