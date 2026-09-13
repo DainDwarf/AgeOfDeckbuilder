@@ -4,14 +4,14 @@ Guidance for Claude Code sessions in this repository.
 
 ## Project
 
-**Age of Deckbuilder** (working name) — a card game, designed from scratch. The design is written at design altitude in `docs/DESIGN.md`; the game is TypeScript on Phaser 4, built by Vite, played in the browser. [`docs/DOGMAS.md`](docs/DOGMAS.md) → _Stack_ holds the layout and the one architectural rule: `src/rules/` is pure, `src/ui/` only renders.
+**Age of Deckbuilder** (working name) — a card game, designed from scratch. The design is written at design altitude in the design pages, `docs/DESIGN.md` and the two it names; the game is TypeScript on Phaser 4, built by Vite, played in the browser. [`docs/DOGMAS.md`](docs/DOGMAS.md) → _Stack_ holds the layout and the one architectural rule: `src/rules/` is pure, `src/ui/` only renders.
 
 ## Three lifespans
 
 Every file has exactly one:
 
 - **Code** — permanent. Source of truth for _how_.
-- **Docs** (`docs/`) — standing. Source of truth for _what is_ and _what was decided_. [`docs/index.md`](docs/index.md) is the map; [`docs/DESIGN.md`](docs/DESIGN.md) the game, [`docs/DOGMAS.md`](docs/DOGMAS.md) the rules every session works by, [`docs/GLOSSARY.md`](docs/GLOSSARY.md) the closed gameplay vocabulary.
+- **Docs** (`docs/`) — standing. Source of truth for _what is_ and _what was decided_. [`docs/index.md`](docs/index.md) is the map; [`docs/DESIGN.md`](docs/DESIGN.md) and the two pages it names the game, [`docs/DOGMAS.md`](docs/DOGMAS.md) the rules every session works by, [`docs/GLOSSARY.md`](docs/GLOSSARY.md) the closed gameplay vocabulary.
 - **Task context** — ephemeral. [`BOARD.md`](BOARD.md) (ordered lines with done-conditions; completion is deletion), `board/<slug>.md` task files (die with their line), [`IDEAS.md`](IDEAS.md) (unordered pool, nothing promised), and on a branch of several lines a `BRANCH.md` (its design first, its lines after; deleted before the merge).
 
 [`CHANGELOG.md`](CHANGELOG.md) is player-facing release notes, written at version bumps only. Nothing durable cites a board line, a task file or an idea.
@@ -36,7 +36,7 @@ Full rules in [`docs/DOGMAS.md`](docs/DOGMAS.md). The ones no session may miss:
 
 1. **Pitch before writing.** Orient freely; surface the plan before the first file changes.
 2. **One line per turn.** Ship a step, commit it, stop so the user can inspect. Claude owns commit granularity; pushing stays on request.
-3. **Design is the spec.** Code that disagrees is wrong. A gap is reported as a deviation, never coded in silently, and the design page is never edited down to match an implementation.
+3. **Design is the spec.** Code that disagrees is wrong. A gap is reported as a deviation, never coded in silently, and a design page is never edited down to match an implementation.
 4. **Report corner cases.** Anything the agreed design did not foresee goes in the report.
 5. **One verb per concept.** Gameplay terms come from `GLOSSARY.md`; no synonyms, ever.
 6. **No handholding.** Players learn, misplay, and lose. No guard rails, no safety nets.

@@ -31,7 +31,7 @@ On the agent's report, check that the unit of work is whole:
 
 - code changed and verification passed (the report says which commands ran and their result);
 - every doc-impact `docs/` page updated, or "none" justified in one line;
-- `DESIGN.md` untouched except where the line's done-condition is a design change;
+- the design pages untouched except where the line's done-condition is a design change;
 - the board line deleted and its dossier removed;
 - the board is no longer than you found it minus this line — a discovery is in the report, never on the board;
 - the report's _Deviations_ section is present, and every item in it is relayed to the user.

@@ -9,20 +9,20 @@ One board line per invocation: the first line with no dossier link, unless the u
 
 ## 1. Read
 
-The line; `docs/DESIGN.md`, `docs/GLOSSARY.md` and `docs/DOGMAS.md` where they touch it; the code it lands in, enough to know what it changes. Time and measure what a number would settle.
+The line; the design pages, `docs/GLOSSARY.md` and `docs/DOGMAS.md` where they touch it; the code it lands in, enough to know what it changes. Time and measure what a number would settle.
 
 ## 2. Challenge
 
 Four checks, in order; stop at the first that decides the line's fate:
 
-1. **Conflict.** Does it contradict a decision in `docs/DESIGN.md` or a rule in `docs/DOGMAS.md`? Surface it. Changing a decision is valid work — the done-condition is then the docs edit — but silently violating one is not.
+1. **Conflict.** Does it contradict a decision in a design page or a rule in `docs/DOGMAS.md`? Surface it. Changing a decision is valid work — the done-condition is then the docs edit — but silently violating one is not.
 2. **Completability.** Can a done-condition be written — a state of the repo someone can check? If not, the line is docs content (a standing fact, a domain claim) or an idea: route it there and delete the line.
 3. **Scope.** Can one ship session hold the whole thing? Split only on a real abstraction boundary, never to defer the hard part; each part becomes its own line, and this pass dossiers the first.
 4. **Doc-impact.** Name the `docs/` pages the work will change, or "none".
 
 ## 3. Discuss
 
-Present what you found and the forks: one or two options each, with trade-offs and a recommendation, in prose. A pick-one prompt is for a scoping fact only. A UI change is pitched as a live mockup built from real values, the variables that change the answer as controls, one option marked recommended; a generator change is pitched running, and its dossier says whether the process is fixed or rolled and how wide it may vary. End the turn and wait; one fork may take several turns. `DESIGN.md` first — much is pre-decided. A fork that is the implementer's — where a function lives, how a module is cut — is named as such and left out.
+Present what you found and the forks: one or two options each, with trade-offs and a recommendation, in prose. A pick-one prompt is for a scoping fact only. A UI change is pitched as a live mockup built from real values, the variables that change the answer as controls, one option marked recommended; a generator change is pitched running, and its dossier says whether the process is fixed or rolled and how wide it may vary. End the turn and wait; one fork may take several turns. The design pages first — much is pre-decided. A fork that is the implementer's — where a function lives, how a module is cut — is named as such and left out.
 
 ## 4. Write the dossier
 
