@@ -637,8 +637,8 @@ function flowRivers(
 /**
  * Where the camps stand, one at a time: each is drawn uniformly from the tiles of the terrains a
  * camp lies on that the ground runs to the city from, far enough from the city and from every camp
- * already placed, and the candidates are filtered again after each. When they run out the map holds
- * fewer camps than the composition asks for. Nothing else on the tile changes.
+ * already placed, and the candidates are filtered again after each. When they run out the placing
+ * stops, and `generateMap` deals the map again. Nothing else on the tile changes.
  */
 function campsOn(
   initial: Rng,
@@ -688,9 +688,18 @@ function campsOn(
  * touches a biome of another kind, a terrain scattered from each biome's table — the rim one where
  * the rim reaches — each feature dealt over a share of the terrain it lies on, rivers walked down
  * from the mountain range along the edges between tiles, and the camps dealt over the ground they
- * name that the city is walked to from.
+ * name that the city is walked to from. A deal holding fewer camps than the composition asks is
+ * thrown away and another dealt from the generator state it leaves.
  */
 export function generateMap(initial: Rng): { rng: Rng; tiles: Tile[]; rivers: River[] } {
+  let deal = dealMap(initial);
+  while (deal.tiles.filter((tile) => tile.building === 'PH_Camp').length < MAP_COMPOSITION.camps) {
+    deal = dealMap(deal.rng);
+  }
+  return deal;
+}
+
+function dealMap(initial: Rng): { rng: Rng; tiles: Tile[]; rivers: River[] } {
   const { radius, cityBiome, featureShares } = MAP_COMPOSITION;
   let rng = initial;
 
