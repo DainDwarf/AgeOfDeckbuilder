@@ -97,7 +97,7 @@ deliberate exception the reviewer sees; there is no silent allow-list.
 | **range** | The distance, in tiles, a unit attacks over; one for melee. | reach |
 | **move** | A unit's stat: the move points it refreshes to. | speed, mobility, movement points |
 | **move points** | What a unit spends to cross tiles, a tile's movement cost to enter it; refreshed to its move. | movement points, steps, stamina |
-| **action** | A unit's stat, and what it spends to attack, one per attack, or, on a worker, what it spends on a card played through it, one per card, whatever its range; refreshed to its action. | action points, energy, attack pool |
+| **action** | A unit's stat, and what it spends to attack, one per attack, or, on a worker, what it spends on a card played through it, one per card, whatever its range or damage; refreshed to its action. | action points, energy, attack pool |
 | **refresh** | To bring a unit's spendable stat back to its full value — its move points to its move, its action to its action. The turn refreshes both on every unit when it ticks over; an instant refreshes one unit's move points. Health is never refreshed but healed. | restore, replenish, reset, recharge, recover, regain |
 | **military** | The resource that pays for military units, instants and fortifications. | — |
 | **occupy** | What an enemy does to a tile it stands on: the tile yields nothing and is not claimable. | blockade |

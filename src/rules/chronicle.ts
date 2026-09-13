@@ -481,8 +481,8 @@ function move(chronicle: Chronicle, mover: number, to: TileCoords): Stage[] {
 /**
  * One unit of the player's attacking what stands on a tile its range reaches: the attacker spends
  * one of its action, and the target loses the attacker's damage or is killed by it. Nobody moves. A
- * unit that is not the player's, one with no action left, and a tile no unit of another faction
- * within range stands on are one `refused` stage.
+ * unit that is not the player's, a worker, one with no action left, and a tile no unit of another
+ * faction within range stands on are one `refused` stage.
  */
 function attack(chronicle: Chronicle, attacker: number, at: TileCoords): Stage[] {
   const unit = unitOf(chronicle.units, attacker);
