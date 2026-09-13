@@ -39,8 +39,8 @@ logic finding — relay it as the agent labelled it, *seen on <renderer>; hardwa
 **ask the user whether their display shows the same** at the place named. Their answer decides
 what it is:
 
-- They see it: a bug, into `/intake` as one.
-- They do not: a rasteriser-dependent defect, still into `/intake` — it will break on some other
+- They see it: a bug, a `/todo` line on their word.
+- They do not: a rasteriser-dependent defect, still a line on their word — it will break on some other
   GPU, OS or configuration, and it blinds every screenshot the agent takes of that place — but as
   its own line with its own workaround, the way the tearing became *Rotated Texts stop tearing*.
 

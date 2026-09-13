@@ -33,7 +33,7 @@ obvious way. "None" is a valid Deviations entry; the section is never absent.
 
 Scope grows in place when exploration reveals adjacent work that shares the abstraction — do it.
 A genuinely separable discovery does not: note it under **Discovered** in your report for the
-caller to route through intake. Never leave a `TODO` in the code; never widen the line's scope
+user to read. Never leave a `TODO` in the code; never widen the line's scope
 into unrelated files because they were nearby.
 
 ## Working rules
@@ -81,5 +81,5 @@ each page and what changed, or "none — <why>"
 the spec said / the case / what I did / the options — or "none"
 
 ## Discovered
-separable work for intake, one line each — or "none"
+separable work for the user, one line each — or "none"
 ```

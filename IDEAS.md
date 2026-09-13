@@ -2,8 +2,8 @@
 
 The unordered pool of features that may or may not happen. Nothing here is promised, designed,
 or scheduled, and nothing here is a bug — a defect goes to the user and the board the turn it
-emerges. An entry is one line, or a few, and gets no elaboration until `/intake` promotes it to
-a [`BOARD.md`](BOARD.md) line. Say
+emerges. An entry is one line, or a few, and gets no elaboration until `/todo` moves it to a
+[`BOARD.md`](BOARD.md) line and `/intake` designs it. Say
 *"jot: …"* mid-task and the thought lands here without derailing the task. Entries untouched for
 20 shipped lines go on trial at `/upkeep`.
 

@@ -24,6 +24,7 @@
       "PowerShell(node *)",
       "PowerShell(Invoke-WebRequest http://localhost:5173*)",
       "PowerShell(Invoke-WebRequest -Uri http://localhost:5173*)",
+      "Skill(todo)",
       "Skill(intake)",
       "Skill(ship)",
       "Skill(upkeep)",

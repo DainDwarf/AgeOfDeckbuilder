@@ -1,7 +1,7 @@
 # Roadmap
 
 The broad deliverables from here to the playable demo. This page directs attention, nothing
-more: when [`BOARD.md`](../BOARD.md) is empty, the next rung is where `/intake` looks. It is
+more: when [`BOARD.md`](../BOARD.md) is empty, the next rung is where `/todo` looks. It is
 written in sand — reshaped freely as testing teaches, never cited as a promise — and a rung gets
 no detail here: its board lines are cut when its turn comes. Versions are themes, not dates.
 

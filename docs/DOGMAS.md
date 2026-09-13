@@ -1,7 +1,7 @@
 # Dogmas
 
-How this project is built. Human-chosen; every session works by them, `/intake` challenges new
-work against them, the `egress-reviewer` reviews against them. A rule carries a one-line *why*
+How this project is built. Human-chosen; every session works by them, `/intake` challenges a
+board line against them, the `egress-reviewer` reviews against them. A rule carries a one-line *why*
 only where the alternative is attractive enough to be redone by mistake. A correction the user
 makes twice becomes a line here (the ratchet, at `/upkeep`).
 
@@ -34,10 +34,10 @@ makes twice becomes a line here (the ratchet, at `/upkeep`).
   something you noticed; don't add your own without asking.
 - **A bug is never an idea.** `IDEAS.md` holds features that may or may not happen; a defect or
   trap in what already exists is reported to the user the turn it emerges and, unless fixed on
-  the spot, becomes a board line through `/intake`.
+  the spot, becomes a board line through `/todo` on the user's order.
 - **Cut big steps into shippable substeps**, each self-contained enough for a cleared session to
   execute; name the shared mechanism that links them. Propose the cut before executing it.
-- **A generator change is pitched running.** Its intake line says whether the process is fixed or
+- **A generator change is pitched running.** Its dossier says whether the process is fixed or
   rolled, and how wide it may vary; its pitch shows the generator ported into the mockup and run
   on the project's seeds, the port checked against the rules tests first. Why: a diagram reads
   straight, and a straight reading of a rolled process has cost a pitch round twice.
@@ -146,7 +146,8 @@ makes twice becomes a line here (the ratchet, at `/upkeep`).
   of reading. No paraphrase of the code, no history ("used to…", "step 3 of…"), no design
   rationale (that is `DESIGN.md`), no explanation of code elsewhere (a bare pointer at most — and
   if the explanation can't be kept local, the code may be misplaced; say so). No `TODO`: discovered
-  work goes through `/intake` or gets done now. Re-shave a comment when editing near it.
+  work is reported for the user to `/todo`, or gets done now. Re-shave a comment when editing
+  near it.
 
 ## Testing
 

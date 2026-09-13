@@ -26,13 +26,16 @@ Every file has exactly one:
 [`CHANGELOG.md`](CHANGELOG.md) is player-facing release notes, written at version bumps only.
 Nothing durable cites a board line, a task file or an idea.
 
-## The three loops
+## The four loops
 
-- **`/intake`** — a request, idea or discovery becomes a board line, or docs content, or nothing.
-  Checks conflict with the docs, completability, scope, doc-impact.
-- **`/ship`** — take one board line, pitch the plan, implement through the `implementer` agent,
-  land the trinity (code + `docs/` pages + line deleted), get the `egress-reviewer`'s verdict,
-  commit, stop.
+- **`/todo`** — on the user's order, a request, bug or discovery becomes a board line — a title
+  and one sentence, placed in order — or an idea. Never on Claude's own initiative.
+- **`/intake`** — one board line, the first without a dossier, gets its design settled with the
+  user: forks, contradictions with the docs, scope. Ends in a dossier a ship session executes with
+  no design question left.
+- **`/ship`** — take one dossiered line, implement through the `implementer` agent, land the
+  trinity (code + `docs/` pages + line deleted), get the `egress-reviewer`'s verdict, commit,
+  stop.
 - **`/upkeep`** — every 20 shipped lines or monthly: docs lint, board eviction, the
   **ratchet** — recurring corrections become `DOGMAS.md` lines — and the memory lint.
 

@@ -5,8 +5,8 @@ description: The maintenance loop — docs lint, board and ideas eviction, the h
 
 # Upkeep
 
-A recurring pass over four surfaces. Findings become board lines through `/intake` or edits made
-now; the pass itself changes nothing silently — every change is listed in the report.
+A recurring pass over four surfaces. Findings become board lines through `/todo` on the user's
+word, or edits made now; the pass itself changes nothing silently — every change is listed in the report.
 
 Count cycles from the git log: one cycle is one commit that deleted a board line. Note the
 date and commit of this pass at the top of the report so the next pass knows where to count from.
@@ -27,14 +27,14 @@ Read every page reachable from `docs/index.md`. For each, check:
 - **Page shape** — a page whose table of contents no longer reads at a glance, or whose level-2
   sections have grown into documents of their own: propose the split, naming the seams and the
   files. Never make it in this pass; a split of a `docs/` page is a design of its own and goes to
-  the user, then through `/intake`.
+  the user, then through `/todo` and `/intake`.
 
 ## 2. Board and ideas eviction
 
 Oldest first. For each `BOARD.md` line untouched for 20 cycles: still wanted, still completable,
 still correctly scoped? Propose delete, demote to `IDEAS.md`, or keep with the reason. For each
 `IDEAS.md` entry untouched for 20 cycles: restate it in one line so the user sees it again, and
-propose promotion through `/intake` where it has become due. Age alone never evicts an idea;
+propose promotion through `/todo` where it has become due. Age alone never evicts an idea;
 `IDEAS.md` is a long-term document. A task file in `board/` whose line is gone is deleted now.
 
 ## 3. Harness ratchet
@@ -48,7 +48,7 @@ Mine the recurring corrections:
 
 Three occurrences of the same class is a harness problem, not a code problem. For each, propose
 the amendment — a `DOGMAS.md` line, a charter line in an agent, a lint rule in a hook, a skill
-edit — as a board line through `/intake`, or make the edit now if it is a one-liner the user has
+edit — as a board line through `/todo`, or make the edit now if it is a one-liner the user has
 already stated twice. A feedback memory promoted to a dogma is deleted from memory in the same
 pass; memory keeps only facts about the user, not rules for the repo.
 

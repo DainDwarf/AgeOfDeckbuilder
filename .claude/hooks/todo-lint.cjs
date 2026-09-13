@@ -1,5 +1,5 @@
 // PreToolUse lint on Edit/Write: a TODO/FIXME/XXX marker may not enter a source file.
-// Discovered work goes through /intake (a BOARD.md line or an IDEAS.md jot) or gets done now.
+// Discovered work is handed to the user for /todo (a BOARD.md line or an IDEAS.md jot) or gets done now.
 // Markdown is exempt — the board, the ideas file and the docs talk *about* TODOs legitimately.
 
 const MARKER = /\b(TODO|FIXME|XXX)\b/;
@@ -41,7 +41,7 @@ process.stdin.on('end', () => {
         permissionDecision: 'deny',
         permissionDecisionReason:
           `A TODO/FIXME/XXX marker would enter ${path}. Source files carry no deferred work: ` +
-          'do it now, or route it through /intake (a BOARD.md line or an IDEAS.md jot) and ' +
+          'do it now, or hand it to the user for /todo (a BOARD.md line or an IDEAS.md jot) and ' +
           'write the edit without the marker.',
       },
     }),
