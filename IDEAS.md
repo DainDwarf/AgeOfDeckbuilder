@@ -100,3 +100,7 @@ emerges. An entry is one line, or a few, and gets no elaboration until `/todo` m
 - **Type-size floor, verified small** (art-style pass scope): minimum type sizes generous enough
   that the smallest window we care about stays readable; ui-check verifies at that size. Uniform
   window scaling plus card zoom covers the rest — no UI-scale slider unless playtesting demands it.
+- **Settle city sight and held-tile sight**: both are provisional; decide them for good once their
+  pros and cons have been seen in play.
+- **End-of-turn warning for idle inhabitants**: a warning at end of turn when inhabitants stand
+  idle while free tiles remain. Shelved, not rejected — it conflicts with no-handholding.
