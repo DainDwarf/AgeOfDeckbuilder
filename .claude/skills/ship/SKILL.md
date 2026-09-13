@@ -19,7 +19,7 @@ Spawn the `implementer` agent with a brief containing:
 - the dossier's path;
 - the `docs/` pages that are the spec for this change, by path and section heading — the implementer reads the sections named, not the whole page;
 - the doc-impact list;
-- what to run to verify (typecheck, tests, the relevant command);
+- what to run to verify (`npm run fmt`, then typecheck, tests, the relevant command);
 - the standing instruction: _the design is the spec; a gap is a Deviation in your report, not a change to the design; anything the dossier did not foresee goes in the report_;
 - the standing instruction: _after spawning any child or background task, finish finite work and end your turn_.
 
@@ -47,7 +47,7 @@ Spawn the `egress-reviewer` with: the diff (`git diff` plus the list of untracke
 
 ## 5. Commit
 
-Once the review is LOOKS GOOD (or its blocking findings are fixed): check `CLAUDE.md` and the touched `docs/` pages for staleness, fix in the same commit, write the message to a scratchpad file, `git commit -F`. One commit per line. Do not push.
+Once the review is LOOKS GOOD (or its blocking findings are fixed): check `CLAUDE.md` and the touched `docs/` pages for staleness, fix in the same commit, run `npm run fmt`, write the message to a scratchpad file, `git commit -F`. One commit per line. Do not push.
 
 ## 6. Hand back
 

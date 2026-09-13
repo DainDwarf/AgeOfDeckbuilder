@@ -89,6 +89,7 @@ How this project is built. Human-chosen; every session works by them, `/intake` 
 - **`CHANGELOG.md` is for players**, written at a version bump, in their words.
 - **`CLAUDE.md` stays short.** It is loaded every session; detail lives in `docs/` pages read on demand.
 - **Skills state their rules plainly** — no justifying, no referencing another skill. Calibration numbers are data and stay.
+- **A paragraph is one line.** No markdown file is hard-wrapped; Prettier keeps it so (`npm run fmt`) and `npm run lint` refuses a wrapped one. Why: a phrase broken across a line break is invisible to a search, and an edit mid-paragraph no longer reflows what follows.
 
 ## Tooling
 
@@ -107,7 +108,7 @@ How this project is built. Human-chosen; every session works by them, `/intake` 
 | Rules tests | Vitest 4 |
 | UI verification | Playwright, Chromium only |
 | CI | GitHub Actions on every push, any branch: typecheck, lint, rules tests, e2e |
-| Lint and format | Biome, one `biome.json` |
+| Lint and format | Biome for code, one `biome.json`; Prettier for markdown, one `.prettierrc` |
 | Package manager | npm on Node 24; `package-lock.json` is committed |
 | Hosting | itch.io HTML5 page, the zipped `dist/`. No server, ever. |
 | Desktop wrapper | Tauri 2 — not installed; it needs Rust, and it is installed when the desktop target is taken |
