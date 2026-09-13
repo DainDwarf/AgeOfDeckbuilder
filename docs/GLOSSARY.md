@@ -1,21 +1,13 @@
 # Glossary
 
-The **closed vocabulary** of gameplay. Every concept has exactly one term, and that term is the
-only one used for it — on cards, in the UI, in the codex, in code identifiers, in these docs.
-Paraphrase and synonyms are defects: *remove* is never *destroy*, *sacrifice* or *trash* if
-*remove* is the term. A concept that has no term here has no term yet; adding one is a design
-decision made with the user, not a choice an implementer makes in passing.
+The **closed vocabulary** of gameplay. Every concept has exactly one term, and that term is the only one used for it — on cards, in the UI, in the codex, in code identifiers, in these docs. Paraphrase and synonyms are defects: _remove_ is never _destroy_, _sacrifice_ or _trash_ if _remove_ is the term. A concept that has no term here has no term yet; adding one is a design decision made with the user, not a choice an implementer makes in passing.
 
-The vocabulary covers player-facing terms and the code that represents and manipulates those
-player-facing objects; development internals (the machinery under the game, such as `apply`'s
-command) are outside it.
+The vocabulary covers player-facing terms and the code that represents and manipulates those player-facing objects; development internals (the machinery under the game, such as `apply`'s command) are outside it.
 
-Each row lists the forbidden near-synonyms so the review and the lint hook can catch them.
-Prose that must mention a forbidden word for another reason (a card *named* "Sacrifice") is a
-deliberate exception the reviewer sees; there is no silent allow-list.
+Each row lists the forbidden near-synonyms so the review and the lint hook can catch them. Prose that must mention a forbidden word for another reason (a card _named_ "Sacrifice") is a deliberate exception the reviewer sees; there is no silent allow-list.
 
 | Term | Meaning | Not |
-|------|---------|-----|
+| --- | --- | --- |
 | **age** | One span of history: the unit a chronicle plays through, the campaign unlocks, and content is partitioned by. | era, epoch, period, tier |
 | **campaign** | Humanity's history as the player has unlocked it — the meta's progression. | tech tree, map (for the meta) |
 | **collection** | Every card the player owns, with the copies owned of each. | library, pool, inventory |
@@ -25,7 +17,7 @@ deliberate exception the reviewer sees; there is no silent allow-list.
 | **achievement** | A goal a chronicle can reach; reaching it unlocks a technology. | mission, objective, quest, milestone |
 | **influence** | The meta-currency every chronicle pays, scaled by how the city fared. | gold, XP |
 | **chronicle** | One city's story through one age, from founding to victory or defeat — what a roguelite calls a run. | run, playthrough, attempt, session |
-| **city** | A settlement on the map; the player owns exactly one — *the* city, what a chronicle is about. | town, capital, base, settlement |
+| **city** | A settlement on the map; the player owns exactly one — _the_ city, what a chronicle is about. | town, capital, base, settlement |
 | **map** | The hexagonal grid a chronicle is played on. | board, world, grid |
 | **chronicle screen** | The surface a chronicle is played on — the map, the hand, the piles, the resource bar, the infopanel; what a window opens over and closes back to. | table, playfield, play area |
 | **city mode** | The chronicle screen's second mode, in which a left click on the selected tile acts on the city — assigns, unassigns, claims. | build mode, manage mode, edit mode, planning mode |
