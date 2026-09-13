@@ -1,6 +1,6 @@
 # Chronicle
 
-What exists only inside a chronicle: first the rules the city lives by, then the screen that shows them. A design page, under [`DESIGN.md`](DESIGN.md)'s legend and rule: the spec, never edited down to match the code.
+> What exists only inside a chronicle: first the rules the city lives by, then the screen that shows them. A design page, under [`DESIGN.md`](DESIGN.md)'s legend and rule: the spec, never edited down to match the code.
 
 ## The rules
 

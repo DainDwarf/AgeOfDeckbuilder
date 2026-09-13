@@ -43,7 +43,7 @@ process.stdin.on('end', () => {
   for (const line of glossary.split('\n')) {
     const m = line.match(/^\|\s*([^|]+?)\s*\|[^|]*\|\s*([^|]+?)\s*\|/);
     if (!m) continue;
-    const term = m[1];
+    const term = m[1].replace(/\*\*/g, '');
     if (/^-+$/.test(term) || term.toLowerCase() === 'term') continue;
     const banned = m[2]
       .split(',')

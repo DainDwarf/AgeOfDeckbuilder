@@ -1,6 +1,6 @@
 # Interface
 
-How any screen is worked: the menu and what it lists, the keys and how they are rebound, the debug console, and the three presses. A design page, under [`DESIGN.md`](DESIGN.md)'s legend and rule: the spec, never edited down to match the code. What a press does to a thing only a chronicle has is [`CHRONICLE.md`](CHRONICLE.md)'s.
+> How any screen is worked: the menu and what it lists, the keys and how they are rebound, the debug console, and the three presses. A design page, under [`DESIGN.md`](DESIGN.md)'s legend and rule: the spec, never edited down to match the code. What a press does to a thing only a chronicle has is [`CHRONICLE.md`](CHRONICLE.md)'s.
 
 ## The menu ✅
 
