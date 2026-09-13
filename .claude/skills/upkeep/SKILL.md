@@ -1,6 +1,6 @@
 ---
 name: upkeep
-description: The maintenance loop — docs lint, board and ideas eviction, the harness ratchet that turns recurring corrections into DOGMAS.md lines, the memory lint, and the upstream traps. Run every 20 shipped board lines or monthly, whichever first, or when asked.
+description: The maintenance loop — docs lint, board and ideas eviction, the harness ratchet that turns recurring corrections into DOGMAS.md lines, the memory lint, and the upstream traps. Run every 20 shipped board lines or monthly, whichever first, when a hand-back takes the parked leftovers past 100 lines, or when asked.
 ---
 
 # Upkeep
@@ -69,6 +69,14 @@ have not answered. For each file:
   says what the file holds.
 
 Every cut is listed in the report by file and gist.
+
+Then triage the leftovers parked in `project-status.md` — open questions, parked intents, feel
+checks never reported, candidates, advisories — every one of them, including those a past triage
+kept. Present them in batches of about ten, grouped by kind, each with a recommendation: a board
+line or an idea through `/todo`, a harness edit, keep, or drop. Act on the user's answers before the
+next batch: the moves are made and committed, the drops cut from memory. What the user keeps stays
+under its heading. Standing calls, measurements and ratchet counts are not leftovers and are not
+triaged.
 
 ## 5. Upstream traps
 

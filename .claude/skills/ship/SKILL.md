@@ -72,6 +72,10 @@ advisories one line each, the implementer's discoveries one line each, what to i
 and what the next line would do. Then stop — the user reads the report and orders what becomes a
 shave or a `/todo`; the next line is a new invocation.
 
+What the user leaves unordered — an advisory, a discovery, a question they did not answer — is
+parked in the project memory's `project-status.md`, one line under its heading, for `/upkeep`'s
+triage. When parking takes that file past 100 lines, the hand-back proposes an `/upkeep` now.
+
 ## Notifications
 
 Send a PushNotification at exactly the turns that block on the user: the hand-back awaiting the
