@@ -32,8 +32,7 @@ Once every fork is settled, and not before, write `board/<slug>.md`:
 # <Title>
 
 **Line:** the board line, verbatim, with its done-condition.
-**Spec:** the `docs/` pages and section headings that are the spec, and the sentences to add or
-change in them, written out.
+**Spec:** the `docs/` pages and section headings that are the spec, the sentences to add or change in them, written out, and every player-facing sentence the line foresees — a text-table entry, a card's text — written out, so the hand-back's _Authored_ list holds only what intake did not foresee.
 **Doc-impact:** the pages, or "none — <why>".
 **Scope:** what is in, what is out, the corner cases decided here and how.
 **Traps:** the non-local facts the implementer cannot see from the files it edits.

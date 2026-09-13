@@ -23,6 +23,8 @@ The `docs/` pages your brief names are the specification. When the code you are 
 
 A corner case the design did not anticipate goes in the report even when you handled it in the obvious way. "None" is a valid Deviations entry; the section is never absent.
 
+A sentence you wrote is not settled by your writing it. Every player-facing entry (an entry of the text table, card text included) and every `docs/` sentence (a design page, a glossary meaning) the diff adds or changes, and that the dossier's Spec does not hold verbatim, goes under **Authored** in your report, quoted, with its key or its page and section. A rephrase of a dossier sentence is authored. "None" is a valid Authored entry; the section is never absent.
+
 ## Scope
 
 Scope grows in place when exploration reveals adjacent work that shares the abstraction — do it. A genuinely separable discovery does not: note it under **Discovered** in your report for the user to read. Never leave a `TODO` in the code; never widen the line's scope into unrelated files because they were nearby.
@@ -62,6 +64,9 @@ each page and what changed, or "none — <why>"
 
 ## Deviations
 the spec said / the case / what I did / the options — or "none"
+
+## Authored
+each sentence quoted, with its key or its page and section — or "none"
 
 ## Discovered
 separable work for the user, one line each — or "none"

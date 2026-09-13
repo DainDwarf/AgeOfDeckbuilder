@@ -6,7 +6,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ---
 
-- **Sentences authored by the implementer** — the implementer's report carries an _Authored_ section listing every player-facing entry and every `docs/` sentence the dossier did not write out verbatim, the ship session checks it against the diff and quotes each back to the user at the hand-back, and the dossier template writes the player-facing sentences a line foresees out at intake. Doc-impact: DOGMAS.md. [board/sentences-authored-by-the-implementer.md](board/sentences-authored-by-the-implementer.md)
 - **Seeds dealt no camp** — seed 6 of PH_Deck, and twelve more seeds under a thousand, are dealt no camp though the composition asks for three; undiagnosed whether placement fails or no tile legitimately takes one.
 - **City-mode click beside the tiles** — in city mode a left click beside the tiles drops nothing, though the presses section of `docs/INTERFACE.md` writes no city-mode exception.
 - **An enemy script touching a fellow enemy** — `enemyPhase` re-seeds each enemy from the start-of-phase snapshot, so a script touching a fellow enemy would be reverted; possibly fixed already, to check.

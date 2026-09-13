@@ -34,7 +34,8 @@ On the agent's report, check that the unit of work is whole:
 - the design pages untouched except where the line's done-condition is a design change;
 - the board line deleted and its dossier removed;
 - the board is no longer than you found it minus this line — a discovery is in the report, never on the board;
-- the report's _Deviations_ section is present, and every item in it is relayed to the user.
+- the report's _Deviations_ section is present, and every item in it is relayed to the user;
+- the report's _Authored_ section is present and complete: every entry the diff adds or changes in `src/ui/text.ts` and every sentence it adds or changes under `docs/` is either verbatim in the dossier's Spec or listed there; one that is neither is added to the list yourself before the hand-back.
 
 Fix omissions yourself if they are mechanical (a missed doc line, a leftover dossier); anything that touches the design goes back to the user.
 
@@ -51,7 +52,7 @@ Once the review is LOOKS GOOD (or its blocking findings are fixed): check `CLAUD
 
 ## 6. Hand back
 
-Report to the user: what shipped, the commit, the deviations, the review verdict with its advisories one line each, the implementer's discoveries one line each, what to inspect and how, and what the next line would do. Then stop — the user reads the report and orders what becomes a shave or a `/todo`; the next line is a new invocation.
+Report to the user: what shipped, the commit, the deviations, the review verdict with its advisories one line each, the implementer's discoveries one line each, the authored sentences, each quoted with its key or page and one line on where a player or reader meets it, what to inspect and how, and what the next line would do. Then stop — the user reads the report, answers the authored sentences, and orders what becomes a shave or a `/todo`; the next line is a new invocation.
 
 What the user leaves unordered — an advisory, a discovery, a question they did not answer — is parked in the project memory's `project-status.md`, one line under its heading, for `/upkeep`'s triage.
 
