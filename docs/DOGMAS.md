@@ -13,6 +13,10 @@ makes twice becomes a line here (the ratchet, at `/upkeep`).
 - **Design is a conversation, not a menu.** A design or creative fork gets one or two concrete
   options with trade-offs and a recommendation, in prose, and the turn ends. A pick-one prompt is
   for scoping facts (platform, count), not for choices that carry framing.
+- **A pitch's forks are design-shaped** — rules semantics, player-facing shape, numbers, scope.
+  Where a function or module lives is the implementer's initiative, a suggestion in the brief at
+  most; a stand-in's look is not a fork — name the precedent it follows and build; a mockup is for
+  content and screens that ship.
 - **Stay at discussion altitude when the user is discussing.** Never author a full spec in one
   sweep; check `DESIGN.md` and `BOARD.md` first — much is pre-decided.
 - **One step per turn.** Ship a step, commit it, stop with "here is what to inspect; here is what
@@ -166,7 +170,8 @@ makes twice becomes a line here (the ratchet, at `/upkeep`).
 - **The Playwright suite is CI's.** It runs on every push, any branch, one worker, no retries;
   locally the cap is four workers, so a timeout means a bug either way. A session runs one spec at
   a time, the one its line adds, touches or names (`npx playwright test e2e/<spec>.spec.ts`), and
-  a hook refuses a local run that names no spec; the whole suite runs locally only when the user
+  a hook refuses a local run that names no spec; a line that rewrites a path several specs walk
+  runs each of those and names them in its report; the whole suite runs locally only when the user
   runs it in their own terminal.
 - **No mocks.** A pure `src/rules/` needs none; a mock that mirrors the code tests the code
   against itself. Use real dependencies or don't test that path.
@@ -206,6 +211,12 @@ makes twice becomes a line here (the ratchet, at `/upkeep`).
   version lives in git only.
 - **Each doc owns one altitude.** The board carries a line and a pointer; the task file carries the
   contract; the `docs/` page carries the settled fact. Nothing is stated twice.
+- **A change of several lines on its own branch gets a branch board.** `BRANCH.md` at the root
+  holds the clean design first and one line per thing that design breaks after, the line that
+  writes the design into `docs/` first among them; `BOARD.md` on the branch holds one pointer line;
+  the branch merges only once `BRANCH.md` holds no line, and one Prep commit deletes the file and
+  the pointer before the merge. Why: one board with two workstreams makes priority order lie, and
+  the design section reviewed line by line keeps `DESIGN.md` on `main` free of half-true designs.
 - **A task file is written once, on the settled state.** Findings stay in the conversation until
   they settle — intermediate readings are usually wrong, and a superseded number left in a file
   reads as fact next session.

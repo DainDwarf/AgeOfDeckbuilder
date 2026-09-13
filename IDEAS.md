@@ -85,8 +85,8 @@ a [`BOARD.md`](BOARD.md) line. Say
   either way: assignment is management; buildings, improvements and unit spawn are cards; unit
   movement and attacks are management. Each switch is the same rules function behind a different
   input, plus the design page, the glossary and a rebalance.
-- **Worker actions**: a worker spends its per-turn pool to gain the yield of the tile it stands
-  on. Only a tile the city does not own? Buildings included or not?
+- **Worker yield**: a worker spends its action to gain the yield of the tile it stands on. Only a
+  tile the city does not own? Buildings included or not?
 - **Consuming the worker on building**: a building card spends the worker that stands on the tile,
   so workers are a scarcity of their own and the city's population pays for its buildings twice.
 - **Bundle the UI font** (art-style pass scope): `system-ui` resolves to a different typeface on

@@ -20,7 +20,8 @@ Every file has exactly one:
   [`docs/GLOSSARY.md`](docs/GLOSSARY.md) the closed gameplay vocabulary.
 - **Task context** — ephemeral. [`BOARD.md`](BOARD.md) (ordered lines with done-conditions;
   completion is deletion), `board/<slug>.md` task files (die with their line),
-  [`IDEAS.md`](IDEAS.md) (unordered pool, nothing promised).
+  [`IDEAS.md`](IDEAS.md) (unordered pool, nothing promised), and on a branch of several lines a
+  `BRANCH.md` (its design first, its lines after; deleted before the merge).
 
 [`CHANGELOG.md`](CHANGELOG.md) is player-facing release notes, written at version bumps only.
 Nothing durable cites a board line, a task file or an idea.

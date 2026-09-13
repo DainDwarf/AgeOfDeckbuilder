@@ -45,8 +45,7 @@ what it is:
   its own line with its own workaround, the way the tearing became *Rotated Texts stop tearing*.
 
 Never code around it inside the line being shipped, and never let it change what the line was
-meant to build. A workaround chosen without the user's answer is how a hand-rolled word wrap
-once entered this repository.
+meant to build.
 
 ## Scope
 

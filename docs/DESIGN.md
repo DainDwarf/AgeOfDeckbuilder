@@ -268,11 +268,11 @@ going to the discard pile; discarded unplayed, it comes around like any other. T
 chronicle-only by nature.
 
 - **Building** — builds a building on a tile inside the border where a worker stands, and that
-  worker spends one of its action. The map is
-  the cap: no free tile of the right terrain, no farm — and a building card with nowhere to go
-  is a blank draw, which is what keeps a deck from being all buildings. A copy bought in the meta
-  makes the deck faster, never the city bigger. Consuming a building card on play was rejected:
-  the deck would be the city's blueprint and the chronicle merely where it is built.
+  worker spends one of its action. The map is the cap: no free tile of the right terrain, no
+  farm — and a building card with nowhere to go is a blank draw, which is what keeps a deck from
+  being all buildings. A copy bought in the meta makes the deck faster, never the city bigger.
+  Consuming a building card on play was rejected: the deck would be the city's blueprint and the
+  chronicle merely where it is built.
 - **Unit** — puts a unit on the map, made of one idle inhabitant, never the city's last: an
   inhabitant off the tiles becomes the warrior, the worker, later the trader, and is gone
   when the unit is killed. Where a unit enters is 🔧 until the map is designed.
@@ -590,7 +590,8 @@ across turns, never within one blow.
   attacks nothing because it is a worker, whatever its range or damage; what a unit spends its
   action on is written on the unit, never read off a stat. A worker spends its action on a card
   played through it — a building, an improvement, a terraform — one to a card, and a worker with
-  none left is refused them. An instant that refreshes a unit refreshes its move points, never its action.
+  none left is refused them. An instant that refreshes a unit refreshes its move points, never its
+  action.
 - **One unit per tile.** A unit on a tile is a gate: an enemy must kill it to pass. Stacking was
   rejected: piled units turn position into arithmetic.
 - **Enemies hurt the city by standing on it.** A tile the city owns yields nothing at income
@@ -629,17 +630,16 @@ never in when: the player knows the trial from the founding and learns its turn 
 
 **Enemies enter from camps.** The generator places **camps** on the map, each filling its tile's
 building slot, each uncharted until seen. An event that spawns enemies draws, for each of them, a
-camp whose tile is free, seeded, and the enemy enters on it; with no camp's tile free nothing
-more enters. The enemy
-follows its script — the default one moves toward the nearest of the player's units or the city and
-attacks it. Scouting is how a chronicle learns where the enemy comes from. A camp is **captured**
-the way the city is, mirrored: a unit of the player's, any unit, that stands on it through the enemy
-phase — still there when the next turn begins — captures it. A captured camp leaves the map, its
-slot empty, so it spawns nothing again, and no raid enters a chronicle whose every camp is captured.
-Its reward is a card that joins the chronicle's deck, laid in the discard pile at the capture. 🔧
-Until the deck is data the card is a stand-in: an instant, single use, that gains some of every core
-resource. Spawning enemies on any tile out of sight was rejected: a raid out of a hollow that turns
-out empty reads as nothing.
+camp whose tile is free, seeded, and the enemy enters on it; with no camp's tile free nothing more
+enters. The enemy follows its script — the default one moves toward the nearest of the player's
+units or the city and attacks it. Scouting is how a chronicle learns where the enemy comes from. A
+camp is **captured** the way the city is, mirrored: a unit of the player's, any unit, that stands on
+it through the enemy phase — still there when the next turn begins — captures it. A captured camp
+leaves the map, its slot empty, so it spawns nothing again, and no raid enters a chronicle whose
+every camp is captured. Its reward is a card that joins the chronicle's deck, laid in the discard
+pile at the capture. 🔧 Until the deck is data the card is a stand-in: an instant, single use, that
+gains some of every core resource. Spawning enemies on any tile out of sight was rejected: a raid
+out of a hollow that turns out empty reads as nothing.
 
 **The capstone lands on a turn drawn at the founding**, seeded, from a window of turns the age's
 schedule names — 🔧 the twenty-seventh to the thirty-third; the chronicle carries the turn, and the
@@ -657,5 +657,6 @@ where the tiles run out, and a warrior enters on each. On each of the five turns
 phase enters a warrior on every camp whose tile is free — the generator's camps as much as the
 siege's own — before whatever that turn deals, and those warriors enter the map the way an event's
 do. A city still standing when the sixth turn ends is victory: the chronicle ends at that end of
-turn, before the turn ticks over, and carries the ending as it carries a defeat. A fixed turn known from the launch was rejected: a countdown the player can
-read turns the whole chronicle into arithmetic toward it.
+turn, before the turn ticks over, and carries the ending as it carries a defeat. A fixed turn known
+from the launch was rejected: a countdown the player can read turns the whole chronicle into
+arithmetic toward it.
