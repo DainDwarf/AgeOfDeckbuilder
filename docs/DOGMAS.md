@@ -108,10 +108,10 @@ How this project is built. Human-chosen; every session works by them, `/intake` 
 | Dev server and bundler | Vite 8 |
 | Rules tests | Vitest 4 |
 | UI verification | Playwright, Chromium only |
-| CI | GitHub Actions on every push, any branch: typecheck, lint, rules tests, e2e |
+| CI | GitHub Actions on every push, any branch: typecheck, lint, rules tests, e2e. On `Latest`, once that passes: build and deploy to Pages |
 | Lint and format | Biome for code, one `biome.json`; Prettier for markdown, one `.prettierrc` |
 | Package manager | npm on Node 24; `package-lock.json` is committed |
-| Hosting | itch.io HTML5 page, the zipped `dist/`. No server, ever. |
+| Hosting | GitHub Pages, the `dist/` built from `Latest`, served under `/AgeOfDeckbuilder/`; itch.io HTML5 page, the same bundle zipped from a relative-base build — a script the itch publish adds. No server, ever. |
 | Desktop wrapper | Tauri 2 — not installed; it needs Rust, and it is installed when the desktop target is taken |
 
 - **`src/rules/` never imports Phaser and never touches the DOM; `src/ui/` never mutates state.** The game is one pure function, `apply(state, command) → stages`: the ordered steps the command resolves as, never none, each carrying the state it leaves, the last of them carrying the state the command ends on. The seeded generator's state lives inside `state`. That single rule is what makes a chronicle replay from its seed, a save the state serialised, and a headless simulator `apply` in a loop keeping the last stage's state. Why stages and not the state alone: what happened — which tile attacked which — is not in the state that follows it, and the chronicle screen has to play it. Phaser renders a state and emits commands, nothing else.
