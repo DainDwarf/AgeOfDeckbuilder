@@ -13,3 +13,10 @@ Before intake: `- **Title** — what it is about.`
 After intake: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [dossier]`
 
 ---
+
+- **The wrap linter** — docs wrapping becomes a lint, through an existing tool, so no session wraps
+  a paragraph by hand again.
+- **The design page split** — DESIGN.md's interface prose leaves the Systems section for a page of
+  its own.
+- **Sentences authored by the implementer** — a player-facing sentence or a design sentence the
+  implementer wrote is put to the user at the hand-back, never left unconfirmed.
