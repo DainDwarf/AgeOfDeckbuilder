@@ -18,7 +18,7 @@ Read `docs/DOGMAS.md` before touching anything. It is the rulebook; the reviewer
 The `docs/` pages your brief names are the specification. When the code you are writing cannot match them, or the plan did not foresee a case you hit:
 
 - **Do not resolve it by choosing.** Do not pick the interpretation that seems best and move on.
-- **Do not edit the design page down** to match what you built.
+- **Do not edit a design page down** to match what you built.
 - Implement the parts that are unambiguous, leave the ambiguous part in the state the plan described as closely as you can, and put the gap under **Deviations** in your report with the concrete case, what the spec says, what you did, and what the options are.
 
 A corner case the design did not anticipate goes in the report even when you handled it in the obvious way. "None" is a valid Deviations entry; the section is never absent.
