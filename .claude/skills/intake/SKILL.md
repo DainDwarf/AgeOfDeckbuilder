@@ -50,4 +50,4 @@ Where a check ended the line instead — a docs edit made now, an idea, nothing 
 
 ## Report
 
-One line: the dossier's path and what the ship session will not have to decide, or the line's fate. Then hand the turn back; the ship is a new invocation.
+Commit the dossier and `BOARD.md` — and whatever a check moved, a docs edit or an idea — as `Intake: <title>`, staging those files alone; a dossier left uncommitted lands in the ship's commit and the history loses the intake. Then one line: the dossier's path and what the ship session will not have to decide, or the line's fate. Then hand the turn back; the ship is a new invocation.
