@@ -205,6 +205,9 @@ test('a slot takes the next key pressed, and keeps it across a reload', async ({
   await expect.poll(() => standing(page, 'menu')).toBe(true);
   await page.keyboard.press('Escape');
   await expect.poll(() => standing(page, 'menu')).toBe(false);
+  // The reload founds the chronicle again, and the menu closes back onto its capstone window.
+  await click(page, 'capstone-card-0');
+  await expect.poll(() => standing(page, 'capstone')).toBe(false);
 
   // The frame pans up, so what stands on the map comes down the screen.
   expect(await heldBy(page, 'k')).toBeGreaterThan(40);
