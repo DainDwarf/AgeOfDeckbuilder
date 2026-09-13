@@ -8,6 +8,7 @@ import {
   type Carrying,
   CITY,
   cityOf,
+  endedTurn,
   everyCard,
   FOOD,
   field,
@@ -18,6 +19,7 @@ import {
   pointsOf,
   stagedBy,
   standing,
+  unitNamed,
   WORKER,
   withTile,
   withUnits,
@@ -349,7 +351,8 @@ test('a building card builds its building on a tile inside the border where a wo
   expect(after.resources.production).toBe(0);
   expect(after.hand).toEqual([]);
   expect(after.discardPile).toEqual(['PH_Farm']);
-  expect(after.units).toEqual(city.units);
+  expect(unitNamed(after, 1).tile).toEqual({ q: 1, r: 0 });
+  expect(actionOf(after, 1)).toBe(actionOf(city, 1) - 1);
 });
 
 test('a building card is refused on a tile no worker stands on, and with no tile at all', () => {
@@ -396,7 +399,7 @@ test('a tile’s building slot takes one building and no more', () => {
     resources: production(6),
   });
 
-  const once = outcome(apply(city, aimedAt({ q: 1, r: 0 })));
+  const once = endedTurn(outcome(apply(city, aimedAt({ q: 1, r: 0 }))));
 
   expect(outcome(apply(once, aimedAt({ q: 1, r: 0 })))).toEqual(once);
   expect(refusedFor(once, 'PH_Farm', { q: 1, r: 0 })).toBe('slot');
@@ -462,7 +465,8 @@ test('the mine card improves the hills a worker stands on, inside the border and
     expect(after.resources.production).toBe(0);
     expect(after.hand).toEqual([]);
     expect(after.discardPile).toEqual(['PH_Mine']);
-    expect(after.units).toEqual(city.units);
+    expect(unitNamed(after, 1).tile).toEqual(at);
+    expect(actionOf(after, 1)).toBe(actionOf(city, 1) - 1);
   }
 });
 
@@ -502,7 +506,7 @@ test('a tile takes the same improvement once and never a second time', () => {
     resources: production(6),
   });
 
-  const once = outcome(apply(city, aimedAt(at)));
+  const once = endedTurn(outcome(apply(city, aimedAt(at))));
 
   expect(admittedTiles(once, 'PH_Mine')).toEqual([]);
   expect(refusedFor(once, 'PH_Mine', at)).toBe('improvement');
@@ -534,7 +538,8 @@ test('the road card improves every terrain a worker of the player’s stands on'
     expect(tileAt(after.tiles, at)?.improvements).toEqual(['PH_Road']);
     expect(after.resources.production).toBe(0);
     expect(after.discardPile).toEqual(['PH_Road']);
-    expect(after.units).toEqual(city.units);
+    expect(unitNamed(after, 1).tile).toEqual(at);
+    expect(actionOf(after, 1)).toBe(actionOf(city, 1) - 1);
   }
 });
 
@@ -561,7 +566,8 @@ test('the urbanisation card terraforms the plain a worker stands on, inside the 
     expect(tileAt(after.tiles, at)?.terrain).toBe('urban');
     expect(after.resources.production).toBe(0);
     expect(after.discardPile).toEqual(['PH_Urbanisation']);
-    expect(after.units).toEqual(city.units);
+    expect(unitNamed(after, 1).tile).toEqual(at);
+    expect(actionOf(after, 1)).toBe(actionOf(city, 1) - 1);
   }
 });
 
@@ -734,10 +740,88 @@ test('every card the map answers for is playable whatever the map holds, and blo
   expect(playable(refusalOf(empty, 'PH_Urbanisation'))).toBe(false);
 });
 
-test('the farm card names the first of its four reasons: worker, terrain, border, then slot', () => {
+test('a card played through a worker spends one of that worker’s action, whichever card it is', () => {
+  const at = { q: 1, r: 0 };
+  const plays: [CardId, Terrain, number][] = [
+    ['PH_Farm', 'plain', 3],
+    ['PH_Mine', 'hills', 3],
+    ['PH_Road', 'plain', 2],
+    ['PH_Urbanisation', 'plain', 5],
+  ];
+  for (const [id, terrain, cost] of plays) {
+    const city = workedTile(at, terrain, { hand: [id], resources: production(cost) });
+
+    const after = outcome(apply(city, aimedAt(at)));
+
+    expect(after.discardPile).toEqual([id]);
+    expect(actionOf(after, 1)).toBe(actionOf(city, 1) - 1);
+  }
+});
+
+test('a worker with no action left refuses the next card played through it, and lights no tile for it', () => {
+  const at = { q: 1, r: 0 };
+  const city = workedTile(at, 'hills', {
+    hand: ['PH_Mine', 'PH_Road'],
+    resources: production(5),
+  });
+
+  const mined = outcome(apply(city, aimedAt(at)));
+
+  expect(actionOf(mined, 1)).toBe(0);
+  expect(refusedFor(mined, 'PH_Road', at)).toBe('action');
+  expect(admittedTiles(mined, 'PH_Road')).toEqual([]);
+  expect(stagedBy(mined, aimedAt(at))).toEqual(['refused']);
+  expect(outcome(apply(mined, aimedAt(at)))).toBe(mined);
+});
+
+test('the turn refreshes a worker’s action, and the card it refused lands on the next turn', () => {
+  const at = { q: 1, r: 0 };
+  const city = workedTile(at, 'hills', {
+    ...NO_GROWTH,
+    hand: ['PH_Mine', 'PH_Road'],
+    resources: production(5),
+  });
+
+  const ticked = endedTurn(outcome(apply(city, aimedAt(at))));
+  const road = ticked.hand.indexOf('PH_Road');
+
+  expect(road).not.toBe(-1);
+  expect(actionOf(ticked, 1)).toBe(actionOf(city, 1));
+  expect(refusedFor(ticked, 'PH_Road', at)).toBeUndefined();
+
+  const after = outcome(apply(ticked, { type: 'play', index: road, aim: 'tile', tile: at }));
+
+  expect(tileAt(after.tiles, at)?.improvements).toEqual(['PH_Mine', 'PH_Road']);
+});
+
+test('the refresh instant leaves a worker’s spent action spent, and the card refused on it refused', () => {
+  const at = { q: 1, r: 0 };
+  const city = founded(2, {
+    tiles: madeOf(field(2), 'hills', [at]),
+    hand: ['PH_Mine', 'PH_March', 'PH_Road'],
+    resources: production(5),
+    units: [worker(CITY)],
+  });
+
+  const moved = outcome(apply(city, { type: 'move', unit: 1, tile: at }));
+  const mined = outcome(apply(moved, aimedAt(at)));
+  const refreshed = outcome(apply(mined, aimedAtUnit(at)));
+
+  expect(pointsOf(moved, 1)).toBeLessThan(WORKER.move);
+  expect(pointsOf(refreshed, 1)).toBe(WORKER.move);
+  expect(refreshed.discardPile).toEqual(['PH_Mine', 'PH_March']);
+  expect(actionOf(refreshed, 1)).toBe(0);
+  expect(refusedFor(refreshed, 'PH_Road', at)).toBe('action');
+});
+
+test('the farm card names the first of its five reasons: worker, action, terrain, border, then slot', () => {
   const at = { q: 1, r: 0 };
   const out = { q: 2, r: 0 };
-  const hilly = founded(2, { tiles: madeOf(field(2), 'hills', [at, out]) });
+  const hilly = founded(2, {
+    tiles: madeOf(field(2), 'hills', [at, out]),
+    hand: ['PH_Road'],
+    resources: production(2),
+  });
   const flat = founded(2, { tiles: madeOf(field(2), 'plain', [at, out]) });
   const worked = withUnits(flat, [worker(at)]);
   const filled = withTile(worked, {
@@ -750,14 +834,17 @@ test('the farm card names the first of its four reasons: worker, terrain, border
   expect(refusedFor(hilly, 'PH_Farm', out)).toBe('worker');
   expect(refusedFor(withUnits(hilly, [worker(out)]), 'PH_Farm', out)).toBe('terrain');
   expect(refusedFor(withUnits(hilly, [worker(at)]), 'PH_Farm', at)).toBe('terrain');
+  expect(
+    refusedFor(outcome(apply(withUnits(hilly, [worker(at)]), aimedAt(at))), 'PH_Farm', at),
+  ).toBe('action');
   expect(refusedFor(withUnits(flat, [worker(out)]), 'PH_Farm', out)).toBe('border');
   expect(refusedFor(filled, 'PH_Farm', at)).toBe('slot');
   expect(refusedFor(worked, 'PH_Farm', at)).toBeUndefined();
 });
 
-test('the mine card names the first of its three reasons: worker, terrain, then improvement', () => {
+test('the mine card names the first of its four reasons: worker, action, terrain, then improvement', () => {
   const at = { q: 1, r: 0 };
-  const plain = founded(2);
+  const plain = founded(2, { hand: ['PH_Road'], resources: production(2) });
   const hills = founded(2, { tiles: madeOf(field(2), 'hills', [at]) });
   const worked = withUnits(hills, [worker(at)]);
   const mined = withTile(worked, { ...at, terrain: 'hills', improvements: ['PH_Mine'] });
@@ -771,14 +858,21 @@ test('the mine card names the first of its three reasons: worker, terrain, then 
     ),
   ).toBe('worker');
   expect(refusedFor(withUnits(plain, [worker(at)]), 'PH_Mine', at)).toBe('terrain');
+  expect(
+    refusedFor(outcome(apply(withUnits(plain, [worker(at)]), aimedAt(at))), 'PH_Mine', at),
+  ).toBe('action');
   expect(refusedFor(mined, 'PH_Mine', at)).toBe('improvement');
   expect(refusedFor(worked, 'PH_Mine', at)).toBeUndefined();
 });
 
-test('the urbanisation card names the first of its three reasons: worker, terrain, then slot', () => {
+test('the urbanisation card names the first of its four reasons: worker, action, terrain, then slot', () => {
   const at = { q: 1, r: 0 };
   const plain = founded(2);
-  const forest = founded(2, { tiles: madeOf(field(2), 'forest', [at]) });
+  const forest = founded(2, {
+    tiles: madeOf(field(2), 'forest', [at]),
+    hand: ['PH_Road'],
+    resources: production(2),
+  });
   const built = withTile(plain, { ...at, terrain: 'plain', improvements: [], building: 'PH_Farm' });
   const worked = withUnits(plain, [worker(at)]);
   const wooded = withUnits(forest, [worker(at)]);
@@ -787,6 +881,7 @@ test('the urbanisation card names the first of its three reasons: worker, terrai
   expect(refusedFor(plain, 'PH_Urbanisation', at)).toBe('worker');
   expect(refusedFor(forest, 'PH_Urbanisation', at)).toBe('worker');
   expect(refusedFor(wooded, 'PH_Urbanisation', at)).toBe('terrain');
+  expect(refusedFor(outcome(apply(wooded, aimedAt(at))), 'PH_Urbanisation', at)).toBe('action');
   expect(refusedFor(built, 'PH_Urbanisation', at)).toBe('worker');
   expect(refusedFor(filled, 'PH_Urbanisation', at)).toBe('slot');
   expect(refusedFor(worked, 'PH_Urbanisation', at)).toBeUndefined();

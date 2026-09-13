@@ -282,9 +282,9 @@ export function buildingAt(chronicle: Chronicle, { q, r }: TileCoords): Building
   return chronicle.tiles.find((tile) => tile.q === q && tile.r === r)?.building;
 }
 
-/** A worker of the player's, standing on a tile with nothing to fight with and no action to fight on. */
+/** A worker of the player's, standing on a tile with nothing to fight with. */
 export function worker(tile: TileCoords): Standing {
-  return standing('player', tile, { type: 'PH_Worker', damage: 0, range: 0, action: 0 });
+  return standing('player', tile, { type: 'PH_Worker', damage: 0, range: 0 });
 }
 
 /** What a worker of these fixtures carries: what says which tiles one of them can stand on. */

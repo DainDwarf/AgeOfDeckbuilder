@@ -1,13 +1,17 @@
 import { expect, type Page, test } from '@playwright/test';
+import { aimOf, CARDS } from '../src/rules/cards';
+import { admitted, apply, outcome, refusalOf } from '../src/rules/chronicle';
 import { IMPROVEMENTS, type TileCoords, tileKey } from '../src/rules/map';
-import type { CardId, Chronicle } from '../src/rules/state';
+import { type CardId, type Chronicle, playable } from '../src/rules/state';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
 import { text } from '../src/ui/text';
 import {
   aimed,
+  budget,
   chronicleOf,
   dragOut,
   dragUnit,
+  endedTurn,
   endTurn,
   marksIn,
   onScreen,
@@ -15,12 +19,25 @@ import {
   panelLines,
   playedOut,
   type Run,
+  refusalLines,
   ringedTile,
+  settled,
   shownCard,
   standing,
   watch,
   workerRun,
 } from './chronicle-screen';
+
+/** Whether the road can be played on the tile: a worker with action left stands there, and the city can pay. */
+function roadLands(chronicle: Chronicle, at: TileCoords): boolean {
+  const road = aimOf(CARDS.PH_Road);
+  if (road.aim !== 'tile') throw new Error('PH_Road is aimed at no tile');
+  return (
+    chronicle.hand.includes('PH_Road') &&
+    playable(refusalOf(chronicle, 'PH_Road')) &&
+    admitted(chronicle, road).some((coord) => tileKey(coord) === tileKey(at))
+  );
+}
 
 /** The run's turn opened, a worker entered and moved by hand onto the tile the run found. */
 async function moveOut(page: Page, run: Run): Promise<Chronicle> {
@@ -73,6 +90,48 @@ test('the mine card improves the hills the worker moved to', async ({ page }) =>
   expect(await marksIn(page, 'improvements')).toBe(before + 1);
   expect(after.resources.production).toBe(moved.resources.production - 3);
   expect(after.units[0].tile).toEqual(run.tile);
+  expect(problems).toEqual([]);
+});
+
+test('the road on the worker that laid the mine is refused for its action, and lands on the next turn', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const run = workerRun('PH_Mine', (tile, moved) => {
+    const at = { q: tile.q, r: tile.r };
+    const mine = moved.hand.indexOf('PH_Mine');
+    const mined = outcome(apply(moved, { type: 'play', index: mine, aim: 'tile', tile: at }));
+    if (!mined.hand.includes('PH_Road') || !playable(refusalOf(mined, 'PH_Road'))) return false;
+    const next = endedTurn(mined);
+    return next.ending === undefined && roadLands(next, at);
+  });
+  // The run's ends of turn, the worker entered and moved, the mine, and the turn after it.
+  test.setTimeout(budget(run.turn + 3));
+
+  const moved = await moveOut(page, run);
+  await aimAt(page, moved.hand, 'PH_Mine', run.tile);
+
+  const mined = await chronicleOf(page);
+  const target = await onScreen(page, `tile-${tileKey(run.tile)}`);
+  await dragOut(page, mined.hand.indexOf('PH_Road'));
+  await aimed(page);
+  await page.mouse.click(target.x, target.y);
+  await settled(page);
+
+  expect(await refusalLines(page)).toEqual([text('refusal.action')]);
+  expect(await chronicleOf(page)).toEqual(mined);
+
+  await page.keyboard.press('Escape');
+  await expect.poll(() => standing(page, 'aim')).toBe(false);
+  await endTurn(page);
+
+  const next = await chronicleOf(page);
+  await aimAt(page, next.hand, 'PH_Road', run.tile);
+
+  const after = await chronicleOf(page);
+  const improved = after.tiles.find((tile) => tileKey(tile) === tileKey(run.tile));
+
+  expect(improved?.improvements).toEqual(['PH_Mine', 'PH_Road']);
   expect(problems).toEqual([]);
 });
 

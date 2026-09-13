@@ -41,7 +41,7 @@ export const UNIT_STATS: Record<UnitTypeId, UnitStats> = {
     damage: 0,
     range: 0,
     move: 2 * MOVE_POINT,
-    action: 0,
+    action: 1,
     sight: 2,
   },
   PH_Warrior: {
@@ -57,7 +57,7 @@ export const UNIT_STATS: Record<UnitTypeId, UnitStats> = {
 
 /**
  * A unit standing on the map, with the move points it has left to cross tiles on and the action it
- * has left to attack on. An enemy is the one that carries a script — the enemy phase asks it where
+ * has left to spend. An enemy is the one that carries a script — the enemy phase asks it where
  * to move and what to attack. `id` is the number the chronicle dealt it as it entered: what every
  * command names it by, whoever else enters or is killed around it.
  */
@@ -83,6 +83,11 @@ export function refreshedMovePoints(unit: Unit): Unit {
 /** A unit's action refreshed to its own action, whatever it had left of it. */
 export function refreshedAction(unit: Unit): Unit {
   return { ...unit, action: unit.stats.action };
+}
+
+/** A unit with one of its action spent: what an attack spends, and a card played through a worker. */
+export function spentAction<U extends Unit>(unit: U): U {
+  return { ...unit, action: unit.action - 1 };
 }
 
 /** The one unit standing on a tile, if one does. */

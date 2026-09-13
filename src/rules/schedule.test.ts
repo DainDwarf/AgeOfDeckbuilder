@@ -310,7 +310,6 @@ function unkillable(tile: TileCoords): Standing {
     type: 'PH_Worker',
     damage: 0,
     range: 0,
-    action: 0,
     health: 99,
   });
 }

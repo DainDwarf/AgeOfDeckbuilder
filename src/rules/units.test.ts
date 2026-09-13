@@ -18,7 +18,7 @@ import {
 } from './fixtures';
 import { type ImprovementId, MOVE_POINT, type Tile, type TileCoords, tileKey } from './map';
 import type { Chronicle } from './state';
-import { UNIT_STATS } from './units';
+import { attackable, UNIT_STATS } from './units';
 
 /** The same tiles, with the named ones carrying the improvement. */
 function improvedWith(tiles: Tile[], improvement: ImprovementId, coords: TileCoords[]): Tile[] {
@@ -175,6 +175,22 @@ test('an attack by a worker, by a unit that is not the player’s, and by no uni
   expect(outcome(apply(city, attackOn(1, { q: 2, r: 0 })))).toBe(city);
   expect(outcome(apply(city, attackOn(2, { q: 3, r: 0 })))).toBe(city);
   expect(outcome(apply(city, attackOn(10, { q: 2, r: 0 })))).toBe(city);
+});
+
+test('a worker entered by its card holds an action and attacks nothing beside it: its range is zero', () => {
+  const city = cityOf(['urban'], {
+    tiles: field(3),
+    hand: ['PH_Worker'],
+    population: 2,
+    resources: FOOD,
+    units: [standing('enemy', { q: 1, r: 0 })],
+  });
+
+  const entered = outcome(apply(city, { type: 'play', index: 0, aim: 'none' }));
+
+  expect(actionOf(entered, 2)).toBeGreaterThan(0);
+  expect(attackable(entered.units, unitNamed(entered, 2))).toEqual([]);
+  expect(stagedBy(entered, attackOn(2, { q: 1, r: 0 }))).toEqual(['refused']);
 });
 
 test('an attack reaches its range and no further, and lands on a unit of another faction alone', () => {

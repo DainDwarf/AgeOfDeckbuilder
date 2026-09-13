@@ -11,8 +11,3 @@ traps, plan — written once, on the settled state, and deleted with the line.
 Format: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [task file]`
 
 ---
-
-- **A worker acts once** — a worker holds one action; a card played through a worker (building,
-  improvement, terraform) spends one of it and is refused, with its own reason, on a worker that has
-  none left; the design and the glossary say so. Doc-impact: `docs/DESIGN.md`, `docs/GLOSSARY.md`.
-  [board/worker-acts-once.md](board/worker-acts-once.md)

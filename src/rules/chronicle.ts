@@ -25,6 +25,7 @@ import {
   reachable,
   refreshedAction,
   refreshedMovePoints,
+  spentAction,
   unitAt,
   unitOf,
 } from './units';
@@ -493,7 +494,7 @@ function attack(chronicle: Chronicle, attacker: number, at: TileCoords): Stage[]
   if (target === undefined) return [{ name: 'refused', chronicle }];
 
   const damaged = attacked(chronicle.units, unit, target).map((other) =>
-    other.id === attacker ? { ...other, action: other.action - 1 } : other,
+    other.id === attacker ? spentAction(other) : other,
   );
   return [
     {
@@ -566,7 +567,7 @@ function enemyPhase(chronicle: Chronicle): Stage[] {
       const target = script.attacks({ ...chronicle, units }, acting);
       if (target === undefined) break;
       const damaged = attacked(units, acting, target);
-      acting = { ...acting, action: acting.action - 1 };
+      acting = spentAction(acting);
       units = damaged.map((other) => (other.id === acting.id ? acting : other));
       stages.push({
         name: 'attack',

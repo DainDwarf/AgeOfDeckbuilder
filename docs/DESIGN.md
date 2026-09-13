@@ -38,7 +38,7 @@ fiction's own word: *Chronicles of the mercantile civilization in the Age of Pow
   farm with a person assigned yields — and **changing the map costs a card**: building,
   terraforming, negotiating. What a unit does with itself is the exception it carries with it: it
   crosses the map on its own move points and attacks on its own action, and no card is spent on
-  either.
+  either. A worker's action is spent the other way round: on the cards played through it.
 - Five core resources: **food, production, military, money, science**. 🔧 Their jobs: food grows
   the population; production builds buildings and units and shapes tiles; military pays for
   military units, instants and fortifications; money trades for other goods and accumulates;
@@ -267,7 +267,8 @@ use** is a keyword some cards carry, not a kind: played, such a card leaves the 
 going to the discard pile; discarded unplayed, it comes around like any other. The map's gifts are
 chronicle-only by nature.
 
-- **Building** — builds a building on a tile inside the border where a worker stands. The map is
+- **Building** — builds a building on a tile inside the border where a worker stands, and that
+  worker spends one of its action. The map is
   the cap: no free tile of the right terrain, no farm — and a building card with nowhere to go
   is a blank draw, which is what keeps a deck from being all buildings. A copy bought in the meta
   makes the deck faster, never the city bigger. Consuming a building card on play was rejected:
@@ -278,8 +279,9 @@ chronicle-only by nature.
 - **Instant** — an immediate effect: draw two, gain food, negotiate with a neutral, terraform a
   tile where a worker stands, **refresh** a unit's move points, **recall** a card from the discard
   pile. The refresh takes one unit, so a unit that has spent its move points crosses again in the
-  same turn; it is refused on a unit whose move points are full. Everything that is not a noun
-  entering the map.
+  same turn; it is refused on a unit whose move points are full. An instant played through a worker —
+  an improvement, a terraform — spends one of that worker's action, as a building card does.
+  Everything that is not a noun entering the map.
 - **Hazard** — the kind that is not the player's own. It sits in no deck: a hazard enters a
   chronicle from an event, and from there cycles like any other card. It **strikes** at the end of
   any turn it is still in the hand, before the hand is discarded — and again every cycle it comes
@@ -484,7 +486,8 @@ a layer names that outright, with a river running along the tile adding to its y
 
 **Improving and terraforming reach any tile a worker of the player's stands on**, inside the border
 or not — unlike building, which is inside the border only. A tile whose building slot is filled is
-not terraformed, and the worker stays where it stands through either.
+not terraformed. Either spends one of the worker's action, and the worker stays where it stands
+through either.
 
 🔧 A building's yield may read its neighbours. Nothing in the first playable does; the door
 is there so that adjacency is content when it comes.
@@ -583,8 +586,10 @@ across turns, never within one blow.
   points, and spends one per attack on a unit of another faction within its range; a melee unit's
   range is one. The player attacks by the same press as a move — the target standing on the tile is
   what makes it an attack — and the two pools are independent: an attack spends no move points, a
-  step spends no action, and either follows the other in a turn. A worker holds no action and
-  attacks nothing. An instant that refreshes a unit refreshes its move points, never its action.
+  step spends no action, and either follows the other in a turn. A worker holds one action and
+  attacks nothing, its range being zero: it spends its action on a card played through it — a
+  building, an improvement, a terraform — one to a card, and a worker with none left is refused
+  them. An instant that refreshes a unit refreshes its move points, never its action.
 - **One unit per tile.** A unit on a tile is a gate: an enemy must kill it to pass. Stacking was
   rejected: piled units turn position into arithmetic.
 - **Enemies hurt the city by standing on it.** A tile the city owns yields nothing at income

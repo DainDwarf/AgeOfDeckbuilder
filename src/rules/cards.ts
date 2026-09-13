@@ -18,7 +18,7 @@ import {
   idle,
   type TileBlock,
 } from './state';
-import { refreshedMovePoints, type UnitTypeId, unitAt } from './units';
+import { refreshedMovePoints, spentAction, type UnitTypeId, unitAt } from './units';
 
 /** The declared order of the kinds, which is the order a sorted list of cards reads in. */
 export const CARD_KINDS = ['unit', 'building', 'instant', 'hazard'] as const;
@@ -147,12 +147,37 @@ function firstRefusal(...checks: readonly (TileBlock | undefined)[]): TileBlock 
   return checks.find((reason) => reason !== undefined);
 }
 
-/** A worker of the player's standing on the tile: what a card played through a worker composes. */
+/** A worker of the player's standing on the tile, with action left to spend. */
 function worked(chronicle: Chronicle, tile: TileCoords): TileBlock | undefined {
   const standing = unitAt(chronicle.units, tile);
-  return standing?.faction === 'player' && standing.stats.type === 'PH_Worker'
-    ? undefined
-    : 'worker';
+  if (standing?.faction !== 'player' || standing.stats.type !== 'PH_Worker') return 'worker';
+  return standing.action > 0 ? undefined : 'action';
+}
+
+/**
+ * How a card played through a worker is aimed, the check and the spend as one pair so neither is
+ * written without the other: the worker's reasons come before the tile's, and the worker standing on
+ * the tile spends one of its action as the card's own effect lands.
+ */
+function throughWorker(
+  refusesTile: (chronicle: Chronicle, tile: Tile) => TileBlock | undefined,
+  effect: (paid: Chronicle, at: TileCoords) => Chronicle,
+): Aim & { readonly aim: 'tile' } {
+  return {
+    aim: 'tile',
+    refuses: (chronicle, tile) =>
+      firstRefusal(worked(chronicle, tile), refusesTile(chronicle, tile)),
+    effect: (paid, at) => effect(acted(paid, at), at),
+  };
+}
+
+/** The unit standing on the tile with one of its action spent. */
+function acted(paid: Chronicle, at: TileCoords): Chronicle {
+  const acting = unitAt(paid.units, at)?.id;
+  return {
+    ...paid,
+    units: paid.units.map((unit) => (unit.id === acting ? spentAction(unit) : unit)),
+  };
 }
 
 /** The tile inside the city's border: what a building card asks for and an instant does not. */
@@ -268,15 +293,15 @@ export const CARDS: Record<CardId, Card> = {
   PH_Farm: {
     kind: 'building',
     cost: { production: 3 },
-    aim: 'tile',
-    refuses: (chronicle, tile) =>
-      firstRefusal(
-        worked(chronicle, tile),
-        made(tile, BUILDINGS.PH_Farm.terrains),
-        inside(chronicle, tile),
-        slotFree(tile),
-      ),
-    effect: (paid, at) => built(paid, at, 'PH_Farm'),
+    ...throughWorker(
+      (chronicle, tile) =>
+        firstRefusal(
+          made(tile, BUILDINGS.PH_Farm.terrains),
+          inside(chronicle, tile),
+          slotFree(tile),
+        ),
+      (paid, at) => built(paid, at, 'PH_Farm'),
+    ),
   },
   PH_March: {
     kind: 'instant',
@@ -294,34 +319,28 @@ export const CARDS: Record<CardId, Card> = {
   PH_Mine: {
     kind: 'instant',
     cost: { production: 3 },
-    aim: 'tile',
-    refuses: (chronicle, tile) =>
-      firstRefusal(
-        worked(chronicle, tile),
-        made(tile, IMPROVEMENTS.PH_Mine.terrains),
-        unimproved(tile, 'PH_Mine'),
-      ),
-    effect: (paid, at) => improved(paid, at, 'PH_Mine'),
+    ...throughWorker(
+      (_, tile) =>
+        firstRefusal(made(tile, IMPROVEMENTS.PH_Mine.terrains), unimproved(tile, 'PH_Mine')),
+      (paid, at) => improved(paid, at, 'PH_Mine'),
+    ),
   },
   PH_Road: {
     kind: 'instant',
     cost: { production: 2 },
-    aim: 'tile',
-    refuses: (chronicle, tile) =>
-      firstRefusal(
-        worked(chronicle, tile),
-        made(tile, IMPROVEMENTS.PH_Road.terrains),
-        unimproved(tile, 'PH_Road'),
-      ),
-    effect: (paid, at) => improved(paid, at, 'PH_Road'),
+    ...throughWorker(
+      (_, tile) =>
+        firstRefusal(made(tile, IMPROVEMENTS.PH_Road.terrains), unimproved(tile, 'PH_Road')),
+      (paid, at) => improved(paid, at, 'PH_Road'),
+    ),
   },
   PH_Urbanisation: {
     kind: 'instant',
     cost: { production: 5 },
-    aim: 'tile',
-    refuses: (chronicle, tile) =>
-      firstRefusal(worked(chronicle, tile), made(tile, ['plain']), slotFree(tile)),
-    effect: (paid, at) => terraformed(paid, at, 'urban'),
+    ...throughWorker(
+      (_, tile) => firstRefusal(made(tile, ['plain']), slotFree(tile)),
+      (paid, at) => terraformed(paid, at, 'urban'),
+    ),
   },
   PH_Recall: {
     kind: 'instant',
