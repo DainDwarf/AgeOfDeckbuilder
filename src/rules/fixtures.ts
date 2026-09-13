@@ -167,6 +167,7 @@ export function camped(tiles: Tile[], coords: TileCoords[]): Tile[] {
 function statsOf(stats: Partial<UnitStats>): UnitStats {
   return {
     type: 'PH_Warrior',
+    worker: false,
     health: 4,
     damage: 1,
     range: 1,
@@ -282,9 +283,9 @@ export function buildingAt(chronicle: Chronicle, { q, r }: TileCoords): Building
   return chronicle.tiles.find((tile) => tile.q === q && tile.r === r)?.building;
 }
 
-/** A worker of the player's, standing on a tile with nothing to fight with. */
+/** A worker of the player's, standing on a tile. */
 export function worker(tile: TileCoords): Standing {
-  return standing('player', tile, { type: 'PH_Worker', damage: 0, range: 0 });
+  return standing('player', tile, { type: 'PH_Worker', worker: true });
 }
 
 /** What a worker of these fixtures carries: what says which tiles one of them can stand on. */

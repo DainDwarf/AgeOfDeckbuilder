@@ -177,7 +177,7 @@ test('an attack by a worker, by a unit that is not the player’s, and by no uni
   expect(outcome(apply(city, attackOn(10, { q: 2, r: 0 })))).toBe(city);
 });
 
-test('a worker entered by its card holds an action and attacks nothing beside it: its range is zero', () => {
+test('a worker entered by its card holds an action and attacks nothing beside it', () => {
   const city = cityOf(['urban'], {
     tiles: field(3),
     hand: ['PH_Worker'],
@@ -191,6 +191,20 @@ test('a worker entered by its card holds an action and attacks nothing beside it
   expect(actionOf(entered, 2)).toBeGreaterThan(0);
   expect(attackable(entered.units, unitNamed(entered, 2))).toEqual([]);
   expect(stagedBy(entered, attackOn(2, { q: 1, r: 0 }))).toEqual(['refused']);
+});
+
+test('a worker with range and damage attacks nothing all the same', () => {
+  const city = cityOf(['urban'], {
+    tiles: field(3),
+    units: [
+      standing('player', { q: 1, r: 0 }, { type: 'PH_Worker', worker: true, damage: 1, range: 1 }),
+      standing('enemy', { q: 2, r: 0 }),
+    ],
+  });
+
+  expect(actionOf(city, 1)).toBeGreaterThan(0);
+  expect(attackable(city.units, unitNamed(city, 1))).toEqual([]);
+  expect(stagedBy(city, attackOn(1, { q: 2, r: 0 }))).toEqual(['refused']);
 });
 
 test('an attack reaches its range and no further, and lands on a unit of another faction alone', () => {

@@ -302,16 +302,11 @@ function corridor(carrying: Carrying = {}): Chronicle {
 const REINFORCED = 5;
 
 /**
- * A worker of the player's with health no siege runs through, and nothing to fight back with: what a
- * fixture stands where it wants the enemies of the span to spend their turns.
+ * A worker of the player's with health no siege runs through: what a fixture stands where it wants
+ * the enemies of the span to spend their turns.
  */
 function unkillable(tile: TileCoords): Standing {
-  return standing('player', tile, {
-    type: 'PH_Worker',
-    damage: 0,
-    range: 0,
-    health: 99,
-  });
+  return standing('player', tile, { type: 'PH_Worker', worker: true, health: 99 });
 }
 
 /** The disc with water around the city: no ground runs to it, so the siege places no camp of its own. */

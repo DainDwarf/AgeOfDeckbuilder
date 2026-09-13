@@ -389,6 +389,30 @@ test('each enemy acts on the chronicle the enemy before it left, and no unit of 
   expect(after.units.map((unit) => unit.id)).toEqual([2, 3]);
 });
 
+test('an enemy with no damage attacks all the same, and removes nothing', () => {
+  const city = cityOf(['urban'], {
+    tiles: field(2),
+    units: [worker({ q: 1, r: 0 }), standing('enemy', { q: 2, r: 0 }, { move: 0, damage: 0 })],
+  });
+
+  const after = outcome(apply(city, { type: 'end-turn' }));
+
+  expect(attacksOf(city)).toEqual([['2,0', '1,0']]);
+  expect(after.units[0].stats.health).toBe(city.units[0].stats.health);
+});
+
+test('an enemy that is a worker attacks nothing, whatever its range and damage', () => {
+  const city = cityOf(['urban'], {
+    tiles: field(2),
+    units: [
+      worker({ q: 1, r: 0 }),
+      standing('enemy', { q: 2, r: 0 }, { worker: true, move: 0, damage: 2, range: 2 }),
+    ],
+  });
+
+  expect(attacksOf(city)).toEqual([]);
+});
+
 test('a killed enemy attacks no more', () => {
   const city = cityOf(['urban'], {
     tiles: field(3),

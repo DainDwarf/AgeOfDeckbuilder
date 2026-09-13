@@ -587,9 +587,10 @@ across turns, never within one blow.
   range is one. The player attacks by the same press as a move — the target standing on the tile is
   what makes it an attack — and the two pools are independent: an attack spends no move points, a
   step spends no action, and either follows the other in a turn. A worker holds one action and
-  attacks nothing, its range being zero: it spends its action on a card played through it — a
-  building, an improvement, a terraform — one to a card, and a worker with none left is refused
-  them. An instant that refreshes a unit refreshes its move points, never its action.
+  attacks nothing because it is a worker, whatever its range or damage; what a unit spends its
+  action on is written on the unit, never read off a stat. A worker spends its action on a card
+  played through it — a building, an improvement, a terraform — one to a card, and a worker with
+  none left is refused them. An instant that refreshes a unit refreshes its move points, never its action.
 - **One unit per tile.** A unit on a tile is a gate: an enemy must kill it to pass. Stacking was
   rejected: piled units turn position into arithmetic.
 - **Enemies hurt the city by standing on it.** A tile the city owns yields nothing at income

@@ -25,6 +25,7 @@ export type EnemyScriptId = 'PH_Advance';
  */
 export type UnitStats = {
   readonly type: UnitTypeId;
+  readonly worker: boolean;
   readonly health: number;
   readonly damage: number;
   readonly range: number;
@@ -37,6 +38,7 @@ export type UnitStats = {
 export const UNIT_STATS: Record<UnitTypeId, UnitStats> = {
   PH_Worker: {
     type: 'PH_Worker',
+    worker: true,
     health: 2,
     damage: 0,
     range: 0,
@@ -46,6 +48,7 @@ export const UNIT_STATS: Record<UnitTypeId, UnitStats> = {
   },
   PH_Warrior: {
     type: 'PH_Warrior',
+    worker: false,
     health: 5,
     damage: 2,
     range: 1,
@@ -160,10 +163,10 @@ export function reachable(chronicle: Crossed, unit: Unit): Landing[] {
 
 /**
  * What a unit an enemy script attacks: the unit of another faction within its range holding the
- * least health, and nothing when none is there or the unit has no damage to remove.
+ * least health, and nothing when none is there or the unit is a worker.
  */
 export function leastHealth(units: readonly Unit[], attacker: Unit): Unit | undefined {
-  if (attacker.stats.damage === 0) return undefined;
+  if (attacker.stats.worker) return undefined;
 
   let target: Unit | undefined;
   for (const other of units) {
@@ -176,10 +179,10 @@ export function leastHealth(units: readonly Unit[], attacker: Unit): Unit | unde
 
 /**
  * What a unit can attack: every unit of another faction within its range, while it has the action an
- * attack spends. A unit with none attacks nothing.
+ * attack spends. A worker, or a unit with none, attacks nothing.
  */
 export function attackable(units: readonly Unit[], attacker: Unit): Unit[] {
-  if (attacker.action <= 0) return [];
+  if (attacker.stats.worker || attacker.action <= 0) return [];
 
   const targets: Unit[] = [];
   for (const other of units) {

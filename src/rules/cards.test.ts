@@ -486,6 +486,25 @@ test('the mine card is refused on a tile no worker of the player’s stands on',
   expect(outcome(apply(fighting, aimedAt(at)))).toEqual(fighting);
 });
 
+test('a unit that is not a worker, with action left, is refused every card played through a worker', () => {
+  const at = { q: 1, r: 0 };
+  const cards: [CardId, Terrain][] = [
+    ['PH_Farm', 'plain'],
+    ['PH_Mine', 'hills'],
+    ['PH_Road', 'plain'],
+    ['PH_Urbanisation', 'plain'],
+  ];
+  for (const [id, terrain] of cards) {
+    const tiles = madeOf(field(2), terrain, [at]);
+    const fighting = founded(2, { tiles, units: [standing('player', at)] });
+    const worked = founded(2, { tiles, units: [worker(at)] });
+
+    expect(actionOf(fighting, 1)).toBeGreaterThan(0);
+    expect(refusedFor(fighting, id, at)).toBe('worker');
+    expect(refusedFor(worked, id, at)).toBeUndefined();
+  }
+});
+
 test('the mine card is refused on every terrain but the hills it goes on', () => {
   const at = { q: 1, r: 0 };
   for (const terrain of ['plain', 'forest', 'mountain', 'coast', 'deep', 'urban'] as Terrain[]) {

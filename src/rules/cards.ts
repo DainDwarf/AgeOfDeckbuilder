@@ -150,7 +150,7 @@ function firstRefusal(...checks: readonly (TileBlock | undefined)[]): TileBlock 
 /** A worker of the player's standing on the tile, with action left to spend. */
 function worked(chronicle: Chronicle, tile: TileCoords): TileBlock | undefined {
   const standing = unitAt(chronicle.units, tile);
-  if (standing?.faction !== 'player' || standing.stats.type !== 'PH_Worker') return 'worker';
+  if (standing?.faction !== 'player' || !standing.stats.worker) return 'worker';
   return standing.action > 0 ? undefined : 'action';
 }
 
