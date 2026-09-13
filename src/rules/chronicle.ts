@@ -551,8 +551,8 @@ function enemyPhase(chronicle: Chronicle): Stage[] {
 
   const stages: Stage[] = [];
   let units = chronicle.units;
-  for (const enemy of chronicle.units) {
-    const found = units.find((unit) => unit.id === enemy.id);
+  for (const rostered of chronicle.units) {
+    const found = units.find((unit) => unit.id === rostered.id);
     if (found?.faction !== 'enemy') continue;
     const script = ENEMY_SCRIPTS[found.script];
     let acting = found;
