@@ -552,11 +552,10 @@ function enemyPhase(chronicle: Chronicle): Stage[] {
   const stages: Stage[] = [];
   let units = chronicle.units;
   for (const enemy of chronicle.units) {
-    if (enemy.faction !== 'enemy') continue;
-    const script = ENEMY_SCRIPTS[enemy.script];
-    const standing = units.find((unit) => unit.id === enemy.id);
-    if (standing === undefined) continue;
-    let acting = standing;
+    const found = units.find((unit) => unit.id === enemy.id);
+    if (found?.faction !== 'enemy') continue;
+    const script = ENEMY_SCRIPTS[found.script];
+    let acting = found;
 
     const landing = script.moveTo({ ...chronicle, units }, acting);
     if (tileKey(landing.tile) !== tileKey(acting.tile)) {
