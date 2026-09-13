@@ -14,7 +14,7 @@ A chronicle is a sequence of **turns**. Each turn, in this order:
 4. **End.** The player ends the turn; the rest of the hand is discarded.
 5. **Income.** Standing things do their standing thing: assigned tiles and their buildings yield their resources. So what the player sees when drawing holds for the whole turn: a farm built this turn feeds the next.
 6. **Growth.** A food stock that has reached the growth threshold is spent on one idle inhabitant, at most one a turn.
-7. **Enemy phase.** 🔧 Neutrals move; each enemy moves by its script and then attacks a unit of the player's within its range, spending its action as any unit does. An enemy standing on the city's tile attacks nothing: it is there to capture. An attack declared a turn before it lands was rejected: it only matters when the player’s movement is limited, and units that move freely by hand step out of a plan declared a turn ahead for nothing.
+7. **Enemy phase.** 🔧 Neutrals move; each enemy in turn, on the chronicle as the enemy before it left it, moves by its script and then attacks a unit of the player's within its range, spending its action as any unit does. The enemies that act are those standing when the phase begins: one a fellow has killed before its turn acts no more, and one entered during the phase waits for the next. An enemy standing on the city's tile attacks nothing: it is there to capture. An attack declared a turn before it lands was rejected: it only matters when the player’s movement is limited, and units that move freely by hand step out of a plan declared a turn ahead for nothing.
 
 ### Sight ✅
 

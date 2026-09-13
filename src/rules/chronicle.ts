@@ -539,9 +539,10 @@ function discard(chronicle: Chronicle): Chronicle {
 /**
  * The enemies' half of the turn: an enemy that stood on the city's tile through the whole turn
  * captures it and the chronicle ends there; otherwise every enemy acts in unit order, on the
- * chronicle the one before it left — it moves by its script on the move points it holds, spending
- * what the tiles it crosses cost, and then attacks the unit its script names while it holds action,
- * one attack a point. A stage each, and none for a move it did not make or an attack aimed at nobody.
+ * chronicle the one before it left, as it stands there; one killed before its turn acts no more —
+ * it moves by its script on the move points it holds, spending what the tiles it crosses cost, and
+ * then attacks the unit its script names while it holds action, one attack a point. A stage each,
+ * and none for a move it did not make or an attack aimed at nobody.
  */
 function enemyPhase(chronicle: Chronicle): Stage[] {
   if (occupied(chronicle.units, chronicle.city)) {
@@ -553,7 +554,9 @@ function enemyPhase(chronicle: Chronicle): Stage[] {
   for (const enemy of chronicle.units) {
     if (enemy.faction !== 'enemy') continue;
     const script = ENEMY_SCRIPTS[enemy.script];
-    let acting = enemy;
+    const standing = units.find((unit) => unit.id === enemy.id);
+    if (standing === undefined) continue;
+    let acting = standing;
 
     const landing = script.moveTo({ ...chronicle, units }, acting);
     if (tileKey(landing.tile) !== tileKey(acting.tile)) {

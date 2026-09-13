@@ -5,5 +5,3 @@ A shrinking list whose goal is zero. One line per item; **priority is order; com
 Before intake: `- **Title** — what it is about.` After intake: `- **Title** — done-condition. Doc-impact: <`docs/` pages, or none>. [dossier]`
 
 ---
-
-- **An enemy script touching a fellow enemy** — the enemy phase reads each acting enemy live from the units the enemy before it left, so what a fellow's script did to it stands, and one killed before its turn acts no more. Doc-impact: `docs/CHRONICLE.md`. [board/enemy-script-touching-a-fellow-enemy.md](board/enemy-script-touching-a-fellow-enemy.md)
