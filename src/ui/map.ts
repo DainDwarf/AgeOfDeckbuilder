@@ -373,7 +373,7 @@ export function unitMark(
 // before it, which a centred diamond always has once, whatever order its corners are given in: a
 // square turned is the only shape that outlines whole, a polygon comes out open and cut across.
 // That is what forces the shape here and nowhere else — a diamond drawn without an outline, as the
-// card face draws its own, meets none of it.
+// card face draws its own, meets none of it (phaserjs/phaser#7361).
 /** The one way a diamond the map outlines is drawn: `span` corner to corner, in the colour given. */
 function diamond(scene: Phaser.Scene, span: number, colour: number): Phaser.GameObjects.Rectangle {
   const side = span / Math.SQRT2;

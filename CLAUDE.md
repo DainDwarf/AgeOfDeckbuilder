@@ -37,7 +37,8 @@ Nothing durable cites a board line, a task file or an idea.
   trinity (code + `docs/` pages + line deleted), get the `egress-reviewer`'s verdict, commit,
   stop.
 - **`/upkeep`** — every 20 shipped lines or monthly: docs lint, board eviction, the
-  **ratchet** — recurring corrections become `DOGMAS.md` lines — and the memory lint.
+  **ratchet** — recurring corrections become `DOGMAS.md` lines — the memory lint, and the upstream
+  traps.
 
 ## Roles
 
