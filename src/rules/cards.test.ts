@@ -314,8 +314,7 @@ test('a chronicle founded on a deck of the catalogue holds that deck’s cards a
   const chronicle = launched(CATALOGUE, REGION, 2026, deck);
 
   expect(chronicle.hand).toHaveLength(5);
-  expect(everyCard(chronicle)).toHaveLength(deck.length);
-  for (const id of everyCard(chronicle)) expect(cardOf(CATALOGUE, id)).toBeDefined();
+  expect(everyCard(chronicle)).toEqual([...deck].sort());
 });
 
 test('a card whose effect names a building, an improvement or a terrain the catalogue lacks is refused where it lands', () => {
