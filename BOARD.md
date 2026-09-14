@@ -6,7 +6,7 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ---
 
-- **The road's movement lives in its improvement** — `src/rules/map.ts` stops naming `PH_Road`: the half-move-point cost and the bridge become properties of the road improvement in the catalogue.
+- **The road's movement lives in its improvement** — `src/rules/map.ts` stops naming `PH_Road`: the movement cost a layer names outright and the bridge become two properties a layer declares in the catalogue, read off the building and the improvements of a tile alike, the road the one layer of both catalogues carrying either; the validator refuses a layer naming a cost of zero or less; and no `PH_` id is written in `src/rules/` outside its tests and fixtures. Doc-impact: `docs/CHRONICLE.md`, `docs/GLOSSARY.md`. [board/the-roads-movement-lives-in-its-improvement.md](board/the-roads-movement-lives-in-its-improvement.md)
 - **Turn 0, the settle** — a chronicle opens unsettled and its first command puts the city on a tile of a small centre part of the map, the empowering choice of a settling site; later ages may add steps to turn 0.
 - **The throwaway selection page** — the game boots on a page choosing a region, a schedule, a deck and a seed and feeding the chronicle its generated map and timeline; it is wholly replaced in v0.0.5, and the rules never learn the word scenario.
 - **The nomadic age designed, number-less** — its page in `docs/`: the starting collection of cards with few or no buildings, the units, the events, the capstone and the camp's reward.
