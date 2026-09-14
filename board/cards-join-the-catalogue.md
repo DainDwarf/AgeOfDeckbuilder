@@ -43,6 +43,7 @@ Corner cases decided: an id in a pile the catalogue lacks throws at its first re
 - `PH_Famine.lands` in `schedule.ts` lays the literal `'PH_Hunger'`, and `enemies.test.ts` reads `'PH_Spoils'` off the discard pile by literal: the fixture's hazard keeps the id `PH_Hunger` and its gift `PH_Spoils`, both the fixture's own cards.
 - `TextKey` in `text.ts` is a closed union of keys, so a template key over an open id does not typecheck: the two lookups are the way through, and `text.ts` is hook-linted for glossary synonyms — no sentence is added.
 - `tsconfig.json` sets `noUnusedParameters`: a closure that takes the catalogue and ignores it names the parameter with a leading underscore.
+- `biome.json` sets `noImportCycles` with `ignoreTypes: false`, so a type-only import counts as a cycle: `Card`'s closures take `Catalogue` and `Catalogue` holds `Card`, so the two types share a module, as `Catalogue` and `EnemyScript` already share `catalogue.ts`.
 - The e2e helpers find cards by literal id (`chronicle.hand.indexOf('PH_Worker')`); that is content read against the stand-in and stays.
 - `overlay.ts` sorts the draw pile by `CARD_KINDS.indexOf(card.kind)`; `CARD_KINDS` stays in the rules, the card comes through the lookup.
 - `docs/DOGMAS.md`'s bullets are one line each; `npm run lint` refuses a wrapped one.
