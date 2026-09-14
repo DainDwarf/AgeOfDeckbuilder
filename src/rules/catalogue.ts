@@ -1,4 +1,4 @@
-import type { TileCoords } from './map';
+import type { Tile, TileCoords } from './map';
 import {
   biomeKind,
   buildingKind,
@@ -8,7 +8,8 @@ import {
   refuse,
   terrainKind,
 } from './map-kinds';
-import type { Chronicle } from './state';
+import type { Resources } from './resources';
+import type { Block, Chronicle, TileBlock } from './state';
 import { type Landing, standsOn, type Unit, type UnitStats } from './units';
 
 /**
@@ -27,22 +28,91 @@ export type EnemyScript = {
 };
 
 /**
+ * What a card is played at, and what it does with what it was played at. An aim of `none` lands
+ * whole, and names what blocks it where the map or the city can hold it up; a `tile` aim answers the
+ * first reason it refuses a tile for and nothing at all on one it admits, and hands its effect the
+ * tile that was chosen; a `unit` aim is the same over the tiles a unit of the player's stands on,
+ * which it is asked of before its own reasons; a `discard-pile` aim names what blocks it the way an
+ * aim of `none` does, and hands its effect where in the discard pile the card that was chosen lies.
+ * The effect takes the chronicle the card's cost is paid on.
+ */
+export type Aim =
+  | {
+      readonly aim: 'none';
+      readonly blocked?: (catalogue: Catalogue, chronicle: Chronicle) => Block[];
+      readonly effect: (catalogue: Catalogue, paid: Chronicle) => Chronicle;
+    }
+  | {
+      readonly aim: 'tile';
+      readonly refuses: (
+        catalogue: Catalogue,
+        chronicle: Chronicle,
+        tile: Tile,
+      ) => TileBlock | undefined;
+      readonly effect: (catalogue: Catalogue, paid: Chronicle, at: TileCoords) => Chronicle;
+    }
+  | {
+      readonly aim: 'unit';
+      readonly refuses: (
+        catalogue: Catalogue,
+        chronicle: Chronicle,
+        tile: Tile,
+      ) => TileBlock | undefined;
+      readonly effect: (catalogue: Catalogue, paid: Chronicle, at: TileCoords) => Chronicle;
+    }
+  | {
+      readonly aim: 'discard-pile';
+      readonly blocked: (catalogue: Catalogue, chronicle: Chronicle) => Block[];
+      readonly effect: (catalogue: Catalogue, paid: Chronicle, at: number) => Chronicle;
+    };
+
+/**
+ * A card: its kind, which a list of cards sorts and labels by, and its cost. The three kinds the
+ * player's deck holds declare the aim and effect they are played through, and the noun such a card
+ * names — the unit it puts on the map, the building it builds — is named by its effect and nowhere
+ * else. A hazard declares its strike alone, its kind fixing everything else about it.
+ */
+export type Card = { readonly cost: Partial<Resources> } & (
+  | ({
+      readonly kind: 'unit' | 'building' | 'instant';
+      readonly singleUse?: true;
+    } & Aim)
+  | {
+      readonly kind: 'hazard';
+      /** What it does to the chronicle at the end of a turn it is still in the hand. */
+      readonly strikes: (catalogue: Catalogue, chronicle: Chronicle) => Chronicle;
+    }
+);
+
+/** How a card the player picks a tile for is played: what the hand aims and the map lights for. */
+export type AimedCard = Extract<Aim, { readonly aim: 'tile' | 'unit' }>;
+
+/**
  * The content a chronicle is played on: the stats a unit of each kind enters the map with, every
- * script an enemy can carry, the map content, what a camp is and enters, and what the opening puts
- * on the centre tile. Every one of them is named by its key.
+ * script an enemy can carry, the map content, the cards and the decks a chronicle is founded on,
+ * what a camp is, enters and gives on its capture, and what the opening puts on the centre tile.
+ * Every one of them is named by its key.
  */
 export type Catalogue = MapContent & {
   readonly units: Readonly<Record<string, UnitStats>>;
   readonly scripts: Readonly<Record<string, EnemyScript>>;
-  readonly camp: { readonly unit: string; readonly script: string; readonly building: string };
+  readonly cards: Readonly<Record<string, Card>>;
+  readonly decks: Readonly<Record<string, readonly string[]>>;
+  readonly camp: {
+    readonly unit: string;
+    readonly script: string;
+    readonly building: string;
+    readonly gift: string;
+  };
   readonly city: { readonly terrain: string; readonly building: string };
 };
 
 /**
  * The one way a catalogue is built, refused whole where it does not hold together: every unit kind
- * names itself by its key; every id a biome, a feature, a building, an improvement, a region, the
- * camp and the city name is held; every biome rolls some rim width; the camp's unit stands on every
- * terrain its building names; and the city's building stands on the city's terrain.
+ * names itself by its key; every id a biome, a feature, a building, an improvement, a region, a deck,
+ * the camp and the city name is held; every biome rolls some rim width; no deck holds a hazard or the
+ * camp's gift; the camp's unit stands on every terrain its building names; and the city's building
+ * stands on the city's terrain. A card's closures are neither run nor read here.
  */
 export function catalogued(content: Catalogue): Catalogue {
   for (const [id, kind] of Object.entries(content.units)) {
@@ -67,9 +137,19 @@ export function catalogued(content: Catalogue): Catalogue {
     for (const { biome } of region.biomeShares) biomeKind(content, biome);
     for (const { feature } of region.featureShares) featureKind(content, feature);
   }
+  for (const [id, deck] of Object.entries(content.decks)) {
+    for (const card of deck) {
+      if (cardOf(content, card).kind === 'hazard') {
+        refuse(content, `the deck ${id} holds the hazard ${card}`);
+      }
+      if (card === content.camp.gift)
+        refuse(content, `the deck ${id} holds the camp's gift ${card}`);
+    }
+  }
 
   const campUnit = unitKind(content, content.camp.unit);
   enemyScript(content, content.camp.script);
+  cardOf(content, content.camp.gift);
   for (const terrain of buildingKind(content, content.camp.building).terrains) {
     if (!standsOn(content, campUnit, { q: 0, r: 0, terrain, improvements: [] })) {
       refuse(content, `the camp's unit ${content.camp.unit} cannot stand on ${terrain}`);
@@ -92,6 +172,16 @@ export function unitKind(catalogue: Catalogue, id: string): UnitStats {
 /** The script an enemy names; a script the catalogue does not hold is refused. */
 export function enemyScript(catalogue: Catalogue, id: string): EnemyScript {
   return held(catalogue, catalogue.scripts, id, 'enemy script');
+}
+
+/** The card an id names; a card the catalogue does not hold is refused. */
+export function cardOf(catalogue: Catalogue, id: string): Card {
+  return held(catalogue, catalogue.cards, id, 'card');
+}
+
+/** The card ids a deck lists; a deck the catalogue does not hold is refused. */
+export function deckOf(catalogue: Catalogue, id: string): readonly string[] {
+  return held(catalogue, catalogue.decks, id, 'deck');
 }
 
 /** A chronicle founded on any other version of the content than this catalogue's is refused. */

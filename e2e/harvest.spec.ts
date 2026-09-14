@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { STAND_IN } from '../src/content/stand-in';
-import { DECKS } from '../src/rules/cards';
+import { deckOf } from '../src/rules/catalogue';
 import { refusalOf } from '../src/rules/chronicle';
 import { playable } from '../src/rules/state';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
@@ -18,7 +18,7 @@ import {
 /** The first seed whose second turn opens on a harvest card the city can pay for. */
 function harvestSeed(): number {
   return firstSeed('opens its second turn on a playable harvest card', (seed) => {
-    const chronicle = endedTurn(launch(seed, DECKS.PH_Deck));
+    const chronicle = endedTurn(launch(seed, deckOf(STAND_IN, 'PH_Deck')));
     const found =
       chronicle.hand.includes('PH_Harvest') &&
       playable(refusalOf(STAND_IN, chronicle, 'PH_Harvest'));

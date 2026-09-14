@@ -1,6 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import { STAND_IN } from '../src/content/stand-in';
-import { DECKS } from '../src/rules/cards';
+import { deckOf } from '../src/rules/catalogue';
 import { apply, outcome, refusalOf } from '../src/rules/chronicle';
 import { distance, type TileCoords, tileKey } from '../src/rules/map';
 import { type Chronicle, playable } from '../src/rules/state';
@@ -33,7 +33,7 @@ type AttackRun = {
 /** The first seed that opens on such a run. */
 function attackRun(): AttackRun {
   return firstSeed('brings an enemy within reach of a standing warrior', (seed) => {
-    let chronicle = launch(seed, DECKS.PH_Deck);
+    let chronicle = launch(seed, deckOf(STAND_IN, 'PH_Deck'));
     for (let turn = 1; turn <= 8; turn++) {
       const met = besieged(chronicle);
       if (met !== undefined) return { seed, turn, ...met };

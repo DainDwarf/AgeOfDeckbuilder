@@ -1,5 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
-import { DECKS } from '../src/rules/cards';
+import { STAND_IN } from '../src/content/stand-in';
+import * as catalogue from '../src/rules/catalogue';
 import { tileKey } from '../src/rules/map';
 import type { Chronicle } from '../src/rules/state';
 import {
@@ -26,7 +27,7 @@ import {
 /** The first seed that stands its city through three ended turns. */
 function standingRun(): number {
   return firstSeed('stands its city through three ended turns', (seed) => {
-    let chronicle = launch(seed, DECKS.PH_Deck);
+    let chronicle = launch(seed, catalogue.deckOf(STAND_IN, 'PH_Deck'));
     for (let turn = 0; turn < 3; turn++) {
       chronicle = endedTurn(chronicle);
     }

@@ -1,6 +1,5 @@
 import type Phaser from 'phaser';
-import { CARDS } from '../rules/cards';
-import type { Catalogue } from '../rules/catalogue';
+import { type Catalogue, cardOf } from '../rules/catalogue';
 import { costOf } from '../rules/chronicle';
 import { SCHEDULE } from '../rules/schedule';
 import {
@@ -23,7 +22,7 @@ import {
   UI_FONT,
 } from './design-space';
 import { RESOURCE_COLOURS } from './resource-bar';
-import { text } from './text';
+import { cardName, cardRules, text } from './text';
 import { layOutRun, type Run } from './text-run';
 
 export const CARD_WIDTH = 130;
@@ -111,13 +110,13 @@ export type Face = {
 };
 
 /** The face a card of the deck is drawn as. */
-export function cardFace(id: CardId): Face {
+export function cardFace(catalogue: Catalogue, id: CardId): Face {
   return {
     id,
-    name: text(`card.${id}`),
-    kind: text(`kind.${CARDS[id].kind}`),
-    rules: text(`rules.${id}`),
-    costs: costOf(id),
+    name: cardName(id),
+    kind: text(`kind.${cardOf(catalogue, id).kind}`),
+    rules: cardRules(id),
+    costs: costOf(catalogue, id),
   };
 }
 

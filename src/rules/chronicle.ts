@@ -1,5 +1,5 @@
-import { type AimedCard, aimOf, CARDS, leavesChronicle, refuses, struck } from './cards';
-import { type Catalogue, checkContent, enemyScript } from './catalogue';
+import { aimOf, leavesChronicle, refuses, struck } from './cards';
+import { type AimedCard, type Catalogue, cardOf, checkContent, enemyScript } from './catalogue';
 import { assign, type CityCommand, claim, founding, grow, income, reassign } from './city';
 import {
   CITY_TILE,
@@ -373,8 +373,8 @@ function victory(chronicle: Chronicle): Chronicle {
 }
 
 /** What a card costs, resource by resource, in the order the resource bar reads. */
-export function costOf(id: CardId): Cost[] {
-  const { cost } = CARDS[id];
+export function costOf(catalogue: Catalogue, id: CardId): Cost[] {
+  const { cost } = cardOf(catalogue, id);
   const entries: Cost[] = [];
   for (const resource of RESOURCES) {
     const amount = cost[resource];
@@ -385,7 +385,7 @@ export function costOf(id: CardId): Cost[] {
 
 export function refusalOf(catalogue: Catalogue, chronicle: Chronicle, id: CardId): Refusal {
   return {
-    unaffordable: unaffordable(chronicle, costOf(id)),
+    unaffordable: unaffordable(chronicle, costOf(catalogue, id)),
     blocked: blocked(catalogue, chronicle, id),
   };
 }
@@ -411,7 +411,7 @@ export function admitted(
  * being no part of what the hand judges it by.
  */
 function blocked(catalogue: Catalogue, chronicle: Chronicle, id: CardId): Block[] {
-  const card = aimOf(CARDS[id]);
+  const card = aimOf(cardOf(catalogue, id));
   switch (card.aim) {
     case 'none':
       return card.blocked?.(catalogue, chronicle) ?? [];
@@ -439,12 +439,12 @@ function play(catalogue: Catalogue, chronicle: Chronicle, command: PlayCommand):
   if (effect === undefined) return [{ name: 'refused', chronicle }];
 
   const resources = { ...chronicle.resources };
-  for (const { resource, amount } of costOf(id)) resources[resource] -= amount;
+  for (const { resource, amount } of costOf(catalogue, id)) resources[resource] -= amount;
   const paid: Chronicle = {
     ...chronicle,
     resources,
     hand: chronicle.hand.filter((_, at) => at !== command.index),
-    discardPile: leavesChronicle(CARDS[id])
+    discardPile: leavesChronicle(cardOf(catalogue, id))
       ? chronicle.discardPile
       : [...chronicle.discardPile, id],
   };
@@ -464,7 +464,7 @@ function aimedEffect(
   id: CardId,
   command: PlayCommand,
 ): ((paid: Chronicle) => Chronicle) | undefined {
-  const card = aimOf(CARDS[id]);
+  const card = aimOf(cardOf(catalogue, id));
   switch (card.aim) {
     case 'none':
       return command.aim === 'none' ? (paid) => card.effect(catalogue, paid) : undefined;
@@ -639,7 +639,7 @@ function enemyPhase(catalogue: Catalogue, chronicle: Chronicle): Stage[] {
 
 /**
  * The camps captured, in tile order: a camp a unit of the player's is still standing on once the
- * enemy phase is over leaves its tile's building slot, and its reward card is laid in the discard
+ * enemy phase is over leaves its tile's building slot, and the camp's gift is laid in the discard
  * pile. A stage each, carrying the tile the camp stood on.
  */
 function captures(catalogue: Catalogue, chronicle: Chronicle): Stage[] {
@@ -655,7 +655,7 @@ function captures(catalogue: Catalogue, chronicle: Chronicle): Stage[] {
       tiles: standing.tiles.map((tile) =>
         tileKey(tile) === at ? { ...tile, building: undefined } : tile,
       ),
-      discardPile: [...standing.discardPile, 'PH_Spoils'],
+      discardPile: [...standing.discardPile, catalogue.camp.gift],
     };
     stages.push({ name: 'camp-capture', tile: { q, r }, chronicle: standing });
   }

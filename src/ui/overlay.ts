@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
-import { CARD_KINDS, CARDS } from '../rules/cards';
-import type { Catalogue } from '../rules/catalogue';
+import { CARD_KINDS } from '../rules/cards';
+import { type Catalogue, cardOf } from '../rules/catalogue';
 import type { Stage } from '../rules/chronicle';
 import { dealsCapstone, SCHEDULE } from '../rules/schedule';
 import {
@@ -36,7 +36,7 @@ import {
 } from './design-space';
 import { behind, createWindow, type MenuWindow, type Opened } from './menu';
 import { BAR_HEIGHT } from './resource-bar';
-import { text } from './text';
+import { cardName, text } from './text';
 
 const SCRIM = 0x0d1014;
 const SCRIM_ALPHA = 0.82;
@@ -442,7 +442,7 @@ export function createOverlay(
     );
     layGrid(
       'browse',
-      browsing.cards.map((id, at): Offered => ({ face: cardFace(id), at })),
+      browsing.cards.map((id, at): Offered => ({ face: cardFace(catalogue, id), at })),
       title.y + title.height + MARGIN,
       (at, press) => {
         switch (press) {
@@ -452,7 +452,7 @@ export function createOverlay(
             return;
           case 'right':
             if (at !== undefined)
-              showInspection(cardFace(browsing.cards[at]), NO_REFUSAL, browsing);
+              showInspection(cardFace(catalogue, browsing.cards[at]), NO_REFUSAL, browsing);
             return;
         }
       },
@@ -536,10 +536,7 @@ export function createOverlay(
     const raised: AimWindow = { stands: 'aim-window', aim };
     carried = raised;
 
-    const title = raiseTitle(
-      'aim-window',
-      text('aim.discard-pile', { card: text(`card.${aim.aimed}`) }),
-    );
+    const title = raiseTitle('aim-window', text('aim.discard-pile', { card: cardName(aim.aimed) }));
     layGrid('aim-window', aim.cards, title.y + title.height + MARGIN, (at, press) => {
       switch (press) {
         case 'left':
@@ -763,7 +760,7 @@ export function createOverlay(
       showBrowse({
         stands: 'browse',
         pile,
-        cards: cardsOf(pile, chronicle),
+        cards: cardsOf(catalogue, pile, chronicle),
         selected: undefined,
       });
     },
@@ -772,7 +769,7 @@ export function createOverlay(
       showAim({
         aimed,
         cards: chronicle.discardPile
-          .map((id, at): Offered => ({ face: cardFace(id), at }))
+          .map((id, at): Offered => ({ face: cardFace(catalogue, id), at }))
           .reverse(),
         chosen,
         closed,
@@ -780,14 +777,16 @@ export function createOverlay(
       return closeAim;
     },
     inspect(id: CardId, refusal: Refusal): void {
-      showInspection(cardFace(id), refusal, undefined);
+      showInspection(cardFace(catalogue, id), refusal, undefined);
     },
     inspectSelection(): void {
       if (carried === undefined) return;
       switch (carried.stands) {
         case 'browse': {
           const at = carried.selected;
-          if (at !== undefined) showInspection(cardFace(carried.cards[at]), NO_REFUSAL, carried);
+          if (at !== undefined) {
+            showInspection(cardFace(catalogue, carried.cards[at]), NO_REFUSAL, carried);
+          }
           return;
         }
         case 'deal': {
@@ -866,11 +865,11 @@ function speedOf(trail: readonly { time: number; y: number }[], now: number): nu
 }
 
 /** The draw pile gives its draw order away to no one: it reads by kind, then by name. */
-function cardsOf(pile: PileKind, chronicle: Chronicle): readonly CardId[] {
+function cardsOf(catalogue: Catalogue, pile: PileKind, chronicle: Chronicle): readonly CardId[] {
   if (pile === 'discard-pile') return [...chronicle.discardPile].reverse();
   return [...chronicle.drawPile].sort(
     (a, b) =>
-      CARD_KINDS.indexOf(CARDS[a].kind) - CARD_KINDS.indexOf(CARDS[b].kind) ||
-      text(`card.${a}`).localeCompare(text(`card.${b}`)),
+      CARD_KINDS.indexOf(cardOf(catalogue, a).kind) -
+        CARD_KINDS.indexOf(cardOf(catalogue, b).kind) || cardName(a).localeCompare(cardName(b)),
   );
 }

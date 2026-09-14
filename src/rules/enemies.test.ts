@@ -1,5 +1,4 @@
 import { expect, test } from 'vitest';
-import { DECKS } from './cards';
 import { apply, outcome } from './chronicle';
 import { cityCommand, claimable } from './city';
 import {
@@ -239,10 +238,6 @@ test('the camp’s reward card discarded unplayed comes around like any card', (
 
   expect(ended.discardPile).toEqual(['PH_Spoils']);
   expect(everyCard(outcome(apply(CATALOGUE, ended, { type: 'end-turn' })))).toContain('PH_Spoils');
-});
-
-test('no deck a chronicle is founded on holds the camp’s reward card', () => {
-  for (const deck of Object.values(DECKS)) expect(deck).not.toContain('PH_Spoils');
 });
 
 test('an enemy moves its move toward the city, turn after turn', () => {

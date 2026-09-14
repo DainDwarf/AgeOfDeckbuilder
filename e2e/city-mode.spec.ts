@@ -1,6 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import { STAND_IN } from '../src/content/stand-in';
-import { DECKS } from '../src/rules/cards';
+import { deckOf } from '../src/rules/catalogue';
 import { claimable } from '../src/rules/city';
 import { distance, runsAlong, type TileCoords, tileKey, tileYield } from '../src/rules/map';
 import { RESOURCES } from '../src/rules/resources';
@@ -60,7 +60,7 @@ const UNPAID = [text('refusal.claim')];
 
 /** How many claims the founding opens on, by the rules' own count: one mark to be drawn for each. */
 function claims(): number {
-  return claimable(STAND_IN, launch(1, DECKS.PH_Deck)).length;
+  return claimable(STAND_IN, launch(1, deckOf(STAND_IN, 'PH_Deck'))).length;
 }
 
 /** Whether the chronicle screen shows city mode is on: both marks stand, or neither does. */

@@ -18,19 +18,7 @@ export type Ending = { readonly turn: number } & (
 /** `PH_` marks a stand-in: none of these is authored content, and every one of them goes. */
 export type EventId = 'PH_Raid' | 'PH_Famine' | 'PH_Siege';
 
-/** `PH_` marks a stand-in: none of these is authored content, and every one of them goes. */
-export type CardId =
-  | 'PH_Worker'
-  | 'PH_Warrior'
-  | 'PH_Farm'
-  | 'PH_March'
-  | 'PH_Harvest'
-  | 'PH_Mine'
-  | 'PH_Road'
-  | 'PH_Urbanisation'
-  | 'PH_Recall'
-  | 'PH_Spoils'
-  | 'PH_Hunger';
+export type CardId = string;
 
 /** What a snapshot keeps of the unit that stood on the tile: what its mark is drawn from. */
 export type SnapshotUnit = { readonly type: string; readonly faction: Faction };

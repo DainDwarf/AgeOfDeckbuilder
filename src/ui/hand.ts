@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
-import { type AimedCard, aimOf, CARDS } from '../rules/cards';
-import type { Catalogue } from '../rules/catalogue';
+import { aimOf } from '../rules/cards';
+import { type AimedCard, type Catalogue, cardOf } from '../rules/catalogue';
 import { costOf, refusalOf, type Stage } from '../rules/chronicle';
 import { type CardId, type Chronicle, playable, type Refusal } from '../rules/state';
 import { createAimLine } from './aim-line';
@@ -145,7 +145,7 @@ export function createHand(
   /** Every reason the rules refuse this card, over it and clear of the lift a selection gives it. */
   const refuse = (slot: Slot): void => {
     note.overCard(
-      refusedCard(costOf(slot.id), slot.refusal),
+      refusedCard(costOf(catalogue, slot.id), slot.refusal),
       slot.home.x,
       slot.home.y - CARD_LIFT - CARD_HEIGHT,
     );
@@ -217,7 +217,7 @@ export function createHand(
     slot.face.select(true);
     settle(slot, 120);
 
-    const card = aimOf(CARDS[slot.id]);
+    const card = aimOf(cardOf(catalogue, slot.id));
     switch (card.aim) {
       case 'none':
       case 'discard-pile':
@@ -242,7 +242,7 @@ export function createHand(
       refuse(slot);
       return;
     }
-    const card = aimOf(CARDS[slot.id]);
+    const card = aimOf(cardOf(catalogue, slot.id));
     switch (card.aim) {
       case 'none':
         letGo = slot;
@@ -277,7 +277,7 @@ export function createHand(
       const off = index - (held - 1) / 2;
       const refusal = refusalOf(catalogue, chronicle, id);
       const slot: Slot = {
-        face: createCardFace(scene, cardFace(id), refusal),
+        face: createCardFace(scene, cardFace(catalogue, id), refusal),
         id,
         index,
         home: {

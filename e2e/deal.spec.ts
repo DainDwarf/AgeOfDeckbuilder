@@ -1,6 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import { STAND_IN } from '../src/content/stand-in';
-import { DECKS } from '../src/rules/cards';
+import { deckOf } from '../src/rules/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
 import { text } from '../src/ui/text';
 import {
@@ -30,7 +30,7 @@ const DUE = 3;
  */
 function dealRun(): number {
   return firstSeed('deals a raid first on its third turn', (seed) => {
-    const opened = launch(seed, DECKS.PH_Deck);
+    const opened = launch(seed, deckOf(STAND_IN, 'PH_Deck'));
     if (opened.nextEvent !== DUE) return undefined;
 
     let chronicle = opened;

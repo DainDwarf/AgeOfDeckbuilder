@@ -186,6 +186,16 @@ export function improvementName(improvement: string): string {
   return named('improvement', improvement, 'the improvement');
 }
 
+/** What a card is named on the screen; a card no entry names is refused. */
+export function cardName(card: string): string {
+  return named('card', card, 'the card');
+}
+
+/** What a card's rules entry reads on the screen; a card no entry names is refused. */
+export function cardRules(card: string): string {
+  return named('rules', card, 'the card');
+}
+
 /** The entry a content id names under its prefix; an id no entry names is refused. */
 function named(prefix: string, id: string, noun: string): string {
   const key = `${prefix}.${id}`;

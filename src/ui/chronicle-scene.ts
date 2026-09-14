@@ -363,7 +363,7 @@ export class ChronicleScene extends Phaser.Scene {
           admitted(this.catalogue, this.current, card),
           (tile) => {
             if (!playable(refusal)) {
-              note.overTile(refusedCard(costOf(id), refusal), view.faceOf(tile));
+              note.overTile(refusedCard(costOf(this.catalogue, id), refusal), view.faceOf(tile));
               return;
             }
             hand.unselect();
@@ -509,7 +509,7 @@ export class ChronicleScene extends Phaser.Scene {
     parts.push(
       view,
       bar,
-      createPiles(this, (pile) => overlay.browse(pile, this.current)),
+      createPiles(this, this.catalogue, (pile) => overlay.browse(pile, this.current)),
       hand,
       endTurn,
       overlay,

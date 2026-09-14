@@ -4,7 +4,8 @@
  */
 // The one import of `src/content/` under `src/rules/`, allowed because this module is test-only.
 import { ADVANCE } from '../content/stand-in';
-import { type Catalogue, catalogued, type Entering, entered } from './catalogue';
+import * as cards from './cards';
+import { type Catalogue, catalogued, deckOf, type Entering, entered } from './catalogue';
 import { apply, type Command, outcome } from './chronicle';
 import {
   type BuildingTypeId,
@@ -18,6 +19,7 @@ import {
   type TileCoords,
   tileKey,
 } from './map';
+import { buildingKind, improvementKind } from './map-kinds';
 import type { Resources } from './resources';
 import { seedRng } from './rng';
 import { scheduled } from './schedule';
@@ -51,6 +53,107 @@ export const CATALOGUE: Catalogue = catalogued({
     },
   },
   scripts: { advance: ADVANCE },
+  cards: {
+    PH_Worker: { kind: 'unit', cost: { food: 2 }, ...cards.enters('PH_Worker') },
+    PH_Warrior: { kind: 'unit', cost: { military: 2 }, ...cards.enters('PH_Warrior') },
+    PH_Farm: {
+      kind: 'building',
+      cost: { production: 3 },
+      ...cards.throughWorker(
+        (catalogue, chronicle, tile) =>
+          cards.firstRefusal(
+            cards.made(catalogue, tile, buildingKind(catalogue, 'PH_Farm').terrains),
+            cards.inside(chronicle, tile),
+            cards.slotFree(tile),
+          ),
+        (catalogue, paid, at) => cards.built(catalogue, paid, at, 'PH_Farm'),
+      ),
+    },
+    PH_March: {
+      kind: 'instant',
+      cost: {},
+      aim: 'unit',
+      refuses: (_catalogue, chronicle, tile) => cards.movePointsSpent(chronicle, tile),
+      effect: (_catalogue, paid, at) => cards.refreshed(paid, at),
+    },
+    PH_Harvest: {
+      kind: 'instant',
+      cost: { science: 1 },
+      aim: 'none',
+      effect: (_catalogue, paid) => cards.gained(paid, { food: 2 }),
+    },
+    PH_Mine: {
+      kind: 'instant',
+      cost: { production: 3 },
+      ...cards.throughWorker(
+        (catalogue, _chronicle, tile) =>
+          cards.firstRefusal(
+            cards.made(catalogue, tile, improvementKind(catalogue, 'PH_Mine').terrains),
+            cards.unimproved(catalogue, tile, 'PH_Mine'),
+          ),
+        (catalogue, paid, at) => cards.improved(catalogue, paid, at, 'PH_Mine'),
+      ),
+    },
+    PH_Road: {
+      kind: 'instant',
+      cost: { production: 2 },
+      ...cards.throughWorker(
+        (catalogue, _chronicle, tile) =>
+          cards.firstRefusal(
+            cards.made(catalogue, tile, improvementKind(catalogue, 'PH_Road').terrains),
+            cards.unimproved(catalogue, tile, 'PH_Road'),
+          ),
+        (catalogue, paid, at) => cards.improved(catalogue, paid, at, 'PH_Road'),
+      ),
+    },
+    PH_Urbanisation: {
+      kind: 'instant',
+      cost: { production: 5 },
+      ...cards.throughWorker(
+        (catalogue, _chronicle, tile) =>
+          cards.firstRefusal(cards.made(catalogue, tile, ['plain']), cards.slotFree(tile)),
+        (catalogue, paid, at) => cards.terraformed(catalogue, paid, at, 'urban'),
+      ),
+    },
+    PH_Recall: {
+      kind: 'instant',
+      cost: { science: 2 },
+      aim: 'discard-pile',
+      blocked: (_catalogue, chronicle) =>
+        chronicle.discardPile.length === 0 ? ['discard-pile'] : [],
+      effect: (_catalogue, paid, at) => cards.recalled(paid, at),
+    },
+    PH_Spoils: {
+      kind: 'instant',
+      cost: {},
+      singleUse: true,
+      aim: 'none',
+      effect: (_catalogue, paid) =>
+        cards.gained(paid, { food: 10, production: 10, military: 10, money: 10, science: 10 }),
+    },
+    PH_Hunger: {
+      kind: 'hazard',
+      cost: { production: 3 },
+      strikes: (_catalogue, chronicle) => ({
+        ...chronicle,
+        resources: { ...chronicle.resources, food: 0 },
+      }),
+    },
+  },
+  decks: {
+    deck: [
+      'PH_Worker',
+      'PH_Worker',
+      'PH_Warrior',
+      'PH_Warrior',
+      'PH_Farm',
+      'PH_Farm',
+      'PH_March',
+      'PH_March',
+      'PH_Harvest',
+      'PH_Harvest',
+    ],
+  },
   terrains: {
     plain: {
       yields: { food: 2 },
@@ -152,7 +255,7 @@ export const CATALOGUE: Catalogue = catalogued({
       },
     },
   },
-  camp: { unit: 'PH_Warrior', script: 'advance', building: 'PH_Camp' },
+  camp: { unit: 'PH_Warrior', script: 'advance', building: 'PH_Camp', gift: 'PH_Spoils' },
   city: { terrain: 'urban', building: 'PH_City' },
 });
 
@@ -444,18 +547,7 @@ export function fullDraw(): CardId[] {
 }
 
 /** The deck these foundings are played on: two of each card, enough to draw a hand and cycle. */
-export const DECK: readonly CardId[] = [
-  'PH_Worker',
-  'PH_Worker',
-  'PH_Warrior',
-  'PH_Warrior',
-  'PH_Farm',
-  'PH_Farm',
-  'PH_March',
-  'PH_March',
-  'PH_Harvest',
-  'PH_Harvest',
-];
+export const DECK: readonly CardId[] = deckOf(CATALOGUE, 'deck');
 
 /** How many turns these fixtures end before they give up on a schedule that has landed nothing. */
 export const SCHEDULE_BOUND = 30;

@@ -1,4 +1,5 @@
 import type Phaser from 'phaser';
+import type { Catalogue } from '../rules/catalogue';
 import type { Stage } from '../rules/chronicle';
 import { type CardId, type Chronicle, NO_REFUSAL } from '../rules/state';
 import {
@@ -30,7 +31,11 @@ export type Piles = {
  * pile takes the hand's cards only once the last of them has landed, and the shuffle carries the
  * discard pile over as one card, so neither count ever reads ahead of what is on the way.
  */
-export function createPiles(scene: Phaser.Scene, browse: (pile: PileKind) => void): Piles {
+export function createPiles(
+  scene: Phaser.Scene,
+  catalogue: Catalogue,
+  browse: (pile: PileKind) => void,
+): Piles {
   const drawn = createPile(scene, 'draw-pile', browse);
   const discarded = createPile(scene, 'discard-pile', browse);
 
@@ -43,7 +48,7 @@ export function createPiles(scene: Phaser.Scene, browse: (pile: PileKind) => voi
   const topOf = (id: CardId | undefined): Phaser.GameObjects.Container =>
     id === undefined
       ? createEmptySlot(scene)
-      : createCardFace(scene, cardFace(id), NO_REFUSAL, { faded: true }).root;
+      : createCardFace(scene, cardFace(catalogue, id), NO_REFUSAL, { faded: true }).root;
 
   const render = (chronicle: Chronicle): void => {
     // Whoever is waiting on the wait is let go, so a cancelled one leaves nothing hanging on it.

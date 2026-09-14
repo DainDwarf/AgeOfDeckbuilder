@@ -73,6 +73,30 @@ test('a catalogue whose city’s building does not stand on the city’s terrain
   expect(() => catalogued(content)).toThrow(/^fixture: /);
 });
 
+test('a catalogue whose deck names a card it does not hold is refused', () => {
+  const content = changed({ decks: { deck: [...DECK, 'PH_Scout'] } });
+
+  expect(() => catalogued(content)).toThrow(/^fixture: /);
+});
+
+test('a catalogue whose deck holds a hazard is refused', () => {
+  const content = changed({ decks: { deck: [...DECK, 'PH_Hunger'] } });
+
+  expect(() => catalogued(content)).toThrow(/^fixture: /);
+});
+
+test('a catalogue whose deck holds the camp’s gift is refused', () => {
+  const content = changed({ decks: { deck: [...DECK, CATALOGUE.camp.gift] } });
+
+  expect(() => catalogued(content)).toThrow(/^fixture: /);
+});
+
+test('a catalogue whose camp gives a card it does not hold is refused', () => {
+  const content = changed({ camp: { ...CATALOGUE.camp, gift: 'PH_Loot' } });
+
+  expect(() => catalogued(content)).toThrow(/^fixture: /);
+});
+
 test('a catalogue that holds together builds', () => {
   const content = changed({ version: 'coherent' });
 

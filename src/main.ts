@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { STAND_IN, STAND_IN_REGION } from './content/stand-in';
-import { CARDS, DECKS, type DeckId } from './rules/cards';
+import { cardOf, deckOf } from './rules/catalogue';
 import type { CardId } from './rules/state';
 import { ChronicleScene } from './ui/chronicle-scene';
 import { backingSize, followWindow, releaseOnBlur } from './ui/design-space';
@@ -31,13 +31,11 @@ function askedDeck(): readonly CardId[] {
   if (asked === null || asked.trim() === '') {
     throw new Error('no deck on the address: ?deck= a deck id, or a list of card ids');
   }
-  if (Object.hasOwn(DECKS, asked)) return DECKS[asked as DeckId];
+  if (Object.hasOwn(STAND_IN.decks, asked)) return deckOf(STAND_IN, asked);
 
   const cards = asked.split(',').map((id) => id.trim());
-  for (const id of cards) {
-    if (!Object.hasOwn(CARDS, id)) throw new Error(`${id} is neither a deck nor a card`);
-  }
-  return cards as CardId[];
+  for (const id of cards) cardOf(STAND_IN, id);
+  return cards;
 }
 
 const backing = backingSize();

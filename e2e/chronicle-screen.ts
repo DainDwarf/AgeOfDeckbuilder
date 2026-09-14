@@ -1,7 +1,8 @@
 import { expect, type Page } from '@playwright/test';
 import type Phaser from 'phaser';
 import { STAND_IN, STAND_IN_REGION } from '../src/content/stand-in';
-import { type AimedCard, aimOf, CARDS, DECKS, type DeckId } from '../src/rules/cards';
+import { aimOf } from '../src/rules/cards';
+import * as catalogue from '../src/rules/catalogue';
 import { admitted, apply, launched, outcome, refusalOf } from '../src/rules/chronicle';
 import {
   CITY_TILE,
@@ -79,7 +80,7 @@ export function watch(page: Page): string[] {
 export async function open(
   page: Page,
   seed: number,
-  deck: DeckId | readonly CardId[],
+  deck: string | readonly CardId[],
 ): Promise<void> {
   await openOnCapstone(page, seed, deck);
   await click(page, 'capstone-card-0');
@@ -91,7 +92,7 @@ export async function open(
 export async function openOnCapstone(
   page: Page,
   seed: number,
-  deck: DeckId | readonly CardId[],
+  deck: string | readonly CardId[],
 ): Promise<void> {
   await page.addInitScript(() => {
     const within = (
@@ -398,11 +399,11 @@ function runOn(
   complaint: string,
   keeps: (tile: Tile, chronicle: Chronicle) => boolean,
 ): Run {
-  const aimed = aimOf(CARDS[card]);
+  const aimed = aimOf(catalogue.cardOf(STAND_IN, card));
   if (aimed.aim !== 'tile') throw new Error(`${card} is aimed at no tile`);
 
   return firstSeed(complaint, (seed) => {
-    let chronicle = launch(seed, DECKS.PH_Deck);
+    let chronicle = launch(seed, catalogue.deckOf(STAND_IN, 'PH_Deck'));
     for (let turn = 1; turn <= 8; turn++) {
       const tile = workedThisTurn(chronicle, card, aimed, keeps);
       if (tile !== undefined) return { seed, turn, tile };
@@ -423,7 +424,7 @@ export type StepRun = {
 /** The first seed with a turn in its first eight that opens on such a run. */
 export function stepRun(): StepRun {
   return firstSeed('opens a turn on a worker and two steps', (seed) => {
-    let chronicle = launch(seed, DECKS.PH_Deck);
+    let chronicle = launch(seed, catalogue.deckOf(STAND_IN, 'PH_Deck'));
     for (let turn = 1; turn <= 8; turn++) {
       const steps = steppedThisTurn(chronicle);
       if (steps !== undefined) return { seed, turn, ...steps };
@@ -461,14 +462,16 @@ function steppedThisTurn(
 /** Where a card aimed at a tile that the city can pay for lies in the hand, or -1. */
 export function atTile(chronicle: Chronicle): number {
   return chronicle.hand.findIndex(
-    (id) => aimOf(CARDS[id]).aim === 'tile' && playable(refusalOf(STAND_IN, chronicle, id)),
+    (id) =>
+      aimOf(catalogue.cardOf(STAND_IN, id)).aim === 'tile' &&
+      playable(refusalOf(STAND_IN, chronicle, id)),
   );
 }
 
 /** The first seed with a turn in its first eight that opens on such a card. */
 export function atTileRun(): { seed: number; turn: number } {
   return firstSeed('opens a turn on a card aimed at a tile the city can pay for', (seed) => {
-    let chronicle = launch(seed, DECKS.PH_Deck);
+    let chronicle = launch(seed, catalogue.deckOf(STAND_IN, 'PH_Deck'));
     for (let turn = 1; turn <= 8; turn++) {
       if (atTile(chronicle) !== -1) return { seed, turn };
       chronicle = endedTurn(chronicle);
@@ -480,7 +483,7 @@ export function atTileRun(): { seed: number; turn: number } {
 /** The first seed whose city is captured inside twenty turns of ending the turn and nothing else. */
 export function fallRun(): { seed: number; turns: number } {
   return firstSeed('is captured inside twenty turns', (seed) => {
-    let chronicle = launch(seed, DECKS.PH_Deck);
+    let chronicle = launch(seed, catalogue.deckOf(STAND_IN, 'PH_Deck'));
     for (let turns = 1; turns <= 20 && chronicle.ending === undefined; turns++) {
       chronicle = endedTurn(chronicle);
       const ending = chronicle.ending;
@@ -498,7 +501,7 @@ export function fallRun(): { seed: number; turns: number } {
 function workedThisTurn(
   chronicle: Chronicle,
   card: CardId,
-  aimed: AimedCard,
+  aimed: catalogue.AimedCard,
   keeps: (tile: Tile, chronicle: Chronicle) => boolean,
 ): TileCoords | undefined {
   const enter = chronicle.hand.indexOf('PH_Worker');

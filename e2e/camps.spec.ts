@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { STAND_IN, STAND_IN_REGION } from '../src/content/stand-in';
-import { DECKS } from '../src/rules/cards';
+import { deckOf } from '../src/rules/catalogue';
 import { type TileCoords, tileKey } from '../src/rules/map';
 import { regionOf } from '../src/rules/map-kinds';
 import type { Chronicle } from '../src/rules/state';
@@ -26,7 +26,7 @@ const SEED = 1;
  * The turn this seed's schedule deals its first event on. The raid is among what it offers, and
  * every camp's tile is free for it, the city having entered no unit of its own.
  */
-const RAID = launch(SEED, DECKS.PH_Deck).nextEvent;
+const RAID = launch(SEED, deckOf(STAND_IN, 'PH_Deck')).nextEvent;
 
 /** The tiles the generator put a camp on, in the order the map lists them. */
 function campsOf(chronicle: Chronicle): TileCoords[] {

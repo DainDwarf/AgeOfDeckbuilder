@@ -1,6 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import { STAND_IN } from '../src/content/stand-in';
-import { DECKS } from '../src/rules/cards';
+import { deckOf } from '../src/rules/catalogue';
 import { apply, outcome, refusalOf } from '../src/rules/chronicle';
 import { distance, neighbours, type TileCoords, tileKey } from '../src/rules/map';
 import { inSight } from '../src/rules/sight';
@@ -51,7 +51,7 @@ function fogRun(): Run {
   return firstSeed(
     'opens a turn on a worker whose step out and back leaves a tile in fog',
     (seed) => {
-      let chronicle = launch(seed, DECKS.PH_Deck);
+      let chronicle = launch(seed, deckOf(STAND_IN, 'PH_Deck'));
       for (let turn = 1; turn <= 8; turn++) {
         const stepped = steppedThisTurn(chronicle);
         if (stepped !== undefined) return { seed, turn, ...stepped };
@@ -119,7 +119,7 @@ type EnemyRun = {
  */
 function enemyInFog(): EnemyRun {
   return firstSeed('leaves an enemy standing in the fog behind a worker', (seed) => {
-    let chronicle = launch(seed, DECKS.PH_Deck);
+    let chronicle = launch(seed, deckOf(STAND_IN, 'PH_Deck'));
     for (let turn = 1; turn <= 8; turn++) {
       const stepped = foggedThisTurn(chronicle);
       if (stepped !== undefined) return { seed, turn, ...stepped };
@@ -181,7 +181,7 @@ type Charting = {
  */
 function riverCharting(): Charting {
   return firstSeed('opens a turn on a worker whose step charts a river', (seed) => {
-    let chronicle = launch(seed, DECKS.PH_Deck);
+    let chronicle = launch(seed, deckOf(STAND_IN, 'PH_Deck'));
     for (let turn = 1; turn <= 8; turn++) {
       const charted = chartedThisTurn(chronicle);
       if (charted !== undefined) return { seed, turn, out: charted };

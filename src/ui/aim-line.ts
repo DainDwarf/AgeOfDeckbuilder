@@ -1,9 +1,9 @@
 import type Phaser from 'phaser';
-import type { AimedCard } from '../rules/cards';
+import type { AimedCard } from '../rules/catalogue';
 import type { CardId } from '../rules/state';
 import { AIM_POINT_REACH, CARD_BASELINE, CARD_EDGE, CARD_HEIGHT, CARD_LIFT } from './card-face';
 import { ACCENT, addText, css, DESIGN_WIDTH, type Surface, UI_FONT } from './design-space';
-import { text } from './text';
+import { cardName, text } from './text';
 
 /** Over the hand's lifted cards, under the note a refusal raises. */
 const DEPTH = 45;
@@ -70,7 +70,7 @@ export function createAimLine(scene: Phaser.Scene, on: Surface): AimLine {
 
 /** The sentence one aim is said in, the card named by its own name. */
 function sentence(id: CardId, aim: AimedCard['aim']): string {
-  const card = text(`card.${id}`);
+  const card = cardName(id);
   switch (aim) {
     case 'tile':
       return text('aim.tile', { card });

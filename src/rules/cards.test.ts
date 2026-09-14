@@ -1,5 +1,6 @@
 import { expect, test } from 'vitest';
-import { type AimedCard, aimOf, CARDS, DECKS, refuses } from './cards';
+import { aimOf, built, improved, made, refuses, terraformed, throughWorker } from './cards';
+import { type AimedCard, type Catalogue, cardOf, catalogued, deckOf } from './catalogue';
 import { admitted, apply, type Command, launched, outcome, refusalOf } from './chronicle';
 import {
   actionOf,
@@ -27,7 +28,15 @@ import {
   withUnits,
   worker,
 } from './fixtures';
-import { cornersOf, MOVE_POINT, type Terrain, type TileCoords, tileAt, tileKey } from './map';
+import {
+  cornersOf,
+  MOVE_POINT,
+  type Terrain,
+  type Tile,
+  type TileCoords,
+  tileAt,
+  tileKey,
+} from './map';
 import { terrainKind } from './map-kinds';
 import { RESOURCES, type Resources } from './resources';
 import { type CardId, type Chronicle, idle, playable, type TileBlock } from './state';
@@ -50,7 +59,7 @@ function aimedAtPile(card: number): Command {
 
 /** The named card, for a fixture that expects it to be aimed at a tile or at a unit. */
 function aimedCard(id: CardId): AimedCard {
-  const card = aimOf(CARDS[id]);
+  const card = aimOf(cardOf(CATALOGUE, id));
   if (card.aim !== 'tile' && card.aim !== 'unit')
     throw new Error(`${id} is aimed at neither a tile nor a unit`);
   return card;
@@ -301,11 +310,52 @@ test('the refresh instant is refused on a unit whose move points are full, its a
 });
 
 test('the deck the game ships with founds a chronicle that draws a full hand from it', () => {
-  const chronicle = launched(CATALOGUE, REGION, 2026, DECKS.PH_Deck);
+  const deck = deckOf(CATALOGUE, 'deck');
+  const chronicle = launched(CATALOGUE, REGION, 2026, deck);
 
   expect(chronicle.hand).toHaveLength(5);
-  expect(everyCard(chronicle)).toHaveLength(DECKS.PH_Deck.length);
-  for (const id of everyCard(chronicle)) expect(CARDS[id]).toBeDefined();
+  expect(everyCard(chronicle)).toHaveLength(deck.length);
+  for (const id of everyCard(chronicle)) expect(cardOf(CATALOGUE, id)).toBeDefined();
+});
+
+test('a card whose effect names a building, an improvement or a terrain the catalogue lacks is refused where it lands', () => {
+  const at = { q: 1, r: 0 };
+  const onPlain = (catalogue: Catalogue, _chronicle: Chronicle, tile: Tile) =>
+    made(catalogue, tile, ['plain']);
+  const lacking = catalogued({
+    ...CATALOGUE,
+    cards: {
+      ...CATALOGUE.cards,
+      PH_Keep: {
+        kind: 'building',
+        cost: {},
+        ...throughWorker(onPlain, (catalogue, paid, on) => built(catalogue, paid, on, 'PH_Keep')),
+      },
+      PH_Well: {
+        kind: 'instant',
+        cost: {},
+        ...throughWorker(onPlain, (catalogue, paid, on) =>
+          improved(catalogue, paid, on, 'PH_Well'),
+        ),
+      },
+      PH_Drain: {
+        kind: 'instant',
+        cost: {},
+        ...throughWorker(onPlain, (catalogue, paid, on) =>
+          terraformed(catalogue, paid, on, 'marsh'),
+        ),
+      },
+    },
+  });
+
+  for (const id of ['PH_Keep', 'PH_Well', 'PH_Drain']) {
+    const city = workedTile(at, 'plain', { hand: [id] });
+    const card = aimOf(cardOf(lacking, id));
+    if (card.aim !== 'tile') throw new Error(`${id} is aimed at no tile`);
+
+    expect(admitted(lacking, city, card)).toContainEqual(at);
+    expect(() => apply(lacking, city, aimedAt(at))).toThrow(/^fixture: /);
+  }
 });
 
 test('a unit card turns one population into a unit on the city tile', () => {
@@ -1073,12 +1123,6 @@ test('a hazard strikes from the hand alone, and never from a pile', () => {
 
   expect(stagedBy(piled, { type: 'end-turn' })).not.toContain('strike');
   expect(ended.resources.food).toBe(STOCKED.food + yielded);
-});
-
-test('no deck a chronicle is founded on holds a card of the hazard kind', () => {
-  for (const deck of Object.values(DECKS)) {
-    expect(deck.filter((id) => CARDS[id].kind === 'hazard')).toEqual([]);
-  }
 });
 
 test('a card the city falls short for is refused for the resource it is short of', () => {

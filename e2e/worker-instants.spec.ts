@@ -1,6 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
 import { STAND_IN } from '../src/content/stand-in';
-import { aimOf, CARDS } from '../src/rules/cards';
+import { aimOf } from '../src/rules/cards';
+import { cardOf } from '../src/rules/catalogue';
 import { admitted, apply, outcome, refusalOf } from '../src/rules/chronicle';
 import { type TileCoords, tileKey } from '../src/rules/map';
 import { improvementKind } from '../src/rules/map-kinds';
@@ -32,7 +33,7 @@ import {
 
 /** Whether the road can be played on the tile: a worker with action left stands there, and the city can pay. */
 function roadLands(chronicle: Chronicle, at: TileCoords): boolean {
-  const road = aimOf(CARDS.PH_Road);
+  const road = aimOf(cardOf(STAND_IN, 'PH_Road'));
   if (road.aim !== 'tile') throw new Error('PH_Road is aimed at no tile');
   return (
     chronicle.hand.includes('PH_Road') &&
