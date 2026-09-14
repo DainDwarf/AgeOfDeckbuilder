@@ -6,7 +6,7 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ---
 
-- **Units join the catalogue** — the content argument is born here: unit stats and the enemy scripts move into a catalogue threaded from the boot through the founding and every rule that reads them, the chronicle names its content version, and this line sets the pattern the map, the cards and the schedule copy.
+- **Units join the catalogue** — the rules receive a catalogue holding the unit kinds, the enemy scripts and what a camp enters, threaded from the boot through the founding and every rule that reads them; the chronicle names its catalogue's version and `apply` refuses any other; a fixture catalogue serves the rules tests, and a coherence test checks the stand-in's kinds against the UI's names and marks. Doc-impact: `docs/DOGMAS.md`. [board/units-join-the-catalogue.md](board/units-join-the-catalogue.md)
 - **The map joins the catalogue** — the layer tables and the map compositions move in, a region being a composition, and the founding takes a fully generated map instead of dealing it, so a test hands in a hand-made map such as a radius 8 all-plain disc.
 - **Cards join the catalogue** — cards and decks move in, each card carrying its aim and effect closures signed once against the catalogue, and the "data owns its behaviour" dogma returns.
 - **The schedule is a timeline** — the founding takes a pre-rolled list of deals, rolled from the schedule's entries and tempo numbers, each landing still reading the chronicle as it stands; the fixture timeline replaces the walkers and their bound so the e2e reaches the victory screen in three turns, and the coherence checks land with the two remaining deferred dogmas.
