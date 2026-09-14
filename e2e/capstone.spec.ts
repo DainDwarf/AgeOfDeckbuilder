@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
-import { SCHEDULE } from '../src/rules/schedule';
+import { STAND_IN, STAND_IN_SCHEDULE } from '../src/content/stand-in';
+import { scheduleOf } from '../src/rules/catalogue';
 import { text } from '../src/ui/text';
 import {
   budget,
@@ -13,6 +14,9 @@ import {
   watch,
 } from './chronicle-screen';
 
+/** The capstone the schedule the spec opens on names. */
+const CAPSTONE = scheduleOf(STAND_IN, STAND_IN_SCHEDULE).capstone.event;
+
 test('the founding announces the capstone, once', async ({ page }) => {
   const problems = watch(page);
   // The turn ended to prove the window does not come back.
@@ -20,11 +24,11 @@ test('the founding announces the capstone, once', async ({ page }) => {
 
   await openOnCapstone(page, 1, 'PH_Deck');
   expect(await titleOf(page, 'capstone')).toBe(text('capstone.title'));
-  expect(await cardOnFace(page, 'capstone-card-0')).toBe(SCHEDULE.capstone.event);
+  expect(await cardOnFace(page, 'capstone-card-0')).toBe(CAPSTONE);
 
   const card = await onScreen(page, 'capstone-card-0');
   await page.mouse.click(card.x, card.y, { button: 'right' });
-  await expect.poll(() => cardOnFace(page, 'inspection')).toBe(SCHEDULE.capstone.event);
+  await expect.poll(() => cardOnFace(page, 'inspection')).toBe(CAPSTONE);
   await page.keyboard.press('Escape');
   await expect.poll(() => standing(page, 'inspection')).toBe(false);
   expect(await standing(page, 'capstone')).toBe(true);

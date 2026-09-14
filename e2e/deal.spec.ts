@@ -21,25 +21,26 @@ import {
   watch,
 } from './chronicle-screen';
 
-/** The earliest turn the schedule can bring an event on: the spacing's least. */
-const DUE = 3;
-
 /**
- * The first seed whose first event is due on that turn and whose deal offers the raid first, with a
- * camp free for it to enter a warrior on: what the take lands is then a warrior standing on the map.
+ * The first seed whose timeline's first deal offers the raid first, with a camp free for it to enter
+ * a warrior on — what the take lands is then a warrior standing on the map — and the turn that deal
+ * is due on.
  */
-function dealRun(): number {
-  return firstSeed('deals a raid first on its third turn', (seed) => {
+function dealRun(): { seed: number; due: number } {
+  return firstSeed('deals a raid first on its first deal', (seed) => {
     const opened = launch(seed, deckOf(STAND_IN, 'PH_Deck'));
-    if (opened.nextEvent !== DUE) return undefined;
+    const [first] = opened.timeline.deals;
+    if (first === undefined) return undefined;
 
     let chronicle = opened;
-    for (let turn = 1; turn < DUE - 1; turn++) chronicle = endedTurn(chronicle);
+    for (let turn = 1; turn < first.turn - 1; turn++) chronicle = endedTurn(chronicle);
     const dealt = outcome(apply(STAND_IN, chronicle, { type: 'end-turn' }));
     if (dealt.deal[0] !== 'PH_Raid') return undefined;
 
     const landed = outcome(apply(STAND_IN, dealt, { type: 'take', event: 'PH_Raid' }));
-    return landed.units.some((unit) => unit.faction === 'enemy') ? seed : undefined;
+    return landed.units.some((unit) => unit.faction === 'enemy')
+      ? { seed, due: first.turn }
+      : undefined;
   });
 }
 
@@ -58,15 +59,16 @@ test('the events phase deals a choice, and the turn plays on from the one taken'
   page,
 }) => {
   const problems = watch(page);
+  const run = dealRun();
   // The turns ended up to the due one, and the take that plays the rest of it out.
-  test.setTimeout(budget(DUE));
+  test.setTimeout(budget(run.due));
 
-  await open(page, dealRun(), 'PH_Deck');
-  for (let turn = 1; turn < DUE; turn++) await stoppedTurn(page);
+  await open(page, run.seed, 'PH_Deck');
+  for (let turn = 1; turn < run.due; turn++) await stoppedTurn(page);
   await expect.poll(() => standing(page, 'deal')).toBe(true);
 
   const dealt = await chronicleOf(page);
-  expect(dealt.turn).toBe(DUE);
+  expect(dealt.turn).toBe(run.due);
   expect(dealt.hand).toEqual([]);
   expect(await titleOf(page, 'deal')).toBe(text('deal.title'));
   for (const [at, event] of dealt.deal.entries()) {
@@ -98,8 +100,8 @@ test('the events phase deals a choice, and the turn plays on from the one taken'
   const after = await chronicleOf(page);
   expect(await standing(page, 'deal')).toBe(false);
   expect(after.deal).toEqual([]);
-  expect(after.turn).toBe(DUE);
-  expect(after.nextEvent).toBeGreaterThan(DUE);
+  expect(after.turn).toBe(run.due);
+  expect(after.timeline.deals[1].turn).toBeGreaterThan(run.due);
   expect(after.hand).toHaveLength(5);
   expect(after.units.some((unit) => unit.faction === 'enemy')).toBe(true);
 

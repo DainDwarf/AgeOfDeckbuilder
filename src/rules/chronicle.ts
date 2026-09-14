@@ -13,7 +13,7 @@ import {
 import { refuse } from './map-kinds';
 import { RESOURCES } from './resources';
 import { seedRng, shuffle as shuffleItems } from './rng';
-import { events, reinforced, scheduled, survived, taken } from './schedule';
+import { continued, events, survived, taken, timelineOf } from './schedule';
 import { charted } from './sight';
 import {
   type Block,
@@ -21,10 +21,10 @@ import {
   type Chronicle,
   type Cost,
   type DefeatCause,
-  type EventId,
   playable,
   type Refusal,
   type Snapshot,
+  type Timeline,
   unaffordable,
 } from './state';
 import {
@@ -42,7 +42,7 @@ import {
 export type Command =
   | { readonly type: 'end-turn' }
   /** One entry of the deal the events phase left standing, taken to land. */
-  | { readonly type: 'take'; readonly event: EventId }
+  | { readonly type: 'take'; readonly event: string }
   | { readonly type: 'play'; readonly index: number; readonly aim: 'none' }
   | {
       readonly type: 'play';
@@ -89,7 +89,7 @@ const HAND_SIZE = 5;
  * on a tile, taken off one, or taken off one and put on another, `claim` is a tile bought with
  * culture and taken inside the border, `grow` is the food stock spent on one more inhabitant,
  * `turn` is the tick, where every unit's move points and action are refreshed, `reinforce` is the
- * capstone's warriors entering on the camps, `deal` is what the schedule offers on a due turn,
+ * capstone's second script on a turn of its span, `deal` is what the timeline offers on a due turn,
  * `events` is the entry taken landing, `strike` is every hazard the hand still holds striking,
  * `capture` is the city falling to an enemy that stood on its tile, and `victory` is the city still
  * standing at the end of the capstone's last turn.
@@ -127,18 +127,19 @@ export type Stage = { readonly chronicle: Chronicle } & (
 );
 
 /**
- * The opening, on the map it is handed: the centre tile is settled — its terrain and its building
- * become the catalogue's city's, and its feature is gone, whatever the map carried there — the border
- * and the inhabitants inside it are what a founding starts on, the deck it is founded on is shuffled
- * into its draw pile from the seed, and the map is charted of what the city sees from the first
- * turn. A map with no centre tile is refused. The chronicle names the version of the catalogue it is
- * founded on.
+ * The opening, on the map and the timeline it is handed: the centre tile is settled — its terrain and
+ * its building become the catalogue's city's, and its feature is gone, whatever the map carried
+ * there — the border and the inhabitants inside it are what a founding starts on, the deck it is
+ * founded on is shuffled into its draw pile from the seed, the events phase runs on the first turn,
+ * and the map is charted of what the city sees from that turn. A map with no centre tile is refused.
+ * The chronicle names the version of the catalogue it is founded on.
  */
 export function beginChronicle(
   catalogue: Catalogue,
   seed: number,
   deck: readonly CardId[],
   map: HexMap,
+  timeline: Timeline,
 ): Chronicle {
   if (tileAt(map.tiles, CITY_TILE) === undefined) {
     refuse(catalogue, `the map holds no tile at ${tileKey(CITY_TILE)} for the city to settle`);
@@ -162,7 +163,8 @@ export function beginChronicle(
           events({
             content: catalogue.version,
             seed,
-            ...scheduled(shuffled.rng),
+            rng: shuffled.rng,
+            timeline,
             tiles,
             snapshots: [],
             rivers: map.rivers,
@@ -184,17 +186,20 @@ export function beginChronicle(
 }
 
 /**
- * A chronicle launched on a region: the seed deals the region's map, and the opening takes it
- * from the same seed. The one place a map and a chronicle share one.
+ * A chronicle launched on a region and a schedule: the seed deals the region's map, the schedule is
+ * rolled into a timeline from the generator the map left, and the opening takes both from the same
+ * seed. The one place a map, a timeline and a chronicle share one.
  */
 export function launched(
   catalogue: Catalogue,
   region: string,
+  schedule: string,
   seed: number,
   deck: readonly CardId[],
 ): Chronicle {
-  const { tiles, rivers } = generateMap(catalogue, region, seedRng(seed));
-  return beginChronicle(catalogue, seed, deck, { tiles, rivers });
+  const { tiles, rivers, rng } = generateMap(catalogue, region, seedRng(seed));
+  const { timeline } = timelineOf(catalogue, schedule, rng);
+  return beginChronicle(catalogue, seed, deck, { tiles, rivers }, timeline);
 }
 
 /**
@@ -324,7 +329,7 @@ function endOfTurn(catalogue: Catalogue, chronicle: Chronicle): Stage[] {
     turn: standing.turn + 1,
     units: standing.units.map((unit) => refreshedAction(refreshedMovePoints(unit))),
   });
-  staged('reinforce', reinforced(catalogue, standing));
+  staged('reinforce', continued(catalogue, standing));
   staged('deal', events(standing));
   if (standing.deal.length > 0) return stages;
   raised(drawn(standing));
@@ -336,7 +341,7 @@ function endOfTurn(catalogue: Catalogue, chronicle: Chronicle): Stage[] {
  * it leaves. An entry the deal does not hold, and a take made while no deal stands, are one
  * `refused` stage on the chronicle as it stood.
  */
-function take(catalogue: Catalogue, chronicle: Chronicle, event: EventId): Stage[] {
+function take(catalogue: Catalogue, chronicle: Chronicle, event: string): Stage[] {
   if (!chronicle.deal.includes(event)) return [{ name: 'refused', chronicle }];
 
   const landed = taken(catalogue, chronicle, event);

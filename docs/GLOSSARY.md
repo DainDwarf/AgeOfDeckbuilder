@@ -35,7 +35,8 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **killed** | What happens to a unit that loses: it leaves the map. | destroyed, slain, dead, lost |
 | **event** | One entry of the age's schedule; what the chronicle throws at the city. | disaster, threat, crisis, encounter |
 | **capstone** | The age's final trial, known from the chronicle's opening on a turn that is not; passing it is victory. | boss, finale, objective |
-| **schedule** | An age's set of events with their turn-shifting weights; what the Events phase draws from. | timeline, calendar |
+| **schedule** | An age's set of events with their turn-shifting weights, and its tempo: the spacing, how many a deal holds, the capstone's window and span. What a timeline is rolled from. | calendar |
+| **timeline** | One chronicle's roll of its schedule, made when the chronicle opens: each deal ahead on its turn, and the capstone's turn and last. Internal: the player is never shown it, and learns each event when it lands. | forecast, agenda, itinerary |
 | **camp** | A generated site enemies enter the map from, filling its tile's building slot; captured, it leaves the map. | lair, nest, spawn point, spawner |
 | **victory** | The end of a chronicle by passing the capstone. | win, success, triumph |
 | **defeat** | The end of a chronicle by the city's fall. | collapse, game over, loss, death |

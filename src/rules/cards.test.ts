@@ -20,6 +20,7 @@ import {
   NO_GROWTH,
   pointsOf,
   REGION,
+  SCHEDULE,
   stagedBy,
   standing,
   unitNamed,
@@ -311,7 +312,7 @@ test('the refresh instant is refused on a unit whose move points are full, its a
 
 test('a chronicle founded on a deck of the catalogue holds that deck’s cards and opens on a full hand of them', () => {
   const deck = deckOf(CATALOGUE, 'deck');
-  const chronicle = launched(CATALOGUE, REGION, 2026, deck);
+  const chronicle = launched(CATALOGUE, REGION, SCHEDULE, 2026, deck);
 
   expect(chronicle.hand).toHaveLength(5);
   expect(everyCard(chronicle)).toEqual([...deck].sort());
@@ -1077,7 +1078,6 @@ test('a hazard discarded unplayed comes around and strikes again', () => {
   const city = cityOf(['urban', 'plain'], {
     ...NO_GROWTH,
     hand: ['PH_Hunger'],
-    nextEvent: 9,
     resources: STOCKED,
   });
 

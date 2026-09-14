@@ -1,7 +1,7 @@
 import { expect, test } from 'vitest';
 import { entered } from './catalogue';
 import { apply, outcome } from './chronicle';
-import { CATALOGUE } from './fixtures';
+import { CATALOGUE, NO_DEALS } from './fixtures';
 import {
   distance,
   MOVE_POINT,
@@ -12,7 +12,6 @@ import {
   tileKey,
 } from './map';
 import { seedRng } from './rng';
-import { scheduled } from './schedule';
 import { CITY_SIGHT, charted, inSight } from './sight';
 import type { Chronicle, Snapshot } from './state';
 import type { UnitStats } from './units';
@@ -68,7 +67,8 @@ function founded(tiles: Tile[], claimed: readonly TileCoords[] = []): Chronicle 
   return charted(CATALOGUE, {
     content: CATALOGUE.version,
     seed: 7,
-    ...scheduled(seedRng(7)),
+    rng: seedRng(7),
+    timeline: NO_DEALS,
     tiles,
     snapshots: [],
     rivers: [],

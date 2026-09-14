@@ -2,15 +2,8 @@ import Phaser from 'phaser';
 import { CARD_KINDS } from '../rules/cards';
 import { type Catalogue, cardOf } from '../rules/catalogue';
 import type { Stage } from '../rules/chronicle';
-import { dealsCapstone, SCHEDULE } from '../rules/schedule';
-import {
-  type CardId,
-  type Chronicle,
-  type Ending,
-  type EventId,
-  NO_REFUSAL,
-  type Refusal,
-} from '../rules/state';
+import { dealsCapstone } from '../rules/schedule';
+import { type CardId, type Chronicle, type Ending, NO_REFUSAL, type Refusal } from '../rules/state';
 import type { Bind, Press } from './bindings';
 import {
   type CardFace,
@@ -36,7 +29,7 @@ import {
 } from './design-space';
 import { behind, createWindow, type MenuWindow, type Opened } from './menu';
 import { BAR_HEIGHT } from './resource-bar';
-import { cardName, text } from './text';
+import { cardName, text, victoryLine } from './text';
 
 const SCRIM = 0x0d1014;
 const SCRIM_ALPHA = 0.82;
@@ -183,7 +176,7 @@ export function createOverlay(
   catalogue: Catalogue,
   covering: (covered: boolean) => void,
   newChronicle: () => void,
-  take: (event: EventId) => void,
+  take: (event: string) => void,
 ): Overlay {
   const scrim = scene.add
     .rectangle(0, 0, DESIGN_WIDTH, DESIGN_HEIGHT, SCRIM, SCRIM_ALPHA)
@@ -200,8 +193,8 @@ export function createOverlay(
   let offset = 0;
   let fling = 0;
   let scrolling: Scroll | undefined;
-  /** The ending the screen was raised on, kept so the menu can close back onto it. */
-  let raisedOn: Ending | undefined;
+  /** The chronicle the ending screen was raised on, kept so the menu can close back onto it. */
+  let raisedOn: Ended | undefined;
   /** The deal standing, kept so the menu can close back onto its window; the take lets it go. */
   let dealing: Dealing | undefined;
   /** Whether the capstone has been announced: the first render raises its window, and no render after. */
@@ -514,7 +507,7 @@ export function createOverlay(
     carried = announcement;
     capstone = announcement;
 
-    const face = eventFace(catalogue, announcement.on, SCHEDULE.capstone.event);
+    const face = eventFace(catalogue, announcement.on, announcement.on.timeline.capstone.event);
     const title = raiseTitle('capstone', text('capstone.title'));
     layGrid('capstone', [{ face, at: 0 }], title.y + title.height + MARGIN, (at, press) => {
       switch (press) {
@@ -576,13 +569,13 @@ export function createOverlay(
   };
 
   /** The chronicle ended, on the screen that says so; the caller decides whether it rises or stands. */
-  const showEnding = (ending: Ending): Phaser.GameObjects.Container => {
+  const showEnding = (on: Ended): Phaser.GameObjects.Container => {
     wipe();
     cover();
     carried = { stands: 'ending' };
-    raisedOn = ending;
+    raisedOn = on;
 
-    const said = says(ending);
+    const said = says(on);
     const title = addText(scene, DESIGN_WIDTH / 2, DESIGN_HEIGHT / 2 - 12, said.title, {
       fontFamily: UI_FONT,
       fontSize: '72px',
@@ -598,14 +591,14 @@ export function createOverlay(
     const screen = scene.add
       .container(0, 0, [title, line])
       .setDepth(SCRIM_DEPTH + 1)
-      .setName(ending.outcome);
+      .setName(on.ending.outcome);
     shown.push(screen);
     return screen;
   };
 
   /** The ending as it lands: the scrim and the screen rise together, out of nothing and a little low. */
-  const raiseEnding = (ending: Ending): Promise<void> => {
-    const screen = showEnding(ending).setAlpha(0).setY(12);
+  const raiseEnding = (on: Ended): Promise<void> => {
+    const screen = showEnding(on).setAlpha(0).setY(12);
     rising = screen;
     scrim.setAlpha(0);
 
@@ -821,23 +814,27 @@ export function createOverlay(
         announced = true;
         showCapstone({ stands: 'capstone', on: chronicle });
       } else if (chronicle.ending !== undefined && raisedOn === undefined)
-        void raiseEnding(chronicle.ending);
+        void raiseEnding({ ending: chronicle.ending, timeline: chronicle.timeline });
       else if (chronicle.deal.length > 0 && dealing === undefined)
         showDeal({ stands: 'deal', on: chronicle, selected: undefined });
       else stand();
     },
     play(stage: Stage): Promise<void> | undefined {
-      if (stage.chronicle.ending === undefined || raisedOn !== undefined) return undefined;
-      return raiseEnding(stage.chronicle.ending);
+      const { ending, timeline } = stage.chronicle;
+      if (ending === undefined || raisedOn !== undefined) return undefined;
+      return raiseEnding({ ending, timeline });
     },
   };
 }
 
+/** What of an ended chronicle its ending screen reads: how it ended, and the capstone it was on. */
+type Ended = Pick<Chronicle, 'timeline'> & { readonly ending: Ending };
+
 /** What the ending screen reads: its title, and the one line under it. */
-function says(ending: Ending): { title: string; line: string } {
+function says({ ending, timeline }: Ended): { title: string; line: string } {
   switch (ending.outcome) {
     case 'victory':
-      return { title: text('victory.title'), line: text('victory.survived') };
+      return { title: text('victory.title'), line: victoryLine(timeline.capstone.event) };
     case 'defeat':
       return {
         title: text('defeat.title'),

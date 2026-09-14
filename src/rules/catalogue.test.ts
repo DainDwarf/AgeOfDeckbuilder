@@ -1,13 +1,19 @@
 import { expect, test } from 'vitest';
-import { type Catalogue, catalogued, entered } from './catalogue';
+import { type Catalogue, catalogued, entered, type Schedule } from './catalogue';
 import { apply, beginChronicle, launched } from './chronicle';
-import { CATALOGUE, CITY, cityOf, DECK, field, REGION } from './fixtures';
+import { CATALOGUE, CITY, cityOf, DECK, field, NO_DEALS, REGION, SCHEDULE } from './fixtures';
 import { generateMap, tileKey } from './map';
 import { seedRng } from './rng';
+import { timelineOf } from './schedule';
 
 /** The fixture's content with what the test changes laid over it. */
 function changed(content: Partial<Catalogue>): Catalogue {
   return { ...CATALOGUE, ...content };
+}
+
+/** The fixture's content with its one schedule changed as the test lays it over. */
+function rescheduled(schedule: Partial<Schedule>): Catalogue {
+  return changed({ schedules: { [SCHEDULE]: { ...CATALOGUE.schedules[SCHEDULE], ...schedule } } });
 }
 
 test('a catalogue whose camp enters a unit kind it does not hold is refused', () => {
@@ -97,6 +103,56 @@ test('a catalogue whose camp’s reward is a card it does not hold is refused', 
   expect(() => catalogued(content)).toThrow(/^fixture: /);
 });
 
+test('a catalogue whose schedule names an event it does not hold is refused', () => {
+  const { entries, capstone } = CATALOGUE.schedules[SCHEDULE];
+  const entry = rescheduled({ entries: { ...entries, PH_Plague: () => 1 } });
+  const trial = rescheduled({ capstone: { ...capstone, event: 'PH_Flood' } });
+
+  expect(() => catalogued(entry)).toThrow(/^fixture: /);
+  expect(() => catalogued(trial)).toThrow(/^fixture: /);
+});
+
+test('a catalogue whose schedule deals its capstone among its entries is refused', () => {
+  const { entries, capstone } = CATALOGUE.schedules[SCHEDULE];
+  const content = rescheduled({ entries: { ...entries, [capstone.event]: () => 1 } });
+
+  expect(() => catalogued(content)).toThrow(/^fixture: /);
+});
+
+test('a catalogue whose event carries a second script under no schedule’s capstone is refused', () => {
+  const { PH_Raid } = CATALOGUE.events;
+  const content = changed({
+    events: {
+      ...CATALOGUE.events,
+      PH_Raid: { ...PH_Raid, continues: (_c, chronicle) => chronicle },
+    },
+  });
+
+  expect(() => catalogued(content)).toThrow(/^fixture: /);
+});
+
+test('a catalogue whose schedule deals or spans less than one is refused', () => {
+  const { capstone } = CATALOGUE.schedules[SCHEDULE];
+
+  expect(() => catalogued(rescheduled({ deal: 0 }))).toThrow(/^fixture: /);
+  expect(() => catalogued(rescheduled({ capstone: { ...capstone, span: 0 } }))).toThrow(
+    /^fixture: /,
+  );
+});
+
+test('a catalogue whose schedule rolls a span from below one, or to less than its least, is refused', () => {
+  const { capstone } = CATALOGUE.schedules[SCHEDULE];
+
+  expect(() => catalogued(rescheduled({ spacing: [0, 7] }))).toThrow(/^fixture: /);
+  expect(() => catalogued(rescheduled({ capstone: { ...capstone, window: [33, 27] } }))).toThrow(
+    /^fixture: /,
+  );
+});
+
+test('a timeline of a schedule the catalogue does not hold is refused', () => {
+  expect(() => timelineOf(CATALOGUE, 'seasons', seedRng(1))).toThrow(/^fixture: /);
+});
+
 test('a catalogue that holds together builds', () => {
   const content = changed({ version: 'coherent' });
 
@@ -110,7 +166,7 @@ test('a map of a region the catalogue does not hold is refused', () => {
 test('the opening on a map with no centre tile is refused', () => {
   const holed = field(2).filter((tile) => tileKey(tile) !== tileKey(CITY));
 
-  expect(() => beginChronicle(CATALOGUE, 1, DECK, { tiles: holed, rivers: [] })).toThrow(
+  expect(() => beginChronicle(CATALOGUE, 1, DECK, { tiles: holed, rivers: [] }, NO_DEALS)).toThrow(
     /^fixture: /,
   );
 });
@@ -126,7 +182,7 @@ test('a catalogue whose region’s rivers rise in a biome it does not hold is re
 
 test('a chronicle founded on another version of the content is refused by apply', () => {
   const other = catalogued(changed({ version: 'other' }));
-  const founded = launched(other, REGION, 1234, DECK);
+  const founded = launched(other, REGION, SCHEDULE, 1234, DECK);
 
   expect(() => apply(CATALOGUE, founded, { type: 'end-turn' })).toThrow(/^fixture: /);
   expect(apply(other, founded, { type: 'end-turn' }).length).toBeGreaterThan(0);

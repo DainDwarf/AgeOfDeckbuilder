@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
-import { STAND_IN, STAND_IN_REGION } from './content/stand-in';
-import { cardOf, deckOf } from './rules/catalogue';
+import { STAND_IN, STAND_IN_REGION, STAND_IN_SCHEDULE } from './content/stand-in';
+import { cardOf, deckOf, scheduleOf } from './rules/catalogue';
 import type { CardId } from './rules/state';
 import { ChronicleScene } from './ui/chronicle-scene';
 import { backingSize, followWindow, releaseOnBlur } from './ui/design-space';
@@ -38,6 +38,14 @@ function askedDeck(): readonly CardId[] {
   return cards;
 }
 
+/** The schedule asked for in the address by its id, and the stand-in's own where it names none. */
+function askedSchedule(): string {
+  const asked = new URLSearchParams(window.location.search).get('schedule');
+  if (asked === null || asked.trim() === '') return STAND_IN_SCHEDULE;
+  scheduleOf(STAND_IN, asked);
+  return asked;
+}
+
 const backing = backingSize();
 const game = new Phaser.Game({
   type: Phaser.AUTO,
@@ -50,7 +58,7 @@ const game = new Phaser.Game({
   // line goes when a release fixes the shader.
   maxTextures: 1,
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
-  scene: [new ChronicleScene(STAND_IN, STAND_IN_REGION, askedSeed(), askedDeck())],
+  scene: [new ChronicleScene(STAND_IN, STAND_IN_REGION, askedSchedule(), askedSeed(), askedDeck())],
 });
 followWindow(game);
 releaseOnBlur(game);

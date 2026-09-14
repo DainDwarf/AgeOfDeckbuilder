@@ -15,10 +15,17 @@ export type Ending = { readonly turn: number } & (
   | { readonly outcome: 'defeat'; readonly cause: DefeatCause }
 );
 
-/** `PH_` marks a stand-in: none of these is authored content, and every one of them goes. */
-export type EventId = 'PH_Raid' | 'PH_Famine' | 'PH_Siege';
-
 export type CardId = string;
+
+/**
+ * One chronicle's roll of its schedule: each deal ahead with the turn it is due on and its entries in
+ * the order dealt, and the capstone with the turn it lands on and the last turn of its span. The
+ * capstone's own deal is not among the deals.
+ */
+export type Timeline = {
+  readonly deals: readonly { readonly turn: number; readonly entries: readonly string[] }[];
+  readonly capstone: { readonly event: string; readonly turn: number; readonly last: number };
+};
 
 /** What a snapshot keeps of the unit that stood on the tile: what its mark is drawn from. */
 export type SnapshotUnit = { readonly type: string; readonly faction: Faction };
@@ -46,22 +53,14 @@ export type Chronicle = {
   readonly city: TileCoords;
   readonly held: TileCoords[];
   readonly turn: number;
-  /**
-   * The turn the schedule's next event is due, rolled at the founding and again each time one lands:
-   * the events phase draws on that turn and on no other.
-   */
-  readonly nextEvent: number;
-  /**
-   * The turn the capstone lands on, rolled at the founding from the window the age's schedule names:
-   * the events phase deals the capstone alone on that turn, whatever else was due.
-   */
-  readonly capstoneTurn: number;
+  /** What the events phase deals on every turn of the chronicle, rolled when it was launched. */
+  readonly timeline: Timeline;
   /**
    * The entries the events phase dealt, in the order dealt, and none at all while no deal stands.
    * While one does the chronicle waits on the take: it has no hand, and every other command is
    * refused.
    */
-  readonly deal: readonly EventId[];
+  readonly deal: readonly string[];
   readonly resources: Resources;
   readonly population: number;
   /** The tiles an inhabitant stands on, at most one to a tile; every other inhabitant is idle. */

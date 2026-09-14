@@ -25,6 +25,7 @@ import {
   tileKey,
 } from '../rules/map';
 import { buildingKind, improvementKind } from '../rules/map-kinds';
+import { besieged, laid, raided, reinforced } from '../rules/schedule';
 import type { CardId, Chronicle } from '../rules/state';
 import { type Landing, leastHealth, reachable, type Unit } from '../rules/units';
 
@@ -67,6 +68,9 @@ export const ADVANCE: EnemyScript = {
 
 /** The region the boot launches the stand-in on. */
 export const STAND_IN_REGION = 'PH_Region';
+
+/** The schedule the boot launches the stand-in on, where the address names none. */
+export const STAND_IN_SCHEDULE = 'PH_Schedule';
 
 /** What the decks are built from: a card won on the map joins a chronicle and no deck. */
 const FOUNDING_CARDS: readonly CardId[] = [
@@ -195,6 +199,35 @@ export const STAND_IN: Catalogue = catalogued({
     },
   },
   decks: { PH_Deck: copies(2), PH_LongDeck: copies(5) },
+  events: {
+    PH_Raid: {
+      reads: (_catalogue, chronicle) => ({ warriors: raiders(chronicle.turn) }),
+      lands: (catalogue, chronicle) => raided(catalogue, chronicle, raiders(chronicle.turn)),
+    },
+    PH_Famine: {
+      reads: () => ({}),
+      lands: (catalogue, chronicle) => laid(catalogue, chronicle, 'PH_Hunger'),
+    },
+    PH_Siege: {
+      reads: () => ({ camps: 5 }),
+      lands: (catalogue, chronicle) => besieged(catalogue, chronicle, 5, [3, 5], 3),
+      continues: reinforced,
+    },
+  },
+  schedules: {
+    [STAND_IN_SCHEDULE]: {
+      spacing: [3, 7],
+      deal: 2,
+      capstone: { event: 'PH_Siege', window: [27, 33], span: 6 },
+      entries: { PH_Raid: () => 1, PH_Famine: () => 1 },
+    },
+    PH_ShortSchedule: {
+      spacing: [3, 7],
+      deal: 2,
+      capstone: { event: 'PH_Siege', window: [2, 2], span: 2 },
+      entries: { PH_Raid: () => 1, PH_Famine: () => 1 },
+    },
+  },
   terrains: {
     plain: {
       yields: { food: 2 },
@@ -303,6 +336,11 @@ export const STAND_IN: Catalogue = catalogued({
 /** A deck of this many copies of each founding card, in the order the founding cards are listed. */
 function copies(count: number): readonly CardId[] {
   return FOUNDING_CARDS.flatMap((id) => Array<CardId>(count).fill(id));
+}
+
+/** How many warriors a raid enters on this turn: one, and one more for every ten turns. */
+function raiders(turn: number): number {
+  return 1 + Math.floor(turn / 10);
 }
 
 /** What an enemy moves toward: the player's unit or the city it crosses to for the least it can. */

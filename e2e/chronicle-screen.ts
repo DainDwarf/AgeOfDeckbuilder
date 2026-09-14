@@ -1,6 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 import type Phaser from 'phaser';
-import { STAND_IN, STAND_IN_REGION } from '../src/content/stand-in';
+import { STAND_IN, STAND_IN_REGION, STAND_IN_SCHEDULE } from '../src/content/stand-in';
 import { aimOf } from '../src/rules/cards';
 import { type AimedCard, cardOf, deckOf } from '../src/rules/catalogue';
 import { admitted, apply, launched, outcome, refusalOf } from '../src/rules/chronicle';
@@ -37,9 +37,16 @@ declare global {
   }
 }
 
-/** The chronicle the screen opens on a seed and a deck, launched exactly as the boot launches it. */
-export function launch(seed: number, deck: readonly CardId[]): Chronicle {
-  return launched(STAND_IN, STAND_IN_REGION, seed, deck);
+/**
+ * The chronicle the screen opens on a seed, a deck and a schedule, launched exactly as the boot
+ * launches it: on the schedule the boot takes when the address names none, unless one is given.
+ */
+export function launch(
+  seed: number,
+  deck: readonly CardId[],
+  schedule: string = STAND_IN_SCHEDULE,
+): Chronicle {
+  return launched(STAND_IN, STAND_IN_REGION, schedule, seed, deck);
 }
 
 /** How far up a card comes before the release plays it or aims it, in design units, and then some. */
@@ -73,16 +80,17 @@ export function watch(page: Page): string[] {
 }
 
 /**
- * Opens the chronicle a seed and a deck found, waits for its scene to run, and closes the capstone's
- * window every founding opens on, leaving the chronicle screen bare. The card and not the back key
- * closes it: that key is rebindable, and specs rebind it.
+ * Opens the chronicle a seed, a deck and a schedule found, waits for its scene to run, and closes
+ * the capstone's window every founding opens on, leaving the chronicle screen bare. The card and not
+ * the back key closes it: that key is rebindable, and specs rebind it.
  */
 export async function open(
   page: Page,
   seed: number,
   deck: string | readonly CardId[],
+  schedule: string = STAND_IN_SCHEDULE,
 ): Promise<void> {
-  await openOnCapstone(page, seed, deck);
+  await openOnCapstone(page, seed, deck, schedule);
   await click(page, 'capstone-card-0');
   await expect.poll(() => standing(page, 'capstone')).toBe(false);
   await settled(page);
@@ -93,6 +101,7 @@ export async function openOnCapstone(
   page: Page,
   seed: number,
   deck: string | readonly CardId[],
+  schedule: string = STAND_IN_SCHEDULE,
 ): Promise<void> {
   await page.addInitScript(() => {
     const within = (
@@ -129,7 +138,8 @@ export async function openOnCapstone(
     window.counted = (name) =>
       layers().reduce((total, layer) => total + within(layer.list, name, []).length, 0);
   });
-  await page.goto(`/?seed=${seed}&deck=${typeof deck === 'string' ? deck : deck.join(',')}`);
+  const cards = typeof deck === 'string' ? deck : deck.join(',');
+  await page.goto(`/?seed=${seed}&deck=${cards}&schedule=${schedule}`);
   await page.waitForFunction(() => window.game?.scene.isActive('chronicle') === true);
   await settled(page);
   await expect.poll(() => standing(page, 'capstone')).toBe(true);

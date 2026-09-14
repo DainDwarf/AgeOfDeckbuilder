@@ -37,9 +37,9 @@ import {
 import { buildingKind, improvementKind } from './map-kinds';
 import type { Resources } from './resources';
 import { seedRng } from './rng';
-import { scheduled } from './schedule';
+import { besieged, laid, raided, reinforced } from './schedule';
 import { charted } from './sight';
-import type { CardId, Chronicle, EventId } from './state';
+import type { CardId, Chronicle, Timeline } from './state';
 import type { Faction, Unit, UnitStats } from './units';
 
 /** The content every fixture is played on, its numbers the fixture's own. */
@@ -169,6 +169,30 @@ export const CATALOGUE: Catalogue = catalogued({
       'PH_Harvest',
     ],
   },
+  events: {
+    PH_Raid: {
+      reads: (_catalogue, chronicle) => ({ warriors: 1 + Math.floor(chronicle.turn / 10) }),
+      lands: (catalogue, chronicle) =>
+        raided(catalogue, chronicle, 1 + Math.floor(chronicle.turn / 10)),
+    },
+    PH_Famine: {
+      reads: () => ({}),
+      lands: (catalogue, chronicle) => laid(catalogue, chronicle, 'PH_Hunger'),
+    },
+    PH_Siege: {
+      reads: () => ({ camps: 5 }),
+      lands: (catalogue, chronicle) => besieged(catalogue, chronicle, 5, [3, 5], 3),
+      continues: reinforced,
+    },
+  },
+  schedules: {
+    schedule: {
+      spacing: [3, 7],
+      deal: 2,
+      capstone: { event: 'PH_Siege', window: [27, 33], span: 6 },
+      entries: { PH_Raid: () => 1, PH_Famine: () => 1 },
+    },
+  },
   terrains: {
     plain: {
       yields: { food: 2 },
@@ -277,6 +301,23 @@ export const CATALOGUE: Catalogue = catalogued({
 /** The one region the fixture catalogue deals its maps from. */
 export const REGION = 'disc';
 
+/** The one schedule the fixture catalogue rolls its timelines from. */
+export const SCHEDULE = 'schedule';
+
+/**
+ * A timeline dealing nothing: no deal at all, and the capstone on a turn past any a test ends. What a
+ * fixture chronicle carries unless its test writes the deals it wants.
+ */
+export const NO_DEALS: Timeline = {
+  deals: [],
+  capstone: { event: 'PH_Siege', turn: 1000, last: 1005 },
+};
+
+/** A timeline dealing these entries on these turns, and its capstone as `NO_DEALS` has it. */
+export function dealing(...deals: Timeline['deals']): Timeline {
+  return { ...NO_DEALS, deals };
+}
+
 export const CITY: TileCoords = { q: 0, r: 0 };
 
 /**
@@ -325,7 +366,8 @@ export function cityOf(inside: Terrain[], carrying: Carrying = {}): Chronicle {
   const city: Chronicle = {
     content: CATALOGUE.version,
     seed: 7,
-    ...scheduled(seedRng(7)),
+    rng: seedRng(7),
+    timeline: NO_DEALS,
     snapshots: [],
     tiles: [
       ...inside.map(
@@ -564,66 +606,16 @@ export function fullDraw(): CardId[] {
 /** The deck these foundings are played on: two of each card, enough to draw a hand and cycle. */
 export const DECK: readonly CardId[] = deckOf(CATALOGUE, 'deck');
 
-/** How many turns these fixtures end before they give up on a schedule that has landed nothing. */
-export const SCHEDULE_BOUND = 30;
-
-/**
- * A capstone standing past every turn a walk of the schedule below reaches: what a fixture about the
- * ordinary cadence carries, so no siege is dealt in the middle of the turns it ends.
- */
-export const LATE_CAPSTONE: Carrying = { capstoneTurn: SCHEDULE_BOUND * 2 };
-
 /**
  * One whole turn: the end of turn, and the entry taken of the deal it may stop on — `wanted` where
  * this deal holds it, and the first entry dealt where it does not. Every fixture that ends turns
  * goes through here, because a chronicle waiting on a deal refuses every other command.
  */
-export function endedTurn(chronicle: Chronicle, wanted?: EventId): Chronicle {
+export function endedTurn(chronicle: Chronicle, wanted?: string): Chronicle {
   const ended = outcome(apply(CATALOGUE, chronicle, { type: 'end-turn' }));
   if (ended.deal.length === 0) return ended;
   const taken = wanted !== undefined && ended.deal.includes(wanted) ? wanted : ended.deal[0];
   return outcome(apply(CATALOGUE, ended, { type: 'take', event: taken }));
-}
-
-/**
- * The chronicle every event landed on over thirty whole turns, in the order they landed; `wanted`
- * is the entry taken wherever the deal offers it.
- */
-export function landings(chronicle: Chronicle, wanted?: EventId): Chronicle[] {
-  let standing = chronicle;
-  const landed: Chronicle[] = [];
-  for (let turn = 0; turn < SCHEDULE_BOUND; turn++) {
-    const dealt = standing.nextEvent;
-    standing = endedTurn(standing, wanted);
-    if (standing.nextEvent !== dealt) landed.push(standing);
-  }
-  return landed;
-}
-
-/**
- * Whole turn after whole turn until a raid enters an enemy, and the chronicle that turn left: the
- * raid is taken wherever it is dealt. A fixture with no camp free gives up instead, the raid it
- * takes entering nobody.
- */
-export function toFirstRaid(chronicle: Chronicle): Chronicle {
-  let standing = chronicle;
-  for (let turn = 0; turn < SCHEDULE_BOUND; turn++) {
-    standing = endedTurn(standing, 'PH_Raid');
-    if (enemiesOf(standing).length > 0) return standing;
-  }
-  throw new Error(`this schedule entered no raider in ${SCHEDULE_BOUND} turns`);
-}
-
-/**
- * The chronicle the last of thirty turns' landings left: what a fixture no raid can enter a warrior
- * on is read through, there being no landing of its own for it to stop at.
- */
-export function throughSchedule(chronicle: Chronicle): Chronicle {
-  const landed = landings(chronicle, 'PH_Raid');
-  if (landed.length === 0) {
-    throw new Error(`this schedule landed no event in ${SCHEDULE_BOUND} turns`);
-  }
-  return landed[landed.length - 1];
 }
 
 /** The enemies standing on the chronicle: what a raid entered, and nothing for a famine. */

@@ -1,15 +1,7 @@
 import type Phaser from 'phaser';
-import { type Catalogue, cardOf } from '../rules/catalogue';
+import { type Catalogue, cardOf, eventOf } from '../rules/catalogue';
 import { costOf } from '../rules/chronicle';
-import { SCHEDULE } from '../rules/schedule';
-import {
-  type CardId,
-  type Chronicle,
-  type Cost,
-  type EventId,
-  playable,
-  type Refusal,
-} from '../rules/state';
+import { type CardId, type Chronicle, type Cost, playable, type Refusal } from '../rules/state';
 import {
   ACCENT,
   addText,
@@ -22,7 +14,7 @@ import {
   UI_FONT,
 } from './design-space';
 import { RESOURCE_COLOURS } from './resource-bar';
-import { cardName, cardRules, text } from './text';
+import { cardName, cardRules, eventName, eventRules, text } from './text';
 import { layOutRun, type Run } from './text-run';
 
 export const CARD_WIDTH = 130;
@@ -124,12 +116,12 @@ export function cardFace(catalogue: Catalogue, id: CardId): Face {
  * The face one entry of a deal is drawn as: an event costs nothing, and its rules entry reads the
  * numbers of the turn it was dealt on.
  */
-export function eventFace(catalogue: Catalogue, chronicle: Chronicle, id: EventId): Face {
+export function eventFace(catalogue: Catalogue, chronicle: Chronicle, id: string): Face {
   return {
     id,
-    name: text(`event.${id}`),
+    name: eventName(id),
     kind: text('kind.event'),
-    rules: text(`rules.${id}`, SCHEDULE.events[id].reads(catalogue, chronicle)),
+    rules: eventRules(id, eventOf(catalogue, id).reads(catalogue, chronicle)),
     costs: [],
   };
 }

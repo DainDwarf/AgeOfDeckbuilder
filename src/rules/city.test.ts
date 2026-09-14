@@ -14,6 +14,7 @@ import {
   founded,
   NO_GROWTH,
   REGION,
+  SCHEDULE,
   stagedBy,
   standing,
   withTile,
@@ -70,7 +71,7 @@ function withWorkerBeside(chronicle: Chronicle, tile: TileCoords): Chronicle | u
 function darkBorder(): { opened: Chronicle; dark: TileCoords } {
   for (let seed = 0; seed < 1000; seed++) {
     const opened = outcome(
-      apply(CATALOGUE, launched(CATALOGUE, REGION, seed, DECK), { type: 'end-turn' }),
+      apply(CATALOGUE, launched(CATALOGUE, REGION, SCHEDULE, seed, DECK), { type: 'end-turn' }),
     );
     const dark = unchartedTouching(opened);
     if (dark === undefined || withWorkerBeside(opened, dark) === undefined) continue;
@@ -81,7 +82,7 @@ function darkBorder(): { opened: Chronicle; dark: TileCoords } {
 
 test('the city holds its own tile and every tile touching it', () => {
   for (const seed of [0, 1234, 0xdeadbeef | 0]) {
-    const chronicle = launched(CATALOGUE, REGION, seed, DECK);
+    const chronicle = launched(CATALOGUE, REGION, SCHEDULE, seed, DECK);
     const held = new Set(chronicle.held.map(tileKey));
 
     expect(held.size).toBe(7);
@@ -92,7 +93,7 @@ test('the city holds its own tile and every tile touching it', () => {
 });
 
 test('the founding puts an inhabitant on every tile the city holds, and leaves two idle', () => {
-  const chronicle = launched(CATALOGUE, REGION, 1234, DECK);
+  const chronicle = launched(CATALOGUE, REGION, SCHEDULE, 1234, DECK);
 
   expect([...chronicle.assigned].map(tileKey).sort()).toEqual(
     [...chronicle.held].map(tileKey).sort(),
@@ -327,7 +328,7 @@ test('an assign with no inhabitant idle is refused', () => {
 });
 
 test('a drag takes the inhabitant off the tile it stands on and puts it on the tile it lands on', () => {
-  const founding = launched(CATALOGUE, REGION, 1, DECK);
+  const founding = launched(CATALOGUE, REGION, SCHEDULE, 1, DECK);
   const [from, to] = neighbours(founding.city);
   const freed = outcome(apply(CATALOGUE, founding, assignTo(to)));
 
@@ -343,7 +344,7 @@ test('a drag takes the inhabitant off the tile it stands on and puts it on the t
 });
 
 test('a drag onto a tile an inhabitant stands on, onto one the city does not hold, or onto the tile it started from is refused', () => {
-  const founding = launched(CATALOGUE, REGION, 1, DECK);
+  const founding = launched(CATALOGUE, REGION, SCHEDULE, 1, DECK);
   const [from, worked] = neighbours(founding.city);
   const outside = claimable(CATALOGUE, founding)[0];
 
@@ -355,7 +356,7 @@ test('a drag onto a tile an inhabitant stands on, onto one the city does not hol
 });
 
 test('a drag from a tile nobody stands on is refused', () => {
-  const founding = launched(CATALOGUE, REGION, 1, DECK);
+  const founding = launched(CATALOGUE, REGION, SCHEDULE, 1, DECK);
   const [bare, empty] = neighbours(founding.city);
   const freed = outcome(
     apply(CATALOGUE, outcome(apply(CATALOGUE, founding, assignTo(bare))), assignTo(empty)),

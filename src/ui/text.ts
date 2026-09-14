@@ -146,7 +146,7 @@ const TEXT = {
   'defeat.capture': 'An enemy captured the city on turn {turn}.',
   'defeat.population': "The city's population reached zero on turn {turn}.",
   'victory.title': 'Victory',
-  'victory.survived': 'The city survived the siege.',
+  'victory.PH_Siege': 'The city survived the siege.',
   'console.line': '> {line}',
   'console.no-entry': 'no such entry: {word}',
   'console.uncharted-veil-on': 'uncharted veil: on',
@@ -196,9 +196,29 @@ export function cardRules(card: string): string {
   return named('rules', card, 'the card');
 }
 
+/** What an event is named on the screen; an event no entry names is refused. */
+export function eventName(event: string): string {
+  return named('event', event, 'the event');
+}
+
+/** What an event's rules entry reads on the screen, with its numbers; an event no entry names is refused. */
+export function eventRules(event: string, values: Record<string, string | number> = {}): string {
+  return named('rules', event, 'the event', values);
+}
+
+/** The line the victory screen reads for passing a capstone; a capstone no entry names is refused. */
+export function victoryLine(capstone: string): string {
+  return named('victory', capstone, 'the capstone');
+}
+
 /** The entry a content id names under its prefix; an id no entry names is refused. */
-function named(prefix: string, id: string, noun: string): string {
+function named(
+  prefix: string,
+  id: string,
+  noun: string,
+  values: Record<string, string | number> = {},
+): string {
   const key = `${prefix}.${id}`;
   if (!Object.hasOwn(TEXT, key)) throw new Error(`no entry names ${noun} ${id}`);
-  return text(key as TextKey);
+  return text(key as TextKey, values);
 }

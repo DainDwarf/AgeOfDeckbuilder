@@ -11,13 +11,13 @@ import {
   cityOf,
   claimOf,
   culture,
+  dealing,
   endedTurn,
   enemiesOf,
   everyCard,
   field,
   founded,
   fullDraw,
-  LATE_CAPSTONE,
   madeOf,
   NO_GROWTH,
   only,
@@ -26,8 +26,6 @@ import {
   riverBetween,
   stagedBy,
   standing,
-  throughSchedule,
-  toFirstRaid,
   WORKER,
   withUnits,
   worker,
@@ -36,6 +34,9 @@ import { distance, MOVE_POINT, type River, type TileCoords, tileKey } from './ma
 import { regionOf, terrainKind } from './map-kinds';
 import { RESOURCES } from './resources';
 import type { Chronicle } from './state';
+
+/** A timeline dealing the raid on the second turn, and nothing else before the capstone. */
+const RAID_ON_SECOND = dealing({ turn: 2, entries: ['PH_Raid', 'PH_Famine'] });
 
 /** Every attack the end of turn stages, as the tile each was made from and the tile it was aimed at. */
 function attacksOf(chronicle: Chronicle): string[][] {
@@ -171,9 +172,10 @@ test('a captured camp is silent: the raid enters on a camp still standing', () =
   const held = cityOf(['urban'], {
     tiles: camped(field(4), CAMPS),
     units: besieged.map(worker),
+    timeline: RAID_ON_SECOND,
   });
 
-  const raided = toFirstRaid(held);
+  const raided = endedTurn(held, 'PH_Raid');
 
   for (const camp of besieged) expect(buildingAt(raided, camp)).toBeUndefined();
   expect(buildingAt(raided, kept)).toBe(CATALOGUE.camp.building);
@@ -182,13 +184,14 @@ test('a captured camp is silent: the raid enters on a camp still standing', () =
 
 test('a chronicle whose every camp is captured takes no raider at all', () => {
   const held = cityOf(['urban'], {
-    ...LATE_CAPSTONE,
     tiles: camped(field(4), CAMPS),
     units: CAMPS.map(worker),
+    timeline: RAID_ON_SECOND,
   });
 
-  const raided = throughSchedule(held);
+  const raided = endedTurn(held, 'PH_Raid');
 
+  expect(raided.turn).toBe(2);
   expect(raided.tiles.some((tile) => tile.building === CATALOGUE.camp.building)).toBe(false);
   expect(enemiesOf(raided)).toEqual([]);
 });
@@ -500,6 +503,7 @@ test('the enemy that moves in from its camp reaches the city and captures it', (
   const radius = regionOf(CATALOGUE, REGION).radius;
   let chronicle = cityOf(['urban'], {
     tiles: camped(field(radius), [{ q: radius, r: 0 }]),
+    timeline: RAID_ON_SECOND,
   });
   for (let turn = 0; turn < 20 && chronicle.ending === undefined; turn++) {
     chronicle = endedTurn(chronicle, 'PH_Raid');

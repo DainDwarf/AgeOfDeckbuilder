@@ -6,7 +6,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ---
 
-- **The schedule is a timeline** — the events and the schedules join the catalogue, the weights and the tempo numbers on the schedule and a second script on the event for the turns of its span; the launch rolls the schedule into a timeline the founding takes as an argument and the chronicle carries, every landing still reading the chronicle as it stands; the walkers and their bound go, a fixture timeline in their place; the boot takes a schedule id and the stand-in's short schedule brings the e2e to the victory screen in three turns; the stand-in's coherence test covers the events, the schedules and the victory line; and the two remaining deferred dogmas return. Doc-impact: `docs/CHRONICLE.md`, `docs/GLOSSARY.md`, `docs/DOGMAS.md`. [board/the-schedule-is-a-timeline.md](board/the-schedule-is-a-timeline.md)
 - **The road's movement lives in its improvement** — `src/rules/map.ts` stops naming `PH_Road`: the half-move-point cost and the bridge become properties of the road improvement in the catalogue.
 - **Turn 0, the settle** — a chronicle opens unsettled and its first command puts the city on a tile of a small centre part of the map, the empowering choice of a settling site; later ages may add steps to turn 0.
 - **The throwaway selection page** — the game boots on a page choosing a region, a schedule, a deck and a seed and feeding the chronicle its generated map and timeline; it is wholly replaced in v0.0.5, and the rules never learn the word scenario.

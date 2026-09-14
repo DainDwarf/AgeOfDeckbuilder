@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { apply, type Command, launched, outcome } from './chronicle';
+import { apply, beginChronicle, type Command, launched, outcome } from './chronicle';
 import { growthThreshold } from './city';
 import {
   assignTo,
@@ -11,65 +11,55 @@ import {
   camped,
   cityOf,
   DECK,
+  dealing,
   endedTurn,
   enemiesOf,
-  everyCard,
   field,
   fullDraw,
-  LATE_CAPSTONE,
-  landings,
   madeOf,
   NO_GROWTH,
   only,
   REGION,
-  SCHEDULE_BOUND,
+  SCHEDULE,
   type Standing,
   stagedBy,
   standing,
-  throughSchedule,
-  toFirstRaid,
   withUnits,
   worker,
 } from './fixtures';
 import { distance, neighbours, type TileCoords, tileKey } from './map';
 import { seedRng } from './rng';
-import { SIEGE, scheduled } from './schedule';
-import type { Chronicle } from './state';
+import { timelineOf } from './schedule';
+import type { Chronicle, Timeline } from './state';
 import { unitAt } from './units';
 
-/**
- * Every event a seed's schedule dealt over thirty turns, the turn it was dealt on and how many
- * hunger cards the chronicle holds by then. The city holds no camp, so a raid enters nobody and
- * nothing ever reaches the city: what a landing leaves to read is its turn, against the hazards the
- * famines have laid.
- */
-function scheduleOf(seed: number): { turn: number; hungers: number }[] {
-  return landings(
-    cityOf(['urban', 'plain'], { ...NO_GROWTH, ...scheduled(seedRng(seed)), ...LATE_CAPSTONE }),
-  ).map((landed) => ({
-    turn: landed.turn,
-    hungers: everyCard(landed).filter((id) => id === 'PH_Hunger').length,
-  }));
+/** The timeline a seed rolls of the fixture's schedule. */
+function rolled(seed: number): Timeline {
+  return timelineOf(CATALOGUE, SCHEDULE, seedRng(seed)).timeline;
 }
 
-/** The seeds a test over the whole schedule runs: enough of them for both entries to be drawn. */
+/** The seeds a test over the whole timeline runs: enough of them for both orders to be drawn. */
 const SEEDS: readonly number[] = Array.from({ length: 40 }, (_, at) => at + 1);
 
 /** The food stock a city waiting on an event holds: its one tile yields none, so only a famine moves it. */
 const STOCKED = 5;
 
+/** A timeline dealing the raid first and the famine second, on that turn and on no other. */
+function dueOn(turn: number): Timeline {
+  return dealing({ turn, entries: ['PH_Raid', 'PH_Famine'] });
+}
+
 /**
  * The city with camps enough for any raid, holding food it is too many to grow on, standing on the
- * turn before an event is due: one end of turn brings the schedule to it.
+ * turn before its timeline deals: one end of turn brings the deal to it.
  */
 function awaiting(due: number, carrying: Carrying = {}): Chronicle {
   return cityOf(['urban'], {
     ...NO_GROWTH,
-    ...LATE_CAPSTONE,
     tiles: camped(field(4), CAMPS),
     resources: { food: STOCKED, production: 0, military: 0, money: 0, science: 0, culture: 0 },
     turn: due - 1,
-    nextEvent: due,
+    timeline: dueOn(due),
     ...carrying,
   });
 }
@@ -79,31 +69,75 @@ function dealtBy(due: number, carrying: Carrying = {}): Chronicle {
   return outcome(apply(CATALOGUE, awaiting(due, carrying), { type: 'end-turn' }));
 }
 
-test('an event lands on the third turn to the seventh, and the next three to seven turns after', () => {
+test('a deal is due on the third turn to the seventh, and each next three to seven turns after a landing', () => {
   for (const seed of SEEDS) {
-    const turns = scheduleOf(seed).map((landed) => landed.turn);
+    const { deals, capstone } = rolled(seed);
+    const landings = [...deals.map((deal) => deal.turn), capstone.turn].sort((a, b) => a - b);
 
-    expect(turns[0]).toBeGreaterThanOrEqual(3);
-    expect(turns[0]).toBeLessThanOrEqual(7);
-    for (let at = 1; at < turns.length; at++) {
-      expect(turns[at] - turns[at - 1]).toBeGreaterThanOrEqual(3);
-      expect(turns[at] - turns[at - 1]).toBeLessThanOrEqual(7);
+    let previous = 0;
+    for (const turn of landings) {
+      if (turn !== capstone.turn) {
+        expect(turn - previous).toBeGreaterThanOrEqual(3);
+        expect(turn - previous).toBeLessThanOrEqual(7);
+      }
+      previous = turn;
     }
-    expect(turns[turns.length - 1]).toBeGreaterThan(SCHEDULE_BOUND - 7);
+    expect(landings[landings.length - 1]).toBeGreaterThan(capstone.last - 7);
   }
 });
 
-test('the same seed deals the same schedule, and another seed deals a different one', () => {
-  expect(scheduleOf(7)).toEqual(scheduleOf(7));
-  expect(scheduleOf(7)).not.toEqual(scheduleOf(8));
+test('the same seed rolls the same timeline, and another seed a different one', () => {
+  expect(rolled(7)).toEqual(rolled(7));
+  expect(rolled(7)).not.toEqual(rolled(8));
 });
 
-test('the schedule deals nothing before its due turn, and its raid enters a warrior on a camp', () => {
-  const camp = { q: 4, r: 0 };
-  let chronicle = cityOf(['urban'], { ...LATE_CAPSTONE, tiles: camped(field(4), [camp]) });
-  const due = chronicle.nextEvent;
+test('the capstone lands on a turn rolled at the launch, between the twenty-seventh and the thirty-third, and spans six', () => {
+  const capstones = SEEDS.map(
+    (seed) => launched(CATALOGUE, REGION, SCHEDULE, seed, DECK).timeline.capstone,
+  );
 
-  for (let turn = 2; turn < due; turn++) {
+  for (const { turn, last } of capstones) {
+    expect(turn).toBeGreaterThanOrEqual(27);
+    expect(turn).toBeLessThanOrEqual(33);
+    expect(last).toBe(turn + 5);
+  }
+  expect(new Set(capstones.map(({ turn }) => turn)).size).toBeGreaterThan(1);
+});
+
+test('the timeline deals nothing on the capstone’s turn, and every deal holds both entries in an order the seed decides', () => {
+  const firsts = new Set<string>();
+  for (const seed of SEEDS) {
+    const { deals, capstone } = rolled(seed);
+    expect(deals.map((deal) => deal.turn)).not.toContain(capstone.turn);
+    for (const deal of deals) expect([...deal.entries].sort()).toEqual(['PH_Famine', 'PH_Raid']);
+    firsts.add(deals[0].entries.join(' '));
+  }
+
+  expect(firsts.size).toBe(2);
+});
+
+test('the famine is dealt as readily on the third turn as the twentieth', () => {
+  const turns = SEEDS.flatMap((seed) =>
+    rolled(seed)
+      .deals.filter((deal) => deal.entries.includes('PH_Famine'))
+      .map((deal) => deal.turn),
+  );
+
+  expect(Math.min(...turns)).toBeLessThanOrEqual(7);
+  expect(Math.max(...turns)).toBeGreaterThanOrEqual(20);
+});
+
+test('a timeline dealing on the first turn opens the chronicle on its deal', () => {
+  const opened = beginChronicle(CATALOGUE, 1, DECK, { tiles: field(4), rivers: [] }, dueOn(1));
+
+  expect(opened.deal).toEqual(['PH_Raid', 'PH_Famine']);
+});
+
+test('nothing is dealt before the due turn, and the raid enters a warrior on a camp', () => {
+  const camp = { q: 4, r: 0 };
+  let chronicle = cityOf(['urban'], { tiles: camped(field(4), [camp]), timeline: dueOn(5) });
+
+  for (let turn = 2; turn < 5; turn++) {
     chronicle = endedTurn(chronicle);
     expect(chronicle.turn).toBe(turn);
     expect(chronicle.deal).toEqual([]);
@@ -111,7 +145,7 @@ test('the schedule deals nothing before its due turn, and its raid enters a warr
   }
   chronicle = endedTurn(chronicle, 'PH_Raid');
 
-  expect(chronicle.turn).toBe(due);
+  expect(chronicle.turn).toBe(5);
   expect(chronicle.units).toHaveLength(1);
   expect(chronicle.units[0].faction).toBe('enemy');
   expect(chronicle.units[0].stats).toEqual(CATALOGUE.units.PH_Warrior);
@@ -121,25 +155,26 @@ test('the schedule deals nothing before its due turn, and its raid enters a warr
 test('which camp the raid enters a warrior on is drawn from the seeded generator', () => {
   const disc = camped(field(4), CAMPS);
   const raidOf = (seed: number): TileCoords =>
-    toFirstRaid(cityOf(['urban'], { ...LATE_CAPSTONE, tiles: disc, rng: seedRng(seed) })).units[0]
-      .tile;
+    endedTurn(cityOf(['urban'], { tiles: disc, rng: seedRng(seed), timeline: dueOn(2) }), 'PH_Raid')
+      .units[0].tile;
 
   expect(raidOf(7)).toEqual(raidOf(7));
   expect(new Set(SEEDS.map((seed) => tileKey(raidOf(seed)))).size).toBeGreaterThan(1);
 });
 
 test('the raid enters its warrior on a camp no unit stands on, and on nothing else at all', () => {
-  const open = cityOf(['urban'], { ...LATE_CAPSTONE, tiles: camped(field(4), CAMPS) });
+  const open = cityOf(['urban'], { tiles: camped(field(4), CAMPS), timeline: dueOn(2) });
   const [onlyOpen, ...taken] = CAMPS;
   const stoodOn = (camps: TileCoords[]): Chronicle =>
     withUnits(
       open,
       camps.map((camp) => worker(camp)),
     );
+  const raid = (chronicle: Chronicle): Chronicle => endedTurn(chronicle, 'PH_Raid');
 
-  expect(CAMPS.map(tileKey)).toContain(tileKey(toFirstRaid(open).units[0].tile));
-  expect(toFirstRaid(stoodOn(taken)).units[taken.length].tile).toEqual(onlyOpen);
-  expect(throughSchedule(stoodOn(CAMPS)).units).toHaveLength(CAMPS.length);
+  expect(CAMPS.map(tileKey)).toContain(tileKey(raid(open).units[0].tile));
+  expect(raid(stoodOn(taken)).units[taken.length].tile).toEqual(onlyOpen);
+  expect(raid(stoodOn(CAMPS)).units).toHaveLength(CAMPS.length);
 });
 
 test('a raid enters one warrior, and one more for every ten turns', () => {
@@ -164,17 +199,12 @@ test('a raid with more warriors than camps to enter on enters what it can', () =
   expect([...new Set(raiders)]).toEqual([two.length]);
 });
 
-test('a famine is dealt as readily on the third turn as the twentieth, and lays its hazard', () => {
+test('a famine taken on any turn lays its hazard and leaves the food stock as it stood', () => {
   for (const due of [3, 14, 20]) {
-    for (const seed of SEEDS) {
-      const standing = dealtBy(due, { rng: seedRng(seed) });
-      const landed = endedTurn(awaiting(due, { rng: seedRng(seed) }), 'PH_Famine');
+    const landed = endedTurn(awaiting(due), 'PH_Famine');
 
-      expect(standing.deal).toContain('PH_Famine');
-      expect(standing.resources.food).toBe(STOCKED);
-      expect(landed.resources.food).toBe(STOCKED);
-      expect(landed.hand).toEqual(['PH_Hunger']);
-    }
+    expect(landed.resources.food).toBe(STOCKED);
+    expect(landed.hand).toEqual(['PH_Hunger']);
   }
 });
 
@@ -190,22 +220,20 @@ test('the famine lays its hazard on top of the draw pile, and leaves the city as
   expect(enemiesOf(after)).toEqual([]);
 });
 
-test('a due turn deals both entries, in an order the seed decides, and the turn ends there', () => {
-  const dealt = SEEDS.map((seed) => dealtBy(5, { rng: seedRng(seed), drawPile: fullDraw() }));
+test('a due turn deals its entries in the order the timeline lists them, and the turn ends there', () => {
+  const standing = dealtBy(5, { drawPile: fullDraw() });
+  const swapped = dealtBy(5, { timeline: dealing({ turn: 5, entries: ['PH_Famine', 'PH_Raid'] }) });
   const staged = stagedBy(awaiting(5, { drawPile: fullDraw() }), { type: 'end-turn' });
 
-  for (const standing of dealt) {
-    expect([...standing.deal].sort()).toEqual(['PH_Famine', 'PH_Raid']);
-    expect(standing.turn).toBe(5);
-    expect(standing.hand).toEqual([]);
-  }
+  expect(standing.deal).toEqual(['PH_Raid', 'PH_Famine']);
+  expect(swapped.deal).toEqual(['PH_Famine', 'PH_Raid']);
+  expect(standing.turn).toBe(5);
+  expect(standing.hand).toEqual([]);
   expect(staged[staged.length - 1]).toBe('deal');
   expect(staged).not.toContain('draw');
-  expect(new Set(dealt.map((standing) => standing.deal.join(' '))).size).toBe(2);
-  expect(dealtBy(5, { rng: seedRng(7) }).deal).toEqual(dealtBy(5, { rng: seedRng(7) }).deal);
 });
 
-test('the take lands the entry taken and no other, rolls the next due turn, and draws a hand', () => {
+test('the take lands the entry taken and no other, draws nothing of its own, and draws a hand', () => {
   const standing = dealtBy(5, { drawPile: fullDraw() });
   const raided = outcome(apply(CATALOGUE, standing, { type: 'take', event: 'PH_Raid' }));
   const starved = outcome(apply(CATALOGUE, standing, { type: 'take', event: 'PH_Famine' }));
@@ -215,11 +243,11 @@ test('the take lands the entry taken and no other, rolls the next due turn, and 
   expect(raided.hand).toEqual(fullDraw());
   expect(enemiesOf(starved)).toEqual([]);
   expect(starved.hand).toEqual(['PH_Hunger', ...fullDraw().slice(0, 4)]);
+  expect(starved.rng).toEqual(standing.rng);
   for (const after of [raided, starved]) {
     expect(after.deal).toEqual([]);
     expect(after.resources.food).toBe(STOCKED);
-    expect(after.nextEvent - after.turn).toBeGreaterThanOrEqual(3);
-    expect(after.nextEvent - after.turn).toBeLessThanOrEqual(7);
+    expect(after.timeline).toEqual(standing.timeline);
   }
 });
 
@@ -253,19 +281,30 @@ test('a chronicle waiting on a deal takes no command but the take', () => {
   expect(stagedBy(waiting, { type: 'take', event: 'PH_Raid' })).toEqual(['events']);
 });
 
-/** A turn inside the window the capstone's own turn is rolled from. */
+/** The turn the capstone lands on in every fixture below. */
 const CAPSTONE = 30;
+
+/** How many turns of the siege's span follow the one it lands on: what a city stands out to win. */
+const REINFORCED = 5;
+
+/** A timeline with the siege on its turn and spanning its six, and these deals besides. */
+function besieging(...deals: Timeline['deals']): Timeline {
+  return {
+    deals,
+    capstone: { event: 'PH_Siege', turn: CAPSTONE, last: CAPSTONE + REINFORCED },
+  };
+}
 
 /**
  * The city standing on the turn before the capstone's, on a disc of plain wide enough for the siege
- * to reach around it. The next event is long overdue: what the capstone's turn deals is its own.
+ * to reach around it.
  */
 function awaitingCapstone(carrying: Carrying = {}): Chronicle {
   return cityOf(['urban'], {
     ...NO_GROWTH,
     tiles: field(6),
     turn: CAPSTONE - 1,
-    capstoneTurn: CAPSTONE,
+    timeline: besieging(),
     ...carrying,
   });
 }
@@ -300,9 +339,6 @@ function corridor(carrying: Carrying = {}): Chronicle {
   return besieged({ tiles: only(6, CORRIDOR), ...carrying });
 }
 
-/** How many turns of the siege's span follow the one it lands on: what a city stands out to win. */
-const REINFORCED = 5;
-
 /**
  * A worker of the player's with health no siege runs through: what a fixture stands where it wants
  * the enemies of the span to spend their turns.
@@ -330,30 +366,16 @@ function moated(carrying: Carrying = {}): Chronicle {
 
 /** That city ending turn after turn to the end of the siege's span: the chronicle it left. */
 function stoodOut(): Chronicle {
-  let besieging = moated({ units: [unkillable(LURE)] });
-  for (let turn = 0; turn <= REINFORCED; turn++) besieging = endedTurn(besieging, 'PH_Famine');
-  return besieging;
+  let standingOut = moated({ units: [unkillable(LURE)] });
+  for (let turn = 0; turn <= REINFORCED; turn++) standingOut = endedTurn(standingOut, 'PH_Famine');
+  return standingOut;
 }
 
-test('the capstone lands on a turn rolled at the founding, between the twenty-seventh and the thirty-third', () => {
-  const turns = SEEDS.map((seed) => launched(CATALOGUE, REGION, seed, DECK).capstoneTurn);
-
-  for (const turn of turns) {
-    expect(turn).toBeGreaterThanOrEqual(27);
-    expect(turn).toBeLessThanOrEqual(33);
-  }
-  expect(launched(CATALOGUE, REGION, 7, DECK).capstoneTurn).toBe(
-    launched(CATALOGUE, REGION, 7, DECK).capstoneTurn,
-  );
-  expect(new Set(turns).size).toBeGreaterThan(1);
-});
-
-test('the capstone turn deals the capstone alone, whatever turn the next event was due', () => {
-  for (const due of [CAPSTONE - 4, CAPSTONE, CAPSTONE + 4]) {
+test('the capstone’s turn deals the capstone alone, whatever the timeline lists for that turn', () => {
+  const listed = dealing({ turn: CAPSTONE, entries: ['PH_Raid', 'PH_Famine'] }).deals;
+  for (const timeline of [besieging(), besieging(...listed)]) {
     const dealt = outcome(
-      apply(CATALOGUE, awaitingCapstone({ nextEvent: due, drawPile: fullDraw() }), {
-        type: 'end-turn',
-      }),
+      apply(CATALOGUE, awaitingCapstone({ timeline, drawPile: fullDraw() }), { type: 'end-turn' }),
     );
 
     expect(dealt.deal).toEqual(['PH_Siege']);
@@ -372,7 +394,7 @@ test('the siege places five camps around the city, apart from one another, a war
     expect(distance(camp, CITY)).toBeGreaterThanOrEqual(3);
     expect(distance(camp, CITY)).toBeLessThanOrEqual(5);
     for (const other of camps.slice(at + 1)) {
-      expect(distance(camp, other)).toBeGreaterThanOrEqual(SIEGE.apart);
+      expect(distance(camp, other)).toBeGreaterThanOrEqual(3);
     }
   }
   expect(warriors).toHaveLength(camps.length);
@@ -406,18 +428,18 @@ test('the siege places no camp the city holds, a unit stands on, a building fill
     { q: 3, r: 0 },
     { q: 4, r: 0 },
   ];
-  const standing = { q: 5, r: 0 };
+  const near = { q: 5, r: 0 };
   const none: Chronicle[] = [
     corridor({ held: [CITY, ...reach] }),
     corridor({ units: reach.map(worker) }),
     corridor({ tiles: builtOn(only(6, CORRIDOR), 'PH_Farm', reach) }),
-    corridor({ tiles: camped(only(6, [...CORRIDOR, standing]), [standing]) }),
+    corridor({ tiles: camped(only(6, [...CORRIDOR, near]), [near]) }),
   ];
 
   for (const after of none) {
     expect(enemiesOf(after)).toEqual([]);
   }
-  expect(campsOf(none[3])).toEqual([standing]);
+  expect(campsOf(none[3])).toEqual([near]);
   for (const after of none.slice(0, 3)) expect(campsOf(after)).toEqual([]);
 });
 
@@ -437,64 +459,67 @@ test('the siege places no camp on ground a camp does not lie on, or the city is 
 });
 
 test('each of the five turns after the landing enters a warrior on the camp standing, and no turn more', () => {
-  let besieging = moated({ units: [unkillable(LURE)] });
-  expect(enemiesOf(besieging)).toEqual([]);
+  let reinforcing = moated({ units: [unkillable(LURE)] });
+  expect(enemiesOf(reinforcing)).toEqual([]);
 
   for (let turn = 1; turn <= REINFORCED; turn++) {
-    besieging = endedTurn(besieging, 'PH_Famine');
+    reinforcing = endedTurn(reinforcing, 'PH_Famine');
 
-    expect(besieging.turn).toBe(CAPSTONE + turn);
-    expect(enemiesOf(besieging)).toHaveLength(turn);
-    expect(unitAt(besieging.units, STANDING_CAMP)?.faction).toBe('enemy');
+    expect(reinforcing.turn).toBe(CAPSTONE + turn);
+    expect(enemiesOf(reinforcing)).toHaveLength(turn);
+    expect(unitAt(reinforcing.units, STANDING_CAMP)?.faction).toBe('enemy');
   }
   expect(enemiesOf(stoodOut())).toHaveLength(REINFORCED);
 });
 
 test('the reinforcement is a stage of its own, raised after the tick and ahead of the deal', () => {
-  let besieging = moated({ rng: seedRng(1), units: [unkillable(LURE)] });
-  expect(besieging.nextEvent).toBeLessThanOrEqual(CAPSTONE + REINFORCED);
+  const due = CAPSTONE + 3;
+  let reinforcing = moated({
+    units: [unkillable(LURE)],
+    timeline: besieging(...dueOn(due).deals),
+  });
 
-  while (besieging.turn < besieging.nextEvent - 1) {
-    const staged = stagedBy(besieging, { type: 'end-turn' });
+  while (reinforcing.turn < due - 1) {
+    const staged = stagedBy(reinforcing, { type: 'end-turn' });
     expect(staged.slice(staged.indexOf('turn'))).toEqual(['turn', 'reinforce']);
-    besieging = endedTurn(besieging, 'PH_Famine');
+    reinforcing = endedTurn(reinforcing, 'PH_Famine');
   }
-  const due = stagedBy(besieging, { type: 'end-turn' });
+  const dealt = stagedBy(reinforcing, { type: 'end-turn' });
 
-  expect(due.slice(due.indexOf('turn'))).toEqual(['turn', 'reinforce', 'deal']);
+  expect(dealt.slice(dealt.indexOf('turn'))).toEqual(['turn', 'reinforce', 'deal']);
 });
 
 test('the siege’s own camps are reinforced as the camps standing are', () => {
-  const besieging = besieged({ units: [unkillable(CITY)] });
-  const camps = campsOf(besieging);
-  const after = endedTurn(besieging, 'PH_Famine');
+  const landed = besieged({ units: [unkillable(CITY)] });
+  const camps = campsOf(landed);
+  const after = endedTurn(landed, 'PH_Famine');
 
-  expect(enemiesOf(besieging)).toHaveLength(camps.length);
+  expect(enemiesOf(landed)).toHaveLength(camps.length);
   expect(enemiesOf(after)).toHaveLength(2 * camps.length);
   for (const camp of camps) expect(unitAt(after.units, camp)?.faction).toBe('enemy');
 });
 
 test('the reinforcement enters no warrior on a camp a unit stands on', () => {
-  let besieging = moated({ units: [standing('enemy', STANDING_CAMP)] });
-  const entered = unitAt(besieging.units, STANDING_CAMP)?.id;
+  let reinforcing = moated({ units: [standing('enemy', STANDING_CAMP)] });
+  const entered = unitAt(reinforcing.units, STANDING_CAMP)?.id;
 
   for (let turn = 1; turn <= REINFORCED; turn++) {
-    besieging = endedTurn(besieging, 'PH_Famine');
+    reinforcing = endedTurn(reinforcing, 'PH_Famine');
 
-    expect(enemiesOf(besieging)).toHaveLength(1);
-    expect(unitAt(besieging.units, STANDING_CAMP)?.id).toBe(entered);
+    expect(enemiesOf(reinforcing)).toHaveLength(1);
+    expect(unitAt(reinforcing.units, STANDING_CAMP)?.id).toBe(entered);
   }
 });
 
 test('the city standing at the end of the siege’s sixth turn ends the chronicle in victory', () => {
-  let besieging = moated({ units: [unkillable(LURE)] });
+  let reinforcing = moated({ units: [unkillable(LURE)] });
 
   for (let turn = 1; turn <= REINFORCED; turn++) {
-    besieging = endedTurn(besieging, 'PH_Famine');
-    expect(besieging.turn).toBe(CAPSTONE + turn);
-    expect(besieging.ending).toBeUndefined();
+    reinforcing = endedTurn(reinforcing, 'PH_Famine');
+    expect(reinforcing.turn).toBe(CAPSTONE + turn);
+    expect(reinforcing.ending).toBeUndefined();
   }
-  const staged = stagedBy(besieging, { type: 'end-turn' });
+  const staged = stagedBy(reinforcing, { type: 'end-turn' });
   const survived = stoodOut();
 
   expect(staged[staged.length - 1]).toBe('victory');

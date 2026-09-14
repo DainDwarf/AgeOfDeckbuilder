@@ -60,6 +60,7 @@ const LABEL_STYLE = {
 export class ChronicleScene extends Phaser.Scene {
   private readonly catalogue: Catalogue;
   private readonly region: string;
+  private readonly schedule: string;
   private readonly deck: readonly CardId[];
   private current: Chronicle;
   /** The play-out running on the chronicle screen as it stands, and nothing while none is. */
@@ -68,12 +69,14 @@ export class ChronicleScene extends Phaser.Scene {
   constructor(
     catalogue: Catalogue,
     region: string,
+    schedule: string,
     seed: number | undefined,
     deck: readonly CardId[],
   ) {
     super('chronicle');
     this.catalogue = catalogue;
     this.region = region;
+    this.schedule = schedule;
     this.deck = deck;
     this.current = this.begin(seed);
   }
@@ -89,13 +92,13 @@ export class ChronicleScene extends Phaser.Scene {
   }
 
   /**
-   * A chronicle on this chronicle screen's region and deck, from the seed it was asked for or from a
-   * fresh one. The fresh one is the one place entropy enters the game: `src/rules/` draws only from
-   * the seed it is handed.
+   * A chronicle on this chronicle screen's region, schedule and deck, from the seed it was asked for
+   * or from a fresh one. The fresh one is the one place entropy enters the game: `src/rules/` draws
+   * only from the seed it is handed.
    */
   private begin(seed: number | undefined): Chronicle {
     const drawn = seed ?? (Math.random() * 2 ** 32) | 0;
-    return launched(this.catalogue, this.region, drawn, this.deck);
+    return launched(this.catalogue, this.region, this.schedule, drawn, this.deck);
   }
 
   /**
