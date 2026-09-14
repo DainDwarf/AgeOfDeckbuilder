@@ -6,7 +6,7 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ---
 
-- **Turn 0, the settle** — a chronicle opens unsettled and its first command puts the city on a tile of a small centre part of the map, the empowering choice of a settling site; later ages may add steps to turn 0.
+- **Turn 0, the settle** — a chronicle opens unsettled and its first command puts the city on a tile of a small centre part of the map, the empowering choice of a settling site; later ages may add steps to turn 0. The city's sight, the tiles the settle holds and the idle inhabitants it opens with become content on the catalogue's city entry, no longer constants in the rules.
 - **The throwaway selection page** — the game boots on a page choosing a region, a schedule, a deck and a seed and feeding the chronicle its generated map and timeline; it is wholly replaced in v0.0.5, and the rules never learn the word scenario.
 - **The nomadic age designed, number-less** — its page in `docs/`: the starting collection of cards with few or no buildings, the units, the events, the capstone and the camp's reward.
 - **The nomadic age implemented** — the real catalogue replaces the stand-ins with provisional numbers at last, a scout among the units, and the camp's reward a real card.
