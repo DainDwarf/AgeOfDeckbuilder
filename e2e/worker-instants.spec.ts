@@ -2,7 +2,8 @@ import { expect, type Page, test } from '@playwright/test';
 import { STAND_IN } from '../src/content/stand-in';
 import { aimOf, CARDS } from '../src/rules/cards';
 import { admitted, apply, outcome, refusalOf } from '../src/rules/chronicle';
-import { IMPROVEMENTS, type TileCoords, tileKey } from '../src/rules/map';
+import { type TileCoords, tileKey } from '../src/rules/map';
+import { improvementKind } from '../src/rules/map-kinds';
 import { type CardId, type Chronicle, playable } from '../src/rules/state';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
 import { text } from '../src/ui/text';
@@ -164,7 +165,7 @@ test('the tile the mine improved inspects the mine on a card of its own, before 
       text('improvement.PH_Mine'),
       text('improvement.PH_Mine'),
       'panel-yield-production',
-      `+${IMPROVEMENTS.PH_Mine.yields.production}`,
+      `+${improvementKind(STAND_IN, 'PH_Mine').yields.production}`,
     ]);
 
   await page.keyboard.press('i');

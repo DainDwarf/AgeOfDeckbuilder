@@ -17,7 +17,7 @@ import {
 
 /** What entering a tile of this chronicle costs; the run steps onto tiles a unit enters at all. */
 function costOf(chronicle: Chronicle, coord: TileCoords): number {
-  const cost = movementCost(tileAt(chronicle.tiles, coord));
+  const cost = movementCost(STAND_IN, tileAt(chronicle.tiles, coord));
   if (cost === undefined) throw new Error(`nothing crosses onto ${tileKey(coord)}`);
   return cost;
 }

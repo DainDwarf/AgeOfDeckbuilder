@@ -4,9 +4,9 @@ import type { Catalogue } from '../rules/catalogue';
 import {
   admitted,
   apply,
-  beginChronicle,
   type Command,
   costOf,
+  launched,
   outcome,
   refusalOf,
   type Stage,
@@ -59,14 +59,21 @@ const LABEL_STYLE = {
 
 export class ChronicleScene extends Phaser.Scene {
   private readonly catalogue: Catalogue;
+  private readonly region: string;
   private readonly deck: readonly CardId[];
   private current: Chronicle;
   /** The play-out running on the chronicle screen as it stands, and nothing while none is. */
   private sequence: symbol | undefined;
 
-  constructor(catalogue: Catalogue, seed: number | undefined, deck: readonly CardId[]) {
+  constructor(
+    catalogue: Catalogue,
+    region: string,
+    seed: number | undefined,
+    deck: readonly CardId[],
+  ) {
     super('chronicle');
     this.catalogue = catalogue;
+    this.region = region;
     this.deck = deck;
     this.current = this.begin(seed);
   }
@@ -82,12 +89,13 @@ export class ChronicleScene extends Phaser.Scene {
   }
 
   /**
-   * A chronicle on this chronicle screen's deck, from the seed it was asked for or from a fresh
-   * one. The fresh one is the one place entropy enters the game: `src/rules/` draws only from the
-   * seed it is handed.
+   * A chronicle on this chronicle screen's region and deck, from the seed it was asked for or from a
+   * fresh one. The fresh one is the one place entropy enters the game: `src/rules/` draws only from
+   * the seed it is handed.
    */
   private begin(seed: number | undefined): Chronicle {
-    return beginChronicle(this.catalogue, seed ?? (Math.random() * 2 ** 32) | 0, this.deck);
+    const drawn = seed ?? (Math.random() * 2 ** 32) | 0;
+    return launched(this.catalogue, this.region, drawn, this.deck);
   }
 
   /**
@@ -108,7 +116,7 @@ export class ChronicleScene extends Phaser.Scene {
     createBand(this);
 
     const parts: Part[] = [];
-    const view = createMapView(this, map, this.current);
+    const view = createMapView(this, map, this.catalogue, this.current);
     const panel = createInfoPanel(this, map, this.catalogue);
     const note = createRefusalNote(this, map);
 
@@ -192,7 +200,7 @@ export class ChronicleScene extends Phaser.Scene {
      */
     const thresholdOn = (found: PressedTile | undefined): Cost | undefined => {
       if (!cityMode || found === undefined) return undefined;
-      if (tileRefusal(this.current, found.tile) === undefined) return undefined;
+      if (tileRefusal(this.catalogue, this.current, found.tile) === undefined) return undefined;
       return tileCost(this.current, found.tile).find(({ resource }) => resource === 'culture');
     };
 
@@ -227,6 +235,7 @@ export class ChronicleScene extends Phaser.Scene {
         return;
       }
       const cards = cardsOf(
+        this.catalogue,
         face.tile,
         face.asStands ? this.current.units : [],
         this.current.rivers,
@@ -248,9 +257,9 @@ export class ChronicleScene extends Phaser.Scene {
      * act.
      */
     const act = async (found: PressedTile): Promise<void> => {
-      const refusal = tileRefusal(this.current, found.tile);
+      const refusal = tileRefusal(this.catalogue, this.current, found.tile);
       if (refusal === undefined) return;
-      const command = cityCommand(this.current, found.tile);
+      const command = cityCommand(this.catalogue, this.current, found.tile);
       if (command === undefined) {
         note.overTile(refusedAct(refusal), found.at);
         return;

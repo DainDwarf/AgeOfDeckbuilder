@@ -1,7 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
 import { STAND_IN } from '../src/content/stand-in';
 import { aimOf, CARDS, DECKS, refuses } from '../src/rules/cards';
-import { beginChronicle, costOf, refusalOf } from '../src/rules/chronicle';
+import { costOf, refusalOf } from '../src/rules/chronicle';
 import { tileAt, tileKey } from '../src/rules/map';
 import { type CardId, type Chronicle, playable } from '../src/rules/state';
 import { text } from '../src/ui/text';
@@ -16,6 +16,7 @@ import {
   endedTurn,
   endTurn,
   firstSeed,
+  launch,
   mapFrame,
   type OnScreen,
   onScreen,
@@ -49,7 +50,7 @@ function refusedRun(
   lies: (chronicle: Chronicle) => number,
 ): { seed: number; turn: number } {
   return firstSeed(`opens a turn on ${such}`, (seed) => {
-    let chronicle = beginChronicle(STAND_IN, seed, DECKS.PH_Deck);
+    let chronicle = launch(seed, DECKS.PH_Deck);
     for (let turn = 1; turn <= 8; turn++) {
       if (lies(chronicle) !== -1) return { seed, turn };
       chronicle = endedTurn(chronicle);

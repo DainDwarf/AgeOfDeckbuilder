@@ -1,7 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
 import { STAND_IN } from '../src/content/stand-in';
 import { DECKS } from '../src/rules/cards';
-import { apply, beginChronicle, outcome, refusalOf } from '../src/rules/chronicle';
+import { apply, outcome, refusalOf } from '../src/rules/chronicle';
 import { distance, neighbours, type TileCoords, tileKey } from '../src/rules/map';
 import { inSight } from '../src/rules/sight';
 import { type Chronicle, playable } from '../src/rules/state';
@@ -19,6 +19,7 @@ import {
   firstSeed,
   glyphs,
   glyphsOf,
+  launch,
   marksIn,
   open,
   ringedTile,
@@ -50,7 +51,7 @@ function fogRun(): Run {
   return firstSeed(
     'opens a turn on a worker whose step out and back leaves a tile in fog',
     (seed) => {
-      let chronicle = beginChronicle(STAND_IN, seed, DECKS.PH_Deck);
+      let chronicle = launch(seed, DECKS.PH_Deck);
       for (let turn = 1; turn <= 8; turn++) {
         const stepped = steppedThisTurn(chronicle);
         if (stepped !== undefined) return { seed, turn, ...stepped };
@@ -90,7 +91,7 @@ function roundTrips(chronicle: Chronicle): RoundTrip[] {
 /** What this hand's worker leaves behind it when it steps one tile off the city and back again. */
 function steppedThisTurn(chronicle: Chronicle): Omit<Run, 'seed' | 'turn'> | undefined {
   for (const { out, back } of roundTrips(chronicle)) {
-    const seen = inSight(back);
+    const seen = inSight(STAND_IN, back);
     const charted = new Set(back.snapshots.map(tileKey));
     const fog = back.snapshots.find((snapshot) => !seen.has(tileKey(snapshot)));
     const uncharted = back.tiles.find((tile) => !charted.has(tileKey(tile)));
@@ -118,7 +119,7 @@ type EnemyRun = {
  */
 function enemyInFog(): EnemyRun {
   return firstSeed('leaves an enemy standing in the fog behind a worker', (seed) => {
-    let chronicle = beginChronicle(STAND_IN, seed, DECKS.PH_Deck);
+    let chronicle = launch(seed, DECKS.PH_Deck);
     for (let turn = 1; turn <= 8; turn++) {
       const stepped = foggedThisTurn(chronicle);
       if (stepped !== undefined) return { seed, turn, ...stepped };
@@ -132,7 +133,7 @@ function enemyInFog(): EnemyRun {
 /** Where this hand's worker steps out and back to leave an enemy behind it in fog. */
 function foggedThisTurn(chronicle: Chronicle): Omit<EnemyRun, 'seed' | 'turn'> | undefined {
   for (const { out, back } of roundTrips(chronicle)) {
-    const seen = inSight(back);
+    const seen = inSight(STAND_IN, back);
     const fog = back.snapshots.find(
       (snapshot) =>
         !seen.has(tileKey(snapshot)) &&
@@ -180,7 +181,7 @@ type Charting = {
  */
 function riverCharting(): Charting {
   return firstSeed('opens a turn on a worker whose step charts a river', (seed) => {
-    let chronicle = beginChronicle(STAND_IN, seed, DECKS.PH_Deck);
+    let chronicle = launch(seed, DECKS.PH_Deck);
     for (let turn = 1; turn <= 8; turn++) {
       const charted = chartedThisTurn(chronicle);
       if (charted !== undefined) return { seed, turn, out: charted };
@@ -238,7 +239,7 @@ test('the map draws a tile in sight live, a tile in fog under its scrim, and an 
 
   // The map draws a face for every tile it has ever seen, and one scrim for each of them in fog.
   const stood = await chronicleOf(page);
-  const seen = inSight(stood);
+  const seen = inSight(STAND_IN, stood);
   expect(await marksIn(page, 'terrain')).toBe(stood.snapshots.length);
   expect(await marksIn(page, 'fog')).toBe(
     stood.snapshots.filter((snapshot) => !seen.has(tileKey(snapshot))).length,

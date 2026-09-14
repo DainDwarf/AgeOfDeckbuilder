@@ -1,14 +1,13 @@
 import { type Catalogue, entered } from './catalogue';
 import {
-  BUILDINGS,
   type BuildingTypeId,
-  IMPROVEMENTS,
   type ImprovementId,
   type Terrain,
   type Tile,
   type TileCoords,
   tileKey,
 } from './map';
+import { buildingKind, improvementKind } from './map-kinds';
 import { RESOURCES, type Resources } from './resources';
 import { type Block, type CardId, type Chronicle, holds, idle, type TileBlock } from './state';
 import { refreshedMovePoints, spentAction, unitAt } from './units';
@@ -166,13 +165,13 @@ function worked(chronicle: Chronicle, tile: TileCoords): TileBlock | undefined {
  * the tile spends one of its action as the card's own effect lands.
  */
 function throughWorker(
-  refusesTile: (chronicle: Chronicle, tile: Tile) => TileBlock | undefined,
+  refusesTile: (catalogue: Catalogue, chronicle: Chronicle, tile: Tile) => TileBlock | undefined,
   effect: (paid: Chronicle, at: TileCoords) => Chronicle,
 ): Aim & { readonly aim: 'tile' } {
   return {
     aim: 'tile',
-    refuses: (_catalogue, chronicle, tile) =>
-      firstRefusal(worked(chronicle, tile), refusesTile(chronicle, tile)),
+    refuses: (catalogue, chronicle, tile) =>
+      firstRefusal(worked(chronicle, tile), refusesTile(catalogue, chronicle, tile)),
     effect: (_catalogue, paid, at) => effect(acted(paid, at), at),
   };
 }
@@ -301,9 +300,9 @@ export const CARDS: Record<CardId, Card> = {
     kind: 'building',
     cost: { production: 3 },
     ...throughWorker(
-      (chronicle, tile) =>
+      (catalogue, chronicle, tile) =>
         firstRefusal(
-          made(tile, BUILDINGS.PH_Farm.terrains),
+          made(tile, buildingKind(catalogue, 'PH_Farm').terrains),
           inside(chronicle, tile),
           slotFree(tile),
         ),
@@ -327,8 +326,11 @@ export const CARDS: Record<CardId, Card> = {
     kind: 'instant',
     cost: { production: 3 },
     ...throughWorker(
-      (_, tile) =>
-        firstRefusal(made(tile, IMPROVEMENTS.PH_Mine.terrains), unimproved(tile, 'PH_Mine')),
+      (catalogue, _, tile) =>
+        firstRefusal(
+          made(tile, improvementKind(catalogue, 'PH_Mine').terrains),
+          unimproved(tile, 'PH_Mine'),
+        ),
       (paid, at) => improved(paid, at, 'PH_Mine'),
     ),
   },
@@ -336,8 +338,11 @@ export const CARDS: Record<CardId, Card> = {
     kind: 'instant',
     cost: { production: 2 },
     ...throughWorker(
-      (_, tile) =>
-        firstRefusal(made(tile, IMPROVEMENTS.PH_Road.terrains), unimproved(tile, 'PH_Road')),
+      (catalogue, _, tile) =>
+        firstRefusal(
+          made(tile, improvementKind(catalogue, 'PH_Road').terrains),
+          unimproved(tile, 'PH_Road'),
+        ),
       (paid, at) => improved(paid, at, 'PH_Road'),
     ),
   },
@@ -345,7 +350,7 @@ export const CARDS: Record<CardId, Card> = {
     kind: 'instant',
     cost: { production: 5 },
     ...throughWorker(
-      (_, tile) => firstRefusal(made(tile, ['plain']), slotFree(tile)),
+      (_catalogue, _, tile) => firstRefusal(made(tile, ['plain']), slotFree(tile)),
       (paid, at) => terraformed(paid, at, 'urban'),
     ),
   },

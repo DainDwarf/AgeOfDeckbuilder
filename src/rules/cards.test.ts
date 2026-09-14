@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 import { type AimedCard, aimOf, CARDS, DECKS, refuses } from './cards';
-import { admitted, apply, beginChronicle, type Command, outcome, refusalOf } from './chronicle';
+import { admitted, apply, type Command, launched, outcome, refusalOf } from './chronicle';
 import {
   actionOf,
   assignTo,
@@ -18,6 +18,7 @@ import {
   madeOf,
   NO_GROWTH,
   pointsOf,
+  REGION,
   stagedBy,
   standing,
   unitNamed,
@@ -26,16 +27,8 @@ import {
   withUnits,
   worker,
 } from './fixtures';
-import {
-  cornersOf,
-  MOVE_POINT,
-  RIVER_YIELDS,
-  TERRAIN_YIELDS,
-  type Terrain,
-  type TileCoords,
-  tileAt,
-  tileKey,
-} from './map';
+import { cornersOf, MOVE_POINT, type Terrain, type TileCoords, tileAt, tileKey } from './map';
+import { terrainKind } from './map-kinds';
 import { RESOURCES, type Resources } from './resources';
 import { type CardId, type Chronicle, idle, playable, type TileBlock } from './state';
 import { standsOn } from './units';
@@ -104,7 +97,7 @@ function workedTile(at: TileCoords, terrain: Terrain, carrying: Carrying = {}): 
   const tiles = madeOf(field(2), terrain, [at]);
   return founded(2, {
     tiles,
-    units: standsOn(WORKER, tileAt(tiles, at)) ? [worker(at)] : [],
+    units: standsOn(CATALOGUE, WORKER, tileAt(tiles, at)) ? [worker(at)] : [],
     ...carrying,
   });
 }
@@ -128,9 +121,9 @@ test('a plain a river runs along stops taking its food once the tile is terrafor
   for (const resource of RESOURCES) {
     expect(urban.resources[resource]).toBe(
       plain.resources[resource] -
-        (TERRAIN_YIELDS.plain[resource] ?? 0) -
-        (RIVER_YIELDS.plain?.[resource] ?? 0) +
-        (TERRAIN_YIELDS.urban[resource] ?? 0),
+        (terrainKind(CATALOGUE, 'plain').yields[resource] ?? 0) -
+        (terrainKind(CATALOGUE, 'plain').river?.[resource] ?? 0) +
+        (terrainKind(CATALOGUE, 'urban').yields[resource] ?? 0),
     );
   }
 });
@@ -308,7 +301,7 @@ test('the refresh instant is refused on a unit whose move points are full, its a
 });
 
 test('the deck the game ships with founds a chronicle that draws a full hand from it', () => {
-  const chronicle = beginChronicle(CATALOGUE, 2026, DECKS.PH_Deck);
+  const chronicle = launched(CATALOGUE, REGION, 2026, DECKS.PH_Deck);
 
   expect(chronicle.hand).toHaveLength(5);
   expect(everyCard(chronicle)).toHaveLength(DECKS.PH_Deck.length);
@@ -523,7 +516,7 @@ test('the mine card is refused on every terrain but the hills it goes on', () =>
 
     expect(admittedTiles(city, 'PH_Mine')).toEqual([]);
     expect(refusedFor(city, 'PH_Mine', at)).toBe(
-      standsOn(WORKER, tileAt(city.tiles, at)) ? 'terrain' : 'worker',
+      standsOn(CATALOGUE, WORKER, tileAt(city.tiles, at)) ? 'terrain' : 'worker',
     );
     expect(outcome(apply(CATALOGUE, city, aimedAt(at)))).toEqual(city);
   }
@@ -654,7 +647,7 @@ test('the urbanisation card is refused on every terrain but the plain it terrafo
 
     expect(admittedTiles(city, 'PH_Urbanisation')).toEqual([]);
     expect(refusedFor(city, 'PH_Urbanisation', at)).toBe(
-      standsOn(WORKER, tileAt(city.tiles, at)) ? 'terrain' : 'worker',
+      standsOn(CATALOGUE, WORKER, tileAt(city.tiles, at)) ? 'terrain' : 'worker',
     );
     expect(outcome(apply(CATALOGUE, city, aimedAt(at)))).toEqual(city);
   }
@@ -678,8 +671,8 @@ test('a terraformed tile yields its new terrain at the next income', () => {
   for (const resource of RESOURCES) {
     expect(urban.resources[resource]).toBe(
       bare.resources[resource] -
-        (TERRAIN_YIELDS.plain[resource] ?? 0) +
-        (TERRAIN_YIELDS.urban[resource] ?? 0),
+        (terrainKind(CATALOGUE, 'plain').yields[resource] ?? 0) +
+        (terrainKind(CATALOGUE, 'urban').yields[resource] ?? 0),
     );
   }
 });

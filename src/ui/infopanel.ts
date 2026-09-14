@@ -1,21 +1,17 @@
 import type Phaser from 'phaser';
 import { type Catalogue, unitKind } from '../rules/catalogue';
 import {
-  BUILDINGS,
   type BuildingTypeId,
-  FEATURES,
   type FeatureId,
-  IMPROVEMENTS,
   type ImprovementId,
   MOVE_POINT,
   movementCost,
-  RIVER_YIELDS,
   type River,
   runsAlong,
-  TERRAIN_YIELDS,
   type Terrain,
   type Tile,
 } from '../rules/map';
+import { buildingKind, featureKind, improvementKind, terrainKind } from '../rules/map-kinds';
 import { RESOURCES, type Resource, type Resources } from '../rules/resources';
 import { type Unit, unitAt } from '../rules/units';
 import { CARD_EDGE, CARD_HEIGHT, CARD_METRICS, CARD_WIDTH, drawCardSurface } from './card-face';
@@ -31,7 +27,7 @@ import {
   unitMark,
 } from './map';
 import { RESOURCE_COLOURS } from './resource-bar';
-import { text, unitName } from './text';
+import { buildingName, featureName, improvementName, terrainName, text, unitName } from './text';
 import { createTooltip } from './tooltip';
 
 /** One line of a card's ledger: what it is drawn and named by, and what it gives at income. */
@@ -57,7 +53,12 @@ export type Card =
  * the tile's improvements, and the terrain with its feature and the river running along it. The
  * first two are left out when nothing fills them; the terrain card always stands.
  */
-export function cardsOf(tile: Tile, units: readonly Unit[], rivers: readonly River[]): Card[] {
+export function cardsOf(
+  catalogue: Catalogue,
+  tile: Tile,
+  units: readonly Unit[],
+  rivers: readonly River[],
+): Card[] {
   const cards: Card[] = [];
 
   const unit = unitAt(units, tile);
@@ -71,7 +72,7 @@ export function cardsOf(tile: Tile, units: readonly Unit[], rivers: readonly Riv
   const ground: Row[] = [{ kind: 'terrain', terrain: tile.terrain }];
   if (tile.feature !== undefined) ground.push({ kind: 'feature', feature: tile.feature });
   if (runsAlong(rivers, tile)) ground.push({ kind: 'river', terrain: tile.terrain });
-  cards.push({ kind: 'terrain', rows: ground, movementCost: movementCost(tile) });
+  cards.push({ kind: 'terrain', rows: ground, movementCost: movementCost(catalogue, tile) });
 
   return cards;
 }
@@ -354,7 +355,7 @@ function buildFace(scene: Phaser.Scene, catalogue: Catalogue, bubble: RowBubble,
     );
     contents.push(rowName);
 
-    const gives = yieldsOf(row);
+    const gives = yieldsOf(catalogue, row);
     if (gives.length === 0) {
       contents.push(
         addText(scene, right, rowTop + line / 2, text('panel.no-yield'), LABEL_STYLE).setOrigin(
@@ -466,13 +467,13 @@ function markOf(scene: Phaser.Scene, row: Row): Phaser.GameObjects.Polygon {
 function nameOf(row: Row): string {
   switch (row.kind) {
     case 'building':
-      return text(`building.${row.building}`);
+      return buildingName(row.building);
     case 'improvement':
-      return text(`improvement.${row.improvement}`);
+      return improvementName(row.improvement);
     case 'feature':
-      return text(`feature.${row.feature}`);
+      return featureName(row.feature);
     case 'terrain':
-      return text(`terrain.${row.terrain}`);
+      return terrainName(row.terrain);
     case 'river':
       return text('panel.river');
   }
@@ -491,24 +492,24 @@ function noteOf(row: Row): string | undefined {
   }
 }
 
-function yieldsIn(row: Row): Partial<Resources> {
+function yieldsIn(catalogue: Catalogue, row: Row): Partial<Resources> {
   switch (row.kind) {
     case 'building':
-      return BUILDINGS[row.building].yields;
+      return buildingKind(catalogue, row.building).yields;
     case 'improvement':
-      return IMPROVEMENTS[row.improvement].yields;
+      return improvementKind(catalogue, row.improvement).yields;
     case 'feature':
-      return FEATURES[row.feature].yields;
+      return featureKind(catalogue, row.feature).yields;
     case 'terrain':
-      return TERRAIN_YIELDS[row.terrain];
+      return terrainKind(catalogue, row.terrain).yields;
     case 'river':
-      return RIVER_YIELDS[row.terrain] ?? {};
+      return terrainKind(catalogue, row.terrain).river ?? {};
   }
 }
 
 /** What the row gives at income, in the order the resource bar reads. */
-function yieldsOf(row: Row): { resource: Resource; amount: number }[] {
-  const yields = yieldsIn(row);
+function yieldsOf(catalogue: Catalogue, row: Row): { resource: Resource; amount: number }[] {
+  const yields = yieldsIn(catalogue, row);
   const given: { resource: Resource; amount: number }[] = [];
   for (const resource of RESOURCES) {
     const amount = yields[resource];

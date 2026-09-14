@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import type { Catalogue } from '../rules/catalogue';
 import type { Stage, UnitCommand } from '../rules/chronicle';
 import { cityDrag, claimable, type ReassignCommand } from '../rules/city';
 import {
@@ -49,47 +50,24 @@ import {
   whileUp,
 } from './design-space';
 import { onKeyDown, onKeyUp } from './keys';
-import { unitMarkOf } from './marks';
+import {
+  BUILT,
+  buildingColourOf,
+  buildingMarkOf,
+  ENEMY_RED,
+  featureColourOf,
+  featureMarkOf,
+  improvementMarkOf,
+  terrainColourOf,
+  unitMarkOf,
+} from './marks';
 import { RESOURCE_COLOURS } from './resource-bar';
 import { text } from './text';
 import { VEILS_ON, type Veils } from './veils';
 
 const TILE_SIZE = 24;
 
-const TERRAIN_COLOURS: Record<Terrain, number> = {
-  plain: 0x7d9c55,
-  forest: 0x2f6f4e,
-  hills: 0x9a8555,
-  mountain: 0x6b5f57,
-  coast: 0x3d6d9e,
-  deep: 0x2b4f7a,
-  urban: 0x8f8f9c,
-};
-
-const FACTION_COLOURS: Record<Faction, number> = { player: ACCENT, enemy: 0xb4453c };
-
-/** The wall the city is drawn as, and the camp with it: a camp is the city's mark in enemy red. */
-const WALL: number[] = corners([
-  -15, 10, -15, -12, -8, -12, -8, -6, -4, -6, -4, -12, 4, -12, 4, -6, 8, -6, 8, -12, 15, -12, 15,
-  10,
-]);
-
-/**
- * Placeholder primitives until the art pass: the farm a house, the city and the camp a crenellated
- * wall, all of them wide enough to show under a unit.
- */
-const BUILDING_MARKS: Record<BuildingTypeId, number[]> = {
-  PH_City: WALL,
-  PH_Farm: corners([-16, 8, -16, -2, 0, -13, 16, -2, 16, 8]),
-  PH_Camp: WALL,
-};
-
-/** Placeholder primitives until the art pass: the fertile plain a small hexagon of its own green. */
-const FEATURE_MARKS: Record<FeatureId, number[]> = {
-  PH_Fertile: hexagon(4),
-};
-
-const FEATURE_COLOURS: Record<FeatureId, number> = { PH_Fertile: 0x4a7a2d };
+const FACTION_COLOURS: Record<Faction, number> = { player: ACCENT, enemy: ENEMY_RED };
 
 /**
  * Placeholder primitives until the art pass: a river a line along its corners on the map, and a
@@ -99,21 +77,6 @@ const RIVER_COLOUR = 0x62a9e0;
 const RIVER_WIDTH = 5;
 const RIVER_OUTLINE_WIDTH = 7;
 const RIVER_MARK: number[] = corners([-12, -12, -4, 0, 4, -8, 12, 4, 12, 12, 4, 0, -4, 8, -12, -4]);
-
-/** Placeholder primitives until the art pass: the mine a cut into the ground, the road a straight band. */
-const IMPROVEMENT_MARKS: Record<ImprovementId, number[]> = {
-  PH_Mine: corners([-8, 7, -4, -7, 4, -7, 8, 7]),
-  PH_Road: corners([-8, -2, 8, -2, 8, 2, -8, 2]),
-};
-
-const BUILT = 0xcfc6b4;
-
-/** What each building's mark is painted in: the stone everything built is, a camp the enemy's red. */
-const BUILDING_COLOURS: Record<BuildingTypeId, number> = {
-  PH_City: BUILT,
-  PH_Farm: BUILT,
-  PH_Camp: FACTION_COLOURS.enemy,
-};
 
 const OUTLINE = 0x0d1014;
 
@@ -318,7 +281,7 @@ export type MapView = {
 /** The one way a tile's terrain is drawn: the hexagonal face, at the size a tile is drawn at. */
 export function terrainMark(scene: Phaser.Scene, terrain: Terrain): Phaser.GameObjects.Polygon {
   return scene.add
-    .polygon(0, 0, hexagon(TILE_SIZE), TERRAIN_COLOURS[terrain])
+    .polygon(0, 0, hexagon(TILE_SIZE), terrainColourOf(terrain))
     .setStrokeStyle(1, OUTLINE);
 }
 
@@ -328,14 +291,14 @@ export function buildingMark(
   building: BuildingTypeId,
 ): Phaser.GameObjects.Polygon {
   return scene.add
-    .polygon(0, 0, BUILDING_MARKS[building], BUILDING_COLOURS[building])
+    .polygon(0, 0, corners(buildingMarkOf(building)), buildingColourOf(building))
     .setStrokeStyle(2, OUTLINE);
 }
 
 /** The one way a feature is drawn: its placeholder mark, in the colour that feature is known by. */
 export function featureMark(scene: Phaser.Scene, feature: FeatureId): Phaser.GameObjects.Polygon {
   return scene.add
-    .polygon(0, 0, FEATURE_MARKS[feature], FEATURE_COLOURS[feature])
+    .polygon(0, 0, corners(featureMarkOf(feature)), featureColourOf(feature))
     .setStrokeStyle(1, OUTLINE);
 }
 
@@ -349,7 +312,9 @@ export function improvementMark(
   scene: Phaser.Scene,
   improvement: ImprovementId,
 ): Phaser.GameObjects.Polygon {
-  return scene.add.polygon(0, 0, IMPROVEMENT_MARKS[improvement], BUILT).setStrokeStyle(2, OUTLINE);
+  return scene.add
+    .polygon(0, 0, corners(improvementMarkOf(improvement)), BUILT)
+    .setStrokeStyle(2, OUTLINE);
 }
 
 /** The one way a unit is drawn: its placeholder mark, in the colour of the faction it acts for. */
@@ -541,7 +506,12 @@ type Grab = { readonly from: { x: number; y: number }; dragging: boolean } & (
  * Every layer of every tile, the border and the units are redrawn on each state change; and a card
  * is aimed here — the rules say which tiles light up, never this file.
  */
-export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chronicle): MapView {
+export function createMapView(
+  scene: Phaser.Scene,
+  map: Surface,
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+): MapView {
   const camera = map.camera;
   const layer = map.layer;
 
@@ -939,7 +909,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
   const drawing = (
     chronicle: Chronicle,
   ): { drawn: ReadonlySet<string>; live: ReadonlySet<string> } => {
-    const seen = inSight(chronicle);
+    const seen = inSight(catalogue, chronicle);
     const kept = new Set(chronicle.snapshots.map(tileKey));
     const keys = chronicle.tiles.map(tileKey);
     const shownKeys = new Set(
@@ -999,7 +969,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
       const face = drawnOf(tile);
       if (face === undefined) continue;
       const asked = inside.has(tileKey(tile)) ? EVERY_RESOURCE : showing;
-      const yields = tileYield(face.tile, shown.rivers);
+      const yields = tileYield(catalogue, face.tile, shown.rivers);
       const owed: Resource[] = [];
       for (const resource of RESOURCES) {
         if (!asked.has(resource)) continue;
@@ -1059,7 +1029,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
       cityMarks.add(mark);
       assignedMarks.set(tileKey(coord), mark);
     }
-    for (const coord of claimable(shown)) {
+    for (const coord of claimable(catalogue, shown)) {
       cityMarks.add(ringMark(scene, coord, RESOURCE_COLOURS.culture, RING).setName('claimable'));
     }
   };
@@ -1174,7 +1144,7 @@ export function createMapView(scene: Phaser.Scene, map: Surface, chronicle: Chro
     if (current !== undefined && standing?.faction === 'player') {
       lit = {
         unit: standing.id,
-        landings: reachable(current, standing),
+        landings: reachable(catalogue, current, standing),
         targets: attackable(current.units, standing).map((other) => other.tile),
       };
     }

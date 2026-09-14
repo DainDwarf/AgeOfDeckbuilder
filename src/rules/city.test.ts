@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { apply, beginChronicle, type Command, outcome } from './chronicle';
+import { apply, type Command, launched, outcome } from './chronicle';
 import { cityCommand, cityDrag, claimable, growthThreshold, tileCost, tileRefusal } from './city';
 import {
   assignTo,
@@ -13,24 +13,21 @@ import {
   field,
   founded,
   NO_GROWTH,
+  REGION,
   stagedBy,
   standing,
   withTile,
 } from './fixtures';
 import {
-  BUILDINGS,
   cornersOf,
   distance,
-  FEATURES,
-  IMPROVEMENTS,
   neighbours,
-  RIVER_YIELDS,
-  TERRAIN_YIELDS,
   type Terrain,
   type Tile,
   type TileCoords,
   tileKey,
 } from './map';
+import { buildingKind, featureKind, improvementKind, terrainKind } from './map-kinds';
 import { RESOURCES } from './resources';
 import { type Chronicle, idle } from './state';
 
@@ -40,32 +37,51 @@ function reassignTo(from: TileCoords, to: TileCoords): Command {
 }
 
 /** A tile of a generated map that touches the border and has never been in sight. */
-function unchartedTouching(chronicle: Chronicle): TileCoords {
+function unchartedTouching(chronicle: Chronicle): TileCoords | undefined {
   const seen = new Set(chronicle.snapshots.map(tileKey));
   const found = chronicle.tiles.find(
     (tile) => distance(tile, chronicle.city) === 2 && !seen.has(tileKey(tile)),
   );
-  if (found === undefined) throw new Error('every tile touching this border has been in sight');
-  return { q: found.q, r: found.r };
+  return found === undefined ? undefined : { q: found.q, r: found.r };
 }
 
 /**
  * The chronicle with a worker entered and stepped onto a tile between the city and `tile`, from
- * where it charts it.
+ * where it charts it; nothing where the hand enters no worker or the worker takes no such step.
  */
-function withWorkerBeside(chronicle: Chronicle, tile: TileCoords): Chronicle {
+function withWorkerBeside(chronicle: Chronicle, tile: TileCoords): Chronicle | undefined {
   const at = chronicle.hand.indexOf('PH_Worker');
-  if (at === -1) throw new Error('this hand holds no worker to enter');
+  if (at === -1) return undefined;
   const entered = outcome(apply(CATALOGUE, chronicle, { type: 'play', index: at, aim: 'none' }));
+  if (entered.units.length === chronicle.units.length) return undefined;
   const worker = entered.units[entered.units.length - 1];
   const between = neighbours(entered.city).find((coord) => distance(coord, tile) === 1);
-  if (between === undefined) throw new Error(`no tile of the border touches ${tileKey(tile)}`);
-  return outcome(apply(CATALOGUE, entered, { type: 'move', unit: worker.id, tile: between }));
+  if (between === undefined) return undefined;
+  const stepped = outcome(
+    apply(CATALOGUE, entered, { type: 'move', unit: worker.id, tile: between }),
+  );
+  return stepped === entered ? undefined : stepped;
+}
+
+/**
+ * The first seed whose opening, one end of turn on, leaves a tile touching the border uncharted
+ * that a worker the hand enters can step beside: that chronicle, and the tile.
+ */
+function darkBorder(): { opened: Chronicle; dark: TileCoords } {
+  for (let seed = 0; seed < 1000; seed++) {
+    const opened = outcome(
+      apply(CATALOGUE, launched(CATALOGUE, REGION, seed, DECK), { type: 'end-turn' }),
+    );
+    const dark = unchartedTouching(opened);
+    if (dark === undefined || withWorkerBeside(opened, dark) === undefined) continue;
+    return { opened, dark };
+  }
+  throw new Error('no seed under a thousand leaves a dark border tile a worker can step beside');
 }
 
 test('the city holds its own tile and every tile touching it', () => {
   for (const seed of [0, 1234, 0xdeadbeef | 0]) {
-    const chronicle = beginChronicle(CATALOGUE, seed, DECK);
+    const chronicle = launched(CATALOGUE, REGION, seed, DECK);
     const held = new Set(chronicle.held.map(tileKey));
 
     expect(held.size).toBe(7);
@@ -76,7 +92,7 @@ test('the city holds its own tile and every tile touching it', () => {
 });
 
 test('the founding puts an inhabitant on every tile the city holds, and leaves two idle', () => {
-  const chronicle = beginChronicle(CATALOGUE, 1234, DECK);
+  const chronicle = launched(CATALOGUE, REGION, 1234, DECK);
 
   expect([...chronicle.assigned].map(tileKey).sort()).toEqual(
     [...chronicle.held].map(tileKey).sort(),
@@ -91,7 +107,7 @@ test('income yields every tile inside the border, and nothing outside it', () =>
 
   for (const resource of RESOURCES) {
     const yielded = inside.reduce(
-      (total, terrain) => total + (TERRAIN_YIELDS[terrain][resource] ?? 0),
+      (total, terrain) => total + (terrainKind(CATALOGUE, terrain).yields[resource] ?? 0),
       0,
     );
     expect(after.resources[resource]).toBe(yielded);
@@ -113,7 +129,7 @@ test('an assigned tile yields what all four of its layers declare, summed', () =
   const layered: Tile = {
     q: 1,
     r: 0,
-    terrain: FEATURES.PH_Fertile.terrain,
+    terrain: featureKind(CATALOGUE, 'PH_Fertile').terrain,
     feature: 'PH_Fertile',
     improvements: ['PH_Mine'],
     building: 'PH_Farm',
@@ -124,12 +140,12 @@ test('an assigned tile yields what all four of its layers declare, summed', () =
 
   for (const resource of RESOURCES) {
     expect(after.resources[resource]).toBe(
-      (TERRAIN_YIELDS.urban[resource] ?? 0) +
-        (BUILDINGS.PH_City.yields[resource] ?? 0) +
-        (TERRAIN_YIELDS[layered.terrain][resource] ?? 0) +
-        (FEATURES.PH_Fertile.yields[resource] ?? 0) +
-        (IMPROVEMENTS.PH_Mine.yields[resource] ?? 0) +
-        (BUILDINGS.PH_Farm.yields[resource] ?? 0),
+      (terrainKind(CATALOGUE, 'urban').yields[resource] ?? 0) +
+        (buildingKind(CATALOGUE, 'PH_City').yields[resource] ?? 0) +
+        (terrainKind(CATALOGUE, layered.terrain).yields[resource] ?? 0) +
+        (featureKind(CATALOGUE, 'PH_Fertile').yields[resource] ?? 0) +
+        (improvementKind(CATALOGUE, 'PH_Mine').yields[resource] ?? 0) +
+        (buildingKind(CATALOGUE, 'PH_Farm').yields[resource] ?? 0),
     );
   }
 });
@@ -148,7 +164,7 @@ test('a river running along a tile gives it one food at income, however many edg
 
     for (const resource of RESOURCES) {
       expect(after.resources[resource]).toBe(
-        bare.resources[resource] + (RIVER_YIELDS.plain?.[resource] ?? 0),
+        bare.resources[resource] + (terrainKind(CATALOGUE, 'plain').river?.[resource] ?? 0),
       );
     }
   }
@@ -169,7 +185,7 @@ test('two rivers meeting at a tile give it the one food between them', () => {
 
   for (const resource of RESOURCES) {
     expect(after.resources[resource]).toBe(
-      bare.resources[resource] + (RIVER_YIELDS.plain?.[resource] ?? 0),
+      bare.resources[resource] + (terrainKind(CATALOGUE, 'plain').river?.[resource] ?? 0),
     );
   }
 });
@@ -206,7 +222,7 @@ test('the city in its slot adds nothing to what the tile it stands on yields', (
   );
 
   for (const resource of RESOURCES) {
-    expect(founded.resources[resource]).toBe(TERRAIN_YIELDS.urban[resource] ?? 0);
+    expect(founded.resources[resource]).toBe(terrainKind(CATALOGUE, 'urban').yields[resource] ?? 0);
   }
 });
 
@@ -311,7 +327,7 @@ test('an assign with no inhabitant idle is refused', () => {
 });
 
 test('a drag takes the inhabitant off the tile it stands on and puts it on the tile it lands on', () => {
-  const founding = beginChronicle(CATALOGUE, 1, DECK);
+  const founding = launched(CATALOGUE, REGION, 1, DECK);
   const [from, to] = neighbours(founding.city);
   const freed = outcome(apply(CATALOGUE, founding, assignTo(to)));
 
@@ -327,9 +343,9 @@ test('a drag takes the inhabitant off the tile it stands on and puts it on the t
 });
 
 test('a drag onto a tile an inhabitant stands on, onto one the city does not hold, or onto the tile it started from is refused', () => {
-  const founding = beginChronicle(CATALOGUE, 1, DECK);
+  const founding = launched(CATALOGUE, REGION, 1, DECK);
   const [from, worked] = neighbours(founding.city);
-  const outside = claimable(founding)[0];
+  const outside = claimable(CATALOGUE, founding)[0];
 
   expect(cityDrag(founding, from, worked)).toBeUndefined();
   expect(stagedBy(founding, reassignTo(from, worked))).toEqual(['refused']);
@@ -339,7 +355,7 @@ test('a drag onto a tile an inhabitant stands on, onto one the city does not hol
 });
 
 test('a drag from a tile nobody stands on is refused', () => {
-  const founding = beginChronicle(CATALOGUE, 1, DECK);
+  const founding = launched(CATALOGUE, REGION, 1, DECK);
   const [bare, empty] = neighbours(founding.city);
   const freed = outcome(
     apply(CATALOGUE, outcome(apply(CATALOGUE, founding, assignTo(bare))), assignTo(empty)),
@@ -359,7 +375,7 @@ test('an assigned tile yields at income, and an unassigned one yields nothing', 
 
   for (const resource of RESOURCES) {
     expect(bare.resources[resource]).toBe(
-      worked.resources[resource] - (TERRAIN_YIELDS.plain[resource] ?? 0),
+      worked.resources[resource] - (terrainKind(CATALOGUE, 'plain').yields[resource] ?? 0),
     );
   }
 });
@@ -373,7 +389,7 @@ test('the city’s own tile unassigned yields nothing at income, like any other'
 
   for (const resource of RESOURCES) {
     expect(bare.resources[resource]).toBe(
-      worked.resources[resource] - (TERRAIN_YIELDS.urban[resource] ?? 0),
+      worked.resources[resource] - (terrainKind(CATALOGUE, 'urban').yields[resource] ?? 0),
     );
   }
 });
@@ -410,7 +426,9 @@ test('a claimed tile an inhabitant stands on yields at the next income', () => {
   const bare = outcome(apply(CATALOGUE, city, { type: 'end-turn' }));
   const wider = outcome(apply(CATALOGUE, claimed, { type: 'end-turn' }));
 
-  expect(wider.resources.food).toBe(bare.resources.food + (TERRAIN_YIELDS.plain.food ?? 0));
+  expect(wider.resources.food).toBe(
+    bare.resources.food + (terrainKind(CATALOGUE, 'plain').yields.food ?? 0),
+  );
 });
 
 test('a claim on a tile the border does not touch, off the map, or already held is refused', () => {
@@ -451,7 +469,7 @@ test('a claim costs one culture, and one more for every three tiles claimed', ()
 test('the city may claim every tile touching the border, and no other', () => {
   const city = founded(3);
 
-  expect(claimable(city).map(tileKey).sort()).toEqual(
+  expect(claimable(CATALOGUE, city).map(tileKey).sort()).toEqual(
     field(3)
       .filter((tile) => distance(tile, CITY) === 2)
       .map(tileKey)
@@ -460,28 +478,24 @@ test('the city may claim every tile touching the border, and no other', () => {
 });
 
 test('an uncharted tile touching the border is no claim of the city’s', () => {
-  const opened = outcome(
-    apply(CATALOGUE, beginChronicle(CATALOGUE, 4, DECK), { type: 'end-turn' }),
-  );
-  const dark = unchartedTouching(opened);
+  const { opened, dark } = darkBorder();
 
   expect(opened.resources.culture).toBeGreaterThanOrEqual(1);
-  expect(claimable(opened).map(tileKey)).not.toContain(tileKey(dark));
-  expect(tileRefusal(opened, dark)).toBeUndefined();
-  expect(cityCommand(opened, dark)).toBeUndefined();
+  expect(claimable(CATALOGUE, opened).map(tileKey)).not.toContain(tileKey(dark));
+  expect(tileRefusal(CATALOGUE, opened, dark)).toBeUndefined();
+  expect(cityCommand(CATALOGUE, opened, dark)).toBeUndefined();
   expect(stagedBy(opened, claimOf(dark))).toEqual(['refused']);
   expect(outcome(apply(CATALOGUE, opened, claimOf(dark)))).toBe(opened);
 });
 
 test('a unit that charts that tile makes it a claim the city can make', () => {
-  const opened = outcome(
-    apply(CATALOGUE, beginChronicle(CATALOGUE, 4, DECK), { type: 'end-turn' }),
-  );
-  const dark = unchartedTouching(opened);
+  const { opened, dark } = darkBorder();
   const charting = withWorkerBeside(opened, dark);
+  if (charting === undefined)
+    throw new Error('the worker found for this tile no longer steps beside it');
 
-  expect(claimable(charting).map(tileKey)).toContain(tileKey(dark));
-  expect(cityCommand(charting, dark)).toEqual(claimOf(dark));
+  expect(claimable(CATALOGUE, charting).map(tileKey)).toContain(tileKey(dark));
+  expect(cityCommand(CATALOGUE, charting, dark)).toEqual(claimOf(dark));
   expect(stagedBy(charting, claimOf(dark))).toEqual(['claim']);
   expect(outcome(apply(CATALOGUE, charting, claimOf(dark))).held.map(tileKey)).toContain(
     tileKey(dark),
@@ -492,9 +506,9 @@ test('a camp’s tile touching the border is no claim of the city’s', () => {
   const camp = { q: 2, r: 0 };
   const city = founded(3, { tiles: camped(field(3), [camp]), resources: culture(9) });
 
-  expect(claimable(city).map(tileKey)).not.toContain(tileKey(camp));
-  expect(tileRefusal(city, camp)).toBeUndefined();
-  expect(cityCommand(city, camp)).toBeUndefined();
+  expect(claimable(CATALOGUE, city).map(tileKey)).not.toContain(tileKey(camp));
+  expect(tileRefusal(CATALOGUE, city, camp)).toBeUndefined();
+  expect(cityCommand(CATALOGUE, city, camp)).toBeUndefined();
   expect(stagedBy(city, claimOf(camp))).toEqual(['refused']);
   expect(outcome(apply(CATALOGUE, city, claimOf(camp)))).toBe(city);
 });
@@ -507,23 +521,23 @@ test('a tile an enemy occupies is no claim of the city’s, and a unit of the pl
     units: [standing('enemy', occupied), standing('player', stood)],
   });
 
-  expect(claimable(city).map(tileKey)).not.toContain(tileKey(occupied));
-  expect(tileRefusal(city, occupied)).toBeUndefined();
-  expect(cityCommand(city, occupied)).toBeUndefined();
+  expect(claimable(CATALOGUE, city).map(tileKey)).not.toContain(tileKey(occupied));
+  expect(tileRefusal(CATALOGUE, city, occupied)).toBeUndefined();
+  expect(cityCommand(CATALOGUE, city, occupied)).toBeUndefined();
   expect(stagedBy(city, claimOf(occupied))).toEqual(['refused']);
   expect(outcome(apply(CATALOGUE, city, claimOf(occupied)))).toBe(city);
 
-  expect(claimable(city).map(tileKey)).toContain(tileKey(stood));
-  expect(cityCommand(city, stood)).toEqual(claimOf(stood));
+  expect(claimable(CATALOGUE, city).map(tileKey)).toContain(tileKey(stood));
+  expect(cityCommand(CATALOGUE, city, stood)).toEqual(claimOf(stood));
   expect(stagedBy(city, claimOf(stood))).toEqual(['claim']);
 });
 
 test('a city-mode click assigns on a tile the city holds and claims on any other', () => {
   const city = founded(3, { resources: culture(1) });
 
-  expect(cityCommand(city, { q: 1, r: 0 })).toEqual(assignTo({ q: 1, r: 0 }));
-  expect(cityCommand(city, { q: 2, r: 0 })).toEqual(claimOf({ q: 2, r: 0 }));
-  expect(cityCommand(city, { q: 3, r: 0 })).toBeUndefined();
+  expect(cityCommand(CATALOGUE, city, { q: 1, r: 0 })).toEqual(assignTo({ q: 1, r: 0 }));
+  expect(cityCommand(CATALOGUE, city, { q: 2, r: 0 })).toEqual(claimOf({ q: 2, r: 0 }));
+  expect(cityCommand(CATALOGUE, city, { q: 3, r: 0 })).toBeUndefined();
 });
 
 test('a city-mode click is refused for the culture it costs, and a tile off the border refuses nothing', () => {
@@ -531,18 +545,21 @@ test('a city-mode click is refused for the culture it costs, and a tile off the 
   const paid = founded(3, { resources: culture(1) });
 
   expect(tileCost(city, { q: 2, r: 0 })).toEqual([{ resource: 'culture', amount: 1 }]);
-  expect(tileRefusal(city, { q: 2, r: 0 })).toEqual({ unaffordable: ['culture'], blocked: [] });
-  expect(tileRefusal(paid, { q: 2, r: 0 })).toEqual({ unaffordable: [], blocked: [] });
+  expect(tileRefusal(CATALOGUE, city, { q: 2, r: 0 })).toEqual({
+    unaffordable: ['culture'],
+    blocked: [],
+  });
+  expect(tileRefusal(CATALOGUE, paid, { q: 2, r: 0 })).toEqual({ unaffordable: [], blocked: [] });
   expect(tileCost(paid, CITY)).toEqual([]);
-  expect(tileRefusal(paid, CITY)).toEqual({ unaffordable: [], blocked: [] });
+  expect(tileRefusal(CATALOGUE, paid, CITY)).toEqual({ unaffordable: [], blocked: [] });
 });
 
 test('a tile the city neither holds nor can claim is no act of the city’s, and refuses a claim', () => {
   const city = founded(3, { resources: culture(9) });
 
-  expect(tileRefusal(city, { q: 3, r: 0 })).toBeUndefined();
-  expect(tileRefusal(city, { q: 9, r: 9 })).toBeUndefined();
-  expect(cityCommand(city, { q: 3, r: 0 })).toBeUndefined();
+  expect(tileRefusal(CATALOGUE, city, { q: 3, r: 0 })).toBeUndefined();
+  expect(tileRefusal(CATALOGUE, city, { q: 9, r: 9 })).toBeUndefined();
+  expect(cityCommand(CATALOGUE, city, { q: 3, r: 0 })).toBeUndefined();
   expect(stagedBy(city, claimOf({ q: 3, r: 0 }))).toEqual(['refused']);
 });
 
@@ -551,13 +568,13 @@ test('a city-mode click on a held tile nobody stands on is refused while nobody 
   const empty = { q: 1, r: 0 };
 
   expect(idle(spent)).toBe(0);
-  expect(tileRefusal(spent, empty)).toEqual({ unaffordable: [], blocked: ['idle'] });
-  expect(cityCommand(spent, empty)).toBeUndefined();
+  expect(tileRefusal(CATALOGUE, spent, empty)).toEqual({ unaffordable: [], blocked: ['idle'] });
+  expect(cityCommand(CATALOGUE, spent, empty)).toBeUndefined();
   expect(stagedBy(spent, assignTo(empty))).toEqual(['refused']);
 
   const freed = outcome(apply(CATALOGUE, spent, assignTo(CITY)));
 
-  expect(tileRefusal(freed, empty)).toEqual({ unaffordable: [], blocked: [] });
+  expect(tileRefusal(CATALOGUE, freed, empty)).toEqual({ unaffordable: [], blocked: [] });
   expect(stagedBy(freed, assignTo(empty))).toEqual(['assign']);
 });
 

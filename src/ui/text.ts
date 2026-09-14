@@ -163,7 +163,32 @@ export function text(key: TextKey, values: Record<string, string | number> = {})
 
 /** What a unit kind is named on the screen; a kind no entry names is refused. */
 export function unitName(type: string): string {
-  const key = `unit.${type}`;
-  if (!Object.hasOwn(TEXT, key)) throw new Error(`no entry names the unit kind ${type}`);
+  return named('unit', type, 'the unit kind');
+}
+
+/** What a terrain is named on the screen; a terrain no entry names is refused. */
+export function terrainName(terrain: string): string {
+  return named('terrain', terrain, 'the terrain');
+}
+
+/** What a building is named on the screen; a building no entry names is refused. */
+export function buildingName(building: string): string {
+  return named('building', building, 'the building');
+}
+
+/** What a feature is named on the screen; a feature no entry names is refused. */
+export function featureName(feature: string): string {
+  return named('feature', feature, 'the feature');
+}
+
+/** What an improvement is named on the screen; an improvement no entry names is refused. */
+export function improvementName(improvement: string): string {
+  return named('improvement', improvement, 'the improvement');
+}
+
+/** The entry a content id names under its prefix; an id no entry names is refused. */
+function named(prefix: string, id: string, noun: string): string {
+  const key = `${prefix}.${id}`;
+  if (!Object.hasOwn(TEXT, key)) throw new Error(`no entry names ${noun} ${id}`);
   return text(key as TextKey);
 }

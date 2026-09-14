@@ -1,12 +1,11 @@
 import { expect, test } from '@playwright/test';
-import { STAND_IN } from '../src/content/stand-in';
 import { DECKS } from '../src/rules/cards';
-import { beginChronicle } from '../src/rules/chronicle';
 import {
   chronicleOf,
   counted,
   endTurn,
   firstSeed,
+  launch,
   open,
   riverRuns,
   watch,
@@ -15,7 +14,7 @@ import {
 /** The first seed whose map runs a river along a tile the founding has charted. */
 function riverSeed(): number {
   return firstSeed('runs a river along a charted tile', (seed) =>
-    riverRuns(beginChronicle(STAND_IN, seed, DECKS.PH_Deck)) > 0 ? seed : undefined,
+    riverRuns(launch(seed, DECKS.PH_Deck)) > 0 ? seed : undefined,
   );
 }
 

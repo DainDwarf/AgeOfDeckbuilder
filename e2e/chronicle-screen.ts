@@ -1,8 +1,8 @@
 import { expect, type Page } from '@playwright/test';
 import type Phaser from 'phaser';
-import { STAND_IN } from '../src/content/stand-in';
+import { STAND_IN, STAND_IN_REGION } from '../src/content/stand-in';
 import { type AimedCard, aimOf, CARDS, DECKS, type DeckId } from '../src/rules/cards';
-import { admitted, apply, beginChronicle, outcome, refusalOf } from '../src/rules/chronicle';
+import { admitted, apply, launched, outcome, refusalOf } from '../src/rules/chronicle';
 import {
   CITY_TILE,
   neighbours,
@@ -34,6 +34,11 @@ declare global {
     /** How many objects of that name stand on the chronicle screen: a repaint leaves no second one. */
     counted?: (name: string) => number;
   }
+}
+
+/** The chronicle the screen opens on a seed and a deck, launched exactly as the boot launches it. */
+export function launch(seed: number, deck: readonly CardId[]): Chronicle {
+  return launched(STAND_IN, STAND_IN_REGION, seed, deck);
 }
 
 /** How far up a card comes before the release plays it or aims it, in design units, and then some. */
@@ -327,7 +332,7 @@ export function drawnFaces(chronicle: Chronicle): Tile[] {
 export function glyphsOf(faces: readonly Tile[], rivers: readonly River[]): Glyphs {
   const owed = noGlyphs();
   for (const face of faces) {
-    const yields = tileYield(face, rivers);
+    const yields = tileYield(STAND_IN, face, rivers);
     for (const resource of RESOURCES) owed[resource] += yields[resource] ?? 0;
   }
   return owed;
@@ -397,7 +402,7 @@ function runOn(
   if (aimed.aim !== 'tile') throw new Error(`${card} is aimed at no tile`);
 
   return firstSeed(complaint, (seed) => {
-    let chronicle = beginChronicle(STAND_IN, seed, DECKS.PH_Deck);
+    let chronicle = launch(seed, DECKS.PH_Deck);
     for (let turn = 1; turn <= 8; turn++) {
       const tile = workedThisTurn(chronicle, card, aimed, keeps);
       if (tile !== undefined) return { seed, turn, tile };
@@ -418,7 +423,7 @@ export type StepRun = {
 /** The first seed with a turn in its first eight that opens on such a run. */
 export function stepRun(): StepRun {
   return firstSeed('opens a turn on a worker and two steps', (seed) => {
-    let chronicle = beginChronicle(STAND_IN, seed, DECKS.PH_Deck);
+    let chronicle = launch(seed, DECKS.PH_Deck);
     for (let turn = 1; turn <= 8; turn++) {
       const steps = steppedThisTurn(chronicle);
       if (steps !== undefined) return { seed, turn, ...steps };
@@ -463,7 +468,7 @@ export function atTile(chronicle: Chronicle): number {
 /** The first seed with a turn in its first eight that opens on such a card. */
 export function atTileRun(): { seed: number; turn: number } {
   return firstSeed('opens a turn on a card aimed at a tile the city can pay for', (seed) => {
-    let chronicle = beginChronicle(STAND_IN, seed, DECKS.PH_Deck);
+    let chronicle = launch(seed, DECKS.PH_Deck);
     for (let turn = 1; turn <= 8; turn++) {
       if (atTile(chronicle) !== -1) return { seed, turn };
       chronicle = endedTurn(chronicle);
@@ -475,7 +480,7 @@ export function atTileRun(): { seed: number; turn: number } {
 /** The first seed whose city is captured inside twenty turns of ending the turn and nothing else. */
 export function fallRun(): { seed: number; turns: number } {
   return firstSeed('is captured inside twenty turns', (seed) => {
-    let chronicle = beginChronicle(STAND_IN, seed, DECKS.PH_Deck);
+    let chronicle = launch(seed, DECKS.PH_Deck);
     for (let turns = 1; turns <= 20 && chronicle.ending === undefined; turns++) {
       chronicle = endedTurn(chronicle);
       const ending = chronicle.ending;

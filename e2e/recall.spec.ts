@@ -1,7 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
 import { STAND_IN } from '../src/content/stand-in';
 import { DECKS } from '../src/rules/cards';
-import { beginChronicle, refusalOf } from '../src/rules/chronicle';
+import { refusalOf } from '../src/rules/chronicle';
 import { type Chronicle, playable } from '../src/rules/state';
 import { text } from '../src/ui/text';
 import {
@@ -12,6 +12,7 @@ import {
   endedTurn,
   endTurn,
   firstSeed,
+  launch,
   type OnScreen,
   onScreen,
   open,
@@ -25,7 +26,7 @@ import {
 /** The first seed whose third turn opens on a recall card the city can pay for. */
 function recallSeed(): number {
   return firstSeed('opens its third turn on a playable recall card', (seed) => {
-    let chronicle = beginChronicle(STAND_IN, seed, DECKS.PH_Deck);
+    let chronicle = launch(seed, DECKS.PH_Deck);
     for (let turn = 1; turn < 3; turn++) {
       chronicle = endedTurn(chronicle);
     }

@@ -1,3 +1,4 @@
+import type { Catalogue } from './catalogue';
 import { CITY_TILE, neighbours, type TileCoords, tileKey, tileYield } from './map';
 import { RESOURCES } from './resources';
 import {
@@ -52,13 +53,13 @@ export function founding(): Pick<Chronicle, 'held' | 'population' | 'assigned'> 
  * Income: an assigned tile yields what its layers and the river running along it give, the city's
  * own tile no exception.
  */
-export function income(chronicle: Chronicle): Chronicle {
+export function income(catalogue: Catalogue, chronicle: Chronicle): Chronicle {
   const assigned = new Set(chronicle.assigned.map(tileKey));
   const resources = { ...chronicle.resources };
   for (const tile of chronicle.tiles) {
     if (!assigned.has(tileKey(tile))) continue;
     if (occupied(chronicle.units, tile)) continue;
-    const yields = tileYield(tile, chronicle.rivers);
+    const yields = tileYield(catalogue, tile, chronicle.rivers);
     for (const resource of RESOURCES) resources[resource] += yields[resource] ?? 0;
   }
   return RESOURCES.every((resource) => resources[resource] === chronicle.resources[resource])
@@ -87,7 +88,7 @@ export function grow(chronicle: Chronicle): Chronicle {
  * The tiles the city may claim: charted, not held, touching a tile it holds, with no camp filling
  * the slot and no enemy occupying it.
  */
-export function claimable(chronicle: Chronicle): TileCoords[] {
+export function claimable(catalogue: Catalogue, chronicle: Chronicle): TileCoords[] {
   const held = new Set(chronicle.held.map(tileKey));
   const chartedTiles = new Set(chronicle.snapshots.map(tileKey));
   return chronicle.tiles
@@ -95,7 +96,7 @@ export function claimable(chronicle: Chronicle): TileCoords[] {
       (tile) =>
         chartedTiles.has(tileKey(tile)) &&
         !held.has(tileKey(tile)) &&
-        tile.building !== 'PH_Camp' &&
+        tile.building !== catalogue.camp.building &&
         !occupied(chronicle.units, tile) &&
         neighbours(tile).some((coord) => held.has(tileKey(coord))),
     )
@@ -126,12 +127,18 @@ export function tileCost(chronicle: Chronicle, tile: TileCoords): Cost[] {
  * none of, and the culture a claim falls short of. A tile the city neither holds nor may claim — an
  * uncharted one among them — is no act of the city's at all, and answers nothing.
  */
-export function tileRefusal(chronicle: Chronicle, tile: TileCoords): Refusal | undefined {
+export function tileRefusal(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  tile: TileCoords,
+): Refusal | undefined {
   if (holds(chronicle, tile)) {
     const standing = assignedTo(chronicle, tile);
     return { unaffordable: [], blocked: standing || idle(chronicle) > 0 ? [] : ['idle'] };
   }
-  if (!claimable(chronicle).some((coord) => tileKey(coord) === tileKey(tile))) return undefined;
+  if (!claimable(catalogue, chronicle).some((coord) => tileKey(coord) === tileKey(tile))) {
+    return undefined;
+  }
   return { unaffordable: unaffordable(chronicle, tileCost(chronicle, tile)), blocked: [] };
 }
 
@@ -142,10 +149,11 @@ export function tileRefusal(chronicle: Chronicle, tile: TileCoords): Refusal | u
  * answer that click by.
  */
 export function cityCommand(
+  catalogue: Catalogue,
   chronicle: Chronicle,
   tile: TileCoords,
 ): AssignCommand | ClaimCommand | undefined {
-  const refusal = tileRefusal(chronicle, tile);
+  const refusal = tileRefusal(catalogue, chronicle, tile);
   if (refusal === undefined || !playable(refusal)) return undefined;
   return { type: holds(chronicle, tile) ? 'assign' : 'claim', tile };
 }
@@ -171,8 +179,12 @@ export function cityDrag(
  * a tile the city holds. Anything the city-mode click on that tile is not, or is refused for,
  * answers nothing.
  */
-export function assign(chronicle: Chronicle, tile: TileCoords): Chronicle | undefined {
-  if (cityCommand(chronicle, tile)?.type !== 'assign') return undefined;
+export function assign(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  tile: TileCoords,
+): Chronicle | undefined {
+  if (cityCommand(catalogue, chronicle, tile)?.type !== 'assign') return undefined;
 
   const at = tileKey(tile);
   const on = chronicle.assigned.filter((coord) => tileKey(coord) !== at);
@@ -207,8 +219,12 @@ export function reassign(
  * inhabitant stands on it at once when the city has one. Anything the city-mode click on that tile
  * is not, or is refused for, answers nothing.
  */
-export function claim(chronicle: Chronicle, tile: TileCoords): Chronicle | undefined {
-  if (cityCommand(chronicle, tile)?.type !== 'claim') return undefined;
+export function claim(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  tile: TileCoords,
+): Chronicle | undefined {
+  if (cityCommand(catalogue, chronicle, tile)?.type !== 'claim') return undefined;
 
   const taken = { q: tile.q, r: tile.r };
   const staffed = idle(chronicle) > 0;

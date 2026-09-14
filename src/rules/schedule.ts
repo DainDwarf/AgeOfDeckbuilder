@@ -1,14 +1,7 @@
 import type { Catalogue } from './catalogue';
 import { enteredFromCamp, enteredOnCamp } from './enemies';
-import {
-  BUILDINGS,
-  distance,
-  MAP_COMPOSITION,
-  MOVE_POINT,
-  pathCosts,
-  type TileCoords,
-  tileKey,
-} from './map';
+import { distance, MOVE_POINT, pathCosts, type TileCoords, tileKey } from './map';
+import { buildingKind } from './map-kinds';
 import { nextRng, pickWeighted, type Rng } from './rng';
 import { type Chronicle, type EventId, holds } from './state';
 import { unitAt } from './units';
@@ -30,8 +23,11 @@ const DEAL = 2;
 /** The least and the most a span rolls, both ends included. */
 type Span = readonly [number, number];
 
-/** 🔧 What the siege lands: how many camps it draws, and how far from the city each stands. */
-const SIEGE = { camps: 5, fromCity: [3, 5] as Span };
+/**
+ * 🔧 What the siege lands: how many camps it draws, how far from the city each stands, and how far
+ * from every camp standing.
+ */
+export const SIEGE = { camps: 5, fromCity: [3, 5] as Span, apart: 3 };
 
 /** 🔧 How many turns the siege spans, the turn it lands on the first of them. */
 const SIEGE_SPAN = 6;
@@ -136,7 +132,7 @@ export function reinforced(catalogue: Catalogue, chronicle: Chronicle): Chronicl
 
   let standing = chronicle;
   for (const { q, r, building } of chronicle.tiles) {
-    if (building !== 'PH_Camp') continue;
+    if (building !== catalogue.camp.building) continue;
     if (unitAt(standing.units, { q, r }) !== undefined) continue;
     standing = enteredOnCamp(catalogue, standing, { q, r });
   }
@@ -195,9 +191,12 @@ function raid(catalogue: Catalogue, chronicle: Chronicle, warriors: number): Chr
  */
 function siege(catalogue: Catalogue, chronicle: Chronicle): Chronicle {
   const [near, far] = SIEGE.fromCity;
+  const camp = catalogue.camp.building;
+  const ground = buildingKind(catalogue, camp).terrains;
   // Only which tiles the walk reached is read here, never what reaching them cost, so the move a
   // crossing is charged against shows nowhere.
   const reached = pathCosts(
+    catalogue,
     chronicle.tiles,
     chronicle.rivers,
     chronicle.city,
@@ -206,27 +205,27 @@ function siege(catalogue: Catalogue, chronicle: Chronicle): Chronicle {
   );
 
   let rng = chronicle.rng;
-  const standing: TileCoords[] = chronicle.tiles.filter((tile) => tile.building === 'PH_Camp');
+  const standing: TileCoords[] = chronicle.tiles.filter((tile) => tile.building === camp);
   const placed: TileCoords[] = [];
-  for (let camp = 0; camp < SIEGE.camps; camp++) {
+  for (let drawn = 0; drawn < SIEGE.camps; drawn++) {
     const candidates = chronicle.tiles.filter(
       (tile) =>
         tile.building === undefined &&
-        BUILDINGS.PH_Camp.terrains.includes(tile.terrain) &&
+        ground.includes(tile.terrain) &&
         reached.has(tileKey(tile)) &&
         distance(tile, chronicle.city) >= near &&
         distance(tile, chronicle.city) <= far &&
         !holds(chronicle, tile) &&
         unitAt(chronicle.units, tile) === undefined &&
-        standing.every((other) => distance(tile, other) >= MAP_COMPOSITION.campsApart),
+        standing.every((other) => distance(tile, other) >= SIEGE.apart),
     );
     if (candidates.length === 0) break;
 
     const step = nextRng(rng);
     rng = step.rng;
-    const drawn = candidates[Math.floor(step.value * candidates.length)];
-    standing.push(drawn);
-    placed.push({ q: drawn.q, r: drawn.r });
+    const chosen = candidates[Math.floor(step.value * candidates.length)];
+    standing.push(chosen);
+    placed.push({ q: chosen.q, r: chosen.r });
   }
 
   const camped = new Set(placed.map(tileKey));
@@ -234,7 +233,7 @@ function siege(catalogue: Catalogue, chronicle: Chronicle): Chronicle {
     ...chronicle,
     rng,
     tiles: chronicle.tiles.map((tile) =>
-      camped.has(tileKey(tile)) ? { ...tile, building: 'PH_Camp' } : tile,
+      camped.has(tileKey(tile)) ? { ...tile, building: camp } : tile,
     ),
   };
   for (const tile of placed) besieged = enteredOnCamp(catalogue, besieged, tile);

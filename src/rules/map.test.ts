@@ -1,47 +1,45 @@
 import { expect, test } from 'vitest';
+import { CATALOGUE, REGION } from './fixtures';
 import {
-  BIOMES,
-  BUILDINGS,
-  CITY_TERRAIN,
-  CITY_TILE,
   type Corner,
   cornerKey,
   dealtBiomes,
   distance,
-  FEATURES,
   generateMap,
-  MAP_COMPOSITION,
   MOVE_POINT,
   pathCosts,
-  RIVER_FLOW,
   type River,
   riversAlong,
   type Tile,
+  type TileCoords,
   tileAt,
   tileKey,
   tilesAtCorner,
   tilesOfEdge,
   water,
 } from './map';
+import { biomeKind, buildingKind, featureKind, regionOf } from './map-kinds';
 import { seedRng } from './rng';
 
 const SEEDS = [0, 1, 1234, 0xdeadbeef | 0, 424242];
 
+/** The composition every map here is dealt from. */
+const DISC = regionOf(CATALOGUE, REGION);
+
+/** The middle of the disc. */
+const CENTRE: TileCoords = { q: 0, r: 0 };
+
 function mapOf(seed: number): Tile[] {
-  return generateMap(seedRng(seed)).tiles;
+  return generateMap(CATALOGUE, REGION, seedRng(seed)).tiles;
 }
 
 function riversOf(seed: number): River[] {
-  return generateMap(seedRng(seed)).rivers;
+  return generateMap(CATALOGUE, REGION, seedRng(seed)).rivers;
 }
 
 /** The camps a map was dealt, in the order its tiles list them. */
 function campsOf(tiles: Tile[]): Tile[] {
-  return tiles.filter((tile) => tile.building === 'PH_Camp');
-}
-
-function at(tiles: Tile[], { q, r }: { q: number; r: number }): Tile | undefined {
-  return tiles.find((tile) => tile.q === q && tile.r === r);
+  return tiles.filter((tile) => tile.building === CATALOGUE.camp.building);
 }
 
 /** The tiles of the map a corner is a corner of; a corner on the outer ring touches fewer than three. */
@@ -62,11 +60,11 @@ function edgeKey({ from, to }: { from: Corner; to: Corner }): string {
   return `${cornerKey(from)}|${cornerKey(to)}`;
 }
 
-/** The tiles of a map so many steps from the city: a stand-in for the tiles a chronicle has charted. */
+/** The tiles of a map so many steps from the centre: a stand-in for the tiles a chronicle has charted. */
 function within(seed: number, steps: number): Set<string> {
   return new Set(
     mapOf(seed)
-      .filter((tile) => distance(CITY_TILE, tile) <= steps)
+      .filter((tile) => distance(CENTRE, tile) <= steps)
       .map(tileKey),
   );
 }
@@ -94,8 +92,8 @@ test('a map survives JSON and comes back the same', () => {
   expect(JSON.parse(JSON.stringify(tiles))).toEqual(tiles);
 });
 
-test('the map is a hexagonal disc around the city, every tile once', () => {
-  const { radius } = MAP_COMPOSITION;
+test('the map is a hexagonal disc around its centre, every tile once', () => {
+  const { radius } = DISC;
   for (const seed of SEEDS) {
     const tiles = mapOf(seed);
     expect(tiles).toHaveLength(3 * radius * radius + 3 * radius + 1);
@@ -106,13 +104,18 @@ test('the map is a hexagonal disc around the city, every tile once', () => {
   }
 });
 
-test('the city stands on its tile', () => {
-  for (const seed of SEEDS) expect(at(mapOf(seed), CITY_TILE)?.terrain).toBe(CITY_TERRAIN);
+test('the generator puts urban on no tile, and the centre tile is its biome’s origin terrain', () => {
+  const origin = biomeKind(CATALOGUE, DISC.centreBiome).origin;
+  for (const seed of SEEDS) {
+    const tiles = mapOf(seed);
+    expect(tiles.filter((tile) => tile.terrain === CATALOGUE.city.terrain)).toEqual([]);
+    expect(tileAt(tiles, CENTRE)?.terrain).toBe(origin);
+  }
 });
 
 test('every tile carries a terrain one of the biomes can produce', () => {
-  const known = new Set<string>([CITY_TERRAIN]);
-  for (const biome of Object.values(BIOMES)) {
+  const known = new Set<string>();
+  for (const biome of Object.values(CATALOGUE.biomes)) {
     known.add(biome.origin);
     for (const terrain of Object.keys(biome.interior)) known.add(terrain);
     for (const terrain of Object.keys(biome.rim)) known.add(terrain);
@@ -143,18 +146,17 @@ test('a sea is rimmed with coast, the terrain no biome scatters over its interio
 test('every map is dealt a share of every feature, so none of them is ever missing', () => {
   for (const seed of SEEDS) {
     const tiles = mapOf(seed);
-    for (const { feature } of MAP_COMPOSITION.featureShares) {
+    for (const { feature } of DISC.featureShares) {
       expect(tiles.some((tile) => tile.feature === feature)).toBe(true);
     }
   }
 });
 
-test("a feature lies on the terrain it belongs to, and never on the city's tile", () => {
+test('a feature lies on the terrain it belongs to', () => {
   for (const seed of SEEDS) {
     for (const tile of mapOf(seed)) {
       if (tile.feature === undefined) continue;
-      expect(tile.terrain).toBe(FEATURES[tile.feature].terrain);
-      expect(tileKey(tile)).not.toBe(tileKey(CITY_TILE));
+      expect(tile.terrain).toBe(featureKind(CATALOGUE, tile.feature).terrain);
     }
   }
 });
@@ -166,12 +168,14 @@ test('the generator improves nothing: every tile of a fresh map is bare of impro
 });
 
 test('a range dealt clear of the water runs the two rivers it is worth, whole courses both', () => {
-  const ranges = dealtBiomes(mapOf(0).length).filter((biome) => biome === 'mountain').length;
+  const ranges = dealtBiomes(DISC, mapOf(0).length).filter(
+    (biome) => biome === DISC.rivers.source,
+  ).length;
   const rivers = riversOf(0);
 
-  expect(rivers).toHaveLength(RIVER_FLOW.perRange * ranges);
+  expect(rivers).toHaveLength(DISC.rivers.perRange * ranges);
   for (const river of rivers) {
-    expect(edgesOf(river).length).toBeGreaterThanOrEqual(RIVER_FLOW.leastEdges);
+    expect(edgesOf(river).length).toBeGreaterThanOrEqual(DISC.rivers.leastEdges);
   }
 });
 
@@ -201,7 +205,7 @@ test('a river rises in a mountain range and ends at water or at another river', 
         (other, at) =>
           at !== index && other.some((corner) => cornerKey(corner) === cornerKey(mouth)),
       );
-      const sea = tilesOn(tiles, mouth).some((tile) => water(tile.terrain));
+      const sea = tilesOn(tiles, mouth).some((tile) => water(CATALOGUE, tile.terrain));
       expect(sea || met).toBe(true);
     }
   }
@@ -210,7 +214,7 @@ test('a river rises in a mountain range and ends at water or at another river', 
 test('every river runs along at least six edges: a trickle is thrown away', () => {
   for (const seed of SEEDS) {
     for (const river of riversOf(seed)) {
-      expect(edgesOf(river).length).toBeGreaterThanOrEqual(RIVER_FLOW.leastEdges);
+      expect(edgesOf(river).length).toBeGreaterThanOrEqual(DISC.rivers.leastEdges);
     }
   }
 });
@@ -225,16 +229,18 @@ test('a river runs along no more than four edges of any one tile, so it never ri
         }
       }
       for (const count of along.values()) {
-        expect(count).toBeLessThanOrEqual(RIVER_FLOW.edgesPerTile);
+        expect(count).toBeLessThanOrEqual(DISC.rivers.edgesPerTile);
       }
     }
   }
 });
 
 test('a map holds at most two rivers for every mountain range it is dealt', () => {
-  const ranges = dealtBiomes(mapOf(0).length).filter((biome) => biome === 'mountain').length;
+  const ranges = dealtBiomes(DISC, mapOf(0).length).filter(
+    (biome) => biome === DISC.rivers.source,
+  ).length;
   for (const seed of SEEDS) {
-    expect(riversOf(seed).length).toBeLessThanOrEqual(RIVER_FLOW.perRange * ranges);
+    expect(riversOf(seed).length).toBeLessThanOrEqual(DISC.rivers.perRange * ranges);
   }
 });
 
@@ -290,13 +296,13 @@ test('the rivers of a map survive JSON and come back the same', () => {
   expect(JSON.parse(JSON.stringify(rivers))).toEqual(rivers);
 });
 
-test('every map is dealt its camps, each keeping its distance from the city and from the others', () => {
-  const { camps, campFromCity, campsApart } = MAP_COMPOSITION;
+test('every map is dealt its camps, each keeping its distance from the centre and from the others', () => {
+  const { camps, campFromCentre, campsApart } = DISC;
   for (const seed of SEEDS) {
     const placed = campsOf(mapOf(seed));
     expect(placed).toHaveLength(camps);
     for (const camp of placed) {
-      expect(distance(camp, CITY_TILE)).toBeGreaterThanOrEqual(campFromCity);
+      expect(distance(camp, CENTRE)).toBeGreaterThanOrEqual(campFromCentre);
       for (const other of placed) {
         if (tileKey(other) === tileKey(camp)) continue;
         expect(distance(camp, other)).toBeGreaterThanOrEqual(campsApart);
@@ -305,13 +311,14 @@ test('every map is dealt its camps, each keeping its distance from the city and 
   }
 });
 
-test('a camp stands where the ground runs to the city, never across the water', () => {
+test('a camp stands where the ground runs to the centre, never across the water', () => {
   for (const seed of SEEDS) {
-    const map = generateMap(seedRng(seed));
+    const map = generateMap(CATALOGUE, REGION, seedRng(seed));
     const walked = pathCosts(
+      CATALOGUE,
       map.tiles,
       map.rivers,
-      CITY_TILE,
+      CENTRE,
       { kind: 'whole-map', move: MOVE_POINT },
       () => false,
     );
@@ -320,11 +327,12 @@ test('a camp stands where the ground runs to the city, never across the water', 
 });
 
 test('the generator fills a building slot with a camp and with nothing else', () => {
+  const ground = buildingKind(CATALOGUE, CATALOGUE.camp.building).terrains;
   for (const seed of SEEDS) {
     for (const tile of mapOf(seed)) {
       if (tile.building === undefined) continue;
-      expect(tile.building).toBe('PH_Camp');
-      expect(BUILDINGS.PH_Camp.terrains).toContain(tile.terrain);
+      expect(tile.building).toBe(CATALOGUE.camp.building);
+      expect(ground).toContain(tile.terrain);
     }
   }
 });

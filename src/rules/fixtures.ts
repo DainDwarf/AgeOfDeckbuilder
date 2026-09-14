@@ -51,8 +51,113 @@ export const CATALOGUE: Catalogue = catalogued({
     },
   },
   scripts: { advance: ADVANCE },
-  camp: { unit: 'PH_Warrior', script: 'advance' },
+  terrains: {
+    plain: {
+      yields: { food: 2 },
+      movementCost: MOVE_POINT,
+      water: false,
+      elevation: 0,
+      lift: 0,
+      river: { food: 1 },
+    },
+    forest: {
+      yields: { food: 1, production: 1 },
+      movementCost: 2 * MOVE_POINT,
+      water: false,
+      elevation: 1,
+      lift: 0,
+      river: { food: 1 },
+    },
+    hills: {
+      yields: { production: 2 },
+      movementCost: 2 * MOVE_POINT,
+      water: false,
+      elevation: 2,
+      lift: 1,
+    },
+    mountain: {
+      yields: { production: 1 },
+      movementCost: 6 * MOVE_POINT,
+      water: false,
+      elevation: 3,
+      lift: 2,
+    },
+    coast: { yields: { food: 1, money: 1 }, water: true, elevation: 0, lift: 0 },
+    deep: { yields: { food: 1 }, water: true, elevation: 0, lift: 0 },
+    urban: {
+      yields: { production: 1, military: 1, money: 1, science: 1, culture: 1 },
+      movementCost: MOVE_POINT,
+      water: false,
+      elevation: 0,
+      lift: 0,
+    },
+  },
+  biomes: {
+    land: {
+      origin: 'plain',
+      interior: { plain: 0.55, forest: 0.25, hills: 0.2 },
+      rim: { plain: 0.55, forest: 0.25, hills: 0.2 },
+      rimWidths: [1],
+    },
+    sea: {
+      origin: 'deep',
+      interior: { deep: 0.92, plain: 0.08 },
+      rim: { coast: 1 },
+      rimWidths: [0.2, 0.5, 0.3],
+    },
+    mountain: {
+      origin: 'mountain',
+      interior: { mountain: 0.7, hills: 0.3 },
+      rim: { hills: 1 },
+      rimWidths: [0.4, 0.6],
+    },
+  },
+  buildings: {
+    PH_City: { terrains: ['urban'], yields: {} },
+    PH_Farm: { terrains: ['plain'], yields: { food: 1 } },
+    PH_Camp: { terrains: ['plain', 'forest', 'hills'], yields: {} },
+  },
+  features: {
+    PH_Fertile: { terrain: 'plain', yields: { food: 1 } },
+  },
+  improvements: {
+    PH_Mine: { terrains: ['hills'], yields: { production: 1 } },
+    PH_Road: { terrains: ['plain', 'forest', 'hills', 'urban'], yields: {} },
+  },
+  regions: {
+    disc: {
+      radius: 8,
+      tilesPerBiome: 26,
+      minBiomes: 5,
+      centreBiome: 'land',
+      biomeShares: [
+        { biome: 'sea', share: 0.3 },
+        { biome: 'mountain', share: 0.1 },
+      ],
+      featureShares: [{ feature: 'PH_Fertile', share: 1 / 6 }],
+      camps: 3,
+      campFromCentre: 4,
+      campsApart: 3,
+      rivers: {
+        source: 'mountain',
+        relief: 1.5,
+        roughness: 0.5,
+        perRange: 2,
+        climb: 0.5,
+        meander: 1.5,
+        curl: 0.75,
+        edgesPerTile: 4,
+        leastEdges: 6,
+        draws: 60,
+      },
+    },
+  },
+  camp: { unit: 'PH_Warrior', script: 'advance', building: 'PH_Camp' },
+  city: { terrain: 'urban', building: 'PH_City' },
 });
+
+/** The one region the fixture catalogue deals its maps from. */
+export const REGION = 'disc';
 
 export const CITY: TileCoords = { q: 0, r: 0 };
 
@@ -84,7 +189,7 @@ export function withUnits(chronicle: Chronicle, units: readonly Standing[]): Chr
     };
     stood = { ...dealt, units: [...dealt.units.slice(0, -1), authored] };
   }
-  return charted(stood);
+  return charted(CATALOGUE, stood);
 }
 
 /** What a fixture authors on the chronicle it asks for: its state, and the units standing on it. */
@@ -111,7 +216,7 @@ export function cityOf(inside: Terrain[], carrying: Carrying = {}): Chronicle {
             ? { q: 0, r: 0, terrain, improvements: [], building: 'PH_City' }
             : { q: index, r: 0, terrain, improvements: [] },
       ),
-      { q: 0, r: 5, terrain: 'plain' as Terrain, improvements: [] },
+      { q: 0, r: 5, terrain: 'plain', improvements: [] },
     ],
     rivers: [],
     city: CITY,
@@ -194,7 +299,7 @@ export function built(tiles: Tile[], building: BuildingTypeId, coords: TileCoord
 
 /** The same tiles, with a camp filling the building slot of the named ones. */
 export function camped(tiles: Tile[], coords: TileCoords[]): Tile[] {
-  return built(tiles, 'PH_Camp', coords);
+  return built(tiles, CATALOGUE.camp.building, coords);
 }
 
 function statsOf(stats: Partial<UnitStats>): UnitStats {
@@ -260,7 +365,7 @@ export function actionOf(chronicle: Chronicle, unit: number): number {
 
 /** The chronicle with the tile at those coordinates replaced, layer for layer. */
 export function withTile(chronicle: Chronicle, tile: Tile): Chronicle {
-  return charted({
+  return charted(CATALOGUE, {
     ...chronicle,
     tiles: chronicle.tiles.map((other) => (tileKey(other) === tileKey(tile) ? tile : other)),
   });

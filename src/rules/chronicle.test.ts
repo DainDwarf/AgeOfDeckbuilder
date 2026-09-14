@@ -1,8 +1,8 @@
 import { expect, test } from 'vitest';
-import { apply, beginChronicle, type Command, outcome } from './chronicle';
+import { apply, beginChronicle, type Command, launched, outcome } from './chronicle';
 import {
-  buildingAt,
   CATALOGUE,
+  CITY,
   cityOf,
   DECK,
   endedTurn,
@@ -10,29 +10,42 @@ import {
   field,
   fullDraw,
   NO_GROWTH,
+  REGION,
   stagedBy,
   standing,
   worker,
 } from './fixtures';
-import { MOVE_POINT } from './map';
+import { MOVE_POINT, type Tile, tileAt, tileKey } from './map';
 import { RESOURCES } from './resources';
 import { seedRng } from './rng';
 import type { Chronicle } from './state';
 
+/** A disc of plain out to eight, with nothing on it but a fertile plain on its centre tile. */
+function plainDisc(): Tile[] {
+  return field(8).map(
+    ({ q, r }): Tile =>
+      tileKey({ q, r }) === tileKey(CITY)
+        ? { q, r, terrain: 'plain', feature: 'PH_Fertile', improvements: [] }
+        : { q, r, terrain: 'plain', improvements: [] },
+  );
+}
+
 test('the same seed founds the same chronicle', () => {
-  expect(beginChronicle(CATALOGUE, 1234, DECK)).toEqual(beginChronicle(CATALOGUE, 1234, DECK));
-  expect(beginChronicle(CATALOGUE, 1235, DECK)).not.toEqual(beginChronicle(CATALOGUE, 1234, DECK));
+  expect(launched(CATALOGUE, REGION, 1234, DECK)).toEqual(launched(CATALOGUE, REGION, 1234, DECK));
+  expect(launched(CATALOGUE, REGION, 1235, DECK)).not.toEqual(
+    launched(CATALOGUE, REGION, 1234, DECK),
+  );
 });
 
 test('a chronicle survives JSON and carries its generator on', () => {
-  const chronicle = beginChronicle(CATALOGUE, 1234, DECK);
+  const chronicle = launched(CATALOGUE, REGION, 1234, DECK);
 
   expect(JSON.parse(JSON.stringify(chronicle))).toEqual(chronicle);
   expect(chronicle.rng).not.toEqual(seedRng(chronicle.seed));
 });
 
 test('a chronicle opens on turn one, with empty stores', () => {
-  const chronicle = beginChronicle(CATALOGUE, 1234, DECK);
+  const chronicle = launched(CATALOGUE, REGION, 1234, DECK);
 
   expect(chronicle.turn).toBe(1);
   for (const resource of RESOURCES) expect(chronicle.resources[resource]).toBe(0);
@@ -63,7 +76,7 @@ test('growth is staged right after the income it comes from, and before the enem
 });
 
 test('the hand holds five cards on founding, and five again after every turn', () => {
-  let chronicle = beginChronicle(CATALOGUE, 4242, DECK);
+  let chronicle = launched(CATALOGUE, REGION, 4242, DECK);
   expect(chronicle.hand).toHaveLength(5);
 
   for (let turn = 0; turn < 6; turn++) {
@@ -179,7 +192,7 @@ test('a stage of the end of turn that changed nothing is left out of it', () => 
 });
 
 test('every card of the deck is in exactly one pile through a full cycle', () => {
-  let chronicle = beginChronicle(CATALOGUE, 2026, DECK);
+  let chronicle = launched(CATALOGUE, REGION, 2026, DECK);
   const deck = everyCard(chronicle);
   expect(deck).toHaveLength(DECK.length);
 
@@ -217,10 +230,19 @@ test('a city with no population left falls, whatever the command was', () => {
   expect(ended.ending).toEqual({ outcome: 'defeat', cause: 'population', turn: ended.turn });
 });
 
-test('the founding fills the city tile’s slot with the city', () => {
-  const chronicle = beginChronicle(CATALOGUE, 1234, DECK);
+test('the opening settles the centre tile: the city’s terrain, the city’s building, and no feature', () => {
+  const chronicle = beginChronicle(CATALOGUE, 1234, DECK, { tiles: plainDisc(), rivers: [] });
+  const centre = tileAt(chronicle.tiles, chronicle.city);
 
-  expect(buildingAt(chronicle, chronicle.city)).toBe('PH_City');
+  expect(tileKey(chronicle.city)).toBe(tileKey(CITY));
+  expect(centre?.terrain).toBe(CATALOGUE.city.terrain);
+  expect(centre?.building).toBe(CATALOGUE.city.building);
+  expect(centre?.feature).toBeUndefined();
+  for (const tile of chronicle.tiles) {
+    if (tileKey(tile) === tileKey(CITY)) continue;
+    expect(tile.terrain).toBe('plain');
+    expect(tile.building).toBeUndefined();
+  }
 });
 
 test('a chronicle that has ended takes no command at all', () => {

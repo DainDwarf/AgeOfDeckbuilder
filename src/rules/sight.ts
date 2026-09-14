@@ -1,3 +1,4 @@
+import type { Catalogue } from './catalogue';
 import { distance, elevation, type Terrain, type TileCoords, tileKey } from './map';
 import type { Chronicle, Snapshot } from './state';
 import { unitAt } from './units';
@@ -57,14 +58,15 @@ function between(from: TileCoords, to: TileCoords, way: 1 | -1): TileCoords[] {
  * share has two ways to go, and either one clear is enough.
  */
 function seenFrom(
+  catalogue: Catalogue,
   terrains: ReadonlyMap<string, Terrain>,
   from: TileCoords,
   to: TileCoords,
 ): boolean {
-  const standing = elevation(terrains.get(tileKey(from)));
+  const standing = elevation(catalogue, terrains.get(tileKey(from)));
   const clear = (way: 1 | -1): boolean =>
     between(from, to, way).every((coord) => {
-      const crossed = elevation(terrains.get(tileKey(coord)));
+      const crossed = elevation(catalogue, terrains.get(tileKey(coord)));
       return crossed === 0 || crossed < standing;
     });
   return clear(1) || clear(-1);
@@ -75,7 +77,7 @@ function seenFrom(
  * and every tile within a sight of theirs that a line over the ground reaches. The one answer to
  * what is in sight.
  */
-export function inSight(chronicle: Chronicle): ReadonlySet<string> {
+export function inSight(catalogue: Catalogue, chronicle: Chronicle): ReadonlySet<string> {
   const terrains = new Map(chronicle.tiles.map((tile) => [tileKey(tile), tile.terrain]));
   const seen = new Set(chronicle.held.map(tileKey));
 
@@ -88,7 +90,7 @@ export function inSight(chronicle: Chronicle): ReadonlySet<string> {
     for (const { q, r } of chronicle.tiles) {
       const coord = { q, r };
       if (seen.has(tileKey(coord)) || distance(from, coord) > sight) continue;
-      if (seenFrom(terrains, from, coord)) seen.add(tileKey(coord));
+      if (seenFrom(catalogue, terrains, from, coord)) seen.add(tileKey(coord));
     }
   }
 
@@ -116,8 +118,8 @@ function records(snapshot: Snapshot | undefined, taken: Snapshot): boolean {
  * recorded at all. A chronicle the snapshots already answer for is handed straight back, so a
  * command that charted nothing answers the very chronicle it was given.
  */
-export function charted(chronicle: Chronicle): Chronicle {
-  const seen = inSight(chronicle);
+export function charted(catalogue: Catalogue, chronicle: Chronicle): Chronicle {
+  const seen = inSight(catalogue, chronicle);
   const kept = new Map(chronicle.snapshots.map((snapshot) => [tileKey(snapshot), snapshot]));
   let charting = false;
 

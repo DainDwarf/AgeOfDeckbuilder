@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { STAND_IN } from './content/stand-in';
+import { STAND_IN, STAND_IN_REGION } from './content/stand-in';
 import { CARDS, DECKS, type DeckId } from './rules/cards';
 import type { CardId } from './rules/state';
 import { ChronicleScene } from './ui/chronicle-scene';
@@ -52,7 +52,7 @@ const game = new Phaser.Game({
   // line goes when a release fixes the shader.
   maxTextures: 1,
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
-  scene: [new ChronicleScene(STAND_IN, askedSeed(), askedDeck())],
+  scene: [new ChronicleScene(STAND_IN, STAND_IN_REGION, askedSeed(), askedDeck())],
 });
 followWindow(game);
 releaseOnBlur(game);

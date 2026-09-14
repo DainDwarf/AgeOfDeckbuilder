@@ -7,6 +7,7 @@ import {
   type TileCoords,
   tileKey,
 } from './map';
+import type { MapContent } from './map-kinds';
 
 /** Who a unit acts for. The player commands theirs; an enemy attacks them. */
 export type Faction = 'player' | 'enemy';
@@ -78,8 +79,8 @@ export function unitOf(units: readonly Unit[], id: number): Unit | undefined {
  * Whether a unit of these stats can stand on a tile at all: the tile names a movement cost, and the
  * unit's move covers it. Move points never run above the move, so the answer holds all turn.
  */
-export function standsOn(stats: UnitStats, tile: Tile | undefined): boolean {
-  const cost = movementCost(tile);
+export function standsOn(catalogue: MapContent, stats: UnitStats, tile: Tile | undefined): boolean {
+  const cost = movementCost(catalogue, tile);
   return cost !== undefined && cost <= stats.move;
 }
 
@@ -101,12 +102,13 @@ type Crossed = {
  * A unit of the player's neither lands on an uncharted tile nor crosses one, while the enemies read
  * the whole map and cross it charted or not.
  */
-export function reachable(chronicle: Crossed, unit: Unit): Landing[] {
+export function reachable(catalogue: MapContent, chronicle: Crossed, unit: Unit): Landing[] {
   const standing = new Map(chronicle.units.map((other) => [tileKey(other.tile), other.faction]));
   const chartedTiles =
     unit.faction === 'player' ? new Set(chronicle.snapshots.map(tileKey)) : undefined;
 
   const spent = pathCosts(
+    catalogue,
     chronicle.tiles,
     chronicle.rivers,
     unit.tile,

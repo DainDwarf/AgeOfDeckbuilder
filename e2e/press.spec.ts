@@ -1,7 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
 import { STAND_IN } from '../src/content/stand-in';
 import { aimOf, CARDS, DECKS } from '../src/rules/cards';
-import { beginChronicle, refusalOf } from '../src/rules/chronicle';
+import { refusalOf } from '../src/rules/chronicle';
 import { tileKey } from '../src/rules/map';
 import { type Chronicle, playable } from '../src/rules/state';
 import { text } from '../src/ui/text';
@@ -21,6 +21,7 @@ import {
   endedTurn,
   endTurn,
   firstSeed,
+  launch,
   mapFrame,
   type OnScreen,
   offCanvas,
@@ -55,7 +56,7 @@ function atNothing(chronicle: Chronicle): number {
 /** The first seed with a turn in its first eight that opens on such a card. */
 function playableRun(): { seed: number; turn: number } {
   return firstSeed('opens a turn on a card that plays at nothing', (seed) => {
-    let chronicle = beginChronicle(STAND_IN, seed, DECKS.PH_LongDeck);
+    let chronicle = launch(seed, DECKS.PH_LongDeck);
     for (let turn = 1; turn <= 8; turn++) {
       if (atNothing(chronicle) !== -1) return { seed, turn };
       chronicle = endedTurn(chronicle);
@@ -72,7 +73,7 @@ function bothKindsRun(): { seed: number; turn: number } {
   return firstSeed(
     'opens a turn on a card aimed at a tile and a card that plays at nothing',
     (seed) => {
-      let chronicle = beginChronicle(STAND_IN, seed, DECKS.PH_Deck);
+      let chronicle = launch(seed, DECKS.PH_Deck);
       for (let turn = 1; turn <= 8; turn++) {
         if (atTile(chronicle) !== -1 && atNothing(chronicle) !== -1) return { seed, turn };
         chronicle = endedTurn(chronicle);

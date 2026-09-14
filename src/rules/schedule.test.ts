@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { apply, beginChronicle, type Command, outcome } from './chronicle';
+import { apply, type Command, launched, outcome } from './chronicle';
 import { growthThreshold } from './city';
 import {
   assignTo,
@@ -21,6 +21,7 @@ import {
   madeOf,
   NO_GROWTH,
   only,
+  REGION,
   SCHEDULE_BOUND,
   type Standing,
   stagedBy,
@@ -30,9 +31,9 @@ import {
   withUnits,
   worker,
 } from './fixtures';
-import { distance, MAP_COMPOSITION, neighbours, type TileCoords, tileKey } from './map';
+import { distance, neighbours, type TileCoords, tileKey } from './map';
 import { seedRng } from './rng';
-import { scheduled } from './schedule';
+import { SIEGE, scheduled } from './schedule';
 import type { Chronicle } from './state';
 import { unitAt } from './units';
 
@@ -277,7 +278,7 @@ function besieged(carrying: Carrying = {}): Chronicle {
 /** The tiles a camp fills: what the siege placed, these fixtures standing with none of their own. */
 function campsOf(chronicle: Chronicle): TileCoords[] {
   return chronicle.tiles
-    .filter((tile) => tile.building === 'PH_Camp')
+    .filter((tile) => tile.building === CATALOGUE.camp.building)
     .map(({ q, r }) => ({ q, r }));
 }
 
@@ -335,14 +336,14 @@ function stoodOut(): Chronicle {
 }
 
 test('the capstone lands on a turn rolled at the founding, between the twenty-seventh and the thirty-third', () => {
-  const turns = SEEDS.map((seed) => beginChronicle(CATALOGUE, seed, DECK).capstoneTurn);
+  const turns = SEEDS.map((seed) => launched(CATALOGUE, REGION, seed, DECK).capstoneTurn);
 
   for (const turn of turns) {
     expect(turn).toBeGreaterThanOrEqual(27);
     expect(turn).toBeLessThanOrEqual(33);
   }
-  expect(beginChronicle(CATALOGUE, 7, DECK).capstoneTurn).toBe(
-    beginChronicle(CATALOGUE, 7, DECK).capstoneTurn,
+  expect(launched(CATALOGUE, REGION, 7, DECK).capstoneTurn).toBe(
+    launched(CATALOGUE, REGION, 7, DECK).capstoneTurn,
   );
   expect(new Set(turns).size).toBeGreaterThan(1);
 });
@@ -371,7 +372,7 @@ test('the siege places five camps around the city, apart from one another, a war
     expect(distance(camp, CITY)).toBeGreaterThanOrEqual(3);
     expect(distance(camp, CITY)).toBeLessThanOrEqual(5);
     for (const other of camps.slice(at + 1)) {
-      expect(distance(camp, other)).toBeGreaterThanOrEqual(MAP_COMPOSITION.campsApart);
+      expect(distance(camp, other)).toBeGreaterThanOrEqual(SIEGE.apart);
     }
   }
   expect(warriors).toHaveLength(camps.length);

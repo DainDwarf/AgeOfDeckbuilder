@@ -1,7 +1,16 @@
 import { type AimedCard, aimOf, CARDS, leavesChronicle, refuses, struck } from './cards';
 import { type Catalogue, checkContent, enemyScript } from './catalogue';
 import { assign, type CityCommand, claim, founding, grow, income, reassign } from './city';
-import { CITY_TILE, generateMap, type Tile, type TileCoords, tileKey } from './map';
+import {
+  CITY_TILE,
+  generateMap,
+  type HexMap,
+  type Tile,
+  type TileCoords,
+  tileAt,
+  tileKey,
+} from './map';
+import { refuse } from './map-kinds';
 import { RESOURCES } from './resources';
 import { seedRng, shuffle as shuffleItems } from './rng';
 import { events, reinforced, scheduled, survived, taken } from './schedule';
@@ -118,22 +127,35 @@ export type Stage = { readonly chronicle: Chronicle } & (
 );
 
 /**
- * The founding: the seed generates the map, the city fills the slot of the tile it stands on, the
- * border and the inhabitants inside it are what a founding starts on, the deck it is founded on is
- * shuffled into its draw pile, and the map is charted of what the city sees from the first turn.
- * The chronicle names the version of the catalogue it is founded on.
+ * The opening, on the map it is handed: the centre tile is settled — its terrain and its building
+ * become the catalogue's city's, and its feature is gone, whatever the map carried there — the border
+ * and the inhabitants inside it are what a founding starts on, the deck it is founded on is shuffled
+ * into its draw pile from the seed, and the map is charted of what the city sees from the first
+ * turn. A map with no centre tile is refused. The chronicle names the version of the catalogue it is
+ * founded on.
  */
 export function beginChronicle(
   catalogue: Catalogue,
   seed: number,
   deck: readonly CardId[],
+  map: HexMap,
 ): Chronicle {
-  const map = generateMap(seedRng(seed));
-  const shuffled = shuffleItems(map.rng, deck);
+  if (tileAt(map.tiles, CITY_TILE) === undefined) {
+    refuse(catalogue, `the map holds no tile at ${tileKey(CITY_TILE)} for the city to settle`);
+  }
+  const shuffled = shuffleItems(seedRng(seed), deck);
   const tiles: Tile[] = map.tiles.map((tile) =>
-    tileKey(tile) === tileKey(CITY_TILE) ? { ...tile, building: 'PH_City' } : tile,
+    tileKey(tile) === tileKey(CITY_TILE)
+      ? {
+          ...tile,
+          terrain: catalogue.city.terrain,
+          building: catalogue.city.building,
+          feature: undefined,
+        }
+      : tile,
   );
   return charted(
+    catalogue,
     draw(
       shuffle(
         draw(
@@ -162,13 +184,27 @@ export function beginChronicle(
 }
 
 /**
+ * A chronicle launched on a region: the seed deals the region's map, and the opening takes it
+ * from the same seed. The one place a map and a chronicle share one.
+ */
+export function launched(
+  catalogue: Catalogue,
+  region: string,
+  seed: number,
+  deck: readonly CardId[],
+): Chronicle {
+  const { tiles, rivers } = generateMap(catalogue, region, seedRng(seed));
+  return beginChronicle(catalogue, seed, deck, { tiles, rivers });
+}
+
+/**
  * The one way a chronicle changes: every command the player has goes through here, and answers the
  * stages it resolves as — never none, each of them charted of what stood in sight when it ended. A
  * chronicle founded on another version of the content than the catalogue's is refused first.
  */
 export function apply(catalogue: Catalogue, chronicle: Chronicle, command: Command): Stage[] {
   checkContent(catalogue, chronicle);
-  return charting(chronicle.snapshots, resolved(catalogue, chronicle, command));
+  return charting(catalogue, chronicle.snapshots, resolved(catalogue, chronicle, command));
 }
 
 /**
@@ -195,14 +231,14 @@ function resolved(catalogue: Catalogue, chronicle: Chronicle, command: Command):
  * the snapshots the first of them carries are already the ones it started with, and a command that
  * charted nothing hands back the very stage it was given.
  */
-function charting(taken: Snapshot[], stages: readonly Stage[]): Stage[] {
+function charting(catalogue: Catalogue, taken: Snapshot[], stages: readonly Stage[]): Stage[] {
   let standing = taken;
   return stages.map((stage) => {
     const carried =
       stage.chronicle.snapshots === standing
         ? stage.chronicle
         : { ...stage.chronicle, snapshots: standing };
-    const seen = charted(carried);
+    const seen = charted(catalogue, carried);
     standing = seen.snapshots;
     return seen === stage.chronicle ? stage : { ...stage, chronicle: seen };
   });
@@ -218,15 +254,15 @@ function stagesOf(catalogue: Catalogue, chronicle: Chronicle, command: Command):
     case 'play':
       return play(catalogue, chronicle, command);
     case 'move':
-      return move(chronicle, command.unit, command.tile);
+      return move(catalogue, chronicle, command.unit, command.tile);
     case 'attack':
       return attack(chronicle, command.unit, command.tile);
     case 'assign':
-      return acted(chronicle, 'assign', assign(chronicle, command.tile));
+      return acted(chronicle, 'assign', assign(catalogue, chronicle, command.tile));
     case 'reassign':
       return acted(chronicle, 'assign', reassign(chronicle, command.from, command.to));
     case 'claim':
-      return acted(chronicle, 'claim', claim(chronicle, command.tile));
+      return acted(chronicle, 'claim', claim(catalogue, chronicle, command.tile));
   }
 }
 
@@ -273,11 +309,11 @@ function endOfTurn(catalogue: Catalogue, chronicle: Chronicle): Stage[] {
 
   staged('strike', struck(catalogue, standing));
   staged('discard', discard(standing));
-  staged('income', income(standing));
+  staged('income', income(catalogue, standing));
   staged('grow', grow(standing));
   raised(enemyPhase(catalogue, standing));
   if (standing.ending !== undefined) return stages;
-  raised(captures(standing));
+  raised(captures(catalogue, standing));
   if (survived(standing)) {
     staged('victory', victory(standing));
     return stages;
@@ -472,11 +508,11 @@ function aimedTile(command: PlayCommand, aim: AimedCard['aim']): TileCoords | un
  * phase raises. A unit that is not the player's, or a tile it cannot land on — an uncharted one
  * among them — is one `refused` stage.
  */
-function move(chronicle: Chronicle, mover: number, to: TileCoords): Stage[] {
+function move(catalogue: Catalogue, chronicle: Chronicle, mover: number, to: TileCoords): Stage[] {
   const unit = unitOf(chronicle.units, mover);
   if (unit === undefined || unit.faction !== 'player') return [{ name: 'refused', chronicle }];
 
-  const landing = reachable(chronicle, unit).find(
+  const landing = reachable(catalogue, chronicle, unit).find(
     (reached) => tileKey(reached.tile) === tileKey(to),
   );
   if (landing === undefined) return [{ name: 'refused', chronicle }];
@@ -606,11 +642,11 @@ function enemyPhase(catalogue: Catalogue, chronicle: Chronicle): Stage[] {
  * enemy phase is over leaves its tile's building slot, and its reward card is laid in the discard
  * pile. A stage each, carrying the tile the camp stood on.
  */
-function captures(chronicle: Chronicle): Stage[] {
+function captures(catalogue: Catalogue, chronicle: Chronicle): Stage[] {
   const stages: Stage[] = [];
   let standing = chronicle;
   for (const { q, r, building } of chronicle.tiles) {
-    if (building !== 'PH_Camp') continue;
+    if (building !== catalogue.camp.building) continue;
     if (unitAt(chronicle.units, { q, r })?.faction !== 'player') continue;
 
     const at = tileKey({ q, r });

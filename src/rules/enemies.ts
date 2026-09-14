@@ -11,7 +11,8 @@ import { unitAt } from './units';
  */
 export function enteredFromCamp(catalogue: Catalogue, chronicle: Chronicle): Chronicle {
   const camps = chronicle.tiles.filter(
-    (tile) => tile.building === 'PH_Camp' && unitAt(chronicle.units, tile) === undefined,
+    (tile) =>
+      tile.building === catalogue.camp.building && unitAt(chronicle.units, tile) === undefined,
   );
   if (camps.length === 0) return chronicle;
 

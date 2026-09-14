@@ -23,6 +23,7 @@ import {
   NO_GROWTH,
   only,
   pointsOf,
+  REGION,
   riverBetween,
   stagedBy,
   standing,
@@ -32,15 +33,8 @@ import {
   withUnits,
   worker,
 } from './fixtures';
-import {
-  distance,
-  MAP_COMPOSITION,
-  MOVE_POINT,
-  type River,
-  TERRAIN_YIELDS,
-  type TileCoords,
-  tileKey,
-} from './map';
+import { distance, MOVE_POINT, type River, type TileCoords, tileKey } from './map';
+import { regionOf, terrainKind } from './map-kinds';
 import { RESOURCES } from './resources';
 import type { Chronicle } from './state';
 
@@ -99,8 +93,8 @@ test('a camp captured at the end of the turn leaves its tile claimed like any ot
   const taken = outcome(apply(CATALOGUE, besieging, { type: 'end-turn' }));
 
   expect(capturesOf(besieging)).toEqual([tileKey(camp)]);
-  expect(claimable(taken).map(tileKey)).toContain(tileKey(camp));
-  expect(cityCommand(taken, camp)).toEqual(claimOf(camp));
+  expect(claimable(CATALOGUE, taken).map(tileKey)).toContain(tileKey(camp));
+  expect(cityCommand(CATALOGUE, taken, camp)).toEqual(claimOf(camp));
   expect(stagedBy(taken, claimOf(camp))).toEqual(['claim']);
   expect(outcome(apply(CATALOGUE, taken, claimOf(camp))).held.map(tileKey)).toContain(
     tileKey(camp),
@@ -155,7 +149,7 @@ test('a unit killed in the enemy phase captures the camp it stood on no longer',
   const taken = outcome(apply(CATALOGUE, besieging, { type: 'end-turn' }));
 
   expect(taken.units.some((unit) => unit.faction === 'player')).toBe(false);
-  expect(buildingAt(taken, camp)).toBe('PH_Camp');
+  expect(buildingAt(taken, camp)).toBe(CATALOGUE.camp.building);
   expect(taken.discardPile).toEqual([]);
 });
 
@@ -169,7 +163,7 @@ test('a chronicle that fell in the enemy phase captures no camp', () => {
   const fallen = outcome(apply(CATALOGUE, overrun, { type: 'end-turn' }));
 
   expect(stagedBy(overrun, { type: 'end-turn' })).toEqual(['capture']);
-  expect(buildingAt(fallen, camp)).toBe('PH_Camp');
+  expect(buildingAt(fallen, camp)).toBe(CATALOGUE.camp.building);
   expect(fallen.discardPile).toEqual([]);
 });
 
@@ -183,7 +177,7 @@ test('a captured camp is silent: the raid enters on a camp still standing', () =
   const raided = toFirstRaid(held);
 
   for (const camp of besieged) expect(buildingAt(raided, camp)).toBeUndefined();
-  expect(buildingAt(raided, kept)).toBe('PH_Camp');
+  expect(buildingAt(raided, kept)).toBe(CATALOGUE.camp.building);
   expect(raided.units.find((unit) => unit.faction === 'enemy')?.tile).toEqual(kept);
 });
 
@@ -196,7 +190,7 @@ test('a chronicle whose every camp is captured takes no raider at all', () => {
 
   const raided = throughSchedule(held);
 
-  expect(raided.tiles.some((tile) => tile.building === 'PH_Camp')).toBe(false);
+  expect(raided.tiles.some((tile) => tile.building === CATALOGUE.camp.building)).toBe(false);
   expect(enemiesOf(raided)).toEqual([]);
 });
 
@@ -215,7 +209,7 @@ test('two camps captured in one turn lay two cards in the discard pile', () => {
   const taken = outcome(apply(CATALOGUE, besieging, { type: 'end-turn' }));
 
   expect(capturesOf(besieging)).toEqual(
-    besieging.tiles.filter((tile) => tile.building === 'PH_Camp').map(tileKey),
+    besieging.tiles.filter((tile) => tile.building === CATALOGUE.camp.building).map(tileKey),
   );
   for (const camp of camps) expect(buildingAt(taken, camp)).toBeUndefined();
   expect(taken.discardPile).toEqual(['PH_Spoils', 'PH_Spoils']);
@@ -482,7 +476,7 @@ test('a tile an enemy occupies yields nothing at income', () => {
 
   for (const resource of RESOURCES) {
     expect(held.resources[resource]).toBe(
-      free.resources[resource] - (TERRAIN_YIELDS.plain[resource] ?? 0),
+      free.resources[resource] - (terrainKind(CATALOGUE, 'plain').yields[resource] ?? 0),
     );
   }
 });
@@ -508,7 +502,7 @@ test('an enemy on the city’s tile attacks nothing, and captures the city the t
 });
 
 test('the enemy that moves in from its camp reaches the city and captures it', () => {
-  const radius = MAP_COMPOSITION.radius;
+  const radius = regionOf(CATALOGUE, REGION).radius;
   let chronicle = cityOf(['urban'], {
     tiles: camped(field(radius), [{ q: radius, r: 0 }]),
   });

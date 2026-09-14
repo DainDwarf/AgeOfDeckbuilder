@@ -1,81 +1,25 @@
+import {
+  biomeKind,
+  buildingKind,
+  featureKind,
+  improvementKind,
+  type MapContent,
+  type Region,
+  type RiverFlow,
+  regionOf,
+  terrainKind,
+} from './map-kinds';
 import type { Resource, Resources } from './resources';
 import { nextRng, pickWeighted, type Rng, shuffle } from './rng';
 
-const LAND_TERRAINS = { plain: 0.55, forest: 0.25, hills: 0.2 } as const;
-
-/**
- * What each biome is made of: the terrain its origin tile is outright, the weighted table its
- * interior tiles scatter from, the table the tiles on its rim draw from instead, and the weight of
- * each rim width in tiles, no rim at all first. Land rims on nothing: its widths make every one of
- * its tiles interior, and its rim table is its interior one.
- */
-export const BIOMES = {
-  land: { origin: 'plain', interior: LAND_TERRAINS, rim: LAND_TERRAINS, rimWidths: [1] },
-  sea: {
-    origin: 'deep',
-    interior: { deep: 0.92, plain: 0.08 },
-    rim: { coast: 1 },
-    rimWidths: [0.2, 0.5, 0.3],
-  },
-  mountain: {
-    origin: 'mountain',
-    interior: { mountain: 0.7, hills: 0.3 },
-    rim: { hills: 1 },
-    rimWidths: [0.4, 0.6],
-  },
-} as const satisfies Record<
-  string,
-  {
-    origin: string;
-    interior: Readonly<Record<string, number>>;
-    rim: Readonly<Record<string, number>>;
-    rimWidths: readonly number[];
-  }
->;
-
-export type Biome = keyof typeof BIOMES;
-
-export const CITY_TERRAIN = 'urban';
-
-export type Terrain =
-  | {
-      [B in Biome]:
-        | (typeof BIOMES)[B]['origin']
-        | keyof (typeof BIOMES)[B]['interior']
-        | keyof (typeof BIOMES)[B]['rim'];
-    }[Biome]
-  | typeof CITY_TERRAIN;
-
-/** What one tile of each terrain yields at income. */
-export const TERRAIN_YIELDS: Record<Terrain, Partial<Resources>> = {
-  plain: { food: 2 },
-  forest: { food: 1, production: 1 },
-  hills: { production: 2 },
-  mountain: { production: 1 },
-  coast: { food: 1, money: 1 },
-  deep: { food: 1 },
-  urban: { production: 1, military: 1, money: 1, science: 1, culture: 1 },
-};
-
-/** What a river adds to a tile it runs along, terrain by terrain: a terrain left out takes nothing. */
-export const RIVER_YIELDS: Partial<Record<Terrain, Partial<Resources>>> = {
-  plain: { food: 1 },
-  forest: { food: 1 },
-};
+export type Terrain = string;
+export type Biome = string;
+export type BuildingTypeId = string;
+export type FeatureId = string;
+export type ImprovementId = string;
 
 /** One move point, in the hundredths every move stat, move point and movement cost counts in. */
 export const MOVE_POINT = 100;
-
-/** What entering a tile of each terrain costs, terrain by terrain; water names none. */
-const TERRAIN_MOVEMENT_COST: Record<Terrain, number | undefined> = {
-  plain: MOVE_POINT,
-  forest: 2 * MOVE_POINT,
-  hills: 2 * MOVE_POINT,
-  mountain: 6 * MOVE_POINT,
-  coast: undefined,
-  deep: undefined,
-  urban: MOVE_POINT,
-};
 
 /** Whether a road runs on a tile: what names the tile's own cost, and what a bridge needs on both banks. */
 function roaded(tile: Tile | undefined): boolean {
@@ -84,138 +28,25 @@ function roaded(tile: Tile | undefined): boolean {
 
 /**
  * What entering a tile spends of a unit's move points: the one answer every path over the map asks.
- * Water names no movement cost and is crossed by nothing, and neither is a tile off the map. A road
- * names its tile's cost outright over what the layers under it sum to.
+ * A terrain that names no movement cost is crossed by nothing, and neither is a tile off the map. A
+ * road names its tile's cost outright over what the layers under it sum to.
  */
-export function movementCost(tile: Tile | undefined): number | undefined {
+export function movementCost(catalogue: MapContent, tile: Tile | undefined): number | undefined {
   if (tile === undefined) return undefined;
-  const ground = TERRAIN_MOVEMENT_COST[tile.terrain];
+  const ground = terrainKind(catalogue, tile.terrain).movementCost;
   if (ground === undefined) return undefined;
   return roaded(tile) ? MOVE_POINT / 2 : ground;
 }
 
-/** Which terrains are water, terrain by terrain. */
-const TERRAIN_WATER: Record<Terrain, boolean> = {
-  plain: false,
-  forest: false,
-  hills: false,
-  mountain: false,
-  coast: true,
-  deep: true,
-  urban: false,
-};
-
 /** Whether a terrain is water: what a river runs to, and what height is measured from. */
-export function water(terrain: Terrain | undefined): boolean {
-  return terrain !== undefined && TERRAIN_WATER[terrain];
+export function water(catalogue: MapContent, terrain: Terrain | undefined): boolean {
+  return terrain !== undefined && terrainKind(catalogue, terrain).water;
 }
-
-/** How high each terrain stands over the ground, terrain by terrain. */
-const TERRAIN_ELEVATION: Record<Terrain, number> = {
-  plain: 0,
-  forest: 1,
-  hills: 2,
-  mountain: 3,
-  coast: 0,
-  deep: 0,
-  urban: 0,
-};
 
 /** How high a terrain stands: what a unit sees over, and what stops it. Off the map is flat. */
-export function elevation(terrain: Terrain | undefined): number {
-  return terrain === undefined ? 0 : TERRAIN_ELEVATION[terrain];
+export function elevation(catalogue: MapContent, terrain: Terrain | undefined): number {
+  return terrain === undefined ? 0 : terrainKind(catalogue, terrain).elevation;
 }
-
-/** How far each terrain stands over the water: what the river layer's relief multiplies. */
-const TERRAIN_LIFT: Record<Terrain, number> = {
-  plain: 0,
-  forest: 0,
-  hills: 1,
-  mountain: 2,
-  coast: 0,
-  deep: 0,
-  urban: 0,
-};
-
-/** `PH_` marks a stand-in: none of these is authored content, and all of them go. */
-export type BuildingTypeId = 'PH_City' | 'PH_Farm' | 'PH_Camp';
-export type FeatureId = 'PH_Fertile';
-export type ImprovementId = 'PH_Mine' | 'PH_Road';
-
-/** What terrains a building of each kind stands on, and what it yields at income on top of them. */
-export const BUILDINGS: Record<
-  BuildingTypeId,
-  { readonly terrains: readonly Terrain[]; readonly yields: Partial<Resources> }
-> = {
-  PH_City: { terrains: ['urban'], yields: {} },
-  PH_Farm: { terrains: ['plain'], yields: { food: 1 } },
-  PH_Camp: { terrains: ['plain', 'forest', 'hills'], yields: {} },
-};
-
-/** What a feature of each kind lies on, and what it yields at income on top of that terrain. */
-export const FEATURES: Record<
-  FeatureId,
-  { readonly terrain: Terrain; readonly yields: Partial<Resources> }
-> = {
-  PH_Fertile: { terrain: 'plain', yields: { food: 1 } },
-};
-
-/** What terrains an improvement of each kind goes on, and what it yields at income on top of them. */
-export const IMPROVEMENTS: Record<
-  ImprovementId,
-  { readonly terrains: readonly Terrain[]; readonly yields: Partial<Resources> }
-> = {
-  PH_Mine: { terrains: ['hills'], yields: { production: 1 } },
-  PH_Road: { terrains: ['plain', 'forest', 'hills', 'urban'], yields: {} },
-};
-
-/**
- * How many biomes the map is cut into, which kinds they are dealt, which features follow, and how
- * the camps stand: how many of them the map is worth, how far each keeps from the city, and how far
- * from every camp already placed.
- */
-export const MAP_COMPOSITION = {
-  radius: 8,
-  tilesPerBiome: 26,
-  minBiomes: 5,
-  cityBiome: 'land',
-  biomeShares: [
-    { biome: 'sea', share: 0.3 },
-    { biome: 'mountain', share: 0.1 },
-  ],
-  featureShares: [{ feature: 'PH_Fertile', share: 1 / 6 }],
-  camps: 3,
-  campFromCity: 4,
-  campsApart: 3,
-} satisfies {
-  radius: number;
-  tilesPerBiome: number;
-  minBiomes: number;
-  cityBiome: Biome;
-  biomeShares: { biome: Biome; share: number }[];
-  featureShares: { feature: FeatureId; share: number }[];
-  camps: number;
-  campFromCity: number;
-  campsApart: number;
-};
-
-/**
- * How the river layer runs. `relief`: how far a hills tile stands above its distance to water,
- * mountain twice that. `roughness`: the most a tile's rolled lift adds to its height. `meander`: an
- * edge's drop is weighted as exp(drop / meander), so a small value makes the steep way near-certain.
- * `curl`: what repeating the last turn multiplies an edge's weight by.
- */
-export const RIVER_FLOW = {
-  relief: 1.5,
-  roughness: 0.5,
-  perRange: 2,
-  climb: 0.5,
-  meander: 1.5,
-  curl: 0.75,
-  edgesPerTile: 4,
-  leastEdges: 6,
-  draws: 60,
-};
 
 export type TileCoords = { readonly q: number; readonly r: number };
 
@@ -231,23 +62,34 @@ export type Tile = TileCoords & {
   readonly building?: BuildingTypeId;
 };
 
+/** A map: its tiles, and the rivers running along the edges between them. */
+export type HexMap = { readonly tiles: Tile[]; readonly rivers: River[] };
+
 export const CITY_TILE: TileCoords = { q: 0, r: 0 };
+
+/** The middle of the disc the generator deals, whatever settles there. */
+const CENTRE: TileCoords = { q: 0, r: 0 };
 
 /**
  * What a tile's layers and the river running along it give at income, resource by resource: the one
  * answer income and the yield overlay both read. A resource left out is none of it.
  */
-export function tileYield(tile: Tile, rivers: readonly River[]): Partial<Resources> {
-  const summed: Partial<Resources> = { ...TERRAIN_YIELDS[tile.terrain] };
+export function tileYield(
+  catalogue: MapContent,
+  tile: Tile,
+  rivers: readonly River[],
+): Partial<Resources> {
+  const ground = terrainKind(catalogue, tile.terrain);
+  const summed: Partial<Resources> = { ...ground.yields };
   const add = (yields: Partial<Resources>): void => {
     for (const [resource, amount] of Object.entries(yields) as [Resource, number][]) {
       summed[resource] = (summed[resource] ?? 0) + amount;
     }
   };
-  if (tile.feature !== undefined) add(FEATURES[tile.feature].yields);
-  for (const improvement of tile.improvements) add(IMPROVEMENTS[improvement].yields);
-  if (tile.building !== undefined) add(BUILDINGS[tile.building].yields);
-  if (runsAlong(rivers, tile)) add(RIVER_YIELDS[tile.terrain] ?? {});
+  if (tile.feature !== undefined) add(featureKind(catalogue, tile.feature).yields);
+  for (const improvement of tile.improvements) add(improvementKind(catalogue, improvement).yields);
+  if (tile.building !== undefined) add(buildingKind(catalogue, tile.building).yields);
+  if (runsAlong(rivers, tile)) add(ground.river ?? {});
   return summed;
 }
 
@@ -313,6 +155,7 @@ function spentOn(walk: Walk, paid: number, cost: number, river: boolean): number
  * movement cost is named for.
  */
 export function pathCosts(
+  catalogue: MapContent,
   tiles: readonly Tile[],
   rivers: readonly River[],
   from: TileCoords,
@@ -333,7 +176,7 @@ export function pathCosts(
       for (const coord of neighbours(at)) {
         const key = tileKey(coord);
         const onto = ground.get(key);
-        const cost = movementCost(onto);
+        const cost = movementCost(catalogue, onto);
         if (cost === undefined || shut(coord)) continue;
         const bridged = nearBank && roaded(onto);
         const total = spentOn(walk, paid, cost, crossings.has(edgeKey(at, coord)) && !bridged);
@@ -471,20 +314,13 @@ export function riversAlong(rivers: readonly River[], tiles: ReadonlySet<string>
   return runs;
 }
 
-function pickTerrain(
-  rng: Rng,
-  table: Readonly<Record<string, number>>,
-): { rng: Rng; picked: Terrain } {
-  return pickWeighted(rng, Object.entries(table) as [Terrain, number][]);
-}
-
 /**
- * Which biomes a map is dealt, the city's own aside: the quota each share is worth, and the city's
- * kind for whatever is left over. Dealt as quotas rather than diced one by one, because independent
- * dice deal a map with no sea at all.
+ * Which biomes a map of the region is dealt, the centre's own aside: the quota each share is worth,
+ * and the centre's kind for whatever is left over. Dealt as quotas rather than diced one by one,
+ * because independent dice deal a map with no sea at all.
  */
-export function dealtBiomes(tileCount: number): Biome[] {
-  const { tilesPerBiome, minBiomes, cityBiome, biomeShares } = MAP_COMPOSITION;
+export function dealtBiomes(region: Region, tileCount: number): Biome[] {
+  const { tilesPerBiome, minBiomes, centreBiome, biomeShares } = region;
   const biomeCount = Math.max(minBiomes, Math.round(tileCount / tilesPerBiome));
 
   const dealt: Biome[] = [];
@@ -492,17 +328,19 @@ export function dealtBiomes(tileCount: number): Biome[] {
     const quota = Math.min(Math.round((biomeCount - 1) * share), biomeCount - 1 - dealt.length);
     for (let i = 0; i < quota; i++) dealt.push(biome);
   }
-  while (dealt.length < biomeCount - 1) dealt.push(cityBiome);
+  while (dealt.length < biomeCount - 1) dealt.push(centreBiome);
   return dealt;
 }
 
 /**
  * The river layer: every tile takes a height — how far it lies from water, lifted by its relief and
  * roughened by a roll — a corner takes the mean of its tiles', and a river is walked down that field
- * from a corner of the mountain range to the water or to a river already run. A walk that dies
+ * from a corner of the biome its rivers rise in to the water or to a river already run. A walk that dies
  * inland or comes out short is thrown away and another source drawn.
  */
 function flowRivers(
+  catalogue: MapContent,
+  flow: RiverFlow,
   initial: Rng,
   coords: readonly TileCoords[],
   indexOf: ReadonlyMap<string, number>,
@@ -511,13 +349,13 @@ function flowRivers(
   ranges: number,
 ): { rng: Rng; rivers: River[] } {
   const { relief, roughness, perRange, climb, meander, curl, edgesPerTile, leastEdges, draws } =
-    RIVER_FLOW;
+    flow;
   let rng = initial;
 
   const dist: number[] = new Array(coords.length).fill(Number.POSITIVE_INFINITY);
   let front: number[] = [];
   for (let index = 0; index < coords.length; index++) {
-    if (!water(terrains[index])) continue;
+    if (!water(catalogue, terrains[index])) continue;
     dist[index] = 0;
     front.push(index);
   }
@@ -538,7 +376,8 @@ function flowRivers(
   for (let index = 0; index < coords.length; index++) {
     const step = nextRng(rng);
     rng = step.rng;
-    heights[index] = dist[index] + relief * TERRAIN_LIFT[terrains[index]] + roughness * step.value;
+    const lift = terrainKind(catalogue, terrains[index]).lift;
+    heights[index] = dist[index] + relief * lift + roughness * step.value;
   }
 
   const onMap = (corner: Corner): number[] =>
@@ -557,7 +396,7 @@ function flowRivers(
   const pool: { corner: Corner; height: number }[] = [];
   const pooled = new Set<string>();
   for (let index = 0; index < coords.length; index++) {
-    if (tileBiomes[index] !== 'mountain') continue;
+    if (tileBiomes[index] !== flow.source) continue;
     for (const corner of cornersOf(coords[index])) {
       const key = cornerKey(corner);
       if (pooled.has(key)) continue;
@@ -635,35 +474,40 @@ function flowRivers(
 }
 
 /**
- * Where the camps stand, one at a time: each is drawn uniformly from the tiles of the terrains a
- * camp lies on that the ground runs to the city from, far enough from the city and from every camp
- * already placed, and the candidates are filtered again after each. When they run out the placing
- * stops, and `generateMap` deals the map again. Nothing else on the tile changes.
+ * Where the camps stand, one at a time: each is drawn uniformly from the tiles of the terrains the
+ * camp's building lies on that the ground runs to the disc's centre from, far enough from the centre
+ * and from every camp already placed, and the candidates are filtered again after each. When they
+ * run out the placing stops, and `generateMap` deals the map again. Nothing else on the tile changes.
  */
 function campsOn(
+  catalogue: MapContent,
+  region: Region,
   initial: Rng,
   tiles: readonly Tile[],
   rivers: readonly River[],
 ): { rng: Rng; tiles: Tile[]; placed: number } {
-  const { camps, campFromCity, campsApart } = MAP_COMPOSITION;
+  const { camps, campFromCentre, campsApart } = region;
+  const camp = catalogue.camp.building;
+  const ground = buildingKind(catalogue, camp).terrains;
   // Only which tiles the walk reached is read here, never what reaching them cost, so the move a
   // crossing is charged against shows nowhere.
   const reached = pathCosts(
+    catalogue,
     tiles,
     rivers,
-    CITY_TILE,
+    CENTRE,
     { kind: 'whole-map', move: MOVE_POINT },
     () => false,
   );
 
   let rng = initial;
   const placed: TileCoords[] = [];
-  for (let camp = 0; camp < camps; camp++) {
+  for (let drawn = 0; drawn < camps; drawn++) {
     const candidates = tiles.filter(
       (tile) =>
-        BUILDINGS.PH_Camp.terrains.includes(tile.terrain) &&
+        ground.includes(tile.terrain) &&
         reached.has(tileKey(tile)) &&
-        distance(tile, CITY_TILE) >= campFromCity &&
+        distance(tile, CENTRE) >= campFromCentre &&
         placed.every((other) => distance(tile, other) >= campsApart),
     );
     if (candidates.length === 0) break;
@@ -676,35 +520,43 @@ function campsOn(
   const camped = new Set(placed.map(tileKey));
   return {
     rng,
-    tiles: tiles.map((tile) =>
-      camped.has(tileKey(tile)) ? { ...tile, building: 'PH_Camp' } : tile,
-    ),
+    tiles: tiles.map((tile) => (camped.has(tileKey(tile)) ? { ...tile, building: camp } : tile)),
     placed: placed.length,
   };
 }
 
 /**
- * The map of a chronicle: a hexagonal disc of tiles in axial coordinates, the city at its centre,
- * generated in six layers: biomes spread from their origins, a rim marked around every biome that
- * touches a biome of another kind, a terrain scattered from each biome's table — the rim one where
- * the rim reaches — each feature dealt over a share of the terrain it lies on, rivers walked down
- * from the mountain range along the edges between tiles, and the camps dealt over the ground they
- * name that the city is walked to from. A deal holding fewer camps than the composition asks is
- * thrown away and another dealt from the generator state it leaves; a tenth deal short of them
- * throws.
+ * The map a region deals: a hexagonal disc of tiles in axial coordinates around its centre,
+ * generated in six layers: biomes spread from their origins, the centre's among them, a rim marked
+ * around every biome that touches a biome of another kind, a terrain scattered from each biome's
+ * table — the rim one where the rim reaches — each feature dealt over a share of the terrain it lies
+ * on, rivers walked down from the biome they rise in along the edges between tiles, and the camps dealt
+ * over the ground they name that the centre is walked to from. A deal holding fewer camps than the
+ * region asks is thrown away and another dealt from the generator state it leaves; a tenth deal
+ * short of them throws.
  */
-export function generateMap(initial: Rng): { rng: Rng; tiles: Tile[]; rivers: River[] } {
-  const { camps } = MAP_COMPOSITION;
-  let deal = dealMap(initial);
-  for (let dealt = 1; deal.placed < camps; dealt++) {
-    if (dealt === 10) throw new Error(`this map was dealt 10 times and never held ${camps} camps`);
-    deal = dealMap(deal.rng);
+export function generateMap(
+  catalogue: MapContent,
+  regionId: string,
+  initial: Rng,
+): HexMap & { readonly rng: Rng } {
+  const region = regionOf(catalogue, regionId);
+  let deal = dealMap(catalogue, region, initial);
+  for (let dealt = 1; deal.placed < region.camps; dealt++) {
+    if (dealt === 10) {
+      throw new Error(`this map was dealt 10 times and never held ${region.camps} camps`);
+    }
+    deal = dealMap(catalogue, region, deal.rng);
   }
   return { rng: deal.rng, tiles: deal.tiles, rivers: deal.rivers };
 }
 
-function dealMap(initial: Rng): { rng: Rng; tiles: Tile[]; rivers: River[]; placed: number } {
-  const { radius, cityBiome, featureShares } = MAP_COMPOSITION;
+function dealMap(
+  catalogue: MapContent,
+  region: Region,
+  initial: Rng,
+): { rng: Rng; tiles: Tile[]; rivers: River[]; placed: number } {
+  const { radius, centreBiome, featureShares } = region;
   let rng = initial;
 
   const coords: TileCoords[] = [];
@@ -714,7 +566,7 @@ function dealMap(initial: Rng): { rng: Rng; tiles: Tile[]; rivers: River[]; plac
     }
   }
   const indexOf = new Map(coords.map((coord, index) => [tileKey(coord), index]));
-  const cityIndex = coords.findIndex((coord) => tileKey(coord) === tileKey(CITY_TILE));
+  const centreIndex = coords.findIndex((coord) => tileKey(coord) === tileKey(CENTRE));
 
   const tileBiomes: Biome[] = new Array(coords.length);
   const assigned = new Set<number>();
@@ -727,15 +579,15 @@ function dealMap(initial: Rng): { rng: Rng; tiles: Tile[]; rivers: River[]; plac
 
   const scattered = shuffle(
     rng,
-    coords.map((_, index) => index).filter((index) => index !== cityIndex),
+    coords.map((_, index) => index).filter((index) => index !== centreIndex),
   );
   rng = scattered.rng;
   const elsewhere = scattered.items;
 
-  const dealt = dealtBiomes(coords.length);
+  const dealt = dealtBiomes(region, coords.length);
 
-  const origins = new Set<number>([cityIndex]);
-  spread(cityIndex, cityBiome);
+  const origins = new Set<number>([centreIndex]);
+  spread(centreIndex, centreBiome);
   for (let i = 0; i < dealt.length; i++) {
     origins.add(elsewhere[i]);
     spread(elsewhere[i], dealt[i]);
@@ -768,7 +620,7 @@ function dealMap(initial: Rng): { rng: Rng; tiles: Tile[]; rivers: River[]; plac
     if (!onRim) continue;
     const roll = pickWeighted(
       rng,
-      BIOMES[biome].rimWidths.map((weight, width) => [width, weight] as const),
+      biomeKind(catalogue, biome).rimWidths.map((weight, width) => [width, weight] as const),
     );
     rng = roll.rng;
     for (let reached = 0; reached < coords.length; reached++) {
@@ -779,27 +631,22 @@ function dealMap(initial: Rng): { rng: Rng; tiles: Tile[]; rivers: River[]; plac
 
   const terrains: Terrain[] = new Array(coords.length);
   for (let index = 0; index < coords.length; index++) {
-    const biome = BIOMES[tileBiomes[index]];
+    const biome = biomeKind(catalogue, tileBiomes[index]);
     if (origins.has(index)) {
       terrains[index] = biome.origin;
       continue;
     }
-    const step = pickTerrain(rng, rimmed.has(index) ? biome.rim : biome.interior);
+    const step = pickWeighted(rng, Object.entries(rimmed.has(index) ? biome.rim : biome.interior));
     rng = step.rng;
     terrains[index] = step.picked;
   }
-  terrains[cityIndex] = CITY_TERRAIN;
 
   const features: (FeatureId | undefined)[] = new Array(coords.length);
   for (const { feature, share } of featureShares) {
+    const lies = featureKind(catalogue, feature).terrain;
     const eligible = coords
       .map((_, index) => index)
-      .filter(
-        (index) =>
-          index !== cityIndex &&
-          features[index] === undefined &&
-          terrains[index] === FEATURES[feature].terrain,
-      );
+      .filter((index) => features[index] === undefined && terrains[index] === lies);
     const order = shuffle(rng, eligible);
     rng = order.rng;
     for (const index of order.items.slice(0, Math.round(share * eligible.length))) {
@@ -808,16 +655,20 @@ function dealMap(initial: Rng): { rng: Rng; tiles: Tile[]; rivers: River[]; plac
   }
 
   const flowed = flowRivers(
+    catalogue,
+    region.rivers,
     rng,
     coords,
     indexOf,
     terrains,
     tileBiomes,
-    dealt.filter((biome) => biome === 'mountain').length,
+    dealt.filter((biome) => biome === region.rivers.source).length,
   );
   rng = flowed.rng;
 
   const camped = campsOn(
+    catalogue,
+    region,
     rng,
     coords.map(({ q, r }, index) => ({
       q,

@@ -65,7 +65,7 @@ function ground(...relief: readonly Relief[]): Tile[] {
  */
 function founded(tiles: Tile[], claimed: readonly TileCoords[] = []): Chronicle {
   const held = [CITY, ...neighbours(CITY), ...claimed];
-  return charted({
+  return charted(CATALOGUE, {
     content: CATALOGUE.version,
     seed: 7,
     ...scheduled(seedRng(7)),
@@ -95,7 +95,7 @@ function watching(chronicle: Chronicle, tile: TileCoords, carried: Partial<UnitS
   const dealt = entered(CATALOGUE, chronicle, { type: 'PH_Warrior', tile, faction: 'player' });
   const last = dealt.units[dealt.units.length - 1];
   const stats = { ...last.stats, ...carried };
-  return charted({
+  return charted(CATALOGUE, {
     ...dealt,
     units: [...dealt.units.slice(0, -1), { ...last, stats, movePoints: stats.move }],
   });
@@ -104,6 +104,7 @@ function watching(chronicle: Chronicle, tile: TileCoords, carried: Partial<UnitS
 /** The chronicle with an enemy entered on a tile through the rules, on the one script there is. */
 function raiding(chronicle: Chronicle, tile: TileCoords): Chronicle {
   return charted(
+    CATALOGUE,
     entered(CATALOGUE, chronicle, {
       type: 'PH_Warrior',
       tile,
@@ -115,7 +116,7 @@ function raiding(chronicle: Chronicle, tile: TileCoords): Chronicle {
 
 /** Whether a tile is in sight. */
 function sees(chronicle: Chronicle, coord: TileCoords): boolean {
-  return inSight(chronicle).has(tileKey(coord));
+  return inSight(CATALOGUE, chronicle).has(tileKey(coord));
 }
 
 /** What the chronicle's snapshot of a tile holds, and nothing at all while the tile is uncharted. */

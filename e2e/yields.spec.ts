@@ -1,4 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
+import { STAND_IN } from '../src/content/stand-in';
 import { tileKey, tileYield } from '../src/rules/map';
 import { RESOURCES, type Resource } from '../src/rules/resources';
 import {
@@ -46,7 +47,7 @@ async function withCityMode(page: Page, ...resources: Resource[]): Promise<Glyph
   const inside = new Set(chronicle.held.map(tileKey));
   const shown = noGlyphs();
   for (const face of drawnFaces(chronicle)) {
-    const yields = tileYield(face, chronicle.rivers);
+    const yields = tileYield(STAND_IN, face, chronicle.rivers);
     for (const resource of inside.has(tileKey(face)) ? RESOURCES : resources) {
       shown[resource] += yields[resource] ?? 0;
     }

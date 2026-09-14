@@ -1,14 +1,11 @@
 import { expect, type Page, test } from '@playwright/test';
 import { STAND_IN } from '../src/content/stand-in';
 import { DECKS } from '../src/rules/cards';
-import { beginChronicle } from '../src/rules/chronicle';
 import {
-  FEATURES,
   type FeatureId,
   MOVE_POINT,
   movementCost,
   neighbours,
-  RIVER_YIELDS,
   runsAlong,
   type Terrain,
   type TileCoords,
@@ -16,14 +13,16 @@ import {
   tileKey,
   water,
 } from '../src/rules/map';
+import { featureKind, terrainKind } from '../src/rules/map-kinds';
 import type { Chronicle } from '../src/rules/state';
-import { text } from '../src/ui/text';
+import { featureName, text } from '../src/ui/text';
 import {
   besideTiles,
   chronicleOf,
   dragOut,
   endTurn,
   firstSeed,
+  launch,
   onScreen,
   open,
   panelLines,
@@ -70,7 +69,7 @@ async function answered(page: Page): Promise<void> {
 /** The first seed whose generator put a feature on a tile touching the city, well inside the frame. */
 function featureRun(): { seed: number; key: string; feature: FeatureId } {
   return firstSeed('puts a feature beside the city', (seed) => {
-    const { tiles, city } = beginChronicle(STAND_IN, seed, DECKS.PH_Deck);
+    const { tiles, city } = launch(seed, DECKS.PH_Deck);
     const touching = new Set(neighbours(city).map(tileKey));
     const found = tiles.find((tile) => tile.feature !== undefined && touching.has(tileKey(tile)));
     if (found?.feature === undefined) return undefined;
@@ -105,13 +104,13 @@ function stepsClear(chronicle: Chronicle): boolean {
  */
 function riverRun(): { seed: number; key: string; terrain: Terrain } {
   return firstSeed('runs a river along a fed tile beside the city', (seed) => {
-    const { tiles, city, rivers } = beginChronicle(STAND_IN, seed, DECKS.PH_Deck);
+    const { tiles, city, rivers } = launch(seed, DECKS.PH_Deck);
     const touching = new Set(neighbours(city).map(tileKey));
     const found = tiles.find(
       (tile) =>
         touching.has(tileKey(tile)) &&
         tile.feature === undefined &&
-        RIVER_YIELDS[tile.terrain] !== undefined &&
+        terrainKind(STAND_IN, tile.terrain).river !== undefined &&
         runsAlong(rivers, tile),
     );
     if (found === undefined) return undefined;
@@ -125,7 +124,7 @@ function riverRun(): { seed: number; key: string; terrain: Terrain } {
  */
 function bareRun(): { seed: number; key: string } {
   return firstSeed('leaves a tile beside the city bare', (seed) => {
-    const { tiles, city } = beginChronicle(STAND_IN, seed, DECKS.PH_Deck);
+    const { tiles, city } = launch(seed, DECKS.PH_Deck);
     const touching = new Set(neighbours(city).map(tileKey));
     const found = tiles.find(
       (tile) =>
@@ -147,7 +146,7 @@ function costRun(): { seed: number; land: string; water: string } {
   return firstSeed(
     'leaves a tile costing two move points beside the city, and water in sight',
     (seed) => {
-      const chronicle = beginChronicle(STAND_IN, seed, DECKS.PH_Deck);
+      const chronicle = launch(seed, DECKS.PH_Deck);
       const touching = new Set(neighbours(chronicle.city).map(tileKey));
       const stood = new Set(chronicle.units.map((unit) => tileKey(unit.tile)));
       const land = chronicle.tiles.find(
@@ -156,9 +155,9 @@ function costRun(): { seed: number; land: string; water: string } {
           !stood.has(tileKey(tile)) &&
           tile.building === undefined &&
           tile.improvements.length === 0 &&
-          movementCost(tile) === 2 * MOVE_POINT,
+          movementCost(STAND_IN, tile) === 2 * MOVE_POINT,
       );
-      const wet = chronicle.snapshots.find((snapshot) => water(snapshot.tile.terrain));
+      const wet = chronicle.snapshots.find((snapshot) => water(STAND_IN, snapshot.tile.terrain));
       if (land === undefined || wet === undefined) return undefined;
       return { seed, land: tileKey(land), water: tileKey(wet) };
     },
@@ -188,11 +187,11 @@ test('a tile the generator gave a feature shows its mark, and the terrain card g
   await expect.poll(() => shownCard(page)).toBe('terrain');
 
   await expect
-    .poll(() => rowFrom(page, text(`feature.${run.feature}`)))
+    .poll(() => rowFrom(page, featureName(run.feature)))
     .toEqual([
-      text(`feature.${run.feature}`),
+      featureName(run.feature),
       'panel-yield-food',
-      `+${FEATURES[run.feature].yields.food}`,
+      `+${featureKind(STAND_IN, run.feature).yields.food}`,
     ]);
 
   expect(problems).toEqual([]);
@@ -215,7 +214,11 @@ test('a tile a river runs along gives the river a row of the terrain card, on wh
 
   await expect
     .poll(() => rowFrom(page, text('panel.river')))
-    .toEqual([text('panel.river'), 'panel-yield-food', `+${RIVER_YIELDS[run.terrain]?.food}`]);
+    .toEqual([
+      text('panel.river'),
+      'panel-yield-food',
+      `+${terrainKind(STAND_IN, run.terrain).river?.food}`,
+    ]);
 
   // The tile holds that one card, so a further press leaves it standing.
   await page.keyboard.press('i');

@@ -1,7 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import { STAND_IN } from '../src/content/stand-in';
 import { DECKS } from '../src/rules/cards';
-import { beginChronicle } from '../src/rules/chronicle';
 import { claimable } from '../src/rules/city';
 import { distance, runsAlong, type TileCoords, tileKey, tileYield } from '../src/rules/map';
 import { RESOURCES } from '../src/rules/resources';
@@ -21,6 +20,7 @@ import {
   type Glyphs,
   glyphs,
   glyphsOf,
+  launch,
   marksIn,
   noGlyphs,
   open,
@@ -60,7 +60,7 @@ const UNPAID = [text('refusal.claim')];
 
 /** How many claims the founding opens on, by the rules' own count: one mark to be drawn for each. */
 function claims(): number {
-  return claimable(beginChronicle(STAND_IN, 1, DECKS.PH_Deck)).length;
+  return claimable(STAND_IN, launch(1, DECKS.PH_Deck)).length;
 }
 
 /** Whether the chronicle screen shows city mode is on: both marks stand, or neither does. */
@@ -104,7 +104,7 @@ async function yielded(page: Page): Promise<{ inside: Glyphs; drawn: Glyphs }> {
   const inside = noGlyphs();
   const drawn = noGlyphs();
   for (const face of drawnFaces(chronicle)) {
-    const yields = tileYield(face, chronicle.rivers);
+    const yields = tileYield(STAND_IN, face, chronicle.rivers);
     for (const resource of RESOURCES) {
       const points = yields[resource] ?? 0;
       drawn[resource] += points;
@@ -504,7 +504,7 @@ test('a second click the city cannot pay for claims nothing and says so, one it 
   await page.mouse.click(far.x, far.y);
   await answered(page);
   expect(await refusalLines(page)).toBeUndefined();
-  expect(claimable(claimed).map(tileKey)).not.toContain(FAR.key);
+  expect(claimable(STAND_IN, claimed).map(tileKey)).not.toContain(FAR.key);
 
   expect(problems).toEqual([]);
 });
