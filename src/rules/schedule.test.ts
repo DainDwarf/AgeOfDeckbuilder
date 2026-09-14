@@ -127,10 +127,14 @@ test('the famine is dealt as readily on the third turn as the twentieth', () => 
   expect(Math.max(...turns)).toBeGreaterThanOrEqual(20);
 });
 
-test('a timeline dealing on the first turn opens the chronicle on its deal', () => {
+test('a timeline dealing on the first turn opens the chronicle on its deal, and the take draws its hand', () => {
   const opened = beginChronicle(CATALOGUE, 1, DECK, { tiles: field(4), rivers: [] }, dueOn(1));
+  const taken = outcome(apply(CATALOGUE, opened, { type: 'take', event: 'PH_Famine' }));
 
   expect(opened.deal).toEqual(['PH_Raid', 'PH_Famine']);
+  expect(opened.hand).toEqual([]);
+  expect(taken.deal).toEqual([]);
+  expect(taken.hand).toHaveLength(5);
 });
 
 test('nothing is dealt before the due turn, and the raid enters a warrior on a camp', () => {
@@ -310,7 +314,7 @@ function awaitingCapstone(carrying: Carrying = {}): Chronicle {
 }
 
 /** The same city one end of turn on, with the capstone taken off the deal its turn brought. */
-function besieged(carrying: Carrying = {}): Chronicle {
+function siegeLanded(carrying: Carrying = {}): Chronicle {
   return endedTurn(awaitingCapstone(carrying), 'PH_Siege');
 }
 
@@ -336,7 +340,7 @@ const CORRIDOR: TileCoords[] = [
 
 /** A city on that corridor, and water everywhere else. */
 function corridor(carrying: Carrying = {}): Chronicle {
-  return besieged({ tiles: only(6, CORRIDOR), ...carrying });
+  return siegeLanded({ tiles: only(6, CORRIDOR), ...carrying });
 }
 
 /**
@@ -361,7 +365,7 @@ const LURE: TileCoords = { q: 4, r: 0 };
 
 /** The moated city with the siege landed on it, a camp of the generator's standing out of its reach. */
 function moated(carrying: Carrying = {}): Chronicle {
-  return besieged({ tiles: camped(MOATED, [STANDING_CAMP]), ...carrying });
+  return siegeLanded({ tiles: camped(MOATED, [STANDING_CAMP]), ...carrying });
 }
 
 /** That city ending turn after turn to the end of the siege's span: the chronicle it left. */
@@ -385,7 +389,7 @@ test('the capstone’s turn deals the capstone alone, whatever the timeline list
 });
 
 test('the siege places five camps around the city, apart from one another, a warrior on each', () => {
-  const after = besieged();
+  const after = siegeLanded();
   const camps = campsOf(after);
   const warriors = enemiesOf(after);
 
@@ -406,7 +410,7 @@ test('the siege places five camps around the city, apart from one another, a war
 
 test('which tiles the siege places its camps on is drawn from the seeded generator', () => {
   const campsFrom = (seed: number): string =>
-    campsOf(besieged({ rng: seedRng(seed) }))
+    campsOf(siegeLanded({ rng: seedRng(seed) }))
       .map(tileKey)
       .join(' ');
 
@@ -449,8 +453,8 @@ test('the siege places no camp on ground a camp does not lie on, or the city is 
     { q: 4, r: 0 },
   ];
   const land = [CITY, { q: 1, r: 0 }, { q: 2, r: 0 }, ...reach];
-  const rough = besieged({ tiles: madeOf(only(6, land), 'mountain', reach) });
-  const moat = besieged({ tiles: only(6, [CITY, ...reach]) });
+  const rough = siegeLanded({ tiles: madeOf(only(6, land), 'mountain', reach) });
+  const moat = siegeLanded({ tiles: only(6, [CITY, ...reach]) });
 
   for (const after of [rough, moat]) {
     expect(campsOf(after)).toEqual([]);
@@ -490,7 +494,7 @@ test('the reinforcement is a stage of its own, raised after the tick and ahead o
 });
 
 test('the siege’s own camps are reinforced as the camps standing are', () => {
-  const landed = besieged({ units: [unkillable(CITY)] });
+  const landed = siegeLanded({ units: [unkillable(CITY)] });
   const camps = campsOf(landed);
   const after = endedTurn(landed, 'PH_Famine');
 

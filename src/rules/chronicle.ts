@@ -131,8 +131,9 @@ export type Stage = { readonly chronicle: Chronicle } & (
  * its building become the catalogue's city's, and its feature is gone, whatever the map carried
  * there — the border and the inhabitants inside it are what a founding starts on, the deck it is
  * founded on is shuffled into its draw pile from the seed, the events phase runs on the first turn,
- * and the map is charted of what the city sees from that turn. A map with no centre tile is refused.
- * The chronicle names the version of the catalogue it is founded on.
+ * a hand is drawn unless that phase left a deal standing — the take draws it then — and the map is
+ * charted of what the city sees from that turn. A map with no centre tile is refused. The chronicle
+ * names the version of the catalogue it is founded on.
  */
 export function beginChronicle(
   catalogue: Catalogue,
@@ -155,34 +156,26 @@ export function beginChronicle(
         }
       : tile,
   );
-  return charted(
-    catalogue,
-    draw(
-      shuffle(
-        draw(
-          events({
-            content: catalogue.version,
-            seed,
-            rng: shuffled.rng,
-            timeline,
-            tiles,
-            snapshots: [],
-            rivers: map.rivers,
-            city: CITY_TILE,
-            ...founding(),
-            turn: 1,
-            deal: [],
-            resources: { food: 0, production: 0, military: 0, money: 0, science: 0, culture: 0 },
-            units: [],
-            nextUnit: 1,
-            drawPile: shuffled.items,
-            hand: [],
-            discardPile: [],
-          }),
-        ),
-      ),
-    ),
-  );
+  const opened = events({
+    content: catalogue.version,
+    seed,
+    rng: shuffled.rng,
+    timeline,
+    tiles,
+    snapshots: [],
+    rivers: map.rivers,
+    city: CITY_TILE,
+    ...founding(),
+    turn: 1,
+    deal: [],
+    resources: { food: 0, production: 0, military: 0, money: 0, science: 0, culture: 0 },
+    units: [],
+    nextUnit: 1,
+    drawPile: shuffled.items,
+    hand: [],
+    discardPile: [],
+  });
+  return charted(catalogue, opened.deal.length > 0 ? opened : draw(shuffle(draw(opened))));
 }
 
 /**

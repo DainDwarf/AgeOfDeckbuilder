@@ -42,6 +42,14 @@ import { charted } from './sight';
 import type { CardId, Chronicle, Timeline } from './state';
 import type { Faction, Unit, UnitStats } from './units';
 
+/** How many camps the fixture's siege places: what its rules entry reads and what it lands. */
+const SIEGE_CAMPS = 5;
+
+/** How many warriors the fixture's raid enters on this turn: one, and one more for every ten turns. */
+function raiders(turn: number): number {
+  return 1 + Math.floor(turn / 10);
+}
+
 /** The content every fixture is played on, its numbers the fixture's own. */
 export const CATALOGUE: Catalogue = catalogued({
   version: 'fixture',
@@ -171,17 +179,16 @@ export const CATALOGUE: Catalogue = catalogued({
   },
   events: {
     PH_Raid: {
-      reads: (_catalogue, chronicle) => ({ warriors: 1 + Math.floor(chronicle.turn / 10) }),
-      lands: (catalogue, chronicle) =>
-        raided(catalogue, chronicle, 1 + Math.floor(chronicle.turn / 10)),
+      reads: (_catalogue, chronicle) => ({ warriors: raiders(chronicle.turn) }),
+      lands: (catalogue, chronicle) => raided(catalogue, chronicle, raiders(chronicle.turn)),
     },
     PH_Famine: {
       reads: () => ({}),
       lands: (catalogue, chronicle) => laid(catalogue, chronicle, 'PH_Hunger'),
     },
     PH_Siege: {
-      reads: () => ({ camps: 5 }),
-      lands: (catalogue, chronicle) => besieged(catalogue, chronicle, 5, [3, 5], 3),
+      reads: () => ({ camps: SIEGE_CAMPS }),
+      lands: (catalogue, chronicle) => besieged(catalogue, chronicle, SIEGE_CAMPS, [3, 5], 3),
       continues: reinforced,
     },
   },

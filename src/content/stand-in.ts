@@ -85,6 +85,9 @@ const FOUNDING_CARDS: readonly CardId[] = [
   'PH_Recall',
 ];
 
+/** How many camps the siege places: what its rules entry reads and what it lands. */
+const SIEGE_CAMPS = 5;
+
 /** `PH_` marks a stand-in: none of this is authored content, and every piece of it goes. */
 export const STAND_IN: Catalogue = catalogued({
   version: 'stand-in',
@@ -209,8 +212,8 @@ export const STAND_IN: Catalogue = catalogued({
       lands: (catalogue, chronicle) => laid(catalogue, chronicle, 'PH_Hunger'),
     },
     PH_Siege: {
-      reads: () => ({ camps: 5 }),
-      lands: (catalogue, chronicle) => besieged(catalogue, chronicle, 5, [3, 5], 3),
+      reads: () => ({ camps: SIEGE_CAMPS }),
+      lands: (catalogue, chronicle) => besieged(catalogue, chronicle, SIEGE_CAMPS, [3, 5], 3),
       continues: reinforced,
     },
   },
