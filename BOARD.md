@@ -6,7 +6,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ---
 
-- **The nomadic age enters the design** — the age list in the pitch and the roadmap reshaped: the nomadic age is the campaign's starting point and v0.0.4's content, the Stone age comes with the meta in v0.0.5, and a chronicle opens on a turn 0 the launch choices lead to.
 - **Units join the catalogue** — the content argument is born here: unit stats and the enemy scripts move into a catalogue threaded from the boot through the founding and every rule that reads them, the chronicle names its content version, and this line sets the pattern the map, the cards and the schedule copy.
 - **The map joins the catalogue** — the layer tables and the map compositions move in, a region being a composition, and the founding takes a fully generated map instead of dealing it, so a test hands in a hand-made map such as a radius 8 all-plain disc.
 - **Cards join the catalogue** — cards and decks move in, each card carrying its aim and effect closures signed once against the catalogue, and the "data owns its behaviour" dogma returns.

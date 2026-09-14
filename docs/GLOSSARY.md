@@ -12,12 +12,13 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **campaign** | Humanity's history as the player has unlocked it — the meta's progression. | tech tree, map (for the meta) |
 | **collection** | Every card the player owns, with the copies owned of each. | library, pool, inventory |
 | **civilization** | A playable identity: starting units, one passive rule, a look, and its deck. | people, nation, civ, board |
-| **deck** | A civilization's set of cards, fixed for a chronicle. | loadout |
+| **deck** | A civilization's set of cards, fixed for a chronicle, in two sections: its cards, which the draw pile cycles, and its **settle cards**, played on turn 0 alone. | loadout |
 | **technology** | A permanent unlock earned by an achievement: new cards, better buildings, better units. | tech, advancement, upgrade, research |
 | **achievement** | A goal a chronicle can reach; reaching it unlocks a technology. | mission, objective, quest, milestone |
 | **influence** | The meta-currency every chronicle pays, scaled by how the city fared. | gold, XP |
-| **chronicle** | One city's story through one age, from founding to victory or defeat — what a roguelite calls a run. | run, playthrough, attempt, session |
+| **chronicle** | One city's story through one age, from its opening to victory or defeat — what a roguelite calls a run. | run, playthrough, attempt, session |
 | **city** | A settlement on the map; the player owns exactly one — _the_ city, what a chronicle is about. | town, capital, base, settlement |
+| **settle** | To put the city on a tile; what the settle card does on turn 0, the **settle phase**, where the deck's settle cards alone are played. | found, founding, establish, place (the city) |
 | **map** | The hexagonal grid a chronicle is played on. | board, world, grid |
 | **chronicle screen** | The surface a chronicle is played on — the map, the hand, the piles, the resource bar, the infopanel; what a window opens over and closes back to. | table, playfield, play area |
 | **city mode** | The chronicle screen's second mode, in which a left click on the selected tile acts on the city — assigns, unassigns, claims. | build mode, manage mode, edit mode, planning mode |
@@ -33,13 +34,13 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **enemy** | A non-player unit that attacks. | barbarian, raider, hostile, invader, foe |
 | **killed** | What happens to a unit that loses: it leaves the map. | destroyed, slain, dead, lost |
 | **event** | One entry of the age's schedule; what the chronicle throws at the city. | disaster, threat, crisis, encounter |
-| **capstone** | The age's final trial, known from the founding on a turn that is not; passing it is victory. | boss, finale, objective |
+| **capstone** | The age's final trial, known from the chronicle's opening on a turn that is not; passing it is victory. | boss, finale, objective |
 | **schedule** | An age's set of events with their turn-shifting weights; what the Events phase draws from. | timeline, calendar |
 | **camp** | A generated site enemies enter the map from, filling its tile's building slot; captured, it leaves the map. | lair, nest, spawn point, spawner |
 | **victory** | The end of a chronicle by passing the capstone. | win, success, triumph |
 | **defeat** | The end of a chronicle by the city's fall. | collapse, game over, loss, death |
 | **border** | The edge of the tiles the city holds; pushed out by culture. | frontier, territory |
-| **turn** | One pass of the cycle: events, draw, play, end, income, growth, enemy phase. | round |
+| **turn** | One pass of the cycle: events, draw, play, end, income, growth, enemy phase. Turn 0, the settle phase, runs none of it. | round |
 | **phase** | One part of the turn's cycle, in its fixed order; what the turn list names. | step, stage (in prose), section |
 | **hand** | The cards drawn this turn; what is not played is discarded when the turn ends. | — |
 | **draw** | To take cards from the draw pile into the hand. | pull |

@@ -12,10 +12,11 @@ A single-player **roguelite deckbuilder** that retraces humanity's history throu
 
 ### The chronicle — one city, one age ✅
 
-A **chronicle** is one city's story, told once — the roguelite's unit of play, named with the fiction's own word: _Chronicles of the mercantile civilization in the Age of Powder_.
+A **chronicle** is one city's story, told once — the roguelite's unit of play, named with the fiction's own word.
 
-- You found **one city** on a generated **hexagonal map** of varied terrain. Over the chronicle you extend it over tiles, work and terraform them, build buildings, field units that move, attack and protect, and deal with the neutrals and enemies on the map.
+- You settle **one city** on a generated **hexagonal map** of varied terrain. Over the chronicle you extend it over tiles, work and terraform them, build buildings, field units that move, attack and protect, and deal with the neutrals and enemies on the map.
 - A chronicle spans **one age**, from its dawn to the threshold of the next. Its history is an **escalating schedule of events** — enemies, natural disasters, inner turmoil, plus neutral and fortunate ones — and it ends with the age's **capstone**, one authored trial per age. Reaching the next age is victory; the city's fall is defeat. A chronicle spanning every age was rejected: in 30–60 minutes each age is a few minutes and every chronicle opens the same way.
+- **The ages** are humanity's, in order: the Nomadic Age, the Stone Age, the Bronze Age, the Iron Age, and on through history. The **Nomadic Age** is where humanity stops wandering — the settle is the act it is named for — and it is the age of the fewest verbs: units and instants, few or no buildings, the shortest chronicle. A campaign begins there, and its capstone is the threshold of the Stone Age, where buildings begin. 🔧 It later serves a second time, as the first chronicle a new player plays, on a fixed map and schedule with a tutorial.
 - **The schedule tests every resource and the map**, never one axis, and no two chronicles deal it in the same order. That is the only rule against a narrow deck: a deck with no answer to famine dies to the famine. A deck has a specialty; it never has an omission.
 - **Cards are the verbs; the map holds the nouns.** Buildings and units enter the map through cards, and immediate effects are cards. Standing things do their standing thing for free — a farm with a person assigned yields — and **changing the map costs a card**: building, terraforming, negotiating. What a unit does with itself is the exception it carries with it: it crosses the map on its own move points and attacks on its own action, and no card is spent on either. A worker's action is spent the other way round: on the cards played through it.
 - Five core resources: **food, production, military, money, science**. 🔧 Their jobs: food grows the population; production builds buildings and units and shapes tiles; military pays for military units, instants and fortifications; money trades for other goods and accumulates; science pays for manipulating the cards — drawing, discarding and the like. **Culture pushes the border out**, and the tiles inside it are the city's; population is the city's inhabitants, assigned to its tiles.
@@ -27,10 +28,12 @@ A **chronicle** is one city's story, told once — the roguelite's unit of play,
 
 Four choices, each with one job:
 
-- **Age** — given by the campaign: the furthest age reached. Earlier ages stay playable, for the influence and the achievements missed. The age is never a difficulty pick.
+- **Age** — given by the campaign: the furthest age reached, the Nomadic Age for a new campaign. Earlier ages stay playable, for the influence and the achievements missed. The age is never a difficulty pick.
 - **Region** — a bias on map generation: temperate, desert, coast, mountains, polar, … The region is the **difficulty dial**, and honestly so: a harsh region pays more influence, and some achievements are reachable only from a region that has what they need — _Sailing_ wants a coast. 🔧 A freely chosen region with no such stakes was rejected: every launch would take the easiest.
 - **Civilization** — who you are: starting units, one passive rule, a look. A civilization owns its deck — one deck per civilization, edited as a facet of it. 🔧
-- **Deck** — built in the meta from the shared collection, fixed for the chronicle.
+- **Deck** — built in the meta from the shared collection, fixed for the chronicle, in two sections: its **cards**, which the draw pile cycles, and its **settle cards**, played on turn 0 alone.
+
+The four choices lead to turn 0: the chronicle opens unsettled, and its first act is the settle.
 
 ### The meta — humanity's history ✅
 
