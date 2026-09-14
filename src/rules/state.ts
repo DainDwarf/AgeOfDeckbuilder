@@ -1,7 +1,7 @@
 import { type River, type Tile, type TileCoords, tileKey } from './map';
 import type { Resource, Resources } from './resources';
 import type { Rng } from './rng';
-import { type EnemyScriptId, type Faction, UNIT_STATS, type Unit, type UnitTypeId } from './units';
+import type { Faction, Unit } from './units';
 
 /** What took the city: an enemy captured it, or it was left without population. */
 export type DefeatCause = 'capture' | 'population';
@@ -33,7 +33,7 @@ export type CardId =
   | 'PH_Hunger';
 
 /** What a snapshot keeps of the unit that stood on the tile: what its mark is drawn from. */
-export type SnapshotUnit = { readonly type: UnitTypeId; readonly faction: Faction };
+export type SnapshotUnit = { readonly type: string; readonly faction: Faction };
 
 /**
  * One tile as it was last in sight, and the unit standing on it then. The player's own units carry
@@ -43,6 +43,8 @@ export type Snapshot = TileCoords & { readonly tile: Tile; readonly unit?: Snaps
 
 /** Everything one city's story is made of, and the generator every later draw comes from. */
 export type Chronicle = {
+  /** The version of the catalogue the chronicle was founded on, and the only one it is played on. */
+  readonly content: string;
   readonly seed: number;
   readonly rng: Rng;
   readonly tiles: Tile[];
@@ -151,37 +153,4 @@ export function assignedTo(chronicle: Chronicle, tile: TileCoords): boolean {
 /** The inhabitants on no tile: what a unit card takes, and what an assign has to give a tile. */
 export function idle(chronicle: Chronicle): number {
   return chronicle.population - chronicle.assigned.length;
-}
-
-/** What a unit entering the map is: its kind, the tile it stands on, and who it acts for. */
-export type Entering = { readonly type: UnitTypeId; readonly tile: TileCoords } & (
-  | { readonly faction: 'player' }
-  | { readonly faction: 'enemy'; readonly script: EnemyScriptId }
-);
-
-/**
- * The one way a unit enters the map: it takes the next number off the chronicle's counter, carries
- * its own copy of its kind's stats, and stands with its move points and its action full.
- */
-export function entered(chronicle: Chronicle, entering: Entering): Chronicle {
-  const stats = { ...UNIT_STATS[entering.type] };
-  const carried = {
-    id: chronicle.nextUnit,
-    stats,
-    tile: entering.tile,
-    movePoints: stats.move,
-    action: stats.action,
-  };
-  const dealt = (unit: Unit): Chronicle => ({
-    ...chronicle,
-    nextUnit: chronicle.nextUnit + 1,
-    units: [...chronicle.units, unit],
-  });
-
-  switch (entering.faction) {
-    case 'player':
-      return dealt({ ...carried, faction: 'player' });
-    case 'enemy':
-      return dealt({ ...carried, faction: 'enemy', script: entering.script });
-  }
 }

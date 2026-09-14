@@ -1,5 +1,6 @@
 import type Phaser from 'phaser';
 import { CARDS } from '../rules/cards';
+import type { Catalogue } from '../rules/catalogue';
 import { costOf } from '../rules/chronicle';
 import { SCHEDULE } from '../rules/schedule';
 import {
@@ -124,12 +125,12 @@ export function cardFace(id: CardId): Face {
  * The face one entry of a deal is drawn as: an event costs nothing, and its rules entry reads the
  * numbers of the turn it was dealt on.
  */
-export function eventFace(chronicle: Chronicle, id: EventId): Face {
+export function eventFace(catalogue: Catalogue, chronicle: Chronicle, id: EventId): Face {
   return {
     id,
     name: text(`event.${id}`),
     kind: text('kind.event'),
-    rules: text(`rules.${id}`, SCHEDULE.events[id].reads(chronicle)),
+    rules: text(`rules.${id}`, SCHEDULE.events[id].reads(catalogue, chronicle)),
     costs: [],
   };
 }

@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { CARD_KINDS, CARDS } from '../rules/cards';
+import type { Catalogue } from '../rules/catalogue';
 import type { Stage } from '../rules/chronicle';
 import { dealsCapstone, SCHEDULE } from '../rules/schedule';
 import {
@@ -179,6 +180,7 @@ type Scroll = {
 export function createOverlay(
   scene: Phaser.Scene,
   on: Surface,
+  catalogue: Catalogue,
   covering: (covered: boolean) => void,
   newChronicle: () => void,
   take: (event: EventId) => void,
@@ -472,7 +474,7 @@ export function createOverlay(
     const title = raiseTitle('deal', text(dealsCapstone(deal.on) ? 'deal.capstone' : 'deal.title'));
     layGrid(
       'deal',
-      deal.on.deal.map((id, at): Offered => ({ face: eventFace(deal.on, id), at })),
+      deal.on.deal.map((id, at): Offered => ({ face: eventFace(catalogue, deal.on, id), at })),
       title.y + title.height + MARGIN,
       (at, press) => {
         switch (press) {
@@ -487,7 +489,7 @@ export function createOverlay(
             return;
           case 'right':
             if (at !== undefined) {
-              showInspection(eventFace(deal.on, deal.on.deal[at]), NO_REFUSAL, deal);
+              showInspection(eventFace(catalogue, deal.on, deal.on.deal[at]), NO_REFUSAL, deal);
             }
             return;
         }
@@ -512,7 +514,7 @@ export function createOverlay(
     carried = announcement;
     capstone = announcement;
 
-    const face = eventFace(announcement.on, SCHEDULE.capstone.event);
+    const face = eventFace(catalogue, announcement.on, SCHEDULE.capstone.event);
     const title = raiseTitle('capstone', text('capstone.title'));
     layGrid('capstone', [{ face, at: 0 }], title.y + title.height + MARGIN, (at, press) => {
       switch (press) {
@@ -791,7 +793,11 @@ export function createOverlay(
         case 'deal': {
           const at = carried.selected;
           if (at !== undefined) {
-            showInspection(eventFace(carried.on, carried.on.deal[at]), NO_REFUSAL, carried);
+            showInspection(
+              eventFace(catalogue, carried.on, carried.on.deal[at]),
+              NO_REFUSAL,
+              carried,
+            );
           }
           return;
         }

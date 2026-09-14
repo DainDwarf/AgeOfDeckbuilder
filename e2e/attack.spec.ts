@@ -1,9 +1,10 @@
 import { expect, type Page, test } from '@playwright/test';
+import { STAND_IN } from '../src/content/stand-in';
 import { DECKS } from '../src/rules/cards';
 import { apply, beginChronicle, outcome, refusalOf } from '../src/rules/chronicle';
 import { distance, type TileCoords, tileKey } from '../src/rules/map';
 import { type Chronicle, playable } from '../src/rules/state';
-import { UNIT_STATS, type Unit, unitAt } from '../src/rules/units';
+import { type Unit, unitAt } from '../src/rules/units';
 import {
   budget,
   chronicleOf,
@@ -31,7 +32,7 @@ type AttackRun = {
 /** The first seed that opens on such a run. */
 function attackRun(): AttackRun {
   return firstSeed('brings an enemy within reach of a standing warrior', (seed) => {
-    let chronicle = beginChronicle(seed, DECKS.PH_Deck);
+    let chronicle = beginChronicle(STAND_IN, seed, DECKS.PH_Deck);
     for (let turn = 1; turn <= 8; turn++) {
       const met = besieged(chronicle);
       if (met !== undefined) return { seed, turn, ...met };
@@ -47,8 +48,8 @@ function attackRun(): AttackRun {
  */
 function besieged(chronicle: Chronicle): { turns: number; enemy: TileCoords } | undefined {
   const enter = chronicle.hand.indexOf('PH_Warrior');
-  if (enter === -1 || !playable(refusalOf(chronicle, 'PH_Warrior'))) return undefined;
-  let standing = outcome(apply(chronicle, { type: 'play', index: enter, aim: 'none' }));
+  if (enter === -1 || !playable(refusalOf(STAND_IN, chronicle, 'PH_Warrior'))) return undefined;
+  let standing = outcome(apply(STAND_IN, chronicle, { type: 'play', index: enter, aim: 'none' }));
   if (standing.units.length !== 1) return undefined;
 
   for (let turns = 1; turns <= 20; turns++) {
@@ -92,14 +93,14 @@ test('a warrior dragged onto an enemy attacks it, and its spent action refuses a
   const warrior = besetted.units[0];
   const enemy = await unitOn(page, run.enemy);
   expect(warrior.tile).toEqual(entered.city);
-  expect(warrior.action).toBe(UNIT_STATS.PH_Warrior.action);
+  expect(warrior.action).toBe(STAND_IN.units.PH_Warrior.action);
   expect(enemy?.faction).toBe('enemy');
 
   // The attack: the warrior is dragged onto the enemy, the target on the tile making it an attack.
   await dragTiles(page, warrior.tile, run.enemy);
   await expect
     .poll(async () => (await unitOn(page, run.enemy))?.stats.health)
-    .toBe((enemy?.stats.health ?? 0) - UNIT_STATS.PH_Warrior.damage);
+    .toBe((enemy?.stats.health ?? 0) - STAND_IN.units.PH_Warrior.damage);
 
   const attacked = await chronicleOf(page);
   expect(attacked.units[0].tile).toEqual(warrior.tile);

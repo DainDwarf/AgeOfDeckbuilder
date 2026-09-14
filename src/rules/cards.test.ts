@@ -5,6 +5,7 @@ import {
   actionOf,
   assignTo,
   buildingAt,
+  CATALOGUE,
   type Carrying,
   CITY,
   cityOf,
@@ -64,14 +65,14 @@ function aimedCard(id: CardId): AimedCard {
 
 /** The tiles the named card's aim admits, for a card aimed at a tile or at a unit. */
 function admittedTiles(chronicle: Chronicle, id: CardId): TileCoords[] {
-  return admitted(chronicle, aimedCard(id));
+  return admitted(CATALOGUE, chronicle, aimedCard(id));
 }
 
 /** The one reason the named card's aim refuses this tile of the map, and nothing when it admits it. */
 function refusedFor(chronicle: Chronicle, id: CardId, at: TileCoords): TileBlock | undefined {
   const tile = tileAt(chronicle.tiles, at);
   if (tile === undefined) throw new Error(`${tileKey(at)} is no tile of the map`);
-  return refuses(chronicle, aimedCard(id), tile);
+  return refuses(CATALOGUE, chronicle, aimedCard(id), tile);
 }
 
 /** What the city holds to build and to work tiles with, and nothing besides. */
@@ -117,8 +118,12 @@ test('a plain a river runs along stops taking its food once the tile is terrafor
     rivers: [cornersOf(at).slice(0, 2)],
   });
 
-  const plain = outcome(apply({ ...city, resources: production(0) }, { type: 'end-turn' }));
-  const urban = outcome(apply(outcome(apply(city, aimedAt(at))), { type: 'end-turn' }));
+  const plain = outcome(
+    apply(CATALOGUE, { ...city, resources: production(0) }, { type: 'end-turn' }),
+  );
+  const urban = outcome(
+    apply(CATALOGUE, outcome(apply(CATALOGUE, city, aimedAt(at))), { type: 'end-turn' }),
+  );
 
   for (const resource of RESOURCES) {
     expect(urban.resources[resource]).toBe(
@@ -136,7 +141,7 @@ test('playing a card pays its cost and sends it to the discard pile', () => {
     resources: { food: 0, production: 0, military: 0, money: 0, science: 3, culture: 0 },
   });
 
-  const after = outcome(apply(city, { type: 'play', index: 0, aim: 'none' }));
+  const after = outcome(apply(CATALOGUE, city, { type: 'play', index: 0, aim: 'none' }));
 
   expect(after.hand).toEqual(['PH_March']);
   expect(after.discardPile).toEqual(['PH_Harvest']);
@@ -149,7 +154,7 @@ test('playing the harvest card gains its two food, on top of what the city alrea
     resources: { food: 1, production: 0, military: 0, money: 0, science: 1, culture: 0 },
   });
 
-  const after = outcome(apply(city, { type: 'play', index: 0, aim: 'none' }));
+  const after = outcome(apply(CATALOGUE, city, { type: 'play', index: 0, aim: 'none' }));
 
   expect(after.resources.food).toBe(3);
 });
@@ -161,8 +166,12 @@ test('a card the city cannot pay for stays in the hand and costs nothing', () =>
     resources: { food: 0, production: 2, military: 0, money: 0, science: 0, culture: 0 },
   });
 
-  expect(outcome(apply(penniless, { type: 'play', index: 0, aim: 'none' }))).toEqual(penniless);
-  expect(outcome(apply(halfway, { type: 'play', index: 0, aim: 'none' }))).toEqual(halfway);
+  expect(outcome(apply(CATALOGUE, penniless, { type: 'play', index: 0, aim: 'none' }))).toEqual(
+    penniless,
+  );
+  expect(outcome(apply(CATALOGUE, halfway, { type: 'play', index: 0, aim: 'none' }))).toEqual(
+    halfway,
+  );
 });
 
 test('the refresh instant refreshes one unit of the player’s that has spent move points', () => {
@@ -175,7 +184,7 @@ test('the refresh instant refreshes one unit of the player’s that has spent mo
     ],
   });
 
-  const stages = apply(city, aimedAtUnit(CITY));
+  const stages = apply(CATALOGUE, city, aimedAtUnit(CITY));
 
   expect(stages.map((stage) => stage.name)).toEqual(['played']);
   expect(pointsOf(outcome(stages), 1)).toBe(2 * MOVE_POINT);
@@ -198,10 +207,10 @@ test('the refresh instant is refused on a unit whose move points are full, on an
   expect(stagedBy(city, aimedAtUnit({ q: 2, r: 0 }))).toEqual(['refused']);
   expect(stagedBy(city, aimedAtUnit({ q: 0, r: 1 }))).toEqual(['refused']);
   expect(stagedBy(city, { type: 'play', index: 0, aim: 'none' })).toEqual(['refused']);
-  expect(outcome(apply(city, aimedAtUnit({ q: 1, r: 1 })))).toBe(city);
-  expect(outcome(apply(city, aimedAtUnit({ q: 2, r: 0 })))).toBe(city);
-  expect(outcome(apply(city, aimedAtUnit({ q: 0, r: 1 })))).toBe(city);
-  expect(outcome(apply(city, { type: 'play', index: 0, aim: 'none' }))).toBe(city);
+  expect(outcome(apply(CATALOGUE, city, aimedAtUnit({ q: 1, r: 1 })))).toBe(city);
+  expect(outcome(apply(CATALOGUE, city, aimedAtUnit({ q: 2, r: 0 })))).toBe(city);
+  expect(outcome(apply(CATALOGUE, city, aimedAtUnit({ q: 0, r: 1 })))).toBe(city);
+  expect(outcome(apply(CATALOGUE, city, { type: 'play', index: 0, aim: 'none' }))).toBe(city);
 });
 
 test('the recall instant takes the card it is aimed at out of the discard pile and into the hand', () => {
@@ -211,7 +220,7 @@ test('the recall instant takes the card it is aimed at out of the discard pile a
     resources: science(2),
   });
 
-  const stages = apply(city, aimedAtPile(1));
+  const stages = apply(CATALOGUE, city, aimedAtPile(1));
   const after = outcome(stages);
 
   expect(stages.map((stage) => stage.name)).toEqual(['played']);
@@ -231,9 +240,9 @@ test('the recall instant is refused at a card the discard pile does not hold, an
   expect(stagedBy(city, { type: 'play', index: 0, aim: 'none' })).toEqual(['refused']);
   expect(stagedBy(city, aimedAtPile(-1))).toEqual(['refused']);
   expect(stagedBy(city, aimedAtPile(2))).toEqual(['refused']);
-  expect(outcome(apply(city, { type: 'play', index: 0, aim: 'none' }))).toBe(city);
-  expect(outcome(apply(city, aimedAtPile(-1)))).toBe(city);
-  expect(outcome(apply(city, aimedAtPile(2)))).toBe(city);
+  expect(outcome(apply(CATALOGUE, city, { type: 'play', index: 0, aim: 'none' }))).toBe(city);
+  expect(outcome(apply(CATALOGUE, city, aimedAtPile(-1)))).toBe(city);
+  expect(outcome(apply(CATALOGUE, city, aimedAtPile(2)))).toBe(city);
 });
 
 test('the recall instant never brings back the card it sent to the discard pile itself', () => {
@@ -244,8 +253,8 @@ test('the recall instant never brings back the card it sent to the discard pile 
   });
 
   expect(stagedBy(city, aimedAtPile(1))).toEqual(['refused']);
-  expect(outcome(apply(city, aimedAtPile(1)))).toBe(city);
-  expect(outcome(apply(city, aimedAtPile(0))).hand).toEqual(['PH_Farm']);
+  expect(outcome(apply(CATALOGUE, city, aimedAtPile(1)))).toBe(city);
+  expect(outcome(apply(CATALOGUE, city, aimedAtPile(0))).hand).toEqual(['PH_Farm']);
 });
 
 test('an empty discard pile blocks the recall instant in the hand', () => {
@@ -256,11 +265,11 @@ test('an empty discard pile blocks the recall instant in the hand', () => {
     resources: science(2),
   });
 
-  expect(refusalOf(empty, 'PH_Recall').blocked).toEqual(['discard-pile']);
-  expect(playable(refusalOf(empty, 'PH_Recall'))).toBe(false);
+  expect(refusalOf(CATALOGUE, empty, 'PH_Recall').blocked).toEqual(['discard-pile']);
+  expect(playable(refusalOf(CATALOGUE, empty, 'PH_Recall'))).toBe(false);
   expect(stagedBy(empty, aimedAtPile(0))).toEqual(['refused']);
-  expect(outcome(apply(empty, aimedAtPile(0)))).toBe(empty);
-  expect(playable(refusalOf(holding, 'PH_Recall'))).toBe(true);
+  expect(outcome(apply(CATALOGUE, empty, aimedAtPile(0)))).toBe(empty);
+  expect(playable(refusalOf(CATALOGUE, holding, 'PH_Recall'))).toBe(true);
 });
 
 test('a recall the city cannot pay for stays in the hand and costs nothing', () => {
@@ -271,7 +280,7 @@ test('a recall the city cannot pay for stays in the hand and costs nothing', () 
   });
 
   expect(stagedBy(short, aimedAtPile(0))).toEqual(['refused']);
-  expect(outcome(apply(short, aimedAtPile(0)))).toBe(short);
+  expect(outcome(apply(CATALOGUE, short, aimedAtPile(0)))).toBe(short);
 });
 
 test('the refresh instant refreshes move points alone, and leaves a spent action spent', () => {
@@ -281,7 +290,7 @@ test('the refresh instant refreshes move points alone, and leaves a spent action
     units: [standing('player', CITY, { move: 2 * MOVE_POINT, action: 1 }, 0, 0)],
   });
 
-  const refreshed = outcome(apply(city, aimedAtUnit(CITY)));
+  const refreshed = outcome(apply(CATALOGUE, city, aimedAtUnit(CITY)));
 
   expect(pointsOf(refreshed, 1)).toBe(2 * MOVE_POINT);
   expect(actionOf(refreshed, 1)).toBe(0);
@@ -295,11 +304,11 @@ test('the refresh instant is refused on a unit whose move points are full, its a
   });
 
   expect(stagedBy(city, aimedAtUnit(CITY))).toEqual(['refused']);
-  expect(outcome(apply(city, aimedAtUnit(CITY)))).toBe(city);
+  expect(outcome(apply(CATALOGUE, city, aimedAtUnit(CITY)))).toBe(city);
 });
 
 test('the deck the game ships with founds a chronicle that draws a full hand from it', () => {
-  const chronicle = beginChronicle(2026, DECKS.PH_Deck);
+  const chronicle = beginChronicle(CATALOGUE, 2026, DECKS.PH_Deck);
 
   expect(chronicle.hand).toHaveLength(5);
   expect(everyCard(chronicle)).toHaveLength(DECKS.PH_Deck.length);
@@ -314,7 +323,7 @@ test('a unit card turns one population into a unit on the city tile', () => {
     resources: { food: 2, production: 0, military: 0, money: 0, science: 0, culture: 0 },
   });
 
-  const after = outcome(apply(city, { type: 'play', index: 0, aim: 'none' }));
+  const after = outcome(apply(CATALOGUE, city, { type: 'play', index: 0, aim: 'none' }));
 
   expect(after.population).toBe(city.population - 1);
   expect(after.units).toHaveLength(1);
@@ -334,7 +343,9 @@ test('a unit card is refused while a unit already stands on the city tile', () =
     resources: { food: 2, production: 0, military: 0, money: 0, science: 0, culture: 0 },
   });
 
-  expect(outcome(apply(crowded, { type: 'play', index: 0, aim: 'none' }))).toEqual(crowded);
+  expect(outcome(apply(CATALOGUE, crowded, { type: 'play', index: 0, aim: 'none' }))).toEqual(
+    crowded,
+  );
 });
 
 test('a building card builds its building on a tile inside the border where a worker stands', () => {
@@ -345,7 +356,7 @@ test('a building card builds its building on a tile inside the border where a wo
     resources: production(3),
   });
 
-  const after = outcome(apply(city, aimedAt({ q: 1, r: 0 })));
+  const after = outcome(apply(CATALOGUE, city, aimedAt({ q: 1, r: 0 })));
 
   expect(buildingAt(after, { q: 1, r: 0 })).toBe('PH_Farm');
   expect(after.resources.production).toBe(0);
@@ -363,8 +374,8 @@ test('a building card is refused on a tile no worker stands on, and with no tile
     resources: production(3),
   });
 
-  expect(outcome(apply(city, aimedAt({ q: 2, r: 0 })))).toEqual(city);
-  expect(outcome(apply(city, { type: 'play', index: 0, aim: 'none' }))).toEqual(city);
+  expect(outcome(apply(CATALOGUE, city, aimedAt({ q: 2, r: 0 })))).toEqual(city);
+  expect(outcome(apply(CATALOGUE, city, { type: 'play', index: 0, aim: 'none' }))).toEqual(city);
 });
 
 test('a building card is refused on a tile outside the border, worker standing or not', () => {
@@ -375,7 +386,7 @@ test('a building card is refused on a tile outside the border, worker standing o
     resources: production(3),
   });
 
-  expect(outcome(apply(city, aimedAt({ q: 1, r: 0 })))).toEqual(city);
+  expect(outcome(apply(CATALOGUE, city, aimedAt({ q: 1, r: 0 })))).toEqual(city);
 });
 
 test('a building card cannot be played with no worker of the player’s inside the border', () => {
@@ -388,7 +399,7 @@ test('a building card cannot be played with no worker of the player’s inside t
 
   expect(refusedFor(alone, 'PH_Farm', { q: 1, r: 0 })).toBe('worker');
   expect(refusedFor(fighting, 'PH_Farm', { q: 1, r: 0 })).toBe('worker');
-  expect(outcome(apply(alone, aimedAt({ q: 1, r: 0 })))).toEqual(alone);
+  expect(outcome(apply(CATALOGUE, alone, aimedAt({ q: 1, r: 0 })))).toEqual(alone);
 });
 
 test('a tile’s building slot takes one building and no more', () => {
@@ -399,9 +410,9 @@ test('a tile’s building slot takes one building and no more', () => {
     resources: production(6),
   });
 
-  const once = endedTurn(outcome(apply(city, aimedAt({ q: 1, r: 0 }))));
+  const once = endedTurn(outcome(apply(CATALOGUE, city, aimedAt({ q: 1, r: 0 }))));
 
-  expect(outcome(apply(once, aimedAt({ q: 1, r: 0 })))).toEqual(once);
+  expect(outcome(apply(CATALOGUE, once, aimedAt({ q: 1, r: 0 })))).toEqual(once);
   expect(refusedFor(once, 'PH_Farm', { q: 1, r: 0 })).toBe('slot');
 });
 
@@ -416,7 +427,7 @@ test('the city fills its own tile’s slot, worker or no worker', () => {
 
   expect(buildingAt(city, CITY)).toBe('PH_City');
   expect(admittedTiles(city, 'PH_Farm')).toEqual([]);
-  expect(outcome(apply(city, aimedAt(CITY)))).toEqual(city);
+  expect(outcome(apply(CATALOGUE, city, aimedAt(CITY)))).toEqual(city);
   // The city's own tile is urban, so the farm names the terrain before it ever reaches the slot.
   expect(refusedFor(city, 'PH_Farm', CITY)).toBe('terrain');
   expect(admittedTiles(overOne, 'PH_Farm')).toEqual([{ q: 1, r: 0 }]);
@@ -432,7 +443,7 @@ test('a farm stands on a plain and on no other terrain a worker reaches', () => 
 
     expect(admittedTiles(city, 'PH_Farm')).toEqual([]);
     expect(refusedFor(city, 'PH_Farm', { q: 1, r: 0 })).toBe('terrain');
-    expect(outcome(apply(city, aimedAt({ q: 1, r: 0 })))).toEqual(city);
+    expect(outcome(apply(CATALOGUE, city, aimedAt({ q: 1, r: 0 })))).toEqual(city);
   }
 });
 
@@ -445,9 +456,9 @@ test('a farm standing on a tile adds its food to what that tile yields at income
     resources: production(3),
   });
 
-  const bare = outcome(apply(city, { type: 'end-turn' }));
-  const built = outcome(apply(city, aimedAt({ q: 1, r: 0 })));
-  const farmed = outcome(apply(built, { type: 'end-turn' }));
+  const bare = outcome(apply(CATALOGUE, city, { type: 'end-turn' }));
+  const built = outcome(apply(CATALOGUE, city, aimedAt({ q: 1, r: 0 })));
+  const farmed = outcome(apply(CATALOGUE, built, { type: 'end-turn' }));
 
   expect(farmed.resources.food).toBe(bare.resources.food + 1);
 });
@@ -459,7 +470,7 @@ test('the mine card improves the hills a worker stands on, inside the border and
   ]) {
     const city = workedTile(at, 'hills', { hand: ['PH_Mine'], resources: production(3) });
 
-    const after = outcome(apply(city, aimedAt(at)));
+    const after = outcome(apply(CATALOGUE, city, aimedAt(at)));
 
     expect(tileAt(after.tiles, at)?.improvements).toEqual(['PH_Mine']);
     expect(after.resources.production).toBe(0);
@@ -482,8 +493,8 @@ test('the mine card is refused on a tile no worker of the player’s stands on',
   expect(admittedTiles(bare, 'PH_Mine')).toEqual([]);
   expect(refusedFor(bare, 'PH_Mine', at)).toBe('worker');
   expect(refusedFor(fighting, 'PH_Mine', at)).toBe('worker');
-  expect(outcome(apply(bare, aimedAt(at)))).toEqual(bare);
-  expect(outcome(apply(fighting, aimedAt(at)))).toEqual(fighting);
+  expect(outcome(apply(CATALOGUE, bare, aimedAt(at)))).toEqual(bare);
+  expect(outcome(apply(CATALOGUE, fighting, aimedAt(at)))).toEqual(fighting);
 });
 
 test('a unit that is not a worker, with action left, is refused every card played through a worker', () => {
@@ -514,7 +525,7 @@ test('the mine card is refused on every terrain but the hills it goes on', () =>
     expect(refusedFor(city, 'PH_Mine', at)).toBe(
       standsOn(WORKER, tileAt(city.tiles, at)) ? 'terrain' : 'worker',
     );
-    expect(outcome(apply(city, aimedAt(at)))).toEqual(city);
+    expect(outcome(apply(CATALOGUE, city, aimedAt(at)))).toEqual(city);
   }
 });
 
@@ -525,11 +536,11 @@ test('a tile takes the same improvement once and never a second time', () => {
     resources: production(6),
   });
 
-  const once = endedTurn(outcome(apply(city, aimedAt(at))));
+  const once = endedTurn(outcome(apply(CATALOGUE, city, aimedAt(at))));
 
   expect(admittedTiles(once, 'PH_Mine')).toEqual([]);
   expect(refusedFor(once, 'PH_Mine', at)).toBe('improvement');
-  expect(outcome(apply(once, aimedAt(at)))).toEqual(once);
+  expect(outcome(apply(CATALOGUE, once, aimedAt(at)))).toEqual(once);
 });
 
 test('a mine improved onto a tile adds its production to what that tile yields at income', () => {
@@ -540,8 +551,12 @@ test('a mine improved onto a tile adds its production to what that tile yields a
     resources: production(3),
   });
 
-  const bare = outcome(apply({ ...city, resources: production(0) }, { type: 'end-turn' }));
-  const mined = outcome(apply(outcome(apply(city, aimedAt(at))), { type: 'end-turn' }));
+  const bare = outcome(
+    apply(CATALOGUE, { ...city, resources: production(0) }, { type: 'end-turn' }),
+  );
+  const mined = outcome(
+    apply(CATALOGUE, outcome(apply(CATALOGUE, city, aimedAt(at))), { type: 'end-turn' }),
+  );
 
   expect(mined.resources.production).toBe(bare.resources.production + 1);
 });
@@ -551,7 +566,7 @@ test('the road card improves every terrain a worker of the player’s stands on'
   for (const terrain of ['plain', 'forest', 'hills', 'urban'] as Terrain[]) {
     const city = workedTile(at, terrain, { hand: ['PH_Road'], resources: production(2) });
 
-    const after = outcome(apply(city, aimedAt(at)));
+    const after = outcome(apply(CATALOGUE, city, aimedAt(at)));
 
     expect(admittedTiles(city, 'PH_Road')).toEqual([at]);
     expect(tileAt(after.tiles, at)?.improvements).toEqual(['PH_Road']);
@@ -569,7 +584,7 @@ test('the road card is refused on the ground no worker of the player’s stands 
 
     expect(admittedTiles(city, 'PH_Road')).toEqual([]);
     expect(refusedFor(city, 'PH_Road', at)).toBe('worker');
-    expect(outcome(apply(city, aimedAt(at)))).toEqual(city);
+    expect(outcome(apply(CATALOGUE, city, aimedAt(at)))).toEqual(city);
   }
 });
 
@@ -580,7 +595,7 @@ test('the urbanisation card terraforms the plain a worker stands on, inside the 
   ]) {
     const city = workedTile(at, 'plain', { hand: ['PH_Urbanisation'], resources: production(5) });
 
-    const after = outcome(apply(city, aimedAt(at)));
+    const after = outcome(apply(CATALOGUE, city, aimedAt(at)));
 
     expect(tileAt(after.tiles, at)?.terrain).toBe('urban');
     expect(after.resources.production).toBe(0);
@@ -597,7 +612,7 @@ test('a terraformed tile loses its feature and keeps the improvements on it', ()
     { ...at, terrain: 'plain', feature: 'PH_Fertile', improvements: ['PH_Mine'] },
   );
 
-  const after = tileAt(outcome(apply(city, aimedAt(at))).tiles, at);
+  const after = tileAt(outcome(apply(CATALOGUE, city, aimedAt(at))).tiles, at);
 
   expect(after?.terrain).toBe('urban');
   expect(after?.feature).toBeUndefined();
@@ -614,7 +629,7 @@ test('a terraform leaves the rivers where they run: a river lies on no tile', ()
     rivers: [river],
   });
 
-  const after = outcome(apply(city, aimedAt(at)));
+  const after = outcome(apply(CATALOGUE, city, aimedAt(at)));
 
   expect(tileAt(after.tiles, at)?.terrain).toBe('urban');
   expect(after.rivers).toEqual([river]);
@@ -629,7 +644,7 @@ test('a tile with a building in its slot is not terraformed', () => {
 
   expect(admittedTiles(city, 'PH_Urbanisation')).toEqual([]);
   expect(refusedFor(city, 'PH_Urbanisation', at)).toBe('slot');
-  expect(outcome(apply(city, aimedAt(at)))).toEqual(city);
+  expect(outcome(apply(CATALOGUE, city, aimedAt(at)))).toEqual(city);
 });
 
 test('the urbanisation card is refused on every terrain but the plain it terraforms', () => {
@@ -641,7 +656,7 @@ test('the urbanisation card is refused on every terrain but the plain it terrafo
     expect(refusedFor(city, 'PH_Urbanisation', at)).toBe(
       standsOn(WORKER, tileAt(city.tiles, at)) ? 'terrain' : 'worker',
     );
-    expect(outcome(apply(city, aimedAt(at)))).toEqual(city);
+    expect(outcome(apply(CATALOGUE, city, aimedAt(at)))).toEqual(city);
   }
 });
 
@@ -653,8 +668,12 @@ test('a terraformed tile yields its new terrain at the next income', () => {
     resources: production(5),
   });
 
-  const bare = outcome(apply({ ...city, resources: production(0) }, { type: 'end-turn' }));
-  const urban = outcome(apply(outcome(apply(city, aimedAt(at))), { type: 'end-turn' }));
+  const bare = outcome(
+    apply(CATALOGUE, { ...city, resources: production(0) }, { type: 'end-turn' }),
+  );
+  const urban = outcome(
+    apply(CATALOGUE, outcome(apply(CATALOGUE, city, aimedAt(at))), { type: 'end-turn' }),
+  );
 
   for (const resource of RESOURCES) {
     expect(urban.resources[resource]).toBe(
@@ -674,23 +693,25 @@ test('a unit card never takes the city’s last population', () => {
   });
   const idling = { ...last, population: 2 };
 
-  expect(playable(refusalOf(last, 'PH_Worker'))).toBe(false);
-  expect(outcome(apply(last, { type: 'play', index: 0, aim: 'none' }))).toEqual(last);
-  expect(outcome(apply(idling, { type: 'play', index: 0, aim: 'none' })).population).toBe(1);
+  expect(playable(refusalOf(CATALOGUE, last, 'PH_Worker'))).toBe(false);
+  expect(outcome(apply(CATALOGUE, last, { type: 'play', index: 0, aim: 'none' }))).toEqual(last);
+  expect(
+    outcome(apply(CATALOGUE, idling, { type: 'play', index: 0, aim: 'none' })).population,
+  ).toBe(1);
 });
 
 test('a unit card is refused for the population when only the city’s last inhabitant is left', () => {
   const last = cityOf(['urban'], { tiles: field(2), population: 1, assigned: [], resources: FOOD });
 
   expect(idle(last)).toBe(1);
-  expect(refusalOf(last, 'PH_Worker').blocked).toEqual(['population']);
+  expect(refusalOf(CATALOGUE, last, 'PH_Worker').blocked).toEqual(['population']);
 });
 
 test('a unit card refused for the population and for the idle inhabitant names both', () => {
   const last = cityOf(['urban'], { tiles: field(2), population: 1, resources: FOOD });
 
   expect(idle(last)).toBe(0);
-  expect(refusalOf(last, 'PH_Worker').blocked).toEqual(['population', 'idle']);
+  expect(refusalOf(CATALOGUE, last, 'PH_Worker').blocked).toEqual(['population', 'idle']);
 });
 
 test('a unit card is refused for the city while a unit of the player’s stands on it', () => {
@@ -701,7 +722,7 @@ test('a unit card is refused for the city while a unit of the player’s stands 
     resources: FOOD,
   });
 
-  expect(refusalOf(held, 'PH_Worker').blocked).toEqual(['city']);
+  expect(refusalOf(CATALOGUE, held, 'PH_Worker').blocked).toEqual(['city']);
 });
 
 test('a unit card refused for the population and for the city names both', () => {
@@ -713,7 +734,7 @@ test('a unit card refused for the population and for the city names both', () =>
     resources: FOOD,
   });
 
-  expect(refusalOf(both, 'PH_Worker').blocked).toEqual(['population', 'city']);
+  expect(refusalOf(CATALOGUE, both, 'PH_Worker').blocked).toEqual(['population', 'city']);
 });
 
 test('a unit card takes an idle inhabitant, and is refused while every one is assigned', () => {
@@ -722,13 +743,13 @@ test('a unit card takes an idle inhabitant, and is refused while every one is as
     hand: ['PH_Worker'],
     resources: FOOD,
   });
-  const freed = outcome(apply(full, assignTo({ q: 1, r: 0 })));
+  const freed = outcome(apply(CATALOGUE, full, assignTo({ q: 1, r: 0 })));
 
   expect(idle(full)).toBe(0);
-  expect(refusalOf(full, 'PH_Worker').blocked).toEqual(['idle']);
-  expect(outcome(apply(full, { type: 'play', index: 0, aim: 'none' }))).toEqual(full);
+  expect(refusalOf(CATALOGUE, full, 'PH_Worker').blocked).toEqual(['idle']);
+  expect(outcome(apply(CATALOGUE, full, { type: 'play', index: 0, aim: 'none' }))).toEqual(full);
 
-  const entered = outcome(apply(freed, { type: 'play', index: 0, aim: 'none' }));
+  const entered = outcome(apply(CATALOGUE, freed, { type: 'play', index: 0, aim: 'none' }));
 
   expect(entered.population).toBe(freed.population - 1);
   expect(entered.assigned).toEqual(freed.assigned);
@@ -741,10 +762,10 @@ test('a building card with nowhere to stand is playable all the same, and every 
   const worked = withUnits(alone, [worker(at)]);
 
   expect(admittedTiles(alone, 'PH_Farm')).toEqual([]);
-  expect(refusalOf(alone, 'PH_Farm').blocked).toEqual([]);
+  expect(refusalOf(CATALOGUE, alone, 'PH_Farm').blocked).toEqual([]);
   expect(refusedFor(alone, 'PH_Farm', at)).toBe('worker');
   expect(admittedTiles(worked, 'PH_Farm')).toEqual([at]);
-  expect(refusalOf(worked, 'PH_Farm').blocked).toEqual([]);
+  expect(refusalOf(CATALOGUE, worked, 'PH_Farm').blocked).toEqual([]);
 });
 
 test('every card the map answers for is playable whatever the map holds, and blocked only by its cost', () => {
@@ -752,11 +773,11 @@ test('every card the map answers for is playable whatever the map holds, and blo
 
   for (const id of ['PH_Farm', 'PH_March', 'PH_Mine', 'PH_Road', 'PH_Urbanisation'] as CardId[]) {
     expect(admittedTiles(empty, id)).toEqual([]);
-    expect(refusalOf(empty, id).blocked).toEqual([]);
+    expect(refusalOf(CATALOGUE, empty, id).blocked).toEqual([]);
   }
-  expect(playable(refusalOf(empty, 'PH_Farm'))).toBe(true);
-  expect(playable(refusalOf(empty, 'PH_March'))).toBe(true);
-  expect(playable(refusalOf(empty, 'PH_Urbanisation'))).toBe(false);
+  expect(playable(refusalOf(CATALOGUE, empty, 'PH_Farm'))).toBe(true);
+  expect(playable(refusalOf(CATALOGUE, empty, 'PH_March'))).toBe(true);
+  expect(playable(refusalOf(CATALOGUE, empty, 'PH_Urbanisation'))).toBe(false);
 });
 
 test('a card played through a worker spends one of that worker’s action, whichever card it is', () => {
@@ -770,7 +791,7 @@ test('a card played through a worker spends one of that worker’s action, which
   for (const [id, terrain, cost] of plays) {
     const city = workedTile(at, terrain, { hand: [id], resources: production(cost) });
 
-    const after = outcome(apply(city, aimedAt(at)));
+    const after = outcome(apply(CATALOGUE, city, aimedAt(at)));
 
     expect(after.discardPile).toEqual([id]);
     expect(actionOf(after, 1)).toBe(actionOf(city, 1) - 1);
@@ -784,13 +805,13 @@ test('a worker with no action left refuses the next card played through it, and 
     resources: production(5),
   });
 
-  const mined = outcome(apply(city, aimedAt(at)));
+  const mined = outcome(apply(CATALOGUE, city, aimedAt(at)));
 
   expect(actionOf(mined, 1)).toBe(0);
   expect(refusedFor(mined, 'PH_Road', at)).toBe('action');
   expect(admittedTiles(mined, 'PH_Road')).toEqual([]);
   expect(stagedBy(mined, aimedAt(at))).toEqual(['refused']);
-  expect(outcome(apply(mined, aimedAt(at)))).toBe(mined);
+  expect(outcome(apply(CATALOGUE, mined, aimedAt(at)))).toBe(mined);
 });
 
 test('the turn refreshes a worker’s action, and the card it refused lands on the next turn', () => {
@@ -801,14 +822,16 @@ test('the turn refreshes a worker’s action, and the card it refused lands on t
     resources: production(5),
   });
 
-  const ticked = endedTurn(outcome(apply(city, aimedAt(at))));
+  const ticked = endedTurn(outcome(apply(CATALOGUE, city, aimedAt(at))));
   const road = ticked.hand.indexOf('PH_Road');
 
   expect(road).not.toBe(-1);
   expect(actionOf(ticked, 1)).toBe(actionOf(city, 1));
   expect(refusedFor(ticked, 'PH_Road', at)).toBeUndefined();
 
-  const after = outcome(apply(ticked, { type: 'play', index: road, aim: 'tile', tile: at }));
+  const after = outcome(
+    apply(CATALOGUE, ticked, { type: 'play', index: road, aim: 'tile', tile: at }),
+  );
 
   expect(tileAt(after.tiles, at)?.improvements).toEqual(['PH_Mine', 'PH_Road']);
 });
@@ -822,9 +845,9 @@ test('the refresh instant leaves a worker’s spent action spent, and the card r
     units: [worker(CITY)],
   });
 
-  const moved = outcome(apply(city, { type: 'move', unit: 1, tile: at }));
-  const mined = outcome(apply(moved, aimedAt(at)));
-  const refreshed = outcome(apply(mined, aimedAtUnit(at)));
+  const moved = outcome(apply(CATALOGUE, city, { type: 'move', unit: 1, tile: at }));
+  const mined = outcome(apply(CATALOGUE, moved, aimedAt(at)));
+  const refreshed = outcome(apply(CATALOGUE, mined, aimedAtUnit(at)));
 
   expect(pointsOf(moved, 1)).toBeLessThan(WORKER.move);
   expect(pointsOf(refreshed, 1)).toBe(WORKER.move);
@@ -854,7 +877,11 @@ test('the farm card names the first of its five reasons: worker, action, terrain
   expect(refusedFor(withUnits(hilly, [worker(out)]), 'PH_Farm', out)).toBe('terrain');
   expect(refusedFor(withUnits(hilly, [worker(at)]), 'PH_Farm', at)).toBe('terrain');
   expect(
-    refusedFor(outcome(apply(withUnits(hilly, [worker(at)]), aimedAt(at))), 'PH_Farm', at),
+    refusedFor(
+      outcome(apply(CATALOGUE, withUnits(hilly, [worker(at)]), aimedAt(at))),
+      'PH_Farm',
+      at,
+    ),
   ).toBe('action');
   expect(refusedFor(withUnits(flat, [worker(out)]), 'PH_Farm', out)).toBe('border');
   expect(refusedFor(filled, 'PH_Farm', at)).toBe('slot');
@@ -878,7 +905,11 @@ test('the mine card names the first of its four reasons: worker, action, terrain
   ).toBe('worker');
   expect(refusedFor(withUnits(plain, [worker(at)]), 'PH_Mine', at)).toBe('terrain');
   expect(
-    refusedFor(outcome(apply(withUnits(plain, [worker(at)]), aimedAt(at))), 'PH_Mine', at),
+    refusedFor(
+      outcome(apply(CATALOGUE, withUnits(plain, [worker(at)]), aimedAt(at))),
+      'PH_Mine',
+      at,
+    ),
   ).toBe('action');
   expect(refusedFor(mined, 'PH_Mine', at)).toBe('improvement');
   expect(refusedFor(worked, 'PH_Mine', at)).toBeUndefined();
@@ -900,7 +931,9 @@ test('the urbanisation card names the first of its four reasons: worker, action,
   expect(refusedFor(plain, 'PH_Urbanisation', at)).toBe('worker');
   expect(refusedFor(forest, 'PH_Urbanisation', at)).toBe('worker');
   expect(refusedFor(wooded, 'PH_Urbanisation', at)).toBe('terrain');
-  expect(refusedFor(outcome(apply(wooded, aimedAt(at))), 'PH_Urbanisation', at)).toBe('action');
+  expect(refusedFor(outcome(apply(CATALOGUE, wooded, aimedAt(at))), 'PH_Urbanisation', at)).toBe(
+    'action',
+  );
   expect(refusedFor(built, 'PH_Urbanisation', at)).toBe('worker');
   expect(refusedFor(filled, 'PH_Urbanisation', at)).toBe('slot');
   expect(refusedFor(worked, 'PH_Urbanisation', at)).toBeUndefined();
@@ -930,9 +963,9 @@ test('a card aimed at a unit lands on the play that aims at a unit, and nowhere 
   });
 
   expect(stagedBy(city, aimedAt(at))).toEqual(['refused']);
-  expect(outcome(apply(city, aimedAt(at)))).toBe(city);
+  expect(outcome(apply(CATALOGUE, city, aimedAt(at)))).toBe(city);
   expect(stagedBy(city, aimedAtUnit(at))).toEqual(['played']);
-  expect(pointsOf(outcome(apply(city, aimedAtUnit(at))), 1)).toBe(2 * MOVE_POINT);
+  expect(pointsOf(outcome(apply(CATALOGUE, city, aimedAtUnit(at))), 1)).toBe(2 * MOVE_POINT);
 });
 
 test('the refresh instant names the first of its two reasons: the unit, then its move points', () => {
@@ -969,8 +1002,8 @@ test('a play aimed at a tile the aim refuses, or at nothing, lands nowhere', () 
   const at = { q: 1, r: 0 };
   const city = founded(2, { hand: ['PH_Farm'], resources: production(3) });
 
-  const aimed = apply(city, aimedAt(at));
-  const nowhere = apply(city, { type: 'play', index: 0, aim: 'none' });
+  const aimed = apply(CATALOGUE, city, aimedAt(at));
+  const nowhere = apply(CATALOGUE, city, { type: 'play', index: 0, aim: 'none' });
 
   expect(refusedFor(city, 'PH_Farm', at)).toBe('worker');
   expect(aimed.map((stage) => stage.name)).toEqual(['refused']);
@@ -988,8 +1021,8 @@ test('a hazard strikes at the end of a turn it is still in the hand, before the 
   });
   const bare = cityOf(['urban', 'plain'], NO_GROWTH);
 
-  const ended = outcome(apply(stocked, { type: 'end-turn' }));
-  const yielded = outcome(apply(bare, { type: 'end-turn' })).resources.food;
+  const ended = outcome(apply(CATALOGUE, stocked, { type: 'end-turn' }));
+  const yielded = outcome(apply(CATALOGUE, bare, { type: 'end-turn' })).resources.food;
 
   expect(stagedBy(stocked, { type: 'end-turn' })[0]).toBe('strike');
   expect(yielded).toBeGreaterThan(0);
@@ -1006,8 +1039,8 @@ test('a hazard discarded unplayed comes around and strikes again', () => {
     resources: STOCKED,
   });
 
-  const cycled = outcome(apply(city, { type: 'end-turn' }));
-  const again = outcome(apply(cycled, { type: 'end-turn' }));
+  const cycled = outcome(apply(CATALOGUE, city, { type: 'end-turn' }));
+  const again = outcome(apply(CATALOGUE, cycled, { type: 'end-turn' }));
 
   expect(cycled.hand).toEqual(['PH_Hunger']);
   expect(again.hand).toEqual(['PH_Hunger']);
@@ -1022,9 +1055,9 @@ test('a hazard played for its cost leaves the chronicle, and strikes nothing tha
   });
   const bare = cityOf(['urban', 'plain'], NO_GROWTH);
 
-  const played = outcome(apply(city, { type: 'play', index: 0, aim: 'none' }));
-  const ended = outcome(apply(played, { type: 'end-turn' }));
-  const yielded = outcome(apply(bare, { type: 'end-turn' })).resources.food;
+  const played = outcome(apply(CATALOGUE, city, { type: 'play', index: 0, aim: 'none' }));
+  const ended = outcome(apply(CATALOGUE, played, { type: 'end-turn' }));
+  const yielded = outcome(apply(CATALOGUE, bare, { type: 'end-turn' })).resources.food;
 
   expect(stagedBy(city, { type: 'play', index: 0, aim: 'none' })).toEqual(['played']);
   expect(played.resources.production).toBe(0);
@@ -1042,8 +1075,8 @@ test('a hazard strikes from the hand alone, and never from a pile', () => {
   });
   const bare = cityOf(['urban', 'plain'], NO_GROWTH);
 
-  const ended = outcome(apply(piled, { type: 'end-turn' }));
-  const yielded = outcome(apply(bare, { type: 'end-turn' })).resources.food;
+  const ended = outcome(apply(CATALOGUE, piled, { type: 'end-turn' }));
+  const yielded = outcome(apply(CATALOGUE, bare, { type: 'end-turn' })).resources.food;
 
   expect(stagedBy(piled, { type: 'end-turn' })).not.toContain('strike');
   expect(ended.resources.food).toBe(STOCKED.food + yielded);
@@ -1063,6 +1096,6 @@ test('a card the city falls short for is refused for the resource it is short of
   });
   const paid = { ...short, resources: production(3) };
 
-  expect(refusalOf(short, 'PH_Farm').unaffordable).toEqual(['production']);
-  expect(refusalOf(paid, 'PH_Farm')).toEqual({ unaffordable: [], blocked: [] });
+  expect(refusalOf(CATALOGUE, short, 'PH_Farm').unaffordable).toEqual(['production']);
+  expect(refusalOf(CATALOGUE, paid, 'PH_Farm')).toEqual({ unaffordable: [], blocked: [] });
 });

@@ -1,5 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 import type Phaser from 'phaser';
+import { STAND_IN } from '../src/content/stand-in';
 import { type AimedCard, aimOf, CARDS, DECKS, type DeckId } from '../src/rules/cards';
 import { admitted, apply, beginChronicle, outcome, refusalOf } from '../src/rules/chronicle';
 import {
@@ -374,7 +375,7 @@ export function workerRun(
   return runOn(
     card,
     `opens a turn on a worker, a move and ${card}`,
-    (tile, chronicle) => playable(refusalOf(chronicle, card)) && on(tile, chronicle),
+    (tile, chronicle) => playable(refusalOf(STAND_IN, chronicle, card)) && on(tile, chronicle),
   );
 }
 
@@ -383,7 +384,7 @@ export function unaffordableRun(card: CardId): Run {
   return runOn(
     card,
     `opens a turn on a worker, a move and ${card} unpaid for`,
-    (_, chronicle) => !playable(refusalOf(chronicle, card)),
+    (_, chronicle) => !playable(refusalOf(STAND_IN, chronicle, card)),
   );
 }
 
@@ -396,7 +397,7 @@ function runOn(
   if (aimed.aim !== 'tile') throw new Error(`${card} is aimed at no tile`);
 
   return firstSeed(complaint, (seed) => {
-    let chronicle = beginChronicle(seed, DECKS.PH_Deck);
+    let chronicle = beginChronicle(STAND_IN, seed, DECKS.PH_Deck);
     for (let turn = 1; turn <= 8; turn++) {
       const tile = workedThisTurn(chronicle, card, aimed, keeps);
       if (tile !== undefined) return { seed, turn, tile };
@@ -417,7 +418,7 @@ export type StepRun = {
 /** The first seed with a turn in its first eight that opens on such a run. */
 export function stepRun(): StepRun {
   return firstSeed('opens a turn on a worker and two steps', (seed) => {
-    let chronicle = beginChronicle(seed, DECKS.PH_Deck);
+    let chronicle = beginChronicle(STAND_IN, seed, DECKS.PH_Deck);
     for (let turn = 1; turn <= 8; turn++) {
       const steps = steppedThisTurn(chronicle);
       if (steps !== undefined) return { seed, turn, ...steps };
@@ -435,16 +436,16 @@ function steppedThisTurn(
   chronicle: Chronicle,
 ): { first: TileCoords; second: TileCoords } | undefined {
   const enter = chronicle.hand.indexOf('PH_Worker');
-  if (enter === -1 || !playable(refusalOf(chronicle, 'PH_Worker'))) return undefined;
-  const entered = outcome(apply(chronicle, { type: 'play', index: enter, aim: 'none' }));
+  if (enter === -1 || !playable(refusalOf(STAND_IN, chronicle, 'PH_Worker'))) return undefined;
+  const entered = outcome(apply(STAND_IN, chronicle, { type: 'play', index: enter, aim: 'none' }));
   if (entered.units.length !== 1) return undefined;
 
   for (const first of neighbours(entered.city)) {
-    const stepped = outcome(apply(entered, { type: 'move', unit: 1, tile: first }));
+    const stepped = outcome(apply(STAND_IN, entered, { type: 'move', unit: 1, tile: first }));
     if (stepped === entered) continue;
     for (const second of neighbours(first)) {
       if (tileKey(second) === tileKey(entered.city)) continue;
-      if (outcome(apply(stepped, { type: 'move', unit: 1, tile: second })) !== stepped) {
+      if (outcome(apply(STAND_IN, stepped, { type: 'move', unit: 1, tile: second })) !== stepped) {
         return { first, second };
       }
     }
@@ -455,14 +456,14 @@ function steppedThisTurn(
 /** Where a card aimed at a tile that the city can pay for lies in the hand, or -1. */
 export function atTile(chronicle: Chronicle): number {
   return chronicle.hand.findIndex(
-    (id) => aimOf(CARDS[id]).aim === 'tile' && playable(refusalOf(chronicle, id)),
+    (id) => aimOf(CARDS[id]).aim === 'tile' && playable(refusalOf(STAND_IN, chronicle, id)),
   );
 }
 
 /** The first seed with a turn in its first eight that opens on such a card. */
 export function atTileRun(): { seed: number; turn: number } {
   return firstSeed('opens a turn on a card aimed at a tile the city can pay for', (seed) => {
-    let chronicle = beginChronicle(seed, DECKS.PH_Deck);
+    let chronicle = beginChronicle(STAND_IN, seed, DECKS.PH_Deck);
     for (let turn = 1; turn <= 8; turn++) {
       if (atTile(chronicle) !== -1) return { seed, turn };
       chronicle = endedTurn(chronicle);
@@ -474,7 +475,7 @@ export function atTileRun(): { seed: number; turn: number } {
 /** The first seed whose city is captured inside twenty turns of ending the turn and nothing else. */
 export function fallRun(): { seed: number; turns: number } {
   return firstSeed('is captured inside twenty turns', (seed) => {
-    let chronicle = beginChronicle(seed, DECKS.PH_Deck);
+    let chronicle = beginChronicle(STAND_IN, seed, DECKS.PH_Deck);
     for (let turns = 1; turns <= 20 && chronicle.ending === undefined; turns++) {
       chronicle = endedTurn(chronicle);
       const ending = chronicle.ending;
@@ -496,16 +497,17 @@ function workedThisTurn(
   keeps: (tile: Tile, chronicle: Chronicle) => boolean,
 ): TileCoords | undefined {
   const enter = chronicle.hand.indexOf('PH_Worker');
-  if (enter === -1 || !playable(refusalOf(chronicle, 'PH_Worker'))) return undefined;
-  const entered = outcome(apply(chronicle, { type: 'play', index: enter, aim: 'none' }));
+  if (enter === -1 || !playable(refusalOf(STAND_IN, chronicle, 'PH_Worker'))) return undefined;
+  const entered = outcome(apply(STAND_IN, chronicle, { type: 'play', index: enter, aim: 'none' }));
   if (entered.units.length !== 1 || !entered.hand.includes(card)) return undefined;
 
   for (const tile of neighbours(entered.city)) {
-    const moved = outcome(apply(entered, { type: 'move', unit: 1, tile }));
+    const moved = outcome(apply(STAND_IN, entered, { type: 'move', unit: 1, tile }));
     if (moved === entered) continue;
     const standing = tileAt(moved.tiles, tile);
     if (standing === undefined || !keeps(standing, moved)) continue;
-    if (admitted(moved, aimed).some((coord) => tileKey(coord) === tileKey(tile))) return tile;
+    if (admitted(STAND_IN, moved, aimed).some((coord) => tileKey(coord) === tileKey(tile)))
+      return tile;
   }
   return undefined;
 }
@@ -748,9 +750,9 @@ export async function take(page: Page, at: number): Promise<void> {
  * searches for is run forward with, a chronicle waiting on a deal taking no other command.
  */
 export function endedTurn(chronicle: Chronicle): Chronicle {
-  const ended = outcome(apply(chronicle, { type: 'end-turn' }));
+  const ended = outcome(apply(STAND_IN, chronicle, { type: 'end-turn' }));
   if (ended.deal.length === 0) return ended;
-  return outcome(apply(ended, { type: 'take', event: ended.deal[0] }));
+  return outcome(apply(STAND_IN, ended, { type: 'take', event: ended.deal[0] }));
 }
 
 /**

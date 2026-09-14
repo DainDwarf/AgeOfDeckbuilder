@@ -27,7 +27,6 @@ import {
   type Landing,
   reachable,
   type Unit,
-  type UnitTypeId,
   unitAt,
   unitOf,
 } from '../rules/units';
@@ -50,6 +49,7 @@ import {
   whileUp,
 } from './design-space';
 import { onKeyDown, onKeyUp } from './keys';
+import { unitMarkOf } from './marks';
 import { RESOURCE_COLOURS } from './resource-bar';
 import { text } from './text';
 import { VEILS_ON, type Veils } from './veils';
@@ -67,12 +67,6 @@ const TERRAIN_COLOURS: Record<Terrain, number> = {
 };
 
 const FACTION_COLOURS: Record<Faction, number> = { player: ACCENT, enemy: 0xb4453c };
-
-/** Placeholder primitives until the art pass: the worker a block, the warrior a point. */
-const UNIT_MARKS: Record<UnitTypeId, number[]> = {
-  PH_Worker: corners([-11, -11, 11, -11, 11, 11, -11, 11]),
-  PH_Warrior: corners([0, -14, 13, 9, -13, 9]),
-};
 
 /** The wall the city is drawn as, and the camp with it: a camp is the city's mark in enemy red. */
 const WALL: number[] = corners([
@@ -361,11 +355,11 @@ export function improvementMark(
 /** The one way a unit is drawn: its placeholder mark, in the colour of the faction it acts for. */
 export function unitMark(
   scene: Phaser.Scene,
-  type: UnitTypeId,
+  type: string,
   faction: Faction,
 ): Phaser.GameObjects.Polygon {
   return scene.add
-    .polygon(0, 0, UNIT_MARKS[type], FACTION_COLOURS[faction])
+    .polygon(0, 0, corners(unitMarkOf(type)), FACTION_COLOURS[faction])
     .setStrokeStyle(2, OUTLINE);
 }
 

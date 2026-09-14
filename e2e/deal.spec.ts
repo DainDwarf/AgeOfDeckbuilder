@@ -1,4 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
+import { STAND_IN } from '../src/content/stand-in';
 import { DECKS } from '../src/rules/cards';
 import { apply, beginChronicle, outcome } from '../src/rules/chronicle';
 import { text } from '../src/ui/text';
@@ -28,15 +29,15 @@ const DUE = 3;
  */
 function dealRun(): number {
   return firstSeed('deals a raid first on its third turn', (seed) => {
-    const opened = beginChronicle(seed, DECKS.PH_Deck);
+    const opened = beginChronicle(STAND_IN, seed, DECKS.PH_Deck);
     if (opened.nextEvent !== DUE) return undefined;
 
     let chronicle = opened;
     for (let turn = 1; turn < DUE - 1; turn++) chronicle = endedTurn(chronicle);
-    const dealt = outcome(apply(chronicle, { type: 'end-turn' }));
+    const dealt = outcome(apply(STAND_IN, chronicle, { type: 'end-turn' }));
     if (dealt.deal[0] !== 'PH_Raid') return undefined;
 
-    const landed = outcome(apply(dealt, { type: 'take', event: 'PH_Raid' }));
+    const landed = outcome(apply(STAND_IN, dealt, { type: 'take', event: 'PH_Raid' }));
     return landed.units.some((unit) => unit.faction === 'enemy') ? seed : undefined;
   });
 }

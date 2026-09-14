@@ -1,4 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
+import { STAND_IN } from '../src/content/stand-in';
 import { aimOf, CARDS } from '../src/rules/cards';
 import { admitted, apply, outcome, refusalOf } from '../src/rules/chronicle';
 import { IMPROVEMENTS, type TileCoords, tileKey } from '../src/rules/map';
@@ -34,8 +35,8 @@ function roadLands(chronicle: Chronicle, at: TileCoords): boolean {
   if (road.aim !== 'tile') throw new Error('PH_Road is aimed at no tile');
   return (
     chronicle.hand.includes('PH_Road') &&
-    playable(refusalOf(chronicle, 'PH_Road')) &&
-    admitted(chronicle, road).some((coord) => tileKey(coord) === tileKey(at))
+    playable(refusalOf(STAND_IN, chronicle, 'PH_Road')) &&
+    admitted(STAND_IN, chronicle, road).some((coord) => tileKey(coord) === tileKey(at))
   );
 }
 
@@ -100,8 +101,11 @@ test('the road on the worker that laid the mine is refused for its action, and l
   const run = workerRun('PH_Mine', (tile, moved) => {
     const at = { q: tile.q, r: tile.r };
     const mine = moved.hand.indexOf('PH_Mine');
-    const mined = outcome(apply(moved, { type: 'play', index: mine, aim: 'tile', tile: at }));
-    if (!mined.hand.includes('PH_Road') || !playable(refusalOf(mined, 'PH_Road'))) return false;
+    const mined = outcome(
+      apply(STAND_IN, moved, { type: 'play', index: mine, aim: 'tile', tile: at }),
+    );
+    if (!mined.hand.includes('PH_Road') || !playable(refusalOf(STAND_IN, mined, 'PH_Road')))
+      return false;
     const next = endedTurn(mined);
     return next.ending === undefined && roadLands(next, at);
   });

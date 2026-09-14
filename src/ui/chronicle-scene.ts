@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { refuses } from '../rules/cards';
+import type { Catalogue } from '../rules/catalogue';
 import {
   admitted,
   apply,
@@ -57,13 +58,15 @@ const LABEL_STYLE = {
 };
 
 export class ChronicleScene extends Phaser.Scene {
+  private readonly catalogue: Catalogue;
   private readonly deck: readonly CardId[];
   private current: Chronicle;
   /** The play-out running on the chronicle screen as it stands, and nothing while none is. */
   private sequence: symbol | undefined;
 
-  constructor(seed: number | undefined, deck: readonly CardId[]) {
+  constructor(catalogue: Catalogue, seed: number | undefined, deck: readonly CardId[]) {
     super('chronicle');
+    this.catalogue = catalogue;
     this.deck = deck;
     this.current = this.begin(seed);
   }
@@ -84,7 +87,7 @@ export class ChronicleScene extends Phaser.Scene {
    * seed it is handed.
    */
   private begin(seed: number | undefined): Chronicle {
-    return beginChronicle(seed ?? (Math.random() * 2 ** 32) | 0, this.deck);
+    return beginChronicle(this.catalogue, seed ?? (Math.random() * 2 ** 32) | 0, this.deck);
   }
 
   /**
@@ -106,7 +109,7 @@ export class ChronicleScene extends Phaser.Scene {
 
     const parts: Part[] = [];
     const view = createMapView(this, map, this.current);
-    const panel = createInfoPanel(this, map);
+    const panel = createInfoPanel(this, map, this.catalogue);
     const note = createRefusalNote(this, map);
 
     /** The tile the ring stands on, and nothing while none is selected. */
@@ -151,7 +154,7 @@ export class ChronicleScene extends Phaser.Scene {
      */
     const playOut = async (command: Command): Promise<void> => {
       if (this.sequence !== undefined) return;
-      const stages = apply(this.current, command);
+      const stages = apply(this.catalogue, this.current, command);
       const running = Symbol('play-out');
       this.sequence = running;
 
@@ -320,6 +323,7 @@ export class ChronicleScene extends Phaser.Scene {
     const overlay = createOverlay(
       this,
       ui,
+      this.catalogue,
       (over) => {
         covered = over;
         view.live(!over);
@@ -333,7 +337,7 @@ export class ChronicleScene extends Phaser.Scene {
     const endTurn = this.addEndTurn(() => {
       void playOut({ type: 'end-turn' });
     });
-    const hand = createHand(this, ui, {
+    const hand = createHand(this, ui, this.catalogue, {
       play: (index) => {
         void playOut({ type: 'play', index, aim: 'none' });
       },
@@ -345,9 +349,9 @@ export class ChronicleScene extends Phaser.Scene {
         // Nothing changes the chronicle while an aim stands, so the refusal it opens on is still the
         // rules' answer at the press that lands it, and no play is sent for one they would refuse.
         const id = this.current.hand[index];
-        const refusal = refusalOf(this.current, id);
+        const refusal = refusalOf(this.catalogue, this.current, id);
         return view.aimTile(
-          admitted(this.current, card),
+          admitted(this.catalogue, this.current, card),
           (tile) => {
             if (!playable(refusal)) {
               note.overTile(refusedCard(costOf(id), refusal), view.faceOf(tile));
@@ -358,7 +362,8 @@ export class ChronicleScene extends Phaser.Scene {
           },
           (found) => {
             const tile = tileAt(this.current.tiles, found.tile);
-            const block = tile === undefined ? undefined : refuses(this.current, card, tile);
+            const block =
+              tile === undefined ? undefined : refuses(this.catalogue, this.current, card, tile);
             if (block === undefined) return;
             note.overTile(refusedAim(block), found.at);
           },

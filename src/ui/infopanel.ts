@@ -1,4 +1,5 @@
 import type Phaser from 'phaser';
+import { type Catalogue, unitKind } from '../rules/catalogue';
 import {
   BUILDINGS,
   type BuildingTypeId,
@@ -16,7 +17,7 @@ import {
   type Tile,
 } from '../rules/map';
 import { RESOURCES, type Resource, type Resources } from '../rules/resources';
-import { UNIT_STATS, type Unit, unitAt } from '../rules/units';
+import { type Unit, unitAt } from '../rules/units';
 import { CARD_EDGE, CARD_HEIGHT, CARD_METRICS, CARD_WIDTH, drawCardSurface } from './card-face';
 import { stopMotion } from './card-motion';
 import { addText, onHover, type Surface, UI_FONT } from './design-space';
@@ -30,7 +31,7 @@ import {
   unitMark,
 } from './map';
 import { RESOURCE_COLOURS } from './resource-bar';
-import { text } from './text';
+import { text, unitName } from './text';
 import { createTooltip } from './tooltip';
 
 /** One line of a card's ledger: what it is drawn and named by, and what it gives at income. */
@@ -124,11 +125,14 @@ function inMovePoints(hundredths: number): string {
   return (hundredths / MOVE_POINT).toString();
 }
 
-/** What a stat's row reads: what the unit has left over its own number, where it has two. */
-function readingOf(unit: Unit, stat: (typeof STATS)[number]): string {
+/**
+ * What a stat's row reads: what the unit has left over its own number, where it has two. Full health
+ * is its kind's, read off the catalogue.
+ */
+function readingOf(catalogue: Catalogue, unit: Unit, stat: (typeof STATS)[number]): string {
   switch (stat) {
     case 'health':
-      return `${unit.stats.health} / ${UNIT_STATS[unit.stats.type].health}`;
+      return `${unit.stats.health} / ${unitKind(catalogue, unit.stats.type).health}`;
     case 'move':
       return `${inMovePoints(unit.movePoints)} / ${inMovePoints(unit.stats.move)}`;
     case 'action':
@@ -161,7 +165,7 @@ type RowBubble = {
  * about one. Every show rebuilds the card, so nothing here follows a state change — the panel is
  * dismissed by whatever caused one.
  */
-export function createInfoPanel(scene: Phaser.Scene, on: Surface): InfoPanel {
+export function createInfoPanel(scene: Phaser.Scene, on: Surface, catalogue: Catalogue): InfoPanel {
   const tooltip = createTooltip(scene, on);
   const ghosts = scene.add.graphics();
   const panel = scene.add
@@ -238,7 +242,7 @@ export function createInfoPanel(scene: Phaser.Scene, on: Surface): InfoPanel {
       const outgoing = standing;
       if (!cycling) outgoing?.root.destroy();
 
-      const face = buildFace(scene, bubble, cards[index]);
+      const face = buildFace(scene, catalogue, bubble, cards[index]);
       // Under the card it replaces, so the dissolve uncovers it, and over the ghosts either way.
       panel.addAt(face.root, 1);
       standing = face;
@@ -271,7 +275,7 @@ export function createInfoPanel(scene: Phaser.Scene, on: Surface): InfoPanel {
 }
 
 /** The card's head over its rows, laid out in the card's own type and spacing. */
-function buildFace(scene: Phaser.Scene, bubble: RowBubble, card: Card): Face {
+function buildFace(scene: Phaser.Scene, catalogue: Catalogue, bubble: RowBubble, card: Card): Face {
   const left = 1 + pad;
   const right = CARD_WIDTH - 1 - pad;
   const top = 1 + pad;
@@ -324,7 +328,7 @@ function buildFace(scene: Phaser.Scene, bubble: RowBubble, card: Card): Face {
   if (card.kind === 'unit') {
     for (const stat of STATS) {
       const label = addText(scene, left, 0, text(`label.${stat}`), LABEL_STYLE).setOrigin(0, 0.5);
-      const reading = readingOf(card.unit, stat);
+      const reading = readingOf(catalogue, card.unit, stat);
       const value = addText(scene, right, 0, reading, VALUE_STYLE).setOrigin(1, 0.5);
       label.setY(rowTop + label.height / 2);
       value.setY(rowTop + label.height / 2);
@@ -422,7 +426,7 @@ function headOf(
   if (card.kind === 'unit') {
     return {
       mark: unitMark(scene, card.unit.stats.type, card.unit.faction),
-      name: text(`unit.${card.unit.stats.type}`),
+      name: unitName(card.unit.stats.type),
     };
   }
   return { mark: markOf(scene, card.rows[0]), name: nameOf(card.rows[0]) };

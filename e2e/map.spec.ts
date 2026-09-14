@@ -1,4 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
+import { STAND_IN } from '../src/content/stand-in';
 import { DECKS } from '../src/rules/cards';
 import { apply, beginChronicle } from '../src/rules/chronicle';
 import { type TileCoords, tileKey } from '../src/rules/map';
@@ -94,9 +95,9 @@ async function pushOut(page: Page, coord: TileCoords): Promise<void> {
  */
 function moveRun(): { seed: number; turns: number; from: TileCoords; to: TileCoords } {
   return firstSeed('crosses an enemy in sight inside eight ends of turn', (seed) => {
-    let chronicle = beginChronicle(seed, DECKS.PH_Deck);
+    let chronicle = beginChronicle(STAND_IN, seed, DECKS.PH_Deck);
     for (let turns = 0; turns <= 8 && chronicle.ending === undefined; turns++) {
-      const stages = apply(chronicle, { type: 'end-turn' });
+      const stages = apply(STAND_IN, chronicle, { type: 'end-turn' });
       const moves = stages.flatMap((stage) =>
         stage.name === 'move'
           ? [{ from: stage.from, to: stage.to, seen: inSight(stage.chronicle) }]

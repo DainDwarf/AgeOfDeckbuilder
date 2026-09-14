@@ -2,6 +2,9 @@
  * The fixtures the rules tests share, authored by the tests and entered through the rules. Nothing
  * outside a test imports this module: a rules module that did would ship fixtures in the build.
  */
+// The one import of `src/content/` under `src/rules/`, allowed because this module is test-only.
+import { ADVANCE } from '../content/stand-in';
+import { type Catalogue, catalogued, type Entering, entered } from './catalogue';
 import { apply, type Command, outcome } from './chronicle';
 import {
   type BuildingTypeId,
@@ -19,8 +22,37 @@ import type { Resources } from './resources';
 import { seedRng } from './rng';
 import { scheduled } from './schedule';
 import { charted } from './sight';
-import { type CardId, type Chronicle, type Entering, type EventId, entered } from './state';
+import type { CardId, Chronicle, EventId } from './state';
 import type { Faction, Unit, UnitStats } from './units';
+
+/** The content every fixture is played on, its numbers the fixture's own. */
+export const CATALOGUE: Catalogue = catalogued({
+  version: 'fixture',
+  units: {
+    PH_Worker: {
+      type: 'PH_Worker',
+      worker: true,
+      health: 2,
+      damage: 0,
+      range: 0,
+      move: 2 * MOVE_POINT,
+      action: 1,
+      sight: 2,
+    },
+    PH_Warrior: {
+      type: 'PH_Warrior',
+      worker: false,
+      health: 5,
+      damage: 2,
+      range: 1,
+      move: 2 * MOVE_POINT,
+      action: 1,
+      sight: 2,
+    },
+  },
+  scripts: { advance: ADVANCE },
+  camp: { unit: 'PH_Warrior', script: 'advance' },
+});
 
 export const CITY: TileCoords = { q: 0, r: 0 };
 
@@ -42,7 +74,7 @@ export type Standing = {
 export function withUnits(chronicle: Chronicle, units: readonly Standing[]): Chronicle {
   let stood = chronicle;
   for (const unit of units) {
-    const dealt = entered(stood, unit.entering);
+    const dealt = entered(CATALOGUE, stood, unit.entering);
     const last = dealt.units[dealt.units.length - 1];
     const authored: Unit = {
       ...last,
@@ -68,6 +100,7 @@ export function cityOf(inside: Terrain[], carrying: Carrying = {}): Chronicle {
   const held = inside.map((_, index) => ({ q: index, r: 0 }));
   const { units = [], ...state } = carrying;
   const city: Chronicle = {
+    content: CATALOGUE.version,
     seed: 7,
     ...scheduled(seedRng(7)),
     snapshots: [],
@@ -199,7 +232,7 @@ export function standing(
     case 'player':
       return { ...state, entering: { type: carried.type, tile, faction } };
     case 'enemy':
-      return { ...state, entering: { type: carried.type, tile, faction, script: 'PH_Advance' } };
+      return { ...state, entering: { type: carried.type, tile, faction, script: 'advance' } };
   }
 }
 
@@ -297,7 +330,7 @@ export function everyCard(chronicle: Chronicle): CardId[] {
 
 /** What every stage of the command is called, in the order the command resolves them. */
 export function stagedBy(chronicle: Chronicle, command: Command): string[] {
-  return apply(chronicle, command).map((stage) => stage.name);
+  return apply(CATALOGUE, chronicle, command).map((stage) => stage.name);
 }
 
 /** Cards enough for the end of turn to draw a full hand, so its shuffle leaves the discard pile be. */
@@ -334,10 +367,10 @@ export const LATE_CAPSTONE: Carrying = { capstoneTurn: SCHEDULE_BOUND * 2 };
  * goes through here, because a chronicle waiting on a deal refuses every other command.
  */
 export function endedTurn(chronicle: Chronicle, wanted?: EventId): Chronicle {
-  const ended = outcome(apply(chronicle, { type: 'end-turn' }));
+  const ended = outcome(apply(CATALOGUE, chronicle, { type: 'end-turn' }));
   if (ended.deal.length === 0) return ended;
   const taken = wanted !== undefined && ended.deal.includes(wanted) ? wanted : ended.deal[0];
-  return outcome(apply(ended, { type: 'take', event: taken }));
+  return outcome(apply(CATALOGUE, ended, { type: 'take', event: taken }));
 }
 
 /**

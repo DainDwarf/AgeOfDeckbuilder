@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { STAND_IN } from '../src/content/stand-in';
 import { apply, beginChronicle } from '../src/rules/chronicle';
 import type { CardId } from '../src/rules/state';
 import { chronicleOf, endTurn, onScreen, open, playing, watch } from './chronicle-screen';
@@ -28,7 +29,9 @@ test('a pointer sweeping the hand while the end of turn plays leaves the chronic
 }) => {
   const problems = watch(page);
 
-  const names = apply(beginChronicle(SEED, DECK), { type: 'end-turn' }).map((stage) => stage.name);
+  const names = apply(STAND_IN, beginChronicle(STAND_IN, SEED, DECK), { type: 'end-turn' }).map(
+    (stage) => stage.name,
+  );
   expect(names.indexOf('draw')).toBeLessThan(names.indexOf('shuffle'));
 
   await open(page, SEED, DECK);

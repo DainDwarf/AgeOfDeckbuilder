@@ -1,4 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
+import { STAND_IN } from '../src/content/stand-in';
 import { DECKS } from '../src/rules/cards';
 import { beginChronicle } from '../src/rules/chronicle';
 import {
@@ -69,7 +70,7 @@ async function answered(page: Page): Promise<void> {
 /** The first seed whose generator put a feature on a tile touching the city, well inside the frame. */
 function featureRun(): { seed: number; key: string; feature: FeatureId } {
   return firstSeed('puts a feature beside the city', (seed) => {
-    const { tiles, city } = beginChronicle(seed, DECKS.PH_Deck);
+    const { tiles, city } = beginChronicle(STAND_IN, seed, DECKS.PH_Deck);
     const touching = new Set(neighbours(city).map(tileKey));
     const found = tiles.find((tile) => tile.feature !== undefined && touching.has(tileKey(tile)));
     if (found?.feature === undefined) return undefined;
@@ -104,7 +105,7 @@ function stepsClear(chronicle: Chronicle): boolean {
  */
 function riverRun(): { seed: number; key: string; terrain: Terrain } {
   return firstSeed('runs a river along a fed tile beside the city', (seed) => {
-    const { tiles, city, rivers } = beginChronicle(seed, DECKS.PH_Deck);
+    const { tiles, city, rivers } = beginChronicle(STAND_IN, seed, DECKS.PH_Deck);
     const touching = new Set(neighbours(city).map(tileKey));
     const found = tiles.find(
       (tile) =>
@@ -124,7 +125,7 @@ function riverRun(): { seed: number; key: string; terrain: Terrain } {
  */
 function bareRun(): { seed: number; key: string } {
   return firstSeed('leaves a tile beside the city bare', (seed) => {
-    const { tiles, city } = beginChronicle(seed, DECKS.PH_Deck);
+    const { tiles, city } = beginChronicle(STAND_IN, seed, DECKS.PH_Deck);
     const touching = new Set(neighbours(city).map(tileKey));
     const found = tiles.find(
       (tile) =>
@@ -146,7 +147,7 @@ function costRun(): { seed: number; land: string; water: string } {
   return firstSeed(
     'leaves a tile costing two move points beside the city, and water in sight',
     (seed) => {
-      const chronicle = beginChronicle(seed, DECKS.PH_Deck);
+      const chronicle = beginChronicle(STAND_IN, seed, DECKS.PH_Deck);
       const touching = new Set(neighbours(chronicle.city).map(tileKey));
       const stood = new Set(chronicle.units.map((unit) => tileKey(unit.tile)));
       const land = chronicle.tiles.find(

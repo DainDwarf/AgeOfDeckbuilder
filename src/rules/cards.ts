@@ -1,3 +1,4 @@
+import { type Catalogue, entered } from './catalogue';
 import {
   BUILDINGS,
   type BuildingTypeId,
@@ -9,16 +10,8 @@ import {
   tileKey,
 } from './map';
 import { RESOURCES, type Resources } from './resources';
-import {
-  type Block,
-  type CardId,
-  type Chronicle,
-  entered,
-  holds,
-  idle,
-  type TileBlock,
-} from './state';
-import { refreshedMovePoints, spentAction, type UnitTypeId, unitAt } from './units';
+import { type Block, type CardId, type Chronicle, holds, idle, type TileBlock } from './state';
+import { refreshedMovePoints, spentAction, unitAt } from './units';
 
 /** The declared order of the kinds, which is the order a sorted list of cards reads in. */
 export const CARD_KINDS = ['unit', 'building', 'instant', 'hazard'] as const;
@@ -37,23 +30,31 @@ export type CardKind = (typeof CARD_KINDS)[number];
 export type Aim =
   | {
       readonly aim: 'none';
-      readonly blocked?: (chronicle: Chronicle) => Block[];
-      readonly effect: (paid: Chronicle) => Chronicle;
+      readonly blocked?: (catalogue: Catalogue, chronicle: Chronicle) => Block[];
+      readonly effect: (catalogue: Catalogue, paid: Chronicle) => Chronicle;
     }
   | {
       readonly aim: 'tile';
-      readonly refuses: (chronicle: Chronicle, tile: Tile) => TileBlock | undefined;
-      readonly effect: (paid: Chronicle, at: TileCoords) => Chronicle;
+      readonly refuses: (
+        catalogue: Catalogue,
+        chronicle: Chronicle,
+        tile: Tile,
+      ) => TileBlock | undefined;
+      readonly effect: (catalogue: Catalogue, paid: Chronicle, at: TileCoords) => Chronicle;
     }
   | {
       readonly aim: 'unit';
-      readonly refuses: (chronicle: Chronicle, tile: Tile) => TileBlock | undefined;
-      readonly effect: (paid: Chronicle, at: TileCoords) => Chronicle;
+      readonly refuses: (
+        catalogue: Catalogue,
+        chronicle: Chronicle,
+        tile: Tile,
+      ) => TileBlock | undefined;
+      readonly effect: (catalogue: Catalogue, paid: Chronicle, at: TileCoords) => Chronicle;
     }
   | {
       readonly aim: 'discard-pile';
-      readonly blocked: (chronicle: Chronicle) => Block[];
-      readonly effect: (paid: Chronicle, at: number) => Chronicle;
+      readonly blocked: (catalogue: Catalogue, chronicle: Chronicle) => Block[];
+      readonly effect: (catalogue: Catalogue, paid: Chronicle, at: number) => Chronicle;
     };
 
 /**
@@ -70,7 +71,7 @@ export type Card = { readonly cost: Partial<Resources> } & (
   | {
       readonly kind: 'hazard';
       /** What it does to the chronicle at the end of a turn it is still in the hand. */
-      readonly strikes: (chronicle: Chronicle) => Chronicle;
+      readonly strikes: (catalogue: Catalogue, chronicle: Chronicle) => Chronicle;
     }
 );
 
@@ -88,7 +89,7 @@ export function aimOf(card: Card): Aim {
     case 'instant':
       return card;
     case 'hazard':
-      return { aim: 'none', effect: (paid) => paid };
+      return { aim: 'none', effect: (_catalogue, paid) => paid };
   }
 }
 
@@ -111,7 +112,7 @@ export function leavesChronicle(card: Card): boolean {
  * The hazards of the hand striking, in hand order, each on the chronicle the one before it left, and
  * the chronicle untouched where the hand holds none.
  */
-export function struck(chronicle: Chronicle): Chronicle {
+export function struck(catalogue: Catalogue, chronicle: Chronicle): Chronicle {
   let standing = chronicle;
   for (const id of chronicle.hand) {
     const card = CARDS[id];
@@ -121,7 +122,7 @@ export function struck(chronicle: Chronicle): Chronicle {
       case 'instant':
         break;
       case 'hazard':
-        standing = card.strikes(standing);
+        standing = card.strikes(catalogue, standing);
         break;
     }
   }
@@ -133,12 +134,17 @@ export function struck(chronicle: Chronicle): Chronicle {
  * what the aim's kind asks of the tile, then what the card's own aim does. Every path that lights a
  * tile, plays on one or says why it was turned down asks here.
  */
-export function refuses(chronicle: Chronicle, card: AimedCard, tile: Tile): TileBlock | undefined {
+export function refuses(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  card: AimedCard,
+  tile: Tile,
+): TileBlock | undefined {
   switch (card.aim) {
     case 'tile':
-      return card.refuses(chronicle, tile);
+      return card.refuses(catalogue, chronicle, tile);
     case 'unit':
-      return firstRefusal(unitThere(chronicle, tile), card.refuses(chronicle, tile));
+      return firstRefusal(unitThere(chronicle, tile), card.refuses(catalogue, chronicle, tile));
   }
 }
 
@@ -165,9 +171,9 @@ function throughWorker(
 ): Aim & { readonly aim: 'tile' } {
   return {
     aim: 'tile',
-    refuses: (chronicle, tile) =>
+    refuses: (_catalogue, chronicle, tile) =>
       firstRefusal(worked(chronicle, tile), refusesTile(chronicle, tile)),
-    effect: (paid, at) => effect(acted(paid, at), at),
+    effect: (_catalogue, paid, at) => effect(acted(paid, at), at),
   };
 }
 
@@ -216,18 +222,19 @@ function movePointsSpent(chronicle: Chronicle, tile: TileCoords): TileBlock | un
  * without the other: the city keeps its last inhabitant, needs one idle to turn into the unit, and
  * needs its own tile free; then one idle inhabitant becomes the unit, on the city's tile.
  */
-function enters(type: UnitTypeId): Aim & { readonly aim: 'none' } {
+function enters(type: string): Aim & { readonly aim: 'none' } {
   return {
     aim: 'none',
-    blocked: (chronicle) => {
+    blocked: (_catalogue, chronicle) => {
       const blocks: Block[] = [];
       if (chronicle.population <= 1) blocks.push('population');
       if (idle(chronicle) <= 0) blocks.push('idle');
       if (unitAt(chronicle.units, chronicle.city) !== undefined) blocks.push('city');
       return blocks;
     },
-    effect: (paid) =>
+    effect: (catalogue, paid) =>
       entered(
+        catalogue,
         { ...paid, population: paid.population - 1 },
         {
           type,
@@ -307,14 +314,14 @@ export const CARDS: Record<CardId, Card> = {
     kind: 'instant',
     cost: {},
     aim: 'unit',
-    refuses: movePointsSpent,
-    effect: refreshed,
+    refuses: (_catalogue, chronicle, tile) => movePointsSpent(chronicle, tile),
+    effect: (_catalogue, paid, at) => refreshed(paid, at),
   },
   PH_Harvest: {
     kind: 'instant',
     cost: { science: 1 },
     aim: 'none',
-    effect: (paid) => gained(paid, { food: 2 }),
+    effect: (_catalogue, paid) => gained(paid, { food: 2 }),
   },
   PH_Mine: {
     kind: 'instant',
@@ -346,21 +353,22 @@ export const CARDS: Record<CardId, Card> = {
     kind: 'instant',
     cost: { science: 2 },
     aim: 'discard-pile',
-    blocked: (chronicle) => (chronicle.discardPile.length === 0 ? ['discard-pile'] : []),
-    effect: recalled,
+    blocked: (_catalogue, chronicle) =>
+      chronicle.discardPile.length === 0 ? ['discard-pile'] : [],
+    effect: (_catalogue, paid, at) => recalled(paid, at),
   },
   PH_Spoils: {
     kind: 'instant',
     cost: {},
     singleUse: true,
     aim: 'none',
-    effect: (paid) =>
+    effect: (_catalogue, paid) =>
       gained(paid, { food: 10, production: 10, military: 10, money: 10, science: 10 }),
   },
   PH_Hunger: {
     kind: 'hazard',
     cost: { production: 3 },
-    strikes: (chronicle) => ({
+    strikes: (_catalogue, chronicle) => ({
       ...chronicle,
       resources: { ...chronicle.resources, food: 0 },
     }),

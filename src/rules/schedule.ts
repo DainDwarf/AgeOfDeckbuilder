@@ -1,3 +1,4 @@
+import type { Catalogue } from './catalogue';
 import { enteredFromCamp, enteredOnCamp } from './enemies';
 import {
   BUILDINGS,
@@ -19,8 +20,8 @@ import { unitAt } from './units';
  */
 export type ScheduledEvent = {
   readonly weight: (turn: number) => number;
-  readonly reads: (chronicle: Chronicle) => Record<string, number>;
-  readonly lands: (chronicle: Chronicle) => Chronicle;
+  readonly reads: (catalogue: Catalogue, chronicle: Chronicle) => Record<string, number>;
+  readonly lands: (catalogue: Catalogue, chronicle: Chronicle) => Chronicle;
 };
 
 /** How many of the schedule's entries a due turn deals, for the player to take one of. */
@@ -49,13 +50,13 @@ export const SCHEDULE: {
   events: {
     PH_Raid: {
       weight: () => 1,
-      reads: (chronicle) => ({ warriors: raiders(chronicle.turn) }),
-      lands: (chronicle) => raid(chronicle, raiders(chronicle.turn)),
+      reads: (_catalogue, chronicle) => ({ warriors: raiders(chronicle.turn) }),
+      lands: (catalogue, chronicle) => raid(catalogue, chronicle, raiders(chronicle.turn)),
     },
     PH_Famine: {
       weight: () => 1,
       reads: () => ({}),
-      lands: (chronicle) => ({
+      lands: (_catalogue, chronicle) => ({
         ...chronicle,
         drawPile: ['PH_Hunger', ...chronicle.drawPile],
       }),
@@ -64,7 +65,7 @@ export const SCHEDULE: {
       // Its own turn is what deals it; the weight of nothing keeps it out of every other deal.
       weight: () => 0,
       reads: () => ({ camps: SIEGE.camps }),
-      lands: (chronicle) => siege(chronicle),
+      lands: (catalogue, chronicle) => siege(catalogue, chronicle),
     },
   },
 };
@@ -130,14 +131,14 @@ export function events(chronicle: Chronicle): Chronicle {
  * and none at all on a camp a unit stands on. It draws nothing, and must not: every later draw of the
  * chronicle would move with it.
  */
-export function reinforced(chronicle: Chronicle): Chronicle {
+export function reinforced(catalogue: Catalogue, chronicle: Chronicle): Chronicle {
   if (chronicle.turn <= chronicle.capstoneTurn) return chronicle;
 
   let standing = chronicle;
   for (const { q, r, building } of chronicle.tiles) {
     if (building !== 'PH_Camp') continue;
     if (unitAt(standing.units, { q, r }) !== undefined) continue;
-    standing = enteredOnCamp(standing, { q, r });
+    standing = enteredOnCamp(catalogue, standing, { q, r });
   }
   return standing;
 }
@@ -147,8 +148,8 @@ export function reinforced(chronicle: Chronicle): Chronicle {
  * and the turn the next event is due is rolled — deal, land, roll, in that order, which a replay of
  * the chronicle pins.
  */
-export function taken(chronicle: Chronicle, event: EventId): Chronicle {
-  const landed = SCHEDULE.events[event].lands({ ...chronicle, deal: [] });
+export function taken(catalogue: Catalogue, chronicle: Chronicle, event: EventId): Chronicle {
+  const landed = SCHEDULE.events[event].lands(catalogue, { ...chronicle, deal: [] });
   const rolled = withinSpan(landed.rng, SCHEDULE.spacing);
   return { ...landed, rng: rolled.rng, nextEvent: landed.turn + rolled.turns };
 }
@@ -176,9 +177,11 @@ function raiders(turn: number): number {
  * The raid's warriors, one after another: each draws its own camp, so the second sees the camp the
  * first took as taken, and a raid with more warriors than free camps enters what it can.
  */
-function raid(chronicle: Chronicle, warriors: number): Chronicle {
+function raid(catalogue: Catalogue, chronicle: Chronicle, warriors: number): Chronicle {
   let standing = chronicle;
-  for (let warrior = 0; warrior < warriors; warrior++) standing = enteredFromCamp(standing);
+  for (let warrior = 0; warrior < warriors; warrior++) {
+    standing = enteredFromCamp(catalogue, standing);
+  }
   return standing;
 }
 
@@ -190,7 +193,7 @@ function raid(chronicle: Chronicle, warriors: number): Chronicle {
  * again after each. When they run out the siege places what it can. Then a warrior enters on each
  * camp it placed, on that camp and on no other, so the draws of the placement are the only ones.
  */
-function siege(chronicle: Chronicle): Chronicle {
+function siege(catalogue: Catalogue, chronicle: Chronicle): Chronicle {
   const [near, far] = SIEGE.fromCity;
   // Only which tiles the walk reached is read here, never what reaching them cost, so the move a
   // crossing is charged against shows nowhere.
@@ -234,6 +237,6 @@ function siege(chronicle: Chronicle): Chronicle {
       camped.has(tileKey(tile)) ? { ...tile, building: 'PH_Camp' } : tile,
     ),
   };
-  for (const tile of placed) besieged = enteredOnCamp(besieged, tile);
+  for (const tile of placed) besieged = enteredOnCamp(catalogue, besieged, tile);
   return besieged;
 }

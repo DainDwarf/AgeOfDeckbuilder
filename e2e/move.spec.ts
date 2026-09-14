@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
+import { STAND_IN } from '../src/content/stand-in';
 import { movementCost, type TileCoords, tileAt, tileKey } from '../src/rules/map';
 import type { Chronicle } from '../src/rules/state';
-import { UNIT_STATS } from '../src/rules/units';
 import {
   chronicleOf,
   click,
@@ -36,7 +36,7 @@ test('a unit crosses two tiles in two steps, and the turn refreshes what it spen
   await expect.poll(async () => (await chronicleOf(page)).units.length).toBe(1);
 
   const entered = await chronicleOf(page);
-  expect(entered.units[0].movePoints).toBe(UNIT_STATS.PH_Worker.move);
+  expect(entered.units[0].movePoints).toBe(STAND_IN.units.PH_Worker.move);
 
   // The first step: the unit is clicked, then the tile the map lights under it.
   await click(page, `tile-${tileKey(entered.city)}`);
@@ -48,7 +48,9 @@ test('a unit crosses two tiles in two steps, and the turn refreshes what it spen
     .toBe(tileKey(run.first));
 
   const stepped = await chronicleOf(page);
-  expect(stepped.units[0].movePoints).toBe(UNIT_STATS.PH_Worker.move - costOf(entered, run.first));
+  expect(stepped.units[0].movePoints).toBe(
+    STAND_IN.units.PH_Worker.move - costOf(entered, run.first),
+  );
   // The unit is selected again where it landed, so one more click is the next step.
   await expect.poll(() => ringedTile(page)).toBe(tileKey(run.first));
 
@@ -58,12 +60,12 @@ test('a unit crosses two tiles in two steps, and the turn refreshes what it spen
   const twice = await chronicleOf(page);
   expect(tileKey(twice.units[0].tile)).toBe(tileKey(run.second));
   expect(twice.units[0].movePoints).toBe(
-    UNIT_STATS.PH_Worker.move - costOf(entered, run.first) - costOf(entered, run.second),
+    STAND_IN.units.PH_Worker.move - costOf(entered, run.first) - costOf(entered, run.second),
   );
 
   await endTurn(page);
 
   const ticked = await chronicleOf(page);
-  expect(ticked.units[0].movePoints).toBe(UNIT_STATS.PH_Worker.move);
+  expect(ticked.units[0].movePoints).toBe(STAND_IN.units.PH_Worker.move);
   expect(problems).toEqual([]);
 });

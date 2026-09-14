@@ -1,5 +1,4 @@
 import { expect, test } from 'vitest';
-import { CAMP_ENEMY } from './enemies';
 import {
   BIOMES,
   BUILDINGS,
@@ -25,7 +24,6 @@ import {
   water,
 } from './map';
 import { seedRng } from './rng';
-import { standsOn } from './units';
 
 const SEEDS = [0, 1, 1234, 0xdeadbeef | 0, 424242];
 
@@ -304,12 +302,6 @@ test('every map is dealt its camps, each keeping its distance from the city and 
         expect(distance(camp, other)).toBeGreaterThanOrEqual(campsApart);
       }
     }
-  }
-});
-
-test('a camp lies on ground the enemy that comes from it can stand on', () => {
-  for (const terrain of BUILDINGS.PH_Camp.terrains) {
-    expect(standsOn(CAMP_ENEMY, { q: 0, r: 0, terrain, improvements: [] })).toBe(true);
   }
 });
 

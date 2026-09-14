@@ -1,5 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import type Phaser from 'phaser';
+import { STAND_IN } from '../src/content/stand-in';
 import { DECKS } from '../src/rules/cards';
 import { beginChronicle } from '../src/rules/chronicle';
 import { type TileCoords, tileKey } from '../src/rules/map';
@@ -33,7 +34,7 @@ type Run = { readonly seed: number; readonly turns: number; readonly enemy: Tile
  */
 function unchartedEnemy(): Run {
   return firstSeed('stands an enemy on an uncharted tile inside eight turns', (seed) => {
-    let chronicle = beginChronicle(seed, DECKS.PH_Deck);
+    let chronicle = beginChronicle(STAND_IN, seed, DECKS.PH_Deck);
     for (let turns = 1; turns <= 8; turns++) {
       chronicle = endedTurn(chronicle);
       if (chronicle.ending !== undefined) return undefined;

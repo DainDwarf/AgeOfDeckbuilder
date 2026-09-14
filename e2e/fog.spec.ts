@@ -1,4 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
+import { STAND_IN } from '../src/content/stand-in';
 import { DECKS } from '../src/rules/cards';
 import { apply, beginChronicle, outcome, refusalOf } from '../src/rules/chronicle';
 import { distance, neighbours, type TileCoords, tileKey } from '../src/rules/map';
@@ -49,7 +50,7 @@ function fogRun(): Run {
   return firstSeed(
     'opens a turn on a worker whose step out and back leaves a tile in fog',
     (seed) => {
-      let chronicle = beginChronicle(seed, DECKS.PH_Deck);
+      let chronicle = beginChronicle(STAND_IN, seed, DECKS.PH_Deck);
       for (let turn = 1; turn <= 8; turn++) {
         const stepped = steppedThisTurn(chronicle);
         if (stepped !== undefined) return { seed, turn, ...stepped };
@@ -69,16 +70,18 @@ type RoundTrip = { readonly out: TileCoords; readonly back: Chronicle };
  */
 function roundTrips(chronicle: Chronicle): RoundTrip[] {
   const at = chronicle.hand.indexOf('PH_Worker');
-  if (at === -1 || !playable(refusalOf(chronicle, 'PH_Worker'))) return [];
-  const entered = outcome(apply(chronicle, { type: 'play', index: at, aim: 'none' }));
+  if (at === -1 || !playable(refusalOf(STAND_IN, chronicle, 'PH_Worker'))) return [];
+  const entered = outcome(apply(STAND_IN, chronicle, { type: 'play', index: at, aim: 'none' }));
   const worker = entered.units[entered.units.length - 1];
   if (worker.faction !== 'player') return [];
 
   const trips: RoundTrip[] = [];
   for (const out of neighbours(entered.city)) {
-    const stepped = outcome(apply(entered, { type: 'move', unit: worker.id, tile: out }));
+    const stepped = outcome(apply(STAND_IN, entered, { type: 'move', unit: worker.id, tile: out }));
     if (stepped === entered) continue;
-    const back = outcome(apply(stepped, { type: 'move', unit: worker.id, tile: entered.city }));
+    const back = outcome(
+      apply(STAND_IN, stepped, { type: 'move', unit: worker.id, tile: entered.city }),
+    );
     if (back !== stepped) trips.push({ out, back });
   }
   return trips;
@@ -115,7 +118,7 @@ type EnemyRun = {
  */
 function enemyInFog(): EnemyRun {
   return firstSeed('leaves an enemy standing in the fog behind a worker', (seed) => {
-    let chronicle = beginChronicle(seed, DECKS.PH_Deck);
+    let chronicle = beginChronicle(STAND_IN, seed, DECKS.PH_Deck);
     for (let turn = 1; turn <= 8; turn++) {
       const stepped = foggedThisTurn(chronicle);
       if (stepped !== undefined) return { seed, turn, ...stepped };
@@ -177,7 +180,7 @@ type Charting = {
  */
 function riverCharting(): Charting {
   return firstSeed('opens a turn on a worker whose step charts a river', (seed) => {
-    let chronicle = beginChronicle(seed, DECKS.PH_Deck);
+    let chronicle = beginChronicle(STAND_IN, seed, DECKS.PH_Deck);
     for (let turn = 1; turn <= 8; turn++) {
       const charted = chartedThisTurn(chronicle);
       if (charted !== undefined) return { seed, turn, out: charted };
@@ -190,13 +193,13 @@ function riverCharting(): Charting {
 /** Where this hand's worker steps to chart a river, on a chronicle whose map draws none yet. */
 function chartedThisTurn(chronicle: Chronicle): TileCoords | undefined {
   const at = chronicle.hand.indexOf('PH_Worker');
-  if (at === -1 || !playable(refusalOf(chronicle, 'PH_Worker'))) return undefined;
+  if (at === -1 || !playable(refusalOf(STAND_IN, chronicle, 'PH_Worker'))) return undefined;
   if (chronicle.rivers.length === 0 || riverRuns(chronicle) > 0) return undefined;
-  const entered = outcome(apply(chronicle, { type: 'play', index: at, aim: 'none' }));
+  const entered = outcome(apply(STAND_IN, chronicle, { type: 'play', index: at, aim: 'none' }));
   if (entered.units.length !== 1) return undefined;
 
   for (const out of neighbours(entered.city)) {
-    const stepped = outcome(apply(entered, { type: 'move', unit: 1, tile: out }));
+    const stepped = outcome(apply(STAND_IN, entered, { type: 'move', unit: 1, tile: out }));
     if (stepped !== entered && riverRuns(stepped) > 0) return out;
   }
   return undefined;

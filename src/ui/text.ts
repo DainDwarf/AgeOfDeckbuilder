@@ -160,3 +160,10 @@ export type TextKey = keyof typeof TEXT;
 export function text(key: TextKey, values: Record<string, string | number> = {}): string {
   return TEXT[key].replace(/\{(\w+)\}/g, (_, name: string) => String(values[name]));
 }
+
+/** What a unit kind is named on the screen; a kind no entry names is refused. */
+export function unitName(type: string): string {
+  const key = `unit.${type}`;
+  if (!Object.hasOwn(TEXT, key)) throw new Error(`no entry names the unit kind ${type}`);
+  return text(key as TextKey);
+}

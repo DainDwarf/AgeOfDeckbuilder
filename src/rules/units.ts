@@ -1,6 +1,5 @@
 import {
   distance,
-  MOVE_POINT,
   movementCost,
   pathCosts,
   type River,
@@ -12,19 +11,13 @@ import {
 /** Who a unit acts for. The player commands theirs; an enemy attacks them. */
 export type Faction = 'player' | 'enemy';
 
-/** `PH_` marks a stand-in: neither of these is authored content, and both of them go. */
-export type UnitTypeId = 'PH_Worker' | 'PH_Warrior';
-
-/** `PH_` marks a stand-in: this script is not authored content, and it goes with the enemies it drives. */
-export type EnemyScriptId = 'PH_Advance';
-
 /**
- * What a unit is and what it can do. A unit carries its own copy, taken from `UNIT_STATS` when the
- * card resolves, so from then on the numbers are that unit's own and change with it. `move` counts
- * in `MOVE_POINT` hundredths, alone among these: every other stat here is a whole number.
+ * What a unit is and what it can do. A unit carries its own copy, taken from its kind in the
+ * catalogue as it enters, so from then on the numbers are that unit's own and change with it. `move`
+ * counts in `MOVE_POINT` hundredths, alone among these: every other stat here is a whole number.
  */
 export type UnitStats = {
-  readonly type: UnitTypeId;
+  readonly type: string;
   readonly worker: boolean;
   readonly health: number;
   readonly damage: number;
@@ -32,30 +25,6 @@ export type UnitStats = {
   readonly move: number;
   readonly action: number;
   readonly sight: number;
-};
-
-/** The stats a unit of each kind enters the map with. */
-export const UNIT_STATS: Record<UnitTypeId, UnitStats> = {
-  PH_Worker: {
-    type: 'PH_Worker',
-    worker: true,
-    health: 2,
-    damage: 0,
-    range: 0,
-    move: 2 * MOVE_POINT,
-    action: 1,
-    sight: 2,
-  },
-  PH_Warrior: {
-    type: 'PH_Warrior',
-    worker: false,
-    health: 5,
-    damage: 2,
-    range: 1,
-    move: 2 * MOVE_POINT,
-    action: 1,
-    sight: 2,
-  },
 };
 
 /**
@@ -70,10 +39,7 @@ export type Unit = {
   readonly tile: TileCoords;
   readonly movePoints: number;
   readonly action: number;
-} & (
-  | { readonly faction: 'player' }
-  | { readonly faction: 'enemy'; readonly script: EnemyScriptId }
-);
+} & ({ readonly faction: 'player' } | { readonly faction: 'enemy'; readonly script: string });
 
 /** A tile a unit can land on, and the move points crossing to it spends. */
 export type Landing = { readonly tile: TileCoords; readonly cost: number };

@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { type AimedCard, aimOf, CARDS } from '../rules/cards';
+import type { Catalogue } from '../rules/catalogue';
 import { costOf, refusalOf, type Stage } from '../rules/chronicle';
 import { type CardId, type Chronicle, playable, type Refusal } from '../rules/state';
 import { createAimLine } from './aim-line';
@@ -87,7 +88,12 @@ export type HandPresses = {
  * whatever else stands. While a card is aimed at the discard pile the hand lies under the window's
  * scrim.
  */
-export function createHand(scene: Phaser.Scene, on: Surface, presses: HandPresses): Hand {
+export function createHand(
+  scene: Phaser.Scene,
+  on: Surface,
+  catalogue: Catalogue,
+  presses: HandPresses,
+): Hand {
   const laneLeft = MARGIN + CARD_WIDTH + LANE_PAD;
   const laneWidth = DESIGN_WIDTH - 2 * laneLeft;
   const note = createRefusalNote(scene, on);
@@ -269,7 +275,7 @@ export function createHand(scene: Phaser.Scene, on: Surface, presses: HandPresse
 
     slots = chronicle.hand.map((id, index) => {
       const off = index - (held - 1) / 2;
-      const refusal = refusalOf(chronicle, id);
+      const refusal = refusalOf(catalogue, chronicle, id);
       const slot: Slot = {
         face: createCardFace(scene, cardFace(id), refusal),
         id,

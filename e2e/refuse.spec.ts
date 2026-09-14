@@ -1,4 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
+import { STAND_IN } from '../src/content/stand-in';
 import { aimOf, CARDS, DECKS, refuses } from '../src/rules/cards';
 import { beginChronicle, costOf, refusalOf } from '../src/rules/chronicle';
 import { tileAt, tileKey } from '../src/rules/map';
@@ -32,13 +33,13 @@ const UNPAID: CardId = 'PH_Urbanisation';
 
 /** Where a card the rules refuse lies in the hand, or -1. */
 function refused(chronicle: Chronicle): number {
-  return chronicle.hand.findIndex((id) => !playable(refusalOf(chronicle, id)));
+  return chronicle.hand.findIndex((id) => !playable(refusalOf(STAND_IN, chronicle, id)));
 }
 
 /** Where a card the rules refuse that plays at nothing lies in the hand, or -1. */
 function refusedAtNothing(chronicle: Chronicle): number {
   return chronicle.hand.findIndex(
-    (id) => aimOf(CARDS[id]).aim === 'none' && !playable(refusalOf(chronicle, id)),
+    (id) => aimOf(CARDS[id]).aim === 'none' && !playable(refusalOf(STAND_IN, chronicle, id)),
   );
 }
 
@@ -48,7 +49,7 @@ function refusedRun(
   lies: (chronicle: Chronicle) => number,
 ): { seed: number; turn: number } {
   return firstSeed(`opens a turn on ${such}`, (seed) => {
-    let chronicle = beginChronicle(seed, DECKS.PH_Deck);
+    let chronicle = beginChronicle(STAND_IN, seed, DECKS.PH_Deck);
     for (let turn = 1; turn <= 8; turn++) {
       if (lies(chronicle) !== -1) return { seed, turn };
       chronicle = endedTurn(chronicle);
@@ -59,7 +60,7 @@ function refusedRun(
 
 /** Every reason the rules refuse this card, in the words the note says them in. */
 function reasons(chronicle: Chronicle, id: CardId): string[] {
-  const refusal = refusalOf(chronicle, id);
+  const refusal = refusalOf(STAND_IN, chronicle, id);
   return [
     ...costOf(id)
       .filter(({ resource }) => refusal.unaffordable.includes(resource))
@@ -127,7 +128,7 @@ test('a press on a tile an aim refuses says one reason over it, and the card sta
   if (card.aim !== 'tile') throw new Error(`${opened.hand[index]} is aimed at no tile`);
   const tile = tileAt(opened.tiles, opened.city);
   if (tile === undefined) throw new Error('the city stands on no tile of the map');
-  const block = refuses(opened, card, tile);
+  const block = refuses(STAND_IN, opened, card, tile);
   if (block === undefined) throw new Error(`${opened.hand[index]} admits the city's own tile`);
 
   const face = await onScreen(page, `tile-${tileKey(opened.city)}`);

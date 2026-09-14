@@ -1,5 +1,7 @@
 import { expect, test } from 'vitest';
+import { entered } from './catalogue';
 import { apply, outcome } from './chronicle';
+import { CATALOGUE } from './fixtures';
 import {
   distance,
   MOVE_POINT,
@@ -12,7 +14,7 @@ import {
 import { seedRng } from './rng';
 import { scheduled } from './schedule';
 import { CITY_SIGHT, charted, inSight } from './sight';
-import { type Chronicle, entered, type Snapshot } from './state';
+import type { Chronicle, Snapshot } from './state';
 import type { UnitStats } from './units';
 
 const CITY: TileCoords = { q: 0, r: 0 };
@@ -64,6 +66,7 @@ function ground(...relief: readonly Relief[]): Tile[] {
 function founded(tiles: Tile[], claimed: readonly TileCoords[] = []): Chronicle {
   const held = [CITY, ...neighbours(CITY), ...claimed];
   return charted({
+    content: CATALOGUE.version,
     seed: 7,
     ...scheduled(seedRng(7)),
     tiles,
@@ -89,7 +92,7 @@ function founded(tiles: Tile[], claimed: readonly TileCoords[] = []): Chronicle 
  * the test names on top of its kind's, its move points full from them.
  */
 function watching(chronicle: Chronicle, tile: TileCoords, carried: Partial<UnitStats>): Chronicle {
-  const dealt = entered(chronicle, { type: 'PH_Warrior', tile, faction: 'player' });
+  const dealt = entered(CATALOGUE, chronicle, { type: 'PH_Warrior', tile, faction: 'player' });
   const last = dealt.units[dealt.units.length - 1];
   const stats = { ...last.stats, ...carried };
   return charted({
@@ -101,7 +104,12 @@ function watching(chronicle: Chronicle, tile: TileCoords, carried: Partial<UnitS
 /** The chronicle with an enemy entered on a tile through the rules, on the one script there is. */
 function raiding(chronicle: Chronicle, tile: TileCoords): Chronicle {
   return charted(
-    entered(chronicle, { type: 'PH_Warrior', tile, faction: 'enemy', script: 'PH_Advance' }),
+    entered(CATALOGUE, chronicle, {
+      type: 'PH_Warrior',
+      tile,
+      faction: 'enemy',
+      script: 'advance',
+    }),
   );
 }
 
@@ -199,7 +207,7 @@ test('the snapshot keeps a tile as it was last seen once the unit that saw it ha
   const watched = watching(founded(ground(['hills', [seen]])), WATCHER, { sight: SIGHT });
   expect(sees(watched, seen)).toBe(true);
 
-  const left = outcome(apply(watched, { type: 'move', unit: 1, tile: away }));
+  const left = outcome(apply(CATALOGUE, watched, { type: 'move', unit: 1, tile: away }));
 
   expect(sees(left, seen)).toBe(false);
   expect(snapshotOf(left, seen)?.tile.terrain).toBe('hills');
@@ -213,13 +221,13 @@ test('a killed unit charts nothing more: what it alone saw stands as it stood wh
     off(0, 3),
   );
 
-  const killed = outcome(apply(raided, { type: 'end-turn' }));
+  const killed = outcome(apply(CATALOGUE, raided, { type: 'end-turn' }));
   expect(killed.units.every((unit) => unit.faction === 'enemy')).toBe(true);
   // The enemy crossed in sight, so the tile it landed on was charted with it standing there.
   expect(snapshotOf(killed, stood)?.unit).toEqual({ type: 'PH_Warrior', faction: 'enemy' });
   expect(snapshotOf(killed, off(0, 3))).toBeUndefined();
 
-  const on = outcome(apply(killed, { type: 'end-turn' }));
+  const on = outcome(apply(CATALOGUE, killed, { type: 'end-turn' }));
 
   expect(tileKey(on.units[0].tile)).toBe(tileKey(off(0, -1)));
   expect(snapshotOf(on, off(0, -1))?.unit).toBeUndefined();
@@ -236,13 +244,15 @@ test('a unit of the player’s neither lands on an uncharted tile nor crosses on
   expect(snapshotOf(chronicle, uncharted)).toBeUndefined();
   expect(snapshotOf(chronicle, beyond)).toBeDefined();
 
-  const onto = apply(chronicle, { type: 'move', unit: 1, tile: uncharted });
-  const past = apply(chronicle, { type: 'move', unit: 1, tile: beyond });
+  const onto = apply(CATALOGUE, chronicle, { type: 'move', unit: 1, tile: uncharted });
+  const past = apply(CATALOGUE, chronicle, { type: 'move', unit: 1, tile: beyond });
 
   expect(onto.map((stage) => stage.name)).toEqual(['refused']);
   expect(past.map((stage) => stage.name)).toEqual(['refused']);
   // The charting is the whole of the refusal: the same distance over charted ground is crossed.
   expect(
-    apply(chronicle, { type: 'move', unit: 1, tile: off(0, -3) }).map((stage) => stage.name),
+    apply(CATALOGUE, chronicle, { type: 'move', unit: 1, tile: off(0, -3) }).map(
+      (stage) => stage.name,
+    ),
   ).toEqual(['move']);
 });

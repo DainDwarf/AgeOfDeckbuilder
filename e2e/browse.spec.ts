@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { STAND_IN } from '../src/content/stand-in';
 import { beginChronicle } from '../src/rules/chronicle';
 import type { CardId } from '../src/rules/state';
 import {
@@ -29,7 +30,7 @@ const DECK: readonly CardId[] = (
 /** The first seed whose three ended turns leave the city standing on fifteen discarded cards. */
 function browseSeed(): number {
   return firstSeed('ends three turns standing on fifteen discarded cards', (seed) => {
-    let chronicle = beginChronicle(seed, DECK);
+    let chronicle = beginChronicle(STAND_IN, seed, DECK);
     for (let turn = 0; turn < 3; turn++) {
       chronicle = endedTurn(chronicle);
     }

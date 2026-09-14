@@ -1,6 +1,6 @@
 import { type AimedCard, aimOf, CARDS, leavesChronicle, refuses, struck } from './cards';
+import { type Catalogue, checkContent, enemyScript } from './catalogue';
 import { assign, type CityCommand, claim, founding, grow, income, reassign } from './city';
-import { ENEMY_SCRIPTS } from './enemies';
 import { CITY_TILE, generateMap, type Tile, type TileCoords, tileKey } from './map';
 import { RESOURCES } from './resources';
 import { seedRng, shuffle as shuffleItems } from './rng';
@@ -121,8 +121,13 @@ export type Stage = { readonly chronicle: Chronicle } & (
  * The founding: the seed generates the map, the city fills the slot of the tile it stands on, the
  * border and the inhabitants inside it are what a founding starts on, the deck it is founded on is
  * shuffled into its draw pile, and the map is charted of what the city sees from the first turn.
+ * The chronicle names the version of the catalogue it is founded on.
  */
-export function beginChronicle(seed: number, deck: readonly CardId[]): Chronicle {
+export function beginChronicle(
+  catalogue: Catalogue,
+  seed: number,
+  deck: readonly CardId[],
+): Chronicle {
   const map = generateMap(seedRng(seed));
   const shuffled = shuffleItems(map.rng, deck);
   const tiles: Tile[] = map.tiles.map((tile) =>
@@ -133,6 +138,7 @@ export function beginChronicle(seed: number, deck: readonly CardId[]): Chronicle
       shuffle(
         draw(
           events({
+            content: catalogue.version,
             seed,
             ...scheduled(shuffled.rng),
             tiles,
@@ -157,10 +163,12 @@ export function beginChronicle(seed: number, deck: readonly CardId[]): Chronicle
 
 /**
  * The one way a chronicle changes: every command the player has goes through here, and answers the
- * stages it resolves as — never none, each of them charted of what stood in sight when it ended.
+ * stages it resolves as — never none, each of them charted of what stood in sight when it ended. A
+ * chronicle founded on another version of the content than the catalogue's is refused first.
  */
-export function apply(chronicle: Chronicle, command: Command): Stage[] {
-  return charting(chronicle.snapshots, resolved(chronicle, command));
+export function apply(catalogue: Catalogue, chronicle: Chronicle, command: Command): Stage[] {
+  checkContent(catalogue, chronicle);
+  return charting(chronicle.snapshots, resolved(catalogue, chronicle, command));
 }
 
 /**
@@ -168,13 +176,13 @@ export function apply(chronicle: Chronicle, command: Command): Stage[] {
  * every command and one waiting on a deal every command but the take, and a city left without
  * population falls on the last stage whatever it was.
  */
-function resolved(chronicle: Chronicle, command: Command): Stage[] {
+function resolved(catalogue: Catalogue, chronicle: Chronicle, command: Command): Stage[] {
   if (chronicle.ending !== undefined) return [{ name: 'refused', chronicle }];
   if (chronicle.deal.length > 0 && command.type !== 'take') {
     return [{ name: 'refused', chronicle }];
   }
 
-  const stages = stagesOf(chronicle, command);
+  const stages = stagesOf(catalogue, chronicle, command);
 
   const last = stages[stages.length - 1];
   if (last.chronicle.ending !== undefined || last.chronicle.population > 0) return stages;
@@ -201,14 +209,14 @@ function charting(taken: Snapshot[], stages: readonly Stage[]): Stage[] {
 }
 
 /** What each command resolves as, before the fall the city may have come to on the last of them. */
-function stagesOf(chronicle: Chronicle, command: Command): Stage[] {
+function stagesOf(catalogue: Catalogue, chronicle: Chronicle, command: Command): Stage[] {
   switch (command.type) {
     case 'end-turn':
-      return endOfTurn(chronicle);
+      return endOfTurn(catalogue, chronicle);
     case 'take':
-      return take(chronicle, command.event);
+      return take(catalogue, chronicle, command.event);
     case 'play':
-      return play(chronicle, command);
+      return play(catalogue, chronicle, command);
     case 'move':
       return move(chronicle, command.unit, command.tile);
     case 'attack':
@@ -247,7 +255,7 @@ export function outcome(stages: readonly Stage[]): Chronicle {
  * turn's events phase leaves standing — the hand waits on the take. The turn always ticks, so there
  * is always a stage.
  */
-function endOfTurn(chronicle: Chronicle): Stage[] {
+function endOfTurn(catalogue: Catalogue, chronicle: Chronicle): Stage[] {
   const stages: Stage[] = [];
   let standing = chronicle;
   const staged = (name: PlainStage, next: Chronicle): void => {
@@ -263,11 +271,11 @@ function endOfTurn(chronicle: Chronicle): Stage[] {
     }
   };
 
-  staged('strike', struck(standing));
+  staged('strike', struck(catalogue, standing));
   staged('discard', discard(standing));
   staged('income', income(standing));
   staged('grow', grow(standing));
-  raised(enemyPhase(standing));
+  raised(enemyPhase(catalogue, standing));
   if (standing.ending !== undefined) return stages;
   raised(captures(standing));
   if (survived(standing)) {
@@ -280,7 +288,7 @@ function endOfTurn(chronicle: Chronicle): Stage[] {
     turn: standing.turn + 1,
     units: standing.units.map((unit) => refreshedAction(refreshedMovePoints(unit))),
   });
-  staged('reinforce', reinforced(standing));
+  staged('reinforce', reinforced(catalogue, standing));
   staged('deal', events(standing));
   if (standing.deal.length > 0) return stages;
   raised(drawn(standing));
@@ -292,10 +300,10 @@ function endOfTurn(chronicle: Chronicle): Stage[] {
  * it leaves. An entry the deal does not hold, and a take made while no deal stands, are one
  * `refused` stage on the chronicle as it stood.
  */
-function take(chronicle: Chronicle, event: EventId): Stage[] {
+function take(catalogue: Catalogue, chronicle: Chronicle, event: EventId): Stage[] {
   if (!chronicle.deal.includes(event)) return [{ name: 'refused', chronicle }];
 
-  const landed = taken(chronicle, event);
+  const landed = taken(catalogue, chronicle, event);
   return [{ name: 'events', chronicle: landed }, ...drawn(landed)];
 }
 
@@ -339,17 +347,24 @@ export function costOf(id: CardId): Cost[] {
   return entries;
 }
 
-export function refusalOf(chronicle: Chronicle, id: CardId): Refusal {
-  return { unaffordable: unaffordable(chronicle, costOf(id)), blocked: blocked(chronicle, id) };
+export function refusalOf(catalogue: Catalogue, chronicle: Chronicle, id: CardId): Refusal {
+  return {
+    unaffordable: unaffordable(chronicle, costOf(id)),
+    blocked: blocked(catalogue, chronicle, id),
+  };
 }
 
 /**
  * Every tile a card's aim admits, what the aim refuses the whole of the filter. The one list the
  * play and the map a card is aimed over both read.
  */
-export function admitted(chronicle: Chronicle, card: AimedCard): TileCoords[] {
+export function admitted(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  card: AimedCard,
+): TileCoords[] {
   return chronicle.tiles
-    .filter((tile) => refuses(chronicle, card, tile) === undefined)
+    .filter((tile) => refuses(catalogue, chronicle, card, tile) === undefined)
     .map(({ q, r }) => ({ q, r }));
 }
 
@@ -359,13 +374,13 @@ export function admitted(chronicle: Chronicle, card: AimedCard): TileCoords[] {
  * in the order they declare them; a card aimed at a tile or at a unit answers with none, the map
  * being no part of what the hand judges it by.
  */
-function blocked(chronicle: Chronicle, id: CardId): Block[] {
+function blocked(catalogue: Catalogue, chronicle: Chronicle, id: CardId): Block[] {
   const card = aimOf(CARDS[id]);
   switch (card.aim) {
     case 'none':
-      return card.blocked?.(chronicle) ?? [];
+      return card.blocked?.(catalogue, chronicle) ?? [];
     case 'discard-pile':
-      return card.blocked(chronicle);
+      return card.blocked(catalogue, chronicle);
     case 'tile':
     case 'unit':
       return [];
@@ -379,12 +394,12 @@ function blocked(chronicle: Chronicle, id: CardId): Block[] {
  * play the hand, the city, the map or the discard pile refuses is one `refused` stage on the
  * chronicle as it stood, nothing paid or discarded.
  */
-function play(chronicle: Chronicle, command: PlayCommand): Stage[] {
+function play(catalogue: Catalogue, chronicle: Chronicle, command: PlayCommand): Stage[] {
   const id = chronicle.hand[command.index];
-  if (id === undefined || !playable(refusalOf(chronicle, id))) {
+  if (id === undefined || !playable(refusalOf(catalogue, chronicle, id))) {
     return [{ name: 'refused', chronicle }];
   }
-  const effect = aimedEffect(chronicle, id, command);
+  const effect = aimedEffect(catalogue, chronicle, id, command);
   if (effect === undefined) return [{ name: 'refused', chronicle }];
 
   const resources = { ...chronicle.resources };
@@ -408,6 +423,7 @@ function play(chronicle: Chronicle, command: PlayCommand): Stage[] {
  * at all. `undefined` refuses the play.
  */
 function aimedEffect(
+  catalogue: Catalogue,
   chronicle: Chronicle,
   id: CardId,
   command: PlayCommand,
@@ -415,20 +431,22 @@ function aimedEffect(
   const card = aimOf(CARDS[id]);
   switch (card.aim) {
     case 'none':
-      return command.aim === 'none' ? card.effect : undefined;
+      return command.aim === 'none' ? (paid) => card.effect(catalogue, paid) : undefined;
     case 'tile':
     case 'unit': {
       const tile = aimedTile(command, card.aim);
       if (tile === undefined) return undefined;
       const at = tileKey(tile);
-      if (!admitted(chronicle, card).some((coord) => tileKey(coord) === at)) return undefined;
-      return (paid) => card.effect(paid, tile);
+      if (!admitted(catalogue, chronicle, card).some((coord) => tileKey(coord) === at)) {
+        return undefined;
+      }
+      return (paid) => card.effect(catalogue, paid, tile);
     }
     case 'discard-pile': {
       if (command.aim !== 'discard-pile') return undefined;
       const at = command.card;
       if (at < 0 || at >= chronicle.discardPile.length) return undefined;
-      return (paid) => card.effect(paid, at);
+      return (paid) => card.effect(catalogue, paid, at);
     }
   }
 }
@@ -544,7 +562,7 @@ function discard(chronicle: Chronicle): Chronicle {
  * then attacks the unit its script names while it holds action, one attack a point. A stage each,
  * and none for a move it did not make or an attack aimed at nobody.
  */
-function enemyPhase(chronicle: Chronicle): Stage[] {
+function enemyPhase(catalogue: Catalogue, chronicle: Chronicle): Stage[] {
   if (occupied(chronicle.units, chronicle.city)) {
     return [{ name: 'capture', chronicle: fall(chronicle, 'capture') }];
   }
@@ -554,10 +572,10 @@ function enemyPhase(chronicle: Chronicle): Stage[] {
   for (const rostered of chronicle.units) {
     const found = units.find((unit) => unit.id === rostered.id);
     if (found?.faction !== 'enemy') continue;
-    const script = ENEMY_SCRIPTS[found.script];
+    const script = enemyScript(catalogue, found.script);
     let acting = found;
 
-    const landing = script.moveTo({ ...chronicle, units }, acting);
+    const landing = script.moveTo(catalogue, { ...chronicle, units }, acting);
     if (tileKey(landing.tile) !== tileKey(acting.tile)) {
       const from = acting.tile;
       acting = { ...acting, tile: landing.tile, movePoints: acting.movePoints - landing.cost };
@@ -566,7 +584,7 @@ function enemyPhase(chronicle: Chronicle): Stage[] {
     }
 
     while (acting.action > 0) {
-      const target = script.attacks({ ...chronicle, units }, acting);
+      const target = script.attacks(catalogue, { ...chronicle, units }, acting);
       if (target === undefined) break;
       const damaged = attacked(units, acting, target);
       acting = spentAction(acting);

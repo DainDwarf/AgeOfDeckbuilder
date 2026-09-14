@@ -3,6 +3,7 @@ import { apply, beginChronicle, type Command, outcome } from './chronicle';
 import { cityCommand, cityDrag, claimable, growthThreshold, tileCost, tileRefusal } from './city';
 import {
   assignTo,
+  CATALOGUE,
   CITY,
   camped,
   cityOf,
@@ -55,16 +56,16 @@ function unchartedTouching(chronicle: Chronicle): TileCoords {
 function withWorkerBeside(chronicle: Chronicle, tile: TileCoords): Chronicle {
   const at = chronicle.hand.indexOf('PH_Worker');
   if (at === -1) throw new Error('this hand holds no worker to enter');
-  const entered = outcome(apply(chronicle, { type: 'play', index: at, aim: 'none' }));
+  const entered = outcome(apply(CATALOGUE, chronicle, { type: 'play', index: at, aim: 'none' }));
   const worker = entered.units[entered.units.length - 1];
   const between = neighbours(entered.city).find((coord) => distance(coord, tile) === 1);
   if (between === undefined) throw new Error(`no tile of the border touches ${tileKey(tile)}`);
-  return outcome(apply(entered, { type: 'move', unit: worker.id, tile: between }));
+  return outcome(apply(CATALOGUE, entered, { type: 'move', unit: worker.id, tile: between }));
 }
 
 test('the city holds its own tile and every tile touching it', () => {
   for (const seed of [0, 1234, 0xdeadbeef | 0]) {
-    const chronicle = beginChronicle(seed, DECK);
+    const chronicle = beginChronicle(CATALOGUE, seed, DECK);
     const held = new Set(chronicle.held.map(tileKey));
 
     expect(held.size).toBe(7);
@@ -75,7 +76,7 @@ test('the city holds its own tile and every tile touching it', () => {
 });
 
 test('the founding puts an inhabitant on every tile the city holds, and leaves two idle', () => {
-  const chronicle = beginChronicle(1234, DECK);
+  const chronicle = beginChronicle(CATALOGUE, 1234, DECK);
 
   expect([...chronicle.assigned].map(tileKey).sort()).toEqual(
     [...chronicle.held].map(tileKey).sort(),
@@ -86,7 +87,7 @@ test('the founding puts an inhabitant on every tile the city holds, and leaves t
 test('income yields every tile inside the border, and nothing outside it', () => {
   const inside: Terrain[] = ['urban', 'plain', 'forest', 'hills', 'mountain', 'coast'];
 
-  const after = outcome(apply(cityOf(inside, NO_GROWTH), { type: 'end-turn' }));
+  const after = outcome(apply(CATALOGUE, cityOf(inside, NO_GROWTH), { type: 'end-turn' }));
 
   for (const resource of RESOURCES) {
     const yielded = inside.reduce(
@@ -98,8 +99,10 @@ test('income yields every tile inside the border, and nothing outside it', () =>
 });
 
 test('a second tile of the same terrain yields as much again', () => {
-  const once = outcome(apply(cityOf(['forest'], NO_GROWTH), { type: 'end-turn' }));
-  const twice = outcome(apply(cityOf(['forest', 'forest'], NO_GROWTH), { type: 'end-turn' }));
+  const once = outcome(apply(CATALOGUE, cityOf(['forest'], NO_GROWTH), { type: 'end-turn' }));
+  const twice = outcome(
+    apply(CATALOGUE, cityOf(['forest', 'forest'], NO_GROWTH), { type: 'end-turn' }),
+  );
 
   for (const resource of RESOURCES) {
     expect(twice.resources[resource]).toBe(once.resources[resource] * 2);
@@ -117,7 +120,7 @@ test('an assigned tile yields what all four of its layers declare, summed', () =
   };
   const city = cityOf(['urban', layered.terrain], NO_GROWTH);
 
-  const after = outcome(apply(withTile(city, layered), { type: 'end-turn' }));
+  const after = outcome(apply(CATALOGUE, withTile(city, layered), { type: 'end-turn' }));
 
   for (const resource of RESOURCES) {
     expect(after.resources[resource]).toBe(
@@ -134,12 +137,14 @@ test('an assigned tile yields what all four of its layers declare, summed', () =
 test('a river running along a tile gives it one food at income, however many edges it runs along', () => {
   const at = { q: 1, r: 0 };
   const around = cornersOf(at);
-  const bare = outcome(apply(cityOf(['urban', 'plain'], NO_GROWTH), { type: 'end-turn' }));
+  const bare = outcome(
+    apply(CATALOGUE, cityOf(['urban', 'plain'], NO_GROWTH), { type: 'end-turn' }),
+  );
 
   for (const river of [around.slice(0, 2), around.slice(0, 4)]) {
     const city = cityOf(['urban', 'plain'], { ...NO_GROWTH, rivers: [river] });
 
-    const after = outcome(apply(city, { type: 'end-turn' }));
+    const after = outcome(apply(CATALOGUE, city, { type: 'end-turn' }));
 
     for (const resource of RESOURCES) {
       expect(after.resources[resource]).toBe(
@@ -152,13 +157,15 @@ test('a river running along a tile gives it one food at income, however many edg
 test('two rivers meeting at a tile give it the one food between them', () => {
   const at = { q: 1, r: 0 };
   const around = cornersOf(at);
-  const bare = outcome(apply(cityOf(['urban', 'plain'], NO_GROWTH), { type: 'end-turn' }));
+  const bare = outcome(
+    apply(CATALOGUE, cityOf(['urban', 'plain'], NO_GROWTH), { type: 'end-turn' }),
+  );
   const city = cityOf(['urban', 'plain'], {
     ...NO_GROWTH,
     rivers: [around.slice(1, 3), around.slice(2, 4)],
   });
 
-  const after = outcome(apply(city, { type: 'end-turn' }));
+  const after = outcome(apply(CATALOGUE, city, { type: 'end-turn' }));
 
   for (const resource of RESOURCES) {
     expect(after.resources[resource]).toBe(
@@ -169,10 +176,12 @@ test('two rivers meeting at a tile give it the one food between them', () => {
 
 test('a river running along a terrain it feeds nothing gives that tile nothing', () => {
   const at = { q: 1, r: 0 };
-  const bare = outcome(apply(cityOf(['urban', 'hills'], NO_GROWTH), { type: 'end-turn' }));
+  const bare = outcome(
+    apply(CATALOGUE, cityOf(['urban', 'hills'], NO_GROWTH), { type: 'end-turn' }),
+  );
   const city = cityOf(['urban', 'hills'], { ...NO_GROWTH, rivers: [cornersOf(at).slice(0, 2)] });
 
-  const after = outcome(apply(city, { type: 'end-turn' }));
+  const after = outcome(apply(CATALOGUE, city, { type: 'end-turn' }));
 
   for (const resource of RESOURCES) {
     expect(after.resources[resource]).toBe(bare.resources[resource]);
@@ -182,9 +191,9 @@ test('a river running along a terrain it feeds nothing gives that tile nothing',
 test('resources accumulate over consecutive turns', () => {
   const city = cityOf(['urban', 'plain', 'hills'], NO_GROWTH);
 
-  const first = outcome(apply(city, { type: 'end-turn' }));
-  const second = outcome(apply(first, { type: 'end-turn' }));
-  const third = outcome(apply(second, { type: 'end-turn' }));
+  const first = outcome(apply(CATALOGUE, city, { type: 'end-turn' }));
+  const second = outcome(apply(CATALOGUE, first, { type: 'end-turn' }));
+  const third = outcome(apply(CATALOGUE, second, { type: 'end-turn' }));
 
   for (const resource of RESOURCES) {
     expect(third.resources[resource]).toBe(first.resources[resource] * 3);
@@ -192,7 +201,9 @@ test('resources accumulate over consecutive turns', () => {
 });
 
 test('the city in its slot adds nothing to what the tile it stands on yields', () => {
-  const founded = outcome(apply(cityOf(['urban'], { tiles: field(1) }), { type: 'end-turn' }));
+  const founded = outcome(
+    apply(CATALOGUE, cityOf(['urban'], { tiles: field(1) }), { type: 'end-turn' }),
+  );
 
   for (const resource of RESOURCES) {
     expect(founded.resources[resource]).toBe(TERRAIN_YIELDS.urban[resource] ?? 0);
@@ -202,7 +213,7 @@ test('the city in its slot adds nothing to what the tile it stands on yields', (
 test('a food stock short of the growth threshold grows nobody, and the stock is kept', () => {
   const city = cityOf(['urban', 'plain', 'coast'], NO_GROWTH);
 
-  const after = outcome(apply(city, { type: 'end-turn' }));
+  const after = outcome(apply(CATALOGUE, city, { type: 'end-turn' }));
 
   expect(after.population).toBe(city.population);
   expect(after.resources.food).toBe(3);
@@ -215,7 +226,7 @@ test('the food stock reaching the growth threshold is spent on one inhabitant, a
     resources: { food: 1, production: 0, military: 0, money: 0, science: 0, culture: 0 },
   });
 
-  const after = outcome(apply(city, { type: 'end-turn' }));
+  const after = outcome(apply(CATALOGUE, city, { type: 'end-turn' }));
 
   expect(after.population).toBe(city.population + 1);
   expect(after.resources.food).toBe(0);
@@ -230,8 +241,8 @@ test('the growth threshold is the food the next inhabitant needs: one short of i
     resources: { ...city.resources, food },
   });
 
-  const short = outcome(apply(stocked(growthThreshold(city) - 1), { type: 'end-turn' }));
-  const reached = outcome(apply(stocked(growthThreshold(city)), { type: 'end-turn' }));
+  const short = outcome(apply(CATALOGUE, stocked(growthThreshold(city) - 1), { type: 'end-turn' }));
+  const reached = outcome(apply(CATALOGUE, stocked(growthThreshold(city)), { type: 'end-turn' }));
 
   expect(short.population).toBe(city.population);
   expect(short.resources.food).toBe(growthThreshold(city) - 1);
@@ -245,7 +256,7 @@ test('a food stock worth several growth thresholds grows one inhabitant and no m
     resources: { food: 9, production: 0, military: 0, money: 0, science: 0, culture: 0 },
   });
 
-  const after = outcome(apply(city, { type: 'end-turn' }));
+  const after = outcome(apply(CATALOGUE, city, { type: 'end-turn' }));
 
   expect(after.population).toBe(city.population + 1);
   expect(after.resources.food).toBe(7);
@@ -257,8 +268,8 @@ test('the growth threshold widens with the population: the next inhabitant costs
     resources: { food: 5, production: 0, military: 0, money: 0, science: 0, culture: 0 },
   });
 
-  const first = outcome(apply(city, { type: 'end-turn' }));
-  const second = outcome(apply(first, { type: 'end-turn' }));
+  const first = outcome(apply(CATALOGUE, city, { type: 'end-turn' }));
+  const second = outcome(apply(CATALOGUE, first, { type: 'end-turn' }));
 
   expect(first.population).toBe(3);
   expect(first.resources.food).toBe(3);
@@ -270,8 +281,8 @@ test('an assign takes the inhabitant off a tile, and a second one puts it back',
   const city = cityOf(['urban', 'plain']);
   const tile = { q: 1, r: 0 };
 
-  const off = outcome(apply(city, assignTo(tile)));
-  const back = outcome(apply(off, assignTo(tile)));
+  const off = outcome(apply(CATALOGUE, city, assignTo(tile)));
+  const back = outcome(apply(CATALOGUE, off, assignTo(tile)));
 
   expect(stagedBy(city, assignTo(tile))).toEqual(['assign']);
   expect(off.assigned.map(tileKey)).toEqual(['0,0']);
@@ -284,7 +295,7 @@ test('an assign on a tile the city does not hold is refused', () => {
   const city = cityOf(['urban', 'plain'], { population: 4 });
 
   expect(stagedBy(city, assignTo({ q: 0, r: 5 }))).toEqual(['refused']);
-  expect(outcome(apply(city, assignTo({ q: 0, r: 5 })))).toBe(city);
+  expect(outcome(apply(CATALOGUE, city, assignTo({ q: 0, r: 5 })))).toBe(city);
   expect(stagedBy(city, assignTo({ q: 9, r: 9 }))).toEqual(['refused']);
 });
 
@@ -296,15 +307,15 @@ test('an assign with no inhabitant idle is refused', () => {
 
   expect(idle(spent)).toBe(0);
   expect(stagedBy(spent, assignTo({ q: 2, r: 0 }))).toEqual(['refused']);
-  expect(outcome(apply(spent, assignTo({ q: 2, r: 0 })))).toBe(spent);
+  expect(outcome(apply(CATALOGUE, spent, assignTo({ q: 2, r: 0 })))).toBe(spent);
 });
 
 test('a drag takes the inhabitant off the tile it stands on and puts it on the tile it lands on', () => {
-  const founding = beginChronicle(1, DECK);
+  const founding = beginChronicle(CATALOGUE, 1, DECK);
   const [from, to] = neighbours(founding.city);
-  const freed = outcome(apply(founding, assignTo(to)));
+  const freed = outcome(apply(CATALOGUE, founding, assignTo(to)));
 
-  const stages = apply(freed, reassignTo(from, to));
+  const stages = apply(CATALOGUE, freed, reassignTo(from, to));
   const after = outcome(stages);
 
   expect(cityDrag(freed, from, to)).toEqual(reassignTo(from, to));
@@ -316,33 +327,35 @@ test('a drag takes the inhabitant off the tile it stands on and puts it on the t
 });
 
 test('a drag onto a tile an inhabitant stands on, onto one the city does not hold, or onto the tile it started from is refused', () => {
-  const founding = beginChronicle(1, DECK);
+  const founding = beginChronicle(CATALOGUE, 1, DECK);
   const [from, worked] = neighbours(founding.city);
   const outside = claimable(founding)[0];
 
   expect(cityDrag(founding, from, worked)).toBeUndefined();
   expect(stagedBy(founding, reassignTo(from, worked))).toEqual(['refused']);
-  expect(outcome(apply(founding, reassignTo(from, worked)))).toBe(founding);
+  expect(outcome(apply(CATALOGUE, founding, reassignTo(from, worked)))).toBe(founding);
   expect(stagedBy(founding, reassignTo(from, outside))).toEqual(['refused']);
   expect(stagedBy(founding, reassignTo(from, from))).toEqual(['refused']);
 });
 
 test('a drag from a tile nobody stands on is refused', () => {
-  const founding = beginChronicle(1, DECK);
+  const founding = beginChronicle(CATALOGUE, 1, DECK);
   const [bare, empty] = neighbours(founding.city);
-  const freed = outcome(apply(outcome(apply(founding, assignTo(bare))), assignTo(empty)));
+  const freed = outcome(
+    apply(CATALOGUE, outcome(apply(CATALOGUE, founding, assignTo(bare))), assignTo(empty)),
+  );
 
   expect(cityDrag(freed, bare, empty)).toBeUndefined();
   expect(stagedBy(freed, reassignTo(bare, empty))).toEqual(['refused']);
-  expect(outcome(apply(freed, reassignTo(bare, empty)))).toBe(freed);
+  expect(outcome(apply(CATALOGUE, freed, reassignTo(bare, empty)))).toBe(freed);
 });
 
 test('an assigned tile yields at income, and an unassigned one yields nothing', () => {
   const city = cityOf(['urban', 'plain'], NO_GROWTH);
-  const off = outcome(apply(city, assignTo({ q: 1, r: 0 })));
+  const off = outcome(apply(CATALOGUE, city, assignTo({ q: 1, r: 0 })));
 
-  const worked = outcome(apply(city, { type: 'end-turn' }));
-  const bare = outcome(apply(off, { type: 'end-turn' }));
+  const worked = outcome(apply(CATALOGUE, city, { type: 'end-turn' }));
+  const bare = outcome(apply(CATALOGUE, off, { type: 'end-turn' }));
 
   for (const resource of RESOURCES) {
     expect(bare.resources[resource]).toBe(
@@ -353,10 +366,10 @@ test('an assigned tile yields at income, and an unassigned one yields nothing', 
 
 test('the city’s own tile unassigned yields nothing at income, like any other', () => {
   const city = cityOf(['urban', 'plain'], NO_GROWTH);
-  const off = outcome(apply(city, assignTo(CITY)));
+  const off = outcome(apply(CATALOGUE, city, assignTo(CITY)));
 
-  const worked = outcome(apply(city, { type: 'end-turn' }));
-  const bare = outcome(apply(off, { type: 'end-turn' }));
+  const worked = outcome(apply(CATALOGUE, city, { type: 'end-turn' }));
+  const bare = outcome(apply(CATALOGUE, off, { type: 'end-turn' }));
 
   for (const resource of RESOURCES) {
     expect(bare.resources[resource]).toBe(
@@ -369,7 +382,7 @@ test('a claim pays its culture, takes the tile inside the border, and puts an id
   const city = founded(3, { resources: culture(2) });
   const tile = { q: 2, r: 0 };
 
-  const stages = apply(city, claimOf(tile));
+  const stages = apply(CATALOGUE, city, claimOf(tile));
   const after = outcome(stages);
 
   expect(stages.map((stage) => stage.name)).toEqual(['claim']);
@@ -382,7 +395,7 @@ test('a claim pays its culture, takes the tile inside the border, and puts an id
 test('a claim made with nobody idle takes the tile with no inhabitant on it', () => {
   const full = founded(3, { resources: culture(2), population: 7 });
 
-  const after = outcome(apply(full, claimOf({ q: 2, r: 0 })));
+  const after = outcome(apply(CATALOGUE, full, claimOf({ q: 2, r: 0 })));
 
   expect(idle(full)).toBe(0);
   expect(after.held.map(tileKey)).toContain('2,0');
@@ -392,10 +405,10 @@ test('a claim made with nobody idle takes the tile with no inhabitant on it', ()
 
 test('a claimed tile an inhabitant stands on yields at the next income', () => {
   const city = founded(3, { ...NO_GROWTH, resources: culture(1) });
-  const claimed = outcome(apply(city, claimOf({ q: 2, r: 0 })));
+  const claimed = outcome(apply(CATALOGUE, city, claimOf({ q: 2, r: 0 })));
 
-  const bare = outcome(apply(city, { type: 'end-turn' }));
-  const wider = outcome(apply(claimed, { type: 'end-turn' }));
+  const bare = outcome(apply(CATALOGUE, city, { type: 'end-turn' }));
+  const wider = outcome(apply(CATALOGUE, claimed, { type: 'end-turn' }));
 
   expect(wider.resources.food).toBe(bare.resources.food + (TERRAIN_YIELDS.plain.food ?? 0));
 });
@@ -404,7 +417,7 @@ test('a claim on a tile the border does not touch, off the map, or already held 
   const city = founded(3, { resources: culture(9) });
 
   expect(stagedBy(city, claimOf({ q: 3, r: 0 }))).toEqual(['refused']);
-  expect(outcome(apply(city, claimOf({ q: 3, r: 0 })))).toBe(city);
+  expect(outcome(apply(CATALOGUE, city, claimOf({ q: 3, r: 0 })))).toBe(city);
   expect(stagedBy(city, claimOf({ q: 9, r: 9 }))).toEqual(['refused']);
   expect(stagedBy(city, claimOf({ q: 1, r: 0 }))).toEqual(['refused']);
 });
@@ -414,9 +427,9 @@ test('a claim the city cannot pay for is refused, and one it can just pay for go
   const exact = founded(3, { resources: culture(1) });
 
   expect(stagedBy(penniless, claimOf({ q: 2, r: 0 }))).toEqual(['refused']);
-  expect(outcome(apply(penniless, claimOf({ q: 2, r: 0 })))).toBe(penniless);
+  expect(outcome(apply(CATALOGUE, penniless, claimOf({ q: 2, r: 0 })))).toBe(penniless);
   expect(stagedBy(exact, claimOf({ q: 2, r: 0 }))).toEqual(['claim']);
-  expect(outcome(apply(exact, claimOf({ q: 2, r: 0 }))).resources.culture).toBe(0);
+  expect(outcome(apply(CATALOGUE, exact, claimOf({ q: 2, r: 0 }))).resources.culture).toBe(0);
 });
 
 test('a claim costs one culture, and one more for every three tiles claimed', () => {
@@ -427,7 +440,7 @@ test('a claim costs one culture, and one more for every three tiles claimed', ()
 
   const paid = touching.map((tile) => {
     const before = chronicle.resources.culture;
-    chronicle = outcome(apply(chronicle, claimOf(tile)));
+    chronicle = outcome(apply(CATALOGUE, chronicle, claimOf(tile)));
     return before - chronicle.resources.culture;
   });
 
@@ -447,7 +460,9 @@ test('the city may claim every tile touching the border, and no other', () => {
 });
 
 test('an uncharted tile touching the border is no claim of the city’s', () => {
-  const opened = outcome(apply(beginChronicle(4, DECK), { type: 'end-turn' }));
+  const opened = outcome(
+    apply(CATALOGUE, beginChronicle(CATALOGUE, 4, DECK), { type: 'end-turn' }),
+  );
   const dark = unchartedTouching(opened);
 
   expect(opened.resources.culture).toBeGreaterThanOrEqual(1);
@@ -455,18 +470,22 @@ test('an uncharted tile touching the border is no claim of the city’s', () => 
   expect(tileRefusal(opened, dark)).toBeUndefined();
   expect(cityCommand(opened, dark)).toBeUndefined();
   expect(stagedBy(opened, claimOf(dark))).toEqual(['refused']);
-  expect(outcome(apply(opened, claimOf(dark)))).toBe(opened);
+  expect(outcome(apply(CATALOGUE, opened, claimOf(dark)))).toBe(opened);
 });
 
 test('a unit that charts that tile makes it a claim the city can make', () => {
-  const opened = outcome(apply(beginChronicle(4, DECK), { type: 'end-turn' }));
+  const opened = outcome(
+    apply(CATALOGUE, beginChronicle(CATALOGUE, 4, DECK), { type: 'end-turn' }),
+  );
   const dark = unchartedTouching(opened);
   const charting = withWorkerBeside(opened, dark);
 
   expect(claimable(charting).map(tileKey)).toContain(tileKey(dark));
   expect(cityCommand(charting, dark)).toEqual(claimOf(dark));
   expect(stagedBy(charting, claimOf(dark))).toEqual(['claim']);
-  expect(outcome(apply(charting, claimOf(dark))).held.map(tileKey)).toContain(tileKey(dark));
+  expect(outcome(apply(CATALOGUE, charting, claimOf(dark))).held.map(tileKey)).toContain(
+    tileKey(dark),
+  );
 });
 
 test('a camp’s tile touching the border is no claim of the city’s', () => {
@@ -477,7 +496,7 @@ test('a camp’s tile touching the border is no claim of the city’s', () => {
   expect(tileRefusal(city, camp)).toBeUndefined();
   expect(cityCommand(city, camp)).toBeUndefined();
   expect(stagedBy(city, claimOf(camp))).toEqual(['refused']);
-  expect(outcome(apply(city, claimOf(camp)))).toBe(city);
+  expect(outcome(apply(CATALOGUE, city, claimOf(camp)))).toBe(city);
 });
 
 test('a tile an enemy occupies is no claim of the city’s, and a unit of the player’s refuses none', () => {
@@ -492,7 +511,7 @@ test('a tile an enemy occupies is no claim of the city’s, and a unit of the pl
   expect(tileRefusal(city, occupied)).toBeUndefined();
   expect(cityCommand(city, occupied)).toBeUndefined();
   expect(stagedBy(city, claimOf(occupied))).toEqual(['refused']);
-  expect(outcome(apply(city, claimOf(occupied)))).toBe(city);
+  expect(outcome(apply(CATALOGUE, city, claimOf(occupied)))).toBe(city);
 
   expect(claimable(city).map(tileKey)).toContain(tileKey(stood));
   expect(cityCommand(city, stood)).toEqual(claimOf(stood));
@@ -536,7 +555,7 @@ test('a city-mode click on a held tile nobody stands on is refused while nobody 
   expect(cityCommand(spent, empty)).toBeUndefined();
   expect(stagedBy(spent, assignTo(empty))).toEqual(['refused']);
 
-  const freed = outcome(apply(spent, assignTo(CITY)));
+  const freed = outcome(apply(CATALOGUE, spent, assignTo(CITY)));
 
   expect(tileRefusal(freed, empty)).toEqual({ unaffordable: [], blocked: [] });
   expect(stagedBy(freed, assignTo(empty))).toEqual(['assign']);
@@ -546,8 +565,8 @@ test('the same claim on the same chronicle gives the same chronicle back', () =>
   const city = founded(3, { resources: culture(3) });
   const untouched = structuredClone(city);
 
-  expect(outcome(apply(city, claimOf({ q: 2, r: 0 })))).toEqual(
-    outcome(apply(city, claimOf({ q: 2, r: 0 }))),
+  expect(outcome(apply(CATALOGUE, city, claimOf({ q: 2, r: 0 })))).toEqual(
+    outcome(apply(CATALOGUE, city, claimOf({ q: 2, r: 0 }))),
   );
   expect(city).toEqual(untouched);
 });
