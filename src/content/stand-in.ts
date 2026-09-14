@@ -302,7 +302,12 @@ export const STAND_IN: Catalogue = catalogued({
   },
   improvements: {
     PH_Mine: { terrains: ['hills'], yields: { production: 1 } },
-    PH_Road: { terrains: ['plain', 'forest', 'hills', 'urban'], yields: {} },
+    PH_Road: {
+      terrains: ['plain', 'forest', 'hills', 'urban'],
+      yields: {},
+      movementCost: MOVE_POINT / 2,
+      bridge: true,
+    },
   },
   regions: {
     [STAND_IN_REGION]: {

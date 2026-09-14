@@ -77,7 +77,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **feature** | A generated extra on a tile: a fertile plain. | bonus |
 | **river** | A watercourse the generator runs along the edges between tiles, from a mountain range to the sea. | stream, creek, waterway |
 | **improvement** | A layer a worker improves a tile with through an instant; distinct ones stack, the same one never twice. | — |
-| **road** | An improvement whose tile costs half a move point to enter, whatever lies under it. | path, track, highway, trail |
+| **road** | An improvement that names its tile's movement cost outright, whatever lies under it, and makes a bridge of a river edge it stands on both banks of. | path, track, highway, trail |
 | **bridge** | A river edge with a road on both banks, crossed as if no river ran there. | ford, viaduct, span |
 | **improve** | To put an improvement on a tile where a worker stands; what an improvement instant does. | lay, build, place, install |
 | **yield** | What a tile's layers and the river running along it give at income, resource by resource. | output, produce, harvest |

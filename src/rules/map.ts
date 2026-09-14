@@ -3,6 +3,7 @@ import {
   buildingKind,
   featureKind,
   improvementKind,
+  type LayerKind,
   type MapContent,
   type Region,
   type RiverFlow,
@@ -21,21 +22,34 @@ export type ImprovementId = string;
 /** One move point, in the hundredths every move stat, move point and movement cost counts in. */
 export const MOVE_POINT = 100;
 
-/** Whether a road runs on a tile: what names the tile's own cost, and what a bridge needs on both banks. */
-function roaded(tile: Tile | undefined): boolean {
-  return tile?.improvements.includes('PH_Road') ?? false;
+/** The building and the improvements of a tile: the layers a movement cost or a bridge is read off. */
+function layersOf(catalogue: MapContent, tile: Tile): LayerKind[] {
+  const improvements = tile.improvements.map((improvement) =>
+    improvementKind(catalogue, improvement),
+  );
+  if (tile.building === undefined) return improvements;
+  return [buildingKind(catalogue, tile.building), ...improvements];
+}
+
+/** Whether a layer of the tile bridges: what a bridge needs on both banks. */
+function bridges(catalogue: MapContent, tile: Tile | undefined): boolean {
+  return tile !== undefined && layersOf(catalogue, tile).some((layer) => layer.bridge === true);
 }
 
 /**
  * What entering a tile spends of a unit's move points: the one answer every path over the map asks.
  * A terrain that names no movement cost is crossed by nothing, and neither is a tile off the map. A
- * road names its tile's cost outright over what the layers under it sum to.
+ * layer that names the cost outright takes the tile to it, whatever the terrain's, the lowest named
+ * of them winning; the terrain's cost is the tile's only where no layer names one.
  */
 export function movementCost(catalogue: MapContent, tile: Tile | undefined): number | undefined {
   if (tile === undefined) return undefined;
   const ground = terrainKind(catalogue, tile.terrain).movementCost;
   if (ground === undefined) return undefined;
-  return roaded(tile) ? MOVE_POINT / 2 : ground;
+  const named = layersOf(catalogue, tile).flatMap((layer) =>
+    layer.movementCost === undefined ? [] : [layer.movementCost],
+  );
+  return named.length === 0 ? ground : Math.min(...named);
 }
 
 /** Whether a terrain is water: what a river runs to, and what height is measured from. */
@@ -150,8 +164,8 @@ function spentOn(walk: Walk, paid: number, cost: number, river: boolean): number
 /**
  * What the cheapest route to each tile costs from a start, the start itself nothing: every step
  * spends what the walk says, and `shut` keeps a route off the tiles the mover may not cross for
- * reasons of its own. A river edge with a road on both banks is a bridge, stepped over as if no
- * river ran there. A tile no route reaches is absent from the answer, and so is every tile no
+ * reasons of its own. A river edge with a bridging layer on both banks is a bridge, stepped over as
+ * if no river ran there. A tile no route reaches is absent from the answer, and so is every tile no
  * movement cost is named for.
  */
 export function pathCosts(
@@ -172,13 +186,13 @@ export function pathCosts(
     for (const [at, paid] of front) {
       // A tile the walk reached again for less stands on the front twice; the dearer one is dropped.
       if (spent.get(tileKey(at)) !== paid) continue;
-      const nearBank = roaded(ground.get(tileKey(at)));
+      const nearBank = bridges(catalogue, ground.get(tileKey(at)));
       for (const coord of neighbours(at)) {
         const key = tileKey(coord);
         const onto = ground.get(key);
         const cost = movementCost(catalogue, onto);
         if (cost === undefined || shut(coord)) continue;
-        const bridged = nearBank && roaded(onto);
+        const bridged = nearBank && bridges(catalogue, onto);
         const total = spentOn(walk, paid, cost, crossings.has(edgeKey(at, coord)) && !bridged);
         if (total === undefined) continue;
         const before = spent.get(key);

@@ -482,6 +482,60 @@ test('a road on one bank alone leaves the crossing spending every move point', (
   }
 });
 
+test('a layer naming a movement cost that does not bridge leaves the crossing spending every move point', () => {
+  const bank = { q: 1, r: 0 };
+  const across = { q: 2, r: 0 };
+  const on = { q: 3, r: 0 };
+  const city = cityOf(['urban'], {
+    tiles: improvedWith(field(3), 'PH_Trail', [bank, across]),
+    rivers: [riverBetween(bank, across)],
+    units: [standing('player', CITY, { move: 2 * MOVE_POINT, sight: 4 })],
+  });
+
+  const crossed = outcome(apply(CATALOGUE, city, moveTo(1, across)));
+
+  expect(crossed.units[0].tile).toEqual(across);
+  expect(pointsOf(crossed, 1)).toBe(0);
+  expect(outcome(apply(CATALOGUE, crossed, moveTo(1, on)))).toEqual(crossed);
+});
+
+test('a tile two layers each name a movement cost for costs the lower, whichever came first', () => {
+  const line = [
+    { q: 1, r: 0 },
+    { q: 2, r: 0 },
+    { q: 3, r: 0 },
+    { q: 4, r: 0 },
+  ];
+
+  for (const [first, second] of [
+    ['PH_Road', 'PH_Trail'],
+    ['PH_Trail', 'PH_Road'],
+  ]) {
+    const city = cityOf(['urban'], {
+      tiles: improvedWith(improvedWith(field(4), first, line), second, line),
+      units: [standing('player', CITY, { move: 2 * MOVE_POINT, sight: 4 })],
+    });
+
+    const along = outcome(apply(CATALOGUE, city, moveTo(1, { q: 4, r: 0 })));
+
+    expect(along.units[0].tile).toEqual({ q: 4, r: 0 });
+    expect(pointsOf(along, 1)).toBe(0);
+  }
+});
+
+test('a layer naming a movement cost above its terrain’s takes the tile to it', () => {
+  const heaped = { q: 1, r: 0 };
+  const city = cityOf(['urban'], {
+    tiles: improvedWith(field(3), 'PH_Rubble', [heaped]),
+    units: [standing('player', CITY, { move: 3 * MOVE_POINT, sight: 4 })],
+  });
+
+  const entered = outcome(apply(CATALOGUE, city, moveTo(1, heaped)));
+
+  expect(entered.units[0].tile).toEqual(heaped);
+  expect(pointsOf(entered, 1)).toBe(MOVE_POINT);
+});
+
 test('a unit crosses to a tile the cheapest way, not the fewest tiles', () => {
   /** A hill the whole disc is in sight from, two forests on the straight line east of it. */
   const watch = { q: 0, r: -1 };

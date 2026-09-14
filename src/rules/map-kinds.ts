@@ -26,10 +26,16 @@ export type BiomeKind = {
   readonly rimWidths: readonly number[];
 };
 
-/** What terrains a building or an improvement of a kind goes on, and what it yields on top of them. */
+/**
+ * What terrains a building or an improvement of a kind goes on, what it yields on top of them, the
+ * movement cost it names its tile outright — none named, and it names nothing, unlike a terrain's —
+ * and whether it bridges a river edge it stands on both banks of.
+ */
 export type LayerKind = {
   readonly terrains: readonly string[];
   readonly yields: Partial<Resources>;
+  readonly movementCost?: number;
+  readonly bridge?: boolean;
 };
 
 /** The terrain a feature of a kind lies on, and what it yields at income on top of that terrain. */

@@ -138,7 +138,8 @@ export type Catalogue = MapContent & {
 /**
  * The one way a catalogue is built, refused whole where it does not hold together: every unit kind
  * names itself by its key; every id a biome, a feature, a building, an improvement, a region, a deck,
- * a schedule, the camp and the city name is held; every biome rolls some rim width; no deck holds a
+ * a schedule, the camp and the city name is held; every biome rolls some rim width; no building or
+ * improvement names a movement cost below one hundredth of a move point; no deck holds a
  * hazard or the camp's reward; no schedule deals its capstone among its entries; a schedule deals and
  * spans at least one, and each of its spans rolls from one at least to no less than its least; an
  * event with a second script is some schedule's capstone; the camp's unit stands on every terrain
@@ -161,6 +162,16 @@ export function catalogued(content: Catalogue): Catalogue {
     ...Object.values(content.improvements),
   ]) {
     for (const terrain of layer.terrains) terrainKind(content, terrain);
+  }
+  for (const [noun, table] of [
+    ['building', content.buildings],
+    ['improvement', content.improvements],
+  ] as const) {
+    for (const [id, layer] of Object.entries(table)) {
+      if (layer.movementCost !== undefined && layer.movementCost < 1) {
+        refuse(content, `the ${noun} ${id} names a movement cost of ${layer.movementCost}`);
+      }
+    }
   }
   for (const region of Object.values(content.regions)) {
     biomeKind(content, region.centreBiome);

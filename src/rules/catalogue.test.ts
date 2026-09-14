@@ -67,6 +67,17 @@ test('a catalogue whose region names a biome or a feature it does not hold is re
   expect(() => catalogued(ruins)).toThrow(/^fixture: /);
 });
 
+test('a catalogue whose layer names a movement cost of zero is refused', () => {
+  const content = changed({
+    improvements: {
+      ...CATALOGUE.improvements,
+      PH_Road: { ...CATALOGUE.improvements.PH_Road, movementCost: 0 },
+    },
+  });
+
+  expect(() => catalogued(content)).toThrow(/^fixture: /);
+});
+
 test('a catalogue whose camp is a building it does not hold is refused', () => {
   const content = changed({ camp: { ...CATALOGUE.camp, building: 'PH_Fort' } });
 

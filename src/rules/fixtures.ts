@@ -271,7 +271,18 @@ export const CATALOGUE: Catalogue = catalogued({
   },
   improvements: {
     PH_Mine: { terrains: ['hills'], yields: { production: 1 } },
-    PH_Road: { terrains: ['plain', 'forest', 'hills', 'urban'], yields: {} },
+    PH_Road: {
+      terrains: ['plain', 'forest', 'hills', 'urban'],
+      yields: {},
+      movementCost: MOVE_POINT / 2,
+      bridge: true,
+    },
+    PH_Trail: {
+      terrains: ['plain', 'forest', 'hills', 'urban'],
+      yields: {},
+      movementCost: (3 * MOVE_POINT) / 4,
+    },
+    PH_Rubble: { terrains: ['plain'], yields: {}, movementCost: 2 * MOVE_POINT },
   },
   regions: {
     disc: {
