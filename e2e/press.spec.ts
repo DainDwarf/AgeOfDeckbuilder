@@ -1,7 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
 import { STAND_IN } from '../src/content/stand-in';
 import { aimOf } from '../src/rules/cards';
-import * as catalogue from '../src/rules/catalogue';
+import { cardOf, deckOf } from '../src/rules/catalogue';
 import { refusalOf } from '../src/rules/chronicle';
 import { tileKey } from '../src/rules/map';
 import { type Chronicle, playable } from '../src/rules/state';
@@ -14,7 +14,7 @@ import {
   besideTheCards,
   browse,
   budget,
-  cardOf,
+  cardOnFace,
   chronicleOf,
   click,
   dragOut,
@@ -51,15 +51,14 @@ const LIFTED = 140;
 function atNothing(chronicle: Chronicle): number {
   return chronicle.hand.findIndex(
     (id) =>
-      aimOf(catalogue.cardOf(STAND_IN, id)).aim === 'none' &&
-      playable(refusalOf(STAND_IN, chronicle, id)),
+      aimOf(cardOf(STAND_IN, id)).aim === 'none' && playable(refusalOf(STAND_IN, chronicle, id)),
   );
 }
 
 /** The first seed with a turn in its first eight that opens on such a card. */
 function playableRun(): { seed: number; turn: number } {
   return firstSeed('opens a turn on a card that plays at nothing', (seed) => {
-    let chronicle = launch(seed, catalogue.deckOf(STAND_IN, 'PH_LongDeck'));
+    let chronicle = launch(seed, deckOf(STAND_IN, 'PH_LongDeck'));
     for (let turn = 1; turn <= 8; turn++) {
       if (atNothing(chronicle) !== -1) return { seed, turn };
       chronicle = endedTurn(chronicle);
@@ -76,7 +75,7 @@ function bothKindsRun(): { seed: number; turn: number } {
   return firstSeed(
     'opens a turn on a card aimed at a tile and a card that plays at nothing',
     (seed) => {
-      let chronicle = launch(seed, catalogue.deckOf(STAND_IN, 'PH_Deck'));
+      let chronicle = launch(seed, deckOf(STAND_IN, 'PH_Deck'));
       for (let turn = 1; turn <= 8; turn++) {
         if (atTile(chronicle) !== -1 && atNothing(chronicle) !== -1) return { seed, turn };
         chronicle = endedTurn(chronicle);
@@ -489,7 +488,7 @@ test('a right press beside the card shown large takes it down and leaves the car
   expect(await selected(page, index, home)).toBe(true);
 
   await page.mouse.click(home.x, home.y, { button: 'right' });
-  await expect.poll(() => cardOf(page, 'inspection')).toBe(opened.hand[index]);
+  await expect.poll(() => cardOnFace(page, 'inspection')).toBe(opened.hand[index]);
 
   // A card has but the one, so a second right click on the card shown large steps nowhere.
   const large = await onScreen(page, 'inspection');

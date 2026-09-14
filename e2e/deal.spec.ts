@@ -5,7 +5,7 @@ import { apply, outcome } from '../src/rules/chronicle';
 import { text } from '../src/ui/text';
 import {
   budget,
-  cardOf,
+  cardOnFace,
   chronicleOf,
   click,
   endedTurn,
@@ -70,12 +70,12 @@ test('the events phase deals a choice, and the turn plays on from the one taken'
   expect(dealt.hand).toEqual([]);
   expect(await titleOf(page, 'deal')).toBe(text('deal.title'));
   for (const [at, event] of dealt.deal.entries()) {
-    expect(await cardOf(page, `deal-card-${at}`)).toBe(event);
+    expect(await cardOnFace(page, `deal-card-${at}`)).toBe(event);
   }
 
   const second = await onScreen(page, 'deal-card-1');
   await page.mouse.click(second.x, second.y, { button: 'right' });
-  await expect.poll(() => cardOf(page, 'inspection')).toBe(dealt.deal[1]);
+  await expect.poll(() => cardOnFace(page, 'inspection')).toBe(dealt.deal[1]);
 
   const beside = await besideTheDeal(page);
   await page.mouse.click(beside.x, beside.y);

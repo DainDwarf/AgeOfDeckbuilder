@@ -1,6 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import { STAND_IN } from '../src/content/stand-in';
-import * as catalogue from '../src/rules/catalogue';
+import { deckOf } from '../src/rules/catalogue';
 import { tileKey } from '../src/rules/map';
 import type { Chronicle } from '../src/rules/state';
 import {
@@ -27,7 +27,7 @@ import {
 /** The first seed that stands its city through three ended turns. */
 function standingRun(): number {
   return firstSeed('stands its city through three ended turns', (seed) => {
-    let chronicle = launch(seed, catalogue.deckOf(STAND_IN, 'PH_Deck'));
+    let chronicle = launch(seed, deckOf(STAND_IN, 'PH_Deck'));
     for (let turn = 0; turn < 3; turn++) {
       chronicle = endedTurn(chronicle);
     }
@@ -36,7 +36,7 @@ function standingRun(): number {
 }
 
 /** Every card the chronicle holds, wherever it stands: the deck it was founded on. */
-function deckOf(chronicle: Chronicle): string[] {
+function cardsHeld(chronicle: Chronicle): string[] {
   return [...chronicle.drawPile, ...chronicle.hand, ...chronicle.discardPile].sort();
 }
 
@@ -165,7 +165,7 @@ test('a new chronicle deals the same deck a fresh seed, on turn 1', async ({ pag
   const fresh = await chronicleOf(page);
   expect(fresh.turn).toBe(1);
   expect(fresh.seed).not.toBe(played.seed);
-  expect(deckOf(fresh)).toEqual(deckOf(played));
+  expect(cardsHeld(fresh)).toEqual(cardsHeld(played));
 
   expect(problems).toEqual([]);
 });

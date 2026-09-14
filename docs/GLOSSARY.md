@@ -96,3 +96,4 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **occupy** | What an enemy does to a tile it stands on: the tile yields nothing and is not claimable. | blockade |
 | **pillage** | What some enemies do to the tile they stand on: its building or improvement is destroyed. | raze, loot, burn |
 | **capture** | To take a site by standing on its tile through a full turn: an enemy captures the city (defeat), the player captures a camp. | conquer, seize, sack |
+| **reward** | What capturing a site on the map gives: a camp's is a card laid in the discard pile. | gift, prize, bounty |

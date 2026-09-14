@@ -102,7 +102,7 @@ export type Catalogue = MapContent & {
     readonly unit: string;
     readonly script: string;
     readonly building: string;
-    readonly gift: string;
+    readonly reward: string;
   };
   readonly city: { readonly terrain: string; readonly building: string };
 };
@@ -111,7 +111,7 @@ export type Catalogue = MapContent & {
  * The one way a catalogue is built, refused whole where it does not hold together: every unit kind
  * names itself by its key; every id a biome, a feature, a building, an improvement, a region, a deck,
  * the camp and the city name is held; every biome rolls some rim width; no deck holds a hazard or the
- * camp's gift; the camp's unit stands on every terrain its building names; and the city's building
+ * camp's reward; the camp's unit stands on every terrain its building names; and the city's building
  * stands on the city's terrain. A card's closures are neither run nor read here.
  */
 export function catalogued(content: Catalogue): Catalogue {
@@ -142,14 +142,15 @@ export function catalogued(content: Catalogue): Catalogue {
       if (cardOf(content, card).kind === 'hazard') {
         refuse(content, `the deck ${id} holds the hazard ${card}`);
       }
-      if (card === content.camp.gift)
-        refuse(content, `the deck ${id} holds the camp's gift ${card}`);
+      if (card === content.camp.reward) {
+        refuse(content, `the deck ${id} holds the camp's reward ${card}`);
+      }
     }
   }
 
   const campUnit = unitKind(content, content.camp.unit);
   enemyScript(content, content.camp.script);
-  cardOf(content, content.camp.gift);
+  cardOf(content, content.camp.reward);
   for (const terrain of buildingKind(content, content.camp.building).terrains) {
     if (!standsOn(content, campUnit, { q: 0, r: 0, terrain, improvements: [] })) {
       refuse(content, `the camp's unit ${content.camp.unit} cannot stand on ${terrain}`);

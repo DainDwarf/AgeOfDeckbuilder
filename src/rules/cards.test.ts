@@ -309,7 +309,7 @@ test('the refresh instant is refused on a unit whose move points are full, its a
   expect(outcome(apply(CATALOGUE, city, aimedAtUnit(CITY)))).toBe(city);
 });
 
-test('the deck the game ships with founds a chronicle that draws a full hand from it', () => {
+test('a chronicle founded on a deck of the catalogue holds that deck’s cards and opens on a full hand of them', () => {
   const deck = deckOf(CATALOGUE, 'deck');
   const chronicle = launched(CATALOGUE, REGION, 2026, deck);
 
@@ -814,7 +814,7 @@ test('a building card with nowhere to stand is playable all the same, and every 
 test('every card the map answers for is playable whatever the map holds, and blocked only by its cost', () => {
   const empty = cityOf(['urban'], { tiles: field(2), resources: production(3) });
 
-  for (const id of ['PH_Farm', 'PH_March', 'PH_Mine', 'PH_Road', 'PH_Urbanisation'] as CardId[]) {
+  for (const id of ['PH_Farm', 'PH_March', 'PH_Mine', 'PH_Road', 'PH_Urbanisation']) {
     expect(admittedTiles(empty, id)).toEqual([]);
     expect(refusalOf(CATALOGUE, empty, id).blocked).toEqual([]);
   }

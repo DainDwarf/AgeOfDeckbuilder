@@ -3,7 +3,7 @@ import type { CardId } from '../src/rules/state';
 import {
   besideTheCards,
   browse,
-  cardOf,
+  cardOnFace,
   chronicleOf,
   click,
   endedTurn,
@@ -22,9 +22,13 @@ import {
 } from './chronicle-screen';
 
 /** Five copies of each card: a pile of these lays out taller than the browse's frame. */
-const DECK: readonly CardId[] = (
-  ['PH_Worker', 'PH_Warrior', 'PH_Farm', 'PH_March', 'PH_Harvest'] as CardId[]
-).flatMap((id) => [id, id, id, id, id]);
+const DECK: readonly CardId[] = [
+  'PH_Worker',
+  'PH_Warrior',
+  'PH_Farm',
+  'PH_March',
+  'PH_Harvest',
+].flatMap((id) => [id, id, id, id, id]);
 
 /** The first seed whose three ended turns leave the city standing on fifteen discarded cards. */
 function browseSeed(): number {
@@ -94,9 +98,9 @@ test('a click rings a browsed card, a right click and the inspection key show it
 
   // The deck holds five of each card, so one of the first six the browse lays out reads differently
   // from the first, and which card stands large says where the inspection sits.
-  const first = await cardOf(page, 'browse-card-0');
+  const first = await cardOnFace(page, 'browse-card-0');
   const read = await Promise.all(
-    [1, 2, 3, 4, 5].map((index) => cardOf(page, `browse-card-${index}`)),
+    [1, 2, 3, 4, 5].map((index) => cardOnFace(page, `browse-card-${index}`)),
   );
   const other = 1 + read.findIndex((id) => id !== first);
   const selection = `browse-card-${other}`;
@@ -117,13 +121,13 @@ test('a click rings a browsed card, a right click and the inspection key show it
 
   const at = await onScreen(page, 'browse-card-0');
   await page.mouse.click(at.x, at.y, { button: 'right' });
-  await expect.poll(() => cardOf(page, 'inspection')).toBe(first);
+  await expect.poll(() => cardOnFace(page, 'inspection')).toBe(first);
   expect(await standing(page, 'browse')).toBe(false);
 
   // A card stands large, so the inspection key does nothing.
   await page.keyboard.press('KeyI');
   await settled(page);
-  expect(await cardOf(page, 'inspection')).toBe(first);
+  expect(await cardOnFace(page, 'inspection')).toBe(first);
 
   // The right click never selects, so the back key finds the browse's own selection standing.
   await page.keyboard.press('Escape');
@@ -132,7 +136,7 @@ test('a click rings a browsed card, a right click and the inspection key show it
   expect(await ringed(page, selection)).toBe(true);
 
   await page.keyboard.press('KeyI');
-  await expect.poll(() => cardOf(page, 'inspection')).toBe(read[other - 1]);
+  await expect.poll(() => cardOnFace(page, 'inspection')).toBe(read[other - 1]);
   await page.keyboard.press('Escape');
   await expect.poll(() => standing(page, 'browse')).toBe(true);
   expect(await ringed(page, selection)).toBe(true);

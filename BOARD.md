@@ -10,8 +10,8 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 - **The road's movement lives in its improvement** — `src/rules/map.ts` stops naming `PH_Road`: the half-move-point cost and the bridge become properties of the road improvement in the catalogue.
 - **Turn 0, the settle** — a chronicle opens unsettled and its first command puts the city on a tile of a small centre part of the map, the empowering choice of a settling site; later ages may add steps to turn 0.
 - **The throwaway selection page** — the game boots on a page choosing a region, a schedule, a deck and a seed and feeding the chronicle its generated map and timeline; it is wholly replaced in v0.0.5, and the rules never learn the word scenario.
-- **The nomadic age designed, number-less** — its page in `docs/`: the starting collection of cards with few or no buildings, the units, the events, the capstone and the camp's gift.
-- **The nomadic age implemented** — the real catalogue replaces the stand-ins with provisional numbers at last, a scout among the units, and the camp's gift a real card.
+- **The nomadic age designed, number-less** — its page in `docs/`: the starting collection of cards with few or no buildings, the units, the events, the capstone and the camp's reward.
+- **The nomadic age implemented** — the real catalogue replaces the stand-ins with provisional numbers at last, a scout among the units, and the camp's reward a real card.
 - **The biome rework** — a growth weight per biome, the spread growing per biome instead of per frontier, the city's first ring dealt as its own biome, and the bigger map.
 - **The balance pass** — numbers measured on the real content, edits uncommitted until the user says they hold.
 - **Close v0.0.4** — the changelog entry and the tag.

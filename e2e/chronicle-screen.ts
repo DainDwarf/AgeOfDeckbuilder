@@ -2,7 +2,7 @@ import { expect, type Page } from '@playwright/test';
 import type Phaser from 'phaser';
 import { STAND_IN, STAND_IN_REGION } from '../src/content/stand-in';
 import { aimOf } from '../src/rules/cards';
-import * as catalogue from '../src/rules/catalogue';
+import { type AimedCard, cardOf, deckOf } from '../src/rules/catalogue';
 import { admitted, apply, launched, outcome, refusalOf } from '../src/rules/chronicle';
 import {
   CITY_TILE,
@@ -261,7 +261,7 @@ export function standing(page: Page, name: string): Promise<boolean> {
  * Which card the named face stands, and nothing where no such face is up: a browse's cards and the
  * card shown large each carry theirs.
  */
-export function cardOf(page: Page, name: string): Promise<string | undefined> {
+export function cardOnFace(page: Page, name: string): Promise<string | undefined> {
   return page.evaluate((target) => {
     const face = window.named?.(target)?.object;
     return face === undefined ? undefined : (face.getData('card') as string);
@@ -399,11 +399,11 @@ function runOn(
   complaint: string,
   keeps: (tile: Tile, chronicle: Chronicle) => boolean,
 ): Run {
-  const aimed = aimOf(catalogue.cardOf(STAND_IN, card));
+  const aimed = aimOf(cardOf(STAND_IN, card));
   if (aimed.aim !== 'tile') throw new Error(`${card} is aimed at no tile`);
 
   return firstSeed(complaint, (seed) => {
-    let chronicle = launch(seed, catalogue.deckOf(STAND_IN, 'PH_Deck'));
+    let chronicle = launch(seed, deckOf(STAND_IN, 'PH_Deck'));
     for (let turn = 1; turn <= 8; turn++) {
       const tile = workedThisTurn(chronicle, card, aimed, keeps);
       if (tile !== undefined) return { seed, turn, tile };
@@ -424,7 +424,7 @@ export type StepRun = {
 /** The first seed with a turn in its first eight that opens on such a run. */
 export function stepRun(): StepRun {
   return firstSeed('opens a turn on a worker and two steps', (seed) => {
-    let chronicle = launch(seed, catalogue.deckOf(STAND_IN, 'PH_Deck'));
+    let chronicle = launch(seed, deckOf(STAND_IN, 'PH_Deck'));
     for (let turn = 1; turn <= 8; turn++) {
       const steps = steppedThisTurn(chronicle);
       if (steps !== undefined) return { seed, turn, ...steps };
@@ -463,15 +463,14 @@ function steppedThisTurn(
 export function atTile(chronicle: Chronicle): number {
   return chronicle.hand.findIndex(
     (id) =>
-      aimOf(catalogue.cardOf(STAND_IN, id)).aim === 'tile' &&
-      playable(refusalOf(STAND_IN, chronicle, id)),
+      aimOf(cardOf(STAND_IN, id)).aim === 'tile' && playable(refusalOf(STAND_IN, chronicle, id)),
   );
 }
 
 /** The first seed with a turn in its first eight that opens on such a card. */
 export function atTileRun(): { seed: number; turn: number } {
   return firstSeed('opens a turn on a card aimed at a tile the city can pay for', (seed) => {
-    let chronicle = launch(seed, catalogue.deckOf(STAND_IN, 'PH_Deck'));
+    let chronicle = launch(seed, deckOf(STAND_IN, 'PH_Deck'));
     for (let turn = 1; turn <= 8; turn++) {
       if (atTile(chronicle) !== -1) return { seed, turn };
       chronicle = endedTurn(chronicle);
@@ -483,7 +482,7 @@ export function atTileRun(): { seed: number; turn: number } {
 /** The first seed whose city is captured inside twenty turns of ending the turn and nothing else. */
 export function fallRun(): { seed: number; turns: number } {
   return firstSeed('is captured inside twenty turns', (seed) => {
-    let chronicle = launch(seed, catalogue.deckOf(STAND_IN, 'PH_Deck'));
+    let chronicle = launch(seed, deckOf(STAND_IN, 'PH_Deck'));
     for (let turns = 1; turns <= 20 && chronicle.ending === undefined; turns++) {
       chronicle = endedTurn(chronicle);
       const ending = chronicle.ending;
@@ -501,7 +500,7 @@ export function fallRun(): { seed: number; turns: number } {
 function workedThisTurn(
   chronicle: Chronicle,
   card: CardId,
-  aimed: catalogue.AimedCard,
+  aimed: AimedCard,
   keeps: (tile: Tile, chronicle: Chronicle) => boolean,
 ): TileCoords | undefined {
   const enter = chronicle.hand.indexOf('PH_Worker');

@@ -4,7 +4,22 @@
  */
 // The one import of `src/content/` under `src/rules/`, allowed because this module is test-only.
 import { ADVANCE } from '../content/stand-in';
-import * as cards from './cards';
+import {
+  built,
+  enters,
+  firstRefusal,
+  gained,
+  improved,
+  inside,
+  made,
+  movePointsSpent,
+  recalled,
+  refreshed,
+  slotFree,
+  terraformed,
+  throughWorker,
+  unimproved,
+} from './cards';
 import { type Catalogue, catalogued, deckOf, type Entering, entered } from './catalogue';
 import { apply, type Command, outcome } from './chronicle';
 import {
@@ -54,65 +69,65 @@ export const CATALOGUE: Catalogue = catalogued({
   },
   scripts: { advance: ADVANCE },
   cards: {
-    PH_Worker: { kind: 'unit', cost: { food: 2 }, ...cards.enters('PH_Worker') },
-    PH_Warrior: { kind: 'unit', cost: { military: 2 }, ...cards.enters('PH_Warrior') },
+    PH_Worker: { kind: 'unit', cost: { food: 2 }, ...enters('PH_Worker') },
+    PH_Warrior: { kind: 'unit', cost: { military: 2 }, ...enters('PH_Warrior') },
     PH_Farm: {
       kind: 'building',
       cost: { production: 3 },
-      ...cards.throughWorker(
+      ...throughWorker(
         (catalogue, chronicle, tile) =>
-          cards.firstRefusal(
-            cards.made(catalogue, tile, buildingKind(catalogue, 'PH_Farm').terrains),
-            cards.inside(chronicle, tile),
-            cards.slotFree(tile),
+          firstRefusal(
+            made(catalogue, tile, buildingKind(catalogue, 'PH_Farm').terrains),
+            inside(chronicle, tile),
+            slotFree(tile),
           ),
-        (catalogue, paid, at) => cards.built(catalogue, paid, at, 'PH_Farm'),
+        (catalogue, paid, at) => built(catalogue, paid, at, 'PH_Farm'),
       ),
     },
     PH_March: {
       kind: 'instant',
       cost: {},
       aim: 'unit',
-      refuses: (_catalogue, chronicle, tile) => cards.movePointsSpent(chronicle, tile),
-      effect: (_catalogue, paid, at) => cards.refreshed(paid, at),
+      refuses: (_catalogue, chronicle, tile) => movePointsSpent(chronicle, tile),
+      effect: (_catalogue, paid, at) => refreshed(paid, at),
     },
     PH_Harvest: {
       kind: 'instant',
       cost: { science: 1 },
       aim: 'none',
-      effect: (_catalogue, paid) => cards.gained(paid, { food: 2 }),
+      effect: (_catalogue, paid) => gained(paid, { food: 2 }),
     },
     PH_Mine: {
       kind: 'instant',
       cost: { production: 3 },
-      ...cards.throughWorker(
+      ...throughWorker(
         (catalogue, _chronicle, tile) =>
-          cards.firstRefusal(
-            cards.made(catalogue, tile, improvementKind(catalogue, 'PH_Mine').terrains),
-            cards.unimproved(catalogue, tile, 'PH_Mine'),
+          firstRefusal(
+            made(catalogue, tile, improvementKind(catalogue, 'PH_Mine').terrains),
+            unimproved(catalogue, tile, 'PH_Mine'),
           ),
-        (catalogue, paid, at) => cards.improved(catalogue, paid, at, 'PH_Mine'),
+        (catalogue, paid, at) => improved(catalogue, paid, at, 'PH_Mine'),
       ),
     },
     PH_Road: {
       kind: 'instant',
       cost: { production: 2 },
-      ...cards.throughWorker(
+      ...throughWorker(
         (catalogue, _chronicle, tile) =>
-          cards.firstRefusal(
-            cards.made(catalogue, tile, improvementKind(catalogue, 'PH_Road').terrains),
-            cards.unimproved(catalogue, tile, 'PH_Road'),
+          firstRefusal(
+            made(catalogue, tile, improvementKind(catalogue, 'PH_Road').terrains),
+            unimproved(catalogue, tile, 'PH_Road'),
           ),
-        (catalogue, paid, at) => cards.improved(catalogue, paid, at, 'PH_Road'),
+        (catalogue, paid, at) => improved(catalogue, paid, at, 'PH_Road'),
       ),
     },
     PH_Urbanisation: {
       kind: 'instant',
       cost: { production: 5 },
-      ...cards.throughWorker(
+      ...throughWorker(
         (catalogue, _chronicle, tile) =>
-          cards.firstRefusal(cards.made(catalogue, tile, ['plain']), cards.slotFree(tile)),
-        (catalogue, paid, at) => cards.terraformed(catalogue, paid, at, 'urban'),
+          firstRefusal(made(catalogue, tile, ['plain']), slotFree(tile)),
+        (catalogue, paid, at) => terraformed(catalogue, paid, at, 'urban'),
       ),
     },
     PH_Recall: {
@@ -121,7 +136,7 @@ export const CATALOGUE: Catalogue = catalogued({
       aim: 'discard-pile',
       blocked: (_catalogue, chronicle) =>
         chronicle.discardPile.length === 0 ? ['discard-pile'] : [],
-      effect: (_catalogue, paid, at) => cards.recalled(paid, at),
+      effect: (_catalogue, paid, at) => recalled(paid, at),
     },
     PH_Spoils: {
       kind: 'instant',
@@ -129,7 +144,7 @@ export const CATALOGUE: Catalogue = catalogued({
       singleUse: true,
       aim: 'none',
       effect: (_catalogue, paid) =>
-        cards.gained(paid, { food: 10, production: 10, military: 10, money: 10, science: 10 }),
+        gained(paid, { food: 10, production: 10, military: 10, money: 10, science: 10 }),
     },
     PH_Hunger: {
       kind: 'hazard',
@@ -255,7 +270,7 @@ export const CATALOGUE: Catalogue = catalogued({
       },
     },
   },
-  camp: { unit: 'PH_Warrior', script: 'advance', building: 'PH_Camp', gift: 'PH_Spoils' },
+  camp: { unit: 'PH_Warrior', script: 'advance', building: 'PH_Camp', reward: 'PH_Spoils' },
   city: { terrain: 'urban', building: 'PH_City' },
 });
 
@@ -395,14 +410,14 @@ export const CAMPS: TileCoords[] = [
 ];
 
 /** The same tiles, with a building of that kind filling the slot of the named ones. */
-export function built(tiles: Tile[], building: BuildingTypeId, coords: TileCoords[]): Tile[] {
+export function builtOn(tiles: Tile[], building: BuildingTypeId, coords: TileCoords[]): Tile[] {
   const named = new Set(coords.map(tileKey));
   return tiles.map((tile) => (named.has(tileKey(tile)) ? { ...tile, building } : tile));
 }
 
 /** The same tiles, with a camp filling the building slot of the named ones. */
 export function camped(tiles: Tile[], coords: TileCoords[]): Tile[] {
-  return built(tiles, CATALOGUE.camp.building, coords);
+  return builtOn(tiles, CATALOGUE.camp.building, coords);
 }
 
 function statsOf(stats: Partial<UnitStats>): UnitStats {

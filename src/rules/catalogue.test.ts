@@ -85,14 +85,14 @@ test('a catalogue whose deck holds a hazard is refused', () => {
   expect(() => catalogued(content)).toThrow(/^fixture: /);
 });
 
-test('a catalogue whose deck holds the camp’s gift is refused', () => {
-  const content = changed({ decks: { deck: [...DECK, CATALOGUE.camp.gift] } });
+test('a catalogue whose deck holds the camp’s reward is refused', () => {
+  const content = changed({ decks: { deck: [...DECK, CATALOGUE.camp.reward] } });
 
   expect(() => catalogued(content)).toThrow(/^fixture: /);
 });
 
-test('a catalogue whose camp gives a card it does not hold is refused', () => {
-  const content = changed({ camp: { ...CATALOGUE.camp, gift: 'PH_Loot' } });
+test('a catalogue whose camp’s reward is a card it does not hold is refused', () => {
+  const content = changed({ camp: { ...CATALOGUE.camp, reward: 'PH_Loot' } });
 
   expect(() => catalogued(content)).toThrow(/^fixture: /);
 });

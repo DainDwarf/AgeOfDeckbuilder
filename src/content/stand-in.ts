@@ -296,7 +296,7 @@ export const STAND_IN: Catalogue = catalogued({
       },
     },
   },
-  camp: { unit: 'PH_Warrior', script: 'PH_Advance', building: 'PH_Camp', gift: 'PH_Spoils' },
+  camp: { unit: 'PH_Warrior', script: 'PH_Advance', building: 'PH_Camp', reward: 'PH_Spoils' },
   city: { terrain: 'urban', building: 'PH_City' },
 });
 

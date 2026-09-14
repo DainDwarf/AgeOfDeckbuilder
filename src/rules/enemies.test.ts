@@ -214,7 +214,7 @@ test('two camps captured in one turn lay two cards in the discard pile', () => {
   expect(taken.discardPile).toEqual(['PH_Spoils', 'PH_Spoils']);
 });
 
-test('the camp’s reward card is single use: played, it gains and leaves the chronicle', () => {
+test('the camp’s reward is single use: played, it gains and leaves the chronicle', () => {
   const city = cityOf(['urban'], { hand: ['PH_Spoils'] });
 
   const played = outcome(apply(CATALOGUE, city, { type: 'play', index: 0, aim: 'none' }));
@@ -231,7 +231,7 @@ test('the camp’s reward card is single use: played, it gains and leaves the ch
   expect(everyCard(played)).toEqual([]);
 });
 
-test('the camp’s reward card discarded unplayed comes around like any card', () => {
+test('the camp’s reward discarded unplayed comes around like any card', () => {
   const city = cityOf(['urban'], { ...NO_GROWTH, hand: ['PH_Spoils'], drawPile: fullDraw() });
 
   const ended = outcome(apply(CATALOGUE, city, { type: 'end-turn' }));

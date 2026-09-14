@@ -639,7 +639,7 @@ function enemyPhase(catalogue: Catalogue, chronicle: Chronicle): Stage[] {
 
 /**
  * The camps captured, in tile order: a camp a unit of the player's is still standing on once the
- * enemy phase is over leaves its tile's building slot, and the camp's gift is laid in the discard
+ * enemy phase is over leaves its tile's building slot, and the camp's reward is laid in the discard
  * pile. A stage each, carrying the tile the camp stood on.
  */
 function captures(catalogue: Catalogue, chronicle: Chronicle): Stage[] {
@@ -655,7 +655,7 @@ function captures(catalogue: Catalogue, chronicle: Chronicle): Stage[] {
       tiles: standing.tiles.map((tile) =>
         tileKey(tile) === at ? { ...tile, building: undefined } : tile,
       ),
-      discardPile: [...standing.discardPile, catalogue.camp.gift],
+      discardPile: [...standing.discardPile, catalogue.camp.reward],
     };
     stages.push({ name: 'camp-capture', tile: { q, r }, chronicle: standing });
   }

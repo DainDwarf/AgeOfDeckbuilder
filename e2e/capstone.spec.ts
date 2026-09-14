@@ -3,7 +3,7 @@ import { SCHEDULE } from '../src/rules/schedule';
 import { text } from '../src/ui/text';
 import {
   budget,
-  cardOf,
+  cardOnFace,
   click,
   endTurn,
   onScreen,
@@ -20,11 +20,11 @@ test('the founding announces the capstone, once', async ({ page }) => {
 
   await openOnCapstone(page, 1, 'PH_Deck');
   expect(await titleOf(page, 'capstone')).toBe(text('capstone.title'));
-  expect(await cardOf(page, 'capstone-card-0')).toBe(SCHEDULE.capstone.event);
+  expect(await cardOnFace(page, 'capstone-card-0')).toBe(SCHEDULE.capstone.event);
 
   const card = await onScreen(page, 'capstone-card-0');
   await page.mouse.click(card.x, card.y, { button: 'right' });
-  await expect.poll(() => cardOf(page, 'inspection')).toBe(SCHEDULE.capstone.event);
+  await expect.poll(() => cardOnFace(page, 'inspection')).toBe(SCHEDULE.capstone.event);
   await page.keyboard.press('Escape');
   await expect.poll(() => standing(page, 'inspection')).toBe(false);
   expect(await standing(page, 'capstone')).toBe(true);

@@ -3,7 +3,7 @@ import { apply, type Command, launched, outcome } from './chronicle';
 import { growthThreshold } from './city';
 import {
   assignTo,
-  built,
+  builtOn,
   CAMPS,
   CATALOGUE,
   type Carrying,
@@ -410,7 +410,7 @@ test('the siege places no camp the city holds, a unit stands on, a building fill
   const none: Chronicle[] = [
     corridor({ held: [CITY, ...reach] }),
     corridor({ units: reach.map(worker) }),
-    corridor({ tiles: built(only(6, CORRIDOR), 'PH_Farm', reach) }),
+    corridor({ tiles: builtOn(only(6, CORRIDOR), 'PH_Farm', reach) }),
     corridor({ tiles: camped(only(6, [...CORRIDOR, standing]), [standing]) }),
   ];
 
