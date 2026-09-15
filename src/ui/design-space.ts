@@ -425,16 +425,15 @@ export function onHover(
 ): Hover {
   const input = target.scene.input;
   let hovered = false;
+  let returning = false;
   const off = (): void => {
     if (!hovered) return;
     hovered = false;
     leave();
   };
 
-  // The pointer keeps the coordinates it left the canvas at, so only a move on the canvas says
-  // where it came back; the browser sends the canvas's `mouseover` ahead of that move.
   const resume = (): void => {
-    if (hovered || !input.isOver || target.input?.enabled !== true) return;
+    if (hovered || returning || !input.isOver || target.input?.enabled !== true) return;
     const pointer = input.activePointer;
     if (input.sortGameObjects(input.hitTestPointer(pointer), pointer)[0] !== target) return;
     // Phaser's list has to hold the target too, or it would send no `pointerout` when the pointer
@@ -450,7 +449,8 @@ export function onHover(
     if (hovered && target.input?.cursor) input.resetCursor();
     off();
   };
-  let returning = false;
+  // The pointer keeps the coordinates it left the canvas at, so only a move on the canvas says
+  // where it came back; the browser sends the canvas's `mouseover` ahead of that move.
   const back = (): void => {
     returning = true;
   };
