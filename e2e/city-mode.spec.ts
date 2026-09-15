@@ -25,10 +25,12 @@ import {
   marksIn,
   noGlyphs,
   open,
+  openOnCapstone,
   playedOut,
   refusalLines,
   rested,
   ringedTile,
+  settle,
   shownCard,
   shows,
   standing,
@@ -114,6 +116,36 @@ async function yielded(page: Page): Promise<{ inside: Glyphs; drawn: Glyphs }> {
   }
   return { inside, drawn };
 }
+
+test('before the settle neither the city key nor culture nor population enters city mode, and once the city stands the city key does', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  test.setTimeout(budget(0));
+
+  await openOnCapstone(page, 1, 'PH_Deck');
+  await click(page, 'capstone-card-0');
+  await expect.poll(() => standing(page, 'capstone')).toBe(false);
+  await rested(page);
+
+  await page.keyboard.press('c');
+  await answered(page);
+  expect(await inCityMode(page)).toBe(false);
+
+  await click(page, 'reading-culture');
+  await answered(page);
+  expect(await inCityMode(page)).toBe(false);
+
+  await click(page, 'reading-population');
+  await answered(page);
+  expect(await inCityMode(page)).toBe(false);
+
+  await settle(page);
+  await page.keyboard.press('c');
+  await expect.poll(() => inCityMode(page)).toBe(true);
+
+  expect(problems).toEqual([]);
+});
 
 test('the city key enters city mode, where a click rings a tile and stands the culture threshold on it, and the back key drops both', async ({
   page,

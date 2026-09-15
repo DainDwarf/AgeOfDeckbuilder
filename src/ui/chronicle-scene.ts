@@ -420,7 +420,7 @@ export class ChronicleScene extends Phaser.Scene {
 
     /** City mode raised: what was pending on the chronicle screen is let go of and it passes. */
     const enterCityMode = (): void => {
-      if (cityMode) return;
+      if (cityMode || this.current.city === undefined) return;
       dismiss();
       cityMode = true;
       marks.show(true);
