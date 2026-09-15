@@ -15,7 +15,8 @@ The unordered pool of features that may or may not happen. Nothing here is promi
 - **Seed selection at launch**: when the "launch a chronicle" menu exists, it offers starting on a given seed — the player-facing door to replay-from-seed; `?seed=` stays the debug/e2e one.
 - **Colour ledger** (art-style pass scope): every UI colour resolves through one theme lookup, so an alternate theme — colour-blind-friendly included — becomes content, not surgery.
 - **Colour never carries gameplay meaning alone** (art-style pass scope): resource chips and anything gameplay-critical get shape/glyph redundancy, fixing colour-blindness in every theme at once — including the default.
-- **Animation speed settings**: the player sets how fast the staged motions play.
+- **Animation speed settings**: the player sets how fast the staged motions play. The e2e suite runs on the fastest one: an end of turn plays out its animations in 2–3 s at today's speed, and most of the suite's time is spent watching them; only the specs that test a motion or a rest mid-way keep real speed.
+- **Specs open on a fabricated save** (once save and resume ships, v0.0.5): a spec loads a save it wrote and plays from any state it chose, instead of settling through the screen and ending turns to reach it — about 3 s of every opening, and most of the longest specs.
 - **Income flies in from the tiles** (v0.0.6, the look): at the income stage each yielding tile sends its resource to the bar.
 - **Copy a replay**: one action puts version, seed, deck, the commands played and the last error on the clipboard, so any game a player pastes back can be replayed to the turn.
 - **A scout card** (v0.0.4, with the first real cards): v0.0.3 ships sight and fog with no card that answers them — every stand-in unit is a worker or a warrior. A scout sees further from where it stops, and is what makes finding a camp a play rather than a wait.
