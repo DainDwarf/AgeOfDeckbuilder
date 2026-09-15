@@ -6,6 +6,7 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ---
 
+- **A free claim instead of a held ring** — add a stand-in settle card that claims a tile for free, 6 copies in the standard deck, and use those to claim the ring around the city in the e2e tests that need it; this removes the corner case, the map argument for founding the city, and the ring field of the city content.
 - **Turn 0, the settle** — a chronicle opens on turn 0 with the city standing nowhere, the map's centre part in sight and the deck's settle cards in hand; a card of the new settle kind puts the city on a charted tile that takes one; ending the turn is refused until it stands, and its end brings turn 1 with none of the cycle run and the settle cards gone; the stand-in settles as it founded, and every spec opens through the settle. Doc-impact: `docs/CHRONICLE.md`, `docs/GLOSSARY.md`. [board/turn-0-the-settle.md](board/turn-0-the-settle.md)
 - **The throwaway selection page** — the game boots on a page choosing a region, a schedule, a deck and a seed and feeding the chronicle its generated map and timeline; it is wholly replaced in v0.0.5, and the rules never learn the word scenario.
 - **The nomadic age designed, number-less** — its page in `docs/`: how the age settles — the site chosen, the city keeping the terrain it lands on, water and mountain refused, one inhabitant working its tile — the starting collection of cards with few or no buildings, the units, the events, the capstone and the camp's reward.
