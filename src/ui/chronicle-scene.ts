@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { refuses } from '../rules/cards';
-import type { Catalogue, Deck } from '../rules/catalogue';
+import { type Catalogue, deckOf } from '../rules/catalogue';
 import {
   admitted,
   apply,
@@ -36,6 +36,7 @@ import {
 import { createHand } from './hand';
 import { cardsOf, createInfoPanel } from './infopanel';
 import { onKeyDown } from './keys';
+import type { Choices } from './launch-page';
 import { createMapView, type PressedTile } from './map';
 import { createOverlay } from './overlay';
 import { createPiles } from './piles';
@@ -58,27 +59,22 @@ const LABEL_STYLE = {
 };
 
 export class ChronicleScene extends Phaser.Scene {
-  private readonly catalogue: Catalogue;
-  private readonly region: string;
-  private readonly schedule: string;
-  private readonly deck: Deck;
-  private current: Chronicle;
+  private choices!: Choices;
+  private current!: Chronicle;
   /** The play-out running on the chronicle screen as it stands, and nothing while none is. */
   private sequence: symbol | undefined;
 
-  constructor(
-    catalogue: Catalogue,
-    region: string,
-    schedule: string,
-    seed: number | undefined,
-    deck: Deck,
-  ) {
+  constructor() {
     super('chronicle');
-    this.catalogue = catalogue;
-    this.region = region;
-    this.schedule = schedule;
-    this.deck = deck;
-    this.current = this.begin(seed);
+  }
+
+  init(choices: Choices): void {
+    this.choices = choices;
+    this.current = this.begin(choices.seed);
+  }
+
+  private get catalogue(): Catalogue {
+    return this.choices.catalogue;
   }
 
   /** The chronicle as it stands, for whoever holds the game through `window.game`. */
@@ -92,26 +88,36 @@ export class ChronicleScene extends Phaser.Scene {
   }
 
   /**
-   * A chronicle on this chronicle screen's region, schedule and deck, from the seed it was asked for
-   * or from a fresh one. The fresh one is the one place entropy enters the game: `src/rules/` draws
-   * only from the seed it is handed.
+   * A chronicle on the choices, from the seed it was asked for or from a fresh one, written into the
+   * address. The fresh one is the one place entropy enters the game: `src/rules/` draws only from
+   * the seed it is handed.
    */
   private begin(seed: number | undefined): Chronicle {
+    const { catalogue, region, schedule, deck } = this.choices;
     const drawn = seed ?? (Math.random() * 2 ** 32) | 0;
-    return launched(this.catalogue, this.region, this.schedule, drawn, this.deck);
+    const chronicle = launched(catalogue, region, schedule, drawn, deckOf(catalogue, deck));
+    const written = new URL(window.location.href);
+    written.search = new URLSearchParams({
+      content: catalogue.version,
+      region,
+      schedule,
+      deck,
+      seed: String(chronicle.seed),
+    }).toString();
+    window.history.replaceState(window.history.state, '', written);
+    return chronicle;
   }
 
   /**
-   * A fresh chronicle on a new seed and the same deck, on a chronicle screen raised from nothing:
+   * A fresh chronicle on a new seed and the same choices, on a chronicle screen raised from nothing:
    * the scene's restart takes down every object, listener, tween and timer the old chronicle
    * screen left standing. The play-out the old chronicle screen was in the middle of is let go of
    * here, and its tail commits nothing.
    */
   private newChronicle(): void {
     this.sequence = undefined;
-    this.current = this.begin(undefined);
     stopAllMotion(this);
-    this.scene.restart();
+    this.scene.restart({ ...this.choices, seed: undefined });
   }
 
   create(): void {

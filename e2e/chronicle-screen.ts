@@ -23,16 +23,16 @@ import type { PileKind } from '../src/ui/overlay';
 declare global {
   interface Window {
     /**
-     * The named object and the camera that paints it, wherever on the chronicle screen it stands.
-     * The scene's own display list carries only the two layers, so `children.getByName` finds
-     * nothing, and a name may sit any depth down inside a container.
+     * The named object and the camera that paints it, on whichever running scene it stands. A
+     * scene's own display list carries only the two layers, so `children.getByName` finds nothing,
+     * and a name may sit any depth down inside a container.
      */
     named?: (
       name: string,
     ) =>
       | { object: Phaser.GameObjects.GameObject; camera: Phaser.Cameras.Scene2D.Camera }
       | undefined;
-    /** How many objects of that name stand on the chronicle screen: a repaint leaves no second one. */
+    /** How many objects of that name stand on the running scenes: a repaint leaves no second one. */
     counted?: (name: string) => number;
   }
 }
@@ -193,6 +193,15 @@ export async function openOnCapstone(
   deck: string,
   schedule: string = STAND_IN_SCHEDULE,
 ): Promise<void> {
+  await readNames(page);
+  await page.goto(`/?seed=${seed}&deck=${deck}&schedule=${schedule}`);
+  await page.waitForFunction(() => window.game?.scene.isActive('chronicle') === true);
+  await rested(page);
+  await expect.poll(() => standing(page, 'capstone')).toBe(true);
+}
+
+/** Gives the pages this one loads from now on `window.named` and `window.counted`. */
+export async function readNames(page: Page): Promise<void> {
   await page.addInitScript(() => {
     const within = (
       list: Phaser.GameObjects.GameObject[],
@@ -207,13 +216,13 @@ export async function openOnCapstone(
       return found;
     };
 
-    const layers = (): Phaser.GameObjects.Layer[] => {
-      const scene = window.game?.scene.getScene('chronicle');
-      if (scene === null || scene === undefined) return [];
-      return scene.children.list.filter(
-        (child) => child.type === 'Layer',
-      ) as Phaser.GameObjects.Layer[];
-    };
+    const layers = (): Phaser.GameObjects.Layer[] =>
+      (window.game?.scene.getScenes(true) ?? []).flatMap(
+        (scene) =>
+          scene.children.list.filter(
+            (child) => child.type === 'Layer',
+          ) as Phaser.GameObjects.Layer[],
+      );
 
     window.named = (name) => {
       for (const layer of layers()) {
@@ -228,10 +237,6 @@ export async function openOnCapstone(
     window.counted = (name) =>
       layers().reduce((total, layer) => total + within(layer.list, name, []).length, 0);
   });
-  await page.goto(`/?seed=${seed}&deck=${deck}&schedule=${schedule}`);
-  await page.waitForFunction(() => window.game?.scene.isActive('chronicle') === true);
-  await rested(page);
-  await expect.poll(() => standing(page, 'capstone')).toBe(true);
 }
 
 /** Waits for a drawn frame, so a camera moved since answers for where it now stands. */

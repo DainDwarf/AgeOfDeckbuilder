@@ -1,9 +1,11 @@
 import Phaser from 'phaser';
-import { STAND_IN, STAND_IN_REGION, STAND_IN_SCHEDULE } from './content/stand-in';
-import { type Deck, deckOf, scheduleOf } from './rules/catalogue';
+import { CATALOGUES, catalogueOf } from './content/catalogues';
+import { deckOf, scheduleOf } from './rules/catalogue';
+import { regionOf } from './rules/map-kinds';
 import { ChronicleScene } from './ui/chronicle-scene';
 import { backingSize, followWindow, releaseOnBlur } from './ui/design-space';
 import { readMouseKeys } from './ui/keys';
+import { type Choices, firstsOf, LaunchPage } from './ui/launch-page';
 
 // The e2e suite and browser-console debugging observe the running game through this handle;
 // it is optional because the window exists before the game does.
@@ -13,30 +15,42 @@ declare global {
   }
 }
 
+const address = new URLSearchParams(window.location.search);
+
+/** What the address names under that key, and nothing where it names nothing. */
+function asked(key: string): string | undefined {
+  const value = address.get(key);
+  return value === null || value.trim() === '' ? undefined : value;
+}
+
 /** The seed asked for in the address, so a chronicle can be replayed and a spec can be written. */
 function askedSeed(): number | undefined {
-  const asked = new URLSearchParams(window.location.search).get('seed');
-  if (asked === null || asked.trim() === '') return undefined;
-  const seed = Number(asked);
+  const value = asked('seed');
+  if (value === undefined) return undefined;
+  const seed = Number(value);
   return Number.isInteger(seed) ? seed : undefined;
 }
 
-/** The deck asked for in the address by its id. There is no deck to fall back on, so anything else stops the boot. */
-function askedDeck(): Deck {
-  const asked = new URLSearchParams(window.location.search).get('deck');
-  if (asked === null || asked.trim() === '')
-    throw new Error('no deck on the address: ?deck= a deck id');
-  return deckOf(STAND_IN, asked);
+/** What the address names, each id resolved through the catalogue, and the firsts for the rest. */
+function askedChoices(): Choices {
+  const content = asked('content');
+  const catalogue = content === undefined ? CATALOGUES[0] : catalogueOf(content);
+  const firsts = firstsOf(catalogue, askedSeed());
+  const region = asked('region');
+  const schedule = asked('schedule');
+  const deck = asked('deck');
+  if (region !== undefined) regionOf(catalogue, region);
+  if (schedule !== undefined) scheduleOf(catalogue, schedule);
+  if (deck !== undefined) deckOf(catalogue, deck);
+  return {
+    ...firsts,
+    region: region ?? firsts.region,
+    schedule: schedule ?? firsts.schedule,
+    deck: deck ?? firsts.deck,
+  };
 }
 
-/** The schedule asked for in the address by its id, and the stand-in's own where it names none. */
-function askedSchedule(): string {
-  const asked = new URLSearchParams(window.location.search).get('schedule');
-  if (asked === null || asked.trim() === '') return STAND_IN_SCHEDULE;
-  scheduleOf(STAND_IN, asked);
-  return asked;
-}
-
+const choices = askedChoices();
 const backing = backingSize();
 const game = new Phaser.Game({
   type: Phaser.AUTO,
@@ -49,8 +63,11 @@ const game = new Phaser.Game({
   // line goes when a release fixes the shader.
   maxTextures: 1,
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
-  scene: [new ChronicleScene(STAND_IN, STAND_IN_REGION, askedSchedule(), askedSeed(), askedDeck())],
 });
+// Scenes handed to the config start the first of them on no data, so both are added unstarted.
+game.scene.add('launch', LaunchPage);
+game.scene.add('chronicle', ChronicleScene);
+game.scene.start(asked('deck') === undefined ? 'launch' : 'chronicle', choices);
 followWindow(game);
 releaseOnBlur(game);
 readMouseKeys(game);
