@@ -210,10 +210,10 @@ function resolved(catalogue: Catalogue, chronicle: Chronicle, command: Command):
 
   const stages = stagesOf(catalogue, chronicle, command);
 
-  const last = stages[stages.length - 1].chronicle;
-  if (last.ending !== undefined || last.city === undefined || last.population > 0) return stages;
-  const fallen = stages[stages.length - 1];
-  return [...stages.slice(0, -1), { ...fallen, chronicle: fall(last, 'population') }];
+  const lastStage = stages[stages.length - 1];
+  const ends = lastStage.chronicle;
+  if (ends.ending !== undefined || ends.city === undefined || ends.population > 0) return stages;
+  return [...stages.slice(0, -1), { ...lastStage, chronicle: fall(ends, 'population') }];
 }
 
 /**
