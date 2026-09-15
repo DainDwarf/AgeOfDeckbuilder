@@ -90,8 +90,8 @@ test('a catalogue whose city’s building does not stand on the city’s terrain
   expect(() => catalogued(content)).toThrow(/^fixture: /);
 });
 
-test('a catalogue whose city sees, holds rings or opens with idle inhabitants below nought is refused', () => {
-  for (const below of [{ sight: -1 }, { holds: -1 }, { idle: -1 }]) {
+test('a catalogue whose city sees or opens with idle inhabitants below nought is refused', () => {
+  for (const below of [{ sight: -1 }, { idle: -1 }]) {
     const content = changed({ city: { ...CATALOGUE.city, ...below } });
 
     expect(() => catalogued(content)).toThrow(/^fixture: /);
@@ -137,22 +137,17 @@ test('a catalogue whose deck holds a settle card among its cards is refused', ()
 
 test('a catalogue whose region’s camps may come within sight of the settle wherever it lands is refused', () => {
   const disc = CATALOGUE.regions[REGION];
-  const { sight, holds } = CATALOGUE.city;
-  const reach = disc.centre + Math.max(sight, holds);
+  const reach = disc.centre + CATALOGUE.city.sight;
   const near = changed({ regions: { [REGION]: { ...disc, campFromCentre: reach } } });
   const far = changed({
     version: 'far',
     regions: { [REGION]: { ...disc, campFromCentre: reach + 1 } },
   });
   const seeing = changed({ city: { ...CATALOGUE.city, sight: disc.campFromCentre - disc.centre } });
-  const holding = changed({
-    city: { ...CATALOGUE.city, holds: disc.campFromCentre - disc.centre },
-  });
 
   expect(() => catalogued(near)).toThrow(/^fixture: /);
   expect(catalogued(far)).toBe(far);
   expect(() => catalogued(seeing)).toThrow(/^fixture: /);
-  expect(() => catalogued(holding)).toThrow(/^fixture: /);
 });
 
 test('a catalogue whose camp’s reward is a card it does not hold is refused', () => {

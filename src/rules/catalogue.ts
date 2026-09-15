@@ -122,8 +122,8 @@ export type Deck = { readonly cards: readonly string[]; readonly settle: readonl
  * The content a chronicle is played on: the stats a unit of each kind enters the map with, every
  * script an enemy can carry, the map content, the cards and the decks a chronicle is founded on,
  * the events and the schedules its timeline is rolled from, what a camp is, enters and gives on its
- * capture, and the city: the terrain and the building it stands as, how far it sees, and what its
- * settle holds and opens with. Every one of them is named by its key.
+ * capture, and the city: the terrain and the building it stands as, how far it sees, and how many
+ * idle inhabitants it opens with. Every one of them is named by its key.
  */
 export type Catalogue = MapContent & {
   readonly units: Readonly<Record<string, UnitStats>>;
@@ -142,9 +142,7 @@ export type Catalogue = MapContent & {
     readonly terrain: string;
     readonly building: string;
     readonly sight: number;
-    /** How many rings around its own tile the settle holds with it. */
-    readonly holds: number;
-    /** How many inhabitants the chronicle opens with besides one on each tile the settle holds. */
+    /** How many inhabitants the chronicle opens with besides the one on the city's tile. */
     readonly idle: number;
   };
 };
@@ -154,14 +152,13 @@ export type Catalogue = MapContent & {
  * names itself by its key; every id a biome, a feature, a building, an improvement, a region, a deck,
  * a schedule, the camp and the city name is held; every biome rolls some rim width; no building or
  * improvement names a movement cost below one hundredth of a move point; no region keeps its camps
- * within the centre part's reach plus the greater of the city's sight and the rings its settle
- * holds; no section of a deck holds a hazard or the camp's reward, a deck's settle section holds a
- * settle card and its cards none; no schedule deals its capstone among its entries; a schedule deals and
- * spans at least one, and each of its spans rolls from one at least to no less than its least; an
- * event with a second script is some schedule's capstone; the camp's unit stands on every terrain
- * its building names; the city's building stands on the city's terrain; and the city's sight, the
- * rings its settle holds and its idle count are none below nought. A card's closures and an
- * event's are neither run nor read here.
+ * within the centre part's reach plus the city's sight; no section of a deck holds a hazard or the
+ * camp's reward, a deck's settle section holds a settle card and its cards none; no schedule deals
+ * its capstone among its entries; a schedule deals and spans at least one, and each of its spans
+ * rolls from one at least to no less than its least; an event with a second script is some
+ * schedule's capstone; the camp's unit stands on every terrain its building names; the city's
+ * building stands on the city's terrain; and the city's sight and its idle count are none below
+ * nought. A card's closures and an event's are neither run nor read here.
  */
 export function catalogued(content: Catalogue): Catalogue {
   for (const [id, kind] of Object.entries(content.units)) {
@@ -195,7 +192,7 @@ export function catalogued(content: Catalogue): Catalogue {
     biomeKind(content, region.rivers.source);
     for (const { biome } of region.biomeShares) biomeKind(content, biome);
     for (const { feature } of region.featureShares) featureKind(content, feature);
-    const reach = region.centre + Math.max(content.city.sight, content.city.holds);
+    const reach = region.centre + content.city.sight;
     if (region.campFromCentre <= reach) {
       refuse(
         content,
@@ -260,9 +257,8 @@ export function catalogued(content: Catalogue): Catalogue {
       `the city's building ${content.city.building} does not stand on ${content.city.terrain}`,
     );
   }
-  const { sight, holds, idle } = content.city;
+  const { sight, idle } = content.city;
   if (sight < 0) refuse(content, `the city sees ${sight}`);
-  if (holds < 0) refuse(content, `the city's settle holds ${holds} rings`);
   if (idle < 0) refuse(content, `the city opens with ${idle} idle`);
   return content;
 }

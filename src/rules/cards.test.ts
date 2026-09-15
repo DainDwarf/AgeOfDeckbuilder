@@ -15,7 +15,6 @@ import {
   everyCard,
   FOOD,
   field,
-  founded,
   fullDraw,
   madeOf,
   NO_GROWTH,
@@ -23,6 +22,7 @@ import {
   plains,
   pointsOf,
   REGION,
+  ringed,
   SCHEDULE,
   settledLaunch,
   stagedBy,
@@ -103,13 +103,14 @@ const STOCKED: Resources = {
 };
 
 /**
- * The founding on a disc out to two, with the tile at `at` made of `terrain` and a worker of the
- * player's standing on it wherever a worker can stand at all: ground no worker enters holds nobody.
- * The seven tiles the founding holds reach out to one, so a tile further out lies outside the border.
+ * A city holding its ring on a disc out to two, with the tile at `at` made of `terrain` and a worker
+ * of the player's standing on it wherever a worker can stand at all: ground no worker enters holds
+ * nobody. The seven tiles the city holds reach out to one, so a tile further out lies outside the
+ * border.
  */
 function workedTile(at: TileCoords, terrain: Terrain, carrying: Carrying = {}): Chronicle {
   const tiles = madeOf(field(2), terrain, [at]);
-  return founded(2, {
+  return ringed(2, {
     tiles,
     units: standsOn(CATALOGUE, WORKER, tileAt(tiles, at)) ? [worker(at)] : [],
     ...carrying,
@@ -570,8 +571,8 @@ test('a unit that is not a worker, with action left, is refused every card playe
   ];
   for (const [id, terrain] of cards) {
     const tiles = madeOf(field(2), terrain, [at]);
-    const fighting = founded(2, { tiles, units: [standing('player', at)] });
-    const worked = founded(2, { tiles, units: [worker(at)] });
+    const fighting = ringed(2, { tiles, units: [standing('player', at)] });
+    const worked = ringed(2, { tiles, units: [worker(at)] });
 
     expect(actionOf(fighting, 1)).toBeGreaterThan(0);
     expect(refusedFor(fighting, id, at)).toBe('worker');
@@ -901,7 +902,7 @@ test('the turn refreshes a worker’s action, and the card it refused lands on t
 
 test('the refresh instant leaves a worker’s spent action spent, and the card refused on it refused', () => {
   const at = { q: 1, r: 0 };
-  const city = founded(2, {
+  const city = ringed(2, {
     tiles: madeOf(field(2), 'hills', [at]),
     hand: ['PH_Mine', 'PH_March', 'PH_Road'],
     resources: production(5),
@@ -922,12 +923,12 @@ test('the refresh instant leaves a worker’s spent action spent, and the card r
 test('the farm card names the first of its five reasons: worker, action, terrain, border, then slot', () => {
   const at = { q: 1, r: 0 };
   const out = { q: 2, r: 0 };
-  const hilly = founded(2, {
+  const hilly = ringed(2, {
     tiles: madeOf(field(2), 'hills', [at, out]),
     hand: ['PH_Road'],
     resources: production(2),
   });
-  const flat = founded(2, { tiles: madeOf(field(2), 'plain', [at, out]) });
+  const flat = ringed(2, { tiles: madeOf(field(2), 'plain', [at, out]) });
   const worked = withUnits(flat, [worker(at)]);
   const filled = withTile(worked, {
     ...at,
@@ -953,8 +954,8 @@ test('the farm card names the first of its five reasons: worker, action, terrain
 
 test('the mine card names the first of its four reasons: worker, action, terrain, then improvement', () => {
   const at = { q: 1, r: 0 };
-  const plain = founded(2, { hand: ['PH_Road'], resources: production(2) });
-  const hills = founded(2, { tiles: madeOf(field(2), 'hills', [at]) });
+  const plain = ringed(2, { hand: ['PH_Road'], resources: production(2) });
+  const hills = ringed(2, { tiles: madeOf(field(2), 'hills', [at]) });
   const worked = withUnits(hills, [worker(at)]);
   const mined = withTile(worked, { ...at, terrain: 'hills', improvements: ['PH_Mine'] });
 
@@ -980,8 +981,8 @@ test('the mine card names the first of its four reasons: worker, action, terrain
 
 test('the urbanisation card names the first of its four reasons: worker, action, terrain, then slot', () => {
   const at = { q: 1, r: 0 };
-  const plain = founded(2);
-  const forest = founded(2, {
+  const plain = ringed(2);
+  const forest = ringed(2, {
     tiles: madeOf(field(2), 'forest', [at]),
     hand: ['PH_Road'],
     resources: production(2),
@@ -1005,7 +1006,7 @@ test('the urbanisation card names the first of its four reasons: worker, action,
 test('a card aimed at a unit admits the tiles the player’s units stand on, and no others', () => {
   const spent = { q: 1, r: 0 };
   const held = { q: 2, r: 0 };
-  const city = founded(2, {
+  const city = ringed(2, {
     units: [
       standing('player', spent, { move: 2 * MOVE_POINT }, MOVE_POINT),
       standing('enemy', held, { move: 2 * MOVE_POINT }, MOVE_POINT),
@@ -1015,12 +1016,12 @@ test('a card aimed at a unit admits the tiles the player’s units stand on, and
   expect(admittedTiles(city, 'PH_March')).toEqual([spent]);
   expect(refusedFor(city, 'PH_March', held)).toBe('unit');
   expect(refusedFor(city, 'PH_March', { q: 0, r: 1 })).toBe('unit');
-  expect(admittedTiles(founded(2), 'PH_March')).toEqual([]);
+  expect(admittedTiles(ringed(2), 'PH_March')).toEqual([]);
 });
 
 test('a card aimed at a unit lands on the play that aims at a unit, and nowhere on one that aims at a tile', () => {
   const at = { q: 1, r: 0 };
-  const city = founded(2, {
+  const city = ringed(2, {
     hand: ['PH_March'],
     units: [standing('player', at, { move: 2 * MOVE_POINT }, MOVE_POINT)],
   });
@@ -1033,7 +1034,7 @@ test('a card aimed at a unit lands on the play that aims at a unit, and nowhere 
 
 test('the refresh instant names the first of its two reasons: the unit, then its move points', () => {
   const at = { q: 1, r: 0 };
-  const bare = founded(2);
+  const bare = ringed(2);
   const enemy = withUnits(bare, [standing('enemy', at)]);
   const full = withUnits(bare, [worker(at)]);
   const spent = withUnits(bare, [standing('player', at, { move: 2 * MOVE_POINT }, MOVE_POINT)]);
@@ -1049,7 +1050,7 @@ test('a card’s aim admits exactly the tiles of the map it names no reason for'
     { q: 1, r: 0 },
     { q: 0, r: 1 },
   ];
-  const city = founded(2, { units: worked.map(worker) });
+  const city = ringed(2, { units: worked.map(worker) });
 
   const lit = admittedTiles(city, 'PH_Farm');
 
@@ -1063,7 +1064,7 @@ test('a card’s aim admits exactly the tiles of the map it names no reason for'
 
 test('a play aimed at a tile the aim refuses, or at nothing, lands nowhere', () => {
   const at = { q: 1, r: 0 };
-  const city = founded(2, { hand: ['PH_Farm'], resources: production(3) });
+  const city = ringed(2, { hand: ['PH_Farm'], resources: production(3) });
 
   const aimed = apply(CATALOGUE, city, aimedAt(at));
   const nowhere = apply(CATALOGUE, city, { type: 'play', index: 0, aim: 'none' });

@@ -6,6 +6,7 @@
 import { ADVANCE } from '../content/stand-in';
 import {
   built,
+  claimableTile,
   enters,
   firstRefusal,
   gained,
@@ -31,13 +32,14 @@ import {
   entered,
 } from './catalogue';
 import { apply, beginChronicle, type Command, launched, outcome } from './chronicle';
-import { founding } from './city';
+import { arrived, bordered } from './city';
 import {
   type BuildingTypeId,
   cornerKey,
   cornersOf,
   distance,
   MOVE_POINT,
+  neighbours,
   type River,
   type Terrain,
   type Tile,
@@ -95,6 +97,13 @@ export const CATALOGUE: Catalogue = catalogued({
         firstRefusal(made(catalogue, tile, ['plain', 'forest', 'hills']), slotFree(tile)),
       effect: (catalogue, paid, at) =>
         settled(catalogue, terraformed(catalogue, paid, at, catalogue.city.terrain), at),
+    },
+    PH_Claim: {
+      kind: 'instant',
+      cost: {},
+      aim: 'tile',
+      refuses: (catalogue, chronicle, tile) => claimableTile(catalogue, chronicle, tile),
+      effect: (_catalogue, paid, at) => bordered(arrived(paid), at),
     },
     PH_Worker: { kind: 'unit', cost: { food: 2 }, ...enters('PH_Worker') },
     PH_Warrior: { kind: 'unit', cost: { military: 2 }, ...enters('PH_Warrior') },
@@ -196,7 +205,7 @@ export const CATALOGUE: Catalogue = catalogued({
         'PH_Harvest',
         'PH_Harvest',
       ],
-      settle: ['PH_Settle'],
+      settle: ['PH_Settle', 'PH_Claim'],
     },
   },
   events: {
@@ -336,7 +345,7 @@ export const CATALOGUE: Catalogue = catalogued({
     },
   },
   camp: { unit: 'PH_Warrior', script: 'advance', building: 'PH_Camp', reward: 'PH_Spoils' },
-  city: { terrain: 'urban', building: 'PH_City', sight: 2, holds: 1, idle: 2 },
+  city: { terrain: 'urban', building: 'PH_City', sight: 2, idle: 2 },
 });
 
 /** The one region the fixture catalogue deals its maps from. */
@@ -399,7 +408,7 @@ export type Carrying = Partial<Omit<Chronicle, 'units' | 'nextUnit'>> & {
 
 /**
  * A city on `inside`, tile by tile, with one plain lying outside the border and no cards. Its
- * inhabitants stand where the founding leaves them: one on each tile the city holds.
+ * inhabitants stand one on each tile the city holds, and none is idle.
  */
 export function cityOf(inside: Terrain[], carrying: Carrying = {}): Chronicle {
   const held = inside.map((_, index) => ({ q: index, r: 0 }));
@@ -440,7 +449,7 @@ export function cityOf(inside: Terrain[], carrying: Carrying = {}): Chronicle {
 
 /**
  * A disc of plain around the city, out to `radius`; `coast` names the wet ones. The city stands on
- * its urban tile as the founding leaves it: in that tile's building slot.
+ * its urban tile as the settle leaves it: in that tile's building slot.
  */
 export function field(radius: number, coast: TileCoords[] = []): Tile[] {
   const wet = new Set(coast.map(tileKey));
@@ -639,10 +648,19 @@ export function claimOf(tile: TileCoords): Command {
   return { type: 'claim', tile };
 }
 
-/** A city on a disc of plain out to `radius`, holding and staffed as the founding leaves it. */
-export function founded(radius: number, carrying: Carrying = {}): Chronicle {
-  const tiles = carrying.tiles ?? field(radius);
-  return cityOf(['urban'], { tiles, ...founding(CATALOGUE, CITY, tiles), ...carrying });
+/**
+ * A city on a disc of plain out to `radius`, holding its own tile and the six around it, one
+ * inhabitant on each and two idle.
+ */
+export function ringed(radius: number, carrying: Carrying = {}): Chronicle {
+  const ring = [CITY, ...neighbours(CITY)];
+  return cityOf(['urban'], {
+    tiles: field(radius),
+    held: ring,
+    population: ring.length + 2,
+    assigned: [...ring],
+    ...carrying,
+  });
 }
 
 /**

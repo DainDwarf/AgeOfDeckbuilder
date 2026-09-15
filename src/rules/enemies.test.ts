@@ -16,13 +16,13 @@ import {
   enemiesOf,
   everyCard,
   field,
-  founded,
   fullDraw,
   madeOf,
   NO_GROWTH,
   only,
   pointsOf,
   REGION,
+  ringed,
   riverBetween,
   stagedBy,
   standing,
@@ -82,7 +82,7 @@ test('a capture ends the end of turn on its own stage, with the ending set', () 
 
 test('a camp captured at the end of the turn leaves its tile claimed like any other', () => {
   const camp = { q: 2, r: 0 };
-  const besieging = founded(3, {
+  const besieging = ringed(3, {
     ...NO_GROWTH,
     tiles: camped(field(3), [camp]),
     resources: culture(9),

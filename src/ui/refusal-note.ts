@@ -56,7 +56,7 @@ export function refusedCard(costs: readonly Cost[], refusal: Refusal): Said {
  */
 export function refusedAct(refusal: Refusal): Said {
   return [
-    ...(refusal.unaffordable.length > 0 ? [text('refusal.claim')] : []),
+    ...(refusal.unaffordable.length > 0 ? [text('refusal.unpaid')] : []),
     ...refusal.blocked.map(blocking),
   ];
 }

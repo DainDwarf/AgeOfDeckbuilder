@@ -1,5 +1,5 @@
 import { type Aim, type AimedCard, type Card, type Catalogue, cardOf, entered } from './catalogue';
-import { founding } from './city';
+import { claimable } from './city';
 import { type Tile, type TileCoords, tileKey } from './map';
 import { buildingKind, improvementKind, refuse, terrainKind } from './map-kinds';
 import { RESOURCES, type Resources } from './resources';
@@ -140,6 +140,18 @@ export function inside(chronicle: Chronicle, tile: TileCoords): TileBlock | unde
   return holds(chronicle, tile) ? undefined : 'border';
 }
 
+/** A tile the city may claim: the one list city mode marks. */
+export function claimableTile(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  tile: TileCoords,
+): TileBlock | undefined {
+  const at = tileKey(tile);
+  return claimable(catalogue, chronicle).some((coord) => tileKey(coord) === at)
+    ? undefined
+    : 'claim';
+}
+
 /** The terrains a building stands on, an improvement lies on, or a terraform starts from. */
 export function made(
   catalogue: Catalogue,
@@ -209,13 +221,18 @@ export function enters(type: string): Aim & { readonly aim: 'none' } {
 }
 
 /**
- * The settle: the city stands on the tile from now on, its building in the tile's slot, holding and
- * staffing what a settle there holds.
+ * The settle: the city stands on the tile from now on, its building in the tile's slot, holding that
+ * tile alone with one inhabitant on it and the city's idle count besides.
  */
 export function settled(catalogue: Catalogue, paid: Chronicle, at: TileCoords): Chronicle {
   const city = { q: at.q, r: at.r };
-  const standing = built(catalogue, paid, city, catalogue.city.building);
-  return { ...standing, city, ...founding(catalogue, city, standing.tiles) };
+  return {
+    ...built(catalogue, paid, city, catalogue.city.building),
+    city,
+    held: [city],
+    assigned: [city],
+    population: 1 + catalogue.city.idle,
+  };
 }
 
 /** One tile of the map layered over, every other tile left as it stands. */

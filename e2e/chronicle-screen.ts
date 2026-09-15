@@ -38,22 +38,44 @@ declare global {
 }
 
 /**
+ * What the city holds when turn 0 ends: the six tiles around it claimed by the settle section's free
+ * claims, or its own tile alone.
+ */
+export type Border = 'ring' | 'bare';
+
+/**
  * The chronicle the screen opens on a seed, a deck and a schedule, launched exactly as the boot
  * launches it — on the schedule the boot takes when the address names none, unless one is given —
  * and settled exactly as `open` settles it: the settle card played on the centre tile, or on the
- * tile given, and turn 0 ended, a deal turn 1 stops on left standing.
+ * tile given, the free claims played on the six tiles around it unless the city is asked for bare,
+ * and turn 0 ended, a deal turn 1 stops on left standing.
  */
 export function launch(
   seed: number,
   deck: Deck,
   schedule: string = STAND_IN_SCHEDULE,
   at: TileCoords = CENTRE,
+  border: Border = 'ring',
 ): Chronicle {
   const opened = launched(STAND_IN, STAND_IN_REGION, schedule, seed, deck);
   const index = opened.hand.findIndex((id) => cardOf(STAND_IN, id).kind === 'settle');
-  const settling = outcome(apply(STAND_IN, opened, { type: 'play', index, aim: 'tile', tile: at }));
+  let settling = outcome(apply(STAND_IN, opened, { type: 'play', index, aim: 'tile', tile: at }));
   if (settling.city === undefined)
     throw new Error(`seed ${seed} settles no city on ${tileKey(at)}`);
+  switch (border) {
+    case 'ring':
+      for (const tile of neighbours(at)) {
+        const claimed = outcome(
+          apply(STAND_IN, settling, { type: 'play', index: 0, aim: 'tile', tile }),
+        );
+        if (claimed.held.length === settling.held.length)
+          throw new Error(`seed ${seed} claims no ${tileKey(tile)} beside its city`);
+        settling = claimed;
+      }
+      break;
+    case 'bare':
+      break;
+  }
   return outcome(apply(STAND_IN, settling, { type: 'end-turn' }));
 }
 
@@ -96,9 +118,10 @@ export function watch(page: Page): string[] {
 
 /**
  * Opens the chronicle a seed, a deck and a schedule found, waits for its scene to run, closes the
- * capstone's window every chronicle opens on, and settles on the centre tile or the tile given:
- * turn 1 open on the chronicle screen, or the deal it stops on standing. The card and not the back
- * key closes the window: that key is rebindable, and specs rebind it.
+ * capstone's window every chronicle opens on, and settles on the centre tile or the tile given, its
+ * city holding the border asked for: turn 1 open on the chronicle screen, or the deal it stops on
+ * standing. The card and not the back key closes the window: that key is rebindable, and specs
+ * rebind it.
  */
 export async function open(
   page: Page,
@@ -106,19 +129,25 @@ export async function open(
   deck: string,
   schedule: string = STAND_IN_SCHEDULE,
   at: TileCoords = CENTRE,
+  border: Border = 'ring',
 ): Promise<void> {
   await openOnCapstone(page, seed, deck, schedule);
   await click(page, 'capstone-card-0');
   await expect.poll(() => standing(page, 'capstone')).toBe(false);
   await rested(page);
-  await settle(page, at);
+  await settle(page, at, border);
 }
 
 /**
  * The settle as a player makes it on turn 0: the settle card dragged out of the hand, the centre
- * tile or the tile given pressed, and the turn ended once the city stands.
+ * tile or the tile given pressed, the free claims played on the six tiles around the city unless it
+ * is asked for bare, and the turn ended.
  */
-export async function settle(page: Page, at: TileCoords = CENTRE): Promise<void> {
+export async function settle(
+  page: Page,
+  at: TileCoords = CENTRE,
+  border: Border = 'ring',
+): Promise<void> {
   const { hand } = await chronicleOf(page);
   await dragOut(
     page,
@@ -130,7 +159,31 @@ export async function settle(page: Page, at: TileCoords = CENTRE): Promise<void>
   await page.waitForFunction(
     () => window.game?.scene.getScene<ChronicleScene>('chronicle').chronicle.city !== undefined,
   );
+  switch (border) {
+    case 'ring':
+      for (const tile of neighbours(at)) await claimFree(page, tile);
+      break;
+    case 'bare':
+      break;
+  }
   await stoppedTurn(page);
+}
+
+/**
+ * A free claim as a player plays it on turn 0: the first card of the hand selected, then the tile
+ * pressed, waited out until the city holds one tile more.
+ */
+async function claimFree(page: Page, tile: TileCoords): Promise<void> {
+  const { held } = await chronicleOf(page);
+  await click(page, 'hand-0');
+  await aimed(page);
+  await click(page, `tile-${tileKey(tile)}`);
+  await playedOut(page);
+  await page.waitForFunction(
+    (count) =>
+      window.game?.scene.getScene<ChronicleScene>('chronicle').chronicle.held.length === count,
+    held.length + 1,
+  );
 }
 
 /** The same as `open` before the settle, with the capstone's window left standing as the opening raised it. */

@@ -20,7 +20,7 @@ import {
   standing,
   worker,
 } from './fixtures';
-import { distance, MOVE_POINT, type Tile, tileAt, tileKey } from './map';
+import { MOVE_POINT, type Tile, tileAt, tileKey } from './map';
 import { RESOURCES } from './resources';
 import { seedRng } from './rng';
 import { inSight } from './sight';
@@ -247,8 +247,8 @@ test('a city with no population left falls, whatever the command was', () => {
   expect(ended.ending).toEqual({ outcome: 'defeat', cause: 'population', turn: ended.turn });
 });
 
-test('the settle puts the city on its tile: its terrain and building, no feature, the tiles it holds staffed, and the card in no pile', () => {
-  const opened = opening(plainDisc());
+test('the settle puts the city on its tile: its terrain and building, no feature, that tile alone held and staffed, and the card in no pile', () => {
+  const opened = opening(plainDisc(), { deck: { cards: DECK.cards, settle: ['PH_Settle'] } });
   const settled = settledOn(opened, CITY);
   const centre = tileAt(settled.tiles, CITY);
 
@@ -261,13 +261,8 @@ test('the settle puts the city on its tile: its terrain and building, no feature
     expect(tile.terrain).toBe('plain');
     expect(tile.building).toBeUndefined();
   }
-  expect(settled.held.map(tileKey).sort()).toEqual(
-    settled.tiles
-      .filter((tile) => distance(tile, CITY) <= CATALOGUE.city.holds)
-      .map(tileKey)
-      .sort(),
-  );
-  expect(settled.assigned.map(tileKey).sort()).toEqual(settled.held.map(tileKey).sort());
+  expect(settled.held).toEqual([CITY]);
+  expect(settled.assigned).toEqual([CITY]);
   expect(idle(settled)).toBe(CATALOGUE.city.idle);
   expect(settled.hand).toEqual([]);
   expect(settled.discardPile).toEqual([]);

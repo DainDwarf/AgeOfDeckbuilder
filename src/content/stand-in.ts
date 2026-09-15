@@ -1,5 +1,6 @@
 import {
   built,
+  claimableTile,
   enters,
   firstRefusal,
   gained,
@@ -16,6 +17,7 @@ import {
   unimproved,
 } from '../rules/cards';
 import { type Catalogue, catalogued, type EnemyScript } from '../rules/catalogue';
+import { arrived, bordered } from '../rules/city';
 import {
   MOVE_POINT,
   movementCost,
@@ -75,8 +77,11 @@ export const STAND_IN_REGION = 'PH_Region';
 /** The schedule the boot launches the stand-in on, where the address names none. */
 export const STAND_IN_SCHEDULE = 'PH_Schedule';
 
-/** What the decks are built from: a card won on the map joins a chronicle and no deck. */
-const FOUNDING_CARDS: readonly CardId[] = [
+/** What every deck's settle section holds. */
+const SETTLE_SECTION: readonly CardId[] = ['PH_Settle', ...Array<CardId>(6).fill('PH_Claim')];
+
+/** What the decks' cards are built from: a card won on the map joins a chronicle and no deck. */
+const DECK_CARDS: readonly CardId[] = [
   'PH_Worker',
   'PH_Warrior',
   'PH_Farm',
@@ -126,6 +131,13 @@ export const STAND_IN: Catalogue = catalogued({
         firstRefusal(made(catalogue, tile, ['plain', 'forest', 'hills']), slotFree(tile)),
       effect: (catalogue, paid, at) =>
         settled(catalogue, terraformed(catalogue, paid, at, catalogue.city.terrain), at),
+    },
+    PH_Claim: {
+      kind: 'instant',
+      cost: {},
+      aim: 'tile',
+      refuses: (catalogue, chronicle, tile) => claimableTile(catalogue, chronicle, tile),
+      effect: (_catalogue, paid, at) => bordered(arrived(paid), at),
     },
     PH_Worker: { kind: 'unit', cost: { food: 2 }, ...enters('PH_Worker') },
     PH_Warrior: { kind: 'unit', cost: { military: 2 }, ...enters('PH_Warrior') },
@@ -214,13 +226,13 @@ export const STAND_IN: Catalogue = catalogued({
     },
   },
   decks: {
-    PH_Deck: { cards: copies(2), settle: ['PH_Settle'] },
-    PH_LongDeck: { cards: copies(5), settle: ['PH_Settle'] },
+    PH_Deck: { cards: copies(2), settle: SETTLE_SECTION },
+    PH_LongDeck: { cards: copies(5), settle: SETTLE_SECTION },
     PH_TallDeck: {
       cards: ['PH_Worker', 'PH_Warrior', 'PH_Farm', 'PH_March', 'PH_Harvest'].flatMap((id) =>
         Array<CardId>(5).fill(id),
       ),
-      settle: ['PH_Settle'],
+      settle: SETTLE_SECTION,
     },
     PH_ShortDeck: {
       cards: [
@@ -232,7 +244,7 @@ export const STAND_IN: Catalogue = catalogued({
         'PH_Farm',
         'PH_March',
       ],
-      settle: ['PH_Settle'],
+      settle: SETTLE_SECTION,
     },
   },
   events: {
@@ -372,12 +384,12 @@ export const STAND_IN: Catalogue = catalogued({
     },
   },
   camp: { unit: 'PH_Warrior', script: 'PH_Advance', building: 'PH_Camp', reward: 'PH_Spoils' },
-  city: { terrain: 'urban', building: 'PH_City', sight: 2, holds: 1, idle: 2 },
+  city: { terrain: 'urban', building: 'PH_City', sight: 2, idle: 2 },
 });
 
-/** A deck's cards: this many copies of each founding card, in the order they are listed. */
+/** A deck's cards: this many copies of each card the decks are built from, in the order they are listed. */
 function copies(count: number): readonly CardId[] {
-  return FOUNDING_CARDS.flatMap((id) => Array<CardId>(count).fill(id));
+  return DECK_CARDS.flatMap((id) => Array<CardId>(count).fill(id));
 }
 
 /** How many warriors a raid enters on this turn: one, and one more for every ten turns. */

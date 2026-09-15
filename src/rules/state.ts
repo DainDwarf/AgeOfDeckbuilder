@@ -85,7 +85,7 @@ export type Chronicle = {
  * What a card's aim has against one tile: the tile uncharted, no worker of the player's standing
  * there, the worker there with no action left, the tile outside the border, the wrong terrain, the
  * building slot filled, the improvement already laid, no unit of the player's standing there, its
- * move points full.
+ * move points full, the tile no claim of the city's.
  */
 export type TileBlock =
   | 'uncharted'
@@ -96,7 +96,8 @@ export type TileBlock =
   | 'slot'
   | 'improvement'
   | 'unit'
-  | 'move';
+  | 'move'
+  | 'claim';
 
 /**
  * What the city or the map has against a card or a claim the cost alone would let through: the city
