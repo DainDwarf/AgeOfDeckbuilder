@@ -112,7 +112,10 @@ test('a motion that throws still ends the turn and gives the chronicle screen ba
     population: text('reading.over', { count: idle(committed), over: committed.population }),
   };
   expect(await paintedReadings(page, Object.keys(readings))).toEqual(readings);
-  expect(await endTurnLabel(page)).toBe(text('button.turn', { turn: committed.turn }));
+  expect(await endTurnLabel(page)).toBe(text('button.end-turn'));
+  const food = await onScreen(page, 'reading-food');
+  await page.mouse.move(food.x, food.y);
+  await expect.poll(() => endTurnLabel(page)).toBe(text('button.turn', { turn: committed.turn }));
   expect(await counted(page, 'end-turn-leaving')).toBe(0);
 
   await endTurn(page);

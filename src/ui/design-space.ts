@@ -399,14 +399,24 @@ export function onClick(
 export type Hover = {
   /** Whether the pointer is over the object, as far as the hover knows. */
   readonly hovered: boolean;
-  /** The owner ends the hover it knows is over: Phaser sends no `pointerout` for a disable. */
+  /**
+   * The owner ends the hover it knows is over: Phaser sends no `pointerout` for a disable, and
+   * leaves the object's cursor standing.
+   */
   end(): void;
+  /**
+   * The owner resumes the hover once it has made the object live: Phaser sends no `pointerover` to
+   * an object that comes live under a resting pointer.
+   */
+  resume(): void;
 };
 
 /**
- * A hover: entered when the pointer comes over the object, left when it goes — including when it
- * goes by leaving the canvas. Phaser sends no `pointerout` to an object the pointer leaves the
- * canvas over: that leave reaches the scene's input plugin alone, as `gameout`.
+ * A hover: entered when the pointer comes over the object, left when it goes. Phaser sends no
+ * `pointerout` to an object the pointer leaves the canvas over: that leave reaches the scene's input
+ * plugin alone, as `gameout`. And it sends `pointerover` only when an object joins the input
+ * plugin's private per-pointer over list, which keeps the object through a disable, a re-enable and
+ * a `gameout` alike.
  */
 export function onHover(
   target: Phaser.GameObjects.GameObject,
@@ -421,22 +431,56 @@ export function onHover(
     leave();
   };
 
+  // The pointer keeps the coordinates it left the canvas at, so only a move on the canvas says
+  // where it came back; the browser sends the canvas's `mouseover` ahead of that move.
+  const resume = (): void => {
+    if (hovered || !input.isOver || target.input?.enabled !== true) return;
+    const pointer = input.activePointer;
+    if (input.sortGameObjects(input.hitTestPointer(pointer), pointer)[0] !== target) return;
+    // Phaser's list has to hold the target too, or it would send no `pointerout` when the pointer
+    // goes, and a `pointerover` again at the next move on it.
+    const over = (input as unknown as { _over: Record<number, Phaser.GameObjects.GameObject[]> })
+      ._over[pointer.id];
+    if (over !== undefined && !over.includes(target)) over.push(target);
+    input.setCursor(target.input);
+    hovered = true;
+    enter();
+  };
+  const end = (): void => {
+    if (hovered && target.input?.cursor) input.resetCursor();
+    off();
+  };
+  let returning = false;
+  const back = (): void => {
+    returning = true;
+  };
+  const moved = (): void => {
+    if (!returning) return;
+    returning = false;
+    resume();
+  };
+
   target.on('pointerover', () => {
     hovered = true;
     enter();
   });
   target.on('pointerout', off);
-  // The scene outlives the target, so this one goes when the target does.
+  // The scene outlives the target, so these go when the target does.
   input.on('gameout', off);
+  input.on('gameover', back);
+  input.on('pointermove', moved);
   target.once('destroy', () => {
     input.off('gameout', off);
+    input.off('gameover', back);
+    input.off('pointermove', moved);
   });
 
   return {
     get hovered() {
       return hovered;
     },
-    end: off,
+    end,
+    resume,
   };
 }
 

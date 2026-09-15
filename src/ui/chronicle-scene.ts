@@ -563,9 +563,13 @@ export class ChronicleScene extends Phaser.Scene {
     let wanted = true;
     let standing = false;
     const interact = (): void => {
-      if (wanted && standing) button.setInteractive({ useHandCursor: true });
-      else button.disableInteractive();
-      hover.end();
+      if (wanted && standing) {
+        button.setInteractive({ useHandCursor: true });
+        hover.resume();
+      } else {
+        button.disableInteractive();
+        hover.end();
+      }
     };
 
     /** The label a roll is carrying off the button; a render owns it and takes it down. */

@@ -6,7 +6,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ---
 
-- **The end-turn hover test fails** — `e2e/hover.spec.ts` passes with its four tests unchanged plus two new ones: the button reads `End turn` with no move after a turn ended under a resting pointer, and after the pointer leaves the canvas over it and comes straight back; `docs/CHRONICLE.md` says what the pointer rests on reads as under it. Doc-impact: `docs/CHRONICLE.md`. [board/the-end-turn-hover-test-fails.md](board/the-end-turn-hover-test-fails.md)
 - **The nomadic age designed, number-less** — its page in `docs/`: how the age settles — the site chosen, the city keeping the terrain it lands on, water and mountain refused, one inhabitant working its tile — the starting collection of cards with few or no buildings, the units, the events, the capstone and the camp's reward.
 - **The nomadic age implemented** — the real catalogue replaces the stand-ins with provisional numbers at last, a scout among the units, and the camp's reward a real card.
 - **The biome rework** — a growth weight per biome, the spread growing per biome instead of per frontier, the city's first ring dealt as its own biome, and the bigger map.
