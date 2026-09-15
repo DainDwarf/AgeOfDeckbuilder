@@ -280,8 +280,8 @@ export function outcome(stages: readonly Stage[]): Chronicle {
  * nothing is absent, and the list ends at the capture when the city falls in the enemy phase, at the
  * victory when the city is still standing once the capstone's last turn is over, or at the deal a due
  * turn's events phase leaves standing — the hand waits on the take. Turn 0's end runs none of the
- * cycle and opens on the tick. The tick leaves the hand empty, and the turn always ticks, so there is
- * always a stage. A turn ended while the city stands nowhere is one `refused` stage.
+ * cycle and opens on the tick, which takes the settle cards left in hand. The turn always ticks, so
+ * there is always a stage. A turn ended while the city stands nowhere is one `refused` stage.
  */
 function endOfTurn(catalogue: Catalogue, chronicle: Chronicle): Stage[] {
   if (chronicle.city === undefined) return [{ name: 'refused', chronicle }];
@@ -317,7 +317,7 @@ function endOfTurn(catalogue: Catalogue, chronicle: Chronicle): Stage[] {
   staged('turn', {
     ...standing,
     turn: standing.turn + 1,
-    hand: [],
+    hand: standing.turn === 0 ? [] : standing.hand,
     units: standing.units.map((unit) => refreshedAction(refreshedMovePoints(unit))),
   });
   staged('reinforce', continued(catalogue, standing));
