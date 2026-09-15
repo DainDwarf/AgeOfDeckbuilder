@@ -204,9 +204,7 @@ export class ChronicleScene extends Phaser.Scene {
     const thresholdOn = (found: PressedTile | undefined): Cost | undefined => {
       if (!cityMode || found === undefined) return undefined;
       if (tileRefusal(this.catalogue, this.current, found.tile) === undefined) return undefined;
-      return tileCost(this.catalogue, this.current, found.tile).find(
-        ({ resource }) => resource === 'culture',
-      );
+      return tileCost(this.current, found.tile).find(({ resource }) => resource === 'culture');
     };
 
     /**

@@ -76,7 +76,7 @@ test('every card of the stand-in has a name and a rules entry on the screen', ()
   }
 });
 
-test('every card of the stand-in answers its refusal, and its admitted tiles, on a chronicle founded on each deck', () => {
+test('every card of the stand-in answers its refusal, and its admitted tiles, on a chronicle begun on each deck', () => {
   for (const deck of Object.keys(STAND_IN.decks)) {
     const chronicle = launched(
       STAND_IN,

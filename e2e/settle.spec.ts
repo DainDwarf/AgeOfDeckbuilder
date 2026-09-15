@@ -85,6 +85,7 @@ test('after the settle a free claim lights the six tiles around the city and no 
   page,
 }) => {
   const problems = watch(page);
+  test.setTimeout(budget(0));
 
   await openOnCapstone(page, 1, 'PH_Deck');
   await click(page, 'capstone-card-0');

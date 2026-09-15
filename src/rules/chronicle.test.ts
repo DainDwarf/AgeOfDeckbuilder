@@ -36,7 +36,7 @@ function plainDisc(): Tile[] {
   );
 }
 
-test('the same seed founds the same chronicle', () => {
+test('the same seed begins the same chronicle', () => {
   expect(launched(CATALOGUE, REGION, SCHEDULE, 1234, DECK)).toEqual(
     launched(CATALOGUE, REGION, SCHEDULE, 1234, DECK),
   );

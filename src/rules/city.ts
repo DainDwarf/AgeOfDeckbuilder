@@ -30,7 +30,7 @@ type ClaimCommand = { readonly type: 'claim'; readonly tile: TileCoords };
 /** Everything the player commands the city by: its inhabitants, and the border they stand inside. */
 export type CityCommand = AssignCommand | ReassignCommand | ClaimCommand;
 
-/** What the first claim costs, and how many tiles held beyond the city's own each rise lasts. */
+/** What a claim costs with no tile held, and how many tiles held each rise lasts. */
 const CLAIM_FIRST = 1;
 const CLAIMS_PER_RISE = 3;
 
@@ -95,18 +95,17 @@ export function claimable(catalogue: Catalogue, chronicle: Chronicle): TileCoord
 
 /**
  * The culture threshold, what the next claim costs: one culture, and one more for every three tiles
- * held beyond the city's own.
+ * held, the city's own included.
  */
 function cultureThreshold(chronicle: Chronicle): number {
-  const beyond = Math.max(0, chronicle.held.length - 1);
-  return CLAIM_FIRST + Math.floor(beyond / CLAIMS_PER_RISE);
+  return CLAIM_FIRST + Math.floor(chronicle.held.length / CLAIMS_PER_RISE);
 }
 
 /**
  * What the city's act on this tile costs, in the shape a card's cost comes in: the culture a claim
  * asks for, and nothing at all on a tile the city already holds.
  */
-export function tileCost(_catalogue: Catalogue, chronicle: Chronicle, tile: TileCoords): Cost[] {
+export function tileCost(chronicle: Chronicle, tile: TileCoords): Cost[] {
   return holds(chronicle, tile)
     ? []
     : [{ resource: 'culture', amount: cultureThreshold(chronicle) }];
@@ -130,7 +129,7 @@ export function tileRefusal(
     return undefined;
   }
   return {
-    unaffordable: unaffordable(chronicle, tileCost(catalogue, chronicle, tile)),
+    unaffordable: unaffordable(chronicle, tileCost(chronicle, tile)),
     blocked: [],
   };
 }

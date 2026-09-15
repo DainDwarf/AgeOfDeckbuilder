@@ -232,12 +232,12 @@ test('a catalogue whose region’s rivers rise in a biome it does not hold is re
   expect(() => catalogued(content)).toThrow(/^fixture: /);
 });
 
-test('a chronicle founded on another version of the content is refused by apply', () => {
+test('a chronicle begun on another version of the content is refused by apply', () => {
   const other = catalogued(changed({ version: 'other' }));
-  const founded = launched(other, REGION, SCHEDULE, 1234, DECK);
+  const begun = launched(other, REGION, SCHEDULE, 1234, DECK);
 
-  expect(() => apply(CATALOGUE, founded, { type: 'end-turn' })).toThrow(/^fixture: /);
-  expect(apply(other, founded, { type: 'end-turn' }).length).toBeGreaterThan(0);
+  expect(() => apply(CATALOGUE, begun, { type: 'end-turn' })).toThrow(/^fixture: /);
+  expect(apply(other, begun, { type: 'end-turn' }).length).toBeGreaterThan(0);
 });
 
 test('a unit entering as a kind the catalogue does not hold is refused', () => {

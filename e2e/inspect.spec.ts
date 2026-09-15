@@ -147,7 +147,7 @@ function bareRun(): { seed: number; key: string } {
 /**
  * The first seed whose generator leaves a tile costing two move points beside the city, bare and
  * with nobody on it so its terrain card is the whole of its cycle, and charts a water tile from the
- * founding.
+ * opening.
  */
 function costRun(): { seed: number; land: string; water: string } {
   return firstSeed(

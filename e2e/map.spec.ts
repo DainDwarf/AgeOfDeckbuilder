@@ -33,7 +33,7 @@ import {
 /** A point on bare map, clear of the resource bar, the piles and the hand; no tile is read off it. */
 const BARE = { at: { q: 0, r: -3 }, key: '0,-3' };
 
-/** A bare tile the founding charts, clear of the same three: what a press picks out. */
+/** A bare tile the opening charts, clear of the same three: what a press picks out. */
 const CHARTED = { at: { q: 1, r: -2 }, key: '1,-2' };
 
 /** The tiles furthest east and furthest south: the last of the map to leave the frame. */

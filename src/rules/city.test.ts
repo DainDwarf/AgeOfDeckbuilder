@@ -178,7 +178,7 @@ test('six free claims make the next claim cost three culture', () => {
   const paying: Chronicle = { ...chronicle, resources: culture(3) };
 
   expect(chronicle.held).toHaveLength(7);
-  expect(tileCost(CATALOGUE, chronicle, next)).toEqual([{ resource: 'culture', amount: 3 }]);
+  expect(tileCost(chronicle, next)).toEqual([{ resource: 'culture', amount: 3 }]);
   expect(outcome(apply(CATALOGUE, paying, claimOf(next))).resources.culture).toBe(0);
 });
 
@@ -198,7 +198,7 @@ test('a free claim aimed at a tile the city holds, one the border does not touch
   expect(admitted(CATALOGUE, settled, claimCard())).toHaveLength(5);
 });
 
-test('a claim costs one culture, and one more for every three tiles held beyond the city’s own', () => {
+test('a claim costs one culture, and one more for every three tiles held, the city’s own included', () => {
   let chronicle = alone({ resources: culture(20), population: 40 });
   const tiles = [...neighbours(CITY), { q: 2, r: 0 }];
 
@@ -208,7 +208,7 @@ test('a claim costs one culture, and one more for every three tiles held beyond 
     return before - chronicle.resources.culture;
   });
 
-  expect(paid).toEqual([1, 1, 1, 2, 2, 2, 3]);
+  expect(paid).toEqual([1, 1, 2, 2, 2, 3, 3]);
   expect(chronicle.held).toHaveLength(8);
 });
 
@@ -639,13 +639,13 @@ test('a city-mode click is refused for the culture it costs, and a tile off the 
   const city = alone();
   const paid = alone({ resources: culture(1) });
 
-  expect(tileCost(CATALOGUE, city, { q: 1, r: 0 })).toEqual([{ resource: 'culture', amount: 1 }]);
+  expect(tileCost(city, { q: 1, r: 0 })).toEqual([{ resource: 'culture', amount: 1 }]);
   expect(tileRefusal(CATALOGUE, city, { q: 1, r: 0 })).toEqual({
     unaffordable: ['culture'],
     blocked: [],
   });
   expect(tileRefusal(CATALOGUE, paid, { q: 1, r: 0 })).toEqual({ unaffordable: [], blocked: [] });
-  expect(tileCost(CATALOGUE, paid, CITY)).toEqual([]);
+  expect(tileCost(paid, CITY)).toEqual([]);
   expect(tileRefusal(CATALOGUE, paid, CITY)).toEqual({ unaffordable: [], blocked: [] });
 });
 

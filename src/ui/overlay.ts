@@ -74,7 +74,7 @@ export type Overlay = {
   /** A key pressed while a slot of the Controls window listens binds there, and is taken. */
   binds(press: Bind): boolean;
   /**
-   * Raises the capstone's window on the founding's first render, the deal window while the chronicle
+   * Raises the capstone's window on the opening's first render, the deal window while the chronicle
    * waits on a deal and the ending screen once it has ended, and nothing while it runs.
    */
   render(chronicle: Chronicle): void;

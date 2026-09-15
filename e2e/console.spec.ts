@@ -22,7 +22,7 @@ import {
   watch,
 } from './chronicle-screen';
 
-/** A tile on bare map, clear of the resource bar, the piles and the hand; the founding never sees it. */
+/** A tile on bare map, clear of the resource bar, the piles and the hand; the opening never sees it. */
 const BARE = { q: 0, r: -3 };
 
 /** The chronicle an enemy stands on a tile of that nobody has ever charted. */

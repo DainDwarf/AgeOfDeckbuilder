@@ -12,7 +12,7 @@ import {
   watch,
 } from './chronicle-screen';
 
-/** A tile on bare map, clear of the resource bar, the piles and the hand; the founding never sees it. */
+/** A tile on bare map, clear of the resource bar, the piles and the hand; the opening never sees it. */
 const BARE = { q: 0, r: -3 };
 
 /** Every slot of the Controls window as it reads before a single key has been rebound. */
@@ -205,7 +205,7 @@ test('a slot takes the next key pressed, and keeps it across a reload', async ({
   await expect.poll(() => standing(page, 'menu')).toBe(true);
   await page.keyboard.press('Escape');
   await expect.poll(() => standing(page, 'menu')).toBe(false);
-  // The reload founds the chronicle again, and the menu closes back onto its capstone window.
+  // The reload begins the chronicle again, and the menu closes back onto its capstone window.
   await click(page, 'capstone-card-0');
   await expect.poll(() => standing(page, 'capstone')).toBe(false);
 

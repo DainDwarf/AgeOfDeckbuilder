@@ -36,7 +36,7 @@ function standingRun(): number {
   });
 }
 
-/** Every card the chronicle holds, wherever it stands: the deck it was founded on. */
+/** Every card the chronicle holds, wherever it stands: the deck it was begun on. */
 function cardsHeld(chronicle: Chronicle): string[] {
   return [...chronicle.drawPile, ...chronicle.hand, ...chronicle.discardPile].sort();
 }

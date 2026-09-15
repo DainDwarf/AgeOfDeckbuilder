@@ -12,7 +12,7 @@ import {
   watch,
 } from './chronicle-screen';
 
-/** The first seed whose map runs a river along a tile the founding has charted. */
+/** The first seed whose map runs a river along a tile the opening has charted. */
 function riverSeed(): number {
   return firstSeed('runs a river along a charted tile', (seed) =>
     riverRuns(launch(seed, deckOf(STAND_IN, 'PH_Deck'))) > 0 ? seed : undefined,

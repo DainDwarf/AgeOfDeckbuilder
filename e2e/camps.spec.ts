@@ -44,7 +44,7 @@ test('the map draws the camps it was dealt, and the raid’s warrior stands on o
 
   await open(page, SEED, 'PH_Deck');
 
-  // Every camp stands beyond the city's sight at the founding: uncharted, and drawn not at all.
+  // Every camp stands beyond the city's sight at the opening: uncharted, and drawn not at all.
   const opened = await chronicleOf(page);
   const camps = campsOf(opened);
   expect(camps).toHaveLength(regionOf(STAND_IN, STAND_IN_REGION).camps);

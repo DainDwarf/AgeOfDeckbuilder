@@ -70,7 +70,7 @@ function opening(border: Border = 'ring'): Chronicle {
 
 /** The culture threshold a claim on the tile asks for, as the tile wears it. */
 function threshold(chronicle: Chronicle, tile: TileCoords): string {
-  const [cost] = tileCost(STAND_IN, chronicle, tile);
+  const [cost] = tileCost(chronicle, tile);
   return text('threshold.culture', { culture: cost.amount });
 }
 
@@ -153,7 +153,7 @@ test('before the settle neither the city key nor culture nor population enters c
   await answered(page);
   expect(await inCityMode(page)).toBe(false);
 
-  await settle(page);
+  await settle(page, CENTRE, 'bare');
   await page.keyboard.press('c');
   await expect.poll(() => inCityMode(page)).toBe(true);
 

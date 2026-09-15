@@ -130,7 +130,7 @@ export type Stage = { readonly chronicle: Chronicle } & (
  * population and no tile held, the deck's cards shuffled into the draw pile from the seed, its settle
  * cards in hand in the deck's order, and the map charted of its centre part. A map whose centre part
  * names a tile the map does not hold is refused. The chronicle names the version of the catalogue it
- * is founded on.
+ * is begun on.
  */
 export function beginChronicle(
   catalogue: Catalogue,
@@ -190,7 +190,7 @@ export function launched(
 /**
  * The one way a chronicle changes: every command the player has goes through here, and answers the
  * stages it resolves as — never none, each of them charted of what stood in sight when it ended. A
- * chronicle founded on another version of the content than the catalogue's is refused first.
+ * chronicle begun on another version of the content than the catalogue's is refused first.
  */
 export function apply(catalogue: Catalogue, chronicle: Chronicle, command: Command): Stage[] {
   checkContent(catalogue, chronicle);

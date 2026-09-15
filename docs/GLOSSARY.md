@@ -81,7 +81,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **bridge** | A river edge with a road on both banks, crossed as if no river ran there. | ford, viaduct, span |
 | **improve** | To put an improvement on a tile where a worker stands; what an improvement instant does. | lay, build, place, install |
 | **yield** | What a tile's layers and the river running along it give at income, resource by resource. | output, produce, harvest |
-| **claim** | To take a charted tile adjacent to one the city holds into the border: by hand it costs culture, and a card may claim without. | buy, purchase, expand, annex |
+| **claim** | To take a charted tile adjacent to one the city holds into the border, for culture. | buy, purchase, expand, annex |
 | **culture** | The resource that claims tiles. | — |
 | **culture threshold** | The culture the next claim costs; rises with the tiles the city holds. | claim cost, step, price |
 | **health** | A unit's remaining life; at zero the unit is killed. | HP, hit points, hitpoints, life |

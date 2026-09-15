@@ -120,7 +120,7 @@ export type Deck = { readonly cards: readonly string[]; readonly settle: readonl
 
 /**
  * The content a chronicle is played on: the stats a unit of each kind enters the map with, every
- * script an enemy can carry, the map content, the cards and the decks a chronicle is founded on,
+ * script an enemy can carry, the map content, the cards and the decks a chronicle is begun on,
  * the events and the schedules its timeline is rolled from, what a camp is, enters and gives on its
  * capture, and the city: the terrain and the building it stands as, how far it sees, and how many
  * idle inhabitants it opens with. Every one of them is named by its key.
@@ -293,10 +293,10 @@ export function scheduleOf(catalogue: Catalogue, id: string): Schedule {
   return held(catalogue, catalogue.schedules, id, 'schedule');
 }
 
-/** A chronicle founded on any other version of the content than this catalogue's is refused. */
+/** A chronicle begun on any other version of the content than this catalogue's is refused. */
 export function checkContent(catalogue: Catalogue, chronicle: Chronicle): void {
   if (chronicle.content === catalogue.version) return;
-  refuse(catalogue, `a chronicle founded on ${chronicle.content} is played on no other content`);
+  refuse(catalogue, `a chronicle begun on ${chronicle.content} is played on no other content`);
 }
 
 /** What a unit entering the map is: its kind, the tile it stands on, and who it acts for. */

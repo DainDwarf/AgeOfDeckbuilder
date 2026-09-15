@@ -38,7 +38,7 @@ export type Snapshot = TileCoords & { readonly tile: Tile; readonly unit?: Snaps
 
 /** Everything one city's story is made of, and the generator every later draw comes from. */
 export type Chronicle = {
-  /** The version of the catalogue the chronicle was founded on, and the only one it is played on. */
+  /** The version of the catalogue the chronicle was begun on, and the only one it is played on. */
   readonly content: string;
   readonly seed: number;
   readonly rng: Rng;
