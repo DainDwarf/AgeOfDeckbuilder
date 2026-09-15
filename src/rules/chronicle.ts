@@ -1,15 +1,14 @@
 import { aimOf, leavesChronicle, refuses, struck } from './cards';
-import { type AimedCard, type Catalogue, cardOf, checkContent, enemyScript } from './catalogue';
-import { assign, type CityCommand, claim, founding, grow, income, reassign } from './city';
 import {
-  CITY_TILE,
-  generateMap,
-  type HexMap,
-  type Tile,
-  type TileCoords,
-  tileAt,
-  tileKey,
-} from './map';
+  type AimedCard,
+  type Catalogue,
+  cardOf,
+  checkContent,
+  type Deck,
+  enemyScript,
+} from './catalogue';
+import { assign, type CityCommand, claim, grow, income, reassign } from './city';
+import { generateMap, type HexMap, type TileCoords, tileAt, tileKey } from './map';
 import { refuse } from './map-kinds';
 import { RESOURCES } from './resources';
 import { seedRng, shuffle as shuffleItems } from './rng';
@@ -127,55 +126,48 @@ export type Stage = { readonly chronicle: Chronicle } & (
 );
 
 /**
- * The opening, on the map and the timeline it is handed: the centre tile is settled — its terrain and
- * its building become the catalogue's city's, and its feature is gone, whatever the map carried
- * there — the border and the inhabitants inside it are what a founding starts on, the deck it is
- * founded on is shuffled into its draw pile from the seed, the events phase runs on the first turn,
- * a hand is drawn unless that phase left a deal standing — the take draws it then — and the map is
- * charted of what the city sees from that turn. A map with no centre tile is refused. The chronicle
- * names the version of the catalogue it is founded on.
+ * The opening, on the map and the timeline it is handed: turn 0, the city standing nowhere with no
+ * population and no tile held, the deck's cards shuffled into the draw pile from the seed, its settle
+ * cards in hand in the deck's order, and the map charted of its centre part. A map whose centre part
+ * names a tile the map does not hold is refused. The chronicle names the version of the catalogue it
+ * is founded on.
  */
 export function beginChronicle(
   catalogue: Catalogue,
   seed: number,
-  deck: readonly CardId[],
+  deck: Deck,
   map: HexMap,
   timeline: Timeline,
 ): Chronicle {
-  if (tileAt(map.tiles, CITY_TILE) === undefined) {
-    refuse(catalogue, `the map holds no tile at ${tileKey(CITY_TILE)} for the city to settle`);
+  for (const coord of map.centre) {
+    if (tileAt(map.tiles, coord) !== undefined) continue;
+    refuse(
+      catalogue,
+      `the map's centre part names ${tileKey(coord)}, a tile the map does not hold`,
+    );
   }
-  const shuffled = shuffleItems(seedRng(seed), deck);
-  const tiles: Tile[] = map.tiles.map((tile) =>
-    tileKey(tile) === tileKey(CITY_TILE)
-      ? {
-          ...tile,
-          terrain: catalogue.city.terrain,
-          building: catalogue.city.building,
-          feature: undefined,
-        }
-      : tile,
-  );
-  const opened = events({
+  const shuffled = shuffleItems(seedRng(seed), deck.cards);
+  return charted(catalogue, {
     content: catalogue.version,
     seed,
     rng: shuffled.rng,
     timeline,
-    tiles,
+    tiles: map.tiles,
     snapshots: [],
     rivers: map.rivers,
-    city: CITY_TILE,
-    ...founding(catalogue, CITY_TILE, tiles),
-    turn: 1,
+    centre: map.centre,
+    held: [],
+    turn: 0,
     deal: [],
     resources: { food: 0, production: 0, military: 0, money: 0, science: 0, culture: 0 },
+    population: 0,
+    assigned: [],
     units: [],
     nextUnit: 1,
     drawPile: shuffled.items,
-    hand: [],
+    hand: [...deck.settle],
     discardPile: [],
   });
-  return charted(catalogue, opened.deal.length > 0 ? opened : draw(shuffle(draw(opened))));
 }
 
 /**
@@ -188,11 +180,11 @@ export function launched(
   region: string,
   schedule: string,
   seed: number,
-  deck: readonly CardId[],
+  deck: Deck,
 ): Chronicle {
-  const { tiles, rivers, rng } = generateMap(catalogue, region, seedRng(seed));
+  const { tiles, rivers, centre, rng } = generateMap(catalogue, region, seedRng(seed));
   const { timeline } = timelineOf(catalogue, schedule, rng);
-  return beginChronicle(catalogue, seed, deck, { tiles, rivers }, timeline);
+  return beginChronicle(catalogue, seed, deck, { tiles, rivers, centre }, timeline);
 }
 
 /**
@@ -207,8 +199,8 @@ export function apply(catalogue: Catalogue, chronicle: Chronicle, command: Comma
 
 /**
  * The stages a command resolves as before the map is charted. A chronicle that has ended refuses
- * every command and one waiting on a deal every command but the take, and a city left without
- * population falls on the last stage whatever it was.
+ * every command and one waiting on a deal every command but the take, and a standing city left
+ * without population falls on the last stage whatever it was.
  */
 function resolved(catalogue: Catalogue, chronicle: Chronicle, command: Command): Stage[] {
   if (chronicle.ending !== undefined) return [{ name: 'refused', chronicle }];
@@ -218,9 +210,10 @@ function resolved(catalogue: Catalogue, chronicle: Chronicle, command: Command):
 
   const stages = stagesOf(catalogue, chronicle, command);
 
-  const last = stages[stages.length - 1];
-  if (last.chronicle.ending !== undefined || last.chronicle.population > 0) return stages;
-  return [...stages.slice(0, -1), { ...last, chronicle: fall(last.chronicle, 'population') }];
+  const last = stages[stages.length - 1].chronicle;
+  if (last.ending !== undefined || last.city === undefined || last.population > 0) return stages;
+  const fallen = stages[stages.length - 1];
+  return [...stages.slice(0, -1), { ...fallen, chronicle: fall(last, 'population') }];
 }
 
 /**
@@ -286,10 +279,12 @@ export function outcome(stages: readonly Stage[]): Chronicle {
  * The end of turn, step by ordered step, each with the chronicle it leaves: a step that changed
  * nothing is absent, and the list ends at the capture when the city falls in the enemy phase, at the
  * victory when the city is still standing once the capstone's last turn is over, or at the deal a due
- * turn's events phase leaves standing — the hand waits on the take. The turn always ticks, so there
- * is always a stage.
+ * turn's events phase leaves standing — the hand waits on the take. Turn 0's end runs none of the
+ * cycle and opens on the tick. The tick leaves the hand empty, and the turn always ticks, so there is
+ * always a stage. A turn ended while the city stands nowhere is one `refused` stage.
  */
 function endOfTurn(catalogue: Catalogue, chronicle: Chronicle): Stage[] {
+  if (chronicle.city === undefined) return [{ name: 'refused', chronicle }];
   const stages: Stage[] = [];
   let standing = chronicle;
   const staged = (name: PlainStage, next: Chronicle): void => {
@@ -305,21 +300,24 @@ function endOfTurn(catalogue: Catalogue, chronicle: Chronicle): Stage[] {
     }
   };
 
-  staged('strike', struck(catalogue, standing));
-  staged('discard', discard(standing));
-  staged('income', income(catalogue, standing));
-  staged('grow', grow(standing));
-  raised(enemyPhase(catalogue, standing));
-  if (standing.ending !== undefined) return stages;
-  raised(captures(catalogue, standing));
-  if (survived(standing)) {
-    staged('victory', victory(standing));
-    return stages;
+  if (standing.turn > 0) {
+    staged('strike', struck(catalogue, standing));
+    staged('discard', discard(standing));
+    staged('income', income(catalogue, standing));
+    staged('grow', grow(standing));
+    raised(enemyPhase(catalogue, standing));
+    if (standing.ending !== undefined) return stages;
+    raised(captures(catalogue, standing));
+    if (survived(standing)) {
+      staged('victory', victory(standing));
+      return stages;
+    }
   }
 
   staged('turn', {
     ...standing,
     turn: standing.turn + 1,
+    hand: [],
     units: standing.units.map((unit) => refreshedAction(refreshedMovePoints(unit))),
   });
   staged('reinforce', continued(catalogue, standing));
@@ -424,7 +422,8 @@ function blocked(catalogue: Catalogue, chronicle: Chronicle, id: CardId): Block[
 /**
  * One card played: the aim is judged on the chronicle as it stands, the same one the map lit its
  * tiles from; then, on the one `played` stage, the card has left the hand for the discard pile — or
- * for nowhere at all, single use or hazard as it is — its cost is paid and its effect has landed. A
+ * for nowhere at all, as a settle card, a single use card, a hazard and any card played on turn 0
+ * do — its cost is paid and its effect has landed. A
  * play the hand, the city, the map or the discard pile refuses is one `refused` stage on the
  * chronicle as it stood, nothing paid or discarded.
  */
@@ -442,9 +441,10 @@ function play(catalogue: Catalogue, chronicle: Chronicle, command: PlayCommand):
     ...chronicle,
     resources,
     hand: chronicle.hand.filter((_, at) => at !== command.index),
-    discardPile: leavesChronicle(cardOf(catalogue, id))
-      ? chronicle.discardPile
-      : [...chronicle.discardPile, id],
+    discardPile:
+      chronicle.turn === 0 || leavesChronicle(cardOf(catalogue, id))
+        ? chronicle.discardPile
+        : [...chronicle.discardPile, id],
   };
   return [{ name: 'played', chronicle: effect(paid) }];
 }
@@ -597,7 +597,7 @@ function discard(chronicle: Chronicle): Chronicle {
  * and none for a move it did not make or an attack aimed at nobody.
  */
 function enemyPhase(catalogue: Catalogue, chronicle: Chronicle): Stage[] {
-  if (occupied(chronicle.units, chronicle.city)) {
+  if (chronicle.city !== undefined && occupied(chronicle.units, chronicle.city)) {
     return [{ name: 'capture', chronicle: fall(chronicle, 'capture') }];
   }
 

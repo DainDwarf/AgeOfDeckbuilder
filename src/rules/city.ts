@@ -1,5 +1,6 @@
 import type { Catalogue } from './catalogue';
 import { neighbours, type Tile, type TileCoords, tileKey, tileYield } from './map';
+import { refuse } from './map-kinds';
 import { RESOURCES } from './resources';
 import {
   assignedTo,
@@ -117,6 +118,8 @@ export function claimable(catalogue: Catalogue, chronicle: Chronicle): TileCoord
  * claimed past the tiles the founding held.
  */
 function cultureThreshold(catalogue: Catalogue, chronicle: Chronicle): number {
+  if (chronicle.city === undefined)
+    refuse(catalogue, 'a claim priced while the city stands nowhere');
   const founded = founding(catalogue, chronicle.city, chronicle.tiles).held.length;
   const claimed = Math.max(0, chronicle.held.length - founded);
   return CLAIM_FIRST + Math.floor(claimed / CLAIMS_PER_RISE);

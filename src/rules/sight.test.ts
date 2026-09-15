@@ -2,7 +2,7 @@ import { expect, test } from 'vitest';
 import { type Catalogue, catalogued, entered } from './catalogue';
 import { apply, outcome } from './chronicle';
 import { founding } from './city';
-import { CATALOGUE, NO_DEALS } from './fixtures';
+import { CATALOGUE, NO_DEALS, opening, plains, settledOn } from './fixtures';
 import { distance, MOVE_POINT, type Terrain, type Tile, type TileCoords, tileKey } from './map';
 import { seedRng } from './rng';
 import { charted, inSight } from './sight';
@@ -72,6 +72,7 @@ function founded(
     tiles,
     snapshots: [],
     rivers: [],
+    centre: [],
     city: CITY,
     held,
     turn: 1,
@@ -212,6 +213,24 @@ test('a city of sight one sees the six tiles around it, and none beyond them', (
     if (distance(CITY, tile) > 2) continue;
     expect(seen.has(tileKey(tile))).toBe(distance(CITY, tile) <= 1);
   }
+});
+
+test('the centre part stands in sight through turn 0, and from turn 1 falls into fog wherever the city does not see it', () => {
+  const at = { q: 3, r: 0 };
+  const far = { q: -3, r: 0 };
+  const beyond = { q: -4, r: 0 };
+  const opened = opening(plains(RADIUS), { reach: 3 });
+  const settled = settledOn(opened, at);
+  const ticked = outcome(apply(CATALOGUE, settled, { type: 'end-turn' }));
+
+  expect(sees(opened, far)).toBe(true);
+  expect(sees(opened, beyond)).toBe(false);
+  expect(sees(settled, far)).toBe(true);
+  expect(ticked.turn).toBe(1);
+  expect(sees(ticked, at)).toBe(true);
+  expect(sees(ticked, far)).toBe(false);
+  expect(snapshotOf(ticked, far)).toBeDefined();
+  expect(snapshotOf(ticked, beyond)).toBeUndefined();
 });
 
 test('the snapshot keeps a tile as it was last seen once the unit that saw it has left', () => {

@@ -7,6 +7,7 @@ import type { Chronicle } from '../src/rules/state';
 import {
   budget,
   chronicleOf,
+  cityTileOf,
   consoleKey,
   endTurn,
   enter,
@@ -72,6 +73,6 @@ test('the map draws the camps it was dealt, and the raid’s warrior stands on o
 
   expect(raided.turn).toBe(RAID);
   expect(enemy).toBeDefined();
-  expect(camps.map(tileKey)).toContain(tileKey(enemy?.tile ?? raided.city));
+  expect(camps.map(tileKey)).toContain(tileKey(enemy?.tile ?? cityTileOf(raided)));
   expect(problems).toEqual([]);
 });

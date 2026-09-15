@@ -8,6 +8,7 @@ import {
   browse,
   budget,
   chronicleOf,
+  cityTileOf,
   click,
   counted,
   dragOut,
@@ -113,7 +114,7 @@ test('Escape lets go of the card being aimed before it raises the menu', async (
 
   // The refresh instant admits the tile of a unit that has spent move points, so the worker moves out first.
   const standingStill = await chronicleOf(page);
-  await dragUnit(page, standingStill.city, run.tile);
+  await dragUnit(page, cityTileOf(standingStill), run.tile);
 
   const entered = await chronicleOf(page);
   await dragOut(page, entered.hand.indexOf('PH_March'));
@@ -135,8 +136,8 @@ test('the Menu button drops the selected tile before it raises the menu', async 
 
   await open(page, 1, 'PH_Deck');
   const opened = await chronicleOf(page);
-  await click(page, `tile-${tileKey(opened.city)}`);
-  await expect.poll(() => ringedTile(page)).toBe(tileKey(opened.city));
+  await click(page, `tile-${tileKey(cityTileOf(opened))}`);
+  await expect.poll(() => ringedTile(page)).toBe(tileKey(cityTileOf(opened)));
 
   await click(page, 'menu-button');
   await expect.poll(() => standing(page, 'menu')).toBe(true);
@@ -149,7 +150,7 @@ test('the Menu button drops the selected tile before it raises the menu', async 
   expect(problems).toEqual([]);
 });
 
-test('a new chronicle deals the same deck a fresh seed, on turn 1', async ({ page }) => {
+test('a new chronicle deals the same deck a fresh seed, on turn 0', async ({ page }) => {
   const problems = watch(page);
 
   await open(page, standingRun(), 'PH_Deck');
@@ -163,9 +164,11 @@ test('a new chronicle deals the same deck a fresh seed, on turn 1', async ({ pag
   await raised(page);
 
   const fresh = await chronicleOf(page);
-  expect(fresh.turn).toBe(1);
+  expect(fresh.turn).toBe(0);
   expect(fresh.seed).not.toBe(played.seed);
-  expect(cardsHeld(fresh)).toEqual(cardsHeld(played));
+  expect(cardsHeld(fresh)).toEqual(
+    [...cardsHeld(played), ...deckOf(STAND_IN, 'PH_Deck').settle].sort(),
+  );
 
   expect(problems).toEqual([]);
 });
@@ -190,7 +193,7 @@ test('the menu opens over the defeat screen, and a new chronicle takes the chron
 
   const fresh = await chronicleOf(page);
   expect(fresh.ending).toBeUndefined();
-  expect(fresh.turn).toBe(1);
+  expect(fresh.turn).toBe(0);
   expect(await standing(page, 'defeat')).toBe(false);
 
   expect(problems).toEqual([]);

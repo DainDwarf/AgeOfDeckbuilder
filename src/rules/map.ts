@@ -76,13 +76,15 @@ export type Tile = TileCoords & {
   readonly building?: BuildingTypeId;
 };
 
-/** A map: its tiles, and the rivers running along the edges between them. */
-export type HexMap = { readonly tiles: Tile[]; readonly rivers: River[] };
+/** A map: its tiles, the rivers running along the edges between them, and its centre part. */
+export type HexMap = {
+  readonly tiles: Tile[];
+  readonly rivers: River[];
+  readonly centre: TileCoords[];
+};
 
-export const CITY_TILE: TileCoords = { q: 0, r: 0 };
-
-/** The middle of the disc the generator deals, whatever settles there. */
-const CENTRE: TileCoords = { q: 0, r: 0 };
+/** The middle of the disc the generator deals. */
+export const CENTRE: TileCoords = { q: 0, r: 0 };
 
 /**
  * What a tile's layers and the river running along it give at income, resource by resource: the one
@@ -541,13 +543,14 @@ function campsOn(
 
 /**
  * The map a region deals: a hexagonal disc of tiles in axial coordinates around its centre,
- * generated in six layers: biomes spread from their origins, the centre's among them, a rim marked
+ * generated in seven layers: biomes spread from their origins, the centre's among them, a rim marked
  * around every biome that touches a biome of another kind, a terrain scattered from each biome's
  * table — the rim one where the rim reaches — each feature dealt over a share of the terrain it lies
- * on, rivers walked down from the biome they rise in along the edges between tiles, and the camps dealt
- * over the ground they name that the centre is walked to from. A deal holding fewer camps than the
- * region asks is thrown away and another dealt from the generator state it leaves; a tenth deal
- * short of them throws.
+ * on, rivers walked down from the biome they rise in along the edges between tiles, the camps dealt
+ * over the ground they name that the centre is walked to from, and the centre part: every tile
+ * within the region's reach of the disc's centre, which draws nothing. A deal holding fewer camps
+ * than the region asks is thrown away and another dealt from the generator state it leaves; a tenth
+ * deal short of them throws.
  */
 export function generateMap(
   catalogue: MapContent,
@@ -562,14 +565,14 @@ export function generateMap(
     }
     deal = dealMap(catalogue, region, deal.rng);
   }
-  return { rng: deal.rng, tiles: deal.tiles, rivers: deal.rivers };
+  return { rng: deal.rng, tiles: deal.tiles, rivers: deal.rivers, centre: deal.centre };
 }
 
 function dealMap(
   catalogue: MapContent,
   region: Region,
   initial: Rng,
-): { rng: Rng; tiles: Tile[]; rivers: River[]; placed: number } {
+): { rng: Rng; tiles: Tile[]; rivers: River[]; centre: TileCoords[]; placed: number } {
   const { radius, centreBiome, featureShares } = region;
   let rng = initial;
 
@@ -694,5 +697,11 @@ function dealMap(
     flowed.rivers,
   );
 
-  return { rng: camped.rng, rivers: flowed.rivers, tiles: camped.tiles, placed: camped.placed };
+  return {
+    rng: camped.rng,
+    rivers: flowed.rivers,
+    tiles: camped.tiles,
+    centre: coords.filter((coord) => distance(coord, CENTRE) <= region.centre),
+    placed: camped.placed,
+  };
 }

@@ -8,6 +8,7 @@ import { type Unit, unitAt } from '../src/rules/units';
 import {
   budget,
   chronicleOf,
+  cityTileOf,
   dragOut,
   dragTiles,
   endedTurn,
@@ -93,7 +94,7 @@ test('a warrior dragged onto an enemy attacks it, and its spent action refuses a
   const besetted = await chronicleOf(page);
   const warrior = besetted.units[0];
   const enemy = await unitOn(page, run.enemy);
-  expect(warrior.tile).toEqual(entered.city);
+  expect(warrior.tile).toEqual(cityTileOf(entered));
   expect(warrior.action).toBe(STAND_IN.units.PH_Warrior.action);
   expect(enemy?.faction).toBe('enemy');
 

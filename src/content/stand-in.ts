@@ -9,6 +9,7 @@ import {
   movePointsSpent,
   recalled,
   refreshed,
+  settled,
   slotFree,
   terraformed,
   throughWorker,
@@ -61,7 +62,9 @@ export const ADVANCE: EnemyScript = {
   },
 
   attacks(_catalogue: Catalogue, chronicle: Chronicle, enemy: Unit): Unit | undefined {
-    if (tileKey(enemy.tile) === tileKey(chronicle.city)) return undefined;
+    if (chronicle.city !== undefined && tileKey(enemy.tile) === tileKey(chronicle.city)) {
+      return undefined;
+    }
     return leastHealth(chronicle.units, enemy);
   },
 };
@@ -115,6 +118,15 @@ export const STAND_IN: Catalogue = catalogued({
   },
   scripts: { PH_Advance: ADVANCE },
   cards: {
+    PH_Settle: {
+      kind: 'settle',
+      cost: {},
+      aim: 'tile',
+      refuses: (catalogue, _chronicle, tile) =>
+        firstRefusal(made(catalogue, tile, ['plain', 'forest', 'hills']), slotFree(tile)),
+      effect: (catalogue, paid, at) =>
+        settled(catalogue, terraformed(catalogue, paid, at, catalogue.city.terrain), at),
+    },
     PH_Worker: { kind: 'unit', cost: { food: 2 }, ...enters('PH_Worker') },
     PH_Warrior: { kind: 'unit', cost: { military: 2 }, ...enters('PH_Warrior') },
     PH_Farm: {
@@ -201,7 +213,28 @@ export const STAND_IN: Catalogue = catalogued({
       }),
     },
   },
-  decks: { PH_Deck: copies(2), PH_LongDeck: copies(5) },
+  decks: {
+    PH_Deck: { cards: copies(2), settle: ['PH_Settle'] },
+    PH_LongDeck: { cards: copies(5), settle: ['PH_Settle'] },
+    PH_TallDeck: {
+      cards: ['PH_Worker', 'PH_Warrior', 'PH_Farm', 'PH_March', 'PH_Harvest'].flatMap((id) =>
+        Array<CardId>(5).fill(id),
+      ),
+      settle: ['PH_Settle'],
+    },
+    PH_ShortDeck: {
+      cards: [
+        'PH_Worker',
+        'PH_Warrior',
+        'PH_Farm',
+        'PH_March',
+        'PH_Harvest',
+        'PH_Farm',
+        'PH_March',
+      ],
+      settle: ['PH_Settle'],
+    },
+  },
   events: {
     PH_Raid: {
       reads: (_catalogue, chronicle) => ({ warriors: raiders(chronicle.turn) }),
@@ -312,6 +345,7 @@ export const STAND_IN: Catalogue = catalogued({
   regions: {
     [STAND_IN_REGION]: {
       radius: 8,
+      centre: 3,
       tilesPerBiome: 26,
       minBiomes: 5,
       centreBiome: 'land',
@@ -321,7 +355,7 @@ export const STAND_IN: Catalogue = catalogued({
       ],
       featureShares: [{ feature: 'PH_Fertile', share: 1 / 6 }],
       camps: 3,
-      campFromCentre: 4,
+      campFromCentre: 6,
       campsApart: 3,
       rivers: {
         source: 'mountain',
@@ -341,7 +375,7 @@ export const STAND_IN: Catalogue = catalogued({
   city: { terrain: 'urban', building: 'PH_City', sight: 2, holds: 1, idle: 2 },
 });
 
-/** A deck of this many copies of each founding card, in the order the founding cards are listed. */
+/** A deck's cards: this many copies of each founding card, in the order they are listed. */
 function copies(count: number): readonly CardId[] {
   return FOUNDING_CARDS.flatMap((id) => Array<CardId>(count).fill(id));
 }
@@ -357,10 +391,11 @@ function nearest(catalogue: Catalogue, chronicle: Chronicle, walker: Unit): Tile
   const targets = chronicle.units
     .filter((unit) => unit.faction === 'player')
     .map((unit) => unit.tile);
+  if (chronicle.city !== undefined) targets.push(chronicle.city);
 
   let chosen: TileCoords | undefined;
   let cheapest = Number.POSITIVE_INFINITY;
-  for (const coord of inTileOrder(chronicle.tiles, [...targets, chronicle.city])) {
+  for (const coord of inTileOrder(chronicle.tiles, targets)) {
     const cost = costs.get(tileKey(coord));
     if (cost !== undefined && cost < cheapest) {
       cheapest = cost;

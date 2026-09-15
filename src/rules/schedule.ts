@@ -1,7 +1,7 @@
 import { type Catalogue, cardOf, eventOf, type Span, scheduleOf } from './catalogue';
 import { enteredFromCamp, enteredOnCamp } from './enemies';
 import { distance, MOVE_POINT, pathCosts, type TileCoords, tileKey } from './map';
-import { buildingKind } from './map-kinds';
+import { buildingKind, refuse } from './map-kinds';
 import { nextRng, pickWeighted, type Rng } from './rng';
 import { type CardId, type Chronicle, holds, type Timeline } from './state';
 import { unitAt } from './units';
@@ -149,6 +149,8 @@ export function besieged(
   fromCity: Span,
   apart: number,
 ): Chronicle {
+  const { city } = chronicle;
+  if (city === undefined) refuse(catalogue, 'a siege landed while the city stands nowhere');
   const [near, far] = fromCity;
   const camp = catalogue.camp.building;
   const ground = buildingKind(catalogue, camp).terrains;
@@ -158,7 +160,7 @@ export function besieged(
     catalogue,
     chronicle.tiles,
     chronicle.rivers,
-    chronicle.city,
+    city,
     { kind: 'whole-map', move: MOVE_POINT },
     () => false,
   );
@@ -172,8 +174,8 @@ export function besieged(
         tile.building === undefined &&
         ground.includes(tile.terrain) &&
         reached.has(tileKey(tile)) &&
-        distance(tile, chronicle.city) >= near &&
-        distance(tile, chronicle.city) <= far &&
+        distance(tile, city) >= near &&
+        distance(tile, city) <= far &&
         !holds(chronicle, tile) &&
         unitAt(chronicle.units, tile) === undefined &&
         standing.every((other) => distance(tile, other) >= apart),

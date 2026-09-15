@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { apply, beginChronicle, type Command, launched, outcome } from './chronicle';
+import { apply, type Command, launched, outcome } from './chronicle';
 import { growthThreshold } from './city';
 import {
   assignTo,
@@ -19,9 +19,12 @@ import {
   madeOf,
   NO_GROWTH,
   only,
+  opening,
+  plains,
   REGION,
   SCHEDULE,
   type Standing,
+  settledOn,
   stagedBy,
   standing,
   withUnits,
@@ -127,12 +130,14 @@ test('the famine is dealt as readily on the third turn as the twentieth', () => 
   expect(Math.max(...turns)).toBeGreaterThanOrEqual(20);
 });
 
-test('a timeline dealing on the first turn opens the chronicle on its deal, and the take draws its hand', () => {
-  const opened = beginChronicle(CATALOGUE, 1, DECK, { tiles: field(4), rivers: [] }, dueOn(1));
-  const taken = outcome(apply(CATALOGUE, opened, { type: 'take', event: 'PH_Famine' }));
+test('a timeline dealing on the first turn stops the end of turn 0 on its deal, and the take draws its hand', () => {
+  const settled = settledOn(opening(plains(4), { timeline: dueOn(1) }), CITY);
+  const dealt = outcome(apply(CATALOGUE, settled, { type: 'end-turn' }));
+  const taken = outcome(apply(CATALOGUE, dealt, { type: 'take', event: 'PH_Famine' }));
 
-  expect(opened.deal).toEqual(['PH_Raid', 'PH_Famine']);
-  expect(opened.hand).toEqual([]);
+  expect(dealt.turn).toBe(1);
+  expect(dealt.deal).toEqual(['PH_Raid', 'PH_Famine']);
+  expect(dealt.hand).toEqual([]);
   expect(taken.deal).toEqual([]);
   expect(taken.hand).toHaveLength(5);
 });

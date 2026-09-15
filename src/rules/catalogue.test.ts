@@ -99,21 +99,60 @@ test('a catalogue whose city sees, holds rings or opens with idle inhabitants be
 });
 
 test('a catalogue whose deck names a card it does not hold is refused', () => {
-  const content = changed({ decks: { deck: [...DECK, 'PH_Scout'] } });
+  const content = changed({ decks: { deck: { ...DECK, cards: [...DECK.cards, 'PH_Scout'] } } });
 
   expect(() => catalogued(content)).toThrow(/^fixture: /);
 });
 
-test('a catalogue whose deck holds a hazard is refused', () => {
-  const content = changed({ decks: { deck: [...DECK, 'PH_Hunger'] } });
+test('a catalogue whose deck holds a hazard in either section is refused', () => {
+  const cards = changed({ decks: { deck: { ...DECK, cards: [...DECK.cards, 'PH_Hunger'] } } });
+  const settle = changed({ decks: { deck: { ...DECK, settle: [...DECK.settle, 'PH_Hunger'] } } });
+
+  expect(() => catalogued(cards)).toThrow(/^fixture: /);
+  expect(() => catalogued(settle)).toThrow(/^fixture: /);
+});
+
+test('a catalogue whose deck holds the camp’s reward in either section is refused', () => {
+  const { reward } = CATALOGUE.camp;
+  const cards = changed({ decks: { deck: { ...DECK, cards: [...DECK.cards, reward] } } });
+  const settle = changed({ decks: { deck: { ...DECK, settle: [...DECK.settle, reward] } } });
+
+  expect(() => catalogued(cards)).toThrow(/^fixture: /);
+  expect(() => catalogued(settle)).toThrow(/^fixture: /);
+});
+
+test('a catalogue whose deck’s settle section holds no settle card is refused', () => {
+  for (const settle of [[], ['PH_Harvest']]) {
+    const content = changed({ decks: { deck: { ...DECK, settle } } });
+
+    expect(() => catalogued(content)).toThrow(/^fixture: /);
+  }
+});
+
+test('a catalogue whose deck holds a settle card among its cards is refused', () => {
+  const content = changed({ decks: { deck: { ...DECK, cards: [...DECK.cards, 'PH_Settle'] } } });
 
   expect(() => catalogued(content)).toThrow(/^fixture: /);
 });
 
-test('a catalogue whose deck holds the camp’s reward is refused', () => {
-  const content = changed({ decks: { deck: [...DECK, CATALOGUE.camp.reward] } });
+test('a catalogue whose region’s camps may come within sight of the settle wherever it lands is refused', () => {
+  const disc = CATALOGUE.regions[REGION];
+  const { sight, holds } = CATALOGUE.city;
+  const reach = disc.centre + Math.max(sight, holds);
+  const near = changed({ regions: { [REGION]: { ...disc, campFromCentre: reach } } });
+  const far = changed({
+    version: 'far',
+    regions: { [REGION]: { ...disc, campFromCentre: reach + 1 } },
+  });
+  const seeing = changed({ city: { ...CATALOGUE.city, sight: disc.campFromCentre - disc.centre } });
+  const holding = changed({
+    city: { ...CATALOGUE.city, holds: disc.campFromCentre - disc.centre },
+  });
 
-  expect(() => catalogued(content)).toThrow(/^fixture: /);
+  expect(() => catalogued(near)).toThrow(/^fixture: /);
+  expect(catalogued(far)).toBe(far);
+  expect(() => catalogued(seeing)).toThrow(/^fixture: /);
+  expect(() => catalogued(holding)).toThrow(/^fixture: /);
 });
 
 test('a catalogue whose camp’s reward is a card it does not hold is refused', () => {
@@ -182,12 +221,11 @@ test('a map of a region the catalogue does not hold is refused', () => {
   expect(() => generateMap(CATALOGUE, 'tundra', seedRng(1))).toThrow(/^fixture: /);
 });
 
-test('the opening on a map with no centre tile is refused', () => {
+test('the opening on a map whose centre part names a tile the map does not hold is refused', () => {
   const holed = field(2).filter((tile) => tileKey(tile) !== tileKey(CITY));
+  const map = { tiles: holed, rivers: [], centre: [CITY] };
 
-  expect(() => beginChronicle(CATALOGUE, 1, DECK, { tiles: holed, rivers: [] }, NO_DEALS)).toThrow(
-    /^fixture: /,
-  );
+  expect(() => beginChronicle(CATALOGUE, 1, DECK, map, NO_DEALS)).toThrow(/^fixture: /);
 });
 
 test('a catalogue whose region’s rivers rise in a biome it does not hold is refused', () => {

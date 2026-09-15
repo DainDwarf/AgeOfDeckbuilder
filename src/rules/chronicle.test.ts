@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { apply, beginChronicle, type Command, launched, outcome } from './chronicle';
+import { apply, type Command, launched, outcome } from './chronicle';
 import {
   CATALOGUE,
   CITY,
@@ -9,18 +9,22 @@ import {
   everyCard,
   field,
   fullDraw,
-  NO_DEALS,
   NO_GROWTH,
+  opening,
+  plains,
   REGION,
   SCHEDULE,
+  settledLaunch,
+  settledOn,
   stagedBy,
   standing,
   worker,
 } from './fixtures';
-import { MOVE_POINT, type Tile, tileAt, tileKey } from './map';
+import { distance, MOVE_POINT, type Tile, tileAt, tileKey } from './map';
 import { RESOURCES } from './resources';
 import { seedRng } from './rng';
-import type { Chronicle } from './state';
+import { inSight } from './sight';
+import { type Chronicle, idle } from './state';
 
 /** A disc of plain out to eight, with nothing on it but a fertile plain on its centre tile. */
 function plainDisc(): Tile[] {
@@ -48,11 +52,20 @@ test('a chronicle survives JSON and carries its generator on', () => {
   expect(chronicle.rng).not.toEqual(seedRng(chronicle.seed));
 });
 
-test('a chronicle opens on turn one, with empty stores', () => {
+test('a chronicle opens on turn 0 with empty stores, the city standing nowhere, the settle cards in hand and the centre part alone in sight', () => {
   const chronicle = launched(CATALOGUE, REGION, SCHEDULE, 1234, DECK);
+  const centre = chronicle.centre.map(tileKey).sort();
 
-  expect(chronicle.turn).toBe(1);
+  expect(chronicle.turn).toBe(0);
   for (const resource of RESOURCES) expect(chronicle.resources[resource]).toBe(0);
+  expect(chronicle.city).toBeUndefined();
+  expect(chronicle.population).toBe(0);
+  expect(chronicle.held).toEqual([]);
+  expect(chronicle.hand).toEqual(DECK.settle);
+  expect([...chronicle.drawPile].sort()).toEqual([...DECK.cards].sort());
+  expect(centre.length).toBeGreaterThan(1);
+  expect([...inSight(CATALOGUE, chronicle)].sort()).toEqual(centre);
+  expect(chronicle.snapshots.map(tileKey).sort()).toEqual(centre);
 });
 
 test('ending the turn moves the chronicle on to the next one', () => {
@@ -79,8 +92,8 @@ test('growth is staged right after the income it comes from, and before the enem
   ]);
 });
 
-test('the hand holds five cards on founding, and five again after every turn', () => {
-  let chronicle = launched(CATALOGUE, REGION, SCHEDULE, 4242, DECK);
+test('the hand holds five cards on turn 1, and five again after every turn', () => {
+  let chronicle = settledLaunch(CATALOGUE, REGION, SCHEDULE, 4242, DECK);
   expect(chronicle.hand).toHaveLength(5);
 
   for (let turn = 0; turn < 6; turn++) {
@@ -196,9 +209,9 @@ test('a stage of the end of turn that changed nothing is left out of it', () => 
 });
 
 test('every card of the deck is in exactly one pile through a full cycle', () => {
-  let chronicle = launched(CATALOGUE, REGION, SCHEDULE, 2026, DECK);
+  let chronicle = settledLaunch(CATALOGUE, REGION, SCHEDULE, 2026, DECK);
   const deck = everyCard(chronicle);
-  expect(deck).toHaveLength(DECK.length);
+  expect(deck).toHaveLength(DECK.cards.length);
 
   for (let turn = 0; turn < 8; turn++) {
     chronicle = outcome(apply(CATALOGUE, chronicle, { type: 'play', index: 0, aim: 'none' }));
@@ -234,25 +247,74 @@ test('a city with no population left falls, whatever the command was', () => {
   expect(ended.ending).toEqual({ outcome: 'defeat', cause: 'population', turn: ended.turn });
 });
 
-test('the opening settles the centre tile: the city’s terrain, the city’s building, and no feature', () => {
-  const chronicle = beginChronicle(
-    CATALOGUE,
-    1234,
-    DECK,
-    { tiles: plainDisc(), rivers: [] },
-    NO_DEALS,
-  );
-  const centre = tileAt(chronicle.tiles, chronicle.city);
+test('the settle puts the city on its tile: its terrain and building, no feature, the tiles it holds staffed, and the card in no pile', () => {
+  const opened = opening(plainDisc());
+  const settled = settledOn(opened, CITY);
+  const centre = tileAt(settled.tiles, CITY);
 
-  expect(tileKey(chronicle.city)).toBe(tileKey(CITY));
+  expect(settled.city).toEqual(CITY);
   expect(centre?.terrain).toBe(CATALOGUE.city.terrain);
   expect(centre?.building).toBe(CATALOGUE.city.building);
   expect(centre?.feature).toBeUndefined();
-  for (const tile of chronicle.tiles) {
+  for (const tile of settled.tiles) {
     if (tileKey(tile) === tileKey(CITY)) continue;
     expect(tile.terrain).toBe('plain');
     expect(tile.building).toBeUndefined();
   }
+  expect(settled.held.map(tileKey).sort()).toEqual(
+    settled.tiles
+      .filter((tile) => distance(tile, CITY) <= CATALOGUE.city.holds)
+      .map(tileKey)
+      .sort(),
+  );
+  expect(settled.assigned.map(tileKey).sort()).toEqual(settled.held.map(tileKey).sort());
+  expect(idle(settled)).toBe(CATALOGUE.city.idle);
+  expect(settled.hand).toEqual([]);
+  expect(settled.discardPile).toEqual([]);
+  expect(everyCard(settled)).toEqual([...DECK.cards].sort());
+});
+
+test('ending turn 0 is refused while the city stands nowhere, and a chronicle standing nowhere never falls for its population', () => {
+  const opened = opening(plains(3));
+
+  expect(opened.population).toBe(0);
+  expect(stagedBy(opened, { type: 'end-turn' })).toEqual(['refused']);
+  expect(outcome(apply(CATALOGUE, opened, { type: 'end-turn' }))).toBe(opened);
+  expect(outcome(apply(CATALOGUE, opened, { type: 'play', index: 0, aim: 'none' })).ending).toBe(
+    undefined,
+  );
+});
+
+test('the end of turn 0 runs none of the cycle: turn 1 and its hand drawn, no income, no growth, and the settle cards left in hand gone', () => {
+  const opened = opening(plains(3), {
+    deck: { cards: DECK.cards, settle: ['PH_Settle', 'PH_Settle'] },
+  });
+  const settled = settledOn(opened, CITY);
+  const stocked: Chronicle = { ...settled, resources: { ...settled.resources, food: 99 } };
+
+  const stages = apply(CATALOGUE, stocked, { type: 'end-turn' });
+  const after = outcome(stages);
+
+  expect(stocked.hand).toEqual(['PH_Settle']);
+  expect(stages.map((stage) => stage.name)).toEqual(['turn', 'draw']);
+  expect(after.turn).toBe(1);
+  expect(after.hand).toHaveLength(5);
+  expect(after.resources).toEqual(stocked.resources);
+  expect(after.population).toBe(stocked.population);
+  expect(everyCard(after)).toEqual([...DECK.cards].sort());
+});
+
+test('any card played on turn 0 leaves the chronicle, and the hand holds the settle section in the deck’s order', () => {
+  const opened = opening(plains(3), { deck: { cards: [], settle: ['PH_Harvest', 'PH_Settle'] } });
+  const paying: Chronicle = { ...opened, resources: { ...opened.resources, science: 1 } };
+
+  const harvested = outcome(apply(CATALOGUE, paying, { type: 'play', index: 0, aim: 'none' }));
+
+  expect(opened.hand).toEqual(['PH_Harvest', 'PH_Settle']);
+  expect(harvested.resources.food).toBe(2);
+  expect(harvested.hand).toEqual(['PH_Settle']);
+  expect(harvested.discardPile).toEqual([]);
+  expect(everyCard(harvested)).toEqual(['PH_Settle']);
 });
 
 test('a chronicle that has ended takes no command at all', () => {

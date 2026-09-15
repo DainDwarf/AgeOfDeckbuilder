@@ -4,7 +4,7 @@ import type { Stage, UnitCommand } from '../rules/chronicle';
 import { cityDrag, claimable, type ReassignCommand } from '../rules/city';
 import {
   type BuildingTypeId,
-  CITY_TILE,
+  CENTRE,
   type Corner,
   cornerKey,
   cornersOf,
@@ -430,7 +430,7 @@ function pressedOn(tile: TileCoords): PressedTile {
 
 /** Where a corner of the tile lattice stands on the map's own surface. */
 function cornerAt({ x, y }: Corner): Phaser.Math.Vector2 {
-  const middle = positionOf(CITY_TILE);
+  const middle = positionOf(CENTRE);
   return new Phaser.Math.Vector2(
     middle.x + x * (Math.sqrt(3) / 2) * TILE_SIZE,
     middle.y + (y * TILE_SIZE) / 2,
@@ -604,7 +604,7 @@ export function createMapView(
   let taking = true;
 
   const box = boxOf(chronicle.tiles);
-  const centre = positionOf(CITY_TILE);
+  const centre = positionOf(CENTRE);
   let zoom = 1;
   const catchers = new Set<Phaser.GameObjects.Zone>();
 
@@ -871,7 +871,7 @@ export function createMapView(
   } => {
     presser?.disableInteractive();
     const catcher = catcherZone('aim');
-    const glow = scene.add.container(0, 0).setDepth(GLOW_DEPTH);
+    const glow = scene.add.container(0, 0).setDepth(GLOW_DEPTH).setName('aim-lit');
     layer.add(glow);
     overDim.add(glow);
     liftOverDim();
@@ -1160,8 +1160,10 @@ export function createMapView(
   const paintBorder = (): void => {
     rings.removeAll(true);
     if (shown === undefined) return;
+    const { city } = shown;
     for (const coord of shown.held) {
-      rings.add(ringMark(scene, coord, ACCENT, same(coord, shown.city) ? CITY_RING : RING));
+      const weight = city !== undefined && same(coord, city) ? CITY_RING : RING;
+      rings.add(ringMark(scene, coord, ACCENT, weight));
     }
   };
 

@@ -2,10 +2,10 @@ import { expect, type Page } from '@playwright/test';
 import type Phaser from 'phaser';
 import { STAND_IN, STAND_IN_REGION, STAND_IN_SCHEDULE } from '../src/content/stand-in';
 import { aimOf } from '../src/rules/cards';
-import { type AimedCard, cardOf, deckOf } from '../src/rules/catalogue';
+import { type AimedCard, cardOf, type Deck, deckOf } from '../src/rules/catalogue';
 import { admitted, apply, launched, outcome, refusalOf } from '../src/rules/chronicle';
 import {
-  CITY_TILE,
+  CENTRE,
   neighbours,
   type River,
   riversAlong,
@@ -39,14 +39,28 @@ declare global {
 
 /**
  * The chronicle the screen opens on a seed, a deck and a schedule, launched exactly as the boot
- * launches it: on the schedule the boot takes when the address names none, unless one is given.
+ * launches it — on the schedule the boot takes when the address names none, unless one is given —
+ * and settled exactly as `open` settles it: the settle card played on the centre tile, or on the
+ * tile given, and turn 0 ended, a deal turn 1 stops on left standing.
  */
 export function launch(
   seed: number,
-  deck: readonly CardId[],
+  deck: Deck,
   schedule: string = STAND_IN_SCHEDULE,
+  at: TileCoords = CENTRE,
 ): Chronicle {
-  return launched(STAND_IN, STAND_IN_REGION, schedule, seed, deck);
+  const opened = launched(STAND_IN, STAND_IN_REGION, schedule, seed, deck);
+  const index = opened.hand.findIndex((id) => cardOf(STAND_IN, id).kind === 'settle');
+  const settling = outcome(apply(STAND_IN, opened, { type: 'play', index, aim: 'tile', tile: at }));
+  if (settling.city === undefined)
+    throw new Error(`seed ${seed} settles no city on ${tileKey(at)}`);
+  return outcome(apply(STAND_IN, settling, { type: 'end-turn' }));
+}
+
+/** The tile the city stands on, for a spec whose chronicle has settled it. */
+export function cityTileOf(chronicle: Chronicle): TileCoords {
+  if (chronicle.city === undefined) throw new Error('the city of this chronicle stands nowhere');
+  return chronicle.city;
 }
 
 /** How far up a card comes before the release plays it or aims it, in design units, and then some. */
@@ -59,11 +73,12 @@ const COLD_START_MS = 10_000;
 const TURN_MS = 10_000;
 
 /**
- * How long a spec may take, in milliseconds: `turns` counts every end of turn it plays out, and a
- * gesture whose release plays out stages of its own counts as one more.
+ * How long a spec may take, in milliseconds: `turns` counts every end of turn it plays out past the
+ * settle's, which is counted here, and a gesture whose release plays out stages of its own counts as
+ * one more.
  */
 export function budget(turns: number): number {
-  return COLD_START_MS + TURN_MS * turns;
+  return COLD_START_MS + TURN_MS * (turns + 1);
 }
 
 /** Where a named object's centre sits on the page, and what one design unit measures there. */
@@ -80,27 +95,49 @@ export function watch(page: Page): string[] {
 }
 
 /**
- * Opens the chronicle a seed, a deck and a schedule found, waits for its scene to run, and closes
- * the capstone's window every founding opens on, leaving the chronicle screen bare. The card and not
- * the back key closes it: that key is rebindable, and specs rebind it.
+ * Opens the chronicle a seed, a deck and a schedule found, waits for its scene to run, closes the
+ * capstone's window every chronicle opens on, and settles on the centre tile or the tile given:
+ * turn 1 open on the chronicle screen, or the deal it stops on standing. The card and not the back
+ * key closes the window: that key is rebindable, and specs rebind it.
  */
 export async function open(
   page: Page,
   seed: number,
-  deck: string | readonly CardId[],
+  deck: string,
   schedule: string = STAND_IN_SCHEDULE,
+  at: TileCoords = CENTRE,
 ): Promise<void> {
   await openOnCapstone(page, seed, deck, schedule);
   await click(page, 'capstone-card-0');
   await expect.poll(() => standing(page, 'capstone')).toBe(false);
   await settled(page);
+  await settle(page, at);
 }
 
-/** The same, with the capstone's window left standing as the founding raised it. */
+/**
+ * The settle as a player makes it on turn 0: the settle card dragged out of the hand, the centre
+ * tile or the tile given pressed, and the turn ended once the city stands.
+ */
+export async function settle(page: Page, at: TileCoords = CENTRE): Promise<void> {
+  const { hand } = await chronicleOf(page);
+  await dragOut(
+    page,
+    hand.findIndex((id) => cardOf(STAND_IN, id).kind === 'settle'),
+  );
+  await aimed(page);
+  await click(page, `tile-${tileKey(at)}`);
+  await playedOut(page);
+  await page.waitForFunction(
+    () => window.game?.scene.getScene<ChronicleScene>('chronicle').chronicle.city !== undefined,
+  );
+  await stoppedTurn(page);
+}
+
+/** The same as `open` before the settle, with the capstone's window left standing as the opening raised it. */
 export async function openOnCapstone(
   page: Page,
   seed: number,
-  deck: string | readonly CardId[],
+  deck: string,
   schedule: string = STAND_IN_SCHEDULE,
 ): Promise<void> {
   await page.addInitScript(() => {
@@ -138,8 +175,7 @@ export async function openOnCapstone(
     window.counted = (name) =>
       layers().reduce((total, layer) => total + within(layer.list, name, []).length, 0);
   });
-  const cards = typeof deck === 'string' ? deck : deck.join(',');
-  await page.goto(`/?seed=${seed}&deck=${cards}&schedule=${schedule}`);
+  await page.goto(`/?seed=${seed}&deck=${deck}&schedule=${schedule}`);
   await page.waitForFunction(() => window.game?.scene.isActive('chronicle') === true);
   await settled(page);
   await expect.poll(() => standing(page, 'capstone')).toBe(true);
@@ -195,15 +231,15 @@ export function onScreen(page: Page, name: string): Promise<OnScreen> {
 
 /**
  * Where a tile's face stands on the page, whether the map draws it or not: the map lays its tiles on
- * two axes, and the city's own face with the two beside it — always in sight — give both. Where a
- * spec presses for a tile the map may be drawing nothing of, a press that lands off the map.
+ * two axes, and the centre tile's face with the two beside it — charted from turn 0 on — give both.
+ * Where a spec presses for a tile the map may be drawing nothing of, a press that lands off the map.
  */
 export async function tileOnScreen(page: Page, coord: TileCoords): Promise<OnScreen> {
-  const origin = await onScreen(page, `tile-${tileKey(CITY_TILE)}`);
-  const alongQ = await onScreen(page, `tile-${tileKey({ q: CITY_TILE.q + 1, r: CITY_TILE.r })}`);
-  const alongR = await onScreen(page, `tile-${tileKey({ q: CITY_TILE.q, r: CITY_TILE.r + 1 })}`);
-  const q = coord.q - CITY_TILE.q;
-  const r = coord.r - CITY_TILE.r;
+  const origin = await onScreen(page, `tile-${tileKey(CENTRE)}`);
+  const alongQ = await onScreen(page, `tile-${tileKey({ q: CENTRE.q + 1, r: CENTRE.r })}`);
+  const alongR = await onScreen(page, `tile-${tileKey({ q: CENTRE.q, r: CENTRE.r + 1 })}`);
+  const q = coord.q - CENTRE.q;
+  const r = coord.r - CENTRE.r;
   return {
     x: origin.x + q * (alongQ.x - origin.x) + r * (alongR.x - origin.x),
     y: origin.y + q * (alongQ.y - origin.y) + r * (alongR.y - origin.y),
@@ -212,11 +248,11 @@ export async function tileOnScreen(page: Page, coord: TileCoords): Promise<OnScr
 }
 
 /**
- * A point beside the tiles: up and left of the city, inside the map's frame, which starts under the
- * resource bar, and far enough out for the nearest tile to be well outside the map's disc.
+ * A point beside the tiles: up and left of the centre, inside the map's frame, which starts under
+ * the resource bar, and far enough out for the nearest tile to be well outside the map's disc.
  */
 export async function besideTiles(page: Page): Promise<{ x: number; y: number }> {
-  const city = await onScreen(page, `tile-${tileKey(CITY_TILE)}`);
+  const city = await onScreen(page, `tile-${tileKey(CENTRE)}`);
   return { x: city.x - 440 * city.unit, y: city.y - 160 * city.unit };
 }
 
@@ -456,11 +492,11 @@ function steppedThisTurn(
   const entered = outcome(apply(STAND_IN, chronicle, { type: 'play', index: enter, aim: 'none' }));
   if (entered.units.length !== 1) return undefined;
 
-  for (const first of neighbours(entered.city)) {
+  for (const first of neighbours(cityTileOf(entered))) {
     const stepped = outcome(apply(STAND_IN, entered, { type: 'move', unit: 1, tile: first }));
     if (stepped === entered) continue;
     for (const second of neighbours(first)) {
-      if (tileKey(second) === tileKey(entered.city)) continue;
+      if (tileKey(second) === tileKey(cityTileOf(entered))) continue;
       if (outcome(apply(STAND_IN, stepped, { type: 'move', unit: 1, tile: second })) !== stepped) {
         return { first, second };
       }
@@ -518,7 +554,7 @@ function workedThisTurn(
   const entered = outcome(apply(STAND_IN, chronicle, { type: 'play', index: enter, aim: 'none' }));
   if (entered.units.length !== 1 || !entered.hand.includes(card)) return undefined;
 
-  for (const tile of neighbours(entered.city)) {
+  for (const tile of neighbours(cityTileOf(entered))) {
     const moved = outcome(apply(STAND_IN, entered, { type: 'move', unit: 1, tile }));
     if (moved === entered) continue;
     const standing = tileAt(moved.tiles, tile);

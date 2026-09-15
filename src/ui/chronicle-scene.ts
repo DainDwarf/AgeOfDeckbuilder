@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { refuses } from '../rules/cards';
-import type { Catalogue } from '../rules/catalogue';
+import type { Catalogue, Deck } from '../rules/catalogue';
 import {
   admitted,
   apply,
@@ -15,7 +15,7 @@ import {
 import { cityCommand, type ReassignCommand, tileCost, tileRefusal } from '../rules/city';
 import { tileAt, tileKey } from '../rules/map';
 import { RESOURCES, type Resource } from '../rules/resources';
-import { type CardId, type Chronicle, type Cost, playable } from '../rules/state';
+import { type Chronicle, type Cost, playable } from '../rules/state';
 import { unitOf } from '../rules/units';
 import { createBand } from './band';
 import { boundTo } from './bindings';
@@ -61,7 +61,7 @@ export class ChronicleScene extends Phaser.Scene {
   private readonly catalogue: Catalogue;
   private readonly region: string;
   private readonly schedule: string;
-  private readonly deck: readonly CardId[];
+  private readonly deck: Deck;
   private current: Chronicle;
   /** The play-out running on the chronicle screen as it stands, and nothing while none is. */
   private sequence: symbol | undefined;
@@ -71,7 +71,7 @@ export class ChronicleScene extends Phaser.Scene {
     region: string,
     schedule: string,
     seed: number | undefined,
-    deck: readonly CardId[],
+    deck: Deck,
   ) {
     super('chronicle');
     this.catalogue = catalogue;
@@ -316,7 +316,12 @@ export class ChronicleScene extends Phaser.Scene {
               return;
             }
             if (cityMode) void act(found);
-            else if (tileKey(found.tile) === tileKey(this.current.city)) enterCityMode();
+            else if (
+              this.current.city !== undefined &&
+              tileKey(found.tile) === tileKey(this.current.city)
+            ) {
+              enterCityMode();
+            }
             return;
         }
       },
@@ -548,6 +553,15 @@ export class ChronicleScene extends Phaser.Scene {
     const hover = onHover(button, paint, paint);
     onClick(button, endTurn);
 
+    /** Whether the screen wants the button live, and whether the city it would end the turn of stands. */
+    let wanted = true;
+    let standing = false;
+    const interact = (): void => {
+      if (wanted && standing) button.setInteractive({ useHandCursor: true });
+      else button.disableInteractive();
+      hover.end();
+    };
+
     /** The label a roll is carrying off the button; a render owns it and takes it down. */
     let leaving: Phaser.GameObjects.Text | undefined;
 
@@ -560,6 +574,10 @@ export class ChronicleScene extends Phaser.Scene {
       }
       label.setPosition(x, y).setAlpha(1);
       turn = chronicle.turn;
+      if (standing !== (chronicle.city !== undefined)) {
+        standing = chronicle.city !== undefined;
+        interact();
+      }
       paint();
     };
 
@@ -589,12 +607,11 @@ export class ChronicleScene extends Phaser.Scene {
         return stage.name === 'turn' ? roll(stage.chronicle) : undefined;
       },
       live(on: boolean): void {
-        if (on) button.setInteractive({ useHandCursor: true });
-        else button.disableInteractive();
-        hover.end();
+        wanted = on;
+        interact();
       },
     };
-    part.live(true);
+    interact();
     return part;
   }
 }

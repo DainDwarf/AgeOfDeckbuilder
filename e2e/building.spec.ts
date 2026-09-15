@@ -5,6 +5,7 @@ import {
   aimed,
   besideTiles,
   chronicleOf,
+  cityTileOf,
   dragOut,
   dragUnit,
   endTurn,
@@ -32,7 +33,7 @@ test('the farm card builds its farm where the worker moved to', async ({ page })
   );
 
   const entered = await chronicleOf(page);
-  await dragUnit(page, entered.city, run.tile);
+  await dragUnit(page, cityTileOf(entered), run.tile);
 
   const moved = await chronicleOf(page);
   const standing = await marksIn(page, 'buildings');
@@ -71,7 +72,7 @@ test('a right click while the farm card is aimed inspects, and the card stays ai
   await expect.poll(async () => (await chronicleOf(page)).units.length).toBe(1);
 
   const entered = await chronicleOf(page);
-  await dragUnit(page, entered.city, run.tile);
+  await dragUnit(page, cityTileOf(entered), run.tile);
 
   const moved = await chronicleOf(page);
   const destination = await onScreen(page, `tile-${tileKey(run.tile)}`);

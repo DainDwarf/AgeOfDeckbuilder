@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
-import type { CardId } from '../src/rules/state';
+import { STAND_IN } from '../src/content/stand-in';
+import { deckOf } from '../src/rules/catalogue';
 import {
   besideTheCards,
   browse,
@@ -21,19 +22,13 @@ import {
   wheel,
 } from './chronicle-screen';
 
-/** Five copies of each card: a pile of these lays out taller than the browse's frame. */
-const DECK: readonly CardId[] = [
-  'PH_Worker',
-  'PH_Warrior',
-  'PH_Farm',
-  'PH_March',
-  'PH_Harvest',
-].flatMap((id) => [id, id, id, id, id]);
+/** Five copies of each of five cards: a pile of these lays out taller than the browse's frame. */
+const DECK = 'PH_TallDeck';
 
 /** The first seed whose three ended turns leave the city standing on fifteen discarded cards. */
 function browseSeed(): number {
   return firstSeed('ends three turns standing on fifteen discarded cards', (seed) => {
-    let chronicle = launch(seed, DECK);
+    let chronicle = launch(seed, deckOf(STAND_IN, DECK));
     for (let turn = 0; turn < 3; turn++) {
       chronicle = endedTurn(chronicle);
     }

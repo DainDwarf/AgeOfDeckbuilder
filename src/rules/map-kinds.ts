@@ -67,10 +67,12 @@ export type RiverFlow = {
 /**
  * One composition of the map: the disc's radius, how many biomes it is cut into and which kinds are
  * dealt in what shares, the share of each feature, how many camps and how far each keeps from the
- * disc's centre and from every camp already placed, and how the river layer runs.
+ * disc's centre and from every camp already placed, how far the centre part reaches from the disc's
+ * centre, and how the river layer runs.
  */
 export type Region = {
   readonly radius: number;
+  readonly centre: number;
   readonly tilesPerBiome: number;
   readonly minBiomes: number;
   readonly centreBiome: string;

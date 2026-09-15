@@ -1,6 +1,7 @@
 import { expect, test } from 'vitest';
 import { CATALOGUE, REGION } from './fixtures';
 import {
+  CENTRE,
   type Corner,
   cornerKey,
   dealtBiomes,
@@ -11,7 +12,6 @@ import {
   type River,
   riversAlong,
   type Tile,
-  type TileCoords,
   tileAt,
   tileKey,
   tilesAtCorner,
@@ -25,9 +25,6 @@ const SEEDS = [0, 1, 1234, 0xdeadbeef | 0, 424242];
 
 /** The composition every map here is dealt from. */
 const DISC = regionOf(CATALOGUE, REGION);
-
-/** The middle of the disc. */
-const CENTRE: TileCoords = { q: 0, r: 0 };
 
 function mapOf(seed: number): Tile[] {
   return generateMap(CATALOGUE, REGION, seedRng(seed)).tiles;
@@ -110,6 +107,19 @@ test('the generator puts urban on no tile, and the centre tile is its biome’s 
     const tiles = mapOf(seed);
     expect(tiles.filter((tile) => tile.terrain === CATALOGUE.city.terrain)).toEqual([]);
     expect(tileAt(tiles, CENTRE)?.terrain).toBe(origin);
+  }
+});
+
+test('the map hands out its centre part: every tile within the region’s reach of the disc’s centre, and no other', () => {
+  for (const seed of SEEDS) {
+    const { tiles, centre } = generateMap(CATALOGUE, REGION, seedRng(seed));
+
+    expect(centre.map(tileKey).sort()).toEqual(
+      tiles
+        .filter((tile) => distance(tile, CENTRE) <= DISC.centre)
+        .map(tileKey)
+        .sort(),
+    );
   }
 });
 

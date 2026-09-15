@@ -6,9 +6,9 @@ import {
   budget,
   cardOnFace,
   click,
-  endTurn,
   onScreen,
   openOnCapstone,
+  settle,
   standing,
   titleOf,
   watch,
@@ -19,8 +19,8 @@ const CAPSTONE = scheduleOf(STAND_IN, STAND_IN_SCHEDULE).capstone.event;
 
 test('the founding announces the capstone, once', async ({ page }) => {
   const problems = watch(page);
-  // The turn ended to prove the window does not come back.
-  test.setTimeout(budget(1));
+  // The settle's turn ended to prove the window does not come back.
+  test.setTimeout(budget(0));
 
   await openOnCapstone(page, 1, 'PH_Deck');
   expect(await titleOf(page, 'capstone')).toBe(text('capstone.title'));
@@ -42,7 +42,7 @@ test('the founding announces the capstone, once', async ({ page }) => {
   await click(page, 'capstone-card-0');
   await expect.poll(() => standing(page, 'capstone')).toBe(false);
 
-  await endTurn(page);
+  await settle(page);
   expect(await standing(page, 'capstone')).toBe(false);
 
   expect(problems).toEqual([]);

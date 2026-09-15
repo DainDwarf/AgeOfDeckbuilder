@@ -8,6 +8,7 @@ import {
   aimed,
   budget,
   chronicleOf,
+  cityTileOf,
   dragOut,
   dragUnit,
   endedTurn,
@@ -129,7 +130,7 @@ test('the map is framed between the resource bar and the band, on the city', asy
   expect(Math.abs(frame.y + frame.height - band.y)).toBeLessThan(2);
   expect((await onScreen(page, 'band')).y).toBeGreaterThan(frame.y + frame.height);
 
-  const city = await chronicleOf(page).then((chronicle) => chronicle.city);
+  const city = await chronicleOf(page).then(cityTileOf);
   const at = await onScreen(page, `tile-${tileKey(city)}`);
   expect(Math.abs(at.x - (frame.x + frame.width / 2))).toBeLessThan(2);
   expect(Math.abs(at.y - (frame.y + frame.height / 2))).toBeLessThan(2);
@@ -246,7 +247,7 @@ test('a drag on bare ground pans the map, and a drag from the unit moves it', as
   const panned = await chronicleOf(page);
   expect(panned.units[0].tile).toEqual(entered.units[0].tile);
 
-  const city = await onScreen(page, `tile-${tileKey(entered.city)}`);
+  const city = await onScreen(page, `tile-${tileKey(cityTileOf(entered))}`);
   const destination = await onScreen(page, `tile-${tileKey(run.tile)}`);
   await drag(page, city, { x: destination.x - city.x, y: destination.y - city.y });
   await playedOut(page);
@@ -276,7 +277,7 @@ test('a drag during a tile aim pans the map, and the aim still builds after it',
   await expect.poll(async () => (await chronicleOf(page)).units.length).toBe(1);
 
   const entered = await chronicleOf(page);
-  await dragUnit(page, entered.city, run.tile);
+  await dragUnit(page, cityTileOf(entered), run.tile);
 
   const aiming = await chronicleOf(page);
   await dragOut(page, aiming.hand.indexOf('PH_Farm'));

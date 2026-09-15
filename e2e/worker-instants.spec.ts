@@ -12,6 +12,7 @@ import {
   aimed,
   budget,
   chronicleOf,
+  cityTileOf,
   dragOut,
   dragUnit,
   endedTurn,
@@ -54,7 +55,7 @@ async function moveOut(page: Page, run: Run): Promise<Chronicle> {
   );
 
   const entered = await chronicleOf(page);
-  await dragUnit(page, entered.city, run.tile);
+  await dragUnit(page, cityTileOf(entered), run.tile);
 
   return chronicleOf(page);
 }

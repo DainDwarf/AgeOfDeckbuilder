@@ -12,6 +12,7 @@ import {
   atTileRun,
   budget,
   chronicleOf,
+  cityTileOf,
   dragOut,
   dragUnit,
   endedTurn,
@@ -129,12 +130,12 @@ test('a press on a tile an aim refuses says one reason over it, and the card sta
   const index = atTile(opened);
   const card = aimOf(cardOf(STAND_IN, opened.hand[index]));
   if (card.aim !== 'tile') throw new Error(`${opened.hand[index]} is aimed at no tile`);
-  const tile = tileAt(opened.tiles, opened.city);
+  const tile = tileAt(opened.tiles, cityTileOf(opened));
   if (tile === undefined) throw new Error('the city stands on no tile of the map');
   const block = refuses(STAND_IN, opened, card, tile);
   if (block === undefined) throw new Error(`${opened.hand[index]} admits the city's own tile`);
 
-  const face = await onScreen(page, `tile-${tileKey(opened.city)}`);
+  const face = await onScreen(page, `tile-${tileKey(cityTileOf(opened))}`);
   await dragOut(page, index);
   await aimed(page);
   await page.mouse.click(face.x, face.y);
@@ -197,7 +198,7 @@ test('a press on a lit tile the city cannot pay for says the cost over it, and t
   await expect.poll(async () => (await chronicleOf(page)).units.length).toBe(1);
 
   const entered = await chronicleOf(page);
-  await dragUnit(page, entered.city, run.tile);
+  await dragUnit(page, cityTileOf(entered), run.tile);
 
   const aiming = await chronicleOf(page);
   const card = await onScreen(page, `hand-${aiming.hand.indexOf(UNPAID)}`);

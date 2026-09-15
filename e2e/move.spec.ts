@@ -4,6 +4,7 @@ import { movementCost, type TileCoords, tileAt, tileKey } from '../src/rules/map
 import type { Chronicle } from '../src/rules/state';
 import {
   chronicleOf,
+  cityTileOf,
   click,
   dragOut,
   dragUnit,
@@ -39,8 +40,8 @@ test('a unit crosses two tiles in two steps, and the turn refreshes what it spen
   expect(entered.units[0].movePoints).toBe(STAND_IN.units.PH_Worker.move);
 
   // The first step: the unit is clicked, then the tile the map lights under it.
-  await click(page, `tile-${tileKey(entered.city)}`);
-  await expect.poll(() => ringedTile(page)).toBe(tileKey(entered.city));
+  await click(page, `tile-${tileKey(cityTileOf(entered))}`);
+  await expect.poll(() => ringedTile(page)).toBe(tileKey(cityTileOf(entered)));
   await click(page, `tile-${tileKey(run.first)}`);
   await playedOut(page);
   await expect

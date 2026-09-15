@@ -67,12 +67,14 @@ export type Aim =
     };
 
 /**
- * A card: its kind, which a list of cards sorts and labels by, and its cost. The three kinds the
- * player's deck holds declare the aim and effect they are played through, and the noun such a card
- * names — the unit it puts on the map, the building it builds — is named by its effect and nowhere
- * else. A hazard declares its strike alone, its kind fixing everything else about it.
+ * A card: its kind, which a list of cards sorts and labels by, and its cost. The kinds the player's
+ * deck holds declare the aim and effect they are played through, and the noun such a card names —
+ * the unit it puts on the map, the building it builds — is named by its effect and nowhere else. A
+ * settle card is aimed at a tile, and asks its own reasons of a tile once the kind has asked for it
+ * charted. A hazard declares its strike alone, its kind fixing everything else about it.
  */
 export type Card = { readonly cost: Partial<Resources> } & (
+  | ({ readonly kind: 'settle' } & Extract<Aim, { readonly aim: 'tile' }>)
   | ({
       readonly kind: 'unit' | 'building' | 'instant';
       readonly singleUse?: true;
@@ -113,18 +115,21 @@ export type Schedule = {
   readonly entries: Readonly<Record<string, (turn: number) => number>>;
 };
 
+/** A deck's two sections: its cards, which the draw pile cycles, and its settle cards, in hand on turn 0. */
+export type Deck = { readonly cards: readonly string[]; readonly settle: readonly string[] };
+
 /**
  * The content a chronicle is played on: the stats a unit of each kind enters the map with, every
  * script an enemy can carry, the map content, the cards and the decks a chronicle is founded on,
  * the events and the schedules its timeline is rolled from, what a camp is, enters and gives on its
- * capture, and the city: what the opening puts on the centre tile, how far it sees, and what its
+ * capture, and the city: the terrain and the building it stands as, how far it sees, and what its
  * settle holds and opens with. Every one of them is named by its key.
  */
 export type Catalogue = MapContent & {
   readonly units: Readonly<Record<string, UnitStats>>;
   readonly scripts: Readonly<Record<string, EnemyScript>>;
   readonly cards: Readonly<Record<string, Card>>;
-  readonly decks: Readonly<Record<string, readonly string[]>>;
+  readonly decks: Readonly<Record<string, Deck>>;
   readonly events: Readonly<Record<string, ScheduledEvent>>;
   readonly schedules: Readonly<Record<string, Schedule>>;
   readonly camp: {
@@ -148,8 +153,10 @@ export type Catalogue = MapContent & {
  * The one way a catalogue is built, refused whole where it does not hold together: every unit kind
  * names itself by its key; every id a biome, a feature, a building, an improvement, a region, a deck,
  * a schedule, the camp and the city name is held; every biome rolls some rim width; no building or
- * improvement names a movement cost below one hundredth of a move point; no deck holds a
- * hazard or the camp's reward; no schedule deals its capstone among its entries; a schedule deals and
+ * improvement names a movement cost below one hundredth of a move point; no region keeps its camps
+ * within the centre part's reach plus the greater of the city's sight and the rings its settle
+ * holds; no section of a deck holds a hazard or the camp's reward, a deck's settle section holds a
+ * settle card and its cards none; no schedule deals its capstone among its entries; a schedule deals and
  * spans at least one, and each of its spans rolls from one at least to no less than its least; an
  * event with a second script is some schedule's capstone; the camp's unit stands on every terrain
  * its building names; the city's building stands on the city's terrain; and the city's sight, the
@@ -183,20 +190,35 @@ export function catalogued(content: Catalogue): Catalogue {
       }
     }
   }
-  for (const region of Object.values(content.regions)) {
+  for (const [id, region] of Object.entries(content.regions)) {
     biomeKind(content, region.centreBiome);
     biomeKind(content, region.rivers.source);
     for (const { biome } of region.biomeShares) biomeKind(content, biome);
     for (const { feature } of region.featureShares) featureKind(content, feature);
+    const reach = region.centre + Math.max(content.city.sight, content.city.holds);
+    if (region.campFromCentre <= reach) {
+      refuse(
+        content,
+        `the region ${id} keeps its camps ${region.campFromCentre} from the centre, within the settle's reach of ${reach}`,
+      );
+    }
   }
   for (const [id, deck] of Object.entries(content.decks)) {
-    for (const card of deck) {
+    for (const card of [...deck.cards, ...deck.settle]) {
       if (cardOf(content, card).kind === 'hazard') {
         refuse(content, `the deck ${id} holds the hazard ${card}`);
       }
       if (card === content.camp.reward) {
         refuse(content, `the deck ${id} holds the camp's reward ${card}`);
       }
+    }
+    for (const card of deck.cards) {
+      if (cardOf(content, card).kind === 'settle') {
+        refuse(content, `the deck ${id} holds the settle card ${card} among its cards`);
+      }
+    }
+    if (!deck.settle.some((card) => cardOf(content, card).kind === 'settle')) {
+      refuse(content, `the deck ${id} holds no settle card in its settle section`);
     }
   }
 
@@ -260,8 +282,8 @@ export function cardOf(catalogue: Catalogue, id: string): Card {
   return held(catalogue, catalogue.cards, id, 'card');
 }
 
-/** The card ids a deck lists; a deck the catalogue does not hold is refused. */
-export function deckOf(catalogue: Catalogue, id: string): readonly string[] {
+/** The two sections a deck lists; a deck the catalogue does not hold is refused. */
+export function deckOf(catalogue: Catalogue, id: string): Deck {
   return held(catalogue, catalogue.decks, id, 'deck');
 }
 

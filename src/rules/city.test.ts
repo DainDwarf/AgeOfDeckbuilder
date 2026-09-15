@@ -24,6 +24,8 @@ import {
   NO_GROWTH,
   REGION,
   SCHEDULE,
+  settledLaunch,
+  settledOn,
   stagedBy,
   standing,
   withTile,
@@ -37,7 +39,7 @@ import {
   type TileCoords,
   tileKey,
 } from './map';
-import { buildingKind, featureKind, improvementKind, terrainKind } from './map-kinds';
+import { buildingKind, featureKind, improvementKind, regionOf, terrainKind } from './map-kinds';
 import { RESOURCES } from './resources';
 import { type Chronicle, idle } from './state';
 
@@ -52,26 +54,31 @@ function reassignTo(from: TileCoords, to: TileCoords): Command {
   return { type: 'reassign', from, to };
 }
 
-/** A tile of a generated map that touches the border and has never been in sight. */
-function unchartedTouching(chronicle: Chronicle): TileCoords | undefined {
+/** A tile of a generated map that touches the border of a city on `city` and has never been in sight. */
+function unchartedTouching(chronicle: Chronicle, city: TileCoords): TileCoords | undefined {
   const seen = new Set(chronicle.snapshots.map(tileKey));
   const found = chronicle.tiles.find(
-    (tile) => distance(tile, chronicle.city) === 2 && !seen.has(tileKey(tile)),
+    (tile) => distance(tile, city) === 2 && !seen.has(tileKey(tile)),
   );
   return found === undefined ? undefined : { q: found.q, r: found.r };
 }
 
 /**
- * The chronicle with a worker entered and stepped onto a tile between the city and `tile`, from
- * where it charts it; nothing where the hand enters no worker or the worker takes no such step.
+ * The chronicle with a worker entered and stepped onto a tile between the city on `city` and
+ * `tile`, from where it charts it; nothing where the hand enters no worker or the worker takes no
+ * such step.
  */
-function withWorkerBeside(chronicle: Chronicle, tile: TileCoords): Chronicle | undefined {
+function withWorkerBeside(
+  chronicle: Chronicle,
+  tile: TileCoords,
+  city: TileCoords,
+): Chronicle | undefined {
   const at = chronicle.hand.indexOf('PH_Worker');
   if (at === -1) return undefined;
   const entered = outcome(apply(CATALOGUE, chronicle, { type: 'play', index: at, aim: 'none' }));
   if (entered.units.length === chronicle.units.length) return undefined;
   const worker = entered.units[entered.units.length - 1];
-  const between = neighbours(entered.city).find((coord) => distance(coord, tile) === 1);
+  const between = neighbours(city).find((coord) => distance(coord, tile) === 1);
   if (between === undefined) return undefined;
   const stepped = outcome(
     apply(CATALOGUE, entered, { type: 'move', unit: worker.id, tile: between }),
@@ -80,35 +87,43 @@ function withWorkerBeside(chronicle: Chronicle, tile: TileCoords): Chronicle | u
 }
 
 /**
- * The first seed whose opening, one end of turn on, leaves a tile touching the border uncharted
- * that a worker the hand enters can step beside: that chronicle, and the tile.
+ * The first seed and tile at the edge of the centre part whose settle, two ends of turn on, leaves
+ * a tile touching the border uncharted that a worker the hand enters can step beside: that
+ * chronicle, the tile, and where the city stands. The centre part charts every tile nearer the
+ * centre, so a city settled any nearer has no dark border to find.
  */
-function darkBorder(): { opened: Chronicle; dark: TileCoords } {
+function darkBorder(): { opened: Chronicle; dark: TileCoords; city: TileCoords } {
+  const reach = regionOf(CATALOGUE, REGION).centre;
   for (let seed = 0; seed < 1000; seed++) {
-    const opened = outcome(
-      apply(CATALOGUE, launched(CATALOGUE, REGION, SCHEDULE, seed, DECK), { type: 'end-turn' }),
-    );
-    const dark = unchartedTouching(opened);
-    if (dark === undefined || withWorkerBeside(opened, dark) === undefined) continue;
-    return { opened, dark };
+    const unsettled = launched(CATALOGUE, REGION, SCHEDULE, seed, DECK);
+    for (const city of unsettled.centre) {
+      if (distance(city, CITY) !== reach) continue;
+      const settling = settledOn(unsettled, city);
+      if (settling.city === undefined) continue;
+      const ended = outcome(apply(CATALOGUE, settling, { type: 'end-turn' }));
+      const opened = outcome(apply(CATALOGUE, ended, { type: 'end-turn' }));
+      const dark = unchartedTouching(opened, city);
+      if (dark === undefined || withWorkerBeside(opened, dark, city) === undefined) continue;
+      return { opened, dark, city };
+    }
   }
   throw new Error('no seed under a thousand leaves a dark border tile a worker can step beside');
 }
 
 test('the city holds its own tile and every tile touching it', () => {
   for (const seed of [0, 1234, 0xdeadbeef | 0]) {
-    const chronicle = launched(CATALOGUE, REGION, SCHEDULE, seed, DECK);
+    const chronicle = settledLaunch(CATALOGUE, REGION, SCHEDULE, seed, DECK);
     const held = new Set(chronicle.held.map(tileKey));
 
     expect(held.size).toBe(7);
     for (const tile of chronicle.tiles) {
-      expect(held.has(tileKey(tile))).toBe(distance(tile, chronicle.city) <= 1);
+      expect(held.has(tileKey(tile))).toBe(distance(tile, CITY) <= 1);
     }
   }
 });
 
 test('the founding puts an inhabitant on every tile the city holds, and leaves two idle', () => {
-  const chronicle = launched(CATALOGUE, REGION, SCHEDULE, 1234, DECK);
+  const chronicle = settledLaunch(CATALOGUE, REGION, SCHEDULE, 1234, DECK);
 
   expect([...chronicle.assigned].map(tileKey).sort()).toEqual(
     [...chronicle.held].map(tileKey).sort(),
@@ -117,10 +132,10 @@ test('the founding puts an inhabitant on every tile the city holds, and leaves t
 });
 
 test('a city whose content holds no ring holds its tile alone, one inhabitant on it and its idle besides', () => {
-  const chronicle = launched(ALONE, REGION, SCHEDULE, 1234, DECK);
+  const chronicle = settledLaunch(ALONE, REGION, SCHEDULE, 1234, DECK);
 
-  expect(chronicle.held.map(tileKey)).toEqual([tileKey(chronicle.city)]);
-  expect(chronicle.assigned.map(tileKey)).toEqual([tileKey(chronicle.city)]);
+  expect(chronicle.held.map(tileKey)).toEqual([tileKey(CITY)]);
+  expect(chronicle.assigned.map(tileKey)).toEqual([tileKey(CITY)]);
   expect(idle(chronicle)).toBe(3);
 });
 
@@ -370,8 +385,8 @@ test('an assign with no inhabitant idle is refused', () => {
 });
 
 test('a drag takes the inhabitant off the tile it stands on and puts it on the tile it lands on', () => {
-  const founding = launched(CATALOGUE, REGION, SCHEDULE, 1, DECK);
-  const [from, to] = neighbours(founding.city);
+  const founding = settledLaunch(CATALOGUE, REGION, SCHEDULE, 1, DECK);
+  const [from, to] = neighbours(CITY);
   const freed = outcome(apply(CATALOGUE, founding, assignTo(to)));
 
   const stages = apply(CATALOGUE, freed, reassignTo(from, to));
@@ -386,8 +401,8 @@ test('a drag takes the inhabitant off the tile it stands on and puts it on the t
 });
 
 test('a drag onto a tile an inhabitant stands on, onto one the city does not hold, or onto the tile it started from is refused', () => {
-  const founding = launched(CATALOGUE, REGION, SCHEDULE, 1, DECK);
-  const [from, worked] = neighbours(founding.city);
+  const founding = settledLaunch(CATALOGUE, REGION, SCHEDULE, 1, DECK);
+  const [from, worked] = neighbours(CITY);
   const outside = claimable(CATALOGUE, founding)[0];
 
   expect(cityDrag(founding, from, worked)).toBeUndefined();
@@ -398,8 +413,8 @@ test('a drag onto a tile an inhabitant stands on, onto one the city does not hol
 });
 
 test('a drag from a tile nobody stands on is refused', () => {
-  const founding = launched(CATALOGUE, REGION, SCHEDULE, 1, DECK);
-  const [bare, empty] = neighbours(founding.city);
+  const founding = settledLaunch(CATALOGUE, REGION, SCHEDULE, 1, DECK);
+  const [bare, empty] = neighbours(CITY);
   const freed = outcome(
     apply(CATALOGUE, outcome(apply(CATALOGUE, founding, assignTo(bare))), assignTo(empty)),
   );
@@ -532,8 +547,8 @@ test('an uncharted tile touching the border is no claim of the city’s', () => 
 });
 
 test('a unit that charts that tile makes it a claim the city can make', () => {
-  const { opened, dark } = darkBorder();
-  const charting = withWorkerBeside(opened, dark);
+  const { opened, dark, city } = darkBorder();
+  const charting = withWorkerBeside(opened, dark, city);
   if (charting === undefined)
     throw new Error('the worker found for this tile no longer steps beside it');
 

@@ -1,7 +1,7 @@
 import { expect, test } from 'vitest';
 import { aimOf, built, improved, made, refuses, terraformed, throughWorker } from './cards';
 import { type AimedCard, type Catalogue, cardOf, catalogued, deckOf } from './catalogue';
-import { admitted, apply, type Command, launched, outcome, refusalOf } from './chronicle';
+import { admitted, apply, type Command, outcome, refusalOf } from './chronicle';
 import {
   actionOf,
   assignTo,
@@ -9,6 +9,7 @@ import {
   CATALOGUE,
   type Carrying,
   CITY,
+  camped,
   cityOf,
   endedTurn,
   everyCard,
@@ -18,9 +19,13 @@ import {
   fullDraw,
   madeOf,
   NO_GROWTH,
+  opening,
+  plains,
   pointsOf,
   REGION,
   SCHEDULE,
+  settledLaunch,
+  settledOn,
   stagedBy,
   standing,
   unitNamed,
@@ -310,12 +315,47 @@ test('the refresh instant is refused on a unit whose move points are full, its a
   expect(outcome(apply(CATALOGUE, city, aimedAtUnit(CITY)))).toBe(city);
 });
 
-test('a chronicle founded on a deck of the catalogue holds that deck’s cards and opens on a full hand of them', () => {
+test('a chronicle founded on a deck of the catalogue holds that deck’s cards and opens turn 1 on a full hand of them', () => {
   const deck = deckOf(CATALOGUE, 'deck');
-  const chronicle = launched(CATALOGUE, REGION, SCHEDULE, 2026, deck);
+  const chronicle = settledLaunch(CATALOGUE, REGION, SCHEDULE, 2026, deck);
 
   expect(chronicle.hand).toHaveLength(5);
-  expect(everyCard(chronicle)).toEqual([...deck].sort());
+  expect(everyCard(chronicle)).toEqual([...deck.cards].sort());
+});
+
+test('a settle card is refused on an uncharted tile, on a terrain its content takes no city on, and on a filled slot', () => {
+  const rough = { q: 1, r: 0 };
+  const camp = { q: 0, r: 1 };
+  const out = { q: 3, r: 0 };
+  const opened = opening(camped(madeOf(plains(3), 'mountain', [rough]), [camp]));
+
+  expect(refusedFor(opened, 'PH_Settle', out)).toBe('uncharted');
+  expect(refusedFor(opened, 'PH_Settle', rough)).toBe('terrain');
+  expect(refusedFor(opened, 'PH_Settle', camp)).toBe('slot');
+  expect(refusedFor(opened, 'PH_Settle', CITY)).toBeUndefined();
+  for (const tile of [out, rough, camp]) {
+    expect(admittedTiles(opened, 'PH_Settle').map(tileKey)).not.toContain(tileKey(tile));
+    expect(stagedBy(opened, aimedAt(tile))).toEqual(['refused']);
+  }
+});
+
+test('a unit card is refused while the city stands nowhere, and enters on the city’s tile once the settle has put it there on turn 0', () => {
+  const opened: Chronicle = {
+    ...opening(plains(3), { deck: { cards: [], settle: ['PH_Worker', 'PH_Settle'] } }),
+    resources: FOOD,
+  };
+
+  expect(refusalOf(CATALOGUE, opened, 'PH_Worker').blocked).toEqual(['unsettled']);
+  expect(stagedBy(opened, { type: 'play', index: 0, aim: 'none' })).toEqual(['refused']);
+
+  const settled = settledOn(opened, CITY);
+  const entered = outcome(apply(CATALOGUE, settled, { type: 'play', index: 0, aim: 'none' }));
+
+  expect(settled.hand).toEqual(['PH_Worker']);
+  expect(entered.turn).toBe(0);
+  expect(entered.units).toHaveLength(1);
+  expect(entered.units[0].tile).toEqual(CITY);
+  expect(everyCard(entered)).toEqual([]);
 });
 
 test('a card whose effect names a building, an improvement or a terrain the catalogue lacks is refused where it lands', () => {

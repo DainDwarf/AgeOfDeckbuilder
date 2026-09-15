@@ -9,6 +9,7 @@ import {
   besideTiles,
   budget,
   chronicleOf,
+  cityTileOf,
   click,
   consoleKey,
   counted,
@@ -40,8 +41,8 @@ import {
 /** A tile the founding's border touches and the city has charted: what a claim takes first. */
 const TOUCHING = { at: { q: 1, r: -2 }, key: '1,-2' };
 
-/** A tile beside that one the founding's border does not touch, uncharted at the founding. */
-const FAR = { at: { q: 1, r: -3 }, key: '1,-3' };
+/** A tile out beyond the centre part the border does not touch, and uncharted from the opening. */
+const FAR = { at: { q: 1, r: -4 }, key: '1,-4' };
 
 /** A tile the city holds, and an inhabitant stands on from the founding. */
 const HELD = { at: { q: 0, r: -1 }, key: '0,-1' };
@@ -80,7 +81,7 @@ async function bareTile(page: Page): Promise<TileCoords> {
   const seen = new Set(chronicle.snapshots.map(tileKey));
   const found = chronicle.tiles.find(
     (tile) =>
-      distance(tile, chronicle.city) === 2 &&
+      distance(tile, cityTileOf(chronicle)) === 2 &&
       seen.has(tileKey(tile)) &&
       tile.feature === undefined &&
       tile.building === undefined &&
@@ -165,7 +166,7 @@ test('a second left click on the city’s own tile enters city mode, and on any 
   const problems = watch(page);
 
   await open(page, 1, 'PH_Deck');
-  const founded = (await chronicleOf(page)).city;
+  const founded = cityTileOf(await chronicleOf(page));
   const city = await tileOnScreen(page, founded);
   await page.mouse.click(city.x, city.y);
   await expect.poll(() => ringedTile(page)).toBe(tileKey(founded));
@@ -313,7 +314,7 @@ test('city mode marks every tile an inhabitant stands on, and a second click on 
   expect(await counted(page, 'city-dim')).toBe(0);
 
   // The city's own tile is one of the tiles it works, and its second click acts as any other's does.
-  const founded = (await chronicleOf(page)).city;
+  const founded = cityTileOf(await chronicleOf(page));
   const city = await tileOnScreen(page, founded);
   await page.mouse.click(city.x, city.y);
   await expect.poll(() => ringedTile(page)).toBe(tileKey(founded));
@@ -412,8 +413,8 @@ test('a unit’s tile selected in city mode lights nothing, and a click on the t
   await page.keyboard.press('c');
   await expect.poll(() => inCityMode(page)).toBe(true);
 
-  await click(page, `tile-${tileKey(entered.city)}`);
-  await expect.poll(() => ringedTile(page)).toBe(tileKey(entered.city));
+  await click(page, `tile-${tileKey(cityTileOf(entered))}`);
+  await expect.poll(() => ringedTile(page)).toBe(tileKey(cityTileOf(entered)));
   expect(await marksIn(page, 'lit')).toBe(0);
 
   await click(page, `tile-${tileKey(run.first)}`);
@@ -494,8 +495,9 @@ test('a second click the city cannot pay for claims nothing and says so, one it 
   expect(claimed.held.map(tileKey)).toContain(TOUCHING.key);
   expect(claimed.resources.culture).toBe(0);
   expect(await counted(page, 'assigned')).toBe(FOUNDED + 1);
-  // The tile claimed is a claim no longer, and the border has moved out onto nothing it has seen.
-  expect(await counted(page, 'claimable')).toBe(claims() - 1);
+  // The tile claimed is a claim no longer, and the marks are the claims the moved border opens.
+  expect(claimable(STAND_IN, claimed).map(tileKey)).not.toContain(TOUCHING.key);
+  expect(await counted(page, 'claimable')).toBe(claimable(STAND_IN, claimed).length);
   // The tile the claim took stays selected, and asks for nothing more.
   await expect.poll(() => ringedTile(page)).toBe(TOUCHING.key);
   expect(await thresholdShown(page)).toBeUndefined();

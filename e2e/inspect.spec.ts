@@ -19,6 +19,7 @@ import { featureName, text } from '../src/ui/text';
 import {
   besideTiles,
   chronicleOf,
+  cityTileOf,
   dragOut,
   endTurn,
   firstSeed,
@@ -69,7 +70,9 @@ async function answered(page: Page): Promise<void> {
 /** The first seed whose generator put a feature on a tile touching the city, well inside the frame. */
 function featureRun(): { seed: number; key: string; feature: FeatureId } {
   return firstSeed('puts a feature beside the city', (seed) => {
-    const { tiles, city } = launch(seed, deckOf(STAND_IN, 'PH_Deck'));
+    const opened = launch(seed, deckOf(STAND_IN, 'PH_Deck'));
+    const { tiles } = opened;
+    const city = cityTileOf(opened);
     const touching = new Set(neighbours(city).map(tileKey));
     const found = tiles.find((tile) => tile.feature !== undefined && touching.has(tileKey(tile)));
     if (found?.feature === undefined) return undefined;
@@ -87,13 +90,13 @@ function westOf({ q, r }: TileCoords): TileCoords {
  * river runs along either, and the west one is bare, so its terrain card is the only one it holds.
  */
 function stepsClear(chronicle: Chronicle): boolean {
-  const west = tileAt(chronicle.tiles, westOf(chronicle.city));
+  const west = tileAt(chronicle.tiles, westOf(cityTileOf(chronicle)));
   return (
     west !== undefined &&
     west.feature === undefined &&
     west.building === undefined &&
     west.improvements.length === 0 &&
-    !runsAlong(chronicle.rivers, chronicle.city) &&
+    !runsAlong(chronicle.rivers, cityTileOf(chronicle)) &&
     !runsAlong(chronicle.rivers, west)
   );
 }
@@ -104,7 +107,9 @@ function stepsClear(chronicle: Chronicle): boolean {
  */
 function riverRun(): { seed: number; key: string; terrain: Terrain } {
   return firstSeed('runs a river along a fed tile beside the city', (seed) => {
-    const { tiles, city, rivers } = launch(seed, deckOf(STAND_IN, 'PH_Deck'));
+    const opened = launch(seed, deckOf(STAND_IN, 'PH_Deck'));
+    const { tiles, rivers } = opened;
+    const city = cityTileOf(opened);
     const touching = new Set(neighbours(city).map(tileKey));
     const found = tiles.find(
       (tile) =>
@@ -124,7 +129,9 @@ function riverRun(): { seed: number; key: string; terrain: Terrain } {
  */
 function bareRun(): { seed: number; key: string } {
   return firstSeed('leaves a tile beside the city bare', (seed) => {
-    const { tiles, city } = launch(seed, deckOf(STAND_IN, 'PH_Deck'));
+    const opened = launch(seed, deckOf(STAND_IN, 'PH_Deck'));
+    const { tiles } = opened;
+    const city = cityTileOf(opened);
     const touching = new Set(neighbours(city).map(tileKey));
     const found = tiles.find(
       (tile) =>
@@ -147,7 +154,7 @@ function costRun(): { seed: number; land: string; water: string } {
     'leaves a tile costing two move points beside the city, and water in sight',
     (seed) => {
       const chronicle = launch(seed, deckOf(STAND_IN, 'PH_Deck'));
-      const touching = new Set(neighbours(chronicle.city).map(tileKey));
+      const touching = new Set(neighbours(cityTileOf(chronicle)).map(tileKey));
       const stood = new Set(chronicle.units.map((unit) => tileKey(unit.tile)));
       const land = chronicle.tiles.find(
         (tile) =>
@@ -301,7 +308,7 @@ test('a click selects a tile, the inspection key steps its cards, and the back k
   expect(await standing(page, 'menu')).toBe(false);
 
   // West of the city: the run leaves nothing on it, and it is clear of the panel the city raises.
-  const bareTile = tileKey(westOf(entered.city));
+  const bareTile = tileKey(westOf(cityTileOf(entered)));
   const bare = await onScreen(page, `tile-${bareTile}`);
   await page.mouse.click(bare.x, bare.y);
   await expect.poll(() => ringedTile(page)).toBe(bareTile);
@@ -339,7 +346,7 @@ test('a right click inspects and never selects, shows no browser menu, and the i
 
   await open(page, run.seed, 'PH_Deck');
   const bare = await onScreen(page, `tile-${run.key}`);
-  const cityTile = await chronicleOf(page).then((chronicle) => tileKey(chronicle.city));
+  const cityTile = await chronicleOf(page).then((chronicle) => tileKey(cityTileOf(chronicle)));
   const city = await onScreen(page, `tile-${cityTile}`);
 
   await watchBrowserMenu(page);

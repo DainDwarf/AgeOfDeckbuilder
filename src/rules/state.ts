@@ -50,7 +50,10 @@ export type Chronicle = {
   readonly snapshots: Snapshot[];
   /** The rivers the generator ran, each the corners it passes through along the edges between tiles. */
   readonly rivers: River[];
-  readonly city: TileCoords;
+  /** The map's centre part: the whole of what is in sight on turn 0 before the city stands. */
+  readonly centre: TileCoords[];
+  /** The tile the city stands on, and nothing at all until the settle puts it on one. */
+  readonly city?: TileCoords;
   readonly held: TileCoords[];
   readonly turn: number;
   /** What the events phase deals on every turn of the chronicle, rolled when it was launched. */
@@ -79,11 +82,13 @@ export type Chronicle = {
 };
 
 /**
- * What a card's aim has against one tile: no worker of the player's standing there, the worker
- * there with no action left, the tile outside the border, the wrong terrain, the building slot
- * filled, the improvement already laid, no unit of the player's standing there, its move points full.
+ * What a card's aim has against one tile: the tile uncharted, no worker of the player's standing
+ * there, the worker there with no action left, the tile outside the border, the wrong terrain, the
+ * building slot filled, the improvement already laid, no unit of the player's standing there, its
+ * move points full.
  */
 export type TileBlock =
+  | 'uncharted'
   | 'worker'
   | 'action'
   | 'border'
@@ -95,11 +100,11 @@ export type TileBlock =
 
 /**
  * What the city or the map has against a card or a claim the cost alone would let through: the city
- * down to the last inhabitant it keeps, no inhabitant idle to turn into a unit or to stand on a
- * tile, a unit already on the city tile, an empty discard pile with no card to come back out of it,
- * and every reason an aim turns a tile down.
+ * standing nowhere yet, the city down to the last inhabitant it keeps, no inhabitant idle to turn
+ * into a unit or to stand on a tile, a unit already on the city tile, an empty discard pile with no
+ * card to come back out of it, and every reason an aim turns a tile down.
  */
-export type Block = 'population' | 'idle' | 'city' | 'discard-pile' | TileBlock;
+export type Block = 'unsettled' | 'population' | 'idle' | 'city' | 'discard-pile' | TileBlock;
 
 /** What one thing asks for of one resource: a card's cost line by line, a claim's culture. */
 export type Cost = { readonly resource: Resource; readonly amount: number };

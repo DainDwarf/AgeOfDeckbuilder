@@ -15,18 +15,28 @@ import {
   movePointsSpent,
   recalled,
   refreshed,
+  settled,
   slotFree,
   terraformed,
   throughWorker,
   unimproved,
 } from './cards';
-import { type Catalogue, catalogued, deckOf, type Entering, entered } from './catalogue';
-import { apply, type Command, outcome } from './chronicle';
+import {
+  type Catalogue,
+  cardOf,
+  catalogued,
+  type Deck,
+  deckOf,
+  type Entering,
+  entered,
+} from './catalogue';
+import { apply, beginChronicle, type Command, launched, outcome } from './chronicle';
 import { founding } from './city';
 import {
   type BuildingTypeId,
   cornerKey,
   cornersOf,
+  distance,
   MOVE_POINT,
   type River,
   type Terrain,
@@ -77,6 +87,15 @@ export const CATALOGUE: Catalogue = catalogued({
   },
   scripts: { advance: ADVANCE },
   cards: {
+    PH_Settle: {
+      kind: 'settle',
+      cost: {},
+      aim: 'tile',
+      refuses: (catalogue, _chronicle, tile) =>
+        firstRefusal(made(catalogue, tile, ['plain', 'forest', 'hills']), slotFree(tile)),
+      effect: (catalogue, paid, at) =>
+        settled(catalogue, terraformed(catalogue, paid, at, catalogue.city.terrain), at),
+    },
     PH_Worker: { kind: 'unit', cost: { food: 2 }, ...enters('PH_Worker') },
     PH_Warrior: { kind: 'unit', cost: { military: 2 }, ...enters('PH_Warrior') },
     PH_Farm: {
@@ -164,18 +183,21 @@ export const CATALOGUE: Catalogue = catalogued({
     },
   },
   decks: {
-    deck: [
-      'PH_Worker',
-      'PH_Worker',
-      'PH_Warrior',
-      'PH_Warrior',
-      'PH_Farm',
-      'PH_Farm',
-      'PH_March',
-      'PH_March',
-      'PH_Harvest',
-      'PH_Harvest',
-    ],
+    deck: {
+      cards: [
+        'PH_Worker',
+        'PH_Worker',
+        'PH_Warrior',
+        'PH_Warrior',
+        'PH_Farm',
+        'PH_Farm',
+        'PH_March',
+        'PH_March',
+        'PH_Harvest',
+        'PH_Harvest',
+      ],
+      settle: ['PH_Settle'],
+    },
   },
   events: {
     PH_Raid: {
@@ -287,6 +309,7 @@ export const CATALOGUE: Catalogue = catalogued({
   regions: {
     disc: {
       radius: 8,
+      centre: 3,
       tilesPerBiome: 26,
       minBiomes: 5,
       centreBiome: 'land',
@@ -296,7 +319,7 @@ export const CATALOGUE: Catalogue = catalogued({
       ],
       featureShares: [{ feature: 'PH_Fertile', share: 1 / 6 }],
       camps: 3,
-      campFromCentre: 4,
+      campFromCentre: 6,
       campsApart: 3,
       rivers: {
         source: 'mountain',
@@ -387,6 +410,7 @@ export function cityOf(inside: Terrain[], carrying: Carrying = {}): Chronicle {
     rng: seedRng(7),
     timeline: NO_DEALS,
     snapshots: [],
+    centre: [],
     tiles: [
       ...inside.map(
         (terrain, index): Tile =>
@@ -436,6 +460,62 @@ export function field(radius: number, coast: TileCoords[] = []): Tile[] {
     }
   }
   return tiles;
+}
+
+/** A disc of plain out to `radius` with nothing standing on it: ground no city has settled yet. */
+export function plains(radius: number): Tile[] {
+  return field(radius).map(({ q, r }): Tile => ({ q, r, terrain: 'plain', improvements: [] }));
+}
+
+/** What a fixture opening names: the deck, the timeline, and how far the centre part reaches. */
+export type Opening = {
+  readonly deck?: Deck;
+  readonly timeline?: Timeline;
+  readonly reach?: number;
+};
+
+/**
+ * The chronicle opened on these tiles through the rules, standing on turn 0 with the city nowhere:
+ * its centre part every tile within `reach` of the centre, two unless the fixture names it, on the
+ * fixture's deck and a timeline dealing nothing unless the fixture names others.
+ */
+export function opening(
+  tiles: Tile[],
+  { deck = DECK, timeline = NO_DEALS, reach = 2 }: Opening = {},
+): Chronicle {
+  const centre = tiles
+    .filter((tile) => distance(tile, CITY) <= reach)
+    .map(({ q, r }) => ({ q, r }));
+  return beginChronicle(CATALOGUE, 7, deck, { tiles, rivers: [], centre }, timeline);
+}
+
+/** The chronicle with the first settle card of its hand played on a tile, refused or not. */
+export function settledOn(
+  chronicle: Chronicle,
+  tile: TileCoords,
+  catalogue: Catalogue = CATALOGUE,
+): Chronicle {
+  const index = chronicle.hand.findIndex((id) => cardOf(catalogue, id).kind === 'settle');
+  return outcome(apply(catalogue, chronicle, { type: 'play', index, aim: 'tile', tile }));
+}
+
+/**
+ * A chronicle launched as the boot launches one, its settle card played on a tile — the centre tile
+ * unless the fixture names another — and turn 0 ended, all through the rules: turn 1 as that end
+ * leaves it, standing on the deal where turn 1 deals one. A settle the tile refuses throws.
+ */
+export function settledLaunch(
+  catalogue: Catalogue,
+  region: string,
+  schedule: string,
+  seed: number,
+  deck: Deck,
+  at: TileCoords = CITY,
+): Chronicle {
+  const settling = settledOn(launched(catalogue, region, schedule, seed, deck), at, catalogue);
+  if (settling.city === undefined)
+    throw new Error(`seed ${seed} settles no city on ${tileKey(at)}`);
+  return outcome(apply(catalogue, settling, { type: 'end-turn' }));
 }
 
 /** The same disc with every tile but the named ones under water: what leaves a fixture one corridor. */
@@ -612,8 +692,8 @@ export function fullDraw(): CardId[] {
   return ['PH_Worker', 'PH_Warrior', 'PH_Farm', 'PH_March', 'PH_Harvest'];
 }
 
-/** The deck these foundings are played on: two of each card, enough to draw a hand and cycle. */
-export const DECK: readonly CardId[] = deckOf(CATALOGUE, 'deck');
+/** The deck these chronicles are played on: two of each card, enough to draw a hand and cycle, and the settle. */
+export const DECK: Deck = deckOf(CATALOGUE, 'deck');
 
 /**
  * One whole turn: the end of turn, and the entry taken of the deal it may stop on — `wanted` where

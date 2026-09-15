@@ -16,6 +16,7 @@ import {
   budget,
   cardOnFace,
   chronicleOf,
+  cityTileOf,
   click,
   dragOut,
   dragUnit,
@@ -281,7 +282,7 @@ test('a right click inspects a tile while a card is selected, and the back key t
 
   // The city's own tile: the map centres on it, so the press lands clear of the hand and the bar,
   // and nothing stands on it this early, so the first card of its cycle is what is built there.
-  const city = await onScreen(page, `tile-${tileKey(opened.city)}`);
+  const city = await onScreen(page, `tile-${tileKey(cityTileOf(opened))}`);
   await page.mouse.click(city.x, city.y, { button: 'right' });
   await expect.poll(() => shownCard(page)).toBe('building');
   expect(await selected(page, index, home)).toBe(true);
@@ -382,7 +383,7 @@ test('a card aimed at a unit says it is played at a unit', async ({ page }) => {
 
   // The refresh instant admits the tile of a unit that has spent move points, so the worker moves first.
   const entered = await chronicleOf(page);
-  await dragUnit(page, entered.city, run.tile);
+  await dragUnit(page, cityTileOf(entered), run.tile);
 
   const moved = await chronicleOf(page);
   const home = await onScreen(page, `hand-${moved.hand.indexOf('PH_March')}`);

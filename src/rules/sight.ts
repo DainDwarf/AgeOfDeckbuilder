@@ -70,15 +70,17 @@ function seenFrom(
 }
 
 /**
- * The tiles the city and the units of the player's see, by their keys: every tile the city holds,
- * and every tile within a sight of theirs that a line over the ground reaches. The one answer to
- * what is in sight.
+ * The tiles in sight, by their keys: the map's centre part for the whole of turn 0, every tile the
+ * city holds, and every tile within a sight of the city's, once it stands, or of a unit of the
+ * player's that a line over the ground reaches. The one answer to what is in sight.
  */
 export function inSight(catalogue: Catalogue, chronicle: Chronicle): ReadonlySet<string> {
   const terrains = new Map(chronicle.tiles.map((tile) => [tileKey(tile), tile.terrain]));
   const seen = new Set(chronicle.held.map(tileKey));
+  if (chronicle.turn === 0) for (const coord of chronicle.centre) seen.add(tileKey(coord));
 
-  const watching = [{ from: chronicle.city, sight: catalogue.city.sight }];
+  const watching =
+    chronicle.city === undefined ? [] : [{ from: chronicle.city, sight: catalogue.city.sight }];
   for (const unit of chronicle.units) {
     if (unit.faction === 'player') watching.push({ from: unit.tile, sight: unit.stats.sight });
   }

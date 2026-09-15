@@ -1,13 +1,16 @@
 import { expect, type Page, test } from '@playwright/test';
-import { STAND_IN } from '../src/content/stand-in';
-import { deckOf } from '../src/rules/catalogue';
-import { apply, outcome, refusalOf } from '../src/rules/chronicle';
-import { distance, neighbours, type TileCoords, tileKey } from '../src/rules/map';
+import { STAND_IN, STAND_IN_REGION, STAND_IN_SCHEDULE } from '../src/content/stand-in';
+import { aimOf } from '../src/rules/cards';
+import { cardOf, deckOf } from '../src/rules/catalogue';
+import { admitted, apply, launched, outcome, refusalOf } from '../src/rules/chronicle';
+import { CENTRE, distance, neighbours, type TileCoords, tileKey } from '../src/rules/map';
+import { regionOf } from '../src/rules/map-kinds';
 import { inSight } from '../src/rules/sight';
 import { type Chronicle, playable } from '../src/rules/state';
 import {
   budget,
   chronicleOf,
+  cityTileOf,
   consoleKey,
   counted,
   dragOut,
@@ -35,6 +38,8 @@ import {
 /** One tile of each of the three states, on the chronicle a worker's step out and back leaves. */
 type Run = {
   readonly seed: number;
+  /** The tile the city is settled on. */
+  readonly city: TileCoords;
   readonly turn: number;
   /** The tile the worker steps onto and off again; the city holds it, so it stays in sight. */
   readonly out: TileCoords;
@@ -43,19 +48,42 @@ type Run = {
 };
 
 /**
- * The first seed with a turn in its first eight whose worker, stepping one tile off the city and
- * back again, leaves the map showing all three states at once: the tile it stepped onto in sight,
- * a tile it saw from there and no longer does in fog, and one it never saw uncharted.
+ * The tiles at the edge of the centre part a seed's settle admits. The centre part charts every tile
+ * a worker one step off a city nearer the centre sees, so only a city settled out here has a step
+ * that charts anything.
+ */
+function edgeSettles(seed: number): TileCoords[] {
+  const unsettled = launched(
+    STAND_IN,
+    STAND_IN_REGION,
+    STAND_IN_SCHEDULE,
+    seed,
+    deckOf(STAND_IN, 'PH_Deck'),
+  );
+  const card = aimOf(cardOf(STAND_IN, 'PH_Settle'));
+  if (card.aim !== 'tile') throw new Error('PH_Settle is aimed at no tile');
+  const reach = regionOf(STAND_IN, STAND_IN_REGION).centre;
+  return admitted(STAND_IN, unsettled, card).filter((tile) => distance(tile, CENTRE) === reach);
+}
+
+/**
+ * The first seed, settled on a tile at the edge of the centre part, with a turn in its first eight
+ * whose worker, stepping one tile off the city and back again, leaves the map showing all three
+ * states at once: the tile it stepped onto in sight, a tile it charted from there and no longer sees
+ * in fog, and one it never saw uncharted.
  */
 function fogRun(): Run {
   return firstSeed(
     'opens a turn on a worker whose step out and back leaves a tile in fog',
     (seed) => {
-      let chronicle = launch(seed, deckOf(STAND_IN, 'PH_Deck'));
-      for (let turn = 1; turn <= 8; turn++) {
-        const stepped = steppedThisTurn(chronicle);
-        if (stepped !== undefined) return { seed, turn, ...stepped };
-        chronicle = endedTurn(chronicle);
+      for (const city of edgeSettles(seed)) {
+        let chronicle = launch(seed, deckOf(STAND_IN, 'PH_Deck'), STAND_IN_SCHEDULE, city);
+        for (let turn = 1; turn <= 8; turn++) {
+          const stepped = steppedThisTurn(chronicle);
+          if (stepped !== undefined) return { seed, city, turn, ...stepped };
+          chronicle = endedTurn(chronicle);
+          if (chronicle.ending !== undefined) break;
+        }
       }
       return undefined;
     },
@@ -77,23 +105,29 @@ function roundTrips(chronicle: Chronicle): RoundTrip[] {
   if (worker.faction !== 'player') return [];
 
   const trips: RoundTrip[] = [];
-  for (const out of neighbours(entered.city)) {
+  for (const out of neighbours(cityTileOf(entered))) {
     const stepped = outcome(apply(STAND_IN, entered, { type: 'move', unit: worker.id, tile: out }));
     if (stepped === entered) continue;
     const back = outcome(
-      apply(STAND_IN, stepped, { type: 'move', unit: worker.id, tile: entered.city }),
+      apply(STAND_IN, stepped, { type: 'move', unit: worker.id, tile: cityTileOf(entered) }),
     );
     if (back !== stepped) trips.push({ out, back });
   }
   return trips;
 }
 
-/** What this hand's worker leaves behind it when it steps one tile off the city and back again. */
-function steppedThisTurn(chronicle: Chronicle): Omit<Run, 'seed' | 'turn'> | undefined {
+/**
+ * What this hand's worker leaves behind it when it steps one tile off the city and back again: the
+ * tile in fog one the step charted, uncharted on the chronicle before it.
+ */
+function steppedThisTurn(chronicle: Chronicle): Omit<Run, 'seed' | 'city' | 'turn'> | undefined {
+  const before = new Set(chronicle.snapshots.map(tileKey));
   for (const { out, back } of roundTrips(chronicle)) {
     const seen = inSight(STAND_IN, back);
     const charted = new Set(back.snapshots.map(tileKey));
-    const fog = back.snapshots.find((snapshot) => !seen.has(tileKey(snapshot)));
+    const fog = back.snapshots.find(
+      (snapshot) => !seen.has(tileKey(snapshot)) && !before.has(tileKey(snapshot)),
+    );
     const uncharted = back.tiles.find((tile) => !charted.has(tileKey(tile)));
     if (fog === undefined || uncharted === undefined) continue;
     return { out, fog: { q: fog.q, r: fog.r }, uncharted: { q: uncharted.q, r: uncharted.r } };
@@ -104,6 +138,8 @@ function steppedThisTurn(chronicle: Chronicle): Omit<Run, 'seed' | 'turn'> | und
 /** One tile in fog with an enemy standing on it, and one tile the map draws nothing of. */
 type EnemyRun = {
   readonly seed: number;
+  /** The tile the city is settled on. */
+  readonly city: TileCoords;
   readonly turn: number;
   /** The tile the worker steps onto and off again. */
   readonly out: TileCoords;
@@ -114,29 +150,39 @@ type EnemyRun = {
 };
 
 /**
- * The first seed with a turn in its first eight whose worker, stepping one tile off the city and
- * back again, leaves a tile it charted from there in fog with an enemy standing on it.
+ * The first seed, settled on a tile at the edge of the centre part, with a turn in its first eight
+ * whose worker, stepping one tile off the city and back again, leaves a tile it charted from there
+ * in fog with an enemy standing on it.
  */
 function enemyInFog(): EnemyRun {
   return firstSeed('leaves an enemy standing in the fog behind a worker', (seed) => {
-    let chronicle = launch(seed, deckOf(STAND_IN, 'PH_Deck'));
-    for (let turn = 1; turn <= 8; turn++) {
-      const stepped = foggedThisTurn(chronicle);
-      if (stepped !== undefined) return { seed, turn, ...stepped };
-      chronicle = endedTurn(chronicle);
-      if (chronicle.ending !== undefined) return undefined;
+    for (const city of edgeSettles(seed)) {
+      let chronicle = launch(seed, deckOf(STAND_IN, 'PH_Deck'), STAND_IN_SCHEDULE, city);
+      for (let turn = 1; turn <= 8; turn++) {
+        const stepped = foggedThisTurn(chronicle);
+        if (stepped !== undefined) return { seed, city, turn, ...stepped };
+        chronicle = endedTurn(chronicle);
+        if (chronicle.ending !== undefined) break;
+      }
     }
     return undefined;
   });
 }
 
-/** Where this hand's worker steps out and back to leave an enemy behind it in fog. */
-function foggedThisTurn(chronicle: Chronicle): Omit<EnemyRun, 'seed' | 'turn'> | undefined {
+/**
+ * Where this hand's worker steps out and back to leave an enemy behind it in fog, on a tile the step
+ * charted that was uncharted on the chronicle before it.
+ */
+function foggedThisTurn(
+  chronicle: Chronicle,
+): Omit<EnemyRun, 'seed' | 'city' | 'turn'> | undefined {
+  const before = new Set(chronicle.snapshots.map(tileKey));
   for (const { out, back } of roundTrips(chronicle)) {
     const seen = inSight(STAND_IN, back);
     const fog = back.snapshots.find(
       (snapshot) =>
         !seen.has(tileKey(snapshot)) &&
+        !before.has(tileKey(snapshot)) &&
         back.units.some((unit) => tileKey(unit.tile) === tileKey(snapshot)),
     );
     if (fog === undefined) continue;
@@ -158,7 +204,7 @@ function nearestUncharted(chronicle: Chronicle): TileCoords {
   let away = Infinity;
   for (const tile of chronicle.tiles) {
     if (seen.has(tileKey(tile))) continue;
-    const off = distance(tile, chronicle.city);
+    const off = distance(tile, cityTileOf(chronicle));
     if (off >= away) continue;
     away = off;
     nearest = { q: tile.q, r: tile.r };
@@ -171,13 +217,14 @@ function nearestUncharted(chronicle: Chronicle): TileCoords {
 type Charting = {
   readonly seed: number;
   readonly turn: number;
-  /** The tile the worker steps onto: a river runs along it, and no river was charted before. */
+  /** The tile the worker crosses to, one or two off the city: from there it charts a river. */
   readonly out: TileCoords;
 };
 
 /**
- * The first seed with a turn in its first eight whose worker, stepping one tile off the city, charts
- * a tile a river runs along, on a map whose rivers all lie between uncharted tiles until then.
+ * The first seed with a turn in its first eight whose worker, crossing one or two tiles off the city,
+ * charts a tile a river runs along, on a map whose rivers all lie between uncharted tiles until then.
+ * The centre part has charted every tile a single step would bring in sight.
  */
 function riverCharting(): Charting {
   return firstSeed('opens a turn on a worker whose step charts a river', (seed) => {
@@ -199,9 +246,11 @@ function chartedThisTurn(chronicle: Chronicle): TileCoords | undefined {
   const entered = outcome(apply(STAND_IN, chronicle, { type: 'play', index: at, aim: 'none' }));
   if (entered.units.length !== 1) return undefined;
 
-  for (const out of neighbours(entered.city)) {
-    const stepped = outcome(apply(STAND_IN, entered, { type: 'move', unit: 1, tile: out }));
-    if (stepped !== entered && riverRuns(stepped) > 0) return out;
+  const city = cityTileOf(entered);
+  for (const { q, r } of entered.tiles) {
+    if (distance({ q, r }, city) > 2) continue;
+    const stepped = outcome(apply(STAND_IN, entered, { type: 'move', unit: 1, tile: { q, r } }));
+    if (stepped !== entered && riverRuns(stepped) > 0) return { q, r };
   }
   return undefined;
 }
@@ -214,7 +263,7 @@ test('the map draws a tile in sight live, a tile in fog under its scrim, and an 
   // The run's ends of turn, and the two steps the worker takes on the turn it opens.
   test.setTimeout(budget(run.turn + 1));
 
-  await open(page, run.seed, 'PH_Deck');
+  await open(page, run.seed, 'PH_Deck', STAND_IN_SCHEDULE, run.city);
   for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
 
   // Before the worker steps out, the tile it will see from there is uncharted like any other.
@@ -225,8 +274,8 @@ test('the map draws a tile in sight live, a tile in fog under its scrim, and an 
   await expect.poll(async () => (await chronicleOf(page)).units.length).toBe(1);
 
   const entered = await chronicleOf(page);
-  await dragUnit(page, entered.city, run.out);
-  await dragUnit(page, run.out, entered.city);
+  await dragUnit(page, cityTileOf(entered), run.out);
+  await dragUnit(page, run.out, cityTileOf(entered));
 
   expect(await standing(page, `tile-${tileKey(run.out)}`)).toBe(true);
   expect(await standing(page, `fog-${tileKey(run.out)}`)).toBe(false);
@@ -256,7 +305,7 @@ test('the overlay, the inspection and a press read what the map draws, and widen
   // The run's ends of turn, and the two steps the worker takes on the turn it opens.
   test.setTimeout(budget(run.turn + 1));
 
-  await open(page, run.seed, 'PH_Deck');
+  await open(page, run.seed, 'PH_Deck', STAND_IN_SCHEDULE, run.city);
   for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
 
   const opened = await chronicleOf(page);
@@ -264,8 +313,8 @@ test('the overlay, the inspection and a press read what the map draws, and widen
   await expect.poll(() => playerUnits(page)).toBe(1);
 
   const entered = await chronicleOf(page);
-  await dragUnit(page, entered.city, run.out);
-  await dragUnit(page, run.out, entered.city);
+  await dragUnit(page, cityTileOf(entered), run.out);
+  await dragUnit(page, run.out, cityTileOf(entered));
 
   // The overlay glyphs the tiles the map draws, each from the face it draws of it.
   await page.keyboard.press('Tab');
@@ -326,7 +375,7 @@ test('the map draws no river between two uncharted tiles, and draws one along a 
 
   await dragOut(page, opened.hand.indexOf('PH_Worker'));
   const entered = await chronicleOf(page);
-  await dragUnit(page, entered.city, run.out);
+  await dragUnit(page, cityTileOf(entered), run.out);
 
   const stepped = await chronicleOf(page);
   expect(riverRuns(stepped)).toBeGreaterThan(0);

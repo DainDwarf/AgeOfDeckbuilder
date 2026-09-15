@@ -18,7 +18,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **influence** | The meta-currency every chronicle pays, scaled by how the city fared. | gold, XP |
 | **chronicle** | One city's story through one age, from its opening to victory or defeat — what a roguelite calls a run. | run, playthrough, attempt, session |
 | **city** | A settlement on the map; the player owns exactly one — _the_ city, what a chronicle is about. | town, capital, base, settlement |
-| **settle** | To put the city on a tile; what the settle card does on turn 0, the **settle phase**, where the deck's settle cards alone are played. | found, founding, establish, place (the city) |
+| **settle** | To put the city on a tile; what a **settle card** — the kind the deck's settle section holds — does on turn 0, the **settle phase**, where the deck's settle cards alone are played. | found, founding, establish, place (the city) |
 | **map** | The hexagonal grid a chronicle is played on. | board, world, grid |
 | **chronicle screen** | The surface a chronicle is played on — the map, the hand, the piles, the resource bar, the infopanel; what a window opens over and closes back to. | table, playfield, play area |
 | **city mode** | The chronicle screen's second mode, in which a left click on the selected tile acts on the city — assigns, unassigns, claims. | build mode, manage mode, edit mode, planning mode |

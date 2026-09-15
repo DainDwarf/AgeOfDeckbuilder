@@ -1,21 +1,30 @@
 import { type Aim, type AimedCard, type Card, type Catalogue, cardOf, entered } from './catalogue';
+import { founding } from './city';
 import { type Tile, type TileCoords, tileKey } from './map';
-import { buildingKind, improvementKind, terrainKind } from './map-kinds';
+import { buildingKind, improvementKind, refuse, terrainKind } from './map-kinds';
 import { RESOURCES, type Resources } from './resources';
 import { type Block, type Chronicle, holds, idle, type TileBlock } from './state';
 import { refreshedMovePoints, spentAction, unitAt } from './units';
 
 /** The declared order of the kinds, which is the order a sorted list of cards reads in. */
-export const CARD_KINDS = ['unit', 'building', 'instant', 'hazard'] as const;
+export const CARD_KINDS = ['settle', 'unit', 'building', 'instant', 'hazard'] as const;
 
 export type CardKind = (typeof CARD_KINDS)[number];
 
 /**
  * How a card is played, whatever its kind: what it is aimed at, and what it does with what it was
- * aimed at. A hazard is aimed at nothing and does nothing when it is played.
+ * aimed at. A settle card refuses an uncharted tile before it asks its own reasons. A hazard is
+ * aimed at nothing and does nothing when it is played.
  */
 export function aimOf(card: Card): Aim {
   switch (card.kind) {
+    case 'settle':
+      return {
+        aim: 'tile',
+        refuses: (catalogue, chronicle, tile) =>
+          firstRefusal(chartedTile(chronicle, tile), card.refuses(catalogue, chronicle, tile)),
+        effect: card.effect,
+      };
     case 'unit':
     case 'building':
     case 'instant':
@@ -27,7 +36,7 @@ export function aimOf(card: Card): Aim {
 
 /**
  * Whether a card played leaves the chronicle instead of going to the discard pile: what single use
- * says of the card carrying it, and what paying a hazard is.
+ * says of the card carrying it, and what playing a settle card or paying a hazard is.
  */
 export function leavesChronicle(card: Card): boolean {
   switch (card.kind) {
@@ -35,6 +44,7 @@ export function leavesChronicle(card: Card): boolean {
     case 'building':
     case 'instant':
       return card.singleUse === true;
+    case 'settle':
     case 'hazard':
       return true;
   }
@@ -49,6 +59,7 @@ export function struck(catalogue: Catalogue, chronicle: Chronicle): Chronicle {
   for (const id of chronicle.hand) {
     const card = cardOf(catalogue, id);
     switch (card.kind) {
+      case 'settle':
       case 'unit':
       case 'building':
       case 'instant':
@@ -83,6 +94,12 @@ export function refuses(
 /** The first check that refuses, in the order the aim hands them over: the one reason it answers. */
 export function firstRefusal(...checks: readonly (TileBlock | undefined)[]): TileBlock | undefined {
   return checks.find((reason) => reason !== undefined);
+}
+
+/** A tile that has been in sight, in sight now or in fog: what a settle card is aimed at. */
+export function chartedTile(chronicle: Chronicle, tile: TileCoords): TileBlock | undefined {
+  const at = tileKey(tile);
+  return chronicle.snapshots.some((snapshot) => tileKey(snapshot) === at) ? undefined : 'uncharted';
 }
 
 /** A worker of the player's standing on the tile, with action left to spend. */
@@ -161,21 +178,25 @@ export function movePointsSpent(chronicle: Chronicle, tile: TileCoords): TileBlo
 
 /**
  * How a unit card enters its unit, the block and the effect as one pair so neither is written
- * without the other: the city keeps its last inhabitant, needs one idle to turn into the unit, and
- * needs its own tile free; then one idle inhabitant becomes the unit, on the city's tile.
+ * without the other: a city standing nowhere blocks it on that alone; a standing city keeps its last
+ * inhabitant, needs one idle to turn into the unit, and needs its own tile free; then one idle
+ * inhabitant becomes the unit, on the city's tile.
  */
 export function enters(type: string): Aim & { readonly aim: 'none' } {
   return {
     aim: 'none',
     blocked: (_catalogue, chronicle) => {
+      if (chronicle.city === undefined) return ['unsettled'];
       const blocks: Block[] = [];
       if (chronicle.population <= 1) blocks.push('population');
       if (idle(chronicle) <= 0) blocks.push('idle');
       if (unitAt(chronicle.units, chronicle.city) !== undefined) blocks.push('city');
       return blocks;
     },
-    effect: (catalogue, paid) =>
-      entered(
+    effect: (catalogue, paid) => {
+      if (paid.city === undefined)
+        refuse(catalogue, `a ${type} entered while the city stands nowhere`);
+      return entered(
         catalogue,
         { ...paid, population: paid.population - 1 },
         {
@@ -183,8 +204,19 @@ export function enters(type: string): Aim & { readonly aim: 'none' } {
           faction: 'player',
           tile: paid.city,
         },
-      ),
+      );
+    },
   };
+}
+
+/**
+ * The settle: the city stands on the tile from now on, its building in the tile's slot, holding and
+ * staffing what a settle there holds.
+ */
+export function settled(catalogue: Catalogue, paid: Chronicle, at: TileCoords): Chronicle {
+  const city = { q: at.q, r: at.r };
+  const standing = built(catalogue, paid, city, catalogue.city.building);
+  return { ...standing, city, ...founding(catalogue, city, standing.tiles) };
 }
 
 /** One tile of the map layered over, every other tile left as it stands. */

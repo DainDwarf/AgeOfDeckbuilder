@@ -1,22 +1,14 @@
 import { expect, test } from '@playwright/test';
 import { STAND_IN } from '../src/content/stand-in';
+import { deckOf } from '../src/rules/catalogue';
 import { apply } from '../src/rules/chronicle';
-import type { CardId } from '../src/rules/state';
 import { chronicleOf, endTurn, launch, onScreen, open, playing, watch } from './chronicle-screen';
 
 /**
  * Seven cards, so the first end of turn deals its next hand either side of a shuffle: two off what
  * the draw pile has left, the discard pile shuffled back into it, then the other three.
  */
-const DECK: readonly CardId[] = [
-  'PH_Worker',
-  'PH_Warrior',
-  'PH_Farm',
-  'PH_March',
-  'PH_Harvest',
-  'PH_Farm',
-  'PH_March',
-];
+const DECK = 'PH_ShortDeck';
 
 /**
  * The two turns this ends are safe on any seed: no event lands before the third turn, and a raid
@@ -29,7 +21,7 @@ test('a pointer sweeping the hand while the end of turn plays leaves the chronic
 }) => {
   const problems = watch(page);
 
-  const names = apply(STAND_IN, launch(SEED, DECK), { type: 'end-turn' }).map(
+  const names = apply(STAND_IN, launch(SEED, deckOf(STAND_IN, DECK)), { type: 'end-turn' }).map(
     (stage) => stage.name,
   );
   expect(names.indexOf('draw')).toBeLessThan(names.indexOf('shuffle'));

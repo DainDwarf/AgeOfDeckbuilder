@@ -1,7 +1,6 @@
 import Phaser from 'phaser';
 import { STAND_IN, STAND_IN_REGION, STAND_IN_SCHEDULE } from './content/stand-in';
-import { cardOf, deckOf, scheduleOf } from './rules/catalogue';
-import type { CardId } from './rules/state';
+import { type Deck, deckOf, scheduleOf } from './rules/catalogue';
 import { ChronicleScene } from './ui/chronicle-scene';
 import { backingSize, followWindow, releaseOnBlur } from './ui/design-space';
 import { readMouseKeys } from './ui/keys';
@@ -22,20 +21,12 @@ function askedSeed(): number | undefined {
   return Number.isInteger(seed) ? seed : undefined;
 }
 
-/**
- * The deck asked for in the address: a deck by its id, or a list of card ids. There is no deck to
- * fall back on, so anything else stops the boot.
- */
-function askedDeck(): readonly CardId[] {
+/** The deck asked for in the address by its id. There is no deck to fall back on, so anything else stops the boot. */
+function askedDeck(): Deck {
   const asked = new URLSearchParams(window.location.search).get('deck');
-  if (asked === null || asked.trim() === '') {
-    throw new Error('no deck on the address: ?deck= a deck id, or a list of card ids');
-  }
-  if (Object.hasOwn(STAND_IN.decks, asked)) return deckOf(STAND_IN, asked);
-
-  const cards = asked.split(',').map((id) => id.trim());
-  for (const id of cards) cardOf(STAND_IN, id);
-  return cards;
+  if (asked === null || asked.trim() === '')
+    throw new Error('no deck on the address: ?deck= a deck id');
+  return deckOf(STAND_IN, asked);
 }
 
 /** The schedule asked for in the address by its id, and the stand-in's own where it names none. */
