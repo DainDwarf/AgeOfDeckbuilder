@@ -25,9 +25,9 @@ import {
   launch,
   marksIn,
   open,
+  rested,
   ringedTile,
   riverRuns,
-  settled,
   shownCard,
   shows,
   standing,
@@ -329,8 +329,8 @@ test('the overlay, the inspection and a press read what the map draws, and widen
   await expect.poll(() => ringedTile(page)).toBe(tileKey(run.fog));
   for (let press = 0; press < 3; press++) {
     await page.keyboard.press('i');
-    await settled(page);
-    await settled(page);
+    await rested(page);
+    await rested(page);
     const card = await shownCard(page);
     expect(card).toBeDefined();
     expect(card).not.toBe('unit');
@@ -339,8 +339,8 @@ test('the overlay, the inspection and a press read what the map draws, and widen
   // A press on an uncharted tile lands off the map: it rings nothing and inspects nothing.
   const dark = await tileOnScreen(page, run.uncharted);
   await page.mouse.click(dark.x, dark.y);
-  await settled(page);
-  await settled(page);
+  await rested(page);
+  await rested(page);
   expect(await ringedTile(page)).toBeUndefined();
   expect(await shownCard(page)).toBeUndefined();
 

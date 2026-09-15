@@ -27,8 +27,8 @@ import {
   open,
   playedOut,
   refusalLines,
+  rested,
   ringedTile,
-  settled,
   shownCard,
   shows,
   standing,
@@ -94,8 +94,8 @@ async function bareTile(page: Page): Promise<TileCoords> {
 
 /** Two frames, so whatever the last gesture handed the chronicle screen has been answered. */
 async function answered(page: Page): Promise<void> {
-  await settled(page);
-  await settled(page);
+  await rested(page);
+  await rested(page);
 }
 
 /** What the tiles inside the border yield, point by point, and what every tile the map draws does. */

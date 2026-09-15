@@ -4,8 +4,8 @@ import {
   click,
   onScreen,
   open,
+  rested,
   ringedTile,
-  settled,
   shownCard,
   standing,
   tileOnScreen,
@@ -81,10 +81,10 @@ async function heldThrough(
 ): Promise<number> {
   const before = await tileOnScreen(page, BARE);
   await down();
-  for (let frame = 0; frame < 12; frame++) await settled(page);
+  for (let frame = 0; frame < 12; frame++) await rested(page);
   await up();
-  await settled(page);
-  await settled(page);
+  await rested(page);
+  await rested(page);
   return (await tileOnScreen(page, BARE)).y - before.y;
 }
 
@@ -155,8 +155,8 @@ async function draggedBy(page: Page, button: 'left' | 'right', by: number): Prom
   await page.mouse.move(before.x, before.y + by / 2, { steps: 5 });
   await page.mouse.move(before.x, before.y + by, { steps: 5 });
   await page.mouse.up({ button });
-  await settled(page);
-  await settled(page);
+  await rested(page);
+  await rested(page);
   return (await tileOnScreen(page, BARE)).y - before.y;
 }
 
@@ -165,8 +165,8 @@ async function grewBy(page: Page, gesture: () => Promise<void>): Promise<number>
   const before = await tileOnScreen(page, BARE);
   await page.mouse.move(before.x, before.y);
   await gesture();
-  await settled(page);
-  await settled(page);
+  await rested(page);
+  await rested(page);
   return (await tileOnScreen(page, BARE)).unit / before.unit;
 }
 
@@ -194,7 +194,7 @@ test('a slot takes the next key pressed, and keeps it across a reload', async ({
 
   await page.reload();
   await page.waitForFunction(() => window.game?.scene.isActive('chronicle') === true);
-  await settled(page);
+  await rested(page);
   await intoControls(page);
   expect(await slotReads(page, 'pan-up', 1)).toBe('K');
   expect(await slotReads(page, 'pan-up', 0)).toBe('W');
@@ -267,8 +267,8 @@ test('the back key binds like any other, and the Back button closes without it',
 
   // Escape backs nothing out any more, so the key that used to leaves the window standing.
   await page.keyboard.press('Escape');
-  await settled(page);
-  await settled(page);
+  await rested(page);
+  await rested(page);
   expect(await standing(page, 'controls')).toBe(true);
 
   await click(page, 'controls-back');
@@ -317,13 +317,13 @@ test("a chord is the browser's, and binds nothing", async ({ page }) => {
   await expect.poll(() => slotReads(page, 'pan-up', 1)).toBe('Press a key');
 
   await page.keyboard.press('Control+k');
-  await settled(page);
-  await settled(page);
+  await rested(page);
+  await rested(page);
   expect(await slotReads(page, 'pan-up', 1)).toBe('Press a key');
 
   await page.keyboard.press('Control');
-  await settled(page);
-  await settled(page);
+  await rested(page);
+  await rested(page);
   expect(await slotReads(page, 'pan-up', 1)).toBe('Press a key');
 
   await page.keyboard.press('k');
@@ -341,8 +341,8 @@ test("a chord is the browser's, and binds nothing", async ({ page }) => {
   await page.keyboard.down('Control');
   await page.mouse.click(tile.x, tile.y, { button: 'middle' });
   await page.keyboard.up('Control');
-  await settled(page);
-  await settled(page);
+  await rested(page);
+  await rested(page);
   expect(await ringedTile(page)).toBeUndefined();
   expect(await shownCard(page)).toBeUndefined();
 
@@ -452,8 +452,8 @@ test('a key bound to a zoom zooms the map, and the wheel moved off it stops zoom
   const before = await tileOnScreen(page, BARE);
   await page.mouse.move(before.x, before.y);
   await page.mouse.wheel(0, -100);
-  await settled(page);
-  await settled(page);
+  await rested(page);
+  await rested(page);
 
   const nudged = await tileOnScreen(page, BARE);
   expect(nudged.unit / before.unit).toBeCloseTo(1, 2);
@@ -476,8 +476,8 @@ test('a right click leaves a window standing, and the back key still steps out o
   // The middle of the design space: the windows stand on it, and bare map lies under them.
   const middle = await onScreen(page, 'controls');
   await page.mouse.click(middle.x, middle.y, { button: 'right' });
-  await settled(page);
-  await settled(page);
+  await rested(page);
+  await rested(page);
   expect(await standing(page, 'controls')).toBe(true);
 
   await outOfControls(page);
@@ -521,8 +521,8 @@ test('a press anywhere else lets go of the slot that was listening', async ({ pa
   await click(page, 'controls-default');
   await expect.poll(() => rows(page)).toEqual(AS_FOUND);
   await page.keyboard.press('k');
-  await settled(page);
-  await settled(page);
+  await rested(page);
+  await rested(page);
   expect(await rows(page)).toEqual(AS_FOUND);
 
   expect(problems).toEqual([]);

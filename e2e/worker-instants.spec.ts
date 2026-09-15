@@ -24,8 +24,8 @@ import {
   playedOut,
   type Run,
   refusalLines,
+  rested,
   ringedTile,
-  settled,
   shownCard,
   standing,
   watch,
@@ -123,7 +123,7 @@ test('the road on the worker that laid the mine is refused for its action, and l
   await dragOut(page, mined.hand.indexOf('PH_Road'));
   await aimed(page);
   await page.mouse.click(target.x, target.y);
-  await settled(page);
+  await rested(page);
 
   expect(await refusalLines(page)).toEqual([text('refusal.action')]);
   expect(await chronicleOf(page)).toEqual(mined);

@@ -15,7 +15,7 @@ import {
   marksIn,
   openOnCapstone,
   playedOut,
-  settled,
+  rested,
   standing,
   stoppedTurn,
   watch,
@@ -46,8 +46,8 @@ test('a chronicle opens on turn 0 with the city standing nowhere, and the settle
 
   expect(await endTurnLabel(page)).toBe(text('button.turn', { turn: 0 }));
   await click(page, 'end-turn');
-  await settled(page);
-  await settled(page);
+  await rested(page);
+  await rested(page);
   expect(await endTurnLabel(page)).toBe(text('button.turn', { turn: 0 }));
   expect(await chronicleOf(page)).toEqual(opened);
 

@@ -24,8 +24,8 @@ import {
   onScreen,
   open,
   refusalLines,
+  rested,
   selected,
-  settled,
   standing,
   unaffordableRun,
   watch,
@@ -139,7 +139,7 @@ test('a press on a tile an aim refuses says one reason over it, and the card sta
   await dragOut(page, index);
   await aimed(page);
   await page.mouse.click(face.x, face.y);
-  await settled(page);
+  await rested(page);
 
   expect(await refusalLines(page)).toEqual([text(`refusal.${block}`)]);
   expect(await standing(page, 'aim')).toBe(true);
@@ -168,11 +168,11 @@ test('a second click on a card the city cannot pay for says why over it, and it 
   const said = reasons(opened, opened.hand[index]);
 
   await page.mouse.click(home.x, home.y);
-  await settled(page);
+  await rested(page);
   expect(await refusalLines(page)).toBeUndefined();
 
   await page.mouse.click(home.x, home.y);
-  await settled(page);
+  await rested(page);
   expect(await refusalLines(page)).toEqual(said);
   expect((await chronicleOf(page)).hand).toEqual(opened.hand);
 
@@ -207,7 +207,7 @@ test('a press on a lit tile the city cannot pay for says the cost over it, and t
 
   const face = await onScreen(page, `tile-${tileKey(run.tile)}`);
   await page.mouse.click(face.x, face.y);
-  await settled(page);
+  await rested(page);
 
   expect(await refusalLines(page)).toEqual(reasons(aiming, UNPAID));
   expect(await standing(page, 'aim')).toBe(true);

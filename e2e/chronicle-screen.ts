@@ -110,7 +110,7 @@ export async function open(
   await openOnCapstone(page, seed, deck, schedule);
   await click(page, 'capstone-card-0');
   await expect.poll(() => standing(page, 'capstone')).toBe(false);
-  await settled(page);
+  await rested(page);
   await settle(page, at);
 }
 
@@ -177,12 +177,12 @@ export async function openOnCapstone(
   });
   await page.goto(`/?seed=${seed}&deck=${deck}&schedule=${schedule}`);
   await page.waitForFunction(() => window.game?.scene.isActive('chronicle') === true);
-  await settled(page);
+  await rested(page);
   await expect.poll(() => standing(page, 'capstone')).toBe(true);
 }
 
 /** Waits for a drawn frame, so a camera moved since answers for where it now stands. */
-export function settled(page: Page): Promise<void> {
+export function rested(page: Page): Promise<void> {
   return page.evaluate(
     () =>
       new Promise<void>((done) => {
@@ -685,14 +685,14 @@ export function offsetOf(page: Page): Promise<number> {
 /** The key above Tab, pressed by its place: the console opens under it, and closes again. */
 export async function consoleKey(page: Page): Promise<void> {
   await page.keyboard.press('Backquote');
-  await settled(page);
+  await rested(page);
 }
 
 /** One entry run at the open console, and the map redrawn under whatever it changed. */
 export async function enter(page: Page, line: string): Promise<void> {
   await page.keyboard.type(line);
   await page.keyboard.press('Enter');
-  await settled(page);
+  await rested(page);
 }
 
 /** Clicks the named object where it stands on the page. */
@@ -720,7 +720,7 @@ export async function wheel(page: Page, by: number): Promise<void> {
  * of a play-out, so a spec that presses either of them straight after would press nothing.
  */
 export async function playedOut(page: Page): Promise<void> {
-  await settled(page);
+  await rested(page);
   await page.waitForFunction(
     () => window.game?.scene.getScene<ChronicleScene>('chronicle').playing === false,
   );
@@ -815,7 +815,7 @@ export function endedTurn(chronicle: Chronicle): Chronicle {
 export async function selected(page: Page, index: number, home: OnScreen): Promise<boolean> {
   const beside = await onScreen(page, `hand-${index === 0 ? 1 : index - 1}`);
   await page.mouse.move(beside.x, beside.y - 200 * beside.unit);
-  await settled(page);
+  await rested(page);
   const now = await onScreen(page, `hand-${index}`);
   return now.y < home.y;
 }

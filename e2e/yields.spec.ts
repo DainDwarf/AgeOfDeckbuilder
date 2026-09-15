@@ -12,7 +12,7 @@ import {
   glyphsOf,
   noGlyphs,
   open,
-  settled,
+  rested,
   shows,
   standing,
   watch,
@@ -20,8 +20,8 @@ import {
 
 /** Two frames, so whatever the last gesture handed the chronicle screen has been answered. */
 async function answered(page: Page): Promise<void> {
-  await settled(page);
-  await settled(page);
+  await rested(page);
+  await rested(page);
 }
 
 /** How many glyphs each resource is owed: one for every point the tiles the map draws yield of it. */

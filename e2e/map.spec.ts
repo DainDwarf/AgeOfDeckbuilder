@@ -20,8 +20,8 @@ import {
   onScreen,
   open,
   playedOut,
+  rested,
   ringedTile,
-  settled,
   shownCard,
   standing,
   tileOnScreen,
@@ -52,7 +52,7 @@ async function drag(page: Page, from: Point, by: Point): Promise<void> {
   await page.mouse.move(from.x + by.x / 2, from.y + by.y / 2, { steps: 5 });
   await page.mouse.move(from.x + by.x, from.y + by.y, { steps: 5 });
   await page.mouse.up();
-  await settled(page);
+  await rested(page);
 }
 
 function inside(at: Point, frame: Frame): boolean {
@@ -74,7 +74,7 @@ async function pushOut(page: Page, coord: TileCoords): Promise<void> {
   const middle = { x: frame.x + frame.width / 2, y: frame.y + frame.height / 2 };
   await page.mouse.move(middle.x, middle.y);
   for (let notch = 0; notch < 2; notch++) await page.mouse.wheel(0, -100);
-  await settled(page);
+  await rested(page);
 
   for (const step of [
     { x: frame.width / 3, y: 0 },
@@ -179,7 +179,7 @@ test('a pan and a zoom carry the ringed tile and the panel beside it', async ({ 
 
   await page.mouse.move(panned.x, panned.y);
   await page.mouse.wheel(0, -100);
-  await settled(page);
+  await rested(page);
 
   const zoomed = await onScreen(page, 'infopanel');
   const grown = await tileOnScreen(page, CHARTED.at);
@@ -214,8 +214,8 @@ test("a pan carries a panel row's tooltip along with the row", async ({ page }) 
     .poll(() => onScreen(page, 'infopanel').then((at) => at.y))
     .toBeGreaterThan(panel.y + 40);
   await page.keyboard.up('w');
-  await settled(page);
-  await settled(page);
+  await rested(page);
+  await rested(page);
 
   const carried = await onScreen(page, 'infopanel');
   const stood = await onScreen(page, 'tooltip-map');
@@ -318,7 +318,7 @@ test('a wheel notch zooms the map about the pointer', async ({ page }) => {
   const east = await tileOnScreen(page, EAST);
   await page.mouse.move(before.x, before.y);
   await page.mouse.wheel(0, -100);
-  await settled(page);
+  await rested(page);
 
   const after = await tileOnScreen(page, BARE.at);
   const eastAfter = await tileOnScreen(page, EAST);
@@ -344,10 +344,10 @@ test('a held pan key moves the map, and lets go of it when it is released', asyn
     .toBeGreaterThan(before.y + 40);
   await page.keyboard.up('w');
 
-  await settled(page);
-  await settled(page);
+  await rested(page);
+  await rested(page);
   const stopped = await tileOnScreen(page, BARE.at);
-  await settled(page);
+  await rested(page);
   expect((await tileOnScreen(page, BARE.at)).y).toBe(stopped.y);
 
   expect(problems).toEqual([]);

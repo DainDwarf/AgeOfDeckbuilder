@@ -468,7 +468,7 @@ export function plains(radius: number): Tile[] {
 }
 
 /** What a fixture opening names: the deck, the timeline, and how far the centre part reaches. */
-export type Opening = {
+type Opening = {
   readonly deck?: Deck;
   readonly timeline?: Timeline;
   readonly reach?: number;

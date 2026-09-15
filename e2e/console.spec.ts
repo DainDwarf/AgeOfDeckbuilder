@@ -15,7 +15,7 @@ import {
   launch,
   marksIn,
   open,
-  settled,
+  rested,
   shows,
   standing,
   tileOnScreen,
@@ -88,10 +88,10 @@ function bandAndLines(page: Page): Promise<{ bar: number; highest: number }> {
 async function heldBy(page: Page, key: string): Promise<number> {
   const before = await tileOnScreen(page, BARE);
   await page.keyboard.down(key);
-  for (let frame = 0; frame < 12; frame++) await settled(page);
+  for (let frame = 0; frame < 12; frame++) await rested(page);
   await page.keyboard.up(key);
-  await settled(page);
-  await settled(page);
+  await rested(page);
+  await rested(page);
   return (await tileOnScreen(page, BARE)).y - before.y;
 }
 
@@ -119,7 +119,7 @@ test('the key above Tab opens the console, which then holds the keyboard', async
   expect(await typedLine(page)).toBe('> w');
 
   await page.keyboard.press('Backspace');
-  await settled(page);
+  await rested(page);
   expect(await typedLine(page)).toBe('> ');
 
   await enter(page, 'sight');
@@ -133,7 +133,7 @@ test('the key above Tab opens the console, which then holds the keyboard', async
   await consoleKey(page);
   expect(await shows(page, 'console')).toBe(true);
   await page.keyboard.press('Escape');
-  await settled(page);
+  await rested(page);
   expect(await shows(page, 'console')).toBe(false);
 
   expect(problems).toEqual([]);

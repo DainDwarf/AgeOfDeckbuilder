@@ -28,8 +28,8 @@ import {
   open,
   panelLines,
   panelMovement,
+  rested,
   ringedTile,
-  settled,
   shownCard,
   standing,
   watch,
@@ -63,8 +63,8 @@ function browserMenu(page: Page): Promise<boolean | undefined> {
 
 /** Two frames, so whatever the last gesture handed the chronicle screen has been answered. */
 async function answered(page: Page): Promise<void> {
-  await settled(page);
-  await settled(page);
+  await rested(page);
+  await rested(page);
 }
 
 /** The first seed whose generator put a feature on a tile touching the city, well inside the frame. */

@@ -31,10 +31,10 @@ import {
   onScreen,
   open,
   playedOut,
+  rested,
   ringed,
   scrolled,
   selected,
-  settled,
   shownCard,
   standing,
   watch,
@@ -131,7 +131,7 @@ test('a hand card released off the canvas comes home, plays nothing, and leaves 
   expect((await chronicleOf(page)).hand).toEqual(opened.hand);
 
   await page.mouse.click(home.x, home.y);
-  await settled(page);
+  await rested(page);
   expect(await standing(page, 'inspection')).toBe(false);
 
   await page.mouse.click(home.x, home.y, { button: 'right' });
@@ -252,7 +252,7 @@ test('a click selects a card that plays at nothing, and a second click plays it'
   const home = await onScreen(page, `hand-${index}`);
 
   await page.mouse.click(home.x, home.y);
-  await settled(page);
+  await rested(page);
   expect((await chronicleOf(page)).hand).toEqual(opened.hand);
   expect(await selected(page, index, home)).toBe(true);
 
@@ -277,7 +277,7 @@ test('a right click inspects a tile while a card is selected, and the back key t
   const home = await onScreen(page, `hand-${index}`);
 
   await page.mouse.click(home.x, home.y);
-  await settled(page);
+  await rested(page);
   expect(await selected(page, index, home)).toBe(true);
 
   // The city's own tile: the map centres on it, so the press lands clear of the hand and the bar,
@@ -318,12 +318,12 @@ test('a click aims a card at the tiles it admits, and a click on another card ta
   await aimed(page);
 
   await page.mouse.click(card.x, card.y);
-  await settled(page);
+  await rested(page);
   expect(await standing(page, 'aim')).toBe(true);
   expect(await chronicleOf(page)).toEqual(opened);
 
   await page.mouse.click(beside.x, beside.y);
-  await settled(page);
+  await rested(page);
   expect(await standing(page, 'aim')).toBe(false);
   expect((await chronicleOf(page)).hand).toEqual(opened.hand);
   expect(await selected(page, other, beside)).toBe(true);
@@ -346,7 +346,7 @@ test('the card being aimed wears a point and says what it is played at, and a ca
   const beside = await onScreen(page, `hand-${other}`);
 
   await page.mouse.click(beside.x, beside.y);
-  await settled(page);
+  await rested(page);
   expect(await selected(page, other, beside)).toBe(true);
   expect(await standing(page, 'aim-point')).toBe(false);
   expect(await aimLine(page)).toBeUndefined();
@@ -459,7 +459,7 @@ test('the inspection key shows the selected card large, and the back key leaves 
   const home = await onScreen(page, `hand-${index}`);
 
   await page.mouse.click(home.x, home.y);
-  await settled(page);
+  await rested(page);
   await page.keyboard.press('KeyI');
   await expect.poll(() => standing(page, 'inspection')).toBe(true);
 
@@ -485,7 +485,7 @@ test('a right press beside the card shown large takes it down and leaves the car
   const home = await onScreen(page, `hand-${index}`);
 
   await page.mouse.click(home.x, home.y);
-  await settled(page);
+  await rested(page);
   expect(await selected(page, index, home)).toBe(true);
 
   await page.mouse.click(home.x, home.y, { button: 'right' });
@@ -494,11 +494,11 @@ test('a right press beside the card shown large takes it down and leaves the car
   // A card has but the one, so a second right click on the card shown large steps nowhere.
   const large = await onScreen(page, 'inspection');
   await page.mouse.click(large.x, large.y, { button: 'right' });
-  await settled(page);
+  await rested(page);
   expect(await standing(page, 'inspection')).toBe(true);
 
   await page.mouse.click(large.x, large.y);
-  await settled(page);
+  await rested(page);
   expect(await standing(page, 'inspection')).toBe(true);
   expect(await selected(page, index, home)).toBe(true);
   expect((await chronicleOf(page)).hand).toEqual(opened.hand);
@@ -527,7 +527,7 @@ test('a right press beside the cards drops the card a browse shows large, and do
   // Nothing stands large, so the right press beside the cards has nothing to take down.
   const away = await besideTheCards(page);
   await page.mouse.click(away.x, away.y, { button: 'right' });
-  await settled(page);
+  await rested(page);
   expect(await standing(page, 'browse')).toBe(true);
   expect(await ringed(page, 'browse-card-0')).toBe(true);
 

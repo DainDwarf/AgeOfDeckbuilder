@@ -16,8 +16,8 @@ import {
   type OnScreen,
   onScreen,
   open,
+  rested,
   selected,
-  settled,
   standing,
   titleOf,
   watch,
@@ -135,7 +135,7 @@ test('a right click on a card of the aim window shows it large, and a press besi
   // A card has but the one thing to show, so a second right click on it steps nowhere.
   const large = await onScreen(page, 'inspection');
   await page.mouse.click(large.x, large.y, { button: 'right' });
-  await settled(page);
+  await rested(page);
   expect(await standing(page, 'inspection')).toBe(true);
 
   const away = await besideTheCards(page);

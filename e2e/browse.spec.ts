@@ -14,9 +14,9 @@ import {
   offsetOf,
   onScreen,
   open,
+  rested,
   ringed,
   scrolled,
-  settled,
   standing,
   watch,
   wheel,
@@ -109,7 +109,7 @@ test('a click rings a browsed card, a right click and the inspection key show it
 
   // A card in a browse is there to be seen and no more: a click on the selection does nothing.
   await click(page, selection);
-  await settled(page);
+  await rested(page);
   expect(await ringed(page, selection)).toBe(true);
   expect(await standing(page, 'inspection')).toBe(false);
   expect(await standing(page, 'browse')).toBe(true);
@@ -121,7 +121,7 @@ test('a click rings a browsed card, a right click and the inspection key show it
 
   // A card stands large, so the inspection key does nothing.
   await page.keyboard.press('KeyI');
-  await settled(page);
+  await rested(page);
   expect(await cardOnFace(page, 'inspection')).toBe(first);
 
   // The right click never selects, so the back key finds the browse's own selection standing.
