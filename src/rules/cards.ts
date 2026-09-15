@@ -178,19 +178,18 @@ export function movePointsSpent(chronicle: Chronicle, tile: TileCoords): TileBlo
 
 /**
  * How a unit card enters its unit, the block and the effect as one pair so neither is written
- * without the other: a city standing nowhere blocks it on that alone; a standing city keeps its last
- * inhabitant, needs one idle to turn into the unit, and needs its own tile free; then one idle
- * inhabitant becomes the unit, on the city's tile.
+ * without the other: the city keeps its last inhabitant, needs one idle to turn into the unit, and
+ * needs its own tile free; then one idle inhabitant becomes the unit, on the city's tile.
  */
 export function enters(type: string): Aim & { readonly aim: 'none' } {
   return {
     aim: 'none',
     blocked: (_catalogue, chronicle) => {
-      if (chronicle.city === undefined) return ['unsettled'];
       const blocks: Block[] = [];
       if (chronicle.population <= 1) blocks.push('population');
       if (idle(chronicle) <= 0) blocks.push('idle');
-      if (unitAt(chronicle.units, chronicle.city) !== undefined) blocks.push('city');
+      if (chronicle.city !== undefined && unitAt(chronicle.units, chronicle.city) !== undefined)
+        blocks.push('city');
       return blocks;
     },
     effect: (catalogue, paid) => {

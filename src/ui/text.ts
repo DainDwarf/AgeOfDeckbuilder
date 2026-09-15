@@ -104,7 +104,6 @@ const TEXT = {
   'refusal.science': 'Costs {cost} science.',
   'refusal.culture': 'Costs {cost} culture.',
   'refusal.claim': 'Not enough culture.',
-  'refusal.unsettled': 'The city is not settled.',
   'refusal.population': 'The city keeps its last inhabitant.',
   'refusal.idle': 'No idle population.',
   'refusal.city': 'A unit already stands on the city.',

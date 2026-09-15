@@ -25,7 +25,6 @@ import {
   REGION,
   SCHEDULE,
   settledLaunch,
-  settledOn,
   stagedBy,
   standing,
   unitNamed,
@@ -337,25 +336,6 @@ test('a settle card is refused on an uncharted tile, on a terrain its content ta
     expect(admittedTiles(opened, 'PH_Settle').map(tileKey)).not.toContain(tileKey(tile));
     expect(stagedBy(opened, aimedAt(tile))).toEqual(['refused']);
   }
-});
-
-test('a unit card is refused while the city stands nowhere, and enters on the city’s tile once the settle has put it there on turn 0', () => {
-  const opened: Chronicle = {
-    ...opening(plains(3), { deck: { cards: [], settle: ['PH_Worker', 'PH_Settle'] } }),
-    resources: FOOD,
-  };
-
-  expect(refusalOf(CATALOGUE, opened, 'PH_Worker').blocked).toEqual(['unsettled']);
-  expect(stagedBy(opened, { type: 'play', index: 0, aim: 'none' })).toEqual(['refused']);
-
-  const settled = settledOn(opened, CITY);
-  const entered = outcome(apply(CATALOGUE, settled, { type: 'play', index: 0, aim: 'none' }));
-
-  expect(settled.hand).toEqual(['PH_Worker']);
-  expect(entered.turn).toBe(0);
-  expect(entered.units).toHaveLength(1);
-  expect(entered.units[0].tile).toEqual(CITY);
-  expect(everyCard(entered)).toEqual([]);
 });
 
 test('a card whose effect names a building, an improvement or a terrain the catalogue lacks is refused where it lands', () => {
