@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { catalogued, entered } from './catalogue';
+import { type Catalogue, catalogued, entered } from './catalogue';
 import { apply, outcome } from './chronicle';
 import { founding } from './city';
 import { CATALOGUE, NO_DEALS } from './fixtures';
@@ -58,10 +58,14 @@ function ground(...relief: readonly Relief[]): Tile[] {
  * A city on that ground as the founding leaves it: the tiles it holds with an inhabitant on each,
  * and whatever else the test has it hold on top of them.
  */
-function founded(tiles: Tile[], claimed: readonly TileCoords[] = []): Chronicle {
-  const held = [...founding(CATALOGUE, CITY, tiles).held, ...claimed];
-  return charted(CATALOGUE, {
-    content: CATALOGUE.version,
+function founded(
+  tiles: Tile[],
+  claimed: readonly TileCoords[] = [],
+  catalogue: Catalogue = CATALOGUE,
+): Chronicle {
+  const held = [...founding(catalogue, CITY, tiles).held, ...claimed];
+  return charted(catalogue, {
+    content: catalogue.version,
     seed: 7,
     rng: seedRng(7),
     timeline: NO_DEALS,
@@ -201,7 +205,7 @@ test('the city sees over the ground as a unit does: a forest beside it hides wha
 test('a city of sight one sees the six tiles around it, and none beyond them', () => {
   const narrow = catalogued({ ...CATALOGUE, city: { ...CATALOGUE.city, sight: 1, holds: 0 } });
   const tiles = ground();
-  const chronicle = { ...founded(tiles), ...founding(narrow, CITY, tiles) };
+  const chronicle = founded(tiles, [], narrow);
   const seen = inSight(narrow, chronicle);
 
   for (const tile of tiles) {
