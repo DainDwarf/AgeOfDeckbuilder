@@ -6,7 +6,7 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ---
 
-- **The throwaway selection page** — the game boots on a page choosing a region, a schedule, a deck and a seed and feeding the chronicle its generated map and timeline; it is wholly replaced in v0.0.5, and the rules never learn the word scenario.
+- **The throwaway selection page** — the game boots on a page choosing the content, a region, a schedule, a deck and a seed and opening the chronicle on them; an address that names a deck opens the chronicle straight and any other opens the page; the rules never learn the word scenario. Doc-impact: `docs/INTERFACE.md`, `.claude/skills/run/SKILL.md`. [board/the-throwaway-selection-page.md](board/the-throwaway-selection-page.md)
 - **The nomadic age designed, number-less** — its page in `docs/`: how the age settles — the site chosen, the city keeping the terrain it lands on, water and mountain refused, one inhabitant working its tile — the starting collection of cards with few or no buildings, the units, the events, the capstone and the camp's reward.
 - **The nomadic age implemented** — the real catalogue replaces the stand-ins with provisional numbers at last, a scout among the units, and the camp's reward a real card.
 - **The biome rework** — a growth weight per biome, the spread growing per biome instead of per frontier, the city's first ring dealt as its own biome, and the bigger map.
