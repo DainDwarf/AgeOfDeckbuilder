@@ -1,7 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
 import { STAND_IN } from '../src/content/stand-in';
 import { deckOf } from '../src/rules/catalogue';
-import { chronicleOf, click, readNames, standing, watch } from './chronicle-screen';
+import { chronicleOf, click, readNames, rested, standing, watch } from './chronicle-screen';
 
 /** The seed the address carries, and nothing where it carries none. */
 function seedOnAddress(page: Page): number | undefined {
@@ -43,6 +43,7 @@ test('Launch opens the chronicle on the defaults, and the address follows every 
 
   await page.goto('/');
   await expect.poll(() => standing(page, 'launch-button')).toBe(true);
+  await rested(page);
   await click(page, 'launch-button');
   await page.waitForFunction(() => window.game?.scene.isActive('chronicle') === true);
 
