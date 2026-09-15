@@ -22,12 +22,12 @@ import {
 } from './cards';
 import { type Catalogue, catalogued, deckOf, type Entering, entered } from './catalogue';
 import { apply, type Command, outcome } from './chronicle';
+import { founding } from './city';
 import {
   type BuildingTypeId,
   cornerKey,
   cornersOf,
   MOVE_POINT,
-  neighbours,
   type River,
   type Terrain,
   type Tile,
@@ -313,7 +313,7 @@ export const CATALOGUE: Catalogue = catalogued({
     },
   },
   camp: { unit: 'PH_Warrior', script: 'advance', building: 'PH_Camp', reward: 'PH_Spoils' },
-  city: { terrain: 'urban', building: 'PH_City' },
+  city: { terrain: 'urban', building: 'PH_City', sight: 2, holds: 1, idle: 2 },
 });
 
 /** The one region the fixture catalogue deals its maps from. */
@@ -559,19 +559,10 @@ export function claimOf(tile: TileCoords): Command {
   return { type: 'claim', tile };
 }
 
-/**
- * A city on a disc of plain out to `radius`, holding the seven tiles the founding holds with an
- * inhabitant on each and two idle besides.
- */
+/** A city on a disc of plain out to `radius`, holding and staffed as the founding leaves it. */
 export function founded(radius: number, carrying: Carrying = {}): Chronicle {
-  const held = [CITY, ...neighbours(CITY)];
-  return cityOf(['urban'], {
-    tiles: field(radius),
-    held,
-    population: held.length + 2,
-    assigned: [...held],
-    ...carrying,
-  });
+  const tiles = carrying.tiles ?? field(radius);
+  return cityOf(['urban'], { tiles, ...founding(CATALOGUE, CITY, tiles), ...carrying });
 }
 
 /**

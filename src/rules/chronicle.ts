@@ -165,7 +165,7 @@ export function beginChronicle(
     snapshots: [],
     rivers: map.rivers,
     city: CITY_TILE,
-    ...founding(),
+    ...founding(catalogue, CITY_TILE, tiles),
     turn: 1,
     deal: [],
     resources: { food: 0, production: 0, military: 0, money: 0, science: 0, culture: 0 },

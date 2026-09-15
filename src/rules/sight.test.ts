@@ -1,18 +1,11 @@
 import { expect, test } from 'vitest';
-import { entered } from './catalogue';
+import { catalogued, entered } from './catalogue';
 import { apply, outcome } from './chronicle';
+import { founding } from './city';
 import { CATALOGUE, NO_DEALS } from './fixtures';
-import {
-  distance,
-  MOVE_POINT,
-  neighbours,
-  type Terrain,
-  type Tile,
-  type TileCoords,
-  tileKey,
-} from './map';
+import { distance, MOVE_POINT, type Terrain, type Tile, type TileCoords, tileKey } from './map';
 import { seedRng } from './rng';
-import { CITY_SIGHT, charted, inSight } from './sight';
+import { charted, inSight } from './sight';
 import type { Chronicle, Snapshot } from './state';
 import type { UnitStats } from './units';
 
@@ -26,6 +19,9 @@ const WATCHER: TileCoords = { q: 0, r: 5 };
 
 /** How far the unit under test sees: the fixture's own number, not a unit of content's. */
 const SIGHT = 2;
+
+/** How far the fixture's city sees. */
+const CITY_SIGHT = CATALOGUE.city.sight;
 
 /** A tile so many steps off the watcher. */
 function off(q: number, r: number): TileCoords {
@@ -59,11 +55,11 @@ function ground(...relief: readonly Relief[]): Tile[] {
 }
 
 /**
- * A city on that ground as the founding leaves it: the seven tiles it holds with an inhabitant on
- * each, and whatever else the test has it hold on top of them.
+ * A city on that ground as the founding leaves it: the tiles it holds with an inhabitant on each,
+ * and whatever else the test has it hold on top of them.
  */
 function founded(tiles: Tile[], claimed: readonly TileCoords[] = []): Chronicle {
-  const held = [CITY, ...neighbours(CITY), ...claimed];
+  const held = [...founding(CATALOGUE, CITY, tiles).held, ...claimed];
   return charted(CATALOGUE, {
     content: CATALOGUE.version,
     seed: 7,
@@ -200,6 +196,18 @@ test('the city sees over the ground as a unit does: a forest beside it hides wha
 
   expect(sees(open, behind)).toBe(true);
   expect(sees(hidden, behind)).toBe(false);
+});
+
+test('a city of sight one sees the six tiles around it, and none beyond them', () => {
+  const narrow = catalogued({ ...CATALOGUE, city: { ...CATALOGUE.city, sight: 1, holds: 0 } });
+  const tiles = ground();
+  const chronicle = { ...founded(tiles), ...founding(narrow, CITY, tiles) };
+  const seen = inSight(narrow, chronicle);
+
+  for (const tile of tiles) {
+    if (distance(CITY, tile) > 2) continue;
+    expect(seen.has(tileKey(tile))).toBe(distance(CITY, tile) <= 1);
+  }
 });
 
 test('the snapshot keeps a tile as it was last seen once the unit that saw it has left', () => {

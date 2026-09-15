@@ -1,5 +1,5 @@
 import type { Catalogue } from './catalogue';
-import { CITY_TILE, neighbours, type TileCoords, tileKey, tileYield } from './map';
+import { neighbours, type Tile, type TileCoords, tileKey, tileYield } from './map';
 import { RESOURCES } from './resources';
 import {
   assignedTo,
@@ -30,23 +30,32 @@ type ClaimCommand = { readonly type: 'claim'; readonly tile: TileCoords };
 /** Everything the player commands the city by: its inhabitants, and the border they stand inside. */
 export type CityCommand = AssignCommand | ReassignCommand | ClaimCommand;
 
-/** How many inhabitants the founding leaves on no tile, on top of one for each tile it holds. */
-const IDLE_FOUNDED = 2;
-
-/** What the founding holds: the city's own tile and the six around it. */
-const FOUNDING_HELD: readonly TileCoords[] = [CITY_TILE, ...neighbours(CITY_TILE)];
-
 /** What the first claim past the founding's tiles costs, and how many claims each rise lasts. */
 const CLAIM_FIRST = 1;
 const CLAIMS_PER_RISE = 3;
 
 /**
- * The border a founding starts on and the inhabitants standing inside it: the city's own tile and
- * the six around it, one inhabitant on each and two idle besides.
+ * The border a founding on this tile starts on and the inhabitants standing inside it: the city's
+ * own tile first and every tile of the map within as many rings of it as the city's content holds,
+ * one inhabitant on each and the city's idle count besides.
  */
-export function founding(): Pick<Chronicle, 'held' | 'population' | 'assigned'> {
-  const held = [...FOUNDING_HELD];
-  return { held, population: held.length + IDLE_FOUNDED, assigned: [...held] };
+export function founding(
+  catalogue: Catalogue,
+  at: TileCoords,
+  tiles: readonly Tile[],
+): Pick<Chronicle, 'held' | 'population' | 'assigned'> {
+  const reached = new Map([[tileKey(at), { q: at.q, r: at.r }]]);
+  let ring: TileCoords[] = [{ q: at.q, r: at.r }];
+  for (let step = 0; step < catalogue.city.holds; step++) {
+    ring = ring.flatMap(neighbours).filter((coord) => {
+      if (reached.has(tileKey(coord))) return false;
+      reached.set(tileKey(coord), coord);
+      return true;
+    });
+  }
+  const onMap = new Set(tiles.map(tileKey));
+  const held = [...reached.values()].filter((coord) => onMap.has(tileKey(coord)));
+  return { held, population: held.length + catalogue.city.idle, assigned: [...held] };
 }
 
 /**
@@ -105,10 +114,11 @@ export function claimable(catalogue: Catalogue, chronicle: Chronicle): TileCoord
 
 /**
  * The culture threshold, what the next claim costs: one culture, and one more for every three tiles
- * claimed past the seven the founding holds.
+ * claimed past the tiles the founding held.
  */
-function cultureThreshold(chronicle: Chronicle): number {
-  const claimed = Math.max(0, chronicle.held.length - FOUNDING_HELD.length);
+function cultureThreshold(catalogue: Catalogue, chronicle: Chronicle): number {
+  const founded = founding(catalogue, chronicle.city, chronicle.tiles).held.length;
+  const claimed = Math.max(0, chronicle.held.length - founded);
   return CLAIM_FIRST + Math.floor(claimed / CLAIMS_PER_RISE);
 }
 
@@ -116,10 +126,10 @@ function cultureThreshold(chronicle: Chronicle): number {
  * What the city's act on this tile costs, in the shape a card's cost comes in: the culture a claim
  * asks for, and nothing at all on a tile the city already holds.
  */
-export function tileCost(chronicle: Chronicle, tile: TileCoords): Cost[] {
+export function tileCost(catalogue: Catalogue, chronicle: Chronicle, tile: TileCoords): Cost[] {
   return holds(chronicle, tile)
     ? []
-    : [{ resource: 'culture', amount: cultureThreshold(chronicle) }];
+    : [{ resource: 'culture', amount: cultureThreshold(catalogue, chronicle) }];
 }
 
 /**
@@ -139,7 +149,10 @@ export function tileRefusal(
   if (!claimable(catalogue, chronicle).some((coord) => tileKey(coord) === tileKey(tile))) {
     return undefined;
   }
-  return { unaffordable: unaffordable(chronicle, tileCost(chronicle, tile)), blocked: [] };
+  return {
+    unaffordable: unaffordable(chronicle, tileCost(catalogue, chronicle, tile)),
+    blocked: [],
+  };
 }
 
 /**
@@ -232,7 +245,7 @@ export function claim(
     ...chronicle,
     resources: {
       ...chronicle.resources,
-      culture: chronicle.resources.culture - cultureThreshold(chronicle),
+      culture: chronicle.resources.culture - cultureThreshold(catalogue, chronicle),
     },
     held: [...chronicle.held, taken],
     assigned: staffed ? [...chronicle.assigned, taken] : chronicle.assigned,

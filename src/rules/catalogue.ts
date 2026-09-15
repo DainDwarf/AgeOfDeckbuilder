@@ -117,7 +117,8 @@ export type Schedule = {
  * The content a chronicle is played on: the stats a unit of each kind enters the map with, every
  * script an enemy can carry, the map content, the cards and the decks a chronicle is founded on,
  * the events and the schedules its timeline is rolled from, what a camp is, enters and gives on its
- * capture, and what the opening puts on the centre tile. Every one of them is named by its key.
+ * capture, and the city: what the opening puts on the centre tile, how far it sees, and what its
+ * settle holds and opens with. Every one of them is named by its key.
  */
 export type Catalogue = MapContent & {
   readonly units: Readonly<Record<string, UnitStats>>;
@@ -132,7 +133,15 @@ export type Catalogue = MapContent & {
     readonly building: string;
     readonly reward: string;
   };
-  readonly city: { readonly terrain: string; readonly building: string };
+  readonly city: {
+    readonly terrain: string;
+    readonly building: string;
+    readonly sight: number;
+    /** How many rings around its own tile the settle holds with it. */
+    readonly holds: number;
+    /** How many inhabitants the chronicle opens with besides one on each tile the settle holds. */
+    readonly idle: number;
+  };
 };
 
 /**
@@ -143,7 +152,8 @@ export type Catalogue = MapContent & {
  * hazard or the camp's reward; no schedule deals its capstone among its entries; a schedule deals and
  * spans at least one, and each of its spans rolls from one at least to no less than its least; an
  * event with a second script is some schedule's capstone; the camp's unit stands on every terrain
- * its building names; and the city's building stands on the city's terrain. A card's closures and an
+ * its building names; the city's building stands on the city's terrain; and the city's sight, the
+ * rings its settle holds and its idle count are none below nought. A card's closures and an
  * event's are neither run nor read here.
  */
 export function catalogued(content: Catalogue): Catalogue {
@@ -228,6 +238,10 @@ export function catalogued(content: Catalogue): Catalogue {
       `the city's building ${content.city.building} does not stand on ${content.city.terrain}`,
     );
   }
+  const { sight, holds, idle } = content.city;
+  if (sight < 0) refuse(content, `the city sees ${sight}`);
+  if (holds < 0) refuse(content, `the city's settle holds ${holds} rings`);
+  if (idle < 0) refuse(content, `the city opens with ${idle} idle`);
   return content;
 }
 

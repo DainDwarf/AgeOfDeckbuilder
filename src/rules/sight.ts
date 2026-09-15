@@ -3,9 +3,6 @@ import { distance, elevation, type Terrain, type TileCoords, tileKey } from './m
 import type { Chronicle, Snapshot } from './state';
 import { unitAt } from './units';
 
-/** How far the city sees, the way a unit sees on its own sight. */
-export const CITY_SIGHT = 2;
-
 /** A tile in the cube coordinates a line is drawn in: `x` is its q, `z` its r, and the three sum to nought. */
 type Cube = { readonly x: number; readonly y: number; readonly z: number };
 
@@ -81,7 +78,7 @@ export function inSight(catalogue: Catalogue, chronicle: Chronicle): ReadonlySet
   const terrains = new Map(chronicle.tiles.map((tile) => [tileKey(tile), tile.terrain]));
   const seen = new Set(chronicle.held.map(tileKey));
 
-  const watching = [{ from: chronicle.city, sight: CITY_SIGHT }];
+  const watching = [{ from: chronicle.city, sight: catalogue.city.sight }];
   for (const unit of chronicle.units) {
     if (unit.faction === 'player') watching.push({ from: unit.tile, sight: unit.stats.sight });
   }

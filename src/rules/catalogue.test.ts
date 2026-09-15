@@ -90,6 +90,14 @@ test('a catalogue whose city’s building does not stand on the city’s terrain
   expect(() => catalogued(content)).toThrow(/^fixture: /);
 });
 
+test('a catalogue whose city sees, holds rings or opens with idle inhabitants below nought is refused', () => {
+  for (const below of [{ sight: -1 }, { holds: -1 }, { idle: -1 }]) {
+    const content = changed({ city: { ...CATALOGUE.city, ...below } });
+
+    expect(() => catalogued(content)).toThrow(/^fixture: /);
+  }
+});
+
 test('a catalogue whose deck names a card it does not hold is refused', () => {
   const content = changed({ decks: { deck: [...DECK, 'PH_Scout'] } });
 

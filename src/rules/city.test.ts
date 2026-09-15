@@ -1,6 +1,15 @@
 import { expect, test } from 'vitest';
+import { type Catalogue, catalogued } from './catalogue';
 import { apply, type Command, launched, outcome } from './chronicle';
-import { cityCommand, cityDrag, claimable, growthThreshold, tileCost, tileRefusal } from './city';
+import {
+  cityCommand,
+  cityDrag,
+  claimable,
+  founding,
+  growthThreshold,
+  tileCost,
+  tileRefusal,
+} from './city';
 import {
   assignTo,
   CATALOGUE,
@@ -31,6 +40,12 @@ import {
 import { buildingKind, featureKind, improvementKind, terrainKind } from './map-kinds';
 import { RESOURCES } from './resources';
 import { type Chronicle, idle } from './state';
+
+/** The fixture's content with a city whose settle holds its own tile alone and opens with three idle. */
+const ALONE: Catalogue = catalogued({
+  ...CATALOGUE,
+  city: { ...CATALOGUE.city, holds: 0, idle: 3 },
+});
 
 /** The command a drag in city mode sends: the inhabitant off one tile and onto another. */
 function reassignTo(from: TileCoords, to: TileCoords): Command {
@@ -99,6 +114,33 @@ test('the founding puts an inhabitant on every tile the city holds, and leaves t
     [...chronicle.held].map(tileKey).sort(),
   );
   expect(idle(chronicle)).toBe(2);
+});
+
+test('a city whose content holds no ring holds its tile alone, one inhabitant on it and its idle besides', () => {
+  const chronicle = launched(ALONE, REGION, SCHEDULE, 1234, DECK);
+
+  expect(chronicle.held.map(tileKey)).toEqual([tileKey(chronicle.city)]);
+  expect(chronicle.assigned.map(tileKey)).toEqual([tileKey(chronicle.city)]);
+  expect(idle(chronicle)).toBe(3);
+});
+
+test('past a founding that held its tile alone, a claim costs one culture, and one more for every three tiles claimed', () => {
+  const tiles = field(2);
+  let chronicle = cityOf(['urban'], {
+    tiles,
+    ...founding(ALONE, CITY, tiles),
+    resources: culture(20),
+    population: 40,
+  });
+
+  const paid = neighbours(CITY).map((tile) => {
+    const before = chronicle.resources.culture;
+    chronicle = outcome(apply(ALONE, chronicle, claimOf(tile)));
+    return before - chronicle.resources.culture;
+  });
+
+  expect(paid).toEqual([1, 1, 1, 2, 2, 2]);
+  expect(chronicle.held).toHaveLength(7);
 });
 
 test('income yields every tile inside the border, and nothing outside it', () => {
@@ -545,13 +587,13 @@ test('a city-mode click is refused for the culture it costs, and a tile off the 
   const city = founded(3);
   const paid = founded(3, { resources: culture(1) });
 
-  expect(tileCost(city, { q: 2, r: 0 })).toEqual([{ resource: 'culture', amount: 1 }]);
+  expect(tileCost(CATALOGUE, city, { q: 2, r: 0 })).toEqual([{ resource: 'culture', amount: 1 }]);
   expect(tileRefusal(CATALOGUE, city, { q: 2, r: 0 })).toEqual({
     unaffordable: ['culture'],
     blocked: [],
   });
   expect(tileRefusal(CATALOGUE, paid, { q: 2, r: 0 })).toEqual({ unaffordable: [], blocked: [] });
-  expect(tileCost(paid, CITY)).toEqual([]);
+  expect(tileCost(CATALOGUE, paid, CITY)).toEqual([]);
   expect(tileRefusal(CATALOGUE, paid, CITY)).toEqual({ unaffordable: [], blocked: [] });
 });
 

@@ -338,7 +338,7 @@ export const STAND_IN: Catalogue = catalogued({
     },
   },
   camp: { unit: 'PH_Warrior', script: 'PH_Advance', building: 'PH_Camp', reward: 'PH_Spoils' },
-  city: { terrain: 'urban', building: 'PH_City' },
+  city: { terrain: 'urban', building: 'PH_City', sight: 2, holds: 1, idle: 2 },
 });
 
 /** A deck of this many copies of each founding card, in the order the founding cards are listed. */
