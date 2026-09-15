@@ -71,10 +71,10 @@ export const ADVANCE: EnemyScript = {
   },
 };
 
-/** The region the boot launches the stand-in on. */
+/** The region a launch chooses on the stand-in, listed first so a launch that names none lands on it. */
 export const STAND_IN_REGION = 'PH_Region';
 
-/** The schedule the boot launches the stand-in on, where the address names none. */
+/** The schedule a launch chooses on the stand-in, listed first so a launch that names none lands on it. */
 export const STAND_IN_SCHEDULE = 'PH_Schedule';
 
 /** What every deck's settle section holds. */

@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { refuses } from '../rules/cards';
-import { type Catalogue, deckOf } from '../rules/catalogue';
+import { deckOf } from '../rules/catalogue';
 import {
   admitted,
   apply,
@@ -73,10 +73,6 @@ export class ChronicleScene extends Phaser.Scene {
     this.current = this.begin(choices.seed);
   }
 
-  private get catalogue(): Catalogue {
-    return this.choices.catalogue;
-  }
-
   /** The chronicle as it stands, for whoever holds the game through `window.game`. */
   get chronicle(): Chronicle {
     return this.current;
@@ -125,8 +121,8 @@ export class ChronicleScene extends Phaser.Scene {
     createBand(this);
 
     const parts: Part[] = [];
-    const view = createMapView(this, map, this.catalogue, this.current);
-    const panel = createInfoPanel(this, map, this.catalogue);
+    const view = createMapView(this, map, this.choices.catalogue, this.current);
+    const panel = createInfoPanel(this, map, this.choices.catalogue);
     const note = createRefusalNote(this, map);
 
     /** The tile the ring stands on, and nothing while none is selected. */
@@ -171,7 +167,7 @@ export class ChronicleScene extends Phaser.Scene {
      */
     const playOut = async (command: Command): Promise<void> => {
       if (this.sequence !== undefined) return;
-      const stages = apply(this.catalogue, this.current, command);
+      const stages = apply(this.choices.catalogue, this.current, command);
       const running = Symbol('play-out');
       this.sequence = running;
 
@@ -209,7 +205,8 @@ export class ChronicleScene extends Phaser.Scene {
      */
     const thresholdOn = (found: PressedTile | undefined): Cost | undefined => {
       if (!cityMode || found === undefined) return undefined;
-      if (tileRefusal(this.catalogue, this.current, found.tile) === undefined) return undefined;
+      if (tileRefusal(this.choices.catalogue, this.current, found.tile) === undefined)
+        return undefined;
       return tileCost(this.current, found.tile).find(({ resource }) => resource === 'culture');
     };
 
@@ -244,7 +241,7 @@ export class ChronicleScene extends Phaser.Scene {
         return;
       }
       const cards = cardsOf(
-        this.catalogue,
+        this.choices.catalogue,
         face.tile,
         face.asStands ? this.current.units : [],
         this.current.rivers,
@@ -266,9 +263,9 @@ export class ChronicleScene extends Phaser.Scene {
      * act.
      */
     const act = async (found: PressedTile): Promise<void> => {
-      const refusal = tileRefusal(this.catalogue, this.current, found.tile);
+      const refusal = tileRefusal(this.choices.catalogue, this.current, found.tile);
       if (refusal === undefined) return;
-      const command = cityCommand(this.catalogue, this.current, found.tile);
+      const command = cityCommand(this.choices.catalogue, this.current, found.tile);
       if (command === undefined) {
         note.overTile(refusedAct(refusal), found.at);
         return;
@@ -346,7 +343,7 @@ export class ChronicleScene extends Phaser.Scene {
     const overlay = createOverlay(
       this,
       ui,
-      this.catalogue,
+      this.choices.catalogue,
       (over) => {
         covered = over;
         view.live(!over);
@@ -360,7 +357,7 @@ export class ChronicleScene extends Phaser.Scene {
     const endTurn = this.addEndTurn(() => {
       void playOut({ type: 'end-turn' });
     });
-    const hand = createHand(this, ui, this.catalogue, {
+    const hand = createHand(this, ui, this.choices.catalogue, {
       play: (index) => {
         void playOut({ type: 'play', index, aim: 'none' });
       },
@@ -372,12 +369,15 @@ export class ChronicleScene extends Phaser.Scene {
         // Nothing changes the chronicle while an aim stands, so the refusal it opens on is still the
         // rules' answer at the press that lands it, and no play is sent for one they would refuse.
         const id = this.current.hand[index];
-        const refusal = refusalOf(this.catalogue, this.current, id);
+        const refusal = refusalOf(this.choices.catalogue, this.current, id);
         return view.aimTile(
-          admitted(this.catalogue, this.current, card),
+          admitted(this.choices.catalogue, this.current, card),
           (tile) => {
             if (!playable(refusal)) {
-              note.overTile(refusedCard(costOf(this.catalogue, id), refusal), view.faceOf(tile));
+              note.overTile(
+                refusedCard(costOf(this.choices.catalogue, id), refusal),
+                view.faceOf(tile),
+              );
               return;
             }
             hand.unselect();
@@ -386,7 +386,9 @@ export class ChronicleScene extends Phaser.Scene {
           (found) => {
             const tile = tileAt(this.current.tiles, found.tile);
             const block =
-              tile === undefined ? undefined : refuses(this.catalogue, this.current, card, tile);
+              tile === undefined
+                ? undefined
+                : refuses(this.choices.catalogue, this.current, card, tile);
             if (block === undefined) return;
             note.overTile(refusedAim(block), found.at);
           },
@@ -523,7 +525,7 @@ export class ChronicleScene extends Phaser.Scene {
     parts.push(
       view,
       bar,
-      createPiles(this, this.catalogue, (pile) => overlay.browse(pile, this.current)),
+      createPiles(this, this.choices.catalogue, (pile) => overlay.browse(pile, this.current)),
       hand,
       endTurn,
       overlay,
