@@ -6,6 +6,7 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ---
 
+- **Terraforming a filled slot** — a worker's terraform is admitted on a filled slot and razes the building the new terrain does not name, the city's tile is terraformed into a terrain its building stands on alone and stands untouched otherwise, a unit left on ground it cannot stand on is killed, and `docs/CHRONICLE.md` says all three. Doc-impact: `docs/CHRONICLE.md`, `docs/GLOSSARY.md`. [board/terraforming-a-filled-slot.md](board/terraforming-a-filled-slot.md)
 - **The nomadic age implemented** — the real catalogue replaces every stand-in with provisional numbers at last: the three units with the scout, the cards, the land and its three features, the five events, the first shelter and the camps' two rewards.
 - **The biome rework** — a growth weight per biome, the spread growing per biome instead of per frontier, the city's first ring dealt as its own biome, and the bigger map.
 - **The balance pass** — numbers measured on the real content, edits uncommitted until the user says they hold.
