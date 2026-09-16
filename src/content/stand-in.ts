@@ -93,7 +93,7 @@ const DECK_CARDS: readonly CardId[] = [
   'PH_Recall',
 ];
 
-/** How many camps the siege places: what its rules entry reads and what it lands. */
+/** How many camps the siege places. */
 const SIEGE_CAMPS = 5;
 
 /** `PH_` marks a stand-in: none of this is authored content, and every piece of it goes. */
@@ -277,31 +277,27 @@ export const STAND_IN: Catalogue = catalogued({
         },
       },
     },
+  },
+  capstones: {
     PH_Siege: {
-      answers: {
-        PH_Hold: {
-          cost: {},
-          reads: () => ({ camps: SIEGE_CAMPS }),
-          lands: (catalogue, chronicle) => besieged(catalogue, chronicle, SIEGE_CAMPS, [3, 5], 3),
-        },
-      },
+      lands: (catalogue, chronicle) => besieged(catalogue, chronicle, SIEGE_CAMPS, [3, 5], 3),
       continues: reinforced,
     },
   },
   schedules: {
     [STAND_IN_SCHEDULE]: {
       spacing: [3, 7],
-      capstone: { event: 'PH_Siege', window: [27, 33], span: 6 },
+      capstone: { id: 'PH_Siege', window: [27, 33], span: 6 },
       entries: { PH_Hardship: () => 1 },
     },
     PH_ShortSchedule: {
       spacing: [3, 7],
-      capstone: { event: 'PH_Siege', window: [2, 2], span: 2 },
+      capstone: { id: 'PH_Siege', window: [2, 2], span: 2 },
       entries: { PH_Hardship: () => 1 },
     },
     PH_TollSchedule: {
       spacing: [3, 7],
-      capstone: { event: 'PH_Siege', window: [27, 33], span: 6 },
+      capstone: { id: 'PH_Siege', window: [27, 33], span: 6 },
       entries: { PH_Toll: () => 1 },
     },
   },

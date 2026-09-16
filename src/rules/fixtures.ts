@@ -46,7 +46,7 @@ import { charted } from './sight';
 import type { CardId, Chronicle, Deal, Timeline } from './state';
 import type { Faction, Unit, UnitStats } from './units';
 
-/** How many camps the fixture's siege places: what its rules entry reads and what it lands. */
+/** How many camps the fixture's siege places. */
 const SIEGE_CAMPS = 5;
 
 /** The production the fixture's explosion costs: the one answer of the fixture that costs a stock. */
@@ -245,21 +245,17 @@ export const CATALOGUE: Catalogue = catalogued({
         },
       },
     },
+  },
+  capstones: {
     PH_Siege: {
-      answers: {
-        PH_Hold: {
-          cost: {},
-          reads: () => ({ camps: SIEGE_CAMPS }),
-          lands: (catalogue, chronicle) => besieged(catalogue, chronicle, SIEGE_CAMPS, [3, 5], 3),
-        },
-      },
+      lands: (catalogue, chronicle) => besieged(catalogue, chronicle, SIEGE_CAMPS, [3, 5], 3),
       continues: reinforced,
     },
   },
   schedules: {
     schedule: {
       spacing: [3, 7],
-      capstone: { event: 'PH_Siege', window: [27, 33], span: 6 },
+      capstone: { id: 'PH_Siege', window: [27, 33], span: 6 },
       entries: { PH_Hardship: () => 1, PH_Blight: () => 1 },
     },
   },
@@ -397,7 +393,7 @@ export const SCHEDULE = 'schedule';
  */
 export const NO_DEALS: Timeline = {
   deals: [],
-  capstone: { event: 'PH_Siege', turn: 1000, last: 1005 },
+  capstone: { id: 'PH_Siege', turn: 1000, last: 1005 },
 };
 
 /** A timeline dealing these events on these turns, and its capstone as `NO_DEALS` has it. */

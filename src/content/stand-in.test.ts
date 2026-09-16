@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 import { aimOf } from '../rules/cards';
-import { cardOf, catalogued, deckOf, eventOf, scheduleOf } from '../rules/catalogue';
+import { capstoneOf, cardOf, catalogued, deckOf, eventOf } from '../rules/catalogue';
 import { admitted, launched, refusalOf } from '../rules/chronicle';
 import { settledLaunch } from '../rules/fixtures';
 import { seedRng } from '../rules/rng';
@@ -18,10 +18,11 @@ import {
   answerName,
   answerRules,
   buildingName,
+  capstoneName,
+  capstoneRules,
   cardName,
   cardRules,
   eventName,
-  eventRules,
   featureName,
   improvementName,
   terrainName,
@@ -118,10 +119,9 @@ test('each deck of the stand-in settles its city on the centre tile and reaches 
   }
 });
 
-test('every event of the stand-in, and every answer it deals, has a name and a rules entry on the screen', () => {
+test('every event of the stand-in has a name on the screen, and every answer it deals a name and a rules entry', () => {
   for (const [id, event] of Object.entries(STAND_IN.events)) {
     expect(() => eventName(id)).not.toThrow();
-    expect(() => eventRules(id)).not.toThrow();
     for (const answer of Object.keys(event.answers)) {
       expect(() => answerName(answer)).not.toThrow();
       expect(() => answerRules(answer, {})).not.toThrow();
@@ -136,9 +136,11 @@ test('every reward of the stand-in’s camp has a name and a rules entry on the 
   }
 });
 
-test('every capstone a schedule of the stand-in names has a victory line on the screen', () => {
-  for (const id of Object.keys(STAND_IN.schedules)) {
-    expect(() => victoryLine(scheduleOf(STAND_IN, id).capstone.event)).not.toThrow();
+test('every capstone of the stand-in has a name, a rules entry and a victory line on the screen', () => {
+  for (const id of Object.keys(STAND_IN.capstones)) {
+    expect(() => capstoneName(id)).not.toThrow();
+    expect(() => capstoneRules(id)).not.toThrow();
+    expect(() => victoryLine(id)).not.toThrow();
   }
 });
 
@@ -148,17 +150,20 @@ test('every schedule of the stand-in rolls a timeline', () => {
   }
 });
 
-test('every answer of every event of the stand-in reads and lands, and every event continues, on a chronicle launched and settled on each schedule', () => {
+test('every answer of every event of the stand-in reads and lands, and every capstone lands and continues, on a chronicle launched and settled on each schedule', () => {
   for (const schedule of Object.keys(STAND_IN.schedules)) {
     const deck = deckOf(STAND_IN, 'PH_Deck');
     const chronicle = settledLaunch(STAND_IN, STAND_IN_REGION, schedule, 1, deck);
     for (const id of Object.keys(STAND_IN.events)) {
-      const event = eventOf(STAND_IN, id);
-      for (const answer of Object.values(event.answers)) {
+      for (const answer of Object.values(eventOf(STAND_IN, id).answers)) {
         expect(() => answer.reads(STAND_IN, chronicle)).not.toThrow();
         expect(() => answer.lands(STAND_IN, chronicle)).not.toThrow();
       }
-      expect(() => event.continues?.(STAND_IN, chronicle)).not.toThrow();
+    }
+    for (const id of Object.keys(STAND_IN.capstones)) {
+      const capstone = capstoneOf(STAND_IN, id);
+      expect(() => capstone.lands(STAND_IN, chronicle)).not.toThrow();
+      expect(() => capstone.continues?.(STAND_IN, chronicle)).not.toThrow();
     }
   }
 });

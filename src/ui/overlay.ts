@@ -16,9 +16,9 @@ import type { Bind, Press } from './bindings';
 import {
   answerFace,
   type CardFace,
+  capstoneFace,
   cardFace,
   createCardFace,
-  eventFace,
   type Face,
   heightOf,
 } from './card-face';
@@ -89,6 +89,11 @@ export type Overlay = {
    */
   render(chronicle: Chronicle): void;
   play(stage: Stage): Promise<void> | undefined;
+  /**
+   * Raises the capstone's window at its landing, over the chronicle it landed on; `closed` is told
+   * once it closes.
+   */
+  land(chronicle: Chronicle, closed: () => void): void;
 };
 
 /** One face offered on the scrim, what it is drawn refused by, and the number a press on it answers by. */
@@ -148,9 +153,13 @@ type Dealing = {
 
 /**
  * The capstone's window on the scrim: the chronicle it was raised over, whose timeline names the
- * capstone. It offers its one card to be read and nothing to be taken, so it holds no selection.
+ * capstone, and whether the opening raised it or the landing did, which is told when it closes. It
+ * offers its one card to be read and nothing to be taken, so it holds no selection.
  */
-type Capstone = { readonly stands: 'capstone'; readonly on: Chronicle };
+type Capstone = { readonly stands: 'capstone'; readonly on: Chronicle } & (
+  | { readonly raised: 'opening' }
+  | { readonly raised: 'landing'; readonly closed: () => void }
+);
 
 /** The windows that lay out cards, which a card shown large is taken off. */
 type Offering = Browsing | AimWindow | Dealing | Capstone;
@@ -517,10 +526,22 @@ export function createOverlay(
     ring(dealing, dealing.selected);
   };
 
-  /** The capstone's window closed: it is read once, and nothing brings it back on this screen. */
+  /**
+   * The capstone's window closed: it is read once, and nothing brings it back on this screen but the
+   * landing. The landing's is told it closed once the scrim is down.
+   */
   const closeCapstone = (): void => {
+    const closing = capstone;
     capstone = undefined;
     close();
+    if (closing === undefined) return;
+    switch (closing.raised) {
+      case 'opening':
+        return;
+      case 'landing':
+        closing.closed();
+        return;
+    }
   };
 
   /**
@@ -533,8 +554,8 @@ export function createOverlay(
     carried = announcement;
     capstone = announcement;
 
-    const face = eventFace(announcement.on.timeline.capstone.event);
-    const title = raiseTitle('capstone', text('capstone.title'));
+    const face = capstoneFace(announcement.on.timeline.capstone.id);
+    const title = raiseTitle('capstone', text(capstoneTitle(announcement)));
     layGrid(
       'capstone',
       [{ face, refusal: NO_REFUSAL, at: 0 }],
@@ -840,7 +861,7 @@ export function createOverlay(
     render(chronicle: Chronicle): void {
       if (!announced) {
         announced = true;
-        showCapstone({ stands: 'capstone', on: chronicle });
+        showCapstone({ stands: 'capstone', on: chronicle, raised: 'opening' });
       } else if (chronicle.ending !== undefined && raisedOn === undefined)
         void raiseEnding({ ending: chronicle.ending, timeline: chronicle.timeline });
       else if (chronicle.deals[0] !== undefined && standingDeal === undefined)
@@ -854,7 +875,20 @@ export function createOverlay(
       // render the play-out ends on, which a render of this stage would pre-empt.
       return deals.length > 0 ? Promise.resolve() : undefined;
     },
+    land(chronicle: Chronicle, closed: () => void): void {
+      showCapstone({ stands: 'capstone', on: chronicle, raised: 'landing', closed });
+    },
   };
+}
+
+/** The title the capstone's window stands under: the age ending on it, or its landing. */
+function capstoneTitle(capstone: Capstone): 'capstone.title' | 'capstone.lands' {
+  switch (capstone.raised) {
+    case 'opening':
+      return 'capstone.title';
+    case 'landing':
+      return 'capstone.lands';
+  }
 }
 
 /** What of an ended chronicle its ending screen reads: how it ended, and the capstone it was on. */
@@ -864,7 +898,7 @@ type Ended = Pick<Chronicle, 'timeline'> & { readonly ending: Ending };
 function says({ ending, timeline }: Ended): { title: string; line: string } {
   switch (ending.outcome) {
     case 'victory':
-      return { title: text('victory.title'), line: victoryLine(timeline.capstone.event) };
+      return { title: text('victory.title'), line: victoryLine(timeline.capstone.id) };
     case 'defeat':
       return {
         title: text('defeat.title'),

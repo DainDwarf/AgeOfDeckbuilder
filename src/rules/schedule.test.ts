@@ -1,4 +1,5 @@
 import { expect, test } from 'vitest';
+import type { Catalogue } from './catalogue';
 import { apply, type Command, launched, outcome } from './chronicle';
 import { growthThreshold } from './city';
 import {
@@ -325,7 +326,7 @@ const REINFORCED = 5;
 function besieging(...deals: Timeline['deals']): Timeline {
   return {
     deals,
-    capstone: { event: 'PH_Siege', turn: CAPSTONE, last: CAPSTONE + REINFORCED },
+    capstone: { id: 'PH_Siege', turn: CAPSTONE, last: CAPSTONE + REINFORCED },
   };
 }
 
@@ -343,9 +344,9 @@ function awaitingCapstone(carrying: Carrying = {}): Chronicle {
   });
 }
 
-/** The same city one end of turn on, with the capstone's answer taken off the deal its turn brought. */
+/** The same city one end of turn on, the capstone landed on the turn that end opened. */
 function siegeLanded(carrying: Carrying = {}): Chronicle {
-  return endedTurn(awaitingCapstone(carrying), 'PH_Hold');
+  return endedTurn(awaitingCapstone(carrying));
 }
 
 /** The tiles a camp fills: what the siege placed, these fixtures standing with none of their own. */
@@ -405,32 +406,54 @@ function stoodOut(): Chronicle {
   return standingOut;
 }
 
-test('the capstone’s turn deals the capstone alone, whatever the timeline lists for that turn', () => {
+test('the capstone’s turn lands the capstone straight and draws the hand, dealing nothing, whatever the timeline lists for that turn', () => {
   const listed = dueOn(CAPSTONE).deals;
   for (const timeline of [besieging(), besieging(...listed)]) {
-    const dealt = outcome(
-      apply(CATALOGUE, awaitingCapstone({ timeline, drawPile: fullDraw() }), { type: 'end-turn' }),
-    );
+    const awaited = awaitingCapstone({ timeline, drawPile: fullDraw() });
+    const landed = outcome(apply(CATALOGUE, awaited, { type: 'end-turn' }));
+    const staged = stagedBy(awaited, { type: 'end-turn' });
 
-    expect(dealt.deals).toEqual([{ of: 'event', event: 'PH_Siege' }]);
-    expect(dealt.turn).toBe(CAPSTONE);
-    expect(dealt.hand).toEqual([]);
+    expect(landed.deals).toEqual([]);
+    expect(landed.turn).toBe(CAPSTONE);
+    expect(landed.hand).toEqual(fullDraw());
+    expect(campsOf(landed)).toHaveLength(5);
+    expect(staged.slice(staged.indexOf('turn'))).toEqual(['turn', 'capstone', 'draw']);
   }
 });
 
-test('a camp captured the turn before the capstone’s deals its rewards, and the take opens the capstone’s turn on the capstone', () => {
+test('the capstone’s landing is a stage of its own on its turn, even where it lands nothing', () => {
+  const quiet: Catalogue = {
+    ...CATALOGUE,
+    capstones: { PH_Siege: { lands: (_c, chronicle) => chronicle } },
+  };
+  const awaited = awaitingCapstone({ drawPile: fullDraw() });
+  const staged = apply(quiet, awaited, { type: 'end-turn' }).map((stage) => stage.name);
+
+  expect(staged.slice(staged.indexOf('turn'))).toEqual(['turn', 'capstone', 'draw']);
+});
+
+test('a camp captured the turn before the capstone’s deals its rewards, and the take opens the capstone’s turn on its landing and the draw', () => {
   const camp = { q: 4, r: 0 };
   const dealt = outcome(
-    apply(CATALOGUE, awaitingCapstone({ tiles: camped(field(6), [camp]), units: [worker(camp)] }), {
-      type: 'end-turn',
-    }),
+    apply(
+      CATALOGUE,
+      awaitingCapstone({
+        tiles: camped(field(6), [camp]),
+        units: [worker(camp)],
+        drawPile: fullDraw(),
+      }),
+      { type: 'end-turn' },
+    ),
   );
   const taken = outcome(apply(CATALOGUE, dealt, { type: 'take', at: 0 }));
 
   expect(dealt.deals).toEqual([{ of: 'camp', rewards: CATALOGUE.camp.rewards }]);
   expect(dealt.turn).toBe(CAPSTONE - 1);
+  expect(stagedBy(dealt, { type: 'take', at: 0 })).toEqual(['reward', 'turn', 'capstone', 'draw']);
   expect(taken.turn).toBe(CAPSTONE);
-  expect(taken.deals).toEqual([{ of: 'event', event: 'PH_Siege' }]);
+  expect(taken.deals).toEqual([]);
+  expect(taken.hand).toEqual(fullDraw());
+  expect(campsOf(taken)).not.toEqual([]);
 });
 
 test('a camp captured on the capstone’s last turn holds the victory back until its reward is taken', () => {

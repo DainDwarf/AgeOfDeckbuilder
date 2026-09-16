@@ -1,4 +1,12 @@
-import { type Answer, type Catalogue, cardOf, eventOf, type Span, scheduleOf } from './catalogue';
+import {
+  type Answer,
+  type Catalogue,
+  capstoneOf,
+  cardOf,
+  eventOf,
+  type Span,
+  scheduleOf,
+} from './catalogue';
 import { enteredFromCamp, enteredOnCamp } from './enemies';
 import { distance, MOVE_POINT, pathCosts, type TileCoords, tileKey } from './map';
 import { buildingKind, held, refuse } from './map-kinds';
@@ -58,7 +66,7 @@ export function timelineOf(
     rng: drawing,
     timeline: {
       deals,
-      capstone: { event: schedule.capstone.event, turn: capstone.turns, last },
+      capstone: { id: schedule.capstone.id, turn: capstone.turns, last },
     },
   };
 }
@@ -69,21 +77,29 @@ export function survived(chronicle: Chronicle): boolean {
 }
 
 /**
- * The events phase, which draws nothing: the capstone's turn deals the capstone alone, whatever the
- * timeline lists for that turn; a turn the timeline lists a deal for deals its event; any other turn
- * changes nothing, so the end of turn raises no stage for it. The deal waits behind the deals already
- * standing, and nothing lands until one of its answers is taken.
+ * The events phase, which draws nothing of its own: on the capstone's turn the capstone lands on the
+ * chronicle as it stands and nothing is dealt, whatever the timeline lists for that turn; a turn the
+ * timeline lists a deal for deals its event, behind the deals already standing, and nothing lands
+ * until one of its answers is taken; any other turn changes nothing.
  */
-export function events(chronicle: Chronicle): Chronicle {
+export function events(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+): { readonly phase: 'capstone' | 'deal'; readonly chronicle: Chronicle } {
   const { capstone, deals } = chronicle.timeline;
-  const dealt = (event: string): Chronicle => ({
-    ...chronicle,
-    deals: [...chronicle.deals, { of: 'event', event }],
-  });
-  if (chronicle.turn === capstone.turn) return dealt(capstone.event);
+  if (chronicle.turn === capstone.turn) {
+    return {
+      phase: 'capstone',
+      chronicle: capstoneOf(catalogue, capstone.id).lands(catalogue, chronicle),
+    };
+  }
 
   const due = deals.find((deal) => deal.turn === chronicle.turn);
-  return due === undefined ? chronicle : dealt(due.event);
+  if (due === undefined) return { phase: 'deal', chronicle };
+  return {
+    phase: 'deal',
+    chronicle: { ...chronicle, deals: [...chronicle.deals, { of: 'event', event: due.event }] },
+  };
 }
 
 /** What a deal offers to be taken, by id, in the order dealt: its event's answers, or the camp's rewards. */
@@ -133,9 +149,9 @@ export function rewarded(chronicle: Chronicle, card: CardId): Chronicle {
  * any other turn or for a capstone that carries none.
  */
 export function continued(catalogue: Catalogue, chronicle: Chronicle): Chronicle {
-  const { event, turn, last } = chronicle.timeline.capstone;
+  const { id, turn, last } = chronicle.timeline.capstone;
   if (chronicle.turn <= turn || chronicle.turn > last) return chronicle;
-  return eventOf(catalogue, event).continues?.(catalogue, chronicle) ?? chronicle;
+  return capstoneOf(catalogue, id).continues?.(catalogue, chronicle) ?? chronicle;
 }
 
 /**

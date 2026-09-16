@@ -22,7 +22,15 @@ import {
   UI_FONT,
 } from './design-space';
 import { RESOURCE_COLOURS } from './resource-bar';
-import { answerName, answerRules, cardName, cardRules, eventName, eventRules, text } from './text';
+import {
+  answerName,
+  answerRules,
+  capstoneName,
+  capstoneRules,
+  cardName,
+  cardRules,
+  text,
+} from './text';
 import { layOutRun, type Run } from './text-run';
 
 export const CARD_WIDTH = 130;
@@ -120,9 +128,15 @@ export function cardFace(catalogue: Catalogue, id: CardId): Face {
   };
 }
 
-/** The face an event is drawn as on its own: it costs nothing, and its rules entry reads no numbers. */
-export function eventFace(id: string): Face {
-  return { id, name: eventName(id), kind: text('kind.event'), rules: eventRules(id), costs: [] };
+/** The face a capstone is drawn as: it costs nothing, and its rules entry reads no numbers. */
+export function capstoneFace(id: string): Face {
+  return {
+    id,
+    name: capstoneName(id),
+    kind: text('kind.capstone'),
+    rules: capstoneRules(id),
+    costs: [],
+  };
 }
 
 /**

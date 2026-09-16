@@ -177,23 +177,14 @@ test('a catalogue whose schedule deals an event of fewer than two answers is ref
   expect(() => catalogued(content)).toThrow(/^fixture: /);
 });
 
-test('a catalogue whose capstone deals no answer is refused', () => {
-  const { PH_Siege } = CATALOGUE.events;
-  const content = changed({
-    events: { ...CATALOGUE.events, PH_Siege: { ...PH_Siege, answers: {} } },
-  });
-
-  expect(() => catalogued(content)).toThrow(/^fixture: /);
-});
-
 test('a catalogue whose two events deal the same answer is refused', () => {
-  const { PH_Siege, PH_Hardship } = CATALOGUE.events;
+  const { PH_Blight, PH_Hardship } = CATALOGUE.events;
   const content = changed({
     events: {
       ...CATALOGUE.events,
-      PH_Siege: {
-        ...PH_Siege,
-        answers: { ...PH_Siege.answers, PH_Raid: PH_Hardship.answers.PH_Raid },
+      PH_Blight: {
+        ...PH_Blight,
+        answers: { ...PH_Blight.answers, PH_Raid: PH_Hardship.answers.PH_Raid },
       },
     },
   });
@@ -222,32 +213,21 @@ test('a catalogue whose event deals no answer costing no stock is refused, an an
   expect(catalogued(blighted({})).version).toBe('blighted');
 });
 
-test('a catalogue whose schedule names an event it does not hold is refused', () => {
-  const { entries, capstone } = CATALOGUE.schedules[SCHEDULE];
-  const entry = rescheduled({ entries: { ...entries, PH_Plague: () => 1 } });
-  const trial = rescheduled({ capstone: { ...capstone, event: 'PH_Flood' } });
+test('a catalogue whose schedule deals an event it does not hold is refused', () => {
+  const { entries } = CATALOGUE.schedules[SCHEDULE];
 
-  expect(() => catalogued(entry)).toThrow(/^fixture: /);
-  expect(() => catalogued(trial)).toThrow(/^fixture: /);
+  expect(() => catalogued(rescheduled({ entries: { ...entries, PH_Plague: () => 1 } }))).toThrow(
+    /^fixture: /,
+  );
 });
 
-test('a catalogue whose schedule deals its capstone among its entries is refused', () => {
-  const { entries, capstone } = CATALOGUE.schedules[SCHEDULE];
-  const content = rescheduled({ entries: { ...entries, [capstone.event]: () => 1 } });
+test('a catalogue whose schedule names a capstone it does not hold is refused', () => {
+  const { capstone } = CATALOGUE.schedules[SCHEDULE];
+  const flood = rescheduled({ capstone: { ...capstone, id: 'PH_Flood' } });
+  const event = rescheduled({ capstone: { ...capstone, id: 'PH_Hardship' } });
 
-  expect(() => catalogued(content)).toThrow(/^fixture: /);
-});
-
-test('a catalogue whose event carries a second script under no schedule’s capstone is refused', () => {
-  const { PH_Hardship } = CATALOGUE.events;
-  const content = changed({
-    events: {
-      ...CATALOGUE.events,
-      PH_Hardship: { ...PH_Hardship, continues: (_c, chronicle) => chronicle },
-    },
-  });
-
-  expect(() => catalogued(content)).toThrow(/^fixture: /);
+  expect(() => catalogued(flood)).toThrow(/^fixture: /);
+  expect(() => catalogued(event)).toThrow(/^fixture: /);
 });
 
 test('a catalogue whose schedule spans less than one is refused', () => {

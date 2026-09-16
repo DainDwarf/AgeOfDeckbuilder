@@ -1352,6 +1352,7 @@ export function createMapView(
           );
         case 'events':
         case 'reinforce':
+        case 'capstone':
           return staged(
             arrivals(stage.chronicle).map((unit) => unit.tile),
             stage.chronicle,

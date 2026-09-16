@@ -837,13 +837,17 @@ export async function stoppedTurn(page: Page): Promise<void> {
 }
 
 /**
- * One whole turn: the end of turn, and the first entry of every deal it may stop on taken through
- * the window's own presses, one window after another. What every spec that only wants the next turn
- * open ends the turn with.
+ * One whole turn: the end of turn, the first entry of every deal it may stop on taken through the
+ * window's own presses, one window after another, and the capstone's window a landing stops on
+ * closed by a press on its card, the draw after it waited out. What every spec that only wants the
+ * next turn open ends the turn with.
  */
 export async function endTurn(page: Page): Promise<void> {
   await stoppedTurn(page);
   while (await standing(page, 'deal')) await take(page, 0);
+  if (!(await standing(page, 'capstone'))) return;
+  await click(page, 'capstone-card-0');
+  await playedOut(page);
 }
 
 /** Takes the entry the deal window offers in that place: one press rings it, a second takes it. */

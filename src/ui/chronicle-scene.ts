@@ -164,10 +164,18 @@ export class ChronicleScene extends Phaser.Scene {
      * the air. A play-out the chronicle screen has let go of — a new chronicle was begun under it
      * — commits nothing: the objects it was playing on are gone, and the chronicle it would commit
      * is not the one on the chronicle screen.
+     *
+     * A play-out ends on the capstone's landing: its tail commits the landing's chronicle and raises
+     * the capstone's window over it, and the stages after the landing play out once that window
+     * closes.
      */
-    const playOut = async (command: Command): Promise<void> => {
-      if (this.sequence !== undefined) return;
-      const stages = apply(this.choices.catalogue, this.current, command);
+    const playOut = (command: Command): Promise<void> =>
+      played(apply(this.choices.catalogue, this.current, command));
+
+    const played = async (stages: readonly Stage[]): Promise<void> => {
+      if (this.sequence !== undefined || stages.length === 0) return;
+      const landing = stages.findIndex((stage) => stage.name === 'capstone');
+      const now = landing < 0 ? stages : stages.slice(0, landing + 1);
       const running = Symbol('play-out');
       this.sequence = running;
 
@@ -176,7 +184,7 @@ export class ChronicleScene extends Phaser.Scene {
         hand.live(false);
         dismiss();
 
-        for (const stage of stages) {
+        for (const stage of now) {
           if (this.sequence !== running) return;
           this.current = stage.chronicle;
           const motions: Promise<void>[] = [];
@@ -189,11 +197,16 @@ export class ChronicleScene extends Phaser.Scene {
         }
       } finally {
         if (this.sequence === running) {
-          this.current = outcome(stages);
+          this.current = outcome(now);
           paint();
           hand.live(true);
           endTurn.live(true);
           this.sequence = undefined;
+          if (landing >= 0 && this.current.ending === undefined) {
+            overlay.land(this.current, () => {
+              void played(stages.slice(landing + 1));
+            });
+          }
         }
       }
     };

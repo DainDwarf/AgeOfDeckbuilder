@@ -19,12 +19,11 @@ export type CardId = string;
 
 /**
  * One chronicle's roll of its schedule: each deal ahead with the turn it is due on and the one event
- * it deals, and the capstone with the turn it lands on and the last turn of its span. The capstone's
- * own deal is not among the deals.
+ * it deals, and the capstone by its id with the turn it lands on and the last turn of its span.
  */
 export type Timeline = {
   readonly deals: readonly { readonly turn: number; readonly event: string }[];
-  readonly capstone: { readonly event: string; readonly turn: number; readonly last: number };
+  readonly capstone: { readonly id: string; readonly turn: number; readonly last: number };
 };
 
 /** One deal waiting on the take: an event, which deals its answers, or a captured camp's rewards. */

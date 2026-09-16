@@ -35,7 +35,7 @@ import { regionOf, terrainKind } from './map-kinds';
 import { RESOURCES } from './resources';
 import type { Chronicle } from './state';
 
-/** A timeline dealing the raid on the second turn, and nothing else before the capstone. */
+/** A timeline dealing the raid on the second turn, and no other deal. */
 const RAID_ON_SECOND = dealing({ turn: 2, event: 'PH_Hardship' });
 
 /** Every attack the end of turn stages, as the tile each was made from and the tile it was aimed at. */

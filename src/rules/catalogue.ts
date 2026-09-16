@@ -101,12 +101,15 @@ export type Answer = {
   readonly lands: (catalogue: Catalogue, chronicle: Chronicle) => Chronicle;
 };
 
+/** An event: its answers, dealt in the order declared. */
+export type ScheduledEvent = { readonly answers: Readonly<Record<string, Answer>> };
+
 /**
- * An event: its answers, dealt in the order declared, and what it does on every turn of its span
- * after the one it lands on.
+ * A capstone: what it does to the chronicle on the turn it lands, and what it does on every turn of
+ * its span after that one.
  */
-export type ScheduledEvent = {
-  readonly answers: Readonly<Record<string, Answer>>;
+export type Capstone = {
+  readonly lands: (catalogue: Catalogue, chronicle: Chronicle) => Chronicle;
   readonly continues?: (catalogue: Catalogue, chronicle: Chronicle) => Chronicle;
 };
 
@@ -120,7 +123,7 @@ export type Span = readonly [number, number];
  */
 export type Schedule = {
   readonly spacing: Span;
-  readonly capstone: { readonly event: string; readonly window: Span; readonly span: number };
+  readonly capstone: { readonly id: string; readonly window: Span; readonly span: number };
   readonly entries: Readonly<Record<string, (turn: number) => number>>;
 };
 
@@ -130,9 +133,9 @@ export type Deck = { readonly cards: readonly string[]; readonly settle: readonl
 /**
  * The content a chronicle is played on: the stats a unit of each kind enters the map with, every
  * script an enemy can carry, the map content, the cards and the decks a chronicle is begun on,
- * the events and the schedules its timeline is rolled from, what a camp is, enters and gives on its
- * capture, and the city: the terrain and the building it stands as, how far it sees, and how many
- * idle inhabitants it opens with. Every one of them is named by its key.
+ * the events, the capstones and the schedules its timeline is rolled from, what a camp is, enters
+ * and gives on its capture, and the city: the terrain and the building it stands as, how far it
+ * sees, and how many idle inhabitants it opens with. Every one of them is named by its key.
  */
 export type Catalogue = MapContent & {
   readonly units: Readonly<Record<string, UnitStats>>;
@@ -140,6 +143,7 @@ export type Catalogue = MapContent & {
   readonly cards: Readonly<Record<string, Card>>;
   readonly decks: Readonly<Record<string, Deck>>;
   readonly events: Readonly<Record<string, ScheduledEvent>>;
+  readonly capstones: Readonly<Record<string, Capstone>>;
   readonly schedules: Readonly<Record<string, Schedule>>;
   readonly camp: {
     readonly unit: string;
@@ -164,14 +168,13 @@ export type Catalogue = MapContent & {
  * improvement names a movement cost below one hundredth of a move point; no region keeps its camps
  * within the centre part's reach plus the city's sight; no section of a deck holds a hazard or any
  * of the camp's rewards, a deck's settle section holds settle cards alone and at least one, and its
- * cards none; no schedule deals its capstone among its entries; a schedule spans at least one, and
- * each of its spans rolls from one at least to no less than its least; an event a schedule deals
- * among its entries deals two answers at least; every event deals an answer costing no stock, every
- * amount its cost names nought, so a capstone deals one at least; no answer is dealt by two events;
- * an event with a second script is some schedule's capstone; the camp deals one reward at least; the
- * camp's unit stands on every terrain its building names; the city's building stands on the city's
- * terrain; and the city's sight and its idle count are none below nought. A card's closures and an
- * answer's are neither run nor read here.
+ * cards none; a schedule's capstone is held, it spans at least one, and each of its spans rolls from
+ * one at least to no less than its least; an event a schedule deals among its entries deals two
+ * answers at least; every event deals an answer costing no stock, every amount its cost names
+ * nought; no answer is dealt by two events; the camp deals one reward at least; the camp's unit
+ * stands on every terrain its building names; the city's building stands on the city's terrain; and
+ * the city's sight and its idle count are none below nought. The closures of a card, an answer and
+ * a capstone are neither run nor read here.
  */
 export function catalogued(content: Catalogue): Catalogue {
   for (const [id, kind] of Object.entries(content.units)) {
@@ -243,10 +246,7 @@ export function catalogued(content: Catalogue): Catalogue {
       const answers = Object.keys(eventOf(content, entry).answers).length;
       if (answers < 2) refuse(content, `the schedule ${id} deals ${entry}, which deals ${answers}`);
     }
-    eventOf(content, schedule.capstone.event);
-    if (Object.hasOwn(schedule.entries, schedule.capstone.event)) {
-      refuse(content, `the schedule ${id} deals its capstone ${schedule.capstone.event}`);
-    }
+    capstoneOf(content, schedule.capstone.id);
     if (schedule.capstone.span < 1) {
       refuse(content, `the schedule ${id} spans ${schedule.capstone.span}`);
     }
@@ -267,11 +267,6 @@ export function catalogued(content: Catalogue): Catalogue {
     }
     const free = Object.values(event.answers).some((answer) => costsOf(answer.cost).length === 0);
     if (!free) refuse(content, `the event ${id} deals no answer costing no stock`);
-    if (event.continues === undefined) continue;
-    const capstones = Object.values(content.schedules).map((schedule) => schedule.capstone.event);
-    if (!capstones.includes(id)) {
-      refuse(content, `the event ${id} continues under no schedule's capstone`);
-    }
   }
 
   const campUnit = unitKind(content, content.camp.unit);
@@ -318,6 +313,11 @@ export function deckOf(catalogue: Catalogue, id: string): Deck {
 /** The event an id names; an event the catalogue does not hold is refused. */
 export function eventOf(catalogue: Catalogue, id: string): ScheduledEvent {
   return held(catalogue, catalogue.events, id, 'event');
+}
+
+/** The capstone an id names; a capstone the catalogue does not hold is refused. */
+export function capstoneOf(catalogue: Catalogue, id: string): Capstone {
+  return held(catalogue, catalogue.capstones, id, 'capstone');
 }
 
 /** The schedule an id names; a schedule the catalogue does not hold is refused. */

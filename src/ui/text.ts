@@ -1,5 +1,5 @@
-// A `rules.` or `answer-rules.` entry may mark a resource glyph `[resource]`, which only a card face
-// draws: anything else reading one puts the brackets on the screen.
+// A `rules.`, `answer-rules.` or `capstone-rules.` entry may mark a resource glyph `[resource]`,
+// which only a card face draws: anything else reading one puts the brackets on the screen.
 /** Every player-facing sentence, one entry each. English is the only language. */
 const TEXT = {
   'label.food': 'Food',
@@ -59,6 +59,7 @@ const TEXT = {
   'kind.instant': 'Instant',
   'kind.hazard': 'Hazard',
   'kind.event': 'Event',
+  'kind.capstone': 'Capstone',
   'unit.PH_Worker': 'PH_Worker',
   'unit.PH_Warrior': 'PH_Warrior',
   'card.PH_Settle': 'PH_Settle',
@@ -88,22 +89,19 @@ const TEXT = {
   'rules.PH_Spoils': 'Single use.\n10[food] 10[production] 10[military] 10[money] 10[science]',
   'rules.PH_Hunger': 'Empties the food stock',
   'event.PH_Hardship': 'PH_Hardship',
-  'event.PH_Siege': 'PH_Siege',
   'event.PH_Toll': 'PH_Toll',
-  'rules.PH_Toll': 'The camps demand a toll',
   'answer.PH_Tribute': 'PH_Tribute',
   'answer.PH_Defiance': 'PH_Defiance',
   'answer-rules.PH_Tribute': 'The camps are paid off',
   'answer-rules.PH_Defiance': 'A raid of {warriors} enters from the camps',
-  'rules.PH_Hardship': 'A hard season',
-  'rules.PH_Siege': 'The camps close in around the city',
   'answer.PH_Raid': 'PH_Raid',
   'answer.PH_Famine': 'PH_Famine',
-  'answer.PH_Hold': 'PH_Hold',
   'answer-rules.PH_Raid': 'A raid of {warriors} enters from the camps',
   'answer-rules.PH_Famine': 'Lays PH_Hunger on top of the draw pile',
-  'answer-rules.PH_Hold': '{camps} camps are placed near the city, a warrior on each',
+  'capstone-name.PH_Siege': 'PH_Siege',
+  'capstone-rules.PH_Siege': 'The camps close in around the city',
   'capstone.title': 'The age ends on this capstone.',
+  'capstone.lands': 'The capstone lands.',
   'aim.tile': 'Play {card} at a tile',
   'aim.unit': 'Play {card} at a unit',
   'aim.discard-pile': 'Play {card} at a card of the discard pile',
@@ -224,11 +222,6 @@ export function eventName(event: string): string {
   return named('event', event, 'the event');
 }
 
-/** What an event's rules entry reads on the screen; an event no entry names is refused. */
-export function eventRules(event: string): string {
-  return named('rules', event, 'the event');
-}
-
 /** What an answer is named on the screen; an answer no entry names is refused. */
 export function answerName(answer: string): string {
   return named('answer', answer, 'the answer');
@@ -237,6 +230,16 @@ export function answerName(answer: string): string {
 /** What an answer's rules entry reads on the screen, with its numbers; an answer no entry names is refused. */
 export function answerRules(answer: string, values: Record<string, string | number>): string {
   return named('answer-rules', answer, 'the answer', values);
+}
+
+/** What a capstone is named on the screen; a capstone no entry names is refused. */
+export function capstoneName(capstone: string): string {
+  return named('capstone-name', capstone, 'the capstone');
+}
+
+/** What a capstone's rules entry reads on the screen; a capstone no entry names is refused. */
+export function capstoneRules(capstone: string): string {
+  return named('capstone-rules', capstone, 'the capstone');
 }
 
 /** The line the victory screen reads for passing a capstone; a capstone no entry names is refused. */

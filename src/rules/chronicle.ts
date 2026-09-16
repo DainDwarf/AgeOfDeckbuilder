@@ -99,9 +99,10 @@ const HAND_SIZE = 5;
  * on a tile, taken off one, or taken off one and put on another, `claim` is a tile bought with
  * culture and taken inside the border, `grow` is the food stock spent on one more inhabitant,
  * `turn` is the tick, where every unit's move points and action are refreshed, `reinforce` is the
- * capstone's second script on a turn of its span, `deal` is what the timeline offers on a due turn,
- * `events` is the answer taken landing, `reward` is the reward taken laid in the discard pile,
- * `strike` is every hazard the hand still holds striking,
+ * capstone's second script on a turn of its span, `capstone` is the capstone landing on its turn,
+ * `deal` is what the timeline offers on a due turn, `events` is the answer taken landing,
+ * `reward` is the reward taken laid in the discard pile, `strike` is every hazard the hand still
+ * holds striking,
  * `capture` is the city falling to an enemy that stood on its tile, and `victory` is the city still
  * standing at the end of the capstone's last turn.
  */
@@ -118,6 +119,7 @@ export type PlainStage =
   | 'victory'
   | 'turn'
   | 'reinforce'
+  | 'capstone'
   | 'deal'
   | 'events'
   | 'reward'
@@ -332,7 +334,8 @@ function endOfTurn(catalogue: Catalogue, chronicle: Chronicle): Stage[] {
  * that changed nothing absent: the victory, ending the list, when the city is still standing once
  * the capstone's last turn is over; else the tick, the capstone's second script, the events phase,
  * and the draw — or, while the events phase leaves a deal standing, nothing after it: the hand
- * waits on the take. The turn always ticks where the victory does not end it.
+ * waits on the take. The turn always ticks where the victory does not end it, and the capstone's
+ * landing is staged on its turn even where it changed nothing.
  */
 function turnOpened(catalogue: Catalogue, chronicle: Chronicle): Stage[] {
   if (survived(chronicle)) return [{ name: 'victory', chronicle: victory(chronicle) }];
@@ -351,8 +354,17 @@ function turnOpened(catalogue: Catalogue, chronicle: Chronicle): Stage[] {
     units: standing.units.map((unit) => refreshedAction(refreshedMovePoints(unit))),
   });
   staged('reinforce', continued(catalogue, standing));
-  staged('deal', events(standing));
-  if (standing.deals.length > 0) return stages;
+  const phase = events(catalogue, standing);
+  switch (phase.phase) {
+    case 'capstone':
+      standing = phase.chronicle;
+      stages.push({ name: 'capstone', chronicle: standing });
+      break;
+    case 'deal':
+      staged('deal', phase.chronicle);
+      if (standing.deals.length > 0) return stages;
+      break;
+  }
   return [...stages, ...drawn(standing)];
 }
 

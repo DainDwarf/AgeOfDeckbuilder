@@ -17,7 +17,7 @@ test('the city still standing when the capstone’s last turn ends wins, and the
   test.setTimeout(budget(3));
 
   // The short schedule lands the capstone on the second turn and spans two: the second end of turn
-  // takes it, and the third ends its last turn.
+  // stops on its window, and the third ends its last turn.
   await open(page, 1, 'PH_Deck', 'PH_ShortSchedule');
   expect(await victoryShown(page)).toBe(false);
   for (let turn = 0; turn < 3; turn++) await endTurn(page);
