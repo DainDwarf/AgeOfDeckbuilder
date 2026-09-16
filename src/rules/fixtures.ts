@@ -46,7 +46,6 @@ import { charted } from './sight';
 import type { CardId, Chronicle, Deal, Timeline } from './state';
 import type { Faction, Unit, UnitStats } from './units';
 
-/** How many camps the fixture's siege places. */
 const SIEGE_CAMPS = 5;
 
 /** The production the fixture's explosion costs: the one answer of the fixture that costs a stock. */

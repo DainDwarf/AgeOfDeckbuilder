@@ -93,7 +93,6 @@ const DECK_CARDS: readonly CardId[] = [
   'PH_Recall',
 ];
 
-/** How many camps the siege places. */
 const SIEGE_CAMPS = 5;
 
 /** `PH_` marks a stand-in: none of this is authored content, and every piece of it goes. */
