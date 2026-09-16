@@ -41,13 +41,16 @@ import {
 import { buildingKind, improvementKind } from './map-kinds';
 import type { Resources } from './resources';
 import { seedRng } from './rng';
-import { besieged, laid, raided, reinforced } from './schedule';
+import { besieged, laid, offered, raided, reinforced } from './schedule';
 import { charted } from './sight';
-import type { CardId, Chronicle, Timeline } from './state';
+import type { CardId, Chronicle, Deal, Timeline } from './state';
 import type { Faction, Unit, UnitStats } from './units';
 
 /** How many camps the fixture's siege places: what its rules entry reads and what it lands. */
 const SIEGE_CAMPS = 5;
+
+/** The production the fixture's burn costs: the one answer of the fixture that costs a stock. */
+export const BURN = 4;
 
 /** How many warriors the fixture's raid enters on this turn: one, and one more for every ten turns. */
 function raiders(turn: number): number {
@@ -180,6 +183,13 @@ export const CATALOGUE: Catalogue = catalogued({
       effect: (_catalogue, paid) =>
         gained(paid, { food: 10, production: 10, military: 10, money: 10, science: 10 }),
     },
+    PH_Cache: {
+      kind: 'instant',
+      cost: {},
+      singleUse: true,
+      aim: 'none',
+      effect: (_catalogue, paid) => gained(paid, { food: 5 }),
+    },
     PH_Hunger: {
       kind: 'hazard',
       cost: { production: 3 },
@@ -207,26 +217,50 @@ export const CATALOGUE: Catalogue = catalogued({
     },
   },
   events: {
-    PH_Raid: {
-      reads: (_catalogue, chronicle) => ({ warriors: raiders(chronicle.turn) }),
-      lands: (catalogue, chronicle) => raided(catalogue, chronicle, raiders(chronicle.turn)),
+    PH_Hardship: {
+      answers: {
+        PH_Raid: {
+          cost: {},
+          reads: (_catalogue, chronicle) => ({ warriors: raiders(chronicle.turn) }),
+          lands: (catalogue, chronicle) => raided(catalogue, chronicle, raiders(chronicle.turn)),
+        },
+        PH_Famine: {
+          cost: {},
+          reads: () => ({}),
+          lands: (catalogue, chronicle) => laid(catalogue, chronicle, 'PH_Hunger'),
+        },
+      },
     },
-    PH_Famine: {
-      reads: () => ({}),
-      lands: (catalogue, chronicle) => laid(catalogue, chronicle, 'PH_Hunger'),
+    PH_Blight: {
+      answers: {
+        PH_Endure: {
+          cost: { food: 0 },
+          reads: () => ({}),
+          lands: (catalogue, chronicle) => laid(catalogue, chronicle, 'PH_Hunger'),
+        },
+        PH_Burn: {
+          cost: { production: BURN },
+          reads: () => ({}),
+          lands: (_catalogue, chronicle) => chronicle,
+        },
+      },
     },
     PH_Siege: {
-      reads: () => ({ camps: SIEGE_CAMPS }),
-      lands: (catalogue, chronicle) => besieged(catalogue, chronicle, SIEGE_CAMPS, [3, 5], 3),
+      answers: {
+        PH_Hold: {
+          cost: {},
+          reads: () => ({ camps: SIEGE_CAMPS }),
+          lands: (catalogue, chronicle) => besieged(catalogue, chronicle, SIEGE_CAMPS, [3, 5], 3),
+        },
+      },
       continues: reinforced,
     },
   },
   schedules: {
     schedule: {
       spacing: [3, 7],
-      deal: 2,
       capstone: { event: 'PH_Siege', window: [27, 33], span: 6 },
-      entries: { PH_Raid: () => 1, PH_Famine: () => 1 },
+      entries: { PH_Hardship: () => 1, PH_Blight: () => 1 },
     },
   },
   terrains: {
@@ -342,7 +376,12 @@ export const CATALOGUE: Catalogue = catalogued({
       },
     },
   },
-  camp: { unit: 'PH_Warrior', script: 'advance', building: 'PH_Camp', reward: 'PH_Spoils' },
+  camp: {
+    unit: 'PH_Warrior',
+    script: 'advance',
+    building: 'PH_Camp',
+    rewards: ['PH_Spoils', 'PH_Cache'],
+  },
   city: { terrain: 'urban', building: 'PH_City', sight: 2, idle: 2 },
 });
 
@@ -361,7 +400,7 @@ export const NO_DEALS: Timeline = {
   capstone: { event: 'PH_Siege', turn: 1000, last: 1005 },
 };
 
-/** A timeline dealing these entries on these turns, and its capstone as `NO_DEALS` has it. */
+/** A timeline dealing these events on these turns, and its capstone as `NO_DEALS` has it. */
 export function dealing(...deals: Timeline['deals']): Timeline {
   return { ...NO_DEALS, deals };
 }
@@ -431,7 +470,7 @@ export function cityOf(inside: Terrain[], carrying: Carrying = {}): Chronicle {
     city: CITY,
     held,
     turn: 1,
-    deal: [],
+    deals: [],
     resources: { food: 0, production: 0, military: 0, money: 0, science: 0, culture: 0 },
     population: held.length,
     assigned: [...held],
@@ -711,15 +750,26 @@ export function fullDraw(): CardId[] {
 export const DECK: Deck = deckOf(CATALOGUE, 'deck');
 
 /**
- * One whole turn: the end of turn, and the entry taken of the deal it may stop on — `wanted` where
- * this deal holds it, and the first entry dealt where it does not. Every fixture that ends turns
- * goes through here, because a chronicle waiting on a deal refuses every other command.
+ * One whole turn: the end of turn, and an entry taken of every deal it may stop on, one after
+ * another — `wanted` where the deal offers it, and the first entry dealt where it does not. Every
+ * fixture that ends turns goes through here, because a chronicle waiting on a deal refuses every
+ * other command. A take the rules refuse throws.
  */
 export function endedTurn(chronicle: Chronicle, wanted?: string): Chronicle {
-  const ended = outcome(apply(CATALOGUE, chronicle, { type: 'end-turn' }));
-  if (ended.deal.length === 0) return ended;
-  const taken = wanted !== undefined && ended.deal.includes(wanted) ? wanted : ended.deal[0];
-  return outcome(apply(CATALOGUE, ended, { type: 'take', event: taken }));
+  let standing = outcome(apply(CATALOGUE, chronicle, { type: 'end-turn' }));
+  for (let deal = standing.deals[0]; deal !== undefined; deal = standing.deals[0]) {
+    const at = placeOf(deal, wanted);
+    const taken = outcome(apply(CATALOGUE, standing, { type: 'take', at }));
+    if (taken === standing) throw new Error(`the take at ${at} is refused`);
+    standing = taken;
+  }
+  return standing;
+}
+
+/** Where a deal offers `wanted`, and the first place where it does not or nothing is wanted. */
+function placeOf(deal: Deal, wanted: string | undefined): number {
+  const at = wanted === undefined ? -1 : offered(CATALOGUE, deal).indexOf(wanted);
+  return at < 0 ? 0 : at;
 }
 
 /** The enemies standing on the chronicle: what a raid entered, and nothing for a famine. */

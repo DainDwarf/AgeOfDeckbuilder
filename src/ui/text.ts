@@ -87,14 +87,16 @@ const TEXT = {
   'rules.PH_Recall': 'Recall a card from the discard pile',
   'rules.PH_Spoils': 'Single use.\n10[food] 10[production] 10[military] 10[money] 10[science]',
   'rules.PH_Hunger': 'Empties the food stock',
-  'event.PH_Raid': 'PH_Raid',
-  'event.PH_Famine': 'PH_Famine',
+  'event.PH_Hardship': 'PH_Hardship',
   'event.PH_Siege': 'PH_Siege',
-  'rules.PH_Raid': 'A raid of {warriors} enters from the camps',
-  'rules.PH_Famine': 'Lays PH_Hunger on top of the draw pile',
-  'rules.PH_Siege': '{camps} camps are placed near the city, a warrior on each',
-  'deal.title': 'An event lands. Take one.',
-  'deal.capstone': 'The capstone lands. Take it.',
+  'rules.PH_Hardship': 'A hard season',
+  'rules.PH_Siege': 'The camps close in around the city',
+  'answer.PH_Raid': 'PH_Raid',
+  'answer.PH_Famine': 'PH_Famine',
+  'answer.PH_Hold': 'PH_Hold',
+  'answer-rules.PH_Raid': 'A raid of {warriors} enters from the camps',
+  'answer-rules.PH_Famine': 'Lays PH_Hunger on top of the draw pile',
+  'answer-rules.PH_Hold': '{camps} camps are placed near the city, a warrior on each',
   'capstone.title': 'The age ends on this capstone.',
   'aim.tile': 'Play {card} at a tile',
   'aim.unit': 'Play {card} at a unit',
@@ -216,9 +218,19 @@ export function eventName(event: string): string {
   return named('event', event, 'the event');
 }
 
-/** What an event's rules entry reads on the screen, with its numbers; an event no entry names is refused. */
-export function eventRules(event: string, values: Record<string, string | number> = {}): string {
-  return named('rules', event, 'the event', values);
+/** What an event's rules entry reads on the screen; an event no entry names is refused. */
+export function eventRules(event: string): string {
+  return named('rules', event, 'the event');
+}
+
+/** What an answer is named on the screen; an answer no entry names is refused. */
+export function answerName(answer: string): string {
+  return named('answer', answer, 'the answer');
+}
+
+/** What an answer's rules entry reads on the screen, with its numbers; an answer no entry names is refused. */
+export function answerRules(answer: string, values: Record<string, string | number>): string {
+  return named('answer-rules', answer, 'the answer', values);
 }
 
 /** The line the victory screen reads for passing a capstone; a capstone no entry names is refused. */

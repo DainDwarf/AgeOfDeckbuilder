@@ -3,6 +3,7 @@ import { apply, type Command, launched, outcome } from './chronicle';
 import { growthThreshold } from './city';
 import {
   assignTo,
+  BURN,
   builtOn,
   CAMPS,
   CATALOGUE,
@@ -47,9 +48,9 @@ const SEEDS: readonly number[] = Array.from({ length: 40 }, (_, at) => at + 1);
 /** The food stock a city waiting on an event holds: its one tile yields none, so only a famine moves it. */
 const STOCKED = 5;
 
-/** A timeline dealing the raid first and the famine second, on that turn and on no other. */
-function dueOn(turn: number): Timeline {
-  return dealing({ turn, entries: ['PH_Raid', 'PH_Famine'] });
+/** A timeline dealing the hardship, its raid first and its famine second, on that turn and on no other. */
+function dueOn(turn: number, event = 'PH_Hardship'): Timeline {
+  return dealing({ turn, event });
 }
 
 /**
@@ -107,22 +108,22 @@ test('the capstone lands on a turn rolled at the launch, between the twenty-seve
   expect(new Set(capstones.map(({ turn }) => turn)).size).toBeGreaterThan(1);
 });
 
-test('the timeline deals nothing on the capstone’s turn, and every deal holds both entries in an order the seed decides', () => {
+test('the timeline deals nothing on the capstone’s turn, and each due turn deals one event the seed decides', () => {
   const firsts = new Set<string>();
   for (const seed of SEEDS) {
     const { deals, capstone } = rolled(seed);
     expect(deals.map((deal) => deal.turn)).not.toContain(capstone.turn);
-    for (const deal of deals) expect([...deal.entries].sort()).toEqual(['PH_Famine', 'PH_Raid']);
-    firsts.add(deals[0].entries.join(' '));
+    for (const deal of deals) expect(['PH_Hardship', 'PH_Blight']).toContain(deal.event);
+    firsts.add(deals[0].event);
   }
 
   expect(firsts.size).toBe(2);
 });
 
-test('the famine is dealt as readily on the third turn as the twentieth', () => {
+test('the blight is dealt as readily on the third turn as the twentieth', () => {
   const turns = SEEDS.flatMap((seed) =>
     rolled(seed)
-      .deals.filter((deal) => deal.entries.includes('PH_Famine'))
+      .deals.filter((deal) => deal.event === 'PH_Blight')
       .map((deal) => deal.turn),
   );
 
@@ -133,12 +134,12 @@ test('the famine is dealt as readily on the third turn as the twentieth', () => 
 test('a timeline dealing on the first turn stops the end of turn 0 on its deal, and the take draws its hand', () => {
   const settled = settledOn(opening(plains(4), { timeline: dueOn(1) }), CITY);
   const dealt = outcome(apply(CATALOGUE, settled, { type: 'end-turn' }));
-  const taken = outcome(apply(CATALOGUE, dealt, { type: 'take', event: 'PH_Famine' }));
+  const taken = outcome(apply(CATALOGUE, dealt, { type: 'take', at: 1 }));
 
   expect(dealt.turn).toBe(1);
-  expect(dealt.deal).toEqual(['PH_Raid', 'PH_Famine']);
+  expect(dealt.deals).toEqual([{ of: 'event', event: 'PH_Hardship' }]);
   expect(dealt.hand).toEqual([]);
-  expect(taken.deal).toEqual([]);
+  expect(taken.deals).toEqual([]);
   expect(taken.hand).toHaveLength(5);
 });
 
@@ -149,7 +150,7 @@ test('nothing is dealt before the due turn, and the raid enters a warrior on a c
   for (let turn = 2; turn < 5; turn++) {
     chronicle = endedTurn(chronicle);
     expect(chronicle.turn).toBe(turn);
-    expect(chronicle.deal).toEqual([]);
+    expect(chronicle.deals).toEqual([]);
     expect(chronicle.units).toEqual([]);
   }
   chronicle = endedTurn(chronicle, 'PH_Raid');
@@ -229,51 +230,75 @@ test('the famine lays its hazard on top of the draw pile, and leaves the city as
   expect(enemiesOf(after)).toEqual([]);
 });
 
-test('a due turn deals its entries in the order the timeline lists them, and the turn ends there', () => {
+test('a due turn deals its one event, and the turn ends there', () => {
   const standing = dealtBy(5, { drawPile: fullDraw() });
-  const swapped = dealtBy(5, { timeline: dealing({ turn: 5, entries: ['PH_Famine', 'PH_Raid'] }) });
+  const blighted = dealtBy(5, { timeline: dueOn(5, 'PH_Blight') });
   const staged = stagedBy(awaiting(5, { drawPile: fullDraw() }), { type: 'end-turn' });
 
-  expect(standing.deal).toEqual(['PH_Raid', 'PH_Famine']);
-  expect(swapped.deal).toEqual(['PH_Famine', 'PH_Raid']);
+  expect(standing.deals).toEqual([{ of: 'event', event: 'PH_Hardship' }]);
+  expect(blighted.deals).toEqual([{ of: 'event', event: 'PH_Blight' }]);
   expect(standing.turn).toBe(5);
   expect(standing.hand).toEqual([]);
   expect(staged[staged.length - 1]).toBe('deal');
   expect(staged).not.toContain('draw');
 });
 
-test('the take lands the entry taken and no other, draws nothing of its own, and draws a hand', () => {
+test('the take lands the answer at its place in the order declared and no other, draws nothing of its own, and draws a hand', () => {
   const standing = dealtBy(5, { drawPile: fullDraw() });
-  const raided = outcome(apply(CATALOGUE, standing, { type: 'take', event: 'PH_Raid' }));
-  const starved = outcome(apply(CATALOGUE, standing, { type: 'take', event: 'PH_Famine' }));
+  const raided = outcome(apply(CATALOGUE, standing, { type: 'take', at: 0 }));
+  const starved = outcome(apply(CATALOGUE, standing, { type: 'take', at: 1 }));
 
-  expect(stagedBy(standing, { type: 'take', event: 'PH_Raid' })).toEqual(['events', 'draw']);
+  expect(stagedBy(standing, { type: 'take', at: 0 })).toEqual(['events', 'draw']);
   expect(enemiesOf(raided)).toHaveLength(1);
   expect(raided.hand).toEqual(fullDraw());
   expect(enemiesOf(starved)).toEqual([]);
   expect(starved.hand).toEqual(['PH_Hunger', ...fullDraw().slice(0, 4)]);
   expect(starved.rng).toEqual(standing.rng);
   for (const after of [raided, starved]) {
-    expect(after.deal).toEqual([]);
+    expect(after.deals).toEqual([]);
     expect(after.resources.food).toBe(STOCKED);
     expect(after.timeline).toEqual(standing.timeline);
   }
 });
 
-test('a take the deal does not offer, and one with no deal standing, are refused', () => {
-  const one = cityOf(['urban'], { tiles: camped(field(4), CAMPS), deal: ['PH_Famine'] });
-  const undealt: Command = { type: 'take', event: 'PH_Raid' };
+test('an answer taken pays its cost before it lands, and one the city cannot pay for is refused with nothing paid', () => {
+  const stocked = (production: number): Chronicle =>
+    dealtBy(5, {
+      timeline: dueOn(5, 'PH_Blight'),
+      drawPile: fullDraw(),
+      resources: { food: STOCKED, production, military: 0, money: 0, science: 0, culture: 0 },
+    });
+  const short = stocked(0);
+  const rich = stocked(BURN);
+  const burnt = outcome(apply(CATALOGUE, rich, { type: 'take', at: 1 }));
+  const endured = outcome(apply(CATALOGUE, short, { type: 'take', at: 0 }));
 
-  expect(stagedBy(one, undealt)).toEqual(['refused']);
-  expect(outcome(apply(CATALOGUE, one, undealt))).toBe(one);
-  expect(stagedBy(cityOf(['urban']), undealt)).toEqual(['refused']);
-  expect(outcome(apply(CATALOGUE, one, { type: 'take', event: 'PH_Famine' })).deal).toEqual([]);
+  expect(short.resources.production).toBeLessThan(BURN);
+  expect(stagedBy(short, { type: 'take', at: 1 })).toEqual(['refused']);
+  expect(outcome(apply(CATALOGUE, short, { type: 'take', at: 1 }))).toBe(short);
+  expect(burnt.resources.production).toBe(rich.resources.production - BURN);
+  expect(burnt.deals).toEqual([]);
+  expect(burnt.hand).toEqual(fullDraw());
+  expect(endured.resources).toEqual(short.resources);
+  expect(endured.hand[0]).toBe('PH_Hunger');
+});
+
+test('a take at a place the deal does not offer, and one with no deal standing, are refused', () => {
+  const one = dealtBy(5);
+  const refused: Command[] = [-1, 2, 0.5].map((at) => ({ type: 'take', at }));
+
+  for (const command of refused) {
+    expect(stagedBy(one, command)).toEqual(['refused']);
+    expect(outcome(apply(CATALOGUE, one, command))).toBe(one);
+  }
+  expect(stagedBy(cityOf(['urban']), { type: 'take', at: 0 })).toEqual(['refused']);
+  expect(outcome(apply(CATALOGUE, one, { type: 'take', at: 1 })).deals).toEqual([]);
 });
 
 test('a chronicle waiting on a deal takes no command but the take', () => {
   const waiting = cityOf(['urban', 'plain'], {
     tiles: camped(field(4), CAMPS),
-    deal: ['PH_Raid', 'PH_Famine'],
+    deals: [{ of: 'event', event: 'PH_Hardship' }],
     hand: ['PH_Harvest'],
     resources: { food: 0, production: 0, military: 0, money: 0, science: 1, culture: 0 },
   });
@@ -287,7 +312,7 @@ test('a chronicle waiting on a deal takes no command but the take', () => {
     expect(stagedBy(waiting, command)).toEqual(['refused']);
     expect(outcome(apply(CATALOGUE, waiting, command))).toBe(waiting);
   }
-  expect(stagedBy(waiting, { type: 'take', event: 'PH_Raid' })).toEqual(['events']);
+  expect(stagedBy(waiting, { type: 'take', at: 0 })).toEqual(['events']);
 });
 
 /** The turn the capstone lands on in every fixture below. */
@@ -318,9 +343,9 @@ function awaitingCapstone(carrying: Carrying = {}): Chronicle {
   });
 }
 
-/** The same city one end of turn on, with the capstone taken off the deal its turn brought. */
+/** The same city one end of turn on, with the capstone's answer taken off the deal its turn brought. */
 function siegeLanded(carrying: Carrying = {}): Chronicle {
-  return endedTurn(awaitingCapstone(carrying), 'PH_Siege');
+  return endedTurn(awaitingCapstone(carrying), 'PH_Hold');
 }
 
 /** The tiles a camp fills: what the siege placed, these fixtures standing with none of their own. */
@@ -381,16 +406,30 @@ function stoodOut(): Chronicle {
 }
 
 test('the capstone’s turn deals the capstone alone, whatever the timeline lists for that turn', () => {
-  const listed = dealing({ turn: CAPSTONE, entries: ['PH_Raid', 'PH_Famine'] }).deals;
+  const listed = dueOn(CAPSTONE).deals;
   for (const timeline of [besieging(), besieging(...listed)]) {
     const dealt = outcome(
       apply(CATALOGUE, awaitingCapstone({ timeline, drawPile: fullDraw() }), { type: 'end-turn' }),
     );
 
-    expect(dealt.deal).toEqual(['PH_Siege']);
+    expect(dealt.deals).toEqual([{ of: 'event', event: 'PH_Siege' }]);
     expect(dealt.turn).toBe(CAPSTONE);
     expect(dealt.hand).toEqual([]);
   }
+});
+
+test('a camp captured on the capstone’s turn deals its rewards ahead of the capstone', () => {
+  const camp = { q: 4, r: 0 };
+  const dealt = outcome(
+    apply(CATALOGUE, awaitingCapstone({ tiles: camped(field(6), [camp]), units: [worker(camp)] }), {
+      type: 'end-turn',
+    }),
+  );
+
+  expect(dealt.deals).toEqual([
+    { of: 'camp', rewards: CATALOGUE.camp.rewards },
+    { of: 'event', event: 'PH_Siege' },
+  ]);
 });
 
 test('the siege places five camps around the city, apart from one another, a warrior on each', () => {

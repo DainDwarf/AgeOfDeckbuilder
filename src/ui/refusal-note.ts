@@ -71,9 +71,17 @@ export function refusedAim(block: Block): Said {
  * panel language, its tail pointing down at what it speaks for, and staying up until it is taken
  * down. One stands per surface: a second note replaces the first, and any press on the chronicle
  * screen takes down whichever is up. Nothing to say takes it down as well. It keeps the size on
- * screen it was laid out at however far its surface has zoomed, so a zoom stands it again.
+ * screen it was laid out at however far its surface has zoomed, so a zoom stands it again. A note
+ * over a window stands at the depth it is given, and `raised` is told of every note as it goes up.
  */
-export function createRefusalNote(scene: Phaser.Scene, on: Surface): RefusalNote {
+export function createRefusalNote(
+  scene: Phaser.Scene,
+  on: Surface,
+  {
+    depth = DEPTH,
+    raised: told,
+  }: { depth?: number; raised?: (note: Phaser.GameObjects.Container) => void } = {},
+): RefusalNote {
   let note: Phaser.GameObjects.Container | undefined;
   /** How the note stands where it was raised, for a zoom that changes what the surface measures in. */
   let stand: (() => void) | undefined;
@@ -104,9 +112,10 @@ export function createRefusalNote(scene: Phaser.Scene, on: Surface): RefusalNote
 
     const raised = scene.add
       .container(0, 0, [bubble, ...labels])
-      .setDepth(DEPTH)
+      .setDepth(depth)
       .setName('refusal');
     on.layer.add(raised);
+    told?.(raised);
     note = raised;
 
     stand = (): void => {

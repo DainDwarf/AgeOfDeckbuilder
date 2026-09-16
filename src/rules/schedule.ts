@@ -1,19 +1,18 @@
-import { type Catalogue, cardOf, eventOf, type Span, scheduleOf } from './catalogue';
+import { type Answer, type Catalogue, cardOf, eventOf, type Span, scheduleOf } from './catalogue';
 import { enteredFromCamp, enteredOnCamp } from './enemies';
 import { distance, MOVE_POINT, pathCosts, type TileCoords, tileKey } from './map';
-import { buildingKind, refuse } from './map-kinds';
+import { buildingKind, held, refuse } from './map-kinds';
 import { nextRng, pickWeighted, type Rng } from './rng';
-import { type CardId, type Chronicle, holds, type Timeline } from './state';
+import { type CardId, type Chronicle, costsOf, type Deal, holds, type Timeline } from './state';
 import { unitAt } from './units';
 
 /**
  * A schedule rolled into a timeline, every draw from the generator handed in and in this order: the
  * turn the first deal is due, the capstone's turn, and then turn by turn to the capstone's last what
  * the events phase would have drawn. The capstone's turn deals nothing among the deals and rolls the
- * next due turn from itself, whatever was due. A due turn deals the entries weighing anything on it
- * one after another, never the same one twice and what there is where fewer weigh anything, and
- * rolls the next due turn from itself; one no entry weighs anything on deals nothing and rolls
- * nothing, so the turn after it is tried. A schedule the catalogue does not hold is refused.
+ * next due turn from itself, whatever was due. A due turn deals one of the entries weighing anything
+ * on it and rolls the next due turn from itself; one no entry weighs anything on deals nothing and
+ * rolls nothing, so the turn after it is tried. A schedule the catalogue does not hold is refused.
  */
 export function timelineOf(
   catalogue: Catalogue,
@@ -36,17 +35,9 @@ export function timelineOf(
         .filter(([, weight]) => weight > 0);
       if (weighing.length === 0) continue;
 
-      const entries: string[] = [];
-      while (entries.length < schedule.deal && weighing.length > 0) {
-        const drawn = pickWeighted(drawing, weighing);
-        drawing = drawn.rng;
-        entries.push(drawn.picked);
-        weighing.splice(
-          weighing.findIndex(([entry]) => entry === drawn.picked),
-          1,
-        );
-      }
-      deals.push({ turn, entries });
+      const drawn = pickWeighted(drawing, weighing);
+      drawing = drawn.rng;
+      deals.push({ turn, event: drawn.picked });
     }
     const next = withinSpan(drawing, schedule.spacing);
     drawing = next.rng;
@@ -62,11 +53,6 @@ export function timelineOf(
   };
 }
 
-/** Whether the deal standing is the capstone's: what the deal window reads its title from. */
-export function dealsCapstone(chronicle: Chronicle): boolean {
-  return chronicle.deal.length > 0 && chronicle.turn === chronicle.timeline.capstone.turn;
-}
-
 /** Whether the capstone has been stood out: the chronicle is on the last turn of its span. */
 export function survived(chronicle: Chronicle): boolean {
   return chronicle.turn === chronicle.timeline.capstone.last;
@@ -74,17 +60,50 @@ export function survived(chronicle: Chronicle): boolean {
 
 /**
  * The events phase, which draws nothing: the capstone's turn deals the capstone alone, whatever the
- * timeline lists for that turn; a turn the timeline lists a deal for deals its entries in the order
- * listed; any other turn changes nothing, so the end of turn raises no stage for it. Nothing lands
- * until one of the entries dealt is taken.
+ * timeline lists for that turn; a turn the timeline lists a deal for deals its event; any other turn
+ * changes nothing, so the end of turn raises no stage for it. The deal waits behind the deals already
+ * standing, and nothing lands until one of its answers is taken.
  */
 export function events(chronicle: Chronicle): Chronicle {
   const { capstone, deals } = chronicle.timeline;
-  if (chronicle.turn === capstone.turn) return { ...chronicle, deal: [capstone.event] };
+  const dealt = (event: string): Chronicle => ({
+    ...chronicle,
+    deals: [...chronicle.deals, { of: 'event', event }],
+  });
+  if (chronicle.turn === capstone.turn) return dealt(capstone.event);
 
   const due = deals.find((deal) => deal.turn === chronicle.turn);
-  if (due === undefined || due.entries.length === 0) return chronicle;
-  return { ...chronicle, deal: [...due.entries] };
+  return due === undefined ? chronicle : dealt(due.event);
+}
+
+/** What a deal offers to be taken, by id, in the order dealt: its event's answers, or the camp's rewards. */
+export function offered(catalogue: Catalogue, deal: Deal): readonly string[] {
+  switch (deal.of) {
+    case 'event':
+      return Object.keys(eventOf(catalogue, deal.event).answers);
+    case 'camp':
+      return deal.rewards;
+  }
+}
+
+/** The answer an id names among the event's; an answer the event does not deal is refused. */
+export function answerOf(catalogue: Catalogue, event: string, answer: string): Answer {
+  return held(catalogue, eventOf(catalogue, event).answers, answer, `answer of ${event}`);
+}
+
+/**
+ * An answer taken off the chronicle the deal is popped from: its cost is paid, and it lands on what
+ * that leaves.
+ */
+export function answered(catalogue: Catalogue, chronicle: Chronicle, answer: Answer): Chronicle {
+  const resources = { ...chronicle.resources };
+  for (const { resource, amount } of costsOf(answer.cost)) resources[resource] -= amount;
+  return answer.lands(catalogue, { ...chronicle, resources });
+}
+
+/** A reward taken off the chronicle the deal is popped from: it is laid in the discard pile. */
+export function rewarded(chronicle: Chronicle, card: CardId): Chronicle {
+  return { ...chronicle, discardPile: [...chronicle.discardPile, card] };
 }
 
 /**
@@ -95,11 +114,6 @@ export function continued(catalogue: Catalogue, chronicle: Chronicle): Chronicle
   const { event, turn, last } = chronicle.timeline.capstone;
   if (chronicle.turn <= turn || chronicle.turn > last) return chronicle;
   return eventOf(catalogue, event).continues?.(catalogue, chronicle) ?? chronicle;
-}
-
-/** One dealt entry taken: it lands on the chronicle the deal stood on, which is left with no deal. */
-export function taken(catalogue: Catalogue, chronicle: Chronicle, event: string): Chronicle {
-  return eventOf(catalogue, event).lands(catalogue, { ...chronicle, deal: [] });
 }
 
 /**

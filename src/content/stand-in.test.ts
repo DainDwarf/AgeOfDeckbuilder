@@ -15,6 +15,8 @@ import {
   unitMarkOf,
 } from '../ui/marks';
 import {
+  answerName,
+  answerRules,
   buildingName,
   cardName,
   cardRules,
@@ -116,10 +118,21 @@ test('each deck of the stand-in settles its city on the centre tile and reaches 
   }
 });
 
-test('every event of the stand-in has a name and a rules entry on the screen', () => {
-  for (const id of Object.keys(STAND_IN.events)) {
+test('every event of the stand-in, and every answer it deals, has a name and a rules entry on the screen', () => {
+  for (const [id, event] of Object.entries(STAND_IN.events)) {
     expect(() => eventName(id)).not.toThrow();
     expect(() => eventRules(id)).not.toThrow();
+    for (const answer of Object.keys(event.answers)) {
+      expect(() => answerName(answer)).not.toThrow();
+      expect(() => answerRules(answer, {})).not.toThrow();
+    }
+  }
+});
+
+test('every reward of the stand-in’s camp has a name and a rules entry on the screen', () => {
+  for (const id of STAND_IN.camp.rewards) {
+    expect(() => cardName(id)).not.toThrow();
+    expect(() => cardRules(id)).not.toThrow();
   }
 });
 
@@ -135,14 +148,16 @@ test('every schedule of the stand-in rolls a timeline', () => {
   }
 });
 
-test('every event of the stand-in reads, lands and continues on a chronicle launched and settled on each schedule', () => {
+test('every answer of every event of the stand-in reads and lands, and every event continues, on a chronicle launched and settled on each schedule', () => {
   for (const schedule of Object.keys(STAND_IN.schedules)) {
     const deck = deckOf(STAND_IN, 'PH_Deck');
     const chronicle = settledLaunch(STAND_IN, STAND_IN_REGION, schedule, 1, deck);
     for (const id of Object.keys(STAND_IN.events)) {
       const event = eventOf(STAND_IN, id);
-      expect(() => event.reads(STAND_IN, chronicle)).not.toThrow();
-      expect(() => event.lands(STAND_IN, chronicle)).not.toThrow();
+      for (const answer of Object.values(event.answers)) {
+        expect(() => answer.reads(STAND_IN, chronicle)).not.toThrow();
+        expect(() => answer.lands(STAND_IN, chronicle)).not.toThrow();
+      }
       expect(() => event.continues?.(STAND_IN, chronicle)).not.toThrow();
     }
   }

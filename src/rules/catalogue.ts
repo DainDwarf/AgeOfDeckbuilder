@@ -91,13 +91,22 @@ export type Card = { readonly cost: Partial<Resources> } & (
 export type AimedCard = Extract<Aim, { readonly aim: 'tile' | 'unit' }>;
 
 /**
- * An event: what its rules entry reads of the chronicle it is dealt on, what it does to the
- * chronicle it lands on, and what it does on every turn of its span after that one. A draw of its
- * own steps the generator that chronicle carries.
+ * One answer an event deals: its cost, what its rules entry reads of the chronicle it is dealt on,
+ * and what it does to the chronicle it lands on. A draw of its own steps the generator that chronicle
+ * carries.
  */
-export type ScheduledEvent = {
+export type Answer = {
+  readonly cost: Partial<Resources>;
   readonly reads: (catalogue: Catalogue, chronicle: Chronicle) => Record<string, number>;
   readonly lands: (catalogue: Catalogue, chronicle: Chronicle) => Chronicle;
+};
+
+/**
+ * An event: its answers, dealt in the order declared, and what it does on every turn of its span
+ * after the one it lands on.
+ */
+export type ScheduledEvent = {
+  readonly answers: Readonly<Record<string, Answer>>;
   readonly continues?: (catalogue: Catalogue, chronicle: Chronicle) => Chronicle;
 };
 
@@ -105,13 +114,12 @@ export type ScheduledEvent = {
 export type Span = readonly [number, number];
 
 /**
- * An age's schedule: how far apart its deals are due, how many entries a deal holds, its capstone
- * with the window its turn is rolled from and how many turns it spans, and every entry a deal is
- * drawn from with what it weighs on a turn — nothing at all on a turn it may not be dealt on.
+ * An age's schedule: how far apart its deals are due, its capstone with the window its turn is
+ * rolled from and how many turns it spans, and every entry a deal is drawn from with what it weighs
+ * on a turn — nothing at all on a turn it may not be dealt on.
  */
 export type Schedule = {
   readonly spacing: Span;
-  readonly deal: number;
   readonly capstone: { readonly event: string; readonly window: Span; readonly span: number };
   readonly entries: Readonly<Record<string, (turn: number) => number>>;
 };
@@ -137,7 +145,8 @@ export type Catalogue = MapContent & {
     readonly unit: string;
     readonly script: string;
     readonly building: string;
-    readonly reward: string;
+    /** What a capture deals, in the order dealt. */
+    readonly rewards: readonly string[];
   };
   readonly city: {
     readonly terrain: string;
@@ -153,13 +162,16 @@ export type Catalogue = MapContent & {
  * names itself by its key; every id a biome, a feature, a building, an improvement, a region, a deck,
  * a schedule, the camp and the city name is held; every biome rolls some rim width; no building or
  * improvement names a movement cost below one hundredth of a move point; no region keeps its camps
- * within the centre part's reach plus the city's sight; no section of a deck holds a hazard or the
- * camp's reward, a deck's settle section holds settle cards alone and at least one, and its cards
- * none; no schedule deals its capstone among its entries; a schedule deals and spans at least one,
- * and each of its spans rolls from one at least to no less than its least; an event with a second
- * script is some schedule's capstone; the camp's unit stands on every terrain its building names;
- * the city's building stands on the city's terrain; and the city's sight and its idle count are none
- * below nought. A card's closures and an event's are neither run nor read here.
+ * within the centre part's reach plus the city's sight; no section of a deck holds a hazard or any
+ * of the camp's rewards, a deck's settle section holds settle cards alone and at least one, and its
+ * cards none; no schedule deals its capstone among its entries; a schedule spans at least one, and
+ * each of its spans rolls from one at least to no less than its least; an event a schedule deals
+ * among its entries deals two answers at least; every event deals an answer costing no stock, every
+ * amount its cost names nought, so a capstone deals one at least; an event with a second script is
+ * some schedule's capstone; the camp deals one reward at least; the camp's unit stands on every
+ * terrain its building names; the city's building stands on the city's terrain; and the city's
+ * sight and its idle count are none below nought. A card's closures and an answer's are neither run
+ * nor read here.
  */
 export function catalogued(content: Catalogue): Catalogue {
   for (const [id, kind] of Object.entries(content.units)) {
@@ -206,7 +218,7 @@ export function catalogued(content: Catalogue): Catalogue {
       if (cardOf(content, card).kind === 'hazard') {
         refuse(content, `the deck ${id} holds the hazard ${card}`);
       }
-      if (card === content.camp.reward) {
+      if (content.camp.rewards.includes(card)) {
         refuse(content, `the deck ${id} holds the camp's reward ${card}`);
       }
     }
@@ -227,12 +239,14 @@ export function catalogued(content: Catalogue): Catalogue {
   }
 
   for (const [id, schedule] of Object.entries(content.schedules)) {
-    for (const entry of Object.keys(schedule.entries)) eventOf(content, entry);
+    for (const entry of Object.keys(schedule.entries)) {
+      const answers = Object.keys(eventOf(content, entry).answers).length;
+      if (answers < 2) refuse(content, `the schedule ${id} deals ${entry}, which deals ${answers}`);
+    }
     eventOf(content, schedule.capstone.event);
     if (Object.hasOwn(schedule.entries, schedule.capstone.event)) {
       refuse(content, `the schedule ${id} deals its capstone ${schedule.capstone.event}`);
     }
-    if (schedule.deal < 1) refuse(content, `the schedule ${id} deals ${schedule.deal}`);
     if (schedule.capstone.span < 1) {
       refuse(content, `the schedule ${id} spans ${schedule.capstone.span}`);
     }
@@ -243,6 +257,10 @@ export function catalogued(content: Catalogue): Catalogue {
     }
   }
   for (const [id, event] of Object.entries(content.events)) {
+    const free = Object.values(event.answers).some((answer) =>
+      Object.values(answer.cost).every((amount) => amount === 0),
+    );
+    if (!free) refuse(content, `the event ${id} deals no answer costing no stock`);
     if (event.continues === undefined) continue;
     const capstones = Object.values(content.schedules).map((schedule) => schedule.capstone.event);
     if (!capstones.includes(id)) {
@@ -252,7 +270,8 @@ export function catalogued(content: Catalogue): Catalogue {
 
   const campUnit = unitKind(content, content.camp.unit);
   enemyScript(content, content.camp.script);
-  cardOf(content, content.camp.reward);
+  if (content.camp.rewards.length === 0) refuse(content, 'the camp deals no reward');
+  for (const reward of content.camp.rewards) cardOf(content, reward);
   for (const terrain of buildingKind(content, content.camp.building).terrains) {
     if (!standsOn(content, campUnit, { q: 0, r: 0, terrain, improvements: [] })) {
       refuse(content, `the camp's unit ${content.camp.unit} cannot stand on ${terrain}`);

@@ -138,7 +138,7 @@ export function createResourceBar(
   let rising: Entry[] = [];
 
   const render = (chronicle: Chronicle): void => {
-    overScrim = chronicle.deal.length > 0;
+    overScrim = chronicle.deals.length > 0;
     bar.setDepth(overScrim ? OVER_SCRIM_DEPTH : BAR_DEPTH);
     for (const entry of rising) stopMotion(scene, entry.ticking);
     rising = [];

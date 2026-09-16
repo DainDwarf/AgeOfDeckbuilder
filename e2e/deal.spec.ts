@@ -2,7 +2,8 @@ import { expect, type Page, test } from '@playwright/test';
 import { STAND_IN } from '../src/content/stand-in';
 import { deckOf } from '../src/rules/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
-import { text } from '../src/ui/text';
+import { offered } from '../src/rules/schedule';
+import { eventName } from '../src/ui/text';
 import {
   budget,
   cardOnFace,
@@ -22,9 +23,9 @@ import {
 } from './chronicle-screen';
 
 /**
- * The first seed whose timeline's first deal offers the raid first, with a camp free for it to enter
- * a warrior on — what the take lands is then a warrior standing on the map — and the turn that deal
- * is due on.
+ * The first seed whose timeline's first deal stands alone and offers the raid first, with a camp
+ * free for it to enter a warrior on — what the take lands is then a warrior standing on the map —
+ * and the turn that deal is due on.
  */
 function dealRun(): { seed: number; due: number } {
   return firstSeed('deals a raid first on its first deal', (seed) => {
@@ -35,9 +36,11 @@ function dealRun(): { seed: number; due: number } {
     let chronicle = opened;
     for (let turn = 1; turn < first.turn - 1; turn++) chronicle = endedTurn(chronicle);
     const dealt = outcome(apply(STAND_IN, chronicle, { type: 'end-turn' }));
-    if (dealt.deal[0] !== 'PH_Raid') return undefined;
+    const [deal, ...behind] = dealt.deals;
+    if (deal === undefined || behind.length > 0) return undefined;
+    if (offered(STAND_IN, deal)[0] !== 'PH_Raid') return undefined;
 
-    const landed = outcome(apply(STAND_IN, dealt, { type: 'take', event: 'PH_Raid' }));
+    const landed = outcome(apply(STAND_IN, dealt, { type: 'take', at: 0 }));
     return landed.units.some((unit) => unit.faction === 'enemy')
       ? { seed, due: first.turn }
       : undefined;
@@ -68,16 +71,19 @@ test('the events phase deals a choice, and the turn plays on from the one taken'
   await expect.poll(() => standing(page, 'deal')).toBe(true);
 
   const dealt = await chronicleOf(page);
+  const [deal] = dealt.deals;
+  if (deal?.of !== 'event') throw new Error(`turn ${run.due} deals no event`);
+  const answers = offered(STAND_IN, deal);
   expect(dealt.turn).toBe(run.due);
   expect(dealt.hand).toEqual([]);
-  expect(await titleOf(page, 'deal')).toBe(text('deal.title'));
-  for (const [at, event] of dealt.deal.entries()) {
-    expect(await cardOnFace(page, `deal-card-${at}`)).toBe(event);
+  expect(await titleOf(page, 'deal')).toBe(eventName(deal.event));
+  for (const [at, answer] of answers.entries()) {
+    expect(await cardOnFace(page, `deal-card-${at}`)).toBe(answer);
   }
 
   const second = await onScreen(page, 'deal-card-1');
   await page.mouse.click(second.x, second.y, { button: 'right' });
-  await expect.poll(() => cardOnFace(page, 'inspection')).toBe(dealt.deal[1]);
+  await expect.poll(() => cardOnFace(page, 'inspection')).toBe(answers[1]);
 
   const beside = await besideTheDeal(page);
   await page.mouse.click(beside.x, beside.y);
@@ -99,7 +105,7 @@ test('the events phase deals a choice, and the turn plays on from the one taken'
 
   const after = await chronicleOf(page);
   expect(await standing(page, 'deal')).toBe(false);
-  expect(after.deal).toEqual([]);
+  expect(after.deals).toEqual([]);
   expect(after.turn).toBe(run.due);
   expect(after.timeline.deals[1].turn).toBeGreaterThan(run.due);
   expect(after.hand).toHaveLength(5);

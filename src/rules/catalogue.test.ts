@@ -3,6 +3,7 @@ import { type Catalogue, catalogued, entered, type Schedule } from './catalogue'
 import { apply, beginChronicle, launched } from './chronicle';
 import { CATALOGUE, CITY, cityOf, DECK, field, NO_DEALS, REGION, SCHEDULE } from './fixtures';
 import { generateMap, tileKey } from './map';
+import type { Resources } from './resources';
 import { seedRng } from './rng';
 import { timelineOf } from './schedule';
 
@@ -112,13 +113,14 @@ test('a catalogue whose deck holds a hazard in either section is refused', () =>
   expect(() => catalogued(settle)).toThrow(/^fixture: /);
 });
 
-test('a catalogue whose deck holds the camp’s reward in either section is refused', () => {
-  const { reward } = CATALOGUE.camp;
-  const cards = changed({ decks: { deck: { ...DECK, cards: [...DECK.cards, reward] } } });
-  const settle = changed({ decks: { deck: { ...DECK, settle: [...DECK.settle, reward] } } });
+test('a catalogue whose deck holds any of the camp’s rewards in either section is refused', () => {
+  for (const reward of CATALOGUE.camp.rewards) {
+    const cards = changed({ decks: { deck: { ...DECK, cards: [...DECK.cards, reward] } } });
+    const settle = changed({ decks: { deck: { ...DECK, settle: [...DECK.settle, reward] } } });
 
-  expect(() => catalogued(cards)).toThrow(/^fixture: /);
-  expect(() => catalogued(settle)).toThrow(/^fixture: /);
+    expect(() => catalogued(cards)).toThrow(/^fixture: /);
+    expect(() => catalogued(settle)).toThrow(/^fixture: /);
+  }
 });
 
 test('a catalogue whose deck’s settle section is empty or holds a card of another kind is refused', () => {
@@ -155,10 +157,54 @@ test('a catalogue whose region’s camps may come within sight of the settle whe
   expect(() => catalogued(seeing)).toThrow(/^fixture: /);
 });
 
-test('a catalogue whose camp’s reward is a card it does not hold is refused', () => {
-  const content = changed({ camp: { ...CATALOGUE.camp, reward: 'PH_Loot' } });
+test('a catalogue whose camp deals a reward it does not hold, or no reward at all, is refused', () => {
+  const loot = changed({
+    camp: { ...CATALOGUE.camp, rewards: [...CATALOGUE.camp.rewards, 'PH_Loot'] },
+  });
+  const none = changed({ camp: { ...CATALOGUE.camp, rewards: [] } });
+
+  expect(() => catalogued(loot)).toThrow(/^fixture: /);
+  expect(() => catalogued(none)).toThrow(/^fixture: /);
+});
+
+test('a catalogue whose schedule deals an event of fewer than two answers is refused', () => {
+  const { PH_Hardship } = CATALOGUE.events;
+  const { PH_Raid } = PH_Hardship.answers;
+  const content = changed({
+    events: { ...CATALOGUE.events, PH_Hardship: { ...PH_Hardship, answers: { PH_Raid } } },
+  });
 
   expect(() => catalogued(content)).toThrow(/^fixture: /);
+});
+
+test('a catalogue whose capstone deals no answer is refused', () => {
+  const { PH_Siege } = CATALOGUE.events;
+  const content = changed({
+    events: { ...CATALOGUE.events, PH_Siege: { ...PH_Siege, answers: {} } },
+  });
+
+  expect(() => catalogued(content)).toThrow(/^fixture: /);
+});
+
+test('a catalogue whose event deals no answer costing no stock is refused, an answer costing nought of a stock costing none', () => {
+  const { PH_Blight } = CATALOGUE.events;
+  const { PH_Endure, PH_Burn } = PH_Blight.answers;
+  const blighted = (endure: Partial<Resources>): Catalogue =>
+    changed({
+      version: 'blighted',
+      events: {
+        ...CATALOGUE.events,
+        PH_Blight: {
+          ...PH_Blight,
+          answers: { PH_Endure: { ...PH_Endure, cost: endure }, PH_Burn },
+        },
+      },
+    });
+
+  expect(() => catalogued(blighted({ food: 1 }))).toThrow(/^blighted: /);
+  expect(() => catalogued(blighted({ food: 0, money: 2 }))).toThrow(/^blighted: /);
+  expect(catalogued(blighted({ food: 0, money: 0 })).version).toBe('blighted');
+  expect(catalogued(blighted({})).version).toBe('blighted');
 });
 
 test('a catalogue whose schedule names an event it does not hold is refused', () => {
@@ -178,21 +224,20 @@ test('a catalogue whose schedule deals its capstone among its entries is refused
 });
 
 test('a catalogue whose event carries a second script under no schedule’s capstone is refused', () => {
-  const { PH_Raid } = CATALOGUE.events;
+  const { PH_Hardship } = CATALOGUE.events;
   const content = changed({
     events: {
       ...CATALOGUE.events,
-      PH_Raid: { ...PH_Raid, continues: (_c, chronicle) => chronicle },
+      PH_Hardship: { ...PH_Hardship, continues: (_c, chronicle) => chronicle },
     },
   });
 
   expect(() => catalogued(content)).toThrow(/^fixture: /);
 });
 
-test('a catalogue whose schedule deals or spans less than one is refused', () => {
+test('a catalogue whose schedule spans less than one is refused', () => {
   const { capstone } = CATALOGUE.schedules[SCHEDULE];
 
-  expect(() => catalogued(rescheduled({ deal: 0 }))).toThrow(/^fixture: /);
   expect(() => catalogued(rescheduled({ capstone: { ...capstone, span: 0 } }))).toThrow(
     /^fixture: /,
   );

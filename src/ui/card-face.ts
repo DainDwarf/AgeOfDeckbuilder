@@ -1,7 +1,15 @@
 import type Phaser from 'phaser';
-import { type Catalogue, cardOf, eventOf } from '../rules/catalogue';
+import { type Catalogue, cardOf } from '../rules/catalogue';
 import { costOf } from '../rules/chronicle';
-import { type CardId, type Chronicle, type Cost, playable, type Refusal } from '../rules/state';
+import { answerOf } from '../rules/schedule';
+import {
+  type CardId,
+  type Chronicle,
+  type Cost,
+  costsOf,
+  playable,
+  type Refusal,
+} from '../rules/state';
 import {
   ACCENT,
   addText,
@@ -14,7 +22,7 @@ import {
   UI_FONT,
 } from './design-space';
 import { RESOURCE_COLOURS } from './resource-bar';
-import { cardName, cardRules, eventName, eventRules, text } from './text';
+import { answerName, answerRules, cardName, cardRules, eventName, eventRules, text } from './text';
 import { layOutRun, type Run } from './text-run';
 
 export const CARD_WIDTH = 130;
@@ -112,17 +120,28 @@ export function cardFace(catalogue: Catalogue, id: CardId): Face {
   };
 }
 
+/** The face an event is drawn as on its own: it costs nothing, and its rules entry reads no numbers. */
+export function eventFace(id: string): Face {
+  return { id, name: eventName(id), kind: text('kind.event'), rules: eventRules(id), costs: [] };
+}
+
 /**
- * The face one entry of a deal is drawn as: an event costs nothing, and its rules entry reads the
- * numbers of the turn it was dealt on.
+ * The face an answer of an event is drawn as: its cost, and its rules entry reading the numbers of
+ * the chronicle it was dealt on.
  */
-export function eventFace(catalogue: Catalogue, chronicle: Chronicle, id: string): Face {
+export function answerFace(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  event: string,
+  id: string,
+): Face {
+  const answer = answerOf(catalogue, event, id);
   return {
     id,
-    name: eventName(id),
+    name: answerName(id),
     kind: text('kind.event'),
-    rules: eventRules(id, eventOf(catalogue, id).reads(catalogue, chronicle)),
-    costs: [],
+    rules: answerRules(id, answer.reads(catalogue, chronicle)),
+    costs: costsOf(answer.cost),
   };
 }
 

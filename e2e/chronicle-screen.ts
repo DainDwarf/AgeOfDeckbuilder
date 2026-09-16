@@ -837,12 +837,13 @@ export async function stoppedTurn(page: Page): Promise<void> {
 }
 
 /**
- * One whole turn: the end of turn, and the first entry of the deal it may stop on taken through the
- * window's own presses. What every spec that only wants the next turn open ends the turn with.
+ * One whole turn: the end of turn, and the first entry of every deal it may stop on taken through
+ * the window's own presses, one window after another. What every spec that only wants the next turn
+ * open ends the turn with.
  */
 export async function endTurn(page: Page): Promise<void> {
   await stoppedTurn(page);
-  if (await standing(page, 'deal')) await take(page, 0);
+  while (await standing(page, 'deal')) await take(page, 0);
 }
 
 /** Takes the entry the deal window offers in that place: one press rings it, a second takes it. */
@@ -854,13 +855,17 @@ export async function take(page: Page, at: number): Promise<void> {
 
 /**
  * The chronicle one whole turn leaves, played through the rules: the end of turn, and the first
- * entry of the deal it may stop on taken, as the window's presses take it. What every seed a spec
- * searches for is run forward with, a chronicle waiting on a deal taking no other command.
+ * entry of every deal it may stop on taken, as the window's presses take them. What every seed a
+ * spec searches for is run forward with, a chronicle waiting on a deal taking no other command.
  */
 export function endedTurn(chronicle: Chronicle): Chronicle {
-  const ended = outcome(apply(STAND_IN, chronicle, { type: 'end-turn' }));
-  if (ended.deal.length === 0) return ended;
-  return outcome(apply(STAND_IN, ended, { type: 'take', event: ended.deal[0] }));
+  let ended = outcome(apply(STAND_IN, chronicle, { type: 'end-turn' }));
+  while (ended.deals.length > 0) {
+    const taken = outcome(apply(STAND_IN, ended, { type: 'take', at: 0 }));
+    if (taken === ended) throw new Error(`the take at 0 is refused on turn ${ended.turn}`);
+    ended = taken;
+  }
+  return ended;
 }
 
 /**

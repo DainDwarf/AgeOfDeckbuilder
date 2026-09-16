@@ -2,10 +2,20 @@ import Phaser from 'phaser';
 import { CARD_KINDS } from '../rules/cards';
 import { type Catalogue, cardOf } from '../rules/catalogue';
 import type { Stage } from '../rules/chronicle';
-import { dealsCapstone } from '../rules/schedule';
-import { type CardId, type Chronicle, type Ending, NO_REFUSAL, type Refusal } from '../rules/state';
+import { offered } from '../rules/schedule';
+import {
+  type CardId,
+  type Chronicle,
+  type Deal,
+  type Ending,
+  NO_REFUSAL,
+  playable,
+  type Refusal,
+  unaffordable,
+} from '../rules/state';
 import type { Bind, Press } from './bindings';
 import {
+  answerFace,
   type CardFace,
   cardFace,
   createCardFace,
@@ -28,8 +38,9 @@ import {
   whileUp,
 } from './design-space';
 import { behind, createWindow, type MenuWindow, type Opened } from './menu';
+import { createRefusalNote, refusedCard } from './refusal-note';
 import { BAR_HEIGHT } from './resource-bar';
-import { cardName, text, victoryLine } from './text';
+import { buildingName, cardName, eventName, text, victoryLine } from './text';
 
 const SCRIM = 0x0d1014;
 const SCRIM_ALPHA = 0.82;
@@ -81,8 +92,8 @@ export type Overlay = {
   play(stage: Stage): Promise<void> | undefined;
 };
 
-/** One face offered on the scrim, and the number a press on it answers by. */
-type Offered = { readonly face: Face; readonly at: number };
+/** One face offered on the scrim, what it is drawn refused by, and the number a press on it answers by. */
+type Offered = { readonly face: Face; readonly refusal: Refusal; readonly at: number };
 
 /** Where one offered face was laid out — about its own bottom centre, as a card is drawn — and its drawing. */
 type Placed = Offered & {
@@ -124,20 +135,21 @@ type Browsing = {
 type AimWindow = { readonly stands: 'aim-window'; readonly aim: Aiming };
 
 /**
- * The deal window on the scrim: the chronicle the events phase dealt on, which its entries read
- * their numbers off, and which of them is ringed. It closes on the take alone.
+ * The deal window on the scrim: the chronicle whose first deal it stands, which its answers read
+ * their numbers and their refusal off, and which of its entries is ringed. It closes on the take
+ * alone.
  */
 type Dealing = {
   readonly stands: 'deal';
   readonly on: Chronicle;
+  readonly deal: Deal;
   /** The number the ringed entry was offered as, and nothing while none is ringed. */
   selected: number | undefined;
 };
 
 /**
- * The capstone's window on the scrim: the chronicle it was raised over, which the capstone's card
- * reads its numbers off. It offers its one card to be read and nothing to be taken, so it holds no
- * selection.
+ * The capstone's window on the scrim: the chronicle it was raised over, whose timeline names the
+ * capstone. It offers its one card to be read and nothing to be taken, so it holds no selection.
  */
 type Capstone = { readonly stands: 'capstone'; readonly on: Chronicle };
 
@@ -176,7 +188,7 @@ export function createOverlay(
   catalogue: Catalogue,
   covering: (covered: boolean) => void,
   newChronicle: () => void,
-  take: (event: string) => void,
+  take: (at: number) => void,
 ): Overlay {
   const scrim = scene.add
     .rectangle(0, 0, DESIGN_WIDTH, DESIGN_HEIGHT, SCRIM, SCRIM_ALPHA)
@@ -184,6 +196,10 @@ export function createOverlay(
     .setDepth(SCRIM_DEPTH)
     .setVisible(false);
   const clip = createClip(scene, on);
+  const note = createRefusalNote(scene, on, {
+    depth: SCRIM_DEPTH + 3,
+    raised: (raised) => clip.exclude(raised),
+  });
 
   let shown: Phaser.GameObjects.GameObject[] = [];
   /** What stands on the scrim, and nothing while the scrim is down. */
@@ -196,7 +212,7 @@ export function createOverlay(
   /** The chronicle the ending screen was raised on, kept so the menu can close back onto it. */
   let raisedOn: Ended | undefined;
   /** The deal standing, kept so the menu can close back onto its window; the take lets it go. */
-  let dealing: Dealing | undefined;
+  let standingDeal: Dealing | undefined;
   /** Whether the capstone has been announced: the first render raises its window, and no render after. */
   let announced = false;
   /** The capstone's window standing, kept so the menu can close back onto it; closing it lets it go. */
@@ -206,6 +222,7 @@ export function createOverlay(
 
   /** What the scrim carries taken down, the scrim itself left up: every raise replaces through here. */
   const wipe = (): void => {
+    note.hide();
     for (const object of shown) object.destroy();
     shown = [];
     grid = undefined;
@@ -401,7 +418,7 @@ export function createOverlay(
       const x =
         (DESIGN_WIDTH - spanX) / 2 + column * (BROWSE_WIDTH + BROWSE_GAP) + BROWSE_WIDTH / 2;
       const y = firstY + row * (height + BROWSE_GAP) + height;
-      const drawn = createCardFace(scene, offered.face, NO_REFUSAL, { width: BROWSE_WIDTH });
+      const drawn = createCardFace(scene, offered.face, offered.refusal, { width: BROWSE_WIDTH });
       root.add(
         drawn.root
           .setPosition(x, y)
@@ -435,7 +452,9 @@ export function createOverlay(
     );
     layGrid(
       'browse',
-      browsing.cards.map((id, at): Offered => ({ face: cardFace(catalogue, id), at })),
+      browsing.cards.map(
+        (id, at): Offered => ({ face: cardFace(catalogue, id), refusal: NO_REFUSAL, at }),
+      ),
       title.y + title.height + MARGIN,
       (at, press) => {
         switch (press) {
@@ -456,39 +475,47 @@ export function createOverlay(
   /**
    * The deal window raised, and raised again where the back from a card shown large or from the menu
    * brings it. A press on an entry rings it and a press on the ringed entry takes it: the window
-   * closes on the take, and the landing plays out under the caller.
+   * closes on the take, and the landing plays out under the caller. The take of an answer the city
+   * cannot pay for says why over the card instead, and the ring stays.
    */
-  const showDeal = (deal: Dealing): void => {
+  const showDeal = (dealing: Dealing): void => {
     wipe();
     cover();
-    carried = deal;
-    dealing = deal;
+    carried = dealing;
+    standingDeal = dealing;
 
-    const title = raiseTitle('deal', text(dealsCapstone(deal.on) ? 'deal.capstone' : 'deal.title'));
-    layGrid(
-      'deal',
-      deal.on.deal.map((id, at): Offered => ({ face: eventFace(catalogue, deal.on, id), at })),
-      title.y + title.height + MARGIN,
-      (at, press) => {
-        switch (press) {
-          case 'left':
-            if (at === undefined || at !== deal.selected) {
-              ring(deal, at);
-              return;
-            }
-            dealing = undefined;
-            close();
-            take(deal.on.deal[at]);
+    const { heading, entries } = dealt(catalogue, dealing.on, dealing.deal);
+    const title = raiseTitle('deal', heading);
+    layGrid('deal', entries, title.y + title.height + MARGIN, (at, press) => {
+      switch (press) {
+        case 'left': {
+          if (at === undefined || at !== dealing.selected) {
+            ring(dealing, at);
             return;
-          case 'right':
-            if (at !== undefined) {
-              showInspection(eventFace(catalogue, deal.on, deal.on.deal[at]), NO_REFUSAL, deal);
+          }
+          const { face, refusal } = entries[at];
+          if (!playable(refusal)) {
+            const placed = grid?.placed.find((card) => card.at === at);
+            if (placed !== undefined && grid !== undefined) {
+              note.overCard(
+                refusedCard(face.costs, refusal),
+                placed.x,
+                placed.y + grid.root.y - grid.height,
+              );
             }
             return;
+          }
+          standingDeal = undefined;
+          close();
+          take(at);
+          return;
         }
-      },
-    );
-    ring(deal, deal.selected);
+        case 'right':
+          if (at !== undefined) showInspection(entries[at].face, entries[at].refusal, dealing);
+          return;
+      }
+    });
+    ring(dealing, dealing.selected);
   };
 
   /** The capstone's window closed: it is read once, and nothing brings it back on this screen. */
@@ -507,19 +534,24 @@ export function createOverlay(
     carried = announcement;
     capstone = announcement;
 
-    const face = eventFace(catalogue, announcement.on, announcement.on.timeline.capstone.event);
+    const face = eventFace(announcement.on.timeline.capstone.event);
     const title = raiseTitle('capstone', text('capstone.title'));
-    layGrid('capstone', [{ face, at: 0 }], title.y + title.height + MARGIN, (at, press) => {
-      switch (press) {
-        case 'left':
-          if (at === undefined) back();
-          else closeCapstone();
-          return;
-        case 'right':
-          if (at !== undefined) showInspection(face, NO_REFUSAL, announcement);
-          return;
-      }
-    });
+    layGrid(
+      'capstone',
+      [{ face, refusal: NO_REFUSAL, at: 0 }],
+      title.y + title.height + MARGIN,
+      (at, press) => {
+        switch (press) {
+          case 'left':
+            if (at === undefined) back();
+            else closeCapstone();
+            return;
+          case 'right':
+            if (at !== undefined) showInspection(face, NO_REFUSAL, announcement);
+            return;
+        }
+      },
+    );
   };
 
   /** The aim window raised, and raised again where the back from a card shown large brings it. */
@@ -644,7 +676,7 @@ export function createOverlay(
    */
   const shut = (): void => {
     if (raisedOn !== undefined) showEnding(raisedOn);
-    else if (dealing !== undefined) showDeal(dealing);
+    else if (standingDeal !== undefined) showDeal(standingDeal);
     else if (capstone !== undefined) showCapstone(capstone);
     else close();
   };
@@ -762,7 +794,7 @@ export function createOverlay(
       showAim({
         aimed,
         cards: chronicle.discardPile
-          .map((id, at): Offered => ({ face: cardFace(catalogue, id), at }))
+          .map((id, at): Offered => ({ face: cardFace(catalogue, id), refusal: NO_REFUSAL, at }))
           .reverse(),
         chosen,
         closed,
@@ -783,14 +815,11 @@ export function createOverlay(
           return;
         }
         case 'deal': {
-          const at = carried.selected;
-          if (at !== undefined) {
-            showInspection(
-              eventFace(catalogue, carried.on, carried.on.deal[at]),
-              NO_REFUSAL,
-              carried,
-            );
-          }
+          const entry =
+            carried.selected === undefined
+              ? undefined
+              : dealt(catalogue, carried.on, carried.deal).entries[carried.selected];
+          if (entry !== undefined) showInspection(entry.face, entry.refusal, carried);
           return;
         }
         case 'aim-window':
@@ -815,14 +844,16 @@ export function createOverlay(
         showCapstone({ stands: 'capstone', on: chronicle });
       } else if (chronicle.ending !== undefined && raisedOn === undefined)
         void raiseEnding({ ending: chronicle.ending, timeline: chronicle.timeline });
-      else if (chronicle.deal.length > 0 && dealing === undefined)
-        showDeal({ stands: 'deal', on: chronicle, selected: undefined });
+      else if (chronicle.deals[0] !== undefined && standingDeal === undefined)
+        showDeal({ stands: 'deal', on: chronicle, deal: chronicle.deals[0], selected: undefined });
       else stand();
     },
     play(stage: Stage): Promise<void> | undefined {
-      const { ending, timeline } = stage.chronicle;
-      if (ending === undefined || raisedOn !== undefined) return undefined;
-      return raiseEnding({ ending, timeline });
+      const { ending, timeline, deals } = stage.chronicle;
+      if (ending !== undefined && raisedOn === undefined) return raiseEnding({ ending, timeline });
+      // A capture deals before the rest of the end of turn has played out: the window waits for the
+      // render the play-out ends on, which a render of this stage would pre-empt.
+      return deals.length > 0 ? Promise.resolve() : undefined;
     },
   };
 }
@@ -839,6 +870,37 @@ function says({ ending, timeline }: Ended): { title: string; line: string } {
       return {
         title: text('defeat.title'),
         line: text(`defeat.${ending.cause}`, { turn: ending.turn }),
+      };
+  }
+}
+
+/**
+ * What the deal window reads of a deal: the event's name or the camp's over it, and its entries in
+ * the order dealt — an answer drawn unaffordable where the chronicle cannot pay it, a reward as the
+ * card of the deck it is.
+ */
+function dealt(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  deal: Deal,
+): { heading: string; entries: readonly Offered[] } {
+  const ids = offered(catalogue, deal);
+  switch (deal.of) {
+    case 'event':
+      return {
+        heading: eventName(deal.event),
+        entries: ids.map((id, at): Offered => {
+          const face = answerFace(catalogue, chronicle, deal.event, id);
+          const refusal = { unaffordable: unaffordable(chronicle, face.costs), blocked: [] };
+          return { face, refusal, at };
+        }),
+      };
+    case 'camp':
+      return {
+        heading: buildingName(catalogue.camp.building),
+        entries: ids.map(
+          (id, at): Offered => ({ face: cardFace(catalogue, id), refusal: NO_REFUSAL, at }),
+        ),
       };
   }
 }

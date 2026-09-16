@@ -1,5 +1,5 @@
 import { type River, type Tile, type TileCoords, tileKey } from './map';
-import type { Resource, Resources } from './resources';
+import { RESOURCES, type Resource, type Resources } from './resources';
 import type { Rng } from './rng';
 import type { Faction, Unit } from './units';
 
@@ -18,14 +18,19 @@ export type Ending = { readonly turn: number } & (
 export type CardId = string;
 
 /**
- * One chronicle's roll of its schedule: each deal ahead with the turn it is due on and its entries in
- * the order dealt, and the capstone with the turn it lands on and the last turn of its span. The
- * capstone's own deal is not among the deals.
+ * One chronicle's roll of its schedule: each deal ahead with the turn it is due on and the one event
+ * it deals, and the capstone with the turn it lands on and the last turn of its span. The capstone's
+ * own deal is not among the deals.
  */
 export type Timeline = {
-  readonly deals: readonly { readonly turn: number; readonly entries: readonly string[] }[];
+  readonly deals: readonly { readonly turn: number; readonly event: string }[];
   readonly capstone: { readonly event: string; readonly turn: number; readonly last: number };
 };
+
+/** One deal waiting on the take: an event, which deals its answers, or a captured camp's rewards. */
+export type Deal =
+  | { readonly of: 'event'; readonly event: string }
+  | { readonly of: 'camp'; readonly rewards: readonly CardId[] };
 
 /** What a snapshot keeps of the unit that stood on the tile: what its mark is drawn from. */
 export type SnapshotUnit = { readonly type: string; readonly faction: Faction };
@@ -59,11 +64,11 @@ export type Chronicle = {
   /** What the events phase deals on every turn of the chronicle, rolled when it was launched. */
   readonly timeline: Timeline;
   /**
-   * The entries the events phase dealt, in the order dealt, and none at all while no deal stands.
+   * The deals waiting on the take, the one standing first, and none at all while no deal stands.
    * While one does the chronicle waits on the take: it has no hand, and every other command is
    * refused.
    */
-  readonly deal: readonly string[];
+  readonly deals: readonly Deal[];
   readonly resources: Resources;
   readonly population: number;
   /** The tiles an inhabitant stands on, at most one to a tile; every other inhabitant is idle. */
@@ -109,6 +114,16 @@ export type Block = 'population' | 'idle' | 'city' | 'discard-pile' | TileBlock;
 
 /** What one thing asks for of one resource: a card's cost line by line, a claim's culture. */
 export type Cost = { readonly resource: Resource; readonly amount: number };
+
+/** A cost, resource by resource, in the order the resource bar reads. */
+export function costsOf(cost: Partial<Resources>): Cost[] {
+  const entries: Cost[] = [];
+  for (const resource of RESOURCES) {
+    const amount = cost[resource];
+    if (amount !== undefined) entries.push({ resource, amount });
+  }
+  return entries;
+}
 
 /** Everything standing between the city and a card or a claim: what it cannot pay, and the map. */
 export type Refusal = {

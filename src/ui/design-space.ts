@@ -306,6 +306,8 @@ export type Clip = {
     height: number,
   ): void;
   hide(): void;
+  /** Keeps an object the scene gained after `show` out of the rectangle. */
+  exclude(object: Phaser.GameObjects.GameObject): void;
 };
 
 /**
@@ -355,6 +357,9 @@ export function createClip(scene: Phaser.Scene, on: Surface): Clip {
     hide(): void {
       frame = undefined;
       camera.setVisible(false);
+    },
+    exclude(object): void {
+      camera.ignore(object);
     },
   };
 }

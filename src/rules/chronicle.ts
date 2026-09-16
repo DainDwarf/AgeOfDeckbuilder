@@ -10,15 +10,25 @@ import {
 import { assign, type CityCommand, claim, grow, income, reassign } from './city';
 import { generateMap, type HexMap, type TileCoords, tileAt, tileKey } from './map';
 import { refuse } from './map-kinds';
-import { RESOURCES } from './resources';
 import { seedRng, shuffle as shuffleItems } from './rng';
-import { continued, events, survived, taken, timelineOf } from './schedule';
+import {
+  answered,
+  answerOf,
+  continued,
+  events,
+  offered,
+  rewarded,
+  survived,
+  timelineOf,
+} from './schedule';
 import { charted } from './sight';
 import {
   type Block,
   type CardId,
   type Chronicle,
   type Cost,
+  costsOf,
+  type Deal,
   type DefeatCause,
   playable,
   type Refusal,
@@ -40,8 +50,8 @@ import {
 
 export type Command =
   | { readonly type: 'end-turn' }
-  /** One entry of the deal the events phase left standing, taken to land. */
-  | { readonly type: 'take'; readonly event: string }
+  /** One entry of the deal standing taken, named by its place in the order dealt. */
+  | { readonly type: 'take'; readonly at: number }
   | { readonly type: 'play'; readonly index: number; readonly aim: 'none' }
   | {
       readonly type: 'play';
@@ -89,7 +99,8 @@ const HAND_SIZE = 5;
  * culture and taken inside the border, `grow` is the food stock spent on one more inhabitant,
  * `turn` is the tick, where every unit's move points and action are refreshed, `reinforce` is the
  * capstone's second script on a turn of its span, `deal` is what the timeline offers on a due turn,
- * `events` is the entry taken landing, `strike` is every hazard the hand still holds striking,
+ * `events` is the answer taken landing, `reward` is the reward taken laid in the discard pile,
+ * `strike` is every hazard the hand still holds striking,
  * `capture` is the city falling to an enemy that stood on its tile, and `victory` is the city still
  * standing at the end of the capstone's last turn.
  */
@@ -108,6 +119,7 @@ export type PlainStage =
   | 'reinforce'
   | 'deal'
   | 'events'
+  | 'reward'
   | 'draw'
   | 'shuffle';
 
@@ -158,7 +170,7 @@ export function beginChronicle(
     centre: map.centre,
     held: [],
     turn: 0,
-    deal: [],
+    deals: [],
     resources: { food: 0, production: 0, military: 0, money: 0, science: 0, culture: 0 },
     population: 0,
     assigned: [],
@@ -204,7 +216,7 @@ export function apply(catalogue: Catalogue, chronicle: Chronicle, command: Comma
  */
 function resolved(catalogue: Catalogue, chronicle: Chronicle, command: Command): Stage[] {
   if (chronicle.ending !== undefined) return [{ name: 'refused', chronicle }];
-  if (chronicle.deal.length > 0 && command.type !== 'take') {
+  if (chronicle.deals.length > 0 && command.type !== 'take') {
     return [{ name: 'refused', chronicle }];
   }
 
@@ -241,7 +253,7 @@ function stagesOf(catalogue: Catalogue, chronicle: Chronicle, command: Command):
     case 'end-turn':
       return endOfTurn(catalogue, chronicle);
     case 'take':
-      return take(catalogue, chronicle, command.event);
+      return take(catalogue, chronicle, command.at);
     case 'play':
       return play(catalogue, chronicle, command);
     case 'move':
@@ -278,8 +290,9 @@ export function outcome(stages: readonly Stage[]): Chronicle {
 /**
  * The end of turn, step by ordered step, each with the chronicle it leaves: a step that changed
  * nothing is absent, and the list ends at the capture when the city falls in the enemy phase, at the
- * victory when the city is still standing once the capstone's last turn is over, or at the deal a due
- * turn's events phase leaves standing — the hand waits on the take. Turn 0's end runs none of the
+ * victory when the city is still standing once the capstone's last turn is over, or before the draw
+ * while any deal stands, a capture's or the events phase's — the hand waits on the take; a deal
+ * queued by a capture alone raises no `deal` stage. Turn 0's end runs none of the
  * cycle and opens on the tick, which takes the settle cards left in hand. The turn always ticks, so
  * there is always a stage. A turn ended while the city stands nowhere is one `refused` stage.
  */
@@ -322,21 +335,51 @@ function endOfTurn(catalogue: Catalogue, chronicle: Chronicle): Stage[] {
   });
   staged('reinforce', continued(catalogue, standing));
   staged('deal', events(standing));
-  if (standing.deal.length > 0) return stages;
+  if (standing.deals.length > 0) return stages;
   raised(drawn(standing));
   return stages;
 }
 
 /**
- * One dealt entry taken: it lands in the one `events` stage, and the hand is drawn on the chronicle
- * it leaves. An entry the deal does not hold, and a take made while no deal stands, are one
- * `refused` stage on the chronicle as it stood.
+ * One entry of the deal standing taken, by its place in the order dealt, and the deal popped: an
+ * answer pays its cost and lands in the one `events` stage, a reward is laid in the discard pile in
+ * the one `reward` stage and the rewards beside it are gone. The hand is drawn on the chronicle that
+ * leaves once no deal stands, and waits on the next deal while one does. A take made while no deal
+ * stands, one at a place the deal does not offer, and one of an answer the city cannot pay for are
+ * one `refused` stage on the chronicle as it stood.
  */
-function take(catalogue: Catalogue, chronicle: Chronicle, event: string): Stage[] {
-  if (!chronicle.deal.includes(event)) return [{ name: 'refused', chronicle }];
+function take(catalogue: Catalogue, chronicle: Chronicle, at: number): Stage[] {
+  const [deal, ...waiting] = chronicle.deals;
+  if (deal === undefined) return [{ name: 'refused', chronicle }];
+  const id = offered(catalogue, deal)[at];
+  if (id === undefined) return [{ name: 'refused', chronicle }];
 
-  const landed = taken(catalogue, chronicle, event);
-  return [{ name: 'events', chronicle: landed }, ...drawn(landed)];
+  const landed = landing(catalogue, chronicle, { ...chronicle, deals: waiting }, deal, id);
+  if (landed === undefined) return [{ name: 'refused', chronicle }];
+  if (landed.chronicle.deals.length > 0) return [landed];
+  return [landed, ...drawn(landed.chronicle)];
+}
+
+/**
+ * The one stage an entry of the deal lands as, on the chronicle the deal is popped from, and nothing
+ * for an answer the chronicle the deal stood on cannot pay for.
+ */
+function landing(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  popped: Chronicle,
+  deal: Deal,
+  id: string,
+): Stage | undefined {
+  switch (deal.of) {
+    case 'event': {
+      const answer = answerOf(catalogue, deal.event, id);
+      if (unaffordable(chronicle, costsOf(answer.cost)).length > 0) return undefined;
+      return { name: 'events', chronicle: answered(catalogue, popped, answer) };
+    }
+    case 'camp':
+      return { name: 'reward', chronicle: rewarded(popped, id) };
+  }
 }
 
 /**
@@ -370,13 +413,7 @@ function victory(chronicle: Chronicle): Chronicle {
 
 /** What a card costs, resource by resource, in the order the resource bar reads. */
 export function costOf(catalogue: Catalogue, id: CardId): Cost[] {
-  const { cost } = cardOf(catalogue, id);
-  const entries: Cost[] = [];
-  for (const resource of RESOURCES) {
-    const amount = cost[resource];
-    if (amount !== undefined) entries.push({ resource, amount });
-  }
-  return entries;
+  return costsOf(cardOf(catalogue, id).cost);
 }
 
 export function refusalOf(catalogue: Catalogue, chronicle: Chronicle, id: CardId): Refusal {
@@ -635,8 +672,8 @@ function enemyPhase(catalogue: Catalogue, chronicle: Chronicle): Stage[] {
 
 /**
  * The camps captured, in tile order: a camp a unit of the player's is still standing on once the
- * enemy phase is over leaves its tile's building slot, and the camp's reward is laid in the discard
- * pile. A stage each, carrying the tile the camp stood on.
+ * enemy phase is over leaves its tile's building slot, and the camp's rewards are dealt behind the
+ * deals already standing. A stage each, carrying the tile the camp stood on.
  */
 function captures(catalogue: Catalogue, chronicle: Chronicle): Stage[] {
   const stages: Stage[] = [];
@@ -651,7 +688,7 @@ function captures(catalogue: Catalogue, chronicle: Chronicle): Stage[] {
       tiles: standing.tiles.map((tile) =>
         tileKey(tile) === at ? { ...tile, building: undefined } : tile,
       ),
-      discardPile: [...standing.discardPile, catalogue.camp.reward],
+      deals: [...standing.deals, { of: 'camp', rewards: catalogue.camp.rewards }],
     };
     stages.push({ name: 'camp-capture', tile: { q, r }, chronicle: standing });
   }

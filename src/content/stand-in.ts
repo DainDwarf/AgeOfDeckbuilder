@@ -248,32 +248,41 @@ export const STAND_IN: Catalogue = catalogued({
     },
   },
   events: {
-    PH_Raid: {
-      reads: (_catalogue, chronicle) => ({ warriors: raiders(chronicle.turn) }),
-      lands: (catalogue, chronicle) => raided(catalogue, chronicle, raiders(chronicle.turn)),
-    },
-    PH_Famine: {
-      reads: () => ({}),
-      lands: (catalogue, chronicle) => laid(catalogue, chronicle, 'PH_Hunger'),
+    PH_Hardship: {
+      answers: {
+        PH_Raid: {
+          cost: {},
+          reads: (_catalogue, chronicle) => ({ warriors: raiders(chronicle.turn) }),
+          lands: (catalogue, chronicle) => raided(catalogue, chronicle, raiders(chronicle.turn)),
+        },
+        PH_Famine: {
+          cost: {},
+          reads: () => ({}),
+          lands: (catalogue, chronicle) => laid(catalogue, chronicle, 'PH_Hunger'),
+        },
+      },
     },
     PH_Siege: {
-      reads: () => ({ camps: SIEGE_CAMPS }),
-      lands: (catalogue, chronicle) => besieged(catalogue, chronicle, SIEGE_CAMPS, [3, 5], 3),
+      answers: {
+        PH_Hold: {
+          cost: {},
+          reads: () => ({ camps: SIEGE_CAMPS }),
+          lands: (catalogue, chronicle) => besieged(catalogue, chronicle, SIEGE_CAMPS, [3, 5], 3),
+        },
+      },
       continues: reinforced,
     },
   },
   schedules: {
     [STAND_IN_SCHEDULE]: {
       spacing: [3, 7],
-      deal: 2,
       capstone: { event: 'PH_Siege', window: [27, 33], span: 6 },
-      entries: { PH_Raid: () => 1, PH_Famine: () => 1 },
+      entries: { PH_Hardship: () => 1 },
     },
     PH_ShortSchedule: {
       spacing: [3, 7],
-      deal: 2,
       capstone: { event: 'PH_Siege', window: [2, 2], span: 2 },
-      entries: { PH_Raid: () => 1, PH_Famine: () => 1 },
+      entries: { PH_Hardship: () => 1 },
     },
   },
   terrains: {
@@ -383,7 +392,12 @@ export const STAND_IN: Catalogue = catalogued({
       },
     },
   },
-  camp: { unit: 'PH_Warrior', script: 'PH_Advance', building: 'PH_Camp', reward: 'PH_Spoils' },
+  camp: {
+    unit: 'PH_Warrior',
+    script: 'PH_Advance',
+    building: 'PH_Camp',
+    rewards: ['PH_Spoils'],
+  },
   city: { terrain: 'urban', building: 'PH_City', sight: 2, idle: 2 },
 });
 

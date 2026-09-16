@@ -3,6 +3,7 @@ import { STAND_IN, STAND_IN_REGION } from '../src/content/stand-in';
 import { deckOf } from '../src/rules/catalogue';
 import { type TileCoords, tileKey } from '../src/rules/map';
 import { regionOf } from '../src/rules/map-kinds';
+import { offered } from '../src/rules/schedule';
 import type { Chronicle } from '../src/rules/state';
 import {
   budget,
@@ -65,8 +66,8 @@ test('the map draws the camps it was dealt, and the raid’s warrior stands on o
   for (let turn = opened.turn; turn < RAID - 1; turn++) await endTurn(page);
   await stoppedTurn(page);
 
-  const dealt = await chronicleOf(page);
-  await take(page, dealt.deal.indexOf('PH_Raid'));
+  const [deal] = (await chronicleOf(page)).deals;
+  await take(page, deal === undefined ? -1 : offered(STAND_IN, deal).indexOf('PH_Raid'));
 
   const raided = await chronicleOf(page);
   const enemy = raided.units.find((unit) => unit.faction === 'enemy');
