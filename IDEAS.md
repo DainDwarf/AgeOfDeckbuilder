@@ -31,5 +31,4 @@ The unordered pool of features that may or may not happen. Nothing here is promi
 - **Settle city sight and held-tile sight**: both are provisional; decide them for good once their pros and cons have been seen in play.
 - **Merge elevation and river lift**: test if a terrain's elevation and its river lift can be the same data — they only diverge on forest, and both represent the same idea of terrain elevation.
 - **Hand-crafted challenge maps**: once the opening takes a fully generated map, a map written by hand could be one the player launches on, a challenge with a fixed layout. Not committed to at all.
-- **The stand-in's turn-0 claim cards are instants, not settle cards**: a misunderstanding — the user expected every card of the settle section to be of the settle kind. The stand-in goes with the first real catalogue; what kind a turn-0 card that is not the settle itself carries (a unit card in the settle section, say) is worth a look when the settle section is next touched.
 - **End-of-turn warning for idle inhabitants**: a warning at end of turn when inhabitants stand idle while free tiles remain. Shelved, not rejected — it conflicts with no-handholding.
