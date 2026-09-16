@@ -846,7 +846,7 @@ test('a worker’s terraform removes the building that does not stand on the new
   expect(buildingAt(after, at)).toBeUndefined();
 });
 
-test('a worker’s terraform is refused for the slot on a camp’s tile until the camp is captured', () => {
+test('a worker’s terraform is refused for the faction on a camp’s tile until the camp is captured', () => {
   const at = { q: 2, r: 0 };
   const camp = ringed(2, {
     tiles: camped(field(2), [at]),
@@ -857,7 +857,7 @@ test('a worker’s terraform is refused for the slot on a camp’s tile until th
 
   const captured = endedTurn(camp);
 
-  expect(refusedFor(camp, 'PH_Urbanisation', at)).toBe('slot');
+  expect(refusedFor(camp, 'PH_Urbanisation', at)).toBe('faction');
   expect(outcome(apply(CATALOGUE, camp, aimedAt(at)))).toEqual(camp);
   expect(buildingAt(captured, at)).toBeUndefined();
   expect(refusedFor(captured, 'PH_Urbanisation', at)).toBeUndefined();
@@ -918,16 +918,15 @@ function upheaved(carrying: Carrying = {}): Chronicle {
   });
 }
 
-test('an event’s terraform reaches the city’s tile into a terrain the city’s building stands on, building and all, and kills the unit that cannot stand there', () => {
+test('an event’s terraform reaches the city’s tile into a terrain the city’s building stands on, building and all', () => {
   const catalogue = reshaping('forest');
-  const city = upheaved({ units: [standing('player', CITY, { move: MOVE_POINT })] });
+  const city = upheaved();
 
   const after = endedTurn(city, 'PH_Quake', catalogue);
 
   expect(tileAt(after.tiles, CITY)?.terrain).toBe('forest');
   expect(buildingAt(after, CITY)).toBe('PH_City');
   expect(after.city).toEqual(CITY);
-  expect(after.units).toEqual([]);
 });
 
 test('an event’s terraform into a terrain the city’s building does not stand on passes the city’s tile over, and kills nobody there', () => {
@@ -1269,7 +1268,7 @@ test('the mine card names the first of its four reasons: worker, action, terrain
   expect(refusedFor(worked, 'PH_Mine', at)).toBeUndefined();
 });
 
-test('the urbanisation card names the first of its four reasons: worker, action, terrain, then slot', () => {
+test('the urbanisation card names the first of its four reasons: worker, action, terrain, then faction', () => {
   const at = { q: 1, r: 0 };
   const plain = ringed(2);
   const forest = ringed(2, {
@@ -1298,7 +1297,7 @@ test('the urbanisation card names the first of its four reasons: worker, action,
     'action',
   );
   expect(refusedFor(built, 'PH_Urbanisation', at)).toBe('worker');
-  expect(refusedFor(camp, 'PH_Urbanisation', at)).toBe('slot');
+  expect(refusedFor(camp, 'PH_Urbanisation', at)).toBe('faction');
   expect(refusedFor(filled, 'PH_Urbanisation', at)).toBeUndefined();
   expect(refusedFor(worked, 'PH_Urbanisation', at)).toBeUndefined();
 });

@@ -190,9 +190,9 @@ export function slotFree(tile: Tile): TileBlock | undefined {
 }
 
 /**
- * What a worker's terraform into `to` asks of the tile besides the terrains it starts from: the city's
- * tile only into a terrain the city's building stands on, and no camp's tile until the camp is
- * captured.
+ * What a terraform of the player's into `to` asks of the tile besides the terrains it starts from: no
+ * camp's tile until the camp is captured, and the city's tile only into a terrain the city's building
+ * stands on.
  */
 export function terraformable(
   catalogue: Catalogue,
@@ -200,8 +200,8 @@ export function terraformable(
   tile: Tile,
   to: string,
 ): TileBlock | undefined {
-  if (!reaches(catalogue, chronicle, tile, to)) return 'terrain';
-  return tile.building === catalogue.camp.building ? 'slot' : undefined;
+  if (tile.building === catalogue.camp.building) return 'faction';
+  return reaches(catalogue, chronicle, tile, to) ? undefined : 'terrain';
 }
 
 /**
