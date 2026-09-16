@@ -90,6 +90,7 @@ test('after the settle a free claim lights the six tiles around the city and no 
   await openOnCapstone(page, 1, 'PH_Deck');
   await click(page, 'capstone-card-0');
   await expect.poll(() => standing(page, 'capstone')).toBe(false);
+  await rested(page);
 
   await dragOut(page, 0);
   await aimed(page);
