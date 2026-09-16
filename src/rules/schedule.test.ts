@@ -4,6 +4,7 @@ import { apply, type Command, launched, outcome } from './chronicle';
 import { growthThreshold } from './city';
 import {
   assignTo,
+  buildingAt,
   builtOn,
   CAMPS,
   CATALOGUE,
@@ -813,10 +814,10 @@ test('a capstone’s condition ends the chronicle in victory at the end of the f
 });
 
 test('a capstone’s condition holding before the capstone lands passes nothing', () => {
-  let chronicle = awaitingTillage({
-    tiles: builtOn(field(2), TILLAGE, [TILLED]),
-    turn: CAPSTONE - 2,
-  });
+  let chronicle = tilled(
+    awaitingTillage({ ...FARMING, turn: CAPSTONE - 2, drawPile: [], hand: ['PH_Farm'] }),
+  );
+  expect(buildingAt(chronicle, TILLED)).toBe(TILLAGE);
 
   for (let turn = CAPSTONE - 1; turn <= CAPSTONE; turn++) {
     chronicle = endedTurn(chronicle);
