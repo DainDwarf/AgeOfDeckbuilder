@@ -96,9 +96,6 @@ const DECK_CARDS: readonly CardId[] = [
 /** How many camps the siege places: what its rules entry reads and what it lands. */
 const SIEGE_CAMPS = 5;
 
-/** The money the toll's tribute costs: more than a city holds by the toll's first turn. */
-const TRIBUTE = 99;
-
 /** `PH_` marks a stand-in: none of this is authored content, and every piece of it goes. */
 export const STAND_IN: Catalogue = catalogued({
   version: 'stand-in',
@@ -268,7 +265,8 @@ export const STAND_IN: Catalogue = catalogued({
     PH_Toll: {
       answers: {
         PH_Tribute: {
-          cost: { money: TRIBUTE },
+          // More than a city holds by the toll's first turn: the deal spec presses it refused.
+          cost: { money: 99 },
           reads: () => ({}),
           lands: (_catalogue, chronicle) => chronicle,
         },

@@ -167,11 +167,11 @@ export type Catalogue = MapContent & {
  * cards none; no schedule deals its capstone among its entries; a schedule spans at least one, and
  * each of its spans rolls from one at least to no less than its least; an event a schedule deals
  * among its entries deals two answers at least; every event deals an answer costing no stock, every
- * amount its cost names nought, so a capstone deals one at least; no answer is dealt by two events; an event with a second script is
- * some schedule's capstone; the camp deals one reward at least; the camp's unit stands on every
- * terrain its building names; the city's building stands on the city's terrain; and the city's
- * sight and its idle count are none below nought. A card's closures and an answer's are neither run
- * nor read here.
+ * amount its cost names nought, so a capstone deals one at least; no answer is dealt by two events;
+ * an event with a second script is some schedule's capstone; the camp deals one reward at least; the
+ * camp's unit stands on every terrain its building names; the city's building stands on the city's
+ * terrain; and the city's sight and its idle count are none below nought. A card's closures and an
+ * answer's are neither run nor read here.
  */
 export function catalogued(content: Catalogue): Catalogue {
   for (const [id, kind] of Object.entries(content.units)) {
