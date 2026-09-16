@@ -1,5 +1,14 @@
 import { expect, test } from 'vitest';
-import { aimOf, built, improved, made, refuses, terraformed, throughWorker } from './cards';
+import {
+  aimOf,
+  built,
+  improved,
+  made,
+  refuses,
+  terraformable,
+  terraformed,
+  throughWorker,
+} from './cards';
 import { type AimedCard, type Catalogue, cardOf, catalogued, deckOf } from './catalogue';
 import { admitted, apply, byHand, type Command, outcome, refusalOf } from './chronicle';
 import {
@@ -67,8 +76,8 @@ function aimedAtPile(card: number): Command {
 }
 
 /** The named card, for a fixture that expects it to be aimed at a tile or at a unit. */
-function aimedCard(id: CardId): AimedCard {
-  const card = aimOf(cardOf(CATALOGUE, id));
+function aimedCard(id: CardId, catalogue: Catalogue = CATALOGUE): AimedCard {
+  const card = aimOf(cardOf(catalogue, id));
   if (card.aim !== 'tile' && card.aim !== 'unit')
     throw new Error(`${id} is aimed at neither a tile nor a unit`);
   return card;
@@ -79,11 +88,19 @@ function admittedTiles(chronicle: Chronicle, id: CardId): TileCoords[] {
   return admitted(CATALOGUE, chronicle, aimedCard(id));
 }
 
-/** The one reason the named card's aim refuses this tile of the map, and nothing when it admits it. */
-function refusedFor(chronicle: Chronicle, id: CardId, at: TileCoords): TileBlock | undefined {
+/**
+ * The one reason the named card's aim refuses this tile of the map, and nothing when it admits it: on
+ * the fixture's content unless the test hands in its own.
+ */
+function refusedFor(
+  chronicle: Chronicle,
+  id: CardId,
+  at: TileCoords,
+  catalogue: Catalogue = CATALOGUE,
+): TileBlock | undefined {
   const tile = tileAt(chronicle.tiles, at);
   if (tile === undefined) throw new Error(`${tileKey(at)} is no tile of the map`);
-  return refuses(CATALOGUE, chronicle, aimedCard(id), tile);
+  return refuses(catalogue, chronicle, aimedCard(id, catalogue), tile);
 }
 
 /** What the city holds to build and to work tiles with, and nothing besides. */
@@ -815,16 +832,173 @@ test('a terraform leaves the rivers where they run: a river lies on no tile', ()
   expect(after.rivers).toEqual([river]);
 });
 
-test('a tile with a building in its slot is not terraformed', () => {
+test('a worker’s terraform removes the building that does not stand on the new terrain', () => {
   const at = { q: 1, r: 0 };
   const city = withTile(
     workedTile(at, 'plain', { hand: ['PH_Urbanisation'], resources: production(5) }),
     { ...at, terrain: 'plain', improvements: [], building: 'PH_Farm' },
   );
 
-  expect(admittedTiles(city, 'PH_Urbanisation')).toEqual([]);
-  expect(refusedFor(city, 'PH_Urbanisation', at)).toBe('slot');
-  expect(outcome(apply(CATALOGUE, city, aimedAt(at)))).toEqual(city);
+  const after = outcome(apply(CATALOGUE, city, aimedAt(at)));
+
+  expect(admittedTiles(city, 'PH_Urbanisation')).toEqual([at]);
+  expect(tileAt(after.tiles, at)?.terrain).toBe('urban');
+  expect(buildingAt(after, at)).toBeUndefined();
+});
+
+test('a worker’s terraform is refused for the slot on a camp’s tile until the camp is captured', () => {
+  const at = { q: 2, r: 0 };
+  const camp = ringed(2, {
+    tiles: camped(field(2), [at]),
+    hand: ['PH_Urbanisation'],
+    resources: production(5),
+    units: [worker(at)],
+  });
+
+  const captured = endedTurn(camp);
+
+  expect(refusedFor(camp, 'PH_Urbanisation', at)).toBe('slot');
+  expect(outcome(apply(CATALOGUE, camp, aimedAt(at)))).toEqual(camp);
+  expect(buildingAt(captured, at)).toBeUndefined();
+  expect(refusedFor(captured, 'PH_Urbanisation', at)).toBeUndefined();
+});
+
+/**
+ * The fixture's content with the city's building standing on forest besides urban, and a terraform
+ * into `to` three ways: a card played through a worker, a card aimed at any tile and refusing none,
+ * and the upheaval's quake landing on the city's tile.
+ */
+function reshaping(to: Terrain): Catalogue {
+  const { PH_Upheaval } = CATALOGUE.events;
+  return catalogued({
+    ...CATALOGUE,
+    cards: {
+      ...CATALOGUE.cards,
+      PH_Sink: {
+        kind: 'instant',
+        cost: {},
+        ...throughWorker(
+          (catalogue, chronicle, tile) => terraformable(catalogue, chronicle, tile, to),
+          (catalogue, paid, at) => terraformed(catalogue, paid, at, to),
+        ),
+      },
+      PH_Collapse: {
+        kind: 'instant',
+        cost: {},
+        aim: 'tile',
+        refuses: () => undefined,
+        effect: (catalogue, paid, at) => terraformed(catalogue, paid, at, to),
+      },
+    },
+    events: {
+      ...CATALOGUE.events,
+      PH_Upheaval: {
+        answers: {
+          ...PH_Upheaval.answers,
+          PH_Quake: {
+            ...PH_Upheaval.answers.PH_Quake,
+            lands: (catalogue, chronicle) => terraformed(catalogue, chronicle, CITY, to),
+          },
+        },
+      },
+    },
+    buildings: {
+      ...CATALOGUE.buildings,
+      PH_City: { ...CATALOGUE.buildings.PH_City, terrains: ['urban', 'forest'] },
+    },
+  });
+}
+
+/** A city on a disc out to two, dealt the upheaval at the end of its turn. */
+function upheaved(carrying: Carrying = {}): Chronicle {
+  return cityOf(['urban', 'plain'], {
+    tiles: field(2),
+    timeline: dealing({ turn: 2, event: 'PH_Upheaval' }),
+    ...carrying,
+  });
+}
+
+test('an event’s terraform reaches the city’s tile into a terrain the city’s building stands on, building and all, and kills the unit that cannot stand there', () => {
+  const catalogue = reshaping('forest');
+  const city = upheaved({ units: [standing('player', CITY, { move: MOVE_POINT })] });
+
+  const after = endedTurn(city, 'PH_Quake', catalogue);
+
+  expect(tileAt(after.tiles, CITY)?.terrain).toBe('forest');
+  expect(buildingAt(after, CITY)).toBe('PH_City');
+  expect(after.city).toEqual(CITY);
+  expect(after.units).toEqual([]);
+});
+
+test('an event’s terraform into a terrain the city’s building does not stand on passes the city’s tile over, and kills nobody there', () => {
+  const catalogue = reshaping('coast');
+  const bare = upheaved({ units: [standing('player', CITY)] });
+  const city = withTile(bare, {
+    ...CITY,
+    terrain: 'urban',
+    improvements: ['PH_Road'],
+    building: 'PH_City',
+  });
+
+  const after = endedTurn(city, 'PH_Quake', catalogue);
+
+  expect(tileAt(after.tiles, CITY)).toEqual(tileAt(city.tiles, CITY));
+  expect(after.units).toEqual(city.units);
+});
+
+test('a worker’s terraform of the city’s tile is admitted into a terrain the city’s building stands on, and refused for the terrain into one it does not', () => {
+  const forest = reshaping('forest');
+  const plain = reshaping('plain');
+  const city = cityOf(['urban'], { tiles: field(2), hand: ['PH_Sink'], units: [worker(CITY)] });
+
+  const forested = outcome(apply(forest, city, aimedAt(CITY)));
+
+  expect(refusedFor(city, 'PH_Sink', CITY, forest)).toBeUndefined();
+  expect(tileAt(forested.tiles, CITY)?.terrain).toBe('forest');
+  expect(buildingAt(forested, CITY)).toBe('PH_City');
+  expect(unitNamed(forested, 1).tile).toEqual(CITY);
+  expect(refusedFor(city, 'PH_Sink', CITY, plain)).toBe('terrain');
+  expect(outcome(apply(plain, city, aimedAt(CITY)))).toEqual(city);
+});
+
+test('a unit standing on a tile terraformed into a terrain it cannot stand on is killed, whatever its faction', () => {
+  const at = { q: 1, r: 0 };
+  const catalogue = reshaping('mountain');
+  for (const faction of ['player', 'enemy'] as const) {
+    const city = ringed(2, { hand: ['PH_Collapse'], units: [standing(faction, at)] });
+
+    const after = outcome(apply(catalogue, city, aimedAt(at)));
+
+    expect(tileAt(after.tiles, at)?.terrain).toBe('mountain');
+    expect(after.units).toEqual([]);
+    expect(after.population).toBe(city.population);
+  }
+});
+
+test('a unit standing on a tile terraformed into a terrain it can stand on stays standing', () => {
+  const at = { q: 1, r: 0 };
+  const catalogue = reshaping('mountain');
+  const city = ringed(2, {
+    hand: ['PH_Collapse'],
+    units: [standing('player', at, { move: 6 * MOVE_POINT })],
+  });
+
+  const after = outcome(apply(catalogue, city, aimedAt(at)));
+
+  expect(tileAt(after.tiles, at)?.terrain).toBe('mountain');
+  expect(after.units).toEqual(city.units);
+});
+
+test('the worker that terraforms its own tile into a terrain it cannot stand on is killed', () => {
+  const at = { q: 1, r: 0 };
+  const catalogue = reshaping('coast');
+  const city = ringed(2, { hand: ['PH_Sink'], units: [worker(at)] });
+
+  const after = outcome(apply(catalogue, city, aimedAt(at)));
+
+  expect(tileAt(after.tiles, at)?.terrain).toBe('coast');
+  expect(after.units).toEqual([]);
+  expect(after.discardPile).toEqual(['PH_Sink']);
 });
 
 test('the urbanisation card is refused on every terrain but the plain it terraforms', () => {
@@ -1107,6 +1281,15 @@ test('the urbanisation card names the first of its four reasons: worker, action,
   const worked = withUnits(plain, [worker(at)]);
   const wooded = withUnits(forest, [worker(at)]);
   const filled = withUnits(built, [worker(at)]);
+  const camp = withUnits(
+    withTile(plain, {
+      ...at,
+      terrain: 'plain',
+      improvements: [],
+      building: CATALOGUE.camp.building,
+    }),
+    [worker(at)],
+  );
 
   expect(refusedFor(plain, 'PH_Urbanisation', at)).toBe('worker');
   expect(refusedFor(forest, 'PH_Urbanisation', at)).toBe('worker');
@@ -1115,7 +1298,8 @@ test('the urbanisation card names the first of its four reasons: worker, action,
     'action',
   );
   expect(refusedFor(built, 'PH_Urbanisation', at)).toBe('worker');
-  expect(refusedFor(filled, 'PH_Urbanisation', at)).toBe('slot');
+  expect(refusedFor(camp, 'PH_Urbanisation', at)).toBe('slot');
+  expect(refusedFor(filled, 'PH_Urbanisation', at)).toBeUndefined();
   expect(refusedFor(worked, 'PH_Urbanisation', at)).toBeUndefined();
 });
 

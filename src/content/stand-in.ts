@@ -12,6 +12,7 @@ import {
   refreshed,
   settled,
   slotFree,
+  terraformable,
   terraformed,
   throughWorker,
   unimproved,
@@ -194,8 +195,11 @@ export const STAND_IN: Catalogue = catalogued({
       kind: 'instant',
       cost: { production: 5 },
       ...throughWorker(
-        (catalogue, _chronicle, tile) =>
-          firstRefusal(made(catalogue, tile, ['plain']), slotFree(tile)),
+        (catalogue, chronicle, tile) =>
+          firstRefusal(
+            made(catalogue, tile, ['plain']),
+            terraformable(catalogue, chronicle, tile, 'urban'),
+          ),
         (catalogue, paid, at) => terraformed(catalogue, paid, at, 'urban'),
       ),
     },

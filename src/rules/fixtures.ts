@@ -19,6 +19,7 @@ import {
   refreshed,
   settled,
   slotFree,
+  terraformable,
   terraformed,
   throughWorker,
   unimproved,
@@ -187,8 +188,11 @@ export const CATALOGUE: Catalogue = catalogued({
       kind: 'instant',
       cost: { production: 5 },
       ...throughWorker(
-        (catalogue, _chronicle, tile) =>
-          firstRefusal(made(catalogue, tile, ['plain']), slotFree(tile)),
+        (catalogue, chronicle, tile) =>
+          firstRefusal(
+            made(catalogue, tile, ['plain']),
+            terraformable(catalogue, chronicle, tile, 'urban'),
+          ),
         (catalogue, paid, at) => terraformed(catalogue, paid, at, 'urban'),
       ),
     },
@@ -808,16 +812,20 @@ export function fullDraw(): CardId[] {
 export const DECK: Deck = deckOf(CATALOGUE, 'deck');
 
 /**
- * One whole turn: the end of turn, and an entry taken of every deal it may stop on, one after
- * another — `wanted` where the deal offers it, and the first entry dealt where it does not. Every
- * fixture that ends turns goes through here, because a chronicle waiting on a deal refuses every
- * other command. A take the rules refuse throws.
+ * One whole turn, on the fixture's content unless the test hands in its own: the end of turn, and an
+ * entry taken of every deal it may stop on, one after another — `wanted` where the deal offers it,
+ * and the first entry dealt where it does not. Every fixture that ends turns goes through here,
+ * because a chronicle waiting on a deal refuses every other command. A take the rules refuse throws.
  */
-export function endedTurn(chronicle: Chronicle, wanted?: string): Chronicle {
-  let standing = outcome(apply(CATALOGUE, chronicle, { type: 'end-turn' }));
+export function endedTurn(
+  chronicle: Chronicle,
+  wanted?: string,
+  catalogue: Catalogue = CATALOGUE,
+): Chronicle {
+  let standing = outcome(apply(catalogue, chronicle, { type: 'end-turn' }));
   for (let deal = standing.deals[0]; deal !== undefined; deal = standing.deals[0]) {
-    const at = placeOf(deal, wanted);
-    const taken = outcome(apply(CATALOGUE, standing, { type: 'take', at }));
+    const at = placeOf(catalogue, deal, wanted);
+    const taken = outcome(apply(catalogue, standing, { type: 'take', at }));
     if (taken === standing) throw new Error(`the take at ${at} is refused`);
     standing = taken;
   }
@@ -825,8 +833,8 @@ export function endedTurn(chronicle: Chronicle, wanted?: string): Chronicle {
 }
 
 /** Where a deal offers `wanted`, and the first place where it does not or nothing is wanted. */
-function placeOf(deal: Deal, wanted: string | undefined): number {
-  const at = wanted === undefined ? -1 : offered(CATALOGUE, deal).indexOf(wanted);
+function placeOf(catalogue: Catalogue, deal: Deal, wanted: string | undefined): number {
+  const at = wanted === undefined ? -1 : offered(catalogue, deal).indexOf(wanted);
   return at < 0 ? 0 : at;
 }
 

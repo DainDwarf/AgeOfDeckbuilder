@@ -8,7 +8,7 @@ import {
   unitKind,
 } from './catalogue';
 import { claimable } from './city';
-import { type Tile, type TileCoords, tileKey } from './map';
+import { type Tile, type TileCoords, tileAt, tileKey } from './map';
 import { buildingKind, improvementKind, refuse, terrainKind } from './map-kinds';
 import { RESOURCES, type Resources } from './resources';
 import { type Block, type Chronicle, holds, idle, type TileBlock } from './state';
@@ -184,9 +184,36 @@ export function made(
   return terrains.includes(tile.terrain) ? undefined : 'terrain';
 }
 
-/** A tile's one building slot, free: what a building fills and a terraform needs empty. */
+/** A tile's one building slot, free: what a building fills and a settle needs empty. */
 export function slotFree(tile: Tile): TileBlock | undefined {
   return tile.building === undefined ? undefined : 'slot';
+}
+
+/**
+ * What a worker's terraform into `to` asks of the tile besides the terrains it starts from: the city's
+ * tile only into a terrain the city's building stands on, and no camp's tile until the camp is
+ * captured.
+ */
+export function terraformable(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  tile: Tile,
+  to: string,
+): TileBlock | undefined {
+  if (!reaches(catalogue, chronicle, tile, to)) return 'terrain';
+  return tile.building === catalogue.camp.building ? 'slot' : undefined;
+}
+
+/**
+ * Whether a terraform into `to` reaches the tile: every tile but the city's, and the city's into a
+ * terrain its building stands on alone.
+ */
+function reaches(catalogue: Catalogue, chronicle: Chronicle, at: TileCoords, to: string): boolean {
+  return (
+    chronicle.city === undefined ||
+    tileKey(chronicle.city) !== tileKey(at) ||
+    buildingKind(catalogue, catalogue.city.building).terrains.includes(to)
+  );
 }
 
 /** No copy of this improvement on the tile: distinct ones stack, the same one never twice. */
@@ -309,7 +336,8 @@ export function improved(
 /**
  * The terrain a tile is terraformed into: the feature that lay on the old terrain goes with it, and
  * so does every improvement and the building whose kind does not name the new terrain; the ones
- * whose kind names it stay.
+ * whose kind names it stay. A unit standing on the tile that cannot stand on the new terrain is
+ * killed. The city's tile, into a terrain the city's building does not stand on, is left as it stands.
  */
 export function terraformed(
   catalogue: Catalogue,
@@ -318,7 +346,8 @@ export function terraformed(
   to: string,
 ): Chronicle {
   terrainKind(catalogue, to);
-  return retiled(paid, at, (tile) => ({
+  if (!reaches(catalogue, paid, at, to)) return paid;
+  const relayered = retiled(paid, at, (tile) => ({
     ...tile,
     terrain: to,
     feature: undefined,
@@ -330,6 +359,14 @@ export function terraformed(
         ? tile.building
         : undefined,
   }));
+  const tile = tileAt(relayered.tiles, at);
+  const key = tileKey(at);
+  return {
+    ...relayered,
+    units: relayered.units.filter(
+      (unit) => tileKey(unit.tile) !== key || standsOn(catalogue, unit.stats, tile),
+    ),
+  };
 }
 
 /** The move points an instant refreshes, on the unit standing on the tile it was aimed at. */
