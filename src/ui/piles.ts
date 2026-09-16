@@ -117,7 +117,26 @@ export function createPiles(
           return landed(stage.chronicle);
         case 'shuffle':
           return shuffle(stage.chronicle);
-        default:
+        case 'played':
+        case 'refused':
+        case 'assign':
+        case 'claim':
+        case 'strike':
+        case 'income':
+        case 'grow':
+        case 'capture':
+        case 'victory':
+        case 'turn':
+        case 'reinforce':
+        case 'capstone':
+        case 'deal':
+        case 'no-deal':
+        case 'events':
+        case 'reward':
+        case 'draw':
+        case 'attack':
+        case 'move':
+        case 'camp-capture':
           return undefined;
       }
     },

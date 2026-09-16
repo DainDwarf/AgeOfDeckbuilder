@@ -451,7 +451,25 @@ export function createHand(
           return fromDrawPile(stage.chronicle);
         case 'refused':
           return comeHome();
-        default:
+        case 'played':
+        case 'assign':
+        case 'claim':
+        case 'strike':
+        case 'income':
+        case 'grow':
+        case 'capture':
+        case 'victory':
+        case 'turn':
+        case 'reinforce':
+        case 'capstone':
+        case 'deal':
+        case 'no-deal':
+        case 'events':
+        case 'reward':
+        case 'shuffle':
+        case 'attack':
+        case 'move':
+        case 'camp-capture':
           return undefined;
       }
     },

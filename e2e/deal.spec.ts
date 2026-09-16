@@ -33,6 +33,7 @@ function dealRun(): { seed: number; due: number } {
   return firstSeed('deals a raid first on its first deal', (seed) => {
     const opened = launch(seed, deckOf(STAND_IN, 'PH_Deck'));
     const first = opened.timeline.next;
+    if (first.event === undefined) return undefined;
 
     let chronicle = opened;
     for (let turn = 1; turn < first.turn - 1; turn++) chronicle = endedTurn(chronicle);

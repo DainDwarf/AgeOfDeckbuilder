@@ -20,13 +20,13 @@ export type CardId = string;
 /**
  * One chronicle's roll of its schedule, a deal ahead, from a generator of its own that nothing the
  * player does steps: the schedule it rolls from, the next deal with the turn it is due on and the one
- * event it deals, and the capstone by its id with the turn it lands on. A test hands one in
+ * event it deals or none, and the capstone by its id with the turn it lands on. A test hands one in
  * to name the deal it wants on the turn it wants.
  */
 export type Timeline = {
   readonly schedule: string;
   readonly rng: Rng;
-  readonly next: { readonly turn: number; readonly event: string };
+  readonly next: { readonly turn: number; readonly event?: string };
   readonly capstone: { readonly id: string; readonly turn: number };
 };
 

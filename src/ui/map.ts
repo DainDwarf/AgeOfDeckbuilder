@@ -1358,7 +1358,23 @@ export function createMapView(
             stage.chronicle,
             () => arriving(stage.chronicle),
           );
-        default:
+        case 'played':
+        case 'refused':
+        case 'assign':
+        case 'claim':
+        case 'strike':
+        case 'discard':
+        case 'income':
+        case 'grow':
+        case 'capture':
+        case 'victory':
+        case 'turn':
+        case 'deal':
+        case 'no-deal':
+        case 'reward':
+        case 'draw':
+        case 'shuffle':
+        case 'camp-capture':
           return undefined;
       }
     },

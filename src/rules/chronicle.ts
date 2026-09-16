@@ -100,7 +100,8 @@ const HAND_SIZE = 5;
  * culture and taken inside the border, `grow` is the food stock spent on one more inhabitant,
  * `turn` is the tick, where every unit's move points and action are refreshed, `reinforce` is the
  * capstone's second script on a turn after its landing, `capstone` is the capstone landing on its
- * turn, `deal` is what the timeline offers on a due turn, `events` is the answer taken landing,
+ * turn, `deal` is what the timeline offers on a due turn, `no-deal` is a due turn dealing nothing
+ * and the next deal rolled from it, `events` is the answer taken landing,
  * `reward` is the reward taken laid in the discard pile, `strike` is every hazard the hand still
  * holds striking, `capture` is the city falling to an enemy that stood on its tile, and `victory` is
  * the capstone passed at the end of a turn.
@@ -120,6 +121,7 @@ export type PlainStage =
   | 'reinforce'
   | 'capstone'
   | 'deal'
+  | 'no-deal'
   | 'events'
   | 'reward'
   | 'draw'
@@ -362,6 +364,9 @@ function turnOpened(catalogue: Catalogue, chronicle: Chronicle): Stage[] {
     case 'deal':
       staged('deal', phase.chronicle);
       if (standing.deals.length > 0) return stages;
+      break;
+    case 'no-deal':
+      staged('no-deal', phase.chronicle);
       break;
   }
   return [...stages, ...drawn(standing)];

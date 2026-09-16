@@ -45,9 +45,8 @@ export function timelineOf(catalogue: Catalogue, id: string, rng: Rng): Timeline
 
 /**
  * The next deal rolled from a landing, every draw from the timeline's own generator: its due turn
- * from the spacing, rolled again from that turn while no entry weighs anything on it, then one of the
- * entries weighing anything on it drawn. A schedule whose entries weigh nothing on any turn from the
- * landing on never ends the roll.
+ * from the spacing, then one of the entries weighing anything on that turn drawn, or no event where
+ * none does, which draws nothing.
  */
 function rolledFrom(
   catalogue: Catalogue,
@@ -55,19 +54,12 @@ function rolledFrom(
   landing: number,
 ): Timeline {
   const { spacing, entries } = scheduleOf(catalogue, timeline.schedule);
-  const weighingOn = (turn: number): [string, number][] =>
-    Object.entries(entries)
-      .map(([entry, weight]): [string, number] => [entry, weight(turn)])
-      .filter(([, weight]) => weight > 0);
-
-  let spaced = withinSpan(timeline.rng, spacing);
-  let turn = landing + spaced.turns;
-  let weighing = weighingOn(turn);
-  while (weighing.length === 0) {
-    spaced = withinSpan(spaced.rng, spacing);
-    turn += spaced.turns;
-    weighing = weighingOn(turn);
-  }
+  const spaced = withinSpan(timeline.rng, spacing);
+  const turn = landing + spaced.turns;
+  const weighing = Object.entries(entries)
+    .map(([entry, weight]): [string, number] => [entry, weight(turn)])
+    .filter(([, weight]) => weight > 0);
+  if (weighing.length === 0) return { ...timeline, rng: spaced.rng, next: { turn } };
 
   const drawn = pickWeighted(spaced.rng, weighing);
   return { ...timeline, rng: drawn.rng, next: { turn, event: drawn.picked } };
@@ -92,12 +84,13 @@ export function spanEnded(chronicle: Chronicle, turns: number): boolean {
  * capstone lands on the chronicle as it stands, nothing is dealt whatever deal was ahead, and the
  * next deal is rolled from that turn; on the turn the next deal is due its event is dealt behind the
  * deals already standing, nothing landing until one of its answers is taken, and the next is rolled
- * from that turn; any other turn changes nothing.
+ * from that turn; on the turn a next deal with no event is due nothing is dealt, and the next is
+ * rolled from that turn; any other turn changes nothing.
  */
 export function events(
   catalogue: Catalogue,
   chronicle: Chronicle,
-): { readonly phase: 'capstone' | 'deal'; readonly chronicle: Chronicle } {
+): { readonly phase: 'capstone' | 'deal' | 'no-deal'; readonly chronicle: Chronicle } {
   const { timeline, turn } = chronicle;
   if (turn === timeline.capstone.turn) {
     const landed = capstoneOf(catalogue, timeline.capstone.id).lands(catalogue, chronicle);
@@ -109,6 +102,12 @@ export function events(
 
   const { next } = timeline;
   if (turn !== next.turn) return { phase: 'deal', chronicle };
+  if (next.event === undefined) {
+    return {
+      phase: 'no-deal',
+      chronicle: { ...chronicle, timeline: rolledFrom(catalogue, timeline, turn) },
+    };
+  }
   return {
     phase: 'deal',
     chronicle: {
