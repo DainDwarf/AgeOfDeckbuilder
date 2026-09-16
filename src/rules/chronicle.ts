@@ -14,6 +14,7 @@ import { seedRng, shuffle as shuffleItems } from './rng';
 import {
   answered,
   answerOf,
+  answerRefusal,
   continued,
   events,
   offered,
@@ -28,8 +29,8 @@ import {
   type Chronicle,
   type Cost,
   costsOf,
-  type Deal,
   type DefeatCause,
+  paid,
   playable,
   type Refusal,
   type Snapshot,
@@ -289,12 +290,11 @@ export function outcome(stages: readonly Stage[]): Chronicle {
 
 /**
  * The end of turn, step by ordered step, each with the chronicle it leaves: a step that changed
- * nothing is absent, and the list ends at the capture when the city falls in the enemy phase, at the
- * victory when the city is still standing once the capstone's last turn is over, or before the draw
- * while any deal stands, a capture's or the events phase's — the hand waits on the take; a deal
- * queued by a capture alone raises no `deal` stage. Turn 0's end runs none of the
- * cycle and opens on the tick, which takes the settle cards left in hand. The turn always ticks, so
- * there is always a stage. A turn ended while the city stands nowhere is one `refused` stage.
+ * nothing is absent, and the list ends at the capture when the city falls in the enemy phase, or at
+ * the last camp captured while a camp's rewards stand — the rest of the end of turn waits on their
+ * take. Otherwise the turn opens as `turnOpened` has it. Turn 0's end runs none of the cycle and
+ * opens on the tick, which takes the settle cards left in hand. There is always a stage. A turn ended
+ * while the city stands nowhere is one `refused` stage.
  */
 function endOfTurn(catalogue: Catalogue, chronicle: Chronicle): Stage[] {
   if (chronicle.city === undefined) return [{ name: 'refused', chronicle }];
@@ -321,11 +321,28 @@ function endOfTurn(catalogue: Catalogue, chronicle: Chronicle): Stage[] {
     raised(enemyPhase(catalogue, standing));
     if (standing.ending !== undefined) return stages;
     raised(captures(catalogue, standing));
-    if (survived(standing)) {
-      staged('victory', victory(standing));
-      return stages;
-    }
+    if (standing.deals.length > 0) return stages;
   }
+  raised(turnOpened(catalogue, standing));
+  return stages;
+}
+
+/**
+ * What the end of turn resolves after the captures, each step with the chronicle it leaves and one
+ * that changed nothing absent: the victory, ending the list, when the city is still standing once
+ * the capstone's last turn is over; else the tick, the capstone's second script, the events phase,
+ * and the draw — or, while the events phase leaves a deal standing, nothing after it: the hand
+ * waits on the take. The turn always ticks where the victory does not end it.
+ */
+function turnOpened(catalogue: Catalogue, chronicle: Chronicle): Stage[] {
+  if (survived(chronicle)) return [{ name: 'victory', chronicle: victory(chronicle) }];
+  const stages: Stage[] = [];
+  let standing = chronicle;
+  const staged = (name: PlainStage, next: Chronicle): void => {
+    if (next === standing) return;
+    standing = next;
+    stages.push({ name, chronicle: next });
+  };
 
   staged('turn', {
     ...standing,
@@ -336,17 +353,17 @@ function endOfTurn(catalogue: Catalogue, chronicle: Chronicle): Stage[] {
   staged('reinforce', continued(catalogue, standing));
   staged('deal', events(standing));
   if (standing.deals.length > 0) return stages;
-  raised(drawn(standing));
-  return stages;
+  return [...stages, ...drawn(standing)];
 }
 
 /**
  * One entry of the deal standing taken, by its place in the order dealt, and the deal popped: an
  * answer pays its cost and lands in the one `events` stage, a reward is laid in the discard pile in
- * the one `reward` stage and the rewards beside it are gone. The hand is drawn on the chronicle that
- * leaves once no deal stands, and waits on the next deal while one does. A take made while no deal
- * stands, one at a place the deal does not offer, and one of an answer the city cannot pay for are
- * one `refused` stage on the chronicle as it stood.
+ * the one `reward` stage and the rewards beside it are gone. While a deal still stands nothing more
+ * resolves; once none does, the last reward taken resumes the end of turn where the captures left
+ * it, and the last answer taken draws the hand. A take made while no deal stands, one at a place the
+ * deal does not offer, and one of an answer the city cannot pay for are one `refused` stage on the
+ * chronicle as it stood.
  */
 function take(catalogue: Catalogue, chronicle: Chronicle, at: number): Stage[] {
   const [deal, ...waiting] = chronicle.deals;
@@ -354,32 +371,28 @@ function take(catalogue: Catalogue, chronicle: Chronicle, at: number): Stage[] {
   const id = offered(catalogue, deal)[at];
   if (id === undefined) return [{ name: 'refused', chronicle }];
 
-  const landed = landing(catalogue, chronicle, { ...chronicle, deals: waiting }, deal, id);
-  if (landed === undefined) return [{ name: 'refused', chronicle }];
-  if (landed.chronicle.deals.length > 0) return [landed];
-  return [landed, ...drawn(landed.chronicle)];
-}
-
-/**
- * The one stage an entry of the deal lands as, on the chronicle the deal is popped from, and nothing
- * for an answer the chronicle the deal stood on cannot pay for.
- */
-function landing(
-  catalogue: Catalogue,
-  chronicle: Chronicle,
-  popped: Chronicle,
-  deal: Deal,
-  id: string,
-): Stage | undefined {
+  const popped: Chronicle = { ...chronicle, deals: waiting };
   switch (deal.of) {
     case 'event': {
-      const answer = answerOf(catalogue, deal.event, id);
-      if (unaffordable(chronicle, costsOf(answer.cost)).length > 0) return undefined;
-      return { name: 'events', chronicle: answered(catalogue, popped, answer) };
+      if (!playable(answerRefusal(catalogue, chronicle, deal.event, id))) {
+        return [{ name: 'refused', chronicle }];
+      }
+      const landed = answered(catalogue, popped, answerOf(catalogue, deal.event, id));
+      return [{ name: 'events', chronicle: landed }, ...resumed(landed, drawn)];
     }
-    case 'camp':
-      return { name: 'reward', chronicle: rewarded(popped, id) };
+    case 'camp': {
+      const landed = rewarded(popped, id);
+      return [
+        { name: 'reward', chronicle: landed },
+        ...resumed(landed, (left) => turnOpened(catalogue, left)),
+      ];
+    }
   }
+}
+
+/** What a take goes on to resolve: nothing while a deal still stands, and the rest where none does. */
+function resumed(chronicle: Chronicle, rest: (left: Chronicle) => Stage[]): Stage[] {
+  return chronicle.deals.length > 0 ? [] : rest(chronicle);
 }
 
 /**
@@ -471,17 +484,19 @@ function play(catalogue: Catalogue, chronicle: Chronicle, command: PlayCommand):
   const effect = aimedEffect(catalogue, chronicle, id, command);
   if (effect === undefined) return [{ name: 'refused', chronicle }];
 
-  const resources = { ...chronicle.resources };
-  for (const { resource, amount } of costOf(catalogue, id)) resources[resource] -= amount;
-  const paid: Chronicle = {
-    ...chronicle,
-    resources,
-    hand: chronicle.hand.filter((_, at) => at !== command.index),
-    discardPile: leavesChronicle(cardOf(catalogue, id))
-      ? chronicle.discardPile
-      : [...chronicle.discardPile, id],
-  };
-  return [{ name: 'played', chronicle: effect(paid) }];
+  const left = paid(chronicle, costOf(catalogue, id));
+  return [
+    {
+      name: 'played',
+      chronicle: effect({
+        ...left,
+        hand: chronicle.hand.filter((_, at) => at !== command.index),
+        discardPile: leavesChronicle(cardOf(catalogue, id))
+          ? chronicle.discardPile
+          : [...chronicle.discardPile, id],
+      }),
+    },
+  ];
 }
 
 /**

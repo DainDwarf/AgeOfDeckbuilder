@@ -186,9 +186,24 @@ test('a catalogue whose capstone deals no answer is refused', () => {
   expect(() => catalogued(content)).toThrow(/^fixture: /);
 });
 
+test('a catalogue whose two events deal the same answer is refused', () => {
+  const { PH_Siege, PH_Hardship } = CATALOGUE.events;
+  const content = changed({
+    events: {
+      ...CATALOGUE.events,
+      PH_Siege: {
+        ...PH_Siege,
+        answers: { ...PH_Siege.answers, PH_Raid: PH_Hardship.answers.PH_Raid },
+      },
+    },
+  });
+
+  expect(() => catalogued(content)).toThrow(/^fixture: /);
+});
+
 test('a catalogue whose event deals no answer costing no stock is refused, an answer costing nought of a stock costing none', () => {
   const { PH_Blight } = CATALOGUE.events;
-  const { PH_Endure, PH_Burn } = PH_Blight.answers;
+  const { PH_Endure, PH_Explosion } = PH_Blight.answers;
   const blighted = (endure: Partial<Resources>): Catalogue =>
     changed({
       version: 'blighted',
@@ -196,7 +211,7 @@ test('a catalogue whose event deals no answer costing no stock is refused, an an
         ...CATALOGUE.events,
         PH_Blight: {
           ...PH_Blight,
-          answers: { PH_Endure: { ...PH_Endure, cost: endure }, PH_Burn },
+          answers: { PH_Endure: { ...PH_Endure, cost: endure }, PH_Explosion },
         },
       },
     });

@@ -96,6 +96,9 @@ const DECK_CARDS: readonly CardId[] = [
 /** How many camps the siege places: what its rules entry reads and what it lands. */
 const SIEGE_CAMPS = 5;
 
+/** The money the toll's tribute costs: more than a city holds by the toll's first turn. */
+const TRIBUTE = 99;
+
 /** `PH_` marks a stand-in: none of this is authored content, and every piece of it goes. */
 export const STAND_IN: Catalogue = catalogued({
   version: 'stand-in',
@@ -262,6 +265,20 @@ export const STAND_IN: Catalogue = catalogued({
         },
       },
     },
+    PH_Toll: {
+      answers: {
+        PH_Tribute: {
+          cost: { money: TRIBUTE },
+          reads: () => ({}),
+          lands: (_catalogue, chronicle) => chronicle,
+        },
+        PH_Defiance: {
+          cost: {},
+          reads: (_catalogue, chronicle) => ({ warriors: raiders(chronicle.turn) }),
+          lands: (catalogue, chronicle) => raided(catalogue, chronicle, raiders(chronicle.turn)),
+        },
+      },
+    },
     PH_Siege: {
       answers: {
         PH_Hold: {
@@ -283,6 +300,11 @@ export const STAND_IN: Catalogue = catalogued({
       spacing: [3, 7],
       capstone: { event: 'PH_Siege', window: [2, 2], span: 2 },
       entries: { PH_Hardship: () => 1 },
+    },
+    PH_TollSchedule: {
+      spacing: [3, 7],
+      capstone: { event: 'PH_Siege', window: [27, 33], span: 6 },
+      entries: { PH_Toll: () => 1 },
     },
   },
   terrains: {

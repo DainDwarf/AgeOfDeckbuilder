@@ -9,7 +9,7 @@ import {
   terrainKind,
 } from './map-kinds';
 import type { Resources } from './resources';
-import type { Block, Chronicle, TileBlock } from './state';
+import { type Block, type Chronicle, costsOf, type TileBlock } from './state';
 import { type Landing, standsOn, type Unit, type UnitStats } from './units';
 
 /**
@@ -167,7 +167,7 @@ export type Catalogue = MapContent & {
  * cards none; no schedule deals its capstone among its entries; a schedule spans at least one, and
  * each of its spans rolls from one at least to no less than its least; an event a schedule deals
  * among its entries deals two answers at least; every event deals an answer costing no stock, every
- * amount its cost names nought, so a capstone deals one at least; an event with a second script is
+ * amount its cost names nought, so a capstone deals one at least; no answer is dealt by two events; an event with a second script is
  * some schedule's capstone; the camp deals one reward at least; the camp's unit stands on every
  * terrain its building names; the city's building stands on the city's terrain; and the city's
  * sight and its idle count are none below nought. A card's closures and an answer's are neither run
@@ -256,10 +256,16 @@ export function catalogued(content: Catalogue): Catalogue {
       }
     }
   }
+  const dealtBy = new Map<string, string>();
   for (const [id, event] of Object.entries(content.events)) {
-    const free = Object.values(event.answers).some((answer) =>
-      Object.values(answer.cost).every((amount) => amount === 0),
-    );
+    for (const answer of Object.keys(event.answers)) {
+      const other = dealtBy.get(answer);
+      if (other !== undefined) {
+        refuse(content, `the answer ${answer} is dealt by both ${other} and ${id}`);
+      }
+      dealtBy.set(answer, id);
+    }
+    const free = Object.values(event.answers).some((answer) => costsOf(answer.cost).length === 0);
     if (!free) refuse(content, `the event ${id} deals no answer costing no stock`);
     if (event.continues === undefined) continue;
     const capstones = Object.values(content.schedules).map((schedule) => schedule.capstone.event);

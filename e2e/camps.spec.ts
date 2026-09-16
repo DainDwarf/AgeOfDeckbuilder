@@ -67,7 +67,8 @@ test('the map draws the camps it was dealt, and the raid’s warrior stands on o
   await stoppedTurn(page);
 
   const [deal] = (await chronicleOf(page)).deals;
-  await take(page, deal === undefined ? -1 : offered(STAND_IN, deal).indexOf('PH_Raid'));
+  if (deal === undefined) throw new Error(`turn ${RAID} deals nothing`);
+  await take(page, offered(STAND_IN, deal).indexOf('PH_Raid'));
 
   const raided = await chronicleOf(page);
   const enemy = raided.units.find((unit) => unit.faction === 'enemy');

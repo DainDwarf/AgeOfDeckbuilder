@@ -3,7 +3,17 @@ import { enteredFromCamp, enteredOnCamp } from './enemies';
 import { distance, MOVE_POINT, pathCosts, type TileCoords, tileKey } from './map';
 import { buildingKind, held, refuse } from './map-kinds';
 import { nextRng, pickWeighted, type Rng } from './rng';
-import { type CardId, type Chronicle, costsOf, type Deal, holds, type Timeline } from './state';
+import {
+  type CardId,
+  type Chronicle,
+  costsOf,
+  type Deal,
+  holds,
+  paid,
+  type Refusal,
+  type Timeline,
+  unaffordable,
+} from './state';
 import { unitAt } from './units';
 
 /**
@@ -92,13 +102,25 @@ export function answerOf(catalogue: Catalogue, event: string, answer: string): A
 }
 
 /**
+ * Everything standing between the city and an answer of the event: what it cannot pay. Nothing on
+ * the map blocks an answer.
+ */
+export function answerRefusal(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  event: string,
+  answer: string,
+): Refusal {
+  const costs = costsOf(answerOf(catalogue, event, answer).cost);
+  return { unaffordable: unaffordable(chronicle, costs), blocked: [] };
+}
+
+/**
  * An answer taken off the chronicle the deal is popped from: its cost is paid, and it lands on what
  * that leaves.
  */
 export function answered(catalogue: Catalogue, chronicle: Chronicle, answer: Answer): Chronicle {
-  const resources = { ...chronicle.resources };
-  for (const { resource, amount } of costsOf(answer.cost)) resources[resource] -= amount;
-  return answer.lands(catalogue, { ...chronicle, resources });
+  return answer.lands(catalogue, paid(chronicle, costsOf(answer.cost)));
 }
 
 /** A reward taken off the chronicle the deal is popped from: it is laid in the discard pile. */

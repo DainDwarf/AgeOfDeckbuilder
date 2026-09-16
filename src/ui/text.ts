@@ -1,5 +1,5 @@
-// A `rules.` entry may mark a resource glyph `[resource]`, which only a card face draws: anything
-// else reading one puts the brackets on the screen.
+// A `rules.` or `answer-rules.` entry may mark a resource glyph `[resource]`, which only a card face
+// draws: anything else reading one puts the brackets on the screen.
 /** Every player-facing sentence, one entry each. English is the only language. */
 const TEXT = {
   'label.food': 'Food',
@@ -89,6 +89,12 @@ const TEXT = {
   'rules.PH_Hunger': 'Empties the food stock',
   'event.PH_Hardship': 'PH_Hardship',
   'event.PH_Siege': 'PH_Siege',
+  'event.PH_Toll': 'PH_Toll',
+  'rules.PH_Toll': 'The camps demand a toll',
+  'answer.PH_Tribute': 'PH_Tribute',
+  'answer.PH_Defiance': 'PH_Defiance',
+  'answer-rules.PH_Tribute': 'The camps are paid off',
+  'answer-rules.PH_Defiance': 'A raid of {warriors} enters from the camps',
   'rules.PH_Hardship': 'A hard season',
   'rules.PH_Siege': 'The camps close in around the city',
   'answer.PH_Raid': 'PH_Raid',

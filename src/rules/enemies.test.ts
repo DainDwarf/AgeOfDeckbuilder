@@ -112,13 +112,13 @@ test('a unit of the player’s standing on a camp when the turn ends captures it
 
   const taken = outcome(apply(CATALOGUE, besieging, { type: 'end-turn' }));
 
-  expect(stagedBy(besieging, { type: 'end-turn' })).toEqual(['income', 'camp-capture', 'turn']);
+  expect(stagedBy(besieging, { type: 'end-turn' })).toEqual(['income', 'camp-capture']);
   expect(capturesOf(besieging)).toEqual([tileKey(camp)]);
   expect(buildingAt(taken, camp)).toBeUndefined();
   expect(taken.discardPile).toEqual([]);
 });
 
-test('a capture deals the camp’s rewards and stops the turn before the draw, and the one taken is laid in the discard pile, the other gone', () => {
+test('a capture deals the camp’s rewards and stops the end of turn before the tick, and the take resumes it: the one taken is laid in the discard pile, the other gone', () => {
   const camp = { q: 4, r: 0 };
   const besieging = cityOf(['urban'], {
     ...NO_GROWTH,
@@ -130,8 +130,10 @@ test('a capture deals the camp’s rewards and stops the turn before the draw, a
   const cache = outcome(apply(CATALOGUE, dealt, { type: 'take', at: 1 }));
 
   expect(dealt.deals).toEqual([{ of: 'camp', rewards: ['PH_Spoils', 'PH_Cache'] }]);
+  expect(dealt.turn).toBe(besieging.turn);
   expect(dealt.hand).toEqual([]);
-  expect(stagedBy(dealt, { type: 'take', at: 1 })).toEqual(['reward', 'draw']);
+  expect(stagedBy(dealt, { type: 'take', at: 1 })).toEqual(['reward', 'turn', 'draw']);
+  expect(cache.turn).toBe(besieging.turn + 1);
   expect(cache.deals).toEqual([]);
   expect(cache.discardPile).toEqual(['PH_Cache']);
   expect(cache.hand).toEqual(fullDraw());
@@ -211,7 +213,7 @@ test('a chronicle whose every camp is captured takes no raider at all', () => {
   expect(enemiesOf(raided)).toEqual([]);
 });
 
-test('two camps captured on the turn an event is due deal two deals of rewards and then the event, taken in turn, the draw after the last', () => {
+test('two camps captured the turn before an event is due deal two deals of rewards, and the last take opens the turn on the event, taken in turn, the draw after the last', () => {
   const camps = [
     { q: 4, r: 0 },
     { q: 0, r: 4 },
@@ -235,9 +237,12 @@ test('two camps captured on the turn an event is due deal two deals of rewards a
       .map(tileKey),
   );
   for (const camp of camps) expect(buildingAt(dealt, camp)).toBeUndefined();
-  expect(dealt.deals).toEqual([rewards, rewards, { of: 'event', event: 'PH_Hardship' }]);
+  expect(dealt.deals).toEqual([rewards, rewards]);
+  expect(dealt.turn).toBe(besieging.turn);
   expect(stagedBy(dealt, { type: 'take', at: 0 })).toEqual(['reward']);
-  expect(stagedBy(first, { type: 'take', at: 1 })).toEqual(['reward']);
+  expect(first.turn).toBe(besieging.turn);
+  expect(stagedBy(first, { type: 'take', at: 1 })).toEqual(['reward', 'turn', 'deal']);
+  expect(second.deals).toEqual([{ of: 'event', event: 'PH_Hardship' }]);
   expect(second.discardPile).toEqual(['PH_Spoils', 'PH_Cache']);
   expect(second.hand).toEqual([]);
   expect(stagedBy(second, { type: 'take', at: 0 })).toEqual(['events', 'draw']);

@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { CARD_KINDS } from '../rules/cards';
 import { type Catalogue, cardOf } from '../rules/catalogue';
 import type { Stage } from '../rules/chronicle';
-import { offered } from '../rules/schedule';
+import { answerRefusal, offered } from '../rules/schedule';
 import {
   type CardId,
   type Chronicle,
@@ -11,7 +11,6 @@ import {
   NO_REFUSAL,
   playable,
   type Refusal,
-  unaffordable,
 } from '../rules/state';
 import type { Bind, Press } from './bindings';
 import {
@@ -347,16 +346,16 @@ export function createOverlay(
    * A pile's cards laid out below `top`, and the frame that scrolls and flings them: `pressed` takes
    * the press and the number the card under it was offered as, and nothing where it landed between
    * them. Every card face is named after the grid and its place on the screen, the first drawn
-   * first, and carries the card it stands and the number it was offered as in its data. Nothing may
-   * be added to the scene after this: the clip's camera draws whatever it was not told to ignore
-   * inside the frame.
+   * first, and carries the card it stands and the number it was offered as in its data. Anything
+   * added to the scene after this is excluded from the clip, or the clip's camera draws it inside the
+   * frame too.
    */
   const layGrid = (
     name: string,
     cards: readonly Offered[],
     top: number,
     pressed: (at: number | undefined, press: Press) => void,
-  ): void => {
+  ): Grid => {
     const height = heightOf(BROWSE_WIDTH);
     const frameHeight = DESIGN_HEIGHT - MARGIN - top;
     const columns = Math.max(
@@ -429,9 +428,11 @@ export function createOverlay(
     });
     shown.push(frame, root);
 
-    grid = { root, placed, height, overflow };
+    const laid = { root, placed, height, overflow };
+    grid = laid;
     scrollTo(offset);
     clip.show(root, MARGIN, top, DESIGN_WIDTH - 2 * MARGIN, frameHeight);
+    return laid;
   };
 
   /** The one card of a window ringed, and none ringed at all where nothing is selected. */
@@ -486,7 +487,7 @@ export function createOverlay(
 
     const { heading, entries } = dealt(catalogue, dealing.on, dealing.deal);
     const title = raiseTitle('deal', heading);
-    layGrid('deal', entries, title.y + title.height + MARGIN, (at, press) => {
+    const laid = layGrid('deal', entries, title.y + title.height + MARGIN, (at, press) => {
       switch (press) {
         case 'left': {
           if (at === undefined || at !== dealing.selected) {
@@ -495,14 +496,12 @@ export function createOverlay(
           }
           const { face, refusal } = entries[at];
           if (!playable(refusal)) {
-            const placed = grid?.placed.find((card) => card.at === at);
-            if (placed !== undefined && grid !== undefined) {
-              note.overCard(
-                refusedCard(face.costs, refusal),
-                placed.x,
-                placed.y + grid.root.y - grid.height,
-              );
-            }
+            const card = laid.placed[at];
+            note.overCard(
+              refusedCard(face.costs, refusal),
+              card.x,
+              card.y + laid.root.y - laid.height,
+            );
             return;
           }
           standingDeal = undefined;
@@ -851,7 +850,7 @@ export function createOverlay(
     play(stage: Stage): Promise<void> | undefined {
       const { ending, timeline, deals } = stage.chronicle;
       if (ending !== undefined && raisedOn === undefined) return raiseEnding({ ending, timeline });
-      // A capture deals before the rest of the end of turn has played out: the window waits for the
+      // Every camp captured deals before the camps after it are captured: the window waits for the
       // render the play-out ends on, which a render of this stage would pre-empt.
       return deals.length > 0 ? Promise.resolve() : undefined;
     },
@@ -889,11 +888,13 @@ function dealt(
     case 'event':
       return {
         heading: eventName(deal.event),
-        entries: ids.map((id, at): Offered => {
-          const face = answerFace(catalogue, chronicle, deal.event, id);
-          const refusal = { unaffordable: unaffordable(chronicle, face.costs), blocked: [] };
-          return { face, refusal, at };
-        }),
+        entries: ids.map(
+          (id, at): Offered => ({
+            face: answerFace(catalogue, chronicle, deal.event, id),
+            refusal: answerRefusal(catalogue, chronicle, deal.event, id),
+            at,
+          }),
+        ),
       };
     case 'camp':
       return {

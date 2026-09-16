@@ -2,8 +2,9 @@ import { expect, type Page, test } from '@playwright/test';
 import { STAND_IN } from '../src/content/stand-in';
 import { deckOf } from '../src/rules/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
-import { offered } from '../src/rules/schedule';
-import { eventName } from '../src/ui/text';
+import { answerOf, answerRefusal, offered } from '../src/rules/schedule';
+import { costsOf, playable } from '../src/rules/state';
+import { eventName, text } from '../src/ui/text';
 import {
   budget,
   cardOnFace,
@@ -14,6 +15,7 @@ import {
   launch,
   onScreen,
   open,
+  refusalLines,
   ringed,
   standing,
   stoppedTurn,
@@ -110,6 +112,43 @@ test('the events phase deals a choice, and the turn plays on from the one taken'
   expect(after.timeline.deals[1].turn).toBeGreaterThan(run.due);
   expect(after.hand).toHaveLength(5);
   expect(after.units.some((unit) => unit.faction === 'enemy')).toBe(true);
+
+  expect(problems).toEqual([]);
+});
+
+/** The schedule whose one event deals an answer no city pays for by its first deal. */
+const TOLL = 'PH_TollSchedule';
+
+test('the take of an answer the city cannot pay for says why over the card, and takes and pays nothing', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const seed = 1;
+  const due = launch(seed, deckOf(STAND_IN, 'PH_Deck'), TOLL).timeline.deals[0].turn;
+  test.setTimeout(budget(due));
+
+  await open(page, seed, 'PH_Deck', TOLL);
+  for (let turn = 1; turn < due; turn++) await stoppedTurn(page);
+  await expect.poll(() => standing(page, 'deal')).toBe(true);
+
+  const dealt = await chronicleOf(page);
+  const [deal] = dealt.deals;
+  if (deal?.of !== 'event') throw new Error(`turn ${due} deals no event`);
+  const at = offered(STAND_IN, deal).indexOf('PH_Tribute');
+  const refusal = answerRefusal(STAND_IN, dealt, deal.event, 'PH_Tribute');
+  const said = costsOf(answerOf(STAND_IN, deal.event, 'PH_Tribute').cost)
+    .filter(({ resource }) => refusal.unaffordable.includes(resource))
+    .map(({ resource, amount }) => text(`refusal.${resource}`, { cost: amount }));
+  expect(playable(refusal)).toBe(false);
+
+  await click(page, `deal-card-${at}`);
+  await expect.poll(() => ringed(page, `deal-card-${at}`)).toBe(true);
+  await click(page, `deal-card-${at}`);
+
+  await expect.poll(() => refusalLines(page)).toEqual(said);
+  expect(await ringed(page, `deal-card-${at}`)).toBe(true);
+  expect(await standing(page, 'deal')).toBe(true);
+  expect(await chronicleOf(page)).toEqual(dealt);
 
   expect(problems).toEqual([]);
 });

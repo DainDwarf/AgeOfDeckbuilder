@@ -3,7 +3,6 @@ import { apply, type Command, launched, outcome } from './chronicle';
 import { growthThreshold } from './city';
 import {
   assignTo,
-  BURN,
   builtOn,
   CAMPS,
   CATALOGUE,
@@ -13,6 +12,7 @@ import {
   cityOf,
   DECK,
   dealing,
+  EXPLOSION,
   endedTurn,
   enemiesOf,
   field,
@@ -269,16 +269,16 @@ test('an answer taken pays its cost before it lands, and one the city cannot pay
       resources: { food: STOCKED, production, military: 0, money: 0, science: 0, culture: 0 },
     });
   const short = stocked(0);
-  const rich = stocked(BURN);
-  const burnt = outcome(apply(CATALOGUE, rich, { type: 'take', at: 1 }));
+  const rich = stocked(EXPLOSION);
+  const exploded = outcome(apply(CATALOGUE, rich, { type: 'take', at: 1 }));
   const endured = outcome(apply(CATALOGUE, short, { type: 'take', at: 0 }));
 
-  expect(short.resources.production).toBeLessThan(BURN);
+  expect(short.resources.production).toBeLessThan(EXPLOSION);
   expect(stagedBy(short, { type: 'take', at: 1 })).toEqual(['refused']);
   expect(outcome(apply(CATALOGUE, short, { type: 'take', at: 1 }))).toBe(short);
-  expect(burnt.resources.production).toBe(rich.resources.production - BURN);
-  expect(burnt.deals).toEqual([]);
-  expect(burnt.hand).toEqual(fullDraw());
+  expect(exploded.resources.production).toBe(rich.resources.production - EXPLOSION);
+  expect(exploded.deals).toEqual([]);
+  expect(exploded.hand).toEqual(fullDraw());
   expect(endured.resources).toEqual(short.resources);
   expect(endured.hand[0]).toBe('PH_Hunger');
 });
@@ -418,18 +418,40 @@ test('the capstone’s turn deals the capstone alone, whatever the timeline list
   }
 });
 
-test('a camp captured on the capstone’s turn deals its rewards ahead of the capstone', () => {
+test('a camp captured the turn before the capstone’s deals its rewards, and the take opens the capstone’s turn on the capstone', () => {
   const camp = { q: 4, r: 0 };
   const dealt = outcome(
     apply(CATALOGUE, awaitingCapstone({ tiles: camped(field(6), [camp]), units: [worker(camp)] }), {
       type: 'end-turn',
     }),
   );
+  const taken = outcome(apply(CATALOGUE, dealt, { type: 'take', at: 0 }));
 
-  expect(dealt.deals).toEqual([
-    { of: 'camp', rewards: CATALOGUE.camp.rewards },
-    { of: 'event', event: 'PH_Siege' },
-  ]);
+  expect(dealt.deals).toEqual([{ of: 'camp', rewards: CATALOGUE.camp.rewards }]);
+  expect(dealt.turn).toBe(CAPSTONE - 1);
+  expect(taken.turn).toBe(CAPSTONE);
+  expect(taken.deals).toEqual([{ of: 'event', event: 'PH_Siege' }]);
+});
+
+test('a camp captured on the capstone’s last turn holds the victory back until its reward is taken', () => {
+  const camp = { q: 4, r: 0 };
+  const last = cityOf(['urban'], {
+    ...NO_GROWTH,
+    tiles: camped(field(6), [camp]),
+    units: [worker(camp)],
+    turn: CAPSTONE + REINFORCED,
+    timeline: besieging(),
+  });
+  const dealt = outcome(apply(CATALOGUE, last, { type: 'end-turn' }));
+
+  expect(stagedBy(last, { type: 'end-turn' })).not.toContain('victory');
+  expect(dealt.ending).toBeUndefined();
+  expect(dealt.deals).toEqual([{ of: 'camp', rewards: CATALOGUE.camp.rewards }]);
+  expect(stagedBy(dealt, { type: 'take', at: 0 })).toEqual(['reward', 'victory']);
+  expect(outcome(apply(CATALOGUE, dealt, { type: 'take', at: 0 })).ending).toEqual({
+    outcome: 'victory',
+    turn: CAPSTONE + REINFORCED,
+  });
 });
 
 test('the siege places five camps around the city, apart from one another, a warrior on each', () => {

@@ -115,14 +115,21 @@ export type Block = 'population' | 'idle' | 'city' | 'discard-pile' | TileBlock;
 /** What one thing asks for of one resource: a card's cost line by line, a claim's culture. */
 export type Cost = { readonly resource: Resource; readonly amount: number };
 
-/** A cost, resource by resource, in the order the resource bar reads. */
+/** A cost, resource by resource, in the order the resource bar reads; an amount of nought costs nothing. */
 export function costsOf(cost: Partial<Resources>): Cost[] {
   const entries: Cost[] = [];
   for (const resource of RESOURCES) {
-    const amount = cost[resource];
-    if (amount !== undefined) entries.push({ resource, amount });
+    const amount = cost[resource] ?? 0;
+    if (amount !== 0) entries.push({ resource, amount });
   }
   return entries;
+}
+
+/** The chronicle with a cost paid out of the city's stocks. */
+export function paid(chronicle: Chronicle, costs: readonly Cost[]): Chronicle {
+  const resources = { ...chronicle.resources };
+  for (const { resource, amount } of costs) resources[resource] -= amount;
+  return { ...chronicle, resources };
 }
 
 /** Everything standing between the city and a card or a claim: what it cannot pay, and the map. */

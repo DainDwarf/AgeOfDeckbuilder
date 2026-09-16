@@ -49,8 +49,8 @@ import type { Faction, Unit, UnitStats } from './units';
 /** How many camps the fixture's siege places: what its rules entry reads and what it lands. */
 const SIEGE_CAMPS = 5;
 
-/** The production the fixture's burn costs: the one answer of the fixture that costs a stock. */
-export const BURN = 4;
+/** The production the fixture's explosion costs: the one answer of the fixture that costs a stock. */
+export const EXPLOSION = 4;
 
 /** How many warriors the fixture's raid enters on this turn: one, and one more for every ten turns. */
 function raiders(turn: number): number {
@@ -238,8 +238,8 @@ export const CATALOGUE: Catalogue = catalogued({
           reads: () => ({}),
           lands: (catalogue, chronicle) => laid(catalogue, chronicle, 'PH_Hunger'),
         },
-        PH_Burn: {
-          cost: { production: BURN },
+        PH_Explosion: {
+          cost: { production: EXPLOSION },
           reads: () => ({}),
           lands: (_catalogue, chronicle) => chronicle,
         },
