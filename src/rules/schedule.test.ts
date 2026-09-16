@@ -19,32 +19,89 @@ import {
   field,
   fullDraw,
   madeOf,
+  NO_DEALS,
   NO_GROWTH,
   only,
   opening,
   plains,
   REGION,
+  ringed,
   SCHEDULE,
   type Standing,
   settledOn,
   stagedBy,
   standing,
+  TILLAGE,
+  withTile,
   withUnits,
   worker,
 } from './fixtures';
 import { distance, neighbours, type TileCoords, tileKey } from './map';
 import { seedRng } from './rng';
-import { timelineOf } from './schedule';
+import { offered } from './schedule';
 import type { Chronicle, Timeline } from './state';
 import { unitAt } from './units';
 
-/** The timeline a seed rolls of the fixture's schedule. */
-function rolled(seed: number): Timeline {
-  return timelineOf(CATALOGUE, SCHEDULE, seedRng(seed)).timeline;
+/** The seeds a test over a whole walk runs: enough of them for both orders to be drawn. */
+const SEEDS: readonly number[] = Array.from({ length: 40 }, (_, at) => at + 1);
+
+/** What the events phase landed on one turn: the event it dealt, or no event for the capstone. */
+type Landing = { readonly turn: number; readonly event?: string };
+
+/** A walk: what the events phase landed turn by turn, and the turn the chronicle stood on at its end. */
+type Walk = { readonly landings: readonly Landing[]; readonly turn: number };
+
+/**
+ * The chronicle ended turn after turn until it stands on `through` or has ended, every deal taken —
+ * `wanted` where the deal offers it, and the first entry dealt where it does not — and what the
+ * events phase landed read off the stages every command resolved as.
+ */
+function walkedFrom(
+  catalogue: Catalogue,
+  start: Chronicle,
+  through: number,
+  wanted: string,
+): Walk & { readonly chronicle: Chronicle } {
+  let chronicle = start;
+  const landings: Landing[] = [];
+  const resolve = (command: Command): void => {
+    const stages = apply(catalogue, chronicle, command);
+    for (const { name, chronicle: left } of stages) {
+      const dealt = left.deals[left.deals.length - 1];
+      if (name === 'capstone') landings.push({ turn: left.turn });
+      if (name === 'deal' && dealt?.of === 'event') {
+        landings.push({ turn: left.turn, event: dealt.event });
+      }
+    }
+    const next = outcome(stages);
+    if (next === chronicle) throw new Error(`the ${command.type} is refused`);
+    chronicle = next;
+  };
+
+  while (chronicle.turn < through && chronicle.ending === undefined) {
+    resolve({ type: 'end-turn' });
+    for (let deal = chronicle.deals[0]; deal !== undefined; deal = chronicle.deals[0]) {
+      resolve({ type: 'take', at: Math.max(offered(catalogue, deal).indexOf(wanted), 0) });
+    }
+  }
+  return { landings, turn: chronicle.turn, chronicle };
 }
 
-/** The seeds a test over the whole timeline runs: enough of them for both orders to be drawn. */
-const SEEDS: readonly number[] = Array.from({ length: 40 }, (_, at) => at + 1);
+const walks = new Map<string, Walk>();
+
+/**
+ * A chronicle launched on the fixture's schedule from a seed, settled on the centre tile, and walked
+ * to the fortieth turn.
+ */
+function walked(seed: number, wanted = 'PH_Famine'): Walk {
+  const key = `${seed} ${wanted}`;
+  const known = walks.get(key);
+  if (known !== undefined) return known;
+  const settled = settledOn(launched(CATALOGUE, REGION, SCHEDULE, seed, DECK), CITY);
+  const walk = walkedFrom(CATALOGUE, settled, 40, wanted);
+  walks.set(key, walk);
+  return walk;
+}
 
 /** The food stock a city waiting on an event holds: its one tile yields none, so only a famine moves it. */
 const STOCKED = 5;
@@ -76,46 +133,58 @@ function dealtBy(due: number, carrying: Carrying = {}): Chronicle {
 
 test('a deal is due on the third turn to the seventh, and each next three to seven turns after a landing', () => {
   for (const seed of SEEDS) {
-    const { deals, capstone } = rolled(seed);
-    const landings = [...deals.map((deal) => deal.turn), capstone.turn].sort((a, b) => a - b);
+    const { landings } = walked(seed);
+    expect(landings.filter((landing) => landing.event !== undefined).length).toBeGreaterThan(2);
 
     let previous = 0;
-    for (const turn of landings) {
-      if (turn !== capstone.turn) {
+    for (const { turn, event } of landings) {
+      if (event !== undefined) {
         expect(turn - previous).toBeGreaterThanOrEqual(3);
         expect(turn - previous).toBeLessThanOrEqual(7);
       }
       previous = turn;
     }
-    expect(landings[landings.length - 1]).toBeGreaterThan(capstone.last - 7);
   }
 });
 
-test('the same seed rolls the same timeline, and another seed a different one', () => {
-  expect(rolled(7)).toEqual(rolled(7));
-  expect(rolled(7)).not.toEqual(rolled(8));
+test('the same seed deals the same whatever answers are taken, and another seed deals otherwise', () => {
+  for (const seed of SEEDS.slice(0, 10)) {
+    const raided = walked(seed, 'PH_Raid');
+    const starved = walked(seed);
+    const through = Math.min(raided.turn, starved.turn);
+    const until = (walk: Walk): Landing[] =>
+      walk.landings.filter((landing) => landing.turn <= through);
+
+    expect(until(raided).length).toBeGreaterThan(0);
+    expect(until(raided)).toEqual(until(starved));
+  }
+  expect(walked(7).landings).not.toEqual(walked(8).landings);
 });
 
-test('the capstone lands on a turn rolled at the launch, between the twenty-seventh and the thirty-third, and spans six', () => {
-  const capstones = SEEDS.map(
-    (seed) => launched(CATALOGUE, REGION, SCHEDULE, seed, DECK).timeline.capstone,
+test('the capstone lands on a turn rolled at the launch, between the twenty-seventh and the thirty-third', () => {
+  const turns = SEEDS.map(
+    (seed) => launched(CATALOGUE, REGION, SCHEDULE, seed, DECK).timeline.capstone.turn,
   );
 
-  for (const { turn, last } of capstones) {
+  for (const turn of turns) {
     expect(turn).toBeGreaterThanOrEqual(27);
     expect(turn).toBeLessThanOrEqual(33);
-    expect(last).toBe(turn + 5);
   }
-  expect(new Set(capstones.map(({ turn }) => turn)).size).toBeGreaterThan(1);
+  expect(new Set(turns).size).toBeGreaterThan(1);
 });
 
-test('the timeline deals nothing on the capstone’s turn, and each due turn deals one event the seed decides', () => {
+test('the capstone’s turn deals nothing, and each due turn deals one event the seed decides', () => {
   const firsts = new Set<string>();
   for (const seed of SEEDS) {
-    const { deals, capstone } = rolled(seed);
-    expect(deals.map((deal) => deal.turn)).not.toContain(capstone.turn);
-    for (const deal of deals) expect(['PH_Hardship', 'PH_Blight']).toContain(deal.event);
-    firsts.add(deals[0].event);
+    const { landings } = walked(seed);
+    const turns = landings.map((landing) => landing.turn);
+
+    expect(new Set(turns).size).toBe(turns.length);
+    for (const { event } of landings) {
+      if (event !== undefined) expect(['PH_Hardship', 'PH_Blight']).toContain(event);
+    }
+    const [first] = landings;
+    if (first?.event !== undefined) firsts.add(first.event);
   }
 
   expect(firsts.size).toBe(2);
@@ -123,13 +192,57 @@ test('the timeline deals nothing on the capstone’s turn, and each due turn dea
 
 test('the blight is dealt as readily on the third turn as the twentieth', () => {
   const turns = SEEDS.flatMap((seed) =>
-    rolled(seed)
-      .deals.filter((deal) => deal.event === 'PH_Blight')
-      .map((deal) => deal.turn),
+    walked(seed)
+      .landings.filter((landing) => landing.event === 'PH_Blight')
+      .map((landing) => landing.turn),
   );
 
   expect(Math.min(...turns)).toBeLessThanOrEqual(7);
   expect(Math.max(...turns)).toBeGreaterThanOrEqual(20);
+});
+
+test('a due turn no event weighs anything on deals nothing, and the turn after it is due, until one does', () => {
+  const sparse: Catalogue = {
+    ...CATALOGUE,
+    schedules: {
+      ...CATALOGUE.schedules,
+      sparse: {
+        spacing: [3, 7],
+        capstone: { id: 'PH_Siege', window: [27, 33] },
+        entries: { PH_Hardship: (turn) => (turn >= 8 ? 1 : 0) },
+      },
+    },
+  };
+  let chronicle = cityOf(['urban'], {
+    ...NO_GROWTH,
+    tiles: camped(field(4), CAMPS),
+    timeline: { ...NO_DEALS, schedule: 'sparse', next: { turn: 4 } },
+  });
+
+  for (let turn = 2; turn < 8; turn++) {
+    const stages = apply(sparse, chronicle, { type: 'end-turn' });
+    chronicle = outcome(stages);
+
+    expect(chronicle.turn).toBe(turn);
+    expect(stages.map((stage) => stage.name)).not.toContain('deal');
+    expect(chronicle.deals).toEqual([]);
+  }
+  chronicle = outcome(apply(sparse, chronicle, { type: 'end-turn' }));
+
+  expect(chronicle.turn).toBe(8);
+  expect(chronicle.deals).toEqual([{ of: 'event', event: 'PH_Hardship' }]);
+});
+
+test('a schedule with no entries deals nothing after the deal a timeline was handed, turn after turn', () => {
+  const start = cityOf(['urban'], {
+    ...NO_GROWTH,
+    tiles: camped(field(4), CAMPS),
+    timeline: dueOn(2),
+  });
+  const walk = walkedFrom(CATALOGUE, start, 40, 'PH_Famine');
+
+  expect(walk.turn).toBe(40);
+  expect(walk.landings).toEqual([{ turn: 2, event: 'PH_Hardship' }]);
 });
 
 test('a timeline dealing on the first turn stops the end of turn 0 on its deal, and the take draws its hand', () => {
@@ -319,15 +432,12 @@ test('a chronicle waiting on a deal takes no command but the take', () => {
 /** The turn the capstone lands on in every fixture below. */
 const CAPSTONE = 30;
 
-/** How many turns of the siege's span follow the one it lands on: what a city stands out to win. */
+/** How many turns follow the siege's landing up to the one at whose end the fixture's siege is passed. */
 const REINFORCED = 5;
 
-/** A timeline with the siege on its turn and spanning its six, and these deals besides. */
-function besieging(...deals: Timeline['deals']): Timeline {
-  return {
-    deals,
-    capstone: { id: 'PH_Siege', turn: CAPSTONE, last: CAPSTONE + REINFORCED },
-  };
+/** A timeline with the siege landing on its turn, and this deal ahead of it or none. */
+function besieging(next: Timeline['next'] = NO_DEALS.next): Timeline {
+  return { ...NO_DEALS, next, capstone: { id: 'PH_Siege', turn: CAPSTONE } };
 }
 
 /**
@@ -376,7 +486,7 @@ function corridor(carrying: Carrying = {}): Chronicle {
 
 /**
  * A worker of the player's with health no siege runs through: what a fixture stands where it wants
- * the enemies of the span to spend their turns.
+ * the enemies of the siege to spend their turns.
  */
 function unkillable(tile: TileCoords): Standing {
   return standing('player', tile, { type: 'PH_Worker', worker: true, health: 99 });
@@ -399,16 +509,15 @@ function moated(carrying: Carrying = {}): Chronicle {
   return siegeLanded({ tiles: camped(MOATED, [STANDING_CAMP]), ...carrying });
 }
 
-/** That city ending turn after turn to the end of the siege's span: the chronicle it left. */
+/** That city ending turn after turn until the siege is passed: the chronicle it left. */
 function stoodOut(): Chronicle {
   let standingOut = moated({ units: [unkillable(LURE)] });
   for (let turn = 0; turn <= REINFORCED; turn++) standingOut = endedTurn(standingOut, 'PH_Famine');
   return standingOut;
 }
 
-test('the capstone’s turn lands the capstone straight and draws the hand, dealing nothing, whatever the timeline lists for that turn', () => {
-  const listed = dueOn(CAPSTONE).deals;
-  for (const timeline of [besieging(), besieging(...listed)]) {
+test('the capstone’s turn lands the capstone straight and draws the hand, dealing nothing, whatever deal was due on that turn', () => {
+  for (const timeline of [besieging(), besieging({ turn: CAPSTONE, event: 'PH_Hardship' })]) {
     const awaited = awaitingCapstone({ timeline, drawPile: fullDraw() });
     const landed = outcome(apply(CATALOGUE, awaited, { type: 'end-turn' }));
     const staged = stagedBy(awaited, { type: 'end-turn' });
@@ -421,10 +530,22 @@ test('the capstone’s turn lands the capstone straight and draws the hand, deal
   }
 });
 
+test('the capstone’s turn drops a deal due past it, and the next deal is due three to seven turns after the landing', () => {
+  const past = { ...besieging({ turn: CAPSTONE + 1, event: 'PH_Hardship' }), schedule: SCHEDULE };
+  const landed = moated({ units: [unkillable(LURE)], timeline: past });
+  const walk = walkedFrom(CATALOGUE, landed, CAPSTONE + 2, 'PH_Famine');
+  const { next } = landed.timeline;
+
+  expect(walk.landings).toEqual([]);
+  expect(next.event).toBeDefined();
+  expect(next.turn).toBeGreaterThanOrEqual(CAPSTONE + 3);
+  expect(next.turn).toBeLessThanOrEqual(CAPSTONE + 7);
+});
+
 test('the capstone’s landing is a stage of its own on its turn, even where it lands nothing', () => {
   const quiet: Catalogue = {
     ...CATALOGUE,
-    capstones: { PH_Siege: { lands: (_c, chronicle) => chronicle } },
+    capstones: { PH_Siege: { lands: (_c, chronicle) => chronicle, passes: () => false } },
   };
   const awaited = awaitingCapstone({ drawPile: fullDraw() });
   const staged = apply(quiet, awaited, { type: 'end-turn' }).map((stage) => stage.name);
@@ -456,7 +577,7 @@ test('a camp captured the turn before the capstone’s deals its rewards, and th
   expect(campsOf(taken)).not.toEqual([]);
 });
 
-test('a camp captured on the capstone’s last turn holds the victory back until its reward is taken', () => {
+test('a camp captured on the turn the siege is passed holds the victory back until its reward is taken', () => {
   const camp = { q: 4, r: 0 };
   const last = cityOf(['urban'], {
     ...NO_GROWTH,
@@ -567,10 +688,11 @@ test('each of the five turns after the landing enters a warrior on the camp stan
 
 test('the reinforcement is a stage of its own, raised after the tick and ahead of the deal', () => {
   const due = CAPSTONE + 3;
-  let reinforcing = moated({
-    units: [unkillable(LURE)],
-    timeline: besieging(...dueOn(due).deals),
-  });
+  const landed = moated({ units: [unkillable(LURE)] });
+  let reinforcing: Chronicle = {
+    ...landed,
+    timeline: { ...landed.timeline, next: { turn: due, event: 'PH_Hardship' } },
+  };
 
   while (reinforcing.turn < due - 1) {
     const staged = stagedBy(reinforcing, { type: 'end-turn' });
@@ -630,4 +752,81 @@ test('a chronicle that ended in victory takes no command at all', () => {
     expect(stagedBy(survived, command)).toEqual(['refused']);
     expect(outcome(apply(CATALOGUE, survived, command))).toBe(survived);
   }
+});
+
+/** The tile of the ring the tillage's building stands on once a fixture puts it there. */
+const TILLED: TileCoords = { q: 1, r: 0 };
+
+/**
+ * A city holding the ring around it, standing on the turn before the tillage lands: a capstone that
+ * lands nothing and is passed once its building stands on a tile the city holds.
+ */
+function awaitingTillage(carrying: Carrying = {}): Chronicle {
+  return ringed(2, {
+    turn: CAPSTONE - 1,
+    timeline: { ...NO_DEALS, capstone: { id: 'PH_Tillage', turn: CAPSTONE } },
+    ...carrying,
+  });
+}
+
+/** The chronicle with the tillage's building standing on the tilled tile. */
+function tilled(chronicle: Chronicle): Chronicle {
+  return withTile(chronicle, { ...TILLED, terrain: 'plain', improvements: [], building: TILLAGE });
+}
+
+test('a capstone’s condition ends the chronicle in victory at the end of the first turn it holds, its landing turn included', () => {
+  const landed = endedTurn(awaitingTillage());
+  let later = landed;
+  for (let turn = 1; turn <= 3; turn++) {
+    later = endedTurn(later);
+    expect(later.ending).toBeUndefined();
+  }
+
+  for (const [chronicle, turn] of [
+    [landed, CAPSTONE],
+    [later, CAPSTONE + 3],
+  ] as const) {
+    const staged = stagedBy(tilled(chronicle), { type: 'end-turn' });
+
+    expect(chronicle.ending).toBeUndefined();
+    expect(staged[staged.length - 1]).toBe('victory');
+    expect(staged).not.toContain('turn');
+    expect(endedTurn(tilled(chronicle)).ending).toEqual({ outcome: 'victory', turn });
+  }
+});
+
+test('a capstone’s condition holding before the capstone lands passes nothing', () => {
+  let chronicle = awaitingTillage({
+    tiles: builtOn(field(2), TILLAGE, [TILLED]),
+    turn: CAPSTONE - 2,
+  });
+
+  for (let turn = CAPSTONE - 1; turn <= CAPSTONE; turn++) {
+    chronicle = endedTurn(chronicle);
+    expect(chronicle.turn).toBe(turn);
+    expect(chronicle.ending).toBeUndefined();
+  }
+  expect(endedTurn(chronicle).ending).toEqual({ outcome: 'victory', turn: CAPSTONE });
+});
+
+test('a city captured in the enemy phase of the turn a capstone’s condition holds is defeated', () => {
+  const captured = endedTurn(
+    tilled(awaitingTillage({ turn: CAPSTONE, units: [standing('enemy', CITY)] })),
+  );
+
+  expect(captured.ending).toEqual({ outcome: 'defeat', cause: 'capture', turn: CAPSTONE });
+});
+
+test('the schedule keeps dealing past the landing of a capstone no span passes', () => {
+  const start = awaitingTillage({
+    tiles: camped(field(4), CAMPS),
+    timeline: { ...NO_DEALS, schedule: SCHEDULE, capstone: { id: 'PH_Tillage', turn: CAPSTONE } },
+  });
+  const { chronicle, landings } = walkedFrom(CATALOGUE, start, CAPSTONE + 40, 'PH_Famine');
+  const dealt = landings.filter((landing) => landing.event !== undefined);
+
+  expect(chronicle.ending).toBeUndefined();
+  expect(landings[0]).toEqual({ turn: CAPSTONE });
+  expect(dealt.length).toBeGreaterThan(4);
+  expect(dealt[dealt.length - 1].turn).toBeGreaterThan(CAPSTONE + 30);
 });

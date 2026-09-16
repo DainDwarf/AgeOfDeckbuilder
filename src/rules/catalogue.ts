@@ -105,12 +105,13 @@ export type Answer = {
 export type ScheduledEvent = { readonly answers: Readonly<Record<string, Answer>> };
 
 /**
- * A capstone: what it does to the chronicle on the turn it lands, and what it does on every turn of
- * its span after that one.
+ * A capstone: what it does to the chronicle on the turn it lands, what it does on every turn after
+ * that one, and whether the chronicle has passed it.
  */
 export type Capstone = {
   readonly lands: (catalogue: Catalogue, chronicle: Chronicle) => Chronicle;
   readonly continues?: (catalogue: Catalogue, chronicle: Chronicle) => Chronicle;
+  readonly passes: (catalogue: Catalogue, chronicle: Chronicle) => boolean;
 };
 
 /** The least and the most a span of turns rolls, both ends included. */
@@ -118,12 +119,12 @@ export type Span = readonly [number, number];
 
 /**
  * An age's schedule: how far apart its deals are due, its capstone with the window its turn is
- * rolled from and how many turns it spans, and every entry a deal is drawn from with what it weighs
- * on a turn — nothing at all on a turn it may not be dealt on.
+ * rolled from, and every entry a deal is drawn from with what it weighs on a turn — nothing at all
+ * on a turn it may not be dealt on.
  */
 export type Schedule = {
   readonly spacing: Span;
-  readonly capstone: { readonly id: string; readonly window: Span; readonly span: number };
+  readonly capstone: { readonly id: string; readonly window: Span };
   readonly entries: Readonly<Record<string, (turn: number) => number>>;
 };
 
@@ -168,8 +169,8 @@ export type Catalogue = MapContent & {
  * improvement names a movement cost below one hundredth of a move point; no region keeps its camps
  * within the centre part's reach plus the city's sight; no section of a deck holds a hazard or any
  * of the camp's rewards, a deck's settle section holds settle cards alone and at least one, and its
- * cards none; a schedule's capstone is held, it spans at least one, and each of its spans rolls from
- * one at least to no less than its least; an event a schedule deals among its entries deals two
+ * cards none; a schedule's capstone is held, and each of its spans rolls from one at least to no
+ * less than its least; an event a schedule deals among its entries deals two
  * answers at least; every event deals an answer costing no stock, every amount its cost names
  * nought; no answer is dealt by two events; the camp deals one reward at least; the camp's unit
  * stands on every terrain its building names; the city's building stands on the city's terrain; and
@@ -247,9 +248,6 @@ export function catalogued(content: Catalogue): Catalogue {
       if (answers < 2) refuse(content, `the schedule ${id} deals ${entry}, which deals ${answers}`);
     }
     capstoneOf(content, schedule.capstone.id);
-    if (schedule.capstone.span < 1) {
-      refuse(content, `the schedule ${id} spans ${schedule.capstone.span}`);
-    }
     for (const [least, most] of [schedule.spacing, schedule.capstone.window]) {
       if (least < 1 || most < least) {
         refuse(content, `the schedule ${id} rolls a span from ${least} to ${most}`);

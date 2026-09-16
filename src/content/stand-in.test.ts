@@ -150,7 +150,7 @@ test('every schedule of the stand-in rolls a timeline', () => {
   }
 });
 
-test('every answer of every event of the stand-in reads and lands, and every capstone lands and continues, on a chronicle launched and settled on each schedule', () => {
+test('every answer of every event of the stand-in reads and lands, and every capstone lands, continues and is not passed, on a chronicle launched and settled on each schedule', () => {
   for (const schedule of Object.keys(STAND_IN.schedules)) {
     const deck = deckOf(STAND_IN, 'PH_Deck');
     const chronicle = settledLaunch(STAND_IN, STAND_IN_REGION, schedule, 1, deck);
@@ -164,6 +164,7 @@ test('every answer of every event of the stand-in reads and lands, and every cap
       const capstone = capstoneOf(STAND_IN, id);
       expect(() => capstone.lands(STAND_IN, chronicle)).not.toThrow();
       expect(() => capstone.continues?.(STAND_IN, chronicle)).not.toThrow();
+      expect(capstone.passes(STAND_IN, chronicle)).toBe(false);
     }
   }
 });

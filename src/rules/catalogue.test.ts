@@ -230,14 +230,6 @@ test('a catalogue whose schedule names a capstone it does not hold is refused', 
   expect(() => catalogued(event)).toThrow(/^fixture: /);
 });
 
-test('a catalogue whose schedule spans less than one is refused', () => {
-  const { capstone } = CATALOGUE.schedules[SCHEDULE];
-
-  expect(() => catalogued(rescheduled({ capstone: { ...capstone, span: 0 } }))).toThrow(
-    /^fixture: /,
-  );
-});
-
 test('a catalogue whose schedule rolls a span from below one, or to less than its least, is refused', () => {
   const { capstone } = CATALOGUE.schedules[SCHEDULE];
 

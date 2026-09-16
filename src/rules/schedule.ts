@@ -25,80 +25,102 @@ import {
 import { unitAt } from './units';
 
 /**
- * A schedule rolled into a timeline, every draw from the generator handed in and in this order: the
- * turn the first deal is due, the capstone's turn, and then turn by turn to the capstone's last what
- * the events phase would have drawn. The capstone's turn deals nothing among the deals and rolls the
- * next due turn from itself, whatever was due. A due turn deals one of the entries weighing anything
- * on it and rolls the next due turn from itself; one no entry weighs anything on deals nothing and
- * rolls nothing, so the turn after it is tried. A schedule the catalogue does not hold is refused.
+ * A schedule rolled into the timeline a chronicle opens on, the generator handed in its own from then
+ * on: the capstone's turn from the window, then the first deal rolled as from a landing on turn 0. A
+ * schedule the catalogue does not hold is refused.
  */
-export function timelineOf(
-  catalogue: Catalogue,
-  id: string,
-  rng: Rng,
-): { rng: Rng; timeline: Timeline } {
+export function timelineOf(catalogue: Catalogue, id: string, rng: Rng): Timeline {
   const schedule = scheduleOf(catalogue, id);
-  const first = withinSpan(rng, schedule.spacing);
-  const capstone = withinSpan(first.rng, schedule.capstone.window);
-  const last = capstone.turns + schedule.capstone.span - 1;
-
-  let drawing = capstone.rng;
-  let due = first.turns;
-  const deals: Timeline['deals'][number][] = [];
-  for (let turn = 1; turn <= last; turn++) {
-    if (turn !== capstone.turns) {
-      if (turn < due) continue;
-      const weighing = Object.entries(schedule.entries)
-        .map(([entry, weight]): [string, number] => [entry, weight(turn)])
-        .filter(([, weight]) => weight > 0);
-      if (weighing.length === 0) continue;
-
-      const drawn = pickWeighted(drawing, weighing);
-      drawing = drawn.rng;
-      deals.push({ turn, event: drawn.picked });
-    }
-    const next = withinSpan(drawing, schedule.spacing);
-    drawing = next.rng;
-    due = turn + next.turns;
-  }
-
-  return {
-    rng: drawing,
-    timeline: {
-      deals,
-      capstone: { id: schedule.capstone.id, turn: capstone.turns, last },
+  const capstone = withinSpan(rng, schedule.capstone.window);
+  return rolledFrom(
+    catalogue,
+    {
+      schedule: id,
+      rng: capstone.rng,
+      capstone: { id: schedule.capstone.id, turn: capstone.turns },
     },
-  };
-}
-
-/** Whether the capstone has been stood out: the chronicle is on the last turn of its span. */
-export function survived(chronicle: Chronicle): boolean {
-  return chronicle.turn === chronicle.timeline.capstone.last;
+    0,
+  );
 }
 
 /**
- * The events phase, which draws nothing of its own: on the capstone's turn the capstone lands on the
- * chronicle as it stands and nothing is dealt, whatever the timeline lists for that turn; a turn the
- * timeline lists a deal for deals its event, behind the deals already standing, and nothing lands
- * until one of its answers is taken; any other turn changes nothing.
+ * The next deal rolled from a landing, every draw from the timeline's own generator: its due turn
+ * from the spacing, then the draw on that turn.
+ */
+function rolledFrom(
+  catalogue: Catalogue,
+  timeline: Omit<Timeline, 'next'>,
+  landing: number,
+): Timeline {
+  const spaced = withinSpan(timeline.rng, scheduleOf(catalogue, timeline.schedule).spacing);
+  return drawnOn(catalogue, { ...timeline, rng: spaced.rng }, landing + spaced.turns);
+}
+
+/**
+ * The deal due on a turn: one of the entries weighing anything on it, drawn from the timeline's own
+ * generator, or none where no entry does, which draws nothing.
+ */
+function drawnOn(catalogue: Catalogue, timeline: Omit<Timeline, 'next'>, turn: number): Timeline {
+  const weighing = Object.entries(scheduleOf(catalogue, timeline.schedule).entries)
+    .map(([entry, weight]): [string, number] => [entry, weight(turn)])
+    .filter(([, weight]) => weight > 0);
+  if (weighing.length === 0) return { ...timeline, next: { turn } };
+
+  const drawn = pickWeighted(timeline.rng, weighing);
+  return { ...timeline, rng: drawn.rng, next: { turn, event: drawn.picked } };
+}
+
+/**
+ * Whether the chronicle has passed its capstone: never before the turn the capstone lands on, and
+ * from that turn on whenever the capstone's condition holds.
+ */
+export function passed(catalogue: Catalogue, chronicle: Chronicle): boolean {
+  const { id, turn } = chronicle.timeline.capstone;
+  return chronicle.turn >= turn && capstoneOf(catalogue, id).passes(catalogue, chronicle);
+}
+
+/** Whether the chronicle stands on the last turn of a span of turns begun on the capstone's, or past it. */
+export function spanEnded(chronicle: Chronicle, turns: number): boolean {
+  return chronicle.turn >= chronicle.timeline.capstone.turn + turns - 1;
+}
+
+/**
+ * The events phase, which draws nothing from the chronicle's generator: on the capstone's turn the
+ * capstone lands on the chronicle as it stands, nothing is dealt whatever deal was ahead, and the
+ * next deal is rolled from that turn; on the turn the next deal is due its event is dealt behind the
+ * deals already standing, nothing landing until one of its answers is taken, and the next is rolled
+ * from that turn; a due turn with no event deals nothing and makes the turn after it due, drawn on
+ * without a roll of the spacing; any other turn changes nothing. `none` is a phase that dealt nothing,
+ * though its timeline may have moved on.
  */
 export function events(
   catalogue: Catalogue,
   chronicle: Chronicle,
-): { readonly phase: 'capstone' | 'deal'; readonly chronicle: Chronicle } {
-  const { capstone, deals } = chronicle.timeline;
-  if (chronicle.turn === capstone.turn) {
+): { readonly phase: 'capstone' | 'deal' | 'none'; readonly chronicle: Chronicle } {
+  const { timeline, turn } = chronicle;
+  if (turn === timeline.capstone.turn) {
+    const landed = capstoneOf(catalogue, timeline.capstone.id).lands(catalogue, chronicle);
     return {
       phase: 'capstone',
-      chronicle: capstoneOf(catalogue, capstone.id).lands(catalogue, chronicle),
+      chronicle: { ...landed, timeline: rolledFrom(catalogue, timeline, turn) },
     };
   }
 
-  const due = deals.find((deal) => deal.turn === chronicle.turn);
-  if (due === undefined) return { phase: 'deal', chronicle };
+  const { next } = timeline;
+  if (turn !== next.turn) return { phase: 'none', chronicle };
+  if (next.event === undefined) {
+    return {
+      phase: 'none',
+      chronicle: { ...chronicle, timeline: drawnOn(catalogue, timeline, turn + 1) },
+    };
+  }
   return {
     phase: 'deal',
-    chronicle: { ...chronicle, deals: [...chronicle.deals, { of: 'event', event: due.event }] },
+    chronicle: {
+      ...chronicle,
+      timeline: rolledFrom(catalogue, timeline, turn),
+      deals: [...chronicle.deals, { of: 'event', event: next.event }],
+    },
   };
 }
 
@@ -145,12 +167,12 @@ export function rewarded(chronicle: Chronicle, card: CardId): Chronicle {
 }
 
 /**
- * The capstone's second script, on every turn of its span after the one it lands on, and nothing on
- * any other turn or for a capstone that carries none.
+ * The capstone's second script, on every turn after the one it lands on, and nothing on any other
+ * turn or for a capstone that carries none.
  */
 export function continued(catalogue: Catalogue, chronicle: Chronicle): Chronicle {
-  const { id, turn, last } = chronicle.timeline.capstone;
-  if (chronicle.turn <= turn || chronicle.turn > last) return chronicle;
+  const { id, turn } = chronicle.timeline.capstone;
+  if (chronicle.turn <= turn) return chronicle;
   return capstoneOf(catalogue, id).continues?.(catalogue, chronicle) ?? chronicle;
 }
 

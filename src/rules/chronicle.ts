@@ -18,8 +18,8 @@ import {
   continued,
   events,
   offered,
+  passed,
   rewarded,
-  survived,
   timelineOf,
 } from './schedule';
 import { charted } from './sight';
@@ -99,12 +99,11 @@ const HAND_SIZE = 5;
  * on a tile, taken off one, or taken off one and put on another, `claim` is a tile bought with
  * culture and taken inside the border, `grow` is the food stock spent on one more inhabitant,
  * `turn` is the tick, where every unit's move points and action are refreshed, `reinforce` is the
- * capstone's second script on a turn of its span, `capstone` is the capstone landing on its turn,
- * `deal` is what the timeline offers on a due turn, `events` is the answer taken landing,
+ * capstone's second script on a turn after its landing, `capstone` is the capstone landing on its
+ * turn, `deal` is what the timeline offers on a due turn, `events` is the answer taken landing,
  * `reward` is the reward taken laid in the discard pile, `strike` is every hazard the hand still
- * holds striking,
- * `capture` is the city falling to an enemy that stood on its tile, and `victory` is the city still
- * standing at the end of the capstone's last turn.
+ * holds striking, `capture` is the city falling to an enemy that stood on its tile, and `victory` is
+ * the capstone passed at the end of a turn.
  */
 export type PlainStage =
   | 'played'
@@ -186,9 +185,9 @@ export function beginChronicle(
 }
 
 /**
- * A chronicle launched on a region and a schedule: the seed deals the region's map, the schedule is
- * rolled into a timeline from the generator the map left, and the opening takes both from the same
- * seed. The one place a map, a timeline and a chronicle share one.
+ * A chronicle launched on a region and a schedule: the seed deals the region's map, the timeline
+ * takes the generator the map left as its own, and the opening takes both from the same seed. The
+ * one place a map, a timeline and a chronicle share one.
  */
 export function launched(
   catalogue: Catalogue,
@@ -198,7 +197,7 @@ export function launched(
   deck: Deck,
 ): Chronicle {
   const { tiles, rivers, centre, rng } = generateMap(catalogue, region, seedRng(seed));
-  const { timeline } = timelineOf(catalogue, schedule, rng);
+  const timeline = timelineOf(catalogue, schedule, rng);
   return beginChronicle(catalogue, seed, deck, { tiles, rivers, centre }, timeline);
 }
 
@@ -331,14 +330,15 @@ function endOfTurn(catalogue: Catalogue, chronicle: Chronicle): Stage[] {
 
 /**
  * What the end of turn resolves after the captures, each step with the chronicle it leaves and one
- * that changed nothing absent: the victory, ending the list, when the city is still standing once
- * the capstone's last turn is over; else the tick, the capstone's second script, the events phase,
- * and the draw — or, while the events phase leaves a deal standing, nothing after it: the hand
- * waits on the take. The turn always ticks where the victory does not end it, and the capstone's
- * landing is staged on its turn even where it changed nothing.
+ * that changed nothing absent: the victory, ending the list, when the capstone is passed; else the
+ * tick, the capstone's second script, the events phase, and the draw — or, while the events phase
+ * leaves a deal standing, nothing after it: the hand waits on the take. The turn always ticks where
+ * the victory does not end it, and the capstone's landing is staged on its turn even where it
+ * changed nothing. An events phase that dealt nothing raises no stage: the timeline it moved on is
+ * carried by the stage before it.
  */
 function turnOpened(catalogue: Catalogue, chronicle: Chronicle): Stage[] {
-  if (survived(chronicle)) return [{ name: 'victory', chronicle: victory(chronicle) }];
+  if (passed(catalogue, chronicle)) return [{ name: 'victory', chronicle: victory(chronicle) }];
   const stages: Stage[] = [];
   let standing = chronicle;
   const staged = (name: PlainStage, next: Chronicle): void => {
@@ -364,6 +364,13 @@ function turnOpened(catalogue: Catalogue, chronicle: Chronicle): Stage[] {
       staged('deal', phase.chronicle);
       if (standing.deals.length > 0) return stages;
       break;
+    case 'none': {
+      if (phase.chronicle === standing) break;
+      standing = phase.chronicle;
+      const last = stages.length - 1;
+      stages[last] = { ...stages[last], chronicle: standing };
+      break;
+    }
   }
   return [...stages, ...drawn(standing)];
 }
@@ -431,7 +438,7 @@ function fall(chronicle: Chronicle, cause: DefeatCause): Chronicle {
   return { ...chronicle, ending: { outcome: 'defeat', cause, turn: chronicle.turn } };
 }
 
-/** The capstone stood out: the chronicle records the turn it ended on, and ends there. */
+/** The capstone passed: the chronicle records the turn it ended on, and ends there. */
 function victory(chronicle: Chronicle): Chronicle {
   return { ...chronicle, ending: { outcome: 'victory', turn: chronicle.turn } };
 }

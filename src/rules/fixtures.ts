@@ -41,12 +41,15 @@ import {
 import { buildingKind, improvementKind } from './map-kinds';
 import type { Resources } from './resources';
 import { seedRng } from './rng';
-import { besieged, laid, offered, raided, reinforced } from './schedule';
+import { besieged, laid, offered, raided, reinforced, spanEnded } from './schedule';
 import { charted } from './sight';
-import type { CardId, Chronicle, Deal, Timeline } from './state';
+import { type CardId, type Chronicle, type Deal, holds, type Timeline } from './state';
 import type { Faction, Unit, UnitStats } from './units';
 
 const SIEGE_CAMPS = 5;
+
+/** The building whose standing on a tile the city holds passes the fixture's tillage. */
+export const TILLAGE = 'PH_Farm';
 
 /** The production the fixture's explosion costs: the one answer of the fixture that costs a stock. */
 export const EXPLOSION = 4;
@@ -249,13 +252,24 @@ export const CATALOGUE: Catalogue = catalogued({
     PH_Siege: {
       lands: (catalogue, chronicle) => besieged(catalogue, chronicle, SIEGE_CAMPS, [3, 5], 3),
       continues: reinforced,
+      passes: (_catalogue, chronicle) => spanEnded(chronicle, 6),
+    },
+    PH_Tillage: {
+      lands: (_catalogue, chronicle) => chronicle,
+      passes: (_catalogue, chronicle) =>
+        chronicle.tiles.some((tile) => tile.building === TILLAGE && holds(chronicle, tile)),
     },
   },
   schedules: {
     schedule: {
       spacing: [3, 7],
-      capstone: { id: 'PH_Siege', window: [27, 33], span: 6 },
+      capstone: { id: 'PH_Siege', window: [27, 33] },
       entries: { PH_Hardship: () => 1, PH_Blight: () => 1 },
+    },
+    quiet: {
+      spacing: [3, 7],
+      capstone: { id: 'PH_Tillage', window: [27, 33] },
+      entries: {},
     },
   },
   terrains: {
@@ -386,18 +400,23 @@ export const REGION = 'disc';
 /** The one schedule the fixture catalogue rolls its timelines from. */
 export const SCHEDULE = 'schedule';
 
+/** The schedule the fixture's handed-in timelines roll on from: it weighs no entry on any turn. */
+export const QUIET = 'quiet';
+
 /**
- * A timeline dealing nothing: no deal at all, and the capstone on a turn past any a test ends. What a
- * fixture chronicle carries unless its test writes the deals it wants.
+ * A timeline dealing nothing: rolled on from a schedule with no entries, and the capstone on a turn
+ * past any a test ends. What a fixture chronicle carries unless its test writes the deal it wants.
  */
 export const NO_DEALS: Timeline = {
-  deals: [],
-  capstone: { id: 'PH_Siege', turn: 1000, last: 1005 },
+  schedule: QUIET,
+  rng: seedRng(7),
+  next: { turn: 1 },
+  capstone: { id: 'PH_Siege', turn: 1000 },
 };
 
-/** A timeline dealing these events on these turns, and its capstone as `NO_DEALS` has it. */
-export function dealing(...deals: Timeline['deals']): Timeline {
-  return { ...NO_DEALS, deals };
+/** A timeline dealing this event on this turn and nothing after it, its capstone as `NO_DEALS` has it. */
+export function dealing(deal: { readonly turn: number; readonly event: string }): Timeline {
+  return { ...NO_DEALS, next: deal };
 }
 
 export const CITY: TileCoords = { q: 0, r: 0 };

@@ -10,14 +10,14 @@ function victoryShown(page: Page): Promise<boolean> {
   });
 }
 
-test('the city still standing when the capstone’s last turn ends wins, and the chronicle ends on the victory screen', async ({
+test('the city passing the capstone wins, and the chronicle ends on the victory screen', async ({
   page,
 }) => {
   const problems = watch(page);
   test.setTimeout(budget(3));
 
-  // The short schedule lands the capstone on the second turn and spans two: the second end of turn
-  // stops on its window, and the third ends its last turn.
+  // The short schedule's capstone lands on the second turn and is passed at the end of the third:
+  // the second end of turn stops on its window, and the third passes it.
   await open(page, 1, 'PH_Deck', 'PH_ShortSchedule');
   expect(await victoryShown(page)).toBe(false);
   for (let turn = 0; turn < 3; turn++) await endTurn(page);

@@ -28,7 +28,7 @@ const SEED = 1;
  * The turn this seed's timeline deals its first event on. The raid is among what it offers, and
  * every camp's tile is free for it, the city having entered no unit of its own.
  */
-const RAID = launch(SEED, deckOf(STAND_IN, 'PH_Deck')).timeline.deals[0].turn;
+const RAID = launch(SEED, deckOf(STAND_IN, 'PH_Deck')).timeline.next.turn;
 
 /** The tiles the generator put a camp on, in the order the map lists them. */
 function campsOf(chronicle: Chronicle): TileCoords[] {

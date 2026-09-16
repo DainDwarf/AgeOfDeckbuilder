@@ -28,7 +28,7 @@ import {
   tileKey,
 } from '../rules/map';
 import { buildingKind, improvementKind } from '../rules/map-kinds';
-import { besieged, laid, raided, reinforced } from '../rules/schedule';
+import { besieged, laid, raided, reinforced, spanEnded } from '../rules/schedule';
 import type { CardId, Chronicle } from '../rules/state';
 import { type Landing, leastHealth, reachable, type Unit } from '../rules/units';
 
@@ -279,24 +279,30 @@ export const STAND_IN: Catalogue = catalogued({
   },
   capstones: {
     PH_Siege: {
-      lands: (catalogue, chronicle) => besieged(catalogue, chronicle, SIEGE_CAMPS, [3, 5], 3),
+      lands: siege,
       continues: reinforced,
+      passes: (_catalogue, chronicle) => spanEnded(chronicle, 6),
+    },
+    PH_ShortSiege: {
+      lands: siege,
+      continues: reinforced,
+      passes: (_catalogue, chronicle) => spanEnded(chronicle, 2),
     },
   },
   schedules: {
     [STAND_IN_SCHEDULE]: {
       spacing: [3, 7],
-      capstone: { id: 'PH_Siege', window: [27, 33], span: 6 },
+      capstone: { id: 'PH_Siege', window: [27, 33] },
       entries: { PH_Hardship: () => 1 },
     },
     PH_ShortSchedule: {
       spacing: [3, 7],
-      capstone: { id: 'PH_Siege', window: [2, 2], span: 2 },
+      capstone: { id: 'PH_ShortSiege', window: [2, 2] },
       entries: { PH_Hardship: () => 1 },
     },
     PH_TollSchedule: {
       spacing: [3, 7],
-      capstone: { id: 'PH_Siege', window: [27, 33], span: 6 },
+      capstone: { id: 'PH_Siege', window: [27, 33] },
       entries: { PH_Toll: () => 1 },
     },
   },
@@ -419,6 +425,10 @@ export const STAND_IN: Catalogue = catalogued({
 /** A deck's cards: this many copies of each card the decks are built from, in the order they are listed. */
 function copies(count: number): readonly CardId[] {
   return DECK_CARDS.flatMap((id) => Array<CardId>(count).fill(id));
+}
+
+function siege(catalogue: Catalogue, chronicle: Chronicle): Chronicle {
+  return besieged(catalogue, chronicle, SIEGE_CAMPS, [3, 5], 3);
 }
 
 /** How many warriors a raid enters on this turn: one, and one more for every ten turns. */
