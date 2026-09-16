@@ -1,10 +1,18 @@
-import { type Aim, type AimedCard, type Card, type Catalogue, cardOf, entered } from './catalogue';
+import {
+  type Aim,
+  type AimedCard,
+  type Card,
+  type Catalogue,
+  cardOf,
+  entered,
+  unitKind,
+} from './catalogue';
 import { claimable } from './city';
 import { type Tile, type TileCoords, tileKey } from './map';
 import { buildingKind, improvementKind, refuse, terrainKind } from './map-kinds';
 import { RESOURCES, type Resources } from './resources';
 import { type Block, type Chronicle, holds, idle, type TileBlock } from './state';
-import { refreshedMovePoints, spentAction, unitAt } from './units';
+import { refreshedMovePoints, spentAction, standsOn, unitAt } from './units';
 
 /** The declared order of the kinds, which is the order a sorted list of cards reads in. */
 export const CARD_KINDS = ['settle', 'unit', 'building', 'instant', 'hazard'] as const;
@@ -235,6 +243,24 @@ export function enters(type: string): Aim & { readonly aim: 'none' } {
 }
 
 /**
+ * How a settle card enters its unit, the refusal and the effect as one pair so neither is written
+ * without the other: aimed at a tile the unit can stand on with no unit standing there, the unit
+ * enters on it, the player's, and takes no inhabitant.
+ */
+export function entersOn(type: string): Aim & { readonly aim: 'tile' } {
+  return {
+    aim: 'tile',
+    refuses: (catalogue, chronicle, tile) =>
+      firstRefusal(
+        standsOn(catalogue, unitKind(catalogue, type), tile) ? undefined : 'terrain',
+        unitAt(chronicle.units, tile) === undefined ? undefined : 'standing',
+      ),
+    effect: (catalogue, paid, at) =>
+      entered(catalogue, paid, { type, faction: 'player', tile: { q: at.q, r: at.r } }),
+  };
+}
+
+/**
  * The settle: the city stands on the tile from now on, its building in the tile's slot, holding that
  * tile alone with one inhabitant on it and the city's idle count besides.
  */
@@ -280,7 +306,11 @@ export function improved(
   }));
 }
 
-/** The terrain an instant terraforms into: the feature that lay on the old terrain goes with it. */
+/**
+ * The terrain a tile is terraformed into: the feature that lay on the old terrain goes with it, and
+ * so does every improvement and the building whose kind does not name the new terrain; the ones
+ * whose kind names it stay.
+ */
 export function terraformed(
   catalogue: Catalogue,
   paid: Chronicle,
@@ -288,7 +318,18 @@ export function terraformed(
   to: string,
 ): Chronicle {
   terrainKind(catalogue, to);
-  return retiled(paid, at, (tile) => ({ ...tile, terrain: to, feature: undefined }));
+  return retiled(paid, at, (tile) => ({
+    ...tile,
+    terrain: to,
+    feature: undefined,
+    improvements: tile.improvements.filter((improvement) =>
+      improvementKind(catalogue, improvement).terrains.includes(to),
+    ),
+    building:
+      tile.building !== undefined && buildingKind(catalogue, tile.building).terrains.includes(to)
+        ? tile.building
+        : undefined,
+  }));
 }
 
 /** The move points an instant refreshes, on the unit standing on the tile it was aimed at. */

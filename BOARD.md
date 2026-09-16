@@ -6,7 +6,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ---
 
-- **The map's scripts** — inert, on the stand-in: nothing sees and no unit acts on turn 0, the centre part the whole of its sight; a settle card that enters a unit is aimed at a charted tile the unit stands on with no unit on it and takes no inhabitant; a terraform removes the improvements and the building the new terrain does not admit; and an answer has a helper to kill the inhabitant working a tile and one to damage the unit standing on it, the fixture proving each. Doc-impact: `docs/CHRONICLE.md`, `docs/GLOSSARY.md`. [board/the-maps-scripts.md](board/the-maps-scripts.md)
 - **The nomadic age implemented** — the real catalogue replaces every stand-in with provisional numbers at last: the three units with the scout, the cards, the land and its three features, the five events, the first shelter and the camps' two rewards.
 - **The biome rework** — a growth weight per biome, the spread growing per biome instead of per frontier, the city's first ring dealt as its own biome, and the bigger map.
 - **The balance pass** — numbers measured on the real content, edits uncommitted until the user says they hold.

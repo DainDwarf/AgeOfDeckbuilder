@@ -48,9 +48,8 @@ type Run = {
 };
 
 /**
- * The tiles at the edge of the centre part a seed's settle admits. The centre part charts every tile
- * a worker one step off a city nearer the centre sees, so only a city settled out here has a step
- * that charts anything.
+ * The tiles one inside the edge of the centre part a seed's settle admits: the furthest out a city
+ * stands whose six free claims all land on turn 0, when nothing but the centre part is charted.
  */
 function edgeSettles(seed: number): TileCoords[] {
   const unsettled = launched(
@@ -63,12 +62,12 @@ function edgeSettles(seed: number): TileCoords[] {
   const card = aimOf(cardOf(STAND_IN, 'PH_Settle'));
   if (card.aim !== 'tile') throw new Error('PH_Settle is aimed at no tile');
   const reach = regionOf(STAND_IN, STAND_IN_REGION).centre;
-  return admitted(STAND_IN, unsettled, card).filter((tile) => distance(tile, CENTRE) === reach);
+  return admitted(STAND_IN, unsettled, card).filter((tile) => distance(tile, CENTRE) === reach - 1);
 }
 
 /**
- * The first seed, settled on a tile at the edge of the centre part, with a turn in its first eight
- * whose worker, stepping one tile off the city and back again, leaves the map showing all three
+ * The first seed, settled on a tile one inside the edge of the centre part, with a turn in its first
+ * eight whose worker, stepping one tile off the city and back again, leaves the map showing all three
  * states at once: the tile it stepped onto in sight, a tile it charted from there and no longer sees
  * in fog, and one it never saw uncharted.
  */
@@ -150,9 +149,9 @@ type EnemyRun = {
 };
 
 /**
- * The first seed, settled on a tile at the edge of the centre part, with a turn in its first eight
- * whose worker, stepping one tile off the city and back again, leaves a tile it charted from there
- * in fog with an enemy standing on it.
+ * The first seed, settled on a tile one inside the edge of the centre part, with a turn in its first
+ * eight whose worker, stepping one tile off the city and back again, leaves a tile it charted from
+ * there in fog with an enemy standing on it.
  */
 function enemyInFog(): EnemyRun {
   return firstSeed('leaves an enemy standing in the fog behind a worker', (seed) => {

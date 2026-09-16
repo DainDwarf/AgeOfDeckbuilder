@@ -41,11 +41,13 @@ import {
 import {
   attackable,
   attacked,
+  type Landing,
   occupied,
   reachable,
   refreshedAction,
   refreshedMovePoints,
   spentAction,
+  type Unit,
   unitAt,
   unitOf,
 } from './units';
@@ -266,7 +268,7 @@ function stagesOf(catalogue: Catalogue, chronicle: Chronicle, command: Command):
     case 'move':
       return move(catalogue, chronicle, command.unit, command.tile);
     case 'attack':
-      return attack(chronicle, command.unit, command.tile);
+      return attack(catalogue, chronicle, command.unit, command.tile);
     case 'assign':
       return acted(chronicle, 'assign', assign(catalogue, chronicle, command.tile));
     case 'reassign':
@@ -573,16 +575,33 @@ function aimedTile(command: PlayCommand, aim: AimedCard['aim']): TileCoords | un
 }
 
 /**
+ * What a unit of the player's may do by hand: the landings its move points reach and the units its
+ * attack reaches, and nothing at all on turn 0. The one answer the move, the attack and the map
+ * lighting a unit all read.
+ */
+export function byHand(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  unit: Unit,
+): { readonly landings: Landing[]; readonly targets: Unit[] } {
+  if (chronicle.turn === 0) return { landings: [], targets: [] };
+  return {
+    landings: reachable(catalogue, chronicle, unit),
+    targets: attackable(chronicle.units, unit),
+  };
+}
+
+/**
  * One unit of the player's crossing to a tile its move points reach, in as many steps as the player
  * likes: the cheapest route there is spent, and the crossing is the same `move` stage the enemy
- * phase raises. A unit that is not the player's, or a tile it cannot land on — an uncharted one
- * among them — is one `refused` stage.
+ * phase raises. A unit that is not the player's, a move on turn 0, or a tile it cannot land on — an
+ * uncharted one among them — is one `refused` stage.
  */
 function move(catalogue: Catalogue, chronicle: Chronicle, mover: number, to: TileCoords): Stage[] {
   const unit = unitOf(chronicle.units, mover);
   if (unit === undefined || unit.faction !== 'player') return [{ name: 'refused', chronicle }];
 
-  const landing = reachable(catalogue, chronicle, unit).find(
+  const landing = byHand(catalogue, chronicle, unit).landings.find(
     (reached) => tileKey(reached.tile) === tileKey(to),
   );
   if (landing === undefined) return [{ name: 'refused', chronicle }];
@@ -605,14 +624,19 @@ function move(catalogue: Catalogue, chronicle: Chronicle, mover: number, to: Til
 /**
  * One unit of the player's attacking what stands on a tile its range reaches: the attacker spends
  * one of its action, and the target loses the attacker's damage or is killed by it. Nobody moves. A
- * unit that is not the player's, a worker, one with no action left, and a tile no unit of another
- * faction within range stands on are one `refused` stage.
+ * unit that is not the player's, a worker, one with no action left, an attack on turn 0, and a tile
+ * no unit of another faction within range stands on are one `refused` stage.
  */
-function attack(chronicle: Chronicle, attacker: number, at: TileCoords): Stage[] {
+function attack(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  attacker: number,
+  at: TileCoords,
+): Stage[] {
   const unit = unitOf(chronicle.units, attacker);
   if (unit === undefined || unit.faction !== 'player') return [{ name: 'refused', chronicle }];
 
-  const target = attackable(chronicle.units, unit).find(
+  const target = byHand(catalogue, chronicle, unit).targets.find(
     (other) => tileKey(other.tile) === tileKey(at),
   );
   if (target === undefined) return [{ name: 'refused', chronicle }];

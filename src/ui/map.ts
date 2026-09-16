@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import type { Catalogue } from '../rules/catalogue';
-import type { Stage, UnitCommand } from '../rules/chronicle';
+import { byHand, type Stage, type UnitCommand } from '../rules/chronicle';
 import { cityDrag, claimable, type ReassignCommand } from '../rules/city';
 import {
   type BuildingTypeId,
@@ -22,15 +22,7 @@ import {
 import { RESOURCES, type Resource } from '../rules/resources';
 import { inSight } from '../rules/sight';
 import { assignedTo, type Chronicle, type Cost, type Snapshot } from '../rules/state';
-import {
-  attackable,
-  type Faction,
-  type Landing,
-  reachable,
-  type Unit,
-  unitAt,
-  unitOf,
-} from '../rules/units';
+import { type Faction, type Landing, type Unit, unitAt, unitOf } from '../rules/units';
 import { MAP_FRAME } from './band';
 import { type Bind, bindings, boundTo, type Control, type Press, pressOf } from './bindings';
 import { EASE, ended, stopMotion } from './card-motion';
@@ -1142,11 +1134,8 @@ export function createMapView(
         : unitAt(current.units, tile);
     lit = undefined;
     if (current !== undefined && standing?.faction === 'player') {
-      lit = {
-        unit: standing.id,
-        landings: reachable(catalogue, current, standing),
-        targets: attackable(current.units, standing).map((other) => other.tile),
-      };
+      const { landings, targets } = byHand(catalogue, current, standing);
+      lit = { unit: standing.id, landings, targets: targets.map((other) => other.tile) };
     }
 
     lighted.removeAll(true);

@@ -78,11 +78,13 @@ function claimRefusal(chronicle: Chronicle, at: TileCoords): string | undefined 
   return refuses(CATALOGUE, chronicle, claimCard(), tile);
 }
 
-/** A tile of a generated map that touches the border of a city on `city` and has never been in sight. */
-function unchartedTouching(chronicle: Chronicle, city: TileCoords): TileCoords | undefined {
+/** A tile of a generated map that touches the border and has never been in sight. */
+function unchartedTouching(chronicle: Chronicle): TileCoords | undefined {
   const seen = new Set(chronicle.snapshots.map(tileKey));
+  const held = new Set(chronicle.held.map(tileKey));
   const found = chronicle.tiles.find(
-    (tile) => distance(tile, city) === 2 && !seen.has(tileKey(tile)),
+    (tile) =>
+      !seen.has(tileKey(tile)) && neighbours(tile).some((coord) => held.has(tileKey(coord))),
   );
   return found === undefined ? undefined : { q: found.q, r: found.r };
 }
@@ -112,10 +114,11 @@ function withWorkerBeside(
 
 /**
  * The first seed and tile at the edge of the centre part whose settle, its six free claims played on
- * the tiles around the city and two ends of turn on, leaves a tile touching the border uncharted that
- * a worker the hand enters can step beside: that chronicle with culture enough for any claim, the
- * tile, and where the city stands. The centre part charts every tile nearer the centre, so a city
- * settled any nearer has no dark border to find.
+ * the tiles around the city — those beyond the centre part refused, uncharted on turn 0 — and two
+ * ends of turn on, leaves a tile touching the border uncharted that a worker the hand enters can step
+ * beside: that chronicle with culture enough for any claim, the tile, and where the city stands. The
+ * centre part charts every tile nearer the centre, so a city settled any nearer has no dark border to
+ * find.
  */
 function darkBorder(): { opened: Chronicle; dark: TileCoords; city: TileCoords } {
   const reach = regionOf(CATALOGUE, REGION).centre;
@@ -130,7 +133,7 @@ function darkBorder(): { opened: Chronicle; dark: TileCoords; city: TileCoords }
       }
       const ended = outcome(apply(CATALOGUE, settling, { type: 'end-turn' }));
       const opened = outcome(apply(CATALOGUE, ended, { type: 'end-turn' }));
-      const dark = unchartedTouching(opened, city);
+      const dark = unchartedTouching(opened);
       if (dark === undefined || withWorkerBeside(opened, dark, city) === undefined) continue;
       return {
         opened: { ...opened, resources: { ...opened.resources, culture: 9 } },

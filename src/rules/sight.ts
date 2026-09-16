@@ -70,14 +70,15 @@ function seenFrom(
 }
 
 /**
- * The tiles in sight, by their keys: the map's centre part for the whole of turn 0, every tile the
- * city holds, and every tile within a sight of the city's, once it stands, or of a unit of the
- * player's that a line over the ground reaches. The one answer to what is in sight.
+ * The tiles in sight, by their keys: on turn 0 the map's centre part and nothing else, since nothing
+ * sees before turn 1; from turn 1 every tile the city holds, and every tile within a sight of the
+ * city's, once it stands, or of a unit of the player's that a line over the ground reaches. The one
+ * answer to what is in sight.
  */
 export function inSight(catalogue: Catalogue, chronicle: Chronicle): ReadonlySet<string> {
+  if (chronicle.turn === 0) return new Set(chronicle.centre.map(tileKey));
   const terrains = new Map(chronicle.tiles.map((tile) => [tileKey(tile), tile.terrain]));
   const seen = new Set(chronicle.held.map(tileKey));
-  if (chronicle.turn === 0) for (const coord of chronicle.centre) seen.add(tileKey(coord));
 
   const watching =
     chronicle.city === undefined ? [] : [{ from: chronicle.city, sight: catalogue.city.sight }];

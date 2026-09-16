@@ -22,7 +22,7 @@ import {
   type Timeline,
   unaffordable,
 } from './state';
-import { unitAt } from './units';
+import { damaged, unitAt } from './units';
 
 /**
  * A schedule rolled into the timeline a chronicle opens on, the generator handed in its own from then
@@ -180,6 +180,27 @@ export function raided(catalogue: Catalogue, chronicle: Chronicle, warriors: num
     standing = enteredFromCamp(catalogue, standing);
   }
   return standing;
+}
+
+/**
+ * The inhabitant working the tile killed: the population one fewer and the tile unassigned, and the
+ * chronicle untouched where nobody works it.
+ */
+export function inhabitantKilled(chronicle: Chronicle, at: TileCoords): Chronicle {
+  const key = tileKey(at);
+  const assigned = chronicle.assigned.filter((coord) => tileKey(coord) !== key);
+  if (assigned.length === chronicle.assigned.length) return chronicle;
+  return { ...chronicle, population: chronicle.population - 1, assigned };
+}
+
+/**
+ * The unit standing on the tile, whatever its faction, losing health by the amount and killed at
+ * nought, and the chronicle untouched where no unit stands there.
+ */
+export function unitDamaged(chronicle: Chronicle, at: TileCoords, amount: number): Chronicle {
+  const target = unitAt(chronicle.units, at);
+  if (target === undefined) return chronicle;
+  return { ...chronicle, units: damaged(chronicle.units, target, amount) };
 }
 
 /** A card laid on top of the draw pile; a card the catalogue does not hold is refused. */

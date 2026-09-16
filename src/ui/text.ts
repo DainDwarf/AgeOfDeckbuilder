@@ -125,6 +125,7 @@ const TEXT = {
   'refusal.slot': 'A building already stands there.',
   'refusal.improvement': 'That improvement is already there.',
   'refusal.unit': 'No unit stands there.',
+  'refusal.standing': 'A unit already stands there.',
   'refusal.move': 'Unit move points are full.',
   'refusal.discard-pile': 'The discard pile is empty.',
   'refusal.claim': 'The city cannot claim that tile.',

@@ -8,6 +8,7 @@ import {
   built,
   claimableTile,
   enters,
+  entersOn,
   firstRefusal,
   gained,
   improved,
@@ -41,7 +42,16 @@ import {
 import { buildingKind, improvementKind } from './map-kinds';
 import type { Resources } from './resources';
 import { seedRng } from './rng';
-import { besieged, laid, offered, raided, reinforced, spanEnded } from './schedule';
+import {
+  besieged,
+  inhabitantKilled,
+  laid,
+  offered,
+  raided,
+  reinforced,
+  spanEnded,
+  unitDamaged,
+} from './schedule';
 import { charted } from './sight';
 import { type CardId, type Chronicle, type Deal, holds, type Timeline } from './state';
 import type { Faction, Unit, UnitStats } from './units';
@@ -56,6 +66,15 @@ export const TILLAGE = 'PH_Farm';
 
 /** The production the fixture's explosion costs: the one answer of the fixture that costs a stock. */
 export const EXPLOSION = 4;
+
+/**
+ * The tile every answer of the fixture's upheaval lands on: the one beside the city a `cityOf` city
+ * holds second.
+ */
+export const UPHEAVAL: TileCoords = { q: 1, r: 0 };
+
+/** The health the fixture's ambush takes off the unit standing on the upheaval's tile. */
+export const AMBUSH = 3;
 
 /** How many warriors the fixture's raid enters on this turn: one, and one more for every ten turns. */
 function raiders(turn: number): number {
@@ -105,6 +124,7 @@ export const CATALOGUE: Catalogue = catalogued({
       refuses: (catalogue, chronicle, tile) => claimableTile(catalogue, chronicle, tile),
       effect: (_catalogue, paid, at) => bordered(arrived(paid), at),
     },
+    PH_Band: { kind: 'settle', cost: {}, ...entersOn('PH_Worker') },
     PH_Stores: {
       kind: 'settle',
       cost: {},
@@ -247,6 +267,25 @@ export const CATALOGUE: Catalogue = catalogued({
           cost: { production: EXPLOSION },
           reads: () => ({}),
           lands: (_catalogue, chronicle) => chronicle,
+        },
+      },
+    },
+    PH_Upheaval: {
+      answers: {
+        PH_Plague: {
+          cost: {},
+          reads: () => ({}),
+          lands: (_catalogue, chronicle) => inhabitantKilled(chronicle, UPHEAVAL),
+        },
+        PH_Ambush: {
+          cost: {},
+          reads: () => ({ damage: AMBUSH }),
+          lands: (_catalogue, chronicle) => unitDamaged(chronicle, UPHEAVAL, AMBUSH),
+        },
+        PH_Quake: {
+          cost: {},
+          reads: () => ({}),
+          lands: (catalogue, chronicle) => terraformed(catalogue, chronicle, UPHEAVAL, 'forest'),
         },
       },
     },

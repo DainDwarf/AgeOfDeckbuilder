@@ -243,6 +243,38 @@ test('the centre part stands in sight through turn 0, and from turn 1 falls into
   expect(snapshotOf(ticked, beyond)).toBeUndefined();
 });
 
+test('nothing sees on turn 0: a settle at the centre part’s edge charts nothing beyond it until the tick', () => {
+  const at = { q: 3, r: 0 };
+  const beyond = { q: 3 + CITY_SIGHT, r: 0 };
+  const settled = settledOn(opening(plains(RADIUS), { reach: 3 }), at);
+  const ticked = outcome(apply(CATALOGUE, settled, { type: 'end-turn' }));
+
+  expect(settled.city).toEqual(at);
+  expect(sees(settled, beyond)).toBe(false);
+  expect(snapshotOf(settled, beyond)).toBeUndefined();
+  expect(sees(ticked, beyond)).toBe(true);
+  expect(snapshotOf(ticked, beyond)).toBeDefined();
+});
+
+test('nothing sees on turn 0: a unit entered at the centre part’s edge charts nothing beyond it until the tick', () => {
+  const at = { q: 3, r: 0 };
+  const beyond = { q: 3 + CATALOGUE.units.PH_Worker.sight, r: 0 };
+  const opened = opening(plains(RADIUS), {
+    reach: 3,
+    deck: { cards: [], settle: ['PH_Band', 'PH_Settle'] },
+  });
+  const entered = settledOn(opened, at);
+  const settled = settledOn(entered, CITY);
+  const ticked = outcome(apply(CATALOGUE, settled, { type: 'end-turn' }));
+
+  expect(entered.units).toHaveLength(1);
+  expect(sees(entered, beyond)).toBe(false);
+  expect(snapshotOf(settled, beyond)).toBeUndefined();
+  expect(distance(CITY, beyond)).toBeGreaterThan(CITY_SIGHT);
+  expect(sees(ticked, beyond)).toBe(true);
+  expect(snapshotOf(ticked, beyond)).toBeDefined();
+});
+
 test('the snapshot keeps a tile as it was last seen once the unit that saw it has left', () => {
   const seen = off(2, 0);
   const away = off(0, -2);

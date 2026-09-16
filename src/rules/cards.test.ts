@@ -1,16 +1,19 @@
 import { expect, test } from 'vitest';
 import { aimOf, built, improved, made, refuses, terraformed, throughWorker } from './cards';
 import { type AimedCard, type Catalogue, cardOf, catalogued, deckOf } from './catalogue';
-import { admitted, apply, type Command, outcome, refusalOf } from './chronicle';
+import { admitted, apply, byHand, type Command, outcome, refusalOf } from './chronicle';
 import {
   actionOf,
   assignTo,
+  attackOn,
   buildingAt,
+  builtOn,
   CATALOGUE,
   type Carrying,
   CITY,
   camped,
   cityOf,
+  dealing,
   endedTurn,
   everyCard,
   FOOD,
@@ -27,6 +30,7 @@ import {
   settledLaunch,
   stagedBy,
   standing,
+  UPHEAVAL,
   unitNamed,
   WORKER,
   withTile,
@@ -343,6 +347,94 @@ test('a settle card aimed at nothing is refused on a tile', () => {
   const opened = opening(plains(3), { deck: { cards: [], settle: ['PH_Stores', 'PH_Settle'] } });
 
   expect(stagedBy(opened, aimedAt(CITY))).toEqual(['refused']);
+});
+
+/** A deck whose settle section enters two workers before the city settles, and holds no card besides. */
+const BANDS = { cards: [], settle: ['PH_Band', 'PH_Band', 'PH_Settle'] };
+
+test('a settle card entering a unit admits every charted tile the unit stands on with no unit on it', () => {
+  const rough = { q: 1, r: 0 };
+  const camp = { q: 0, r: 1 };
+  const out = { q: 3, r: 0 };
+  const taken = { q: -1, r: 1 };
+  const opened = opening(camped(madeOf(plains(3), 'mountain', [rough]), [camp]), { deck: BANDS });
+  const entered = outcome(apply(CATALOGUE, opened, aimedAt(taken)));
+
+  expect(refusedFor(entered, 'PH_Band', out)).toBe('uncharted');
+  expect(refusedFor(entered, 'PH_Band', rough)).toBe('terrain');
+  expect(refusedFor(entered, 'PH_Band', taken)).toBe('standing');
+  expect(refusedFor(entered, 'PH_Band', camp)).toBeUndefined();
+  expect(admittedTiles(entered, 'PH_Band').map(tileKey).sort()).toEqual(
+    entered.snapshots
+      .filter((snapshot) => standsOn(CATALOGUE, CATALOGUE.units.PH_Worker, snapshot.tile))
+      .filter((snapshot) => tileKey(snapshot) !== tileKey(taken))
+      .map(tileKey)
+      .sort(),
+  );
+  for (const tile of [out, rough, taken]) {
+    expect(stagedBy(entered, aimedAt(tile))).toEqual(['refused']);
+  }
+});
+
+test('a settle card entering a unit puts it on its tile full, takes no inhabitant and leaves the chronicle, before the settle and after it', () => {
+  const at = { q: 1, r: 1 };
+  const opened = opening(plains(3), { deck: BANDS });
+
+  const stages = apply(CATALOGUE, opened, aimedAt(at));
+  const before = outcome(stages);
+  const settled = outcome(
+    apply(CATALOGUE, before, { type: 'play', index: 1, aim: 'tile', tile: CITY }),
+  );
+  const after = outcome(apply(CATALOGUE, settled, aimedAt(CITY)));
+
+  expect(stages.map((stage) => stage.name)).toEqual(['played']);
+  expect(before.units).toHaveLength(1);
+  const [band] = before.units;
+  expect(band.faction).toBe('player');
+  expect(band.tile).toEqual(at);
+  expect(band.stats).toEqual(CATALOGUE.units.PH_Worker);
+  expect(band.movePoints).toBe(band.stats.move);
+  expect(band.action).toBe(band.stats.action);
+  expect(before.population).toBe(0);
+  expect(before.hand).toEqual(['PH_Band', 'PH_Settle']);
+  expect(before.discardPile).toEqual([]);
+
+  expect(settled.city).toEqual(CITY);
+  expect(after.units).toHaveLength(2);
+  expect(after.units[1].tile).toEqual(CITY);
+  expect(after.population).toBe(settled.population);
+  expect(after.hand).toEqual([]);
+  expect(after.discardPile).toEqual([]);
+});
+
+test('a unit entered on turn 0 neither moves nor attacks, and nothing is offered for it, until turn 1', () => {
+  const warrior = { q: 1, r: 0 };
+  const enemy = { q: 2, r: 0 };
+  const onto = { q: 1, r: -1 };
+  const opened = withUnits(opening(plains(3), { deck: BANDS }), [
+    standing('player', warrior),
+    standing('enemy', enemy),
+  ]);
+  const entered = outcome(apply(CATALOGUE, opened, aimedAt({ q: 0, r: 1 })));
+
+  for (const id of [1, 3]) {
+    expect(byHand(CATALOGUE, entered, unitNamed(entered, id))).toEqual({
+      landings: [],
+      targets: [],
+    });
+    expect(stagedBy(entered, { type: 'move', unit: id, tile: onto })).toEqual(['refused']);
+  }
+  expect(stagedBy(entered, attackOn(1, enemy))).toEqual(['refused']);
+
+  const settled = outcome(
+    apply(CATALOGUE, entered, { type: 'play', index: 1, aim: 'tile', tile: { q: -1, r: 0 } }),
+  );
+  const ticked = outcome(apply(CATALOGUE, settled, { type: 'end-turn' }));
+
+  expect(ticked.turn).toBe(1);
+  expect(byHand(CATALOGUE, ticked, unitNamed(ticked, 3)).landings.length).toBeGreaterThan(0);
+  expect(stagedBy(ticked, { type: 'move', unit: 3, tile: onto })).toEqual(['move']);
+  expect(stagedBy(ticked, attackOn(1, enemy))).toEqual(['attack']);
 });
 
 test('a card whose effect names a building, an improvement or a terrain the catalogue lacks is refused where it lands', () => {
@@ -675,18 +767,36 @@ test('the urbanisation card terraforms the plain a worker stands on, inside the 
   }
 });
 
-test('a terraformed tile loses its feature and keeps the improvements on it', () => {
+test('a terraformed tile loses its feature and every improvement not naming the new terrain, and keeps the ones that do', () => {
   const at = { q: 1, r: 0 };
   const city = withTile(
     workedTile(at, 'plain', { hand: ['PH_Urbanisation'], resources: production(5) }),
-    { ...at, terrain: 'plain', feature: 'PH_Fertile', improvements: ['PH_Mine'] },
+    { ...at, terrain: 'plain', feature: 'PH_Fertile', improvements: ['PH_Mine', 'PH_Road'] },
   );
 
   const after = tileAt(outcome(apply(CATALOGUE, city, aimedAt(at))).tiles, at);
 
   expect(after?.terrain).toBe('urban');
   expect(after?.feature).toBeUndefined();
-  expect(after?.improvements).toEqual(['PH_Mine']);
+  expect(after?.improvements).toEqual(['PH_Road']);
+});
+
+test('an event’s terraform removes the building that does not stand on the new terrain, and keeps the one that does', () => {
+  const upheaval = { timeline: dealing({ turn: 2, event: 'PH_Upheaval' }) };
+  const farmed = cityOf(['urban', 'plain'], {
+    ...upheaval,
+    tiles: builtOn(field(2), 'PH_Farm', [UPHEAVAL]),
+  });
+  const camp = cityOf(['urban', 'plain'], { ...upheaval, tiles: camped(field(2), [UPHEAVAL]) });
+
+  const razed = tileAt(endedTurn(farmed, 'PH_Quake').tiles, UPHEAVAL);
+  const kept = tileAt(endedTurn(camp, 'PH_Quake').tiles, UPHEAVAL);
+
+  expect(buildingAt(farmed, UPHEAVAL)).toBe('PH_Farm');
+  expect(razed?.terrain).toBe('forest');
+  expect(razed?.building).toBeUndefined();
+  expect(kept?.terrain).toBe('forest');
+  expect(kept?.building).toBe(CATALOGUE.camp.building);
 });
 
 test('a terraform leaves the rivers where they run: a river lies on no tile', () => {
