@@ -33,9 +33,9 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **neutral** | A non-player unit that does not attack. | NPC, city-state, friendly |
 | **enemy** | A non-player unit that attacks. | barbarian, raider, hostile, invader, foe |
 | **killed** | What happens to a unit that loses: it leaves the map. | destroyed, slain, dead, lost |
-| **event** | One entry of the age's schedule; what the chronicle throws at the city. | disaster, threat, crisis, encounter |
-| **capstone** | The age's final trial, known from the chronicle's opening on a turn that is not; passing it is victory. | boss, finale, objective |
-| **schedule** | An age's set of events with their turn-shifting weights, and its tempo: the spacing, how many a deal holds, the capstone's window and span. What a timeline is rolled from. | calendar |
+| **event** | One entry of the age's schedule: a problem the chronicle throws at the city, dealt with its answers. | disaster, threat, crisis, encounter |
+| **capstone** | The age's final trial, known from the chronicle's opening on a turn that is not; passing it — its span ended, or its condition met — is victory. | boss, finale, objective |
+| **schedule** | An age's set of events with their turn-shifting weights, and its tempo: the spacing, the capstone's window and span. What a timeline is rolled from. | calendar |
 | **timeline** | One chronicle's roll of its schedule, made when the chronicle opens: each deal ahead on its turn, and the capstone's turn and last. Internal: the player is never shown it, and learns each event when it lands. | forecast, agenda, itinerary |
 | **camp** | A generated site enemies enter the map from, filling its tile's building slot; captured, it leaves the map. | lair, nest, spawn point, spawner |
 | **victory** | The end of a chronicle by passing the capstone. | win, success, triumph |
@@ -97,4 +97,4 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **occupy** | What an enemy does to a tile it stands on: the tile yields nothing and is not claimable. | blockade |
 | **pillage** | What some enemies do to the tile they stand on: its building or improvement is destroyed. | raze, loot, burn |
 | **capture** | To take a site by standing on its tile through a full turn: an enemy captures the city (defeat), the player captures a camp. | conquer, seize, sack |
-| **reward** | What capturing a site on the map gives: a camp's is a card laid in the discard pile. | gift, prize, bounty |
+| **reward** | What capturing a site on the map gives: the cards a camp's capture deals as an event deals its answers, the one taken laid in the discard pile. | gift, prize, bounty |
