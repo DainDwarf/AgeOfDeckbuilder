@@ -32,7 +32,6 @@ import {
   stagedBy,
   standing,
   TILLAGE,
-  withTile,
   withUnits,
   worker,
 } from './fixtures';
@@ -769,13 +768,31 @@ function awaitingTillage(carrying: Carrying = {}): Chronicle {
   });
 }
 
-/** The chronicle with the tillage's building standing on the tilled tile. */
+/**
+ * What a city carries to build the tillage's building: a worker on the tilled tile, the farm card
+ * coming around to the hand, and the production to pay for it.
+ */
+const FARMING: Carrying = {
+  units: [worker(TILLED)],
+  drawPile: ['PH_Farm'],
+  resources: { food: 0, production: 99, military: 0, money: 0, science: 0, culture: 0 },
+};
+
+/** The chronicle with the farm card in its hand played on the tilled tile. A refused play throws. */
 function tilled(chronicle: Chronicle): Chronicle {
-  return withTile(chronicle, { ...TILLED, terrain: 'plain', improvements: [], building: TILLAGE });
+  const play: Command = {
+    type: 'play',
+    index: chronicle.hand.indexOf('PH_Farm'),
+    aim: 'tile',
+    tile: TILLED,
+  };
+  const played = outcome(apply(CATALOGUE, chronicle, play));
+  if (played === chronicle) throw new Error('the farm is refused on the tilled tile');
+  return played;
 }
 
 test('a capstone’s condition ends the chronicle in victory at the end of the first turn it holds, its landing turn included', () => {
-  const landed = endedTurn(awaitingTillage());
+  const landed = endedTurn(awaitingTillage(FARMING));
   let later = landed;
   for (let turn = 1; turn <= 3; turn++) {
     later = endedTurn(later);
@@ -811,7 +828,15 @@ test('a capstone’s condition holding before the capstone lands passes nothing'
 
 test('a city captured in the enemy phase of the turn a capstone’s condition holds is defeated', () => {
   const captured = endedTurn(
-    tilled(awaitingTillage({ turn: CAPSTONE, units: [standing('enemy', CITY)] })),
+    tilled(
+      awaitingTillage({
+        ...FARMING,
+        turn: CAPSTONE,
+        drawPile: [],
+        hand: ['PH_Farm'],
+        units: [worker(TILLED), standing('enemy', CITY)],
+      }),
+    ),
   );
 
   expect(captured.ending).toEqual({ outcome: 'defeat', cause: 'capture', turn: CAPSTONE });
