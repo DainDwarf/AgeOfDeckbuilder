@@ -339,6 +339,16 @@ test('a settle card is refused on an uncharted tile, on a terrain its content ta
   }
 });
 
+test('a settle card aimed at nothing is played on turn 0 where it stands, on no tile, and leaves the chronicle', () => {
+  const opened = opening(plains(3), { deck: { cards: [], settle: ['PH_Stores', 'PH_Settle'] } });
+
+  const stocked = outcome(apply(CATALOGUE, opened, { type: 'play', index: 0, aim: 'none' }));
+
+  expect(stagedBy(opened, aimedAt(CITY))).toEqual(['refused']);
+  expect(stocked.resources.food).toBe(opened.resources.food + 2);
+  expect(everyCard(stocked)).toEqual(['PH_Settle']);
+});
+
 test('a card whose effect names a building, an improvement or a terrain the catalogue lacks is refused where it lands', () => {
   const at = { q: 1, r: 0 };
   const onPlain = (catalogue: Catalogue, _chronicle: Chronicle, tile: Tile) =>

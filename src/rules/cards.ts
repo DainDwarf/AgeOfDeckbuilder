@@ -13,24 +13,35 @@ export type CardKind = (typeof CARD_KINDS)[number];
 
 /**
  * How a card is played, whatever its kind: what it is aimed at, and what it does with what it was
- * aimed at. A settle card refuses an uncharted tile before it asks its own reasons. A hazard is
- * aimed at nothing and does nothing when it is played.
+ * aimed at. A hazard is aimed at nothing and does nothing when it is played.
  */
 export function aimOf(card: Card): Aim {
   switch (card.kind) {
     case 'settle':
-      return {
-        aim: 'tile',
-        refuses: (catalogue, chronicle, tile) =>
-          firstRefusal(chartedTile(chronicle, tile), card.refuses(catalogue, chronicle, tile)),
-        effect: card.effect,
-      };
+      return charted(card);
     case 'unit':
     case 'building':
     case 'instant':
       return card;
     case 'hazard':
       return { aim: 'none', effect: (_catalogue, paid) => paid };
+  }
+}
+
+/** A settle card's aim: aimed at a tile, it asks for the tile charted before its own reasons. */
+function charted(aim: Aim): Aim {
+  switch (aim.aim) {
+    case 'tile':
+      return {
+        aim: 'tile',
+        refuses: (catalogue, chronicle, tile) =>
+          firstRefusal(chartedTile(chronicle, tile), aim.refuses(catalogue, chronicle, tile)),
+        effect: aim.effect,
+      };
+    case 'none':
+    case 'unit':
+    case 'discard-pile':
+      return aim;
   }
 }
 
@@ -96,7 +107,10 @@ export function firstRefusal(...checks: readonly (TileBlock | undefined)[]): Til
   return checks.find((reason) => reason !== undefined);
 }
 
-/** A tile that has been in sight, in sight now or in fog: what a settle card is aimed at. */
+/**
+ * A tile that has been in sight, in sight now or in fog: what a settle card aimed at a tile is
+ * aimed at.
+ */
 export function chartedTile(chronicle: Chronicle, tile: TileCoords): TileBlock | undefined {
   const at = tileKey(tile);
   return chronicle.snapshots.some((snapshot) => tileKey(snapshot) === at) ? undefined : 'uncharted';

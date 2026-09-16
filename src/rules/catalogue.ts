@@ -70,11 +70,12 @@ export type Aim =
  * A card: its kind, which a list of cards sorts and labels by, and its cost. The kinds the player's
  * deck holds declare the aim and effect they are played through, and the noun such a card names —
  * the unit it puts on the map, the building it builds — is named by its effect and nowhere else. A
- * settle card is aimed at a tile, and asks its own reasons of a tile once the kind has asked for it
- * charted. A hazard declares its strike alone, its kind fixing everything else about it.
+ * settle card is played through whatever aim it declares, and one aimed at a tile asks its own
+ * reasons of a tile once the kind has asked for it charted. A hazard declares its strike alone, its
+ * kind fixing everything else about it.
  */
 export type Card = { readonly cost: Partial<Resources> } & (
-  | ({ readonly kind: 'settle' } & Extract<Aim, { readonly aim: 'tile' }>)
+  | ({ readonly kind: 'settle' } & Aim)
   | ({
       readonly kind: 'unit' | 'building' | 'instant';
       readonly singleUse?: true;
@@ -153,12 +154,12 @@ export type Catalogue = MapContent & {
  * a schedule, the camp and the city name is held; every biome rolls some rim width; no building or
  * improvement names a movement cost below one hundredth of a move point; no region keeps its camps
  * within the centre part's reach plus the city's sight; no section of a deck holds a hazard or the
- * camp's reward, a deck's settle section holds a settle card and its cards none; no schedule deals
- * its capstone among its entries; a schedule deals and spans at least one, and each of its spans
- * rolls from one at least to no less than its least; an event with a second script is some
- * schedule's capstone; the camp's unit stands on every terrain its building names; the city's
- * building stands on the city's terrain; and the city's sight and its idle count are none below
- * nought. A card's closures and an event's are neither run nor read here.
+ * camp's reward, a deck's settle section holds settle cards alone and at least one, and its cards
+ * none; no schedule deals its capstone among its entries; a schedule deals and spans at least one,
+ * and each of its spans rolls from one at least to no less than its least; an event with a second
+ * script is some schedule's capstone; the camp's unit stands on every terrain its building names;
+ * the city's building stands on the city's terrain; and the city's sight and its idle count are none
+ * below nought. A card's closures and an event's are neither run nor read here.
  */
 export function catalogued(content: Catalogue): Catalogue {
   for (const [id, kind] of Object.entries(content.units)) {
@@ -214,8 +215,14 @@ export function catalogued(content: Catalogue): Catalogue {
         refuse(content, `the deck ${id} holds the settle card ${card} among its cards`);
       }
     }
-    if (!deck.settle.some((card) => cardOf(content, card).kind === 'settle')) {
+    if (deck.settle.length === 0) {
       refuse(content, `the deck ${id} holds no settle card in its settle section`);
+    }
+    for (const card of deck.settle) {
+      const { kind } = cardOf(content, card);
+      if (kind !== 'settle') {
+        refuse(content, `the deck ${id} holds the ${kind} ${card} in its settle section`);
+      }
     }
   }
 

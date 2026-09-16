@@ -299,17 +299,16 @@ test('the end of turn 0 runs none of the cycle: turn 1 and its hand drawn, no in
   expect(everyCard(after)).toEqual([...DECK.cards].sort());
 });
 
-test('any card played on turn 0 leaves the chronicle, and the hand holds the settle section in the deck’s order', () => {
-  const opened = opening(plains(3), { deck: { cards: [], settle: ['PH_Harvest', 'PH_Settle'] } });
-  const paying: Chronicle = { ...opened, resources: { ...opened.resources, science: 1 } };
+test('a settle card played leaves the chronicle, and the hand holds the settle section in the deck’s order', () => {
+  const opened = opening(plains(3), { deck: { cards: [], settle: ['PH_Stores', 'PH_Settle'] } });
 
-  const harvested = outcome(apply(CATALOGUE, paying, { type: 'play', index: 0, aim: 'none' }));
+  const stocked = outcome(apply(CATALOGUE, opened, { type: 'play', index: 0, aim: 'none' }));
 
-  expect(opened.hand).toEqual(['PH_Harvest', 'PH_Settle']);
-  expect(harvested.resources.food).toBe(2);
-  expect(harvested.hand).toEqual(['PH_Settle']);
-  expect(harvested.discardPile).toEqual([]);
-  expect(everyCard(harvested)).toEqual(['PH_Settle']);
+  expect(opened.hand).toEqual(['PH_Stores', 'PH_Settle']);
+  expect(stocked.resources.food).toBe(2);
+  expect(stocked.hand).toEqual(['PH_Settle']);
+  expect(stocked.discardPile).toEqual([]);
+  expect(everyCard(stocked)).toEqual(['PH_Settle']);
 });
 
 test('a chronicle that has ended takes no command at all', () => {

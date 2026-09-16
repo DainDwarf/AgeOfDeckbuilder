@@ -22,15 +22,7 @@ import {
   throughWorker,
   unimproved,
 } from './cards';
-import {
-  type Catalogue,
-  cardOf,
-  catalogued,
-  type Deck,
-  deckOf,
-  type Entering,
-  entered,
-} from './catalogue';
+import { type Catalogue, catalogued, type Deck, deckOf, type Entering, entered } from './catalogue';
 import { apply, beginChronicle, type Command, launched, outcome } from './chronicle';
 import { arrived, bordered } from './city';
 import {
@@ -99,11 +91,17 @@ export const CATALOGUE: Catalogue = catalogued({
         settled(catalogue, terraformed(catalogue, paid, at, catalogue.city.terrain), at),
     },
     PH_Claim: {
-      kind: 'instant',
+      kind: 'settle',
       cost: {},
       aim: 'tile',
       refuses: (catalogue, chronicle, tile) => claimableTile(catalogue, chronicle, tile),
       effect: (_catalogue, paid, at) => bordered(arrived(paid), at),
+    },
+    PH_Stores: {
+      kind: 'settle',
+      cost: {},
+      aim: 'none',
+      effect: (_catalogue, paid) => gained(paid, { food: 2 }),
     },
     PH_Worker: { kind: 'unit', cost: { food: 2 }, ...enters('PH_Worker') },
     PH_Warrior: { kind: 'unit', cost: { military: 2 }, ...enters('PH_Warrior') },
@@ -498,20 +496,19 @@ export function opening(
   return beginChronicle(CATALOGUE, 7, deck, { tiles, rivers: [], centre }, timeline);
 }
 
-/** The chronicle with the first settle card of its hand played on a tile, refused or not. */
+/** The chronicle with the first card of its hand played on a tile, refused or not. */
 export function settledOn(
   chronicle: Chronicle,
   tile: TileCoords,
   catalogue: Catalogue = CATALOGUE,
 ): Chronicle {
-  const index = chronicle.hand.findIndex((id) => cardOf(catalogue, id).kind === 'settle');
-  return outcome(apply(catalogue, chronicle, { type: 'play', index, aim: 'tile', tile }));
+  return outcome(apply(catalogue, chronicle, { type: 'play', index: 0, aim: 'tile', tile }));
 }
 
 /**
- * A chronicle launched as the boot launches one, its settle card played on a tile — the centre tile
- * unless the fixture names another — and turn 0 ended, all through the rules: turn 1 as that end
- * leaves it, standing on the deal where turn 1 deals one. A settle the tile refuses throws.
+ * A chronicle launched as the boot launches one, the first card of its hand played on a tile — the
+ * centre tile unless the fixture names another — and turn 0 ended, all through the rules: turn 1 as
+ * that end leaves it, standing on the deal where turn 1 deals one. A settle the tile refuses throws.
  */
 export function settledLaunch(
   catalogue: Catalogue,

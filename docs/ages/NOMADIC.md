@@ -8,7 +8,7 @@ The Nomadic Age is where humanity stops wandering, and it is the first chronicle
 
 ## The settle ✅
 
-The deck's settle section holds three cards, each costing nothing: the settle card, a worker card and a scout card, the two units taking no inhabitant — the band arrives with them. Turn 0 is the two acts the age is named for: choose where to stop, and send someone out. The settle lands on plain, forest or hills; water and mountain refuse it. The city keeps the terrain it lands on, and its building gives **military and culture** on top of that terrain and nothing else. Nothing on the map yields military, so the city is where warriors come from, and the site is a choice a new player reads off the map: a plain feeds growth, hills and forest give production, and a river beside any of them is worth a tile more. A city building that also fed a poor site was rejected: it is the safety net the dogmas forbid.
+The deck's settle section holds three settle cards, each costing nothing: the one that settles the city, a worker and a scout, the two units taking no inhabitant — the band arrives with them. Turn 0 is the two acts the age is named for: choose where to stop, and send someone out. The settle lands on plain, forest or hills; water and mountain refuse it. The city keeps the terrain it lands on, and its building gives **military and culture** on top of that terrain and nothing else. Nothing on the map yields military, so the city is where warriors come from, and the site is a choice a new player reads off the map: a plain feeds growth, hills and forest give production, and a river beside any of them is worth a tile more. A city building that also fed a poor site was rejected: it is the safety net the dogmas forbid.
 
 ## The land ✅
 

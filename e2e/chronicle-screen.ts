@@ -46,9 +46,9 @@ export type Border = 'ring' | 'bare';
 /**
  * The chronicle the screen opens on a seed, a deck and a schedule, launched exactly as the boot
  * launches it — on the schedule the boot takes when the address names none, unless one is given —
- * and settled exactly as `open` settles it: the settle card played on the centre tile, or on the
- * tile given, the free claims played on the six tiles around it unless the city is asked for bare,
- * and turn 0 ended, a deal turn 1 stops on left standing.
+ * and settled exactly as `open` settles it: the first card of the hand played on the centre tile, or
+ * on the tile given, the free claims played on the six tiles around it unless the city is asked for
+ * bare, and turn 0 ended, a deal turn 1 stops on left standing.
  */
 export function launch(
   seed: number,
@@ -58,8 +58,9 @@ export function launch(
   border: Border = 'ring',
 ): Chronicle {
   const opened = launched(STAND_IN, STAND_IN_REGION, schedule, seed, deck);
-  const index = opened.hand.findIndex((id) => cardOf(STAND_IN, id).kind === 'settle');
-  let settling = outcome(apply(STAND_IN, opened, { type: 'play', index, aim: 'tile', tile: at }));
+  let settling = outcome(
+    apply(STAND_IN, opened, { type: 'play', index: 0, aim: 'tile', tile: at }),
+  );
   if (settling.city === undefined)
     throw new Error(`seed ${seed} settles no city on ${tileKey(at)}`);
   switch (border) {
@@ -139,7 +140,7 @@ export async function open(
 }
 
 /**
- * The settle as a player makes it on turn 0: the settle card dragged out of the hand, the centre
+ * The settle as a player makes it on turn 0: the first card of the hand dragged out, the centre
  * tile or the tile given pressed, the free claims played on the six tiles around the city unless it
  * is asked for bare, and the turn ended.
  */
@@ -148,11 +149,7 @@ export async function settle(
   at: TileCoords = CENTRE,
   border: Border = 'ring',
 ): Promise<void> {
-  const { hand } = await chronicleOf(page);
-  await dragOut(
-    page,
-    hand.findIndex((id) => cardOf(STAND_IN, id).kind === 'settle'),
-  );
+  await dragOut(page, 0);
   await aimed(page);
   await click(page, `tile-${tileKey(at)}`);
   await playedOut(page);

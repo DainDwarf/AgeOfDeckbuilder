@@ -422,10 +422,9 @@ function blocked(catalogue: Catalogue, chronicle: Chronicle, id: CardId): Block[
 /**
  * One card played: the aim is judged on the chronicle as it stands, the same one the map lit its
  * tiles from; then, on the one `played` stage, the card has left the hand for the discard pile — or
- * for nowhere at all, as a settle card, a single use card, a hazard and any card played on turn 0
- * do — its cost is paid and its effect has landed. A
- * play the hand, the city, the map or the discard pile refuses is one `refused` stage on the
- * chronicle as it stood, nothing paid or discarded.
+ * for nowhere at all, as a settle card, a single use card and a hazard do — its cost is paid and its
+ * effect has landed. A play the hand, the city, the map or the discard pile refuses is one `refused`
+ * stage on the chronicle as it stood, nothing paid or discarded.
  */
 function play(catalogue: Catalogue, chronicle: Chronicle, command: PlayCommand): Stage[] {
   const id = chronicle.hand[command.index];
@@ -441,10 +440,9 @@ function play(catalogue: Catalogue, chronicle: Chronicle, command: PlayCommand):
     ...chronicle,
     resources,
     hand: chronicle.hand.filter((_, at) => at !== command.index),
-    discardPile:
-      chronicle.turn === 0 || leavesChronicle(cardOf(catalogue, id))
-        ? chronicle.discardPile
-        : [...chronicle.discardPile, id],
+    discardPile: leavesChronicle(cardOf(catalogue, id))
+      ? chronicle.discardPile
+      : [...chronicle.discardPile, id],
   };
   return [{ name: 'played', chronicle: effect(paid) }];
 }

@@ -133,7 +133,7 @@ export const STAND_IN: Catalogue = catalogued({
         settled(catalogue, terraformed(catalogue, paid, at, catalogue.city.terrain), at),
     },
     PH_Claim: {
-      kind: 'instant',
+      kind: 'settle',
       cost: {},
       aim: 'tile',
       refuses: (catalogue, chronicle, tile) => claimableTile(catalogue, chronicle, tile),
