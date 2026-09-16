@@ -1,4 +1,5 @@
 import { expect, test } from 'vitest';
+import { type Catalogue, catalogued, unitKind } from './catalogue';
 import { apply, outcome } from './chronicle';
 import { cityCommand, claimable } from './city';
 import {
@@ -33,6 +34,7 @@ import {
 import { distance, MOVE_POINT, type River, type TileCoords, tileKey } from './map';
 import { regionOf, terrainKind } from './map-kinds';
 import { RESOURCES } from './resources';
+import { seedRng } from './rng';
 import type { Chronicle } from './state';
 
 /** A timeline dealing the raid on the second turn, and no other deal. */
@@ -211,6 +213,147 @@ test('a chronicle whose every camp is captured takes no raider at all', () => {
   expect(raided.turn).toBe(2);
   expect(raided.tiles.some((tile) => tile.building === CATALOGUE.camp.building)).toBe(false);
   expect(enemiesOf(raided)).toEqual([]);
+});
+
+/** The fixture's content with its camp rolling at these odds. */
+function rolling(odds: number): Catalogue {
+  return catalogued({ ...CATALOGUE, camp: { ...CATALOGUE.camp, odds } });
+}
+
+/** Every camp the end of turn stages a warrior entering on, as the tile each stood on. */
+function entriesOf(catalogue: Catalogue, chronicle: Chronicle): string[] {
+  return apply(catalogue, chronicle, { type: 'end-turn' }).flatMap((stage) =>
+    stage.name === 'camp-enter' ? [tileKey(stage.tile)] : [],
+  );
+}
+
+/** The fixture's camps in the order the map lists their tiles. */
+function campsInTileOrder(chronicle: Chronicle): string[] {
+  return chronicle.tiles.filter((tile) => tile.building === CATALOGUE.camp.building).map(tileKey);
+}
+
+test('at odds of one every free camp enters a warrior once the enemies have acted, a stage each in tile order ahead of the captures, and none on a camp a unit stands on', () => {
+  const held = { q: 4, r: 0 };
+  const guarded = { q: 0, r: -4 };
+  const city = cityOf(['urban'], {
+    ...NO_GROWTH,
+    tiles: camped(field(4), CAMPS),
+    drawPile: fullDraw(),
+    units: [
+      standing('player', held),
+      standing('enemy', guarded, { move: 0 }),
+      standing('enemy', { q: 3, r: 0 }, { move: 0 }),
+    ],
+  });
+  const free = campsInTileOrder(city).filter(
+    (camp) => camp !== tileKey(held) && camp !== tileKey(guarded),
+  );
+
+  const staged = apply(rolling(1), city, { type: 'end-turn' }).map((stage) => stage.name);
+
+  expect(staged).toEqual(['income', 'attack', ...free.map(() => 'camp-enter'), 'camp-capture']);
+  expect(entriesOf(rolling(1), city)).toEqual(free);
+});
+
+test('a warrior a camp rolls stands on the camp with the camp’s unit’s stats, its move points and its action full when the turn ends', () => {
+  const city = cityOf(['urban'], {
+    ...NO_GROWTH,
+    tiles: camped(field(4), CAMPS),
+    drawPile: fullDraw(),
+  });
+  const stats = unitKind(CATALOGUE, CATALOGUE.camp.unit);
+
+  const after = outcome(apply(rolling(1), city, { type: 'end-turn' }));
+
+  expect(after.turn).toBe(city.turn + 1);
+  expect(
+    after.units.map((unit) => ({
+      tile: tileKey(unit.tile),
+      stats: unit.stats,
+      movePoints: unit.movePoints,
+      action: unit.action,
+      script: unit.faction === 'enemy' ? unit.script : undefined,
+    })),
+  ).toEqual(
+    campsInTileOrder(city).map((tile) => ({
+      tile,
+      stats,
+      movePoints: stats.move,
+      action: stats.action,
+      script: CATALOGUE.camp.script,
+    })),
+  );
+});
+
+test('a camp its warrior walked off in the enemy phase rolls at the same phase', () => {
+  const camp = { q: 4, r: 0 };
+  const city = cityOf(['urban'], {
+    ...NO_GROWTH,
+    tiles: camped(field(4), [camp]),
+    drawPile: fullDraw(),
+    units: [standing('enemy', camp)],
+  });
+
+  const after = outcome(apply(rolling(1), city, { type: 'end-turn' }));
+
+  expect(entriesOf(rolling(1), city)).toEqual([tileKey(camp)]);
+  expect(enemiesOf(after).filter((unit) => tileKey(unit.tile) === tileKey(camp))).toHaveLength(1);
+  expect(enemiesOf(after)).toHaveLength(2);
+});
+
+test('at odds of nought no camp enters a warrior and no stage is raised, and every free camp draws all the same', () => {
+  const carrying = { ...NO_GROWTH, drawPile: fullDraw() };
+  const city = cityOf(['urban'], { ...carrying, tiles: camped(field(4), CAMPS) });
+  const empty = cityOf(['urban'], { ...carrying, tiles: field(4) });
+  const rngAt = (odds: number): Chronicle['rng'] =>
+    outcome(apply(rolling(odds), city, { type: 'end-turn' })).rng;
+
+  const after = outcome(apply(rolling(0), city, { type: 'end-turn' }));
+
+  expect(stagedBy(city, { type: 'end-turn' })).toEqual(stagedBy(empty, { type: 'end-turn' }));
+  expect(enemiesOf(after)).toEqual([]);
+  expect(rngAt(0)).toEqual(rngAt(0.5));
+  expect(rngAt(0)).toEqual(rngAt(1));
+  expect(rngAt(0)).not.toEqual(outcome(apply(rolling(0), empty, { type: 'end-turn' })).rng);
+});
+
+test('at odds of a half a seed enters on the same camps every time, and seeds differ in the camps they enter on', () => {
+  const rolledOn = (seed: number): string =>
+    entriesOf(
+      rolling(0.5),
+      cityOf(['urban'], {
+        ...NO_GROWTH,
+        rng: seedRng(seed),
+        tiles: camped(field(4), CAMPS),
+        drawPile: fullDraw(),
+      }),
+    ).join(' ');
+  const seeds = [1, 2, 3, 4, 5, 6, 7, 8];
+
+  for (const seed of seeds) expect(rolledOn(seed)).toBe(rolledOn(seed));
+  expect(new Set(seeds.map(rolledOn)).size).toBeGreaterThan(1);
+});
+
+test('a city fallen in the enemy phase rolls no camp', () => {
+  const overrun = cityOf(['urban'], {
+    tiles: camped(field(4), CAMPS),
+    units: [standing('enemy', CITY)],
+  });
+
+  const fallen = outcome(apply(rolling(1), overrun, { type: 'end-turn' }));
+
+  expect(entriesOf(rolling(1), overrun)).toEqual([]);
+  expect(enemiesOf(fallen)).toHaveLength(1);
+  expect(fallen.rng).toEqual(overrun.rng);
+});
+
+test('turn 0’s end rolls no camp', () => {
+  const opening = cityOf(['urban'], { turn: 0, tiles: camped(field(4), CAMPS) });
+
+  const opened = outcome(apply(rolling(1), opening, { type: 'end-turn' }));
+
+  expect(entriesOf(rolling(1), opening)).toEqual([]);
+  expect(enemiesOf(opened)).toEqual([]);
 });
 
 test('two camps captured the turn before an event is due deal two deals of rewards, and the last take opens the turn on the event, taken in turn, the draw after the last', () => {

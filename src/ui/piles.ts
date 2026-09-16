@@ -136,6 +136,7 @@ export function createPiles(
         case 'draw':
         case 'attack':
         case 'move':
+        case 'camp-enter':
         case 'camp-capture':
           return undefined;
       }

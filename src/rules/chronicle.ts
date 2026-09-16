@@ -8,9 +8,10 @@ import {
   enemyScript,
 } from './catalogue';
 import { assign, type CityCommand, claim, grow, income, reassign } from './city';
+import { enteredOnCamp } from './enemies';
 import { generateMap, type HexMap, type TileCoords, tileAt, tileKey } from './map';
 import { refuse } from './map-kinds';
-import { seedRng, shuffle as shuffleItems } from './rng';
+import { nextRng, seedRng, shuffle as shuffleItems } from './rng';
 import {
   answered,
   answerOf,
@@ -130,14 +131,16 @@ export type PlainStage =
 /**
  * The shape every command resolves as: one step, and the chronicle it leaves behind. An `attack` is
  * one unit's attack, the player's by hand or an enemy's in the enemy phase, a `move` is one unit
- * crossing, the player's or the enemy phase's alike, and a `camp-capture` is one camp taken by the
- * unit standing on it; each names the tiles it happened between or on, because what the chronicle
- * after the step cannot say is carried on the step itself.
+ * crossing, the player's or the enemy phase's alike, a `camp-enter` is one warrior a camp rolled
+ * entering on it, and a `camp-capture` is one camp taken by the unit standing on it; each names the
+ * tiles it happened between or on, because what the chronicle after the step cannot say is carried
+ * on the step itself.
  */
 export type Stage = { readonly chronicle: Chronicle } & (
   | { readonly name: PlainStage }
   | { readonly name: 'attack'; readonly attacker: TileCoords; readonly target: TileCoords }
   | { readonly name: 'move'; readonly from: TileCoords; readonly to: TileCoords }
+  | { readonly name: 'camp-enter'; readonly tile: TileCoords }
   | { readonly name: 'camp-capture'; readonly tile: TileCoords }
 );
 
@@ -323,6 +326,9 @@ function endOfTurn(catalogue: Catalogue, chronicle: Chronicle): Stage[] {
     staged('grow', grow(standing));
     raised(enemyPhase(catalogue, standing));
     if (standing.ending !== undefined) return stages;
+    const rolled = campsRolled(catalogue, standing);
+    raised(rolled.stages);
+    standing = rolled.chronicle;
     raised(captures(catalogue, standing));
     if (standing.deals.length > 0) return stages;
   }
@@ -699,6 +705,31 @@ function enemyPhase(catalogue: Catalogue, chronicle: Chronicle): Stage[] {
   }
 
   return stages;
+}
+
+/**
+ * The camps rolling their own warriors, in tile order: each camp whose tile no unit stands on draws
+ * once from the seeded generator whatever its odds, and its unit enters on it where the draw falls
+ * under them. A stage each warrior entered, carrying the camp's tile. A draw that entered nothing
+ * raises no stage, so the chronicle the last draw left is handed back beside the stages.
+ */
+function campsRolled(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+): { readonly stages: Stage[]; readonly chronicle: Chronicle } {
+  const stages: Stage[] = [];
+  let standing = chronicle;
+  for (const { q, r, building } of chronicle.tiles) {
+    if (building !== catalogue.camp.building) continue;
+    if (unitAt(standing.units, { q, r }) !== undefined) continue;
+
+    const step = nextRng(standing.rng);
+    standing = { ...standing, rng: step.rng };
+    if (step.value >= catalogue.camp.odds) continue;
+    standing = enteredOnCamp(catalogue, standing, { q, r });
+    stages.push({ name: 'camp-enter', tile: { q, r }, chronicle: standing });
+  }
+  return { stages, chronicle: standing };
 }
 
 /**

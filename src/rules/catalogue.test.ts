@@ -29,6 +29,14 @@ test('a catalogue whose camp carries a script it does not hold is refused', () =
   expect(() => catalogued(content)).toThrow(/^fixture: /);
 });
 
+test('a catalogue whose camp rolls at odds below nought or above one is refused', () => {
+  const below = changed({ camp: { ...CATALOGUE.camp, odds: -0.1 } });
+  const above = changed({ camp: { ...CATALOGUE.camp, odds: 1.1 } });
+
+  expect(() => catalogued(below)).toThrow(/^fixture: /);
+  expect(() => catalogued(above)).toThrow(/^fixture: /);
+});
+
 test('a catalogue whose camp enters a unit that cannot stand on a camp’s terrain is refused', () => {
   const stuck = { ...CATALOGUE.units.PH_Warrior, move: 0 };
   const content = changed({ units: { ...CATALOGUE.units, PH_Warrior: stuck } });

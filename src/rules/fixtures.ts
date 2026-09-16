@@ -393,6 +393,7 @@ export const CATALOGUE: Catalogue = catalogued({
     script: 'advance',
     building: 'PH_Camp',
     rewards: ['PH_Spoils', 'PH_Cache'],
+    odds: 0,
   },
   city: { terrain: 'urban', building: 'PH_City', sight: 2, idle: 2 },
 });

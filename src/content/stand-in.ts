@@ -418,6 +418,7 @@ export const STAND_IN: Catalogue = catalogued({
     script: 'PH_Advance',
     building: 'PH_Camp',
     rewards: ['PH_Spoils'],
+    odds: 0,
   },
   city: { terrain: 'urban', building: 'PH_City', sight: 2, idle: 2 },
 });

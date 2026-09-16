@@ -152,6 +152,8 @@ export type Catalogue = MapContent & {
     readonly building: string;
     /** What a capture deals, in the order dealt. */
     readonly rewards: readonly string[];
+    /** The chance, at every enemy phase, that the camp's unit enters on a free camp. */
+    readonly odds: number;
   };
   readonly city: {
     readonly terrain: string;
@@ -172,9 +174,9 @@ export type Catalogue = MapContent & {
  * cards none; a schedule deals one event at least, its capstone is held, and each of its spans rolls from one at least to no
  * less than its least; an event a schedule deals among its entries deals two
  * answers at least; every event deals an answer costing no stock, every amount its cost names
- * nought; no answer is dealt by two events; the camp deals one reward at least; the camp's unit
- * stands on every terrain its building names; the city's building stands on the city's terrain; and
- * the city's sight and its idle count are none below nought. The closures of a card, an answer and
+ * nought; no answer is dealt by two events; the camp deals one reward at least and rolls at odds
+ * from nought to one; the camp's unit stands on every terrain its building names; the city's
+ * building stands on the city's terrain; and the city's sight and its idle count are none below nought. The closures of a card, an answer and
  * a capstone are neither run nor read here.
  */
 export function catalogued(content: Catalogue): Catalogue {
@@ -274,6 +276,8 @@ export function catalogued(content: Catalogue): Catalogue {
   enemyScript(content, content.camp.script);
   if (content.camp.rewards.length === 0) refuse(content, 'the camp deals no reward');
   for (const reward of content.camp.rewards) cardOf(content, reward);
+  const { odds } = content.camp;
+  if (!(odds >= 0 && odds <= 1)) refuse(content, `the camp rolls at odds of ${odds}`);
   for (const terrain of buildingKind(content, content.camp.building).terrains) {
     if (!standsOn(content, campUnit, { q: 0, r: 0, terrain, improvements: [] })) {
       refuse(content, `the camp's unit ${content.camp.unit} cannot stand on ${terrain}`);
