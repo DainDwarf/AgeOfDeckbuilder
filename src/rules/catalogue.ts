@@ -171,13 +171,13 @@ export type Catalogue = MapContent & {
  * improvement names a movement cost below one hundredth of a move point; no region keeps its camps
  * within the centre part's reach plus the city's sight; no section of a deck holds a hazard or any
  * of the camp's rewards, a deck's settle section holds settle cards alone and at least one, and its
- * cards none; a schedule deals one event at least, its capstone is held, and each of its spans rolls from one at least to no
- * less than its least; an event a schedule deals among its entries deals two
+ * cards none; a schedule deals one event at least, its capstone is held, and each of its spans rolls
+ * from one at least to no less than its least; an event a schedule deals among its entries deals two
  * answers at least; every event deals an answer costing no stock, every amount its cost names
  * nought; no answer is dealt by two events; the camp deals one reward at least and rolls at odds
  * from nought to one; the camp's unit stands on every terrain its building names; the city's
- * building stands on the city's terrain; and the city's sight and its idle count are none below nought. The closures of a card, an answer and
- * a capstone are neither run nor read here.
+ * building stands on the city's terrain; and the city's sight and its idle count are none below
+ * nought. The closures of a card, an answer and a capstone are neither run nor read here.
  */
 export function catalogued(content: Catalogue): Catalogue {
   for (const [id, kind] of Object.entries(content.units)) {
