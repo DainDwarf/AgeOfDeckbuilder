@@ -45,28 +45,31 @@ export function timelineOf(catalogue: Catalogue, id: string, rng: Rng): Timeline
 
 /**
  * The next deal rolled from a landing, every draw from the timeline's own generator: its due turn
- * from the spacing, then the draw on that turn.
+ * from the spacing, rolled again from that turn while no entry weighs anything on it, then one of the
+ * entries weighing anything on it drawn. A schedule whose entries weigh nothing on any turn from the
+ * landing on never ends the roll.
  */
 function rolledFrom(
   catalogue: Catalogue,
   timeline: Omit<Timeline, 'next'>,
   landing: number,
 ): Timeline {
-  const spaced = withinSpan(timeline.rng, scheduleOf(catalogue, timeline.schedule).spacing);
-  return drawnOn(catalogue, { ...timeline, rng: spaced.rng }, landing + spaced.turns);
-}
+  const { spacing, entries } = scheduleOf(catalogue, timeline.schedule);
+  const weighingOn = (turn: number): [string, number][] =>
+    Object.entries(entries)
+      .map(([entry, weight]): [string, number] => [entry, weight(turn)])
+      .filter(([, weight]) => weight > 0);
 
-/**
- * The deal due on a turn: one of the entries weighing anything on it, drawn from the timeline's own
- * generator, or none where no entry does, which draws nothing.
- */
-function drawnOn(catalogue: Catalogue, timeline: Omit<Timeline, 'next'>, turn: number): Timeline {
-  const weighing = Object.entries(scheduleOf(catalogue, timeline.schedule).entries)
-    .map(([entry, weight]): [string, number] => [entry, weight(turn)])
-    .filter(([, weight]) => weight > 0);
-  if (weighing.length === 0) return { ...timeline, next: { turn } };
+  let spaced = withinSpan(timeline.rng, spacing);
+  let turn = landing + spaced.turns;
+  let weighing = weighingOn(turn);
+  while (weighing.length === 0) {
+    spaced = withinSpan(spaced.rng, spacing);
+    turn += spaced.turns;
+    weighing = weighingOn(turn);
+  }
 
-  const drawn = pickWeighted(timeline.rng, weighing);
+  const drawn = pickWeighted(spaced.rng, weighing);
   return { ...timeline, rng: drawn.rng, next: { turn, event: drawn.picked } };
 }
 
@@ -89,14 +92,12 @@ export function spanEnded(chronicle: Chronicle, turns: number): boolean {
  * capstone lands on the chronicle as it stands, nothing is dealt whatever deal was ahead, and the
  * next deal is rolled from that turn; on the turn the next deal is due its event is dealt behind the
  * deals already standing, nothing landing until one of its answers is taken, and the next is rolled
- * from that turn; a due turn with no event deals nothing and makes the turn after it due, drawn on
- * without a roll of the spacing; any other turn changes nothing. `none` is a phase that dealt nothing,
- * though its timeline may have moved on.
+ * from that turn; any other turn changes nothing.
  */
 export function events(
   catalogue: Catalogue,
   chronicle: Chronicle,
-): { readonly phase: 'capstone' | 'deal' | 'none'; readonly chronicle: Chronicle } {
+): { readonly phase: 'capstone' | 'deal'; readonly chronicle: Chronicle } {
   const { timeline, turn } = chronicle;
   if (turn === timeline.capstone.turn) {
     const landed = capstoneOf(catalogue, timeline.capstone.id).lands(catalogue, chronicle);
@@ -107,13 +108,7 @@ export function events(
   }
 
   const { next } = timeline;
-  if (turn !== next.turn) return { phase: 'none', chronicle };
-  if (next.event === undefined) {
-    return {
-      phase: 'none',
-      chronicle: { ...chronicle, timeline: drawnOn(catalogue, timeline, turn + 1) },
-    };
-  }
+  if (turn !== next.turn) return { phase: 'deal', chronicle };
   return {
     phase: 'deal',
     chronicle: {

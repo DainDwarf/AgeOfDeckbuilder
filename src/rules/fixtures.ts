@@ -48,6 +48,9 @@ import type { Faction, Unit, UnitStats } from './units';
 
 const SIEGE_CAMPS = 5;
 
+/** A turn past any a test ends. */
+const FAR = 1000;
+
 /** The building whose standing on a tile the city holds passes the fixture's tillage. */
 export const TILLAGE = 'PH_Farm';
 
@@ -269,7 +272,7 @@ export const CATALOGUE: Catalogue = catalogued({
     quiet: {
       spacing: [3, 7],
       capstone: { id: 'PH_Tillage', window: [27, 33] },
-      entries: {},
+      entries: { PH_Hardship: (turn) => (turn >= FAR ? 1 : 0) },
     },
   },
   terrains: {
@@ -400,18 +403,19 @@ export const REGION = 'disc';
 /** The one schedule the fixture catalogue rolls its timelines from. */
 export const SCHEDULE = 'schedule';
 
-/** The schedule the fixture's handed-in timelines roll on from: it weighs no entry on any turn. */
+/** The schedule the fixture's handed-in timelines roll on from: it deals nothing before `FAR`. */
 export const QUIET = 'quiet';
 
 /**
- * A timeline dealing nothing: rolled on from a schedule with no entries, and the capstone on a turn
- * past any a test ends. What a fixture chronicle carries unless its test writes the deal it wants.
+ * A timeline dealing nothing: its next deal, and the capstone, on a turn past any a test ends, and
+ * rolled on from a schedule that deals nothing before then. What a fixture chronicle carries unless
+ * its test writes the deal it wants.
  */
 export const NO_DEALS: Timeline = {
   schedule: QUIET,
   rng: seedRng(7),
-  next: { turn: 1 },
-  capstone: { id: 'PH_Siege', turn: 1000 },
+  next: { turn: FAR, event: 'PH_Hardship' },
+  capstone: { id: 'PH_Siege', turn: FAR },
 };
 
 /** A timeline dealing this event on this turn and nothing after it, its capstone as `NO_DEALS` has it. */

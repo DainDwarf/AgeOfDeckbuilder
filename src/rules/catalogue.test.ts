@@ -221,6 +221,10 @@ test('a catalogue whose schedule deals an event it does not hold is refused', ()
   );
 });
 
+test('a catalogue whose schedule deals no event is refused', () => {
+  expect(() => catalogued(rescheduled({ entries: {} }))).toThrow(/^fixture: /);
+});
+
 test('a catalogue whose schedule names a capstone it does not hold is refused', () => {
   const { capstone } = CATALOGUE.schedules[SCHEDULE];
   const flood = rescheduled({ capstone: { ...capstone, id: 'PH_Flood' } });

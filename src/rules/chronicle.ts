@@ -334,8 +334,7 @@ function endOfTurn(catalogue: Catalogue, chronicle: Chronicle): Stage[] {
  * tick, the capstone's second script, the events phase, and the draw — or, while the events phase
  * leaves a deal standing, nothing after it: the hand waits on the take. The turn always ticks where
  * the victory does not end it, and the capstone's landing is staged on its turn even where it
- * changed nothing. An events phase that dealt nothing raises no stage: the timeline it moved on is
- * carried by the stage before it.
+ * changed nothing.
  */
 function turnOpened(catalogue: Catalogue, chronicle: Chronicle): Stage[] {
   if (passed(catalogue, chronicle)) return [{ name: 'victory', chronicle: victory(chronicle) }];
@@ -364,13 +363,6 @@ function turnOpened(catalogue: Catalogue, chronicle: Chronicle): Stage[] {
       staged('deal', phase.chronicle);
       if (standing.deals.length > 0) return stages;
       break;
-    case 'none': {
-      if (phase.chronicle === standing) break;
-      standing = phase.chronicle;
-      const last = stages.length - 1;
-      stages[last] = { ...stages[last], chronicle: standing };
-      break;
-    }
   }
   return [...stages, ...drawn(standing)];
 }

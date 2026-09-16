@@ -201,50 +201,6 @@ test('the blight is dealt as readily on the third turn as the twentieth', () => 
   expect(Math.max(...turns)).toBeGreaterThanOrEqual(20);
 });
 
-test('a due turn no event weighs anything on deals nothing, and the turn after it is due, until one does', () => {
-  const sparse: Catalogue = {
-    ...CATALOGUE,
-    schedules: {
-      ...CATALOGUE.schedules,
-      sparse: {
-        spacing: [3, 7],
-        capstone: { id: 'PH_Siege', window: [27, 33] },
-        entries: { PH_Hardship: (turn) => (turn >= 8 ? 1 : 0) },
-      },
-    },
-  };
-  let chronicle = cityOf(['urban'], {
-    ...NO_GROWTH,
-    tiles: camped(field(4), CAMPS),
-    timeline: { ...NO_DEALS, schedule: 'sparse', next: { turn: 4 } },
-  });
-
-  for (let turn = 2; turn < 8; turn++) {
-    const stages = apply(sparse, chronicle, { type: 'end-turn' });
-    chronicle = outcome(stages);
-
-    expect(chronicle.turn).toBe(turn);
-    expect(stages.map((stage) => stage.name)).not.toContain('deal');
-    expect(chronicle.deals).toEqual([]);
-  }
-  chronicle = outcome(apply(sparse, chronicle, { type: 'end-turn' }));
-
-  expect(chronicle.turn).toBe(8);
-  expect(chronicle.deals).toEqual([{ of: 'event', event: 'PH_Hardship' }]);
-});
-
-test('a schedule with no entries deals nothing after the deal a timeline was handed, turn after turn', () => {
-  const start = cityOf(['urban'], {
-    ...NO_GROWTH,
-    tiles: camped(field(4), CAMPS),
-    timeline: dueOn(2),
-  });
-  const walk = walkedFrom(CATALOGUE, start, 40, 'PH_Famine');
-
-  expect(walk.turn).toBe(40);
-  expect(walk.landings).toEqual([{ turn: 2, event: 'PH_Hardship' }]);
-});
-
 test('a timeline dealing on the first turn stops the end of turn 0 on its deal, and the take draws its hand', () => {
   const settled = settledOn(opening(plains(4), { timeline: dueOn(1) }), CITY);
   const dealt = outcome(apply(CATALOGUE, settled, { type: 'end-turn' }));

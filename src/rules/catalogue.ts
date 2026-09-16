@@ -169,7 +169,7 @@ export type Catalogue = MapContent & {
  * improvement names a movement cost below one hundredth of a move point; no region keeps its camps
  * within the centre part's reach plus the city's sight; no section of a deck holds a hazard or any
  * of the camp's rewards, a deck's settle section holds settle cards alone and at least one, and its
- * cards none; a schedule's capstone is held, and each of its spans rolls from one at least to no
+ * cards none; a schedule deals one event at least, its capstone is held, and each of its spans rolls from one at least to no
  * less than its least; an event a schedule deals among its entries deals two
  * answers at least; every event deals an answer costing no stock, every amount its cost names
  * nought; no answer is dealt by two events; the camp deals one reward at least; the camp's unit
@@ -243,6 +243,9 @@ export function catalogued(content: Catalogue): Catalogue {
   }
 
   for (const [id, schedule] of Object.entries(content.schedules)) {
+    if (Object.keys(schedule.entries).length === 0) {
+      refuse(content, `the schedule ${id} deals no event`);
+    }
     for (const entry of Object.keys(schedule.entries)) {
       const answers = Object.keys(eventOf(content, entry).answers).length;
       if (answers < 2) refuse(content, `the schedule ${id} deals ${entry}, which deals ${answers}`);
