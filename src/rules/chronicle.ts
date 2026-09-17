@@ -97,9 +97,9 @@ const HAND_SIZE = 5;
 
 /**
  * A step that carries nothing but the chronicle it left. `played` is the card gone from the hand
- * with its cost paid, `refused` is the command the rules turned down, `assign` is an inhabitant put
+ * with its cost paid, `refused` is the command the rules turned down, `assign` is one population put
  * on a tile, taken off one, or taken off one and put on another, `claim` is a tile bought with
- * culture and taken inside the border, `grow` is the food stock spent on one more inhabitant,
+ * culture and taken inside the border, `grow` is the food stock spent on one more population,
  * `turn` is the tick, where every unit's move points and action are refreshed, `reinforce` is the
  * capstone's second script on a turn after its landing, `capstone` is the capstone landing on its
  * turn, `deal` is what the timeline offers on a due turn, `no-deal` is a due turn dealing nothing

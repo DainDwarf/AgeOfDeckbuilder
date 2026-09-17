@@ -232,7 +232,7 @@ export type MapView = {
    * when it lands off the map; `zoomed` fires whenever the zoom changes, so whatever stands on the
    * map at a size of its own stands again. `commanded` is the command a press on one of the lit
    * unit's tiles is — its step onto a landing, or its attack on a unit glowed — and `reassigned` the
-   * one a drag in city mode is, from the tile an inhabitant stands on onto a tile the city holds and
+   * one a drag in city mode is, from the tile the population stands on onto a tile the city holds and
    * nobody stands on; neither is a tile press. A drag that lands anywhere else brings what it took
    * hold of home and is no press either. Called once; while a card is aimed the aim takes the left
    * press and this hears the right one alone.
@@ -259,7 +259,7 @@ export type MapView = {
    */
   showYields(shown: ReadonlySet<Resource>): void;
   /**
-   * Marks the tiles an inhabitant stands on, dims the held ones with nobody on them, rings the ones
+   * Marks the tiles the population stands on, dims the held ones with nobody on them, rings the ones
    * the city may claim, and shows what every tile inside the border yields, whatever the overlay is
    * showing: what the map shows while city mode is on.
    */
@@ -409,7 +409,7 @@ function faceAt(tile: TileCoords): TileFace {
   return { ...positionOf(tile), radius: TILE_SIZE };
 }
 
-/** Where the mark of a tile an inhabitant stands on lies: below the middle of that tile. */
+/** Where the mark of a tile the population stands on lies: below the middle of that tile. */
 function assignedAt(tile: TileCoords): { x: number; y: number } {
   const { x, y } = positionOf(tile);
   return { x, y: y + ASSIGNED_DROP };
@@ -484,13 +484,13 @@ function glowTile(
 }
 
 /**
- * What one left press has hold of on the map — a unit by the number it is named by, or an inhabitant
+ * What one left press has hold of on the map — a unit by the number it is named by, or population
  * by the tile it is assigned to — with where the press landed and whether it has come past the slack
  * that tells a drag from a click. A press holds one of them or nothing at all.
  */
 type Grab = { readonly from: { x: number; y: number }; dragging: boolean } & (
   | { readonly kind: 'unit'; readonly unit: number }
-  | { readonly kind: 'inhabitant'; readonly tile: TileCoords }
+  | { readonly kind: 'assigned'; readonly tile: TileCoords }
 );
 
 /**
@@ -561,7 +561,7 @@ export function createMapView(
 
   /** The mark drawn for each unit the map shows, by the number that unit is named by. */
   let markers = new Map<number, Phaser.GameObjects.Polygon>();
-  /** The mark drawn on each tile an inhabitant stands on while city mode is on, by its tile's key. */
+  /** The mark drawn on each tile the population stands on while city mode is on, by its tile's key. */
   let assignedMarks = new Map<string, Phaser.GameObjects.Rectangle>();
 
   /** What the left press on the map has hold of; nothing while it holds nothing. */
@@ -569,7 +569,7 @@ export function createMapView(
 
   /**
    * What the press has hold of, back where the map draws it standing: the unit on the tile it stands
-   * on, the inhabitant under the tile it is assigned to.
+   * on, the population under the tile it is assigned to.
    */
   const bringHome = (): void => {
     if (grabbed === undefined) return;
@@ -581,7 +581,7 @@ export function createMapView(
         markers.get(grabbed.unit)?.setPosition(home.x, home.y);
         return;
       }
-      case 'inhabitant': {
+      case 'assigned': {
         const home = assignedAt(grabbed.tile);
         assignedMarks.get(tileKey(grabbed.tile))?.setPosition(home.x, home.y);
         return;
@@ -1001,8 +1001,8 @@ export function createMapView(
   onResize(scene, paintThreshold);
 
   /**
-   * City mode's tiles repainted on the chronicle the map stands on: a mark under every tile an
-   * inhabitant stands on, a scrim over every held tile with nobody on it, and culture's own ring
+   * City mode's tiles repainted on the chronicle the map stands on: a mark under every tile the
+   * population stands on, a scrim over every held tile with nobody on it, and culture's own ring
    * around every tile the city may claim. An assign and a claim change them, so this follows every
    * render.
    */
@@ -1394,7 +1394,7 @@ export function createMapView(
           case 'unit':
             markers.get(grabbed.unit)?.setPosition(at.x, at.y);
             return;
-          case 'inhabitant':
+          case 'assigned':
             assignedMarks.get(tileKey(grabbed.tile))?.setPosition(at.x, at.y);
             return;
         }
@@ -1430,7 +1430,7 @@ export function createMapView(
           const from = { x: pointer.x, y: pointer.y };
           if (marking) {
             if (!assignedTo(shown, under)) return true;
-            grabbed = { kind: 'inhabitant', tile: under, from, dragging: false };
+            grabbed = { kind: 'assigned', tile: under, from, dragging: false };
             return false;
           }
           const standing = unitAt(shown.units, under);
@@ -1458,7 +1458,7 @@ export function createMapView(
               if (on !== undefined && commandUnitOn(holding.unit, on)) return;
               lightUnit(selection);
               break;
-            case 'inhabitant': {
+            case 'assigned': {
               const command =
                 on === undefined || shown === undefined
                   ? undefined
@@ -1511,14 +1511,14 @@ export function createMapView(
 
     showCityMarks(on: boolean): void {
       marking = on;
-      // A key leaves the mode under a press still holding an inhabitant, and the release of that
+      // A key leaves the mode under a press still holding population, and the release of that
       // press is a whole scene away: that hold is the mode's and goes with its marks, while a
       // unit's is held outside the mode and stands.
       if (grabbed !== undefined) {
         switch (grabbed.kind) {
           case 'unit':
             break;
-          case 'inhabitant':
+          case 'assigned':
             bringHome();
             grabbed = undefined;
             break;

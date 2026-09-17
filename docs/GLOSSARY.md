@@ -32,7 +32,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **build** | To put a building on a tile; what a building card does. | raise, construct, erect |
 | **neutral** | A non-player unit that does not attack. | NPC, city-state, friendly |
 | **enemy** | A non-player unit that attacks. | barbarian, raider, hostile, invader, foe |
-| **killed** | What happens to a unit that loses or that a terraform leaves on ground it cannot stand on, or to an inhabitant an event kills: the unit leaves the map, the inhabitant the city. | destroyed, slain, dead, lost |
+| **killed** | What happens to a unit that loses or that a terraform leaves on ground it cannot stand on, or to one population an event kills: the unit leaves the map, the population the city. | destroyed, slain, dead, lost |
 | **event** | One entry of the age's schedule: a problem the chronicle throws at the city, dealt with its answers. | disaster, threat, crisis, encounter |
 | **capstone** | The age's final trial, known from the chronicle's opening on a turn that is not; passing it — its condition met — is victory. | boss, finale, objective |
 | **schedule** | An age's set of events with their turn-shifting weights, and its tempo: the spacing, and the capstone with its window. What a timeline is rolled from. | calendar |
@@ -67,9 +67,9 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **population** | The city's inhabitants: assigned to tiles for income, turned into units by unit cards. | inhabitants, citizens, workforce, pops |
 | **assign** | To put one population on a tile inside the border; free, instant, reversible. | allocate |
 | **unassign** | To take one population off the tile it stands on; the reverse of assign. | remove, free up, release |
-| **idle** | An inhabitant assigned to no tile; what a unit card takes. | unemployed, spare, unassigned (as a noun) |
-| **grow** | What the food stock reaching the growth threshold does at the growth phase: the city gains one idle inhabitant. | birth, breed, spawn (for population), expand |
-| **growth threshold** | The food the next inhabitant needs; spent when the stock reaches it, and wider each time. | step, growth cost, food cap |
+| **idle** | One population assigned to no tile; what a unit card takes. | unemployed, spare, unassigned (as a noun) |
+| **grow** | What the food stock reaching the growth threshold does at the growth phase: the city gains one idle population. | birth, breed, spawn (for population), expand |
+| **growth threshold** | The food the next population needs; spent when the stock reaches it, and wider each time. | step, growth cost, food cap |
 | **biome** | A stretch of map the generator spreads as one kind — land, sea, … — weighting the terrain of each tile in it. | patch, zone, area, ecosystem |
 | **terrain** | A tile's base layer: plain, forest, hills, …; one per tile, changed only by terraforming. | tile type |
 | **movement cost** | What entering a tile spends of a unit's move points, summed from the tile's layers unless one of them names it outright; water names none and is crossed by nothing. | move cost, terrain cost, travel cost, difficulty, impassable |

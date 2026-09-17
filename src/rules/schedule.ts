@@ -177,10 +177,10 @@ export function raided(catalogue: Catalogue, chronicle: Chronicle, warriors: num
 }
 
 /**
- * The inhabitant working the tile killed: the population one fewer and the tile unassigned, and the
- * chronicle untouched where nobody works it.
+ * The population working the tile killed: the city's population one fewer and the tile unassigned,
+ * and the chronicle untouched where nobody works it.
  */
-export function inhabitantKilled(chronicle: Chronicle, at: TileCoords): Chronicle {
+export function populationKilled(chronicle: Chronicle, at: TileCoords): Chronicle {
   const key = tileKey(at);
   const assigned = chronicle.assigned.filter((coord) => tileKey(coord) !== key);
   if (assigned.length === chronicle.assigned.length) return chronicle;

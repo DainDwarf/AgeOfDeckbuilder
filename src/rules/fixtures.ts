@@ -47,9 +47,9 @@ import { seedRng } from './rng';
 import {
   besieged,
   encamped,
-  inhabitantKilled,
   laid,
   offered,
+  populationKilled,
   raided,
   reinforced,
   spanEnded,
@@ -284,7 +284,7 @@ export const CATALOGUE: Catalogue = catalogued({
         PH_Plague: {
           cost: {},
           reads: () => ({}),
-          lands: (_catalogue, chronicle) => inhabitantKilled(chronicle, UPHEAVAL),
+          lands: (_catalogue, chronicle) => populationKilled(chronicle, UPHEAVAL),
         },
         PH_Ambush: {
           cost: {},
@@ -523,7 +523,7 @@ export type Carrying = Partial<Omit<Chronicle, 'units' | 'nextUnit'>> & {
 
 /**
  * A city on `inside`, tile by tile, with one plain lying outside the border and no cards. Its
- * inhabitants stand one on each tile the city holds, and none is idle.
+ * population stands one on each tile the city holds, and none is idle.
  */
 export function cityOf(inside: Terrain[], carrying: Carrying = {}): Chronicle {
   const held = inside.map((_, index) => ({ q: index, r: 0 }));
@@ -752,7 +752,7 @@ export function withTile(chronicle: Chronicle, tile: Tile): Chronicle {
   });
 }
 
-/** The command city mode sends for a tile: an inhabitant on it, or the one on it off. */
+/** The command city mode sends for a tile: one population on it, or the one on it off. */
 export function assignTo(tile: TileCoords): Command {
   return { type: 'assign', tile };
 }
@@ -764,7 +764,7 @@ export function claimOf(tile: TileCoords): Command {
 
 /**
  * A city on a disc of plain out to `radius`, holding its own tile and the six around it, one
- * inhabitant on each and two idle.
+ * population on each and two idle.
  */
 export function ringed(radius: number, carrying: Carrying = {}): Chronicle {
   const ring = [CITY, ...neighbours(CITY)];

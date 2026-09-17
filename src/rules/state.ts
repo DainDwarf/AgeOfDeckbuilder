@@ -74,7 +74,7 @@ export type Chronicle = {
   readonly deals: readonly Deal[];
   readonly resources: Resources;
   readonly population: number;
-  /** The tiles an inhabitant stands on, at most one to a tile; every other inhabitant is idle. */
+  /** The tiles population stands on, at most one to a tile; the rest of the population is idle. */
   readonly assigned: TileCoords[];
   readonly units: Unit[];
   /**
@@ -111,7 +111,7 @@ export type TileBlock =
 
 /**
  * What the city or the map has against a card or a claim the cost alone would let through: the city
- * down to the last inhabitant it keeps, no inhabitant idle to turn into a unit or to stand on a tile,
+ * down to the last population it keeps, no population idle to turn into a unit or to stand on a tile,
  * a unit already on the city tile, an empty discard pile with no card to come back out of it, and
  * every reason an aim turns a tile down.
  */
@@ -163,14 +163,14 @@ export function holds(chronicle: Chronicle, tile: TileCoords): boolean {
 }
 
 /**
- * Whether an inhabitant stands on the tile: what an assign, both ends of a drag in city mode and the
+ * Whether population stands on the tile: what an assign, both ends of a drag in city mode and the
  * mark the map puts on a tile all ask.
  */
 export function assignedTo(chronicle: Chronicle, tile: TileCoords): boolean {
   return chronicle.assigned.some((coord) => tileKey(coord) === tileKey(tile));
 }
 
-/** The inhabitants on no tile: what a unit card takes, and what an assign has to give a tile. */
+/** The population on no tile: what a unit card takes, and what an assign has to give a tile. */
 export function idle(chronicle: Chronicle): number {
   return chronicle.population - chronicle.assigned.length;
 }

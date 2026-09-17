@@ -394,7 +394,7 @@ test('a settle card entering a unit admits every charted tile the unit stands on
   }
 });
 
-test('a settle card entering a unit puts it on its tile full, takes no inhabitant and leaves the chronicle, before the settle and after it', () => {
+test('a settle card entering a unit puts it on its tile full, takes no population and leaves the chronicle, before the settle and after it', () => {
   const at = { q: 1, r: 1 };
   const opened = opening(plains(3), { deck: BANDS });
 
@@ -1054,14 +1054,14 @@ test('a unit card never takes the city’s last population', () => {
   ).toBe(1);
 });
 
-test('a unit card is refused for the population when only the city’s last inhabitant is left', () => {
+test('a unit card is refused for the population when only the city’s last population is left', () => {
   const last = cityOf(['urban'], { tiles: field(2), population: 1, assigned: [], resources: FOOD });
 
   expect(idle(last)).toBe(1);
   expect(refusalOf(CATALOGUE, last, 'PH_Worker').blocked).toEqual(['population']);
 });
 
-test('a unit card refused for the population and for the idle inhabitant names both', () => {
+test('a unit card refused for the population and for the idle population names both', () => {
   const last = cityOf(['urban'], { tiles: field(2), population: 1, resources: FOOD });
 
   expect(idle(last)).toBe(0);
@@ -1091,7 +1091,7 @@ test('a unit card refused for the population and for the city names both', () =>
   expect(refusalOf(CATALOGUE, both, 'PH_Worker').blocked).toEqual(['population', 'city']);
 });
 
-test('a unit card takes an idle inhabitant, and is refused while every one is assigned', () => {
+test('a unit card takes one idle population, and is refused while every one is assigned', () => {
   const full = cityOf(['urban', 'plain'], {
     tiles: field(2),
     hand: ['PH_Worker'],

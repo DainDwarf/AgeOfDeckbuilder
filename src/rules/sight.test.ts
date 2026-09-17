@@ -65,8 +65,8 @@ function ground(...relief: readonly Relief[]): Tile[] {
 }
 
 /**
- * A city on that ground holding these tiles — its ring unless the test names others — with an
- * inhabitant on each.
+ * A city on that ground holding these tiles — its ring unless the test names others — with one
+ * population on each.
  */
 function cityOn(
   tiles: Tile[],

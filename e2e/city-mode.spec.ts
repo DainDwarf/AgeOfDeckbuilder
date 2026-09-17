@@ -51,13 +51,13 @@ const BESIDE = { at: { q: 1, r: -1 }, key: '1,-1' };
 /** A tile out beyond the centre part the border does not touch, and uncharted from the opening. */
 const FAR = { at: { q: 1, r: -4 }, key: '1,-4' };
 
-/** A tile the city holds, and an inhabitant stands on from the opening. */
+/** A tile the city holds, and one population stands on from the opening. */
 const HELD = { at: { q: 0, r: -1 }, key: '0,-1' };
 
-/** Another one of them, on the other side of the city: what a drag carries an inhabitant from. */
+/** Another one of them, on the other side of the city: what a drag carries one population from. */
 const WORKED = { at: { q: 0, r: 1 }, key: '0,1' };
 
-/** How many tiles the city holds from the opening, one inhabitant on each. */
+/** How many tiles the city holds from the opening, one population on each. */
 const RING = 7;
 
 /** What the note says over a tile whose claim the city cannot pay for. */
@@ -326,7 +326,7 @@ test('a press on culture or population enters city mode, and the chip leaves it'
   expect(problems).toEqual([]);
 });
 
-test('city mode marks every tile an inhabitant stands on, and a second click on the selected one takes it off and puts it back', async ({
+test('city mode marks every tile the population stands on, and a second click on the selected one takes it off and puts it back', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -376,7 +376,7 @@ test('city mode marks every tile an inhabitant stands on, and a second click on 
   expect(problems).toEqual([]);
 });
 
-test('a drag in city mode carries the inhabitant onto the tile the city holds and nobody stands on, and selects it', async ({
+test('a drag in city mode carries the population onto the tile the city holds and nobody stands on, and selects it', async ({
   page,
 }) => {
   const problems = watch(page);

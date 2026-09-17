@@ -8,7 +8,7 @@ The Nomadic Age is where humanity stops wandering, and it is the first chronicle
 
 ## The settle ✅
 
-The deck's settle section holds three settle cards, each costing nothing: the one that settles the city, a worker and a scout, the two units taking no inhabitant — the band arrives with them. Turn 0 is the two acts the age is named for: choose where to stop, and send someone out. The settle lands on plain, forest or hills; water and mountain refuse it. The city keeps the terrain it lands on, and its building gives **military and culture** on top of that terrain and nothing else. Nothing on the map yields military, so the city is where warriors come from, and the site is a choice a new player reads off the map: a plain feeds growth, hills and forest give production, and a river beside any of them is worth a tile more. A city building that also fed a poor site was rejected: it is the safety net the dogmas forbid.
+The deck's settle section holds three settle cards, each costing nothing: the one that settles the city, a worker and a scout, the two units taking no population — the band arrives with them. Turn 0 is the two acts the age is named for: choose where to stop, and send someone out. The settle lands on plain, forest or hills; water and mountain refuse it. The city keeps the terrain it lands on, and its building gives **military and culture** on top of that terrain and nothing else. Nothing on the map yields military, so the city is where warriors come from, and the site is a choice a new player reads off the map: a plain feeds growth, hills and forest give production, and a river beside any of them is worth a tile more. A city building that also fed a poor site was rejected: it is the safety net the dogmas forbid.
 
 ## The land ✅
 
@@ -39,7 +39,7 @@ A hunter that gathered and fought was rejected: a worker that attacks is refused
 
 The deck the draw pile cycles, each card the lesson it carries:
 
-- **Worker**, costing food, **Warrior**, costing military, and **Scout**, costing military: an inhabitant leaves the tiles to become a unit, and the city's last is never taken.
+- **Worker**, costing food, **Warrior**, costing military, and **Scout**, costing military: one population leaves the tiles to become a unit, and the city's last is never taken.
 - **Gather**, the age's card, costing nothing: aimed at a worker, it spends the worker's action and gains the yield of the tile the worker stands on, whatever its layers and the river give. It is the most copied card in the deck by far, so a hand rarely lacks one. Units act on tiles through cards.
 - **Trapping** 🔧, an improvement on forest giving food, played through a worker for production: a worker changes the map for good, and an improvement counts wherever the tile is — inside the border at income, outside it through Gather. Kept on trial: it is the one card of the deck judged in play.
 - **March**, the refresh, aimed at a unit, costing military: move points, and the card that gets a worker home ahead of a raid or a warrior onto a camp a turn early.
@@ -52,11 +52,11 @@ Five events, each a problem the chronicle deals with two answers, one of them op
 
 - **Lean season.** _Share_: the hazard **Hunger** is laid on the draw pile; it strikes the food stock while it stays in the hand and costs production to be rid of. _Ration_: the stock is kept, and the envious enter as a raid.
 - **A rival band.** _Fight_: their warriors enter the map as one raid and come. _Make room_: a new camp is placed near the city and a smaller raid enters on and around it, one warrior at first — a source of raids for the rest of the chronicle, and a capture with its rewards for a band bold enough. Both answers cost no stock: many now against fewer now and more later.
-- **Wildfire.** _Let it burn_: the forest tiles within some distance of the city become plain, so the map has visibly changed; the fire is a terraform, so the game and the trapping go with the forest, the inhabitant working a burned tile is killed, and a unit standing on one takes damage enough to kill a worker. _Cut a firebreak_: production paid, the forest stands.
-- **Departure.** _Let them go_: an inhabitant leaves the city, working or idle, never the city's last. _Keep them_: culture paid.
+- **Wildfire.** _Let it burn_: the forest tiles within some distance of the city become plain, so the map has visibly changed; the fire is a terraform, so the game and the trapping go with the forest, the population working a burned tile is killed, and a unit standing on one takes damage enough to kill a worker. _Cut a firebreak_: production paid, the forest stands.
+- **Departure.** _Let them go_: one population leaves the city, working or idle, never the city's last. _Keep them_: culture paid.
 - **The herd**, rare and fortunate. _Hunt it_: food now. _Follow it_: game is dealt onto the forest near the city. Both are gains; a fortunate event is a breath, not a decision.
 
-Lean season is food against a raid, a rival band is a raid now against a camp later, Wildfire is production against the map, Departure is culture against an inhabitant. An event with more than two answers is content when it comes.
+Lean season is food against a raid, a rival band is a raid now against a camp later, Wildfire is production against the map, Departure is culture against population. An event with more than two answers is content when it comes.
 
 ## The capstone ✅
 
@@ -67,6 +67,6 @@ Lean season is food against a raid, a rival band is a raid now against a camp la
 A camp is a rival band's, and a warrior may enter on it any turn, as the rules say. Its capture deals two rewards, both single use, and the player takes one:
 
 - **The stores**: food and production, the rival band's stock.
-- **The band joins**: one inhabitant, the defeated band's people taken in, arriving idle.
+- **The band joins**: one population, the defeated band's people taken in, arriving idle.
 
 Single use in both, so a captured camp leaves no dead card cycling through a small deck.

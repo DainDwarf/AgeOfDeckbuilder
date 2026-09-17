@@ -101,7 +101,7 @@ test('a catalogue whose camp is a building it does not hold is refused', () => {
   expect(() => catalogued(content)).toThrow(/^fixture: /);
 });
 
-test('a catalogue whose city sees or opens with idle inhabitants below nought is refused', () => {
+test('a catalogue whose city sees or opens with idle population below nought is refused', () => {
   for (const below of [{ sight: -1 }, { idle: -1 }]) {
     const content = changed({ city: { ...CATALOGUE.city, ...below } });
 

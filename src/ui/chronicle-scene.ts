@@ -303,7 +303,7 @@ export class ChronicleScene extends Phaser.Scene {
     };
 
     /**
-     * One inhabitant carried onto another tile by a drag in city mode: the play-out runs, and the
+     * One population carried onto another tile by a drag in city mode: the play-out runs, and the
      * tile it landed on is selected, so the next press on it is the city's next act there. A drag
      * that landed while another command was playing out did nothing, and selects nothing either.
      */

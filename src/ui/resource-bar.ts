@@ -307,7 +307,7 @@ function place(entry: Entry, { at, zone }: Placed): void {
 
 /**
  * What a reading reads: the number a rise ticks through, and the whole it stands against, where it
- * has one — the idle inhabitants over all of them, the food stock over the growth threshold.
+ * has one — the idle population over all of it, the food stock over the growth threshold.
  */
 function readingOf(chronicle: Chronicle, key: Reading): { count: number; over?: number } {
   switch (key) {

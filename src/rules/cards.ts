@@ -239,8 +239,8 @@ export function movePointsSpent(chronicle: Chronicle, tile: TileCoords): TileBlo
 
 /**
  * How a unit card enters its unit, the block and the effect as one pair so neither is written
- * without the other: the city keeps its last inhabitant, needs one idle to turn into the unit, and
- * needs its own tile free; then one idle inhabitant becomes the unit, on the city's tile.
+ * without the other: the city keeps its last population, needs one idle to turn into the unit, and
+ * needs its own tile free; then one idle population becomes the unit, on the city's tile.
  */
 export function enters(type: string): Aim & { readonly aim: 'none' } {
   return {
@@ -272,7 +272,7 @@ export function enters(type: string): Aim & { readonly aim: 'none' } {
 /**
  * How a settle card enters its unit, the refusal and the effect as one pair so neither is written
  * without the other: aimed at a tile the unit can stand on with no unit standing there, the unit
- * enters on it, the player's, and takes no inhabitant.
+ * enters on it, the player's, and takes no population.
  */
 export function entersOn(type: string): Aim & { readonly aim: 'tile' } {
   return {
@@ -289,7 +289,7 @@ export function entersOn(type: string): Aim & { readonly aim: 'tile' } {
 
 /**
  * The settle: the city stands on the tile from now on, its building in the tile's slot, holding that
- * tile alone with one inhabitant on it and the city's idle count besides.
+ * tile alone with one population on it and the city's idle count besides.
  */
 export function settled(catalogue: Catalogue, paid: Chronicle, at: TileCoords): Chronicle {
   const city = { q: at.q, r: at.r };

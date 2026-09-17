@@ -136,7 +136,7 @@ export type Deck = { readonly cards: readonly string[]; readonly settle: readonl
  * script an enemy can carry, the map content, the cards and the decks a chronicle is begun on,
  * the events, the capstones and the schedules its timeline is rolled from, what a camp is, enters
  * and gives on its capture, and the city: the building it stands as, how far it sees, and how many
- * idle inhabitants it opens with. Every one of them is named by its key.
+ * idle population it opens with. Every one of them is named by its key.
  */
 export type Catalogue = MapContent & {
   readonly units: Readonly<Record<string, UnitStats>>;
@@ -159,7 +159,7 @@ export type Catalogue = MapContent & {
   readonly city: {
     readonly building: string;
     readonly sight: number;
-    /** How many inhabitants the chronicle opens with besides the one on the city's tile. */
+    /** How many population the chronicle opens with besides the one on the city's tile. */
     readonly idle: number;
   };
 };

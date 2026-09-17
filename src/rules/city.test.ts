@@ -41,13 +41,13 @@ import { buildingKind, featureKind, improvementKind, regionOf, terrainKind } fro
 import { RESOURCES } from './resources';
 import { type Chronicle, idle } from './state';
 
-/** The command a drag in city mode sends: the inhabitant off one tile and onto another. */
+/** The command a drag in city mode sends: the population off one tile and onto another. */
 function reassignTo(from: TileCoords, to: TileCoords): Command {
   return { type: 'reassign', from, to };
 }
 
 /**
- * A city on a disc of plain out to three holding its own tile alone, one inhabitant on it and two
+ * A city on a disc of plain out to three holding its own tile alone, one population on it and two
  * idle.
  */
 function alone(carrying: Carrying = {}): Chronicle {
@@ -145,7 +145,7 @@ function darkBorder(): { opened: Chronicle; dark: TileCoords; city: TileCoords }
   throw new Error('no seed under a thousand leaves a dark border tile a worker can step beside');
 }
 
-test('the settle holds the city’s tile alone, one inhabitant on it and the city’s idle count besides', () => {
+test('the settle holds the city’s tile alone, one population on it and the city’s idle count besides', () => {
   for (const seed of [0, 1234, 0xdeadbeef | 0]) {
     const chronicle = settledLaunch(CATALOGUE, REGION, SCHEDULE, seed, DECK);
 
@@ -155,7 +155,7 @@ test('the settle holds the city’s tile alone, one inhabitant on it and the cit
   }
 });
 
-test('a free claim holds the tile, brings one inhabitant who stands on it, and asks no culture', () => {
+test('a free claim holds the tile, brings one population that stands on it, and asks no culture', () => {
   const settled = settledOn(opening(plains(3)), CITY);
   const [tile] = neighbours(CITY);
 
@@ -351,7 +351,7 @@ test('a food stock short of the growth threshold grows nobody, and the stock is 
   expect(stagedBy(city, { type: 'end-turn' })).not.toContain('grow');
 });
 
-test('the food stock reaching the growth threshold is spent on one inhabitant, and that one is idle', () => {
+test('the food stock reaching the growth threshold is spent on one population, and that one is idle', () => {
   const city = cityOf(['urban', 'plain'], {
     population: 3,
     resources: { food: 1, production: 0, military: 0, money: 0, science: 0, culture: 0 },
@@ -365,7 +365,7 @@ test('the food stock reaching the growth threshold is spent on one inhabitant, a
   expect(idle(after)).toBe(idle(city) + 1);
 });
 
-test('the growth threshold is the food the next inhabitant needs: one short of it grows nobody', () => {
+test('the growth threshold is the food the next population needs: one short of it grows nobody', () => {
   const city = cityOf(['urban', 'plain'], { population: 5, assigned: [] });
   const stocked = (food: number): Chronicle => ({
     ...city,
@@ -381,7 +381,7 @@ test('the growth threshold is the food the next inhabitant needs: one short of i
   expect(reached.resources.food).toBe(0);
 });
 
-test('a food stock worth several growth thresholds grows one inhabitant and no more', () => {
+test('a food stock worth several growth thresholds grows one population and no more', () => {
   const city = cityOf(['urban'], {
     population: 2,
     resources: { food: 9, production: 0, military: 0, money: 0, science: 0, culture: 0 },
@@ -393,7 +393,7 @@ test('a food stock worth several growth thresholds grows one inhabitant and no m
   expect(after.resources.food).toBe(7);
 });
 
-test('the growth threshold widens with the population: the next inhabitant costs one food more', () => {
+test('the growth threshold widens with the population: the next population costs one food more', () => {
   const city = cityOf(['urban'], {
     population: 2,
     resources: { food: 5, production: 0, military: 0, money: 0, science: 0, culture: 0 },
@@ -408,7 +408,7 @@ test('the growth threshold widens with the population: the next inhabitant costs
   expect(second.resources.food).toBe(0);
 });
 
-test('an assign takes the inhabitant off a tile, and a second one puts it back', () => {
+test('an assign takes the population off a tile, and a second one puts it back', () => {
   const city = cityOf(['urban', 'plain']);
   const tile = { q: 1, r: 0 };
 
@@ -430,7 +430,7 @@ test('an assign on a tile the city does not hold is refused', () => {
   expect(stagedBy(city, assignTo({ q: 9, r: 9 }))).toEqual(['refused']);
 });
 
-test('an assign with no inhabitant idle is refused', () => {
+test('an assign with no population idle is refused', () => {
   const spent = cityOf(['urban', 'plain', 'forest'], {
     population: 2,
     assigned: [CITY, { q: 1, r: 0 }],
@@ -441,7 +441,7 @@ test('an assign with no inhabitant idle is refused', () => {
   expect(outcome(apply(CATALOGUE, spent, assignTo({ q: 2, r: 0 })))).toBe(spent);
 });
 
-test('a drag takes the inhabitant off the tile it stands on and puts it on the tile it lands on', () => {
+test('a drag takes the population off the tile it stands on and puts it on the tile it lands on', () => {
   const city = ringed(3);
   const [from, to] = neighbours(CITY);
   const freed = outcome(apply(CATALOGUE, city, assignTo(to)));
@@ -457,7 +457,7 @@ test('a drag takes the inhabitant off the tile it stands on and puts it on the t
   expect(idle(after)).toBe(idle(freed));
 });
 
-test('a drag onto a tile an inhabitant stands on, onto one the city does not hold, or onto the tile it started from is refused', () => {
+test('a drag onto a tile the population stands on, onto one the city does not hold, or onto the tile it started from is refused', () => {
   const city = ringed(3);
   const [from, worked] = neighbours(CITY);
   const outside = claimable(CATALOGUE, city)[0];
@@ -509,7 +509,7 @@ test('the city’s own tile unassigned yields nothing at income, like any other'
   }
 });
 
-test('a claim pays its culture, takes the tile inside the border, and puts an idle inhabitant on it', () => {
+test('a claim pays its culture, takes the tile inside the border, and puts one idle population on it', () => {
   const city = alone({ resources: culture(2) });
   const tile = { q: 1, r: 0 };
 
@@ -523,7 +523,7 @@ test('a claim pays its culture, takes the tile inside the border, and puts an id
   expect(idle(after)).toBe(idle(city) - 1);
 });
 
-test('a claim made with nobody idle takes the tile with no inhabitant on it', () => {
+test('a claim made with nobody idle takes the tile with no population on it', () => {
   const full = alone({ resources: culture(2), population: 1 });
 
   const after = outcome(apply(CATALOGUE, full, claimOf({ q: 1, r: 0 })));
@@ -534,7 +534,7 @@ test('a claim made with nobody idle takes the tile with no inhabitant on it', ()
   expect(idle(after)).toBe(0);
 });
 
-test('a claimed tile an inhabitant stands on yields at the next income', () => {
+test('a claimed tile the population stands on yields at the next income', () => {
   const city = alone({ ...NO_GROWTH, resources: culture(1) });
   const claimed = outcome(apply(CATALOGUE, city, claimOf({ q: 1, r: 0 })));
 

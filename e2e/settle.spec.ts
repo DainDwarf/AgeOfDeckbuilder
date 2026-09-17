@@ -81,7 +81,7 @@ test('a chronicle opens on turn 0 with the city standing nowhere, and the settle
   expect(problems).toEqual([]);
 });
 
-test('after the settle a free claim lights the six tiles around the city and no other, and a press on one holds it, brings an inhabitant who stands on it, and leaves the card in neither pile', async ({
+test('after the settle a free claim lights the six tiles around the city and no other, and a press on one holds it, brings one population that stands on it, and leaves the card in neither pile', async ({
   page,
 }) => {
   const problems = watch(page);

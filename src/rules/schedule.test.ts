@@ -368,7 +368,7 @@ function upheaved(city: Chronicle, answer: string): { dealt: Chronicle; stages: 
   return { dealt, stages: apply(CATALOGUE, dealt, { type: 'take', at }) };
 }
 
-test('an answer killing the inhabitant working a tile leaves the population one fewer and the tile unassigned', () => {
+test('an answer killing the population working a tile leaves the population one fewer and the tile unassigned', () => {
   const { dealt, stages } = upheaved(cityOf(['urban', 'hills'], UPHEAVAL_DUE), 'PH_Plague');
   const after = outcome(stages);
 
@@ -378,7 +378,7 @@ test('an answer killing the inhabitant working a tile leaves the population one 
   expect(after.ending).toBeUndefined();
 });
 
-test('an answer killing the inhabitant working a tile nobody works kills nobody', () => {
+test('an answer killing the population working a tile nobody works kills nobody', () => {
   const city = cityOf(['urban', 'hills'], { ...UPHEAVAL_DUE, assigned: [CITY] });
   const { dealt, stages } = upheaved(city, 'PH_Plague');
   const after = outcome(stages);
@@ -387,7 +387,7 @@ test('an answer killing the inhabitant working a tile nobody works kills nobody'
   expect(after.assigned).toEqual(dealt.assigned);
 });
 
-test('an answer killing the city’s last inhabitant ends the chronicle in defeat on the take', () => {
+test('an answer killing the city’s last population ends the chronicle in defeat on the take', () => {
   const city = cityOf(['urban', 'hills'], {
     ...UPHEAVAL_DUE,
     population: 1,

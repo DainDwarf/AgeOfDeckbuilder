@@ -14,13 +14,13 @@ import {
 } from './state';
 import { occupied } from './units';
 
-/** One idle inhabitant put on a tile the city holds, or the one standing on that tile taken off. */
+/** One idle population put on a tile the city holds, or the one standing on that tile taken off. */
 type AssignCommand = { readonly type: 'assign'; readonly tile: TileCoords };
 
-/** One inhabitant taken off the tile it stands on and put on another, in the one gesture. */
+/** One population taken off the tile it stands on and put on another, in the one gesture. */
 export type ReassignCommand = {
   readonly type: 'reassign';
-  /** The tile the inhabitant stands on, and the tile it stands on once this has resolved. */
+  /** The tile the population stands on, and the tile it stands on once this has resolved. */
   readonly from: TileCoords;
   readonly to: TileCoords;
 };
@@ -28,7 +28,7 @@ export type ReassignCommand = {
 /** One tile outside the border bought with culture and taken inside it. */
 type ClaimCommand = { readonly type: 'claim'; readonly tile: TileCoords };
 
-/** Everything the player commands the city by: its inhabitants, and the border they stand inside. */
+/** Everything the player commands the city by: its population, and the border it stands inside. */
 export type CityCommand = AssignCommand | ReassignCommand | ClaimCommand;
 
 /** What a claim costs with no tile held, and how many tiles held each rise lasts. */
@@ -64,17 +64,17 @@ export function yielded(catalogue: Catalogue, chronicle: Chronicle, at: TileCoor
   return { ...chronicle, resources };
 }
 
-/** The growth threshold, what the next inhabitant costs: the population it joins. */
+/** The growth threshold, what the next population costs: the population it joins. */
 export function growthThreshold(chronicle: Chronicle): number {
   return chronicle.population;
 }
 
-/** One inhabitant more for the city, arriving idle. */
+/** One population more for the city, arriving idle. */
 export function arrived(chronicle: Chronicle): Chronicle {
   return { ...chronicle, population: chronicle.population + 1 };
 }
 
-/** Growth: the food stock that has reached the growth threshold is spent on one idle inhabitant. */
+/** Growth: the food stock that has reached the growth threshold is spent on one idle population. */
 export function grow(chronicle: Chronicle): Chronicle {
   const threshold = growthThreshold(chronicle);
   // A threshold of nothing every stock reaches: a city of nobody would grow one and undo its fall.
@@ -164,7 +164,7 @@ export function cityCommand(
 
 /**
  * What a drag in city mode sends — the press taken on one tile and let go on another: the
- * inhabitant off the tile it stands on and onto the tile it was let go on, which the city has to
+ * population off the tile it stands on and onto the tile it was let go on, which the city has to
  * hold with nobody standing on it. Nothing at all for any other pair of tiles, the same tile twice
  * among them. The one decision both the chronicle screen and `apply` answer that drag by.
  */
@@ -179,7 +179,7 @@ export function cityDrag(
 }
 
 /**
- * One tile assigned or unassigned: the inhabitant already on it comes off, and an idle one goes on
+ * One tile assigned or unassigned: the population already on it comes off, and an idle one goes on
  * a tile the city holds. Anything the city-mode click on that tile is not, or is refused for,
  * answers nothing.
  */
@@ -197,7 +197,7 @@ export function assign(
 }
 
 /**
- * One inhabitant off the tile it stands on and onto another: the chronicle is left with the same
+ * One population off the tile it stands on and onto another: the chronicle is left with the same
  * population and the same idle count. A drag the rules have no act of the city's for answers
  * nothing.
  */
@@ -243,7 +243,7 @@ export function claim(
 
 /**
  * One tile taken inside the border, however it was claimed: it joins the tiles the city holds, and
- * an idle inhabitant stands on it at once when the city has one.
+ * an idle population stands on it at once when the city has one.
  */
 export function bordered(chronicle: Chronicle, tile: TileCoords): Chronicle {
   const taken = { q: tile.q, r: tile.r };
