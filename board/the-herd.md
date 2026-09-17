@@ -47,7 +47,7 @@ Text-table entries, all of them (`src/ui/text.ts`):
 - `records` in `src/rules/sight.ts` compares tiles by identity: the helper rebuilds the one tile it deals onto and leaves every other tile the very object it was.
 - The need is asked on the chronicle the deal is drawn on, the draw lands on the chronicle the deal was popped from with its cost paid: both read the same candidates function, as `fireStartable` and `fireDrawn` read `fireStarts`.
 - Whatever the state gains to carry the tiles in sight is plain data — a save is the state serialised — and every place that builds a `Chronicle` literal must hold it.
-- An answer's id is unique across every event of a catalogue; `hunt-it` and `follow-it` are free. The lines _An answer's cost reads the chronicle_ and _Departure_ stand before this one on the board: the `Answer` type and the nomadic schedule may have moved since this was written; both answers here are the flat free price in whatever shape it has.
+- An answer's id is unique across every event of a catalogue; `hunt-it` and `follow-it` are free. The lines _An answer's cost reads the chronicle_ and _Departure_ stand before this one on the board: the `Answer` type and the nomadic schedule may have moved since this was written; both answers here are the flat free cost in whatever shape it has.
 - The nomadic coherence test asks every `needs` and `reads` on a launched chronicle; the herd's must answer there.
 - The glossary hook reads the text table; if it flags an entry above, report it, never reword it.
 - Comments are for traps only: no docblock retelling a signature.

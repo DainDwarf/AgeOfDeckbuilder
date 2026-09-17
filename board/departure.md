@@ -34,7 +34,7 @@ Text-table entries, all of them (`src/ui/text.ts`):
 - Decided: a short stock is emptied **and** one population is killed — both, never either.
 - Decided: both Departure and Hunger take the city's last, and the city falls by population. Departure therefore always does something and names no need; it weighs 1 on every turn, like Lean season.
 - Decided: "the last assigned" is the last entry of the chronicle's assigned tiles — every writer appends, so it is the population most recently put on a tile, by an assign, a drag or a claim. Nothing on screen says so; the player learns it.
-- Decided: _Keep them_'s price is the population, read on the chronicle as it stands (`{ culture: population }`). _Let them go_ is the flat free answer. Hunger's strike keeps its number, `2 + floor(turn / 10)`, and its production price.
+- Decided: _Keep them_'s cost is the population, read on the chronicle as it stands (`{ culture: population }`). _Let them go_ is the flat free answer. Hunger's strike keeps its number, `2 + floor(turn / 10)`, and its production cost.
 - Decided here, not foreseen by the line — **report it in the hand-back**: today a city left without population falls on the _last_ stage of the command, so a Hunger killing the last at the strike would still play out the discard, the income, the enemy phase, the tick, even a victory if the shelter stood. The fall moves to the first stage that leaves a standing city without population, and the stages after it are dropped, for every command alike. A test asserting the fall on a later stage follows this rule; that is the design change, not a weakened test.
 
 **Traps:**

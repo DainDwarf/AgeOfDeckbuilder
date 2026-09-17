@@ -47,6 +47,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **draw** | To take cards from the draw pile into the hand. | pull |
 | **play** | To put a card from the hand into effect, paying its cost. | cast, activate |
 | **aim** | What a card is played at: a drawn tile, a unit of the player's on one, a card of the discard pile, or nothing. The window offering the discard pile's cards to a card aimed there is the **aim window**. A card is **being aimed** while it is selected and the things its aim admits are offered — the map lighting them, or the aim window standing. | target (for a card's aim), targeting (for a card's aim), cast at, pointed at, destination |
+| **cost** | What the city pays out of its stocks to play something, for example a card. | price, fee, charge, toll |
 | **unaffordable** | A card, a claim or an event's answer whose cost exceeds what the city holds; the city cannot pay for it. | unpayable, short, lacking, too expensive |
 | **discard** | To send a card from the hand to the discard pile. | throw away, dump |
 | **recall** | To put a card from the discard pile into the hand; what a recall instant does. | retrieve, recover, reclaim, salvage |
@@ -83,7 +84,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **yield** | What a tile's layers and the river running along it give at income, resource by resource. | output, produce, harvest |
 | **claim** | To take a charted tile adjacent to one the city holds into the border, for culture. | buy, purchase, expand, annex |
 | **culture** | The resource that claims tiles. | — |
-| **culture threshold** | The culture the next claim costs; rises with the tiles the city holds. | claim cost, step, price |
+| **culture threshold** | The culture the next claim costs; rises with the tiles the city holds. | claim cost, step |
 | **health** | A unit's remaining life; at zero the unit is killed. | HP, hit points, hitpoints, life |
 | **heal** | To bring a unit's health back up. | refresh (of health), repair, restore, regenerate, cure |
 | **attack** | The act: a unit removes its damage from a target's health. | hit |
