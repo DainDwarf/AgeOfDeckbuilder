@@ -15,6 +15,7 @@ import {
   cityOf,
   DECK,
   dealing,
+  ENCAMPED,
   EXPLOSION,
   endedTurn,
   enemiesOf,
@@ -426,6 +427,28 @@ test('an answer damaging the unit standing on a tile no unit stands on touches n
   const { dealt, stages } = upheaved(city, 'PH_Ambush');
 
   expect(outcome(stages).units).toEqual(dealt.units);
+});
+
+test('an answer placing a camp near the city places one, and its raid enters a warrior on the camp and the rest around it', () => {
+  const city = cityOf(['urban'], {
+    ...NO_GROWTH,
+    tiles: field(6),
+    timeline: dueOn(2, 'PH_Rivals'),
+  });
+  const dealt = outcome(apply(CATALOGUE, city, { type: 'end-turn' }));
+  const after = outcome(apply(CATALOGUE, dealt, { type: 'take', at: 0 }));
+  const [camp, ...others] = campsOf(after);
+  const warriors = enemiesOf(after);
+
+  expect(campsOf(dealt)).toEqual([]);
+  expect(others).toEqual([]);
+  expect(distance(camp, CITY)).toBeGreaterThanOrEqual(3);
+  expect(distance(camp, CITY)).toBeLessThanOrEqual(4);
+  expect(warriors).toHaveLength(ENCAMPED);
+  expect(warriors.map((warrior) => distance(warrior.tile, camp)).sort()).toEqual([
+    0,
+    ...Array<number>(ENCAMPED - 1).fill(1),
+  ]);
 });
 
 /** The turn the capstone lands on in every fixture below. */

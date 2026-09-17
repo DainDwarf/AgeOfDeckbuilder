@@ -46,6 +46,7 @@ import type { Resources } from './resources';
 import { seedRng } from './rng';
 import {
   besieged,
+  encamped,
   inhabitantKilled,
   laid,
   offered,
@@ -80,6 +81,9 @@ export const UPHEAVAL: TileCoords = { q: 1, r: 0 };
 
 /** The health the fixture's ambush takes off the unit standing on the upheaval's tile. */
 export const AMBUSH = 3;
+
+/** How many warriors the fixture's encampment enters on and around the camp it places. */
+export const ENCAMPED = 3;
 
 /** How many warriors the fixture's raid enters on this turn: one, and one more for every ten turns. */
 function raiders(turn: number): number {
@@ -291,6 +295,15 @@ export const CATALOGUE: Catalogue = catalogued({
           cost: {},
           reads: () => ({}),
           lands: (catalogue, chronicle) => terraformed(catalogue, chronicle, UPHEAVAL, 'forest'),
+        },
+      },
+    },
+    PH_Rivals: {
+      answers: {
+        PH_Encampment: {
+          cost: {},
+          reads: () => ({ warriors: ENCAMPED }),
+          lands: (catalogue, chronicle) => encamped(catalogue, chronicle, [3, 4], 3, ENCAMPED),
         },
       },
     },

@@ -275,6 +275,30 @@ export function besieged(
   return placing;
 }
 
+/** `besieged` enters the raid's first warrior on the camp it places. */
+export function encamped(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  fromCity: Span,
+  apart: number,
+  warriors: number,
+): Chronicle {
+  const { city } = chronicle;
+  if (city === undefined) refuse(catalogue, 'a camp was placed while the city stands nowhere');
+  const [near, far] = fromCity;
+  const edge = Math.max(...chronicle.tiles.map((tile) => distance(tile, city)));
+  const camp = catalogue.camp.building;
+  for (let widened = far; widened <= Math.max(far, edge); widened++) {
+    const placed = besieged(catalogue, chronicle, 1, [near, widened], apart);
+    const pitched = placed.tiles.find(
+      (tile, index) => tile.building === camp && chronicle.tiles[index].building !== camp,
+    );
+    if (pitched === undefined) continue;
+    return enteredAround(catalogue, placed, { q: pitched.q, r: pitched.r }, warriors - 1);
+  }
+  return raided(catalogue, chronicle, warriors);
+}
+
 /** One roll of the generator inside a span of turns, both ends included. */
 function withinSpan(rng: Rng, [least, most]: Span): { rng: Rng; turns: number } {
   const step = nextRng(rng);
