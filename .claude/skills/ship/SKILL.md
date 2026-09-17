@@ -9,7 +9,7 @@ One board line per invocation: the top line with a dossier link, unless the user
 
 ## 1. Load the line
 
-Read the line, its dossier, the `docs/` sections the dossier names, and `docs/DOGMAS.md`. If the dossier leaves a design question open, or the line contradicts the docs it names, stop: it goes back through `/intake`. Nothing is pitched here; the design was settled at intake.
+Read the line, its dossier, the `docs/` sections the dossier names, and `docs/DOGMAS.md`. If the dossier leaves a design question open, the line contradicts the docs it names, or the dossier's plan contradicts a rule in `docs/DOGMAS.md` — a gameplay test on real content is the one that has happened — stop: it goes back through `/intake`. Nothing is pitched here; the design was settled at intake.
 
 ## 2. Implement
 
