@@ -36,7 +36,7 @@ Once every fork is settled, and not before, write `board/<slug>.md`:
 **Doc-impact:** the pages, or "none — <why>".
 **Scope:** what is in, what is out, the corner cases decided here and how.
 **Traps:** the non-local facts the implementer cannot see from the files it edits.
-**Plan:** the modules and functions the change touches, and the order, at the altitude of a choke point — which function owns the invariant — never a line number; the implementer reads the code once, at the ship.
+**Plan:** the files the change touches and the order the work lands in, each step by what it leaves standing. Never a function, a signature, or which function owns what: the implementer reads the code once, at the ship, and decides that.
 **Verify:** the commands to run, and the spec to run by name.
 ```
 
