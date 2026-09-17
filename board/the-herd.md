@@ -19,7 +19,7 @@
 ```
 
 - _The map_, the **Feature** bullet: "at most one, put there by the generator: a fertile plain." becomes "at most one, dealt by the generator or by an event's answer: a fertile plain." The bullet's second sentence stays word for word.
-- _Events and the capstone_, first paragraph: the sentence "An answer is a script — spawn enemies, shock a resource, change tiles, take or kill population, damage units, lay a card on top of the draw pile, which the landing's draw puts in hand." becomes "An answer is a script run on the chronicle, and what it does is content; a card it lays on top of the draw pile is one the landing's draw puts in hand." The user's call: a list of what an answer can do only grows, and is too low an altitude for a design page — whoever needs the list reads the content.
+- _Events and the capstone_, first paragraph: the sentence "An answer is a script — spawn enemies, shock a resource, change tiles, take or kill population, damage units, lay a card on top of the draw pile, which the landing's draw puts in hand." becomes "An answer is a script run on the chronicle, and what it does is content." The user's call: a list of what an answer can do only grows, and is too low an altitude for a design page — whoever needs the list reads the content.
 
 [`docs/GLOSSARY.md`](../docs/GLOSSARY.md), the **feature** row: "A generated extra on a tile: a fertile plain." becomes "An extra on a tile, dealt by the generator or by an event's answer: a fertile plain."
 
