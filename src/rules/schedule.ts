@@ -231,7 +231,7 @@ export function besieged(
   camps: number,
   fromCity: Span,
   apart: number,
-): Chronicle {
+): { readonly chronicle: Chronicle; readonly placed: readonly TileCoords[] } {
   const { city } = chronicle;
   if (city === undefined) refuse(catalogue, 'a siege landed while the city stands nowhere');
   const [near, far] = fromCity;
@@ -272,7 +272,7 @@ export function besieged(
     ),
   };
   for (const tile of placed) placing = campUnitEntered(catalogue, placing, tile);
-  return placing;
+  return { chronicle: placing, placed };
 }
 
 /** `besieged` enters the raid's first warrior on the camp it places. */
@@ -287,14 +287,17 @@ export function encamped(
   if (city === undefined) refuse(catalogue, 'a camp was placed while the city stands nowhere');
   const [near, far] = fromCity;
   const edge = Math.max(...chronicle.tiles.map((tile) => distance(tile, city)));
-  const camp = catalogue.camp.building;
   for (let widened = far; widened <= Math.max(far, edge); widened++) {
-    const placed = besieged(catalogue, chronicle, 1, [near, widened], apart);
-    const pitched = placed.tiles.find(
-      (tile, index) => tile.building === camp && chronicle.tiles[index].building !== camp,
+    const { chronicle: placing, placed } = besieged(
+      catalogue,
+      chronicle,
+      1,
+      [near, widened],
+      apart,
     );
-    if (pitched === undefined) continue;
-    return enteredAround(catalogue, placed, { q: pitched.q, r: pitched.r }, warriors - 1);
+    const [camp] = placed;
+    if (camp === undefined) continue;
+    return enteredAround(catalogue, placing, camp, warriors - 1);
   }
   return raided(catalogue, chronicle, warriors);
 }

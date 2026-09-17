@@ -445,7 +445,7 @@ test('an answer placing a camp near the city places one, and its raid enters a w
   expect(distance(camp, CITY)).toBeGreaterThanOrEqual(3);
   expect(distance(camp, CITY)).toBeLessThanOrEqual(4);
   expect(warriors).toHaveLength(ENCAMPED);
-  expect(warriors.map((warrior) => distance(warrior.tile, camp)).sort()).toEqual([
+  expect(warriors.map((warrior) => distance(warrior.tile, camp)).sort((a, b) => a - b)).toEqual([
     0,
     ...Array<number>(ENCAMPED - 1).fill(1),
   ]);

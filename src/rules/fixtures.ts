@@ -310,7 +310,8 @@ export const CATALOGUE: Catalogue = catalogued({
   },
   capstones: {
     PH_Siege: {
-      lands: (catalogue, chronicle) => besieged(catalogue, chronicle, SIEGE_CAMPS, [3, 5], 3),
+      lands: (catalogue, chronicle) =>
+        besieged(catalogue, chronicle, SIEGE_CAMPS, [3, 5], 3).chronicle,
       continues: reinforced,
       passes: (_catalogue, chronicle) => spanEnded(chronicle, 6),
     },

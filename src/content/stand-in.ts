@@ -387,7 +387,7 @@ function copies(count: number): readonly CardId[] {
 }
 
 function siege(catalogue: Catalogue, chronicle: Chronicle): Chronicle {
-  return besieged(catalogue, chronicle, SIEGE_CAMPS, [3, 5], 3);
+  return besieged(catalogue, chronicle, SIEGE_CAMPS, [3, 5], 3).chronicle;
 }
 
 /** How many warriors a raid enters on this turn: one, and one more for every ten turns. */
