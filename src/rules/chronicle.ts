@@ -23,7 +23,7 @@ import {
   rewarded,
   timelineOf,
 } from './schedule';
-import { charted, unitsGone } from './sight';
+import { charted, outOfSight, unitsGone } from './sight';
 import {
   type Block,
   type CardId,
@@ -174,6 +174,7 @@ export function beginChronicle(
     timeline,
     tiles: map.tiles,
     snapshots: [],
+    landedInSight: [],
     rivers: map.rivers,
     centre: map.centre,
     held: [],
@@ -221,7 +222,8 @@ export function apply(catalogue: Catalogue, chronicle: Chronicle, command: Comma
  * The stages a command resolves as before the map is charted. A chronicle that has ended refuses
  * every command and one waiting on a deal every command but the take, and a standing city left
  * without population falls on the first stage that leaves it so, whatever that stage was, with
- * every stage the command resolved after it dropped.
+ * every stage the command resolved after it dropped. Whatever the landing before it put in sight
+ * goes out of sight as the command begins, and a refused command changes nothing, that included.
  */
 function resolved(catalogue: Catalogue, chronicle: Chronicle, command: Command): Stage[] {
   if (chronicle.ending !== undefined) return [{ name: 'refused', chronicle }];
@@ -229,7 +231,11 @@ function resolved(catalogue: Catalogue, chronicle: Chronicle, command: Command):
     return [{ name: 'refused', chronicle }];
   }
 
-  const stages = stagesOf(catalogue, chronicle, command);
+  // A refused stage carries the chronicle `stagesOf` was handed, its landing already out of sight;
+  // a refusal changes nothing, so the chronicle the command stood on goes back on it.
+  const stages = stagesOf(catalogue, outOfSight(chronicle), command).map((stage) =>
+    stage.name === 'refused' ? { ...stage, chronicle } : stage,
+  );
   const at = stages.findIndex(({ chronicle: left }) => falling(left));
   if (at < 0) return stages;
   const fell = stages[at];

@@ -1,4 +1,5 @@
 import { expect, test } from 'vitest';
+import { chartedTile } from './cards';
 import { type Catalogue, catalogued, eventOf } from './catalogue';
 import { apply, type Command, launched, outcome, type Stage } from './chronicle';
 import { growthThreshold } from './city';
@@ -22,6 +23,7 @@ import {
   FIRE,
   field,
   fullDraw,
+  HERD,
   madeOf,
   NO_DEALS,
   NO_GROWTH,
@@ -41,9 +43,18 @@ import {
   withUnits,
   worker,
 } from './fixtures';
-import { distance, neighbours, type TileCoords, tileAt, tileKey } from './map';
+import {
+  distance,
+  type FeatureId,
+  neighbours,
+  type Tile,
+  type TileCoords,
+  tileAt,
+  tileKey,
+} from './map';
 import { nextRng, seedRng } from './rng';
 import { offered } from './schedule';
+import { inSight } from './sight';
 import { type Chronicle, idle, type Timeline } from './state';
 import { unitAt } from './units';
 
@@ -748,6 +759,108 @@ test('a wildfire is dealt with a forest tile within its distance of the city to 
   expect(outcome(apply(CATALOGUE, near, end)).deals).toEqual([
     { of: 'event', event: 'PH_Wildfire' },
   ]);
+  expect(stagedBy(far, end)).toContain('no-deal');
+  expect(outcome(apply(CATALOGUE, far, end)).deals).toEqual([]);
+});
+
+/** The same tiles, with the named ones carrying the feature. */
+function featured(tiles: Tile[], feature: FeatureId, coords: TileCoords[]): Tile[] {
+  const named = new Set(coords.map(tileKey));
+  return tiles.map((tile) => (named.has(tileKey(tile)) ? { ...tile, feature } : tile));
+}
+
+/**
+ * A city on a disc of plain out to five, every plain within the herd's reach of the city carrying a
+ * feature already but the named ones, dealt the fixture's herd at the end of its turn.
+ */
+function herded(open: TileCoords[], carrying: Carrying = {}): Chronicle {
+  const wanted = new Set([CITY, ...open].map(tileKey));
+  const covered = field(5).filter(
+    (tile) => distance(tile, CITY) <= HERD && !wanted.has(tileKey(tile)),
+  );
+  return cityOf(['urban'], {
+    timeline: dueOn(2, 'PH_Herd'),
+    drawPile: fullDraw(),
+    tiles: featured(field(5), 'PH_Fertile', covered),
+    ...carrying,
+  });
+}
+
+/**
+ * The city one end of turn on with the herd standing, the chronicle its first answer lands on, and
+ * the one the take leaves once the hand is drawn.
+ */
+function followed(city: Chronicle): {
+  dealt: Chronicle;
+  landed: Chronicle;
+  taken: Chronicle;
+} {
+  const dealt = outcome(apply(CATALOGUE, city, { type: 'end-turn' }));
+  if (dealt.deals.length === 0) throw new Error('the herd is not dealt');
+  const stages = apply(CATALOGUE, dealt, { type: 'take', at: 0 });
+  const events = stages.find((stage) => stage.name === 'events');
+  if (events === undefined) throw new Error('the take lands nothing');
+  return { dealt, landed: events.chronicle, taken: outcome(stages) };
+}
+
+function featureOf(chronicle: Chronicle, at: TileCoords): FeatureId | undefined {
+  return tileAt(chronicle.tiles, at)?.feature;
+}
+
+test('a feature is dealt onto one tile near the city carrying none, drawn once from the seeded generator, and no other tile changes', () => {
+  const open = [
+    { q: HERD, r: 0 },
+    { q: -HERD, r: 0 },
+    { q: 0, r: HERD },
+    { q: 0, r: -HERD },
+  ];
+  const beyond = { q: HERD + 1, r: 0 };
+  const dealtOn = new Set<string>();
+
+  for (const seed of SEEDS) {
+    const { dealt, landed } = followed(herded(open, { rng: seedRng(seed) }));
+    const gained = open.filter((tile) => featureOf(landed, tile) !== undefined);
+
+    expect(gained).toHaveLength(1);
+    expect(featureOf(landed, beyond)).toBeUndefined();
+    expect(landed.rng).toEqual(nextRng(dealt.rng).rng);
+    expect(landed.tiles.filter((tile) => tileKey(tile) !== tileKey(gained[0]))).toEqual(
+      dealt.tiles.filter((tile) => tileKey(tile) !== tileKey(gained[0])),
+    );
+    dealtOn.add(tileKey(gained[0]));
+  }
+  expect(dealtOn.size).toBeGreaterThan(1);
+});
+
+test('a tile an answer puts in sight is charted where it was not, and its snapshot holds what the answer dealt onto it and whoever stands on it', () => {
+  const at = { q: HERD, r: 0 };
+  const { dealt, landed } = followed(herded([at], { units: [standing('enemy', at, {}, 0, 0)] }));
+  const snapshot = landed.snapshots.find((kept) => tileKey(kept) === tileKey(at));
+
+  expect(chartedTile(dealt, at)).toBe('uncharted');
+  expect(inSight(CATALOGUE, landed).has(tileKey(at))).toBe(true);
+  expect(snapshot?.tile.feature).toBe('PH_Fertile');
+  expect(snapshot?.unit).toEqual({ type: 'PH_Warrior', faction: 'enemy' });
+});
+
+test('a tile an answer put in sight stays in sight through a command the rules refuse, and is in fog after the next one', () => {
+  const at = { q: HERD, r: 0 };
+  const { taken } = followed(herded([at]));
+  const refused = outcome(apply(CATALOGUE, taken, { type: 'take', at: 0 }));
+  const commanded = outcome(apply(CATALOGUE, taken, assignTo(CITY)));
+
+  expect(inSight(CATALOGUE, taken).has(tileKey(at))).toBe(true);
+  expect(inSight(CATALOGUE, refused).has(tileKey(at))).toBe(true);
+  expect(inSight(CATALOGUE, commanded).has(tileKey(at))).toBe(false);
+  expect(chartedTile(commanded, at)).toBeUndefined();
+});
+
+test('an event needing a tile near the city to deal a feature onto is dealt with one, and not without one', () => {
+  const end: Command = { type: 'end-turn' };
+  const near = herded([{ q: HERD, r: 0 }]);
+  const far = herded([{ q: HERD + 1, r: 0 }]);
+
+  expect(outcome(apply(CATALOGUE, near, end)).deals).toEqual([{ of: 'event', event: 'PH_Herd' }]);
   expect(stagedBy(far, end)).toContain('no-deal');
   expect(outcome(apply(CATALOGUE, far, end)).deals).toEqual([]);
 });

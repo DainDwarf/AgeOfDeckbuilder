@@ -71,14 +71,14 @@ function seenFrom(
 
 /**
  * The tiles in sight, by their keys: on turn 0 the map's centre part and nothing else, since nothing
- * sees before turn 1; from turn 1 every tile the city holds, and every tile within a sight of the
- * city's, once it stands, or of a unit of the player's that a line over the ground reaches. The one
- * answer to what is in sight.
+ * sees before turn 1; from turn 1 every tile the city holds, every tile a command's landing put in
+ * sight, and every tile within a sight of the city's, once it stands, or of a unit of the player's
+ * that a line over the ground reaches. The one answer to what is in sight.
  */
 export function inSight(catalogue: Catalogue, chronicle: Chronicle): ReadonlySet<string> {
   if (chronicle.turn === 0) return new Set(chronicle.centre.map(tileKey));
   const terrains = new Map(chronicle.tiles.map((tile) => [tileKey(tile), tile.terrain]));
-  const seen = new Set(chronicle.held.map(tileKey));
+  const seen = new Set([...chronicle.held, ...chronicle.landedInSight].map(tileKey));
 
   const watching =
     chronicle.city === undefined ? [] : [{ from: chronicle.city, sight: catalogue.city.sight }];
@@ -137,6 +137,20 @@ export function charted(catalogue: Catalogue, chronicle: Chronicle): Chronicle {
   }
 
   return charting ? { ...chronicle, snapshots: [...kept.values()] } : chronicle;
+}
+
+/**
+ * A tile put in sight as an answer lands: it is in sight wherever it stands, and charted where it
+ * was not, until the player's next command. The one door onto what a landing puts in sight.
+ */
+export function putInSight(chronicle: Chronicle, at: TileCoords): Chronicle {
+  return { ...chronicle, landedInSight: [...chronicle.landedInSight, { q: at.q, r: at.r }] };
+}
+
+/** The chronicle a command begins on: what the landing before it put in sight is in sight no longer. */
+export function outOfSight(chronicle: Chronicle): Chronicle {
+  if (chronicle.landedInSight.length === 0) return chronicle;
+  return { ...chronicle, landedInSight: [] };
 }
 
 /**

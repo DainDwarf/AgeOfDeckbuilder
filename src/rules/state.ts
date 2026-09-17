@@ -55,6 +55,11 @@ export type Chronicle = {
    * tile absent from it is uncharted. Rivers never move, so no snapshot keeps one.
    */
   readonly snapshots: Snapshot[];
+  /**
+   * The tiles a command's landing put in sight, which are in sight wherever they stand until the
+   * player's next command, and none at all from then on.
+   */
+  readonly landedInSight: TileCoords[];
   /** The rivers the generator ran, each the corners it passes through along the edges between tiles. */
   readonly rivers: River[];
   /** The map's centre part: the whole of what is in sight on turn 0 before the city stands. */

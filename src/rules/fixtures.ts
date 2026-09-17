@@ -57,6 +57,8 @@ import {
   burned,
   encamped,
   type Fire,
+  featureDealable,
+  featureDealt,
   fireRead,
   fireStartable,
   laid,
@@ -68,7 +70,7 @@ import {
   spanEnded,
   unitDamaged,
 } from './schedule';
-import { charted } from './sight';
+import { charted, putInSight } from './sight';
 import { type CardId, type Chronicle, type Deal, holds, type Timeline } from './state';
 import type { Faction, Unit, UnitStats } from './units';
 
@@ -103,6 +105,9 @@ export const ENCAMPED = 3;
 
 /** The fixture's wildfire: forest burned to plain, starting within three of the city. */
 export const FIRE: Fire = { burns: 'forest', leaves: 'plain', fromCity: 3, around: 1, damage: 3 };
+
+/** How far from the city the fixture's herd deals its feature. */
+export const HERD = 3;
 
 /** How many warriors the fixture's raid enters on this turn: one, and one more for every ten turns. */
 function raiders(turn: number): number {
@@ -192,6 +197,20 @@ const EVENTS: Catalogue['events'] = {
         lands: (catalogue, chronicle) => burned(catalogue, chronicle, FIRE),
       },
       PH_Firebreak: { cost: {}, reads: () => ({}), lands: (_catalogue, chronicle) => chronicle },
+    },
+  },
+  PH_Herd: {
+    needs: (catalogue, chronicle) => featureDealable(catalogue, chronicle, 'PH_Fertile', HERD),
+    answers: {
+      PH_Follow: {
+        cost: {},
+        reads: () => ({}),
+        lands: (catalogue, chronicle) => {
+          const dealt = featureDealt(catalogue, chronicle, 'PH_Fertile', HERD);
+          return dealt.at === undefined ? dealt.chronicle : putInSight(dealt.chronicle, dealt.at);
+        },
+      },
+      PH_Ignore: { cost: {}, reads: () => ({}), lands: (_catalogue, chronicle) => chronicle },
     },
   },
   PH_Spoilage: {
@@ -622,6 +641,7 @@ export function cityOf(inside: Terrain[], carrying: Carrying = {}): Chronicle {
     rng: seedRng(7),
     timeline: NO_DEALS,
     snapshots: [],
+    landedInSight: [],
     centre: [],
     tiles: [
       ...inside.map(

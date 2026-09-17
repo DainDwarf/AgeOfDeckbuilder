@@ -9,8 +9,8 @@ import {
   scheduleOf,
 } from './catalogue';
 import { campUnitEntered, enteredAround, raidEntry } from './enemies';
-import { distance, groundRunsTo, type TileCoords, tileKey } from './map';
-import { buildingKind, held, refuse } from './map-kinds';
+import { distance, type FeatureId, groundRunsTo, type Tile, type TileCoords, tileKey } from './map';
+import { buildingKind, featureKind, held, refuse } from './map-kinds';
 import { nextRng, pickWeighted, type Rng } from './rng';
 import {
   type CardId,
@@ -300,6 +300,61 @@ export function burned(catalogue: Catalogue, chronicle: Chronicle, fire: Fire): 
     landing = unitDamaged(landing, tile, fire.damage);
   }
   return landing;
+}
+
+/**
+ * The tiles near the city a feature may be dealt onto: every tile of the terrain it lies on within
+ * that distance of the city's tile carrying no feature, whatever else stands on them. None at all
+ * while the city stands nowhere.
+ */
+function featureTiles(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  feature: FeatureId,
+  fromCity: number,
+): Tile[] {
+  const { city } = chronicle;
+  if (city === undefined) return [];
+  const { terrain } = featureKind(catalogue, feature);
+  return chronicle.tiles.filter(
+    (tile) =>
+      tile.terrain === terrain && tile.feature === undefined && distance(tile, city) <= fromCity,
+  );
+}
+
+export function featureDealable(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  feature: FeatureId,
+  fromCity: number,
+): boolean {
+  return featureTiles(catalogue, chronicle, feature, fromCity).length > 0;
+}
+
+/**
+ * The feature dealt onto one tile near the city, drawn uniformly among the tiles it may be dealt
+ * onto in one step of the chronicle's generator, and the tile it landed on. Every other tile is left
+ * the object it was. No tile to deal onto deals nothing and draws nothing.
+ */
+export function featureDealt(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  feature: FeatureId,
+  fromCity: number,
+): { readonly chronicle: Chronicle; readonly at?: TileCoords } {
+  const candidates = featureTiles(catalogue, chronicle, feature, fromCity);
+  if (candidates.length === 0) return { chronicle };
+  const step = nextRng(chronicle.rng);
+  const dealt = candidates[Math.floor(step.value * candidates.length)];
+  const key = tileKey(dealt);
+  return {
+    chronicle: {
+      ...chronicle,
+      rng: step.rng,
+      tiles: chronicle.tiles.map((tile) => (tileKey(tile) === key ? { ...tile, feature } : tile)),
+    },
+    at: { q: dealt.q, r: dealt.r },
+  };
 }
 
 /** A card laid on top of the draw pile; a card the catalogue does not hold is refused. */

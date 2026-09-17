@@ -75,7 +75,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **terrain** | A tile's base layer: plain, forest, hills, …; one per tile, changed only by terraforming. | tile type |
 | **movement cost** | What entering a tile spends of a unit's move points, summed from the tile's layers unless one of them names it outright; water names none and is crossed by nothing. | move cost, terrain cost, travel cost, difficulty, impassable |
 | **terraform** | To change a tile's terrain into another, where a worker stands or where an event's answer aims; what a terraform instant does. | transform, convert, reshape |
-| **feature** | A generated extra on a tile: a fertile plain. | bonus |
+| **feature** | An extra on a tile, dealt by the generator or by an event's answer: a fertile plain. | bonus |
 | **river** | A watercourse the generator runs along the edges between tiles, from a mountain range to the sea. | stream, creek, waterway |
 | **improvement** | A layer a worker improves a tile with through an instant; distinct ones stack, the same one never twice. | — |
 | **road** | An improvement that names its tile's movement cost outright, whatever lies under it, and makes a bridge of a river edge it stands on both banks of. | path, track, highway, trail |

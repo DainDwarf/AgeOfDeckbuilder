@@ -6,7 +6,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ---
 
-- **The herd** — the nomadic schedule deals The herd, rare, from the first deal, needing a forest tile near the city that carries no feature: _Hunt it_ gains food; _Follow it_ deals game onto one such tile, drawn seeded, and puts that tile in sight as it lands, charted where it was not, its snapshot holding the game. An answer's script is content: the design pages list no script. `npm test`, `npm run check` and `npm run lint` pass. Doc-impact: `docs/ages/NOMADIC.md`, `docs/CHRONICLE.md`, `docs/GLOSSARY.md`. [board/the-herd.md](board/the-herd.md)
 - **Make room can deliver Fight** — where no tile takes a camp, `encamped` resolves the answer as a full raid instead, and it widens the content's distance band ring by ring out to the map's edge, neither of which any design page says; `besieged` entering a warrior on every camp it places is linked to it and settles on the same line.
 - **A feature's mark under an improvement's** — the map draws a feature's mark and an improvement's mark on the same spot of a tile, so Trapping on a game forest reads as one mark; fixed in this version, not left to the v0.0.6 visual rework.
 - **Event animations** — when an event's answer lands, what it changes on the map — burned tiles, killed population and units, anything an answer does — is animated rather than simply redrawn; the tile The herd's _Follow it_ puts in sight is one of them, wherever it lies on the map, and nothing draws the eye to it until then.

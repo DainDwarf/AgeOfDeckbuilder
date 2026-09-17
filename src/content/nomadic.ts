@@ -23,12 +23,15 @@ import {
   burned,
   encamped,
   type Fire,
+  featureDealable,
+  featureDealt,
   fireRead,
   fireStartable,
   laid,
   populationTaken,
   raided,
 } from '../rules/schedule';
+import { putInSight } from '../rules/sight';
 import { ADVANCE } from './scripts';
 
 /** How many warriors a raid enters on this turn: one, and one more for every ten turns. */
@@ -227,6 +230,25 @@ export const NOMADIC: Catalogue = catalogued({
         },
       },
     },
+    herd: {
+      needs: (catalogue, chronicle) =>
+        featureDealable(catalogue, chronicle, 'game', WILDFIRE.fromCity),
+      answers: {
+        'hunt-it': {
+          cost: {},
+          reads: () => ({ food: 4 }),
+          lands: (_catalogue, chronicle) => gained(chronicle, { food: 4 }),
+        },
+        'follow-it': {
+          cost: {},
+          reads: () => ({}),
+          lands: (catalogue, chronicle) => {
+            const dealt = featureDealt(catalogue, chronicle, 'game', WILDFIRE.fromCity);
+            return dealt.at === undefined ? dealt.chronicle : putInSight(dealt.chronicle, dealt.at);
+          },
+        },
+      },
+    },
   },
   capstones: {
     'first-shelter': {
@@ -244,6 +266,7 @@ export const NOMADIC: Catalogue = catalogued({
         'rival-band': () => 1,
         wildfire: (turn) => (turn >= 8 ? 1 : 0),
         departure: () => 1,
+        herd: () => 1 / 3,
       },
     },
   },
