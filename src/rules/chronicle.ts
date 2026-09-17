@@ -23,7 +23,7 @@ import {
   rewarded,
   timelineOf,
 } from './schedule';
-import { charted, outOfSight, unitsGone } from './sight';
+import { carriedOver, charted, unitsGone } from './sight';
 import {
   type Block,
   type CardId,
@@ -174,7 +174,6 @@ export function beginChronicle(
     timeline,
     tiles: map.tiles,
     snapshots: [],
-    landedInSight: [],
     rivers: map.rivers,
     centre: map.centre,
     held: [],
@@ -222,8 +221,7 @@ export function apply(catalogue: Catalogue, chronicle: Chronicle, command: Comma
  * The stages a command resolves as before the map is charted. A chronicle that has ended refuses
  * every command and one waiting on a deal every command but the take, and a standing city left
  * without population falls on the first stage that leaves it so, whatever that stage was, with
- * every stage the command resolved after it dropped. Whatever the landing before it put in sight
- * goes out of sight as the command begins, and a refused command changes nothing, that included.
+ * every stage the command resolved after it dropped.
  */
 function resolved(catalogue: Catalogue, chronicle: Chronicle, command: Command): Stage[] {
   if (chronicle.ending !== undefined) return [{ name: 'refused', chronicle }];
@@ -231,11 +229,7 @@ function resolved(catalogue: Catalogue, chronicle: Chronicle, command: Command):
     return [{ name: 'refused', chronicle }];
   }
 
-  // A refused stage carries the chronicle `stagesOf` was handed, its landing already out of sight;
-  // a refusal changes nothing, so the chronicle the command stood on goes back on it.
-  const stages = stagesOf(catalogue, outOfSight(chronicle), command).map((stage) =>
-    stage.name === 'refused' ? { ...stage, chronicle } : stage,
-  );
+  const stages = stagesOf(catalogue, chronicle, command);
   const at = stages.findIndex(({ chronicle: left }) => falling(left));
   if (at < 0) return stages;
   const fell = stages[at];
@@ -251,10 +245,11 @@ function falling(chronicle: Chronicle): boolean {
 
 /**
  * Every stage with its own chronicle charted, each carrying on from the snapshots the stage before
- * it left. The units leave the snapshots here, on the stage the turn ticks on, because the carrying
- * overwrites whatever snapshots a stage's own chronicle holds. Every stage a command resolves as is built off the chronicle the command started on, so the
- * snapshots the first of them carries are already the ones it started with, and a command that
- * charted nothing hands back the very stage it was given.
+ * it left and keeping whatever the stage charted itself. Every stage a command resolves as is built
+ * off the chronicle the command started on, which is what tells the two apart, so the chronicle the
+ * command stood on is handed to the carrying as the base. The units leave the snapshots here, on the
+ * stage the turn ticks on, because the snapshots a stage's own chronicle carries are that base's,
+ * stale by a turn. A command that charted nothing hands back the very stage it was given.
  */
 function charting(catalogue: Catalogue, started: Chronicle, stages: readonly Stage[]): Stage[] {
   let standing = started.snapshots;
@@ -262,10 +257,12 @@ function charting(catalogue: Catalogue, started: Chronicle, stages: readonly Sta
   return stages.map((stage) => {
     if (stage.chronicle.turn !== turn) standing = unitsGone(standing);
     turn = stage.chronicle.turn;
+    const snapshots = carriedOver(standing, {
+      own: stage.chronicle.snapshots,
+      builtOff: started.snapshots,
+    });
     const carried =
-      stage.chronicle.snapshots === standing
-        ? stage.chronicle
-        : { ...stage.chronicle, snapshots: standing };
+      stage.chronicle.snapshots === snapshots ? stage.chronicle : { ...stage.chronicle, snapshots };
     const seen = charted(catalogue, carried);
     standing = seen.snapshots;
     return seen === stage.chronicle ? stage : { ...stage, chronicle: seen };

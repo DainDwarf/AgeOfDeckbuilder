@@ -34,7 +34,7 @@ The map is hidden. The city and its units have **sight** over the tiles near the
 
 **Every tile the city holds is in sight** 🔧: one population works it.
 
-**An answer may put a tile in sight as it lands.** The tile is charted where it was not, and its snapshot is taken as it stands, whoever stands on it; it stays in sight until the player's next command, and is in fog from then on unless something sees it.
+**An answer may chart a tile as it lands.** The tile is charted where it was not, and its snapshot is taken as it stands, whoever stands on it; it is in fog from then on unless something sees it.
 
 **On turn 0 the centre part of the map is in sight**, and it is the only sight there is: nothing sees on turn 0 — not the city once it stands, not a unit entered on it — so nothing is charted before turn 1 but the centre part, and the settle is chosen on what it shows. From turn 1 the city and its units see for themselves, and the centre part falls into fog wherever they do not.
 

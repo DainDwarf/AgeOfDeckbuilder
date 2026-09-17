@@ -81,7 +81,6 @@ function cityOn(
     timeline: NO_DEALS,
     tiles,
     snapshots: [],
-    landedInSight: [],
     rivers: [],
     centre: [],
     city: CITY,

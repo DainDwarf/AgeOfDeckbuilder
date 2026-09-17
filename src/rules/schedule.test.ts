@@ -54,8 +54,8 @@ import {
 } from './map';
 import { nextRng, seedRng } from './rng';
 import { offered } from './schedule';
-import { inSight } from './sight';
-import { type Chronicle, idle, type Timeline } from './state';
+import { chartedAt, inSight } from './sight';
+import { type Chronicle, idle, type Snapshot, type Timeline } from './state';
 import { unitAt } from './units';
 
 /** The seeds a test over a whole walk runs: enough of them for both orders to be drawn. */
@@ -807,6 +807,10 @@ function featureOf(chronicle: Chronicle, at: TileCoords): FeatureId | undefined 
   return tileAt(chronicle.tiles, at)?.feature;
 }
 
+function snapshotOf(chronicle: Chronicle, at: TileCoords): Snapshot | undefined {
+  return chronicle.snapshots.find((kept) => tileKey(kept) === tileKey(at));
+}
+
 test('a feature is dealt onto one tile near the city carrying none, drawn once from the seeded generator, and no other tile changes', () => {
   const open = [
     { q: HERD, r: 0 },
@@ -832,27 +836,47 @@ test('a feature is dealt onto one tile near the city carrying none, drawn once f
   expect(dealtOn.size).toBeGreaterThan(1);
 });
 
-test('a tile an answer puts in sight is charted where it was not, and its snapshot holds what the answer dealt onto it and whoever stands on it', () => {
+test('a tile an answer charts is charted where it was not, its snapshot holding what the answer dealt onto it and whoever stands on it, and it is in fog as the answer lands', () => {
   const at = { q: HERD, r: 0 };
   const { dealt, landed } = followed(herded([at], { units: [standing('enemy', at, {}, 0, 0)] }));
-  const snapshot = landed.snapshots.find((kept) => tileKey(kept) === tileKey(at));
+  const snapshot = snapshotOf(landed, at);
 
   expect(chartedTile(dealt, at)).toBe('uncharted');
-  expect(inSight(CATALOGUE, landed).has(tileKey(at))).toBe(true);
+  expect(chartedTile(landed, at)).toBeUndefined();
+  expect(inSight(CATALOGUE, landed).has(tileKey(at))).toBe(false);
   expect(snapshot?.tile.feature).toBe('PH_Fertile');
   expect(snapshot?.unit).toEqual({ type: 'PH_Warrior', faction: 'enemy' });
 });
 
-test('a tile an answer put in sight stays in sight through a command the rules refuse, and is in fog after the next one', () => {
+test('a tile an answer charts that was charted before holds what the answer dealt onto it and whoever stands on it, over the snapshot it had', () => {
+  const at = { q: HERD, r: 0 };
+  const seen = chartedAt(CATALOGUE, herded([at]), at);
+  const { dealt, landed, taken } = followed(withUnits(seen, [standing('enemy', at, {}, 0, 0)]));
+
+  expect(snapshotOf(dealt, at)?.tile.feature).toBeUndefined();
+  expect(snapshotOf(dealt, at)?.unit).toBeUndefined();
+  expect(snapshotOf(landed, at)?.tile.feature).toBe('PH_Fertile');
+  expect(snapshotOf(landed, at)?.unit).toEqual({ type: 'PH_Warrior', faction: 'enemy' });
+  expect(snapshotOf(taken, at)?.tile.feature).toBe('PH_Fertile');
+  expect(inSight(CATALOGUE, landed).has(tileKey(at))).toBe(false);
+});
+
+test('a tile an answer charted stays charted as it was then, and in fog, through the commands and the turns that follow, where nothing sees it', () => {
   const at = { q: HERD, r: 0 };
   const { taken } = followed(herded([at]));
-  const refused = outcome(apply(CATALOGUE, taken, { type: 'take', at: 0 }));
-  const commanded = outcome(apply(CATALOGUE, taken, assignTo(CITY)));
+  const fogged = (chronicle: Chronicle): void => {
+    expect(inSight(CATALOGUE, chronicle).has(tileKey(at))).toBe(false);
+    expect(chartedTile(chronicle, at)).toBeUndefined();
+    expect(snapshotOf(chronicle, at)?.tile.feature).toBe('PH_Fertile');
+  };
 
-  expect(inSight(CATALOGUE, taken).has(tileKey(at))).toBe(true);
-  expect(inSight(CATALOGUE, refused).has(tileKey(at))).toBe(true);
-  expect(inSight(CATALOGUE, commanded).has(tileKey(at))).toBe(false);
-  expect(chartedTile(commanded, at)).toBeUndefined();
+  let later = outcome(apply(CATALOGUE, taken, assignTo(CITY)));
+  fogged(later);
+  for (let turns = 0; turns < 3; turns++) {
+    later = outcome(apply(CATALOGUE, later, { type: 'end-turn' }));
+    fogged(later);
+  }
+  expect(later.turn).toBe(taken.turn + 3);
 });
 
 test('an event needing a tile near the city to deal a feature onto is dealt with one, and not without one', () => {

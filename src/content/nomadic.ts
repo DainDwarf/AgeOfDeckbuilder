@@ -31,7 +31,7 @@ import {
   populationTaken,
   raided,
 } from '../rules/schedule';
-import { putInSight } from '../rules/sight';
+import { chartedAt } from '../rules/sight';
 import { ADVANCE } from './scripts';
 
 /** How many warriors a raid enters on this turn: one, and one more for every ten turns. */
@@ -246,7 +246,9 @@ export const NOMADIC: Catalogue = catalogued({
           reads: () => ({}),
           lands: (catalogue, chronicle) => {
             const dealt = featureDealt(catalogue, chronicle, HERD.feature, HERD.fromCity);
-            return dealt.at === undefined ? dealt.chronicle : putInSight(dealt.chronicle, dealt.at);
+            return dealt.at === undefined
+              ? dealt.chronicle
+              : chartedAt(catalogue, dealt.chronicle, dealt.at);
           },
         },
       },

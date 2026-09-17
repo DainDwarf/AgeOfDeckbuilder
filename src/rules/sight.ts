@@ -1,5 +1,14 @@
 import type { Catalogue } from './catalogue';
-import { distance, elevation, type Terrain, type TileCoords, tileKey } from './map';
+import {
+  distance,
+  elevation,
+  type Terrain,
+  type Tile,
+  type TileCoords,
+  tileAt,
+  tileKey,
+} from './map';
+import { refuse } from './map-kinds';
 import type { Chronicle, Snapshot } from './state';
 import { unitAt } from './units';
 
@@ -71,14 +80,14 @@ function seenFrom(
 
 /**
  * The tiles in sight, by their keys: on turn 0 the map's centre part and nothing else, since nothing
- * sees before turn 1; from turn 1 every tile the city holds, every tile a command's landing put in
- * sight, and every tile within a sight of the city's, once it stands, or of a unit of the player's
- * that a line over the ground reaches. The one answer to what is in sight.
+ * sees before turn 1; from turn 1 every tile the city holds, and every tile within a sight of the
+ * city's, once it stands, or of a unit of the player's that a line over the ground reaches. The one
+ * answer to what is in sight.
  */
 export function inSight(catalogue: Catalogue, chronicle: Chronicle): ReadonlySet<string> {
   if (chronicle.turn === 0) return new Set(chronicle.centre.map(tileKey));
   const terrains = new Map(chronicle.tiles.map((tile) => [tileKey(tile), tile.terrain]));
-  const seen = new Set([...chronicle.held, ...chronicle.landedInSight].map(tileKey));
+  const seen = new Set(chronicle.held.map(tileKey));
 
   const watching =
     chronicle.city === undefined ? [] : [{ from: chronicle.city, sight: catalogue.city.sight }];
@@ -102,21 +111,31 @@ export function inSight(catalogue: Catalogue, chronicle: Chronicle): ReadonlySet
  * layers did not change is the very object it was: every path that layers a tile over rebuilds that
  * one tile and leaves the others as they stand.
  */
-function records(snapshot: Snapshot | undefined, taken: Snapshot): boolean {
+function records(kept: Snapshot | undefined, snapshot: Snapshot): boolean {
   return (
-    snapshot !== undefined &&
-    snapshot.tile === taken.tile &&
-    snapshot.unit?.type === taken.unit?.type &&
-    snapshot.unit?.faction === taken.unit?.faction
+    kept !== undefined &&
+    kept.tile === snapshot.tile &&
+    kept.unit?.type === snapshot.unit?.type &&
+    kept.unit?.faction === snapshot.unit?.faction
   );
 }
 
 /**
+ * The snapshot a tile is charted as: the tile as it stands, with the unit standing on it, nobody
+ * where nobody stands and nobody where the unit is the player's own.
+ */
+function taken(chronicle: Chronicle, tile: Tile): Snapshot {
+  const standing = unitAt(chronicle.units, tile);
+  const at: Snapshot = { q: tile.q, r: tile.r, tile };
+  if (standing === undefined || standing.faction === 'player') return at;
+  return { ...at, unit: { type: standing.stats.type, faction: standing.faction } };
+}
+
+/**
  * The chronicle with a snapshot taken of every tile in sight, over whatever it was last seen as:
- * the one place the map is charted, and every stage a command resolves as goes through it. A tile
- * in sight with nobody on it is recorded with nobody on it, and a unit of the player's is never
- * recorded at all. A chronicle the snapshots already answer for is handed straight back, so a
- * command that charted nothing answers the very chronicle it was given.
+ * the one place what is in sight is charted, and every stage a command resolves as goes through it.
+ * A chronicle the snapshots already answer for is handed straight back, so a command that charted
+ * nothing answers the very chronicle it was given.
  */
 export function charted(catalogue: Catalogue, chronicle: Chronicle): Chronicle {
   const seen = inSight(catalogue, chronicle);
@@ -125,14 +144,9 @@ export function charted(catalogue: Catalogue, chronicle: Chronicle): Chronicle {
 
   for (const tile of chronicle.tiles) {
     if (!seen.has(tileKey(tile))) continue;
-    const standing = unitAt(chronicle.units, tile);
-    const at: Snapshot = { q: tile.q, r: tile.r, tile };
-    const taken: Snapshot =
-      standing === undefined || standing.faction === 'player'
-        ? at
-        : { ...at, unit: { type: standing.stats.type, faction: standing.faction } };
-    if (records(kept.get(tileKey(tile)), taken)) continue;
-    kept.set(tileKey(tile), taken);
+    const snapshot = taken(chronicle, tile);
+    if (records(kept.get(tileKey(tile)), snapshot)) continue;
+    kept.set(tileKey(tile), snapshot);
     charting = true;
   }
 
@@ -140,17 +154,47 @@ export function charted(catalogue: Catalogue, chronicle: Chronicle): Chronicle {
 }
 
 /**
- * A tile put in sight as an answer lands: it is in sight wherever it stands, and charted where it
- * was not, until the player's next command. The one door onto what a landing puts in sight.
+ * The chronicle with one tile charted, whatever sees it: its snapshot taken as the tile stands and
+ * whoever stands on it, put where the tile had none and over the one it had. Nothing else changes,
+ * so the tile is in fog from there on unless something sees it. A tile the map does not hold is
+ * refused.
  */
-export function putInSight(chronicle: Chronicle, at: TileCoords): Chronicle {
-  return { ...chronicle, landedInSight: [...chronicle.landedInSight, { q: at.q, r: at.r }] };
+export function chartedAt(catalogue: Catalogue, chronicle: Chronicle, at: TileCoords): Chronicle {
+  const tile = tileAt(chronicle.tiles, at);
+  if (tile === undefined)
+    refuse(catalogue, `${tileKey(at)} was charted, a tile the map does not hold`);
+  const key = tileKey(at);
+  const kept = new Map(chronicle.snapshots.map((snapshot) => [tileKey(snapshot), snapshot]));
+  const snapshot = taken(chronicle, tile);
+  if (records(kept.get(key), snapshot)) return chronicle;
+  kept.set(key, snapshot);
+  return { ...chronicle, snapshots: [...kept.values()] };
 }
 
-/** The chronicle a command begins on: what the landing before it put in sight is in sight no longer. */
-export function outOfSight(chronicle: Chronicle): Chronicle {
-  if (chronicle.landedInSight.length === 0) return chronicle;
-  return { ...chronicle, landedInSight: [] };
+/**
+ * The snapshots a stage leaves: the ones the stage before it left, and over them every snapshot the
+ * stage charted itself, which wins. Every stage a command resolves as is built off the chronicle the
+ * command started on, and nothing writes snapshots but this file, so an entry that is not the very
+ * object the chronicle the stage was built off holds for that tile is one the stage charted, and a
+ * stage that charted nothing carries that chronicle's snapshots object for object.
+ */
+export function carriedOver(
+  left: Snapshot[],
+  charting: { readonly own: Snapshot[]; readonly builtOff: Snapshot[] },
+): Snapshot[] {
+  const { own, builtOff } = charting;
+  if (own === builtOff) return left;
+  const base = new Map(builtOff.map((snapshot) => [tileKey(snapshot), snapshot]));
+  const kept = new Map(left.map((snapshot) => [tileKey(snapshot), snapshot]));
+  let carrying = false;
+
+  for (const snapshot of own) {
+    if (base.get(tileKey(snapshot)) === snapshot) continue;
+    kept.set(tileKey(snapshot), snapshot);
+    carrying = true;
+  }
+
+  return carrying ? [...kept.values()] : left;
 }
 
 /**

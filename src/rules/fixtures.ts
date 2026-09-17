@@ -70,7 +70,7 @@ import {
   spanEnded,
   unitDamaged,
 } from './schedule';
-import { charted, putInSight } from './sight';
+import { charted, chartedAt } from './sight';
 import { type CardId, type Chronicle, type Deal, holds, type Timeline } from './state';
 import type { Faction, Unit, UnitStats } from './units';
 
@@ -207,7 +207,9 @@ const EVENTS: Catalogue['events'] = {
         reads: () => ({}),
         lands: (catalogue, chronicle) => {
           const dealt = featureDealt(catalogue, chronicle, 'PH_Fertile', HERD);
-          return dealt.at === undefined ? dealt.chronicle : putInSight(dealt.chronicle, dealt.at);
+          return dealt.at === undefined
+            ? dealt.chronicle
+            : chartedAt(catalogue, dealt.chronicle, dealt.at);
         },
       },
       PH_Ignore: { cost: {}, reads: () => ({}), lands: (_catalogue, chronicle) => chronicle },
@@ -641,7 +643,6 @@ export function cityOf(inside: Terrain[], carrying: Carrying = {}): Chronicle {
     rng: seedRng(7),
     timeline: NO_DEALS,
     snapshots: [],
-    landedInSight: [],
     centre: [],
     tiles: [
       ...inside.map(
