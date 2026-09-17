@@ -1,10 +1,17 @@
+const BLOCK: number[] = [-11, -11, 11, -11, 11, 11, -11, 11];
+
+const POINT: number[] = [0, -14, 13, 9, -13, 9];
+
 /**
- * Placeholder primitives until the art pass: the worker a block, the warrior a point. Each is its
- * corners about its own centre, raw.
+ * Placeholder primitives until the art pass: the worker a block, the warrior a point, the scout an
+ * arrowhead. Each is its corners about its own centre, raw.
  */
 const UNIT_MARKS: Readonly<Record<string, number[]>> = {
-  PH_Worker: [-11, -11, 11, -11, 11, 11, -11, 11],
-  PH_Warrior: [0, -14, 13, 9, -13, 9],
+  PH_Worker: BLOCK,
+  PH_Warrior: POINT,
+  worker: BLOCK,
+  warrior: POINT,
+  scout: [0, -14, 11, 12, 0, 5, -11, 12],
 };
 
 /** The red the enemies are drawn in, and everything that is theirs. */
@@ -31,12 +38,15 @@ const WALL: number[] = [
 
 /**
  * Placeholder primitives until the art pass: the farm a house, the city and the camp a crenellated
- * wall, all of them wide enough to show under a unit.
+ * wall, the shelter a tent, all of them wide enough to show under a unit.
  */
 const BUILDING_MARKS: Readonly<Record<string, number[]>> = {
   PH_City: WALL,
   PH_Farm: [-16, 8, -16, -2, 0, -13, 16, -2, 16, 8],
   PH_Camp: WALL,
+  city: WALL,
+  camp: WALL,
+  shelter: [-16, 10, 0, -13, 16, 10, 5, 10, 0, 2, -5, 10],
 };
 
 /** What each building's mark is painted in: the stone everything built is, a camp the enemy's red. */
@@ -44,22 +54,42 @@ const BUILDING_COLOURS: Readonly<Record<string, number>> = {
   PH_City: BUILT,
   PH_Farm: BUILT,
   PH_Camp: ENEMY_RED,
+  city: BUILT,
+  camp: ENEMY_RED,
+  shelter: BUILT,
 };
 
 /** Half the width of the fertile plain's hexagon, whose corners stand four from its centre. */
 const HEX_HALF = 2 * Math.sqrt(3);
 
-/** Placeholder primitives until the art pass: the fertile plain a small hexagon of its own green. */
+const FERTILE: number[] = [HEX_HALF, -2, HEX_HALF, 2, 0, 4, -HEX_HALF, 2, -HEX_HALF, -2, 0, -4];
+
+/**
+ * Placeholder primitives until the art pass: the fertile plain a small hexagon of its own green, the
+ * game a small triangle, the flint a shard.
+ */
 const FEATURE_MARKS: Readonly<Record<string, number[]>> = {
-  PH_Fertile: [HEX_HALF, -2, HEX_HALF, 2, 0, 4, -HEX_HALF, 2, -HEX_HALF, -2, 0, -4],
+  PH_Fertile: FERTILE,
+  fertile: FERTILE,
+  game: [-4, 3, 0, -4, 4, 3],
+  flint: [-2, -4, 3, -1, 1, 4, -3, 1],
 };
 
-const FEATURE_COLOURS: Readonly<Record<string, number>> = { PH_Fertile: 0x4a7a2d };
+const FEATURE_COLOURS: Readonly<Record<string, number>> = {
+  PH_Fertile: 0x4a7a2d,
+  fertile: 0x4a7a2d,
+  game: 0x8a5a2b,
+  flint: 0x4b4f58,
+};
 
-/** Placeholder primitives until the art pass: the mine a cut into the ground, the road a straight band. */
+/**
+ * Placeholder primitives until the art pass: the mine a cut into the ground, the road a straight
+ * band, the trapping a snare.
+ */
 const IMPROVEMENT_MARKS: Readonly<Record<string, number[]>> = {
   PH_Mine: [-8, 7, -4, -7, 4, -7, 8, 7],
   PH_Road: [-8, -2, 8, -2, 8, 2, -8, 2],
+  trapping: [-8, -6, -4, -6, 0, 2, 4, -6, 8, -6, 0, 7],
 };
 
 /** The corners a unit kind's mark is drawn from; a kind with no mark is refused. */

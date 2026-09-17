@@ -3,7 +3,7 @@
  * outside a test imports this module: a rules module that did would ship fixtures in the build.
  */
 // The one import of `src/content/` under `src/rules/`, allowed because this module is test-only.
-import { ADVANCE } from '../content/stand-in';
+import { ADVANCE } from '../content/scripts';
 import {
   built,
   claimableTile,

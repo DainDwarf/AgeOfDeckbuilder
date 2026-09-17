@@ -6,7 +6,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ---
 
-- **The nomadic age implemented** — `src/content/nomadic.ts` is the catalogue a launch with no choice lands on: the three units with the scout, the land and its three features, the cards and the deck, Lean season as the schedule's one event, the first shelter and the camps' two rewards, every id named on the screen and coherence-tested; the stand-in stays as the e2e suite's content. Doc-impact: `docs/CHRONICLE.md`, `docs/ages/NOMADIC.md`. [board/nomadic-age.md](board/nomadic-age.md)
 - **A rival band** — the second event: Fight enters the band on the free camps, Make room places a camp near the city with one warrior on it; how a later band is larger under Make room is that intake's fork.
 - **Wildfire** — the third event: the forest near the city burns to plain with the game, the trapping, the inhabitant and a unit's health on it, or production pays for a firebreak; the reach, whether all or a roll, and the city's own forest tile are that intake's forks.
 - **Departure** — the fourth event, and the helper that takes an inhabitant from the city, idle first and the last assigned else: an inhabitant leaves, never the city's last, or culture keeps them; Hunger's strike then kills one when the food stock cannot cover it.

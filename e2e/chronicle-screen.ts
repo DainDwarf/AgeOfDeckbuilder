@@ -191,7 +191,7 @@ export async function openOnCapstone(
   schedule: string = STAND_IN_SCHEDULE,
 ): Promise<void> {
   await readNames(page);
-  await page.goto(`/?seed=${seed}&deck=${deck}&schedule=${schedule}`);
+  await page.goto(`/?content=${STAND_IN.version}&seed=${seed}&deck=${deck}&schedule=${schedule}`);
   await page.waitForFunction(() => window.game?.scene.isActive('chronicle') === true);
   await rested(page);
   await expect.poll(() => standing(page, 'capstone')).toBe(true);

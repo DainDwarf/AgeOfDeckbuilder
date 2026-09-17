@@ -1,4 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
+import { NOMADIC } from '../src/content/nomadic';
 import { STAND_IN } from '../src/content/stand-in';
 import { deckOf } from '../src/rules/catalogue';
 import { chronicleOf, click, readNames, rested, standing, watch } from './chronicle-screen';
@@ -12,7 +13,7 @@ function seedOnAddress(page: Page): number | undefined {
 test('an address naming a deck boots into the chronicle and logs nothing', async ({ page }) => {
   const problems = watch(page);
 
-  await page.goto('/?deck=PH_Deck');
+  await page.goto(`/?content=${STAND_IN.version}&deck=PH_Deck`);
 
   const canvas = page.locator('canvas');
   await expect(canvas).toBeVisible();
@@ -48,9 +49,9 @@ test('Launch opens the chronicle on the defaults, and the address follows every 
   await page.waitForFunction(() => window.game?.scene.isActive('chronicle') === true);
 
   const launched = await chronicleOf(page);
-  const deck = deckOf(STAND_IN, 'PH_Deck');
+  const deck = deckOf(NOMADIC, 'nomadic');
   await expect.poll(() => seedOnAddress(page)).toBe(launched.seed);
-  expect(launched.content).toBe('stand-in');
+  expect(launched.content).toBe(NOMADIC.version);
   expect([...launched.drawPile, ...launched.hand, ...launched.discardPile].sort()).toEqual(
     [...deck.cards, ...deck.settle].sort(),
   );
