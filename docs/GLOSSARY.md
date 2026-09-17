@@ -64,7 +64,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **hazard** | A card no deck holds: an event brings it into a chronicle, and it **strikes** while held. | penalty, curse, drawback, upkeep, affliction, bane |
 | **strike** | What a hazard does to the chronicle at the end of a turn it is still in the hand. | bite, trigger, fire, proc, go off |
 | **worker** | A non-fighting unit that changes tiles: builds buildings, terraforms them, improves them, spending its one action on each card played through it. | builder, engineer, labourer |
-| **population** | The city's inhabitants: assigned to tiles for income, turned into units by unit cards. | citizens, workforce, pops |
+| **population** | The city's inhabitants: assigned to tiles for income, turned into units by unit cards. | inhabitants, citizens, workforce, pops |
 | **assign** | To put one population on a tile inside the border; free, instant, reversible. | allocate |
 | **unassign** | To take one population off the tile it stands on; the reverse of assign. | remove, free up, release |
 | **idle** | An inhabitant assigned to no tile; what a unit card takes. | unemployed, spare, unassigned (as a noun) |
