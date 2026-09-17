@@ -135,8 +135,8 @@ export type Deck = { readonly cards: readonly string[]; readonly settle: readonl
  * The content a chronicle is played on: the stats a unit of each kind enters the map with, every
  * script an enemy can carry, the map content, the cards and the decks a chronicle is begun on,
  * the events, the capstones and the schedules its timeline is rolled from, what a camp is, enters
- * and gives on its capture, and the city: the building it stands as, how far it
- * sees, and how many idle inhabitants it opens with. Every one of them is named by its key.
+ * and gives on its capture, and the city: the building it stands as, how far it sees, and how many
+ * idle inhabitants it opens with. Every one of them is named by its key.
  */
 export type Catalogue = MapContent & {
   readonly units: Readonly<Record<string, UnitStats>>;
@@ -174,8 +174,9 @@ export type Catalogue = MapContent & {
  * from one at least to no less than its least; an event a schedule deals among its entries deals two
  * answers at least; every event deals an answer costing no stock, every amount its cost names
  * nought; no answer is dealt by two events; the camp deals one reward at least and rolls at odds
- * from nought to one; the camp's unit stands on every terrain its building names; and the city's sight and its idle count are none below
- * nought. The closures of a card, an answer and a capstone are neither run nor read here.
+ * from nought to one; the camp's unit stands on every terrain its building names; and the city's
+ * sight and its idle count are none below nought. The closures of a card, an answer and a capstone
+ * are neither run nor read here.
  */
 export function catalogued(content: Catalogue): Catalogue {
   for (const [id, kind] of Object.entries(content.units)) {

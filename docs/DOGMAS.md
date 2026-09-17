@@ -130,7 +130,7 @@ The layout, which embodies the rule above:
 index.html          the page Phaser puts its canvas in; no UI of its own
 src/main.ts         boots the Phaser game
 src/rules/          pure TypeScript: state, commands, the seeded generator
-src/content/        the catalogues: the stand-in today, an age's content later; what the boot hands the rules and the screen
+src/content/        the catalogues: the ages' content, and the stand-in the e2e suite plays on; what the boot hands the rules and the screen
 src/ui/             Phaser scenes, and the design space they lay out in
 e2e/                Playwright specs
 .github/workflows/  the CI check
