@@ -238,7 +238,7 @@ test('a city with no population left falls, whatever the command was', () => {
     cause: 'population',
     turn: empty.turn,
   });
-  // The fall rides the last stage the command resolved as, refused though that play was.
+  // The fall rides the stage the command resolved as, refused though that play was.
   expect(stagedBy(empty, { type: 'play', index: 0, aim: 'none' })).toEqual(['refused']);
 
   const ended = outcome(apply(CATALOGUE, empty, { type: 'end-turn' }));

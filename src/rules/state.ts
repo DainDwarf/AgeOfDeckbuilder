@@ -73,7 +73,11 @@ export type Chronicle = {
   readonly deals: readonly Deal[];
   readonly resources: Resources;
   readonly population: number;
-  /** The tiles population stands on, at most one to a tile; the rest of the population is idle. */
+  /**
+   * The tiles population stands on, at most one to a tile; the rest of the population is idle. Its
+   * order is the order assigned — every writer appends — and one population taken with none idle
+   * comes off the last entry.
+   */
   readonly assigned: TileCoords[];
   readonly units: Unit[];
   /**

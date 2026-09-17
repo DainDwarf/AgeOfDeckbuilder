@@ -62,9 +62,11 @@ import {
   laid,
   offered,
   populationKilled,
+  populationTaken,
   raided,
   reinforced,
   spanEnded,
+  stockStruck,
   unitDamaged,
 } from './schedule';
 import { charted } from './sight';
@@ -81,6 +83,9 @@ export const TILLAGE = 'PH_Farm';
 
 /** The food the fixture's hunger strikes off the stock. */
 export const HUNGER = 6;
+
+/** The food the fixture's drought strikes off the stock, taking one population where it falls short. */
+export const DROUGHT = 4;
 
 /** The production the fixture's explosion costs: the one answer of the fixture whose flat cost asks a stock. */
 export const EXPLOSION = 4;
@@ -157,6 +162,16 @@ const EVENTS: Catalogue['events'] = {
         reads: () => ({}),
         lands: (catalogue, chronicle) => terraformed(catalogue, chronicle, UPHEAVAL, 'forest'),
       },
+    },
+  },
+  PH_Exodus: {
+    answers: {
+      PH_Leave: {
+        cost: {},
+        reads: () => ({}),
+        lands: (_catalogue, chronicle) => populationTaken(chronicle),
+      },
+      PH_Stay: { cost: {}, reads: () => ({}), lands: (_catalogue, chronicle) => chronicle },
     },
   },
   PH_Rivals: {
@@ -330,6 +345,11 @@ export const CATALOGUE: Catalogue = catalogued({
       kind: 'hazard',
       cost: { production: 3 },
       strikes: (_catalogue, chronicle) => shocked(chronicle, 'food', HUNGER),
+    },
+    PH_Drought: {
+      kind: 'hazard',
+      cost: { production: 3 },
+      strikes: (_catalogue, chronicle) => stockStruck(chronicle, 'food', DROUGHT),
     },
   },
   decks: {

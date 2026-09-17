@@ -22,6 +22,7 @@ import {
   CITY,
   camped,
   cityOf,
+  DROUGHT,
   dealing,
   endedTurn,
   everyCard,
@@ -1463,6 +1464,53 @@ test('a hazard’s strike takes what it names off the stock, and a strike that o
 
   expect(outrun.resources.food).toBe(yielded);
   expect(spared.resources.food).toBe(1 + yielded);
+});
+
+/** A city with the drought in its hand and that much food for it to strike. */
+function droughty(food: number, carrying: Carrying = {}): Chronicle {
+  return cityOf(['urban', 'plain'], {
+    ...NO_GROWTH,
+    hand: ['PH_Drought'],
+    resources: { ...STOCKED, food },
+    ...carrying,
+  });
+}
+
+/** The chronicle the city's hazards left on striking at the end of its turn. A turn striking nothing throws. */
+function stricken(city: Chronicle): Chronicle {
+  const strike = apply(CATALOGUE, city, { type: 'end-turn' }).find(
+    (stage) => stage.name === 'strike',
+  );
+  if (strike === undefined) throw new Error('the end of turn strikes nothing');
+  return strike.chronicle;
+}
+
+test('a strike the stock covers takes no population, the stock covering it exactly no exception', () => {
+  const exact = droughty(DROUGHT);
+  const spared = droughty(DROUGHT + 1);
+
+  expect(stricken(exact).resources.food).toBe(0);
+  expect(stricken(exact).population).toBe(exact.population);
+  expect(stricken(spared).resources.food).toBe(1);
+  expect(stricken(spared).population).toBe(spared.population);
+});
+
+test('a strike the stock cannot cover empties the stock and takes one population besides', () => {
+  const short = droughty(DROUGHT - 1);
+
+  expect(stricken(short).resources.food).toBe(0);
+  expect(stricken(short).population).toBe(short.population - 1);
+});
+
+test('a strike taking the city’s last population falls on the strike, and no step of the end of turn follows it', () => {
+  const last = droughty(DROUGHT - 1, { population: 1, assigned: [CITY], drawPile: fullDraw() });
+  const ended = outcome(apply(CATALOGUE, last, { type: 'end-turn' }));
+
+  expect(stagedBy(last, { type: 'end-turn' })).toEqual(['strike']);
+  expect(ended.population).toBe(0);
+  expect(ended.resources.food).toBe(0);
+  expect(ended.hand).toEqual(['PH_Drought']);
+  expect(ended.ending).toEqual({ outcome: 'defeat', cause: 'population', turn: last.turn });
 });
 
 test('a card the city falls short for is refused for the resource it is short of', () => {

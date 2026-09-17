@@ -32,7 +32,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **build** | To put a building on a tile; what a building card does. | raise, construct, erect |
 | **neutral** | A non-player unit that does not attack. | NPC, city-state, friendly |
 | **enemy** | A non-player unit that attacks. | barbarian, raider, hostile, invader, foe |
-| **killed** | What happens to a unit that loses or that a terraform leaves on ground it cannot stand on, or to one population an event kills: the unit leaves the map, the population the city. | destroyed, slain, dead, lost |
+| **killed** | What happens to a unit that loses or that a terraform leaves on ground it cannot stand on, or to one population an event or a hazard's strike kills: the unit leaves the map, the population the city. | destroyed, slain, dead, lost |
 | **event** | One entry of the age's schedule: a problem the chronicle throws at the city, dealt with its answers. | disaster, threat, crisis, encounter |
 | **capstone** | The age's final trial, known from the chronicle's opening on a turn that is not; passing it — its condition met — is victory. | boss, finale, objective |
 | **schedule** | An age's set of events with their turn-shifting weights, and its tempo: the spacing, and the capstone with its window. What a timeline is rolled from. | calendar |

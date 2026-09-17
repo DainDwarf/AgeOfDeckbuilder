@@ -10,7 +10,6 @@ import {
   movePointsSpent,
   refreshed,
   settled,
-  shocked,
   slotFree,
   throughWorker,
   unimproved,
@@ -26,7 +25,9 @@ import {
   fireRead,
   fireStartable,
   laid,
+  populationTaken,
   raided,
+  stockStruck,
 } from '../rules/schedule';
 import { ADVANCE } from './scripts';
 
@@ -133,7 +134,7 @@ export const NOMADIC: Catalogue = catalogued({
       kind: 'hazard',
       cost: { production: 2 },
       strikes: (_catalogue, chronicle) =>
-        shocked(chronicle, 'food', 2 + Math.floor(chronicle.turn / 10)),
+        stockStruck(chronicle, 'food', 2 + Math.floor(chronicle.turn / 10)),
     },
     stores: {
       kind: 'instant',
@@ -209,6 +210,20 @@ export const NOMADIC: Catalogue = catalogued({
         },
       },
     },
+    departure: {
+      answers: {
+        'let-them-go': {
+          cost: {},
+          reads: () => ({}),
+          lands: (_catalogue, chronicle) => populationTaken(chronicle),
+        },
+        'keep-them': {
+          cost: (_catalogue, chronicle) => ({ culture: chronicle.population }),
+          reads: () => ({}),
+          lands: (_catalogue, chronicle) => chronicle,
+        },
+      },
+    },
   },
   capstones: {
     'first-shelter': {
@@ -225,6 +240,7 @@ export const NOMADIC: Catalogue = catalogued({
         'lean-season': () => 1,
         'rival-band': () => 1,
         wildfire: (turn) => (turn >= 8 ? 1 : 0),
+        departure: () => 1,
       },
     },
   },

@@ -220,7 +220,8 @@ export function apply(catalogue: Catalogue, chronicle: Chronicle, command: Comma
 /**
  * The stages a command resolves as before the map is charted. A chronicle that has ended refuses
  * every command and one waiting on a deal every command but the take, and a standing city left
- * without population falls on the last stage whatever it was.
+ * without population falls on the first stage that leaves it so, whatever that stage was, with
+ * every stage the command resolved after it dropped.
  */
 function resolved(catalogue: Catalogue, chronicle: Chronicle, command: Command): Stage[] {
   if (chronicle.ending !== undefined) return [{ name: 'refused', chronicle }];
@@ -229,11 +230,17 @@ function resolved(catalogue: Catalogue, chronicle: Chronicle, command: Command):
   }
 
   const stages = stagesOf(catalogue, chronicle, command);
+  const at = stages.findIndex(({ chronicle: left }) => falling(left));
+  if (at < 0) return stages;
+  const fell = stages[at];
+  return [...stages.slice(0, at), { ...fell, chronicle: fall(fell.chronicle, 'population') }];
+}
 
-  const lastStage = stages[stages.length - 1];
-  const ends = lastStage.chronicle;
-  if (ends.ending !== undefined || ends.city === undefined || ends.population > 0) return stages;
-  return [...stages.slice(0, -1), { ...lastStage, chronicle: fall(ends, 'population') }];
+/** Whether the chronicle stands on a city with no population left: the fall by population. */
+function falling(chronicle: Chronicle): boolean {
+  return (
+    chronicle.ending === undefined && chronicle.city !== undefined && chronicle.population <= 0
+  );
 }
 
 /**
@@ -259,7 +266,7 @@ function charting(catalogue: Catalogue, started: Chronicle, stages: readonly Sta
   });
 }
 
-/** What each command resolves as, before the fall the city may have come to on the last of them. */
+/** What each command resolves as, before the fall the city may have come to on any of them. */
 function stagesOf(catalogue: Catalogue, chronicle: Chronicle, command: Command): Stage[] {
   switch (command.type) {
     case 'end-turn':

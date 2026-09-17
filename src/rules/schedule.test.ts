@@ -44,7 +44,7 @@ import {
 import { distance, neighbours, type TileCoords, tileAt, tileKey } from './map';
 import { nextRng, seedRng } from './rng';
 import { offered } from './schedule';
-import type { Chronicle, Timeline } from './state';
+import { type Chronicle, idle, type Timeline } from './state';
 import { unitAt } from './units';
 
 /** The seeds a test over a whole walk runs: enough of them for both orders to be drawn. */
@@ -441,17 +441,17 @@ test('a chronicle waiting on a deal takes no command but the take', () => {
 /** The timeline dealing the fixture's upheaval at the end of a `cityOf` city's turn. */
 const UPHEAVAL_DUE: Carrying = { timeline: dueOn(2, 'PH_Upheaval') };
 
-/** The city one end of turn on with the upheaval standing, and the stages its answer taken resolves as. */
-function upheaved(city: Chronicle, answer: string): { dealt: Chronicle; stages: Stage[] } {
+/** The city one end of turn on with its deal standing, and the stages the named answer taken resolves as. */
+function answerTaken(city: Chronicle, answer: string): { dealt: Chronicle; stages: Stage[] } {
   const dealt = outcome(apply(CATALOGUE, city, { type: 'end-turn' }));
   const [deal] = dealt.deals;
-  if (deal === undefined) throw new Error('the upheaval is not dealt');
+  if (deal === undefined) throw new Error(`no deal stands to take ${answer} from`);
   const at = offered(CATALOGUE, deal).indexOf(answer);
   return { dealt, stages: apply(CATALOGUE, dealt, { type: 'take', at }) };
 }
 
 test('an answer killing the population working a tile leaves the population one fewer and the tile unassigned', () => {
-  const { dealt, stages } = upheaved(cityOf(['urban', 'hills'], UPHEAVAL_DUE), 'PH_Plague');
+  const { dealt, stages } = answerTaken(cityOf(['urban', 'hills'], UPHEAVAL_DUE), 'PH_Plague');
   const after = outcome(stages);
 
   expect(stages.map((stage) => stage.name)).toEqual(['events']);
@@ -462,7 +462,7 @@ test('an answer killing the population working a tile leaves the population one 
 
 test('an answer killing the population working a tile nobody works kills nobody', () => {
   const city = cityOf(['urban', 'hills'], { ...UPHEAVAL_DUE, assigned: [CITY] });
-  const { dealt, stages } = upheaved(city, 'PH_Plague');
+  const { dealt, stages } = answerTaken(city, 'PH_Plague');
   const after = outcome(stages);
 
   expect(after.population).toBe(dealt.population);
@@ -475,7 +475,7 @@ test('an answer killing the city’s last population ends the chronicle in defea
     population: 1,
     assigned: [UPHEAVAL],
   });
-  const { stages } = upheaved(city, 'PH_Plague');
+  const { stages } = answerTaken(city, 'PH_Plague');
 
   expect(stages.map((stage) => stage.name)).toEqual(['events']);
   expect(outcome(stages).population).toBe(0);
@@ -485,12 +485,13 @@ test('an answer killing the city’s last population ends the chronicle in defea
 test('an answer damaging the unit standing on a tile takes its health, whatever its faction, and kills it at nought', () => {
   const hurt = (unit: Standing): Chronicle =>
     outcome(
-      upheaved(cityOf(['urban', 'plain'], { ...UPHEAVAL_DUE, units: [unit] }), 'PH_Ambush').stages,
+      answerTaken(cityOf(['urban', 'plain'], { ...UPHEAVAL_DUE, units: [unit] }), 'PH_Ambush')
+        .stages,
     );
 
   const warrior = hurt(standing('player', UPHEAVAL, { health: AMBUSH + 2 }));
   const enemy = hurt(standing('enemy', UPHEAVAL, { health: AMBUSH + 1 }, 0, 0));
-  const { stages } = upheaved(
+  const { stages } = answerTaken(
     cityOf(['urban', 'plain'], {
       ...UPHEAVAL_DUE,
       units: [standing('player', UPHEAVAL, { type: 'PH_Worker', worker: true, health: AMBUSH })],
@@ -506,9 +507,49 @@ test('an answer damaging the unit standing on a tile takes its health, whatever 
 
 test('an answer damaging the unit standing on a tile no unit stands on touches no unit', () => {
   const city = cityOf(['urban', 'plain'], { ...UPHEAVAL_DUE, units: [standing('player', CITY)] });
-  const { dealt, stages } = upheaved(city, 'PH_Ambush');
+  const { dealt, stages } = answerTaken(city, 'PH_Ambush');
 
   expect(outcome(stages).units).toEqual(dealt.units);
+});
+
+/** The timeline dealing the fixture's exodus at the end of a `cityOf` city's turn. */
+const EXODUS_DUE: Carrying = { timeline: dueOn(2, 'PH_Exodus') };
+
+test('an answer taking one population takes an idle one, and leaves every tile assigned', () => {
+  const city = cityOf(['urban', 'plain', 'hills'], { ...EXODUS_DUE, population: 4 });
+  const { dealt, stages } = answerTaken(city, 'PH_Leave');
+  const after = outcome(stages);
+
+  expect(idle(dealt)).toBe(1);
+  expect(after.population).toBe(dealt.population - 1);
+  expect(after.assigned).toEqual(dealt.assigned);
+  expect(after.ending).toBeUndefined();
+});
+
+test('an answer taking one population with none idle unassigns the tile assigned last', () => {
+  const back: TileCoords = { q: 1, r: 0 };
+  const city = cityOf(['urban', 'plain', 'hills'], EXODUS_DUE);
+  const off = outcome(apply(CATALOGUE, city, assignTo(back)));
+  const on = outcome(apply(CATALOGUE, off, assignTo(back)));
+  const { dealt, stages } = answerTaken(on, 'PH_Leave');
+  const after = outcome(stages);
+
+  expect(idle(dealt)).toBe(0);
+  expect(dealt.assigned).toEqual([CITY, { q: 2, r: 0 }, back]);
+  expect(after.population).toBe(dealt.population - 1);
+  expect(after.assigned).toEqual([CITY, { q: 2, r: 0 }]);
+});
+
+test('an answer taking the city’s last population falls on the take, and nothing of it resolves after', () => {
+  const city = cityOf(['urban'], { ...EXODUS_DUE, population: 1, drawPile: fullDraw() });
+  const { dealt, stages } = answerTaken(city, 'PH_Leave');
+  const after = outcome(stages);
+
+  expect(dealt.population).toBe(1);
+  expect(stages.map((stage) => stage.name)).toEqual(['events']);
+  expect(after.population).toBe(0);
+  expect(after.hand).toEqual([]);
+  expect(after.ending).toEqual({ outcome: 'defeat', cause: 'population', turn: 2 });
 });
 
 test('an answer placing a camp near the city places one, and its raid enters a warrior on the camp and the rest around it', () => {
