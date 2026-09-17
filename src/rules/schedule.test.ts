@@ -853,6 +853,7 @@ test('a tile an answer charts that was charted before holds what the answer deal
   const seen = chartedAt(CATALOGUE, herded([at]), at);
   const { dealt, landed, taken } = followed(withUnits(seen, [standing('enemy', at, {}, 0, 0)]));
 
+  expect(snapshotOf(dealt, at)).toBeDefined();
   expect(snapshotOf(dealt, at)?.tile.feature).toBeUndefined();
   expect(snapshotOf(dealt, at)?.unit).toBeUndefined();
   expect(snapshotOf(landed, at)?.tile.feature).toBe('PH_Fertile');
