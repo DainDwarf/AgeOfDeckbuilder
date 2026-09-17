@@ -50,7 +50,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **unaffordable** | A card, a claim or an event's answer whose cost exceeds what the city holds; the city cannot pay for it. | unpayable, short, lacking, too expensive |
 | **discard** | To send a card from the hand to the discard pile. | throw away, dump |
 | **recall** | To put a card from the discard pile into the hand; what a recall instant does. | retrieve, recover, reclaim, salvage |
-| **single use** | A keyword on a card: played, it leaves the chronicle instead of going to the discard pile. | one-use, gone once played, consumed, exhaust, burn, exile |
+| **single use** | A keyword on a card: played, it leaves the chronicle instead of going to the discard pile. | one-use, gone once played, consumed, exhaust, exile |
 | **draw pile** | The cards not yet drawn this cycle; refilled from the discard pile when empty. | library |
 | **discard pile** | The cards played or discarded this cycle, waiting to be shuffled back. | graveyard, trash, bin |
 | **browse** | A window offering a pile's cards to be read, opened by a left click on that pile; the window a card aimed at the discard pile opens is the aim window and not one. | pile window, viewer, gallery, preview, list (of a pile) |
@@ -62,7 +62,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **uncharted** | A tile never yet in sight; drawn not at all, and a unit of the player's is not moved onto one. Its opposite, **charted**, is a tile in sight or in fog. | unexplored, unknown, unrevealed, black, explored, revealed, discovered, known |
 | **instant** | A card with an immediate effect: on the city, on a tile, or one thing with one unit. | action (for a card), spell, effect card |
 | **hazard** | A card no deck holds: an event brings it into a chronicle, and it **strikes** while held. | penalty, curse, drawback, upkeep, affliction, bane |
-| **strike** | What a hazard does to the chronicle at the end of a turn it is still in the hand. | bite, trigger, fire, proc, go off |
+| **strike** | What a hazard does to the chronicle at the end of a turn it is still in the hand. | bite, trigger, proc, go off |
 | **worker** | A non-fighting unit that changes tiles: builds buildings, terraforms them, improves them, spending its one action on each card played through it. | builder, engineer, labourer |
 | **population** | The city's inhabitants: assigned to tiles for income, turned into units by unit cards. | inhabitants, citizens, workforce, pops |
 | **assign** | To put one population on a tile inside the border; free, instant, reversible. | allocate |
@@ -95,6 +95,6 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **refresh** | To bring a unit's spendable stat back to its full value — its move points to its move, its action to its action. The turn refreshes both on every unit when it ticks over; an instant refreshes one unit's move points. Health is never refreshed but healed. | restore, replenish, reset, recharge, recover, regain |
 | **military** | The resource that pays for military units, instants and fortifications. | — |
 | **occupy** | What an enemy does to a tile it stands on: the tile yields nothing and is not claimable. | blockade |
-| **pillage** | What some enemies do to the tile they stand on: its building or improvement is destroyed. | raze, loot, burn |
+| **pillage** | What some enemies do to the tile they stand on: its building or improvement is destroyed. | raze, loot |
 | **capture** | To take a site by standing on its tile through a full turn: an enemy captures the city (defeat), the player captures a camp. | conquer, seize, sack |
 | **reward** | What capturing a site on the map gives: the cards a camp's capture deals as an event deals its answers, the one taken laid in the discard pile. | gift, prize, bounty |
