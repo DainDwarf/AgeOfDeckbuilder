@@ -19,7 +19,7 @@ import { type Catalogue, catalogued } from '../rules/catalogue';
 import { arrived, yielded } from '../rules/city';
 import { MOVE_POINT } from '../rules/map';
 import { buildingKind, improvementKind } from '../rules/map-kinds';
-import { laid, raided } from '../rules/schedule';
+import { encamped, laid, raided } from '../rules/schedule';
 import { ADVANCE } from './scripts';
 
 /** How many warriors a raid enters on this turn: one, and one more for every ten turns. */
@@ -168,6 +168,22 @@ export const NOMADIC: Catalogue = catalogued({
         },
       },
     },
+    'rival-band': {
+      answers: {
+        fight: {
+          cost: {},
+          reads: (_catalogue, chronicle) => ({ warriors: raiders(chronicle.turn) + 1 }),
+          lands: (catalogue, chronicle) =>
+            raided(catalogue, chronicle, raiders(chronicle.turn) + 1),
+        },
+        'make-room': {
+          cost: {},
+          reads: (_catalogue, chronicle) => ({ warriors: raiders(chronicle.turn) }),
+          lands: (catalogue, chronicle) =>
+            encamped(catalogue, chronicle, [3, 4], 3, raiders(chronicle.turn)),
+        },
+      },
+    },
   },
   capstones: {
     'first-shelter': {
@@ -180,7 +196,7 @@ export const NOMADIC: Catalogue = catalogued({
     nomadic: {
       spacing: [3, 5],
       capstone: { id: 'first-shelter', window: [12, 18] },
-      entries: { 'lean-season': () => 1 },
+      entries: { 'lean-season': () => 1, 'rival-band': () => 1 },
     },
   },
   terrains: {

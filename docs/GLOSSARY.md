@@ -37,7 +37,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **capstone** | The age's final trial, known from the chronicle's opening on a turn that is not; passing it — its condition met — is victory. | boss, finale, objective |
 | **schedule** | An age's set of events with their turn-shifting weights, and its tempo: the spacing, and the capstone with its window. What a timeline is rolled from. | calendar |
 | **timeline** | One chronicle's roll of its schedule, a deal ahead from a generator of its own: the next deal on its turn, and the capstone's turn. Internal: the player is never shown it, and learns each event when it lands. | forecast, agenda, itinerary |
-| **camp** | A generated site enemies enter the map from, filling its tile's building slot; captured, it leaves the map. | lair, nest, spawn point, spawner |
+| **camp** | A site enemies enter the map from, generated with the map or placed by an event, filling its tile's building slot; captured, it leaves the map. | lair, nest, spawn point, spawner |
 | **victory** | The end of a chronicle by passing the capstone. | win, success, triumph |
 | **defeat** | The end of a chronicle by the city's fall. | collapse, game over, loss, death |
 | **border** | The edge of the tiles the city holds; pushed out by culture. | frontier, territory |

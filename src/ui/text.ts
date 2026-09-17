@@ -139,6 +139,12 @@ const TEXT = {
   'answer-rules.share': 'Lays Hunger on top of the draw pile',
   'answer.ration': 'Ration',
   'answer-rules.ration': 'A raid of {warriors} enters the map',
+  'event.rival-band': 'A rival band',
+  'answer.fight': 'Fight',
+  'answer-rules.fight': 'A raid of {warriors} enters the map',
+  'answer.make-room': 'Make room',
+  'answer-rules.make-room':
+    'A camp is placed near the city, and a raid of {warriors} enters on and around it',
   'capstone-name.PH_Siege': 'PH_Siege',
   'capstone-rules.PH_Siege': 'The camps close in around the city',
   'capstone-name.PH_ShortSiege': 'PH_ShortSiege',
