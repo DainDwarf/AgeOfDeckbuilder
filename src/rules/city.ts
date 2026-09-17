@@ -1,5 +1,6 @@
 import type { Catalogue } from './catalogue';
-import { neighbours, type TileCoords, tileKey, tileYield } from './map';
+import { neighbours, type TileCoords, tileAt, tileKey, tileYield } from './map';
+import { refuse } from './map-kinds';
 import { RESOURCES } from './resources';
 import {
   assignedTo,
@@ -40,16 +41,27 @@ const CLAIMS_PER_RISE = 3;
  */
 export function income(catalogue: Catalogue, chronicle: Chronicle): Chronicle {
   const assigned = new Set(chronicle.assigned.map(tileKey));
-  const resources = { ...chronicle.resources };
+  let yielding = chronicle;
   for (const tile of chronicle.tiles) {
     if (!assigned.has(tileKey(tile))) continue;
     if (occupied(chronicle.units, tile)) continue;
-    const yields = tileYield(catalogue, tile, chronicle.rivers);
-    for (const resource of RESOURCES) resources[resource] += yields[resource] ?? 0;
+    yielding = yielded(catalogue, yielding, tile);
   }
-  return RESOURCES.every((resource) => resources[resource] === chronicle.resources[resource])
+  return RESOURCES.every(
+    (resource) => yielding.resources[resource] === chronicle.resources[resource],
+  )
     ? chronicle
-    : { ...chronicle, resources };
+    : yielding;
+}
+
+/** A tile's yield gained: the city's stock of each resource rises by what the tile yields. */
+export function yielded(catalogue: Catalogue, chronicle: Chronicle, at: TileCoords): Chronicle {
+  const tile = tileAt(chronicle.tiles, at);
+  if (tile === undefined) refuse(catalogue, `no tile of the map yields at ${tileKey(at)}`);
+  const yields = tileYield(catalogue, tile, chronicle.rivers);
+  const resources = { ...chronicle.resources };
+  for (const resource of RESOURCES) resources[resource] += yields[resource] ?? 0;
+  return { ...chronicle, resources };
 }
 
 /** The growth threshold, what the next inhabitant costs: the population it joins. */

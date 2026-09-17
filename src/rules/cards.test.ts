@@ -1399,15 +1399,18 @@ test('a hazard discarded unplayed comes around and strikes again', () => {
   const city = cityOf(['urban', 'plain'], {
     ...NO_GROWTH,
     hand: ['PH_Hunger'],
-    resources: STOCKED,
+    resources: { ...STOCKED, food: 3 * HUNGER },
   });
+  const bare = cityOf(['urban', 'plain'], NO_GROWTH);
 
   const cycled = outcome(apply(CATALOGUE, city, { type: 'end-turn' }));
   const again = outcome(apply(CATALOGUE, cycled, { type: 'end-turn' }));
+  const yielded = outcome(apply(CATALOGUE, bare, { type: 'end-turn' })).resources.food;
 
   expect(cycled.hand).toEqual(['PH_Hunger']);
   expect(again.hand).toEqual(['PH_Hunger']);
-  expect(again.resources.food).toBe(cycled.resources.food);
+  expect(cycled.resources.food).toBe(3 * HUNGER - HUNGER + yielded);
+  expect(again.resources.food).toBe(cycled.resources.food - HUNGER + yielded);
 });
 
 test('a hazard played for its cost leaves the chronicle, and strikes nothing that turn', () => {

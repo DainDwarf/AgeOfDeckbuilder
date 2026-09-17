@@ -16,9 +16,9 @@ import {
   unimproved,
 } from '../rules/cards';
 import { type Catalogue, catalogued } from '../rules/catalogue';
-import { arrived } from '../rules/city';
-import { MOVE_POINT, tileAt, tileYield } from '../rules/map';
-import { buildingKind, improvementKind, refuse } from '../rules/map-kinds';
+import { arrived, yielded } from '../rules/city';
+import { MOVE_POINT } from '../rules/map';
+import { buildingKind, improvementKind } from '../rules/map-kinds';
 import { laid, raided } from '../rules/schedule';
 import { ADVANCE } from './scripts';
 
@@ -84,11 +84,7 @@ export const NOMADIC: Catalogue = catalogued({
       cost: {},
       ...throughWorker(
         () => undefined,
-        (catalogue, paid, at) => {
-          const tile = tileAt(paid.tiles, at);
-          if (tile === undefined) refuse(catalogue, 'gather played on no tile of the map');
-          return gained(paid, tileYield(catalogue, tile, paid.rivers));
-        },
+        (catalogue, paid, at) => yielded(catalogue, paid, at),
       ),
     },
     trapping: {
