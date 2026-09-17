@@ -336,8 +336,7 @@ test('a unit standing in sight when the turn ticks is still recorded', () => {
   const enemy = ticked.units.find((unit) => unit.faction === 'enemy');
 
   expect(ticked.turn).toBe(raided.turn + 1);
-  expect(enemy).toBeDefined();
-  if (enemy === undefined) return;
+  if (enemy === undefined) throw new Error('no enemy stands on the map');
   expect(sees(ticked, enemy.tile)).toBe(true);
   expect(snapshotOf(ticked, enemy.tile)?.unit).toEqual(ENEMY);
 });
@@ -352,8 +351,7 @@ test('a killed unit charts nothing more: its killer, out of sight, leaves the sn
   const stages = apply(CATALOGUE, raided, { type: 'end-turn' });
   const blow = stages.find((stage) => stage.name === 'attack');
   const killed = outcome(stages);
-  expect(blow).toBeDefined();
-  if (blow === undefined) return;
+  if (blow === undefined) throw new Error('the end of turn staged no attack');
   const seenAtTheBlow = snapshotOf(blow.chronicle, stood);
 
   expect(killed.units.every((unit) => unit.faction === 'enemy')).toBe(true);

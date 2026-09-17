@@ -140,8 +140,8 @@ export function charted(catalogue: Catalogue, chronicle: Chronicle): Chronicle {
 }
 
 /**
- * The snapshots as the tick leaves them: every unit gone, every tile kept as it was last seen.
- * Snapshots that held no unit are handed straight back.
+ * Each snapshot keeps the very tile object it held: `records` compares tiles by identity, and a
+ * rebuilt tile would be charted anew on every tile in sight.
  */
 export function unitsGone(snapshots: Snapshot[]): Snapshot[] {
   if (snapshots.every((snapshot) => snapshot.unit === undefined)) return snapshots;
