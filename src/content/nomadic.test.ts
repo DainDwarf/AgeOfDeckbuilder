@@ -146,6 +146,7 @@ test('every answer of every event of the Nomadic Age reads and lands, and every 
     const deck = deckOf(NOMADIC, 'nomadic');
     const chronicle = settledLaunch(NOMADIC, REGION, schedule, 1, deck);
     for (const id of Object.keys(NOMADIC.events)) {
+      expect(() => eventOf(NOMADIC, id).needs?.(NOMADIC, chronicle)).not.toThrow();
       for (const answer of Object.values(eventOf(NOMADIC, id).answers)) {
         expect(() => answer.reads(NOMADIC, chronicle)).not.toThrow();
         expect(() => answer.lands(NOMADIC, chronicle)).not.toThrow();

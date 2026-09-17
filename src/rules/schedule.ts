@@ -26,8 +26,8 @@ import { damaged, unitAt } from './units';
 
 /**
  * A schedule rolled into the timeline a chronicle opens on, the generator handed in its own from then
- * on: the capstone's turn from the window, then the first deal rolled as from a landing on turn 0. A
- * schedule the catalogue does not hold is refused.
+ * on: the capstone's turn from the window, then the first due turn rolled as from a landing on turn
+ * 0. A schedule the catalogue does not hold is refused.
  */
 export function timelineOf(catalogue: Catalogue, id: string, rng: Rng): Timeline {
   const schedule = scheduleOf(catalogue, id);
@@ -43,26 +43,35 @@ export function timelineOf(catalogue: Catalogue, id: string, rng: Rng): Timeline
   );
 }
 
-/**
- * The next deal rolled from a landing, every draw from the timeline's own generator: its due turn
- * from the spacing, then one of the entries weighing anything on that turn drawn, or no event where
- * none does, which draws nothing.
- */
+/** The next due turn rolled from a landing by the spacing, from the timeline's own generator. */
 function rolledFrom(
   catalogue: Catalogue,
   timeline: Omit<Timeline, 'next'>,
   landing: number,
 ): Timeline {
-  const { spacing, entries } = scheduleOf(catalogue, timeline.schedule);
-  const spaced = withinSpan(timeline.rng, spacing);
-  const turn = landing + spaced.turns;
-  const weighing = Object.entries(entries)
+  const spaced = withinSpan(timeline.rng, scheduleOf(catalogue, timeline.schedule).spacing);
+  return { ...timeline, rng: spaced.rng, next: landing + spaced.turns };
+}
+
+/**
+ * The event drawn on the due turn, from the timeline's own generator, seeded and weighted among the
+ * entries weighing anything on that turn whose need the chronicle meets; no event where none does.
+ * Where no entry weighs anything on the turn it draws nothing.
+ */
+function eventDrawn(catalogue: Catalogue, chronicle: Chronicle): { event?: string; rng: Rng } {
+  const { timeline, turn } = chronicle;
+  const weighing = Object.entries(scheduleOf(catalogue, timeline.schedule).entries)
     .map(([entry, weight]): [string, number] => [entry, weight(turn)])
     .filter(([, weight]) => weight > 0);
-  if (weighing.length === 0) return { ...timeline, rng: spaced.rng, next: { turn } };
+  if (weighing.length === 0) return { rng: timeline.rng };
 
-  const drawn = pickWeighted(spaced.rng, weighing);
-  return { ...timeline, rng: drawn.rng, next: { turn, event: drawn.picked } };
+  const dealable = weighing.filter(
+    ([entry]) => eventOf(catalogue, entry).needs?.(catalogue, chronicle) ?? true,
+  );
+  // The step is taken even where no need is met, or the turns a seed deals on would follow the play.
+  if (dealable.length === 0) return { rng: nextRng(timeline.rng).rng };
+  const { picked, rng } = pickWeighted(timeline.rng, dealable);
+  return { event: picked, rng };
 }
 
 /**
@@ -81,11 +90,10 @@ export function spanEnded(chronicle: Chronicle, turns: number): boolean {
 
 /**
  * The events phase, which draws nothing from the chronicle's generator: on the capstone's turn the
- * capstone lands on the chronicle as it stands, nothing is dealt whatever deal was ahead, and the
- * next deal is rolled from that turn; on the turn the next deal is due its event is dealt behind the
- * deals already standing, nothing landing until one of its answers is taken, and the next is rolled
- * from that turn; on the turn a next deal with no event is due nothing is dealt, and the next is
- * rolled from that turn; any other turn changes nothing.
+ * capstone lands on the chronicle as it stands, nothing is dealt whatever was due, and the next due
+ * turn is rolled from that turn; on the due turn its event is drawn and dealt behind the deals
+ * already standing, nothing landing until one of its answers is taken, or nothing is dealt where no
+ * event is drawn, and the next due turn is rolled from that turn; any other turn changes nothing.
  */
 export function events(
   catalogue: Catalogue,
@@ -100,20 +108,18 @@ export function events(
     };
   }
 
-  const { next } = timeline;
-  if (turn !== next.turn) return { phase: 'deal', chronicle };
-  if (next.event === undefined) {
-    return {
-      phase: 'no-deal',
-      chronicle: { ...chronicle, timeline: rolledFrom(catalogue, timeline, turn) },
-    };
+  if (turn !== timeline.next) return { phase: 'deal', chronicle };
+  const { event, rng } = eventDrawn(catalogue, chronicle);
+  const rolled = rolledFrom(catalogue, { ...timeline, rng }, turn);
+  if (event === undefined) {
+    return { phase: 'no-deal', chronicle: { ...chronicle, timeline: rolled } };
   }
   return {
     phase: 'deal',
     chronicle: {
       ...chronicle,
-      timeline: rolledFrom(catalogue, timeline, turn),
-      deals: [...chronicle.deals, { of: 'event', event: next.event }],
+      timeline: rolled,
+      deals: [...chronicle.deals, { of: 'event', event }],
     },
   };
 }

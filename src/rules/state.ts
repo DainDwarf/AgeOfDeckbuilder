@@ -18,15 +18,14 @@ export type Ending = { readonly turn: number } & (
 export type CardId = string;
 
 /**
- * One chronicle's roll of its schedule, a deal ahead, from a generator of its own that nothing the
- * player does steps: the schedule it rolls from, the next deal with the turn it is due on and the one
- * event it deals or none, and the capstone by its id with the turn it lands on. A test hands one in
- * to name the deal it wants on the turn it wants.
+ * One chronicle's roll of its schedule, from a generator of its own that nothing the player does
+ * steps: the schedule it rolls and draws from, the turn the next deal is due on, and the capstone by
+ * its id with the turn it lands on.
  */
 export type Timeline = {
   readonly schedule: string;
   readonly rng: Rng;
-  readonly next: { readonly turn: number; readonly event?: string };
+  readonly next: number;
   readonly capstone: { readonly id: string; readonly turn: number };
 };
 
@@ -64,7 +63,7 @@ export type Chronicle = {
   readonly city?: TileCoords;
   readonly held: TileCoords[];
   readonly turn: number;
-  /** What the events phase deals next, and the capstone. */
+  /** The turn the events phase deals next on, and the capstone. */
   readonly timeline: Timeline;
   /**
    * The deals waiting on the take, the one standing first, and none at all while no deal stands.

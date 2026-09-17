@@ -25,7 +25,15 @@ import {
   throughWorker,
   unimproved,
 } from './cards';
-import { type Catalogue, catalogued, type Deck, deckOf, type Entering, entered } from './catalogue';
+import {
+  type Catalogue,
+  catalogued,
+  type Deck,
+  deckOf,
+  type Entering,
+  entered,
+  type Schedule,
+} from './catalogue';
 import { apply, beginChronicle, type Command, launched, outcome } from './chronicle';
 import { arrived, bordered } from './city';
 import {
@@ -305,6 +313,14 @@ export const CATALOGUE: Catalogue = catalogued({
           reads: () => ({ warriors: ENCAMPED }),
           lands: (catalogue, chronicle) => encamped(catalogue, chronicle, [3, 4], 3, ENCAMPED),
         },
+        PH_Truce: { cost: {}, reads: () => ({}), lands: (_catalogue, chronicle) => chronicle },
+      },
+    },
+    PH_Spoilage: {
+      needs: (_catalogue, chronicle) => everyCard(chronicle).includes('PH_Hunger'),
+      answers: {
+        PH_Ration: { cost: {}, reads: () => ({}), lands: (_catalogue, chronicle) => chronicle },
+        PH_Waste: { cost: {}, reads: () => ({}), lands: (_catalogue, chronicle) => chronicle },
       },
     },
   },
@@ -332,6 +348,23 @@ export const CATALOGUE: Catalogue = catalogued({
       capstone: { id: 'PH_Tillage', window: [27, 33] },
       entries: { PH_Hardship: (turn) => (turn >= FAR ? 1 : 0) },
     },
+    wary: {
+      spacing: [3, 7],
+      capstone: { id: 'PH_Siege', window: [27, 33] },
+      entries: { PH_Hardship: () => 1, PH_Spoilage: () => 1 },
+    },
+    ...Object.fromEntries(
+      ['PH_Hardship', 'PH_Blight', 'PH_Upheaval', 'PH_Rivals', 'PH_Spoilage'].map(
+        (event): [string, Schedule] => [
+          event,
+          {
+            spacing: [FAR, FAR],
+            capstone: { id: 'PH_Siege', window: [FAR, FAR] },
+            entries: { [event]: () => 1 },
+          },
+        ],
+      ),
+    ),
   },
   terrains: {
     plain: {
@@ -467,6 +500,12 @@ export const SCHEDULE = 'schedule';
 export const QUIET = 'quiet';
 
 /**
+ * The schedule dealing the hardship and the spoilage alike, the spoilage only once the city's cards
+ * hold the hunger.
+ */
+export const WARY = 'wary';
+
+/**
  * A timeline dealing nothing: its next deal, and the capstone, on a turn past any a test ends, and
  * rolled on from a schedule that deals nothing before then. What a fixture chronicle carries unless
  * its test writes the deal it wants.
@@ -474,13 +513,16 @@ export const QUIET = 'quiet';
 export const NO_DEALS: Timeline = {
   schedule: QUIET,
   rng: seedRng(7),
-  next: { turn: FAR, event: 'PH_Hardship' },
+  next: FAR,
   capstone: { id: 'PH_Siege', turn: FAR },
 };
 
-/** A timeline dealing this event on this turn and nothing after it, its capstone as `NO_DEALS` has it. */
+/**
+ * A timeline due on this turn, drawing from the schedule of this event alone, its next due turn past
+ * any a test ends; its capstone as `NO_DEALS` has it.
+ */
 export function dealing(deal: { readonly turn: number; readonly event: string }): Timeline {
-  return { ...NO_DEALS, next: deal };
+  return { ...NO_DEALS, schedule: deal.event, next: deal.turn };
 }
 
 export const CITY: TileCoords = { q: 0, r: 0 };

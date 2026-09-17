@@ -32,20 +32,17 @@ import {
 function dealRun(): { seed: number; due: number } {
   return firstSeed('deals a raid first on its first deal', (seed) => {
     const opened = launch(seed, deckOf(STAND_IN, 'PH_Deck'));
-    const first = opened.timeline.next;
-    if (first.event === undefined) return undefined;
+    const due = opened.timeline.next;
 
     let chronicle = opened;
-    for (let turn = 1; turn < first.turn - 1; turn++) chronicle = endedTurn(chronicle);
+    for (let turn = 1; turn < due - 1; turn++) chronicle = endedTurn(chronicle);
     const dealt = outcome(apply(STAND_IN, chronicle, { type: 'end-turn' }));
     const [deal, ...behind] = dealt.deals;
     if (deal === undefined || behind.length > 0) return undefined;
     if (offered(STAND_IN, deal)[0] !== 'PH_Raid') return undefined;
 
     const landed = outcome(apply(STAND_IN, dealt, { type: 'take', at: 0 }));
-    return landed.units.some((unit) => unit.faction === 'enemy')
-      ? { seed, due: first.turn }
-      : undefined;
+    return landed.units.some((unit) => unit.faction === 'enemy') ? { seed, due } : undefined;
   });
 }
 
@@ -109,7 +106,7 @@ test('the events phase deals a choice, and the turn plays on from the one taken'
   expect(await standing(page, 'deal')).toBe(false);
   expect(after.deals).toEqual([]);
   expect(after.turn).toBe(run.due);
-  expect(after.timeline.next.turn).toBeGreaterThan(run.due);
+  expect(after.timeline.next).toBeGreaterThan(run.due);
   expect(after.hand).toHaveLength(5);
   expect(after.units.some((unit) => unit.faction === 'enemy')).toBe(true);
 
@@ -124,7 +121,7 @@ test('the take of an answer the city cannot pay for says why over the card, and 
 }) => {
   const problems = watch(page);
   const seed = 1;
-  const due = launch(seed, deckOf(STAND_IN, 'PH_Deck'), TOLL).timeline.next.turn;
+  const due = launch(seed, deckOf(STAND_IN, 'PH_Deck'), TOLL).timeline.next;
   test.setTimeout(budget(due));
 
   await open(page, seed, 'PH_Deck', TOLL);

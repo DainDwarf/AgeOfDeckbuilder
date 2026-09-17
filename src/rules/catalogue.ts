@@ -101,8 +101,14 @@ export type Answer = {
   readonly lands: (catalogue: Catalogue, chronicle: Chronicle) => Chronicle;
 };
 
-/** An event: its answers, dealt in the order declared. */
-export type ScheduledEvent = { readonly answers: Readonly<Record<string, Answer>> };
+/**
+ * An event: its answers, dealt in the order declared, and whether the chronicle meets its need, for
+ * an event that names one.
+ */
+export type ScheduledEvent = {
+  readonly answers: Readonly<Record<string, Answer>>;
+  readonly needs?: (catalogue: Catalogue, chronicle: Chronicle) => boolean;
+};
 
 /**
  * A capstone: what it does to the chronicle on the turn it lands, what it does on every turn after
