@@ -98,6 +98,74 @@ function raiders(turn: number): number {
   return 1 + Math.floor(turn / 10);
 }
 
+/** The events every fixture schedule deals from, each one also a schedule of its own through `dealing`. */
+const EVENTS: Catalogue['events'] = {
+  PH_Hardship: {
+    answers: {
+      PH_Raid: {
+        cost: {},
+        reads: (_catalogue, chronicle) => ({ warriors: raiders(chronicle.turn) }),
+        lands: (catalogue, chronicle) => raided(catalogue, chronicle, raiders(chronicle.turn)),
+      },
+      PH_Famine: {
+        cost: {},
+        reads: () => ({}),
+        lands: (catalogue, chronicle) => laid(catalogue, chronicle, 'PH_Hunger'),
+      },
+    },
+  },
+  PH_Blight: {
+    answers: {
+      PH_Endure: {
+        cost: { food: 0 },
+        reads: () => ({}),
+        lands: (catalogue, chronicle) => laid(catalogue, chronicle, 'PH_Hunger'),
+      },
+      PH_Explosion: {
+        cost: { production: EXPLOSION },
+        reads: () => ({}),
+        lands: (_catalogue, chronicle) => chronicle,
+      },
+    },
+  },
+  PH_Upheaval: {
+    answers: {
+      PH_Plague: {
+        cost: {},
+        reads: () => ({}),
+        lands: (_catalogue, chronicle) => populationKilled(chronicle, UPHEAVAL),
+      },
+      PH_Ambush: {
+        cost: {},
+        reads: () => ({ damage: AMBUSH }),
+        lands: (_catalogue, chronicle) => unitDamaged(chronicle, UPHEAVAL, AMBUSH),
+      },
+      PH_Quake: {
+        cost: {},
+        reads: () => ({}),
+        lands: (catalogue, chronicle) => terraformed(catalogue, chronicle, UPHEAVAL, 'forest'),
+      },
+    },
+  },
+  PH_Rivals: {
+    answers: {
+      PH_Encampment: {
+        cost: {},
+        reads: () => ({ warriors: ENCAMPED }),
+        lands: (catalogue, chronicle) => encamped(catalogue, chronicle, [3, 4], 3, ENCAMPED),
+      },
+      PH_Truce: { cost: {}, reads: () => ({}), lands: (_catalogue, chronicle) => chronicle },
+    },
+  },
+  PH_Spoilage: {
+    needs: (_catalogue, chronicle) => everyCard(chronicle).includes('PH_Hunger'),
+    answers: {
+      PH_Ration: { cost: {}, reads: () => ({}), lands: (_catalogue, chronicle) => chronicle },
+      PH_Waste: { cost: {}, reads: () => ({}), lands: (_catalogue, chronicle) => chronicle },
+    },
+  },
+};
+
 /** The content every fixture is played on, its numbers the fixture's own. */
 export const CATALOGUE: Catalogue = catalogued({
   version: 'fixture',
@@ -258,72 +326,7 @@ export const CATALOGUE: Catalogue = catalogued({
       settle: ['PH_Settle', 'PH_Claim'],
     },
   },
-  events: {
-    PH_Hardship: {
-      answers: {
-        PH_Raid: {
-          cost: {},
-          reads: (_catalogue, chronicle) => ({ warriors: raiders(chronicle.turn) }),
-          lands: (catalogue, chronicle) => raided(catalogue, chronicle, raiders(chronicle.turn)),
-        },
-        PH_Famine: {
-          cost: {},
-          reads: () => ({}),
-          lands: (catalogue, chronicle) => laid(catalogue, chronicle, 'PH_Hunger'),
-        },
-      },
-    },
-    PH_Blight: {
-      answers: {
-        PH_Endure: {
-          cost: { food: 0 },
-          reads: () => ({}),
-          lands: (catalogue, chronicle) => laid(catalogue, chronicle, 'PH_Hunger'),
-        },
-        PH_Explosion: {
-          cost: { production: EXPLOSION },
-          reads: () => ({}),
-          lands: (_catalogue, chronicle) => chronicle,
-        },
-      },
-    },
-    PH_Upheaval: {
-      answers: {
-        PH_Plague: {
-          cost: {},
-          reads: () => ({}),
-          lands: (_catalogue, chronicle) => populationKilled(chronicle, UPHEAVAL),
-        },
-        PH_Ambush: {
-          cost: {},
-          reads: () => ({ damage: AMBUSH }),
-          lands: (_catalogue, chronicle) => unitDamaged(chronicle, UPHEAVAL, AMBUSH),
-        },
-        PH_Quake: {
-          cost: {},
-          reads: () => ({}),
-          lands: (catalogue, chronicle) => terraformed(catalogue, chronicle, UPHEAVAL, 'forest'),
-        },
-      },
-    },
-    PH_Rivals: {
-      answers: {
-        PH_Encampment: {
-          cost: {},
-          reads: () => ({ warriors: ENCAMPED }),
-          lands: (catalogue, chronicle) => encamped(catalogue, chronicle, [3, 4], 3, ENCAMPED),
-        },
-        PH_Truce: { cost: {}, reads: () => ({}), lands: (_catalogue, chronicle) => chronicle },
-      },
-    },
-    PH_Spoilage: {
-      needs: (_catalogue, chronicle) => everyCard(chronicle).includes('PH_Hunger'),
-      answers: {
-        PH_Ration: { cost: {}, reads: () => ({}), lands: (_catalogue, chronicle) => chronicle },
-        PH_Waste: { cost: {}, reads: () => ({}), lands: (_catalogue, chronicle) => chronicle },
-      },
-    },
-  },
+  events: EVENTS,
   capstones: {
     PH_Siege: {
       lands: (catalogue, chronicle) =>
@@ -354,16 +357,14 @@ export const CATALOGUE: Catalogue = catalogued({
       entries: { PH_Hardship: () => 1, PH_Spoilage: () => 1 },
     },
     ...Object.fromEntries(
-      ['PH_Hardship', 'PH_Blight', 'PH_Upheaval', 'PH_Rivals', 'PH_Spoilage'].map(
-        (event): [string, Schedule] => [
-          event,
-          {
-            spacing: [FAR, FAR],
-            capstone: { id: 'PH_Siege', window: [FAR, FAR] },
-            entries: { [event]: () => 1 },
-          },
-        ],
-      ),
+      Object.keys(EVENTS).map((event): [string, Schedule] => [
+        event,
+        {
+          spacing: [FAR, FAR],
+          capstone: { id: 'PH_Siege', window: [FAR, FAR] },
+          entries: { [event]: () => 1 },
+        },
+      ]),
     ),
   },
   terrains: {
