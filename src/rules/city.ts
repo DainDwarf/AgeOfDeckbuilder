@@ -77,7 +77,6 @@ export function arrived(chronicle: Chronicle): Chronicle {
 /** Growth: the food stock that has reached the growth threshold is spent on one idle population. */
 export function grow(chronicle: Chronicle): Chronicle {
   const threshold = growthThreshold(chronicle);
-  // A threshold of nothing every stock reaches: a city of nobody would grow one and undo its fall.
   if (threshold === 0 || chronicle.resources.food < threshold) return chronicle;
   return {
     ...chronicle,

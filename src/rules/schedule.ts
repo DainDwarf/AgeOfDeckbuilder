@@ -1,4 +1,4 @@
-import { shocked, terraformed } from './cards';
+import { terraformed } from './cards';
 import {
   type Answer,
   type Catalogue,
@@ -11,7 +11,6 @@ import {
 import { campUnitEntered, enteredAround, raidEntry } from './enemies';
 import { distance, groundRunsTo, type TileCoords, tileKey } from './map';
 import { buildingKind, held, refuse } from './map-kinds';
-import type { Resource } from './resources';
 import { nextRng, pickWeighted, type Rng } from './rng';
 import {
   type CardId,
@@ -217,16 +216,6 @@ export function populationTaken(chronicle: Chronicle): Chronicle {
   if (chronicle.population <= 0) return chronicle;
   const assigned = idle(chronicle) > 0 ? chronicle.assigned : chronicle.assigned.slice(0, -1);
   return { ...chronicle, population: chronicle.population - 1, assigned };
-}
-
-/**
- * A strike on one stock: the stock shocked by the amount, and one population taken besides where the
- * stock stood below it. A stock that covers the amount exactly is emptied and nobody is taken.
- */
-export function stockStruck(chronicle: Chronicle, resource: Resource, amount: number): Chronicle {
-  const shortened = shocked(chronicle, resource, amount);
-  if (chronicle.resources[resource] >= amount) return shortened;
-  return populationTaken(shortened);
 }
 
 /**

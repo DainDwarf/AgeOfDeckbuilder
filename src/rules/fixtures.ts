@@ -66,7 +66,6 @@ import {
   raided,
   reinforced,
   spanEnded,
-  stockStruck,
   unitDamaged,
 } from './schedule';
 import { charted } from './sight';
@@ -349,7 +348,10 @@ export const CATALOGUE: Catalogue = catalogued({
     PH_Drought: {
       kind: 'hazard',
       cost: { production: 3 },
-      strikes: (_catalogue, chronicle) => stockStruck(chronicle, 'food', DROUGHT),
+      strikes: (_catalogue, chronicle) => {
+        const shortened = shocked(chronicle, 'food', DROUGHT);
+        return chronicle.resources.food < DROUGHT ? populationTaken(shortened) : shortened;
+      },
     },
   },
   decks: {

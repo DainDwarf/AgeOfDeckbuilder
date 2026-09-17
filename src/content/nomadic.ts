@@ -10,6 +10,7 @@ import {
   movePointsSpent,
   refreshed,
   settled,
+  shocked,
   slotFree,
   throughWorker,
   unimproved,
@@ -27,7 +28,6 @@ import {
   laid,
   populationTaken,
   raided,
-  stockStruck,
 } from '../rules/schedule';
 import { ADVANCE } from './scripts';
 
@@ -133,8 +133,11 @@ export const NOMADIC: Catalogue = catalogued({
     hunger: {
       kind: 'hazard',
       cost: { production: 2 },
-      strikes: (_catalogue, chronicle) =>
-        stockStruck(chronicle, 'food', 2 + Math.floor(chronicle.turn / 10)),
+      strikes: (_catalogue, chronicle) => {
+        const taken = 2 + Math.floor(chronicle.turn / 10);
+        const shortened = shocked(chronicle, 'food', taken);
+        return chronicle.resources.food < taken ? populationTaken(shortened) : shortened;
+      },
     },
     stores: {
       kind: 'instant',

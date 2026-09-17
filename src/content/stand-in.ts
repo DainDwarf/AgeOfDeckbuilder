@@ -11,6 +11,7 @@ import {
   recalled,
   refreshed,
   settled,
+  shocked,
   slotFree,
   terraformable,
   terraformed,
@@ -175,10 +176,7 @@ export const STAND_IN: Catalogue = catalogued({
     PH_Hunger: {
       kind: 'hazard',
       cost: { production: 3 },
-      strikes: (_catalogue, chronicle) => ({
-        ...chronicle,
-        resources: { ...chronicle.resources, food: 0 },
-      }),
+      strikes: (_catalogue, chronicle) => shocked(chronicle, 'food', chronicle.resources.food),
     },
   },
   decks: {
