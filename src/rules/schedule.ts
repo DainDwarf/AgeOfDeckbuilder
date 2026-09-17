@@ -15,6 +15,7 @@ import { nextRng, pickWeighted, type Rng } from './rng';
 import {
   type CardId,
   type Chronicle,
+  type Cost,
   costsOf,
   type Deal,
   holds,
@@ -140,6 +141,17 @@ export function answerOf(catalogue: Catalogue, event: string, answer: string): A
   return held(catalogue, eventOf(catalogue, event).answers, answer, `answer of ${event}`);
 }
 
+/** What an answer costs on the chronicle as it stands. */
+export function answerCost(catalogue: Catalogue, chronicle: Chronicle, answer: Answer): Cost[] {
+  const { cost } = answer;
+  switch (typeof cost) {
+    case 'function':
+      return costsOf(cost(catalogue, chronicle));
+    case 'object':
+      return costsOf(cost);
+  }
+}
+
 /**
  * Everything standing between the city and an answer of the event: what it cannot pay. Nothing on
  * the map blocks an answer.
@@ -150,7 +162,7 @@ export function answerRefusal(
   event: string,
   answer: string,
 ): Refusal {
-  const costs = costsOf(answerOf(catalogue, event, answer).cost);
+  const costs = answerCost(catalogue, chronicle, answerOf(catalogue, event, answer));
   return { unaffordable: unaffordable(chronicle, costs), blocked: [] };
 }
 
@@ -159,7 +171,7 @@ export function answerRefusal(
  * that leaves.
  */
 export function answered(catalogue: Catalogue, chronicle: Chronicle, answer: Answer): Chronicle {
-  return answer.lands(catalogue, paid(chronicle, costsOf(answer.cost)));
+  return answer.lands(catalogue, paid(chronicle, answerCost(catalogue, chronicle, answer)));
 }
 
 /** A reward taken off the chronicle the deal is popped from: it is laid in the discard pile. */

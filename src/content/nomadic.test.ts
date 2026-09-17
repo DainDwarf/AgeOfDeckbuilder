@@ -4,7 +4,7 @@ import { capstoneOf, cardOf, catalogued, deckOf, eventOf } from '../rules/catalo
 import { admitted, launched, refusalOf } from '../rules/chronicle';
 import { settledLaunch } from '../rules/fixtures';
 import { seedRng } from '../rules/rng';
-import { timelineOf } from '../rules/schedule';
+import { answerCost, timelineOf } from '../rules/schedule';
 import {
   buildingColourOf,
   buildingMarkOf,
@@ -141,13 +141,14 @@ test('every schedule of the Nomadic Age rolls a timeline', () => {
   }
 });
 
-test('every answer of every event of the Nomadic Age reads and lands, and every capstone lands, continues and is not passed, on a chronicle launched and settled on each schedule', () => {
+test('every answer of every event of the Nomadic Age costs, reads and lands, and every capstone lands, continues and is not passed, on a chronicle launched and settled on each schedule', () => {
   for (const schedule of Object.keys(NOMADIC.schedules)) {
     const deck = deckOf(NOMADIC, 'nomadic');
     const chronicle = settledLaunch(NOMADIC, REGION, schedule, 1, deck);
     for (const id of Object.keys(NOMADIC.events)) {
       expect(() => eventOf(NOMADIC, id).needs?.(NOMADIC, chronicle)).not.toThrow();
       for (const answer of Object.values(eventOf(NOMADIC, id).answers)) {
+        expect(() => answerCost(NOMADIC, chronicle, answer)).not.toThrow();
         expect(() => answer.reads(NOMADIC, chronicle)).not.toThrow();
         expect(() => answer.lands(NOMADIC, chronicle)).not.toThrow();
       }

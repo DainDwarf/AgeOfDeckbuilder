@@ -1,15 +1,8 @@
 import type Phaser from 'phaser';
 import { type Catalogue, cardOf } from '../rules/catalogue';
 import { costOf } from '../rules/chronicle';
-import { answerOf } from '../rules/schedule';
-import {
-  type CardId,
-  type Chronicle,
-  type Cost,
-  costsOf,
-  playable,
-  type Refusal,
-} from '../rules/state';
+import { answerCost, answerOf } from '../rules/schedule';
+import { type CardId, type Chronicle, type Cost, playable, type Refusal } from '../rules/state';
 import {
   ACCENT,
   addText,
@@ -140,8 +133,8 @@ export function capstoneFace(id: string): Face {
 }
 
 /**
- * The face an answer of an event is drawn as: its cost, and its rules entry reading the numbers of
- * the chronicle it was dealt on.
+ * The face an answer of an event is drawn as: its cost and its rules entry, both read on the
+ * chronicle it was dealt on.
  */
 export function answerFace(
   catalogue: Catalogue,
@@ -155,7 +148,7 @@ export function answerFace(
     name: answerName(id),
     kind: text('kind.event'),
     rules: answerRules(id, answer.reads(catalogue, chronicle)),
-    costs: costsOf(answer.cost),
+    costs: answerCost(catalogue, chronicle, answer),
   };
 }
 

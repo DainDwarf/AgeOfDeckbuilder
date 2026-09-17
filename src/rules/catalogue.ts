@@ -91,12 +91,14 @@ export type Card = { readonly cost: Partial<Resources> } & (
 export type AimedCard = Extract<Aim, { readonly aim: 'tile' | 'unit' }>;
 
 /**
- * One answer an event deals: its cost, what its rules entry reads of the chronicle it is dealt on,
- * and what it does to the chronicle it lands on. A draw of its own steps the generator that chronicle
- * carries.
+ * One answer an event deals: its cost, flat or a reading of the chronicle it is asked on,
+ * what its rules entry reads of the chronicle it is dealt on, and what it does to the chronicle it
+ * lands on. A draw of its own steps the generator that chronicle carries.
  */
 export type Answer = {
-  readonly cost: Partial<Resources>;
+  readonly cost:
+    | Partial<Resources>
+    | ((catalogue: Catalogue, chronicle: Chronicle) => Partial<Resources>);
   readonly reads: (catalogue: Catalogue, chronicle: Chronicle) => Record<string, number>;
   readonly lands: (catalogue: Catalogue, chronicle: Chronicle) => Chronicle;
 };
@@ -259,7 +261,7 @@ export function catalogued(content: Catalogue): Catalogue {
       }
       dealtBy.set(answer, id);
     }
-    const free = Object.values(event.answers).some((answer) => costsOf(answer.cost).length === 0);
+    const free = Object.values(event.answers).some(({ cost }) => freeWhateverTheChronicle(cost));
     if (!free) refuse(content, `the event ${id} deals no answer costing no stock`);
   }
 
@@ -282,6 +284,15 @@ export function catalogued(content: Catalogue): Catalogue {
   if (sight < 0) refuse(content, `the city sees ${sight}`);
   if (idle < 0) refuse(content, `the city opens with ${idle} idle`);
   return content;
+}
+
+function freeWhateverTheChronicle(cost: Answer['cost']): boolean {
+  switch (typeof cost) {
+    case 'function':
+      return false;
+    case 'object':
+      return costsOf(cost).length === 0;
+  }
 }
 
 /** The stats a unit of that kind enters the map with; a kind the catalogue does not hold is refused. */

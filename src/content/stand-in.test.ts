@@ -4,7 +4,7 @@ import { capstoneOf, cardOf, catalogued, deckOf, eventOf } from '../rules/catalo
 import { admitted, launched, refusalOf } from '../rules/chronicle';
 import { settledLaunch } from '../rules/fixtures';
 import { seedRng } from '../rules/rng';
-import { timelineOf } from '../rules/schedule';
+import { answerCost, timelineOf } from '../rules/schedule';
 import {
   buildingColourOf,
   buildingMarkOf,
@@ -150,13 +150,14 @@ test('every schedule of the stand-in rolls a timeline', () => {
   }
 });
 
-test('every answer of every event of the stand-in reads and lands, and every capstone lands, continues and is not passed, on a chronicle launched and settled on each schedule', () => {
+test('every answer of every event of the stand-in costs, reads and lands, and every capstone lands, continues and is not passed, on a chronicle launched and settled on each schedule', () => {
   for (const schedule of Object.keys(STAND_IN.schedules)) {
     const deck = deckOf(STAND_IN, 'PH_Deck');
     const chronicle = settledLaunch(STAND_IN, STAND_IN_REGION, schedule, 1, deck);
     for (const id of Object.keys(STAND_IN.events)) {
       expect(() => eventOf(STAND_IN, id).needs?.(STAND_IN, chronicle)).not.toThrow();
       for (const answer of Object.values(eventOf(STAND_IN, id).answers)) {
+        expect(() => answerCost(STAND_IN, chronicle, answer)).not.toThrow();
         expect(() => answer.reads(STAND_IN, chronicle)).not.toThrow();
         expect(() => answer.lands(STAND_IN, chronicle)).not.toThrow();
       }

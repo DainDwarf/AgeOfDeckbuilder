@@ -385,6 +385,27 @@ test('an answer taken pays its cost before it lands, and one the city cannot pay
   expect(endured.hand[0]).toBe('PH_Hunger');
 });
 
+test('an answer whose cost reads the chronicle is refused where that reading outruns the stock, and pays exactly that reading where it does not', () => {
+  const levied = (population: number): Chronicle =>
+    dealtBy(5, {
+      timeline: dueOn(5, 'PH_Blight'),
+      drawPile: fullDraw(),
+      population,
+      resources: { food: STOCKED, production: 40, military: 0, money: 0, science: 0, culture: 0 },
+    });
+  const levy: Command = { type: 'take', at: 2 };
+  const short = levied(99);
+  const rich = levied(30);
+  const paid = outcome(apply(CATALOGUE, rich, levy));
+
+  expect(short.resources.production).toBeLessThan(short.population);
+  expect(stagedBy(short, levy)).toEqual(['refused']);
+  expect(outcome(apply(CATALOGUE, short, levy))).toBe(short);
+  expect(rich.resources.production).toBeGreaterThanOrEqual(rich.population);
+  expect(paid.resources.production).toBe(rich.resources.production - rich.population);
+  expect(paid.deals).toEqual([]);
+});
+
 test('a take at a place the deal does not offer, and one with no deal standing, are refused', () => {
   const one = dealtBy(5);
   const refused: Command[] = [-1, 2, 0.5].map((at) => ({ type: 'take', at }));

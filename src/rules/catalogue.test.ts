@@ -1,9 +1,8 @@
 import { expect, test } from 'vitest';
-import { type Catalogue, catalogued, entered, type Schedule } from './catalogue';
+import { type Answer, type Catalogue, catalogued, entered, type Schedule } from './catalogue';
 import { apply, beginChronicle, launched } from './chronicle';
 import { CATALOGUE, CITY, cityOf, DECK, field, NO_DEALS, REGION, SCHEDULE } from './fixtures';
 import { generateMap, tileKey } from './map';
-import type { Resources } from './resources';
 import { seedRng } from './rng';
 import { timelineOf } from './schedule';
 
@@ -202,10 +201,10 @@ test('a catalogue whose two events deal the same answer is refused', () => {
   expect(() => catalogued(content)).toThrow(/^fixture: /);
 });
 
-test('a catalogue whose event deals no answer costing no stock is refused, an answer costing nought of a stock costing none', () => {
+test('a catalogue whose event deals no answer costing no stock is refused, an answer costing nought of a stock costing none and one whose cost reads the chronicle never counting', () => {
   const { PH_Blight } = CATALOGUE.events;
   const { PH_Endure, PH_Explosion } = PH_Blight.answers;
-  const blighted = (endure: Partial<Resources>): Catalogue =>
+  const blighted = (endure: Answer['cost']): Catalogue =>
     changed({
       version: 'blighted',
       events: {
@@ -221,6 +220,7 @@ test('a catalogue whose event deals no answer costing no stock is refused, an an
   expect(() => catalogued(blighted({ food: 0, money: 2 }))).toThrow(/^blighted: /);
   expect(catalogued(blighted({ food: 0, money: 0 })).version).toBe('blighted');
   expect(catalogued(blighted({})).version).toBe('blighted');
+  expect(() => catalogued(blighted(() => ({})))).toThrow(/^blighted: /);
 });
 
 test('a catalogue whose schedule deals an event it does not hold is refused', () => {

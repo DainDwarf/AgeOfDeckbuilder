@@ -2,8 +2,8 @@ import { expect, type Page, test } from '@playwright/test';
 import { STAND_IN } from '../src/content/stand-in';
 import { deckOf } from '../src/rules/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
-import { answerOf, answerRefusal, offered } from '../src/rules/schedule';
-import { costsOf, playable } from '../src/rules/state';
+import { answerCost, answerOf, answerRefusal, offered } from '../src/rules/schedule';
+import { playable } from '../src/rules/state';
 import { eventName, text } from '../src/ui/text';
 import {
   budget,
@@ -133,7 +133,7 @@ test('the take of an answer the city cannot pay for says why over the card, and 
   if (deal?.of !== 'event') throw new Error(`turn ${due} deals no event`);
   const at = offered(STAND_IN, deal).indexOf('PH_Tribute');
   const refusal = answerRefusal(STAND_IN, dealt, deal.event, 'PH_Tribute');
-  const said = costsOf(answerOf(STAND_IN, deal.event, 'PH_Tribute').cost)
+  const said = answerCost(STAND_IN, dealt, answerOf(STAND_IN, deal.event, 'PH_Tribute'))
     .filter(({ resource }) => refusal.unaffordable.includes(resource))
     .map(({ resource, amount }) => text(`refusal.${resource}`, { cost: amount }));
   expect(playable(refusal)).toBe(false);

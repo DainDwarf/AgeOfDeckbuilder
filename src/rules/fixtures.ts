@@ -82,7 +82,7 @@ export const TILLAGE = 'PH_Farm';
 /** The food the fixture's hunger strikes off the stock. */
 export const HUNGER = 6;
 
-/** The production the fixture's explosion costs: the one answer of the fixture that costs a stock. */
+/** The production the fixture's explosion costs: the one answer of the fixture whose flat cost asks a stock. */
 export const EXPLOSION = 4;
 
 /**
@@ -130,6 +130,11 @@ const EVENTS: Catalogue['events'] = {
       },
       PH_Explosion: {
         cost: { production: EXPLOSION },
+        reads: () => ({}),
+        lands: (_catalogue, chronicle) => chronicle,
+      },
+      PH_Levy: {
+        cost: (_catalogue, chronicle) => ({ production: chronicle.population }),
         reads: () => ({}),
         lands: (_catalogue, chronicle) => chronicle,
       },
