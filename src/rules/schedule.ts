@@ -216,7 +216,6 @@ export type Fire = {
   readonly damage: number;
 };
 
-/** The tiles of the terrain the fire burns within its distance of the city's tile, in tile order. */
 function fireStarts(chronicle: Chronicle, fire: Fire): TileCoords[] {
   const { city } = chronicle;
   if (city === undefined) return [];
@@ -225,7 +224,6 @@ function fireStarts(chronicle: Chronicle, fire: Fire): TileCoords[] {
   );
 }
 
-/** Whether the fire has a tile to start on. */
 export function fireStartable(chronicle: Chronicle, fire: Fire): boolean {
   return fireStarts(chronicle, fire).length > 0;
 }
