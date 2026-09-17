@@ -22,7 +22,7 @@ The map is hidden. The city and its units have **sight** over the tiles near the
 
 **Fog draws the tile as it was last seen.** The chronicle keeps a snapshot of every tile that has ever been in sight — its terrain, its feature, its improvements, its building, and the non-player unit standing on it. Rivers never move, so none is kept; a unit of the player's carries sight with it and is never stale, so none is kept either. The snapshot is taken again each time a command changes the chronicle, so an enemy crossing in sight is recorded as it crosses, and a unit killed reveals nothing after the attack that killed it.
 
-**A unit in the snapshot stays there until its tile is seen again** 🔧: the player is told where it last stood, not where it is. The end of the turn wiping units out of the snapshot is one rule away.
+**A unit in the snapshot leaves it when the turn ticks**: the enemy phase has moved whoever stood in the fog, so a mark kept past it would say where a unit is not. Within a turn nothing but the player moves, so a unit the fog shows is where it was seen.
 
 **A unit of the player's is not moved onto an uncharted tile**, nor across one to reach past it. Every tile beside a unit is in sight, so this shuts nobody in — walking into the dark costs a step, never a plan.
 

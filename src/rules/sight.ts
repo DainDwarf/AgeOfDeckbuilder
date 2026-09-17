@@ -138,3 +138,12 @@ export function charted(catalogue: Catalogue, chronicle: Chronicle): Chronicle {
 
   return charting ? { ...chronicle, snapshots: [...kept.values()] } : chronicle;
 }
+
+/**
+ * The snapshots as the tick leaves them: every unit gone, every tile kept as it was last seen.
+ * Snapshots that held no unit are handed straight back.
+ */
+export function unitsGone(snapshots: Snapshot[]): Snapshot[] {
+  if (snapshots.every((snapshot) => snapshot.unit === undefined)) return snapshots;
+  return snapshots.map(({ q, r, tile }) => ({ q, r, tile }));
+}

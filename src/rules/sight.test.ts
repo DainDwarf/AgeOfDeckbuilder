@@ -288,24 +288,81 @@ test('the snapshot keeps a tile as it was last seen once the unit that saw it ha
   expect(snapshotOf(left, off(3, 0))).toBeUndefined();
 });
 
-test('a killed unit charts nothing more: what it alone saw stands as it stood when it died', () => {
+/**
+ * A watcher that saw an enemy on the hills two tiles off and has since stepped away twice, one tile
+ * a command, leaving the enemy's tile in fog.
+ */
+function leftInFog(): { readonly seen: Chronicle; readonly left: Chronicle[] } {
+  const seen = raiding(
+    watching(cityOn(ground(['hills', [off(2, 0)]])), WATCHER, { sight: SIGHT }),
+    off(2, 0),
+  );
+  const once = outcome(apply(CATALOGUE, seen, { type: 'move', unit: 1, tile: off(0, -1) }));
+  const twice = outcome(apply(CATALOGUE, once, { type: 'move', unit: 1, tile: off(0, -2) }));
+  return { seen, left: [once, twice] };
+}
+
+const ENEMY = { type: 'PH_Warrior', faction: 'enemy' } as const;
+
+test('a unit kept in fog stays in the snapshot through the commands of the turn', () => {
+  const { seen, left } = leftInFog();
+  expect(snapshotOf(seen, off(2, 0))?.unit).toEqual(ENEMY);
+
+  for (const chronicle of left) {
+    expect(sees(chronicle, off(2, 0))).toBe(false);
+    expect(snapshotOf(chronicle, off(2, 0))?.unit).toEqual(ENEMY);
+  }
+});
+
+test('when the turn ticks a unit kept in fog leaves the snapshot, and its tile stays as it was last seen', () => {
+  const { left } = leftInFog();
+  const fogged = left[left.length - 1];
+  const before = snapshotOf(fogged, off(2, 0));
+
+  const ticked = outcome(apply(CATALOGUE, fogged, { type: 'end-turn' }));
+
+  expect(ticked.turn).toBe(fogged.turn + 1);
+  expect(sees(ticked, off(2, 0))).toBe(false);
+  const after = snapshotOf(ticked, off(2, 0));
+  expect(after?.unit).toBeUndefined();
+  expect(after?.tile).toBe(before?.tile);
+  expect(after?.tile.terrain).toBe('hills');
+});
+
+test('a unit standing in sight when the turn ticks is still recorded', () => {
+  const raided = raiding(watching(cityOn(ground()), WATCHER, { sight: SIGHT }), off(1, 0));
+
+  const ticked = outcome(apply(CATALOGUE, raided, { type: 'end-turn' }));
+  const enemy = ticked.units.find((unit) => unit.faction === 'enemy');
+
+  expect(ticked.turn).toBe(raided.turn + 1);
+  expect(enemy).toBeDefined();
+  if (enemy === undefined) return;
+  expect(sees(ticked, enemy.tile)).toBe(true);
+  expect(snapshotOf(ticked, enemy.tile)?.unit).toEqual(ENEMY);
+});
+
+test('a killed unit charts nothing more: its killer, out of sight, leaves the snapshot when the turn ticks', () => {
   const stood = off(0, 1);
   const raided = raiding(
     watching(cityOn(ground()), WATCHER, { sight: SIGHT, health: 1 }),
     off(0, 3),
   );
 
-  const killed = outcome(apply(CATALOGUE, raided, { type: 'end-turn' }));
+  const stages = apply(CATALOGUE, raided, { type: 'end-turn' });
+  const blow = stages.find((stage) => stage.name === 'attack');
+  const killed = outcome(stages);
+  expect(blow).toBeDefined();
+  if (blow === undefined) return;
+  const seenAtTheBlow = snapshotOf(blow.chronicle, stood);
+
   expect(killed.units.every((unit) => unit.faction === 'enemy')).toBe(true);
-  // The enemy crossed in sight, so the tile it landed on was charted with it standing there.
-  expect(snapshotOf(killed, stood)?.unit).toEqual({ type: 'PH_Warrior', faction: 'enemy' });
+  expect(tileKey(killed.units[0].tile)).toBe(tileKey(stood));
+  expect(seenAtTheBlow?.unit).toEqual(ENEMY);
+  expect(sees(killed, stood)).toBe(false);
+  expect(snapshotOf(killed, stood)?.unit).toBeUndefined();
+  expect(snapshotOf(killed, stood)?.tile).toBe(seenAtTheBlow?.tile);
   expect(snapshotOf(killed, off(0, 3))).toBeUndefined();
-
-  const on = outcome(apply(CATALOGUE, killed, { type: 'end-turn' }));
-
-  expect(tileKey(on.units[0].tile)).toBe(tileKey(off(0, -1)));
-  expect(snapshotOf(on, off(0, -1))?.unit).toBeUndefined();
-  expect(snapshotOf(on, stood)?.unit).toEqual({ type: 'PH_Warrior', faction: 'enemy' });
 });
 
 test('a unit of the player’s neither lands on an uncharted tile nor crosses one to reach past it', () => {

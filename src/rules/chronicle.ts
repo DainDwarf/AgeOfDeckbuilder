@@ -23,7 +23,7 @@ import {
   rewarded,
   timelineOf,
 } from './schedule';
-import { charted } from './sight';
+import { charted, unitsGone } from './sight';
 import {
   type Block,
   type CardId,
@@ -34,7 +34,6 @@ import {
   paid,
   playable,
   type Refusal,
-  type Snapshot,
   type Timeline,
   unaffordable,
 } from './state';
@@ -215,7 +214,7 @@ export function launched(
  */
 export function apply(catalogue: Catalogue, chronicle: Chronicle, command: Command): Stage[] {
   checkContent(catalogue, chronicle);
-  return charting(catalogue, chronicle.snapshots, resolved(catalogue, chronicle, command));
+  return charting(catalogue, chronicle, resolved(catalogue, chronicle, command));
 }
 
 /**
@@ -239,13 +238,17 @@ function resolved(catalogue: Catalogue, chronicle: Chronicle, command: Command):
 
 /**
  * Every stage with its own chronicle charted, each carrying on from the snapshots the stage before
- * it left. Every stage a command resolves as is built off the chronicle the command started on, so
- * the snapshots the first of them carries are already the ones it started with, and a command that
+ * it left, and the stage the turn ticks on carrying them with every unit gone before it is charted.
+ * Every stage a command resolves as is built off the chronicle the command started on, so the
+ * snapshots the first of them carries are already the ones it started with, and a command that
  * charted nothing hands back the very stage it was given.
  */
-function charting(catalogue: Catalogue, taken: Snapshot[], stages: readonly Stage[]): Stage[] {
-  let standing = taken;
+function charting(catalogue: Catalogue, started: Chronicle, stages: readonly Stage[]): Stage[] {
+  let standing = started.snapshots;
+  let turn = started.turn;
   return stages.map((stage) => {
+    if (stage.chronicle.turn !== turn) standing = unitsGone(standing);
+    turn = stage.chronicle.turn;
     const carried =
       stage.chronicle.snapshots === standing
         ? stage.chronicle
