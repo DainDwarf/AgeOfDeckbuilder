@@ -7,8 +7,8 @@ import {
   type Span,
   scheduleOf,
 } from './catalogue';
-import { enteredFromCamp, enteredOnCamp } from './enemies';
-import { distance, MOVE_POINT, pathCosts, type TileCoords, tileKey } from './map';
+import { enteredAround, enteredOnCamp, groundToCity, raidDoor } from './enemies';
+import { distance, type TileCoords, tileKey } from './map';
 import { buildingKind, held, refuse } from './map-kinds';
 import { nextRng, pickWeighted, type Rng } from './rng';
 import {
@@ -170,16 +170,11 @@ export function continued(catalogue: Catalogue, chronicle: Chronicle): Chronicle
   return capstoneOf(catalogue, id).continues?.(catalogue, chronicle) ?? chronicle;
 }
 
-/**
- * Warriors entering from the camps, one after another: each draws its own camp, so the second sees
- * the camp the first took as taken, and more warriors than free camps enter what they can.
- */
+/** A raid of warriors through one door drawn, entering together on and around it; with no door, none. */
 export function raided(catalogue: Catalogue, chronicle: Chronicle, warriors: number): Chronicle {
-  let standing = chronicle;
-  for (let warrior = 0; warrior < warriors; warrior++) {
-    standing = enteredFromCamp(catalogue, standing);
-  }
-  return standing;
+  const drawn = raidDoor(catalogue, chronicle);
+  if (drawn === undefined) return chronicle;
+  return enteredAround(catalogue, drawn.chronicle, drawn.door, warriors);
 }
 
 /**
@@ -243,16 +238,7 @@ export function besieged(
   const [near, far] = fromCity;
   const camp = catalogue.camp.building;
   const ground = buildingKind(catalogue, camp).terrains;
-  // Only which tiles the walk reached is read here, never what reaching them cost, so the move a
-  // crossing is charged against shows nowhere.
-  const reached = pathCosts(
-    catalogue,
-    chronicle.tiles,
-    chronicle.rivers,
-    city,
-    { kind: 'whole-map', move: MOVE_POINT },
-    () => false,
-  );
+  const reached = groundToCity(catalogue, chronicle, city);
 
   let rng = chronicle.rng;
   const standing: TileCoords[] = chronicle.tiles.filter((tile) => tile.building === camp);

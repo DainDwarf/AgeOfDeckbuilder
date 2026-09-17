@@ -376,6 +376,7 @@ export const STAND_IN: Catalogue = catalogued({
     building: 'PH_Camp',
     rewards: ['PH_Spoils'],
     odds: 0,
+    raidOdds: 1,
   },
   city: { building: 'PH_City', sight: 2, idle: 2 },
 });

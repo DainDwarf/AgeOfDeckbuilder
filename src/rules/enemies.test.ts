@@ -31,7 +31,15 @@ import {
   withUnits,
   worker,
 } from './fixtures';
-import { distance, MOVE_POINT, type River, type TileCoords, tileKey } from './map';
+import {
+  CENTRE,
+  distance,
+  MOVE_POINT,
+  neighbours,
+  type River,
+  type TileCoords,
+  tileKey,
+} from './map';
 import { regionOf, terrainKind } from './map-kinds';
 import { RESOURCES } from './resources';
 import { seedRng } from './rng';
@@ -201,18 +209,101 @@ test('a captured camp is silent: the raid enters on a camp still standing', () =
   expect(raided.units.find((unit) => unit.faction === 'enemy')?.tile).toEqual(kept);
 });
 
-test('a chronicle whose every camp is captured takes no raider at all', () => {
+/** A timeline dealing the raid on the twentieth turn, when the fixture's raid enters three warriors. */
+const RAID_OF_THREE = dealing({ turn: 20, event: 'PH_Hardship' });
+
+/** The seeds a raid's draws are read over. */
+const SEEDS = [1, 2, 3, 4, 5, 6, 7, 8];
+
+/** The fixture's content with its raids entering through a camp at these odds. */
+function raidingAt(raidOdds: number): Catalogue {
+  return catalogued({ ...CATALOGUE, camp: { ...CATALOGUE.camp, raidOdds } });
+}
+
+/** The tiles the enemies entered since `before` stand on, in the order they entered. */
+function enteredSince(before: Chronicle, after: Chronicle): TileCoords[] {
+  return enemiesOf(after)
+    .filter((unit) => unit.id >= before.nextUnit)
+    .map((unit) => unit.tile);
+}
+
+test('a raid of three enters on its camp’s tile, then on the nearest free tile around it, ring by ring', () => {
+  const camp = { q: 3, r: 0 };
+  const [open, ...taken] = neighbours(camp);
+  const city = cityOf(['urban'], {
+    tiles: camped(field(5), [camp]),
+    units: taken.map(worker),
+    turn: 19,
+    timeline: RAID_OF_THREE,
+  });
+
+  for (const seed of SEEDS) {
+    const seeded = { ...city, rng: seedRng(seed) };
+    const [first, second, third, ...more] = enteredSince(seeded, endedTurn(seeded, 'PH_Raid'));
+
+    expect(first).toEqual(camp);
+    expect(second).toEqual(open);
+    expect(distance(third, camp)).toBe(2);
+    expect(more).toEqual([]);
+  }
+});
+
+test('a raid through a camp a unit stands on enters beside the camp’s tile', () => {
+  const camp = { q: 3, r: 0 };
+  const city = cityOf(['urban'], {
+    tiles: camped(field(5), [camp]),
+    units: [standing('enemy', camp, { move: 0 })],
+    timeline: RAID_ON_SECOND,
+  });
+
+  const entered = enteredSince(city, endedTurn(city, 'PH_Raid'));
+
+  expect(entered).toHaveLength(1);
+  expect(distance(entered[0], camp)).toBe(1);
+});
+
+test('a raid whose door is drawn on the outer ring enters on a tile of the disc farthest from its centre, camps standing or not', () => {
+  const city = cityOf(['urban'], { tiles: camped(field(5), CAMPS), timeline: RAID_ON_SECOND });
+
+  for (const seed of SEEDS) {
+    const seeded = { ...city, rng: seedRng(seed) };
+    const entered = enteredSince(seeded, endedTurn(seeded, 'PH_Raid', raidingAt(0)));
+
+    expect(entered).toHaveLength(1);
+    expect(distance(entered[0], CENTRE)).toBe(5);
+  }
+});
+
+test('a chronicle whose every camp is captured takes its raid on the outer ring', () => {
   const held = cityOf(['urban'], {
-    tiles: camped(field(4), CAMPS),
+    tiles: camped(field(5), CAMPS),
     units: CAMPS.map(worker),
     timeline: RAID_ON_SECOND,
   });
 
   const raided = endedTurn(held, 'PH_Raid');
+  const entered = enteredSince(held, raided);
 
   expect(raided.turn).toBe(2);
   expect(raided.tiles.some((tile) => tile.building === CATALOGUE.camp.building)).toBe(false);
-  expect(enemiesOf(raided)).toEqual([]);
+  expect(entered).toHaveLength(1);
+  expect(distance(entered[0], CENTRE)).toBe(5);
+});
+
+test('a raid never enters on the city’s tile, and one larger than the tiles left to it enters what it can', () => {
+  const camp = { q: 1, r: 0 };
+  const beyond = { q: 2, r: 0 };
+  const city = cityOf(['urban'], {
+    tiles: camped(only(4, [CITY, camp, beyond]), [camp]),
+    turn: 19,
+    timeline: RAID_OF_THREE,
+  });
+
+  for (const seed of SEEDS) {
+    const seeded = { ...city, rng: seedRng(seed) };
+
+    expect(enteredSince(seeded, endedTurn(seeded, 'PH_Raid'))).toEqual([camp, beyond]);
+  }
 });
 
 /** The fixture's content with its camp rolling at these odds. */

@@ -50,7 +50,7 @@ Gather is the most copied, then the units, then a few Trapping and March; the de
 
 Five events, each a problem the chronicle deals with two answers, one of them open to a city with nothing. The escalation is the event's, whichever answer is taken: a later rival band is larger either way, and Wildfire weighs nothing early.
 
-- **Lean season.** _Share_: the hazard **Hunger** is laid on the draw pile; it strikes the food stock while it stays in the hand and costs production to be rid of. _Ration_: the stock is kept, and the envious enter on the free camps as a raid.
+- **Lean season.** _Share_: the hazard **Hunger** is laid on the draw pile; it strikes the food stock while it stays in the hand and costs production to be rid of. _Ration_: the stock is kept, and the envious enter as a raid.
 - **A rival band.** _Fight_: their warriors enter on the free camps and come. _Make room_: a new camp is placed near the city with one warrior on it — a source of raids for the rest of the chronicle, and a capture with its rewards for a band bold enough. Both answers cost no stock: many now against one now and more later.
 - **Wildfire.** _Let it burn_: the forest tiles within some distance of the city become plain, so the map has visibly changed; the fire is a terraform, so the game and the trapping go with the forest, the inhabitant working a burned tile is killed, and a unit standing on one takes damage enough to kill a worker. _Cut a firebreak_: production paid, the forest stands.
 - **Departure.** _Let them go_: an inhabitant leaves the city, working or idle, never the city's last. _Keep them_: culture paid.

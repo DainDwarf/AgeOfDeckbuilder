@@ -35,7 +35,6 @@ import {
   standing,
   TILLAGE,
   UPHEAVAL,
-  withUnits,
   worker,
 } from './fixtures';
 import { distance, neighbours, type TileCoords, tileKey } from './map';
@@ -114,7 +113,7 @@ function dueOn(turn: number, event = 'PH_Hardship'): Timeline {
 }
 
 /**
- * The city with camps enough for any raid, holding food it is too many to grow on, standing on the
+ * The city with camps for a raid to enter through, holding food it is too many to grow on, standing on the
  * turn before its timeline deals: one end of turn brings the deal to it.
  */
 function awaiting(due: number, carrying: Carrying = {}): Chronicle {
@@ -244,21 +243,6 @@ test('which camp the raid enters a warrior on is drawn from the seeded generator
   expect(new Set(SEEDS.map((seed) => tileKey(raidOf(seed)))).size).toBeGreaterThan(1);
 });
 
-test('the raid enters its warrior on a camp no unit stands on, and on nothing else at all', () => {
-  const open = cityOf(['urban'], { tiles: camped(field(4), CAMPS), timeline: dueOn(2) });
-  const [onlyOpen, ...taken] = CAMPS;
-  const stoodOn = (camps: TileCoords[]): Chronicle =>
-    withUnits(
-      open,
-      camps.map((camp) => worker(camp)),
-    );
-  const raid = (chronicle: Chronicle): Chronicle => endedTurn(chronicle, 'PH_Raid');
-
-  expect(CAMPS.map(tileKey)).toContain(tileKey(raid(open).units[0].tile));
-  expect(raid(stoodOn(taken)).units[taken.length].tile).toEqual(onlyOpen);
-  expect(raid(stoodOn(CAMPS)).units).toHaveLength(CAMPS.length);
-});
-
 test('a raid enters one warrior, and one more for every ten turns', () => {
   const raiders = (due: number): number[] =>
     SEEDS.map(
@@ -267,18 +251,6 @@ test('a raid enters one warrior, and one more for every ten turns', () => {
 
   for (let due = 3; due <= 9; due++) expect([...new Set(raiders(due))]).toEqual([1]);
   for (let due = 20; due <= 29; due++) expect([...new Set(raiders(due))]).toEqual([3]);
-});
-
-test('a raid with more warriors than camps to enter on enters what it can', () => {
-  const two = CAMPS.slice(0, 2);
-  const raiders = SEEDS.map(
-    (seed) =>
-      enemiesOf(
-        endedTurn(awaiting(20, { rng: seedRng(seed), tiles: camped(field(4), two) }), 'PH_Raid'),
-      ).length,
-  );
-
-  expect([...new Set(raiders)]).toEqual([two.length]);
 });
 
 test('a famine taken on any turn lays its hazard and leaves the food stock as it stood', () => {
