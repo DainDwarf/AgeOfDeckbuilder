@@ -1,3 +1,4 @@
+import { terraformed } from './cards';
 import {
   type Answer,
   type Catalogue,
@@ -201,6 +202,82 @@ export function unitDamaged(chronicle: Chronicle, at: TileCoords, amount: number
   const target = unitAt(chronicle.units, at);
   if (target === undefined) return chronicle;
   return { ...chronicle, units: damaged(chronicle.units, target, amount) };
+}
+
+/**
+ * A fire: the terrain it burns and the terrain it leaves, how far from the city's tile it may start
+ * and how far from its start it burns, and the damage a unit on a burned tile takes.
+ */
+export type Fire = {
+  readonly burns: string;
+  readonly leaves: string;
+  readonly fromCity: number;
+  readonly around: number;
+  readonly damage: number;
+};
+
+/** The tiles of the terrain the fire burns within its distance of the city's tile, in tile order. */
+function fireStarts(chronicle: Chronicle, fire: Fire): TileCoords[] {
+  const { city } = chronicle;
+  if (city === undefined) return [];
+  return chronicle.tiles.filter(
+    (tile) => tile.terrain === fire.burns && distance(tile, city) <= fire.fromCity,
+  );
+}
+
+/** Whether the fire has a tile to start on. */
+export function fireStartable(chronicle: Chronicle, fire: Fire): boolean {
+  return fireStarts(chronicle, fire).length > 0;
+}
+
+/**
+ * The tiles a fire burns, and the chronicle's generator after the one step drawing its start
+ * uniformly among the tiles it may start on: every tile of the terrain it burns within its distance
+ * of the start, the start included. No tile to start on burns nothing and draws nothing.
+ */
+function fireDrawn(
+  chronicle: Chronicle,
+  fire: Fire,
+): { readonly burning: readonly TileCoords[]; readonly rng: Rng } {
+  const candidates = fireStarts(chronicle, fire);
+  if (candidates.length === 0) return { burning: [], rng: chronicle.rng };
+  const step = nextRng(chronicle.rng);
+  const start = candidates[Math.floor(step.value * candidates.length)];
+  const burning = chronicle.tiles
+    .filter((tile) => tile.terrain === fire.burns && distance(tile, start) <= fire.around)
+    .map(({ q, r }) => ({ q, r }));
+  return { burning, rng: step.rng };
+}
+
+/**
+ * What the fire costs, read before it lands: the tiles burned, the population working them, the
+ * player's units standing on them, and the damage each unit takes.
+ */
+export function fireRead(chronicle: Chronicle, fire: Fire): Record<string, number> {
+  const burning = new Set(fireDrawn(chronicle, fire).burning.map(tileKey));
+  return {
+    tiles: burning.size,
+    population: chronicle.assigned.filter((coord) => burning.has(tileKey(coord))).length,
+    units: chronicle.units.filter(
+      (unit) => unit.faction === 'player' && burning.has(tileKey(unit.tile)),
+    ).length,
+    damage: fire.damage,
+  };
+}
+
+/**
+ * The fire landed: on every tile it burns, the population working it killed, the tile terraformed
+ * into the terrain it leaves, and the unit standing on it damaged, whatever its faction.
+ */
+export function burned(catalogue: Catalogue, chronicle: Chronicle, fire: Fire): Chronicle {
+  const { burning, rng } = fireDrawn(chronicle, fire);
+  let landing: Chronicle = { ...chronicle, rng };
+  for (const tile of burning) {
+    landing = populationKilled(landing, tile);
+    landing = terraformed(catalogue, landing, tile, fire.leaves);
+    landing = unitDamaged(landing, tile, fire.damage);
+  }
+  return landing;
 }
 
 /** A card laid on top of the draw pile; a card the catalogue does not hold is refused. */

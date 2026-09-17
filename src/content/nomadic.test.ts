@@ -1,10 +1,11 @@
 import { expect, test } from 'vitest';
 import { aimOf } from '../rules/cards';
-import { capstoneOf, cardOf, catalogued, deckOf, eventOf } from '../rules/catalogue';
+import { capstoneOf, cardOf, catalogued, deckOf, eventOf, scheduleOf } from '../rules/catalogue';
 import { admitted, launched, refusalOf } from '../rules/chronicle';
 import { settledLaunch } from '../rules/fixtures';
+import { distance, tileKey } from '../rules/map';
 import { seedRng } from '../rules/rng';
-import { timelineOf } from '../rules/schedule';
+import { answerOf, timelineOf } from '../rules/schedule';
 import {
   buildingColourOf,
   buildingMarkOf,
@@ -139,6 +140,42 @@ test('every schedule of the Nomadic Age rolls a timeline', () => {
   for (const id of Object.keys(NOMADIC.schedules)) {
     expect(() => timelineOf(NOMADIC, id, seedRng(1))).not.toThrow();
   }
+});
+
+test('Wildfire weighs nothing on the Nomadic Age’s schedule before the eighth turn, and weighs from it', () => {
+  const { wildfire } = scheduleOf(NOMADIC, SCHEDULE).entries;
+
+  for (let turn = 0; turn < 8; turn++) expect(wildfire(turn)).toBe(0);
+  for (let turn = 8; turn < 40; turn++) expect(wildfire(turn)).toBeGreaterThan(0);
+});
+
+test('Wildfire’s Let it burn reads what it lands, and landed until its need fails leaves no forest near the city', () => {
+  const wildfire = eventOf(NOMADIC, 'wildfire');
+  const burn = answerOf(NOMADIC, 'wildfire', 'let-it-burn');
+  let chronicle = settledLaunch(NOMADIC, REGION, SCHEDULE, 1, deckOf(NOMADIC, 'nomadic'));
+  const { city } = chronicle;
+  if (city === undefined) throw new Error('the launch settles no city');
+
+  expect(wildfire.needs?.(NOMADIC, chronicle)).toBe(true);
+  while (wildfire.needs?.(NOMADIC, chronicle)) {
+    const read = burn.reads(NOMADIC, chronicle);
+    const landed = burn.lands(NOMADIC, chronicle);
+    const burned = new Set(
+      landed.tiles.filter((tile, at) => tile.terrain !== chronicle.tiles[at].terrain).map(tileKey),
+    );
+
+    expect(read.tiles).toBe(burned.size);
+    expect(read.population).toBe(chronicle.population - landed.population);
+    expect(read.units).toBe(
+      chronicle.units.filter((unit) => unit.faction === 'player' && burned.has(tileKey(unit.tile)))
+        .length,
+    );
+    expect(burned.size).toBeGreaterThan(0);
+    chronicle = landed;
+  }
+  expect(
+    chronicle.tiles.filter((tile) => tile.terrain === 'forest' && distance(tile, city) <= 4),
+  ).toEqual([]);
 });
 
 test('every answer of every event of the Nomadic Age reads and lands, and every capstone lands, continues and is not passed, on a chronicle launched and settled on each schedule', () => {

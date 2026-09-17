@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import type { Catalogue } from './catalogue';
+import { type Catalogue, catalogued, eventOf } from './catalogue';
 import { apply, type Command, launched, outcome, type Stage } from './chronicle';
 import { growthThreshold } from './city';
 import {
@@ -19,6 +19,7 @@ import {
   EXPLOSION,
   endedTurn,
   enemiesOf,
+  FIRE,
   field,
   fullDraw,
   madeOf,
@@ -40,8 +41,8 @@ import {
   withUnits,
   worker,
 } from './fixtures';
-import { distance, neighbours, type TileCoords, tileKey } from './map';
-import { seedRng } from './rng';
+import { distance, neighbours, type TileCoords, tileAt, tileKey } from './map';
+import { nextRng, seedRng } from './rng';
 import { offered } from './schedule';
 import type { Chronicle, Timeline } from './state';
 import { unitAt } from './units';
@@ -509,6 +510,184 @@ test('an answer placing a camp near the city places one, and its raid enters a w
     0,
     ...Array<number>(ENCAMPED - 1).fill(1),
   ]);
+});
+
+/**
+ * A city on a disc of plain out to five, forest on the named tiles, dealt the fixture's wildfire at
+ * the end of its turn.
+ */
+function wooded(forest: TileCoords[], carrying: Carrying = {}): Chronicle {
+  return cityOf(['urban'], {
+    timeline: dueOn(2, 'PH_Wildfire'),
+    drawPile: fullDraw(),
+    tiles: madeOf(field(5), 'forest', forest),
+    ...carrying,
+  });
+}
+
+/** The city one end of turn on with the wildfire standing, what its card reads, and the chronicle the fire leaves. */
+function aflame(
+  city: Chronicle,
+  catalogue: Catalogue = CATALOGUE,
+): { dealt: Chronicle; read: Record<string, number>; landed: Chronicle } {
+  const dealt = outcome(apply(catalogue, city, { type: 'end-turn' }));
+  if (dealt.deals.length === 0) throw new Error('the wildfire is not dealt');
+  const read = eventOf(catalogue, 'PH_Wildfire').answers.PH_Burn.reads(catalogue, dealt);
+  const stages = apply(catalogue, dealt, { type: 'take', at: 0 });
+  const events = stages.find((stage) => stage.name === 'events');
+  if (events === undefined) throw new Error('the take lands nothing');
+  return { dealt, read, landed: events.chronicle };
+}
+
+function terrainOf(chronicle: Chronicle, at: TileCoords): string | undefined {
+  return tileAt(chronicle.tiles, at)?.terrain;
+}
+
+/**
+ * The fixture's content with the city's building standing on forest and plain besides urban, and
+ * forest yielding no food, so a city working it alone never grows.
+ */
+const CITY_IN_FOREST: Catalogue = catalogued({
+  ...CATALOGUE,
+  terrains: {
+    ...CATALOGUE.terrains,
+    forest: { ...CATALOGUE.terrains.forest, yields: { production: 1 } },
+  },
+  buildings: {
+    ...CATALOGUE.buildings,
+    PH_City: { ...CATALOGUE.buildings.PH_City, terrains: ['urban', 'forest', 'plain'] },
+  },
+});
+
+test('a fire burns every forest tile within its reach of the tile it starts on to plain, and no other tile', () => {
+  const start = { q: FIRE.fromCity, r: 0 };
+  const around = [
+    { q: FIRE.fromCity + 1, r: 0 },
+    { q: FIRE.fromCity + 1, r: -1 },
+    { q: FIRE.fromCity, r: 1 },
+  ];
+  const beyond = { q: FIRE.fromCity + 2, r: 0 };
+  const burning = new Set([start, ...around].map(tileKey));
+  const { dealt, read, landed } = aflame(wooded([start, ...around, beyond]));
+
+  for (const tile of [start, ...around]) expect(terrainOf(landed, tile)).toBe('plain');
+  expect(terrainOf(landed, beyond)).toBe('forest');
+  expect(landed.tiles.filter((tile) => !burning.has(tileKey(tile)))).toEqual(
+    dealt.tiles.filter((tile) => !burning.has(tileKey(tile))),
+  );
+  expect(read.tiles).toBe(4);
+});
+
+test('the forest tile a fire starts on is drawn once from the seeded generator, and what the card reads is what lands', () => {
+  const worked = { q: 1, r: 0 };
+  const walkedTo = { q: 0, r: 2 };
+  const starts = [worked, { q: -2, r: 0 }, walkedTo, { q: 0, r: -2 }];
+  const far = { q: FIRE.fromCity + 1, r: 0 };
+  const burnedFrom = new Set<string>();
+
+  for (const seed of SEEDS) {
+    const city = cityOf(['urban', 'forest'], {
+      timeline: dueOn(2, 'PH_Wildfire'),
+      drawPile: fullDraw(),
+      tiles: madeOf(field(5), 'forest', [...starts, far]),
+      rng: seedRng(seed),
+      units: [worker(walkedTo)],
+    });
+    const { dealt, read, landed } = aflame(city);
+    const burned = starts.filter((tile) => terrainOf(landed, tile) === 'plain');
+
+    expect(burned).toHaveLength(1);
+    expect(terrainOf(landed, far)).toBe('forest');
+    expect(landed.rng).toEqual(nextRng(dealt.rng).rng);
+    expect(read).toEqual({
+      tiles: 1,
+      population: dealt.population - landed.population,
+      units: tileKey(burned[0]) === tileKey(walkedTo) ? 1 : 0,
+      damage: FIRE.damage,
+    });
+    burnedFrom.add(tileKey(burned[0]));
+  }
+  expect(burnedFrom.size).toBeGreaterThan(1);
+});
+
+test('a fire kills the population working a burned tile, the city’s own tile included, and no idle population', () => {
+  const beside = { q: 1, r: 0 };
+  const city = cityOf(['forest', 'forest', 'plain'], {
+    timeline: dueOn(2, 'PH_Wildfire'),
+    drawPile: fullDraw(),
+    tiles: madeOf(field(5), 'forest', [CITY, beside]),
+    population: 5,
+  });
+  const { dealt, read, landed } = aflame(city, CITY_IN_FOREST);
+
+  expect(read.population).toBe(2);
+  expect(landed.population).toBe(dealt.population - 2);
+  expect(landed.assigned).toEqual([{ q: 2, r: 0 }]);
+  expect(terrainOf(landed, CITY)).toBe('plain');
+  expect(buildingAt(landed, CITY)).toBe('PH_City');
+  expect(landed.city).toEqual(CITY);
+});
+
+test('a fire killing the city’s last population ends the chronicle in defeat on the take', () => {
+  const city = cityOf(['forest'], {
+    timeline: dueOn(2, 'PH_Wildfire'),
+    drawPile: fullDraw(),
+    tiles: madeOf(field(5), 'forest', [CITY]),
+  });
+  const dealt = outcome(apply(CITY_IN_FOREST, city, { type: 'end-turn' }));
+  const taken = outcome(apply(CITY_IN_FOREST, dealt, { type: 'take', at: 0 }));
+
+  expect(dealt.population).toBe(1);
+  expect(taken.population).toBe(0);
+  expect(taken.ending).toEqual({ outcome: 'defeat', cause: 'population', turn: 2 });
+});
+
+test('a fire damages every unit standing on a burned tile, whatever its faction, and its card counts the player’s alone', () => {
+  const warriorAt = { q: 2, r: 0 };
+  const enemyAt = { q: 3, r: 0 };
+  const workerAt = { q: 3, r: -1 };
+  const clear = { q: 1, r: 0 };
+  const city = wooded([warriorAt, enemyAt, workerAt], {
+    units: [
+      standing('player', warriorAt, { health: FIRE.damage + 2 }),
+      standing('enemy', enemyAt, { health: FIRE.damage + 1 }, 0, 0),
+      standing('player', workerAt, { type: 'PH_Worker', worker: true, health: FIRE.damage }),
+      standing('player', clear, { health: FIRE.damage }),
+    ],
+  });
+  const { read, landed } = aflame(city);
+
+  expect(read.units).toBe(2);
+  expect(read.damage).toBe(FIRE.damage);
+  expect(unitAt(landed.units, warriorAt)?.stats.health).toBe(2);
+  expect(unitAt(landed.units, enemyAt)?.stats.health).toBe(1);
+  expect(unitAt(landed.units, workerAt)).toBeUndefined();
+  expect(unitAt(landed.units, clear)?.stats.health).toBe(FIRE.damage);
+});
+
+test('a camp on a burned tile stays, and the warrior on it takes the damage', () => {
+  const camp = { q: 2, r: 0 };
+  const city = wooded([], {
+    tiles: camped(madeOf(field(5), 'forest', [camp]), [camp]),
+    units: [standing('enemy', camp, { health: FIRE.damage + 1 }, 0, 0)],
+  });
+  const { landed } = aflame(city);
+
+  expect(terrainOf(landed, camp)).toBe('plain');
+  expect(buildingAt(landed, camp)).toBe(CATALOGUE.camp.building);
+  expect(unitAt(landed.units, camp)?.stats.health).toBe(1);
+});
+
+test('a wildfire is dealt with a forest tile within its distance of the city to start on, and not without one', () => {
+  const end: Command = { type: 'end-turn' };
+  const near = wooded([{ q: FIRE.fromCity, r: 0 }]);
+  const far = wooded([{ q: FIRE.fromCity + 1, r: 0 }]);
+
+  expect(outcome(apply(CATALOGUE, near, end)).deals).toEqual([
+    { of: 'event', event: 'PH_Wildfire' },
+  ]);
+  expect(stagedBy(far, end)).toContain('no-deal');
+  expect(outcome(apply(CATALOGUE, far, end)).deals).toEqual([]);
 });
 
 /** The turn the capstone lands on in every fixture below. */

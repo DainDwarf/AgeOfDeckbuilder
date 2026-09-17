@@ -6,7 +6,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ---
 
-- **Wildfire** — the nomadic schedule's third event: _Let it burn_ starts a fire on a forest tile drawn within 4 of the city and burns every forest tile within 1 of it to plain, killing the population on them and damaging the units on them, its card reading the exact price; _Cut a firebreak_ costs production and changes nothing; it weighs nothing before turn 8 and is not dealt with no forest to start on — held by rules tests on the nomadic catalogue. Doc-impact: `docs/ages/NOMADIC.md`. [board/wildfire.md](board/wildfire.md)
 - **Departure** — the fourth event, and the helper that takes one population from the city, idle first and the last assigned else: one population leaves, never the city's last, or culture keeps it; Hunger's strike then kills one when the food stock cannot cover it.
 - **The herd** — the fifth event, and the helper that deals a feature onto a tile: food now, or game dealt onto the forest near the city; the reach is that intake's fork, and so is whether it names the need Wildfire does, with no forest near the city to deal game onto.
 - **Victory on the act** — check the win condition on player actions, so that building the shelter finishes right away instead of at the end of turn.

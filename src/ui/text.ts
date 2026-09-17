@@ -145,6 +145,12 @@ const TEXT = {
   'answer.make-room': 'Make room',
   'answer-rules.make-room':
     'A camp is placed near the city, and a raid of {warriors} enters on and around it',
+  'event.wildfire': 'Wildfire',
+  'answer.let-it-burn': 'Let it burn',
+  'answer-rules.let-it-burn':
+    'A fire starts in a forest near the city and burns the forest around it to plain: {tiles} tiles, {population} population killed, {units} of your units take {damage} damage',
+  'answer.firebreak': 'Cut a firebreak',
+  'answer-rules.firebreak': 'The forest stands',
   'capstone-name.PH_Siege': 'PH_Siege',
   'capstone-rules.PH_Siege': 'The camps close in around the city',
   'capstone-name.PH_ShortSiege': 'PH_ShortSiege',

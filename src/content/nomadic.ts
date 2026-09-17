@@ -19,13 +19,23 @@ import { type Catalogue, catalogued } from '../rules/catalogue';
 import { arrived, yielded } from '../rules/city';
 import { MOVE_POINT } from '../rules/map';
 import { buildingKind, improvementKind } from '../rules/map-kinds';
-import { encamped, laid, raided } from '../rules/schedule';
+import {
+  burned,
+  encamped,
+  type Fire,
+  fireRead,
+  fireStartable,
+  laid,
+  raided,
+} from '../rules/schedule';
 import { ADVANCE } from './scripts';
 
 /** How many warriors a raid enters on this turn: one, and one more for every ten turns. */
 function raiders(turn: number): number {
   return 1 + Math.floor(turn / 10);
 }
+
+const WILDFIRE: Fire = { burns: 'forest', leaves: 'plain', fromCity: 4, around: 1, damage: 2 };
 
 export const NOMADIC: Catalogue = catalogued({
   version: 'nomadic',
@@ -184,6 +194,21 @@ export const NOMADIC: Catalogue = catalogued({
         },
       },
     },
+    wildfire: {
+      needs: (_catalogue, chronicle) => fireStartable(chronicle, WILDFIRE),
+      answers: {
+        'let-it-burn': {
+          cost: {},
+          reads: (_catalogue, chronicle) => fireRead(chronicle, WILDFIRE),
+          lands: (catalogue, chronicle) => burned(catalogue, chronicle, WILDFIRE),
+        },
+        firebreak: {
+          cost: { production: 3 },
+          reads: () => ({}),
+          lands: (_catalogue, chronicle) => chronicle,
+        },
+      },
+    },
   },
   capstones: {
     'first-shelter': {
@@ -196,7 +221,11 @@ export const NOMADIC: Catalogue = catalogued({
     nomadic: {
       spacing: [3, 5],
       capstone: { id: 'first-shelter', window: [12, 18] },
-      entries: { 'lean-season': () => 1, 'rival-band': () => 1 },
+      entries: {
+        'lean-season': () => 1,
+        'rival-band': () => 1,
+        wildfire: (turn) => (turn >= 8 ? 1 : 0),
+      },
     },
   },
   terrains: {

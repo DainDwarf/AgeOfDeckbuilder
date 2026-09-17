@@ -54,7 +54,11 @@ import type { Resources } from './resources';
 import { seedRng } from './rng';
 import {
   besieged,
+  burned,
   encamped,
+  type Fire,
+  fireRead,
+  fireStartable,
   laid,
   offered,
   populationKilled,
@@ -92,6 +96,9 @@ export const AMBUSH = 3;
 
 /** How many warriors the fixture's encampment enters on and around the camp it places. */
 export const ENCAMPED = 3;
+
+/** The fixture's wildfire: forest burned to plain, starting within three of the city. */
+export const FIRE: Fire = { burns: 'forest', leaves: 'plain', fromCity: 3, around: 1, damage: 3 };
 
 /** How many warriors the fixture's raid enters on this turn: one, and one more for every ten turns. */
 function raiders(turn: number): number {
@@ -155,6 +162,17 @@ const EVENTS: Catalogue['events'] = {
         lands: (catalogue, chronicle) => encamped(catalogue, chronicle, [3, 4], 3, ENCAMPED),
       },
       PH_Truce: { cost: {}, reads: () => ({}), lands: (_catalogue, chronicle) => chronicle },
+    },
+  },
+  PH_Wildfire: {
+    needs: (_catalogue, chronicle) => fireStartable(chronicle, FIRE),
+    answers: {
+      PH_Burn: {
+        cost: {},
+        reads: (_catalogue, chronicle) => fireRead(chronicle, FIRE),
+        lands: (catalogue, chronicle) => burned(catalogue, chronicle, FIRE),
+      },
+      PH_Firebreak: { cost: {}, reads: () => ({}), lands: (_catalogue, chronicle) => chronicle },
     },
   },
   PH_Spoilage: {
