@@ -41,6 +41,8 @@ function raiders(turn: number): number {
 
 const WILDFIRE: Fire = { burns: 'forest', leaves: 'plain', fromCity: 4, around: 1, damage: 2 };
 
+const HERD = { feature: 'game', fromCity: 4 } as const;
+
 export const NOMADIC: Catalogue = catalogued({
   version: 'nomadic',
   units: {
@@ -232,7 +234,7 @@ export const NOMADIC: Catalogue = catalogued({
     },
     herd: {
       needs: (catalogue, chronicle) =>
-        featureDealable(catalogue, chronicle, 'game', WILDFIRE.fromCity),
+        featureDealable(catalogue, chronicle, HERD.feature, HERD.fromCity),
       answers: {
         'hunt-it': {
           cost: {},
@@ -243,7 +245,7 @@ export const NOMADIC: Catalogue = catalogued({
           cost: {},
           reads: () => ({}),
           lands: (catalogue, chronicle) => {
-            const dealt = featureDealt(catalogue, chronicle, 'game', WILDFIRE.fromCity);
+            const dealt = featureDealt(catalogue, chronicle, HERD.feature, HERD.fromCity);
             return dealt.at === undefined ? dealt.chronicle : putInSight(dealt.chronicle, dealt.at);
           },
         },
