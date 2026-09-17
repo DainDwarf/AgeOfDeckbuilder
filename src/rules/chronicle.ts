@@ -8,7 +8,7 @@ import {
   enemyScript,
 } from './catalogue';
 import { assign, type CityCommand, claim, grow, income, reassign } from './city';
-import { enteredOnCamp } from './enemies';
+import { campUnitEntered } from './enemies';
 import { generateMap, type HexMap, type TileCoords, tileAt, tileKey } from './map';
 import { refuse } from './map-kinds';
 import { nextRng, seedRng, shuffle as shuffleItems } from './rng';
@@ -753,7 +753,7 @@ function campsRolled(
     const step = nextRng(standing.rng);
     standing = { ...standing, rng: step.rng };
     if (step.value >= catalogue.camp.odds) continue;
-    standing = enteredOnCamp(catalogue, standing, { q, r });
+    standing = campUnitEntered(catalogue, standing, { q, r });
     stages.push({ name: 'camp-enter', tile: { q, r }, chronicle: standing });
   }
   return { stages, chronicle: standing };

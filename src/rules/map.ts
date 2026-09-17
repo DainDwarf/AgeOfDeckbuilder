@@ -208,6 +208,25 @@ export function pathCosts(
   return spent;
 }
 
+export function groundRunsTo(
+  catalogue: MapContent,
+  tiles: readonly Tile[],
+  rivers: readonly River[],
+  to: TileCoords,
+): ReadonlySet<string> {
+  // Only which tiles the walk reached is read, never what reaching them cost, so the move a crossing
+  // is charged against shows nowhere.
+  const reached = pathCosts(
+    catalogue,
+    tiles,
+    rivers,
+    to,
+    { kind: 'whole-map', move: MOVE_POINT },
+    () => false,
+  );
+  return new Set(reached.keys());
+}
+
 /**
  * A point where three tiles meet, on a lattice of its own: a tile's middle is (2q + r, 3r) and each
  * of its six corners stands one step off that, so a corner has one identity however it is reached.
@@ -505,16 +524,7 @@ function campsOn(
   const { camps, campFromCentre, campsApart } = region;
   const camp = catalogue.camp.building;
   const ground = buildingKind(catalogue, camp).terrains;
-  // Only which tiles the walk reached is read here, never what reaching them cost, so the move a
-  // crossing is charged against shows nowhere.
-  const reached = pathCosts(
-    catalogue,
-    tiles,
-    rivers,
-    CENTRE,
-    { kind: 'whole-map', move: MOVE_POINT },
-    () => false,
-  );
+  const reached = groundRunsTo(catalogue, tiles, rivers, CENTRE);
 
   let rng = initial;
   const placed: TileCoords[] = [];

@@ -7,8 +7,8 @@ import {
   type Span,
   scheduleOf,
 } from './catalogue';
-import { enteredAround, enteredOnCamp, groundToCity, raidDoor } from './enemies';
-import { distance, type TileCoords, tileKey } from './map';
+import { campUnitEntered, enteredAround, raidEntry } from './enemies';
+import { distance, groundRunsTo, type TileCoords, tileKey } from './map';
 import { buildingKind, held, refuse } from './map-kinds';
 import { nextRng, pickWeighted, type Rng } from './rng';
 import {
@@ -170,11 +170,10 @@ export function continued(catalogue: Catalogue, chronicle: Chronicle): Chronicle
   return capstoneOf(catalogue, id).continues?.(catalogue, chronicle) ?? chronicle;
 }
 
-/** A raid of warriors through one door drawn, entering together on and around it; with no door, none. */
 export function raided(catalogue: Catalogue, chronicle: Chronicle, warriors: number): Chronicle {
-  const drawn = raidDoor(catalogue, chronicle);
+  const drawn = raidEntry(catalogue, chronicle);
   if (drawn === undefined) return chronicle;
-  return enteredAround(catalogue, drawn.chronicle, drawn.door, warriors);
+  return enteredAround(catalogue, drawn.chronicle, drawn.entry, warriors);
 }
 
 /**
@@ -213,7 +212,7 @@ export function reinforced(catalogue: Catalogue, chronicle: Chronicle): Chronicl
   for (const { q, r, building } of chronicle.tiles) {
     if (building !== catalogue.camp.building) continue;
     if (unitAt(standing.units, { q, r }) !== undefined) continue;
-    standing = enteredOnCamp(catalogue, standing, { q, r });
+    standing = campUnitEntered(catalogue, standing, { q, r });
   }
   return standing;
 }
@@ -238,7 +237,7 @@ export function besieged(
   const [near, far] = fromCity;
   const camp = catalogue.camp.building;
   const ground = buildingKind(catalogue, camp).terrains;
-  const reached = groundToCity(catalogue, chronicle, city);
+  const reached = groundRunsTo(catalogue, chronicle.tiles, chronicle.rivers, city);
 
   let rng = chronicle.rng;
   const standing: TileCoords[] = chronicle.tiles.filter((tile) => tile.building === camp);
@@ -272,7 +271,7 @@ export function besieged(
       pitched.has(tileKey(tile)) ? { ...tile, building: camp } : tile,
     ),
   };
-  for (const tile of placed) placing = enteredOnCamp(catalogue, placing, tile);
+  for (const tile of placed) placing = campUnitEntered(catalogue, placing, tile);
   return placing;
 }
 

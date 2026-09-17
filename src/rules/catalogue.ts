@@ -154,8 +154,7 @@ export type Catalogue = MapContent & {
     readonly rewards: readonly string[];
     /** The chance, at every enemy phase, that the camp's unit enters on a free camp. */
     readonly odds: number;
-    /** The chance that an event's raid enters through a camp still standing, not the outer ring. */
-    readonly raidOdds: number;
+    readonly raidCampOdds: number;
   };
   readonly city: {
     readonly building: string;
@@ -165,21 +164,6 @@ export type Catalogue = MapContent & {
   };
 };
 
-/**
- * The one way a catalogue is built, refused whole where it does not hold together: every unit kind
- * names itself by its key; every id a biome, a feature, a building, an improvement, a region, a deck,
- * a schedule, the camp and the city name is held; every biome rolls some rim width; no building or
- * improvement names a movement cost below one hundredth of a move point; no region keeps its camps
- * within the centre part's reach plus the city's sight; no section of a deck holds a hazard or any
- * of the camp's rewards, a deck's settle section holds settle cards alone and at least one, and its
- * cards none; a schedule deals one event at least, its capstone is held, and each of its spans rolls
- * from one at least to no less than its least; an event a schedule deals among its entries deals two
- * answers at least; every event deals an answer costing no stock, every amount its cost names
- * nought; no answer is dealt by two events; the camp deals one reward at least, and rolls and takes
- * a raid through it at odds from nought to one; the camp's unit stands on every terrain its building names; and the city's
- * sight and its idle count are none below nought. The closures of a card, an answer and a capstone
- * are neither run nor read here.
- */
 export function catalogued(content: Catalogue): Catalogue {
   for (const [id, kind] of Object.entries(content.units)) {
     if (kind.type !== id) refuse(content, `the unit kind ${id} names itself ${kind.type}`);
@@ -277,10 +261,10 @@ export function catalogued(content: Catalogue): Catalogue {
   enemyScript(content, content.camp.script);
   if (content.camp.rewards.length === 0) refuse(content, 'the camp deals no reward');
   for (const reward of content.camp.rewards) cardOf(content, reward);
-  const { odds, raidOdds } = content.camp;
+  const { odds, raidCampOdds } = content.camp;
   if (!(odds >= 0 && odds <= 1)) refuse(content, `the camp rolls at odds of ${odds}`);
-  if (!(raidOdds >= 0 && raidOdds <= 1)) {
-    refuse(content, `a raid enters through a camp at odds of ${raidOdds}`);
+  if (!(raidCampOdds >= 0 && raidCampOdds <= 1)) {
+    refuse(content, `a raid enters through a camp at odds of ${raidCampOdds}`);
   }
   for (const terrain of buildingKind(content, content.camp.building).terrains) {
     if (!standsOn(content, campUnit, { q: 0, r: 0, terrain, improvements: [] })) {

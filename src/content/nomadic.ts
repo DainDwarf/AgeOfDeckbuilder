@@ -283,7 +283,7 @@ export const NOMADIC: Catalogue = catalogued({
     building: 'camp',
     rewards: ['stores', 'band-joins'],
     odds: 0.08,
-    raidOdds: 0.8,
+    raidCampOdds: 0.8,
   },
   city: { building: 'city', sight: 2, idle: 2 },
 });

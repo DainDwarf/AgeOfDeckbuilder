@@ -112,10 +112,6 @@ function dueOn(turn: number, event = 'PH_Hardship'): Timeline {
   return dealing({ turn, event });
 }
 
-/**
- * The city with camps for a raid to enter through, holding food it is too many to grow on, standing on the
- * turn before its timeline deals: one end of turn brings the deal to it.
- */
 function awaiting(due: number, carrying: Carrying = {}): Chronicle {
   return cityOf(['urban'], {
     ...NO_GROWTH,

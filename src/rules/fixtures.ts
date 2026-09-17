@@ -438,7 +438,7 @@ export const CATALOGUE: Catalogue = catalogued({
     building: 'PH_Camp',
     rewards: ['PH_Spoils', 'PH_Cache'],
     odds: 0,
-    raidOdds: 1,
+    raidCampOdds: 1,
   },
   city: { building: 'PH_City', sight: 2, idle: 2 },
 });

@@ -38,8 +38,8 @@ test('a catalogue whose camp rolls at odds below nought or above one is refused'
 });
 
 test('a catalogue whose raids enter through a camp at odds below nought or above one is refused', () => {
-  const below = changed({ camp: { ...CATALOGUE.camp, raidOdds: -0.1 } });
-  const above = changed({ camp: { ...CATALOGUE.camp, raidOdds: 1.1 } });
+  const below = changed({ camp: { ...CATALOGUE.camp, raidCampOdds: -0.1 } });
+  const above = changed({ camp: { ...CATALOGUE.camp, raidCampOdds: 1.1 } });
 
   expect(() => catalogued(below)).toThrow(/^fixture: /);
   expect(() => catalogued(above)).toThrow(/^fixture: /);

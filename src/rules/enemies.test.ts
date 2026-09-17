@@ -209,18 +209,15 @@ test('a captured camp is silent: the raid enters on a camp still standing', () =
   expect(raided.units.find((unit) => unit.faction === 'enemy')?.tile).toEqual(kept);
 });
 
-/** A timeline dealing the raid on the twentieth turn, when the fixture's raid enters three warriors. */
+// the fixture's raid enters three warriors from turn 20
 const RAID_OF_THREE = dealing({ turn: 20, event: 'PH_Hardship' });
 
-/** The seeds a raid's draws are read over. */
 const SEEDS = [1, 2, 3, 4, 5, 6, 7, 8];
 
-/** The fixture's content with its raids entering through a camp at these odds. */
-function raidingAt(raidOdds: number): Catalogue {
-  return catalogued({ ...CATALOGUE, camp: { ...CATALOGUE.camp, raidOdds } });
+function raidingAt(raidCampOdds: number): Catalogue {
+  return catalogued({ ...CATALOGUE, camp: { ...CATALOGUE.camp, raidCampOdds } });
 }
 
-/** The tiles the enemies entered since `before` stand on, in the order they entered. */
 function enteredSince(before: Chronicle, after: Chronicle): TileCoords[] {
   return enemiesOf(after)
     .filter((unit) => unit.id >= before.nextUnit)
@@ -262,7 +259,7 @@ test('a raid through a camp a unit stands on enters beside the camp’s tile', (
   expect(distance(entered[0], camp)).toBe(1);
 });
 
-test('a raid whose door is drawn on the outer ring enters on a tile of the disc farthest from its centre, camps standing or not', () => {
+test('a raid drawn through the outer ring enters on a tile of the disc farthest from its centre, camps standing', () => {
   const city = cityOf(['urban'], { tiles: camped(field(5), CAMPS), timeline: RAID_ON_SECOND });
 
   for (const seed of SEEDS) {
