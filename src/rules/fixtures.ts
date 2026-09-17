@@ -18,6 +18,7 @@ import {
   recalled,
   refreshed,
   settled,
+  shocked,
   slotFree,
   terraformable,
   terraformed,
@@ -64,6 +65,9 @@ const FAR = 1000;
 
 /** The building whose standing on a tile the city holds passes the fixture's tillage. */
 export const TILLAGE = 'PH_Farm';
+
+/** The food the fixture's hunger strikes off the stock. */
+export const HUNGER = 6;
 
 /** The production the fixture's explosion costs: the one answer of the fixture that costs a stock. */
 export const EXPLOSION = 4;
@@ -116,7 +120,7 @@ export const CATALOGUE: Catalogue = catalogued({
       refuses: (catalogue, _chronicle, tile) =>
         firstRefusal(made(catalogue, tile, ['plain', 'forest', 'hills']), slotFree(tile)),
       effect: (catalogue, paid, at) =>
-        settled(catalogue, terraformed(catalogue, paid, at, catalogue.city.terrain), at),
+        settled(catalogue, terraformed(catalogue, paid, at, 'urban'), at),
     },
     PH_Claim: {
       kind: 'settle',
@@ -222,10 +226,7 @@ export const CATALOGUE: Catalogue = catalogued({
     PH_Hunger: {
       kind: 'hazard',
       cost: { production: 3 },
-      strikes: (_catalogue, chronicle) => ({
-        ...chronicle,
-        resources: { ...chronicle.resources, food: 0 },
-      }),
+      strikes: (_catalogue, chronicle) => shocked(chronicle, 'food', HUNGER),
     },
   },
   decks: {
@@ -438,7 +439,7 @@ export const CATALOGUE: Catalogue = catalogued({
     rewards: ['PH_Spoils', 'PH_Cache'],
     odds: 0,
   },
-  city: { terrain: 'urban', building: 'PH_City', sight: 2, idle: 2 },
+  city: { building: 'PH_City', sight: 2, idle: 2 },
 });
 
 /** The one region the fixture catalogue deals its maps from. */

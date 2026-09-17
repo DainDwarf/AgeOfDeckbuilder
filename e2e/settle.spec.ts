@@ -66,7 +66,7 @@ test('a chronicle opens on turn 0 with the city standing nowhere, and the settle
   await expect.poll(async () => (await chronicleOf(page)).city).toEqual(at);
 
   const standingCity = await chronicleOf(page);
-  expect(tileAt(standingCity.tiles, at)?.terrain).toBe(STAND_IN.city.terrain);
+  expect(tileAt(standingCity.tiles, at)?.terrain).toBe('urban');
   expect(await marksIn(page, 'border')).toBe(standingCity.held.length);
 
   await stoppedTurn(page);

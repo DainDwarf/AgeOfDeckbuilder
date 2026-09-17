@@ -28,6 +28,7 @@ import {
   FOOD,
   field,
   fullDraw,
+  HUNGER,
   madeOf,
   NO_GROWTH,
   opening,
@@ -115,7 +116,7 @@ function science(amount: number): Resources {
 
 /** A food stock for a hazard to empty, and the production to pay one with. */
 const STOCKED: Resources = {
-  food: 6,
+  food: HUNGER,
   production: 3,
   military: 0,
   money: 0,
@@ -1442,6 +1443,23 @@ test('a hazard strikes from the hand alone, and never from a pile', () => {
 
   expect(stagedBy(piled, { type: 'end-turn' })).not.toContain('strike');
   expect(ended.resources.food).toBe(STOCKED.food + yielded);
+});
+
+test('a hazard’s strike takes what it names off the stock, and a strike that outruns the stock leaves nothing', () => {
+  const stockOf = (food: number): Chronicle =>
+    cityOf(['urban', 'plain'], {
+      ...NO_GROWTH,
+      hand: ['PH_Hunger'],
+      resources: { ...STOCKED, food },
+    });
+  const bare = cityOf(['urban', 'plain'], NO_GROWTH);
+
+  const outrun = outcome(apply(CATALOGUE, stockOf(HUNGER - 1), { type: 'end-turn' }));
+  const spared = outcome(apply(CATALOGUE, stockOf(HUNGER + 1), { type: 'end-turn' }));
+  const yielded = outcome(apply(CATALOGUE, bare, { type: 'end-turn' })).resources.food;
+
+  expect(outrun.resources.food).toBe(yielded);
+  expect(spared.resources.food).toBe(1 + yielded);
 });
 
 test('a card the city falls short for is refused for the resource it is short of', () => {

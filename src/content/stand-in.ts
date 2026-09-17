@@ -130,7 +130,7 @@ export const STAND_IN: Catalogue = catalogued({
       refuses: (catalogue, _chronicle, tile) =>
         firstRefusal(made(catalogue, tile, ['plain', 'forest', 'hills']), slotFree(tile)),
       effect: (catalogue, paid, at) =>
-        settled(catalogue, terraformed(catalogue, paid, at, catalogue.city.terrain), at),
+        settled(catalogue, terraformed(catalogue, paid, at, 'urban'), at),
     },
     PH_Claim: {
       kind: 'settle',
@@ -424,7 +424,7 @@ export const STAND_IN: Catalogue = catalogued({
     rewards: ['PH_Spoils'],
     odds: 0,
   },
-  city: { terrain: 'urban', building: 'PH_City', sight: 2, idle: 2 },
+  city: { building: 'PH_City', sight: 2, idle: 2 },
 });
 
 /** A deck's cards: this many copies of each card the decks are built from, in the order they are listed. */

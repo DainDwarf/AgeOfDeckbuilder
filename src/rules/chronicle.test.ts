@@ -253,7 +253,7 @@ test('the settle puts the city on its tile: its terrain and building, no feature
   const centre = tileAt(settled.tiles, CITY);
 
   expect(settled.city).toEqual(CITY);
-  expect(centre?.terrain).toBe(CATALOGUE.city.terrain);
+  expect(centre?.terrain).toBe('urban');
   expect(centre?.building).toBe(CATALOGUE.city.building);
   expect(centre?.feature).toBeUndefined();
   for (const tile of settled.tiles) {

@@ -105,7 +105,7 @@ test('the generator puts urban on no tile, and the centre tile is its biome’s 
   const origin = biomeKind(CATALOGUE, DISC.centreBiome).origin;
   for (const seed of SEEDS) {
     const tiles = mapOf(seed);
-    expect(tiles.filter((tile) => tile.terrain === CATALOGUE.city.terrain)).toEqual([]);
+    expect(tiles.filter((tile) => tile.terrain === 'urban')).toEqual([]);
     expect(tileAt(tiles, CENTRE)?.terrain).toBe(origin);
   }
 });

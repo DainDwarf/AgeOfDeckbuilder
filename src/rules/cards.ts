@@ -10,7 +10,7 @@ import {
 import { claimable } from './city';
 import { type Tile, type TileCoords, tileAt, tileKey } from './map';
 import { buildingKind, improvementKind, refuse, terrainKind } from './map-kinds';
-import { RESOURCES, type Resources } from './resources';
+import { RESOURCES, type Resource, type Resources } from './resources';
 import { type Block, type Chronicle, holds, idle, type TileBlock } from './state';
 import { refreshedMovePoints, spentAction, standsOn, unitAt } from './units';
 
@@ -392,4 +392,15 @@ export function gained(paid: Chronicle, gain: Partial<Resources>): Chronicle {
   const resources = { ...paid.resources };
   for (const resource of RESOURCES) resources[resource] += gain[resource] ?? 0;
   return { ...paid, resources };
+}
+
+/** A resource shocked: the city's stock of it loses the amount, and never falls below nothing. */
+export function shocked(chronicle: Chronicle, resource: Resource, amount: number): Chronicle {
+  return {
+    ...chronicle,
+    resources: {
+      ...chronicle.resources,
+      [resource]: Math.max(0, chronicle.resources[resource] - amount),
+    },
+  };
 }

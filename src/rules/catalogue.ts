@@ -135,7 +135,7 @@ export type Deck = { readonly cards: readonly string[]; readonly settle: readonl
  * The content a chronicle is played on: the stats a unit of each kind enters the map with, every
  * script an enemy can carry, the map content, the cards and the decks a chronicle is begun on,
  * the events, the capstones and the schedules its timeline is rolled from, what a camp is, enters
- * and gives on its capture, and the city: the terrain and the building it stands as, how far it
+ * and gives on its capture, and the city: the building it stands as, how far it
  * sees, and how many idle inhabitants it opens with. Every one of them is named by its key.
  */
 export type Catalogue = MapContent & {
@@ -156,7 +156,6 @@ export type Catalogue = MapContent & {
     readonly odds: number;
   };
   readonly city: {
-    readonly terrain: string;
     readonly building: string;
     readonly sight: number;
     /** How many inhabitants the chronicle opens with besides the one on the city's tile. */
@@ -175,8 +174,7 @@ export type Catalogue = MapContent & {
  * from one at least to no less than its least; an event a schedule deals among its entries deals two
  * answers at least; every event deals an answer costing no stock, every amount its cost names
  * nought; no answer is dealt by two events; the camp deals one reward at least and rolls at odds
- * from nought to one; the camp's unit stands on every terrain its building names; the city's
- * building stands on the city's terrain; and the city's sight and its idle count are none below
+ * from nought to one; the camp's unit stands on every terrain its building names; and the city's sight and its idle count are none below
  * nought. The closures of a card, an answer and a capstone are neither run nor read here.
  */
 export function catalogued(content: Catalogue): Catalogue {
@@ -283,12 +281,7 @@ export function catalogued(content: Catalogue): Catalogue {
       refuse(content, `the camp's unit ${content.camp.unit} cannot stand on ${terrain}`);
     }
   }
-  if (!buildingKind(content, content.city.building).terrains.includes(content.city.terrain)) {
-    refuse(
-      content,
-      `the city's building ${content.city.building} does not stand on ${content.city.terrain}`,
-    );
-  }
+  buildingKind(content, content.city.building);
   const { sight, idle } = content.city;
   if (sight < 0) refuse(content, `the city sees ${sight}`);
   if (idle < 0) refuse(content, `the city opens with ${idle} idle`);
