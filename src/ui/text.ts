@@ -140,6 +140,7 @@ const TEXT = {
   'answer.ration': 'Ration',
   'answer-rules.ration': 'A raid of {warriors} enters the map',
   'event.rival-band': 'A rival band',
+  // glossary exception: fight — an answer's name, not a synonym of combat.
   'answer.fight': 'Fight',
   'answer-rules.fight': 'A raid of {warriors} enters the map',
   'answer.make-room': 'Make room',

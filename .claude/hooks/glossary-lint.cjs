@@ -1,7 +1,9 @@
 // PostToolUse lint on Edit/Write: flag forbidden synonyms of glossary terms in what was just
 // written. Reads docs/GLOSSARY.md's table — column 1 is the term, column 3 the words it forbids —
 // so the vocabulary lives in one place. Advisory, never a deny: a forbidden word can be
-// legitimate (a card *named* after it), and the reviewer sees the exception either way.
+// legitimate (a card *named* after it), and the reviewer sees the exception either way. A file
+// that lives with one marks it beside the word — `glossary exception: <word>` in a comment — and
+// the lint skips that word in that file.
 
 const fs = require('node:fs');
 const path = require('node:path');
@@ -56,9 +58,18 @@ process.stdin.on('end', () => {
   const added = input.tool_name === 'Write' ? ti.content : ti.new_string;
   if (typeof added !== 'string') process.exit(0);
 
+  // PostToolUse: the file already holds the edit, so its markers are read off the file itself.
+  const excepted = new Set();
+  try {
+    for (const m of fs.readFileSync(target, 'utf8').matchAll(/glossary exception: (\S+)/g)) {
+      excepted.add(m[1].toLowerCase());
+    }
+  } catch {}
+
   const hits = [];
   for (const { term, banned } of rules) {
     for (const word of banned) {
+      if (excepted.has(word.toLowerCase())) continue;
       const re = new RegExp(`\\b${word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
       if (re.test(added)) hits.push(`"${word}" → use "${term}"`);
     }
