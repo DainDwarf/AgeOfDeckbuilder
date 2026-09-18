@@ -113,7 +113,7 @@ test('a play the rules refuse is one refused stage, on the chronicle as it stood
   expect(stagedBy(penniless, { type: 'play', index: 3, aim: 'none' })).toEqual(['refused']);
 });
 
-test('a card that lands whole is played in the one stage, the effect already in it', () => {
+test('a card that lands whole is played as one played group, closing on the chronicle its effect left', () => {
   const city = cityOf(['urban'], {
     hand: ['PH_Harvest'],
     resources: { food: 1, production: 0, military: 0, money: 0, science: 1, culture: 0 },
@@ -196,6 +196,29 @@ test('a unit card is played over its cost, one population fewer, and the unit en
   expect(fewer.chronicle.units).toEqual([]);
   expect(entering).toMatchObject({ tile: CITY });
   expect(entering.chronicle.units.map(({ tile }) => tile)).toEqual([CITY]);
+});
+
+test('a second settle raises no change for a row it leaves where it stood: the population already at what the settle gives', () => {
+  const opened = opening(plainDisc(), {
+    deck: { cards: DECK.cards, settle: ['PH_Settle', 'PH_Settle'] },
+  });
+  const first = settledOn(opened, CITY);
+  const moved = { q: 1, r: 0 };
+
+  const held = playedOver(first, { type: 'play', index: 0, aim: 'tile', tile: moved });
+
+  expect(first.population).toBe(1 + CATALOGUE.city.idle);
+  expect(held.map(({ name }) => name)).toEqual([
+    'left',
+    'retiled',
+    'retiled',
+    'settled',
+    'held',
+    'assigned',
+  ]);
+  expect(
+    outcome(apply(CATALOGUE, first, { type: 'play', index: 0, aim: 'tile', tile: moved })).city,
+  ).toEqual(moved);
 });
 
 test('the settle is played over the card leaving and the settle’s own changes, all on the city’s tile', () => {

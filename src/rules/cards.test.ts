@@ -207,6 +207,19 @@ test('a card the city cannot pay for stays in the hand and costs nothing', () =>
   );
 });
 
+test('a card played through a worker whose effect is called on a tile no worker stands on raises a runtime error, and its effect lands after it', () => {
+  const at = { q: 1, r: 0 };
+  const city = cityOf(['urban', 'plain']);
+  const card = aimOf(cardOf(CATALOGUE, 'PH_Farm'));
+  if (card.aim !== 'tile') throw new Error('the farm is aimed at no tile');
+
+  const landing = card.effect(CATALOGUE, city, at);
+
+  expect(landing.stages.map(({ name }) => name)).toEqual(['runtime-error', 'retiled']);
+  expect(landing.stages[0].chronicle).toBe(city);
+  expect(buildingAt(landing.chronicle, at)).toBe('PH_Farm');
+});
+
 test('the refresh instant refreshes one unit of the player’s that has spent move points', () => {
   const city = cityOf(['urban'], {
     tiles: field(3),

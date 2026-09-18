@@ -12,7 +12,6 @@ import {
 import { campUnit, enteredAround, raidEntry } from './enemies';
 import { distance, type FeatureId, groundRunsTo, type Tile, type TileCoords, tileKey } from './map';
 import { buildingKind, featureKind, held, refuse } from './map-kinds';
-
 import { nextRng, pickWeighted, type Rng } from './rng';
 import {
   change,

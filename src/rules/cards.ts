@@ -154,10 +154,13 @@ export function throughWorker(
   };
 }
 
-/** The unit standing on the tile with one of its action spent, and nothing where none stands there. */
+/**
+ * The unit standing on the tile with one of its action spent; a `runtime-error` where none stands
+ * there.
+ */
 function acted(paid: Chronicle, at: TileCoords): Landed {
   const acting = unitAt(paid.units, at);
-  if (acting === undefined) return unchanged(paid);
+  if (acting === undefined) return landedAs(change('runtime-error', paid));
   return landedAs(
     changeOn('action-spent', at, {
       ...paid,
@@ -297,16 +300,30 @@ export function entersOn(type: string): Aim & { readonly aim: 'tile' } {
  */
 export function settled(catalogue: Catalogue, paid: Chronicle, at: TileCoords): Landed {
   const city = { q: at.q, r: at.r };
+  const key = tileKey(city);
+  const alone = (tiles: readonly TileCoords[]): boolean =>
+    tiles.length === 1 && tileKey(tiles[0]) === key;
+  const population = 1 + catalogue.city.idle;
   let landing = built(catalogue, paid, city, catalogue.city.building);
-  landing = followed(landing, (left) => landedAs(changeOn('settled', city, { ...left, city })));
   landing = followed(landing, (left) =>
-    landedAs(changeOn('held', city, { ...left, held: [city] })),
+    left.city !== undefined && tileKey(left.city) === key
+      ? unchanged(left)
+      : landedAs(changeOn('settled', city, { ...left, city })),
   );
   landing = followed(landing, (left) =>
-    landedAs(change('population', { ...left, population: 1 + catalogue.city.idle })),
+    alone(left.held)
+      ? unchanged(left)
+      : landedAs(changeOn('held', city, { ...left, held: [city] })),
+  );
+  landing = followed(landing, (left) =>
+    left.population === population
+      ? unchanged(left)
+      : landedAs(change('population', { ...left, population })),
   );
   return followed(landing, (left) =>
-    landedAs(changeOn('assigned', city, { ...left, assigned: [city] })),
+    alone(left.assigned)
+      ? unchanged(left)
+      : landedAs(changeOn('assigned', city, { ...left, assigned: [city] })),
   );
 }
 

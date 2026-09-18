@@ -327,12 +327,12 @@ export function outcome(stages: readonly Stage[]): Chronicle {
 
 /**
  * The end of turn, step by ordered step, each with the chronicle it leaves: one `strike` for every
- * hazard in hand, whatever it moved, then the steps after it, one that changed nothing absent; the
- * list ends at the capture when the city falls in the enemy phase, or at
- * the last camp captured while a camp's rewards stand — the rest of the end of turn waits on their
- * take. Otherwise the turn opens as `turnOpened` has it. Turn 0's end runs none of the cycle and
- * opens on the tick, which takes the settle cards left in hand. There is always a stage. A turn ended
- * while the city stands nowhere is one `refused` stage.
+ * hazard in hand, whatever it moved, then the steps after it, one that changed nothing absent. The
+ * list ends at the capture when the city falls in the enemy phase, or at the last camp captured
+ * while a camp's rewards stand — the rest of the end of turn waits on their take. Otherwise the turn
+ * opens as `turnOpened` has it. Turn 0's end runs none of the cycle and opens on the tick, which
+ * takes the settle cards left in hand. There is always a stage. A turn ended while the city stands
+ * nowhere is one `refused` stage.
  */
 function endOfTurn(catalogue: Catalogue, chronicle: Chronicle): Stage[] {
   if (chronicle.city === undefined) return [holdingNothing('refused', chronicle)];
@@ -343,7 +343,7 @@ function endOfTurn(catalogue: Catalogue, chronicle: Chronicle): Stage[] {
     standing = stage.chronicle;
     stages.push(stage);
   };
-  /** The steps that resolve unit by unit hand their stages over already made. */
+  /** Stages handed over already made, the strikes among them, are kept whatever they moved. */
   const raised = (sequence: readonly Stage[]): void => {
     for (const stage of sequence) {
       standing = stage.chronicle;
