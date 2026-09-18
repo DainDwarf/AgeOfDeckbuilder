@@ -2,9 +2,9 @@
 
 **Line:** The stage tree stands — `apply` answers a tree of stages, the one stage type a change or a group over stages, the chronicle screen plays it through one walk in order, and every stage of today is sorted into a change or a group holding nothing, the play-out unchanged to the eye. Doc-impact: none.
 
-**Spec:** `docs/DOGMAS.md` → _Stack_, the bullet beginning "`src/rules/` never imports Phaser": the sentences on `apply`'s two products, the change, the group and the closed sets `src/rules/stages.ts` holds. `docs/DOGMAS.md` → _Code_, the bullet "A rules helper that changes the chronicle answers the changes it raised". `BRANCH.md` → _The design_, for the change vocabulary by row and the group list. No sentence of any `docs/` page changes, and there is no player-facing sentence: nothing on screen reads differently.
+**Spec:** `docs/DOGMAS.md` → _Code_, the four bullets "The game is one pure function", "The flow is a tree of stages", "A group is a name for why, over stages" and "A rules helper that changes the chronicle answers the changes it raised": `apply`'s two products, the change, the group and the closed sets `src/rules/stages.ts` holds. `BRANCH.md` → _The design_, for the change vocabulary by row and the group list. No sentence of any `docs/` page changes, and there is no player-facing sentence: nothing on screen reads differently.
 
-**Doc-impact:** none — the Stack paragraph already states the tree, and `docs/CHRONICLE.md`'s one sentence on the ending screen rising "as the last stage plays out" stays true.
+**Doc-impact:** none — the Code bullets already state the tree, and `docs/CHRONICLE.md`'s one sentence on the ending screen rising "as the last stage plays out" stays true.
 
 **Scope:**
 
