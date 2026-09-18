@@ -7,6 +7,8 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 ---
 
 - **The fixture's own script** — `src/rules/fixtures.ts` imports the default enemy script from `src/content/scripts.ts`, the one import of content under the rules; the fixture writes a trivial script of its own, and the tests that pinned the default script's routes are re-read as content tests.
+- **A unit card's population through one door** — `enters` in `src/rules/cards.ts` decrements the population itself instead of going through `populationTaken`; either it goes through that door or the two rules, an idle population only and never the city's last against any population, are told apart on purpose.
+- **The raid's door is a switch** — `raidEntry` in `src/rules/enemies.ts` picks the raid's door with a nested ternary over a closed two-member set, and only the camps-empty-to-ring direction is designed; the ring-empty-to-camps direction is decided and the branch becomes a switch.
 - **A long-comment lint** — a hook on every edit under `src/` flags a comment block longer than three lines, advisory like the glossary lint, so the implementer sees a comment drifting into paraphrase the moment it writes one.
 - **The design pages at altitude** — a Docs dogma says what a design page carries and what it never does: stand-in names, content detail, future implementation, history retold; the three design pages and the age page are re-read against it.
 - **Event animations** — when an event's answer lands, what it changes on the map — burned tiles, killed population and units, anything an answer does — is animated rather than simply redrawn; the tile The herd's _Follow it_ charts is one of them, wherever it lies on the map, and nothing draws the eye to it until then.
