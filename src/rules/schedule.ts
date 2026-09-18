@@ -527,7 +527,8 @@ export function campsPlaced(
 
 /**
  * One camp placed around the city, then a raid of that many warriors entering on and around it, the
- * first on the camp. Where no tile takes a camp nothing is placed, and it is a `runtime-error`.
+ * first on the camp. A raid of no warrior, or one where no tile takes a camp, places nothing and is a
+ * `runtime-error`.
  */
 export function encamped(
   catalogue: Catalogue,
@@ -536,6 +537,7 @@ export function encamped(
   apart: number,
   warriors: number,
 ): Landed {
+  if (warriors <= 0) return runtimeError(chronicle);
   const placing = campsPlaced(catalogue, chronicle, 1, fromCity, apart);
   const [camp] = placing.placed;
   if (camp === undefined) return runtimeError(chronicle);
