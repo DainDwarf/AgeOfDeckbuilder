@@ -13,7 +13,15 @@ import { distance, type FeatureId, groundRunsTo, type Tile, type TileCoords, til
 import { buildingKind, featureKind, held, refuse } from './map-kinds';
 import type { Resources } from './resources';
 import { nextRng, pickWeighted, type Rng } from './rng';
-import { followed, type Landed, landedAs, type Stage, unchanged } from './stages';
+import {
+  change,
+  followed,
+  holdingNothing,
+  type Landed,
+  landedAs,
+  type Stage,
+  unchanged,
+} from './stages';
 import {
   type CardId,
   type Chronicle,
@@ -113,7 +121,7 @@ export function events(
     const landing = capstoneOf(catalogue, timeline.capstone.id).lands(catalogue, rolled);
     return {
       phase: 'capstone',
-      stages: [{ name: 'capstone', chronicle: rolled }, ...landing.stages],
+      stages: [holdingNothing('capstone', rolled), ...landing.stages],
     };
   }
 
@@ -179,7 +187,7 @@ export function answerRefusal(
  */
 export function answered(catalogue: Catalogue, chronicle: Chronicle, answer: Answer): Stage[] {
   const paidOn = paid(chronicle, answerCost(catalogue, chronicle, answer));
-  return [{ name: 'answer', chronicle: paidOn }, ...answer.lands(catalogue, paidOn).stages];
+  return [holdingNothing('answer', paidOn), ...answer.lands(catalogue, paidOn).stages];
 }
 
 /** A reward taken off the chronicle the deal is popped from: it is laid in the discard pile. */
@@ -199,7 +207,7 @@ export function continued(catalogue: Catalogue, chronicle: Chronicle): Landed {
 
 /** A landing the content should never have called, followed through as the one step saying so. */
 function runtimeError(chronicle: Chronicle): Landed {
-  return landedAs({ name: 'runtime-error', chronicle });
+  return landedAs(change('runtime-error', chronicle));
 }
 
 /**
@@ -221,10 +229,13 @@ export function populationKilled(chronicle: Chronicle, at: TileCoords): Landed {
   const key = tileKey(at);
   const assigned = chronicle.assigned.filter((coord) => tileKey(coord) !== key);
   if (assigned.length === chronicle.assigned.length) return unchanged(chronicle);
-  return landedAs({
-    name: 'population-lost',
-    chronicle: { ...chronicle, population: chronicle.population - 1, assigned },
-  });
+  return landedAs(
+    change('population-lost', {
+      ...chronicle,
+      population: chronicle.population - 1,
+      assigned,
+    }),
+  );
 }
 
 /**
@@ -235,10 +246,13 @@ export function populationKilled(chronicle: Chronicle, at: TileCoords): Landed {
 export function populationTaken(chronicle: Chronicle): Landed {
   if (chronicle.population <= 0) return unchanged(chronicle);
   const assigned = idle(chronicle) > 0 ? chronicle.assigned : chronicle.assigned.slice(0, -1);
-  return landedAs({
-    name: 'population-lost',
-    chronicle: { ...chronicle, population: chronicle.population - 1, assigned },
-  });
+  return landedAs(
+    change('population-lost', {
+      ...chronicle,
+      population: chronicle.population - 1,
+      assigned,
+    }),
+  );
 }
 
 /**
@@ -249,6 +263,7 @@ export function unitDamaged(chronicle: Chronicle, at: TileCoords, amount: number
   const target = unitAt(chronicle.units, at);
   if (target === undefined) return unchanged(chronicle);
   return landedAs({
+    kind: 'change',
     name: 'damaged',
     tile: at,
     chronicle: { ...chronicle, units: damaged(chronicle.units, target, amount) },
@@ -258,7 +273,7 @@ export function unitDamaged(chronicle: Chronicle, at: TileCoords, amount: number
 /** The resources gained into the city's stock, and nothing where it gains none. */
 export function stockGained(chronicle: Chronicle, gain: Partial<Resources>): Landed {
   if (costsOf(gain).length === 0) return unchanged(chronicle);
-  return landedAs({ name: 'gained', chronicle: gained(chronicle, gain) });
+  return landedAs(change('stock', gained(chronicle, gain)));
 }
 
 /**
@@ -273,15 +288,15 @@ export function terraformedOn(
 ): Landed {
   const left = terraformed(catalogue, chronicle, at, to);
   if (left === chronicle) return unchanged(chronicle);
-  return landedAs({ name: 'retiled', tile: at, chronicle: left });
+  return landedAs({ kind: 'change', name: 'retiled', tile: at, chronicle: left });
 }
 
 /**
- * The tile charted, whatever sees it: the one `charted` stage, carrying no snapshot of its own — the
+ * The tile charted, whatever sees it: the one `charted` change, carrying no snapshot of its own — the
  * chronicle's charting takes it.
  */
 export function tileCharted(chronicle: Chronicle, at: TileCoords): Landed {
-  return landedAs({ name: 'charted', tile: at, chronicle });
+  return landedAs({ kind: 'change', name: 'charted', tile: at, chronicle });
 }
 
 /**
@@ -406,6 +421,7 @@ export function featureDealt(
   const key = tileKey(dealt);
   const at = { q: dealt.q, r: dealt.r };
   const landing = landedAs({
+    kind: 'change',
     name: 'retiled',
     tile: at,
     chronicle: {
@@ -420,10 +436,7 @@ export function featureDealt(
 /** A card laid on top of the draw pile; a card the catalogue does not hold is refused. */
 export function laid(catalogue: Catalogue, chronicle: Chronicle, card: CardId): Landed {
   cardOf(catalogue, card);
-  return landedAs({
-    name: 'laid',
-    chronicle: { ...chronicle, drawPile: [card, ...chronicle.drawPile] },
-  });
+  return landedAs(change('laid', { ...chronicle, drawPile: [card, ...chronicle.drawPile] }));
 }
 
 /**
@@ -492,6 +505,7 @@ export function besieged(
     const key = tileKey(placing.tile);
     landing = followed(landing, (left) =>
       landedAs({
+        kind: 'change',
         name: 'retiled',
         tile: placing.tile,
         chronicle: {

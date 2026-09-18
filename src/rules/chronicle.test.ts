@@ -10,6 +10,7 @@ import {
   field,
   fullDraw,
   NO_GROWTH,
+  namesOf,
   opening,
   plains,
   REGION,
@@ -119,7 +120,7 @@ test('a card that lands whole is played in the one stage, the effect already in 
 
   const stages = apply(CATALOGUE, city, { type: 'play', index: 0, aim: 'none' });
 
-  expect(stages.map((stage) => stage.name)).toEqual(['played']);
+  expect(namesOf(stages)).toEqual(['played']);
   expect(stages[0].chronicle.resources).toEqual({ ...city.resources, food: 3, science: 0 });
   expect(stages[0].chronicle.discardPile).toEqual(['PH_Harvest']);
 });
@@ -182,15 +183,15 @@ test('the end of turn resolves in order, and its last stage is where the turn en
   const stages = apply(CATALOGUE, city, { type: 'end-turn' });
   const ended = stages[stages.length - 1].chronicle;
 
-  expect(stages.map((stage) => stage.name)).toEqual([
-    'discard',
+  expect(namesOf(stages)).toEqual([
+    'discarded',
     'income',
     'move',
     'attack',
     'turn',
-    'draw',
-    'shuffle',
-    'draw',
+    'drawn',
+    'shuffled',
+    'drawn',
   ]);
   expect(ended).toEqual(outcome(stages));
   expect(ended.turn).toBe(city.turn + 1);
@@ -205,7 +206,7 @@ test('a stage of the end of turn that changed nothing is left out of it', () => 
     discardPile: ['PH_Harvest'],
   });
 
-  expect(stagedBy(quiet, { type: 'end-turn' })).toEqual(['income', 'turn', 'draw']);
+  expect(stagedBy(quiet, { type: 'end-turn' })).toEqual(['income', 'turn', 'drawn']);
 });
 
 test('every card of the deck is in exactly one pile through a full cycle', () => {
@@ -291,7 +292,7 @@ test('the end of turn 0 runs none of the cycle: turn 1 and its hand drawn, no in
   const after = outcome(stages);
 
   expect(stocked.hand).toEqual(['PH_Settle']);
-  expect(stages.map((stage) => stage.name)).toEqual(['turn', 'draw']);
+  expect(namesOf(stages)).toEqual(['turn', 'drawn']);
   expect(after.turn).toBe(1);
   expect(after.hand).toHaveLength(5);
   expect(after.resources).toEqual(stocked.resources);

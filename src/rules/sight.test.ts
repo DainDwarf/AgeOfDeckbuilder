@@ -1,7 +1,7 @@
 import { expect, test } from 'vitest';
 import { type Catalogue, catalogued, entered } from './catalogue';
 import { apply, outcome } from './chronicle';
-import { CATALOGUE, NO_DEALS, opening, plains, settledOn } from './fixtures';
+import { CATALOGUE, NO_DEALS, namesOf, opening, plains, settledOn } from './fixtures';
 import {
   distance,
   MOVE_POINT,
@@ -13,6 +13,7 @@ import {
 } from './map';
 import { seedRng } from './rng';
 import { charted, inSight } from './sight';
+import { walked } from './stages';
 import type { Chronicle, Snapshot } from './state';
 import type { UnitStats } from './units';
 
@@ -349,7 +350,7 @@ test('a killed unit charts nothing more: its killer, out of sight, leaves the sn
   );
 
   const stages = apply(CATALOGUE, raided, { type: 'end-turn' });
-  const blow = stages.find((stage) => stage.name === 'attack');
+  const blow = [...walked(stages)].find((stage) => stage.name === 'attack');
   const killed = outcome(stages);
   if (blow === undefined) throw new Error('the end of turn staged no attack');
   const seenAtTheBlow = snapshotOf(blow.chronicle, stood);
@@ -376,12 +377,10 @@ test('a unit of the player’s neither lands on an uncharted tile nor crosses on
   const onto = apply(CATALOGUE, chronicle, { type: 'move', unit: 1, tile: uncharted });
   const past = apply(CATALOGUE, chronicle, { type: 'move', unit: 1, tile: beyond });
 
-  expect(onto.map((stage) => stage.name)).toEqual(['refused']);
-  expect(past.map((stage) => stage.name)).toEqual(['refused']);
+  expect(namesOf(onto)).toEqual(['refused']);
+  expect(namesOf(past)).toEqual(['refused']);
   // The charting is the whole of the refusal: the same distance over charted ground is crossed.
-  expect(
-    apply(CATALOGUE, chronicle, { type: 'move', unit: 1, tile: off(0, -3) }).map(
-      (stage) => stage.name,
-    ),
-  ).toEqual(['move']);
+  expect(namesOf(apply(CATALOGUE, chronicle, { type: 'move', unit: 1, tile: off(0, -3) }))).toEqual(
+    ['move'],
+  );
 });

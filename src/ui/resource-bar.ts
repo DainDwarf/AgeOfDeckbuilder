@@ -179,7 +179,9 @@ export function createResourceBar(
   return {
     render,
     play(stage: Stage): Promise<void> | undefined {
-      return stage.name === 'income' || stage.name === 'grow' ? rise(stage.chronicle) : undefined;
+      return stage.kind === 'group' && (stage.name === 'income' || stage.name === 'grow')
+        ? rise(stage.chronicle)
+        : undefined;
     },
     latch(shown: ReadonlySet<Resource>): void {
       for (const entry of entries) {

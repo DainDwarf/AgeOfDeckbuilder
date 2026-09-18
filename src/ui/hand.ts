@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { aimOf } from '../rules/cards';
 import { type AimedCard, type Catalogue, cardOf } from '../rules/catalogue';
 import { costOf, refusalOf } from '../rules/chronicle';
-import type { Stage } from '../rules/stages';
+import type { Change, Group, Stage } from '../rules/stages';
 import { type CardId, type Chronicle, playable, type Refusal } from '../rules/state';
 import { createAimLine } from './aim-line';
 import {
@@ -436,6 +436,49 @@ export function createHand(
     return letGoOf(slot);
   };
 
+  const changed = (stage: Change): Promise<void> | undefined => {
+    switch (stage.name) {
+      case 'discarded':
+        return toDiscardPile(stage.chronicle);
+      case 'drawn':
+        return fromDrawPile(stage.chronicle);
+      case 'shuffled':
+      case 'rolled':
+      case 'ended':
+      case 'move':
+      case 'enter':
+      case 'retiled':
+      case 'charted':
+      case 'damaged':
+      case 'laid':
+      case 'stock':
+      case 'population-lost':
+      case 'runtime-error':
+        return undefined;
+    }
+  };
+
+  const grouped = (stage: Group): Promise<void> | undefined => {
+    switch (stage.name) {
+      case 'refused':
+        return comeHome();
+      case 'played':
+      case 'assign':
+      case 'claim':
+      case 'strike':
+      case 'income':
+      case 'grow':
+      case 'turn':
+      case 'capstone':
+      case 'deal':
+      case 'answer':
+      case 'reward':
+      case 'attack':
+      case 'camp-capture':
+        return undefined;
+    }
+  };
+
   return {
     render,
     live,
@@ -445,40 +488,11 @@ export function createHand(
     },
     unselect,
     play(stage: Stage): Promise<void> | undefined {
-      switch (stage.name) {
-        case 'discard':
-          return toDiscardPile(stage.chronicle);
-        case 'draw':
-          return fromDrawPile(stage.chronicle);
-        case 'refused':
-          return comeHome();
-        case 'played':
-        case 'assign':
-        case 'claim':
-        case 'strike':
-        case 'income':
-        case 'grow':
-        case 'capture':
-        case 'victory':
-        case 'turn':
-        case 'capstone':
-        case 'deal':
-        case 'no-deal':
-        case 'answer':
-        case 'reward':
-        case 'shuffle':
-        case 'attack':
-        case 'move':
-        case 'camp-capture':
-        case 'enter':
-        case 'retiled':
-        case 'charted':
-        case 'damaged':
-        case 'laid':
-        case 'gained':
-        case 'population-lost':
-        case 'runtime-error':
-          return undefined;
+      switch (stage.kind) {
+        case 'change':
+          return changed(stage);
+        case 'group':
+          return grouped(stage);
       }
     },
   };

@@ -24,7 +24,7 @@ import {
   timelineOf,
 } from './schedule';
 import { charted, chartedAt, unitsGone } from './sight';
-import type { PlainStage, Stage } from './stages';
+import { type Change, change, holdingNothing, type Stage } from './stages';
 import {
   type Block,
   type CardId,
@@ -175,9 +175,9 @@ export function apply(catalogue: Catalogue, chronicle: Chronicle, command: Comma
  * every stage the command resolved after it dropped.
  */
 function resolved(catalogue: Catalogue, chronicle: Chronicle, command: Command): Stage[] {
-  if (chronicle.ending !== undefined) return [{ name: 'refused', chronicle }];
+  if (chronicle.ending !== undefined) return [holdingNothing('refused', chronicle)];
   if (chronicle.deals.length > 0 && command.type !== 'take') {
-    return [{ name: 'refused', chronicle }];
+    return [holdingNothing('refused', chronicle)];
   }
 
   const stages = stagesOf(catalogue, chronicle, command);
@@ -195,63 +195,61 @@ function falling(chronicle: Chronicle): boolean {
 }
 
 /**
- * Every stage with its own chronicle charted, each carrying on from the snapshots the stage before
- * it left: every stage a command resolves as is built off the chronicle the command started on, so
- * the snapshots its own chronicle carries are that one's. A `charted` stage has its tile's snapshot
- * taken here, as the stage's chronicle stands. The units leave the snapshots here, on the stage the
- * turn ticks on, because the snapshots a stage's own chronicle carries are stale by a turn. A command
- * that charted nothing hands back the very stage it was given.
+ * Every leaf of the tree with its own chronicle charted, in the order the walk plays them, each
+ * carrying on from the snapshots the leaf before it left: every stage a command resolves as is built
+ * off the chronicle the command started on, so the snapshots its own chronicle carries are that
+ * one's. A `charted` change has its tile's snapshot taken here, as the change's chronicle stands. The
+ * units leave the snapshots here, on the leaf the turn ticks on, because the snapshots a leaf's own
+ * chronicle carries are stale by a turn. A group holding stages leaves its last stage's charted
+ * chronicle. A command that charted nothing hands back the very stages it was given.
  */
 function charting(catalogue: Catalogue, started: Chronicle, stages: readonly Stage[]): Stage[] {
   let standing = started.snapshots;
   let turn = started.turn;
-  return stages.map((stage) => {
+  const seen = <Settled extends Stage>(stage: Settled, at: TileCoords | undefined): Settled => {
     if (stage.chronicle.turn !== turn) standing = unitsGone(standing);
     turn = stage.chronicle.turn;
     const carried =
       stage.chronicle.snapshots === standing
         ? stage.chronicle
         : { ...stage.chronicle, snapshots: standing };
-    const at = chartedOn(stage);
-    const seen = charted(catalogue, at === undefined ? carried : chartedAt(catalogue, carried, at));
-    standing = seen.snapshots;
-    return seen === stage.chronicle ? stage : { ...stage, chronicle: seen };
-  });
+    const left = charted(catalogue, at === undefined ? carried : chartedAt(catalogue, carried, at));
+    standing = left.snapshots;
+    return left === stage.chronicle ? stage : { ...stage, chronicle: left };
+  };
+  const chart = (stage: Stage): Stage => {
+    switch (stage.kind) {
+      case 'change':
+        return seen(stage, chartedOn(stage));
+      case 'group': {
+        if (stage.stages.length === 0) return seen(stage, undefined);
+        const held = stage.stages.map(chart);
+        if (held.every((child, at) => child === stage.stages[at])) return stage;
+        return { ...stage, stages: held, chronicle: held[held.length - 1].chronicle };
+      }
+    }
+  };
+  return stages.map(chart);
 }
 
-/** The tile a stage charts whatever sees it, and nothing for every stage but `charted`. */
-function chartedOn(stage: Stage): TileCoords | undefined {
+/** The tile a change charts whatever sees it, and nothing for every change but `charted`. */
+function chartedOn(stage: Change): TileCoords | undefined {
   switch (stage.name) {
     case 'charted':
       return stage.tile;
     case 'enter':
     case 'retiled':
     case 'damaged':
+    case 'move':
     case 'laid':
-    case 'gained':
+    case 'stock':
+    case 'discarded':
+    case 'drawn':
+    case 'shuffled':
+    case 'rolled':
+    case 'ended':
     case 'population-lost':
     case 'runtime-error':
-    case 'played':
-    case 'refused':
-    case 'assign':
-    case 'claim':
-    case 'strike':
-    case 'discard':
-    case 'income':
-    case 'grow':
-    case 'capture':
-    case 'victory':
-    case 'turn':
-    case 'capstone':
-    case 'deal':
-    case 'no-deal':
-    case 'answer':
-    case 'reward':
-    case 'draw':
-    case 'shuffle':
-    case 'attack':
-    case 'move':
-    case 'camp-capture':
       return undefined;
   }
 }
@@ -287,8 +285,8 @@ function acted(
   name: 'assign' | 'claim',
   left: Chronicle | undefined,
 ): Stage[] {
-  if (left === undefined) return [{ name: 'refused', chronicle }];
-  return [{ name, chronicle: left }];
+  if (left === undefined) return [holdingNothing('refused', chronicle)];
+  return [holdingNothing(name, left)];
 }
 
 /** The chronicle a command left: the last stage's, for whoever wants the state and not the play. */
@@ -305,13 +303,13 @@ export function outcome(stages: readonly Stage[]): Chronicle {
  * while the city stands nowhere is one `refused` stage.
  */
 function endOfTurn(catalogue: Catalogue, chronicle: Chronicle): Stage[] {
-  if (chronicle.city === undefined) return [{ name: 'refused', chronicle }];
+  if (chronicle.city === undefined) return [holdingNothing('refused', chronicle)];
   const stages: Stage[] = [];
   let standing = chronicle;
-  const staged = (name: PlainStage, next: Chronicle): void => {
-    if (next === standing) return;
-    standing = next;
-    stages.push({ name, chronicle: next });
+  const staged = (stage: Stage): void => {
+    if (stage.chronicle === standing) return;
+    standing = stage.chronicle;
+    stages.push(stage);
   };
   /** The steps that resolve unit by unit hand their stages over already made. */
   const raised = (sequence: readonly Stage[]): void => {
@@ -322,10 +320,10 @@ function endOfTurn(catalogue: Catalogue, chronicle: Chronicle): Stage[] {
   };
 
   if (standing.turn > 0) {
-    staged('strike', struck(catalogue, standing));
-    staged('discard', discard(standing));
-    staged('income', income(catalogue, standing));
-    staged('grow', grow(standing));
+    staged(holdingNothing('strike', struck(catalogue, standing)));
+    staged(change('discarded', discard(standing)));
+    staged(holdingNothing('income', income(catalogue, standing)));
+    staged(holdingNothing('grow', grow(standing)));
     raised(enemyPhase(catalogue, standing));
     if (standing.ending !== undefined) return stages;
     const rolled = campsRolled(catalogue, standing);
@@ -347,13 +345,13 @@ function endOfTurn(catalogue: Catalogue, chronicle: Chronicle): Stage[] {
  * nothing.
  */
 function turnOpened(catalogue: Catalogue, chronicle: Chronicle): Stage[] {
-  if (passed(catalogue, chronicle)) return [{ name: 'victory', chronicle: victory(chronicle) }];
+  if (passed(catalogue, chronicle)) return [change('ended', victory(chronicle))];
   const stages: Stage[] = [];
   let standing = chronicle;
-  const staged = (name: PlainStage, next: Chronicle): void => {
-    if (next === standing) return;
-    standing = next;
-    stages.push({ name, chronicle: next });
+  const staged = (stage: Stage): void => {
+    if (stage.chronicle === standing) return;
+    standing = stage.chronicle;
+    stages.push(stage);
   };
   const raised = (sequence: readonly Stage[]): void => {
     for (const stage of sequence) {
@@ -362,12 +360,14 @@ function turnOpened(catalogue: Catalogue, chronicle: Chronicle): Stage[] {
     }
   };
 
-  staged('turn', {
-    ...standing,
-    turn: standing.turn + 1,
-    hand: standing.turn === 0 ? [] : standing.hand,
-    units: standing.units.map((unit) => refreshedAction(refreshedMovePoints(unit))),
-  });
+  staged(
+    holdingNothing('turn', {
+      ...standing,
+      turn: standing.turn + 1,
+      hand: standing.turn === 0 ? [] : standing.hand,
+      units: standing.units.map((unit) => refreshedAction(refreshedMovePoints(unit))),
+    }),
+  );
   raised(continued(catalogue, standing).stages);
   const phase = events(catalogue, standing);
   switch (phase.phase) {
@@ -375,11 +375,11 @@ function turnOpened(catalogue: Catalogue, chronicle: Chronicle): Stage[] {
       raised(phase.stages);
       break;
     case 'deal':
-      staged('deal', phase.chronicle);
+      staged(holdingNothing('deal', phase.chronicle));
       if (standing.deals.length > 0) return stages;
       break;
     case 'no-deal':
-      staged('no-deal', phase.chronicle);
+      staged(change('rolled', phase.chronicle));
       break;
   }
   return [...stages, ...drawn(standing)];
@@ -396,15 +396,15 @@ function turnOpened(catalogue: Catalogue, chronicle: Chronicle): Stage[] {
  */
 function take(catalogue: Catalogue, chronicle: Chronicle, at: number): Stage[] {
   const [deal, ...waiting] = chronicle.deals;
-  if (deal === undefined) return [{ name: 'refused', chronicle }];
+  if (deal === undefined) return [holdingNothing('refused', chronicle)];
   const id = offered(catalogue, deal)[at];
-  if (id === undefined) return [{ name: 'refused', chronicle }];
+  if (id === undefined) return [holdingNothing('refused', chronicle)];
 
   const popped: Chronicle = { ...chronicle, deals: waiting };
   switch (deal.of) {
     case 'event': {
       if (!playable(answerRefusal(catalogue, chronicle, deal.event, id))) {
-        return [{ name: 'refused', chronicle }];
+        return [holdingNothing('refused', chronicle)];
       }
       const stages = answered(catalogue, popped, answerOf(catalogue, deal.event, id));
       return [...stages, ...resumed(outcome(stages), drawn)];
@@ -412,7 +412,7 @@ function take(catalogue: Catalogue, chronicle: Chronicle, at: number): Stage[] {
     case 'camp': {
       const landed = rewarded(popped, id);
       return [
-        { name: 'reward', chronicle: landed },
+        holdingNothing('reward', landed),
         ...resumed(landed, (left) => turnOpened(catalogue, left)),
       ];
     }
@@ -431,15 +431,15 @@ function resumed(chronicle: Chronicle, rest: (left: Chronicle) => Stage[]): Stag
 function drawn(chronicle: Chronicle): Stage[] {
   const stages: Stage[] = [];
   let standing = chronicle;
-  const staged = (name: PlainStage, next: Chronicle): void => {
-    if (next === standing) return;
-    standing = next;
-    stages.push({ name, chronicle: next });
+  const staged = (stage: Stage): void => {
+    if (stage.chronicle === standing) return;
+    standing = stage.chronicle;
+    stages.push(stage);
   };
 
-  staged('draw', draw(standing));
-  staged('shuffle', shuffle(standing));
-  staged('draw', draw(standing));
+  staged(change('drawn', draw(standing)));
+  staged(change('shuffled', shuffle(standing)));
+  staged(change('drawn', draw(standing)));
   return stages;
 }
 
@@ -508,23 +508,23 @@ function blocked(catalogue: Catalogue, chronicle: Chronicle, id: CardId): Block[
 function play(catalogue: Catalogue, chronicle: Chronicle, command: PlayCommand): Stage[] {
   const id = chronicle.hand[command.index];
   if (id === undefined || !playable(refusalOf(catalogue, chronicle, id))) {
-    return [{ name: 'refused', chronicle }];
+    return [holdingNothing('refused', chronicle)];
   }
   const effect = aimedEffect(catalogue, chronicle, id, command);
-  if (effect === undefined) return [{ name: 'refused', chronicle }];
+  if (effect === undefined) return [holdingNothing('refused', chronicle)];
 
   const left = paid(chronicle, costOf(catalogue, id));
   return [
-    {
-      name: 'played',
-      chronicle: effect({
+    holdingNothing(
+      'played',
+      effect({
         ...left,
         hand: chronicle.hand.filter((_, at) => at !== command.index),
         discardPile: leavesChronicle(cardOf(catalogue, id))
           ? chronicle.discardPile
           : [...chronicle.discardPile, id],
       }),
-    },
+    ),
   ];
 }
 
@@ -604,12 +604,13 @@ export function byHand(
  */
 function move(catalogue: Catalogue, chronicle: Chronicle, mover: number, to: TileCoords): Stage[] {
   const unit = unitOf(chronicle.units, mover);
-  if (unit === undefined || unit.faction !== 'player') return [{ name: 'refused', chronicle }];
+  if (unit === undefined || unit.faction !== 'player')
+    return [holdingNothing('refused', chronicle)];
 
   const landing = byHand(catalogue, chronicle, unit).landings.find(
     (reached) => tileKey(reached.tile) === tileKey(to),
   );
-  if (landing === undefined) return [{ name: 'refused', chronicle }];
+  if (landing === undefined) return [holdingNothing('refused', chronicle)];
 
   const crossed = chronicle.units.map((other) =>
     other.id === mover
@@ -618,6 +619,7 @@ function move(catalogue: Catalogue, chronicle: Chronicle, mover: number, to: Til
   );
   return [
     {
+      kind: 'change',
       name: 'move',
       from: unit.tile,
       to: landing.tile,
@@ -639,22 +641,25 @@ function attack(
   at: TileCoords,
 ): Stage[] {
   const unit = unitOf(chronicle.units, attacker);
-  if (unit === undefined || unit.faction !== 'player') return [{ name: 'refused', chronicle }];
+  if (unit === undefined || unit.faction !== 'player')
+    return [holdingNothing('refused', chronicle)];
 
   const target = byHand(catalogue, chronicle, unit).targets.find(
     (other) => tileKey(other.tile) === tileKey(at),
   );
-  if (target === undefined) return [{ name: 'refused', chronicle }];
+  if (target === undefined) return [holdingNothing('refused', chronicle)];
 
   const damaged = attacked(chronicle.units, unit, target).map((other) =>
     other.id === attacker ? spentAction(other) : other,
   );
   return [
     {
+      kind: 'group',
       name: 'attack',
       attacker: unit.tile,
       target: target.tile,
       chronicle: { ...chronicle, units: damaged },
+      stages: [],
     },
   ];
 }
@@ -699,7 +704,7 @@ function discard(chronicle: Chronicle): Chronicle {
  */
 function enemyPhase(catalogue: Catalogue, chronicle: Chronicle): Stage[] {
   if (chronicle.city !== undefined && occupied(chronicle.units, chronicle.city)) {
-    return [{ name: 'capture', chronicle: fall(chronicle, 'capture') }];
+    return [change('ended', fall(chronicle, 'capture'))];
   }
 
   const stages: Stage[] = [];
@@ -715,7 +720,13 @@ function enemyPhase(catalogue: Catalogue, chronicle: Chronicle): Stage[] {
       const from = acting.tile;
       acting = { ...acting, tile: landing.tile, movePoints: acting.movePoints - landing.cost };
       units = units.map((other) => (other.id === acting.id ? acting : other));
-      stages.push({ name: 'move', from, to: acting.tile, chronicle: { ...chronicle, units } });
+      stages.push({
+        kind: 'change',
+        name: 'move',
+        from,
+        to: acting.tile,
+        chronicle: { ...chronicle, units },
+      });
     }
 
     while (acting.action > 0) {
@@ -725,10 +736,12 @@ function enemyPhase(catalogue: Catalogue, chronicle: Chronicle): Stage[] {
       acting = spentAction(acting);
       units = damaged.map((other) => (other.id === acting.id ? acting : other));
       stages.push({
+        kind: 'group',
         name: 'attack',
         attacker: acting.tile,
         target: target.tile,
         chronicle: { ...chronicle, units },
+        stages: [],
       });
     }
   }
@@ -745,8 +758,8 @@ function enemyPhase(catalogue: Catalogue, chronicle: Chronicle): Stage[] {
 function campsRolled(
   catalogue: Catalogue,
   chronicle: Chronicle,
-): { readonly stages: Stage[]; readonly chronicle: Chronicle } {
-  const stages: Stage[] = [];
+): { readonly stages: Change[]; readonly chronicle: Chronicle } {
+  const stages: Change[] = [];
   let standing = chronicle;
   for (const { q, r, building } of chronicle.tiles) {
     if (building !== catalogue.camp.building) continue;
@@ -782,7 +795,13 @@ function captures(catalogue: Catalogue, chronicle: Chronicle): Stage[] {
       ),
       deals: [...standing.deals, { of: 'camp', rewards: catalogue.camp.rewards }],
     };
-    stages.push({ name: 'camp-capture', tile: { q, r }, chronicle: standing });
+    stages.push({
+      kind: 'group',
+      name: 'camp-capture',
+      tile: { q, r },
+      chronicle: standing,
+      stages: [],
+    });
   }
   return stages;
 }

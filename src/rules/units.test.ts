@@ -9,6 +9,7 @@ import {
   FOOD,
   field,
   madeOf,
+  namesOf,
   only,
   pointsOf,
   riverBetween,
@@ -18,6 +19,7 @@ import {
   worker,
 } from './fixtures';
 import { type ImprovementId, MOVE_POINT, type Tile, type TileCoords, tileKey } from './map';
+import { walked } from './stages';
 import type { Chronicle } from './state';
 import { attackable } from './units';
 
@@ -46,10 +48,10 @@ test('a move is one stage, naming the tile the unit left and the one it reached'
   });
 
   const stages = apply(CATALOGUE, city, moveTo(1, { q: 1, r: 0 }));
-  const [crossed] = stages;
+  const [crossed] = walked(stages);
   if (crossed.name !== 'move') throw new Error('the command staged no move');
 
-  expect(stages.map((stage) => stage.name)).toEqual(['move']);
+  expect(namesOf(stages)).toEqual(['move']);
   expect(crossed.from).toEqual(CITY);
   expect(crossed.to).toEqual({ q: 1, r: 0 });
   expect(crossed.chronicle.units[0].tile).toEqual({ q: 1, r: 0 });
@@ -137,10 +139,10 @@ test('an attack by hand takes the attacker’s damage off the target and spends 
   });
 
   const stages = apply(CATALOGUE, city, attackOn(1, { q: 2, r: 0 }));
-  const [landed] = stages;
+  const [landed] = walked(stages);
   if (landed.name !== 'attack') throw new Error('the command staged no attack');
 
-  expect(stages.map((stage) => stage.name)).toEqual(['attack']);
+  expect(namesOf(stages)).toEqual(['attack']);
   expect(landed.attacker).toEqual({ q: 1, r: 0 });
   expect(landed.target).toEqual({ q: 2, r: 0 });
   expect(landed.chronicle.units[1].stats.health).toBe(3);

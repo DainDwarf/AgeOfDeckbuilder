@@ -14,7 +14,7 @@ import {
 import { cityCommand, type ReassignCommand, tileCost, tileRefusal } from '../rules/city';
 import { tileAt, tileKey } from '../rules/map';
 import { RESOURCES, type Resource } from '../rules/resources';
-import type { Stage } from '../rules/stages';
+import { leaf, type Stage, walked } from '../rules/stages';
 import { type Chronicle, type Cost, playable } from '../rules/state';
 import { unitOf } from '../rules/units';
 import { createBand } from './band';
@@ -47,7 +47,11 @@ import { createTooltip } from './tooltip';
 
 type Part = {
   render(chronicle: Chronicle): void;
-  /** What this part plays for the stage; nothing means the scene renders it at once. */
+  /**
+   * What this part plays for the stage. For a change or a group holding nothing, nothing means the
+   * scene renders it at once; for a group holding stages, nothing means this part renders nothing
+   * for it. A part plays a group or the stages it holds, never both.
+   */
   play?(stage: Stage): Promise<void> | undefined;
 };
 
@@ -153,8 +157,10 @@ export class ChronicleScene extends Phaser.Scene {
     };
 
     /**
-     * A command played out, stage by stage: each part is offered the stage, one with no motion for
-     * it renders at once, and the next stage waits on every motion the stage did raise. The button
+     * A command played out, stage by stage in the walk's order, a group before the stages it holds:
+     * each part is offered the stage, and the next stage waits on every motion the stage did raise.
+     * A change or a group holding nothing is committed as the chronicle on the screen, and a part
+     * with no motion for it renders at once; a group holding stages commits nothing. The button
      * and the hand are dead for the whole of it — a card played or hovered under it would be
      * animated and then reverted, and would kill the very tweens the stages are waiting on. The
      * map stays live.
@@ -174,7 +180,9 @@ export class ChronicleScene extends Phaser.Scene {
 
     const played = async (stages: readonly Stage[]): Promise<void> => {
       if (this.sequence !== undefined || stages.length === 0) return;
-      const landing = stages.findIndex((stage) => stage.name === 'capstone');
+      const landing = stages.findIndex(
+        (stage) => stage.kind === 'group' && stage.name === 'capstone',
+      );
       const now = landing < 0 ? stages : stages.slice(0, landing + 1);
       const running = Symbol('play-out');
       this.sequence = running;
@@ -184,14 +192,15 @@ export class ChronicleScene extends Phaser.Scene {
         hand.live(false);
         dismiss();
 
-        for (const stage of now) {
+        for (const stage of walked(now)) {
           if (this.sequence !== running) return;
-          this.current = stage.chronicle;
+          const settles = leaf(stage);
+          if (settles) this.current = stage.chronicle;
           const motions: Promise<void>[] = [];
           for (const part of parts) {
             const motion = part.play?.(stage);
-            if (motion === undefined) part.render(this.current);
-            else motions.push(motion);
+            if (motion !== undefined) motions.push(motion);
+            else if (settles) part.render(this.current);
           }
           await Promise.all(motions);
         }
@@ -627,7 +636,7 @@ export class ChronicleScene extends Phaser.Scene {
     const part = {
       render,
       play(stage: Stage): Promise<void> | undefined {
-        return stage.name === 'turn' ? roll(stage.chronicle) : undefined;
+        return stage.kind === 'group' && stage.name === 'turn' ? roll(stage.chronicle) : undefined;
       },
       live(on: boolean): void {
         wanted = on;

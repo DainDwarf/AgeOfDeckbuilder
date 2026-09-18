@@ -1,6 +1,6 @@
 import type Phaser from 'phaser';
 import type { Catalogue } from '../rules/catalogue';
-import type { Stage } from '../rules/stages';
+import type { Change, Group, Stage } from '../rules/stages';
 import { type CardId, type Chronicle, NO_REFUSAL } from '../rules/state';
 import {
   CARD_BASELINE,
@@ -109,42 +109,56 @@ export function createPiles(
       waiting = { event, done };
     });
 
+  const changed = (stage: Change): Promise<void> | undefined => {
+    switch (stage.name) {
+      case 'discarded':
+        return landed(stage.chronicle);
+      case 'shuffled':
+        return shuffle(stage.chronicle);
+      case 'drawn':
+      case 'rolled':
+      case 'ended':
+      case 'move':
+      case 'enter':
+      case 'retiled':
+      case 'charted':
+      case 'damaged':
+      case 'laid':
+      case 'stock':
+      case 'population-lost':
+      case 'runtime-error':
+        return undefined;
+    }
+  };
+
+  const grouped = (stage: Group): Promise<void> | undefined => {
+    switch (stage.name) {
+      case 'played':
+      case 'refused':
+      case 'assign':
+      case 'claim':
+      case 'strike':
+      case 'income':
+      case 'grow':
+      case 'turn':
+      case 'capstone':
+      case 'deal':
+      case 'answer':
+      case 'reward':
+      case 'attack':
+      case 'camp-capture':
+        return undefined;
+    }
+  };
+
   return {
     render,
     play(stage: Stage): Promise<void> | undefined {
-      switch (stage.name) {
-        case 'discard':
-          return landed(stage.chronicle);
-        case 'shuffle':
-          return shuffle(stage.chronicle);
-        case 'played':
-        case 'refused':
-        case 'assign':
-        case 'claim':
-        case 'strike':
-        case 'income':
-        case 'grow':
-        case 'capture':
-        case 'victory':
-        case 'turn':
-        case 'capstone':
-        case 'deal':
-        case 'no-deal':
-        case 'answer':
-        case 'reward':
-        case 'draw':
-        case 'attack':
-        case 'move':
-        case 'camp-capture':
-        case 'enter':
-        case 'retiled':
-        case 'charted':
-        case 'damaged':
-        case 'laid':
-        case 'gained':
-        case 'population-lost':
-        case 'runtime-error':
-          return undefined;
+      switch (stage.kind) {
+        case 'change':
+          return changed(stage);
+        case 'group':
+          return grouped(stage);
       }
     },
   };

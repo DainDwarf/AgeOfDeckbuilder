@@ -73,7 +73,7 @@ import {
   unitDamaged,
 } from './schedule';
 import { charted } from './sight';
-import { followed, unchanged } from './stages';
+import { followed, type Stage, unchanged, walked } from './stages';
 import { type CardId, type Chronicle, type Deal, holds, type Timeline } from './state';
 import type { Faction, Unit, UnitStats } from './units';
 
@@ -950,9 +950,14 @@ export function everyCard(chronicle: Chronicle): CardId[] {
   return [...chronicle.drawPile, ...chronicle.hand, ...chronicle.discardPile].sort();
 }
 
-/** What every stage of the command is called, in the order the command resolves them. */
+/** What every stage of the tree is called, in the order the walk plays them. */
+export function namesOf(stages: readonly Stage[]): string[] {
+  return [...walked(stages)].map((stage) => stage.name);
+}
+
+/** What every stage of the command is called, in the order the walk plays them. */
 export function stagedBy(chronicle: Chronicle, command: Command): string[] {
-  return apply(CATALOGUE, chronicle, command).map((stage) => stage.name);
+  return namesOf(apply(CATALOGUE, chronicle, command));
 }
 
 /** Cards enough for the end of turn to draw a full hand, so its shuffle leaves the discard pile be. */

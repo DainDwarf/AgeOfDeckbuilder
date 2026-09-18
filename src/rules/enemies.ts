@@ -2,17 +2,18 @@ import { type Catalogue, entered, unitKind } from './catalogue';
 import { CENTRE, distance, groundRunsTo, type Tile, type TileCoords, tileKey } from './map';
 import { refuse } from './map-kinds';
 import { nextRng } from './rng';
-import { followed, type Landed, type LandingStage, landedAs, unchanged } from './stages';
+import { type Change, followed, type Landed, landedAs, unchanged } from './stages';
 import type { Chronicle } from './state';
 import { standsOn, unitAt } from './units';
 
-/** The camp's unit entering on the tile: the one `enter` stage. */
+/** The camp's unit entering on the tile: the one `enter` change. */
 export function campUnitEntered(
   catalogue: Catalogue,
   chronicle: Chronicle,
   tile: TileCoords,
-): LandingStage {
+): Change {
   return {
+    kind: 'change',
     name: 'enter',
     tile,
     chronicle: entered(catalogue, chronicle, {

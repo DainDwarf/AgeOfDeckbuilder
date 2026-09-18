@@ -20,6 +20,7 @@ import {
   fullDraw,
   madeOf,
   NO_GROWTH,
+  namesOf,
   only,
   pointsOf,
   REGION,
@@ -43,6 +44,7 @@ import {
 import { regionOf, terrainKind } from './map-kinds';
 import { RESOURCES } from './resources';
 import { seedRng } from './rng';
+import { walked } from './stages';
 import type { Chronicle } from './state';
 
 /** A timeline dealing the raid on the second turn, and no other deal. */
@@ -50,21 +52,21 @@ const RAID_ON_SECOND = dealing({ turn: 2, event: 'PH_Hardship' });
 
 /** Every attack the end of turn stages, as the tile each was made from and the tile it was aimed at. */
 function attacksOf(chronicle: Chronicle): string[][] {
-  return apply(CATALOGUE, chronicle, { type: 'end-turn' }).flatMap((stage) =>
+  return [...walked(apply(CATALOGUE, chronicle, { type: 'end-turn' }))].flatMap((stage) =>
     stage.name === 'attack' ? [[tileKey(stage.attacker), tileKey(stage.target)]] : [],
   );
 }
 
 /** Every move the end of turn stages, as the tile each enemy left and the tile it reached. */
 function movesOf(chronicle: Chronicle): string[][] {
-  return apply(CATALOGUE, chronicle, { type: 'end-turn' }).flatMap((stage) =>
+  return [...walked(apply(CATALOGUE, chronicle, { type: 'end-turn' }))].flatMap((stage) =>
     stage.name === 'move' ? [[tileKey(stage.from), tileKey(stage.to)]] : [],
   );
 }
 
 /** Every camp the end of turn stages a capture of, as the tile each stood on. */
 function capturesOf(chronicle: Chronicle): string[] {
-  return apply(CATALOGUE, chronicle, { type: 'end-turn' }).flatMap((stage) =>
+  return [...walked(apply(CATALOGUE, chronicle, { type: 'end-turn' }))].flatMap((stage) =>
     stage.name === 'camp-capture' ? [tileKey(stage.tile)] : [],
   );
 }
@@ -80,7 +82,7 @@ test('a capture ends the end of turn on its own stage, with the ending set', () 
   const stages = apply(CATALOGUE, overrun, { type: 'end-turn' });
   const last = stages[stages.length - 1];
 
-  expect(stages.map((stage) => stage.name)).toEqual(['discard', 'capture']);
+  expect(namesOf(stages)).toEqual(['discarded', 'ended']);
   expect(last.chronicle.ending).toEqual({
     outcome: 'defeat',
     cause: 'capture',
@@ -142,7 +144,7 @@ test('a capture deals the camp’s rewards and stops the end of turn before the 
   expect(dealt.deals).toEqual([{ of: 'camp', rewards: ['PH_Spoils', 'PH_Cache'] }]);
   expect(dealt.turn).toBe(besieging.turn);
   expect(dealt.hand).toEqual([]);
-  expect(stagedBy(dealt, { type: 'take', at: 1 })).toEqual(['reward', 'turn', 'draw']);
+  expect(stagedBy(dealt, { type: 'take', at: 1 })).toEqual(['reward', 'turn', 'drawn']);
   expect(cache.turn).toBe(besieging.turn + 1);
   expect(cache.deals).toEqual([]);
   expect(cache.discardPile).toEqual(['PH_Cache']);
@@ -189,7 +191,7 @@ test('a chronicle that fell in the enemy phase captures no camp', () => {
 
   const fallen = outcome(apply(CATALOGUE, overrun, { type: 'end-turn' }));
 
-  expect(stagedBy(overrun, { type: 'end-turn' })).toEqual(['capture']);
+  expect(stagedBy(overrun, { type: 'end-turn' })).toEqual(['ended']);
   expect(buildingAt(fallen, camp)).toBe(CATALOGUE.camp.building);
   expect(fallen.deals).toEqual([]);
 });
@@ -310,7 +312,7 @@ function rolling(odds: number): Catalogue {
 
 /** Every camp the end of turn stages a warrior entering on, as the tile each stood on. */
 function entriesOf(catalogue: Catalogue, chronicle: Chronicle): string[] {
-  return apply(catalogue, chronicle, { type: 'end-turn' }).flatMap((stage) =>
+  return [...walked(apply(catalogue, chronicle, { type: 'end-turn' }))].flatMap((stage) =>
     stage.name === 'enter' ? [tileKey(stage.tile)] : [],
   );
 }
@@ -337,7 +339,7 @@ test('at odds of one every free camp enters a warrior once the enemies have acte
     (camp) => camp !== tileKey(held) && camp !== tileKey(guarded),
   );
 
-  const staged = apply(rolling(1), city, { type: 'end-turn' }).map((stage) => stage.name);
+  const staged = namesOf(apply(rolling(1), city, { type: 'end-turn' }));
 
   expect(staged).toEqual(['income', 'attack', ...free.map(() => 'enter'), 'camp-capture']);
   expect(entriesOf(rolling(1), city)).toEqual(free);
@@ -476,7 +478,7 @@ test('two camps captured the turn before an event is due deal two deals of rewar
   expect(second.deals).toEqual([{ of: 'event', event: 'PH_Hardship' }]);
   expect(second.discardPile).toEqual(['PH_Spoils', 'PH_Cache']);
   expect(second.hand).toEqual([]);
-  expect(stagedBy(second, { type: 'take', at: 0 })).toEqual(['answer', 'enter', 'draw']);
+  expect(stagedBy(second, { type: 'take', at: 0 })).toEqual(['answer', 'enter', 'drawn']);
   expect(outcome(apply(CATALOGUE, second, { type: 'take', at: 0 })).deals).toEqual([]);
 });
 
@@ -527,7 +529,7 @@ test('an enemy spends the move points it crosses on, and carries them into the t
   });
 
   const stages = apply(CATALOGUE, city, { type: 'end-turn' });
-  const crossed = stages.find((stage) => stage.name === 'move');
+  const crossed = [...walked(stages)].find((stage) => stage.name === 'move');
   if (crossed === undefined) throw new Error('the enemy phase staged no move');
 
   expect(pointsOf(crossed.chronicle, 1)).toBe(0);

@@ -32,6 +32,7 @@ import {
   HUNGER,
   madeOf,
   NO_GROWTH,
+  namesOf,
   opening,
   plains,
   pointsOf,
@@ -60,6 +61,7 @@ import {
 import { terrainKind } from './map-kinds';
 import { RESOURCES, type Resources } from './resources';
 import { terraformedOn } from './schedule';
+import { walked } from './stages';
 import { type CardId, type Chronicle, idle, playable, type TileBlock } from './state';
 import { standsOn } from './units';
 
@@ -218,7 +220,7 @@ test('the refresh instant refreshes one unit of the player’s that has spent mo
 
   const stages = apply(CATALOGUE, city, aimedAtUnit(CITY));
 
-  expect(stages.map((stage) => stage.name)).toEqual(['played']);
+  expect(namesOf(stages)).toEqual(['played']);
   expect(pointsOf(outcome(stages), 1)).toBe(2 * MOVE_POINT);
   expect(pointsOf(outcome(stages), 2)).toBe(MOVE_POINT);
   expect(outcome(stages).discardPile).toEqual(['PH_March']);
@@ -255,7 +257,7 @@ test('the recall instant takes the card it is aimed at out of the discard pile a
   const stages = apply(CATALOGUE, city, aimedAtPile(1));
   const after = outcome(stages);
 
-  expect(stages.map((stage) => stage.name)).toEqual(['played']);
+  expect(namesOf(stages)).toEqual(['played']);
   expect(after.hand).toEqual(['PH_Harvest']);
   expect(after.discardPile).toEqual(['PH_Farm', 'PH_Mine', 'PH_Recall']);
   expect(after.resources.science).toBe(0);
@@ -407,7 +409,7 @@ test('a settle card entering a unit puts it on its tile full, takes no populatio
   );
   const after = outcome(apply(CATALOGUE, settled, aimedAt(CITY)));
 
-  expect(stages.map((stage) => stage.name)).toEqual(['played']);
+  expect(namesOf(stages)).toEqual(['played']);
   expect(before.units).toHaveLength(1);
   const [band] = before.units;
   expect(band.faction).toBe('player');
@@ -1372,9 +1374,9 @@ test('a play aimed at a tile the aim refuses, or at nothing, lands nowhere', () 
   const nowhere = apply(CATALOGUE, city, { type: 'play', index: 0, aim: 'none' });
 
   expect(refusedFor(city, 'PH_Farm', at)).toBe('worker');
-  expect(aimed.map((stage) => stage.name)).toEqual(['refused']);
+  expect(namesOf(aimed)).toEqual(['refused']);
   expect(outcome(aimed)).toEqual(city);
-  expect(nowhere.map((stage) => stage.name)).toEqual(['refused']);
+  expect(namesOf(nowhere)).toEqual(['refused']);
   expect(outcome(nowhere)).toEqual(city);
 });
 
@@ -1479,7 +1481,7 @@ function droughty(food: number, carrying: Carrying = {}): Chronicle {
 
 /** The chronicle the city's hazards left on striking at the end of its turn. A turn striking nothing throws. */
 function stricken(city: Chronicle): Chronicle {
-  const strike = apply(CATALOGUE, city, { type: 'end-turn' }).find(
+  const strike = [...walked(apply(CATALOGUE, city, { type: 'end-turn' }))].find(
     (stage) => stage.name === 'strike',
   );
   if (strike === undefined) throw new Error('the end of turn strikes nothing');

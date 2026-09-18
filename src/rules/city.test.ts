@@ -16,6 +16,7 @@ import {
   everyCard,
   field,
   NO_GROWTH,
+  namesOf,
   opening,
   plains,
   REGION,
@@ -163,7 +164,7 @@ test('a free claim holds the tile, brings one population that stands on it, and 
   const after = outcome(stages);
 
   expect(settled.hand).toEqual(['PH_Claim']);
-  expect(stages.map((stage) => stage.name)).toEqual(['played']);
+  expect(namesOf(stages)).toEqual(['played']);
   expect(after.held.map(tileKey)).toEqual([tileKey(CITY), tileKey(tile)]);
   expect(after.assigned.map(tileKey)).toContain(tileKey(tile));
   expect(after.population).toBe(settled.population + 1);
@@ -450,7 +451,7 @@ test('a drag takes the population off the tile it stands on and puts it on the t
   const after = outcome(stages);
 
   expect(cityDrag(freed, from, to)).toEqual(reassignTo(from, to));
-  expect(stages.map((stage) => stage.name)).toEqual(['assign']);
+  expect(namesOf(stages)).toEqual(['assign']);
   expect(after.assigned.map(tileKey)).not.toContain(tileKey(from));
   expect(after.assigned.map(tileKey)).toContain(tileKey(to));
   expect(after.population).toBe(freed.population);
@@ -516,7 +517,7 @@ test('a claim pays its culture, takes the tile inside the border, and puts one i
   const stages = apply(CATALOGUE, city, claimOf(tile));
   const after = outcome(stages);
 
-  expect(stages.map((stage) => stage.name)).toEqual(['claim']);
+  expect(namesOf(stages)).toEqual(['claim']);
   expect(after.held.map(tileKey)).toContain('1,0');
   expect(after.resources.culture).toBe(1);
   expect(after.assigned.map(tileKey)).toContain('1,0');
