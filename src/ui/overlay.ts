@@ -89,9 +89,9 @@ export type Overlay = {
    */
   render(chronicle: Chronicle): void;
   /**
-   * Raises the capstone's window at the cue of the `capstone-landing` group, over the
-   * screen as it stood before the landing, and holds the play-out until the window closes; raises
-   * the ending screen on the stage that ends the chronicle.
+   * Raises the capstone's window at the cue of the `capstone-landing` group, over the screen as it
+   * stood before the landing, and holds the play-out until the window closes; raises the ending
+   * screen on the stage that ends the chronicle.
    */
   play(stage: Stage): Promise<void> | undefined;
 };

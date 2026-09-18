@@ -35,8 +35,9 @@ export type Change = { readonly kind: 'change'; readonly chronicle: Chronicle } 
  * hazard in hand striking, `income` the tiles worked yielding, `grow` the food stock spent on one
  * more population, `turn` the turn ticked and the units refreshed, `enemy-phase` the enemies' half of
  * the turn, `capstone-landing` the capstone's turn come, `capstone-continued` its second script on a
- * turn after, `deal` what the timeline offers on a due turn, `answer` an answer taken, `reward` a reward taken, `attack` one unit's
- * attack, and `camp-capture` one camp taken by the unit standing on it.
+ * turn after, `deal` what the timeline offers on a due turn, `answer` an answer taken, `reward` a
+ * reward taken, `attack` one unit's attack, and `camp-capture` one camp taken by the unit standing on
+ * it.
  */
 export type Group = {
   readonly kind: 'group';
