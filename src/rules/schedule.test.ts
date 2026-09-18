@@ -1093,7 +1093,7 @@ test('an event needing a tile near the city to deal a feature onto is dealt with
 /** The turn the capstone lands on in every fixture below. */
 const CAPSTONE = 30;
 
-/** How many turns follow the siege's landing up to the one at whose end the fixture's siege is passed. */
+/** How many turns follow the siege's landing up to its last: the tick past that one passes the fixture's siege. */
 const REINFORCED = 5;
 
 /** This timeline, dealing nothing unless the test names one, with the siege landing on its turn. */
@@ -1170,7 +1170,7 @@ function moated(carrying: Carrying = {}): Chronicle {
   return siegeLanded({ tiles: camped(MOATED, [STANDING_CAMP]), ...carrying });
 }
 
-/** That city ending turn after turn until the siege is passed: the chronicle it left. */
+/** That city ending turn after turn until the tick past the siege's last turn passes it: the chronicle it left. */
 function stoodOut(): Chronicle {
   let standingOut = moated({ units: [unkillable(LURE)] });
   for (let turn = 0; turn <= REINFORCED; turn++) standingOut = endedTurn(standingOut, 'PH_Famine');
@@ -1294,7 +1294,7 @@ test('a camp captured the turn before the capstone’s deals its rewards, and th
   expect(campsOf(taken)).not.toEqual([]);
 });
 
-test('a camp captured on the turn the siege is passed holds the victory back until its reward is taken', () => {
+test('a camp captured on the siege’s last turn holds the victory back until its reward is taken', () => {
   const camp = { q: 4, r: 0 };
   const last = cityOf(['urban'], {
     ...NO_GROWTH,
@@ -1312,12 +1312,41 @@ test('a camp captured on the turn the siege is passed holds the victory back unt
     'reward',
     'taken',
     'discarded',
+    'turn',
+    'turn',
     'ended',
   ]);
   expect(outcome(apply(CATALOGUE, dealt, { type: 'take', at: 0 })).ending).toEqual({
     outcome: 'victory',
-    turn: CAPSTONE + REINFORCED,
+    turn: CAPSTONE + REINFORCED + 1,
   });
+});
+
+test('a capture that meets a capstone’s condition ends the chronicle on the capture, its rewards never dealt', () => {
+  const camp = { q: 4, r: 0 };
+  const cleared: Catalogue = {
+    ...CATALOGUE,
+    capstones: {
+      PH_Siege: {
+        lands: (_c, chronicle) => unchanged(chronicle),
+        passes: (catalogue, chronicle) =>
+          chronicle.tiles.every((tile) => tile.building !== catalogue.camp.building),
+      },
+    },
+  };
+  const last = cityOf(['urban'], {
+    ...NO_GROWTH,
+    tiles: camped(field(6), [camp]),
+    units: [worker(camp)],
+    turn: CAPSTONE,
+    timeline: besieging(),
+  });
+  const stages = apply(cleared, last, { type: 'end-turn' });
+
+  expect(heldBy(stages, 'camp-capture').map(({ name }) => name)).toEqual(['retiled', 'ended']);
+  expect(namesOf(stages).slice(-3)).toEqual(['camp-capture', 'retiled', 'ended']);
+  expect(outcome(stages).deals).toEqual([]);
+  expect(outcome(stages).ending).toEqual({ outcome: 'victory', turn: CAPSTONE });
 });
 
 test('the siege places five camps around the city, apart from one another, a warrior on each', () => {
@@ -1456,7 +1485,7 @@ test('the reinforcement enters no warrior on a camp a unit stands on', () => {
   }
 });
 
-test('the city standing at the end of the siege’s sixth turn ends the chronicle in victory', () => {
+test('the turn ticking past the siege’s sixth with the city standing ends the chronicle in victory on the tick', () => {
   let reinforcing = moated({ units: [unkillable(LURE)] });
 
   for (let turn = 1; turn <= REINFORCED; turn++) {
@@ -1464,13 +1493,14 @@ test('the city standing at the end of the siege’s sixth turn ends the chronicl
     expect(reinforcing.turn).toBe(CAPSTONE + turn);
     expect(reinforcing.ending).toBeUndefined();
   }
-  const staged = stagedBy(reinforcing, { type: 'end-turn' });
+  const stages = apply(CATALOGUE, reinforcing, { type: 'end-turn' });
+  const staged = namesOf(stages);
   const survived = stoodOut();
 
-  expect(staged[staged.length - 1]).toBe('ended');
-  expect(staged).not.toContain('turn');
-  expect(survived.turn).toBe(CAPSTONE + REINFORCED);
-  expect(survived.ending).toEqual({ outcome: 'victory', turn: CAPSTONE + REINFORCED });
+  expect(staged.slice(staged.indexOf('turn'))).toEqual(['turn', 'turn', 'ended']);
+  expect(heldBy(stages, 'turn').map(({ name }) => name)).toEqual(['turn', 'ended']);
+  expect(survived.turn).toBe(CAPSTONE + REINFORCED + 1);
+  expect(survived.ending).toEqual({ outcome: 'victory', turn: CAPSTONE + REINFORCED + 1 });
 });
 
 test('a chronicle that ended in victory takes no command at all', () => {
@@ -1522,7 +1552,12 @@ function tilled(chronicle: Chronicle): Chronicle {
   return played;
 }
 
-test('a capstone’s condition ends the chronicle in victory at the end of the first turn it holds, its landing turn included', () => {
+/** The farm card played on the tilled tile: what a play of it resolves as. */
+function tilling(chronicle: Chronicle): Command {
+  return { type: 'play', index: chronicle.hand.indexOf('PH_Farm'), aim: 'tile', tile: TILLED };
+}
+
+test('a building that passes a capstone ends the chronicle in victory on the play that builds it, the landing turn included', () => {
   const landed = endedTurn(awaitingTillage(FARMING));
   let later = landed;
   for (let turn = 1; turn <= 3; turn++) {
@@ -1534,43 +1569,82 @@ test('a capstone’s condition ends the chronicle in victory at the end of the f
     [landed, CAPSTONE],
     [later, CAPSTONE + 3],
   ] as const) {
-    const staged = stagedBy(tilled(chronicle), { type: 'end-turn' });
+    const stages = apply(CATALOGUE, chronicle, tilling(chronicle));
 
     expect(chronicle.ending).toBeUndefined();
-    expect(staged[staged.length - 1]).toBe('ended');
-    expect(staged).not.toContain('turn');
-    expect(endedTurn(tilled(chronicle)).ending).toEqual({ outcome: 'victory', turn });
+    expect(namesOf(stages)).toEqual([
+      'played',
+      'discarded',
+      'stock',
+      'action-spent',
+      'retiled',
+      'ended',
+    ]);
+    expect(buildingAt(outcome(stages), TILLED)).toBe(TILLAGE);
+    expect(outcome(stages).ending).toEqual({ outcome: 'victory', turn });
   }
 });
 
-test('a capstone’s condition holding before the capstone lands passes nothing', () => {
-  let chronicle = tilled(
+test('a capstone’s condition met partway through a play ends the chronicle there, and the rest of the card never resolves', () => {
+  const spent: Catalogue = {
+    ...CATALOGUE,
+    capstones: {
+      PH_Tillage: {
+        lands: (_c, chronicle) => unchanged(chronicle),
+        passes: (_c, chronicle) => chronicle.units.some((unit) => unit.action === 0),
+      },
+    },
+  };
+  const landed = endedTurn(awaitingTillage(FARMING), undefined, spent);
+  const stages = apply(spent, landed, tilling(landed));
+
+  expect(namesOf(stages)).toEqual(['played', 'discarded', 'stock', 'action-spent', 'ended']);
+  expect(buildingAt(outcome(stages), TILLED)).toBeUndefined();
+  expect(outcome(stages).ending).toEqual({ outcome: 'victory', turn: CAPSTONE });
+});
+
+test('a capstone’s condition holding before the capstone lands ends the chronicle on the landing, before the draw, the tick and the roll reading nothing', () => {
+  const tilledEarly = tilled(
     awaitingTillage({ ...FARMING, turn: CAPSTONE - 2, drawPile: [], hand: ['PH_Farm'] }),
   );
-  expect(buildingAt(chronicle, TILLED)).toBe(TILLAGE);
+  expect(buildingAt(tilledEarly, TILLED)).toBe(TILLAGE);
 
-  for (let turn = CAPSTONE - 1; turn <= CAPSTONE; turn++) {
-    chronicle = endedTurn(chronicle);
-    expect(chronicle.turn).toBe(turn);
-    expect(chronicle.ending).toBeUndefined();
-  }
-  expect(endedTurn(chronicle).ending).toEqual({ outcome: 'victory', turn: CAPSTONE });
+  const awaited = endedTurn(tilledEarly);
+  expect(awaited.turn).toBe(CAPSTONE - 1);
+  expect(awaited.ending).toBeUndefined();
+
+  const stages = apply(CATALOGUE, awaited, { type: 'end-turn' });
+  const staged = namesOf(stages);
+
+  expect(staged.slice(staged.indexOf('turn'))).toEqual([
+    'turn',
+    'turn',
+    'capstone',
+    'rolled',
+    'ended',
+  ]);
+  expect(outcome(stages).hand).toEqual([]);
+  expect(outcome(stages).ending).toEqual({ outcome: 'victory', turn: CAPSTONE });
 });
 
-test('a city captured in the enemy phase of the turn a capstone’s condition holds is defeated', () => {
-  const captured = endedTurn(
-    tilled(
-      awaitingTillage({
-        ...FARMING,
-        turn: CAPSTONE,
-        drawPile: [],
-        hand: ['PH_Farm'],
-        units: [worker(TILLED), standing('enemy', CITY)],
-      }),
-    ),
-  );
+test('a change that both leaves the city no population and meets a capstone’s condition ends the chronicle in defeat', () => {
+  const emptied: Catalogue = {
+    ...CATALOGUE,
+    capstones: {
+      PH_Tillage: {
+        lands: (_c, chronicle) => unchanged(chronicle),
+        passes: (_c, chronicle) => chronicle.population === 0,
+      },
+    },
+  };
+  const city = cityOf(['urban'], {
+    hand: ['PH_Drought'],
+    timeline: { ...NO_DEALS, capstone: { id: 'PH_Tillage', turn: 1 } },
+  });
+  const stages = apply(emptied, city, { type: 'end-turn' });
 
-  expect(captured.ending).toEqual({ outcome: 'defeat', cause: 'capture', turn: CAPSTONE });
+  expect(namesOf(stages).slice(-3)).toEqual(['assigned', 'population', 'ended']);
+  expect(outcome(stages).ending).toEqual({ outcome: 'defeat', cause: 'population', turn: 1 });
 });
 
 test('the schedule keeps dealing past the landing of a capstone no span passes', () => {

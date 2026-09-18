@@ -471,18 +471,20 @@ export type Run = { readonly seed: number; readonly turn: number; readonly tile:
 
 /**
  * The first seed with a turn in its first eight that opens on such a run, for a card the city can
- * pay for; `on` narrows which run counts — the tile the unit lands on, and the chronicle it lands
- * in — for a spec that needs a particular layer standing on that tile, or the generator to have
- * left another one clear.
+ * pay for, on the schedule the boot takes unless one is given; `on` narrows which run counts — the
+ * tile the unit lands on, and the chronicle it lands in — for a spec that needs a particular layer
+ * standing on that tile, or the generator to have left another one clear.
  */
 export function workerRun(
   card: CardId,
   on: (tile: Tile, chronicle: Chronicle) => boolean = () => true,
+  schedule: string = STAND_IN_SCHEDULE,
 ): Run {
   return runOn(
     card,
     `opens a turn on a worker, a move and ${card}`,
     (tile, chronicle) => playable(refusalOf(STAND_IN, chronicle, card)) && on(tile, chronicle),
+    schedule,
   );
 }
 
@@ -499,12 +501,13 @@ function runOn(
   card: CardId,
   complaint: string,
   keeps: (tile: Tile, chronicle: Chronicle) => boolean,
+  schedule: string = STAND_IN_SCHEDULE,
 ): Run {
   const aimed = aimOf(cardOf(STAND_IN, card));
   if (aimed.aim !== 'tile') throw new Error(`${card} is aimed at no tile`);
 
   return firstSeed(complaint, (seed) => {
-    let chronicle = launch(seed, deckOf(STAND_IN, 'PH_Deck'));
+    let chronicle = launch(seed, deckOf(STAND_IN, 'PH_Deck'), schedule);
     for (let turn = 1; turn <= 8; turn++) {
       const tile = workedThisTurn(chronicle, card, aimed, keeps);
       if (tile !== undefined) return { seed, turn, tile };

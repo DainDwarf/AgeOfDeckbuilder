@@ -24,7 +24,7 @@ import { MOVE_POINT } from '../rules/map';
 import { buildingKind, improvementKind } from '../rules/map-kinds';
 import { besieged, laid, raided, reinforced, spanEnded } from '../rules/schedule';
 import { followed, type Landed, unchanged } from '../rules/stages';
-import type { CardId, Chronicle } from '../rules/state';
+import { type CardId, type Chronicle, holds } from '../rules/state';
 import { ADVANCE } from './scripts';
 
 /** The region a launch chooses on the stand-in, listed first so a launch that names none lands on it. */
@@ -244,6 +244,11 @@ export const STAND_IN: Catalogue = catalogued({
       continues: reinforced,
       passes: (_catalogue, chronicle) => spanEnded(chronicle, 2),
     },
+    PH_Tillage: {
+      lands: (_catalogue, chronicle) => unchanged(chronicle),
+      passes: (_catalogue, chronicle) =>
+        chronicle.tiles.some((tile) => tile.building === 'PH_Farm' && holds(chronicle, tile)),
+    },
   },
   schedules: {
     [STAND_IN_SCHEDULE]: {
@@ -254,6 +259,11 @@ export const STAND_IN: Catalogue = catalogued({
     PH_ShortSchedule: {
       spacing: [3, 7],
       capstone: { id: 'PH_ShortSiege', window: [2, 2] },
+      entries: { PH_Hardship: () => 1 },
+    },
+    PH_TillageSchedule: {
+      spacing: [3, 7],
+      capstone: { id: 'PH_Tillage', window: [2, 2] },
       entries: { PH_Hardship: () => 1 },
     },
     PH_TollSchedule: {

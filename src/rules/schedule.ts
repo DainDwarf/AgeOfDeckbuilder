@@ -90,18 +90,9 @@ function eventDrawn(catalogue: Catalogue, chronicle: Chronicle): { event?: strin
   return { event: picked, rng };
 }
 
-/**
- * Whether the chronicle has passed its capstone: never before the turn the capstone lands on, and
- * from that turn on whenever the capstone's condition holds.
- */
-export function passed(catalogue: Catalogue, chronicle: Chronicle): boolean {
-  const { id, turn } = chronicle.timeline.capstone;
-  return chronicle.turn >= turn && capstoneOf(catalogue, id).passes(catalogue, chronicle);
-}
-
-/** Whether the chronicle stands on the last turn of a span of turns begun on the capstone's, or past it. */
+/** Whether the turn has ticked past the last of a span of turns begun on the capstone's. */
 export function spanEnded(chronicle: Chronicle, turns: number): boolean {
-  return chronicle.turn >= chronicle.timeline.capstone.turn + turns - 1;
+  return chronicle.turn >= chronicle.timeline.capstone.turn + turns;
 }
 
 /**

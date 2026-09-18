@@ -169,11 +169,16 @@ export function unchanged<S extends Stage = Change>(chronicle: Chronicle): Seque
  */
 export function landedAs(stage: Change): Landed {
   const { chronicle } = stage;
-  if (chronicle.ending !== undefined || chronicle.city === undefined || chronicle.population > 0) {
-    return { stages: [stage], chronicle };
-  }
+  if (!falls(chronicle)) return { stages: [stage], chronicle };
   const ended = change('ended', fall(chronicle, 'population'));
   return { stages: [stage, ended], chronicle: ended.chronicle };
+}
+
+/** Whether the city falls for its population on this chronicle: it stands at none and has not ended. */
+export function falls(chronicle: Chronicle): boolean {
+  return (
+    chronicle.ending === undefined && chronicle.city !== undefined && chronicle.population <= 0
+  );
 }
 
 /**

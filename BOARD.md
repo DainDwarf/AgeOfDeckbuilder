@@ -6,7 +6,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ---
 
-- **Victory on the act** — a capstone's condition is read after every change from its landing on, as the population fall is, and the chronicle ends in victory on the spot; `docs/CHRONICLE.md` and `docs/ages/NOMADIC.md` say so, a rules test holds it on the fixture, and the victory spec wins a chronicle on a play. Doc-impact: `docs/CHRONICLE.md`, `docs/ages/NOMADIC.md`. [board/victory-on-the-act.md](board/victory-on-the-act.md)
 - **Make room can deliver Fight** — A rival band names the need of a tile near the city that takes a camp and is not dealt without one, placing a camp enters no unit, and Make room's raid enters on and around the camp it placed by the raid's own entry rule, the first on the camp; `docs/ages/NOMADIC.md` says the need, and a rules test on the fixture holds it. Doc-impact: `docs/ages/NOMADIC.md`. [board/make-room-can-deliver-fight.md](board/make-room-can-deliver-fight.md)
 - **A feature's mark under an improvement's** — the map draws a feature's mark and an improvement's mark on the same spot of a tile, so Trapping on a game forest reads as one mark; fixed in this version, not left to the v0.0.6 visual rework.
 - **Event animations** — when an event's answer lands, what it changes on the map — burned tiles, killed population and units, anything an answer does — is animated rather than simply redrawn; the tile The herd's _Follow it_ charts is one of them, wherever it lies on the map, and nothing draws the eye to it until then.

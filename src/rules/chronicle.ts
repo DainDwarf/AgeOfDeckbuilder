@@ -2,6 +2,7 @@ import { aimOf, leavesChronicle, refuses, struck } from './cards';
 import {
   type AimedCard,
   type Catalogue,
+  capstoneOf,
   cardOf,
   checkContent,
   type Deck,
@@ -20,7 +21,6 @@ import {
   continued,
   events,
   offered,
-  passed,
   rewarded,
   timelineOf,
   unitDamaged,
@@ -32,6 +32,7 @@ import {
   changeFrom,
   changeOn,
   fall,
+  falls,
   followed,
   type Group,
   grouped,
@@ -179,7 +180,49 @@ export function launched(
  */
 export function apply(catalogue: Catalogue, chronicle: Chronicle, command: Command): Stage[] {
   checkContent(catalogue, chronicle);
-  return charting(catalogue, chronicle, resolved(catalogue, chronicle, command));
+  const stages = resolved(catalogue, chronicle, command);
+  return charting(catalogue, chronicle, passedOn(catalogue, chronicle, stages));
+}
+
+/**
+ * The stages a command resolves as, cut at the first change after which the capstone's condition
+ * holds: the `ended` of the victory right after it, and nothing that was resolved after it. The
+ * condition is read from the capstone's landing on — after the `capstone` group on its turn, and
+ * after every change from then on — and never on a chronicle that has ended or whose city falls on
+ * it, the fall being read first.
+ */
+function passedOn(catalogue: Catalogue, started: Chronicle, stages: readonly Stage[]): Stage[] {
+  if (started.ending !== undefined) return [...stages];
+  const { id, turn } = started.timeline.capstone;
+  const { passes } = capstoneOf(catalogue, id);
+  // The events phase lands the capstone in the command whose tick reaches its turn, so a command
+  // started on that turn or after starts past the landing.
+  let landed = started.turn >= turn;
+  const holds = (chronicle: Chronicle): boolean =>
+    landed && chronicle.ending === undefined && !falls(chronicle) && passes(catalogue, chronicle);
+
+  const cut = (held: readonly Stage[]): Stage[] | undefined => {
+    for (const [at, stage] of held.entries()) {
+      switch (stage.kind) {
+        case 'change':
+          if (holds(stage.chronicle)) return [...held.slice(0, at + 1), victory(stage.chronicle)];
+          break;
+        case 'group': {
+          const inner = cut(stage.stages);
+          if (inner !== undefined) {
+            const last = inner[inner.length - 1].chronicle;
+            return [...held.slice(0, at), { ...stage, stages: inner, chronicle: last }];
+          }
+          if (landed || stage.name !== 'capstone' || stage.chronicle.turn !== turn) break;
+          landed = true;
+          if (holds(stage.chronicle)) return [...held.slice(0, at + 1), victory(stage.chronicle)];
+          break;
+        }
+      }
+    }
+    return undefined;
+  };
+  return cut(stages) ?? [...stages];
 }
 
 /**
@@ -344,12 +387,11 @@ function endOfTurn(catalogue: Catalogue, chronicle: Chronicle): Sequence {
 }
 
 /**
- * The opening of the next turn: the bare `ended` of the victory, and nothing after it, when the
- * capstone is passed; else the `turn`, the capstone's second script, the events phase, and the draw
- * — or, while the events phase leaves a deal standing, nothing after it: the hand waits on the take.
+ * The opening of the next turn: the `turn`, the capstone's second script, the events phase, and the
+ * draw — or, while the events phase leaves a deal standing, nothing after it: the hand waits on the
+ * take.
  */
 function opened(catalogue: Catalogue, chronicle: Chronicle): Sequence {
-  if (passed(catalogue, chronicle)) return landedAs(change('ended', victory(chronicle)));
   return course(chronicle, [
     ticked,
     (left) => continued(catalogue, left),
@@ -450,8 +492,8 @@ function drawn(chronicle: Chronicle): Landed {
 }
 
 /** The capstone passed: the chronicle records the turn it ended on, and ends there. */
-function victory(chronicle: Chronicle): Chronicle {
-  return { ...chronicle, ending: { outcome: 'victory', turn: chronicle.turn } };
+function victory(chronicle: Chronicle): Change {
+  return change('ended', { ...chronicle, ending: { outcome: 'victory', turn: chronicle.turn } });
 }
 
 /** What a card costs, resource by resource, in the order the resource bar reads. */
