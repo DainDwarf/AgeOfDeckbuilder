@@ -170,20 +170,10 @@ export class ChronicleScene extends Phaser.Scene {
      * the air. A play-out the chronicle screen has let go of — a new chronicle was begun under it
      * — commits nothing: the objects it was playing on are gone, and the chronicle it would commit
      * is not the one on the chronicle screen.
-     *
-     * A play-out ends on the `capstone` stage: its tail commits that stage's chronicle and raises the
-     * capstone's window over it, and the stages after it, the landing's among them, play out once
-     * that window closes.
      */
-    const playOut = (command: Command): Promise<void> =>
-      played(apply(this.choices.catalogue, this.current, command));
-
-    const played = async (stages: readonly Stage[]): Promise<void> => {
-      if (this.sequence !== undefined || stages.length === 0) return;
-      const landing = stages.findIndex(
-        (stage) => stage.kind === 'group' && stage.name === 'capstone',
-      );
-      const now = landing < 0 ? stages : stages.slice(0, landing + 1);
+    const playOut = async (command: Command): Promise<void> => {
+      if (this.sequence !== undefined) return;
+      const stages = apply(this.choices.catalogue, this.current, command);
       const running = Symbol('play-out');
       this.sequence = running;
 
@@ -192,7 +182,7 @@ export class ChronicleScene extends Phaser.Scene {
         hand.live(false);
         dismiss();
 
-        for (const stage of walked(now)) {
+        for (const stage of walked(stages)) {
           if (this.sequence !== running) return;
           const settles = leaf(stage);
           if (settles) this.current = stage.chronicle;
@@ -206,16 +196,11 @@ export class ChronicleScene extends Phaser.Scene {
         }
       } finally {
         if (this.sequence === running) {
-          this.current = outcome(now);
+          this.current = outcome(stages);
           paint();
           hand.live(true);
           endTurn.live(true);
           this.sequence = undefined;
-          if (landing >= 0 && this.current.ending === undefined) {
-            overlay.land(this.current, () => {
-              void played(stages.slice(landing + 1));
-            });
-          }
         }
       }
     };

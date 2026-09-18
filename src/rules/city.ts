@@ -38,27 +38,23 @@ const CLAIM_FIRST = 1;
 const CLAIMS_PER_RISE = 3;
 
 /**
- * Income: an assigned tile yields what its layers and the river running along it give, the city's
- * own tile no exception.
+ * Income: an assigned tile no enemy occupies yields what its layers and the river running along it
+ * give, the city's own tile no exception, tile by tile in tile order.
  */
-export function income(catalogue: Catalogue, chronicle: Chronicle): Chronicle {
+export function income(catalogue: Catalogue, chronicle: Chronicle): Landed {
   const assigned = new Set(chronicle.assigned.map(tileKey));
-  let yielding = chronicle;
-  for (const tile of chronicle.tiles) {
-    if (!assigned.has(tileKey(tile))) continue;
-    if (occupied(chronicle.units, tile)) continue;
-    yielding = yielded(catalogue, yielding, tile).chronicle;
+  let yielding = unchanged(chronicle);
+  for (const { q, r } of chronicle.tiles) {
+    if (!assigned.has(tileKey({ q, r }))) continue;
+    if (occupied(chronicle.units, { q, r })) continue;
+    yielding = followed(yielding, (left) => yielded(catalogue, left, { q, r }));
   }
-  return RESOURCES.every(
-    (resource) => yielding.resources[resource] === chronicle.resources[resource],
-  )
-    ? chronicle
-    : yielding;
+  return yielding;
 }
 
 /**
- * A tile's yield gained: the city's stock of each resource rises by what the tile yields, and nothing
- * where it yields nothing.
+ * A tile's yield gained: the city's stock of each resource rises by what the tile yields, one `stock`
+ * carrying the tile, and nothing where it yields nothing.
  */
 export function yielded(catalogue: Catalogue, chronicle: Chronicle, at: TileCoords): Landed {
   const tile = tileAt(chronicle.tiles, at);
@@ -67,7 +63,7 @@ export function yielded(catalogue: Catalogue, chronicle: Chronicle, at: TileCoor
   if (costsOf(yields).length === 0) return unchanged(chronicle);
   const resources = { ...chronicle.resources };
   for (const resource of RESOURCES) resources[resource] += yields[resource] ?? 0;
-  return landedAs(change('stock', { ...chronicle, resources }));
+  return landedAs(changeOn('stock', { q: at.q, r: at.r }, { ...chronicle, resources }));
 }
 
 /** The growth threshold, what the next population costs: the population it joins. */
@@ -80,15 +76,20 @@ export function arrived(chronicle: Chronicle): Landed {
   return landedAs(change('population', { ...chronicle, population: chronicle.population + 1 }));
 }
 
-/** Growth: the food stock that has reached the growth threshold is spent on one idle population. */
-export function grow(chronicle: Chronicle): Chronicle {
+/**
+ * Growth: the food stock that has reached the growth threshold is spent, and one idle population
+ * arrives on what that leaves.
+ */
+export function grow(chronicle: Chronicle): Landed {
   const threshold = growthThreshold(chronicle);
-  if (threshold === 0 || chronicle.resources.food < threshold) return chronicle;
-  return {
-    ...chronicle,
-    resources: { ...chronicle.resources, food: chronicle.resources.food - threshold },
-    population: chronicle.population + 1,
-  };
+  if (chronicle.resources.food < threshold) return unchanged(chronicle);
+  const spent = landedAs(
+    change('stock', {
+      ...chronicle,
+      resources: { ...chronicle.resources, food: chronicle.resources.food - threshold },
+    }),
+  );
+  return followed(spent, arrived);
 }
 
 /**
@@ -185,65 +186,66 @@ export function cityDrag(
 
 /**
  * One tile assigned or unassigned: the population already on it comes off, and an idle one goes on
- * a tile the city holds. Anything the city-mode click on that tile is not, or is refused for,
- * answers nothing.
+ * a tile the city holds, one `assigned` either way. Anything the city-mode click on that tile is not,
+ * or is refused for, answers nothing.
  */
 export function assign(
   catalogue: Catalogue,
   chronicle: Chronicle,
   tile: TileCoords,
-): Chronicle | undefined {
+): Landed | undefined {
   if (cityCommand(catalogue, chronicle, tile)?.type !== 'assign') return undefined;
-
-  const at = tileKey(tile);
-  const on = chronicle.assigned.filter((coord) => tileKey(coord) !== at);
-  if (on.length < chronicle.assigned.length) return { ...chronicle, assigned: on };
-  return { ...chronicle, assigned: [...on, { q: tile.q, r: tile.r }] };
+  return assigned(chronicle, tile);
 }
 
 /**
- * One population off the tile it stands on and onto another: the chronicle is left with the same
- * population and the same idle count. A drag the rules have no act of the city's for answers
- * nothing.
+ * One population off the tile it stands on and onto another: the tile left, then the tile worked,
+ * and the chronicle left with the same population and the same idle count. A drag the rules have no
+ * act of the city's for answers nothing.
  */
 export function reassign(
   chronicle: Chronicle,
   from: TileCoords,
   to: TileCoords,
-): Chronicle | undefined {
+): Landed | undefined {
   if (cityDrag(chronicle, from, to) === undefined) return undefined;
+  return followed(assigned(chronicle, from), (left) => assigned(left, to));
+}
 
-  const off = tileKey(from);
-  return {
-    ...chronicle,
-    assigned: [
-      ...chronicle.assigned.filter((coord) => tileKey(coord) !== off),
-      { q: to.q, r: to.r },
-    ],
-  };
+/** The population on the tile taken off it, or an idle one put on it where none stands there. */
+function assigned(chronicle: Chronicle, tile: TileCoords): Landed {
+  const at = { q: tile.q, r: tile.r };
+  const key = tileKey(at);
+  const off = chronicle.assigned.filter((coord) => tileKey(coord) !== key);
+  return landedAs(
+    changeOn('assigned', at, {
+      ...chronicle,
+      assigned: off.length < chronicle.assigned.length ? off : [...off, at],
+    }),
+  );
 }
 
 /**
- * One tile claimed by hand: the culture is paid and the tile taken inside the border. Anything the
- * city-mode click on that tile is not, or is refused for, answers nothing.
+ * One tile claimed by hand: the culture is paid, one `stock`, and the tile taken inside the border.
+ * Anything the city-mode click on that tile is not, or is refused for, answers nothing.
  */
 export function claim(
   catalogue: Catalogue,
   chronicle: Chronicle,
   tile: TileCoords,
-): Chronicle | undefined {
+): Landed | undefined {
   if (cityCommand(catalogue, chronicle, tile)?.type !== 'claim') return undefined;
 
-  return bordered(
-    {
+  const paid = landedAs(
+    change('stock', {
       ...chronicle,
       resources: {
         ...chronicle.resources,
         culture: chronicle.resources.culture - cultureThreshold(chronicle),
       },
-    },
-    tile,
-  ).chronicle;
+    }),
+  );
+  return followed(paid, (left) => bordered(left, tile));
 }
 
 /**

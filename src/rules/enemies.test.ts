@@ -18,6 +18,7 @@ import {
   everyCard,
   field,
   fullDraw,
+  heldBy,
   madeOf,
   NO_GROWTH,
   namesOf,
@@ -82,7 +83,8 @@ test('a capture ends the end of turn on its own stage, with the ending set', () 
   const stages = apply(CATALOGUE, overrun, { type: 'end-turn' });
   const last = stages[stages.length - 1];
 
-  expect(namesOf(stages)).toEqual(['discarded', 'ended']);
+  expect(namesOf(stages)).toEqual(['discarded', 'income', 'grow', 'enemy-phase', 'ended']);
+  expect(heldBy(stages, 'enemy-phase').map(({ name }) => name)).toEqual(['ended']);
   expect(last.chronicle.ending).toEqual({
     outcome: 'defeat',
     cause: 'capture',
@@ -107,7 +109,7 @@ test('a camp captured at the end of the turn leaves its tile claimed like any ot
   expect(capturesOf(besieging)).toEqual([tileKey(camp)]);
   expect(claimable(CATALOGUE, taken).map(tileKey)).toContain(tileKey(camp));
   expect(cityCommand(CATALOGUE, taken, camp)).toEqual(claimOf(camp));
-  expect(stagedBy(taken, claimOf(camp))).toEqual(['claim']);
+  expect(stagedBy(taken, claimOf(camp))).toEqual(['claim', 'stock', 'held', 'assigned']);
   expect(outcome(apply(CATALOGUE, taken, claimOf(camp))).held.map(tileKey)).toContain(
     tileKey(camp),
   );
@@ -124,7 +126,15 @@ test('a unit of the player’s standing on a camp when the turn ends captures it
 
   const taken = outcome(apply(CATALOGUE, besieging, { type: 'end-turn' }));
 
-  expect(stagedBy(besieging, { type: 'end-turn' })).toEqual(['income', 'camp-capture']);
+  expect(stagedBy(besieging, { type: 'end-turn' })).toEqual([
+    'income',
+    'stock',
+    'grow',
+    'enemy-phase',
+    'camp-capture',
+    'retiled',
+    'dealt',
+  ]);
   expect(capturesOf(besieging)).toEqual([tileKey(camp)]);
   expect(buildingAt(taken, camp)).toBeUndefined();
   expect(taken.discardPile).toEqual([]);
@@ -144,7 +154,14 @@ test('a capture deals the camp’s rewards and stops the end of turn before the 
   expect(dealt.deals).toEqual([{ of: 'camp', rewards: ['PH_Spoils', 'PH_Cache'] }]);
   expect(dealt.turn).toBe(besieging.turn);
   expect(dealt.hand).toEqual([]);
-  expect(stagedBy(dealt, { type: 'take', at: 1 })).toEqual(['reward', 'turn', 'drawn']);
+  expect(stagedBy(dealt, { type: 'take', at: 1 })).toEqual([
+    'reward',
+    'taken',
+    'discarded',
+    'turn',
+    'turn',
+    'drawn',
+  ]);
   expect(cache.turn).toBe(besieging.turn + 1);
   expect(cache.deals).toEqual([]);
   expect(cache.discardPile).toEqual(['PH_Cache']);
@@ -191,7 +208,12 @@ test('a chronicle that fell in the enemy phase captures no camp', () => {
 
   const fallen = outcome(apply(CATALOGUE, overrun, { type: 'end-turn' }));
 
-  expect(stagedBy(overrun, { type: 'end-turn' })).toEqual(['ended']);
+  expect(stagedBy(overrun, { type: 'end-turn' })).toEqual([
+    'income',
+    'grow',
+    'enemy-phase',
+    'ended',
+  ]);
   expect(buildingAt(fallen, camp)).toBe(CATALOGUE.camp.building);
   expect(fallen.deals).toEqual([]);
 });
@@ -341,7 +363,19 @@ test('at odds of one every free camp enters a warrior once the enemies have acte
 
   const staged = namesOf(apply(rolling(1), city, { type: 'end-turn' }));
 
-  expect(staged).toEqual(['income', 'attack', ...free.map(() => 'enter'), 'camp-capture']);
+  expect(staged).toEqual([
+    'income',
+    'stock',
+    'grow',
+    'enemy-phase',
+    'attack',
+    'action-spent',
+    'damaged',
+    ...free.map(() => 'enter'),
+    'camp-capture',
+    'retiled',
+    'dealt',
+  ]);
   expect(entriesOf(rolling(1), city)).toEqual(free);
 });
 
@@ -405,6 +439,69 @@ test('at odds of nought no camp enters a warrior and no stage is raised, and eve
   expect(rngAt(0)).toEqual(rngAt(0.5));
   expect(rngAt(0)).toEqual(rngAt(1));
   expect(rngAt(0)).not.toEqual(outcome(apply(rolling(0), empty, { type: 'end-turn' })).rng);
+});
+
+test('the enemy phase holds nothing at odds of nought, and its chronicle carries the draws every free camp made', () => {
+  const city = cityOf(['urban'], {
+    ...NO_GROWTH,
+    tiles: camped(field(4), CAMPS),
+    drawPile: fullDraw(),
+  });
+
+  const stages = apply(rolling(0), city, { type: 'end-turn' });
+  const phase = stages.find((stage) => stage.name === 'enemy-phase');
+  const grow = stages.find((stage) => stage.name === 'grow');
+  if (phase === undefined || grow === undefined) throw new Error('the end of turn staged no phase');
+
+  expect(heldBy(stages, 'enemy-phase')).toEqual([]);
+  expect(phase.chronicle.rng).not.toEqual(grow.chronicle.rng);
+  expect(outcome(stages).rng).toEqual(outcome(apply(rolling(0.5), city, { type: 'end-turn' })).rng);
+});
+
+test('the enemy phase holds each enemy’s move and attacks, then the warriors the camps roll, each entering on its camp', () => {
+  const camp = { q: 4, r: 0 };
+  const city = cityOf(['urban'], {
+    ...NO_GROWTH,
+    tiles: camped(field(4), [camp]),
+    drawPile: fullDraw(),
+    units: [worker({ q: 2, r: 0 }), standing('enemy', { q: 3, r: -1 }, { move: MOVE_POINT })],
+  });
+
+  const held = heldBy(apply(rolling(1), city, { type: 'end-turn' }), 'enemy-phase');
+
+  expect(held.map(({ name }) => name)).toEqual(['move', 'attack', 'enter']);
+  const [crossed, attack, entered] = held;
+  if (attack.kind !== 'group' || attack.name !== 'attack') throw new Error('no attack staged');
+  expect(attack.stages.map(({ name }) => name)).toEqual(['action-spent', 'damaged']);
+  expect(attack.stages).toMatchObject([{ tile: attack.attacker }, { tile: attack.target }]);
+  expect(attack.target).toEqual({ q: 2, r: 0 });
+  expect(crossed).toMatchObject({ to: attack.attacker });
+  expect(entered).toMatchObject({ tile: camp });
+});
+
+test('a camp captured is one camp-capture carrying its tile, over the camp leaving the tile and its rewards dealt', () => {
+  const camp = { q: 4, r: 0 };
+  const besieging = cityOf(['urban'], {
+    ...NO_GROWTH,
+    tiles: camped(field(4), [camp]),
+    drawPile: fullDraw(),
+    units: [standing('player', camp)],
+  });
+
+  const stages = apply(CATALOGUE, besieging, { type: 'end-turn' });
+  const capture = stages.find((stage) => stage.name === 'camp-capture');
+  if (capture?.kind !== 'group' || capture.name !== 'camp-capture') {
+    throw new Error('no camp was captured');
+  }
+  const [retiled, dealt] = capture.stages;
+
+  expect(capture.tile).toEqual(camp);
+  expect(retiled).toMatchObject({ name: 'retiled', tile: camp });
+  expect(buildingAt(retiled.chronicle, camp)).toBeUndefined();
+  expect(retiled.chronicle.deals).toEqual([]);
+  expect(dealt.name).toBe('dealt');
+  expect(dealt.chronicle.deals).toEqual([{ of: 'camp', rewards: CATALOGUE.camp.rewards }]);
+  expect(outcome(stages)).toBe(capture.chronicle);
 });
 
 test('at odds of a half a seed enters on the same camps every time, and seeds differ in the camps they enter on', () => {
@@ -472,13 +569,22 @@ test('two camps captured the turn before an event is due deal two deals of rewar
   for (const camp of camps) expect(buildingAt(dealt, camp)).toBeUndefined();
   expect(dealt.deals).toEqual([rewards, rewards]);
   expect(dealt.turn).toBe(besieging.turn);
-  expect(stagedBy(dealt, { type: 'take', at: 0 })).toEqual(['reward']);
+  expect(stagedBy(dealt, { type: 'take', at: 0 })).toEqual(['reward', 'taken', 'discarded']);
   expect(first.turn).toBe(besieging.turn);
-  expect(stagedBy(first, { type: 'take', at: 1 })).toEqual(['reward', 'turn', 'deal']);
+  expect(stagedBy(first, { type: 'take', at: 1 })).toEqual([
+    'reward',
+    'taken',
+    'discarded',
+    'turn',
+    'turn',
+    'deal',
+    'rolled',
+    'dealt',
+  ]);
   expect(second.deals).toEqual([{ of: 'event', event: 'PH_Hardship' }]);
   expect(second.discardPile).toEqual(['PH_Spoils', 'PH_Cache']);
   expect(second.hand).toEqual([]);
-  expect(stagedBy(second, { type: 'take', at: 0 })).toEqual(['answer', 'enter', 'drawn']);
+  expect(stagedBy(second, { type: 'take', at: 0 })).toEqual(['answer', 'taken', 'enter', 'drawn']);
   expect(outcome(apply(CATALOGUE, second, { type: 'take', at: 0 })).deals).toEqual([]);
 });
 
@@ -595,7 +701,19 @@ test('an enemy moves within range of a unit and attacks it in the same enemy pha
 
   const after = outcome(apply(CATALOGUE, city, { type: 'end-turn' }));
 
-  expect(stagedBy(city, { type: 'end-turn' })).toEqual(['income', 'move', 'attack', 'turn']);
+  expect(stagedBy(city, { type: 'end-turn' })).toEqual([
+    'income',
+    'stock',
+    'grow',
+    'enemy-phase',
+    'move',
+    'attack',
+    'action-spent',
+    'damaged',
+    'turn',
+    'turn',
+    'refreshed',
+  ]);
   expect(movesOf(city)).toEqual([['4,0', '3,0']]);
   expect(attacksOf(city)).toEqual([['3,0', '2,0']]);
   expect(after.units[0].stats.health).toBe(city.units[0].stats.health - 2);
@@ -612,7 +730,16 @@ test('an enemy its move leaves out of range attacks nothing', () => {
 
   const after = outcome(apply(CATALOGUE, city, { type: 'end-turn' }));
 
-  expect(stagedBy(city, { type: 'end-turn' })).toEqual(['income', 'move', 'turn']);
+  expect(stagedBy(city, { type: 'end-turn' })).toEqual([
+    'income',
+    'stock',
+    'grow',
+    'enemy-phase',
+    'move',
+    'turn',
+    'turn',
+    'refreshed',
+  ]);
   expect(after.units[0].stats.health).toBe(city.units[0].stats.health);
 });
 
@@ -726,11 +853,21 @@ test('each enemy stages its own move and its own attacks, before the next enemy 
 
   expect(stagedBy(city, { type: 'end-turn' })).toEqual([
     'income',
+    'stock',
+    'grow',
+    'enemy-phase',
     'move',
     'attack',
+    'action-spent',
+    'damaged',
     'move',
     'attack',
+    'action-spent',
+    'damaged',
     'turn',
+    'turn',
+    'refreshed',
+    'refreshed',
   ]);
 });
 

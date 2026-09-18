@@ -15,6 +15,7 @@ import {
   DECK,
   everyCard,
   field,
+  heldBy,
   NO_GROWTH,
   namesOf,
   opening,
@@ -349,7 +350,36 @@ test('a food stock short of the growth threshold grows nobody, and the stock is 
 
   expect(after.population).toBe(city.population);
   expect(after.resources.food).toBe(3);
-  expect(stagedBy(city, { type: 'end-turn' })).not.toContain('grow');
+  expect(heldBy(apply(CATALOGUE, city, { type: 'end-turn' }), 'grow')).toEqual([]);
+});
+
+test('the food stock reaching the growth threshold grows as one grow group, the food spent and then the population', () => {
+  const city = cityOf(['urban', 'plain'], {
+    population: 3,
+    resources: { food: 1, production: 0, military: 0, money: 0, science: 0, culture: 0 },
+  });
+
+  const [spent, arrived, ...rest] = heldBy(apply(CATALOGUE, city, { type: 'end-turn' }), 'grow');
+
+  expect([spent.name, arrived.name]).toEqual(['stock', 'population']);
+  expect(rest).toEqual([]);
+  expect(spent.chronicle.population).toBe(city.population);
+  expect(arrived.chronicle.population).toBe(city.population + 1);
+  expect(arrived.chronicle.resources.food).toBe(spent.chronicle.resources.food);
+});
+
+test('income is one stock per tile worked that yields, in tile order, each carrying its tile', () => {
+  const city = cityOf(['urban', 'plain', 'plain'], {
+    ...NO_GROWTH,
+    assigned: [{ q: 2, r: 0 }, CITY],
+  });
+
+  const stocks = heldBy(apply(CATALOGUE, city, { type: 'end-turn' }), 'income');
+
+  expect(stocks.map((stage) => stage.name)).toEqual(['stock', 'stock']);
+  expect(stocks).toMatchObject([{ tile: CITY }, { tile: { q: 2, r: 0 } }]);
+  expect(stocks[0].chronicle.resources.food).toBe(0);
+  expect(stocks[1].chronicle.resources.food).toBe(2);
 });
 
 test('the food stock reaching the growth threshold is spent on one population, and that one is idle', () => {
@@ -416,7 +446,9 @@ test('an assign takes the population off a tile, and a second one puts it back',
   const off = outcome(apply(CATALOGUE, city, assignTo(tile)));
   const back = outcome(apply(CATALOGUE, off, assignTo(tile)));
 
-  expect(stagedBy(city, assignTo(tile))).toEqual(['assign']);
+  expect(stagedBy(city, assignTo(tile))).toEqual(['assign', 'assigned']);
+  expect(stagedBy(off, assignTo(tile))).toEqual(['assign', 'assigned']);
+  expect(heldBy(apply(CATALOGUE, city, assignTo(tile)), 'assign')).toMatchObject([{ tile }]);
   expect(off.assigned.map(tileKey)).toEqual(['0,0']);
   expect(idle(off)).toBe(1);
   expect(back.assigned.map(tileKey).sort()).toEqual(['0,0', '1,0']);
@@ -451,7 +483,12 @@ test('a drag takes the population off the tile it stands on and puts it on the t
   const after = outcome(stages);
 
   expect(cityDrag(freed, from, to)).toEqual(reassignTo(from, to));
-  expect(namesOf(stages)).toEqual(['assign']);
+  expect(namesOf(stages)).toEqual(['assign', 'assigned', 'assigned']);
+  const [left, worked] = heldBy(stages, 'assign');
+  expect(left).toMatchObject({ tile: from });
+  expect(left.chronicle.assigned.map(tileKey)).not.toContain(tileKey(from));
+  expect(left.chronicle.assigned.map(tileKey)).not.toContain(tileKey(to));
+  expect(worked).toMatchObject({ tile: to });
   expect(after.assigned.map(tileKey)).not.toContain(tileKey(from));
   expect(after.assigned.map(tileKey)).toContain(tileKey(to));
   expect(after.population).toBe(freed.population);
@@ -517,7 +554,12 @@ test('a claim pays its culture, takes the tile inside the border, and puts one i
   const stages = apply(CATALOGUE, city, claimOf(tile));
   const after = outcome(stages);
 
-  expect(namesOf(stages)).toEqual(['claim']);
+  expect(namesOf(stages)).toEqual(['claim', 'stock', 'held', 'assigned']);
+  const [paid, held, assigned] = heldBy(stages, 'claim');
+  expect(paid.chronicle.resources.culture).toBe(1);
+  expect(paid.chronicle.held.map(tileKey)).not.toContain('1,0');
+  expect(held).toMatchObject({ tile });
+  expect(assigned).toMatchObject({ tile });
   expect(after.held.map(tileKey)).toContain('1,0');
   expect(after.resources.culture).toBe(1);
   expect(after.assigned.map(tileKey)).toContain('1,0');
@@ -529,6 +571,7 @@ test('a claim made with nobody idle takes the tile with no population on it', ()
 
   const after = outcome(apply(CATALOGUE, full, claimOf({ q: 1, r: 0 })));
 
+  expect(stagedBy(full, claimOf({ q: 1, r: 0 }))).toEqual(['claim', 'stock', 'held']);
   expect(idle(full)).toBe(0);
   expect(after.held.map(tileKey)).toContain('1,0');
   expect(after.assigned.map(tileKey)).not.toContain('1,0');
@@ -562,7 +605,7 @@ test('a claim the city cannot pay for is refused, and one it can just pay for go
 
   expect(stagedBy(penniless, claimOf({ q: 1, r: 0 }))).toEqual(['refused']);
   expect(outcome(apply(CATALOGUE, penniless, claimOf({ q: 1, r: 0 })))).toBe(penniless);
-  expect(stagedBy(exact, claimOf({ q: 1, r: 0 }))).toEqual(['claim']);
+  expect(stagedBy(exact, claimOf({ q: 1, r: 0 }))).toEqual(['claim', 'stock', 'held', 'assigned']);
   expect(outcome(apply(CATALOGUE, exact, claimOf({ q: 1, r: 0 }))).resources.culture).toBe(0);
 });
 
@@ -595,7 +638,7 @@ test('a unit that charts that tile makes it a claim the city can make', () => {
 
   expect(claimable(CATALOGUE, charting).map(tileKey)).toContain(tileKey(dark));
   expect(cityCommand(CATALOGUE, charting, dark)).toEqual(claimOf(dark));
-  expect(stagedBy(charting, claimOf(dark))).toEqual(['claim']);
+  expect(stagedBy(charting, claimOf(dark))).toEqual(['claim', 'stock', 'held', 'assigned']);
   expect(outcome(apply(CATALOGUE, charting, claimOf(dark))).held.map(tileKey)).toContain(
     tileKey(dark),
   );
@@ -628,7 +671,7 @@ test('a tile an enemy occupies is no claim of the city’s, and a unit of the pl
 
   expect(claimable(CATALOGUE, city).map(tileKey)).toContain(tileKey(stood));
   expect(cityCommand(CATALOGUE, city, stood)).toEqual(claimOf(stood));
-  expect(stagedBy(city, claimOf(stood))).toEqual(['claim']);
+  expect(stagedBy(city, claimOf(stood))).toEqual(['claim', 'stock', 'held', 'assigned']);
 });
 
 test('a city-mode click assigns on a tile the city holds and claims on any other', () => {
@@ -674,7 +717,7 @@ test('a city-mode click on a held tile nobody stands on is refused while nobody 
   const freed = outcome(apply(CATALOGUE, spent, assignTo(CITY)));
 
   expect(tileRefusal(CATALOGUE, freed, empty)).toEqual({ unaffordable: [], blocked: [] });
-  expect(stagedBy(freed, assignTo(empty))).toEqual(['assign']);
+  expect(stagedBy(freed, assignTo(empty))).toEqual(['assign', 'assigned']);
 });
 
 test('the same claim on the same chronicle gives the same chronicle back', () => {

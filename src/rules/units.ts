@@ -161,11 +161,6 @@ export function attackable(units: readonly Unit[], attacker: Unit): Unit[] {
   return targets;
 }
 
-/** The one attack there is: the target loses the attacker's damage, as `damaged` has it. */
-export function attacked(units: readonly Unit[], attacker: Unit, target: Unit): Unit[] {
-  return damaged(units, target, attacker.stats.damage);
-}
-
 /** A unit losing health by an amount, whatever took it: at zero health or below it is killed. */
 export function damaged(units: readonly Unit[], target: Unit, amount: number): Unit[] {
   return units.flatMap((unit) => {

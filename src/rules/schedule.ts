@@ -17,10 +17,11 @@ import {
   change,
   changeOn,
   followed,
-  holdingNothing,
+  type Group,
+  grouped,
   type Landed,
   landedAs,
-  type Stage,
+  type Sequence,
   unchanged,
 } from './stages';
 import {
@@ -103,43 +104,42 @@ export function spanEnded(chronicle: Chronicle, turns: number): boolean {
 }
 
 /**
- * The events phase, which draws from the chronicle's generator only through the capstone's landing: on the capstone's turn
- * nothing is dealt whatever was due, the next due turn is rolled from that turn in the one `capstone`
- * stage, and the capstone lands on what that leaves, in its landing's stages after it; on the due
- * turn its event is drawn and dealt behind the deals already standing, nothing landing until one of
- * its answers is taken, or nothing is dealt where no event is drawn, and the next due turn is rolled
- * from that turn; any other turn changes nothing.
+ * The events phase, which draws from the chronicle's generator only through the capstone's landing.
+ * On the capstone's turn, one `capstone` group: nothing is dealt whatever was due, the next due turn
+ * is rolled from that turn, and the capstone lands on what that leaves. On a due turn, one `deal`
+ * group: the next due turn is rolled from that turn, and the event drawn is dealt behind the deals
+ * already standing, nothing landing until one of its answers is taken — or, where no event is drawn,
+ * a `runtime-error`, and play goes on to the next due turn. Any other turn stages nothing.
  */
-export function events(
-  catalogue: Catalogue,
-  chronicle: Chronicle,
-):
-  | { readonly phase: 'capstone'; readonly stages: readonly Stage[] }
-  | { readonly phase: 'deal' | 'no-deal'; readonly chronicle: Chronicle } {
+export function events(catalogue: Catalogue, chronicle: Chronicle): Sequence<Group> {
   const { timeline, turn } = chronicle;
   if (turn === timeline.capstone.turn) {
-    const rolled = { ...chronicle, timeline: rolledFrom(catalogue, timeline, turn) };
-    const landing = capstoneOf(catalogue, timeline.capstone.id).lands(catalogue, rolled);
-    return {
-      phase: 'capstone',
-      stages: [holdingNothing('capstone', rolled), ...landing.stages],
-    };
+    const rolled = landedAs(
+      change('rolled', { ...chronicle, timeline: rolledFrom(catalogue, timeline, turn) }),
+    );
+    const { lands } = capstoneOf(catalogue, timeline.capstone.id);
+    return grouped(
+      { name: 'capstone' },
+      followed(rolled, (left) => lands(catalogue, left)),
+    );
   }
 
-  if (turn !== timeline.next) return { phase: 'deal', chronicle };
+  if (turn !== timeline.next) return unchanged(chronicle);
   const { event, rng } = eventDrawn(catalogue, chronicle);
-  const rolled = rolledFrom(catalogue, { ...timeline, rng }, turn);
-  if (event === undefined) {
-    return { phase: 'no-deal', chronicle: { ...chronicle, timeline: rolled } };
-  }
-  return {
-    phase: 'deal',
-    chronicle: {
+  const rolled = landedAs(
+    change('rolled', {
       ...chronicle,
-      timeline: rolled,
-      deals: [...chronicle.deals, { of: 'event', event }],
-    },
-  };
+      timeline: rolledFrom(catalogue, { ...timeline, rng }, turn),
+    }),
+  );
+  return grouped(
+    { name: 'deal' },
+    followed(rolled, (left) =>
+      event === undefined
+        ? runtimeError(left)
+        : landedAs(change('dealt', { ...left, deals: [...left.deals, { of: 'event', event }] })),
+    ),
+  );
 }
 
 /** What a deal offers to be taken, by id, in the order dealt: its event's answers, or the camp's rewards. */
@@ -183,30 +183,35 @@ export function answerRefusal(
 }
 
 /**
- * An answer taken off the chronicle the deal is popped from: its cost is paid in the one `answer`
- * stage, and it lands on what that leaves, in its landing's stages after it.
+ * An answer taken off the chronicle the deal is popped from: its cost paid as one `stock`, none where
+ * it costs nothing, and its landing on what that leaves.
  */
-export function answered(catalogue: Catalogue, chronicle: Chronicle, answer: Answer): Stage[] {
-  const paidOn = paid(chronicle, answerCost(catalogue, chronicle, answer));
-  return [holdingNothing('answer', paidOn), ...answer.lands(catalogue, paidOn).stages];
+export function answered(catalogue: Catalogue, chronicle: Chronicle, answer: Answer): Landed {
+  const costs = answerCost(catalogue, chronicle, answer);
+  const paidOn =
+    costs.length === 0 ? unchanged(chronicle) : landedAs(change('stock', paid(chronicle, costs)));
+  return followed(paidOn, (left) => answer.lands(catalogue, left));
 }
 
 /** A reward taken off the chronicle the deal is popped from: it is laid in the discard pile. */
-export function rewarded(chronicle: Chronicle, card: CardId): Chronicle {
-  return { ...chronicle, discardPile: [...chronicle.discardPile, card] };
+export function rewarded(chronicle: Chronicle, card: CardId): Landed {
+  return landedAs(
+    change('discarded', { ...chronicle, discardPile: [...chronicle.discardPile, card] }),
+  );
 }
 
 /**
- * The capstone's second script, on every turn after the one it lands on, and nothing on any other
- * turn or for a capstone that carries none.
+ * The capstone's second script, on every turn after the one it lands on: one `capstone` group over
+ * what it raised. Nothing on any other turn, or for a capstone that carries none.
  */
-export function continued(catalogue: Catalogue, chronicle: Chronicle): Landed {
+export function continued(catalogue: Catalogue, chronicle: Chronicle): Sequence<Group> {
   const { id, turn } = chronicle.timeline.capstone;
-  if (chronicle.turn <= turn) return unchanged(chronicle);
-  return capstoneOf(catalogue, id).continues?.(catalogue, chronicle) ?? unchanged(chronicle);
+  const { continues } = capstoneOf(catalogue, id);
+  if (chronicle.turn <= turn || continues === undefined) return unchanged(chronicle);
+  return grouped({ name: 'capstone' }, continues(catalogue, chronicle));
 }
 
-/** A landing the content should never have called, followed through as the one step saying so. */
+/** A content defect met in play, followed through as the one change saying so. */
 function runtimeError(chronicle: Chronicle): Landed {
   return landedAs(change('runtime-error', chronicle));
 }

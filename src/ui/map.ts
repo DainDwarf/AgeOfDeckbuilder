@@ -21,7 +21,7 @@ import {
 } from '../rules/map';
 import { RESOURCES, type Resource } from '../rules/resources';
 import { inSight } from '../rules/sight';
-import { type Change, type Group, leaf, type Stage } from '../rules/stages';
+import type { Change, Group, Stage } from '../rules/stages';
 import { assignedTo, type Chronicle, type Cost, type Snapshot } from '../rules/state';
 import { type Faction, type Landing, type Unit, unitAt, unitOf } from '../rules/units';
 import { MAP_FRAME } from './band';
@@ -1351,7 +1351,10 @@ export function createMapView(
       case 'recalled':
       case 'shuffled':
       case 'left':
+      case 'turn':
       case 'rolled':
+      case 'dealt':
+      case 'taken':
       case 'ended':
       case 'runtime-error':
         return undefined;
@@ -1374,6 +1377,7 @@ export function createMapView(
       case 'income':
       case 'grow':
       case 'turn':
+      case 'enemy-phase':
       case 'deal':
       case 'reward':
       case 'camp-capture':
@@ -1389,7 +1393,6 @@ export function createMapView(
     render,
 
     play(stage: Stage): Promise<void> | undefined {
-      if (!leaf(stage)) return undefined;
       switch (stage.kind) {
         case 'change':
           return changed(stage);

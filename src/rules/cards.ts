@@ -11,7 +11,17 @@ import { claimable } from './city';
 import { type Tile, type TileCoords, tileAt, tileKey } from './map';
 import { buildingKind, improvementKind, refuse, terrainKind } from './map-kinds';
 import { RESOURCES, type Resource, type Resources } from './resources';
-import { change, changeOn, followed, type Group, type Landed, landedAs, unchanged } from './stages';
+import {
+  change,
+  changeOn,
+  followed,
+  type Group,
+  grouped,
+  type Landed,
+  landedAs,
+  type Sequence,
+  unchanged,
+} from './stages';
 import { type Block, type Chronicle, costsOf, holds, idle, type TileBlock } from './state';
 import { refreshedMovePoints, spentAction, standsOn, unitAt } from './units';
 
@@ -74,9 +84,8 @@ export function leavesChronicle(card: Card): boolean {
  * The hazards of the hand striking, in hand order, each on the chronicle the one before it left: one
  * `strike` each, over what its strike raised, and none where the hand holds no hazard.
  */
-export function struck(catalogue: Catalogue, chronicle: Chronicle): Group[] {
-  const strikes: Group[] = [];
-  let standing = chronicle;
+export function struck(catalogue: Catalogue, chronicle: Chronicle): Sequence<Group> {
+  let strikes = unchanged<Group>(chronicle);
   for (const id of chronicle.hand) {
     const card = cardOf(catalogue, id);
     switch (card.kind) {
@@ -85,12 +94,11 @@ export function struck(catalogue: Catalogue, chronicle: Chronicle): Group[] {
       case 'building':
       case 'instant':
         break;
-      case 'hazard': {
-        const { stages, chronicle: left } = card.strikes(catalogue, standing);
-        strikes.push({ kind: 'group', name: 'strike', card: id, chronicle: left, stages });
-        standing = left;
+      case 'hazard':
+        strikes = followed(strikes, (left) =>
+          grouped({ name: 'strike', card: id }, card.strikes(catalogue, left)),
+        );
         break;
-      }
     }
   }
   return strikes;
@@ -295,8 +303,8 @@ export function entersOn(type: string): Aim & { readonly aim: 'tile' } {
 }
 
 /**
- * The settle: the city stands on the tile from now on, its building in the tile's slot, holding that
- * tile alone with one population on it and the city's idle count besides.
+ * The settle: its building in the tile's slot, the city holding that tile alone with one population
+ * on it and the city's idle count besides, and then the city standing on the tile from now on.
  */
 export function settled(catalogue: Catalogue, paid: Chronicle, at: TileCoords): Landed {
   const city = { q: at.q, r: at.r };
@@ -305,11 +313,6 @@ export function settled(catalogue: Catalogue, paid: Chronicle, at: TileCoords): 
     tiles.length === 1 && tileKey(tiles[0]) === key;
   const population = 1 + catalogue.city.idle;
   let landing = built(catalogue, paid, city, catalogue.city.building);
-  landing = followed(landing, (left) =>
-    left.city !== undefined && tileKey(left.city) === key
-      ? unchanged(left)
-      : landedAs(changeOn('settled', city, { ...left, city })),
-  );
   landing = followed(landing, (left) =>
     alone(left.held)
       ? unchanged(left)
@@ -320,10 +323,15 @@ export function settled(catalogue: Catalogue, paid: Chronicle, at: TileCoords): 
       ? unchanged(left)
       : landedAs(change('population', { ...left, population })),
   );
-  return followed(landing, (left) =>
+  landing = followed(landing, (left) =>
     alone(left.assigned)
       ? unchanged(left)
       : landedAs(changeOn('assigned', city, { ...left, assigned: [city] })),
+  );
+  return followed(landing, (left) =>
+    left.city !== undefined && tileKey(left.city) === key
+      ? unchanged(left)
+      : landedAs(changeOn('settled', city, { ...left, city })),
   );
 }
 

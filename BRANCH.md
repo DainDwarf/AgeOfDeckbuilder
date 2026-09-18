@@ -30,5 +30,4 @@ The one claim the design leaves unverified: the sight's charting runs once per c
 
 ## Lines
 
-- **The cycle is groups over changes** — the end of turn, the take, the city's acts and the unit's commands resolve as groups over the changes they make, income per tile, the tick per unit, each enemy's blow an `attack` over its two changes, a due turn that draws no event a `rolled` then a `runtime-error`, an assign an `assign` group over its `assigned` changes; and the fall is taken on the first change that leaves the population at nought, so nothing after it is computed and the guard in `grow` goes. Doc-impact: `docs/DOGMAS.md`. [board/the-cycle-is-groups-over-changes.md](board/the-cycle-is-groups-over-changes.md)
 - **Cards are instances** — a card is a reference to content, not an instance of its own, so the hand cannot tell which of two copies was played on a tile and the wrong copy flies to the discard pile; cards need an identity of their own.

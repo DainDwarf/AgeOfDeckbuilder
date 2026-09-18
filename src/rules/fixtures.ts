@@ -72,7 +72,7 @@ import {
   unitDamaged,
 } from './schedule';
 import { charted } from './sight';
-import { followed, type Stage, unchanged, walked } from './stages';
+import { followed, type Group, type Stage, unchanged, walked } from './stages';
 import { type CardId, type Chronicle, type Deal, holds, type Timeline } from './state';
 import type { Faction, Unit, UnitStats } from './units';
 
@@ -952,6 +952,14 @@ export function everyCard(chronicle: Chronicle): CardId[] {
 /** What every stage of the tree is called, in the order the walk plays them. */
 export function namesOf(stages: readonly Stage[]): string[] {
   return [...walked(stages)].map((stage) => stage.name);
+}
+
+/** What the first group of that name the walk meets holds. A tree holding no such group throws. */
+export function heldBy(stages: readonly Stage[], name: Group['name']): readonly Stage[] {
+  for (const stage of walked(stages)) {
+    if (stage.kind === 'group' && stage.name === name) return stage.stages;
+  }
+  throw new Error(`no ${name} group is staged`);
 }
 
 /** What every stage of the command is called, in the order the walk plays them. */

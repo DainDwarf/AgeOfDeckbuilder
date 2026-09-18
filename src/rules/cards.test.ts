@@ -468,7 +468,7 @@ test('a unit entered on turn 0 neither moves nor attacks, and nothing is offered
   expect(ticked.turn).toBe(1);
   expect(byHand(CATALOGUE, ticked, unitNamed(ticked, 3)).landings.length).toBeGreaterThan(0);
   expect(stagedBy(ticked, { type: 'move', unit: 3, tile: onto })).toEqual(['move']);
-  expect(stagedBy(ticked, attackOn(1, enemy))).toEqual(['attack']);
+  expect(stagedBy(ticked, attackOn(1, enemy))).toEqual(['attack', 'action-spent', 'damaged']);
 });
 
 test('a card whose effect names a building, an improvement or a terrain the catalogue lacks is refused where it lands', () => {
@@ -1577,6 +1577,7 @@ test('a strike taking the city’s last population falls on the strike, and no s
     'stock',
     'assigned',
     'population',
+    'ended',
   ]);
   const [strike] = apply(CATALOGUE, last, { type: 'end-turn' });
   if (strike.kind !== 'group') throw new Error('the end of turn opens on no strike');

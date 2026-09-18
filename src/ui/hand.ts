@@ -476,7 +476,10 @@ export function createHand(
       case 'recalled':
       case 'shuffled':
       case 'left':
+      case 'turn':
       case 'rolled':
+      case 'dealt':
+      case 'taken':
       case 'ended':
       case 'runtime-error':
         return undefined;
@@ -494,6 +497,7 @@ export function createHand(
       case 'income':
       case 'grow':
       case 'turn':
+      case 'enemy-phase':
       case 'capstone':
       case 'deal':
       case 'answer':
