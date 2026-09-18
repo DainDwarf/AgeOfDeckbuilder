@@ -16,6 +16,7 @@ How this project is built. Human-chosen; every session works by them, `/intake` 
 - **A side finding gets one line and a pointer.** If it keeps growing across turns, stop.
 - **"jot: …"** appends one line to `IDEAS.md` and the current task continues. Offer to jot something you noticed; don't add your own without asking.
 - **A bug is never an idea.** `IDEAS.md` holds features that may or may not happen; a defect or trap in what already exists is reported to the user the turn it emerges and, unless fixed on the spot, becomes a board line through `/todo` on the user's order.
+- **A tiny defect found while a line runs may be folded into it, on the user's say.** It is reported the turn it emerges; the user widens the line or does not, and the commit says the line was widened. Claude says when the fold has grown past a fix and needs a line of its own.
 - **Cut big steps into shippable substeps**, each self-contained enough for a cleared session to execute; name the shared mechanism that links them. Propose the cut before executing it.
 - **A generator change is pitched running.** Its dossier says whether the process is fixed or rolled, and how wide it may vary; its pitch shows the generator ported into the mockup and run on the project's seeds, the port checked against the rules tests first. Why: a diagram reads straight, and a straight reading of a rolled process has cost a pitch round twice.
 

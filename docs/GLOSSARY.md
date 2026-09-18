@@ -4,7 +4,7 @@ The **closed vocabulary** of gameplay. Every concept has exactly one term, and t
 
 The vocabulary covers player-facing terms and the code that represents and manipulates those player-facing objects; development internals (the machinery under the game, such as `apply`'s command) are outside it.
 
-Each row lists the forbidden near-synonyms so the review and the lint hook can catch them. Prose that must mention a forbidden word for another reason (a card _named_ "Sacrifice") is a deliberate exception the reviewer sees; there is no silent allow-list. A file that lives with one marks it beside the word, `glossary exception: <word>` in a comment, and the lint skips that word in that file alone.
+Each row lists the forbidden near-synonyms so the review and the lint hook can catch them. Prose that must mention a forbidden word for another reason (a card _named_ "Sacrifice") is a deliberate exception the reviewer sees; there is no silent allow-list. A line that lives with one marks it at its end, `// glossary exception: <word>`, and the lint skips that word on that line alone.
 
 | Term | Meaning | Not |
 | --- | --- | --- |
