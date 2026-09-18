@@ -9,6 +9,7 @@ import {
   terrainKind,
 } from './map-kinds';
 import type { Resources } from './resources';
+import type { Landed } from './stages';
 import { type Block, type Chronicle, costsOf, type TileBlock } from './state';
 import { type Landing, standsOn, type Unit, type UnitStats } from './units';
 
@@ -100,7 +101,7 @@ export type Answer = {
     | Partial<Resources>
     | ((catalogue: Catalogue, chronicle: Chronicle) => Partial<Resources>);
   readonly reads: (catalogue: Catalogue, chronicle: Chronicle) => Record<string, number>;
-  readonly lands: (catalogue: Catalogue, chronicle: Chronicle) => Chronicle;
+  readonly lands: (catalogue: Catalogue, chronicle: Chronicle) => Landed;
 };
 
 /**
@@ -117,8 +118,8 @@ export type ScheduledEvent = {
  * that one, and whether the chronicle has passed it.
  */
 export type Capstone = {
-  readonly lands: (catalogue: Catalogue, chronicle: Chronicle) => Chronicle;
-  readonly continues?: (catalogue: Catalogue, chronicle: Chronicle) => Chronicle;
+  readonly lands: (catalogue: Catalogue, chronicle: Chronicle) => Landed;
+  readonly continues?: (catalogue: Catalogue, chronicle: Chronicle) => Landed;
   readonly passes: (catalogue: Catalogue, chronicle: Chronicle) => boolean;
 };
 

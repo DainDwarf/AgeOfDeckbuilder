@@ -1,6 +1,6 @@
 import type Phaser from 'phaser';
 import type { Catalogue } from '../rules/catalogue';
-import type { Stage } from '../rules/chronicle';
+import type { Stage } from '../rules/stages';
 import { type CardId, type Chronicle, NO_REFUSAL } from '../rules/state';
 import {
   CARD_BASELINE,
@@ -127,17 +127,22 @@ export function createPiles(
         case 'capture':
         case 'victory':
         case 'turn':
-        case 'reinforce':
         case 'capstone':
         case 'deal':
         case 'no-deal':
-        case 'events':
+        case 'answer':
         case 'reward':
         case 'draw':
         case 'attack':
         case 'move':
-        case 'camp-enter':
         case 'camp-capture':
+        case 'enter':
+        case 'retiled':
+        case 'charted':
+        case 'damaged':
+        case 'laid':
+        case 'gained':
+        case 'population-lost':
           return undefined;
       }
     },

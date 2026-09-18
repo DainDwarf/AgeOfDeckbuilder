@@ -6,7 +6,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ---
 
-- **An answer's landing resolves as stages** — an answer's and a capstone's landing resolve as one stage per change they make, each carrying the tile it landed on where it landed on one, so a take resolves as `answer` then the landing's stages and the capstone's turn as `capstone` then its landing's; `enter` is the one stage for a unit entering, `charted` the one way a landing charts a tile, and `carriedOver`, `camp-enter`, `reinforce` and the `events` stage are gone. Doc-impact: `docs/CHRONICLE.md`. [board/answer-landing-stages.md](board/answer-landing-stages.md)
 - **The fall is taken too late** — the fall by population is taken after every stage is computed, so `grow` still runs on a city of nought population and a silent guard in `src/rules/city.ts` is all that keeps it from growing one back and undoing the fall; the fall may belong before the stages after it are computed.
 - **Victory on the act** — check the win condition on player actions, so that building the shelter finishes right away instead of at the end of turn.
 - **Make room can deliver Fight** — where no tile takes a camp, `encamped` resolves the answer as a full raid instead, and it widens the content's distance band ring by ring out to the map's edge, neither of which any design page says; `besieged` entering a warrior on every camp it places is linked to it and settles on the same line.

@@ -172,32 +172,6 @@ export function chartedAt(catalogue: Catalogue, chronicle: Chronicle, at: TileCo
 }
 
 /**
- * The snapshots a stage leaves: the ones the stage before it left, and over them every snapshot the
- * stage charted itself, which wins. Every stage a command resolves as is built off the chronicle the
- * command started on, and nothing writes snapshots but this file, so an entry that is not the very
- * object the chronicle the stage was built off holds for that tile is one the stage charted, and a
- * stage that charted nothing carries that chronicle's snapshots object for object.
- */
-export function carriedOver(
-  left: Snapshot[],
-  charting: { readonly own: Snapshot[]; readonly builtOff: Snapshot[] },
-): Snapshot[] {
-  const { own, builtOff } = charting;
-  if (own === builtOff) return left;
-  const base = new Map(builtOff.map((snapshot) => [tileKey(snapshot), snapshot]));
-  const kept = new Map(left.map((snapshot) => [tileKey(snapshot), snapshot]));
-  let carrying = false;
-
-  for (const snapshot of own) {
-    if (base.get(tileKey(snapshot)) === snapshot) continue;
-    kept.set(tileKey(snapshot), snapshot);
-    carrying = true;
-  }
-
-  return carrying ? [...kept.values()] : left;
-}
-
-/**
  * Each snapshot keeps the very tile object it held: `records` compares tiles by identity, and a
  * rebuilt tile would be charted anew on every tile in sight.
  */

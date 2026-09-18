@@ -311,7 +311,7 @@ function rolling(odds: number): Catalogue {
 /** Every camp the end of turn stages a warrior entering on, as the tile each stood on. */
 function entriesOf(catalogue: Catalogue, chronicle: Chronicle): string[] {
   return apply(catalogue, chronicle, { type: 'end-turn' }).flatMap((stage) =>
-    stage.name === 'camp-enter' ? [tileKey(stage.tile)] : [],
+    stage.name === 'enter' ? [tileKey(stage.tile)] : [],
   );
 }
 
@@ -339,7 +339,7 @@ test('at odds of one every free camp enters a warrior once the enemies have acte
 
   const staged = apply(rolling(1), city, { type: 'end-turn' }).map((stage) => stage.name);
 
-  expect(staged).toEqual(['income', 'attack', ...free.map(() => 'camp-enter'), 'camp-capture']);
+  expect(staged).toEqual(['income', 'attack', ...free.map(() => 'enter'), 'camp-capture']);
   expect(entriesOf(rolling(1), city)).toEqual(free);
 });
 
@@ -476,7 +476,7 @@ test('two camps captured the turn before an event is due deal two deals of rewar
   expect(second.deals).toEqual([{ of: 'event', event: 'PH_Hardship' }]);
   expect(second.discardPile).toEqual(['PH_Spoils', 'PH_Cache']);
   expect(second.hand).toEqual([]);
-  expect(stagedBy(second, { type: 'take', at: 0 })).toEqual(['events', 'draw']);
+  expect(stagedBy(second, { type: 'take', at: 0 })).toEqual(['answer', 'enter', 'draw']);
   expect(outcome(apply(CATALOGUE, second, { type: 'take', at: 0 })).deals).toEqual([]);
 });
 

@@ -9,12 +9,12 @@ import {
   launched,
   outcome,
   refusalOf,
-  type Stage,
   type UnitCommand,
 } from '../rules/chronicle';
 import { cityCommand, type ReassignCommand, tileCost, tileRefusal } from '../rules/city';
 import { tileAt, tileKey } from '../rules/map';
 import { RESOURCES, type Resource } from '../rules/resources';
+import type { Stage } from '../rules/stages';
 import { type Chronicle, type Cost, playable } from '../rules/state';
 import { unitOf } from '../rules/units';
 import { createBand } from './band';
@@ -165,9 +165,9 @@ export class ChronicleScene extends Phaser.Scene {
      * — commits nothing: the objects it was playing on are gone, and the chronicle it would commit
      * is not the one on the chronicle screen.
      *
-     * A play-out ends on the capstone's landing: its tail commits the landing's chronicle and raises
-     * the capstone's window over it, and the stages after the landing play out once that window
-     * closes.
+     * A play-out ends on the `capstone` stage: its tail commits that stage's chronicle and raises the
+     * capstone's window over it, and the stages after it, the landing's among them, play out once
+     * that window closes.
      */
     const playOut = (command: Command): Promise<void> =>
       played(apply(this.choices.catalogue, this.current, command));

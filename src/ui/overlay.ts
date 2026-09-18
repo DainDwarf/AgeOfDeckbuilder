@@ -1,8 +1,8 @@
 import Phaser from 'phaser';
 import { CARD_KINDS } from '../rules/cards';
 import { type Catalogue, cardOf } from '../rules/catalogue';
-import type { Stage } from '../rules/chronicle';
 import { answerRefusal, offered } from '../rules/schedule';
+import type { Stage } from '../rules/stages';
 import {
   type CardId,
   type Chronicle,

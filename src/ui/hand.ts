@@ -1,7 +1,8 @@
 import Phaser from 'phaser';
 import { aimOf } from '../rules/cards';
 import { type AimedCard, type Catalogue, cardOf } from '../rules/catalogue';
-import { costOf, refusalOf, type Stage } from '../rules/chronicle';
+import { costOf, refusalOf } from '../rules/chronicle';
+import type { Stage } from '../rules/stages';
 import { type CardId, type Chronicle, playable, type Refusal } from '../rules/state';
 import { createAimLine } from './aim-line';
 import {
@@ -460,17 +461,22 @@ export function createHand(
         case 'capture':
         case 'victory':
         case 'turn':
-        case 'reinforce':
         case 'capstone':
         case 'deal':
         case 'no-deal':
-        case 'events':
+        case 'answer':
         case 'reward':
         case 'shuffle':
         case 'attack':
         case 'move':
-        case 'camp-enter':
         case 'camp-capture':
+        case 'enter':
+        case 'retiled':
+        case 'charted':
+        case 'damaged':
+        case 'laid':
+        case 'gained':
+        case 'population-lost':
           return undefined;
       }
     },

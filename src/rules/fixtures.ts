@@ -68,9 +68,12 @@ import {
   raided,
   reinforced,
   spanEnded,
+  terraformedOn,
+  tileCharted,
   unitDamaged,
 } from './schedule';
-import { charted, chartedAt } from './sight';
+import { charted } from './sight';
+import { followed, unchanged } from './stages';
 import { type CardId, type Chronicle, type Deal, holds, type Timeline } from './state';
 import type { Faction, Unit, UnitStats } from './units';
 
@@ -140,12 +143,12 @@ const EVENTS: Catalogue['events'] = {
       PH_Explosion: {
         cost: { production: EXPLOSION },
         reads: () => ({}),
-        lands: (_catalogue, chronicle) => chronicle,
+        lands: (_catalogue, chronicle) => unchanged(chronicle),
       },
       PH_Levy: {
         cost: (_catalogue, chronicle) => ({ production: chronicle.population }),
         reads: () => ({}),
-        lands: (_catalogue, chronicle) => chronicle,
+        lands: (_catalogue, chronicle) => unchanged(chronicle),
       },
     },
   },
@@ -164,7 +167,7 @@ const EVENTS: Catalogue['events'] = {
       PH_Quake: {
         cost: {},
         reads: () => ({}),
-        lands: (catalogue, chronicle) => terraformed(catalogue, chronicle, UPHEAVAL, 'forest'),
+        lands: (catalogue, chronicle) => terraformedOn(catalogue, chronicle, UPHEAVAL, 'forest'),
       },
     },
   },
@@ -175,7 +178,11 @@ const EVENTS: Catalogue['events'] = {
         reads: () => ({}),
         lands: (_catalogue, chronicle) => populationTaken(chronicle),
       },
-      PH_Stay: { cost: {}, reads: () => ({}), lands: (_catalogue, chronicle) => chronicle },
+      PH_Stay: {
+        cost: {},
+        reads: () => ({}),
+        lands: (_catalogue, chronicle) => unchanged(chronicle),
+      },
     },
   },
   PH_Rivals: {
@@ -185,7 +192,11 @@ const EVENTS: Catalogue['events'] = {
         reads: () => ({ warriors: ENCAMPED }),
         lands: (catalogue, chronicle) => encamped(catalogue, chronicle, [3, 4], 3, ENCAMPED),
       },
-      PH_Truce: { cost: {}, reads: () => ({}), lands: (_catalogue, chronicle) => chronicle },
+      PH_Truce: {
+        cost: {},
+        reads: () => ({}),
+        lands: (_catalogue, chronicle) => unchanged(chronicle),
+      },
     },
   },
   PH_Wildfire: {
@@ -196,7 +207,11 @@ const EVENTS: Catalogue['events'] = {
         reads: (_catalogue, chronicle) => fireRead(chronicle, FIRE),
         lands: (catalogue, chronicle) => burned(catalogue, chronicle, FIRE),
       },
-      PH_Firebreak: { cost: {}, reads: () => ({}), lands: (_catalogue, chronicle) => chronicle },
+      PH_Firebreak: {
+        cost: {},
+        reads: () => ({}),
+        lands: (_catalogue, chronicle) => unchanged(chronicle),
+      },
     },
   },
   PH_Herd: {
@@ -207,19 +222,30 @@ const EVENTS: Catalogue['events'] = {
         reads: () => ({}),
         lands: (catalogue, chronicle) => {
           const dealt = featureDealt(catalogue, chronicle, 'PH_Fertile', HERD);
-          return dealt.at === undefined
-            ? dealt.chronicle
-            : chartedAt(catalogue, dealt.chronicle, dealt.at);
+          const { at } = dealt;
+          return at === undefined ? dealt : followed(dealt, (left) => tileCharted(left, at));
         },
       },
-      PH_Ignore: { cost: {}, reads: () => ({}), lands: (_catalogue, chronicle) => chronicle },
+      PH_Ignore: {
+        cost: {},
+        reads: () => ({}),
+        lands: (_catalogue, chronicle) => unchanged(chronicle),
+      },
     },
   },
   PH_Spoilage: {
     needs: (_catalogue, chronicle) => everyCard(chronicle).includes('PH_Hunger'),
     answers: {
-      PH_Ration: { cost: {}, reads: () => ({}), lands: (_catalogue, chronicle) => chronicle },
-      PH_Waste: { cost: {}, reads: () => ({}), lands: (_catalogue, chronicle) => chronicle },
+      PH_Ration: {
+        cost: {},
+        reads: () => ({}),
+        lands: (_catalogue, chronicle) => unchanged(chronicle),
+      },
+      PH_Waste: {
+        cost: {},
+        reads: () => ({}),
+        lands: (_catalogue, chronicle) => unchanged(chronicle),
+      },
     },
   },
 };
@@ -371,7 +397,9 @@ export const CATALOGUE: Catalogue = catalogued({
       cost: { production: 3 },
       strikes: (_catalogue, chronicle) => {
         const shortened = shocked(chronicle, 'food', DROUGHT);
-        return chronicle.resources.food < DROUGHT ? populationTaken(shortened) : shortened;
+        return chronicle.resources.food < DROUGHT
+          ? populationTaken(shortened).chronicle
+          : shortened;
       },
     },
   },
@@ -395,13 +423,12 @@ export const CATALOGUE: Catalogue = catalogued({
   events: EVENTS,
   capstones: {
     PH_Siege: {
-      lands: (catalogue, chronicle) =>
-        besieged(catalogue, chronicle, SIEGE_CAMPS, [3, 5], 3).chronicle,
+      lands: (catalogue, chronicle) => besieged(catalogue, chronicle, SIEGE_CAMPS, [3, 5], 3),
       continues: reinforced,
       passes: (_catalogue, chronicle) => spanEnded(chronicle, 6),
     },
     PH_Tillage: {
-      lands: (_catalogue, chronicle) => chronicle,
+      lands: (_catalogue, chronicle) => unchanged(chronicle),
       passes: (_catalogue, chronicle) =>
         chronicle.tiles.some((tile) => tile.building === TILLAGE && holds(chronicle, tile)),
     },

@@ -1,7 +1,7 @@
 import { expect, test } from 'vitest';
 import { chartedTile } from './cards';
 import { type Catalogue, catalogued, eventOf } from './catalogue';
-import { apply, type Command, launched, outcome, type Stage } from './chronicle';
+import { apply, type Command, launched, outcome } from './chronicle';
 import { growthThreshold } from './city';
 import {
   AMBUSH,
@@ -55,6 +55,7 @@ import {
 import { nextRng, seedRng } from './rng';
 import { offered } from './schedule';
 import { chartedAt, inSight } from './sight';
+import { type Stage, unchanged } from './stages';
 import { type Chronicle, idle, type Snapshot, type Timeline } from './state';
 import { unitAt } from './units';
 
@@ -361,7 +362,7 @@ test('the take lands the answer at its place in the order declared and no other,
   const raided = outcome(apply(CATALOGUE, standing, { type: 'take', at: 0 }));
   const starved = outcome(apply(CATALOGUE, standing, { type: 'take', at: 1 }));
 
-  expect(stagedBy(standing, { type: 'take', at: 0 })).toEqual(['events', 'draw']);
+  expect(stagedBy(standing, { type: 'take', at: 0 })).toEqual(['answer', 'enter', 'draw']);
   expect(enemiesOf(raided)).toHaveLength(1);
   expect(raided.hand).toEqual(fullDraw());
   expect(enemiesOf(starved)).toEqual([]);
@@ -446,8 +447,14 @@ test('a chronicle waiting on a deal takes no command but the take', () => {
     expect(stagedBy(waiting, command)).toEqual(['refused']);
     expect(outcome(apply(CATALOGUE, waiting, command))).toBe(waiting);
   }
-  expect(stagedBy(waiting, { type: 'take', at: 0 })).toEqual(['events']);
+  expect(stagedBy(waiting, { type: 'take', at: 0 })).toEqual(['answer', 'enter']);
 });
+
+/** The chronicle an answer's landing leaves: the last stage's before the hand is drawn. */
+function landedOf(stages: readonly Stage[]): Chronicle {
+  const drawing = stages.findIndex((stage) => stage.name === 'draw');
+  return outcome(drawing < 0 ? stages : stages.slice(0, drawing));
+}
 
 /** The timeline dealing the fixture's upheaval at the end of a `cityOf` city's turn. */
 const UPHEAVAL_DUE: Carrying = { timeline: dueOn(2, 'PH_Upheaval') };
@@ -465,7 +472,7 @@ test('an answer killing the population working a tile leaves the population one 
   const { dealt, stages } = answerTaken(cityOf(['urban', 'hills'], UPHEAVAL_DUE), 'PH_Plague');
   const after = outcome(stages);
 
-  expect(stages.map((stage) => stage.name)).toEqual(['events']);
+  expect(stages.map((stage) => stage.name)).toEqual(['answer', 'population-lost']);
   expect(after.population).toBe(dealt.population - 1);
   expect(after.assigned).toEqual([CITY]);
   expect(after.ending).toBeUndefined();
@@ -488,7 +495,7 @@ test('an answer killing the city’s last population ends the chronicle in defea
   });
   const { stages } = answerTaken(city, 'PH_Plague');
 
-  expect(stages.map((stage) => stage.name)).toEqual(['events']);
+  expect(stages.map((stage) => stage.name)).toEqual(['answer', 'population-lost']);
   expect(outcome(stages).population).toBe(0);
   expect(outcome(stages).ending).toEqual({ outcome: 'defeat', cause: 'population', turn: 2 });
 });
@@ -512,7 +519,7 @@ test('an answer damaging the unit standing on a tile takes its health, whatever 
 
   expect(warrior.units.map((unit) => unit.stats.health)).toEqual([2]);
   expect(enemy.units.map((unit) => unit.stats.health)).toEqual([1]);
-  expect(stages.map((stage) => stage.name)).toEqual(['events']);
+  expect(stages.map((stage) => stage.name)).toEqual(['answer', 'damaged']);
   expect(outcome(stages).units).toEqual([]);
 });
 
@@ -557,7 +564,7 @@ test('an answer taking the city’s last population falls on the take, and nothi
   const after = outcome(stages);
 
   expect(dealt.population).toBe(1);
-  expect(stages.map((stage) => stage.name)).toEqual(['events']);
+  expect(stages.map((stage) => stage.name)).toEqual(['answer', 'population-lost']);
   expect(after.population).toBe(0);
   expect(after.hand).toEqual([]);
   expect(after.ending).toEqual({ outcome: 'defeat', cause: 'population', turn: 2 });
@@ -606,10 +613,7 @@ function aflame(
   const dealt = outcome(apply(catalogue, city, { type: 'end-turn' }));
   if (dealt.deals.length === 0) throw new Error('the wildfire is not dealt');
   const read = eventOf(catalogue, 'PH_Wildfire').answers.PH_Burn.reads(catalogue, dealt);
-  const stages = apply(catalogue, dealt, { type: 'take', at: 0 });
-  const events = stages.find((stage) => stage.name === 'events');
-  if (events === undefined) throw new Error('the take lands nothing');
-  return { dealt, read, landed: events.chronicle };
+  return { dealt, read, landed: landedOf(apply(catalogue, dealt, { type: 'take', at: 0 })) };
 }
 
 function terrainOf(chronicle: Chronicle, at: TileCoords): string | undefined {
@@ -798,9 +802,7 @@ function followed(city: Chronicle): {
   const dealt = outcome(apply(CATALOGUE, city, { type: 'end-turn' }));
   if (dealt.deals.length === 0) throw new Error('the herd is not dealt');
   const stages = apply(CATALOGUE, dealt, { type: 'take', at: 0 });
-  const events = stages.find((stage) => stage.name === 'events');
-  if (events === undefined) throw new Error('the take lands nothing');
-  return { dealt, landed: events.chronicle, taken: outcome(stages) };
+  return { dealt, landed: landedOf(stages), taken: outcome(stages) };
 }
 
 function featureOf(chronicle: Chronicle, at: TileCoords): FeatureId | undefined {
@@ -878,6 +880,53 @@ test('a tile an answer charted stays charted as it was then, and in fog, through
     fogged(later);
   }
   expect(later.turn).toBe(taken.turn + 3);
+});
+
+test('a landing resolves as one stage per change it makes, in the order it makes them, each carrying the tile it landed on', () => {
+  const burning = { q: 1, r: 0 };
+  const city = cityOf(['urban', 'forest'], {
+    timeline: dueOn(2, 'PH_Wildfire'),
+    drawPile: fullDraw(),
+    tiles: madeOf(field(5), 'forest', [burning]),
+    units: [standing('player', burning, { health: FIRE.damage + 1 })],
+  });
+  const dealt = outcome(apply(CATALOGUE, city, { type: 'end-turn' }));
+  const [answer, lost, retiled, damaged, drawn] = apply(CATALOGUE, dealt, { type: 'take', at: 0 });
+  const healthOn = (stage: Stage): number | undefined =>
+    unitAt(stage.chronicle.units, burning)?.stats.health;
+
+  expect([answer, lost, retiled, damaged, drawn].map((stage) => stage.name)).toEqual([
+    'answer',
+    'population-lost',
+    'retiled',
+    'damaged',
+    'draw',
+  ]);
+  expect(retiled).toMatchObject({ tile: burning });
+  expect(damaged).toMatchObject({ tile: burning });
+  expect(lost.chronicle.population).toBe(dealt.population - 1);
+  expect(terrainOf(lost.chronicle, burning)).toBe('forest');
+  expect(terrainOf(retiled.chronicle, burning)).toBe('plain');
+  expect(healthOn(retiled)).toBe(FIRE.damage + 1);
+  expect(healthOn(damaged)).toBe(1);
+});
+
+test('a tile a landing charts is charted as the stage charting it stands, and stays so through every stage after', () => {
+  const at = { q: HERD, r: 0 };
+  const city = herded([at], { units: [standing('enemy', at, {}, 0, 0)] });
+  const dealt = outcome(apply(CATALOGUE, city, { type: 'end-turn' }));
+  const stages = apply(CATALOGUE, dealt, { type: 'take', at: 0 });
+  const [, retiled, charting, ...after] = stages;
+
+  expect(stages.map((stage) => stage.name)).toEqual(['answer', 'retiled', 'charted', 'draw']);
+  expect(retiled).toMatchObject({ tile: at });
+  expect(charting).toMatchObject({ tile: at });
+  expect(snapshotOf(retiled.chronicle, at)).toBeUndefined();
+  for (const stage of [charting, ...after]) {
+    expect(snapshotOf(stage.chronicle, at)?.tile.feature).toBe('PH_Fertile');
+    expect(snapshotOf(stage.chronicle, at)?.unit).toEqual({ type: 'PH_Warrior', faction: 'enemy' });
+    expect(inSight(CATALOGUE, stage.chronicle).has(tileKey(at))).toBe(false);
+  }
 });
 
 test('an event needing a tile near the city to deal a feature onto is dealt with one, and not without one', () => {
@@ -987,7 +1036,13 @@ test('the capstone’s turn lands the capstone straight and draws the hand, deal
     expect(landed.turn).toBe(CAPSTONE);
     expect(landed.hand).toEqual(fullDraw());
     expect(campsOf(landed)).toHaveLength(5);
-    expect(staged.slice(staged.indexOf('turn'))).toEqual(['turn', 'capstone', 'draw']);
+    expect(staged.slice(staged.indexOf('turn'))).toEqual([
+      'turn',
+      'capstone',
+      ...Array<string>(5).fill('retiled'),
+      ...Array<string>(5).fill('enter'),
+      'draw',
+    ]);
   }
 });
 
@@ -1005,7 +1060,9 @@ test('the capstone’s turn drops a deal due past it, and the next deal is due t
 test('the capstone’s landing is a stage of its own on its turn, even where it lands nothing', () => {
   const quiet: Catalogue = {
     ...CATALOGUE,
-    capstones: { PH_Siege: { lands: (_c, chronicle) => chronicle, passes: () => false } },
+    capstones: {
+      PH_Siege: { lands: (_c, chronicle) => unchanged(chronicle), passes: () => false },
+    },
   };
   const awaited = awaitingCapstone({ drawPile: fullDraw() });
   const staged = apply(quiet, awaited, { type: 'end-turn' }).map((stage) => stage.name);
@@ -1030,7 +1087,14 @@ test('a camp captured the turn before the capstone’s deals its rewards, and th
 
   expect(dealt.deals).toEqual([{ of: 'camp', rewards: CATALOGUE.camp.rewards }]);
   expect(dealt.turn).toBe(CAPSTONE - 1);
-  expect(stagedBy(dealt, { type: 'take', at: 0 })).toEqual(['reward', 'turn', 'capstone', 'draw']);
+  expect(stagedBy(dealt, { type: 'take', at: 0 })).toEqual([
+    'reward',
+    'turn',
+    'capstone',
+    ...campsOf(taken).map(() => 'retiled'),
+    ...campsOf(taken).map(() => 'enter'),
+    'draw',
+  ]);
   expect(taken.turn).toBe(CAPSTONE);
   expect(taken.deals).toEqual([]);
   expect(taken.hand).toEqual(fullDraw());
@@ -1146,7 +1210,7 @@ test('each of the five turns after the landing enters a warrior on the camp stan
   expect(enemiesOf(stoodOut())).toHaveLength(REINFORCED);
 });
 
-test('the reinforcement is a stage of its own, raised after the tick and ahead of the deal', () => {
+test('the warrior the reinforcement enters is a stage of its own, raised after the tick and ahead of the deal', () => {
   const due = CAPSTONE + 3;
   const landed = moated({ units: [unkillable(LURE)] });
   let reinforcing: Chronicle = {
@@ -1156,12 +1220,12 @@ test('the reinforcement is a stage of its own, raised after the tick and ahead o
 
   while (reinforcing.turn < due - 1) {
     const staged = stagedBy(reinforcing, { type: 'end-turn' });
-    expect(staged.slice(staged.indexOf('turn'))).toEqual(['turn', 'reinforce']);
+    expect(staged.slice(staged.indexOf('turn'))).toEqual(['turn', 'enter']);
     reinforcing = endedTurn(reinforcing, 'PH_Famine');
   }
   const dealt = stagedBy(reinforcing, { type: 'end-turn' });
 
-  expect(dealt.slice(dealt.indexOf('turn'))).toEqual(['turn', 'reinforce', 'deal']);
+  expect(dealt.slice(dealt.indexOf('turn'))).toEqual(['turn', 'enter', 'deal']);
 });
 
 test('the siege’s own camps are reinforced as the camps standing are', () => {

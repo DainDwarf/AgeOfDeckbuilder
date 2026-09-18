@@ -23,6 +23,7 @@ import { arrived, bordered } from '../rules/city';
 import { MOVE_POINT } from '../rules/map';
 import { buildingKind, improvementKind } from '../rules/map-kinds';
 import { besieged, laid, raided, reinforced, spanEnded } from '../rules/schedule';
+import { type Landed, unchanged } from '../rules/stages';
 import type { CardId, Chronicle } from '../rules/state';
 import { ADVANCE } from './scripts';
 
@@ -222,7 +223,7 @@ export const STAND_IN: Catalogue = catalogued({
           // More than a city holds by the toll's first turn: the deal spec presses it refused.
           cost: { money: 99 },
           reads: () => ({}),
-          lands: (_catalogue, chronicle) => chronicle,
+          lands: (_catalogue, chronicle) => unchanged(chronicle),
         },
         PH_Defiance: {
           cost: {},
@@ -384,8 +385,8 @@ function copies(count: number): readonly CardId[] {
   return DECK_CARDS.flatMap((id) => Array<CardId>(count).fill(id));
 }
 
-function siege(catalogue: Catalogue, chronicle: Chronicle): Chronicle {
-  return besieged(catalogue, chronicle, SIEGE_CAMPS, [3, 5], 3).chronicle;
+function siege(catalogue: Catalogue, chronicle: Chronicle): Landed {
+  return besieged(catalogue, chronicle, SIEGE_CAMPS, [3, 5], 3);
 }
 
 /** How many warriors a raid enters on this turn: one, and one more for every ten turns. */

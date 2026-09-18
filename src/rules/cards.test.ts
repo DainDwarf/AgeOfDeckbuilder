@@ -59,6 +59,7 @@ import {
 } from './map';
 import { terrainKind } from './map-kinds';
 import { RESOURCES, type Resources } from './resources';
+import { terraformedOn } from './schedule';
 import { type CardId, type Chronicle, idle, playable, type TileBlock } from './state';
 import { standsOn } from './units';
 
@@ -899,7 +900,7 @@ function reshaping(to: Terrain): Catalogue {
           ...PH_Upheaval.answers,
           PH_Quake: {
             ...PH_Upheaval.answers.PH_Quake,
-            lands: (catalogue, chronicle) => terraformed(catalogue, chronicle, CITY, to),
+            lands: (catalogue, chronicle) => terraformedOn(catalogue, chronicle, CITY, to),
           },
         },
       },

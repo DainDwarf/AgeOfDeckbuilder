@@ -23,7 +23,8 @@ import {
   rewarded,
   timelineOf,
 } from './schedule';
-import { carriedOver, charted, unitsGone } from './sight';
+import { charted, chartedAt, unitsGone } from './sight';
+import type { PlainStage, Stage } from './stages';
 import {
   type Block,
   type CardId,
@@ -94,56 +95,6 @@ type PlayCommand = Extract<Command, { readonly type: 'play' }>;
 
 /** A full hand. */
 const HAND_SIZE = 5;
-
-/**
- * A step that carries nothing but the chronicle it left. `played` is the card gone from the hand
- * with its cost paid, `refused` is the command the rules turned down, `assign` is one population put
- * on a tile, taken off one, or taken off one and put on another, `claim` is a tile bought with
- * culture and taken inside the border, `grow` is the food stock spent on one more population,
- * `turn` is the tick, where every unit's move points and action are refreshed, `reinforce` is the
- * capstone's second script on a turn after its landing, `capstone` is the capstone landing on its
- * turn, `deal` is what the timeline offers on a due turn, `no-deal` is a due turn dealing nothing
- * and the next deal rolled from it, `events` is the answer taken landing,
- * `reward` is the reward taken laid in the discard pile, `strike` is every hazard the hand still
- * holds striking, `capture` is the city falling to an enemy that stood on its tile, and `victory` is
- * the capstone passed at the end of a turn.
- */
-export type PlainStage =
-  | 'played'
-  | 'refused'
-  | 'assign'
-  | 'claim'
-  | 'strike'
-  | 'discard'
-  | 'income'
-  | 'grow'
-  | 'capture'
-  | 'victory'
-  | 'turn'
-  | 'reinforce'
-  | 'capstone'
-  | 'deal'
-  | 'no-deal'
-  | 'events'
-  | 'reward'
-  | 'draw'
-  | 'shuffle';
-
-/**
- * The shape every command resolves as: one step, and the chronicle it leaves behind. An `attack` is
- * one unit's attack, the player's by hand or an enemy's in the enemy phase, a `move` is one unit
- * crossing, the player's or the enemy phase's alike, a `camp-enter` is one warrior a camp rolled
- * entering on it, and a `camp-capture` is one camp taken by the unit standing on it; each names the
- * tiles it happened between or on, because what the chronicle after the step cannot say is carried
- * on the step itself.
- */
-export type Stage = { readonly chronicle: Chronicle } & (
-  | { readonly name: PlainStage }
-  | { readonly name: 'attack'; readonly attacker: TileCoords; readonly target: TileCoords }
-  | { readonly name: 'move'; readonly from: TileCoords; readonly to: TileCoords }
-  | { readonly name: 'camp-enter'; readonly tile: TileCoords }
-  | { readonly name: 'camp-capture'; readonly tile: TileCoords }
-);
 
 /**
  * The opening, on the map and the timeline it is handed: turn 0, the city standing nowhere with no
@@ -245,11 +196,11 @@ function falling(chronicle: Chronicle): boolean {
 
 /**
  * Every stage with its own chronicle charted, each carrying on from the snapshots the stage before
- * it left and keeping whatever the stage charted itself. Every stage a command resolves as is built
- * off the chronicle the command started on, which is what tells the two apart, so the chronicle the
- * command stood on is handed to the carrying as the base. The units leave the snapshots here, on the
- * stage the turn ticks on, because the snapshots a stage's own chronicle carries are that base's,
- * stale by a turn. A command that charted nothing hands back the very stage it was given.
+ * it left: every stage a command resolves as is built off the chronicle the command started on, so
+ * the snapshots its own chronicle carries are that one's. A `charted` stage has its tile's snapshot
+ * taken here, as the stage's chronicle stands. The units leave the snapshots here, on the stage the
+ * turn ticks on, because the snapshots a stage's own chronicle carries are stale by a turn. A command
+ * that charted nothing hands back the very stage it was given.
  */
 function charting(catalogue: Catalogue, started: Chronicle, stages: readonly Stage[]): Stage[] {
   let standing = started.snapshots;
@@ -257,16 +208,51 @@ function charting(catalogue: Catalogue, started: Chronicle, stages: readonly Sta
   return stages.map((stage) => {
     if (stage.chronicle.turn !== turn) standing = unitsGone(standing);
     turn = stage.chronicle.turn;
-    const snapshots = carriedOver(standing, {
-      own: stage.chronicle.snapshots,
-      builtOff: started.snapshots,
-    });
     const carried =
-      stage.chronicle.snapshots === snapshots ? stage.chronicle : { ...stage.chronicle, snapshots };
-    const seen = charted(catalogue, carried);
+      stage.chronicle.snapshots === standing
+        ? stage.chronicle
+        : { ...stage.chronicle, snapshots: standing };
+    const at = chartedOn(stage);
+    const seen = charted(catalogue, at === undefined ? carried : chartedAt(catalogue, carried, at));
     standing = seen.snapshots;
     return seen === stage.chronicle ? stage : { ...stage, chronicle: seen };
   });
+}
+
+/** The tile a stage charts whatever sees it, and nothing for every stage but `charted`. */
+function chartedOn(stage: Stage): TileCoords | undefined {
+  switch (stage.name) {
+    case 'charted':
+      return stage.tile;
+    case 'enter':
+    case 'retiled':
+    case 'damaged':
+    case 'laid':
+    case 'gained':
+    case 'population-lost':
+    case 'played':
+    case 'refused':
+    case 'assign':
+    case 'claim':
+    case 'strike':
+    case 'discard':
+    case 'income':
+    case 'grow':
+    case 'capture':
+    case 'victory':
+    case 'turn':
+    case 'capstone':
+    case 'deal':
+    case 'no-deal':
+    case 'answer':
+    case 'reward':
+    case 'draw':
+    case 'shuffle':
+    case 'attack':
+    case 'move':
+    case 'camp-capture':
+      return undefined;
+  }
 }
 
 /** What each command resolves as, before the fall the city may have come to on any of them. */
@@ -356,8 +342,8 @@ function endOfTurn(catalogue: Catalogue, chronicle: Chronicle): Stage[] {
  * that changed nothing absent: the victory, ending the list, when the capstone is passed; else the
  * tick, the capstone's second script, the events phase, and the draw — or, while the events phase
  * leaves a deal standing, nothing after it: the hand waits on the take. The turn always ticks where
- * the victory does not end it, and the capstone's landing is staged on its turn even where it
- * changed nothing.
+ * the victory does not end it, and the capstone's turn is staged even where its landing changed
+ * nothing.
  */
 function turnOpened(catalogue: Catalogue, chronicle: Chronicle): Stage[] {
   if (passed(catalogue, chronicle)) return [{ name: 'victory', chronicle: victory(chronicle) }];
@@ -368,6 +354,12 @@ function turnOpened(catalogue: Catalogue, chronicle: Chronicle): Stage[] {
     standing = next;
     stages.push({ name, chronicle: next });
   };
+  const raised = (sequence: readonly Stage[]): void => {
+    for (const stage of sequence) {
+      standing = stage.chronicle;
+      stages.push(stage);
+    }
+  };
 
   staged('turn', {
     ...standing,
@@ -375,12 +367,11 @@ function turnOpened(catalogue: Catalogue, chronicle: Chronicle): Stage[] {
     hand: standing.turn === 0 ? [] : standing.hand,
     units: standing.units.map((unit) => refreshedAction(refreshedMovePoints(unit))),
   });
-  staged('reinforce', continued(catalogue, standing));
+  raised(continued(catalogue, standing).stages);
   const phase = events(catalogue, standing);
   switch (phase.phase) {
     case 'capstone':
-      standing = phase.chronicle;
-      stages.push({ name: 'capstone', chronicle: standing });
+      raised(phase.stages);
       break;
     case 'deal':
       staged('deal', phase.chronicle);
@@ -395,8 +386,8 @@ function turnOpened(catalogue: Catalogue, chronicle: Chronicle): Stage[] {
 
 /**
  * One entry of the deal standing taken, by its place in the order dealt, and the deal popped: an
- * answer pays its cost and lands in the one `events` stage, a reward is laid in the discard pile in
- * the one `reward` stage and the rewards beside it are gone. While a deal still stands nothing more
+ * answer pays its cost in the one `answer` stage and lands in its landing's stages after it, a
+ * reward is laid in the discard pile in the one `reward` stage and the rewards beside it are gone. While a deal still stands nothing more
  * resolves; once none does, the last reward taken resumes the end of turn where the captures left
  * it, and the last answer taken draws the hand. A take made while no deal stands, one at a place the
  * deal does not offer, and one of an answer the city cannot pay for are one `refused` stage on the
@@ -414,8 +405,8 @@ function take(catalogue: Catalogue, chronicle: Chronicle, at: number): Stage[] {
       if (!playable(answerRefusal(catalogue, chronicle, deal.event, id))) {
         return [{ name: 'refused', chronicle }];
       }
-      const landed = answered(catalogue, popped, answerOf(catalogue, deal.event, id));
-      return [{ name: 'events', chronicle: landed }, ...resumed(landed, drawn)];
+      const stages = answered(catalogue, popped, answerOf(catalogue, deal.event, id));
+      return [...stages, ...resumed(outcome(stages), drawn)];
     }
     case 'camp': {
       const landed = rewarded(popped, id);
@@ -763,8 +754,9 @@ function campsRolled(
     const step = nextRng(standing.rng);
     standing = { ...standing, rng: step.rng };
     if (step.value >= catalogue.camp.odds) continue;
-    standing = campUnitEntered(catalogue, standing, { q, r });
-    stages.push({ name: 'camp-enter', tile: { q, r }, chronicle: standing });
+    const entering = campUnitEntered(catalogue, standing, { q, r });
+    standing = entering.chronicle;
+    stages.push(entering);
   }
   return { stages, chronicle: standing };
 }

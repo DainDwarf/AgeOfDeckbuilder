@@ -2,20 +2,26 @@ import { type Catalogue, entered, unitKind } from './catalogue';
 import { CENTRE, distance, groundRunsTo, type Tile, type TileCoords, tileKey } from './map';
 import { refuse } from './map-kinds';
 import { nextRng } from './rng';
+import { followed, type Landed, type LandingStage, landedAs, unchanged } from './stages';
 import type { Chronicle } from './state';
 import { standsOn, unitAt } from './units';
 
+/** The camp's unit entering on the tile: the one `enter` stage. */
 export function campUnitEntered(
   catalogue: Catalogue,
   chronicle: Chronicle,
   tile: TileCoords,
-): Chronicle {
-  return entered(catalogue, chronicle, {
-    type: catalogue.camp.unit,
-    faction: 'enemy',
+): LandingStage {
+  return {
+    name: 'enter',
     tile,
-    script: catalogue.camp.script,
-  });
+    chronicle: entered(catalogue, chronicle, {
+      type: catalogue.camp.unit,
+      faction: 'enemy',
+      tile,
+      script: catalogue.camp.script,
+    }),
+  };
 }
 
 function raidGround(catalogue: Catalogue, chronicle: Chronicle): Tile[] {
@@ -36,10 +42,11 @@ export function enteredAround(
   chronicle: Chronicle,
   entry: TileCoords,
   enemies: number,
-): Chronicle {
+): Landed {
   const ground = raidGround(catalogue, chronicle);
-  let standing = chronicle;
+  let landing = unchanged(chronicle);
   for (let enemy = 0; enemy < enemies; enemy++) {
+    const standing = landing.chronicle;
     const free = ground.filter((tile) => unitAt(standing.units, tile) === undefined);
     if (free.length === 0) break;
     const nearest = Math.min(...free.map((tile) => distance(tile, entry)));
@@ -47,16 +54,23 @@ export function enteredAround(
 
     const step = nextRng(standing.rng);
     const { q, r } = equal[Math.floor(step.value * equal.length)];
-    standing = campUnitEntered(catalogue, { ...standing, rng: step.rng }, { q, r });
+    landing = followed(landing, (left) =>
+      landedAs(campUnitEntered(catalogue, { ...left, rng: step.rng }, { q, r })),
+    );
   }
-  return standing;
+  return landing;
 }
 
+/**
+ * The tile a raid enters around, drawn from the generator: nothing drawn at all where no tile of the
+ * raid's ground is free for a warrior to enter on.
+ */
 export function raidEntry(
   catalogue: Catalogue,
   chronicle: Chronicle,
 ): { readonly entry: TileCoords; readonly chronicle: Chronicle } | undefined {
   const ground = raidGround(catalogue, chronicle);
+  if (ground.every((tile) => unitAt(chronicle.units, tile) !== undefined)) return undefined;
   const camps = chronicle.tiles.filter((tile) => tile.building === catalogue.camp.building);
   // The chronicle holds no radius: the disc's edge is read off its tiles, which the generator deals
   // around `CENTRE`.

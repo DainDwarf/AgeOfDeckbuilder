@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import type { Catalogue } from '../rules/catalogue';
-import { byHand, type Stage, type UnitCommand } from '../rules/chronicle';
+import { byHand, type UnitCommand } from '../rules/chronicle';
 import { cityDrag, claimable, type ReassignCommand } from '../rules/city';
 import {
   type BuildingTypeId,
@@ -21,6 +21,7 @@ import {
 } from '../rules/map';
 import { RESOURCES, type Resource } from '../rules/resources';
 import { inSight } from '../rules/sight';
+import type { Stage } from '../rules/stages';
 import { assignedTo, type Chronicle, type Cost, type Snapshot } from '../rules/state';
 import { type Faction, type Landing, type Unit, unitAt, unitOf } from '../rules/units';
 import { MAP_FRAME } from './band';
@@ -1339,15 +1340,20 @@ export function createMapView(
           return staged([stage.from, stage.to], stage.chronicle, () =>
             slide(stage.from, stage.to, stage.chronicle),
           );
-        case 'events':
-        case 'reinforce':
-        case 'capstone':
-        case 'camp-enter':
+        case 'enter':
           return staged(
             arrivals(stage.chronicle).map((unit) => unit.tile),
             stage.chronicle,
             () => arriving(stage.chronicle),
           );
+        case 'retiled':
+        case 'charted':
+        case 'damaged':
+        case 'laid':
+        case 'gained':
+        case 'population-lost':
+        case 'capstone':
+        case 'answer':
         case 'played':
         case 'refused':
         case 'assign':

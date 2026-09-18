@@ -30,8 +30,10 @@ import {
   laid,
   populationTaken,
   raided,
+  stockGained,
+  tileCharted,
 } from '../rules/schedule';
-import { chartedAt } from '../rules/sight';
+import { followed, unchanged } from '../rules/stages';
 import { ADVANCE } from './scripts';
 
 /** How many warriors a raid enters on this turn: one, and one more for every ten turns. */
@@ -141,7 +143,7 @@ export const NOMADIC: Catalogue = catalogued({
       strikes: (_catalogue, chronicle) => {
         const taken = 2 + Math.floor(chronicle.turn / 10);
         const shortened = shocked(chronicle, 'food', taken);
-        return chronicle.resources.food < taken ? populationTaken(shortened) : shortened;
+        return chronicle.resources.food < taken ? populationTaken(shortened).chronicle : shortened;
       },
     },
     stores: {
@@ -214,7 +216,7 @@ export const NOMADIC: Catalogue = catalogued({
         firebreak: {
           cost: { production: 3 },
           reads: () => ({}),
-          lands: (_catalogue, chronicle) => chronicle,
+          lands: (_catalogue, chronicle) => unchanged(chronicle),
         },
       },
     },
@@ -228,7 +230,7 @@ export const NOMADIC: Catalogue = catalogued({
         'keep-them': {
           cost: (_catalogue, chronicle) => ({ culture: chronicle.population }),
           reads: () => ({}),
-          lands: (_catalogue, chronicle) => chronicle,
+          lands: (_catalogue, chronicle) => unchanged(chronicle),
         },
       },
     },
@@ -239,16 +241,15 @@ export const NOMADIC: Catalogue = catalogued({
         'hunt-it': {
           cost: {},
           reads: () => ({ food: 4 }),
-          lands: (_catalogue, chronicle) => gained(chronicle, { food: 4 }),
+          lands: (_catalogue, chronicle) => stockGained(chronicle, { food: 4 }),
         },
         'follow-it': {
           cost: {},
           reads: () => ({}),
           lands: (catalogue, chronicle) => {
             const dealt = featureDealt(catalogue, chronicle, HERD.feature, HERD.fromCity);
-            return dealt.at === undefined
-              ? dealt.chronicle
-              : chartedAt(catalogue, dealt.chronicle, dealt.at);
+            const { at } = dealt;
+            return at === undefined ? dealt : followed(dealt, (left) => tileCharted(left, at));
           },
         },
       },
