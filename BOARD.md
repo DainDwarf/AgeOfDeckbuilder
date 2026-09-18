@@ -6,7 +6,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ---
 
-- **The stage tree** — the branch `stage-tree`: its design and its lines are on [BRANCH.md](BRANCH.md), the fall taken too late and the hazard's strike as stages among them; this line goes with the merge.
 - **Victory on the act** — check the win condition on player actions, so that building the shelter finishes right away instead of at the end of turn.
 - **Make room can deliver Fight** — where no tile takes a camp, `encamped` resolves the answer as a full raid instead, and it widens the content's distance band ring by ring out to the map's edge, neither of which any design page says; `besieged` entering a warrior on every camp it places is linked to it and settles on the same line.
 - **A feature's mark under an improvement's** — the map draws a feature's mark and an improvement's mark on the same spot of a tile, so Trapping on a game forest reads as one mark; fixed in this version, not left to the v0.0.6 visual rework.
