@@ -1,7 +1,7 @@
 import type Phaser from 'phaser';
 import { growthThreshold } from '../rules/city';
 import { RESOURCES, type Resource } from '../rules/resources';
-import type { Stage } from '../rules/stages';
+import { leaf, type Stage } from '../rules/stages';
 import { type Chronicle, idle } from '../rules/state';
 import { layOutBar, type Placed, type Zone } from './bar-layout';
 import { EASE, ended, stopMotion } from './card-motion';
@@ -179,6 +179,7 @@ export function createResourceBar(
   return {
     render,
     play(stage: Stage): Promise<void> | undefined {
+      if (!leaf(stage)) return undefined;
       return stage.kind === 'group' && (stage.name === 'income' || stage.name === 'grow')
         ? rise(stage.chronicle)
         : undefined;

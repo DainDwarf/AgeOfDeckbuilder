@@ -104,7 +104,11 @@ function cityOn(
  * the test names on top of its kind's, its move points full from them.
  */
 function watching(chronicle: Chronicle, tile: TileCoords, carried: Partial<UnitStats>): Chronicle {
-  const dealt = entered(CATALOGUE, chronicle, { type: 'PH_Warrior', tile, faction: 'player' });
+  const dealt = entered(CATALOGUE, chronicle, {
+    type: 'PH_Warrior',
+    tile,
+    faction: 'player',
+  }).chronicle;
   const last = dealt.units[dealt.units.length - 1];
   const stats = { ...last.stats, ...carried };
   return charted(CATALOGUE, {
@@ -122,7 +126,7 @@ function raiding(chronicle: Chronicle, tile: TileCoords): Chronicle {
       tile,
       faction: 'enemy',
       script: 'advance',
-    }),
+    }).chronicle,
   );
 }
 

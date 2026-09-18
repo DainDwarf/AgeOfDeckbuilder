@@ -1,28 +1,14 @@
-import { type Catalogue, entered, unitKind } from './catalogue';
+import { type Catalogue, type Entering, entered, unitKind } from './catalogue';
 import { CENTRE, distance, groundRunsTo, type Tile, type TileCoords, tileKey } from './map';
 import { refuse } from './map-kinds';
 import { nextRng } from './rng';
-import { type Change, followed, type Landed, landedAs, unchanged } from './stages';
+import { followed, type Landed, unchanged } from './stages';
 import type { Chronicle } from './state';
 import { standsOn, unitAt } from './units';
 
-/** The camp's unit entering on the tile: the one `enter` change. */
-export function campUnitEntered(
-  catalogue: Catalogue,
-  chronicle: Chronicle,
-  tile: TileCoords,
-): Change {
-  return {
-    kind: 'change',
-    name: 'enter',
-    tile,
-    chronicle: entered(catalogue, chronicle, {
-      type: catalogue.camp.unit,
-      faction: 'enemy',
-      tile,
-      script: catalogue.camp.script,
-    }),
-  };
+/** The camp's unit, entering on the tile. */
+export function campUnit(catalogue: Catalogue, tile: TileCoords): Entering {
+  return { type: catalogue.camp.unit, faction: 'enemy', tile, script: catalogue.camp.script };
 }
 
 function raidGround(catalogue: Catalogue, chronicle: Chronicle): Tile[] {
@@ -56,7 +42,7 @@ export function enteredAround(
     const step = nextRng(standing.rng);
     const { q, r } = equal[Math.floor(step.value * equal.length)];
     landing = followed(landing, (left) =>
-      landedAs(campUnitEntered(catalogue, { ...left, rng: step.rng }, { q, r })),
+      entered(catalogue, { ...left, rng: step.rng }, campUnit(catalogue, { q, r })),
     );
   }
   return landing;

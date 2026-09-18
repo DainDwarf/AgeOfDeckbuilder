@@ -1,20 +1,23 @@
 import type { TileCoords } from './map';
-import type { Chronicle } from './state';
+import type { CardId, Chronicle } from './state';
 
 /**
- * One row of the chronicle moved, and the chronicle it leaves. `laid` is a card laid on top of the
- * draw pile, `stock` is the city's stock moved, `discarded` is cards gone into the discard pile,
- * `drawn` is cards drawn into the hand, `shuffled` is the discard pile shuffled into the draw pile,
- * `rolled` is the timeline's next due turn rolled, `ended` is the chronicle's ending set,
- * `population-lost` is the city one population fewer with the tile it worked unassigned, and
- * `runtime-error` is a landing followed through where the content should never have called it and
- * nothing moved. `enter` is one unit entering on the tile, `retiled` is the tile's layers changed,
- * `charted` is the tile charted as it stands on this change, `damaged` is the unit standing on the
- * tile hurt or killed by no attacker, and `move` is one unit crossing.
+ * One row of the chronicle moved, and the chronicle it leaves. On a unit: `enter` is one unit
+ * entering on the tile, `move` one unit crossing, `damaged` the unit standing on the tile hurt by no
+ * attacker, `killed` it gone at nought health or off a terrain it cannot stand on, `refreshed` its
+ * move points brought back up, `action-spent` one of its action spent. On a tile: `retiled` is its
+ * layers changed, `charted` it charted as it stands on this change, `held` its holder changed,
+ * `settled` the city standing on it. `stock` is the city's stock moved, `population` its count, and
+ * `assigned` a tile worked or left. On the piles: `laid` is a card laid on top of the draw pile,
+ * `drawn` cards drawn into the hand, `discarded` cards gone into the discard pile, `recalled` a card
+ * back out of it into the hand, `shuffled` the discard pile shuffled into the draw pile, `left` a
+ * card gone from the chronicle. `rolled` is the timeline's next due turn rolled, `ended` the
+ * chronicle's ending set, and `runtime-error` a landing followed through where the content should
+ * never have called it and nothing moved.
  */
 export type Change = { readonly kind: 'change'; readonly chronicle: Chronicle } & (
   | { readonly name: PlainChange }
-  | { readonly name: 'enter' | 'retiled' | 'charted' | 'damaged'; readonly tile: TileCoords }
+  | { readonly name: TiledChange; readonly tile: TileCoords }
   | { readonly name: 'move'; readonly from: TileCoords; readonly to: TileCoords }
 );
 
@@ -22,7 +25,7 @@ export type Change = { readonly kind: 'change'; readonly chronicle: Chronicle } 
  * A name for why, over the stages it holds, and the chronicle it leaves: its last stage's, or the one
  * it was handed or left where it holds none. `played` is a card played, `refused` a command the rules
  * turned down, `assign` a population put on a tile, taken off one, or both, `claim` a tile bought
- * with culture, `strike` the hazards in hand striking, `income` the tiles worked yielding, `grow` the
+ * with culture, `strike` one hazard in hand striking, `income` the tiles worked yielding, `grow` the
  * food stock spent on one more population, `turn` the tick, `capstone` the capstone's turn come,
  * `deal` what the timeline offers on a due turn, `answer` an answer taken, `reward` a reward taken,
  * `attack` one unit's attack, and `camp-capture` one camp taken by the unit standing on it.
@@ -33,6 +36,7 @@ export type Group = {
   readonly stages: readonly Stage[];
 } & (
   | { readonly name: PlainGroup }
+  | { readonly name: 'strike'; readonly card: CardId }
   | { readonly name: 'attack'; readonly attacker: TileCoords; readonly target: TileCoords }
   | { readonly name: 'camp-capture'; readonly tile: TileCoords }
 );
@@ -44,13 +48,28 @@ export type Stage = Change | Group;
 type PlainChange =
   | 'laid'
   | 'stock'
+  | 'population'
   | 'discarded'
   | 'drawn'
+  | 'recalled'
   | 'shuffled'
+  | 'left'
   | 'rolled'
   | 'ended'
-  | 'population-lost'
   | 'runtime-error';
+
+/** The changes that carry the tile they moved a row on. */
+type TiledChange =
+  | 'enter'
+  | 'damaged'
+  | 'killed'
+  | 'refreshed'
+  | 'action-spent'
+  | 'retiled'
+  | 'charted'
+  | 'held'
+  | 'settled'
+  | 'assigned';
 
 /** The groups that carry nothing but the stages they hold and the chronicle they leave. */
 type PlainGroup =
@@ -58,7 +77,6 @@ type PlainGroup =
   | 'refused'
   | 'assign'
   | 'claim'
-  | 'strike'
   | 'income'
   | 'grow'
   | 'turn'
@@ -71,8 +89,17 @@ export function change(name: PlainChange, chronicle: Chronicle): Change {
   return { kind: 'change', name, chronicle };
 }
 
+export function changeOn(name: TiledChange, tile: TileCoords, chronicle: Chronicle): Change {
+  return { kind: 'change', name, tile, chronicle };
+}
+
 export function holdingNothing(name: PlainGroup, chronicle: Chronicle): Group {
   return { kind: 'group', name, chronicle, stages: [] };
+}
+
+/** A group over what a landing raised, leaving the chronicle the landing left. */
+export function grouped(name: PlainGroup, landing: Landed): Group {
+  return { kind: 'group', name, chronicle: landing.chronicle, stages: landing.stages };
 }
 
 /** Every stage of the tree in order, a group before the stages it holds. */

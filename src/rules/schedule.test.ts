@@ -490,7 +490,7 @@ test('an answer killing the population working a tile leaves the population one 
   const { dealt, stages } = answerTaken(cityOf(['urban', 'hills'], UPHEAVAL_DUE), 'PH_Plague');
   const after = outcome(stages);
 
-  expect(namesOf(stages)).toEqual(['answer', 'population-lost']);
+  expect(namesOf(stages)).toEqual(['answer', 'assigned', 'population']);
   expect(after.population).toBe(dealt.population - 1);
   expect(after.assigned).toEqual([CITY]);
   expect(after.ending).toBeUndefined();
@@ -513,7 +513,7 @@ test('an answer killing the city’s last population ends the chronicle in defea
   });
   const { stages } = answerTaken(city, 'PH_Plague');
 
-  expect(namesOf(stages)).toEqual(['answer', 'population-lost']);
+  expect(namesOf(stages)).toEqual(['answer', 'assigned', 'population']);
   expect(outcome(stages).population).toBe(0);
   expect(outcome(stages).ending).toEqual({ outcome: 'defeat', cause: 'population', turn: 2 });
 });
@@ -537,7 +537,7 @@ test('an answer damaging the unit standing on a tile takes its health, whatever 
 
   expect(warrior.units.map((unit) => unit.stats.health)).toEqual([2]);
   expect(enemy.units.map((unit) => unit.stats.health)).toEqual([1]);
-  expect(namesOf(stages)).toEqual(['answer', 'damaged']);
+  expect(namesOf(stages)).toEqual(['answer', 'killed']);
   expect(outcome(stages).units).toEqual([]);
 });
 
@@ -582,7 +582,7 @@ test('an answer taking the city’s last population falls on the take, and nothi
   const after = outcome(stages);
 
   expect(dealt.population).toBe(1);
-  expect(namesOf(stages)).toEqual(['answer', 'population-lost']);
+  expect(namesOf(stages)).toEqual(['answer', 'assigned', 'population']);
   expect(after.population).toBe(0);
   expect(after.hand).toEqual([]);
   expect(after.ending).toEqual({ outcome: 'defeat', cause: 'population', turn: 2 });
@@ -909,19 +909,21 @@ test('a landing resolves as one stage per change it makes, in the order it makes
     units: [standing('player', burning, { health: FIRE.damage + 1 })],
   });
   const dealt = outcome(apply(CATALOGUE, city, { type: 'end-turn' }));
-  const [answer, lost, retiled, damaged, drawn] = stagesWalked(
+  const [answer, unassigned, lost, retiled, damaged, drawn] = stagesWalked(
     apply(CATALOGUE, dealt, { type: 'take', at: 0 }),
   );
   const healthOn = (stage: Stage): number | undefined =>
     unitAt(stage.chronicle.units, burning)?.stats.health;
 
-  expect([answer, lost, retiled, damaged, drawn].map((stage) => stage.name)).toEqual([
+  expect([answer, unassigned, lost, retiled, damaged, drawn].map((stage) => stage.name)).toEqual([
     'answer',
-    'population-lost',
+    'assigned',
+    'population',
     'retiled',
     'damaged',
     'drawn',
   ]);
+  expect(unassigned).toMatchObject({ tile: burning });
   expect(retiled).toMatchObject({ tile: burning });
   expect(damaged).toMatchObject({ tile: burning });
   expect(lost.chronicle.population).toBe(dealt.population - 1);

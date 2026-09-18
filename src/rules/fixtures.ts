@@ -68,7 +68,6 @@ import {
   raided,
   reinforced,
   spanEnded,
-  terraformedOn,
   tileCharted,
   unitDamaged,
 } from './schedule';
@@ -167,7 +166,7 @@ const EVENTS: Catalogue['events'] = {
       PH_Quake: {
         cost: {},
         reads: () => ({}),
-        lands: (catalogue, chronicle) => terraformedOn(catalogue, chronicle, UPHEAVAL, 'forest'),
+        lands: (catalogue, chronicle) => terraformed(catalogue, chronicle, UPHEAVAL, 'forest'),
       },
     },
   },
@@ -284,14 +283,14 @@ export const CATALOGUE: Catalogue = catalogued({
       refuses: (catalogue, _chronicle, tile) =>
         firstRefusal(made(catalogue, tile, ['plain', 'forest', 'hills']), slotFree(tile)),
       effect: (catalogue, paid, at) =>
-        settled(catalogue, terraformed(catalogue, paid, at, 'urban'), at),
+        followed(terraformed(catalogue, paid, at, 'urban'), (left) => settled(catalogue, left, at)),
     },
     PH_Claim: {
       kind: 'settle',
       cost: {},
       aim: 'tile',
       refuses: (catalogue, chronicle, tile) => claimableTile(catalogue, chronicle, tile),
-      effect: (_catalogue, paid, at) => bordered(arrived(paid), at),
+      effect: (_catalogue, paid, at) => followed(arrived(paid), (left) => bordered(left, at)),
     },
     PH_Band: { kind: 'settle', cost: {}, ...entersOn('PH_Worker') },
     PH_Stores: {
@@ -398,7 +397,7 @@ export const CATALOGUE: Catalogue = catalogued({
       strikes: (_catalogue, chronicle) => {
         const shortened = shocked(chronicle, 'food', DROUGHT);
         return chronicle.resources.food < DROUGHT
-          ? populationTaken(shortened).chronicle
+          ? followed(shortened, (left) => populationTaken(left))
           : shortened;
       },
     },
@@ -639,7 +638,7 @@ export type Standing = {
 export function withUnits(chronicle: Chronicle, units: readonly Standing[]): Chronicle {
   let stood = chronicle;
   for (const unit of units) {
-    const dealt = entered(CATALOGUE, stood, unit.entering);
+    const dealt = entered(CATALOGUE, stood, unit.entering).chronicle;
     const last = dealt.units[dealt.units.length - 1];
     const authored: Unit = {
       ...last,

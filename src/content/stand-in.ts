@@ -23,7 +23,7 @@ import { arrived, bordered } from '../rules/city';
 import { MOVE_POINT } from '../rules/map';
 import { buildingKind, improvementKind } from '../rules/map-kinds';
 import { besieged, laid, raided, reinforced, spanEnded } from '../rules/schedule';
-import { type Landed, unchanged } from '../rules/stages';
+import { followed, type Landed, unchanged } from '../rules/stages';
 import type { CardId, Chronicle } from '../rules/state';
 import { ADVANCE } from './scripts';
 
@@ -85,14 +85,14 @@ export const STAND_IN: Catalogue = catalogued({
       refuses: (catalogue, _chronicle, tile) =>
         firstRefusal(made(catalogue, tile, ['plain', 'forest', 'hills']), slotFree(tile)),
       effect: (catalogue, paid, at) =>
-        settled(catalogue, terraformed(catalogue, paid, at, 'urban'), at),
+        followed(terraformed(catalogue, paid, at, 'urban'), (left) => settled(catalogue, left, at)),
     },
     PH_Claim: {
       kind: 'settle',
       cost: {},
       aim: 'tile',
       refuses: (catalogue, chronicle, tile) => claimableTile(catalogue, chronicle, tile),
-      effect: (_catalogue, paid, at) => bordered(arrived(paid), at),
+      effect: (_catalogue, paid, at) => followed(arrived(paid), (left) => bordered(left, at)),
     },
     PH_Worker: { kind: 'unit', cost: { food: 2 }, ...enters('PH_Worker') },
     PH_Warrior: { kind: 'unit', cost: { military: 2 }, ...enters('PH_Warrior') },

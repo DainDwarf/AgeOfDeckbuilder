@@ -11,7 +11,8 @@ import { claimable } from './city';
 import { type Tile, type TileCoords, tileAt, tileKey } from './map';
 import { buildingKind, improvementKind, refuse, terrainKind } from './map-kinds';
 import { RESOURCES, type Resource, type Resources } from './resources';
-import { type Block, type Chronicle, holds, idle, type TileBlock } from './state';
+import { change, changeOn, followed, type Group, type Landed, landedAs, unchanged } from './stages';
+import { type Block, type Chronicle, costsOf, holds, idle, type TileBlock } from './state';
 import { refreshedMovePoints, spentAction, standsOn, unitAt } from './units';
 
 /** The declared order of the kinds, which is the order a sorted list of cards reads in. */
@@ -32,7 +33,7 @@ export function aimOf(card: Card): Aim {
     case 'instant':
       return card;
     case 'hazard':
-      return { aim: 'none', effect: (_catalogue, paid) => paid };
+      return { aim: 'none', effect: (_catalogue, paid) => unchanged(paid) };
   }
 }
 
@@ -70,10 +71,11 @@ export function leavesChronicle(card: Card): boolean {
 }
 
 /**
- * The hazards of the hand striking, in hand order, each on the chronicle the one before it left, and
- * the chronicle untouched where the hand holds none.
+ * The hazards of the hand striking, in hand order, each on the chronicle the one before it left: one
+ * `strike` each, over what its strike raised, and none where the hand holds no hazard.
  */
-export function struck(catalogue: Catalogue, chronicle: Chronicle): Chronicle {
+export function struck(catalogue: Catalogue, chronicle: Chronicle): Group[] {
+  const strikes: Group[] = [];
   let standing = chronicle;
   for (const id of chronicle.hand) {
     const card = cardOf(catalogue, id);
@@ -83,12 +85,15 @@ export function struck(catalogue: Catalogue, chronicle: Chronicle): Chronicle {
       case 'building':
       case 'instant':
         break;
-      case 'hazard':
-        standing = card.strikes(catalogue, standing);
+      case 'hazard': {
+        const { stages, chronicle: left } = card.strikes(catalogue, standing);
+        strikes.push({ kind: 'group', name: 'strike', card: id, chronicle: left, stages });
+        standing = left;
         break;
+      }
     }
   }
-  return standing;
+  return strikes;
 }
 
 /**
@@ -138,23 +143,27 @@ export function worked(chronicle: Chronicle, tile: TileCoords): TileBlock | unde
  */
 export function throughWorker(
   refusesTile: (catalogue: Catalogue, chronicle: Chronicle, tile: Tile) => TileBlock | undefined,
-  effect: (catalogue: Catalogue, paid: Chronicle, at: TileCoords) => Chronicle,
+  effect: (catalogue: Catalogue, paid: Chronicle, at: TileCoords) => Landed,
 ): Aim & { readonly aim: 'tile' } {
   return {
     aim: 'tile',
     refuses: (catalogue, chronicle, tile) =>
       firstRefusal(worked(chronicle, tile), refusesTile(catalogue, chronicle, tile)),
-    effect: (catalogue, paid, at) => effect(catalogue, acted(paid, at), at),
+    effect: (catalogue, paid, at) =>
+      followed(acted(paid, at), (left) => effect(catalogue, left, at)),
   };
 }
 
-/** The unit standing on the tile with one of its action spent. */
-function acted(paid: Chronicle, at: TileCoords): Chronicle {
-  const acting = unitAt(paid.units, at)?.id;
-  return {
-    ...paid,
-    units: paid.units.map((unit) => (unit.id === acting ? spentAction(unit) : unit)),
-  };
+/** The unit standing on the tile with one of its action spent, and nothing where none stands there. */
+function acted(paid: Chronicle, at: TileCoords): Landed {
+  const acting = unitAt(paid.units, at);
+  if (acting === undefined) return unchanged(paid);
+  return landedAs(
+    changeOn('action-spent', at, {
+      ...paid,
+      units: paid.units.map((unit) => (unit.id === acting.id ? spentAction(unit) : unit)),
+    }),
+  );
 }
 
 /** The tile inside the city's border: what a building card asks for and an instant does not. */
@@ -254,16 +263,11 @@ export function enters(type: string): Aim & { readonly aim: 'none' } {
       return blocks;
     },
     effect: (catalogue, paid) => {
-      if (paid.city === undefined)
-        refuse(catalogue, `a ${type} entered while the city stands nowhere`);
-      return entered(
-        catalogue,
-        { ...paid, population: paid.population - 1 },
-        {
-          type,
-          faction: 'player',
-          tile: paid.city,
-        },
+      const { city } = paid;
+      if (city === undefined) refuse(catalogue, `a ${type} entered while the city stands nowhere`);
+      return followed(
+        landedAs(change('population', { ...paid, population: paid.population - 1 })),
+        (left) => entered(catalogue, left, { type, faction: 'player', tile: city }),
       );
     },
   };
@@ -291,21 +295,30 @@ export function entersOn(type: string): Aim & { readonly aim: 'tile' } {
  * The settle: the city stands on the tile from now on, its building in the tile's slot, holding that
  * tile alone with one population on it and the city's idle count besides.
  */
-export function settled(catalogue: Catalogue, paid: Chronicle, at: TileCoords): Chronicle {
+export function settled(catalogue: Catalogue, paid: Chronicle, at: TileCoords): Landed {
   const city = { q: at.q, r: at.r };
-  return {
-    ...built(catalogue, paid, city, catalogue.city.building),
-    city,
-    held: [city],
-    assigned: [city],
-    population: 1 + catalogue.city.idle,
-  };
+  let landing = built(catalogue, paid, city, catalogue.city.building);
+  landing = followed(landing, (left) => landedAs(changeOn('settled', city, { ...left, city })));
+  landing = followed(landing, (left) =>
+    landedAs(changeOn('held', city, { ...left, held: [city] })),
+  );
+  landing = followed(landing, (left) =>
+    landedAs(change('population', { ...left, population: 1 + catalogue.city.idle })),
+  );
+  return followed(landing, (left) =>
+    landedAs(changeOn('assigned', city, { ...left, assigned: [city] })),
+  );
 }
 
-/** One tile of the map layered over, every other tile left as it stands. */
-function retiled(paid: Chronicle, at: TileCoords, after: (tile: Tile) => Tile): Chronicle {
+/** One tile of the map layered over, every other tile left as it stands: the one `retiled` change. */
+function retiled(paid: Chronicle, at: TileCoords, after: (tile: Tile) => Tile): Landed {
   const key = tileKey(at);
-  return { ...paid, tiles: paid.tiles.map((tile) => (tileKey(tile) === key ? after(tile) : tile)) };
+  return landedAs(
+    changeOn('retiled', at, {
+      ...paid,
+      tiles: paid.tiles.map((tile) => (tileKey(tile) === key ? after(tile) : tile)),
+    }),
+  );
 }
 
 /** The building a building card builds: it fills the slot of the tile the card was aimed at. */
@@ -314,7 +327,7 @@ export function built(
   paid: Chronicle,
   at: TileCoords,
   building: string,
-): Chronicle {
+): Landed {
   buildingKind(catalogue, building);
   return retiled(paid, at, (tile) => ({ ...tile, building }));
 }
@@ -325,7 +338,7 @@ export function improved(
   paid: Chronicle,
   at: TileCoords,
   improvement: string,
-): Chronicle {
+): Landed {
   improvementKind(catalogue, improvement);
   return retiled(paid, at, (tile) => ({
     ...tile,
@@ -337,16 +350,17 @@ export function improved(
  * The terrain a tile is terraformed into: the feature that lay on the old terrain goes with it, and
  * so does every improvement and the building whose kind does not name the new terrain; the ones
  * whose kind names it stay. A unit standing on the tile that cannot stand on the new terrain is
- * killed. The city's tile, into a terrain the city's building does not stand on, is left as it stands.
+ * killed. The city's tile, into a terrain the city's building does not stand on, is left as it
+ * stands, and nothing is raised.
  */
 export function terraformed(
   catalogue: Catalogue,
   paid: Chronicle,
   at: TileCoords,
   to: string,
-): Chronicle {
+): Landed {
   terrainKind(catalogue, to);
-  if (!reaches(catalogue, paid, at, to)) return paid;
+  if (!reaches(catalogue, paid, at, to)) return unchanged(paid);
   const relayered = retiled(paid, at, (tile) => ({
     ...tile,
     terrain: to,
@@ -359,48 +373,64 @@ export function terraformed(
         ? tile.building
         : undefined,
   }));
-  const tile = tileAt(relayered.tiles, at);
-  const key = tileKey(at);
-  return {
-    ...relayered,
-    units: relayered.units.filter(
-      (unit) => tileKey(unit.tile) !== key || standsOn(catalogue, unit.stats, tile),
-    ),
-  };
+  return followed(relayered, (left) => {
+    const standing = unitAt(left.units, at);
+    if (standing === undefined || standsOn(catalogue, standing.stats, tileAt(left.tiles, at))) {
+      return unchanged(left);
+    }
+    return landedAs(
+      changeOn('killed', at, {
+        ...left,
+        units: left.units.filter((unit) => unit.id !== standing.id),
+      }),
+    );
+  });
 }
 
-/** The move points an instant refreshes, on the unit standing on the tile it was aimed at. */
-export function refreshed(paid: Chronicle, at: TileCoords): Chronicle {
-  const marching = unitAt(paid.units, at)?.id;
-  return {
-    ...paid,
-    units: paid.units.map((unit) => (unit.id === marching ? refreshedMovePoints(unit) : unit)),
-  };
+/**
+ * The move points an instant refreshes, on the unit standing on the tile it was aimed at, and
+ * nothing where they were already full.
+ */
+export function refreshed(paid: Chronicle, at: TileCoords): Landed {
+  const marching = unitAt(paid.units, at);
+  if (marching === undefined || marching.movePoints === marching.stats.move) {
+    return unchanged(paid);
+  }
+  return landedAs(
+    changeOn('refreshed', at, {
+      ...paid,
+      units: paid.units.map((unit) => (unit.id === marching.id ? refreshedMovePoints(unit) : unit)),
+    }),
+  );
 }
 
 /** The card a recall brings back: it leaves the discard pile for the back of the hand. */
-export function recalled(paid: Chronicle, at: number): Chronicle {
-  return {
-    ...paid,
-    hand: [...paid.hand, paid.discardPile[at]],
-    discardPile: paid.discardPile.filter((_, index) => index !== at),
-  };
+export function recalled(paid: Chronicle, at: number): Landed {
+  return landedAs(
+    change('recalled', {
+      ...paid,
+      hand: [...paid.hand, paid.discardPile[at]],
+      discardPile: paid.discardPile.filter((_, index) => index !== at),
+    }),
+  );
 }
 
-/** The resources an instant gains: they land in the city's stores. */
-export function gained(paid: Chronicle, gain: Partial<Resources>): Chronicle {
+/** The resources gained into the city's stock, and nothing where it gains none. */
+export function gained(paid: Chronicle, gain: Partial<Resources>): Landed {
+  if (costsOf(gain).length === 0) return unchanged(paid);
   const resources = { ...paid.resources };
   for (const resource of RESOURCES) resources[resource] += gain[resource] ?? 0;
-  return { ...paid, resources };
+  return landedAs(change('stock', { ...paid, resources }));
 }
 
-/** A resource shocked: the city's stock of it loses the amount, and never falls below nothing. */
-export function shocked(chronicle: Chronicle, resource: Resource, amount: number): Chronicle {
-  return {
-    ...chronicle,
-    resources: {
-      ...chronicle.resources,
-      [resource]: Math.max(0, chronicle.resources[resource] - amount),
-    },
-  };
+/**
+ * A resource shocked: the city's stock of it loses the amount, and never falls below nothing; nothing
+ * where the stock stands where it did.
+ */
+export function shocked(chronicle: Chronicle, resource: Resource, amount: number): Landed {
+  const left = Math.max(0, chronicle.resources[resource] - amount);
+  if (left === chronicle.resources[resource]) return unchanged(chronicle);
+  return landedAs(
+    change('stock', { ...chronicle, resources: { ...chronicle.resources, [resource]: left } }),
+  );
 }

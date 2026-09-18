@@ -25,6 +25,7 @@ import { MOVE_POINT, type Tile, tileAt, tileKey } from './map';
 import { RESOURCES } from './resources';
 import { seedRng } from './rng';
 import { inSight } from './sight';
+import type { Stage } from './stages';
 import { type Chronicle, idle } from './state';
 
 /** A disc of plain out to eight, with nothing on it but a fertile plain on its centre tile. */
@@ -120,9 +121,111 @@ test('a card that lands whole is played in the one stage, the effect already in 
 
   const stages = apply(CATALOGUE, city, { type: 'play', index: 0, aim: 'none' });
 
-  expect(namesOf(stages)).toEqual(['played']);
+  expect(namesOf(stages)).toEqual(['played', 'discarded', 'stock', 'stock']);
   expect(stages[0].chronicle.resources).toEqual({ ...city.resources, food: 3, science: 0 });
   expect(stages[0].chronicle.discardPile).toEqual(['PH_Harvest']);
+});
+
+/** What the one `played` group a play resolves as holds. A play resolving as anything else throws. */
+function playedOver(chronicle: Chronicle, command: Command): readonly Stage[] {
+  const stages = apply(CATALOGUE, chronicle, command);
+  const [played] = stages;
+  if (stages.length !== 1 || played.kind !== 'group' || played.name !== 'played') {
+    throw new Error('the play resolves as no one played group');
+  }
+  expect(played.chronicle).toBe(played.stages[played.stages.length - 1].chronicle);
+  return played.stages;
+}
+
+const PLAYED: Command = { type: 'play', index: 0, aim: 'none' };
+
+test('a card played goes to the discard pile, then pays its cost as one stock, then lands its effect', () => {
+  const city = cityOf(['urban'], {
+    hand: ['PH_Harvest', 'PH_March'],
+    resources: { food: 1, production: 0, military: 0, money: 0, science: 1, culture: 0 },
+  });
+
+  const [discarded, paid, gained, ...rest] = playedOver(city, PLAYED);
+
+  expect([discarded, paid, gained].map(({ name }) => name)).toEqual([
+    'discarded',
+    'stock',
+    'stock',
+  ]);
+  expect(rest).toEqual([]);
+  expect(discarded.chronicle.hand).toEqual(['PH_March']);
+  expect(discarded.chronicle.discardPile).toEqual(['PH_Harvest']);
+  expect(discarded.chronicle.resources).toEqual(city.resources);
+  expect(paid.chronicle.resources).toEqual({ ...city.resources, science: 0 });
+  expect(gained.chronicle.resources).toEqual({ ...city.resources, food: 3, science: 0 });
+});
+
+test('a free card played raises no stock for its cost, and a single use card leaves the chronicle instead of the discard pile', () => {
+  const city = cityOf(['urban'], { hand: ['PH_Cache'] });
+
+  const [left, gained, ...rest] = playedOver(city, PLAYED);
+
+  expect([left, gained].map(({ name }) => name)).toEqual(['left', 'stock']);
+  expect(rest).toEqual([]);
+  expect(left.chronicle.hand).toEqual([]);
+  expect(left.chronicle.discardPile).toEqual([]);
+  expect(gained.chronicle.resources.food).toBe(city.resources.food + 5);
+});
+
+test('a card whose effect moves nothing is played over its leaving and its cost alone', () => {
+  const city = cityOf(['urban'], {
+    hand: ['PH_Hunger'],
+    resources: { food: 0, production: 3, military: 0, money: 0, science: 0, culture: 0 },
+  });
+
+  expect(playedOver(city, PLAYED).map(({ name }) => name)).toEqual(['left', 'stock']);
+});
+
+test('a unit card is played over its cost, one population fewer, and the unit entering on the city’s tile', () => {
+  const city = cityOf(['urban'], {
+    hand: ['PH_Worker'],
+    population: 3,
+    resources: { food: 2, production: 0, military: 0, money: 0, science: 0, culture: 0 },
+  });
+
+  const held = playedOver(city, PLAYED);
+  const [, , fewer, entering] = held;
+
+  expect(held.map(({ name }) => name)).toEqual(['discarded', 'stock', 'population', 'enter']);
+  expect(fewer.chronicle.population).toBe(2);
+  expect(fewer.chronicle.units).toEqual([]);
+  expect(entering).toMatchObject({ tile: CITY });
+  expect(entering.chronicle.units.map(({ tile }) => tile)).toEqual([CITY]);
+});
+
+test('the settle is played over the card leaving and the settle’s own changes, all on the city’s tile', () => {
+  const opened = opening(plainDisc(), { deck: { cards: DECK.cards, settle: ['PH_Settle'] } });
+
+  const held = playedOver(opened, { type: 'play', index: 0, aim: 'tile', tile: CITY });
+  const [left, ...changes] = held;
+  const [, built, stood, holding, population, assigned] = changes;
+
+  expect(held.map(({ name }) => name)).toEqual([
+    'left',
+    'retiled',
+    'retiled',
+    'settled',
+    'held',
+    'population',
+    'assigned',
+  ]);
+  expect(left.chronicle.hand).toEqual([]);
+  for (const change of [...changes.slice(0, 4), assigned]) {
+    expect(change).toMatchObject({ tile: CITY });
+  }
+  expect(tileAt(built.chronicle.tiles, CITY)?.building).toBe(CATALOGUE.city.building);
+  expect(stood.chronicle.city).toEqual(CITY);
+  expect(holding.chronicle.held).toEqual([CITY]);
+  expect(population.chronicle.population).toBe(1 + CATALOGUE.city.idle);
+  expect(assigned.chronicle.assigned).toEqual([CITY]);
+  expect(
+    outcome(apply(CATALOGUE, opened, { type: 'play', index: 0, aim: 'tile', tile: CITY })).ending,
+  ).toBeUndefined();
 });
 
 test('ending the turn discards what is left of the hand', () => {

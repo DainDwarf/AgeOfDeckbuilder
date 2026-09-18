@@ -98,10 +98,14 @@ export function createPiles(
     if (carrier === carrying) render(chronicle);
   };
 
-  /** The hand's block lands on the discard pile all at once, once the last card is down. */
+  /**
+   * The block of cards the hand no longer holds lands on the discard pile all at once, once the last
+   * card is down.
+   */
   const landed = (chronicle: Chronicle): Promise<void> =>
     new Promise((done) => {
-      const event = scene.time.delayedCall(blockLength(shown?.hand.length ?? 0), () => {
+      const left = (shown?.hand.length ?? 0) - chronicle.hand.length;
+      const event = scene.time.delayedCall(blockLength(Math.max(0, left)), () => {
         waiting = undefined;
         render(chronicle);
         done();
@@ -115,17 +119,25 @@ export function createPiles(
         return landed(stage.chronicle);
       case 'shuffled':
         return shuffle(stage.chronicle);
-      case 'drawn':
-      case 'rolled':
-      case 'ended':
-      case 'move':
       case 'enter':
+      case 'move':
+      case 'damaged':
+      case 'killed':
+      case 'refreshed':
+      case 'action-spent':
       case 'retiled':
       case 'charted':
-      case 'damaged':
-      case 'laid':
+      case 'held':
+      case 'settled':
       case 'stock':
-      case 'population-lost':
+      case 'population':
+      case 'assigned':
+      case 'laid':
+      case 'drawn':
+      case 'recalled':
+      case 'left':
+      case 'rolled':
+      case 'ended':
       case 'runtime-error':
         return undefined;
     }

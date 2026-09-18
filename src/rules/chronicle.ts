@@ -6,9 +6,10 @@ import {
   checkContent,
   type Deck,
   enemyScript,
+  entered,
 } from './catalogue';
 import { assign, type CityCommand, claim, grow, income, reassign } from './city';
-import { campUnitEntered } from './enemies';
+import { campUnit } from './enemies';
 import { generateMap, type HexMap, type TileCoords, tileAt, tileKey } from './map';
 import { refuse } from './map-kinds';
 import { nextRng, seedRng, shuffle as shuffleItems } from './rng';
@@ -24,7 +25,17 @@ import {
   timelineOf,
 } from './schedule';
 import { charted, chartedAt, unitsGone } from './sight';
-import { type Change, change, holdingNothing, type Stage } from './stages';
+import {
+  type Change,
+  change,
+  followed,
+  grouped,
+  holdingNothing,
+  type Landed,
+  landedAs,
+  type Stage,
+  unchanged,
+} from './stages';
 import {
   type Block,
   type CardId,
@@ -183,8 +194,20 @@ function resolved(catalogue: Catalogue, chronicle: Chronicle, command: Command):
   const stages = stagesOf(catalogue, chronicle, command);
   const at = stages.findIndex(({ chronicle: left }) => falling(left));
   if (at < 0) return stages;
-  const fell = stages[at];
-  return [...stages.slice(0, at), { ...fell, chronicle: fall(fell.chronicle, 'population') }];
+  return [...stages.slice(0, at), fallenOn(stages[at])];
+}
+
+/**
+ * The stage the city falls on, with the fall set on it; a group holding stages is cut after the
+ * first of them the city falls on, and closes on it.
+ */
+function fallenOn(stage: Stage): Stage {
+  if (stage.kind === 'change' || stage.stages.length === 0) {
+    return { ...stage, chronicle: fall(stage.chronicle, 'population') };
+  }
+  const at = stage.stages.findIndex(({ chronicle }) => falling(chronicle));
+  const held = [...stage.stages.slice(0, at), fallenOn(stage.stages[at])];
+  return { ...stage, stages: held, chronicle: held[held.length - 1].chronicle };
 }
 
 /** Whether the chronicle stands on a city with no population left: the fall by population. */
@@ -238,17 +261,25 @@ function chartedOn(stage: Change): TileCoords | undefined {
     case 'charted':
       return stage.tile;
     case 'enter':
-    case 'retiled':
-    case 'damaged':
     case 'move':
-    case 'laid':
+    case 'damaged':
+    case 'killed':
+    case 'refreshed':
+    case 'action-spent':
+    case 'retiled':
+    case 'held':
+    case 'settled':
     case 'stock':
-    case 'discarded':
+    case 'population':
+    case 'assigned':
+    case 'laid':
     case 'drawn':
+    case 'discarded':
+    case 'recalled':
     case 'shuffled':
+    case 'left':
     case 'rolled':
     case 'ended':
-    case 'population-lost':
     case 'runtime-error':
       return undefined;
   }
@@ -295,8 +326,9 @@ export function outcome(stages: readonly Stage[]): Chronicle {
 }
 
 /**
- * The end of turn, step by ordered step, each with the chronicle it leaves: a step that changed
- * nothing is absent, and the list ends at the capture when the city falls in the enemy phase, or at
+ * The end of turn, step by ordered step, each with the chronicle it leaves: one `strike` for every
+ * hazard in hand, whatever it moved, then the steps after it, one that changed nothing absent; the
+ * list ends at the capture when the city falls in the enemy phase, or at
  * the last camp captured while a camp's rewards stand — the rest of the end of turn waits on their
  * take. Otherwise the turn opens as `turnOpened` has it. Turn 0's end runs none of the cycle and
  * opens on the tick, which takes the settle cards left in hand. There is always a stage. A turn ended
@@ -320,7 +352,7 @@ function endOfTurn(catalogue: Catalogue, chronicle: Chronicle): Stage[] {
   };
 
   if (standing.turn > 0) {
-    staged(holdingNothing('strike', struck(catalogue, standing)));
+    raised(struck(catalogue, standing));
     staged(change('discarded', discard(standing)));
     staged(holdingNothing('income', income(catalogue, standing)));
     staged(holdingNothing('grow', grow(standing)));
@@ -500,9 +532,9 @@ function blocked(catalogue: Catalogue, chronicle: Chronicle, id: CardId): Block[
 
 /**
  * One card played: the aim is judged on the chronicle as it stands, the same one the map lit its
- * tiles from; then, on the one `played` stage, the card has left the hand for the discard pile — or
- * for nowhere at all, as a settle card, a single use card and a hazard do — its cost is paid and its
- * effect has landed. A play the hand, the city, the map or the discard pile refuses is one `refused`
+ * tiles from; then, in the one `played` group, the card leaves the hand for the discard pile — or
+ * for nowhere at all, as a settle card, a single use card and a hazard do — its cost is paid, and
+ * its effect lands. A play the hand, the city, the map or the discard pile refuses is one `refused`
  * stage on the chronicle as it stood, nothing paid or discarded.
  */
 function play(catalogue: Catalogue, chronicle: Chronicle, command: PlayCommand): Stage[] {
@@ -513,19 +545,14 @@ function play(catalogue: Catalogue, chronicle: Chronicle, command: PlayCommand):
   const effect = aimedEffect(catalogue, chronicle, id, command);
   if (effect === undefined) return [holdingNothing('refused', chronicle)];
 
-  const left = paid(chronicle, costOf(catalogue, id));
-  return [
-    holdingNothing(
-      'played',
-      effect({
-        ...left,
-        hand: chronicle.hand.filter((_, at) => at !== command.index),
-        discardPile: leavesChronicle(cardOf(catalogue, id))
-          ? chronicle.discardPile
-          : [...chronicle.discardPile, id],
-      }),
-    ),
-  ];
+  const hand = chronicle.hand.filter((_, at) => at !== command.index);
+  const leaving = leavesChronicle(cardOf(catalogue, id))
+    ? change('left', { ...chronicle, hand })
+    : change('discarded', { ...chronicle, hand, discardPile: [...chronicle.discardPile, id] });
+  const costs = costOf(catalogue, id);
+  const cost = (left: Chronicle): Landed =>
+    costs.length === 0 ? unchanged(left) : landedAs(change('stock', paid(left, costs)));
+  return [grouped('played', followed(followed(landedAs(leaving), cost), effect))];
 }
 
 /**
@@ -540,7 +567,7 @@ function aimedEffect(
   chronicle: Chronicle,
   id: CardId,
   command: PlayCommand,
-): ((paid: Chronicle) => Chronicle) | undefined {
+): ((paid: Chronicle) => Landed) | undefined {
   const card = aimOf(cardOf(catalogue, id));
   switch (card.aim) {
     case 'none':
@@ -768,9 +795,9 @@ function campsRolled(
     const step = nextRng(standing.rng);
     standing = { ...standing, rng: step.rng };
     if (step.value >= catalogue.camp.odds) continue;
-    const entering = campUnitEntered(catalogue, standing, { q, r });
+    const entering = entered(catalogue, standing, campUnit(catalogue, { q, r }));
     standing = entering.chronicle;
-    stages.push(entering);
+    stages.push(...entering.stages);
   }
   return { stages, chronicle: standing };
 }

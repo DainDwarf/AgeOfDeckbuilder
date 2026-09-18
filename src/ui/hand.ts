@@ -375,13 +375,30 @@ export function createHand(
   };
 
   /**
-   * The hand leaving for the discard pile: every card straightens as it goes, the last one landing
-   * a stagger behind the one before it, and the emptied hand is laid out where they all land.
+   * The slots whose cards the chronicle's hand no longer holds, the card let go of the first to go
+   * among copies of one card.
+   */
+  const gone = (hand: readonly CardId[]): Slot[] => {
+    const held = new Map<CardId, number>();
+    for (const id of hand) held.set(id, (held.get(id) ?? 0) + 1);
+    const kept = letGo === undefined ? slots : [...slots.filter((slot) => slot !== letGo), letGo];
+    return kept.filter((slot) => {
+      const left = held.get(slot.id) ?? 0;
+      held.set(slot.id, left - 1);
+      return left <= 0;
+    });
+  };
+
+  /**
+   * The cards the hand no longer holds leaving for the discard pile: every one straightens as it
+   * goes, the last one landing a stagger behind the one before it, and the hand is laid out anew
+   * where they all land.
    */
   const toDiscardPile = async (chronicle: Chronicle): Promise<void> => {
-    const leaving = slots.map((slot) => slot.face.root);
+    const going = gone(chronicle.hand);
+    const leaving = going.map((slot) => slot.face.root);
     flying = leaving;
-    slots = [];
+    slots = slots.filter((slot) => !going.includes(slot));
     await Promise.all(
       leaving.map((face, index) => {
         stopMotion(scene, face);
@@ -442,17 +459,25 @@ export function createHand(
         return toDiscardPile(stage.chronicle);
       case 'drawn':
         return fromDrawPile(stage.chronicle);
-      case 'shuffled':
-      case 'rolled':
-      case 'ended':
-      case 'move':
       case 'enter':
+      case 'move':
+      case 'damaged':
+      case 'killed':
+      case 'refreshed':
+      case 'action-spent':
       case 'retiled':
       case 'charted':
-      case 'damaged':
-      case 'laid':
+      case 'held':
+      case 'settled':
       case 'stock':
-      case 'population-lost':
+      case 'population':
+      case 'assigned':
+      case 'laid':
+      case 'recalled':
+      case 'shuffled':
+      case 'left':
+      case 'rolled':
+      case 'ended':
       case 'runtime-error':
         return undefined;
     }

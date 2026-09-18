@@ -1,20 +1,22 @@
-import { gained, terraformed } from './cards';
+import { terraformed } from './cards';
 import {
   type Answer,
   type Catalogue,
   capstoneOf,
   cardOf,
+  entered,
   eventOf,
   type Span,
   scheduleOf,
 } from './catalogue';
-import { campUnitEntered, enteredAround, raidEntry } from './enemies';
+import { campUnit, enteredAround, raidEntry } from './enemies';
 import { distance, type FeatureId, groundRunsTo, type Tile, type TileCoords, tileKey } from './map';
 import { buildingKind, featureKind, held, refuse } from './map-kinds';
-import type { Resources } from './resources';
+
 import { nextRng, pickWeighted, type Rng } from './rng';
 import {
   change,
+  changeOn,
   followed,
   holdingNothing,
   type Landed,
@@ -221,38 +223,43 @@ export function raided(catalogue: Catalogue, chronicle: Chronicle, warriors: num
   return enteredAround(catalogue, drawn.chronicle, drawn.entry, warriors);
 }
 
-/**
- * The population working the tile killed: the city's population one fewer and the tile unassigned,
- * and nothing where nobody works it.
- */
-export function populationKilled(chronicle: Chronicle, at: TileCoords): Landed {
+/** The population off the tile and then one fewer. */
+function populationLeaving(chronicle: Chronicle, at: TileCoords): Landed {
   const key = tileKey(at);
-  const assigned = chronicle.assigned.filter((coord) => tileKey(coord) !== key);
-  if (assigned.length === chronicle.assigned.length) return unchanged(chronicle);
-  return landedAs(
-    change('population-lost', {
-      ...chronicle,
-      population: chronicle.population - 1,
-      assigned,
-    }),
+  return followed(
+    landedAs(
+      changeOn('assigned', at, {
+        ...chronicle,
+        assigned: chronicle.assigned.filter((coord) => tileKey(coord) !== key),
+      }),
+    ),
+    (left) => landedAs(change('population', { ...left, population: left.population - 1 })),
   );
 }
 
 /**
- * One population of the city taken, whichever it is: the population one fewer, an idle one where
- * one is idle and the last assigned tile unassigned where none is, the city's last no exception.
+ * The population working the tile killed: the tile unassigned and the city's population one fewer,
+ * and nothing where nobody works it.
+ */
+export function populationKilled(chronicle: Chronicle, at: TileCoords): Landed {
+  const key = tileKey(at);
+  const working = chronicle.assigned.find((coord) => tileKey(coord) === key);
+  if (working === undefined) return unchanged(chronicle);
+  return populationLeaving(chronicle, working);
+}
+
+/**
+ * One population of the city taken, whichever it is: an idle one where one is idle, and where none
+ * is the last assigned tile unassigned first, the city's last no exception; the population one fewer.
  * Nothing where the city has no population at all.
  */
 export function populationTaken(chronicle: Chronicle): Landed {
   if (chronicle.population <= 0) return unchanged(chronicle);
-  const assigned = idle(chronicle) > 0 ? chronicle.assigned : chronicle.assigned.slice(0, -1);
-  return landedAs(
-    change('population-lost', {
-      ...chronicle,
-      population: chronicle.population - 1,
-      assigned,
-    }),
-  );
+  const last = chronicle.assigned[chronicle.assigned.length - 1];
+  if (idle(chronicle) > 0 || last === undefined) {
+    return landedAs(change('population', { ...chronicle, population: chronicle.population - 1 }));
+  }
+  return populationLeaving(chronicle, last);
 }
 
 /**
@@ -262,33 +269,9 @@ export function populationTaken(chronicle: Chronicle): Landed {
 export function unitDamaged(chronicle: Chronicle, at: TileCoords, amount: number): Landed {
   const target = unitAt(chronicle.units, at);
   if (target === undefined) return unchanged(chronicle);
-  return landedAs({
-    kind: 'change',
-    name: 'damaged',
-    tile: at,
-    chronicle: { ...chronicle, units: damaged(chronicle.units, target, amount) },
-  });
-}
-
-/** The resources gained into the city's stock, and nothing where it gains none. */
-export function stockGained(chronicle: Chronicle, gain: Partial<Resources>): Landed {
-  if (costsOf(gain).length === 0) return unchanged(chronicle);
-  return landedAs(change('stock', gained(chronicle, gain)));
-}
-
-/**
- * The tile terraformed as a card terraforms it, and nothing where the terraform leaves the tile as it
- * stands.
- */
-export function terraformedOn(
-  catalogue: Catalogue,
-  chronicle: Chronicle,
-  at: TileCoords,
-  to: string,
-): Landed {
-  const left = terraformed(catalogue, chronicle, at, to);
-  if (left === chronicle) return unchanged(chronicle);
-  return landedAs({ kind: 'change', name: 'retiled', tile: at, chronicle: left });
+  const units = damaged(chronicle.units, target, amount);
+  const killed = units.length < chronicle.units.length;
+  return landedAs(changeOn(killed ? 'killed' : 'damaged', at, { ...chronicle, units }));
 }
 
 /**
@@ -296,7 +279,7 @@ export function terraformedOn(
  * chronicle's charting takes it.
  */
 export function tileCharted(chronicle: Chronicle, at: TileCoords): Landed {
-  return landedAs({ kind: 'change', name: 'charted', tile: at, chronicle });
+  return landedAs(changeOn('charted', at, chronicle));
 }
 
 /**
@@ -368,7 +351,7 @@ export function burned(catalogue: Catalogue, chronicle: Chronicle, fire: Fire): 
   let landing = unchanged({ ...chronicle, rng });
   for (const tile of burning) {
     landing = followed(landing, (left) => populationKilled(left, tile));
-    landing = followed(landing, (left) => terraformedOn(catalogue, left, tile, fire.leaves));
+    landing = followed(landing, (left) => terraformed(catalogue, left, tile, fire.leaves));
     landing = followed(landing, (left) => unitDamaged(left, tile, fire.damage));
   }
   return landing.stages.length === 0 ? runtimeError(chronicle) : landing;
@@ -420,16 +403,13 @@ export function featureDealt(
   const dealt = candidates[Math.floor(step.value * candidates.length)];
   const key = tileKey(dealt);
   const at = { q: dealt.q, r: dealt.r };
-  const landing = landedAs({
-    kind: 'change',
-    name: 'retiled',
-    tile: at,
-    chronicle: {
+  const landing = landedAs(
+    changeOn('retiled', at, {
       ...chronicle,
       rng: step.rng,
       tiles: chronicle.tiles.map((tile) => (tileKey(tile) === key ? { ...tile, feature } : tile)),
-    },
-  });
+    }),
+  );
   return { ...landing, at };
 }
 
@@ -448,7 +428,7 @@ export function reinforced(catalogue: Catalogue, chronicle: Chronicle): Landed {
   for (const { q, r, building } of chronicle.tiles) {
     if (building !== catalogue.camp.building) continue;
     if (unitAt(landing.chronicle.units, { q, r }) !== undefined) continue;
-    landing = followed(landing, (left) => landedAs(campUnitEntered(catalogue, left, { q, r })));
+    landing = followed(landing, (left) => entered(catalogue, left, campUnit(catalogue, { q, r })));
   }
   return landing;
 }
@@ -504,22 +484,19 @@ export function besieged(
   for (const placing of placings) {
     const key = tileKey(placing.tile);
     landing = followed(landing, (left) =>
-      landedAs({
-        kind: 'change',
-        name: 'retiled',
-        tile: placing.tile,
-        chronicle: {
+      landedAs(
+        changeOn('retiled', placing.tile, {
           ...left,
           rng: placing.rng,
           tiles: left.tiles.map((tile) =>
             tileKey(tile) === key ? { ...tile, building: camp } : tile,
           ),
-        },
-      }),
+        }),
+      ),
     );
   }
   for (const { tile } of placings) {
-    landing = followed(landing, (left) => landedAs(campUnitEntered(catalogue, left, tile)));
+    landing = followed(landing, (left) => entered(catalogue, left, campUnit(catalogue, tile)));
   }
   return { ...landing, placed: placings.map(({ tile }) => tile) };
 }

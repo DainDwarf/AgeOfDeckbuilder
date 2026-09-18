@@ -9,7 +9,7 @@ import {
   terrainKind,
 } from './map-kinds';
 import type { Resources } from './resources';
-import type { Landed } from './stages';
+import { changeOn, type Landed, landedAs } from './stages';
 import { type Block, type Chronicle, costsOf, type TileBlock } from './state';
 import { type Landing, standsOn, type Unit, type UnitStats } from './units';
 
@@ -41,7 +41,7 @@ export type Aim =
   | {
       readonly aim: 'none';
       readonly blocked?: (catalogue: Catalogue, chronicle: Chronicle) => Block[];
-      readonly effect: (catalogue: Catalogue, paid: Chronicle) => Chronicle;
+      readonly effect: (catalogue: Catalogue, paid: Chronicle) => Landed;
     }
   | {
       readonly aim: 'tile';
@@ -50,7 +50,7 @@ export type Aim =
         chronicle: Chronicle,
         tile: Tile,
       ) => TileBlock | undefined;
-      readonly effect: (catalogue: Catalogue, paid: Chronicle, at: TileCoords) => Chronicle;
+      readonly effect: (catalogue: Catalogue, paid: Chronicle, at: TileCoords) => Landed;
     }
   | {
       readonly aim: 'unit';
@@ -59,12 +59,12 @@ export type Aim =
         chronicle: Chronicle,
         tile: Tile,
       ) => TileBlock | undefined;
-      readonly effect: (catalogue: Catalogue, paid: Chronicle, at: TileCoords) => Chronicle;
+      readonly effect: (catalogue: Catalogue, paid: Chronicle, at: TileCoords) => Landed;
     }
   | {
       readonly aim: 'discard-pile';
       readonly blocked: (catalogue: Catalogue, chronicle: Chronicle) => Block[];
-      readonly effect: (catalogue: Catalogue, paid: Chronicle, at: number) => Chronicle;
+      readonly effect: (catalogue: Catalogue, paid: Chronicle, at: number) => Landed;
     };
 
 /**
@@ -84,7 +84,7 @@ export type Card = { readonly cost: Partial<Resources> } & (
   | {
       readonly kind: 'hazard';
       /** What it does to the chronicle at the end of a turn it is still in the hand. */
-      readonly strikes: (catalogue: Catalogue, chronicle: Chronicle) => Chronicle;
+      readonly strikes: (catalogue: Catalogue, chronicle: Chronicle) => Landed;
     }
 );
 
@@ -347,7 +347,7 @@ export type Entering = { readonly type: string; readonly tile: TileCoords } & (
  * The one way a unit enters the map: it takes the next number off the chronicle's counter, carries
  * its own copy of its kind's stats, and stands with its move points and its action full.
  */
-export function entered(catalogue: Catalogue, chronicle: Chronicle, entering: Entering): Chronicle {
+export function entered(catalogue: Catalogue, chronicle: Chronicle, entering: Entering): Landed {
   const stats = { ...unitKind(catalogue, entering.type) };
   const carried = {
     id: chronicle.nextUnit,
@@ -356,11 +356,14 @@ export function entered(catalogue: Catalogue, chronicle: Chronicle, entering: En
     movePoints: stats.move,
     action: stats.action,
   };
-  const dealt = (unit: Unit): Chronicle => ({
-    ...chronicle,
-    nextUnit: chronicle.nextUnit + 1,
-    units: [...chronicle.units, unit],
-  });
+  const dealt = (unit: Unit): Landed =>
+    landedAs(
+      changeOn('enter', entering.tile, {
+        ...chronicle,
+        nextUnit: chronicle.nextUnit + 1,
+        units: [...chronicle.units, unit],
+      }),
+    );
 
   switch (entering.faction) {
     case 'player':

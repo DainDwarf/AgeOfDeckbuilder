@@ -487,7 +487,11 @@ test('the camp’s reward is single use: played, it gains and leaves the chronic
 
   const played = outcome(apply(CATALOGUE, city, { type: 'play', index: 0, aim: 'none' }));
 
-  expect(stagedBy(city, { type: 'play', index: 0, aim: 'none' })).toEqual(['played']);
+  expect(stagedBy(city, { type: 'play', index: 0, aim: 'none' })).toEqual([
+    'played',
+    'left',
+    'stock',
+  ]);
   expect(played.resources).toEqual({
     food: 10,
     production: 10,

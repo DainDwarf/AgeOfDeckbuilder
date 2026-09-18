@@ -30,7 +30,6 @@ import {
   laid,
   populationTaken,
   raided,
-  stockGained,
   tileCharted,
 } from '../rules/schedule';
 import { followed, unchanged } from '../rules/stages';
@@ -143,7 +142,9 @@ export const NOMADIC: Catalogue = catalogued({
       strikes: (_catalogue, chronicle) => {
         const taken = 2 + Math.floor(chronicle.turn / 10);
         const shortened = shocked(chronicle, 'food', taken);
-        return chronicle.resources.food < taken ? populationTaken(shortened).chronicle : shortened;
+        return chronicle.resources.food < taken
+          ? followed(shortened, (left) => populationTaken(left))
+          : shortened;
       },
     },
     stores: {
@@ -241,7 +242,7 @@ export const NOMADIC: Catalogue = catalogued({
         'hunt-it': {
           cost: {},
           reads: () => ({ food: 4 }),
-          lands: (_catalogue, chronicle) => stockGained(chronicle, { food: 4 }),
+          lands: (_catalogue, chronicle) => gained(chronicle, { food: 4 }),
         },
         'follow-it': {
           cost: {},

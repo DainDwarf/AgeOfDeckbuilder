@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { CARD_KINDS } from '../rules/cards';
 import { type Catalogue, cardOf } from '../rules/catalogue';
 import { answerRefusal, offered } from '../rules/schedule';
-import type { Stage } from '../rules/stages';
+import { leaf, type Stage } from '../rules/stages';
 import {
   type CardId,
   type Chronicle,
@@ -869,6 +869,7 @@ export function createOverlay(
       else stand();
     },
     play(stage: Stage): Promise<void> | undefined {
+      if (!leaf(stage)) return undefined;
       const { ending, timeline, deals } = stage.chronicle;
       if (ending !== undefined && raisedOn === undefined) return raiseEnding({ ending, timeline });
       // Every camp captured deals before the camps after it are captured: the window waits for the

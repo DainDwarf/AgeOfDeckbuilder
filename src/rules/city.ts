@@ -2,10 +2,12 @@ import type { Catalogue } from './catalogue';
 import { neighbours, type TileCoords, tileAt, tileKey, tileYield } from './map';
 import { refuse } from './map-kinds';
 import { RESOURCES } from './resources';
+import { change, changeOn, followed, type Landed, landedAs, unchanged } from './stages';
 import {
   assignedTo,
   type Chronicle,
   type Cost,
+  costsOf,
   holds,
   idle,
   playable,
@@ -45,7 +47,7 @@ export function income(catalogue: Catalogue, chronicle: Chronicle): Chronicle {
   for (const tile of chronicle.tiles) {
     if (!assigned.has(tileKey(tile))) continue;
     if (occupied(chronicle.units, tile)) continue;
-    yielding = yielded(catalogue, yielding, tile);
+    yielding = yielded(catalogue, yielding, tile).chronicle;
   }
   return RESOURCES.every(
     (resource) => yielding.resources[resource] === chronicle.resources[resource],
@@ -54,14 +56,18 @@ export function income(catalogue: Catalogue, chronicle: Chronicle): Chronicle {
     : yielding;
 }
 
-/** A tile's yield gained: the city's stock of each resource rises by what the tile yields. */
-export function yielded(catalogue: Catalogue, chronicle: Chronicle, at: TileCoords): Chronicle {
+/**
+ * A tile's yield gained: the city's stock of each resource rises by what the tile yields, and nothing
+ * where it yields nothing.
+ */
+export function yielded(catalogue: Catalogue, chronicle: Chronicle, at: TileCoords): Landed {
   const tile = tileAt(chronicle.tiles, at);
   if (tile === undefined) refuse(catalogue, `no tile of the map yields at ${tileKey(at)}`);
   const yields = tileYield(catalogue, tile, chronicle.rivers);
+  if (costsOf(yields).length === 0) return unchanged(chronicle);
   const resources = { ...chronicle.resources };
   for (const resource of RESOURCES) resources[resource] += yields[resource] ?? 0;
-  return { ...chronicle, resources };
+  return landedAs(change('stock', { ...chronicle, resources }));
 }
 
 /** The growth threshold, what the next population costs: the population it joins. */
@@ -70,8 +76,8 @@ export function growthThreshold(chronicle: Chronicle): number {
 }
 
 /** One population more for the city, arriving idle. */
-export function arrived(chronicle: Chronicle): Chronicle {
-  return { ...chronicle, population: chronicle.population + 1 };
+export function arrived(chronicle: Chronicle): Landed {
+  return landedAs(change('population', { ...chronicle, population: chronicle.population + 1 }));
 }
 
 /** Growth: the food stock that has reached the growth threshold is spent on one idle population. */
@@ -237,18 +243,20 @@ export function claim(
       },
     },
     tile,
-  );
+  ).chronicle;
 }
 
 /**
  * One tile taken inside the border, however it was claimed: it joins the tiles the city holds, and
  * an idle population stands on it at once when the city has one.
  */
-export function bordered(chronicle: Chronicle, tile: TileCoords): Chronicle {
+export function bordered(chronicle: Chronicle, tile: TileCoords): Landed {
   const taken = { q: tile.q, r: tile.r };
-  return {
-    ...chronicle,
-    held: [...chronicle.held, taken],
-    assigned: idle(chronicle) > 0 ? [...chronicle.assigned, taken] : chronicle.assigned,
-  };
+  const held = landedAs(
+    changeOn('held', taken, { ...chronicle, held: [...chronicle.held, taken] }),
+  );
+  if (idle(chronicle) <= 0) return held;
+  return followed(held, (left) =>
+    landedAs(changeOn('assigned', taken, { ...left, assigned: [...left.assigned, taken] })),
+  );
 }
