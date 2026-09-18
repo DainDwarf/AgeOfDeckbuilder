@@ -29,7 +29,6 @@ The one claim the design leaves unverified: the sight's charting runs once per c
 
 ## Lines
 
-- **The stage tree is written** — the Stack paragraph of `docs/DOGMAS.md` on `apply` says the two products, the row grain, the tree, and the Code section holds the line that every helper answers its changes and the caller groups them. Doc-impact: `docs/DOGMAS.md`. [board/stage-tree-design.md](board/stage-tree-design.md)
 - **The stage tree stands** — `apply` answers a tree of stages, the one stage type a change or a group over stages, the chronicle screen plays it through one walk in order, and every stage of today is sorted into a change or a group holding nothing, the play-out unchanged to the eye.
 - **Every helper answers its changes** — every rules helper that changes the chronicle answers the changes it raised and every closure content composes them into does the same, the pairs that answer a bare chronicle beside a landing (`gained` and `stockGained`, `terraformed` and `terraformedOn`) become one helper each, and a card play and a hazard's strike group what their effect and their strike raised, one `strike` per hazard.
 - **The cycle is groups over changes** — the end of turn, the take, the city's acts and the unit's commands resolve as groups over the changes they make, income per tile, the tick per unit, each enemy's blow an `attack` over its two changes, `no-deal` a bare `rolled`; and the fall is taken on the first change that leaves the population at nought, so nothing after it is computed and the guard in `grow` goes.
