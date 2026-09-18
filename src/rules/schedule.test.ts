@@ -739,6 +739,24 @@ test('an answer placing a camp near the city places one, and its raid enters a w
   ]);
 });
 
+test('an event placing a camp near the city is not dealt where no tile near it takes a camp, and its answer landed there is a runtime error', () => {
+  const cramped = cityOf(['urban'], {
+    ...NO_GROWTH,
+    tiles: field(2),
+    timeline: dueOn(2, 'PH_Rivals'),
+  });
+  const passed = outcome(apply(CATALOGUE, cramped, { type: 'end-turn' }));
+  const landing = eventOf(CATALOGUE, 'PH_Rivals').answers.PH_Encampment.lands(CATALOGUE, passed);
+
+  expect(
+    heldBy(apply(CATALOGUE, cramped, { type: 'end-turn' }), 'deal').map(({ name }) => name),
+  ).toEqual(['rolled', 'runtime-error']);
+  expect(passed.deals).toEqual([]);
+  expect(landing.stages.map(({ name }) => name)).toEqual(['runtime-error']);
+  expect(campsOf(landing.chronicle)).toEqual([]);
+  expect(enemiesOf(landing.chronicle)).toEqual([]);
+});
+
 /**
  * A city on a disc of plain out to five, forest on the named tiles, dealt the fixture's wildfire at
  * the end of its turn.

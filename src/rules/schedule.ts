@@ -430,43 +430,74 @@ export function reinforced(catalogue: Catalogue, chronicle: Chronicle): Landed {
 }
 
 /**
- * Camps placed around the city, drawn one at a time, each uniformly from the tiles of the terrains a
- * camp lies on whose slot is empty, that the ground runs to the city from, within `fromCity` of the
- * city, held by nobody, no unit standing on them, and `apart` at least from every camp standing — the
- * generator's and the ones already drawn here alike; the candidates are filtered again after each.
- * When they run out it places what it can. Each camp placed is its own stage, carrying the draw that
- * placed it; then the camp's unit enters on each camp it placed, on that camp and on no other, so the
- * draws of the placement are the only ones.
+ * The tiles a camp may be placed on around the city: of the terrains a camp lies on, slot empty, the
+ * ground running to the city from them, within `fromCity` of the city, held by nobody, no unit
+ * standing on them, and `apart` at least from every camp in `standing`. None while the city stands
+ * nowhere.
  */
-export function besieged(
+function campTiles(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  fromCity: Span,
+  apart: number,
+  standing: readonly TileCoords[],
+): Tile[] {
+  const { city } = chronicle;
+  if (city === undefined) return [];
+  const [near, far] = fromCity;
+  const ground = buildingKind(catalogue, catalogue.camp.building).terrains;
+  const reached = groundRunsTo(catalogue, chronicle.tiles, chronicle.rivers, city);
+  return chronicle.tiles.filter(
+    (tile) =>
+      tile.building === undefined &&
+      ground.includes(tile.terrain) &&
+      reached.has(tileKey(tile)) &&
+      distance(tile, city) >= near &&
+      distance(tile, city) <= far &&
+      !holds(chronicle, tile) &&
+      unitAt(chronicle.units, tile) === undefined &&
+      standing.every((other) => distance(tile, other) >= apart),
+  );
+}
+
+function campsStanding(catalogue: Catalogue, chronicle: Chronicle): TileCoords[] {
+  return chronicle.tiles.filter((tile) => tile.building === catalogue.camp.building);
+}
+
+export function campPlaceable(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  fromCity: Span,
+  apart: number,
+): boolean {
+  return (
+    campTiles(catalogue, chronicle, fromCity, apart, campsStanding(catalogue, chronicle)).length > 0
+  );
+}
+
+/**
+ * Camps placed around the city, drawn one at a time, each uniformly from the tiles a camp may be
+ * placed on, `apart` from every camp standing — the generator's and the ones already drawn here
+ * alike; the candidates are filtered again after each. When they run out it places what it can. Each
+ * camp placed is its own stage, carrying the draw that placed it. It enters no unit.
+ */
+export function campsPlaced(
   catalogue: Catalogue,
   chronicle: Chronicle,
   camps: number,
   fromCity: Span,
   apart: number,
 ): Landed & { readonly placed: readonly TileCoords[] } {
-  const { city } = chronicle;
-  if (city === undefined) refuse(catalogue, 'a siege landed while the city stands nowhere');
-  const [near, far] = fromCity;
+  if (chronicle.city === undefined) {
+    refuse(catalogue, 'a camp was placed while the city stands nowhere');
+  }
   const camp = catalogue.camp.building;
-  const ground = buildingKind(catalogue, camp).terrains;
-  const reached = groundRunsTo(catalogue, chronicle.tiles, chronicle.rivers, city);
 
   let rng = chronicle.rng;
-  const standing: TileCoords[] = chronicle.tiles.filter((tile) => tile.building === camp);
+  const standing = campsStanding(catalogue, chronicle);
   const placings: { readonly tile: TileCoords; readonly rng: Rng }[] = [];
   for (let drawn = 0; drawn < camps; drawn++) {
-    const candidates = chronicle.tiles.filter(
-      (tile) =>
-        tile.building === undefined &&
-        ground.includes(tile.terrain) &&
-        reached.has(tileKey(tile)) &&
-        distance(tile, city) >= near &&
-        distance(tile, city) <= far &&
-        !holds(chronicle, tile) &&
-        unitAt(chronicle.units, tile) === undefined &&
-        standing.every((other) => distance(tile, other) >= apart),
-    );
+    const candidates = campTiles(catalogue, chronicle, fromCity, apart, standing);
     if (candidates.length === 0) break;
 
     const step = nextRng(rng);
@@ -491,13 +522,13 @@ export function besieged(
       ),
     );
   }
-  for (const { tile } of placings) {
-    landing = followed(landing, (left) => entered(catalogue, left, campUnit(catalogue, tile)));
-  }
   return { ...landing, placed: placings.map(({ tile }) => tile) };
 }
 
-/** `besieged` enters the raid's first warrior on the camp it places. */
+/**
+ * One camp placed around the city, then a raid of that many warriors entering on and around it, the
+ * first on the camp. Where no tile takes a camp nothing is placed, and it is a `runtime-error`.
+ */
 export function encamped(
   catalogue: Catalogue,
   chronicle: Chronicle,
@@ -505,17 +536,12 @@ export function encamped(
   apart: number,
   warriors: number,
 ): Landed {
-  const { city } = chronicle;
-  if (city === undefined) refuse(catalogue, 'a camp was placed while the city stands nowhere');
-  const [near, far] = fromCity;
-  const edge = Math.max(...chronicle.tiles.map((tile) => distance(tile, city)));
-  for (let widened = far; widened <= Math.max(far, edge); widened++) {
-    const siege = besieged(catalogue, chronicle, 1, [near, widened], apart);
-    const [camp] = siege.placed;
-    if (camp === undefined) continue;
-    return followed(siege, (left) => enteredAround(catalogue, left, camp, warriors - 1));
-  }
-  return raided(catalogue, chronicle, warriors);
+  const placing = campsPlaced(catalogue, chronicle, 1, fromCity, apart);
+  const [camp] = placing.placed;
+  if (camp === undefined) return runtimeError(chronicle);
+  // The first warrior lands on the camp only because `campTiles` asks the ground to run to the city
+  // and no unit to stand there, and the catalogue refuses a camp on a terrain its unit cannot stand on.
+  return followed(placing, (left) => enteredAround(catalogue, left, camp, warriors));
 }
 
 /** One roll of the generator inside a span of turns, both ends included. */

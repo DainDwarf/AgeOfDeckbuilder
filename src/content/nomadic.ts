@@ -21,6 +21,7 @@ import { MOVE_POINT } from '../rules/map';
 import { buildingKind, improvementKind } from '../rules/map-kinds';
 import {
   burned,
+  campPlaceable,
   encamped,
   type Fire,
   featureDealable,
@@ -43,6 +44,8 @@ function raiders(turn: number): number {
 const WILDFIRE: Fire = { burns: 'forest', leaves: 'plain', fromCity: 4, around: 1, damage: 2 };
 
 const HERD = { feature: 'game', fromCity: 4 } as const;
+
+const RIVAL_CAMP = { fromCity: [3, 4], apart: 3 } as const;
 
 export const NOMADIC: Catalogue = catalogued({
   version: 'nomadic',
@@ -191,6 +194,8 @@ export const NOMADIC: Catalogue = catalogued({
       },
     },
     'rival-band': {
+      needs: (catalogue, chronicle) =>
+        campPlaceable(catalogue, chronicle, RIVAL_CAMP.fromCity, RIVAL_CAMP.apart),
       answers: {
         fight: {
           cost: {},
@@ -202,7 +207,13 @@ export const NOMADIC: Catalogue = catalogued({
           cost: {},
           reads: (_catalogue, chronicle) => ({ warriors: raiders(chronicle.turn) }),
           lands: (catalogue, chronicle) =>
-            encamped(catalogue, chronicle, [3, 4], 3, raiders(chronicle.turn)),
+            encamped(
+              catalogue,
+              chronicle,
+              RIVAL_CAMP.fromCity,
+              RIVAL_CAMP.apart,
+              raiders(chronicle.turn),
+            ),
         },
       },
     },

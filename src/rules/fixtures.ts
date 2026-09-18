@@ -36,6 +36,7 @@ import {
 } from './catalogue';
 import { apply, beginChronicle, type Command, launched, outcome } from './chronicle';
 import { arrived, bordered } from './city';
+import { campUnit } from './enemies';
 import {
   type BuildingTypeId,
   cornerKey,
@@ -53,8 +54,9 @@ import { buildingKind, improvementKind } from './map-kinds';
 import type { Resources } from './resources';
 import { seedRng } from './rng';
 import {
-  besieged,
   burned,
+  campPlaceable,
+  campsPlaced,
   encamped,
   type Fire,
   featureDealable,
@@ -72,7 +74,7 @@ import {
   unitDamaged,
 } from './schedule';
 import { charted } from './sight';
-import { followed, type Group, type Stage, unchanged, walked } from './stages';
+import { followed, type Group, type Landed, type Stage, unchanged, walked } from './stages';
 import { type CardId, type Chronicle, type Deal, holds, type Timeline } from './state';
 import type { Faction, Unit, UnitStats } from './units';
 
@@ -105,6 +107,8 @@ export const AMBUSH = 3;
 /** How many warriors the fixture's encampment enters on and around the camp it places. */
 export const ENCAMPED = 3;
 
+const RIVALS = { fromCity: [3, 4], apart: 3 } as const;
+
 /** The fixture's wildfire: forest burned to plain, starting within three of the city. */
 export const FIRE: Fire = { burns: 'forest', leaves: 'plain', fromCity: 3, around: 1, damage: 3 };
 
@@ -114,6 +118,15 @@ export const HERD = 3;
 /** How many warriors the fixture's raid enters on this turn: one, and one more for every ten turns. */
 function raiders(turn: number): number {
   return 1 + Math.floor(turn / 10);
+}
+
+function besieged(catalogue: Catalogue, chronicle: Chronicle): Landed {
+  const placing = campsPlaced(catalogue, chronicle, SIEGE_CAMPS, [3, 5], 3);
+  let landing: Landed = placing;
+  for (const camp of placing.placed) {
+    landing = followed(landing, (left) => entered(catalogue, left, campUnit(catalogue, camp)));
+  }
+  return landing;
 }
 
 /** The events every fixture schedule deals from, each one also a schedule of its own through `dealing`. */
@@ -185,11 +198,14 @@ const EVENTS: Catalogue['events'] = {
     },
   },
   PH_Rivals: {
+    needs: (catalogue, chronicle) =>
+      campPlaceable(catalogue, chronicle, RIVALS.fromCity, RIVALS.apart),
     answers: {
       PH_Encampment: {
         cost: {},
         reads: () => ({ warriors: ENCAMPED }),
-        lands: (catalogue, chronicle) => encamped(catalogue, chronicle, [3, 4], 3, ENCAMPED),
+        lands: (catalogue, chronicle) =>
+          encamped(catalogue, chronicle, RIVALS.fromCity, RIVALS.apart, ENCAMPED),
       },
       PH_Truce: {
         cost: {},
@@ -422,7 +438,7 @@ export const CATALOGUE: Catalogue = catalogued({
   events: EVENTS,
   capstones: {
     PH_Siege: {
-      lands: (catalogue, chronicle) => besieged(catalogue, chronicle, SIEGE_CAMPS, [3, 5], 3),
+      lands: besieged,
       continues: reinforced,
       passes: (_catalogue, chronicle) => spanEnded(chronicle, 6),
     },

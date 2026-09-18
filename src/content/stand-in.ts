@@ -18,11 +18,12 @@ import {
   throughWorker,
   unimproved,
 } from '../rules/cards';
-import { type Catalogue, catalogued } from '../rules/catalogue';
+import { type Catalogue, catalogued, entered } from '../rules/catalogue';
 import { arrived, bordered } from '../rules/city';
+import { campUnit } from '../rules/enemies';
 import { MOVE_POINT } from '../rules/map';
 import { buildingKind, improvementKind } from '../rules/map-kinds';
-import { besieged, laid, raided, reinforced, spanEnded } from '../rules/schedule';
+import { campsPlaced, laid, raided, reinforced, spanEnded } from '../rules/schedule';
 import { followed, type Landed, unchanged } from '../rules/stages';
 import { type CardId, type Chronicle, holds } from '../rules/state';
 import { ADVANCE } from './scripts';
@@ -396,7 +397,12 @@ function copies(count: number): readonly CardId[] {
 }
 
 function siege(catalogue: Catalogue, chronicle: Chronicle): Landed {
-  return besieged(catalogue, chronicle, SIEGE_CAMPS, [3, 5], 3);
+  const placing = campsPlaced(catalogue, chronicle, SIEGE_CAMPS, [3, 5], 3);
+  let landing: Landed = placing;
+  for (const camp of placing.placed) {
+    landing = followed(landing, (left) => entered(catalogue, left, campUnit(catalogue, camp)));
+  }
+  return landing;
 }
 
 /** How many warriors a raid enters on this turn: one, and one more for every ten turns. */
