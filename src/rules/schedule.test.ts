@@ -87,9 +87,7 @@ function walkedFrom(
     const stages = apply(catalogue, chronicle, command);
     for (const { name, chronicle: left } of stagesWalked(stages)) {
       const dealt = left.deals[left.deals.length - 1];
-      if (name === 'capstone' && left.turn === left.timeline.capstone.turn) {
-        landings.push({ turn: left.turn });
-      }
+      if (name === 'capstone-landing') landings.push({ turn: left.turn });
       if (name === 'deal' && dealt?.of === 'event') {
         landings.push({ turn: left.turn, event: dealt.event });
       }
@@ -1211,7 +1209,7 @@ test('the capstone’s turn lands the capstone straight and draws the hand, deal
     expect(staged.slice(staged.indexOf('turn'))).toEqual([
       'turn',
       'turn',
-      'capstone',
+      'capstone-landing',
       'rolled',
       ...Array<string>(5).fill('retiled'),
       ...Array<string>(5).fill('enter'),
@@ -1231,10 +1229,10 @@ test('the capstone’s turn drops a deal due past it, and the next deal is due t
   expect(next).toBeLessThanOrEqual(CAPSTONE + 7);
 });
 
-test('the capstone’s turn is one capstone group over the next due turn rolled and the landing, and each turn after it one over the second script', () => {
+test('the capstone’s turn is one landing group over the next due turn rolled and the landing, and each turn after it one second-script group over the second script', () => {
   const awaited = awaitingCapstone({ drawPile: fullDraw() });
 
-  const landing = heldBy(apply(CATALOGUE, awaited, { type: 'end-turn' }), 'capstone');
+  const landing = heldBy(apply(CATALOGUE, awaited, { type: 'end-turn' }), 'capstone-landing');
   const [rolled, ...landed] = landing;
 
   expect(rolled.name).toBe('rolled');
@@ -1246,19 +1244,19 @@ test('the capstone’s turn is one capstone group over the next due turn rolled 
   ]);
 
   const after = moated({ units: [unkillable(LURE)] });
-  const continued = heldBy(apply(CATALOGUE, after, { type: 'end-turn' }), 'capstone');
+  const continued = heldBy(apply(CATALOGUE, after, { type: 'end-turn' }), 'capstone-continued');
 
   expect(continued.map(({ name }) => name)).toEqual(['enter']);
   expect(continued).toMatchObject([{ tile: STANDING_CAMP }]);
 });
 
-test('a capstone carrying no second script stages no capstone on the turns after its own', () => {
+test('a capstone carrying no second script stages no second-script group on the turns after its own', () => {
   const tilled = awaitingTillage();
   const landed = endedTurn(tilled);
 
-  expect(stagedBy(tilled, { type: 'end-turn' })).toContain('capstone');
+  expect(stagedBy(tilled, { type: 'end-turn' })).toContain('capstone-landing');
   expect(landed.turn).toBe(CAPSTONE);
-  expect(stagedBy(landed, { type: 'end-turn' })).not.toContain('capstone');
+  expect(stagedBy(landed, { type: 'end-turn' })).not.toContain('capstone-continued');
 });
 
 test('the capstone’s landing is a stage of its own on its turn, even where it lands nothing', () => {
@@ -1274,7 +1272,7 @@ test('the capstone’s landing is a stage of its own on its turn, even where it 
   expect(staged.slice(staged.indexOf('turn'))).toEqual([
     'turn',
     'turn',
-    'capstone',
+    'capstone-landing',
     'rolled',
     'drawn',
   ]);
@@ -1303,7 +1301,7 @@ test('a camp captured the turn before the capstone’s deals its rewards, and th
     'discarded',
     'turn',
     'turn',
-    'capstone',
+    'capstone-landing',
     'rolled',
     ...campsOf(taken).map(() => 'retiled'),
     ...campsOf(taken).map(() => 'enter'),
@@ -1430,7 +1428,10 @@ test('the siege places no camp the city holds, a unit stands on, a building fill
     const after = outcome(stages);
     none.push(after);
 
-    expect(heldBy(stages, 'capstone').map(({ name }) => name)).toEqual(['rolled', 'runtime-error']);
+    expect(heldBy(stages, 'capstone-landing').map(({ name }) => name)).toEqual([
+      'rolled',
+      'runtime-error',
+    ]);
     expect(enemiesOf(after)).toEqual([]);
   }
   expect(campsOf(none[3])).toEqual([near]);
@@ -1450,7 +1451,10 @@ test('the siege places no camp on ground a camp does not lie on, or the city is 
     const stages = apply(CATALOGUE, awaited, { type: 'end-turn' });
     const after = outcome(stages);
 
-    expect(heldBy(stages, 'capstone').map(({ name }) => name)).toEqual(['rolled', 'runtime-error']);
+    expect(heldBy(stages, 'capstone-landing').map(({ name }) => name)).toEqual([
+      'rolled',
+      'runtime-error',
+    ]);
     expect(campsOf(after)).toEqual([]);
     expect(enemiesOf(after)).toEqual([]);
   }
@@ -1485,14 +1489,14 @@ test('the warrior the reinforcement enters is a stage of its own, raised after t
 
   while (reinforcing.turn < due - 1) {
     const stages = apply(CATALOGUE, reinforcing, { type: 'end-turn' });
-    expect(opened(stages)).toEqual(['turn', 'capstone']);
-    expect(heldBy(stages, 'capstone').map(({ name }) => name)).toEqual(['enter']);
+    expect(opened(stages)).toEqual(['turn', 'capstone-continued']);
+    expect(heldBy(stages, 'capstone-continued').map(({ name }) => name)).toEqual(['enter']);
     reinforcing = endedTurn(reinforcing, 'PH_Famine');
   }
   const dealt = apply(CATALOGUE, reinforcing, { type: 'end-turn' });
 
-  expect(opened(dealt)).toEqual(['turn', 'capstone', 'deal']);
-  expect(heldBy(dealt, 'capstone').map(({ name }) => name)).toEqual(['enter']);
+  expect(opened(dealt)).toEqual(['turn', 'capstone-continued', 'deal']);
+  expect(heldBy(dealt, 'capstone-continued').map(({ name }) => name)).toEqual(['enter']);
   expect(heldBy(dealt, 'deal').map(({ name }) => name)).toEqual(['rolled', 'dealt']);
 });
 
@@ -1652,7 +1656,7 @@ test('a capstone’s condition holding before the capstone lands ends the chroni
   expect(staged.slice(staged.indexOf('turn'))).toEqual([
     'turn',
     'turn',
-    'capstone',
+    'capstone-landing',
     'rolled',
     'ended',
   ]);

@@ -1375,7 +1375,8 @@ export function createMapView(
         return staged([stage.attacker, stage.target], stage.chronicle, () =>
           attack(stage.attacker, stage.target, stage.chronicle),
         );
-      case 'capstone':
+      case 'capstone-landing':
+      case 'capstone-continued':
       case 'answer':
       case 'played':
       case 'refused':

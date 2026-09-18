@@ -97,7 +97,7 @@ export function spanEnded(chronicle: Chronicle, turns: number): boolean {
 
 /**
  * The events phase, which draws from the chronicle's generator only through the capstone's landing.
- * On the capstone's turn, one `capstone` group: nothing is dealt whatever was due, the next due turn
+ * On the capstone's turn, one `capstone-landing` group: nothing is dealt whatever was due, the next due turn
  * is rolled from that turn, and the capstone lands on what that leaves. On a due turn, one `deal`
  * group: the next due turn is rolled from that turn, and the event drawn is dealt behind the deals
  * already standing, nothing landing until one of its answers is taken — or, where no event is drawn,
@@ -111,7 +111,7 @@ export function events(catalogue: Catalogue, chronicle: Chronicle): Sequence<Gro
     );
     const { lands } = capstoneOf(catalogue, timeline.capstone.id);
     return grouped(
-      { name: 'capstone' },
+      { name: 'capstone-landing' },
       followed(rolled, (left) => lands(catalogue, left)),
     );
   }
@@ -193,14 +193,14 @@ export function rewarded(chronicle: Chronicle, card: CardId): Landed {
 }
 
 /**
- * The capstone's second script, on every turn after the one it lands on: one `capstone` group over
+ * The capstone's second script, on every turn after the one it lands on: one `capstone-continued` group over
  * what it raised. Nothing on any other turn, or for a capstone that carries none.
  */
 export function continued(catalogue: Catalogue, chronicle: Chronicle): Sequence<Group> {
   const { id, turn } = chronicle.timeline.capstone;
   const { continues } = capstoneOf(catalogue, id);
   if (chronicle.turn <= turn || continues === undefined) return unchanged(chronicle);
-  return grouped({ name: 'capstone' }, continues(catalogue, chronicle));
+  return grouped({ name: 'capstone-continued' }, continues(catalogue, chronicle));
 }
 
 /** A content defect met in play, followed through as the one change saying so. */

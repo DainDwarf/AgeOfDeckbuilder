@@ -6,7 +6,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ---
 
-- **The capstone's two groups named apart** — the capstone's landing is the `capstone-landing` group and its second script the `capstone-continued` group, both in the closed set `src/rules/stages.ts` holds, and neither the victory read nor the landing's window reads the turn to tell them apart; `npm test` and the capstone spec pass. Doc-impact: none. [board/capstone-groups-named-apart.md](board/capstone-groups-named-apart.md)
 - **Event animations** — when an event's answer lands, what it changes on the map — burned tiles, killed population and units, anything an answer does — is animated rather than simply redrawn; the tile The herd's _Follow it_ charts is one of them, wherever it lies on the map, and nothing draws the eye to it until then.
 - **The biome rework** — a growth weight per biome, the spread growing per biome instead of per frontier, the city's first ring dealt as its own biome, and the bigger map.
 - **The balance pass** — numbers measured on the real content, edits uncommitted until the user says they hold. First playtest of the nomadic age: the enemy hits too hard; the settlement and the economy expand way too fast, so gathering is not much needed after a few turns — a victory on 74 food, 22 production, 15 culture — which leaves Hunger biteless and the camps' stocks useless as loot.

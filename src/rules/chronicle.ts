@@ -187,9 +187,9 @@ export function apply(catalogue: Catalogue, chronicle: Chronicle, command: Comma
 /**
  * The stages a command resolves as, cut at the first change after which the capstone's condition
  * holds: the `ended` of the victory right after it, and nothing that was resolved after it. The
- * condition is read from the capstone's landing on — after the `capstone` group on its turn, and
- * after every change from then on — and never on a chronicle that has ended or whose city falls on
- * it, the fall being read first.
+ * condition is read from the capstone's landing on — after the `capstone-landing` group, and after
+ * every change from then on — and never on a chronicle that has ended or whose city falls on it, the
+ * fall being read first.
  */
 function passedOn(catalogue: Catalogue, started: Chronicle, stages: readonly Stage[]): Stage[] {
   if (started.ending !== undefined) return [...stages];
@@ -214,10 +214,29 @@ function passedOn(catalogue: Catalogue, started: Chronicle, stages: readonly Sta
             const last = inner[inner.length - 1].chronicle;
             return [...held.slice(0, at), { ...stage, stages: inner, chronicle: last }];
           }
-          if (landed || stage.name !== 'capstone' || stage.chronicle.turn !== turn) break;
-          landed = true;
-          if (passesNow(stage.chronicle))
-            return [...held.slice(0, at + 1), victory(stage.chronicle)];
+          switch (stage.name) {
+            case 'capstone-landing':
+              landed = true;
+              if (passesNow(stage.chronicle))
+                return [...held.slice(0, at + 1), victory(stage.chronicle)];
+              break;
+            case 'capstone-continued':
+            case 'played':
+            case 'refused':
+            case 'assign':
+            case 'claim':
+            case 'strike':
+            case 'income':
+            case 'grow':
+            case 'turn':
+            case 'enemy-phase':
+            case 'deal':
+            case 'answer':
+            case 'reward':
+            case 'attack':
+            case 'camp-capture':
+              break;
+          }
           break;
         }
       }

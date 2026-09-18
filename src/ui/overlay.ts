@@ -89,7 +89,7 @@ export type Overlay = {
    */
   render(chronicle: Chronicle): void;
   /**
-   * Raises the capstone's window at the cue of the `capstone` group on the capstone's turn, over the
+   * Raises the capstone's window at the cue of the `capstone-landing` group, over the
    * screen as it stood before the landing, and holds the play-out until the window closes; raises
    * the ending screen on the stage that ends the chronicle.
    */
@@ -763,13 +763,11 @@ export function createOverlay(
 
   const grouped = (stage: Group): Promise<void> | undefined => {
     switch (stage.name) {
-      case 'capstone': {
-        const { chronicle } = stage;
-        if (chronicle.turn !== chronicle.timeline.capstone.turn) return undefined;
+      case 'capstone-landing':
         return new Promise((closed) => {
-          showCapstone({ stands: 'capstone', on: chronicle, raised: 'landing', closed });
+          showCapstone({ stands: 'capstone', on: stage.chronicle, raised: 'landing', closed });
         });
-      }
+      case 'capstone-continued':
       case 'played':
       case 'refused':
       case 'assign':

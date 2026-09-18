@@ -195,7 +195,8 @@ export function createResourceBar(
       case 'strike':
       case 'turn':
       case 'enemy-phase':
-      case 'capstone':
+      case 'capstone-landing':
+      case 'capstone-continued':
       case 'deal':
       case 'answer':
       case 'reward':
