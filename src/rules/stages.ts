@@ -37,12 +37,13 @@ export type PlainStage =
 /**
  * One change a landing makes. `laid` is a card laid on top of the draw pile, `gained` is resources
  * into the city's stock, `population-lost` is the city one population fewer with the tile it worked
- * unassigned; `enter` is one unit entering on the tile by anything but a card play, `retiled` is the
+ * unassigned, `runtime-error` is a landing followed through where the content should never have
+ * called it and nothing changed; `enter` is one unit entering on the tile by anything but a card play, `retiled` is the
  * tile's layers changed, `charted` is the tile charted as it stands on this stage, and `damaged` is
  * the unit standing on the tile hurt or killed by no attacker.
  */
 export type LandingStage = { readonly chronicle: Chronicle } & (
-  | { readonly name: 'laid' | 'gained' | 'population-lost' }
+  | { readonly name: 'laid' | 'gained' | 'population-lost' | 'runtime-error' }
   | { readonly name: 'enter' | 'retiled' | 'charted' | 'damaged'; readonly tile: TileCoords }
 );
 

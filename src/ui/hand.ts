@@ -477,6 +477,7 @@ export function createHand(
         case 'laid':
         case 'gained':
         case 'population-lost':
+        case 'runtime-error':
           return undefined;
       }
     },

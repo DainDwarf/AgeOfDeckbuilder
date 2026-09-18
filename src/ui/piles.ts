@@ -143,6 +143,7 @@ export function createPiles(
         case 'laid':
         case 'gained':
         case 'population-lost':
+        case 'runtime-error':
           return undefined;
       }
     },

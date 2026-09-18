@@ -375,6 +375,22 @@ test('the take lands the answer at its place in the order declared and no other,
   }
 });
 
+test('a raid with no free tile to enter on enters nobody, draws nothing, and resolves as a runtime error', () => {
+  const held = cityOf(['urban'], {
+    tiles: field(1),
+    timeline: dueOn(2),
+    drawPile: fullDraw(),
+    units: neighbours(CITY).map((tile) => standing('player', tile)),
+  });
+  const dealt = outcome(apply(CATALOGUE, held, { type: 'end-turn' }));
+  const raided = outcome(apply(CATALOGUE, dealt, { type: 'take', at: 0 }));
+
+  expect(dealt.deals).toEqual([{ of: 'event', event: 'PH_Hardship' }]);
+  expect(stagedBy(dealt, { type: 'take', at: 0 })).toEqual(['answer', 'runtime-error', 'draw']);
+  expect(enemiesOf(raided)).toEqual([]);
+  expect(raided.rng).toEqual(dealt.rng);
+});
+
 test('an answer taken pays its cost before it lands, and one the city cannot pay for is refused with nothing paid', () => {
   const stocked = (production: number): Chronicle =>
     dealtBy(5, {

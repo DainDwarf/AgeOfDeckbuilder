@@ -230,6 +230,7 @@ function chartedOn(stage: Stage): TileCoords | undefined {
     case 'laid':
     case 'gained':
     case 'population-lost':
+    case 'runtime-error':
     case 'played':
     case 'refused':
     case 'assign':

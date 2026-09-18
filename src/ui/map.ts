@@ -1352,6 +1352,7 @@ export function createMapView(
         case 'laid':
         case 'gained':
         case 'population-lost':
+        case 'runtime-error':
         case 'capstone':
         case 'answer':
         case 'played':

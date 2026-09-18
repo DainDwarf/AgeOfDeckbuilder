@@ -94,7 +94,7 @@ export function spanEnded(chronicle: Chronicle, turns: number): boolean {
 }
 
 /**
- * The events phase, which draws nothing from the chronicle's generator: on the capstone's turn
+ * The events phase, which draws from the chronicle's generator only through the capstone's landing: on the capstone's turn
  * nothing is dealt whatever was due, the next due turn is rolled from that turn in the one `capstone`
  * stage, and the capstone lands on what that leaves, in its landing's stages after it; on the due
  * turn its event is drawn and dealt behind the deals already standing, nothing landing until one of
@@ -197,10 +197,19 @@ export function continued(catalogue: Catalogue, chronicle: Chronicle): Landed {
   return capstoneOf(catalogue, id).continues?.(catalogue, chronicle) ?? unchanged(chronicle);
 }
 
+/** A landing the content should never have called, followed through as the one step saying so. */
+function runtimeError(chronicle: Chronicle): Landed {
+  return landedAs({ name: 'runtime-error', chronicle });
+}
+
+/**
+ * The warriors entering around a door drawn for them; a raid of no warrior, or one with no door or
+ * no free tile to enter on, draws nothing and is a `runtime-error`.
+ */
 export function raided(catalogue: Catalogue, chronicle: Chronicle, warriors: number): Landed {
-  if (warriors <= 0) return unchanged(chronicle);
+  if (warriors <= 0) return runtimeError(chronicle);
   const drawn = raidEntry(catalogue, chronicle);
-  if (drawn === undefined) return unchanged(chronicle);
+  if (drawn === undefined) return runtimeError(chronicle);
   return enteredAround(catalogue, drawn.chronicle, drawn.entry, warriors);
 }
 
@@ -337,7 +346,7 @@ export function fireRead(chronicle: Chronicle, fire: Fire): Record<string, numbe
 /**
  * The fire landed: on every tile it burns, the population working it killed, the tile terraformed
  * into the terrain it leaves, and the unit standing on it damaged, whatever its faction. A fire that
- * changed nothing drew nothing.
+ * would change nothing draws nothing and is a `runtime-error`.
  */
 export function burned(catalogue: Catalogue, chronicle: Chronicle, fire: Fire): Landed {
   const { burning, rng } = fireDrawn(chronicle, fire);
@@ -347,7 +356,7 @@ export function burned(catalogue: Catalogue, chronicle: Chronicle, fire: Fire): 
     landing = followed(landing, (left) => terraformedOn(catalogue, left, tile, fire.leaves));
     landing = followed(landing, (left) => unitDamaged(left, tile, fire.damage));
   }
-  return landing.stages.length === 0 ? unchanged(chronicle) : landing;
+  return landing.stages.length === 0 ? runtimeError(chronicle) : landing;
 }
 
 /**
