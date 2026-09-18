@@ -1,19 +1,30 @@
-import { gained, terraformed } from './cards';
+import { terraformed } from './cards';
 import {
   type Answer,
   type Catalogue,
   capstoneOf,
   cardOf,
+  entered,
   eventOf,
   type Span,
   scheduleOf,
 } from './catalogue';
-import { campUnitEntered, enteredAround, raidEntry } from './enemies';
+import { campUnit, enteredAround, raidEntry } from './enemies';
 import { distance, type FeatureId, groundRunsTo, type Tile, type TileCoords, tileKey } from './map';
 import { buildingKind, featureKind, held, refuse } from './map-kinds';
-import type { Resources } from './resources';
 import { nextRng, pickWeighted, type Rng } from './rng';
-import { followed, type Landed, landedAs, type Stage, unchanged } from './stages';
+import {
+  change,
+  changeFrom,
+  changeOn,
+  followed,
+  type Group,
+  grouped,
+  type Landed,
+  landedAs,
+  type Sequence,
+  unchanged,
+} from './stages';
 import {
   type CardId,
   type Chronicle,
@@ -94,43 +105,42 @@ export function spanEnded(chronicle: Chronicle, turns: number): boolean {
 }
 
 /**
- * The events phase, which draws from the chronicle's generator only through the capstone's landing: on the capstone's turn
- * nothing is dealt whatever was due, the next due turn is rolled from that turn in the one `capstone`
- * stage, and the capstone lands on what that leaves, in its landing's stages after it; on the due
- * turn its event is drawn and dealt behind the deals already standing, nothing landing until one of
- * its answers is taken, or nothing is dealt where no event is drawn, and the next due turn is rolled
- * from that turn; any other turn changes nothing.
+ * The events phase, which draws from the chronicle's generator only through the capstone's landing.
+ * On the capstone's turn, one `capstone` group: nothing is dealt whatever was due, the next due turn
+ * is rolled from that turn, and the capstone lands on what that leaves. On a due turn, one `deal`
+ * group: the next due turn is rolled from that turn, and the event drawn is dealt behind the deals
+ * already standing, nothing landing until one of its answers is taken — or, where no event is drawn,
+ * a `runtime-error`, and play goes on to the next due turn. Any other turn stages nothing.
  */
-export function events(
-  catalogue: Catalogue,
-  chronicle: Chronicle,
-):
-  | { readonly phase: 'capstone'; readonly stages: readonly Stage[] }
-  | { readonly phase: 'deal' | 'no-deal'; readonly chronicle: Chronicle } {
+export function events(catalogue: Catalogue, chronicle: Chronicle): Sequence<Group> {
   const { timeline, turn } = chronicle;
   if (turn === timeline.capstone.turn) {
-    const rolled = { ...chronicle, timeline: rolledFrom(catalogue, timeline, turn) };
-    const landing = capstoneOf(catalogue, timeline.capstone.id).lands(catalogue, rolled);
-    return {
-      phase: 'capstone',
-      stages: [{ name: 'capstone', chronicle: rolled }, ...landing.stages],
-    };
+    const rolled = landedAs(
+      change('rolled', { ...chronicle, timeline: rolledFrom(catalogue, timeline, turn) }),
+    );
+    const { lands } = capstoneOf(catalogue, timeline.capstone.id);
+    return grouped(
+      { name: 'capstone' },
+      followed(rolled, (left) => lands(catalogue, left)),
+    );
   }
 
-  if (turn !== timeline.next) return { phase: 'deal', chronicle };
+  if (turn !== timeline.next) return unchanged(chronicle);
   const { event, rng } = eventDrawn(catalogue, chronicle);
-  const rolled = rolledFrom(catalogue, { ...timeline, rng }, turn);
-  if (event === undefined) {
-    return { phase: 'no-deal', chronicle: { ...chronicle, timeline: rolled } };
-  }
-  return {
-    phase: 'deal',
-    chronicle: {
+  const rolled = landedAs(
+    change('rolled', {
       ...chronicle,
-      timeline: rolled,
-      deals: [...chronicle.deals, { of: 'event', event }],
-    },
-  };
+      timeline: rolledFrom(catalogue, { ...timeline, rng }, turn),
+    }),
+  );
+  return grouped(
+    { name: 'deal' },
+    followed(rolled, (left) =>
+      event === undefined
+        ? runtimeError(left)
+        : landedAs(change('dealt', { ...left, deals: [...left.deals, { of: 'event', event }] })),
+    ),
+  );
 }
 
 /** What a deal offers to be taken, by id, in the order dealt: its event's answers, or the camp's rewards. */
@@ -174,32 +184,37 @@ export function answerRefusal(
 }
 
 /**
- * An answer taken off the chronicle the deal is popped from: its cost is paid in the one `answer`
- * stage, and it lands on what that leaves, in its landing's stages after it.
+ * An answer taken off the chronicle the deal is popped from: its cost paid as one `stock`, none where
+ * it costs nothing, and its landing on what that leaves.
  */
-export function answered(catalogue: Catalogue, chronicle: Chronicle, answer: Answer): Stage[] {
-  const paidOn = paid(chronicle, answerCost(catalogue, chronicle, answer));
-  return [{ name: 'answer', chronicle: paidOn }, ...answer.lands(catalogue, paidOn).stages];
+export function answered(catalogue: Catalogue, chronicle: Chronicle, answer: Answer): Landed {
+  const costs = answerCost(catalogue, chronicle, answer);
+  const paidOn =
+    costs.length === 0 ? unchanged(chronicle) : landedAs(change('stock', paid(chronicle, costs)));
+  return followed(paidOn, (left) => answer.lands(catalogue, left));
 }
 
 /** A reward taken off the chronicle the deal is popped from: it is laid in the discard pile. */
-export function rewarded(chronicle: Chronicle, card: CardId): Chronicle {
-  return { ...chronicle, discardPile: [...chronicle.discardPile, card] };
+export function rewarded(chronicle: Chronicle, card: CardId): Landed {
+  return landedAs(
+    changeFrom('discarded', [], { ...chronicle, discardPile: [...chronicle.discardPile, card] }),
+  );
 }
 
 /**
- * The capstone's second script, on every turn after the one it lands on, and nothing on any other
- * turn or for a capstone that carries none.
+ * The capstone's second script, on every turn after the one it lands on: one `capstone` group over
+ * what it raised. Nothing on any other turn, or for a capstone that carries none.
  */
-export function continued(catalogue: Catalogue, chronicle: Chronicle): Landed {
+export function continued(catalogue: Catalogue, chronicle: Chronicle): Sequence<Group> {
   const { id, turn } = chronicle.timeline.capstone;
-  if (chronicle.turn <= turn) return unchanged(chronicle);
-  return capstoneOf(catalogue, id).continues?.(catalogue, chronicle) ?? unchanged(chronicle);
+  const { continues } = capstoneOf(catalogue, id);
+  if (chronicle.turn <= turn || continues === undefined) return unchanged(chronicle);
+  return grouped({ name: 'capstone' }, continues(catalogue, chronicle));
 }
 
-/** A landing the content should never have called, followed through as the one step saying so. */
+/** A content defect met in play, followed through as the one change saying so. */
 function runtimeError(chronicle: Chronicle): Landed {
-  return landedAs({ name: 'runtime-error', chronicle });
+  return landedAs(change('runtime-error', chronicle));
 }
 
 /**
@@ -213,32 +228,43 @@ export function raided(catalogue: Catalogue, chronicle: Chronicle, warriors: num
   return enteredAround(catalogue, drawn.chronicle, drawn.entry, warriors);
 }
 
+/** The population off the tile and then one fewer. */
+function populationLeaving(chronicle: Chronicle, at: TileCoords): Landed {
+  const key = tileKey(at);
+  return followed(
+    landedAs(
+      changeOn('assigned', at, {
+        ...chronicle,
+        assigned: chronicle.assigned.filter((coord) => tileKey(coord) !== key),
+      }),
+    ),
+    (left) => landedAs(change('population', { ...left, population: left.population - 1 })),
+  );
+}
+
 /**
- * The population working the tile killed: the city's population one fewer and the tile unassigned,
+ * The population working the tile killed: the tile unassigned and the city's population one fewer,
  * and nothing where nobody works it.
  */
 export function populationKilled(chronicle: Chronicle, at: TileCoords): Landed {
   const key = tileKey(at);
-  const assigned = chronicle.assigned.filter((coord) => tileKey(coord) !== key);
-  if (assigned.length === chronicle.assigned.length) return unchanged(chronicle);
-  return landedAs({
-    name: 'population-lost',
-    chronicle: { ...chronicle, population: chronicle.population - 1, assigned },
-  });
+  const working = chronicle.assigned.find((coord) => tileKey(coord) === key);
+  if (working === undefined) return unchanged(chronicle);
+  return populationLeaving(chronicle, working);
 }
 
 /**
- * One population of the city taken, whichever it is: the population one fewer, an idle one where
- * one is idle and the last assigned tile unassigned where none is, the city's last no exception.
+ * One population of the city taken, whichever it is: an idle one where one is idle, and where none
+ * is the last assigned tile unassigned first, the city's last no exception; the population one fewer.
  * Nothing where the city has no population at all.
  */
 export function populationTaken(chronicle: Chronicle): Landed {
   if (chronicle.population <= 0) return unchanged(chronicle);
-  const assigned = idle(chronicle) > 0 ? chronicle.assigned : chronicle.assigned.slice(0, -1);
-  return landedAs({
-    name: 'population-lost',
-    chronicle: { ...chronicle, population: chronicle.population - 1, assigned },
-  });
+  const last = chronicle.assigned[chronicle.assigned.length - 1];
+  if (idle(chronicle) > 0 || last === undefined) {
+    return landedAs(change('population', { ...chronicle, population: chronicle.population - 1 }));
+  }
+  return populationLeaving(chronicle, last);
 }
 
 /**
@@ -248,40 +274,17 @@ export function populationTaken(chronicle: Chronicle): Landed {
 export function unitDamaged(chronicle: Chronicle, at: TileCoords, amount: number): Landed {
   const target = unitAt(chronicle.units, at);
   if (target === undefined) return unchanged(chronicle);
-  return landedAs({
-    name: 'damaged',
-    tile: at,
-    chronicle: { ...chronicle, units: damaged(chronicle.units, target, amount) },
-  });
-}
-
-/** The resources gained into the city's stock, and nothing where it gains none. */
-export function stockGained(chronicle: Chronicle, gain: Partial<Resources>): Landed {
-  if (costsOf(gain).length === 0) return unchanged(chronicle);
-  return landedAs({ name: 'gained', chronicle: gained(chronicle, gain) });
+  const units = damaged(chronicle.units, target, amount);
+  const killed = units.length < chronicle.units.length;
+  return landedAs(changeOn(killed ? 'killed' : 'damaged', at, { ...chronicle, units }));
 }
 
 /**
- * The tile terraformed as a card terraforms it, and nothing where the terraform leaves the tile as it
- * stands.
- */
-export function terraformedOn(
-  catalogue: Catalogue,
-  chronicle: Chronicle,
-  at: TileCoords,
-  to: string,
-): Landed {
-  const left = terraformed(catalogue, chronicle, at, to);
-  if (left === chronicle) return unchanged(chronicle);
-  return landedAs({ name: 'retiled', tile: at, chronicle: left });
-}
-
-/**
- * The tile charted, whatever sees it: the one `charted` stage, carrying no snapshot of its own — the
+ * The tile charted, whatever sees it: the one `charted` change, carrying no snapshot of its own — the
  * chronicle's charting takes it.
  */
 export function tileCharted(chronicle: Chronicle, at: TileCoords): Landed {
-  return landedAs({ name: 'charted', tile: at, chronicle });
+  return landedAs(changeOn('charted', at, chronicle));
 }
 
 /**
@@ -353,7 +356,7 @@ export function burned(catalogue: Catalogue, chronicle: Chronicle, fire: Fire): 
   let landing = unchanged({ ...chronicle, rng });
   for (const tile of burning) {
     landing = followed(landing, (left) => populationKilled(left, tile));
-    landing = followed(landing, (left) => terraformedOn(catalogue, left, tile, fire.leaves));
+    landing = followed(landing, (left) => terraformed(catalogue, left, tile, fire.leaves));
     landing = followed(landing, (left) => unitDamaged(left, tile, fire.damage));
   }
   return landing.stages.length === 0 ? runtimeError(chronicle) : landing;
@@ -405,25 +408,20 @@ export function featureDealt(
   const dealt = candidates[Math.floor(step.value * candidates.length)];
   const key = tileKey(dealt);
   const at = { q: dealt.q, r: dealt.r };
-  const landing = landedAs({
-    name: 'retiled',
-    tile: at,
-    chronicle: {
+  const landing = landedAs(
+    changeOn('retiled', at, {
       ...chronicle,
       rng: step.rng,
       tiles: chronicle.tiles.map((tile) => (tileKey(tile) === key ? { ...tile, feature } : tile)),
-    },
-  });
+    }),
+  );
   return { ...landing, at };
 }
 
 /** A card laid on top of the draw pile; a card the catalogue does not hold is refused. */
 export function laid(catalogue: Catalogue, chronicle: Chronicle, card: CardId): Landed {
   cardOf(catalogue, card);
-  return landedAs({
-    name: 'laid',
-    chronicle: { ...chronicle, drawPile: [card, ...chronicle.drawPile] },
-  });
+  return landedAs(change('laid', { ...chronicle, drawPile: [card, ...chronicle.drawPile] }));
 }
 
 /**
@@ -435,7 +433,7 @@ export function reinforced(catalogue: Catalogue, chronicle: Chronicle): Landed {
   for (const { q, r, building } of chronicle.tiles) {
     if (building !== catalogue.camp.building) continue;
     if (unitAt(landing.chronicle.units, { q, r }) !== undefined) continue;
-    landing = followed(landing, (left) => landedAs(campUnitEntered(catalogue, left, { q, r })));
+    landing = followed(landing, (left) => entered(catalogue, left, campUnit(catalogue, { q, r })));
   }
   return landing;
 }
@@ -491,21 +489,19 @@ export function besieged(
   for (const placing of placings) {
     const key = tileKey(placing.tile);
     landing = followed(landing, (left) =>
-      landedAs({
-        name: 'retiled',
-        tile: placing.tile,
-        chronicle: {
+      landedAs(
+        changeOn('retiled', placing.tile, {
           ...left,
           rng: placing.rng,
           tiles: left.tiles.map((tile) =>
             tileKey(tile) === key ? { ...tile, building: camp } : tile,
           ),
-        },
-      }),
+        }),
+      ),
     );
   }
   for (const { tile } of placings) {
-    landing = followed(landing, (left) => landedAs(campUnitEntered(catalogue, left, tile)));
+    landing = followed(landing, (left) => entered(catalogue, left, campUnit(catalogue, tile)));
   }
   return { ...landing, placed: placings.map(({ tile }) => tile) };
 }

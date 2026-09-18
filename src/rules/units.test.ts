@@ -9,6 +9,7 @@ import {
   FOOD,
   field,
   madeOf,
+  namesOf,
   only,
   pointsOf,
   riverBetween,
@@ -18,6 +19,7 @@ import {
   worker,
 } from './fixtures';
 import { type ImprovementId, MOVE_POINT, type Tile, type TileCoords, tileKey } from './map';
+import { walked } from './stages';
 import type { Chronicle } from './state';
 import { attackable } from './units';
 
@@ -46,10 +48,10 @@ test('a move is one stage, naming the tile the unit left and the one it reached'
   });
 
   const stages = apply(CATALOGUE, city, moveTo(1, { q: 1, r: 0 }));
-  const [crossed] = stages;
+  const [crossed] = walked(stages);
   if (crossed.name !== 'move') throw new Error('the command staged no move');
 
-  expect(stages.map((stage) => stage.name)).toEqual(['move']);
+  expect(namesOf(stages)).toEqual(['move']);
   expect(crossed.from).toEqual(CITY);
   expect(crossed.to).toEqual({ q: 1, r: 0 });
   expect(crossed.chronicle.units[0].tile).toEqual({ q: 1, r: 0 });
@@ -137,10 +139,15 @@ test('an attack by hand takes the attacker’s damage off the target and spends 
   });
 
   const stages = apply(CATALOGUE, city, attackOn(1, { q: 2, r: 0 }));
-  const [landed] = stages;
+  const [landed, spent, damaged] = walked(stages);
   if (landed.name !== 'attack') throw new Error('the command staged no attack');
 
-  expect(stages.map((stage) => stage.name)).toEqual(['attack']);
+  expect(namesOf(stages)).toEqual(['attack', 'action-spent', 'damaged']);
+  expect(spent).toMatchObject({ tile: { q: 1, r: 0 } });
+  expect(actionOf(spent.chronicle, 1)).toBe(0);
+  expect(spent.chronicle.units[1].stats.health).toBe(5);
+  expect(damaged).toMatchObject({ tile: { q: 2, r: 0 } });
+  expect(landed.chronicle).toBe(damaged.chronicle);
   expect(landed.attacker).toEqual({ q: 1, r: 0 });
   expect(landed.target).toEqual({ q: 2, r: 0 });
   expect(landed.chronicle.units[1].stats.health).toBe(3);
@@ -228,7 +235,7 @@ test('an attack reaches its range and no further, and lands on a unit of another
     units: [standing('player', CITY, { damage: 2, range: 2 }), ...units.slice(1)],
   });
 
-  expect(stagedBy(far, attackOn(1, { q: 2, r: 0 }))).toEqual(['attack']);
+  expect(stagedBy(far, attackOn(1, { q: 2, r: 0 }))).toEqual(['attack', 'action-spent', 'damaged']);
 });
 
 test('an attack that takes the target’s last health kills it, and it leaves the map', () => {
@@ -245,6 +252,7 @@ test('an attack that takes the target’s last health kills it, and it leaves th
   expect(after.units).toHaveLength(1);
   expect(after.units[0].faction).toBe('player');
   expect(actionOf(after, 1)).toBe(0);
+  expect(stagedBy(city, attackOn(1, { q: 2, r: 0 }))).toEqual(['attack', 'action-spent', 'killed']);
 });
 
 test('a kill leaves every unit still standing commanded by the number it entered with', () => {

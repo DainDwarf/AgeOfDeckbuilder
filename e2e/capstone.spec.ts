@@ -57,7 +57,7 @@ test('the chronicle’s opening announces the capstone, once', async ({ page }) 
   expect(problems).toEqual([]);
 });
 
-test('the capstone’s landing ends the end of turn on its window, and the hand is drawn once it closes', async ({
+test('the capstone’s landing holds the end of turn on its window, and the end of turn goes on to draw the hand once it closes', async ({
   page,
 }) => {
   const problems = watch(page);

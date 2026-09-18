@@ -21,7 +21,7 @@ import {
 } from '../rules/map';
 import { RESOURCES, type Resource } from '../rules/resources';
 import { inSight } from '../rules/sight';
-import type { Stage } from '../rules/stages';
+import type { Change, Group, Stage } from '../rules/stages';
 import { assignedTo, type Chronicle, type Cost, type Snapshot } from '../rules/state';
 import { type Faction, type Landing, type Unit, unitAt, unitOf } from '../rules/units';
 import { MAP_FRAME } from './band';
@@ -212,7 +212,6 @@ export type Drawn = {
 
 export type MapView = {
   render(chronicle: Chronicle): void;
-  /** What the map plays for the stage; nothing means the scene renders it at once. */
   play(stage: Stage): Promise<void> | undefined;
   /**
    * Lights those of the tiles it is given that the map draws and aims at them until it is let go of;
@@ -1323,6 +1322,69 @@ export function createMapView(
     });
   };
 
+  const changed = (stage: Change): Promise<void> | undefined => {
+    switch (stage.name) {
+      case 'move':
+        return staged([stage.from, stage.to], stage.chronicle, () =>
+          slide(stage.from, stage.to, stage.chronicle),
+        );
+      case 'enter':
+        return staged(
+          arrivals(stage.chronicle).map((unit) => unit.tile),
+          stage.chronicle,
+          () => arriving(stage.chronicle),
+        );
+      case 'damaged':
+      case 'killed':
+      case 'refreshed':
+      case 'action-spent':
+      case 'retiled':
+      case 'charted':
+      case 'held':
+      case 'settled':
+      case 'stock':
+      case 'population':
+      case 'assigned':
+      case 'laid':
+      case 'drawn':
+      case 'discarded':
+      case 'recalled':
+      case 'shuffled':
+      case 'left':
+      case 'turn':
+      case 'rolled':
+      case 'dealt':
+      case 'taken':
+      case 'ended':
+      case 'runtime-error':
+        return undefined;
+    }
+  };
+
+  const grouped = (stage: Group): Promise<void> | undefined => {
+    switch (stage.name) {
+      case 'attack':
+        return staged([stage.attacker, stage.target], stage.chronicle, () =>
+          attack(stage.attacker, stage.target, stage.chronicle),
+        );
+      case 'capstone':
+      case 'answer':
+      case 'played':
+      case 'refused':
+      case 'assign':
+      case 'claim':
+      case 'strike':
+      case 'income':
+      case 'grow':
+      case 'turn':
+      case 'enemy-phase':
+      case 'deal':
+      case 'reward':
+      case 'camp-capture':
+        return undefined;
+    }
+  };
+
   return {
     live(on: boolean): void {
       taking = on;
@@ -1331,48 +1393,11 @@ export function createMapView(
     render,
 
     play(stage: Stage): Promise<void> | undefined {
-      switch (stage.name) {
-        case 'attack':
-          return staged([stage.attacker, stage.target], stage.chronicle, () =>
-            attack(stage.attacker, stage.target, stage.chronicle),
-          );
-        case 'move':
-          return staged([stage.from, stage.to], stage.chronicle, () =>
-            slide(stage.from, stage.to, stage.chronicle),
-          );
-        case 'enter':
-          return staged(
-            arrivals(stage.chronicle).map((unit) => unit.tile),
-            stage.chronicle,
-            () => arriving(stage.chronicle),
-          );
-        case 'retiled':
-        case 'charted':
-        case 'damaged':
-        case 'laid':
-        case 'gained':
-        case 'population-lost':
-        case 'runtime-error':
-        case 'capstone':
-        case 'answer':
-        case 'played':
-        case 'refused':
-        case 'assign':
-        case 'claim':
-        case 'strike':
-        case 'discard':
-        case 'income':
-        case 'grow':
-        case 'capture':
-        case 'victory':
-        case 'turn':
-        case 'deal':
-        case 'no-deal':
-        case 'reward':
-        case 'draw':
-        case 'shuffle':
-        case 'camp-capture':
-          return undefined;
+      switch (stage.kind) {
+        case 'change':
+          return changed(stage);
+        case 'group':
+          return grouped(stage);
       }
     },
 

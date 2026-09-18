@@ -1,7 +1,7 @@
 import type Phaser from 'phaser';
 import { growthThreshold } from '../rules/city';
 import { RESOURCES, type Resource } from '../rules/resources';
-import type { Stage } from '../rules/stages';
+import { type Group, type Stage, walked } from '../rules/stages';
 import { type Chronicle, idle } from '../rules/state';
 import { layOutBar, type Placed, type Zone } from './bar-layout';
 import { EASE, ended, stopMotion } from './card-motion';
@@ -176,10 +176,45 @@ export function createResourceBar(
     });
   };
 
+  /**
+   * The stages under a rise the bar played: it answers each of them with nothing to wait on and
+   * renders none of them, or every reading the rise ticked would snap back to theirs.
+   */
+  const claimed = new Set<Stage>();
+
+  const grouped = (stage: Group): Promise<void> | undefined => {
+    switch (stage.name) {
+      case 'income':
+      case 'grow':
+        for (const held of walked(stage.stages)) claimed.add(held);
+        return rise(stage.chronicle);
+      case 'played':
+      case 'refused':
+      case 'assign':
+      case 'claim':
+      case 'strike':
+      case 'turn':
+      case 'enemy-phase':
+      case 'capstone':
+      case 'deal':
+      case 'answer':
+      case 'reward':
+      case 'attack':
+      case 'camp-capture':
+        return undefined;
+    }
+  };
+
   return {
     render,
     play(stage: Stage): Promise<void> | undefined {
-      return stage.name === 'income' || stage.name === 'grow' ? rise(stage.chronicle) : undefined;
+      if (claimed.delete(stage)) return Promise.resolve();
+      switch (stage.kind) {
+        case 'change':
+          return undefined;
+        case 'group':
+          return grouped(stage);
+      }
     },
     latch(shown: ReadonlySet<Resource>): void {
       for (const entry of entries) {

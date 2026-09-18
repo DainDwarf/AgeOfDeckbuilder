@@ -24,9 +24,11 @@ import {
   field,
   fullDraw,
   HERD,
+  heldBy,
   madeOf,
   NO_DEALS,
   NO_GROWTH,
+  namesOf,
   only,
   opening,
   plains,
@@ -55,7 +57,7 @@ import {
 import { nextRng, seedRng } from './rng';
 import { offered } from './schedule';
 import { chartedAt, inSight } from './sight';
-import { type Stage, unchanged } from './stages';
+import { type Stage, walked as stagesWalked, unchanged } from './stages';
 import { type Chronicle, idle, type Snapshot, type Timeline } from './state';
 import { unitAt } from './units';
 
@@ -83,9 +85,11 @@ function walkedFrom(
   const landings: Landing[] = [];
   const resolve = (command: Command): void => {
     const stages = apply(catalogue, chronicle, command);
-    for (const { name, chronicle: left } of stages) {
+    for (const { name, chronicle: left } of stagesWalked(stages)) {
       const dealt = left.deals[left.deals.length - 1];
-      if (name === 'capstone') landings.push({ turn: left.turn });
+      if (name === 'capstone' && left.turn === left.timeline.capstone.turn) {
+        landings.push({ turn: left.turn });
+      }
       if (name === 'deal' && dealt?.of === 'event') {
         landings.push({ turn: left.turn, event: dealt.event });
       }
@@ -295,8 +299,8 @@ test('a due turn deals its one event, and the turn ends there', () => {
   expect(blighted.deals).toEqual([{ of: 'event', event: 'PH_Blight' }]);
   expect(standing.turn).toBe(5);
   expect(standing.hand).toEqual([]);
-  expect(staged[staged.length - 1]).toBe('deal');
-  expect(staged).not.toContain('draw');
+  expect(staged.slice(-3)).toEqual(['deal', 'rolled', 'dealt']);
+  expect(staged).not.toContain('drawn');
 });
 
 /** A timeline of that schedule from a seed due on the second turn, and the hunger among the cards or not. */
@@ -328,12 +332,122 @@ test('a due turn no event’s need lets deal on deals nothing, and leaves the ti
   const passed = outcome(apply(CATALOGUE, unmet, end));
   const dealt = outcome(apply(CATALOGUE, met, end));
 
-  expect(stagedBy(unmet, end)).toContain('no-deal');
+  expect(heldBy(apply(CATALOGUE, unmet, end), 'deal').map(({ name }) => name)).toEqual([
+    'rolled',
+    'runtime-error',
+  ]);
+  expect(heldBy(apply(CATALOGUE, met, end), 'deal').map(({ name }) => name)).toEqual([
+    'rolled',
+    'dealt',
+  ]);
+  expect(stagedBy(unmet, end)).toContain('drawn');
   expect(passed.turn).toBe(2);
   expect(passed.deals).toEqual([]);
   expect(dealt.deals).toEqual([{ of: 'event', event: 'PH_Spoilage' }]);
   expect(passed.timeline).toEqual(dealt.timeline);
   expect(passed.timeline.rng).not.toEqual(unmet.timeline.rng);
+});
+
+test('a due turn is one deal group over the next due turn rolled and the event dealt, and a turn not due stages no deal at all', () => {
+  const end: Command = { type: 'end-turn' };
+  const waiting = awaiting(5, { drawPile: fullDraw() });
+  const early = awaiting(6, { drawPile: fullDraw(), turn: 3 });
+
+  const [rolled, dealt, ...rest] = heldBy(apply(CATALOGUE, waiting, end), 'deal');
+
+  expect([rolled.name, dealt.name]).toEqual(['rolled', 'dealt']);
+  expect(rest).toEqual([]);
+  expect(rolled.chronicle.timeline.next).toBeGreaterThan(waiting.timeline.next);
+  expect(rolled.chronicle.deals).toEqual([]);
+  expect(dealt.chronicle.deals).toEqual([{ of: 'event', event: 'PH_Hardship' }]);
+  expect(dealt.chronicle.timeline).toEqual(rolled.chronicle.timeline);
+  expect(stagedBy(early, end)).not.toContain('deal');
+});
+
+test('a due turn weighing no entry above nought is a deal over the roll and a runtime error, and play goes on to the next due turn, which deals as any', () => {
+  const late: Catalogue = catalogued({
+    ...CATALOGUE,
+    schedules: {
+      ...CATALOGUE.schedules,
+      late: {
+        ...CATALOGUE.schedules.quiet,
+        entries: { PH_Hardship: (turn) => (turn >= 3 ? 1 : 0) },
+      },
+    },
+  });
+  const city = awaiting(2, {
+    drawPile: [...fullDraw(), ...fullDraw()],
+    timeline: { ...NO_DEALS, schedule: 'late', next: 2 },
+  });
+
+  const stages = apply(late, city, { type: 'end-turn' });
+  const passed = outcome(stages);
+
+  expect(heldBy(stages, 'deal').map(({ name }) => name)).toEqual(['rolled', 'runtime-error']);
+  expect(passed.turn).toBe(2);
+  expect(passed.deals).toEqual([]);
+  expect(passed.hand).toHaveLength(5);
+  expect(passed.timeline.next).toBeGreaterThanOrEqual(2 + 3);
+  expect(passed.timeline.next).toBeLessThanOrEqual(2 + 7);
+
+  let walking = passed;
+  while (walking.turn < passed.timeline.next - 1) walking = endedTurn(walking, undefined, late);
+  const due = apply(late, walking, { type: 'end-turn' });
+
+  expect(heldBy(due, 'deal').map(({ name }) => name)).toEqual(['rolled', 'dealt']);
+  expect(outcome(due).deals).toEqual([{ of: 'event', event: 'PH_Hardship' }]);
+});
+
+test('an answer taken is one answer group over the deal taken, its cost as one stock, and its landing', () => {
+  const rich = dealtBy(5, {
+    timeline: dueOn(5, 'PH_Blight'),
+    drawPile: fullDraw(),
+    resources: {
+      food: STOCKED,
+      production: EXPLOSION,
+      military: 0,
+      money: 0,
+      science: 0,
+      culture: 0,
+    },
+  });
+
+  const exploding = heldBy(apply(CATALOGUE, rich, { type: 'take', at: 1 }), 'answer');
+  const enduring = heldBy(apply(CATALOGUE, rich, { type: 'take', at: 0 }), 'answer');
+  const [taken, paid] = exploding;
+
+  expect(exploding.map(({ name }) => name)).toEqual(['taken', 'stock']);
+  expect(taken.chronicle.deals).toEqual([]);
+  expect(taken.chronicle.resources).toEqual(rich.resources);
+  expect(paid.chronicle.resources.production).toBe(rich.resources.production - EXPLOSION);
+  expect(enduring.map(({ name }) => name)).toEqual(['taken', 'laid']);
+});
+
+test('a reward taken is one reward group over the deal taken and the card discarded', () => {
+  const camp = { q: 4, r: 0 };
+  const dealt = outcome(
+    apply(
+      CATALOGUE,
+      cityOf(['urban'], {
+        ...NO_GROWTH,
+        tiles: camped(field(4), [camp]),
+        drawPile: fullDraw(),
+        units: [standing('player', camp)],
+      }),
+      { type: 'end-turn' },
+    ),
+  );
+
+  const [taken, discarded, ...rest] = heldBy(
+    apply(CATALOGUE, dealt, { type: 'take', at: 0 }),
+    'reward',
+  );
+
+  expect([taken.name, discarded.name]).toEqual(['taken', 'discarded']);
+  expect(rest).toEqual([]);
+  expect(taken.chronicle.deals).toEqual([]);
+  expect(taken.chronicle.discardPile).toEqual([]);
+  expect(discarded.chronicle.discardPile).toEqual([CATALOGUE.camp.rewards[0]]);
 });
 
 test('the same seed is due on the same turns whatever answers are taken, though what they let be dealt differs', () => {
@@ -362,7 +476,12 @@ test('the take lands the answer at its place in the order declared and no other,
   const raided = outcome(apply(CATALOGUE, standing, { type: 'take', at: 0 }));
   const starved = outcome(apply(CATALOGUE, standing, { type: 'take', at: 1 }));
 
-  expect(stagedBy(standing, { type: 'take', at: 0 })).toEqual(['answer', 'enter', 'draw']);
+  expect(stagedBy(standing, { type: 'take', at: 0 })).toEqual([
+    'answer',
+    'taken',
+    'enter',
+    'drawn',
+  ]);
   expect(enemiesOf(raided)).toHaveLength(1);
   expect(raided.hand).toEqual(fullDraw());
   expect(enemiesOf(starved)).toEqual([]);
@@ -386,7 +505,12 @@ test('a raid with no free tile to enter on enters nobody, draws nothing, and res
   const raided = outcome(apply(CATALOGUE, dealt, { type: 'take', at: 0 }));
 
   expect(dealt.deals).toEqual([{ of: 'event', event: 'PH_Hardship' }]);
-  expect(stagedBy(dealt, { type: 'take', at: 0 })).toEqual(['answer', 'runtime-error', 'draw']);
+  expect(stagedBy(dealt, { type: 'take', at: 0 })).toEqual([
+    'answer',
+    'taken',
+    'runtime-error',
+    'drawn',
+  ]);
   expect(enemiesOf(raided)).toEqual([]);
   expect(raided.rng).toEqual(dealt.rng);
 });
@@ -463,13 +587,14 @@ test('a chronicle waiting on a deal takes no command but the take', () => {
     expect(stagedBy(waiting, command)).toEqual(['refused']);
     expect(outcome(apply(CATALOGUE, waiting, command))).toBe(waiting);
   }
-  expect(stagedBy(waiting, { type: 'take', at: 0 })).toEqual(['answer', 'enter']);
+  expect(stagedBy(waiting, { type: 'take', at: 0 })).toEqual(['answer', 'taken', 'enter']);
 });
 
 /** The chronicle an answer's landing leaves: the last stage's before the hand is drawn. */
 function landedOf(stages: readonly Stage[]): Chronicle {
-  const drawing = stages.findIndex((stage) => stage.name === 'draw');
-  return outcome(drawing < 0 ? stages : stages.slice(0, drawing));
+  const read = [...stagesWalked(stages)];
+  const drawing = read.findIndex((stage) => stage.name === 'drawn');
+  return outcome(drawing < 0 ? read : read.slice(0, drawing));
 }
 
 /** The timeline dealing the fixture's upheaval at the end of a `cityOf` city's turn. */
@@ -488,7 +613,7 @@ test('an answer killing the population working a tile leaves the population one 
   const { dealt, stages } = answerTaken(cityOf(['urban', 'hills'], UPHEAVAL_DUE), 'PH_Plague');
   const after = outcome(stages);
 
-  expect(stages.map((stage) => stage.name)).toEqual(['answer', 'population-lost']);
+  expect(namesOf(stages)).toEqual(['answer', 'taken', 'assigned', 'population']);
   expect(after.population).toBe(dealt.population - 1);
   expect(after.assigned).toEqual([CITY]);
   expect(after.ending).toBeUndefined();
@@ -511,7 +636,7 @@ test('an answer killing the city’s last population ends the chronicle in defea
   });
   const { stages } = answerTaken(city, 'PH_Plague');
 
-  expect(stages.map((stage) => stage.name)).toEqual(['answer', 'population-lost']);
+  expect(namesOf(stages)).toEqual(['answer', 'taken', 'assigned', 'population', 'ended']);
   expect(outcome(stages).population).toBe(0);
   expect(outcome(stages).ending).toEqual({ outcome: 'defeat', cause: 'population', turn: 2 });
 });
@@ -535,7 +660,7 @@ test('an answer damaging the unit standing on a tile takes its health, whatever 
 
   expect(warrior.units.map((unit) => unit.stats.health)).toEqual([2]);
   expect(enemy.units.map((unit) => unit.stats.health)).toEqual([1]);
-  expect(stages.map((stage) => stage.name)).toEqual(['answer', 'damaged']);
+  expect(namesOf(stages)).toEqual(['answer', 'taken', 'killed']);
   expect(outcome(stages).units).toEqual([]);
 });
 
@@ -580,7 +705,13 @@ test('an answer taking the city’s last population falls on the take, and nothi
   const after = outcome(stages);
 
   expect(dealt.population).toBe(1);
-  expect(stages.map((stage) => stage.name)).toEqual(['answer', 'population-lost']);
+  expect(namesOf(stages)).toEqual(['answer', 'taken', 'assigned', 'population', 'ended']);
+  expect(heldBy(stages, 'answer').map(({ name }) => name)).toEqual([
+    'taken',
+    'assigned',
+    'population',
+    'ended',
+  ]);
   expect(after.population).toBe(0);
   expect(after.hand).toEqual([]);
   expect(after.ending).toEqual({ outcome: 'defeat', cause: 'population', turn: 2 });
@@ -779,7 +910,7 @@ test('a wildfire is dealt with a forest tile within its distance of the city to 
   expect(outcome(apply(CATALOGUE, near, end)).deals).toEqual([
     { of: 'event', event: 'PH_Wildfire' },
   ]);
-  expect(stagedBy(far, end)).toContain('no-deal');
+  expect(stagedBy(far, end)).toContain('rolled');
   expect(outcome(apply(CATALOGUE, far, end)).deals).toEqual([]);
 });
 
@@ -907,17 +1038,21 @@ test('a landing resolves as one stage per change it makes, in the order it makes
     units: [standing('player', burning, { health: FIRE.damage + 1 })],
   });
   const dealt = outcome(apply(CATALOGUE, city, { type: 'end-turn' }));
-  const [answer, lost, retiled, damaged, drawn] = apply(CATALOGUE, dealt, { type: 'take', at: 0 });
+  const [answer, , unassigned, lost, retiled, damaged, drawn] = stagesWalked(
+    apply(CATALOGUE, dealt, { type: 'take', at: 0 }),
+  );
   const healthOn = (stage: Stage): number | undefined =>
     unitAt(stage.chronicle.units, burning)?.stats.health;
 
-  expect([answer, lost, retiled, damaged, drawn].map((stage) => stage.name)).toEqual([
+  expect([answer, unassigned, lost, retiled, damaged, drawn].map((stage) => stage.name)).toEqual([
     'answer',
-    'population-lost',
+    'assigned',
+    'population',
     'retiled',
     'damaged',
-    'draw',
+    'drawn',
   ]);
+  expect(unassigned).toMatchObject({ tile: burning });
   expect(retiled).toMatchObject({ tile: burning });
   expect(damaged).toMatchObject({ tile: burning });
   expect(lost.chronicle.population).toBe(dealt.population - 1);
@@ -932,9 +1067,9 @@ test('a tile a landing charts is charted as the stage charting it stands, and st
   const city = herded([at], { units: [standing('enemy', at, {}, 0, 0)] });
   const dealt = outcome(apply(CATALOGUE, city, { type: 'end-turn' }));
   const stages = apply(CATALOGUE, dealt, { type: 'take', at: 0 });
-  const [, retiled, charting, ...after] = stages;
+  const [, , retiled, charting, ...after] = stagesWalked(stages);
 
-  expect(stages.map((stage) => stage.name)).toEqual(['answer', 'retiled', 'charted', 'draw']);
+  expect(namesOf(stages)).toEqual(['answer', 'taken', 'retiled', 'charted', 'drawn']);
   expect(retiled).toMatchObject({ tile: at });
   expect(charting).toMatchObject({ tile: at });
   expect(snapshotOf(retiled.chronicle, at)).toBeUndefined();
@@ -951,7 +1086,7 @@ test('an event needing a tile near the city to deal a feature onto is dealt with
   const far = herded([{ q: HERD + 1, r: 0 }]);
 
   expect(outcome(apply(CATALOGUE, near, end)).deals).toEqual([{ of: 'event', event: 'PH_Herd' }]);
-  expect(stagedBy(far, end)).toContain('no-deal');
+  expect(stagedBy(far, end)).toContain('rolled');
   expect(outcome(apply(CATALOGUE, far, end)).deals).toEqual([]);
 });
 
@@ -1054,10 +1189,12 @@ test('the capstone’s turn lands the capstone straight and draws the hand, deal
     expect(campsOf(landed)).toHaveLength(5);
     expect(staged.slice(staged.indexOf('turn'))).toEqual([
       'turn',
+      'turn',
       'capstone',
+      'rolled',
       ...Array<string>(5).fill('retiled'),
       ...Array<string>(5).fill('enter'),
-      'draw',
+      'drawn',
     ]);
   }
 });
@@ -1073,6 +1210,36 @@ test('the capstone’s turn drops a deal due past it, and the next deal is due t
   expect(next).toBeLessThanOrEqual(CAPSTONE + 7);
 });
 
+test('the capstone’s turn is one capstone group over the next due turn rolled and the landing, and each turn after it one over the second script', () => {
+  const awaited = awaitingCapstone({ drawPile: fullDraw() });
+
+  const landing = heldBy(apply(CATALOGUE, awaited, { type: 'end-turn' }), 'capstone');
+  const [rolled, ...landed] = landing;
+
+  expect(rolled.name).toBe('rolled');
+  expect(rolled.chronicle.timeline.next).toBeGreaterThan(CAPSTONE);
+  expect(campsOf(rolled.chronicle)).toEqual([]);
+  expect(landed.map(({ name }) => name)).toEqual([
+    ...Array<string>(5).fill('retiled'),
+    ...Array<string>(5).fill('enter'),
+  ]);
+
+  const after = moated({ units: [unkillable(LURE)] });
+  const continued = heldBy(apply(CATALOGUE, after, { type: 'end-turn' }), 'capstone');
+
+  expect(continued.map(({ name }) => name)).toEqual(['enter']);
+  expect(continued).toMatchObject([{ tile: STANDING_CAMP }]);
+});
+
+test('a capstone carrying no second script stages no capstone on the turns after its own', () => {
+  const tilled = awaitingTillage();
+  const landed = endedTurn(tilled);
+
+  expect(stagedBy(tilled, { type: 'end-turn' })).toContain('capstone');
+  expect(landed.turn).toBe(CAPSTONE);
+  expect(stagedBy(landed, { type: 'end-turn' })).not.toContain('capstone');
+});
+
 test('the capstone’s landing is a stage of its own on its turn, even where it lands nothing', () => {
   const quiet: Catalogue = {
     ...CATALOGUE,
@@ -1081,9 +1248,15 @@ test('the capstone’s landing is a stage of its own on its turn, even where it 
     },
   };
   const awaited = awaitingCapstone({ drawPile: fullDraw() });
-  const staged = apply(quiet, awaited, { type: 'end-turn' }).map((stage) => stage.name);
+  const staged = namesOf(apply(quiet, awaited, { type: 'end-turn' }));
 
-  expect(staged.slice(staged.indexOf('turn'))).toEqual(['turn', 'capstone', 'draw']);
+  expect(staged.slice(staged.indexOf('turn'))).toEqual([
+    'turn',
+    'turn',
+    'capstone',
+    'rolled',
+    'drawn',
+  ]);
 });
 
 test('a camp captured the turn before the capstone’s deals its rewards, and the take opens the capstone’s turn on its landing and the draw', () => {
@@ -1105,11 +1278,15 @@ test('a camp captured the turn before the capstone’s deals its rewards, and th
   expect(dealt.turn).toBe(CAPSTONE - 1);
   expect(stagedBy(dealt, { type: 'take', at: 0 })).toEqual([
     'reward',
+    'taken',
+    'discarded',
+    'turn',
     'turn',
     'capstone',
+    'rolled',
     ...campsOf(taken).map(() => 'retiled'),
     ...campsOf(taken).map(() => 'enter'),
-    'draw',
+    'drawn',
   ]);
   expect(taken.turn).toBe(CAPSTONE);
   expect(taken.deals).toEqual([]);
@@ -1128,10 +1305,15 @@ test('a camp captured on the turn the siege is passed holds the victory back unt
   });
   const dealt = outcome(apply(CATALOGUE, last, { type: 'end-turn' }));
 
-  expect(stagedBy(last, { type: 'end-turn' })).not.toContain('victory');
+  expect(stagedBy(last, { type: 'end-turn' })).not.toContain('ended');
   expect(dealt.ending).toBeUndefined();
   expect(dealt.deals).toEqual([{ of: 'camp', rewards: CATALOGUE.camp.rewards }]);
-  expect(stagedBy(dealt, { type: 'take', at: 0 })).toEqual(['reward', 'victory']);
+  expect(stagedBy(dealt, { type: 'take', at: 0 })).toEqual([
+    'reward',
+    'taken',
+    'discarded',
+    'ended',
+  ]);
   expect(outcome(apply(CATALOGUE, dealt, { type: 'take', at: 0 })).ending).toEqual({
     outcome: 'victory',
     turn: CAPSTONE + REINFORCED,
@@ -1234,14 +1416,22 @@ test('the warrior the reinforcement enters is a stage of its own, raised after t
     timeline: { ...dueOn(due), capstone: landed.timeline.capstone },
   };
 
+  const opened = (stages: readonly Stage[]): string[] => {
+    const names = stages.map(({ name }) => name);
+    return names.slice(names.indexOf('turn'));
+  };
+
   while (reinforcing.turn < due - 1) {
-    const staged = stagedBy(reinforcing, { type: 'end-turn' });
-    expect(staged.slice(staged.indexOf('turn'))).toEqual(['turn', 'enter']);
+    const stages = apply(CATALOGUE, reinforcing, { type: 'end-turn' });
+    expect(opened(stages)).toEqual(['turn', 'capstone']);
+    expect(heldBy(stages, 'capstone').map(({ name }) => name)).toEqual(['enter']);
     reinforcing = endedTurn(reinforcing, 'PH_Famine');
   }
-  const dealt = stagedBy(reinforcing, { type: 'end-turn' });
+  const dealt = apply(CATALOGUE, reinforcing, { type: 'end-turn' });
 
-  expect(dealt.slice(dealt.indexOf('turn'))).toEqual(['turn', 'enter', 'deal']);
+  expect(opened(dealt)).toEqual(['turn', 'capstone', 'deal']);
+  expect(heldBy(dealt, 'capstone').map(({ name }) => name)).toEqual(['enter']);
+  expect(heldBy(dealt, 'deal').map(({ name }) => name)).toEqual(['rolled', 'dealt']);
 });
 
 test('the siege’s own camps are reinforced as the camps standing are', () => {
@@ -1277,7 +1467,7 @@ test('the city standing at the end of the siege’s sixth turn ends the chronicl
   const staged = stagedBy(reinforcing, { type: 'end-turn' });
   const survived = stoodOut();
 
-  expect(staged[staged.length - 1]).toBe('victory');
+  expect(staged[staged.length - 1]).toBe('ended');
   expect(staged).not.toContain('turn');
   expect(survived.turn).toBe(CAPSTONE + REINFORCED);
   expect(survived.ending).toEqual({ outcome: 'victory', turn: CAPSTONE + REINFORCED });
@@ -1287,7 +1477,7 @@ test('a chronicle that ended in victory takes no command at all', () => {
   const survived = stoodOut();
   const refused: Command[] = [{ type: 'end-turn' }, assignTo(CITY)];
 
-  expect(stagedBy(moated(), assignTo(CITY))).toEqual(['assign']);
+  expect(stagedBy(moated(), assignTo(CITY))).toEqual(['assign', 'assigned']);
   for (const command of refused) {
     expect(stagedBy(survived, command)).toEqual(['refused']);
     expect(outcome(apply(CATALOGUE, survived, command))).toBe(survived);
@@ -1347,7 +1537,7 @@ test('a capstone’s condition ends the chronicle in victory at the end of the f
     const staged = stagedBy(tilled(chronicle), { type: 'end-turn' });
 
     expect(chronicle.ending).toBeUndefined();
-    expect(staged[staged.length - 1]).toBe('victory');
+    expect(staged[staged.length - 1]).toBe('ended');
     expect(staged).not.toContain('turn');
     expect(endedTurn(tilled(chronicle)).ending).toEqual({ outcome: 'victory', turn });
   }

@@ -823,15 +823,17 @@ export async function dragUnit(page: Page, from: TileCoords, to: TileCoords): Pr
 
 /**
  * Ends the turn on the button, and waits for the end of turn to finish playing out — the next turn
- * open, the deal it stopped on standing, or the chronicle ended. The turn moves on partway through
- * the sequence, so all three hold before the hand it deals is on the chronicle screen.
+ * open, the deal it stopped on standing, or the chronicle ended — or to stop on the capstone's window
+ * at its landing, which holds the play-out until it closes. The turn moves on partway through the
+ * play-out, so the turn alone does not say the hand it deals is on the chronicle screen.
  */
 export async function stoppedTurn(page: Page): Promise<void> {
   const { turn } = await chronicleOf(page);
   await click(page, 'end-turn');
   await page.waitForFunction((next) => {
     const scene = window.game?.scene.getScene<ChronicleScene>('chronicle');
-    if (scene === null || scene === undefined || scene.playing) return false;
+    if (scene === null || scene === undefined) return false;
+    if (scene.playing) return window.named?.('capstone') !== undefined;
     return scene.chronicle.turn === next || scene.chronicle.ending !== undefined;
   }, turn + 1);
 }

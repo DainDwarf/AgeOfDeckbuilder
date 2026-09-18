@@ -3,13 +3,16 @@ import { apply, type Command, launched, outcome } from './chronicle';
 import {
   CATALOGUE,
   CITY,
+  camped,
   cityOf,
   DECK,
   endedTurn,
   everyCard,
   field,
   fullDraw,
+  heldBy,
   NO_GROWTH,
+  namesOf,
   opening,
   plains,
   REGION,
@@ -24,6 +27,7 @@ import { MOVE_POINT, type Tile, tileAt, tileKey } from './map';
 import { RESOURCES } from './resources';
 import { seedRng } from './rng';
 import { inSight } from './sight';
+import { type Change, type Stage, walked } from './stages';
 import { type Chronicle, idle } from './state';
 
 /** A disc of plain out to eight, with nothing on it but a fertile plain on its centre tile. */
@@ -85,10 +89,19 @@ test('growth is staged right after the income it comes from, and before the enem
 
   expect(stagedBy(city, { type: 'end-turn' })).toEqual([
     'income',
+    'stock',
+    'stock',
     'grow',
+    'stock',
+    'population',
+    'enemy-phase',
     'move',
     'attack',
+    'action-spent',
+    'damaged',
     'turn',
+    'turn',
+    'refreshed',
   ]);
 });
 
@@ -111,7 +124,7 @@ test('a play the rules refuse is one refused stage, on the chronicle as it stood
   expect(stagedBy(penniless, { type: 'play', index: 3, aim: 'none' })).toEqual(['refused']);
 });
 
-test('a card that lands whole is played in the one stage, the effect already in it', () => {
+test('a card that lands whole is played as one played group, closing on the chronicle its effect left', () => {
   const city = cityOf(['urban'], {
     hand: ['PH_Harvest'],
     resources: { food: 1, production: 0, military: 0, money: 0, science: 1, culture: 0 },
@@ -119,9 +132,211 @@ test('a card that lands whole is played in the one stage, the effect already in 
 
   const stages = apply(CATALOGUE, city, { type: 'play', index: 0, aim: 'none' });
 
-  expect(stages.map((stage) => stage.name)).toEqual(['played']);
+  expect(namesOf(stages)).toEqual(['played', 'discarded', 'stock', 'stock']);
   expect(stages[0].chronicle.resources).toEqual({ ...city.resources, food: 3, science: 0 });
   expect(stages[0].chronicle.discardPile).toEqual(['PH_Harvest']);
+});
+
+/** What the one `played` group a play resolves as holds. A play resolving as anything else throws. */
+function playedOver(chronicle: Chronicle, command: Command): readonly Stage[] {
+  const stages = apply(CATALOGUE, chronicle, command);
+  const [played] = stages;
+  if (stages.length !== 1 || played.kind !== 'group' || played.name !== 'played') {
+    throw new Error('the play resolves as no one played group');
+  }
+  expect(played.chronicle).toBe(played.stages[played.stages.length - 1].chronicle);
+  return played.stages;
+}
+
+const PLAYED: Command = { type: 'play', index: 0, aim: 'none' };
+
+test('a card played goes to the discard pile, then pays its cost as one stock, then lands its effect', () => {
+  const city = cityOf(['urban'], {
+    hand: ['PH_Harvest', 'PH_March'],
+    resources: { food: 1, production: 0, military: 0, money: 0, science: 1, culture: 0 },
+  });
+
+  const [discarded, paid, gained, ...rest] = playedOver(city, PLAYED);
+
+  expect([discarded, paid, gained].map(({ name }) => name)).toEqual([
+    'discarded',
+    'stock',
+    'stock',
+  ]);
+  expect(rest).toEqual([]);
+  expect(discarded.chronicle.hand).toEqual(['PH_March']);
+  expect(discarded.chronicle.discardPile).toEqual(['PH_Harvest']);
+  expect(discarded.chronicle.resources).toEqual(city.resources);
+  expect(paid.chronicle.resources).toEqual({ ...city.resources, science: 0 });
+  expect(gained.chronicle.resources).toEqual({ ...city.resources, food: 3, science: 0 });
+});
+
+test('a free card played raises no stock for its cost, and a single use card leaves the chronicle instead of the discard pile', () => {
+  const city = cityOf(['urban'], { hand: ['PH_Cache'] });
+
+  const [left, gained, ...rest] = playedOver(city, PLAYED);
+
+  expect([left, gained].map(({ name }) => name)).toEqual(['left', 'stock']);
+  expect(rest).toEqual([]);
+  expect(left.chronicle.hand).toEqual([]);
+  expect(left.chronicle.discardPile).toEqual([]);
+  expect(gained.chronicle.resources.food).toBe(city.resources.food + 5);
+});
+
+test('a card whose effect moves nothing is played over its leaving and its cost alone', () => {
+  const city = cityOf(['urban'], {
+    hand: ['PH_Hunger'],
+    resources: { food: 0, production: 3, military: 0, money: 0, science: 0, culture: 0 },
+  });
+
+  expect(playedOver(city, PLAYED).map(({ name }) => name)).toEqual(['left', 'stock']);
+});
+
+/** The first change of that name the walk meets. A tree holding none throws. */
+function changeNamed(stages: readonly Stage[], name: Change['name']): Change {
+  for (const stage of walked(stages)) {
+    if (stage.kind === 'change' && stage.name === name) return stage;
+  }
+  throw new Error(`no ${name} change is staged`);
+}
+
+test('a pile change carries the places in the pile its cards came out of, and a reward, out of no pile, carries none', () => {
+  const copies = cityOf(['urban'], {
+    hand: ['PH_Harvest', 'PH_Harvest'],
+    resources: { food: 0, production: 0, military: 0, money: 0, science: 1, culture: 0 },
+  });
+  const second = apply(CATALOGUE, copies, { type: 'play', index: 1, aim: 'none' });
+
+  expect(changeNamed(second, 'discarded')).toMatchObject({ places: [1] });
+  expect(outcome(second).hand).toEqual(['PH_Harvest']);
+
+  const held = cityOf(['urban'], { hand: ['PH_Harvest', 'PH_March', 'PH_Harvest'] });
+
+  expect(changeNamed(apply(CATALOGUE, held, { type: 'end-turn' }), 'discarded')).toMatchObject({
+    places: [0, 1, 2],
+  });
+
+  const settling = opening(plainDisc(), {
+    deck: { cards: DECK.cards, settle: ['PH_Settle', 'PH_Settle', 'PH_Settle'] },
+  });
+
+  expect(
+    changeNamed(apply(CATALOGUE, settledOn(settling, CITY), { type: 'end-turn' }), 'left'),
+  ).toMatchObject({ places: [0, 1] });
+
+  const camp = { q: 4, r: 0 };
+  const dealt = outcome(
+    apply(
+      CATALOGUE,
+      cityOf(['urban'], {
+        ...NO_GROWTH,
+        tiles: camped(field(4), [camp]),
+        drawPile: fullDraw(),
+        units: [standing('player', camp)],
+      }),
+      { type: 'end-turn' },
+    ),
+  );
+
+  expect(
+    changeNamed(heldBy(apply(CATALOGUE, dealt, { type: 'take', at: 0 }), 'reward'), 'discarded'),
+  ).toMatchObject({ places: [] });
+
+  const recalling = cityOf(['urban'], {
+    hand: ['PH_Harvest', 'PH_Recall'],
+    discardPile: ['PH_Farm', 'PH_Harvest', 'PH_Mine'],
+    resources: { food: 0, production: 0, military: 0, money: 0, science: 2, culture: 0 },
+  });
+  const recall = apply(CATALOGUE, recalling, {
+    type: 'play',
+    index: 1,
+    aim: 'discard-pile',
+    card: 2,
+  });
+
+  expect(changeNamed(recall, 'discarded')).toMatchObject({ places: [1] });
+  expect(changeNamed(recall, 'recalled')).toMatchObject({ places: [2] });
+  expect(outcome(recall).hand).toEqual(['PH_Harvest', 'PH_Mine']);
+});
+
+test('a unit card is played over its cost, one population fewer, and the unit entering on the city’s tile', () => {
+  const city = cityOf(['urban'], {
+    hand: ['PH_Worker'],
+    population: 3,
+    resources: { food: 2, production: 0, military: 0, money: 0, science: 0, culture: 0 },
+  });
+
+  const held = playedOver(city, PLAYED);
+  const [, , fewer, entering] = held;
+
+  expect(held.map(({ name }) => name)).toEqual(['discarded', 'stock', 'population', 'enter']);
+  expect(fewer.chronicle.population).toBe(2);
+  expect(fewer.chronicle.units).toEqual([]);
+  expect(entering).toMatchObject({ tile: CITY });
+  expect(entering.chronicle.units.map(({ tile }) => tile)).toEqual([CITY]);
+});
+
+test('a second settle raises no change for a row it leaves where it stood: the population already at what the settle gives', () => {
+  const opened = opening(plainDisc(), {
+    deck: { cards: DECK.cards, settle: ['PH_Settle', 'PH_Settle'] },
+  });
+  const first = settledOn(opened, CITY);
+  const moved = { q: 1, r: 0 };
+
+  const held = playedOver(first, { type: 'play', index: 0, aim: 'tile', tile: moved });
+
+  expect(first.population).toBe(1 + CATALOGUE.city.idle);
+  expect(held.map(({ name }) => name)).toEqual([
+    'left',
+    'retiled',
+    'retiled',
+    'held',
+    'assigned',
+    'settled',
+  ]);
+  expect(
+    outcome(apply(CATALOGUE, first, { type: 'play', index: 0, aim: 'tile', tile: moved })).city,
+  ).toEqual(moved);
+});
+
+test('the settle is played over the card leaving and the settle’s own changes, all on the city’s tile', () => {
+  const opened = opening(plainDisc(), { deck: { cards: DECK.cards, settle: ['PH_Settle'] } });
+
+  const held = playedOver(opened, { type: 'play', index: 0, aim: 'tile', tile: CITY });
+  const [left, ...changes] = held;
+  const [, built, holding, population, assigned, stood] = changes;
+
+  expect(held.map(({ name }) => name)).toEqual([
+    'left',
+    'retiled',
+    'retiled',
+    'held',
+    'population',
+    'assigned',
+    'settled',
+  ]);
+  expect(left.chronicle.hand).toEqual([]);
+  for (const change of [...changes.slice(0, 3), assigned, stood]) {
+    expect(change).toMatchObject({ tile: CITY });
+  }
+  expect(tileAt(built.chronicle.tiles, CITY)?.building).toBe(CATALOGUE.city.building);
+  expect(holding.chronicle.held).toEqual([CITY]);
+  expect(population.chronicle.population).toBe(1 + CATALOGUE.city.idle);
+  expect(assigned.chronicle.assigned).toEqual([CITY]);
+  for (const change of changes.slice(0, 4)) expect(change.chronicle.city).toBeUndefined();
+  expect(stood.chronicle.city).toEqual(CITY);
+  expect(
+    outcome(apply(CATALOGUE, opened, { type: 'play', index: 0, aim: 'tile', tile: CITY })).ending,
+  ).toBeUndefined();
+});
+
+test('the settle raises no ending: the city stands only once everything it runs on is in place', () => {
+  const opened = opening(plainDisc(), { deck: { cards: DECK.cards, settle: ['PH_Settle'] } });
+
+  const names = stagedBy(opened, { type: 'play', index: 0, aim: 'tile', tile: CITY });
+
+  expect(names).not.toContain('ended');
+  expect(names[names.length - 1]).toBe('settled');
 });
 
 test('ending the turn discards what is left of the hand', () => {
@@ -182,30 +397,89 @@ test('the end of turn resolves in order, and its last stage is where the turn en
   const stages = apply(CATALOGUE, city, { type: 'end-turn' });
   const ended = stages[stages.length - 1].chronicle;
 
-  expect(stages.map((stage) => stage.name)).toEqual([
-    'discard',
+  expect(namesOf(stages)).toEqual([
+    'discarded',
     'income',
+    'stock',
+    'stock',
+    'grow',
+    'enemy-phase',
     'move',
     'attack',
+    'action-spent',
+    'damaged',
     'turn',
-    'draw',
-    'shuffle',
-    'draw',
+    'turn',
+    'refreshed',
+    'drawn',
+    'shuffled',
+    'drawn',
   ]);
   expect(ended).toEqual(outcome(stages));
   expect(ended.turn).toBe(city.turn + 1);
   expect(ended.hand).toHaveLength(5);
 });
 
-test('a stage of the end of turn that changed nothing is left out of it', () => {
+test('a phase the turn always has is staged every turn, empty or not, and an empty hand discards nothing', () => {
   const quiet = cityOf(['urban', 'plain'], {
     ...NO_GROWTH,
     tiles: field(1),
     drawPile: fullDraw(),
     discardPile: ['PH_Harvest'],
   });
+  const stages = apply(CATALOGUE, quiet, { type: 'end-turn' });
 
-  expect(stagedBy(quiet, { type: 'end-turn' })).toEqual(['income', 'turn', 'draw']);
+  expect(namesOf(stages)).toEqual([
+    'income',
+    'stock',
+    'stock',
+    'grow',
+    'enemy-phase',
+    'turn',
+    'turn',
+    'drawn',
+  ]);
+  expect(heldBy(stages, 'grow')).toEqual([]);
+  expect(heldBy(stages, 'enemy-phase')).toEqual([]);
+});
+
+test('the turn ticks first, then refreshes every unit short of full move points or action, in unit order, each on its tile', () => {
+  const spent = { q: 2, r: 0 };
+  const idleOne = { q: 0, r: 2 };
+  const tired = { q: -2, r: 0 };
+  const city = cityOf(['urban'], {
+    ...NO_GROWTH,
+    tiles: field(3),
+    units: [
+      standing('player', spent, {}, 0),
+      standing('player', idleOne),
+      standing('player', tired, {}, undefined, 0),
+    ],
+  });
+
+  const [tick, ...refreshes] = heldBy(apply(CATALOGUE, city, { type: 'end-turn' }), 'turn');
+
+  expect(tick.name).toBe('turn');
+  expect(tick.chronicle.turn).toBe(city.turn + 1);
+  expect(tick.chronicle.units).toEqual(city.units);
+  expect(refreshes.map(({ name }) => name)).toEqual(['refreshed', 'refreshed']);
+  expect(refreshes).toMatchObject([{ tile: spent }, { tile: tired }]);
+  const after = refreshes[1].chronicle;
+  for (const unit of after.units) {
+    expect(unit.movePoints).toBe(unit.stats.move);
+    expect(unit.action).toBe(unit.stats.action);
+  }
+});
+
+test('a city whose food stock of nought would grow at no population falls on the food spent, and grows nobody', () => {
+  const empty = cityOf(['urban'], { tiles: field(2), population: 0, assigned: [] });
+
+  const stages = apply(CATALOGUE, empty, { type: 'end-turn' });
+  const ended = outcome(stages);
+
+  expect(namesOf(stages)).toEqual(['income', 'grow', 'stock', 'ended']);
+  expect(ended.population).toBe(0);
+  expect(ended.ending).toEqual({ outcome: 'defeat', cause: 'population', turn: empty.turn });
 });
 
 test('every card of the deck is in exactly one pile through a full cycle', () => {
@@ -230,20 +504,30 @@ test('the same command on the same chronicle gives the same chronicle back', () 
   expect(city).toEqual(untouched);
 });
 
-test('a city with no population left falls, whatever the command was', () => {
-  const empty = cityOf(['urban'], { tiles: field(2), population: 0 });
+test('a city with no population left falls on the first change a command makes, whatever the command was, and nothing after it resolves', () => {
+  const empty = cityOf(['urban'], {
+    tiles: field(2),
+    population: 0,
+    hand: ['PH_Harvest'],
+    resources: { food: 0, production: 0, military: 0, money: 0, science: 1, culture: 0 },
+  });
 
-  expect(outcome(apply(CATALOGUE, empty, { type: 'play', index: 0, aim: 'none' })).ending).toEqual({
+  const played = apply(CATALOGUE, empty, { type: 'play', index: 0, aim: 'none' });
+
+  expect(namesOf(played)).toEqual(['played', 'discarded', 'ended']);
+  expect(outcome(played).ending).toEqual({
     outcome: 'defeat',
     cause: 'population',
     turn: empty.turn,
   });
-  // The fall rides the stage the command resolved as, refused though that play was.
-  expect(stagedBy(empty, { type: 'play', index: 0, aim: 'none' })).toEqual(['refused']);
+  expect(outcome(played).resources).toEqual(empty.resources);
 
-  const ended = outcome(apply(CATALOGUE, empty, { type: 'end-turn' }));
+  const stages = apply(CATALOGUE, empty, { type: 'end-turn' });
+  const ended = outcome(stages);
 
+  expect(namesOf(stages)).toEqual(['discarded', 'ended']);
   expect(ended.population).toBe(0);
+  expect(ended.turn).toBe(empty.turn);
   expect(ended.ending).toEqual({ outcome: 'defeat', cause: 'population', turn: ended.turn });
 });
 
@@ -291,7 +575,11 @@ test('the end of turn 0 runs none of the cycle: turn 1 and its hand drawn, no in
   const after = outcome(stages);
 
   expect(stocked.hand).toEqual(['PH_Settle']);
-  expect(stages.map((stage) => stage.name)).toEqual(['turn', 'draw']);
+  expect(namesOf(stages)).toEqual(['turn', 'turn', 'left', 'drawn']);
+  const [, tick, left] = [...walked(stages)];
+  expect(tick.chronicle.turn).toBe(1);
+  expect(tick.chronicle.hand).toEqual(stocked.hand);
+  expect(left.chronicle.hand).toEqual([]);
   expect(after.turn).toBe(1);
   expect(after.hand).toHaveLength(5);
   expect(after.resources).toEqual(stocked.resources);

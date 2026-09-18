@@ -32,6 +32,7 @@ import {
   HUNGER,
   madeOf,
   NO_GROWTH,
+  namesOf,
   opening,
   plains,
   pointsOf,
@@ -59,7 +60,7 @@ import {
 } from './map';
 import { terrainKind } from './map-kinds';
 import { RESOURCES, type Resources } from './resources';
-import { terraformedOn } from './schedule';
+import { walked } from './stages';
 import { type CardId, type Chronicle, idle, playable, type TileBlock } from './state';
 import { standsOn } from './units';
 
@@ -206,6 +207,19 @@ test('a card the city cannot pay for stays in the hand and costs nothing', () =>
   );
 });
 
+test('a card played through a worker whose effect is called on a tile no worker stands on raises a runtime error, and its effect lands after it', () => {
+  const at = { q: 1, r: 0 };
+  const city = cityOf(['urban', 'plain']);
+  const card = aimOf(cardOf(CATALOGUE, 'PH_Farm'));
+  if (card.aim !== 'tile') throw new Error('the farm is aimed at no tile');
+
+  const landing = card.effect(CATALOGUE, city, at);
+
+  expect(landing.stages.map(({ name }) => name)).toEqual(['runtime-error', 'retiled']);
+  expect(landing.stages[0].chronicle).toBe(city);
+  expect(buildingAt(landing.chronicle, at)).toBe('PH_Farm');
+});
+
 test('the refresh instant refreshes one unit of the player’s that has spent move points', () => {
   const city = cityOf(['urban'], {
     tiles: field(3),
@@ -218,7 +232,7 @@ test('the refresh instant refreshes one unit of the player’s that has spent mo
 
   const stages = apply(CATALOGUE, city, aimedAtUnit(CITY));
 
-  expect(stages.map((stage) => stage.name)).toEqual(['played']);
+  expect(namesOf(stages)).toEqual(['played', 'discarded', 'refreshed']);
   expect(pointsOf(outcome(stages), 1)).toBe(2 * MOVE_POINT);
   expect(pointsOf(outcome(stages), 2)).toBe(MOVE_POINT);
   expect(outcome(stages).discardPile).toEqual(['PH_March']);
@@ -255,7 +269,7 @@ test('the recall instant takes the card it is aimed at out of the discard pile a
   const stages = apply(CATALOGUE, city, aimedAtPile(1));
   const after = outcome(stages);
 
-  expect(stages.map((stage) => stage.name)).toEqual(['played']);
+  expect(namesOf(stages)).toEqual(['played', 'discarded', 'stock', 'recalled']);
   expect(after.hand).toEqual(['PH_Harvest']);
   expect(after.discardPile).toEqual(['PH_Farm', 'PH_Mine', 'PH_Recall']);
   expect(after.resources.science).toBe(0);
@@ -407,7 +421,7 @@ test('a settle card entering a unit puts it on its tile full, takes no populatio
   );
   const after = outcome(apply(CATALOGUE, settled, aimedAt(CITY)));
 
-  expect(stages.map((stage) => stage.name)).toEqual(['played']);
+  expect(namesOf(stages)).toEqual(['played', 'left', 'enter']);
   expect(before.units).toHaveLength(1);
   const [band] = before.units;
   expect(band.faction).toBe('player');
@@ -454,7 +468,7 @@ test('a unit entered on turn 0 neither moves nor attacks, and nothing is offered
   expect(ticked.turn).toBe(1);
   expect(byHand(CATALOGUE, ticked, unitNamed(ticked, 3)).landings.length).toBeGreaterThan(0);
   expect(stagedBy(ticked, { type: 'move', unit: 3, tile: onto })).toEqual(['move']);
-  expect(stagedBy(ticked, attackOn(1, enemy))).toEqual(['attack']);
+  expect(stagedBy(ticked, attackOn(1, enemy))).toEqual(['attack', 'action-spent', 'damaged']);
 });
 
 test('a card whose effect names a building, an improvement or a terrain the catalogue lacks is refused where it lands', () => {
@@ -900,7 +914,7 @@ function reshaping(to: Terrain): Catalogue {
           ...PH_Upheaval.answers,
           PH_Quake: {
             ...PH_Upheaval.answers.PH_Quake,
-            lands: (catalogue, chronicle) => terraformedOn(catalogue, chronicle, CITY, to),
+            lands: (catalogue, chronicle) => terraformed(catalogue, chronicle, CITY, to),
           },
         },
       },
@@ -1330,7 +1344,7 @@ test('a card aimed at a unit lands on the play that aims at a unit, and nowhere 
 
   expect(stagedBy(city, aimedAt(at))).toEqual(['refused']);
   expect(outcome(apply(CATALOGUE, city, aimedAt(at)))).toBe(city);
-  expect(stagedBy(city, aimedAtUnit(at))).toEqual(['played']);
+  expect(stagedBy(city, aimedAtUnit(at))).toEqual(['played', 'discarded', 'refreshed']);
   expect(pointsOf(outcome(apply(CATALOGUE, city, aimedAtUnit(at))), 1)).toBe(2 * MOVE_POINT);
 });
 
@@ -1372,9 +1386,9 @@ test('a play aimed at a tile the aim refuses, or at nothing, lands nowhere', () 
   const nowhere = apply(CATALOGUE, city, { type: 'play', index: 0, aim: 'none' });
 
   expect(refusedFor(city, 'PH_Farm', at)).toBe('worker');
-  expect(aimed.map((stage) => stage.name)).toEqual(['refused']);
+  expect(namesOf(aimed)).toEqual(['refused']);
   expect(outcome(aimed)).toEqual(city);
-  expect(nowhere.map((stage) => stage.name)).toEqual(['refused']);
+  expect(namesOf(nowhere)).toEqual(['refused']);
   expect(outcome(nowhere)).toEqual(city);
 });
 
@@ -1427,7 +1441,11 @@ test('a hazard played for its cost leaves the chronicle, and strikes nothing tha
   const ended = outcome(apply(CATALOGUE, played, { type: 'end-turn' }));
   const yielded = outcome(apply(CATALOGUE, bare, { type: 'end-turn' })).resources.food;
 
-  expect(stagedBy(city, { type: 'play', index: 0, aim: 'none' })).toEqual(['played']);
+  expect(stagedBy(city, { type: 'play', index: 0, aim: 'none' })).toEqual([
+    'played',
+    'left',
+    'stock',
+  ]);
   expect(played.resources.production).toBe(0);
   expect(everyCard(played)).toEqual([]);
   expect(stagedBy(played, { type: 'end-turn' })).not.toContain('strike');
@@ -1467,6 +1485,53 @@ test('a hazard’s strike takes what it names off the stock, and a strike that o
   expect(spared.resources.food).toBe(1 + yielded);
 });
 
+/** The `strike` groups the end of turn opens on: the hazard each carries, and what it holds. */
+function strikesOf(city: Chronicle): { card: CardId; holds: string[]; left: Chronicle }[] {
+  return apply(CATALOGUE, city, { type: 'end-turn' }).flatMap((stage) =>
+    stage.kind === 'group' && stage.name === 'strike'
+      ? [{ card: stage.card, holds: namesOf(stage.stages), left: stage.chronicle }]
+      : [],
+  );
+}
+
+test('every hazard in hand strikes as one strike of its own, in hand order, each on what the one before it left', () => {
+  const city = cityOf(['urban', 'plain'], {
+    ...NO_GROWTH,
+    hand: ['PH_Drought', 'PH_Warrior', 'PH_Hunger'],
+    resources: { ...STOCKED, food: HUNGER + DROUGHT },
+  });
+
+  const strikes = strikesOf(city);
+
+  expect(strikes.map(({ card, holds }) => ({ card, holds }))).toEqual([
+    { card: 'PH_Drought', holds: ['stock'] },
+    { card: 'PH_Hunger', holds: ['stock'] },
+  ]);
+  expect(strikes.map(({ left }) => left.resources.food)).toEqual([HUNGER, 0]);
+  expect(stagedBy(city, { type: 'end-turn' }).slice(0, 5)).toEqual([
+    'strike',
+    'stock',
+    'strike',
+    'stock',
+    'discarded',
+  ]);
+});
+
+test('a hazard whose strike moves nothing still strikes, holding nothing', () => {
+  const bare = cityOf(['urban', 'plain'], {
+    ...NO_GROWTH,
+    hand: ['PH_Hunger'],
+    resources: { ...STOCKED, food: 0 },
+  });
+
+  const [strike] = strikesOf(bare);
+
+  expect(strike.card).toBe('PH_Hunger');
+  expect(strike.holds).toEqual([]);
+  expect(strike.left.resources).toEqual(bare.resources);
+  expect(stagedBy(bare, { type: 'end-turn' })[0]).toBe('strike');
+});
+
 /** A city with the drought in its hand and that much food for it to strike. */
 function droughty(food: number, carrying: Carrying = {}): Chronicle {
   return cityOf(['urban', 'plain'], {
@@ -1479,7 +1544,7 @@ function droughty(food: number, carrying: Carrying = {}): Chronicle {
 
 /** The chronicle the city's hazards left on striking at the end of its turn. A turn striking nothing throws. */
 function stricken(city: Chronicle): Chronicle {
-  const strike = apply(CATALOGUE, city, { type: 'end-turn' }).find(
+  const strike = [...walked(apply(CATALOGUE, city, { type: 'end-turn' }))].find(
     (stage) => stage.name === 'strike',
   );
   if (strike === undefined) throw new Error('the end of turn strikes nothing');
@@ -1507,7 +1572,18 @@ test('a strike taking the city’s last population falls on the strike, and no s
   const last = droughty(DROUGHT - 1, { population: 1, assigned: [CITY], drawPile: fullDraw() });
   const ended = outcome(apply(CATALOGUE, last, { type: 'end-turn' }));
 
-  expect(stagedBy(last, { type: 'end-turn' })).toEqual(['strike']);
+  expect(stagedBy(last, { type: 'end-turn' })).toEqual([
+    'strike',
+    'stock',
+    'assigned',
+    'population',
+    'ended',
+  ]);
+  const [strike] = apply(CATALOGUE, last, { type: 'end-turn' });
+  if (strike.kind !== 'group') throw new Error('the end of turn opens on no strike');
+  const fell = strike.stages[strike.stages.length - 1];
+  expect(fell.chronicle.ending).toEqual(ended.ending);
+  expect(strike.chronicle).toBe(fell.chronicle);
   expect(ended.population).toBe(0);
   expect(ended.resources.food).toBe(0);
   expect(ended.hand).toEqual(['PH_Drought']);

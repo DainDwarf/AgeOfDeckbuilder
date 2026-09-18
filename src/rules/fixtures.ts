@@ -68,12 +68,11 @@ import {
   raided,
   reinforced,
   spanEnded,
-  terraformedOn,
   tileCharted,
   unitDamaged,
 } from './schedule';
 import { charted } from './sight';
-import { followed, unchanged } from './stages';
+import { followed, type Group, type Stage, unchanged, walked } from './stages';
 import { type CardId, type Chronicle, type Deal, holds, type Timeline } from './state';
 import type { Faction, Unit, UnitStats } from './units';
 
@@ -167,7 +166,7 @@ const EVENTS: Catalogue['events'] = {
       PH_Quake: {
         cost: {},
         reads: () => ({}),
-        lands: (catalogue, chronicle) => terraformedOn(catalogue, chronicle, UPHEAVAL, 'forest'),
+        lands: (catalogue, chronicle) => terraformed(catalogue, chronicle, UPHEAVAL, 'forest'),
       },
     },
   },
@@ -284,14 +283,14 @@ export const CATALOGUE: Catalogue = catalogued({
       refuses: (catalogue, _chronicle, tile) =>
         firstRefusal(made(catalogue, tile, ['plain', 'forest', 'hills']), slotFree(tile)),
       effect: (catalogue, paid, at) =>
-        settled(catalogue, terraformed(catalogue, paid, at, 'urban'), at),
+        followed(terraformed(catalogue, paid, at, 'urban'), (left) => settled(catalogue, left, at)),
     },
     PH_Claim: {
       kind: 'settle',
       cost: {},
       aim: 'tile',
       refuses: (catalogue, chronicle, tile) => claimableTile(catalogue, chronicle, tile),
-      effect: (_catalogue, paid, at) => bordered(arrived(paid), at),
+      effect: (_catalogue, paid, at) => followed(arrived(paid), (left) => bordered(left, at)),
     },
     PH_Band: { kind: 'settle', cost: {}, ...entersOn('PH_Worker') },
     PH_Stores: {
@@ -398,7 +397,7 @@ export const CATALOGUE: Catalogue = catalogued({
       strikes: (_catalogue, chronicle) => {
         const shortened = shocked(chronicle, 'food', DROUGHT);
         return chronicle.resources.food < DROUGHT
-          ? populationTaken(shortened).chronicle
+          ? followed(shortened, (left) => populationTaken(left))
           : shortened;
       },
     },
@@ -639,7 +638,7 @@ export type Standing = {
 export function withUnits(chronicle: Chronicle, units: readonly Standing[]): Chronicle {
   let stood = chronicle;
   for (const unit of units) {
-    const dealt = entered(CATALOGUE, stood, unit.entering);
+    const dealt = entered(CATALOGUE, stood, unit.entering).chronicle;
     const last = dealt.units[dealt.units.length - 1];
     const authored: Unit = {
       ...last,
@@ -950,9 +949,22 @@ export function everyCard(chronicle: Chronicle): CardId[] {
   return [...chronicle.drawPile, ...chronicle.hand, ...chronicle.discardPile].sort();
 }
 
-/** What every stage of the command is called, in the order the command resolves them. */
+/** What every stage of the tree is called, in the order the walk plays them. */
+export function namesOf(stages: readonly Stage[]): string[] {
+  return [...walked(stages)].map((stage) => stage.name);
+}
+
+/** What the first group of that name the walk meets holds. A tree holding no such group throws. */
+export function heldBy(stages: readonly Stage[], name: Group['name']): readonly Stage[] {
+  for (const stage of walked(stages)) {
+    if (stage.kind === 'group' && stage.name === name) return stage.stages;
+  }
+  throw new Error(`no ${name} group is staged`);
+}
+
+/** What every stage of the command is called, in the order the walk plays them. */
 export function stagedBy(chronicle: Chronicle, command: Command): string[] {
-  return apply(CATALOGUE, chronicle, command).map((stage) => stage.name);
+  return namesOf(apply(CATALOGUE, chronicle, command));
 }
 
 /** Cards enough for the end of turn to draw a full hand, so its shuffle leaves the discard pile be. */

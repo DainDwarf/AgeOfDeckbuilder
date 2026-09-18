@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { aimOf } from '../rules/cards';
 import { type AimedCard, type Catalogue, cardOf } from '../rules/catalogue';
 import { costOf, refusalOf } from '../rules/chronicle';
-import type { Stage } from '../rules/stages';
+import type { Change, Group, Stage } from '../rules/stages';
 import { type CardId, type Chronicle, playable, type Refusal } from '../rules/state';
 import { createAimLine } from './aim-line';
 import {
@@ -375,13 +375,23 @@ export function createHand(
   };
 
   /**
-   * The hand leaving for the discard pile: every card straightens as it goes, the last one landing
-   * a stagger behind the one before it, and the emptied hand is laid out where they all land.
+   * The cards at the places the change names leaving for the discard pile, in the order named: every
+   * one straightens as it goes, the last one landing a stagger behind the one before it, and the
+   * hand is laid out anew where they all land.
    */
-  const toDiscardPile = async (chronicle: Chronicle): Promise<void> => {
-    const leaving = slots.map((slot) => slot.face.root);
+  const toDiscardPile = async (places: readonly number[], chronicle: Chronicle): Promise<void> => {
+    const going: Slot[] = [];
+    for (const place of places) {
+      const slot = slots[place];
+      if (slot === undefined) {
+        console.error(`no card of the hand at place ${place}, the hand holding ${slots.length}`);
+        continue;
+      }
+      going.push(slot);
+    }
+    const leaving = going.map((slot) => slot.face.root);
     flying = leaving;
-    slots = [];
+    slots = slots.filter((slot) => !going.includes(slot));
     await Promise.all(
       leaving.map((face, index) => {
         stopMotion(scene, face);
@@ -436,6 +446,61 @@ export function createHand(
     return letGoOf(slot);
   };
 
+  const changed = (stage: Change): Promise<void> | undefined => {
+    switch (stage.name) {
+      case 'discarded':
+        return toDiscardPile(stage.places, stage.chronicle);
+      case 'drawn':
+        return fromDrawPile(stage.chronicle);
+      case 'enter':
+      case 'move':
+      case 'damaged':
+      case 'killed':
+      case 'refreshed':
+      case 'action-spent':
+      case 'retiled':
+      case 'charted':
+      case 'held':
+      case 'settled':
+      case 'stock':
+      case 'population':
+      case 'assigned':
+      case 'laid':
+      case 'recalled':
+      case 'shuffled':
+      case 'left':
+      case 'turn':
+      case 'rolled':
+      case 'dealt':
+      case 'taken':
+      case 'ended':
+      case 'runtime-error':
+        return undefined;
+    }
+  };
+
+  const grouped = (stage: Group): Promise<void> | undefined => {
+    switch (stage.name) {
+      case 'refused':
+        return comeHome();
+      case 'played':
+      case 'assign':
+      case 'claim':
+      case 'strike':
+      case 'income':
+      case 'grow':
+      case 'turn':
+      case 'enemy-phase':
+      case 'capstone':
+      case 'deal':
+      case 'answer':
+      case 'reward':
+      case 'attack':
+      case 'camp-capture':
+        return undefined;
+    }
+  };
+
   return {
     render,
     live,
@@ -445,40 +510,11 @@ export function createHand(
     },
     unselect,
     play(stage: Stage): Promise<void> | undefined {
-      switch (stage.name) {
-        case 'discard':
-          return toDiscardPile(stage.chronicle);
-        case 'draw':
-          return fromDrawPile(stage.chronicle);
-        case 'refused':
-          return comeHome();
-        case 'played':
-        case 'assign':
-        case 'claim':
-        case 'strike':
-        case 'income':
-        case 'grow':
-        case 'capture':
-        case 'victory':
-        case 'turn':
-        case 'capstone':
-        case 'deal':
-        case 'no-deal':
-        case 'answer':
-        case 'reward':
-        case 'shuffle':
-        case 'attack':
-        case 'move':
-        case 'camp-capture':
-        case 'enter':
-        case 'retiled':
-        case 'charted':
-        case 'damaged':
-        case 'laid':
-        case 'gained':
-        case 'population-lost':
-        case 'runtime-error':
-          return undefined;
+      switch (stage.kind) {
+        case 'change':
+          return changed(stage);
+        case 'group':
+          return grouped(stage);
       }
     },
   };

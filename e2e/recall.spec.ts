@@ -16,6 +16,7 @@ import {
   type OnScreen,
   onScreen,
   open,
+  playedOut,
   rested,
   selected,
   standing,
@@ -75,6 +76,7 @@ test('a press on a card of the aim window recalls it into the hand', async ({ pa
 
   // The window lays the pile out newest first, so its first card is the pile's last.
   await click(page, 'aim-window-card-0');
+  await playedOut(page);
   await expect.poll(async () => (await chronicleOf(page)).discardPile.at(-1)).toBe('PH_Recall');
 
   const after = await chronicleOf(page);

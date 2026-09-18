@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { CARD_KINDS } from '../rules/cards';
 import { type Catalogue, cardOf } from '../rules/catalogue';
 import { answerRefusal, offered } from '../rules/schedule';
-import type { Stage } from '../rules/stages';
+import type { Group, Stage } from '../rules/stages';
 import {
   type CardId,
   type Chronicle,
@@ -88,12 +88,12 @@ export type Overlay = {
    * waits on a deal and the ending screen once it has ended, and nothing while it runs.
    */
   render(chronicle: Chronicle): void;
-  play(stage: Stage): Promise<void> | undefined;
   /**
-   * Raises the capstone's window at its landing, over the chronicle it landed on; `closed` is told
-   * once it closes.
+   * Raises the capstone's window at the cue of the `capstone` group on the capstone's turn, over the
+   * screen as it stood before the landing, and holds the play-out until the window closes; raises
+   * the ending screen on the stage that ends the chronicle.
    */
-  land(chronicle: Chronicle, closed: () => void): void;
+  play(stage: Stage): Promise<void> | undefined;
 };
 
 /** One face offered on the scrim, what it is drawn refused by, and the number a press on it answers by. */
@@ -761,6 +761,33 @@ export function createOverlay(
     }
   };
 
+  const grouped = (stage: Group): Promise<void> | undefined => {
+    switch (stage.name) {
+      case 'capstone': {
+        const { chronicle } = stage;
+        if (chronicle.turn !== chronicle.timeline.capstone.turn) return undefined;
+        return new Promise((closed) => {
+          showCapstone({ stands: 'capstone', on: chronicle, raised: 'landing', closed });
+        });
+      }
+      case 'played':
+      case 'refused':
+      case 'assign':
+      case 'claim':
+      case 'strike':
+      case 'income':
+      case 'grow':
+      case 'turn':
+      case 'enemy-phase':
+      case 'deal':
+      case 'answer':
+      case 'reward':
+      case 'attack':
+      case 'camp-capture':
+        return undefined;
+    }
+  };
+
   onClick(scrim, beside);
 
   onClick(
@@ -869,14 +896,18 @@ export function createOverlay(
       else stand();
     },
     play(stage: Stage): Promise<void> | undefined {
+      switch (stage.kind) {
+        case 'change':
+          break;
+        case 'group':
+          if (stage.stages.length > 0) return grouped(stage);
+          break;
+      }
       const { ending, timeline, deals } = stage.chronicle;
       if (ending !== undefined && raisedOn === undefined) return raiseEnding({ ending, timeline });
       // Every camp captured deals before the camps after it are captured: the window waits for the
       // render the play-out ends on, which a render of this stage would pre-empt.
       return deals.length > 0 ? Promise.resolve() : undefined;
-    },
-    land(chronicle: Chronicle, closed: () => void): void {
-      showCapstone({ stands: 'capstone', on: chronicle, raised: 'landing', closed });
     },
   };
 }

@@ -4,6 +4,7 @@ import { deckOf } from '../src/rules/catalogue';
 import { apply } from '../src/rules/chronicle';
 import { type TileCoords, tileKey } from '../src/rules/map';
 import { inSight } from '../src/rules/sight';
+import { walked } from '../src/rules/stages';
 import {
   aimed,
   budget,
@@ -99,7 +100,7 @@ function moveRun(): { seed: number; turns: number; from: TileCoords; to: TileCoo
   return firstSeed('crosses an enemy in sight inside eight ends of turn', (seed) => {
     let chronicle = launch(seed, deckOf(STAND_IN, 'PH_Deck'));
     for (let turns = 0; turns <= 8 && chronicle.ending === undefined; turns++) {
-      const stages = apply(STAND_IN, chronicle, { type: 'end-turn' });
+      const stages = [...walked(apply(STAND_IN, chronicle, { type: 'end-turn' }))];
       const moves = stages.flatMap((stage) =>
         stage.name === 'move'
           ? [{ from: stage.from, to: stage.to, seen: inSight(STAND_IN, stage.chronicle) }]

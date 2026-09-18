@@ -1,87 +1,201 @@
 import type { TileCoords } from './map';
-import type { Chronicle } from './state';
+import type { CardId, Chronicle, DefeatCause } from './state';
 
 /**
- * A step that carries nothing but the chronicle it left. `played` is the card gone from the hand
- * with its cost paid, `refused` is the command the rules turned down, `assign` is one population put
- * on a tile, taken off one, or taken off one and put on another, `claim` is a tile bought with
- * culture and taken inside the border, `grow` is the food stock spent on one more population,
- * `turn` is the tick, where every unit's move points and action are refreshed, `capstone` is the
- * capstone's turn come with its timeline rolled on and nothing of it landed yet, `deal` is what the
- * timeline offers on a due turn, `no-deal` is a due turn dealing nothing and the next deal rolled
- * from it, `answer` is the answer taken with the deal popped and its cost paid and nothing of it
- * landed yet, `reward` is the reward taken laid in the discard pile, `strike` is every hazard the
- * hand still holds striking, `capture` is the city falling to an enemy that stood on its tile, and
- * `victory` is the capstone passed at the end of a turn.
+ * One row of the chronicle moved, and the chronicle it leaves. On a unit: `enter` is one unit
+ * entering on the tile, `move` one unit crossing, `damaged` the unit standing on the tile hurt by no
+ * attacker, `killed` it gone at nought health or off a terrain it cannot stand on, `refreshed` its
+ * move points or its action brought back up, `action-spent` one of its action spent. On a tile:
+ * `retiled` is its layers changed, `charted` it charted as it stands on this change, `held` its
+ * holder changed, `settled` the city standing on it. `stock` is the city's stock moved, carrying the
+ * tile where a tile yielded it, `population` its count, and `assigned` a tile worked or left. On the
+ * piles: `laid` is a card laid on top of the draw pile, `drawn` cards drawn into the hand,
+ * `discarded` cards gone into the discard pile, `recalled` a card back out of it into the hand,
+ * `shuffled` the discard pile shuffled into the draw pile, `left` a card gone from the chronicle;
+ * `discarded`, `recalled` and `left` carry the places their cards came out of, each an index into
+ * that pile as it stood before the change — the hand for `discarded` and `left`, the discard pile
+ * for `recalled` — and none for a card that came out of no pile. `turn` is the turn ticked,
+ * `rolled` the timeline's next due turn rolled, `dealt` a deal dealt behind the ones standing,
+ * `taken` the deal standing taken, `ended` the chronicle's ending set, and `runtime-error` a content
+ * defect met in play, followed through where nothing could move.
  */
-export type PlainStage =
+export type Change = { readonly kind: 'change'; readonly chronicle: Chronicle } & (
+  | { readonly name: PlainChange }
+  | { readonly name: PlacedChange; readonly places: readonly number[] }
+  | { readonly name: 'stock'; readonly tile?: TileCoords }
+  | { readonly name: TiledChange; readonly tile: TileCoords }
+  | { readonly name: 'move'; readonly from: TileCoords; readonly to: TileCoords }
+);
+
+/**
+ * A name for why, over the stages it holds, and the chronicle it leaves: its last stage's, or the one
+ * it was handed or left where it holds none, a draw of the generator that raised no stage riding on
+ * it either way. `played` is a card played, `refused` a command the rules turned down, `assign` a
+ * population put on a tile, taken off one, or both, `claim` a tile bought with culture, `strike` one
+ * hazard in hand striking, `income` the tiles worked yielding, `grow` the food stock spent on one
+ * more population, `turn` the turn ticked and the units refreshed, `enemy-phase` the enemies' half of
+ * the turn, `capstone` the capstone's turn come or its second script, `deal` what the timeline
+ * offers on a due turn, `answer` an answer taken, `reward` a reward taken, `attack` one unit's
+ * attack, and `camp-capture` one camp taken by the unit standing on it.
+ */
+export type Group = {
+  readonly kind: 'group';
+  readonly chronicle: Chronicle;
+  readonly stages: readonly Stage[];
+} & GroupHead;
+
+/** What a group is named and carries, before the stages it holds. */
+type GroupHead =
+  | { readonly name: PlainGroup }
+  | { readonly name: 'strike'; readonly card: CardId }
+  | { readonly name: 'attack'; readonly attacker: TileCoords; readonly target: TileCoords }
+  | { readonly name: 'camp-capture'; readonly tile: TileCoords };
+
+/** The one step a command resolves as, a change or a group, each carrying the chronicle it leaves. */
+export type Stage = Change | Group;
+
+/** The changes that carry nothing but the chronicle they leave. */
+type PlainChange =
+  | 'laid'
+  | 'population'
+  | 'drawn'
+  | 'shuffled'
+  | 'turn'
+  | 'rolled'
+  | 'dealt'
+  | 'taken'
+  | 'ended'
+  | 'runtime-error';
+
+type PlacedChange = 'discarded' | 'recalled' | 'left';
+
+/** The changes that carry the tile they moved a row on. */
+type TiledChange =
+  | 'enter'
+  | 'damaged'
+  | 'killed'
+  | 'refreshed'
+  | 'action-spent'
+  | 'retiled'
+  | 'charted'
+  | 'held'
+  | 'settled'
+  | 'assigned';
+
+/** The groups that carry nothing but the stages they hold and the chronicle they leave. */
+type PlainGroup =
   | 'played'
   | 'refused'
   | 'assign'
   | 'claim'
-  | 'strike'
-  | 'discard'
   | 'income'
   | 'grow'
-  | 'capture'
-  | 'victory'
   | 'turn'
+  | 'enemy-phase'
   | 'capstone'
   | 'deal'
-  | 'no-deal'
   | 'answer'
-  | 'reward'
-  | 'draw'
-  | 'shuffle';
+  | 'reward';
+
+export function change(name: PlainChange | 'stock', chronicle: Chronicle): Change {
+  return { kind: 'change', name, chronicle };
+}
+
+export function changeOn(
+  name: TiledChange | 'stock',
+  tile: TileCoords,
+  chronicle: Chronicle,
+): Change {
+  return { kind: 'change', name, tile, chronicle };
+}
+
+export function changeFrom(
+  name: PlacedChange,
+  places: readonly number[],
+  chronicle: Chronicle,
+): Change {
+  return { kind: 'change', name, places, chronicle };
+}
+
+/** Every stage of the tree in order, a group before the stages it holds. */
+export function* walked(stages: readonly Stage[]): Generator<Stage> {
+  for (const stage of stages) {
+    yield stage;
+    switch (stage.kind) {
+      case 'change':
+        break;
+      case 'group':
+        yield* walked(stage.stages);
+        break;
+    }
+  }
+}
+
+/** Whether a stage settles its chronicle as it plays: a change, or a group holding nothing. */
+export function leaf(stage: Stage): boolean {
+  switch (stage.kind) {
+    case 'change':
+      return true;
+    case 'group':
+      return stage.stages.length === 0;
+  }
+}
 
 /**
- * One change a landing makes. `laid` is a card laid on top of the draw pile, `gained` is resources
- * into the city's stock, `population-lost` is the city one population fewer with the tile it worked
- * unassigned, `runtime-error` is a landing followed through where the content should never have
- * called it and nothing changed; `enter` is one unit entering on the tile by anything but a card play, `retiled` is the
- * tile's layers changed, `charted` is the tile charted as it stands on this stage, and `damaged` is
- * the unit standing on the tile hurt or killed by no attacker.
+ * Stages in the order they were raised, and the chronicle they leave: the last stage's, or the very
+ * chronicle the sequence was handed where it raised none, apart from a draw of the generator that
+ * raised no stage. Once a stage of it ends the chronicle, nothing follows it.
  */
-export type LandingStage = { readonly chronicle: Chronicle } & (
-  | { readonly name: 'laid' | 'gained' | 'population-lost' | 'runtime-error' }
-  | { readonly name: 'enter' | 'retiled' | 'charted' | 'damaged'; readonly tile: TileCoords }
-);
+export type Sequence<S extends Stage = Stage> = {
+  readonly stages: readonly S[];
+  readonly chronicle: Chronicle;
+};
 
 /**
- * The shape every command resolves as: one step, and the chronicle it leaves behind. An `attack` is
- * one unit's attack, the player's by hand or an enemy's in the enemy phase, a `move` is one unit
- * crossing, the player's or the enemy phase's alike, and a `camp-capture` is one camp taken by the
- * unit standing on it; each names the tiles it happened between or on, because what the chronicle
- * after the step cannot say is carried on the step itself.
+ * What a landing answers: one change per row it moved, in the order it moved them, and the chronicle
+ * it leaves. A draw of the generator rides on the change it drew for, so a landing that raised
+ * nothing drew nothing.
  */
-export type Stage =
-  | LandingStage
-  | ({ readonly chronicle: Chronicle } & (
-      | { readonly name: PlainStage }
-      | { readonly name: 'attack'; readonly attacker: TileCoords; readonly target: TileCoords }
-      | { readonly name: 'move'; readonly from: TileCoords; readonly to: TileCoords }
-      | { readonly name: 'camp-capture'; readonly tile: TileCoords }
-    ));
+export type Landed = Sequence<Change>;
 
-/**
- * What a landing answers: one stage per change it made, in the order it made them, and the chronicle
- * it leaves — the last stage's, or the very chronicle it was handed where it raised none. A draw of
- * the generator rides on the stage it drew for, so a landing that raised nothing drew nothing.
- */
-export type Landed = { readonly stages: readonly LandingStage[]; readonly chronicle: Chronicle };
-
-/** A landing that changed nothing. */
-export function unchanged(chronicle: Chronicle): Landed {
+/** A landing, or any sequence, that changed nothing. */
+export function unchanged<S extends Stage = Change>(chronicle: Chronicle): Sequence<S> {
   return { stages: [], chronicle };
 }
 
-/** A landing that made the one change the stage stands for. */
-export function landedAs(stage: LandingStage): Landed {
-  return { stages: [stage], chronicle: stage.chronicle };
+/**
+ * A landing that made the one change: the one place a change joins what a command resolves as.
+ * Where it leaves a standing city at no population the city falls on it, an `ended` right after it.
+ */
+export function landedAs(stage: Change): Landed {
+  const { chronicle } = stage;
+  if (chronicle.ending !== undefined || chronicle.city === undefined || chronicle.population > 0) {
+    return { stages: [stage], chronicle };
+  }
+  const ended = change('ended', fall(chronicle, 'population'));
+  return { stages: [stage, ended], chronicle: ended.chronicle };
 }
 
-/** One landing and then another on the chronicle the first left, their stages in that order. */
-export function followed(first: Landed, next: (chronicle: Chronicle) => Landed): Landed {
+/**
+ * One sequence and then another on the chronicle the first left, their stages in that order; where
+ * the first ends the chronicle, the second is never resolved.
+ */
+export function followed<S extends Stage>(
+  first: Sequence<S>,
+  next: (chronicle: Chronicle) => Sequence<S>,
+): Sequence<S> {
+  if (first.chronicle.ending !== undefined) return first;
   const second = next(first.chronicle);
   return { stages: [...first.stages, ...second.stages], chronicle: second.chronicle };
+}
+
+/** A group over what a sequence raised, leaving the chronicle it left: the one stage it answers. */
+export function grouped(head: GroupHead, over: Sequence): Sequence<Group> {
+  const group: Group = { kind: 'group', chronicle: over.chronicle, stages: over.stages, ...head };
+  return { stages: [group], chronicle: group.chronicle };
+}
+
+/** The city's fall: the chronicle records what took it and on which turn, and ends there. */
+export function fall(chronicle: Chronicle, cause: DefeatCause): Chronicle {
+  return { ...chronicle, ending: { outcome: 'defeat', cause, turn: chronicle.turn } };
 }
