@@ -11,3 +11,4 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 - **The balance pass** — numbers measured on the real content, edits uncommitted until the user says they hold. First playtest of the nomadic age: the enemy hits too hard; the settlement and the economy expand way too fast, so gathering is not much needed after a few turns — a victory on 74 food, 22 production, 15 culture — which leaves Hunger biteless and the camps' stocks useless as loot.
 - **Close v0.0.4** — the changelog entry and the tag.
 - **Card references** — a card named in another text is displayed like a link: hovering it shows a miniature of the card, inspecting it zooms on the card; the details come at intake.
+- **The screen page** — the "The screen" half of `docs/CHRONICLE.md` (the chronicle screen, the resource bar, the yield overlay) becomes a design page of its own, `docs/SCREEN.md`, the fourth the design pages name.
