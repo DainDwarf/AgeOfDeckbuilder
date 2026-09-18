@@ -15,6 +15,7 @@ import { buildingKind, featureKind, held, refuse } from './map-kinds';
 import { nextRng, pickWeighted, type Rng } from './rng';
 import {
   change,
+  changeFrom,
   changeOn,
   followed,
   type Group,
@@ -196,7 +197,7 @@ export function answered(catalogue: Catalogue, chronicle: Chronicle, answer: Ans
 /** A reward taken off the chronicle the deal is popped from: it is laid in the discard pile. */
 export function rewarded(chronicle: Chronicle, card: CardId): Landed {
   return landedAs(
-    change('discarded', { ...chronicle, discardPile: [...chronicle.discardPile, card] }),
+    changeFrom('discarded', [], { ...chronicle, discardPile: [...chronicle.discardPile, card] }),
   );
 }
 

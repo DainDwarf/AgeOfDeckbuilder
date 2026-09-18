@@ -3,6 +3,7 @@ import { apply, type Command, launched, outcome } from './chronicle';
 import {
   CATALOGUE,
   CITY,
+  camped,
   cityOf,
   DECK,
   endedTurn,
@@ -26,7 +27,7 @@ import { MOVE_POINT, type Tile, tileAt, tileKey } from './map';
 import { RESOURCES } from './resources';
 import { seedRng } from './rng';
 import { inSight } from './sight';
-import { type Stage, walked } from './stages';
+import { type Change, type Stage, walked } from './stages';
 import { type Chronicle, idle } from './state';
 
 /** A disc of plain out to eight, with nothing on it but a fertile plain on its centre tile. */
@@ -189,6 +190,73 @@ test('a card whose effect moves nothing is played over its leaving and its cost 
   });
 
   expect(playedOver(city, PLAYED).map(({ name }) => name)).toEqual(['left', 'stock']);
+});
+
+/** The first change of that name the walk meets. A tree holding none throws. */
+function changeNamed(stages: readonly Stage[], name: Change['name']): Change {
+  for (const stage of walked(stages)) {
+    if (stage.kind === 'change' && stage.name === name) return stage;
+  }
+  throw new Error(`no ${name} change is staged`);
+}
+
+test('a pile change carries the places in the pile its cards came out of, and a reward, out of no pile, carries none', () => {
+  const copies = cityOf(['urban'], {
+    hand: ['PH_Harvest', 'PH_Harvest'],
+    resources: { food: 0, production: 0, military: 0, money: 0, science: 1, culture: 0 },
+  });
+  const second = apply(CATALOGUE, copies, { type: 'play', index: 1, aim: 'none' });
+
+  expect(changeNamed(second, 'discarded')).toMatchObject({ places: [1] });
+  expect(outcome(second).hand).toEqual(['PH_Harvest']);
+
+  const held = cityOf(['urban'], { hand: ['PH_Harvest', 'PH_March', 'PH_Harvest'] });
+
+  expect(changeNamed(apply(CATALOGUE, held, { type: 'end-turn' }), 'discarded')).toMatchObject({
+    places: [0, 1, 2],
+  });
+
+  const settling = opening(plainDisc(), {
+    deck: { cards: DECK.cards, settle: ['PH_Settle', 'PH_Settle', 'PH_Settle'] },
+  });
+
+  expect(
+    changeNamed(apply(CATALOGUE, settledOn(settling, CITY), { type: 'end-turn' }), 'left'),
+  ).toMatchObject({ places: [0, 1] });
+
+  const camp = { q: 4, r: 0 };
+  const dealt = outcome(
+    apply(
+      CATALOGUE,
+      cityOf(['urban'], {
+        ...NO_GROWTH,
+        tiles: camped(field(4), [camp]),
+        drawPile: fullDraw(),
+        units: [standing('player', camp)],
+      }),
+      { type: 'end-turn' },
+    ),
+  );
+
+  expect(
+    changeNamed(heldBy(apply(CATALOGUE, dealt, { type: 'take', at: 0 }), 'reward'), 'discarded'),
+  ).toMatchObject({ places: [] });
+
+  const recalling = cityOf(['urban'], {
+    hand: ['PH_Harvest', 'PH_Recall'],
+    discardPile: ['PH_Farm', 'PH_Harvest', 'PH_Mine'],
+    resources: { food: 0, production: 0, military: 0, money: 0, science: 2, culture: 0 },
+  });
+  const recall = apply(CATALOGUE, recalling, {
+    type: 'play',
+    index: 1,
+    aim: 'discard-pile',
+    card: 2,
+  });
+
+  expect(changeNamed(recall, 'discarded')).toMatchObject({ places: [1] });
+  expect(changeNamed(recall, 'recalled')).toMatchObject({ places: [2] });
+  expect(outcome(recall).hand).toEqual(['PH_Harvest', 'PH_Mine']);
 });
 
 test('a unit card is played over its cost, one population fewer, and the unit entering on the city’s tile', () => {

@@ -29,6 +29,7 @@ import { charted, chartedAt, unitsGone } from './sight';
 import {
   type Change,
   change,
+  changeFrom,
   changeOn,
   fall,
   followed,
@@ -317,11 +318,7 @@ function course(chronicle: Chronicle, steps: readonly ((left: Chronicle) => Sequ
 }
 
 /** One change where a step moved its row, and nothing where it left the chronicle as it stood. */
-function moved(
-  name: 'discarded' | 'drawn' | 'shuffled',
-  before: Chronicle,
-  after: Chronicle,
-): Landed {
+function moved(name: 'drawn' | 'shuffled', before: Chronicle, after: Chronicle): Landed {
   return after === before ? unchanged(before) : landedAs(change(name, after));
 }
 
@@ -337,7 +334,7 @@ function endOfTurn(catalogue: Catalogue, chronicle: Chronicle): Sequence {
   if (chronicle.turn === 0) return opened(catalogue, chronicle);
   return course(chronicle, [
     (left) => struck(catalogue, left),
-    (left) => moved('discarded', left, discard(left)),
+    discarded,
     (left) => grouped({ name: 'income' }, income(catalogue, left)),
     (left) => grouped({ name: 'grow' }, grow(left)),
     (left) => enemyPhase(catalogue, left),
@@ -369,7 +366,9 @@ function opened(catalogue: Catalogue, chronicle: Chronicle): Sequence {
 function ticked(chronicle: Chronicle): Sequence<Group> {
   let tick = landedAs(change('turn', { ...chronicle, turn: chronicle.turn + 1 }));
   if (chronicle.turn === 0 && chronicle.hand.length > 0) {
-    tick = followed(tick, (left) => landedAs(change('left', { ...left, hand: [] })));
+    tick = followed(tick, (left) =>
+      landedAs(changeFrom('left', everyPlace(left.hand), { ...left, hand: [] })),
+    );
   }
   for (const unit of chronicle.units) {
     tick = followed(tick, (left) => refreshedUnit(left, unit));
@@ -517,8 +516,12 @@ function play(catalogue: Catalogue, chronicle: Chronicle, command: PlayCommand):
 
   const hand = chronicle.hand.filter((_, at) => at !== command.index);
   const leaving = leavesChronicle(cardOf(catalogue, id))
-    ? change('left', { ...chronicle, hand })
-    : change('discarded', { ...chronicle, hand, discardPile: [...chronicle.discardPile, id] });
+    ? changeFrom('left', [command.index], { ...chronicle, hand })
+    : changeFrom('discarded', [command.index], {
+        ...chronicle,
+        hand,
+        discardPile: [...chronicle.discardPile, id],
+      });
   const costs = costOf(catalogue, id);
   const cost = (left: Chronicle): Landed =>
     costs.length === 0 ? unchanged(left) : landedAs(change('stock', paid(left, costs)));
@@ -687,14 +690,21 @@ function shuffle(chronicle: Chronicle): Chronicle {
   return { ...chronicle, rng: shuffled.rng, drawPile: shuffled.items, discardPile: [] };
 }
 
-/** The end of the turn: what is left of the hand goes to the discard pile. */
-function discard(chronicle: Chronicle): Chronicle {
-  if (chronicle.hand.length === 0) return chronicle;
-  return {
-    ...chronicle,
-    hand: [],
-    discardPile: [...chronicle.discardPile, ...chronicle.hand],
-  };
+/** The end of the turn: what is left of the hand goes to the discard pile, and nothing where none is. */
+function discarded(chronicle: Chronicle): Landed {
+  if (chronicle.hand.length === 0) return unchanged(chronicle);
+  return landedAs(
+    changeFrom('discarded', everyPlace(chronicle.hand), {
+      ...chronicle,
+      hand: [],
+      discardPile: [...chronicle.discardPile, ...chronicle.hand],
+    }),
+  );
+}
+
+/** Every place of a pile, in pile order. */
+function everyPlace(pile: readonly CardId[]): number[] {
+  return pile.map((_, at) => at);
 }
 
 /**

@@ -13,6 +13,7 @@ import { buildingKind, improvementKind, refuse, terrainKind } from './map-kinds'
 import { RESOURCES, type Resource, type Resources } from './resources';
 import {
   change,
+  changeFrom,
   changeOn,
   followed,
   type Group,
@@ -432,7 +433,7 @@ export function refreshed(paid: Chronicle, at: TileCoords): Landed {
 /** The card a recall brings back: it leaves the discard pile for the back of the hand. */
 export function recalled(paid: Chronicle, at: number): Landed {
   return landedAs(
-    change('recalled', {
+    changeFrom('recalled', [at], {
       ...paid,
       hand: [...paid.hand, paid.discardPile[at]],
       discardPile: paid.discardPile.filter((_, index) => index !== at),

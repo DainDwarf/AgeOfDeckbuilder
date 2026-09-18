@@ -18,6 +18,7 @@ import type { CardId, Chronicle, DefeatCause } from './state';
  */
 export type Change = { readonly kind: 'change'; readonly chronicle: Chronicle } & (
   | { readonly name: PlainChange }
+  | { readonly name: PlacedChange; readonly places: readonly number[] }
   | { readonly name: 'stock'; readonly tile?: TileCoords }
   | { readonly name: TiledChange; readonly tile: TileCoords }
   | { readonly name: 'move'; readonly from: TileCoords; readonly to: TileCoords }
@@ -54,17 +55,21 @@ export type Stage = Change | Group;
 type PlainChange =
   | 'laid'
   | 'population'
-  | 'discarded'
   | 'drawn'
-  | 'recalled'
   | 'shuffled'
-  | 'left'
   | 'turn'
   | 'rolled'
   | 'dealt'
   | 'taken'
   | 'ended'
   | 'runtime-error';
+
+/**
+ * The changes that carry the places in the pile their cards came out of, each an index into the pile
+ * as it stood before the change: the hand for `discarded` and `left`, the discard pile for
+ * `recalled`. A card that came out of no pile carries none.
+ */
+type PlacedChange = 'discarded' | 'recalled' | 'left';
 
 /** The changes that carry the tile they moved a row on. */
 type TiledChange =
@@ -104,6 +109,14 @@ export function changeOn(
   chronicle: Chronicle,
 ): Change {
   return { kind: 'change', name, tile, chronicle };
+}
+
+export function changeFrom(
+  name: PlacedChange,
+  places: readonly number[],
+  chronicle: Chronicle,
+): Change {
+  return { kind: 'change', name, places, chronicle };
 }
 
 /** Every stage of the tree in order, a group before the stages it holds. */

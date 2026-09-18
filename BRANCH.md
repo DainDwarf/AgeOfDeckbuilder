@@ -29,5 +29,3 @@ The groups: `played` over the card leaving the hand, `discarded` or `left`, then
 The one claim the design leaves unverified: the sight's charting runs once per change, so a tick over twenty units becomes twenty passes where it was one. Each pass is small; it is measured on the line that lands it, not assumed.
 
 ## Lines
-
-- **A pile change carries the place** — `discarded` and `left` carry the places in the hand the cards left, one for a play and every one at the end of a turn, `recalled` the place in the discard pile its card came out of, and a reward laid in the discard pile carries none, having left no pile; the hand flies the slot the change names and its guess among copies goes; one rules test on the fixture holds it. Doc-impact: `docs/DOGMAS.md`. [board/a-pile-change-carries-the-place.md](board/a-pile-change-carries-the-place.md)

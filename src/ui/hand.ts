@@ -375,27 +375,12 @@ export function createHand(
   };
 
   /**
-   * The slots whose cards the chronicle's hand no longer holds, the card let go of the first to go
-   * among copies of one card.
+   * The cards at the places the change names leaving for the discard pile, in the order named: every
+   * one straightens as it goes, the last one landing a stagger behind the one before it, and the
+   * hand is laid out anew where they all land.
    */
-  const gone = (hand: readonly CardId[]): Slot[] => {
-    const held = new Map<CardId, number>();
-    for (const id of hand) held.set(id, (held.get(id) ?? 0) + 1);
-    const kept = letGo === undefined ? slots : [...slots.filter((slot) => slot !== letGo), letGo];
-    return kept.filter((slot) => {
-      const left = held.get(slot.id) ?? 0;
-      held.set(slot.id, left - 1);
-      return left <= 0;
-    });
-  };
-
-  /**
-   * The cards the hand no longer holds leaving for the discard pile: every one straightens as it
-   * goes, the last one landing a stagger behind the one before it, and the hand is laid out anew
-   * where they all land.
-   */
-  const toDiscardPile = async (chronicle: Chronicle): Promise<void> => {
-    const going = gone(chronicle.hand);
+  const toDiscardPile = async (places: readonly number[], chronicle: Chronicle): Promise<void> => {
+    const going = places.map((place) => slots[place]);
     const leaving = going.map((slot) => slot.face.root);
     flying = leaving;
     slots = slots.filter((slot) => !going.includes(slot));
@@ -456,7 +441,7 @@ export function createHand(
   const changed = (stage: Change): Promise<void> | undefined => {
     switch (stage.name) {
       case 'discarded':
-        return toDiscardPile(stage.chronicle);
+        return toDiscardPile(stage.places, stage.chronicle);
       case 'drawn':
         return fromDrawPile(stage.chronicle);
       case 'enter':
