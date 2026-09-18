@@ -198,14 +198,15 @@ function passedOn(catalogue: Catalogue, started: Chronicle, stages: readonly Sta
   // The events phase lands the capstone in the command whose tick reaches its turn, so a command
   // started on that turn or after starts past the landing.
   let landed = started.turn >= turn;
-  const holds = (chronicle: Chronicle): boolean =>
+  const passesNow = (chronicle: Chronicle): boolean =>
     landed && chronicle.ending === undefined && !falls(chronicle) && passes(catalogue, chronicle);
 
   const cut = (held: readonly Stage[]): Stage[] | undefined => {
     for (const [at, stage] of held.entries()) {
       switch (stage.kind) {
         case 'change':
-          if (holds(stage.chronicle)) return [...held.slice(0, at + 1), victory(stage.chronicle)];
+          if (passesNow(stage.chronicle))
+            return [...held.slice(0, at + 1), victory(stage.chronicle)];
           break;
         case 'group': {
           const inner = cut(stage.stages);
@@ -215,7 +216,8 @@ function passedOn(catalogue: Catalogue, started: Chronicle, stages: readonly Sta
           }
           if (landed || stage.name !== 'capstone' || stage.chronicle.turn !== turn) break;
           landed = true;
-          if (holds(stage.chronicle)) return [...held.slice(0, at + 1), victory(stage.chronicle)];
+          if (passesNow(stage.chronicle))
+            return [...held.slice(0, at + 1), victory(stage.chronicle)];
           break;
         }
       }
