@@ -478,8 +478,9 @@ export function campPlaceable(
 /**
  * Camps placed around the city, drawn one at a time, each uniformly from the tiles a camp may be
  * placed on, `apart` from every camp standing — the generator's and the ones already drawn here
- * alike; the candidates are filtered again after each. When they run out it places what it can. Each
- * camp placed is its own stage, carrying the draw that placed it. It enters no unit.
+ * alike; the candidates are filtered again after each. When they run out it places what it can, and
+ * where it can place none it draws nothing and is a `runtime-error`. Each camp placed is its own
+ * stage, carrying the draw that placed it. It enters no unit.
  */
 export function campsPlaced(
   catalogue: Catalogue,
@@ -506,6 +507,7 @@ export function campsPlaced(
     standing.push(chosen);
     placings.push({ tile: { q: chosen.q, r: chosen.r }, rng });
   }
+  if (placings.length === 0) return { ...runtimeError(chronicle), placed: [] };
 
   let landing = unchanged(chronicle);
   for (const placing of placings) {
@@ -523,27 +525,6 @@ export function campsPlaced(
     );
   }
   return { ...landing, placed: placings.map(({ tile }) => tile) };
-}
-
-/**
- * One camp placed around the city, then a raid of that many warriors entering on and around it, the
- * first on the camp. A raid of no warrior, or one where no tile takes a camp, places nothing and is a
- * `runtime-error`.
- */
-export function encamped(
-  catalogue: Catalogue,
-  chronicle: Chronicle,
-  fromCity: Span,
-  apart: number,
-  warriors: number,
-): Landed {
-  if (warriors <= 0) return runtimeError(chronicle);
-  const placing = campsPlaced(catalogue, chronicle, 1, fromCity, apart);
-  const [camp] = placing.placed;
-  if (camp === undefined) return runtimeError(chronicle);
-  // The first warrior lands on the camp only because `campTiles` asks the ground to run to the city
-  // and no unit to stand there, and the catalogue refuses a camp on a terrain its unit cannot stand on.
-  return followed(placing, (left) => enteredAround(catalogue, left, camp, warriors));
 }
 
 /** One roll of the generator inside a span of turns, both ends included. */

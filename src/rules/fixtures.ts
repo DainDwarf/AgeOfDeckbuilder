@@ -36,7 +36,7 @@ import {
 } from './catalogue';
 import { apply, beginChronicle, type Command, launched, outcome } from './chronicle';
 import { arrived, bordered } from './city';
-import { campUnit } from './enemies';
+import { campUnit, enteredAround } from './enemies';
 import {
   type BuildingTypeId,
   cornerKey,
@@ -57,7 +57,6 @@ import {
   burned,
   campPlaceable,
   campsPlaced,
-  encamped,
   type Fire,
   featureDealable,
   featureDealt,
@@ -204,8 +203,15 @@ const EVENTS: Catalogue['events'] = {
       PH_Encampment: {
         cost: {},
         reads: () => ({ warriors: ENCAMPED }),
-        lands: (catalogue, chronicle) =>
-          encamped(catalogue, chronicle, RIVALS.fromCity, RIVALS.apart, ENCAMPED),
+        lands: (catalogue, chronicle) => {
+          const placing = campsPlaced(catalogue, chronicle, 1, RIVALS.fromCity, RIVALS.apart);
+          const [camp] = placing.placed;
+          if (camp === undefined) return placing;
+          // The first warrior lands on the camp only because `campsPlaced` asks the ground to run to
+          // the city and no unit to stand there, and the catalogue refuses a camp on a terrain its
+          // unit cannot stand on.
+          return followed(placing, (left) => enteredAround(catalogue, left, camp, ENCAMPED));
+        },
       },
       PH_Truce: {
         cost: {},

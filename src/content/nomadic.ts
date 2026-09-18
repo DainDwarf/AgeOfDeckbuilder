@@ -17,12 +17,13 @@ import {
 } from '../rules/cards';
 import { type Catalogue, catalogued } from '../rules/catalogue';
 import { arrived, yielded } from '../rules/city';
+import { enteredAround } from '../rules/enemies';
 import { MOVE_POINT } from '../rules/map';
 import { buildingKind, improvementKind } from '../rules/map-kinds';
 import {
   burned,
   campPlaceable,
-  encamped,
+  campsPlaced,
   type Fire,
   featureDealable,
   featureDealt,
@@ -206,14 +207,23 @@ export const NOMADIC: Catalogue = catalogued({
         'make-room': {
           cost: {},
           reads: (_catalogue, chronicle) => ({ warriors: raiders(chronicle.turn) }),
-          lands: (catalogue, chronicle) =>
-            encamped(
+          lands: (catalogue, chronicle) => {
+            const placing = campsPlaced(
               catalogue,
               chronicle,
+              1,
               RIVAL_CAMP.fromCity,
               RIVAL_CAMP.apart,
-              raiders(chronicle.turn),
-            ),
+            );
+            const [camp] = placing.placed;
+            if (camp === undefined) return placing;
+            // The first warrior lands on the camp only because `campsPlaced` asks the ground to run
+            // to the city and no unit to stand there, and the catalogue refuses a camp on a terrain
+            // its unit cannot stand on.
+            return followed(placing, (left) =>
+              enteredAround(catalogue, left, camp, raiders(chronicle.turn)),
+            );
+          },
         },
       },
     },

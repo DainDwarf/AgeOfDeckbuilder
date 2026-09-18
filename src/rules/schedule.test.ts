@@ -1171,7 +1171,10 @@ function unkillable(tile: TileCoords): Standing {
   return standing('player', tile, { type: 'PH_Worker', worker: true, health: 99 });
 }
 
-/** The disc with water around the city: no ground runs to it, so the siege places no camp of its own. */
+/**
+ * The disc with water around the city: no ground runs to it, so the siege places no camp of its own
+ * and its landing there is a `runtime-error`.
+ */
 const MOATED = field(6, neighbours(CITY));
 
 /** A camp of the generator's out on that disc. */
@@ -1406,36 +1409,48 @@ test('the siege places what it can where the tiles run out, and enters one warri
   expect(enemiesOf(after)[0].tile).toEqual(campsOf(after)[0]);
 });
 
-test('the siege places no camp the city holds, a unit stands on, a building fills, or a camp stands near', () => {
+test('the siege places no camp the city holds, a unit stands on, a building fills, or a camp stands near, and its landing there is a runtime error', () => {
   const reach = [
     { q: 3, r: 0 },
     { q: 4, r: 0 },
   ];
   const near = { q: 5, r: 0 };
-  const none: Chronicle[] = [
-    corridor({ held: [CITY, ...reach] }),
-    corridor({ units: reach.map(worker) }),
-    corridor({ tiles: builtOn(only(6, CORRIDOR), 'PH_Farm', reach) }),
-    corridor({ tiles: camped(only(6, [...CORRIDOR, near]), [near]) }),
+  const carryings: Carrying[] = [
+    { held: [CITY, ...reach] },
+    { units: reach.map(worker) },
+    { tiles: builtOn(only(6, CORRIDOR), 'PH_Farm', reach) },
+    { tiles: camped(only(6, [...CORRIDOR, near]), [near]) },
   ];
+  const none: Chronicle[] = [];
 
-  for (const after of none) {
+  for (const carrying of carryings) {
+    const stages = apply(CATALOGUE, awaitingCapstone({ tiles: only(6, CORRIDOR), ...carrying }), {
+      type: 'end-turn',
+    });
+    const after = outcome(stages);
+    none.push(after);
+
+    expect(heldBy(stages, 'capstone').map(({ name }) => name)).toEqual(['rolled', 'runtime-error']);
     expect(enemiesOf(after)).toEqual([]);
   }
   expect(campsOf(none[3])).toEqual([near]);
   for (const after of none.slice(0, 3)) expect(campsOf(after)).toEqual([]);
 });
 
-test('the siege places no camp on ground a camp does not lie on, or the city is not walked to', () => {
+test('the siege places no camp on ground a camp does not lie on, or the city is not walked to, and its landing there is a runtime error', () => {
   const reach = [
     { q: 3, r: 0 },
     { q: 4, r: 0 },
   ];
   const land = [CITY, { q: 1, r: 0 }, { q: 2, r: 0 }, ...reach];
-  const rough = siegeLanded({ tiles: madeOf(only(6, land), 'mountain', reach) });
-  const moat = siegeLanded({ tiles: only(6, [CITY, ...reach]) });
+  const rough = awaitingCapstone({ tiles: madeOf(only(6, land), 'mountain', reach) });
+  const moat = awaitingCapstone({ tiles: only(6, [CITY, ...reach]) });
 
-  for (const after of [rough, moat]) {
+  for (const awaited of [rough, moat]) {
+    const stages = apply(CATALOGUE, awaited, { type: 'end-turn' });
+    const after = outcome(stages);
+
+    expect(heldBy(stages, 'capstone').map(({ name }) => name)).toEqual(['rolled', 'runtime-error']);
     expect(campsOf(after)).toEqual([]);
     expect(enemiesOf(after)).toEqual([]);
   }

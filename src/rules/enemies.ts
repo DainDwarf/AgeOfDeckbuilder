@@ -2,7 +2,7 @@ import { type Catalogue, type Entering, entered, unitKind } from './catalogue';
 import { CENTRE, distance, groundRunsTo, type Tile, type TileCoords, tileKey } from './map';
 import { refuse } from './map-kinds';
 import { nextRng } from './rng';
-import { followed, type Landed, unchanged } from './stages';
+import { change, followed, type Landed, landedAs, unchanged } from './stages';
 import type { Chronicle } from './state';
 import { standsOn, unitAt } from './units';
 
@@ -24,12 +24,18 @@ function raidGround(catalogue: Catalogue, chronicle: Chronicle): Tile[] {
   );
 }
 
+/**
+ * That many of the camp's unit entering around the tile, each on the nearest free tile of the raid's
+ * ground, ties drawn from the generator; where none is free, the ones left enter nowhere. A count of
+ * none or fewer draws nothing and is a `runtime-error`.
+ */
 export function enteredAround(
   catalogue: Catalogue,
   chronicle: Chronicle,
   entry: TileCoords,
   enemies: number,
 ): Landed {
+  if (enemies <= 0) return landedAs(change('runtime-error', chronicle));
   const ground = raidGround(catalogue, chronicle);
   let landing = unchanged(chronicle);
   for (let enemy = 0; enemy < enemies; enemy++) {
