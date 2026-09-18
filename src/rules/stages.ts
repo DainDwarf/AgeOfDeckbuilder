@@ -11,10 +11,13 @@ import type { CardId, Chronicle, DefeatCause } from './state';
  * tile where a tile yielded it, `population` its count, and `assigned` a tile worked or left. On the
  * piles: `laid` is a card laid on top of the draw pile, `drawn` cards drawn into the hand,
  * `discarded` cards gone into the discard pile, `recalled` a card back out of it into the hand,
- * `shuffled` the discard pile shuffled into the draw pile, `left` a card gone from the chronicle.
- * `turn` is the turn ticked, `rolled` the timeline's next due turn rolled, `dealt` a deal dealt
- * behind the ones standing, `taken` the deal standing taken, `ended` the chronicle's ending set, and
- * `runtime-error` a content defect met in play, followed through where nothing could move.
+ * `shuffled` the discard pile shuffled into the draw pile, `left` a card gone from the chronicle;
+ * `discarded`, `recalled` and `left` carry the places their cards came out of, each an index into
+ * that pile as it stood before the change — the hand for `discarded` and `left`, the discard pile
+ * for `recalled` — and none for a card that came out of no pile. `turn` is the turn ticked,
+ * `rolled` the timeline's next due turn rolled, `dealt` a deal dealt behind the ones standing,
+ * `taken` the deal standing taken, `ended` the chronicle's ending set, and `runtime-error` a content
+ * defect met in play, followed through where nothing could move.
  */
 export type Change = { readonly kind: 'change'; readonly chronicle: Chronicle } & (
   | { readonly name: PlainChange }
@@ -64,11 +67,6 @@ type PlainChange =
   | 'ended'
   | 'runtime-error';
 
-/**
- * The changes that carry the places in the pile their cards came out of, each an index into the pile
- * as it stood before the change: the hand for `discarded` and `left`, the discard pile for
- * `recalled`. A card that came out of no pile carries none.
- */
 type PlacedChange = 'discarded' | 'recalled' | 'left';
 
 /** The changes that carry the tile they moved a row on. */

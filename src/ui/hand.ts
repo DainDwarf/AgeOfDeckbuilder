@@ -380,7 +380,15 @@ export function createHand(
    * hand is laid out anew where they all land.
    */
   const toDiscardPile = async (places: readonly number[], chronicle: Chronicle): Promise<void> => {
-    const going = places.map((place) => slots[place]);
+    const going: Slot[] = [];
+    for (const place of places) {
+      const slot = slots[place];
+      if (slot === undefined) {
+        console.error(`no card of the hand at place ${place}, the hand holding ${slots.length}`);
+        continue;
+      }
+      going.push(slot);
+    }
     const leaving = going.map((slot) => slot.face.root);
     flying = leaving;
     slots = slots.filter((slot) => !going.includes(slot));

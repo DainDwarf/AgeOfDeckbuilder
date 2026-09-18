@@ -13,7 +13,7 @@ One job: get the app up and hand back how to reach it. Whatever happens afterwar
 2. **Probe it before launching.** An instance from an earlier session may still be listening; the OS remembers even though the session does not. If a page comes back, that is the answer — report the URL, say it was already up, and stop.
 3. **Otherwise launch `npm run dev` in the background.** It never returns; a foreground call hangs the turn.
 4. **Read the address out of the launch output** with the Read tool — Vite prints `Local: http://…` once it is listening. Report that line's URL, not an assumed one.
-5. **Say what the address opens.** The bare address boots the launch page. `?deck=PH_Deck` (a deck id from `src/content/stand-in.ts`) opens a chronicle straight; `&seed=<integer>` replays one, and `&region=`, `&schedule=` and `&content=` name the rest, the page's defaults standing in for what is not named.
+5. **Say what the address opens.** The bare address, no option, is the normal door: it boots the launch page on the default content. A chronicle once begun writes its whole address into the bar — `content`, `region`, `schedule`, `deck`, `seed` — so that address replays it. Naming a deck opens a chronicle straight, but only within the content named: a stand-in deck needs `content=stand-in` beside it (`?content=stand-in&deck=PH_Deck`), since the default content holds none.
 
 ## Rules
 
