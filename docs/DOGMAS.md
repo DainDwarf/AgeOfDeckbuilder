@@ -26,7 +26,7 @@ How this project is built. Human-chosen; every session works by them, `/intake` 
 - **Price new content against what already does that job.** Strictly worse on every axis is dead on arrival, however good the flavour; "the balance pass will tune it" is not a licence to skip the comparison. Later-tier content may dominate earlier-tier content — that is progression.
 - **Compare rates on a common basis.** A per-play yield and a per-turn yield are only comparable after amortising the one-shot by how often it is drawn.
 - **No generative AI in assets.** Art, sound and music come from packs whose licence is recorded the moment they enter the repository, or are primitives drawn by code; a generative model produces none of it, placeholders included. Why: a part of the audience rejects genAI assets outright, and a placeholder has a way of shipping.
-- **A code-drawn placeholder is a flat polygon** — one fill, one outline, no curves, no gradients, no detail work. A primitive that starts wanting beauty is an asset and waits for its pack. Why: an elaborate mark authored by the model is genAI art in polygon clothing.
+- **A code-drawn placeholder is a flat polygon** — one fill, one outline, no curves, no gradients, no detail work, and the fewest vertices that tell it apart from the other marks: a mark says which thing it is, never what the thing looks like. A tent with a door notch or a snare with its V is a picture; a primitive that starts wanting one is an asset and waits for its pack. Why: an elaborate mark authored by the model is genAI art in polygon clothing.
 
 ## Writing rules
 
@@ -98,7 +98,7 @@ How this project is built. Human-chosen; every session works by them, `/intake` 
 - **A change of several lines on its own branch gets a branch board.** `BRANCH.md` at the root holds the clean design first and one line per thing that design breaks after, the line that writes the design into `docs/` first among them; `BOARD.md` on the branch holds one pointer line; the branch merges only once `BRANCH.md` holds no line, and one Prep commit deletes the file and the pointer before the merge. Why: one board with two workstreams makes priority order lie, and the design section reviewed line by line keeps the design pages on `main` free of half-true designs.
 - **A task file is written once, on the settled state.** Findings stay in the conversation until they settle — intermediate readings are usually wrong, and a superseded number left in a file reads as fact next session.
 - **Durable never cites transient.** A `docs/` page or a changelog entry never references a board line, a task file, or an idea.
-- **`CHANGELOG.md` is for players**, written at a version bump, in their words.
+- **`CHANGELOG.md` is for players**, written at a version bump, in their words, and never reworded after: a past entry keeps its words even where the glossary has since forbidden one, a rename sweep skips it, and a stale sentence in it is history, not a finding.
 - **`CLAUDE.md` stays short.** It is loaded every session; detail lives in `docs/` pages read on demand.
 - **Skills state their rules plainly** — no justifying, no referencing another skill. Calibration numbers are data and stay.
 - **A paragraph is one line.** No markdown file is hard-wrapped; Prettier keeps it so (`npm run fmt`) and `npm run lint` refuses a wrapped one. Why: a phrase broken across a line break is invisible to a search, and an edit mid-paragraph no longer reflows what follows.
