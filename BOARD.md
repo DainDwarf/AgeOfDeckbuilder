@@ -6,6 +6,7 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ---
 
+- **Every state change gives out its steps** — the rules helpers that change the chronicle always give out the steps they raised, and the caller decides whether it keeps or drops them, so a card play or a hazard's strike keeps only the end state where it resolves as one stage, and the pairs that answer a bare chronicle beside a landing (`gained` and `stockGained`, `terraformed` and `terraformedOn`) become one helper each.
 - **The fall is taken too late** — the fall by population is taken after every stage is computed, so `grow` still runs on a city of nought population and a silent guard in `src/rules/city.ts` is all that keeps it from growing one back and undoing the fall; the fall may belong before the stages after it are computed.
 - **Victory on the act** — check the win condition on player actions, so that building the shelter finishes right away instead of at the end of turn.
 - **Make room can deliver Fight** — where no tile takes a camp, `encamped` resolves the answer as a full raid instead, and it widens the content's distance band ring by ring out to the map's edge, neither of which any design page says; `besieged` entering a warrior on every camp it places is linked to it and settles on the same line.
