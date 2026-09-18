@@ -6,7 +6,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ---
 
-- **A feature's mark under an improvement's** — the map draws a tile's feature and improvements in one row above its middle, the feature first, every mark of the row 10 px across, so Trapping on a game forest reads as two marks; `docs/CHRONICLE.md` says where a tile's marks stand, and the two specs that read the marks pass. Doc-impact: `docs/CHRONICLE.md`. [board/tile-mark-row.md](board/tile-mark-row.md)
 - **The capstone's two groups named apart** — the capstone's landing is the `capstone-landing` group and its second script the `capstone-continued` group, both in the closed set `src/rules/stages.ts` holds, and neither the victory read nor the landing's window reads the turn to tell them apart; `npm test` and the capstone spec pass. Doc-impact: none. [board/capstone-groups-named-apart.md](board/capstone-groups-named-apart.md)
 - **Event animations** — when an event's answer lands, what it changes on the map — burned tiles, killed population and units, anything an answer does — is animated rather than simply redrawn; the tile The herd's _Follow it_ charts is one of them, wherever it lies on the map, and nothing draws the eye to it until then.
 - **The biome rework** — a growth weight per biome, the spread growing per biome instead of per frontier, the city's first ring dealt as its own biome, and the bigger map.

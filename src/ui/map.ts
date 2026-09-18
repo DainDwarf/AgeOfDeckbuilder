@@ -126,8 +126,12 @@ const FOG_ALPHA = 0.6;
 const GLYPH = 6;
 const GLYPH_PITCH = 8;
 
-/** How far above a tile's middle its feature and its improvements stand: clear of a building mark. */
-const FEATURE_RISE = 16;
+/**
+ * How far above a tile's middle the row of its feature and its improvements stands, clear of a
+ * building mark, and how far apart the marks of that row stand, centre to centre.
+ */
+const ROW_RISE = 15;
+const ROW_PITCH = 11;
 
 /** The mark of an assigned tile, corner to corner, and how far below the tile's middle it stands. */
 const ASSIGNED_GLYPH = 12;
@@ -1033,7 +1037,7 @@ export function createMapView(
    * as where it is drawn in fog, and from the chronicle where the map draws it as it stands with no
    * snapshot to draw. A terraform changes a tile's terrain and takes its feature with it, an
    * improvement is improved onto it and a building is built on it, so every layer follows every
-   * render. An improvement stands where a feature stands, the two never sharing a terrain.
+   * render.
    */
   const paintTiles = (): void => {
     ground.removeAll(true);
@@ -1054,15 +1058,19 @@ export function createMapView(
           .setPosition(x, y)
           .setName(`tile-${tileKey(tile)}`),
       );
+      const inRow = (face.feature === undefined ? 0 : 1) + face.improvements.length;
+      let slot = x - ((inRow - 1) * ROW_PITCH) / 2;
       if (face.feature !== undefined) {
         features.add(
           featureMark(scene, face.feature)
-            .setPosition(x, y - FEATURE_RISE)
+            .setPosition(slot, y - ROW_RISE)
             .setName(`feature-${tileKey(tile)}`),
         );
+        slot += ROW_PITCH;
       }
       for (const improvement of face.improvements) {
-        improved.add(improvementMark(scene, improvement).setPosition(x, y - FEATURE_RISE));
+        improved.add(improvementMark(scene, improvement).setPosition(slot, y - ROW_RISE));
+        slot += ROW_PITCH;
       }
       if (face.building !== undefined) {
         built.add(

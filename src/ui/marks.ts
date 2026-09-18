@@ -59,10 +59,23 @@ const BUILDING_COLOURS: Readonly<Record<string, number>> = {
   shelter: BUILT,
 };
 
-/** Half the width of the fertile plain's hexagon, whose corners stand four from its centre. */
-const HEX_HALF = 2 * Math.sqrt(3);
+/** Half the width of the fertile plain's hexagon, whose corners stand five from its centre. */
+const HEX_HALF = 2.5 * Math.sqrt(3);
 
-const FERTILE: number[] = [HEX_HALF, -2, HEX_HALF, 2, 0, 4, -HEX_HALF, 2, -HEX_HALF, -2, 0, -4];
+const FERTILE: number[] = [
+  HEX_HALF,
+  -2.5,
+  HEX_HALF,
+  2.5,
+  0,
+  5,
+  -HEX_HALF,
+  2.5,
+  -HEX_HALF,
+  -2.5,
+  0,
+  -5,
+];
 
 /**
  * Placeholder primitives until the art pass: the fertile plain a small hexagon of its own green, the
@@ -71,8 +84,8 @@ const FERTILE: number[] = [HEX_HALF, -2, HEX_HALF, 2, 0, 4, -HEX_HALF, 2, -HEX_H
 const FEATURE_MARKS: Readonly<Record<string, number[]>> = {
   PH_Fertile: FERTILE,
   fertile: FERTILE,
-  game: [-4, 3, 0, -4, 4, 3],
-  flint: [-2, -4, 3, -1, 1, 4, -3, 1],
+  game: [-5, 4, 0, -4, 5, 4],
+  flint: [-2, -5, 4, -1, 2, 5, -4, 1],
 };
 
 const FEATURE_COLOURS: Readonly<Record<string, number>> = {
@@ -84,12 +97,12 @@ const FEATURE_COLOURS: Readonly<Record<string, number>> = {
 
 /**
  * Placeholder primitives until the art pass: the mine a cut into the ground, the road a straight
- * band, the trapping a snare.
+ * band, the trapping a funnel.
  */
 const IMPROVEMENT_MARKS: Readonly<Record<string, number[]>> = {
-  PH_Mine: [-8, 7, -4, -7, 4, -7, 8, 7],
-  PH_Road: [-8, -2, 8, -2, 8, 2, -8, 2],
-  trapping: [-8, -6, -4, -6, 0, 2, 4, -6, 8, -6, 0, 7],
+  PH_Mine: [-5, 4, -2, -4, 2, -4, 5, 4],
+  PH_Road: [-5, -2, 5, -2, 5, 2, -5, 2],
+  trapping: [-5, -4, 5, -4, 0, 5],
 };
 
 /** The corners a unit kind's mark is drawn from; a kind with no mark is refused. */
