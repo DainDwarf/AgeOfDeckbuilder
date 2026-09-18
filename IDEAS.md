@@ -5,7 +5,7 @@ The unordered pool of features that may or may not happen. Nothing here is promi
 ## Harness
 
 - **Content-stage board**: when content exists, track each piece through Design (number-less) → Implement (provisional numbers) → Balance (measured + feel) → Polish (text, art, lore), one stage per session batched across pieces. Worked well before.
-- **Headless balance simulator**: only run when asked; reports numbers, not diagnoses.
+- **Headless balance simulator**: only run when asked; reports numbers, not diagnoses. Not before v0.0.4 is closed, and not tuned on one age: in the previous project a simulator tuned on a single age produced knobs tuned for the early game only, over-specific, or wrongly shaped, and this chronicle is far more complex than that one — it waits until at least two ages exist to tune across. Pure core performance is its concern and no one else's: the reachability cache below and the end of turn's cost per `apply` are looked at when it is made.
 - **The render factor can change after boot**: regrow the bitmap, re-zoom cameras, re-rasterize text while the game runs. Four consumers: itch.io's fullscreen button, a settings render-scale slider, monitor-hopping, resizing the window after boot. Decide after the art style locks — pixel art would replace this whole strategy with integer scaling.
 
 ## Game
