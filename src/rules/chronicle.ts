@@ -371,26 +371,22 @@ function ticked(chronicle: Chronicle): Sequence<Group> {
   if (chronicle.turn === 0 && chronicle.hand.length > 0) {
     tick = followed(tick, (left) => landedAs(change('left', { ...left, hand: [] })));
   }
-  for (const { id } of chronicle.units) {
-    tick = followed(tick, (left) => refreshedUnit(left, id));
+  for (const unit of chronicle.units) {
+    tick = followed(tick, (left) => refreshedUnit(left, unit));
   }
   return grouped({ name: 'turn' }, tick);
 }
 
 /** One unit's move points and action brought back up to full, and nothing where both are. */
-function refreshedUnit(chronicle: Chronicle, id: number): Landed {
-  const unit = unitOf(chronicle.units, id);
-  if (
-    unit === undefined ||
-    (unit.movePoints === unit.stats.move && unit.action === unit.stats.action)
-  ) {
+function refreshedUnit(chronicle: Chronicle, unit: Unit): Landed {
+  if (unit.movePoints === unit.stats.move && unit.action === unit.stats.action) {
     return unchanged(chronicle);
   }
   return landedAs(
     changeOn('refreshed', unit.tile, {
       ...chronicle,
       units: chronicle.units.map((other) =>
-        other.id === id ? refreshedAction(refreshedMovePoints(other)) : other,
+        other.id === unit.id ? refreshedAction(refreshedMovePoints(other)) : other,
       ),
     }),
   );

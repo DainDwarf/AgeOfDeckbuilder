@@ -137,7 +137,20 @@ export function createResourceBar(
   /** The readings the bar has ticking; a render owns them and takes them down. */
   let rising: Entry[] = [];
 
+  /**
+   * The stages under a rise the bar played: it answers each of them with nothing to wait on and
+   * renders none of them, or every reading the rise ticked would snap back to theirs. A render from
+   * the scene lets them all go, so a play-out let go of between a rise and its stages leaves none
+   * behind; the rise's own closing paint must not, since the stages it claimed are still to come.
+   */
+  const claimed = new Set<Stage>();
+
   const render = (chronicle: Chronicle): void => {
+    claimed.clear();
+    paint(chronicle);
+  };
+
+  const paint = (chronicle: Chronicle): void => {
     overScrim = chronicle.deals.length > 0;
     bar.setDepth(overScrim ? OVER_SCRIM_DEPTH : BAR_DEPTH);
     for (const entry of rising) stopMotion(scene, entry.ticking);
@@ -172,15 +185,9 @@ export function createResourceBar(
       }),
     ).then(() => {
       // A render while these were ticking took them down and painted the readings it stands on.
-      if (rising === ticking) render(chronicle);
+      if (rising === ticking) paint(chronicle);
     });
   };
-
-  /**
-   * The stages under a rise the bar played: it answers each of them with nothing to wait on and
-   * renders none of them, or every reading the rise ticked would snap back to theirs.
-   */
-  const claimed = new Set<Stage>();
 
   const grouped = (stage: Group): Promise<void> | undefined => {
     switch (stage.name) {

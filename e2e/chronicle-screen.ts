@@ -825,7 +825,7 @@ export async function dragUnit(page: Page, from: TileCoords, to: TileCoords): Pr
  * Ends the turn on the button, and waits for the end of turn to finish playing out — the next turn
  * open, the deal it stopped on standing, or the chronicle ended — or to stop on the capstone's window
  * at its landing, which holds the play-out until it closes. The turn moves on partway through the
- * sequence, so all three hold before the hand it deals is on the chronicle screen.
+ * play-out, so the turn alone does not say the hand it deals is on the chronicle screen.
  */
 export async function stoppedTurn(page: Page): Promise<void> {
   const { turn } = await chronicleOf(page);
