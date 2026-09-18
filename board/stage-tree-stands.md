@@ -17,13 +17,13 @@ In: the shape and the sorting, nothing of the grain. A stage is one of two kinds
 | `discard`, `draw`, `shuffle` | change `discarded`, `drawn`, `shuffled` |
 | `no-deal` | change `rolled` |
 | `capture`, `victory` | change `ended` |
-| `population-lost` | change, name kept |
-| `played`, `refused`, `claim`, `strike`, `income`, `grow`, `turn`, `capstone`, `deal`, `answer`, `reward`, `runtime-error` | group holding nothing, same name |
+| `population-lost`, `runtime-error` | change, name kept |
+| `played`, `refused`, `claim`, `strike`, `income`, `grow`, `turn`, `capstone`, `deal`, `answer`, `reward` | group holding nothing, same name |
 | `attack` | group holding nothing, carrying `attacker` and `target` |
 | `camp-capture` | group holding nothing, carrying `tile` |
 | `assign` | group holding nothing, name kept |
 
-The two closed sets in `src/rules/stages.ts` hold exactly the names this table raises and no other: a member nobody raises is a dead case in every switch, and the lines after this one add theirs as they raise them. Two names are interim on purpose: `population-lost` moves two rows and the next line splits it into `population` and `assigned`; `assign` is settled by the third line. `damaged` still covers a kill and `strike` is still one for every hazard; the next line regrains both, this one renames nothing there.
+`runtime-error` is a change though it moves no row: it is the one case of a helper called where the content should never have called it, the fact a landing answers in place of the change it could not make, and `raided` and `burned` answer it through `Landed` as they do today. The two closed sets in `src/rules/stages.ts` hold exactly the names this table raises and no other: a member nobody raises is a dead case in every switch, and the lines after this one add theirs as they raise them. Two names are interim on purpose: `population-lost` moves two rows and the next line splits it into `population` and `assigned`; `assign` is settled by the third line. `damaged` still covers a kill and `strike` is still one for every hazard; the next line regrains both, this one renames nothing there.
 
 The walk: pre-order, a group a cue before its children. The screen offers a group to every part before its children; a part that plays it is awaited before the children are walked; a part that answers nothing for a group renders nothing for it. A leaf, a change or an empty group, commits its chronicle to the screen and is rendered by every part that answers nothing for it, as every stage is today. Every stage of this line is a leaf, so the screen behaves exactly as it does today; the walk's rule is written for the lines that fill the groups: the why plays first, the facts settle after, and a part answers a group or its children, never both. The `Part` contract says so where it says today that nothing means the scene renders at once. Tests read the stages through that same walk.
 
