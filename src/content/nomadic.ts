@@ -8,6 +8,7 @@ import {
   inside,
   made,
   movePointsSpent,
+  outside,
   refreshed,
   settled,
   shocked,
@@ -103,7 +104,7 @@ export const NOMADIC: Catalogue = catalogued({
       kind: 'instant',
       cost: {},
       ...throughWorker(
-        () => undefined,
+        (_catalogue, chronicle, tile) => outside(chronicle, tile),
         (catalogue, paid, at) => yielded(catalogue, paid, at),
       ),
     },

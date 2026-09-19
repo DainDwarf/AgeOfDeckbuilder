@@ -4,6 +4,7 @@ import {
   built,
   improved,
   made,
+  outside,
   refuses,
   terraformable,
   terraformed,
@@ -11,6 +12,7 @@ import {
 } from './cards';
 import { type AimedCard, type Catalogue, cardOf, catalogued, deckOf } from './catalogue';
 import { admitted, apply, byHand, type Command, outcome, refusalOf } from './chronicle';
+import { yielded } from './city';
 import {
   actionOf,
   assignTo,
@@ -1268,6 +1270,38 @@ test('the farm card names the first of its five reasons: worker, action, terrain
   expect(refusedFor(withUnits(flat, [worker(out)]), 'PH_Farm', out)).toBe('border');
   expect(refusedFor(filled, 'PH_Farm', at)).toBe('slot');
   expect(refusedFor(worked, 'PH_Farm', at)).toBeUndefined();
+});
+
+/** The fixture's content with a card that works the map: through a worker, outside the border. */
+const FORAGING: Catalogue = catalogued({
+  ...CATALOGUE,
+  cards: {
+    ...CATALOGUE.cards,
+    PH_Forage: {
+      kind: 'instant',
+      cost: {},
+      ...throughWorker(
+        (_catalogue, chronicle, tile) => outside(chronicle, tile),
+        (catalogue, paid, on) => yielded(catalogue, paid, on),
+      ),
+    },
+  },
+});
+
+test('the forage card names the first of its three reasons: worker, action, then held', () => {
+  const at = { q: 1, r: 0 };
+  const out = { q: 2, r: 0 };
+  const bare = ringed(2, { hand: ['PH_Road'], resources: production(2) });
+  const held = withUnits(bare, [worker(at)]);
+  const beyond = withUnits(bare, [worker(out)]);
+
+  expect(refusedFor(bare, 'PH_Forage', at, FORAGING)).toBe('worker');
+  expect(refusedFor(bare, 'PH_Forage', out, FORAGING)).toBe('worker');
+  expect(refusedFor(held, 'PH_Forage', at, FORAGING)).toBe('held');
+  expect(
+    refusedFor(outcome(apply(FORAGING, beyond, aimedAt(out))), 'PH_Forage', out, FORAGING),
+  ).toBe('action');
+  expect(refusedFor(beyond, 'PH_Forage', out, FORAGING)).toBeUndefined();
 });
 
 test('the mine card names the first of its four reasons: worker, action, terrain, then improvement', () => {

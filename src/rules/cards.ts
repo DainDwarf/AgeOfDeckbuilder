@@ -183,6 +183,11 @@ export function inside(chronicle: Chronicle, tile: TileCoords): TileBlock | unde
   return holds(chronicle, tile) ? undefined : 'border';
 }
 
+/** The tile outside the city's border: what a card worked on the map asks for. */
+export function outside(chronicle: Chronicle, tile: TileCoords): TileBlock | undefined {
+  return holds(chronicle, tile) ? 'held' : undefined;
+}
+
 /** A tile the city may claim: the one list city mode marks. */
 export function claimableTile(
   catalogue: Catalogue,

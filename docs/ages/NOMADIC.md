@@ -40,7 +40,7 @@ A hunter that gathered and fought was rejected: a worker that attacks is refused
 The deck the draw pile cycles, each card the lesson it carries:
 
 - **Worker**, costing food, **Warrior**, costing military, and **Scout**, costing military: one population leaves the tiles to become a unit, and the city's last is never taken.
-- **Gather**, the age's card, costing nothing: aimed at a worker, it spends the worker's action and gains the yield of the tile the worker stands on, whatever its layers and the river give. It is the most copied card in the deck by far, so a hand rarely lacks one. Units act on tiles through cards.
+- **Gather**, the age's card, costing nothing: aimed at a worker outside the border, it spends the worker's action and gains the yield of the tile the worker stands on, whatever its layers and the river give; on a tile the city holds it is refused, for the border is the population's to work. It is the most copied card in the deck by far, so a hand rarely lacks one. Units act on tiles through cards, and the wealth is out on the map. Gather inside the border was rejected: a worker at home doubled the tiles the population already works, the city's own building among them, and never left.
 - **Trapping** 🔧, an improvement on forest giving food, played through a worker for production: a worker changes the map for good, and an improvement counts wherever the tile is — inside the border at income, outside it through Gather.
 - **March**, the refresh, aimed at a unit, costing military: move points, and the card that gets a worker home ahead of a raid or a warrior onto a camp a turn early.
 
