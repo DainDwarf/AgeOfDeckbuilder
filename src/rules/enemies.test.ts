@@ -81,7 +81,7 @@ test('a camp captured at the end of the turn leaves its tile claimed like any ot
   const besieging = ringed(3, {
     ...NO_GROWTH,
     tiles: camped(field(3), [camp]),
-    resources: culture(9),
+    resources: culture(20),
     drawPile: fullDraw(),
     units: [standing('player', camp)],
   });

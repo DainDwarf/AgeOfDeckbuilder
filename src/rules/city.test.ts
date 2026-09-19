@@ -138,7 +138,7 @@ function darkBorder(): { opened: Chronicle; dark: TileCoords; city: TileCoords }
       const dark = unchartedTouching(opened);
       if (dark === undefined || withWorkerBeside(opened, dark, city) === undefined) continue;
       return {
-        opened: { ...opened, resources: { ...opened.resources, culture: 9 } },
+        opened: { ...opened, resources: { ...opened.resources, culture: 20 } },
         dark,
         city,
       };
@@ -174,16 +174,16 @@ test('a free claim holds the tile, brings one population that stands on it, and 
   expect(everyCard(after)).not.toContain('PH_Claim');
 });
 
-test('six free claims make the next claim cost three culture', () => {
+test('six free claims make the next claim cost fourteen culture', () => {
   let chronicle = settledOn(opening(plains(3), { deck: claiming(6) }), CITY);
   for (const tile of neighbours(CITY)) {
     chronicle = outcome(apply(CATALOGUE, chronicle, freeClaim(tile)));
   }
   const next = { q: 2, r: 0 };
-  const paying: Chronicle = { ...chronicle, resources: culture(3) };
+  const paying: Chronicle = { ...chronicle, resources: culture(14) };
 
   expect(chronicle.held).toHaveLength(7);
-  expect(tileCost(chronicle, next)).toEqual([{ resource: 'culture', amount: 3 }]);
+  expect(tileCost(chronicle, next)).toEqual([{ resource: 'culture', amount: 14 }]);
   expect(outcome(apply(CATALOGUE, paying, claimOf(next))).resources.culture).toBe(0);
 });
 
@@ -203,8 +203,8 @@ test('a free claim aimed at a tile the city holds, one the border does not touch
   expect(admitted(CATALOGUE, settled, claimCard())).toHaveLength(5);
 });
 
-test('a claim costs one culture, and one more for every three tiles held, the city’s own included', () => {
-  let chronicle = alone({ resources: culture(20), population: 40 });
+test('a claim costs twice the tiles the city holds, its own counted', () => {
+  let chronicle = alone({ resources: culture(60), population: 40 });
   const tiles = [...neighbours(CITY), { q: 2, r: 0 }];
 
   const paid = tiles.map((tile) => {
@@ -213,7 +213,7 @@ test('a claim costs one culture, and one more for every three tiles held, the ci
     return before - chronicle.resources.culture;
   });
 
-  expect(paid).toEqual([1, 1, 2, 2, 2, 3, 3]);
+  expect(paid).toEqual([2, 4, 6, 8, 10, 12, 14]);
   expect(chronicle.held).toHaveLength(8);
 });
 
@@ -548,7 +548,7 @@ test('the city’s own tile unassigned yields nothing at income, like any other'
 });
 
 test('a claim pays its culture, takes the tile inside the border, and puts one idle population on it', () => {
-  const city = alone({ resources: culture(2) });
+  const city = alone({ resources: culture(3) });
   const tile = { q: 1, r: 0 };
 
   const stages = apply(CATALOGUE, city, claimOf(tile));
@@ -579,7 +579,7 @@ test('a claim made with nobody idle takes the tile with no population on it', ()
 });
 
 test('a claimed tile the population stands on yields at the next income', () => {
-  const city = alone({ ...NO_GROWTH, resources: culture(1) });
+  const city = alone({ ...NO_GROWTH, resources: culture(2) });
   const claimed = outcome(apply(CATALOGUE, city, claimOf({ q: 1, r: 0 })));
 
   const bare = outcome(apply(CATALOGUE, city, { type: 'end-turn' }));
@@ -591,7 +591,7 @@ test('a claimed tile the population stands on yields at the next income', () => 
 });
 
 test('a claim on a tile the border does not touch, off the map, or already held is refused', () => {
-  const city = ringed(3, { resources: culture(9) });
+  const city = ringed(3, { resources: culture(20) });
 
   expect(stagedBy(city, claimOf({ q: 3, r: 0 }))).toEqual(['refused']);
   expect(outcome(apply(CATALOGUE, city, claimOf({ q: 3, r: 0 })))).toBe(city);
@@ -601,7 +601,7 @@ test('a claim on a tile the border does not touch, off the map, or already held 
 
 test('a claim the city cannot pay for is refused, and one it can just pay for goes through', () => {
   const penniless = alone();
-  const exact = alone({ resources: culture(1) });
+  const exact = alone({ resources: culture(2) });
 
   expect(stagedBy(penniless, claimOf({ q: 1, r: 0 }))).toEqual(['refused']);
   expect(outcome(apply(CATALOGUE, penniless, claimOf({ q: 1, r: 0 })))).toBe(penniless);
@@ -646,7 +646,7 @@ test('a unit that charts that tile makes it a claim the city can make', () => {
 
 test('a camp’s tile touching the border is no claim of the city’s', () => {
   const camp = { q: 2, r: 0 };
-  const city = ringed(3, { tiles: camped(field(3), [camp]), resources: culture(9) });
+  const city = ringed(3, { tiles: camped(field(3), [camp]), resources: culture(20) });
 
   expect(claimable(CATALOGUE, city).map(tileKey)).not.toContain(tileKey(camp));
   expect(tileRefusal(CATALOGUE, city, camp)).toBeUndefined();
@@ -659,7 +659,7 @@ test('a tile an enemy occupies is no claim of the city’s, and a unit of the pl
   const occupied = { q: 2, r: 0 };
   const stood = { q: 0, r: 2 };
   const city = ringed(3, {
-    resources: culture(9),
+    resources: culture(20),
     units: [standing('enemy', occupied), standing('player', stood)],
   });
 
@@ -675,7 +675,7 @@ test('a tile an enemy occupies is no claim of the city’s, and a unit of the pl
 });
 
 test('a city-mode click assigns on a tile the city holds and claims on any other', () => {
-  const city = alone({ resources: culture(1) });
+  const city = alone({ resources: culture(2) });
 
   expect(cityCommand(CATALOGUE, city, CITY)).toEqual(assignTo(CITY));
   expect(cityCommand(CATALOGUE, city, { q: 1, r: 0 })).toEqual(claimOf({ q: 1, r: 0 }));
@@ -684,9 +684,9 @@ test('a city-mode click assigns on a tile the city holds and claims on any other
 
 test('a city-mode click is refused for the culture it costs, and a tile off the border refuses nothing', () => {
   const city = alone();
-  const paid = alone({ resources: culture(1) });
+  const paid = alone({ resources: culture(2) });
 
-  expect(tileCost(city, { q: 1, r: 0 })).toEqual([{ resource: 'culture', amount: 1 }]);
+  expect(tileCost(city, { q: 1, r: 0 })).toEqual([{ resource: 'culture', amount: 2 }]);
   expect(tileRefusal(CATALOGUE, city, { q: 1, r: 0 })).toEqual({
     unaffordable: ['culture'],
     blocked: [],
@@ -697,7 +697,7 @@ test('a city-mode click is refused for the culture it costs, and a tile off the 
 });
 
 test('a tile the city neither holds nor can claim is no act of the city’s, and refuses a claim', () => {
-  const city = ringed(3, { resources: culture(9) });
+  const city = ringed(3, { resources: culture(20) });
 
   expect(tileRefusal(CATALOGUE, city, { q: 3, r: 0 })).toBeUndefined();
   expect(tileRefusal(CATALOGUE, city, { q: 9, r: 9 })).toBeUndefined();
@@ -721,7 +721,7 @@ test('a city-mode click on a held tile nobody stands on is refused while nobody 
 });
 
 test('the same claim on the same chronicle gives the same chronicle back', () => {
-  const city = ringed(3, { resources: culture(3) });
+  const city = ringed(3, { resources: culture(20) });
   const untouched = structuredClone(city);
 
   expect(outcome(apply(CATALOGUE, city, claimOf({ q: 2, r: 0 })))).toEqual(

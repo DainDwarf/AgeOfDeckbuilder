@@ -69,10 +69,15 @@ function opening(border: Border = 'ring'): Chronicle {
   return launch(1, deckOf(STAND_IN, 'PH_Deck'), STAND_IN_SCHEDULE, CENTRE, border);
 }
 
-/** The culture threshold a claim on the tile asks for, as the tile wears it. */
-function threshold(chronicle: Chronicle, tile: TileCoords): string {
+/** The culture threshold a claim on the tile asks for, by the rules' own count. */
+function threshold(chronicle: Chronicle, tile: TileCoords): number {
   const [cost] = tileCost(chronicle, tile);
-  return text('threshold.culture', { culture: cost.amount });
+  return cost.amount;
+}
+
+/** The culture threshold a claim on the tile asks for, as the tile wears it. */
+function thresholdWorn(chronicle: Chronicle, tile: TileCoords): string {
+  return text('threshold.culture', { culture: threshold(chronicle, tile) });
 }
 
 /** How many claims the opening opens on, by the rules' own count: one mark to be drawn for each. */
@@ -175,7 +180,7 @@ test('the city key enters city mode, where a click rings a tile and stands the c
   const near = await tileOnScreen(page, TOUCHING.at);
   await page.mouse.click(near.x, near.y);
   await expect.poll(() => ringedTile(page)).toBe(TOUCHING.key);
-  expect(await thresholdShown(page)).toBe(threshold(opening(), TOUCHING.at));
+  expect(await thresholdShown(page)).toBe(thresholdWorn(opening(), TOUCHING.at));
   expect(await refusalLines(page)).toBeUndefined();
   expect((await chronicleOf(page)).held.map(tileKey)).not.toContain(TOUCHING.key);
 
@@ -495,7 +500,9 @@ test('a second click the city cannot pay for claims nothing and says so, one it 
 }) => {
   const problems = watch(page);
   const bare = opening('bare');
-  const asked = threshold(bare, BESIDE.at);
+  const owed = threshold(bare, BESIDE.at);
+  const asked = thresholdWorn(bare, BESIDE.at);
+  test.setTimeout(budget(owed + 1));
 
   await open(page, 1, 'PH_Deck', STAND_IN_SCHEDULE, CENTRE, 'bare');
   await page.keyboard.press('c');
@@ -531,8 +538,8 @@ test('a second click the city cannot pay for claims nothing and says so, one it 
   expect(await thresholdShown(page)).toBeUndefined();
   expect(await refusalLines(page)).toBeUndefined();
 
-  await endTurn(page);
-  expect((await chronicleOf(page)).resources.culture).toBe(1);
+  for (let turn = 0; turn < owed; turn++) await endTurn(page);
+  expect((await chronicleOf(page)).resources.culture).toBe(owed);
 
   await page.mouse.click(near.x, near.y);
   await expect.poll(() => thresholdShown(page)).toBe(asked);
@@ -603,7 +610,7 @@ test('the tile wearing the culture threshold shows none of the overlay’s glyph
 
   const near = await tileOnScreen(page, TOUCHING.at);
   await page.mouse.click(near.x, near.y);
-  await expect.poll(() => thresholdShown(page)).toBe(threshold(opening(), TOUCHING.at));
+  await expect.poll(() => thresholdShown(page)).toBe(thresholdWorn(opening(), TOUCHING.at));
   expect(await glyphs(page)).toEqual(bare);
 
   await page.keyboard.press('Escape');
