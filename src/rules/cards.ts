@@ -178,12 +178,12 @@ function acted(paid: Chronicle, at: TileCoords): Landed {
   );
 }
 
-/** The tile inside the city's border: what a building card asks for and an instant does not. */
+/** The tile inside the city's border. */
 export function inside(chronicle: Chronicle, tile: TileCoords): TileBlock | undefined {
   return holds(chronicle, tile) ? undefined : 'border';
 }
 
-/** The tile outside the city's border: what a card worked on the map asks for. */
+/** The tile outside the city's border. */
 export function outside(chronicle: Chronicle, tile: TileCoords): TileBlock | undefined {
   return holds(chronicle, tile) ? 'held' : undefined;
 }
