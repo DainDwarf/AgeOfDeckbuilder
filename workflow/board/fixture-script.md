@@ -1,12 +1,12 @@
 # The fixture's own script
 
-**Line:** **The fixture's own script** — `src/rules/` imports nothing from `src/content/`, the fixture catalogue runs on a script of its own, and the default script's decisions are held by a content test beside it. Doc-impact: `docs/DOGMAS.md`, `docs/CHRONICLE.md`.
+**Line:** **The fixture's own script** — `src/rules/` imports nothing from `src/content/`, the fixture catalogue runs on a script of its own, and the default script's decisions are held by a content test beside it. Doc-impact: `DOGMAS.md`, `docs/CHRONICLE.md`.
 
 **Spec:**
 
-`docs/DOGMAS.md` → _Stack_, the rule "`src/rules/` never imports Phaser, never touches the DOM and never imports `src/content/`" is the spec for the import: it names no exception, and the comment in `src/rules/fixtures.ts` claiming a test-only one goes with the import.
+`DOGMAS.md` → _Stack_, the rule "`src/rules/` never imports Phaser, never touches the DOM and never imports `src/content/`" is the spec for the import: it names no exception, and the comment in `src/rules/fixtures.ts` claiming a test-only one goes with the import.
 
-`docs/DOGMAS.md` → _Testing_, the bullet "A mechanism gets one test on synthetic content; content gets coherence checks, never a gameplay test" gains the cut for content that decides. The bullet, in full, becomes:
+`DOGMAS.md` → _Testing_, the bullet "A mechanism gets one test on synthetic content; content gets coherence checks, never a gameplay test" gains the cut for content that decides. The bullet, in full, becomes:
 
 > - **A mechanism gets one test on synthetic content; content gets coherence checks, never a gameplay test.** A rule is proven through the fixture catalogue on numbers of the fixture's own; a real card, unit, event or schedule gets its ids resolved, its text found and its closures answered on a launched chronicle, and nothing more. A test that reads its oracle from the content's own table, or seeds exactly a real card's price, is a content test wearing a mechanism title. Why: a content test breaks at every tuning, and a rule proven on real numbers is proven for those numbers alone. **Content that decides is the exception.** An enemy script carries no number, only choices the rules do not make — which target, which landing, whether it strikes from the city's tile — and each choice gets one test beside the script, the real closure played on the fixture's ground; content that only lays numbers over the rules' helpers decides nothing and gets the coherence checks alone. Why: a coherence check notices no decision changing, and a decision changed is the game playing differently.
 
@@ -16,7 +16,7 @@
 
 No player-facing sentence: nothing on screen changes.
 
-**Doc-impact:** `docs/DOGMAS.md` (the Testing clause), `docs/CHRONICLE.md` (one sentence moved from the phase to the default script).
+**Doc-impact:** `DOGMAS.md` (the Testing clause), `docs/CHRONICLE.md` (one sentence moved from the phase to the default script).
 
 **Scope:**
 
@@ -27,7 +27,7 @@ In:
 - Four tests leave `src/rules/enemies.test.ts` for `src/content/scripts.test.ts`, beside the script, keeping their assertions: the forest on the enemy's way; the river weighed as its whole move and turned away from; the nearest of the player's units chosen over the city; attacking nothing from the city's tile. The content test builds its catalogue as the fixture catalogue with the default script under the fixture's script id, so the fixture's camp and enemy helpers resolve, and plays it on the fixture's ground through the fixture's helpers.
 - The city-tile test splits: its mechanism half — an enemy that reaches the city's tile stands there with no ending, and captures it at the next enemy phase — stays in the rules on the fixture's script, without the worker beside the city and without the assertions on attacks and health; its decision half — the default script attacks nothing from the city's tile, the unit beside it unharmed — is the content test.
 - One rules test, "a unit killed in the enemy phase captures the camp it stood on no longer", pins its enemy with no move: on the fixture's script it would walk toward the city instead of standing beside the worker it kills. The fixture changes, the assertion does not.
-- The two `docs/` edits above.
+- The two page edits above.
 
 Out:
 
@@ -50,11 +50,11 @@ Corner cases decided here:
 
 **Plan:**
 
-1. `docs/DOGMAS.md`, `docs/CHRONICLE.md` — the Testing clause added, the city-tile sentence moved from the phase to the default script. Leaves the spec saying what the code is about to do.
+1. `DOGMAS.md`, `docs/CHRONICLE.md` — the Testing clause added, the city-tile sentence moved from the phase to the default script. Leaves the spec saying what the code is about to do.
 2. `src/rules/fixtures.ts` — the fixture's script written and named by the camp and the enemy-standing helper; the content import and its comment gone; the staged-move and staged-attack readers the content test will share moved in. Leaves `src/rules/` importing nothing from `src/content/`, and the four decision tests failing on the fixture's script.
 3. `src/rules/enemies.test.ts` — the three route tests out, the city-tile test cut to its mechanism half, the one enemy pinned with no move. Leaves the rules tests green on the fixture's script.
 4. `src/content/scripts.test.ts` — the four decision tests, on the fixture catalogue carrying the default script under the fixture's id. Leaves the default script's every decision held beside it.
-5. `BOARD.md` — the line deleted.
+5. `workflow/BOARD.md` — the line deleted.
 
 **Verify:**
 

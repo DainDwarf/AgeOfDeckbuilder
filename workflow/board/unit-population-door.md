@@ -6,7 +6,7 @@
 
 `docs/CHRONICLE.md` → _Population_: "a unit card turns one idle population into a unit, and is refused when none is idle, or when it would be the city's last." And → _The cards_, **Unit**: "made of one idle population, never the city's last". These are the unit card's two rules, and they are the aim's blocks, unchanged by this line.
 
-`docs/DOGMAS.md` → _Code_, "One choke point per invariant", and → _Architecture_, "an effect changes it only through the rules' named helpers, so an invariant stays behind one door": the invariant is the idle count never negative, and the door is the helper that takes one population, an idle one first and otherwise the last assigned tile's.
+`DOGMAS.md` → _Code_, "One choke point per invariant", and → _Architecture_, "an effect changes it only through the rules' named helpers, so an invariant stays behind one door": the invariant is the idle count never negative, and the door is the helper that takes one population, an idle one first and otherwise the last assigned tile's.
 
 No sentence changes in any page; no player-facing sentence: nothing on screen changes.
 
@@ -37,7 +37,7 @@ Corner cases decided here:
 **Plan:**
 
 1. `src/rules/cards.ts`, and whichever module the door lands in — the effect through the door, the inline decrement gone, the imports resolved without a cycle. Leaves every population decrement in the rules going through one helper.
-2. `BOARD.md` — the line deleted.
+2. `workflow/BOARD.md` — the line deleted.
 
 **Verify:**
 

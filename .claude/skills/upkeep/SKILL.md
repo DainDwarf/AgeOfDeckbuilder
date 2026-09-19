@@ -11,7 +11,7 @@ Count cycles from the git log: one cycle is one commit that deleted a board line
 
 ## 1. Docs lint
 
-Read every page reachable from `docs/index.md`. For each, check:
+Read every page reachable from `docs/index.md`, and `DOGMAS.md`. For each, check:
 
 - **Contradictions** between pages, or between a page and `CLAUDE.md`.
 - **Claims stale against code** — a path, command, name or number the repo no longer matches. Verify by reading, not by recollection.
@@ -23,7 +23,7 @@ Read every page reachable from `docs/index.md`. For each, check:
 
 ## 2. Board and ideas eviction
 
-Oldest first. For each `BOARD.md` line untouched for 20 cycles: still wanted, still completable, still correctly scoped? Propose delete, demote to `IDEAS.md`, or keep with the reason. For each `IDEAS.md` entry untouched for 20 cycles: restate it in one line so the user sees it again, and propose promotion through `/todo` where it has become due. Age alone never evicts an idea; `IDEAS.md` is a long-term document. A task file in `board/` whose line is gone is deleted now.
+Oldest first. For each `workflow/BOARD.md` line untouched for 20 cycles: still wanted, still completable, still correctly scoped? Propose delete, demote to `workflow/IDEAS.md`, or keep with the reason. For each `workflow/IDEAS.md` entry untouched for 20 cycles: restate it in one line so the user sees it again, and propose promotion through `/todo` where it has become due. Age alone never evicts an idea; `workflow/IDEAS.md` is a long-term document. A task file in `workflow/board/` whose line is gone is deleted now.
 
 ## 3. Harness ratchet
 
@@ -39,7 +39,7 @@ Three occurrences of the same class is a harness problem, not a code problem. Fo
 
 Read every file in the project memory directory. Memory holds what the repo does not: who the user is, how they want the work done, calls and intents the docs do not carry, questions they have not answered. For each file:
 
-- **Repeats the repo** — a commit hash, a shipped line, a settled number, a call that became a `docs/` page or a board line: cut it. Git, `docs/` and `BOARD.md` hold it.
+- **Repeats the repo** — a commit hash, a shipped line, a settled number, a call that became a `docs/` page or a board line: cut it. Git, `docs/` and `workflow/BOARD.md` hold it.
 - **Journal shape** — a paragraph per pitch or per session: rewrite as facts, one line each, grouped by what they are (standing calls, parked intents, open questions, candidates).
 - **Stale pointer** — a file, function, flag or line it names: verify against the tree, fix or drop.
 - **Wrong or overtaken** — the user reversed it, or the code moved on: delete.

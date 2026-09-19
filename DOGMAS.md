@@ -7,15 +7,15 @@ How this project is built. Human-chosen; every session works by them, `/intake` 
 - **Orient freely, pitch before writing.** Read, time, experiment as needed — then say what you found, what you propose, the open forks, the one thing you couldn't verify, and wait. Once files exist the conversation is about revising a choice instead of making one together.
 - **Design is a conversation, not a menu.** A design or creative fork gets one or two concrete options with trade-offs and a recommendation, in prose, and the turn ends. A pick-one prompt is for scoping facts (platform, count), not for choices that carry framing.
 - **A pitch's forks are design-shaped** — rules semantics, player-facing shape, numbers, scope. Where a function or module lives is the implementer's initiative, a suggestion in the brief at most; a stand-in's look is not a fork — name the precedent it follows and build; a mockup is for content and screens that ship.
-- **Stay at discussion altitude when the user is discussing.** Never author a full spec in one sweep; check the design pages and `BOARD.md` first — much is pre-decided.
+- **Stay at discussion altitude when the user is discussing.** Never author a full spec in one sweep; check the design pages and `workflow/BOARD.md` first — much is pre-decided.
 - **One step per turn.** Ship a step, commit it, stop with "here is what to inspect; here is what the next step does". The user inspects between steps.
 - **Design is the spec.** Code that disagrees is wrong. A problem found in a design the user chose is reported with its cause — numbers where there are numbers — and the turn ends. "Go ahead" authorises executing the agreed design, not revisiting it. A design page is never edited down to match an implementation.
 - **Unforeseen corner cases are reported, never resolved silently.** The implementer's report has a _Deviations_ section; "none" is a valid entry, absence is not.
 - **A sentence the implementer authored is put to the user at the hand-back.** A player-facing entry or a `docs/` sentence the dossier did not write out verbatim is listed in the report under _Authored_, and the hand-back quotes each with where it shows; "none" is a valid entry, absence is not. Why: the hand-back relays deviations and advisories, and a sentence that is neither reads as settled.
 - **Verify a cheap claim before asserting it.** A claim never survives a second telling unchecked. If only expensive measurement would settle it, say it is unverified.
 - **A side finding gets one line and a pointer.** If it keeps growing across turns, stop.
-- **"jot: …"** appends one line to `IDEAS.md` and the current task continues. Offer to jot something you noticed; don't add your own without asking.
-- **A bug is never an idea.** `IDEAS.md` holds features that may or may not happen; a defect or trap in what already exists is reported to the user the turn it emerges and, unless fixed on the spot, becomes a board line through `/todo` on the user's order.
+- **"jot: …"** appends one line to `workflow/IDEAS.md` and the current task continues. Offer to jot something you noticed; don't add your own without asking.
+- **A bug is never an idea.** `workflow/IDEAS.md` holds features that may or may not happen; a defect or trap in what already exists is reported to the user the turn it emerges and, unless fixed on the spot, becomes a board line through `/todo` on the user's order.
 - **A tiny defect found while a line runs may be folded into it, on the user's say.** It is reported the turn it emerges; the user widens the line or does not, and the commit says the line was widened. Claude says when the fold has grown past a fix and needs a line of its own.
 - **Cut big steps into shippable substeps**, each self-contained enough for a cleared session to execute; name the shared mechanism that links them. Propose the cut before executing it.
 - **A generator change is pitched running.** Its dossier says whether the process is fixed or rolled, and how wide it may vary; its pitch shows the generator ported into the mockup and run on the project's seeds, the port checked against the rules tests first. Why: a diagram reads straight, and a straight reading of a rolled process has cost a pitch round twice.
@@ -97,11 +97,11 @@ How this code base is shaped, and what a change never deviates from:
 
 ## Docs
 
-- **Three lifespans**: code (permanent, how), `docs/` (standing, what is / what was decided), task context (ephemeral: board, task files, ideas). Anything without a lifespan is noise — delete it.
+- **Three lifespans, three places**: code (permanent, how); the standing pages — `docs/`, what is and what was decided, and this page, how the project is built; `workflow/` (ephemeral: the board and its task files, the ideas, the roadmap). The root holds the repository's own files and nothing else: the README, `CLAUDE.md`, this page, the changelog. Anything without a lifespan is noise — delete it.
 - **`docs/` states what is.** No journals, no ADRs, no reasoning journeys. A standing decision gets one line of _why_, and only when the rejected alternative is attractive.
 - **Pivots are edits.** An overturned decision changes `docs/` in the same unit of work; the old version lives in git only.
 - **Each doc owns one altitude.** The board carries a line and a pointer; the task file carries the contract; the `docs/` page carries the settled fact. Nothing is stated twice.
-- **A change of several lines on its own branch gets a branch board.** `BRANCH.md` at the root holds the clean design first and one line per thing that design breaks after, the line that writes the design into `docs/` first among them; `BOARD.md` on the branch holds one pointer line; the branch merges only once `BRANCH.md` holds no line, and one Prep commit deletes the file and the pointer before the merge. Why: one board with two workstreams makes priority order lie, and the design section reviewed line by line keeps the design pages on `main` free of half-true designs.
+- **A change of several lines on its own branch gets a branch board.** `workflow/BRANCH.md` holds the clean design first and one line per thing that design breaks after, the line that writes the design into `docs/` first among them; `BOARD.md` on the branch holds one pointer line; the branch merges only once `BRANCH.md` holds no line, and one Prep commit deletes the file and the pointer before the merge. Why: one board with two workstreams makes priority order lie, and the design section reviewed line by line keeps the design pages on `main` free of half-true designs.
 - **A task file is written once, on the settled state.** Findings stay in the conversation until they settle — intermediate readings are usually wrong, and a superseded number left in a file reads as fact next session.
 - **Durable never cites transient.** A `docs/` page or a changelog entry never references a board line, a task file, or an idea.
 - **`CHANGELOG.md` is for players**, written at a version bump, in their words, and never reworded after: a past entry keeps its words even where the glossary has since forbidden one, a rename sweep skips it, and a stale sentence in it is history, not a finding.
@@ -140,6 +140,9 @@ How this code base is shaped, and what a change never deviates from:
 The layout, which embodies the first rule above:
 
 ```
+CLAUDE.md           the session's entry; DOGMAS.md its rules; CHANGELOG.md the players' notes
+docs/               the standing design: the design pages, the glossary, one page per age
+workflow/           the ephemeral task context: the board and its task files, the ideas, the roadmap
 index.html          the page Phaser puts its canvas in; no UI of its own
 src/main.ts         boots the Phaser game
 src/rules/          pure TypeScript: state, commands, the seeded generator

@@ -1,6 +1,6 @@
 # Roadmap
 
-The broad deliverables from here to the playable demo. This page directs attention, nothing more: when [`BOARD.md`](../BOARD.md) is empty, the next rung is where `/todo` looks. It is written in sand — reshaped freely as testing teaches, never cited as a promise — and a rung gets no detail here: its board lines are cut when its turn comes. Versions are themes, not dates.
+The broad deliverables from here to the playable demo. This page directs attention, nothing more: when [`BOARD.md`](BOARD.md) is empty, the next rung is where `/todo` looks. It is written in sand — reshaped freely as testing teaches, never cited as a promise — and a rung gets no detail here: its board lines are cut when its turn comes. Versions are themes, not dates.
 
 The demo (v0.1.0) carries most if not all of the design pages and covers the first ages: Nomadic, Stone, Bronze, ideally Iron.
 

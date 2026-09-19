@@ -9,7 +9,7 @@ One board line per invocation: the top line with a dossier link, unless the user
 
 ## 1. Load the line
 
-Read the line, its dossier, the `docs/` sections the dossier names, and `docs/DOGMAS.md`. If the dossier leaves a design question open, the line contradicts the docs it names, or the dossier's plan contradicts a rule in `docs/DOGMAS.md` — a gameplay test on real content is the one that has happened — stop: it goes back through `/intake`. Nothing is pitched here; the design was settled at intake.
+Read the line, its dossier, the `docs/` sections the dossier names, and `DOGMAS.md`. If the dossier leaves a design question open, the line contradicts the docs it names, or the dossier's plan contradicts a rule in `DOGMAS.md` — a gameplay test on real content is the one that has happened — stop: it goes back through `/intake`. Nothing is pitched here; the design was settled at intake.
 
 ## 2. Implement
 
@@ -35,7 +35,7 @@ On the agent's report, check that the unit of work is whole:
 - the board line deleted and its dossier removed;
 - the board is no longer than you found it minus this line — a discovery is in the report, never on the board;
 - the report's _Deviations_ section is present, and every item in it is relayed to the user;
-- the report's _Authored_ section is present and complete: every entry the diff adds or changes in `src/ui/text.ts` and every sentence it adds or changes under `docs/` is either verbatim in the dossier's Spec or listed there; one that is neither is added to the list yourself before the hand-back.
+- the report's _Authored_ section is present and complete: every entry the diff adds or changes in `src/ui/text.ts` and every sentence it adds or changes under `docs/` or in `DOGMAS.md` is either verbatim in the dossier's Spec or listed there; one that is neither is added to the list yourself before the hand-back.
 
 Fix omissions yourself if they are mechanical (a missed doc line, a leftover dossier); anything that touches the design goes back to the user.
 

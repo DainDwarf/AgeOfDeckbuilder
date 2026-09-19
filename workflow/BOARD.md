@@ -6,9 +6,9 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ---
 
-- **The fixture's own script** — `src/rules/` imports nothing from `src/content/`, the fixture catalogue runs on a script of its own, and the default script's decisions are held by a content test beside it. Doc-impact: `docs/DOGMAS.md`, `docs/CHRONICLE.md`. [board/fixture-script.md](board/fixture-script.md)
+- **The fixture's own script** — `src/rules/` imports nothing from `src/content/`, the fixture catalogue runs on a script of its own, and the default script's decisions are held by a content test beside it. Doc-impact: `DOGMAS.md`, `docs/CHRONICLE.md`. [board/fixture-script.md](board/fixture-script.md)
 - **A unit card's population through one door** — `enters` in `src/rules/cards.ts` takes its population through `populationTaken` and holds no decrement of its own; the aim's blocks and the play's stages are unchanged. Doc-impact: none. [board/unit-population-door.md](board/unit-population-door.md)
-- **A long-comment lint** — a hook on every Edit or Write under `src/` and `e2e/` flags a comment block longer than three lines of prose, advisory like the glossary lint, and `docs/DOGMAS.md` → _Code_ says so. Doc-impact: `docs/DOGMAS.md`. [board/long-comment-lint.md](board/long-comment-lint.md)
+- **A long-comment lint** — a hook on every Edit or Write under `src/` and `e2e/` flags a comment block longer than three lines of prose, advisory like the glossary lint, and `DOGMAS.md` → _Code_ says so. Doc-impact: `DOGMAS.md`. [board/long-comment-lint.md](board/long-comment-lint.md)
 - **The design pages at altitude** — a Docs dogma says what a design page carries and what it never does: stand-in names, content detail, future implementation, history retold; the three design pages and the age page are re-read against it.
 - **The screen page** — the "The screen" half of `docs/CHRONICLE.md` (the chronicle screen, the resource bar, the yield overlay) becomes a design page of its own, `docs/SCREEN.md`, the fourth the design pages name.
 - **The biome rework** — a growth weight per biome, the spread growing per biome instead of per frontier, the city's first ring dealt as its own biome, and the bigger map.

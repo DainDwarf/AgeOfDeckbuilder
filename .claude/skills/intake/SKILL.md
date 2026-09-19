@@ -9,13 +9,13 @@ One board line per invocation: the first line with no dossier link, unless the u
 
 ## 1. Read
 
-The line; the design pages, `docs/GLOSSARY.md` and `docs/DOGMAS.md` where they touch it; the code it lands in, enough to know what it changes. Time and measure what a number would settle.
+The line; the design pages, `docs/GLOSSARY.md` and `DOGMAS.md` where they touch it; the code it lands in, enough to know what it changes. Time and measure what a number would settle.
 
 ## 2. Challenge
 
 Five checks, in order; stop at the first that decides the line's fate:
 
-1. **Conflict.** Does it contradict a decision in a design page or a rule in `docs/DOGMAS.md`? Surface it. Changing a decision is valid work — the done-condition is then the docs edit — but silently violating one is not. The dossier is held to the same check as the line: its Plan and its Verify are read against `docs/DOGMAS.md` before it is written.
+1. **Conflict.** Does it contradict a decision in a design page or a rule in `DOGMAS.md`? Surface it. Changing a decision is valid work — the done-condition is then the docs edit — but silently violating one is not. The dossier is held to the same check as the line: its Plan and its Verify are read against `DOGMAS.md` before it is written.
 2. **Completability.** Can a done-condition be written — a state of the repo someone can check? If not, the line is docs content (a standing fact, a domain claim) or an idea: route it there and delete the line. A content line's checkable state is the content standing in its catalogue, the catalogue's coherence test passing and its age page saying so — never a test on the content: its numbers are tuning and change. A mechanism the content needs is held by one test on a fixture, and is its own line where it is a real boundary.
 3. **Scope.** Can one ship session hold the whole thing? Split only on a real abstraction boundary, never to defer the hard part; each part becomes its own line, and this pass dossiers the first.
 4. **Novelty.** For a content line — an answer, a card, anything the rules resolve — does this content do something no content of its kind has done before? Then the mechanism is named in the dossier and gets its one test on the fixture: in this line where it is the one small helper the content needs, in a line ahead of it where it is a real boundary. A content line that reads as content alone and carries a mechanism unnamed is the shape this check catches.
@@ -27,7 +27,7 @@ Present what you found and the forks: one or two options each, with trade-offs a
 
 ## 4. Write the dossier
 
-Once every fork is settled, and not before, write `board/<slug>.md`:
+Once every fork is settled, and not before, write `workflow/board/<slug>.md`:
 
 ```
 # <Title>
@@ -41,7 +41,7 @@ Once every fork is settled, and not before, write `board/<slug>.md`:
 **Verify:** the commands to run, and the spec to run by name.
 ```
 
-Then rewrite the board line in its full form and link the dossier:
+Then rewrite the board line in its full form and link the dossier, the link relative to the board:
 
 ```
 - **Title** — done-condition. Doc-impact: <pages | none>. [board/<slug>.md](board/<slug>.md)
@@ -51,4 +51,4 @@ Where a check ended the line instead — a docs edit made now, an idea, nothing 
 
 ## Report
 
-Commit the dossier and `BOARD.md` — and whatever a check moved, a docs edit or an idea — as `Intake: <title>`, staging those files alone; a dossier left uncommitted lands in the ship's commit and the history loses the intake. Then one line: the dossier's path and what the ship session will not have to decide, or the line's fate. Then hand the turn back; the ship is a new invocation.
+Commit the dossier and `workflow/BOARD.md` — and whatever a check moved, a docs edit or an idea — as `Intake: <title>`, staging those files alone; a dossier left uncommitted lands in the ship's commit and the history loses the intake. Then one line: the dossier's path and what the ship session will not have to decide, or the line's fate. Then hand the turn back; the ship is a new invocation.

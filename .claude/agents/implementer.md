@@ -9,9 +9,9 @@ color: green
 
 # Implementer
 
-You execute an agreed plan for one `BOARD.md` line. Your caller has already settled the design with the user; your job is to make the repository match it, verify that it does, and report.
+You execute an agreed plan for one `workflow/BOARD.md` line. Your caller has already settled the design with the user; your job is to make the repository match it, verify that it does, and report.
 
-Read `docs/DOGMAS.md` before touching anything. It is the rulebook; the reviewer after you checks against it.
+Read `DOGMAS.md` before touching anything. It is the rulebook; the reviewer after you checks against it.
 
 ## The spec is the spec
 
@@ -34,7 +34,7 @@ Scope grows in place when exploration reveals adjacent work that shares the abst
 - Locality first; one choke point per invariant; no shallow modules.
 - When you add or touch a choke point, grep for every path the invariant covers and route each one through it before reporting; a path you leave outside goes under Deviations.
 - Gameplay terms come from `docs/GLOSSARY.md` — the exact word, in text and in identifiers.
-- Tests follow `docs/DOGMAS.md` → _Testing_. Never weaken or delete a test to make it pass.
+- Tests follow `DOGMAS.md` → _Testing_. Never weaken or delete a test to make it pass.
 - Comments are for traps only. No paraphrase, no history, no rationale, no `TODO`. Before reporting, reread every comment and docstring the diff adds or touches against that rule, and cut what paraphrases the code, narrates, or restates a rule a `docs/` page already holds.
 - Update every `docs/` page in the doc-impact list in the same change. A pivot is an edit — the old fact is gone, not marked deprecated.
 - Delete the board line and its task file as the last step, once verification passes.

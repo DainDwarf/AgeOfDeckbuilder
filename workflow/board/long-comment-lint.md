@@ -1,10 +1,10 @@
 # A long-comment lint
 
-**Line:** A long-comment lint — a hook on every Edit or Write under `src/` and `e2e/` flags a comment block longer than three lines of prose, advisory like the glossary lint, and `docs/DOGMAS.md` → _Code_ says so.
+**Line:** A long-comment lint — a hook on every Edit or Write under `src/` and `e2e/` flags a comment block longer than three lines of prose, advisory like the glossary lint, and `DOGMAS.md` → _Code_ says so.
 
-**Spec:** `docs/DOGMAS.md` → _Code_, the **Comments are for traps only** line, which gains this sentence at its end: "A hook flags a comment block longer than three lines, its delimiters not counted, on every edit under `src/` and `e2e/`; it is advisory: the comment is cut to its trap, or the report says why it stays." The hook's message, the one sentence the line foresees, is: `Long-comment lint on <path>: a comment block of <n> lines starting "<its first eight words>"[; …one per block]. Comments are for traps only; a block this long is usually paraphrase, history or rationale. Cut it to the trap, or state in your report why it stays.`
+**Spec:** `DOGMAS.md` → _Code_, the **Comments are for traps only** line, which gains this sentence at its end: "A hook flags a comment block longer than three lines, its delimiters not counted, on every edit under `src/` and `e2e/`; it is advisory: the comment is cut to its trap, or the report says why it stays." The hook's message, the one sentence the line foresees, is: `Long-comment lint on <path>: a comment block of <n> lines starting "<its first eight words>"[; …one per block]. Comments are for traps only; a block this long is usually paraphrase, history or rationale. Cut it to the trap, or state in your report why it stays.`
 
-**Doc-impact:** `docs/DOGMAS.md`.
+**Doc-impact:** `DOGMAS.md`.
 
 **Scope:**
 
@@ -31,8 +31,8 @@
 
 1. `.claude/hooks/long-comment-lint.cjs`: the lint stands and, fed a crafted input from the scratchpad, answers the message on a four-prose-line block under `src/` and nothing on a three-line one.
 2. `.claude/settings.json`: the hook is wired beside the glossary lint; the next Edit under `src/` in the session runs it.
-3. `docs/DOGMAS.md`: the Comments line carries the sentence.
-4. `BOARD.md` and this file: the line and the dossier are gone.
+3. `DOGMAS.md`: the Comments line carries the sentence.
+4. `workflow/BOARD.md` and this file: the line and the dossier are gone.
 
 **Verify:**
 

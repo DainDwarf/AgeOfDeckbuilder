@@ -1,6 +1,6 @@
 # Design
 
-> Status legend, for every design page: ✅ decided · 🔧 provisional (a stated default, open to change). An open question is not a status — it is a [`BOARD.md`](../BOARD.md) line whose done-condition is the decision.
+> Status legend, for every design page: ✅ decided · 🔧 provisional (a stated default, open to change). An open question is not a status — it is a [`BOARD.md`](../workflow/BOARD.md) line whose done-condition is the decision.
 
 The game in broad strokes: what it is, what it deliberately is not, and how a chronicle and the meta fit together. How any screen is worked is [`INTERFACE.md`](INTERFACE.md); what exists only inside a chronicle is [`CHRONICLE.md`](CHRONICLE.md). A standing decision carries one line of rationale, and only when the rejected alternative is attractive enough that a future session would plausibly redo it. When a decision is overturned, the page changes in the same unit of work; it never keeps the old version.
 
