@@ -349,21 +349,37 @@ export function riversAlong(rivers: readonly River[], tiles: ReadonlySet<string>
   return runs;
 }
 
-/**
- * Which biomes a map of the region is dealt, the centre's own aside: the quota each share is worth,
- * and the centre's kind for whatever is left over. Dealt as quotas rather than diced one by one,
- * because independent dice deal a map with no sea at all.
- */
-export function dealtBiomes(region: Region, tileCount: number): Biome[] {
-  const { tilesPerBiome, minBiomes, centreBiome, biomeShares } = region;
-  const biomeCount = Math.max(minBiomes, Math.round(tileCount / tilesPerBiome));
+/** How many tiles a disc of that radius holds. */
+export function discTiles(radius: number): number {
+  return 3 * radius * radius + 3 * radius + 1;
+}
 
+/** How many biomes a map of the region is cut into, the centre's own among them. */
+function biomeCount({ radius, tilesPerBiome }: Region): number {
+  return Math.round(discTiles(radius) / tilesPerBiome);
+}
+
+/**
+ * The biomes the region's shares deal, the centre's own aside: the quota each share is worth, dealt
+ * as quotas rather than diced one by one, because independent dice deal a map with no sea at all.
+ */
+export function sharedBiomes(region: Region): Biome[] {
+  const count = biomeCount(region);
   const dealt: Biome[] = [];
-  for (const { biome, share } of biomeShares) {
-    const quota = Math.min(Math.round((biomeCount - 1) * share), biomeCount - 1 - dealt.length);
+  for (const { biome, share } of region.biomeShares) {
+    const quota = Math.min(Math.round((count - 1) * share), count - 1 - dealt.length);
     for (let i = 0; i < quota; i++) dealt.push(biome);
   }
-  while (dealt.length < biomeCount - 1) dealt.push(centreBiome);
+  return dealt;
+}
+
+/**
+ * Which biomes a map of the region is dealt, the centre's own aside: what its shares deal, and the
+ * centre's kind for whatever they leave over.
+ */
+export function dealtBiomes(region: Region): Biome[] {
+  const dealt = sharedBiomes(region);
+  while (dealt.length < biomeCount(region) - 1) dealt.push(region.centreBiome);
   return dealt;
 }
 
@@ -595,46 +611,91 @@ function dealMap(
   const indexOf = new Map(coords.map((coord, index) => [tileKey(coord), index]));
   const centreIndex = coords.findIndex((coord) => tileKey(coord) === tileKey(CENTRE));
 
-  const tileBiomes: Biome[] = new Array(coords.length);
-  const assigned = new Set<number>();
-  const growing: number[] = [];
-  const spread = (index: number, biome: Biome): void => {
-    tileBiomes[index] = biome;
-    assigned.add(index);
-    growing.push(index);
-  };
+  const around = (index: number): number[] =>
+    neighbours(coords[index])
+      .map((coord) => indexOf.get(tileKey(coord)))
+      .filter((found): found is number => found !== undefined);
 
   const scattered = shuffle(
     rng,
     coords.map((_, index) => index).filter((index) => index !== centreIndex),
   );
   rng = scattered.rng;
-  const elsewhere = scattered.items;
 
-  const dealt = dealtBiomes(region, coords.length);
+  const dealt = dealtBiomes(region);
+  const kinds = [centreBiome, ...dealt];
+  const originTiles = [centreIndex, ...scattered.items.slice(0, dealt.length)];
+  const origins = new Set(originTiles);
 
-  const origins = new Set<number>([centreIndex]);
-  spread(centreIndex, centreBiome);
-  for (let i = 0; i < dealt.length; i++) {
-    origins.add(elsewhere[i]);
-    spread(elsewhere[i], dealt[i]);
+  const owner: (number | undefined)[] = new Array(coords.length);
+  const open = kinds.map(() => new Map<number, number>());
+  const held = kinds.map(() => 0);
+  const take = (index: number, biome: number): void => {
+    owner[index] = biome;
+    held[biome]++;
+    for (const beside of open) beside.delete(index);
+    for (const next of around(index)) {
+      if (owner[next] === undefined) open[biome].set(next, (open[biome].get(next) ?? 0) + 1);
+    }
+  };
+  const grow = (biome: number): void => {
+    const { compactness } = biomeKind(catalogue, kinds[biome]);
+    const pick = pickWeighted(
+      rng,
+      [...open[biome]].map(([index, holds]) => [index, holds ** compactness] as const),
+    );
+    rng = pick.rng;
+    take(pick.picked, biome);
+  };
+  for (const [biome, tile] of originTiles.entries()) take(tile, biome);
+
+  const weights: (number | undefined)[] = [];
+  for (const [biome, kind] of kinds.entries()) {
+    const { growth } = biomeKind(catalogue, kind);
+    switch (growth.kind) {
+      case 'weight':
+        weights.push(growth.weight);
+        break;
+      case 'size':
+        weights.push(undefined);
+        while (held[biome] < growth.size && open[biome].size > 0) grow(biome);
+        break;
+    }
+  }
+  for (;;) {
+    const growing = weights.flatMap((weight, biome) =>
+      weight !== undefined && open[biome].size > 0 ? [[biome, weight] as const] : [],
+    );
+    if (growing.length === 0) break;
+    const pick = pickWeighted(rng, growing);
+    rng = pick.rng;
+    grow(pick.picked);
   }
 
-  while (growing.length > 0) {
-    const step = nextRng(rng);
-    rng = step.rng;
-    const slot = Math.floor(step.value * growing.length);
-    const from = growing[slot];
-    const open = neighbours(coords[from])
-      .map((coord) => indexOf.get(tileKey(coord)))
-      .filter((index): index is number => index !== undefined && !assigned.has(index));
-    if (open.length === 0) {
-      growing.splice(slot, 1);
+  // Only a sized biome leaves tiles unreached: a weighted one grows while anything is open beside it.
+  // A hole two sized biomes closed together goes to the one dealt first.
+  const tileBiomes: Biome[] = new Array(coords.length);
+  for (let index = 0; index < coords.length; index++) {
+    const reached = owner[index];
+    if (reached !== undefined) {
+      tileBiomes[index] = kinds[reached];
       continue;
     }
-    const target = nextRng(rng);
-    rng = target.rng;
-    spread(open[Math.floor(target.value * open.length)], tileBiomes[from]);
+    const hole = [index];
+    const inHole = new Set(hole);
+    let closer = kinds.length;
+    for (let at = 0; at < hole.length; at++) {
+      for (const next of around(hole[at])) {
+        const by = owner[next];
+        if (by !== undefined) closer = Math.min(closer, by);
+        else if (!inHole.has(next)) {
+          inHole.add(next);
+          hole.push(next);
+        }
+      }
+    }
+    for (const tile of hole) owner[tile] = closer;
+    tileBiomes[index] = kinds[closer];
   }
 
   const rimmed = new Set<number>();

@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { CATALOGUE, REGION } from './fixtures';
+import { CATALOGUE, CLEARING, REGION } from './fixtures';
 import {
   CENTRE,
   type Corner,
@@ -18,7 +18,7 @@ import {
   tilesOfEdge,
   water,
 } from './map';
-import { biomeKind, buildingKind, featureKind, regionOf } from './map-kinds';
+import { biomeKind, buildingKind, featureKind, type MapContent, regionOf } from './map-kinds';
 import { seedRng } from './rng';
 
 const SEEDS = [0, 1, 1234, 0xdeadbeef | 0, 424242];
@@ -147,6 +147,79 @@ test('every map has mountain, because a range is dealt and its origin is mountai
   }
 });
 
+test('a biome dealt to a size is filled first, to exactly that many tiles', () => {
+  for (const seed of SEEDS) {
+    const glades = generateMap(CATALOGUE, CLEARING, seedRng(seed)).tiles.filter(
+      (tile) => tile.terrain === 'glade',
+    );
+
+    expect(biomeKind(CATALOGUE, 'clearing').growth).toEqual({ kind: 'size', size: glades.length });
+  }
+});
+
+test('a tile no biome reaches because a sized biome closed it off belongs to that biome', () => {
+  const clearing = biomeKind(CATALOGUE, 'clearing');
+  const hollow: MapContent = {
+    ...CATALOGUE,
+    biomes: { ...CATALOGUE.biomes, clearing: { ...clearing, growth: { kind: 'size', size: 6 } } },
+    regions: {
+      hollow: {
+        ...regionOf(CATALOGUE, CLEARING),
+        radius: 1,
+        tilesPerBiome: 7,
+        biomeShares: [],
+        camps: 0,
+      },
+    },
+  };
+
+  for (const seed of SEEDS) {
+    const { tiles } = generateMap(hollow, 'hollow', seedRng(seed));
+
+    expect(tiles.map((tile) => tile.terrain)).toEqual(Array(7).fill('glade'));
+  }
+});
+
+test('at a very high compactness a biome takes the open tile beside the most of its own', () => {
+  const clearing = biomeKind(CATALOGUE, 'clearing');
+  const round: MapContent = {
+    ...CATALOGUE,
+    biomes: {
+      ...CATALOGUE.biomes,
+      clearing: { ...clearing, growth: { kind: 'size', size: 3 }, compactness: 60 },
+    },
+  };
+
+  for (const seed of SEEDS) {
+    const glades = generateMap(round, CLEARING, seedRng(seed)).tiles.filter(
+      (tile) => tile.terrain === 'glade',
+    );
+
+    expect(glades).toHaveLength(3);
+    for (const glade of glades) {
+      for (const other of glades) {
+        if (tileKey(other) !== tileKey(glade)) expect(distance(glade, other)).toBe(1);
+      }
+    }
+  }
+});
+
+test('a biome kind of a greater growth weight grows larger', () => {
+  const seaWeighing = (weight: number): MapContent => ({
+    ...CATALOGUE,
+    biomes: {
+      ...CATALOGUE.biomes,
+      sea: { ...CATALOGUE.biomes.sea, growth: { kind: 'weight', weight } },
+    },
+  });
+  const waterOn = (content: MapContent): number =>
+    SEEDS.flatMap((seed) => generateMap(content, REGION, seedRng(seed)).tiles).filter((tile) =>
+      water(content, tile.terrain),
+    ).length;
+
+  expect(waterOn(seaWeighing(4))).toBeGreaterThan(waterOn(seaWeighing(1 / 4)));
+});
+
 test('a sea is rimmed with coast, the terrain no biome scatters over its interior', () => {
   for (const seed of SEEDS) {
     expect(mapOf(seed).some((tile) => tile.terrain === 'coast')).toBe(true);
@@ -178,9 +251,7 @@ test('the generator improves nothing: every tile of a fresh map is bare of impro
 });
 
 test('a range dealt clear of the water runs the two rivers it is worth, whole courses both', () => {
-  const ranges = dealtBiomes(DISC, mapOf(0).length).filter(
-    (biome) => biome === DISC.rivers.source,
-  ).length;
+  const ranges = dealtBiomes(DISC).filter((biome) => biome === DISC.rivers.source).length;
   const rivers = riversOf(0);
 
   expect(rivers).toHaveLength(DISC.rivers.perRange * ranges);
@@ -246,9 +317,7 @@ test('a river runs along no more than four edges of any one tile, so it never ri
 });
 
 test('a map holds at most two rivers for every mountain range it is dealt', () => {
-  const ranges = dealtBiomes(DISC, mapOf(0).length).filter(
-    (biome) => biome === DISC.rivers.source,
-  ).length;
+  const ranges = dealtBiomes(DISC).filter((biome) => biome === DISC.rivers.source).length;
   for (const seed of SEEDS) {
     expect(riversOf(seed).length).toBeLessThanOrEqual(DISC.rivers.perRange * ranges);
   }

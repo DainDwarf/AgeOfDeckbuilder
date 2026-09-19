@@ -320,18 +320,24 @@ export const STAND_IN: Catalogue = catalogued({
       interior: { plain: 0.55, forest: 0.25, hills: 0.2 },
       rim: { plain: 0.55, forest: 0.25, hills: 0.2 },
       rimWidths: [1],
+      growth: { kind: 'weight', weight: 1 },
+      compactness: 0,
     },
     sea: {
       origin: 'deep',
       interior: { deep: 0.92, plain: 0.08 },
       rim: { coast: 1 },
       rimWidths: [0.2, 0.5, 0.3],
+      growth: { kind: 'weight', weight: 1 },
+      compactness: 0,
     },
     mountain: {
       origin: 'mountain',
       interior: { mountain: 0.7, hills: 0.3 },
       rim: { hills: 1 },
       rimWidths: [0.4, 0.6],
+      growth: { kind: 'weight', weight: 1 },
+      compactness: 0,
     },
   },
   buildings: {
@@ -356,7 +362,6 @@ export const STAND_IN: Catalogue = catalogued({
       radius: 8,
       centre: 3,
       tilesPerBiome: 26,
-      minBiomes: 5,
       centreBiome: 'land',
       biomeShares: [
         { biome: 'sea', share: 0.3 },

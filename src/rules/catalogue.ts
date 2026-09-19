@@ -1,4 +1,4 @@
-import type { Tile, TileCoords } from './map';
+import { dealtBiomes, discTiles, sharedBiomes, type Tile, type TileCoords } from './map';
 import {
   biomeKind,
   buildingKind,
@@ -182,6 +182,21 @@ export function catalogued(content: Catalogue): Catalogue {
     for (const terrain of Object.keys(biome.interior)) terrainKind(content, terrain);
     for (const terrain of Object.keys(biome.rim)) terrainKind(content, terrain);
     if (biome.rimWidths.length === 0) refuse(content, `the biome ${id} rolls no rim width`);
+    if (biome.compactness < 0) {
+      refuse(content, `the biome ${id} grows at a compactness of ${biome.compactness}`);
+    }
+    switch (biome.growth.kind) {
+      case 'weight':
+        if (biome.growth.weight <= 0) {
+          refuse(content, `the biome ${id} grows at a growth weight of ${biome.growth.weight}`);
+        }
+        break;
+      case 'size':
+        if (!Number.isInteger(biome.growth.size) || biome.growth.size < 1) {
+          refuse(content, `the biome ${id} is dealt to a size of ${biome.growth.size}`);
+        }
+        break;
+    }
   }
   for (const feature of Object.values(content.features)) terrainKind(content, feature.terrain);
   for (const layer of [
@@ -205,6 +220,25 @@ export function catalogued(content: Catalogue): Catalogue {
     biomeKind(content, region.rivers.source);
     for (const { biome } of region.biomeShares) biomeKind(content, biome);
     for (const { feature } of region.featureShares) featureKind(content, feature);
+    const { growth } = biomeKind(content, region.centreBiome);
+    if (growth.kind === 'size' && growth.size >= discTiles(region.radius)) {
+      refuse(
+        content,
+        `the region ${id} deals its centre a biome of ${growth.size} tiles on a disc of ${discTiles(region.radius)}`,
+      );
+    }
+    const shared = sharedBiomes(region);
+    for (const { biome } of region.biomeShares) {
+      if (!shared.includes(biome))
+        refuse(content, `the region ${id} deals its share of ${biome} no biome`);
+    }
+    const leftover = dealtBiomes(region).length - shared.length;
+    if (growth.kind === 'size' && leftover > 0) {
+      refuse(
+        content,
+        `the region ${id} deals ${leftover} biome of ${region.centreBiome}, dealt to a size, over what its shares deal`,
+      );
+    }
     const reach = region.centre + content.city.sight;
     if (region.campFromCentre <= reach) {
       refuse(

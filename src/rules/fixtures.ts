@@ -543,6 +543,7 @@ export const CATALOGUE: Catalogue = catalogued({
       elevation: 0,
       lift: 0,
     },
+    glade: { yields: { food: 1 }, movementCost: MOVE_POINT, water: false, elevation: 0, lift: 0 },
   },
   biomes: {
     land: {
@@ -550,18 +551,32 @@ export const CATALOGUE: Catalogue = catalogued({
       interior: { plain: 0.55, forest: 0.25, hills: 0.2 },
       rim: { plain: 0.55, forest: 0.25, hills: 0.2 },
       rimWidths: [1],
+      growth: { kind: 'weight', weight: 1 },
+      compactness: 0,
     },
     sea: {
       origin: 'deep',
       interior: { deep: 0.92, plain: 0.08 },
       rim: { coast: 1 },
       rimWidths: [0.2, 0.5, 0.3],
+      growth: { kind: 'weight', weight: 1 },
+      compactness: 0,
     },
     mountain: {
       origin: 'mountain',
       interior: { mountain: 0.7, hills: 0.3 },
       rim: { hills: 1 },
       rimWidths: [0.4, 0.6],
+      growth: { kind: 'weight', weight: 1 },
+      compactness: 0,
+    },
+    clearing: {
+      origin: 'glade',
+      interior: { glade: 1 },
+      rim: { glade: 1 },
+      rimWidths: [1],
+      growth: { kind: 'size', size: 9 },
+      compactness: 2,
     },
   },
   buildings: {
@@ -592,7 +607,6 @@ export const CATALOGUE: Catalogue = catalogued({
       radius: 8,
       centre: 3,
       tilesPerBiome: 26,
-      minBiomes: 5,
       centreBiome: 'land',
       biomeShares: [
         { biome: 'sea', share: 0.3 },
@@ -615,6 +629,33 @@ export const CATALOGUE: Catalogue = catalogued({
         draws: 60,
       },
     },
+    clearing: {
+      radius: 7,
+      centre: 2,
+      tilesPerBiome: 28,
+      centreBiome: 'clearing',
+      biomeShares: [
+        { biome: 'sea', share: 0.2 },
+        { biome: 'mountain', share: 0.2 },
+        { biome: 'land', share: 0.6 },
+      ],
+      featureShares: [],
+      camps: 2,
+      campFromCentre: 6,
+      campsApart: 4,
+      rivers: {
+        source: 'mountain',
+        relief: 1,
+        roughness: 0.5,
+        perRange: 1,
+        climb: 0.5,
+        meander: 1,
+        curl: 0.75,
+        edgesPerTile: 4,
+        leastEdges: 4,
+        draws: 40,
+      },
+    },
   },
   camp: {
     unit: 'PH_Warrior',
@@ -627,8 +668,11 @@ export const CATALOGUE: Catalogue = catalogued({
   city: { building: 'PH_City', sight: 2, idle: 2 },
 });
 
-/** The one region the fixture catalogue deals its maps from. */
+/** The region the fixture catalogue deals its maps from, its centre's biome one that spreads. */
 export const REGION = 'disc';
+
+/** The region whose centre's biome is dealt to a size: the one biome kind of the fixture that is. */
+export const CLEARING = 'clearing';
 
 /** The one schedule the fixture catalogue rolls its timelines from. */
 export const SCHEDULE = 'schedule';

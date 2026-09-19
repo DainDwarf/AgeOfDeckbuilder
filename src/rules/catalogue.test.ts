@@ -1,8 +1,19 @@
 import { expect, test } from 'vitest';
 import { type Answer, type Catalogue, catalogued, entered, type Schedule } from './catalogue';
 import { apply, beginChronicle, launched } from './chronicle';
-import { CATALOGUE, CITY, cityOf, DECK, field, NO_DEALS, REGION, SCHEDULE } from './fixtures';
-import { generateMap, tileKey } from './map';
+import {
+  CATALOGUE,
+  CITY,
+  CLEARING,
+  cityOf,
+  DECK,
+  field,
+  NO_DEALS,
+  REGION,
+  SCHEDULE,
+} from './fixtures';
+import { discTiles, generateMap, tileKey } from './map';
+import { regionOf } from './map-kinds';
 import { seedRng } from './rng';
 import { timelineOf } from './schedule';
 
@@ -62,6 +73,71 @@ test('a catalogue whose unit kind names itself by another key is refused', () =>
 test('a catalogue whose biome names a terrain it does not hold is refused', () => {
   const { sea } = CATALOGUE.biomes;
   const content = changed({ biomes: { ...CATALOGUE.biomes, sea: { ...sea, rim: { shoal: 1 } } } });
+
+  expect(() => catalogued(content)).toThrow(/^fixture: /);
+});
+
+test('a catalogue whose biome grows at a growth weight of nought, a compactness below nought or to a size of nought is refused', () => {
+  const { sea, clearing } = CATALOGUE.biomes;
+  for (const biome of [
+    { ...sea, growth: { kind: 'weight', weight: 0 } } as const,
+    { ...sea, compactness: -0.5 },
+    { ...clearing, growth: { kind: 'size', size: 0 } } as const,
+  ]) {
+    const content = changed({ biomes: { ...CATALOGUE.biomes, sea: biome } });
+
+    expect(() => catalogued(content)).toThrow(/^fixture: /);
+  }
+});
+
+test('a catalogue whose region deals its centre a sized biome as large as its disc is refused', () => {
+  const { clearing } = CATALOGUE.biomes;
+  const disc = regionOf(CATALOGUE, CLEARING);
+  const sized = (size: number): Catalogue =>
+    changed({
+      version: 'sized',
+      biomes: { ...CATALOGUE.biomes, clearing: { ...clearing, growth: { kind: 'size', size } } },
+      regions: { [CLEARING]: disc },
+    });
+
+  expect(() => catalogued(sized(discTiles(disc.radius)))).toThrow(/^sized: /);
+  expect(catalogued(sized(discTiles(disc.radius) - 1)).version).toBe('sized');
+});
+
+test('a catalogue whose region leaves biomes over its shares to a centre kind dealt to a size is refused', () => {
+  const disc = regionOf(CATALOGUE, CLEARING);
+  const landing = (share: number): Catalogue =>
+    changed({
+      version: 'landing',
+      regions: {
+        [CLEARING]: {
+          ...disc,
+          biomeShares: [
+            { biome: 'sea', share: 0.2 },
+            { biome: 'mountain', share: 0.2 },
+            { biome: 'land', share },
+          ],
+        },
+      },
+    });
+
+  expect(() => catalogued(landing(0.4))).toThrow(/^landing: /);
+  expect(catalogued(landing(0.6)).version).toBe('landing');
+});
+
+test('a catalogue whose region deals a share of a biome that rounds to no biome is refused', () => {
+  const disc = regionOf(CATALOGUE, REGION);
+  const content = changed({
+    regions: {
+      [REGION]: {
+        ...disc,
+        biomeShares: [
+          { biome: 'sea', share: 0.3 },
+          { biome: 'mountain', share: 0.01 },
+        ],
+      },
+    },
+  });
 
   expect(() => catalogued(content)).toThrow(/^fixture: /);
 });

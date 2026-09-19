@@ -15,15 +15,25 @@ export type TerrainKind = {
 };
 
 /**
- * What a biome is made of: the terrain its origin tile is outright, the weighted table its interior
- * tiles scatter from, the table the tiles on its rim draw from instead, and the weight of each rim
- * width in tiles, no rim at all first.
+ * How a biome of a kind grows. `weight`: it spreads with the others, drawn by that growth weight.
+ * `size`: it is filled first to that many tiles and grows no further.
+ */
+export type Growth =
+  | { readonly kind: 'weight'; readonly weight: number }
+  | { readonly kind: 'size'; readonly size: number };
+
+/**
+ * What a biome is made of: the terrain its origin tile is outright, the tables its interior and its
+ * rim tiles scatter from, the weight of each rim width in tiles, no rim at all first, how it grows,
+ * and its compactness: the power an open tile's count of neighbours it holds is raised to.
  */
 export type BiomeKind = {
   readonly origin: string;
   readonly interior: Readonly<Record<string, number>>;
   readonly rim: Readonly<Record<string, number>>;
   readonly rimWidths: readonly number[];
+  readonly growth: Growth;
+  readonly compactness: number;
 };
 
 /**
@@ -74,7 +84,6 @@ export type Region = {
   readonly radius: number;
   readonly centre: number;
   readonly tilesPerBiome: number;
-  readonly minBiomes: number;
   readonly centreBiome: string;
   readonly biomeShares: readonly { readonly biome: string; readonly share: number }[];
   readonly featureShares: readonly { readonly feature: string; readonly share: number }[];

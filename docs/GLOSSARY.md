@@ -71,7 +71,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **idle** | One population assigned to no tile; what a unit card takes. | unemployed, spare, unassigned (as a noun) |
 | **grow** | What the food stock reaching the growth threshold does at the growth phase: the city gains one idle population. | birth, breed, spawn (for population), expand |
 | **growth threshold** | The food the next population needs; spent when the stock reaches it, and wider each time. | step, growth cost, food cap |
-| **biome** | A stretch of map the generator spreads as one kind — land, sea, … — weighting the terrain of each tile in it. | patch, zone, area, ecosystem |
+| **biome** | A stretch of map the generator spreads or deals as one kind — land, sea, … — weighting the terrain of each tile in it. | patch, zone, area, ecosystem |
 | **terrain** | A tile's base layer: plain, forest, hills, …; one per tile, changed only by terraforming. | tile type |
 | **movement cost** | What entering a tile spends of a unit's move points, summed from the tile's layers unless one of them names it outright; water names none and is crossed by nothing. | move cost, terrain cost, travel cost, difficulty, impassable |
 | **terraform** | To change a tile's terrain into another, where a worker stands or where an event's answer aims; what a terraform instant does. | transform, convert, reshape |
