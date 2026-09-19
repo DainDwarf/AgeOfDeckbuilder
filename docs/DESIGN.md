@@ -2,9 +2,9 @@
 
 > Status legend, for every design page: ✅ decided · 🔧 provisional (a stated default, open to change). An open question is not a status — it is a [`BOARD.md`](../workflow/BOARD.md) line whose done-condition is the decision.
 
-The game in broad strokes: what it is, what it deliberately is not, and how a chronicle and the meta fit together. How any screen is worked is [`INTERFACE.md`](INTERFACE.md); what exists only inside a chronicle is [`CHRONICLE.md`](CHRONICLE.md). A standing decision carries one line of rationale, and only when the rejected alternative is attractive enough that a future session would plausibly redo it. When a decision is overturned, the page changes in the same unit of work; it never keeps the old version.
+The game in broad strokes: what it is, what it deliberately is not, and how a chronicle and the meta fit together. How any screen is worked is [`INTERFACE.md`](INTERFACE.md); what exists only inside a chronicle is [`CHRONICLE.md`](CHRONICLE.md).
 
-The three are **the design pages**, and they are the **spec**. Code that disagrees with them is wrong; a gap found during implementation is reported as a deviation, never closed by editing a page down.
+The three are **the design pages**, and they are the **spec**.
 
 ## Pitch
 
@@ -18,18 +18,18 @@ A **chronicle** is one city's story, told once — the roguelite's unit of play,
 - A chronicle spans **one age**, from its dawn to the threshold of the next. Its history is an **escalating schedule of events** — enemies, natural disasters, inner turmoil, plus neutral and fortunate ones — and it ends with the age's **capstone**, one authored trial per age. Reaching the next age is victory; the city's fall is defeat. A chronicle spanning every age was rejected: in 30–60 minutes each age is a few minutes and every chronicle opens the same way.
 - **The ages** are humanity's, in order: the Nomadic Age, the Stone Age, the Bronze Age, the Iron Age, and on through history. The **Nomadic Age** is where humanity stops wandering — the settle is the act it is named for — and it is the age of the fewest verbs: units and instants, one building, the shortest chronicle. A campaign begins there, and its capstone is the threshold of the Stone Age, where buildings begin; what it is made of is [`ages/NOMADIC.md`](ages/NOMADIC.md). 🔧 It later serves a second time, as the first chronicle a new player plays, on a fixed map and schedule with a tutorial.
 - **The schedule tests every resource and the map**, never one axis, and no two chronicles deal it in the same order. That is the only rule against a narrow deck: a deck with no answer to famine dies to the famine. A deck has a specialty; it never has an omission.
-- **Cards are the verbs; the map holds the nouns.** Buildings and units enter the map through cards, and immediate effects are cards. Standing things do their standing thing for free — a farm with a person assigned yields — and **changing the map costs a card**: building, terraforming, negotiating. What a unit does with itself is the exception it carries with it: it crosses the map on its own move points and attacks on its own action, and no card is spent on either. A worker's action is spent the other way round: on the cards played through it.
+- **Cards are the verbs; the map holds the nouns.** Buildings and units enter the map through cards, and immediate effects are cards. Standing things do their standing thing for free — a tile with a population assigned yields — and **changing the map costs a card**: building, terraforming, negotiating. What a unit does with itself is the exception it carries with it: it crosses the map on its own move points and attacks on its own action, and no card is spent on either. A worker's action is spent the other way round: on the cards played through it.
 - Five core resources: **food, production, military, money, science**. 🔧 Their jobs: food grows the population; production builds buildings and units and shapes tiles; military pays for military units, instants and fortifications; money trades for other goods and accumulates; science pays for manipulating the cards — drawing, discarding and the like. **Culture pushes the border out**, and the tiles inside it are the city's; population is the city's inhabitants, assigned to its tiles.
-- **Deterministic.** Every random draw comes from a seeded generator carried in the state, so a chronicle replays from its seed — for replay, undo and debugging first; a headless simulator is possible but not promised.
+- **Deterministic.** Every random draw comes from a seeded generator carried in the state, so a chronicle replays from its seed.
 - A chronicle lasts **30–60 minutes**, shorter in the earlier ages where the verbs are fewer. 🔧
-- **The map is the draft.** 🔧 Trading with a neutral, clearing a ruin, taming a terrain can yield a card that joins the deck for this chronicle only. The deck built in the meta is who you are; the map is what you found.
+- **The map is the draft.** 🔧 What the map holds can yield a card that joins the deck for this chronicle only: a camp's capture deals its rewards. The deck built in the meta is who you are; the map is what you found.
 
 ### Launching a chronicle ✅
 
 Four choices, each with one job:
 
 - **Age** — given by the campaign: the furthest age reached, the Nomadic Age for a new campaign. Earlier ages stay playable, for the influence and the achievements missed. The age is never a difficulty pick.
-- **Region** — a bias on map generation: temperate, desert, coast, mountains, polar, … The region is the **difficulty dial**, and honestly so: a harsh region pays more influence, and some achievements are reachable only from a region that has what they need — _Sailing_ wants a coast. 🔧 A freely chosen region with no such stakes was rejected: every launch would take the easiest.
+- **Region** — a bias on map generation: temperate, desert, coast, mountains, polar, … The region is the **difficulty dial**, and honestly so: a harsh region pays more influence, and some achievements are reachable only from a region that has what they need. 🔧 A freely chosen region with no such stakes was rejected: every launch would take the easiest.
 - **Civilization** — who you are: starting units, one passive rule, a look. A civilization owns its deck — one deck per civilization, edited as a facet of it. 🔧
 - **Deck** — built in the meta from the shared collection, fixed for the chronicle, in two sections: its **cards**, which the draw pile cycles, and its **settle cards**, played on turn 0 alone.
 
