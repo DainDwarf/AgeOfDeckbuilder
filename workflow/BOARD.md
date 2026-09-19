@@ -6,6 +6,11 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ---
 
+- **Guarded camps and the enemy scripts** — the enemy keeps one warrior on top of each camp so an early scout cannot rush it and capturing the camp is the player's voluntary attack: a warrior entered on a camp's tile holds it, one entered elsewhere advances.
+- **An action spends the move points** — by default a unit that spends its action, on an attack or on a card played through a worker, also spends its remaining move points, hit-and-run being a later age's unit trait rather than the nomadic warrior's.
+- **The culture curve** — the culture threshold buys six tiles before the capstone, which is not nomadic at all; the age wants one claim needed and a second fought for, while later ages must let a culture-heavy deck play a large land city, so the curve's shape is the question.
+- **The population growth curve** — the growth threshold equals the population, so the city grows every turn and food piles up to dozens; a steeper curve is the candidate, with the question of whether units count as population for it, since otherwise a smaller city produces units faster.
+- **Production's drain** — production has almost no drain or curve and piles up like food; Shelter, Trapping, the firebreak and Hunger are its only sinks, and what a standing drain or a steeper sink should be is the question.
 - **The balance pass** — numbers measured on the real content, edits uncommitted until the user says they hold. First playtest of the nomadic age: the enemy hits too hard; the settlement and the economy expand way too fast, so gathering is not much needed after a few turns — a victory on 74 food, 22 production, 15 culture — which leaves Hunger biteless and the camps' stocks useless as loot.
 - **Event animations** — when an event's answer lands, what it changes on the map — burned tiles, killed population and units, anything an answer does — is animated rather than simply redrawn; the tile The herd's _Follow it_ charts is one of them, wherever it lies on the map, and nothing draws the eye to it until then.
 - **Card references** — a card named in another text is displayed like a link: hovering it shows a miniature of the card, inspecting it zooms on the card; the details come at intake.
