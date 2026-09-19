@@ -22,6 +22,7 @@ import {
   open,
   panelLines,
   playedOut,
+  playersOf,
   type Run,
   refusalLines,
   rested,
@@ -51,7 +52,10 @@ async function moveOut(page: Page, run: Run): Promise<Chronicle> {
   const opened = await chronicleOf(page);
   await dragOut(page, opened.hand.indexOf('PH_Worker'));
   await page.waitForFunction(
-    () => window.game?.scene.getScene<ChronicleScene>('chronicle').chronicle.units.length === 1,
+    () =>
+      window.game?.scene
+        .getScene<ChronicleScene>('chronicle')
+        .chronicle.units.filter((unit) => unit.faction === 'player').length === 1,
   );
 
   const entered = await chronicleOf(page);
@@ -93,7 +97,7 @@ test('the mine card improves the hills the worker moved to', async ({ page }) =>
   expect(improved?.improvements).toEqual(['PH_Mine']);
   expect(await marksIn(page, 'improvements')).toBe(before + 1);
   expect(after.resources.production).toBe(moved.resources.production - 3);
-  expect(after.units[0].tile).toEqual(run.tile);
+  expect(playersOf(after)[0].tile).toEqual(run.tile);
   expect(problems).toEqual([]);
 });
 
@@ -195,6 +199,6 @@ test('the urbanisation card terraforms the plain the worker moved to, feature an
   expect(worked?.feature).toBeUndefined();
   expect(await standing(page, mark)).toBe(false);
   expect(after.resources.production).toBe(moved.resources.production - 5);
-  expect(after.units[0].tile).toEqual(run.tile);
+  expect(playersOf(after)[0].tile).toEqual(run.tile);
   expect(problems).toEqual([]);
 });

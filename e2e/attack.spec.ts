@@ -16,6 +16,7 @@ import {
   firstSeed,
   launch,
   open,
+  playersOf,
   ringedTile,
   standing,
   watch,
@@ -53,7 +54,7 @@ function besieged(chronicle: Chronicle): { turns: number; enemy: TileCoords } | 
   const enter = chronicle.hand.indexOf('PH_Warrior');
   if (enter === -1 || !playable(refusalOf(STAND_IN, chronicle, 'PH_Warrior'))) return undefined;
   let standing = outcome(apply(STAND_IN, chronicle, { type: 'play', index: enter, aim: 'none' }));
-  if (standing.units.length !== 1) return undefined;
+  if (playersOf(standing).length !== 1) return undefined;
 
   for (let turns = 1; turns <= 20; turns++) {
     standing = endedTurn(standing);
@@ -87,13 +88,13 @@ test('a warrior dragged onto an enemy attacks it, and its spent action refuses a
 
   const opened = await chronicleOf(page);
   await dragOut(page, opened.hand.indexOf('PH_Warrior'));
-  await expect.poll(async () => (await chronicleOf(page)).units.length).toBe(1);
+  await expect.poll(async () => playersOf(await chronicleOf(page)).length).toBe(1);
 
   const entered = await chronicleOf(page);
   for (let turn = 0; turn < run.turns; turn++) await endTurn(page);
 
   const besetted = await chronicleOf(page);
-  const warrior = besetted.units[0];
+  const [warrior] = playersOf(besetted);
   const enemy = await unitOn(page, run.enemy);
   expect(warrior.tile).toEqual(cityTileOf(entered));
   expect(warrior.action).toBe(STAND_IN.units.PH_Warrior.action);
@@ -106,9 +107,10 @@ test('a warrior dragged onto an enemy attacks it, and its spent action refuses a
     .toBe((enemy?.stats.health ?? 0) - STAND_IN.units.PH_Warrior.damage);
 
   const attacked = await chronicleOf(page);
-  expect(attacked.units[0].tile).toEqual(warrior.tile);
-  expect(attacked.units[0].action).toBe(0);
-  expect(attacked.units[0].movePoints).toBe(0);
+  const [struck] = playersOf(attacked);
+  expect(struck.tile).toEqual(warrior.tile);
+  expect(struck.action).toBe(0);
+  expect(struck.movePoints).toBe(0);
   // Nothing left to spend: the warrior stands dimmed, and the enemy it struck never is.
   await expect.poll(() => standing(page, `unit-dim-${tileKey(warrior.tile)}`)).toBe(true);
   expect(await standing(page, `unit-dim-${tileKey(run.enemy)}`)).toBe(false);

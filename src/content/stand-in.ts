@@ -26,7 +26,7 @@ import { buildingKind, improvementKind } from '../rules/map-kinds';
 import { campsPlaced, laid, raided, reinforced, spanEnded } from '../rules/schedule';
 import { followed, type Landed, unchanged } from '../rules/stages';
 import { type CardId, type Chronicle, holds } from '../rules/state';
-import { ADVANCE } from './scripts';
+import { guarding, RAIDER } from './scripts';
 
 /** The region a launch chooses on the stand-in, listed first so a launch that names none lands on it. */
 export const STAND_IN_REGION = 'PH_Region';
@@ -77,7 +77,7 @@ export const STAND_IN: Catalogue = catalogued({
       sight: 2,
     },
   },
-  scripts: { PH_Advance: ADVANCE },
+  scripts: { PH_Guard: guarding(2), PH_Raider: RAIDER },
   cards: {
     PH_Settle: {
       kind: 'settle',
@@ -237,12 +237,12 @@ export const STAND_IN: Catalogue = catalogued({
   capstones: {
     PH_Siege: {
       lands: siege,
-      continues: reinforced,
+      continues: (catalogue, chronicle) => reinforced(catalogue, chronicle, 'guard'),
       passes: (_catalogue, chronicle) => spanEnded(chronicle, 6),
     },
     PH_ShortSiege: {
       lands: siege,
-      continues: reinforced,
+      continues: (catalogue, chronicle) => reinforced(catalogue, chronicle, 'guard'),
       passes: (_catalogue, chronicle) => spanEnded(chronicle, 2),
     },
     PH_Tillage: {
@@ -387,7 +387,7 @@ export const STAND_IN: Catalogue = catalogued({
   },
   camp: {
     unit: 'PH_Warrior',
-    script: 'PH_Advance',
+    scripts: { guard: 'PH_Guard', raider: 'PH_Raider' },
     building: 'PH_Camp',
     rewards: ['PH_Spoils'],
     odds: 0,
@@ -405,7 +405,9 @@ function siege(catalogue: Catalogue, chronicle: Chronicle): Landed {
   const placing = campsPlaced(catalogue, chronicle, SIEGE_CAMPS, [3, 5], 3);
   let landing: Landed = placing;
   for (const camp of placing.placed) {
-    landing = followed(landing, (left) => entered(catalogue, left, campUnit(catalogue, camp)));
+    landing = followed(landing, (left) =>
+      entered(catalogue, left, campUnit(catalogue, camp, 'raider')),
+    );
   }
   return landing;
 }

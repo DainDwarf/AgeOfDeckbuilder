@@ -34,7 +34,7 @@ import {
   tileCharted,
 } from '../rules/schedule';
 import { followed, unchanged } from '../rules/stages';
-import { ADVANCE } from './scripts';
+import { guarding, RAIDER } from './scripts';
 
 /** How many warriors a raid enters on this turn: one, and one more for every ten turns. */
 function raiders(turn: number): number {
@@ -81,7 +81,7 @@ export const NOMADIC: Catalogue = catalogued({
       sight: 3,
     },
   },
-  scripts: { advance: ADVANCE },
+  scripts: { guard: guarding(2), raider: RAIDER },
   cards: {
     settle: {
       kind: 'settle',
@@ -220,7 +220,7 @@ export const NOMADIC: Catalogue = catalogued({
             // to the city and no unit to stand there, and the catalogue refuses a camp on a terrain
             // its unit cannot stand on.
             return followed(placing, (left) =>
-              enteredAround(catalogue, left, camp, raiders(chronicle.turn)),
+              enteredAround(catalogue, left, camp, raiders(chronicle.turn), 'guard'),
             );
           },
         },
@@ -415,7 +415,7 @@ export const NOMADIC: Catalogue = catalogued({
   },
   camp: {
     unit: 'warrior',
-    script: 'advance',
+    scripts: { guard: 'guard', raider: 'raider' },
     building: 'camp',
     rewards: ['stores', 'band-joins'],
     odds: 0.08,

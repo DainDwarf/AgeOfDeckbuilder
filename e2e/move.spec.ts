@@ -11,6 +11,7 @@ import {
   endTurn,
   open,
   playedOut,
+  playersOf,
   ringedTile,
   stepRun,
   watch,
@@ -34,10 +35,10 @@ test('a unit crosses two tiles in two steps, and the turn refreshes what it spen
 
   const opened = await chronicleOf(page);
   await dragOut(page, opened.hand.indexOf('PH_Worker'));
-  await expect.poll(async () => (await chronicleOf(page)).units.length).toBe(1);
+  await expect.poll(async () => playersOf(await chronicleOf(page)).length).toBe(1);
 
   const entered = await chronicleOf(page);
-  expect(entered.units[0].movePoints).toBe(STAND_IN.units.PH_Worker.move);
+  expect(playersOf(entered)[0].movePoints).toBe(STAND_IN.units.PH_Worker.move);
 
   // The first step: the unit is clicked, then the tile the map lights under it.
   await click(page, `tile-${tileKey(cityTileOf(entered))}`);
@@ -45,11 +46,11 @@ test('a unit crosses two tiles in two steps, and the turn refreshes what it spen
   await click(page, `tile-${tileKey(run.first)}`);
   await playedOut(page);
   await expect
-    .poll(async () => tileKey((await chronicleOf(page)).units[0].tile))
+    .poll(async () => tileKey(playersOf(await chronicleOf(page))[0].tile))
     .toBe(tileKey(run.first));
 
   const stepped = await chronicleOf(page);
-  expect(stepped.units[0].movePoints).toBe(
+  expect(playersOf(stepped)[0].movePoints).toBe(
     STAND_IN.units.PH_Worker.move - costOf(entered, run.first),
   );
   // The unit is selected again where it landed, so one more click is the next step.
@@ -59,14 +60,14 @@ test('a unit crosses two tiles in two steps, and the turn refreshes what it spen
   await dragUnit(page, run.first, run.second);
 
   const twice = await chronicleOf(page);
-  expect(tileKey(twice.units[0].tile)).toBe(tileKey(run.second));
-  expect(twice.units[0].movePoints).toBe(
+  expect(tileKey(playersOf(twice)[0].tile)).toBe(tileKey(run.second));
+  expect(playersOf(twice)[0].movePoints).toBe(
     STAND_IN.units.PH_Worker.move - costOf(entered, run.first) - costOf(entered, run.second),
   );
 
   await endTurn(page);
 
   const ticked = await chronicleOf(page);
-  expect(ticked.units[0].movePoints).toBe(STAND_IN.units.PH_Worker.move);
+  expect(playersOf(ticked)[0].movePoints).toBe(STAND_IN.units.PH_Worker.move);
   expect(problems).toEqual([]);
 });

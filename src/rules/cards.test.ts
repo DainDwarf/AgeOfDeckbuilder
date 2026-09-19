@@ -386,7 +386,7 @@ test('a settle card aimed at nothing is refused on a tile', () => {
 /** A deck whose settle section enters two workers before the city settles, and holds no card besides. */
 const BANDS = { cards: [], settle: ['PH_Band', 'PH_Band', 'PH_Settle'] };
 
-test('a settle card entering a unit admits every charted tile the unit stands on with no unit on it', () => {
+test('a settle card entering a unit admits every charted tile the unit stands on with no unit on it, and no camp, a guard standing on each from the opening', () => {
   const rough = { q: 1, r: 0 };
   const camp = { q: 0, r: 1 };
   const out = { q: 3, r: 0 };
@@ -397,15 +397,15 @@ test('a settle card entering a unit admits every charted tile the unit stands on
   expect(refusedFor(entered, 'PH_Band', out)).toBe('uncharted');
   expect(refusedFor(entered, 'PH_Band', rough)).toBe('terrain');
   expect(refusedFor(entered, 'PH_Band', taken)).toBe('standing');
-  expect(refusedFor(entered, 'PH_Band', camp)).toBeUndefined();
+  expect(refusedFor(entered, 'PH_Band', camp)).toBe('standing');
   expect(admittedTiles(entered, 'PH_Band').map(tileKey).sort()).toEqual(
     entered.snapshots
       .filter((snapshot) => standsOn(CATALOGUE, CATALOGUE.units.PH_Worker, snapshot.tile))
-      .filter((snapshot) => tileKey(snapshot) !== tileKey(taken))
+      .filter((snapshot) => ![taken, camp].some((tile) => tileKey(snapshot) === tileKey(tile)))
       .map(tileKey)
       .sort(),
   );
-  for (const tile of [out, rough, taken]) {
+  for (const tile of [out, rough, taken, camp]) {
     expect(stagedBy(entered, aimedAt(tile))).toEqual(['refused']);
   }
 });

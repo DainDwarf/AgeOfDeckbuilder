@@ -10,7 +10,7 @@ import {
   entered,
 } from './catalogue';
 import { assign, type CityCommand, claim, grow, income, reassign } from './city';
-import { campUnit } from './enemies';
+import { campUnit, enteredAround } from './enemies';
 import { generateMap, type HexMap, type TileCoords, tileAt, tileKey } from './map';
 import { refuse } from './map-kinds';
 import { nextRng, seedRng, shuffle as shuffleItems } from './rng';
@@ -113,10 +113,10 @@ const HAND_SIZE = 5;
 
 /**
  * The opening, on the map and the timeline it is handed: turn 0, the city standing nowhere with no
- * population and no tile held, the deck's cards shuffled into the draw pile from the seed, its settle
- * cards in hand in the deck's order, and the map charted of its centre part. A map whose centre part
- * names a tile the map does not hold is refused. The chronicle names the version of the catalogue it
- * is begun on.
+ * population and no tile held, one guard standing on each camp of the map in tile order, the deck's
+ * cards shuffled into the draw pile from the seed, its settle cards in hand in the deck's order, and
+ * the map charted of its centre part. A map whose centre part names a tile the map does not hold is
+ * refused. The chronicle names the version of the catalogue it is begun on.
  */
 export function beginChronicle(
   catalogue: Catalogue,
@@ -133,7 +133,7 @@ export function beginChronicle(
     );
   }
   const shuffled = shuffleItems(seedRng(seed), deck.cards);
-  return charted(catalogue, {
+  const begun: Chronicle = {
     content: catalogue.version,
     seed,
     rng: shuffled.rng,
@@ -153,7 +153,13 @@ export function beginChronicle(
     drawPile: shuffled.items,
     hand: [...deck.settle],
     discardPile: [],
-  });
+  };
+  let guarded = begun;
+  for (const { q, r, building } of map.tiles) {
+    if (building !== catalogue.camp.building) continue;
+    guarded = entered(catalogue, guarded, campUnit(catalogue, { q, r }, 'guard')).chronicle;
+  }
+  return charted(catalogue, guarded);
 }
 
 /**
@@ -793,17 +799,19 @@ function enemyPhase(catalogue: Catalogue, chronicle: Chronicle): Sequence<Group>
  * One enemy acting on the chronicle the one before it left, as it stands there; one killed before
  * its turn acts no more. It moves by its script on the move points it holds, spending what the tiles
  * it crosses cost, and then attacks the unit its script names while it holds action, one attack a
- * point. Nothing for a move it did not make or an attack aimed at nobody.
+ * point. Nothing for a move it did not make or an attack aimed at nobody; the draws its script made
+ * ride on the chronicle all the same.
  */
 function enemyActs(catalogue: Catalogue, chronicle: Chronicle, id: number): Sequence {
   const found = unitOf(chronicle.units, id);
   if (found?.faction !== 'enemy') return unchanged(chronicle);
   const script = enemyScript(catalogue, found.script);
-  const landing = script.moveTo(catalogue, chronicle, found);
+  const { landing, rng } = script.moveTo(catalogue, chronicle, found);
+  const drawn = rng === chronicle.rng ? chronicle : { ...chronicle, rng };
   const moving =
     tileKey(landing.tile) === tileKey(found.tile)
-      ? unchanged(chronicle)
-      : crossed(chronicle, found, landing);
+      ? unchanged(drawn)
+      : crossed(drawn, found, landing);
 
   const attacks = (standing: Chronicle): Sequence => {
     const acting = unitOf(standing.units, id);
@@ -816,20 +824,20 @@ function enemyActs(catalogue: Catalogue, chronicle: Chronicle, id: number): Sequ
 }
 
 /**
- * The camps rolling their own warriors, in tile order: each camp whose tile no unit stands on draws
- * once from the seeded generator whatever its odds, and its unit enters on it where the draw falls
- * under them. A draw that entered nothing raises no stage and rides on the chronicle handed back.
+ * The camps rolling their own guards, in tile order: each camp draws once from the seeded generator
+ * whatever its odds, and where the draw falls under them one guard enters around it as a raid enters
+ * around its door — on the camp's tile where it is free. A draw that entered nothing raises no stage
+ * and rides on the chronicle handed back.
  */
 function campsRolled(catalogue: Catalogue, chronicle: Chronicle): Sequence {
   let rolling: Sequence = unchanged(chronicle);
   for (const { q, r, building } of chronicle.tiles) {
     if (building !== catalogue.camp.building) continue;
     rolling = followed(rolling, (left) => {
-      if (unitAt(left.units, { q, r }) !== undefined) return unchanged(left);
       const step = nextRng(left.rng);
       const drawn = { ...left, rng: step.rng };
       if (step.value >= catalogue.camp.odds) return unchanged(drawn);
-      return entered(catalogue, drawn, campUnit(catalogue, { q, r }));
+      return enteredAround(catalogue, drawn, { q, r }, 1, 'guard');
     });
   }
   return rolling;

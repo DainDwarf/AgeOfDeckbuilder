@@ -21,6 +21,7 @@ import {
   onScreen,
   open,
   playedOut,
+  playersOf,
   rested,
   ringedTile,
   shownCard,
@@ -236,7 +237,7 @@ test('a drag on bare ground pans the map, and a drag from the unit moves it', as
 
   const opened = await chronicleOf(page);
   await dragOut(page, opened.hand.indexOf('PH_Worker'));
-  await expect.poll(async () => (await chronicleOf(page)).units.length).toBe(1);
+  await expect.poll(async () => playersOf(await chronicleOf(page)).length).toBe(1);
 
   const entered = await chronicleOf(page);
   const before = await tileOnScreen(page, BARE.at);
@@ -246,7 +247,7 @@ test('a drag on bare ground pans the map, and a drag from the unit moves it', as
   expect(after.x - before.x).toBeCloseTo(100, 0);
   expect(after.y - before.y).toBeCloseTo(60, 0);
   const panned = await chronicleOf(page);
-  expect(panned.units[0].tile).toEqual(entered.units[0].tile);
+  expect(playersOf(panned)[0].tile).toEqual(playersOf(entered)[0].tile);
 
   const city = await onScreen(page, `tile-${tileKey(cityTileOf(entered))}`);
   const destination = await onScreen(page, `tile-${tileKey(run.tile)}`);
@@ -254,7 +255,7 @@ test('a drag on bare ground pans the map, and a drag from the unit moves it', as
   await playedOut(page);
 
   await expect
-    .poll(async () => tileKey((await chronicleOf(page)).units[0].tile))
+    .poll(async () => tileKey(playersOf(await chronicleOf(page))[0].tile))
     .toBe(tileKey(run.tile));
   // The press that took hold of the unit left the map where it stood.
   const held = await tileOnScreen(page, BARE.at);
@@ -275,7 +276,7 @@ test('a drag during a tile aim pans the map, and the aim still builds after it',
 
   const opened = await chronicleOf(page);
   await dragOut(page, opened.hand.indexOf('PH_Worker'));
-  await expect.poll(async () => (await chronicleOf(page)).units.length).toBe(1);
+  await expect.poll(async () => playersOf(await chronicleOf(page)).length).toBe(1);
 
   const entered = await chronicleOf(page);
   await dragUnit(page, cityTileOf(entered), run.tile);

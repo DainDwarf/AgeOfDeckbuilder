@@ -33,10 +33,15 @@ test('a catalogue whose camp enters a unit kind it does not hold is refused', ()
   expect(() => catalogued(content)).toThrow(/^fixture: /);
 });
 
-test('a catalogue whose camp carries a script it does not hold is refused', () => {
-  const content = changed({ camp: { ...CATALOGUE.camp, script: 'retreat' } });
+test('a catalogue whose camp names a guard’s or a raider’s script it does not hold is refused', () => {
+  const { scripts } = CATALOGUE.camp;
+  const guard = changed({ camp: { ...CATALOGUE.camp, scripts: { ...scripts, guard: 'retreat' } } });
+  const raider = changed({
+    camp: { ...CATALOGUE.camp, scripts: { ...scripts, raider: 'retreat' } },
+  });
 
-  expect(() => catalogued(content)).toThrow(/^fixture: /);
+  expect(() => catalogued(guard)).toThrow(/^fixture: /);
+  expect(() => catalogued(raider)).toThrow(/^fixture: /);
 });
 
 test('a catalogue whose camp rolls at odds below nought or above one is refused', () => {

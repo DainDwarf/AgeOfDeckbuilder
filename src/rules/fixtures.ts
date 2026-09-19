@@ -127,7 +127,9 @@ function besieged(catalogue: Catalogue, chronicle: Chronicle): Landed {
   const placing = campsPlaced(catalogue, chronicle, SIEGE_CAMPS, [3, 5], 3);
   let landing: Landed = placing;
   for (const camp of placing.placed) {
-    landing = followed(landing, (left) => entered(catalogue, left, campUnit(catalogue, camp)));
+    landing = followed(landing, (left) =>
+      entered(catalogue, left, campUnit(catalogue, camp, 'raider')),
+    );
   }
   return landing;
 }
@@ -214,7 +216,9 @@ const EVENTS: Catalogue['events'] = {
           // The first warrior lands on the camp only because `campsPlaced` asks the ground to run to
           // the city and no unit to stand there, and the catalogue refuses a camp on a terrain its
           // unit cannot stand on.
-          return followed(placing, (left) => enteredAround(catalogue, left, camp, ENCAMPED));
+          return followed(placing, (left) =>
+            enteredAround(catalogue, left, camp, ENCAMPED, 'guard'),
+          );
         },
       },
       PH_Truce: {
@@ -275,20 +279,29 @@ const EVENTS: Catalogue['events'] = {
   },
 };
 
-/** The one script the fixture's enemies enter with. */
+/** The script the fixture's enemies enter with, and the one its camp's raiders carry. */
 export const SCRIPT = 'PH_Beeline';
 
-/** The fixture's script. Unlike the default one, it attacks from the city's tile too. */
+/** The script the fixture camp's guards carry: it stays where it stands and attacks within range. */
+const SENTRY: EnemyScript = {
+  moveTo: (_catalogue, chronicle, enemy) => ({
+    landing: { tile: enemy.tile, cost: 0 },
+    rng: chronicle.rng,
+  }),
+  attacks: (_catalogue, chronicle, enemy) => leastHealth(chronicle.units, enemy),
+};
+
+/** The fixture's script. Unlike the raider, it attacks from the city's tile too. */
 const BEELINE: EnemyScript = {
   moveTo(catalogue, chronicle, enemy) {
     const stay: Landing = { tile: enemy.tile, cost: 0 };
     const { city } = chronicle;
-    if (city === undefined) return stay;
+    if (city === undefined) return { landing: stay, rng: chronicle.rng };
     let chosen = stay;
     for (const landing of reachable(catalogue, chronicle, enemy)) {
       if (distance(landing.tile, city) < distance(chosen.tile, city)) chosen = landing;
     }
-    return chosen;
+    return { landing: chosen, rng: chronicle.rng };
   },
   attacks: (_catalogue, chronicle, enemy) => leastHealth(chronicle.units, enemy),
 };
@@ -318,7 +331,7 @@ export const CATALOGUE: Catalogue = catalogued({
       sight: 2,
     },
   },
-  scripts: { [SCRIPT]: BEELINE },
+  scripts: { [SCRIPT]: BEELINE, PH_Sentry: SENTRY },
   cards: {
     PH_Settle: {
       kind: 'settle',
@@ -467,7 +480,7 @@ export const CATALOGUE: Catalogue = catalogued({
   capstones: {
     PH_Siege: {
       lands: besieged,
-      continues: reinforced,
+      continues: (catalogue, chronicle) => reinforced(catalogue, chronicle, 'raider'),
       passes: (_catalogue, chronicle) => spanEnded(chronicle, 6),
     },
     PH_Tillage: {
@@ -659,7 +672,7 @@ export const CATALOGUE: Catalogue = catalogued({
   },
   camp: {
     unit: 'PH_Warrior',
-    script: SCRIPT,
+    scripts: { guard: 'PH_Sentry', raider: SCRIPT },
     building: 'PH_Camp',
     rewards: ['PH_Spoils', 'PH_Cache'],
     odds: 0,

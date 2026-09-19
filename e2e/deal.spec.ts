@@ -3,7 +3,8 @@ import { STAND_IN } from '../src/content/stand-in';
 import { deckOf } from '../src/rules/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
 import { answerCost, answerOf, answerRefusal, offered } from '../src/rules/schedule';
-import { playable } from '../src/rules/state';
+import { type Chronicle, playable } from '../src/rules/state';
+import type { Unit } from '../src/rules/units';
 import { eventName, text } from '../src/ui/text';
 import {
   budget,
@@ -25,9 +26,9 @@ import {
 } from './chronicle-screen';
 
 /**
- * The first seed whose timeline's first deal stands alone and offers the raid first, with a camp
- * free for it to enter a warrior on — what the take lands is then a warrior standing on the map —
- * and the turn that deal is due on.
+ * The first seed whose timeline's first deal stands alone and offers the raid first, with a tile
+ * free for it to enter a warrior on — what the take lands is then one more warrior standing on the
+ * map — and the turn that deal is due on.
  */
 function dealRun(): { seed: number; due: number } {
   return firstSeed('deals a raid first on its first deal', (seed) => {
@@ -42,8 +43,12 @@ function dealRun(): { seed: number; due: number } {
     if (offered(STAND_IN, deal)[0] !== 'PH_Raid') return undefined;
 
     const landed = outcome(apply(STAND_IN, dealt, { type: 'take', at: 0 }));
-    return landed.units.some((unit) => unit.faction === 'enemy') ? { seed, due } : undefined;
+    return enemiesOf(landed).length > enemiesOf(dealt).length ? { seed, due } : undefined;
   });
+}
+
+function enemiesOf(chronicle: Chronicle): Unit[] {
+  return chronicle.units.filter((unit) => unit.faction === 'enemy');
 }
 
 /**
@@ -108,7 +113,7 @@ test('the events phase deals a choice, and the turn plays on from the one taken'
   expect(after.turn).toBe(run.due);
   expect(after.timeline.next).toBeGreaterThan(run.due);
   expect(after.hand).toHaveLength(5);
-  expect(after.units.some((unit) => unit.faction === 'enemy')).toBe(true);
+  expect(enemiesOf(after).length).toBeGreaterThan(enemiesOf(dealt).length);
 
   expect(problems).toEqual([]);
 });

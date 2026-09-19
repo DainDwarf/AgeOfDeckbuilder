@@ -1,10 +1,11 @@
 import { expect, test } from '@playwright/test';
 import { STAND_IN, STAND_IN_REGION } from '../src/content/stand-in';
 import { deckOf } from '../src/rules/catalogue';
-import { type TileCoords, tileKey } from '../src/rules/map';
+import { distance, type TileCoords, tileKey } from '../src/rules/map';
 import { regionOf } from '../src/rules/map-kinds';
 import { offered } from '../src/rules/schedule';
 import type { Chronicle } from '../src/rules/state';
+import { unitAt } from '../src/rules/units';
 import {
   budget,
   chronicleOf,
@@ -26,7 +27,7 @@ const SEED = 1;
 
 /**
  * The turn this seed's timeline deals its first event on. The raid is among what it offers, and
- * every camp's tile is free for it, the city having entered no unit of its own.
+ * every camp's tile holds the guard it opened with.
  */
 const RAID = launch(SEED, deckOf(STAND_IN, 'PH_Deck')).timeline.next;
 
@@ -37,7 +38,7 @@ function campsOf(chronicle: Chronicle): TileCoords[] {
     .map(({ q, r }) => ({ q, r }));
 }
 
-test('the map draws the camps it was dealt, and the raid’s warrior stands on one', async ({
+test('the map draws the camps it was dealt, a guard on each, and the raid’s warrior stands beside one', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -50,6 +51,7 @@ test('the map draws the camps it was dealt, and the raid’s warrior stands on o
   const camps = campsOf(opened);
   expect(camps).toHaveLength(regionOf(STAND_IN, STAND_IN_REGION).camps);
   for (const camp of camps) {
+    expect(unitAt(opened.units, camp)?.faction).toBe('enemy');
     expect(await standing(page, `building-${tileKey(camp)}`)).toBe(false);
   }
 
@@ -66,15 +68,17 @@ test('the map draws the camps it was dealt, and the raid’s warrior stands on o
   for (let turn = opened.turn; turn < RAID - 1; turn++) await endTurn(page);
   await stoppedTurn(page);
 
-  const [deal] = (await chronicleOf(page)).deals;
+  const dealt = await chronicleOf(page);
+  const [deal] = dealt.deals;
   if (deal === undefined) throw new Error(`turn ${RAID} deals nothing`);
   await take(page, offered(STAND_IN, deal).indexOf('PH_Raid'));
 
   const raided = await chronicleOf(page);
-  const enemy = raided.units.find((unit) => unit.faction === 'enemy');
+  const enemy = raided.units.find((unit) => unit.id >= dealt.nextUnit);
+  const tile = enemy?.tile ?? cityTileOf(raided);
 
   expect(raided.turn).toBe(RAID);
-  expect(enemy).toBeDefined();
-  expect(camps.map(tileKey)).toContain(tileKey(enemy?.tile ?? cityTileOf(raided)));
+  expect(enemy?.faction).toBe('enemy');
+  expect(camps.map((camp) => distance(camp, tile))).toContain(1);
   expect(problems).toEqual([]);
 });

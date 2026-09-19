@@ -28,6 +28,7 @@ import {
   open,
   panelLines,
   panelMovement,
+  playersOf,
   rested,
   ringedTile,
   shownCard,
@@ -269,10 +270,10 @@ test('a click selects a tile, the inspection key steps its cards, and the back k
 
   const opened = await chronicleOf(page);
   await dragOut(page, opened.hand.indexOf('PH_Worker'));
-  await expect.poll(async () => (await chronicleOf(page)).units.length).toBe(1);
+  await expect.poll(async () => playersOf(await chronicleOf(page)).length).toBe(1);
 
   const entered = await chronicleOf(page);
-  const cityTile = tileKey(entered.units[0].tile);
+  const cityTile = tileKey(playersOf(entered)[0].tile);
   const city = await onScreen(page, `tile-${cityTile}`);
   expect(await shownCard(page)).toBeUndefined();
   expect(await ringedTile(page)).toBeUndefined();

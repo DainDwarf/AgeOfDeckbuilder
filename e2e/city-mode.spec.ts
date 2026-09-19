@@ -29,6 +29,7 @@ import {
   open,
   openOnCapstone,
   playedOut,
+  playersOf,
   refusalLines,
   rested,
   ringedTile,
@@ -452,7 +453,7 @@ test('a unit’s tile selected in city mode lights nothing, and a click on the t
 
   const opened = await chronicleOf(page);
   await dragOut(page, opened.hand.indexOf('PH_Worker'));
-  await expect.poll(async () => (await chronicleOf(page)).units.length).toBe(1);
+  await expect.poll(async () => playersOf(await chronicleOf(page)).length).toBe(1);
 
   const entered = await chronicleOf(page);
   await page.keyboard.press('c');

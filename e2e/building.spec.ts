@@ -13,6 +13,7 @@ import {
   onScreen,
   open,
   playedOut,
+  playersOf,
   shownCard,
   standing,
   watch,
@@ -29,7 +30,10 @@ test('the farm card builds its farm where the worker moved to', async ({ page })
   const opened = await chronicleOf(page);
   await dragOut(page, opened.hand.indexOf('PH_Worker'));
   await page.waitForFunction(
-    () => window.game?.scene.getScene<ChronicleScene>('chronicle').chronicle.units.length === 1,
+    () =>
+      window.game?.scene
+        .getScene<ChronicleScene>('chronicle')
+        .chronicle.units.filter((unit) => unit.faction === 'player').length === 1,
   );
 
   const entered = await chronicleOf(page);
@@ -54,7 +58,7 @@ test('the farm card builds its farm where the worker moved to', async ({ page })
   expect(built?.building).toBe('PH_Farm');
   expect(await marksIn(page, 'buildings')).toBe(standing + 1);
   expect(after.resources.production).toBe(moved.resources.production - 3);
-  expect(after.units[0].tile).toEqual(run.tile);
+  expect(playersOf(after)[0].tile).toEqual(run.tile);
   expect(problems).toEqual([]);
 });
 
@@ -69,7 +73,7 @@ test('a right click while the farm card is aimed inspects, and the card stays ai
 
   const opened = await chronicleOf(page);
   await dragOut(page, opened.hand.indexOf('PH_Worker'));
-  await expect.poll(async () => (await chronicleOf(page)).units.length).toBe(1);
+  await expect.poll(async () => playersOf(await chronicleOf(page)).length).toBe(1);
 
   const entered = await chronicleOf(page);
   await dragUnit(page, cityTileOf(entered), run.tile);

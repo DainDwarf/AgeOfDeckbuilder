@@ -14,6 +14,7 @@ import {
   onScreen,
   open,
   playedOut,
+  playersOf,
   watch,
   workerRun,
 } from './chronicle-screen';
@@ -61,7 +62,7 @@ test('the play that builds the farm passing the capstone wins on the play, and t
 
   const opened = await chronicleOf(page);
   await dragOut(page, opened.hand.indexOf('PH_Worker'));
-  await expect.poll(async () => (await chronicleOf(page)).units.length).toBe(1);
+  await expect.poll(async () => playersOf(await chronicleOf(page)).length).toBe(1);
 
   const entered = await chronicleOf(page);
   await dragUnit(page, cityTileOf(entered), run.tile);

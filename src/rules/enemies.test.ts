@@ -24,9 +24,12 @@ import {
   NO_GROWTH,
   namesOf,
   only,
+  opening,
+  plains,
   pointsOf,
   REGION,
   ringed,
+  SCRIPT,
   stagedBy,
   standing,
   WORKER,
@@ -36,9 +39,10 @@ import {
 import { CENTRE, distance, MOVE_POINT, neighbours, type TileCoords, tileKey } from './map';
 import { regionOf, terrainKind } from './map-kinds';
 import { RESOURCES } from './resources';
-import { seedRng } from './rng';
+import { nextRng, seedRng } from './rng';
 import { walked } from './stages';
 import type { Chronicle } from './state';
+import { unitAt } from './units';
 
 /** A timeline dealing the raid on the second turn, and no other deal. */
 const RAID_ON_SECOND = dealing({ turn: 2, event: 'PH_Hardship' });
@@ -322,7 +326,7 @@ function campsInTileOrder(chronicle: Chronicle): string[] {
   return chronicle.tiles.filter((tile) => tile.building === CATALOGUE.camp.building).map(tileKey);
 }
 
-test('at odds of one every free camp enters a warrior once the enemies have acted, a stage each in tile order ahead of the captures, and none on a camp a unit stands on', () => {
+test('at odds of one every camp enters a guard once the enemies have acted, a stage each in tile order ahead of the captures: on the camp where its tile is free, and beside it where a unit stands on it', () => {
   const held = { q: 4, r: 0 };
   const guarded = { q: 0, r: -4 };
   const city = cityOf(['urban'], {
@@ -335,13 +339,13 @@ test('at odds of one every free camp enters a warrior once the enemies have acte
       standing('enemy', { q: 3, r: 0 }, { move: 0 }),
     ],
   });
-  const free = campsInTileOrder(city).filter(
-    (camp) => camp !== tileKey(held) && camp !== tileKey(guarded),
+  const camps = campsInTileOrder(city);
+  const stages = apply(rolling(1), city, { type: 'end-turn' });
+  const entries = [...walked(stages)].flatMap((stage) =>
+    stage.name === 'enter' ? [stage.tile] : [],
   );
 
-  const staged = namesOf(apply(rolling(1), city, { type: 'end-turn' }));
-
-  expect(staged).toEqual([
+  expect(namesOf(stages)).toEqual([
     'income',
     'stock',
     'grow',
@@ -349,12 +353,85 @@ test('at odds of one every free camp enters a warrior once the enemies have acte
     'attack',
     'action-spent',
     'damaged',
-    ...free.map(() => 'enter'),
+    ...camps.map(() => 'enter'),
     'camp-capture',
     'retiled',
     'dealt',
   ]);
-  expect(entriesOf(rolling(1), city)).toEqual(free);
+  for (const [at, camp] of camps.entries()) {
+    const taken = camp === tileKey(held) || camp === tileKey(guarded);
+    const [q, r] = camp.split(',').map(Number);
+    expect(distance(entries[at], { q, r })).toBe(taken ? 1 : 0);
+  }
+  expect(
+    enemiesOf(outcome(stages))
+      .filter((unit) => unit.id >= city.nextUnit)
+      .map((unit) => (unit.faction === 'enemy' ? unit.script : undefined)),
+  ).toEqual(camps.map(() => CATALOGUE.camp.scripts.guard));
+});
+
+test('the chronicle opens with one guard on each camp the map was dealt, in tile order, ahead of every unit the settle enters', () => {
+  const opened = opening(camped(plains(5), CAMPS), { deck: { cards: [], settle: ['PH_Band'] } });
+  const camps = campsInTileOrder(opened);
+  const banded = outcome(
+    apply(CATALOGUE, opened, { type: 'play', index: 0, aim: 'tile', tile: CITY }),
+  );
+
+  expect(
+    opened.units.map((unit) => ({
+      id: unit.id,
+      tile: tileKey(unit.tile),
+      script: unit.faction === 'enemy' ? unit.script : undefined,
+    })),
+  ).toEqual(camps.map((tile, at) => ({ id: at + 1, tile, script: CATALOGUE.camp.scripts.guard })));
+  expect(unitAt(banded.units, CITY)?.id).toBe(camps.length + 1);
+});
+
+test('a raid enters raiders, whatever door it comes through', () => {
+  const city = cityOf(['urban'], { tiles: camped(field(5), CAMPS), timeline: RAID_ON_SECOND });
+
+  for (const catalogue of [raidingAt(0), raidingAt(1)]) {
+    const raided = endedTurn(city, 'PH_Raid', catalogue);
+    const entered = enemiesOf(raided).filter((unit) => unit.id >= city.nextUnit);
+
+    expect(entered).toHaveLength(1);
+    expect(entered.map((unit) => (unit.faction === 'enemy' ? unit.script : undefined))).toEqual([
+      CATALOGUE.camp.scripts.raider,
+    ]);
+  }
+});
+
+test('an enemy’s move draws from the seeded generator where its script draws, and the phase carries on from the generator the script leaves', () => {
+  const drawing: Catalogue = catalogued({
+    ...CATALOGUE,
+    scripts: {
+      ...CATALOGUE.scripts,
+      [SCRIPT]: {
+        moveTo: (_catalogue, chronicle, enemy) => ({
+          landing: { tile: enemy.tile, cost: 0 },
+          rng: nextRng(chronicle.rng).rng,
+        }),
+        attacks: () => undefined,
+      },
+    },
+  });
+  const city = cityOf(['urban'], {
+    tiles: field(3),
+    units: [
+      standing('enemy', { q: 3, r: 0 }, { move: 0 }),
+      standing('enemy', { q: -3, r: 0 }, { move: 0 }),
+    ],
+  });
+  const phaseOf = (catalogue: Catalogue): Chronicle => {
+    const stages = apply(catalogue, city, { type: 'end-turn' });
+    const phase = stages.find((stage) => stage.name === 'enemy-phase');
+    if (phase === undefined) throw new Error('the end of turn staged no phase');
+    return phase.chronicle;
+  };
+
+  expect(phaseOf(CATALOGUE).rng).toEqual(city.rng);
+  expect(phaseOf(drawing).rng).toEqual(nextRng(nextRng(city.rng).rng).rng);
+  expect(outcome(apply(drawing, city, { type: 'end-turn' })).rng).toEqual(phaseOf(drawing).rng);
 });
 
 test('a warrior a camp rolls stands on the camp with the camp’s unit’s stats, its move points and its action full when the turn ends', () => {
@@ -382,7 +459,7 @@ test('a warrior a camp rolls stands on the camp with the camp’s unit’s stats
       stats,
       movePoints: stats.move,
       action: stats.action,
-      script: CATALOGUE.camp.script,
+      script: CATALOGUE.camp.scripts.guard,
     })),
   );
 });
@@ -403,7 +480,7 @@ test('a camp its warrior walked off in the enemy phase rolls at the same phase',
   expect(enemiesOf(after)).toHaveLength(2);
 });
 
-test('at odds of nought no camp enters a warrior and no stage is raised, and every free camp draws all the same', () => {
+test('at odds of nought no camp enters a warrior and no stage is raised, and every camp draws all the same', () => {
   const carrying = { ...NO_GROWTH, drawPile: fullDraw() };
   const city = cityOf(['urban'], { ...carrying, tiles: camped(field(4), CAMPS) });
   const empty = cityOf(['urban'], { ...carrying, tiles: field(4) });
@@ -419,7 +496,7 @@ test('at odds of nought no camp enters a warrior and no stage is raised, and eve
   expect(rngAt(0)).not.toEqual(outcome(apply(rolling(0), empty, { type: 'end-turn' })).rng);
 });
 
-test('the enemy phase holds nothing at odds of nought, and its chronicle carries the draws every free camp made', () => {
+test('the enemy phase holds nothing at odds of nought, and its chronicle carries the draws every camp made', () => {
   const city = cityOf(['urban'], {
     ...NO_GROWTH,
     tiles: camped(field(4), CAMPS),

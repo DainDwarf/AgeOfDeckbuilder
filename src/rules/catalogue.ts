@@ -9,6 +9,7 @@ import {
   terrainKind,
 } from './map-kinds';
 import type { Resources } from './resources';
+import type { Rng } from './rng';
 import { changeOn, type Landed, landedAs } from './stages';
 import { type Block, type Chronicle, costsOf, type TileBlock } from './state';
 import { type Landing, standsOn, type Unit, type UnitStats } from './units';
@@ -21,9 +22,13 @@ import { type Landing, standsOn, type Unit, type UnitStats } from './units';
 export type EnemyScript = {
   /**
    * The landing it moves to, out of the tiles its move points reach and the one it already stands
-   * on, which costs it nothing.
+   * on, which costs it nothing, and the chronicle's generator as its draws leave it.
    */
-  moveTo(catalogue: Catalogue, chronicle: Chronicle, enemy: Unit): Landing;
+  moveTo(
+    catalogue: Catalogue,
+    chronicle: Chronicle,
+    enemy: Unit,
+  ): { readonly landing: Landing; readonly rng: Rng };
   /** The unit it attacks now, and nothing when it attacks none. */
   attacks(catalogue: Catalogue, chronicle: Chronicle, enemy: Unit): Unit | undefined;
 };
@@ -123,6 +128,9 @@ export type Capstone = {
   readonly passes: (catalogue: Catalogue, chronicle: Chronicle) => boolean;
 };
 
+/** The two scripts a camp's warriors carry: one keeps its camp, one goes for the city. */
+export type CampScript = 'guard' | 'raider';
+
 /** The least and the most a span of turns rolls, both ends included. */
 export type Span = readonly [number, number];
 
@@ -157,11 +165,12 @@ export type Catalogue = MapContent & {
   readonly schedules: Readonly<Record<string, Schedule>>;
   readonly camp: {
     readonly unit: string;
-    readonly script: string;
+    /** The script each warrior of the camp's carries, named by what enters it. */
+    readonly scripts: Readonly<Record<CampScript, string>>;
     readonly building: string;
     /** What a capture deals, in the order dealt. */
     readonly rewards: readonly string[];
-    /** The chance, at every enemy phase, that the camp's unit enters on a free camp. */
+    /** The chance, at every enemy phase, that a camp standing enters a guard. */
     readonly odds: number;
     readonly raidCampOdds: number;
   };
@@ -306,7 +315,8 @@ export function catalogued(content: Catalogue): Catalogue {
   }
 
   const campUnit = unitKind(content, content.camp.unit);
-  enemyScript(content, content.camp.script);
+  enemyScript(content, content.camp.scripts.guard);
+  enemyScript(content, content.camp.scripts.raider);
   if (content.camp.rewards.length === 0) refuse(content, 'the camp deals no reward');
   for (const reward of content.camp.rewards) cardOf(content, reward);
   const { odds, raidCampOdds } = content.camp;

@@ -1,4 +1,4 @@
-import { type Catalogue, type Entering, entered, unitKind } from './catalogue';
+import { type CampScript, type Catalogue, type Entering, entered, unitKind } from './catalogue';
 import { CENTRE, distance, groundRunsTo, type Tile, type TileCoords, tileKey } from './map';
 import { refuse } from './map-kinds';
 import { nextRng } from './rng';
@@ -6,9 +6,14 @@ import { change, followed, type Landed, landedAs, unchanged } from './stages';
 import type { Chronicle } from './state';
 import { standsOn, unitAt } from './units';
 
-/** The camp's unit, entering on the tile. */
-export function campUnit(catalogue: Catalogue, tile: TileCoords): Entering {
-  return { type: catalogue.camp.unit, faction: 'enemy', tile, script: catalogue.camp.script };
+/** The camp's unit, entering on the tile with the script the camp names for it. */
+export function campUnit(catalogue: Catalogue, tile: TileCoords, script: CampScript): Entering {
+  return {
+    type: catalogue.camp.unit,
+    faction: 'enemy',
+    tile,
+    script: catalogue.camp.scripts[script],
+  };
 }
 
 function raidGround(catalogue: Catalogue, chronicle: Chronicle): Tile[] {
@@ -25,15 +30,17 @@ function raidGround(catalogue: Catalogue, chronicle: Chronicle): Tile[] {
 }
 
 /**
- * That many of the camp's unit entering around the tile, each on the nearest free tile of the raid's
- * ground, ties drawn from the generator; where none is free, the ones left enter nowhere. A count of
- * none or fewer draws nothing and is a `runtime-error`.
+ * That many of the camp's unit entering around the tile with the script named, each on the nearest
+ * free tile of the raid's ground, ties drawn from the generator and nothing drawn where one tile is
+ * nearest; where none is free, the ones left enter nowhere. A count of none or fewer draws nothing
+ * and is a `runtime-error`.
  */
 export function enteredAround(
   catalogue: Catalogue,
   chronicle: Chronicle,
   entry: TileCoords,
   enemies: number,
+  script: CampScript,
 ): Landed {
   if (enemies <= 0) return landedAs(change('runtime-error', chronicle));
   const ground = raidGround(catalogue, chronicle);
@@ -45,10 +52,14 @@ export function enteredAround(
     const nearest = Math.min(...free.map((tile) => distance(tile, entry)));
     const equal = free.filter((tile) => distance(tile, entry) === nearest);
 
-    const step = nextRng(standing.rng);
-    const { q, r } = equal[Math.floor(step.value * equal.length)];
+    const drawn = equal.length === 1 ? undefined : nextRng(standing.rng);
+    const { q, r } = drawn === undefined ? equal[0] : equal[Math.floor(drawn.value * equal.length)];
     landing = followed(landing, (left) =>
-      entered(catalogue, { ...left, rng: step.rng }, campUnit(catalogue, { q, r })),
+      entered(
+        catalogue,
+        drawn === undefined ? left : { ...left, rng: drawn.rng },
+        campUnit(catalogue, { q, r }, script),
+      ),
     );
   }
   return landing;

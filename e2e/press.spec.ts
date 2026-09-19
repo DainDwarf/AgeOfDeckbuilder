@@ -31,6 +31,7 @@ import {
   onScreen,
   open,
   playedOut,
+  playersOf,
   rested,
   ringed,
   scrolled,
@@ -379,7 +380,7 @@ test('a card aimed at a unit says it is played at a unit', async ({ page }) => {
 
   const opened = await chronicleOf(page);
   await dragOut(page, opened.hand.indexOf('PH_Worker'));
-  await expect.poll(async () => (await chronicleOf(page)).units.length).toBe(1);
+  await expect.poll(async () => playersOf(await chronicleOf(page)).length).toBe(1);
 
   // The refresh instant admits the tile of a unit that has spent move points, so the worker moves first.
   const entered = await chronicleOf(page);

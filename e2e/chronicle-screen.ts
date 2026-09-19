@@ -17,6 +17,7 @@ import {
 } from '../src/rules/map';
 import { RESOURCES, type Resource } from '../src/rules/resources';
 import { type CardId, type Chronicle, playable } from '../src/rules/state';
+import type { Unit } from '../src/rules/units';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
 import type { PileKind } from '../src/ui/overlay';
 
@@ -252,6 +253,11 @@ export function chronicleOf(page: Page): Promise<Chronicle> {
     if (scene === undefined) throw new Error('the chronicle scene is not running');
     return scene.chronicle;
   });
+}
+
+/** The units of the player's standing on the chronicle, in unit order: the camps' guards left out. */
+export function playersOf(chronicle: Chronicle): Unit[] {
+  return chronicle.units.filter((unit) => unit.faction === 'player');
 }
 
 /** Whether the end of turn is still playing out its stages. */
@@ -540,7 +546,7 @@ export function stepRun(): StepRun {
 
 /**
  * The two tiles this hand's worker crosses to, one step at a time, and nothing when it cannot. The
- * worker is the only unit on the map, so the chronicle has dealt it the first number of all: one.
+ * worker is the only unit of the player's on the map.
  */
 function steppedThisTurn(
   chronicle: Chronicle,
@@ -548,14 +554,18 @@ function steppedThisTurn(
   const enter = chronicle.hand.indexOf('PH_Worker');
   if (enter === -1 || !playable(refusalOf(STAND_IN, chronicle, 'PH_Worker'))) return undefined;
   const entered = outcome(apply(STAND_IN, chronicle, { type: 'play', index: enter, aim: 'none' }));
-  if (entered.units.length !== 1) return undefined;
+  const [worker, ...others] = playersOf(entered);
+  if (worker === undefined || others.length > 0) return undefined;
 
   for (const first of neighbours(cityTileOf(entered))) {
-    const stepped = outcome(apply(STAND_IN, entered, { type: 'move', unit: 1, tile: first }));
+    const stepped = outcome(
+      apply(STAND_IN, entered, { type: 'move', unit: worker.id, tile: first }),
+    );
     if (stepped === entered) continue;
     for (const second of neighbours(first)) {
       if (tileKey(second) === tileKey(cityTileOf(entered))) continue;
-      if (outcome(apply(STAND_IN, stepped, { type: 'move', unit: 1, tile: second })) !== stepped) {
+      const again = { type: 'move', unit: worker.id, tile: second } as const;
+      if (outcome(apply(STAND_IN, stepped, again)) !== stepped) {
         return { first, second };
       }
     }
@@ -598,8 +608,8 @@ export function fallRun(): { seed: number; turns: number } {
 
 /**
  * Where the card lands when this hand plays its worker, moves it one tile by hand and then aims
- * the card there, in that order. The worker has to be the only unit on the map, so every spec built
- * on the run finds it first in `units`, and the chronicle has dealt it the first number of all: one.
+ * the card there, in that order. The worker has to be the only unit of the player's on the map, so
+ * every spec built on the run finds it first among `playersOf`.
  */
 function workedThisTurn(
   chronicle: Chronicle,
@@ -610,10 +620,11 @@ function workedThisTurn(
   const enter = chronicle.hand.indexOf('PH_Worker');
   if (enter === -1 || !playable(refusalOf(STAND_IN, chronicle, 'PH_Worker'))) return undefined;
   const entered = outcome(apply(STAND_IN, chronicle, { type: 'play', index: enter, aim: 'none' }));
-  if (entered.units.length !== 1 || !entered.hand.includes(card)) return undefined;
+  const [worker, ...others] = playersOf(entered);
+  if (worker === undefined || others.length > 0 || !entered.hand.includes(card)) return undefined;
 
   for (const tile of neighbours(cityTileOf(entered))) {
-    const moved = outcome(apply(STAND_IN, entered, { type: 'move', unit: 1, tile }));
+    const moved = outcome(apply(STAND_IN, entered, { type: 'move', unit: worker.id, tile }));
     if (moved === entered) continue;
     const standing = tileAt(moved.tiles, tile);
     if (standing === undefined || !keeps(standing, moved)) continue;

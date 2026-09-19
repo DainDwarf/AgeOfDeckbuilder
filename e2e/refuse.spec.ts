@@ -23,6 +23,7 @@ import {
   type OnScreen,
   onScreen,
   open,
+  playersOf,
   refusalLines,
   rested,
   selected,
@@ -195,7 +196,7 @@ test('a press on a lit tile the city cannot pay for says the cost over it, and t
 
   const opened = await chronicleOf(page);
   await dragOut(page, opened.hand.indexOf('PH_Worker'));
-  await expect.poll(async () => (await chronicleOf(page)).units.length).toBe(1);
+  await expect.poll(async () => playersOf(await chronicleOf(page)).length).toBe(1);
 
   const entered = await chronicleOf(page);
   await dragUnit(page, cityTileOf(entered), run.tile);

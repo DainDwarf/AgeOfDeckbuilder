@@ -25,6 +25,7 @@ import {
   launch,
   marksIn,
   open,
+  playersOf,
   rested,
   ringedTile,
   riverRuns,
@@ -192,8 +193,7 @@ function foggedThisTurn(
 
 /** How many units of the player's stand on the map, the enemies of the turn left out. */
 async function playerUnits(page: Page): Promise<number> {
-  const { units } = await chronicleOf(page);
-  return units.filter((unit) => unit.faction === 'player').length;
+  return playersOf(await chronicleOf(page)).length;
 }
 
 /** The tile nearest the city that has never been in sight: the closest dark ground to press on. */
@@ -243,12 +243,14 @@ function chartedThisTurn(chronicle: Chronicle): TileCoords | undefined {
   if (at === -1 || !playable(refusalOf(STAND_IN, chronicle, 'PH_Worker'))) return undefined;
   if (chronicle.rivers.length === 0 || riverRuns(chronicle) > 0) return undefined;
   const entered = outcome(apply(STAND_IN, chronicle, { type: 'play', index: at, aim: 'none' }));
-  if (entered.units.length !== 1) return undefined;
+  const [worker, ...others] = playersOf(entered);
+  if (worker === undefined || others.length > 0) return undefined;
 
   const city = cityTileOf(entered);
   for (const { q, r } of entered.tiles) {
     if (distance({ q, r }, city) > 2) continue;
-    const stepped = outcome(apply(STAND_IN, entered, { type: 'move', unit: 1, tile: { q, r } }));
+    const move = { type: 'move', unit: worker.id, tile: { q, r } } as const;
+    const stepped = outcome(apply(STAND_IN, entered, move));
     if (stepped !== entered && riverRuns(stepped) > 0) return { q, r };
   }
   return undefined;
@@ -270,7 +272,7 @@ test('the map draws a tile in sight live, a tile in fog under its scrim, and an 
 
   const opened = await chronicleOf(page);
   await dragOut(page, opened.hand.indexOf('PH_Worker'));
-  await expect.poll(async () => (await chronicleOf(page)).units.length).toBe(1);
+  await expect.poll(async () => playersOf(await chronicleOf(page)).length).toBe(1);
 
   const entered = await chronicleOf(page);
   await dragUnit(page, cityTileOf(entered), run.out);

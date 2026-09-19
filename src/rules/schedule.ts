@@ -1,6 +1,7 @@
 import { terraformed } from './cards';
 import {
   type Answer,
+  type CampScript,
   type Catalogue,
   capstoneOf,
   cardOf,
@@ -209,14 +210,14 @@ function runtimeError(chronicle: Chronicle): Landed {
 }
 
 /**
- * The warriors entering around a door drawn for them; a raid of no warrior, or one with no door or
- * no free tile to enter on, draws nothing and is a `runtime-error`.
+ * The warriors entering around a door drawn for them, raiders all; a raid of no warrior, or one with
+ * no door or no free tile to enter on, draws nothing and is a `runtime-error`.
  */
 export function raided(catalogue: Catalogue, chronicle: Chronicle, warriors: number): Landed {
   if (warriors <= 0) return runtimeError(chronicle);
   const drawn = raidEntry(catalogue, chronicle);
   if (drawn === undefined) return runtimeError(chronicle);
-  return enteredAround(catalogue, drawn.chronicle, drawn.entry, warriors);
+  return enteredAround(catalogue, drawn.chronicle, drawn.entry, warriors, 'raider');
 }
 
 /**
@@ -377,15 +378,17 @@ export function laid(catalogue: Catalogue, chronicle: Chronicle, card: CardId): 
 }
 
 /**
- * The camp's unit entering on every camp whose tile is free, in tile order, and on none a unit
- * stands on. It draws nothing.
+ * The camp's unit entering with the script named on every camp whose tile is free, in tile order,
+ * and on none a unit stands on. It draws nothing.
  */
-export function reinforced(catalogue: Catalogue, chronicle: Chronicle): Landed {
+export function reinforced(catalogue: Catalogue, chronicle: Chronicle, script: CampScript): Landed {
   let landing = unchanged(chronicle);
   for (const { q, r, building } of chronicle.tiles) {
     if (building !== catalogue.camp.building) continue;
     if (unitAt(landing.chronicle.units, { q, r }) !== undefined) continue;
-    landing = followed(landing, (left) => entered(catalogue, left, campUnit(catalogue, { q, r })));
+    landing = followed(landing, (left) =>
+      entered(catalogue, left, campUnit(catalogue, { q, r }, script)),
+    );
   }
   return landing;
 }
