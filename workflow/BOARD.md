@@ -6,7 +6,7 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ---
 
-- **Guarded camps and the enemy scripts** — the enemy keeps one warrior on top of each camp so an early scout cannot rush it and capturing the camp is the player's voluntary attack: a warrior entered on a camp's tile holds it, one entered elsewhere advances.
+- **Guarded camps and the enemy scripts** — every camp opens and rolls with a guard on or beside it, a warrior carries the guard or the raider script its entry names, and each script's decisions are held by one test on the fixture. Doc-impact: `docs/CHRONICLE.md`, `docs/ages/NOMADIC.md`. [board/guarded-camps.md](board/guarded-camps.md)
 - **An action spends the move points** — by default a unit that spends its action, on an attack or on a card played through a worker, also spends its remaining move points, hit-and-run being a later age's unit trait rather than the nomadic warrior's.
 - **The culture curve** — the culture threshold buys six tiles before the capstone, which is not nomadic at all; the age wants one claim needed and a second fought for, while later ages must let a culture-heavy deck play a large land city, so the curve's shape is the question.
 - **The population growth curve** — the growth threshold equals the population, so the city grows every turn and food piles up to dozens; a steeper curve is the candidate, with the question of whether units count as population for it, since otherwise a smaller city produces units faster.
