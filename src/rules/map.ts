@@ -693,9 +693,9 @@ function dealMap(
         }
       }
     }
-    if (closers.size === 0 || [...closers].some((by) => weights[by] !== undefined)) {
+    if ([...closers].some((by) => weights[by] !== undefined)) {
       throw new Error(
-        `the generator left ${tileKey(coords[index])} unreached with a biome that grows by weight beside it, or none`,
+        `the generator left ${tileKey(coords[index])} unreached with a biome that grows by weight beside it`,
       );
     }
     const closer = Math.min(...closers);

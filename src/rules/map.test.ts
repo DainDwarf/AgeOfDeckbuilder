@@ -148,7 +148,7 @@ test('every map has mountain, because a range is dealt and its origin is mountai
   }
 });
 
-test('a biome dealt to a size holds at least that many tiles, and every tile over it is ringed by the biome', () => {
+test('a biome dealt to a size holds at least that many tiles, and no more over it than the tiles it rings', () => {
   const { growth } = biomeKind(CATALOGUE, 'clearing');
   const size = growth.kind === 'size' ? growth.size : Number.NaN;
   for (const seed of SEEDS) {
