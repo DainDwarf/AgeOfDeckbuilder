@@ -33,9 +33,6 @@ type ClaimCommand = { readonly type: 'claim'; readonly tile: TileCoords };
 /** Everything the player commands the city by: its population, and the border it stands inside. */
 export type CityCommand = AssignCommand | ReassignCommand | ClaimCommand;
 
-/** What a claim costs per tile the city holds. */
-const CLAIM_PER_TILE = 2;
-
 /**
  * Income: an assigned tile no enemy occupies yields what its layers and the river running along it
  * give, the city's own tile no exception, tile by tile in tile order.
@@ -149,12 +146,9 @@ export function claimable(catalogue: Catalogue, chronicle: Chronicle): TileCoord
     .map(({ q, r }) => ({ q, r }));
 }
 
-/**
- * The culture threshold, what the next claim costs: twice the tiles the city holds, its own
- * counted.
- */
+/** The culture threshold, what the next claim costs. */
 function cultureThreshold(chronicle: Chronicle): number {
-  return CLAIM_PER_TILE * chronicle.held.length;
+  return 2 * chronicle.held.length;
 }
 
 /**
