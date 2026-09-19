@@ -5,7 +5,7 @@ import type { CardId, Chronicle, DefeatCause } from './state';
  * One row of the chronicle moved, and the chronicle it leaves. On a unit: `enter` is one unit
  * entering on the tile, `move` one unit crossing, `damaged` the unit standing on the tile hurt by no
  * attacker, `killed` it gone at nought health or off a terrain it cannot stand on, `refreshed` its
- * move points or its action brought back up, `action-spent` one of its action spent. On a tile:
+ * move points or its action brought back up, `action-spent` one of its action spent and its move points with it. On a tile:
  * `retiled` is its layers changed, `charted` it charted as it stands on this change, `held` its
  * holder changed, `settled` the city standing on it. `stock` is the city's stock moved, carrying the
  * tile where a tile yielded it, `population` its count, and `assigned` a tile worked or left. On the

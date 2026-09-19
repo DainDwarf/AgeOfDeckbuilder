@@ -55,9 +55,12 @@ export function refreshedAction(unit: Unit): Unit {
   return { ...unit, action: unit.stats.action };
 }
 
-/** A unit with one of its action spent: what an attack spends, and a card played through a worker. */
+/**
+ * A unit with one of its action spent, and the move points it had left with it: what an attack
+ * spends, and a card played through a worker.
+ */
 export function spentAction<U extends Unit>(unit: U): U {
-  return { ...unit, action: unit.action - 1 };
+  return { ...unit, action: unit.action - 1, movePoints: 0 };
 }
 
 /** The one unit standing on a tile, if one does. */

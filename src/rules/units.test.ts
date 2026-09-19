@@ -153,7 +153,7 @@ test('an attack by hand takes the attacker’s damage off the target and spends 
   expect(landed.chronicle.units[1].stats.health).toBe(3);
   expect(landed.chronicle.units[0].tile).toEqual({ q: 1, r: 0 });
   expect(actionOf(landed.chronicle, 1)).toBe(0);
-  expect(pointsOf(landed.chronicle, 1)).toBe(2 * MOVE_POINT);
+  expect(pointsOf(landed.chronicle, 1)).toBe(0);
 });
 
 test('a unit attacks on the action it holds, and a second attack the same turn is refused', () => {
@@ -268,7 +268,8 @@ test('a kill leaves every unit still standing commanded by the number it entered
   const killed = outcome(apply(CATALOGUE, city, attackOn(2, { q: 2, r: 0 })));
   expect(killed.units).toHaveLength(2);
 
-  const stepped = outcome(apply(CATALOGUE, killed, moveTo(2, { q: 1, r: 1 })));
+  const ticked = outcome(apply(CATALOGUE, killed, { type: 'end-turn' }));
+  const stepped = outcome(apply(CATALOGUE, ticked, moveTo(2, { q: 1, r: 1 })));
   const both = outcome(apply(CATALOGUE, stepped, moveTo(3, { q: 0, r: 2 })));
 
   expect(unitNamed(both, 2).tile).toEqual({ q: 1, r: 1 });
@@ -315,7 +316,7 @@ test('the turn refreshes every unit to its action, and never past it', () => {
   expect(actionOf(ticked, 3)).toBe(1);
 });
 
-test('an attack spends no move points and a step no action: either follows the other', () => {
+test('an attack spends the move points the attacker has left, and a step no action: a unit moves, then acts', () => {
   const city = cityOf(['urban'], {
     tiles: field(3),
     units: [
@@ -325,16 +326,14 @@ test('an attack spends no move points and a step no action: either follows the o
   });
 
   const attackedFirst = outcome(apply(CATALOGUE, city, attackOn(1, { q: 2, r: 0 })));
-  expect(pointsOf(attackedFirst, 1)).toBe(2 * MOVE_POINT);
-  const andStepped = outcome(apply(CATALOGUE, attackedFirst, moveTo(1, { q: 1, r: 1 })));
-  expect(andStepped.units[0].tile).toEqual({ q: 1, r: 1 });
-  expect(andStepped.units[1].stats.health).toBe(4);
+  expect(pointsOf(attackedFirst, 1)).toBe(0);
+  expect(stagedBy(attackedFirst, moveTo(1, { q: 1, r: 1 }))).toEqual(['refused']);
 
   const steppedFirst = outcome(apply(CATALOGUE, city, moveTo(1, { q: 1, r: 1 })));
   expect(actionOf(steppedFirst, 1)).toBe(1);
   const andAttacked = outcome(apply(CATALOGUE, steppedFirst, attackOn(1, { q: 2, r: 0 })));
   expect(andAttacked.units[1].stats.health).toBe(4);
-  expect(pointsOf(andAttacked, 1)).toBe(MOVE_POINT);
+  expect(pointsOf(andAttacked, 1)).toBe(0);
 });
 
 test('a chronicle with units on the map survives JSON', () => {

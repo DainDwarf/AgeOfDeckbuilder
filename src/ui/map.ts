@@ -156,6 +156,9 @@ const RING = 2;
 /** How dark city mode paints a held tile nobody stands on: the scrim's alpha. */
 const UNASSIGNED_ALPHA = 0.6;
 
+/** How dark a unit of the player's with nothing left to spend is painted: the scrim's alpha. */
+const SPENT_ALPHA = 0.6;
+
 /** How many glyphs a row of them holds before the next row starts. */
 const GLYPH_ROW = 3;
 
@@ -322,6 +325,23 @@ export function unitMark(
   return scene.add
     .polygon(0, 0, corners(unitMarkOf(type)), FACTION_COLOURS[faction])
     .setStrokeStyle(2, OUTLINE);
+}
+
+/**
+ * The one way a unit standing live on the map is drawn: its mark, dimmed under a scrim of its own
+ * shape once it is a unit of the player's with no move points and no action left.
+ */
+function unitMarker(scene: Phaser.Scene, unit: Unit): Phaser.GameObjects.Container {
+  const { x, y } = positionOf(unit.tile);
+  const marker = scene.add.container(x, y, [unitMark(scene, unit.stats.type, unit.faction)]);
+  if (unit.faction === 'player' && unit.movePoints <= 0 && unit.action <= 0) {
+    marker.add(
+      scene.add
+        .polygon(0, 0, corners(unitMarkOf(unit.stats.type)), OUTLINE, SPENT_ALPHA)
+        .setName(`unit-dim-${tileKey(unit.tile)}`),
+    );
+  }
+  return marker;
 }
 
 // Phaser's WebGL stroke skips a polygon point whose origin-shifted position lands on the raw point
@@ -564,7 +584,7 @@ export function createMapView(
   }
 
   /** The mark drawn for each unit the map shows, by the number that unit is named by. */
-  let markers = new Map<number, Phaser.GameObjects.Polygon>();
+  let markers = new Map<number, Phaser.GameObjects.Container>();
   /** The mark drawn on each tile the population stands on while city mode is on, by its tile's key. */
   let assignedMarks = new Map<string, Phaser.GameObjects.Rectangle>();
 
@@ -1180,10 +1200,9 @@ export function createMapView(
     paintBorder();
 
     markers = new Map(
-      current.units.flatMap((unit): [number, Phaser.GameObjects.Polygon][] => {
+      current.units.flatMap((unit): [number, Phaser.GameObjects.Container][] => {
         if (!live.has(tileKey(unit.tile))) return [];
-        const { x, y } = positionOf(unit.tile);
-        const marker = unitMark(scene, unit.stats.type, unit.faction).setPosition(x, y);
+        const marker = unitMarker(scene, unit);
         marks.add(marker);
         return [[unit.id, marker]];
       }),
@@ -1207,14 +1226,14 @@ export function createMapView(
   };
 
   /** The marker standing on a tile, and nothing where the map shows none. */
-  const markerOn = (coord: TileCoords): Phaser.GameObjects.Polygon | undefined => {
+  const markerOn = (coord: TileCoords): Phaser.GameObjects.Container | undefined => {
     const standing = shown === undefined ? undefined : unitAt(shown.units, coord);
     return standing === undefined ? undefined : markers.get(standing.id);
   };
 
   /** What a target does: a bump where it was attacked, and a shrink off the map if it was killed. */
   const bumped = async (
-    marker: Phaser.GameObjects.Polygon,
+    marker: Phaser.GameObjects.Container,
     killed: boolean,
     token: symbol,
   ): Promise<void> => {
@@ -1295,8 +1314,7 @@ export function createMapView(
 
     const token = takeOff();
     const entering = arrived.map((unit) => {
-      const { x, y } = positionOf(unit.tile);
-      const marker = unitMark(scene, unit.stats.type, unit.faction).setPosition(x, y).setScale(0);
+      const marker = unitMarker(scene, unit).setScale(0);
       marks.add(marker);
       return marker;
     });

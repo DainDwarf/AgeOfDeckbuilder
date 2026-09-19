@@ -1168,6 +1168,17 @@ test('a card played through a worker spends one of that worker’s action, which
   }
 });
 
+test('a card played through a worker spends the move points that worker has left, and a step after it is refused', () => {
+  const at = { q: 1, r: 0 };
+  const city = workedTile(at, 'plain', { hand: ['PH_Road'], resources: production(2) });
+
+  const paved = outcome(apply(CATALOGUE, city, aimedAt(at)));
+
+  expect(pointsOf(city, 1)).toBeGreaterThan(0);
+  expect(pointsOf(paved, 1)).toBe(0);
+  expect(stagedBy(paved, { type: 'move', unit: 1, tile: CITY })).toEqual(['refused']);
+});
+
 test('a worker with no action left refuses the next card played through it, and lights no tile for it', () => {
   const at = { q: 1, r: 0 };
   const city = workedTile(at, 'hills', {
@@ -1220,6 +1231,7 @@ test('the refresh instant leaves a worker’s spent action spent, and the card r
   const refreshed = outcome(apply(CATALOGUE, mined, aimedAtUnit(at)));
 
   expect(pointsOf(moved, 1)).toBeLessThan(WORKER.move);
+  expect(pointsOf(mined, 1)).toBe(0);
   expect(pointsOf(refreshed, 1)).toBe(WORKER.move);
   expect(refreshed.discardPile).toEqual(['PH_Mine', 'PH_March']);
   expect(actionOf(refreshed, 1)).toBe(0);

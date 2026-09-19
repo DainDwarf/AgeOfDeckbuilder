@@ -6,7 +6,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ---
 
-- **An action spends the move points** — a unit that spends its action, on an attack or on a card played through a worker, spends the move points it has left with it, and a unit of the player's with no move points and no action left is dimmed on the map. Doc-impact: `docs/CHRONICLE.md`, `docs/CHRONICLE-SCREEN.md`. [board/action-spends-move-points.md](board/action-spends-move-points.md)
 - **Guarded camps and the enemy scripts** — every camp opens and rolls with a guard on or beside it, a warrior carries the guard or the raider script its entry names, and each script's decisions are held by one test on the fixture. Doc-impact: `docs/CHRONICLE.md`, `docs/ages/NOMADIC.md`. [board/guarded-camps.md](board/guarded-camps.md)
 - **The culture curve** — the culture threshold buys six tiles before the capstone, which is not nomadic at all; the age wants one claim needed and a second fought for, while later ages must let a culture-heavy deck play a large land city, so the curve's shape is the question.
 - **The population growth curve** — the growth threshold equals the population, so the city grows every turn and food piles up to dozens; a steeper curve is the candidate, with the question of whether units count as population for it, since otherwise a smaller city produces units faster.

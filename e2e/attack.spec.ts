@@ -107,7 +107,7 @@ test('a warrior dragged onto an enemy attacks it, and its spent action refuses a
   const attacked = await chronicleOf(page);
   expect(attacked.units[0].tile).toEqual(warrior.tile);
   expect(attacked.units[0].action).toBe(0);
-  expect(attacked.units[0].movePoints).toBe(warrior.movePoints);
+  expect(attacked.units[0].movePoints).toBe(0);
   // The warrior is selected again where it stands, so one more press is its next command.
   await expect.poll(() => ringedTile(page)).toBe(tileKey(warrior.tile));
 
