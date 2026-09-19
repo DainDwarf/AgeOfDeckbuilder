@@ -92,7 +92,7 @@ How this code base is shaped, and what a change never deviates from:
 - **A content change and its measurement are one commit**; the mechanism it needed lands in its own inert commit before it.
 - **During a tuning pass, edits stay uncommitted** until the user says the numbers are right. Say once that the tree carries the change; never roll back or ask keep-or-revert mid-pass.
 - **Git is the backup.** No scratchpad copies of tracked files; `git checkout <file>` reverts, and `git status --porcelain <file>` confirms it printed nothing.
-- **Never push unless asked.** The repository will be public; a push is a publication.
+- **Never push unless asked.** The repository is public; a push is a publication.
 - Commit messages end with `Co-Authored-By: Claude <model> <noreply@anthropic.com>`.
 
 ## Docs
