@@ -6,7 +6,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ---
 
-- **The screen page** — the "The screen" half of `docs/CHRONICLE.md` (the chronicle screen, the resource bar, the yield overlay) becomes a design page of its own, `docs/SCREEN.md`, the fourth the design pages name.
 - **The biome rework** — a growth weight per biome, the spread growing per biome instead of per frontier, the city's first ring dealt as its own biome, and the bigger map.
 - **The balance pass** — numbers measured on the real content, edits uncommitted until the user says they hold. First playtest of the nomadic age: the enemy hits too hard; the settlement and the economy expand way too fast, so gathering is not much needed after a few turns — a victory on 74 food, 22 production, 15 culture — which leaves Hunger biteless and the camps' stocks useless as loot.
 - **Event animations** — when an event's answer lands, what it changes on the map — burned tiles, killed population and units, anything an answer does — is animated rather than simply redrawn; the tile The herd's _Follow it_ charts is one of them, wherever it lies on the map, and nothing draws the eye to it until then.

@@ -4,7 +4,7 @@ Guidance for Claude Code sessions in this repository.
 
 ## Project
 
-**Age of Deckbuilder** (working name) — a card game, designed from scratch. The design is written at design altitude in the design pages, `docs/DESIGN.md` and the two it names; the game is TypeScript on Phaser 4, built by Vite, played in the browser. [`DOGMAS.md`](DOGMAS.md) → _Stack_ holds the layout and the one architectural rule: `src/rules/` is pure, `src/ui/` only renders.
+**Age of Deckbuilder** (working name) — a card game, designed from scratch. The design is written at design altitude in the design pages, `docs/DESIGN.md` and the three it names; the game is TypeScript on Phaser 4, built by Vite, played in the browser. [`DOGMAS.md`](DOGMAS.md) → _Stack_ holds the layout and the one architectural rule: `src/rules/` is pure, `src/ui/` only renders.
 
 ## Three kinds of documentation
 

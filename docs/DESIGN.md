@@ -2,9 +2,9 @@
 
 > Status legend, for every design page: ✅ decided · 🔧 provisional (a stated default, open to change). An open question is not a status — it is a [`BOARD.md`](../workflow/BOARD.md) line whose done-condition is the decision.
 
-The game in broad strokes: what it is, what it deliberately is not, and how a chronicle and the meta fit together. How any screen is worked is [`INTERFACE.md`](INTERFACE.md); what exists only inside a chronicle is [`CHRONICLE.md`](CHRONICLE.md).
+The game in broad strokes: what it is, what it deliberately is not, and how a chronicle and the meta fit together. How any screen is worked is [`INTERFACE.md`](INTERFACE.md); the rules a chronicle is played by are [`CHRONICLE.md`](CHRONICLE.md); the screen it is played on is [`CHRONICLE-SCREEN.md`](CHRONICLE-SCREEN.md).
 
-The three are **the design pages**, and they are the **spec**.
+The four are **the design pages**, and they are the **spec**.
 
 ## Pitch
 
