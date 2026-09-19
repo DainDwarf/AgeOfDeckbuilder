@@ -140,7 +140,7 @@ How this code base is shaped, and what a change never deviates from:
 The layout, which embodies the first rule above:
 
 ```
-CLAUDE.md           the session's entry; DOGMAS.md its rules; CHANGELOG.md the players' notes
+README.md           what the game is, for a visitor; CLAUDE.md the session's entry, DOGMAS.md its rules, CHANGELOG.md the players' notes
 docs/               the standing design: the design pages, the glossary, one page per age
 workflow/           the ephemeral task context: the board and its task files, the ideas, the roadmap
 index.html          the page Phaser puts its canvas in; no UI of its own
