@@ -129,7 +129,7 @@ test('the road on the worker that laid the mine is refused for its action, and l
   await page.mouse.click(target.x, target.y);
   await rested(page);
 
-  expect(await refusalLines(page)).toEqual([text('refusal.action')]);
+  expect(await refusalLines(page)).toEqual([text('refusal.worker-spent')]);
   expect(await chronicleOf(page)).toEqual(mined);
 
   await page.keyboard.press('Escape');

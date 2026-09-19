@@ -194,7 +194,7 @@ test('a free claim aimed at a tile the city holds, one the border does not touch
 
   expect(admitted(CATALOGUE, opened, claimCard())).toEqual([]);
   for (const tile of [CITY, { q: 2, r: 0 }, camp]) {
-    expect(claimRefusal(settled, tile)).toBe('claim');
+    expect(claimRefusal(settled, tile)).toBe('no-claim');
     expect(stagedBy(settled, freeClaim(tile))).toEqual(['refused']);
   }
   expect(admitted(CATALOGUE, settled, claimCard()).map(tileKey).sort()).toEqual(

@@ -369,9 +369,9 @@ test('a settle card is refused on an uncharted tile, on a terrain its content ta
   const out = { q: 3, r: 0 };
   const opened = opening(camped(madeOf(plains(3), 'mountain', [rough]), [camp]));
 
-  expect(refusedFor(opened, 'PH_Settle', out)).toBe('uncharted');
-  expect(refusedFor(opened, 'PH_Settle', rough)).toBe('terrain');
-  expect(refusedFor(opened, 'PH_Settle', camp)).toBe('slot');
+  expect(refusedFor(opened, 'PH_Settle', out)).toBe('tile-uncharted');
+  expect(refusedFor(opened, 'PH_Settle', rough)).toBe('wrong-terrain');
+  expect(refusedFor(opened, 'PH_Settle', camp)).toBe('slot-filled');
   expect(refusedFor(opened, 'PH_Settle', CITY)).toBeUndefined();
   for (const tile of [out, rough, camp]) {
     expect(admittedTiles(opened, 'PH_Settle').map(tileKey)).not.toContain(tileKey(tile));
@@ -396,10 +396,10 @@ test('a settle card entering a unit admits every charted tile the unit stands on
   const opened = opening(camped(madeOf(plains(3), 'mountain', [rough]), [camp]), { deck: BANDS });
   const entered = outcome(apply(CATALOGUE, opened, aimedAt(taken)));
 
-  expect(refusedFor(entered, 'PH_Band', out)).toBe('uncharted');
-  expect(refusedFor(entered, 'PH_Band', rough)).toBe('terrain');
-  expect(refusedFor(entered, 'PH_Band', taken)).toBe('standing');
-  expect(refusedFor(entered, 'PH_Band', camp)).toBe('standing');
+  expect(refusedFor(entered, 'PH_Band', out)).toBe('tile-uncharted');
+  expect(refusedFor(entered, 'PH_Band', rough)).toBe('wrong-terrain');
+  expect(refusedFor(entered, 'PH_Band', taken)).toBe('unit-standing');
+  expect(refusedFor(entered, 'PH_Band', camp)).toBe('unit-standing');
   expect(admittedTiles(entered, 'PH_Band').map(tileKey).sort()).toEqual(
     entered.snapshots
       .filter((snapshot) => standsOn(CATALOGUE, CATALOGUE.units.PH_Worker, snapshot.tile))
@@ -595,8 +595,8 @@ test('a building card cannot be played with no worker of the player’s inside t
   });
   const fighting = withUnits(alone, [standing('player', { q: 1, r: 0 })]);
 
-  expect(refusedFor(alone, 'PH_Farm', { q: 1, r: 0 })).toBe('worker');
-  expect(refusedFor(fighting, 'PH_Farm', { q: 1, r: 0 })).toBe('worker');
+  expect(refusedFor(alone, 'PH_Farm', { q: 1, r: 0 })).toBe('no-worker');
+  expect(refusedFor(fighting, 'PH_Farm', { q: 1, r: 0 })).toBe('no-worker');
   expect(outcome(apply(CATALOGUE, alone, aimedAt({ q: 1, r: 0 })))).toEqual(alone);
 });
 
@@ -611,7 +611,7 @@ test('a tile’s building slot takes one building and no more', () => {
   const once = endedTurn(outcome(apply(CATALOGUE, city, aimedAt({ q: 1, r: 0 }))));
 
   expect(outcome(apply(CATALOGUE, once, aimedAt({ q: 1, r: 0 })))).toEqual(once);
-  expect(refusedFor(once, 'PH_Farm', { q: 1, r: 0 })).toBe('slot');
+  expect(refusedFor(once, 'PH_Farm', { q: 1, r: 0 })).toBe('slot-filled');
 });
 
 test('the city fills its own tile’s slot, worker or no worker', () => {
@@ -627,7 +627,7 @@ test('the city fills its own tile’s slot, worker or no worker', () => {
   expect(admittedTiles(city, 'PH_Farm')).toEqual([]);
   expect(outcome(apply(CATALOGUE, city, aimedAt(CITY)))).toEqual(city);
   // The city's own tile is urban, so the farm names the terrain before it ever reaches the slot.
-  expect(refusedFor(city, 'PH_Farm', CITY)).toBe('terrain');
+  expect(refusedFor(city, 'PH_Farm', CITY)).toBe('wrong-terrain');
   expect(admittedTiles(overOne, 'PH_Farm')).toEqual([{ q: 1, r: 0 }]);
 });
 
@@ -640,7 +640,7 @@ test('a farm stands on a plain and on no other terrain a worker reaches', () => 
     });
 
     expect(admittedTiles(city, 'PH_Farm')).toEqual([]);
-    expect(refusedFor(city, 'PH_Farm', { q: 1, r: 0 })).toBe('terrain');
+    expect(refusedFor(city, 'PH_Farm', { q: 1, r: 0 })).toBe('wrong-terrain');
     expect(outcome(apply(CATALOGUE, city, aimedAt({ q: 1, r: 0 })))).toEqual(city);
   }
 });
@@ -689,8 +689,8 @@ test('the mine card is refused on a tile no worker of the player’s stands on',
   const fighting = withUnits(bare, [standing('player', at)]);
 
   expect(admittedTiles(bare, 'PH_Mine')).toEqual([]);
-  expect(refusedFor(bare, 'PH_Mine', at)).toBe('worker');
-  expect(refusedFor(fighting, 'PH_Mine', at)).toBe('worker');
+  expect(refusedFor(bare, 'PH_Mine', at)).toBe('no-worker');
+  expect(refusedFor(fighting, 'PH_Mine', at)).toBe('no-worker');
   expect(outcome(apply(CATALOGUE, bare, aimedAt(at)))).toEqual(bare);
   expect(outcome(apply(CATALOGUE, fighting, aimedAt(at)))).toEqual(fighting);
 });
@@ -709,7 +709,7 @@ test('a unit that is not a worker, with action left, is refused every card playe
     const worked = ringed(2, { tiles, units: [worker(at)] });
 
     expect(actionOf(fighting, 1)).toBeGreaterThan(0);
-    expect(refusedFor(fighting, id, at)).toBe('worker');
+    expect(refusedFor(fighting, id, at)).toBe('no-worker');
     expect(refusedFor(worked, id, at)).toBeUndefined();
   }
 });
@@ -721,7 +721,7 @@ test('the mine card is refused on every terrain but the hills it goes on', () =>
 
     expect(admittedTiles(city, 'PH_Mine')).toEqual([]);
     expect(refusedFor(city, 'PH_Mine', at)).toBe(
-      standsOn(CATALOGUE, WORKER, tileAt(city.tiles, at)) ? 'terrain' : 'worker',
+      standsOn(CATALOGUE, WORKER, tileAt(city.tiles, at)) ? 'wrong-terrain' : 'no-worker',
     );
     expect(outcome(apply(CATALOGUE, city, aimedAt(at)))).toEqual(city);
   }
@@ -737,7 +737,7 @@ test('a tile takes the same improvement once and never a second time', () => {
   const once = endedTurn(outcome(apply(CATALOGUE, city, aimedAt(at))));
 
   expect(admittedTiles(once, 'PH_Mine')).toEqual([]);
-  expect(refusedFor(once, 'PH_Mine', at)).toBe('improvement');
+  expect(refusedFor(once, 'PH_Mine', at)).toBe('improvement-laid');
   expect(outcome(apply(CATALOGUE, once, aimedAt(at)))).toEqual(once);
 });
 
@@ -781,7 +781,7 @@ test('the road card is refused on the ground no worker of the player’s stands 
     const city = workedTile(at, terrain, { hand: ['PH_Road'], resources: production(2) });
 
     expect(admittedTiles(city, 'PH_Road')).toEqual([]);
-    expect(refusedFor(city, 'PH_Road', at)).toBe('worker');
+    expect(refusedFor(city, 'PH_Road', at)).toBe('no-worker');
     expect(outcome(apply(CATALOGUE, city, aimedAt(at)))).toEqual(city);
   }
 });
@@ -876,7 +876,7 @@ test('a worker’s terraform is refused for the faction on a camp’s tile until
 
   const captured = endedTurn(camp);
 
-  expect(refusedFor(camp, 'PH_Urbanisation', at)).toBe('faction');
+  expect(refusedFor(camp, 'PH_Urbanisation', at)).toBe('other-faction');
   expect(outcome(apply(CATALOGUE, camp, aimedAt(at)))).toEqual(camp);
   expect(buildingAt(captured, at)).toBeUndefined();
   expect(refusedFor(captured, 'PH_Urbanisation', at)).toBeUndefined();
@@ -975,7 +975,7 @@ test('a worker’s terraform of the city’s tile is admitted into a terrain the
   expect(tileAt(forested.tiles, CITY)?.terrain).toBe('forest');
   expect(buildingAt(forested, CITY)).toBe('PH_City');
   expect(unitNamed(forested, 1).tile).toEqual(CITY);
-  expect(refusedFor(city, 'PH_Sink', CITY, plain)).toBe('terrain');
+  expect(refusedFor(city, 'PH_Sink', CITY, plain)).toBe('wrong-terrain');
   expect(outcome(apply(plain, city, aimedAt(CITY)))).toEqual(city);
 });
 
@@ -1026,7 +1026,7 @@ test('the urbanisation card is refused on every terrain but the plain it terrafo
 
     expect(admittedTiles(city, 'PH_Urbanisation')).toEqual([]);
     expect(refusedFor(city, 'PH_Urbanisation', at)).toBe(
-      standsOn(CATALOGUE, WORKER, tileAt(city.tiles, at)) ? 'terrain' : 'worker',
+      standsOn(CATALOGUE, WORKER, tileAt(city.tiles, at)) ? 'wrong-terrain' : 'no-worker',
     );
     expect(outcome(apply(CATALOGUE, city, aimedAt(at)))).toEqual(city);
   }
@@ -1135,7 +1135,7 @@ test('a building card with nowhere to stand is playable all the same, and every 
 
   expect(admittedTiles(alone, 'PH_Farm')).toEqual([]);
   expect(refusalOf(CATALOGUE, alone, 'PH_Farm').blocked).toEqual([]);
-  expect(refusedFor(alone, 'PH_Farm', at)).toBe('worker');
+  expect(refusedFor(alone, 'PH_Farm', at)).toBe('no-worker');
   expect(admittedTiles(worked, 'PH_Farm')).toEqual([at]);
   expect(refusalOf(CATALOGUE, worked, 'PH_Farm').blocked).toEqual([]);
 });
@@ -1191,7 +1191,7 @@ test('a worker with no action left refuses the next card played through it, and 
   const mined = outcome(apply(CATALOGUE, city, aimedAt(at)));
 
   expect(actionOf(mined, 1)).toBe(0);
-  expect(refusedFor(mined, 'PH_Road', at)).toBe('action');
+  expect(refusedFor(mined, 'PH_Road', at)).toBe('worker-spent');
   expect(admittedTiles(mined, 'PH_Road')).toEqual([]);
   expect(stagedBy(mined, aimedAt(at))).toEqual(['refused']);
   expect(outcome(apply(CATALOGUE, mined, aimedAt(at)))).toBe(mined);
@@ -1237,7 +1237,7 @@ test('the refresh instant leaves a worker’s spent action spent, and the card r
   expect(pointsOf(refreshed, 1)).toBe(WORKER.move);
   expect(refreshed.discardPile).toEqual(['PH_Mine', 'PH_March']);
   expect(actionOf(refreshed, 1)).toBe(0);
-  expect(refusedFor(refreshed, 'PH_Road', at)).toBe('action');
+  expect(refusedFor(refreshed, 'PH_Road', at)).toBe('worker-spent');
 });
 
 test('the farm card names the first of its five reasons: worker, action, terrain, border, then slot', () => {
@@ -1257,18 +1257,18 @@ test('the farm card names the first of its five reasons: worker, action, terrain
     building: 'PH_Farm',
   });
 
-  expect(refusedFor(hilly, 'PH_Farm', out)).toBe('worker');
-  expect(refusedFor(withUnits(hilly, [worker(out)]), 'PH_Farm', out)).toBe('terrain');
-  expect(refusedFor(withUnits(hilly, [worker(at)]), 'PH_Farm', at)).toBe('terrain');
+  expect(refusedFor(hilly, 'PH_Farm', out)).toBe('no-worker');
+  expect(refusedFor(withUnits(hilly, [worker(out)]), 'PH_Farm', out)).toBe('wrong-terrain');
+  expect(refusedFor(withUnits(hilly, [worker(at)]), 'PH_Farm', at)).toBe('wrong-terrain');
   expect(
     refusedFor(
       outcome(apply(CATALOGUE, withUnits(hilly, [worker(at)]), aimedAt(at))),
       'PH_Farm',
       at,
     ),
-  ).toBe('action');
-  expect(refusedFor(withUnits(flat, [worker(out)]), 'PH_Farm', out)).toBe('border');
-  expect(refusedFor(filled, 'PH_Farm', at)).toBe('slot');
+  ).toBe('worker-spent');
+  expect(refusedFor(withUnits(flat, [worker(out)]), 'PH_Farm', out)).toBe('outside-border');
+  expect(refusedFor(filled, 'PH_Farm', at)).toBe('slot-filled');
   expect(refusedFor(worked, 'PH_Farm', at)).toBeUndefined();
 });
 
@@ -1295,12 +1295,12 @@ test('the forage card names the first of its three reasons: worker, action, then
   const held = withUnits(bare, [worker(at)]);
   const beyond = withUnits(bare, [worker(out)]);
 
-  expect(refusedFor(bare, 'PH_Forage', at, FORAGING)).toBe('worker');
-  expect(refusedFor(bare, 'PH_Forage', out, FORAGING)).toBe('worker');
-  expect(refusedFor(held, 'PH_Forage', at, FORAGING)).toBe('held');
+  expect(refusedFor(bare, 'PH_Forage', at, FORAGING)).toBe('no-worker');
+  expect(refusedFor(bare, 'PH_Forage', out, FORAGING)).toBe('no-worker');
+  expect(refusedFor(held, 'PH_Forage', at, FORAGING)).toBe('inside-border');
   expect(
     refusedFor(outcome(apply(FORAGING, beyond, aimedAt(out))), 'PH_Forage', out, FORAGING),
-  ).toBe('action');
+  ).toBe('worker-spent');
   expect(refusedFor(beyond, 'PH_Forage', out, FORAGING)).toBeUndefined();
 });
 
@@ -1311,23 +1311,23 @@ test('the mine card names the first of its four reasons: worker, action, terrain
   const worked = withUnits(hills, [worker(at)]);
   const mined = withTile(worked, { ...at, terrain: 'hills', improvements: ['PH_Mine'] });
 
-  expect(refusedFor(plain, 'PH_Mine', at)).toBe('worker');
+  expect(refusedFor(plain, 'PH_Mine', at)).toBe('no-worker');
   expect(
     refusedFor(
       withTile(hills, { ...at, terrain: 'hills', improvements: ['PH_Mine'] }),
       'PH_Mine',
       at,
     ),
-  ).toBe('worker');
-  expect(refusedFor(withUnits(plain, [worker(at)]), 'PH_Mine', at)).toBe('terrain');
+  ).toBe('no-worker');
+  expect(refusedFor(withUnits(plain, [worker(at)]), 'PH_Mine', at)).toBe('wrong-terrain');
   expect(
     refusedFor(
       outcome(apply(CATALOGUE, withUnits(plain, [worker(at)]), aimedAt(at))),
       'PH_Mine',
       at,
     ),
-  ).toBe('action');
-  expect(refusedFor(mined, 'PH_Mine', at)).toBe('improvement');
+  ).toBe('worker-spent');
+  expect(refusedFor(mined, 'PH_Mine', at)).toBe('improvement-laid');
   expect(refusedFor(worked, 'PH_Mine', at)).toBeUndefined();
 });
 
@@ -1353,14 +1353,14 @@ test('the urbanisation card names the first of its four reasons: worker, action,
     [worker(at)],
   );
 
-  expect(refusedFor(plain, 'PH_Urbanisation', at)).toBe('worker');
-  expect(refusedFor(forest, 'PH_Urbanisation', at)).toBe('worker');
-  expect(refusedFor(wooded, 'PH_Urbanisation', at)).toBe('terrain');
+  expect(refusedFor(plain, 'PH_Urbanisation', at)).toBe('no-worker');
+  expect(refusedFor(forest, 'PH_Urbanisation', at)).toBe('no-worker');
+  expect(refusedFor(wooded, 'PH_Urbanisation', at)).toBe('wrong-terrain');
   expect(refusedFor(outcome(apply(CATALOGUE, wooded, aimedAt(at))), 'PH_Urbanisation', at)).toBe(
-    'action',
+    'worker-spent',
   );
-  expect(refusedFor(built, 'PH_Urbanisation', at)).toBe('worker');
-  expect(refusedFor(camp, 'PH_Urbanisation', at)).toBe('faction');
+  expect(refusedFor(built, 'PH_Urbanisation', at)).toBe('no-worker');
+  expect(refusedFor(camp, 'PH_Urbanisation', at)).toBe('other-faction');
   expect(refusedFor(filled, 'PH_Urbanisation', at)).toBeUndefined();
   expect(refusedFor(worked, 'PH_Urbanisation', at)).toBeUndefined();
 });
@@ -1376,8 +1376,8 @@ test('a card aimed at a unit admits the tiles the player’s units stand on, and
   });
 
   expect(admittedTiles(city, 'PH_March')).toEqual([spent]);
-  expect(refusedFor(city, 'PH_March', held)).toBe('unit');
-  expect(refusedFor(city, 'PH_March', { q: 0, r: 1 })).toBe('unit');
+  expect(refusedFor(city, 'PH_March', held)).toBe('no-unit');
+  expect(refusedFor(city, 'PH_March', { q: 0, r: 1 })).toBe('no-unit');
   expect(admittedTiles(ringed(2), 'PH_March')).toEqual([]);
 });
 
@@ -1401,9 +1401,9 @@ test('the refresh instant names the first of its two reasons: the unit, then its
   const full = withUnits(bare, [worker(at)]);
   const spent = withUnits(bare, [standing('player', at, { move: 2 * MOVE_POINT }, MOVE_POINT)]);
 
-  expect(refusedFor(bare, 'PH_March', at)).toBe('unit');
-  expect(refusedFor(enemy, 'PH_March', at)).toBe('unit');
-  expect(refusedFor(full, 'PH_March', at)).toBe('move');
+  expect(refusedFor(bare, 'PH_March', at)).toBe('no-unit');
+  expect(refusedFor(enemy, 'PH_March', at)).toBe('no-unit');
+  expect(refusedFor(full, 'PH_March', at)).toBe('move-full');
   expect(refusedFor(spent, 'PH_March', at)).toBeUndefined();
 });
 
@@ -1431,7 +1431,7 @@ test('a play aimed at a tile the aim refuses, or at nothing, lands nowhere', () 
   const aimed = apply(CATALOGUE, city, aimedAt(at));
   const nowhere = apply(CATALOGUE, city, { type: 'play', index: 0, aim: 'none' });
 
-  expect(refusedFor(city, 'PH_Farm', at)).toBe('worker');
+  expect(refusedFor(city, 'PH_Farm', at)).toBe('no-worker');
   expect(namesOf(aimed)).toEqual(['refused']);
   expect(outcome(aimed)).toEqual(city);
   expect(namesOf(nowhere)).toEqual(['refused']);

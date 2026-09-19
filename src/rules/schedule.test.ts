@@ -1006,7 +1006,7 @@ test('a tile an answer charts is charted where it was not, its snapshot holding 
   const { dealt, landed } = followed(herded([at], { units: [standing('enemy', at, {}, 0, 0)] }));
   const snapshot = snapshotOf(landed, at);
 
-  expect(chartedTile(dealt, at)).toBe('uncharted');
+  expect(chartedTile(dealt, at)).toBe('tile-uncharted');
   expect(chartedTile(landed, at)).toBeUndefined();
   expect(inSight(CATALOGUE, landed).has(tileKey(at))).toBe(false);
   expect(snapshot?.tile.feature).toBe('PH_Fertile');

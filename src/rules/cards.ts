@@ -135,14 +135,16 @@ export function firstRefusal(...checks: readonly (TileBlock | undefined)[]): Til
  */
 export function chartedTile(chronicle: Chronicle, tile: TileCoords): TileBlock | undefined {
   const at = tileKey(tile);
-  return chronicle.snapshots.some((snapshot) => tileKey(snapshot) === at) ? undefined : 'uncharted';
+  return chronicle.snapshots.some((snapshot) => tileKey(snapshot) === at)
+    ? undefined
+    : 'tile-uncharted';
 }
 
 /** A worker of the player's standing on the tile, with action left to spend. */
 export function worked(chronicle: Chronicle, tile: TileCoords): TileBlock | undefined {
   const standing = unitAt(chronicle.units, tile);
-  if (standing?.faction !== 'player' || !standing.stats.worker) return 'worker';
-  return standing.action > 0 ? undefined : 'action';
+  if (standing?.faction !== 'player' || !standing.stats.worker) return 'no-worker';
+  return standing.action > 0 ? undefined : 'worker-spent';
 }
 
 /**
@@ -180,12 +182,12 @@ function acted(paid: Chronicle, at: TileCoords): Landed {
 
 /** The tile inside the city's border. */
 export function inside(chronicle: Chronicle, tile: TileCoords): TileBlock | undefined {
-  return holds(chronicle, tile) ? undefined : 'border';
+  return holds(chronicle, tile) ? undefined : 'outside-border';
 }
 
 /** The tile outside the city's border. */
 export function outside(chronicle: Chronicle, tile: TileCoords): TileBlock | undefined {
-  return holds(chronicle, tile) ? 'held' : undefined;
+  return holds(chronicle, tile) ? 'inside-border' : undefined;
 }
 
 /** A tile the city may claim: the one list city mode marks. */
@@ -197,7 +199,7 @@ export function claimableTile(
   const at = tileKey(tile);
   return claimable(catalogue, chronicle).some((coord) => tileKey(coord) === at)
     ? undefined
-    : 'claim';
+    : 'no-claim';
 }
 
 /** The terrains a building stands on, an improvement lies on, or a terraform starts from. */
@@ -207,12 +209,12 @@ export function made(
   terrains: readonly string[],
 ): TileBlock | undefined {
   for (const terrain of terrains) terrainKind(catalogue, terrain);
-  return terrains.includes(tile.terrain) ? undefined : 'terrain';
+  return terrains.includes(tile.terrain) ? undefined : 'wrong-terrain';
 }
 
 /** A tile's one building slot, free: what a building fills and a settle needs empty. */
 export function slotFree(tile: Tile): TileBlock | undefined {
-  return tile.building === undefined ? undefined : 'slot';
+  return tile.building === undefined ? undefined : 'slot-filled';
 }
 
 /**
@@ -226,8 +228,8 @@ export function terraformable(
   tile: Tile,
   to: string,
 ): TileBlock | undefined {
-  if (tile.building === catalogue.camp.building) return 'faction';
-  return reaches(catalogue, chronicle, tile, to) ? undefined : 'terrain';
+  if (tile.building === catalogue.camp.building) return 'other-faction';
+  return reaches(catalogue, chronicle, tile, to) ? undefined : 'wrong-terrain';
 }
 
 /**
@@ -249,18 +251,20 @@ export function unimproved(
   improvement: string,
 ): TileBlock | undefined {
   improvementKind(catalogue, improvement);
-  return tile.improvements.includes(improvement) ? 'improvement' : undefined;
+  return tile.improvements.includes(improvement) ? 'improvement-laid' : undefined;
 }
 
 /** A unit of the player's standing on the tile: the whole of what a card aimed at a unit admits. */
 export function unitThere(chronicle: Chronicle, tile: TileCoords): TileBlock | undefined {
-  return unitAt(chronicle.units, tile)?.faction === 'player' ? undefined : 'unit';
+  return unitAt(chronicle.units, tile)?.faction === 'player' ? undefined : 'no-unit';
 }
 
 /** Move points a refresh has room to bring back up: a unit that has spent none is already full. */
 export function movePointsSpent(chronicle: Chronicle, tile: TileCoords): TileBlock | undefined {
   const standing = unitAt(chronicle.units, tile);
-  return standing !== undefined && standing.movePoints < standing.stats.move ? undefined : 'move';
+  return standing !== undefined && standing.movePoints < standing.stats.move
+    ? undefined
+    : 'move-full';
 }
 
 /**
@@ -299,8 +303,8 @@ export function entersOn(type: string): Aim & { readonly aim: 'tile' } {
     aim: 'tile',
     refuses: (catalogue, chronicle, tile) =>
       firstRefusal(
-        standsOn(catalogue, unitKind(catalogue, type), tile) ? undefined : 'terrain',
-        unitAt(chronicle.units, tile) === undefined ? undefined : 'standing',
+        standsOn(catalogue, unitKind(catalogue, type), tile) ? undefined : 'wrong-terrain',
+        unitAt(chronicle.units, tile) === undefined ? undefined : 'unit-standing',
       ),
     effect: (catalogue, paid, at) =>
       entered(catalogue, paid, { type, faction: 'player', tile: { q: at.q, r: at.r } }),
