@@ -116,11 +116,11 @@ const YIELD_DEPTH = 10;
  */
 const THRESHOLD_DEPTH = 11;
 
-/** How dark the yield overlay's dim paints the map: the scrim's alpha. */
+/**
+ * How dark every scrim of the map paints what it covers: fog, the yield overlay's dim, city mode's
+ * dim and a spent unit's.
+ */
 const DIM_ALPHA = 0.6;
-
-/** How dark a tile in fog is painted: the scrim's alpha. */
-const FOG_ALPHA = 0.6;
 
 /** One glyph, corner to corner, and how far apart the glyphs of a tile stand. */
 const GLYPH = 6;
@@ -152,12 +152,6 @@ const THRESHOLD_GAP = 3;
 /** How heavy the ring around the city's own tile is, against the one every other tile takes. */
 const CITY_RING = 4;
 const RING = 2;
-
-/** How dark city mode paints a held tile nobody stands on: the scrim's alpha. */
-const UNASSIGNED_ALPHA = 0.6;
-
-/** How dark a unit of the player's with nothing left to spend is painted: the scrim's alpha. */
-const SPENT_ALPHA = 0.6;
 
 /** How many glyphs a row of them holds before the next row starts. */
 const GLYPH_ROW = 3;
@@ -337,7 +331,7 @@ function unitMarker(scene: Phaser.Scene, unit: Unit): Phaser.GameObjects.Contain
   if (unit.faction === 'player' && unit.movePoints <= 0 && unit.action <= 0) {
     marker.add(
       scene.add
-        .polygon(0, 0, corners(unitMarkOf(unit.stats.type)), OUTLINE, SPENT_ALPHA)
+        .polygon(0, 0, corners(unitMarkOf(unit.stats.type)), OUTLINE, DIM_ALPHA)
         .setName(`unit-dim-${tileKey(unit.tile)}`),
     );
   }
@@ -410,14 +404,14 @@ function thresholdMark(
 /** The one way a held tile with nobody on it is dimmed: a scrim over it and all it carries. */
 function cityDim(scene: Phaser.Scene, coord: TileCoords): Phaser.GameObjects.Polygon {
   const { x, y } = positionOf(coord);
-  return scene.add.polygon(x, y, hexagon(TILE_SIZE), OUTLINE, UNASSIGNED_ALPHA).setName('city-dim');
+  return scene.add.polygon(x, y, hexagon(TILE_SIZE), OUTLINE, DIM_ALPHA).setName('city-dim');
 }
 
 /** The one way a tile in fog is darkened: a scrim over the tile as it was last seen. */
 function fogScrim(scene: Phaser.Scene, coord: TileCoords): Phaser.GameObjects.Polygon {
   const { x, y } = positionOf(coord);
   return scene.add
-    .polygon(x, y, hexagon(TILE_SIZE), OUTLINE, FOG_ALPHA)
+    .polygon(x, y, hexagon(TILE_SIZE), OUTLINE, DIM_ALPHA)
     .setName(`fog-${tileKey(coord)}`);
 }
 
