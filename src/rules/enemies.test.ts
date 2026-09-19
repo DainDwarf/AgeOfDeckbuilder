@@ -4,6 +4,7 @@ import { apply, outcome } from './chronicle';
 import { cityCommand, claimable } from './city';
 import {
   attackOn,
+  attacksOf,
   buildingAt,
   CAMPS,
   CATALOGUE,
@@ -19,29 +20,20 @@ import {
   field,
   fullDraw,
   heldBy,
-  madeOf,
+  movesOf,
   NO_GROWTH,
   namesOf,
   only,
   pointsOf,
   REGION,
   ringed,
-  riverBetween,
   stagedBy,
   standing,
   WORKER,
   withUnits,
   worker,
 } from './fixtures';
-import {
-  CENTRE,
-  distance,
-  MOVE_POINT,
-  neighbours,
-  type River,
-  type TileCoords,
-  tileKey,
-} from './map';
+import { CENTRE, distance, MOVE_POINT, neighbours, type TileCoords, tileKey } from './map';
 import { regionOf, terrainKind } from './map-kinds';
 import { RESOURCES } from './resources';
 import { seedRng } from './rng';
@@ -50,20 +42,6 @@ import type { Chronicle } from './state';
 
 /** A timeline dealing the raid on the second turn, and no other deal. */
 const RAID_ON_SECOND = dealing({ turn: 2, event: 'PH_Hardship' });
-
-/** Every attack the end of turn stages, as the tile each was made from and the tile it was aimed at. */
-function attacksOf(chronicle: Chronicle): string[][] {
-  return [...walked(apply(CATALOGUE, chronicle, { type: 'end-turn' }))].flatMap((stage) =>
-    stage.name === 'attack' ? [[tileKey(stage.attacker), tileKey(stage.target)]] : [],
-  );
-}
-
-/** Every move the end of turn stages, as the tile each enemy left and the tile it reached. */
-function movesOf(chronicle: Chronicle): string[][] {
-  return [...walked(apply(CATALOGUE, chronicle, { type: 'end-turn' }))].flatMap((stage) =>
-    stage.name === 'move' ? [[tileKey(stage.from), tileKey(stage.to)]] : [],
-  );
-}
 
 /** Every camp the end of turn stages a capture of, as the tile each stood on. */
 function capturesOf(chronicle: Chronicle): string[] {
@@ -189,7 +167,7 @@ test('a unit killed in the enemy phase captures the camp it stood on no longer',
   const besieging = cityOf(['urban'], {
     ...NO_GROWTH,
     tiles: camped(field(4), [camp]),
-    units: [worker(camp), standing('enemy', { q: 3, r: 0 }, { damage: WORKER.health })],
+    units: [worker(camp), standing('enemy', { q: 3, r: 0 }, { move: 0, damage: WORKER.health })],
   });
 
   const taken = outcome(apply(CATALOGUE, besieging, { type: 'end-turn' }));
@@ -646,50 +624,6 @@ test('an enemy spends the move points it crosses on, and carries them into the t
   expect(pointsOf(outcome(stages), 1)).toBe(2 * MOVE_POINT);
 });
 
-test('a forest on an enemy’s way costs it what the tile says, and keeps it off the city', () => {
-  /** One corridor to the city, forked: the straight way through one tile, the way round through two. */
-  const corridor = [CITY, { q: 1, r: 0 }, { q: 2, r: 0 }, { q: 2, r: -1 }, { q: 1, r: -1 }];
-  const raider = standing('enemy', { q: 2, r: 0 }, { move: 2 * MOVE_POINT, damage: 0 });
-  const plains = cityOf(['urban'], { tiles: only(2, corridor), units: [raider] });
-  const wooded = cityOf(['urban'], {
-    tiles: madeOf(only(2, corridor), 'forest', [{ q: 1, r: 0 }]),
-    units: [raider],
-  });
-
-  expect(movesOf(plains)).toEqual([['2,0', '0,0']]);
-  expect(movesOf(wooded)).toEqual([['2,0', '1,-1']]);
-});
-
-test('an enemy weighs a crossing as its whole move, and turns for the city instead of taking it', () => {
-  const bank = { q: 4, r: 0 };
-  const across = { q: 5, r: 0 };
-  /** One corridor east of the city, with the player's unit on the far end of it. */
-  const corridor = [CITY, { q: 1, r: 0 }, { q: 2, r: 0 }, { q: 3, r: 0 }, bank, across];
-  const beset = (rivers: River[]): Chronicle =>
-    cityOf(['urban'], {
-      tiles: only(5, corridor),
-      rivers,
-      units: [
-        standing('player', across),
-        standing('enemy', { q: 3, r: 0 }, { move: 3 * MOVE_POINT }),
-      ],
-    });
-
-  expect(movesOf(beset([]))).toEqual([['3,0', '4,0']]);
-  expect(movesOf(beset([riverBetween(bank, across)]))).toEqual([['3,0', '0,0']]);
-});
-
-test('an enemy moves toward the nearest of the player’s units instead of the city', () => {
-  const city = cityOf(['urban'], {
-    tiles: field(4),
-    units: [worker({ q: 2, r: 0 }), standing('enemy', { q: 4, r: 0 }, { move: 2 * MOVE_POINT })],
-  });
-
-  const moved = outcome(apply(CATALOGUE, city, { type: 'end-turn' }));
-
-  expect(distance(moved.units[1].tile, { q: 2, r: 0 })).toBe(1);
-});
-
 test('an enemy moves within range of a unit and attacks it in the same enemy phase', () => {
   const city = cityOf(['urban'], {
     tiles: field(4),
@@ -885,19 +819,14 @@ test('a tile an enemy occupies yields nothing at income', () => {
   }
 });
 
-test('an enemy on the city’s tile attacks nothing, and captures the city the turn after', () => {
+test('an enemy that reaches the city’s tile stands there, and captures the city the turn after', () => {
   const city = cityOf(['urban'], {
     tiles: field(2),
-    units: [
-      worker({ q: 0, r: 1 }),
-      standing('enemy', { q: 1, r: 0 }, { move: MOVE_POINT, damage: 1 }),
-    ],
+    units: [standing('enemy', { q: 1, r: 0 }, { move: MOVE_POINT })],
   });
 
   const stood = outcome(apply(CATALOGUE, city, { type: 'end-turn' }));
-  expect(stood.units[1].tile).toEqual(CITY);
-  expect(attacksOf(city)).toEqual([]);
-  expect(stood.units[0].stats.health).toBe(city.units[0].stats.health);
+  expect(stood.units[0].tile).toEqual(CITY);
   expect(stood.ending).toBeUndefined();
 
   const fallen = outcome(apply(CATALOGUE, stood, { type: 'end-turn' }));

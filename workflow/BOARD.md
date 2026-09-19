@@ -6,7 +6,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ---
 
-- **The fixture's own script** — `src/rules/` imports nothing from `src/content/`, the fixture catalogue runs on a script of its own, and the default script's decisions are held by a content test beside it. Doc-impact: `DOGMAS.md`, `docs/CHRONICLE.md`. [board/fixture-script.md](board/fixture-script.md)
 - **A unit card's population through one door** — `enters` in `src/rules/cards.ts` takes its population through `populationTaken` and holds no decrement of its own; the aim's blocks and the play's stages are unchanged. Doc-impact: none. [board/unit-population-door.md](board/unit-population-door.md)
 - **A long-comment lint** — a hook on every Edit or Write under `src/` and `e2e/` flags a comment block longer than three lines of prose, advisory like the glossary lint, and `DOGMAS.md` → _Code_ says so. Doc-impact: `DOGMAS.md`. [board/long-comment-lint.md](board/long-comment-lint.md)
 - **The design pages at altitude** — a Docs dogma says what a design page carries and what it never does: stand-in names, content detail, future implementation, history retold; the three design pages and the age page are re-read against it, and carry none of it. Doc-impact: `DOGMAS.md`, `docs/DESIGN.md`, `docs/INTERFACE.md`, `docs/CHRONICLE.md`, `docs/ages/NOMADIC.md`. [board/design-pages-at-altitude.md](board/design-pages-at-altitude.md)

@@ -2,8 +2,6 @@
  * The fixtures the rules tests share, authored by the tests and entered through the rules. Nothing
  * outside a test imports this module: a rules module that did would ship fixtures in the build.
  */
-// The one import of `src/content/` under `src/rules/`, allowed because this module is test-only.
-import { ADVANCE } from '../content/scripts';
 import {
   built,
   claimableTile,
@@ -30,6 +28,7 @@ import {
   catalogued,
   type Deck,
   deckOf,
+  type EnemyScript,
   type Entering,
   entered,
   type Schedule,
@@ -75,7 +74,14 @@ import {
 import { charted } from './sight';
 import { followed, type Group, type Landed, type Stage, unchanged, walked } from './stages';
 import { type CardId, type Chronicle, type Deal, holds, type Timeline } from './state';
-import type { Faction, Unit, UnitStats } from './units';
+import {
+  type Faction,
+  type Landing,
+  leastHealth,
+  reachable,
+  type Unit,
+  type UnitStats,
+} from './units';
 
 const SIEGE_CAMPS = 5;
 
@@ -271,6 +277,28 @@ const EVENTS: Catalogue['events'] = {
   },
 };
 
+/** The one script the fixture's enemies enter with. */
+export const SCRIPT = 'PH_Beeline';
+
+/**
+ * The fixture's script, deciding as little as it can: a step to the landing nearest the city by hex
+ * distance, staying where no landing is nearer and the first of equals as the rules list them, and
+ * an attack on the unit the rules' least-health helper names, from the city's tile too.
+ */
+const BEELINE: EnemyScript = {
+  moveTo(catalogue, chronicle, enemy) {
+    const stay: Landing = { tile: enemy.tile, cost: 0 };
+    const { city } = chronicle;
+    if (city === undefined) return stay;
+    let chosen = stay;
+    for (const landing of reachable(catalogue, chronicle, enemy)) {
+      if (distance(landing.tile, city) < distance(chosen.tile, city)) chosen = landing;
+    }
+    return chosen;
+  },
+  attacks: (_catalogue, chronicle, enemy) => leastHealth(chronicle.units, enemy),
+};
+
 /** The content every fixture is played on, its numbers the fixture's own. */
 export const CATALOGUE: Catalogue = catalogued({
   version: 'fixture',
@@ -296,7 +324,7 @@ export const CATALOGUE: Catalogue = catalogued({
       sight: 2,
     },
   },
-  scripts: { advance: ADVANCE },
+  scripts: { [SCRIPT]: BEELINE },
   cards: {
     PH_Settle: {
       kind: 'settle',
@@ -596,7 +624,7 @@ export const CATALOGUE: Catalogue = catalogued({
   },
   camp: {
     unit: 'PH_Warrior',
-    script: 'advance',
+    script: SCRIPT,
     building: 'PH_Camp',
     rewards: ['PH_Spoils', 'PH_Cache'],
     odds: 0,
@@ -875,7 +903,7 @@ export function standing(
     case 'player':
       return { ...state, entering: { type: carried.type, tile, faction } };
     case 'enemy':
-      return { ...state, entering: { type: carried.type, tile, faction, script: 'advance' } };
+      return { ...state, entering: { type: carried.type, tile, faction, script: SCRIPT } };
   }
 }
 
@@ -1022,6 +1050,20 @@ export function endedTurn(
 function placeOf(catalogue: Catalogue, deal: Deal, wanted: string | undefined): number {
   const at = wanted === undefined ? -1 : offered(catalogue, deal).indexOf(wanted);
   return at < 0 ? 0 : at;
+}
+
+/** Every attack the end of turn stages, as the tile each was made from and the tile it was aimed at. */
+export function attacksOf(chronicle: Chronicle, catalogue: Catalogue = CATALOGUE): string[][] {
+  return [...walked(apply(catalogue, chronicle, { type: 'end-turn' }))].flatMap((stage) =>
+    stage.name === 'attack' ? [[tileKey(stage.attacker), tileKey(stage.target)]] : [],
+  );
+}
+
+/** Every move the end of turn stages, as the tile each enemy left and the tile it reached. */
+export function movesOf(chronicle: Chronicle, catalogue: Catalogue = CATALOGUE): string[][] {
+  return [...walked(apply(catalogue, chronicle, { type: 'end-turn' }))].flatMap((stage) =>
+    stage.name === 'move' ? [[tileKey(stage.from), tileKey(stage.to)]] : [],
+  );
 }
 
 /** The enemies standing on the chronicle: what a raid entered, and nothing for a famine. */

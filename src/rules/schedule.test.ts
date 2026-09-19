@@ -1178,10 +1178,7 @@ const MOATED = field(6, neighbours(CITY));
 /** A camp of the generator's out on that disc. */
 const STANDING_CAMP: TileCoords = { q: 6, r: 0 };
 
-/**
- * The tile the worker the camp's enemies walk to stands on: two tiles off the camp, with room enough
- * around it for five of them, so every warrior entered leaves the camp it entered on.
- */
+/** The tile a worker of the player's stands on out on that disc, two tiles off the camp. */
 const LURE: TileCoords = { q: 4, r: 0 };
 
 /** The moated city with the siege landed on it, a camp of the generator's standing out of its reach. */
@@ -1511,7 +1508,7 @@ test('the siege’s own camps are reinforced as the camps standing are', () => {
 });
 
 test('the reinforcement enters no warrior on a camp a unit stands on', () => {
-  let reinforcing = moated({ units: [standing('enemy', STANDING_CAMP)] });
+  let reinforcing = moated({ units: [standing('enemy', STANDING_CAMP, { move: 0 })] });
   const entered = unitAt(reinforcing.units, STANDING_CAMP)?.id;
 
   for (let turn = 1; turn <= REINFORCED; turn++) {

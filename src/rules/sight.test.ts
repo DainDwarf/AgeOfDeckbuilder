@@ -1,7 +1,7 @@
 import { expect, test } from 'vitest';
 import { type Catalogue, catalogued, entered } from './catalogue';
 import { apply, outcome } from './chronicle';
-import { CATALOGUE, NO_DEALS, namesOf, opening, plains, settledOn } from './fixtures';
+import { CATALOGUE, NO_DEALS, namesOf, opening, plains, SCRIPT, settledOn } from './fixtures';
 import {
   distance,
   MOVE_POINT,
@@ -125,7 +125,7 @@ function raiding(chronicle: Chronicle, tile: TileCoords): Chronicle {
       type: 'PH_Warrior',
       tile,
       faction: 'enemy',
-      script: 'advance',
+      script: SCRIPT,
     }).chronicle,
   );
 }
