@@ -9,6 +9,7 @@ import {
   type Span,
   scheduleOf,
 } from './catalogue';
+import { populationKilled } from './city';
 import { campUnit, enteredAround, raidEntry } from './enemies';
 import { distance, type FeatureId, groundRunsTo, type Tile, type TileCoords, tileKey } from './map';
 import { buildingKind, featureKind, held, refuse } from './map-kinds';
@@ -32,7 +33,6 @@ import {
   costsOf,
   type Deal,
   holds,
-  idle,
   paid,
   type Refusal,
   type Timeline,
@@ -217,45 +217,6 @@ export function raided(catalogue: Catalogue, chronicle: Chronicle, warriors: num
   const drawn = raidEntry(catalogue, chronicle);
   if (drawn === undefined) return runtimeError(chronicle);
   return enteredAround(catalogue, drawn.chronicle, drawn.entry, warriors);
-}
-
-/** The population off the tile and then one fewer. */
-function populationLeaving(chronicle: Chronicle, at: TileCoords): Landed {
-  const key = tileKey(at);
-  return followed(
-    landedAs(
-      changeOn('assigned', at, {
-        ...chronicle,
-        assigned: chronicle.assigned.filter((coord) => tileKey(coord) !== key),
-      }),
-    ),
-    (left) => landedAs(change('population', { ...left, population: left.population - 1 })),
-  );
-}
-
-/**
- * The population working the tile killed: the tile unassigned and the city's population one fewer,
- * and nothing where nobody works it.
- */
-export function populationKilled(chronicle: Chronicle, at: TileCoords): Landed {
-  const key = tileKey(at);
-  const working = chronicle.assigned.find((coord) => tileKey(coord) === key);
-  if (working === undefined) return unchanged(chronicle);
-  return populationLeaving(chronicle, working);
-}
-
-/**
- * One population of the city taken, whichever it is: an idle one where one is idle, and where none
- * is the last assigned tile unassigned first, the city's last no exception; the population one fewer.
- * Nothing where the city has no population at all.
- */
-export function populationTaken(chronicle: Chronicle): Landed {
-  if (chronicle.population <= 0) return unchanged(chronicle);
-  const last = chronicle.assigned[chronicle.assigned.length - 1];
-  if (idle(chronicle) > 0 || last === undefined) {
-    return landedAs(change('population', { ...chronicle, population: chronicle.population - 1 }));
-  }
-  return populationLeaving(chronicle, last);
 }
 
 /**

@@ -34,7 +34,7 @@ import {
   type Schedule,
 } from './catalogue';
 import { apply, beginChronicle, type Command, launched, outcome } from './chronicle';
-import { arrived, bordered } from './city';
+import { arrived, bordered, populationKilled, populationTaken } from './city';
 import { campUnit, enteredAround } from './enemies';
 import {
   type BuildingTypeId,
@@ -63,8 +63,6 @@ import {
   fireStartable,
   laid,
   offered,
-  populationKilled,
-  populationTaken,
   raided,
   reinforced,
   spanEnded,

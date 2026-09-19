@@ -16,7 +16,7 @@ import {
   unimproved,
 } from '../rules/cards';
 import { type Catalogue, catalogued } from '../rules/catalogue';
-import { arrived, yielded } from '../rules/city';
+import { arrived, populationTaken, yielded } from '../rules/city';
 import { enteredAround } from '../rules/enemies';
 import { MOVE_POINT } from '../rules/map';
 import { buildingKind, improvementKind } from '../rules/map-kinds';
@@ -30,7 +30,6 @@ import {
   fireRead,
   fireStartable,
   laid,
-  populationTaken,
   raided,
   tileCharted,
 } from '../rules/schedule';

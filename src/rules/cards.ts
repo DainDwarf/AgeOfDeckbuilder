@@ -7,7 +7,7 @@ import {
   entered,
   unitKind,
 } from './catalogue';
-import { claimable } from './city';
+import { claimable, populationTaken } from './city';
 import { type Tile, type TileCoords, tileAt, tileKey } from './map';
 import { buildingKind, improvementKind, refuse, terrainKind } from './map-kinds';
 import { RESOURCES, type Resource, type Resources } from './resources';
@@ -277,9 +277,8 @@ export function enters(type: string): Aim & { readonly aim: 'none' } {
     effect: (catalogue, paid) => {
       const { city } = paid;
       if (city === undefined) refuse(catalogue, `a ${type} entered while the city stands nowhere`);
-      return followed(
-        landedAs(change('population', { ...paid, population: paid.population - 1 })),
-        (left) => entered(catalogue, left, { type, faction: 'player', tile: city }),
+      return followed(populationTaken(paid), (left) =>
+        entered(catalogue, left, { type, faction: 'player', tile: city }),
       );
     },
   };
