@@ -6,7 +6,7 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ---
 
-- **The land and mountain tables** — revise what the land biome and the range are made of, their interior and rim tables and their rim widths, on the maps the biome rework deals.
+- **The land and mountain tables** — the nomadic region deals a woodland biome beside the land, the sea's and the range's rim widths take their new odds, every feature is dealt on a tenth of its terrain, and the age page says forest gathers in woods. Doc-impact: `docs/ages/NOMADIC.md`. [board/land-and-mountain-tables.md](board/land-and-mountain-tables.md)
 - **The balance pass** — numbers measured on the real content, edits uncommitted until the user says they hold. First playtest of the nomadic age: the enemy hits too hard; the settlement and the economy expand way too fast, so gathering is not much needed after a few turns — a victory on 74 food, 22 production, 15 culture — which leaves Hunger biteless and the camps' stocks useless as loot.
 - **Event animations** — when an event's answer lands, what it changes on the map — burned tiles, killed population and units, anything an answer does — is animated rather than simply redrawn; the tile The herd's _Follow it_ charts is one of them, wherever it lies on the map, and nothing draws the eye to it until then.
 - **Card references** — a card named in another text is displayed like a link: hovering it shows a miniature of the card, inspecting it zooms on the card; the details come at intake.
