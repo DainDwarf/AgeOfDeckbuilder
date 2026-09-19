@@ -280,11 +280,7 @@ const EVENTS: Catalogue['events'] = {
 /** The one script the fixture's enemies enter with. */
 export const SCRIPT = 'PH_Beeline';
 
-/**
- * The fixture's script, deciding as little as it can: a step to the landing nearest the city by hex
- * distance, staying where no landing is nearer and the first of equals as the rules list them, and
- * an attack on the unit the rules' least-health helper names, from the city's tile too.
- */
+/** The fixture's script. Unlike the default one, it attacks from the city's tile too. */
 const BEELINE: EnemyScript = {
   moveTo(catalogue, chronicle, enemy) {
     const stay: Landing = { tile: enemy.tile, cost: 0 };

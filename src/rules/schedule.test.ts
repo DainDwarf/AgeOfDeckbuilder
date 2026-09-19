@@ -1178,9 +1178,6 @@ const MOATED = field(6, neighbours(CITY));
 /** A camp of the generator's out on that disc. */
 const STANDING_CAMP: TileCoords = { q: 6, r: 0 };
 
-/** The tile a worker of the player's stands on out on that disc, two tiles off the camp. */
-const LURE: TileCoords = { q: 4, r: 0 };
-
 /** The moated city with the siege landed on it, a camp of the generator's standing out of its reach. */
 function moated(carrying: Carrying = {}): Chronicle {
   return siegeLanded({ tiles: camped(MOATED, [STANDING_CAMP]), ...carrying });
@@ -1188,7 +1185,7 @@ function moated(carrying: Carrying = {}): Chronicle {
 
 /** That city ending turn after turn until the tick past the siege's last turn passes it: the chronicle it left. */
 function stoodOut(): Chronicle {
-  let standingOut = moated({ units: [unkillable(LURE)] });
+  let standingOut = moated();
   for (let turn = 0; turn <= REINFORCED; turn++) standingOut = endedTurn(standingOut, 'PH_Famine');
   return standingOut;
 }
@@ -1217,7 +1214,7 @@ test('the capstone’s turn lands the capstone straight and draws the hand, deal
 
 test('the capstone’s turn drops a deal due past it, and the next deal is due three to seven turns after the landing', () => {
   const past = { ...besieging(), schedule: SCHEDULE, next: CAPSTONE + 1 };
-  const landed = moated({ units: [unkillable(LURE)], timeline: past });
+  const landed = moated({ timeline: past });
   const walk = walkedFrom(CATALOGUE, landed, CAPSTONE + 2, 'PH_Famine');
   const { next } = landed.timeline;
 
@@ -1240,7 +1237,7 @@ test('the capstone’s turn is one landing group over the next due turn rolled a
     ...Array<string>(5).fill('enter'),
   ]);
 
-  const after = moated({ units: [unkillable(LURE)] });
+  const after = moated();
   const continued = heldBy(apply(CATALOGUE, after, { type: 'end-turn' }), 'capstone-continued');
 
   expect(continued.map(({ name }) => name)).toEqual(['enter']);
@@ -1458,7 +1455,7 @@ test('the siege places no camp on ground a camp does not lie on, or the city is 
 });
 
 test('each of the five turns after the landing enters a warrior on the camp standing, and no turn more', () => {
-  let reinforcing = moated({ units: [unkillable(LURE)] });
+  let reinforcing = moated();
   expect(enemiesOf(reinforcing)).toEqual([]);
 
   for (let turn = 1; turn <= REINFORCED; turn++) {
@@ -1473,7 +1470,7 @@ test('each of the five turns after the landing enters a warrior on the camp stan
 
 test('the warrior the reinforcement enters is a stage of its own, raised after the tick and ahead of the deal', () => {
   const due = CAPSTONE + 3;
-  const landed = moated({ units: [unkillable(LURE)] });
+  const landed = moated();
   let reinforcing: Chronicle = {
     ...landed,
     timeline: { ...dueOn(due), capstone: landed.timeline.capstone },
@@ -1520,7 +1517,7 @@ test('the reinforcement enters no warrior on a camp a unit stands on', () => {
 });
 
 test('the turn ticking past the siege’s sixth with the city standing ends the chronicle in victory on the tick', () => {
-  let reinforcing = moated({ units: [unkillable(LURE)] });
+  let reinforcing = moated();
 
   for (let turn = 1; turn <= REINFORCED; turn++) {
     reinforcing = endedTurn(reinforcing, 'PH_Famine');
