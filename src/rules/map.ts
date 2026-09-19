@@ -672,7 +672,6 @@ function dealMap(
     grow(pick.picked);
   }
 
-  // Only a sized biome leaves tiles unreached: a weighted one grows while anything is open beside it.
   // A hole two sized biomes closed together goes to the one dealt first.
   const tileBiomes: Biome[] = new Array(coords.length);
   for (let index = 0; index < coords.length; index++) {
@@ -683,17 +682,23 @@ function dealMap(
     }
     const hole = [index];
     const inHole = new Set(hole);
-    let closer = kinds.length;
+    const closers = new Set<number>();
     for (let at = 0; at < hole.length; at++) {
       for (const next of around(hole[at])) {
         const by = owner[next];
-        if (by !== undefined) closer = Math.min(closer, by);
+        if (by !== undefined) closers.add(by);
         else if (!inHole.has(next)) {
           inHole.add(next);
           hole.push(next);
         }
       }
     }
+    if (closers.size === 0 || [...closers].some((by) => weights[by] !== undefined)) {
+      throw new Error(
+        `the generator left ${tileKey(coords[index])} unreached with a biome that grows by weight beside it, or none`,
+      );
+    }
+    const closer = Math.min(...closers);
     for (const tile of hole) owner[tile] = closer;
     tileBiomes[index] = kinds[closer];
   }

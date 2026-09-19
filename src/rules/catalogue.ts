@@ -220,23 +220,28 @@ export function catalogued(content: Catalogue): Catalogue {
     biomeKind(content, region.rivers.source);
     for (const { biome } of region.biomeShares) biomeKind(content, biome);
     for (const { feature } of region.featureShares) featureKind(content, feature);
-    const { growth } = biomeKind(content, region.centreBiome);
-    if (growth.kind === 'size' && growth.size >= discTiles(region.radius)) {
-      refuse(
-        content,
-        `the region ${id} deals its centre a biome of ${growth.size} tiles on a disc of ${discTiles(region.radius)}`,
-      );
-    }
     const shared = sharedBiomes(region);
     for (const { biome } of region.biomeShares) {
       if (!shared.includes(biome))
         refuse(content, `the region ${id} deals its share of ${biome} no biome`);
     }
-    const leftover = dealtBiomes(region).length - shared.length;
-    if (growth.kind === 'size' && leftover > 0) {
+    const dealt = dealtBiomes(region);
+    const leftover = dealt.length - shared.length;
+    if (biomeKind(content, region.centreBiome).growth.kind === 'size' && leftover > 0) {
       refuse(
         content,
-        `the region ${id} deals ${leftover} biome of ${region.centreBiome}, dealt to a size, over what its shares deal`,
+        `the region ${id} leaves ${leftover} biomes over its shares, and its centre kind ${region.centreBiome} is dealt to a size`,
+      );
+    }
+    let sized = 0;
+    for (const kind of [region.centreBiome, ...dealt]) {
+      const { growth } = biomeKind(content, kind);
+      if (growth.kind === 'size') sized += growth.size;
+    }
+    if (sized >= discTiles(region.radius)) {
+      refuse(
+        content,
+        `the region ${id} deals sized biomes of ${sized} tiles on a disc of ${discTiles(region.radius)}`,
       );
     }
     const reach = region.centre + content.city.sight;

@@ -90,18 +90,29 @@ test('a catalogue whose biome grows at a growth weight of nought, a compactness 
   }
 });
 
-test('a catalogue whose region deals its centre a sized biome as large as its disc is refused', () => {
+test('a catalogue whose region deals sized biomes, its centre’s and those by share, as large as its disc together is refused', () => {
   const { clearing } = CATALOGUE.biomes;
   const disc = regionOf(CATALOGUE, CLEARING);
   const sized = (size: number): Catalogue =>
     changed({
       version: 'sized',
       biomes: { ...CATALOGUE.biomes, clearing: { ...clearing, growth: { kind: 'size', size } } },
-      regions: { [CLEARING]: disc },
+      regions: {
+        [CLEARING]: {
+          ...disc,
+          biomeShares: [
+            { biome: 'sea', share: 0.2 },
+            { biome: 'mountain', share: 0.2 },
+            { biome: 'land', share: 0.2 },
+            { biome: 'clearing', share: 0.4 },
+          ],
+        },
+      },
     });
+  const tiles = discTiles(disc.radius);
 
-  expect(() => catalogued(sized(discTiles(disc.radius)))).toThrow(/^sized: /);
-  expect(catalogued(sized(discTiles(disc.radius) - 1)).version).toBe('sized');
+  expect(() => catalogued(sized(Math.ceil(tiles / 3)))).toThrow(/^sized: /);
+  expect(catalogued(sized(Math.floor((tiles - 1) / 3))).version).toBe('sized');
 });
 
 test('a catalogue whose region leaves biomes over its shares to a centre kind dealt to a size is refused', () => {

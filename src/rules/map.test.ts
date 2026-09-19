@@ -8,6 +8,7 @@ import {
   distance,
   generateMap,
   MOVE_POINT,
+  neighbours,
   pathCosts,
   type River,
   riversAlong,
@@ -147,13 +148,21 @@ test('every map has mountain, because a range is dealt and its origin is mountai
   }
 });
 
-test('a biome dealt to a size is filled first, to exactly that many tiles', () => {
+test('a biome dealt to a size holds at least that many tiles, and every tile over it is ringed by the biome', () => {
+  const { growth } = biomeKind(CATALOGUE, 'clearing');
+  const size = growth.kind === 'size' ? growth.size : Number.NaN;
   for (const seed of SEEDS) {
-    const glades = generateMap(CATALOGUE, CLEARING, seedRng(seed)).tiles.filter(
-      (tile) => tile.terrain === 'glade',
+    const { tiles } = generateMap(CATALOGUE, CLEARING, seedRng(seed));
+    const glades = tiles.filter((tile) => tile.terrain === 'glade');
+    const ringed = glades.filter((glade) =>
+      neighbours(glade).every((coord) => {
+        const beside = tileAt(tiles, coord);
+        return beside === undefined || beside.terrain === 'glade';
+      }),
     );
 
-    expect(biomeKind(CATALOGUE, 'clearing').growth).toEqual({ kind: 'size', size: glades.length });
+    expect(glades.length).toBeGreaterThanOrEqual(size);
+    expect(glades.length - size).toBeLessThanOrEqual(ringed.length);
   }
 });
 
@@ -180,28 +189,19 @@ test('a tile no biome reaches because a sized biome closed it off belongs to tha
   }
 });
 
-test('at a very high compactness a biome takes the open tile beside the most of its own', () => {
-  const clearing = biomeKind(CATALOGUE, 'clearing');
-  const round: MapContent = {
+test('a biome kind of a greater compactness grows rounder, its tiles nearer its origin', () => {
+  const compacted = (compactness: number): MapContent => ({
     ...CATALOGUE,
-    biomes: {
-      ...CATALOGUE.biomes,
-      clearing: { ...clearing, growth: { kind: 'size', size: 3 }, compactness: 60 },
-    },
+    biomes: { ...CATALOGUE.biomes, clearing: { ...CATALOGUE.biomes.clearing, compactness } },
+  });
+  const reachOf = (content: MapContent): number => {
+    const glades = SEEDS.flatMap(
+      (seed) => generateMap(content, CLEARING, seedRng(seed)).tiles,
+    ).filter((tile) => tile.terrain === 'glade');
+    return glades.reduce((total, glade) => total + distance(glade, CENTRE), 0) / glades.length;
   };
 
-  for (const seed of SEEDS) {
-    const glades = generateMap(round, CLEARING, seedRng(seed)).tiles.filter(
-      (tile) => tile.terrain === 'glade',
-    );
-
-    expect(glades).toHaveLength(3);
-    for (const glade of glades) {
-      for (const other of glades) {
-        if (tileKey(other) !== tileKey(glade)) expect(distance(glade, other)).toBe(1);
-      }
-    }
-  }
+  expect(reachOf(compacted(4))).toBeLessThan(reachOf(compacted(0)));
 });
 
 test('a biome kind of a greater growth weight grows larger', () => {
