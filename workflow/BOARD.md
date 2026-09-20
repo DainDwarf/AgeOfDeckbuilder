@@ -6,7 +6,9 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ---
 
+- **One home for the colours** — every colour in `src/ui/` lives in one place, reachable without Phaser; a theme-picker setting and a colour-blindness friendly theme will need it, and `e2e/chronicle-screen.ts`'s `accent(page)` — which reads the accent off the end-turn button's pixels because the constants module drags Phaser in — goes with it.
 - **Card references** — a card named in a rules entry is marked by its id and drawn as its name in brackets; the pointer resting on it shows the named card small above it and a right click on it shows the named card large beside the one it was taken off, both cascading; `docs/INTERFACE.md` and `docs/CHRONICLE-SCREEN.md` say so, the catalogues' coherence tests refuse a name that resolves to no card of theirs, and `e2e/reference.spec.ts` asserts it. Doc-impact: `docs/INTERFACE.md`, `docs/CHRONICLE-SCREEN.md`. [board/card-references.md](board/card-references.md)
+- **The population key is named idle** — `label.population`, `tooltip.population` and the bar's `Reading` member `'population'` now hold the word Idle; the key is renamed across the bar, the map's assigned mark colour and the piles' change switch.
 - **Player-facing text polish** — going over every player-facing text for polish.
 - **Event animations** — when an event's answer lands, what it changes on the map — burned tiles, killed population and units, anything an answer does — is animated rather than simply redrawn; the tile The herd's _Follow it_ charts is one of them, wherever it lies on the map, and nothing draws the eye to it until then.
 - **Close v0.0.4** — the changelog entry and the tag.
