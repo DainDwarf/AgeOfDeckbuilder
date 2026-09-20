@@ -860,8 +860,9 @@ export function settledOn(
 
 /**
  * A chronicle launched as the boot launches one, the first card of its hand played on a tile — the
- * centre tile unless the fixture names another — and the settle phase ended, all through the rules: turn 1 as
- * that end leaves it, standing on the deal where turn 1 deals one. A settle the tile refuses throws.
+ * centre tile unless the fixture names another — and the settle phase ended, all through the rules:
+ * turn 1 as that end leaves it, standing on the deal where turn 1 deals one. A settle the tile
+ * refuses throws.
  */
 export function settledLaunch(
   catalogue: Catalogue,

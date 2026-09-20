@@ -113,7 +113,8 @@ test('Escape lets go of the card being aimed before it raises the menu', async (
   await dragOut(page, opened.hand.indexOf('PH_Worker'));
   await expect.poll(async () => playersOf(await chronicleOf(page)).length).toBe(1);
 
-  // The refresh instant admits the tile of a unit that has spent move points, so the worker moves out first.
+  // The refresh instant admits the tile of a unit that has spent move points, so the worker moves
+  // out first.
   const standingStill = await chronicleOf(page);
   await dragUnit(page, cityTileOf(standingStill), run.tile);
 

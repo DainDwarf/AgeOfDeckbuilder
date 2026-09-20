@@ -112,13 +112,6 @@ type PlayCommand = Extract<Command, { readonly type: 'play' }>;
 /** A full hand. */
 const HAND_SIZE = 5;
 
-/**
- * The opening, on the map and the timeline it is handed: the settle phase, the city standing
- * nowhere with no population and no tile held, one guard standing on each camp of the map in tile order, the deck's
- * cards shuffled into the draw pile from the seed, its settle cards in hand in the deck's order, and
- * the map charted of its centre part. A map whose centre part names a tile the map does not hold is
- * refused. The chronicle names the version of the catalogue it is begun on.
- */
 export function beginChronicle(
   catalogue: Catalogue,
   seed: number,
@@ -421,11 +414,6 @@ function opened(catalogue: Catalogue, chronicle: Chronicle): Sequence {
   ]);
 }
 
-/**
- * The `turn` group: the turn ticked; the settle cards still in hand gone from the chronicle at the
- * end of the settle phase; and every unit, in unit order, whose move points or action are short of
- * full, refreshed.
- */
 function ticked(chronicle: Chronicle): Sequence<Group> {
   let tick = landedAs(change('turn', { ...chronicle, turn: chronicle.turn + 1 }));
   if (onSettlePhase(chronicle) && chronicle.hand.length > 0) {
@@ -642,11 +630,6 @@ function aimedTile(command: PlayCommand, aim: AimedCard['aim']): TileCoords | un
   }
 }
 
-/**
- * What a unit of the player's may do by hand: the landings its move points reach and the units its
- * attack reaches, and nothing at all on the settle phase. The one answer the move, the attack and
- * the map lighting a unit all read.
- */
 export function byHand(
   catalogue: Catalogue,
   chronicle: Chronicle,

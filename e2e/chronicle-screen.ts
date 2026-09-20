@@ -45,11 +45,8 @@ declare global {
 export type Border = 'ring' | 'bare';
 
 /**
- * The chronicle the screen opens on a seed, a deck and a schedule, launched exactly as the boot
- * launches it — on the schedule the boot takes when the address names none, unless one is given —
- * and settled exactly as `open` settles it: the first card of the hand played on the centre tile, or
- * on the tile given, the free claims played on the six tiles around it unless the city is asked for
- * bare, and the settle phase ended, a deal turn 1 stops on left standing.
+ * The headless twin of `open`: the two must settle alike, or a spec's fixture is not the chronicle
+ * its page shows.
  */
 export function launch(
   seed: number,
@@ -141,9 +138,9 @@ export async function open(
 }
 
 /**
- * The settle as a player makes it on the settle phase: the first card of the hand dragged out, the centre
- * tile or the tile given pressed, the free claims played on the six tiles around the city unless it
- * is asked for bare, and the turn ended.
+ * The settle as a player makes it on the settle phase: the first card of the hand dragged out, the
+ * centre tile or the tile given pressed, the free claims played on the six tiles around the city
+ * unless it is asked for bare, and the turn ended.
  */
 export async function settle(
   page: Page,
@@ -168,8 +165,8 @@ export async function settle(
 }
 
 /**
- * A free claim as a player plays it on the settle phase: the first card of the hand selected, then the tile
- * pressed, waited out until the city holds one tile more.
+ * A free claim as a player plays it on the settle phase: the first card of the hand selected, then
+ * the tile pressed, waited out until the city holds one tile more.
  */
 async function claimFree(page: Page, tile: TileCoords): Promise<void> {
   const { held } = await chronicleOf(page);
@@ -292,8 +289,9 @@ export function onScreen(page: Page, name: string): Promise<OnScreen> {
 
 /**
  * Where a tile's face stands on the page, whether the map draws it or not: the map lays its tiles on
- * two axes, and the centre tile's face with the two beside it — charted from the settle phase on — give both.
- * Where a spec presses for a tile the map may be drawing nothing of, a press that lands off the map.
+ * two axes, and the centre tile's face with the two beside it — charted from the settle phase on —
+ * give both. Where a spec presses for a tile the map may be drawing nothing of, a press that lands
+ * off the map.
  */
 export async function tileOnScreen(page: Page, coord: TileCoords): Promise<OnScreen> {
   const origin = await onScreen(page, `tile-${tileKey(CENTRE)}`);
