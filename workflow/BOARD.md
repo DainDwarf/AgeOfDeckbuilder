@@ -6,7 +6,7 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ---
 
-- **The population growth curve** — the growth threshold equals the population, so the city grows every turn and food piles up to dozens; a steeper curve is the candidate, with the question of whether units count as population for it, since otherwise a smaller city produces units faster.
+- **The population growth curve** — the growth threshold is twice the population and the units of the player's on the map counted together, `docs/CHRONICLE.md` says so and one rules test holds it on the fixture. Doc-impact: `docs/CHRONICLE.md`. [board/population-growth-curve.md](board/population-growth-curve.md)
 - **Production's drain** — production has almost no drain or curve and piles up like food; Shelter, Trapping, the firebreak and Hunger are its only sinks, and what a standing drain or a steeper sink should be is the question.
 - **The balance pass** — numbers measured on the real content, edits uncommitted until the user says they hold. First playtest of the nomadic age: the enemy hits too hard; the settlement and the economy expand way too fast, so gathering is not much needed after a few turns — a victory on 74 food, 22 production, 15 culture — which leaves Hunger biteless and the camps' stocks useless as loot.
 - **The claim indicator** — the city shows the player when a new tile can be claimed.
