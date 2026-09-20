@@ -46,7 +46,9 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **hand** | The cards drawn this turn. | — |
 | **draw** | To take cards from the draw pile into the hand. | pull |
 | **play** | To put a card from the hand into effect, paying its cost. | cast, activate |
-| **aim** | What a card is played at: a drawn tile, a unit of the player's on one, a card of the discard pile, or nothing. The window offering the discard pile's cards to a card aimed there is the **aim window**. A card is **being aimed** while it is selected and the things its aim admits are offered — the map lighting them, or the aim window standing. | target (for a card's aim), targeting (for a card's aim), cast at, pointed at, destination |
+| **aim** | What a card is played at, nothing included. | target (for a card's aim), targeting (for a card's aim), cast at, pointed at, destination |
+| **aim window** | The window offering the discard pile's cards to a card aimed there. | browse (for the aim window), picker, chooser, selector |
+| **being aimed** | The state of a selected card while what its aim admits is offered, until it lands or is put back. | armed, pending, targeting, in flight |
 | **cost** | What the city pays out of its stocks to play something, for example a card. | price, fee, charge, toll |
 | **unaffordable** | What the city cannot pay for: its cost exceeds the stocks. | unpayable, short, lacking, too expensive |
 | **discard** | To send a card from the hand to the discard pile. | throw away, dump |
@@ -54,7 +56,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **single use** | A keyword on a card: played, it leaves the chronicle instead of going to the discard pile. | one-use, gone once played, consumed, exhaust, exile |
 | **draw pile** | The cards not yet drawn this cycle; refilled from the discard pile when empty. | library |
 | **discard pile** | The cards played or discarded this cycle, waiting to be shuffled back. | graveyard, trash, bin |
-| **browse** | A window offering a pile's cards to be read; the aim window is not one. | pile window, viewer, gallery, preview, list (of a pile) |
+| **browse** | A window offering a pile's cards to be read. | pile window, viewer, gallery, preview, list (of a pile) |
 | **combat** | Units attacking one another: the player's by hand in play, the enemies' in the enemy phase. | battle, fight, skirmish, war |
 | **income** | The phase after the turn ends where standing things yield. | upkeep, production phase, resolution |
 | **sight** | A unit's stat and the city's own: how far it sees; a tile it reaches is in sight. | vision, line of sight |
