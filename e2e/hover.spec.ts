@@ -87,8 +87,8 @@ function cursorOverCanvas(page: Page): Promise<string> {
   return page.locator('canvas').evaluate((canvas: HTMLCanvasElement) => canvas.style.cursor);
 }
 
-// `open` ends turn 0 by clicking the button, so the pointer rests on it: the first assertions have
-// to come before any move.
+// `open` ends the settle phase by clicking the button, so the pointer rests on it: the first
+// assertions have to come before any move.
 test('the end-turn button reads End turn under the pointer the last turn ended at', async ({
   page,
 }) => {

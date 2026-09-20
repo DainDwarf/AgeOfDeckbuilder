@@ -1,0 +1,84 @@
+import type Phaser from 'phaser';
+import { MAP_FRAME } from './band';
+import { addText, onClick, UI_FONT } from './design-space';
+
+/** Over the band and the map under it, under the cards that stand up into the map's frame. */
+const DEPTH = 2;
+
+/** How wide the frame's stroke is; Phaser centres a stroke on its path, hence the half-width inset. */
+const STROKE = 8;
+
+/** How far the chip stands clear of the stroke's inner edge, above it and to its right. */
+const CLEAR = 16;
+
+/** How far the chip's fill reaches past its label, sideways and down. */
+const PADDING = { x: 40, y: 10 };
+
+const LABEL_STYLE = { fontFamily: UI_FONT, fontSize: '16px', fontStyle: 'bold', color: '#0d1014' };
+
+/** The frame and the chip, both standing only while what they name is on. */
+export type Frame = { show(on: boolean): void };
+
+/**
+ * What one frame is drawn for: the name its objects take, its colour, the word on its chip, and what
+ * a press on that chip leaves — nothing on a chip that answers none.
+ */
+export type Framed = {
+  readonly name: string;
+  readonly colour: number;
+  readonly label: string;
+  readonly leave?: () => void;
+};
+
+/**
+ * What the chronicle screen shows it is in — city mode, the settle phase: the map's frame in that
+ * colour and the chip naming it in the frame's top-right corner, sized to its own word. Both are
+ * laid out once and shown or hidden; what is on is the scene's.
+ */
+export function createFrame(scene: Phaser.Scene, framed: Framed): Frame {
+  const frame = scene.add
+    .rectangle(
+      MAP_FRAME.x + STROKE / 2,
+      MAP_FRAME.y + STROKE / 2,
+      MAP_FRAME.width - STROKE,
+      MAP_FRAME.height - STROKE,
+    )
+    .setOrigin(0, 0)
+    .setStrokeStyle(STROKE, framed.colour)
+    .setName(`${framed.name}-frame`)
+    .setDepth(DEPTH)
+    .setVisible(false);
+
+  const chip = scene.add
+    .rectangle(0, 0, 1, 1, framed.colour)
+    .setOrigin(0, 0)
+    .setName(`${framed.name}-chip`)
+    .setDepth(DEPTH)
+    .setVisible(false);
+  // Added after the chip: equal depths draw in the order they were added.
+  const label = addText(scene, 0, 0, framed.label, LABEL_STYLE)
+    .setOrigin(0.5, 0.5)
+    .setName(`${framed.name}-chip-label`)
+    .setDepth(DEPTH)
+    .setVisible(false);
+
+  const width = label.width + PADDING.x;
+  const height = label.height + PADDING.y;
+  const x = MAP_FRAME.x + MAP_FRAME.width - STROKE - CLEAR - width;
+  const y = MAP_FRAME.y + STROKE + CLEAR;
+  chip.setPosition(x, y).setSize(width, height);
+  label.setPosition(x + width / 2, y + height / 2);
+
+  const leave = framed.leave;
+  if (leave !== undefined) onClick(chip, leave);
+
+  return {
+    show(on: boolean): void {
+      frame.setVisible(on);
+      chip.setVisible(on);
+      label.setVisible(on);
+      if (on && leave !== undefined) chip.setInteractive({ useHandCursor: true });
+      else chip.disableInteractive();
+    },
+  };
+}

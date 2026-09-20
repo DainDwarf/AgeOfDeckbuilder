@@ -57,7 +57,7 @@ export type Chronicle = {
   readonly snapshots: Snapshot[];
   /** The rivers the generator ran, each the corners it passes through along the edges between tiles. */
   readonly rivers: River[];
-  /** The map's centre part: the whole of what is in sight on turn 0 before the city stands. */
+  /** The map's centre part: the whole of what is in sight on the settle phase before the city stands. */
   readonly centre: TileCoords[];
   /** The tile the city stands on, and nothing at all until the settle puts it on one. */
   readonly city?: TileCoords;
@@ -154,6 +154,14 @@ export function unaffordable(chronicle: Chronicle, costs: readonly Cost[]): Reso
   return costs
     .filter(({ resource, amount }) => amount > chronicle.resources[resource])
     .map(({ resource }) => resource);
+}
+
+/**
+ * Whether the chronicle stands on the settle phase, before its first turn: nothing else reads the
+ * turn counter's zero.
+ */
+export function onSettlePhase(chronicle: Chronicle): boolean {
+  return chronicle.turn === 0;
 }
 
 /** Whether the tile is inside the city's border: what a card's aim and a city-mode click both ask. */

@@ -50,7 +50,7 @@ type Run = {
 
 /**
  * The tiles one inside the edge of the centre part a seed's settle admits: the furthest out a city
- * stands whose six free claims all land on turn 0, when nothing but the centre part is charted.
+ * stands whose six free claims all land on the settle phase, when nothing but the centre part is charted.
  */
 function edgeSettles(seed: number): TileCoords[] {
   const unsettled = launched(

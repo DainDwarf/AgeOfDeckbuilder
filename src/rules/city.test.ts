@@ -116,7 +116,7 @@ function withWorkerBeside(
 
 /**
  * The first seed and tile at the edge of the centre part whose settle, its six free claims played on
- * the tiles around the city — those beyond the centre part refused, uncharted on turn 0 — and two
+ * the tiles around the city — those beyond the centre part refused, uncharted on the settle phase — and two
  * ends of turn on, leaves a tile touching the border uncharted that a worker the hand enters can step
  * beside: that chronicle with culture enough for any claim, the tile, and where the city stands. The
  * centre part charts every tile nearer the centre, so a city settled any nearer has no dark border to

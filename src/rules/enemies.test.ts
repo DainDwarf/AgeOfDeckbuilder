@@ -589,7 +589,7 @@ test('a city fallen in the enemy phase rolls no camp', () => {
   expect(fallen.rng).toEqual(overrun.rng);
 });
 
-test('turn 0’s end rolls no camp', () => {
+test('the settle phase’s end rolls no camp', () => {
   const opening = cityOf(['urban'], { turn: 0, tiles: camped(field(4), CAMPS) });
 
   const opened = outcome(apply(rolling(1), opening, { type: 'end-turn' }));

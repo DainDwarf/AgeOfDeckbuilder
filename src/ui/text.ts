@@ -59,6 +59,8 @@ const TEXT = {
   'panel.no-yield': 'No yield',
   'button.turn': 'Turn {turn}',
   'button.end-turn': 'End turn',
+  'button.settle-phase': 'Settle phase',
+  'button.end-settle-phase': 'End settle phase',
   'button.city-mode': 'City mode',
   'kind.settle': 'Settle',
   'kind.unit': 'Unit',

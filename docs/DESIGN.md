@@ -31,9 +31,9 @@ Four choices, each with one job:
 - **Age** — given by the campaign: the furthest age reached, the Nomadic Age for a new campaign. Earlier ages stay playable, for the influence and the achievements missed. The age is never a difficulty pick.
 - **Region** — a bias on map generation: temperate, desert, coast, mountains, polar, … The region is the **difficulty dial**, and honestly so: a harsh region pays more influence, and some achievements are reachable only from a region that has what they need. 🔧 A freely chosen region with no such stakes was rejected: every launch would take the easiest.
 - **Civilization** — who you are: starting units, one passive rule, a look. A civilization owns its deck — one deck per civilization, edited as a facet of it. 🔧
-- **Deck** — built in the meta from the shared collection, fixed for the chronicle, in two sections: its **cards**, which the draw pile cycles, and its **settle cards**, played on turn 0 alone.
+- **Deck** — built in the meta from the shared collection, fixed for the chronicle, in two sections: its **cards**, which the draw pile cycles, and its **settle cards**, played on the settle phase alone.
 
-The four choices lead to turn 0: the chronicle opens unsettled, and its first act is the settle.
+The four choices lead to the settle phase: the chronicle opens unsettled, and its first act is the settle.
 
 ### The meta — humanity's history ✅
 

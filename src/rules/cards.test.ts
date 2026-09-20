@@ -443,7 +443,7 @@ test('a settle card entering a unit puts it on its tile full, takes no populatio
   expect(after.discardPile).toEqual([]);
 });
 
-test('a unit entered on turn 0 neither moves nor attacks, and nothing is offered for it, until turn 1', () => {
+test('a unit entered on the settle phase neither moves nor attacks, and nothing is offered for it, until turn 1', () => {
   const warrior = { q: 1, r: 0 };
   const enemy = { q: 2, r: 0 };
   const onto = { q: 1, r: -1 };

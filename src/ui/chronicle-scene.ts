@@ -15,13 +15,12 @@ import { cityCommand, type ReassignCommand, tileCost, tileRefusal } from '../rul
 import { tileAt, tileKey } from '../rules/map';
 import { RESOURCES, type Resource } from '../rules/resources';
 import { leaf, type Stage, walked } from '../rules/stages';
-import { type Chronicle, type Cost, playable } from '../rules/state';
+import { type Chronicle, type Cost, onSettlePhase, playable } from '../rules/state';
 import { unitOf } from '../rules/units';
 import { createBand } from './band';
 import { boundTo } from './bindings';
 import { CARD_BASELINE, CARD_HEIGHT } from './card-face';
 import { EASE, ended, stopAllMotion, stopMotion } from './card-motion';
-import { createCityMode } from './city-mode';
 import { createDebugConsole } from './debug-console';
 import {
   ACCENT,
@@ -31,8 +30,10 @@ import {
   MARGIN,
   onClick,
   onHover,
+  SETTLE_PHASE,
   UI_FONT,
 } from './design-space';
+import { createFrame } from './frame';
 import { createHand } from './hand';
 import { cardsOf, createInfoPanel } from './infopanel';
 import { onKeyDown } from './keys';
@@ -427,9 +428,24 @@ export class ChronicleScene extends Phaser.Scene {
       overlay.menu();
     };
 
-    const marks = createCityMode(this, () => {
-      leaveCityMode();
+    const settleFrame = createFrame(this, {
+      name: 'settle-phase',
+      colour: SETTLE_PHASE,
+      label: text('button.settle-phase'),
     });
+    const marks = createFrame(this, {
+      name: 'city',
+      colour: ACCENT,
+      label: text('button.city-mode'),
+      leave: () => {
+        leaveCityMode();
+      },
+    });
+
+    /** The one place the settle phase's frame and chip are shown or hidden. */
+    const showSettleFrame = (chronicle: Chronicle): void => {
+      settleFrame.show(onSettlePhase(chronicle) && !cityMode);
+    };
 
     /** City mode raised: what was pending on the chronicle screen is let go of and it passes. */
     const enterCityMode = (): void => {
@@ -437,6 +453,7 @@ export class ChronicleScene extends Phaser.Scene {
       dismiss();
       cityMode = true;
       marks.show(true);
+      showSettleFrame(this.current);
       view.showCityMarks(true);
     };
 
@@ -446,6 +463,7 @@ export class ChronicleScene extends Phaser.Scene {
       cityMode = false;
       dismiss();
       marks.show(false);
+      showSettleFrame(this.current);
       view.showCityMarks(false);
       return true;
     };
@@ -535,6 +553,7 @@ export class ChronicleScene extends Phaser.Scene {
       createPiles(this, this.choices.catalogue, (pile) => overlay.browse(pile, this.current)),
       hand,
       endTurn,
+      { render: showSettleFrame },
       overlay,
     );
     paint();
@@ -547,11 +566,19 @@ export class ChronicleScene extends Phaser.Scene {
       .setName('end-turn-label')
       .setDepth(21);
 
-    // Measured at both labels, so neither the hover swap nor a fourth digit in the turn resizes it.
-    label.setText(text('button.end-turn'));
-    const hoveredWidth = label.width;
-    label.setText(text('button.turn', { turn: 8888 }));
-    const width = Math.max(hoveredWidth, label.width) + 56;
+    // Measured at every label it ever takes, so neither the hover swap, the phase it stands on nor a
+    // fourth digit in the turn resizes it.
+    let widest = 0;
+    for (const reading of [
+      text('button.turn', { turn: 8888 }),
+      text('button.end-turn'),
+      text('button.settle-phase'),
+      text('button.end-settle-phase'),
+    ]) {
+      label.setText(reading);
+      widest = Math.max(widest, label.width);
+    }
+    const width = widest + 56;
     const height = label.height + 24;
     const x = DESIGN_WIDTH - MARGIN - width / 2;
     const y = CARD_BASELINE - CARD_HEIGHT - 14 - height / 2;
@@ -559,7 +586,13 @@ export class ChronicleScene extends Phaser.Scene {
     label.setPosition(x, y);
 
     let turn = 1;
+    let settlePhase = false;
     const paint = (): void => {
+      button.setFillStyle(settlePhase ? SETTLE_PHASE : ACCENT);
+      if (settlePhase) {
+        label.setText(text(hover.hovered ? 'button.end-settle-phase' : 'button.settle-phase'));
+        return;
+      }
       label.setText(hover.hovered ? text('button.end-turn') : text('button.turn', { turn }));
     };
 
@@ -591,6 +624,7 @@ export class ChronicleScene extends Phaser.Scene {
       }
       label.setPosition(x, y).setAlpha(1);
       turn = chronicle.turn;
+      settlePhase = onSettlePhase(chronicle);
       if (standing !== (chronicle.city !== undefined)) {
         standing = chronicle.city !== undefined;
         interact();
@@ -606,6 +640,7 @@ export class ChronicleScene extends Phaser.Scene {
         .setDepth(21);
       leaving = carried;
       turn = chronicle.turn;
+      settlePhase = onSettlePhase(chronicle);
       paint();
       label.setPosition(x, y + 24).setAlpha(0);
 

@@ -13,15 +13,17 @@ import {
   dragOut,
   endTurnLabel,
   marksIn,
+  onScreen,
   openOnCapstone,
   playedOut,
   rested,
+  shows,
   standing,
   stoppedTurn,
   watch,
 } from './chronicle-screen';
 
-test('a chronicle opens on turn 0 with the city standing nowhere, and the settle card puts it on the tile it is aimed at', async ({
+test('a chronicle opens on the settle phase with the city standing nowhere, and the settle card puts it on the tile it is aimed at', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -44,11 +46,13 @@ test('a chronicle opens on turn 0 with the city standing nowhere, and the settle
   }
   expect(await marksIn(page, 'border')).toBe(0);
 
-  expect(await endTurnLabel(page)).toBe(text('button.turn', { turn: 0 }));
+  expect(await endTurnLabel(page)).toBe(text('button.settle-phase'));
+  expect(await shows(page, 'settle-phase-frame')).toBe(true);
+  expect(await shows(page, 'settle-phase-chip')).toBe(true);
   await click(page, 'end-turn');
   await rested(page);
   await rested(page);
-  expect(await endTurnLabel(page)).toBe(text('button.turn', { turn: 0 }));
+  expect(await endTurnLabel(page)).toBe(text('button.settle-phase'));
   expect(await chronicleOf(page)).toEqual(opened);
 
   const card = aimOf(cardOf(STAND_IN, 'PH_Settle'));
@@ -69,14 +73,51 @@ test('a chronicle opens on turn 0 with the city standing nowhere, and the settle
   expect(tileAt(standingCity.tiles, at)?.terrain).toBe('urban');
   expect(await marksIn(page, 'border')).toBe(standingCity.held.length);
 
+  const button = await onScreen(page, 'end-turn');
+  await page.mouse.move(button.x, button.y);
+  await expect.poll(() => endTurnLabel(page)).toBe(text('button.end-settle-phase'));
+
   await stoppedTurn(page);
   const ticked = await chronicleOf(page);
   expect(ticked.turn).toBe(1);
+  expect(await shows(page, 'settle-phase-frame')).toBe(false);
+  expect(await shows(page, 'settle-phase-chip')).toBe(false);
   expect(ticked.hand).toHaveLength(5);
   for (const pile of [ticked.hand, ticked.drawPile, ticked.discardPile]) {
     expect(pile).not.toContain('PH_Settle');
     expect(pile).not.toContain('PH_Claim');
   }
+
+  expect(problems).toEqual([]);
+});
+
+test('city mode entered once the city stands hides the settle phase’s frame and chip, and leaving it brings them back', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  test.setTimeout(budget(0));
+
+  await openOnCapstone(page, 1, 'PH_Deck');
+  await click(page, 'capstone-card-0');
+  await expect.poll(() => standing(page, 'capstone')).toBe(false);
+  await rested(page);
+
+  await dragOut(page, 0);
+  await aimed(page);
+  await click(page, `tile-${tileKey(CENTRE)}`);
+  await playedOut(page);
+  await expect.poll(async () => (await chronicleOf(page)).city).toEqual(CENTRE);
+
+  await page.keyboard.press('c');
+  await expect.poll(() => shows(page, 'city-chip')).toBe(true);
+  expect(await shows(page, 'city-frame')).toBe(true);
+  expect(await shows(page, 'settle-phase-chip')).toBe(false);
+  expect(await shows(page, 'settle-phase-frame')).toBe(false);
+
+  await page.keyboard.press('Escape');
+  await expect.poll(() => shows(page, 'city-chip')).toBe(false);
+  expect(await shows(page, 'settle-phase-chip')).toBe(true);
+  expect(await shows(page, 'settle-phase-frame')).toBe(true);
 
   expect(problems).toEqual([]);
 });

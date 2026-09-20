@@ -216,7 +216,7 @@ test('the blight is dealt as readily on the third turn as the twentieth', () => 
   expect(Math.max(...turns)).toBeGreaterThanOrEqual(20);
 });
 
-test('a timeline dealing on the first turn stops the end of turn 0 on its deal, and the take draws its hand', () => {
+test('a timeline dealing on the first turn stops the end of the settle phase on its deal, and the take draws its hand', () => {
   const settled = settledOn(opening(plains(4), { timeline: dueOn(1) }), CITY);
   const dealt = outcome(apply(CATALOGUE, settled, { type: 'end-turn' }));
   const taken = outcome(apply(CATALOGUE, dealt, { type: 'take', at: 1 }));

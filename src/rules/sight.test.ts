@@ -230,7 +230,7 @@ test('a city of sight one sees the six tiles around it, and none beyond them', (
   }
 });
 
-test('the centre part stands in sight through turn 0, and from turn 1 falls into fog wherever the city does not see it', () => {
+test('the centre part stands in sight through the settle phase, and from turn 1 falls into fog wherever the city does not see it', () => {
   const at = { q: 3, r: 0 };
   const far = { q: -3, r: 0 };
   const beyond = { q: -4, r: 0 };
@@ -248,7 +248,7 @@ test('the centre part stands in sight through turn 0, and from turn 1 falls into
   expect(snapshotOf(ticked, beyond)).toBeUndefined();
 });
 
-test('nothing sees on turn 0: a settle at the centre part’s edge charts nothing beyond it until the tick', () => {
+test('nothing sees on the settle phase: a settle at the centre part’s edge charts nothing beyond it until the tick', () => {
   const at = { q: 3, r: 0 };
   const beyond = { q: 3 + CITY_SIGHT, r: 0 };
   const settled = settledOn(opening(plains(RADIUS), { reach: 3 }), at);
@@ -261,7 +261,7 @@ test('nothing sees on turn 0: a settle at the centre part’s edge charts nothin
   expect(snapshotOf(ticked, beyond)).toBeDefined();
 });
 
-test('nothing sees on turn 0: a unit entered at the centre part’s edge charts nothing beyond it until the tick', () => {
+test('nothing sees on the settle phase: a unit entered at the centre part’s edge charts nothing beyond it until the tick', () => {
   const at = { q: 3, r: 0 };
   const beyond = { q: 3 + CATALOGUE.units.PH_Worker.sight, r: 0 };
   const opened = opening(plains(RADIUS), {

@@ -151,7 +151,7 @@ test('the Menu button drops the selected tile before it raises the menu', async 
   expect(problems).toEqual([]);
 });
 
-test('a new chronicle deals the same deck a fresh seed, on turn 0', async ({ page }) => {
+test('a new chronicle deals the same deck a fresh seed, on the settle phase', async ({ page }) => {
   const problems = watch(page);
 
   await open(page, standingRun(), 'PH_Deck');

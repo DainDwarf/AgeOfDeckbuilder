@@ -12,6 +12,9 @@ export const MARGIN = 24;
 /** The one accent, on everything that is the player's: the border, the deck, the button. */
 export const ACCENT = 0xd9a441;
 
+/** The settle phase's own colour, on its frame, its chip and the button while the phase is on. */
+export const SETTLE_PHASE = 0x9fbb3a;
+
 /** The panel language: the tooltip bubbles and the resource bar are this fill inside this edge. */
 export const PANEL_FILL = 0xd4d7db;
 export const PANEL_EDGE = 0x6f757d;

@@ -6,7 +6,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ---
 
-- **The settle phase** — the glossary names the settle phase, no `docs/` page, `src/` or `e2e/` file says turn 0, and the chronicle screen marks the phase: the map's frame and a chip in the phase's own colour, and the end-turn button in it reading the phase. Doc-impact: `docs/GLOSSARY.md`, `docs/CHRONICLE.md`, `docs/CHRONICLE-SCREEN.md`, `docs/DESIGN.md`, `docs/ages/NOMADIC.md`. [board/settle-phase.md](board/settle-phase.md)
 - **The population growth curve** — the growth threshold equals the population, so the city grows every turn and food piles up to dozens; a steeper curve is the candidate, with the question of whether units count as population for it, since otherwise a smaller city produces units faster.
 - **Production's drain** — production has almost no drain or curve and piles up like food; Shelter, Trapping, the firebreak and Hunger are its only sinks, and what a standing drain or a steeper sink should be is the question.
 - **The balance pass** — numbers measured on the real content, edits uncommitted until the user says they hold. First playtest of the nomadic age: the enemy hits too hard; the settlement and the economy expand way too fast, so gathering is not much needed after a few turns — a victory on 74 food, 22 production, 15 culture — which leaves Hunger biteless and the camps' stocks useless as loot.

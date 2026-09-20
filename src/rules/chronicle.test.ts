@@ -56,7 +56,7 @@ test('a chronicle survives JSON and carries its generator on', () => {
   expect(chronicle.rng).not.toEqual(seedRng(chronicle.seed));
 });
 
-test('a chronicle opens on turn 0 with empty stores, the city standing nowhere, the settle cards in hand and the centre part alone in sight', () => {
+test('a chronicle opens on the settle phase with empty stores, the city standing nowhere, the settle cards in hand and the centre part alone in sight', () => {
   const chronicle = launched(CATALOGUE, REGION, SCHEDULE, 1234, DECK);
   const centre = chronicle.centre.map(tileKey).sort();
 
@@ -554,7 +554,7 @@ test('the settle puts the city on its tile: its terrain and building, no feature
   expect(everyCard(settled)).toEqual([...DECK.cards].sort());
 });
 
-test('ending turn 0 is refused while the city stands nowhere, and a chronicle standing nowhere never falls for its population', () => {
+test('ending the settle phase is refused while the city stands nowhere, and a chronicle standing nowhere never falls for its population', () => {
   const opened = opening(plains(3));
 
   expect(opened.population).toBe(0);
@@ -565,7 +565,7 @@ test('ending turn 0 is refused while the city stands nowhere, and a chronicle st
   );
 });
 
-test('the end of turn 0 runs none of the cycle: turn 1 and its hand drawn, no income, no growth, and the settle cards left in hand gone', () => {
+test('the end of the settle phase runs none of the cycle: turn 1 and its hand drawn, no income, no growth, and the settle cards left in hand gone', () => {
   const opened = opening(plains(3), {
     deck: { cards: DECK.cards, settle: ['PH_Settle', 'PH_Settle'] },
   });

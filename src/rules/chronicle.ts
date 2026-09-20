@@ -48,6 +48,7 @@ import {
   type Chronicle,
   type Cost,
   costsOf,
+  onSettlePhase,
   paid,
   playable,
   type Refusal,
@@ -112,8 +113,8 @@ type PlayCommand = Extract<Command, { readonly type: 'play' }>;
 const HAND_SIZE = 5;
 
 /**
- * The opening, on the map and the timeline it is handed: turn 0, the city standing nowhere with no
- * population and no tile held, one guard standing on each camp of the map in tile order, the deck's
+ * The opening, on the map and the timeline it is handed: the settle phase, the city standing
+ * nowhere with no population and no tile held, one guard standing on each camp of the map in tile order, the deck's
  * cards shuffled into the draw pile from the seed, its settle cards in hand in the deck's order, and
  * the map charted of its centre part. A map whose centre part names a tile the map does not hold is
  * refused. The chronicle names the version of the catalogue it is begun on.
@@ -394,7 +395,7 @@ function moved(name: 'drawn' | 'shuffled', before: Chronicle, after: Chronicle):
 
 function endOfTurn(catalogue: Catalogue, chronicle: Chronicle): Sequence {
   if (chronicle.city === undefined) return refused(chronicle);
-  if (chronicle.turn === 0) return opened(catalogue, chronicle);
+  if (onSettlePhase(chronicle)) return opened(catalogue, chronicle);
   return course(chronicle, [
     (left) => struck(catalogue, left),
     discarded,
@@ -422,12 +423,12 @@ function opened(catalogue: Catalogue, chronicle: Chronicle): Sequence {
 
 /**
  * The `turn` group: the turn ticked; the settle cards still in hand gone from the chronicle at the
- * end of turn 0; and every unit, in unit order, whose move points or action are short of full,
- * refreshed.
+ * end of the settle phase; and every unit, in unit order, whose move points or action are short of
+ * full, refreshed.
  */
 function ticked(chronicle: Chronicle): Sequence<Group> {
   let tick = landedAs(change('turn', { ...chronicle, turn: chronicle.turn + 1 }));
-  if (chronicle.turn === 0 && chronicle.hand.length > 0) {
+  if (onSettlePhase(chronicle) && chronicle.hand.length > 0) {
     tick = followed(tick, (left) =>
       landedAs(changeFrom('left', everyPlace(left.hand), { ...left, hand: [] })),
     );
@@ -643,15 +644,15 @@ function aimedTile(command: PlayCommand, aim: AimedCard['aim']): TileCoords | un
 
 /**
  * What a unit of the player's may do by hand: the landings its move points reach and the units its
- * attack reaches, and nothing at all on turn 0. The one answer the move, the attack and the map
- * lighting a unit all read.
+ * attack reaches, and nothing at all on the settle phase. The one answer the move, the attack and
+ * the map lighting a unit all read.
  */
 export function byHand(
   catalogue: Catalogue,
   chronicle: Chronicle,
   unit: Unit,
 ): { readonly landings: Landing[]; readonly targets: Unit[] } {
-  if (chronicle.turn === 0) return { landings: [], targets: [] };
+  if (onSettlePhase(chronicle)) return { landings: [], targets: [] };
   return {
     landings: reachable(catalogue, chronicle, unit),
     targets: attackable(chronicle.units, unit),
@@ -679,8 +680,8 @@ function crossed(chronicle: Chronicle, unit: Unit, landing: Landing): Landed {
 /**
  * One unit of the player's crossing to a tile its move points reach, in as many steps as the player
  * likes: the cheapest route there is spent, and the crossing is the same `move` change the enemy
- * phase raises. A unit that is not the player's, a move on turn 0, or a tile it cannot land on — an
- * uncharted one among them — is `refused`.
+ * phase raises. A unit that is not the player's, a move on the settle phase, or a tile it cannot
+ * land on — an uncharted one among them — is `refused`.
  */
 function move(catalogue: Catalogue, chronicle: Chronicle, mover: number, to: TileCoords): Sequence {
   const unit = unitOf(chronicle.units, mover);
@@ -696,8 +697,8 @@ function move(catalogue: Catalogue, chronicle: Chronicle, mover: number, to: Til
 /**
  * One unit of the player's attacking what stands on a tile its range reaches, as the one `attack`
  * group the enemy phase raises too. A unit that is not the player's, a worker, one with no action
- * left, an attack on turn 0, and a tile no unit of another faction within range stands on are
- * `refused`.
+ * left, an attack on the settle phase, and a tile no unit of another faction within range stands on
+ * are `refused`.
  */
 function attack(
   catalogue: Catalogue,

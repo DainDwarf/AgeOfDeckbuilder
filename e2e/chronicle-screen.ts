@@ -39,8 +39,8 @@ declare global {
 }
 
 /**
- * What the city holds when turn 0 ends: the six tiles around it claimed by the settle section's free
- * claims, or its own tile alone.
+ * What the city holds when the settle phase ends: the six tiles around it claimed by the settle
+ * section's free claims, or its own tile alone.
  */
 export type Border = 'ring' | 'bare';
 
@@ -49,7 +49,7 @@ export type Border = 'ring' | 'bare';
  * launches it — on the schedule the boot takes when the address names none, unless one is given —
  * and settled exactly as `open` settles it: the first card of the hand played on the centre tile, or
  * on the tile given, the free claims played on the six tiles around it unless the city is asked for
- * bare, and turn 0 ended, a deal turn 1 stops on left standing.
+ * bare, and the settle phase ended, a deal turn 1 stops on left standing.
  */
 export function launch(
   seed: number,
@@ -141,7 +141,7 @@ export async function open(
 }
 
 /**
- * The settle as a player makes it on turn 0: the first card of the hand dragged out, the centre
+ * The settle as a player makes it on the settle phase: the first card of the hand dragged out, the centre
  * tile or the tile given pressed, the free claims played on the six tiles around the city unless it
  * is asked for bare, and the turn ended.
  */
@@ -168,7 +168,7 @@ export async function settle(
 }
 
 /**
- * A free claim as a player plays it on turn 0: the first card of the hand selected, then the tile
+ * A free claim as a player plays it on the settle phase: the first card of the hand selected, then the tile
  * pressed, waited out until the city holds one tile more.
  */
 async function claimFree(page: Page, tile: TileCoords): Promise<void> {
@@ -292,7 +292,7 @@ export function onScreen(page: Page, name: string): Promise<OnScreen> {
 
 /**
  * Where a tile's face stands on the page, whether the map draws it or not: the map lays its tiles on
- * two axes, and the centre tile's face with the two beside it — charted from turn 0 on — give both.
+ * two axes, and the centre tile's face with the two beside it — charted from the settle phase on — give both.
  * Where a spec presses for a tile the map may be drawing nothing of, a press that lands off the map.
  */
 export async function tileOnScreen(page: Page, coord: TileCoords): Promise<OnScreen> {

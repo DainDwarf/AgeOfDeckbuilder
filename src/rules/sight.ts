@@ -9,7 +9,7 @@ import {
   tileKey,
 } from './map';
 import { refuse } from './map-kinds';
-import type { Chronicle, Snapshot } from './state';
+import { type Chronicle, onSettlePhase, type Snapshot } from './state';
 import { unitAt } from './units';
 
 /** A tile in the cube coordinates a line is drawn in: `x` is its q, `z` its r, and the three sum to nought. */
@@ -79,13 +79,13 @@ function seenFrom(
 }
 
 /**
- * The tiles in sight, by their keys: on turn 0 the map's centre part and nothing else, since nothing
- * sees before turn 1; from turn 1 every tile the city holds, and every tile within a sight of the
- * city's, once it stands, or of a unit of the player's that a line over the ground reaches. The one
- * answer to what is in sight.
+ * The tiles in sight, by their keys: on the settle phase the map's centre part and nothing else,
+ * since nothing sees before turn 1; from turn 1 every tile the city holds, and every tile within a
+ * sight of the city's, once it stands, or of a unit of the player's that a line over the ground
+ * reaches. The one answer to what is in sight.
  */
 export function inSight(catalogue: Catalogue, chronicle: Chronicle): ReadonlySet<string> {
-  if (chronicle.turn === 0) return new Set(chronicle.centre.map(tileKey));
+  if (onSettlePhase(chronicle)) return new Set(chronicle.centre.map(tileKey));
   const terrains = new Map(chronicle.tiles.map((tile) => [tileKey(tile), tile.terrain]));
   const seen = new Set(chronicle.held.map(tileKey));
 

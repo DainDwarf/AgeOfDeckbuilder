@@ -145,7 +145,7 @@ export type Schedule = {
   readonly entries: Readonly<Record<string, (turn: number) => number>>;
 };
 
-/** A deck's two sections: its cards, which the draw pile cycles, and its settle cards, in hand on turn 0. */
+/** A deck's two sections: its cards, which the draw pile cycles, and its settle cards, in hand on the settle phase. */
 export type Deck = { readonly cards: readonly string[]; readonly settle: readonly string[] };
 
 /**

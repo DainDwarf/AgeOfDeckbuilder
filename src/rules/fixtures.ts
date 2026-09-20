@@ -835,7 +835,7 @@ type Opening = {
 };
 
 /**
- * The chronicle opened on these tiles through the rules, standing on turn 0 with the city nowhere:
+ * The chronicle opened on these tiles through the rules, on the settle phase with the city nowhere:
  * its centre part every tile within `reach` of the centre, two unless the fixture names it, on the
  * fixture's deck and a timeline dealing nothing unless the fixture names others.
  */
@@ -860,7 +860,7 @@ export function settledOn(
 
 /**
  * A chronicle launched as the boot launches one, the first card of its hand played on a tile — the
- * centre tile unless the fixture names another — and turn 0 ended, all through the rules: turn 1 as
+ * centre tile unless the fixture names another — and the settle phase ended, all through the rules: turn 1 as
  * that end leaves it, standing on the deal where turn 1 deals one. A settle the tile refuses throws.
  */
 export function settledLaunch(
