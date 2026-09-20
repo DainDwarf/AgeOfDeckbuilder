@@ -33,7 +33,6 @@ import {
   SETTLE_PHASE,
   UI_FONT,
 } from './design-space';
-import { createFrame } from './frame';
 import { createHand } from './hand';
 import { cardsOf, createInfoPanel } from './infopanel';
 import { onKeyDown } from './keys';
@@ -43,6 +42,7 @@ import { createOverlay } from './overlay';
 import { createPiles } from './piles';
 import { createRefusalNote, refusedAct, refusedAim, refusedCard } from './refusal-note';
 import { createResourceBar } from './resource-bar';
+import { createStanding } from './standing';
 import { text } from './text';
 import { createTooltip } from './tooltip';
 
@@ -428,12 +428,12 @@ export class ChronicleScene extends Phaser.Scene {
       overlay.menu();
     };
 
-    const settleFrame = createFrame(this, {
+    const settleStanding = createStanding(this, {
       name: 'settle-phase',
       colour: SETTLE_PHASE,
       label: text('button.settle-phase'),
     });
-    const marks = createFrame(this, {
+    const cityStanding = createStanding(this, {
       name: 'city',
       colour: ACCENT,
       label: text('button.city-mode'),
@@ -442,9 +442,13 @@ export class ChronicleScene extends Phaser.Scene {
       },
     });
 
-    /** The one place the settle phase's frame and chip are shown or hidden. */
-    const showSettleFrame = (chronicle: Chronicle): void => {
-      settleFrame.show(onSettlePhase(chronicle) && !cityMode);
+    /**
+     * The one place the settle phase's standing is shown or hidden, and a render calls it: the phase
+     * ends under the player on the turn's tick, where city mode is only ever left through the two
+     * doors below.
+     */
+    const showSettleStanding = (chronicle: Chronicle): void => {
+      settleStanding.show(onSettlePhase(chronicle) && !cityMode);
     };
 
     /** City mode raised: what was pending on the chronicle screen is let go of and it passes. */
@@ -452,8 +456,8 @@ export class ChronicleScene extends Phaser.Scene {
       if (cityMode || this.current.city === undefined) return;
       dismiss();
       cityMode = true;
-      marks.show(true);
-      showSettleFrame(this.current);
+      cityStanding.show(true);
+      showSettleStanding(this.current);
       view.showCityMarks(true);
     };
 
@@ -462,8 +466,8 @@ export class ChronicleScene extends Phaser.Scene {
       if (!cityMode) return false;
       cityMode = false;
       dismiss();
-      marks.show(false);
-      showSettleFrame(this.current);
+      cityStanding.show(false);
+      showSettleStanding(this.current);
       view.showCityMarks(false);
       return true;
     };
@@ -553,7 +557,7 @@ export class ChronicleScene extends Phaser.Scene {
       createPiles(this, this.choices.catalogue, (pile) => overlay.browse(pile, this.current)),
       hand,
       endTurn,
-      { render: showSettleFrame },
+      { render: showSettleStanding },
       overlay,
     );
     paint();

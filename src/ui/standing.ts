@@ -17,13 +17,13 @@ const PADDING = { x: 40, y: 10 };
 const LABEL_STYLE = { fontFamily: UI_FONT, fontSize: '16px', fontStyle: 'bold', color: '#0d1014' };
 
 /** The frame and the chip, both standing only while what they name is on. */
-export type Frame = { show(on: boolean): void };
+export type Standing = { show(on: boolean): void };
 
 /**
- * What one frame is drawn for: the name its objects take, its colour, the word on its chip, and what
- * a press on that chip leaves — nothing on a chip that answers none.
+ * What one standing is drawn for: the name its objects take, its colour, the word on its chip, and
+ * what a press on that chip leaves — nothing on a chip that answers none.
  */
-export type Framed = {
+export type Stood = {
   readonly name: string;
   readonly colour: number;
   readonly label: string;
@@ -31,11 +31,11 @@ export type Framed = {
 };
 
 /**
- * What the chronicle screen shows it is in — city mode, the settle phase: the map's frame in that
- * colour and the chip naming it in the frame's top-right corner, sized to its own word. Both are
- * laid out once and shown or hidden; what is on is the scene's.
+ * What the chronicle screen shows it is standing in — city mode, the settle phase: the map's frame
+ * in that colour and the chip naming it in the frame's top-right corner, sized to its own word.
+ * Both are laid out once and shown or hidden; what is on is the scene's.
  */
-export function createFrame(scene: Phaser.Scene, framed: Framed): Frame {
+export function createStanding(scene: Phaser.Scene, stood: Stood): Standing {
   const frame = scene.add
     .rectangle(
       MAP_FRAME.x + STROKE / 2,
@@ -44,21 +44,21 @@ export function createFrame(scene: Phaser.Scene, framed: Framed): Frame {
       MAP_FRAME.height - STROKE,
     )
     .setOrigin(0, 0)
-    .setStrokeStyle(STROKE, framed.colour)
-    .setName(`${framed.name}-frame`)
+    .setStrokeStyle(STROKE, stood.colour)
+    .setName(`${stood.name}-frame`)
     .setDepth(DEPTH)
     .setVisible(false);
 
   const chip = scene.add
-    .rectangle(0, 0, 1, 1, framed.colour)
+    .rectangle(0, 0, 1, 1, stood.colour)
     .setOrigin(0, 0)
-    .setName(`${framed.name}-chip`)
+    .setName(`${stood.name}-chip`)
     .setDepth(DEPTH)
     .setVisible(false);
   // Added after the chip: equal depths draw in the order they were added.
-  const label = addText(scene, 0, 0, framed.label, LABEL_STYLE)
+  const label = addText(scene, 0, 0, stood.label, LABEL_STYLE)
     .setOrigin(0.5, 0.5)
-    .setName(`${framed.name}-chip-label`)
+    .setName(`${stood.name}-chip-label`)
     .setDepth(DEPTH)
     .setVisible(false);
 
@@ -69,7 +69,7 @@ export function createFrame(scene: Phaser.Scene, framed: Framed): Frame {
   chip.setPosition(x, y).setSize(width, height);
   label.setPosition(x + width / 2, y + height / 2);
 
-  const leave = framed.leave;
+  const leave = stood.leave;
   if (leave !== undefined) onClick(chip, leave);
 
   return {
