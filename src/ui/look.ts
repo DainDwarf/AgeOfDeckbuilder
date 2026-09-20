@@ -6,6 +6,9 @@ export type Reading = Resource | 'population';
 /** A colour laid over what is under it, at the strength it rests at. */
 export type Wash = { readonly colour: number; readonly strength: number };
 
+/** How strongly a glow rests on the tile it is drawn over: its face, and the line around it. */
+export type Glow = { readonly fill: number; readonly stroke: number };
+
 /** The paper one card face is drawn on. */
 export type Paper = {
   readonly face: number;
@@ -47,6 +50,8 @@ export type Look = {
   readonly mapDim: Wash;
   readonly scrim: Wash;
   readonly consolePanel: Wash;
+  readonly litGlow: Glow;
+  readonly targetGlow: Glow;
   readonly reading: Readonly<Record<Reading, number>>;
   readonly terrain: Readonly<Record<string, number>>;
   readonly feature: Readonly<Record<string, number>>;
@@ -85,6 +90,8 @@ export const LOOK: Look = {
   mapDim: { colour: 0x0d1014, strength: 0.6 },
   scrim: { colour: 0x0d1014, strength: 0.82 },
   consolePanel: { colour: 0x0d1014, strength: 0.9 },
+  litGlow: { fill: 0.4, stroke: 0.9 },
+  targetGlow: { fill: 0.4, stroke: 0.9 },
   reading: {
     food: 0x7d9c55,
     production: 0xb0834a,

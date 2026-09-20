@@ -745,6 +745,15 @@ export function endTurnLabel(page: Page): Promise<string> {
   });
 }
 
+/** What the end-turn button is painted. */
+export function endTurnFill(page: Page): Promise<number> {
+  return page.evaluate(() => {
+    const button = window.named?.('end-turn')?.object as Phaser.GameObjects.Rectangle | undefined;
+    if (button === undefined) throw new Error('the end-turn button is not on the chronicle screen');
+    return button.fillColor;
+  });
+}
+
 /** Which tile the map is ringing, or nothing while none is selected. */
 export function ringedTile(page: Page): Promise<string | undefined> {
   return page.evaluate(() => {

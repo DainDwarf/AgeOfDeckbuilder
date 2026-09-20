@@ -4,6 +4,7 @@ import { aimOf } from '../src/rules/cards';
 import { cardOf, deckOf } from '../src/rules/catalogue';
 import { admitted } from '../src/rules/chronicle';
 import { CENTRE, neighbours, tileAt, tileKey } from '../src/rules/map';
+import { LOOK } from '../src/ui/look';
 import { text } from '../src/ui/text';
 import {
   aimed,
@@ -11,6 +12,7 @@ import {
   chronicleOf,
   click,
   dragOut,
+  endTurnFill,
   endTurnLabel,
   marksIn,
   onScreen,
@@ -47,6 +49,7 @@ test('a chronicle opens on the settle phase with the city standing nowhere, and 
   expect(await marksIn(page, 'border')).toBe(0);
 
   expect(await endTurnLabel(page)).toBe(text('button.settle-phase'));
+  expect(await endTurnFill(page)).toBe(LOOK.settlePhase);
   expect(await shows(page, 'settle-phase-frame')).toBe(true);
   expect(await shows(page, 'settle-phase-chip')).toBe(true);
   await click(page, 'end-turn');
@@ -80,6 +83,7 @@ test('a chronicle opens on the settle phase with the city standing nowhere, and 
   await stoppedTurn(page);
   const ticked = await chronicleOf(page);
   expect(ticked.turn).toBe(1);
+  expect(await endTurnFill(page)).toBe(LOOK.accent);
   expect(await shows(page, 'settle-phase-frame')).toBe(false);
   expect(await shows(page, 'settle-phase-chip')).toBe(false);
   expect(ticked.hand).toHaveLength(5);

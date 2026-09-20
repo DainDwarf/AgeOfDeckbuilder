@@ -41,7 +41,7 @@ import {
   whileUp,
 } from './design-space';
 import { onKeyDown, onKeyUp } from './keys';
-import { css, LOOK } from './look';
+import { css, type Glow, LOOK } from './look';
 import {
   buildingColourOf,
   buildingMarkOf,
@@ -474,19 +474,16 @@ function same(a: TileCoords, b: TileCoords): boolean {
   return a.q === b.q && a.r === b.r;
 }
 
-/**
- * The one way a tile is glowed: its face in the colour of whoever offers it — the pale one on a
- * landing and on a tile a card is aimed at, the enemies' own on a unit an attack can be made on.
- */
 function glowTile(
   scene: Phaser.Scene,
   coord: TileCoords,
   colour: number,
+  glow: Glow,
 ): Phaser.GameObjects.Polygon {
   const { x, y } = positionOf(coord);
   return scene.add
-    .polygon(x, y, hexagon(TILE_SIZE - 2), colour, 0.4)
-    .setStrokeStyle(2, colour, 0.9);
+    .polygon(x, y, hexagon(TILE_SIZE - 2), colour, glow.fill)
+    .setStrokeStyle(2, colour, glow.stroke);
 }
 
 /**
@@ -1149,9 +1146,10 @@ export function createMapView(
     }
 
     lighted.removeAll(true);
-    for (const landing of lit?.landings ?? []) lighted.add(glowTile(scene, landing.tile, LOOK.lit));
+    for (const landing of lit?.landings ?? [])
+      lighted.add(glowTile(scene, landing.tile, LOOK.lit, LOOK.litGlow));
     for (const coord of lit?.targets ?? []) {
-      lighted.add(glowTile(scene, coord, FACTION_COLOURS.enemy));
+      lighted.add(glowTile(scene, coord, FACTION_COLOURS.enemy, LOOK.targetGlow));
     }
   };
 
@@ -1585,7 +1583,7 @@ export function createMapView(
     ): () => void {
       const { catcher, glow, close } = openAim();
       const lit = tiles.filter((coord) => drawn.has(tileKey(coord)));
-      for (const coord of lit) glow.add(glowTile(scene, coord, LOOK.lit));
+      for (const coord of lit) glow.add(glowTile(scene, coord, LOOK.lit, LOOK.litGlow));
 
       const letGo = (): void => {
         stop();
