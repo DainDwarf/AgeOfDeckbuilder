@@ -1,6 +1,7 @@
 import type Phaser from 'phaser';
 import type { Block, Cost, Refusal } from '../rules/state';
 import { addText, DESIGN_WIDTH, drawBubble, MARGIN, type Surface, UI_FONT } from './design-space';
+import { css, LOOK } from './look';
 import type { TileFace } from './map';
 import { text } from './text';
 
@@ -10,7 +11,7 @@ const DEPTH = 50;
 /** The clear water between the note and what it points at; its tail crosses most of that. */
 const STANDOFF = 8;
 
-const STYLE = { fontFamily: UI_FONT, fontSize: '14px', color: '#0d1014' };
+const STYLE = { fontFamily: UI_FONT, fontSize: '14px', color: css(LOOK.ink) };
 
 /** Where the note stands on its surface, laid out for the bubble it has measured. */
 type Place = (width: number, height: number, unit: number) => Placement;

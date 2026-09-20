@@ -1,8 +1,9 @@
 import type Phaser from 'phaser';
 import type { AimedCard } from '../rules/catalogue';
 import type { CardId } from '../rules/state';
-import { AIM_POINT_REACH, CARD_BASELINE, CARD_EDGE, CARD_HEIGHT, CARD_LIFT } from './card-face';
-import { ACCENT, addText, css, DESIGN_WIDTH, type Surface, UI_FONT } from './design-space';
+import { AIM_POINT_REACH, CARD_BASELINE, CARD_HEIGHT, CARD_LIFT } from './card-face';
+import { addText, DESIGN_WIDTH, type Surface, UI_FONT } from './design-space';
+import { css, LOOK } from './look';
 import { cardName, text } from './text';
 
 /** Over the hand's lifted cards, under the note a refusal raises. */
@@ -14,8 +15,7 @@ const STANDOFF = 8;
 /** The line's bottom edge: clear of the point on a card lifted out of the hand. */
 const BOTTOM = CARD_BASELINE - CARD_HEIGHT - CARD_LIFT - AIM_POINT_REACH - STANDOFF;
 
-/** The slab the sentence is written on, and how far the sentence stands off its edges. */
-const FILL = 0x232833;
+/** How far the sentence stands off the slab's edges. */
 const PAD_X = 10;
 const PAD_Y = 7;
 
@@ -23,7 +23,7 @@ const STYLE = {
   fontFamily: UI_FONT,
   fontSize: '14px',
   fontStyle: 'bold',
-  color: css(ACCENT),
+  color: css(LOOK.accent),
 };
 
 export type AimLine = {
@@ -52,9 +52,9 @@ export function createAimLine(scene: Phaser.Scene, on: Surface): AimLine {
       const height = label.height + 2 * PAD_Y;
 
       const slab = scene.add.graphics();
-      slab.fillStyle(FILL);
+      slab.fillStyle(LOOK.aimSlab);
       slab.fillRect(0, 0, width, height);
-      slab.lineStyle(1, CARD_EDGE);
+      slab.lineStyle(1, LOOK.cardEdge);
       slab.strokeRect(0.5, 0.5, width - 1, height - 1);
 
       line = scene.add

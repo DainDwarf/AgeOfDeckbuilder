@@ -1,6 +1,7 @@
 import type Phaser from 'phaser';
 import { MAP_FRAME } from './band';
 import { addText, onClick, UI_FONT } from './design-space';
+import { css, LOOK } from './look';
 
 /** Over the band and the map under it, under the cards that stand up into the map's frame. */
 const DEPTH = 2;
@@ -14,7 +15,12 @@ const CLEAR = 16;
 /** How far the chip's fill reaches past its label, sideways and down. */
 const PADDING = { x: 40, y: 10 };
 
-const LABEL_STYLE = { fontFamily: UI_FONT, fontSize: '16px', fontStyle: 'bold', color: '#0d1014' };
+const LABEL_STYLE = {
+  fontFamily: UI_FONT,
+  fontSize: '16px',
+  fontStyle: 'bold',
+  color: css(LOOK.ink),
+};
 
 /** The frame and the chip, both standing only while what they name is on. */
 export type Standing = { show(on: boolean): void };

@@ -12,7 +12,8 @@ import {
   createEmptySlot,
 } from './card-face';
 import { blockLength, EASE, ended, IN_FLIGHT, SHUFFLE, stopMotion, travel } from './card-motion';
-import { ACCENT, addText, DESIGN_WIDTH, MARGIN, onClick, UI_FONT } from './design-space';
+import { addText, DESIGN_WIDTH, MARGIN, onClick, UI_FONT } from './design-space';
+import { css, LOOK } from './look';
 import type { PileKind } from './overlay';
 
 /** Where each pile's top card lies, about its own bottom centre, as a card is drawn. */
@@ -202,7 +203,7 @@ function createPile(scene: Phaser.Scene, pile: PileKind, browse: (pile: PileKind
     fontFamily: UI_FONT,
     fontSize: '15px',
     fontStyle: 'bold',
-    color: '#0d1014',
+    color: css(LOOK.ink),
   })
     .setOrigin(0.5, 0.5)
     .setName(`${pile}-count`)
@@ -223,7 +224,7 @@ function createPile(scene: Phaser.Scene, pile: PileKind, browse: (pile: PileKind
       };
       count.setPosition(centre.x, centre.y);
       pill.clear();
-      pill.fillStyle(ACCENT);
+      pill.fillStyle(LOOK.accent);
       pill.fillRoundedRect(centre.x - width / 2, centre.y - height / 2, width, height, height / 2);
     },
     lift(): Phaser.GameObjects.Container | undefined {

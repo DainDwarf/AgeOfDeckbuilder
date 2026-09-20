@@ -6,7 +6,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ---
 
-- **One home for the colours** — every colour of the screen, the veils' strengths and the worn-down with them, lives in one Phaser-free record under `src/ui/`, no colour literal stands anywhere else under `src/`, and `e2e/chronicle-screen.ts`'s `accent(page)` is gone, the specs reading the accent off the home. Doc-impact: none. [board/one-home-for-the-colours.md](board/one-home-for-the-colours.md)
 - **Card references** — a card named in a rules entry is marked by its id and drawn as its name in brackets; the pointer resting on it shows the named card small above it and a right click on it shows the named card large beside the one it was taken off, both cascading; `docs/INTERFACE.md` and `docs/CHRONICLE-SCREEN.md` say so, the catalogues' coherence tests refuse a name that resolves to no card of theirs, and `e2e/reference.spec.ts` asserts it. Doc-impact: `docs/INTERFACE.md`, `docs/CHRONICLE-SCREEN.md`. [board/card-references.md](board/card-references.md)
 - **The population key is named idle** — `label.population`, `tooltip.population` and the bar's `Reading` member `'population'` now hold the word Idle; the key is renamed across the bar, the map's assigned mark colour and the piles' change switch.
 - **Player-facing text polish** — going over every player-facing text for polish.

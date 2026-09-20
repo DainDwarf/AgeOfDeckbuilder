@@ -1,14 +1,8 @@
 import type Phaser from 'phaser';
 import { runLine } from './console-line';
-import {
-  addText,
-  DESIGN_WIDTH,
-  MARGIN,
-  OVER_SCRIM_DEPTH,
-  PANEL_EDGE,
-  PANEL_FILL,
-} from './design-space';
+import { addText, DESIGN_WIDTH, MARGIN, OVER_SCRIM_DEPTH } from './design-space';
 import { readsKeyboard } from './keys';
+import { css, LOOK } from './look';
 import { BAR_HEIGHT } from './resource-bar';
 import { text } from './text';
 import { VEILS_ON, type Veils } from './veils';
@@ -19,11 +13,9 @@ const CONSOLE_KEY = 'Backquote';
 /** How many lines already run stand above the line being typed. */
 const HISTORY = 4;
 
-/** The panel's ink, the pale a line typed reads in, and the grey an answer reads in. */
-const PANEL = 0x0d1014;
-const PANEL_ALPHA = 0.9;
-const TYPED_INK = '#d4d7db';
-const ANSWER_INK = '#9aa1a9';
+/** The pale a line typed reads in, and the grey an answer reads in. */
+const TYPED_INK = css(LOOK.paleInk);
+const ANSWER_INK = css(LOOK.answerInk);
 
 /** How tall one line stands, and how far the lines stand off the panel's top and bottom. */
 const LINE = 18;
@@ -58,8 +50,10 @@ type Line = { readonly line: string; readonly answer: boolean };
 export function createDebugConsole(scene: Phaser.Scene, veiled: (veils: Veils) => void): void {
   const root = scene.add.container(0, 0).setName('console').setDepth(CONSOLE_DEPTH);
   root.add([
-    scene.add.rectangle(0, 0, DESIGN_WIDTH, HEIGHT, PANEL, PANEL_ALPHA).setOrigin(0, 0),
-    scene.add.rectangle(0, HEIGHT - 1, DESIGN_WIDTH, 1, PANEL_EDGE).setOrigin(0, 0),
+    scene.add
+      .rectangle(0, 0, DESIGN_WIDTH, HEIGHT, LOOK.consolePanel.colour, LOOK.consolePanel.strength)
+      .setOrigin(0, 0),
+    scene.add.rectangle(0, HEIGHT - 1, DESIGN_WIDTH, 1, LOOK.panelEdge).setOrigin(0, 0),
   ]);
 
   const lines: Phaser.GameObjects.Text[] = [];
@@ -75,7 +69,7 @@ export function createDebugConsole(scene: Phaser.Scene, veiled: (veils: Veils) =
     .setOrigin(0, 0)
     .setName('console-input');
   const caret = scene.add
-    .rectangle(MARGIN, LINES_TOP + HISTORY * LINE + 3, 7, LINE - 8, PANEL_FILL)
+    .rectangle(MARGIN, LINES_TOP + HISTORY * LINE + 3, 7, LINE - 8, LOOK.panelFill)
     .setOrigin(0, 0)
     .setName('console-caret');
   root.add([input, caret]);

@@ -36,15 +36,13 @@ import {
   UI_FONT,
   whileUp,
 } from './design-space';
+import { css, LOOK } from './look';
 import { behind, createWindow, type MenuWindow, type Opened } from './menu';
 import { createRefusalNote, refusedCard } from './refusal-note';
 import { BAR_HEIGHT } from './resource-bar';
 import { buildingName, cardName, eventName, text, victoryLine } from './text';
 
-const SCRIM = 0x0d1014;
-const SCRIM_ALPHA = 0.82;
-
-const TITLE_INK = '#d4d7db';
+const TITLE_INK = css(LOOK.paleInk);
 
 const BROWSE_WIDTH = 180;
 const BROWSE_GAP = 26;
@@ -199,7 +197,7 @@ export function createOverlay(
   take: (at: number) => void,
 ): Overlay {
   const scrim = scene.add
-    .rectangle(0, 0, DESIGN_WIDTH, DESIGN_HEIGHT, SCRIM, SCRIM_ALPHA)
+    .rectangle(0, 0, DESIGN_WIDTH, DESIGN_HEIGHT, LOOK.scrim.colour, LOOK.scrim.strength)
     .setOrigin(0, 0)
     .setDepth(SCRIM_DEPTH)
     .setVisible(false);
@@ -290,7 +288,7 @@ export function createOverlay(
   // The ending's rise brings the scrim up from nothing, so every cover states the alpha it wants.
   const cover = (): void => {
     stopMotion(scene, scrim);
-    scrim.setVisible(true).setAlpha(SCRIM_ALPHA).setInteractive();
+    scrim.setVisible(true).setAlpha(LOOK.scrim.strength).setInteractive();
     covering(true);
   };
 
@@ -656,7 +654,7 @@ export function createOverlay(
 
     const climb = { duration: 1200, ease: EASE };
     return Promise.all([
-      ended(scene.tweens.add({ targets: scrim, alpha: SCRIM_ALPHA, ...climb })),
+      ended(scene.tweens.add({ targets: scrim, alpha: LOOK.scrim.strength, ...climb })),
       ended(scene.tweens.add({ targets: screen, alpha: 1, y: 0, ...climb })),
     ]).then(() => {
       if (rising === screen) rising = undefined;
@@ -670,7 +668,7 @@ export function createOverlay(
     rising = undefined;
     stopMotion(scene, scrim);
     stopMotion(scene, screen);
-    scrim.setAlpha(SCRIM_ALPHA);
+    scrim.setAlpha(LOOK.scrim.strength);
     screen.setAlpha(1).setY(0);
   };
 

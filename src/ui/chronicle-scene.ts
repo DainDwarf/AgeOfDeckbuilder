@@ -23,20 +23,19 @@ import { CARD_BASELINE, CARD_HEIGHT } from './card-face';
 import { EASE, ended, stopAllMotion, stopMotion } from './card-motion';
 import { createDebugConsole } from './debug-console';
 import {
-  ACCENT,
   addText,
   applyDesignSpace,
   DESIGN_WIDTH,
   MARGIN,
   onClick,
   onHover,
-  SETTLE_PHASE,
   UI_FONT,
 } from './design-space';
 import { createHand } from './hand';
 import { cardsOf, createInfoPanel } from './infopanel';
 import { onKeyDown } from './keys';
 import type { Choices } from './launch-page';
+import { css, LOOK } from './look';
 import { createMapView, type PressedTile } from './map';
 import { createOverlay } from './overlay';
 import { createPiles } from './piles';
@@ -60,7 +59,7 @@ const LABEL_STYLE = {
   fontFamily: UI_FONT,
   fontSize: '18px',
   fontStyle: 'bold',
-  color: '#0d1014',
+  color: css(LOOK.ink),
 };
 
 export class ChronicleScene extends Phaser.Scene {
@@ -430,12 +429,12 @@ export class ChronicleScene extends Phaser.Scene {
 
     const settleStanding = createStanding(this, {
       name: 'settle-phase',
-      colour: SETTLE_PHASE,
+      colour: LOOK.settlePhase,
       label: text('button.settle-phase'),
     });
     const cityStanding = createStanding(this, {
       name: 'city',
-      colour: ACCENT,
+      colour: LOOK.accent,
       label: text('button.city-mode'),
       leave: () => {
         leaveCityMode();
@@ -565,7 +564,7 @@ export class ChronicleScene extends Phaser.Scene {
   }
 
   private addEndTurn(endTurn: () => void): Part & { live(on: boolean): void } {
-    const button = this.add.rectangle(0, 0, 1, 1, ACCENT).setName('end-turn').setDepth(20);
+    const button = this.add.rectangle(0, 0, 1, 1, LOOK.accent).setName('end-turn').setDepth(20);
     const label = addText(this, 0, 0, '', LABEL_STYLE)
       .setOrigin(0.5, 0.5)
       .setName('end-turn-label')
@@ -593,7 +592,7 @@ export class ChronicleScene extends Phaser.Scene {
     let turn = 1;
     let settlePhase = false;
     const paint = (): void => {
-      button.setFillStyle(settlePhase ? SETTLE_PHASE : ACCENT);
+      button.setFillStyle(settlePhase ? LOOK.settlePhase : LOOK.accent);
       if (settlePhase) {
         label.setText(text(hover.hovered ? 'button.end-settle-phase' : 'button.settle-phase'));
         return;

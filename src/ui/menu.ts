@@ -8,16 +8,8 @@ import {
   rebind,
   restoreDefaults,
 } from './bindings';
-import {
-  ACCENT,
-  addText,
-  DESIGN_HEIGHT,
-  DESIGN_WIDTH,
-  onClick,
-  PANEL_EDGE,
-  PANEL_FILL,
-  UI_FONT,
-} from './design-space';
+import { addText, DESIGN_HEIGHT, DESIGN_WIDTH, onClick, UI_FONT } from './design-space';
+import { css, LOOK } from './look';
 import { text } from './text';
 
 /** Every window the menu opens. */
@@ -61,7 +53,7 @@ const ROW_GAP = 8;
 const ROWS_HEIGHT = CONTROLS.length * SLOT_HEIGHT + (CONTROLS.length - 1) * ROW_GAP;
 
 /** The panel's own dark ink: a window stands in the panel language, not on the scrim. */
-const INK = '#0d1014';
+const INK = css(LOOK.ink);
 
 const TITLE_STYLE = { fontFamily: UI_FONT, fontSize: '26px', fontStyle: 'bold', color: INK };
 const LABEL_STYLE = { fontFamily: UI_FONT, fontSize: '18px', fontStyle: 'bold', color: INK };
@@ -89,7 +81,7 @@ function pressable(
   pressed: () => void,
 ): { face: Phaser.GameObjects.Rectangle; label: Phaser.GameObjects.Text } {
   const face = scene.add
-    .rectangle(at.x, at.y, at.width, at.height, ACCENT)
+    .rectangle(at.x, at.y, at.width, at.height, LOOK.accent)
     .setName(name)
     .setInteractive({ useHandCursor: true });
   onClick(face, pressed);
@@ -230,8 +222,8 @@ export function createWindow(scene: Phaser.Scene, which: MenuWindow, on: Presses
   const body = top + PADDING + title.height + PADDING;
 
   const box = scene.add
-    .rectangle(middle, top + height / 2, WIDTH, height, PANEL_FILL)
-    .setStrokeStyle(1, PANEL_EDGE)
+    .rectangle(middle, top + height / 2, WIDTH, height, LOOK.panelFill)
+    .setStrokeStyle(1, LOOK.panelEdge)
     .setInteractive();
   title.setPosition(middle, top + PADDING);
 

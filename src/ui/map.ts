@@ -28,10 +28,8 @@ import { MAP_FRAME } from './band';
 import { type Bind, bindings, boundTo, type Control, type Press, pressOf } from './bindings';
 import { EASE, ended, stopMotion } from './card-motion';
 import {
-  ACCENT,
   addText,
   corners,
-  css,
   DESIGN_HEIGHT,
   DESIGN_WIDTH,
   dragged,
@@ -43,42 +41,33 @@ import {
   whileUp,
 } from './design-space';
 import { onKeyDown, onKeyUp } from './keys';
+import { css, LOOK } from './look';
 import {
-  BUILT,
   buildingColourOf,
   buildingMarkOf,
-  ENEMY_RED,
   featureColourOf,
   featureMarkOf,
   improvementMarkOf,
   terrainColourOf,
   unitMarkOf,
 } from './marks';
-import { RESOURCE_COLOURS } from './resource-bar';
 import { text } from './text';
 import { VEILS_ON, type Veils } from './veils';
 
 const TILE_SIZE = 24;
 
-const FACTION_COLOURS: Record<Faction, number> = { player: ACCENT, enemy: ENEMY_RED };
+const FACTION_COLOURS: Record<Faction, number> = { player: LOOK.accent, enemy: LOOK.enemyRed };
 
 /**
  * Placeholder primitives until the art pass: a river a line along its corners on the map, and a
  * bent band where it stands as a mark of its own, both in its own blue.
  */
-const RIVER_COLOUR = 0x62a9e0;
 const RIVER_WIDTH = 5;
 const RIVER_OUTLINE_WIDTH = 7;
 const RIVER_MARK: number[] = corners([-12, -12, -4, 0, 4, -8, 12, 4, 12, 12, 4, 0, -4, 8, -12, -4]);
 
-const OUTLINE = 0x0d1014;
-
-/** Placeholder primitive until the art pass: the disc's rim a plain grey line around the map. */
-const RIM = 0x5c6068;
+/** Placeholder primitive until the art pass: the disc's rim a plain line around the map. */
 const RIM_WIDTH = 2;
-
-/** Pale, not accent: the border rings are already accent, and aiming has to read over them. */
-const LIT = 0xf2f6ff;
 
 /**
  * Under the hand and the piles, which stay live while a card is aimed: the map takes every press
@@ -116,12 +105,6 @@ const YIELD_DEPTH = 10;
  */
 const THRESHOLD_DEPTH = 11;
 
-/**
- * How dark every scrim of the map paints what it covers: fog, the yield overlay's dim, city mode's
- * dim and a spent unit's.
- */
-const DIM_ALPHA = 0.6;
-
 /** One glyph, corner to corner, and how far apart the glyphs of a tile stand. */
 const GLYPH = 6;
 const GLYPH_PITCH = 8;
@@ -142,8 +125,8 @@ const THRESHOLD_STYLE = {
   fontFamily: UI_FONT,
   fontSize: '12px',
   fontStyle: 'bold',
-  color: css(LIT),
-  stroke: css(OUTLINE),
+  color: css(LOOK.lit),
+  stroke: css(LOOK.mapOutline),
   strokeThickness: 2.5,
 };
 const THRESHOLD_GLYPH = 8;
@@ -275,7 +258,7 @@ export type MapView = {
 export function terrainMark(scene: Phaser.Scene, terrain: Terrain): Phaser.GameObjects.Polygon {
   return scene.add
     .polygon(0, 0, hexagon(TILE_SIZE), terrainColourOf(terrain))
-    .setStrokeStyle(1, OUTLINE);
+    .setStrokeStyle(1, LOOK.mapOutline);
 }
 
 /** The one way a building is drawn: its placeholder mark, in the colour that building is known by. */
@@ -285,19 +268,19 @@ export function buildingMark(
 ): Phaser.GameObjects.Polygon {
   return scene.add
     .polygon(0, 0, corners(buildingMarkOf(building)), buildingColourOf(building))
-    .setStrokeStyle(2, OUTLINE);
+    .setStrokeStyle(2, LOOK.mapOutline);
 }
 
 /** The one way a feature is drawn: its placeholder mark, in the colour that feature is known by. */
 export function featureMark(scene: Phaser.Scene, feature: FeatureId): Phaser.GameObjects.Polygon {
   return scene.add
     .polygon(0, 0, corners(featureMarkOf(feature)), featureColourOf(feature))
-    .setStrokeStyle(1, OUTLINE);
+    .setStrokeStyle(1, LOOK.mapOutline);
 }
 
 /** The one way a river is drawn off the map: its placeholder mark, in the blue a river runs in. */
 export function riverMark(scene: Phaser.Scene): Phaser.GameObjects.Polygon {
-  return scene.add.polygon(0, 0, RIVER_MARK, RIVER_COLOUR).setStrokeStyle(1, OUTLINE);
+  return scene.add.polygon(0, 0, RIVER_MARK, LOOK.river).setStrokeStyle(1, LOOK.mapOutline);
 }
 
 /** The one way an improvement is drawn: its placeholder mark, in the stone everything worked is. */
@@ -306,8 +289,8 @@ export function improvementMark(
   improvement: ImprovementId,
 ): Phaser.GameObjects.Polygon {
   return scene.add
-    .polygon(0, 0, corners(improvementMarkOf(improvement)), BUILT)
-    .setStrokeStyle(2, OUTLINE);
+    .polygon(0, 0, corners(improvementMarkOf(improvement)), LOOK.built)
+    .setStrokeStyle(2, LOOK.mapOutline);
 }
 
 /** The one way a unit is drawn: its placeholder mark, in the colour of the faction it acts for. */
@@ -318,7 +301,7 @@ export function unitMark(
 ): Phaser.GameObjects.Polygon {
   return scene.add
     .polygon(0, 0, corners(unitMarkOf(type)), FACTION_COLOURS[faction])
-    .setStrokeStyle(2, OUTLINE);
+    .setStrokeStyle(2, LOOK.mapOutline);
 }
 
 /**
@@ -331,7 +314,7 @@ function unitMarker(scene: Phaser.Scene, unit: Unit): Phaser.GameObjects.Contain
   if (unit.faction === 'player' && unit.movePoints <= 0 && unit.action <= 0) {
     marker.add(
       scene.add
-        .polygon(0, 0, corners(unitMarkOf(unit.stats.type)), OUTLINE, DIM_ALPHA)
+        .polygon(0, 0, corners(unitMarkOf(unit.stats.type)), LOOK.mapOutline, LOOK.mapDim.strength)
         .setName(`unit-dim-${tileKey(unit.tile)}`),
     );
   }
@@ -346,12 +329,15 @@ function unitMarker(scene: Phaser.Scene, unit: Unit): Phaser.GameObjects.Contain
 /** The one way a diamond the map outlines is drawn: `span` corner to corner, in the colour given. */
 function diamond(scene: Phaser.Scene, span: number, colour: number): Phaser.GameObjects.Rectangle {
   const side = span / Math.SQRT2;
-  return scene.add.rectangle(0, 0, side, side, colour).setStrokeStyle(1, OUTLINE).setAngle(45);
+  return scene.add
+    .rectangle(0, 0, side, side, colour)
+    .setStrokeStyle(1, LOOK.mapOutline)
+    .setAngle(45);
 }
 
 /** The one way a point of yield is drawn: a diamond in the colour its resource is known by. */
 function yieldMark(scene: Phaser.Scene, resource: Resource): Phaser.GameObjects.Rectangle {
-  return diamond(scene, GLYPH, RESOURCE_COLOURS[resource]).setName(`yield-${resource}`);
+  return diamond(scene, GLYPH, LOOK.reading[resource]).setName(`yield-${resource}`);
 }
 
 /**
@@ -370,7 +356,7 @@ function ringMark(
 
 /** The one way an assigned tile is marked: a diamond in the colour population is known by. */
 function assignedMark(scene: Phaser.Scene): Phaser.GameObjects.Rectangle {
-  return diamond(scene, ASSIGNED_GLYPH, RESOURCE_COLOURS.population).setName('assigned');
+  return diamond(scene, ASSIGNED_GLYPH, LOOK.reading.population).setName('assigned');
 }
 
 /**
@@ -392,7 +378,7 @@ function thresholdMark(
   )
     .setResolution(resolution)
     .setOrigin(0.5, 0.5);
-  const glyph = diamond(scene, THRESHOLD_GLYPH, RESOURCE_COLOURS[cost.resource]);
+  const glyph = diamond(scene, THRESHOLD_GLYPH, LOOK.reading[cost.resource]);
 
   const width = number.width + THRESHOLD_GAP + THRESHOLD_GLYPH;
   number.setX((number.width - width) / 2);
@@ -404,14 +390,16 @@ function thresholdMark(
 /** The one way a held tile with nobody on it is dimmed: a scrim over it and all it carries. */
 function cityDim(scene: Phaser.Scene, coord: TileCoords): Phaser.GameObjects.Polygon {
   const { x, y } = positionOf(coord);
-  return scene.add.polygon(x, y, hexagon(TILE_SIZE), OUTLINE, DIM_ALPHA).setName('city-dim');
+  return scene.add
+    .polygon(x, y, hexagon(TILE_SIZE), LOOK.mapOutline, LOOK.mapDim.strength)
+    .setName('city-dim');
 }
 
 /** The one way a tile in fog is darkened: a scrim over the tile as it was last seen. */
 function fogScrim(scene: Phaser.Scene, coord: TileCoords): Phaser.GameObjects.Polygon {
   const { x, y } = positionOf(coord);
   return scene.add
-    .polygon(x, y, hexagon(TILE_SIZE), OUTLINE, DIM_ALPHA)
+    .polygon(x, y, hexagon(TILE_SIZE), LOOK.mapOutline, LOOK.mapDim.strength)
     .setName(`fog-${tileKey(coord)}`);
 }
 
@@ -539,7 +527,7 @@ export function createMapView(
   const marks = scene.add.container(0, 0).setDepth(UNIT_DEPTH).setName('units');
   const fog = scene.add.container(0, 0).setDepth(FOG_DEPTH).setName('fog');
   const dim = scene.add
-    .rectangle(0, 0, 1, 1, OUTLINE, DIM_ALPHA)
+    .rectangle(0, 0, 1, 1, LOOK.mapOutline, LOOK.mapDim.strength)
     .setOrigin(0, 0)
     .setDepth(DIM_DEPTH)
     .setName('yield-dim')
@@ -567,7 +555,7 @@ export function createMapView(
 
   // Nothing a chronicle does moves the disc's rim, so it is stroked here and no render repaints it.
   const onMap = new Set(chronicle.tiles.map(tileKey));
-  rim.lineStyle(RIM_WIDTH, RIM);
+  rim.lineStyle(RIM_WIDTH, LOOK.mapRim);
   for (const tile of chronicle.tiles) {
     const around = new Set(cornersOf(tile).map(cornerKey));
     for (const coord of neighbours(tile)) {
@@ -1040,7 +1028,7 @@ export function createMapView(
       assignedMarks.set(tileKey(coord), mark);
     }
     for (const coord of claimable(catalogue, shown)) {
-      cityMarks.add(ringMark(scene, coord, RESOURCE_COLOURS.culture, RING).setName('claimable'));
+      cityMarks.add(ringMark(scene, coord, LOOK.reading.culture, RING).setName('claimable'));
     }
   };
 
@@ -1122,11 +1110,11 @@ export function createMapView(
     const along = riversAlong(shown.rivers, drawn).map((run) => run.map(cornerAt));
     const outlines = scene.add.graphics();
     rivers.add(outlines);
-    for (const run of along) strokeRiver(outlines, run, OUTLINE, RIVER_OUTLINE_WIDTH);
+    for (const run of along) strokeRiver(outlines, run, LOOK.mapOutline, RIVER_OUTLINE_WIDTH);
     for (const run of along) {
       const water = scene.add.graphics().setName('river');
       rivers.add(water);
-      strokeRiver(water, run, RIVER_COLOUR, RIVER_WIDTH);
+      strokeRiver(water, run, LOOK.river, RIVER_WIDTH);
     }
   };
 
@@ -1161,7 +1149,7 @@ export function createMapView(
     }
 
     lighted.removeAll(true);
-    for (const landing of lit?.landings ?? []) lighted.add(glowTile(scene, landing.tile, LIT));
+    for (const landing of lit?.landings ?? []) lighted.add(glowTile(scene, landing.tile, LOOK.lit));
     for (const coord of lit?.targets ?? []) {
       lighted.add(glowTile(scene, coord, FACTION_COLOURS.enemy));
     }
@@ -1174,7 +1162,7 @@ export function createMapView(
     const { city } = shown;
     for (const coord of shown.held) {
       const weight = city !== undefined && same(coord, city) ? CITY_RING : RING;
-      rings.add(ringMark(scene, coord, ACCENT, weight));
+      rings.add(ringMark(scene, coord, LOOK.accent, weight));
     }
   };
 
@@ -1541,7 +1529,9 @@ export function createMapView(
       selected.setData('tile', tile === undefined ? undefined : tileKey(tile));
       if (tile !== undefined) {
         const { x, y } = positionOf(tile);
-        selected.add(scene.add.polygon(x, y, hexagon(TILE_SIZE - 2), 0, 0).setStrokeStyle(4, LIT));
+        selected.add(
+          scene.add.polygon(x, y, hexagon(TILE_SIZE - 2), 0, 0).setStrokeStyle(4, LOOK.lit),
+        );
       }
       paintThreshold();
       paintYields();
@@ -1595,7 +1585,7 @@ export function createMapView(
     ): () => void {
       const { catcher, glow, close } = openAim();
       const lit = tiles.filter((coord) => drawn.has(tileKey(coord)));
-      for (const coord of lit) glow.add(glowTile(scene, coord, LIT));
+      for (const coord of lit) glow.add(glowTile(scene, coord, LOOK.lit));
 
       const letGo = (): void => {
         stop();

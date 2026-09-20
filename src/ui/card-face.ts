@@ -4,17 +4,15 @@ import { costOf } from '../rules/chronicle';
 import { answerCost, answerOf } from '../rules/schedule';
 import { type CardId, type Chronicle, type Cost, playable, type Refusal } from '../rules/state';
 import {
-  ACCENT,
   addText,
   corners,
-  css,
   DESIGN_HEIGHT,
   hexagon,
   MARGIN,
   TEXT_INSET,
   UI_FONT,
 } from './design-space';
-import { RESOURCE_COLOURS } from './resource-bar';
+import { css, LOOK, type Paper, worn } from './look';
 import {
   answerName,
   answerRules,
@@ -61,19 +59,9 @@ const RING_WEIGHT = 3;
 /** The point a card being aimed wears, its base on the ring's outer edge and its apex towards the map. */
 const POINT_WIDTH = 18;
 const POINT_HEIGHT = 12;
-const POINT_EDGE = 0x0d1014;
 
 /** How far the point on a card being aimed reaches above the card's own top edge, ring included. */
 export const AIM_POINT_REACH = RING_STANDOFF + RING_WEIGHT / 2 + POINT_HEIGHT;
-
-export const CARD_EDGE = 0x6f757d;
-const KIND_INK = 0x4a5058;
-const UNAFFORDABLE_MARK = 0xc0392b;
-const BACK = 0x232833;
-const EMPTY_EDGE = 0x4a5058;
-
-const AFFORDABLE = { face: 0xd4d7db, art: 0xb6bbc2, artEdge: 0x9aa0a8, ink: 0x0d1014 };
-const UNAFFORDABLE = { face: 0xa7abb1, art: 0x8f959c, artEdge: 0x7c828a, ink: 0x3a3f45 };
 
 /**
  * The paper and edge the card face, the card back and the infopanel with its ghosts are drawn on.
@@ -86,8 +74,8 @@ export function drawCardSurface(
   y: number,
   {
     width = CARD_WIDTH,
-    face = AFFORDABLE.face,
-    edge = CARD_EDGE,
+    face = LOOK.affordableCard.face,
+    edge = LOOK.cardEdge,
   }: { width?: number; face?: number; edge?: number } = {},
 ): void {
   const { height, radius } = metricsOf(width);
@@ -171,8 +159,8 @@ export function createCardFace(
   { faded = false, width = CARD_WIDTH }: { faded?: boolean; width?: number } = {},
 ): CardFace {
   const { height, em, pad, radius } = metricsOf(width);
-  const tone = faded ? dim : (colour: number): number => colour;
-  const palette = playable(refusal) ? AFFORDABLE : UNAFFORDABLE;
+  const tone = faded ? worn : (colour: number): number => colour;
+  const palette: Paper = playable(refusal) ? LOOK.affordableCard : LOOK.unaffordableCard;
 
   const left = -width / 2 + 1 + pad;
   const right = width / 2 - 1 - pad;
@@ -183,7 +171,7 @@ export function createCardFace(
   drawCardSurface(paper, -width / 2, -height, {
     width,
     face: tone(palette.face),
-    edge: tone(CARD_EDGE),
+    edge: tone(LOOK.cardEdge),
   });
   root.add(paper);
 
@@ -192,13 +180,13 @@ export function createCardFace(
   for (const { resource, amount } of face.costs) {
     const marked = refusal.unaffordable.includes(resource);
     const chip = scene.add
-      .rectangle(x + 0.4 * em, middle, 0.8 * em, 0.8 * em, tone(RESOURCE_COLOURS[resource]))
+      .rectangle(x + 0.4 * em, middle, 0.8 * em, 0.8 * em, tone(LOOK.reading[resource]))
       .setAngle(45);
     root.add(chip);
     if (marked) {
       const ring = scene.add
         .rectangle(x + 0.4 * em, middle, 1.15 * em, 1.15 * em)
-        .setStrokeStyle(0.12 * em, tone(UNAFFORDABLE_MARK))
+        .setStrokeStyle(0.12 * em, tone(LOOK.unaffordableMark))
         .setAngle(45);
       root.add(ring);
     }
@@ -206,7 +194,7 @@ export function createCardFace(
       fontFamily: UI_FONT,
       fontSize: `${em}px`,
       fontStyle: 'bold',
-      color: css(tone(marked ? UNAFFORDABLE_MARK : palette.ink)),
+      color: css(tone(marked ? LOOK.unaffordableMark : palette.ink)),
     }).setOrigin(0, 0.5);
     root.add(value);
     x = value.x + value.width + 0.35 * em;
@@ -222,7 +210,7 @@ export function createCardFace(
   const kind = addText(scene, 0, -1 - pad, face.kind.toUpperCase(), {
     fontFamily: UI_FONT,
     fontSize: `${0.65 * em}px`,
-    color: css(tone(KIND_INK)),
+    color: css(tone(LOOK.faintInk)),
     letterSpacing: 0.14 * 0.65 * em,
   }).setOrigin(0.5, 1);
 
@@ -258,7 +246,7 @@ export function createCardFace(
         runTop + (glyph.line + 0.5) * lineHeight,
         span / Math.SQRT2,
         span / Math.SQRT2,
-        tone(RESOURCE_COLOURS[glyph.resource]),
+        tone(LOOK.reading[glyph.resource]),
       )
       .setAngle(45),
   );
@@ -272,7 +260,7 @@ export function createCardFace(
   art.strokeRoundedRect(left + 0.5, artTop + 0.5, right - left - 1, artHeight - 1, 0.2 * em);
 
   const ring = scene.add.graphics().setName('ring').setVisible(false);
-  ring.lineStyle(RING_WEIGHT, ACCENT);
+  ring.lineStyle(RING_WEIGHT, LOOK.accent);
   ring.strokeRoundedRect(
     -width / 2 - RING_STANDOFF,
     -height - RING_STANDOFF,
@@ -300,9 +288,9 @@ export function createCardFace(
           0,
           -height - RING_STANDOFF - RING_WEIGHT / 2 - POINT_HEIGHT / 2,
           corners([-POINT_WIDTH / 2, POINT_HEIGHT, POINT_WIDTH / 2, POINT_HEIGHT, 0, 0]),
-          ACCENT,
+          LOOK.accent,
         )
-        .setStrokeStyle(1, POINT_EDGE)
+        .setStrokeStyle(1, LOOK.aimPointEdge)
         .setName('aim-point');
       root.add(point);
     },
@@ -311,16 +299,16 @@ export function createCardFace(
 
 /** The face-down card the draw pile shows, about its own bottom centre; worn when the pile is dry. */
 export function createCardBack(scene: Phaser.Scene, faded = false): Phaser.GameObjects.Container {
-  const tone = faded ? dim : (colour: number): number => colour;
+  const tone = faded ? worn : (colour: number): number => colour;
   const paper = scene.add.graphics();
   drawCardSurface(paper, -CARD_WIDTH / 2, -CARD_HEIGHT, {
-    face: tone(BACK),
-    edge: tone(CARD_EDGE),
+    face: tone(LOOK.cardBack),
+    edge: tone(LOOK.cardEdge),
   });
 
   const emblem = scene.add
     .polygon(0, -CARD_HEIGHT / 2, hexagon(CARD_WIDTH * 0.28 - 3), 0, 0)
-    .setStrokeStyle(3, tone(ACCENT));
+    .setStrokeStyle(3, tone(LOOK.accent));
 
   return scene.add.container(0, 0, [paper, emblem]);
 }
@@ -328,7 +316,7 @@ export function createCardBack(scene: Phaser.Scene, faded = false): Phaser.GameO
 /** Where a pile's top card would be: the card's own rounded outline, dashed. */
 export function createEmptySlot(scene: Phaser.Scene): Phaser.GameObjects.Container {
   const outline = scene.add.graphics();
-  outline.lineStyle(2, EMPTY_EDGE);
+  outline.lineStyle(2, LOOK.emptyEdge);
   dashAlong(outline, cardOutline());
   return scene.add.container(0, 0, [outline]);
 }
@@ -384,14 +372,4 @@ function dashAlong(outline: Phaser.GameObjects.Graphics, points: { x: number; y:
     }
     travelled += lengths[i];
   }
-}
-
-/** What the discard pile's top card is worn down to: CSS `grayscale(0.35) brightness(0.75)`. */
-function dim(colour: number): number {
-  const red = (colour >> 16) & 0xff;
-  const green = (colour >> 8) & 0xff;
-  const blue = colour & 0xff;
-  const grey = 0.2126 * red + 0.7152 * green + 0.0722 * blue;
-  const worn = (channel: number): number => Math.round((channel * 0.65 + grey * 0.35) * 0.75);
-  return (worn(red) << 16) | (worn(green) << 8) | worn(blue);
 }

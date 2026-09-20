@@ -1,5 +1,6 @@
 import type Phaser from 'phaser';
 import { addText, DESIGN_WIDTH, drawBubble, MARGIN, type Surface, UI_FONT } from './design-space';
+import { css, LOOK } from './look';
 
 /** The clear water between a tooltip and what it points at; its tail crosses most of that. */
 const STANDOFF = 8;
@@ -16,7 +17,7 @@ const HANDOVER_MS = 120;
 /** The travel a rest tolerates, in design pixels: less than this and the hand is holding still. */
 const JITTER = 3;
 
-const STYLE = { fontFamily: UI_FONT, fontSize: '14px', color: '#0d1014' };
+const STYLE = { fontFamily: UI_FONT, fontSize: '14px', color: css(LOOK.ink) };
 
 export type Tooltip = {
   /**

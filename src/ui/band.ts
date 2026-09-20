@@ -1,6 +1,7 @@
 import type Phaser from 'phaser';
 import { CARD_BASELINE, CARD_HEIGHT } from './card-face';
-import { DESIGN_HEIGHT, DESIGN_WIDTH, PANEL_EDGE, PANEL_FILL } from './design-space';
+import { DESIGN_HEIGHT, DESIGN_WIDTH } from './design-space';
+import { LOOK } from './look';
 import { BAR_HEIGHT } from './resource-bar';
 
 /** How far the resting cards' tops rise above the band: they stand in it as in a tray. */
@@ -23,12 +24,12 @@ export const MAP_FRAME = {
  */
 export function createBand(scene: Phaser.Scene): void {
   scene.add
-    .rectangle(0, BAND_TOP, DESIGN_WIDTH, DESIGN_HEIGHT - BAND_TOP, PANEL_FILL)
+    .rectangle(0, BAND_TOP, DESIGN_WIDTH, DESIGN_HEIGHT - BAND_TOP, LOOK.panelFill)
     .setOrigin(0, 0)
     .setName('band')
     .setDepth(1);
   scene.add
-    .rectangle(0, BAND_TOP, DESIGN_WIDTH, 1, PANEL_EDGE)
+    .rectangle(0, BAND_TOP, DESIGN_WIDTH, 1, LOOK.panelEdge)
     .setOrigin(0, 0)
     .setName('band-edge')
     .setDepth(1);

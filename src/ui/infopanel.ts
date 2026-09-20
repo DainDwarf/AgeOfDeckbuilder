@@ -14,9 +14,10 @@ import {
 import { buildingKind, featureKind, improvementKind, terrainKind } from '../rules/map-kinds';
 import { RESOURCES, type Resource, type Resources } from '../rules/resources';
 import { type Unit, unitAt } from '../rules/units';
-import { CARD_EDGE, CARD_HEIGHT, CARD_METRICS, CARD_WIDTH, drawCardSurface } from './card-face';
+import { CARD_HEIGHT, CARD_METRICS, CARD_WIDTH, drawCardSurface } from './card-face';
 import { stopMotion } from './card-motion';
 import { addText, onHover, type Surface, UI_FONT } from './design-space';
+import { css, LOOK } from './look';
 import {
   buildingMark,
   featureMark,
@@ -26,7 +27,6 @@ import {
   terrainMark,
   unitMark,
 } from './map';
-import { RESOURCE_COLOURS } from './resource-bar';
 import { buildingName, featureName, improvementName, terrainName, text, unitName } from './text';
 import { createTooltip } from './tooltip';
 
@@ -109,10 +109,10 @@ const TITLE_STYLE = {
   fontFamily: UI_FONT,
   fontSize: `${0.75 * em}px`,
   fontStyle: 'bold',
-  color: '#0d1014',
+  color: css(LOOK.ink),
 };
-const LABEL_STYLE = { fontFamily: UI_FONT, fontSize: `${0.62 * em}px`, color: '#4a5058' };
-const VALUE_STYLE = { fontFamily: UI_FONT, fontSize: `${0.62 * em}px`, color: '#0d1014' };
+const LABEL_STYLE = { fontFamily: UI_FONT, fontSize: `${0.62 * em}px`, color: css(LOOK.faintInk) };
+const VALUE_STYLE = { fontFamily: UI_FONT, fontSize: `${0.62 * em}px`, color: css(LOOK.ink) };
 const CHIP_STYLE = { ...VALUE_STYLE, fontStyle: 'bold' };
 const MOVEMENT_STYLE = { ...LABEL_STYLE, fontSize: `${0.55 * em}px` };
 
@@ -294,7 +294,7 @@ function buildFace(scene: Phaser.Scene, catalogue: Catalogue, bubble: RowBubble,
   );
 
   const ruleY = Math.round(middle + 1.15 * em);
-  const rule = scene.add.rectangle(left, ruleY, right - left, 1, CARD_EDGE).setOrigin(0, 0);
+  const rule = scene.add.rectangle(left, ruleY, right - left, 1, LOOK.cardEdge).setOrigin(0, 0);
 
   const contents: Phaser.GameObjects.GameObject[] = [paper, mark, name, rule];
   const hovers: Phaser.GameObjects.Zone[] = [];
@@ -395,7 +395,7 @@ function buildFace(scene: Phaser.Scene, catalogue: Catalogue, bubble: RowBubble,
         for (const { resource, value } of chips.slice(first, first + taken)) {
           // A diamond is a square turned, never a polygon: see the trap over `yieldMark` in `map.ts`.
           const chip = scene.add
-            .rectangle(x + 0.25 * em, centre, 0.5 * em, 0.5 * em, RESOURCE_COLOURS[resource])
+            .rectangle(x + 0.25 * em, centre, 0.5 * em, 0.5 * em, LOOK.reading[resource])
             .setAngle(45)
             .setName(`panel-yield-${resource}`);
           value.setPosition(x + 0.7 * em, centre);

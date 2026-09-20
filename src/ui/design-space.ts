@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { type Press, pressOf } from './bindings';
+import { LOOK } from './look';
 
 export const DESIGN_WIDTH = 1280;
 export const DESIGN_HEIGHT = 720;
@@ -8,21 +9,6 @@ export const UI_FONT = 'system-ui, "Segoe UI", sans-serif';
 
 /** How far anything laid against an edge of the screen stands off it. */
 export const MARGIN = 24;
-
-/** The one accent, on everything that is the player's: the border, the deck, the button. */
-export const ACCENT = 0xd9a441;
-
-/** The settle phase's own colour, on its frame, its chip and the button while the phase is on. */
-export const SETTLE_PHASE = 0x9fbb3a;
-
-/** The panel language: the tooltip bubbles and the resource bar are this fill inside this edge. */
-export const PANEL_FILL = 0xd4d7db;
-export const PANEL_EDGE = 0x6f757d;
-
-/** A colour in the notation a text style takes it in. */
-export function css(colour: number): string {
-  return `#${colour.toString(16).padStart(6, '0')}`;
-}
 
 /**
  * The two depths the scrim divides the chronicle screen at: everything the chronicle screen lays
@@ -72,8 +58,8 @@ export function drawBubble(
   const at = Math.min(Math.max(tail.at, TAIL_HALF + 4), span - TAIL_HALF - 4);
 
   bubble.clear();
-  bubble.fillStyle(PANEL_FILL);
-  bubble.lineStyle(1, PANEL_EDGE);
+  bubble.fillStyle(LOOK.panelFill);
+  bubble.lineStyle(1, LOOK.panelEdge);
   bubble.beginPath();
   bubble.moveTo(0, 0);
   if (tail.edge === 'top') {

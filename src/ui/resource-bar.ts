@@ -7,17 +7,15 @@ import { type Chronicle, idle } from '../rules/state';
 import { layOutBar, type Placed, type Zone } from './bar-layout';
 import { EASE, ended, stopMotion } from './card-motion';
 import {
-  ACCENT,
   addText,
   DESIGN_WIDTH,
   MARGIN,
   OVER_SCRIM_DEPTH,
   onClick,
   onHover,
-  PANEL_EDGE,
-  PANEL_FILL,
   UI_FONT,
 } from './design-space';
+import { css, LOOK, type Reading } from './look';
 import { text } from './text';
 import type { Tooltip } from './tooltip';
 
@@ -27,11 +25,11 @@ export const BAR_HEIGHT = 48;
 const BAR_DEPTH = 10;
 
 /** The word of a reading, and the ink it is lifted to while the reading is latched down. */
-const WORD_INK = '#4a5058';
-const SUNK_WORD_INK = '#0d1014';
+const WORD_INK = css(LOOK.faintInk);
+const SUNK_WORD_INK = css(LOOK.ink);
 
 const WORD_STYLE = { fontFamily: UI_FONT, fontSize: '18px', color: WORD_INK };
-const VALUE_STYLE = { fontFamily: UI_FONT, fontSize: '18px', color: '#0d1014' };
+const VALUE_STYLE = { fontFamily: UI_FONT, fontSize: '18px', color: css(LOOK.ink) };
 
 const CHIP_TO_WORD = 18;
 const WORD_TO_VALUE = 8;
@@ -39,25 +37,8 @@ const WORD_TO_VALUE = 8;
 const MENU_HEIGHT = 32;
 const MENU_PADDING = 12;
 
-/** The well a reading sits in: the floor a latch gives it, the edge it is cut into, and the light beneath. */
-const WELL_FILL = 0xb4b9c0;
-const WELL_LIGHT = 0xeef0f3;
-
 /** How far a reading in its well is pressed down and to the right. */
 const SUNK = 1;
-
-type Reading = Resource | 'population';
-
-/** The colour each reading is known by, in the bar and on every cost a card asks for. */
-export const RESOURCE_COLOURS: Record<Reading, number> = {
-  food: 0x7d9c55,
-  production: 0xb0834a,
-  military: 0xb05252,
-  money: 0xa08a1e,
-  science: 0x5f8fc0,
-  culture: 0x9a6fb8,
-  population: 0x6b6b7d,
-};
 
 /** The readings the bar carries, in the order it reads them. */
 const READINGS: readonly Reading[] = [...RESOURCES, 'population'];
@@ -101,10 +82,10 @@ export function createResourceBar(
   toggleYield: (resource: Resource) => void,
 ): ResourceBar {
   const bar = scene.add.container(0, 0).setDepth(BAR_DEPTH);
-  bar.add(scene.add.rectangle(0, 0, DESIGN_WIDTH, BAR_HEIGHT, PANEL_FILL).setOrigin(0, 0));
+  bar.add(scene.add.rectangle(0, 0, DESIGN_WIDTH, BAR_HEIGHT, LOOK.panelFill).setOrigin(0, 0));
   bar.add(
     scene.add
-      .rectangle(0, BAR_HEIGHT - 1, DESIGN_WIDTH, 1, PANEL_EDGE)
+      .rectangle(0, BAR_HEIGHT - 1, DESIGN_WIDTH, 1, LOOK.panelEdge)
       .setOrigin(0, 0)
       .setName('bar-edge'),
   );
@@ -154,7 +135,7 @@ export function createResourceBar(
       const filled = waiting.has(entry.key);
       const down = filled || (entry.key !== 'population' && latched.has(entry.key));
       entry.well.setVisible(down);
-      entry.floor.setFillStyle(filled ? ACCENT : WELL_FILL);
+      entry.floor.setFillStyle(filled ? LOOK.accent : LOOK.wellFill);
       entry.face.setPosition(down ? SUNK : 0, down ? SUNK : 0);
       entry.word.setColor(down ? SUNK_WORD_INK : WORD_INK);
     }
@@ -269,8 +250,8 @@ function createMenuButton(
   const y = BAR_HEIGHT / 2;
 
   const button = scene.add
-    .rectangle(x, y, zone.width, MENU_HEIGHT, PANEL_FILL)
-    .setStrokeStyle(1, PANEL_EDGE)
+    .rectangle(x, y, zone.width, MENU_HEIGHT, LOOK.panelFill)
+    .setStrokeStyle(1, LOOK.panelEdge)
     .setName('menu-button')
     .setInteractive({ useHandCursor: true });
   label.setPosition(x, y);
@@ -300,9 +281,13 @@ function createWell(
   scene: Phaser.Scene,
   key: Reading,
 ): { well: Phaser.GameObjects.Container; floor: Phaser.GameObjects.Rectangle } {
-  const [floor, ...edges] = [WELL_FILL, PANEL_EDGE, PANEL_EDGE, WELL_LIGHT, WELL_LIGHT].map(
-    (colour) => scene.add.rectangle(0, 0, 1, 1, colour).setOrigin(0, 0),
-  );
+  const [floor, ...edges] = [
+    LOOK.wellFill,
+    LOOK.panelEdge,
+    LOOK.panelEdge,
+    LOOK.wellLight,
+    LOOK.wellLight,
+  ].map((colour) => scene.add.rectangle(0, 0, 1, 1, colour).setOrigin(0, 0));
   floor.setName(`reading-${key}-floor`);
   const well = scene.add
     .container(0, 0, [floor, ...edges])
@@ -329,7 +314,7 @@ function createEntry(
   key: Reading,
   quiet: () => boolean,
 ): Entry {
-  const chip = scene.add.rectangle(0, 0, 10, 10, RESOURCE_COLOURS[key]).setAngle(45);
+  const chip = scene.add.rectangle(0, 0, 10, 10, LOOK.reading[key]).setAngle(45);
   const word = addText(scene, 0, 0, text(`label.${key}`), WORD_STYLE).setOrigin(0, 0.5);
   const value = addText(scene, 0, 0, '', VALUE_STYLE)
     .setOrigin(0, 0.5)

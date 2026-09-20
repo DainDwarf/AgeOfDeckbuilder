@@ -5,9 +5,9 @@ import { claimable, tileCost } from '../src/rules/city';
 import { CENTRE, distance, runsAlong, type TileCoords, tileKey, tileYield } from '../src/rules/map';
 import { RESOURCES } from '../src/rules/resources';
 import type { Chronicle } from '../src/rules/state';
+import { LOOK } from '../src/ui/look';
 import { text } from '../src/ui/text';
 import {
-  accent,
   type Border,
   besideTiles,
   budget,
@@ -343,12 +343,11 @@ test('culture’s well fills while the city can pay for a tile it may claim, and
   test.setTimeout(budget(owed + 1));
 
   await open(page, 1, 'PH_Deck', STAND_IN_SCHEDULE, CENTRE, 'bare');
-  const filled = await accent(page);
   expect(await wellFill(page, 'culture')).toBeUndefined();
 
   for (let turn = 0; turn < owed; turn++) await endTurn(page);
   expect((await chronicleOf(page)).resources.culture).toBe(owed);
-  await expect.poll(() => wellFill(page, 'culture')).toBe(filled);
+  await expect.poll(() => wellFill(page, 'culture')).toBe(LOOK.accent);
 
   await page.keyboard.press('c');
   await expect.poll(() => inCityMode(page)).toBe(true);
@@ -371,7 +370,6 @@ test('population’s well fills while one is idle over a tile the city holds and
   const problems = watch(page);
 
   await open(page, 1, 'PH_Deck');
-  const filled = await accent(page);
   expect(await wellFill(page, 'population')).toBeUndefined();
 
   await page.keyboard.press('c');
@@ -383,7 +381,7 @@ test('population’s well fills while one is idle over a tile the city holds and
   await page.mouse.click(held.x, held.y);
   await playedOut(page);
   expect(await counted(page, 'assigned')).toBe(RING - 1);
-  await expect.poll(() => wellFill(page, 'population')).toBe(filled);
+  await expect.poll(() => wellFill(page, 'population')).toBe(LOOK.accent);
 
   await page.mouse.click(held.x, held.y);
   await playedOut(page);

@@ -6,6 +6,7 @@ import { ChronicleScene } from './ui/chronicle-scene';
 import { backingSize, followWindow, releaseOnBlur } from './ui/design-space';
 import { readMouseKeys } from './ui/keys';
 import { type Choices, firstsOf, LaunchPage } from './ui/launch-page';
+import { css, LOOK } from './ui/look';
 
 // The e2e suite and browser-console debugging observe the running game through this handle;
 // it is optional because the window exists before the game does.
@@ -56,7 +57,7 @@ const game = new Phaser.Game({
   type: Phaser.AUTO,
   width: backing.width,
   height: backing.height,
-  backgroundColor: '#0d1117',
+  backgroundColor: css(LOOK.page),
   disableContextMenu: true,
   // Phaser 4.2.1 picks a batch's sampler by exact float equality on an interpolated varying, so a
   // rotated Text tears (phaserjs/phaser#7372). One texture per batch skips the comparison; the

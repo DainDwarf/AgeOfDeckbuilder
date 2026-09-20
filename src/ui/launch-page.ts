@@ -3,17 +3,15 @@ import { CATALOGUES, catalogueOf } from '../content/catalogues';
 import type { Catalogue } from '../rules/catalogue';
 import { refuse } from '../rules/map-kinds';
 import {
-  ACCENT,
   addText,
   applyDesignSpace,
   DESIGN_HEIGHT,
   DESIGN_WIDTH,
   onClick,
-  PANEL_EDGE,
-  PANEL_FILL,
   UI_FONT,
 } from './design-space';
 import { readsKeyboard } from './keys';
+import { css, LOOK } from './look';
 import { type TextKey, text } from './text';
 
 /** What a chronicle is launched on: the content, a region, a schedule and a deck, and a seed or nothing for a fresh one. */
@@ -53,7 +51,7 @@ const SEED_WIDTH = 160;
 const SEED_DIGITS = 10;
 const BUTTON_HEIGHT = 44;
 
-const INK = '#0d1014';
+const INK = css(LOOK.ink);
 const TITLE_STYLE = { fontFamily: UI_FONT, fontSize: '26px', fontStyle: 'bold', color: INK };
 const LABEL_STYLE = { fontFamily: UI_FONT, fontSize: '18px', fontStyle: 'bold', color: INK };
 const FACE_STYLE = { fontFamily: UI_FONT, fontSize: '16px', fontStyle: 'bold', color: INK };
@@ -127,12 +125,12 @@ export class LaunchPage extends Phaser.Scene {
             .setOrigin(0.5)
             .setName(`launch-${row}-${option}-label`);
           const face = this.add
-            .rectangle(0, 0, label.width + 2 * FACE_PADDING, FACE_HEIGHT, PANEL_FILL)
-            .setStrokeStyle(1, PANEL_EDGE)
+            .rectangle(0, 0, label.width + 2 * FACE_PADDING, FACE_HEIGHT, LOOK.panelFill)
+            .setStrokeStyle(1, LOOK.panelEdge)
             .setName(`launch-${row}-${option}`)
             .setData('chosen', option === held)
             .setInteractive({ useHandCursor: true });
-          if (option === held) face.setFillStyle(ACCENT);
+          if (option === held) face.setFillStyle(LOOK.accent);
           onClick(face, () => choose(row, option));
           return { face, label };
         }),
@@ -157,8 +155,8 @@ export class LaunchPage extends Phaser.Scene {
         body + index * (FACE_HEIGHT + ROW_GAP) + FACE_HEIGHT / 2;
 
       const box = this.add
-        .rectangle(middle, top + height / 2, width, height, PANEL_FILL)
-        .setStrokeStyle(1, PANEL_EDGE);
+        .rectangle(middle, top + height / 2, width, height, LOOK.panelFill)
+        .setStrokeStyle(1, LOOK.panelEdge);
       title.setPosition(middle, top + PADDING);
       root = this.add.container(0, 0, [box, title]).setName('launch');
 
@@ -178,8 +176,8 @@ export class LaunchPage extends Phaser.Scene {
 
       const seedRow = laid.length;
       const slot = this.add
-        .rectangle(right - SEED_WIDTH / 2, rowY(seedRow), SEED_WIDTH, FACE_HEIGHT, PANEL_FILL)
-        .setStrokeStyle(1, PANEL_EDGE)
+        .rectangle(right - SEED_WIDTH / 2, rowY(seedRow), SEED_WIDTH, FACE_HEIGHT, LOOK.panelFill)
+        .setStrokeStyle(1, LOOK.panelEdge)
         .setName('launch-seed');
       seedLabel = addText(this, slot.x, slot.y, '', FACE_STYLE)
         .setOrigin(0.5)
@@ -189,7 +187,7 @@ export class LaunchPage extends Phaser.Scene {
 
       const buttonY = body + rowsHeight + PADDING + BUTTON_HEIGHT / 2;
       const button = this.add
-        .rectangle(middle, buttonY, width - 2 * PADDING, BUTTON_HEIGHT, ACCENT)
+        .rectangle(middle, buttonY, width - 2 * PADDING, BUTTON_HEIGHT, LOOK.accent)
         .setName('launch-button')
         .setInteractive({ useHandCursor: true });
       onClick(button, launch);
