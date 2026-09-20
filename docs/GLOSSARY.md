@@ -21,9 +21,9 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **settle** | To put the city on a tile, on turn 0, the **settle phase**. A **settle card** is of the kind the deck's settle section holds and no other section does: in hand on the settle phase alone, gone once played; the one that settles the city is among them. | found, founding, establish, place (the city) |
 | **map** | The hexagonal grid a chronicle is played on. | board, world, grid |
 | **chronicle screen** | The surface a chronicle is played on — the map, the hand, the piles, the resource bar, the infopanel; what a window opens over and closes back to. | table, playfield, play area |
-| **city mode** | The chronicle screen's second mode, in which a left click on the selected tile acts on the city — assigns, unassigns, claims. | build mode, manage mode, edit mode, planning mode |
-| **select** | To make a tile or a card the selection: the one thing a screen holds — the tile the map rings, the card lifted in the hand, or the card ringed in a browse — and what the inspection key inspects. | pick, highlight, focus, arm, target (for a tile or a card) |
-| **inspect** | To show a tile's cards in the infopanel, one per step — the unit, the building with the improvements, the terrain with the feature and the river; after the last the first again — or to show a card large. | read (a tile), examine, view, look at, zoom (for a card) |
+| **city mode** | The chronicle screen's second mode, in which the player acts on the city: assigns, unassigns, claims. | build mode, manage mode, edit mode, planning mode |
+| **select** | To make a tile or a card the selection, the one thing a screen holds at a time. | pick, highlight, focus, arm, target (for a tile or a card) |
+| **inspect** | To show a tile's cards in the infopanel, one at a time, or to show a card large. | read (a tile), examine, view, look at, zoom (for a card) |
 | **tile** | One hexagon of the map, of one terrain. | hex, cell, square, territory |
 | **region** | The launch choice that biases map generation; the difficulty dial. | site, location, start |
 | **unit** | A mobile piece on the map, the player's or not. | army, troop, piece, token |
@@ -32,59 +32,59 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **build** | To put a building on a tile; what a building card does. | raise, construct, erect |
 | **neutral** | A non-player unit that does not attack. | NPC, city-state, friendly |
 | **enemy** | A non-player unit that attacks. | barbarian, raider, hostile, invader, foe |
-| **killed** | What happens to a unit that loses or that a terraform leaves on ground it cannot stand on, or to one population an event or a hazard's strike kills: the unit leaves the map, the population the city. | destroyed, slain, dead, lost |
+| **killed** | What befalls a unit or a population: the unit leaves the map, the population the city. | destroyed, slain, dead, lost |
 | **event** | One entry of the age's schedule: a problem the chronicle throws at the city, dealt with its answers. | disaster, threat, crisis, encounter |
-| **capstone** | The age's final trial, known from the chronicle's opening on a turn that is not; passing it — its condition met — is victory. | boss, finale, objective |
-| **schedule** | An age's set of events with their turn-shifting weights, and its tempo: the spacing, and the capstone with its window. What a timeline is rolled from. | calendar |
-| **timeline** | One chronicle's roll of its schedule, from a generator of its own: the turn the next deal is due on, and the capstone's turn; the event is dealt on its due turn. Internal: the player is never shown it, and learns each event when it lands. | forecast, agenda, itinerary |
-| **camp** | A site enemies enter the map from, generated with the map or placed by an event, filling its tile's building slot; captured, it leaves the map. | lair, nest, spawn point, spawner |
+| **capstone** | The age's final trial; passing it is victory. | boss, finale, objective |
+| **schedule** | An age's events and capstone, with their odds and tempo; what a timeline is rolled from. | calendar |
+| **timeline** | One chronicle's roll of its schedule: the turns its events and its capstone land on. | forecast, agenda, itinerary |
+| **camp** | A site enemies enter the map from. | lair, nest, spawn point, spawner |
 | **victory** | The end of a chronicle by passing the capstone. | win, success, triumph |
 | **defeat** | The end of a chronicle by the city's fall. | collapse, game over, loss, death |
 | **border** | The edge of the tiles the city holds; pushed out by culture. | frontier, territory |
-| **turn** | One pass of the cycle: events, draw, play, end, income, growth, enemy phase. Turn 0, the settle phase, runs none of it. | round |
+| **turn** | One pass of the chronicle's cycle of phases. | round |
 | **phase** | One part of the turn's cycle, in its fixed order; what the turn list names. | step, stage (in prose), section |
-| **hand** | The cards drawn this turn; what is not played is discarded when the turn ends. | — |
+| **hand** | The cards drawn this turn. | — |
 | **draw** | To take cards from the draw pile into the hand. | pull |
 | **play** | To put a card from the hand into effect, paying its cost. | cast, activate |
 | **aim** | What a card is played at: a drawn tile, a unit of the player's on one, a card of the discard pile, or nothing. The window offering the discard pile's cards to a card aimed there is the **aim window**. A card is **being aimed** while it is selected and the things its aim admits are offered — the map lighting them, or the aim window standing. | target (for a card's aim), targeting (for a card's aim), cast at, pointed at, destination |
 | **cost** | What the city pays out of its stocks to play something, for example a card. | price, fee, charge, toll |
-| **unaffordable** | A card, a claim or an event's answer whose cost exceeds what the city holds; the city cannot pay for it. | unpayable, short, lacking, too expensive |
+| **unaffordable** | What the city cannot pay for: its cost exceeds the stocks. | unpayable, short, lacking, too expensive |
 | **discard** | To send a card from the hand to the discard pile. | throw away, dump |
 | **recall** | To put a card from the discard pile into the hand; what a recall instant does. | retrieve, recover, reclaim, salvage |
 | **single use** | A keyword on a card: played, it leaves the chronicle instead of going to the discard pile. | one-use, gone once played, consumed, exhaust, exile |
 | **draw pile** | The cards not yet drawn this cycle; refilled from the discard pile when empty. | library |
 | **discard pile** | The cards played or discarded this cycle, waiting to be shuffled back. | graveyard, trash, bin |
-| **browse** | A window offering a pile's cards to be read, opened by a left click on that pile; the window a card aimed at the discard pile opens is the aim window and not one. | pile window, viewer, gallery, preview, list (of a pile) |
+| **browse** | A window offering a pile's cards to be read; the aim window is not one. | pile window, viewer, gallery, preview, list (of a pile) |
 | **combat** | Units attacking one another: the player's by hand in play, the enemies' in the enemy phase. | battle, fight, skirmish, war |
 | **income** | The phase after the turn ends where standing things yield. | upkeep, production phase, resolution |
-| **sight** | A unit's stat and the city's own number: how far it sees, and the tiles a line from it reaches over the ground. | vision, line of sight |
-| **elevation** | How high a terrain stands over the ground: a raised tile at least as high as the one a unit is on stops the line from it there. | altitude, tallness |
-| **fog** | A tile seen before and out of sight now; drawn as it was last seen, darkened. | fog of war, shroud, dimmed, remembered |
-| **uncharted** | A tile never yet in sight; drawn not at all, and a unit of the player's is not moved onto one. Its opposite, **charted**, is a tile in sight or in fog. | unexplored, unknown, unrevealed, black, explored, revealed, discovered, known |
+| **sight** | A unit's stat and the city's own: how far it sees; a tile it reaches is in sight. | vision, line of sight |
+| **elevation** | How high a terrain stands over the ground; what blocks sight. | altitude, tallness |
+| **fog** | A tile seen before and out of sight now. | fog of war, shroud, dimmed, remembered |
+| **uncharted** | A tile never yet in sight. Its opposite, **charted**, is a tile in sight or in fog. | unexplored, unknown, unrevealed, black, explored, revealed, discovered, known |
 | **instant** | A card with an immediate effect: on the city, on a tile, or one thing with one unit. | action (for a card), spell, effect card |
 | **hazard** | A card no deck holds: an event brings it into a chronicle, and it **strikes** while held. | penalty, curse, drawback, upkeep, affliction, bane |
 | **strike** | What a hazard does to the chronicle at the end of a turn it is still in the hand. | bite, trigger, proc, go off |
-| **worker** | A non-fighting unit that changes tiles: builds buildings, terraforms them, improves them, spending its one action on each card played through it. | builder, engineer, labourer |
+| **worker** | A non-fighting unit that cards are played through to change tiles: build, terraform, improve. | builder, engineer, labourer |
 | **population** | The city's inhabitants: assigned to tiles for income, turned into units by unit cards. | inhabitants, citizens, workforce, pops |
-| **assign** | To put one population on a tile inside the border; free, instant, reversible. | allocate |
+| **assign** | To put one population on a tile inside the border. | allocate |
 | **unassign** | To take one population off the tile it stands on; the reverse of assign. | remove, free up, release |
 | **idle** | One population assigned to no tile; what a unit card takes. | unemployed, spare, unassigned (as a noun) |
-| **grow** | What the food stock reaching the growth threshold does at the growth phase: the city gains one idle population. | birth, breed, spawn (for population), expand |
-| **growth threshold** | The food the next population needs; spent when the stock reaches it, and wider each time. | step, growth cost, food cap |
+| **grow** | What the city does at the growth phase: it gains one population, paid in food. | birth, breed, spawn (for population), expand |
+| **growth threshold** | The food the next population costs. | step, growth cost, food cap |
 | **biome** | A stretch of map the generator spreads or deals as one kind — land, sea, … — weighting the terrain of each tile in it. | patch, zone, area, ecosystem |
 | **terrain** | A tile's base layer: plain, forest, hills, …; one per tile, changed only by terraforming. | tile type |
-| **movement cost** | What entering a tile spends of a unit's move points, summed from the tile's layers unless one of them names it outright; water names none and is crossed by nothing. | move cost, terrain cost, travel cost, difficulty, impassable |
-| **terraform** | To change a tile's terrain into another, where a worker stands or where an event's answer aims; what a terraform instant does. | transform, convert, reshape |
+| **movement cost** | What entering a tile spends of a unit's move points; a tile that names none is entered by nothing. | move cost, terrain cost, travel cost, difficulty, impassable |
+| **terraform** | To change a tile's terrain into another. | transform, convert, reshape |
 | **feature** | An extra on a tile, dealt by the generator or by an event's answer: a fertile plain. | bonus |
 | **river** | A watercourse the generator runs along the edges between tiles, from a mountain range to the sea. | stream, creek, waterway |
-| **improvement** | A layer a worker improves a tile with through an instant; distinct ones stack, the same one never twice. | — |
-| **road** | An improvement that names its tile's movement cost outright, whatever lies under it, and makes a bridge of a river edge it stands on both banks of. | path, track, highway, trail |
+| **improvement** | A layer a tile gains by being improved; unlike a building, a tile holds any number. | — |
+| **road** | An improvement that names its tile's movement cost outright. | path, track, highway, trail |
 | **bridge** | A river edge with a road on both banks, crossed as if no river ran there. | ford, viaduct, span |
 | **improve** | To put an improvement on a tile where a worker stands; what an improvement instant does. | lay, build, place, install |
 | **yield** | What a tile's layers and the river running along it give at income, resource by resource. | output, produce, harvest |
 | **claim** | To take a charted tile adjacent to one the city holds into the border, for culture. | buy, purchase, expand, annex |
 | **culture** | The resource that claims tiles. | — |
-| **culture threshold** | The culture the next claim costs; rises with the tiles the city holds. | claim cost, step |
+| **culture threshold** | The culture the next claim costs. | claim cost, step |
 | **health** | A unit's remaining life; at zero the unit is killed. | HP, hit points, hitpoints, life |
 | **heal** | To bring a unit's health back up. | refresh (of health), repair, restore, regenerate, cure |
 | **attack** | The act: a unit removes its damage from a target's health. | hit |
@@ -92,10 +92,10 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **range** | The distance, in tiles, a unit attacks over; one for melee. | reach |
 | **move** | A unit's stat: the move points it refreshes to. | speed, mobility, movement points |
 | **move points** | What a unit spends to cross tiles, a tile's movement cost to enter it; refreshed to its move. | movement points, steps, stamina |
-| **action** | A unit's stat, and what it spends to attack, one per attack, or, on a worker, what it spends on a card played through it, one per card, whatever its range or damage; refreshed to its action. | action points, energy, attack pool |
-| **refresh** | To bring a unit's spendable stat back to its full value — its move points to its move, its action to its action. The turn refreshes both on every unit when it ticks over; an instant refreshes one unit's move points. Health is never refreshed but healed. | restore, replenish, reset, recharge, recover, regain |
+| **action** | A unit's stat and the pool it refreshes to: what it spends to attack, or, on a worker, on a card played through it. | action points, energy, attack pool |
+| **refresh** | To bring a unit's spendable stat — move points, action — back to its full value; health is healed, never refreshed. | restore, replenish, reset, recharge, recover, regain |
 | **military** | The resource that pays for military units, instants and fortifications. | — |
 | **occupy** | What an enemy does to a tile it stands on: the tile yields nothing and is not claimable. | blockade |
 | **pillage** | What some enemies do to the tile they stand on: its building or improvement is destroyed. | raze, loot |
-| **capture** | To take a site by standing on its tile through a full turn: an enemy captures the city (defeat), the player captures a camp. | conquer, seize, sack |
-| **reward** | What capturing a site on the map gives: the cards a camp's capture deals as an event deals its answers, the one taken laid in the discard pile. | gift, prize, bounty |
+| **capture** | To take a site, the city or a camp, by standing on its tile. | conquer, seize, sack |
+| **reward** | What capturing a site deals: cards, of which the player takes one. | gift, prize, bounty |
