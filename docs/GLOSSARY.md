@@ -62,9 +62,10 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **sight** | A unit's stat and the city's own: how far it sees; a tile it reaches is in sight. | vision, line of sight |
 | **elevation** | How high a terrain stands over the ground; what blocks sight. | altitude, tallness |
 | **fog** | A tile seen before and out of sight now. | fog of war, shroud, dimmed, remembered |
-| **uncharted** | A tile never yet in sight. Its opposite, **charted**, is a tile in sight or in fog. | unexplored, unknown, unrevealed, black, explored, revealed, discovered, known |
+| **charted** | A tile that has been in sight, in sight now or in fog. | explored, revealed, discovered, known, seen (of a tile's state) |
+| **uncharted** | A tile never yet in sight. | unexplored, unknown, unrevealed, black, hidden |
 | **instant** | A card with an immediate effect: on the city, on a tile, or one thing with one unit. | action (for a card), spell, effect card |
-| **hazard** | A card no deck holds: an event brings it into a chronicle, and it **strikes** while held. | penalty, curse, drawback, upkeep, affliction, bane |
+| **hazard** | A card no deck holds: an event brings it into a chronicle, and it strikes while held. | penalty, curse, drawback, upkeep, affliction, bane |
 | **strike** | What a hazard does to the chronicle at the end of a turn it is still in the hand. | bite, trigger, proc, go off |
 | **worker** | A non-fighting unit that cards are played through to change tiles: build, terraform, improve. | builder, engineer, labourer |
 | **population** | The city's inhabitants: assigned to tiles for income, turned into units by unit cards. | inhabitants, citizens, workforce, pops |
