@@ -62,9 +62,9 @@ export function yielded(catalogue: Catalogue, chronicle: Chronicle, at: TileCoor
   return landedAs(changeOn('stock', { q: at.q, r: at.r }, { ...chronicle, resources }));
 }
 
-/** The growth threshold, what the next population costs: the population it joins. */
 export function growthThreshold(chronicle: Chronicle): number {
-  return chronicle.population;
+  const fielded = chronicle.units.filter((unit) => unit.faction === 'player').length;
+  return 2 * (chronicle.population + fielded);
 }
 
 /** One population more for the city, arriving idle. */

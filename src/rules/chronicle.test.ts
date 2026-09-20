@@ -84,7 +84,7 @@ test('growth is staged on the food stock the turn ends with, before the income a
   const city = cityOf(['urban', 'plain'], {
     tiles: field(3),
     population: 2,
-    resources: { food: 2, production: 0, military: 0, money: 0, science: 0, culture: 0 },
+    resources: { food: 6, production: 0, military: 0, money: 0, science: 0, culture: 0 },
     units: [worker({ q: 1, r: 1 }), standing('enemy', { q: 3, r: 0 }, { move: MOVE_POINT })],
   });
 

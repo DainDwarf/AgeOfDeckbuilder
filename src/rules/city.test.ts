@@ -23,11 +23,13 @@ import {
   REGION,
   ringed,
   SCHEDULE,
+  type Standing,
   settledLaunch,
   settledOn,
   stagedBy,
   standing,
   withTile,
+  worker,
 } from './fixtures';
 import {
   cornersOf,
@@ -352,7 +354,7 @@ test('a food stock short of the growth threshold grows nobody, and the stock is 
 test('the food stock reaching the growth threshold grows as one grow group, the food spent and then the population', () => {
   const city = cityOf(['urban', 'plain'], {
     population: 3,
-    resources: { food: 3, production: 0, military: 0, money: 0, science: 0, culture: 0 },
+    resources: { food: 6, production: 0, military: 0, money: 0, science: 0, culture: 0 },
   });
 
   const [spent, arrived, ...rest] = heldBy(apply(CATALOGUE, city, { type: 'end-turn' }), 'grow');
@@ -381,7 +383,7 @@ test('income is one stock per tile worked that yields, in tile order, each carry
 test('the food stock reaching the growth threshold is spent on one population, and that one is idle', () => {
   const city = cityOf(['urban'], {
     population: 3,
-    resources: { food: 3, production: 0, military: 0, money: 0, science: 0, culture: 0 },
+    resources: { food: 6, production: 0, military: 0, money: 0, science: 0, culture: 0 },
   });
 
   const after = outcome(apply(CATALOGUE, city, { type: 'end-turn' }));
@@ -411,7 +413,7 @@ test('the growth threshold is the food the next population needs: one short of i
 test('a food stock worth several growth thresholds grows one population and no more', () => {
   const city = cityOf(['urban'], {
     population: 2,
-    resources: { food: 9, production: 0, military: 0, money: 0, science: 0, culture: 0 },
+    resources: { food: 11, production: 0, military: 0, money: 0, science: 0, culture: 0 },
   });
 
   const after = outcome(apply(CATALOGUE, city, { type: 'end-turn' }));
@@ -420,19 +422,42 @@ test('a food stock worth several growth thresholds grows one population and no m
   expect(after.resources.food).toBe(7);
 });
 
-test('the growth threshold widens with the population: the next population costs one food more', () => {
+test('the growth threshold widens with the population: the next population costs two food more', () => {
   const city = cityOf(['urban'], {
     population: 2,
-    resources: { food: 5, production: 0, military: 0, money: 0, science: 0, culture: 0 },
+    resources: { food: 10, production: 0, military: 0, money: 0, science: 0, culture: 0 },
   });
 
   const first = outcome(apply(CATALOGUE, city, { type: 'end-turn' }));
   const second = outcome(apply(CATALOGUE, first, { type: 'end-turn' }));
 
   expect(first.population).toBe(3);
-  expect(first.resources.food).toBe(3);
+  expect(first.resources.food).toBe(6);
   expect(second.population).toBe(4);
   expect(second.resources.food).toBe(0);
+});
+
+test("a unit of the player's on the map raises the growth threshold, and an enemy's does not", () => {
+  const stocked = (food: number, units: Standing[]): Chronicle =>
+    cityOf(['urban'], {
+      population: 2,
+      resources: { food, production: 0, military: 0, money: 0, science: 0, culture: 0 },
+      units,
+    });
+  const fielding = stocked(4, [worker(CITY)]);
+
+  const short = outcome(apply(CATALOGUE, fielding, { type: 'end-turn' }));
+  const paid = outcome(apply(CATALOGUE, stocked(6, [worker(CITY)]), { type: 'end-turn' }));
+  const watched = outcome(
+    apply(CATALOGUE, stocked(4, [standing('enemy', { q: 0, r: 5 })]), { type: 'end-turn' }),
+  );
+
+  expect(short.population).toBe(fielding.population);
+  expect(short.resources.food).toBe(4);
+  expect(paid.population).toBe(fielding.population + 1);
+  expect(paid.resources.food).toBe(0);
+  expect(watched.population).toBe(fielding.population + 1);
+  expect(watched.resources.food).toBe(0);
 });
 
 test('an assign takes the population off a tile, and a second one puts it back', () => {
