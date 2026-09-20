@@ -8,7 +8,7 @@ const TEXT = {
   'label.money': 'Money',
   'label.science': 'Science',
   'label.culture': 'Culture',
-  'label.population': 'Population',
+  'label.population': 'Idle',
   'label.health': 'Health',
   'label.damage': 'Damage',
   'label.range': 'Range',
@@ -24,8 +24,7 @@ const TEXT = {
   'tooltip.science':
     'The never-ending ingenuity of humanity. Draw, discard, and manipulate your cards.',
   'tooltip.culture': 'What the city creates and believes. Claims tiles, pushing the border out.',
-  'tooltip.population':
-    'Idle population, over all of it. Assign it to tiles, or turn it into units.',
+  'tooltip.population': 'Idle population. Assign to tile or turn into units.',
   'tooltip.health': 'What the unit has left before it is killed.',
   'tooltip.damage': "The health this unit's attack removes.",
   'tooltip.range': 'The distance, in tiles, this unit attacks over.',

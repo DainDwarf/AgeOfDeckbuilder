@@ -29,7 +29,6 @@ The unordered pool of features that may or may not happen. Nothing here is promi
 - **Type-size floor, verified small** (art-style pass scope): minimum type sizes generous enough that the smallest window we care about stays readable; ui-check verifies at that size. Uniform window scaling plus card zoom covers the rest — no UI-scale slider unless playtesting demands it.
 - **Merge elevation and river lift**: test if a terrain's elevation and its river lift can be the same data — they only diverge on forest, and both represent the same idea of terrain elevation.
 - **Hand-crafted challenge maps**: once the opening takes a fully generated map, a map written by hand could be one the player launches on, a challenge with a fixed layout. Not committed to at all. The screen only generates its map today, so a door handing it a hand-made one comes first; the e2e specs would walk through the same door.
-- **End-of-turn warning for idle population**: a warning at end of turn when population stands idle while free tiles remain. Shelved, not rejected — it conflicts with no-handholding.
 - **A building's yield reads its neighbours**: adjacency as content — a building yielding by what stands on the tiles around it.
 - **A tile that adds sight**: a layer of a tile, a building or an improvement, adding to the sight of the unit standing on it.
 - **A building that adds an entry point**: units enter the map on the city's tile alone; a keyword for a building that opens another door.

@@ -393,6 +393,26 @@ export function shows(page: Page, name: string): Promise<boolean> {
   }, name);
 }
 
+/** What the floor of a reading's well is painted, and nothing at all while that well is down. */
+export function wellFill(page: Page, key: string): Promise<number | undefined> {
+  return page.evaluate((target) => {
+    const floor = window.named?.(`reading-${target}-floor`)?.object as
+      | Phaser.GameObjects.Rectangle
+      | undefined;
+    if (floor === undefined) throw new Error(`there is no well for ${target}`);
+    return floor.parentContainer.visible ? floor.fillColor : undefined;
+  }, key);
+}
+
+/** The one accent, read off the end-turn button, which wears it from the first turn on. */
+export function accent(page: Page): Promise<number> {
+  return page.evaluate(() => {
+    const button = window.named?.('end-turn')?.object as Phaser.GameObjects.Rectangle | undefined;
+    if (button === undefined) throw new Error('there is no end-turn button');
+    return button.fillColor;
+  });
+}
+
 /** How many objects of that name stand on the chronicle screen: one still painted, plus any left over. */
 export function counted(page: Page, name: string): Promise<number> {
   return page.evaluate((target) => {

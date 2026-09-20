@@ -1,11 +1,13 @@
 import type Phaser from 'phaser';
-import { growthThreshold } from '../rules/city';
+import type { Catalogue } from '../rules/catalogue';
+import { assignWaiting, claimWaiting, cultureThreshold, growthThreshold } from '../rules/city';
 import { RESOURCES, type Resource } from '../rules/resources';
 import { type Group, type Stage, walked } from '../rules/stages';
 import { type Chronicle, idle } from '../rules/state';
 import { layOutBar, type Placed, type Zone } from './bar-layout';
 import { EASE, ended, stopMotion } from './card-motion';
 import {
+  ACCENT,
   addText,
   DESIGN_WIDTH,
   MARGIN,
@@ -37,11 +39,11 @@ const WORD_TO_VALUE = 8;
 const MENU_HEIGHT = 32;
 const MENU_PADDING = 12;
 
-/** The well a latched reading sits in: its floor, the edge it is cut into, and the light beneath. */
+/** The well a reading sits in: the floor a latch gives it, the edge it is cut into, and the light beneath. */
 const WELL_FILL = 0xb4b9c0;
 const WELL_LIGHT = 0xeef0f3;
 
-/** How far a latched reading is pressed down and to the right. */
+/** How far a reading in its well is pressed down and to the right. */
 const SUNK = 1;
 
 type Reading = Resource | 'population';
@@ -73,10 +75,11 @@ type Entry = {
   readonly chip: Phaser.GameObjects.Rectangle;
   readonly word: Phaser.GameObjects.Text;
   readonly value: Phaser.GameObjects.Text;
-  /** The chip, the word and the value together: what the latch presses into the bar. */
+  /** The chip, the word and the value together: what the well presses into the bar. */
   readonly face: Phaser.GameObjects.Container;
-  /** The well the reading sits in while it is latched down; it stands only then. */
+  /** The well the reading sits in while it is latched down or its act waits; it stands only then. */
   readonly well: Phaser.GameObjects.Container;
+  readonly floor: Phaser.GameObjects.Rectangle;
   /** What the value reads, as the number a rise ticks through; the text follows it. */
   readonly ticking: { count: number };
   readonly hover: Phaser.GameObjects.Zone;
@@ -91,6 +94,7 @@ export type ResourceBar = {
 
 export function createResourceBar(
   scene: Phaser.Scene,
+  catalogue: Catalogue,
   tooltip: Tooltip,
   menu: () => void,
   cityMode: () => void,
@@ -137,6 +141,25 @@ export function createResourceBar(
   /** The readings the bar has ticking; a render owns them and takes them down. */
   let rising: Entry[] = [];
 
+  /** The resources the overlay holds latched, and the readings whose act in city mode is waiting. */
+  let latched: ReadonlySet<Resource> = new Set();
+  let waiting: ReadonlySet<Reading> = new Set();
+
+  /**
+   * Every reading put in its well or lifted out of it. A latch and a render each arrive without the
+   * other, so both states are painted from here.
+   */
+  const dress = (): void => {
+    for (const entry of entries) {
+      const filled = waiting.has(entry.key);
+      const down = filled || (entry.key !== 'population' && latched.has(entry.key));
+      entry.well.setVisible(down);
+      entry.floor.setFillStyle(filled ? ACCENT : WELL_FILL);
+      entry.face.setPosition(down ? SUNK : 0, down ? SUNK : 0);
+      entry.word.setColor(down ? SUNK_WORD_INK : WORD_INK);
+    }
+  };
+
   const render = (chronicle: Chronicle): void => {
     overScrim = chronicle.deals.length > 0;
     bar.setDepth(overScrim ? OVER_SCRIM_DEPTH : BAR_DEPTH);
@@ -147,6 +170,8 @@ export function createResourceBar(
       entry.ticking.count = count;
       entry.value.setText(readsAs(count, over));
     }
+    waiting = actsWaiting(catalogue, chronicle);
+    dress();
   };
 
   /** Every reading that changed ticks to where it stands. */
@@ -218,12 +243,8 @@ export function createResourceBar(
       }
     },
     latch(shown: ReadonlySet<Resource>): void {
-      for (const entry of entries) {
-        const down = entry.key !== 'population' && shown.has(entry.key);
-        entry.well.setVisible(down);
-        entry.face.setPosition(down ? SUNK : 0, down ? SUNK : 0);
-        entry.word.setColor(down ? SUNK_WORD_INK : WORD_INK);
-      }
+      latched = shown;
+      dress();
     },
   };
 }
@@ -275,11 +296,19 @@ function digitSlot(scene: Phaser.Scene): number {
  * The well of one reading: the floor it sits on, the edge it is cut into above and to the left, and
  * the light that catches below and to the right. Laid out where the reading is placed.
  */
-function createWell(scene: Phaser.Scene, key: Reading): Phaser.GameObjects.Container {
-  const parts = [WELL_FILL, PANEL_EDGE, PANEL_EDGE, WELL_LIGHT, WELL_LIGHT].map((colour) =>
-    scene.add.rectangle(0, 0, 1, 1, colour).setOrigin(0, 0),
+function createWell(
+  scene: Phaser.Scene,
+  key: Reading,
+): { well: Phaser.GameObjects.Container; floor: Phaser.GameObjects.Rectangle } {
+  const [floor, ...edges] = [WELL_FILL, PANEL_EDGE, PANEL_EDGE, WELL_LIGHT, WELL_LIGHT].map(
+    (colour) => scene.add.rectangle(0, 0, 1, 1, colour).setOrigin(0, 0),
   );
-  return scene.add.container(0, 0, parts).setName(`reading-${key}-well`).setVisible(false);
+  floor.setName(`reading-${key}-floor`);
+  const well = scene.add
+    .container(0, 0, [floor, ...edges])
+    .setName(`reading-${key}-well`)
+    .setVisible(false);
+  return { well, floor };
 }
 
 /** The well's five rectangles laid over the reading's own zone: the floor, then the four edges. */
@@ -320,10 +349,10 @@ function createEntry(
     () => tooltip.hide(),
   );
   // The well is added first, so the reading it holds is painted inside it.
-  const well = createWell(scene, key);
+  const { well, floor } = createWell(scene, key);
   const face = scene.add.container(0, 0, [chip, word, value]);
   bar.add([well, face, hover]);
-  return { key, chip, word, value, face, well, ticking: { count: 0 }, hover };
+  return { key, chip, word, value, face, well, floor, ticking: { count: 0 }, hover };
 }
 
 function widthOf({ word }: Entry, slot: number): number {
@@ -342,21 +371,35 @@ function place(entry: Entry, { at, zone }: Placed): void {
 }
 
 /**
- * What a reading reads: the number a rise ticks through, and the whole it stands against, where it
- * has one — the idle population over all of it, the food stock over the growth threshold.
+ * What a reading reads: the number a rise ticks through, and the threshold it stands against, where
+ * it has one — the food stock over the growth threshold, the culture stock over the culture
+ * threshold, and the idle population alone.
  */
 function readingOf(chronicle: Chronicle, key: Reading): { count: number; over?: number } {
   switch (key) {
     case 'population':
-      return { count: idle(chronicle), over: chronicle.population };
+      return { count: idle(chronicle) };
     case 'food':
       return { count: chronicle.resources.food, over: growthThreshold(chronicle) };
-    default:
+    case 'culture':
+      return { count: chronicle.resources.culture, over: cultureThreshold(chronicle) };
+    case 'production':
+    case 'military':
+    case 'money':
+    case 'science':
       return { count: chronicle.resources[key] };
   }
 }
 
-/** How a reading paints: the number alone, or the number over the whole it stands against. */
+/** The readings whose act in city mode is waiting on the player: what fills a well in the accent. */
+function actsWaiting(catalogue: Catalogue, chronicle: Chronicle): ReadonlySet<Reading> {
+  const waiting = new Set<Reading>();
+  if (claimWaiting(catalogue, chronicle)) waiting.add('culture');
+  if (assignWaiting(chronicle)) waiting.add('population');
+  return waiting;
+}
+
+/** How a reading paints: the number alone, or the number over the threshold it stands against. */
 function readsAs(count: number, over: number | undefined): string {
   return over === undefined ? String(count) : text('reading.over', { count, over });
 }

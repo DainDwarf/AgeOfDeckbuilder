@@ -7,6 +7,7 @@ import { RESOURCES } from '../src/rules/resources';
 import type { Chronicle } from '../src/rules/state';
 import { text } from '../src/ui/text';
 import {
+  accent,
   type Border,
   besideTiles,
   budget,
@@ -41,6 +42,7 @@ import {
   thresholdShown,
   tileOnScreen,
   watch,
+  wellFill,
 } from './chronicle-screen';
 
 /** A tile the opening's border touches and the city has charted: what a claim takes first. */
@@ -328,6 +330,65 @@ test('a press on culture or population enters city mode, and the chip leaves it'
 
   await click(page, 'reading-population');
   await expect.poll(() => inCityMode(page)).toBe(true);
+
+  expect(problems).toEqual([]);
+});
+
+test('culture’s well fills while the city can pay for a tile it may claim, and empties once the claim is paid', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const bare = opening('bare');
+  const owed = threshold(bare, BESIDE.at);
+  test.setTimeout(budget(owed + 1));
+
+  await open(page, 1, 'PH_Deck', STAND_IN_SCHEDULE, CENTRE, 'bare');
+  const filled = await accent(page);
+  expect(await wellFill(page, 'culture')).toBeUndefined();
+
+  for (let turn = 0; turn < owed; turn++) await endTurn(page);
+  expect((await chronicleOf(page)).resources.culture).toBe(owed);
+  await expect.poll(() => wellFill(page, 'culture')).toBe(filled);
+
+  await page.keyboard.press('c');
+  await expect.poll(() => inCityMode(page)).toBe(true);
+  const near = await tileOnScreen(page, BESIDE.at);
+  await page.mouse.click(near.x, near.y);
+  await expect.poll(() => thresholdShown(page)).toBe(thresholdWorn(bare, BESIDE.at));
+
+  await page.mouse.click(near.x, near.y);
+  await playedOut(page);
+
+  expect((await chronicleOf(page)).held.map(tileKey)).toContain(BESIDE.key);
+  await expect.poll(() => wellFill(page, 'culture')).toBeUndefined();
+
+  expect(problems).toEqual([]);
+});
+
+test('population’s well fills while one is idle over a tile the city holds and nobody stands on, and empties once it is assigned', async ({
+  page,
+}) => {
+  const problems = watch(page);
+
+  await open(page, 1, 'PH_Deck');
+  const filled = await accent(page);
+  expect(await wellFill(page, 'population')).toBeUndefined();
+
+  await page.keyboard.press('c');
+  await expect.poll(() => inCityMode(page)).toBe(true);
+
+  const held = await tileOnScreen(page, HELD.at);
+  await page.mouse.click(held.x, held.y);
+  await expect.poll(() => ringedTile(page)).toBe(HELD.key);
+  await page.mouse.click(held.x, held.y);
+  await playedOut(page);
+  expect(await counted(page, 'assigned')).toBe(RING - 1);
+  await expect.poll(() => wellFill(page, 'population')).toBe(filled);
+
+  await page.mouse.click(held.x, held.y);
+  await playedOut(page);
+  expect(await counted(page, 'assigned')).toBe(RING);
+  await expect.poll(() => wellFill(page, 'population')).toBeUndefined();
 
   expect(problems).toEqual([]);
 });

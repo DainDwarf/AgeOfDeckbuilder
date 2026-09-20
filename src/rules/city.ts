@@ -146,7 +146,8 @@ export function claimable(catalogue: Catalogue, chronicle: Chronicle): TileCoord
     .map(({ q, r }) => ({ q, r }));
 }
 
-function cultureThreshold(chronicle: Chronicle): number {
+/** What a claim asks of the culture stock, whichever tile it takes: twice the tiles the city holds. */
+export function cultureThreshold(chronicle: Chronicle): number {
   return 2 * chronicle.held.length;
 }
 
@@ -197,6 +198,18 @@ export function cityCommand(
   const refusal = tileRefusal(catalogue, chronicle, tile);
   if (refusal === undefined || !playable(refusal)) return undefined;
   return { type: holds(chronicle, tile) ? 'assign' : 'claim', tile };
+}
+
+/** Whether one of the tiles the city may claim is one it can pay for. */
+export function claimWaiting(catalogue: Catalogue, chronicle: Chronicle): boolean {
+  return claimable(catalogue, chronicle).some(
+    (tile) => cityCommand(catalogue, chronicle, tile)?.type === 'claim',
+  );
+}
+
+/** Whether the city has one population idle and holds a tile nobody stands on to put it to. */
+export function assignWaiting(chronicle: Chronicle): boolean {
+  return idle(chronicle) > 0 && chronicle.held.some((tile) => !assignedTo(chronicle, tile));
 }
 
 /**

@@ -1,6 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import type Phaser from 'phaser';
-import { growthThreshold } from '../src/rules/city';
+import { cultureThreshold, growthThreshold } from '../src/rules/city';
 import { idle } from '../src/rules/state';
 import { text } from '../src/ui/text';
 import {
@@ -109,7 +109,11 @@ test('a motion that throws still ends the turn and gives the chronicle screen ba
       count: committed.resources.food,
       over: growthThreshold(committed),
     }),
-    population: text('reading.over', { count: idle(committed), over: committed.population }),
+    culture: text('reading.over', {
+      count: committed.resources.culture,
+      over: cultureThreshold(committed),
+    }),
+    population: String(idle(committed)),
   };
   expect(await paintedReadings(page, Object.keys(readings))).toEqual(readings);
   expect(await endTurnLabel(page)).toBe(text('button.end-turn'));

@@ -474,6 +474,7 @@ export class ChronicleScene extends Phaser.Scene {
 
     const bar = createResourceBar(
       this,
+      this.choices.catalogue,
       createTooltip(this, ui),
       menu,
       enterCityMode,

@@ -50,7 +50,7 @@ In city mode the map marks the assigned tiles and dims the held ones that are no
 
 ## The resource bar ✅
 
-The resource bar reads population as the idle population over all of it, and food as the stock over the growth threshold.
+The resource bar reads food as the stock over the growth threshold, culture as the stock over the culture threshold, and the idle population alone, under the word idle. Culture and population are the two readings that enter city mode, and each fills its well in the accent while city mode has that act waiting: culture's while the stock covers the culture threshold and a tile the city may claim stands, population's while one is idle and a tile the city holds has nobody on it, its own tile and an occupied one no exception. The well is the one a latched reading sits in, sunk the same way, in the accent in place of grey; a reading latched and filled at once is in the accent.
 
 ## The yield overlay ✅
 

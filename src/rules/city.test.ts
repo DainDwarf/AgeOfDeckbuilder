@@ -2,7 +2,16 @@ import { expect, test } from 'vitest';
 import { aimOf, refuses } from './cards';
 import { type AimedCard, cardOf, type Deck } from './catalogue';
 import { admitted, apply, type Command, launched, outcome } from './chronicle';
-import { cityCommand, cityDrag, claimable, growthThreshold, tileCost, tileRefusal } from './city';
+import {
+  assignWaiting,
+  cityCommand,
+  cityDrag,
+  claimable,
+  claimWaiting,
+  growthThreshold,
+  tileCost,
+  tileRefusal,
+} from './city';
 import {
   assignTo,
   CATALOGUE,
@@ -739,6 +748,30 @@ test('a city-mode click on a held tile nobody stands on is refused while nobody 
 
   expect(tileRefusal(CATALOGUE, freed, empty)).toEqual({ unaffordable: [], blocked: [] });
   expect(stagedBy(freed, assignTo(empty))).toEqual(['assign', 'assigned']);
+});
+
+test('a claim waits while the city can pay for a tile it may claim, and none waits where the border touches nothing', () => {
+  const penniless = alone();
+  const paying = alone({ resources: culture(2) });
+  const boxedIn = cityOf(['urban'], { resources: culture(20) });
+
+  expect(claimWaiting(CATALOGUE, penniless)).toBe(false);
+  expect(claimWaiting(CATALOGUE, paying)).toBe(true);
+  expect(claimable(CATALOGUE, boxedIn)).toEqual([]);
+  expect(claimWaiting(CATALOGUE, boxedIn)).toBe(false);
+});
+
+test('an assign waits while one population is idle and the city holds a tile nobody stands on', () => {
+  const working = ringed(3);
+  const empty = { q: 1, r: 0 };
+  const freed = outcome(apply(CATALOGUE, working, assignTo(empty)));
+  const spent = ringed(3, { population: 6, assigned: [CITY, ...neighbours(CITY).slice(1)] });
+
+  expect(idle(working)).toBe(2);
+  expect(assignWaiting(working)).toBe(false);
+  expect(assignWaiting(freed)).toBe(true);
+  expect(idle(spent)).toBe(0);
+  expect(assignWaiting(spent)).toBe(false);
 });
 
 test('the same claim on the same chronicle gives the same chronicle back', () => {
