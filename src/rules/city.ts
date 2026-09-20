@@ -146,7 +146,6 @@ export function claimable(catalogue: Catalogue, chronicle: Chronicle): TileCoord
     .map(({ q, r }) => ({ q, r }));
 }
 
-/** The culture threshold, what the next claim costs. */
 function cultureThreshold(chronicle: Chronicle): number {
   return 2 * chronicle.held.length;
 }

@@ -445,18 +445,18 @@ test("a unit of the player's on the map raises the growth threshold, and an enem
       units,
     });
   const fielding = stocked(4, [worker(CITY)]);
+  const fed = stocked(6, [worker(CITY)]);
+  const watching = stocked(4, [standing('enemy', { q: 0, r: 5 })]);
 
   const short = outcome(apply(CATALOGUE, fielding, { type: 'end-turn' }));
-  const paid = outcome(apply(CATALOGUE, stocked(6, [worker(CITY)]), { type: 'end-turn' }));
-  const watched = outcome(
-    apply(CATALOGUE, stocked(4, [standing('enemy', { q: 0, r: 5 })]), { type: 'end-turn' }),
-  );
+  const paid = outcome(apply(CATALOGUE, fed, { type: 'end-turn' }));
+  const watched = outcome(apply(CATALOGUE, watching, { type: 'end-turn' }));
 
   expect(short.population).toBe(fielding.population);
   expect(short.resources.food).toBe(4);
-  expect(paid.population).toBe(fielding.population + 1);
+  expect(paid.population).toBe(fed.population + 1);
   expect(paid.resources.food).toBe(0);
-  expect(watched.population).toBe(fielding.population + 1);
+  expect(watched.population).toBe(watching.population + 1);
   expect(watched.resources.food).toBe(0);
 });
 
