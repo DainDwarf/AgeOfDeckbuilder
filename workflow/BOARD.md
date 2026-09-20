@@ -6,7 +6,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ---
 
-- **Fewer events in the Nomadic Age** — deal less events over the age, about two.
 - **The balance pass** — numbers measured on the real content, edits uncommitted until the user says they hold.
 - **No capstone reveal on the first turn** — the capstone is not revealed on the first turn.
 - **The claim indicator** — the city shows the player when a new tile can be claimed.

@@ -286,12 +286,12 @@ export const NOMADIC: Catalogue = catalogued({
   },
   schedules: {
     nomadic: {
-      spacing: [3, 5],
+      spacing: [6, 9],
       capstone: { id: 'first-shelter', window: [12, 18] },
       entries: {
         'lean-season': () => 1,
-        'rival-band': () => 1,
-        wildfire: (turn) => (turn >= 8 ? 1 : 0),
+        'rival-band': (turn) => (turn >= 10 ? 1 : 0),
+        wildfire: (turn) => (turn >= 10 ? 1 : 0),
         departure: () => 1,
         herd: () => 1 / 3,
       },
