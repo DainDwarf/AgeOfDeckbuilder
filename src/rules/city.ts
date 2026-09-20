@@ -203,7 +203,7 @@ export function cityCommand(
 /** Whether one of the tiles the city may claim is one it can pay for. */
 export function claimWaiting(catalogue: Catalogue, chronicle: Chronicle): boolean {
   return claimable(catalogue, chronicle).some(
-    (tile) => cityCommand(catalogue, chronicle, tile)?.type === 'claim',
+    (tile) => cityCommand(catalogue, chronicle, tile) !== undefined,
   );
 }
 
@@ -212,12 +212,6 @@ export function assignWaiting(chronicle: Chronicle): boolean {
   return idle(chronicle) > 0 && chronicle.held.some((tile) => !assignedTo(chronicle, tile));
 }
 
-/**
- * What a drag in city mode sends — the press taken on one tile and let go on another: the
- * population off the tile it stands on and onto the tile it was let go on, which the city has to
- * hold with nobody standing on it. Nothing at all for any other pair of tiles, the same tile twice
- * among them. The one decision both the chronicle screen and `apply` answer that drag by.
- */
 export function cityDrag(
   chronicle: Chronicle,
   from: TileCoords,
