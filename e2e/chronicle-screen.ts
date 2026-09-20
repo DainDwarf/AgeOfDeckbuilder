@@ -288,10 +288,8 @@ export function onScreen(page: Page, name: string): Promise<OnScreen> {
 }
 
 /**
- * Where a tile's face stands on the page, whether the map draws it or not: the map lays its tiles on
- * two axes, and the centre tile's face with the two beside it — charted from the settle phase on —
- * give both. Where a spec presses for a tile the map may be drawing nothing of, a press that lands
- * off the map.
+ * The centre tile and the two beside it are charted from the settle phase on, so the axes they give
+ * can always be measured.
  */
 export async function tileOnScreen(page: Page, coord: TileCoords): Promise<OnScreen> {
   const origin = await onScreen(page, `tile-${tileKey(CENTRE)}`);
