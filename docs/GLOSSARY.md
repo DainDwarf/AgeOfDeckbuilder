@@ -12,7 +12,8 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **campaign** | Humanity's history as the player has unlocked it — the meta's progression. | tech tree, map (for the meta) |
 | **collection** | Every card the player owns, with the copies owned of each. | library, pool, inventory |
 | **civilization** | A playable identity: starting units, one passive rule, a look, and its deck. | people, nation, civ, board |
-| **deck** | A civilization's set of cards, fixed for a chronicle, in two sections: its cards, which the draw pile cycles, and its **settle cards**, played on turn 0 alone. | loadout |
+| **deck** | A civilization's set of cards, fixed for a chronicle. | loadout |
+| **settle section** | The part of the deck that holds its settle cards, the hand of the settle phase. | opening hand, starting hand, sideboard, reserve |
 | **technology** | A permanent unlock earned by an achievement: new cards, better buildings, better units. | tech, advancement, upgrade, research |
 | **achievement** | A goal a chronicle can reach; reaching it unlocks a technology. | mission, objective, quest, milestone |
 | **influence** | The meta-currency every chronicle pays, scaled by how the city fared. | gold, XP |
