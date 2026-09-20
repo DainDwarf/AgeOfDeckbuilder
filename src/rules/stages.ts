@@ -32,8 +32,8 @@ export type Change = { readonly kind: 'change'; readonly chronicle: Chronicle } 
  * it was handed or left where it holds none, a draw of the generator that raised no stage riding on
  * it either way. `played` is a card played, `refused` a command the rules turned down, `assign` a
  * population put on a tile, taken off one, or both, `claim` a tile bought with culture, `strike` one
- * hazard in hand striking, `income` the tiles worked yielding, `grow` the food stock spent on one
- * more population, `turn` the turn ticked and the units refreshed, `enemy-phase` the enemies' half of
+ * hazard in hand striking, `grow` the food stock spent on one more population, `income` the tiles
+ * worked yielding, `turn` the turn ticked and the units refreshed, `enemy-phase` the enemies' half of
  * the turn, `capstone-landing` the capstone's turn come, `capstone-continued` its second script on a
  * turn after, `deal` what the timeline offers on a due turn, `answer` an answer taken, `reward` a
  * reward taken, `attack` one unit's attack, and `camp-capture` one camp taken by the unit standing on

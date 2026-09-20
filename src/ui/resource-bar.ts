@@ -149,7 +149,7 @@ export function createResourceBar(
     }
   };
 
-  /** The income arriving, or the growth after it: every reading that changed ticks to where it stands. */
+  /** Every reading that changed ticks to where it stands. */
   const rise = (chronicle: Chronicle): Promise<void> | undefined => {
     const ticking = entries.filter(
       (entry) => entry.ticking.count !== readingOf(chronicle, entry.key).count,

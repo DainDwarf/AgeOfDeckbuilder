@@ -80,20 +80,21 @@ test('ending the turn moves the chronicle on to the next one', () => {
   expect(outcome(apply(CATALOGUE, second, { type: 'end-turn' })).turn).toBe(3);
 });
 
-test('growth is staged right after the income it comes from, and before the enemy phase', () => {
+test('growth is staged on the food stock the turn ends with, before the income and before the enemy phase', () => {
   const city = cityOf(['urban', 'plain'], {
     tiles: field(3),
     population: 2,
+    resources: { food: 2, production: 0, military: 0, money: 0, science: 0, culture: 0 },
     units: [worker({ q: 1, r: 1 }), standing('enemy', { q: 3, r: 0 }, { move: MOVE_POINT })],
   });
 
   expect(stagedBy(city, { type: 'end-turn' })).toEqual([
-    'income',
-    'stock',
-    'stock',
     'grow',
     'stock',
     'population',
+    'income',
+    'stock',
+    'stock',
     'enemy-phase',
     'move',
     'attack',
@@ -399,10 +400,10 @@ test('the end of turn resolves in order, and its last stage is where the turn en
 
   expect(namesOf(stages)).toEqual([
     'discarded',
+    'grow',
     'income',
     'stock',
     'stock',
-    'grow',
     'enemy-phase',
     'move',
     'attack',
@@ -430,10 +431,10 @@ test('a phase the turn always has is staged every turn, empty or not, and an emp
   const stages = apply(CATALOGUE, quiet, { type: 'end-turn' });
 
   expect(namesOf(stages)).toEqual([
+    'grow',
     'income',
     'stock',
     'stock',
-    'grow',
     'enemy-phase',
     'turn',
     'turn',
@@ -477,7 +478,7 @@ test('a city whose food stock of nought would grow at no population falls on the
   const stages = apply(CATALOGUE, empty, { type: 'end-turn' });
   const ended = outcome(stages);
 
-  expect(namesOf(stages)).toEqual(['income', 'grow', 'stock', 'ended']);
+  expect(namesOf(stages)).toEqual(['grow', 'stock', 'ended']);
   expect(ended.population).toBe(0);
   expect(ended.ending).toEqual({ outcome: 'defeat', cause: 'population', turn: empty.turn });
 });

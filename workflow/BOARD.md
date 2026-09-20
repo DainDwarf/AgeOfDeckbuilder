@@ -6,7 +6,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ---
 
-- **Invert the order of growth and income** — the end of turn runs growth right before income, after the hazard strike and the discard, and the two pages list the cycle in that order. Doc-impact: `docs/CHRONICLE.md`, `docs/GLOSSARY.md`. [board/growth-before-income.md](board/growth-before-income.md)
 - **The settle phase** — the glossary names the settle phase, no `docs/` page, `src/` or `e2e/` file says turn 0, and the chronicle screen marks the phase: the map's frame and a chip in the phase's own colour, and the end-turn button in it reading the phase. Doc-impact: `docs/GLOSSARY.md`, `docs/CHRONICLE.md`, `docs/CHRONICLE-SCREEN.md`, `docs/DESIGN.md`, `docs/ages/NOMADIC.md`. [board/settle-phase.md](board/settle-phase.md)
 - **The population growth curve** — the growth threshold equals the population, so the city grows every turn and food piles up to dozens; a steeper curve is the candidate, with the question of whether units count as population for it, since otherwise a smaller city produces units faster.
 - **Production's drain** — production has almost no drain or curve and piles up like food; Shelter, Trapping, the firebreak and Hunger are its only sinks, and what a standing drain or a steeper sink should be is the question.

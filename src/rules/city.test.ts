@@ -356,7 +356,7 @@ test('a food stock short of the growth threshold grows nobody, and the stock is 
 test('the food stock reaching the growth threshold grows as one grow group, the food spent and then the population', () => {
   const city = cityOf(['urban', 'plain'], {
     population: 3,
-    resources: { food: 1, production: 0, military: 0, money: 0, science: 0, culture: 0 },
+    resources: { food: 3, production: 0, military: 0, money: 0, science: 0, culture: 0 },
   });
 
   const [spent, arrived, ...rest] = heldBy(apply(CATALOGUE, city, { type: 'end-turn' }), 'grow');
@@ -383,9 +383,9 @@ test('income is one stock per tile worked that yields, in tile order, each carry
 });
 
 test('the food stock reaching the growth threshold is spent on one population, and that one is idle', () => {
-  const city = cityOf(['urban', 'plain'], {
+  const city = cityOf(['urban'], {
     population: 3,
-    resources: { food: 1, production: 0, military: 0, money: 0, science: 0, culture: 0 },
+    resources: { food: 3, production: 0, military: 0, money: 0, science: 0, culture: 0 },
   });
 
   const after = outcome(apply(CATALOGUE, city, { type: 'end-turn' }));

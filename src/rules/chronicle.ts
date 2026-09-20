@@ -394,7 +394,7 @@ function moved(name: 'drawn' | 'shuffled', before: Chronicle, after: Chronicle):
 
 /**
  * The end of turn: one `strike` for every hazard in hand, whatever it moved; what is left of the
- * hand discarded; `income`, `grow` and `enemy-phase`, each staged empty or not; one `camp-capture`
+ * hand discarded; `grow`, `income` and `enemy-phase`, each staged empty or not; one `camp-capture`
  * for every camp captured; then the opening, unless a camp's rewards stand — the rest waits on
  * their take. Turn 0's end is the opening alone. A turn ended while the city stands nowhere is
  * `refused`.
@@ -405,8 +405,8 @@ function endOfTurn(catalogue: Catalogue, chronicle: Chronicle): Sequence {
   return course(chronicle, [
     (left) => struck(catalogue, left),
     discarded,
-    (left) => grouped({ name: 'income' }, income(catalogue, left)),
     (left) => grouped({ name: 'grow' }, grow(left)),
+    (left) => grouped({ name: 'income' }, income(catalogue, left)),
     (left) => enemyPhase(catalogue, left),
     (left) => captures(catalogue, left),
     (left) => (left.deals.length > 0 ? unchanged(left) : opened(catalogue, left)),

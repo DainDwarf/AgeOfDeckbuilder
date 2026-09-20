@@ -10,8 +10,8 @@ A chronicle is a sequence of **turns**. It opens on **turn 0, the settle phase**
 2. **Draw.** The player draws a **hand** of **five** cards from the draw pile. 🔧 Buildings, a civilization or an effect may change the number. An empty draw pile is refilled by shuffling the discard pile into it.
 3. **Play.** The player plays cards from the hand, in any order, paying each card's resource cost, and moves and attacks with the units on the map. Nothing else limits play: the hand, the city's resources and what the units hold are the whole budget. A per-turn energy was rejected: a sixth economy fighting the five.
 4. **End.** The player ends the turn; the rest of the hand is discarded.
-5. **Income.** Standing things do their standing thing: assigned tiles and their buildings yield their resources. So what the player sees when drawing holds for the whole turn: a building built this turn yields from the next.
-6. **Growth.** A food stock that has reached the growth threshold is spent on one idle population, at most one a turn.
+5. **Growth.** A food stock that has reached the growth threshold is spent on one idle population, at most one a turn.
+6. **Income.** Standing things do their standing thing: assigned tiles and their buildings yield their resources. So what the player sees when drawing holds for the whole turn: a building built this turn yields from the next.
 7. **Enemy phase.** 🔧 Neutrals move; each enemy in turn, on the chronicle as the enemy before it left it, moves by its script, which draws from the seeded generator where it draws, and then attacks the unit its script names within its range, spending its action as any unit does. The enemies that act are those standing when the phase begins: one a fellow has killed before its turn acts no more, and one entered during the phase waits for the next. Once the enemies have acted, each camp rolls whether a warrior enters on it or beside it. An attack declared a turn before it lands was rejected: it only matters when the player’s movement is limited, and units that move freely by hand step out of a plan declared a turn ahead for nothing.
 
 ## Sight ✅
