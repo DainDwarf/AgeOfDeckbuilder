@@ -34,3 +34,4 @@ The unordered pool of features that may or may not happen. Nothing here is promi
 - **A tile that adds sight**: a layer of a tile, a building or an improvement, adding to the sight of the unit standing on it.
 - **A building that adds an entry point**: units enter the map on the city's tile alone; a keyword for a building that opens another door.
 - **A rolled centre part**: the centre part's radius rolled by the generator instead of named by the region; a generator change, pitched running.
+- **Herbalism** (Stone Age): a technology unlocking the Heal card — 2 food, heal a unit on a player-held tile.

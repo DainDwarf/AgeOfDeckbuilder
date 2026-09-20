@@ -6,8 +6,9 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ---
 
-- **Production's drain** — production has almost no drain or curve and piles up like food; Shelter, Trapping, the firebreak and Hunger are its only sinks, and what a standing drain or a steeper sink should be is the question.
-- **The balance pass** — numbers measured on the real content, edits uncommitted until the user says they hold. First playtest of the nomadic age: the enemy hits too hard; the settlement and the economy expand way too fast, so gathering is not much needed after a few turns — a victory on 74 food, 22 production, 15 culture — which leaves Hunger biteless and the camps' stocks useless as loot.
+- **Fewer events in the Nomadic Age** — deal less events over the age, about two.
+- **The balance pass** — numbers measured on the real content, edits uncommitted until the user says they hold.
+- **No capstone reveal on the first turn** — the capstone is not revealed on the first turn.
 - **The claim indicator** — the city shows the player when a new tile can be claimed.
 - **Event animations** — when an event's answer lands, what it changes on the map — burned tiles, killed population and units, anything an answer does — is animated rather than simply redrawn; the tile The herd's _Follow it_ charts is one of them, wherever it lies on the map, and nothing draws the eye to it until then.
 - **Card references** — a card named in another text is displayed like a link: hovering it shows a miniature of the card, inspecting it zooms on the card; the details come at intake.

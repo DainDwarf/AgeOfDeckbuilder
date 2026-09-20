@@ -74,7 +74,7 @@ export const NOMADIC: Catalogue = catalogued({
     scout: {
       type: 'scout',
       worker: false,
-      health: 2,
+      health: 3,
       damage: 1,
       range: 1,
       move: 4 * MOVE_POINT,
@@ -422,5 +422,5 @@ export const NOMADIC: Catalogue = catalogued({
     odds: 0.08,
     raidCampOdds: 0.8,
   },
-  city: { building: 'city', sight: 2, idle: 2 },
+  city: { building: 'city', sight: 2, idle: 0 },
 });
