@@ -6,7 +6,7 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ---
 
-- **One home for the depths** — the tooltip is drawn under every window, and the resource bar hides it rather than fixing it; what stands over what gets clear rules on a design page, and one ordered table every file reads its depth from.
+- **One home for the depths** — `docs/INTERFACE.md` says what stands over what, one ordered table holds that order and every depth in `src/ui/` is read from it, the tooltip stands over everything but the console and shows over the deal window, and `e2e/hover.spec.ts` asserts it. Doc-impact: `docs/INTERFACE.md`, `docs/index.md`. [board/one-home-for-the-depths.md](board/one-home-for-the-depths.md)
 - **Card references** — a card named in a rules entry is marked by its id and drawn as its name in brackets; the pointer resting on it shows the named card small above it and a right click on it shows the named card large beside the one it was taken off, both cascading; `docs/INTERFACE.md` and `docs/CHRONICLE-SCREEN.md` say so, the catalogues' coherence tests refuse a name that resolves to no card of theirs, and `e2e/reference.spec.ts` asserts it. Doc-impact: `docs/INTERFACE.md`, `docs/CHRONICLE-SCREEN.md`. [board/card-references.md](board/card-references.md)
 - **References beyond cards** — a name in a rules entry resolves to more than a card: an improvement, a feature, anything with a row in the info panel, shown small as that row.
 - **Card kinds explain themselves** — every card kind's label, settle, unit, building, instant, hazard, event and capstone, gets a tooltip or reference stating the kind's own rules, so a card's rules entry stops repeating what its kind already means.
