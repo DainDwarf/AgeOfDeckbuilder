@@ -41,3 +41,4 @@ The chronicle screen is drawn on one Phaser scene today: two Layers painted by t
 - **The overlay is a scene** — the scrim and what it carries move to a scene above the chronicle screen, with the clip camera moving along untouched; the scene sleeps while nothing stands and restarts with the chronicle.
 - **The map and the UI are two scenes** — the two Layers and their cross-ignoring cameras become two scenes, the homing hook goes, strata become Layers, and the depth table goes with them.
 - **The browse is clipped by a mask** — the grid's container takes a Mask filter with a frame-sized rectangle as its source; the clip camera, its ignore lists and the refusal note's `raised` callback go.
+- **The card references dossier is rewritten on the tower** — `board/card-references.md` is rewritten from the settled state, the small card a raiser on any surface adds to that scene's topmost Layer and nothing excluded anywhere, so the line ships on `main` as an ordinary one.
