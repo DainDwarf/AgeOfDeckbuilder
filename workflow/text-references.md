@@ -13,6 +13,15 @@ Every noun the reading of the player-facing text marks as needing a lookup: a na
 | population | concept | no entry of its own; `label.population` reads "Idle" | Capture (`rules.band-joins`) |
 | shelter | card and building | `card.shelter`, `building.shelter` | The first shelter (`capstone-rules.first-shelter`) |
 | yield | concept | no entry; `panel.no-yield` only | Gather (`rules.gather`) |
+| population | concept | as above | Let them go (`answer-rules.let-them-go`), Let it burn |
+| forest | terrain | `terrain.forest` | Follow it (`answer-rules.follow-it`), Let it burn |
+| wildlife (the feature, renamed from game by the polish) | feature | `feature.wildlife` | Follow it (`answer-rules.follow-it`) |
+| Hunger | card | `card.hunger` | Share food (`answer-rules.share`) |
+| warrior | unit | `unit.warrior`; a reference is never pluralised, "3 [Warrior]" | Keep to yourself, Fight them, Make room |
+| city | building | `building.city` | Keep to yourself, Fight them, Make room |
+| plain | terrain | `terrain.plain` | Let it burn (`answer-rules.let-it-burn`) |
+| unit | concept | no entry; `kind.unit` is the card kind | Let it burn (`answer-rules.let-it-burn`) |
+| capstone | concept | no entry; `kind.capstone` is the card kind | the capstone window's title (`capstone.title`) |
 
 ## Kinds
 

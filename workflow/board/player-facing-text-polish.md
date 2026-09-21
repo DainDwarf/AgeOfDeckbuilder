@@ -73,6 +73,66 @@ The review material: the contact sheet (every entry as the screen renders it, wi
 
 Card faces: settled, 2026-09-21.
 
+## Event answers
+
+Read against the lore pitches the user gave for the **Events carry lore** line (`events-carry-lore.md`): the answers are written to read under that text.
+
+### Standing calls for the answer faces
+
+- **Answers address the player**: "your [city]", "Pay X". The card rules stay impersonal.
+- **An answer's cost reads in its text, not in a chip** (the user, 2026-09-21): "Pay X [culture]" on Keep them, "Pay X [production]" on Cut a firebreak, and the cost chip leaves the answer face. The rules are untouched: the cost is still paid, an unaffordable answer is still drawn as one and still refused with its reason. The number is read into the entry the way `{warriors}` is. **Doc-impact:** `docs/CHRONICLE-SCREEN.md`'s deal-window paragraph says an answer's card reads "the stock it costs where it costs one"; it says the cost reads in the text instead.
+- **No "raid" on a face**: the answers name what comes, "X [Warrior] …", and the design pages keep the word raid.
+
+### Departure
+
+| Key | Old | New | Notes |
+| --- | --- | --- | --- |
+| `answer-rules.let-them-go` | One population leaves the city, idle first | Lose one [population] | Settled. |
+| `answer-rules.keep-them` | They stay | Pay {culture} [culture] | Settled. The cost chip leaves the face. |
+
+### The herd
+
+| Key | Old | New | Notes |
+| --- | --- | --- | --- |
+| `answer-rules.hunt-it` | Gain {food} [food] | _unchanged_ | The user: good as is. |
+| `answer-rules.follow-it` | Deals game onto a forest tile near the city and charts it | One [forest] gains [Wildlife] | Settled. **The feature is renamed Wildlife** (the user, 2026-09-21): "game" collides with the game itself. The rename is content and id both, `feature.game` → `feature.wildlife` and the catalogue's id, since a code identifier carries the term too. **Doc-impact:** `docs/ages/NOMADIC.md`'s land table and its Follow it sentence. |
+
+### Lean season
+
+| Key | Old | New | Notes |
+| --- | --- | --- | --- |
+| `answer.share` | Share | Share food | Settled. |
+| `answer-rules.share` | Lays Hunger on top of the draw pile | Put [Hunger] on top of the draw pile | Settled; the capstone's verb. |
+| `answer.ration` | Ration | Keep to yourself | Settled. |
+| `answer-rules.ration` | A raid of {warriors} enters the map | {warriors} [Warrior] attack your [city] | Settled; one entry per count, see _The attack verb_. |
+
+### A rival band
+
+| Key | Old | New | Notes |
+| --- | --- | --- | --- |
+| `answer.fight` | Fight | Fight them | Settled. The glossary exception on "fight" carries over, with its comment. |
+| `answer-rules.fight` | A raid of {warriors} enters the map | {warriors} [Warrior] attack your [city] | Settled; one entry per count, see _The attack verb_. Fight's count is never one. |
+| `answer-rules.make-room` | A camp is placed near the city, and a raid of {warriors} enters on and around it | A camp with {warriors} [Warrior] is placed near your [city] | Settled. Fixes the guards-versus-raid contradiction. Eleven words against the old twenty-three, which wrapped to three lines: two lines expected. |
+
+### Wildfire
+
+| Key | Old | New | Notes |
+| --- | --- | --- | --- |
+| `answer-rules.let-it-burn` | A fire starts in a forest near the city and burns the forest around it to plain: {tiles} tiles, {population} population killed, {units} of your units take {damage} damage | {tiles} [forest] burn into [plain]: {population} [population] killed, {units} [unit] damaged | Settled, to be felt in play. The damage amount goes; the count is what the answer weighs. Seven lines today; three or four expected. `{damage}` is no longer read. |
+| `answer-rules.firebreak` | The forest stands | Pay {production} [production] | Settled. The cost chip leaves the face. |
+
+### The attack verb
+
+**attack**, the glossary's own word for the act: it says what a raider does, and the map shows the approach. **A reference is never pluralised** (the user, 2026-09-21): "3 [Warrior]" reads as a count of the thing the mark names, the way card games write it, so no plural form exists beside a name. The verb still agrees, and the count is 1 on the early turns of Keep to yourself and Make room (raiders(turn) = 1 + turn/10), so each attack answer is **two entries chosen by the count**, one sentence each: _One [Warrior] attacks your [city]_ and _{warriors} [Warrior] attack your [city]_.
+
+### Capstone window
+
+| Key | Old | New | Notes |
+| --- | --- | --- | --- |
+| `capstone.title` | The age ends on this capstone. | Pass the capstone to win the Nomadic Age | Settled. |
+
+Event answers and the capstone window: settled, 2026-09-21.
+
 ## Not yet read
 
-Event answers, capstone window, tooltips, info panel rows, refusals, aim lines, chrome and launch page, ending screens, console lines.
+Tooltips, info panel rows, refusals, aim lines, chrome and launch page, ending screens, console lines.
