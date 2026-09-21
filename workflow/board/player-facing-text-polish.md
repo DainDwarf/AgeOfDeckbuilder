@@ -184,6 +184,28 @@ No noun marked for a lookup: a panel row is a name, where a lookup lands.
 
 Info panel rows: settled, 2026-09-21.
 
+## Refusals
+
+The twenty-four `refusal.*` lines the note says over a card or a tile. The user, 2026-09-21: the trailing period goes on all of them, the no-period call now covering every player-facing text; five lines change beyond that.
+
+### Standing calls for the refusals
+
+- **A note over a tile says "here"**, not "there": it stands on the tile it speaks of.
+- **A refused claim reads its cost** like a refused card does: "Costs {cost} culture", the same entry as `refusal.culture`. `refusal.unpaid` goes. The value path is the ship's: `refusedAct` says the claim's cost, which the scene has where it builds the note (the tile already wears it as the `threshold.culture` chip). Closes the lint's defect: unpaid said unaffordable in other words.
+
+| Key | Old | New | Notes |
+| --- | --- | --- | --- |
+| `refusal.unpaid` | Not enough culture. | Costs {cost} culture | Settled; the entry folds into `refusal.culture`, see above. |
+| `refusal.unit-standing` | A unit already stands there. | A unit already stands here | Settled. |
+| `refusal.no-unit` | No unit stands there. | No unit stands here | Settled. |
+| `refusal.slot-filled` | A building already stands there. | A building already stands here | Settled. |
+| `refusal.improvement-laid` | That improvement is already there. | That improvement is already here | Settled. |
+| every other refusal | _sentence with a period_ | _the same, no period_ | The user: good. `refusal.other-faction` ("That tile belongs to another faction") stays; the block is raised on a camp tile, the only other-faction tile of the age. |
+
+No noun marked for a lookup: a refusal is a note that vanishes.
+
+Refusals: settled, 2026-09-21.
+
 ## Not yet read
 
-Refusals, aim lines, chrome and launch page, ending screens, console lines.
+Aim lines, chrome and launch page, ending screens, console lines.

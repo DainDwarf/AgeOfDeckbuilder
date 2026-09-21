@@ -23,7 +23,7 @@ Every noun the reading of the player-facing text marks as needing a lookup: a na
 | unit | concept | no entry; `kind.unit` is the card kind | Let it burn (`answer-rules.let-it-burn`) |
 | capstone | concept | no entry; `kind.capstone` is the card kind | the capstone window's title (`capstone.title`) |
 
-The tooltips and the info panel rows marked no noun: a tooltip or a panel row is where a lookup lands, not where one starts. Two of the names a lookup lands on are renamed by the polish: the feature game becomes wildlife, the Nomadic terrain deep becomes ocean.
+The tooltips, the info panel rows and the refusals marked no noun: a tooltip or a panel row is where a lookup lands, not where one starts. Two of the names a lookup lands on are renamed by the polish: the feature game becomes wildlife, the Nomadic terrain deep becomes ocean.
 
 ## Kinds
 
