@@ -160,14 +160,14 @@ The thirteen `tooltip.*` entries: the six unit stats of the unit panel and the s
 | Key | Old | New | Notes |
 | --- | --- | --- | --- |
 | `tooltip.food` | The most basic need. Grows your population toward the growth threshold. | Grows your population if you reach the threshold | Settled. Closes the lint's defect: the stock reaches the threshold, and the sentence now says so. "Threshold" is a shortening of **growth threshold** its Not-list does not refuse. |
-| `tooltip.production` | Materials of every sort. Build, improve, and shape the land. | Build, improve, and shape the land | **Open.** The user's wording keeps the old verb, and "shape the land" is the concept **terraform** in other words; the row's Not-list already refuses "reshape", and a tooltip is prose. Recommended: _Build, improve, and terraform_, the concept's own word. The alternative is a glossary exception for this tooltip, the second after "fight". |
+| `tooltip.production` | Materials of every sort. Build, improve, and shape the land. | Build, improve, and terraform | Settled (the user, 2026-09-21). "Shape the land" was the concept **terraform** in other words, and the row's Not-list already refuses "reshape"; the tooltip takes the concept's own word. |
 | `tooltip.military` | A sad necessity. Defend and attack. | Defend and attack | Settled. |
 | `tooltip.money` | Exchange and opulence. Trade it for other goods, or amass it. | Trade it for other goods | Settled. |
 | `tooltip.science` | The never-ending ingenuity of humanity. Draw, discard, and manipulate your cards. | Manipulate your cards | Settled. |
 | `tooltip.culture` | What the city creates and believes. Claims tiles, pushing the border out. | Claims more tiles for your city | Settled. **claim** is the glossary's verb. |
 | `tooltip.population` | Idle population. Assign to tile or turn into units. | Idle population. Assign to tile or turn into units | The user: already good; the trailing period goes. |
 
-Tooltips: settled, 2026-09-21, the production cell open on one word.
+Tooltips: settled, 2026-09-21.
 
 ## Not yet read
 
