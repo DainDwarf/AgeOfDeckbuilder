@@ -284,8 +284,8 @@ function fireDrawn(
 }
 
 /**
- * What the fire costs, read before it lands: the tiles burned, the population working them, the
- * player's units standing on them, and the damage each unit takes.
+ * What the fire costs, read before it lands: the tiles burned, the population working them, and the
+ * player's units standing on them.
  */
 export function fireRead(chronicle: Chronicle, fire: Fire): Record<string, number> {
   const burning = new Set(fireDrawn(chronicle, fire).burning.map(tileKey));
@@ -295,7 +295,6 @@ export function fireRead(chronicle: Chronicle, fire: Fire): Record<string, numbe
     units: chronicle.units.filter(
       (unit) => unit.faction === 'player' && burning.has(tileKey(unit.tile)),
     ).length,
-    damage: fire.damage,
   };
 }
 

@@ -17,8 +17,8 @@ const TEXT = {
   'label.sight': 'Sight',
   'reading.over': '{count}/{over}',
   'threshold.culture': '−{culture}',
-  'tooltip.food': 'Grows your population if you reach the threshold',
-  'tooltip.production': 'Build, improve, and terraform',
+  'tooltip.food': 'Grows your population if you reach the threshold', // glossary exception: reach
+  'tooltip.production': 'Build, improve, and terraform', // glossary exception: build
   'tooltip.military': 'Defend and attack',
   'tooltip.money': 'Trade it for other goods',
   'tooltip.science': 'Manipulate your cards',
@@ -131,25 +131,20 @@ const TEXT = {
   'answer.PH_Defiance': 'PH_Defiance',
   'answer-rules.PH_Tribute': 'The camps are paid off',
   'answer-rules.PH_Defiance': 'A raid of {warriors} enters the map',
-  'answer-rules.PH_Defiance-one': 'A raid of one enters the map',
   'answer.PH_Raid': 'PH_Raid',
   'answer.PH_Famine': 'PH_Famine',
   'answer-rules.PH_Raid': 'A raid of {warriors} enters the map',
-  'answer-rules.PH_Raid-one': 'A raid of one enters the map',
   'answer-rules.PH_Famine': 'Lays PH_Hunger on top of the draw pile',
   'event.lean-season': 'Lean season',
   'answer.share': 'Share food',
   'answer-rules.share': 'Put Hunger on top of the draw pile',
   'answer.ration': 'Keep to yourself',
-  'answer-rules.ration': '{warriors} Warrior attack your city',
-  'answer-rules.ration-one': 'One Warrior attacks your city',
+  'answer-rules.ration': 'Your city is attacked by {warriors} Warrior',
   'event.rival-band': 'A rival band',
   'answer.fight': 'Fight them', // glossary exception: fight
-  'answer-rules.fight': '{warriors} Warrior attack your city', // glossary exception: fight
-  'answer-rules.fight-one': 'One Warrior attacks your city', // glossary exception: fight
+  'answer-rules.fight': 'Your city is attacked by {warriors} Warrior', // glossary exception: fight
   'answer.make-room': 'Make room',
   'answer-rules.make-room': 'A camp with {warriors} Warrior is placed near your city',
-  'answer-rules.make-room-one': 'A camp with one Warrior is placed near your city',
   'event.wildfire': 'Wildfire',
   'answer.let-it-burn': 'Let it burn',
   'answer-rules.let-it-burn':
@@ -306,14 +301,9 @@ export function answerName(answer: string): string {
   return named('answer', answer, 'the answer');
 }
 
-/**
- * What an answer's rules entry reads on the screen, with its numbers; an answer no entry names is
- * refused. An answer reading a count of warriors has one entry per count: the sentence for one is
- * the entry `<id>-one`, and every answer that can read one needs it or throws where it is dealt.
- */
+/** What an answer's rules entry reads on the screen, with its numbers; an answer no entry names is refused. */
 export function answerRules(answer: string, values: Record<string, string | number>): string {
-  const id = values.warriors === 1 ? `${answer}-one` : answer;
-  return named('answer-rules', id, 'the answer', values);
+  return named('answer-rules', answer, 'the answer', values);
 }
 
 /** What a capstone is named on the screen; a capstone no entry names is refused. */

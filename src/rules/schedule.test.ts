@@ -843,7 +843,6 @@ test('the forest tile a fire starts on is drawn once from the seeded generator, 
       tiles: 1,
       population: dealt.population - landed.population,
       units: tileKey(burned[0]) === tileKey(walkedTo) ? 1 : 0,
-      damage: FIRE.damage,
     });
     burnedFrom.add(tileKey(burned[0]));
   }
@@ -898,7 +897,6 @@ test('a fire damages every unit standing on a burned tile, whatever its faction,
   const { read, landed } = aflame(city);
 
   expect(read.units).toBe(2);
-  expect(read.damage).toBe(FIRE.damage);
   expect(unitAt(landed.units, warriorAt)?.stats.health).toBe(2);
   expect(unitAt(landed.units, enemyAt)?.stats.health).toBe(1);
   expect(unitAt(landed.units, workerAt)).toBeUndefined();

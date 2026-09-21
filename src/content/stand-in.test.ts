@@ -31,27 +31,30 @@ import {
 } from '../ui/text';
 import { STAND_IN, STAND_IN_REGION, STAND_IN_SCHEDULE } from './stand-in';
 
+/** What `text` leaves on the screen where an entry marks a value its caller handed none for. */
+const UNFILLED = 'undefined';
+
 test('the stand-in holds together', () => {
   expect(catalogued(STAND_IN)).toBe(STAND_IN);
 });
 
 test('every unit kind of the stand-in has a name and a mark on the screen', () => {
   for (const id of Object.keys(STAND_IN.units)) {
-    expect(() => unitName(id)).not.toThrow();
+    expect(unitName(id)).not.toContain(UNFILLED);
     expect(() => unitMarkOf(id)).not.toThrow();
   }
 });
 
 test('every terrain of the stand-in has a name and a colour on the screen', () => {
   for (const id of Object.keys(STAND_IN.terrains)) {
-    expect(() => terrainName(id)).not.toThrow();
+    expect(terrainName(id)).not.toContain(UNFILLED);
     expect(() => terrainColourOf(id)).not.toThrow();
   }
 });
 
 test('every building of the stand-in has a name, a mark and a colour on the screen', () => {
   for (const id of Object.keys(STAND_IN.buildings)) {
-    expect(() => buildingName(id)).not.toThrow();
+    expect(buildingName(id)).not.toContain(UNFILLED);
     expect(() => buildingMarkOf(id)).not.toThrow();
     expect(() => buildingColourOf(id)).not.toThrow();
   }
@@ -59,7 +62,7 @@ test('every building of the stand-in has a name, a mark and a colour on the scre
 
 test('every feature of the stand-in has a name, a mark and a colour on the screen', () => {
   for (const id of Object.keys(STAND_IN.features)) {
-    expect(() => featureName(id)).not.toThrow();
+    expect(featureName(id)).not.toContain(UNFILLED);
     expect(() => featureMarkOf(id)).not.toThrow();
     expect(() => featureColourOf(id)).not.toThrow();
   }
@@ -67,15 +70,15 @@ test('every feature of the stand-in has a name, a mark and a colour on the scree
 
 test('every improvement of the stand-in has a name and a mark on the screen', () => {
   for (const id of Object.keys(STAND_IN.improvements)) {
-    expect(() => improvementName(id)).not.toThrow();
+    expect(improvementName(id)).not.toContain(UNFILLED);
     expect(() => improvementMarkOf(id)).not.toThrow();
   }
 });
 
 test('every card of the stand-in has a name and a rules entry on the screen', () => {
   for (const id of Object.keys(STAND_IN.cards)) {
-    expect(() => cardName(id)).not.toThrow();
-    expect(() => cardRules(id)).not.toThrow();
+    expect(cardName(id)).not.toContain(UNFILLED);
+    expect(cardRules(id)).not.toContain(UNFILLED);
   }
 });
 
@@ -119,28 +122,27 @@ test('each deck of the stand-in settles its city on the centre tile and reaches 
   }
 });
 
-test('every event of the stand-in has a name on the screen, and every answer it deals a name and a rules entry', () => {
+test('every event of the stand-in has a name on the screen, and every answer it deals a name', () => {
   for (const [id, event] of Object.entries(STAND_IN.events)) {
-    expect(() => eventName(id)).not.toThrow();
+    expect(eventName(id)).not.toContain(UNFILLED);
     for (const answer of Object.keys(event.answers)) {
-      expect(() => answerName(answer)).not.toThrow();
-      expect(() => answerRules(answer, {})).not.toThrow();
+      expect(answerName(answer)).not.toContain(UNFILLED);
     }
   }
 });
 
 test('every reward of the stand-in’s camp has a name and a rules entry on the screen', () => {
   for (const id of STAND_IN.camp.rewards) {
-    expect(() => cardName(id)).not.toThrow();
-    expect(() => cardRules(id)).not.toThrow();
+    expect(cardName(id)).not.toContain(UNFILLED);
+    expect(cardRules(id)).not.toContain(UNFILLED);
   }
 });
 
 test('every capstone of the stand-in has a name, a rules entry and a victory line on the screen', () => {
   for (const id of Object.keys(STAND_IN.capstones)) {
-    expect(() => capstoneName(id)).not.toThrow();
-    expect(() => capstoneRules(id)).not.toThrow();
-    expect(() => victoryLine(id)).not.toThrow();
+    expect(capstoneName(id)).not.toContain(UNFILLED);
+    expect(capstoneRules(id)).not.toContain(UNFILLED);
+    expect(victoryLine(id)).not.toContain(UNFILLED);
   }
 });
 
@@ -150,7 +152,7 @@ test('every schedule of the stand-in rolls a timeline', () => {
   }
 });
 
-test('every answer of every event of the stand-in costs, lands and reads a rules entry at every count it can read, and every capstone lands, continues and is not passed, on a chronicle launched and settled on each schedule', () => {
+test('every answer of every event of the stand-in costs, lands and reads a rules entry on the numbers it reads, and every capstone lands, continues and is not passed, on a chronicle launched and settled on each schedule', () => {
   for (const schedule of Object.keys(STAND_IN.schedules)) {
     const deck = deckOf(STAND_IN, 'PH_Deck');
     const chronicle = settledLaunch(STAND_IN, STAND_IN_REGION, schedule, 1, deck);
@@ -159,11 +161,7 @@ test('every answer of every event of the stand-in costs, lands and reads a rules
       for (const [name, answer] of Object.entries(eventOf(STAND_IN, id).answers)) {
         expect(() => answerCost(STAND_IN, chronicle, answer)).not.toThrow();
         expect(() => answer.reads(STAND_IN, chronicle)).not.toThrow();
-        const read = answer.reads(STAND_IN, chronicle);
-        const counts = 'warriors' in read ? [1, 2].map((warriors) => ({ ...read, warriors })) : [];
-        for (const values of [read, ...counts]) {
-          expect(() => answerRules(name, values)).not.toThrow();
-        }
+        expect(answerRules(name, answer.reads(STAND_IN, chronicle))).not.toContain(UNFILLED);
         expect(() => answer.lands(STAND_IN, chronicle)).not.toThrow();
       }
     }

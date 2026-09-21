@@ -46,17 +46,14 @@ The tooltips, the info panel rows and the refusals marked no noun: a tooltip or 
 | `answer-rules.let-them-go` | Lose one population | population | beyond cards |
 | `answer-rules.follow-it` | One forest gains Wildlife | forest, Wildlife | beyond cards |
 | `answer-rules.let-it-burn` | {tiles} forest burn into plain: {population} population killed, {units} unit damaged | forest, plain, population, unit | beyond cards |
-| `answer-rules.ration` | {warriors} Warrior attack your city | Warrior, city | beyond cards |
-| `answer-rules.ration-one` | One Warrior attacks your city | Warrior, city | beyond cards |
-| `answer-rules.fight` | {warriors} Warrior attack your city | Warrior, city | beyond cards |
-| `answer-rules.fight-one` | One Warrior attacks your city | Warrior, city | beyond cards |
+| `answer-rules.ration` | Your city is attacked by {warriors} Warrior | Warrior, city | beyond cards |
+| `answer-rules.fight` | Your city is attacked by {warriors} Warrior | Warrior, city | beyond cards |
 | `answer-rules.make-room` | A camp with {warriors} Warrior is placed near your city | Warrior, city | beyond cards |
-| `answer-rules.make-room-one` | A camp with one Warrior is placed near your city | Warrior, city | beyond cards |
 | `capstone.title` | Pass the capstone to win the Nomadic Age | capstone | beyond cards |
 
-Two things a session taking either line reads before it starts. **`capstone.title` is not a rules entry** — the run never lays it out, so a mark there needs the window's title to be laid out as a run, which is work neither line has scoped. **A count in front of a name is why the singular entry exists**: "3 Warrior attack your city" is the plural entry unmarked, and it reads as English again only once the mark draws the name; the pair `<id>` and `<id>-one`, chosen in `answerRules` on the count, is how the two sentences are kept apart.
+One thing a session taking either line reads before it starts. **`capstone.title` is not a rules entry** — the run never lays it out, so a mark there needs the window's title to be laid out as a run, which is work neither line has scoped.
 
-`board/card-references.md` was written before the polish landed and its player-facing section quotes the three entries in their old wording — `Lays [card:hunger] on top of the draw pile` and the like. The wording above is what stands; the notation `[card:<id>]` is that line's to settle.
+The table above is the list both reference lines work from; `board/card-references.md` points at it rather than carrying a copy, and the notation `[card:<id>]` is that line's to settle.
 
 ## Kinds
 
