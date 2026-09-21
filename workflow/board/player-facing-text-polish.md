@@ -169,6 +169,20 @@ The thirteen `tooltip.*` entries: the six unit stats of the unit panel and the s
 
 Tooltips: settled, 2026-09-21.
 
+## Info panel rows
+
+The names the info panel shows for a tile: the seven terrains, the three features, the improvement and the three buildings, and the panel's own lines (River, the crossing note, the movement cost, No yield). The user, 2026-09-21: most are good; two renames, and Trapping and Shelter verified by hand.
+
+| Key | Old | New | Notes |
+| --- | --- | --- | --- |
+| `terrain.deep` | Deep | Ocean | Settled. **The terrain is renamed Ocean**, content and id both like Wildlife: `terrain.deep` → `terrain.ocean` and the id `deep` → `ocean` in the catalogues (`src/content/nomadic.ts`, `stand-in.ts`), the fixtures, the tests that name it and the look's colour key. Closes the lint's defect: the panel read "Deep" where the design page said deep water, and "Ocean" fits a card title where "Deep water" would not. **Doc-impact:** `docs/ages/NOMADIC.md`'s land table and its crossing sentence; `docs/CHRONICLE.md`'s map-generation paragraph, where a sea biome "is deep water" and "every sea holds deep water". The changelog is history and keeps its words. |
+| `feature.game` | Game | Wildlife | Already decided on the events turn (Follow it); recorded here because the panel is where the name is read most. |
+| every other row | _unchanged_ | _unchanged_ | The user: good. `panel.crossing` keeps its sentence and its period, a panel line rather than a tooltip. |
+
+No noun marked for a lookup: a panel row is a name, where a lookup lands.
+
+Info panel rows: settled, 2026-09-21.
+
 ## Not yet read
 
-Info panel rows, refusals, aim lines, chrome and launch page, ending screens, console lines.
+Refusals, aim lines, chrome and launch page, ending screens, console lines.
