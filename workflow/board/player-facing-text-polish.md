@@ -206,6 +206,35 @@ No noun marked for a lookup: a refusal is a note that vanishes.
 
 Refusals: settled, 2026-09-21.
 
-## Not yet read
+## Aim lines, chrome, ending screens, console lines
 
-Aim lines, chrome and launch page, ending screens, console lines.
+Read in one pass (the user, 2026-09-21): most of it is good. The three aim lines, the buttons, the kind labels, the event names, the browse titles, the menu, the controls page with its key names, the launch page and the five console lines are unchanged. The ending screens change:
+
+| Key | Old | New | Notes |
+| --- | --- | --- | --- |
+| `victory.first-shelter` | The shelter stands. The age is over. | The shelter was built. Nomadic Age is over | Settled. **built** is the glossary's verb for a building. The trailing period goes under the standing call, the period between the two sentences stays, as on `tooltip.population`. |
+| `defeat.capture` | An enemy captured the city on turn {turn}. | An enemy captured the city on turn {turn} | The period goes. |
+| `defeat.population` | The city's population reached zero on turn {turn}. | The city's population reached zero on turn {turn} | The period goes. |
+
+The `PH_` entries are outside the polish; they die with the stand-in content.
+
+No noun marked for a lookup on these surfaces.
+
+Remaining surfaces: settled, 2026-09-21. **The reading is complete.**
+
+## Ship notes
+
+What a ship session applies, in one pass, all of it mechanical:
+
+1. **The tables above**, every Old → New per key, and the trailing period off every player-facing entry that still has one. `refusal.unpaid` and `feature.game` go; `terrain.ocean` and `feature.wildlife` come.
+2. **The glossary** (`docs/GLOSSARY.md`): a **place** row; **settle** and **improve** lose "place" from their Not-lists; **victory** names **win** as its verb and loses "win" from its Not-list; the "fight" exception carries over to the answer name _Fight them_.
+3. **Wildlife**: `feature.game` → `feature.wildlife`, the catalogue's id with it; `docs/ages/NOMADIC.md`'s land table and its Follow it sentence.
+4. **Ocean**, Nomadic only: the catalogue's terrain `deep` → `ocean`, a look colour key, the map test that expects deep water on every map; the stand-in and the fixtures keep `deep` and `terrain.deep`. `docs/ages/NOMADIC.md`'s land table and crossing sentence, `docs/CHRONICLE.md`'s map-generation paragraph.
+5. **The attack answers**: `answer-rules.ration`, `answer-rules.fight` and the raid half of `answer-rules.make-room` are two entries chosen by the count, singular and plural, per _The attack verb_. The `reads` closures already supply `{warriors}`.
+6. **The cost chip leaves the answer faces**; the cost reads in the text (`{culture}`, `{production}` supplied by the `reads` closures like `{warriors}` is). `docs/CHRONICLE-SCREEN.md`'s deal-window paragraph says so. The rules are untouched.
+7. **A refused claim reads its cost**: `refusedAct` says `refusal.culture` with the claim's cost, which the scene has where it builds the note.
+8. **Let it burn** no longer reads `{damage}`; the closure may stop supplying it.
+9. **Hunger's amount** (`rules.hunger` → "Takes {food} food") ships with whichever of this line and **Hunger is forged by its event** first carries a value path to a card face; until then the entry reads as the table says with the number unfilled, so the ship of this line, if first, keeps the old text on that one cell and says so in its report.
+10. **e2e**: no spec asserts a changed string literally (grep on 2026-09-21); the specs read names through `window.named`, so they follow. The ship runs the specs of the surfaces it touches: the card face, the deal window, the refusal note, the info panel, the endings.
+
+The contact sheet is rebuilt after the ship from the specs parked in the session scratchpad, for the user's last look; it is not part of the done-condition.
