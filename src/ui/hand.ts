@@ -15,7 +15,8 @@ import {
   createCardBack,
   createCardFace,
 } from './card-face';
-import { ended, IN_FLIGHT, STAGGER, stopMotion, travel, turnOver } from './card-motion';
+import { ended, STAGGER, stopMotion, travel, turnOver } from './card-motion';
+import { DEPTH } from './depths';
 import {
   DESIGN_WIDTH,
   MARGIN,
@@ -127,7 +128,7 @@ export function createHand(
   /** The card back where it rests, at once or over that long; the promise settles when it is home. */
   const settle = (slot: Slot, duration: number): Promise<void> => {
     stopMotion(scene, slot.face.root);
-    slot.face.root.setDepth(raised(slot) ? 40 : 5 + slot.index);
+    slot.face.root.setDepth(raised(slot) ? DEPTH.liftedCard : DEPTH.restingCards + slot.index);
     if (duration === 0) {
       slot.face.root.setPosition(slot.home.x, restingY(slot));
       return Promise.resolve();
@@ -294,7 +295,7 @@ export function createHand(
         .setName(`hand-${index}`)
         .setPosition(slot.home.x, slot.home.y)
         .setRotation(Phaser.Math.DegToRad(off * FAN))
-        .setDepth(5 + index)
+        .setDepth(DEPTH.restingCards + index)
         .setInteractive({
           hitArea: new Phaser.Geom.Rectangle(
             -CARD_WIDTH / 2,
@@ -395,7 +396,7 @@ export function createHand(
     await Promise.all(
       leaving.map((face, index) => {
         stopMotion(scene, face);
-        face.setDepth(IN_FLIGHT + index);
+        face.setDepth(DEPTH.inFlight + index);
         const to = { ...PILE_PLACE['discard-pile'], rotation: 0 };
         return travel(scene, face, to, index * STAGGER);
       }),
@@ -429,7 +430,7 @@ export function createHand(
         const face = slot.face.root.setVisible(false);
         const back = createCardBack(scene)
           .setPosition(PILE_PLACE['draw-pile'].x, PILE_PLACE['draw-pile'].y)
-          .setDepth(IN_FLIGHT + index);
+          .setDepth(DEPTH.inFlight + index);
         flying.push(back);
         return travel(scene, back, home, (index - standing.length) * STAGGER).then(() =>
           turnOver(scene, back, face),

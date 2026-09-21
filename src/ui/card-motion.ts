@@ -12,9 +12,6 @@ export const TURN_OVER = 120;
 
 export const EASE = 'Sine.easeInOut';
 
-/** Above the piles, the button and everything else the chronicle screen lays out. */
-export const IN_FLIGHT = 30;
-
 /** How long a block of that many cards is in the air, from the first leaving to the last landing. */
 export function blockLength(cards: number): number {
   return cards === 0 ? 0 : TRAVEL + (cards - 1) * STAGGER;

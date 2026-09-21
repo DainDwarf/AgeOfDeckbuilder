@@ -1,18 +1,16 @@
 import { expect, type Page, test } from '@playwright/test';
 import { STAND_IN } from '../src/content/stand-in';
 import { deckOf } from '../src/rules/catalogue';
-import { apply, outcome } from '../src/rules/chronicle';
 import { answerCost, answerOf, answerRefusal, offered } from '../src/rules/schedule';
-import { type Chronicle, playable } from '../src/rules/state';
-import type { Unit } from '../src/rules/units';
+import { playable } from '../src/rules/state';
 import { eventName, text } from '../src/ui/text';
 import {
   budget,
   cardOnFace,
   chronicleOf,
   click,
-  endedTurn,
-  firstSeed,
+  dealRun,
+  enemiesOf,
   launch,
   onScreen,
   open,
@@ -24,32 +22,6 @@ import {
   titleOf,
   watch,
 } from './chronicle-screen';
-
-/**
- * The first seed whose timeline's first deal stands alone and offers the raid first, with a tile
- * free for it to enter a warrior on — what the take lands is then one more warrior standing on the
- * map — and the turn that deal is due on.
- */
-function dealRun(): { seed: number; due: number } {
-  return firstSeed('deals a raid first on its first deal', (seed) => {
-    const opened = launch(seed, deckOf(STAND_IN, 'PH_Deck'));
-    const due = opened.timeline.next;
-
-    let chronicle = opened;
-    for (let turn = 1; turn < due - 1; turn++) chronicle = endedTurn(chronicle);
-    const dealt = outcome(apply(STAND_IN, chronicle, { type: 'end-turn' }));
-    const [deal, ...behind] = dealt.deals;
-    if (deal === undefined || behind.length > 0) return undefined;
-    if (offered(STAND_IN, deal)[0] !== 'PH_Raid') return undefined;
-
-    const landed = outcome(apply(STAND_IN, dealt, { type: 'take', at: 0 }));
-    return enemiesOf(landed).length > enemiesOf(dealt).length ? { seed, due } : undefined;
-  });
-}
-
-function enemiesOf(chronicle: Chronicle): Unit[] {
-  return chronicle.units.filter((unit) => unit.faction === 'enemy');
-}
 
 /**
  * A point on the scrim beside the window's cards: at the left edge, clear of the frame they are laid

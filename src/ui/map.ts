@@ -27,6 +27,7 @@ import { type Faction, type Landing, type Unit, unitAt, unitOf } from '../rules/
 import { MAP_FRAME } from './band';
 import { type Bind, bindings, boundTo, type Control, type Press, pressOf } from './bindings';
 import { EASE, ended, stopMotion } from './card-motion';
+import { DEPTH } from './depths';
 import {
   addText,
   corners,
@@ -68,42 +69,6 @@ const RIVER_MARK: number[] = corners([-12, -12, -4, 0, 4, -8, 12, 4, 12, 12, 4, 
 
 /** Placeholder primitive until the art pass: the disc's rim a plain line around the map. */
 const RIM_WIDTH = 2;
-
-/**
- * Under the hand and the piles, which stay live while a card is aimed: the map takes every press
- * they do not.
- */
-const AIM_DEPTH = 1;
-
-/** Over the terrain and the border rings, under what stands on the tiles. */
-const GLOW_DEPTH = 2;
-
-const BUILDING_DEPTH = 3;
-
-const UNIT_DEPTH = 4;
-
-/** Over a tile in fog and everything the map draws on it. */
-const FOG_DEPTH = 5;
-
-/** Over what stands on the tiles, while city mode is on. */
-const CITY_DEPTH = 6;
-
-/** Over everything the map draws, while the yield overlay stands. */
-const DIM_DEPTH = 7;
-
-/** Over the dim: what the map keeps at full strength through it. */
-const OVER_DIM_DEPTH = 8;
-
-/** Over everything that darkens a tile: the fog, city mode's dim and the overlay's dim. */
-const SELECTED_DEPTH = 9;
-
-const YIELD_DEPTH = 10;
-
-/**
- * Over everything a tile carries: its unit, the fog, city mode's dim, the selection's ring, the
- * overlay's dim and glyphs.
- */
-const THRESHOLD_DEPTH = 11;
 
 /** One glyph, corner to corner, and how far apart the glyphs of a tile stand. */
 const GLYPH = 6;
@@ -517,21 +482,24 @@ export function createMapView(
   const rivers = scene.add.container(0, 0).setName('rivers');
   const features = scene.add.container(0, 0).setName('features');
   const rings = scene.add.container(0, 0).setName('border');
-  const improved = scene.add.container(0, 0).setDepth(BUILDING_DEPTH).setName('improvements');
-  const built = scene.add.container(0, 0).setDepth(BUILDING_DEPTH).setName('buildings');
-  const selected = scene.add.container(0, 0).setDepth(SELECTED_DEPTH).setName('selected');
-  const lighted = scene.add.container(0, 0).setDepth(GLOW_DEPTH).setName('lit');
-  const marks = scene.add.container(0, 0).setDepth(UNIT_DEPTH).setName('units');
-  const fog = scene.add.container(0, 0).setDepth(FOG_DEPTH).setName('fog');
+  const improved = scene.add.container(0, 0).setDepth(DEPTH.buildings).setName('improvements');
+  const built = scene.add.container(0, 0).setDepth(DEPTH.buildings).setName('buildings');
+  const selected = scene.add.container(0, 0).setDepth(DEPTH.ring).setName('selected');
+  const lighted = scene.add.container(0, 0).setDepth(DEPTH.lit).setName('lit');
+  const marks = scene.add.container(0, 0).setDepth(DEPTH.units).setName('units');
+  const fog = scene.add.container(0, 0).setDepth(DEPTH.fog).setName('fog');
   const dim = scene.add
     .rectangle(0, 0, 1, 1, LOOK.mapOutline, LOOK.mapDim.strength)
     .setOrigin(0, 0)
-    .setDepth(DIM_DEPTH)
+    .setDepth(DEPTH.yieldDim)
     .setName('yield-dim')
     .setVisible(false);
-  const cityMarks = scene.add.container(0, 0).setDepth(CITY_DEPTH).setName('city-marks');
-  const glyphs = scene.add.container(0, 0).setDepth(YIELD_DEPTH).setName('yields');
-  const thresholds = scene.add.container(0, 0).setDepth(THRESHOLD_DEPTH).setName('thresholds');
+  const cityMarks = scene.add.container(0, 0).setDepth(DEPTH.cityMarks).setName('city-marks');
+  const glyphs = scene.add.container(0, 0).setDepth(DEPTH.yieldGlyphs).setName('yields');
+  const thresholds = scene.add
+    .container(0, 0)
+    .setDepth(DEPTH.cultureThreshold)
+    .setName('thresholds');
   layer.add([
     ground,
     rim,
@@ -767,7 +735,7 @@ export function createMapView(
     const catcher = scene.add
       .zone(0, 0, 1, 1)
       .setOrigin(0, 0)
-      .setDepth(AIM_DEPTH)
+      .setDepth(DEPTH.terrain)
       .setName(name)
       .setInteractive();
     catcher.once(Phaser.GameObjects.Events.DESTROY, () => catchers.delete(catcher));
@@ -845,17 +813,15 @@ export function createMapView(
   let threshold: { readonly tile: TileCoords; readonly cost: Cost } | undefined;
 
   /**
-   * What the dim is laid under rather than over: the tiles lit and the units glowed under the
-   * selection, and the glow a card is aimed by, which the player answers the overlay with.
-   * Everything else the map draws dims, so these are lifted only while the dim stands. The ring on
-   * the selected tile and the threshold are deliberately not here; they stand at depths of their
-   * own.
+   * What the dim is laid under rather than over, lifted only while it stands: the tiles lit and the
+   * units glowed, and the glow a card is aimed by. The ring and the culture threshold are not here —
+   * their own rows already stand over the dim's.
    */
   const overDim = new Set<Phaser.GameObjects.Container>([lighted]);
 
   const liftOverDim = (): void => {
     const over = showing.size > 0;
-    for (const object of overDim) object.setDepth(over ? OVER_DIM_DEPTH : GLOW_DEPTH);
+    for (const object of overDim) object.setDepth(over ? DEPTH.throughDim : DEPTH.lit);
   };
 
   /** The ground every aim runs on: its own catcher, a glow to paint, and the tile presses held off. */
@@ -866,7 +832,7 @@ export function createMapView(
   } => {
     presser?.disableInteractive();
     const catcher = catcherZone('aim');
-    const glow = scene.add.container(0, 0).setDepth(GLOW_DEPTH).setName('aim-lit');
+    const glow = scene.add.container(0, 0).setDepth(DEPTH.lit).setName('aim-lit');
     layer.add(glow);
     overDim.add(glow);
     liftOverDim();

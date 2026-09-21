@@ -1,6 +1,6 @@
 # Interface
 
-> How any screen is worked: the menu and what it lists, the keys and how they are rebound, the debug console, and the three presses. A design page, under [`DESIGN.md`](DESIGN.md)'s legend. What a press does to a thing only a chronicle has is [`CHRONICLE-SCREEN.md`](CHRONICLE-SCREEN.md)'s.
+> How any screen is worked: the menu and what it lists, the keys and how they are rebound, the debug console, the three presses, and what stands over what. A design page, under [`DESIGN.md`](DESIGN.md)'s legend. What a press does to a thing only a chronicle has is [`CHRONICLE-SCREEN.md`](CHRONICLE-SCREEN.md)'s.
 
 ## The menu ✅
 
@@ -16,7 +16,7 @@ The game boots on the **launch page**, a stand-in for the meta's launch screen: 
 
 ## The debug console ✅
 
-The **debug console** is a dark panel down the top of the screen, standing over everything the screen carries — the resource bar, a window and the ending screen included — with the last lines run above the line being typed. What it covers reads dimly through it, so the bar is still there to be read and the console writes clear of it. While it stands the keyboard is its — every key types, Backspace deletes, Enter runs the line, and Escape or the key that opened it closes it — so nothing the game binds hears a key meanwhile. The pointer is not its: the map still pans and zooms under it. An entry is one word and Enter, and it is answered in one line; a word the console holds no entry for is answered `no such entry: <word>`. The console binds no key of the player's and stands in no Controls window, and a new chronicle raises it with every entry back where it began.
+The **debug console** is a dark panel down the top of the screen, with the last lines run above the line being typed. What it covers reads dimly through it, so the bar is still there to be read and the console writes clear of it. While it stands the keyboard is its — every key types, Backspace deletes, Enter runs the line, and Escape or the key that opened it closes it — so nothing the game binds hears a key meanwhile. The pointer is not its: the map still pans and zooms under it. An entry is one word and Enter, and it is answered in one line; a word the console holds no entry for is answered `no such entry: <word>`. The console binds no key of the player's and stands in no Controls window, and a new chronicle raises it with every entry back where it began.
 
 ## The presses ✅
 
@@ -33,3 +33,11 @@ Three presses work every screen: the **left click** selects, the **right click**
 The **back key** walks these back in this order: the thing shown large, then a window's own selection and then the window, then the inspection, then the selection.
 
 Two verbs cover it all. **Select** is the tile the map rings, the card lifted out of the hand, or the card ringed in a browse; **inspect** is the tile in the infopanel and the card shown large. "Zoom" stays the map's word.
+
+## What stands over what ✅
+
+The chronicle screen is drawn on two surfaces: the **map**, which pans and zooms, and the **UI**, which holds still and stands over the whole map. On the map the order is a tile's own: the terrain, then the tiles lit and the units glowed on it, its buildings, its units, the fog, city mode's marks, the yield overlay's dim, what stays at full strength through that dim, the ring, the yield glyphs and the culture threshold; the infopanel stands over all of that. On the UI the band the hand and the piles stand in is lowest, the frame and chip of a mode over it, then the piles and the resting cards of the hand, the resource bar, the end-turn button, a card in flight, a card lifted out of the hand, and the line naming what that card is aimed at. A refusal's note stands over everything on the surface it is raised from.
+
+The **scrim** cuts the stack in two. Everything named so far is under it. What it carries — a browse, the aim window, the deal window, the capstone's window, a card shown large, a window of the menu, the ending screen, and the note a refusal raises over a window's card — stands between the scrim and the two things over it: the **Menu** button, so a chronicle that has ended can still be left, and the resource bar for as long as a deal waits to be taken. The **debug console** stands over all of it.
+
+A **tooltip** stands over everything but the console, on the surface it was raised from: a hover reaches only what the pointer can reach, so a bubble is never drawn under the thing it was raised beside. The scrim rising takes a standing tooltip down, and a hover afterwards raises it again.

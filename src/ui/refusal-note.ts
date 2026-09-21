@@ -1,12 +1,10 @@
 import type Phaser from 'phaser';
 import type { Block, Cost, Refusal } from '../rules/state';
+import { DEPTH } from './depths';
 import { addText, DESIGN_WIDTH, drawBubble, MARGIN, type Surface, UI_FONT } from './design-space';
 import { css, LOOK } from './look';
 import type { TileFace } from './map';
 import { text } from './text';
-
-/** Over the hand's lifted cards, over everything the map draws, under the overlay. */
-const DEPTH = 50;
 
 /** The clear water between the note and what it points at; its tail crosses most of that. */
 const STANDOFF = 8;
@@ -71,7 +69,7 @@ export function createRefusalNote(
   scene: Phaser.Scene,
   on: Surface,
   {
-    depth = DEPTH,
+    depth = DEPTH.refusalNote,
     raised: told,
   }: { depth?: number; raised?: (note: Phaser.GameObjects.Container) => void } = {},
 ): RefusalNote {

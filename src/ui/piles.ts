@@ -11,7 +11,8 @@ import {
   createCardFace,
   createEmptySlot,
 } from './card-face';
-import { blockLength, EASE, ended, IN_FLIGHT, SHUFFLE, stopMotion, travel } from './card-motion';
+import { blockLength, EASE, ended, SHUFFLE, stopMotion, travel } from './card-motion';
+import { DEPTH } from './depths';
 import { addText, DESIGN_WIDTH, MARGIN, onClick, UI_FONT } from './design-space';
 import { css, LOOK } from './look';
 import type { PileKind } from './overlay';
@@ -74,7 +75,7 @@ export function createPiles(
     const carried = (discarded.lift() ?? createEmptySlot(scene)).setPosition(0, 0);
     const back = createCardBack(scene).setVisible(false);
     const from = PILE_PLACE['discard-pile'];
-    const carrying = scene.add.container(from.x, from.y, [carried, back]).setDepth(IN_FLIGHT);
+    const carrying = scene.add.container(from.x, from.y, [carried, back]).setDepth(DEPTH.inFlight);
     carrier = carrying;
     discarded.show(createEmptySlot(scene), 0);
 
@@ -190,12 +191,12 @@ type Pile = {
 
 function createPile(scene: Phaser.Scene, pile: PileKind, browse: (pile: PileKind) => void): Pile {
   const { x, y } = PILE_PLACE[pile];
-  const pill = scene.add.graphics().setDepth(6);
+  const pill = scene.add.graphics().setDepth(DEPTH.piles + 1);
   onClick(
     scene.add
       .zone(x, y - CARD_HEIGHT / 2, CARD_WIDTH, CARD_HEIGHT)
       .setName(pile)
-      .setDepth(8)
+      .setDepth(DEPTH.piles + 3)
       .setInteractive({ useHandCursor: true }),
     () => browse(pile),
   );
@@ -207,13 +208,13 @@ function createPile(scene: Phaser.Scene, pile: PileKind, browse: (pile: PileKind
   })
     .setOrigin(0.5, 0.5)
     .setName(`${pile}-count`)
-    .setDepth(7);
+    .setDepth(DEPTH.piles + 2);
 
   let shown: Phaser.GameObjects.Container | undefined;
   return {
     show(card: Phaser.GameObjects.Container, remaining: number): void {
       shown?.destroy();
-      shown = card.setPosition(x, y).setDepth(4);
+      shown = card.setPosition(x, y).setDepth(DEPTH.piles);
 
       count.setText(String(remaining));
       const width = Math.max(18, count.width) + 14;

@@ -1,6 +1,7 @@
 import type Phaser from 'phaser';
 import { runLine } from './console-line';
-import { addText, DESIGN_WIDTH, MARGIN, OVER_SCRIM_DEPTH } from './design-space';
+import { DEPTH } from './depths';
+import { addText, DESIGN_WIDTH, MARGIN } from './design-space';
 import { readsKeyboard } from './keys';
 import { css, LOOK } from './look';
 import { BAR_HEIGHT } from './resource-bar';
@@ -35,9 +36,6 @@ const CONSOLE_STYLE = {
   color: TYPED_INK,
 };
 
-/** Over everything the chronicle screen draws, the scrim and what stands over it included. */
-const CONSOLE_DEPTH = OVER_SCRIM_DEPTH + 10;
-
 /** One line the console has run: what it read, and whether it was the console's answer. */
 type Line = { readonly line: string; readonly answer: boolean };
 
@@ -48,7 +46,7 @@ type Line = { readonly line: string; readonly answer: boolean };
  * down with the chronicle screen it was raised on, and every veil stands again on the next.
  */
 export function createDebugConsole(scene: Phaser.Scene, veiled: (veils: Veils) => void): void {
-  const root = scene.add.container(0, 0).setName('console').setDepth(CONSOLE_DEPTH);
+  const root = scene.add.container(0, 0).setName('console').setDepth(DEPTH.console);
   root.add([
     scene.add
       .rectangle(0, 0, DESIGN_WIDTH, HEIGHT, LOOK.consolePanel.colour, LOOK.consolePanel.strength)

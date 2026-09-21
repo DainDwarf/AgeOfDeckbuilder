@@ -10,16 +10,6 @@ export const UI_FONT = 'system-ui, "Segoe UI", sans-serif';
 /** How far anything laid against an edge of the screen stands off it. */
 export const MARGIN = 24;
 
-/**
- * The two depths the scrim divides the chronicle screen at: everything the chronicle screen lays
- * out is below the scrim, and the Menu button stands over it, so it is pressable while a window or
- * the ending screen covers the chronicle screen. The resource bar rises to that depth too for as
- * long as a deal waits to be taken, and answers no press while it stands there. What the scrim
- * carries stands between the two depths.
- */
-export const SCRIM_DEPTH = 100;
-export const OVER_SCRIM_DEPTH = 110;
-
 // Phaser reads a polygon's corner list in min-(0, 0) space; corners about their own centre draw
 // displaced by half the shape.
 export function corners(raw: number[]): number[] {

@@ -2,12 +2,10 @@ import type Phaser from 'phaser';
 import type { AimedCard } from '../rules/catalogue';
 import type { CardId } from '../rules/state';
 import { AIM_POINT_REACH, CARD_BASELINE, CARD_HEIGHT, CARD_LIFT } from './card-face';
+import { DEPTH } from './depths';
 import { addText, DESIGN_WIDTH, type Surface, UI_FONT } from './design-space';
 import { css, LOOK } from './look';
 import { cardName, text } from './text';
-
-/** Over the hand's lifted cards, under the note a refusal raises. */
-const DEPTH = 45;
 
 /** The clear water between the line and the point of the card being aimed under it. */
 const STANDOFF = 8;
@@ -59,7 +57,7 @@ export function createAimLine(scene: Phaser.Scene, on: Surface): AimLine {
 
       line = scene.add
         .container((DESIGN_WIDTH - width) / 2, BOTTOM - height, [slab, label])
-        .setDepth(DEPTH)
+        .setDepth(DEPTH.aimLine)
         .setName('aim-line');
       on.layer.add(line);
     },

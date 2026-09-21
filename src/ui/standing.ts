@@ -1,10 +1,8 @@
 import type Phaser from 'phaser';
 import { MAP_FRAME } from './band';
+import { DEPTH } from './depths';
 import { addText, onClick, UI_FONT } from './design-space';
 import { css, LOOK } from './look';
-
-/** Over the band and the map under it, under the cards that stand up into the map's frame. */
-const DEPTH = 2;
 
 /** How wide the frame's stroke is; Phaser centres a stroke on its path, hence the half-width inset. */
 const STROKE = 8;
@@ -52,20 +50,20 @@ export function createStanding(scene: Phaser.Scene, stood: Stood): Standing {
     .setOrigin(0, 0)
     .setStrokeStyle(STROKE, stood.colour)
     .setName(`${stood.name}-frame`)
-    .setDepth(DEPTH)
+    .setDepth(DEPTH.standing)
     .setVisible(false);
 
   const chip = scene.add
     .rectangle(0, 0, 1, 1, stood.colour)
     .setOrigin(0, 0)
     .setName(`${stood.name}-chip`)
-    .setDepth(DEPTH)
+    .setDepth(DEPTH.standing)
     .setVisible(false);
   // Added after the chip: equal depths draw in the order they were added.
   const label = addText(scene, 0, 0, stood.label, LABEL_STYLE)
     .setOrigin(0.5, 0.5)
     .setName(`${stood.name}-chip-label`)
-    .setDepth(DEPTH)
+    .setDepth(DEPTH.standing)
     .setVisible(false);
 
   const width = label.width + PADDING.x;

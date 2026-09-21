@@ -1,12 +1,10 @@
 import type Phaser from 'phaser';
+import { DEPTH } from './depths';
 import { addText, DESIGN_WIDTH, drawBubble, MARGIN, type Surface, UI_FONT } from './design-space';
 import { css, LOOK } from './look';
 
 /** The clear water between a tooltip and what it points at; its tail crosses most of that. */
 const STANDOFF = 8;
-
-/** Over every surface a hover can be raised from, under the overlay. */
-const DEPTH = 30;
 
 /** How long the pointer rests still on a source before its tooltip appears. */
 const REST_MS = 500;
@@ -46,7 +44,7 @@ export function createTooltip(scene: Phaser.Scene, on: Surface): Tooltip {
   const label = addText(scene, 10, 7, '', STYLE);
   const tooltip = scene.add
     .container(0, 0, [bubble, label])
-    .setDepth(DEPTH)
+    .setDepth(DEPTH.tooltip)
     .setName(`tooltip-${on.layer.name}`)
     .setVisible(false);
   on.layer.add(tooltip);

@@ -1,11 +1,16 @@
 import { expect, type Page, test } from '@playwright/test';
 import { text } from '../src/ui/text';
 import {
+  budget,
   chronicleOf,
+  dealRun,
   endTurnLabel,
   offCanvas,
   onScreen,
   open,
+  rested,
+  standing,
+  stoppedTurn,
   tooltipUp,
   watch,
 } from './chronicle-screen';
@@ -132,6 +137,45 @@ test('the end-turn button reads End turn when the pointer comes back straight on
   await page.mouse.move(food.x, food.y);
   await expect.poll(() => endTurnLabel(page)).toBe(text('button.turn', { turn }));
   expect(await cursorOverCanvas(page)).not.toBe(HAND);
+
+  expect(problems).toEqual([]);
+});
+
+test('a reading hovered while the deal window stands raises its tooltip', async ({ page }) => {
+  const problems = watch(page);
+  const run = dealRun();
+  test.setTimeout(budget(run.due));
+
+  await page.setViewportSize(WINDOW);
+  await open(page, run.seed, 'PH_Deck');
+  for (let turn = 1; turn < run.due; turn++) await stoppedTurn(page);
+  await expect.poll(() => standing(page, 'deal')).toBe(true);
+  await rested(page);
+
+  const food = await onScreen(page, 'reading-food');
+  await page.mouse.move(food.x, food.y);
+  await expect.poll(() => tooltipUp(page, 'tooltip-ui')).toBe(true);
+
+  expect(problems).toEqual([]);
+});
+
+// The pointer never moves after the key: the menu rising is the one thing that can take the bubble
+// down, and Phaser tells nothing under a scrim that it was covered.
+test('a tooltip standing over a reading goes down when the back key raises the menu', async ({
+  page,
+}) => {
+  const problems = watch(page);
+
+  await page.setViewportSize(WINDOW);
+  await open(page, 1, 'PH_Deck');
+
+  const food = await onScreen(page, 'reading-food');
+  await page.mouse.move(food.x, food.y);
+  await expect.poll(() => tooltipUp(page, 'tooltip-ui')).toBe(true);
+
+  await page.keyboard.press('Escape');
+  await expect.poll(() => standing(page, 'menu')).toBe(true);
+  expect(await tooltipUp(page, 'tooltip-ui')).toBe(false);
 
   expect(problems).toEqual([]);
 });

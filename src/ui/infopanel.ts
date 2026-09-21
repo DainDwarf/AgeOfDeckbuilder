@@ -16,6 +16,7 @@ import { RESOURCES, type Resource, type Resources } from '../rules/resources';
 import { type Unit, unitAt } from '../rules/units';
 import { CARD_HEIGHT, CARD_METRICS, CARD_WIDTH, drawCardSurface } from './card-face';
 import { stopMotion } from './card-motion';
+import { DEPTH } from './depths';
 import { addText, onHover, type Surface, UI_FONT } from './design-space';
 import { css, LOOK } from './look';
 import {
@@ -28,7 +29,7 @@ import {
   unitMark,
 } from './map';
 import { buildingName, featureName, improvementName, terrainName, text, unitName } from './text';
-import { createTooltip } from './tooltip';
+import type { Tooltip } from './tooltip';
 
 /** One line of a card's ledger: what it is drawn and named by, and what it gives at income. */
 type Row =
@@ -90,9 +91,6 @@ export type InfoPanel = {
   rescale(): void;
   hide(): void;
 };
-
-/** Over the terrain, the buildings and the units the map draws, under the bubble a row raises. */
-const DEPTH = 25;
 
 /** How far the panel stands clear of the face it reads, in design pixels. */
 const STANDOFF = 12;
@@ -166,12 +164,16 @@ type RowBubble = {
  * about one. Every show rebuilds the card, so nothing here follows a state change — the panel is
  * dismissed by whatever caused one.
  */
-export function createInfoPanel(scene: Phaser.Scene, on: Surface, catalogue: Catalogue): InfoPanel {
-  const tooltip = createTooltip(scene, on);
+export function createInfoPanel(
+  scene: Phaser.Scene,
+  on: Surface,
+  catalogue: Catalogue,
+  tooltip: Tooltip,
+): InfoPanel {
   const ghosts = scene.add.graphics();
   const panel = scene.add
     .container(0, 0, [ghosts])
-    .setDepth(DEPTH)
+    .setDepth(DEPTH.infopanel)
     .setName('infopanel')
     .setVisible(false);
   on.layer.add(panel);
@@ -201,8 +203,8 @@ export function createInfoPanel(scene: Phaser.Scene, on: Surface, catalogue: Cat
     box.top = at.y - (CARD_HEIGHT / 2) * box.unit;
 
     ghosts.clear();
-    for (let depth = behind; depth >= 1; depth--) {
-      drawCardSurface(ghosts, depth * GHOST_OFFSET, depth * GHOST_OFFSET);
+    for (let ghost = behind; ghost >= 1; ghost--) {
+      drawCardSurface(ghosts, ghost * GHOST_OFFSET, ghost * GHOST_OFFSET);
     }
     panel.setScale(box.unit).setPosition(box.left, box.top);
   };

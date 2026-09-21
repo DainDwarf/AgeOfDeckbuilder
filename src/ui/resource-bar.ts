@@ -6,23 +6,13 @@ import { type Group, type Stage, walked } from '../rules/stages';
 import { type Chronicle, idle } from '../rules/state';
 import { layOutBar, type Placed, type Zone } from './bar-layout';
 import { EASE, ended, stopMotion } from './card-motion';
-import {
-  addText,
-  DESIGN_WIDTH,
-  MARGIN,
-  OVER_SCRIM_DEPTH,
-  onClick,
-  onHover,
-  UI_FONT,
-} from './design-space';
+import { DEPTH } from './depths';
+import { addText, DESIGN_WIDTH, MARGIN, onClick, onHover, UI_FONT } from './design-space';
 import { css, LOOK, type Reading } from './look';
 import { text } from './text';
 import type { Tooltip } from './tooltip';
 
 export const BAR_HEIGHT = 48;
-
-/** Where the bar stands on the chronicle screen: over the map and the hand, under the scrim. */
-const BAR_DEPTH = 10;
 
 /** The word of a reading, and the ink it is lifted to while the reading is latched down. */
 const WORD_INK = css(LOOK.faintInk);
@@ -81,7 +71,7 @@ export function createResourceBar(
   cityMode: () => void,
   toggleYield: (resource: Resource) => void,
 ): ResourceBar {
-  const bar = scene.add.container(0, 0).setDepth(BAR_DEPTH);
+  const bar = scene.add.container(0, 0).setDepth(DEPTH.resourceBar);
   bar.add(scene.add.rectangle(0, 0, DESIGN_WIDTH, BAR_HEIGHT, LOOK.panelFill).setOrigin(0, 0));
   bar.add(
     scene.add
@@ -92,15 +82,11 @@ export function createResourceBar(
 
   const slot = digitSlot(scene);
 
-  /**
-   * Whether the bar stands over the scrim, which it does while a deal waits to be taken. The map is
-   * under the scrim there, so the readings that act on it — the yield overlay's five, city mode's
-   * two — answer no press while it does.
-   */
+  /** Whether the bar stands over the scrim, which it does while a deal waits to be taken. */
   let overScrim = false;
 
   const label = menuLabel(scene);
-  const entries = READINGS.map((key) => createEntry(scene, bar, tooltip, key, () => overScrim));
+  const entries = READINGS.map((key) => createEntry(scene, bar, tooltip, key));
   const layout = layOutBar({
     readings: entries.map((entry) => widthOf(entry, slot)),
     menu: label.width + 2 * MENU_PADDING,
@@ -143,7 +129,7 @@ export function createResourceBar(
 
   const render = (chronicle: Chronicle): void => {
     overScrim = chronicle.deals.length > 0;
-    bar.setDepth(overScrim ? OVER_SCRIM_DEPTH : BAR_DEPTH);
+    bar.setDepth(overScrim ? DEPTH.overScrim : DEPTH.resourceBar);
     for (const entry of rising) stopMotion(scene, entry.ticking);
     rising = [];
     for (const entry of entries) {
@@ -235,11 +221,7 @@ function menuLabel(scene: Phaser.Scene): Phaser.GameObjects.Text {
   return addText(scene, 0, 0, text('menu.menu'), VALUE_STYLE).setOrigin(0.5, 0.5);
 }
 
-/**
- * The Menu button, in the zone the layout gave it at the bar's right end. It stands over the scrim
- * instead of in the bar, so it is still pressable while a window or the ending screen covers the
- * chronicle screen: a new chronicle is how a player leaves a chronicle that has ended.
- */
+/** The Menu button, in the zone the layout gave it at the bar's right end. */
 function createMenuButton(
   scene: Phaser.Scene,
   label: Phaser.GameObjects.Text,
@@ -257,7 +239,7 @@ function createMenuButton(
   label.setPosition(x, y);
   // The label is added after the fill: equal depths draw in the order they were added, so a label
   // standing beside the button rather than inside it would be painted over by it.
-  scene.add.container(0, 0, [button, label]).setDepth(OVER_SCRIM_DEPTH);
+  scene.add.container(0, 0, [button, label]).setDepth(DEPTH.overScrim);
   onClick(button, pressed);
 }
 
@@ -326,7 +308,6 @@ function createEntry(
   bar: Phaser.GameObjects.Container,
   tooltip: Tooltip,
   key: Reading,
-  quiet: () => boolean,
 ): Entry {
   const chip = scene.add.rectangle(0, 0, 10, 10, chipColour(key)).setAngle(45);
   const word = addText(scene, 0, 0, text(`label.${key}`), WORD_STYLE).setOrigin(0, 0.5);
@@ -341,8 +322,6 @@ function createEntry(
   onHover(
     hover,
     () => {
-      // The bubble stands under the scrim wherever the bar stands, so it is not raised over one.
-      if (quiet()) return;
       tooltip.under(text(`tooltip.${key}`), hover.x, hover.x + hover.width / 2, BAR_HEIGHT + 8);
     },
     () => tooltip.hide(),

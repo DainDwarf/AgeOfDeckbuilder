@@ -24,6 +24,7 @@ import {
   heightOf,
 } from './card-face';
 import { EASE, ended, stopMotion } from './card-motion';
+import { DEPTH } from './depths';
 import {
   addText,
   createClip,
@@ -32,7 +33,6 @@ import {
   MARGIN,
   onClick,
   releasedOffCanvas,
-  SCRIM_DEPTH,
   type Surface,
   UI_FONT,
   whileUp,
@@ -214,11 +214,13 @@ export function createOverlay(
   const scrim = scene.add
     .rectangle(0, 0, DESIGN_WIDTH, DESIGN_HEIGHT, LOOK.scrim.colour, LOOK.scrim.strength)
     .setOrigin(0, 0)
-    .setDepth(SCRIM_DEPTH)
+    .setDepth(DEPTH.scrim)
     .setVisible(false);
   const clip = createClip(scene, on);
+  // Raised anew on every refusal, after whatever the scrim carries: equal depths draw in the order
+  // they were added, and a note built once at construction would stand under the window's cards.
   const note = createRefusalNote(scene, on, {
-    depth: SCRIM_DEPTH + 3,
+    depth: DEPTH.onScrim,
     raised: (raised) => clip.exclude(raised),
   });
 
@@ -317,7 +319,7 @@ export function createOverlay(
       .setName('inspection')
       .setData('card', face.id)
       .setPosition(DESIGN_WIDTH / 2, (DESIGN_HEIGHT + height) / 2)
-      .setDepth(SCRIM_DEPTH + 1)
+      .setDepth(DEPTH.onScrim)
       // The card is interactive so that both presses on it reach nothing beneath, the scrim
       // included; it answers neither.
       .setInteractive({
@@ -352,7 +354,7 @@ export function createOverlay(
     })
       .setName(`${name}-title`)
       .setOrigin(0.5, 0)
-      .setDepth(SCRIM_DEPTH + 1);
+      .setDepth(DEPTH.onScrim);
     shown.push(title);
     return title;
   };
@@ -392,7 +394,7 @@ export function createOverlay(
     const frame = scene.add
       .zone(DESIGN_WIDTH / 2, top + frameHeight / 2, DESIGN_WIDTH - 2 * MARGIN, frameHeight)
       .setName(`${name}-frame`)
-      .setDepth(SCRIM_DEPTH + 2)
+      .setDepth(DEPTH.onScrim)
       .setInteractive({ cursor: 'pointer', draggable: true });
 
     frame.on('pointerdown', () => {
@@ -428,7 +430,7 @@ export function createOverlay(
     const root = scene.add
       .container(0, 0)
       .setName(name)
-      .setDepth(SCRIM_DEPTH + 1)
+      .setDepth(DEPTH.onScrim)
       .setData('overflow', overflow);
 
     const placed = cards.map((offered, index): Placed => {
@@ -649,7 +651,7 @@ export function createOverlay(
 
     const screen = scene.add
       .container(0, 0, [title, line])
-      .setDepth(SCRIM_DEPTH + 1)
+      .setDepth(DEPTH.onScrim)
       .setName(on.ending.outcome);
     shown.push(screen);
     return screen;
@@ -694,7 +696,7 @@ export function createOverlay(
       },
     });
     carried = { stands: 'window', which, laid };
-    shown.push(laid.root.setDepth(SCRIM_DEPTH + 1));
+    shown.push(laid.root.setDepth(DEPTH.onScrim));
   };
 
   /**

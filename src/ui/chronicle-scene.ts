@@ -22,6 +22,7 @@ import { boundTo } from './bindings';
 import { CARD_BASELINE, CARD_HEIGHT } from './card-face';
 import { EASE, ended, stopAllMotion, stopMotion } from './card-motion';
 import { createDebugConsole } from './debug-console';
+import { DEPTH } from './depths';
 import {
   addText,
   applyDesignSpace,
@@ -124,9 +125,12 @@ export class ChronicleScene extends Phaser.Scene {
     const { map, ui } = applyDesignSpace(this);
     createBand(this);
 
+    /** The one bubble each surface raises: the infopanel's rows on the map, the bar's on the UI. */
+    const tooltip = { map: createTooltip(this, map), ui: createTooltip(this, ui) };
+
     const parts: Part[] = [];
     const view = createMapView(this, map, this.choices.catalogue, this.current);
-    const panel = createInfoPanel(this, map, this.choices.catalogue);
+    const panel = createInfoPanel(this, map, this.choices.catalogue, tooltip.map);
     const note = createRefusalNote(this, map);
 
     /** The tile the ring stands on, and nothing while none is selected. */
@@ -352,6 +356,12 @@ export class ChronicleScene extends Phaser.Scene {
       ui,
       this.choices.catalogue,
       (over) => {
+        // Phaser re-checks what the pointer is over only when it moves, so a scrim risen under a
+        // pointer at rest sends no `pointerout` to what it covered.
+        if (over && !covered) {
+          tooltip.map.hide();
+          tooltip.ui.hide();
+        }
         covered = over;
         view.live(!over);
       },
@@ -474,7 +484,7 @@ export class ChronicleScene extends Phaser.Scene {
     const bar = createResourceBar(
       this,
       this.choices.catalogue,
-      createTooltip(this, ui),
+      tooltip.ui,
       menu,
       enterCityMode,
       (resource) => {
@@ -564,11 +574,15 @@ export class ChronicleScene extends Phaser.Scene {
   }
 
   private addEndTurn(endTurn: () => void): Part & { live(on: boolean): void } {
-    const button = this.add.rectangle(0, 0, 1, 1, LOOK.accent).setName('end-turn').setDepth(20);
+    const button = this.add
+      .rectangle(0, 0, 1, 1, LOOK.accent)
+      .setName('end-turn')
+      .setDepth(DEPTH.endTurn);
+    // Added after the button: equal depths draw in the order they were added.
     const label = addText(this, 0, 0, '', LABEL_STYLE)
       .setOrigin(0.5, 0.5)
       .setName('end-turn-label')
-      .setDepth(21);
+      .setDepth(DEPTH.endTurn);
 
     // Measured at every label it ever takes, so neither the hover swap, the phase it stands on nor a
     // fourth digit in the turn resizes it.
@@ -641,7 +655,7 @@ export class ChronicleScene extends Phaser.Scene {
       const carried = addText(this, x, y, label.text, LABEL_STYLE)
         .setOrigin(0.5, 0.5)
         .setName('end-turn-leaving')
-        .setDepth(21);
+        .setDepth(DEPTH.endTurn);
       leaving = carried;
       turn = chronicle.turn;
       settlePhase = onSettlePhase(chronicle);
