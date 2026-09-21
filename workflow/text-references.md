@@ -23,7 +23,40 @@ Every noun the reading of the player-facing text marks as needing a lookup: a na
 | unit | concept | no entry; `kind.unit` is the card kind | Let it burn (`answer-rules.let-it-burn`) |
 | capstone | concept | no entry; `kind.capstone` is the card kind | the capstone window's title (`capstone.title`) |
 
-The tooltips, the info panel rows and the refusals marked no noun: a tooltip or a panel row is where a lookup lands, not where one starts. Two of the names a lookup lands on are renamed by the polish: the feature game becomes wildlife, the Nomadic terrain deep becomes ocean.
+The tooltips, the info panel rows and the refusals marked no noun: a tooltip or a panel row is where a lookup lands, not where one starts. Two of the names a lookup lands on were renamed by the polish: the feature game is wildlife, the Nomadic terrain deep is ocean.
+
+## What each entry marks
+
+**No reference bracket survives in `src/ui/text.ts`, so no reference can be found by searching for one.** The brackets still in the file are all resource glyphs — `Pay {production} [production]`, `Gain {food} [food]`, `4[food] 4[production]` — the run's first mark, already drawn on the face, and none of them is listed below. The polish shipped the wording of the tables and stripped the brackets off every reference instead: `src/ui/text-run.ts` parses `[word]` in a `rules.`, `answer-rules.` or `capstone-rules.` entry as a resource glyph and throws on a token that names no resource, and the second mark — the one that draws a name — is the **Card references** line's own step 1. The entries below are the whole list of what wants a mark put back, entry by entry, as each reads today.
+
+| Entry | Reads today | Marks | Line |
+| --- | --- | --- | --- |
+| `rules.settle` | Place the city | city | beyond cards |
+| `rules.first-worker` | Place a worker | worker | beyond cards |
+| `rules.first-scout` | Place a scout | scout | beyond cards |
+| `rules.worker` | Place a worker | worker | beyond cards |
+| `rules.warrior` | Place a warrior | warrior | beyond cards |
+| `rules.scout` | Place a scout | scout | beyond cards |
+| `rules.gather` | Gain the yield of a worker's tile | yield, worker | beyond cards |
+| `rules.trapping` | Place Trapping on Forest | Trapping (the improvement), Forest | beyond cards |
+| `rules.band-joins` | Single use.\nGain one population | population | beyond cards |
+| `capstone-rules.first-shelter` | Put Shelter on top of the draw pile | Shelter | **cards** |
+| `answer-rules.share` | Put Hunger on top of the draw pile | Hunger | **cards** |
+| `answer-rules.PH_Famine` | Lays PH_Hunger on top of the draw pile | PH_Hunger | **cards** |
+| `answer-rules.let-them-go` | Lose one population | population | beyond cards |
+| `answer-rules.follow-it` | One forest gains Wildlife | forest, Wildlife | beyond cards |
+| `answer-rules.let-it-burn` | {tiles} forest burn into plain: {population} population killed, {units} unit damaged | forest, plain, population, unit | beyond cards |
+| `answer-rules.ration` | {warriors} Warrior attack your city | Warrior, city | beyond cards |
+| `answer-rules.ration-one` | One Warrior attacks your city | Warrior, city | beyond cards |
+| `answer-rules.fight` | {warriors} Warrior attack your city | Warrior, city | beyond cards |
+| `answer-rules.fight-one` | One Warrior attacks your city | Warrior, city | beyond cards |
+| `answer-rules.make-room` | A camp with {warriors} Warrior is placed near your city | Warrior, city | beyond cards |
+| `answer-rules.make-room-one` | A camp with one Warrior is placed near your city | Warrior, city | beyond cards |
+| `capstone.title` | Pass the capstone to win the Nomadic Age | capstone | beyond cards |
+
+Two things a session taking either line reads before it starts. **`capstone.title` is not a rules entry** — the run never lays it out, so a mark there needs the window's title to be laid out as a run, which is work neither line has scoped. **A count in front of a name is why the singular entry exists**: "3 Warrior attack your city" is the plural entry unmarked, and it reads as English again only once the mark draws the name; the pair `<id>` and `<id>-one`, chosen in `answerRules` on the count, is how the two sentences are kept apart.
+
+`board/card-references.md` was written before the polish landed and its player-facing section quotes the three entries in their old wording — `Lays [card:hunger] on top of the draw pile` and the like. The wording above is what stands; the notation `[card:<id>]` is that line's to settle.
 
 ## Kinds
 

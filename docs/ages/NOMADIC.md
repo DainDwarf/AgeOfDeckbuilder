@@ -14,16 +14,16 @@ The deck's settle section holds three settle cards, each costing nothing: the on
 
 A terrain gives one point of one resource, a feature gives the second, and the river gives food along plain and forest. So a bare tile is thin, a featured tile or a river tile is worth walking to, and the band is always looking for the tile that has two.
 
-| Terrain    | Gives                      | Feature     | Gives      |
-| ---------- | -------------------------- | ----------- | ---------- |
-| plain      | food                       | **fertile** | food       |
-| forest     | production                 | **game**    | food       |
-| hills      | production                 | **flint**   | production |
-| coast      | food                       | —           | —          |
-| deep water | nothing                    | —           | —          |
-| mountain   | nothing; beyond every unit | —           | —          |
+| Terrain  | Gives                      | Feature      | Gives      |
+| -------- | -------------------------- | ------------ | ---------- |
+| plain    | food                       | **fertile**  | food       |
+| forest   | production                 | **wildlife** | food       |
+| hills    | production                 | **flint**    | production |
+| coast    | food                       | —            | —          |
+| ocean    | nothing                    | —            | —          |
+| mountain | nothing; beyond every unit | —            | —          |
 
-Forest and hills give the same at income and differ in what they cost to walk, what they see over and which feature they carry: a new player learns that hills are the lookout and forest the slow ground. Forest is raised, hills higher and mountain highest, and the rest lies flat; coast, deep water and mountain are crossed by nothing. Features are dealt rarely enough to be sought after; their shares are tuning. Forest is scattered over the land and also gathers in woodlands, biomes of their own that are forest nearly throughout.
+Forest and hills give the same at income and differ in what they cost to walk, what they see over and which feature they carry: a new player learns that hills are the lookout and forest the slow ground. Forest is raised, hills higher and mountain highest, and the rest lies flat; coast, ocean and mountain are crossed by nothing. Features are dealt rarely enough to be sought after; their shares are tuning. Forest is scattered over the land and also gathers in woodlands, biomes of their own that are forest nearly throughout.
 
 ## The units ✅
 
@@ -50,11 +50,11 @@ Gather is the most copied, then the units, then a few Trapping and March; the de
 
 Five events, each a problem the chronicle deals with two answers, one of them open to a city with nothing. The escalation is the event's, whichever answer is taken: a later rival band is larger either way, Wildfire weighs nothing early, and Departure is dearer the larger the city — the population that leaves dearer to grow back, the one kept dearer in culture.
 
-- **Lean season.** _Share_: the hazard **Hunger** is laid on the draw pile; it strikes the food stock while it stays in the hand, empties a stock that cannot cover the strike and kills one population then, the city's last no exception, and costs production to be rid of. _Ration_: the stock is kept, and the envious enter as a raid.
-- **A rival band.** _Fight_: their warriors enter the map as one raid and come. _Make room_: a new camp is placed near the city with its guards on and around it, one at first — a door for the raids to come, and a capture with its rewards for a band bold enough. Both answers cost no stock: raiders at the city now against a camp beside it for good. A rival band needs a tile near the city that takes a camp, and is not dealt without one.
-- **Wildfire.** _Let it burn_: a fire starts on a forest tile near the city, drawn seeded, and that tile and every forest tile around it become plain, so the map has visibly changed; the fire is a terraform, so the game and the trapping go with the forest, the population working a burned tile is killed, the city's own tile and the city's last no exception, and a unit standing on one, whatever its faction, takes damage enough to kill a worker. The answer reads what the fire costs before it is taken — the tiles burned, the population killed, the player's units caught in it — and never where it burns. _Cut a firebreak_: production paid, the forest stands. Wildfire needs a forest near the city to start on, and is not dealt without one. Every forest in sight of the city burning was rejected: a harm aimed at the city reads as unjust, where a fire somewhere in the band's country may or may not find it.
+- **Lean season.** _Share food_: the hazard **Hunger** is laid on the draw pile; it strikes the food stock while it stays in the hand, empties a stock that cannot cover the strike and kills one population then, the city's last no exception, and costs production to be rid of. _Keep to yourself_: the stock is kept, and the envious enter as a raid.
+- **A rival band.** _Fight them_: their warriors enter the map as one raid and come. _Make room_: a new camp is placed near the city with its guards on and around it, one at first — a door for the raids to come, and a capture with its rewards for a band bold enough. Both answers cost no stock: raiders at the city now against a camp beside it for good. A rival band needs a tile near the city that takes a camp, and is not dealt without one.
+- **Wildfire.** _Let it burn_: a fire starts on a forest tile near the city, drawn seeded, and that tile and every forest tile around it become plain, so the map has visibly changed; the fire is a terraform, so the wildlife and the trapping go with the forest, the population working a burned tile is killed, the city's own tile and the city's last no exception, and a unit standing on one, whatever its faction, takes damage enough to kill a worker. The answer reads what the fire costs before it is taken — the tiles burned, the population killed, the player's units caught in it — and never where it burns. _Cut a firebreak_: production paid, the forest stands. Wildfire needs a forest near the city to start on, and is not dealt without one. Every forest in sight of the city burning was rejected: a harm aimed at the city reads as unjust, where a fire somewhere in the band's country may or may not find it.
 - **Departure.** _Let them go_: one population leaves the city, the city's last no exception. _Keep them_: culture paid, more the larger the city.
-- **The herd**, rare and fortunate. _Hunt it_: food now. _Follow it_: game is dealt onto a forest tile near the city that carries no feature, drawn seeded, and the band knows where the herd went: the tile is charted where it was not, in fog unless something sees it. The herd needs such a forest near the city, and is not dealt without one. Both are gains; a fortunate event is a breath, not a decision.
+- **The herd**, rare and fortunate. _Hunt it_: food now. _Follow it_: wildlife is dealt onto a forest tile near the city that carries no feature, drawn seeded, and the band knows where the herd went: the tile is charted where it was not, in fog unless something sees it. The herd needs such a forest near the city, and is not dealt without one. Both are gains; a fortunate event is a breath, not a decision.
 
 Lean season is food against a raid, a rival band is a raid now against a camp later, Wildfire is production against the map, Departure is culture against population.
 
@@ -64,9 +64,9 @@ Lean season is food against a raid, a rival band is a raid now against a camp la
 
 ## The camps ✅
 
-A camp is a rival band's, and its warriors follow one of two scripts, **guard** or **raider**. A guard keeps its camp, the nearest one standing within a small radius of it: on the camp it stays; off it, it walks back onto the camp while the tile is free; while a unit of another faction stands on the camp, it closes on that unit as on any other; and while a fellow holds the camp it closes on any unit of another faction it could strike from inside that radius and wanders inside it otherwise — so a camp with one guard is held, and one with several has the rest roaming around it; a guard with no camp within its radius raids. A raider goes for the city: on the city's tile it stays and attacks nothing; it steps onto that tile when it can, strikes a unit it can reach on its way, and otherwise moves toward the city by the cheapest way. Either attacks the unit of the least health within its range. The chronicle opens with a guard on each camp, the camp's roll enters a guard, Lean season's _Ration_ and the rival band's _Fight_ enter raiders, and _Make room_ enters guards. Its capture deals two rewards, both single use, and the player takes one:
+A camp is a rival band's, and its warriors follow one of two scripts, **guard** or **raider**. A guard keeps its camp, the nearest one standing within a small radius of it: on the camp it stays; off it, it walks back onto the camp while the tile is free; while a unit of another faction stands on the camp, it closes on that unit as on any other; and while a fellow holds the camp it closes on any unit of another faction it could strike from inside that radius and wanders inside it otherwise — so a camp with one guard is held, and one with several has the rest roaming around it; a guard with no camp within its radius raids. A raider goes for the city: on the city's tile it stays and attacks nothing; it steps onto that tile when it can, strikes a unit it can reach on its way, and otherwise moves toward the city by the cheapest way. Either attacks the unit of the least health within its range. The chronicle opens with a guard on each camp, the camp's roll enters a guard, Lean season's _Keep to yourself_ and the rival band's _Fight them_ enter raiders, and _Make room_ enters guards. Its capture deals two rewards, both single use, and the player takes one:
 
-- **The stores**: food and production, the rival band's stock.
-- **The band joins**: one population, the defeated band's people taken in, arriving idle.
+- **Pillage**: food and production, the rival band's stock.
+- **Capture**: one population, the defeated band's people taken in, arriving idle.
 
 Single use in both, so a captured camp leaves no dead card cycling through a small deck.

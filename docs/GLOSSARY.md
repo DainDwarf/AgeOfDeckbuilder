@@ -21,7 +21,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **influence** | The meta-currency every chronicle pays, scaled by how the city fared. | gold, XP |
 | **chronicle** | One city's story through one age, from its opening to victory or defeat — what a roguelite calls a run. | run, playthrough, attempt, session |
 | **city** | A settlement on the map; the player owns exactly one — _the_ city, what a chronicle is about. | town, capital, base, settlement |
-| **settle** | To put the city on a tile, on the settle phase; also the kind of card played on the settle phase alone. | found, founding, establish, place (the city) |
+| **settle** | To put the city on a tile, on the settle phase; also the kind of card played on the settle phase alone. | found, founding, establish |
 | **map** | The hexagonal grid a chronicle is played on. | board, world, grid |
 | **chronicle screen** | The surface a chronicle is played on — the map, the hand, the piles, the resource bar, the infopanel; what a window opens over and closes back to. | table, playfield, play area |
 | **city mode** | The chronicle screen's second mode, in which the player acts on the city: assigns, unassigns, claims. | build mode, manage mode, edit mode, planning mode |
@@ -32,6 +32,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **unit** | A mobile piece on the map, the player's or not. | army, troop, piece, token |
 | **faction** | Who a unit acts for: the player, the enemies, or — when they exist — the neutrals. | side, team, owner, allegiance |
 | **building** | A standing structure on a tile; one slot per tile. | structure |
+| **place** | To put a thing onto a tile: a unit, a building, a camp. | deploy, drop, spawn (for a thing on a tile) |
 | **build** | To put a building on a tile; what a building card does. | raise, construct, erect |
 | **neutral** | A non-player unit that does not attack. | NPC, city-state, friendly |
 | **enemy** | A non-player unit that attacks. | barbarian, raider, hostile, invader, foe |
@@ -41,7 +42,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **schedule** | An age's events and capstone, with their odds and tempo; what a timeline is rolled from. | calendar |
 | **timeline** | One chronicle's roll of its schedule: the turns its events and its capstone land on. | forecast, agenda, itinerary |
 | **camp** | A site enemies enter the map from. | lair, nest, spawn point, spawner |
-| **victory** | The end of a chronicle by passing the capstone. | win, success, triumph |
+| **victory** | The end of a chronicle by passing the capstone; the age is won by it, and win is the verb. | success, triumph |
 | **defeat** | The end of a chronicle by the city's fall. | collapse, game over, loss, death |
 | **border** | The edge of the tiles the city holds; pushed out by culture. | frontier, territory |
 | **turn** | One pass of the chronicle's cycle of phases. | round |
@@ -87,7 +88,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **improvement** | A layer a tile gains by being improved; unlike a building, a tile holds any number. | — |
 | **road** | An improvement that names its tile's movement cost outright. | path, track, highway, trail |
 | **bridge** | A river edge with a road on both banks, crossed as if no river ran there. | ford, viaduct, span |
-| **improve** | To put an improvement on a tile where a worker stands; what an improvement instant does. | lay, build, place, install |
+| **improve** | To put an improvement on a tile where a worker stands; what an improvement instant does. | lay, build, install |
 | **yield** | What a tile's layers and the river running along it give at income, resource by resource. | output, produce, harvest |
 | **claim** | To take a charted tile adjacent to one the city holds into the border, for culture. | buy, purchase, expand, annex |
 | **culture** | The resource that claims tiles. | — |

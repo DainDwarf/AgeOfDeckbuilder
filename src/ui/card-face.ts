@@ -1,7 +1,7 @@
 import type Phaser from 'phaser';
 import { type Catalogue, cardOf } from '../rules/catalogue';
 import { costOf } from '../rules/chronicle';
-import { answerCost, answerOf } from '../rules/schedule';
+import { answerOf } from '../rules/schedule';
 import { type CardId, type Chronicle, type Cost, playable, type Refusal } from '../rules/state';
 import {
   addText,
@@ -121,8 +121,8 @@ export function capstoneFace(id: string): Face {
 }
 
 /**
- * The face an answer of an event is drawn as: its cost and its rules entry, both read on the
- * chronicle it was dealt on.
+ * The face an answer of an event is drawn as: its rules entry, read on the chronicle it was dealt
+ * on. What the answer costs reads in that entry, so the face wears no chip for it.
  */
 export function answerFace(
   catalogue: Catalogue,
@@ -136,7 +136,7 @@ export function answerFace(
     name: answerName(id),
     kind: text('kind.event'),
     rules: answerRules(id, answer.reads(catalogue, chronicle)),
-    costs: answerCost(catalogue, chronicle, answer),
+    costs: [],
   };
 }
 

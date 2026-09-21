@@ -63,9 +63,6 @@ const WORKED = { at: { q: 0, r: 1 }, key: '0,1' };
 /** How many tiles the city holds from the opening, one population on each. */
 const RING = 7;
 
-/** What the note says over a tile whose claim the city cannot pay for. */
-const UNPAID = [text('refusal.unpaid')];
-
 /** The chronicle `open` settles on seed 1, with the border asked for. */
 function opening(border: Border = 'ring'): Chronicle {
   return launch(1, deckOf(STAND_IN, 'PH_Deck'), STAND_IN_SCHEDULE, CENTRE, border);
@@ -561,6 +558,7 @@ test('a second click the city cannot pay for claims nothing and says so, one it 
   const bare = opening('bare');
   const owed = threshold(bare, BESIDE.at);
   const asked = thresholdWorn(bare, BESIDE.at);
+  const unpaid = [text('refusal.culture', { cost: owed })];
   test.setTimeout(budget(owed + 1));
 
   await open(page, 1, 'PH_Deck', STAND_IN_SCHEDULE, CENTRE, 'bare');
@@ -581,7 +579,7 @@ test('a second click the city cannot pay for claims nothing and says so, one it 
 
   await page.mouse.click(near.x, near.y);
   await answered(page);
-  expect(await refusalLines(page)).toEqual(UNPAID);
+  expect(await refusalLines(page)).toEqual(unpaid);
   // The tile goes on wearing what the claim asks for, under the note.
   expect(await thresholdShown(page)).toBe(asked);
   expect((await chronicleOf(page)).held.map(tileKey)).not.toContain(BESIDE.key);

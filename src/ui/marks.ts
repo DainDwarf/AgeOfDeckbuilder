@@ -55,12 +55,12 @@ const FERTILE: number[] = [
 
 /**
  * Placeholder primitives until the art pass: the fertile plain a small hexagon of its own green, the
- * game a small triangle, the flint a shard.
+ * wildlife a small triangle, the flint a shard.
  */
 const FEATURE_MARKS: Readonly<Record<string, number[]>> = {
   PH_Fertile: FERTILE,
   fertile: FERTILE,
-  game: [-5, 4, 0, -4, 5, 4],
+  wildlife: [-5, 4, 0, -4, 5, 4],
   flint: [-2, -5, 4, -1, 2, 5, -4, 1],
 };
 

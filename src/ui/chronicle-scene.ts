@@ -39,7 +39,7 @@ import { css, LOOK } from './look';
 import { createMapView, type PressedTile } from './map';
 import { createOverlay } from './overlay';
 import { createPiles } from './piles';
-import { createRefusalNote, refusedAct, refusedAim, refusedCard } from './refusal-note';
+import { createRefusalNote, refused, refusedAim } from './refusal-note';
 import { createResourceBar } from './resource-bar';
 import { createStanding } from './standing';
 import { text } from './text';
@@ -274,7 +274,7 @@ export class ChronicleScene extends Phaser.Scene {
       if (refusal === undefined) return;
       const command = cityCommand(this.choices.catalogue, this.current, found.tile);
       if (command === undefined) {
-        note.overTile(refusedAct(refusal), found.at);
+        note.overTile(refused(tileCost(this.current, found.tile), refusal), found.at);
         return;
       }
       await playOut(command);
@@ -382,7 +382,7 @@ export class ChronicleScene extends Phaser.Scene {
           (tile) => {
             if (!playable(refusal)) {
               note.overTile(
-                refusedCard(costOf(this.choices.catalogue, id), refusal),
+                refused(costOf(this.choices.catalogue, id), refusal),
                 view.faceOf(tile),
               );
               return;

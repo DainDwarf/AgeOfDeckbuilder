@@ -40,24 +40,16 @@ function blocking(block: Block): string {
   return text(`refusal.${block}`);
 }
 
-/** What a refused card's note says: of what the card costs, only what the city cannot pay. */
-export function refusedCard(costs: readonly Cost[], refusal: Refusal): Said {
+/**
+ * What the note says over anything refused that carries a cost — a card of the hand, an answer of a
+ * deal, the city's act on a tile: of what it costs, only what the city cannot pay, then what stands
+ * in the way.
+ */
+export function refused(costs: readonly Cost[], refusal: Refusal): Said {
   return [
     ...costs
       .filter(({ resource }) => refusal.unaffordable.includes(resource))
       .map(({ resource, amount }) => text(`refusal.${resource}`, { cost: amount })),
-    ...refusal.blocked.map(blocking),
-  ];
-}
-
-/**
- * What the note over a tile says of the city's act on it refused: a claim it cannot pay for in the
- * one sentence that says so — the tile itself wears the culture it asks for — and what stands in
- * the way of an assign.
- */
-export function refusedAct(refusal: Refusal): Said {
-  return [
-    ...(refusal.unaffordable.length > 0 ? [text('refusal.unpaid')] : []),
     ...refusal.blocked.map(blocking),
   ];
 }

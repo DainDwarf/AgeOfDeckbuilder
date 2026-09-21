@@ -1,11 +1,12 @@
 import Phaser from 'phaser';
 import { CARD_KINDS } from '../rules/cards';
 import { type Catalogue, cardOf } from '../rules/catalogue';
-import { answerRefusal, offered } from '../rules/schedule';
+import { answerCost, answerOf, answerRefusal, offered } from '../rules/schedule';
 import type { Group, Stage } from '../rules/stages';
 import {
   type CardId,
   type Chronicle,
+  type Cost,
   type Deal,
   type Ending,
   NO_REFUSAL,
@@ -38,7 +39,7 @@ import {
 } from './design-space';
 import { css, LOOK } from './look';
 import { behind, createWindow, type MenuWindow, type Opened } from './menu';
-import { createRefusalNote, refusedCard } from './refusal-note';
+import { createRefusalNote, refused } from './refusal-note';
 import { BAR_HEIGHT } from './resource-bar';
 import { buildingName, cardName, eventName, text, victoryLine } from './text';
 
@@ -94,8 +95,22 @@ export type Overlay = {
   play(stage: Stage): Promise<void> | undefined;
 };
 
-/** One face offered on the scrim, what it is drawn refused by, and the number a press on it answers by. */
-type Offered = { readonly face: Face; readonly refusal: Refusal; readonly at: number };
+/**
+ * One face offered on the scrim, what the entry costs the city — which its note says, whether or not
+ * the face wears a chip for it — what it is drawn refused by, and the number a press on it answers by.
+ */
+type Offered = {
+  readonly face: Face;
+  readonly costs: readonly Cost[];
+  readonly refusal: Refusal;
+  readonly at: number;
+};
+
+/** One card of the deck offered as it stands: nothing refuses it, and its face wears its own cost. */
+function offeredCard(catalogue: Catalogue, id: CardId, at: number): Offered {
+  const face = cardFace(catalogue, id);
+  return { face, costs: face.costs, refusal: NO_REFUSAL, at };
+}
 
 /** Where one offered face was laid out — about its own bottom centre, as a card is drawn — and its drawing. */
 type Placed = Offered & {
@@ -460,9 +475,7 @@ export function createOverlay(
     );
     layGrid(
       'browse',
-      browsing.cards.map(
-        (id, at): Offered => ({ face: cardFace(catalogue, id), refusal: NO_REFUSAL, at }),
-      ),
+      browsing.cards.map((id, at) => offeredCard(catalogue, id, at)),
       title.y + title.height + MARGIN,
       (at, press) => {
         switch (press) {
@@ -501,14 +514,10 @@ export function createOverlay(
             ring(dealing, at);
             return;
           }
-          const { face, refusal } = entries[at];
+          const { costs, refusal } = entries[at];
           if (!playable(refusal)) {
             const card = laid.placed[at];
-            note.overCard(
-              refusedCard(face.costs, refusal),
-              card.x,
-              card.y + laid.root.y - laid.height,
-            );
+            note.overCard(refused(costs, refusal), card.x, card.y + laid.root.y - laid.height);
             return;
           }
           standingDeal = undefined;
@@ -556,7 +565,7 @@ export function createOverlay(
     const title = raiseTitle('capstone', text(capstoneTitle(announcement)));
     layGrid(
       'capstone',
-      [{ face, refusal: NO_REFUSAL, at: 0 }],
+      [{ face, costs: [], refusal: NO_REFUSAL, at: 0 }],
       title.y + title.height + MARGIN,
       (at, press) => {
         switch (press) {
@@ -836,9 +845,7 @@ export function createOverlay(
       offset = 0;
       showAim({
         aimed,
-        cards: chronicle.discardPile
-          .map((id, at): Offered => ({ face: cardFace(catalogue, id), refusal: NO_REFUSAL, at }))
-          .reverse(),
+        cards: chronicle.discardPile.map((id, at) => offeredCard(catalogue, id, at)).reverse(),
         chosen,
         closed,
       });
@@ -952,6 +959,7 @@ function dealt(
         entries: ids.map(
           (id, at): Offered => ({
             face: answerFace(catalogue, chronicle, deal.event, id),
+            costs: answerCost(catalogue, chronicle, answerOf(catalogue, deal.event, id)),
             refusal: answerRefusal(catalogue, chronicle, deal.event, id),
             at,
           }),
@@ -960,9 +968,7 @@ function dealt(
     case 'camp':
       return {
         heading: buildingName(catalogue.camp.building),
-        entries: ids.map(
-          (id, at): Offered => ({ face: cardFace(catalogue, id), refusal: NO_REFUSAL, at }),
-        ),
+        entries: ids.map((id, at) => offeredCard(catalogue, id, at)),
       };
   }
 }

@@ -108,12 +108,13 @@ export const LOOK: Look = {
     mountain: 0x6b5f57,
     coast: 0x3d6d9e,
     deep: 0x2b4f7a,
+    ocean: 0x2b4f7a,
     urban: 0x8f8f9c,
   },
   feature: {
     PH_Fertile: 0x4a7a2d,
     fertile: 0x4a7a2d,
-    game: 0x8a5a2b,
+    wildlife: 0x8a5a2b,
     flint: 0x4b4f58,
   },
   building: {

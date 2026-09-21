@@ -44,7 +44,7 @@ function raiders(turn: number): number {
 
 const WILDFIRE: Fire = { burns: 'forest', leaves: 'plain', fromCity: 4, around: 1, damage: 2 };
 
-const HERD = { feature: 'game', fromCity: 4 } as const;
+const HERD = { feature: 'wildlife', fromCity: 4 } as const;
 
 const RIVAL_CAMP = { fromCity: [3, 4], apart: 3 } as const;
 
@@ -237,7 +237,7 @@ export const NOMADIC: Catalogue = catalogued({
         },
         firebreak: {
           cost: { production: 3 },
-          reads: () => ({}),
+          reads: () => ({ production: 3 }),
           lands: (_catalogue, chronicle) => unchanged(chronicle),
         },
       },
@@ -251,7 +251,7 @@ export const NOMADIC: Catalogue = catalogued({
         },
         'keep-them': {
           cost: (_catalogue, chronicle) => ({ culture: chronicle.population }),
-          reads: () => ({}),
+          reads: (_catalogue, chronicle) => ({ culture: chronicle.population }),
           lands: (_catalogue, chronicle) => unchanged(chronicle),
         },
       },
@@ -322,7 +322,7 @@ export const NOMADIC: Catalogue = catalogued({
       lift: 1,
     },
     coast: { yields: { food: 1 }, water: true, elevation: 0, lift: 0 },
-    deep: { yields: {}, water: true, elevation: 0, lift: 0 },
+    ocean: { yields: {}, water: true, elevation: 0, lift: 0 },
     mountain: { yields: {}, water: false, elevation: 3, lift: 2 },
   },
   biomes: {
@@ -335,8 +335,8 @@ export const NOMADIC: Catalogue = catalogued({
       compactness: 0,
     },
     sea: {
-      origin: 'deep',
-      interior: { deep: 0.92, plain: 0.08 },
+      origin: 'ocean',
+      interior: { ocean: 0.92, plain: 0.08 },
       rim: { coast: 1 },
       rimWidths: [0.2, 0.6, 0.2],
       growth: { kind: 'weight', weight: 1.2 },
@@ -374,7 +374,7 @@ export const NOMADIC: Catalogue = catalogued({
   },
   features: {
     fertile: { terrain: 'plain', yields: { food: 1 } },
-    game: { terrain: 'forest', yields: { food: 1 } },
+    wildlife: { terrain: 'forest', yields: { food: 1 } },
     flint: { terrain: 'hills', yields: { production: 1 } },
   },
   improvements: {
@@ -394,7 +394,7 @@ export const NOMADIC: Catalogue = catalogued({
       ],
       featureShares: [
         { feature: 'fertile', share: 0.1 },
-        { feature: 'game', share: 0.1 },
+        { feature: 'wildlife', share: 0.1 },
         { feature: 'flint', share: 0.1 },
       ],
       camps: 4,
