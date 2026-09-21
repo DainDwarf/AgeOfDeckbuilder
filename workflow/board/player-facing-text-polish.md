@@ -175,9 +175,10 @@ The names the info panel shows for a tile: the seven terrains, the three feature
 
 | Key | Old | New | Notes |
 | --- | --- | --- | --- |
-| `terrain.deep` | Deep | Ocean | Settled. **The terrain is renamed Ocean**, content and id both like Wildlife: `terrain.deep` → `terrain.ocean` and the id `deep` → `ocean` in the catalogues (`src/content/nomadic.ts`, `stand-in.ts`), the fixtures, the tests that name it and the look's colour key. Closes the lint's defect: the panel read "Deep" where the design page said deep water, and "Ocean" fits a card title where "Deep water" would not. **Doc-impact:** `docs/ages/NOMADIC.md`'s land table and its crossing sentence; `docs/CHRONICLE.md`'s map-generation paragraph, where a sea biome "is deep water" and "every sea holds deep water". The changelog is history and keeps its words. |
+| `terrain.deep` (Nomadic) | Deep | Ocean, as a new entry `terrain.ocean` | Settled. **The Nomadic terrain is renamed Ocean**, content and id both like Wildlife, **in the Nomadic content only** (the user, 2026-09-21): `src/content/nomadic.ts`'s terrain `deep` becomes `ocean`, `terrain.ocean` reads "Ocean", and the look gets a colour key for it. The stand-in content and the rules fixtures keep `deep`, so `terrain.deep` stays as it is for them. The tests that name the terrain follow whichever content they run on: the map test that expects deep water on every map runs on the Nomadic catalogue and follows the rename. Closes the lint's defect: the panel read "Deep" where the design page said deep water, and "Ocean" fits a card title where "Deep water" would not. **Doc-impact:** `docs/ages/NOMADIC.md`'s land table and its crossing sentence; `docs/CHRONICLE.md`'s map-generation paragraph, where a sea biome "is deep water" and "every sea holds deep water". The changelog is history and keeps its words. |
 | `feature.game` | Game | Wildlife | Already decided on the events turn (Follow it); recorded here because the panel is where the name is read most. |
-| every other row | _unchanged_ | _unchanged_ | The user: good. `panel.crossing` keeps its sentence and its period, a panel line rather than a tooltip. |
+| `panel.crossing` | Crossing ends the move. | Crossing ends the move | The user, 2026-09-21: the period goes here too. The no-trailing-period call now covers cards, tooltips and panel lines. |
+| every other row | _unchanged_ | _unchanged_ | The user: good. |
 
 No noun marked for a lookup: a panel row is a name, where a lookup lands.
 
