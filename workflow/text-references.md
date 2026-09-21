@@ -23,6 +23,8 @@ Every noun the reading of the player-facing text marks as needing a lookup: a na
 | unit | concept | no entry; `kind.unit` is the card kind | Let it burn (`answer-rules.let-it-burn`) |
 | capstone | concept | no entry; `kind.capstone` is the card kind | the capstone window's title (`capstone.title`) |
 
+The tooltips marked no noun: a tooltip is where a lookup lands, not where one starts.
+
 ## Kinds
 
 The card kinds themselves — settle, unit, building, instant, hazard, event, capstone — are references too, on the kind label of every face: the board line **Card kinds explain themselves**. The rules text of that lookup is not written here.

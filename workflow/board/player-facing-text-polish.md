@@ -133,6 +133,42 @@ Read against the lore pitches the user gave for the **Events carry lore** line (
 
 Event answers and the capstone window: settled, 2026-09-21.
 
+## Tooltips
+
+The thirteen `tooltip.*` entries: the six unit stats of the unit panel and the seven stocks of the resource bar. The resource bar itself, the user: all good.
+
+### Standing calls for the tooltips
+
+- **No trailing period**, the same as the card texts. A period between two sentences stays (`tooltip.population`).
+- **The lore leaves the resource tooltips**: "The most basic need.", "A sad necessity." and the like go; a tooltip says what the stock does.
+- **A resource tooltip states the stock's role in the game, not in the age**: money and science keep "Trade it for other goods" and "Manipulate your cards" though the Nomadic Age has neither. The lint's flag on the two closes as accepted.
+- **No noun marked** for a lookup on this surface: a tooltip is where a lookup lands.
+
+### Unit stats
+
+| Key | Old | New | Notes |
+| --- | --- | --- | --- |
+| `tooltip.health` | What the unit has left before it is killed. | Unit is killed when it reaches 0 | Settled. **killed** is the glossary's word. |
+| `tooltip.damage` | The health this unit's attack removes. | The health this unit's attack removes | The user: ok; the period goes. |
+| `tooltip.range` | The distance, in tiles, this unit attacks over. | The distance this unit attacks over | Settled. |
+| `tooltip.move` | The tiles this unit can still cross this turn, over its move. | How much this unit can move | Settled. Closes the lint's defect: the old text counted tiles where the reading is move points. |
+| `tooltip.action` | The action this unit can still spend this turn, over its action. | How many actions this unit can do each turn | Settled. |
+| `tooltip.sight` | The distance, in tiles, this unit sees over the ground. | The distance this unit sees over | Settled. |
+
+### Resources
+
+| Key | Old | New | Notes |
+| --- | --- | --- | --- |
+| `tooltip.food` | The most basic need. Grows your population toward the growth threshold. | Grows your population if you reach the threshold | Settled. Closes the lint's defect: the stock reaches the threshold, and the sentence now says so. "Threshold" is a shortening of **growth threshold** its Not-list does not refuse. |
+| `tooltip.production` | Materials of every sort. Build, improve, and shape the land. | Build, improve, and shape the land | **Open.** The user's wording keeps the old verb, and "shape the land" is the concept **terraform** in other words; the row's Not-list already refuses "reshape", and a tooltip is prose. Recommended: _Build, improve, and terraform_, the concept's own word. The alternative is a glossary exception for this tooltip, the second after "fight". |
+| `tooltip.military` | A sad necessity. Defend and attack. | Defend and attack | Settled. |
+| `tooltip.money` | Exchange and opulence. Trade it for other goods, or amass it. | Trade it for other goods | Settled. |
+| `tooltip.science` | The never-ending ingenuity of humanity. Draw, discard, and manipulate your cards. | Manipulate your cards | Settled. |
+| `tooltip.culture` | What the city creates and believes. Claims tiles, pushing the border out. | Claims more tiles for your city | Settled. **claim** is the glossary's verb. |
+| `tooltip.population` | Idle population. Assign to tile or turn into units. | Idle population. Assign to tile or turn into units | The user: already good; the trailing period goes. |
+
+Tooltips: settled, 2026-09-21, the production cell open on one word.
+
 ## Not yet read
 
-Tooltips, info panel rows, refusals, aim lines, chrome and launch page, ending screens, console lines.
+Info panel rows, refusals, aim lines, chrome and launch page, ending screens, console lines.
