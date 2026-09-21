@@ -148,7 +148,7 @@ const TEXT = {
   'event.wildfire': 'Wildfire',
   'answer.let-it-burn': 'Let it burn',
   'answer-rules.let-it-burn':
-    '{tiles} forest burn into plain: {population} population killed, {units} unit damaged',
+    'The fire burns {tiles} forest into plain, kills {population} population and damages {units} unit',
   'answer.firebreak': 'Cut a firebreak',
   'answer-rules.firebreak': 'Pay {production} [production]',
   'event.departure': 'Departure',

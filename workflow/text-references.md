@@ -45,7 +45,7 @@ The tooltips, the info panel rows and the refusals marked no noun: a tooltip or 
 | `answer-rules.PH_Famine` | Lays PH_Hunger on top of the draw pile | PH_Hunger | **cards** |
 | `answer-rules.let-them-go` | Lose one population | population | beyond cards |
 | `answer-rules.follow-it` | One forest gains Wildlife | forest, Wildlife | beyond cards |
-| `answer-rules.let-it-burn` | {tiles} forest burn into plain: {population} population killed, {units} unit damaged | forest, plain, population, unit | beyond cards |
+| `answer-rules.let-it-burn` | The fire burns {tiles} forest into plain, kills {population} population and damages {units} unit | forest, plain, population, unit | beyond cards |
 | `answer-rules.ration` | Your city is attacked by {warriors} Warrior | Warrior, city | beyond cards |
 | `answer-rules.fight` | Your city is attacked by {warriors} Warrior | Warrior, city | beyond cards |
 | `answer-rules.make-room` | A camp with {warriors} Warrior is placed near your city | Warrior, city | beyond cards |
