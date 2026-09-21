@@ -208,13 +208,12 @@ Refusals: settled, 2026-09-21.
 
 ## Aim lines, chrome, ending screens, console lines
 
-Read in one pass (the user, 2026-09-21): most of it is good. The three aim lines, the buttons, the kind labels, the event names, the browse titles, the menu, the controls page with its key names, the launch page and the five console lines are unchanged. The ending screens change:
+Read in one pass (the user, 2026-09-21): most of it is good. The three aim lines, the buttons, the kind labels, the event names, the browse titles, the menu, the controls page with its key names, the launch page and the five console lines are unchanged. **The ending screens keep their final period** (the user, 2026-09-21): the no-period call covers cards, tooltips, panel lines and refusals, not the sentence a chronicle ends on. One line changes:
 
 | Key | Old | New | Notes |
 | --- | --- | --- | --- |
-| `victory.first-shelter` | The shelter stands. The age is over. | The shelter was built. Nomadic Age is over | Settled. **built** is the glossary's verb for a building. The trailing period goes under the standing call, the period between the two sentences stays, as on `tooltip.population`. |
-| `defeat.capture` | An enemy captured the city on turn {turn}. | An enemy captured the city on turn {turn} | The period goes. |
-| `defeat.population` | The city's population reached zero on turn {turn}. | The city's population reached zero on turn {turn} | The period goes. |
+| `victory.first-shelter` | The shelter stands. The age is over. | The shelter was built. Nomadic Age is over. | Settled. **built** is the glossary's verb for a building. |
+| `defeat.capture` / `defeat.population` | _unchanged_ | _unchanged_ | Period kept. |
 
 The `PH_` entries are outside the polish; they die with the stand-in content.
 
@@ -226,7 +225,7 @@ Remaining surfaces: settled, 2026-09-21. **The reading is complete.**
 
 What a ship session applies, in one pass, all of it mechanical:
 
-1. **The tables above**, every Old → New per key, and the trailing period off every player-facing entry that still has one. `refusal.unpaid` and `feature.game` go; `terrain.ocean` and `feature.wildlife` come.
+1. **The tables above**, every Old → New per key, and the trailing period off every player-facing entry that still has one, the ending screens excepted. `refusal.unpaid` and `feature.game` go; `terrain.ocean` and `feature.wildlife` come.
 2. **The glossary** (`docs/GLOSSARY.md`): a **place** row; **settle** and **improve** lose "place" from their Not-lists; **victory** names **win** as its verb and loses "win" from its Not-list; the "fight" exception carries over to the answer name _Fight them_.
 3. **Wildlife**: `feature.game` → `feature.wildlife`, the catalogue's id with it; `docs/ages/NOMADIC.md`'s land table and its Follow it sentence.
 4. **Ocean**, Nomadic only: the catalogue's terrain `deep` → `ocean`, a look colour key, the map test that expects deep water on every map; the stand-in and the fixtures keep `deep` and `terrain.deep`. `docs/ages/NOMADIC.md`'s land table and crossing sentence, `docs/CHRONICLE.md`'s map-generation paragraph.
