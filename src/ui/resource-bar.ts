@@ -41,10 +41,10 @@ const MENU_PADDING = 12;
 const SUNK = 1;
 
 /** The readings the bar carries, in the order it reads them. */
-const READINGS: readonly Reading[] = [...RESOURCES, 'population'];
+const READINGS: readonly Reading[] = [...RESOURCES, 'idle'];
 
 /** The readings the city is managed by: pressing either of them enters city mode. */
-const CITY_READINGS = ['culture', 'population'] as const;
+const CITY_READINGS = ['culture', 'idle'] as const;
 
 /** Whether a press on this reading enters city mode instead of toggling its resource. */
 function managesCity(key: Reading): key is (typeof CITY_READINGS)[number] {
@@ -133,7 +133,7 @@ export function createResourceBar(
   const dress = (): void => {
     for (const entry of entries) {
       const filled = waiting.has(entry.key);
-      const down = filled || (entry.key !== 'population' && latched.has(entry.key));
+      const down = filled || (entry.key !== 'idle' && latched.has(entry.key));
       entry.well.setVisible(down);
       entry.floor.setFillStyle(filled ? LOOK.accent : LOOK.wellFill);
       entry.face.setPosition(down ? SUNK : 0, down ? SUNK : 0);
@@ -307,6 +307,20 @@ function placeWell(well: Phaser.GameObjects.Container, x: number, width: number)
   right.setPosition(x + width - 1, 0).setSize(1, height);
 }
 
+function chipColour(key: Reading): number {
+  switch (key) {
+    case 'idle':
+      return LOOK.population;
+    case 'food':
+    case 'production':
+    case 'military':
+    case 'money':
+    case 'science':
+    case 'culture':
+      return LOOK.reading[key];
+  }
+}
+
 function createEntry(
   scene: Phaser.Scene,
   bar: Phaser.GameObjects.Container,
@@ -314,7 +328,7 @@ function createEntry(
   key: Reading,
   quiet: () => boolean,
 ): Entry {
-  const chip = scene.add.rectangle(0, 0, 10, 10, LOOK.reading[key]).setAngle(45);
+  const chip = scene.add.rectangle(0, 0, 10, 10, chipColour(key)).setAngle(45);
   const word = addText(scene, 0, 0, text(`label.${key}`), WORD_STYLE).setOrigin(0, 0.5);
   const value = addText(scene, 0, 0, '', VALUE_STYLE)
     .setOrigin(0, 0.5)
@@ -362,7 +376,7 @@ function place(entry: Entry, { at, zone }: Placed): void {
  */
 function readingOf(chronicle: Chronicle, key: Reading): { count: number; over?: number } {
   switch (key) {
-    case 'population':
+    case 'idle':
       return { count: idle(chronicle) };
     case 'food':
       return { count: chronicle.resources.food, over: growthThreshold(chronicle) };
@@ -380,7 +394,7 @@ function readingOf(chronicle: Chronicle, key: Reading): { count: number; over?: 
 function actsWaiting(catalogue: Catalogue, chronicle: Chronicle): ReadonlySet<Reading> {
   const waiting = new Set<Reading>();
   if (claimWaiting(catalogue, chronicle)) waiting.add('culture');
-  if (assignWaiting(chronicle)) waiting.add('population');
+  if (assignWaiting(chronicle)) waiting.add('idle');
   return waiting;
 }
 

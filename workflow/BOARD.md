@@ -6,7 +6,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ---
 
-- **The population key is named idle** — `label.idle`, `tooltip.idle` and the bar's `Reading` member `'idle'` hold the word, the assigned mark's colour stands outside the readings' table under population's own name, and `docs/CHRONICLE-SCREEN.md` names the reading idle. Doc-impact: `docs/CHRONICLE-SCREEN.md`. [board/population-key-named-idle.md](board/population-key-named-idle.md)
 - **One home for the depths** — the tooltip is drawn under every window, and the resource bar hides it rather than fixing it; what stands over what gets clear rules on a design page, and one ordered table every file reads its depth from.
 - **Card references** — a card named in a rules entry is marked by its id and drawn as its name in brackets; the pointer resting on it shows the named card small above it and a right click on it shows the named card large beside the one it was taken off, both cascading; `docs/INTERFACE.md` and `docs/CHRONICLE-SCREEN.md` say so, the catalogues' coherence tests refuse a name that resolves to no card of theirs, and `e2e/reference.spec.ts` asserts it. Doc-impact: `docs/INTERFACE.md`, `docs/CHRONICLE-SCREEN.md`. [board/card-references.md](board/card-references.md)
 - **References beyond cards** — a name in a rules entry resolves to more than a card: an improvement, a feature, anything with a row in the info panel, shown small as that row.

@@ -135,7 +135,7 @@ async function yielded(page: Page): Promise<{ inside: Glyphs; drawn: Glyphs }> {
   return { inside, drawn };
 }
 
-test('before the settle neither the city key nor culture nor population enters city mode, and once the city stands the city key does', async ({
+test('before the settle neither the city key nor culture nor idle enters city mode, and once the city stands the city key does', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -154,7 +154,7 @@ test('before the settle neither the city key nor culture nor population enters c
   await answered(page);
   expect(await inCityMode(page)).toBe(false);
 
-  await click(page, 'reading-population');
+  await click(page, 'reading-idle');
   await answered(page);
   expect(await inCityMode(page)).toBe(false);
 
@@ -308,9 +308,7 @@ test('a press beside the tiles in city mode drops the selection and the inspecti
   expect(problems).toEqual([]);
 });
 
-test('a press on culture or population enters city mode, and the chip leaves it', async ({
-  page,
-}) => {
+test('a press on culture or idle enters city mode, and the chip leaves it', async ({ page }) => {
   const problems = watch(page);
 
   await open(page, 1, 'PH_Deck');
@@ -318,14 +316,14 @@ test('a press on culture or population enters city mode, and the chip leaves it'
   await click(page, 'reading-culture');
   await expect.poll(() => inCityMode(page)).toBe(true);
 
-  await click(page, 'reading-population');
+  await click(page, 'reading-idle');
   await answered(page);
   expect(await inCityMode(page)).toBe(true);
 
   await click(page, 'city-chip');
   await expect.poll(() => inCityMode(page)).toBe(false);
 
-  await click(page, 'reading-population');
+  await click(page, 'reading-idle');
   await expect.poll(() => inCityMode(page)).toBe(true);
 
   expect(problems).toEqual([]);
@@ -361,13 +359,13 @@ test('culture’s well fills while the city can pay for a tile it may claim, and
   expect(problems).toEqual([]);
 });
 
-test('population’s well fills while one is idle over a tile the city holds and nobody stands on, and empties once it is assigned', async ({
+test('idle’s well fills while one population is idle over a tile the city holds and nobody stands on, and empties once it is assigned', async ({
   page,
 }) => {
   const problems = watch(page);
 
   await open(page, 1, 'PH_Deck');
-  expect(await wellFill(page, 'population')).toBeUndefined();
+  expect(await wellFill(page, 'idle')).toBeUndefined();
 
   await page.keyboard.press('c');
   await expect.poll(() => inCityMode(page)).toBe(true);
@@ -378,12 +376,12 @@ test('population’s well fills while one is idle over a tile the city holds and
   await page.mouse.click(held.x, held.y);
   await playedOut(page);
   expect(await counted(page, 'assigned')).toBe(RING - 1);
-  await expect.poll(() => wellFill(page, 'population')).toBe(LOOK.accent);
+  await expect.poll(() => wellFill(page, 'idle')).toBe(LOOK.accent);
 
   await page.mouse.click(held.x, held.y);
   await playedOut(page);
   expect(await counted(page, 'assigned')).toBe(RING);
-  await expect.poll(() => wellFill(page, 'population')).toBeUndefined();
+  await expect.poll(() => wellFill(page, 'idle')).toBeUndefined();
 
   expect(problems).toEqual([]);
 });

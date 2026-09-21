@@ -356,7 +356,7 @@ function ringMark(
 
 /** The one way an assigned tile is marked: a diamond in the colour population is known by. */
 function assignedMark(scene: Phaser.Scene): Phaser.GameObjects.Rectangle {
-  return diamond(scene, ASSIGNED_GLYPH, LOOK.reading.population).setName('assigned');
+  return diamond(scene, ASSIGNED_GLYPH, LOOK.population).setName('assigned');
 }
 
 /**

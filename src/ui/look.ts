@@ -1,7 +1,7 @@
 import type { Resource } from '../rules/resources';
 
-/** What the resource bar reads: one resource, or the population. */
-export type Reading = Resource | 'population';
+/** What the resource bar reads: one resource, or the idle population. */
+export type Reading = Resource | 'idle';
 
 /** A colour laid over what is under it, at the strength it rests at. */
 export type Wash = { readonly colour: number; readonly strength: number };
@@ -37,6 +37,7 @@ export type Look = {
   readonly river: number;
   readonly enemyRed: number;
   readonly built: number;
+  readonly population: number;
   readonly wellFill: number;
   readonly wellLight: number;
   readonly cardEdge: number;
@@ -52,7 +53,7 @@ export type Look = {
   readonly consolePanel: Wash;
   readonly litGlow: Glow;
   readonly targetGlow: Glow;
-  readonly reading: Readonly<Record<Reading, number>>;
+  readonly reading: Readonly<Record<Resource, number>>;
   readonly terrain: Readonly<Record<string, number>>;
   readonly feature: Readonly<Record<string, number>>;
   readonly building: Readonly<Record<string, BuildingRole>>;
@@ -77,6 +78,7 @@ export const LOOK: Look = {
   river: 0x62a9e0,
   enemyRed: 0xb4453c,
   built: 0xcfc6b4,
+  population: 0x6b6b7d,
   wellFill: 0xb4b9c0,
   wellLight: 0xeef0f3,
   cardEdge: 0x6f757d,
@@ -99,7 +101,6 @@ export const LOOK: Look = {
     money: 0xa08a1e,
     science: 0x5f8fc0,
     culture: 0x9a6fb8,
-    population: 0x6b6b7d,
   },
   terrain: {
     plain: 0x7d9c55,
