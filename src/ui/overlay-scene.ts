@@ -1,13 +1,13 @@
 import Phaser from 'phaser';
 import { type Bind, keyPressed } from './bindings';
-import { holdDesignSpace, type Surface, stopsThePointer, surfaceOf } from './design-space';
+import { holdDesignSpace, type Stratum, stopsThePointer, stratumOf } from './design-space';
 import { readsKeys, takesMouseKeys } from './keys';
 
 /** The overlay's strata, in the order they stand, all three painted by its one camera. */
 export type Strata = {
-  readonly scrim: Surface;
-  readonly carried: Surface;
-  readonly note: Surface;
+  readonly scrim: Stratum;
+  readonly carried: Stratum;
+  readonly note: Stratum;
 };
 
 /**
@@ -29,9 +29,9 @@ export class OverlayScene extends Phaser.Scene {
   create(): void {
     const camera = this.cameras.main;
     this.strata = {
-      scrim: surfaceOf(this.add.layer().setName('scrim'), camera),
-      carried: surfaceOf(this.add.layer().setName('carried'), camera),
-      note: surfaceOf(this.add.layer().setName('note'), camera),
+      scrim: stratumOf(this.add.layer().setName('scrim'), camera),
+      carried: stratumOf(this.add.layer().setName('carried'), camera),
+      note: stratumOf(this.add.layer().setName('note'), camera),
     };
     // A restart keeps the instance and its fields (docs/PHASER.md), so the widget of the chronicle
     // that has just gone down would answer keys until the next one is built.

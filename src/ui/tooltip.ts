@@ -1,5 +1,5 @@
 import type Phaser from 'phaser';
-import { addText, DESIGN_WIDTH, drawBubble, MARGIN, type Surface, UI_FONT } from './design-space';
+import { addText, DESIGN_WIDTH, drawBubble, MARGIN, type Stratum, UI_FONT } from './design-space';
 import { css, LOOK } from './look';
 
 /** The clear water between a tooltip and what it points at; its tail crosses most of that. */
@@ -38,7 +38,7 @@ export type Tooltip = {
  * a hover crossed on the way somewhere else raises nothing, and only a hover taken straight off the
  * bubble skips the wait.
  */
-export function createTooltip(scene: Phaser.Scene, on: Surface): Tooltip {
+export function createTooltip(scene: Phaser.Scene, on: Stratum): Tooltip {
   const bubble = scene.add.graphics();
   const label = addText(scene, 10, 7, '', STYLE);
   const tooltip = scene.add

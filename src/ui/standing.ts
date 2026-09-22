@@ -1,6 +1,6 @@
 import type Phaser from 'phaser';
 import { MAP_FRAME } from './band';
-import { addText, onClick, type Surface, UI_FONT } from './design-space';
+import { addText, onClick, type Stratum, UI_FONT } from './design-space';
 import { css, LOOK } from './look';
 
 /** How wide the frame's stroke is; Phaser centres a stroke on its path, hence the half-width inset. */
@@ -38,7 +38,7 @@ export type Stood = {
  * in that colour and the chip naming it in the frame's top-right corner, sized to its own word.
  * Both are laid out once and shown or hidden; what is on is the scene's.
  */
-export function createStanding(scene: Phaser.Scene, on: Surface, stood: Stood): Standing {
+export function createStanding(scene: Phaser.Scene, on: Stratum, stood: Stood): Standing {
   const frame = scene.add
     .rectangle(
       MAP_FRAME.x + STROKE / 2,

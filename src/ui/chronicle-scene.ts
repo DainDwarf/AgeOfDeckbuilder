@@ -31,9 +31,9 @@ import {
   MARGIN,
   onClick,
   onHover,
-  type Surface,
+  type Stratum,
   stopsThePointer,
-  surfaceOf,
+  stratumOf,
   UI_FONT,
   UNCOVERED,
 } from './design-space';
@@ -137,7 +137,7 @@ export class ChronicleScene extends Phaser.Scene implements OpensChronicles {
   create(): void {
     const map = mapOf(this);
     const camera = this.cameras.main;
-    const stratum = (): Surface => surfaceOf(this.add.layer(), camera);
+    const stratum = (): Stratum => stratumOf(this.add.layer(), camera);
     const ui = {
       band: stratum(),
       standing: stratum(),
@@ -613,7 +613,7 @@ export class ChronicleScene extends Phaser.Scene implements OpensChronicles {
     paint();
   }
 
-  private addEndTurn(on: Surface, endTurn: () => void): Part & { live(on: boolean): void } {
+  private addEndTurn(on: Stratum, endTurn: () => void): Part & { live(on: boolean): void } {
     const button = this.add.rectangle(0, 0, 1, 1, LOOK.accent).setName('end-turn');
     const label = addText(this, 0, 0, '', LABEL_STYLE)
       .setOrigin(0.5, 0.5)

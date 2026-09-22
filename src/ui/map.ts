@@ -36,7 +36,7 @@ import {
   hexagon,
   onResize,
   renderFactor,
-  type Surface,
+  type Stratum,
   UI_FONT,
   whileUp,
 } from './design-space';
@@ -480,7 +480,7 @@ export function createMapView(
   const map = strata.terrain;
   const camera = map.camera;
 
-  const group = (on: Surface, name: string): Phaser.GameObjects.Layer => {
+  const group = (on: Stratum, name: string): Phaser.GameObjects.Layer => {
     const layer = scene.add.layer().setName(name);
     on.layer.add(layer);
     return layer;
@@ -495,16 +495,16 @@ export function createMapView(
   const lighted = group(strata.lit, 'lit');
   const improved = group(strata.buildings, 'improvements');
   const built = group(strata.buildings, 'buildings');
-  const marks = strata.units.layer.setName('units');
-  const fog = strata.fog.layer.setName('fog');
-  const cityMarks = strata.cityMarks.layer.setName('city-marks');
+  const marks = group(strata.units, 'units');
+  const fog = group(strata.fog, 'fog');
+  const cityMarks = group(strata.cityMarks, 'city-marks');
   const dim = scene.add
     .rectangle(0, 0, 1, 1, LOOK.mapOutline, LOOK.mapDim.strength)
     .setOrigin(0, 0)
     .setName('yield-dim')
     .setVisible(false);
   strata.dim.layer.add(dim);
-  const selected = strata.ring.layer.setName('selected');
+  const selected = group(strata.ring, 'selected');
   const glyphs = group(strata.yields, 'yields');
   const thresholds = group(strata.yields, 'thresholds');
 

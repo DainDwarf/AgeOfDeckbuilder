@@ -1,23 +1,23 @@
 import Phaser from 'phaser';
-import { followFactor, type Surface, surfaceOf } from './design-space';
+import { followFactor, type Stratum, stratumOf } from './design-space';
 
 /** The map's strata, in the order they stand, all painted by its one camera. */
 export type MapStrata = {
-  readonly terrain: Surface;
+  readonly terrain: Stratum;
   /** The tiles lit and the units glowed, while no yield dim stands to lift them over. */
-  readonly lit: Surface;
-  readonly buildings: Surface;
-  readonly units: Surface;
-  readonly fog: Surface;
-  readonly cityMarks: Surface;
+  readonly lit: Stratum;
+  readonly buildings: Stratum;
+  readonly units: Stratum;
+  readonly fog: Stratum;
+  readonly cityMarks: Stratum;
   /** The yield overlay's dim, and what stays at full strength through it. */
-  readonly dim: Surface;
-  readonly ring: Surface;
+  readonly dim: Stratum;
+  readonly ring: Stratum;
   /** The yield glyphs and the culture threshold. */
-  readonly yields: Surface;
-  readonly infopanel: Surface;
-  readonly note: Surface;
-  readonly tooltip: Surface;
+  readonly yields: Stratum;
+  readonly infopanel: Stratum;
+  readonly note: Stratum;
+  readonly tooltip: Stratum;
 };
 
 /**
@@ -35,7 +35,7 @@ export class MapScene extends Phaser.Scene {
 
   create(): void {
     const camera = this.cameras.main;
-    const stratum = (): Surface => surfaceOf(this.add.layer(), camera);
+    const stratum = (): Stratum => stratumOf(this.add.layer(), camera);
     this.strata = {
       terrain: stratum(),
       lit: stratum(),

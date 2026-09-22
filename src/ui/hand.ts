@@ -23,7 +23,7 @@ import {
   onClick,
   onHover,
   releasedOffCanvas,
-  type Surface,
+  type Stratum,
 } from './design-space';
 import { PILE_PLACE } from './piles';
 import { createRefusalNote, refused } from './refusal-note';
@@ -96,11 +96,11 @@ export type HandPresses = {
 export function createHand(
   scene: Phaser.Scene,
   on: {
-    readonly resting: Surface;
-    readonly flight: Surface;
-    readonly lifted: Surface;
-    readonly aimLine: Surface;
-    readonly note: Surface;
+    readonly resting: Stratum;
+    readonly flight: Stratum;
+    readonly lifted: Stratum;
+    readonly aimLine: Stratum;
+    readonly note: Stratum;
   },
   catalogue: Catalogue,
   presses: HandPresses,

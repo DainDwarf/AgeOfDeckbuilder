@@ -1,6 +1,6 @@
 import type Phaser from 'phaser';
 import type { Block, Cost, Refusal } from '../rules/state';
-import { addText, DESIGN_WIDTH, drawBubble, MARGIN, type Surface, UI_FONT } from './design-space';
+import { addText, DESIGN_WIDTH, drawBubble, MARGIN, type Stratum, UI_FONT } from './design-space';
 import { css, LOOK } from './look';
 import type { TileFace } from './map';
 import { text } from './text';
@@ -63,7 +63,7 @@ export function refusedAim(block: Block): Said {
  */
 export function createRefusalNote(
   scene: Phaser.Scene,
-  on: Surface,
+  on: Stratum,
   { raised: told }: { raised?: (note: Phaser.GameObjects.Container) => void } = {},
 ): RefusalNote {
   let note: Phaser.GameObjects.Container | undefined;

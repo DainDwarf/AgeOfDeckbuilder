@@ -12,7 +12,7 @@ import {
   createEmptySlot,
 } from './card-face';
 import { blockLength, EASE, ended, SHUFFLE, stopMotion, travel } from './card-motion';
-import { addText, DESIGN_WIDTH, MARGIN, onClick, type Surface, UI_FONT } from './design-space';
+import { addText, DESIGN_WIDTH, MARGIN, onClick, type Stratum, UI_FONT } from './design-space';
 import { css, LOOK } from './look';
 import type { PileKind } from './overlay';
 
@@ -34,7 +34,7 @@ export type Piles = {
  */
 export function createPiles(
   scene: Phaser.Scene,
-  on: { readonly resting: Surface; readonly flight: Surface },
+  on: { readonly resting: Stratum; readonly flight: Stratum },
   catalogue: Catalogue,
   browse: (pile: PileKind) => void,
 ): Piles {
@@ -192,7 +192,7 @@ type Pile = {
 
 function createPile(
   scene: Phaser.Scene,
-  on: Surface,
+  on: Stratum,
   pile: PileKind,
   browse: (pile: PileKind) => void,
 ): Pile {

@@ -13,7 +13,7 @@ import {
   MARGIN,
   onClick,
   onHover,
-  type Surface,
+  type Stratum,
   UI_FONT,
 } from './design-space';
 import { css, LOOK, type Reading } from './look';
@@ -69,7 +69,7 @@ export type ResourceBar = {
 
 export function createResourceBar(
   scene: Phaser.Scene,
-  on: Surface,
+  on: Stratum,
   catalogue: Catalogue,
   tooltip: Tooltip,
   cityMode: () => void,

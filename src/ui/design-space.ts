@@ -181,23 +181,23 @@ const DRAG_SLACK = 8;
  * does: the pointer carries whichever camera its last hit test found it over, and a camera's matrix
  * is rebuilt once a frame, so both answer for a pan or a zoom that has since happened.
  */
-export type Surface = {
+export type Stratum = {
   readonly layer: Phaser.GameObjects.Layer;
   readonly camera: Phaser.Cameras.Scene2D.Camera;
-  /** Where a canvas point falls on this surface. */
+  /** Where a canvas point falls on this stratum. */
   at(x: number, y: number): { x: number; y: number };
   /**
-   * How much of this surface one design pixel covers: what anything standing on it scales by to
+   * How much of this stratum one design pixel covers: what anything standing on it scales by to
    * keep the size on screen it was laid out at. One on a surface that never zooms.
    */
   unit(): number;
 };
 
 /** One stratum and the camera it is painted by, for whoever stands something on it. */
-export function surfaceOf(
+export function stratumOf(
   layer: Phaser.GameObjects.Layer,
   camera: Phaser.Cameras.Scene2D.Camera,
-): Surface {
+): Stratum {
   // A camera turns about the middle of its viewport, which is where `centerOn` puts what it holds;
   // a viewport narrower than the canvas stands off the canvas's origin by the camera's own x and y.
   return {
@@ -336,7 +336,7 @@ function* objectsIn(
  * also why the camera is kept and re-pointed: a camera's ignore is never lifted, and an object the
  * scene gains while the clip stands open would draw inside the rectangle.
  */
-export function createClip(scene: Phaser.Scene, on: Surface): Clip {
+export function createClip(scene: Phaser.Scene, on: Stratum): Clip {
   const camera = scene.cameras.add(0, 0, 1, 1).setVisible(false);
   /** The rectangle in design units while it is shown, and nothing while it is not. */
   let frame: { x: number; y: number; width: number; height: number } | undefined;

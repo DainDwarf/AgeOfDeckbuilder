@@ -16,7 +16,7 @@ import { RESOURCES, type Resource, type Resources } from '../rules/resources';
 import { type Unit, unitAt } from '../rules/units';
 import { CARD_HEIGHT, CARD_METRICS, CARD_WIDTH, drawCardSurface } from './card-face';
 import { stopMotion } from './card-motion';
-import { addText, onHover, type Surface, UI_FONT } from './design-space';
+import { addText, onHover, type Stratum, UI_FONT } from './design-space';
 import { css, LOOK } from './look';
 import {
   buildingMark,
@@ -165,7 +165,7 @@ type RowBubble = {
  */
 export function createInfoPanel(
   scene: Phaser.Scene,
-  on: Surface,
+  on: Stratum,
   catalogue: Catalogue,
   tooltip: Tooltip,
 ): InfoPanel {

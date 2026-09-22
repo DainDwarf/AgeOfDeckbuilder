@@ -1,6 +1,6 @@
 import type Phaser from 'phaser';
 import { CARD_BASELINE, CARD_HEIGHT } from './card-face';
-import { BAR_HEIGHT, DESIGN_HEIGHT, DESIGN_WIDTH, type Surface } from './design-space';
+import { BAR_HEIGHT, DESIGN_HEIGHT, DESIGN_WIDTH, type Stratum } from './design-space';
 import { LOOK } from './look';
 
 /** How far the resting cards' tops rise above the band: they stand in it as in a tray. */
@@ -18,7 +18,7 @@ export const MAP_FRAME = {
 };
 
 /** The flat band the hand and the piles stand in, so no tile is ever held under a card. */
-export function createBand(scene: Phaser.Scene, on: Surface): void {
+export function createBand(scene: Phaser.Scene, on: Stratum): void {
   on.layer.add([
     scene.add
       .rectangle(0, BAND_TOP, DESIGN_WIDTH, DESIGN_HEIGHT - BAND_TOP, LOOK.panelFill)
