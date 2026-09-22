@@ -35,5 +35,5 @@ The chronicle screen is drawn on one Phaser scene today: two Layers painted by t
 
 ## The lines
 
-- **Drags run on under the Menu button** — a drag, the map's pan or a carried object, keeps its moves across the Menu button with no stutter, the same way it already runs on across the UI's widgets.
+- **Drags run on under the Menu button** — a pan or a carried object dragged across the Menu button keeps its moves, the menu scene withholding a move from the scenes beneath only while no button is held unless a window of it stands; `workflow/BRANCH.md`'s design says so and `e2e/menu.spec.ts` asserts a pan dragged onto the button brings the map the full travel and opens no menu. Doc-impact: none. [board/drags-run-on-under-the-menu-button.md](board/drags-run-on-under-the-menu-button.md)
 - **The card references dossier is rewritten on the tower** — `board/card-references.md` is rewritten from the settled state, the small card a raiser on any surface adds to that scene's topmost Layer and nothing excluded anywhere, so the line ships on `main` as an ordinary one.
