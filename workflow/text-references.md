@@ -10,7 +10,7 @@ Every noun the reading of the player-facing text marks as needing a lookup: a na
 | warrior | unit | `unit.warrior` | Warrior (`rules.warrior`) |
 | trapping | improvement | `improvement.trapping` | Trapping (`rules.trapping`) |
 | forest | terrain | `terrain.forest` | Trapping (`rules.trapping`) |
-| population | concept | no entry of its own; `label.population` reads "Idle" | Capture (`rules.band-joins`) |
+| population | concept | no entry of its own; `label.idle` reads "Idle" | Capture (`rules.band-joins`) |
 | shelter | card and building | `card.shelter`, `building.shelter` | The first shelter (`capstone-rules.first-shelter`) |
 | yield | concept | no entry; `panel.no-yield` only | Gather (`rules.gather`) |
 | population | concept | as above | Let them go (`answer-rules.let-them-go`), Let it burn |
