@@ -19,7 +19,7 @@ The chronicle screen is drawn on one Phaser scene today: two Layers painted by t
 
 **A surface is a scene.** `docs/` keeps the word surface, the player-visible fact that the map moves and the UI holds still; scene is Phaser's unit and the code's word. The two never meet in a design sentence.
 
-**Strata are Layers, never depth numbers.** Inside a scene, one Layer per stratum in the order above, created in that order; an object is added to its Layer and carries no depth. A Container is used only where a thing moves as one, a card face for instance, and a Layer is never put inside a Container. A depth number is legal only within one Layer, indexing something real — a slot, a place in a chain.
+**Strata are Layers, never depth numbers.** Inside a scene, one Layer per stratum in the order above, created in that order; an object is added to its Layer and carries no depth. A Container is used only where a thing moves as one, a card face for instance, and a Layer is never put inside a Container. A depth number is legal only within one Layer, indexing something real — a slot, a place in a chain. A scene holding no stratum of the table above takes no Layer at all: the menu's button, scrim and window stand in the order they are made.
 
 **The tooltip and the small card stand on the surface that raised them**, on that scene's topmost Layer, one widget class instantiated into whichever scene asked. A raiser never reaches into another scene.
 
