@@ -13,7 +13,7 @@ import {
   playable,
   type Refusal,
 } from '../rules/state';
-import type { Bind, Press } from './bindings';
+import { type Bind, boundTo, type Press } from './bindings';
 import {
   answerFace,
   type CardFace,
@@ -24,23 +24,22 @@ import {
   heightOf,
 } from './card-face';
 import { EASE, ended, stopMotion } from './card-motion';
-import { DEPTH } from './depths';
 import {
   addText,
-  createClip,
+  BAR_HEIGHT,
   DESIGN_HEIGHT,
   DESIGN_WIDTH,
   MARGIN,
   onClick,
   releasedOffCanvas,
-  type Surface,
   UI_FONT,
   whileUp,
 } from './design-space';
+import { isWheelNotch } from './keys';
 import { css, LOOK } from './look';
-import { behind, createWindow, type MenuWindow, type Opened } from './menu';
+import { raiseMenu } from './menu-scene';
+import type { OverlayScene } from './overlay-scene';
 import { createRefusalNote, refused } from './refusal-note';
-import { BAR_HEIGHT } from './resource-bar';
 import { buildingName, cardName, eventName, text, victoryLine } from './text';
 
 const TITLE_INK = css(LOOK.paleInk);
@@ -74,14 +73,6 @@ export type Overlay = {
     closed: () => void,
   ): () => void;
   inspect(id: CardId, refusal: Refusal): void;
-  /** The inspection key, pressed while the scrim covers: shows the ringed card of a window large. */
-  inspectSelection(): void;
-  /** The Menu button: raises the menu over whatever stands, and takes the whole menu back down. */
-  menu(): void;
-  /** Takes what stands on the scrim back one step, and answers whether anything stood. */
-  back(): boolean;
-  /** A key pressed while a slot of the Controls window listens binds there, and is taken. */
-  binds(press: Bind): boolean;
   /**
    * Raises the capstone's window on the opening's first render, the deal window while the chronicle
    * waits on a deal and the ending screen once it has ended, and nothing while it runs.
@@ -182,12 +173,11 @@ type Ringing = Browsing | Dealing;
 
 /**
  * What the scrim carries: a pile's cards, the aim window, the deal window, the capstone's window,
- * one card shown large over what it was taken off, a window of the menu, or the ending screen.
+ * one card shown large over what it was taken off, or the ending screen.
  */
 type Carried =
   | Offering
   | { readonly stands: 'inspection'; readonly over: Offering | undefined }
-  | { readonly stands: 'window'; readonly which: MenuWindow; readonly laid: Opened }
   | { readonly stands: 'ending' };
 
 /** Where a drag of the grid was pressed, what the grid stood at, and where the pointer has been. */
@@ -198,31 +188,23 @@ type Scroll = {
 };
 
 /**
- * The scrim and what stands on it. The scrim swallows every pointer beneath it, so the chronicle
- * screen is inert while anything is up, and only the menu comes up over the ending screen — a
- * chronicle that has ended is left behind by a new one alone. `covering` is told as the scrim goes up
- * and comes down, for whatever it cannot swallow: the wheel and the keyboard reach past it.
+ * The scrim and what stands on it, drawn on the overlay scene: the scrim covers the screen beneath
+ * whenever anything stands, so nothing there answers a pointer, and `covering` is told as it goes up
+ * and comes down.
  */
 export function createOverlay(
-  scene: Phaser.Scene,
-  on: Surface,
+  scene: OverlayScene,
   catalogue: Catalogue,
   covering: (covered: boolean) => void,
-  newChronicle: () => void,
   take: (at: number) => void,
 ): Overlay {
+  const on = scene.strata.carried;
   const scrim = scene.add
     .rectangle(0, 0, DESIGN_WIDTH, DESIGN_HEIGHT, LOOK.scrim.colour, LOOK.scrim.strength)
     .setOrigin(0, 0)
-    .setDepth(DEPTH.scrim)
     .setVisible(false);
-  const clip = createClip(scene, on);
-  // Raised anew on every refusal, after whatever the scrim carries: equal depths draw in the order
-  // they were added, and a note built once at construction would stand under the window's cards.
-  const note = createRefusalNote(scene, on, {
-    depth: DEPTH.onScrim,
-    raised: (raised) => clip.exclude(raised),
-  });
+  scene.strata.scrim.layer.add(scrim);
+  const note = createRefusalNote(scene, scene.strata.note);
 
   let shown: Phaser.GameObjects.GameObject[] = [];
   /** What stands on the scrim, and nothing while the scrim is down. */
@@ -232,16 +214,21 @@ export function createOverlay(
   let offset = 0;
   let fling = 0;
   let scrolling: Scroll | undefined;
-  /** The chronicle the ending screen was raised on, kept so the menu can close back onto it. */
+  /** The chronicle the ending screen was raised on: a render raises the screen once and no more. */
   let raisedOn: Ended | undefined;
-  /** The deal standing, kept so the menu can close back onto its window; the take lets it go. */
+  /** The deal standing, so no render raises its window twice; the take lets it go. */
   let standingDeal: Dealing | undefined;
   /** Whether the capstone has been announced: the first render raises its window, and no render after. */
   let announced = false;
-  /** The capstone's window standing, kept so the menu can close back onto it; closing it lets it go. */
-  let capstone: Capstone | undefined;
   /** The ending screen still coming up; a render owns the rise and takes it down. */
   let rising: Phaser.GameObjects.Container | undefined;
+
+  /** One thing raised on the scrim: it stands on the `carried` stratum and goes at the next wipe. */
+  const carries = <T extends Phaser.GameObjects.GameObject>(object: T): T => {
+    on.layer.add(object);
+    shown.push(object);
+    return object;
+  };
 
   /** What the scrim carries taken down, the scrim itself left up: every raise replaces through here. */
   const wipe = (): void => {
@@ -251,7 +238,6 @@ export function createOverlay(
     grid = undefined;
     scrolling = undefined;
     fling = 0;
-    clip.hide();
   };
 
   const close = (): void => {
@@ -272,23 +258,6 @@ export function createOverlay(
       case 'browse':
       case 'deal':
       case 'capstone':
-      case 'window':
-      case 'ending':
-        return undefined;
-    }
-  };
-
-  /** The window of the menu standing, and nothing while anything else stands, or nothing at all. */
-  const windowStanding = (): { which: MenuWindow; laid: Opened } | undefined => {
-    if (carried === undefined) return undefined;
-    switch (carried.stands) {
-      case 'window':
-        return carried;
-      case 'browse':
-      case 'aim-window':
-      case 'deal':
-      case 'capstone':
-      case 'inspection':
       case 'ending':
         return undefined;
     }
@@ -319,7 +288,6 @@ export function createOverlay(
       .setName('inspection')
       .setData('card', face.id)
       .setPosition(DESIGN_WIDTH / 2, (DESIGN_HEIGHT + height) / 2)
-      .setDepth(DEPTH.onScrim)
       // The card is interactive so that both presses on it reach nothing beneath, the scrim
       // included; it answers neither.
       .setInteractive({
@@ -331,7 +299,7 @@ export function createOverlay(
         ),
         hitAreaCallback: Phaser.Geom.Rectangle.Contains,
       });
-    shown.push(root);
+    carries(root);
   };
 
   /** Moves the grid, never past either end of its cards. */
@@ -353,10 +321,8 @@ export function createOverlay(
       color: TITLE_INK,
     })
       .setName(`${name}-title`)
-      .setOrigin(0.5, 0)
-      .setDepth(DEPTH.onScrim);
-    shown.push(title);
-    return title;
+      .setOrigin(0.5, 0);
+    return carries(title);
   };
 
   /** The card of the standing grid a press landed on, and nothing where it landed between them. */
@@ -370,9 +336,7 @@ export function createOverlay(
    * A pile's cards laid out below `top`, and the frame that scrolls and flings them: `pressed` takes
    * the press and the number the card under it was offered as, and nothing where it landed between
    * them. Every card face is named after the grid and its place on the screen, the first drawn
-   * first, and carries the card it stands and the number it was offered as in its data. Anything
-   * added to the scene after this is excluded from the clip, or the clip's camera draws it inside the
-   * frame too.
+   * first, and carries the card it stands and the number it was offered as in its data.
    */
   const layGrid = (
     name: string,
@@ -394,8 +358,8 @@ export function createOverlay(
     const frame = scene.add
       .zone(DESIGN_WIDTH / 2, top + frameHeight / 2, DESIGN_WIDTH - 2 * MARGIN, frameHeight)
       .setName(`${name}-frame`)
-      .setDepth(DEPTH.onScrim)
       .setInteractive({ cursor: 'pointer', draggable: true });
+    carries(frame);
 
     frame.on('pointerdown', () => {
       fling = 0;
@@ -427,11 +391,18 @@ export function createOverlay(
       'right',
     );
 
-    const root = scene.add
-      .container(0, 0)
-      .setName(name)
-      .setDepth(DEPTH.onScrim)
-      .setData('overflow', overflow);
+    const root = carries(scene.add.container(0, 0).setName(name).setData('overflow', overflow));
+    // Off every display list, or it paints; the mask's destroy leaves it standing (docs/PHASER.md).
+    const stencil = new Phaser.GameObjects.Rectangle(
+      scene,
+      frame.x,
+      frame.y,
+      frame.width,
+      frame.height,
+      0xffffff,
+    );
+    shown.push(stencil);
+    root.enableFilters().filters?.external.addMask(stencil, false, on.camera);
 
     const placed = cards.map((offered, index): Placed => {
       const row = Math.floor(index / columns);
@@ -450,12 +421,10 @@ export function createOverlay(
       );
       return { ...offered, x, y, drawn };
     });
-    shown.push(frame, root);
 
     const laid = { root, placed, height, overflow };
     grid = laid;
     scrollTo(offset);
-    clip.show(root, MARGIN, top, DESIGN_WIDTH - 2 * MARGIN, frameHeight);
     return laid;
   };
 
@@ -496,10 +465,8 @@ export function createOverlay(
   };
 
   /**
-   * The deal window raised, and raised again where the back from a card shown large or from the menu
-   * brings it. A press on an entry rings it and a press on the ringed entry takes it: the window
-   * closes on the take, and the landing plays out under the caller. The take of an answer the city
-   * cannot pay for says why over the card instead, and the ring stays.
+   * The deal window raised, and raised again where the back from a card shown large brings it. It
+   * closes on the take alone, and the landing plays out under the caller.
    */
   const showDeal = (dealing: Dealing): void => {
     wipe();
@@ -539,11 +506,8 @@ export function createOverlay(
    * The capstone's window closed: it is read once, and nothing brings it back on this screen but the
    * landing. The landing's is told it closed once the scrim is down.
    */
-  const closeCapstone = (): void => {
-    const closing = capstone;
-    capstone = undefined;
+  const closeCapstone = (closing: Capstone): void => {
     close();
-    if (closing === undefined) return;
     switch (closing.raised) {
       case 'opening':
         return;
@@ -554,14 +518,13 @@ export function createOverlay(
   };
 
   /**
-   * The capstone's window raised, and raised again where the back from a card shown large or from
-   * the menu brings it. A left press on its card closes it for good, as a press beside it does.
+   * The capstone's window raised, and raised again where the back from a card shown large brings it.
+   * A left press on its card closes it for good, as a press beside it does.
    */
   const showCapstone = (announcement: Capstone): void => {
     wipe();
     cover();
     carried = announcement;
-    capstone = announcement;
 
     const face = capstoneFace(announcement.on.timeline.capstone.id);
     const title = raiseTitle('capstone', text(capstoneTitle(announcement)));
@@ -573,7 +536,7 @@ export function createOverlay(
         switch (press) {
           case 'left':
             if (at === undefined) back();
-            else closeCapstone();
+            else closeCapstone(announcement);
             return;
           case 'right':
             if (at !== undefined) showInspection(face, NO_REFUSAL, announcement);
@@ -649,12 +612,7 @@ export function createOverlay(
       color: TITLE_INK,
     }).setOrigin(0.5, 0);
 
-    const screen = scene.add
-      .container(0, 0, [title, line])
-      .setDepth(DEPTH.onScrim)
-      .setName(on.ending.outcome);
-    shown.push(screen);
-    return screen;
+    return carries(scene.add.container(0, 0, [title, line]).setName(on.ending.outcome));
   };
 
   /** The ending as it lands: the scrim and the screen rise together, out of nothing and a little low. */
@@ -683,33 +641,6 @@ export function createOverlay(
     screen.setAlpha(1).setY(0);
   };
 
-  const showWindow = (which: MenuWindow): void => {
-    wipe();
-    cover();
-    const laid = createWindow(scene, which, {
-      press: (press) => {
-        if (press === 'new-chronicle') newChronicle();
-        else showWindow(press);
-      },
-      back: () => {
-        back();
-      },
-    });
-    carried = { stands: 'window', which, laid };
-    shown.push(laid.root.setDepth(DEPTH.onScrim));
-  };
-
-  /**
-   * The menu gone: back to the chronicle screen, or onto the deal window, the capstone's window or
-   * the ending screen that stood under it.
-   */
-  const shut = (): void => {
-    if (raisedOn !== undefined) showEnding(raisedOn);
-    else if (standingDeal !== undefined) showDeal(standingDeal);
-    else if (capstone !== undefined) showCapstone(capstone);
-    else close();
-  };
-
   /** The card shown large taken down, onto what it was taken off: the one path, whichever way. */
   const dropInspection = (over: Offering | undefined): void => {
     if (over === undefined) close();
@@ -719,12 +650,6 @@ export function createOverlay(
   const back = (): boolean => {
     if (carried === undefined) return false;
     switch (carried.stands) {
-      case 'window': {
-        const step = behind(carried.which);
-        if (step === undefined) shut();
-        else showWindow(step);
-        return true;
-      }
       case 'inspection':
         dropInspection(carried.over);
         return true;
@@ -736,13 +661,11 @@ export function createOverlay(
         closeAim();
         return true;
       case 'deal':
-        // The menu is raised here and not left to the chronicle screen's own back: the window
-        // stands until the take, so nothing under it may answer this key.
-        if (carried.selected === undefined) showWindow('menu');
-        else ring(carried, undefined);
+        if (carried.selected === undefined) return false;
+        ring(carried, undefined);
         return true;
       case 'capstone':
-        closeCapstone();
+        closeCapstone(carried);
         return true;
       case 'ending':
         return false;
@@ -763,9 +686,35 @@ export function createOverlay(
       case 'aim-window':
       case 'capstone':
       case 'inspection':
-      case 'window':
       case 'ending':
         back();
+        return;
+    }
+  };
+
+  /** The inspection key while a window stands: it shows the ringed card of one that rings large. */
+  const inspectSelection = (): void => {
+    if (carried === undefined) return;
+    switch (carried.stands) {
+      case 'browse': {
+        const at = carried.selected;
+        if (at !== undefined) {
+          showInspection(cardFace(catalogue, carried.cards[at]), NO_REFUSAL, carried);
+        }
+        return;
+      }
+      case 'deal': {
+        const entry =
+          carried.selected === undefined
+            ? undefined
+            : dealt(catalogue, carried.on, carried.deal).entries[carried.selected];
+        if (entry !== undefined) showInspection(entry.face, entry.refusal, carried);
+        return;
+      }
+      case 'aim-window':
+      case 'capstone':
+      case 'inspection':
+      case 'ending':
         return;
     }
   };
@@ -809,13 +758,32 @@ export function createOverlay(
         case 'aim-window':
         case 'deal':
         case 'capstone':
-        case 'window':
         case 'ending':
           return;
       }
     },
     'right',
   );
+
+  /**
+   * Every key and mouse key while anything stands on the scrim, and none at all while nothing does:
+   * the city key and the yield key are swallowed, the inspection key shows a ringed card large, the
+   * back key walks what stands back and raises the menu where it has nothing left to walk.
+   */
+  const takes = (press: Bind): boolean => {
+    if (carried === undefined) return false;
+    // What scrolls a standing grid is Phaser's own wheel, below, and never this press.
+    if (isWheelNotch(press)) return true;
+    if (boundTo(press, 'city') || boundTo(press, 'yields')) return true;
+    if (boundTo(press, 'inspect')) {
+      inspectSelection();
+      return true;
+    }
+    if (!boundTo(press, 'back')) return false;
+    if (!back()) raiseMenu(scene);
+    return true;
+  };
+  scene.takes(takes);
 
   scene.input.on(
     'wheel',
@@ -855,40 +823,6 @@ export function createOverlay(
     },
     inspect(id: CardId, refusal: Refusal): void {
       showInspection(cardFace(catalogue, id), refusal, undefined);
-    },
-    inspectSelection(): void {
-      if (carried === undefined) return;
-      switch (carried.stands) {
-        case 'browse': {
-          const at = carried.selected;
-          if (at !== undefined) {
-            showInspection(cardFace(catalogue, carried.cards[at]), NO_REFUSAL, carried);
-          }
-          return;
-        }
-        case 'deal': {
-          const entry =
-            carried.selected === undefined
-              ? undefined
-              : dealt(catalogue, carried.on, carried.deal).entries[carried.selected];
-          if (entry !== undefined) showInspection(entry.face, entry.refusal, carried);
-          return;
-        }
-        case 'aim-window':
-        case 'capstone':
-        case 'inspection':
-        case 'window':
-        case 'ending':
-          return;
-      }
-    },
-    menu(): void {
-      if (windowStanding() === undefined) showWindow('menu');
-      else shut();
-    },
-    back,
-    binds(press: Bind): boolean {
-      return windowStanding()?.laid.binds(press) ?? false;
     },
     render(chronicle: Chronicle): void {
       if (!announced) {

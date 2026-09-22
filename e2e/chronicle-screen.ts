@@ -25,9 +25,8 @@ import type { PileKind } from '../src/ui/overlay';
 declare global {
   interface Window {
     /**
-     * The named object and the camera that paints it, on whichever running scene it stands. A
-     * scene's own display list carries only the two layers, so `children.getByName` finds nothing,
-     * and a name may sit any depth down inside a container.
+     * The named object and the camera that paints it, on whichever running scene it stands. A name
+     * may sit any depth down inside a Layer or a container, so `children.getByName` finds nothing.
      */
     named?: (
       name: string,
@@ -153,7 +152,7 @@ export async function settle(
   await click(page, `tile-${tileKey(at)}`);
   await playedOut(page);
   await page.waitForFunction(
-    () => window.game?.scene.getScene<ChronicleScene>('chronicle').chronicle.city !== undefined,
+    () => window.game?.scene.getScene<ChronicleScene>('ui').chronicle.city !== undefined,
   );
   switch (border) {
     case 'ring':
@@ -176,8 +175,7 @@ async function claimFree(page: Page, tile: TileCoords): Promise<void> {
   await click(page, `tile-${tileKey(tile)}`);
   await playedOut(page);
   await page.waitForFunction(
-    (count) =>
-      window.game?.scene.getScene<ChronicleScene>('chronicle').chronicle.held.length === count,
+    (count) => window.game?.scene.getScene<ChronicleScene>('ui').chronicle.held.length === count,
     held.length + 1,
   );
 }
@@ -191,7 +189,7 @@ export async function openOnCapstone(
 ): Promise<void> {
   await readNames(page);
   await page.goto(`/?content=${STAND_IN.version}&seed=${seed}&deck=${deck}&schedule=${schedule}`);
-  await page.waitForFunction(() => window.game?.scene.isActive('chronicle') === true);
+  await page.waitForFunction(() => window.game?.scene.isActive('ui') === true);
   await rested(page);
   await expect.poll(() => standing(page, 'capstone')).toBe(true);
 }
@@ -212,26 +210,27 @@ export async function readNames(page: Page): Promise<void> {
       return found;
     };
 
-    const layers = (): Phaser.GameObjects.Layer[] =>
-      (window.game?.scene.getScenes(true) ?? []).flatMap(
-        (scene) =>
-          scene.children.list.filter(
-            (child) => child.type === 'Layer',
-          ) as Phaser.GameObjects.Layer[],
-      );
+    /** Every place a name may stand: each running scene's display list, under its main camera. */
+    const places = (): {
+      list: Phaser.GameObjects.GameObject[];
+      camera: Phaser.Cameras.Scene2D.Camera;
+    }[] =>
+      (window.game?.scene.getScenes(true) ?? []).map((scene) => ({
+        list: scene.children.list,
+        camera: scene.cameras.main,
+      }));
 
     window.named = (name) => {
-      for (const layer of layers()) {
-        const object = within(layer.list, name, [])[0];
-        const camera = layer.scene.cameras.getCamera(layer.name);
-        if (object === undefined || camera === null) continue;
-        return { object, camera };
+      for (const place of places()) {
+        const object = within(place.list, name, [])[0];
+        if (object === undefined) continue;
+        return { object, camera: place.camera };
       }
       return undefined;
     };
 
     window.counted = (name) =>
-      layers().reduce((total, layer) => total + within(layer.list, name, []).length, 0);
+      places().reduce((total, place) => total + within(place.list, name, []).length, 0);
   });
 }
 
@@ -247,8 +246,8 @@ export function rested(page: Page): Promise<void> {
 
 export function chronicleOf(page: Page): Promise<Chronicle> {
   return page.evaluate(() => {
-    const scene = window.game?.scene.getScene<ChronicleScene>('chronicle');
-    if (scene === undefined) throw new Error('the chronicle scene is not running');
+    const scene = window.game?.scene.getScene<ChronicleScene>('ui');
+    if (scene === undefined) throw new Error('the ui scene is not running');
     return scene.chronicle;
   });
 }
@@ -264,9 +263,7 @@ export function enemiesOf(chronicle: Chronicle): Unit[] {
 
 /** Whether the end of turn is still playing out its stages. */
 export function playing(page: Page): Promise<boolean> {
-  return page.evaluate(
-    () => window.game?.scene.getScene<ChronicleScene>('chronicle').playing === true,
-  );
+  return page.evaluate(() => window.game?.scene.getScene<ChronicleScene>('ui').playing === true);
 }
 
 export function onScreen(page: Page, name: string): Promise<OnScreen> {
@@ -324,7 +321,7 @@ export type Frame = { x: number; y: number; width: number; height: number };
 /** Where the map's frame stands on the page: the rectangle its camera is cropped to. */
 export function mapFrame(page: Page): Promise<Frame> {
   return page.evaluate(() => {
-    const camera = window.game?.scene.getScene('chronicle')?.cameras.getCamera('map');
+    const camera = window.game?.scene.getScene('map')?.cameras.main;
     if (camera === null || camera === undefined) throw new Error('the map camera is not running');
     // A camera's viewport is measured in the backing store the canvas is drawn scaled down from.
     const canvas = camera.scene.game.canvas;
@@ -360,7 +357,7 @@ export function besideTheCards(page: Page): Promise<{ x: number; y: number }> {
   });
 }
 
-/** Whether an object of that name stands on the chronicle screen. */
+/** Whether an object of that name stands on any running scene. */
 export function standing(page: Page, name: string): Promise<boolean> {
   return page.evaluate((target) => window.named?.(target) !== undefined, name);
 }
@@ -834,7 +831,7 @@ export async function wheel(page: Page, by: number): Promise<void> {
 export async function playedOut(page: Page): Promise<void> {
   await rested(page);
   await page.waitForFunction(
-    () => window.game?.scene.getScene<ChronicleScene>('chronicle').playing === false,
+    () => window.game?.scene.getScene<ChronicleScene>('ui').playing === false,
   );
 }
 
@@ -873,7 +870,7 @@ export async function dragTiles(page: Page, from: TileCoords, to: TileCoords): P
 export async function dragUnit(page: Page, from: TileCoords, to: TileCoords): Promise<void> {
   await dragTiles(page, from, to);
   await page.waitForFunction((on) => {
-    const chronicle = window.game?.scene.getScene<ChronicleScene>('chronicle').chronicle;
+    const chronicle = window.game?.scene.getScene<ChronicleScene>('ui').chronicle;
     return chronicle?.units.some((unit) => unit.tile.q === on.q && unit.tile.r === on.r) === true;
   }, to);
 }
@@ -888,7 +885,7 @@ export async function stoppedTurn(page: Page): Promise<void> {
   const { turn } = await chronicleOf(page);
   await click(page, 'end-turn');
   await page.waitForFunction((next) => {
-    const scene = window.game?.scene.getScene<ChronicleScene>('chronicle');
+    const scene = window.game?.scene.getScene<ChronicleScene>('ui');
     if (scene === null || scene === undefined) return false;
     if (scene.playing) return window.named?.('capstone') !== undefined;
     return scene.chronicle.turn === next || scene.chronicle.ending !== undefined;

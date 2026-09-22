@@ -1,7 +1,6 @@
 import type Phaser from 'phaser';
 import { MAP_FRAME } from './band';
-import { DEPTH } from './depths';
-import { addText, onClick, UI_FONT } from './design-space';
+import { addText, onClick, type Stratum, UI_FONT } from './design-space';
 import { css, LOOK } from './look';
 
 /** How wide the frame's stroke is; Phaser centres a stroke on its path, hence the half-width inset. */
@@ -39,7 +38,7 @@ export type Stood = {
  * in that colour and the chip naming it in the frame's top-right corner, sized to its own word.
  * Both are laid out once and shown or hidden; what is on is the scene's.
  */
-export function createStanding(scene: Phaser.Scene, stood: Stood): Standing {
+export function createStanding(scene: Phaser.Scene, on: Stratum, stood: Stood): Standing {
   const frame = scene.add
     .rectangle(
       MAP_FRAME.x + STROKE / 2,
@@ -50,21 +49,18 @@ export function createStanding(scene: Phaser.Scene, stood: Stood): Standing {
     .setOrigin(0, 0)
     .setStrokeStyle(STROKE, stood.colour)
     .setName(`${stood.name}-frame`)
-    .setDepth(DEPTH.standing)
     .setVisible(false);
 
   const chip = scene.add
     .rectangle(0, 0, 1, 1, stood.colour)
     .setOrigin(0, 0)
     .setName(`${stood.name}-chip`)
-    .setDepth(DEPTH.standing)
     .setVisible(false);
-  // Added after the chip: equal depths draw in the order they were added.
   const label = addText(scene, 0, 0, stood.label, LABEL_STYLE)
     .setOrigin(0.5, 0.5)
     .setName(`${stood.name}-chip-label`)
-    .setDepth(DEPTH.standing)
     .setVisible(false);
+  on.layer.add([frame, chip, label]);
 
   const width = label.width + PADDING.x;
   const height = label.height + PADDING.y;

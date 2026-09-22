@@ -49,6 +49,7 @@ Full rules in [`DOGMAS.md`](DOGMAS.md). The ones no session may miss:
 - Multi-line commit messages go through a scratchpad file and `git commit -F` — a PowerShell here-string turns `''` into two literal apostrophes.
 - Long commands run with `run_in_background`; never a sleep poll. **After spawning a child agent or background task, finish any finite work and end the turn** — its completion resumes you.
 - Node 24 and npm are on PATH. **Rust is not installed**: anything needing it — Tauri, the desktop build — is a board line of its own, never a step inside another one.
+- Phaser is read, never remembered: the bundled pages in `node_modules/phaser/skills/`, and `docs/PHASER.md` for what they omit.
 
 ## Commands
 

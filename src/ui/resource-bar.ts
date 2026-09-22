@@ -4,15 +4,22 @@ import { assignWaiting, claimWaiting, cultureThreshold, growthThreshold } from '
 import { RESOURCES, type Resource } from '../rules/resources';
 import { type Group, type Stage, walked } from '../rules/stages';
 import { type Chronicle, idle } from '../rules/state';
-import { layOutBar, type Placed, type Zone } from './bar-layout';
+import { layOutBar, type Placed } from './bar-layout';
 import { EASE, ended, stopMotion } from './card-motion';
-import { DEPTH } from './depths';
-import { addText, DESIGN_WIDTH, MARGIN, onClick, onHover, UI_FONT } from './design-space';
+import {
+  addText,
+  BAR_HEIGHT,
+  DESIGN_WIDTH,
+  MARGIN,
+  onClick,
+  onHover,
+  type Stratum,
+  UI_FONT,
+} from './design-space';
 import { css, LOOK, type Reading } from './look';
+import { menuRoom } from './menu';
 import { text } from './text';
 import type { Tooltip } from './tooltip';
-
-export const BAR_HEIGHT = 48;
 
 /** The word of a reading, and the ink it is lifted to while the reading is latched down. */
 const WORD_INK = css(LOOK.faintInk);
@@ -23,9 +30,6 @@ const VALUE_STYLE = { fontFamily: UI_FONT, fontSize: '18px', color: css(LOOK.ink
 
 const CHIP_TO_WORD = 18;
 const WORD_TO_VALUE = 8;
-
-const MENU_HEIGHT = 32;
-const MENU_PADDING = 12;
 
 /** How far a reading in its well is pressed down and to the right. */
 const SUNK = 1;
@@ -65,13 +69,14 @@ export type ResourceBar = {
 
 export function createResourceBar(
   scene: Phaser.Scene,
+  on: Stratum,
   catalogue: Catalogue,
   tooltip: Tooltip,
-  menu: () => void,
   cityMode: () => void,
   toggleYield: (resource: Resource) => void,
 ): ResourceBar {
-  const bar = scene.add.container(0, 0).setDepth(DEPTH.resourceBar);
+  const bar = scene.add.container(0, 0);
+  on.layer.add(bar);
   bar.add(scene.add.rectangle(0, 0, DESIGN_WIDTH, BAR_HEIGHT, LOOK.panelFill).setOrigin(0, 0));
   bar.add(
     scene.add
@@ -82,24 +87,18 @@ export function createResourceBar(
 
   const slot = digitSlot(scene);
 
-  /** Whether the bar stands over the scrim, which it does while a deal waits to be taken. */
-  let overScrim = false;
-
-  const label = menuLabel(scene);
   const entries = READINGS.map((key) => createEntry(scene, bar, tooltip, key));
   const layout = layOutBar({
     readings: entries.map((entry) => widthOf(entry, slot)),
-    menu: label.width + 2 * MENU_PADDING,
+    menu: menuRoom(scene),
     width: DESIGN_WIDTH,
     margin: MARGIN,
   });
-  createMenuButton(scene, label, layout.menu, menu);
   for (const [index, placed] of layout.readings.entries()) place(entries[index], placed);
 
   for (const entry of entries) {
     const { key } = entry;
     onClick(entry.hover, () => {
-      if (overScrim) return;
       if (managesCity(key)) cityMode();
       else toggleYield(key);
     });
@@ -128,8 +127,6 @@ export function createResourceBar(
   };
 
   const render = (chronicle: Chronicle): void => {
-    overScrim = chronicle.deals.length > 0;
-    bar.setDepth(overScrim ? DEPTH.overScrim : DEPTH.resourceBar);
     for (const entry of rising) stopMotion(scene, entry.ticking);
     rising = [];
     for (const entry of entries) {
@@ -214,33 +211,6 @@ export function createResourceBar(
       dress();
     },
   };
-}
-
-/** The Menu button's label, measured before the bar is laid out: the flow ends at its width. */
-function menuLabel(scene: Phaser.Scene): Phaser.GameObjects.Text {
-  return addText(scene, 0, 0, text('menu.menu'), VALUE_STYLE).setOrigin(0.5, 0.5);
-}
-
-/** The Menu button, in the zone the layout gave it at the bar's right end. */
-function createMenuButton(
-  scene: Phaser.Scene,
-  label: Phaser.GameObjects.Text,
-  zone: Zone,
-  pressed: () => void,
-): void {
-  const x = zone.x + zone.width / 2;
-  const y = BAR_HEIGHT / 2;
-
-  const button = scene.add
-    .rectangle(x, y, zone.width, MENU_HEIGHT, LOOK.panelFill)
-    .setStrokeStyle(1, LOOK.panelEdge)
-    .setName('menu-button')
-    .setInteractive({ useHandCursor: true });
-  label.setPosition(x, y);
-  // The label is added after the fill: equal depths draw in the order they were added, so a label
-  // standing beside the button rather than inside it would be painted over by it.
-  scene.add.container(0, 0, [button, label]).setDepth(DEPTH.overScrim);
-  onClick(button, pressed);
 }
 
 /**

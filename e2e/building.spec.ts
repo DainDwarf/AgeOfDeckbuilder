@@ -32,7 +32,7 @@ test('the farm card builds its farm where the worker moved to', async ({ page })
   await page.waitForFunction(
     () =>
       window.game?.scene
-        .getScene<ChronicleScene>('chronicle')
+        .getScene<ChronicleScene>('ui')
         .chronicle.units.filter((unit) => unit.faction === 'player').length === 1,
   );
 
@@ -47,8 +47,7 @@ test('the farm card builds its farm where the worker moved to', async ({ page })
   await page.mouse.click(destination.x, destination.y);
   await playedOut(page);
   await page.waitForFunction(
-    (held) =>
-      window.game?.scene.getScene<ChronicleScene>('chronicle').chronicle.hand.length === held,
+    (held) => window.game?.scene.getScene<ChronicleScene>('ui').chronicle.hand.length === held,
     moved.hand.length - 1,
   );
 

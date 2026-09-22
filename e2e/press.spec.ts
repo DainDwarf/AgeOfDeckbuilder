@@ -213,6 +213,166 @@ test('a press the blur swallowed before it dragged is no click, and the next rig
   expect(problems).toEqual([]);
 });
 
+test('a card dragged when the menu rises comes home, plays nothing, and the release under the menu lands as nothing', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const run = playableRun();
+
+  await open(page, run.seed, 'PH_LongDeck');
+  for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
+
+  const opened = await chronicleOf(page);
+  const index = atNothing(opened);
+  const card = `hand-${index}`;
+  const home = await onScreen(page, card);
+
+  await page.mouse.move(home.x, home.y);
+  await page.mouse.down();
+  await page.mouse.move(home.x, home.y - LIFTED * home.unit, { steps: 5 });
+  await expect.poll(() => stillAt(page, card, home)).toBe(false);
+
+  await page.keyboard.press('Escape');
+  await expect.poll(() => standing(page, 'menu')).toBe(true);
+  await expect.poll(() => stillAt(page, card, home)).toBe(true);
+  expect((await chronicleOf(page)).hand).toEqual(opened.hand);
+
+  await page.mouse.up();
+  await rested(page);
+  expect(await stillAt(page, card, home)).toBe(true);
+  expect((await chronicleOf(page)).hand).toEqual(opened.hand);
+  expect(await standing(page, 'menu')).toBe(true);
+
+  await page.keyboard.press('Escape');
+  await expect.poll(() => standing(page, 'menu')).toBe(false);
+
+  await dragOut(page, index);
+  await expect.poll(async () => (await chronicleOf(page)).hand).not.toEqual(opened.hand);
+
+  expect(problems).toEqual([]);
+});
+
+test('a right click on a card being dragged shows it large and brings it home, and the release plays nothing', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const run = playableRun();
+
+  await open(page, run.seed, 'PH_LongDeck');
+  for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
+
+  const opened = await chronicleOf(page);
+  const index = atNothing(opened);
+  const card = `hand-${index}`;
+  const home = await onScreen(page, card);
+
+  await page.mouse.move(home.x, home.y);
+  await page.mouse.down();
+  await page.mouse.move(home.x, home.y - LIFTED * home.unit, { steps: 5 });
+  await expect.poll(() => stillAt(page, card, home)).toBe(false);
+
+  await page.mouse.down({ button: 'right' });
+  await page.mouse.up({ button: 'right' });
+  await expect.poll(() => cardOnFace(page, 'inspection')).toBe(opened.hand[index]);
+  await expect.poll(() => stillAt(page, card, home)).toBe(true);
+  expect((await chronicleOf(page)).hand).toEqual(opened.hand);
+
+  await page.mouse.up();
+  await rested(page);
+  expect(await standing(page, 'inspection')).toBe(true);
+  expect(await stillAt(page, card, home)).toBe(true);
+  expect((await chronicleOf(page)).hand).toEqual(opened.hand);
+
+  await page.keyboard.press('Escape');
+  await expect.poll(() => standing(page, 'inspection')).toBe(false);
+
+  expect(problems).toEqual([]);
+});
+
+test('a card dragged and right-clicked where no scrim rises follows the pointer on, and the left release plays it', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const run = playableRun();
+
+  await open(page, run.seed, 'PH_LongDeck');
+  for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
+
+  const opened = await chronicleOf(page);
+  const index = atNothing(opened);
+  const card = `hand-${index}`;
+  const home = await onScreen(page, card);
+  const menu = await onScreen(page, 'menu-button');
+
+  await page.mouse.move(home.x, home.y);
+  await page.mouse.down();
+  await page.mouse.move(home.x, home.y - LIFTED * home.unit, { steps: 5 });
+  await page.mouse.move(menu.x, menu.y, { steps: 5 });
+
+  // The Menu button swallows the press and raises nothing, while the release it never swallows ends
+  // Phaser's drag: from there the card follows the pointer on the hand's own carry.
+  await page.mouse.down({ button: 'right' });
+  await page.mouse.up({ button: 'right' });
+  expect(await standing(page, 'menu')).toBe(false);
+  expect(await standing(page, 'inspection')).toBe(false);
+  expect((await chronicleOf(page)).hand).toEqual(opened.hand);
+
+  // The carry is absolute, so it is exact from the first move the menu does not stop: both of these
+  // stand clear of the button, which swallows every move that lands on it and freezes the card.
+  const below = menu.y + 120 * menu.unit;
+  await page.mouse.move(menu.x, below, { steps: 4 });
+  await rested(page);
+  const carried = await onScreen(page, card);
+
+  const by = 160 * menu.unit;
+  await page.mouse.move(menu.x, below + by, { steps: 4 });
+  await expect
+    .poll(async () => Math.round((await onScreen(page, card)).y - carried.y))
+    .toBe(Math.round(by));
+
+  await page.mouse.up();
+  await playedOut(page);
+  expect((await chronicleOf(page)).hand).not.toEqual(opened.hand);
+
+  expect(problems).toEqual([]);
+});
+
+test('a right click while a unit is carried inspects the tile under it and leaves the unit in hand, and the left release steps it there', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const run = workerRun('PH_Farm');
+  // The run's ends of turn, the worker entered on the turn it opens, and the step it takes.
+  test.setTimeout(budget(run.turn + 2));
+
+  await open(page, run.seed, 'PH_Deck');
+  for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
+
+  const opened = await chronicleOf(page);
+  await dragOut(page, opened.hand.indexOf('PH_Worker'));
+  await expect.poll(async () => playersOf(await chronicleOf(page)).length).toBe(1);
+
+  const city = cityTileOf(await chronicleOf(page));
+  const from = await onScreen(page, `tile-${tileKey(city)}`);
+  const onto = await onScreen(page, `tile-${tileKey(run.tile)}`);
+
+  await page.mouse.move(from.x, from.y);
+  await page.mouse.down();
+  await page.mouse.move((from.x + onto.x) / 2, (from.y + onto.y) / 2, { steps: 5 });
+  await page.mouse.move(onto.x, onto.y, { steps: 5 });
+
+  await page.mouse.down({ button: 'right' });
+  await page.mouse.up({ button: 'right' });
+  await expect.poll(() => shownCard(page)).toBeDefined();
+  expect(tileKey(playersOf(await chronicleOf(page))[0].tile)).toBe(tileKey(city));
+
+  await page.mouse.up();
+  await playedOut(page);
+  expect(tileKey(playersOf(await chronicleOf(page))[0].tile)).toBe(tileKey(run.tile));
+
+  expect(problems).toEqual([]);
+});
+
 test('a right click on the card being aimed shows it large, and the back key leaves the aim standing', async ({
   page,
 }) => {
@@ -235,6 +395,45 @@ test('a right click on the card being aimed shows it large, and the back key lea
   await expect.poll(() => standing(page, 'inspection')).toBe(false);
   expect(await standing(page, 'aim')).toBe(true);
   expect(await chronicleOf(page)).toEqual(opened);
+
+  expect(problems).toEqual([]);
+});
+
+test('a right click while a press is held on the aim inspects the tile under it, and the left release still plays the card there', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const run = workerRun('PH_Farm');
+  // The run's ends of turn, the worker entered, the step it takes, and the card played on its tile.
+  test.setTimeout(budget(run.turn + 3));
+
+  await open(page, run.seed, 'PH_Deck');
+  for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
+
+  const opened = await chronicleOf(page);
+  await dragOut(page, opened.hand.indexOf('PH_Worker'));
+  await expect.poll(async () => playersOf(await chronicleOf(page)).length).toBe(1);
+
+  const entered = await chronicleOf(page);
+  await dragUnit(page, cityTileOf(entered), run.tile);
+
+  const moved = await chronicleOf(page);
+  const home = await onScreen(page, `hand-${moved.hand.indexOf('PH_Farm')}`);
+  await page.mouse.click(home.x, home.y);
+  await aimed(page);
+
+  const tile = await onScreen(page, `tile-${tileKey(run.tile)}`);
+  await page.mouse.move(tile.x, tile.y);
+  await page.mouse.down();
+  await page.mouse.down({ button: 'right' });
+  await page.mouse.up({ button: 'right' });
+  await expect.poll(() => shownCard(page)).toBeDefined();
+  expect(await standing(page, 'aim')).toBe(true);
+  expect(await chronicleOf(page)).toEqual(moved);
+
+  await page.mouse.up();
+  await playedOut(page);
+  expect((await chronicleOf(page)).hand).not.toEqual(moved.hand);
 
   expect(problems).toEqual([]);
 });

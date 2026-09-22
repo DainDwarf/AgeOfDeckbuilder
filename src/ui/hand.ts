@@ -5,6 +5,7 @@ import { costOf, refusalOf } from '../rules/chronicle';
 import type { Change, Group, Stage } from '../rules/stages';
 import { type CardId, type Chronicle, playable, type Refusal } from '../rules/state';
 import { createAimLine } from './aim-line';
+import { pressOf } from './bindings';
 import {
   CARD_BASELINE,
   CARD_HEIGHT,
@@ -16,14 +17,13 @@ import {
   createCardFace,
 } from './card-face';
 import { ended, STAGGER, stopMotion, travel, turnOver } from './card-motion';
-import { DEPTH } from './depths';
 import {
   DESIGN_WIDTH,
   MARGIN,
   onClick,
   onHover,
   releasedOffCanvas,
-  type Surface,
+  type Stratum,
 } from './design-space';
 import { PILE_PLACE } from './piles';
 import { createRefusalNote, refused } from './refusal-note';
@@ -46,10 +46,13 @@ type Slot = {
   hovered: boolean;
 };
 
-/** Where the card was taken hold of, and where it stood at that moment. */
+/** The card being dragged, where it was taken hold of, and where it stood at that moment. */
 type Drag = {
+  readonly slot: Slot;
   readonly grabbed: { x: number; y: number };
   readonly lifted: { x: number; y: number };
+  /** Whether Phaser's drag is over and the hand is carrying the card on its own. */
+  carried: boolean;
 };
 
 /** The selected card, and how the aim it is being aimed by is taken down while one stands. */
@@ -92,14 +95,20 @@ export type HandPresses = {
  */
 export function createHand(
   scene: Phaser.Scene,
-  on: Surface,
+  on: {
+    readonly resting: Stratum;
+    readonly flight: Stratum;
+    readonly lifted: Stratum;
+    readonly aimLine: Stratum;
+    readonly note: Stratum;
+  },
   catalogue: Catalogue,
   presses: HandPresses,
 ): Hand {
   const laneLeft = MARGIN + CARD_WIDTH + LANE_PAD;
   const laneWidth = DESIGN_WIDTH - 2 * laneLeft;
-  const note = createRefusalNote(scene, on);
-  const line = createAimLine(scene, on);
+  const note = createRefusalNote(scene, on.note);
+  const line = createAimLine(scene, on.aimLine);
 
   let slots: Slot[] = [];
   /** What the hand has in the air and no slot holds; a render owns it and takes it down. */
@@ -128,7 +137,7 @@ export function createHand(
   /** The card back where it rests, at once or over that long; the promise settles when it is home. */
   const settle = (slot: Slot, duration: number): Promise<void> => {
     stopMotion(scene, slot.face.root);
-    slot.face.root.setDepth(raised(slot) ? DEPTH.liftedCard : DEPTH.restingCards + slot.index);
+    (raised(slot) ? on.lifted : on.resting).layer.add(slot.face.root);
     if (duration === 0) {
       slot.face.root.setPosition(slot.home.x, restingY(slot));
       return Promise.resolve();
@@ -259,6 +268,48 @@ export function createHand(
     }
   };
 
+  /** The card carried to where the pointer stands, ringed once it is clear of the play height. */
+  const carry = (pointer: Phaser.Input.Pointer): void => {
+    if (dragged === undefined) return;
+    const { slot, grabbed, lifted } = dragged;
+    const at = on.resting.at(pointer.x, pointer.y);
+    slot.face.root.setPosition(lifted.x + at.x - grabbed.x, lifted.y + at.y - grabbed.y);
+    slot.face.select(grabbed.y - at.y > PLAY_HEIGHT);
+  };
+
+  /** The one place a drag ends on the canvas: played past the play height, and home under it. */
+  const resolve = (pointer: Phaser.Input.Pointer): void => {
+    const carrying = dragged;
+    if (carrying === undefined) return;
+    dragged = undefined;
+    carrying.slot.face.select(false);
+    const at = on.resting.at(pointer.x, pointer.y);
+    if (carrying.grabbed.y - at.y <= PLAY_HEIGHT) {
+      settle(carrying.slot, 150);
+      return;
+    }
+    act(select(carrying.slot));
+  };
+
+  /** The drag let go of with nothing played: a scrim rose over the screen, or the release landed off it. */
+  const abandonDrag = (): void => {
+    const carrying = dragged;
+    if (carrying === undefined) return;
+    dragged = undefined;
+    letGoOf(carrying.slot);
+  };
+
+  // Phaser ends the drag at any button's release and sends no `drag` after it, so from a second
+  // button's release the carry is the hand's own: the card follows the pointer here until the
+  // button that took it comes up, and an abandon reaches it in either state.
+  scene.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+    if (dragged?.carried === true) carry(pointer);
+  });
+  scene.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
+    if (dragged?.carried === true && pressOf(pointer) === 'left') resolve(pointer);
+  });
+  scene.input.on('pointerupoutside', abandonDrag);
+
   const render = (chronicle: Chronicle): void => {
     note.hide();
     unselect();
@@ -291,11 +342,12 @@ export function createHand(
         hovered: false,
       };
 
+      on.resting.layer.add(slot.face.root);
       slot.face.root
         .setName(`hand-${index}`)
         .setPosition(slot.home.x, slot.home.y)
         .setRotation(Phaser.Math.DegToRad(off * FAN))
-        .setDepth(DEPTH.restingCards + index)
+        .setDepth(index)
         .setInteractive({
           hitArea: new Phaser.Geom.Rectangle(
             -CARD_WIDTH / 2,
@@ -312,34 +364,24 @@ export function createHand(
           slot.hovered = true;
           settle(slot, 0);
           dragged = {
-            grabbed: on.at(pointer.downX, pointer.downY),
+            slot,
+            grabbed: on.resting.at(pointer.downX, pointer.downY),
             lifted: { x: slot.home.x, y: restingY(slot) },
+            carried: false,
           };
         })
-        .on('drag', (pointer: Phaser.Input.Pointer) => {
-          if (dragged === undefined) return;
-          const { grabbed, lifted } = dragged;
-          const at = on.at(pointer.x, pointer.y);
-          slot.face.root.setPosition(lifted.x + at.x - grabbed.x, lifted.y + at.y - grabbed.y);
-          slot.face.select(grabbed.y - at.y > PLAY_HEIGHT);
-        })
+        .on('drag', carry)
         .on('dragend', (pointer: Phaser.Input.Pointer) => {
           if (dragged === undefined) return;
-          const { grabbed } = dragged;
-          dragged = undefined;
-          slot.face.select(false);
-
+          if (pressOf(pointer) !== 'left') {
+            dragged.carried = true;
+            return;
+          }
           if (releasedOffCanvas(pointer)) {
-            slot.hovered = false;
-            settle(slot, 150);
+            abandonDrag();
             return;
           }
-          const at = on.at(pointer.x, pointer.y);
-          if (grabbed.y - at.y <= PLAY_HEIGHT) {
-            settle(slot, 150);
-            return;
-          }
-          act(select(slot));
+          resolve(pointer);
         });
 
       onHover(
@@ -375,6 +417,12 @@ export function createHand(
     live(taking);
   };
 
+  /** A card in the air, over every card of its block that left before it. */
+  const fly = (card: Phaser.GameObjects.Container, place: number): Phaser.GameObjects.Container => {
+    on.flight.layer.add(card);
+    return card.setDepth(place);
+  };
+
   /**
    * The cards at the places the change names leaving for the discard pile, in the order named: every
    * one straightens as it goes, the last one landing a stagger behind the one before it, and the
@@ -396,9 +444,8 @@ export function createHand(
     await Promise.all(
       leaving.map((face, index) => {
         stopMotion(scene, face);
-        face.setDepth(DEPTH.inFlight + index);
         const to = { ...PILE_PLACE['discard-pile'], rotation: 0 };
-        return travel(scene, face, to, index * STAGGER);
+        return travel(scene, fly(face, index), to, index * STAGGER);
       }),
     );
     // A render while these were in the air took them down and painted the hand it stands on.
@@ -428,13 +475,13 @@ export function createHand(
         }
 
         const face = slot.face.root.setVisible(false);
-        const back = createCardBack(scene)
-          .setPosition(PILE_PLACE['draw-pile'].x, PILE_PLACE['draw-pile'].y)
-          .setDepth(DEPTH.inFlight + index);
-        flying.push(back);
-        return travel(scene, back, home, (index - standing.length) * STAGGER).then(() =>
-          turnOver(scene, back, face),
+        const place = index - standing.length;
+        const back = fly(
+          createCardBack(scene).setPosition(PILE_PLACE['draw-pile'].x, PILE_PLACE['draw-pile'].y),
+          place,
         );
+        flying.push(back);
+        return travel(scene, back, home, place * STAGGER).then(() => turnOver(scene, back, face));
       }),
     );
   };

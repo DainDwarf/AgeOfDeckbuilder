@@ -4,13 +4,13 @@ import type { Catalogue } from '../rules/catalogue';
 import { refuse } from '../rules/map-kinds';
 import {
   addText,
-  applyDesignSpace,
   DESIGN_HEIGHT,
   DESIGN_WIDTH,
+  holdDesignSpace,
   onClick,
   UI_FONT,
 } from './design-space';
-import { readsKeyboard } from './keys';
+import { readsKeys } from './keys';
 import { css, LOOK } from './look';
 import { type TextKey, text } from './text';
 
@@ -71,14 +71,18 @@ export class LaunchPage extends Phaser.Scene {
   }
 
   create(): void {
-    applyDesignSpace(this);
+    holdDesignSpace(this, this.cameras.main);
     let chosen: Choices = this.opening;
     let typed = chosen.seed === undefined ? '' : String(chosen.seed);
     let root: Phaser.GameObjects.Container | undefined;
     let seedLabel: Phaser.GameObjects.Text | undefined;
 
     const launch = (): void => {
-      this.scene.start('chronicle', { ...chosen, seed: typed === '' ? undefined : Number(typed) });
+      // Queued ahead of the start below, so the overlay's keyboard plugin stands ahead of the ui
+      // scene's and the map is up before the ui scene reaches into it (docs/PHASER.md).
+      this.scene.launch('overlay');
+      this.scene.launch('map');
+      this.scene.start('ui', { ...chosen, seed: typed === '' ? undefined : Number(typed) });
     };
 
     const paintSeed = (): void => {
@@ -197,7 +201,7 @@ export class LaunchPage extends Phaser.Scene {
       root.add([button, buttonLabel]);
     };
 
-    readsKeyboard(this, (event) => {
+    readsKeys(this, (event) => {
       if (event.key === 'Enter') {
         launch();
         return true;

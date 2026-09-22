@@ -21,16 +21,21 @@ import { createBand } from './band';
 import { boundTo } from './bindings';
 import { CARD_BASELINE, CARD_HEIGHT } from './card-face';
 import { EASE, ended, stopAllMotion, stopMotion } from './card-motion';
-import { createDebugConsole } from './debug-console';
-import { DEPTH } from './depths';
+import { resetConsole } from './debug-console';
 import {
   addText,
-  applyDesignSpace,
+  COVERED,
   DESIGN_WIDTH,
+  holdDesignSpace,
+  letGoOfPress,
   MARGIN,
   onClick,
   onHover,
+  type Stratum,
+  stopsThePointer,
+  stratumOf,
   UI_FONT,
+  UNCOVERED,
 } from './design-space';
 import { createHand } from './hand';
 import { cardsOf, createInfoPanel } from './infopanel';
@@ -38,7 +43,10 @@ import { onKeyDown } from './keys';
 import type { Choices } from './launch-page';
 import { css, LOOK } from './look';
 import { createMapView, type PressedTile } from './map';
+import { mapOf } from './map-scene';
+import { type OpensChronicles, raiseMenu, resetMenu } from './menu-scene';
 import { createOverlay } from './overlay';
+import { overlayOf } from './overlay-scene';
 import { createPiles } from './piles';
 import { createRefusalNote, refused, refusedAim } from './refusal-note';
 import { createResourceBar } from './resource-bar';
@@ -63,14 +71,14 @@ const LABEL_STYLE = {
   color: css(LOOK.ink),
 };
 
-export class ChronicleScene extends Phaser.Scene {
+export class ChronicleScene extends Phaser.Scene implements OpensChronicles {
   private choices!: Choices;
   private current!: Chronicle;
   /** The play-out running on the chronicle screen as it stands, and nothing while none is. */
   private sequence: symbol | undefined;
 
   constructor() {
-    super('chronicle');
+    super('ui');
   }
 
   init(choices: Choices): void {
@@ -110,28 +118,55 @@ export class ChronicleScene extends Phaser.Scene {
   }
 
   /**
-   * A fresh chronicle on a new seed and the same choices, on a chronicle screen raised from nothing:
-   * the scene's restart takes down every object, listener, tween and timer the old chronicle
-   * screen left standing. The play-out the old chronicle screen was in the middle of is let go of
-   * here, and its tail commits nothing.
+   * A fresh chronicle on a new seed and the same choices: the restart takes down every object,
+   * listener, tween and timer the old chronicle screen left standing, and the play-out it was in
+   * the middle of is let go of here, its tail committing nothing.
    */
-  private newChronicle(): void {
+  newChronicle(): void {
     this.sequence = undefined;
     stopAllMotion(this);
+    stopAllMotion(mapOf(this));
+    // Queued ahead of the restart below, and a start on a running scene stops it first, so the
+    // overlay and the map go down and come back up ahead of this one: the overlay's keyboard plugin
+    // ahead of this one's, the map up before this one reaches into it (docs/PHASER.md).
+    this.scene.launch('overlay');
+    this.scene.launch('map');
     this.scene.restart({ ...this.choices, seed: undefined });
   }
 
   create(): void {
-    const { map, ui } = applyDesignSpace(this);
-    createBand(this);
+    const map = mapOf(this);
+    const camera = this.cameras.main;
+    const stratum = (): Stratum => stratumOf(this.add.layer(), camera);
+    const ui = {
+      band: stratum(),
+      standing: stratum(),
+      /** The piles and the resting cards of the hand. */
+      resting: stratum(),
+      bar: stratum(),
+      endTurn: stratum(),
+      flight: stratum(),
+      lifted: stratum(),
+      aimLine: stratum(),
+      note: stratum(),
+      tooltip: stratum(),
+    };
+    holdDesignSpace(this, camera);
+    stopsThePointer(this, () => 'no button held');
+    createBand(this, ui.band);
 
     /** The one bubble each surface raises: the infopanel's rows on the map, the bar's on the UI. */
-    const tooltip = { map: createTooltip(this, map), ui: createTooltip(this, ui) };
+    const tooltip = {
+      map: createTooltip(map, map.strata.tooltip),
+      ui: createTooltip(this, ui.tooltip),
+    };
 
     const parts: Part[] = [];
-    const view = createMapView(this, map, this.choices.catalogue, this.current);
-    const panel = createInfoPanel(this, map, this.choices.catalogue, tooltip.map);
-    const note = createRefusalNote(this, map);
+    const view = createMapView(map, map.strata, this.choices.catalogue, this.current);
+    const panel = createInfoPanel(map, map.strata.infopanel, this.choices.catalogue, tooltip.map);
+    const note = createRefusalNote(map, map.strata.note);
+    // The map's note hears only the presses this scene lets through to the map.
+    this.input.on('pointerdown', note.hide);
 
     /** The tile the ring stands on, and nothing while none is selected. */
     let selection: PressedTile | undefined;
@@ -349,29 +384,44 @@ export class ChronicleScene extends Phaser.Scene {
       },
     );
 
-    /** Whether a window, a browse, a card inspected or the ending screen stands over the map. */
+    /** Whether the overlay's scrim stands over the screen, and whether a window of the menu does. */
     let covered = false;
+    let underMenu = false;
+    /** Whether the screen is away: the pointer has left the game for whichever scrim covers it. */
+    let away = false;
+
+    /**
+     * The screen away under either scrim and back when the last of them falls: every hover on it
+     * ends, and the press it holds is let go of after the pointer event that raised the scrim —
+     * Phaser's dispatch is synchronous, and a release inside it walks the plugin's lists mid-walk.
+     */
+    const covering = (): void => {
+      const under = covered || underMenu;
+      if (under === away) return;
+      away = under;
+      if (!under) {
+        this.input.emit(UNCOVERED);
+        map.input.emit(UNCOVERED);
+        return;
+      }
+      this.input.emit(COVERED);
+      map.input.emit(COVERED);
+      queueMicrotask(() => letGoOfPress(this.game));
+    };
+
     const overlay = createOverlay(
-      this,
-      ui,
+      overlayOf(this),
       this.choices.catalogue,
       (over) => {
-        // Phaser re-checks what the pointer is over only when it moves, so a scrim risen under a
-        // pointer at rest sends no `pointerout` to what it covered.
-        if (over && !covered) {
-          tooltip.map.hide();
-          tooltip.ui.hide();
-        }
         covered = over;
-        view.live(!over);
+        covering();
       },
-      () => this.newChronicle(),
       (at) => {
         void playOut({ type: 'take', at });
       },
     );
 
-    const endTurn = this.addEndTurn(() => {
+    const endTurn = this.addEndTurn(ui.endTurn, () => {
       void playOut({ type: 'end-turn' });
     });
     const hand = createHand(this, ui, this.choices.catalogue, {
@@ -417,8 +467,7 @@ export class ChronicleScene extends Phaser.Scene {
       },
       aimDiscardPile: (index, closed) => {
         // The scrim the window stands on swallows the button, the hand and the piles along with the
-        // map, so nothing here has to be put down for the length of this aim. The Menu button alone
-        // stands over the scrim, and it lets the selection go, which is what closes the window.
+        // map, so nothing here has to be put down for the length of this aim.
         return overlay.aimDiscardPile(
           this.current,
           this.current.hand[index],
@@ -431,18 +480,12 @@ export class ChronicleScene extends Phaser.Scene {
       inspect: (id, refusal) => overlay.inspect(id, refusal),
     });
 
-    /** The menu, from the Menu button or a clean chronicle screen: the selection is let go of first. */
-    const menu = (): void => {
-      dismiss();
-      overlay.menu();
-    };
-
-    const settleStanding = createStanding(this, {
+    const settleStanding = createStanding(this, ui.standing, {
       name: 'settle-phase',
       colour: LOOK.settlePhase,
       label: text('button.settle-phase'),
     });
-    const cityStanding = createStanding(this, {
+    const cityStanding = createStanding(this, ui.standing, {
       name: 'city',
       colour: LOOK.accent,
       label: text('button.city-mode'),
@@ -483,9 +526,9 @@ export class ChronicleScene extends Phaser.Scene {
 
     const bar = createResourceBar(
       this,
+      ui.bar,
       this.choices.catalogue,
       tooltip.ui,
-      menu,
       enterCityMode,
       (resource) => {
         toggleYield(resource);
@@ -516,35 +559,25 @@ export class ChronicleScene extends Phaser.Scene {
       showYields();
     };
 
-    // The one place the city key, the yield key, the inspection key and the back key are answered: a
-    // slot of the Controls window listening takes any of them first, whatever it is, and anything
-    // standing over the map swallows the other three, the inspection key going to what stands
-    // instead of the screen's own selection. A second listener that acted on these keys would be a
-    // second answer to the one press; the map's own listener answers the pan and zoom keys and no
-    // other.
+    // The one place the city key, the yield key, the inspection key and the back key are answered.
+    // A window on the overlay takes all four ahead of this scene, so nothing here is gated on what
+    // stands over the screen; the map's own reader answers the pan and zoom keys.
     onKeyDown(this, (press) => {
-      if (overlay.binds(press)) return;
       if (boundTo(press, 'city')) {
-        if (covered) return;
         if (!leaveCityMode()) enterCityMode();
         return;
       }
       if (boundTo(press, 'yields')) {
-        if (!covered) clearOrShowAllYields();
+        clearOrShowAllYields();
         return;
       }
       if (boundTo(press, 'inspect')) {
-        if (covered) {
-          overlay.inspectSelection();
-          return;
-        }
         const card = hand.selection();
         if (card !== undefined) overlay.inspect(card.id, card.refusal);
         else if (selection !== undefined) inspect(selection);
         return;
       }
       if (!boundTo(press, 'back')) return;
-      if (overlay.back()) return;
       if (inspection !== undefined) {
         uninspect();
         return;
@@ -554,17 +587,24 @@ export class ChronicleScene extends Phaser.Scene {
         select(undefined);
         return;
       }
-      if (!leaveCityMode()) menu();
+      if (!leaveCityMode()) raiseMenu(this);
     });
 
-    createDebugConsole(this, (veils) => {
+    resetConsole(this, (veils) => {
       view.showVeils(veils);
+    });
+    resetMenu(this, (under) => {
+      underMenu = under;
+      covering();
+      // The menu takes every key it stands under and offers none of them on, so a pan key held as
+      // its window rises would pan on for ever; the overlay lets the two through and freezes nothing.
+      view.live(!under);
     });
 
     parts.push(
       view,
       bar,
-      createPiles(this, this.choices.catalogue, (pile) => overlay.browse(pile, this.current)),
+      createPiles(this, ui, this.choices.catalogue, (pile) => overlay.browse(pile, this.current)),
       hand,
       endTurn,
       { render: showSettleStanding },
@@ -573,16 +613,12 @@ export class ChronicleScene extends Phaser.Scene {
     paint();
   }
 
-  private addEndTurn(endTurn: () => void): Part & { live(on: boolean): void } {
-    const button = this.add
-      .rectangle(0, 0, 1, 1, LOOK.accent)
-      .setName('end-turn')
-      .setDepth(DEPTH.endTurn);
-    // Added after the button: equal depths draw in the order they were added.
+  private addEndTurn(on: Stratum, endTurn: () => void): Part & { live(on: boolean): void } {
+    const button = this.add.rectangle(0, 0, 1, 1, LOOK.accent).setName('end-turn');
     const label = addText(this, 0, 0, '', LABEL_STYLE)
       .setOrigin(0.5, 0.5)
-      .setName('end-turn-label')
-      .setDepth(DEPTH.endTurn);
+      .setName('end-turn-label');
+    on.layer.add([button, label]);
 
     // Measured at every label it ever takes, so neither the hover swap, the phase it stands on nor a
     // fourth digit in the turn resizes it.
@@ -654,8 +690,8 @@ export class ChronicleScene extends Phaser.Scene {
     const roll = async (chronicle: Chronicle): Promise<void> => {
       const carried = addText(this, x, y, label.text, LABEL_STYLE)
         .setOrigin(0.5, 0.5)
-        .setName('end-turn-leaving')
-        .setDepth(DEPTH.endTurn);
+        .setName('end-turn-leaving');
+      on.layer.add(carried);
       leaving = carried;
       turn = chronicle.turn;
       settlePhase = onSettlePhase(chronicle);

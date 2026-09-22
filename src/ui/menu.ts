@@ -1,4 +1,5 @@
 import type Phaser from 'phaser';
+import { menuZone } from './bar-layout';
 import {
   type Bind,
   bindings,
@@ -8,7 +9,15 @@ import {
   rebind,
   restoreDefaults,
 } from './bindings';
-import { addText, DESIGN_HEIGHT, DESIGN_WIDTH, onClick, UI_FONT } from './design-space';
+import {
+  addText,
+  BAR_HEIGHT,
+  DESIGN_HEIGHT,
+  DESIGN_WIDTH,
+  MARGIN,
+  onClick,
+  UI_FONT,
+} from './design-space';
 import { css, LOOK } from './look';
 import { text } from './text';
 
@@ -35,6 +44,13 @@ const WINDOWS: Record<
 /** The window this one closes back to; nothing for the one that closes back to the chronicle screen. */
 export function behind(which: MenuWindow): MenuWindow | undefined {
   return WINDOWS[which].from;
+}
+
+/** What a window lists on the screen standing: New chronicle stands over a chronicle alone. */
+function listed(scene: Phaser.Scene, which: MenuWindow): readonly MenuPress[] {
+  return WINDOWS[which].buttons.filter(
+    (press) => press !== 'new-chronicle' || scene.scene.isActive('ui'),
+  );
 }
 
 const WIDTH = 480;
@@ -90,9 +106,8 @@ function pressable(
 }
 
 /** How far below the title a window's own content reaches, the padding above it included. */
-function bodyHeight(which: MenuWindow): number {
+function bodyHeight(which: MenuWindow, buttons: readonly MenuPress[]): number {
   if (which === 'controls') return PADDING + ROWS_HEIGHT + PADDING + BUTTON_HEIGHT;
-  const { buttons } = WINDOWS[which];
   if (buttons.length === 0) return 0;
   return PADDING + buttons.length * BUTTON_HEIGHT + (buttons.length - 1) * BUTTON_GAP;
 }
@@ -210,13 +225,13 @@ function layControls(
 /**
  * One window, centred on the design space: the box in the panel language, its title, and what it
  * lists. The box takes the pointer so that a press on it is not a press on the scrim behind, which
- * backs the window out. The caller sets the depth and takes the window down.
+ * backs the window out. The caller takes the window down.
  */
 export function createWindow(scene: Phaser.Scene, which: MenuWindow, on: Presses): Opened {
-  const { buttons } = WINDOWS[which];
+  const buttons = listed(scene, which);
   const title = addText(scene, 0, 0, text(`menu.${which}`), TITLE_STYLE).setOrigin(0.5, 0);
 
-  const height = 2 * PADDING + title.height + bodyHeight(which);
+  const height = 2 * PADDING + title.height + bodyHeight(which, buttons);
   const top = Math.round((DESIGN_HEIGHT - height) / 2);
   const middle = DESIGN_WIDTH / 2;
   const body = top + PADDING + title.height + PADDING;
@@ -246,4 +261,40 @@ export function createWindow(scene: Phaser.Scene, which: MenuWindow, on: Presses
 
   const binds = which === 'controls' ? layControls(scene, root, body, on.back) : () => false;
   return { root, binds };
+}
+
+/** How tall the Menu button stands in the bar's strip, and how far it reaches around its label. */
+const MENU_HEIGHT = 32;
+const MENU_PADDING = 12;
+
+const MENU_STYLE = { fontFamily: UI_FONT, fontSize: '18px', color: INK };
+
+function menuLabel(scene: Phaser.Scene): Phaser.GameObjects.Text {
+  return addText(scene, 0, 0, text('menu.menu'), MENU_STYLE).setOrigin(0.5, 0.5);
+}
+
+/**
+ * The room the Menu button takes at the right end of the resource bar: the button stands on the menu
+ * scene and the bar's flow ends before it, so both measure it here.
+ */
+export function menuRoom(scene: Phaser.Scene): number {
+  const label = menuLabel(scene);
+  const room = label.width + 2 * MENU_PADDING;
+  label.destroy();
+  return room;
+}
+
+/** The Menu button where the bar leaves it room, on whatever screen stands under it. */
+export function createMenuButton(scene: Phaser.Scene, pressed: () => void): void {
+  const zone = menuZone(menuRoom(scene), DESIGN_WIDTH, MARGIN);
+  const x = zone.x + zone.width / 2;
+  const y = BAR_HEIGHT / 2;
+  const button = scene.add
+    .rectangle(x, y, zone.width, MENU_HEIGHT, LOOK.panelFill)
+    .setStrokeStyle(1, LOOK.panelEdge)
+    .setName('menu-button')
+    .setInteractive({ useHandCursor: true });
+  // Added after the fill: the display list paints in add order, so a label added first would be hidden.
+  menuLabel(scene).setPosition(x, y);
+  onClick(button, pressed);
 }

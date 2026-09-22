@@ -2,8 +2,7 @@ import type Phaser from 'phaser';
 import type { AimedCard } from '../rules/catalogue';
 import type { CardId } from '../rules/state';
 import { AIM_POINT_REACH, CARD_BASELINE, CARD_HEIGHT, CARD_LIFT } from './card-face';
-import { DEPTH } from './depths';
-import { addText, DESIGN_WIDTH, type Surface, UI_FONT } from './design-space';
+import { addText, DESIGN_WIDTH, type Stratum, UI_FONT } from './design-space';
 import { css, LOOK } from './look';
 import { cardName, text } from './text';
 
@@ -34,7 +33,7 @@ export type AimLine = {
  * The one line over the hand: what the card being aimed is played at. It stands and falls with the
  * point that card wears, so one card being aimed is one sentence, and none standing is none.
  */
-export function createAimLine(scene: Phaser.Scene, on: Surface): AimLine {
+export function createAimLine(scene: Phaser.Scene, on: Stratum): AimLine {
   let line: Phaser.GameObjects.Container | undefined;
 
   const hide = (): void => {
@@ -57,7 +56,6 @@ export function createAimLine(scene: Phaser.Scene, on: Surface): AimLine {
 
       line = scene.add
         .container((DESIGN_WIDTH - width) / 2, BOTTOM - height, [slab, label])
-        .setDepth(DEPTH.aimLine)
         .setName('aim-line');
       on.layer.add(line);
     },

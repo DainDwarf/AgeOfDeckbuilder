@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+import type Phaser from 'phaser';
 import { type Bind, boundTo, CONTROLS, keyPressed, mouseCode, PRESSES } from './bindings';
 import { whileUp } from './design-space';
 
@@ -10,6 +10,11 @@ const UP = 'key-up';
 const WHEEL_UP = 'WheelUp';
 const WHEEL_DOWN = 'WheelDown';
 
+/** Whether the press is a notch of the wheel, for a reader whose rule for one differs. */
+export function isWheelNotch(press: Bind): boolean {
+  return press.code === WHEEL_UP || press.code === WHEEL_DOWN;
+}
+
 /** What the browser measures one notch of the wheel as. */
 const NOTCH = 100;
 
@@ -19,6 +24,13 @@ const NOTCH = 100;
  * next one.
  */
 const NOTCH_WINDOW = 200;
+
+/**
+ * A press on the game's emitter, which has no stopping of its own: a scene that takes one marks it,
+ * and every listener after it — every scene started later, the emitter running them in the order
+ * they subscribed — leaves it alone. A release carries no mark, none ever being taken.
+ */
+type Taken = Bind & { taken: boolean };
 
 /**
  * Whether the press is a chord, and so the browser's: Ctrl+S saves the page, Ctrl+wheel zooms it.
@@ -52,7 +64,7 @@ export function readMouseKeys(game: Phaser.Game): void {
       event.preventDefault();
       if (chorded(event)) return;
       held.add(event.button);
-      const press: Bind = { code: mouseCode(event.button) };
+      const press: Taken = { code: mouseCode(event.button), taken: false };
       game.events.emit(DOWN, press);
     },
     true,
@@ -82,10 +94,13 @@ export function readMouseKeys(game: Phaser.Game): void {
 
       const notches = Math.trunc(rolled / NOTCH);
       rolled -= notches * NOTCH;
-      const turn: Bind = { code: notches < 0 ? WHEEL_UP : WHEEL_DOWN };
+      const code = notches < 0 ? WHEEL_UP : WHEEL_DOWN;
       for (let notch = Math.abs(notches); notch > 0; notch--) {
+        // A press of its own for each notch: one object would carry the first notch's mark to the rest.
+        const turn: Taken = { code, taken: false };
+        const released: Bind = { code };
         game.events.emit(DOWN, turn);
-        game.events.emit(UP, turn);
+        game.events.emit(UP, released);
       }
     },
     true,
@@ -110,25 +125,32 @@ export function onKeyDown(scene: Phaser.Scene, pressed: (press: Bind) => void): 
     pressed(press);
     if (carries(press)) event.preventDefault();
   });
-  whileUp(scene, scene.game.events, DOWN, pressed);
+  whileUp(scene, scene.game.events, DOWN, (press: Taken) => {
+    if (!press.taken) pressed(press);
+  });
 }
 
 /**
- * The one reader the keyboard may belong to, for as long as the scene is up: every key pressed is
- * offered to it in the raw, ahead of everything the game binds, and a key it takes reaches none of
- * them. Two things make that hold — the window's capture phase runs before Phaser's own listener on
- * it, and Phaser's keyboard manager drops an event whose default is already prevented — so a taken
- * key is out of the game's reach whatever order the scene's listeners went on in. A chord is the
- * browser's and is never offered.
+ * Every mouse key and wheel notch pressed while the scene is up, offered to be taken: one taken
+ * reaches no scene that started later. A release is never offered. The keyboard's own keys come
+ * through the scene's keyboard plugin, which stops them itself.
  */
-export function readsKeyboard(scene: Phaser.Scene, reads: (event: KeyboardEvent) => boolean): void {
-  const reader = (event: KeyboardEvent): void => {
-    if (chorded(event)) return;
-    if (reads(event)) event.preventDefault();
-  };
-  window.addEventListener('keydown', reader, true);
-  scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-    window.removeEventListener('keydown', reader, true);
+export function takesMouseKeys(scene: Phaser.Scene, takes: (press: Bind) => boolean): void {
+  whileUp(scene, scene.game.events, DOWN, (press: Taken) => {
+    if (!press.taken && takes(press)) press.taken = true;
+  });
+}
+
+/**
+ * Every key pressed in the raw, on the scene's own keyboard plugin: one the reader takes reaches
+ * neither the browser nor a scene that started later, and a chord is the browser's and is never
+ * offered. No release is read here, so a key held as this scene rose is let go of beneath it.
+ */
+export function readsKeys(scene: Phaser.Scene, reads: (event: KeyboardEvent) => boolean): void {
+  scene.input.keyboard?.on('keydown', (event: KeyboardEvent) => {
+    if (chorded(event) || !reads(event)) return;
+    event.stopPropagation();
+    event.preventDefault();
   });
 }
 

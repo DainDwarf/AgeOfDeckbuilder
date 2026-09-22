@@ -18,10 +18,14 @@ import {
   fallRun,
   firstSeed,
   launch,
+  mapFrame,
+  onScreen,
   open,
   playersOf,
+  rested,
   ringedTile,
   standing,
+  tileOnScreen,
   watch,
   workerRun,
 } from './chronicle-screen';
@@ -133,21 +137,51 @@ test('Escape lets go of the card being aimed before it raises the menu', async (
   expect(problems).toEqual([]);
 });
 
-test('the Menu button drops the selected tile before it raises the menu', async ({ page }) => {
+test('a pan dragged onto the Menu button carries the map the whole way, and opens no menu', async ({
+  page,
+}) => {
+  const problems = watch(page);
+
+  await open(page, 1, 'PH_Deck');
+  const city = cityTileOf(await chronicleOf(page));
+  const button = await onScreen(page, 'menu-button');
+  const travel = 80 * button.unit;
+  // Straight below the button and inside the map's frame, where a press takes hold of the map.
+  const from = { x: button.x, y: button.y + travel };
+  expect(from.y).toBeGreaterThan((await mapFrame(page)).y);
+
+  const before = await tileOnScreen(page, city);
+  await page.mouse.move(from.x, from.y);
+  await page.mouse.down();
+  await page.mouse.move(button.x, button.y, { steps: 10 });
+  await rested(page);
+  const carried = await tileOnScreen(page, city);
+  await page.mouse.up();
+  await rested(page);
+
+  expect(carried.x - before.x).toBeCloseTo(0, 0);
+  expect(carried.y - before.y).toBeCloseTo(-travel, 0);
+  expect(await standing(page, 'menu')).toBe(false);
+
+  expect(problems).toEqual([]);
+});
+
+test('the selected tile waits under the menu', async ({ page }) => {
   const problems = watch(page);
 
   await open(page, 1, 'PH_Deck');
   const opened = await chronicleOf(page);
-  await click(page, `tile-${tileKey(cityTileOf(opened))}`);
-  await expect.poll(() => ringedTile(page)).toBe(tileKey(cityTileOf(opened)));
+  const city = tileKey(cityTileOf(opened));
+  await click(page, `tile-${city}`);
+  await expect.poll(() => ringedTile(page)).toBe(city);
 
   await click(page, 'menu-button');
   await expect.poll(() => standing(page, 'menu')).toBe(true);
-  expect(await ringedTile(page)).toBeUndefined();
+  expect(await ringedTile(page)).toBe(city);
 
   await page.keyboard.press('Escape');
   await expect.poll(() => standing(page, 'menu')).toBe(false);
-  expect(await ringedTile(page)).toBeUndefined();
+  expect(await ringedTile(page)).toBe(city);
 
   expect(problems).toEqual([]);
 });

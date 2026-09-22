@@ -1,9 +1,7 @@
 import type Phaser from 'phaser';
 import { CARD_BASELINE, CARD_HEIGHT } from './card-face';
-import { DEPTH } from './depths';
-import { DESIGN_HEIGHT, DESIGN_WIDTH } from './design-space';
+import { BAR_HEIGHT, DESIGN_HEIGHT, DESIGN_WIDTH, type Stratum } from './design-space';
 import { LOOK } from './look';
-import { BAR_HEIGHT } from './resource-bar';
 
 /** How far the resting cards' tops rise above the band: they stand in it as in a tray. */
 const CLEARED = 24;
@@ -20,15 +18,15 @@ export const MAP_FRAME = {
 };
 
 /** The flat band the hand and the piles stand in, so no tile is ever held under a card. */
-export function createBand(scene: Phaser.Scene): void {
-  scene.add
-    .rectangle(0, BAND_TOP, DESIGN_WIDTH, DESIGN_HEIGHT - BAND_TOP, LOOK.panelFill)
-    .setOrigin(0, 0)
-    .setName('band')
-    .setDepth(DEPTH.band);
-  scene.add
-    .rectangle(0, BAND_TOP, DESIGN_WIDTH, 1, LOOK.panelEdge)
-    .setOrigin(0, 0)
-    .setName('band-edge')
-    .setDepth(DEPTH.band);
+export function createBand(scene: Phaser.Scene, on: Stratum): void {
+  on.layer.add([
+    scene.add
+      .rectangle(0, BAND_TOP, DESIGN_WIDTH, DESIGN_HEIGHT - BAND_TOP, LOOK.panelFill)
+      .setOrigin(0, 0)
+      .setName('band'),
+    scene.add
+      .rectangle(0, BAND_TOP, DESIGN_WIDTH, 1, LOOK.panelEdge)
+      .setOrigin(0, 0)
+      .setName('band-edge'),
+  ]);
 }

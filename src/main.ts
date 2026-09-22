@@ -3,10 +3,14 @@ import { CATALOGUES, catalogueOf } from './content/catalogues';
 import { deckOf, scheduleOf } from './rules/catalogue';
 import { regionOf } from './rules/map-kinds';
 import { ChronicleScene } from './ui/chronicle-scene';
+import { DebugConsole } from './ui/debug-console';
 import { backingSize, followWindow, releaseOnBlur } from './ui/design-space';
 import { readMouseKeys } from './ui/keys';
 import { type Choices, firstsOf, LaunchPage } from './ui/launch-page';
 import { css, LOOK } from './ui/look';
+import { MapScene } from './ui/map-scene';
+import { MenuScene } from './ui/menu-scene';
+import { OverlayScene } from './ui/overlay-scene';
 
 // The e2e suite and browser-console debugging observe the running game through this handle;
 // it is optional because the window exists before the game does.
@@ -54,21 +58,39 @@ function askedChoices(): Choices {
 const choices = askedChoices();
 const backing = backingSize();
 const game = new Phaser.Game({
-  type: Phaser.AUTO,
+  type: Phaser.WEBGL,
   width: backing.width,
   height: backing.height,
   backgroundColor: css(LOOK.page),
   disableContextMenu: true,
-  // Phaser 4.2.1 picks a batch's sampler by exact float equality on an interpolated varying, so a
-  // rotated Text tears (phaserjs/phaser#7372). One texture per batch skips the comparison; the
-  // line goes when a release fixes the shader.
-  maxTextures: 1,
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
 });
-// Scenes handed to the config start the first of them on no data, so both are added unstarted.
+// The tower's barriers rest on this; on, a stopped release strands a drag off the hand (docs/PHASER.md).
+game.input.globalTopOnly = false;
+// Added bottom up, started top down: render order is the add order, key order the start order (docs/PHASER.md).
 game.scene.add('launch', LaunchPage);
-game.scene.add('chronicle', ChronicleScene);
-game.scene.start(asked('deck') === undefined ? 'launch' : 'chronicle', choices);
+game.scene.add('map', MapScene);
+game.scene.add('ui', ChronicleScene);
+game.scene.add('overlay', OverlayScene);
+game.scene.add('menu', MenuScene);
+game.scene.add('console', DebugConsole);
+// The ui scene reaches into the console's, the menu's, the overlay's and the map's as it is created,
+// so this order is load-bearing twice over: started last, none of them has the handle it is reached
+// by yet and the chronicle throws on the address that opens straight.
+game.events.once(Phaser.Core.Events.READY, () => {
+  // A batch shader built for several textures tears a rotated Text (docs/PHASER.md). Not the config's
+  // `maxTextures`: that caps the units every draw binds, and at one the browse's mask binds nothing.
+  (game.renderer as Phaser.Renderer.WebGL.WebGLRenderer).renderNodes.setMaxParallelTextureUnits(1);
+  game.scene.start('console');
+  game.scene.start('menu');
+  if (asked('deck') === undefined) {
+    game.scene.start('launch', choices);
+    return;
+  }
+  game.scene.start('overlay');
+  game.scene.start('map');
+  game.scene.start('ui', choices);
+});
 followWindow(game);
 releaseOnBlur(game);
 readMouseKeys(game);
