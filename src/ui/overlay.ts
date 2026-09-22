@@ -13,7 +13,7 @@ import {
   playable,
   type Refusal,
 } from '../rules/state';
-import type { Bind, Press } from './bindings';
+import type { Press } from './bindings';
 import {
   answerFace,
   type CardFace,
@@ -27,6 +27,7 @@ import { EASE, ended, stopMotion } from './card-motion';
 import { DEPTH } from './depths';
 import {
   addText,
+  BAR_HEIGHT,
   createClip,
   DESIGN_HEIGHT,
   DESIGN_WIDTH,
@@ -38,9 +39,8 @@ import {
   whileUp,
 } from './design-space';
 import { css, LOOK } from './look';
-import { behind, createWindow, type MenuWindow, type Opened } from './menu';
+import { raiseMenu } from './menu-scene';
 import { createRefusalNote, refused } from './refusal-note';
-import { BAR_HEIGHT } from './resource-bar';
 import { buildingName, cardName, eventName, text, victoryLine } from './text';
 
 const TITLE_INK = css(LOOK.paleInk);
@@ -76,12 +76,8 @@ export type Overlay = {
   inspect(id: CardId, refusal: Refusal): void;
   /** The inspection key, pressed while the scrim covers: shows the ringed card of a window large. */
   inspectSelection(): void;
-  /** The Menu button: raises the menu over whatever stands, and takes the whole menu back down. */
-  menu(): void;
   /** Takes what stands on the scrim back one step, and answers whether anything stood. */
   back(): boolean;
-  /** A key pressed while a slot of the Controls window listens binds there, and is taken. */
-  binds(press: Bind): boolean;
   /**
    * Raises the capstone's window on the opening's first render, the deal window while the chronicle
    * waits on a deal and the ending screen once it has ended, and nothing while it runs.
@@ -182,12 +178,11 @@ type Ringing = Browsing | Dealing;
 
 /**
  * What the scrim carries: a pile's cards, the aim window, the deal window, the capstone's window,
- * one card shown large over what it was taken off, a window of the menu, or the ending screen.
+ * one card shown large over what it was taken off, or the ending screen.
  */
 type Carried =
   | Offering
   | { readonly stands: 'inspection'; readonly over: Offering | undefined }
-  | { readonly stands: 'window'; readonly which: MenuWindow; readonly laid: Opened }
   | { readonly stands: 'ending' };
 
 /** Where a drag of the grid was pressed, what the grid stood at, and where the pointer has been. */
@@ -198,17 +193,15 @@ type Scroll = {
 };
 
 /**
- * The scrim and what stands on it. The scrim swallows every pointer beneath it, so the chronicle
- * screen is inert while anything is up, and only the menu comes up over the ending screen — a
- * chronicle that has ended is left behind by a new one alone. `covering` is told as the scrim goes up
- * and comes down, for whatever it cannot swallow: the wheel and the keyboard reach past it.
+ * The scrim and what stands on it: it swallows every pointer beneath it, so the chronicle screen is
+ * inert while anything is up. `covering` is told as the scrim goes up and comes down, for whatever
+ * it cannot swallow: the wheel and the keyboard reach past it.
  */
 export function createOverlay(
   scene: Phaser.Scene,
   on: Surface,
   catalogue: Catalogue,
   covering: (covered: boolean) => void,
-  newChronicle: () => void,
   take: (at: number) => void,
 ): Overlay {
   const scrim = scene.add
@@ -232,14 +225,12 @@ export function createOverlay(
   let offset = 0;
   let fling = 0;
   let scrolling: Scroll | undefined;
-  /** The chronicle the ending screen was raised on, kept so the menu can close back onto it. */
+  /** The chronicle the ending screen was raised on: a render raises the screen once and no more. */
   let raisedOn: Ended | undefined;
-  /** The deal standing, kept so the menu can close back onto its window; the take lets it go. */
+  /** The deal standing, so no render raises its window twice; the take lets it go. */
   let standingDeal: Dealing | undefined;
   /** Whether the capstone has been announced: the first render raises its window, and no render after. */
   let announced = false;
-  /** The capstone's window standing, kept so the menu can close back onto it; closing it lets it go. */
-  let capstone: Capstone | undefined;
   /** The ending screen still coming up; a render owns the rise and takes it down. */
   let rising: Phaser.GameObjects.Container | undefined;
 
@@ -272,23 +263,6 @@ export function createOverlay(
       case 'browse':
       case 'deal':
       case 'capstone':
-      case 'window':
-      case 'ending':
-        return undefined;
-    }
-  };
-
-  /** The window of the menu standing, and nothing while anything else stands, or nothing at all. */
-  const windowStanding = (): { which: MenuWindow; laid: Opened } | undefined => {
-    if (carried === undefined) return undefined;
-    switch (carried.stands) {
-      case 'window':
-        return carried;
-      case 'browse':
-      case 'aim-window':
-      case 'deal':
-      case 'capstone':
-      case 'inspection':
       case 'ending':
         return undefined;
     }
@@ -496,10 +470,8 @@ export function createOverlay(
   };
 
   /**
-   * The deal window raised, and raised again where the back from a card shown large or from the menu
-   * brings it. A press on an entry rings it and a press on the ringed entry takes it: the window
-   * closes on the take, and the landing plays out under the caller. The take of an answer the city
-   * cannot pay for says why over the card instead, and the ring stays.
+   * The deal window raised, and raised again where the back from a card shown large brings it. It
+   * closes on the take alone, and the landing plays out under the caller.
    */
   const showDeal = (dealing: Dealing): void => {
     wipe();
@@ -539,11 +511,8 @@ export function createOverlay(
    * The capstone's window closed: it is read once, and nothing brings it back on this screen but the
    * landing. The landing's is told it closed once the scrim is down.
    */
-  const closeCapstone = (): void => {
-    const closing = capstone;
-    capstone = undefined;
+  const closeCapstone = (closing: Capstone): void => {
     close();
-    if (closing === undefined) return;
     switch (closing.raised) {
       case 'opening':
         return;
@@ -554,14 +523,13 @@ export function createOverlay(
   };
 
   /**
-   * The capstone's window raised, and raised again where the back from a card shown large or from
-   * the menu brings it. A left press on its card closes it for good, as a press beside it does.
+   * The capstone's window raised, and raised again where the back from a card shown large brings it.
+   * A left press on its card closes it for good, as a press beside it does.
    */
   const showCapstone = (announcement: Capstone): void => {
     wipe();
     cover();
     carried = announcement;
-    capstone = announcement;
 
     const face = capstoneFace(announcement.on.timeline.capstone.id);
     const title = raiseTitle('capstone', text(capstoneTitle(announcement)));
@@ -573,7 +541,7 @@ export function createOverlay(
         switch (press) {
           case 'left':
             if (at === undefined) back();
-            else closeCapstone();
+            else closeCapstone(announcement);
             return;
           case 'right':
             if (at !== undefined) showInspection(face, NO_REFUSAL, announcement);
@@ -683,33 +651,6 @@ export function createOverlay(
     screen.setAlpha(1).setY(0);
   };
 
-  const showWindow = (which: MenuWindow): void => {
-    wipe();
-    cover();
-    const laid = createWindow(scene, which, {
-      press: (press) => {
-        if (press === 'new-chronicle') newChronicle();
-        else showWindow(press);
-      },
-      back: () => {
-        back();
-      },
-    });
-    carried = { stands: 'window', which, laid };
-    shown.push(laid.root.setDepth(DEPTH.onScrim));
-  };
-
-  /**
-   * The menu gone: back to the chronicle screen, or onto the deal window, the capstone's window or
-   * the ending screen that stood under it.
-   */
-  const shut = (): void => {
-    if (raisedOn !== undefined) showEnding(raisedOn);
-    else if (standingDeal !== undefined) showDeal(standingDeal);
-    else if (capstone !== undefined) showCapstone(capstone);
-    else close();
-  };
-
   /** The card shown large taken down, onto what it was taken off: the one path, whichever way. */
   const dropInspection = (over: Offering | undefined): void => {
     if (over === undefined) close();
@@ -719,12 +660,6 @@ export function createOverlay(
   const back = (): boolean => {
     if (carried === undefined) return false;
     switch (carried.stands) {
-      case 'window': {
-        const step = behind(carried.which);
-        if (step === undefined) shut();
-        else showWindow(step);
-        return true;
-      }
       case 'inspection':
         dropInspection(carried.over);
         return true;
@@ -738,11 +673,11 @@ export function createOverlay(
       case 'deal':
         // The menu is raised here and not left to the chronicle screen's own back: the window
         // stands until the take, so nothing under it may answer this key.
-        if (carried.selected === undefined) showWindow('menu');
+        if (carried.selected === undefined) raiseMenu(scene);
         else ring(carried, undefined);
         return true;
       case 'capstone':
-        closeCapstone();
+        closeCapstone(carried);
         return true;
       case 'ending':
         return false;
@@ -763,7 +698,6 @@ export function createOverlay(
       case 'aim-window':
       case 'capstone':
       case 'inspection':
-      case 'window':
       case 'ending':
         back();
         return;
@@ -809,7 +743,6 @@ export function createOverlay(
         case 'aim-window':
         case 'deal':
         case 'capstone':
-        case 'window':
         case 'ending':
           return;
       }
@@ -877,19 +810,11 @@ export function createOverlay(
         case 'aim-window':
         case 'capstone':
         case 'inspection':
-        case 'window':
         case 'ending':
           return;
       }
     },
-    menu(): void {
-      if (windowStanding() === undefined) showWindow('menu');
-      else shut();
-    },
     back,
-    binds(press: Bind): boolean {
-      return windowStanding()?.laid.binds(press) ?? false;
-    },
     render(chronicle: Chronicle): void {
       if (!announced) {
         announced = true;

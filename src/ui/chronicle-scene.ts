@@ -38,6 +38,7 @@ import { onKeyDown } from './keys';
 import type { Choices } from './launch-page';
 import { css, LOOK } from './look';
 import { createMapView, type PressedTile } from './map';
+import { type OpensChronicles, raiseMenu, resetMenu } from './menu-scene';
 import { createOverlay } from './overlay';
 import { createPiles } from './piles';
 import { createRefusalNote, refused, refusedAim } from './refusal-note';
@@ -63,7 +64,7 @@ const LABEL_STYLE = {
   color: css(LOOK.ink),
 };
 
-export class ChronicleScene extends Phaser.Scene {
+export class ChronicleScene extends Phaser.Scene implements OpensChronicles {
   private choices!: Choices;
   private current!: Chronicle;
   /** The play-out running on the chronicle screen as it stands, and nothing while none is. */
@@ -110,12 +111,11 @@ export class ChronicleScene extends Phaser.Scene {
   }
 
   /**
-   * A fresh chronicle on a new seed and the same choices, on a chronicle screen raised from nothing:
-   * the scene's restart takes down every object, listener, tween and timer the old chronicle
-   * screen left standing. The play-out the old chronicle screen was in the middle of is let go of
-   * here, and its tail commits nothing.
+   * A fresh chronicle on a new seed and the same choices: the restart takes down every object,
+   * listener, tween and timer the old chronicle screen left standing, and the play-out it was in
+   * the middle of is let go of here, its tail committing nothing.
    */
-  private newChronicle(): void {
+  newChronicle(): void {
     this.sequence = undefined;
     stopAllMotion(this);
     this.scene.restart({ ...this.choices, seed: undefined });
@@ -127,6 +127,16 @@ export class ChronicleScene extends Phaser.Scene {
 
     /** The one bubble each surface raises: the infopanel's rows on the map, the bar's on the UI. */
     const tooltip = { map: createTooltip(this, map), ui: createTooltip(this, ui) };
+
+    /**
+     * Every bubble the screen has raised, taken down: what a scrim rising over the screen calls for,
+     * since Phaser re-checks what the pointer is over only when it moves and a scrim risen under a
+     * pointer at rest sends no `pointerout` to what it covered.
+     */
+    const dropTooltips = (): void => {
+      tooltip.map.hide();
+      tooltip.ui.hide();
+    };
 
     const parts: Part[] = [];
     const view = createMapView(this, map, this.choices.catalogue, this.current);
@@ -351,21 +361,26 @@ export class ChronicleScene extends Phaser.Scene {
 
     /** Whether a window, a browse, a card inspected or the ending screen stands over the map. */
     let covered = false;
+    /** Whether a window of the menu stands, which covers the overlay's own scrim along with the map. */
+    let underMenu = false;
+
+    /**
+     * The one place the map's pan and zoom keys are put down and taken back up. A key already held
+     * as a scrim rises stays held, so the map would pan on under it until the key was let go.
+     */
+    const liveMap = (): void => {
+      view.live(!covered && !underMenu);
+    };
+
     const overlay = createOverlay(
       this,
       ui,
       this.choices.catalogue,
       (over) => {
-        // Phaser re-checks what the pointer is over only when it moves, so a scrim risen under a
-        // pointer at rest sends no `pointerout` to what it covered.
-        if (over && !covered) {
-          tooltip.map.hide();
-          tooltip.ui.hide();
-        }
+        if (over && !covered) dropTooltips();
         covered = over;
-        view.live(!over);
+        liveMap();
       },
-      () => this.newChronicle(),
       (at) => {
         void playOut({ type: 'take', at });
       },
@@ -417,8 +432,7 @@ export class ChronicleScene extends Phaser.Scene {
       },
       aimDiscardPile: (index, closed) => {
         // The scrim the window stands on swallows the button, the hand and the piles along with the
-        // map, so nothing here has to be put down for the length of this aim. The Menu button alone
-        // stands over the scrim, and it lets the selection go, which is what closes the window.
+        // map, so nothing here has to be put down for the length of this aim.
         return overlay.aimDiscardPile(
           this.current,
           this.current.hand[index],
@@ -430,12 +444,6 @@ export class ChronicleScene extends Phaser.Scene {
       },
       inspect: (id, refusal) => overlay.inspect(id, refusal),
     });
-
-    /** The menu, from the Menu button or a clean chronicle screen: the selection is let go of first. */
-    const menu = (): void => {
-      dismiss();
-      overlay.menu();
-    };
 
     const settleStanding = createStanding(this, {
       name: 'settle-phase',
@@ -485,7 +493,6 @@ export class ChronicleScene extends Phaser.Scene {
       this,
       this.choices.catalogue,
       tooltip.ui,
-      menu,
       enterCityMode,
       (resource) => {
         toggleYield(resource);
@@ -516,14 +523,10 @@ export class ChronicleScene extends Phaser.Scene {
       showYields();
     };
 
-    // The one place the city key, the yield key, the inspection key and the back key are answered: a
-    // slot of the Controls window listening takes any of them first, whatever it is, and anything
-    // standing over the map swallows the other three, the inspection key going to what stands
-    // instead of the screen's own selection. A second listener that acted on these keys would be a
-    // second answer to the one press; the map's own listener answers the pan and zoom keys and no
-    // other.
+    // The one place the city key, the yield key, the inspection key and the back key are answered:
+    // anything standing over the map swallows the first three, the inspection key going to what
+    // stands instead of the screen's own selection. The map's own answers the pan and zoom keys.
     onKeyDown(this, (press) => {
-      if (overlay.binds(press)) return;
       if (boundTo(press, 'city')) {
         if (covered) return;
         if (!leaveCityMode()) enterCityMode();
@@ -554,11 +557,16 @@ export class ChronicleScene extends Phaser.Scene {
         select(undefined);
         return;
       }
-      if (!leaveCityMode()) menu();
+      if (!leaveCityMode()) raiseMenu(this);
     });
 
     resetConsole(this, (veils) => {
       view.showVeils(veils);
+    });
+    resetMenu(this, (covering) => {
+      if (covering) dropTooltips();
+      underMenu = covering;
+      liveMap();
     });
 
     parts.push(

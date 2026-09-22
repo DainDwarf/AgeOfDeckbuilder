@@ -8,6 +8,7 @@ import { backingSize, followWindow, releaseOnBlur } from './ui/design-space';
 import { readMouseKeys } from './ui/keys';
 import { type Choices, firstsOf, LaunchPage } from './ui/launch-page';
 import { css, LOOK } from './ui/look';
+import { MenuScene } from './ui/menu-scene';
 
 // The e2e suite and browser-console debugging observe the running game through this handle;
 // it is optional because the window exists before the game does.
@@ -66,17 +67,23 @@ const game = new Phaser.Game({
   maxTextures: 1,
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
 });
+// Phaser stops a pointer event at the first scene from the top with an interactive object under the
+// pointer, the release with the rest, so a card dragged off the hand and let go of over a higher
+// scene's button would never end its drag. Off, the walk goes on unless a scene stops the event.
+game.input.globalTopOnly = false;
 // The render order is the add order, bottom first; the key order is the start order, first started
-// first heard, a scene restarted going to the back. The two run opposite ways, so the console is
-// added last and started first, which neither the config's own array nor a start before boot can do.
+// first heard, a scene restarted going to the back. The two run opposite ways, so the tower is added
+// bottom up and started top down, which neither the config's array nor a start before boot can do.
 game.scene.add('launch', LaunchPage);
 game.scene.add('chronicle', ChronicleScene);
+game.scene.add('menu', MenuScene);
 game.scene.add('console', DebugConsole);
-// The chronicle scene reaches into the console's as it is created, so this order is load-bearing
-// twice over: started second, the console has no `reset` yet and the chronicle throws on the
-// address that opens straight.
+// The chronicle scene reaches into the console's and the menu's as it is created, so this order is
+// load-bearing twice over: started last, neither has the handle it is reached by yet and the
+// chronicle throws on the address that opens straight.
 game.events.once(Phaser.Core.Events.READY, () => {
   game.scene.start('console');
+  game.scene.start('menu');
   game.scene.start(asked('deck') === undefined ? 'launch' : 'chronicle', choices);
 });
 followWindow(game);

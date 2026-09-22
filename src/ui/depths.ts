@@ -37,7 +37,7 @@ export const DEPTH = {
   scrim: 2200,
   /** What the scrim carries. */
   onScrim: 2300,
-  /** The Menu button, and the resource bar while a deal waits to be taken. */
+  /** The resource bar while a deal waits to be taken. */
   overScrim: 2400,
   tooltip: 2500,
 } as const;

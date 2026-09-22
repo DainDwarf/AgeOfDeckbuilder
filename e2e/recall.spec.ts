@@ -177,18 +177,20 @@ test('the back key closes the aim window, and a second one lets the card go', as
   expect(problems).toEqual([]);
 });
 
-test('the Menu button stands over the scrim: it closes the aim window and lets the card go', async ({
-  page,
-}) => {
+test('the aim window waits under the menu', async ({ page }) => {
   const problems = watch(page);
 
   const { before, index, home } = await aimingAtThePile(page);
 
   await click(page, 'menu-button');
   await expect.poll(() => standing(page, 'menu')).toBe(true);
-  expect(await standing(page, 'aim-window')).toBe(false);
+  expect(await standing(page, 'aim-window')).toBe(true);
   expect(await chronicleOf(page)).toEqual(before);
-  await expect.poll(() => selected(page, index, home)).toBe(false);
+
+  await page.keyboard.press('Escape');
+  await expect.poll(() => standing(page, 'menu')).toBe(false);
+  expect(await standing(page, 'aim-window')).toBe(true);
+  expect(await selected(page, index, home)).toBe(true);
 
   expect(problems).toEqual([]);
 });

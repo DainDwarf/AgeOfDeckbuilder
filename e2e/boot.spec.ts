@@ -41,6 +41,16 @@ test('the bare address boots the launch page and logs nothing', async ({ page })
   await expect.poll(() => standing(page, 'launch')).toBe(true);
   expect(await page.evaluate(() => window.game?.scene.isActive('chronicle'))).toBe(false);
 
+  await expect.poll(() => standing(page, 'menu-button')).toBe(true);
+  await rested(page);
+  await click(page, 'menu-button');
+  await expect.poll(() => standing(page, 'menu')).toBe(true);
+  expect(await standing(page, 'menu-settings')).toBe(true);
+  expect(await standing(page, 'menu-new-chronicle')).toBe(false);
+
+  await page.keyboard.press('Escape');
+  await expect.poll(() => standing(page, 'menu')).toBe(false);
+
   expect(problems).toEqual([]);
 });
 

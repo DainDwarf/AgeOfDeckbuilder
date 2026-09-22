@@ -10,6 +10,9 @@ export const UI_FONT = 'system-ui, "Segoe UI", sans-serif';
 /** How far anything laid against an edge of the screen stands off it. */
 export const MARGIN = 24;
 
+/** How tall the strip along the top of the screen stands: the resource bar is drawn in it. */
+export const BAR_HEIGHT = 48;
+
 // Phaser reads a polygon's corner list in min-(0, 0) space; corners about their own centre draw
 // displaced by half the shape.
 export function corners(raw: number[]): number[] {

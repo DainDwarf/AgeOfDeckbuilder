@@ -133,21 +133,22 @@ test('Escape lets go of the card being aimed before it raises the menu', async (
   expect(problems).toEqual([]);
 });
 
-test('the Menu button drops the selected tile before it raises the menu', async ({ page }) => {
+test('the selected tile waits under the menu', async ({ page }) => {
   const problems = watch(page);
 
   await open(page, 1, 'PH_Deck');
   const opened = await chronicleOf(page);
-  await click(page, `tile-${tileKey(cityTileOf(opened))}`);
-  await expect.poll(() => ringedTile(page)).toBe(tileKey(cityTileOf(opened)));
+  const city = tileKey(cityTileOf(opened));
+  await click(page, `tile-${city}`);
+  await expect.poll(() => ringedTile(page)).toBe(city);
 
   await click(page, 'menu-button');
   await expect.poll(() => standing(page, 'menu')).toBe(true);
-  expect(await ringedTile(page)).toBeUndefined();
+  expect(await ringedTile(page)).toBe(city);
 
   await page.keyboard.press('Escape');
   await expect.poll(() => standing(page, 'menu')).toBe(false);
-  expect(await ringedTile(page)).toBeUndefined();
+  expect(await ringedTile(page)).toBe(city);
 
   expect(problems).toEqual([]);
 });

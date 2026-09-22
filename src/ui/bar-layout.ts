@@ -39,6 +39,15 @@ function reach(gap: number): number {
   return Math.max(0, Math.min(WELL_MARGIN, (gap - DAYLIGHT) / 2));
 }
 
+/**
+ * Where the Menu button stands: the last thing in the flow, hard against the bar's right margin. The
+ * button is drawn on the menu scene, which reads its place from here, as the flow reads what to end
+ * before.
+ */
+export function menuZone(menu: number, width: number, margin: number): Zone {
+  return { x: width - margin - menu, width: menu };
+}
+
 export function layOutBar({ readings, menu, width, margin }: Measured): Bar {
   const room = width - 2 * margin - menu;
   const content = readings.reduce((total, span) => total + span, 0);
@@ -55,5 +64,5 @@ export function layOutBar({ readings, menu, width, margin }: Measured): Bar {
     placed.push({ at: x, zone: { x: x - left, width: span + left + reach(before(index + 1)) } });
     x += span;
   }
-  return { readings: placed, menu: { x: width - margin - menu, width: menu } };
+  return { readings: placed, menu: menuZone(menu, width, margin) };
 }

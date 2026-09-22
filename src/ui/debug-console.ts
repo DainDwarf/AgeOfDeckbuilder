@@ -1,9 +1,15 @@
 import Phaser from 'phaser';
 import { runLine } from './console-line';
-import { addText, DESIGN_WIDTH, holdDesignSpace, MARGIN, whileUp } from './design-space';
+import {
+  addText,
+  BAR_HEIGHT,
+  DESIGN_WIDTH,
+  holdDesignSpace,
+  MARGIN,
+  whileUp,
+} from './design-space';
 import { readsKeys } from './keys';
 import { css, LOOK } from './look';
-import { BAR_HEIGHT } from './resource-bar';
 import { text } from './text';
 import { VEILS_ON, type Veils } from './veils';
 

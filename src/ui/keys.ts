@@ -21,6 +21,13 @@ const NOTCH = 100;
 const NOTCH_WINDOW = 200;
 
 /**
+ * A press on the game's emitter, which has no stopping of its own: a scene that takes one marks it,
+ * and every listener after it — every scene started later, the emitter running them in the order
+ * they subscribed — leaves it alone. A release carries no mark, none ever being taken.
+ */
+type Taken = Bind & { taken: boolean };
+
+/**
  * Whether the press is a chord, and so the browser's: Ctrl+S saves the page, Ctrl+wheel zooms it.
  * A modifier held reads on every event under it, the modifier key's own press included, so bare
  * Ctrl, Meta and Alt are chords too.
@@ -52,7 +59,7 @@ export function readMouseKeys(game: Phaser.Game): void {
       event.preventDefault();
       if (chorded(event)) return;
       held.add(event.button);
-      const press: Bind = { code: mouseCode(event.button) };
+      const press: Taken = { code: mouseCode(event.button), taken: false };
       game.events.emit(DOWN, press);
     },
     true,
@@ -82,10 +89,13 @@ export function readMouseKeys(game: Phaser.Game): void {
 
       const notches = Math.trunc(rolled / NOTCH);
       rolled -= notches * NOTCH;
-      const turn: Bind = { code: notches < 0 ? WHEEL_UP : WHEEL_DOWN };
+      const code = notches < 0 ? WHEEL_UP : WHEEL_DOWN;
       for (let notch = Math.abs(notches); notch > 0; notch--) {
+        // A press of its own for each notch: one object would carry the first notch's mark to the rest.
+        const turn: Taken = { code, taken: false };
+        const released: Bind = { code };
         game.events.emit(DOWN, turn);
-        game.events.emit(UP, turn);
+        game.events.emit(UP, released);
       }
     },
     true,
@@ -110,7 +120,20 @@ export function onKeyDown(scene: Phaser.Scene, pressed: (press: Bind) => void): 
     pressed(press);
     if (carries(press)) event.preventDefault();
   });
-  whileUp(scene, scene.game.events, DOWN, pressed);
+  whileUp(scene, scene.game.events, DOWN, (press: Taken) => {
+    if (!press.taken) pressed(press);
+  });
+}
+
+/**
+ * Every mouse key and wheel notch pressed while the scene is up, offered to be taken: one taken
+ * reaches no scene that started later. A release is never offered. The keyboard's own keys come
+ * through the scene's keyboard plugin, which stops them itself.
+ */
+export function takesMouseKeys(scene: Phaser.Scene, takes: (press: Bind) => boolean): void {
+  whileUp(scene, scene.game.events, DOWN, (press: Taken) => {
+    if (!press.taken && takes(press)) press.taken = true;
+  });
 }
 
 /**

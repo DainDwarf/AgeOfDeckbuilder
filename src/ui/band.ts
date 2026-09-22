@@ -1,9 +1,8 @@
 import type Phaser from 'phaser';
 import { CARD_BASELINE, CARD_HEIGHT } from './card-face';
 import { DEPTH } from './depths';
-import { DESIGN_HEIGHT, DESIGN_WIDTH } from './design-space';
+import { BAR_HEIGHT, DESIGN_HEIGHT, DESIGN_WIDTH } from './design-space';
 import { LOOK } from './look';
-import { BAR_HEIGHT } from './resource-bar';
 
 /** How far the resting cards' tops rise above the band: they stand in it as in a tray. */
 const CLEARED = 24;
