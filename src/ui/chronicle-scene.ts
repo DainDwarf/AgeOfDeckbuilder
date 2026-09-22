@@ -26,12 +26,14 @@ import { DEPTH } from './depths';
 import {
   addText,
   applyDesignSpace,
+  COVERED,
   DESIGN_WIDTH,
   letGoOfPress,
   MARGIN,
   onClick,
   onHover,
   UI_FONT,
+  UNCOVERED,
 } from './design-space';
 import { createHand } from './hand';
 import { cardsOf, createInfoPanel } from './infopanel';
@@ -370,10 +372,10 @@ export class ChronicleScene extends Phaser.Scene implements OpensChronicles {
       if (under === away) return;
       away = under;
       if (!under) {
-        this.input.emit('gameover');
+        this.input.emit(UNCOVERED);
         return;
       }
-      this.input.emit('gameout');
+      this.input.emit(COVERED);
       queueMicrotask(() => letGoOfPress(this.game));
     };
 

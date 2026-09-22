@@ -416,6 +416,12 @@ export function onClick(
   });
 }
 
+// Phaser's own `gameout` is the canvas's, said by the input manager; these two are the scene's own,
+// said of its input plugin, and nothing inside Phaser listens to them.
+/** A scrim risen over a scene, and the last of them fallen: the pointer leaving the game, and back. */
+export const COVERED = 'covered';
+export const UNCOVERED = 'uncovered';
+
 export type Hover = {
   /** Whether the pointer is over the object, as far as the hover knows. */
   readonly hovered: boolean;
@@ -433,8 +439,8 @@ export type Hover = {
 
 /**
  * A hover: entered and left with the pointer. Phaser sends no `pointerout` for a leave off the
- * canvas — that reaches the scene's input plugin alone, as `gameout`, which a scene under a scrim
- * says of itself too — and no `pointerover` to an object still on its per-pointer over list.
+ * canvas — that reaches the scene's input plugin alone, as `gameout` — and no `pointerover` to an
+ * object still on its per-pointer over list.
  */
 export function onHover(
   target: Phaser.GameObjects.GameObject,
@@ -444,8 +450,12 @@ export function onHover(
   const input = target.scene.input;
   let hovered = false;
   let returning = false;
-  /** Whether the pointer has left the game, off the canvas or under a scrim risen over the scene. */
-  let away = false;
+  // The two are counted apart: the pointer can leave the canvas and come back while a scrim still
+  // stands, and one flag for both would read the screen as live again under it.
+  /** Whether the pointer is off the canvas, and whether a scrim stands over the scene. */
+  let offCanvas = false;
+  let covered = false;
+  const away = (): boolean => offCanvas || covered;
   const off = (): void => {
     if (!hovered) return;
     hovered = false;
@@ -453,7 +463,7 @@ export function onHover(
   };
 
   const resume = (): void => {
-    if (hovered || returning || away || target.input?.enabled !== true) return;
+    if (hovered || returning || away() || target.input?.enabled !== true) return;
     const pointer = input.activePointer;
     if (input.sortGameObjects(input.hitTestPointer(pointer), pointer)[0] !== target) return;
     // Phaser's list has to hold the target too, or it would send no `pointerout` when the pointer
@@ -470,13 +480,21 @@ export function onHover(
     off();
   };
   const left = (): void => {
-    away = true;
+    offCanvas = true;
     off();
   };
   // The pointer keeps the coordinates it left the canvas at, so only a move on the canvas says
   // where it came back; the browser sends the canvas's `mouseover` ahead of that move.
   const back = (): void => {
-    away = false;
+    offCanvas = false;
+    returning = true;
+  };
+  const hidden = (): void => {
+    covered = true;
+    off();
+  };
+  const shown = (): void => {
+    covered = false;
     returning = true;
   };
   const moved = (): void => {
@@ -493,10 +511,14 @@ export function onHover(
   // The scene outlives the target, so these go when the target does.
   input.on('gameout', left);
   input.on('gameover', back);
+  input.on(COVERED, hidden);
+  input.on(UNCOVERED, shown);
   input.on('pointermove', moved);
   target.once('destroy', () => {
     input.off('gameout', left);
     input.off('gameover', back);
+    input.off(COVERED, hidden);
+    input.off(UNCOVERED, shown);
     input.off('pointermove', moved);
   });
 

@@ -658,10 +658,8 @@ export function createOverlay(
         closeAim();
         return true;
       case 'deal':
-        // The menu is raised here and not left to the chronicle screen's own back: the window
-        // stands until the take, so nothing under it may answer this key.
-        if (carried.selected === undefined) raiseMenu(scene);
-        else ring(carried, undefined);
+        if (carried.selected === undefined) return false;
+        ring(carried, undefined);
         return true;
       case 'capstone':
         closeCapstone(carried);
