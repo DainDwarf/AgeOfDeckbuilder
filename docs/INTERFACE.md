@@ -20,7 +20,7 @@ The **debug console** is a dark panel down the top of the screen, on every scree
 
 ## The presses ✅
 
-Three presses work every screen: the **left click** selects, the **right click** inspects, and the **inspection key** inspects the selection. The two clicks press the screen and are not keys: neither binds to anything, and Controls lists neither.
+Three presses work every screen: the **left click** selects, the **right click** inspects, and the **inspection key** inspects the selection. The two clicks press the screen and are not keys: neither binds to anything, and Controls lists neither. A press is held by the button that landed it, and that button's release alone lets it go; a second button pressed meanwhile is a click of its own, answered at its own release on the thing under the pointer, and the hold stands through it, a scrim that click raises excepted.
 
 **The selection is one thing, a tile or a card, and the left click makes it.** A press on a thing selects it, a new selection drops the old one whatever it was, and a press beside the things drops it and the inspection with it. A left click on the selection acts on it, and what it does is the selected thing's own.
 
@@ -40,4 +40,4 @@ The chronicle screen is drawn on two surfaces: the **map**, which pans and zooms
 
 The **scrim** cuts the stack in two. Everything named so far is under it, and what it carries — a browse, the aim window, the deal window, the capstone's window, a card shown large, the ending screen, and the note a refusal raises over a window's card — stands on it. The **menu** stands over all of that, on every screen and the ending screen included: its button, and a window of it on a scrim of its own that rises with the window over whatever stands, the button among it. The **debug console** stands over all of it.
 
-A **tooltip** stands over everything but the console, on the surface it was raised from: a hover reaches only what the pointer can reach, so a bubble is never drawn under the thing it was raised beside. A scrim rising takes a standing tooltip down, and a hover afterwards raises it again.
+A **tooltip** stands over everything but the console, on the surface it was raised from: a hover reaches only what the pointer can reach, so a bubble is never drawn under the thing it was raised beside. A scrim rising takes a standing tooltip down, and a hover afterwards raises it again. A press the pointer holds as a scrim rises is let go of where it stands, whatever raised the scrim: a card, a unit or a population being carried comes home and nothing plays, nothing is selected, and the release that comes under the scrim lands as nothing.

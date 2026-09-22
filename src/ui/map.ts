@@ -657,11 +657,10 @@ export function createMapView(
    * The press a catcher takes and the scene resolves: the press is the catcher's, so the hand and
    * the piles keep theirs, while the release is the scene's, so a press that travelled off the
    * catcher still ends — on the canvas as a release, off it as an abandon. Past the drag slack the
-   * press carries the map instead, and one that panned reaches neither `release` nor `abandon`:
-   * this is the only place a pan is told from a choice. A press is taken by the button that landed
-   * it and let go of by that same button's release, while an abandon lets go of it whichever button
-   * the release the browser finally delivers names. Hands back the way to take the three scene
-   * listeners off again.
+   * press carries the map instead, and one that panned reaches neither `release` nor `abandon`.
+   * The press is the button's that landed it and that button's release alone lets it go, a second
+   * button meanwhile a click of its own; an abandon lets go whichever button the release the
+   * browser finally delivers names. Hands back the way to take the three scene listeners off again.
    */
   const takePress = (
     catcher: Phaser.GameObjects.Zone,
@@ -671,12 +670,18 @@ export function createMapView(
        * of a left press alone — a right press takes hold of nothing, so it always may pan.
        */
       down?: (pointer: Phaser.Input.Pointer) => boolean;
-      release: (pointer: Phaser.Input.Pointer, press: Press) => void;
+      /**
+       * `held` says the release let the press go; a second button's click answers false, and
+       * whatever that press has hold of stands through it.
+       */
+      release: (pointer: Phaser.Input.Pointer, press: Press, held: boolean) => void;
       abandon?: () => void;
     },
   ): (() => void) => {
     /** Which button is holding the press, and nothing while none is. */
     let taken: Press | undefined;
+    /** The other button pressed while the press is held, and nothing while none waits. */
+    let second: Press | undefined;
     /** Where the press landed on the canvas, and the middle the map held then, while it may pan. */
     let from: { x: number; y: number; centre: { x: number; y: number } } | undefined;
     let panned = false;
@@ -684,6 +689,10 @@ export function createMapView(
     catcher.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       const press = pressOf(pointer);
       if (press === undefined) return;
+      if (taken !== undefined) {
+        if (press !== taken) second = press;
+        return;
+      }
       taken = press;
       panned = false;
       const mayPan = press === 'right' || (on.down?.(pointer) ?? true);
@@ -710,10 +719,17 @@ export function createMapView(
     };
     const release = (pointer: Phaser.Input.Pointer): void => {
       const press = pressOf(pointer);
-      if (press === undefined || press !== taken) return;
-      if (ended()) on.release(pointer, press);
+      if (press === undefined) return;
+      if (press === taken) {
+        if (ended()) on.release(pointer, press, true);
+        return;
+      }
+      if (press !== second) return;
+      second = undefined;
+      on.release(pointer, press, false);
     };
     const abandon = (): void => {
+      second = undefined;
       if (ended()) on.abandon?.();
     };
 
@@ -1444,10 +1460,10 @@ export function createMapView(
           lightUnit(under);
           return false;
         },
-        release: (pointer, press) => {
+        release: (pointer, press, held) => {
           const at = map.at(pointer.x, pointer.y);
           const on = tileUnder(at.x, at.y);
-          const holding = grabbed;
+          const holding = held ? grabbed : undefined;
           if (holding === undefined) {
             if (press === 'left' && on !== undefined && lit !== undefined) {
               if (commandUnitOn(lit.unit, on)) return;

@@ -27,6 +27,7 @@ import {
   addText,
   applyDesignSpace,
   DESIGN_WIDTH,
+  letGoOfPress,
   MARGIN,
   onClick,
   onHover,
@@ -372,12 +373,25 @@ export class ChronicleScene extends Phaser.Scene implements OpensChronicles {
       view.live(!covered && !underMenu);
     };
 
+    /**
+     * A scrim rising over the screen, from either source: the press the screen holds is let go of
+     * where it stands. The release waits out the pointer event that raised the scrim — Phaser's
+     * dispatch is synchronous, and one inside it would walk the input plugin's lists mid-walk.
+     */
+    const scrimRose = (): void => {
+      if (covered || underMenu) return;
+      queueMicrotask(() => letGoOfPress(this.game));
+    };
+
     const overlay = createOverlay(
       this,
       ui,
       this.choices.catalogue,
       (over) => {
-        if (over && !covered) dropTooltips();
+        if (over && !covered) {
+          dropTooltips();
+          scrimRose();
+        }
         covered = over;
         liveMap();
       },
@@ -564,7 +578,10 @@ export class ChronicleScene extends Phaser.Scene implements OpensChronicles {
       view.showVeils(veils);
     });
     resetMenu(this, (covering) => {
-      if (covering) dropTooltips();
+      if (covering) {
+        dropTooltips();
+        scrimRose();
+      }
       underMenu = covering;
       liveMap();
     });

@@ -5,6 +5,7 @@ import { costOf, refusalOf } from '../rules/chronicle';
 import type { Change, Group, Stage } from '../rules/stages';
 import { type CardId, type Chronicle, playable, type Refusal } from '../rules/state';
 import { createAimLine } from './aim-line';
+import { pressOf } from './bindings';
 import {
   CARD_BASELINE,
   CARD_HEIGHT,
@@ -46,10 +47,13 @@ type Slot = {
   hovered: boolean;
 };
 
-/** Where the card was taken hold of, and where it stood at that moment. */
+/** The card being dragged, where it was taken hold of, and where it stood at that moment. */
 type Drag = {
+  readonly slot: Slot;
   readonly grabbed: { x: number; y: number };
   readonly lifted: { x: number; y: number };
+  /** Whether Phaser's drag is over and the hand is carrying the card on its own. */
+  carried: boolean;
 };
 
 /** The selected card, and how the aim it is being aimed by is taken down while one stands. */
@@ -259,6 +263,48 @@ export function createHand(
     }
   };
 
+  /** The card carried to where the pointer stands, ringed once it is clear of the play height. */
+  const carry = (pointer: Phaser.Input.Pointer): void => {
+    if (dragged === undefined) return;
+    const { slot, grabbed, lifted } = dragged;
+    const at = on.at(pointer.x, pointer.y);
+    slot.face.root.setPosition(lifted.x + at.x - grabbed.x, lifted.y + at.y - grabbed.y);
+    slot.face.select(grabbed.y - at.y > PLAY_HEIGHT);
+  };
+
+  /** The one place a drag ends on the canvas: played past the play height, and home under it. */
+  const resolve = (pointer: Phaser.Input.Pointer): void => {
+    const carrying = dragged;
+    if (carrying === undefined) return;
+    dragged = undefined;
+    carrying.slot.face.select(false);
+    const at = on.at(pointer.x, pointer.y);
+    if (carrying.grabbed.y - at.y <= PLAY_HEIGHT) {
+      settle(carrying.slot, 150);
+      return;
+    }
+    act(select(carrying.slot));
+  };
+
+  /** The drag let go of with nothing played: a scrim rose over the screen, or the release landed off it. */
+  const abandonDrag = (): void => {
+    const carrying = dragged;
+    if (carrying === undefined) return;
+    dragged = undefined;
+    letGoOf(carrying.slot);
+  };
+
+  // Phaser ends the drag at any button's release and sends no `drag` after it, so from a second
+  // button's release the carry is the hand's own: the card follows the pointer here until the
+  // button that took it comes up, and an abandon reaches it in either state.
+  scene.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+    if (dragged?.carried === true) carry(pointer);
+  });
+  scene.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
+    if (dragged?.carried === true && pressOf(pointer) === 'left') resolve(pointer);
+  });
+  scene.input.on('pointerupoutside', abandonDrag);
+
   const render = (chronicle: Chronicle): void => {
     note.hide();
     unselect();
@@ -312,34 +358,24 @@ export function createHand(
           slot.hovered = true;
           settle(slot, 0);
           dragged = {
+            slot,
             grabbed: on.at(pointer.downX, pointer.downY),
             lifted: { x: slot.home.x, y: restingY(slot) },
+            carried: false,
           };
         })
-        .on('drag', (pointer: Phaser.Input.Pointer) => {
-          if (dragged === undefined) return;
-          const { grabbed, lifted } = dragged;
-          const at = on.at(pointer.x, pointer.y);
-          slot.face.root.setPosition(lifted.x + at.x - grabbed.x, lifted.y + at.y - grabbed.y);
-          slot.face.select(grabbed.y - at.y > PLAY_HEIGHT);
-        })
+        .on('drag', carry)
         .on('dragend', (pointer: Phaser.Input.Pointer) => {
           if (dragged === undefined) return;
-          const { grabbed } = dragged;
-          dragged = undefined;
-          slot.face.select(false);
-
+          if (pressOf(pointer) !== 'left') {
+            dragged.carried = true;
+            return;
+          }
           if (releasedOffCanvas(pointer)) {
-            slot.hovered = false;
-            settle(slot, 150);
+            abandonDrag();
             return;
           }
-          const at = on.at(pointer.x, pointer.y);
-          if (grabbed.y - at.y <= PLAY_HEIGHT) {
-            settle(slot, 150);
-            return;
-          }
-          act(select(slot));
+          resolve(pointer);
         });
 
       onHover(

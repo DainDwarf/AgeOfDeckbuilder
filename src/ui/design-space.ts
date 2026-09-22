@@ -113,17 +113,24 @@ export function followWindow(game: Phaser.Game): void {
 }
 
 /**
+ * Whatever the pointer is holding, let go of where it stands: Phaser reads a `mouseup` on the
+ * window whose target is not the canvas as a release off the canvas, and that point leaves its hit
+ * test empty, so no press held becomes a click and the browser's own release lands as nothing.
+ */
+export function letGoOfPress(game: Phaser.Game): void {
+  if (game.input.mousePointer?.isDown !== true) return;
+  window.dispatchEvent(
+    new MouseEvent('mouseup', { bubbles: true, button: 0, buttons: 0, clientX: -1, clientY: -1 }),
+  );
+}
+
+/**
  * The release the browser withholds: a window that loses focus mid-press delivers no `mouseup`, so
- * Phaser's drag stays in flight and the next press starts nothing. Phaser reads a `mouseup` on the
- * window whose target is not the canvas as a release off the canvas, and the point off the canvas
- * leaves its hit test empty, so no press held at the blur becomes a click.
+ * Phaser's drag stays in flight and the next press starts nothing.
  */
 export function releaseOnBlur(game: Phaser.Game): void {
   game.events.on(Phaser.Core.Events.BLUR, () => {
-    if (game.input.mousePointer?.isDown !== true) return;
-    window.dispatchEvent(
-      new MouseEvent('mouseup', { bubbles: true, button: 0, buttons: 0, clientX: -1, clientY: -1 }),
-    );
+    letGoOfPress(game);
   });
 }
 
@@ -383,13 +390,17 @@ export function onClick(
     if (pressed && pressOf(pointer) === press) handler(pointer);
   });
   target.on('dragstart', drop);
-  // The scene sees every release, on the canvas and off it, and after the target does. A press the
-  // target never sees released — it was hidden, disabled or removed meanwhile — would otherwise
-  // stay held. The scene outlives the target, so those two go when the target does.
-  input.on('pointerup', drop);
+  // The scene sees a release the target never does — it was hidden, disabled or removed meanwhile —
+  // and after the target when it sees both. On the canvas this press's own button lets it go, so it
+  // stands through a second button's click; off the canvas any button abandons it.
+  const released = (pointer: Phaser.Input.Pointer): void => {
+    if (pressOf(pointer) === press) drop();
+  };
+  input.on('pointerup', released);
   input.on('pointerupoutside', drop);
+  // The scene outlives the target, so these two go when the target does.
   target.once('destroy', () => {
-    input.off('pointerup', drop);
+    input.off('pointerup', released);
     input.off('pointerupoutside', drop);
   });
 }
