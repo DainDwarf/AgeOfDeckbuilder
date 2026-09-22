@@ -27,7 +27,6 @@ import { type Faction, type Landing, type Unit, unitAt, unitOf } from '../rules/
 import { MAP_FRAME } from './band';
 import { type Bind, bindings, boundTo, type Control, type Press, pressOf } from './bindings';
 import { EASE, ended, stopMotion } from './card-motion';
-import { DEPTH } from './depths';
 import {
   addText,
   corners,
@@ -43,6 +42,7 @@ import {
 } from './design-space';
 import { onKeyDown, onKeyUp } from './keys';
 import { css, type Glow, LOOK } from './look';
+import type { MapStrata } from './map-scene';
 import {
   buildingColourOf,
   buildingMarkOf,
@@ -451,6 +451,11 @@ function glowTile(
     .setStrokeStyle(2, colour, glow.stroke);
 }
 
+/** Everything a group holds destroyed: a Layer's `removeAll` destroys nothing, whatever it is handed. */
+function wipe(group: Phaser.GameObjects.Layer): void {
+  for (const object of [...group.list]) object.destroy();
+}
+
 /**
  * What one left press has hold of on the map — a unit by the number it is named by, or population
  * by the tile it is assigned to — with where the press landed and whether it has come past the slack
@@ -468,55 +473,40 @@ type Grab = { readonly from: { x: number; y: number }; dragging: boolean } & (
  */
 export function createMapView(
   scene: Phaser.Scene,
-  map: Surface,
+  strata: MapStrata,
   catalogue: Catalogue,
   chronicle: Chronicle,
 ): MapView {
+  const map = strata.terrain;
   const camera = map.camera;
-  const layer = map.layer;
 
-  // Equal depths paint in the order they were added, which is what keeps the terrain under the
-  // rings and the features under what is built on them.
-  const ground = scene.add.container(0, 0).setName('terrain');
+  const group = (on: Surface, name: string): Phaser.GameObjects.Layer => {
+    const layer = scene.add.layer().setName(name);
+    on.layer.add(layer);
+    return layer;
+  };
+
+  const ground = group(strata.terrain, 'terrain');
   const rim = scene.add.graphics().setName('rim');
-  const rivers = scene.add.container(0, 0).setName('rivers');
-  const features = scene.add.container(0, 0).setName('features');
-  const rings = scene.add.container(0, 0).setName('border');
-  const improved = scene.add.container(0, 0).setDepth(DEPTH.buildings).setName('improvements');
-  const built = scene.add.container(0, 0).setDepth(DEPTH.buildings).setName('buildings');
-  const selected = scene.add.container(0, 0).setDepth(DEPTH.ring).setName('selected');
-  const lighted = scene.add.container(0, 0).setDepth(DEPTH.lit).setName('lit');
-  const marks = scene.add.container(0, 0).setDepth(DEPTH.units).setName('units');
-  const fog = scene.add.container(0, 0).setDepth(DEPTH.fog).setName('fog');
+  strata.terrain.layer.add(rim);
+  const rivers = group(strata.terrain, 'rivers');
+  const features = group(strata.terrain, 'features');
+  const rings = group(strata.terrain, 'border');
+  const lighted = group(strata.lit, 'lit');
+  const improved = group(strata.buildings, 'improvements');
+  const built = group(strata.buildings, 'buildings');
+  const marks = strata.units.layer.setName('units');
+  const fog = strata.fog.layer.setName('fog');
+  const cityMarks = strata.cityMarks.layer.setName('city-marks');
   const dim = scene.add
     .rectangle(0, 0, 1, 1, LOOK.mapOutline, LOOK.mapDim.strength)
     .setOrigin(0, 0)
-    .setDepth(DEPTH.yieldDim)
     .setName('yield-dim')
     .setVisible(false);
-  const cityMarks = scene.add.container(0, 0).setDepth(DEPTH.cityMarks).setName('city-marks');
-  const glyphs = scene.add.container(0, 0).setDepth(DEPTH.yieldGlyphs).setName('yields');
-  const thresholds = scene.add
-    .container(0, 0)
-    .setDepth(DEPTH.cultureThreshold)
-    .setName('thresholds');
-  layer.add([
-    ground,
-    rim,
-    rivers,
-    features,
-    rings,
-    improved,
-    built,
-    lighted,
-    marks,
-    fog,
-    cityMarks,
-    dim,
-    selected,
-    glyphs,
-    thresholds,
-  ]);
+  strata.dim.layer.add(dim);
+  const selected = strata.ring.layer.setName('selected');
+  const glyphs = group(strata.yields, 'yields');
+  const thresholds = group(strata.yields, 'thresholds');
 
   // Nothing a chronicle does moves the disc's rim, so it is stroked here and no render repaints it.
   const onMap = new Set(chronicle.tiles.map(tileKey));
@@ -744,15 +734,10 @@ export function createMapView(
    * not. It is framed in map space, so it is re-cut to the frame on every pan and every zoom.
    */
   const catcherZone = (name: string): Phaser.GameObjects.Zone => {
-    const catcher = scene.add
-      .zone(0, 0, 1, 1)
-      .setOrigin(0, 0)
-      .setDepth(DEPTH.terrain)
-      .setName(name)
-      .setInteractive();
+    const catcher = scene.add.zone(0, 0, 1, 1).setOrigin(0, 0).setName(name).setInteractive();
     catcher.once(Phaser.GameObjects.Events.DESTROY, () => catchers.delete(catcher));
     catchers.add(catcher);
-    layer.add(catcher);
+    strata.terrain.layer.add(catcher);
     place();
     return catcher;
   };
@@ -825,27 +810,26 @@ export function createMapView(
   let threshold: { readonly tile: TileCoords; readonly cost: Cost } | undefined;
 
   /**
-   * What the dim is laid under rather than over, lifted only while it stands: the tiles lit and the
-   * units glowed, and the glow a card is aimed by. The ring and the culture threshold are not here —
-   * their own rows already stand over the dim's.
+   * What the dim is laid under rather than over, lifted onto the dim's stratum only while it stands:
+   * the tiles lit and the units glowed, and the glow a card is aimed by. The ring and the culture
+   * threshold are not here — their own strata already stand over the dim's.
    */
-  const overDim = new Set<Phaser.GameObjects.Container>([lighted]);
+  const overDim = new Set<Phaser.GameObjects.Layer>([lighted]);
 
   const liftOverDim = (): void => {
-    const over = showing.size > 0;
-    for (const object of overDim) object.setDepth(over ? DEPTH.throughDim : DEPTH.lit);
+    const onto = showing.size > 0 ? strata.dim : strata.lit;
+    for (const lifted of overDim) onto.layer.add(lifted);
   };
 
   /** The ground every aim runs on: its own catcher, a glow to paint, and the tile presses held off. */
   const openAim = (): {
     catcher: Phaser.GameObjects.Zone;
-    glow: Phaser.GameObjects.Container;
+    glow: Phaser.GameObjects.Layer;
     close: () => void;
   } => {
     presser?.disableInteractive();
     const catcher = catcherZone('aim');
-    const glow = scene.add.container(0, 0).setDepth(DEPTH.lit).setName('aim-lit');
-    layer.add(glow);
+    const glow = group(strata.lit, 'aim-lit');
     overDim.add(glow);
     liftOverDim();
     return {
@@ -931,7 +915,7 @@ export function createMapView(
    * what the overlay is asked for, if anything.
    */
   const paintYields = (): void => {
-    glyphs.removeAll(true);
+    wipe(glyphs);
     dim.setVisible(showing.size > 0);
     liftOverDim();
     if (shown === undefined) return;
@@ -971,7 +955,7 @@ export function createMapView(
    * raised at, and it is raised again whenever that zoom changes.
    */
   const paintThreshold = (): void => {
-    thresholds.removeAll(true);
+    wipe(thresholds);
     if (threshold === undefined) return;
     const resolution = Math.ceil(renderFactor() * zoom);
     thresholds.add(thresholdMark(scene, threshold.tile, threshold.cost, resolution));
@@ -988,7 +972,7 @@ export function createMapView(
    * render.
    */
   const paintCityMarks = (): void => {
-    cityMarks.removeAll(true);
+    wipe(cityMarks);
     assignedMarks = new Map();
     if (!marking || shown === undefined) return;
 
@@ -1017,11 +1001,11 @@ export function createMapView(
    * render.
    */
   const paintTiles = (): void => {
-    ground.removeAll(true);
-    features.removeAll(true);
-    improved.removeAll(true);
-    built.removeAll(true);
-    fog.removeAll(true);
+    wipe(ground);
+    wipe(features);
+    wipe(improved);
+    wipe(built);
+    wipe(fog);
     if (shown === undefined) return;
 
     for (const tile of shown.tiles) {
@@ -1079,7 +1063,7 @@ export function createMapView(
    * down on one surface under all the water, so two rivers meeting read as one course.
    */
   const paintRivers = (): void => {
-    rivers.removeAll(true);
+    wipe(rivers);
     if (shown === undefined) return;
 
     const along = riversAlong(shown.rivers, drawn).map((run) => run.map(cornerAt));
@@ -1123,7 +1107,7 @@ export function createMapView(
       lit = { unit: standing.id, landings, targets: targets.map((other) => other.tile) };
     }
 
-    lighted.removeAll(true);
+    wipe(lighted);
     for (const landing of lit?.landings ?? [])
       lighted.add(glowTile(scene, landing.tile, LOOK.lit, LOOK.litGlow));
     for (const coord of lit?.targets ?? []) {
@@ -1133,7 +1117,7 @@ export function createMapView(
 
   /** The border repainted on the chronicle the map stands on: a claim moves it, so a render does. */
   const paintBorder = (): void => {
-    rings.removeAll(true);
+    wipe(rings);
     if (shown === undefined) return;
     const { city } = shown;
     for (const coord of shown.held) {
@@ -1151,7 +1135,7 @@ export function createMapView(
     // What is about to be destroyed loses its tweens first: a motion left running on a destroyed
     // marker never completes, and the stage waiting on it would never end.
     stopMotion(scene, marks.list);
-    marks.removeAll(true);
+    wipe(marks);
 
     paintTiles();
     paintRivers();
@@ -1501,7 +1485,7 @@ export function createMapView(
       selection = tile === undefined ? undefined : { q: tile.q, r: tile.r };
       threshold =
         cost === undefined || selection === undefined ? undefined : { tile: selection, cost };
-      selected.removeAll(true);
+      wipe(selected);
       selected.setData('tile', tile === undefined ? undefined : tileKey(tile));
       if (tile !== undefined) {
         const { x, y } = positionOf(tile);

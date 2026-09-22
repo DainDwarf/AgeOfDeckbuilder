@@ -177,11 +177,9 @@ function* textsIn(
 const DRAG_SLACK = 8;
 
 /**
- * One of the two surfaces the game is drawn on: everything standing on it, and the camera that
- * paints that and nothing else. The two conversions read the camera as it stands, which neither
- * `pointer.worldX` nor the camera's own `getWorldPoint` does — the pointer carries whichever camera
- * its last hit test found it over, and a camera's matrix is rebuilt once a frame, so both of those
- * answer for a pan or a zoom that has since happened.
+ * The conversions read the camera as it stands, which neither `pointer.worldX` nor `getWorldPoint`
+ * does: the pointer carries whichever camera its last hit test found it over, and a camera's matrix
+ * is rebuilt once a frame, so both answer for a pan or a zoom that has since happened.
  */
 export type Surface = {
   readonly layer: Phaser.GameObjects.Layer;
@@ -245,24 +243,6 @@ export function holdDesignSpace(scene: Phaser.Scene, camera: Phaser.Cameras.Scen
     camera.setZoom(renderFactor()).centerOn(DESIGN_WIDTH / 2, DESIGN_HEIGHT / 2);
   });
   followFactor(scene);
-}
-
-/** The scene's one Layer, named, and every object the scene makes from now on added to it. */
-export function homeLayer(scene: Phaser.Scene, name: string): Phaser.GameObjects.Layer {
-  const layer = scene.add.layer().setName(name);
-  // A layer re-announces what it is handed on this same emitter, so the guard is what ends this:
-  // the object arrives a second time already homed, and falls through.
-  whileUp(
-    scene,
-    scene.events,
-    Phaser.Scenes.Events.ADDED_TO_SCENE,
-    (object: Phaser.GameObjects.GameObject) => {
-      if (object instanceof Phaser.GameObjects.Layer) return;
-      if (object.displayList !== scene.sys.displayList) return;
-      layer.add(object);
-    },
-  );
-  return layer;
 }
 
 /** A move a scene above kept from this one, said of its input plugin: the pointer is off it. */

@@ -22,17 +22,16 @@ import { boundTo } from './bindings';
 import { CARD_BASELINE, CARD_HEIGHT } from './card-face';
 import { EASE, ended, stopAllMotion, stopMotion } from './card-motion';
 import { resetConsole } from './debug-console';
-import { DEPTH } from './depths';
 import {
   addText,
   COVERED,
   DESIGN_WIDTH,
   holdDesignSpace,
-  homeLayer,
   letGoOfPress,
   MARGIN,
   onClick,
   onHover,
+  type Surface,
   stopsThePointer,
   surfaceOf,
   UI_FONT,
@@ -137,18 +136,35 @@ export class ChronicleScene extends Phaser.Scene implements OpensChronicles {
 
   create(): void {
     const map = mapOf(this);
-    const ui = surfaceOf(homeLayer(this, 'ui'), this.cameras.main);
-    holdDesignSpace(this, ui.camera);
+    const camera = this.cameras.main;
+    const stratum = (): Surface => surfaceOf(this.add.layer(), camera);
+    const ui = {
+      band: stratum(),
+      standing: stratum(),
+      /** The piles and the resting cards of the hand. */
+      resting: stratum(),
+      bar: stratum(),
+      endTurn: stratum(),
+      flight: stratum(),
+      lifted: stratum(),
+      aimLine: stratum(),
+      note: stratum(),
+      tooltip: stratum(),
+    };
+    holdDesignSpace(this, camera);
     stopsThePointer(this, 'no button held');
-    createBand(this);
+    createBand(this, ui.band);
 
     /** The one bubble each surface raises: the infopanel's rows on the map, the bar's on the UI. */
-    const tooltip = { map: createTooltip(map, map.surface), ui: createTooltip(this, ui) };
+    const tooltip = {
+      map: createTooltip(map, map.strata.tooltip),
+      ui: createTooltip(this, ui.tooltip),
+    };
 
     const parts: Part[] = [];
-    const view = createMapView(map, map.surface, this.choices.catalogue, this.current);
-    const panel = createInfoPanel(map, map.surface, this.choices.catalogue, tooltip.map);
-    const note = createRefusalNote(map, map.surface, { depth: DEPTH.refusalNote });
+    const view = createMapView(map, map.strata, this.choices.catalogue, this.current);
+    const panel = createInfoPanel(map, map.strata.infopanel, this.choices.catalogue, tooltip.map);
+    const note = createRefusalNote(map, map.strata.note);
     // The map's note hears only the presses this scene lets through to the map.
     this.input.on('pointerdown', note.hide);
 
@@ -405,7 +421,7 @@ export class ChronicleScene extends Phaser.Scene implements OpensChronicles {
       },
     );
 
-    const endTurn = this.addEndTurn(() => {
+    const endTurn = this.addEndTurn(ui.endTurn, () => {
       void playOut({ type: 'end-turn' });
     });
     const hand = createHand(this, ui, this.choices.catalogue, {
@@ -464,12 +480,12 @@ export class ChronicleScene extends Phaser.Scene implements OpensChronicles {
       inspect: (id, refusal) => overlay.inspect(id, refusal),
     });
 
-    const settleStanding = createStanding(this, {
+    const settleStanding = createStanding(this, ui.standing, {
       name: 'settle-phase',
       colour: LOOK.settlePhase,
       label: text('button.settle-phase'),
     });
-    const cityStanding = createStanding(this, {
+    const cityStanding = createStanding(this, ui.standing, {
       name: 'city',
       colour: LOOK.accent,
       label: text('button.city-mode'),
@@ -510,6 +526,7 @@ export class ChronicleScene extends Phaser.Scene implements OpensChronicles {
 
     const bar = createResourceBar(
       this,
+      ui.bar,
       this.choices.catalogue,
       tooltip.ui,
       enterCityMode,
@@ -587,7 +604,7 @@ export class ChronicleScene extends Phaser.Scene implements OpensChronicles {
     parts.push(
       view,
       bar,
-      createPiles(this, this.choices.catalogue, (pile) => overlay.browse(pile, this.current)),
+      createPiles(this, ui, this.choices.catalogue, (pile) => overlay.browse(pile, this.current)),
       hand,
       endTurn,
       { render: showSettleStanding },
@@ -596,16 +613,12 @@ export class ChronicleScene extends Phaser.Scene implements OpensChronicles {
     paint();
   }
 
-  private addEndTurn(endTurn: () => void): Part & { live(on: boolean): void } {
-    const button = this.add
-      .rectangle(0, 0, 1, 1, LOOK.accent)
-      .setName('end-turn')
-      .setDepth(DEPTH.endTurn);
-    // Added after the button: equal depths draw in the order they were added.
+  private addEndTurn(on: Surface, endTurn: () => void): Part & { live(on: boolean): void } {
+    const button = this.add.rectangle(0, 0, 1, 1, LOOK.accent).setName('end-turn');
     const label = addText(this, 0, 0, '', LABEL_STYLE)
       .setOrigin(0.5, 0.5)
-      .setName('end-turn-label')
-      .setDepth(DEPTH.endTurn);
+      .setName('end-turn-label');
+    on.layer.add([button, label]);
 
     // Measured at every label it ever takes, so neither the hover swap, the phase it stands on nor a
     // fourth digit in the turn resizes it.
@@ -677,8 +690,8 @@ export class ChronicleScene extends Phaser.Scene implements OpensChronicles {
     const roll = async (chronicle: Chronicle): Promise<void> => {
       const carried = addText(this, x, y, label.text, LABEL_STYLE)
         .setOrigin(0.5, 0.5)
-        .setName('end-turn-leaving')
-        .setDepth(DEPTH.endTurn);
+        .setName('end-turn-leaving');
+      on.layer.add(carried);
       leaving = carried;
       turn = chronicle.turn;
       settlePhase = onSettlePhase(chronicle);

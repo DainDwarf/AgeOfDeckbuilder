@@ -1,5 +1,4 @@
 import type Phaser from 'phaser';
-import { DEPTH } from './depths';
 import { addText, DESIGN_WIDTH, drawBubble, MARGIN, type Surface, UI_FONT } from './design-space';
 import { css, LOOK } from './look';
 
@@ -44,8 +43,7 @@ export function createTooltip(scene: Phaser.Scene, on: Surface): Tooltip {
   const label = addText(scene, 10, 7, '', STYLE);
   const tooltip = scene.add
     .container(0, 0, [bubble, label])
-    .setDepth(DEPTH.tooltip)
-    .setName(`tooltip-${on.layer.name}`)
+    .setName(`tooltip-${scene.scene.key}`)
     .setVisible(false);
   on.layer.add(tooltip);
 

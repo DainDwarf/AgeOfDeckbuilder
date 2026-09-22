@@ -6,7 +6,6 @@ import { type Group, type Stage, walked } from '../rules/stages';
 import { type Chronicle, idle } from '../rules/state';
 import { layOutBar, type Placed } from './bar-layout';
 import { EASE, ended, stopMotion } from './card-motion';
-import { DEPTH } from './depths';
 import {
   addText,
   BAR_HEIGHT,
@@ -14,6 +13,7 @@ import {
   MARGIN,
   onClick,
   onHover,
+  type Surface,
   UI_FONT,
 } from './design-space';
 import { css, LOOK, type Reading } from './look';
@@ -69,12 +69,14 @@ export type ResourceBar = {
 
 export function createResourceBar(
   scene: Phaser.Scene,
+  on: Surface,
   catalogue: Catalogue,
   tooltip: Tooltip,
   cityMode: () => void,
   toggleYield: (resource: Resource) => void,
 ): ResourceBar {
-  const bar = scene.add.container(0, 0).setDepth(DEPTH.resourceBar);
+  const bar = scene.add.container(0, 0);
+  on.layer.add(bar);
   bar.add(scene.add.rectangle(0, 0, DESIGN_WIDTH, BAR_HEIGHT, LOOK.panelFill).setOrigin(0, 0));
   bar.add(
     scene.add

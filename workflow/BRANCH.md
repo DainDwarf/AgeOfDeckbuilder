@@ -35,7 +35,6 @@ The chronicle screen is drawn on one Phaser scene today: two Layers painted by t
 
 ## The lines
 
-- **Strata are Layers** — every stratum of the interface page's order is a Layer of its scene, created in that order, and every object is added to its Layer; the one-Layer homing, the depth table and every depth call go, a depth surviving only as a slot's index in the resting hand and a place in a flight; the lit glow moves between its two Layers, under the buildings and over the yield dim, and no Layer is ever reordered; `e2e/yields.spec.ts`, `e2e/move.spec.ts`, `e2e/settle.spec.ts`, `e2e/city-mode.spec.ts`, `e2e/fog.spec.ts`, `e2e/play-out.spec.ts`, `e2e/hover.spec.ts`, `e2e/press.spec.ts`, `e2e/inspect.spec.ts` and `e2e/refuse.spec.ts` pass, the suite on the push. Doc-impact: none. [board/strata-are-layers.md](board/strata-are-layers.md)
 - **The browse is clipped by a mask** — the grid's container takes a Mask filter with a frame-sized rectangle as its source; the clip camera, its ignore lists and the refusal note's `raised` callback go.
 - **Drags run on under the Menu button** — a drag, the map's pan or a carried object, keeps its moves across the Menu button with no stutter, the same way it already runs on across the UI's widgets.
 - **The card references dossier is rewritten on the tower** — `board/card-references.md` is rewritten from the settled state, the small card a raiser on any surface adds to that scene's topmost Layer and nothing excluded anywhere, so the line ships on `main` as an ordinary one.

@@ -12,8 +12,7 @@ import {
   createEmptySlot,
 } from './card-face';
 import { blockLength, EASE, ended, SHUFFLE, stopMotion, travel } from './card-motion';
-import { DEPTH } from './depths';
-import { addText, DESIGN_WIDTH, MARGIN, onClick, UI_FONT } from './design-space';
+import { addText, DESIGN_WIDTH, MARGIN, onClick, type Surface, UI_FONT } from './design-space';
 import { css, LOOK } from './look';
 import type { PileKind } from './overlay';
 
@@ -35,11 +34,12 @@ export type Piles = {
  */
 export function createPiles(
   scene: Phaser.Scene,
+  on: { readonly resting: Surface; readonly flight: Surface },
   catalogue: Catalogue,
   browse: (pile: PileKind) => void,
 ): Piles {
-  const drawn = createPile(scene, 'draw-pile', browse);
-  const discarded = createPile(scene, 'discard-pile', browse);
+  const drawn = createPile(scene, on.resting, 'draw-pile', browse);
+  const discarded = createPile(scene, on.resting, 'discard-pile', browse);
 
   /** The chronicle the piles stand on: how many cards are in the air is read from it. */
   let shown: Chronicle | undefined;
@@ -75,7 +75,8 @@ export function createPiles(
     const carried = (discarded.lift() ?? createEmptySlot(scene)).setPosition(0, 0);
     const back = createCardBack(scene).setVisible(false);
     const from = PILE_PLACE['discard-pile'];
-    const carrying = scene.add.container(from.x, from.y, [carried, back]).setDepth(DEPTH.inFlight);
+    const carrying = scene.add.container(from.x, from.y, [carried, back]);
+    on.flight.layer.add(carrying);
     carrier = carrying;
     discarded.show(createEmptySlot(scene), 0);
 
@@ -189,17 +190,14 @@ type Pile = {
   lift(): Phaser.GameObjects.Container | undefined;
 };
 
-function createPile(scene: Phaser.Scene, pile: PileKind, browse: (pile: PileKind) => void): Pile {
+function createPile(
+  scene: Phaser.Scene,
+  on: Surface,
+  pile: PileKind,
+  browse: (pile: PileKind) => void,
+): Pile {
   const { x, y } = PILE_PLACE[pile];
-  const pill = scene.add.graphics().setDepth(DEPTH.piles + 1);
-  onClick(
-    scene.add
-      .zone(x, y - CARD_HEIGHT / 2, CARD_WIDTH, CARD_HEIGHT)
-      .setName(pile)
-      .setDepth(DEPTH.piles + 3)
-      .setInteractive({ useHandCursor: true }),
-    () => browse(pile),
-  );
+  const pill = scene.add.graphics();
   const count = addText(scene, 0, 0, '', {
     fontFamily: UI_FONT,
     fontSize: '15px',
@@ -207,14 +205,20 @@ function createPile(scene: Phaser.Scene, pile: PileKind, browse: (pile: PileKind
     color: css(LOOK.ink),
   })
     .setOrigin(0.5, 0.5)
-    .setName(`${pile}-count`)
-    .setDepth(DEPTH.piles + 2);
+    .setName(`${pile}-count`);
+  const press = scene.add
+    .zone(x, y - CARD_HEIGHT / 2, CARD_WIDTH, CARD_HEIGHT)
+    .setName(pile)
+    .setInteractive({ useHandCursor: true });
+  onClick(press, () => browse(pile));
+  on.layer.add([pill, count, press]);
 
   let shown: Phaser.GameObjects.Container | undefined;
   return {
     show(card: Phaser.GameObjects.Container, remaining: number): void {
       shown?.destroy();
-      shown = card.setPosition(x, y).setDepth(DEPTH.piles);
+      shown = card.setPosition(x, y);
+      on.layer.addAt(card, on.layer.getIndex(pill));
 
       count.setText(String(remaining));
       const width = Math.max(18, count.width) + 14;

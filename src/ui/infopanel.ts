@@ -16,7 +16,6 @@ import { RESOURCES, type Resource, type Resources } from '../rules/resources';
 import { type Unit, unitAt } from '../rules/units';
 import { CARD_HEIGHT, CARD_METRICS, CARD_WIDTH, drawCardSurface } from './card-face';
 import { stopMotion } from './card-motion';
-import { DEPTH } from './depths';
 import { addText, onHover, type Surface, UI_FONT } from './design-space';
 import { css, LOOK } from './look';
 import {
@@ -171,11 +170,7 @@ export function createInfoPanel(
   tooltip: Tooltip,
 ): InfoPanel {
   const ghosts = scene.add.graphics();
-  const panel = scene.add
-    .container(0, 0, [ghosts])
-    .setDepth(DEPTH.infopanel)
-    .setName('infopanel')
-    .setVisible(false);
+  const panel = scene.add.container(0, 0, [ghosts]).setName('infopanel').setVisible(false);
   on.layer.add(panel);
 
   let standing: Face | undefined;

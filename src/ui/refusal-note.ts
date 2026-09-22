@@ -59,15 +59,12 @@ export function refusedAim(block: Block): Said {
 /**
  * The bubble a cost and a refusal answer with, on the surface it was raised from: one stands per
  * surface, a second replaces the first, nothing to say raises none, and any press on that scene
- * takes it down. It carries the depth it is given and none where it is given none.
+ * takes it down.
  */
 export function createRefusalNote(
   scene: Phaser.Scene,
   on: Surface,
-  {
-    depth,
-    raised: told,
-  }: { depth?: number; raised?: (note: Phaser.GameObjects.Container) => void } = {},
+  { raised: told }: { raised?: (note: Phaser.GameObjects.Container) => void } = {},
 ): RefusalNote {
   let note: Phaser.GameObjects.Container | undefined;
   /** How the note stands where it was raised, for a zoom that changes what the surface measures in. */
@@ -98,7 +95,6 @@ export function createRefusalNote(
     const height = line + 7;
 
     const raised = scene.add.container(0, 0, [bubble, ...labels]).setName('refusal');
-    if (depth !== undefined) raised.setDepth(depth);
     on.layer.add(raised);
     told?.(raised);
     note = raised;
