@@ -4,7 +4,7 @@ Guidance for Claude Code sessions in this repository.
 
 ## Project
 
-**Age of Deckbuilder** (working name) — a card game, designed from scratch. The design is written at design altitude in the design pages, `docs/DESIGN.md` and the three it names; the game is TypeScript on Phaser 4, built by Vite, played in the browser. [`DOGMAS.md`](DOGMAS.md) → _Stack_ holds the layout and the one architectural rule: `src/rules/` is pure, `src/ui/` only renders.
+**Age of Deckbuilder** (working name) — a card game, designed from scratch. The design is written at design altitude in the design pages, `docs/DESIGN.md` and the four it names; the game is TypeScript on Phaser 4, built by Vite, played in the browser. [`DOGMAS.md`](DOGMAS.md) → _Stack_ holds the layout and the one architectural rule: `src/rules/` is pure, `src/ui/` only renders.
 
 ## Three kinds of documentation
 
@@ -12,7 +12,7 @@ Every markdown file is one of them, and each kind has its place:
 
 - **The repository's own files**, at the root. [`README.md`](README.md) says what the game is to a visitor; this file is the session's entry; [`DOGMAS.md`](DOGMAS.md) is the rules every session works by; [`CHANGELOG.md`](CHANGELOG.md) is player-facing release notes, written at version bumps only.
 - **The workflow**, in `workflow/` — ephemeral. [`BOARD.md`](workflow/BOARD.md) (ordered lines with done-conditions; completion is deletion), `board/<slug>.md` task files beside it (die with their line), [`IDEAS.md`](workflow/IDEAS.md) (unordered pool, nothing promised), [`ROADMAP.md`](workflow/ROADMAP.md) (the rungs to the demo, written in sand), and on a branch of several lines a `BRANCH.md` (its design first, its lines after; deleted before the merge).
-- **The design**, in `docs/` — standing. Source of truth for _what is_ and _what was decided_. [`docs/index.md`](docs/index.md) is the map; [`docs/DESIGN.md`](docs/DESIGN.md) and the three pages it names the game, [`docs/GLOSSARY.md`](docs/GLOSSARY.md) the closed gameplay vocabulary, `docs/ages/` one content page per age.
+- **The design**, in `docs/` — standing. Source of truth for _what is_ and _what was decided_. [`docs/index.md`](docs/index.md) is the map; [`docs/DESIGN.md`](docs/DESIGN.md) and the four pages it names the game, [`docs/GLOSSARY.md`](docs/GLOSSARY.md) the closed gameplay vocabulary, `docs/ages/` one content page per age.
 
 Code is the fourth lifespan, permanent, the source of truth for _how_. Nothing durable cites a board line, a task file or an idea.
 
