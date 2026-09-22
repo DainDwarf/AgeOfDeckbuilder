@@ -8,7 +8,7 @@ What the game **is**: the standing design. Not a journal of how it came to be �
 - [`CHRONICLE-SCREEN.md`](CHRONICLE-SCREEN.md) — how the chronicle is shown and worked on its screen: the chronicle screen, the resource bar, the yield overlay.
 - [`ages/`](ages/NOMADIC.md) — one content page per age, under the design pages' legend: what the age is made of — its settle, land, units, cards, events, capstone and camps — with no number on it. [`ages/NOMADIC.md`](ages/NOMADIC.md) is the first.
 - [`GLOSSARY.md`](GLOSSARY.md) — the closed vocabulary of gameplay terms and the synonyms each one forbids.
-- [`PHASER.md`](PHASER.md) — the platform: what Phaser 4.2.1 does across scenes, across a restart, at render under WebGL and under a Playwright spec that its bundled pages do not say, each fact with its source in the pinned package.
+- [`PHASER.md`](PHASER.md) — the platform: what Phaser 4.2.1 does across scenes, at the pointer's readings, across a restart, at render under WebGL and under a Playwright spec that its bundled pages do not say, each fact with its source in the pinned package.
 - [`ASSET-SOURCES.md`](ASSET-SOURCES.md) — where free art, sound, music and fonts come from, with each site's licence terms. Browsed for creativity fuel; used when the look is built.
 
 Domain pages (standing knowledge of the genre, the platform, the audience — each claim naming its source) are added here when there is a domain to describe.

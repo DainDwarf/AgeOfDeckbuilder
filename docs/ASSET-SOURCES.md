@@ -1,6 +1,6 @@
 # Asset sources
 
-Where free art, sound, music and fonts come from when the look is built (v0.0.6 on the [roadmap](../workflow/ROADMAP.md)). The dogmas set the constraints: no generative AI in any asset, and every pack entering `public/assets/` gets its entry in `public/assets/LICENSES.md` the same moment. The art-style call is made against what these sites actually hold in depth.
+Where free art, sound, music and fonts come from when the look is built. [The dogmas](../DOGMAS.md) set the constraints. The art-style call is made against what these sites actually hold in depth.
 
 Licence shorthand: **CC0** needs nothing; **CC BY** needs the author credited in the licence file; **OFL** is the open font licence, fonts embed freely. Anything else is read per pack.
 

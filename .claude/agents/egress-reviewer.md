@@ -32,7 +32,7 @@ Check each and report only what fails:
 - **Blocking** — a charter violation. Quote the line of the diff, name the charter item, state what would satisfy it.
 - **Advisory** — worth recording, not gating. One line each.
 
-Do not edit files. Do not rerun the whole test suite to prove a point unless a specific claim depends on it — say what you ran. Report in this shape:
+Do not edit files. Review by reading: the implementer's Verification section is given, and a spec or a suite it shows green is never re-run. `npm run check` and `npm run lint` are yours to run; a claim about Phaser is settled in `node_modules/phaser/src`, never by a spec. Say what you ran. Report in this shape:
 
 ```
 ## Verdict: LOOKS GOOD | BLOCKED

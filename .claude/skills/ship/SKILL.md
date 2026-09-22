@@ -42,7 +42,7 @@ Fix omissions yourself if they are mechanical (a missed doc line, a leftover dos
 
 ## 4. Review
 
-Spawn the `egress-reviewer` with: the diff (`git diff` plus the list of untracked files), the `docs/` page paths in the doc-impact, the board line text, and nothing about the implementation conversation. End the turn; its verdict resumes you.
+Spawn the `egress-reviewer` with: the diff (`git diff` plus the list of untracked files), the `docs/` page paths in the doc-impact, the board line text, the implementer's Verification section as given with the instruction to run no spec and no suite it shows green, and nothing about the implementation conversation. End the turn; its verdict resumes you.
 
 - **Blocking findings** go back to the implementer agent that did the work, continued with SendMessage so it keeps its context, with the finding quoted. A fresh implementer is spawned only when that agent is gone. After two rejection rounds, stop and hand the disagreement to the user compressed to its inflexion point.
 - **Advisory findings** are relayed in one line each, not acted on unless the user says so.
