@@ -195,21 +195,9 @@ export class ChronicleScene extends Phaser.Scene implements OpensChronicles {
       for (const part of parts) part.render(this.current);
     };
 
-    /**
-     * A command played out, stage by stage in the walk's order, a group before the stages it holds:
-     * each part is offered the stage, and the next stage waits on every motion the stage did raise.
-     * A change or a group holding nothing is committed as the chronicle on the screen, and a part
-     * with no motion for it renders at once; a group holding stages commits nothing. The button
-     * and the hand are dead for the whole of it — a card played or hovered under it would be
-     * animated and then reverted, and would kill the very tweens the stages are waiting on. The
-     * map stays live.
-     *
-     * However the play-out ends, the tail commits the last stage's chronicle and paints it: it
-     * needs no motion to have completed, and a part's render takes down whatever that part left in
-     * the air. A play-out the chronicle screen has let go of — a new chronicle was begun under it
-     * — commits nothing: the objects it was playing on are gone, and the chronicle it would commit
-     * is not the one on the chronicle screen.
-     */
+    // The button and the hand are dead for the whole play-out: a card played or hovered under it would
+    // be animated, reverted, and kill the very tweens the stages wait on. A play-out the screen has let
+    // go of (a new chronicle begun under it) commits nothing: the objects it was playing on are gone.
     const playOut = async (command: Command): Promise<void> => {
       if (this.sequence !== undefined) return;
       const stages = apply(this.choices.catalogue, this.current, command);
@@ -301,13 +289,6 @@ export class ChronicleScene extends Phaser.Scene implements OpensChronicles {
       inspection = { on, card: stepped };
     };
 
-    /**
-     * The city acting on the tile selected in city mode: the rules say which command that is, an act
-     * they refuse plays nothing and says its reason over the tile instead, and a tile the city has
-     * no act on takes the press without a word. The tile is selected again once the act has played
-     * out — unless the chronicle screen let that play-out go — so the next press on it is the next
-     * act.
-     */
     const act = async (found: PressedTile): Promise<void> => {
       const refusal = tileRefusal(this.choices.catalogue, this.current, found.tile);
       if (refusal === undefined) return;
@@ -321,13 +302,6 @@ export class ChronicleScene extends Phaser.Scene implements OpensChronicles {
       select({ tile: found.tile, at: view.faceOf(found.tile) });
     };
 
-    /**
-     * One step or one attack of a unit, chosen on the map: the play-out runs, and the unit is
-     * selected again on the tile it now stands on — the one it landed on, or the one it attacked
-     * from and never left — so the next command is one more press on a tile the map lights. A
-     * press that landed while another command was playing out did nothing, and selects nothing
-     * either.
-     */
     const commandUnit = async (command: UnitCommand): Promise<void> => {
       await playOut(command);
       if (this.playing) return;
