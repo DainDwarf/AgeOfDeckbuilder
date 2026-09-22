@@ -8,6 +8,7 @@ import { backingSize, followWindow, releaseOnBlur } from './ui/design-space';
 import { readMouseKeys } from './ui/keys';
 import { type Choices, firstsOf, LaunchPage } from './ui/launch-page';
 import { css, LOOK } from './ui/look';
+import { MapScene } from './ui/map-scene';
 import { MenuScene } from './ui/menu-scene';
 import { OverlayScene } from './ui/overlay-scene';
 
@@ -70,13 +71,14 @@ const game = new Phaser.Game({
 game.input.globalTopOnly = false;
 // Added bottom up, started top down: render order is the add order, key order the start order (docs/PHASER.md).
 game.scene.add('launch', LaunchPage);
-game.scene.add('chronicle', ChronicleScene);
+game.scene.add('map', MapScene);
+game.scene.add('ui', ChronicleScene);
 game.scene.add('overlay', OverlayScene);
 game.scene.add('menu', MenuScene);
 game.scene.add('console', DebugConsole);
-// The chronicle scene reaches into the console's, the menu's and the overlay's as it is created, so
-// this order is load-bearing twice over: started last, none of them has the handle it is reached by
-// yet and the chronicle throws on the address that opens straight.
+// The ui scene reaches into the console's, the menu's, the overlay's and the map's as it is created,
+// so this order is load-bearing twice over: started last, none of them has the handle it is reached
+// by yet and the chronicle throws on the address that opens straight.
 game.events.once(Phaser.Core.Events.READY, () => {
   game.scene.start('console');
   game.scene.start('menu');
@@ -85,7 +87,8 @@ game.events.once(Phaser.Core.Events.READY, () => {
     return;
   }
   game.scene.start('overlay');
-  game.scene.start('chronicle', choices);
+  game.scene.start('map');
+  game.scene.start('ui', choices);
 });
 followWindow(game);
 releaseOnBlur(game);

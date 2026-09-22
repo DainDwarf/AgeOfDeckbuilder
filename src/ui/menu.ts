@@ -49,7 +49,7 @@ export function behind(which: MenuWindow): MenuWindow | undefined {
 /** What a window lists on the screen standing: New chronicle stands over a chronicle alone. */
 function listed(scene: Phaser.Scene, which: MenuWindow): readonly MenuPress[] {
   return WINDOWS[which].buttons.filter(
-    (press) => press !== 'new-chronicle' || scene.scene.isActive('chronicle'),
+    (press) => press !== 'new-chronicle' || scene.scene.isActive('ui'),
   );
 }
 

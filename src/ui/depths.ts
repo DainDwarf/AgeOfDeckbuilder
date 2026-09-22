@@ -1,7 +1,7 @@
 /**
- * What stands over what, in one order across both surfaces. The map and the UI are two layers
- * painted by two cameras, the UI's second, so every UI object paints over every map object whatever
- * their numbers: only the map's rows coming first here makes one table read true across both.
+ * What stands over what, in one order across both surfaces. The map and the UI are two scenes, the
+ * UI's rendered second, so every UI object paints over every map object whatever their numbers: only
+ * the map's rows coming first here makes one table read true across both.
  */
 export const DEPTH = {
   /** The terrain and everything drawn flat on it, and the zone that takes the map's presses. */

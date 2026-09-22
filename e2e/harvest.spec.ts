@@ -35,8 +35,7 @@ test('the harvest card gains its two food when it is dragged out of the hand', a
   const before = await chronicleOf(page);
   await dragOut(page, before.hand.indexOf('PH_Harvest'));
   await page.waitForFunction(
-    (held) =>
-      window.game?.scene.getScene<ChronicleScene>('chronicle').chronicle.hand.length === held,
+    (held) => window.game?.scene.getScene<ChronicleScene>('ui').chronicle.hand.length === held,
     before.hand.length - 1,
   );
 

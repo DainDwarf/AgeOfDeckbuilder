@@ -4,9 +4,9 @@ import type { Catalogue } from '../rules/catalogue';
 import { refuse } from '../rules/map-kinds';
 import {
   addText,
-  applyDesignSpace,
   DESIGN_HEIGHT,
   DESIGN_WIDTH,
+  holdDesignSpace,
   onClick,
   UI_FONT,
 } from './design-space';
@@ -71,17 +71,18 @@ export class LaunchPage extends Phaser.Scene {
   }
 
   create(): void {
-    applyDesignSpace(this);
+    holdDesignSpace(this, this.cameras.main);
     let chosen: Choices = this.opening;
     let typed = chosen.seed === undefined ? '' : String(chosen.seed);
     let root: Phaser.GameObjects.Container | undefined;
     let seedLabel: Phaser.GameObjects.Text | undefined;
 
     const launch = (): void => {
-      // Queued ahead of the start below, so the overlay's keyboard plugin stands ahead of the
-      // chronicle scene's (docs/PHASER.md).
+      // Queued ahead of the start below, so the overlay's keyboard plugin stands ahead of the ui
+      // scene's and the map is up before the ui scene reaches into it (docs/PHASER.md).
       this.scene.launch('overlay');
-      this.scene.start('chronicle', { ...chosen, seed: typed === '' ? undefined : Number(typed) });
+      this.scene.launch('map');
+      this.scene.start('ui', { ...chosen, seed: typed === '' ? undefined : Number(typed) });
     };
 
     const paintSeed = (): void => {

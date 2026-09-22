@@ -33,9 +33,9 @@ const IN_THE_AIR = 1500;
  */
 async function breakNextMotion(page: Page): Promise<void> {
   await page.evaluate((thrown) => {
-    const scene = window.game?.scene.getScene('chronicle');
+    const scene = window.game?.scene.getScene('ui');
     if (scene === null || scene === undefined) {
-      throw new Error('the chronicle scene is not running');
+      throw new Error('the ui scene is not running');
     }
     const tweens = scene.tweens;
     const raise = tweens.add;

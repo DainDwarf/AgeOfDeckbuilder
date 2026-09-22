@@ -61,7 +61,7 @@ export class MenuScene extends Phaser.Scene {
         press: (press) => {
           switch (press) {
             case 'new-chronicle':
-              this.game.scene.getScene<OpensChronicles>('chronicle').newChronicle();
+              this.game.scene.getScene<OpensChronicles>('ui').newChronicle();
               return;
             case 'settings':
             case 'controls':
@@ -96,7 +96,7 @@ export class MenuScene extends Phaser.Scene {
     };
 
     onClick(scrim, back);
-    stopsThePointer(this);
+    stopsThePointer(this, 'every');
 
     readsKeys(this, (event) => {
       if (standing === undefined) return false;

@@ -9,8 +9,11 @@ import {
   onScreen,
   open,
   rested,
+  ringedTile,
+  shownCard,
   standing,
   stoppedTurn,
+  tileOnScreen,
   tooltipUp,
   watch,
 } from './chronicle-screen';
@@ -178,6 +181,79 @@ test('a tooltip standing over a reading goes down when the back key raises the m
   await page.keyboard.press('Escape');
   await expect.poll(() => standing(page, 'menu')).toBe(true);
   expect(await tooltipUp(page, 'tooltip-ui')).toBe(false);
+
+  expect(problems).toEqual([]);
+});
+
+/** A bare tile the opening charts, clear of the resource bar, the piles and the hand. */
+const CHARTED = { at: { q: 1, r: -2 }, key: '1,-2' };
+
+/** The charted tile inspected, and the pointer resting on the first row of its card. */
+async function onPanelRow(page: Page): Promise<void> {
+  const tile = await tileOnScreen(page, CHARTED.at);
+  await page.mouse.click(tile.x, tile.y);
+  await expect.poll(() => ringedTile(page)).toBe(CHARTED.key);
+  await page.keyboard.press('i');
+  await expect.poll(() => shownCard(page)).toBe('terrain');
+  const row = await onScreen(page, 'infopanel-row-0');
+  await page.mouse.move(row.x, row.y);
+}
+
+// One move each way: the pointer never crosses bare map between the row and the reading.
+test("a panel row's tooltip does not rise once the pointer moves straight onto a reading", async ({
+  page,
+}) => {
+  const problems = watch(page);
+
+  await page.setViewportSize(WINDOW);
+  await open(page, 1, 'PH_Deck');
+
+  await onPanelRow(page);
+  const food = await onScreen(page, 'reading-food');
+  await page.mouse.move(food.x, food.y);
+  await page.waitForTimeout(PAST_REST);
+
+  expect(await tooltipUp(page, 'tooltip-map')).toBe(false);
+
+  expect(problems).toEqual([]);
+});
+
+test("a panel row's tooltip rises when the pointer comes straight back onto it from a reading", async ({
+  page,
+}) => {
+  const problems = watch(page);
+
+  await page.setViewportSize(WINDOW);
+  await open(page, 1, 'PH_Deck');
+
+  await onPanelRow(page);
+  const row = await onScreen(page, 'infopanel-row-0');
+  const food = await onScreen(page, 'reading-food');
+  await page.mouse.move(food.x, food.y);
+  await page.waitForTimeout(PAST_REST);
+  await page.mouse.move(row.x, row.y);
+
+  await expect.poll(() => tooltipUp(page, 'tooltip-map')).toBe(true);
+
+  expect(problems).toEqual([]);
+});
+
+test('the end-turn button reads the turn again when the pointer moves straight onto the Menu button', async ({
+  page,
+}) => {
+  const problems = watch(page);
+
+  await page.setViewportSize(WINDOW);
+  await open(page, 1, 'PH_Deck');
+
+  const { turn } = await chronicleOf(page);
+  const button = await onScreen(page, 'end-turn');
+  const menu = await onScreen(page, 'menu-button');
+  await page.mouse.move(button.x - 20 * button.unit, button.y);
+  await expect.poll(() => endTurnLabel(page)).toBe(text('button.end-turn'));
+
+  await page.mouse.move(menu.x, menu.y);
+  await expect.poll(() => endTurnLabel(page)).toBe(text('button.turn', { turn }));
 
   expect(problems).toEqual([]);
 });

@@ -195,9 +195,6 @@ export type Surface = {
   unit(): number;
 };
 
-/** The map moves under the UI; the UI does not move at all. */
-export type Surfaces = { readonly map: Surface; readonly ui: Surface };
-
 /** One stratum and the camera it is painted by, for whoever stands something on it. */
 export function surfaceOf(
   layer: Phaser.GameObjects.Layer,
@@ -222,55 +219,37 @@ export function surfaceOf(
 }
 
 /**
- * A camera that holds the design space still, laid out now and after every change of window: the
- * whole of DESIGN_WIDTH × DESIGN_HEIGHT across the canvas, and every Text the scene holds re-cut for
- * the factor it is drawn at. A camera left unzoomed paints the backing store at 1:1.
+ * The scene kept to the factor it is drawn at, now and after every change of window: every Text it
+ * holds re-cut for that factor, and the slack that tells a drag from a click measured at it.
  */
-export function holdDesignSpace(scene: Phaser.Scene, camera: Phaser.Cameras.Scene2D.Camera): void {
+export function followFactor(scene: Phaser.Scene): void {
   onResize(scene, () => {
-    const factor = renderFactor();
-    // The cameras' own size is Phaser's business: the camera manager subscribed to RESIZE at scene
-    // boot, ahead of this, and resizes every camera at the origin that had the old size.
-    camera.setZoom(factor).centerOn(DESIGN_WIDTH / 2, DESIGN_HEIGHT / 2);
     // Phaser measures the drag threshold between raw pointer positions, in device pixels.
     scene.input.dragDistanceThreshold = DRAG_SLACK * renderFactor();
-    const resolution = Math.ceil(factor);
+    const resolution = Math.ceil(renderFactor());
     for (const label of textsIn(scene.children.list)) {
       if (label.style.resolution !== resolution) label.setResolution(resolution);
     }
   });
 }
 
-/** The three the scene's own input plugin offers every object it holds under the pointer. */
-const REACHED = ['gameobjectdown', 'gameobjectmove', 'gameobjectwheel'] as const;
-
 /**
- * Every press, move and wheel that lands on an interactive object of this scene kept from the scenes
- * beneath it, and never a release, which stopped would strand a drag under it. One listener per
- * event and not one per object: `topOnly` inside the scene skips a stop on an object lying under another.
+ * A camera that holds the whole of DESIGN_WIDTH × DESIGN_HEIGHT across the canvas, now and after
+ * every change of window, and the scene it paints kept to its factor. A camera left unzoomed paints
+ * the backing store at 1:1.
  */
-export function stopsThePointer(scene: Phaser.Scene): void {
-  for (const reached of REACHED) scene.input.on(reached, () => scene.input.stopPropagation());
+export function holdDesignSpace(scene: Phaser.Scene, camera: Phaser.Cameras.Scene2D.Camera): void {
+  onResize(scene, () => {
+    // The cameras' own size is Phaser's business: the camera manager subscribed to RESIZE at scene
+    // boot, ahead of this, and resizes every camera at the origin that had the old size.
+    camera.setZoom(renderFactor()).centerOn(DESIGN_WIDTH / 2, DESIGN_HEIGHT / 2);
+  });
+  followFactor(scene);
 }
 
-/**
- * The chronicle screen, cut in two: each camera is blind to the other's layer, so one of them can
- * be panned and zoomed while the other holds still. Nothing may be left standing on the scene's own
- * display list, which carries no camera filter and so is painted by both cameras at once — hence
- * the UI takes every object the game makes, and whatever belongs on the map moves itself there.
- * Each layer and the camera that paints it share a name.
- *
- * A scene's `scale.width` / `scale.height` report the backing store in device pixels, and a
- * pointer's `x` / `y` arrive in that same space; lay out against DESIGN_WIDTH and DESIGN_HEIGHT,
- * and read a surface's `at` for the pointer in either surface's own space.
- */
-export function applyDesignSpace(scene: Phaser.Scene): Surfaces {
-  const map = surfaceOf(scene.add.layer().setName('map'), scene.cameras.main.setName('map'));
-  // Added after the map's, so it paints over it and the hit test reaches it first.
-  const ui = surfaceOf(scene.add.layer().setName('ui'), scene.cameras.add().setName('ui'));
-  map.camera.ignore(ui.layer);
-  ui.camera.ignore(map.layer);
-
+/** The scene's one Layer, named, and every object the scene makes from now on added to it. */
+export function homeLayer(scene: Phaser.Scene, name: string): Phaser.GameObjects.Layer {
+  const layer = scene.add.layer().setName(name);
   // A layer re-announces what it is handed on this same emitter, so the guard is what ends this:
   // the object arrives a second time already homed, and falls through.
   whileUp(
@@ -280,12 +259,48 @@ export function applyDesignSpace(scene: Phaser.Scene): Surfaces {
     (object: Phaser.GameObjects.GameObject) => {
       if (object instanceof Phaser.GameObjects.Layer) return;
       if (object.displayList !== scene.sys.displayList) return;
-      ui.layer.add(object);
+      layer.add(object);
     },
   );
+  return layer;
+}
 
-  holdDesignSpace(scene, ui.camera);
-  return { map, ui };
+/** A move a scene above kept from this one, said of its input plugin: the pointer is off it. */
+const WITHHELD = 'withheld';
+
+/** Which moves landing on an interactive object of a scene it keeps from the scenes beneath. */
+export type Moves = 'every' | 'no button held';
+
+/**
+ * Every press and wheel landing on an interactive object of this scene kept from the scenes beneath,
+ * a move as `moves` says, and never a release, which stopped would strand a drag beneath. One
+ * listener per event, not per object: `topOnly` skips a stop on an object lying under another.
+ */
+export function stopsThePointer(scene: Phaser.Scene, moves: Moves): void {
+  const stop = (): void => {
+    scene.input.stopPropagation();
+  };
+  // The scenes beneath never run their over and out pass for a move withheld from them, so they
+  // are told, or a hover there outlives the pointer that left it (docs/PHASER.md).
+  const withhold = (): void => {
+    stop();
+    for (const beneath of scene.game.scene.getScenes(true)) {
+      if (beneath === scene) return;
+      beneath.input.emit(WITHHELD);
+    }
+  };
+  scene.input.on('gameobjectdown', stop);
+  scene.input.on('gameobjectwheel', stop);
+  scene.input.on('gameobjectmove', (pointer: Phaser.Input.Pointer) => {
+    switch (moves) {
+      case 'every':
+        withhold();
+        return;
+      case 'no button held':
+        if (pointer.buttons === 0) withhold();
+        return;
+    }
+  });
 }
 
 // A pointer records `downX` / `downY` for its primary button alone, so where a press landed is the
@@ -450,12 +465,13 @@ export function onHover(
   const input = target.scene.input;
   let hovered = false;
   let returning = false;
-  // The two are counted apart: the pointer can leave the canvas and come back while a scrim still
-  // stands, and one flag for both would read the screen as live again under it.
-  /** Whether the pointer is off the canvas, and whether a scrim stands over the scene. */
+  // Counted apart: the pointer can leave the canvas and come back while a scrim still stands, and
+  // one flag for all three would read the screen as live again under it.
+  /** Off the canvas, under a scrim, and under a scene above that withheld the last move. */
   let offCanvas = false;
   let covered = false;
-  const away = (): boolean => offCanvas || covered;
+  let withheld = false;
+  const away = (): boolean => offCanvas || covered || withheld;
   const off = (): void => {
     if (!hovered) return;
     hovered = false;
@@ -497,9 +513,16 @@ export function onHover(
     covered = false;
     returning = true;
   };
+  const passed = (): void => {
+    withheld = true;
+    off();
+  };
+  // Phaser's list still holds the target the pointer was withheld over, so no `pointerover` comes
+  // when it moves back onto it; this move runs ahead of the over and out pass.
   const moved = (): void => {
-    if (!returning) return;
+    if (!returning && !withheld) return;
     returning = false;
+    withheld = false;
     resume();
   };
 
@@ -513,12 +536,14 @@ export function onHover(
   input.on('gameover', back);
   input.on(COVERED, hidden);
   input.on(UNCOVERED, shown);
+  input.on(WITHHELD, passed);
   input.on('pointermove', moved);
   target.once('destroy', () => {
     input.off('gameout', left);
     input.off('gameover', back);
     input.off(COVERED, hidden);
     input.off(UNCOVERED, shown);
+    input.off(WITHHELD, passed);
     input.off('pointermove', moved);
   });
 

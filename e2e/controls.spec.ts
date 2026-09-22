@@ -193,7 +193,7 @@ test('a slot takes the next key pressed, and keeps it across a reload', async ({
   await expect.poll(() => slotReads(page, 'pan-up', 1)).toBe('K');
 
   await page.reload();
-  await page.waitForFunction(() => window.game?.scene.isActive('chronicle') === true);
+  await page.waitForFunction(() => window.game?.scene.isActive('ui') === true);
   await rested(page);
   await intoControls(page);
   expect(await slotReads(page, 'pan-up', 1)).toBe('K');

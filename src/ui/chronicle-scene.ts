@@ -25,13 +25,16 @@ import { resetConsole } from './debug-console';
 import { DEPTH } from './depths';
 import {
   addText,
-  applyDesignSpace,
   COVERED,
   DESIGN_WIDTH,
+  holdDesignSpace,
+  homeLayer,
   letGoOfPress,
   MARGIN,
   onClick,
   onHover,
+  stopsThePointer,
+  surfaceOf,
   UI_FONT,
   UNCOVERED,
 } from './design-space';
@@ -41,6 +44,7 @@ import { onKeyDown } from './keys';
 import type { Choices } from './launch-page';
 import { css, LOOK } from './look';
 import { createMapView, type PressedTile } from './map';
+import { mapOf } from './map-scene';
 import { type OpensChronicles, raiseMenu, resetMenu } from './menu-scene';
 import { createOverlay } from './overlay';
 import { overlayOf } from './overlay-scene';
@@ -75,7 +79,7 @@ export class ChronicleScene extends Phaser.Scene implements OpensChronicles {
   private sequence: symbol | undefined;
 
   constructor() {
-    super('chronicle');
+    super('ui');
   }
 
   init(choices: Choices): void {
@@ -122,23 +126,31 @@ export class ChronicleScene extends Phaser.Scene implements OpensChronicles {
   newChronicle(): void {
     this.sequence = undefined;
     stopAllMotion(this);
+    stopAllMotion(mapOf(this));
     // Queued ahead of the restart below, and a start on a running scene stops it first, so the
-    // overlay goes down and comes back up with its keyboard plugin ahead of this one (docs/PHASER.md).
+    // overlay and the map go down and come back up ahead of this one: the overlay's keyboard plugin
+    // ahead of this one's, the map up before this one reaches into it (docs/PHASER.md).
     this.scene.launch('overlay');
+    this.scene.launch('map');
     this.scene.restart({ ...this.choices, seed: undefined });
   }
 
   create(): void {
-    const { map, ui } = applyDesignSpace(this);
+    const map = mapOf(this);
+    const ui = surfaceOf(homeLayer(this, 'ui'), this.cameras.main);
+    holdDesignSpace(this, ui.camera);
+    stopsThePointer(this, 'no button held');
     createBand(this);
 
     /** The one bubble each surface raises: the infopanel's rows on the map, the bar's on the UI. */
-    const tooltip = { map: createTooltip(this, map), ui: createTooltip(this, ui) };
+    const tooltip = { map: createTooltip(map, map.surface), ui: createTooltip(this, ui) };
 
     const parts: Part[] = [];
-    const view = createMapView(this, map, this.choices.catalogue, this.current);
-    const panel = createInfoPanel(this, map, this.choices.catalogue, tooltip.map);
-    const note = createRefusalNote(this, map, { depth: DEPTH.refusalNote });
+    const view = createMapView(map, map.surface, this.choices.catalogue, this.current);
+    const panel = createInfoPanel(map, map.surface, this.choices.catalogue, tooltip.map);
+    const note = createRefusalNote(map, map.surface, { depth: DEPTH.refusalNote });
+    // The map's note hears only the presses this scene lets through to the map.
+    this.input.on('pointerdown', note.hide);
 
     /** The tile the ring stands on, and nothing while none is selected. */
     let selection: PressedTile | undefined;
@@ -373,9 +385,11 @@ export class ChronicleScene extends Phaser.Scene implements OpensChronicles {
       away = under;
       if (!under) {
         this.input.emit(UNCOVERED);
+        map.input.emit(UNCOVERED);
         return;
       }
       this.input.emit(COVERED);
+      map.input.emit(COVERED);
       queueMicrotask(() => letGoOfPress(this.game));
     };
 

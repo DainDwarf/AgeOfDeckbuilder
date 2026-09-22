@@ -54,7 +54,7 @@ async function moveOut(page: Page, run: Run): Promise<Chronicle> {
   await page.waitForFunction(
     () =>
       window.game?.scene
-        .getScene<ChronicleScene>('chronicle')
+        .getScene<ChronicleScene>('ui')
         .chronicle.units.filter((unit) => unit.faction === 'player').length === 1,
   );
 
@@ -77,8 +77,7 @@ async function aimAt(
   await page.mouse.click(target.x, target.y);
   await playedOut(page);
   await page.waitForFunction(
-    (held) =>
-      window.game?.scene.getScene<ChronicleScene>('chronicle').chronicle.hand.length === held,
+    (held) => window.game?.scene.getScene<ChronicleScene>('ui').chronicle.hand.length === held,
     hand.length - 1,
   );
 }

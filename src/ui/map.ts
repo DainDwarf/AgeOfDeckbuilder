@@ -977,8 +977,8 @@ export function createMapView(
     thresholds.add(thresholdMark(scene, threshold.tile, threshold.cost, resolution));
   };
 
-  // The design space re-rasterises every text the scene holds at its own factor when the window
-  // changes, and subscribed to that ahead of the map: this raises the threshold again after it.
+  // The map scene re-rasterises every text it holds at its own factor when the window changes, and
+  // subscribed to that at its create, ahead of the map: this raises the threshold again after it.
   onResize(scene, paintThreshold);
 
   /**

@@ -27,7 +27,7 @@ test('an address naming a deck boots into the chronicle and logs nothing', async
   await expect(canvas).toBeVisible();
   expect(await canvas.evaluate((element: HTMLCanvasElement) => element.width)).toBeGreaterThan(0);
 
-  await page.waitForFunction(() => window.game?.scene.isActive('chronicle') === true);
+  await page.waitForFunction(() => window.game?.scene.isActive('ui') === true);
 
   expect(problems).toEqual([]);
 });
@@ -39,7 +39,7 @@ test('the bare address boots the launch page and logs nothing', async ({ page })
   await page.goto('/');
 
   await expect.poll(() => standing(page, 'launch')).toBe(true);
-  expect(await page.evaluate(() => window.game?.scene.isActive('chronicle'))).toBe(false);
+  expect(await page.evaluate(() => window.game?.scene.isActive('ui'))).toBe(false);
 
   await expect.poll(() => standing(page, 'menu-button')).toBe(true);
   await rested(page);
@@ -67,11 +67,11 @@ test('the console over the launch page takes its digits and its Enter', async ({
   await page.keyboard.type('345');
   await page.keyboard.press('Enter');
   await rested(page);
-  expect(await page.evaluate(() => window.game?.scene.isActive('chronicle'))).toBe(false);
+  expect(await page.evaluate(() => window.game?.scene.isActive('ui'))).toBe(false);
   await consoleKey(page);
 
   await page.keyboard.press('Enter');
-  await page.waitForFunction(() => window.game?.scene.isActive('chronicle') === true);
+  await page.waitForFunction(() => window.game?.scene.isActive('ui') === true);
   await expect.poll(() => seedOnAddress(page)).toBe(12);
 
   expect(problems).toEqual([]);
@@ -87,7 +87,7 @@ test('Launch opens the chronicle on the defaults, and the address follows every 
   await expect.poll(() => standing(page, 'launch-button')).toBe(true);
   await rested(page);
   await click(page, 'launch-button');
-  await page.waitForFunction(() => window.game?.scene.isActive('chronicle') === true);
+  await page.waitForFunction(() => window.game?.scene.isActive('ui') === true);
 
   const launched = await chronicleOf(page);
   const deck = deckOf(NOMADIC, 'nomadic');
