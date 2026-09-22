@@ -249,7 +249,7 @@ export function holdDesignSpace(scene: Phaser.Scene, camera: Phaser.Cameras.Scen
 const WITHHELD = 'withheld';
 
 /** Which moves landing on an interactive object of a scene it keeps from the scenes beneath. */
-export type Moves = 'every' | 'no button held';
+type Moves = 'every' | 'no button held';
 
 /**
  * Every press and wheel on an interactive object of this scene kept from the scenes beneath, a
