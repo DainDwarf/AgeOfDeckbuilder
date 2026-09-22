@@ -395,10 +395,10 @@ export function createOverlay(
     // Off every display list, or it paints; the mask's destroy leaves it standing (docs/PHASER.md).
     const stencil = new Phaser.GameObjects.Rectangle(
       scene,
-      DESIGN_WIDTH / 2,
-      top + frameHeight / 2,
-      DESIGN_WIDTH - 2 * MARGIN,
-      frameHeight,
+      frame.x,
+      frame.y,
+      frame.width,
+      frame.height,
       0xffffff,
     );
     shown.push(stencil);
