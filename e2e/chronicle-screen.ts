@@ -369,7 +369,7 @@ export function besideTheCards(page: Page): Promise<{ x: number; y: number }> {
   });
 }
 
-/** Whether an object of that name stands on the chronicle screen. */
+/** Whether an object of that name stands on any running scene. */
 export function standing(page: Page, name: string): Promise<boolean> {
   return page.evaluate((target) => window.named?.(target) !== undefined, name);
 }

@@ -72,6 +72,9 @@ const game = new Phaser.Game({
 game.scene.add('launch', LaunchPage);
 game.scene.add('chronicle', ChronicleScene);
 game.scene.add('console', DebugConsole);
+// The chronicle scene reaches into the console's as it is created, so this order is load-bearing
+// twice over: started second, the console has no `reset` yet and the chronicle throws on the
+// address that opens straight.
 game.events.once(Phaser.Core.Events.READY, () => {
   game.scene.start('console');
   game.scene.start(asked('deck') === undefined ? 'launch' : 'chronicle', choices);

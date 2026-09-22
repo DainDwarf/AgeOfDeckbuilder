@@ -60,7 +60,6 @@ test('the console over the launch page takes its digits and its Enter', async ({
   expect(await page.evaluate(() => window.game?.scene.isActive('chronicle'))).toBe(false);
   await consoleKey(page);
 
-  // The page kept the seed it was typed before the console rose, and nothing the console was typed.
   await page.keyboard.press('Enter');
   await page.waitForFunction(() => window.game?.scene.isActive('chronicle') === true);
   await expect.poll(() => seedOnAddress(page)).toBe(12);
