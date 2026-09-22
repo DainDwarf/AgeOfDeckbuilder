@@ -252,11 +252,11 @@ const WITHHELD = 'withheld';
 export type Moves = 'every' | 'no button held';
 
 /**
- * Every press and wheel landing on an interactive object of this scene kept from the scenes beneath,
- * a move as `moves` says, and never a release, which stopped would strand a drag beneath. One
- * listener per event, not per object: `topOnly` skips a stop on an object lying under another.
+ * Every press and wheel on an interactive object of this scene kept from the scenes beneath, a
+ * move as `moves` answers at that move, never a release: stopped, it would strand a drag beneath.
+ * One listener per event, not per object: `topOnly` skips a stop on an object lying under another.
  */
-export function stopsThePointer(scene: Phaser.Scene, moves: Moves): void {
+export function stopsThePointer(scene: Phaser.Scene, moves: () => Moves): void {
   const stop = (): void => {
     scene.input.stopPropagation();
   };
@@ -272,7 +272,7 @@ export function stopsThePointer(scene: Phaser.Scene, moves: Moves): void {
   scene.input.on('gameobjectdown', stop);
   scene.input.on('gameobjectwheel', stop);
   scene.input.on('gameobjectmove', (pointer: Phaser.Input.Pointer) => {
-    switch (moves) {
+    switch (moves()) {
       case 'every':
         withhold();
         return;

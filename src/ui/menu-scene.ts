@@ -96,7 +96,7 @@ export class MenuScene extends Phaser.Scene {
     };
 
     onClick(scrim, back);
-    stopsThePointer(this, 'every');
+    stopsThePointer(this, () => (standing === undefined ? 'no button held' : 'every'));
 
     readsKeys(this, (event) => {
       if (standing === undefined) return false;

@@ -152,7 +152,7 @@ export class ChronicleScene extends Phaser.Scene implements OpensChronicles {
       tooltip: stratum(),
     };
     holdDesignSpace(this, camera);
-    stopsThePointer(this, 'no button held');
+    stopsThePointer(this, () => 'no button held');
     createBand(this, ui.band);
 
     /** The one bubble each surface raises: the infopanel's rows on the map, the bar's on the UI. */
