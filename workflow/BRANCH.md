@@ -35,7 +35,6 @@ The chronicle screen is drawn on one Phaser scene today: two Layers painted by t
 
 ## The lines
 
-- **The design on the interface page** — _What stands over what_ and _The menu_ say what the tower changes: the menu's own scrim, the resource bar under the scrim while a deal waits, the Menu button on every screen; the two wordings are the intake's.
 - **The console is a scene** — the debug console moves to a scene above everything, stopping every key while it stands; the e2e harness finds named objects across scenes.
 - **The menu is a scene** — the Menu button, the menu's windows and their scrim move to a scene running on every screen, below the console; the overlay's kept-aside states for closing the menu back onto a window go.
 - **The overlay is a scene** — the scrim and what it carries move to a scene above the chronicle screen, with the clip camera moving along untouched; the scene sleeps while nothing stands and restarts with the chronicle.
