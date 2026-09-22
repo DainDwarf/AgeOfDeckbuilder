@@ -360,13 +360,6 @@ export class ChronicleScene extends Phaser.Scene implements OpensChronicles {
     /** Whether the screen is away: the pointer has left the game for whichever scrim covers it. */
     let away = false;
 
-    // The menu takes every key it stands under and offers none of them on, so a pan key held as its
-    // window rises would pan the map on for ever; the overlay lets the two through and freezes nothing.
-    /** The one place the map's pan and zoom keys are put down and taken back up. */
-    const liveMap = (): void => {
-      view.live(!underMenu);
-    };
-
     /**
      * The screen away under either scrim and back when the last of them falls: every hover on it
      * ends, and the press it holds is let go of after the pointer event that raised the scrim —
@@ -570,7 +563,9 @@ export class ChronicleScene extends Phaser.Scene implements OpensChronicles {
     resetMenu(this, (under) => {
       underMenu = under;
       covering();
-      liveMap();
+      // The menu takes every key it stands under and offers none of them on, so a pan key held as
+      // its window rises would pan on for ever; the overlay lets the two through and freezes nothing.
+      view.live(!under);
     });
 
     parts.push(
