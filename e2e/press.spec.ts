@@ -317,7 +317,8 @@ test('a card dragged and right-clicked where no scrim rises follows the pointer 
   expect(await standing(page, 'inspection')).toBe(false);
   expect((await chronicleOf(page)).hand).toEqual(opened.hand);
 
-  // Measured clear of the button, which stops a move that lands on it, and moved clear of it again.
+  // The carry is absolute, so it is exact from the first move the menu does not stop: both of these
+  // stand clear of the button, which swallows every move that lands on it and freezes the card.
   const below = menu.y + 120 * menu.unit;
   await page.mouse.move(menu.x, below, { steps: 4 });
   await rested(page);
@@ -325,7 +326,9 @@ test('a card dragged and right-clicked where no scrim rises follows the pointer 
 
   const by = 160 * menu.unit;
   await page.mouse.move(menu.x, below + by, { steps: 4 });
-  await expect.poll(async () => (await onScreen(page, card)).y - carried.y).toBeGreaterThan(by / 2);
+  await expect
+    .poll(async () => Math.round((await onScreen(page, card)).y - carried.y))
+    .toBe(Math.round(by));
 
   await page.mouse.up();
   await playedOut(page);
