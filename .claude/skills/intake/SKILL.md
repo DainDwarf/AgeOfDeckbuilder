@@ -9,7 +9,7 @@ One board line per invocation: the first line with no dossier link, unless the u
 
 ## 1. Read
 
-The line; the design pages, `docs/GLOSSARY.md` and `DOGMAS.md` where they touch it; the code it lands in, enough to know what it changes. Time and measure what a number would settle.
+The line; the design pages, `docs/GLOSSARY.md` and `DOGMAS.md` where they touch it; the code it lands in, enough to know what it changes; for a line landing in `src/ui/`, `src/main.ts` or `e2e/`, `docs/PHASER.md`, which the dossier's Traps cite rather than restate. Time and measure what a number would settle.
 
 ## 2. Challenge
 

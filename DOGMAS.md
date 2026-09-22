@@ -136,6 +136,7 @@ How this code base is shaped, and what a change never deviates from:
 - **All UI is Phaser** — inside a chronicle and outside it alike: launch, collection, deck editing, codex. `index.html` carries no UI: a style reset, the script that boots Phaser, and the canvas Phaser creates. Why: a card appears on every one of those screens and must have exactly one renderer; a DOM menu layer would be a second one.
 - **The map's geometry lives in `src/rules/`**, in axial coordinates. A tile is drawn as an ordinary Phaser object from those coordinates; Phaser's tilemap system is not used, because the map is a rules structure the renderer reads, not a renderer structure the rules ask about.
 - **Every dependency is pinned exactly** in `package.json` — no `^`, no `~`. Why: a build that changed because an upstream patch landed is a failure with no local cause.
+- **A Phaser claim is read from the pinned package before it is asserted.** The bundled pages, `node_modules/phaser/skills/`, say what Phaser 4 is; `docs/PHASER.md` says what they do not, the mechanisms across scenes and the misreadings they invite; the source, `node_modules/phaser/src`, settles the rest, cited by file and line. Why: memory of Phaser is Phaser 3's, and a confident wrong claim about it has reached a review verdict.
 - **Assets carry a licence record.** A pack entering `public/assets/` gets its entry in `public/assets/LICENSES.md` in the same unit of work; no entry, no ship.
 
 The layout, which embodies the first rule above:

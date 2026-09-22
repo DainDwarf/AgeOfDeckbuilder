@@ -19,6 +19,7 @@ Spawn the `implementer` agent with a brief containing:
 - the dossier's path;
 - the `docs/` pages that are the spec for this change, by path and section heading — the implementer reads the sections named, not the whole page;
 - the doc-impact list;
+- `docs/PHASER.md`, named as the page to read first, when the line touches `src/ui/`, `src/main.ts` or `e2e/`;
 - what to run to verify (`npm run fmt`, then typecheck, tests, the relevant command);
 - the standing instruction: _the design is the spec; a gap is a Deviation in your report, not a change to the design; anything the dossier did not foresee goes in the report_;
 - the standing instruction: _after spawning any child or background task, finish finite work and end your turn_.

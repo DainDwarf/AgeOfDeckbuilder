@@ -13,6 +13,8 @@ You execute an agreed plan for one `workflow/BOARD.md` line. Your caller has alr
 
 Read `DOGMAS.md` before touching anything. It is the rulebook; the reviewer after you checks against it.
 
+A diff touching `src/ui/`, `src/main.ts` or `e2e/` starts with `docs/PHASER.md`. A Phaser behaviour it relies on that the page does not state is read in `node_modules/phaser/skills/` or `node_modules/phaser/src` before it is relied on, and the report cites the file and line.
+
 ## The spec is the spec
 
 The `docs/` pages your brief names are the specification. When the code you are writing cannot match them, or the plan did not foresee a case you hit:
