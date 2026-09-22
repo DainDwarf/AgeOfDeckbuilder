@@ -27,7 +27,6 @@ import { EASE, ended, stopMotion } from './card-motion';
 import {
   addText,
   BAR_HEIGHT,
-  createClip,
   DESIGN_HEIGHT,
   DESIGN_WIDTH,
   MARGIN,
@@ -205,10 +204,7 @@ export function createOverlay(
     .setOrigin(0, 0)
     .setVisible(false);
   scene.strata.scrim.layer.add(scrim);
-  const clip = createClip(scene, on);
-  const note = createRefusalNote(scene, scene.strata.note, {
-    raised: (raised) => clip.exclude(raised),
-  });
+  const note = createRefusalNote(scene, scene.strata.note);
 
   let shown: Phaser.GameObjects.GameObject[] = [];
   /** What stands on the scrim, and nothing while the scrim is down. */
@@ -242,7 +238,6 @@ export function createOverlay(
     grid = undefined;
     scrolling = undefined;
     fling = 0;
-    clip.hide();
   };
 
   const close = (): void => {
@@ -341,9 +336,7 @@ export function createOverlay(
    * A pile's cards laid out below `top`, and the frame that scrolls and flings them: `pressed` takes
    * the press and the number the card under it was offered as, and nothing where it landed between
    * them. Every card face is named after the grid and its place on the screen, the first drawn
-   * first, and carries the card it stands and the number it was offered as in its data. Anything
-   * added to the scene after this is excluded from the clip, or the clip's camera draws it inside the
-   * frame too.
+   * first, and carries the card it stands and the number it was offered as in its data.
    */
   const layGrid = (
     name: string,
@@ -399,6 +392,17 @@ export function createOverlay(
     );
 
     const root = carries(scene.add.container(0, 0).setName(name).setData('overflow', overflow));
+    // Off every display list, or it paints; the mask's destroy leaves it standing (docs/PHASER.md).
+    const stencil = new Phaser.GameObjects.Rectangle(
+      scene,
+      DESIGN_WIDTH / 2,
+      top + frameHeight / 2,
+      DESIGN_WIDTH - 2 * MARGIN,
+      frameHeight,
+      0xffffff,
+    );
+    shown.push(stencil);
+    root.enableFilters().filters?.external.addMask(stencil, false, on.camera);
 
     const placed = cards.map((offered, index): Placed => {
       const row = Math.floor(index / columns);
@@ -421,7 +425,6 @@ export function createOverlay(
     const laid = { root, placed, height, overflow };
     grid = laid;
     scrollTo(offset);
-    clip.show(root, MARGIN, top, DESIGN_WIDTH - 2 * MARGIN, frameHeight);
     return laid;
   };
 

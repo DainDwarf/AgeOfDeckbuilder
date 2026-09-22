@@ -63,8 +63,6 @@ const game = new Phaser.Game({
   height: backing.height,
   backgroundColor: css(LOOK.page),
   disableContextMenu: true,
-  // Not a performance knob: without it a rotated Text tears (docs/PHASER.md).
-  maxTextures: 1,
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
 });
 // The tower's barriers rest on this; on, a stopped release strands a drag off the hand (docs/PHASER.md).
@@ -80,6 +78,10 @@ game.scene.add('console', DebugConsole);
 // so this order is load-bearing twice over: started last, none of them has the handle it is reached
 // by yet and the chronicle throws on the address that opens straight.
 game.events.once(Phaser.Core.Events.READY, () => {
+  // A batch shader built for several textures tears a rotated Text (docs/PHASER.md). Not the config's
+  // `maxTextures`: that caps the units every draw binds, and at one the browse's mask binds nothing.
+  if (game.renderer instanceof Phaser.Renderer.WebGL.WebGLRenderer)
+    game.renderer.renderNodes.setMaxParallelTextureUnits(1);
   game.scene.start('console');
   game.scene.start('menu');
   if (asked('deck') === undefined) {

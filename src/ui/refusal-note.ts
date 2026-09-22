@@ -61,11 +61,7 @@ export function refusedAim(block: Block): Said {
  * surface, a second replaces the first, nothing to say raises none, and any press on that scene
  * takes it down.
  */
-export function createRefusalNote(
-  scene: Phaser.Scene,
-  on: Stratum,
-  { raised: told }: { raised?: (note: Phaser.GameObjects.Container) => void } = {},
-): RefusalNote {
+export function createRefusalNote(scene: Phaser.Scene, on: Stratum): RefusalNote {
   let note: Phaser.GameObjects.Container | undefined;
   /** How the note stands where it was raised, for a zoom that changes what the surface measures in. */
   let stand: (() => void) | undefined;
@@ -96,7 +92,6 @@ export function createRefusalNote(
 
     const raised = scene.add.container(0, 0, [bubble, ...labels]).setName('refusal');
     on.layer.add(raised);
-    told?.(raised);
     note = raised;
 
     stand = (): void => {

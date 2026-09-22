@@ -35,6 +35,5 @@ The chronicle screen is drawn on one Phaser scene today: two Layers painted by t
 
 ## The lines
 
-- **The browse is clipped by a mask** — the grid's container takes a Mask filter with a frame-sized rectangle as its source, the tearing workaround moves from the renderer's texture cap to the batch's parallel texture units, and the clip camera, its ignore lists and the refusal note's `raised` callback go. Doc-impact: `docs/PHASER.md`. [board/browse-clipped-by-mask.md](board/browse-clipped-by-mask.md)
 - **Drags run on under the Menu button** — a drag, the map's pan or a carried object, keeps its moves across the Menu button with no stutter, the same way it already runs on across the UI's widgets.
 - **The card references dossier is rewritten on the tower** — `board/card-references.md` is rewritten from the settled state, the small card a raiser on any surface adds to that scene's topmost Layer and nothing excluded anywhere, so the line ships on `main` as an ordinary one.
