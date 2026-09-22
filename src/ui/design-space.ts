@@ -119,6 +119,7 @@ export function followWindow(game: Phaser.Game): void {
  */
 export function letGoOfPress(game: Phaser.Game): void {
   if (game.input.mousePointer?.isDown !== true) return;
+  // Button 0 whichever button is held: whoever answers this reads no button off the pointer.
   window.dispatchEvent(
     new MouseEvent('mouseup', { bubbles: true, button: 0, buttons: 0, clientX: -1, clientY: -1 }),
   );

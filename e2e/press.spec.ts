@@ -289,6 +289,51 @@ test('a right click on a card being dragged shows it large and brings it home, a
   expect(problems).toEqual([]);
 });
 
+test('a card dragged and right-clicked where no scrim rises follows the pointer on, and the left release plays it', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const run = playableRun();
+
+  await open(page, run.seed, 'PH_LongDeck');
+  for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
+
+  const opened = await chronicleOf(page);
+  const index = atNothing(opened);
+  const card = `hand-${index}`;
+  const home = await onScreen(page, card);
+  const menu = await onScreen(page, 'menu-button');
+
+  await page.mouse.move(home.x, home.y);
+  await page.mouse.down();
+  await page.mouse.move(home.x, home.y - LIFTED * home.unit, { steps: 5 });
+  await page.mouse.move(menu.x, menu.y, { steps: 5 });
+
+  // The Menu button swallows the press and raises nothing, while the release it never swallows ends
+  // Phaser's drag: from there the card follows the pointer on the hand's own carry.
+  await page.mouse.down({ button: 'right' });
+  await page.mouse.up({ button: 'right' });
+  expect(await standing(page, 'menu')).toBe(false);
+  expect(await standing(page, 'inspection')).toBe(false);
+  expect((await chronicleOf(page)).hand).toEqual(opened.hand);
+
+  // Measured clear of the button, which stops a move that lands on it, and moved clear of it again.
+  const below = menu.y + 120 * menu.unit;
+  await page.mouse.move(menu.x, below, { steps: 4 });
+  await rested(page);
+  const carried = await onScreen(page, card);
+
+  const by = 160 * menu.unit;
+  await page.mouse.move(menu.x, below + by, { steps: 4 });
+  await expect.poll(async () => (await onScreen(page, card)).y - carried.y).toBeGreaterThan(by / 2);
+
+  await page.mouse.up();
+  await playedOut(page);
+  expect((await chronicleOf(page)).hand).not.toEqual(opened.hand);
+
+  expect(problems).toEqual([]);
+});
+
 test('a right click while a unit is carried inspects the tile under it and leaves the unit in hand, and the left release steps it there', async ({
   page,
 }) => {
@@ -347,6 +392,45 @@ test('a right click on the card being aimed shows it large, and the back key lea
   await expect.poll(() => standing(page, 'inspection')).toBe(false);
   expect(await standing(page, 'aim')).toBe(true);
   expect(await chronicleOf(page)).toEqual(opened);
+
+  expect(problems).toEqual([]);
+});
+
+test('a right click while a press is held on the aim inspects the tile under it, and the left release still plays the card there', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const run = workerRun('PH_Farm');
+  // The run's ends of turn, the worker entered, the step it takes, and the card played on its tile.
+  test.setTimeout(budget(run.turn + 3));
+
+  await open(page, run.seed, 'PH_Deck');
+  for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
+
+  const opened = await chronicleOf(page);
+  await dragOut(page, opened.hand.indexOf('PH_Worker'));
+  await expect.poll(async () => playersOf(await chronicleOf(page)).length).toBe(1);
+
+  const entered = await chronicleOf(page);
+  await dragUnit(page, cityTileOf(entered), run.tile);
+
+  const moved = await chronicleOf(page);
+  const home = await onScreen(page, `hand-${moved.hand.indexOf('PH_Farm')}`);
+  await page.mouse.click(home.x, home.y);
+  await aimed(page);
+
+  const tile = await onScreen(page, `tile-${tileKey(run.tile)}`);
+  await page.mouse.move(tile.x, tile.y);
+  await page.mouse.down();
+  await page.mouse.down({ button: 'right' });
+  await page.mouse.up({ button: 'right' });
+  await expect.poll(() => shownCard(page)).toBeDefined();
+  expect(await standing(page, 'aim')).toBe(true);
+  expect(await chronicleOf(page)).toEqual(moved);
+
+  await page.mouse.up();
+  await playedOut(page);
+  expect((await chronicleOf(page)).hand).not.toEqual(moved.hand);
 
   expect(problems).toEqual([]);
 });

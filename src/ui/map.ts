@@ -654,13 +654,9 @@ export function createMapView(
   };
 
   /**
-   * The press a catcher takes and the scene resolves: the press is the catcher's, so the hand and
-   * the piles keep theirs, while the release is the scene's, so a press that travelled off the
-   * catcher still ends — on the canvas as a release, off it as an abandon. Past the drag slack the
-   * press carries the map instead, and one that panned reaches neither `release` nor `abandon`.
-   * The press is the button's that landed it and that button's release alone lets it go, a second
-   * button meanwhile a click of its own; an abandon lets go whichever button the release the
-   * browser finally delivers names. Hands back the way to take the three scene listeners off again.
+   * The press is the catcher's and the release the scene's, so a press that travelled off the
+   * catcher still ends — on the canvas as a release, off it as an abandon — while the hand and the
+   * piles keep their own presses. One that panned past the drag slack reaches neither.
    */
   const takePress = (
     catcher: Phaser.GameObjects.Zone,
