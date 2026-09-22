@@ -35,6 +35,7 @@ The chronicle screen is drawn on one Phaser scene today: two Layers painted by t
 
 ## The lines
 
+- **Phaser's traps are written down** — a place every agent and session reads the correct mechanism from, holding both the framework's own traps and the wrong assumptions Claude has made about it, so stale knowledge never takes precedence over the design.
 - **The overlay is a scene** — the scrim and what it carries move to a scene above the chronicle screen and below the menu, started ahead of the chronicle scene and restarted with it, standing empty while nothing stands; while anything stands on it the four keys and every wheel notch are its and the pan and zoom keys pass, a scrim rising is the pointer leaving the game to the screen beneath, the resource bar stands under the deal's scrim, and the clip camera moves along untouched; `docs/INTERFACE.md` says so; `e2e/hover.spec.ts` asserts the bar under the scrim, and `e2e/browse.spec.ts`, `e2e/deal.spec.ts`, `e2e/recall.spec.ts` and `e2e/press.spec.ts` pass. Doc-impact: `docs/INTERFACE.md`. [board/overlay-scene.md](board/overlay-scene.md)
 - **The map and the UI are two scenes** — the two Layers and their cross-ignoring cameras become two scenes, the homing hook goes, strata become Layers, and the depth table goes with them.
 - **The browse is clipped by a mask** — the grid's container takes a Mask filter with a frame-sized rectangle as its source; the clip camera, its ignore lists and the refusal note's `raised` callback go.
