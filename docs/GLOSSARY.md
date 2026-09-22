@@ -54,6 +54,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **aim** | What a card is played at, nothing included. | target (for a card's aim), targeting (for a card's aim), cast at, pointed at, destination |
 | **aim window** | The window offering the discard pile's cards to a card aimed there. | browse (for the aim window), picker, chooser, selector |
 | **being aimed** | The state of a selected card while what its aim admits is offered, until it lands or is put back. | armed, pending, targeting, in flight |
+| **stock** | The city's holding of one resource: what income adds to and every cost is paid out of. | reserve, treasury, pool, supply, balance, bank |
 | **cost** | What the city pays out of its stocks to play something, for example a card. | price, fee, charge, toll |
 | **unaffordable** | What the city cannot pay for: its cost exceeds the stocks. | unpayable, short, lacking, too expensive |
 | **discard** | To send a card from the hand to the discard pile. | throw away, dump |
