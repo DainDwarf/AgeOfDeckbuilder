@@ -58,7 +58,7 @@ function askedChoices(): Choices {
 const choices = askedChoices();
 const backing = backingSize();
 const game = new Phaser.Game({
-  type: Phaser.AUTO,
+  type: Phaser.WEBGL,
   width: backing.width,
   height: backing.height,
   backgroundColor: css(LOOK.page),
@@ -80,8 +80,7 @@ game.scene.add('console', DebugConsole);
 game.events.once(Phaser.Core.Events.READY, () => {
   // A batch shader built for several textures tears a rotated Text (docs/PHASER.md). Not the config's
   // `maxTextures`: that caps the units every draw binds, and at one the browse's mask binds nothing.
-  if (game.renderer instanceof Phaser.Renderer.WebGL.WebGLRenderer)
-    game.renderer.renderNodes.setMaxParallelTextureUnits(1);
+  (game.renderer as Phaser.Renderer.WebGL.WebGLRenderer).renderNodes.setMaxParallelTextureUnits(1);
   game.scene.start('console');
   game.scene.start('menu');
   if (asked('deck') === undefined) {
