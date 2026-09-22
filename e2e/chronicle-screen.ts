@@ -213,18 +213,19 @@ export async function readNames(page: Page): Promise<void> {
 
     /**
      * Every place a name may stand, across the running scenes: a Layer's contents under the camera
-     * it shares its name with, and everything else on a scene's own display list under its main one.
+     * it shares its name with, and everything else — a Layer no camera is named for included — on a
+     * scene's own display list under its main one.
      */
     const places = (): {
       list: Phaser.GameObjects.GameObject[];
-      camera: Phaser.Cameras.Scene2D.Camera | null;
+      camera: Phaser.Cameras.Scene2D.Camera;
     }[] =>
       (window.game?.scene.getScenes(true) ?? []).flatMap((scene) =>
         scene.children.list.map((child) =>
           child.type === 'Layer'
             ? {
                 list: (child as Phaser.GameObjects.Layer).list,
-                camera: scene.cameras.getCamera(child.name),
+                camera: scene.cameras.getCamera(child.name) ?? scene.cameras.main,
               }
             : { list: [child], camera: scene.cameras.main },
         ),
@@ -233,7 +234,7 @@ export async function readNames(page: Page): Promise<void> {
     window.named = (name) => {
       for (const place of places()) {
         const object = within(place.list, name, [])[0];
-        if (object === undefined || place.camera === null) continue;
+        if (object === undefined) continue;
         return { object, camera: place.camera };
       }
       return undefined;

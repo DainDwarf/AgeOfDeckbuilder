@@ -215,7 +215,7 @@ export type MapView = {
   showCityMarks(on: boolean): void;
   /** Draws the map under these veils: what the console's two switches take off and put back. */
   showVeils(veils: Veils): void;
-  /** Whether the pan and zoom keys reach the map; they do not while anything covers it. */
+  /** Whether the pan and zoom keys reach the map; they do not while a menu window stands. */
   live(on: boolean): void;
 };
 

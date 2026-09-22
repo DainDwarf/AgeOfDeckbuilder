@@ -85,9 +85,6 @@ export function createResourceBar(
 
   const slot = digitSlot(scene);
 
-  /** Whether the bar stands over the scrim, which it does while a deal waits to be taken. */
-  let overScrim = false;
-
   const entries = READINGS.map((key) => createEntry(scene, bar, tooltip, key));
   const layout = layOutBar({
     readings: entries.map((entry) => widthOf(entry, slot)),
@@ -100,7 +97,6 @@ export function createResourceBar(
   for (const entry of entries) {
     const { key } = entry;
     onClick(entry.hover, () => {
-      if (overScrim) return;
       if (managesCity(key)) cityMode();
       else toggleYield(key);
     });
@@ -129,8 +125,6 @@ export function createResourceBar(
   };
 
   const render = (chronicle: Chronicle): void => {
-    overScrim = chronicle.deals.length > 0;
-    bar.setDepth(overScrim ? DEPTH.overScrim : DEPTH.resourceBar);
     for (const entry of rising) stopMotion(scene, entry.ticking);
     rising = [];
     for (const entry of entries) {

@@ -1,6 +1,13 @@
 import Phaser from 'phaser';
 import { type Bind, boundTo, keyPressed } from './bindings';
-import { DESIGN_HEIGHT, DESIGN_WIDTH, holdDesignSpace, onClick, whileUp } from './design-space';
+import {
+  DESIGN_HEIGHT,
+  DESIGN_WIDTH,
+  holdDesignSpace,
+  onClick,
+  stopsThePointer,
+  whileUp,
+} from './design-space';
 import { readsKeys, takesMouseKeys } from './keys';
 import { LOOK } from './look';
 import { behind, createMenuButton, createWindow, type MenuWindow, type Opened } from './menu';
@@ -10,9 +17,6 @@ export type OpensChronicles = Phaser.Scene & { newChronicle(): void };
 
 /** What the menu says on the game's emitter as its scrim rises and falls. */
 const COVERED = 'menu-covered';
-
-/** The three the scene's own input plugin offers every object it holds under the pointer. */
-const REACHED = ['gameobjectdown', 'gameobjectmove', 'gameobjectwheel'] as const;
 
 /**
  * The menu, on a scene of its own: started after the console and before every screen, so the console
@@ -92,13 +96,7 @@ export class MenuScene extends Phaser.Scene {
     };
 
     onClick(scrim, back);
-
-    // The release is never stopped, or a drag begun under the menu and let go of over it would never
-    // end. One listener per event and not one per object: with `topOnly` on inside the scene, a stop
-    // on the scrim alone is skipped whenever a button or a slot of a window lies over it.
-    for (const reached of REACHED) {
-      this.input.on(reached, () => this.input.stopPropagation());
-    }
+    stopsThePointer(this);
 
     readsKeys(this, (event) => {
       if (standing === undefined) return false;

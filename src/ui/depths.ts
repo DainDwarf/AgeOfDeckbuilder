@@ -34,10 +34,5 @@ export const DEPTH = {
   aimLine: 2000,
   refusalNote: 2100,
 
-  scrim: 2200,
-  /** What the scrim carries. */
-  onScrim: 2300,
-  /** The resource bar while a deal waits to be taken. */
-  overScrim: 2400,
   tooltip: 2500,
 } as const;

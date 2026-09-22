@@ -41,6 +41,7 @@ import { css, LOOK } from './look';
 import { createMapView, type PressedTile } from './map';
 import { type OpensChronicles, raiseMenu, resetMenu } from './menu-scene';
 import { createOverlay } from './overlay';
+import { overlayOf } from './overlay-scene';
 import { createPiles } from './piles';
 import { createRefusalNote, refused, refusedAim } from './refusal-note';
 import { createResourceBar } from './resource-bar';
@@ -119,6 +120,9 @@ export class ChronicleScene extends Phaser.Scene implements OpensChronicles {
   newChronicle(): void {
     this.sequence = undefined;
     stopAllMotion(this);
+    // Queued ahead of the restart below, and a start on a running scene stops it first, so the
+    // overlay goes down and comes back up with its keyboard plugin ahead of this one (docs/PHASER.md).
+    this.scene.launch('overlay');
     this.scene.restart({ ...this.choices, seed: undefined });
   }
 
@@ -129,20 +133,10 @@ export class ChronicleScene extends Phaser.Scene implements OpensChronicles {
     /** The one bubble each surface raises: the infopanel's rows on the map, the bar's on the UI. */
     const tooltip = { map: createTooltip(this, map), ui: createTooltip(this, ui) };
 
-    /**
-     * Every bubble the screen has raised, taken down: what a scrim rising over the screen calls for,
-     * since Phaser re-checks what the pointer is over only when it moves and a scrim risen under a
-     * pointer at rest sends no `pointerout` to what it covered.
-     */
-    const dropTooltips = (): void => {
-      tooltip.map.hide();
-      tooltip.ui.hide();
-    };
-
     const parts: Part[] = [];
     const view = createMapView(this, map, this.choices.catalogue, this.current);
     const panel = createInfoPanel(this, map, this.choices.catalogue, tooltip.map);
-    const note = createRefusalNote(this, map);
+    const note = createRefusalNote(this, map, { depth: DEPTH.refusalNote });
 
     /** The tile the ring stands on, and nothing while none is selected. */
     let selection: PressedTile | undefined;
@@ -360,40 +354,42 @@ export class ChronicleScene extends Phaser.Scene implements OpensChronicles {
       },
     );
 
-    /** Whether a window, a browse, a card inspected or the ending screen stands over the map. */
+    /** Whether the overlay's scrim stands over the screen, and whether a window of the menu does. */
     let covered = false;
-    /** Whether a window of the menu stands, which covers the overlay's own scrim along with the map. */
     let underMenu = false;
+    /** Whether the screen is away: the pointer has left the game for whichever scrim covers it. */
+    let away = false;
 
-    /**
-     * The one place the map's pan and zoom keys are put down and taken back up. A key already held
-     * as a scrim rises stays held, so the map would pan on under it until the key was let go.
-     */
+    // The menu takes every key it stands under and offers none of them on, so a pan key held as its
+    // window rises would pan the map on for ever; the overlay lets the two through and freezes nothing.
+    /** The one place the map's pan and zoom keys are put down and taken back up. */
     const liveMap = (): void => {
-      view.live(!covered && !underMenu);
+      view.live(!underMenu);
     };
 
     /**
-     * A scrim rising over the screen, from either source: the press the screen holds is let go of
-     * where it stands. The release waits out the pointer event that raised the scrim — Phaser's
-     * dispatch is synchronous, and one inside it would walk the input plugin's lists mid-walk.
+     * The screen away under either scrim and back when the last of them falls: every hover on it
+     * ends, and the press it holds is let go of after the pointer event that raised the scrim —
+     * Phaser's dispatch is synchronous, and a release inside it walks the plugin's lists mid-walk.
      */
-    const scrimRose = (): void => {
-      if (covered || underMenu) return;
+    const covering = (): void => {
+      const under = covered || underMenu;
+      if (under === away) return;
+      away = under;
+      if (!under) {
+        this.input.emit('gameover');
+        return;
+      }
+      this.input.emit('gameout');
       queueMicrotask(() => letGoOfPress(this.game));
     };
 
     const overlay = createOverlay(
-      this,
-      ui,
+      overlayOf(this),
       this.choices.catalogue,
       (over) => {
-        if (over && !covered) {
-          dropTooltips();
-          scrimRose();
-        }
         covered = over;
-        liveMap();
+        covering();
       },
       (at) => {
         void playOut({ type: 'take', at });
@@ -537,31 +533,25 @@ export class ChronicleScene extends Phaser.Scene implements OpensChronicles {
       showYields();
     };
 
-    // The one place the city key, the yield key, the inspection key and the back key are answered:
-    // anything standing over the map swallows the first three, the inspection key going to what
-    // stands instead of the screen's own selection. The map's own answers the pan and zoom keys.
+    // The one place the city key, the yield key, the inspection key and the back key are answered.
+    // A window on the overlay takes all four ahead of this scene, so nothing here is gated on what
+    // stands over the screen; the map's own reader answers the pan and zoom keys.
     onKeyDown(this, (press) => {
       if (boundTo(press, 'city')) {
-        if (covered) return;
         if (!leaveCityMode()) enterCityMode();
         return;
       }
       if (boundTo(press, 'yields')) {
-        if (!covered) clearOrShowAllYields();
+        clearOrShowAllYields();
         return;
       }
       if (boundTo(press, 'inspect')) {
-        if (covered) {
-          overlay.inspectSelection();
-          return;
-        }
         const card = hand.selection();
         if (card !== undefined) overlay.inspect(card.id, card.refusal);
         else if (selection !== undefined) inspect(selection);
         return;
       }
       if (!boundTo(press, 'back')) return;
-      if (overlay.back()) return;
       if (inspection !== undefined) {
         uninspect();
         return;
@@ -577,12 +567,9 @@ export class ChronicleScene extends Phaser.Scene implements OpensChronicles {
     resetConsole(this, (veils) => {
       view.showVeils(veils);
     });
-    resetMenu(this, (covering) => {
-      if (covering) {
-        dropTooltips();
-        scrimRose();
-      }
-      underMenu = covering;
+    resetMenu(this, (under) => {
+      underMenu = under;
+      covering();
       liveMap();
     });
 

@@ -10,6 +10,11 @@ const UP = 'key-up';
 const WHEEL_UP = 'WheelUp';
 const WHEEL_DOWN = 'WheelDown';
 
+/** Whether the press is a notch of the wheel, for a reader whose rule for one differs. */
+export function isWheelNotch(press: Bind): boolean {
+  return press.code === WHEEL_UP || press.code === WHEEL_DOWN;
+}
+
 /** What the browser measures one notch of the wheel as. */
 const NOTCH = 100;
 

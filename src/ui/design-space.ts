@@ -198,7 +198,8 @@ export type Surface = {
 /** The map moves under the UI; the UI does not move at all. */
 export type Surfaces = { readonly map: Surface; readonly ui: Surface };
 
-function surfaceOf(
+/** One stratum and the camera it is painted by, for whoever stands something on it. */
+export function surfaceOf(
   layer: Phaser.GameObjects.Layer,
   camera: Phaser.Cameras.Scene2D.Camera,
 ): Surface {
@@ -231,11 +232,25 @@ export function holdDesignSpace(scene: Phaser.Scene, camera: Phaser.Cameras.Scen
     // The cameras' own size is Phaser's business: the camera manager subscribed to RESIZE at scene
     // boot, ahead of this, and resizes every camera at the origin that had the old size.
     camera.setZoom(factor).centerOn(DESIGN_WIDTH / 2, DESIGN_HEIGHT / 2);
+    // Phaser measures the drag threshold between raw pointer positions, in device pixels.
+    scene.input.dragDistanceThreshold = DRAG_SLACK * renderFactor();
     const resolution = Math.ceil(factor);
     for (const label of textsIn(scene.children.list)) {
       if (label.style.resolution !== resolution) label.setResolution(resolution);
     }
   });
+}
+
+/** The three the scene's own input plugin offers every object it holds under the pointer. */
+const REACHED = ['gameobjectdown', 'gameobjectmove', 'gameobjectwheel'] as const;
+
+/**
+ * Every press, move and wheel that lands on an interactive object of this scene kept from the scenes
+ * beneath it, and never a release, which stopped would strand a drag under it. One listener per
+ * event and not one per object: `topOnly` inside the scene skips a stop on an object lying under another.
+ */
+export function stopsThePointer(scene: Phaser.Scene): void {
+  for (const reached of REACHED) scene.input.on(reached, () => scene.input.stopPropagation());
 }
 
 /**
@@ -270,11 +285,6 @@ export function applyDesignSpace(scene: Phaser.Scene): Surfaces {
   );
 
   holdDesignSpace(scene, ui.camera);
-  onResize(scene, () => {
-    // Phaser measures the drag threshold between raw pointer positions, in device pixels.
-    scene.input.dragDistanceThreshold = DRAG_SLACK * renderFactor();
-  });
-
   return { map, ui };
 }
 
@@ -422,11 +432,9 @@ export type Hover = {
 };
 
 /**
- * A hover: entered when the pointer comes over the object, left when it goes. Phaser sends no
- * `pointerout` to an object the pointer leaves the canvas over: that leave reaches the scene's input
- * plugin alone, as `gameout`. And it sends `pointerover` only when an object joins the input
- * plugin's private per-pointer over list, which keeps the object through a disable, a re-enable and
- * a `gameout` alike.
+ * A hover: entered and left with the pointer. Phaser sends no `pointerout` for a leave off the
+ * canvas — that reaches the scene's input plugin alone, as `gameout`, which a scene under a scrim
+ * says of itself too — and no `pointerover` to an object still on its per-pointer over list.
  */
 export function onHover(
   target: Phaser.GameObjects.GameObject,
@@ -436,6 +444,8 @@ export function onHover(
   const input = target.scene.input;
   let hovered = false;
   let returning = false;
+  /** Whether the pointer has left the game, off the canvas or under a scrim risen over the scene. */
+  let away = false;
   const off = (): void => {
     if (!hovered) return;
     hovered = false;
@@ -443,7 +453,7 @@ export function onHover(
   };
 
   const resume = (): void => {
-    if (hovered || returning || !input.isOver || target.input?.enabled !== true) return;
+    if (hovered || returning || away || target.input?.enabled !== true) return;
     const pointer = input.activePointer;
     if (input.sortGameObjects(input.hitTestPointer(pointer), pointer)[0] !== target) return;
     // Phaser's list has to hold the target too, or it would send no `pointerout` when the pointer
@@ -459,9 +469,14 @@ export function onHover(
     if (hovered && target.input?.cursor) input.resetCursor();
     off();
   };
+  const left = (): void => {
+    away = true;
+    off();
+  };
   // The pointer keeps the coordinates it left the canvas at, so only a move on the canvas says
   // where it came back; the browser sends the canvas's `mouseover` ahead of that move.
   const back = (): void => {
+    away = false;
     returning = true;
   };
   const moved = (): void => {
@@ -476,11 +491,11 @@ export function onHover(
   });
   target.on('pointerout', off);
   // The scene outlives the target, so these go when the target does.
-  input.on('gameout', off);
+  input.on('gameout', left);
   input.on('gameover', back);
   input.on('pointermove', moved);
   target.once('destroy', () => {
-    input.off('gameout', off);
+    input.off('gameout', left);
     input.off('gameover', back);
     input.off('pointermove', moved);
   });

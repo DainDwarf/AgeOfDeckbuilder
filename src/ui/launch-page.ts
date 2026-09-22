@@ -78,6 +78,9 @@ export class LaunchPage extends Phaser.Scene {
     let seedLabel: Phaser.GameObjects.Text | undefined;
 
     const launch = (): void => {
+      // Queued ahead of the start below, so the overlay's keyboard plugin stands ahead of the
+      // chronicle scene's (docs/PHASER.md).
+      this.scene.launch('overlay');
       this.scene.start('chronicle', { ...chosen, seed: typed === '' ? undefined : Number(typed) });
     };
 

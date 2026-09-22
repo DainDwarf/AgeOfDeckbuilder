@@ -9,6 +9,7 @@ import { readMouseKeys } from './ui/keys';
 import { type Choices, firstsOf, LaunchPage } from './ui/launch-page';
 import { css, LOOK } from './ui/look';
 import { MenuScene } from './ui/menu-scene';
+import { OverlayScene } from './ui/overlay-scene';
 
 // The e2e suite and browser-console debugging observe the running game through this handle;
 // it is optional because the window exists before the game does.
@@ -70,15 +71,21 @@ game.input.globalTopOnly = false;
 // Added bottom up, started top down: render order is the add order, key order the start order (docs/PHASER.md).
 game.scene.add('launch', LaunchPage);
 game.scene.add('chronicle', ChronicleScene);
+game.scene.add('overlay', OverlayScene);
 game.scene.add('menu', MenuScene);
 game.scene.add('console', DebugConsole);
-// The chronicle scene reaches into the console's and the menu's as it is created, so this order is
-// load-bearing twice over: started last, neither has the handle it is reached by yet and the
-// chronicle throws on the address that opens straight.
+// The chronicle scene reaches into the console's, the menu's and the overlay's as it is created, so
+// this order is load-bearing twice over: started last, none of them has the handle it is reached by
+// yet and the chronicle throws on the address that opens straight.
 game.events.once(Phaser.Core.Events.READY, () => {
   game.scene.start('console');
   game.scene.start('menu');
-  game.scene.start(asked('deck') === undefined ? 'launch' : 'chronicle', choices);
+  if (asked('deck') === undefined) {
+    game.scene.start('launch', choices);
+    return;
+  }
+  game.scene.start('overlay');
+  game.scene.start('chronicle', choices);
 });
 followWindow(game);
 releaseOnBlur(game);

@@ -141,7 +141,7 @@ test('the end-turn button reads End turn when the pointer comes back straight on
   expect(problems).toEqual([]);
 });
 
-test('a reading hovered while the deal window stands raises its tooltip', async ({ page }) => {
+test('a reading hovered while the deal window stands raises no tooltip', async ({ page }) => {
   const problems = watch(page);
   const run = dealRun();
   test.setTimeout(budget(run.due));
@@ -154,7 +154,9 @@ test('a reading hovered while the deal window stands raises its tooltip', async 
 
   const food = await onScreen(page, 'reading-food');
   await page.mouse.move(food.x, food.y);
-  await expect.poll(() => tooltipUp(page, 'tooltip-ui')).toBe(true);
+  await page.waitForTimeout(PAST_REST);
+
+  expect(await tooltipUp(page, 'tooltip-ui')).toBe(false);
 
   expect(problems).toEqual([]);
 });

@@ -1,6 +1,5 @@
 import type Phaser from 'phaser';
 import type { Block, Cost, Refusal } from '../rules/state';
-import { DEPTH } from './depths';
 import { addText, DESIGN_WIDTH, drawBubble, MARGIN, type Surface, UI_FONT } from './design-space';
 import { css, LOOK } from './look';
 import type { TileFace } from './map';
@@ -58,18 +57,15 @@ export function refusedAim(block: Block): Said {
 }
 
 /**
- * The bubble a cost and a refusal answer with, standing on the surface it was raised from in the
- * panel language, its tail pointing down at what it speaks for, and staying up until it is taken
- * down. One stands per surface: a second note replaces the first, and any press on the chronicle
- * screen takes down whichever is up. Nothing to say takes it down as well. It keeps the size on
- * screen it was laid out at however far its surface has zoomed, so a zoom stands it again. A note
- * over a window stands at the depth it is given, and `raised` is told of every note as it goes up.
+ * The bubble a cost and a refusal answer with, on the surface it was raised from: one stands per
+ * surface, a second replaces the first, nothing to say raises none, and any press on that scene
+ * takes it down. It carries the depth it is given and none where it is given none.
  */
 export function createRefusalNote(
   scene: Phaser.Scene,
   on: Surface,
   {
-    depth = DEPTH.refusalNote,
+    depth,
     raised: told,
   }: { depth?: number; raised?: (note: Phaser.GameObjects.Container) => void } = {},
 ): RefusalNote {
@@ -101,10 +97,8 @@ export function createRefusalNote(
     const width = Math.max(...labels.map((label) => label.width)) + 20;
     const height = line + 7;
 
-    const raised = scene.add
-      .container(0, 0, [bubble, ...labels])
-      .setDepth(depth)
-      .setName('refusal');
+    const raised = scene.add.container(0, 0, [bubble, ...labels]).setName('refusal');
+    if (depth !== undefined) raised.setDepth(depth);
     on.layer.add(raised);
     told?.(raised);
     note = raised;
