@@ -2,7 +2,15 @@ import { expect, type Page, test } from '@playwright/test';
 import { NOMADIC } from '../src/content/nomadic';
 import { STAND_IN } from '../src/content/stand-in';
 import { deckOf } from '../src/rules/catalogue';
-import { chronicleOf, click, readNames, rested, standing, watch } from './chronicle-screen';
+import {
+  chronicleOf,
+  click,
+  consoleKey,
+  readNames,
+  rested,
+  standing,
+  watch,
+} from './chronicle-screen';
 
 /** The seed the address carries, and nothing where it carries none. */
 function seedOnAddress(page: Page): number | undefined {
@@ -32,6 +40,30 @@ test('the bare address boots the launch page and logs nothing', async ({ page })
 
   await expect.poll(() => standing(page, 'launch')).toBe(true);
   expect(await page.evaluate(() => window.game?.scene.isActive('chronicle'))).toBe(false);
+
+  expect(problems).toEqual([]);
+});
+
+test('the console over the launch page takes its digits and its Enter', async ({ page }) => {
+  const problems = watch(page);
+  await readNames(page);
+
+  await page.goto('/');
+  await expect.poll(() => standing(page, 'launch')).toBe(true);
+  await rested(page);
+  await page.keyboard.type('12');
+
+  await consoleKey(page);
+  await page.keyboard.type('345');
+  await page.keyboard.press('Enter');
+  await rested(page);
+  expect(await page.evaluate(() => window.game?.scene.isActive('chronicle'))).toBe(false);
+  await consoleKey(page);
+
+  // The page kept the seed it was typed before the console rose, and nothing the console was typed.
+  await page.keyboard.press('Enter');
+  await page.waitForFunction(() => window.game?.scene.isActive('chronicle') === true);
+  await expect.poll(() => seedOnAddress(page)).toBe(12);
 
   expect(problems).toEqual([]);
 });

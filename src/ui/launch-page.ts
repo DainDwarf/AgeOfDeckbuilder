@@ -10,7 +10,7 @@ import {
   onClick,
   UI_FONT,
 } from './design-space';
-import { readsKeyboard } from './keys';
+import { readsKeys } from './keys';
 import { css, LOOK } from './look';
 import { type TextKey, text } from './text';
 
@@ -197,7 +197,7 @@ export class LaunchPage extends Phaser.Scene {
       root.add([button, buttonLabel]);
     };
 
-    readsKeyboard(this, (event) => {
+    readsKeys(this, (event) => {
       if (event.key === 'Enter') {
         launch();
         return true;

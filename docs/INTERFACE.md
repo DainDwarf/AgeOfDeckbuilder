@@ -16,7 +16,7 @@ The game boots on the **launch page**, a stand-in for the meta's launch screen: 
 
 ## The debug console ✅
 
-The **debug console** is a dark panel down the top of the screen, with the last lines run above the line being typed. What it covers reads dimly through it, so the bar is still there to be read and the console writes clear of it. While it stands the keyboard is its — every key types, Backspace deletes, Enter runs the line, and Escape or the key that opened it closes it — so nothing the game binds hears a key meanwhile. The pointer is not its: the map still pans and zooms under it. An entry is one word and Enter, and it is answered in one line; a word the console holds no entry for is answered `no such entry: <word>`. The console binds no key of the player's and stands in no Controls window, and a new chronicle raises it with every entry back where it began.
+The **debug console** is a dark panel down the top of the screen, on every screen, the launch page among them, with the last lines run above the line being typed. What it covers reads dimly through it, so the bar is still there to be read and the console writes clear of it. While it stands the keyboard is its — every key types, Backspace deletes, Enter runs the line, and Escape or the key that opened it closes it — so nothing the game binds hears a key meanwhile. The pointer is not its: the map still pans and zooms under it. An entry is one word and Enter, and it is answered in one line; a word the console holds no entry for is answered `no such entry: <word>`. The console binds no key of the player's and stands in no Controls window, and a new chronicle closes it and puts every entry back where it began.
 
 ## The presses ✅
 

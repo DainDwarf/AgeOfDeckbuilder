@@ -3,6 +3,7 @@ import { CATALOGUES, catalogueOf } from './content/catalogues';
 import { deckOf, scheduleOf } from './rules/catalogue';
 import { regionOf } from './rules/map-kinds';
 import { ChronicleScene } from './ui/chronicle-scene';
+import { DebugConsole } from './ui/debug-console';
 import { backingSize, followWindow, releaseOnBlur } from './ui/design-space';
 import { readMouseKeys } from './ui/keys';
 import { type Choices, firstsOf, LaunchPage } from './ui/launch-page';
@@ -65,10 +66,16 @@ const game = new Phaser.Game({
   maxTextures: 1,
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
 });
-// Scenes handed to the config start the first of them on no data, so both are added unstarted.
+// The render order is the add order, bottom first; the key order is the start order, first started
+// first heard, a scene restarted going to the back. The two run opposite ways, so the console is
+// added last and started first, which neither the config's own array nor a start before boot can do.
 game.scene.add('launch', LaunchPage);
 game.scene.add('chronicle', ChronicleScene);
-game.scene.start(asked('deck') === undefined ? 'launch' : 'chronicle', choices);
+game.scene.add('console', DebugConsole);
+game.events.once(Phaser.Core.Events.READY, () => {
+  game.scene.start('console');
+  game.scene.start(asked('deck') === undefined ? 'launch' : 'chronicle', choices);
+});
 followWindow(game);
 releaseOnBlur(game);
 readMouseKeys(game);

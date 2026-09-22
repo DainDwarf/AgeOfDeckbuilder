@@ -210,6 +210,24 @@ function surfaceOf(
 }
 
 /**
+ * A camera that holds the design space still, laid out now and after every change of window: the
+ * whole of DESIGN_WIDTH × DESIGN_HEIGHT across the canvas, and every Text the scene holds re-cut for
+ * the factor it is drawn at. A camera left unzoomed paints the backing store at 1:1.
+ */
+export function holdDesignSpace(scene: Phaser.Scene, camera: Phaser.Cameras.Scene2D.Camera): void {
+  onResize(scene, () => {
+    const factor = renderFactor();
+    // The cameras' own size is Phaser's business: the camera manager subscribed to RESIZE at scene
+    // boot, ahead of this, and resizes every camera at the origin that had the old size.
+    camera.setZoom(factor).centerOn(DESIGN_WIDTH / 2, DESIGN_HEIGHT / 2);
+    const resolution = Math.ceil(factor);
+    for (const label of textsIn(scene.children.list)) {
+      if (label.style.resolution !== resolution) label.setResolution(resolution);
+    }
+  });
+}
+
+/**
  * The chronicle screen, cut in two: each camera is blind to the other's layer, so one of them can
  * be panned and zoomed while the other holds still. Nothing may be left standing on the scene's own
  * display list, which carries no camera filter and so is painted by both cameras at once — hence
@@ -240,17 +258,10 @@ export function applyDesignSpace(scene: Phaser.Scene): Surfaces {
     },
   );
 
+  holdDesignSpace(scene, ui.camera);
   onResize(scene, () => {
-    const factor = renderFactor();
-    // The cameras' own size is Phaser's business: the camera manager subscribed to RESIZE at scene
-    // boot, ahead of this, and resizes every camera at the origin that had the old size.
-    ui.camera.setZoom(factor).centerOn(DESIGN_WIDTH / 2, DESIGN_HEIGHT / 2);
     // Phaser measures the drag threshold between raw pointer positions, in device pixels.
-    scene.input.dragDistanceThreshold = DRAG_SLACK * factor;
-    const resolution = Math.ceil(factor);
-    for (const label of textsIn(scene.children.list)) {
-      if (label.style.resolution !== resolution) label.setResolution(resolution);
-    }
+    scene.input.dragDistanceThreshold = DRAG_SLACK * renderFactor();
   });
 
   return { map, ui };

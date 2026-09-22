@@ -25,9 +25,8 @@ import type { PileKind } from '../src/ui/overlay';
 declare global {
   interface Window {
     /**
-     * The named object and the camera that paints it, on whichever running scene it stands. A
-     * scene's own display list carries only the two layers, so `children.getByName` finds nothing,
-     * and a name may sit any depth down inside a container.
+     * The named object and the camera that paints it, on whichever running scene it stands. A name
+     * may sit any depth down inside a Layer or a container, so `children.getByName` finds nothing.
      */
     named?: (
       name: string,
@@ -212,26 +211,36 @@ export async function readNames(page: Page): Promise<void> {
       return found;
     };
 
-    const layers = (): Phaser.GameObjects.Layer[] =>
-      (window.game?.scene.getScenes(true) ?? []).flatMap(
-        (scene) =>
-          scene.children.list.filter(
-            (child) => child.type === 'Layer',
-          ) as Phaser.GameObjects.Layer[],
+    /**
+     * Every place a name may stand, across the running scenes: a Layer's contents under the camera
+     * it shares its name with, and everything else on a scene's own display list under its main one.
+     */
+    const places = (): {
+      list: Phaser.GameObjects.GameObject[];
+      camera: Phaser.Cameras.Scene2D.Camera | null;
+    }[] =>
+      (window.game?.scene.getScenes(true) ?? []).flatMap((scene) =>
+        scene.children.list.map((child) =>
+          child.type === 'Layer'
+            ? {
+                list: (child as Phaser.GameObjects.Layer).list,
+                camera: scene.cameras.getCamera(child.name),
+              }
+            : { list: [child], camera: scene.cameras.main },
+        ),
       );
 
     window.named = (name) => {
-      for (const layer of layers()) {
-        const object = within(layer.list, name, [])[0];
-        const camera = layer.scene.cameras.getCamera(layer.name);
-        if (object === undefined || camera === null) continue;
-        return { object, camera };
+      for (const place of places()) {
+        const object = within(place.list, name, [])[0];
+        if (object === undefined || place.camera === null) continue;
+        return { object, camera: place.camera };
       }
       return undefined;
     };
 
     window.counted = (name) =>
-      layers().reduce((total, layer) => total + within(layer.list, name, []).length, 0);
+      places().reduce((total, place) => total + within(place.list, name, []).length, 0);
   });
 }
 

@@ -21,7 +21,7 @@ import { createBand } from './band';
 import { boundTo } from './bindings';
 import { CARD_BASELINE, CARD_HEIGHT } from './card-face';
 import { EASE, ended, stopAllMotion, stopMotion } from './card-motion';
-import { createDebugConsole } from './debug-console';
+import { resetConsole } from './debug-console';
 import { DEPTH } from './depths';
 import {
   addText,
@@ -557,7 +557,7 @@ export class ChronicleScene extends Phaser.Scene {
       if (!leaveCityMode()) menu();
     });
 
-    createDebugConsole(this, (veils) => {
+    resetConsole(this, (veils) => {
       view.showVeils(veils);
     });
 

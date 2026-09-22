@@ -1,8 +1,7 @@
-import type Phaser from 'phaser';
+import Phaser from 'phaser';
 import { runLine } from './console-line';
-import { DEPTH } from './depths';
-import { addText, DESIGN_WIDTH, MARGIN } from './design-space';
-import { readsKeyboard } from './keys';
+import { addText, DESIGN_WIDTH, holdDesignSpace, MARGIN, whileUp } from './design-space';
+import { readsKeys } from './keys';
 import { css, LOOK } from './look';
 import { BAR_HEIGHT } from './resource-bar';
 import { text } from './text';
@@ -10,6 +9,9 @@ import { VEILS_ON, type Veils } from './veils';
 
 /** The place the key that opens the console stands on: the one above Tab, whatever it prints. */
 const CONSOLE_KEY = 'Backquote';
+
+/** What the console throws a veil's switch on, for whatever screen is drawn under it. */
+const VEILED = 'veiled';
 
 /** How many lines already run stand above the line being typed. */
 const HISTORY = 4;
@@ -40,99 +42,124 @@ const CONSOLE_STYLE = {
 type Line = { readonly line: string; readonly answer: boolean };
 
 /**
- * The debug console: a panel the key above Tab drops over the top of the chronicle screen, the lines
- * last run standing over the line being typed. While it stands the keyboard is its and nothing the
- * game binds hears a key; the pointer is not its, so the map still pans and zooms under it. It goes
- * down with the chronicle screen it was raised on, and every veil stands again on the next.
+ * The debug console, on a scene of its own: started first at boot, so every key reaches it ahead of
+ * every other scene, and never stopped, so it outlives every chronicle. Nothing it holds is made
+ * interactive, which is what lets the pointer fall through to the screen beneath.
  */
-export function createDebugConsole(scene: Phaser.Scene, veiled: (veils: Veils) => void): void {
-  const root = scene.add.container(0, 0).setName('console').setDepth(DEPTH.console);
-  root.add([
-    scene.add
-      .rectangle(0, 0, DESIGN_WIDTH, HEIGHT, LOOK.consolePanel.colour, LOOK.consolePanel.strength)
-      .setOrigin(0, 0),
-    scene.add.rectangle(0, HEIGHT - 1, DESIGN_WIDTH, 1, LOOK.panelEdge).setOrigin(0, 0),
-  ]);
+export class DebugConsole extends Phaser.Scene {
+  /** The console closed, the lines it ran cleared, and both veils back on. */
+  reset!: () => void;
 
-  const lines: Phaser.GameObjects.Text[] = [];
-  for (let at = 0; at < HISTORY; at++) {
-    const label = addText(scene, MARGIN, LINES_TOP + at * LINE, '', CONSOLE_STYLE)
-      .setOrigin(0, 0)
-      .setName(`console-line-${at}`);
-    lines.push(label);
-    root.add(label);
+  constructor() {
+    super('console');
   }
 
-  const input = addText(scene, MARGIN, LINES_TOP + HISTORY * LINE, '', CONSOLE_STYLE)
-    .setOrigin(0, 0)
-    .setName('console-input');
-  const caret = scene.add
-    .rectangle(MARGIN, LINES_TOP + HISTORY * LINE + 3, 7, LINE - 8, LOOK.panelFill)
-    .setOrigin(0, 0)
-    .setName('console-caret');
-  root.add([input, caret]);
+  create(): void {
+    holdDesignSpace(this, this.cameras.main);
 
-  /** Whether the console stands over the chronicle screen. */
-  let open = false;
-  /** What has been typed since the last line was run. */
-  let typed = '';
-  const history: Line[] = [];
-  let veils = VEILS_ON;
+    const root = this.add.container(0, 0).setName('console');
+    root.add([
+      this.add
+        .rectangle(0, 0, DESIGN_WIDTH, HEIGHT, LOOK.consolePanel.colour, LOOK.consolePanel.strength)
+        .setOrigin(0, 0),
+      this.add.rectangle(0, HEIGHT - 1, DESIGN_WIDTH, 1, LOOK.panelEdge).setOrigin(0, 0),
+    ]);
 
-  const paint = (): void => {
-    const first = HISTORY - history.length;
-    lines.forEach((label, at) => {
-      const line = history[at - first];
-      label.setText(line?.line ?? '').setColor(line?.answer === true ? ANSWER_INK : TYPED_INK);
-    });
-    input.setText(text('console.line', { line: typed }));
-    caret.setX(input.x + input.width - 1);
-  };
-
-  const keep = (line: string, answer: boolean): void => {
-    history.push({ line, answer });
-    if (history.length > HISTORY) history.shift();
-  };
-
-  /** The line entered: it and its answer stay in view, and the map hears whatever it switched. */
-  const run = (): void => {
-    const line = typed;
-    typed = '';
-    const ran = runLine(line, veils);
-    if (ran.answer !== undefined) {
-      keep(text('console.line', { line }), false);
-      keep(ran.answer, true);
+    const lines: Phaser.GameObjects.Text[] = [];
+    for (let at = 0; at < HISTORY; at++) {
+      const label = addText(this, MARGIN, LINES_TOP + at * LINE, '', CONSOLE_STYLE)
+        .setOrigin(0, 0)
+        .setName(`console-line-${at}`);
+      lines.push(label);
+      root.add(label);
     }
-    if (ran.veils !== veils) {
-      veils = ran.veils;
-      veiled(veils);
-    }
-    paint();
-  };
 
-  const show = (on: boolean): void => {
-    open = on;
-    root.setVisible(on);
-  };
+    const input = addText(this, MARGIN, LINES_TOP + HISTORY * LINE, '', CONSOLE_STYLE)
+      .setOrigin(0, 0)
+      .setName('console-input');
+    const caret = this.add
+      .rectangle(MARGIN, LINES_TOP + HISTORY * LINE + 3, 7, LINE - 8, LOOK.panelFill)
+      .setOrigin(0, 0)
+      .setName('console-caret');
+    root.add([input, caret]);
 
-  readsKeyboard(scene, (event) => {
-    if (event.code === CONSOLE_KEY) {
-      show(!open);
+    /** Whether the console stands over the screen. */
+    let open = false;
+    /** What has been typed since the last line was run. */
+    let typed = '';
+    const history: Line[] = [];
+    let veils = VEILS_ON;
+
+    const paint = (): void => {
+      const first = HISTORY - history.length;
+      lines.forEach((label, at) => {
+        const line = history[at - first];
+        label.setText(line?.line ?? '').setColor(line?.answer === true ? ANSWER_INK : TYPED_INK);
+      });
+      input.setText(text('console.line', { line: typed }));
+      caret.setX(input.x + input.width - 1);
+    };
+
+    const keep = (line: string, answer: boolean): void => {
+      history.push({ line, answer });
+      if (history.length > HISTORY) history.shift();
+    };
+
+    /** The line entered: it and its answer stay in view, and the map hears whatever it switched. */
+    const run = (): void => {
+      const line = typed;
+      typed = '';
+      const ran = runLine(line, veils);
+      if (ran.answer !== undefined) {
+        keep(text('console.line', { line }), false);
+        keep(ran.answer, true);
+      }
+      if (ran.veils !== veils) {
+        veils = ran.veils;
+        this.game.events.emit(VEILED, veils);
+      }
+      paint();
+    };
+
+    const show = (on: boolean): void => {
+      open = on;
+      root.setVisible(on);
+    };
+
+    readsKeys(this, (event) => {
+      if (event.code === CONSOLE_KEY) {
+        show(!open);
+        return true;
+      }
+      if (!open) return false;
+      if (event.key === 'Escape') show(false);
+      else if (event.key === 'Enter') run();
+      else if (event.key === 'Backspace') {
+        typed = typed.slice(0, -1);
+        paint();
+      } else if (event.key.length === 1) {
+        typed += event.key;
+        paint();
+      }
       return true;
-    }
-    if (!open) return false;
-    if (event.key === 'Escape') show(false);
-    else if (event.key === 'Enter') run();
-    else if (event.key === 'Backspace') {
-      typed = typed.slice(0, -1);
-      paint();
-    } else if (event.key.length === 1) {
-      typed += event.key;
-      paint();
-    }
-    return true;
-  });
+    });
 
-  paint();
-  show(false);
+    this.reset = (): void => {
+      history.length = 0;
+      typed = '';
+      veils = VEILS_ON;
+      paint();
+      show(false);
+    };
+    this.reset();
+  }
+}
+
+/**
+ * The console put back where it began for the chronicle screen now rising, which therefore opens
+ * under both veils, and every switch the console throws while that screen stands.
+ */
+export function resetConsole(scene: Phaser.Scene, veiled: (veils: Veils) => void): void {
+  scene.game.scene.getScene<DebugConsole>('console').reset();
+  whileUp(scene, scene.game.events, VEILED, veiled);
 }

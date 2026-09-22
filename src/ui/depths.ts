@@ -40,5 +40,4 @@ export const DEPTH = {
   /** The Menu button, and the resource bar while a deal waits to be taken. */
   overScrim: 2400,
   tooltip: 2500,
-  console: 2600,
 } as const;
