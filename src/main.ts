@@ -61,19 +61,13 @@ const game = new Phaser.Game({
   height: backing.height,
   backgroundColor: css(LOOK.page),
   disableContextMenu: true,
-  // Phaser 4.2.1 picks a batch's sampler by exact float equality on an interpolated varying, so a
-  // rotated Text tears (phaserjs/phaser#7372). One texture per batch skips the comparison; the
-  // line goes when a release fixes the shader.
+  // Not a performance knob: without it a rotated Text tears (docs/PHASER.md).
   maxTextures: 1,
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
 });
-// Phaser stops a pointer event at the first scene from the top with an interactive object under the
-// pointer, the release with the rest, so a card dragged off the hand and let go of over a higher
-// scene's button would never end its drag. Off, the walk goes on unless a scene stops the event.
+// The tower's barriers rest on this; on, a stopped release strands a drag off the hand (docs/PHASER.md).
 game.input.globalTopOnly = false;
-// The render order is the add order, bottom first; the key order is the start order, first started
-// first heard, a scene restarted going to the back. The two run opposite ways, so the tower is added
-// bottom up and started top down, which neither the config's array nor a start before boot can do.
+// Added bottom up, started top down: render order is the add order, key order the start order (docs/PHASER.md).
 game.scene.add('launch', LaunchPage);
 game.scene.add('chronicle', ChronicleScene);
 game.scene.add('menu', MenuScene);
