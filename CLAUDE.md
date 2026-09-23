@@ -62,3 +62,4 @@ Full rules in [`DOGMAS.md`](DOGMAS.md). The ones no session may miss:
 | `npm run lint` | Biome on the code, Prettier on the markdown: lint and format check. |
 | `npm run fmt` | Fixes what `npm run lint` checks: Biome writes the code, Prettier unwraps the markdown. |
 | `npm run build` | Vite build into `dist/`. |
+| `npm run itch` | Relative-base build, then butler pushes `dist/` to the itch page as the version git describes. Butler must be logged in. |

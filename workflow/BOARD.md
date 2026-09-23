@@ -6,7 +6,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ---
 
-- **Publish to itch.io** — `npm run itch` builds the bundle with a relative base and pushes `dist/` to the itch page's `html` channel under the version git describes, and the channel holds a build. Doc-impact: `DOGMAS.md` _Stack_, `CLAUDE.md` _Commands_; no `docs/` page. [board/publish-to-itch.md](board/publish-to-itch.md)
 - **Inspections pile up** — right-clicking the same name again adds another copy to the row of cards shown large, which will not do; the user would rather have the inspections pile up than make a row of cards.
 - **A small card answers the right click** — right clicking a small card does nothing; make it work.
 - **References beyond cards** — a name in a rules entry resolves to more than a card: an improvement, a feature, anything with a row in the info panel, shown small as that row.

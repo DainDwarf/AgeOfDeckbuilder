@@ -9,4 +9,4 @@ The demo (v0.1.0) carries most if not all of the design pages and covers the fir
 - **v0.0.6 — The look.** Art style locked, real assets, animation, sound, music. After the systems — every asset drawn earlier is drawn twice — but before the next age, so content can be polished, not just built. Animation here is craft — easing, flourish, idle motion; the staging that makes a turn legible shipped in v0.0.1, and only its visuals are redone here.
 - **v0.0.7 — The Bronze Age.** The third age end to end: cards, events, capstone, age-victory unlocking it. The first age to pass through the full content pipeline — design, implement, balance, polish — whose polish stage exists only once the look does.
 - **v0.0.8 — The Iron Age.** Placed last among content so that a demo that must ship sooner cuts this rung and still looks finished.
-- **v0.1.0 — The demo.** Balance measured across the ages, polish, the itch.io publish, the first published [`CHANGELOG.md`](../CHANGELOG.md) entry.
+- **v0.1.0 — The demo.** Balance measured across the ages, polish, the itch page made public and pushed from `Latest` by CI, the first published [`CHANGELOG.md`](../CHANGELOG.md) entry.

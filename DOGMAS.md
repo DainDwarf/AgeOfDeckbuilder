@@ -130,7 +130,7 @@ How this code base is shaped, and what a change never deviates from:
 | CI | GitHub Actions on every push, any branch: typecheck, lint, rules tests, e2e. On `Latest`, once that passes: build and deploy to Pages |
 | Lint and format | Biome for code, one `biome.json`; Prettier for markdown, one `.prettierrc` |
 | Package manager | npm on Node 24; `package-lock.json` is committed |
-| Hosting | GitHub Pages, the `dist/` built from `Latest`, served under `/AgeOfDeckbuilder/`; itch.io HTML5 page, the same bundle zipped from a relative-base build — a script the itch publish adds. No server, ever. |
+| Hosting | GitHub Pages, the `dist/` built from `Latest`, served under `/AgeOfDeckbuilder/`; the itch.io page, restricted to the playtest group, the same bundle built with a relative base and pushed by butler from any tree (`npm run itch`). No server, ever. |
 | Desktop wrapper | Tauri 2 — not installed; it needs Rust, and it is installed when the desktop target is taken |
 
 - **`src/rules/` never imports Phaser, never touches the DOM and never imports `src/content/`; `src/ui/` never mutates state.** Phaser renders a state and emits commands, nothing else. Why: that one rule is what makes a chronicle replay from its seed, a save the state serialised, and a headless simulator `apply` in a loop keeping the last stage's state. The shape of `apply` and what it hands back are the _Architecture_ lines.
@@ -153,6 +153,7 @@ src/content/        the catalogues: the ages' content, and the stand-in the e2e 
 src/ui/             Phaser scenes, and the design space they lay out in
 e2e/                Playwright specs
 .github/workflows/  the CI check
+tools/              the standing scripts: the itch push
 public/assets/      art, sound, music, each pack with its licence entry
-dist/               the build; what is zipped and uploaded
+dist/               the build; what Pages deploys and the itch push sends
 ```
