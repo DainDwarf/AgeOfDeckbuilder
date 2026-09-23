@@ -349,7 +349,10 @@ export type Hover = {
   readonly hovered: boolean;
 };
 
-/** A hover: entered when the pointer comes to be on the object, left when it stops being. */
+/**
+ * A hover: entered when the pointer comes to be on the object, left when it stops being, read each
+ * frame by `followPointer`, which the boot hooks once.
+ */
 export function onHover(
   target: Phaser.GameObjects.GameObject,
   enter: () => void,
@@ -384,7 +387,7 @@ function thingUnder(game: Phaser.Game): Phaser.GameObjects.GameObject | undefine
 /** Every frame, every hover entered or left and the canvas's cursor set by what the pointer is on. */
 export function followPointer(game: Phaser.Game): void {
   let on: Phaser.GameObjects.GameObject | undefined;
-  let hand = false;
+  let pointed = false;
   game.events.on(Phaser.Core.Events.POST_STEP, () => {
     const under = thingUnder(game);
     if (under !== on) {
@@ -401,8 +404,8 @@ export function followPointer(game: Phaser.Game): void {
       }
     }
     const pointing = under !== undefined && answering.has(under);
-    if (pointing === hand) return;
-    hand = pointing;
+    if (pointing === pointed) return;
+    pointed = pointing;
     game.canvas.style.cursor = pointing ? 'pointer' : '';
   });
 }
