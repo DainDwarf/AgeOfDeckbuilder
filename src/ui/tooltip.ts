@@ -23,10 +23,13 @@ export type Tooltip = {
    */
   under(message: string, left: number, tip: number, top: number): void;
   /**
-   * Stands to the right of the point `at` answers as the bubble is painted, level with it, its tail
-   * pointing left back at it. The bubble goes wherever that is, off the frame included.
+   * Stands to the right of the point `at` answers as the bubble is painted and at every `follow`,
+   * level with it, its tail pointing left back at it. The bubble goes wherever that is, off the frame
+   * included.
    */
   beside(message: string, at: () => { x: number; y: number }): void;
+  /** The bubble standing beside a point moved to where that point now stands; one hung under stays. */
+  follow(): void;
   hide(): void;
 };
 
@@ -54,6 +57,8 @@ export function createTooltip(scene: Phaser.Scene, on: Stratum): Tooltip {
 
   let resting: Phaser.Time.TimerEvent | undefined;
   let paint: (() => void) | undefined;
+  /** Where the standing bubble is put beside its point, and nothing while none stands beside one. */
+  let place: (() => void) | undefined;
   let restX = 0;
   let restY = 0;
   let wentDown = Number.NEGATIVE_INFINITY;
@@ -88,18 +93,21 @@ export function createTooltip(scene: Phaser.Scene, on: Stratum): Tooltip {
 
   const hide = (): void => {
     drop();
+    place = undefined;
     if (tooltip.visible) wentDown = scene.time.now;
     tooltip.setVisible(false);
   };
 
-  const paintBeside = (message: string, x: number, y: number): void => {
+  const paintBeside = (message: string, at: () => { x: number; y: number }): void => {
     const { width, height } = measure(message);
     const unit = on.unit();
     drawBubble(bubble, width, height, { edge: 'left', at: height / 2 });
-    tooltip
-      .setScale(unit)
-      .setPosition(x + STANDOFF * unit, y - (height / 2) * unit)
-      .setVisible(true);
+    place = () => {
+      const { x, y } = at();
+      tooltip.setPosition(x + STANDOFF * unit, y - (height / 2) * unit);
+    };
+    place();
+    tooltip.setScale(unit).setVisible(true);
   };
 
   scene.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
@@ -117,15 +125,19 @@ export function createTooltip(scene: Phaser.Scene, on: Stratum): Tooltip {
         const { width, height } = measure(message);
         const x = Math.min(left, DESIGN_WIDTH - MARGIN - width);
         drawBubble(bubble, width, height, { edge: 'top', at: tip - x });
+        place = undefined;
         tooltip.setScale(on.unit()).setPosition(x, top).setVisible(true);
       });
     },
 
     beside(message: string, at: () => { x: number; y: number }): void {
       raise(() => {
-        const { x, y } = at();
-        paintBeside(message, x, y);
+        paintBeside(message, at);
       });
+    },
+
+    follow(): void {
+      place?.();
     },
 
     hide,

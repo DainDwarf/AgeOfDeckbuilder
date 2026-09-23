@@ -35,6 +35,7 @@ import {
   onClick,
   onHover,
   releasedOffCanvas,
+  thingUnder,
   UI_FONT,
   whileUp,
 } from './design-space';
@@ -128,6 +129,8 @@ type Placed = Offered & {
 /** The grid of cards a browse or an aim stands on, and how far it moves. */
 type Grid = {
   readonly root: Phaser.GameObjects.Container;
+  /** What the cards scroll within, and what the pointer is on while it is on the grid. */
+  readonly frame: Phaser.GameObjects.Zone;
   readonly placed: readonly Placed[];
   readonly height: number;
   /** The furthest the cards scroll; zero when they all fit inside the frame. */
@@ -247,7 +250,8 @@ export function createOverlay(
     .setVisible(false);
   scene.strata.scrim.layer.add(scrim);
   const note = createRefusalNote(scene, scene.strata.note);
-  const kinds = createKindBubble(createTooltip(scene, scene.strata.tooltip));
+  const tooltip = createTooltip(scene, scene.strata.tooltip);
+  const kinds = createKindBubble(tooltip);
   const small = createSmallCards(scene, scene.strata.smallCard, catalogue, kinds, (reference) => {
     inspectNamed(reference);
   });
@@ -260,6 +264,8 @@ export function createOverlay(
   let offset = 0;
   let fling = 0;
   let scrolling: Scroll | undefined;
+  /** Whether the grid has moved since the name and the label under the pointer were read off it. */
+  let moved = false;
   /** The chronicle the ending screen was raised on: a render raises the screen once and no more. */
   let raisedOn: Ended | undefined;
   /** The deal standing, so no render raises its window twice; the take lets it go. */
@@ -285,6 +291,7 @@ export function createOverlay(
     grid = undefined;
     scrolling = undefined;
     fling = 0;
+    moved = false;
   };
 
   const close = (): void => {
@@ -414,11 +421,19 @@ export function createOverlay(
     }
   };
 
-  /** Moves the grid, never past either end of its cards. */
+  /**
+   * Moves the grid, never past either end of its cards, and whatever its cards raised with it; what
+   * the pointer is on is read again at the next frame.
+   */
   const scrollTo = (to: number): void => {
     if (grid === undefined) return;
+    const was = offset;
     offset = Math.min(Math.max(to, 0), grid.overflow);
     grid.root.setY(-offset);
+    if (offset === was) return;
+    small.follow();
+    tooltip.follow();
+    moved = true;
   };
 
   /**
@@ -464,6 +479,12 @@ export function createOverlay(
   /** Every card of the standing grid told whether the pointer is on its kind label. */
   const overKind = (face: CardFace | undefined): void => {
     for (const card of grid?.placed ?? []) kinds.over(card.drawn, card.drawn === face);
+  };
+
+  /** The grid's name and kind label under the pointer told what they raise; neither while it is dragged. */
+  const pointOnGrid = (pointer: Phaser.Input.Pointer): void => {
+    small.over(scrolling === undefined ? nameUnder(pointer) : undefined);
+    overKind(scrolling === undefined ? kindUnder(pointer) : undefined);
   };
 
   /**
@@ -515,10 +536,7 @@ export function createOverlay(
       if (dragged === undefined || releasedOffCanvas(pointer)) return;
       fling = -speedOf(dragged.trail, scene.time.now);
     });
-    frame.on('pointermove', (pointer: Phaser.Input.Pointer) => {
-      small.over(scrolling === undefined ? nameUnder(pointer) : undefined);
-      overKind(scrolling === undefined ? kindUnder(pointer) : undefined);
-    });
+    frame.on('pointermove', pointOnGrid);
     onHover(
       frame,
       () => {},
@@ -571,7 +589,7 @@ export function createOverlay(
       return { ...offered, x, y, drawn };
     });
 
-    const laid = { root, placed, height, overflow };
+    const laid = { root, frame, placed, height, overflow };
     grid = laid;
     scrollTo(offset);
     return laid;
@@ -948,6 +966,14 @@ export function createOverlay(
   );
 
   whileUp(scene, scene.events, Phaser.Scenes.Events.UPDATE, (_time: number, delta: number) => {
+    // Here and not in `scrollTo`: the wheel scrolls from inside Phaser's dispatch, where a hit test
+    // refills the list being walked (docs/PHASER.md).
+    if (moved) {
+      moved = false;
+      if (grid !== undefined && thingUnder(scene.game) === grid.frame) {
+        pointOnGrid(scene.input.activePointer);
+      }
+    }
     if (fling === 0 || grid === undefined) return;
     const to = offset + fling * delta;
     scrollTo(to);

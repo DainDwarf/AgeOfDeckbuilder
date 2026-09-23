@@ -40,6 +40,8 @@ export type Raiser = {
 export type SmallCards = {
   /** The pointer is on this name of the surface under the chain, or on none of its names. */
   over(raiser: Raiser | undefined): void;
+  /** Every small card moved with its name as the name now stands, on the side of it it rose on. */
+  follow(): void;
   /** The whole chain taken down at once. */
   down(): void;
 };
@@ -48,6 +50,8 @@ export type SmallCards = {
 type Link = {
   readonly raiser: Raiser;
   readonly root: Phaser.GameObjects.Container;
+  /** Where the card stands from the middle of its name's top edge, as it was raised. */
+  readonly off: { readonly x: number; readonly y: number };
   onCard: boolean;
   under: Raiser | undefined;
 };
@@ -152,19 +156,20 @@ export function createSmallCards(
       link.under = under;
       settle();
     });
-    const link: Link = { raiser, root, onCard: false, under: undefined };
-
-    const { x, top, bottom } = raiser.where();
+    const spot = raiser.where();
     const half = CARD_WIDTH / 2;
-    const above = top - STANDOFF;
+    const above = spot.top - STANDOFF;
+    const x = Math.min(Math.max(spot.x, MARGIN + half), DESIGN_WIDTH - MARGIN - half);
+    const y =
+      above - CARD_HEIGHT >= MARGIN
+        ? above
+        : Math.min(spot.bottom + STANDOFF + CARD_HEIGHT, DESIGN_HEIGHT - MARGIN);
+    const off = { x: x - spot.x, y: y - spot.top };
+    const link: Link = { raiser, root, off, onCard: false, under: undefined };
+
     root
       .setName(`small-card-${level}`)
-      .setPosition(
-        Math.min(Math.max(x, MARGIN + half), DESIGN_WIDTH - MARGIN - half),
-        above - CARD_HEIGHT >= MARGIN
-          ? above
-          : Math.min(bottom + STANDOFF + CARD_HEIGHT, DESIGN_HEIGHT - MARGIN),
-      )
+      .setPosition(x, y)
       .setInteractive({
         hitArea: new Phaser.Geom.Rectangle(-half, -CARD_HEIGHT, CARD_WIDTH, CARD_HEIGHT),
         hitAreaCallback: Phaser.Geom.Rectangle.Contains,
@@ -253,6 +258,13 @@ export function createSmallCards(
     over(raiser: Raiser | undefined): void {
       surface = raiser;
       settle();
+    },
+    // In chain order: a deeper card's name stands on the card before it, which has to move first.
+    follow(): void {
+      for (const { raiser, root, off } of chain) {
+        const { x, top } = raiser.where();
+        root.setPosition(x + off.x, top + off.y);
+      }
     },
     down,
   };

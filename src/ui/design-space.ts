@@ -370,8 +370,10 @@ export function onHover(
   };
 }
 
+// Read from the game loop, never from an input handler: a hit test refills the array Phaser's
+// dispatch is walking (docs/PHASER.md).
 /** The topmost interactive object under the pointer across the running scenes, if any. */
-function thingUnder(game: Phaser.Game): Phaser.GameObjects.GameObject | undefined {
+export function thingUnder(game: Phaser.Game): Phaser.GameObjects.GameObject | undefined {
   const pointer = game.input.activePointer;
   // Until its first move the pointer stands at 0,0 with `isOver` already true (docs/PHASER.md).
   if (!game.input.isOver || pointer.moveTime === 0) return undefined;
@@ -382,8 +384,6 @@ function thingUnder(game: Phaser.Game): Phaser.GameObjects.GameObject | undefine
   return undefined;
 }
 
-// Read from the game loop, never from an input handler: a hit test refills the array Phaser's
-// dispatch is walking (docs/PHASER.md).
 /** Every frame, every hover entered or left and the canvas's cursor set by what the pointer is on. */
 export function followPointer(game: Phaser.Game): void {
   let on: Phaser.GameObjects.GameObject | undefined;

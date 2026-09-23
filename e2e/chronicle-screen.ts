@@ -289,15 +289,24 @@ export function onScreen(page: Page, name: string): Promise<OnScreen> {
   }, name);
 }
 
-/** Where a name the named face's rules entry draws sits on the page, the first it draws at 0. */
-export function nameOnScreen(page: Page, face: string, at = 0): Promise<{ x: number; y: number }> {
+/**
+ * Where a name the named face's rules entry draws sits on the page, the first it draws at 0, and how
+ * tall its line stands there.
+ */
+export function nameOnScreen(
+  page: Page,
+  face: string,
+  at = 0,
+): Promise<{ x: number; y: number; height: number }> {
   return page.evaluate(
     ({ target, index }) => {
       const found = window.named?.(target);
       if (found === undefined)
         throw new Error(`nothing named ${target} is on the chronicle screen`);
       const root = found.object as Phaser.GameObjects.Container;
-      const name = (root.getData('names') as { x: number; y: number }[] | undefined)?.[index];
+      const name = (
+        root.getData('names') as { x: number; y: number; height: number }[] | undefined
+      )?.[index];
       if (name === undefined) throw new Error(`${target} draws no name at ${index}`);
       const middle = root.getWorldTransformMatrix().transformPoint(name.x, name.y);
 
@@ -310,14 +319,18 @@ export function nameOnScreen(page: Page, face: string, at = 0): Promise<{ x: num
       return {
         x: rect.left + (middle.x - origin.x) * unit,
         y: rect.top + (middle.y - origin.y) * unit,
+        height: name.height * unit,
       };
     },
     { target: face, index: at },
   );
 }
 
-/** Where the named face's kind label sits on the page. */
-export function kindLabelOnScreen(page: Page, face: string): Promise<{ x: number; y: number }> {
+/** Where the named face's kind label sits on the page, and how tall it stands there. */
+export function kindLabelOnScreen(
+  page: Page,
+  face: string,
+): Promise<{ x: number; y: number; height: number }> {
   return page.evaluate((target) => {
     const found = window.named?.(target);
     if (found === undefined) throw new Error(`nothing named ${target} is on the chronicle screen`);
@@ -342,6 +355,7 @@ export function kindLabelOnScreen(page: Page, face: string): Promise<{ x: number
     return {
       x: rect.left + (middle.x - origin.x) * unit,
       y: rect.top + (middle.y - origin.y) * unit,
+      height: label.height * unit,
     };
   }, face);
 }
