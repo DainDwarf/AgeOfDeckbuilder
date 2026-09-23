@@ -6,7 +6,7 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ---
 
-- **Inspections pile up** — right-clicking the same name again adds another copy to the row of cards shown large, which will not do; the user would rather have the inspections pile up than make a row of cards.
+- **Inspections pile up** — a card named on a card shown large stands over it, on top of a stack the newest card of which alone answers its names, a new copy each time and none past twelve, and `docs/INTERFACE.md` says so in place of the row. Doc-impact: `docs/INTERFACE.md`. [board/inspections-pile-up.md](board/inspections-pile-up.md)
 - **A small card answers the right click** — right clicking a small card does nothing; make it work.
 - **References beyond cards** — a name in a rules entry resolves to more than a card: an improvement, a feature, anything with a row in the info panel, shown small as that row.
 - **Card kinds explain themselves** — every card kind's label, settle, unit, building, instant, hazard, event and capstone, gets a tooltip or reference stating the kind's own rules, so a card's rules entry stops repeating what its kind already means.
