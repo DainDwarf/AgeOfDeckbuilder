@@ -50,6 +50,12 @@ const BROWSE_WIDTH = 180;
 const BROWSE_GAP = 26;
 const INSPECTION_WIDTH = 380;
 
+/** How far each card shown large peeks out, up and to the left, from under the card over it. */
+const BAND = 14;
+
+/** The most cards shown large that stand at once. */
+const STACK_HOLDS = 12;
+
 /** The pointer's travel over these last milliseconds is the speed a release flings the grid at. */
 const FLING_WINDOW = 80;
 
@@ -177,12 +183,12 @@ type Ringing = Browsing | Dealing;
 type Inspected = { readonly face: Face; readonly refusal: Refusal };
 
 /**
- * The cards shown large, earliest first, over what the first of them was taken off: the row a name
- * on one of them grows to its right.
+ * The cards shown large, earliest first, over what the first of them was taken off: the stack a
+ * name on the newest of them grows on top.
  */
 type Inspection = {
   readonly stands: 'inspection';
-  readonly row: readonly Inspected[];
+  readonly stack: readonly Inspected[];
   readonly over: Offering | undefined;
 };
 
@@ -295,35 +301,36 @@ export function createOverlay(
   };
 
   /**
-   * The row of cards shown large, laid as a browse lays a row and centred, but held off the right
-   * margin: a row wider than the screen lets its earliest cards go off the left edge.
+   * The stack of cards shown large, centred on its whole extent: the newest whole at its bottom
+   * right, each card beneath it a band up and to the left of the one over it.
    */
-  const showRow = (row: readonly Inspected[], over: Offering | undefined): void => {
+  const showStack = (stack: readonly Inspected[], over: Offering | undefined): void => {
     wipe();
     cover();
-    carried = { stands: 'inspection', row, over };
+    carried = { stands: 'inspection', stack, over };
     const height = heightOf(INSPECTION_WIDTH);
-    const span = row.length * INSPECTION_WIDTH + (row.length - 1) * BROWSE_GAP;
-    const left = Math.min((DESIGN_WIDTH - span) / 2, DESIGN_WIDTH - MARGIN - span);
-    for (const [index, { face, refusal }] of row.entries()) {
-      const drawn = createCardFace(scene, face, refusal, {
+    const newest = stack.length - 1;
+    const left = (DESIGN_WIDTH - INSPECTION_WIDTH - newest * BAND) / 2;
+    const top = (DESIGN_HEIGHT - height - newest * BAND) / 2;
+    for (const [index, { face, refusal }] of stack.entries()) {
+      const drawn: CardFace = createCardFace(scene, face, refusal, {
         width: INSPECTION_WIDTH,
-        names: {
-          over: (name) => {
-            small.over(name === undefined ? undefined : raiserOf(drawn, name));
-          },
-          inspect: (name) => {
-            showRow([...row, { face: cardFace(catalogue, name.card), refusal: NO_REFUSAL }], over);
-          },
-        },
+        names:
+          index === newest
+            ? {
+                over: (name) => {
+                  small.over(name === undefined ? undefined : raiserOf(drawn, name));
+                },
+                inspect: (name) => {
+                  inspectNamed(name.card);
+                },
+              }
+            : undefined,
       });
       drawn.root
-        .setName(index === row.length - 1 ? 'inspection' : `inspection-${index}`)
+        .setName(index === newest ? 'inspection' : `inspection-${index}`)
         .setData('card', face.id)
-        .setPosition(
-          left + index * (INSPECTION_WIDTH + BROWSE_GAP) + INSPECTION_WIDTH / 2,
-          (DESIGN_HEIGHT + height) / 2,
-        )
+        .setPosition(left + index * BAND + INSPECTION_WIDTH / 2, top + index * BAND + height)
         // The card is interactive so that both presses on it reach nothing beneath, the scrim
         // included; only its names answer one.
         .setInteractive({
@@ -340,28 +347,33 @@ export function createOverlay(
   };
 
   const showInspection = (face: Face, refusal: Refusal, over: Offering | undefined): void => {
-    showRow([{ face, refusal }], over);
+    showStack([{ face, refusal }], over);
   };
 
-  /** The window a card shown large stands over, whatever stands on the scrim now. */
-  const offering = (): Offering | undefined => {
-    if (carried === undefined) return undefined;
+  /**
+   * A card a name names, on top of the stack while a card stands large, and nothing more once the
+   * stack is full; shown large alone over the window standing otherwise.
+   */
+  const inspectNamed = (card: CardId): void => {
+    const named: Inspected = { face: cardFace(catalogue, card), refusal: NO_REFUSAL };
+    if (carried === undefined) {
+      showStack([named], undefined);
+      return;
+    }
     switch (carried.stands) {
+      case 'inspection':
+        if (carried.stack.length < STACK_HOLDS) showStack([...carried.stack, named], carried.over);
+        return;
       case 'browse':
       case 'aim-window':
       case 'deal':
       case 'capstone':
-        return carried;
-      case 'inspection':
-        return carried.over;
+        showStack([named], carried);
+        return;
       case 'ending':
-        return undefined;
+        showStack([named], undefined);
+        return;
     }
-  };
-
-  /** A card a name names, shown large alone over the window standing. */
-  const inspectNamed = (card: CardId): void => {
-    showInspection(cardFace(catalogue, card), NO_REFUSAL, offering());
   };
 
   /** Moves the grid, never past either end of its cards. */
@@ -726,8 +738,8 @@ export function createOverlay(
    * The newest card shown large taken down, and the last of them onto what it was taken off: the one
    * path, whichever way.
    */
-  const takeDownNewest = ({ row, over }: Inspection): void => {
-    if (row.length > 1) showRow(row.slice(0, -1), over);
+  const takeDownNewest = ({ stack, over }: Inspection): void => {
+    if (stack.length > 1) showStack(stack.slice(0, -1), over);
     else if (over === undefined) close();
     else raise(over);
   };

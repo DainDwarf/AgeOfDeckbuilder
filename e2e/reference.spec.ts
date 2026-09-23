@@ -20,7 +20,10 @@ const HAND = 'pointer';
 /** Longer than the hand-over a small card waits out before it goes down, so one going has gone. */
 const PAST_HANDOVER = 400;
 
-test('a card named on a card raises it small at a rest and shows it large at a right click, and one named on a card shown large stands it beside that one', async ({
+/** The most cards shown large a stack holds. */
+const STACK_HOLDS = 12;
+
+test('a card named on a card raises it small at a rest and shows it large at a right click, and one named on a card shown large stands a new copy on top of the stack, twelve at most', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -68,10 +71,37 @@ test('a card named on a card raises it small at a rest and shows it large at a r
   await page.mouse.click(named.x, named.y, { button: 'right' });
   await expect.poll(() => cardOnFace(page, 'inspection')).toBe('PH_Hunger');
   expect(await cardOnFace(page, 'inspection-0')).toBe('PH_Famine');
+  await rested(page);
 
-  await page.keyboard.press('Escape');
-  await expect.poll(() => cardOnFace(page, 'inspection')).toBe('PH_Famine');
-  expect(await standing(page, 'inspection-0')).toBe(false);
+  // Hunger names itself: each right click on the newest card's name stands another copy on top.
+  for (let count = 3; count <= STACK_HOLDS; count++) {
+    const own = await nameOnScreen(page, 'inspection');
+    await page.mouse.click(own.x, own.y, { button: 'right' });
+    await expect.poll(() => standing(page, `inspection-${count - 2}`)).toBe(true);
+    expect(await cardOnFace(page, 'inspection')).toBe('PH_Hunger');
+    expect(await cardOnFace(page, `inspection-${count - 2}`)).toBe('PH_Hunger');
+    expect(await cardOnFace(page, 'inspection-0')).toBe('PH_Famine');
+    await rested(page);
+  }
+
+  // Only two copies of one card draw their names at one place on the face.
+  const full = await nameOnScreen(page, 'inspection');
+  const beneath = await nameOnScreen(page, `inspection-${STACK_HOLDS - 2}`);
+  expect(beneath.x).toBeLessThan(full.x);
+  expect(beneath.y).toBeLessThan(full.y);
+  await page.mouse.click(full.x, full.y, { button: 'right' });
+  await rested(page);
+  expect(await standing(page, `inspection-${STACK_HOLDS - 1}`)).toBe(false);
+  expect(await standing(page, `inspection-${STACK_HOLDS - 2}`)).toBe(true);
+  await expect.poll(() => cardOnFace(page, 'small-card-0')).toBe('PH_Hunger');
+
+  for (let left = STACK_HOLDS - 1; left >= 1; left--) {
+    await page.keyboard.press('Escape');
+    await expect.poll(() => standing(page, `inspection-${left - 1}`)).toBe(false);
+    expect(await standing(page, 'inspection')).toBe(true);
+    if (left >= 2) expect(await standing(page, `inspection-${left - 2}`)).toBe(true);
+  }
+  expect(await cardOnFace(page, 'inspection')).toBe('PH_Famine');
 
   await page.keyboard.press('Escape');
   await expect.poll(() => standing(page, 'inspection')).toBe(false);
