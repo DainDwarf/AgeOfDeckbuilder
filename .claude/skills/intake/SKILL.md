@@ -38,7 +38,7 @@ Once every fork is settled, and not before, write `workflow/board/<slug>.md`:
 **Scope:** what is in, what is out, the corner cases decided here and how.
 **Traps:** the non-local facts the implementer cannot see from the files it edits.
 **Plan:** the files the change touches and the order the work lands in, each step by what it leaves standing. Never a function, a signature, or which function owns what: the implementer reads the code once, at the ship, and decides that.
-**Verify:** the commands to run, and the spec to run by name.
+**Verify:** the commands to run; the one spec that proves the line, by name, or none; and the specs CI proves on the push, listed for the hand-back.
 ```
 
 Then rewrite the board line in its full form and link the dossier, the link relative to the board:

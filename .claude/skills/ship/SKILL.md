@@ -20,7 +20,7 @@ Spawn the `implementer` agent with a brief containing:
 - the `docs/` pages that are the spec for this change, by path and section heading — the implementer reads the sections named, not the whole page;
 - the doc-impact list;
 - `docs/PHASER.md`, named as the page to read first, when the line touches `src/ui/`, `src/main.ts` or `e2e/`;
-- what to run to verify (`npm run fmt`, then typecheck, tests, the relevant command);
+- what to run to verify (`npm run fmt`, then typecheck, tests, the dossier's one proof spec or none); any other spec is the implementer's to run for a question it has, named in the report with the question, and nothing counts them;
 - the standing instruction: _the design is the spec; a gap is a Deviation in your report, not a change to the design; anything the dossier did not foresee goes in the report_;
 - the standing instruction: _after spawning any child or background task, finish finite work and end your turn_.
 
@@ -53,7 +53,7 @@ Once the review is LOOKS GOOD (or its blocking findings are fixed): check `CLAUD
 
 ## 6. Hand back
 
-Report to the user: what shipped, the commit, the deviations, the review verdict with its advisories one line each, the implementer's discoveries one line each, the authored sentences, each quoted with its key or page and one line on where a player or reader meets it, what to inspect and how, and what the next line would do. Then stop — the user reads the report, answers the authored sentences, and orders what becomes a shave or a `/todo`; the next line is a new invocation.
+Report to the user: what shipped, the commit, the deviations, the review verdict with its advisories one line each, the implementer's discoveries one line each, the authored sentences, each quoted with its key or page and one line on where a player or reader meets it, the specs the dossier lists as CI's, what to inspect and how, and what the next line would do. Then stop — the user reads the report, answers the authored sentences, and orders what becomes a shave or a `/todo`; the next line is a new invocation.
 
 What the user leaves unordered — an advisory, a discovery, a question they did not answer — is parked in the project memory's `project-status.md`, one line under its heading, for `/upkeep`'s triage.
 

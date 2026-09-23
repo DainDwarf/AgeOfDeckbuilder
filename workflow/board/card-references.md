@@ -80,11 +80,8 @@ npm run check
 npm test
 npm run lint
 npx playwright test e2e/reference.spec.ts
-npx playwright test e2e/deal.spec.ts
-npx playwright test e2e/capstone.spec.ts
-npx playwright test e2e/press.spec.ts
-npx playwright test e2e/hover.spec.ts
-npx playwright test e2e/menu.spec.ts
 ```
+
+CI proves on the push: `e2e/deal.spec.ts`, `e2e/capstone.spec.ts`, `e2e/press.spec.ts`, `e2e/hover.spec.ts`, `e2e/menu.spec.ts`.
 
 Then the visual check on the running app: the brackets read on the deal's answer at the browse width and on the card shown large; the small card stands whole over the name, inside the screen, and over the neighbouring answer; two cards shown large stand side by side, centred, neither clipped; the cursor is the hand over a name on the card shown large and the arrow beside it on the same card; the menu opened over a small card takes it down and leaves the row standing.

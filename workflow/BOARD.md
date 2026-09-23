@@ -6,7 +6,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ---
 
-- **The spec-run instrument** — how to cut the redundant spec runs, the reviewer repeating the implementer's set and dossiers naming seven or ten specs, without a cap that prices an honest diagnosis or moves a test; to discuss and converge on.
 - **A staleness pass over the tests** — fixtures carrying pieces that no longer act, like the worker at `LURE` left after the fixture's own script took over from the default one; the nomadic and stand-in coherence tests, which ask their scripts nothing; and the text entries holding a placeholder outside the answers, the refusals, the aim line, the browse titles, the defeat lines and the panel's, whose filling no test proves.
 - **Card references** — a card named in a rules entry is marked by its id and drawn as its name in brackets; the pointer resting on it shows the named card small above it and a right click on it shows the named card large beside the one it was taken off, both cascading; `docs/INTERFACE.md` and `docs/CHRONICLE-SCREEN.md` say so, the catalogues' coherence tests refuse a name that resolves to no card of theirs, and `e2e/reference.spec.ts` asserts it. Doc-impact: `docs/INTERFACE.md`, `docs/CHRONICLE-SCREEN.md`. [board/card-references.md](board/card-references.md)
 - **References beyond cards** — a name in a rules entry resolves to more than a card: an improvement, a feature, anything with a row in the info panel, shown small as that row.

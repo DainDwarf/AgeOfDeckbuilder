@@ -46,7 +46,7 @@ Scope grows in place when exploration reveals adjacent work that shares the abst
 
 Run exactly the commands the brief names and report their real result. A failing check is reported as failing, with the output; never described as passing, never "should pass".
 
-Locally you run one spec at a time, the one the brief names or this working tree touches (`npx playwright test e2e/<spec>.spec.ts`); the whole suite is CI's and is never run here.
+Locally a run is one spec at a time (`npx playwright test e2e/<spec>.spec.ts`). The proof is the one spec the brief names, or none. Any other spec is yours to run when it answers a question — what a path does today, why a run failed, whether a fix held — as often as the question takes; nothing counts them, and each goes in the report with its question. The whole suite is CI's and is never run here.
 
 ## Children and waiting
 
@@ -59,7 +59,7 @@ If you spawn a child agent or a background command, finish whatever finite work 
 what changed, by file, in a few lines
 
 ## Verification
-each command and its outcome
+each command and its outcome; each diagnosis run with the question it answered
 
 ## Doc-impact
 each page and what changed, or "none — <why>"
