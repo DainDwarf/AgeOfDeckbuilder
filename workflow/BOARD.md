@@ -6,6 +6,8 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ---
 
+- **Inspections pile up** — right-clicking the same name again adds another copy to the row of cards shown large, which will not do; the user would rather have the inspections pile up than make a row of cards.
+- **A small card answers the right click** — right clicking a small card does nothing; make it work.
 - **References beyond cards** — a name in a rules entry resolves to more than a card: an improvement, a feature, anything with a row in the info panel, shown small as that row.
 - **Card kinds explain themselves** — every card kind's label, settle, unit, building, instant, hazard, event and capstone, gets a tooltip or reference stating the kind's own rules, so a card's rules entry stops repeating what its kind already means.
 - **Hunger is forged by its event** — the hazard's amount is fixed on the card and shown on its face; it is the event that forges the card that grows with the turns, forging stronger Hungers on later turns.
