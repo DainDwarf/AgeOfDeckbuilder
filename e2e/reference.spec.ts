@@ -84,7 +84,7 @@ test('a card named on a card raises it small at a rest and shows it large at a r
     await rested(page);
   }
 
-  // Only two copies of one card draw their names at one place on the face.
+  // Measured on two copies of one card: two different faces place their names differently.
   const full = await nameOnScreen(page, 'inspection');
   const beneath = await nameOnScreen(page, `inspection-${STACK_HOLDS - 2}`);
   expect(beneath.x).toBeLessThan(full.x);
