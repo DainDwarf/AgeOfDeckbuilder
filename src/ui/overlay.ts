@@ -726,7 +726,7 @@ export function createOverlay(
    * The newest card shown large taken down, and the last of them onto what it was taken off: the one
    * path, whichever way.
    */
-  const putBack = ({ row, over }: Inspection): void => {
+  const takeDownNewest = ({ row, over }: Inspection): void => {
     if (row.length > 1) showRow(row.slice(0, -1), over);
     else if (over === undefined) close();
     else raise(over);
@@ -736,7 +736,7 @@ export function createOverlay(
     if (carried === undefined) return false;
     switch (carried.stands) {
       case 'inspection':
-        putBack(carried);
+        takeDownNewest(carried);
         return true;
       case 'browse':
         if (carried.selected === undefined) close();
@@ -837,7 +837,7 @@ export function createOverlay(
       if (carried === undefined) return;
       switch (carried.stands) {
         case 'inspection':
-          putBack(carried);
+          takeDownNewest(carried);
           return;
         case 'browse':
         case 'aim-window':
