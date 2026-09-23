@@ -6,6 +6,7 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ---
 
+- **The window spec's claim wait times out on CI** — `e2e/window.spec.ts` "the design space follows a window that grows after boot" timed out twice on CI at `claimFree`'s wait for the held tile, green locally and on a re-run; it may be intermittent.
 - **Hunger is forged by its event** — the hazard's amount is fixed on the card and shown on its face; it is the event that forges the card that grows with the turns, forging stronger Hungers on later turns.
 - **Events carry lore** — an event's window says in a short text what is happening to the city, since most answers make no sense by themselves; the user's lore pitches for the five Nomadic events wait in `board/events-carry-lore.md` for the intake.
 - **Event animations** — when an event's answer lands, what it changes on the map — burned tiles, killed population and units, anything an answer does — is animated rather than simply redrawn; the tile The herd's _Follow it_ charts is one of them, wherever it lies on the map, and nothing draws the eye to it until then.
