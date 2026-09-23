@@ -206,6 +206,7 @@ test('a small card and a kind bubble raised off a browsed card move with it as t
 
   const naming: string[] = [];
   for (const face of faces) if (await drawsName(page, face)) naming.push(face);
+  // Nearest the frame's middle: a face at an edge sits under the title or the mask, or runs out of scroll.
   const named = await nearest(frame.y, naming, (face) => nameOnScreen(page, face));
 
   const name = await nameOnScreen(page, named);
@@ -219,6 +220,7 @@ test('a small card and a kind bubble raised off a browsed card move with it as t
   await page.mouse.wheel(0, name.height / frame.unit / 4);
   await expect.poll(() => offsetOf(page)).toBeGreaterThan(start);
   await page.waitForTimeout(PAST_HANDOVER);
+  expect(await standing(page, 'small-card-0')).toBe(true);
   const carried = await nameOnScreen(page, named);
   const followed = await onScreen(page, 'small-card-0');
   expect(carried.y).toBeLessThan(name.y);
