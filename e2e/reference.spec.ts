@@ -23,7 +23,7 @@ const PAST_HANDOVER = 400;
 /** The most cards shown large a stack holds. */
 const STACK_HOLDS = 12;
 
-test('a card named on a card raises it small at a rest and shows it large at a right click, and one named on a card shown large stands a new copy on top of the stack, twelve at most', async ({
+test('a card named on a card raises it small at a rest and shows it large at a right click on the name or on the small card, and one named on a card shown large stands a new copy on top of the stack, twelve at most', async ({
   page,
 }) => {
   const problems = watch(page);

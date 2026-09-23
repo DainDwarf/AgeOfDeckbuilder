@@ -102,8 +102,8 @@ export function createSmallCards(
     cut(count);
     // Phaser resets the cursor when an object that carries one is destroyed, wherever the pointer
     // is (`InputPlugin#clear`), and sends no `pointerover` to what it still rests on (docs/PHASER.md).
-    const pointer = scene.input.activePointer;
-    const top = scene.input.sortGameObjects(scene.input.hitTestPointer(pointer), pointer)[0];
+    const active = scene.input.activePointer;
+    const top = scene.input.sortGameObjects(scene.input.hitTestPointer(active), active)[0];
     if (top?.input) scene.input.setCursor(top.input);
   };
 
