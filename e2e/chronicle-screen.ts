@@ -316,6 +316,36 @@ export function nameOnScreen(page: Page, face: string, at = 0): Promise<{ x: num
   );
 }
 
+/** Where the named face's kind label sits on the page. */
+export function kindLabelOnScreen(page: Page, face: string): Promise<{ x: number; y: number }> {
+  return page.evaluate((target) => {
+    const found = window.named?.(target);
+    if (found === undefined) throw new Error(`nothing named ${target} is on the chronicle screen`);
+    const root = found.object as Phaser.GameObjects.Container;
+    const label = root.list.find((part) => part.name === 'kind-label') as
+      | Phaser.GameObjects.Text
+      | undefined;
+    if (label === undefined) throw new Error(`${target} wears no kind label`);
+    const middle = root
+      .getWorldTransformMatrix()
+      .transformPoint(
+        label.x + (0.5 - label.originX) * label.width,
+        label.y + (0.5 - label.originY) * label.height,
+      );
+
+    const camera = found.camera;
+    const origin = camera.getWorldPoint(0, 0);
+    const stepped = camera.getWorldPoint(1, 1);
+    const canvas = camera.scene.game.canvas;
+    const rect = canvas.getBoundingClientRect();
+    const unit = rect.width / canvas.width / (stepped.x - origin.x);
+    return {
+      x: rect.left + (middle.x - origin.x) * unit,
+      y: rect.top + (middle.y - origin.y) * unit,
+    };
+  }, face);
+}
+
 /** The cursor the page shows over the canvas. */
 export function cursorOverCanvas(page: Page): Promise<string> {
   return page.locator('canvas').evaluate((canvas: HTMLCanvasElement) => canvas.style.cursor);
@@ -770,6 +800,19 @@ export function tooltipUp(page: Page, name: string): Promise<boolean> {
     const bubble = window.named?.(target)?.object as Phaser.GameObjects.Container | undefined;
     if (bubble === undefined) throw new Error(`there is no ${target}`);
     return bubble.visible;
+  }, name);
+}
+
+/** What the named bubble reads. */
+export function tooltipText(page: Page, name: string): Promise<string> {
+  return page.evaluate((target) => {
+    const bubble = window.named?.(target)?.object as Phaser.GameObjects.Container | undefined;
+    if (bubble === undefined) throw new Error(`there is no ${target}`);
+    const label = bubble.list.find((part) => part.type === 'Text') as
+      | Phaser.GameObjects.Text
+      | undefined;
+    if (label === undefined) throw new Error(`${target} holds no text`);
+    return label.text;
   }, name);
 }
 

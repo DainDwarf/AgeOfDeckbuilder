@@ -20,6 +20,7 @@ import {
   capstoneFace,
   cardFace,
   createCardFace,
+  createKindBubble,
   type Face,
   heightOf,
 } from './card-face';
@@ -46,6 +47,7 @@ import { createRefusalNote, refused } from './refusal-note';
 import { createSmallCards, type Raiser, raiserOf } from './small-card';
 import { buildingName, cardName, eventName, text, victoryLine } from './text';
 import type { Reference } from './text-run';
+import { createTooltip } from './tooltip';
 
 const TITLE_INK = css(LOOK.paleInk);
 
@@ -245,7 +247,8 @@ export function createOverlay(
     .setVisible(false);
   scene.strata.scrim.layer.add(scrim);
   const note = createRefusalNote(scene, scene.strata.note);
-  const small = createSmallCards(scene, scene.strata.smallCard, catalogue, (reference) => {
+  const kinds = createKindBubble(createTooltip(scene, scene.strata.tooltip));
+  const small = createSmallCards(scene, scene.strata.smallCard, catalogue, kinds, (reference) => {
     inspectNamed(reference);
   });
 
@@ -349,6 +352,9 @@ export function createOverlay(
                     inspect: (name) => {
                       inspectNamed(name.reference);
                     },
+                    kind: (over) => {
+                      kinds.over(drawn, over);
+                    },
                   }
                 : undefined,
           });
@@ -447,6 +453,19 @@ export function createOverlay(
     return name === undefined ? undefined : raiserOf(card.drawn, name);
   };
 
+  /** The card of the standing grid whose kind label lies under the pointer, and nothing where none does. */
+  const kindUnder = (pointer: Phaser.Input.Pointer): CardFace | undefined => {
+    const card = under(pointer);
+    if (card === undefined) return undefined;
+    const at = on.at(pointer.x, pointer.y);
+    return card.drawn.kindAt(at.x, at.y) ? card.drawn : undefined;
+  };
+
+  /** Every card of the standing grid told whether the pointer is on its kind label. */
+  const overKind = (face: CardFace | undefined): void => {
+    for (const card of grid?.placed ?? []) kinds.over(card.drawn, card.drawn === face);
+  };
+
   /**
    * A pile's cards laid out below `top`, and the frame that scrolls and flings them: `pressed` takes
    * the press and the number the card under it was offered as, and nothing where it landed between
@@ -498,11 +517,15 @@ export function createOverlay(
     });
     frame.on('pointermove', (pointer: Phaser.Input.Pointer) => {
       small.over(scrolling === undefined ? nameUnder(pointer) : undefined);
+      overKind(scrolling === undefined ? kindUnder(pointer) : undefined);
     });
     onHover(
       frame,
       () => {},
-      () => small.over(undefined),
+      () => {
+        small.over(undefined);
+        overKind(undefined);
+      },
     );
     onClick(frame, (pointer) => {
       pressed(under(pointer)?.at, 'left');

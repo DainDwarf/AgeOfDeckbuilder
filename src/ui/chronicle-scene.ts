@@ -156,7 +156,7 @@ export class ChronicleScene extends Phaser.Scene implements OpensChronicles {
     stopsThePointer(this, () => 'no button held');
     createBand(this, ui.band);
 
-    /** The one bubble each surface raises: the infopanel's rows on the map, the bar's on the UI. */
+    /** The one bubble each surface raises; the overlay's is its own. */
     const tooltip = {
       map: createTooltip(map, map.strata.tooltip),
       ui: createTooltip(this, ui.tooltip),
@@ -394,7 +394,7 @@ export class ChronicleScene extends Phaser.Scene implements OpensChronicles {
     const endTurn = this.addEndTurn(ui.endTurn, () => {
       void playOut({ type: 'end-turn' });
     });
-    const hand = createHand(this, ui, this.choices.catalogue, {
+    const hand = createHand(this, ui, tooltip.ui, this.choices.catalogue, {
       play: (index) => {
         void playOut({ type: 'play', index, aim: 'none' });
       },

@@ -1,4 +1,5 @@
 import type Phaser from 'phaser';
+import type { CardKind } from '../rules/cards';
 import { type Catalogue, cardOf } from '../rules/catalogue';
 import { costOf } from '../rules/chronicle';
 import { answerOf } from '../rules/schedule';
@@ -27,6 +28,7 @@ import {
   text,
 } from './text';
 import { layOutRun, type Reference, type Run } from './text-run';
+import type { Tooltip } from './tooltip';
 
 export const CARD_WIDTH = 130;
 
@@ -89,6 +91,9 @@ export function drawCardSurface(
   surface.strokeRoundedRect(x + 0.5, y + 0.5, width - 1, height - 1, radius);
 }
 
+/** What the label at a face's foot reads, and what its tooltip says. */
+export type FaceKind = CardKind | 'event' | 'capstone';
+
 /**
  * What a face reads: what it stands, for whoever reads that back off the object it is drawn on; its
  * name; the kind it is labelled by; its rules entry; and what it costs, in the order the resource
@@ -97,7 +102,7 @@ export function drawCardSurface(
 export type Face = {
   readonly id: string;
   readonly name: string;
-  readonly kind: string;
+  readonly kind: FaceKind;
   readonly rules: string;
   readonly costs: readonly Cost[];
 };
@@ -107,7 +112,7 @@ export function cardFace(catalogue: Catalogue, id: CardId): Face {
   return {
     id,
     name: cardName(id),
-    kind: text(`kind.${cardOf(catalogue, id).kind}`),
+    kind: cardOf(catalogue, id).kind,
     rules: cardRules(id),
     costs: costOf(catalogue, id),
   };
@@ -118,7 +123,7 @@ export function capstoneFace(id: string): Face {
   return {
     id,
     name: capstoneName(id),
-    kind: text('kind.capstone'),
+    kind: 'capstone',
     rules: capstoneRules(id),
     costs: [],
   };
@@ -138,7 +143,7 @@ export function answerFace(
   return {
     id,
     name: answerName(id),
-    kind: text('kind.event'),
+    kind: 'event',
     rules: answerRules(id, answer.reads(catalogue, chronicle)),
     costs: [],
   };
@@ -158,10 +163,14 @@ export type Name = {
 /** Where a name stands on the surface its face is drawn on: its middle, and its line's two edges. */
 export type Spot = { readonly x: number; readonly top: number; readonly bottom: number };
 
-/** What a face handed these lays a zone over every name for: the pointer on it or off it, and the right click. */
+/**
+ * What a face handed these lays a zone over every name for: the pointer on it or off it, and the
+ * right click. Handed `kind`, it lays one over its kind label too, which answers no press.
+ */
 export type NamePresses = {
   over(name: Name | undefined): void;
   inspect(name: Name): void;
+  kind?(over: boolean): void;
 };
 
 export type CardFace = {
@@ -174,6 +183,10 @@ export type CardFace = {
   nameAt(x: number, y: number): Name | undefined;
   /** Where one of the face's names stands on the surface the face is drawn on. */
   spotOf(name: Name): Spot;
+  /** Whether the kind label lies under a point of the surface the face is drawn on. */
+  kindAt(x: number, y: number): boolean;
+  /** The kind's tooltip raised on the bubble, beside the label as it stands when the bubble is painted. */
+  explainKind(tooltip: Tooltip): void;
 };
 
 /**
@@ -239,12 +252,15 @@ export function createCardFace(
     color: css(tone(palette.ink)),
   }).setOrigin(1, 0.5);
 
-  const kind = addText(scene, 0, -1 - pad, face.kind.toUpperCase(), {
+  const kind = addText(scene, 0, -1 - pad, text(`kind.${face.kind}`).toUpperCase(), {
     fontFamily: UI_FONT,
     fontSize: `${0.65 * em}px`,
     color: css(tone(LOOK.faintInk)),
     letterSpacing: 0.14 * 0.65 * em,
-  }).setOrigin(0.5, 1);
+  })
+    .setOrigin(0.5, 1)
+    .setName('kind-label');
+  const kindMiddle = kind.y - kind.height / 2;
 
   const size = 0.62 * em;
   const span = (2 / 3) * size;
@@ -291,7 +307,7 @@ export function createCardFace(
     height: lineHeight,
   }));
   root.setData('names', names);
-  const zones =
+  const zones: Phaser.GameObjects.Zone[] =
     presses === undefined
       ? []
       : names.map((name) => {
@@ -306,6 +322,18 @@ export function createCardFace(
           onClick(zone, () => presses.inspect(name), 'right');
           return zone;
         });
+  if (presses?.kind !== undefined) {
+    const over = presses.kind;
+    const zone = answersPress(
+      scene.add.zone(0, kindMiddle, kind.width, kind.height).setInteractive(),
+    );
+    onHover(
+      zone,
+      () => over(true),
+      () => over(false),
+    );
+    zones.push(zone);
+  }
 
   const artTop = middle + 1.15 * em;
   const artHeight = rules.y - rules.height - 0.45 * em - artTop;
@@ -361,6 +389,56 @@ export function createCardFace(
     spotOf(name: Name): Spot {
       const middle = root.getWorldTransformMatrix().transformPoint(name.x, name.y);
       return { x: middle.x, top: middle.y - name.height / 2, bottom: middle.y + name.height / 2 };
+    },
+    kindAt(x: number, y: number): boolean {
+      const local = root.getLocalPoint(x, y);
+      return (
+        Math.abs(local.x) <= kind.width / 2 && Math.abs(local.y - kindMiddle) <= kind.height / 2
+      );
+    },
+    explainKind(tooltip: Tooltip): void {
+      tooltip.beside(text(`tooltip.${face.kind}`), () =>
+        root.getWorldTransformMatrix().transformPoint(kind.width / 2 - TEXT_INSET.x, kindMiddle),
+      );
+    },
+  };
+}
+
+/** Which face's kind label has raised the surface's one bubble. */
+export type KindBubble = {
+  /** The pointer is on this face, on its kind label or off it. */
+  over(face: CardFace, onLabel: boolean): void;
+};
+
+/**
+ * The kind labels of one surface's faces over the bubble they raise: it goes down as the pointer
+ * leaves the label, and with the face it stands beside.
+ */
+export function createKindBubble(tooltip: Tooltip): KindBubble {
+  let raised: { readonly face: CardFace; readonly gone: () => void } | undefined;
+
+  const down = (): void => {
+    if (raised === undefined) return;
+    raised.face.root.off('destroy', raised.gone);
+    raised = undefined;
+    tooltip.hide();
+  };
+
+  return {
+    over(face: CardFace, onLabel: boolean): void {
+      if (!onLabel) {
+        if (raised?.face === face) down();
+        return;
+      }
+      if (raised?.face === face) return;
+      down();
+      const gone = (): void => {
+        raised = undefined;
+        tooltip.hide();
+      };
+      face.root.once('destroy', gone);
+      raised = { face, gone };
+      face.explainKind(tooltip);
     },
   };
 }

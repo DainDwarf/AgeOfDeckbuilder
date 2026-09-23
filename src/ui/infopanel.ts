@@ -237,7 +237,10 @@ export function createInfoPanel(
 
   const bubble: RowBubble = {
     raise(centre: number, message: string): void {
-      tooltip.beside(message, box.left + CARD_WIDTH * box.unit, box.top + centre * box.unit);
+      tooltip.beside(message, () => ({
+        x: box.left + CARD_WIDTH * box.unit,
+        y: box.top + centre * box.unit,
+      }));
     },
     drop(): void {
       tooltip.hide();

@@ -9,6 +9,7 @@ export type Strata = {
   readonly carried: Stratum;
   readonly note: Stratum;
   readonly smallCard: Stratum;
+  readonly tooltip: Stratum;
 };
 
 /**
@@ -34,6 +35,7 @@ export class OverlayScene extends Phaser.Scene {
       carried: stratumOf(this.add.layer().setName('carried'), camera),
       note: stratumOf(this.add.layer().setName('note'), camera),
       smallCard: stratumOf(this.add.layer().setName('small-card'), camera),
+      tooltip: stratumOf(this.add.layer().setName('tooltip'), camera),
     };
     // A restart keeps the instance and its fields (docs/PHASER.md), so the widget of the chronicle
     // that has just gone down would answer keys until the next one is built.

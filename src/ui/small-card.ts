@@ -7,6 +7,7 @@ import {
   type CardFace,
   cardFace,
   createCardFace,
+  type KindBubble,
   type Name,
   type Spot,
 } from './card-face';
@@ -64,6 +65,7 @@ export function createSmallCards(
   scene: Phaser.Scene,
   on: Stratum,
   catalogue: Catalogue,
+  kinds: KindBubble,
   inspect: (reference: Reference) => void,
 ): SmallCards {
   let chain: Link[] = [];
@@ -118,27 +120,35 @@ export function createSmallCards(
     return face;
   };
 
-  /** What a name names, drawn small: a card as its face, anything else as its infopanel card. */
+  /**
+   * What a name names, drawn small: a card as its face, anything else as its infopanel card, which
+   * wears no kind label.
+   */
   const drawnOf = (
     reference: Reference,
     over: (under: Raiser | undefined) => void,
-  ): Phaser.GameObjects.Container => {
+  ): { root: Phaser.GameObjects.Container; face: CardFace | undefined } => {
     switch (reference.kind) {
-      case 'card':
-        return faceOf(reference.id, over).root;
+      case 'card': {
+        const face = faceOf(reference.id, over);
+        return { root: face.root, face };
+      }
       case 'terrain':
       case 'feature':
       case 'improvement':
       case 'building':
       case 'player':
       case 'enemy':
-        return createThingCard(scene, catalogue, reference, CARD_WIDTH);
+        return {
+          root: createThingCard(scene, catalogue, reference, CARD_WIDTH),
+          face: undefined,
+        };
     }
   };
 
   const raise = (raiser: Raiser, level: number): void => {
     cut(level);
-    const root = drawnOf(raiser.name.reference, (under) => {
+    const { root, face } = drawnOf(raiser.name.reference, (under) => {
       link.under = under;
       settle();
     });
@@ -169,9 +179,18 @@ export function createSmallCards(
       },
       () => {
         link.onCard = false;
+        if (face !== undefined) kinds.over(face, false);
         settle();
       },
     );
+    // A zone over the label would take the root's hover and its right click: the small card would go
+    // down under a pointer resting on its own label.
+    if (face !== undefined) {
+      root.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+        const at = on.at(pointer.x, pointer.y);
+        kinds.over(face, face.kindAt(at.x, at.y));
+      });
+    }
     on.layer.add(root);
     chain.push(link);
     if (level === 0) raiser.hold?.(true);

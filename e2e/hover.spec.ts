@@ -1,12 +1,17 @@
 import { expect, type Page, test } from '@playwright/test';
+import { STAND_IN } from '../src/content/stand-in';
+import { cardOf } from '../src/rules/catalogue';
 import { text } from '../src/ui/text';
 import {
+  besideTheDeal,
   besideTiles,
   budget,
+  cardOnFace,
   chronicleOf,
   cursorOverCanvas,
   dealRun,
   endTurnLabel,
+  kindLabelOnScreen,
   offCanvas,
   onScreen,
   open,
@@ -16,6 +21,7 @@ import {
   standing,
   stoppedTurn,
   tileOnScreen,
+  tooltipText,
   tooltipUp,
   watch,
 } from './chronicle-screen';
@@ -300,6 +306,78 @@ test('a hand card the pointer leaves the canvas over settles back into the hand'
 
   await page.mouse.move(bare.x, bare.y);
   await expect.poll(() => onScreen(page, card).then((at) => at.y)).toBeCloseTo(rest.y, 0);
+
+  expect(problems).toEqual([]);
+});
+
+/** The first card's kind label once the card has come to rest lifted out of the hand. */
+async function liftedLabel(
+  page: Page,
+  lying: { x: number; y: number },
+): Promise<{ x: number; y: number }> {
+  let label = lying;
+  await expect
+    .poll(async () => {
+      const was = await kindLabelOnScreen(page, 'hand-0');
+      await rested(page);
+      label = await kindLabelOnScreen(page, 'hand-0');
+      return label.y < lying.y && label.y === was.y;
+    })
+    .toBe(true);
+  return label;
+}
+
+test("a card's kind label in the hand raises the bubble reading what its kind is, and a right click on it shows the card large", async ({
+  page,
+}) => {
+  const problems = watch(page);
+
+  await open(page, 1, 'PH_Deck');
+
+  const id = (await chronicleOf(page)).hand[0];
+  if (id === undefined) throw new Error('the hand holds no card');
+  const card = await onScreen(page, 'hand-0');
+  const lying = await kindLabelOnScreen(page, 'hand-0');
+
+  await page.mouse.move(card.x, card.y, { steps: 5 });
+  const label = await liftedLabel(page, lying);
+  await page.mouse.move(label.x, label.y, { steps: 5 });
+  await expect.poll(() => tooltipUp(page, 'tooltip-ui')).toBe(true);
+  expect(await tooltipText(page, 'tooltip-ui')).toBe(text(`tooltip.${cardOf(STAND_IN, id).kind}`));
+  expect(await cursorOverCanvas(page)).toBe(HAND);
+
+  const beside = await besideTiles(page);
+  await page.mouse.move(beside.x, beside.y, { steps: 5 });
+  await expect.poll(() => tooltipUp(page, 'tooltip-ui')).toBe(false);
+
+  await page.mouse.move(card.x, card.y, { steps: 5 });
+  const again = await liftedLabel(page, lying);
+  await page.mouse.click(again.x, again.y, { button: 'right' });
+  await expect.poll(() => cardOnFace(page, 'inspection')).toBe(id);
+
+  expect(problems).toEqual([]);
+});
+
+test("an answer's kind label on the deal window raises the overlay's bubble reading what an event is", async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const run = dealRun();
+  test.setTimeout(budget(run.due));
+
+  await open(page, run.seed, 'PH_Deck');
+  for (let turn = 1; turn < run.due; turn++) await stoppedTurn(page);
+  await expect.poll(() => standing(page, 'deal')).toBe(true);
+  await rested(page);
+
+  const label = await kindLabelOnScreen(page, 'deal-card-0');
+  await page.mouse.move(label.x, label.y, { steps: 5 });
+  await expect.poll(() => tooltipUp(page, 'tooltip-overlay')).toBe(true);
+  expect(await tooltipText(page, 'tooltip-overlay')).toBe(text('tooltip.event'));
+
+  const beside = await besideTheDeal(page);
+  await page.mouse.move(beside.x, beside.y, { steps: 5 });
+  await expect.poll(() => tooltipUp(page, 'tooltip-overlay')).toBe(false);
 
   expect(problems).toEqual([]);
 });

@@ -15,6 +15,7 @@ import {
   cardFace,
   createCardBack,
   createCardFace,
+  createKindBubble,
 } from './card-face';
 import { ended, STAGGER, stopMotion, travel, turnOver } from './card-motion';
 import {
@@ -30,6 +31,7 @@ import { PILE_PLACE } from './piles';
 import { createRefusalNote, refused } from './refusal-note';
 import { createSmallCards, type Raiser } from './small-card';
 import type { Reference } from './text-run';
+import type { Tooltip } from './tooltip';
 
 /** The clear water between a pile and the lane the hand fans out in. */
 const LANE_PAD = 28;
@@ -112,6 +114,7 @@ export function createHand(
     readonly note: Stratum;
     readonly smallCard: Stratum;
   },
+  tooltip: Tooltip,
   catalogue: Catalogue,
   presses: HandPresses,
 ): Hand {
@@ -119,7 +122,8 @@ export function createHand(
   const laneWidth = DESIGN_WIDTH - 2 * laneLeft;
   const note = createRefusalNote(scene, on.note);
   const line = createAimLine(scene, on.aimLine);
-  const small = createSmallCards(scene, on.smallCard, catalogue, (reference) =>
+  const kinds = createKindBubble(tooltip);
+  const small = createSmallCards(scene, on.smallCard, catalogue, kinds, (reference) =>
     presses.inspectNamed(reference),
   );
 
@@ -341,6 +345,12 @@ export function createHand(
     };
   };
 
+  /** Whether the pointer is on this card's kind label. */
+  const onKind = (slot: Slot, pointer: Phaser.Input.Pointer): boolean => {
+    const at = on.resting.at(pointer.x, pointer.y);
+    return slot.face.kindAt(at.x, at.y);
+  };
+
   const render = (chronicle: Chronicle): void => {
     small.down();
     note.hide();
@@ -388,6 +398,7 @@ export function createHand(
           draggable: true,
         })
         .on('dragstart', (pointer: Phaser.Input.Pointer) => {
+          kinds.over(slot.face, false);
           unselect();
           slot.hovered = true;
           settle(slot, 0);
@@ -400,6 +411,7 @@ export function createHand(
         })
         .on('pointermove', (pointer: Phaser.Input.Pointer) => {
           small.over(dragged === undefined ? nameUnder(slot, pointer) : undefined);
+          kinds.over(slot.face, dragged === undefined && onKind(slot, pointer));
         })
         .on('drag', carry)
         .on('dragend', (pointer: Phaser.Input.Pointer) => {
@@ -425,6 +437,7 @@ export function createHand(
         },
         () => {
           small.over(undefined);
+          kinds.over(slot.face, false);
           if (dragged !== undefined || !taking) return;
           slot.hovered = false;
           settle(slot, 120);

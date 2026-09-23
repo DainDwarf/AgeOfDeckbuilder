@@ -23,10 +23,10 @@ export type Tooltip = {
    */
   under(message: string, left: number, tip: number, top: number): void;
   /**
-   * Stands to the right of `x`, level with `y`, its tail pointing left back at them. The bubble
-   * goes wherever they are, off the frame included.
+   * Stands to the right of the point `at` answers as the bubble is painted, level with it, its tail
+   * pointing left back at it. The bubble goes wherever that is, off the frame included.
    */
-  beside(message: string, x: number, y: number): void;
+  beside(message: string, at: () => { x: number; y: number }): void;
   hide(): void;
 };
 
@@ -121,8 +121,11 @@ export function createTooltip(scene: Phaser.Scene, on: Stratum): Tooltip {
       });
     },
 
-    beside(message: string, x: number, y: number): void {
-      raise(() => paintBeside(message, x, y));
+    beside(message: string, at: () => { x: number; y: number }): void {
+      raise(() => {
+        const { x, y } = at();
+        paintBeside(message, x, y);
+      });
     },
 
     hide,
