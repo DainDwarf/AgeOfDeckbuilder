@@ -92,7 +92,7 @@ How this code base is shaped, and what a change never deviates from:
 - **A content change and its measurement are one commit**; the mechanism it needed lands in its own inert commit before it.
 - **During a tuning pass, edits stay uncommitted** until the user says the numbers are right. Say once that the tree carries the change; never roll back or ask keep-or-revert mid-pass.
 - **Git is the backup.** No scratchpad copies of tracked files; `git checkout <file>` reverts, and `git status --porcelain <file>` confirms it printed nothing.
-- **Never push unless asked.** The repository is public; a push is a publication.
+- **Never push unless asked, a shipped line excepted.** The repository is public; a push is a publication. `/ship` pushes its commit once the review passes, before the hand-back, and the push carries every unpushed commit on `main`; a Shave, a Fold or any other commit waits for the user's say or the next ship. Why: the hand-back is discussed while CI runs, not after it.
 - **A push is watched.** The session that pushes takes the run's id from `gh run list` and watches it in the background (`gh run watch <id> --exit-status`; with no id it prompts and hangs), goes on with the next thing, and relays the verdict when it lands; a red spec becomes a fold or a board line on the user's say, never a local run of the suite.
 - Commit messages end with `Co-Authored-By: Claude <model> <noreply@anthropic.com>`.
 

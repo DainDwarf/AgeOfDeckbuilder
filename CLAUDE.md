@@ -20,7 +20,7 @@ Code is the fourth lifespan, permanent, the source of truth for _how_. Nothing d
 
 - **`/todo`** — on the user's order, a request, bug or discovery becomes a board line — a title and one sentence, placed in order — or an idea. Never on Claude's own initiative.
 - **`/intake`** — one board line, the first without a dossier, gets its design settled with the user: forks, contradictions with the docs, scope. Ends in a dossier a ship session executes with no design question left.
-- **`/ship`** — take one dossiered line, implement through the `implementer` agent, land the trinity (code + `docs/` pages + line deleted), get the `egress-reviewer`'s verdict, commit, stop.
+- **`/ship`** — take one dossiered line, implement through the `implementer` agent, land the trinity (code + `docs/` pages + line deleted), get the `egress-reviewer`'s verdict, commit and push, hand back while CI runs, stop.
 - **`/upkeep`** — on the user's order; the ship hand-back reminds them after 20 lines, 30 days, or 100 lines of parked leftovers since the last one: docs lint, board eviction, the **ratchet** — recurring corrections become `DOGMAS.md` lines — the memory lint with the leftovers' triage, and the upstream traps.
 
 ## Roles
@@ -35,7 +35,7 @@ Code is the fourth lifespan, permanent, the source of truth for _how_. Nothing d
 Full rules in [`DOGMAS.md`](DOGMAS.md). The ones no session may miss:
 
 1. **Pitch before writing.** Orient freely; surface the plan before the first file changes.
-2. **One line per turn.** Ship a step, commit it, stop so the user can inspect. Claude owns commit granularity; pushing stays on request.
+2. **One line per turn.** Ship a step, commit it, stop so the user can inspect. Claude owns commit granularity; a shipped line is pushed before its hand-back, any other push stays on request.
 3. **Design is the spec.** Code that disagrees is wrong. A gap is reported as a deviation, never coded in silently, and a design page is never edited down to match an implementation.
 4. **Report corner cases.** Anything the agreed design did not foresee goes in the report.
 5. **One verb per concept.** Gameplay terms come from `GLOSSARY.md`; no synonyms, ever.

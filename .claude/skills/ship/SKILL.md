@@ -1,6 +1,6 @@
 ---
 name: ship
-description: Execute one dossiered BOARD.md line end to end — implement through the implementer agent, land code + docs + line deletion as one change, get the egress-reviewer's verdict, commit, stop. Use when asked to ship, implement, do, or take the next line.
+description: Execute one dossiered BOARD.md line end to end — implement through the implementer agent, land code + docs + line deletion as one change, get the egress-reviewer's verdict, commit and push, hand back while CI runs, stop. Use when asked to ship, implement, do, or take the next line.
 ---
 
 # Ship
@@ -49,11 +49,13 @@ Spawn the `egress-reviewer` with: the diff (`git diff` plus the list of untracke
 
 ## 5. Commit
 
-Once the review is LOOKS GOOD (or its blocking findings are fixed): check `CLAUDE.md` and the touched `docs/` pages for staleness, fix in the same commit, run `npm run fmt`, write the message to a scratchpad file, `git commit -F`. One commit per line. Do not push.
+Once the review is LOOKS GOOD (or its blocking findings are fixed): check `CLAUDE.md` and the touched `docs/` pages for staleness, fix in the same commit, run `npm run fmt`, write the message to a scratchpad file, `git commit -F`. One commit per line. Then push, which sends every unpushed commit on `main` with it, take the run's id from `gh run list`, and watch it in the background with `gh run watch <id> --exit-status`.
 
 ## 6. Hand back
 
-Report to the user: what shipped, the commit, the deviations, the review verdict with its advisories one line each, the implementer's discoveries one line each, the authored sentences, each quoted with its key or page and one line on where a player or reader meets it, the specs the dossier lists as CI's, what to inspect and how, and what the next line would do. Then stop — the user reads the report, answers the authored sentences, and orders what becomes a shave or a `/todo`; the next line is a new invocation.
+Report to the user, while the CI run goes on: what shipped, the commit and the run's id, the deviations, the review verdict with its advisories one line each, the implementer's discoveries one line each, the authored sentences, each quoted with its key or page and one line on where a player or reader meets it, the specs the dossier lists as CI's, what to inspect and how, and what the next line would do. Then stop — the user reads the report, answers the authored sentences, and orders what becomes a shave or a `/todo`; the next line is a new invocation.
+
+The run's verdict is relayed the turn it lands, whatever the conversation is on; a red spec becomes a fold or a board line on the user's say.
 
 What the user leaves unordered — an advisory, a discovery, a question they did not answer — is parked in the project memory's `project-status.md`, one line under its heading, for `/upkeep`'s triage.
 
