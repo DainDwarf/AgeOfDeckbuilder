@@ -196,31 +196,42 @@ test('a pan and a zoom carry the ringed tile and the panel beside it', async ({ 
 
 test("a pan carries a panel row's tooltip along with the row", async ({ page }) => {
   const problems = watch(page);
-  await open(page, 1, 'PH_Deck');
+  const run = workerRun('PH_Farm');
 
-  const tile = await tileOnScreen(page, CHARTED.at);
-  await page.mouse.click(tile.x, tile.y);
-  await expect.poll(() => ringedTile(page)).toBe(CHARTED.key);
-  await page.keyboard.press('i');
-  await expect.poll(() => shownCard(page)).toBe('terrain');
+  await open(page, run.seed, 'PH_Deck');
+  for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
 
-  const row = await onScreen(page, 'infopanel-row-0');
-  await page.mouse.move(row.x, row.y);
+  const opened = await chronicleOf(page);
+  await dragOut(page, opened.hand.indexOf('PH_Worker'));
+  await expect.poll(async () => playersOf(await chronicleOf(page)).length).toBe(1);
+  await dragUnit(page, cityTileOf(await chronicleOf(page)), run.tile);
+
+  const tile = await onScreen(page, `tile-${tileKey(run.tile)}`);
+  await page.mouse.click(tile.x, tile.y, { button: 'right' });
+  await expect.poll(() => shownCard(page)).toBe('unit');
+  await rested(page);
+
+  // The unit card's rows follow its stats, and damage's label is the widest of them.
+  const row = await onScreen(page, 'infopanel-row-1');
+  const width = await page.evaluate(() => {
+    const found = window.named?.('infopanel-row-1');
+    if (found === undefined) throw new Error('nothing named infopanel-row-1 is on the map');
+    return (found.object as unknown as { getBounds(): { width: number } }).getBounds().width;
+  });
+  await page.mouse.move(row.x - (width / 2 - 2) * row.unit, row.y);
   await expect.poll(() => tooltipUp(page, 'tooltip-map')).toBe(true);
   const panel = await onScreen(page, 'infopanel');
   const bubble = await onScreen(page, 'tooltip-map');
 
-  // The pointer holds still, so the row keeps the hover the panel is carrying out from under it.
-  await page.keyboard.down('w');
-  await expect
-    .poll(() => onScreen(page, 'infopanel').then((at) => at.y))
-    .toBeGreaterThan(panel.y + 40);
-  await page.keyboard.up('w');
+  // One tap pans one frame, and a row carried out from under the still pointer is left and takes its
+  // tooltip down: the pointer rests just inside the end the tap carries away from it.
+  await page.keyboard.press('d');
   await rested(page);
   await rested(page);
 
   const carried = await onScreen(page, 'infopanel');
   const stood = await onScreen(page, 'tooltip-map');
+  expect(carried.x).toBeLessThan(panel.x - 10 * row.unit);
   expect(await tooltipUp(page, 'tooltip-map')).toBe(true);
   expect(stood.x - carried.x).toBeCloseTo(bubble.x - panel.x, 0);
   expect(stood.y - carried.y).toBeCloseTo(bubble.y - panel.y, 0);
