@@ -1,14 +1,20 @@
-import { expect, test } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
 import {
   besideTheDeal,
   budget,
   cardOnFace,
+  chronicleOf,
+  click,
   cursorOverCanvas,
   dealRun,
   nameOnScreen,
   onScreen,
   open,
+  openOnCapstone,
+  referenceOnFace,
   rested,
+  ringed,
+  shows,
   standing,
   stoppedTurn,
   watch,
@@ -22,6 +28,26 @@ const PAST_HANDOVER = 400;
 
 /** The most cards shown large a stack holds. */
 const STACK_HOLDS = 12;
+
+/**
+ * The first name of the first card of the hand, read once the card has come to rest lifted under the
+ * pointer: the lift carries the name up off where it lay.
+ */
+async function liftedName(
+  page: Page,
+  lying: { x: number; y: number },
+): Promise<{ x: number; y: number }> {
+  let name = lying;
+  await expect
+    .poll(async () => {
+      const was = await nameOnScreen(page, 'hand-0');
+      await rested(page);
+      name = await nameOnScreen(page, 'hand-0');
+      return name.y < lying.y && name.y === was.y;
+    })
+    .toBe(true);
+  return name;
+}
 
 test('a card named on a card raises it small at a rest and shows it large at a right click on the name or on the small card, and one named on a card shown large stands a new copy on top of the stack, twelve at most', async ({
   page,
@@ -136,6 +162,70 @@ test('a card named on a card raises it small at a rest and shows it large at a r
   await page.keyboard.press('Escape');
   await expect.poll(() => standing(page, 'inspection')).toBe(false);
   expect(await standing(page, 'deal')).toBe(true);
+
+  expect(problems).toEqual([]);
+});
+
+test('a building named on the settle card raises its card small at a rest and shows it large at a right click, alone or on top of the settle card shown large', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  test.setTimeout(budget(0));
+
+  await openOnCapstone(page, 1, 'PH_Deck');
+  await click(page, 'capstone-card-0');
+  await expect.poll(() => standing(page, 'capstone')).toBe(false);
+  await rested(page);
+  const opened = await chronicleOf(page);
+  expect(opened.hand[0]).toBe('PH_Settle');
+  const city = { kind: 'building', id: 'PH_City' };
+
+  const card = await onScreen(page, 'hand-0');
+  const lying = await nameOnScreen(page, 'hand-0');
+  await page.mouse.move(card.x, card.y);
+  const name = await liftedName(page, lying);
+  await page.mouse.move(name.x, name.y, { steps: 5 });
+  await expect.poll(() => referenceOnFace(page, 'small-card-0')).toEqual(city);
+  expect(await cardOnFace(page, 'small-card-0')).toBeUndefined();
+
+  const small = await onScreen(page, 'small-card-0');
+  await page.mouse.move(small.x, small.y, { steps: 5 });
+  await page.waitForTimeout(PAST_HANDOVER);
+  expect(await referenceOnFace(page, 'small-card-0')).toEqual(city);
+  expect(await cursorOverCanvas(page)).toBe(HAND);
+
+  const menu = await onScreen(page, 'menu-button');
+  await page.mouse.move(menu.x, menu.y, { steps: 5 });
+  await expect.poll(() => standing(page, 'small-card-0')).toBe(false);
+
+  await page.mouse.move(card.x, card.y, { steps: 5 });
+  const again = await liftedName(page, lying);
+  await page.mouse.click(again.x, again.y, { button: 'right' });
+  await expect.poll(() => referenceOnFace(page, 'inspection')).toEqual(city);
+  expect(await standing(page, 'inspection-0')).toBe(false);
+  await page.keyboard.press('Escape');
+  await expect.poll(() => standing(page, 'inspection')).toBe(false);
+
+  await page.mouse.click(card.x, card.y, { button: 'right' });
+  await expect.poll(() => cardOnFace(page, 'inspection')).toBe('PH_Settle');
+  await rested(page);
+  const named = await nameOnScreen(page, 'inspection');
+  await page.mouse.move(named.x, named.y);
+  await expect.poll(() => cursorOverCanvas(page)).toBe(HAND);
+
+  await page.mouse.click(named.x, named.y, { button: 'right' });
+  await expect.poll(() => referenceOnFace(page, 'inspection')).toEqual(city);
+  expect(await cardOnFace(page, 'inspection-0')).toBe('PH_Settle');
+
+  await page.keyboard.press('Escape');
+  await expect.poll(() => standing(page, 'inspection-0')).toBe(false);
+  expect(await cardOnFace(page, 'inspection')).toBe('PH_Settle');
+  await page.keyboard.press('Escape');
+  await expect.poll(() => standing(page, 'inspection')).toBe(false);
+  expect(await standing(page, 'small-card-0')).toBe(false);
+  expect(await ringed(page, 'hand-0')).toBe(false);
+  expect(await shows(page, 'settle-phase-chip')).toBe(true);
+  expect(await chronicleOf(page)).toEqual(opened);
 
   expect(problems).toEqual([]);
 });

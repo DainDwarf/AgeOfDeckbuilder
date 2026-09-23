@@ -1,17 +1,21 @@
 import { describe, expect, it } from 'vitest';
-import { layOutRun, type Metrics, type Run } from './text-run';
+import { layOutRun, type Metrics, type Reference, type Run } from './text-run';
 
 /** A font of five to the character, spaces included, so a width reads as a count of characters. */
 const measure = (content: string): number => 5 * content.length;
 
 const METRICS: Metrics = { width: 50, glyph: 10, bearing: 5, space: 5 };
 
-/** The cards the runs below name, one of them in several words. */
-const NAMES: Record<string, string> = { short: 'Aaa', long: 'Bbb ccc ddd' };
+/** The things the runs below name, by kind and id: one card in several words, one id of two kinds. */
+const NAMES: Record<string, string> = {
+  'card:short': 'Aaa',
+  'card:long': 'Bbb ccc ddd',
+  'building:short': 'Eee',
+};
 
-function nameOf(card: string): string {
-  const name = NAMES[card];
-  if (name === undefined) throw new Error(`no card ${card}`);
+function nameOf(reference: Reference): string {
+  const name = NAMES[`${reference.kind}:${reference.id}`];
+  if (name === undefined) throw new Error(`no ${reference.kind} ${reference.id}`);
   return name;
 }
 
@@ -78,14 +82,25 @@ describe('a run with names in it', () => {
   it('draws the card’s name in brackets where the entry marks it', () => {
     const run = laid('a [card:short] b');
     expect(run.content).toBe('a [Aaa] b');
-    expect(run.names.map((name) => name.card)).toEqual(['short']);
+    expect(run.names.map((name) => name.reference)).toEqual([{ kind: 'card', id: 'short' }]);
+  });
+
+  it('draws a thing of another kind by its own kind’s name, and answers it with its kind and id', () => {
+    const run = laid('a [building:short] b');
+    expect(run.content).toBe('a [Eee] b');
+    expect(run.names.map((name) => name.reference)).toEqual([{ kind: 'building', id: 'short' }]);
   });
 
   it('never breaks a name of several words across lines, however far it runs past the width', () => {
     const run = laid('aaa [card:long]');
     expect(linesOf(run)).toEqual(['aaa', '[Bbb ccc ddd]']);
     expect(run.names).toEqual([
-      { card: 'long', from: expect.any(Number), to: expect.any(Number), line: 1 },
+      {
+        reference: { kind: 'card', id: 'long' },
+        from: expect.any(Number),
+        to: expect.any(Number),
+        line: 1,
+      },
     ]);
   });
 

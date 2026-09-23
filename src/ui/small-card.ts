@@ -20,6 +20,8 @@ import {
   onHover,
   type Stratum,
 } from './design-space';
+import { createThingCard } from './infopanel';
+import type { Reference } from './text-run';
 import { HANDOVER_MS, JITTER, REST_MS } from './tooltip';
 
 /** The clear water between a small card and the line of the name that raised it. */
@@ -44,7 +46,7 @@ export type SmallCards = {
 /** One small card of the chain, the name that raised it, and what of it the pointer is on. */
 type Link = {
   readonly raiser: Raiser;
-  readonly face: CardFace;
+  readonly root: Phaser.GameObjects.Container;
   onCard: boolean;
   under: Raiser | undefined;
 };
@@ -62,7 +64,7 @@ export function createSmallCards(
   scene: Phaser.Scene,
   on: Stratum,
   catalogue: Catalogue,
-  inspect: (card: CardId) => void,
+  inspect: (reference: Reference) => void,
 ): SmallCards {
   let chain: Link[] = [];
   /** The name of the surface the pointer is on, and nothing while it is on none. */
@@ -92,7 +94,7 @@ export function createSmallCards(
     const gone = chain.slice(count);
     if (gone.length === 0) return;
     chain = chain.slice(0, count);
-    for (const link of gone) link.face.root.destroy();
+    for (const link of gone) link.root.destroy();
     wentDown = scene.time.now;
     if (count === 0) gone[0].raiser.hold?.(false);
   };
@@ -102,25 +104,51 @@ export function createSmallCards(
     resting = undefined;
   };
 
-  const raise = (raiser: Raiser, level: number): void => {
-    cut(level);
-    const face = createCardFace(scene, cardFace(catalogue, raiser.name.card), NO_REFUSAL, {
+  /** A card named, drawn small as its face, whose own names raise the chain on. */
+  const faceOf = (card: CardId, over: (under: Raiser | undefined) => void): CardFace => {
+    const face = createCardFace(scene, cardFace(catalogue, card), NO_REFUSAL, {
       names: {
         over: (name) => {
-          link.under = name === undefined ? undefined : raiserOf(face, name);
-          settle();
+          over(name === undefined ? undefined : raiserOf(face, name));
         },
-        inspect: (name) => inspect(name.card),
+        inspect: (name) => inspect(name.reference),
       },
     });
-    const link: Link = { raiser, face, onCard: false, under: undefined };
+    face.root.setData('card', card);
+    return face;
+  };
+
+  /** What a name names, drawn small: a card as its face, anything else as its infopanel card. */
+  const drawnOf = (
+    reference: Reference,
+    over: (under: Raiser | undefined) => void,
+  ): Phaser.GameObjects.Container => {
+    switch (reference.kind) {
+      case 'card':
+        return faceOf(reference.id, over).root;
+      case 'terrain':
+      case 'feature':
+      case 'improvement':
+      case 'building':
+      case 'player':
+      case 'enemy':
+        return createThingCard(scene, catalogue, reference, CARD_WIDTH);
+    }
+  };
+
+  const raise = (raiser: Raiser, level: number): void => {
+    cut(level);
+    const root = drawnOf(raiser.name.reference, (under) => {
+      link.under = under;
+      settle();
+    });
+    const link: Link = { raiser, root, onCard: false, under: undefined };
 
     const { x, top, bottom } = raiser.where();
     const half = CARD_WIDTH / 2;
     const above = top - STANDOFF;
-    face.root
+    root
       .setName(`small-card-${level}`)
-      .setData('card', raiser.name.card)
       .setPosition(
         Math.min(Math.max(x, MARGIN + half), DESIGN_WIDTH - MARGIN - half),
         above - CARD_HEIGHT >= MARGIN
@@ -131,10 +159,10 @@ export function createSmallCards(
         hitArea: new Phaser.Geom.Rectangle(-half, -CARD_HEIGHT, CARD_WIDTH, CARD_HEIGHT),
         hitAreaCallback: Phaser.Geom.Rectangle.Contains,
       });
-    answersPress(face.root);
-    onClick(face.root, () => inspect(raiser.name.card), 'right');
+    answersPress(root);
+    onClick(root, () => inspect(raiser.name.reference), 'right');
     onHover(
-      face.root,
+      root,
       () => {
         link.onCard = true;
         settle();
@@ -144,7 +172,7 @@ export function createSmallCards(
         settle();
       },
     );
-    on.layer.add(face.root);
+    on.layer.add(root);
     chain.push(link);
     if (level === 0) raiser.hold?.(true);
   };

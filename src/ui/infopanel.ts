@@ -14,7 +14,7 @@ import {
 import { buildingKind, featureKind, improvementKind, terrainKind } from '../rules/map-kinds';
 import { RESOURCES, type Resource, type Resources } from '../rules/resources';
 import { type Unit, unitAt } from '../rules/units';
-import { CARD_HEIGHT, CARD_METRICS, CARD_WIDTH, drawCardSurface } from './card-face';
+import { CARD_HEIGHT, CARD_WIDTH, drawCardSurface, metricsOf } from './card-face';
 import { stopMotion } from './card-motion';
 import { addText, onHover, type Stratum, UI_FONT } from './design-space';
 import { css, LOOK } from './look';
@@ -28,6 +28,7 @@ import {
   unitMark,
 } from './map';
 import { buildingName, featureName, improvementName, terrainName, text, unitName } from './text';
+import type { Reference } from './text-run';
 import type { Tooltip } from './tooltip';
 
 /** One line of a card's ledger: what it is drawn and named by, and what it gives at income. */
@@ -38,15 +39,63 @@ type Row =
   | { readonly kind: 'terrain'; readonly terrain: Terrain }
   | { readonly kind: 'river'; readonly terrain: Terrain };
 
+/** What a unit card reads: a unit standing, or a unit kind read as a unit fresh of it. */
+type Standing = Pick<Unit, 'stats' | 'faction' | 'movePoints' | 'action'>;
+
 /** One card an inspection steps through, headed by the first of the rows it holds. */
 export type Card =
-  | { readonly kind: 'unit'; readonly unit: Unit }
+  | { readonly kind: 'unit'; readonly unit: Standing }
   | { readonly kind: 'building'; readonly rows: readonly Row[] }
   | {
       readonly kind: 'terrain';
       readonly rows: readonly Row[];
       readonly movementCost: number | undefined;
     };
+
+/** What a card of the infopanel's look is drawn from: one an inspection steps through, or a feature alone. */
+type Drawing = Card | { readonly kind: 'feature'; readonly rows: readonly Row[] };
+
+/** A thing a name names that is no card. */
+export type Thing = Exclude<Reference, { readonly kind: 'card' }>;
+
+/** The card the infopanel reads a thing named by: its one row, or the unit kind read fresh. */
+function drawingOf(catalogue: Catalogue, thing: Thing): Drawing {
+  switch (thing.kind) {
+    case 'terrain':
+      return {
+        kind: 'terrain',
+        rows: [{ kind: 'terrain', terrain: thing.id }],
+        movementCost: terrainKind(catalogue, thing.id).movementCost,
+      };
+    case 'feature':
+      return { kind: 'feature', rows: [{ kind: 'feature', feature: thing.id }] };
+    case 'improvement':
+      return { kind: 'building', rows: [{ kind: 'improvement', improvement: thing.id }] };
+    case 'building':
+      return { kind: 'building', rows: [{ kind: 'building', building: thing.id }] };
+    case 'player':
+    case 'enemy': {
+      const stats = unitKind(catalogue, thing.id);
+      const unit = { stats, faction: thing.kind, movePoints: stats.move, action: stats.action };
+      return { kind: 'unit', unit };
+    }
+  }
+}
+
+/**
+ * A thing named, drawn as the card the infopanel reads it by at `width`, about its own bottom centre
+ * as a card face is, and carrying what it stands in its data as `reference`. Its rows raise nothing.
+ */
+export function createThingCard(
+  scene: Phaser.Scene,
+  catalogue: Catalogue,
+  thing: Thing,
+  width: number,
+): Phaser.GameObjects.Container {
+  const face = buildFace(scene, catalogue, drawingOf(catalogue, thing), width, undefined);
+  face.root.setPosition(-width / 2, -metricsOf(width).height);
+  return scene.add.container(0, 0, [face.root]).setData('reference', thing);
+}
 
 /**
  * What a tile is made of right now, as the cards an inspection steps: the unit, the building with
@@ -100,18 +149,23 @@ const GHOST_OFFSET = 4;
 /** How long one card takes to dissolve into the next. */
 const CYCLE_MS = 150;
 
-const { em, pad } = CARD_METRICS;
-
-const TITLE_STYLE = {
-  fontFamily: UI_FONT,
-  fontSize: `${0.75 * em}px`,
-  fontStyle: 'bold',
-  color: css(LOOK.ink),
-};
-const LABEL_STYLE = { fontFamily: UI_FONT, fontSize: `${0.62 * em}px`, color: css(LOOK.faintInk) };
-const VALUE_STYLE = { fontFamily: UI_FONT, fontSize: `${0.62 * em}px`, color: css(LOOK.ink) };
-const CHIP_STYLE = { ...VALUE_STYLE, fontStyle: 'bold' };
-const MOVEMENT_STYLE = { ...LABEL_STYLE, fontSize: `${0.55 * em}px` };
+/** The type a card's face is set in, sized by the `em` of the width it is drawn at. */
+function stylesOf(em: number) {
+  const label = { fontFamily: UI_FONT, fontSize: `${0.62 * em}px`, color: css(LOOK.faintInk) };
+  const value = { fontFamily: UI_FONT, fontSize: `${0.62 * em}px`, color: css(LOOK.ink) };
+  return {
+    title: {
+      fontFamily: UI_FONT,
+      fontSize: `${0.75 * em}px`,
+      fontStyle: 'bold',
+      color: css(LOOK.ink),
+    },
+    label,
+    value,
+    chip: { ...value, fontStyle: 'bold' },
+    movement: { ...label, fontSize: `${0.55 * em}px` },
+  };
+}
 
 const STATS = ['health', 'damage', 'range', 'move', 'action', 'sight'] as const;
 
@@ -127,7 +181,7 @@ function inMovePoints(hundredths: number): string {
  * What a stat's row reads: what the unit has left over its own number, where it has two. Full health
  * is its kind's, read off the catalogue.
  */
-function readingOf(catalogue: Catalogue, unit: Unit, stat: (typeof STATS)[number]): string {
+function readingOf(catalogue: Catalogue, unit: Standing, stat: (typeof STATS)[number]): string {
   switch (stat) {
     case 'health':
       return `${unit.stats.health} / ${unitKind(catalogue, unit.stats.type).health}`;
@@ -240,7 +294,7 @@ export function createInfoPanel(
       const outgoing = standing;
       if (!cycling) outgoing?.root.destroy();
 
-      const face = buildFace(scene, catalogue, bubble, cards[index]);
+      const face = buildFace(scene, catalogue, cards[index], CARD_WIDTH, bubble);
       // Under the card it replaces, so the dissolve uncovers it, and over the ghosts either way.
       panel.addAt(face.root, 1);
       standing = face;
@@ -272,20 +326,31 @@ export function createInfoPanel(
   };
 }
 
-/** The card's head over its rows, laid out in the card's own type and spacing. */
-function buildFace(scene: Phaser.Scene, catalogue: Catalogue, bubble: RowBubble, card: Card): Face {
+/**
+ * The card's head over its rows, laid out in the card's own type and spacing at `width`, from its
+ * top-left corner; a row raises a bubble only where one is handed.
+ */
+function buildFace(
+  scene: Phaser.Scene,
+  catalogue: Catalogue,
+  card: Drawing,
+  width: number,
+  bubble: RowBubble | undefined,
+): Face {
+  const { em, pad } = metricsOf(width);
+  const style = stylesOf(em);
   const left = 1 + pad;
-  const right = CARD_WIDTH - 1 - pad;
+  const right = width - 1 - pad;
   const top = 1 + pad;
   const middle = top + 0.55 * em;
   const markBox = 1.15 * em;
 
   const paper = scene.add.graphics();
-  drawCardSurface(paper, 0, 0);
+  drawCardSurface(paper, 0, 0, { width });
 
   const head = headOf(scene, card);
   const mark = fitMark(head.mark, markBox).setPosition(left + markBox / 2, middle);
-  const name = addText(scene, left + markBox + 0.5 * em, middle, head.name, TITLE_STYLE).setOrigin(
+  const name = addText(scene, left + markBox + 0.5 * em, middle, head.name, style.title).setOrigin(
     0,
     0.5,
   );
@@ -299,22 +364,23 @@ function buildFace(scene: Phaser.Scene, catalogue: Catalogue, bubble: RowBubble,
   const movement = movementOf(card);
   if (movement !== undefined) {
     contents.push(
-      addText(scene, right, middle, movement, MOVEMENT_STYLE)
+      addText(scene, right, middle, movement, style.movement)
         .setOrigin(1, 0.5)
         .setName('panel-movement'),
     );
   }
 
   /** The box a term raises its bubble from, named so a spec finds the rows in the order drawn. */
-  const listen = (x: number, rowTop: number, width: number, height: number, term: Term): void => {
+  const listen = (x: number, rowTop: number, across: number, down: number, term: Term): void => {
+    if (bubble === undefined) return;
     const hover = scene.add
-      .zone(x, rowTop, width, height)
+      .zone(x, rowTop, across, down)
       .setOrigin(0, 0)
       .setName(`infopanel-row-${hovers.length}`)
       .setInteractive();
     onHover(
       hover,
-      () => bubble.raise(rowTop + height / 2, text(`tooltip.${term}`)),
+      () => bubble.raise(rowTop + down / 2, text(`tooltip.${term}`)),
       () => bubble.drop(),
     );
     contents.push(hover);
@@ -325,9 +391,9 @@ function buildFace(scene: Phaser.Scene, catalogue: Catalogue, bubble: RowBubble,
 
   if (card.kind === 'unit') {
     for (const stat of STATS) {
-      const label = addText(scene, left, 0, text(`label.${stat}`), LABEL_STYLE).setOrigin(0, 0.5);
+      const label = addText(scene, left, 0, text(`label.${stat}`), style.label).setOrigin(0, 0.5);
       const reading = readingOf(catalogue, card.unit, stat);
-      const value = addText(scene, right, 0, reading, VALUE_STYLE).setOrigin(1, 0.5);
+      const value = addText(scene, right, 0, reading, style.value).setOrigin(1, 0.5);
       label.setY(rowTop + label.height / 2);
       value.setY(rowTop + label.height / 2);
       contents.push(label, value);
@@ -343,7 +409,7 @@ function buildFace(scene: Phaser.Scene, catalogue: Catalogue, bubble: RowBubble,
       left + 0.75 * em + 0.3 * em,
       0,
       nameOf(row),
-      LABEL_STYLE,
+      style.label,
     ).setOrigin(0, 0.5);
     const line = rowName.height;
     rowName.setY(rowTop + line / 2);
@@ -355,7 +421,7 @@ function buildFace(scene: Phaser.Scene, catalogue: Catalogue, bubble: RowBubble,
     const gives = yieldsOf(catalogue, row);
     if (gives.length === 0) {
       contents.push(
-        addText(scene, right, rowTop + line / 2, text('panel.no-yield'), LABEL_STYLE).setOrigin(
+        addText(scene, right, rowTop + line / 2, text('panel.no-yield'), style.label).setOrigin(
           1,
           0.5,
         ),
@@ -363,7 +429,7 @@ function buildFace(scene: Phaser.Scene, catalogue: Catalogue, bubble: RowBubble,
       rowTop += line + 0.35 * em;
     } else {
       const chips = gives.map(({ resource, amount }) => {
-        const value = addText(scene, 0, 0, `+${amount}`, CHIP_STYLE).setOrigin(0, 0.5);
+        const value = addText(scene, 0, 0, `+${amount}`, style.chip).setOrigin(0, 0.5);
         return { resource, value, width: 0.7 * em + value.width };
       });
 
@@ -379,16 +445,16 @@ function buildFace(scene: Phaser.Scene, catalogue: Catalogue, bubble: RowBubble,
       let first = 0;
       while (first < chips.length) {
         let taken = 0;
-        let width = 0;
+        let span = 0;
         while (taken < 3 && first + taken < chips.length) {
-          const grown = width + chips[first + taken].width + (taken === 0 ? 0 : 0.3 * em);
+          const grown = span + chips[first + taken].width + (taken === 0 ? 0 : 0.3 * em);
           if (taken > 0 && grown > room) break;
-          width = grown;
+          span = grown;
           taken++;
         }
 
         const centre = rowTop + line / 2;
-        let x = right - width;
+        let x = right - span;
         for (const { resource, value } of chips.slice(first, first + taken)) {
           // A diamond is a square turned, never a polygon: see the trap over `yieldMark` in `map.ts`.
           const chip = scene.add
@@ -408,7 +474,7 @@ function buildFace(scene: Phaser.Scene, catalogue: Catalogue, bubble: RowBubble,
 
     const note = noteOf(row);
     if (note !== undefined) {
-      contents.push(addText(scene, left, rowTop + line / 2, note, LABEL_STYLE).setOrigin(0, 0.5));
+      contents.push(addText(scene, left, rowTop + line / 2, note, style.label).setOrigin(0, 0.5));
       rowTop += line + 0.35 * em;
     }
   }
@@ -419,7 +485,7 @@ function buildFace(scene: Phaser.Scene, catalogue: Catalogue, bubble: RowBubble,
 /** What the card is headed by: the unit it stands for, or the first row it holds. */
 function headOf(
   scene: Phaser.Scene,
-  card: Card,
+  card: Drawing,
 ): { mark: Phaser.GameObjects.Polygon; name: string } {
   if (card.kind === 'unit') {
     return {
@@ -432,11 +498,12 @@ function headOf(
 
 /**
  * What the card reads in the corner of its head: what entering the tile costs on the terrain card, a
- * dash where nothing crosses it, and nothing at all on the cards of what stands there.
+ * dash where nothing crosses it, and nothing at all on any other card.
  */
-function movementOf(card: Card): string | undefined {
+function movementOf(card: Drawing): string | undefined {
   switch (card.kind) {
     case 'unit':
+    case 'feature':
     case 'building':
       return undefined;
     case 'terrain':

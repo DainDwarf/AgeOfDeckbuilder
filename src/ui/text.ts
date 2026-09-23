@@ -1,5 +1,8 @@
-// A `rules.`, `answer-rules.` or `capstone-rules.` entry may mark a resource glyph `[resource]` and
-// a card's name `[card:<id>]`, which only a card face draws: anything else puts the mark on screen.
+import type { Reference } from './text-run';
+
+// A `rules.`, `answer-rules.` or `capstone-rules.` entry may mark a glyph `[<resource>]` and a name
+// `[<kind>:<id>]` — a `card`, `terrain`, `feature`, `improvement`, `building`, or a unit kind painted
+// for the faction `player` or `enemy` — which only a card face draws: elsewhere the mark shows.
 /** Every player-facing sentence, one entry each. English is the only language. */
 const TEXT = {
   'label.food': 'Food',
@@ -86,35 +89,35 @@ const TEXT = {
   'card.PH_Recall': 'PH_Recall',
   'card.PH_Spoils': 'PH_Spoils',
   'card.PH_Hunger': 'PH_Hunger',
-  'rules.PH_Settle': 'Settle the city',
+  'rules.PH_Settle': 'Settle the [building:PH_City]',
   'rules.PH_Claim': 'Claim a tile and gain one population.',
-  'rules.PH_Worker': 'Turn one idle population into a worker',
-  'rules.PH_Warrior': 'Turn one idle population into a warrior',
-  'rules.PH_Farm': 'Build a farm',
+  'rules.PH_Worker': 'Turn one idle population into a [player:PH_Worker]',
+  'rules.PH_Warrior': 'Turn one idle population into a [player:PH_Warrior]',
+  'rules.PH_Farm': 'Build a [building:PH_Farm]',
   'rules.PH_March': "Refresh a unit's move points",
   'rules.PH_Harvest': 'Gain 2 food',
-  'rules.PH_Mine': 'Improve hills with a mine',
-  'rules.PH_Road': 'Improve a tile with a road',
-  'rules.PH_Urbanisation': 'Terraform a plain into urban',
+  'rules.PH_Mine': 'Improve [terrain:hills] with a [improvement:PH_Mine]',
+  'rules.PH_Road': 'Improve a tile with a [improvement:PH_Road]',
+  'rules.PH_Urbanisation': 'Terraform a [terrain:plain] into [terrain:urban]',
   'rules.PH_Recall': 'Recall a card from the discard pile',
   'rules.PH_Spoils': 'Single use.\n10[food] 10[production] 10[military] 10[money] 10[science]',
   'rules.PH_Hunger': 'Empties the food stock. Names [card:PH_Hunger]',
   'card.settle': 'Settlement', // glossary exception: settlement
-  'rules.settle': 'Place the city',
+  'rules.settle': 'Place the [building:city]',
   'card.first-worker': 'Worker',
-  'rules.first-worker': 'Place a worker',
+  'rules.first-worker': 'Place a [player:worker]',
   'card.first-scout': 'Scout',
-  'rules.first-scout': 'Place a scout',
+  'rules.first-scout': 'Place a [player:scout]',
   'card.worker': 'Worker',
-  'rules.worker': 'Place a worker',
+  'rules.worker': 'Place a [player:worker]',
   'card.warrior': 'Warrior',
-  'rules.warrior': 'Place a warrior',
+  'rules.warrior': 'Place a [player:warrior]',
   'card.scout': 'Scout',
-  'rules.scout': 'Place a scout',
+  'rules.scout': 'Place a [player:scout]',
   'card.gather': 'Gather',
-  'rules.gather': "Gain the yield of a worker's tile",
+  'rules.gather': "Gain the yield of a [player:worker]'s tile",
   'card.trapping': 'Trapping',
-  'rules.trapping': 'Place Trapping on Forest',
+  'rules.trapping': 'Place [improvement:trapping] on [terrain:forest]',
   'card.march': 'March',
   'rules.march': "Refresh a unit's move points",
   'card.shelter': 'Shelter',
@@ -139,16 +142,17 @@ const TEXT = {
   'answer.share': 'Share food',
   'answer-rules.share': 'Put [card:hunger] on top of the draw pile',
   'answer.ration': 'Keep to yourself',
-  'answer-rules.ration': 'Your city is attacked by {warriors} Warrior',
+  'answer-rules.ration': 'Your [building:city] is attacked by {warriors} [enemy:warrior]',
   'event.rival-band': 'A rival band',
   'answer.fight': 'Fight them', // glossary exception: fight
-  'answer-rules.fight': 'Your city is attacked by {warriors} Warrior', // glossary exception: fight
+  'answer-rules.fight': 'Your [building:city] is attacked by {warriors} [enemy:warrior]', // glossary exception: fight
   'answer.make-room': 'Make room',
-  'answer-rules.make-room': 'A camp with {warriors} Warrior is placed near your city',
+  'answer-rules.make-room':
+    'A [building:camp] with {warriors} [enemy:warrior] is placed near your [building:city]',
   'event.wildfire': 'Wildfire',
   'answer.let-it-burn': 'Let it burn',
   'answer-rules.let-it-burn':
-    'The fire burns {tiles} forest into plain, kills {population} population and damages {units} unit',
+    'The fire burns {tiles} [terrain:forest] into [terrain:plain], kills {population} population and damages {units} unit',
   'answer.firebreak': 'Cut a firebreak',
   'answer-rules.firebreak': 'Pay {production} [production]',
   'event.departure': 'Departure',
@@ -160,7 +164,7 @@ const TEXT = {
   'answer.hunt-it': 'Hunt it',
   'answer-rules.hunt-it': 'Gain {food} [food]',
   'answer.follow-it': 'Follow it',
-  'answer-rules.follow-it': 'One forest gains Wildlife',
+  'answer-rules.follow-it': 'One [terrain:forest] gains [feature:wildlife]',
   'capstone-name.PH_Siege': 'PH_Siege',
   'capstone-rules.PH_Siege': 'The camps close in around the city',
   'capstone-name.PH_ShortSiege': 'PH_ShortSiege',
@@ -289,6 +293,25 @@ export function improvementName(improvement: string): string {
 /** What a card is named on the screen; a card no entry names is refused. */
 export function cardName(card: string): string {
   return named('card', card, 'the card');
+}
+
+/** What the thing a name names is named on the screen, by its kind's entry; one no entry names is refused. */
+export function referenceName(reference: Reference): string {
+  switch (reference.kind) {
+    case 'card':
+      return cardName(reference.id);
+    case 'terrain':
+      return terrainName(reference.id);
+    case 'feature':
+      return featureName(reference.id);
+    case 'improvement':
+      return improvementName(reference.id);
+    case 'building':
+      return buildingName(reference.id);
+    case 'player':
+    case 'enemy':
+      return unitName(reference.id);
+  }
 }
 
 /** What a card's rules entry reads on the screen; a card no entry names is refused. */

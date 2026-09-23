@@ -37,6 +37,7 @@ import {
   UI_FONT,
   whileUp,
 } from './design-space';
+import { createThingCard, type Thing } from './infopanel';
 import { isWheelNotch } from './keys';
 import { css, LOOK } from './look';
 import { raiseMenu } from './menu-scene';
@@ -44,6 +45,7 @@ import type { OverlayScene } from './overlay-scene';
 import { createRefusalNote, refused } from './refusal-note';
 import { createSmallCards, type Raiser, raiserOf } from './small-card';
 import { buildingName, cardName, eventName, text, victoryLine } from './text';
+import type { Reference } from './text-run';
 
 const TITLE_INK = css(LOOK.paleInk);
 
@@ -82,6 +84,8 @@ export type Overlay = {
     closed: () => void,
   ): () => void;
   inspect(id: CardId, refusal: Refusal): void;
+  /** What a name names shown large, as a right click on a name shows it wherever the name stands. */
+  inspectNamed(reference: Reference): void;
   /**
    * Raises the capstone's window on the opening's first render, the deal window while the chronicle
    * waits on a deal and the ending screen once it has ended, and nothing while it runs.
@@ -180,8 +184,25 @@ type Offering = Browsing | AimWindow | Dealing | Capstone;
 /** The two windows that ring one of the cards they offer. */
 type Ringing = Browsing | Dealing;
 
-/** One card shown large, and what it is drawn refused by. */
-type Inspected = { readonly face: Face; readonly refusal: Refusal };
+/** One card shown large: a face and what it is drawn refused by, or a thing a name names. */
+type Inspected =
+  | { readonly shows: 'face'; readonly face: Face; readonly refusal: Refusal }
+  | { readonly shows: 'thing'; readonly thing: Thing };
+
+/** What a name names, as it stands large: a card as its face, which nothing refuses. */
+function inspectedOf(catalogue: Catalogue, reference: Reference): Inspected {
+  switch (reference.kind) {
+    case 'card':
+      return { shows: 'face', face: cardFace(catalogue, reference.id), refusal: NO_REFUSAL };
+    case 'terrain':
+    case 'feature':
+    case 'improvement':
+    case 'building':
+    case 'player':
+    case 'enemy':
+      return { shows: 'thing', thing: reference };
+  }
+}
 
 /**
  * The cards shown large, earliest first, over what the first of them was taken off: the stack a
@@ -224,8 +245,8 @@ export function createOverlay(
     .setVisible(false);
   scene.strata.scrim.layer.add(scrim);
   const note = createRefusalNote(scene, scene.strata.note);
-  const small = createSmallCards(scene, scene.strata.smallCard, catalogue, (card) => {
-    inspectNamed(card);
+  const small = createSmallCards(scene, scene.strata.smallCard, catalogue, (reference) => {
+    inspectNamed(reference);
   });
 
   let shown: Phaser.GameObjects.GameObject[] = [];
@@ -313,24 +334,34 @@ export function createOverlay(
     const newest = stack.length - 1;
     const left = (DESIGN_WIDTH - INSPECTION_WIDTH - newest * BAND) / 2;
     const top = (DESIGN_HEIGHT - height - newest * BAND) / 2;
-    for (const [index, { face, refusal }] of stack.entries()) {
-      const drawn: CardFace = createCardFace(scene, face, refusal, {
-        width: INSPECTION_WIDTH,
-        names:
-          index === newest
-            ? {
-                over: (name) => {
-                  small.over(name === undefined ? undefined : raiserOf(drawn, name));
-                },
-                inspect: (name) => {
-                  inspectNamed(name.card);
-                },
-              }
-            : undefined,
-      });
-      drawn.root
+    /** One card of the stack drawn large; only the newest face's names answer a press. */
+    const drawnOf = (inspected: Inspected, index: number): Phaser.GameObjects.Container => {
+      switch (inspected.shows) {
+        case 'face': {
+          const drawn: CardFace = createCardFace(scene, inspected.face, inspected.refusal, {
+            width: INSPECTION_WIDTH,
+            names:
+              index === newest
+                ? {
+                    over: (name) => {
+                      small.over(name === undefined ? undefined : raiserOf(drawn, name));
+                    },
+                    inspect: (name) => {
+                      inspectNamed(name.reference);
+                    },
+                  }
+                : undefined,
+          });
+          return drawn.root.setData('card', inspected.face.id);
+        }
+        case 'thing':
+          return createThingCard(scene, catalogue, inspected.thing, INSPECTION_WIDTH);
+      }
+    };
+    for (const [index, inspected] of stack.entries()) {
+      const root = drawnOf(inspected, index);
+      root
         .setName(index === newest ? 'inspection' : `inspection-${index}`)
-        .setData('card', face.id)
         .setPosition(left + index * BAND + INSPECTION_WIDTH / 2, top + index * BAND + height)
         // The card is interactive so that both presses on it reach nothing beneath, the scrim
         // included; only its names answer one.
@@ -343,20 +374,20 @@ export function createOverlay(
           ),
           hitAreaCallback: Phaser.Geom.Rectangle.Contains,
         });
-      carries(drawn.root);
+      carries(root);
     }
   };
 
   const showInspection = (face: Face, refusal: Refusal, over: Offering | undefined): void => {
-    showStack([{ face, refusal }], over);
+    showStack([{ shows: 'face', face, refusal }], over);
   };
 
   /**
-   * A card a name names, on top of the stack while a card stands large, and nothing more once the
+   * What a name names, on top of the stack while a card stands large, and nothing more once the
    * stack is full; shown large alone over the window standing otherwise.
    */
-  const inspectNamed = (card: CardId): void => {
-    const named: Inspected = { face: cardFace(catalogue, card), refusal: NO_REFUSAL };
+  const inspectNamed = (reference: Reference): void => {
+    const named = inspectedOf(catalogue, reference);
     if (carried === undefined) {
       showStack([named], undefined);
       return;
@@ -479,7 +510,7 @@ export function createOverlay(
     onClick(
       frame,
       (pointer) => {
-        const named = nameUnder(pointer)?.name.card;
+        const named = nameUnder(pointer)?.name.reference;
         if (named === undefined) pressed(under(pointer)?.at, 'right');
         else inspectNamed(named);
       },
@@ -923,6 +954,7 @@ export function createOverlay(
     inspect(id: CardId, refusal: Refusal): void {
       showInspection(cardFace(catalogue, id), refusal, undefined);
     },
+    inspectNamed,
     render(chronicle: Chronicle): void {
       if (!announced) {
         announced = true;

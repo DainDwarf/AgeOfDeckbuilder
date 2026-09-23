@@ -25,21 +25,41 @@ import {
   eventName,
   featureName,
   improvementName,
+  referenceName,
   terrainName,
   unitName,
   victoryLine,
 } from '../ui/text';
-import { layOutRun } from '../ui/text-run';
+import { layOutRun, type Reference, type ReferenceKind } from '../ui/text-run';
 import { NOMADIC } from './nomadic';
 
 const REGION = 'temperate';
 const SCHEDULE = 'nomadic';
 
-/** The cards a rules entry names, laid out as a run on a measure of one to the character. */
-function namedIn(entry: string): string[] {
+/** What a rules entry names, laid out as a run on a measure of one to the character. */
+function namedIn(entry: string): Reference[] {
   const measure = (content: string): number => content.length;
   const metrics = { width: 24, glyph: 1, bearing: 0, space: 1 };
-  return layOutRun(entry, measure, metrics, cardName).names.map((name) => name.card);
+  return layOutRun(entry, measure, metrics, referenceName).names.map((name) => name.reference);
+}
+
+/** The ids of the table a name of that kind resolves in. */
+function tableOf(kind: ReferenceKind): string[] {
+  switch (kind) {
+    case 'card':
+      return Object.keys(NOMADIC.cards);
+    case 'terrain':
+      return Object.keys(NOMADIC.terrains);
+    case 'feature':
+      return Object.keys(NOMADIC.features);
+    case 'improvement':
+      return Object.keys(NOMADIC.improvements);
+    case 'building':
+      return Object.keys(NOMADIC.buildings);
+    case 'player':
+    case 'enemy':
+      return Object.keys(NOMADIC.units);
+  }
 }
 
 test('the Nomadic Age holds together', () => {
@@ -90,7 +110,7 @@ test('every card of the Nomadic Age has a name and a rules entry on the screen',
   }
 });
 
-test('every rules entry of the Nomadic Age lays out, and every card it names is a card of the Nomadic Age', () => {
+test('every rules entry of the Nomadic Age lays out, and every name on it resolves in the Nomadic Age’s table of its kind', () => {
   const entries = [
     ...Object.keys(NOMADIC.cards).map((id) => cardRules(id)),
     ...Object.keys(NOMADIC.capstones).map((id) => capstoneRules(id)),
@@ -104,7 +124,7 @@ test('every rules entry of the Nomadic Age lays out, and every card it names is 
     }
   }
   for (const entry of entries) {
-    for (const card of namedIn(entry)) expect(Object.keys(NOMADIC.cards)).toContain(card);
+    for (const { kind, id } of namedIn(entry)) expect(tableOf(kind)).toContain(id);
   }
 });
 

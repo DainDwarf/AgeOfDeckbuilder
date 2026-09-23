@@ -23,9 +23,10 @@ import {
   capstoneRules,
   cardName,
   cardRules,
+  referenceName,
   text,
 } from './text';
-import { layOutRun, type Run } from './text-run';
+import { layOutRun, type Reference, type Run } from './text-run';
 
 export const CARD_WIDTH = 130;
 
@@ -35,7 +36,7 @@ export function heightOf(width: number): number {
 }
 
 /** Every measure inside a card is a multiple of `em`, so one width scales the whole face. */
-function metricsOf(width: number): {
+export function metricsOf(width: number): {
   height: number;
   em: number;
   pad: number;
@@ -143,9 +144,9 @@ export function answerFace(
   };
 }
 
-/** A card's name a rules entry draws, which a face carries in its data as `names`: the card, and its box. */
+/** A name a rules entry draws, which a face carries in its data as `names`: what it names, and its box. */
 export type Name = {
-  readonly card: CardId;
+  readonly reference: Reference;
   /** Its middle, about the face's own bottom centre. */
   readonly x: number;
   readonly y: number;
@@ -261,7 +262,7 @@ export function createCardFace(
           content,
           measure,
           { width: right - left, glyph: span, bearing: size / 4, space: measure(' ') },
-          cardName,
+          referenceName,
         );
         return run.content.split('\n');
       },
@@ -283,7 +284,7 @@ export function createCardFace(
   );
 
   const names: Name[] = run.names.map((named) => ({
-    card: named.card,
+    reference: named.reference,
     x: (named.from + named.to) / 2,
     y: runTop + (named.line + 0.5) * lineHeight,
     width: named.to - named.from,

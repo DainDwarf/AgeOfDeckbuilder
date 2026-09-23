@@ -448,6 +448,7 @@ export class ChronicleScene extends Phaser.Scene implements OpensChronicles {
         );
       },
       inspect: (id, refusal) => overlay.inspect(id, refusal),
+      inspectNamed: (reference) => overlay.inspectNamed(reference),
     });
 
     const settleStanding = createStanding(this, ui.standing, {

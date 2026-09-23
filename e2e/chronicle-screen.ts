@@ -416,6 +416,20 @@ export function cardOnFace(page: Page, name: string): Promise<string | undefined
   }, name);
 }
 
+/**
+ * What the named card of a thing a name names stands, by its kind and id, and nothing where no such
+ * card is up: a small card and a card shown large each carry theirs.
+ */
+export function referenceOnFace(
+  page: Page,
+  name: string,
+): Promise<{ kind: string; id: string } | undefined> {
+  return page.evaluate((target) => {
+    const card = window.named?.(target)?.object;
+    return card?.getData('reference') as { kind: string; id: string } | undefined;
+  }, name);
+}
+
 /** Whether the named card face wears the ring: every one carries it, shown while it is selected. */
 export function ringed(page: Page, name: string): Promise<boolean> {
   return page.evaluate((target) => {

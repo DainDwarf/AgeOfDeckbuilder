@@ -25,18 +25,38 @@ import {
   eventName,
   featureName,
   improvementName,
+  referenceName,
   terrainName,
   unitName,
   victoryLine,
 } from '../ui/text';
-import { layOutRun } from '../ui/text-run';
+import { layOutRun, type Reference, type ReferenceKind } from '../ui/text-run';
 import { STAND_IN, STAND_IN_REGION, STAND_IN_SCHEDULE } from './stand-in';
 
-/** The cards a rules entry names, laid out as a run on a measure of one to the character. */
-function namedIn(entry: string): string[] {
+/** What a rules entry names, laid out as a run on a measure of one to the character. */
+function namedIn(entry: string): Reference[] {
   const measure = (content: string): number => content.length;
   const metrics = { width: 24, glyph: 1, bearing: 0, space: 1 };
-  return layOutRun(entry, measure, metrics, cardName).names.map((name) => name.card);
+  return layOutRun(entry, measure, metrics, referenceName).names.map((name) => name.reference);
+}
+
+/** The ids of the table a name of that kind resolves in. */
+function tableOf(kind: ReferenceKind): string[] {
+  switch (kind) {
+    case 'card':
+      return Object.keys(STAND_IN.cards);
+    case 'terrain':
+      return Object.keys(STAND_IN.terrains);
+    case 'feature':
+      return Object.keys(STAND_IN.features);
+    case 'improvement':
+      return Object.keys(STAND_IN.improvements);
+    case 'building':
+      return Object.keys(STAND_IN.buildings);
+    case 'player':
+    case 'enemy':
+      return Object.keys(STAND_IN.units);
+  }
 }
 
 test('the stand-in holds together', () => {
@@ -87,7 +107,7 @@ test('every card of the stand-in has a name and a rules entry on the screen', ()
   }
 });
 
-test('every rules entry of the stand-in lays out, and every card it names is a card of the stand-in', () => {
+test('every rules entry of the stand-in lays out, and every name on it resolves in the stand-in’s table of its kind', () => {
   const entries = [
     ...Object.keys(STAND_IN.cards).map((id) => cardRules(id)),
     ...Object.keys(STAND_IN.capstones).map((id) => capstoneRules(id)),
@@ -102,7 +122,7 @@ test('every rules entry of the stand-in lays out, and every card it names is a c
     }
   }
   for (const entry of entries) {
-    for (const card of namedIn(entry)) expect(Object.keys(STAND_IN.cards)).toContain(card);
+    for (const { kind, id } of namedIn(entry)) expect(tableOf(kind)).toContain(id);
   }
 });
 

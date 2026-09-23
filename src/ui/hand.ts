@@ -3,7 +3,7 @@ import { aimOf } from '../rules/cards';
 import { type AimedCard, type Catalogue, cardOf } from '../rules/catalogue';
 import { costOf, refusalOf } from '../rules/chronicle';
 import type { Change, Group, Stage } from '../rules/stages';
-import { type CardId, type Chronicle, NO_REFUSAL, playable, type Refusal } from '../rules/state';
+import { type CardId, type Chronicle, playable, type Refusal } from '../rules/state';
 import { createAimLine } from './aim-line';
 import { pressOf } from './bindings';
 import {
@@ -29,6 +29,7 @@ import {
 import { PILE_PLACE } from './piles';
 import { createRefusalNote, refused } from './refusal-note';
 import { createSmallCards, type Raiser } from './small-card';
+import type { Reference } from './text-run';
 
 /** The clear water between a pile and the lane the hand fans out in. */
 const LANE_PAD = 28;
@@ -89,6 +90,8 @@ export type HandPresses = {
   /** The aim window raised on the discard pile; `closed` says it came down with nothing paid. */
   aimDiscardPile(index: number, closed: () => void): () => void;
   inspect(id: CardId, refusal: Refusal): void;
+  /** What a name on a card of the hand names, shown large. */
+  inspectNamed(reference: Reference): void;
 };
 
 /**
@@ -116,8 +119,8 @@ export function createHand(
   const laneWidth = DESIGN_WIDTH - 2 * laneLeft;
   const note = createRefusalNote(scene, on.note);
   const line = createAimLine(scene, on.aimLine);
-  const small = createSmallCards(scene, on.smallCard, catalogue, (card) =>
-    presses.inspect(card, NO_REFUSAL),
+  const small = createSmallCards(scene, on.smallCard, catalogue, (reference) =>
+    presses.inspectNamed(reference),
   );
 
   let slots: Slot[] = [];
@@ -437,9 +440,9 @@ export function createHand(
       onClick(
         slot.face.root,
         (pointer) => {
-          const named = nameUnder(slot, pointer)?.name.card;
+          const named = nameUnder(slot, pointer)?.name.reference;
           if (named === undefined) presses.inspect(slot.id, slot.refusal);
-          else presses.inspect(named, NO_REFUSAL);
+          else presses.inspectNamed(named);
         },
         'right',
       );
