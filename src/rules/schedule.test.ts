@@ -1160,14 +1160,6 @@ function corridor(carrying: Carrying = {}): Chronicle {
 }
 
 /**
- * A worker of the player's with health no siege runs through: what a fixture stands where it wants
- * the enemies of the siege to spend their turns.
- */
-function unkillable(tile: TileCoords): Standing {
-  return standing('player', tile, { type: 'PH_Worker', worker: true, health: 99 });
-}
-
-/**
  * The disc with water around the city: no ground runs to it, so the siege places no camp of its own
  * and its landing there is a `runtime-error`.
  */
@@ -1493,7 +1485,7 @@ test('the warrior the reinforcement enters is a stage of its own, raised after t
 });
 
 test('the siege’s own camps are reinforced as the camps standing are', () => {
-  const landed = siegeLanded({ units: [unkillable(CITY)] });
+  const landed = siegeLanded();
   const camps = campsOf(landed);
   const after = endedTurn(landed, 'PH_Famine');
 
@@ -1678,7 +1670,6 @@ test('a change that both leaves the city no population and meets a capstone’s 
 
 test('the schedule keeps dealing past the landing of a capstone no span passes', () => {
   const start = awaitingTillage({
-    tiles: camped(field(4), CAMPS),
     timeline: { ...NO_DEALS, schedule: SCHEDULE, capstone: { id: 'PH_Tillage', turn: CAPSTONE } },
   });
   const { chronicle, landings } = walkedFrom(CATALOGUE, start, CAPSTONE + 40, 'PH_Famine');

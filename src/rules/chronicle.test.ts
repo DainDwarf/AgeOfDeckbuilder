@@ -426,7 +426,6 @@ test('a phase the turn always has is staged every turn, empty or not, and an emp
     ...NO_GROWTH,
     tiles: field(1),
     drawPile: fullDraw(),
-    discardPile: ['PH_Harvest'],
   });
   const stages = apply(CATALOGUE, quiet, { type: 'end-turn' });
 

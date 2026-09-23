@@ -614,10 +614,7 @@ test('a unit crosses its own faction but never lands on it', () => {
 test('the other faction stops a unit where it stands', () => {
   const city = cityOf(['urban'], {
     tiles: field(2),
-    units: [
-      standing('player', CITY, { move: 2 * MOVE_POINT, damage: 0 }),
-      standing('enemy', { q: 1, r: 0 }),
-    ],
+    units: [standing('player', CITY, { move: 2 * MOVE_POINT }), standing('enemy', { q: 1, r: 0 })],
   });
 
   expect(outcome(apply(CATALOGUE, city, moveTo(1, { q: 1, r: 0 })))).toEqual(city);
@@ -655,10 +652,7 @@ test('a unit walled in by water crosses nowhere at all', () => {
 test('the same move on the same chronicle gives the same chronicle back', () => {
   const city = cityOf(['urban'], {
     tiles: field(3),
-    units: [
-      standing('player', CITY, { move: 2 * MOVE_POINT, damage: 2, range: 1 }),
-      standing('enemy', { q: 2, r: 0 }, { health: 5 }),
-    ],
+    units: [standing('player', CITY, { move: 2 * MOVE_POINT }), standing('enemy', { q: 2, r: 0 })],
   });
   const untouched = structuredClone(city);
 

@@ -691,7 +691,7 @@ export const CLEARING = 'clearing';
 export const SCHEDULE = 'schedule';
 
 /** The schedule the fixture's handed-in timelines roll on from: it deals nothing before `FAR`. */
-export const QUIET = 'quiet';
+const QUIET = 'quiet';
 
 /**
  * The schedule dealing the hardship and the spoilage alike, the spoilage only once the city's cards

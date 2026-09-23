@@ -252,8 +252,13 @@ const TEXT = {
 
 export type TextKey = keyof typeof TEXT;
 
+/** The entry a key names, each `{name}` filled with its value; a placeholder handed no value is refused. */
 export function text(key: TextKey, values: Record<string, string | number> = {}): string {
-  return TEXT[key].replace(/\{(\w+)\}/g, (_, name: string) => String(values[name]));
+  return TEXT[key].replace(/\{(\w+)\}/g, (_, name: string) => {
+    const value = values[name];
+    if (value === undefined) throw new Error(`no value fills {${name}} in ${key}`);
+    return String(value);
+  });
 }
 
 /** What a unit kind is named on the screen; a kind no entry names is refused. */

@@ -1073,14 +1073,14 @@ test('a unit card never takes the city’s last population', () => {
 });
 
 test('a unit card is refused for the population when only the city’s last population is left', () => {
-  const last = cityOf(['urban'], { tiles: field(2), population: 1, assigned: [], resources: FOOD });
+  const last = cityOf(['urban'], { tiles: field(2), population: 1, assigned: [] });
 
   expect(idle(last)).toBe(1);
   expect(refusalOf(CATALOGUE, last, 'PH_Worker').blocked).toEqual(['population']);
 });
 
 test('a unit card refused for the population and for the idle population names both', () => {
-  const last = cityOf(['urban'], { tiles: field(2), population: 1, resources: FOOD });
+  const last = cityOf(['urban'], { tiles: field(2), population: 1 });
 
   expect(idle(last)).toBe(0);
   expect(refusalOf(CATALOGUE, last, 'PH_Worker').blocked).toEqual(['population', 'idle']);
@@ -1091,7 +1091,6 @@ test('a unit card is refused for the city while a unit of the player’s stands 
     tiles: field(2),
     population: 3,
     units: [worker(CITY)],
-    resources: FOOD,
   });
 
   expect(refusalOf(CATALOGUE, held, 'PH_Worker').blocked).toEqual(['city']);
@@ -1103,7 +1102,6 @@ test('a unit card refused for the population and for the city names both', () =>
     population: 1,
     assigned: [],
     units: [worker(CITY)],
-    resources: FOOD,
   });
 
   expect(refusalOf(CATALOGUE, both, 'PH_Worker').blocked).toEqual(['population', 'city']);
@@ -1130,7 +1128,7 @@ test('a unit card takes one idle population, and is refused while every one is a
 
 test('a building card with nowhere to stand is playable all the same, and every tile refuses it', () => {
   const at = { q: 1, r: 0 };
-  const alone = cityOf(['urban', 'plain'], { tiles: field(2), resources: production(3) });
+  const alone = cityOf(['urban', 'plain'], { tiles: field(2) });
   const worked = withUnits(alone, [worker(at)]);
 
   expect(admittedTiles(alone, 'PH_Farm')).toEqual([]);
@@ -1637,11 +1635,7 @@ test('a strike taking the city’s last population falls on the strike, and no s
 });
 
 test('a card the city falls short for is refused for the resource it is short of', () => {
-  const short = cityOf(['urban', 'plain'], {
-    tiles: field(2),
-    units: [worker({ q: 1, r: 0 })],
-    resources: production(2),
-  });
+  const short = cityOf(['urban', 'plain'], { resources: production(2) });
   const paid = { ...short, resources: production(3) };
 
   expect(refusalOf(CATALOGUE, short, 'PH_Farm').unaffordable).toEqual(['production']);

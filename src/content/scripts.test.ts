@@ -78,7 +78,7 @@ test('a raider that can strike a unit lands in range of it, on the landing neare
 test('a raider with neither the city’s tile nor a unit in reach moves toward the city by the cheapest way, a forest costing it what the tile says', () => {
   /** One corridor to the city, forked: the straight way through one tile, the way round through two. */
   const corridor = [CITY, { q: 1, r: 0 }, { q: 2, r: 0 }, { q: 2, r: -1 }, { q: 1, r: -1 }];
-  const raider = standing('enemy', { q: 2, r: 0 }, { move: MOVE_POINT, damage: 0 });
+  const raider = standing('enemy', { q: 2, r: 0 }, { move: MOVE_POINT });
   const plains = cityOf(['urban'], { tiles: only(2, corridor), units: [raider] });
   const wooded = cityOf(['urban'], {
     tiles: madeOf(only(2, corridor), 'forest', [{ q: 1, r: 0 }]),

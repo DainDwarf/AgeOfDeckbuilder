@@ -211,7 +211,7 @@ test('a free claim aimed at a tile the city holds, one the border does not touch
 });
 
 test('a claim costs twice the tiles the city holds, its own counted', () => {
-  let chronicle = alone({ resources: culture(60), population: 40 });
+  let chronicle = alone({ resources: culture(60) });
   const tiles = [...neighbours(CITY), { q: 2, r: 0 }];
 
   const paid = tiles.map((tile) => {
