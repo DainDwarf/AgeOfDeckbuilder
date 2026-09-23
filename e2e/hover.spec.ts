@@ -3,6 +3,7 @@ import { text } from '../src/ui/text';
 import {
   budget,
   chronicleOf,
+  cursorOverCanvas,
   dealRun,
   endTurnLabel,
   offCanvas,
@@ -89,11 +90,6 @@ test('the end-turn button reads the turn again when the pointer leaves the canva
 
   expect(problems).toEqual([]);
 });
-
-/** The cursor the page shows over the canvas. */
-function cursorOverCanvas(page: Page): Promise<string> {
-  return page.locator('canvas').evaluate((canvas: HTMLCanvasElement) => canvas.style.cursor);
-}
 
 // `open` ends the settle phase by clicking the button, so the pointer rests on it: the first
 // assertions have to come before any move.

@@ -31,6 +31,7 @@ import {
   DESIGN_WIDTH,
   MARGIN,
   onClick,
+  onHover,
   releasedOffCanvas,
   UI_FONT,
   whileUp,
@@ -40,6 +41,7 @@ import { css, LOOK } from './look';
 import { raiseMenu } from './menu-scene';
 import type { OverlayScene } from './overlay-scene';
 import { createRefusalNote, refused } from './refusal-note';
+import { createSmallCards, type Raiser, raiserOf } from './small-card';
 import { buildingName, cardName, eventName, text, victoryLine } from './text';
 
 const TITLE_INK = css(LOOK.paleInk);
@@ -171,14 +173,24 @@ type Offering = Browsing | AimWindow | Dealing | Capstone;
 /** The two windows that ring one of the cards they offer. */
 type Ringing = Browsing | Dealing;
 
+/** One card shown large, and what it is drawn refused by. */
+type Inspected = { readonly face: Face; readonly refusal: Refusal };
+
+/**
+ * The cards shown large, earliest first, over what the first of them was taken off: the row a name
+ * on one of them grows to its right.
+ */
+type Inspection = {
+  readonly stands: 'inspection';
+  readonly row: readonly Inspected[];
+  readonly over: Offering | undefined;
+};
+
 /**
  * What the scrim carries: a pile's cards, the aim window, the deal window, the capstone's window,
- * one card shown large over what it was taken off, or the ending screen.
+ * the cards shown large over what they were taken off, or the ending screen.
  */
-type Carried =
-  | Offering
-  | { readonly stands: 'inspection'; readonly over: Offering | undefined }
-  | { readonly stands: 'ending' };
+type Carried = Offering | Inspection | { readonly stands: 'ending' };
 
 /** Where a drag of the grid was pressed, what the grid stood at, and where the pointer has been. */
 type Scroll = {
@@ -205,6 +217,9 @@ export function createOverlay(
     .setVisible(false);
   scene.strata.scrim.layer.add(scrim);
   const note = createRefusalNote(scene, scene.strata.note);
+  const small = createSmallCards(scene, scene.strata.smallCard, catalogue, (card) => {
+    inspectNamed(card);
+  });
 
   let shown: Phaser.GameObjects.GameObject[] = [];
   /** What stands on the scrim, and nothing while the scrim is down. */
@@ -232,6 +247,7 @@ export function createOverlay(
 
   /** What the scrim carries taken down, the scrim itself left up: every raise replaces through here. */
   const wipe = (): void => {
+    small.down();
     note.hide();
     for (const object of shown) object.destroy();
     shown = [];
@@ -278,28 +294,74 @@ export function createOverlay(
     covering(true);
   };
 
-  const showInspection = (face: Face, refusal: Refusal, over: Offering | undefined): void => {
+  /**
+   * The row of cards shown large, laid as a browse lays a row and centred, but held off the right
+   * margin: a row wider than the screen lets its earliest cards go off the left edge.
+   */
+  const showRow = (row: readonly Inspected[], over: Offering | undefined): void => {
     wipe();
     cover();
-    carried = { stands: 'inspection', over };
+    carried = { stands: 'inspection', row, over };
     const height = heightOf(INSPECTION_WIDTH);
-    const { root } = createCardFace(scene, face, refusal, { width: INSPECTION_WIDTH });
-    root
-      .setName('inspection')
-      .setData('card', face.id)
-      .setPosition(DESIGN_WIDTH / 2, (DESIGN_HEIGHT + height) / 2)
-      // The card is interactive so that both presses on it reach nothing beneath, the scrim
-      // included; it answers neither.
-      .setInteractive({
-        hitArea: new Phaser.Geom.Rectangle(
-          -INSPECTION_WIDTH / 2,
-          -height,
-          INSPECTION_WIDTH,
-          height,
-        ),
-        hitAreaCallback: Phaser.Geom.Rectangle.Contains,
+    const span = row.length * INSPECTION_WIDTH + (row.length - 1) * BROWSE_GAP;
+    const left = Math.min((DESIGN_WIDTH - span) / 2, DESIGN_WIDTH - MARGIN - span);
+    for (const [index, { face, refusal }] of row.entries()) {
+      const drawn = createCardFace(scene, face, refusal, {
+        width: INSPECTION_WIDTH,
+        names: {
+          over: (name) => {
+            small.over(name === undefined ? undefined : raiserOf(drawn, name));
+          },
+          inspect: (name) => {
+            showRow([...row, { face: cardFace(catalogue, name.card), refusal: NO_REFUSAL }], over);
+          },
+        },
       });
-    carries(root);
+      drawn.root
+        .setName(index === row.length - 1 ? 'inspection' : `inspection-${index}`)
+        .setData('card', face.id)
+        .setPosition(
+          left + index * (INSPECTION_WIDTH + BROWSE_GAP) + INSPECTION_WIDTH / 2,
+          (DESIGN_HEIGHT + height) / 2,
+        )
+        // The card is interactive so that both presses on it reach nothing beneath, the scrim
+        // included; only its names answer one.
+        .setInteractive({
+          hitArea: new Phaser.Geom.Rectangle(
+            -INSPECTION_WIDTH / 2,
+            -height,
+            INSPECTION_WIDTH,
+            height,
+          ),
+          hitAreaCallback: Phaser.Geom.Rectangle.Contains,
+        });
+      carries(drawn.root);
+    }
+  };
+
+  const showInspection = (face: Face, refusal: Refusal, over: Offering | undefined): void => {
+    showRow([{ face, refusal }], over);
+  };
+
+  /** The window a card shown large stands over, whatever stands on the scrim now. */
+  const offering = (): Offering | undefined => {
+    if (carried === undefined) return undefined;
+    switch (carried.stands) {
+      case 'browse':
+      case 'aim-window':
+      case 'deal':
+      case 'capstone':
+        return carried;
+      case 'inspection':
+        return carried.over;
+      case 'ending':
+        return undefined;
+    }
+  };
+
+  /** A card a name names, shown large alone over the window standing. */
+  const inspectNamed = (card: CardId): void => {
+    showInspection(cardFace(catalogue, card), NO_REFUSAL, offering());
   };
 
   /** Moves the grid, never past either end of its cards. */
@@ -330,6 +392,15 @@ export function createOverlay(
     if (grid === undefined) return undefined;
     const at = on.at(pointer.x, pointer.y);
     return cardAt(grid, at.x, at.y);
+  };
+
+  /** The name on a card of the standing grid under the pointer, and nothing where none lies. */
+  const nameUnder = (pointer: Phaser.Input.Pointer): Raiser | undefined => {
+    const card = under(pointer);
+    if (card === undefined) return undefined;
+    const at = on.at(pointer.x, pointer.y);
+    const name = card.drawn.nameAt(at.x, at.y);
+    return name === undefined ? undefined : raiserOf(card.drawn, name);
   };
 
   /**
@@ -380,13 +451,23 @@ export function createOverlay(
       if (dragged === undefined || releasedOffCanvas(pointer)) return;
       fling = -speedOf(dragged.trail, scene.time.now);
     });
+    frame.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+      small.over(scrolling === undefined ? nameUnder(pointer) : undefined);
+    });
+    onHover(
+      frame,
+      () => {},
+      () => small.over(undefined),
+    );
     onClick(frame, (pointer) => {
       pressed(under(pointer)?.at, 'left');
     });
     onClick(
       frame,
       (pointer) => {
-        pressed(under(pointer)?.at, 'right');
+        const named = nameUnder(pointer)?.name.card;
+        if (named === undefined) pressed(under(pointer)?.at, 'right');
+        else inspectNamed(named);
       },
       'right',
     );
@@ -641,9 +722,13 @@ export function createOverlay(
     screen.setAlpha(1).setY(0);
   };
 
-  /** The card shown large taken down, onto what it was taken off: the one path, whichever way. */
-  const dropInspection = (over: Offering | undefined): void => {
-    if (over === undefined) close();
+  /**
+   * The newest card shown large taken down, and the last of them onto what it was taken off: the one
+   * path, whichever way.
+   */
+  const putBack = ({ row, over }: Inspection): void => {
+    if (row.length > 1) showRow(row.slice(0, -1), over);
+    else if (over === undefined) close();
     else raise(over);
   };
 
@@ -651,7 +736,7 @@ export function createOverlay(
     if (carried === undefined) return false;
     switch (carried.stands) {
       case 'inspection':
-        dropInspection(carried.over);
+        putBack(carried);
         return true;
       case 'browse':
         if (carried.selected === undefined) close();
@@ -752,7 +837,7 @@ export function createOverlay(
       if (carried === undefined) return;
       switch (carried.stands) {
         case 'inspection':
-          dropInspection(carried.over);
+          putBack(carried);
           return;
         case 'browse':
         case 'aim-window':

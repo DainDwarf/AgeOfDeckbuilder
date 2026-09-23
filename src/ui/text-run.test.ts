@@ -6,8 +6,17 @@ const measure = (content: string): number => 5 * content.length;
 
 const METRICS: Metrics = { width: 50, glyph: 10, bearing: 5, space: 5 };
 
+/** The cards the runs below name, one of them in several words. */
+const NAMES: Record<string, string> = { short: 'Aaa', long: 'Bbb ccc ddd' };
+
+function nameOf(card: string): string {
+  const name = NAMES[card];
+  if (name === undefined) throw new Error(`no card ${card}`);
+  return name;
+}
+
 function laid(entry: string): Run {
-  return layOutRun(entry, measure, METRICS);
+  return layOutRun(entry, measure, METRICS, nameOf);
 }
 
 function linesOf(run: Run): string[] {
@@ -32,6 +41,7 @@ describe('a run of words', () => {
     const run = laid('aaa bbb');
     expect(run.content).toBe('aaa bbb');
     expect(run.glyphs).toEqual([]);
+    expect(run.names).toEqual([]);
   });
 });
 
@@ -61,5 +71,28 @@ describe('a run with glyphs in it', () => {
 
   it('refuses a mark that names no resource', () => {
     expect(() => laid('10[spoils]')).toThrow('spoils');
+  });
+});
+
+describe('a run with names in it', () => {
+  it('draws the card’s name in brackets where the entry marks it', () => {
+    const run = laid('a [card:short] b');
+    expect(run.content).toBe('a [Aaa] b');
+    expect(run.names.map((name) => name.card)).toEqual(['short']);
+  });
+
+  it('never breaks a name of several words across lines, however far it runs past the width', () => {
+    const run = laid('aaa [card:long]');
+    expect(linesOf(run)).toEqual(['aaa', '[Bbb ccc ddd]']);
+    expect(run.names).toEqual([
+      { card: 'long', from: expect.any(Number), to: expect.any(Number), line: 1 },
+    ]);
+  });
+
+  it('answers the stretch a name is drawn across, both brackets included', () => {
+    const run = laid('aa [card:short]');
+    const [name] = run.names;
+    expect(name.to).toBe(edgeOf(run, 0));
+    expect(name.to - name.from).toBe(measure('[Aaa]'));
   });
 });

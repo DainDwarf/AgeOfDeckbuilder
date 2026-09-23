@@ -9,6 +9,8 @@ import {
   DESIGN_HEIGHT,
   hexagon,
   MARGIN,
+  onClick,
+  onHover,
   TEXT_INSET,
   UI_FONT,
 } from './design-space';
@@ -140,12 +142,36 @@ export function answerFace(
   };
 }
 
+/** A card's name a rules entry draws, which a face carries in its data as `names`: the card, and its box. */
+export type Name = {
+  readonly card: CardId;
+  /** Its middle, about the face's own bottom centre. */
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  /** The run's line height. */
+  readonly height: number;
+};
+
+/** Where a name stands on the surface its face is drawn on: its middle, and its line's two edges. */
+export type Spot = { readonly x: number; readonly top: number; readonly bottom: number };
+
+/** What a face handed these lays a zone over every name for: the pointer on it or off it, and the right click. */
+export type NamePresses = {
+  over(name: Name | undefined): void;
+  inspect(name: Name): void;
+};
+
 export type CardFace = {
   readonly root: Phaser.GameObjects.Container;
   /** Draws the card as the selection, or as one more card lying where it lies. */
   select(selected: boolean): void;
   /** Draws the card as the one being aimed: the point on its ring, or no point at all. */
   aim(beingAimed: boolean): void;
+  /** The name lying under a point of the surface the face is drawn on, and nothing where none does. */
+  nameAt(x: number, y: number): Name | undefined;
+  /** Where one of the face's names stands on the surface the face is drawn on. */
+  spotOf(name: Name): Spot;
 };
 
 /**
@@ -156,7 +182,11 @@ export function createCardFace(
   scene: Phaser.Scene,
   face: Face,
   refusal: Refusal,
-  { faded = false, width = CARD_WIDTH }: { faded?: boolean; width?: number } = {},
+  {
+    faded = false,
+    width = CARD_WIDTH,
+    names: presses,
+  }: { faded?: boolean; width?: number; names?: NamePresses } = {},
 ): CardFace {
   const { height, em, pad, radius } = metricsOf(width);
   const tone = faded ? worn : (colour: number): number => colour;
@@ -226,12 +256,12 @@ export function createCardFace(
     wordWrap: {
       callback: (content, textObject) => {
         const measure = (drawn: string): number => textObject.context.measureText(drawn).width;
-        run = layOutRun(content, measure, {
-          width: right - left,
-          glyph: span,
-          bearing: size / 4,
-          space: measure(' '),
-        });
+        run = layOutRun(
+          content,
+          measure,
+          { width: right - left, glyph: span, bearing: size / 4, space: measure(' ') },
+          cardName,
+        );
         return run.content.split('\n');
       },
     },
@@ -251,6 +281,30 @@ export function createCardFace(
       .setAngle(45),
   );
 
+  const names: Name[] = run.names.map((named) => ({
+    card: named.card,
+    x: (named.from + named.to) / 2,
+    y: runTop + (named.line + 0.5) * lineHeight,
+    width: named.to - named.from,
+    height: lineHeight,
+  }));
+  root.setData('names', names);
+  const zones =
+    presses === undefined
+      ? []
+      : names.map((name) => {
+          const zone = scene.add
+            .zone(name.x, name.y, name.width, name.height)
+            .setInteractive({ cursor: 'pointer' });
+          onHover(
+            zone,
+            () => presses.over(name),
+            () => presses.over(undefined),
+          );
+          onClick(zone, () => presses.inspect(name), 'right');
+          return zone;
+        });
+
   const artTop = middle + 1.15 * em;
   const artHeight = rules.y - rules.height - 0.45 * em - artTop;
   const art = scene.add.graphics();
@@ -269,7 +323,7 @@ export function createCardFace(
     radius + RING_STANDOFF,
   );
 
-  root.add([art, name, kind, rules, ...glyphs, ring]);
+  root.add([art, name, kind, rules, ...glyphs, ring, ...zones]);
 
   /** The point while the card is being aimed, and nothing at all on the card while it is not. */
   let point: Phaser.GameObjects.Polygon | undefined;
@@ -293,6 +347,18 @@ export function createCardFace(
         .setStrokeStyle(1, LOOK.aimPointEdge)
         .setName('aim-point');
       root.add(point);
+    },
+    nameAt(x: number, y: number): Name | undefined {
+      const local = root.getLocalPoint(x, y);
+      return names.find(
+        (name) =>
+          Math.abs(local.x - name.x) <= name.width / 2 &&
+          Math.abs(local.y - name.y) <= name.height / 2,
+      );
+    },
+    spotOf(name: Name): Spot {
+      const middle = root.getWorldTransformMatrix().transformPoint(name.x, name.y);
+      return { x: middle.x, top: middle.y - name.height / 2, bottom: middle.y + name.height / 2 };
     },
   };
 }

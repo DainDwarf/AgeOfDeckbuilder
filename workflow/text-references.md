@@ -27,7 +27,7 @@ The tooltips, the info panel rows and the refusals marked no noun: a tooltip or 
 
 ## What each entry marks
 
-**No reference bracket survives in `src/ui/text.ts`, so no reference can be found by searching for one.** The brackets still in the file are all resource glyphs — `Pay {production} [production]`, `Gain {food} [food]`, `4[food] 4[production]` — the run's first mark, already drawn on the face, and none of them is listed below. The polish shipped the wording of the tables and stripped the brackets off every reference instead: `src/ui/text-run.ts` parses `[word]` in a `rules.`, `answer-rules.` or `capstone-rules.` entry as a resource glyph and throws on a token that names no resource, and the second mark — the one that draws a name — is the **Card references** line's own step 1. The entries below are the whole list of what wants a mark put back, entry by entry, as each reads today.
+**The only references marked in `src/ui/text.ts` are cards, as `[card:<id>]`**; every other bracket in the file is a resource glyph — `Pay {production} [production]`, `Gain {food} [food]`, `4[food] 4[production]`. `src/ui/text-run.ts` parses both marks in a `rules.`, `answer-rules.` or `capstone-rules.` entry, the card's name drawn in brackets and its extent answered, and throws on a `[word]` that names no resource. The entries below are the whole list of what still wants a mark, entry by entry, as each reads today.
 
 | Entry | Reads today | Marks | Line |
 | --- | --- | --- | --- |
@@ -40,9 +40,6 @@ The tooltips, the info panel rows and the refusals marked no noun: a tooltip or 
 | `rules.gather` | Gain the yield of a worker's tile | yield, worker | beyond cards |
 | `rules.trapping` | Place Trapping on Forest | Trapping (the improvement), Forest | beyond cards |
 | `rules.band-joins` | Single use.\nGain one population | population | beyond cards |
-| `capstone-rules.first-shelter` | Put Shelter on top of the draw pile | Shelter | **cards** |
-| `answer-rules.share` | Put Hunger on top of the draw pile | Hunger | **cards** |
-| `answer-rules.PH_Famine` | Lays PH_Hunger on top of the draw pile | PH_Hunger | **cards** |
 | `answer-rules.let-them-go` | Lose one population | population | beyond cards |
 | `answer-rules.follow-it` | One forest gains Wildlife | forest, Wildlife | beyond cards |
 | `answer-rules.let-it-burn` | The fire burns {tiles} forest into plain, kills {population} population and damages {units} unit | forest, plain, population, unit | beyond cards |
@@ -53,7 +50,7 @@ The tooltips, the info panel rows and the refusals marked no noun: a tooltip or 
 
 One thing a session taking either line reads before it starts. **`capstone.title` is not a rules entry** — the run never lays it out, so a mark there needs the window's title to be laid out as a run, which is work neither line has scoped.
 
-The table above is the list both reference lines work from; `board/card-references.md` points at it rather than carrying a copy, and the notation `[card:<id>]` is that line's to settle.
+The table above is the list the **References beyond cards** line works from; its mark sits beside `[card:<id>]`.
 
 ## Kinds
 

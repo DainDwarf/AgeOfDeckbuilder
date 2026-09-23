@@ -6,13 +6,13 @@ import { css, LOOK } from './look';
 const STANDOFF = 8;
 
 /** How long the pointer rests still on a source before its tooltip appears. */
-const REST_MS = 500;
+export const REST_MS = 500;
 
 /** How long after a tooltip goes down a move straight onto another source still shows at once. */
-const HANDOVER_MS = 120;
+export const HANDOVER_MS = 120;
 
 /** The travel a rest tolerates, in design pixels: less than this and the hand is holding still. */
-const JITTER = 3;
+export const JITTER = 3;
 
 const STYLE = { fontFamily: UI_FONT, fontSize: '14px', color: css(LOOK.ink) };
 

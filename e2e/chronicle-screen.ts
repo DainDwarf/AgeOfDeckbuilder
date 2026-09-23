@@ -289,6 +289,38 @@ export function onScreen(page: Page, name: string): Promise<OnScreen> {
   }, name);
 }
 
+/** Where a name the named face's rules entry draws sits on the page, the first it draws at 0. */
+export function nameOnScreen(page: Page, face: string, at = 0): Promise<{ x: number; y: number }> {
+  return page.evaluate(
+    ({ target, index }) => {
+      const found = window.named?.(target);
+      if (found === undefined)
+        throw new Error(`nothing named ${target} is on the chronicle screen`);
+      const root = found.object as Phaser.GameObjects.Container;
+      const name = (root.getData('names') as { x: number; y: number }[] | undefined)?.[index];
+      if (name === undefined) throw new Error(`${target} draws no name at ${index}`);
+      const middle = root.getWorldTransformMatrix().transformPoint(name.x, name.y);
+
+      const camera = found.camera;
+      const origin = camera.getWorldPoint(0, 0);
+      const stepped = camera.getWorldPoint(1, 1);
+      const canvas = camera.scene.game.canvas;
+      const rect = canvas.getBoundingClientRect();
+      const unit = rect.width / canvas.width / (stepped.x - origin.x);
+      return {
+        x: rect.left + (middle.x - origin.x) * unit,
+        y: rect.top + (middle.y - origin.y) * unit,
+      };
+    },
+    { target: face, index: at },
+  );
+}
+
+/** The cursor the page shows over the canvas. */
+export function cursorOverCanvas(page: Page): Promise<string> {
+  return page.locator('canvas').evaluate((canvas: HTMLCanvasElement) => canvas.style.cursor);
+}
+
 /**
  * The centre tile and the two beside it are charted from the settle phase on, so the axes they give
  * can always be measured.
@@ -354,6 +386,17 @@ export function besideTheCards(page: Page): Promise<{ x: number; y: number }> {
   return page.locator('canvas').evaluate((canvas: HTMLCanvasElement) => {
     const rect = canvas.getBoundingClientRect();
     return { x: rect.left + 10, y: rect.top + 10 };
+  });
+}
+
+/**
+ * A point on the scrim beside the deal window's cards: at the left edge, clear of the frame they are
+ * laid in and of the resource bar, which stands over the scrim while a deal waits to be taken.
+ */
+export function besideTheDeal(page: Page): Promise<{ x: number; y: number }> {
+  return page.locator('canvas').evaluate((canvas: HTMLCanvasElement) => {
+    const rect = canvas.getBoundingClientRect();
+    return { x: rect.left + 8, y: rect.top + rect.height / 2 };
   });
 }
 

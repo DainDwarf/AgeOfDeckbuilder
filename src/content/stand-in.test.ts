@@ -29,7 +29,15 @@ import {
   unitName,
   victoryLine,
 } from '../ui/text';
+import { layOutRun } from '../ui/text-run';
 import { STAND_IN, STAND_IN_REGION, STAND_IN_SCHEDULE } from './stand-in';
+
+/** The cards a rules entry names, laid out as a run on a measure of one to the character. */
+function namedIn(entry: string): string[] {
+  const measure = (content: string): number => content.length;
+  const metrics = { width: 24, glyph: 1, bearing: 0, space: 1 };
+  return layOutRun(entry, measure, metrics, cardName).names.map((name) => name.card);
+}
 
 test('the stand-in holds together', () => {
   expect(catalogued(STAND_IN)).toBe(STAND_IN);
@@ -76,6 +84,25 @@ test('every card of the stand-in has a name and a rules entry on the screen', ()
   for (const id of Object.keys(STAND_IN.cards)) {
     expect(() => cardName(id)).not.toThrow();
     expect(() => cardRules(id)).not.toThrow();
+  }
+});
+
+test('every rules entry of the stand-in lays out, and every card it names is a card of the stand-in', () => {
+  const entries = [
+    ...Object.keys(STAND_IN.cards).map((id) => cardRules(id)),
+    ...Object.keys(STAND_IN.capstones).map((id) => capstoneRules(id)),
+  ];
+  for (const schedule of Object.keys(STAND_IN.schedules)) {
+    const deck = deckOf(STAND_IN, 'PH_Deck');
+    const chronicle = settledLaunch(STAND_IN, STAND_IN_REGION, schedule, 1, deck);
+    for (const event of Object.values(STAND_IN.events)) {
+      for (const [name, answer] of Object.entries(event.answers)) {
+        entries.push(answerRules(name, answer.reads(STAND_IN, chronicle)));
+      }
+    }
+  }
+  for (const entry of entries) {
+    for (const card of namedIn(entry)) expect(Object.keys(STAND_IN.cards)).toContain(card);
   }
 });
 

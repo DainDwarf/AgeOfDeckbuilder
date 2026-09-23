@@ -1,10 +1,11 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import { STAND_IN } from '../src/content/stand-in';
 import { deckOf } from '../src/rules/catalogue';
 import { answerCost, answerOf, answerRefusal, offered } from '../src/rules/schedule';
 import { playable } from '../src/rules/state';
 import { eventName, text } from '../src/ui/text';
 import {
+  besideTheDeal,
   budget,
   cardOnFace,
   chronicleOf,
@@ -22,17 +23,6 @@ import {
   titleOf,
   watch,
 } from './chronicle-screen';
-
-/**
- * A point on the scrim beside the window's cards: at the left edge, clear of the frame they are laid
- * in and of the resource bar, which stands over the scrim while a deal waits to be taken.
- */
-async function besideTheDeal(page: Page): Promise<{ x: number; y: number }> {
-  return page.locator('canvas').evaluate((canvas: HTMLCanvasElement) => {
-    const rect = canvas.getBoundingClientRect();
-    return { x: rect.left + 8, y: rect.top + rect.height / 2 };
-  });
-}
 
 test('the events phase deals a choice, and the turn plays on from the one taken', async ({
   page,

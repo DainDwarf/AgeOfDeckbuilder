@@ -1,5 +1,5 @@
-// A `rules.`, `answer-rules.` or `capstone-rules.` entry may mark a resource glyph `[resource]`,
-// which only a card face draws: anything else reading one puts the brackets on the screen.
+// A `rules.`, `answer-rules.` or `capstone-rules.` entry may mark a resource glyph `[resource]` and
+// a card's name `[card:<id>]`, which only a card face draws: anything else puts the mark on screen.
 /** Every player-facing sentence, one entry each. English is the only language. */
 const TEXT = {
   'label.food': 'Food',
@@ -134,10 +134,10 @@ const TEXT = {
   'answer.PH_Raid': 'PH_Raid',
   'answer.PH_Famine': 'PH_Famine',
   'answer-rules.PH_Raid': 'A raid of {warriors} enters the map',
-  'answer-rules.PH_Famine': 'Lays PH_Hunger on top of the draw pile',
+  'answer-rules.PH_Famine': 'Lays [card:PH_Hunger] on top of the draw pile',
   'event.lean-season': 'Lean season',
   'answer.share': 'Share food',
-  'answer-rules.share': 'Put Hunger on top of the draw pile',
+  'answer-rules.share': 'Put [card:hunger] on top of the draw pile',
   'answer.ration': 'Keep to yourself',
   'answer-rules.ration': 'Your city is attacked by {warriors} Warrior',
   'event.rival-band': 'A rival band',
@@ -168,7 +168,7 @@ const TEXT = {
   'capstone-name.PH_Tillage': 'PH_Tillage',
   'capstone-rules.PH_Tillage': 'Lands nothing. A farm the city holds passes it.',
   'capstone-name.first-shelter': 'The first shelter',
-  'capstone-rules.first-shelter': 'Put Shelter on top of the draw pile',
+  'capstone-rules.first-shelter': 'Put [card:shelter] on top of the draw pile',
   'capstone.title': 'Pass the capstone to win the Nomadic Age',
   'capstone.lands': 'The capstone lands.',
   'aim.tile': 'Play {card} at a tile',

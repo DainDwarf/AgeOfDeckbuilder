@@ -3,7 +3,7 @@ import { aimOf } from '../rules/cards';
 import { type AimedCard, type Catalogue, cardOf } from '../rules/catalogue';
 import { costOf, refusalOf } from '../rules/chronicle';
 import type { Change, Group, Stage } from '../rules/stages';
-import { type CardId, type Chronicle, playable, type Refusal } from '../rules/state';
+import { type CardId, type Chronicle, NO_REFUSAL, playable, type Refusal } from '../rules/state';
 import { createAimLine } from './aim-line';
 import { pressOf } from './bindings';
 import {
@@ -27,6 +27,7 @@ import {
 } from './design-space';
 import { PILE_PLACE } from './piles';
 import { createRefusalNote, refused } from './refusal-note';
+import { createSmallCards, type Raiser } from './small-card';
 
 /** The clear water between a pile and the lane the hand fans out in. */
 const LANE_PAD = 28;
@@ -44,6 +45,8 @@ type Slot = {
   readonly refusal: Refusal;
   readonly playable: boolean;
   hovered: boolean;
+  /** Whether a small card raised off one of its names stands, which keeps it lifted. */
+  held: boolean;
 };
 
 /** The card being dragged, where it was taken hold of, and where it stood at that moment. */
@@ -101,6 +104,7 @@ export function createHand(
     readonly lifted: Stratum;
     readonly aimLine: Stratum;
     readonly note: Stratum;
+    readonly smallCard: Stratum;
   },
   catalogue: Catalogue,
   presses: HandPresses,
@@ -109,6 +113,9 @@ export function createHand(
   const laneWidth = DESIGN_WIDTH - 2 * laneLeft;
   const note = createRefusalNote(scene, on.note);
   const line = createAimLine(scene, on.aimLine);
+  const small = createSmallCards(scene, on.smallCard, catalogue, (card) =>
+    presses.inspect(card, NO_REFUSAL),
+  );
 
   let slots: Slot[] = [];
   /** What the hand has in the air and no slot holds; a render owns it and takes it down. */
@@ -129,8 +136,8 @@ export function createHand(
     }
   };
 
-  /** Whether a card stands out of the lane: the one under the pointer, and the selected one. */
-  const raised = (slot: Slot): boolean => slot.hovered || selected?.slot === slot;
+  /** Whether a card stands out of the lane: the one under the pointer, one held, the selected one. */
+  const raised = (slot: Slot): boolean => slot.hovered || slot.held || selected?.slot === slot;
 
   const restingY = (slot: Slot): number => slot.home.y - (raised(slot) ? CARD_LIFT : 0);
 
@@ -310,7 +317,23 @@ export function createHand(
   });
   scene.input.on('pointerupoutside', abandonDrag);
 
+  /** The name of this card under the pointer, handed over as the small cards take one. */
+  const nameUnder = (slot: Slot, pointer: Phaser.Input.Pointer): Raiser | undefined => {
+    const at = on.resting.at(pointer.x, pointer.y);
+    const name = slot.face.nameAt(at.x, at.y);
+    if (name === undefined) return undefined;
+    return {
+      name,
+      where: () => slot.face.spotOf(name),
+      hold: (held) => {
+        slot.held = held;
+        if (dragged === undefined && slots.includes(slot)) settle(slot, 120);
+      },
+    };
+  };
+
   const render = (chronicle: Chronicle): void => {
+    small.down();
     note.hide();
     unselect();
     for (const face of [...flying, ...slots.map((slot) => slot.face.root)]) {
@@ -340,6 +363,7 @@ export function createHand(
         refusal,
         playable: playable(refusal),
         hovered: false,
+        held: false,
       };
 
       on.resting.layer.add(slot.face.root);
@@ -370,6 +394,9 @@ export function createHand(
             carried: false,
           };
         })
+        .on('pointermove', (pointer: Phaser.Input.Pointer) => {
+          small.over(dragged === undefined ? nameUnder(slot, pointer) : undefined);
+        })
         .on('drag', carry)
         .on('dragend', (pointer: Phaser.Input.Pointer) => {
           if (dragged === undefined) return;
@@ -392,6 +419,7 @@ export function createHand(
           settle(slot, 120);
         },
         () => {
+          small.over(undefined);
           if (dragged !== undefined) return;
           slot.hovered = false;
           settle(slot, 120);
@@ -406,8 +434,10 @@ export function createHand(
 
       onClick(
         slot.face.root,
-        () => {
-          presses.inspect(slot.id, slot.refusal);
+        (pointer) => {
+          const named = nameUnder(slot, pointer)?.name.card;
+          if (named === undefined) presses.inspect(slot.id, slot.refusal);
+          else presses.inspect(named, NO_REFUSAL);
         },
         'right',
       );

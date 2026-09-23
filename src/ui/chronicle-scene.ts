@@ -149,6 +149,7 @@ export class ChronicleScene extends Phaser.Scene implements OpensChronicles {
       lifted: stratum(),
       aimLine: stratum(),
       note: stratum(),
+      smallCard: stratum(),
       tooltip: stratum(),
     };
     holdDesignSpace(this, camera);
@@ -570,6 +571,8 @@ export class ChronicleScene extends Phaser.Scene implements OpensChronicles {
     resetMenu(this, (under) => {
       underMenu = under;
       covering();
+      // The overlay's own scrim is no cover to the overlay: whatever it raises wipes what stood.
+      overlayOf(this).input.emit(under ? COVERED : UNCOVERED);
       // The menu takes every key it stands under and offers none of them on, so a pan key held as
       // its window rises would pan on for ever; the overlay lets the two through and freezes nothing.
       view.live(!under);

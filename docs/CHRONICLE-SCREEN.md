@@ -40,7 +40,7 @@ A left click on one of the aim window's cards is the play attempted there; a pre
 
 ### The piles
 
-A left click on a pile opens its **browse**, the pile's cards laid out face up: the discard pile's newest first, the draw pile's by kind and then by name, so the draw order is given away to nobody. A left click on one of its cards selects it, ringed; clicked again it does nothing — a card in a browse is there to be seen and no more — and a press beside the cards closes the browse once no card is selected. A pile is not a card, so a right click on one does nothing.
+A left click on a pile opens its **browse**, the pile's cards laid out face up: the discard pile's newest first, the draw pile's by kind and then by name, so the draw order is given away to nobody. A left click on one of its cards selects it, ringed; clicked again it does nothing — a card in a browse is there to be seen and no more — and a press beside the cards closes the browse once no card is selected. A pile is not a card, so a right click on one does nothing, and a name on its top card answers nothing either.
 
 ### The windows
 

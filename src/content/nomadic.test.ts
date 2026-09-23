@@ -29,10 +29,18 @@ import {
   unitName,
   victoryLine,
 } from '../ui/text';
+import { layOutRun } from '../ui/text-run';
 import { NOMADIC } from './nomadic';
 
 const REGION = 'temperate';
 const SCHEDULE = 'nomadic';
+
+/** The cards a rules entry names, laid out as a run on a measure of one to the character. */
+function namedIn(entry: string): string[] {
+  const measure = (content: string): number => content.length;
+  const metrics = { width: 24, glyph: 1, bearing: 0, space: 1 };
+  return layOutRun(entry, measure, metrics, cardName).names.map((name) => name.card);
+}
 
 test('the Nomadic Age holds together', () => {
   expect(catalogued(NOMADIC)).toBe(NOMADIC);
@@ -79,6 +87,24 @@ test('every card of the Nomadic Age has a name and a rules entry on the screen',
   for (const id of Object.keys(NOMADIC.cards)) {
     expect(() => cardName(id)).not.toThrow();
     expect(() => cardRules(id)).not.toThrow();
+  }
+});
+
+test('every rules entry of the Nomadic Age lays out, and every card it names is a card of the Nomadic Age', () => {
+  const entries = [
+    ...Object.keys(NOMADIC.cards).map((id) => cardRules(id)),
+    ...Object.keys(NOMADIC.capstones).map((id) => capstoneRules(id)),
+  ];
+  for (const schedule of Object.keys(NOMADIC.schedules)) {
+    const chronicle = settledLaunch(NOMADIC, REGION, schedule, 1, deckOf(NOMADIC, 'nomadic'));
+    for (const event of Object.values(NOMADIC.events)) {
+      for (const [name, answer] of Object.entries(event.answers)) {
+        entries.push(answerRules(name, answer.reads(NOMADIC, chronicle)));
+      }
+    }
+  }
+  for (const entry of entries) {
+    for (const card of namedIn(entry)) expect(Object.keys(NOMADIC.cards)).toContain(card);
   }
 });
 
