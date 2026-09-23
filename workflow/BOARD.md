@@ -6,7 +6,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ---
 
-- **A small card answers the right click** — a right click on a small card shows the card it stands large, as a right click on the name that raised it does, the hand cursor stands over it, and `docs/INTERFACE.md` says so in place of "a small card answers no press". Doc-impact: `docs/INTERFACE.md`. [board/small-card-answers-right-click.md](board/small-card-answers-right-click.md)
 - **References beyond cards** — a name in a rules entry resolves to more than a card: an improvement, a feature, anything with a row in the info panel, shown small as that row.
 - **Card kinds explain themselves** — every card kind's label, settle, unit, building, instant, hazard, event and capstone, gets a tooltip or reference stating the kind's own rules, so a card's rules entry stops repeating what its kind already means.
 - **Hunger is forged by its event** — the hazard's amount is fixed on the card and shown on its face; it is the event that forges the card that grows with the turns, forging stronger Hungers on later turns.

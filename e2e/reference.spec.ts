@@ -44,10 +44,31 @@ test('a card named on a card raises it small at a rest and shows it large at a r
   await page.mouse.move(small.x, small.y, { steps: 5 });
   await page.waitForTimeout(PAST_HANDOVER);
   expect(await standing(page, 'small-card-0')).toBe(true);
+  expect(await cursorOverCanvas(page)).toBe(HAND);
 
   const beside = await besideTheDeal(page);
   await page.mouse.move(beside.x, beside.y, { steps: 5 });
   await expect.poll(() => standing(page, 'small-card-0')).toBe(false);
+
+  await page.mouse.move(name.x, name.y, { steps: 5 });
+  await expect.poll(() => cardOnFace(page, 'small-card-0')).toBe('PH_Hunger');
+  await page.mouse.move(small.x, small.y, { steps: 5 });
+  const deeper = await nameOnScreen(page, 'small-card-0');
+  await page.mouse.move(deeper.x, deeper.y, { steps: 5 });
+  await expect.poll(() => cardOnFace(page, 'small-card-1')).toBe('PH_Hunger');
+  // The deeper card stands above the name that raised it: the body it leaves clear is below that name.
+  const body = { x: small.x, y: (deeper.y + name.y) / 2 };
+  await page.mouse.move(body.x, body.y, { steps: 5 });
+  await page.waitForTimeout(PAST_HANDOVER);
+  expect(await standing(page, 'small-card-1')).toBe(false);
+  expect(await cursorOverCanvas(page)).toBe(HAND);
+
+  await page.mouse.click(body.x, body.y, { button: 'right' });
+  await expect.poll(() => cardOnFace(page, 'inspection')).toBe('PH_Hunger');
+  expect(await standing(page, 'small-card-0')).toBe(false);
+  await page.keyboard.press('Escape');
+  await expect.poll(() => standing(page, 'inspection')).toBe(false);
+  expect(await standing(page, 'deal')).toBe(true);
 
   await page.mouse.click(name.x, name.y, { button: 'right' });
   await expect.poll(() => cardOnFace(page, 'inspection')).toBe('PH_Hunger');

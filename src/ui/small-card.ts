@@ -15,6 +15,7 @@ import {
   DESIGN_HEIGHT,
   DESIGN_WIDTH,
   MARGIN,
+  onClick,
   onHover,
   type Stratum,
 } from './design-space';
@@ -95,13 +96,24 @@ export function createSmallCards(
     if (count === 0) gone[0].raiser.hold?.(false);
   };
 
+  /** Small cards cut under a pointer that stays where it rests. */
+  const cutUnder = (count: number): void => {
+    if (count >= chain.length) return;
+    cut(count);
+    // Phaser resets the cursor when an object that carries one is destroyed, wherever the pointer
+    // is (`InputPlugin#clear`), and sends no `pointerover` to what it still rests on (docs/PHASER.md).
+    const pointer = scene.input.activePointer;
+    const top = scene.input.sortGameObjects(scene.input.hitTestPointer(pointer), pointer)[0];
+    if (top?.input) scene.input.setCursor(top.input);
+  };
+
   const stopResting = (): void => {
     resting?.timer.remove();
     resting = undefined;
   };
 
   const raise = (raiser: Raiser, level: number): void => {
-    cut(level);
+    cutUnder(level);
     const face = createCardFace(scene, cardFace(catalogue, raiser.name.card), NO_REFUSAL, {
       names: {
         over: (name) => {
@@ -128,7 +140,9 @@ export function createSmallCards(
       .setInteractive({
         hitArea: new Phaser.Geom.Rectangle(-half, -CARD_HEIGHT, CARD_WIDTH, CARD_HEIGHT),
         hitAreaCallback: Phaser.Geom.Rectangle.Contains,
+        cursor: 'pointer',
       });
+    onClick(face.root, () => inspect(raiser.name.card), 'right');
     onHover(
       face.root,
       () => {
@@ -174,7 +188,7 @@ export function createSmallCards(
     }
     leaving ??= scene.time.delayedCall(HANDOVER_MS, () => {
       leaving = undefined;
-      cut(kept());
+      cutUnder(kept());
       settle();
     });
   };
