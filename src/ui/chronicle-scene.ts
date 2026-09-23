@@ -24,6 +24,7 @@ import { EASE, ended, stopAllMotion, stopMotion } from './card-motion';
 import { resetConsole } from './debug-console';
 import {
   addText,
+  answersPress,
   COVERED,
   DESIGN_WIDTH,
   holdDesignSpace,
@@ -35,7 +36,6 @@ import {
   stopsThePointer,
   stratumOf,
   UI_FONT,
-  UNCOVERED,
 } from './design-space';
 import { createHand } from './hand';
 import { cardsOf, createInfoPanel } from './infopanel';
@@ -366,21 +366,16 @@ export class ChronicleScene extends Phaser.Scene implements OpensChronicles {
     let away = false;
 
     /**
-     * The screen away under either scrim and back when the last of them falls: every hover on it
-     * ends, and the press it holds is let go of after the pointer event that raised the scrim —
-     * Phaser's dispatch is synchronous, and a release inside it walks the plugin's lists mid-walk.
+     * The screen away under either scrim and back when the last of them falls. The press it holds is
+     * let go of after the pointer event that raised the scrim: Phaser's dispatch is synchronous, and
+     * a release inside it walks the plugin's lists mid-walk.
      */
     const covering = (): void => {
       const under = covered || underMenu;
       if (under === away) return;
       away = under;
-      if (!under) {
-        this.input.emit(UNCOVERED);
-        map.input.emit(UNCOVERED);
-        return;
-      }
+      if (!under) return;
       this.input.emit(COVERED);
-      map.input.emit(COVERED);
       queueMicrotask(() => letGoOfPress(this.game));
     };
 
@@ -572,7 +567,7 @@ export class ChronicleScene extends Phaser.Scene implements OpensChronicles {
       underMenu = under;
       covering();
       // The overlay's own scrim is no cover to the overlay: whatever it raises wipes what stood.
-      overlayOf(this).input.emit(under ? COVERED : UNCOVERED);
+      if (under) overlayOf(this).input.emit(COVERED);
       // The menu takes every key it stands under and offers none of them on, so a pan key held as
       // its window rises would pan on for ever; the overlay lets the two through and freezes nothing.
       view.live(!under);
@@ -591,7 +586,7 @@ export class ChronicleScene extends Phaser.Scene implements OpensChronicles {
   }
 
   private addEndTurn(on: Stratum, endTurn: () => void): Part & { live(on: boolean): void } {
-    const button = this.add.rectangle(0, 0, 1, 1, LOOK.accent).setName('end-turn');
+    const button = answersPress(this.add.rectangle(0, 0, 1, 1, LOOK.accent).setName('end-turn'));
     const label = addText(this, 0, 0, '', LABEL_STYLE)
       .setOrigin(0.5, 0.5)
       .setName('end-turn-label');
@@ -634,13 +629,8 @@ export class ChronicleScene extends Phaser.Scene implements OpensChronicles {
     let wanted = true;
     let standing = false;
     const interact = (): void => {
-      if (wanted && standing) {
-        button.setInteractive({ useHandCursor: true });
-        hover.resume();
-      } else {
-        button.disableInteractive();
-        hover.end();
-      }
+      if (wanted && standing) button.setInteractive();
+      else button.disableInteractive();
     };
 
     /** The label a roll is carrying off the button; a render owns it and takes it down. */

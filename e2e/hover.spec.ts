@@ -1,6 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
 import { text } from '../src/ui/text';
 import {
+  besideTiles,
   budget,
   chronicleOf,
   cursorOverCanvas,
@@ -61,6 +62,7 @@ test('a tooltip standing over a resource goes down when the pointer leaves the c
 
   await page.mouse.move(food.x, food.y);
   await expect.poll(() => tooltipUp(page, 'tooltip-ui')).toBe(true);
+  expect(await cursorOverCanvas(page)).toBe(HAND);
 
   await page.mouse.move(bare.x, bare.y, { steps: 5 });
   await expect.poll(() => tooltipUp(page, 'tooltip-ui')).toBe(false);
@@ -105,8 +107,8 @@ test('the end-turn button reads End turn under the pointer the last turn ended a
   expect(await cursorOverCanvas(page)).toBe(HAND);
 
   const { turn } = await chronicleOf(page);
-  const food = await onScreen(page, 'reading-food');
-  await page.mouse.move(food.x, food.y);
+  const beside = await besideTiles(page);
+  await page.mouse.move(beside.x, beside.y);
   await expect.poll(() => endTurnLabel(page)).toBe(text('button.turn', { turn }));
   expect(await cursorOverCanvas(page)).not.toBe(HAND);
 
@@ -132,8 +134,8 @@ test('the end-turn button reads End turn when the pointer comes back straight on
   await expect.poll(() => endTurnLabel(page)).toBe(text('button.end-turn'));
   expect(await cursorOverCanvas(page)).toBe(HAND);
 
-  const food = await onScreen(page, 'reading-food');
-  await page.mouse.move(food.x, food.y);
+  const beside = await besideTiles(page);
+  await page.mouse.move(beside.x, beside.y);
   await expect.poll(() => endTurnLabel(page)).toBe(text('button.turn', { turn }));
   expect(await cursorOverCanvas(page)).not.toBe(HAND);
 
@@ -177,6 +179,33 @@ test('a tooltip standing over a reading goes down when the back key raises the m
   await page.keyboard.press('Escape');
   await expect.poll(() => standing(page, 'menu')).toBe(true);
   expect(await tooltipUp(page, 'tooltip-ui')).toBe(false);
+
+  expect(problems).toEqual([]);
+});
+
+// The pointer never moves after it reaches the button: the menu rising and falling over it is all
+// that happens under it.
+test('the end-turn button reads End turn the moment the menu falls under a pointer resting on it', async ({
+  page,
+}) => {
+  const problems = watch(page);
+
+  await page.setViewportSize(WINDOW);
+  await open(page, 1, 'PH_Deck');
+
+  const { turn } = await chronicleOf(page);
+  const button = await onScreen(page, 'end-turn');
+  await page.mouse.move(button.x - 20 * button.unit, button.y);
+  await expect.poll(() => endTurnLabel(page)).toBe(text('button.end-turn'));
+
+  await page.keyboard.press('Escape');
+  await expect.poll(() => standing(page, 'menu')).toBe(true);
+  await expect.poll(() => endTurnLabel(page)).toBe(text('button.turn', { turn }));
+
+  await page.keyboard.press('Escape');
+  await expect.poll(() => standing(page, 'menu')).toBe(false);
+  await expect.poll(() => endTurnLabel(page)).toBe(text('button.end-turn'));
+  expect(await cursorOverCanvas(page)).toBe(HAND);
 
   expect(problems).toEqual([]);
 });

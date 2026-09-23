@@ -245,9 +245,6 @@ export function holdDesignSpace(scene: Phaser.Scene, camera: Phaser.Cameras.Scen
   followFactor(scene);
 }
 
-/** A move a scene above kept from this one, said of its input plugin: the pointer is off it. */
-const WITHHELD = 'withheld';
-
 /** Which moves landing on an interactive object of a scene it keeps from the scenes beneath. */
 type Moves = 'every' | 'no button held';
 
@@ -260,24 +257,15 @@ export function stopsThePointer(scene: Phaser.Scene, moves: () => Moves): void {
   const stop = (): void => {
     scene.input.stopPropagation();
   };
-  // The scenes beneath never run their over and out pass for a move withheld from them, so they
-  // are told, or a hover there outlives the pointer that left it (docs/PHASER.md).
-  const withhold = (): void => {
-    stop();
-    for (const beneath of scene.game.scene.getScenes(true)) {
-      if (beneath === scene) return;
-      beneath.input.emit(WITHHELD);
-    }
-  };
   scene.input.on('gameobjectdown', stop);
   scene.input.on('gameobjectwheel', stop);
   scene.input.on('gameobjectmove', (pointer: Phaser.Input.Pointer) => {
     switch (moves()) {
       case 'every':
-        withhold();
+        stop();
         return;
       case 'no button held':
-        if (pointer.buttons === 0) withhold();
+        if (pointer.buttons === 0) stop();
         return;
     }
   });
@@ -342,129 +330,81 @@ export function onClick(
   });
 }
 
-// Phaser's own `gameout` is the canvas's, said by the input manager; these two are the scene's own,
-// said of its input plugin, and nothing inside Phaser listens to them.
-/** A scrim risen over a scene, and the last of them fallen: the pointer leaving the game, and back. */
+/** A scrim risen over a scene, said of its input plugin; nothing inside Phaser listens to it. */
 export const COVERED = 'covered';
-export const UNCOVERED = 'uncovered';
+
+type Hovering = { hovered: boolean; readonly enter: () => void; readonly leave: () => void };
+
+const hovers = new Map<Phaser.GameObjects.GameObject, Hovering[]>();
+const answering = new WeakSet<Phaser.GameObjects.GameObject>();
+
+/** The object marked as answering a press: the pointer on it is the hand. */
+export function answersPress<T extends Phaser.GameObjects.GameObject>(object: T): T {
+  answering.add(object);
+  return object;
+}
 
 export type Hover = {
-  /** Whether the pointer is over the object, as far as the hover knows. */
+  /** Whether the pointer is on the object. */
   readonly hovered: boolean;
-  /**
-   * The owner ends the hover it knows is over: Phaser sends no `pointerout` for a disable, and
-   * leaves the object's cursor standing.
-   */
-  end(): void;
-  /**
-   * The owner resumes the hover once it has made the object live: Phaser sends no `pointerover` to
-   * an object that comes live under a resting pointer.
-   */
-  resume(): void;
 };
 
-/**
- * A hover: entered and left with the pointer. Phaser sends no `pointerout` for a leave off the
- * canvas — that reaches the scene's input plugin alone, as `gameout` — and no `pointerover` to an
- * object still on its per-pointer over list.
- */
+/** A hover: entered when the pointer comes to be on the object, left when it stops being. */
 export function onHover(
   target: Phaser.GameObjects.GameObject,
   enter: () => void,
   leave: () => void,
 ): Hover {
-  const input = target.scene.input;
-  let hovered = false;
-  let returning = false;
-  // Counted apart: the pointer can leave the canvas and come back while a scrim still stands, and
-  // one flag for all three would read the screen as live again under it.
-  /** Off the canvas, under a scrim, and under a scene above that withheld the last move. */
-  let offCanvas = false;
-  let covered = false;
-  let withheld = false;
-  const away = (): boolean => offCanvas || covered || withheld;
-  const off = (): void => {
-    if (!hovered) return;
-    hovered = false;
-    leave();
-  };
-
-  const resume = (): void => {
-    if (hovered || returning || away() || target.input?.enabled !== true) return;
-    const pointer = input.activePointer;
-    if (input.sortGameObjects(input.hitTestPointer(pointer), pointer)[0] !== target) return;
-    // Phaser's list has to hold the target too, or it would send no `pointerout` when the pointer
-    // goes, and a `pointerover` again at the next move on it.
-    const over = (input as unknown as { _over: Record<number, Phaser.GameObjects.GameObject[]> })
-      ._over[pointer.id];
-    if (over !== undefined && !over.includes(target)) over.push(target);
-    input.setCursor(target.input);
-    hovered = true;
-    enter();
-  };
-  const end = (): void => {
-    if (hovered && target.input?.cursor) input.resetCursor();
-    off();
-  };
-  const left = (): void => {
-    offCanvas = true;
-    off();
-  };
-  // The pointer keeps the coordinates it left the canvas at, so only a move on the canvas says
-  // where it came back; the browser sends the canvas's `mouseover` ahead of that move.
-  const back = (): void => {
-    offCanvas = false;
-    returning = true;
-  };
-  const hidden = (): void => {
-    covered = true;
-    off();
-  };
-  const shown = (): void => {
-    covered = false;
-    returning = true;
-  };
-  const passed = (): void => {
-    withheld = true;
-    off();
-  };
-  // Phaser's list still holds the target the pointer was withheld over, so no `pointerover` comes
-  // when it moves back onto it; this move runs ahead of the over and out pass.
-  const moved = (): void => {
-    if (!returning && !withheld) return;
-    returning = false;
-    withheld = false;
-    resume();
-  };
-
-  target.on('pointerover', () => {
-    hovered = true;
-    enter();
-  });
-  target.on('pointerout', off);
-  // The scene outlives the target, so these go when the target does.
-  input.on('gameout', left);
-  input.on('gameover', back);
-  input.on(COVERED, hidden);
-  input.on(UNCOVERED, shown);
-  input.on(WITHHELD, passed);
-  input.on('pointermove', moved);
+  const hovering: Hovering = { hovered: false, enter, leave };
+  hovers.set(target, [...(hovers.get(target) ?? []), hovering]);
   target.once('destroy', () => {
-    input.off('gameout', left);
-    input.off('gameover', back);
-    input.off(COVERED, hidden);
-    input.off(UNCOVERED, shown);
-    input.off(WITHHELD, passed);
-    input.off('pointermove', moved);
+    hovers.delete(target);
   });
-
   return {
     get hovered() {
-      return hovered;
+      return hovering.hovered;
     },
-    end,
-    resume,
   };
+}
+
+/** The topmost interactive object under the pointer across the running scenes, if any. */
+function thingUnder(game: Phaser.Game): Phaser.GameObjects.GameObject | undefined {
+  const pointer = game.input.activePointer;
+  // Until its first move the pointer stands at 0,0 with `isOver` already true (docs/PHASER.md).
+  if (!game.input.isOver || pointer.moveTime === 0) return undefined;
+  for (const scene of game.scene.getScenes(true, true)) {
+    const hits = scene.input.hitTestPointer(pointer);
+    if (hits.length > 0) return scene.input.sortGameObjects(hits, pointer)[0];
+  }
+  return undefined;
+}
+
+// Read from the game loop, never from an input handler: a hit test refills the array Phaser's
+// dispatch is walking (docs/PHASER.md).
+/** Every frame, every hover entered or left and the canvas's cursor set by what the pointer is on. */
+export function followPointer(game: Phaser.Game): void {
+  let on: Phaser.GameObjects.GameObject | undefined;
+  let hand = false;
+  game.events.on(Phaser.Core.Events.POST_STEP, () => {
+    const under = thingUnder(game);
+    if (under !== on) {
+      const left = on === undefined ? [] : (hovers.get(on) ?? []);
+      on = under;
+      for (const hovering of left) {
+        if (!hovering.hovered) continue;
+        hovering.hovered = false;
+        hovering.leave();
+      }
+      for (const hovering of under === undefined ? [] : (hovers.get(under) ?? [])) {
+        hovering.hovered = true;
+        hovering.enter();
+      }
+    }
+    const pointing = under !== undefined && answering.has(under);
+    if (pointing === hand) return;
+    hand = pointing;
+    game.canvas.style.cursor = pointing ? 'pointer' : '';
+  });
 }
 
 // Phaser sizes a Text's backing canvas from a box it measures at 1× — sideways from the advance

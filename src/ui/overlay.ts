@@ -26,6 +26,7 @@ import {
 import { EASE, ended, stopMotion } from './card-motion';
 import {
   addText,
+  answersPress,
   BAR_HEIGHT,
   DESIGN_HEIGHT,
   DESIGN_WIDTH,
@@ -441,7 +442,8 @@ export function createOverlay(
     const frame = scene.add
       .zone(DESIGN_WIDTH / 2, top + frameHeight / 2, DESIGN_WIDTH - 2 * MARGIN, frameHeight)
       .setName(`${name}-frame`)
-      .setInteractive({ cursor: 'pointer', draggable: true });
+      .setInteractive({ draggable: true });
+    answersPress(frame);
     carries(frame);
 
     frame.on('pointerdown', () => {

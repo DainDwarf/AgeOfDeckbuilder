@@ -4,7 +4,7 @@ import { deckOf, scheduleOf } from './rules/catalogue';
 import { regionOf } from './rules/map-kinds';
 import { ChronicleScene } from './ui/chronicle-scene';
 import { DebugConsole } from './ui/debug-console';
-import { backingSize, followWindow, releaseOnBlur } from './ui/design-space';
+import { backingSize, followPointer, followWindow, releaseOnBlur } from './ui/design-space';
 import { readMouseKeys } from './ui/keys';
 import { type Choices, firstsOf, LaunchPage } from './ui/launch-page';
 import { css, LOOK } from './ui/look';
@@ -92,6 +92,7 @@ game.events.once(Phaser.Core.Events.READY, () => {
   game.scene.start('ui', choices);
 });
 followWindow(game);
+followPointer(game);
 releaseOnBlur(game);
 readMouseKeys(game);
 

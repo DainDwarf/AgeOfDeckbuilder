@@ -18,6 +18,7 @@ import {
 } from './card-face';
 import { ended, STAGGER, stopMotion, travel, turnOver } from './card-motion';
 import {
+  answersPress,
   DESIGN_WIDTH,
   MARGIN,
   onClick,
@@ -44,6 +45,8 @@ type Slot = {
   readonly home: { x: number; y: number };
   readonly refusal: Refusal;
   readonly playable: boolean;
+  /** Where the pointer is on the card: its outline, and down to where it rests while it is hovered. */
+  readonly hitArea: Phaser.Geom.Rectangle;
   hovered: boolean;
   /** Whether a small card raised off one of its names stands, which keeps it lifted. */
   held: boolean;
@@ -145,6 +148,9 @@ export function createHand(
   const settle = (slot: Slot, duration: number): Promise<void> => {
     stopMotion(scene, slot.face.root);
     (raised(slot) ? on.lifted : on.resting).layer.add(slot.face.root);
+    // Short of its resting place, a card lifted by a hover rises off a pointer holding still near its
+    // bottom edge, is left and falls back onto it, frame after frame.
+    slot.hitArea.height = CARD_HEIGHT + (slot.hovered ? CARD_LIFT : 0);
     if (duration === 0) {
       slot.face.root.setPosition(slot.home.x, restingY(slot));
       return Promise.resolve();
@@ -362,6 +368,7 @@ export function createHand(
         },
         refusal,
         playable: playable(refusal),
+        hitArea: new Phaser.Geom.Rectangle(-CARD_WIDTH / 2, -CARD_HEIGHT, CARD_WIDTH, CARD_HEIGHT),
         hovered: false,
         held: false,
       };
@@ -373,14 +380,8 @@ export function createHand(
         .setRotation(Phaser.Math.DegToRad(off * FAN))
         .setDepth(index)
         .setInteractive({
-          hitArea: new Phaser.Geom.Rectangle(
-            -CARD_WIDTH / 2,
-            -CARD_HEIGHT,
-            CARD_WIDTH,
-            CARD_HEIGHT,
-          ),
+          hitArea: slot.hitArea,
           hitAreaCallback: Phaser.Geom.Rectangle.Contains,
-          cursor: 'pointer',
           draggable: true,
         })
         .on('dragstart', (pointer: Phaser.Input.Pointer) => {
@@ -411,6 +412,7 @@ export function createHand(
           resolve(pointer);
         });
 
+      answersPress(slot.face.root);
       onHover(
         slot.face.root,
         () => {
@@ -420,7 +422,7 @@ export function createHand(
         },
         () => {
           small.over(undefined);
-          if (dragged !== undefined) return;
+          if (dragged !== undefined || !taking) return;
           slot.hovered = false;
           settle(slot, 120);
         },

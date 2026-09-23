@@ -1,6 +1,6 @@
 import type Phaser from 'phaser';
 import { MAP_FRAME } from './band';
-import { addText, onClick, type Stratum, UI_FONT } from './design-space';
+import { addText, answersPress, onClick, type Stratum, UI_FONT } from './design-space';
 import { css, LOOK } from './look';
 
 /** How wide the frame's stroke is; Phaser centres a stroke on its path, hence the half-width inset. */
@@ -70,14 +70,14 @@ export function createStanding(scene: Phaser.Scene, on: Stratum, stood: Stood): 
   label.setPosition(x + width / 2, y + height / 2);
 
   const leave = stood.leave;
-  if (leave !== undefined) onClick(chip, leave);
+  if (leave !== undefined) onClick(answersPress(chip), leave);
 
   return {
     show(on: boolean): void {
       frame.setVisible(on);
       chip.setVisible(on);
       label.setVisible(on);
-      if (on && leave !== undefined) chip.setInteractive({ useHandCursor: true });
+      if (on && leave !== undefined) chip.setInteractive();
       else chip.disableInteractive();
     },
   };

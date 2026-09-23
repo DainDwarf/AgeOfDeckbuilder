@@ -12,7 +12,15 @@ import {
   createEmptySlot,
 } from './card-face';
 import { blockLength, EASE, ended, SHUFFLE, stopMotion, travel } from './card-motion';
-import { addText, DESIGN_WIDTH, MARGIN, onClick, type Stratum, UI_FONT } from './design-space';
+import {
+  addText,
+  answersPress,
+  DESIGN_WIDTH,
+  MARGIN,
+  onClick,
+  type Stratum,
+  UI_FONT,
+} from './design-space';
 import { css, LOOK } from './look';
 import type { PileKind } from './overlay';
 
@@ -209,7 +217,8 @@ function createPile(
   const press = scene.add
     .zone(x, y - CARD_HEIGHT / 2, CARD_WIDTH, CARD_HEIGHT)
     .setName(pile)
-    .setInteractive({ useHandCursor: true });
+    .setInteractive();
+  answersPress(press);
   onClick(press, () => browse(pile));
   on.layer.add([pill, count, press]);
 

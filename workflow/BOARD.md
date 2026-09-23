@@ -6,7 +6,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ---
 
-- **The game owns the cursor** — one reading per frame of what stands topmost under the pointer across the stack of scenes gives every hover its enter and leave and the canvas its cursor, in place of Phaser's over, out and cursor writes and every patch on them: no object carries Phaser's `cursor`, nothing reads or writes Phaser's over list, `onHover` keeps no end, resume, covered, withheld or off-canvas path, the small card's cut hit-tests nothing, `docs/INTERFACE.md` states where the hand shows and that a scrim falling hovers at once, and `e2e/hover.spec.ts` proves the end-turn button reads End turn the moment the menu falls under a pointer resting on it. Doc-impact: `docs/INTERFACE.md`, `docs/PHASER.md`. [board/the-game-owns-the-cursor.md](board/the-game-owns-the-cursor.md)
 - **References beyond cards** — a name in a rules entry resolves to more than a card: an improvement, a feature, anything with a row in the info panel, shown small as that row.
 - **Card kinds explain themselves** — every card kind's label, settle, unit, building, instant, hazard, event and capstone, gets a tooltip or reference stating the kind's own rules, so a card's rules entry stops repeating what its kind already means.
 - **Hunger is forged by its event** — the hazard's amount is fixed on the card and shown on its face; it is the event that forges the card that grows with the turns, forging stronger Hungers on later turns.

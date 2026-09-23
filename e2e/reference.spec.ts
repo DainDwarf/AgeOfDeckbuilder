@@ -40,6 +40,15 @@ test('a card named on a card raises it small at a rest and shows it large at a r
   await page.mouse.move(name.x, name.y);
   await expect.poll(() => cardOnFace(page, 'small-card-0')).toBe('PH_Hunger');
 
+  const menu = await onScreen(page, 'menu-button');
+  await page.mouse.move(menu.x, menu.y);
+  await page.waitForTimeout(PAST_HANDOVER);
+  expect(await standing(page, 'small-card-0')).toBe(false);
+  expect(await cursorOverCanvas(page)).toBe(HAND);
+
+  await page.mouse.move(name.x, name.y);
+  await expect.poll(() => cardOnFace(page, 'small-card-0')).toBe('PH_Hunger');
+
   const small = await onScreen(page, 'small-card-0');
   await page.mouse.move(small.x, small.y, { steps: 5 });
   await page.waitForTimeout(PAST_HANDOVER);

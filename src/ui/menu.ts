@@ -11,6 +11,7 @@ import {
 } from './bindings';
 import {
   addText,
+  answersPress,
   BAR_HEIGHT,
   DESIGN_HEIGHT,
   DESIGN_WIDTH,
@@ -99,7 +100,8 @@ function pressable(
   const face = scene.add
     .rectangle(at.x, at.y, at.width, at.height, LOOK.accent)
     .setName(name)
-    .setInteractive({ useHandCursor: true });
+    .setInteractive();
+  answersPress(face);
   onClick(face, pressed);
   const label = addText(scene, at.x, at.y, '', style).setOrigin(0.5).setName(`${name}-label`);
   return { face, label };
@@ -293,7 +295,8 @@ export function createMenuButton(scene: Phaser.Scene, pressed: () => void): void
     .rectangle(x, y, zone.width, MENU_HEIGHT, LOOK.panelFill)
     .setStrokeStyle(1, LOOK.panelEdge)
     .setName('menu-button')
-    .setInteractive({ useHandCursor: true });
+    .setInteractive();
+  answersPress(button);
   // Added after the fill: the display list paints in add order, so a label added first would be hidden.
   menuLabel(scene).setPosition(x, y);
   onClick(button, pressed);

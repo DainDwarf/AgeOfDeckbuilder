@@ -4,6 +4,7 @@ import type { Catalogue } from '../rules/catalogue';
 import { refuse } from '../rules/map-kinds';
 import {
   addText,
+  answersPress,
   DESIGN_HEIGHT,
   DESIGN_WIDTH,
   holdDesignSpace,
@@ -133,7 +134,8 @@ export class LaunchPage extends Phaser.Scene {
             .setStrokeStyle(1, LOOK.panelEdge)
             .setName(`launch-${row}-${option}`)
             .setData('chosen', option === held)
-            .setInteractive({ useHandCursor: true });
+            .setInteractive();
+          answersPress(face);
           if (option === held) face.setFillStyle(LOOK.accent);
           onClick(face, () => choose(row, option));
           return { face, label };
@@ -193,7 +195,8 @@ export class LaunchPage extends Phaser.Scene {
       const button = this.add
         .rectangle(middle, buttonY, width - 2 * PADDING, BUTTON_HEIGHT, LOOK.accent)
         .setName('launch-button')
-        .setInteractive({ useHandCursor: true });
+        .setInteractive();
+      answersPress(button);
       onClick(button, launch);
       const buttonLabel = addText(this, middle, buttonY, text('launch.button'), LABEL_STYLE)
         .setOrigin(0.5)

@@ -8,6 +8,7 @@ import { layOutBar, type Placed } from './bar-layout';
 import { EASE, ended, stopMotion } from './card-motion';
 import {
   addText,
+  answersPress,
   BAR_HEIGHT,
   DESIGN_WIDTH,
   MARGIN,
@@ -98,7 +99,7 @@ export function createResourceBar(
 
   for (const entry of entries) {
     const { key } = entry;
-    onClick(entry.hover, () => {
+    onClick(answersPress(entry.hover), () => {
       if (managesCity(key)) cityMode();
       else toggleYield(key);
     });

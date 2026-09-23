@@ -5,6 +5,7 @@ import { answerOf } from '../rules/schedule';
 import { type CardId, type Chronicle, type Cost, playable, type Refusal } from '../rules/state';
 import {
   addText,
+  answersPress,
   corners,
   DESIGN_HEIGHT,
   hexagon,
@@ -293,9 +294,9 @@ export function createCardFace(
     presses === undefined
       ? []
       : names.map((name) => {
-          const zone = scene.add
-            .zone(name.x, name.y, name.width, name.height)
-            .setInteractive({ cursor: 'pointer' });
+          const zone = answersPress(
+            scene.add.zone(name.x, name.y, name.width, name.height).setInteractive(),
+          );
           onHover(
             zone,
             () => presses.over(name),
