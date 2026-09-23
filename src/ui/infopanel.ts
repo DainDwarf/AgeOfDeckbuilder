@@ -39,12 +39,12 @@ type Row =
   | { readonly kind: 'terrain'; readonly terrain: Terrain }
   | { readonly kind: 'river'; readonly terrain: Terrain };
 
-/** What a unit card reads: a unit standing, or a unit kind read as a unit fresh of it. */
-type Standing = Pick<Unit, 'stats' | 'faction' | 'movePoints' | 'action'>;
+/** What a unit card reads: a unit on the map, or a unit kind read as a unit fresh of it. */
+type UnitReading = Pick<Unit, 'stats' | 'faction' | 'movePoints' | 'action'>;
 
 /** One card an inspection steps through, headed by the first of the rows it holds. */
 export type Card =
-  | { readonly kind: 'unit'; readonly unit: Standing }
+  | { readonly kind: 'unit'; readonly unit: UnitReading }
   | { readonly kind: 'building'; readonly rows: readonly Row[] }
   | {
       readonly kind: 'terrain';
@@ -181,7 +181,7 @@ function inMovePoints(hundredths: number): string {
  * What a stat's row reads: what the unit has left over its own number, where it has two. Full health
  * is its kind's, read off the catalogue.
  */
-function readingOf(catalogue: Catalogue, unit: Standing, stat: (typeof STATS)[number]): string {
+function readingOf(catalogue: Catalogue, unit: UnitReading, stat: (typeof STATS)[number]): string {
   switch (stat) {
     case 'health':
       return `${unit.stats.health} / ${unitKind(catalogue, unit.stats.type).health}`;
