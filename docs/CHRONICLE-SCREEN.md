@@ -16,7 +16,7 @@ The chronicle screen has two modes. Out of city mode a left click on a tile sele
 
 **What the pointer rests on reads as under it, however the pointer came to be there.** The end-turn button reads `End turn` whenever the pointer stands on it while it is live, `End settle phase` on the settle phase: the next turn rolls in on the button during the end of turn's play-out, and the moment the play-out ends under a pointer that never moved, the button reads `End turn` again, so a turn ends where the last one did. A pointer that left the game over a thing and comes back straight onto it finds that thing as a pointer moved onto it does.
 
-**A tile's marks stand in three places.** Its feature and its improvements stand in one row above its middle, the feature first and then the improvements in the order they were improved, the row centred whatever it holds; its building stands in the middle, and the unit on the tile over it; the mark of an assigned tile stands below the middle.
+**A tile's marks stand in three places.** Its feature and its improvements stand in one row above its middle, the feature first and then the improvements in the order they were placed, the row centred whatever it holds; its building stands in the middle, and the unit on the tile over it; the mark of an assigned tile stands below the middle.
 
 ### The veils and the infopanel
 

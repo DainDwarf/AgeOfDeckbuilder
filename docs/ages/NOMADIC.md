@@ -23,7 +23,7 @@ A terrain gives one point of one resource, a feature gives the second, and the r
 | ocean    | nothing                    | —            | —          |
 | mountain | nothing; beyond every unit | —            | —          |
 
-Forest and hills give the same at income and differ in what they cost to walk, what they see over and which feature they carry: a new player learns that hills are the lookout and forest the slow ground. Forest is raised, hills higher and mountain highest, and the rest lies flat; coast, ocean and mountain are crossed by nothing. Features are dealt rarely enough to be sought after; their shares are tuning. Forest is scattered over the land and also gathers in woodlands, biomes of their own that are forest nearly throughout.
+Forest and hills give the same at income and cost the same to walk, and differ in what they see over and which feature they carry: a new player learns that hills are the lookout. Forest is raised, hills higher and mountain highest, and the rest lies flat; coast, ocean and mountain are crossed by nothing. Features are dealt rarely enough to be sought after; their shares are tuning. Forest is scattered over the land and also gathers in woodlands, biomes of their own that are forest nearly throughout.
 
 ## The units ✅
 

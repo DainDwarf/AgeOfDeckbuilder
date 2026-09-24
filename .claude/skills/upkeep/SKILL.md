@@ -55,4 +55,4 @@ A workaround for a dependency's bug carries a trap comment citing the upstream i
 
 ## Report
 
-One block per surface: what was checked, what was found, what was changed, what went to the board. "Nothing found" is a valid and common result on the first three and the fifth; the memory lint usually finds something.
+One block per surface, one turn each: the block says what was checked, what was found, what was changed, and what carries a call of the user's, each call with its recommendation, and the turn ends on it; the user answers, the answers are acted on and committed, and the next block follows. The triage batches come after the last block the same way. Never hand back two blocks, or a block and a batch, in one turn. "Nothing found" is a valid and common result on the first three and the fifth; the memory lint usually finds something.

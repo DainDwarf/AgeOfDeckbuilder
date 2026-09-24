@@ -6,4 +6,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ---
 
+- **Remove the stand-in content from the throwaway launch page** — the launch page offers the stand-in catalogue among its content choices, and a player should not meet it.
+- **Restructure the design pages' shape** — CHRONICLE.md's "Enemies and camps" and "The capstone" read as one paragraph each, INTERFACE.md's names-and-small-cards paragraph is a section of its own, MAP.md's region has no heading and the rivers' deal sits apart from "The river", and DESIGN.md holds everything under one level-2 heading.
 - **Close v0.0.4** — the changelog entry and the tag.

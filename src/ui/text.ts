@@ -22,7 +22,7 @@ const TEXT = {
   'reading.over': '{count}/{over}',
   'threshold.culture': '−{culture}',
   'tooltip.food': 'Grows your population if you reach the threshold', // glossary exception: reach
-  'tooltip.production': 'Build, improve, and terraform', // glossary exception: build
+  'tooltip.production': 'Build, place, and terraform',
   'tooltip.military': 'Defend and attack',
   'tooltip.money': 'Trade it for other goods',
   'tooltip.science': 'Manipulate your cards',
@@ -107,8 +107,8 @@ const TEXT = {
   'rules.PH_Farm': 'Build a [building:PH_Farm]',
   'rules.PH_March': "Refresh a unit's move points",
   'rules.PH_Harvest': 'Gain 2 food',
-  'rules.PH_Mine': 'Improve [terrain:hills] with a [improvement:PH_Mine]',
-  'rules.PH_Road': 'Improve a tile with a [improvement:PH_Road]',
+  'rules.PH_Mine': 'Place a [improvement:PH_Mine] on [terrain:hills]',
+  'rules.PH_Road': 'Place a [improvement:PH_Road] on a tile',
   'rules.PH_Urbanisation': 'Terraform a [terrain:plain] into [terrain:urban]',
   'rules.PH_Recall': 'Recall a card from the discard pile',
   'rules.PH_Spoils': 'Single use.\n10[food] 10[production] 10[military] 10[money] 10[science]',

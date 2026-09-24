@@ -34,12 +34,13 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **unit** | A mobile piece on the map, the player's or not. | army, troop, piece, token |
 | **faction** | Who a unit acts for: the player, the enemies, or — when they exist — the neutrals. | side, team, owner, allegiance |
 | **building** | A standing structure on a tile; one slot per tile. | structure |
-| **place** | To put a thing onto a tile: a unit, a building, a camp. | deploy, drop, spawn (for a thing on a tile) |
+| **place** | To put a thing onto a tile: a unit, a building, an improvement, a camp. | deploy, drop, spawn (for a thing on a tile), improve, lay, install |
 | **build** | To put a building on a tile; what a building card does. | raise, construct, erect |
 | **neutral** | A non-player unit that does not attack. | NPC, city-state, friendly |
 | **enemy** | A non-player unit that attacks. | barbarian, raider, hostile, invader, foe |
 | **killed** | What befalls a unit or a population: the unit leaves the map, the population the city. | destroyed, slain, dead, lost |
 | **event** | One entry of the age's schedule: a problem the chronicle throws at the city, dealt with its answers. | disaster, threat, crisis, encounter |
+| **answer** | One of the cards an event deals: a way out of its problem with a cost of its own, of which the player chooses one. | option, response, reply, solution |
 | **capstone** | The age's final trial; passing it is victory. | boss, finale, objective |
 | **schedule** | An age's events and capstone, with their odds and tempo; what a timeline is rolled from. | calendar |
 | **timeline** | One chronicle's roll of its schedule: the turns its events and its capstone land on. | forecast, agenda, itinerary |
@@ -76,7 +77,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **instant** | A card with an immediate effect: on the city, on a tile, or one thing with one unit. | action (for a card), spell, effect card |
 | **hazard** | A card no deck holds: an event brings it into a chronicle, and it strikes while held. | penalty, curse, drawback, upkeep, affliction, bane |
 | **strike** | What a hazard does to the chronicle at the end of a turn it is still in the hand. | bite, trigger, proc, go off |
-| **worker** | A non-fighting unit that cards are played through to change tiles: build, terraform, improve. | builder, engineer, labourer |
+| **worker** | A non-fighting unit that cards are played through to change tiles: build, terraform, place an improvement. | builder, engineer, labourer |
 | **population** | The city's inhabitants: assigned to tiles for income, turned into units by unit cards. | inhabitants, citizens, workforce, pops |
 | **assign** | To put one population on a tile inside the border. | allocate |
 | **unassign** | To take one population off the tile it stands on; the reverse of assign. | remove, free up, release |
@@ -89,10 +90,9 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **terraform** | To change a tile's terrain into another. | transform, convert, reshape |
 | **feature** | An extra on a tile, dealt by the generator or by an event's answer: a fertile plain. | bonus |
 | **river** | A watercourse the generator runs along the edges between tiles, from a mountain range to the sea. | stream, creek, waterway |
-| **improvement** | A layer a tile gains by being improved; unlike a building, a tile holds any number. | — |
+| **improvement** | A layer a worker places on a tile; unlike a building, a tile holds any number. | — |
 | **road** | An improvement that names its tile's movement cost outright. | path, track, highway, trail |
 | **bridge** | A river edge with a road on both banks, crossed as if no river ran there. | ford, viaduct, span |
-| **improve** | To put an improvement on a tile where a worker stands; what an improvement instant does. | lay, build, install |
 | **yield** | What a tile's layers and the river running along it give at income, resource by resource. | output, produce, harvest |
 | **claim** | To take a charted tile adjacent to one the city holds into the border, for culture. | buy, purchase, expand, annex |
 | **culture** | The resource that claims tiles. | — |

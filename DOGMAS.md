@@ -98,7 +98,7 @@ How this code base is shaped, and what a change never deviates from:
 
 ## Docs
 
-- **Three lifespans, three places**: code (permanent, how); the standing pages — `docs/`, what is and what was decided, and this page, how the project is built; `workflow/` (ephemeral: the board and its task files, the ideas, the roadmap). The root holds the repository's own files and nothing else: the README, `CLAUDE.md`, this page, the changelog. Anything without a lifespan is noise — delete it.
+- **Three kinds of documentation and the code, four lifespans**: the root holds the repository's own files and nothing else — the README, `CLAUDE.md`, this page, how the project is built, the changelog; `docs/` is the standing design, what is and what was decided; `workflow/` is ephemeral, the board and its task files, the ideas, the roadmap; code is permanent, how. Anything without a lifespan is noise — delete it.
 - **`docs/` states what is.** No journals, no ADRs, no reasoning journeys. A standing decision gets one line of _why_, and only when the rejected alternative is attractive.
 - **Pivots are edits.** An overturned decision changes `docs/` in the same unit of work; the old version lives in git only.
 - **Each doc owns one altitude.** The board carries a line and a pointer; the task file carries the contract; the `docs/` page carries the settled fact. Nothing is stated twice.
