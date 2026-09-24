@@ -1,6 +1,6 @@
 # Interface
 
-> How any screen is worked: the menu and what it lists, the keys and how they are rebound, the launch page, a failed boot, the debug console, the three presses, and what stands over what. A design page, under [`DESIGN.md`](DESIGN.md)'s legend. What a press does to a thing only a chronicle has is [`CHRONICLE-SCREEN.md`](CHRONICLE-SCREEN.md)'s.
+> How any screen is worked: the menu and what it lists, the keys and how they are rebound, the launch page, a failed boot, the debug console, the three presses, a card's names and its label, and what stands over what. A design page, under [`DESIGN.md`](DESIGN.md)'s legend. What a press does to a thing only a chronicle has is [`CHRONICLE-SCREEN.md`](CHRONICLE-SCREEN.md)'s.
 
 ## The menu ✅
 
@@ -32,10 +32,6 @@ Three presses work every screen: the **left click** selects, the **right click**
 
 **The right click inspects and never selects.** It inspects the thing under it — a tile in the infopanel, a card shown large — and pressed again on the same thing steps its cards on; a card has but the one, so a second right click on a card shown large does nothing, a name on it excepted, and neither does a left click on it: a press beside it, or the back key, takes it down. A press beside the things drops the inspection and leaves the selection standing. It does this in every state the screen can be in, so nothing half done has to be undone to inspect a thing.
 
-**A thing named in a card's text stands in brackets** — a card, a terrain, a feature, an improvement, a building or a unit kind — and answers two presses wherever the card it stands on answers any. The pointer resting on it shows the named thing small above it, centred on the name, as a card lies in the hand, after the rest a tooltip waits for: a card as its face, anything else as the card the infopanel reads it by; a card named is shown as its content makes it, at the counters it starts with; on an answer's card, at the counters the answer's reading hands under the names the card declares — the card as the answer will lay it. A small card is a card face, so a name on it shows its own small card the same way, and a small card stays up while the pointer is on it, on the name that raised it or on a small card raised from it, and goes down with those raised from it once the pointer is on none of them. A right click on a name shows the named thing large; while a card stands large, a right click on a name — on that card, or on a small card raised from it — stands the named thing over it, on top of the stack, a new copy whether or not it stands in it already. Each card beneath the newest peeks out by a thin band, up and to the left, and the stack stands centred as the one card does, so a deep one covers the resource bar; a stack holds twelve, and once twelve stand a right click on a name adds nothing, the rest on it still raising its small card. Only the newest card's names answer a press or a rest. A left click on a name is the card's own, and a small card answers the right click as the name that raised it does, and no other press.
-
-**A card's kind label answers the rest.** The pointer resting on the label at a card face's foot raises the one bubble of the surface the face stands on, beside the label, reading in one line what the kind is; the pointer leaving the label takes it down. Every card face answers so but a pile's top card — in the hand, in a browse, in the aim window, on the deal and capstone windows, shown large and small alike — and the label answers no press of its own: a click on it is the card's.
-
 **The inspection key inspects the selection**, and moves the inspection there when a right click had put it elsewhere on the screen. With no selection, or while a card stands large, it does nothing; under a window it inspects the window's own selection and never the screen's.
 
 **A window that offers things to select keeps a selection of its own**, which dies with the window; the screen's selection waits under it.
@@ -43,6 +39,14 @@ Three presses work every screen: the **left click** selects, the **right click**
 The **back key** walks these back in this order: the thing shown large, the newest of them where several stand, then a window's own selection and then the window, then the inspection, then the selection.
 
 Two verbs cover it all. **Select** is the tile the map rings, the card lifted out of the hand, or the card ringed in a window; **inspect** is the tile in the infopanel and the card shown large. "Zoom" stays the map's word.
+
+## A card's names and its label ✅
+
+**A thing named in a card's text stands in brackets** — a card, a terrain, a feature, an improvement, a building or a unit kind — and answers two presses wherever the card it stands on answers any. The pointer resting on it shows the named thing small above it, centred on the name, as a card lies in the hand, after the rest a tooltip waits for: a card as its face, anything else as the card the infopanel reads it by; a card named is shown as its content makes it, at the counters it starts with; on an answer's card, at the counters the answer's reading hands under the names the card declares — the card as the answer will lay it. A small card is a card face, so a name on it shows its own small card the same way, and a small card stays up while the pointer is on it, on the name that raised it or on a small card raised from it, and goes down with those raised from it once the pointer is on none of them.
+
+**A right click on a name shows the named thing large**; while a card stands large, a right click on a name — on that card, or on a small card raised from it — stands the named thing over it, on top of the stack, a new copy whether or not it stands in it already. Each card beneath the newest peeks out by a thin band, up and to the left, and the stack stands centred as the one card does, so a deep one covers the resource bar; a stack holds twelve, and once twelve stand a right click on a name adds nothing, the rest on it still raising its small card. Only the newest card's names answer a press or a rest. A left click on a name is the card's own, and a small card answers the right click as the name that raised it does, and no other press.
+
+**A card's kind label answers the rest.** The pointer resting on the label at a card face's foot raises the one bubble of the surface the face stands on, beside the label, reading in one line what the kind is; the pointer leaving the label takes it down. Every card face answers so but a pile's top card — in the hand, in a browse, in the aim window, on the deal and capstone windows, shown large and small alike — and the label answers no press of its own: a click on it is the card's.
 
 ## What stands over what ✅
 

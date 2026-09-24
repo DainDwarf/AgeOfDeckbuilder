@@ -6,11 +6,11 @@ The game in broad strokes: what it is, what it deliberately is not, and how a ch
 
 The five are **the design pages**, and they are the **spec**.
 
-## Pitch
+## Pitch ✅
 
 A single-player **roguelite deckbuilder** that retraces humanity's history through the ages. The successor to _Age of Deckbuilder: Prelude_; what changed is the chronicle — a card game whose pressure was one fixed goal became a city on a map whose pressure is the age it lives through.
 
-### The chronicle — one city, one age ✅
+## The chronicle — one city, one age ✅
 
 A **chronicle** is one city's story, told once — the roguelite's unit of play, named with the fiction's own word.
 
@@ -24,7 +24,7 @@ A **chronicle** is one city's story, told once — the roguelite's unit of play,
 - A chronicle lasts **30–60 minutes**, shorter in the earlier ages where the verbs are fewer. 🔧
 - **The map is the draft.** 🔧 What the map holds can yield a card that joins the deck for this chronicle only: a camp's capture deals its rewards. The deck built in the meta is who you are; the map is what you found.
 
-### Launching a chronicle ✅
+## Launching a chronicle ✅
 
 Four choices, each with one job:
 
@@ -35,14 +35,14 @@ Four choices, each with one job:
 
 The four choices lead to the settle phase: the chronicle opens unsettled, and its first act is the settle.
 
-### The meta — humanity's history ✅
+## The meta — humanity's history ✅
 
 Two axes of progression:
 
 - **Depth is achievements.** A goal reached during a chronicle unlocks a **technology**: new cards, better buildings, better units. A victory in an age unlocks the next age.
 - **Breadth is influence**, the meta-currency every chronicle pays, victory or defeat, scaled by how the city fared. It buys copies of owned cards, modifications to owned cards, and faster starts.
 
-### Scope ✅
+## Scope ✅
 
 - **Single-player, turn-based, untimed, offline.** No account, no server, no multiplayer — ever.
 - **Playable in the browser.** First contact is a tab on the game's page; the same code also ships as a desktop application. An unknown game gets tried in a tab far more often than it gets downloaded.
