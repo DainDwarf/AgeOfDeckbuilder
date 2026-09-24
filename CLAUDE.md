@@ -27,7 +27,7 @@ Code is the fourth lifespan, permanent, the source of truth for _how_. Nothing d
 
 - **Main session** (this one): design discussion with the user, intake, orchestration. Does not implement a board line inline when it has design latitude — it pitches, then delegates.
 - **`implementer`** (Opus): executes an agreed plan; reports deviations instead of coding them.
-- **`egress-reviewer`** (Opus, fresh context): reviews diff + docs + board line, nothing else.
+- **`egress-reviewer`** (Opus, fresh context): reviews diff + docs + board line + the implementer's Verification section, nothing else, and runs no spec.
 - **`ui-check`** (Sonnet): drives the running app with Playwright and reports what is broken on screen; spawned by the `visual-check` skill, never from this session.
 
 ## Non-negotiables
@@ -35,7 +35,7 @@ Code is the fourth lifespan, permanent, the source of truth for _how_. Nothing d
 Full rules in [`DOGMAS.md`](DOGMAS.md). The ones no session may miss:
 
 1. **Pitch before writing.** Orient freely; surface the plan before the first file changes.
-2. **One line per turn.** Ship a step, commit it, stop so the user can inspect. Claude owns commit granularity; a shipped line is pushed before its hand-back, any other push stays on request.
+2. **One line per turn.** Ship a step, commit it, stop so the user can inspect. Claude owns commit granularity; a shipped line is pushed before its hand-back; any other commit waits for the user's say or rides the next ship.
 3. **Design is the spec.** Code that disagrees is wrong. A gap is reported as a deviation, never coded in silently, and a design page is never edited down to match an implementation.
 4. **Report corner cases.** Anything the agreed design did not foresee goes in the report.
 5. **One verb per concept.** Gameplay terms come from `GLOSSARY.md`; no synonyms, ever.
@@ -58,7 +58,7 @@ Full rules in [`DOGMAS.md`](DOGMAS.md). The ones no session may miss:
 | `npm run dev` | Vite dev server. Background only; the `run` skill reads the URL from its output. |
 | `npm run check` | TypeScript, no emit. |
 | `npm test` | Vitest — the rules tests. |
-| `npm run e2e` | The whole Playwright/Chromium suite, starting the dev server itself; this is the CI check on every push, and a hook refuses it from a session. A session runs one spec, the one its line touches or names: `npx playwright test e2e/<spec>.spec.ts`. |
+| `npm run e2e` | The whole Playwright/Chromium suite, starting the dev server itself; this is the CI check on every push, and a hook refuses it from a session. A session runs one spec at a time, `npx playwright test e2e/<spec>.spec.ts`: the one proof spec the dossier names, and any spec that answers a question the implementer has. |
 | `npm run lint` | Biome on the code, Prettier on the markdown: lint and format check. |
 | `npm run fmt` | Fixes what `npm run lint` checks: Biome writes the code, Prettier unwraps the markdown. |
 | `npm run build` | Vite build into `dist/`. |

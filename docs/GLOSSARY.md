@@ -43,7 +43,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **capstone** | The age's final trial; passing it is victory. | boss, finale, objective |
 | **schedule** | An age's events and capstone, with their odds and tempo; what a timeline is rolled from. | calendar |
 | **timeline** | One chronicle's roll of its schedule: the turns its events and its capstone land on. | forecast, agenda, itinerary |
-| **camp** | A site enemies enter the map from. | lair, nest, spawn point, spawner |
+| **camp** | Where enemies enter the map from. | lair, nest, spawn point, spawner |
 | **victory** | The end of a chronicle by passing the capstone; the age is won by it, and win is the verb. | success, triumph |
 | **defeat** | The end of a chronicle by the city's fall. | collapse, game over, loss, death |
 | **border** | The edge of the tiles the city holds; pushed out by culture. | frontier, territory |
@@ -108,6 +108,6 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **refresh** | To bring a unit's spendable stat — move points, action — back to its full value; health is healed, never refreshed. | restore, replenish, reset, recharge, recover, regain |
 | **military** | The resource that pays for military units, instants and fortifications. | — |
 | **occupy** | What an enemy does to a tile it stands on: the tile yields nothing and is not claimable. | blockade |
-| **pillage** | What some enemies do to the tile they stand on: its building or improvement is destroyed. | raze, loot |
-| **capture** | To take a site, the city or a camp, by standing on its tile. | conquer, seize, sack |
-| **reward** | What capturing a site deals: cards, of which the player chooses one. | gift, prize, bounty |
+| **pillage** | What some enemies do to the tile they stand on: its building or improvement is removed. | raze, loot |
+| **capture** | To take the city or a camp by standing on its tile. | conquer, seize, sack |
+| **reward** | What a capture deals: cards, of which the player chooses one. | gift, prize, bounty |

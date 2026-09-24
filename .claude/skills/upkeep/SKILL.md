@@ -51,7 +51,7 @@ Then triage the leftovers parked in `project-status.md` — open questions, park
 
 ## 5. Upstream traps
 
-A workaround for a dependency's bug carries a trap comment citing the upstream issue (`phaserjs/phaser#7372`). Search `src/` and the config files for comments citing an issue in another repository, and check each with `gh issue view`. An issue still open: nothing. An issue closed with its fix in a released version: propose, through `/todo` on the user's word, a board line to bump the dependency and disarm the trap. Closed with no fix, or fixed only on an unreleased branch: say so and leave the trap standing.
+A workaround for a dependency's bug carries a trap comment citing the upstream issue (`phaserjs/phaser#7372`). Search `src/`, the config files and `docs/PHASER.md` (a workaround under `src/` may cite the page and the page the issue) for comments citing an issue in another repository, and check each with `gh issue view`. An issue still open: nothing. An issue closed with its fix in a released version: propose, through `/todo` on the user's word, a board line to bump the dependency and disarm the trap. Closed with no fix, or fixed only on an unreleased branch: say so and leave the trap standing.
 
 ## Report
 

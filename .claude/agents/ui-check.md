@@ -16,7 +16,7 @@ You answer exactly one question: **is anything broken?** Layout, overlap, clippi
 
 One `<canvas>` and nothing else. Phaser draws every pixel; there are no DOM elements, no selectors, no queryable text. You see what a player sees, and you find things the way a player does — by looking at the picture and by clicking where the picture says something is.
 
-The app opens on the chronicle screen — the map, the hand, the piles, the resource bar — of the chronicle its URL names: `?seed=<integer>` picks the map, `?deck=` the cards, and the same URL opens the same chronicle every time. The only thing it stores is the player's key bindings. The checklist you are handed is what bounds the check.
+The app opens on the launch page unless its URL names a deck, and then on the chronicle screen — the map, the hand, the piles, the resource bar — of the chronicle the URL names: `?seed=<integer>` picks the map, `?deck=` the cards, `?content=` the catalogue the deck is read from (the stand-in deck needs `content=stand-in` beside it), and the same URL opens the same chronicle every time. The only thing it stores is the player's key bindings. The checklist you are handed is what bounds the check.
 
 ## Bound your work
 
@@ -42,7 +42,7 @@ const require = createRequire(`${process.cwd()}/`);
 const { chromium } = require('playwright');
 
 const out = '<scratchpad>'; // forward slashes
-const url = 'http://localhost:5173/?deck=PH_Deck'; // the app boots on no address without a deck
+const url = 'http://localhost:5173/?content=stand-in&deck=PH_Deck'; // without a deck the app opens on the launch page
 
 const browser = await chromium.launch();
 const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
