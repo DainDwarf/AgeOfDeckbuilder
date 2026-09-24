@@ -766,9 +766,14 @@ function workedThisTurn(
   return undefined;
 }
 
-/** Waits for the card being aimed to lay its catcher over the map, which a press aims on. */
+/**
+ * Waits for the card being aimed to lay its catcher over the map, which a press aims on, and for a
+ * frame after: Phaser hit-tests a new interactive object only from the next frame, and a press
+ * landing before it is lost with the aim left standing.
+ */
 export async function aimed(page: Page): Promise<void> {
   await page.waitForFunction(() => window.named?.('aim') !== undefined);
+  await rested(page);
 }
 
 /**
