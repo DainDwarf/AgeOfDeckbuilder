@@ -4,7 +4,7 @@ import type { Reference } from './text-run';
 // A `rules.`, `answer-rules.` or `capstone-rules.` entry may mark a glyph `[<resource>]` and a name
 // `[<kind>:<id>]` — a `card`, `terrain`, `feature`, `improvement`, `building`, or a unit kind painted
 // for the faction `player` or `enemy` — which only a card face draws: elsewhere the mark shows.
-/** Every player-facing sentence, one entry each. English is the only language. */
+/** Every player-facing sentence but the lore (`lore.ts`), one entry each. English is the only language. */
 const TEXT = {
   'label.food': 'Food',
   'label.production': 'Production',
@@ -185,8 +185,7 @@ const TEXT = {
   'capstone-rules.PH_Tillage': 'Lands nothing. A farm the city holds passes it.',
   'capstone-name.first-shelter': 'The first shelter',
   'capstone-rules.first-shelter': 'Put [card:shelter] on top of the draw pile',
-  'capstone.title': 'Pass the capstone to win the Nomadic Age',
-  'capstone.lands': 'The capstone lands.',
+  'capstone.title': 'Capstone',
   'aim.tile': 'Play {card} at a tile',
   'aim.unit': 'Play {card} at a unit',
   'aim.discard-pile': 'Play {card} at a card of the discard pile',

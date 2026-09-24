@@ -3,6 +3,7 @@ import { STAND_IN } from '../src/content/stand-in';
 import { deckOf } from '../src/rules/catalogue';
 import { answerCost, answerOf, answerRefusal, offered } from '../src/rules/schedule';
 import { playable } from '../src/rules/state';
+import { eventLore } from '../src/ui/lore';
 import { eventName, text } from '../src/ui/text';
 import {
   besideTheDeal,
@@ -13,6 +14,7 @@ import {
   dealRun,
   enemiesOf,
   launch,
+  loreOf,
   onScreen,
   open,
   refusalLines,
@@ -43,6 +45,7 @@ test('the events phase deals a choice, and the turn plays on from the one taken'
   expect(dealt.turn).toBe(run.due);
   expect(dealt.hand).toEqual([]);
   expect(await titleOf(page, 'deal')).toBe(eventName(deal.event));
+  expect(await loreOf(page, 'deal')).toBe(eventLore(deal.event));
   for (const [at, answer] of answers.entries()) {
     expect(await cardOnFace(page, `deal-card-${at}`)).toBe(answer);
   }
@@ -55,6 +58,7 @@ test('the events phase deals a choice, and the turn plays on from the one taken'
   await page.mouse.click(beside.x, beside.y);
   await expect.poll(() => standing(page, 'inspection')).toBe(false);
   expect(await standing(page, 'deal')).toBe(true);
+  expect(await loreOf(page, 'deal')).toBe(eventLore(deal.event));
 
   await click(page, 'deal-card-0');
   await expect.poll(() => ringed(page, 'deal-card-0')).toBe(true);

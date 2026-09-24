@@ -874,6 +874,17 @@ export function titleOf(page: Page, name: string): Promise<string | undefined> {
   }, `${name}-title`);
 }
 
+/**
+ * What the named window's lore reads — a lore is named after the window it stands in — or nothing
+ * while that window stands down.
+ */
+export function loreOf(page: Page, name: string): Promise<string | undefined> {
+  return page.evaluate((target) => {
+    const lore = window.named?.(target)?.object as Phaser.GameObjects.Text | undefined;
+    return lore?.text;
+  }, `${name}-lore`);
+}
+
 /** What the line over the hand says the card being aimed is played at, or nothing while none stands. */
 export function aimLine(page: Page): Promise<string | undefined> {
   return page.evaluate(() => {

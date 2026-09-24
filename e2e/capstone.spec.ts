@@ -2,12 +2,14 @@ import { expect, test } from '@playwright/test';
 import { STAND_IN, STAND_IN_SCHEDULE } from '../src/content/stand-in';
 import { scheduleOf } from '../src/rules/catalogue';
 import { CENTRE } from '../src/rules/map';
+import { capstoneLore } from '../src/ui/lore';
 import { text } from '../src/ui/text';
 import {
   budget,
   cardOnFace,
   chronicleOf,
   click,
+  loreOf,
   onScreen,
   open,
   openOnCapstone,
@@ -33,6 +35,7 @@ test('the chronicle’s opening announces the capstone, once', async ({ page }) 
 
   await openOnCapstone(page, 1, 'PH_Deck');
   expect(await titleOf(page, 'capstone')).toBe(text('capstone.title'));
+  expect(await loreOf(page, 'capstone')).toBe(capstoneLore(CAPSTONE, 'opening'));
   expect(await cardOnFace(page, 'capstone-card-0')).toBe(CAPSTONE);
 
   const card = await onScreen(page, 'capstone-card-0');
@@ -68,8 +71,10 @@ test('the capstone’s landing holds the end of turn on its window, and the end 
 
   await stoppedTurn(page);
   await expect.poll(() => standing(page, 'capstone')).toBe(true);
-  expect(await titleOf(page, 'capstone')).toBe(text('capstone.lands'));
-  expect(await cardOnFace(page, 'capstone-card-0')).toBe(scheduleOf(STAND_IN, SHORT).capstone.id);
+  const landing = scheduleOf(STAND_IN, SHORT).capstone.id;
+  expect(await titleOf(page, 'capstone')).toBe(text('capstone.title'));
+  expect(await loreOf(page, 'capstone')).toBe(capstoneLore(landing, 'landing'));
+  expect(await cardOnFace(page, 'capstone-card-0')).toBe(landing);
   expect((await chronicleOf(page)).hand).toEqual([]);
   expect(await standing(page, 'hand-0')).toBe(false);
 

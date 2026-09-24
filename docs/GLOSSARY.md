@@ -4,6 +4,8 @@ The **closed vocabulary** of gameplay. Every concept has exactly one term, and t
 
 The vocabulary covers player-facing terms and the code that represents and manipulates those player-facing objects; development internals (the machinery under the game, such as `apply`'s command) are outside it.
 
+So is lore, the fiction a window reads over its cards: prose the lint does not read, free to say tribe and hunter.
+
 The meaning names what the term englobes, enough to tell it from its neighbours and from the word's other uses, and nothing more: the rules, the cases, the rendering and the reasons live on the design pages. A term a meaning needs is a row of its own, never a bold inside another's cell.
 
 Each row lists the forbidden near-synonyms so the review and the lint hook can catch them. Prose that must mention a forbidden word for another reason (a card _named_ "Sacrifice") is a deliberate exception the reviewer sees; there is no silent allow-list. A line that lives with one marks it at its end, `// glossary exception: <word>`, and the lint skips that word on that line alone.

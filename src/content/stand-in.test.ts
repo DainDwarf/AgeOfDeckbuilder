@@ -14,6 +14,7 @@ import { admitted, launched, refusalOf } from '../rules/chronicle';
 import { settledLaunch } from '../rules/fixtures';
 import { seedRng } from '../rules/rng';
 import { answerCost, timelineOf } from '../rules/schedule';
+import { campLore, capstoneLore, eventLore } from '../ui/lore';
 import {
   buildingColourOf,
   buildingMarkOf,
@@ -175,13 +176,18 @@ test('each deck of the stand-in settles its city on the centre tile and reaches 
   }
 });
 
-test('every event of the stand-in has a name on the screen, and every answer it deals a name', () => {
+test('every event of the stand-in has a name and a lore on the screen, and every answer it deals a name', () => {
   for (const [id, event] of Object.entries(STAND_IN.events)) {
     expect(() => eventName(id)).not.toThrow();
+    expect(() => eventLore(id)).not.toThrow();
     for (const answer of Object.keys(event.answers)) {
       expect(() => answerName(answer)).not.toThrow();
     }
   }
+});
+
+test('the stand-in’s camp has a lore on the screen, keyed on its building', () => {
+  expect(() => campLore(STAND_IN.camp.building)).not.toThrow();
 });
 
 test('every reward of the stand-in’s camp has a name, and a rules entry read at the counters it starts with, on the screen', () => {
@@ -191,10 +197,12 @@ test('every reward of the stand-in’s camp has a name, and a rules entry read a
   }
 });
 
-test('every capstone of the stand-in has a name, a rules entry and a victory line on the screen', () => {
+test('every capstone of the stand-in has a name, a rules entry, a lore at each raising of its window and a victory line on the screen', () => {
   for (const id of Object.keys(STAND_IN.capstones)) {
     expect(() => capstoneName(id)).not.toThrow();
     expect(() => capstoneRules(id)).not.toThrow();
+    expect(() => capstoneLore(id, 'opening')).not.toThrow();
+    expect(() => capstoneLore(id, 'landing')).not.toThrow();
     expect(() => victoryLine(id)).not.toThrow();
   }
 });

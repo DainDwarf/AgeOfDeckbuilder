@@ -42,6 +42,7 @@ import {
 import { createThingCard, type Thing } from './infopanel';
 import { isWheelNotch } from './keys';
 import { css, LOOK } from './look';
+import { campLore, capstoneLore, eventLore } from './lore';
 import { raiseMenu } from './menu-scene';
 import type { OverlayScene } from './overlay-scene';
 import { createRefusalNote, refused } from './refusal-note';
@@ -173,8 +174,8 @@ type Dealing = {
 
 /**
  * The capstone's window on the scrim: the chronicle it was raised over, whose timeline names the
- * capstone, and whether the opening raised it or the landing did, which is told when it closes. It
- * offers its one card to be read and nothing to be taken, so it holds no selection.
+ * capstone, and whether the opening raised it or the landing did, which picks its lore and is told
+ * when it closes. It offers its one card to be read and nothing to be taken, so it holds no selection.
  */
 type Capstone = { readonly stands: 'capstone'; readonly on: Chronicle } & (
   | { readonly raised: 'opening' }
@@ -454,6 +455,21 @@ export function createOverlay(
     return carries(title);
   };
 
+  /** A window's lore, named after the window it stands in, just over the row its grid laid. */
+  const raiseLore = (name: string, lore: string, laid: Grid): void => {
+    const rowTop = laid.placed[0].y - laid.height + laid.root.y;
+    const line = addText(scene, DESIGN_WIDTH / 2, rowTop - 16, lore, {
+      fontFamily: UI_FONT,
+      fontSize: '20px',
+      color: TITLE_INK,
+      align: 'center',
+      wordWrap: { width: 600 },
+    })
+      .setName(`${name}-lore`)
+      .setOrigin(0.5, 1);
+    carries(line);
+  };
+
   /** The card of the standing grid a press landed on, and nothing where it landed between them. */
   const under = (pointer: Phaser.Input.Pointer): Placed | undefined => {
     if (grid === undefined) return undefined;
@@ -643,7 +659,7 @@ export function createOverlay(
     carried = dealing;
     standingDeal = dealing;
 
-    const { heading, entries } = dealt(catalogue, dealing.on, dealing.deal);
+    const { heading, lore, entries } = dealt(catalogue, dealing.on, dealing.deal);
     const title = raiseTitle('deal', heading);
     const laid = layGrid('deal', entries, title.y + title.height + MARGIN, (at, press) => {
       switch (press) {
@@ -668,6 +684,7 @@ export function createOverlay(
           return;
       }
     });
+    raiseLore('deal', lore, laid);
     ring(dealing, dealing.selected);
   };
 
@@ -695,9 +712,10 @@ export function createOverlay(
     cover();
     carried = announcement;
 
-    const face = capstoneFace(announcement.on.timeline.capstone.id);
-    const title = raiseTitle('capstone', text(capstoneTitle(announcement)));
-    layGrid(
+    const { id } = announcement.on.timeline.capstone;
+    const face = capstoneFace(id);
+    const title = raiseTitle('capstone', text('capstone.title'));
+    const laid = layGrid(
       'capstone',
       [{ face, costs: [], refusal: NO_REFUSAL, at: 0 }],
       title.y + title.height + MARGIN,
@@ -713,6 +731,7 @@ export function createOverlay(
         }
       },
     );
+    raiseLore('capstone', capstoneLore(id, announcement.raised), laid);
   };
 
   /** The aim window raised, and raised again where the back from a card shown large brings it. */
@@ -1035,16 +1054,6 @@ export function createOverlay(
   };
 }
 
-/** The title the capstone's window stands under: the age ending on it, or its landing. */
-function capstoneTitle(capstone: Capstone): 'capstone.title' | 'capstone.lands' {
-  switch (capstone.raised) {
-    case 'opening':
-      return 'capstone.title';
-    case 'landing':
-      return 'capstone.lands';
-  }
-}
-
 /** What of an ended chronicle its ending screen reads: how it ended, and the capstone it was on. */
 type Ended = Pick<Chronicle, 'timeline'> & { readonly ending: Ending };
 
@@ -1062,20 +1071,21 @@ function says({ ending, timeline }: Ended): { title: string; line: string } {
 }
 
 /**
- * What the deal window reads of a deal: the event's name or the camp's over it, and its entries in
- * the order dealt — an answer drawn unaffordable where the chronicle cannot pay it, a reward as the
- * card of the deck it is.
+ * What the deal window reads of a deal: the event's name and lore or the camp's over it, and its
+ * entries in the order dealt — an answer drawn unaffordable where the chronicle cannot pay it, a
+ * reward as the card of the deck it is.
  */
 function dealt(
   catalogue: Catalogue,
   chronicle: Chronicle,
   deal: Deal,
-): { heading: string; entries: readonly Offered[] } {
+): { heading: string; lore: string; entries: readonly Offered[] } {
   const ids = offered(catalogue, deal);
   switch (deal.of) {
     case 'event':
       return {
         heading: eventName(deal.event),
+        lore: eventLore(deal.event),
         entries: ids.map(
           (id, at): Offered => ({
             face: answerFace(catalogue, chronicle, deal.event, id),
@@ -1088,6 +1098,7 @@ function dealt(
     case 'camp':
       return {
         heading: buildingName(catalogue.camp.building),
+        lore: campLore(catalogue.camp.building),
         entries: ids.map((id, at) => offeredCard(cardFaceAtStart(catalogue, id), at)),
       };
   }
