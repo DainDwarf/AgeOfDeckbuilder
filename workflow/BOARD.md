@@ -6,4 +6,4 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ---
 
-- **Close v0.0.4** — the changelog entry and the tag.
+- **Close v0.0.4** — version 0.0.4 in the package files, the `[0.0.4]` changelog entry, the README's latest build and the rung off the roadmap; the annotated tag `v0.0.4` pushed on the ship's commit and `Latest` moved onto it. Doc-impact: none. [board/close-v0-0-4.md](board/close-v0-0-4.md)
