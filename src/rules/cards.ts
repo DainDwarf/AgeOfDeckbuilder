@@ -4,6 +4,7 @@ import {
   type Card,
   type Catalogue,
   cardOf,
+  counterOf,
   entered,
   unitKind,
 } from './catalogue';
@@ -87,8 +88,8 @@ export function leavesChronicle(card: Card): boolean {
  */
 export function struck(catalogue: Catalogue, chronicle: Chronicle): Sequence<Group> {
   let strikes = unchanged<Group>(chronicle);
-  for (const id of chronicle.hand) {
-    const card = cardOf(catalogue, id);
+  for (const held of chronicle.hand) {
+    const card = cardOf(catalogue, held.id);
     switch (card.kind) {
       case 'settle':
       case 'unit':
@@ -97,7 +98,10 @@ export function struck(catalogue: Catalogue, chronicle: Chronicle): Sequence<Gro
         break;
       case 'hazard':
         strikes = followed(strikes, (left) =>
-          grouped({ name: 'strike', card: id }, card.strikes(catalogue, left)),
+          grouped(
+            { name: 'strike', card: held.id },
+            card.strikes(catalogue, left, counterOf(catalogue, held)),
+          ),
         );
         break;
     }

@@ -14,6 +14,7 @@ import {
   endedTurn,
   endTurn,
   firstSeed,
+  idsOf,
   launch,
   open,
   playersOf,
@@ -51,7 +52,7 @@ function attackRun(): AttackRun {
  * have an enemy in range at the opening of a player turn, and nothing when none comes inside twenty.
  */
 function besieged(chronicle: Chronicle): { turns: number; enemy: TileCoords } | undefined {
-  const enter = chronicle.hand.indexOf('PH_Warrior');
+  const enter = idsOf(chronicle.hand).indexOf('PH_Warrior');
   if (enter === -1 || !playable(refusalOf(STAND_IN, chronicle, 'PH_Warrior'))) return undefined;
   let standing = outcome(apply(STAND_IN, chronicle, { type: 'play', index: enter, aim: 'none' }));
   if (playersOf(standing).length !== 1) return undefined;
@@ -87,7 +88,7 @@ test('a warrior dragged onto an enemy attacks it, and its spent action refuses a
   for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
 
   const opened = await chronicleOf(page);
-  await dragOut(page, opened.hand.indexOf('PH_Warrior'));
+  await dragOut(page, idsOf(opened.hand).indexOf('PH_Warrior'));
   await expect.poll(async () => playersOf(await chronicleOf(page)).length).toBe(1);
 
   const entered = await chronicleOf(page);

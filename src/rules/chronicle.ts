@@ -3,6 +3,7 @@ import {
   type AimedCard,
   type Catalogue,
   capstoneOf,
+  cardMade,
   cardOf,
   checkContent,
   type Deck,
@@ -46,6 +47,7 @@ import {
   type Block,
   type CardId,
   type Chronicle,
+  type ChronicleCard,
   type Cost,
   costsOf,
   onSettlePhase,
@@ -126,7 +128,8 @@ export function beginChronicle(
       `the map's centre part names ${tileKey(coord)}, a tile the map does not hold`,
     );
   }
-  const shuffled = shuffleItems(seedRng(seed), deck.cards);
+  const made = (id: CardId): ChronicleCard => cardMade(catalogue, id);
+  const shuffled = shuffleItems(seedRng(seed), deck.cards.map(made));
   const begun: Chronicle = {
     content: catalogue.version,
     seed,
@@ -145,7 +148,7 @@ export function beginChronicle(
     units: [],
     nextUnit: 1,
     drawPile: shuffled.items,
-    hand: [...deck.settle],
+    hand: deck.settle.map(made),
     discardPile: [],
   };
   let guarded = begun;
@@ -473,7 +476,7 @@ function take(catalogue: Catalogue, chronicle: Chronicle, at: number): Sequence 
     case 'camp': {
       const rewarding = grouped(
         { name: 'reward' },
-        followed(taken, (left) => rewarded(left, id)),
+        followed(taken, (left) => rewarded(catalogue, left, id)),
       );
       return followed<Stage>(rewarding, (left) =>
         resumed(left, (standing) => opened(catalogue, standing)),
@@ -558,22 +561,22 @@ function blocked(catalogue: Catalogue, chronicle: Chronicle, id: CardId): Block[
  * nothing paid or discarded.
  */
 function play(catalogue: Catalogue, chronicle: Chronicle, command: PlayCommand): Sequence {
-  const id = chronicle.hand[command.index];
-  if (id === undefined || !playable(refusalOf(catalogue, chronicle, id))) {
+  const held = chronicle.hand[command.index];
+  if (held === undefined || !playable(refusalOf(catalogue, chronicle, held.id))) {
     return refused(chronicle);
   }
-  const effect = aimedEffect(catalogue, chronicle, id, command);
+  const effect = aimedEffect(catalogue, chronicle, held.id, command);
   if (effect === undefined) return refused(chronicle);
 
   const hand = chronicle.hand.filter((_, at) => at !== command.index);
-  const leaving = leavesChronicle(cardOf(catalogue, id))
+  const leaving = leavesChronicle(cardOf(catalogue, held.id))
     ? changeFrom('left', [command.index], { ...chronicle, hand })
     : changeFrom('discarded', [command.index], {
         ...chronicle,
         hand,
-        discardPile: [...chronicle.discardPile, id],
+        discardPile: [...chronicle.discardPile, held],
       });
-  const costs = costOf(catalogue, id);
+  const costs = costOf(catalogue, held.id);
   const cost = (left: Chronicle): Landed =>
     costs.length === 0 ? unchanged(left) : landedAs(change('stock', paid(left, costs)));
   return grouped({ name: 'played' }, followed(followed(landedAs(leaving), cost), effect));
@@ -749,7 +752,7 @@ function discarded(chronicle: Chronicle): Landed {
 }
 
 /** Every place of a pile, in pile order. */
-function everyPlace(pile: readonly CardId[]): number[] {
+function everyPlace(pile: readonly ChronicleCard[]): number[] {
   return pile.map((_, at) => at);
 }
 

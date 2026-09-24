@@ -11,6 +11,7 @@ import {
   dragOut,
   dragUnit,
   endTurn,
+  idsOf,
   onScreen,
   open,
   playedOut,
@@ -61,7 +62,7 @@ test('the play that builds the farm passing the capstone wins on the play, and t
   for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
 
   const opened = await chronicleOf(page);
-  await dragOut(page, opened.hand.indexOf('PH_Worker'));
+  await dragOut(page, idsOf(opened.hand).indexOf('PH_Worker'));
   await expect.poll(async () => playersOf(await chronicleOf(page)).length).toBe(1);
 
   const entered = await chronicleOf(page);
@@ -70,7 +71,7 @@ test('the play that builds the farm passing the capstone wins on the play, and t
   const moved = await chronicleOf(page);
   const destination = await onScreen(page, `tile-${tileKey(run.tile)}`);
   expect(await victoryShown(page)).toBe(false);
-  await dragOut(page, moved.hand.indexOf('PH_Farm'));
+  await dragOut(page, idsOf(moved.hand).indexOf('PH_Farm'));
   await aimed(page);
   await page.mouse.click(destination.x, destination.y);
   await playedOut(page);

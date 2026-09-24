@@ -6,6 +6,7 @@ import {
   chronicleOf,
   click,
   consoleKey,
+  idsOf,
   readNames,
   rested,
   standing,
@@ -93,7 +94,7 @@ test('Launch opens the chronicle on the defaults, and the address follows every 
   const deck = deckOf(NOMADIC, 'nomadic');
   await expect.poll(() => seedOnAddress(page)).toBe(launched.seed);
   expect(launched.content).toBe(NOMADIC.version);
-  expect([...launched.drawPile, ...launched.hand, ...launched.discardPile].sort()).toEqual(
+  expect(idsOf([...launched.drawPile, ...launched.hand, ...launched.discardPile]).sort()).toEqual(
     [...deck.cards, ...deck.settle].sort(),
   );
 

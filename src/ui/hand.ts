@@ -3,7 +3,7 @@ import { aimOf } from '../rules/cards';
 import { type AimedCard, type Catalogue, cardOf } from '../rules/catalogue';
 import { costOf, refusalOf } from '../rules/chronicle';
 import type { Change, Group, Stage } from '../rules/stages';
-import { type CardId, type Chronicle, playable, type Refusal } from '../rules/state';
+import { type Chronicle, type ChronicleCard, playable, type Refusal } from '../rules/state';
 import { createAimLine } from './aim-line';
 import { pressOf } from './bindings';
 import {
@@ -43,7 +43,7 @@ const PLAY_HEIGHT = 110;
 
 type Slot = {
   readonly face: CardFace;
-  readonly id: CardId;
+  readonly card: ChronicleCard;
   readonly index: number;
   readonly home: { x: number; y: number };
   readonly refusal: Refusal;
@@ -73,7 +73,7 @@ export type Hand = {
   /** The one gate on the hand's pointer: no hover, no click and no drag while it is shut. */
   live(on: boolean): void;
   /** The card the hand has selected, for whoever shows it large; nothing while none is. */
-  selection(): { readonly id: CardId; readonly refusal: Refusal } | undefined;
+  selection(): { readonly card: ChronicleCard; readonly refusal: Refusal } | undefined;
   /** Lets the selected card go, the aim it stands on with it, and answers whether one was. */
   unselect(): boolean;
 };
@@ -91,7 +91,7 @@ export type HandPresses = {
   aimTile(index: number, card: AimedCard, released: () => void): () => void;
   /** The aim window raised on the discard pile; `closed` says it came down with nothing paid. */
   aimDiscardPile(index: number, closed: () => void): () => void;
-  inspect(id: CardId, refusal: Refusal): void;
+  inspect(card: ChronicleCard, refusal: Refusal): void;
   /** What a name on a card of the hand names, shown large. */
   inspectNamed(reference: Reference): void;
 };
@@ -176,7 +176,7 @@ export function createHand(
   /** Every reason the rules refuse this card, over it and clear of the lift a selection gives it. */
   const refuse = (slot: Slot): void => {
     note.overCard(
-      refused(costOf(catalogue, slot.id), slot.refusal),
+      refused(costOf(catalogue, slot.card.id), slot.refusal),
       slot.home.x,
       slot.home.y - CARD_LIFT - CARD_HEIGHT,
     );
@@ -185,7 +185,7 @@ export function createHand(
   /** The card aimed at a tile or at a unit says so: the point on its ring, the line over the hand. */
   const aiming = (slot: Slot, aim: AimedCard['aim']): void => {
     slot.face.aim(true);
-    line.show(slot.id, aim);
+    line.show(slot.card.id, aim);
   };
 
   /** The card is being aimed no longer: the point comes off its ring and the line goes with it. */
@@ -248,7 +248,7 @@ export function createHand(
     slot.face.select(true);
     settle(slot, 120);
 
-    const card = aimOf(cardOf(catalogue, slot.id));
+    const card = aimOf(cardOf(catalogue, slot.card.id));
     switch (card.aim) {
       case 'none':
       case 'discard-pile':
@@ -273,7 +273,7 @@ export function createHand(
       refuse(slot);
       return;
     }
-    const card = aimOf(cardOf(catalogue, slot.id));
+    const card = aimOf(cardOf(catalogue, slot.card.id));
     switch (card.aim) {
       case 'none':
         letGo = slot;
@@ -368,12 +368,12 @@ export function createHand(
       held > 1 ? Math.min(CARD_WIDTH + GAP, (laneWidth - CARD_WIDTH) / (held - 1)) : 0;
     const first = laneLeft + (laneWidth - (CARD_WIDTH + (held - 1) * advance)) / 2;
 
-    slots = chronicle.hand.map((id, index) => {
+    slots = chronicle.hand.map((card, index) => {
       const off = index - (held - 1) / 2;
-      const refusal = refusalOf(catalogue, chronicle, id);
+      const refusal = refusalOf(catalogue, chronicle, card.id);
       const slot: Slot = {
-        face: createCardFace(scene, cardFace(catalogue, id), refusal),
-        id,
+        face: createCardFace(scene, cardFace(catalogue, card), refusal),
+        card,
         index,
         home: {
           x: first + CARD_WIDTH / 2 + index * advance,
@@ -454,7 +454,7 @@ export function createHand(
         slot.face.root,
         (pointer) => {
           const named = nameUnder(slot, pointer)?.name.reference;
-          if (named === undefined) presses.inspect(slot.id, slot.refusal);
+          if (named === undefined) presses.inspect(slot.card, slot.refusal);
           else presses.inspectNamed(named);
         },
         'right',
@@ -601,9 +601,9 @@ export function createHand(
   return {
     render,
     live,
-    selection(): { readonly id: CardId; readonly refusal: Refusal } | undefined {
+    selection(): { readonly card: ChronicleCard; readonly refusal: Refusal } | undefined {
       if (selected === undefined) return undefined;
-      return { id: selected.slot.id, refusal: selected.slot.refusal };
+      return { card: selected.slot.card, refusal: selected.slot.refusal };
     },
     unselect,
     play(stage: Stage): Promise<void> | undefined {

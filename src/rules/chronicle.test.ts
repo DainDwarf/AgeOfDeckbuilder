@@ -11,6 +11,7 @@ import {
   field,
   fullDraw,
   heldBy,
+  idsOf,
   NO_GROWTH,
   namesOf,
   opening,
@@ -65,8 +66,8 @@ test('a chronicle opens on the settle phase with empty stores, the city standing
   expect(chronicle.city).toBeUndefined();
   expect(chronicle.population).toBe(0);
   expect(chronicle.held).toEqual([]);
-  expect(chronicle.hand).toEqual(DECK.settle);
-  expect([...chronicle.drawPile].sort()).toEqual([...DECK.cards].sort());
+  expect(idsOf(chronicle.hand)).toEqual(DECK.settle);
+  expect(idsOf(chronicle.drawPile).sort()).toEqual([...DECK.cards].sort());
   expect(centre.length).toBeGreaterThan(1);
   expect([...inSight(CATALOGUE, chronicle)].sort()).toEqual(centre);
   expect(chronicle.snapshots.map(tileKey).sort()).toEqual(centre);
@@ -135,7 +136,7 @@ test('a card that lands whole is played as one played group, closing on the chro
 
   expect(namesOf(stages)).toEqual(['played', 'discarded', 'stock', 'stock']);
   expect(stages[0].chronicle.resources).toEqual({ ...city.resources, food: 3, science: 0 });
-  expect(stages[0].chronicle.discardPile).toEqual(['PH_Harvest']);
+  expect(idsOf(stages[0].chronicle.discardPile)).toEqual(['PH_Harvest']);
 });
 
 /** What the one `played` group a play resolves as holds. A play resolving as anything else throws. */
@@ -165,8 +166,8 @@ test('a card played goes to the discard pile, then pays its cost as one stock, t
     'stock',
   ]);
   expect(rest).toEqual([]);
-  expect(discarded.chronicle.hand).toEqual(['PH_March']);
-  expect(discarded.chronicle.discardPile).toEqual(['PH_Harvest']);
+  expect(idsOf(discarded.chronicle.hand)).toEqual(['PH_March']);
+  expect(idsOf(discarded.chronicle.discardPile)).toEqual(['PH_Harvest']);
   expect(discarded.chronicle.resources).toEqual(city.resources);
   expect(paid.chronicle.resources).toEqual({ ...city.resources, science: 0 });
   expect(gained.chronicle.resources).toEqual({ ...city.resources, food: 3, science: 0 });
@@ -209,7 +210,7 @@ test('a pile change carries the places in the pile its cards came out of, and a 
   const second = apply(CATALOGUE, copies, { type: 'play', index: 1, aim: 'none' });
 
   expect(changeNamed(second, 'discarded')).toMatchObject({ places: [1] });
-  expect(outcome(second).hand).toEqual(['PH_Harvest']);
+  expect(idsOf(outcome(second).hand)).toEqual(['PH_Harvest']);
 
   const held = cityOf(['urban'], { hand: ['PH_Harvest', 'PH_March', 'PH_Harvest'] });
 
@@ -257,7 +258,7 @@ test('a pile change carries the places in the pile its cards came out of, and a 
 
   expect(changeNamed(recall, 'discarded')).toMatchObject({ places: [1] });
   expect(changeNamed(recall, 'recalled')).toMatchObject({ places: [2] });
-  expect(outcome(recall).hand).toEqual(['PH_Harvest', 'PH_Mine']);
+  expect(idsOf(outcome(recall).hand)).toEqual(['PH_Harvest', 'PH_Mine']);
 });
 
 test('a unit card is played over its cost, one population fewer, and the unit entering on the city’s tile', () => {
@@ -348,7 +349,7 @@ test('ending the turn discards what is left of the hand', () => {
 
   const after = outcome(apply(CATALOGUE, city, { type: 'end-turn' }));
 
-  expect(after.discardPile).toEqual(['PH_March', 'PH_Farm']);
+  expect(idsOf(after.discardPile)).toEqual(['PH_March', 'PH_Farm']);
   expect(after.hand).toEqual(city.drawPile);
 });
 
@@ -380,7 +381,7 @@ test('an emptied draw pile is refilled by shuffling the discard pile into it', (
 test('a draw with nothing left anywhere draws what there is', () => {
   const city = cityOf(['urban'], { drawPile: ['PH_March', 'PH_Harvest'] });
 
-  expect(outcome(apply(CATALOGUE, city, { type: 'end-turn' })).hand).toEqual([
+  expect(idsOf(outcome(apply(CATALOGUE, city, { type: 'end-turn' })).hand)).toEqual([
     'PH_March',
     'PH_Harvest',
   ]);
@@ -574,7 +575,7 @@ test('the end of the settle phase runs none of the cycle: turn 1 and its hand dr
   const stages = apply(CATALOGUE, stocked, { type: 'end-turn' });
   const after = outcome(stages);
 
-  expect(stocked.hand).toEqual(['PH_Settle']);
+  expect(idsOf(stocked.hand)).toEqual(['PH_Settle']);
   expect(namesOf(stages)).toEqual(['turn', 'turn', 'left', 'drawn']);
   const [, tick, left] = [...walked(stages)];
   expect(tick.chronicle.turn).toBe(1);
@@ -592,9 +593,9 @@ test('a settle card played leaves the chronicle, and the hand holds the settle s
 
   const stocked = outcome(apply(CATALOGUE, opened, { type: 'play', index: 0, aim: 'none' }));
 
-  expect(opened.hand).toEqual(['PH_Stores', 'PH_Settle']);
+  expect(idsOf(opened.hand)).toEqual(['PH_Stores', 'PH_Settle']);
   expect(stocked.resources.food).toBe(2);
-  expect(stocked.hand).toEqual(['PH_Settle']);
+  expect(idsOf(stocked.hand)).toEqual(['PH_Settle']);
   expect(stocked.discardPile).toEqual([]);
   expect(everyCard(stocked)).toEqual(['PH_Settle']);
 });

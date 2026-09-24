@@ -17,6 +17,12 @@ export type Ending = { readonly turn: number } & (
 
 export type CardId = string;
 
+/** A card's counters, by name. */
+export type Counters = Readonly<Record<string, number>>;
+
+/** A card in a chronicle: the content it is, by its id, and the counters it carries. */
+export type ChronicleCard = { readonly id: CardId; readonly counters: Counters };
+
 /**
  * One chronicle's roll of its schedule, from a generator of its own that nothing the player does
  * steps: the schedule it rolls and draws from, the turn the next deal is due on, and the capstone by
@@ -85,9 +91,9 @@ export type Chronicle = {
    * never dealt again, and the first unit of a chronicle is one — never zero.
    */
   readonly nextUnit: number;
-  readonly drawPile: CardId[];
-  readonly hand: CardId[];
-  readonly discardPile: CardId[];
+  readonly drawPile: ChronicleCard[];
+  readonly hand: ChronicleCard[];
+  readonly discardPile: ChronicleCard[];
   /** How the chronicle ended, and nothing at all while it runs: an ended one takes no command. */
   readonly ending?: Ending;
 };
@@ -158,7 +164,7 @@ export function unaffordable(chronicle: Chronicle, costs: readonly Cost[]): Reso
 
 /**
  * Whether the chronicle stands on the settle phase, before its first turn: nothing else reads the
- * turn counter's zero.
+ * turn's zero.
  */
 export function onSettlePhase(chronicle: Chronicle): boolean {
   return chronicle.turn === 0;

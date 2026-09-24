@@ -25,6 +25,7 @@ import {
   fullDraw,
   HERD,
   heldBy,
+  idsOf,
   madeOf,
   NO_DEALS,
   NO_GROWTH,
@@ -272,7 +273,7 @@ test('a famine taken on any turn lays its hazard and leaves the food stock as it
     const landed = endedTurn(awaiting(due), 'PH_Famine');
 
     expect(landed.resources.food).toBe(STOCKED);
-    expect(landed.hand).toEqual(['PH_Hunger']);
+    expect(idsOf(landed.hand)).toEqual(['PH_Hunger']);
   }
 });
 
@@ -280,8 +281,8 @@ test('the famine lays its hazard on top of the draw pile, and leaves the city as
   const waiting = awaiting(15, { drawPile: fullDraw() });
   const after = endedTurn(waiting, 'PH_Famine');
 
-  expect(after.hand).toEqual(['PH_Hunger', ...fullDraw().slice(0, 4)]);
-  expect(after.drawPile).toEqual(fullDraw().slice(4));
+  expect(idsOf(after.hand)).toEqual(['PH_Hunger', ...fullDraw().slice(0, 4)]);
+  expect(idsOf(after.drawPile)).toEqual(fullDraw().slice(4));
   expect(after.resources.food).toBe(STOCKED);
   expect(after.population).toBe(waiting.population);
   expect(growthThreshold(after)).toBe(growthThreshold(waiting));
@@ -445,7 +446,7 @@ test('a reward taken is one reward group over the deal taken and the card discar
   expect(rest).toEqual([]);
   expect(taken.chronicle.deals).toEqual([]);
   expect(taken.chronicle.discardPile).toEqual([]);
-  expect(discarded.chronicle.discardPile).toEqual([CATALOGUE.camp.rewards[0]]);
+  expect(idsOf(discarded.chronicle.discardPile)).toEqual([CATALOGUE.camp.rewards[0]]);
 });
 
 test('the same seed is due on the same turns whatever answers are taken, though what they let be dealt differs', () => {
@@ -481,9 +482,9 @@ test('the take lands the answer at its place in the order declared and no other,
     'drawn',
   ]);
   expect(enemiesOf(raided)).toHaveLength(1);
-  expect(raided.hand).toEqual(fullDraw());
+  expect(idsOf(raided.hand)).toEqual(fullDraw());
   expect(enemiesOf(starved)).toEqual([]);
-  expect(starved.hand).toEqual(['PH_Hunger', ...fullDraw().slice(0, 4)]);
+  expect(idsOf(starved.hand)).toEqual(['PH_Hunger', ...fullDraw().slice(0, 4)]);
   expect(starved.rng).toEqual(standing.rng);
   for (const after of [raided, starved]) {
     expect(after.deals).toEqual([]);
@@ -530,9 +531,9 @@ test('an answer taken pays its cost before it lands, and one the city cannot pay
   expect(outcome(apply(CATALOGUE, short, { type: 'take', at: 1 }))).toBe(short);
   expect(exploded.resources.production).toBe(rich.resources.production - EXPLOSION);
   expect(exploded.deals).toEqual([]);
-  expect(exploded.hand).toEqual(fullDraw());
+  expect(idsOf(exploded.hand)).toEqual(fullDraw());
   expect(endured.resources).toEqual(short.resources);
-  expect(endured.hand[0]).toBe('PH_Hunger');
+  expect(endured.hand[0].id).toBe('PH_Hunger');
 });
 
 test('an answer whose cost reads the chronicle is refused where that reading outruns the stock, and pays exactly that reading where it does not', () => {
@@ -1188,7 +1189,7 @@ test('the capstone’s turn lands the capstone straight and draws the hand, deal
 
     expect(landed.deals).toEqual([]);
     expect(landed.turn).toBe(CAPSTONE);
-    expect(landed.hand).toEqual(fullDraw());
+    expect(idsOf(landed.hand)).toEqual(fullDraw());
     expect(campsOf(landed)).toHaveLength(5);
     expect(staged.slice(staged.indexOf('turn'))).toEqual([
       'turn',
@@ -1293,7 +1294,7 @@ test('a camp captured the turn before the capstone’s deals its rewards, and th
   ]);
   expect(taken.turn).toBe(CAPSTONE);
   expect(taken.deals).toEqual([]);
-  expect(taken.hand).toEqual(fullDraw());
+  expect(idsOf(taken.hand)).toEqual(fullDraw());
   expect(campsOf(taken)).not.toEqual([]);
 });
 
@@ -1564,7 +1565,7 @@ const FARMING: Carrying = {
 function tilled(chronicle: Chronicle): Chronicle {
   const play: Command = {
     type: 'play',
-    index: chronicle.hand.indexOf('PH_Farm'),
+    index: idsOf(chronicle.hand).indexOf('PH_Farm'),
     aim: 'tile',
     tile: TILLED,
   };
@@ -1575,7 +1576,12 @@ function tilled(chronicle: Chronicle): Chronicle {
 
 /** The farm card played on the tilled tile: what a play of it resolves as. */
 function tilling(chronicle: Chronicle): Command {
-  return { type: 'play', index: chronicle.hand.indexOf('PH_Farm'), aim: 'tile', tile: TILLED };
+  return {
+    type: 'play',
+    index: idsOf(chronicle.hand).indexOf('PH_Farm'),
+    aim: 'tile',
+    tile: TILLED,
+  };
 }
 
 test('a building that passes a capstone ends the chronicle in victory on the play that builds it, the landing turn included', () => {

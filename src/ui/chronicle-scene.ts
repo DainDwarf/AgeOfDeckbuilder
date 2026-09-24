@@ -405,7 +405,7 @@ export class ChronicleScene extends Phaser.Scene implements OpensChronicles {
         endTurn.live(false);
         // Nothing changes the chronicle while an aim stands, so the refusal it opens on is still the
         // rules' answer at the press that lands it, and no play is sent for one they would refuse.
-        const id = this.current.hand[index];
+        const { id } = this.current.hand[index];
         const refusal = refusalOf(this.choices.catalogue, this.current, id);
         return view.aimTile(
           admitted(this.choices.catalogue, this.current, card),
@@ -440,14 +440,14 @@ export class ChronicleScene extends Phaser.Scene implements OpensChronicles {
         // map, so nothing here has to be put down for the length of this aim.
         return overlay.aimDiscardPile(
           this.current,
-          this.current.hand[index],
+          this.current.hand[index].id,
           (card) => {
             void playOut({ type: 'play', index, aim: 'discard-pile', card });
           },
           closed,
         );
       },
-      inspect: (id, refusal) => overlay.inspect(id, refusal),
+      inspect: (card, refusal) => overlay.inspect(card, refusal),
       inspectNamed: (reference) => overlay.inspectNamed(reference),
     });
 
@@ -543,8 +543,8 @@ export class ChronicleScene extends Phaser.Scene implements OpensChronicles {
         return;
       }
       if (boundTo(press, 'inspect')) {
-        const card = hand.selection();
-        if (card !== undefined) overlay.inspect(card.id, card.refusal);
+        const selected = hand.selection();
+        if (selected !== undefined) overlay.inspect(selected.card, selected.refusal);
         else if (selection !== undefined) inspect(selection);
         return;
       }

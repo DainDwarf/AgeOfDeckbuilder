@@ -24,6 +24,7 @@ import {
   type Glyphs,
   glyphs,
   glyphsOf,
+  idsOf,
   launch,
   marksIn,
   noGlyphs,
@@ -511,7 +512,7 @@ test('a unit’s tile selected in city mode lights nothing, and a click on the t
   for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
 
   const opened = await chronicleOf(page);
-  await dragOut(page, opened.hand.indexOf('PH_Worker'));
+  await dragOut(page, idsOf(opened.hand).indexOf('PH_Worker'));
   await expect.poll(async () => playersOf(await chronicleOf(page)).length).toBe(1);
 
   const entered = await chronicleOf(page);

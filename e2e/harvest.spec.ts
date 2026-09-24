@@ -10,6 +10,7 @@ import {
   endedTurn,
   endTurn,
   firstSeed,
+  idsOf,
   launch,
   open,
   watch,
@@ -20,7 +21,7 @@ function harvestSeed(): number {
   return firstSeed('opens its second turn on a playable harvest card', (seed) => {
     const chronicle = endedTurn(launch(seed, deckOf(STAND_IN, 'PH_Deck')));
     const found =
-      chronicle.hand.includes('PH_Harvest') &&
+      idsOf(chronicle.hand).includes('PH_Harvest') &&
       playable(refusalOf(STAND_IN, chronicle, 'PH_Harvest'));
     return found ? seed : undefined;
   });
@@ -33,7 +34,7 @@ test('the harvest card gains its two food when it is dragged out of the hand', a
   await endTurn(page);
 
   const before = await chronicleOf(page);
-  await dragOut(page, before.hand.indexOf('PH_Harvest'));
+  await dragOut(page, idsOf(before.hand).indexOf('PH_Harvest'));
   await page.waitForFunction(
     (held) => window.game?.scene.getScene<ChronicleScene>('ui').chronicle.hand.length === held,
     before.hand.length - 1,
@@ -44,6 +45,6 @@ test('the harvest card gains its two food when it is dragged out of the hand', a
     hand.filter((id) => id === 'PH_Harvest').length;
 
   expect(after.resources.food).toBe(before.resources.food + 2);
-  expect(harvests(after.hand)).toBe(harvests(before.hand) - 1);
+  expect(harvests(idsOf(after.hand))).toBe(harvests(idsOf(before.hand)) - 1);
   expect(problems).toEqual([]);
 });

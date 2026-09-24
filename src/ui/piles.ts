@@ -1,7 +1,7 @@
 import type Phaser from 'phaser';
 import type { Catalogue } from '../rules/catalogue';
 import type { Change, Group, Stage } from '../rules/stages';
-import { type CardId, type Chronicle, NO_REFUSAL } from '../rules/state';
+import { type Chronicle, type ChronicleCard, NO_REFUSAL } from '../rules/state';
 import {
   CARD_BASELINE,
   CARD_HEIGHT,
@@ -55,10 +55,10 @@ export function createPiles(
   let waiting: { readonly event: Phaser.Time.TimerEvent; readonly done: () => void } | undefined;
   let carrier: Phaser.GameObjects.Container | undefined;
 
-  const topOf = (id: CardId | undefined): Phaser.GameObjects.Container =>
-    id === undefined
+  const topOf = (card: ChronicleCard | undefined): Phaser.GameObjects.Container =>
+    card === undefined
       ? createEmptySlot(scene)
-      : createCardFace(scene, cardFace(catalogue, id), NO_REFUSAL, { faded: true }).root;
+      : createCardFace(scene, cardFace(catalogue, card), NO_REFUSAL, { faded: true }).root;
 
   const render = (chronicle: Chronicle): void => {
     // Whoever is waiting on the wait is let go, so a cancelled one leaves nothing hanging on it.

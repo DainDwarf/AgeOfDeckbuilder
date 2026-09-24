@@ -2,7 +2,7 @@
 
 **Line:** - **Hunger is forged by its event** — Lean season lays Hunger with its food counter set by the turn, larger later, at one flat price to be rid of; the face reads the counter, the strike reads nothing off the turn, and the answer's name shows the Hunger as it will be laid, with the Nomadic, chronicle and interface pages saying so. Doc-impact: `docs/ages/NOMADIC.md`, `docs/CHRONICLE.md`, `docs/INTERFACE.md`.
 
-Ships after **Cards carry counters**, whose dossier it builds on: the instance, the maker that sets declared counters, the strike handed its card, the face filled from the counters.
+Ships after **Cards carry counters**, whose dossier it builds on: the instance, the maker that sets declared counters, the strike handed a lookup of its counters, the face filled from the counters.
 
 **Spec:** the three pages and the two player-facing sentences, written out.
 
@@ -34,7 +34,7 @@ Ships after **Cards carry counters**, whose dossier it builds on: the instance, 
 **Plan:**
 
 1. The three `docs/` edits, verbatim from _Spec_.
-2. `src/content/nomadic.ts`: Hunger's counter and its strike off the card; Lean season's _Share food_ reading and laying from one function. `src/ui/text.ts`: the two sentences.
+2. `src/content/nomadic.ts`: Hunger's counter and its strike reading its counter; Lean season's _Share food_ reading and laying from one function. `src/ui/text.ts`: the two sentences.
 3. The mechanism in `src/ui/`: the named card on an answer's face made at the reading's counters; the fixture's answer naming its counted card, and the one Vitest beside the pure face module asserting the named card is made at the value read.
 4. `src/content/nomadic.test.ts` passes as it stands, the entry read with the starting counter; `npm run check`, `npm test`, `npm run lint`, then the spec.
 

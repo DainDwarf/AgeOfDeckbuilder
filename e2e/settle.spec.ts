@@ -14,6 +14,7 @@ import {
   dragOut,
   endTurnFill,
   endTurnLabel,
+  idsOf,
   marksIn,
   onScreen,
   openOnCapstone,
@@ -38,7 +39,7 @@ test('a chronicle opens on the settle phase with the city standing nowhere, and 
   const opened = await chronicleOf(page);
   expect(opened.turn).toBe(0);
   expect(opened.city).toBeUndefined();
-  expect(opened.hand).toEqual(deckOf(STAND_IN, 'PH_Deck').settle);
+  expect(idsOf(opened.hand)).toEqual(deckOf(STAND_IN, 'PH_Deck').settle);
   expect(await standing(page, `hand-${opened.hand.length - 1}`)).toBe(true);
   expect(await standing(page, `hand-${opened.hand.length}`)).toBe(false);
 
@@ -88,8 +89,8 @@ test('a chronicle opens on the settle phase with the city standing nowhere, and 
   expect(await shows(page, 'settle-phase-chip')).toBe(false);
   expect(ticked.hand).toHaveLength(5);
   for (const pile of [ticked.hand, ticked.drawPile, ticked.discardPile]) {
-    expect(pile).not.toContain('PH_Settle');
-    expect(pile).not.toContain('PH_Claim');
+    expect(idsOf(pile)).not.toContain('PH_Settle');
+    expect(idsOf(pile)).not.toContain('PH_Claim');
   }
 
   expect(problems).toEqual([]);
@@ -147,7 +148,7 @@ test('after the settle a free claim lights the six tiles around the city and no 
   const card = aimOf(cardOf(STAND_IN, 'PH_Claim'));
   if (card.aim !== 'tile') throw new Error('PH_Claim is aimed at no tile');
   const around = neighbours(CENTRE).map(tileKey).sort();
-  expect(settled.hand[0]).toBe('PH_Claim');
+  expect(settled.hand[0].id).toBe('PH_Claim');
   expect(admitted(STAND_IN, settled, card).map(tileKey).sort()).toEqual(around);
 
   await click(page, 'hand-0');
@@ -166,8 +167,8 @@ test('after the settle a free claim lights the six tiles around the city and no 
   expect(claimed.assigned.map(tileKey)).toContain(tileKey(tile));
   expect(claimed.population).toBe(settled.population + 1);
   expect(claimed.hand).toHaveLength(settled.hand.length - 1);
-  expect(claimed.drawPile).not.toContain('PH_Claim');
-  expect(claimed.discardPile).not.toContain('PH_Claim');
+  expect(idsOf(claimed.drawPile)).not.toContain('PH_Claim');
+  expect(idsOf(claimed.discardPile)).not.toContain('PH_Claim');
 
   expect(problems).toEqual([]);
 });

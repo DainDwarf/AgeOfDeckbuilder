@@ -1,6 +1,15 @@
 import { expect, test } from 'vitest';
 import { aimOf } from '../rules/cards';
-import { capstoneOf, cardOf, catalogued, deckOf, enemyScript, eventOf } from '../rules/catalogue';
+import {
+  capstoneOf,
+  cardMade,
+  cardOf,
+  catalogued,
+  counterOf,
+  deckOf,
+  enemyScript,
+  eventOf,
+} from '../rules/catalogue';
 import { admitted, launched, refusalOf } from '../rules/chronicle';
 import { settledLaunch } from '../rules/fixtures';
 import { seedRng } from '../rules/rng';
@@ -103,16 +112,16 @@ test('every improvement of the Nomadic Age has a name and a mark on the screen',
   }
 });
 
-test('every card of the Nomadic Age has a name and a rules entry on the screen', () => {
+test('every card of the Nomadic Age has a name, and a rules entry read at the counters it starts with, on the screen', () => {
   for (const id of Object.keys(NOMADIC.cards)) {
     expect(() => cardName(id)).not.toThrow();
-    expect(() => cardRules(id)).not.toThrow();
+    expect(() => cardRules(cardMade(NOMADIC, id))).not.toThrow();
   }
 });
 
 test('every rules entry of the Nomadic Age lays out, and every name on it resolves in the Nomadic Age’s table of its kind', () => {
   const entries = [
-    ...Object.keys(NOMADIC.cards).map((id) => cardRules(id)),
+    ...Object.keys(NOMADIC.cards).map((id) => cardRules(cardMade(NOMADIC, id))),
     ...Object.keys(NOMADIC.capstones).map((id) => capstoneRules(id)),
   ];
   for (const schedule of Object.keys(NOMADIC.schedules)) {
@@ -165,10 +174,10 @@ test('every event of the Nomadic Age has a name on the screen, and every answer 
   }
 });
 
-test('every reward of the Nomadic Age’s camp has a name and a rules entry on the screen', () => {
+test('every reward of the Nomadic Age’s camp has a name, and a rules entry read at the counters it starts with, on the screen', () => {
   for (const id of NOMADIC.camp.rewards) {
     expect(() => cardName(id)).not.toThrow();
-    expect(() => cardRules(id)).not.toThrow();
+    expect(() => cardRules(cardMade(NOMADIC, id))).not.toThrow();
   }
 });
 
@@ -216,6 +225,19 @@ test('every answer of every event of the Nomadic Age costs, lands and reads a ru
       expect(() => capstone.lands(NOMADIC, chronicle)).not.toThrow();
       expect(() => capstone.continues?.(NOMADIC, chronicle)).not.toThrow();
       expect(capstone.passes(NOMADIC, chronicle)).toBe(false);
+    }
+  }
+});
+
+test('every hazard of the Nomadic Age strikes at the counters it starts with, on a chronicle launched and settled on each schedule', () => {
+  for (const schedule of Object.keys(NOMADIC.schedules)) {
+    const chronicle = settledLaunch(NOMADIC, REGION, schedule, 1, deckOf(NOMADIC, 'nomadic'));
+    for (const id of Object.keys(NOMADIC.cards)) {
+      const card = cardOf(NOMADIC, id);
+      if (card.kind === 'hazard') {
+        const counter = counterOf(NOMADIC, cardMade(NOMADIC, id));
+        expect(() => card.strikes(NOMADIC, chronicle, counter)).not.toThrow();
+      }
     }
   }
 });

@@ -1,6 +1,15 @@
 import { expect, test } from 'vitest';
 import { aimOf } from '../rules/cards';
-import { capstoneOf, cardOf, catalogued, deckOf, enemyScript, eventOf } from '../rules/catalogue';
+import {
+  capstoneOf,
+  cardMade,
+  cardOf,
+  catalogued,
+  counterOf,
+  deckOf,
+  enemyScript,
+  eventOf,
+} from '../rules/catalogue';
 import { admitted, launched, refusalOf } from '../rules/chronicle';
 import { settledLaunch } from '../rules/fixtures';
 import { seedRng } from '../rules/rng';
@@ -100,16 +109,16 @@ test('every improvement of the stand-in has a name and a mark on the screen', ()
   }
 });
 
-test('every card of the stand-in has a name and a rules entry on the screen', () => {
+test('every card of the stand-in has a name, and a rules entry read at the counters it starts with, on the screen', () => {
   for (const id of Object.keys(STAND_IN.cards)) {
     expect(() => cardName(id)).not.toThrow();
-    expect(() => cardRules(id)).not.toThrow();
+    expect(() => cardRules(cardMade(STAND_IN, id))).not.toThrow();
   }
 });
 
 test('every rules entry of the stand-in lays out, and every name on it resolves in the stand-in’s table of its kind', () => {
   const entries = [
-    ...Object.keys(STAND_IN.cards).map((id) => cardRules(id)),
+    ...Object.keys(STAND_IN.cards).map((id) => cardRules(cardMade(STAND_IN, id))),
     ...Object.keys(STAND_IN.capstones).map((id) => capstoneRules(id)),
   ];
   for (const schedule of Object.keys(STAND_IN.schedules)) {
@@ -175,10 +184,10 @@ test('every event of the stand-in has a name on the screen, and every answer it 
   }
 });
 
-test('every reward of the stand-in’s camp has a name and a rules entry on the screen', () => {
+test('every reward of the stand-in’s camp has a name, and a rules entry read at the counters it starts with, on the screen', () => {
   for (const id of STAND_IN.camp.rewards) {
     expect(() => cardName(id)).not.toThrow();
-    expect(() => cardRules(id)).not.toThrow();
+    expect(() => cardRules(cardMade(STAND_IN, id))).not.toThrow();
   }
 });
 
@@ -232,6 +241,25 @@ test('every answer of every event of the stand-in costs, lands and reads a rules
       expect(() => capstone.lands(STAND_IN, chronicle)).not.toThrow();
       expect(() => capstone.continues?.(STAND_IN, chronicle)).not.toThrow();
       expect(capstone.passes(STAND_IN, chronicle)).toBe(false);
+    }
+  }
+});
+
+test('every hazard of the stand-in strikes at the counters it starts with, on a chronicle launched and settled on each schedule', () => {
+  for (const schedule of Object.keys(STAND_IN.schedules)) {
+    const chronicle = settledLaunch(
+      STAND_IN,
+      STAND_IN_REGION,
+      schedule,
+      1,
+      deckOf(STAND_IN, 'PH_Deck'),
+    );
+    for (const id of Object.keys(STAND_IN.cards)) {
+      const card = cardOf(STAND_IN, id);
+      if (card.kind === 'hazard') {
+        const counter = counterOf(STAND_IN, cardMade(STAND_IN, id));
+        expect(() => card.strikes(STAND_IN, chronicle, counter)).not.toThrow();
+      }
     }
   }
 });

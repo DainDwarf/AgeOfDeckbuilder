@@ -11,7 +11,15 @@ import {
 import type { Resources } from './resources';
 import type { Rng } from './rng';
 import { changeOn, type Landed, landedAs } from './stages';
-import { type Block, type Chronicle, costsOf, type TileBlock } from './state';
+import {
+  type Block,
+  type CardId,
+  type Chronicle,
+  type ChronicleCard,
+  type Counters,
+  costsOf,
+  type TileBlock,
+} from './state';
 import { type Landing, standsOn, type Unit, type UnitStats } from './units';
 
 /**
@@ -73,14 +81,11 @@ export type Aim =
     };
 
 /**
- * A card: its kind, which a list of cards sorts and labels by, and its cost. The kinds the player's
- * deck holds declare the aim and effect they are played through, and the noun such a card names —
- * the unit it puts on the map, the building it builds — is named by its effect and nowhere else. A
- * settle card is played through whatever aim it declares, and one aimed at a tile asks its own
- * reasons of a tile once the kind has asked for it charted. A hazard declares its strike alone, its
- * kind fixing everything else about it.
+ * The noun a card names — the unit it puts on the map, the building it builds — is named by its
+ * effect and nowhere else. A settle card aimed at a tile is asked its own reasons only of a tile
+ * already charted.
  */
-export type Card = { readonly cost: Partial<Resources> } & (
+export type Card = { readonly cost: Partial<Resources>; readonly counters?: Counters } & (
   | ({ readonly kind: 'settle' } & Aim)
   | ({
       readonly kind: 'unit' | 'building' | 'instant';
@@ -88,10 +93,12 @@ export type Card = { readonly cost: Partial<Resources> } & (
     } & Aim)
   | {
       readonly kind: 'hazard';
-      /** What it does to the chronicle at the end of a turn it is still in the hand. */
-      readonly strikes: (catalogue: Catalogue, chronicle: Chronicle) => Landed;
+      readonly strikes: (catalogue: Catalogue, chronicle: Chronicle, counter: Counter) => Landed;
     }
 );
+
+/** A card's counters read by name. */
+export type Counter = (name: string) => number;
 
 /** How a card the player picks a tile for is played: what the hand aims and the map lights for. */
 export type AimedCard = Extract<Aim, { readonly aim: 'tile' | 'unit' }>;
@@ -360,6 +367,32 @@ export function cardOf(catalogue: Catalogue, id: string): Card {
   return held(catalogue, catalogue.cards, id, 'card');
 }
 
+/**
+ * A card made in a chronicle at the counters its content declares, each one set taking the value
+ * handed instead; a card the catalogue does not hold, and a counter set that its content does not
+ * declare, are refused.
+ */
+export function cardMade(catalogue: Catalogue, id: CardId, set: Counters = {}): ChronicleCard {
+  const declared = cardOf(catalogue, id).counters ?? {};
+  for (const counter of Object.keys(set)) {
+    if (!Object.hasOwn(declared, counter)) {
+      refuse(catalogue, `the card ${id} declares no counter ${counter}`);
+    }
+  }
+  return { id, counters: { ...declared, ...set } };
+}
+
+/** The value a card carries under a counter's name; a name its content does not declare is refused. */
+export function counterOf(catalogue: Catalogue, card: ChronicleCard): Counter {
+  const declared = cardOf(catalogue, card.id).counters ?? {};
+  return (name) => {
+    if (!Object.hasOwn(declared, name)) {
+      refuse(catalogue, `the card ${card.id} declares no counter ${name}`);
+    }
+    return card.counters[name];
+  };
+}
+
 /** The two sections a deck lists; a deck the catalogue does not hold is refused. */
 export function deckOf(catalogue: Catalogue, id: string): Deck {
   return held(catalogue, catalogue.decks, id, 'deck');
@@ -393,7 +426,7 @@ export type Entering = { readonly type: string; readonly tile: TileCoords } & (
 );
 
 /**
- * The one way a unit enters the map: it takes the next number off the chronicle's counter, carries
+ * The one way a unit enters the map: it takes the next number the chronicle deals a unit, carries
  * its own copy of its kind's stats, and stands with its move points and its action full.
  */
 export function entered(catalogue: Catalogue, chronicle: Chronicle, entering: Entering): Landed {

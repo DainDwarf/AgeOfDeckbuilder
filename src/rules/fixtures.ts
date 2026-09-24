@@ -25,6 +25,7 @@ import {
 } from './cards';
 import {
   type Catalogue,
+  cardMade,
   catalogued,
   type Deck,
   deckOf,
@@ -71,7 +72,14 @@ import {
 } from './schedule';
 import { charted } from './sight';
 import { followed, type Group, type Landed, type Stage, unchanged, walked } from './stages';
-import { type CardId, type Chronicle, type Deal, holds, type Timeline } from './state';
+import {
+  type CardId,
+  type Chronicle,
+  type ChronicleCard,
+  type Deal,
+  holds,
+  type Timeline,
+} from './state';
 import {
   type Faction,
   type Landing,
@@ -94,6 +102,12 @@ export const HUNGER = 6;
 
 /** The food the fixture's drought strikes off the stock, taking one population where it falls short. */
 export const DROUGHT = 4;
+
+/** What the counter of the fixture's frost starts at: the food it strikes off the stock. */
+export const FROST = 2;
+
+/** The counter the fixture's freeze sets on the frost it lays: the food that frost strikes off. */
+export const FREEZE = 5;
 
 /** The production the fixture's explosion costs: the one answer of the fixture whose flat cost asks a stock. */
 export const EXPLOSION = 4;
@@ -259,6 +273,25 @@ const EVENTS: Catalogue['events'] = {
         cost: {},
         reads: () => ({}),
         lands: (_catalogue, chronicle) => unchanged(chronicle),
+      },
+    },
+  },
+  PH_Cold: {
+    answers: {
+      PH_Chill: {
+        cost: {},
+        reads: () => ({}),
+        lands: (catalogue, chronicle) => laid(catalogue, chronicle, 'PH_Frost'),
+      },
+      PH_Freeze: {
+        cost: {},
+        reads: () => ({}),
+        lands: (catalogue, chronicle) => laid(catalogue, chronicle, 'PH_Frost', { amount: FREEZE }),
+      },
+      PH_Thaw: {
+        cost: {},
+        reads: () => ({}),
+        lands: (catalogue, chronicle) => laid(catalogue, chronicle, 'PH_Frost', { thaw: 1 }),
       },
     },
   },
@@ -447,6 +480,17 @@ export const CATALOGUE: Catalogue = catalogued({
       kind: 'hazard',
       cost: { production: 3 },
       strikes: (_catalogue, chronicle) => shocked(chronicle, 'food', HUNGER),
+    },
+    PH_Frost: {
+      kind: 'hazard',
+      cost: { production: 3 },
+      counters: { amount: FROST },
+      strikes: (_catalogue, chronicle, counter) => shocked(chronicle, 'food', counter('amount')),
+    },
+    PH_Squall: {
+      kind: 'hazard',
+      cost: { production: 3 },
+      strikes: (_catalogue, chronicle, counter) => shocked(chronicle, 'food', counter('amount')),
     },
     PH_Drought: {
       kind: 'hazard',
@@ -752,20 +796,31 @@ export function withUnits(chronicle: Chronicle, units: readonly Standing[]): Chr
   return charted(CATALOGUE, stood);
 }
 
-/** What a fixture authors on the chronicle it asks for: its state, and the units standing on it. */
-export type Carrying = Partial<Omit<Chronicle, 'units' | 'nextUnit'>> & {
-  readonly units?: readonly Standing[];
-};
+type Pile = 'drawPile' | 'hand' | 'discardPile';
 
 /**
- * A city on `inside`, tile by tile, with one plain lying outside the border and no cards. Its
+ * What a fixture authors on the chronicle it asks for: its state, the units standing on it, and the
+ * cards of each pile by id.
+ */
+export type Carrying = Partial<Omit<Chronicle, 'units' | 'nextUnit' | Pile>> & {
+  readonly units?: readonly Standing[];
+} & Partial<Record<Pile, readonly CardId[]>>;
+
+/**
+ * A city on `inside`, tile by tile, with one plain lying outside the border and no cards but the
+ * ones the fixture names, made on the fixture's content unless the test hands in its own. Its
  * population stands one on each tile the city holds, and none is idle.
  */
-export function cityOf(inside: Terrain[], carrying: Carrying = {}): Chronicle {
+export function cityOf(
+  inside: Terrain[],
+  carrying: Carrying = {},
+  catalogue: Catalogue = CATALOGUE,
+): Chronicle {
   const held = inside.map((_, index) => ({ q: index, r: 0 }));
-  const { units = [], ...state } = carrying;
+  const { units = [], drawPile = [], hand = [], discardPile = [], ...state } = carrying;
+  const made = (id: CardId): ChronicleCard => cardMade(catalogue, id);
   const city: Chronicle = {
-    content: CATALOGUE.version,
+    content: catalogue.version,
     seed: 7,
     rng: seedRng(7),
     timeline: NO_DEALS,
@@ -790,10 +845,10 @@ export function cityOf(inside: Terrain[], carrying: Carrying = {}): Chronicle {
     assigned: [...held],
     units: [],
     nextUnit: 1,
-    drawPile: [],
-    hand: [],
-    discardPile: [],
     ...state,
+    drawPile: drawPile.map(made),
+    hand: hand.map(made),
+    discardPile: discardPile.map(made),
   };
   return withUnits(city, units);
 }
@@ -1001,15 +1056,23 @@ export function claimOf(tile: TileCoords): Command {
  * A city on a disc of plain out to `radius`, holding its own tile and the six around it, one
  * population on each and two idle.
  */
-export function ringed(radius: number, carrying: Carrying = {}): Chronicle {
+export function ringed(
+  radius: number,
+  carrying: Carrying = {},
+  catalogue: Catalogue = CATALOGUE,
+): Chronicle {
   const ring = [CITY, ...neighbours(CITY)];
-  return cityOf(['urban'], {
-    tiles: field(radius),
-    held: ring,
-    population: ring.length + 2,
-    assigned: [...ring],
-    ...carrying,
-  });
+  return cityOf(
+    ['urban'],
+    {
+      tiles: field(radius),
+      held: ring,
+      population: ring.length + 2,
+      assigned: [...ring],
+      ...carrying,
+    },
+    catalogue,
+  );
 }
 
 /**
@@ -1046,7 +1109,12 @@ export function worker(tile: TileCoords): Standing {
 export const WORKER = worker(CITY).stats;
 
 export function everyCard(chronicle: Chronicle): CardId[] {
-  return [...chronicle.drawPile, ...chronicle.hand, ...chronicle.discardPile].sort();
+  return idsOf([...chronicle.drawPile, ...chronicle.hand, ...chronicle.discardPile]).sort();
+}
+
+/** What the cards of a pile are, by id, in pile order. */
+export function idsOf(pile: readonly ChronicleCard[]): CardId[] {
+  return pile.map(({ id }) => id);
 }
 
 /** What every stage of the tree is called, in the order the walk plays them. */

@@ -6,6 +6,7 @@ import type { Group, Stage } from '../rules/stages';
 import {
   type CardId,
   type Chronicle,
+  type ChronicleCard,
   type Cost,
   type Deal,
   type Ending,
@@ -19,6 +20,7 @@ import {
   type CardFace,
   capstoneFace,
   cardFace,
+  cardFaceAtStart,
   createCardFace,
   createKindBubble,
   type Face,
@@ -86,7 +88,7 @@ export type Overlay = {
     chosen: (at: number) => void,
     closed: () => void,
   ): () => void;
-  inspect(id: CardId, refusal: Refusal): void;
+  inspect(card: ChronicleCard, refusal: Refusal): void;
   /** What a name names shown large, as a right click on a name shows it wherever the name stands. */
   inspectNamed(reference: Reference): void;
   /**
@@ -114,8 +116,7 @@ type Offered = {
 };
 
 /** One card of the deck offered as it stands: nothing refuses it, and its face wears its own cost. */
-function offeredCard(catalogue: Catalogue, id: CardId, at: number): Offered {
-  const face = cardFace(catalogue, id);
+function offeredCard(face: Face, at: number): Offered {
   return { face, costs: face.costs, refusal: NO_REFUSAL, at };
 }
 
@@ -152,7 +153,7 @@ type Aiming = {
 type Browsing = {
   readonly stands: 'browse';
   readonly pile: PileKind;
-  readonly cards: readonly CardId[];
+  readonly cards: readonly ChronicleCard[];
   /** The number the ringed card was offered as, and nothing while none is ringed. */
   selected: number | undefined;
 };
@@ -198,7 +199,7 @@ type Inspected =
 function inspectedOf(catalogue: Catalogue, reference: Reference): Inspected {
   switch (reference.kind) {
     case 'card':
-      return { shows: 'face', face: cardFace(catalogue, reference.id), refusal: NO_REFUSAL };
+      return { shows: 'face', face: cardFaceAtStart(catalogue, reference.id), refusal: NO_REFUSAL };
     case 'terrain':
     case 'feature':
     case 'improvement':
@@ -613,7 +614,7 @@ export function createOverlay(
     );
     layGrid(
       'browse',
-      browsing.cards.map((id, at) => offeredCard(catalogue, id, at)),
+      browsing.cards.map((card, at) => offeredCard(cardFace(catalogue, card), at)),
       title.y + title.height + MARGIN,
       (at, press) => {
         switch (press) {
@@ -994,14 +995,16 @@ export function createOverlay(
       offset = 0;
       showAim({
         aimed,
-        cards: chronicle.discardPile.map((id, at) => offeredCard(catalogue, id, at)).reverse(),
+        cards: chronicle.discardPile
+          .map((card, at) => offeredCard(cardFace(catalogue, card), at))
+          .reverse(),
         chosen,
         closed,
       });
       return closeAim;
     },
-    inspect(id: CardId, refusal: Refusal): void {
-      showInspection(cardFace(catalogue, id), refusal, undefined);
+    inspect(card: ChronicleCard, refusal: Refusal): void {
+      showInspection(cardFace(catalogue, card), refusal, undefined);
     },
     inspectNamed,
     render(chronicle: Chronicle): void {
@@ -1084,7 +1087,7 @@ function dealt(
     case 'camp':
       return {
         heading: buildingName(catalogue.camp.building),
-        entries: ids.map((id, at) => offeredCard(catalogue, id, at)),
+        entries: ids.map((id, at) => offeredCard(cardFaceAtStart(catalogue, id), at)),
       };
   }
 }
@@ -1108,11 +1111,16 @@ function speedOf(trail: readonly { time: number; y: number }[], now: number): nu
 }
 
 /** The draw pile gives its draw order away to no one: it reads by kind, then by name. */
-function cardsOf(catalogue: Catalogue, pile: PileKind, chronicle: Chronicle): readonly CardId[] {
+function cardsOf(
+  catalogue: Catalogue,
+  pile: PileKind,
+  chronicle: Chronicle,
+): readonly ChronicleCard[] {
   if (pile === 'discard-pile') return [...chronicle.discardPile].reverse();
   return [...chronicle.drawPile].sort(
     (a, b) =>
-      CARD_KINDS.indexOf(cardOf(catalogue, a).kind) -
-        CARD_KINDS.indexOf(cardOf(catalogue, b).kind) || cardName(a).localeCompare(cardName(b)),
+      CARD_KINDS.indexOf(cardOf(catalogue, a.id).kind) -
+        CARD_KINDS.indexOf(cardOf(catalogue, b.id).kind) ||
+      cardName(a.id).localeCompare(cardName(b.id)),
   );
 }

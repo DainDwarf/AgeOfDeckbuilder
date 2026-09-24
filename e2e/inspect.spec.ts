@@ -23,6 +23,7 @@ import {
   dragOut,
   endTurn,
   firstSeed,
+  idsOf,
   launch,
   onScreen,
   open,
@@ -269,7 +270,7 @@ test('a click selects a tile, the inspection key steps its cards, and the back k
   for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
 
   const opened = await chronicleOf(page);
-  await dragOut(page, opened.hand.indexOf('PH_Worker'));
+  await dragOut(page, idsOf(opened.hand).indexOf('PH_Worker'));
   await expect.poll(async () => playersOf(await chronicleOf(page)).length).toBe(1);
 
   const entered = await chronicleOf(page);

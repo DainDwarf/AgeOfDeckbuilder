@@ -1,3 +1,4 @@
+import type { ChronicleCard } from '../rules/state';
 import type { Reference } from './text-run';
 
 // A `rules.`, `answer-rules.` or `capstone-rules.` entry may mark a glyph `[<resource>]` and a name
@@ -109,6 +110,7 @@ const TEXT = {
   'rules.PH_Recall': 'Recall a card from the discard pile',
   'rules.PH_Spoils': 'Single use.\n10[food] 10[production] 10[military] 10[money] 10[science]',
   'rules.PH_Hunger': 'Empties the food stock. Names [card:PH_Hunger]',
+  'rules.PH_Frost': 'Takes {amount}[food]',
   'card.settle': 'Settlement', // glossary exception: settlement
   'rules.settle': 'Place the [building:city]',
   'card.first-worker': 'Worker',
@@ -321,9 +323,12 @@ export function referenceName(reference: Reference): string {
   }
 }
 
-/** What a card's rules entry reads on the screen; a card no entry names is refused. */
-export function cardRules(card: string): string {
-  return named('rules', card, 'the card');
+/**
+ * What a card's rules entry reads on the screen, filled with the counters the card carries; a card
+ * no entry names is refused.
+ */
+export function cardRules(card: ChronicleCard): string {
+  return named('rules', card.id, 'the card', card.counters);
 }
 
 /** What an event is named on the screen; an event no entry names is refused. */

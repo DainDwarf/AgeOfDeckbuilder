@@ -17,7 +17,7 @@ import {
 } from '../src/rules/map';
 import { RESOURCES, type Resource } from '../src/rules/resources';
 import { offered } from '../src/rules/schedule';
-import { type CardId, type Chronicle, playable } from '../src/rules/state';
+import { type CardId, type Chronicle, type ChronicleCard, playable } from '../src/rules/state';
 import type { Unit } from '../src/rules/units';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
 import type { PileKind } from '../src/ui/overlay';
@@ -250,6 +250,11 @@ export function chronicleOf(page: Page): Promise<Chronicle> {
     if (scene === undefined) throw new Error('the ui scene is not running');
     return scene.chronicle;
   });
+}
+
+/** What the cards of a pile are, by id, in pile order. */
+export function idsOf(pile: readonly ChronicleCard[]): CardId[] {
+  return pile.map(({ id }) => id);
 }
 
 /** The units of the player's standing on the chronicle, in unit order: the camps' guards left out. */
@@ -683,7 +688,7 @@ export function stepRun(): StepRun {
 function steppedThisTurn(
   chronicle: Chronicle,
 ): { first: TileCoords; second: TileCoords } | undefined {
-  const enter = chronicle.hand.indexOf('PH_Worker');
+  const enter = idsOf(chronicle.hand).indexOf('PH_Worker');
   if (enter === -1 || !playable(refusalOf(STAND_IN, chronicle, 'PH_Worker'))) return undefined;
   const entered = outcome(apply(STAND_IN, chronicle, { type: 'play', index: enter, aim: 'none' }));
   const [worker, ...others] = playersOf(entered);
@@ -707,7 +712,7 @@ function steppedThisTurn(
 
 /** Where a card aimed at a tile that the city can pay for lies in the hand, or -1. */
 export function atTile(chronicle: Chronicle): number {
-  return chronicle.hand.findIndex(
+  return idsOf(chronicle.hand).findIndex(
     (id) =>
       aimOf(cardOf(STAND_IN, id)).aim === 'tile' && playable(refusalOf(STAND_IN, chronicle, id)),
   );
@@ -749,11 +754,12 @@ function workedThisTurn(
   aimed: AimedCard,
   keeps: (tile: Tile, chronicle: Chronicle) => boolean,
 ): TileCoords | undefined {
-  const enter = chronicle.hand.indexOf('PH_Worker');
+  const enter = idsOf(chronicle.hand).indexOf('PH_Worker');
   if (enter === -1 || !playable(refusalOf(STAND_IN, chronicle, 'PH_Worker'))) return undefined;
   const entered = outcome(apply(STAND_IN, chronicle, { type: 'play', index: enter, aim: 'none' }));
   const [worker, ...others] = playersOf(entered);
-  if (worker === undefined || others.length > 0 || !entered.hand.includes(card)) return undefined;
+  if (worker === undefined || others.length > 0 || !idsOf(entered.hand).includes(card))
+    return undefined;
 
   for (const tile of neighbours(cityTileOf(entered))) {
     const moved = outcome(apply(STAND_IN, entered, { type: 'move', unit: worker.id, tile }));
