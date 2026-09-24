@@ -368,9 +368,9 @@ export function cardOf(catalogue: Catalogue, id: string): Card {
 }
 
 /**
- * The one way a card is made in a chronicle: at the counters its content declares, each one set
- * taking the value handed instead. A card the catalogue does not hold, and a counter set that its
- * content does not declare, are refused.
+ * A card made in a chronicle at the counters its content declares, each one set taking the value
+ * handed instead; a card the catalogue does not hold, and a counter set that its content does not
+ * declare, are refused.
  */
 export function cardMade(catalogue: Catalogue, id: CardId, set: Counters = {}): ChronicleCard {
   const declared = cardOf(catalogue, id).counters ?? {};
