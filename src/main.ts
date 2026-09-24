@@ -1,23 +1,19 @@
+// First, before any import that can throw as it is evaluated: the watch is only as early as it is.
+import './failed-boot';
 import Phaser from 'phaser';
 import { CATALOGUES, catalogueOf } from './content/catalogues';
+import { booted } from './failed-boot';
 import { deckOf, scheduleOf } from './rules/catalogue';
 import { regionOf } from './rules/map-kinds';
 import { ChronicleScene } from './ui/chronicle-scene';
-import { CONSOLE_FONT, DebugConsole } from './ui/debug-console';
-import {
-  backingSize,
-  followPointer,
-  followWindow,
-  releaseOnBlur,
-  UI_FONT,
-} from './ui/design-space';
+import { DebugConsole } from './ui/debug-console';
+import { backingSize, followPointer, followWindow, releaseOnBlur } from './ui/design-space';
 import { readMouseKeys } from './ui/keys';
 import { type Choices, firstsOf, LaunchPage } from './ui/launch-page';
 import { css, LOOK } from './ui/look';
 import { MapScene } from './ui/map-scene';
 import { MenuScene } from './ui/menu-scene';
 import { OverlayScene } from './ui/overlay-scene';
-import { text } from './ui/text';
 
 // The e2e suite and browser-console debugging observe the running game through this handle;
 // it is optional because the window exists before the game does.
@@ -62,95 +58,46 @@ function askedChoices(): Choices {
   };
 }
 
-/** Runs a step of the boot; a throw in it puts the failed boot's page over the body and is thrown on. */
-function booting(step: () => void): void {
-  try {
-    step();
-  } catch (error) {
-    // Phaser cannot draw this: the boot that failed is the one that would have drawn it (DOGMAS.md, Stack).
-    const page = document.createElement('div');
-    Object.assign(page.style, {
-      position: 'fixed',
-      inset: '0',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: '16px',
-      padding: '24px',
-      boxSizing: 'border-box',
-      background: css(LOOK.page),
-      textAlign: 'center',
-    });
-    const sentence = document.createElement('div');
-    sentence.textContent = text('boot.failed');
-    Object.assign(sentence.style, {
-      fontFamily: UI_FONT,
-      fontSize: '26px',
-      fontWeight: 'bold',
-      color: css(LOOK.paleInk),
-    });
-    const words = document.createElement('div');
-    words.textContent = error instanceof Error ? error.message : String(error);
-    Object.assign(words.style, {
-      fontFamily: CONSOLE_FONT,
-      fontSize: '16px',
-      color: css(LOOK.answerInk),
-      maxWidth: '100%',
-      whiteSpace: 'pre-wrap',
-      overflowWrap: 'anywhere',
-    });
-    page.append(sentence, words);
-    document.body.append(page);
-    throw error;
-  }
-}
-
-booting(() => {
-  const choices = askedChoices();
-  const backing = backingSize();
-  const game = new Phaser.Game({
-    type: Phaser.WEBGL,
-    width: backing.width,
-    height: backing.height,
-    backgroundColor: css(LOOK.page),
-    disableContextMenu: true,
-    scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
-  });
-  // The tower's barriers rest on this; on, a stopped release strands a drag off the hand (docs/PHASER.md).
-  game.input.globalTopOnly = false;
-  // Added bottom up, started top down: render order is the add order, key order the start order (docs/PHASER.md).
-  game.scene.add('launch', LaunchPage);
-  game.scene.add('map', MapScene);
-  game.scene.add('ui', ChronicleScene);
-  game.scene.add('overlay', OverlayScene);
-  game.scene.add('menu', MenuScene);
-  game.scene.add('console', DebugConsole);
-  // The ui scene reaches into the console's, the menu's, the overlay's and the map's as it is created,
-  // so this order is load-bearing twice over: started last, none of them has the handle it is reached
-  // by yet and the chronicle throws on the address that opens straight.
-  game.events.once(Phaser.Core.Events.READY, () =>
-    booting(() => {
-      // A batch shader built for several textures tears a rotated Text (docs/PHASER.md). Not the config's
-      // `maxTextures`: that caps the units every draw binds, and at one the browse's mask binds nothing.
-      (game.renderer as Phaser.Renderer.WebGL.WebGLRenderer).renderNodes.setMaxParallelTextureUnits(
-        1,
-      );
-      game.scene.start('console');
-      game.scene.start('menu');
-      if (asked('deck') === undefined) {
-        game.scene.start('launch', choices);
-        return;
-      }
-      game.scene.start('overlay');
-      game.scene.start('map');
-      game.scene.start('ui', choices);
-    }),
-  );
-  followWindow(game);
-  followPointer(game);
-  releaseOnBlur(game);
-  readMouseKeys(game);
-
-  window.game = game;
+const choices = askedChoices();
+const backing = backingSize();
+const game = new Phaser.Game({
+  type: Phaser.WEBGL,
+  width: backing.width,
+  height: backing.height,
+  backgroundColor: css(LOOK.page),
+  disableContextMenu: true,
+  scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
 });
+// At once: a boot failing from here on is destroyed through this handle.
+window.game = game;
+// The tower's barriers rest on this; on, a stopped release strands a drag off the hand (docs/PHASER.md).
+game.input.globalTopOnly = false;
+// Added bottom up, started top down: render order is the add order, key order the start order (docs/PHASER.md).
+game.scene.add('launch', LaunchPage);
+game.scene.add('map', MapScene);
+game.scene.add('ui', ChronicleScene);
+game.scene.add('overlay', OverlayScene);
+game.scene.add('menu', MenuScene);
+game.scene.add('console', DebugConsole);
+// The ui scene reaches into the console's, the menu's, the overlay's and the map's as it is created,
+// so this order is load-bearing twice over: started last, none of them has the handle it is reached
+// by yet and the chronicle throws on the address that opens straight.
+game.events.once(Phaser.Core.Events.READY, () => {
+  // A batch shader built for several textures tears a rotated Text (docs/PHASER.md). Not the config's
+  // `maxTextures`: that caps the units every draw binds, and at one the browse's mask binds nothing.
+  (game.renderer as Phaser.Renderer.WebGL.WebGLRenderer).renderNodes.setMaxParallelTextureUnits(1);
+  game.scene.start('console');
+  game.scene.start('menu');
+  if (asked('deck') === undefined) {
+    game.scene.start('launch', choices);
+  } else {
+    game.scene.start('overlay');
+    game.scene.start('map');
+    game.scene.start('ui', choices);
+  }
+  booted();
+});
+followWindow(game);
+followPointer(game);
+releaseOnBlur(game);
+readMouseKeys(game);

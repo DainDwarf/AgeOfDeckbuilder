@@ -3,6 +3,7 @@ import { runLine } from './console-line';
 import {
   addText,
   BAR_HEIGHT,
+  CONSOLE_FONT,
   DESIGN_WIDTH,
   holdDesignSpace,
   MARGIN,
@@ -37,9 +38,6 @@ const PAD = 10;
 const LINES_TOP = BAR_HEIGHT + PAD;
 
 const HEIGHT = LINES_TOP + PAD + (HISTORY + 1) * LINE;
-
-/** The monospace stack the console types in. */
-export const CONSOLE_FONT = 'ui-monospace, Consolas, "Courier New", monospace';
 
 const CONSOLE_STYLE = {
   fontFamily: CONSOLE_FONT,
