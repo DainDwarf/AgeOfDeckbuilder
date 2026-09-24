@@ -6,7 +6,6 @@ import {
   CARD_BASELINE,
   CARD_HEIGHT,
   CARD_WIDTH,
-  cardFace,
   createCardBack,
   createCardFace,
   createEmptySlot,
@@ -21,6 +20,7 @@ import {
   type Stratum,
   UI_FONT,
 } from './design-space';
+import { cardFace } from './face';
 import { css, LOOK } from './look';
 import type { PileKind } from './overlay';
 

@@ -5,7 +5,6 @@ import {
   CARD_HEIGHT,
   CARD_WIDTH,
   type CardFace,
-  cardFaceAtStart,
   createCardFace,
   type KindBubble,
   type Name,
@@ -21,8 +20,8 @@ import {
   onHover,
   type Stratum,
 } from './design-space';
+import { namedCardFace, type Reading } from './face';
 import { createThingCard } from './infopanel';
-import type { Reference } from './text-run';
 import { HANDOVER_MS, JITTER, REST_MS } from './tooltip';
 
 /** The clear water between a small card and the line of the name that raised it. */
@@ -70,7 +69,7 @@ export function createSmallCards(
   on: Stratum,
   catalogue: Catalogue,
   kinds: KindBubble,
-  inspect: (reference: Reference) => void,
+  inspect: (name: Name) => void,
 ): SmallCards {
   let chain: Link[] = [];
   /** The name of the surface the pointer is on, and nothing while it is on none. */
@@ -111,13 +110,17 @@ export function createSmallCards(
   };
 
   /** A card named, drawn small as its face, whose own names raise the chain on. */
-  const faceOf = (card: CardId, over: (under: Raiser | undefined) => void): CardFace => {
-    const face = createCardFace(scene, cardFaceAtStart(catalogue, card), NO_REFUSAL, {
+  const faceOf = (
+    card: CardId,
+    reading: Reading,
+    over: (under: Raiser | undefined) => void,
+  ): CardFace => {
+    const face = createCardFace(scene, namedCardFace(catalogue, card, reading), NO_REFUSAL, {
       names: {
         over: (name) => {
           over(name === undefined ? undefined : raiserOf(face, name));
         },
-        inspect: (name) => inspect(name.reference),
+        inspect,
       },
     });
     face.root.setData('card', card);
@@ -129,12 +132,12 @@ export function createSmallCards(
    * wears no kind label.
    */
   const drawnOf = (
-    reference: Reference,
+    { reference, reading }: Name,
     over: (under: Raiser | undefined) => void,
   ): { root: Phaser.GameObjects.Container; face: CardFace | undefined } => {
     switch (reference.kind) {
       case 'card': {
-        const face = faceOf(reference.id, over);
+        const face = faceOf(reference.id, reading, over);
         return { root: face.root, face };
       }
       case 'terrain':
@@ -152,7 +155,7 @@ export function createSmallCards(
 
   const raise = (raiser: Raiser, level: number): void => {
     cut(level);
-    const { root, face } = drawnOf(raiser.name.reference, (under) => {
+    const { root, face } = drawnOf(raiser.name, (under) => {
       link.under = under;
       settle();
     });
@@ -175,7 +178,7 @@ export function createSmallCards(
         hitAreaCallback: Phaser.Geom.Rectangle.Contains,
       });
     answersPress(root);
-    onClick(root, () => inspect(raiser.name.reference), 'right');
+    onClick(root, () => inspect(raiser.name), 'right');
     onHover(
       root,
       () => {

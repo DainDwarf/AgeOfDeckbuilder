@@ -12,10 +12,10 @@ import {
   CARD_LIFT,
   CARD_WIDTH,
   type CardFace,
-  cardFace,
   createCardBack,
   createCardFace,
   createKindBubble,
+  type Name,
 } from './card-face';
 import { ended, STAGGER, stopMotion, travel, turnOver } from './card-motion';
 import {
@@ -27,10 +27,10 @@ import {
   releasedOffCanvas,
   type Stratum,
 } from './design-space';
+import { cardFace } from './face';
 import { PILE_PLACE } from './piles';
 import { createRefusalNote, refused } from './refusal-note';
 import { createSmallCards, type Raiser } from './small-card';
-import type { Reference } from './text-run';
 import type { Tooltip } from './tooltip';
 
 /** The clear water between a pile and the lane the hand fans out in. */
@@ -93,7 +93,7 @@ export type HandPresses = {
   aimDiscardPile(index: number, closed: () => void): () => void;
   inspect(card: ChronicleCard, refusal: Refusal): void;
   /** What a name on a card of the hand names, shown large. */
-  inspectNamed(reference: Reference): void;
+  inspectNamed(name: Name): void;
 };
 
 /**
@@ -123,8 +123,8 @@ export function createHand(
   const note = createRefusalNote(scene, on.note);
   const line = createAimLine(scene, on.aimLine);
   const kinds = createKindBubble(tooltip);
-  const small = createSmallCards(scene, on.smallCard, catalogue, kinds, (reference) =>
-    presses.inspectNamed(reference),
+  const small = createSmallCards(scene, on.smallCard, catalogue, kinds, (name) =>
+    presses.inspectNamed(name),
   );
 
   let slots: Slot[] = [];
@@ -453,7 +453,7 @@ export function createHand(
       onClick(
         slot.face.root,
         (pointer) => {
-          const named = nameUnder(slot, pointer)?.name.reference;
+          const named = nameUnder(slot, pointer)?.name;
           if (named === undefined) presses.inspect(slot.card, slot.refusal);
           else presses.inspectNamed(named);
         },

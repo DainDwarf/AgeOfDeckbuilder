@@ -1,16 +1,5 @@
 import type Phaser from 'phaser';
-import type { CardKind } from '../rules/cards';
-import { type Catalogue, cardMade, cardOf } from '../rules/catalogue';
-import { costOf } from '../rules/chronicle';
-import { answerOf } from '../rules/schedule';
-import {
-  type CardId,
-  type Chronicle,
-  type ChronicleCard,
-  type Cost,
-  playable,
-  type Refusal,
-} from '../rules/state';
+import { playable, type Refusal } from '../rules/state';
 import {
   addText,
   answersPress,
@@ -23,17 +12,9 @@ import {
   TEXT_INSET,
   UI_FONT,
 } from './design-space';
+import type { Face, Reading } from './face';
 import { css, LOOK, type Paper, worn } from './look';
-import {
-  answerName,
-  answerRules,
-  capstoneName,
-  capstoneRules,
-  cardName,
-  cardRules,
-  referenceName,
-  text,
-} from './text';
+import { referenceName, text } from './text';
 import { layOutRun, type Reference, type Run } from './text-run';
 import type { Tooltip } from './tooltip';
 
@@ -98,72 +79,13 @@ export function drawCardSurface(
   surface.strokeRoundedRect(x + 0.5, y + 0.5, width - 1, height - 1, radius);
 }
 
-/** What the label at a face's foot reads, and what its tooltip says. */
-export type FaceKind = CardKind | 'event' | 'capstone';
-
 /**
- * What a face reads: what it stands, for whoever reads that back off the object it is drawn on; its
- * name; the kind it is labelled by; its rules entry; and what it costs, in the order the resource
- * bar reads the resources.
+ * A name a rules entry draws, which a face carries in its data as `names`: what it names, the
+ * reading of the face it stands on, and its box.
  */
-export type Face = {
-  readonly id: string;
-  readonly name: string;
-  readonly kind: FaceKind;
-  readonly rules: string;
-  readonly costs: readonly Cost[];
-};
-
-/** The face a card in a chronicle is drawn as, its rules entry reading the counters it carries. */
-export function cardFace(catalogue: Catalogue, card: ChronicleCard): Face {
-  return {
-    id: card.id,
-    name: cardName(card.id),
-    kind: cardOf(catalogue, card.id).kind,
-    rules: cardRules(card),
-    costs: costOf(catalogue, card.id),
-  };
-}
-
-/** The face a card named is drawn as: the card as its content makes it, at the counters it starts with. */
-export function cardFaceAtStart(catalogue: Catalogue, id: CardId): Face {
-  return cardFace(catalogue, cardMade(catalogue, id));
-}
-
-/** The face a capstone is drawn as: it costs nothing, and its rules entry reads no numbers. */
-export function capstoneFace(id: string): Face {
-  return {
-    id,
-    name: capstoneName(id),
-    kind: 'capstone',
-    rules: capstoneRules(id),
-    costs: [],
-  };
-}
-
-/**
- * The face an answer of an event is drawn as: its rules entry, read on the chronicle it was dealt
- * on. What the answer costs reads in that entry, so the face wears no chip for it.
- */
-export function answerFace(
-  catalogue: Catalogue,
-  chronicle: Chronicle,
-  event: string,
-  id: string,
-): Face {
-  const answer = answerOf(catalogue, event, id);
-  return {
-    id,
-    name: answerName(id),
-    kind: 'event',
-    rules: answerRules(id, answer.reads(catalogue, chronicle)),
-    costs: [],
-  };
-}
-
-/** A name a rules entry draws, which a face carries in its data as `names`: what it names, and its box. */
 export type Name = {
   readonly reference: Reference;
+  readonly reading: Reading;
   /** Its middle, about the face's own bottom centre. */
   readonly x: number;
   readonly y: number;
@@ -313,6 +235,7 @@ export function createCardFace(
 
   const names: Name[] = run.names.map((named) => ({
     reference: named.reference,
+    reading: face.reading,
     x: (named.from + named.to) / 2,
     y: runTop + (named.line + 0.5) * lineHeight,
     width: named.to - named.from,

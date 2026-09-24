@@ -15,17 +15,7 @@ import {
   type Refusal,
 } from '../rules/state';
 import { type Bind, boundTo, type Press } from './bindings';
-import {
-  answerFace,
-  type CardFace,
-  capstoneFace,
-  cardFace,
-  cardFaceAtStart,
-  createCardFace,
-  createKindBubble,
-  type Face,
-  heightOf,
-} from './card-face';
+import { type CardFace, createCardFace, createKindBubble, heightOf, type Name } from './card-face';
 import { EASE, ended, stopMotion } from './card-motion';
 import {
   addText,
@@ -41,6 +31,14 @@ import {
   UI_FONT,
   whileUp,
 } from './design-space';
+import {
+  answerFace,
+  capstoneFace,
+  cardFace,
+  cardFaceAtStart,
+  type Face,
+  namedCardFace,
+} from './face';
 import { createThingCard, type Thing } from './infopanel';
 import { isWheelNotch } from './keys';
 import { css, LOOK } from './look';
@@ -49,7 +47,6 @@ import type { OverlayScene } from './overlay-scene';
 import { createRefusalNote, refused } from './refusal-note';
 import { createSmallCards, type Raiser, raiserOf } from './small-card';
 import { buildingName, cardName, eventName, text, victoryLine } from './text';
-import type { Reference } from './text-run';
 import { createTooltip } from './tooltip';
 
 const TITLE_INK = css(LOOK.paleInk);
@@ -90,7 +87,7 @@ export type Overlay = {
   ): () => void;
   inspect(card: ChronicleCard, refusal: Refusal): void;
   /** What a name names shown large, as a right click on a name shows it wherever the name stands. */
-  inspectNamed(reference: Reference): void;
+  inspectNamed(name: Name): void;
   /**
    * Raises the capstone's window on the opening's first render, the deal window while the chronicle
    * waits on a deal and the ending screen once it has ended, and nothing while it runs.
@@ -196,10 +193,14 @@ type Inspected =
   | { readonly shows: 'thing'; readonly thing: Thing };
 
 /** What a name names, as it stands large: a card as its face, which nothing refuses. */
-function inspectedOf(catalogue: Catalogue, reference: Reference): Inspected {
+function inspectedOf(catalogue: Catalogue, { reference, reading }: Name): Inspected {
   switch (reference.kind) {
     case 'card':
-      return { shows: 'face', face: cardFaceAtStart(catalogue, reference.id), refusal: NO_REFUSAL };
+      return {
+        shows: 'face',
+        face: namedCardFace(catalogue, reference.id, reading),
+        refusal: NO_REFUSAL,
+      };
     case 'terrain':
     case 'feature':
     case 'improvement':
@@ -253,8 +254,8 @@ export function createOverlay(
   const note = createRefusalNote(scene, scene.strata.note);
   const tooltip = createTooltip(scene, scene.strata.tooltip);
   const kinds = createKindBubble(tooltip);
-  const small = createSmallCards(scene, scene.strata.smallCard, catalogue, kinds, (reference) => {
-    inspectNamed(reference);
+  const small = createSmallCards(scene, scene.strata.smallCard, catalogue, kinds, (name) => {
+    inspectNamed(name);
   });
 
   let shown: Phaser.GameObjects.GameObject[] = [];
@@ -358,7 +359,7 @@ export function createOverlay(
                       small.over(name === undefined ? undefined : raiserOf(drawn, name));
                     },
                     inspect: (name) => {
-                      inspectNamed(name.reference);
+                      inspectNamed(name);
                     },
                     kind: (over) => {
                       kinds.over(drawn, over);
@@ -400,8 +401,8 @@ export function createOverlay(
    * What a name names, on top of the stack while a card stands large, and nothing more once the
    * stack is full; shown large alone over the window standing otherwise.
    */
-  const inspectNamed = (reference: Reference): void => {
-    const named = inspectedOf(catalogue, reference);
+  const inspectNamed = (name: Name): void => {
+    const named = inspectedOf(catalogue, name);
     if (carried === undefined) {
       showStack([named], undefined);
       return;
@@ -552,7 +553,7 @@ export function createOverlay(
     onClick(
       frame,
       (pointer) => {
-        const named = nameUnder(pointer)?.name.reference;
+        const named = nameUnder(pointer)?.name;
         if (named === undefined) pressed(under(pointer)?.at, 'right');
         else inspectNamed(named);
       },

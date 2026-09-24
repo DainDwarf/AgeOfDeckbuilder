@@ -42,6 +42,10 @@ function raiders(turn: number): number {
   return 1 + Math.floor(turn / 10);
 }
 
+function hungerFood(turn: number): number {
+  return 2 + Math.floor(turn / 10);
+}
+
 const WILDFIRE: Fire = { burns: 'forest', leaves: 'plain', fromCity: 4, around: 1, damage: 2 };
 
 const HERD = { feature: 'wildlife', fromCity: 4 } as const;
@@ -143,8 +147,9 @@ export const NOMADIC: Catalogue = catalogued({
     hunger: {
       kind: 'hazard',
       cost: { production: 2 },
-      strikes: (_catalogue, chronicle) => {
-        const taken = 2 + Math.floor(chronicle.turn / 10);
+      counters: { food: hungerFood(0) },
+      strikes: (_catalogue, chronicle, counter) => {
+        const taken = counter('food');
         const shortened = shocked(chronicle, 'food', taken);
         return chronicle.resources.food < taken
           ? followed(shortened, (left) => populationTaken(left))
@@ -184,8 +189,9 @@ export const NOMADIC: Catalogue = catalogued({
       answers: {
         share: {
           cost: {},
-          reads: () => ({}),
-          lands: (catalogue, chronicle) => laid(catalogue, chronicle, 'hunger'),
+          reads: (_catalogue, chronicle) => ({ food: hungerFood(chronicle.turn) }),
+          lands: (catalogue, chronicle) =>
+            laid(catalogue, chronicle, 'hunger', { food: hungerFood(chronicle.turn) }),
         },
         ration: {
           cost: {},

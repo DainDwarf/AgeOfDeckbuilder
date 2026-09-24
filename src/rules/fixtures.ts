@@ -285,7 +285,7 @@ const EVENTS: Catalogue['events'] = {
       },
       PH_Freeze: {
         cost: {},
-        reads: () => ({}),
+        reads: () => ({ amount: FREEZE, cards: 1 }),
         lands: (catalogue, chronicle) => laid(catalogue, chronicle, 'PH_Frost', { amount: FREEZE }),
       },
       PH_Thaw: {
