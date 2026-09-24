@@ -4,6 +4,55 @@ Player-facing release notes. Written at a version bump, for players; never a dev
 
 ## [Unreleased]
 
+## [0.0.4] - 2026-09-24
+
+The first real age. The stand-in deck gives way to the Nomadic Age: a band that stops wandering, settles where it chooses, and wins the age by building its first shelter. Every number in it is provisional.
+
+### Added
+
+- The Nomadic Age, the first age of the game, with a deck, events, a capstone and a land of its own. Four resources are in play: food, production, military and culture.
+- The settle phase. A chronicle opens before its first turn with the middle of the map in sight and three settle cards in hand: Settlement places the city on plain, forest or hills, and Worker and Scout place the band's first units, taking no population. The phase ends as a turn does, once the city stands; the map's frame, a chip and the end-turn button show it in a colour of its own.
+- The scout, a unit that sees far, moves far and is weak.
+- Gather, the most common card in the deck: played through a worker outside the border, it gains the yield of the tile the worker stands on. Inside the border it is refused.
+- Trapping, placed by a worker on forest, gives food. Two new features: wildlife on forest, flint on hills.
+- Five events, each dealt with two answers. Lean season lays Hunger on the draw pile or brings enemies to the city; a rival band attacks or places a new camp near the city; Wildfire burns forest into plain unless you pay production; Departure takes one population unless you pay culture; the herd, rarer, gives food or wildlife near the city. Every event carries lore, a few lines saying what is happening to the city, and so do a camp's capture and the capstone.
+- The first shelter, the age's capstone. Its card is shown when the chronicle opens; when it lands it puts Shelter on top of the draw pile, and the chronicle is won the moment a worker builds it.
+- Every camp opens with an enemy on it that keeps the camp, and the camp may enter another at each enemy phase.
+- A captured camp deals two rewards and you choose one: Pillage, food and production, or Capture, one population. Both are single use.
+- Names in brackets on a card. Rest the pointer on one to see the thing it names as a small card; right-click it to show it large. Cards shown large stack, up to twelve.
+- A card's kind label says what the kind is when the pointer rests on it.
+- Changes on the map play out: a terrain changes before your eyes, marks come and go, a tile just charted fades in, and a unit hurt or killed by no attacker bumps or shrinks.
+- A unit with no move points and no action left is dimmed.
+- The pointer is a hand over whatever a click presses.
+- A launch page choosing the content, region, schedule, deck and seed. The address keeps the choices, so a reload replays the chronicle.
+- A page saying the game could not start, with the error's own words, in place of a blank screen.
+
+### Changed
+
+- The city holds only its own tile when it settles, with one population on it; every other tile is claimed. The culture threshold is twice the tiles the city holds.
+- The growth threshold is twice the population and your units on the map counted together, and growth now comes before income.
+- The city gives military and culture, and nothing else on the map yields military.
+- An attack, or a card played through a worker, spends the move points the unit has left: move first, then act.
+- An event is one problem dealt with its answers, instead of two events to choose between, and events come less often.
+- Hunger takes the food written on it, more on a later turn, and kills one population when the stock cannot cover it. Pay its production cost to be rid of it.
+- An event's enemies enter together through one door: a camp still standing, or the map's outer ring. Capturing every camp no longer ends the raids.
+- Victory comes the moment the capstone's condition holds, even in the middle of a play.
+- The map is larger. Its middle is plain, forest and hills, with the water and the mountains further out, and forest also gathers in woodlands.
+- A tile's feature and improvements stand in one row above its middle.
+- Enemies seen in the fog are forgotten when the turn ends, since they have moved.
+- The resource bar reads culture as the stock over the culture threshold, and population as the idle alone. Culture and idle fill in the accent while city mode has a claim or an assignment waiting.
+
+### Removed
+
+- The stand-in deck and everything that only it held: PH_Farm, PH_Harvest, PH_Mine, PH_Road, PH_Urbanisation, PH_Recall, PH_Spoils, the raid and famine events, urban ground and the PH_Siege capstone. No card places a road any more.
+
+### Fixed
+
+- The end-turn button reads End turn again when the turn's play-out ends under a pointer that never moved.
+- A card, a unit or a population being dragged comes home when a window rises over it, instead of landing under the window.
+- A pan dragged across the Menu button carries on instead of opening the menu.
+- A small card or a kind label's bubble raised in a window follows the window as it scrolls.
+
 ## [0.0.3] - 2026-09-13
 
 A chronicle that ends in victory: the age throws events at the city, the enemy comes from camps on a map you have to scout, and the capstone, announced at the founding, lands on a turn you never learn. Hold the city through its siege and the chronicle ends in victory instead of defeat.

@@ -10,7 +10,7 @@ No asset is made by a generative model: art, sound and music come from packs who
 
 ## Play
 
-The latest build v0.0.3 is at [daindwarf.github.io/AgeOfDeckbuilder](https://daindwarf.github.io/AgeOfDeckbuilder/). No account, no server, nothing to install.
+The latest build v0.0.4 is at [daindwarf.github.io/AgeOfDeckbuilder](https://daindwarf.github.io/AgeOfDeckbuilder/). No account, no server, nothing to install.
 
 ## Built on
 
