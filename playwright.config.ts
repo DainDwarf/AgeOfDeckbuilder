@@ -4,7 +4,7 @@ const url = 'http://localhost:5173';
 
 export default defineConfig({
   testDir: 'e2e',
-  use: { ...devices['Desktop Chrome'], baseURL: url },
+  use: { ...devices['Desktop Chrome'], baseURL: url, screenshot: 'only-on-failure' },
   reporter: 'list',
   workers: process.env.CI ? 1 : 4,
   retries: 0,
