@@ -427,8 +427,8 @@ function flowRivers(
   for (let index = 0; index < coords.length; index++) {
     const step = nextRng(rng);
     rng = step.rng;
-    const lift = terrainKind(catalogue, terrains[index]).lift;
-    heights[index] = dist[index] + relief * lift + roughness * step.value;
+    const { elevation } = terrainKind(catalogue, terrains[index]);
+    heights[index] = dist[index] + relief * elevation + roughness * step.value;
   }
 
   const onMap = (corner: Corner): number[] =>

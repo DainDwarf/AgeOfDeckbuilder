@@ -309,7 +309,6 @@ export const NOMADIC: Catalogue = catalogued({
       movementCost: MOVE_POINT,
       water: false,
       elevation: 0,
-      lift: 0,
       river: { food: 1 },
     },
     forest: {
@@ -317,7 +316,6 @@ export const NOMADIC: Catalogue = catalogued({
       movementCost: 2 * MOVE_POINT,
       water: false,
       elevation: 1,
-      lift: 0,
       river: { food: 1 },
     },
     hills: {
@@ -325,11 +323,10 @@ export const NOMADIC: Catalogue = catalogued({
       movementCost: 2 * MOVE_POINT,
       water: false,
       elevation: 2,
-      lift: 1,
     },
-    coast: { yields: { food: 1 }, water: true, elevation: 0, lift: 0 },
-    ocean: { yields: {}, water: true, elevation: 0, lift: 0 },
-    mountain: { yields: {}, water: false, elevation: 3, lift: 2 },
+    coast: { yields: { food: 1 }, water: true, elevation: 0 },
+    ocean: { yields: {}, water: true, elevation: 0 },
+    mountain: { yields: {}, water: false, elevation: 3 },
   },
   biomes: {
     land: {
@@ -408,7 +405,7 @@ export const NOMADIC: Catalogue = catalogued({
       campsApart: 4,
       rivers: {
         source: 'mountain',
-        relief: 1.5,
+        relief: 1,
         roughness: 0.5,
         perRange: 2,
         climb: 0.5,

@@ -566,7 +566,6 @@ export const CATALOGUE: Catalogue = catalogued({
       movementCost: MOVE_POINT,
       water: false,
       elevation: 0,
-      lift: 0,
       river: { food: 1 },
     },
     forest: {
@@ -574,7 +573,6 @@ export const CATALOGUE: Catalogue = catalogued({
       movementCost: 2 * MOVE_POINT,
       water: false,
       elevation: 1,
-      lift: 0,
       river: { food: 1 },
     },
     hills: {
@@ -582,25 +580,22 @@ export const CATALOGUE: Catalogue = catalogued({
       movementCost: 2 * MOVE_POINT,
       water: false,
       elevation: 2,
-      lift: 1,
     },
     mountain: {
       yields: { production: 1 },
       movementCost: 6 * MOVE_POINT,
       water: false,
       elevation: 3,
-      lift: 2,
     },
-    coast: { yields: { food: 1, money: 1 }, water: true, elevation: 0, lift: 0 },
-    deep: { yields: { food: 1 }, water: true, elevation: 0, lift: 0 },
+    coast: { yields: { food: 1, money: 1 }, water: true, elevation: 0 },
+    deep: { yields: { food: 1 }, water: true, elevation: 0 },
     urban: {
       yields: { production: 1, military: 1, money: 1, science: 1, culture: 1 },
       movementCost: MOVE_POINT,
       water: false,
       elevation: 0,
-      lift: 0,
     },
-    glade: { yields: { food: 1 }, movementCost: MOVE_POINT, water: false, elevation: 0, lift: 0 },
+    glade: { yields: { food: 1 }, movementCost: MOVE_POINT, water: false, elevation: 0 },
   },
   biomes: {
     land: {
@@ -675,7 +670,7 @@ export const CATALOGUE: Catalogue = catalogued({
       campsApart: 3,
       rivers: {
         source: 'mountain',
-        relief: 1.5,
+        relief: 1,
         roughness: 0.5,
         perRange: 2,
         climb: 0.5,

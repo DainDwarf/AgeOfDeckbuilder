@@ -484,7 +484,7 @@ test('a city whose food stock of nought would grow at no population falls on the
 });
 
 test('every card of the deck is in exactly one pile through a full cycle', () => {
-  let chronicle = settledLaunch(CATALOGUE, REGION, SCHEDULE, 2026, DECK);
+  let chronicle = settledLaunch(CATALOGUE, REGION, SCHEDULE, 2027, DECK);
   const deck = everyCard(chronicle);
   expect(deck).toHaveLength(DECK.cards.length);
 

@@ -2,15 +2,14 @@ import type { Resources } from './resources';
 
 /**
  * What a tile of a terrain is: what it yields at income, what entering it costs — none named, and
- * nothing crosses it — whether it is water, how high it stands for sight, how far over the water it
- * stands for the river layer, and what a river running along it adds, nothing where none is named.
+ * nothing crosses it — whether it is water, its elevation, and what a river running along it adds,
+ * nothing where none is named.
  */
 export type TerrainKind = {
   readonly yields: Partial<Resources>;
   readonly movementCost?: number;
   readonly water: boolean;
   readonly elevation: number;
-  readonly lift: number;
   readonly river?: Partial<Resources>;
 };
 
@@ -57,7 +56,7 @@ export type FeatureKind = {
 /**
  * How the river layer runs. `source`: the biome kind rivers rise in, each one of it dealt counting
  * as a range. `relief`: how far a tile stands above its distance to water for each point of its
- * terrain's lift. `roughness`: the most a tile's rolled lift adds to its height.
+ * terrain's elevation. `roughness`: the most a tile's roll adds to its height.
  * `meander`: an edge's drop is weighted as exp(drop / meander), so a small value makes the steep way
  * near-certain. `curl`: what repeating the last turn multiplies an edge's weight by.
  */

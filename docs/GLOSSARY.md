@@ -69,7 +69,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **combat** | Units attacking one another: the player's by hand in play, the enemies' in the enemy phase. | battle, fight, skirmish, war |
 | **income** | The phase where standing things yield. | upkeep, production phase, resolution |
 | **sight** | A unit's stat and the city's own: how far it sees; a tile it reaches is in sight. | vision, line of sight |
-| **elevation** | How high a terrain stands over the ground; what blocks sight. | altitude, tallness |
+| **elevation** | How high a terrain stands over the ground; what blocks sight, and what lifts the river layer's height. | altitude, tallness |
 | **fog** | A tile seen before and out of sight now. | fog of war, shroud, dimmed, remembered |
 | **charted** | A tile that has been in sight, in sight now or in fog. | explored, revealed, discovered, known, seen (of a tile's state) |
 | **uncharted** | A tile never yet in sight. | unexplored, unknown, unrevealed, black, hidden |
