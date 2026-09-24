@@ -17,7 +17,7 @@ import {
   type Stratum,
   UI_FONT,
 } from './design-space';
-import { css, LOOK, type Reading } from './look';
+import { type BarReading, css, LOOK } from './look';
 import { menuRoom } from './menu';
 import { text } from './text';
 import type { Tooltip } from './tooltip';
@@ -36,18 +36,18 @@ const WORD_TO_VALUE = 8;
 const SUNK = 1;
 
 /** The readings the bar carries, in the order it reads them. */
-const READINGS: readonly Reading[] = [...RESOURCES, 'idle'];
+const READINGS: readonly BarReading[] = [...RESOURCES, 'idle'];
 
 /** The readings the city is managed by: pressing either of them enters city mode. */
 const CITY_READINGS = ['culture', 'idle'] as const;
 
 /** Whether a press on this reading enters city mode instead of toggling its resource. */
-function managesCity(key: Reading): key is (typeof CITY_READINGS)[number] {
+function managesCity(key: BarReading): key is (typeof CITY_READINGS)[number] {
   return CITY_READINGS.some((reading) => reading === key);
 }
 
 type Entry = {
-  readonly key: Reading;
+  readonly key: BarReading;
   readonly chip: Phaser.GameObjects.Rectangle;
   readonly word: Phaser.GameObjects.Text;
   readonly value: Phaser.GameObjects.Text;
@@ -110,7 +110,7 @@ export function createResourceBar(
 
   /** The resources the overlay holds latched, and the readings whose act in city mode is waiting. */
   let latched: ReadonlySet<Resource> = new Set();
-  let waiting: ReadonlySet<Reading> = new Set();
+  let waiting: ReadonlySet<BarReading> = new Set();
 
   /**
    * Every reading put in its well or lifted out of it. A latch and a render each arrive without the
@@ -232,7 +232,7 @@ function digitSlot(scene: Phaser.Scene): number {
  */
 function createWell(
   scene: Phaser.Scene,
-  key: Reading,
+  key: BarReading,
 ): { well: Phaser.GameObjects.Container; floor: Phaser.GameObjects.Rectangle } {
   const [floor, ...edges] = [
     LOOK.wellFill,
@@ -260,7 +260,7 @@ function placeWell(well: Phaser.GameObjects.Container, x: number, width: number)
   right.setPosition(x + width - 1, 0).setSize(1, height);
 }
 
-function chipColour(key: Reading): number {
+function chipColour(key: BarReading): number {
   switch (key) {
     case 'idle':
       return LOOK.population;
@@ -278,7 +278,7 @@ function createEntry(
   scene: Phaser.Scene,
   bar: Phaser.GameObjects.Container,
   tooltip: Tooltip,
-  key: Reading,
+  key: BarReading,
 ): Entry {
   const chip = scene.add.rectangle(0, 0, 10, 10, chipColour(key)).setAngle(45);
   const word = addText(scene, 0, 0, text(`label.${key}`), WORD_STYLE).setOrigin(0, 0.5);
@@ -324,7 +324,7 @@ function place(entry: Entry, { at, zone }: Placed): void {
  * it has one — the food stock over the growth threshold, the culture stock over the culture
  * threshold, and the idle population alone.
  */
-function readingOf(chronicle: Chronicle, key: Reading): { count: number; over?: number } {
+function readingOf(chronicle: Chronicle, key: BarReading): { count: number; over?: number } {
   switch (key) {
     case 'idle':
       return { count: idle(chronicle) };
@@ -341,8 +341,8 @@ function readingOf(chronicle: Chronicle, key: Reading): { count: number; over?: 
 }
 
 /** The readings whose act in city mode is waiting on the player: what fills a well in the accent. */
-function actsWaiting(catalogue: Catalogue, chronicle: Chronicle): ReadonlySet<Reading> {
-  const waiting = new Set<Reading>();
+function actsWaiting(catalogue: Catalogue, chronicle: Chronicle): ReadonlySet<BarReading> {
+  const waiting = new Set<BarReading>();
   if (claimWaiting(catalogue, chronicle)) waiting.add('culture');
   if (assignWaiting(chronicle)) waiting.add('idle');
   return waiting;

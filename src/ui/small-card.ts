@@ -20,7 +20,7 @@ import {
   onHover,
   type Stratum,
 } from './design-space';
-import { namedCardFace, type Reading } from './face';
+import { type AnswerReading, namedCardFace } from './face';
 import { createThingCard } from './infopanel';
 import { HANDOVER_MS, JITTER, REST_MS } from './tooltip';
 
@@ -112,7 +112,7 @@ export function createSmallCards(
   /** A card named, drawn small as its face, whose own names raise the chain on. */
   const faceOf = (
     card: CardId,
-    reading: Reading,
+    reading: AnswerReading,
     over: (under: Raiser | undefined) => void,
   ): CardFace => {
     const face = createCardFace(scene, namedCardFace(catalogue, card, reading), NO_REFUSAL, {

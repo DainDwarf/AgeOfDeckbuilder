@@ -4,7 +4,7 @@ import { CATALOGUE, cityOf, FREEZE, FROST } from '../rules/fixtures';
 import { answerFace, cardFace, namedCardFace } from './face';
 
 describe('a card named on a face', () => {
-  it('is made at the counters an answer reads under the names the card declares, and at its start on any other face', () => {
+  it('is made at the counters an answer reads under the names the card declares, a value read under any other name setting nothing, and at its start on any other face', () => {
     const chronicle = cityOf(['urban']);
     const answer = answerFace(CATALOGUE, chronicle, 'PH_Cold', 'PH_Freeze');
     const card = cardFace(CATALOGUE, cardMade(CATALOGUE, 'PH_Hunger'));

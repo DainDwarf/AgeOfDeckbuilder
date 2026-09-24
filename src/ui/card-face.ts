@@ -12,7 +12,7 @@ import {
   TEXT_INSET,
   UI_FONT,
 } from './design-space';
-import type { Face, Reading } from './face';
+import type { AnswerReading, Face } from './face';
 import { css, LOOK, type Paper, worn } from './look';
 import { referenceName, text } from './text';
 import { layOutRun, type Reference, type Run } from './text-run';
@@ -85,7 +85,7 @@ export function drawCardSurface(
  */
 export type Name = {
   readonly reference: Reference;
-  readonly reading: Reading;
+  readonly reading: AnswerReading;
   /** Its middle, about the face's own bottom centre. */
   readonly x: number;
   readonly y: number;

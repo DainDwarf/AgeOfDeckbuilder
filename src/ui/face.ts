@@ -9,7 +9,7 @@ import { answerName, answerRules, capstoneName, capstoneRules, cardName, cardRul
 export type FaceKind = CardKind | 'event' | 'capstone';
 
 /** The numbers an answer's rules entry reads of the chronicle it is dealt on, by name. */
-export type Reading = Readonly<Record<string, number>>;
+export type AnswerReading = Readonly<Record<string, number>>;
 
 /**
  * What a face reads: what it stands, for whoever reads that back off the object it is drawn on; its
@@ -23,7 +23,7 @@ export type Face = {
   readonly rules: string;
   readonly costs: readonly Cost[];
   /** What a card named on it is made at: an answer's reading, and nothing on any other face. */
-  readonly reading: Reading;
+  readonly reading: AnswerReading;
 };
 
 /** The face a card in a chronicle is drawn as, its rules entry reading the counters it carries. */
@@ -47,7 +47,7 @@ export function cardFaceAtStart(catalogue: Catalogue, id: CardId): Face {
  * The face a card named on a face is drawn as: made at the counters that face's reading hands under
  * the names the card declares, and at its start under every other.
  */
-export function namedCardFace(catalogue: Catalogue, id: CardId, reading: Reading): Face {
+export function namedCardFace(catalogue: Catalogue, id: CardId, reading: AnswerReading): Face {
   const declared = cardOf(catalogue, id).counters ?? {};
   const set = Object.fromEntries(
     Object.entries(reading).filter(([counter]) => Object.hasOwn(declared, counter)),

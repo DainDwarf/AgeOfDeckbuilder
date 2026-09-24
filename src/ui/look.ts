@@ -1,7 +1,7 @@
 import type { Resource } from '../rules/resources';
 
 /** What the resource bar reads: one resource, or the idle population. */
-export type Reading = Resource | 'idle';
+export type BarReading = Resource | 'idle';
 
 /** A colour laid over what is under it, at the strength it rests at. */
 export type Wash = { readonly colour: number; readonly strength: number };
