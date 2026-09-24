@@ -334,7 +334,7 @@ test("a card's kind label in the hand raises the bubble reading what its kind is
 
   await open(page, 1, 'PH_Deck');
 
-  const id = (await chronicleOf(page)).hand[0];
+  const id = (await chronicleOf(page)).hand[0]?.id;
   if (id === undefined) throw new Error('the hand holds no card');
   const card = await onScreen(page, 'hand-0');
   const lying = await kindLabelOnScreen(page, 'hand-0');

@@ -177,7 +177,7 @@ test('a building named on the settle card raises its card small at a rest and sh
   await expect.poll(() => standing(page, 'capstone')).toBe(false);
   await rested(page);
   const opened = await chronicleOf(page);
-  expect(opened.hand[0]).toBe('PH_Settle');
+  expect(opened.hand[0].id).toBe('PH_Settle');
   const city = { kind: 'building', id: 'PH_City' };
 
   const card = await onScreen(page, 'hand-0');

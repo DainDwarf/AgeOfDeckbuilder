@@ -60,6 +60,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **discard** | To send a card from the hand to the discard pile. | throw away, dump |
 | **recall** | To put a card from the discard pile into the hand; what a recall instant does. | retrieve, recover, reclaim, salvage |
 | **single use** | A keyword on a card: played, it leaves the chronicle instead of going to the discard pile. | one-use, gone once played, consumed, exhaust, exile |
+| **counter** | A named number a card carries in a chronicle, declared by its content and set when the card is made. | token, marker, charge, stack, variable, modifier |
 | **draw pile** | The cards not yet drawn this cycle; refilled from the discard pile when empty. | library |
 | **discard pile** | The cards played or discarded this cycle, waiting to be shuffled back. | graveyard, trash, bin |
 | **browse** | A window offering a pile's cards to be read. | pile window, viewer, gallery, preview, list (of a pile) |

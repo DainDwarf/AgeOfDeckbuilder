@@ -9,6 +9,7 @@ import {
   dragOut,
   dragUnit,
   endTurn,
+  idsOf,
   marksIn,
   onScreen,
   open,
@@ -28,7 +29,7 @@ test('the farm card builds its farm where the worker moved to', async ({ page })
   for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
 
   const opened = await chronicleOf(page);
-  await dragOut(page, opened.hand.indexOf('PH_Worker'));
+  await dragOut(page, idsOf(opened.hand).indexOf('PH_Worker'));
   await page.waitForFunction(
     () =>
       window.game?.scene
@@ -42,7 +43,7 @@ test('the farm card builds its farm where the worker moved to', async ({ page })
   const moved = await chronicleOf(page);
   const standing = await marksIn(page, 'buildings');
   const destination = await onScreen(page, `tile-${tileKey(run.tile)}`);
-  await dragOut(page, moved.hand.indexOf('PH_Farm'));
+  await dragOut(page, idsOf(moved.hand).indexOf('PH_Farm'));
   await aimed(page);
   await page.mouse.click(destination.x, destination.y);
   await playedOut(page);
@@ -71,7 +72,7 @@ test('a right click while the farm card is aimed inspects, and the card stays ai
   for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
 
   const opened = await chronicleOf(page);
-  await dragOut(page, opened.hand.indexOf('PH_Worker'));
+  await dragOut(page, idsOf(opened.hand).indexOf('PH_Worker'));
   await expect.poll(async () => playersOf(await chronicleOf(page)).length).toBe(1);
 
   const entered = await chronicleOf(page);
@@ -80,7 +81,7 @@ test('a right click while the farm card is aimed inspects, and the card stays ai
   const moved = await chronicleOf(page);
   const destination = await onScreen(page, `tile-${tileKey(run.tile)}`);
   const beside = await besideTiles(page);
-  await dragOut(page, moved.hand.indexOf('PH_Farm'));
+  await dragOut(page, idsOf(moved.hand).indexOf('PH_Farm'));
   await aimed(page);
 
   // The worker moved there, so the first card of that tile's cycle is the unit standing on it.

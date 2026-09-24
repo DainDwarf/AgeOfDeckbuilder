@@ -9,6 +9,7 @@ import {
   dragOut,
   dragUnit,
   endTurn,
+  idsOf,
   open,
   playedOut,
   playersOf,
@@ -34,7 +35,7 @@ test('a unit crosses two tiles in two steps, and the turn refreshes what it spen
   for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
 
   const opened = await chronicleOf(page);
-  await dragOut(page, opened.hand.indexOf('PH_Worker'));
+  await dragOut(page, idsOf(opened.hand).indexOf('PH_Worker'));
   await expect.poll(async () => playersOf(await chronicleOf(page)).length).toBe(1);
 
   const entered = await chronicleOf(page);

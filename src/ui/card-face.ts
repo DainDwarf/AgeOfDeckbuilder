@@ -1,9 +1,16 @@
 import type Phaser from 'phaser';
 import type { CardKind } from '../rules/cards';
-import { type Catalogue, cardOf } from '../rules/catalogue';
+import { type Catalogue, cardMade, cardOf } from '../rules/catalogue';
 import { costOf } from '../rules/chronicle';
 import { answerOf } from '../rules/schedule';
-import { type CardId, type Chronicle, type Cost, playable, type Refusal } from '../rules/state';
+import {
+  type CardId,
+  type Chronicle,
+  type ChronicleCard,
+  type Cost,
+  playable,
+  type Refusal,
+} from '../rules/state';
 import {
   addText,
   answersPress,
@@ -107,15 +114,20 @@ export type Face = {
   readonly costs: readonly Cost[];
 };
 
-/** The face a card of the deck is drawn as. */
-export function cardFace(catalogue: Catalogue, id: CardId): Face {
+/** The face a card in a chronicle is drawn as, its rules entry reading the counters it carries. */
+export function cardFace(catalogue: Catalogue, card: ChronicleCard): Face {
   return {
-    id,
-    name: cardName(id),
-    kind: cardOf(catalogue, id).kind,
-    rules: cardRules(id),
-    costs: costOf(catalogue, id),
+    id: card.id,
+    name: cardName(card.id),
+    kind: cardOf(catalogue, card.id).kind,
+    rules: cardRules(card),
+    costs: costOf(catalogue, card.id),
   };
+}
+
+/** The face a card named is drawn as: the card as its content makes it, at the counters it starts with. */
+export function namedCardFace(catalogue: Catalogue, id: CardId): Face {
+  return cardFace(catalogue, cardMade(catalogue, id));
 }
 
 /** The face a capstone is drawn as: it costs nothing, and its rules entry reads no numbers. */

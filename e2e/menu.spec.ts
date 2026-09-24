@@ -17,6 +17,7 @@ import {
   endTurn,
   fallRun,
   firstSeed,
+  idsOf,
   launch,
   mapFrame,
   onScreen,
@@ -43,7 +44,7 @@ function standingRun(): number {
 
 /** Every card the chronicle holds, wherever it stands: the deck it was begun on. */
 function cardsHeld(chronicle: Chronicle): string[] {
-  return [...chronicle.drawPile, ...chronicle.hand, ...chronicle.discardPile].sort();
+  return idsOf([...chronicle.drawPile, ...chronicle.hand, ...chronicle.discardPile]).sort();
 }
 
 /** Waits for the chronicle screen a new chronicle raised: the menu gone, one hand laid out on it. */
@@ -108,13 +109,13 @@ test('Escape raises the menu on a bare chronicle screen, and backs out of a brow
 
 test('Escape lets go of the card being aimed before it raises the menu', async ({ page }) => {
   const problems = watch(page);
-  const run = workerRun('PH_Farm', (_, chronicle) => chronicle.hand.includes('PH_March'));
+  const run = workerRun('PH_Farm', (_, chronicle) => idsOf(chronicle.hand).includes('PH_March'));
 
   await open(page, run.seed, 'PH_Deck');
   for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
 
   const opened = await chronicleOf(page);
-  await dragOut(page, opened.hand.indexOf('PH_Worker'));
+  await dragOut(page, idsOf(opened.hand).indexOf('PH_Worker'));
   await expect.poll(async () => playersOf(await chronicleOf(page)).length).toBe(1);
 
   // The refresh instant admits the tile of a unit that has spent move points, so the worker moves
@@ -123,7 +124,7 @@ test('Escape lets go of the card being aimed before it raises the menu', async (
   await dragUnit(page, cityTileOf(standingStill), run.tile);
 
   const entered = await chronicleOf(page);
-  await dragOut(page, entered.hand.indexOf('PH_March'));
+  await dragOut(page, idsOf(entered.hand).indexOf('PH_March'));
   await aimed(page);
 
   await page.keyboard.press('Escape');

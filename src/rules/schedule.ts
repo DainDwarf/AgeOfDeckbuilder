@@ -4,7 +4,7 @@ import {
   type CampScript,
   type Catalogue,
   capstoneOf,
-  cardOf,
+  cardMade,
   entered,
   eventOf,
   type Span,
@@ -31,6 +31,7 @@ import {
   type CardId,
   type Chronicle,
   type Cost,
+  type Counters,
   costsOf,
   type Deal,
   holds,
@@ -186,10 +187,14 @@ export function answered(catalogue: Catalogue, chronicle: Chronicle, answer: Ans
   return followed(paidOn, (left) => answer.lands(catalogue, left));
 }
 
-/** A reward taken off the chronicle the deal is popped from: it is laid in the discard pile. */
-export function rewarded(chronicle: Chronicle, card: CardId): Landed {
+/**
+ * A reward taken off the chronicle the deal is popped from: it is made and laid in the discard pile;
+ * a card the catalogue does not hold is refused.
+ */
+export function rewarded(catalogue: Catalogue, chronicle: Chronicle, card: CardId): Landed {
+  const made = cardMade(catalogue, card);
   return landedAs(
-    changeFrom('discarded', [], { ...chronicle, discardPile: [...chronicle.discardPile, card] }),
+    changeFrom('discarded', [], { ...chronicle, discardPile: [...chronicle.discardPile, made] }),
   );
 }
 
@@ -370,10 +375,18 @@ export function featureDealt(
   return { ...landing, at };
 }
 
-/** A card laid on top of the draw pile; a card the catalogue does not hold is refused. */
-export function laid(catalogue: Catalogue, chronicle: Chronicle, card: CardId): Landed {
-  cardOf(catalogue, card);
-  return landedAs(change('laid', { ...chronicle, drawPile: [card, ...chronicle.drawPile] }));
+/**
+ * A card made with the counters set and laid on top of the draw pile; a card the catalogue does not
+ * hold, and a counter set that it does not declare, are refused.
+ */
+export function laid(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  card: CardId,
+  set: Counters = {},
+): Landed {
+  const made = cardMade(catalogue, card, set);
+  return landedAs(change('laid', { ...chronicle, drawPile: [made, ...chronicle.drawPile] }));
 }
 
 /**

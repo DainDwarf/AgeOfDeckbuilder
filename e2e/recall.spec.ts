@@ -12,6 +12,7 @@ import {
   endedTurn,
   endTurn,
   firstSeed,
+  idsOf,
   launch,
   type OnScreen,
   onScreen,
@@ -32,7 +33,8 @@ function recallSeed(): number {
       chronicle = endedTurn(chronicle);
     }
     const found =
-      chronicle.hand.includes('PH_Recall') && playable(refusalOf(STAND_IN, chronicle, 'PH_Recall'));
+      idsOf(chronicle.hand).includes('PH_Recall') &&
+      playable(refusalOf(STAND_IN, chronicle, 'PH_Recall'));
     return found ? seed : undefined;
   });
 }
@@ -50,7 +52,7 @@ async function aimingAtThePile(page: Page): Promise<Raised> {
   await endTurn(page);
 
   const before = await chronicleOf(page);
-  const index = before.hand.indexOf('PH_Recall');
+  const index = idsOf(before.hand).indexOf('PH_Recall');
   const home = await onScreen(page, `hand-${index}`);
   await dragOut(page, index);
   await expect.poll(() => standing(page, 'aim-window')).toBe(true);
@@ -77,7 +79,7 @@ test('a press on a card of the aim window recalls it into the hand', async ({ pa
   // The window lays the pile out newest first, so its first card is the pile's last.
   await click(page, 'aim-window-card-0');
   await playedOut(page);
-  await expect.poll(async () => (await chronicleOf(page)).discardPile.at(-1)).toBe('PH_Recall');
+  await expect.poll(async () => (await chronicleOf(page)).discardPile.at(-1)?.id).toBe('PH_Recall');
 
   const after = await chronicleOf(page);
   expect(after.hand).toEqual([
@@ -85,7 +87,10 @@ test('a press on a card of the aim window recalls it into the hand', async ({ pa
     ...before.hand.slice(index + 1),
     before.discardPile[newest],
   ]);
-  expect(after.discardPile).toEqual([...before.discardPile.slice(0, newest), 'PH_Recall']);
+  expect(idsOf(after.discardPile)).toEqual([
+    ...idsOf(before.discardPile.slice(0, newest)),
+    'PH_Recall',
+  ]);
   expect(await standing(page, 'aim-window')).toBe(false);
 
   expect(problems).toEqual([]);

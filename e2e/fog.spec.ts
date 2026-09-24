@@ -22,6 +22,7 @@ import {
   firstSeed,
   glyphs,
   glyphsOf,
+  idsOf,
   launch,
   marksIn,
   open,
@@ -99,7 +100,7 @@ type RoundTrip = { readonly out: TileCoords; readonly back: Chronicle };
  * and stepped back again. None at all where the hand holds no worker the city can enter.
  */
 function roundTrips(chronicle: Chronicle): RoundTrip[] {
-  const at = chronicle.hand.indexOf('PH_Worker');
+  const at = idsOf(chronicle.hand).indexOf('PH_Worker');
   if (at === -1 || !playable(refusalOf(STAND_IN, chronicle, 'PH_Worker'))) return [];
   const entered = outcome(apply(STAND_IN, chronicle, { type: 'play', index: at, aim: 'none' }));
   const worker = entered.units[entered.units.length - 1];
@@ -240,7 +241,7 @@ function riverCharting(): Charting {
 
 /** Where this hand's worker steps to chart a river, on a chronicle whose map draws none yet. */
 function chartedThisTurn(chronicle: Chronicle): TileCoords | undefined {
-  const at = chronicle.hand.indexOf('PH_Worker');
+  const at = idsOf(chronicle.hand).indexOf('PH_Worker');
   if (at === -1 || !playable(refusalOf(STAND_IN, chronicle, 'PH_Worker'))) return undefined;
   if (chronicle.rivers.length === 0 || riverRuns(chronicle) > 0) return undefined;
   const entered = outcome(apply(STAND_IN, chronicle, { type: 'play', index: at, aim: 'none' }));
@@ -272,7 +273,7 @@ test('the map draws a tile in sight live, a tile in fog under its scrim, and an 
   expect(await standing(page, `tile-${tileKey(run.fog)}`)).toBe(false);
 
   const opened = await chronicleOf(page);
-  await dragOut(page, opened.hand.indexOf('PH_Worker'));
+  await dragOut(page, idsOf(opened.hand).indexOf('PH_Worker'));
   await expect.poll(async () => playersOf(await chronicleOf(page)).length).toBe(1);
 
   const entered = await chronicleOf(page);
@@ -311,7 +312,7 @@ test('the overlay, the inspection and a press read what the map draws, and widen
   for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
 
   const opened = await chronicleOf(page);
-  await dragOut(page, opened.hand.indexOf('PH_Worker'));
+  await dragOut(page, idsOf(opened.hand).indexOf('PH_Worker'));
   await expect.poll(() => playerUnits(page)).toBe(1);
 
   const entered = await chronicleOf(page);
@@ -375,7 +376,7 @@ test('the map draws no river between two uncharted tiles, and draws one along a 
   expect(riverRuns(opened)).toBe(0);
   expect(await counted(page, 'river')).toBe(0);
 
-  await dragOut(page, opened.hand.indexOf('PH_Worker'));
+  await dragOut(page, idsOf(opened.hand).indexOf('PH_Worker'));
   const entered = await chronicleOf(page);
   await dragUnit(page, cityTileOf(entered), run.out);
 

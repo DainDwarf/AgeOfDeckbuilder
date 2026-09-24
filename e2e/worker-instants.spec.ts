@@ -5,7 +5,7 @@ import { cardOf } from '../src/rules/catalogue';
 import { admitted, apply, outcome, refusalOf } from '../src/rules/chronicle';
 import { type TileCoords, tileKey } from '../src/rules/map';
 import { improvementKind } from '../src/rules/map-kinds';
-import { type CardId, type Chronicle, playable } from '../src/rules/state';
+import { type CardId, type Chronicle, type ChronicleCard, playable } from '../src/rules/state';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
 import { text } from '../src/ui/text';
 import {
@@ -17,6 +17,7 @@ import {
   dragUnit,
   endedTurn,
   endTurn,
+  idsOf,
   marksIn,
   onScreen,
   open,
@@ -38,7 +39,7 @@ function roadLands(chronicle: Chronicle, at: TileCoords): boolean {
   const road = aimOf(cardOf(STAND_IN, 'PH_Road'));
   if (road.aim !== 'tile') throw new Error('PH_Road is aimed at no tile');
   return (
-    chronicle.hand.includes('PH_Road') &&
+    idsOf(chronicle.hand).includes('PH_Road') &&
     playable(refusalOf(STAND_IN, chronicle, 'PH_Road')) &&
     admitted(STAND_IN, chronicle, road).some((coord) => tileKey(coord) === tileKey(at))
   );
@@ -50,7 +51,7 @@ async function moveOut(page: Page, run: Run): Promise<Chronicle> {
   for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
 
   const opened = await chronicleOf(page);
-  await dragOut(page, opened.hand.indexOf('PH_Worker'));
+  await dragOut(page, idsOf(opened.hand).indexOf('PH_Worker'));
   await page.waitForFunction(
     () =>
       window.game?.scene
@@ -67,12 +68,12 @@ async function moveOut(page: Page, run: Run): Promise<Chronicle> {
 /** The card taken out of the hand and aimed at the tile the worker stands on. */
 async function aimAt(
   page: Page,
-  hand: readonly CardId[],
+  hand: readonly ChronicleCard[],
   card: CardId,
   at: TileCoords,
 ): Promise<void> {
   const target = await onScreen(page, `tile-${tileKey(at)}`);
-  await dragOut(page, hand.indexOf(card));
+  await dragOut(page, idsOf(hand).indexOf(card));
   await aimed(page);
   await page.mouse.click(target.x, target.y);
   await playedOut(page);
@@ -106,11 +107,11 @@ test('the road on the worker that laid the mine is refused for its action, and l
   const problems = watch(page);
   const run = workerRun('PH_Mine', (tile, moved) => {
     const at = { q: tile.q, r: tile.r };
-    const mine = moved.hand.indexOf('PH_Mine');
+    const mine = idsOf(moved.hand).indexOf('PH_Mine');
     const mined = outcome(
       apply(STAND_IN, moved, { type: 'play', index: mine, aim: 'tile', tile: at }),
     );
-    if (!mined.hand.includes('PH_Road') || !playable(refusalOf(STAND_IN, mined, 'PH_Road')))
+    if (!idsOf(mined.hand).includes('PH_Road') || !playable(refusalOf(STAND_IN, mined, 'PH_Road')))
       return false;
     const next = endedTurn(mined);
     return next.ending === undefined && roadLands(next, at);
@@ -123,7 +124,7 @@ test('the road on the worker that laid the mine is refused for its action, and l
 
   const mined = await chronicleOf(page);
   const target = await onScreen(page, `tile-${tileKey(run.tile)}`);
-  await dragOut(page, mined.hand.indexOf('PH_Road'));
+  await dragOut(page, idsOf(mined.hand).indexOf('PH_Road'));
   await aimed(page);
   await page.mouse.click(target.x, target.y);
   await rested(page);

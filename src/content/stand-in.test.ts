@@ -1,6 +1,14 @@
 import { expect, test } from 'vitest';
 import { aimOf } from '../rules/cards';
-import { capstoneOf, cardOf, catalogued, deckOf, enemyScript, eventOf } from '../rules/catalogue';
+import {
+  capstoneOf,
+  cardMade,
+  cardOf,
+  catalogued,
+  deckOf,
+  enemyScript,
+  eventOf,
+} from '../rules/catalogue';
 import { admitted, launched, refusalOf } from '../rules/chronicle';
 import { settledLaunch } from '../rules/fixtures';
 import { seedRng } from '../rules/rng';
@@ -100,16 +108,16 @@ test('every improvement of the stand-in has a name and a mark on the screen', ()
   }
 });
 
-test('every card of the stand-in has a name and a rules entry on the screen', () => {
+test('every card of the stand-in has a name, and a rules entry read at the counters it starts with, on the screen', () => {
   for (const id of Object.keys(STAND_IN.cards)) {
     expect(() => cardName(id)).not.toThrow();
-    expect(() => cardRules(id)).not.toThrow();
+    expect(() => cardRules(cardMade(STAND_IN, id))).not.toThrow();
   }
 });
 
 test('every rules entry of the stand-in lays out, and every name on it resolves in the stand-in’s table of its kind', () => {
   const entries = [
-    ...Object.keys(STAND_IN.cards).map((id) => cardRules(id)),
+    ...Object.keys(STAND_IN.cards).map((id) => cardRules(cardMade(STAND_IN, id))),
     ...Object.keys(STAND_IN.capstones).map((id) => capstoneRules(id)),
   ];
   for (const schedule of Object.keys(STAND_IN.schedules)) {
@@ -175,10 +183,10 @@ test('every event of the stand-in has a name on the screen, and every answer it 
   }
 });
 
-test('every reward of the stand-in’s camp has a name and a rules entry on the screen', () => {
+test('every reward of the stand-in’s camp has a name, and a rules entry read at the counters it starts with, on the screen', () => {
   for (const id of STAND_IN.camp.rewards) {
     expect(() => cardName(id)).not.toThrow();
-    expect(() => cardRules(id)).not.toThrow();
+    expect(() => cardRules(cardMade(STAND_IN, id))).not.toThrow();
   }
 });
 

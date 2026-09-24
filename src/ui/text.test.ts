@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { text } from './text';
+import { cardMade } from '../rules/catalogue';
+import { CATALOGUE, FREEZE, FROST } from '../rules/fixtures';
+import { cardRules, text } from './text';
 
 describe('an entry read off the text table', () => {
   it('reads the value handed for its placeholder where the placeholder stood', () => {
@@ -28,5 +30,17 @@ describe('an entry read off the text table', () => {
   it('reads an entry with no placeholder as it stands, whatever values it is handed', () => {
     expect(text('button.end-turn', { turn: 7 })).toBe(text('button.end-turn'));
     expect(text('button.end-turn')).not.toContain('{');
+  });
+});
+
+describe('a card’s rules entry', () => {
+  it('reads the counter the card carries, and the value its content starts it at on a card named', () => {
+    const set = cardRules(cardMade(CATALOGUE, 'PH_Frost', { amount: FREEZE }));
+    const named = cardRules(cardMade(CATALOGUE, 'PH_Frost'));
+
+    expect(set).toContain(String(FREEZE));
+    expect(set).not.toContain(String(FROST));
+    expect(named).toContain(String(FROST));
+    expect(named).not.toContain(String(FREEZE));
   });
 });

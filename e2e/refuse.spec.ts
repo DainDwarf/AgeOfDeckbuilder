@@ -18,6 +18,7 @@ import {
   endedTurn,
   endTurn,
   firstSeed,
+  idsOf,
   launch,
   mapFrame,
   type OnScreen,
@@ -37,12 +38,12 @@ const UNPAID: CardId = 'PH_Urbanisation';
 
 /** Where a card the rules refuse lies in the hand, or -1. */
 function refused(chronicle: Chronicle): number {
-  return chronicle.hand.findIndex((id) => !playable(refusalOf(STAND_IN, chronicle, id)));
+  return idsOf(chronicle.hand).findIndex((id) => !playable(refusalOf(STAND_IN, chronicle, id)));
 }
 
 /** Where a card the rules refuse that plays at nothing lies in the hand, or -1. */
 function refusedAtNothing(chronicle: Chronicle): number {
-  return chronicle.hand.findIndex(
+  return idsOf(chronicle.hand).findIndex(
     (id) =>
       aimOf(cardOf(STAND_IN, id)).aim === 'none' && !playable(refusalOf(STAND_IN, chronicle, id)),
   );
@@ -87,7 +88,7 @@ async function letGo(
   const name = `hand-${index}`;
   const home = await onScreen(page, name);
   await dragOut(page, index);
-  return { opened, card: opened.hand[index], index, name, home };
+  return { opened, card: opened.hand[index].id, index, name, home };
 }
 
 /** Longer than any motion on the chronicle screen takes to play out, so nothing is still on its way. */
@@ -129,12 +130,13 @@ test('a press on a tile an aim refuses says one reason over it, and the card sta
   // no worker and no unit of the player's having entered yet.
   const opened = await chronicleOf(page);
   const index = atTile(opened);
-  const card = aimOf(cardOf(STAND_IN, opened.hand[index]));
-  if (card.aim !== 'tile') throw new Error(`${opened.hand[index]} is aimed at no tile`);
+  const { id } = opened.hand[index];
+  const card = aimOf(cardOf(STAND_IN, id));
+  if (card.aim !== 'tile') throw new Error(`${id} is aimed at no tile`);
   const tile = tileAt(opened.tiles, cityTileOf(opened));
   if (tile === undefined) throw new Error('the city stands on no tile of the map');
   const block = refuses(STAND_IN, opened, card, tile);
-  if (block === undefined) throw new Error(`${opened.hand[index]} admits the city's own tile`);
+  if (block === undefined) throw new Error(`${id} admits the city's own tile`);
 
   const face = await onScreen(page, `tile-${tileKey(cityTileOf(opened))}`);
   await dragOut(page, index);
@@ -166,7 +168,7 @@ test('a second click on a card the city cannot pay for says why over it, and it 
   const index = refusedAtNothing(opened);
   const name = `hand-${index}`;
   const home = await onScreen(page, name);
-  const said = reasons(opened, opened.hand[index]);
+  const said = reasons(opened, opened.hand[index].id);
 
   await page.mouse.click(home.x, home.y);
   await rested(page);
@@ -195,14 +197,14 @@ test('a press on a lit tile the city cannot pay for says the cost over it, and t
   for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
 
   const opened = await chronicleOf(page);
-  await dragOut(page, opened.hand.indexOf('PH_Worker'));
+  await dragOut(page, idsOf(opened.hand).indexOf('PH_Worker'));
   await expect.poll(async () => playersOf(await chronicleOf(page)).length).toBe(1);
 
   const entered = await chronicleOf(page);
   await dragUnit(page, cityTileOf(entered), run.tile);
 
   const aiming = await chronicleOf(page);
-  const card = await onScreen(page, `hand-${aiming.hand.indexOf(UNPAID)}`);
+  const card = await onScreen(page, `hand-${idsOf(aiming.hand).indexOf(UNPAID)}`);
   await page.mouse.click(card.x, card.y);
   await aimed(page);
 

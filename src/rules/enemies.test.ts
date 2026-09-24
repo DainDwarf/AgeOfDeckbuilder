@@ -20,6 +20,7 @@ import {
   field,
   fullDraw,
   heldBy,
+  idsOf,
   movesOf,
   NO_GROWTH,
   namesOf,
@@ -146,8 +147,8 @@ test('a capture deals the camp’s rewards and stops the end of turn before the 
   ]);
   expect(cache.turn).toBe(besieging.turn + 1);
   expect(cache.deals).toEqual([]);
-  expect(cache.discardPile).toEqual(['PH_Cache']);
-  expect(cache.hand).toEqual(fullDraw());
+  expect(idsOf(cache.discardPile)).toEqual(['PH_Cache']);
+  expect(idsOf(cache.hand)).toEqual(fullDraw());
   expect(everyCard(cache)).not.toContain('PH_Spoils');
 });
 
@@ -163,7 +164,7 @@ test('a worker of the player’s captures a camp as any unit does', () => {
   const taken = endedTurn(worked, 'PH_Spoils');
 
   expect(buildingAt(taken, camp)).toBeUndefined();
-  expect(taken.discardPile).toEqual(['PH_Spoils']);
+  expect(idsOf(taken.discardPile)).toEqual(['PH_Spoils']);
 });
 
 test('a unit killed in the enemy phase captures the camp it stood on no longer', () => {
@@ -637,7 +638,7 @@ test('two camps captured the turn before an event is due deal two deals of rewar
     'dealt',
   ]);
   expect(second.deals).toEqual([{ of: 'event', event: 'PH_Hardship' }]);
-  expect(second.discardPile).toEqual(['PH_Spoils', 'PH_Cache']);
+  expect(idsOf(second.discardPile)).toEqual(['PH_Spoils', 'PH_Cache']);
   expect(second.hand).toEqual([]);
   expect(stagedBy(second, { type: 'take', at: 0 })).toEqual(['answer', 'taken', 'enter', 'drawn']);
   expect(outcome(apply(CATALOGUE, second, { type: 'take', at: 0 })).deals).toEqual([]);
@@ -669,7 +670,7 @@ test('the camp’s reward discarded unplayed comes around like any card', () => 
 
   const ended = outcome(apply(CATALOGUE, city, { type: 'end-turn' }));
 
-  expect(ended.discardPile).toEqual(['PH_Spoils']);
+  expect(idsOf(ended.discardPile)).toEqual(['PH_Spoils']);
   expect(everyCard(outcome(apply(CATALOGUE, ended, { type: 'end-turn' })))).toContain('PH_Spoils');
 });
 

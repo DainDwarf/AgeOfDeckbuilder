@@ -16,6 +16,7 @@ import {
   endTurn,
   type Frame,
   firstSeed,
+  idsOf,
   launch,
   mapFrame,
   onScreen,
@@ -202,7 +203,7 @@ test("a pan carries a panel row's tooltip along with the row", async ({ page }) 
   for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
 
   const opened = await chronicleOf(page);
-  await dragOut(page, opened.hand.indexOf('PH_Worker'));
+  await dragOut(page, idsOf(opened.hand).indexOf('PH_Worker'));
   await expect.poll(async () => playersOf(await chronicleOf(page)).length).toBe(1);
   await dragUnit(page, cityTileOf(await chronicleOf(page)), run.tile);
 
@@ -247,7 +248,7 @@ test('a drag on bare ground pans the map, and a drag from the unit moves it', as
   for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
 
   const opened = await chronicleOf(page);
-  await dragOut(page, opened.hand.indexOf('PH_Worker'));
+  await dragOut(page, idsOf(opened.hand).indexOf('PH_Worker'));
   await expect.poll(async () => playersOf(await chronicleOf(page)).length).toBe(1);
 
   const entered = await chronicleOf(page);
@@ -286,14 +287,14 @@ test('a drag during a tile aim pans the map, and the aim still builds after it',
   for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
 
   const opened = await chronicleOf(page);
-  await dragOut(page, opened.hand.indexOf('PH_Worker'));
+  await dragOut(page, idsOf(opened.hand).indexOf('PH_Worker'));
   await expect.poll(async () => playersOf(await chronicleOf(page)).length).toBe(1);
 
   const entered = await chronicleOf(page);
   await dragUnit(page, cityTileOf(entered), run.tile);
 
   const aiming = await chronicleOf(page);
-  await dragOut(page, aiming.hand.indexOf('PH_Farm'));
+  await dragOut(page, idsOf(aiming.hand).indexOf('PH_Farm'));
   await aimed(page);
 
   const before = await tileOnScreen(page, BARE.at);

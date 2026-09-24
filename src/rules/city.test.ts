@@ -25,6 +25,7 @@ import {
   everyCard,
   field,
   heldBy,
+  idsOf,
   NO_GROWTH,
   namesOf,
   opening,
@@ -112,7 +113,7 @@ function withWorkerBeside(
   tile: TileCoords,
   city: TileCoords,
 ): Chronicle | undefined {
-  const at = chronicle.hand.indexOf('PH_Worker');
+  const at = idsOf(chronicle.hand).indexOf('PH_Worker');
   if (at === -1) return undefined;
   const entered = outcome(apply(CATALOGUE, chronicle, { type: 'play', index: at, aim: 'none' }));
   if (entered.units.length === chronicle.units.length) return undefined;
@@ -171,7 +172,7 @@ test('a free claim holds the tile, brings one population that stands on it, and 
   const stages = apply(CATALOGUE, settled, freeClaim(tile));
   const after = outcome(stages);
 
-  expect(settled.hand).toEqual(['PH_Claim']);
+  expect(idsOf(settled.hand)).toEqual(['PH_Claim']);
   expect(namesOf(stages)).toEqual(['played', 'left', 'population', 'held', 'assigned']);
   expect(after.held.map(tileKey)).toEqual([tileKey(CITY), tileKey(tile)]);
   expect(after.assigned.map(tileKey)).toContain(tileKey(tile));
