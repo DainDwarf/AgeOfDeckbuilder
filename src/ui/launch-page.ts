@@ -74,6 +74,8 @@ export class LaunchPage extends Phaser.Scene {
   create(): void {
     holdDesignSpace(this, this.cameras.main);
     let chosen: Choices = this.opening;
+    const listed = CATALOGUES.map((each) => each.version);
+    if (!listed.includes(chosen.catalogue.version)) listed.push(chosen.catalogue.version);
     let typed = chosen.seed === undefined ? '' : String(chosen.seed);
     let root: Phaser.GameObjects.Container | undefined;
     let seedLabel: Phaser.GameObjects.Text | undefined;
@@ -112,11 +114,7 @@ export class LaunchPage extends Phaser.Scene {
       root?.destroy();
       const { catalogue } = chosen;
       const rows: { row: Row; options: readonly string[]; chosen: string }[] = [
-        {
-          row: 'content',
-          options: CATALOGUES.map((each) => each.version),
-          chosen: catalogue.version,
-        },
+        { row: 'content', options: listed, chosen: catalogue.version },
         { row: 'region', options: Object.keys(catalogue.regions), chosen: chosen.region },
         { row: 'schedule', options: Object.keys(catalogue.schedules), chosen: chosen.schedule },
         { row: 'deck', options: Object.keys(catalogue.decks), chosen: chosen.deck },

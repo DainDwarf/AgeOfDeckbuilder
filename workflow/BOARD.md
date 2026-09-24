@@ -6,6 +6,5 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ---
 
-- **Remove the stand-in content from the throwaway launch page** — the bare address's launch page lists the Nomadic content alone, an address naming the stand-in and no deck opens the page with it listed and chosen, and `e2e/boot.spec.ts` proves both. Doc-impact: `docs/INTERFACE.md`. [board/stand-in-off-the-launch-page.md](board/stand-in-off-the-launch-page.md)
 - **Restructure the design pages' shape** — CHRONICLE.md's "Enemies and camps" and "The capstone" read as one paragraph each, INTERFACE.md's names-and-small-cards paragraph is a section of its own, MAP.md's region has no heading and the rivers' deal sits apart from "The river", and DESIGN.md holds everything under one level-2 heading.
 - **Close v0.0.4** — the changelog entry and the tag.
