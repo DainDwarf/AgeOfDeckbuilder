@@ -42,7 +42,7 @@ import {
 import { createThingCard, type Thing } from './infopanel';
 import { isWheelNotch } from './keys';
 import { css, LOOK } from './look';
-import { campLore, capstoneLore, eventLore } from './lore';
+import { campLore, capstoneLore, eventLore, type Raising } from './lore';
 import { raiseMenu } from './menu-scene';
 import type { OverlayScene } from './overlay-scene';
 import { createRefusalNote, refused } from './refusal-note';
@@ -177,10 +177,12 @@ type Dealing = {
  * capstone, and whether the opening raised it or the landing did, which picks its lore and is told
  * when it closes. It offers its one card to be read and nothing to be taken, so it holds no selection.
  */
-type Capstone = { readonly stands: 'capstone'; readonly on: Chronicle } & (
-  | { readonly raised: 'opening' }
-  | { readonly raised: 'landing'; readonly closed: () => void }
-);
+type Capstone = { readonly stands: 'capstone'; readonly on: Chronicle } & {
+  [R in Raising]: { readonly raised: R } & RaisedWith[R];
+}[Raising];
+
+/** What the capstone's window carries beside each raising: the landing's is told when it closes. */
+type RaisedWith = { readonly opening: object; readonly landing: { readonly closed: () => void } };
 
 /** The windows that lay out cards, which a card shown large is taken off. */
 type Offering = Browsing | AimWindow | Dealing | Capstone;
@@ -457,7 +459,7 @@ export function createOverlay(
 
   /** A window's lore, named after the window it stands in, just over the row its grid laid. */
   const raiseLore = (name: string, lore: string, laid: Grid): void => {
-    const rowTop = laid.placed[0].y - laid.height + laid.root.y;
+    const rowTop = laid.placed[0].y - laid.height;
     const line = addText(scene, DESIGN_WIDTH / 2, rowTop - 16, lore, {
       fontFamily: UI_FONT,
       fontSize: '20px',
