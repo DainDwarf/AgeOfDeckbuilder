@@ -6,4 +6,5 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ---
 
+- **The deck-cycle test hangs on its seed** — "every card of the deck is in exactly one pile through a full cycle" (`src/rules/chronicle.test.ts`) holds only on a seed that deals a raid at every deal for eight turns, so any change to the generator's draws can break it again.
 - **Close v0.0.4** — the changelog entry and the tag.
