@@ -460,14 +460,6 @@ function wipe(group: Phaser.GameObjects.Layer): void {
   for (const object of [...group.list]) object.destroy();
 }
 
-/** The object of that name a group holds, and nothing where it holds none. */
-function namedIn(
-  group: Phaser.GameObjects.Layer,
-  name: string,
-): Phaser.GameObjects.GameObject | undefined {
-  return group.list.find((object) => object.name === name);
-}
-
 /** What the map draws of a chronicle and what of it it draws live, by tile key, and the snapshots it draws in fog. */
 type Drawing = {
   readonly drawn: ReadonlySet<string>;
@@ -1351,12 +1343,6 @@ export function createMapView(
     return ended(scene.tweens.add({ targets: mark, scale: 1, duration: 250, ease: EASE }));
   };
 
-  /** A mark the map drew, found by its name, shrinking to nothing; none found plays nothing. */
-  const shrinkNamed = (on: Phaser.GameObjects.Layer, name: string): Promise<void> => {
-    const mark = namedIn(on, name);
-    return mark === undefined ? Promise.resolve() : shrink(mark, 250);
-  };
-
   /** Whatever is painted rising out of nothing: what a tile newly drawn fades in with. */
   const fadeIn = (painted: readonly Phaser.GameObjects.Polygon[]): Promise<void> => {
     for (const object of painted) object.setAlpha(0);
@@ -1364,50 +1350,105 @@ export function createMapView(
   };
 
   /**
-   * Every motion between two faces of one tile, together: a terrain crossfades, a mark gone shrinks
-   * and a mark come scales up. None where the two faces are alike.
+   * The motion between two faces of one tile, and nothing where they are alike. The terrain
+   * crossfades from the start; the marks gone shrink, then the marks staying slide to their slots on
+   * the new face, then the marks come scale up in theirs.
    */
-  const between = (coord: TileCoords, from: Tile, to: Tile): (() => Promise<void>)[] => {
+  const between = (
+    coord: TileCoords,
+    from: Tile,
+    to: Tile,
+  ): ((token: symbol) => Promise<void>) | undefined => {
     const key = tileKey(coord);
     const { x, y } = positionOf(coord);
-    const row = rowOf(to, x);
-    const motions: (() => Promise<void>)[] = [];
+    const was = rowOf(from, x);
+    const is = rowOf(to, x);
 
-    if (from.terrain !== to.terrain) {
-      motions.push(() => {
-        const crossing = terrainMark(scene, to.terrain).setPosition(x, y);
-        ground.add(crossing);
-        return fadeIn([crossing]);
-      });
-    }
-    if (from.feature !== to.feature) {
-      if (from.feature !== undefined) motions.push(() => shrinkNamed(features, `feature-${key}`));
-      const come = to.feature;
-      if (come !== undefined) {
-        motions.push(() => scaleUp(features, featureMark(scene, come), row.feature, y - ROW_RISE));
+    /** A mark the map drew that goes, or that stays and slides to `to`. */
+    const drawnMarks: { on: Phaser.GameObjects.Layer; name: string; to: number | undefined }[] = [];
+    const come: {
+      on: Phaser.GameObjects.Layer;
+      make: () => Phaser.GameObjects.Polygon;
+      x: number;
+      y: number;
+    }[] = [];
+    const compare = <Id extends string>(
+      on: Phaser.GameObjects.Layer,
+      name: (id: Id) => string,
+      make: (id: Id) => Phaser.GameObjects.Polygon,
+      markY: number,
+      before: { ids: readonly Id[]; xs: readonly number[] },
+      after: { ids: readonly Id[]; xs: readonly number[] },
+    ): void => {
+      for (const id of new Set([...before.ids, ...after.ids])) {
+        const at = before.ids.indexOf(id);
+        const next = after.ids.indexOf(id);
+        if (next < 0) drawnMarks.push({ on, name: name(id), to: undefined });
+        else if (at < 0) come.push({ on, make: () => make(id), x: after.xs[next], y: markY });
+        else if (before.xs[at] !== after.xs[next]) {
+          drawnMarks.push({ on, name: name(id), to: after.xs[next] });
+        }
       }
-    }
-    for (const improvement of from.improvements) {
-      if (to.improvements.includes(improvement)) continue;
-      motions.push(() => shrinkNamed(improved, `improvement-${improvement}-${key}`));
-    }
-    to.improvements.forEach((improvement, index) => {
-      if (from.improvements.includes(improvement)) return;
-      motions.push(() =>
-        scaleUp(
-          improved,
-          improvementMark(scene, improvement),
-          row.improvements[index],
-          y - ROW_RISE,
+    };
+    const one = <Id extends string>(id: Id | undefined): Id[] => (id === undefined ? [] : [id]);
+    compare(
+      features,
+      () => `feature-${key}`,
+      (id) => featureMark(scene, id),
+      y - ROW_RISE,
+      { ids: one(from.feature), xs: [was.feature] },
+      { ids: one(to.feature), xs: [is.feature] },
+    );
+    compare(
+      improved,
+      (id) => `improvement-${id}-${key}`,
+      (id) => improvementMark(scene, id),
+      y - ROW_RISE,
+      { ids: from.improvements, xs: was.improvements },
+      { ids: to.improvements, xs: is.improvements },
+    );
+    compare(
+      built,
+      () => `building-${key}`,
+      (id) => buildingMark(scene, id),
+      y,
+      { ids: one(from.building), xs: [x] },
+      { ids: one(to.building), xs: [x] },
+    );
+
+    const crossfades = from.terrain !== to.terrain;
+    if (!crossfades && drawnMarks.length === 0 && come.length === 0) return undefined;
+
+    return async (token) => {
+      let crossing = Promise.resolve();
+      if (crossfades) {
+        const face = terrainMark(scene, to.terrain).setPosition(x, y);
+        ground.add(face);
+        crossing = fadeIn([face]);
+      }
+      const drawn = drawnMarks.map((mark) => ({
+        to: mark.to,
+        object: mark.on.list.find((object) => object.name === mark.name),
+      }));
+      await Promise.all(
+        drawn.flatMap(({ to: slot, object }) =>
+          object !== undefined && slot === undefined ? [shrink(object, 250)] : [],
         ),
       );
-    });
-    if (from.building !== to.building) {
-      if (from.building !== undefined) motions.push(() => shrinkNamed(built, `building-${key}`));
-      const come = to.building;
-      if (come !== undefined) motions.push(() => scaleUp(built, buildingMark(scene, come), x, y));
-    }
-    return motions;
+      if (flight === token) {
+        await Promise.all(
+          drawn.flatMap(({ to: slot, object }) =>
+            object !== undefined && slot !== undefined
+              ? [ended(scene.tweens.add({ targets: object, x: slot, duration: 150, ease: EASE }))]
+              : [],
+          ),
+        );
+      }
+      if (flight === token) {
+        await Promise.all(come.map((mark) => scaleUp(mark.on, mark.make(), mark.x, mark.y)));
+      }
+      await crossing;
+    };
   };
 
   /**
@@ -1424,36 +1465,14 @@ export function createMapView(
     if (to === undefined) return undefined;
     const from = stood === undefined ? undefined : drawnOf(stood);
 
-    const motions =
+    const motion =
       from === undefined
-        ? [() => fadeIn(paintTile(chronicle, seen, leaves))]
+        ? () => fadeIn(paintTile(chronicle, seen, leaves))
         : between(coord, from.tile, to.tile);
-    if (motions.length === 0) return undefined;
+    if (motion === undefined) return undefined;
     return heldThen([coord], chronicle, () => {
       const token = takeOff();
-      return Promise.all(motions.map((motion) => motion())).then(() => settle(token, chronicle));
-    });
-  };
-
-  /**
-   * The population leaving a tile the map draws: its mark shrinks away there, raised for the motion
-   * alone where city mode is off and nothing marks a worked tile. A tile worked plays nothing.
-   */
-  const leftTile = (coord: TileCoords, chronicle: Chronicle): Promise<void> | undefined => {
-    if (shown === undefined || !assignedTo(shown, coord) || assignedTo(chronicle, coord))
-      return undefined;
-    const stood = tileAt(shown.tiles, coord);
-    if (stood === undefined || drawnOf(stood) === undefined) return undefined;
-
-    return heldThen([coord], chronicle, () => {
-      const token = takeOff();
-      let mark = assignedMarks.get(tileKey(coord));
-      if (mark === undefined) {
-        const at = assignedAt(coord);
-        mark = assignedMark(scene).setPosition(at.x, at.y);
-        cityMarks.add(mark);
-      }
-      return shrink(mark, 250).then(() => settle(token, chronicle));
+      return motion(token).then(() => settle(token, chronicle));
     });
   };
 
@@ -1491,14 +1510,13 @@ export function createMapView(
       case 'retiled':
       case 'charted':
         return tileChanged(stage.tile, stage.chronicle);
-      case 'assigned':
-        return leftTile(stage.tile, stage.chronicle);
       case 'refreshed':
       case 'action-spent':
       case 'held':
       case 'settled':
       case 'stock':
       case 'population':
+      case 'assigned':
       case 'laid':
       case 'drawn':
       case 'discarded':

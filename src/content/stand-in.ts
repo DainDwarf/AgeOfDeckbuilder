@@ -62,8 +62,6 @@ const DECK_CARDS: readonly CardId[] = [
 
 const SIEGE_CAMPS = 5;
 
-const WILDS = { feature: 'PH_Fertile', fromCity: 4 } as const;
-
 /** `PH_` marks a stand-in: none of this is authored content, and every piece of it goes. */
 export const STAND_IN: Catalogue = catalogued({
   version: 'stand-in',
@@ -262,14 +260,13 @@ export const STAND_IN: Catalogue = catalogued({
       },
     },
     PH_Wilds: {
-      needs: (catalogue, chronicle) =>
-        featureDealable(catalogue, chronicle, WILDS.feature, WILDS.fromCity),
+      needs: (catalogue, chronicle) => featureDealable(catalogue, chronicle, 'PH_Fertile', 4),
       answers: {
         PH_Follow: {
           cost: {},
           reads: () => ({}),
           lands: (catalogue, chronicle) => {
-            const dealt = featureDealt(catalogue, chronicle, WILDS.feature, WILDS.fromCity);
+            const dealt = featureDealt(catalogue, chronicle, 'PH_Fertile', 4);
             const { at } = dealt;
             return at === undefined ? dealt : followed(dealt, (left) => tileCharted(left, at));
           },
