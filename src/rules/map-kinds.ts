@@ -54,11 +54,8 @@ export type FeatureKind = {
 };
 
 /**
- * How the river layer runs. `source`: the biome kind rivers rise in, each one of it dealt counting
- * as a range. `relief`: how far a tile stands above its distance to water for each point of its
- * terrain's elevation. `roughness`: the most a tile's roll adds to its height.
- * `meander`: an edge's drop is weighted as exp(drop / meander), so a small value makes the steep way
- * near-certain. `curl`: what repeating the last turn multiplies an edge's weight by.
+ * `source`: the biome kind rivers rise in, each one of it dealt counting as a range.
+ * `curl`: what repeating the last turn multiplies an edge's weight by.
  */
 export type RiverFlow = {
   readonly source: string;

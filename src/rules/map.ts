@@ -383,12 +383,6 @@ export function dealtBiomes(region: Region): Biome[] {
   return dealt;
 }
 
-/**
- * The river layer: every tile takes a height — how far it lies from water, lifted by its relief and
- * roughened by a roll — a corner takes the mean of its tiles', and a river is walked down that field
- * from a corner of the biome its rivers rise in to the water or to a river already run. A walk that dies
- * inland or comes out short is thrown away and another source drawn.
- */
 function flowRivers(
   catalogue: MapContent,
   flow: RiverFlow,
