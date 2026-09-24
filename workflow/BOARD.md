@@ -6,7 +6,7 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ---
 
-- **Event animations** — when an event's answer lands, what it changes on the map — burned tiles, killed population and units, anything an answer does — is animated rather than simply redrawn; the tile The herd's _Follow it_ charts is one of them, wherever it lies on the map, and nothing draws the eye to it until then.
+- **Event animations** — every change on a tile the map draws — `retiled`, `charted`, `killed`, `damaged`, and `assigned` where the tile is left — plays as a motion after the pan that holds the tile, the difference between the face drawn and the face the change leaves, and `e2e/landing.spec.ts` proves a stand-in answer's charted tile, pushed out of the frame, is brought in and drawn. Doc-impact: none. [board/event-animations.md](board/event-animations.md)
 - **A failed boot says so** — when the game fails to boot, WebGL missing for one, the player sees an error message instead of a blank page with the error only in the console.
 - **Merge elevation and river lift** — test if a terrain's elevation and its river lift can be the same data: they only diverge on forest, and both represent the same idea of terrain elevation.
 - **Close v0.0.4** — the changelog entry and the tag.
