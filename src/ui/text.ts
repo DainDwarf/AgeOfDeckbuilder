@@ -270,6 +270,7 @@ const TEXT = {
   'launch.seed': 'Seed',
   'launch.fresh': 'Fresh',
   'launch.button': 'Launch',
+  'boot.failed': 'The game could not start', // glossary exception: start
   'console.line': '> {line}',
   'console.no-entry': 'no such entry: {word}',
   'console.uncharted-veil-on': 'uncharted veil: on',

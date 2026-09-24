@@ -14,6 +14,10 @@ A window closes back one step, to the window it was opened from and then to the 
 
 The game boots on the **launch page**, a stand-in for the meta's launch screen: one row per choice — the content, the region, the schedule, the deck and the seed — the first of each list chosen until another is pressed, the seed typed in digits or left blank for a fresh one, and **Launch** under the rows, which opens the chronicle on those choices; Enter presses it too. The address is the developer's door and the test suite's: one that names a deck opens the chronicle straight, on what else it names and the page's defaults for the rest, and any other opens the page with what it names already chosen. The chronicle screen writes the choices and the seed it begins on into the address, a new chronicle included, so a reload replays the chronicle on screen and the bare address is how the page is reached again. The launch screen replaces the page; the address stays.
 
+## A failed boot ✅
+
+When the game cannot start — the browser gives no WebGL, or the address names content the game does not hold — the page says so in place of the blank screen: that the game could not start, and under it the error's own words, so a report can carry them. Nothing on that page is pressed, and the game does not go on.
+
 ## The debug console ✅
 
 The **debug console** is a dark panel down the top of the screen, on every screen, the launch page among them, with the last lines run above the line being typed. What it covers reads dimly through it, so the bar is still there to be read and the console writes clear of it. While it stands the keyboard is its — every key types, Backspace deletes, Enter runs the line, and Escape or the key that opened it closes it — so nothing the game binds hears a key meanwhile. The pointer is not its: the map still pans and zooms under it. An entry is one word and Enter, and it is answered in one line; a word the console holds no entry for is answered `no such entry: <word>`. The console binds no key of the player's and stands in no Controls window, and a new chronicle closes it and puts every entry back where it began.

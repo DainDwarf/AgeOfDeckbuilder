@@ -38,8 +38,11 @@ const LINES_TOP = BAR_HEIGHT + PAD;
 
 const HEIGHT = LINES_TOP + PAD + (HISTORY + 1) * LINE;
 
+/** The monospace stack the console types in. */
+export const CONSOLE_FONT = 'ui-monospace, Consolas, "Courier New", monospace';
+
 const CONSOLE_STYLE = {
-  fontFamily: 'ui-monospace, Consolas, "Courier New", monospace',
+  fontFamily: CONSOLE_FONT,
   fontSize: '14px',
   color: TYPED_INK,
 };
