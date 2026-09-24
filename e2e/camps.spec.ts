@@ -1,24 +1,36 @@
 import { expect, test } from '@playwright/test';
 import { STAND_IN, STAND_IN_REGION } from '../src/content/stand-in';
 import { deckOf } from '../src/rules/catalogue';
-import { distance, type TileCoords, tileKey } from '../src/rules/map';
+import { CENTRE, distance, type TileCoords, tileAt, tileKey } from '../src/rules/map';
 import { regionOf } from '../src/rules/map-kinds';
 import { offered } from '../src/rules/schedule';
 import type { Chronicle } from '../src/rules/state';
 import { unitAt } from '../src/rules/units';
+import { campLore } from '../src/ui/lore';
+import { buildingName } from '../src/ui/text';
 import {
+  aimed,
   budget,
   chronicleOf,
   cityTileOf,
+  click,
   consoleKey,
+  dragOut,
+  dragUnit,
   endTurn,
   enter,
   launch,
+  loreOf,
   marksIn,
   open,
+  openOnCapstone,
+  playedOut,
+  playersOf,
+  rested,
   standing,
   stoppedTurn,
   take,
+  titleOf,
   watch,
 } from './chronicle-screen';
 
@@ -80,5 +92,52 @@ test('the map draws the camps it was dealt, a guard on each, and the raid’s wa
   expect(raided.turn).toBe(RAID);
   expect(enemy?.faction).toBe('enemy');
   expect(camps.map((camp) => distance(camp, tile))).toContain(1);
+  expect(problems).toEqual([]);
+});
+
+test('a warrior standing on a camp through the enemy phase captures it, and the capture’s window reads the camp’s name and lore', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  // The take's landing plays out stages of its own, and so does the end of turn 1.
+  test.setTimeout(budget(2));
+
+  await openOnCapstone(page, SEED, 'PH_CampDeck', 'PH_CampSchedule');
+  await click(page, 'capstone-card-0');
+  await expect.poll(() => standing(page, 'capstone')).toBe(false);
+  await rested(page);
+
+  await dragOut(page, 0);
+  await aimed(page);
+  await click(page, `tile-${tileKey(CENTRE)}`);
+  await playedOut(page);
+  await expect.poll(async () => (await chronicleOf(page)).city).toEqual(CENTRE);
+
+  // On the city's tile the warrior stands one step from every tile the answer may place the camp on.
+  await click(page, 'hand-0');
+  await aimed(page);
+  await click(page, `tile-${tileKey(CENTRE)}`);
+  await playedOut(page);
+  await expect.poll(async () => playersOf(await chronicleOf(page)).length).toBe(1);
+
+  await stoppedTurn(page);
+  await expect.poll(() => standing(page, 'deal')).toBe(true);
+  await rested(page);
+  await take(page, 0);
+
+  const placed = await chronicleOf(page);
+  const camp = campsOf(placed).find((tile) => distance(tile, CENTRE) === 1);
+  if (camp === undefined) throw new Error('the answer placed no camp beside the city');
+  await dragUnit(page, CENTRE, camp);
+
+  await stoppedTurn(page);
+  await expect.poll(() => standing(page, 'deal')).toBe(true);
+  await rested(page);
+
+  const captured = await chronicleOf(page);
+  expect(tileAt(captured.tiles, camp)?.building).toBeUndefined();
+  expect(captured.deals[0]?.of).toBe('camp');
+  expect(await titleOf(page, 'deal')).toBe(buildingName(STAND_IN.camp.building));
+  expect(await loreOf(page, 'deal')).toBe(campLore(STAND_IN.camp.building));
   expect(problems).toEqual([]);
 });

@@ -2,6 +2,7 @@ import {
   built,
   claimableTile,
   enters,
+  entersOn,
   firstRefusal,
   gained,
   improved,
@@ -34,7 +35,7 @@ export const STAND_IN_REGION = 'PH_Region';
 /** The schedule a launch chooses on the stand-in, listed first so a launch that names none lands on it. */
 export const STAND_IN_SCHEDULE = 'PH_Schedule';
 
-/** What every deck's settle section holds. */
+/** The settle section the decks share. */
 const SETTLE_SECTION: readonly CardId[] = ['PH_Settle', ...Array<CardId>(6).fill('PH_Claim')];
 
 /** What the decks' cards are built from: a card won on the map joins a chronicle and no deck. */
@@ -95,6 +96,7 @@ export const STAND_IN: Catalogue = catalogued({
       refuses: (catalogue, chronicle, tile) => claimableTile(catalogue, chronicle, tile),
       effect: (_catalogue, paid, at) => followed(arrived(paid), (left) => bordered(left, at)),
     },
+    PH_FirstWarrior: { kind: 'settle', cost: {}, ...entersOn('PH_Warrior') },
     PH_Worker: { kind: 'unit', cost: { food: 2 }, ...enters('PH_Worker') },
     PH_Warrior: { kind: 'unit', cost: { military: 2 }, ...enters('PH_Warrior') },
     PH_Farm: {
@@ -202,6 +204,7 @@ export const STAND_IN: Catalogue = catalogued({
       ],
       settle: SETTLE_SECTION,
     },
+    PH_CampDeck: { cards: copies(2), settle: ['PH_Settle', 'PH_FirstWarrior'] },
   },
   events: {
     PH_Hardship: {
@@ -230,6 +233,20 @@ export const STAND_IN: Catalogue = catalogued({
           cost: {},
           reads: (_catalogue, chronicle) => ({ warriors: raiders(chronicle.turn) }),
           lands: (catalogue, chronicle) => raided(catalogue, chronicle, raiders(chronicle.turn)),
+        },
+      },
+    },
+    PH_Newcomers: {
+      answers: {
+        PH_Welcome: {
+          cost: {},
+          reads: () => ({}),
+          lands: (catalogue, chronicle) => besideCity(catalogue, chronicle),
+        },
+        PH_Shun: {
+          cost: {},
+          reads: () => ({}),
+          lands: (catalogue, chronicle) => besideCity(catalogue, chronicle),
         },
       },
     },
@@ -271,6 +288,11 @@ export const STAND_IN: Catalogue = catalogued({
       spacing: [3, 7],
       capstone: { id: 'PH_Siege', window: [27, 33] },
       entries: { PH_Toll: () => 1 },
+    },
+    PH_CampSchedule: {
+      spacing: [1, 1],
+      capstone: { id: 'PH_Siege', window: [27, 33] },
+      entries: { PH_Newcomers: () => 1 },
     },
   },
   terrains: {
@@ -410,6 +432,11 @@ function siege(catalogue: Catalogue, chronicle: Chronicle): Landed {
     );
   }
   return landing;
+}
+
+/** One camp placed on a tile beside the city, with no guard on it. */
+function besideCity(catalogue: Catalogue, chronicle: Chronicle): Landed {
+  return campsPlaced(catalogue, chronicle, 1, [1, 1], 1);
 }
 
 /** How many warriors a raid enters on this turn: one, and one more for every ten turns. */

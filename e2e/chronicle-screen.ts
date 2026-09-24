@@ -1024,7 +1024,8 @@ export async function stoppedTurn(page: Page): Promise<void> {
     const scene = window.game?.scene.getScene<ChronicleScene>('ui');
     if (scene === null || scene === undefined) return false;
     if (scene.playing) return window.named?.('capstone') !== undefined;
-    return scene.chronicle.turn === next || scene.chronicle.ending !== undefined;
+    const { chronicle } = scene;
+    return chronicle.turn === next || chronicle.deals.length > 0 || chronicle.ending !== undefined;
   }, turn + 1);
 }
 
