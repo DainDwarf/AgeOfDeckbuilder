@@ -6,5 +6,4 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ---
 
-- **The deck-cycle test hangs on its seed** — "every card of the deck is in exactly one pile through a full cycle" opens on a chronicle that deals nothing, on ground the test authors, names no launch seed and wants no deal, and `npm test` passes. Doc-impact: none. [board/deck-cycle-test-seed.md](board/deck-cycle-test-seed.md)
 - **Close v0.0.4** — the changelog entry and the tag.

@@ -484,13 +484,13 @@ test('a city whose food stock of nought would grow at no population falls on the
 });
 
 test('every card of the deck is in exactly one pile through a full cycle', () => {
-  let chronicle = settledLaunch(CATALOGUE, REGION, SCHEDULE, 2027, DECK);
+  let chronicle = endedTurn(settledOn(opening(plains(3)), CITY));
   const deck = everyCard(chronicle);
   expect(deck).toHaveLength(DECK.cards.length);
 
   for (let turn = 0; turn < 8; turn++) {
     chronicle = outcome(apply(CATALOGUE, chronicle, { type: 'play', index: 0, aim: 'none' }));
-    chronicle = endedTurn(chronicle, 'PH_Raid');
+    chronicle = endedTurn(chronicle);
     expect(everyCard(chronicle)).toEqual(deck);
   }
 });
