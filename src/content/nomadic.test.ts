@@ -5,6 +5,7 @@ import {
   cardMade,
   cardOf,
   catalogued,
+  counterOf,
   deckOf,
   enemyScript,
   eventOf,
@@ -224,6 +225,19 @@ test('every answer of every event of the Nomadic Age costs, lands and reads a ru
       expect(() => capstone.lands(NOMADIC, chronicle)).not.toThrow();
       expect(() => capstone.continues?.(NOMADIC, chronicle)).not.toThrow();
       expect(capstone.passes(NOMADIC, chronicle)).toBe(false);
+    }
+  }
+});
+
+test('every hazard of the Nomadic Age strikes at the counters it starts with, on a chronicle launched and settled on each schedule', () => {
+  for (const schedule of Object.keys(NOMADIC.schedules)) {
+    const chronicle = settledLaunch(NOMADIC, REGION, schedule, 1, deckOf(NOMADIC, 'nomadic'));
+    for (const id of Object.keys(NOMADIC.cards)) {
+      const card = cardOf(NOMADIC, id);
+      if (card.kind === 'hazard') {
+        const counter = counterOf(NOMADIC, cardMade(NOMADIC, id));
+        expect(() => card.strikes(NOMADIC, chronicle, counter)).not.toThrow();
+      }
     }
   }
 });

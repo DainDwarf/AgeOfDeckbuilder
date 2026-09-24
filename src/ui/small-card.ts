@@ -5,10 +5,10 @@ import {
   CARD_HEIGHT,
   CARD_WIDTH,
   type CardFace,
+  cardFaceAtStart,
   createCardFace,
   type KindBubble,
   type Name,
-  namedCardFace,
   type Spot,
 } from './card-face';
 import {
@@ -112,7 +112,7 @@ export function createSmallCards(
 
   /** A card named, drawn small as its face, whose own names raise the chain on. */
   const faceOf = (card: CardId, over: (under: Raiser | undefined) => void): CardFace => {
-    const face = createCardFace(scene, namedCardFace(catalogue, card), NO_REFUSAL, {
+    const face = createCardFace(scene, cardFaceAtStart(catalogue, card), NO_REFUSAL, {
       names: {
         over: (name) => {
           over(name === undefined ? undefined : raiserOf(face, name));

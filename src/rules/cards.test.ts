@@ -1576,6 +1576,18 @@ test('a card laid with a counter its content does not declare is refused', () =>
   expect(() => chilled('PH_Thaw')).toThrow('fixture: the card PH_Frost declares no counter thaw');
 });
 
+test('a hazard whose strike reads a counter its card does not declare is refused when it strikes', () => {
+  const city = cityOf(['urban', 'plain'], {
+    ...NO_GROWTH,
+    hand: ['PH_Squall'],
+    resources: STOCKED,
+  });
+
+  expect(() => apply(CATALOGUE, city, { type: 'end-turn' })).toThrow(
+    'fixture: the card PH_Squall declares no counter amount',
+  );
+});
+
 /** The `strike` groups the end of turn opens on: the hazard each carries, and what it holds. */
 function strikesOf(city: Chronicle): { card: CardId; holds: string[]; left: Chronicle }[] {
   return apply(CATALOGUE, city, { type: 'end-turn' }).flatMap((stage) =>

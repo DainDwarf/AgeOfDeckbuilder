@@ -20,11 +20,11 @@ import {
   type CardFace,
   capstoneFace,
   cardFace,
+  cardFaceAtStart,
   createCardFace,
   createKindBubble,
   type Face,
   heightOf,
-  namedCardFace,
 } from './card-face';
 import { EASE, ended, stopMotion } from './card-motion';
 import {
@@ -199,7 +199,7 @@ type Inspected =
 function inspectedOf(catalogue: Catalogue, reference: Reference): Inspected {
   switch (reference.kind) {
     case 'card':
-      return { shows: 'face', face: namedCardFace(catalogue, reference.id), refusal: NO_REFUSAL };
+      return { shows: 'face', face: cardFaceAtStart(catalogue, reference.id), refusal: NO_REFUSAL };
     case 'terrain':
     case 'feature':
     case 'improvement':
@@ -1087,7 +1087,7 @@ function dealt(
     case 'camp':
       return {
         heading: buildingName(catalogue.camp.building),
-        entries: ids.map((id, at) => offeredCard(namedCardFace(catalogue, id), at)),
+        entries: ids.map((id, at) => offeredCard(cardFaceAtStart(catalogue, id), at)),
       };
   }
 }

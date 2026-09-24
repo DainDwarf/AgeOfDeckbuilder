@@ -4,6 +4,7 @@ import {
   type Card,
   type Catalogue,
   cardOf,
+  counterOf,
   entered,
   unitKind,
 } from './catalogue';
@@ -97,7 +98,10 @@ export function struck(catalogue: Catalogue, chronicle: Chronicle): Sequence<Gro
         break;
       case 'hazard':
         strikes = followed(strikes, (left) =>
-          grouped({ name: 'strike', card: held.id }, card.strikes(catalogue, left, held)),
+          grouped(
+            { name: 'strike', card: held.id },
+            card.strikes(catalogue, left, counterOf(catalogue, held)),
+          ),
         );
         break;
     }

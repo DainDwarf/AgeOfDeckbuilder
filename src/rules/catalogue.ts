@@ -81,12 +81,9 @@ export type Aim =
     };
 
 /**
- * A card: its kind, which a list of cards sorts and labels by, its cost, and its counters with what
- * each starts at. The kinds the player's deck holds declare the aim and effect they are played
- * through, and the noun such a card names — the unit it puts on the map, the building it builds — is
- * named by its effect and nowhere else. A settle card is played through whatever aim it declares, and
- * one aimed at a tile asks its own reasons of a tile once the kind has asked for it charted. A hazard
- * declares its strike alone, its kind fixing everything else about it.
+ * The noun a card names — the unit it puts on the map, the building it builds — is named by its
+ * effect and nowhere else. A settle card aimed at a tile is asked its own reasons only of a tile
+ * already charted.
  */
 export type Card = { readonly cost: Partial<Resources>; readonly counters?: Counters } & (
   | ({ readonly kind: 'settle' } & Aim)
@@ -96,13 +93,12 @@ export type Card = { readonly cost: Partial<Resources>; readonly counters?: Coun
     } & Aim)
   | {
       readonly kind: 'hazard';
-      /**
-       * What it does to the chronicle at the end of a turn it is still in the hand, handed the card
-       * in the hand it strikes as.
-       */
-      readonly strikes: (catalogue: Catalogue, chronicle: Chronicle, card: ChronicleCard) => Landed;
+      readonly strikes: (catalogue: Catalogue, chronicle: Chronicle, counter: Counter) => Landed;
     }
 );
+
+/** A card's counters read by name. */
+export type Counter = (name: string) => number;
 
 /** How a card the player picks a tile for is played: what the hand aims and the map lights for. */
 export type AimedCard = Extract<Aim, { readonly aim: 'tile' | 'unit' }>;
@@ -384,6 +380,17 @@ export function cardMade(catalogue: Catalogue, id: CardId, set: Counters = {}): 
     }
   }
   return { id, counters: { ...declared, ...set } };
+}
+
+/** The value a card carries under a counter's name; a name its content does not declare is refused. */
+export function counterOf(catalogue: Catalogue, card: ChronicleCard): Counter {
+  const declared = cardOf(catalogue, card.id).counters ?? {};
+  return (name) => {
+    if (!Object.hasOwn(declared, name)) {
+      refuse(catalogue, `the card ${card.id} declares no counter ${name}`);
+    }
+    return card.counters[name];
+  };
 }
 
 /** The two sections a deck lists; a deck the catalogue does not hold is refused. */

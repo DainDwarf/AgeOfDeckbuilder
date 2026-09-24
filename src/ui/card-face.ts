@@ -126,7 +126,7 @@ export function cardFace(catalogue: Catalogue, card: ChronicleCard): Face {
 }
 
 /** The face a card named is drawn as: the card as its content makes it, at the counters it starts with. */
-export function namedCardFace(catalogue: Catalogue, id: CardId): Face {
+export function cardFaceAtStart(catalogue: Catalogue, id: CardId): Face {
   return cardFace(catalogue, cardMade(catalogue, id));
 }
 

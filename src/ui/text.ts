@@ -110,7 +110,6 @@ const TEXT = {
   'rules.PH_Recall': 'Recall a card from the discard pile',
   'rules.PH_Spoils': 'Single use.\n10[food] 10[production] 10[military] 10[money] 10[science]',
   'rules.PH_Hunger': 'Empties the food stock. Names [card:PH_Hunger]',
-  'card.PH_Frost': 'PH_Frost',
   'rules.PH_Frost': 'Takes {amount}[food]',
   'card.settle': 'Settlement', // glossary exception: settlement
   'rules.settle': 'Place the [building:city]',

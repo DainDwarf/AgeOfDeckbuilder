@@ -5,6 +5,7 @@ import {
   cardMade,
   cardOf,
   catalogued,
+  counterOf,
   deckOf,
   enemyScript,
   eventOf,
@@ -240,6 +241,25 @@ test('every answer of every event of the stand-in costs, lands and reads a rules
       expect(() => capstone.lands(STAND_IN, chronicle)).not.toThrow();
       expect(() => capstone.continues?.(STAND_IN, chronicle)).not.toThrow();
       expect(capstone.passes(STAND_IN, chronicle)).toBe(false);
+    }
+  }
+});
+
+test('every hazard of the stand-in strikes at the counters it starts with, on a chronicle launched and settled on each schedule', () => {
+  for (const schedule of Object.keys(STAND_IN.schedules)) {
+    const chronicle = settledLaunch(
+      STAND_IN,
+      STAND_IN_REGION,
+      schedule,
+      1,
+      deckOf(STAND_IN, 'PH_Deck'),
+    );
+    for (const id of Object.keys(STAND_IN.cards)) {
+      const card = cardOf(STAND_IN, id);
+      if (card.kind === 'hazard') {
+        const counter = counterOf(STAND_IN, cardMade(STAND_IN, id));
+        expect(() => card.strikes(STAND_IN, chronicle, counter)).not.toThrow();
+      }
     }
   }
 });

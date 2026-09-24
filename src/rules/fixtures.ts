@@ -485,7 +485,12 @@ export const CATALOGUE: Catalogue = catalogued({
       kind: 'hazard',
       cost: { production: 3 },
       counters: { amount: FROST },
-      strikes: (_catalogue, chronicle, card) => shocked(chronicle, 'food', card.counters.amount),
+      strikes: (_catalogue, chronicle, counter) => shocked(chronicle, 'food', counter('amount')),
+    },
+    PH_Squall: {
+      kind: 'hazard',
+      cost: { production: 3 },
+      strikes: (_catalogue, chronicle, counter) => shocked(chronicle, 'food', counter('amount')),
     },
     PH_Drought: {
       kind: 'hazard',
