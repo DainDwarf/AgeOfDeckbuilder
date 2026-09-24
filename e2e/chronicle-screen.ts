@@ -149,6 +149,7 @@ export async function settle(
 ): Promise<void> {
   await dragOut(page, 0);
   await aimed(page);
+  await rested(page);
   await click(page, `tile-${tileKey(at)}`);
   await playedOut(page);
   await page.waitForFunction(
@@ -172,6 +173,7 @@ async function claimFree(page: Page, tile: TileCoords): Promise<void> {
   const { held } = await chronicleOf(page);
   await click(page, 'hand-0');
   await aimed(page);
+  await rested(page);
   await click(page, `tile-${tileKey(tile)}`);
   await playedOut(page);
   await page.waitForFunction(
