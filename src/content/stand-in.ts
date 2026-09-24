@@ -24,7 +24,16 @@ import { arrived, bordered } from '../rules/city';
 import { campUnit } from '../rules/enemies';
 import { MOVE_POINT } from '../rules/map';
 import { buildingKind, improvementKind } from '../rules/map-kinds';
-import { campsPlaced, laid, raided, reinforced, spanEnded } from '../rules/schedule';
+import {
+  campsPlaced,
+  featureDealable,
+  featureDealt,
+  laid,
+  raided,
+  reinforced,
+  spanEnded,
+  tileCharted,
+} from '../rules/schedule';
 import { followed, type Landed, unchanged } from '../rules/stages';
 import { type CardId, type Chronicle, holds } from '../rules/state';
 import { guarding, RAIDER } from './scripts';
@@ -52,6 +61,8 @@ const DECK_CARDS: readonly CardId[] = [
 ];
 
 const SIEGE_CAMPS = 5;
+
+const WILDS = { feature: 'PH_Fertile', fromCity: 4 } as const;
 
 /** `PH_` marks a stand-in: none of this is authored content, and every piece of it goes. */
 export const STAND_IN: Catalogue = catalogued({
@@ -250,6 +261,26 @@ export const STAND_IN: Catalogue = catalogued({
         },
       },
     },
+    PH_Wilds: {
+      needs: (catalogue, chronicle) =>
+        featureDealable(catalogue, chronicle, WILDS.feature, WILDS.fromCity),
+      answers: {
+        PH_Follow: {
+          cost: {},
+          reads: () => ({}),
+          lands: (catalogue, chronicle) => {
+            const dealt = featureDealt(catalogue, chronicle, WILDS.feature, WILDS.fromCity);
+            const { at } = dealt;
+            return at === undefined ? dealt : followed(dealt, (left) => tileCharted(left, at));
+          },
+        },
+        PH_Ignore: {
+          cost: {},
+          reads: () => ({}),
+          lands: (_catalogue, chronicle) => unchanged(chronicle),
+        },
+      },
+    },
   },
   capstones: {
     PH_Siege: {
@@ -293,6 +324,11 @@ export const STAND_IN: Catalogue = catalogued({
       spacing: [1, 1],
       capstone: { id: 'PH_Siege', window: [27, 33] },
       entries: { PH_Newcomers: () => 1 },
+    },
+    PH_WildsSchedule: {
+      spacing: [3, 7],
+      capstone: { id: 'PH_Siege', window: [27, 33] },
+      entries: { PH_Wilds: () => 1 },
     },
   },
   terrains: {

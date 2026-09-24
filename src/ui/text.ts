@@ -151,6 +151,12 @@ const TEXT = {
   'answer.PH_Shun': 'PH_Shun',
   'answer-rules.PH_Welcome': 'A [building:PH_Camp] is placed beside the [building:PH_City]',
   'answer-rules.PH_Shun': 'A [building:PH_Camp] is placed beside the [building:PH_City]',
+  'event.PH_Wilds': 'PH_Wilds',
+  'answer.PH_Follow': 'PH_Follow',
+  'answer.PH_Ignore': 'PH_Ignore',
+  'answer-rules.PH_Follow':
+    'A [feature:PH_Fertile] is dealt onto a [terrain:plain] near the [building:PH_City], and the tile is charted',
+  'answer-rules.PH_Ignore': 'Nothing happens',
   'answer.PH_Raid': 'PH_Raid',
   'answer.PH_Famine': 'PH_Famine',
   'answer-rules.PH_Raid': 'A raid of {warriors} enters the map',

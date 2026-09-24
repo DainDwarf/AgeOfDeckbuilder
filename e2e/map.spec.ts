@@ -14,9 +14,9 @@ import {
   dragUnit,
   endedTurn,
   endTurn,
-  type Frame,
   firstSeed,
   idsOf,
+  inside,
   launch,
   mapFrame,
   onScreen,
@@ -56,15 +56,6 @@ async function drag(page: Page, from: Point, by: Point): Promise<void> {
   await page.mouse.move(from.x + by.x, from.y + by.y, { steps: 5 });
   await page.mouse.up();
   await rested(page);
-}
-
-function inside(at: Point, frame: Frame): boolean {
-  return (
-    at.x > frame.x &&
-    at.x < frame.x + frame.width &&
-    at.y > frame.y &&
-    at.y < frame.y + frame.height
-  );
 }
 
 /**

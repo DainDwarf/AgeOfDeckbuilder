@@ -3,6 +3,7 @@ const LORE = {
   'event.PH_Hardship': 'PH_Hardship',
   'event.PH_Toll': 'PH_Toll',
   'event.PH_Newcomers': 'PH_Newcomers',
+  'event.PH_Wilds': 'PH_Wilds',
   'camp.PH_Camp': 'PH_Camp',
   'capstone-opening.PH_Siege': 'PH_Siege',
   'capstone-landing.PH_Siege': 'PH_Siege',

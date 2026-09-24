@@ -399,6 +399,16 @@ export async function besideTiles(page: Page): Promise<{ x: number; y: number }>
 /** A rectangle on the page. */
 export type Frame = { x: number; y: number; width: number; height: number };
 
+/** Whether a point on the page stands inside a rectangle of it. */
+export function inside(at: { x: number; y: number }, frame: Frame): boolean {
+  return (
+    at.x > frame.x &&
+    at.x < frame.x + frame.width &&
+    at.y > frame.y &&
+    at.y < frame.y + frame.height
+  );
+}
+
 /** Where the map's frame stands on the page: the rectangle its camera is cropped to. */
 export function mapFrame(page: Page): Promise<Frame> {
   return page.evaluate(() => {

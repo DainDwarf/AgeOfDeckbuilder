@@ -21,7 +21,7 @@ import {
 } from '../rules/map';
 import { RESOURCES, type Resource } from '../rules/resources';
 import { inSight } from '../rules/sight';
-import type { Change, Group, Stage } from '../rules/stages';
+import { type Change, type Group, type Stage, walked } from '../rules/stages';
 import { assignedTo, type Chronicle, type Cost, type Snapshot } from '../rules/state';
 import { type Faction, type Landing, type Unit, unitAt, unitOf } from '../rules/units';
 import { MAP_FRAME } from './band';
@@ -451,9 +451,52 @@ function glowTile(
     .setStrokeStyle(2, colour, glow.stroke);
 }
 
-/** Everything a group holds destroyed: a Layer's `removeAll` destroys nothing, whatever it is handed. */
+/**
+ * Everything a group holds stopped where it stands and destroyed: a Layer's `removeAll` destroys
+ * nothing, whatever it is handed.
+ */
 function wipe(group: Phaser.GameObjects.Layer): void {
+  stopMotion(group.scene, group.list);
   for (const object of [...group.list]) object.destroy();
+}
+
+/** The object of that name a group holds, and nothing where it holds none. */
+function namedIn(
+  group: Phaser.GameObjects.Layer,
+  name: string,
+): Phaser.GameObjects.GameObject | undefined {
+  return group.list.find((object) => object.name === name);
+}
+
+/** What the map draws of a chronicle and what of it it draws live, by tile key, and the snapshots it draws in fog. */
+type Drawing = {
+  readonly drawn: ReadonlySet<string>;
+  readonly live: ReadonlySet<string>;
+  readonly charted: ReadonlyMap<string, Snapshot>;
+};
+
+/**
+ * The one face the map draws of a tile, which everything the chronicle screen reads off the map
+ * reads too: the tile as it stands where the map draws it live or has no snapshot of it to draw,
+ * and the tile its snapshot last saw where it draws it in fog. Nothing for a tile it draws none of.
+ */
+function faceIn(drawing: Drawing, tile: Tile): Drawn | undefined {
+  const key = tileKey(tile);
+  if (!drawing.drawn.has(key)) return undefined;
+  const snapshot = drawing.charted.get(key);
+  if (drawing.live.has(key) || snapshot === undefined) return { tile, asStands: true };
+  return { tile: snapshot.tile, asStands: false };
+}
+
+/**
+ * Where the marks of a face's row stand across its tile, its feature first and its improvements
+ * after, in the order the face holds them, the row centred on the tile's middle `x`.
+ */
+function rowOf(face: Tile, x: number): { feature: number; improvements: number[] } {
+  const first = face.feature === undefined ? 0 : 1;
+  const count = first + face.improvements.length;
+  const at = (slot: number): number => x + (slot - (count - 1) / 2) * ROW_PITCH;
+  return { feature: at(0), improvements: face.improvements.map((_, index) => at(first + index)) };
 }
 
 /**
@@ -846,11 +889,8 @@ export function createMapView(
 
   /** The chronicle the map stands on: which marker is whose is read from it. */
   let shown: Chronicle | undefined;
-  /** The snapshot of every tile charted on that chronicle, by its key: what the map draws in fog. */
-  let charted: ReadonlyMap<string, Snapshot> = new Map();
-  /** What the map draws of that chronicle, and what of it it draws live, by tile key. */
-  let drawn: ReadonlySet<string> = new Set();
-  let live: ReadonlySet<string> = new Set();
+  /** What the map draws of that chronicle. */
+  let { drawn, live, charted }: Drawing = { drawn: new Set(), live: new Set(), charted: new Map() };
   /** The veils the map draws under; both stand until the console takes one off. */
   let veils: Veils = VEILS_ON;
   /** What the map has in the air; a render owns it and takes it down. */
@@ -863,30 +903,18 @@ export function createMapView(
    * disc; the fog veil off draws every tile the map draws at all live. Answered for whichever
    * chronicle is asked about, which is not always the one the map stands on.
    */
-  const drawing = (
-    chronicle: Chronicle,
-  ): { drawn: ReadonlySet<string>; live: ReadonlySet<string> } => {
+  const drawing = (chronicle: Chronicle): Drawing => {
     const seen = inSight(catalogue, chronicle);
-    const kept = new Set(chronicle.snapshots.map(tileKey));
+    const charted = new Map(chronicle.snapshots.map((snapshot) => [tileKey(snapshot), snapshot]));
     const keys = chronicle.tiles.map(tileKey);
     const shownKeys = new Set(
-      veils.uncharted ? keys.filter((key) => seen.has(key) || kept.has(key)) : keys,
+      veils.uncharted ? keys.filter((key) => seen.has(key) || charted.has(key)) : keys,
     );
-    return { drawn: shownKeys, live: veils.fog ? seen : shownKeys };
+    return { drawn: shownKeys, live: veils.fog ? seen : shownKeys, charted };
   };
 
-  /**
-   * The one face the map draws of a tile, which everything the chronicle screen reads off the map
-   * reads too: the tile as it stands where the map draws it live or has no snapshot of it to draw,
-   * and the tile its snapshot last saw where it draws it in fog. Nothing for a tile it draws none of.
-   */
-  const drawnOf = (tile: Tile): Drawn | undefined => {
-    const key = tileKey(tile);
-    if (!drawn.has(key)) return undefined;
-    const snapshot = charted.get(key);
-    if (live.has(key) || snapshot === undefined) return { tile, asStands: true };
-    return { tile: snapshot.tile, asStands: false };
-  };
+  /** The face the map draws of a tile on the chronicle it stands on. */
+  const drawnOf = (tile: Tile): Drawn | undefined => faceIn({ drawn, live, charted }, tile);
 
   /**
    * The tile a press lands on: the one the map draws whose face it landed inside, and nothing where
@@ -992,13 +1020,67 @@ export function createMapView(
   };
 
   /**
-   * Every layer of every tile the map draws, on the chronicle it stands on. A tile in sight is
-   * drawn as it stands, and the marks of the units on it are hung after this. A tile out of sight
-   * stands under a scrim, its unit drawn here with its layers: from the snapshot it was last seen
-   * as where it is drawn in fog, and from the chronicle where the map draws it as it stands with no
-   * snapshot to draw. A terraform changes a tile's terrain and takes its feature with it, an
-   * improvement is improved onto it and a building is built on it, so every layer follows every
-   * render.
+   * Every layer of one tile as the map draws it on a chronicle, and every object painted for it. The
+   * units of a live tile are hung by the render; a tile out of sight carries its unit under its scrim.
+   */
+  const paintTile = (
+    chronicle: Chronicle,
+    seen: Drawing,
+    tile: Tile,
+  ): Phaser.GameObjects.Polygon[] => {
+    const drawing = faceIn(seen, tile);
+    if (drawing === undefined) return [];
+    const face = drawing.tile;
+    const key = tileKey(tile);
+    const painted: Phaser.GameObjects.Polygon[] = [];
+    const paint = (on: Phaser.GameObjects.Layer, object: Phaser.GameObjects.Polygon): void => {
+      on.add(object);
+      painted.push(object);
+    };
+
+    const { x, y } = positionOf(tile);
+    paint(ground, terrainMark(scene, face.terrain).setPosition(x, y).setName(`tile-${key}`));
+    const row = rowOf(face, x);
+    if (face.feature !== undefined) {
+      paint(
+        features,
+        featureMark(scene, face.feature)
+          .setPosition(row.feature, y - ROW_RISE)
+          .setName(`feature-${key}`),
+      );
+    }
+    face.improvements.forEach((improvement, index) => {
+      paint(
+        improved,
+        improvementMark(scene, improvement)
+          .setPosition(row.improvements[index], y - ROW_RISE)
+          .setName(`improvement-${improvement}-${key}`),
+      );
+    });
+    if (face.building !== undefined) {
+      paint(built, buildingMark(scene, face.building).setPosition(x, y).setName(`building-${key}`));
+    }
+    if (seen.live.has(key)) return painted;
+    // A snapshot answers for its tile whole: one taken of an empty tile hides the unit that has
+    // walked onto it since.
+    if (drawing.asStands) {
+      const standing = unitAt(chronicle.units, tile);
+      if (standing !== undefined) {
+        paint(marks, unitMark(scene, standing.stats.type, standing.faction).setPosition(x, y));
+      }
+    } else {
+      const kept = seen.charted.get(key)?.unit;
+      if (kept !== undefined)
+        paint(marks, unitMark(scene, kept.type, kept.faction).setPosition(x, y));
+    }
+    paint(fog, fogScrim(scene, tile));
+    return painted;
+  };
+
+  /**
+   * Every layer of every tile the map draws, on the chronicle it stands on. A terraform changes a
+   * tile's terrain and takes its feature with it, an improvement is improved onto it and a building
+   * is built on it, so every layer follows every render.
    */
   const paintTiles = (): void => {
     wipe(ground);
@@ -1007,54 +1089,7 @@ export function createMapView(
     wipe(built);
     wipe(fog);
     if (shown === undefined) return;
-
-    for (const tile of shown.tiles) {
-      const drawing = drawnOf(tile);
-      if (drawing === undefined) continue;
-      const face = drawing.tile;
-
-      const { x, y } = positionOf(tile);
-      ground.add(
-        terrainMark(scene, face.terrain)
-          .setPosition(x, y)
-          .setName(`tile-${tileKey(tile)}`),
-      );
-      const inRow = (face.feature === undefined ? 0 : 1) + face.improvements.length;
-      let slot = x - ((inRow - 1) * ROW_PITCH) / 2;
-      if (face.feature !== undefined) {
-        features.add(
-          featureMark(scene, face.feature)
-            .setPosition(slot, y - ROW_RISE)
-            .setName(`feature-${tileKey(tile)}`),
-        );
-        slot += ROW_PITCH;
-      }
-      for (const improvement of face.improvements) {
-        improved.add(improvementMark(scene, improvement).setPosition(slot, y - ROW_RISE));
-        slot += ROW_PITCH;
-      }
-      if (face.building !== undefined) {
-        built.add(
-          buildingMark(scene, face.building)
-            .setPosition(x, y)
-            .setName(`building-${tileKey(tile)}`),
-        );
-      }
-      if (live.has(tileKey(tile))) continue;
-      // A snapshot answers for its tile whole: one taken of an empty tile hides the unit that has
-      // walked onto it since.
-      if (drawing.asStands) {
-        const standing = unitAt(shown.units, tile);
-        if (standing !== undefined) {
-          marks.add(unitMark(scene, standing.stats.type, standing.faction).setPosition(x, y));
-        }
-      } else {
-        const kept = charted.get(tileKey(tile))?.unit;
-        if (kept !== undefined)
-          marks.add(unitMark(scene, kept.type, kept.faction).setPosition(x, y));
-      }
-      fog.add(fogScrim(scene, tile));
-    }
+    for (const tile of shown.tiles) paintTile(shown, { drawn, live, charted }, tile);
   };
 
   /**
@@ -1129,12 +1164,8 @@ export function createMapView(
   const render = (current: Chronicle): void => {
     flight = undefined;
     shown = current;
-    charted = new Map(current.snapshots.map((snapshot) => [tileKey(snapshot), snapshot]));
-    ({ drawn, live } = drawing(current));
+    ({ drawn, live, charted } = drawing(current));
 
-    // What is about to be destroyed loses its tweens first: a motion left running on a destroyed
-    // marker never completes, and the stage waiting on it would never end.
-    stopMotion(scene, marks.list);
     wipe(marks);
 
     paintTiles();
@@ -1173,24 +1204,32 @@ export function createMapView(
     return standing === undefined ? undefined : markers.get(standing.id);
   };
 
+  /** A unit's marker bumped where it stands, as an attack's target is. */
+  const bump = (marker: Phaser.GameObjects.Container, delay: number): Promise<void> =>
+    ended(
+      scene.tweens.add({
+        targets: marker,
+        scale: 1.35,
+        delay,
+        duration: 60,
+        ease: EASE,
+        yoyo: true,
+      }),
+    );
+
+  /** Whatever the map drew shrinking to nothing where it stands. */
+  const shrink = (target: Phaser.GameObjects.GameObject, duration: number): Promise<void> =>
+    ended(scene.tweens.add({ targets: target, scale: 0, duration, ease: EASE }));
+
   /** What a target does: a bump where it was attacked, and a shrink off the map if it was killed. */
   const bumped = async (
     marker: Phaser.GameObjects.Container,
     killed: boolean,
     token: symbol,
   ): Promise<void> => {
-    await ended(
-      scene.tweens.add({
-        targets: marker,
-        scale: 1.35,
-        delay: 150,
-        duration: 60,
-        ease: EASE,
-        yoyo: true,
-      }),
-    );
+    await bump(marker, 150);
     if (!killed || flight !== token) return;
-    await ended(scene.tweens.add({ targets: marker, scale: 0, duration: 200, ease: EASE }));
+    await shrink(marker, 200);
   };
 
   /** One attack: the attacker lunges halfway at the tile it aimed at, and what stands there takes it. */
@@ -1267,11 +1306,161 @@ export function createMapView(
   };
 
   /**
-   * One stage: the frame comes to hold the tiles it plays on, and the motion starts once it does.
-   * A stage with no tile drawn live on the chronicle it leaves moves neither marker nor frame and is
-   * answered with nothing, so the scene renders the state it ends on. A pan paints nothing, so a
-   * stage whose motion had nothing to animate is rendered here — the scene renders only the stages
-   * the map answers nothing for.
+   * The frame brought to hold the tiles, and the motion once it does. A pan paints nothing, so a
+   * motion that had nothing to animate after one is rendered here — the scene renders only the
+   * stages the map answers nothing for.
+   */
+  const heldThen = (
+    tiles: readonly TileCoords[],
+    chronicle: Chronicle,
+    motion: () => Promise<void> | undefined,
+  ): Promise<void> | undefined => {
+    const panning = hold(tiles);
+    if (panning === undefined) return motion();
+    return panning.then(() => {
+      const played = motion();
+      if (played === undefined) render(chronicle);
+      return played;
+    });
+  };
+
+  /** The unit on a tile damaged by no attacker: its marker bumps as an attack's target does. */
+  const damagedOn = (coord: TileCoords, chronicle: Chronicle): Promise<void> | undefined => {
+    const marker = markerOn(coord);
+    if (marker === undefined) return undefined;
+    const token = takeOff();
+    return bump(marker, 0).then(() => settle(token, chronicle));
+  };
+
+  /** The unit on a tile killed by no attacker: its marker shrinks off the map as one an attack killed does. */
+  const killedOn = (coord: TileCoords, chronicle: Chronicle): Promise<void> | undefined => {
+    const marker = markerOn(coord);
+    if (marker === undefined) return undefined;
+    const token = takeOff();
+    return shrink(marker, 200).then(() => settle(token, chronicle));
+  };
+
+  /** A mark raised onto a layer from nothing, where it stands on the face a change leaves. */
+  const scaleUp = (
+    on: Phaser.GameObjects.Layer,
+    mark: Phaser.GameObjects.Polygon,
+    x: number,
+    y: number,
+  ): Promise<void> => {
+    on.add(mark.setPosition(x, y).setScale(0));
+    return ended(scene.tweens.add({ targets: mark, scale: 1, duration: 250, ease: EASE }));
+  };
+
+  /** A mark the map drew, found by its name, shrinking to nothing; none found plays nothing. */
+  const shrinkNamed = (on: Phaser.GameObjects.Layer, name: string): Promise<void> => {
+    const mark = namedIn(on, name);
+    return mark === undefined ? Promise.resolve() : shrink(mark, 250);
+  };
+
+  /** Whatever is painted rising out of nothing: what a tile newly drawn fades in with. */
+  const fadeIn = (painted: readonly Phaser.GameObjects.Polygon[]): Promise<void> => {
+    for (const object of painted) object.setAlpha(0);
+    return ended(scene.tweens.add({ targets: painted, alpha: 1, duration: 400, ease: EASE }));
+  };
+
+  /**
+   * Every motion between two faces of one tile, together: a terrain crossfades, a mark gone shrinks
+   * and a mark come scales up. None where the two faces are alike.
+   */
+  const between = (coord: TileCoords, from: Tile, to: Tile): (() => Promise<void>)[] => {
+    const key = tileKey(coord);
+    const { x, y } = positionOf(coord);
+    const row = rowOf(to, x);
+    const motions: (() => Promise<void>)[] = [];
+
+    if (from.terrain !== to.terrain) {
+      motions.push(() => {
+        const crossing = terrainMark(scene, to.terrain).setPosition(x, y);
+        ground.add(crossing);
+        return fadeIn([crossing]);
+      });
+    }
+    if (from.feature !== to.feature) {
+      if (from.feature !== undefined) motions.push(() => shrinkNamed(features, `feature-${key}`));
+      const come = to.feature;
+      if (come !== undefined) {
+        motions.push(() => scaleUp(features, featureMark(scene, come), row.feature, y - ROW_RISE));
+      }
+    }
+    for (const improvement of from.improvements) {
+      if (to.improvements.includes(improvement)) continue;
+      motions.push(() => shrinkNamed(improved, `improvement-${improvement}-${key}`));
+    }
+    to.improvements.forEach((improvement, index) => {
+      if (from.improvements.includes(improvement)) return;
+      motions.push(() =>
+        scaleUp(
+          improved,
+          improvementMark(scene, improvement),
+          row.improvements[index],
+          y - ROW_RISE,
+        ),
+      );
+    });
+    if (from.building !== to.building) {
+      if (from.building !== undefined) motions.push(() => shrinkNamed(built, `building-${key}`));
+      const come = to.building;
+      if (come !== undefined) motions.push(() => scaleUp(built, buildingMark(scene, come), x, y));
+    }
+    return motions;
+  };
+
+  /**
+   * A change on a tile: the difference between the face the map draws of it on the chronicle it
+   * stands on and the face it draws on the change's, played after the pan that holds the tile. A
+   * tile newly drawn fades in whole; one drawn alike on both, or on neither, plays nothing.
+   */
+  const tileChanged = (coord: TileCoords, chronicle: Chronicle): Promise<void> | undefined => {
+    const leaves = tileAt(chronicle.tiles, coord);
+    const stood = shown === undefined ? undefined : tileAt(shown.tiles, coord);
+    if (leaves === undefined) return undefined;
+    const seen = drawing(chronicle);
+    const to = faceIn(seen, leaves);
+    if (to === undefined) return undefined;
+    const from = stood === undefined ? undefined : drawnOf(stood);
+
+    const motions =
+      from === undefined
+        ? [() => fadeIn(paintTile(chronicle, seen, leaves))]
+        : between(coord, from.tile, to.tile);
+    if (motions.length === 0) return undefined;
+    return heldThen([coord], chronicle, () => {
+      const token = takeOff();
+      return Promise.all(motions.map((motion) => motion())).then(() => settle(token, chronicle));
+    });
+  };
+
+  /**
+   * The population leaving a tile the map draws: its mark shrinks away there, raised for the motion
+   * alone where city mode is off and nothing marks a worked tile. A tile worked plays nothing.
+   */
+  const leftTile = (coord: TileCoords, chronicle: Chronicle): Promise<void> | undefined => {
+    if (shown === undefined || !assignedTo(shown, coord) || assignedTo(chronicle, coord))
+      return undefined;
+    const stood = tileAt(shown.tiles, coord);
+    if (stood === undefined || drawnOf(stood) === undefined) return undefined;
+
+    return heldThen([coord], chronicle, () => {
+      const token = takeOff();
+      let mark = assignedMarks.get(tileKey(coord));
+      if (mark === undefined) {
+        const at = assignedAt(coord);
+        mark = assignedMark(scene).setPosition(at.x, at.y);
+        cityMarks.add(mark);
+      }
+      return shrink(mark, 250).then(() => settle(token, chronicle));
+    });
+  };
+
+  /**
+   * One stage on units: the frame comes to hold the tiles it plays on, and the motion starts once it
+   * does. A stage with no tile drawn live on the chronicle it leaves moves neither marker nor frame
+   * and is answered with nothing, so the scene renders the state it ends on.
    */
   const staged = (
     tiles: readonly TileCoords[],
@@ -1280,14 +1469,7 @@ export function createMapView(
   ): Promise<void> | undefined => {
     const watched = drawing(chronicle).live;
     if (!tiles.some((tile) => watched.has(tileKey(tile)))) return undefined;
-
-    const panning = hold(tiles);
-    if (panning === undefined) return motion();
-    return panning.then(() => {
-      const played = motion();
-      if (played === undefined) render(chronicle);
-      return played;
-    });
+    return heldThen(tiles, chronicle, motion);
   };
 
   const changed = (stage: Change): Promise<void> | undefined => {
@@ -1303,16 +1485,20 @@ export function createMapView(
           () => arriving(stage.chronicle),
         );
       case 'damaged':
+        return staged([stage.tile], stage.chronicle, () => damagedOn(stage.tile, stage.chronicle));
       case 'killed':
-      case 'refreshed':
-      case 'action-spent':
+        return staged([stage.tile], stage.chronicle, () => killedOn(stage.tile, stage.chronicle));
       case 'retiled':
       case 'charted':
+        return tileChanged(stage.tile, stage.chronicle);
+      case 'assigned':
+        return leftTile(stage.tile, stage.chronicle);
+      case 'refreshed':
+      case 'action-spent':
       case 'held':
       case 'settled':
       case 'stock':
       case 'population':
-      case 'assigned':
       case 'laid':
       case 'drawn':
       case 'discarded':
@@ -1328,6 +1514,9 @@ export function createMapView(
         return undefined;
     }
   };
+
+  /** The stages held by a group the map played: it plays a group or the stages it holds, never both. */
+  const covered = new WeakSet<Stage>();
 
   const grouped = (stage: Group): Promise<void> | undefined => {
     switch (stage.name) {
@@ -1364,9 +1553,12 @@ export function createMapView(
     play(stage: Stage): Promise<void> | undefined {
       switch (stage.kind) {
         case 'change':
-          return changed(stage);
-        case 'group':
-          return grouped(stage);
+          return covered.has(stage) ? undefined : changed(stage);
+        case 'group': {
+          const motion = covered.has(stage) ? undefined : grouped(stage);
+          if (motion !== undefined) for (const held of walked(stage.stages)) covered.add(held);
+          return motion;
+        }
       }
     },
 
