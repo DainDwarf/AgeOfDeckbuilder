@@ -7,6 +7,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 ---
 
 - **Event animations** — every change on a tile the map draws — `retiled`, `charted`, `killed`, `damaged`, and `assigned` where the tile is left — plays as a motion after the pan that holds the tile, the difference between the face drawn and the face the change leaves, and `e2e/landing.spec.ts` proves a stand-in answer's charted tile, pushed out of the frame, is brought in and drawn. Doc-impact: none. [board/event-animations.md](board/event-animations.md)
-- **A failed boot says so** — when the game fails to boot, WebGL missing for one, the player sees an error message instead of a blank page with the error only in the console.
+- **A failed boot says so** — when the boot throws, before the first screen stands, the page shows that the game could not start and the error's own words in place of the blank page, the error still reaching the console, and `e2e/failed-boot.spec.ts` proves it in a Chromium without WebGL. Doc-impact: `docs/INTERFACE.md`. [board/failed-boot.md](board/failed-boot.md)
 - **Merge elevation and river lift** — test if a terrain's elevation and its river lift can be the same data: they only diverge on forest, and both represent the same idea of terrain elevation.
 - **Close v0.0.4** — the changelog entry and the tag.
