@@ -21,6 +21,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **technology** | A permanent unlock earned by an achievement: new cards, better buildings, better units. | tech, advancement, upgrade, research |
 | **achievement** | A goal a chronicle can reach; reaching it unlocks a technology. | mission, objective, quest, milestone |
 | **influence** | The meta-currency every chronicle pays, scaled by how the city fared. | gold, XP |
+| **save** | The chronicle in progress and the meta, kept on the player's machine. | savegame, save file, save slot, checkpoint, autosave |
 | **chronicle** | One city's story through one age, from its opening to victory or defeat — what a roguelite calls a run. | run, playthrough, attempt, session |
 | **city** | A settlement on the map; the player owns exactly one — _the_ city, what a chronicle is about. | town, capital, base, settlement |
 | **settle** | To put the city on a tile, on the settle phase; also the kind of card played on the settle phase alone. | found, founding, establish |

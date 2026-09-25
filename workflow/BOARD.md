@@ -6,7 +6,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Rungs
 
-- **Save and resume** — the chronicle in progress is written to the browser after every command and the game boots back into it; there is never a Save button.
 - **Specs open on a fabricated save** — a spec loads a save it wrote and plays from the state it needs instead of settling through the screen and ending turns to reach it; every spec is reviewed on the way: opened on the state it needs, shortened, and deleted where it tests a remnant of the stand-in or a code path that no longer exists.
 - **One catalogue** — every age's content in one catalogue, an age a slice of it, so a deck and its settle section hold cards of any age.
 - **The campaign and its screen** — the meta's state as a pure module a chronicle's ending pays into, victory or defeat alike: the technology tree, each technology needing the ones before it and the age transitions among its nodes, influence, the collection, the civilization's deck, saved beside the chronicle; the ending screen reads what was paid; the campaign screen is the home, with the tree, the influence, Continue reading what the chronicle in progress holds, New chronicle, Collection, and the menu's Campaign entry; a launch over a chronicle with achievements reached raises a warning, since an abandoned chronicle pays nothing.
@@ -17,3 +16,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 - **The headless simulator** — a consumer of the rules that runs only when asked and reports numbers, not diagnoses, tuned across the two ages; the reachability cache and the end of turn's cost per `apply` are looked at when it is made.
 
 ## Lines
+
+- **A chronicle's save** — what a save is, in `src/rules/`: the chronicle, the content version and the launch's choices, written and read back by pure functions, the reading refusing a save that is not a chronicle's whole; inert in the game, proven on the fixture.
+- **The game boots on the save** — the chronicle screen writes the save when a chronicle begins and after every command, on the outcome before the play-out; the bare address resumes the chronicle in progress where it stood, the capstone's window rising again, or opens the launch page where no save stands or the save is dropped; and nothing is written into the address any more.
