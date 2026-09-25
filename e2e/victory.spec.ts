@@ -1,5 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
-import type Phaser from 'phaser';
+import { expect, test } from '@playwright/test';
 import { STAND_IN } from '../src/content/stand-in';
 import { scheduleOf } from '../src/rules/catalogue';
 import { tileKey } from '../src/rules/map';
@@ -16,17 +15,10 @@ import {
   open,
   playedOut,
   playersOf,
+  victoryShown,
   watch,
   workerRun,
 } from './chronicle-screen';
-
-/** Whether the victory screen has risen over the chronicle screen: the rise ends at full alpha. */
-function victoryShown(page: Page): Promise<boolean> {
-  return page.evaluate(() => {
-    const screen = window.named?.('victory')?.object as Phaser.GameObjects.Container | undefined;
-    return screen?.visible === true && screen.alpha === 1;
-  });
-}
 
 /** The schedule whose capstone lands early and is passed by a farm standing inside the border. */
 const TILLAGE = 'PH_TillageSchedule';

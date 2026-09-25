@@ -16,5 +16,3 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 - **The headless simulator** — a consumer of the rules that runs only when asked and reports numbers, not diagnoses, tuned across the two ages; the reachability cache and the end of turn's cost per `apply` are looked at when it is made.
 
 ## Lines
-
-- **A resumed chronicle's openings, proven** — `e2e/resume.spec.ts` holds two more tests on planted saves and passes: an ended chronicle opens on its ending screen with no capstone's window, and one waiting on a deal opens on the capstone's window, the deal's window rising once it closes. Doc-impact: none. [board/resumed-openings.md](board/resumed-openings.md)

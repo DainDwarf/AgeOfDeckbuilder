@@ -459,6 +459,14 @@ export function besideTheDeal(page: Page): Promise<{ x: number; y: number }> {
   });
 }
 
+/** Whether the victory screen has risen over the chronicle screen: the rise ends at full alpha. */
+export function victoryShown(page: Page): Promise<boolean> {
+  return page.evaluate(() => {
+    const screen = window.named?.('victory')?.object as Phaser.GameObjects.Container | undefined;
+    return screen?.visible === true && screen.alpha === 1;
+  });
+}
+
 /** Whether an object of that name stands on any running scene. */
 export function standing(page: Page, name: string): Promise<boolean> {
   return page.evaluate((target) => window.named?.(target) !== undefined, name);
@@ -600,9 +608,9 @@ export function firstSeed<T>(complaint: string, answer: (seed: number) => T | un
 /**
  * The first seed whose timeline's first deal stands alone and offers the raid first, with a tile
  * free for it to enter a warrior on — what the take lands is then one more warrior standing on the
- * map — and the turn that deal is due on.
+ * map — the turn that deal is due on, and the chronicle that end of turn leaves, the deal waiting.
  */
-export function dealRun(): { seed: number; due: number } {
+export function dealRun(): { seed: number; due: number; dealt: Chronicle } {
   return firstSeed('deals a raid first on its first deal', (seed) => {
     const opened = launch(seed, deckOf(STAND_IN, 'PH_Deck'));
     const due = opened.timeline.next;
@@ -615,7 +623,7 @@ export function dealRun(): { seed: number; due: number } {
     if (offered(STAND_IN, deal)[0] !== 'PH_Raid') return undefined;
 
     const landed = outcome(apply(STAND_IN, dealt, { type: 'take', at: 0 }));
-    return enemiesOf(landed).length > enemiesOf(dealt).length ? { seed, due } : undefined;
+    return enemiesOf(landed).length > enemiesOf(dealt).length ? { seed, due, dealt } : undefined;
   });
 }
 
