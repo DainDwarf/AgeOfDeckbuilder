@@ -4,7 +4,7 @@
 
 ## The menu ✅
 
-The menu lists **Settings** and **New chronicle**: a new chronicle begins one on a fresh seed with the same deck, leaving whatever the city was living through, victory, defeat or the middle of a turn. **Settings** is where everything the player sets lives, and **Controls** is its first entry. The **Menu** button stands on every screen, the launch page among them, and opens the menu over whatever stands; **New chronicle** is listed over a chronicle alone.
+The menu lists **Settings** and **Campaign**, which leaves the chronicle as [`META.md`](META.md) says. **Settings** is where everything the player sets lives, and **Controls** is its first entry. The **Menu** button stands on every screen, the launch page among them, and opens the menu over whatever stands; **Campaign** is listed over a chronicle alone.
 
 A window closes back one step, to the window it was opened from and then to the screen under it. The **back key**, Escape until it is rebound, backs out of whatever is open or under way, one step per press, and raises the menu only where nothing is left to back out of. Nothing pauses, because nothing runs: the game is untimed, and a menu over the chronicle screen is the chronicle screen waiting. While a window of the menu stands, no key and no press reaches the screen under it.
 

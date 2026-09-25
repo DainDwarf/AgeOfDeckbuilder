@@ -26,6 +26,9 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **settle** | To put the city on a tile, on the settle phase; also the kind of card played on the settle phase alone. | found, founding, establish |
 | **map** | The hexagonal grid a chronicle is played on. | board, world, grid |
 | **chronicle screen** | The surface a chronicle is played on — the map, the hand, the piles, the resource bar, the infopanel; what a window opens over and closes back to. | table, playfield, play area |
+| **campaign screen** | The home: the screen the game boots on and a chronicle's ending returns to, showing the campaign. | main menu, title screen, hub, lobby |
+| **launch screen** | The screen a chronicle is launched from, offering the launch's choices. | new game screen, setup screen, lobby |
+| **collection screen** | The screen the deck is edited on and influence spent, showing the collection. | deck builder, deck editor, shop, store |
 | **city mode** | The chronicle screen's second mode, in which the player acts on the city: assigns, unassigns, claims. | build mode, manage mode, edit mode, planning mode |
 | **select** | To make a tile or a card the selection, the one thing a screen holds at a time. | pick, highlight, focus, arm, target (for a tile or a card) |
 | **inspect** | To show a tile's cards in the infopanel, one at a time, or to show a card large. | read (a tile), examine, view, look at, zoom (for a card) |
