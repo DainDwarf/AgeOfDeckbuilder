@@ -6,7 +6,7 @@
 
 A chronicle opens before its first turn on the **settle phase**: the map is dealt and the timeline rolled, the city stands nowhere yet and has no population, the map's **centre part** — the tiles within a radius of the disc's centre the region names — is in sight for the whole of the phase and nothing else is, and the hand holds the deck's settle cards, in the deck's order, played on this phase and no other: the one that **settles** the city on a charted tile that takes a city, and the ones that enter the band's first units on charted tiles.
 
-An age adds settle cards to the section and nothing else, and a settle card played leaves the chronicle instead of going to the discard pile.
+The section holds settle cards and nothing else, and a settle card played leaves the chronicle instead of going to the discard pile.
 
 **The settle phase is not a turn**: none of the cycle below runs on it, and no unit moves or attacks on it — a unit entered on the settle phase stands where it entered until turn 1. It is ended as a turn is, refused while the city stands nowhere, and the settle cards still in hand are gone with it. Turn 1 follows, its events phase and draw as on any turn.
 
