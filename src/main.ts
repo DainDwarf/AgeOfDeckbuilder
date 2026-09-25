@@ -14,6 +14,7 @@ import { css, LOOK } from './ui/look';
 import { MapScene } from './ui/map-scene';
 import { MenuScene } from './ui/menu-scene';
 import { OverlayScene } from './ui/overlay-scene';
+import { savedChronicle } from './ui/save-entry';
 
 // The e2e suite and browser-console debugging observe the running game through this handle;
 // it is optional because the window exists before the game does.
@@ -59,6 +60,10 @@ function askedChoices(): Choices {
 }
 
 const choices = askedChoices();
+const bare = ['content', 'region', 'schedule', 'deck', 'seed'].every(
+  (key) => asked(key) === undefined,
+);
+const resumed = bare ? savedChronicle() : undefined;
 const backing = backingSize();
 const game = new Phaser.Game({
   type: Phaser.WEBGL,
@@ -81,19 +86,20 @@ game.scene.add('menu', MenuScene);
 game.scene.add('console', DebugConsole);
 // The ui scene reaches into the console's, the menu's, the overlay's and the map's as it is created,
 // so this order is load-bearing twice over: started last, none of them has the handle it is reached
-// by yet and the chronicle throws on the address that opens straight.
+// by yet and the chronicle screen throws wherever the boot opens it.
 game.events.once(Phaser.Core.Events.READY, () => {
   // A batch shader built for several textures tears a rotated Text (docs/PHASER.md). Not the config's
   // `maxTextures`: that caps the units every draw binds, and at one the browse's mask binds nothing.
   (game.renderer as Phaser.Renderer.WebGL.WebGLRenderer).renderNodes.setMaxParallelTextureUnits(1);
   game.scene.start('console');
   game.scene.start('menu');
-  if (asked('deck') === undefined) {
+  const opening = resumed ?? (asked('deck') === undefined ? undefined : choices);
+  if (opening === undefined) {
     game.scene.start('launch', choices);
   } else {
     game.scene.start('overlay');
     game.scene.start('map');
-    game.scene.start('ui', choices);
+    game.scene.start('ui', opening);
   }
   booted();
 });

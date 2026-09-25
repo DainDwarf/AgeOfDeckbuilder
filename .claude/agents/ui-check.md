@@ -16,7 +16,7 @@ You answer exactly one question: **is anything broken?** Layout, overlap, clippi
 
 One `<canvas>` and nothing else. Phaser draws every pixel; there are no DOM elements, no selectors, no queryable text. You see what a player sees, and you find things the way a player does — by looking at the picture and by clicking where the picture says something is.
 
-The app opens on the launch page unless its URL names a deck, and then on the chronicle screen — the map, the hand, the piles, the resource bar — of the chronicle the URL names: `?seed=<integer>` picks the map, `?deck=` the cards, `?content=` the catalogue the deck is read from (the stand-in deck needs `content=stand-in` beside it), and the same URL opens the same chronicle every time. The only thing it stores is the player's key bindings. The checklist you are handed is what bounds the check.
+The bare URL boots on the save: the chronicle in progress where it stood, else the launch page. A URL that names a deck opens the chronicle screen — the map, the hand, the piles, the resource bar — of the chronicle it names, straight, and writes it over the save: `?seed=<integer>` picks the map, `?deck=` the cards, `?content=` the catalogue the deck is read from (the stand-in deck needs `content=stand-in` beside it), and the same URL opens the same chronicle every time. The chronicle screen writes nothing into the URL. The app stores the player's key bindings and the save. The checklist you are handed is what bounds the check.
 
 ## Bound your work
 
@@ -124,9 +124,9 @@ Anything else is reported. Every `pageerror` and every `error` line is a FAIL, w
 
 ## Reaching state that needs prior progress
 
-**Seed it directly**: write the app's storage on the fresh profile, then reload. Seed a whole, coherent state, never a patch of the fields you care about — a state the game itself never reaches produces bugs that may not be real.
+**Seed it directly**: write the app's storage on the fresh profile, then open the bare URL. Seed a whole, coherent state, never a patch of the fields you care about — a state the game itself never reaches produces bugs that may not be real.
 
-There is no save yet: a chronicle is reached by its `?seed=` and `?deck=`, and turns are played on the end-turn button. When saves exist, seeding is `page.evaluate` writing the save, then `page.reload()`.
+A chronicle is reached by its `?seed=` and `?deck=`, and turns are played on the end-turn button. A chronicle further on is seeded by `page.evaluate` writing the save under the entry `SAVE_ENTRY` names in `src/ui/save-entry.ts`, then opening the bare URL. A URL that names a deck opens its chronicle straight and writes over the planted save.
 
 **Never play to earn state**, and never drive a chronicle to completion. If a checklist step can only be satisfied by playing through, stop and report it as "not checked (needs play-through)"; the caller hands it to a human.
 

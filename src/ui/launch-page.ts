@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { CATALOGUES, catalogueOf } from '../content/catalogues';
 import type { Catalogue } from '../rules/catalogue';
 import { refuse } from '../rules/map-kinds';
+import type { Chronicle } from '../rules/state';
 import {
   addText,
   answersPress,
@@ -23,6 +24,9 @@ export type Choices = {
   readonly deck: string;
   readonly seed: number | undefined;
 };
+
+/** What the chronicle screen opens on: the choices a chronicle begins on, and the one resumed on them. */
+export type Opening = Choices & { readonly resumed?: Chronicle };
 
 /** The first region, schedule and deck the catalogue lists, on that seed. */
 export function firstsOf(catalogue: Catalogue, seed: number | undefined): Choices {

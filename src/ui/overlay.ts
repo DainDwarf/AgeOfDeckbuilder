@@ -90,8 +90,9 @@ export type Overlay = {
   /** What a name names shown large, as a right click on a name shows it wherever the name stands. */
   inspectNamed(name: Name): void;
   /**
-   * Raises the capstone's window on the opening's first render, the deal window while the chronicle
-   * waits on a deal and the ending screen once it has ended, and nothing while it runs.
+   * Raises the capstone's window on the first render, or stands the ending screen where the chronicle
+   * opened has ended; after it, the deal window while the chronicle waits on a deal and the ending
+   * screen once it has ended, and nothing while it runs.
    */
   render(chronicle: Chronicle): void;
   /**
@@ -275,8 +276,8 @@ export function createOverlay(
   let raisedOn: Ended | undefined;
   /** The deal standing, so no render raises its window twice; the take lets it go. */
   let standingDeal: Dealing | undefined;
-  /** Whether the capstone has been announced: the first render raises its window, and no render after. */
-  let announced = false;
+  /** Whether the first render has opened the screen, on the capstone's window or the ending screen. */
+  let opened = false;
   /** The ending screen still coming up; a render owns the rise and takes it down. */
   let rising: Phaser.GameObjects.Container | undefined;
 
@@ -692,12 +693,14 @@ export function createOverlay(
 
   /**
    * The capstone's window closed: it is read once, and nothing brings it back on this screen but the
-   * landing. The landing's is told it closed once the scrim is down.
+   * landing. The opening's closes onto the screen as the chronicle stands; the landing's is told it
+   * closed once the scrim is down.
    */
   const closeCapstone = (closing: Capstone): void => {
     close();
     switch (closing.raised) {
       case 'opening':
+        standAs(closing.on);
         return;
       case 'landing':
         closing.closed();
@@ -829,6 +832,15 @@ export function createOverlay(
     stopMotion(scene, screen);
     scrim.setAlpha(LOOK.scrim.strength);
     screen.setAlpha(1).setY(0);
+  };
+
+  /** What stands over the chronicle as it stands: its ending screen, else the deal it waits on. */
+  const standAs = (chronicle: Chronicle): void => {
+    if (chronicle.ending !== undefined && raisedOn === undefined)
+      void raiseEnding({ ending: chronicle.ending, timeline: chronicle.timeline });
+    else if (chronicle.deals[0] !== undefined && standingDeal === undefined)
+      showDeal({ stands: 'deal', on: chronicle, deal: chronicle.deals[0], selected: undefined });
+    else stand();
   };
 
   /**
@@ -1030,14 +1042,14 @@ export function createOverlay(
     },
     inspectNamed,
     render(chronicle: Chronicle): void {
-      if (!announced) {
-        announced = true;
+      if (opened) {
+        standAs(chronicle);
+        return;
+      }
+      opened = true;
+      if (chronicle.ending === undefined)
         showCapstone({ stands: 'capstone', on: chronicle, raised: 'opening' });
-      } else if (chronicle.ending !== undefined && raisedOn === undefined)
-        void raiseEnding({ ending: chronicle.ending, timeline: chronicle.timeline });
-      else if (chronicle.deals[0] !== undefined && standingDeal === undefined)
-        showDeal({ stands: 'deal', on: chronicle, deal: chronicle.deals[0], selected: undefined });
-      else stand();
+      else showEnding({ ending: chronicle.ending, timeline: chronicle.timeline });
     },
     play(stage: Stage): Promise<void> | undefined {
       switch (stage.kind) {

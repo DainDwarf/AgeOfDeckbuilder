@@ -40,7 +40,7 @@ import {
 import { createHand } from './hand';
 import { cardsOf, createInfoPanel } from './infopanel';
 import { onKeyDown } from './keys';
-import type { Choices } from './launch-page';
+import type { Choices, Opening } from './launch-page';
 import { css, LOOK } from './look';
 import { createMapView, type PressedTile } from './map';
 import { mapOf } from './map-scene';
@@ -50,6 +50,7 @@ import { overlayOf } from './overlay-scene';
 import { createPiles } from './piles';
 import { createRefusalNote, refused, refusedAim } from './refusal-note';
 import { createResourceBar } from './resource-bar';
+import { keepChronicle } from './save-entry';
 import { createStanding } from './standing';
 import { text } from './text';
 import { createTooltip } from './tooltip';
@@ -81,9 +82,9 @@ export class ChronicleScene extends Phaser.Scene implements OpensChronicles {
     super('ui');
   }
 
-  init(choices: Choices): void {
+  init({ resumed, ...choices }: Opening): void {
     this.choices = choices;
-    this.current = this.begin(choices.seed);
+    this.current = resumed ?? this.begin(choices.seed);
   }
 
   /** The chronicle as it stands, for whoever holds the game through `window.game`. */
@@ -97,23 +98,15 @@ export class ChronicleScene extends Phaser.Scene implements OpensChronicles {
   }
 
   /**
-   * A chronicle on the choices, from the seed it was asked for or from a fresh one, written into the
-   * address. The fresh one is the one place entropy enters the game: `src/rules/` draws only from
-   * the seed it is handed.
+   * A chronicle on the choices, from the seed it was asked for or from a fresh one, kept as the save.
+   * The fresh one is the one place entropy enters the game: `src/rules/` draws only from the seed it
+   * is handed.
    */
   private begin(seed: number | undefined): Chronicle {
     const { catalogue, region, schedule, deck } = this.choices;
     const drawn = seed ?? (Math.random() * 2 ** 32) | 0;
     const chronicle = launched(catalogue, region, schedule, drawn, deckOf(catalogue, deck));
-    const written = new URL(window.location.href);
-    written.search = new URLSearchParams({
-      content: catalogue.version,
-      region,
-      schedule,
-      deck,
-      seed: String(chronicle.seed),
-    }).toString();
-    window.history.replaceState(window.history.state, '', written);
+    keepChronicle(this.choices, chronicle);
     return chronicle;
   }
 
@@ -202,6 +195,7 @@ export class ChronicleScene extends Phaser.Scene implements OpensChronicles {
     const playOut = async (command: Command): Promise<void> => {
       if (this.sequence !== undefined) return;
       const stages = apply(this.choices.catalogue, this.current, command);
+      keepChronicle(this.choices, outcome(stages));
       const running = Symbol('play-out');
       this.sequence = running;
 

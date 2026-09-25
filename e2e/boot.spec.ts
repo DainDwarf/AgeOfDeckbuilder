@@ -14,10 +14,9 @@ import {
   watch,
 } from './chronicle-screen';
 
-/** The seed the address carries, and nothing where it carries none. */
-function seedOnAddress(page: Page): number | undefined {
-  const seed = new URL(page.url()).searchParams.get('seed');
-  return seed === null ? undefined : Number(seed);
+/** What the address names past the path: nothing on the bare address. */
+function named(page: Page): string {
+  return new URL(page.url()).search;
 }
 
 /** The faces of the launch page's content row, left to right, by version and whether each is chosen. */
@@ -36,16 +35,20 @@ function contentRow(page: Page): Promise<{ version: string; chosen: boolean }[]>
   });
 }
 
-test('an address naming a deck boots into the chronicle and logs nothing', async ({ page }) => {
+test('an address naming a deck boots into the chronicle, stays as it was, and logs nothing', async ({
+  page,
+}) => {
   const problems = watch(page);
 
-  await page.goto(`/?content=${STAND_IN.version}&deck=PH_Deck`);
+  const address = `?content=${STAND_IN.version}&deck=PH_Deck`;
+  await page.goto(`/${address}`);
 
   const canvas = page.locator('canvas');
   await expect(canvas).toBeVisible();
   expect(await canvas.evaluate((element: HTMLCanvasElement) => element.width)).toBeGreaterThan(0);
 
   await page.waitForFunction(() => window.game?.scene.isActive('ui') === true);
+  expect(named(page)).toBe(address);
 
   expect(problems).toEqual([]);
 });
@@ -137,12 +140,12 @@ test('the console over the launch page takes its digits and its Enter', async ({
 
   await page.keyboard.press('Enter');
   await page.waitForFunction(() => window.game?.scene.isActive('ui') === true);
-  await expect.poll(() => seedOnAddress(page)).toBe(12);
+  expect((await chronicleOf(page)).seed).toBe(12);
 
   expect(problems).toEqual([]);
 });
 
-test('Launch opens the chronicle on the defaults, and the address follows every chronicle begun', async ({
+test('Launch opens the chronicle on the defaults, and the address stays bare through Launch and New chronicle', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -156,7 +159,7 @@ test('Launch opens the chronicle on the defaults, and the address follows every 
 
   const launched = await chronicleOf(page);
   const deck = deckOf(NOMADIC, 'nomadic');
-  await expect.poll(() => seedOnAddress(page)).toBe(launched.seed);
+  expect(named(page)).toBe('');
   expect(launched.content).toBe(NOMADIC.version);
   expect(idsOf([...launched.drawPile, ...launched.hand, ...launched.discardPile]).sort()).toEqual(
     [...deck.cards, ...deck.settle].sort(),
@@ -167,9 +170,7 @@ test('Launch opens the chronicle on the defaults, and the address follows every 
   await expect.poll(() => standing(page, 'menu')).toBe(true);
   await click(page, 'menu-new-chronicle');
   await expect.poll(async () => (await chronicleOf(page)).seed).not.toBe(launched.seed);
-
-  const fresh = await chronicleOf(page);
-  await expect.poll(() => seedOnAddress(page)).toBe(fresh.seed);
+  expect(named(page)).toBe('');
 
   expect(problems).toEqual([]);
 });

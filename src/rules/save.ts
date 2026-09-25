@@ -70,6 +70,21 @@ export function readSave(catalogue: Catalogue, text: string): ChronicleSave {
   };
 }
 
+/**
+ * The content version a save's text names, the catalogue it is read against; nothing where the text
+ * names none, which the reading refuses against any catalogue.
+ */
+export function contentNamed(text: string): string | undefined {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    return undefined;
+  }
+  const content = (parsed as { chronicle?: { content?: unknown } } | null)?.chronicle?.content;
+  return typeof content === 'string' ? content : undefined;
+}
+
 /** One value of the parsed text, and where in the save it stands. */
 type Slot = { readonly raw: unknown; readonly at: string };
 

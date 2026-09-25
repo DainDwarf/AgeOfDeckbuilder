@@ -11,7 +11,7 @@ import {
   SCHEDULE,
   settledLaunch,
 } from './fixtures';
-import { type ChronicleSave, readSave, writeSave } from './save';
+import { type ChronicleSave, contentNamed, readSave, writeSave } from './save';
 import { laid } from './schedule';
 import type { Chronicle, Counters } from './state';
 
@@ -108,6 +108,13 @@ test('a save that is not a chronicle’s shape is refused', () => {
   expect(
     refusal((chronicle) => ({ ...chronicle, units: [{ ...unit, faction: 'neutral' }, ...others] })),
   ).toThrow("fixture: the save's chronicle.units[0].faction names no faction neutral");
+});
+
+test('a save names the content it was written on, and text that is no save names none', () => {
+  expect(contentNamed(writeSave(CATALOGUE, saved()))).toBe(CATALOGUE.version);
+  expect(contentNamed('{"chronicle":')).toBeUndefined();
+  expect(contentNamed('null')).toBeUndefined();
+  expect(contentNamed('{"chronicle":{"content":7}}')).toBeUndefined();
 });
 
 test('a save written on one content version is refused by a catalogue of another', () => {

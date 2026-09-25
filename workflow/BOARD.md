@@ -16,5 +16,3 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 - **The headless simulator** — a consumer of the rules that runs only when asked and reports numbers, not diagnoses, tuned across the two ages; the reachability cache and the end of turn's cost per `apply` are looked at when it is made.
 
 ## Lines
-
-- **The game boots on the save** — `e2e/resume.spec.ts` passes: a chronicle played on the developer's door and reopened on the bare address stands where it stood, and a save that cannot be read is dropped and the launch page boots; `e2e/boot.spec.ts` asserts the address stays what the boot read. Doc-impact: `docs/CHRONICLE-SCREEN.md`. [board/boot-on-save.md](board/boot-on-save.md)
