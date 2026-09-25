@@ -16,3 +16,5 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 - **The headless simulator** — a consumer of the rules that runs only when asked and reports numbers, not diagnoses, tuned across the two ages; the reachability cache and the end of turn's cost per `apply` are looked at when it is made.
 
 ## Lines
+
+- **A resumed chronicle's openings, proven** — a spec for a resumed chronicle that has ended, which opens on its ending screen, and one for a resumed chronicle waiting on a deal, whose deal's window rises once the capstone's window closes: a save and a reload must never dodge an event.
