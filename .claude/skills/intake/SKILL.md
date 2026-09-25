@@ -1,11 +1,13 @@
 ---
 name: intake
-description: Take one BOARD.md line — the first without a dossier unless the user names one — and settle its design with the user: the forks, the contradictions with the docs, the scope. Ends with a task dossier a later ship session executes with no design question left. Use when asked to intake, design, or prepare a line.
+description: Take one BOARD.md line — the first without a dossier unless the user names one — and settle its design with the user: the forks, the contradictions with the docs, the scope. Ends with a task dossier a later ship session executes with no design question left. Or cut one rung into lines when the user asks, or when no line waits. Use when asked to intake, design, prepare or cut a line or a rung.
 ---
 
 # Intake
 
 One board line per invocation: the first line with no dossier link, unless the user names another. The output is a dossier specific enough that the ship session — another model, no memory of this conversation — opens no design question.
+
+**Or one rung**, when the user names one or the Lines section holds no line waiting for intake: the first rung, unless the user names another. A rung is read and challenged as a line is, and the discussion settles what its lines are — the shared mechanism that links them, the order they land in, what each leaves standing — and no more: a line's own forks wait for its intake. The output is the rung's lines on the Lines section, in order, each a title and one sentence, the rung deleted; the shared design that the lines rest on goes to the `docs/` pages in the same commit, since nothing durable cites a line. The first line's dossier is the next invocation.
 
 ## 1. Read
 
@@ -51,4 +53,4 @@ Where a check ended the line instead — a docs edit made now, an idea, nothing 
 
 ## Report
 
-Commit the dossier and `workflow/BOARD.md` — and whatever a check moved, a docs edit or an idea — as `Intake: <title>`, staging those files alone; a dossier left uncommitted lands in the ship's commit and the history loses the intake. Then one line: the dossier's path and what the ship session will not have to decide, or the line's fate. Then hand the turn back; the ship is a new invocation.
+Commit the dossier and `workflow/BOARD.md` — and whatever a check moved, a docs edit or an idea — as `Intake: <title>`, staging those files alone; a dossier left uncommitted lands in the ship's commit and the history loses the intake. Then one line: the dossier's path and what the ship session will not have to decide, or the line's fate. Then hand the turn back; the ship is a new invocation. A rung's cut commits the board and the docs pages as `Intake: Cut <title>`, and reports the lines as written, in order.

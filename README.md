@@ -31,5 +31,5 @@ npm run dev
 
 - [`docs/`](docs/index.md) — the design: what the game is, and what was decided.
 - [`DOGMAS.md`](DOGMAS.md) — how the project is built.
-- [`workflow/`](workflow/BOARD.md) — what is being worked on, what may come later, and the rungs to the demo.
+- [`workflow/`](workflow/BOARD.md) — what is being worked on, what may come later, and the versions to the demo.
 - [`CHANGELOG.md`](CHANGELOG.md) — what each version brought.

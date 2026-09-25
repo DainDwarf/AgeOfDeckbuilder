@@ -1,16 +1,17 @@
 ---
 name: todo
-description: On the user's order, put a line on BOARD.md — a title and one sentence saying what it is about, placed in order — or a jot in IDEAS.md. Triggers are the user's words only, "todo:", "jot:", "note that down", "add a line for …"; never a discovery of Claude's own.
+description: On the user's order, put a line on BOARD.md — a title and one sentence saying what it is about, placed in order — a rung in its Rungs section, or a jot in IDEAS.md. Triggers are the user's words only, "todo:", "rung:", "jot:", "note that down", "add a line for …"; never a discovery of Claude's own.
 ---
 
 # Todo
 
-One thing in, one line out. Input: a request, bug or discovery, in the user's words. Output: a line on `workflow/BOARD.md`, a line in `workflow/IDEAS.md`, or a merge into a line already there. The skill runs on the user's order and never on Claude's initiative: a discovery Claude made stays in its report, and the user decides what becomes a line.
+One thing in, one line out. Input: a request, bug or discovery, in the user's words. Output: a line on `workflow/BOARD.md`, a rung in its Rungs section, a line in `workflow/IDEAS.md`, or a merge into a line already there. The skill runs on the user's order and never on Claude's initiative: a discovery Claude made stays in its report, and the user decides what becomes a line.
 
 ## Where it goes
 
 - **A feature that may or may not happen** goes to `workflow/IDEAS.md`, one line under the right heading — the jot. "jot: …" says so outright; when the user says "todo" of something with no done-condition in sight, ask in one line which of the two they mean.
-- **Anything else** — a defect, a decision to make, a piece of work — goes to `workflow/BOARD.md`. A bug is never an idea.
+- **A version's deliverable** — "rung: …", a piece of work too big for one line, that `/intake` will cut into lines when its turn comes — goes to the Rungs section of `workflow/BOARD.md`, in order among the rungs.
+- **Anything else** — a defect, a decision to make, a piece of work — goes to the Lines section of `workflow/BOARD.md`. A bug is never an idea.
 - **A duplicate** of a line already on the board merges into it: the existing line gains the sentence the new one adds, and nothing else moves.
 
 ## The line
@@ -19,7 +20,7 @@ One thing in, one line out. Input: a request, bug or discovery, in the user's wo
 - **Title** — one sentence saying what it is about, in the user's words where they gave them.
 ```
 
-No done-condition, no doc-impact, no dossier: those are `/intake`'s, and a line without a dossier link is by that a line waiting for intake. Do not challenge the line against the docs, do not design it, do not split it.
+No done-condition, no doc-impact, no dossier: those are `/intake`'s, and a line without a dossier link is by that a line waiting for intake. A rung has the same shape and never a dossier: its cut is `/intake`'s too. Do not challenge the line against the docs, do not design it, do not split it.
 
 ## The place
 

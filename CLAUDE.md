@@ -11,15 +11,15 @@ Guidance for Claude Code sessions in this repository.
 Every markdown file is one of them, and each kind has its place:
 
 - **The repository's own files**, at the root. [`README.md`](README.md) says what the game is to a visitor; this file is the session's entry; [`DOGMAS.md`](DOGMAS.md) is the rules every session works by; [`CHANGELOG.md`](CHANGELOG.md) is player-facing release notes, written at version bumps only.
-- **The workflow**, in `workflow/` — ephemeral. [`BOARD.md`](workflow/BOARD.md) (ordered lines with done-conditions; completion is deletion), `board/<slug>.md` task files beside it (die with their line), [`IDEAS.md`](workflow/IDEAS.md) (unordered pool, nothing promised), [`ROADMAP.md`](workflow/ROADMAP.md) (the rungs to the demo, written in sand), and on a branch of several lines a `BRANCH.md` (its design first, its lines after; deleted before the merge).
+- **The workflow**, in `workflow/` — ephemeral. [`BOARD.md`](workflow/BOARD.md) (the version's rungs, each cut into lines when its turn comes, then the ordered lines with done-conditions; completion is deletion), `board/<slug>.md` task files beside it (die with their line), [`IDEAS.md`](workflow/IDEAS.md) (unordered pool, nothing promised), [`ROADMAP.md`](workflow/ROADMAP.md) (the versions to the demo, written in sand), and on a branch of several lines a `BRANCH.md` (its design first, its lines after; deleted before the merge).
 - **The design**, in `docs/` — standing. Source of truth for _what is_ and _what was decided_. [`docs/index.md`](docs/index.md) is the map; [`docs/DESIGN.md`](docs/DESIGN.md) and the four pages it names the game, [`docs/GLOSSARY.md`](docs/GLOSSARY.md) the closed gameplay vocabulary, `docs/ages/` one content page per age.
 
 Code is the fourth lifespan, permanent, the source of truth for _how_. Nothing durable cites a board line, a task file or an idea.
 
 ## The four loops
 
-- **`/todo`** — on the user's order, a request, bug or discovery becomes a board line — a title and one sentence, placed in order — or an idea. Never on Claude's own initiative.
-- **`/intake`** — one board line, the first without a dossier, gets its design settled with the user: forks, contradictions with the docs, scope. Ends in a dossier a ship session executes with no design question left.
+- **`/todo`** — on the user's order, a request, bug or discovery becomes a board line — a title and one sentence, placed in order — a rung, or an idea. Never on Claude's own initiative.
+- **`/intake`** — one board line, the first without a dossier, gets its design settled with the user: forks, contradictions with the docs, scope. Ends in a dossier a ship session executes with no design question left. Or one rung gets cut into its lines.
 - **`/ship`** — take one dossiered line, implement through the `implementer` agent, land the trinity (code + `docs/` pages + line deleted), get the `egress-reviewer`'s verdict, commit and push, hand back while CI runs, stop.
 - **`/upkeep`** — on the user's order; the ship hand-back reminds them after 20 lines, 30 days, or 100 lines of parked leftovers since the last one: docs lint, board eviction, the **ratchet** — recurring corrections become `DOGMAS.md` lines — the memory lint with the leftovers' triage, and the upstream traps.
 
