@@ -6,7 +6,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Rungs
 
-- **Specs open on a fabricated save** — a spec loads a save it wrote and plays from the state it needs instead of settling through the screen and ending turns to reach it; every spec is reviewed on the way: opened on the state it needs, shortened, and deleted where it tests a remnant of the stand-in or a code path that no longer exists.
 - **One catalogue** — every age's content in one catalogue, an age a slice of it, so a deck and its settle section hold cards of any age.
 - **The campaign and its screen** — the meta's state as a pure module a chronicle's ending pays into, victory or defeat alike: the technology tree, each technology needing the ones before it and the age transitions among its nodes, influence, the collection, the civilization's deck, saved beside the chronicle; the ending screen reads what was paid; the campaign screen is the home, with the tree, the influence, Continue reading what the chronicle in progress holds, New chronicle, Collection, and the menu's Campaign entry; a launch over a chronicle with achievements reached raises a warning, since an abandoned chronicle pays nothing.
 - **The launch screen** — age, region, civilization and deck, replacing the launch page; the address stays the developer's door.
@@ -16,3 +15,10 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 - **The headless simulator** — a consumer of the rules that runs only when asked and reports numbers, not diagnoses, tuned across the two ages; the reachability cache and the end of turn's cost per `apply` are looked at when it is made.
 
 ## Lines
+
+- **A spec opens on the chronicle it wrote** — the planting helper moves into the shared module and takes any deck, the seed searches answer the chronicle they found, and the specs whose whole setup is turns open on it, on the game's content, each reviewed on the way, opened on the state it needs, shortened, and deleted where it tests a remnant of the stand-in or a code path that no longer exists: fall, attack, victory, deal, move, end-of-turn, play-out.
+- **The hand's specs open on their chronicle** — press, recall and refuse, reviewed the same way.
+- **The worker's specs open on their chronicle** — building, worker-instants, harvest, rivers and inspect, reviewed the same way; a worker card no age's content reaches loses its spec.
+- **The map's specs open on their chronicle** — map, fog, console, landing and camps, reviewed the same way.
+- **The city's specs open on their chronicle** — city-mode, yields, settle and capstone, reviewed the same way; settle and capstone open on the save written before the settle.
+- **The screen's specs open on their chronicle, and the stand-in goes** — hover, reference, browse, menu, controls and window, reviewed the same way; then the helpers that settle through the screen, their headless twin and the stand-in catalogue are deleted, boot, resume and failed-boot staying on the address they test.
