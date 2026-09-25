@@ -1135,8 +1135,11 @@ export function fullDraw(): CardId[] {
   return ['PH_Worker', 'PH_Warrior', 'PH_Farm', 'PH_March', 'PH_Harvest'];
 }
 
+/** The id the fixture catalogue lists its one deck under. */
+export const DECK_ID = 'deck';
+
 /** The deck these chronicles are played on: two of each card, enough to draw a hand and cycle, and the settle. */
-export const DECK: Deck = deckOf(CATALOGUE, 'deck');
+export const DECK: Deck = deckOf(CATALOGUE, DECK_ID);
 
 /**
  * One whole turn, on the fixture's content unless the test hands in its own: the end of turn, and an

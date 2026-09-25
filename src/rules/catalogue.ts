@@ -414,9 +414,9 @@ export function scheduleOf(catalogue: Catalogue, id: string): Schedule {
 }
 
 /** A chronicle begun on any other version of the content than this catalogue's is refused. */
-export function checkContent(catalogue: Catalogue, chronicle: Chronicle): void {
-  if (chronicle.content === catalogue.version) return;
-  refuse(catalogue, `a chronicle begun on ${chronicle.content} is played on no other content`);
+export function checkContent(catalogue: Catalogue, { content }: Pick<Chronicle, 'content'>): void {
+  if (content === catalogue.version) return;
+  refuse(catalogue, `a chronicle begun on ${content} is played on no other content`);
 }
 
 /** What a unit entering the map is: its kind, the tile it stands on, and who it acts for. */

@@ -17,5 +17,4 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **A chronicle's save** — `src/rules/` holds the save module, inert in the game, and its tests pass: a chronicle written and read back plays the next command to the same outcome, and a save that is not a chronicle's whole is refused. Doc-impact: none. [board/chronicle-save.md](board/chronicle-save.md)
 - **The game boots on the save** — `e2e/resume.spec.ts` passes: a chronicle played on the developer's door and reopened on the bare address stands where it stood, and a save that cannot be read is dropped and the launch page boots; `e2e/boot.spec.ts` asserts the address stays what the boot read. Doc-impact: `docs/CHRONICLE-SCREEN.md`. [board/boot-on-save.md](board/boot-on-save.md)
