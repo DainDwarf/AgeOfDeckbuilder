@@ -17,5 +17,5 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **A chronicle's save** — what a save is, in `src/rules/`: the chronicle, the content version and the launch's choices, written and read back by pure functions, the reading refusing a save that is not a chronicle's whole; inert in the game, proven on the fixture.
+- **A chronicle's save** — `src/rules/` holds the save module, inert in the game, and its tests pass: a chronicle written and read back plays the next command to the same outcome, and a save that is not a chronicle's whole is refused. Doc-impact: none. [board/chronicle-save.md](board/chronicle-save.md)
 - **The game boots on the save** — the chronicle screen writes the save when a chronicle begins and after every command, on the outcome before the play-out; the bare address resumes the chronicle in progress where it stood, the capstone's window rising again, or opens the launch page where no save stands or the save is dropped; and nothing is written into the address any more.
