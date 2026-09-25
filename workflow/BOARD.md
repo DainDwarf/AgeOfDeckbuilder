@@ -16,7 +16,7 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **A spec opens on the chronicle it wrote** — the planting helper moves into the shared module and takes any deck, the seed searches answer the chronicle they found, and the specs whose whole setup is turns open on it, on the game's content, each reviewed on the way, opened on the state it needs, shortened, and deleted where it tests a remnant of the stand-in or a code path that no longer exists: fall, attack, victory, deal, move, end-of-turn, play-out.
+- **A spec opens on the chronicle it wrote** — fall, attack, victory, deal, move, end-of-turn and play-out import nothing from the stand-in and open through the shared save opener on a chronicle their fixture built on the Nomadic content; the victory span test and the move spec's end turn are gone; resume plants through the shared helper; the report carries each of the seven specs' duration before and after; CI is green. Doc-impact: none. [board/spec-opens-on-its-chronicle.md](board/spec-opens-on-its-chronicle.md)
 - **The hand's specs open on their chronicle** — press, recall and refuse, reviewed the same way.
 - **The worker's specs open on their chronicle** — building, worker-instants, harvest, rivers and inspect, reviewed the same way; a worker card no age's content reaches loses its spec.
 - **The map's specs open on their chronicle** — map, fog, console, landing and camps, reviewed the same way.
