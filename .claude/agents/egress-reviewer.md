@@ -21,7 +21,7 @@ Check each and report only what fails:
 - **No new trap** — no non-local interdependency, no behaviour a reader cannot see from the file it lives in, no trap for a session without today's context.
 - **Trinity respected** — every doc-impact page updated, or its absence justified; no design page was edited down to match the code; the board line is gone; no `TODO` entered the code.
 - **Design honoured** — the diff does what the design pages say, with the terms `docs/GLOSSARY.md` names. A synonym for a glossary term is a finding. A behaviour the design does not cover is a finding unless the report you were handed lists it as a deviation.
-- **No handholding** — no guard rail, warning, or safety net against a legitimate player choice.
+- **No handholding** — no guard rail, warning, or safety net against a move in play, and no press refused until the player has done something else first; a warning stands only where a press outside play discards what the player earned and would otherwise keep, as `DOGMAS.md` → _Design principles_ says.
 - **Interface surface earns its depth** — no shallow module, no wrapper re-export, no layer for layering's sake.
 - **Deletion power** — demand removal of compat shims, dead branches, defensive bloat, comments that paraphrase or narrate.
 - **Scope-growth power** — where a change is half-done and the cohesive refactor is obvious, require it now rather than accept a follow-up. Growth on a first review is normal; on a second round it should be exceptional.

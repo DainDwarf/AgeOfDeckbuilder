@@ -33,4 +33,8 @@ The unordered pool of features that may or may not happen. Nothing here is promi
 - **A rolled centre part**: the centre part's radius rolled by the generator instead of named by the region; a generator change, pitched running.
 - **Herbalism** (Stone Age): a technology unlocking the Heal card — 2 food, heal a unit on a player-held tile.
 - **An in-game codex**: the rules by section, the card kinds and the keywords among them, read in the game; a right click on a card's kind label opens the codex on that kind, and a keyword standing in a card's text, Single use first, stands in brackets and opens on its own — today the label raises a one-line tooltip and the keyword is plain text.
+- **Unit legibility**: a unit forgotten at the end of a turn feels like a slip, and the cure is a state shown, never a warning or a gate on End turn. Three readings, each its own line when taken:
+  - a count of the units still holding a move, on the bar or by the end-turn button;
+  - a key that jumps the camera to the next unit still holding a move;
+  - a sleep order, a unit's own state that dims it and keeps it out of the count until woken or until an enemy comes into its sight.
 - **Rethink the card kinds**: today's instants mix cards nobody's action is needed for, cards that spend a worker's action, and action-spending cards that change the terrain — building, improvement, terraform; each its own kind, or all of them one action kind? More card content may be needed before the properties emerge. And whether the reward cards should be a reward kind or stay instants.

@@ -39,7 +39,7 @@ Full rules in [`DOGMAS.md`](DOGMAS.md). The ones no session may miss:
 3. **Design is the spec.** Code that disagrees is wrong. A gap is reported as a deviation, never coded in silently, and a design page is never edited down to match an implementation.
 4. **Report corner cases.** Anything the agreed design did not foresee goes in the report.
 5. **One verb per concept.** Gameplay terms come from `GLOSSARY.md`; no synonyms, ever.
-6. **No handholding.** Players learn, misplay, and lose. No guard rails, no safety nets.
+6. **No handholding.** Players learn, misplay, and lose. No guard rails, no safety nets; the one warning is against discarding what the player has earned.
 7. **Comments are for traps only.** `docs/` holds the why.
 
 ## Environment
