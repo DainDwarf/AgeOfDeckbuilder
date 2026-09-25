@@ -17,4 +17,4 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **A resumed chronicle's openings, proven** — a spec for a resumed chronicle that has ended, which opens on its ending screen, and one for a resumed chronicle waiting on a deal, whose deal's window rises once the capstone's window closes: a save and a reload must never dodge an event.
+- **A resumed chronicle's openings, proven** — `e2e/resume.spec.ts` holds two more tests on planted saves and passes: an ended chronicle opens on its ending screen with no capstone's window, and one waiting on a deal opens on the capstone's window, the deal's window rising once it closes. Doc-impact: none. [board/resumed-openings.md](board/resumed-openings.md)
