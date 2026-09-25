@@ -24,6 +24,7 @@ import {
   CITY,
   camped,
   cityOf,
+  DECK_ID,
   DROUGHT,
   dealing,
   endedTurn,
@@ -368,7 +369,7 @@ test('the refresh instant is refused on a unit whose move points are full, its a
 });
 
 test('a chronicle begun on a deck of the catalogue holds that deck’s cards and opens turn 1 on a full hand of them', () => {
-  const deck = deckOf(CATALOGUE, 'deck');
+  const deck = deckOf(CATALOGUE, DECK_ID);
   const chronicle = settledLaunch(CATALOGUE, REGION, SCHEDULE, 2026, deck);
 
   expect(chronicle.hand).toHaveLength(5);

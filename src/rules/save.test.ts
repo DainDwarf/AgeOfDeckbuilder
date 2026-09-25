@@ -1,9 +1,19 @@
 import { expect, test } from 'vitest';
 import { catalogued } from './catalogue';
 import { apply, type Command, outcome } from './chronicle';
-import { CATALOGUE, DECK, DECK_ID, endedTurn, REGION, SCHEDULE, settledLaunch } from './fixtures';
+import {
+  CATALOGUE,
+  DECK,
+  DECK_ID,
+  endedTurn,
+  FROST,
+  REGION,
+  SCHEDULE,
+  settledLaunch,
+} from './fixtures';
 import { type ChronicleSave, readSave, writeSave } from './save';
-import type { Chronicle } from './state';
+import { laid } from './schedule';
+import type { Chronicle, Counters } from './state';
 
 /** A chronicle three turns in, saved with what it was launched on. */
 function saved(): ChronicleSave {
@@ -38,10 +48,38 @@ test('a save carrying a card no catalogue holds is refused', () => {
   expect(() => readSave(CATALOGUE, text)).toThrow('fixture: no card is named PH_Unheld');
 });
 
+test('a chronicle carrying a card no catalogue holds is refused its save', () => {
+  const save = saved();
+  const [card, ...rest] = save.chronicle.drawPile;
+  const chronicle = { ...save.chronicle, drawPile: [{ ...card, id: 'PH_Unheld' }, ...rest] };
+
+  expect(() => writeSave(CATALOGUE, { ...save, chronicle })).toThrow(
+    'fixture: no card is named PH_Unheld',
+  );
+});
+
+test('a card in a save carries the counters its content declares, no fewer and no more', () => {
+  const save = saved();
+  const chronicle = laid(CATALOGUE, save.chronicle, 'PH_Frost').chronicle;
+  const [frost, ...rest] = chronicle.drawPile;
+  const carrying = (counters: Counters): string =>
+    tampered({ ...save, chronicle }, (written) => ({
+      ...written,
+      drawPile: [{ ...frost, counters }, ...rest],
+    }));
+
+  expect(readSave(CATALOGUE, carrying({ amount: FROST })).chronicle).toEqual(chronicle);
+  expect(() => readSave(CATALOGUE, carrying({}))).toThrow(
+    "fixture: the save's chronicle.drawPile[0].counters lacks the counter amount the card PH_Frost declares",
+  );
+  expect(() => readSave(CATALOGUE, carrying({ amount: FROST, thaw: 1 }))).toThrow(
+    'fixture: the card PH_Frost declares no counter thaw',
+  );
+});
+
 test('a save that is not a chronicle’s shape is refused', () => {
   const save = saved();
   const [unit, ...others] = save.chronicle.units;
-  const [card, ...rest] = save.chronicle.hand;
   const refusal = (change: (chronicle: Chronicle) => object): (() => unknown) => {
     const text = tampered(save, change);
     return () => readSave(CATALOGUE, text);
@@ -55,6 +93,12 @@ test('a save that is not a chronicle’s shape is refused', () => {
   expect(refusal((chronicle) => ({ ...chronicle, turn: String(chronicle.turn) }))).toThrow(
     "fixture: the save's chronicle.turn is not an integer",
   );
+  expect(refusal((chronicle) => ({ ...chronicle, seed: chronicle.seed + 0.5 }))).toThrow(
+    "fixture: the save's chronicle.seed is not an integer",
+  );
+  expect(
+    refusal((chronicle) => ({ ...chronicle, resources: { ...chronicle.resources, wood: 1 } })),
+  ).toThrow("fixture: the save's chronicle.resources names no resource wood");
   expect(
     refusal((chronicle) => ({
       ...chronicle,
@@ -64,12 +108,6 @@ test('a save that is not a chronicle’s shape is refused', () => {
   expect(
     refusal((chronicle) => ({ ...chronicle, units: [{ ...unit, faction: 'neutral' }, ...others] })),
   ).toThrow("fixture: the save's chronicle.units[0].faction names no faction neutral");
-  expect(
-    refusal((chronicle) => ({
-      ...chronicle,
-      hand: [{ ...card, counters: { ...card.counters, amount: 2 } }, ...rest],
-    })),
-  ).toThrow(`fixture: the card ${card.id} declares no counter amount`);
 });
 
 test('a save written on one content version is refused by a catalogue of another', () => {

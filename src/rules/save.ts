@@ -40,15 +40,14 @@ export type ChronicleSave = {
   readonly deck: string;
 };
 
-/** A save as text; a chronicle of another content, or a region or a deck it does not hold, is refused. */
+/** A save as text; one the reading would refuse is refused, so a written save always reads back. */
 export function writeSave(
   catalogue: Catalogue,
   { chronicle, region, deck }: ChronicleSave,
 ): string {
-  checkContent(catalogue, chronicle);
-  regionOf(catalogue, region);
-  deckOf(catalogue, deck);
-  return JSON.stringify({ chronicle, region, deck });
+  const text = JSON.stringify({ chronicle, region, deck });
+  readSave(catalogue, text);
+  return text;
 }
 
 /**
@@ -83,17 +82,12 @@ function integer(catalogue: Catalogue, slot: Slot): number {
   return slot.raw as number;
 }
 
-function number(catalogue: Catalogue, slot: Slot): number {
-  if (typeof slot.raw !== 'number') refused(catalogue, slot, 'is not a number');
-  return slot.raw;
-}
-
 function flag(catalogue: Catalogue, slot: Slot): boolean {
   if (typeof slot.raw !== 'boolean') refused(catalogue, slot, 'is not true or false');
   return slot.raw;
 }
 
-function word(catalogue: Catalogue, slot: Slot): string {
+function string(catalogue: Catalogue, slot: Slot): string {
   if (typeof slot.raw !== 'string') refused(catalogue, slot, 'is not a string');
   return slot.raw;
 }
@@ -104,7 +98,7 @@ function id(
   slot: Slot,
   lookup: (catalogue: Catalogue, id: string) => unknown,
 ): string {
-  const named = word(catalogue, slot);
+  const named = string(catalogue, slot);
   lookup(catalogue, named);
   return named;
 }
@@ -137,13 +131,13 @@ function optional<T>(slot: Slot, read: (slot: Slot) => T): T | undefined {
 
 function chronicleOf(catalogue: Catalogue, slot: Slot): Chronicle {
   const field = record(catalogue, slot);
-  const content = word(catalogue, field('content'));
+  const content = string(catalogue, field('content'));
   checkContent(catalogue, { content });
   const card = (item: Slot): ChronicleCard => cardIn(catalogue, item);
   const coords = (item: Slot): TileCoords => coordsIn(catalogue, record(catalogue, item));
   return {
     content,
-    seed: number(catalogue, field('seed')),
+    seed: integer(catalogue, field('seed')),
     rng: rngOf(catalogue, field('rng')),
     tiles: list(catalogue, field('tiles'), (item) => tileOf(catalogue, item)),
     snapshots: list(catalogue, field('snapshots'), (item) => snapshotOf(catalogue, item)),
@@ -229,7 +223,7 @@ function timelineOf(catalogue: Catalogue, slot: Slot): Timeline {
 function dealOf(catalogue: Catalogue, slot: Slot): Deal {
   const field = record(catalogue, slot);
   const kind = field('of');
-  const of = word(catalogue, kind) as Deal['of'];
+  const of = string(catalogue, kind) as Deal['of'];
   switch (of) {
     case 'event':
       return { of, event: id(catalogue, field('event'), eventOf) };
@@ -244,6 +238,10 @@ function dealOf(catalogue: Catalogue, slot: Slot): Deal {
 }
 
 function resourcesOf(catalogue: Catalogue, slot: Slot): Resources {
+  const names: readonly string[] = RESOURCES;
+  for (const name of Object.keys(object(catalogue, slot))) {
+    if (!names.includes(name)) refused(catalogue, slot, `names no resource ${name}`);
+  }
   const field = record(catalogue, slot);
   const stock = {} as Resources;
   for (const resource of RESOURCES) stock[resource] = integer(catalogue, field(resource));
@@ -251,7 +249,7 @@ function resourcesOf(catalogue: Catalogue, slot: Slot): Resources {
 }
 
 function factionOf(catalogue: Catalogue, slot: Slot): Faction {
-  const faction = word(catalogue, slot) as Faction;
+  const faction = string(catalogue, slot) as Faction;
   switch (faction) {
     case 'player':
     case 'enemy':
@@ -296,7 +294,7 @@ function statsOf(catalogue: Catalogue, slot: Slot): UnitStats {
 /** A card of a pile, carrying every counter its content declares and no other. */
 function cardIn(catalogue: Catalogue, slot: Slot): ChronicleCard {
   const field = record(catalogue, slot);
-  const card = word(catalogue, field('id'));
+  const card = string(catalogue, field('id'));
   const declared = cardOf(catalogue, card).counters ?? {};
   const counters = field('counters');
   const carried = Object.fromEntries(
@@ -317,7 +315,7 @@ function endingOf(catalogue: Catalogue, slot: Slot): Ending {
   const field = record(catalogue, slot);
   const turn = integer(catalogue, field('turn'));
   const named = field('outcome');
-  const outcome = word(catalogue, named) as Ending['outcome'];
+  const outcome = string(catalogue, named) as Ending['outcome'];
   switch (outcome) {
     case 'victory':
       return { turn, outcome };
@@ -329,7 +327,7 @@ function endingOf(catalogue: Catalogue, slot: Slot): Ending {
 }
 
 function causeOf(catalogue: Catalogue, slot: Slot): DefeatCause {
-  const cause = word(catalogue, slot) as DefeatCause;
+  const cause = string(catalogue, slot) as DefeatCause;
   switch (cause) {
     case 'capture':
     case 'population':

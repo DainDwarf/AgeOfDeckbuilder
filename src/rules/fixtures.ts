@@ -339,6 +339,9 @@ const BEELINE: EnemyScript = {
   attacks: (_catalogue, chronicle, enemy) => leastHealth(chronicle.units, enemy),
 };
 
+/** The id the fixture catalogue lists its one deck under. */
+export const DECK_ID = 'deck';
+
 /** The content every fixture is played on, its numbers the fixture's own. */
 export const CATALOGUE: Catalogue = catalogued({
   version: 'fixture',
@@ -504,7 +507,7 @@ export const CATALOGUE: Catalogue = catalogued({
     },
   },
   decks: {
-    deck: {
+    [DECK_ID]: {
       cards: [
         'PH_Worker',
         'PH_Worker',
@@ -1134,9 +1137,6 @@ export function stagedBy(chronicle: Chronicle, command: Command): string[] {
 export function fullDraw(): CardId[] {
   return ['PH_Worker', 'PH_Warrior', 'PH_Farm', 'PH_March', 'PH_Harvest'];
 }
-
-/** The id the fixture catalogue lists its one deck under. */
-export const DECK_ID = 'deck';
 
 /** The deck these chronicles are played on: two of each card, enough to draw a hand and cycle, and the settle. */
 export const DECK: Deck = deckOf(CATALOGUE, DECK_ID);
