@@ -1,35 +1,51 @@
 import { expect, test } from '@playwright/test';
-import { STAND_IN } from '../src/content/stand-in';
-import { deckOf } from '../src/rules/catalogue';
-import { apply } from '../src/rules/chronicle';
+import { NOMADIC } from '../src/content/nomadic';
+import { apply, outcome } from '../src/rules/chronicle';
 import { walked } from '../src/rules/stages';
-import { chronicleOf, endTurn, launch, onScreen, open, playing, watch } from './chronicle-screen';
+import type { Chronicle } from '../src/rules/state';
+import {
+  budget,
+  chronicleOf,
+  endedTurn,
+  endTurn,
+  firstSeed,
+  onScreen,
+  openSaved,
+  playing,
+  settledOn,
+  watch,
+} from './chronicle-screen';
 
 /**
- * Seven cards, so the first end of turn deals its next hand either side of a shuffle: two off what
- * the draw pile has left, the discard pile shuffled back into it, then the other three.
+ * The first seed's first turn whose draw pile holds fewer cards than the hand, so its end deals the
+ * next hand either side of a shuffle, with no deal due on the two turns the spec ends.
  */
-const DECK = 'PH_ShortDeck';
-
-/**
- * The two turns this ends are safe on any seed: no event lands before the third turn, and a raid
- * landing on it enters its warriors on camps too far off to cross to the city by then.
- */
-const SEED = 1;
+function thinned(): Chronicle {
+  return firstSeed('thins its draw pile under a hand with no deal due', (seed) => {
+    let chronicle = settledOn(NOMADIC, seed);
+    for (let turn = 1; turn <= 8 && chronicle.ending === undefined; turn++) {
+      if (chronicle.drawPile.length < chronicle.hand.length) {
+        return chronicle.timeline.next > chronicle.turn + 2 ? chronicle : undefined;
+      }
+      chronicle = endedTurn(chronicle);
+    }
+    return undefined;
+  });
+}
 
 test('a pointer sweeping the hand while the end of turn plays leaves the chronicle screen live behind it', async ({
   page,
 }) => {
   const problems = watch(page);
-
-  const names = [
-    ...walked(apply(STAND_IN, launch(SEED, deckOf(STAND_IN, DECK)), { type: 'end-turn' })),
-  ].map((stage) => stage.name);
+  test.setTimeout(budget(2));
+  const opened = thinned();
+  const stages = apply(NOMADIC, opened, { type: 'end-turn' });
+  const names = [...walked(stages)].map((stage) => stage.name);
   expect(names.indexOf('drawn')).toBeLessThan(names.indexOf('shuffled'));
+  const once = outcome(stages);
 
-  await open(page, SEED, DECK);
+  await openSaved(page, opened);
 
-  const opened = await chronicleOf(page);
   const lane = await onScreen(page, `hand-${opened.hand.length - 1}`);
   const button = await onScreen(page, 'end-turn');
 
@@ -48,9 +64,9 @@ test('a pointer sweeping the hand while the end of turn plays leaves the chronic
     })
     .toBe(false);
 
-  expect((await chronicleOf(page)).turn).toBe(opened.turn + 1);
+  expect(await chronicleOf(page)).toEqual(once);
 
   await endTurn(page);
-  expect((await chronicleOf(page)).turn).toBe(opened.turn + 2);
+  expect(await chronicleOf(page)).toEqual(endedTurn(once));
   expect(problems).toEqual([]);
 });

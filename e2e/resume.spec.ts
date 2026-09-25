@@ -1,8 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import { STAND_IN, STAND_IN_REGION } from '../src/content/stand-in';
 import { deckOf } from '../src/rules/catalogue';
-import { writeSave } from '../src/rules/save';
-import type { Chronicle } from '../src/rules/state';
 import { SAVE_ENTRY } from '../src/ui/save-entry';
 import { eventName } from '../src/ui/text';
 import {
@@ -14,6 +12,7 @@ import {
   endTurn,
   launch,
   open,
+  plant,
   readNames,
   rested,
   standing,
@@ -21,17 +20,6 @@ import {
   victoryShown,
   watch,
 } from './chronicle-screen';
-
-/** The chronicle kept as the save the pages this one loads from now on find, on `PH_Deck`. */
-async function plant(page: Page, chronicle: Chronicle): Promise<void> {
-  const text = writeSave(STAND_IN, { chronicle, region: STAND_IN_REGION, deck: 'PH_Deck' });
-  await page.addInitScript(
-    ({ entry, save }) => {
-      window.localStorage.setItem(entry, save);
-    },
-    { entry: SAVE_ENTRY, save: text },
-  );
-}
 
 async function resume(page: Page): Promise<void> {
   await page.goto('/');
@@ -92,7 +80,7 @@ test('an ended chronicle reopens on its ending screen, and no capstone’s windo
   expect(ended.ending).toEqual({ outcome: 'victory', turn: 4 });
 
   await readNames(page);
-  await plant(page, ended);
+  await plant(page, { chronicle: ended, region: STAND_IN_REGION, deck: 'PH_Deck' });
   await resume(page);
 
   await expect.poll(() => victoryShown(page)).toBe(true);
@@ -111,7 +99,7 @@ test('a chronicle reopened waiting on a deal stands under its capstone’s windo
   if (deal?.of !== 'event') throw new Error(`turn ${dealt.turn} deals no event`);
 
   await readNames(page);
-  await plant(page, dealt);
+  await plant(page, { chronicle: dealt, region: STAND_IN_REGION, deck: 'PH_Deck' });
   await resume(page);
 
   await expect.poll(() => standing(page, 'capstone')).toBe(true);

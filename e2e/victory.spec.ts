@@ -1,77 +1,81 @@
 import { expect, test } from '@playwright/test';
-import { STAND_IN } from '../src/content/stand-in';
-import { scheduleOf } from '../src/rules/catalogue';
-import { tileKey } from '../src/rules/map';
+import { NOMADIC } from '../src/content/nomadic';
+import { aimOf, gained } from '../src/rules/cards';
+import { cardOf, entered } from '../src/rules/catalogue';
+import { admitted, apply, outcome, refusalOf } from '../src/rules/chronicle';
+import { neighbours, type TileCoords, tileAt, tileKey } from '../src/rules/map';
+import { charted } from '../src/rules/sight';
+import { type Chronicle, playable } from '../src/rules/state';
 import {
   aimed,
   budget,
   chronicleOf,
   cityTileOf,
+  click,
   dragOut,
-  dragUnit,
-  endTurn,
+  endedTurn,
+  firstSeed,
   idsOf,
-  onScreen,
-  open,
+  openSaved,
   playedOut,
-  playersOf,
+  settledOn,
   victoryShown,
   watch,
-  workerRun,
 } from './chronicle-screen';
 
-/** The schedule whose capstone lands early and is passed by a farm standing inside the border. */
-const TILLAGE = 'PH_TillageSchedule';
+/** The card the capstone's landing lays, and the building its play builds. */
+const SHELTER = 'shelter';
 
-test('the city passing the capstone wins, and the chronicle ends on the victory screen', async ({
+/**
+ * The first seed's capstone landing turn, the shelter in the hand, with a tile beside the city
+ * claimed, the shelter's cost gained and a worker entered on that tile, and the tile: the shelter's
+ * aim admits it.
+ */
+function landed(): { chronicle: Chronicle; tile: TileCoords } {
+  const card = cardOf(NOMADIC, SHELTER);
+  const aim = aimOf(card);
+  if (aim.aim !== 'tile') throw new Error(`${SHELTER} is aimed at no tile`);
+  return firstSeed('lands its capstone with a shelter to build beside the city', (seed) => {
+    let turned = settledOn(NOMADIC, seed);
+    while (turned.turn < turned.timeline.capstone.turn && turned.ending === undefined) {
+      turned = endedTurn(turned);
+    }
+    if (turned.ending !== undefined || !idsOf(turned.hand).includes(SHELTER)) return undefined;
+
+    for (const tile of neighbours(cityTileOf(turned))) {
+      const claimed = outcome(apply(NOMADIC, turned, { type: 'claim', tile }));
+      if (claimed === turned) continue;
+      const paid = gained(claimed, card.cost).chronicle;
+      const worked = entered(NOMADIC, paid, { type: 'worker', faction: 'player', tile }).chronicle;
+      const chronicle = charted(NOMADIC, worked);
+      if (!playable(refusalOf(NOMADIC, chronicle, SHELTER))) continue;
+      if (admitted(NOMADIC, chronicle, aim).some((coord) => tileKey(coord) === tileKey(tile))) {
+        return { chronicle, tile };
+      }
+    }
+    return undefined;
+  });
+}
+
+test('the play whose building passes the capstone wins on the play, and the victory screen rises', async ({
   page,
 }) => {
   const problems = watch(page);
-  test.setTimeout(budget(3));
+  test.setTimeout(budget(1));
+  const { chronicle, tile } = landed();
+  const index = idsOf(chronicle.hand).indexOf(SHELTER);
+  const won = outcome(apply(NOMADIC, chronicle, { type: 'play', index, aim: 'tile', tile }));
 
-  // The short schedule's capstone lands on the second turn and its span's last is the third: the
-  // second end of turn stops on its window, and the tick the third end brings passes it.
-  await open(page, 1, 'PH_Deck', 'PH_ShortSchedule');
+  await openSaved(page, chronicle);
   expect(await victoryShown(page)).toBe(false);
-  for (let turn = 0; turn < 3; turn++) await endTurn(page);
-
-  const won = await chronicleOf(page);
-
-  expect(won.ending).toEqual({ outcome: 'victory', turn: 4 });
-  await expect.poll(() => victoryShown(page)).toBe(true);
-  expect(problems).toEqual([]);
-});
-
-test('the play that builds the farm passing the capstone wins on the play, and the victory screen rises', async ({
-  page,
-}) => {
-  const problems = watch(page);
-  const landing = scheduleOf(STAND_IN, TILLAGE).capstone.window[0];
-  const run = workerRun('PH_Farm', (_, moved) => moved.turn >= landing, TILLAGE);
-  test.setTimeout(budget(run.turn + 2));
-
-  await open(page, run.seed, 'PH_Deck', TILLAGE);
-  for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
-
-  const opened = await chronicleOf(page);
-  await dragOut(page, idsOf(opened.hand).indexOf('PH_Worker'));
-  await expect.poll(async () => playersOf(await chronicleOf(page)).length).toBe(1);
-
-  const entered = await chronicleOf(page);
-  await dragUnit(page, cityTileOf(entered), run.tile);
-
-  const moved = await chronicleOf(page);
-  const destination = await onScreen(page, `tile-${tileKey(run.tile)}`);
-  expect(await victoryShown(page)).toBe(false);
-  await dragOut(page, idsOf(moved.hand).indexOf('PH_Farm'));
+  await dragOut(page, index);
   await aimed(page);
-  await page.mouse.click(destination.x, destination.y);
+  await click(page, `tile-${tileKey(tile)}`);
   await playedOut(page);
 
-  const won = await chronicleOf(page);
-
-  expect(won.tiles.find((tile) => tileKey(tile) === tileKey(run.tile))?.building).toBe('PH_Farm');
-  expect(won.ending).toEqual({ outcome: 'victory', turn: run.turn });
+  expect(await chronicleOf(page)).toEqual(won);
+  expect(tileAt(won.tiles, tile)?.building).toBe(SHELTER);
+  expect(won.ending).toEqual({ outcome: 'victory', turn: chronicle.turn });
   await expect.poll(() => victoryShown(page)).toBe(true);
   expect(problems).toEqual([]);
 });

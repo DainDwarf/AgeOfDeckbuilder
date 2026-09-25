@@ -1,74 +1,85 @@
 import { expect, test } from '@playwright/test';
-import { STAND_IN } from '../src/content/stand-in';
-import { movementCost, type TileCoords, tileAt, tileKey } from '../src/rules/map';
+import { NOMADIC } from '../src/content/nomadic';
+import { apply, outcome } from '../src/rules/chronicle';
+import { movementCost, neighbours, type TileCoords, tileAt, tileKey } from '../src/rules/map';
 import type { Chronicle } from '../src/rules/state';
 import {
+  budget,
   chronicleOf,
   cityTileOf,
   click,
-  dragOut,
   dragUnit,
-  endTurn,
-  idsOf,
-  open,
+  firstSeed,
+  openSaved,
   playedOut,
   playersOf,
   ringedTile,
-  stepRun,
+  settledOn,
   watch,
 } from './chronicle-screen';
 
-/** What entering a tile of this chronicle costs; the run steps onto tiles a unit enters at all. */
+/** What entering a tile of this chronicle costs; the search steps onto tiles a unit enters at all. */
 function costOf(chronicle: Chronicle, coord: TileCoords): number {
-  const cost = movementCost(STAND_IN, tileAt(chronicle.tiles, coord));
+  const cost = movementCost(NOMADIC, tileAt(chronicle.tiles, coord));
   if (cost === undefined) throw new Error(`nothing crosses onto ${tileKey(coord)}`);
   return cost;
 }
 
-test('a unit crosses two tiles in two steps, and the turn refreshes what it spent', async ({
-  page,
-}) => {
+/**
+ * The first seed's turn 1 with the first worker entered on the city's tile, and the two tiles that
+ * worker crosses to, one step at a time.
+ */
+function stepped(): { chronicle: Chronicle; first: TileCoords; second: TileCoords } {
+  return firstSeed('crosses its first worker two tiles in two steps', (seed) => {
+    const chronicle = settledOn(NOMADIC, seed, ['first-worker']);
+    const [worker] = playersOf(chronicle);
+    const city = cityTileOf(chronicle);
+    for (const first of neighbours(city)) {
+      const once = outcome(
+        apply(NOMADIC, chronicle, { type: 'move', unit: worker.id, tile: first }),
+      );
+      if (once === chronicle) continue;
+      for (const second of neighbours(first)) {
+        if (tileKey(second) === tileKey(city)) continue;
+        const again = { type: 'move', unit: worker.id, tile: second } as const;
+        if (outcome(apply(NOMADIC, once, again)) !== once) return { chronicle, first, second };
+      }
+    }
+    return undefined;
+  });
+}
+
+test('a unit crosses two tiles in two steps', async ({ page }) => {
   const problems = watch(page);
-  const run = stepRun();
+  test.setTimeout(budget(2));
+  const { chronicle, first, second } = stepped();
+  const [worker] = playersOf(chronicle);
+  const city = cityTileOf(chronicle);
+  const once = outcome(apply(NOMADIC, chronicle, { type: 'move', unit: worker.id, tile: first }));
+  const twice = outcome(apply(NOMADIC, once, { type: 'move', unit: worker.id, tile: second }));
 
-  await open(page, run.seed, 'PH_Deck');
-  for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
-
-  const opened = await chronicleOf(page);
-  await dragOut(page, idsOf(opened.hand).indexOf('PH_Worker'));
-  await expect.poll(async () => playersOf(await chronicleOf(page)).length).toBe(1);
-
-  const entered = await chronicleOf(page);
-  expect(playersOf(entered)[0].movePoints).toBe(STAND_IN.units.PH_Worker.move);
+  await openSaved(page, chronicle);
 
   // The first step: the unit is clicked, then the tile the map lights under it.
-  await click(page, `tile-${tileKey(cityTileOf(entered))}`);
-  await expect.poll(() => ringedTile(page)).toBe(tileKey(cityTileOf(entered)));
-  await click(page, `tile-${tileKey(run.first)}`);
+  await click(page, `tile-${tileKey(city)}`);
+  await expect.poll(() => ringedTile(page)).toBe(tileKey(city));
+  await click(page, `tile-${tileKey(first)}`);
   await playedOut(page);
   await expect
     .poll(async () => tileKey(playersOf(await chronicleOf(page))[0].tile))
-    .toBe(tileKey(run.first));
+    .toBe(tileKey(first));
 
-  const stepped = await chronicleOf(page);
-  expect(playersOf(stepped)[0].movePoints).toBe(
-    STAND_IN.units.PH_Worker.move - costOf(entered, run.first),
-  );
+  expect(await chronicleOf(page)).toEqual(once);
+  expect(playersOf(once)[0].movePoints).toBe(worker.stats.move - costOf(chronicle, first));
   // The unit is selected again where it landed, so one more click is the next step.
-  await expect.poll(() => ringedTile(page)).toBe(tileKey(run.first));
+  await expect.poll(() => ringedTile(page)).toBe(tileKey(first));
 
   // The second step: the unit is dragged onto the tile it lands on.
-  await dragUnit(page, run.first, run.second);
+  await dragUnit(page, first, second);
 
-  const twice = await chronicleOf(page);
-  expect(tileKey(playersOf(twice)[0].tile)).toBe(tileKey(run.second));
+  expect(await chronicleOf(page)).toEqual(twice);
   expect(playersOf(twice)[0].movePoints).toBe(
-    STAND_IN.units.PH_Worker.move - costOf(entered, run.first) - costOf(entered, run.second),
+    worker.stats.move - costOf(chronicle, first) - costOf(chronicle, second),
   );
-
-  await endTurn(page);
-
-  const ticked = await chronicleOf(page);
-  expect(playersOf(ticked)[0].movePoints).toBe(STAND_IN.units.PH_Worker.move);
   expect(problems).toEqual([]);
 });

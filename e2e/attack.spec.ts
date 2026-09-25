@@ -1,74 +1,51 @@
 import { expect, type Page, test } from '@playwright/test';
-import { STAND_IN } from '../src/content/stand-in';
-import { deckOf } from '../src/rules/catalogue';
-import { apply, outcome, refusalOf } from '../src/rules/chronicle';
-import { distance, type TileCoords, tileKey } from '../src/rules/map';
-import { type Chronicle, playable } from '../src/rules/state';
-import { type Unit, unitAt } from '../src/rules/units';
+import { NOMADIC } from '../src/content/nomadic';
+import { entered, unitKind } from '../src/rules/catalogue';
+import { apply, outcome } from '../src/rules/chronicle';
+import { neighbours, type TileCoords, tileAt, tileKey } from '../src/rules/map';
+import { charted } from '../src/rules/sight';
+import type { Chronicle } from '../src/rules/state';
+import { standsOn, type Unit, unitAt } from '../src/rules/units';
 import {
   budget,
   chronicleOf,
   cityTileOf,
-  dragOut,
   dragTiles,
-  endedTurn,
-  endTurn,
   firstSeed,
-  idsOf,
-  launch,
-  open,
+  openSaved,
   playersOf,
   ringedTile,
+  settledOn,
   standing,
   watch,
 } from './chronicle-screen';
 
 /**
- * A chronicle whose turn `turn` enters a warrior on the city, and whose `turns` ends of turn after
- * it bring an enemy within that warrior's range while it still stands with its action full.
+ * The first seed's turn 1 with a warrior of the player's entered on the city's tile and one enemy of
+ * the camp's unit kind entered with the raider script on a tile beside it, and that enemy's tile.
  */
-type AttackRun = {
-  readonly seed: number;
-  readonly turn: number;
-  readonly turns: number;
-  readonly enemy: TileCoords;
-};
-
-/** The first seed that opens on such a run. */
-function attackRun(): AttackRun {
-  return firstSeed('brings an enemy within reach of a standing warrior', (seed) => {
-    let chronicle = launch(seed, deckOf(STAND_IN, 'PH_Deck'));
-    for (let turn = 1; turn <= 8; turn++) {
-      const met = besieged(chronicle);
-      if (met !== undefined) return { seed, turn, ...met };
-      chronicle = endedTurn(chronicle);
-    }
-    return undefined;
-  });
-}
-
-/**
- * How many ends of turn it takes this hand's warrior, entered and left standing on the city, to
- * have an enemy in range at the opening of a player turn, and nothing when none comes inside twenty.
- */
-function besieged(chronicle: Chronicle): { turns: number; enemy: TileCoords } | undefined {
-  const enter = idsOf(chronicle.hand).indexOf('PH_Warrior');
-  if (enter === -1 || !playable(refusalOf(STAND_IN, chronicle, 'PH_Warrior'))) return undefined;
-  let standing = outcome(apply(STAND_IN, chronicle, { type: 'play', index: enter, aim: 'none' }));
-  if (playersOf(standing).length !== 1) return undefined;
-
-  for (let turns = 1; turns <= 20; turns++) {
-    standing = endedTurn(standing);
-    if (standing.ending !== undefined) return undefined;
-    const warrior = standing.units.find((unit) => unit.faction === 'player');
-    if (warrior === undefined || warrior.action < warrior.stats.action) return undefined;
-    const enemy = standing.units.find(
-      (unit) =>
-        unit.faction === 'enemy' && distance(unit.tile, warrior.tile) <= warrior.stats.range,
+function besieged(): { chronicle: Chronicle; warrior: Unit; enemy: TileCoords } {
+  return firstSeed('stands an enemy beside its city', (seed) => {
+    const settled = settledOn(NOMADIC, seed);
+    const city = cityTileOf(settled);
+    const guarded = entered(NOMADIC, settled, { type: 'warrior', faction: 'player', tile: city });
+    const kind = unitKind(NOMADIC, NOMADIC.camp.unit);
+    const enemy = neighbours(city).find(
+      (tile) =>
+        standsOn(NOMADIC, kind, tileAt(guarded.chronicle.tiles, tile)) &&
+        unitAt(guarded.chronicle.units, tile) === undefined,
     );
-    if (enemy !== undefined) return { turns, enemy: enemy.tile };
-  }
-  return undefined;
+    if (enemy === undefined) return undefined;
+    const beset = entered(NOMADIC, guarded.chronicle, {
+      type: NOMADIC.camp.unit,
+      faction: 'enemy',
+      tile: enemy,
+      script: NOMADIC.camp.scripts.raider,
+    });
+    const chronicle = charted(NOMADIC, beset.chronicle);
+    const [warrior] = playersOf(chronicle);
+    return { chronicle, warrior, enemy };
+  });
 }
 
 /** The unit standing on a tile of the chronicle the screen holds, and nothing where none stands. */
@@ -80,48 +57,36 @@ test('a warrior dragged onto an enemy attacks it, and its spent action refuses a
   page,
 }) => {
   const problems = watch(page);
-  const run = attackRun();
-  // The ends of turn before the warrior and after it, and one more turn's worth for the two drags.
-  test.setTimeout(budget(run.turn + run.turns));
+  test.setTimeout(budget(1));
+  const { chronicle, warrior, enemy } = besieged();
+  const target = unitAt(chronicle.units, enemy);
+  if (target === undefined) throw new Error(`no enemy stands on ${tileKey(enemy)}`);
+  const attacked = outcome(
+    apply(NOMADIC, chronicle, { type: 'attack', unit: warrior.id, tile: enemy }),
+  );
 
-  await open(page, run.seed, 'PH_Deck');
-  for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
-
-  const opened = await chronicleOf(page);
-  await dragOut(page, idsOf(opened.hand).indexOf('PH_Warrior'));
-  await expect.poll(async () => playersOf(await chronicleOf(page)).length).toBe(1);
-
-  const entered = await chronicleOf(page);
-  for (let turn = 0; turn < run.turns; turn++) await endTurn(page);
-
-  const besetted = await chronicleOf(page);
-  const [warrior] = playersOf(besetted);
-  const enemy = await unitOn(page, run.enemy);
-  expect(warrior.tile).toEqual(cityTileOf(entered));
-  expect(warrior.action).toBe(STAND_IN.units.PH_Warrior.action);
-  expect(enemy?.faction).toBe('enemy');
+  await openSaved(page, chronicle);
 
   // The attack: the warrior is dragged onto the enemy, the target on the tile making it an attack.
-  await dragTiles(page, warrior.tile, run.enemy);
+  await dragTiles(page, warrior.tile, enemy);
   await expect
-    .poll(async () => (await unitOn(page, run.enemy))?.stats.health)
-    .toBe((enemy?.stats.health ?? 0) - STAND_IN.units.PH_Warrior.damage);
+    .poll(async () => (await unitOn(page, enemy))?.stats.health)
+    .toBe(target.stats.health - warrior.stats.damage);
 
-  const attacked = await chronicleOf(page);
+  expect(await chronicleOf(page)).toEqual(attacked);
   const [struck] = playersOf(attacked);
   expect(struck.tile).toEqual(warrior.tile);
   expect(struck.action).toBe(0);
   expect(struck.movePoints).toBe(0);
   // Nothing left to spend: the warrior stands dimmed, and the enemy it struck never is.
   await expect.poll(() => standing(page, `unit-dim-${tileKey(warrior.tile)}`)).toBe(true);
-  expect(await standing(page, `unit-dim-${tileKey(run.enemy)}`)).toBe(false);
+  expect(await standing(page, `unit-dim-${tileKey(enemy)}`)).toBe(false);
   // The warrior is selected again where it stands, so one more press is its next command.
   await expect.poll(() => ringedTile(page)).toBe(tileKey(warrior.tile));
 
   // Its action is spent, so the enemy's tile is no target of the warrior's and the drag changes nothing.
-  await dragTiles(page, warrior.tile, run.enemy);
+  await dragTiles(page, warrior.tile, enemy);
 
-  const again = await chronicleOf(page);
-  expect(again.units).toEqual(attacked.units);
+  expect(await chronicleOf(page)).toEqual(attacked);
   expect(problems).toEqual([]);
 });

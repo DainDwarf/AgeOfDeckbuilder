@@ -1,8 +1,8 @@
 import { expect, test } from '@playwright/test';
-import { STAND_IN } from '../src/content/stand-in';
-import { deckOf } from '../src/rules/catalogue';
+import { NOMADIC } from '../src/content/nomadic';
+import { apply, outcome } from '../src/rules/chronicle';
 import { answerCost, answerOf, answerRefusal, offered } from '../src/rules/schedule';
-import { playable } from '../src/rules/state';
+import { type Chronicle, playable } from '../src/rules/state';
 import { eventLore } from '../src/ui/lore';
 import { eventName, text } from '../src/ui/text';
 import {
@@ -11,39 +11,79 @@ import {
   cardOnFace,
   chronicleOf,
   click,
-  dealRun,
+  endedTurn,
   enemiesOf,
-  launch,
+  firstEntriesTaken,
+  firstSeed,
   loreOf,
   onScreen,
-  open,
+  openSaved,
   refusalLines,
+  rested,
   ringed,
+  settledOn,
   standing,
-  stoppedTurn,
   take,
   titleOf,
   watch,
 } from './chronicle-screen';
 
+/** The event dealt as the choice, and the answer of it that enters warriors. */
+const LEAN_SEASON = 'lean-season';
+const RAID = 'ration';
+
+/** The chronicle of the first seed whose first deal is the lean season alone, stopped on that deal. */
+function leanSeason(): Chronicle {
+  return firstSeed('deals the lean season alone first', (seed) => {
+    let chronicle = settledOn(NOMADIC, seed);
+    const due = chronicle.timeline.next;
+    while (chronicle.turn < due - 1 && chronicle.ending === undefined) {
+      chronicle = endedTurn(chronicle);
+    }
+    const dealt = outcome(apply(NOMADIC, chronicle, { type: 'end-turn' }));
+    const [deal, ...behind] = dealt.deals;
+    if (deal?.of !== 'event' || deal.event !== LEAN_SEASON || behind.length > 0) return undefined;
+    return dealt;
+  });
+}
+
+/**
+ * The chronicle of the first seed and turn, inside forty turns, whose deal offers an answer the city
+ * cannot pay for, stopped on that deal, and that answer.
+ */
+function unpaid(): { dealt: Chronicle; answer: string } {
+  return firstSeed('deals an answer its city cannot pay for inside forty turns', (seed) => {
+    let chronicle = settledOn(NOMADIC, seed);
+    while (chronicle.turn < 40 && chronicle.ending === undefined) {
+      const dealt = outcome(apply(NOMADIC, chronicle, { type: 'end-turn' }));
+      const [deal] = dealt.deals;
+      if (deal?.of === 'event') {
+        const answer = offered(NOMADIC, deal).find(
+          (id) => !playable(answerRefusal(NOMADIC, dealt, deal.event, id)),
+        );
+        if (answer !== undefined) return { dealt, answer };
+      }
+      chronicle = firstEntriesTaken(dealt);
+    }
+    return undefined;
+  });
+}
+
 test('the events phase deals a choice, and the turn plays on from the one taken', async ({
   page,
 }) => {
   const problems = watch(page);
-  const run = dealRun();
-  // The turns ended up to the due one, and the take that plays the rest of it out.
-  test.setTimeout(budget(run.due));
-
-  await open(page, run.seed, 'PH_Deck');
-  for (let turn = 1; turn < run.due; turn++) await stoppedTurn(page);
-  await expect.poll(() => standing(page, 'deal')).toBe(true);
-
-  const dealt = await chronicleOf(page);
+  test.setTimeout(budget(1));
+  const dealt = leanSeason();
   const [deal] = dealt.deals;
-  if (deal?.of !== 'event') throw new Error(`turn ${run.due} deals no event`);
-  const answers = offered(STAND_IN, deal);
-  expect(dealt.turn).toBe(run.due);
-  expect(dealt.hand).toEqual([]);
+  if (deal?.of !== 'event') throw new Error(`turn ${dealt.turn} deals no event`);
+  const answers = offered(NOMADIC, deal);
+  const raid = answers.indexOf(RAID);
+  const after = outcome(apply(NOMADIC, dealt, { type: 'take', at: raid }));
+
+  await openSaved(page, dealt);
+  await expect.poll(() => standing(page, 'deal')).toBe(true);
+  await rested(page);
   expect(await titleOf(page, 'deal')).toBe(eventName(deal.event));
   expect(await loreOf(page, 'deal')).toBe(eventLore(deal.event));
   for (const [at, answer] of answers.entries()) {
@@ -71,43 +111,32 @@ test('the events phase deals a choice, and the turn plays on from the one taken'
   await expect.poll(() => standing(page, 'menu')).toBe(false);
   await expect.poll(() => standing(page, 'deal')).toBe(true);
 
-  await take(page, 0);
+  await take(page, raid);
 
-  const after = await chronicleOf(page);
   expect(await standing(page, 'deal')).toBe(false);
-  expect(after.deals).toEqual([]);
-  expect(after.turn).toBe(run.due);
-  expect(after.timeline.next).toBeGreaterThan(run.due);
-  expect(after.hand).toHaveLength(5);
+  expect(await chronicleOf(page)).toEqual(after);
   expect(enemiesOf(after).length).toBeGreaterThan(enemiesOf(dealt).length);
 
   expect(problems).toEqual([]);
 });
 
-/** The schedule whose one event deals an answer no city pays for by its first deal. */
-const TOLL = 'PH_TollSchedule';
-
 test('the take of an answer the city cannot pay for says why over the card, and takes and pays nothing', async ({
   page,
 }) => {
   const problems = watch(page);
-  const seed = 1;
-  const due = launch(seed, deckOf(STAND_IN, 'PH_Deck'), TOLL).timeline.next;
-  test.setTimeout(budget(due));
-
-  await open(page, seed, 'PH_Deck', TOLL);
-  for (let turn = 1; turn < due; turn++) await stoppedTurn(page);
-  await expect.poll(() => standing(page, 'deal')).toBe(true);
-
-  const dealt = await chronicleOf(page);
+  test.setTimeout(budget(0));
+  const { dealt, answer } = unpaid();
   const [deal] = dealt.deals;
-  if (deal?.of !== 'event') throw new Error(`turn ${due} deals no event`);
-  const at = offered(STAND_IN, deal).indexOf('PH_Tribute');
-  const refusal = answerRefusal(STAND_IN, dealt, deal.event, 'PH_Tribute');
-  const said = answerCost(STAND_IN, dealt, answerOf(STAND_IN, deal.event, 'PH_Tribute'))
+  if (deal?.of !== 'event') throw new Error(`turn ${dealt.turn} deals no event`);
+  const at = offered(NOMADIC, deal).indexOf(answer);
+  const refusal = answerRefusal(NOMADIC, dealt, deal.event, answer);
+  const said = answerCost(NOMADIC, dealt, answerOf(NOMADIC, deal.event, answer))
     .filter(({ resource }) => refusal.unaffordable.includes(resource))
     .map(({ resource, amount }) => text(`refusal.${resource}`, { cost: amount }));
-  expect(playable(refusal)).toBe(false);
+
+  await openSaved(page, dealt);
+  await expect.poll(() => standing(page, 'deal')).toBe(true);
+  await rested(page);
 
   await click(page, `deal-card-${at}`);
   await expect.poll(() => ringed(page, `deal-card-${at}`)).toBe(true);

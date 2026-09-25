@@ -1,24 +1,32 @@
 import { expect, type Page, test } from '@playwright/test';
 import type Phaser from 'phaser';
+import { NOMADIC } from '../src/content/nomadic';
+import { apply, outcome } from '../src/rules/chronicle';
 import { cultureThreshold, growthThreshold } from '../src/rules/city';
-import { idle } from '../src/rules/state';
+import { type Chronicle, idle } from '../src/rules/state';
 import { text } from '../src/ui/text';
 import {
+  budget,
   chronicleOf,
   counted,
+  endedTurn,
   endTurn,
   endTurnLabel,
+  firstSeed,
   onScreen,
-  open,
+  openSaved,
   playing,
+  settledOn,
   watch,
 } from './chronicle-screen';
 
-/**
- * The two turns this ends are safe on any seed: no event lands before the third turn, and a raid
- * landing on it enters its warriors on camps too far off to cross to the city by then.
- */
-const SEED = 1;
+/** The first seed's turn 1, with no deal due on the two turns the spec ends. */
+function settled(): Chronicle {
+  return firstSeed('deals nothing on its second and third turns', (seed) => {
+    const chronicle = settledOn(NOMADIC, seed);
+    return chronicle.timeline.next > chronicle.turn + 2 ? chronicle : undefined;
+  });
+}
 
 /** What the broken motion throws, so the one problem of the run can be told from any other. */
 const THROWN = 'this motion was broken from outside';
@@ -79,20 +87,22 @@ test('a motion that throws still ends the turn and gives the chronicle screen ba
   page,
 }) => {
   const problems = watch(page);
+  test.setTimeout(budget(2));
+  const opened = settled();
+  const committed = outcome(apply(NOMADIC, opened, { type: 'end-turn' }));
 
-  await open(page, SEED, 'PH_LongDeck');
-  const opened = await chronicleOf(page);
+  await openSaved(page, opened);
 
   await breakNextMotion(page);
   const button = await onScreen(page, 'end-turn');
   await page.mouse.click(button.x, button.y);
 
-  await expect.poll(async () => (await chronicleOf(page)).turn).toBe(opened.turn + 1);
+  await expect.poll(async () => (await chronicleOf(page)).turn).toBe(committed.turn);
   expect(await playing(page)).toBe(false);
 
   await page.waitForTimeout(IN_THE_AIR);
 
-  const committed = await chronicleOf(page);
+  expect(await chronicleOf(page)).toEqual(committed);
   expect(await paintedPiles(page)).toEqual({
     draw: String(committed.drawPile.length),
     discard: String(committed.discardPile.length),
@@ -123,7 +133,7 @@ test('a motion that throws still ends the turn and gives the chronicle screen ba
   expect(await counted(page, 'end-turn-leaving')).toBe(0);
 
   await endTurn(page);
-  expect((await chronicleOf(page)).turn).toBe(opened.turn + 2);
+  expect(await chronicleOf(page)).toEqual(endedTurn(committed));
 
   await expect.poll(() => problems.length).toBe(1);
   expect(problems[0]).toContain(THROWN);
