@@ -30,11 +30,14 @@ import {
 
 /** The event dealt as the choice, and the answer of it that enters warriors. */
 const LEAN_SEASON = 'lean-season';
-const RAID = 'ration';
+const RATION = 'ration';
 
-/** The chronicle of the first seed whose first deal is the lean season alone, stopped on that deal. */
-function leanSeason(): Chronicle {
-  return firstSeed('deals the lean season alone first', (seed) => {
+/**
+ * The chronicle of the first seed whose first deal is the lean season alone, offering the ration,
+ * stopped on that deal, and where the ration stands among the answers offered.
+ */
+function leanSeason(): { dealt: Chronicle; ration: number } {
+  return firstSeed(`deals the lean season alone first, offering ${RATION}`, (seed) => {
     let chronicle = settledOn(NOMADIC, seed);
     const due = chronicle.timeline.next;
     while (chronicle.turn < due - 1 && chronicle.ending === undefined) {
@@ -43,7 +46,8 @@ function leanSeason(): Chronicle {
     const dealt = outcome(apply(NOMADIC, chronicle, { type: 'end-turn' }));
     const [deal, ...behind] = dealt.deals;
     if (deal?.of !== 'event' || deal.event !== LEAN_SEASON || behind.length > 0) return undefined;
-    return dealt;
+    const ration = offered(NOMADIC, deal).indexOf(RATION);
+    return ration === -1 ? undefined : { dealt, ration };
   });
 }
 
@@ -74,12 +78,11 @@ test('the events phase deals a choice, and the turn plays on from the one taken'
 }) => {
   const problems = watch(page);
   test.setTimeout(budget(1));
-  const dealt = leanSeason();
+  const { dealt, ration } = leanSeason();
   const [deal] = dealt.deals;
   if (deal?.of !== 'event') throw new Error(`turn ${dealt.turn} deals no event`);
   const answers = offered(NOMADIC, deal);
-  const raid = answers.indexOf(RAID);
-  const after = outcome(apply(NOMADIC, dealt, { type: 'take', at: raid }));
+  const after = outcome(apply(NOMADIC, dealt, { type: 'take', at: ration }));
 
   await openSaved(page, dealt);
   await expect.poll(() => standing(page, 'deal')).toBe(true);
@@ -111,7 +114,7 @@ test('the events phase deals a choice, and the turn plays on from the one taken'
   await expect.poll(() => standing(page, 'menu')).toBe(false);
   await expect.poll(() => standing(page, 'deal')).toBe(true);
 
-  await take(page, raid);
+  await take(page, ration);
 
   expect(await standing(page, 'deal')).toBe(false);
   expect(await chronicleOf(page)).toEqual(after);

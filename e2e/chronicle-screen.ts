@@ -141,9 +141,8 @@ const COLD_START_MS = 10_000;
 const TURN_MS = 10_000;
 
 /**
- * How long a spec may take, in milliseconds: `turns` counts every end of turn it plays out past the
- * settle's, which is counted here, and a gesture whose release plays out stages of its own counts as
- * one more.
+ * How long a spec may take, in milliseconds: `turns` counts every end of turn it plays out on screen,
+ * a gesture whose release plays out stages of its own counting as one, and one more is granted.
  */
 export function budget(turns: number): number {
   return COLD_START_MS + TURN_MS * (turns + 1);
