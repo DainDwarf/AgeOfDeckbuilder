@@ -195,7 +195,8 @@ export class ChronicleScene extends Phaser.Scene implements OpensChronicles {
     const playOut = async (command: Command): Promise<void> => {
       if (this.sequence !== undefined) return;
       const stages = apply(this.choices.catalogue, this.current, command);
-      keepChronicle(this.choices, outcome(stages));
+      const after = outcome(stages);
+      if (after !== this.current) keepChronicle(this.choices, after);
       const running = Symbol('play-out');
       this.sequence = running;
 

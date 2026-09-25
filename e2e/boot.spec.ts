@@ -53,7 +53,7 @@ test('an address naming a deck boots into the chronicle, stays as it was, and lo
   expect(problems).toEqual([]);
 });
 
-test('the bare address boots the launch page and logs nothing', async ({ page }) => {
+test('the bare address with no save boots the launch page and logs nothing', async ({ page }) => {
   const problems = watch(page);
   await readNames(page);
 

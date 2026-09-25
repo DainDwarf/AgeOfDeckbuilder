@@ -110,11 +110,11 @@ test('a save that is not a chronicle’s shape is refused', () => {
   ).toThrow("fixture: the save's chronicle.units[0].faction names no faction neutral");
 });
 
-test('a save names the content it was written on, and text that is no save names none', () => {
+test('a save names the content it was written on, and text that names none is refused', () => {
   expect(contentNamed(writeSave(CATALOGUE, saved()))).toBe(CATALOGUE.version);
-  expect(contentNamed('{"chronicle":')).toBeUndefined();
-  expect(contentNamed('null')).toBeUndefined();
-  expect(contentNamed('{"chronicle":{"content":7}}')).toBeUndefined();
+  expect(() => contentNamed('{"chronicle":')).toThrow('the save is not JSON');
+  expect(() => contentNamed('null')).toThrow('the save names no content');
+  expect(() => contentNamed('{"chronicle":{"content":7}}')).toThrow('the save names no content');
 });
 
 test('a save written on one content version is refused by a catalogue of another', () => {

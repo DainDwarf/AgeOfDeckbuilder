@@ -26,8 +26,11 @@ declare global {
 
 const address = new URLSearchParams(window.location.search);
 
+/** Every key the boot reads off the address; an address naming none of them is bare. */
+const ASKED = ['content', 'region', 'schedule', 'deck', 'seed'] as const;
+
 /** What the address names under that key, and nothing where it names nothing. */
-function asked(key: string): string | undefined {
+function asked(key: (typeof ASKED)[number]): string | undefined {
   const value = address.get(key);
   return value === null || value.trim() === '' ? undefined : value;
 }
@@ -60,9 +63,7 @@ function askedChoices(): Choices {
 }
 
 const choices = askedChoices();
-const bare = ['content', 'region', 'schedule', 'deck', 'seed'].every(
-  (key) => asked(key) === undefined,
-);
+const bare = ASKED.every((key) => asked(key) === undefined);
 const resumed = bare ? savedChronicle() : undefined;
 const backing = backingSize();
 const game = new Phaser.Game({

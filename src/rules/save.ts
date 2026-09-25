@@ -71,18 +71,19 @@ export function readSave(catalogue: Catalogue, text: string): ChronicleSave {
 }
 
 /**
- * The content version a save's text names, the catalogue it is read against; nothing where the text
- * names none, which the reading refuses against any catalogue.
+ * The content version a save's text names, the catalogue it is read against. Text that names none is
+ * refused before any catalogue is known, so its words carry no version.
  */
-export function contentNamed(text: string): string | undefined {
+export function contentNamed(text: string): string {
   let parsed: unknown;
   try {
     parsed = JSON.parse(text);
   } catch {
-    return undefined;
+    throw new Error('the save is not JSON');
   }
   const content = (parsed as { chronicle?: { content?: unknown } } | null)?.chronicle?.content;
-  return typeof content === 'string' ? content : undefined;
+  if (typeof content !== 'string') throw new Error('the save names no content');
+  return content;
 }
 
 /** One value of the parsed text, and where in the save it stands. */

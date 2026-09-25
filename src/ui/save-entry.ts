@@ -1,4 +1,4 @@
-import { CATALOGUES, catalogueOf } from '../content/catalogues';
+import { catalogueOf } from '../content/catalogues';
 import { contentNamed, readSave, writeSave } from '../rules/save';
 import type { Chronicle } from '../rules/state';
 import type { Choices, Opening } from './launch-page';
@@ -36,7 +36,7 @@ export function savedChronicle(): Opening | undefined {
   }
   if (text === null) return undefined;
   try {
-    const catalogue = catalogueOf(contentNamed(text) ?? CATALOGUES[0].version);
+    const catalogue = catalogueOf(contentNamed(text));
     const { chronicle, region, deck } = readSave(catalogue, text);
     return {
       catalogue,
