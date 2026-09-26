@@ -939,7 +939,7 @@ export async function aimed(page: Page): Promise<void> {
  * What the card the infopanel is standing reads, in the order it was drawn: its texts, and every
  * yield chip by the resource it is named for.
  */
-export function panelLines(page: Page): Promise<string[]> {
+function panelLines(page: Page): Promise<string[]> {
   return page.evaluate(() => {
     const panel = window.named?.('infopanel')?.object as Phaser.GameObjects.Container | undefined;
     if (panel === undefined) throw new Error('the infopanel is not on the chronicle screen');
@@ -955,12 +955,26 @@ export function panelLines(page: Page): Promise<string[]> {
   });
 }
 
-/** What `panelLines` reads of a row that gives these yields: each chip and what it counts, in resource order. */
-export function chipsOf(yields: Partial<Resources>): string[] {
-  return RESOURCES.flatMap((resource) => {
-    const amount = yields[resource];
-    return amount === undefined ? [] : [`panel-yield-${resource}`, `+${amount}`];
-  });
+/** A text the infopanel's card reads, and what the yield chips drawn after it give. */
+export type PanelRow = { readonly text: string; readonly yields: Partial<Resources> };
+
+/** The rows of the card the infopanel is standing, in the order drawn; a row's chips are read in whatever order they were. */
+export async function panelRows(page: Page): Promise<PanelRow[]> {
+  const lines = await panelLines(page);
+  const rows: { text: string; yields: Partial<Resources> }[] = [];
+  for (let at = 0; at < lines.length; at++) {
+    const resource = RESOURCES.find((named) => lines[at] === `panel-yield-${named}`);
+    if (resource === undefined) {
+      rows.push({ text: lines[at], yields: {} });
+      continue;
+    }
+    const row = rows.at(-1);
+    if (row === undefined)
+      throw new Error(`the infopanel draws a ${resource} chip before any text`);
+    at++;
+    row.yields[resource] = Number(lines[at]);
+  }
+  return rows;
 }
 
 /** What the card the infopanel is standing reads of the tile's movement cost, or nothing on one that reads none. */

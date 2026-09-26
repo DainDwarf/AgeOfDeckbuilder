@@ -18,13 +18,12 @@ import type { Chronicle } from '../src/rules/state';
 import { featureName, text } from '../src/ui/text';
 import {
   besideTiles,
-  chipsOf,
   cityTileOf,
   firstSeed,
   onScreen,
   openSaved,
-  panelLines,
   panelMovement,
+  panelRows,
   rested,
   ringedTile,
   settledOn,
@@ -64,22 +63,22 @@ async function answered(page: Page): Promise<void> {
   await rested(page);
 }
 
-/** A tile touching the city, and so well inside the frame, and what the search found on it. */
-type Beside<T> = { readonly tile: Tile; readonly found: T };
-
-/** The chronicle a search over the seeds found, the tile beside its city, and what was found there. */
-type Found<T> = Beside<T> & { readonly chronicle: Chronicle };
+/**
+ * The chronicle a search over the seeds found, a tile touching its city, and so well inside the
+ * frame, and what the search found there.
+ */
+type Found<T> = { readonly chronicle: Chronicle; readonly tile: Tile; readonly found: T };
 
 /** The first of the city's neighbours that `found` answers, and its answer. */
 function besideOn<T>(
   chronicle: Chronicle,
   found: (tile: Tile) => T | undefined,
-): Beside<T> | undefined {
+): Found<T> | undefined {
   for (const at of neighbours(cityTileOf(chronicle))) {
     const tile = tileAt(chronicle.tiles, at);
     if (tile === undefined) continue;
     const answer = found(tile);
-    if (answer !== undefined) return { tile, found: answer };
+    if (answer !== undefined) return { chronicle, tile, found: answer };
   }
   return undefined;
 }
@@ -91,8 +90,7 @@ function besideCity<T>(
 ): Found<T> {
   return firstSeed(complaint, (seed) => {
     const chronicle = settledOn(NOMADIC, seed);
-    const beside = besideOn(chronicle, (tile) => found(tile, chronicle));
-    return beside === undefined ? undefined : { chronicle, ...beside };
+    return besideOn(chronicle, (tile) => found(tile, chronicle));
   });
 }
 
@@ -174,15 +172,9 @@ function costBeside(): Found<number> & { readonly water: TileCoords } {
           tile.improvements.length === 0;
         return bare && cost === 2 * MOVE_POINT ? cost : undefined;
       });
-      return land === undefined ? undefined : { chronicle, water: wet, ...land };
+      return land === undefined ? undefined : { ...land, water: wet };
     },
   );
-}
-
-/** The lines a ledger row reads from `name` on, as many as `count`. */
-async function rowFrom(page: Page, name: string, count: number): Promise<string[]> {
-  const lines = await panelLines(page);
-  return lines.slice(lines.indexOf(name), lines.indexOf(name) + count);
 }
 
 test('a tile the generator gave a feature shows its mark, and the terrain card gives it a row of its own', async ({
@@ -191,7 +183,6 @@ test('a tile the generator gave a feature shows its mark, and the terrain card g
   const problems = watch(page);
   const { chronicle, tile, found: feature } = featureBeside();
   const key = tileKey(tile);
-  const row = [featureName(feature), ...chipsOf(featureKind(NOMADIC, feature).yields)];
 
   await openSaved(page, chronicle);
   expect(await standing(page, `feature-${key}`)).toBe(true);
@@ -203,7 +194,9 @@ test('a tile the generator gave a feature shows its mark, and the terrain card g
   await page.keyboard.press('i');
   await expect.poll(() => shownCard(page)).toBe('terrain');
 
-  await expect.poll(() => rowFrom(page, featureName(feature), row.length)).toEqual(row);
+  await expect
+    .poll(() => panelRows(page))
+    .toContainEqual({ text: featureName(feature), yields: featureKind(NOMADIC, feature).yields });
 
   expect(problems).toEqual([]);
 });
@@ -214,7 +207,6 @@ test('a tile a river runs along gives the river a row of the terrain card, on wh
   const problems = watch(page);
   const { chronicle, tile, found: fed } = riverBeside();
   const key = tileKey(tile);
-  const row = [text('panel.river'), ...chipsOf(fed)];
 
   await openSaved(page, chronicle);
 
@@ -225,7 +217,9 @@ test('a tile a river runs along gives the river a row of the terrain card, on wh
   await page.keyboard.press('i');
   await expect.poll(() => shownCard(page)).toBe('terrain');
 
-  await expect.poll(() => rowFrom(page, text('panel.river'), row.length)).toEqual(row);
+  await expect
+    .poll(() => panelRows(page))
+    .toContainEqual({ text: text('panel.river'), yields: fed });
 
   // The tile holds that one card, so a further press leaves it standing.
   await page.keyboard.press('i');

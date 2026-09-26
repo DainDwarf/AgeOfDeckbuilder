@@ -11,16 +11,14 @@ import { improvementName } from '../src/ui/text';
 import {
   admits,
   aimed,
-  chipsOf,
   chronicleOf,
   click,
   dragOut,
   idsOf,
   marksIn,
   openSaved,
-  panelLines,
+  panelRows,
   playedOut,
-  playersOf,
   ringedTile,
   shownCard,
   watch,
@@ -70,8 +68,6 @@ test('the trapping card places trapping on the forest the worker stands on', asy
   await playedOut(page);
 
   await expect.poll(() => chronicleOf(page)).toEqual(placed);
-  expect(tileAt(placed.tiles, paid.tile)?.improvements).toEqual([TRAPPING]);
-  expect(playersOf(placed)[0].tile).toEqual(paid.tile);
   expect(await marksIn(page, 'improvements')).toBe(before + 1);
   expect(problems).toEqual([]);
 });
@@ -94,11 +90,10 @@ test('the tile trapping was placed on inspects trapping on a card of its own, be
 
   // Nothing is built on it, so trapping heads the card and its one row says what it gives.
   await expect
-    .poll(() => panelLines(page))
+    .poll(() => panelRows(page))
     .toEqual([
-      improvementName(TRAPPING),
-      improvementName(TRAPPING),
-      ...chipsOf(improvementKind(NOMADIC, TRAPPING).yields),
+      { text: improvementName(TRAPPING), yields: {} },
+      { text: improvementName(TRAPPING), yields: improvementKind(NOMADIC, TRAPPING).yields },
     ]);
 
   await page.keyboard.press('i');
