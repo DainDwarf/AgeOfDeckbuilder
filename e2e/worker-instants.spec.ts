@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { NOMADIC } from '../src/content/nomadic';
+import { CATALOGUE } from '../src/content/catalogue';
 import { gained } from '../src/rules/cards';
 import { cardOf } from '../src/rules/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
@@ -41,7 +41,7 @@ function trappingPaid(): Paid {
     (moved, at) =>
       tileAt(moved.tiles, at)?.terrain === 'forest' && idsOf(moved.hand).includes(TRAPPING),
   );
-  const chronicle = charted(NOMADIC, gained(stepped, cardOf(NOMADIC, TRAPPING).cost).chronicle);
+  const chronicle = charted(CATALOGUE, gained(stepped, cardOf(CATALOGUE, TRAPPING).cost).chronicle);
   const index = idsOf(chronicle.hand).indexOf(TRAPPING);
   if (!admits(chronicle, index, tile))
     throw new Error(`${TRAPPING} admits no ${tileKey(tile)} once paid for`);
@@ -50,7 +50,7 @@ function trappingPaid(): Paid {
 
 /** The chronicle trapping played at the worker's tile leaves. */
 function trappingPlaced({ chronicle, tile, index }: Paid): Chronicle {
-  const placed = outcome(apply(NOMADIC, chronicle, { type: 'play', index, aim: 'tile', tile }));
+  const placed = outcome(apply(CATALOGUE, chronicle, { type: 'play', index, aim: 'tile', tile }));
   if (placed === chronicle) throw new Error(`${TRAPPING} is refused on ${tileKey(tile)}`);
   return placed;
 }
@@ -93,7 +93,7 @@ test('the tile trapping was placed on inspects trapping on a card of its own, be
     .poll(() => panelRows(page))
     .toEqual([
       { text: improvementName(TRAPPING), yields: {} },
-      { text: improvementName(TRAPPING), yields: improvementKind(NOMADIC, TRAPPING).yields },
+      { text: improvementName(TRAPPING), yields: improvementKind(CATALOGUE, TRAPPING).yields },
     ]);
 
   await page.keyboard.press('i');

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { NOMADIC } from '../src/content/nomadic';
+import { CATALOGUE } from '../src/content/catalogue';
 import { aimOf } from '../src/rules/cards';
 import { cardOf, deckOf } from '../src/rules/catalogue';
 import { admitted, apply, outcome } from '../src/rules/chronicle';
@@ -34,16 +34,16 @@ test('a chronicle opens on the settle phase with the city standing nowhere, and 
 }) => {
   const problems = watch(page);
   test.setTimeout(budget(0));
-  const before = launchedOn(NOMADIC, 1);
+  const before = launchedOn(1);
 
-  await openNew(page, NOMADIC, 1);
+  await openNew(page, 1);
   await capstoneClosed(page);
 
   const opened = await chronicleOf(page);
   expect(opened).toEqual(before);
   expect(opened.turn).toBe(0);
   expect(opened.city).toBeUndefined();
-  expect(idsOf(opened.hand)).toEqual(deckOf(NOMADIC, firstsOf(NOMADIC).deck).settle);
+  expect(idsOf(opened.hand)).toEqual(deckOf(CATALOGUE, firstsOf().deck).settle);
   expect(await standing(page, `hand-${opened.hand.length - 1}`)).toBe(true);
   expect(await standing(page, `hand-${opened.hand.length}`)).toBe(false);
 
@@ -64,13 +64,13 @@ test('a chronicle opens on the settle phase with the city standing nowhere, and 
   expect(await chronicleOf(page)).toEqual(opened);
 
   const settle = opened.hand[0].id;
-  const card = aimOf(cardOf(NOMADIC, settle));
+  const card = aimOf(cardOf(CATALOGUE, settle));
   if (card.aim !== 'tile') throw new Error(`${settle} is aimed at no tile`);
-  const lit = admitted(NOMADIC, opened, card);
+  const lit = admitted(CATALOGUE, opened, card);
   const at = lit.find((coord) => tileKey(coord) !== tileKey(CENTRE));
   if (at === undefined) throw new Error('the settle admits no tile off the centre');
   const settled = outcome(
-    apply(NOMADIC, before, { type: 'play', index: 0, aim: 'tile', tile: at }),
+    apply(CATALOGUE, before, { type: 'play', index: 0, aim: 'tile', tile: at }),
   );
 
   await dragOut(page, 0);
@@ -83,7 +83,7 @@ test('a chronicle opens on the settle phase with the city standing nowhere, and 
 
   const standingCity = await chronicleOf(page);
   expect(standingCity.city).toEqual(at);
-  expect(tileAt(standingCity.tiles, at)?.building).toBe(NOMADIC.city.building);
+  expect(tileAt(standingCity.tiles, at)?.building).toBe(CATALOGUE.city.building);
   expect(tileAt(standingCity.tiles, at)?.terrain).toBe(tileAt(opened.tiles, at)?.terrain);
   expect(await marksIn(page, 'border')).toBe(standingCity.held.length);
 
@@ -93,7 +93,7 @@ test('a chronicle opens on the settle phase with the city standing nowhere, and 
 
   await stoppedTurn(page);
   const ticked = await chronicleOf(page);
-  expect(ticked).toEqual(outcome(apply(NOMADIC, settled, { type: 'end-turn' })));
+  expect(ticked).toEqual(outcome(apply(CATALOGUE, settled, { type: 'end-turn' })));
   expect(ticked.turn).toBe(1);
   expect(await endTurnFill(page)).toBe(LOOK.accent);
   expect(await shows(page, 'settle-phase-frame')).toBe(false);
@@ -112,7 +112,7 @@ test('city mode entered once the city stands hides the settle phase’s frame an
   const problems = watch(page);
   test.setTimeout(budget(0));
 
-  await openNew(page, NOMADIC, 1);
+  await openNew(page, 1);
   await capstoneClosed(page);
 
   await dragOut(page, 0);

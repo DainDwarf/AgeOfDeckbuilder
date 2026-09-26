@@ -1,5 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
-import { NOMADIC } from '../src/content/nomadic';
+import { CATALOGUE } from '../src/content/catalogue';
 import { entered, unitKind } from '../src/rules/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
 import { neighbours, type TileCoords, tileAt, tileKey } from '../src/rules/map';
@@ -26,23 +26,23 @@ import {
  */
 function besieged(): { chronicle: Chronicle; warrior: Unit; enemy: Unit } {
   return firstSeed('stands an enemy beside its city', (seed) => {
-    const settled = settledOn(NOMADIC, seed);
+    const settled = settledOn(seed);
     const city = cityTileOf(settled);
-    const guarded = entered(NOMADIC, settled, { type: 'warrior', faction: 'player', tile: city });
-    const kind = unitKind(NOMADIC, NOMADIC.camp.unit);
+    const guarded = entered(CATALOGUE, settled, { type: 'warrior', faction: 'player', tile: city });
+    const kind = unitKind(CATALOGUE, CATALOGUE.camp.unit);
     const beside = neighbours(city).find(
       (tile) =>
-        standsOn(NOMADIC, kind, tileAt(guarded.chronicle.tiles, tile)) &&
+        standsOn(CATALOGUE, kind, tileAt(guarded.chronicle.tiles, tile)) &&
         unitAt(guarded.chronicle.units, tile) === undefined,
     );
     if (beside === undefined) return undefined;
-    const beset = entered(NOMADIC, guarded.chronicle, {
-      type: NOMADIC.camp.unit,
+    const beset = entered(CATALOGUE, guarded.chronicle, {
+      type: CATALOGUE.camp.unit,
       faction: 'enemy',
       tile: beside,
-      script: NOMADIC.camp.scripts.raider,
+      script: CATALOGUE.camp.scripts.raider,
     });
-    const chronicle = charted(NOMADIC, beset.chronicle);
+    const chronicle = charted(CATALOGUE, beset.chronicle);
     const [warrior] = playersOf(chronicle);
     const enemy = unitAt(chronicle.units, beside);
     return enemy === undefined ? undefined : { chronicle, warrior, enemy };
@@ -61,7 +61,7 @@ test('a warrior dragged onto an enemy attacks it, and its spent action refuses a
   test.setTimeout(budget(1));
   const { chronicle, warrior, enemy } = besieged();
   const attacked = outcome(
-    apply(NOMADIC, chronicle, { type: 'attack', unit: warrior.id, tile: enemy.tile }),
+    apply(CATALOGUE, chronicle, { type: 'attack', unit: warrior.id, tile: enemy.tile }),
   );
 
   await openSaved(page, chronicle);

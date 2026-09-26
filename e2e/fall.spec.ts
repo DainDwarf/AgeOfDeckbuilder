@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { NOMADIC } from '../src/content/nomadic';
+import { CATALOGUE } from '../src/content/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
 import {
   beforeTheFall,
@@ -17,7 +17,7 @@ test('the enemy that reaches the city captures it, and the chronicle ends on the
   const problems = watch(page);
   test.setTimeout(budget(1));
   const standing = beforeTheFall();
-  const fallen = outcome(apply(NOMADIC, standing, { type: 'end-turn' }));
+  const fallen = outcome(apply(CATALOGUE, standing, { type: 'end-turn' }));
 
   await openSaved(page, standing);
   expect(await defeatShown(page)).toBe(false);

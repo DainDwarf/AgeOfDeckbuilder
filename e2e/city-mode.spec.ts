@@ -1,5 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
-import { NOMADIC } from '../src/content/nomadic';
+import { CATALOGUE } from '../src/content/catalogue';
 import { gained } from '../src/rules/cards';
 import { apply, type Command, outcome } from '../src/rules/chronicle';
 import { claimable, tileCost } from '../src/rules/city';
@@ -46,7 +46,7 @@ import {
 
 /** Seed 1's turn 1, the city settled and nothing else played. */
 function bareTurn(): Chronicle {
-  return settledOn(NOMADIC, 1);
+  return settledOn(1);
 }
 
 /** The culture threshold a claim on the tile asks for, by the rules' own count. */
@@ -62,7 +62,7 @@ function thresholdWorn(chronicle: Chronicle, tile: TileCoords): string {
 
 /** The first tile the city may claim, in the order the rules list them. */
 function firstClaim(chronicle: Chronicle): TileCoords {
-  const [tile] = claimable(NOMADIC, chronicle);
+  const [tile] = claimable(CATALOGUE, chronicle);
   if (tile === undefined)
     throw new Error(`turn ${chronicle.turn} holds no tile the city may claim`);
   return tile;
@@ -70,7 +70,7 @@ function firstClaim(chronicle: Chronicle): TileCoords {
 
 /** The chronicle the command leaves; a refusal throws. */
 function applied(chronicle: Chronicle, command: Command): Chronicle {
-  const left = outcome(apply(NOMADIC, chronicle, command));
+  const left = outcome(apply(CATALOGUE, chronicle, command));
   if (left === chronicle)
     throw new Error(`the ${command.type} is refused on turn ${chronicle.turn}`);
   return left;
@@ -80,7 +80,7 @@ function applied(chronicle: Chronicle, command: Command): Chronicle {
 function culturePaid(): Chronicle {
   const bare = bareTurn();
   const culture = threshold(bare, firstClaim(bare));
-  return charted(NOMADIC, gained(bare, { culture }).chronicle);
+  return charted(CATALOGUE, gained(bare, { culture }).chronicle);
 }
 
 /** Culture paid with the first tile the city may claim claimed: nobody stands on it. */
@@ -124,7 +124,7 @@ test('before the settle neither the city key nor culture nor idle enters city mo
   const problems = watch(page);
   test.setTimeout(budget(0));
 
-  await openNew(page, NOMADIC, 1);
+  await openNew(page, 1);
   await capstoneClosed(page);
 
   await page.keyboard.press('c');
@@ -511,7 +511,7 @@ test('city mode marks every tile the city can claim, and leaving it takes the ma
 
   await page.keyboard.press('c');
   await expect.poll(() => inCityMode(page)).toBe(true);
-  expect(await counted(page, 'claimable')).toBe(claimable(NOMADIC, bare).length);
+  expect(await counted(page, 'claimable')).toBe(claimable(CATALOGUE, bare).length);
 
   await page.keyboard.press('Escape');
   await expect.poll(() => inCityMode(page)).toBe(false);
@@ -596,8 +596,8 @@ test('a second click the city can pay for claims the tile, which stays selected 
   await expect.poll(() => chronicleOf(page)).toEqual(claimed);
   expect(await counted(page, 'assigned')).toBe(claimed.assigned.length);
   // The tile claimed is a claim no longer, and the marks are the claims the moved border opens.
-  expect(claimable(NOMADIC, claimed).map(tileKey)).not.toContain(tileKey(nearTile));
-  expect(await counted(page, 'claimable')).toBe(claimable(NOMADIC, claimed).length);
+  expect(claimable(CATALOGUE, claimed).map(tileKey)).not.toContain(tileKey(nearTile));
+  expect(await counted(page, 'claimable')).toBe(claimable(CATALOGUE, claimed).length);
   // The tile the claim took stays selected, and asks for nothing more.
   await expect.poll(() => ringedTile(page)).toBe(tileKey(nearTile));
   expect(await thresholdShown(page)).toBeUndefined();
@@ -606,7 +606,7 @@ test('a second click the city can pay for claims the tile, which stays selected 
   await page.mouse.click(far.x, far.y);
   await answered(page);
   expect(await refusalLines(page)).toBeUndefined();
-  expect(claimable(NOMADIC, claimed).map(tileKey)).not.toContain(tileKey(farTile));
+  expect(claimable(CATALOGUE, claimed).map(tileKey)).not.toContain(tileKey(farTile));
 
   expect(problems).toEqual([]);
 });

@@ -1,5 +1,4 @@
 import Phaser from 'phaser';
-import { CATALOGUES, catalogueOf } from '../content/catalogues';
 import type { Catalogue } from '../rules/catalogue';
 import { refuse } from '../rules/map-kinds';
 import type { Chronicle } from '../rules/state';
@@ -61,7 +60,7 @@ const TITLE_STYLE = { fontFamily: UI_FONT, fontSize: '26px', fontStyle: 'bold', 
 const LABEL_STYLE = { fontFamily: UI_FONT, fontSize: '18px', fontStyle: 'bold', color: INK };
 const FACE_STYLE = { fontFamily: UI_FONT, fontSize: '16px', fontStyle: 'bold', color: INK };
 
-type Row = 'content' | 'region' | 'schedule' | 'deck';
+type Row = 'region' | 'schedule' | 'deck';
 
 /** The launch page: one row per choice, the seed slot under them and Launch under the slot. */
 export class LaunchPage extends Phaser.Scene {
@@ -78,7 +77,6 @@ export class LaunchPage extends Phaser.Scene {
   create(): void {
     holdDesignSpace(this, this.cameras.main);
     let chosen: Choices = this.opening;
-    const listed = CATALOGUES.map((each) => each.version);
     let typed = chosen.seed === undefined ? '' : String(chosen.seed);
     let root: Phaser.GameObjects.Container | undefined;
     let seedLabel: Phaser.GameObjects.Text | undefined;
@@ -97,9 +95,6 @@ export class LaunchPage extends Phaser.Scene {
 
     const choose = (row: Row, option: string): void => {
       switch (row) {
-        case 'content':
-          chosen = firstsOf(catalogueOf(option), undefined);
-          break;
         case 'region':
           chosen = { ...chosen, region: option };
           break;
@@ -117,7 +112,6 @@ export class LaunchPage extends Phaser.Scene {
       root?.destroy();
       const { catalogue } = chosen;
       const rows: { row: Row; options: readonly string[]; chosen: string }[] = [
-        { row: 'content', options: listed, chosen: catalogue.version },
         { row: 'region', options: Object.keys(catalogue.regions), chosen: chosen.region },
         { row: 'schedule', options: Object.keys(catalogue.schedules), chosen: chosen.schedule },
         { row: 'deck', options: Object.keys(catalogue.decks), chosen: chosen.deck },

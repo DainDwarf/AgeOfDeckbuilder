@@ -1,5 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
-import { NOMADIC } from '../src/content/nomadic';
+import { CATALOGUE } from '../src/content/catalogue';
 import { aimOf, refuses } from '../src/rules/cards';
 import { cardOf } from '../src/rules/catalogue';
 import { costOf, refusalOf } from '../src/rules/chronicle';
@@ -30,9 +30,9 @@ import {
 
 /** Every reason the rules refuse this card, in the words the note says them in. */
 function reasons(chronicle: Chronicle, id: CardId): string[] {
-  const refusal = refusalOf(NOMADIC, chronicle, id);
+  const refusal = refusalOf(CATALOGUE, chronicle, id);
   return [
-    ...costOf(NOMADIC, id)
+    ...costOf(CATALOGUE, id)
       .filter(({ resource }) => refusal.unaffordable.includes(resource))
       .map(({ resource, amount }) => text(`refusal.${resource}`, { cost: amount })),
     ...refusal.blocked.map((block) => text(`refusal.${block}`)),
@@ -93,11 +93,11 @@ test('a press on a tile an aim refuses says one reason over it, and the card sta
   // The city's own tile: on screen wherever the map stands, and refused by every aim in the deck,
   // no worker and no unit of the player's having entered yet.
   const { id } = opened.hand[index];
-  const card = aimOf(cardOf(NOMADIC, id));
+  const card = aimOf(cardOf(CATALOGUE, id));
   if (card.aim !== 'tile') throw new Error(`${id} is aimed at no tile`);
   const tile = tileAt(opened.tiles, cityTileOf(opened));
   if (tile === undefined) throw new Error('the city stands on no tile of the map');
-  const block = refuses(NOMADIC, opened, card, tile);
+  const block = refuses(CATALOGUE, opened, card, tile);
   if (block === undefined) throw new Error(`${id} admits the city's own tile`);
 
   await openSaved(page, opened);

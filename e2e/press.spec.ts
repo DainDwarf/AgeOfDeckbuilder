@@ -1,5 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
-import { NOMADIC } from '../src/content/nomadic';
+import { CATALOGUE } from '../src/content/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
 import { tileKey } from '../src/rules/map';
 import type { Chronicle } from '../src/rules/state';
@@ -61,7 +61,7 @@ function playableAtNothing(): { opened: Chronicle; unit: number; tile: number } 
   return firstSeed(
     'opens a turn inside forty on a unit card it can play and a card aimed at a tile',
     (seed) => {
-      let opened = settledOn(NOMADIC, seed);
+      let opened = settledOn(seed);
       for (let turn = 1; turn <= 40 && opened.ending === undefined; turn++) {
         const unit = inHand(opened, unitPlayable);
         const tile = inHand(opened, tilePlayable);
@@ -75,7 +75,7 @@ function playableAtNothing(): { opened: Chronicle; unit: number; tile: number } 
 
 /** The chronicle the card at that place in the hand leaves, played at nothing. */
 function playedAtNothing(chronicle: Chronicle, index: number): Chronicle {
-  return outcome(apply(NOMADIC, chronicle, { type: 'play', index, aim: 'none' }));
+  return outcome(apply(CATALOGUE, chronicle, { type: 'play', index, aim: 'none' }));
 }
 
 /** Whether a named object stands where it was measured, to the page pixel. */
@@ -395,7 +395,7 @@ test('a right click while a press is held on the aim inspects the tile under it,
   await playedOut(page);
   await expect
     .poll(() => chronicleOf(page))
-    .toEqual(outcome(apply(NOMADIC, moved, { type: 'play', index, aim: 'tile', tile })));
+    .toEqual(outcome(apply(CATALOGUE, moved, { type: 'play', index, aim: 'tile', tile })));
 
   expect(problems).toEqual([]);
 });
@@ -636,7 +636,7 @@ test('a right press beside the cards drops the card a browse shows large, and do
   page,
 }) => {
   const problems = watch(page);
-  const before = settledOn(NOMADIC, 1);
+  const before = settledOn(1);
 
   await openSaved(page, before);
   await browse(page, 'draw-pile');
@@ -671,7 +671,7 @@ test('a browse released off the canvas stays open, and the next gesture scrolls 
   const problems = watch(page);
 
   await page.setViewportSize(WINDOW);
-  await openSaved(page, settledOn(NOMADIC, 1, [], doubledDeck()));
+  await openSaved(page, settledOn(1, [], doubledDeck()));
   await browse(page, 'draw-pile');
 
   const opened = await scrolled(page);

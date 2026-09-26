@@ -1,5 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
-import { NOMADIC } from '../src/content/nomadic';
+import { CATALOGUE } from '../src/content/catalogue';
 import { deckOf } from '../src/rules/catalogue';
 import { offered } from '../src/rules/schedule';
 import type { Chronicle } from '../src/rules/state';
@@ -52,8 +52,8 @@ function namingAnswer(dealt: Chronicle): {
 } {
   const [deal] = dealt.deals;
   if (deal?.of !== 'event') throw new Error(`turn ${dealt.turn} deals no event`);
-  for (const [at, answer] of offered(NOMADIC, deal).entries()) {
-    const names = namedIn(answerFace(NOMADIC, dealt, deal.event, answer).rules);
+  for (const [at, answer] of offered(CATALOGUE, deal).entries()) {
+    const names = namedIn(answerFace(CATALOGUE, dealt, deal.event, answer).rules);
     const name = names.findIndex((reference) => reference.kind === 'card');
     if (name !== -1) return { answer, at, named: names[name].id, name };
   }
@@ -174,10 +174,10 @@ test('a building named on the settle card raises its card small at a rest and sh
   page,
 }) => {
   const problems = watch(page);
-  const [settle] = deckOf(NOMADIC, firstsOf(NOMADIC).deck).settle;
-  const city = { kind: 'building', id: NOMADIC.city.building };
+  const [settle] = deckOf(CATALOGUE, firstsOf().deck).settle;
+  const city = { kind: 'building', id: CATALOGUE.city.building };
 
-  await openNew(page, NOMADIC, 1);
+  await openNew(page, 1);
   await capstoneClosed(page);
   const opened = await chronicleOf(page);
   expect(opened.hand[0].id).toBe(settle);

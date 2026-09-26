@@ -1,5 +1,4 @@
 import { expect, type Page, test } from '@playwright/test';
-import { NOMADIC } from '../src/content/nomadic';
 import { tileKey } from '../src/rules/map';
 import { RESOURCES, type Resource } from '../src/rules/resources';
 import {
@@ -74,7 +73,7 @@ async function latched(page: Page): Promise<Resource[]> {
 test('the yield key shows what every tile yields, and clears it again', async ({ page }) => {
   const problems = watch(page);
 
-  await openSaved(page, settledOn(NOMADIC, 1));
+  await openSaved(page, settledOn(1));
   expect(await glyphs(page)).toEqual(noGlyphs());
   expect(await shows(page, 'yield-dim')).toBe(false);
 
@@ -96,7 +95,7 @@ test('a press on a reading shows that resource alone, and a second press takes i
 }) => {
   const problems = watch(page);
 
-  await openSaved(page, settledOn(NOMADIC, 1));
+  await openSaved(page, settledOn(1));
 
   await click(page, 'reading-food');
   await expect.poll(() => shows(page, 'yield-dim')).toBe(true);
@@ -124,7 +123,7 @@ test('the yield key clears an overlay a reading raised, and fills one from nothi
 }) => {
   const problems = watch(page);
 
-  await openSaved(page, settledOn(NOMADIC, 1));
+  await openSaved(page, settledOn(1));
 
   await click(page, 'reading-science');
   await expect.poll(() => latched(page)).toEqual(['science']);
@@ -144,7 +143,7 @@ test('the overlay is a display, not a mode: city mode and the back key leave it 
 }) => {
   const problems = watch(page);
 
-  await openSaved(page, settledOn(NOMADIC, 1));
+  await openSaved(page, settledOn(1));
 
   await page.keyboard.press('Tab');
   await expect.poll(() => shows(page, 'yield-dim')).toBe(true);
@@ -172,7 +171,7 @@ test('a tile inside the border shows its whole yield while city mode stands with
 }) => {
   const problems = watch(page);
 
-  await openSaved(page, settledOn(NOMADIC, 1));
+  await openSaved(page, settledOn(1));
 
   await click(page, 'reading-food');
   await expect.poll(() => shows(page, 'yield-dim')).toBe(true);
@@ -195,7 +194,7 @@ test('the overlay stands on the turn the map stands on, with no glyph left over'
 }) => {
   const problems = watch(page);
 
-  await openSaved(page, settledOn(NOMADIC, 1));
+  await openSaved(page, settledOn(1));
 
   await page.keyboard.press('Tab');
   await expect.poll(() => shows(page, 'yield-dim')).toBe(true);
@@ -211,7 +210,7 @@ test('the overlay stands on the turn the map stands on, with no glyph left over'
 test('a window standing over the chronicle screen takes the yield key', async ({ page }) => {
   const problems = watch(page);
 
-  await openSaved(page, settledOn(NOMADIC, 1));
+  await openSaved(page, settledOn(1));
 
   await click(page, 'menu-button');
   await expect.poll(() => standing(page, 'menu')).toBe(true);

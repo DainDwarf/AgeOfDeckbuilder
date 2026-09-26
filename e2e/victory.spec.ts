@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { NOMADIC } from '../src/content/nomadic';
+import { CATALOGUE } from '../src/content/catalogue';
 import { aimOf, gained } from '../src/rules/cards';
 import { cardOf, entered } from '../src/rules/catalogue';
 import { admitted, apply, outcome, refusalOf } from '../src/rules/chronicle';
@@ -32,24 +32,28 @@ const SHELTER = 'shelter';
  * aim admits it.
  */
 function landed(): { chronicle: Chronicle; tile: TileCoords } {
-  const card = cardOf(NOMADIC, SHELTER);
+  const card = cardOf(CATALOGUE, SHELTER);
   const aim = aimOf(card);
   if (aim.aim !== 'tile') throw new Error(`${SHELTER} is aimed at no tile`);
   return firstSeed('lands its capstone with a shelter to build beside the city', (seed) => {
-    let turned = settledOn(NOMADIC, seed);
+    let turned = settledOn(seed);
     while (turned.turn < turned.timeline.capstone.turn && turned.ending === undefined) {
       turned = endedTurn(turned);
     }
     if (turned.ending !== undefined || !idsOf(turned.hand).includes(SHELTER)) return undefined;
 
     for (const tile of neighbours(cityTileOf(turned))) {
-      const claimed = outcome(apply(NOMADIC, turned, { type: 'claim', tile }));
+      const claimed = outcome(apply(CATALOGUE, turned, { type: 'claim', tile }));
       if (claimed === turned) continue;
       const paid = gained(claimed, card.cost).chronicle;
-      const worked = entered(NOMADIC, paid, { type: 'worker', faction: 'player', tile }).chronicle;
-      const chronicle = charted(NOMADIC, worked);
-      if (!playable(refusalOf(NOMADIC, chronicle, SHELTER))) continue;
-      if (admitted(NOMADIC, chronicle, aim).some((coord) => tileKey(coord) === tileKey(tile))) {
+      const worked = entered(CATALOGUE, paid, {
+        type: 'worker',
+        faction: 'player',
+        tile,
+      }).chronicle;
+      const chronicle = charted(CATALOGUE, worked);
+      if (!playable(refusalOf(CATALOGUE, chronicle, SHELTER))) continue;
+      if (admitted(CATALOGUE, chronicle, aim).some((coord) => tileKey(coord) === tileKey(tile))) {
         return { chronicle, tile };
       }
     }
@@ -64,7 +68,7 @@ test('the play whose building passes the capstone wins on the play, and the vict
   test.setTimeout(budget(1));
   const { chronicle, tile } = landed();
   const index = idsOf(chronicle.hand).indexOf(SHELTER);
-  const won = outcome(apply(NOMADIC, chronicle, { type: 'play', index, aim: 'tile', tile }));
+  const won = outcome(apply(CATALOGUE, chronicle, { type: 'play', index, aim: 'tile', tile }));
 
   await openSaved(page, chronicle);
   expect(await victoryShown(page)).toBe(false);

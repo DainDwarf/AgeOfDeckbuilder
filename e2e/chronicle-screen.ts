@@ -1,11 +1,9 @@
 import { expect, type Page } from '@playwright/test';
 import type Phaser from 'phaser';
-import { catalogueOf } from '../src/content/catalogues';
-import { NOMADIC } from '../src/content/nomadic';
+import { CATALOGUE } from '../src/content/catalogue';
 import { aimOf, type CardKind } from '../src/rules/cards';
 import {
   type Aim,
-  type Catalogue,
   cardOf,
   type Deck,
   deckOf,
@@ -56,17 +54,17 @@ export function cityTileOf(chronicle: Chronicle): TileCoords {
   return chronicle.city;
 }
 
-/** The region, the schedule and the deck a catalogue lists first. */
-export function firstsOf(catalogue: Catalogue): { region: string; schedule: string; deck: string } {
+/** The region, the schedule and the deck the catalogue lists first. */
+export function firstsOf(): { region: string; schedule: string; deck: string } {
   const first = (table: Readonly<Record<string, unknown>>, noun: string): string => {
     const [id] = Object.keys(table);
-    if (id === undefined) throw new Error(`${catalogue.version} lists no ${noun}`);
+    if (id === undefined) throw new Error(`${CATALOGUE.version} lists no ${noun}`);
     return id;
   };
   return {
-    region: first(catalogue.regions, 'region'),
-    schedule: first(catalogue.schedules, 'schedule'),
-    deck: first(catalogue.decks, 'deck'),
+    region: first(CATALOGUE.regions, 'region'),
+    schedule: first(CATALOGUE.schedules, 'schedule'),
+    deck: first(CATALOGUE.decks, 'deck'),
   };
 }
 
@@ -74,14 +72,14 @@ export function firstsOf(catalogue: Catalogue): { region: string; schedule: stri
  * A chronicle launched from a seed on the first region, schedule and deck the catalogue lists, or the
  * deck given: the headless twin of `openNew`, the two launching alike.
  */
-export function launchedOn(catalogue: Catalogue, seed: number, deck?: Deck): Chronicle {
-  const firsts = firstsOf(catalogue);
+export function launchedOn(seed: number, deck?: Deck): Chronicle {
+  const firsts = firstsOf();
   return launched(
-    catalogue,
+    CATALOGUE,
     firsts.region,
     firsts.schedule,
     seed,
-    deck ?? deckOf(catalogue, firsts.deck),
+    deck ?? deckOf(CATALOGUE, firsts.deck),
   );
 }
 
@@ -90,23 +88,17 @@ export function launchedOn(catalogue: Catalogue, seed: number, deck?: Deck): Chr
  * played on the centre tile, the ones `onCity` names played on the city's tile, and the settle phase
  * ended with the rest in hand.
  */
-export function settledOn(
-  catalogue: Catalogue,
-  seed: number,
-  onCity: readonly CardId[] = [],
-  deck?: Deck,
-): Chronicle {
-  let settling = playedOn(launchedOn(catalogue, seed, deck), 0, CENTRE);
+export function settledOn(seed: number, onCity: readonly CardId[] = [], deck?: Deck): Chronicle {
+  let settling = playedOn(launchedOn(seed, deck), 0, CENTRE);
   const city = cityTileOf(settling);
   for (const card of onCity)
     settling = playedOn(settling, idsOf(settling.hand).indexOf(card), city);
-  return outcome(apply(catalogue, settling, { type: 'end-turn' }));
+  return outcome(apply(CATALOGUE, settling, { type: 'end-turn' }));
 }
 
 /** The chronicle the card at that place in the hand leaves, played on the tile; a refusal throws. */
 function playedOn(chronicle: Chronicle, index: number, tile: TileCoords): Chronicle {
-  const catalogue = catalogueOf(chronicle.content);
-  const played = outcome(apply(catalogue, chronicle, { type: 'play', index, aim: 'tile', tile }));
+  const played = outcome(apply(CATALOGUE, chronicle, { type: 'play', index, aim: 'tile', tile }));
   if (played === chronicle) {
     const card = chronicle.hand[index]?.id ?? `no card at ${index}`;
     throw new Error(`seed ${chronicle.seed} refuses ${card} on ${tileKey(tile)}`);
@@ -145,14 +137,14 @@ export function watch(page: Page): string[] {
 }
 
 /**
- * Opens a new chronicle on the address naming the content, the seed, and the first schedule and deck
- * the catalogue lists, the region left to the boot's first; the capstone's window the opening raises
- * is left standing. The boot begins a chronicle only on an address naming a deck.
+ * Opens a new chronicle on the address naming the seed, and the first schedule and deck the catalogue
+ * lists, the region left to the boot's first; the capstone's window the opening raises is left
+ * standing. The boot begins a chronicle only on an address naming a deck.
  */
-export async function openNew(page: Page, catalogue: Catalogue, seed: number): Promise<void> {
-  const { schedule, deck } = firstsOf(catalogue);
+export async function openNew(page: Page, seed: number): Promise<void> {
+  const { schedule, deck } = firstsOf();
   await readNames(page);
-  await page.goto(`/?content=${catalogue.version}&seed=${seed}&deck=${deck}&schedule=${schedule}`);
+  await page.goto(`/?seed=${seed}&deck=${deck}&schedule=${schedule}`);
   await page.waitForFunction(() => window.game?.scene.isActive('ui') === true);
   await expect.poll(() => standing(page, 'capstone')).toBe(true);
   await rested(page);
@@ -209,11 +201,11 @@ export async function readNames(page: Page): Promise<void> {
 }
 
 /**
- * The chronicle kept as the save the pages this one loads from now on find, written against the
- * content it names; a save the reading would refuse throws here.
+ * The chronicle kept as the save the pages this one loads from now on find; a save the reading would
+ * refuse throws here.
  */
 export async function plant(page: Page, save: ChronicleSave): Promise<void> {
-  const text = writeSave(catalogueOf(save.chronicle.content), save);
+  const text = writeSave(CATALOGUE, save);
   await page.addInitScript(
     ({ entry, kept }) => {
       window.localStorage.setItem(entry, kept);
@@ -223,12 +215,12 @@ export async function plant(page: Page, save: ChronicleSave): Promise<void> {
 }
 
 /**
- * Opens the chronicle as the save the boot finds, on the first region and deck its content lists,
+ * Opens the chronicle as the save the boot finds, on the first region and deck the catalogue lists,
  * and closes the capstone's window every resumed chronicle opens under but an ended one, which opens
  * on its ending screen. The boot reads a save only on the bare address.
  */
 export async function openSaved(page: Page, chronicle: Chronicle): Promise<void> {
-  const { region, deck } = firstsOf(catalogueOf(chronicle.content));
+  const { region, deck } = firstsOf();
   await readNames(page);
   await plant(page, { chronicle, region, deck });
   await page.goto('/');
@@ -607,10 +599,9 @@ export function drawnFaces(chronicle: Chronicle): Tile[] {
  * they yield of it.
  */
 export function glyphsOf(chronicle: Chronicle, faces: readonly Tile[]): Glyphs {
-  const catalogue = catalogueOf(chronicle.content);
   const owed = noGlyphs();
   for (const face of faces) {
-    const yields = tileYield(catalogue, face, chronicle.rivers);
+    const yields = tileYield(CATALOGUE, face, chronicle.rivers);
     for (const resource of RESOURCES) owed[resource] += yields[resource] ?? 0;
   }
   return owed;
@@ -651,10 +642,9 @@ export type Judged = {
 
 /** Where the first card of the hand lies that `such` holds of, judged on the chronicle, or -1. */
 export function inHand(chronicle: Chronicle, such: (card: Judged) => boolean): number {
-  const catalogue = catalogueOf(chronicle.content);
   return chronicle.hand.findIndex(({ id }) => {
-    const card = cardOf(catalogue, id);
-    const judged = playable(refusalOf(catalogue, chronicle, id));
+    const card = cardOf(CATALOGUE, id);
+    const judged = playable(refusalOf(CATALOGUE, chronicle, id));
     return such({ kind: card.kind, aim: aimOf(card).aim, playable: judged });
   });
 }
@@ -663,12 +653,11 @@ export function inHand(chronicle: Chronicle, such: (card: Judged) => boolean): n
 export function admits(chronicle: Chronicle, index: number, at: TileCoords): boolean {
   const held = chronicle.hand[index];
   if (held === undefined) return false;
-  const catalogue = catalogueOf(chronicle.content);
-  const card = aimOf(cardOf(catalogue, held.id));
+  const card = aimOf(cardOf(CATALOGUE, held.id));
   switch (card.aim) {
     case 'tile':
     case 'unit':
-      return admitted(catalogue, chronicle, card).some((tile) => tileKey(tile) === tileKey(at));
+      return admitted(CATALOGUE, chronicle, card).some((tile) => tileKey(tile) === tileKey(at));
     case 'none':
     case 'discard-pile':
       return false;
@@ -684,7 +673,7 @@ export function bareWith(
   such: (card: Judged) => boolean,
 ): { chronicle: Chronicle; index: number } {
   return firstSeed(`opens turn 1 on ${named}`, (seed) => {
-    const chronicle = settledOn(NOMADIC, seed);
+    const chronicle = settledOn(seed);
     const index = inHand(chronicle, such);
     return index === -1 ? undefined : { chronicle, index };
   });
@@ -721,7 +710,7 @@ export function bareTile(chronicle: Chronicle): TileCoords {
 
 /** The Nomadic deck's cards twice over and its settle section as it is: its piles overflow a browse's frame. */
 export function doubledDeck(): Deck {
-  const deck = deckOf(NOMADIC, firstsOf(NOMADIC).deck);
+  const deck = deckOf(CATALOGUE, firstsOf().deck);
   return { ...deck, cards: [...deck.cards, ...deck.cards] };
 }
 
@@ -730,12 +719,12 @@ export function doubledDeck(): Deck {
  * its timeline's first deal, and that end of turn applied: the chronicle stopped on the deal.
  */
 export function firstDealt(seed: number): Chronicle {
-  let chronicle = settledOn(NOMADIC, seed);
+  let chronicle = settledOn(seed);
   const due = chronicle.timeline.next;
   while (chronicle.turn < due - 1 && chronicle.ending === undefined) {
     chronicle = endedTurn(chronicle);
   }
-  return outcome(apply(NOMADIC, chronicle, { type: 'end-turn' }));
+  return outcome(apply(CATALOGUE, chronicle, { type: 'end-turn' }));
 }
 
 /** The chronicle of the first seed whose first deal is the lean season standing alone, stopped on it. */
@@ -754,7 +743,7 @@ export function leanSeason(): Chronicle {
  */
 export function beforeTheFall(): Chronicle {
   return firstSeed('is captured inside forty turns', (seed) => {
-    let chronicle = settledOn(NOMADIC, seed);
+    let chronicle = settledOn(seed);
     for (let turn = 1; turn <= 40 && chronicle.ending === undefined; turn++) {
       const ended = endedTurn(chronicle);
       if (ended.ending?.outcome === 'defeat' && ended.ending.cause === 'capture') return chronicle;
@@ -781,11 +770,11 @@ export function workerStepped(
   keeps: (stepped: Chronicle, tile: TileCoords) => boolean,
 ): Step {
   return firstSeed(complaint, (seed) => {
-    const entered = settledOn(NOMADIC, seed, ['first-worker']);
+    const entered = settledOn(seed, ['first-worker']);
     const [worker] = playersOf(entered);
     for (const tile of neighbours(cityTileOf(entered))) {
       const move = { type: 'move', unit: worker.id, tile } as const;
-      const stepped = outcome(apply(NOMADIC, entered, move));
+      const stepped = outcome(apply(CATALOGUE, entered, move));
       if (stepped !== entered && keeps(stepped, tile)) return { entered, tile, stepped };
     }
     return undefined;
@@ -794,8 +783,7 @@ export function workerStepped(
 
 /** The chronicle with the unit entered as every unit card enters one, and charted as a command is. */
 export function unitEntered(chronicle: Chronicle, entering: Entering): Chronicle {
-  const catalogue = catalogueOf(chronicle.content);
-  return charted(catalogue, entered(catalogue, chronicle, entering).chronicle);
+  return charted(CATALOGUE, entered(CATALOGUE, chronicle, entering).chronicle);
 }
 
 /**
@@ -803,14 +791,13 @@ export function unitEntered(chronicle: Chronicle, entering: Entering): Chronicle
  * the map lists them.
  */
 export function campGround(chronicle: Chronicle, away: number): TileCoords[] {
-  const catalogue = catalogueOf(chronicle.content);
-  const stats = unitKind(catalogue, catalogue.camp.unit);
+  const stats = unitKind(CATALOGUE, CATALOGUE.camp.unit);
   const city = cityTileOf(chronicle);
   return chronicle.tiles
     .filter(
       (tile) =>
         distance(tile, city) === away &&
-        standsOn(catalogue, stats, tile) &&
+        standsOn(CATALOGUE, stats, tile) &&
         unitAt(chronicle.units, tile) === undefined,
     )
     .map(({ q, r }) => ({ q, r }));
@@ -1133,21 +1120,19 @@ export async function take(page: Page, at: number): Promise<void> {
 }
 
 /**
- * The chronicle one whole turn leaves, played through the rules on the content it names: the end of
- * turn, and the first entry of every deal it may stop on taken. What every seed a spec searches for
- * is run forward with, a chronicle waiting on a deal taking no other command.
+ * The chronicle one whole turn leaves, played through the rules: the end of turn, and the first entry
+ * of every deal it may stop on taken. What every seed a spec searches for is run forward with, a
+ * chronicle waiting on a deal taking no other command.
  */
 export function endedTurn(chronicle: Chronicle): Chronicle {
-  const catalogue = catalogueOf(chronicle.content);
-  return firstEntriesTaken(outcome(apply(catalogue, chronicle, { type: 'end-turn' })));
+  return firstEntriesTaken(outcome(apply(CATALOGUE, chronicle, { type: 'end-turn' })));
 }
 
 /** The first entry of every deal standing taken, one deal after another, as the window's presses take them. */
 export function firstEntriesTaken(chronicle: Chronicle): Chronicle {
-  const catalogue = catalogueOf(chronicle.content);
   let taking = chronicle;
   while (taking.deals.length > 0) {
-    const taken = outcome(apply(catalogue, taking, { type: 'take', at: 0 }));
+    const taken = outcome(apply(CATALOGUE, taking, { type: 'take', at: 0 }));
     if (taken === taking) throw new Error(`the take at 0 is refused on turn ${taking.turn}`);
     taking = taken;
   }

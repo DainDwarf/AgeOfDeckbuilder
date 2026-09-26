@@ -1,5 +1,4 @@
 import { expect, type Page, test } from '@playwright/test';
-import { NOMADIC } from '../src/content/nomadic';
 import { openSaved, settledOn, watch } from './chronicle-screen';
 
 /** The canvas's backing store, and the room it takes on screen measured in the same device pixels. */
@@ -21,7 +20,7 @@ test('the design space follows a window that grows after boot', async ({ page })
   const problems = watch(page);
 
   await page.setViewportSize({ width: 640, height: 360 });
-  await openSaved(page, settledOn(NOMADIC, 1));
+  await openSaved(page, settledOn(1));
 
   const booted = await measure(page);
   expect(booted.width).toBe(booted.onWidth);

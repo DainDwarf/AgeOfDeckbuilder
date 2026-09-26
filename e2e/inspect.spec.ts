@@ -1,5 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
-import { NOMADIC } from '../src/content/nomadic';
+import { CATALOGUE } from '../src/content/catalogue';
 import {
   type FeatureId,
   MOVE_POINT,
@@ -89,7 +89,7 @@ function besideCity<T>(
   found: (tile: Tile, chronicle: Chronicle) => T | undefined,
 ): Found<T> {
   return firstSeed(complaint, (seed) => {
-    const chronicle = settledOn(NOMADIC, seed);
+    const chronicle = settledOn(seed);
     return besideOn(chronicle, (tile) => found(tile, chronicle));
   });
 }
@@ -118,7 +118,7 @@ function stepsClear(chronicle: Chronicle): boolean {
 /** The first seed's turn 1, with the first worker entered on the city, whose steps are clear. */
 function workerOnCity(): Chronicle {
   return firstSeed('enters its first worker on a city whose steps are clear', (seed) => {
-    const chronicle = settledOn(NOMADIC, seed, ['first-worker']);
+    const chronicle = settledOn(seed, ['first-worker']);
     return stepsClear(chronicle) ? chronicle : undefined;
   });
 }
@@ -135,7 +135,7 @@ function featureBeside(): Found<FeatureId> {
 function riverBeside(): Found<Partial<Resources>> {
   return besideCity('runs a river along a fed tile beside the city', (tile, chronicle) =>
     tile.feature === undefined && runsAlong(chronicle.rivers, tile)
-      ? terrainKind(NOMADIC, tile.terrain).river
+      ? terrainKind(CATALOGUE, tile.terrain).river
       : undefined,
   );
 }
@@ -161,11 +161,11 @@ function costBeside(): Found<number> & { readonly water: TileCoords } {
   return firstSeed(
     'leaves a tile costing two move points beside the city, and water in sight',
     (seed) => {
-      const chronicle = settledOn(NOMADIC, seed);
-      const wet = chronicle.snapshots.find((snapshot) => water(NOMADIC, snapshot.tile.terrain));
+      const chronicle = settledOn(seed);
+      const wet = chronicle.snapshots.find((snapshot) => water(CATALOGUE, snapshot.tile.terrain));
       if (wet === undefined) return undefined;
       const land = besideOn(chronicle, (tile) => {
-        const cost = movementCost(NOMADIC, tile);
+        const cost = movementCost(CATALOGUE, tile);
         const bare =
           !chronicle.units.some((unit) => tileKey(unit.tile) === tileKey(tile)) &&
           tile.building === undefined &&
@@ -196,7 +196,7 @@ test('a tile the generator gave a feature shows its mark, and the terrain card g
 
   await expect
     .poll(() => panelRows(page))
-    .toContainEqual({ text: featureName(feature), yields: featureKind(NOMADIC, feature).yields });
+    .toContainEqual({ text: featureName(feature), yields: featureKind(CATALOGUE, feature).yields });
 
   expect(problems).toEqual([]);
 });

@@ -53,7 +53,7 @@ const HERD = { feature: 'wildlife', fromCity: 4 } as const;
 const RIVAL_CAMP = { fromCity: [3, 4], apart: 3 } as const;
 
 export const NOMADIC: Catalogue = catalogued({
-  version: 'nomadic',
+  version: '1',
   units: {
     worker: {
       type: 'worker',

@@ -1,5 +1,5 @@
-import { catalogueOf } from '../content/catalogues';
-import { contentNamed, readSave, writeSave } from '../rules/save';
+import { CATALOGUE } from '../content/catalogue';
+import { readSave, writeSave } from '../rules/save';
 import type { Chronicle } from '../rules/state';
 import type { Choices, Opening } from './launch-page';
 
@@ -36,10 +36,9 @@ export function savedChronicle(): Opening | undefined {
   }
   if (text === null) return undefined;
   try {
-    const catalogue = catalogueOf(contentNamed(text));
-    const { chronicle, region, deck } = readSave(catalogue, text);
+    const { chronicle, region, deck } = readSave(CATALOGUE, text);
     return {
-      catalogue,
+      catalogue: CATALOGUE,
       region,
       schedule: chronicle.timeline.schedule,
       deck,

@@ -1,6 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
 import type Phaser from 'phaser';
-import { NOMADIC } from '../src/content/nomadic';
 import {
   bareTile,
   click,
@@ -15,7 +14,7 @@ import {
   watch,
 } from './chronicle-screen';
 
-const OPENED = settledOn(NOMADIC, 1);
+const OPENED = settledOn(1);
 
 const BARE = bareTile(OPENED);
 

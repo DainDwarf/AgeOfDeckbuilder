@@ -191,7 +191,6 @@ const TEXT = {
   'victory.title': 'Victory',
   'victory.first-shelter': 'The shelter was built. Nomadic Age is over.',
   'launch.title': 'Launch a chronicle',
-  'launch.content': 'Content',
   'launch.region': 'Region',
   'launch.schedule': 'Schedule',
   'launch.deck': 'Deck',

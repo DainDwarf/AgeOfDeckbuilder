@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { NOMADIC } from '../src/content/nomadic';
+import { CATALOGUE } from '../src/content/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
 import { answerCost, answerOf, answerRefusal, offered } from '../src/rules/schedule';
 import { type Chronicle, playable } from '../src/rules/state';
@@ -37,13 +37,13 @@ const RATION = 'ration';
  */
 function unpaid(): { dealt: Chronicle; answer: string } {
   return firstSeed('deals an answer its city cannot pay for inside forty turns', (seed) => {
-    let chronicle = settledOn(NOMADIC, seed);
+    let chronicle = settledOn(seed);
     while (chronicle.turn < 40 && chronicle.ending === undefined) {
-      const dealt = outcome(apply(NOMADIC, chronicle, { type: 'end-turn' }));
+      const dealt = outcome(apply(CATALOGUE, chronicle, { type: 'end-turn' }));
       const [deal] = dealt.deals;
       if (deal?.of === 'event') {
-        const answer = offered(NOMADIC, deal).find(
-          (id) => !playable(answerRefusal(NOMADIC, dealt, deal.event, id)),
+        const answer = offered(CATALOGUE, deal).find(
+          (id) => !playable(answerRefusal(CATALOGUE, dealt, deal.event, id)),
         );
         if (answer !== undefined) return { dealt, answer };
       }
@@ -61,10 +61,10 @@ test('the events phase deals a choice, and the turn plays on from the one taken'
   const dealt = leanSeason();
   const [deal] = dealt.deals;
   if (deal?.of !== 'event') throw new Error(`turn ${dealt.turn} deals no event`);
-  const answers = offered(NOMADIC, deal);
+  const answers = offered(CATALOGUE, deal);
   const ration = answers.indexOf(RATION);
   if (ration === -1) throw new Error(`the ${deal.event} offers no ${RATION}`);
-  const after = outcome(apply(NOMADIC, dealt, { type: 'take', at: ration }));
+  const after = outcome(apply(CATALOGUE, dealt, { type: 'take', at: ration }));
 
   await openSaved(page, dealt);
   await expect.poll(() => standing(page, 'deal')).toBe(true);
@@ -113,9 +113,9 @@ test('the take of an answer the city cannot pay for says why over the card, and 
   const { dealt, answer } = unpaid();
   const [deal] = dealt.deals;
   if (deal?.of !== 'event') throw new Error(`turn ${dealt.turn} deals no event`);
-  const at = offered(NOMADIC, deal).indexOf(answer);
-  const refusal = answerRefusal(NOMADIC, dealt, deal.event, answer);
-  const said = answerCost(NOMADIC, dealt, answerOf(NOMADIC, deal.event, answer))
+  const at = offered(CATALOGUE, deal).indexOf(answer);
+  const refusal = answerRefusal(CATALOGUE, dealt, deal.event, answer);
+  const said = answerCost(CATALOGUE, dealt, answerOf(CATALOGUE, deal.event, answer))
     .filter(({ resource }) => refusal.unaffordable.includes(resource))
     .map(({ resource, amount }) => text(`refusal.${resource}`, { cost: amount }));
 

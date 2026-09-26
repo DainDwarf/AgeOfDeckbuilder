@@ -1,5 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
-import { NOMADIC } from '../src/content/nomadic';
+import { CATALOGUE } from '../src/content/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
 import { campUnit } from '../src/rules/enemies';
 import { CENTRE, type TileCoords, tileKey } from '../src/rules/map';
@@ -47,7 +47,7 @@ const NOTCH = 1.3;
 const GATHER = 'gather';
 
 /** Seed 1's bare turn 1. */
-const OPENED = settledOn(NOMADIC, 1);
+const OPENED = settledOn(1);
 
 /** The tile of the list furthest along the measure given. */
 function furthest(tiles: readonly TileCoords[], by: (tile: TileCoords) => number): TileCoords {
@@ -116,11 +116,11 @@ function gatherStep(): Step {
  */
 function raiderThreeOff(): { chronicle: Chronicle; from: TileCoords; to: TileCoords } {
   for (const tile of campGround(OPENED, 3)) {
-    const chronicle = unitEntered(OPENED, campUnit(NOMADIC, tile, 'raider'));
-    const stages = [...walked(apply(NOMADIC, chronicle, { type: 'end-turn' }))];
+    const chronicle = unitEntered(OPENED, campUnit(CATALOGUE, tile, 'raider'));
+    const stages = [...walked(apply(CATALOGUE, chronicle, { type: 'end-turn' }))];
     const moves = stages.flatMap((stage) =>
       stage.name === 'move'
-        ? [{ from: stage.from, to: stage.to, seen: inSight(NOMADIC, stage.chronicle) }]
+        ? [{ from: stage.from, to: stage.to, seen: inSight(CATALOGUE, stage.chronicle) }]
         : [],
     );
     const [crossing] = moves;
@@ -281,7 +281,7 @@ test('a drag during a tile aim pans the map, and the aim still plays after it', 
   const step = gatherStep();
   const index = idsOf(step.stepped.hand).indexOf(GATHER);
   const gathered = outcome(
-    apply(NOMADIC, step.stepped, { type: 'play', index, aim: 'tile', tile: step.tile }),
+    apply(CATALOGUE, step.stepped, { type: 'play', index, aim: 'tile', tile: step.tile }),
   );
 
   await openSaved(page, step.stepped);
@@ -380,7 +380,7 @@ test('a stage on tiles the frame already holds pans nothing', async ({ page }) =
   const problems = watch(page);
   test.setTimeout(budget(1));
   const run = raiderThreeOff();
-  const crossed = outcome(apply(NOMADIC, run.chronicle, { type: 'end-turn' }));
+  const crossed = outcome(apply(CATALOGUE, run.chronicle, { type: 'end-turn' }));
 
   await openSaved(page, run.chronicle);
 
@@ -409,7 +409,7 @@ test('a stage on tiles the frame does not show is brought into it', async ({ pag
   const problems = watch(page);
   test.setTimeout(budget(1));
   const run = raiderThreeOff();
-  const crossed = outcome(apply(NOMADIC, run.chronicle, { type: 'end-turn' }));
+  const crossed = outcome(apply(CATALOGUE, run.chronicle, { type: 'end-turn' }));
 
   await openSaved(page, run.chronicle);
 

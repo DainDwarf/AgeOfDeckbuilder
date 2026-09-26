@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { NOMADIC } from '../src/content/nomadic';
+import { CATALOGUE } from '../src/content/catalogue';
 import { scheduleOf } from '../src/rules/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
 import { CENTRE, tileKey } from '../src/rules/map';
@@ -30,11 +30,11 @@ import {
 } from './chronicle-screen';
 
 /** The capstone the first schedule names. */
-const CAPSTONE = scheduleOf(NOMADIC, firstsOf(NOMADIC).schedule).capstone.id;
+const CAPSTONE = scheduleOf(CATALOGUE, firstsOf().schedule).capstone.id;
 
 /** Seed 1's bare turn 1 with its turns ended headlessly up to the turn before the capstone lands. */
 function beforeTheCapstone(): Chronicle {
-  let chronicle = settledOn(NOMADIC, 1);
+  let chronicle = settledOn(1);
   const landing = chronicle.timeline.capstone.turn;
   while (chronicle.turn < landing - 1 && chronicle.ending === undefined) {
     chronicle = endedTurn(chronicle);
@@ -49,7 +49,7 @@ test('the chronicle’s opening announces the capstone, once', async ({ page }) 
   // The settle's turn ended to prove the window does not come back.
   test.setTimeout(budget(0));
 
-  await openNew(page, NOMADIC, 1);
+  await openNew(page, 1);
   expect(await titleOf(page, 'capstone')).toBe(text('capstone.title'));
   expect(await loreOf(page, 'capstone')).toBe(capstoneLore(CAPSTONE, 'opening'));
   expect(await cardOnFace(page, 'capstone-card-0')).toBe(CAPSTONE);
@@ -86,7 +86,7 @@ test('the capstone’s landing holds the end of turn on its window, and the end 
   const problems = watch(page);
   test.setTimeout(budget(1));
   const before = beforeTheCapstone();
-  const landed = outcome(apply(NOMADIC, before, { type: 'end-turn' }));
+  const landed = outcome(apply(CATALOGUE, before, { type: 'end-turn' }));
 
   await openSaved(page, before);
   expect(await standing(page, 'capstone')).toBe(false);

@@ -1,6 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import type Phaser from 'phaser';
-import { NOMADIC } from '../src/content/nomadic';
+import { CATALOGUE } from '../src/content/catalogue';
 import { tileKey } from '../src/rules/map';
 import { inSight } from '../src/rules/sight';
 import {
@@ -76,7 +76,7 @@ test('the key above Tab opens the console, which then holds the keyboard', async
   // No turn is played out; the budget covers the boot and the gestures held over a dozen frames.
   test.setTimeout(budget(1));
 
-  await openSaved(page, settledOn(NOMADIC, 1));
+  await openSaved(page, settledOn(1));
   expect(await shows(page, 'console')).toBe(false);
 
   // The frame pans up under the pan key, so what stands on the map comes down the screen.
@@ -117,14 +117,14 @@ test('the key above Tab opens the console, which then holds the keyboard', async
 
 test('the two switches draw the whole map, and put the fog back where it was', async ({ page }) => {
   const problems = watch(page);
-  const stood = settledOn(NOMADIC, 1);
+  const stood = settledOn(1);
   const [guard] = enemiesOf(stood);
   const enemy = guard.tile;
   expect(stood.snapshots.map(tileKey)).not.toContain(tileKey(enemy));
 
   await openSaved(page, stood);
 
-  const seen = inSight(NOMADIC, stood);
+  const seen = inSight(CATALOGUE, stood);
   const fogged = stood.snapshots.filter((snapshot) => !seen.has(tileKey(snapshot))).length;
   expect(await chronicleOf(page)).toEqual(stood);
   expect(await standing(page, `tile-${tileKey(enemy)}`)).toBe(false);

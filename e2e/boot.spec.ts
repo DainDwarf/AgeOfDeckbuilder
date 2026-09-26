@@ -1,6 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
-import type Phaser from 'phaser';
-import { NOMADIC } from '../src/content/nomadic';
+import { CATALOGUE } from '../src/content/catalogue';
 import { deckOf } from '../src/rules/catalogue';
 import {
   chronicleOf,
@@ -19,28 +18,12 @@ function named(page: Page): string {
   return new URL(page.url()).search;
 }
 
-/** The faces of the launch page's content row, left to right, by version and whether each is chosen. */
-function contentRow(page: Page): Promise<{ version: string; chosen: boolean }[]> {
-  return page.evaluate(() => {
-    const root = window.named?.('launch')?.object as Phaser.GameObjects.Container | undefined;
-    if (root === undefined) throw new Error('there is no launch page');
-    const prefix = 'launch-content-';
-    return (root.list as Phaser.GameObjects.Rectangle[])
-      .filter(({ name }) => name.startsWith(prefix) && !name.endsWith('-label'))
-      .sort((one, other) => one.x - other.x)
-      .map((face) => ({
-        version: face.name.slice(prefix.length),
-        chosen: face.getData('chosen') as boolean,
-      }));
-  });
-}
-
 test('an address naming a deck boots into the chronicle, stays as it was, and logs nothing', async ({
   page,
 }) => {
   const problems = watch(page);
 
-  const address = `?content=${NOMADIC.version}&deck=${firstsOf(NOMADIC).deck}`;
+  const address = `?deck=${firstsOf().deck}`;
   await page.goto(`/${address}`);
 
   const canvas = page.locator('canvas');
@@ -71,18 +54,6 @@ test('the bare address with no save boots the launch page and logs nothing', asy
 
   await page.keyboard.press('Escape');
   await expect.poll(() => standing(page, 'menu')).toBe(false);
-
-  expect(problems).toEqual([]);
-});
-
-test("the bare address's launch page lists the ages' content alone", async ({ page }) => {
-  const problems = watch(page);
-  await readNames(page);
-
-  await page.goto('/');
-
-  await expect.poll(() => standing(page, 'launch')).toBe(true);
-  expect(await contentRow(page)).toEqual([{ version: NOMADIC.version, chosen: true }]);
 
   expect(problems).toEqual([]);
 });
@@ -123,9 +94,9 @@ test('Launch opens the chronicle on the defaults, and the address stays bare thr
   await page.waitForFunction(() => window.game?.scene.isActive('ui') === true);
 
   const launched = await chronicleOf(page);
-  const deck = deckOf(NOMADIC, 'nomadic');
+  const deck = deckOf(CATALOGUE, 'nomadic');
   expect(named(page)).toBe('');
-  expect(launched.content).toBe(NOMADIC.version);
+  expect(launched.content).toBe(CATALOGUE.version);
   expect(idsOf([...launched.drawPile, ...launched.hand, ...launched.discardPile]).sort()).toEqual(
     [...deck.cards, ...deck.settle].sort(),
   );

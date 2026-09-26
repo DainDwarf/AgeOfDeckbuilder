@@ -1,7 +1,7 @@
 // First, before any import that can throw as it is evaluated: the watch is only as early as it is.
 import './failed-boot';
 import Phaser from 'phaser';
-import { CATALOGUES, catalogueOf } from './content/catalogues';
+import { CATALOGUE } from './content/catalogue';
 import { booted } from './failed-boot';
 import { deckOf, scheduleOf } from './rules/catalogue';
 import { regionOf } from './rules/map-kinds';
@@ -27,7 +27,7 @@ declare global {
 const address = new URLSearchParams(window.location.search);
 
 /** Every key the boot reads off the address; an address naming none of them is bare. */
-const ASKED = ['content', 'region', 'schedule', 'deck', 'seed'] as const;
+const ASKED = ['region', 'schedule', 'deck', 'seed'] as const;
 
 /** What the address names under that key, and nothing where it names nothing. */
 function asked(key: (typeof ASKED)[number]): string | undefined {
@@ -45,15 +45,13 @@ function askedSeed(): number | undefined {
 
 /** What the address names, each id resolved through the catalogue, and the firsts for the rest. */
 function askedChoices(): Choices {
-  const content = asked('content');
-  const catalogue = content === undefined ? CATALOGUES[0] : catalogueOf(content);
-  const firsts = firstsOf(catalogue, askedSeed());
+  const firsts = firstsOf(CATALOGUE, askedSeed());
   const region = asked('region');
   const schedule = asked('schedule');
   const deck = asked('deck');
-  if (region !== undefined) regionOf(catalogue, region);
-  if (schedule !== undefined) scheduleOf(catalogue, schedule);
-  if (deck !== undefined) deckOf(catalogue, deck);
+  if (region !== undefined) regionOf(CATALOGUE, region);
+  if (schedule !== undefined) scheduleOf(CATALOGUE, schedule);
+  if (deck !== undefined) deckOf(CATALOGUE, deck);
   return {
     ...firsts,
     region: region ?? firsts.region,

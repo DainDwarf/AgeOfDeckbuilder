@@ -1,5 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
-import { NOMADIC } from '../src/content/nomadic';
+import { CATALOGUE } from '../src/content/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
 import { CENTRE, tileKey } from '../src/rules/map';
 import { SAVE_ENTRY } from '../src/ui/save-entry';
@@ -37,7 +37,7 @@ test('a chronicle reopened on the bare address stands where it stood, under its 
   test.setTimeout(budget(0));
   const problems = watch(page);
 
-  await openNew(page, NOMADIC, 1);
+  await openNew(page, 1);
   await capstoneClosed(page);
   await dragOut(page, 0);
   await aimed(page);
@@ -84,8 +84,8 @@ test('an ended chronicle reopens on its ending screen, and no capstone’s windo
   page,
 }) => {
   const problems = watch(page);
-  const fallen = outcome(apply(NOMADIC, beforeTheFall(), { type: 'end-turn' }));
-  const { region, deck } = firstsOf(NOMADIC);
+  const fallen = outcome(apply(CATALOGUE, beforeTheFall(), { type: 'end-turn' }));
+  const { region, deck } = firstsOf();
 
   await readNames(page);
   await plant(page, { chronicle: fallen, region, deck });
@@ -105,7 +105,7 @@ test('a chronicle reopened waiting on a deal stands under its capstone’s windo
   const dealt = firstDealt(1);
   const [deal] = dealt.deals;
   if (deal?.of !== 'event') throw new Error(`turn ${dealt.turn} deals no event`);
-  const { region, deck } = firstsOf(NOMADIC);
+  const { region, deck } = firstsOf();
 
   await readNames(page);
   await plant(page, { chronicle: dealt, region, deck });

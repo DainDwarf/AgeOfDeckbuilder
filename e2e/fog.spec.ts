@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { NOMADIC } from '../src/content/nomadic';
+import { CATALOGUE } from '../src/content/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
 import { campUnit } from '../src/rules/enemies';
 import { neighbours, type TileCoords, tileKey } from '../src/rules/map';
@@ -40,7 +40,7 @@ const FIRST_SCOUT = 'first-scout';
 /** The chronicle the step leaves, or none where the rules refuse the move. */
 function stepped(chronicle: Chronicle, to: TileCoords): Chronicle | undefined {
   const [unit] = playersOf(chronicle);
-  const moved = outcome(apply(NOMADIC, chronicle, { type: 'move', unit: unit.id, tile: to }));
+  const moved = outcome(apply(CATALOGUE, chronicle, { type: 'move', unit: unit.id, tile: to }));
   return moved === chronicle ? undefined : moved;
 }
 
@@ -56,14 +56,14 @@ function roundTrip(): {
   fog: TileCoords;
   uncharted: TileCoords;
 } {
-  const scouted = settledOn(NOMADIC, 1, [FIRST_SCOUT]);
+  const scouted = settledOn(1, [FIRST_SCOUT]);
   const city = cityTileOf(scouted);
   const before = new Set(scouted.snapshots.map(tileKey));
   for (const out of neighbours(city)) {
     const there = stepped(scouted, out);
     const back = there && stepped(there, city);
     if (back === undefined) continue;
-    const seen = inSight(NOMADIC, back);
+    const seen = inSight(CATALOGUE, back);
     const chartedTiles = new Set(back.snapshots.map(tileKey));
     const fog = back.snapshots.find(
       (snapshot) => !seen.has(tileKey(snapshot)) && !before.has(tileKey(snapshot)),
@@ -86,11 +86,11 @@ function roundTrip(): {
  * charted, so the enemy's mark stands in fog there; and the tile.
  */
 function enemyInFog(): { chronicle: Chronicle; fog: TileCoords } {
-  const bare = settledOn(NOMADIC, 1);
+  const bare = settledOn(1);
   const [fog] = campGround(bare, 4);
   if (fog === undefined) throw new Error('seed 1 leaves no ground four tiles from its city');
-  const guarded = unitEntered(bare, campUnit(NOMADIC, fog, 'guard'));
-  return { chronicle: charted(NOMADIC, chartedAt(NOMADIC, guarded, fog)), fog };
+  const guarded = unitEntered(bare, campUnit(CATALOGUE, fog, 'guard'));
+  return { chronicle: charted(CATALOGUE, chartedAt(CATALOGUE, guarded, fog)), fog };
 }
 
 /**
@@ -100,10 +100,10 @@ function enemyInFog(): { chronicle: Chronicle; fog: TileCoords } {
  */
 function riverUncharted(): { scouted: Chronicle; landing: TileCoords; stepped: Chronicle } {
   return firstSeed('charts a river on the scout’s first step', (seed) => {
-    const scouted = settledOn(NOMADIC, seed, [FIRST_SCOUT]);
+    const scouted = settledOn(seed, [FIRST_SCOUT]);
     if (scouted.rivers.length === 0 || riverRuns(scouted) > 0) return undefined;
     const [scout] = playersOf(scouted);
-    for (const { tile } of reachable(NOMADIC, scouted, scout)) {
+    for (const { tile } of reachable(CATALOGUE, scouted, scout)) {
       const moved = stepped(scouted, tile);
       if (moved !== undefined && riverRuns(moved) > 0)
         return { scouted, landing: tile, stepped: moved };
@@ -138,7 +138,7 @@ test('the map draws a tile in sight live, a tile in fog under its scrim, and an 
   expect(await standing(page, `fog-${tileKey(run.uncharted)}`)).toBe(false);
 
   // The map draws a face for every tile it has ever seen, and one scrim for each of them in fog.
-  const seen = inSight(NOMADIC, run.back);
+  const seen = inSight(CATALOGUE, run.back);
   expect(await marksIn(page, 'terrain')).toBe(run.back.snapshots.length);
   expect(await marksIn(page, 'fog')).toBe(
     run.back.snapshots.filter((snapshot) => !seen.has(tileKey(snapshot))).length,

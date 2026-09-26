@@ -1,5 +1,4 @@
 import { expect, test } from '@playwright/test';
-import { NOMADIC } from '../src/content/nomadic';
 import type { Chronicle } from '../src/rules/state';
 import {
   budget,
@@ -16,7 +15,7 @@ import {
 /** The first seed's turn 1, settled bare, whose opening charts a tile a river runs along. */
 function riverCharted(): Chronicle {
   return firstSeed('charts a river from its opening', (seed) => {
-    const chronicle = settledOn(NOMADIC, seed);
+    const chronicle = settledOn(seed);
     return riverRuns(chronicle) > 0 ? chronicle : undefined;
   });
 }

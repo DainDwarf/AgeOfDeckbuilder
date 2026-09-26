@@ -1,6 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
 import type Phaser from 'phaser';
-import { NOMADIC } from '../src/content/nomadic';
 import type { Chronicle } from '../src/rules/state';
 import {
   besideTheCards,
@@ -55,7 +54,7 @@ async function nearest(
 
 /** Seed 1 on the doubled deck, settled bare, with three turns ended: both piles overflow the browse's frame. */
 function overflowing(): Chronicle {
-  let chronicle = settledOn(NOMADIC, 1, [], doubledDeck());
+  let chronicle = settledOn(1, [], doubledDeck());
   for (let turn = 0; turn < 3; turn++) chronicle = endedTurn(chronicle);
   return chronicle;
 }
@@ -110,7 +109,7 @@ test('a click rings a browsed card, a right click and the inspection key show it
 }) => {
   const problems = watch(page);
 
-  const before = settledOn(NOMADIC, 1);
+  const before = settledOn(1);
   await openSaved(page, before);
   await browse(page, 'draw-pile');
 

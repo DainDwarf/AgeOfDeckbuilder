@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { NOMADIC } from '../src/content/nomadic';
+import { CATALOGUE } from '../src/content/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
 import { type TileCoords, tileAt, tileKey } from '../src/rules/map';
 import { campsPlaced } from '../src/rules/schedule';
@@ -30,7 +30,7 @@ const WARRIOR = 'warrior';
 /** The tiles the camp's building stands on, in the order the map lists them. */
 function campsOf(chronicle: Chronicle): TileCoords[] {
   return chronicle.tiles
-    .filter((tile) => tile.building === NOMADIC.camp.building)
+    .filter((tile) => tile.building === CATALOGUE.camp.building)
     .map(({ q, r }) => ({ q, r }));
 }
 
@@ -39,18 +39,18 @@ function campsOf(chronicle: Chronicle): TileCoords[] {
  * the player's entered on it; and the camp.
  */
 function campBeside(): { chronicle: Chronicle; camp: TileCoords } {
-  const bare = settledOn(NOMADIC, 1);
-  const placing = campsPlaced(NOMADIC, bare, 1, [1, 1], 1);
+  const bare = settledOn(1);
+  const placing = campsPlaced(CATALOGUE, bare, 1, [1, 1], 1);
   const [camp] = placing.placed;
   if (camp === undefined) throw new Error('seed 1 places no camp beside its city');
-  const placed = charted(NOMADIC, placing.chronicle);
+  const placed = charted(CATALOGUE, placing.chronicle);
   const chronicle = unitEntered(placed, { type: WARRIOR, faction: 'player', tile: camp });
   return { chronicle, camp };
 }
 
 test('the map draws the camps it was dealt once the uncharted veil is off', async ({ page }) => {
   const problems = watch(page);
-  const opened = settledOn(NOMADIC, 1);
+  const opened = settledOn(1);
   const camps = campsOf(opened);
   expect(camps.length).toBeGreaterThan(0);
 
@@ -79,7 +79,7 @@ test('a warrior standing on a camp through the enemy phase captures it, and the 
   const problems = watch(page);
   test.setTimeout(budget(1));
   const { chronicle, camp } = campBeside();
-  const captured = outcome(apply(NOMADIC, chronicle, { type: 'end-turn' }));
+  const captured = outcome(apply(CATALOGUE, chronicle, { type: 'end-turn' }));
 
   await openSaved(page, chronicle);
   await stoppedTurn(page);
@@ -89,7 +89,7 @@ test('a warrior standing on a camp through the enemy phase captures it, and the 
   expect(await chronicleOf(page)).toEqual(captured);
   expect(tileAt(captured.tiles, camp)?.building).toBeUndefined();
   expect(captured.deals[0]?.of).toBe('camp');
-  expect(await titleOf(page, 'deal')).toBe(buildingName(NOMADIC.camp.building));
-  expect(await loreOf(page, 'deal')).toBe(campLore(NOMADIC.camp.building));
+  expect(await titleOf(page, 'deal')).toBe(buildingName(CATALOGUE.camp.building));
+  expect(await loreOf(page, 'deal')).toBe(campLore(CATALOGUE.camp.building));
   expect(problems).toEqual([]);
 });

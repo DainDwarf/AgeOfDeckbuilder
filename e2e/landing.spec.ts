@@ -1,5 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
-import { NOMADIC } from '../src/content/nomadic';
+import { CATALOGUE } from '../src/content/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
 import { type TileCoords, tileKey } from '../src/rules/map';
 import { offered } from '../src/rules/schedule';
@@ -38,22 +38,22 @@ function herdDealt(): { dealt: Chronicle; at: number; tile: TileCoords } {
   const turns = 20;
   const complaint = `deals the herd alone as its first deal within ${turns} ended turns, its follow-it charting a tile the map does not draw`;
   return firstSeed(complaint, (seed) => {
-    let dealt = settledOn(NOMADIC, seed);
+    let dealt = settledOn(seed);
     for (let turn = 0; turn < turns && dealt.deals.length === 0; turn++) {
       if (dealt.ending !== undefined) return undefined;
-      dealt = outcome(apply(NOMADIC, dealt, { type: 'end-turn' }));
+      dealt = outcome(apply(CATALOGUE, dealt, { type: 'end-turn' }));
     }
     const [deal, ...behind] = dealt.deals;
     if (deal?.of !== 'event' || deal.event !== HERD || behind.length > 0) return undefined;
 
-    const at = offered(NOMADIC, deal).indexOf(FOLLOW);
-    const [tile] = [...walked(apply(NOMADIC, dealt, { type: 'take', at }))].flatMap((stage) =>
+    const at = offered(CATALOGUE, deal).indexOf(FOLLOW);
+    const [tile] = [...walked(apply(CATALOGUE, dealt, { type: 'take', at }))].flatMap((stage) =>
       stage.name === 'charted' ? [stage.tile] : [],
     );
     if (tile === undefined) return undefined;
     const key = tileKey(tile);
     const drawn =
-      inSight(NOMADIC, dealt).has(key) || dealt.snapshots.some((kept) => tileKey(kept) === key);
+      inSight(CATALOGUE, dealt).has(key) || dealt.snapshots.some((kept) => tileKey(kept) === key);
     return drawn ? undefined : { dealt, at, tile };
   });
 }

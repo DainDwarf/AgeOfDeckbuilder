@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { NOMADIC } from '../src/content/nomadic';
+import { CATALOGUE } from '../src/content/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
 import { walked } from '../src/rules/stages';
 import type { Chronicle } from '../src/rules/state';
@@ -22,7 +22,7 @@ import {
  */
 function thinned(): Chronicle {
   return firstSeed('thins its draw pile under a hand with no deal due', (seed) => {
-    let chronicle = settledOn(NOMADIC, seed);
+    let chronicle = settledOn(seed);
     for (let turn = 1; turn <= 8 && chronicle.ending === undefined; turn++) {
       if (chronicle.drawPile.length < chronicle.hand.length) {
         return chronicle.timeline.next > chronicle.turn + 2 ? chronicle : undefined;
@@ -39,7 +39,7 @@ test('a pointer sweeping the hand while the end of turn plays leaves the chronic
   const problems = watch(page);
   test.setTimeout(budget(2));
   const opened = thinned();
-  const stages = apply(NOMADIC, opened, { type: 'end-turn' });
+  const stages = apply(CATALOGUE, opened, { type: 'end-turn' });
   const names = [...walked(stages)].map((stage) => stage.name);
   expect(names.indexOf('drawn')).toBeLessThan(names.indexOf('shuffled'));
   const once = outcome(stages);

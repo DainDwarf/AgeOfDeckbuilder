@@ -1,6 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import type Phaser from 'phaser';
-import { NOMADIC } from '../src/content/nomadic';
+import { CATALOGUE } from '../src/content/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
 import { cultureThreshold, growthThreshold } from '../src/rules/city';
 import { type Chronicle, idle } from '../src/rules/state';
@@ -24,7 +24,7 @@ import {
 /** The first seed's turn 1, with no deal due on the two turns the spec ends. */
 function settled(): Chronicle {
   return firstSeed('deals nothing on its second and third turns', (seed) => {
-    const chronicle = settledOn(NOMADIC, seed);
+    const chronicle = settledOn(seed);
     return chronicle.timeline.next > chronicle.turn + 2 ? chronicle : undefined;
   });
 }
@@ -90,7 +90,7 @@ test('a motion that throws still ends the turn and gives the chronicle screen ba
   const problems = watch(page);
   test.setTimeout(budget(2));
   const opened = settled();
-  const committed = outcome(apply(NOMADIC, opened, { type: 'end-turn' }));
+  const committed = outcome(apply(CATALOGUE, opened, { type: 'end-turn' }));
 
   await openSaved(page, opened);
 

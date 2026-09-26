@@ -1,5 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
-import { NOMADIC } from '../src/content/nomadic';
+import { CATALOGUE } from '../src/content/catalogue';
 import { deckOf } from '../src/rules/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
 import { tileKey } from '../src/rules/map';
@@ -41,7 +41,7 @@ async function raised(page: Page): Promise<void> {
 test('the menu walks in to Controls and closes back one step at a time', async ({ page }) => {
   const problems = watch(page);
 
-  await openSaved(page, settledOn(NOMADIC, 1));
+  await openSaved(page, settledOn(1));
   expect(await standing(page, 'menu')).toBe(false);
 
   await click(page, 'menu-button');
@@ -72,7 +72,7 @@ test('Escape raises the menu on a bare chronicle screen, and backs out of a brow
 }) => {
   const problems = watch(page);
 
-  await openSaved(page, settledOn(NOMADIC, 1));
+  await openSaved(page, settledOn(1));
 
   await page.keyboard.press('Escape');
   await expect.poll(() => standing(page, 'menu')).toBe(true);
@@ -116,7 +116,7 @@ test('a pan dragged onto the Menu button carries the map the whole way, and open
 }) => {
   const problems = watch(page);
 
-  await openSaved(page, settledOn(NOMADIC, 1));
+  await openSaved(page, settledOn(1));
   const city = cityTileOf(await chronicleOf(page));
   const button = await onScreen(page, 'menu-button');
   const travel = 80 * button.unit;
@@ -143,7 +143,7 @@ test('a pan dragged onto the Menu button carries the map the whole way, and open
 test('the selected tile waits under the menu', async ({ page }) => {
   const problems = watch(page);
 
-  await openSaved(page, settledOn(NOMADIC, 1));
+  await openSaved(page, settledOn(1));
   const opened = await chronicleOf(page);
   const city = tileKey(cityTileOf(opened));
   await click(page, `tile-${city}`);
@@ -162,8 +162,8 @@ test('the selected tile waits under the menu', async ({ page }) => {
 
 test('a new chronicle deals the same deck a fresh seed, on the settle phase', async ({ page }) => {
   const problems = watch(page);
-  const played = settledOn(NOMADIC, 1);
-  const deck = deckOf(NOMADIC, firstsOf(NOMADIC).deck);
+  const played = settledOn(1);
+  const deck = deckOf(CATALOGUE, firstsOf().deck);
 
   await openSaved(page, played);
 
@@ -184,7 +184,7 @@ test('the menu opens over the defeat screen, and a new chronicle takes the chron
   page,
 }) => {
   const problems = watch(page);
-  const fallen = outcome(apply(NOMADIC, beforeTheFall(), { type: 'end-turn' }));
+  const fallen = outcome(apply(CATALOGUE, beforeTheFall(), { type: 'end-turn' }));
 
   await openSaved(page, fallen);
   await expect.poll(() => standing(page, 'defeat')).toBe(true);
