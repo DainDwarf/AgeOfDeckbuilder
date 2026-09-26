@@ -68,9 +68,9 @@ function alone(carrying: Carrying = {}): Chronicle {
   return cityOf(['urban'], { tiles: field(3), population: 3, ...carrying });
 }
 
-/** The fixture's deck with this many free claims after the settle card in its settle section. */
+/** The fixture's deck with this many free claims in its settle section. */
 function claiming(claims: number): Deck {
-  return { cards: DECK.cards, settle: ['PH_Settle', ...Array<string>(claims).fill('PH_Claim')] };
+  return { ...DECK, settle: Array<string>(claims).fill('PH_Claim') };
 }
 
 /** The first card of the hand played at a tile: a free claim, on a hand the settle left holding them. */
@@ -155,13 +155,13 @@ function darkBorder(): { opened: Chronicle; dark: TileCoords; city: TileCoords }
   throw new Error('no seed under a thousand leaves a dark border tile a worker can step beside');
 }
 
-test('the settle holds the city’s tile alone, one population on it and the city’s idle count besides', () => {
+test('the settle holds the city’s tile alone, one population on it and the idle population the city section names besides', () => {
   for (const seed of [0, 1234, 0xdeadbeef | 0]) {
     const chronicle = settledLaunch(CATALOGUE, AGE, REGION, seed, DECK);
 
     expect(chronicle.held).toEqual([CITY]);
     expect(chronicle.assigned).toEqual([CITY]);
-    expect(idle(chronicle)).toBe(CATALOGUE.city.idle);
+    expect(idle(chronicle)).toBe(DECK.city.idle);
   }
 });
 

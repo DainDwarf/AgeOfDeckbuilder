@@ -175,7 +175,7 @@ test('a new chronicle deals the same deck a fresh seed, on the settle phase', as
   const fresh = await chronicleOf(page);
   expect(fresh.turn).toBe(0);
   expect(fresh.seed).not.toBe(played.seed);
-  expect(cardsHeld(fresh)).toEqual([...deck.cards, ...deck.settle].sort());
+  expect(cardsHeld(fresh)).toEqual([deck.city.card, ...deck.cards, ...deck.settle].sort());
 
   expect(problems).toEqual([]);
 });

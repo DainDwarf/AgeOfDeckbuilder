@@ -118,6 +118,24 @@ test('a save whose chronicle names no age, or an age the catalogue does not hold
   ).toThrow('fixture: no age is named PH_Unheld');
 });
 
+test('a save whose chronicle carries no city section, or one naming a building or a card the catalogue does not hold, is refused', () => {
+  const save = saved();
+  const reading = (citySection: object | undefined): (() => unknown) => {
+    const text = tampered(save, (chronicle) => ({ ...chronicle, citySection }));
+    return () => readSave(CATALOGUE, text);
+  };
+  const section = save.chronicle.citySection;
+
+  expect(reading(undefined)).toThrow("fixture: the save's chronicle.citySection is not an object");
+  expect(reading({ ...section, building: 'PH_Fort' })).toThrow(
+    'fixture: no building is named PH_Fort',
+  );
+  expect(reading({ ...section, card: 'PH_Unheld' })).toThrow('fixture: no card is named PH_Unheld');
+  expect(reading({ ...section, sight: 1.5 })).toThrow(
+    "fixture: the save's chronicle.citySection.sight is not an integer",
+  );
+});
+
 test('a save written on one content version is refused by a catalogue of another', () => {
   const text = writeSave(CATALOGUE, saved());
   const next = catalogued({ ...CATALOGUE, version: 'fixture-next' });

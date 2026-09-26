@@ -17,7 +17,8 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **collection** | Every card the player owns, with the copies owned of each. | library, pool, inventory |
 | **civilization** | A playable identity: starting units, one passive rule, a look, and its deck. | people, nation, civ, board |
 | **deck** | A civilization's set of cards, fixed for a chronicle. | loadout |
-| **settle section** | The part of the deck that holds its settle cards, the hand of the settle phase. | opening hand, starting hand, sideboard, reserve |
+| **settle section** | The part of the deck that holds its settle cards; with the city section's card, the hand of the settle phase. | opening hand, starting hand, sideboard, reserve |
+| **city section** | The part of the deck that holds the city — its building, its sight, its idle population — and the card that settles it. | city slot, capital card |
 | **technology** | A permanent unlock earned by an achievement: new cards, better buildings, better units. | tech, advancement, upgrade, research |
 | **achievement** | A goal a chronicle can reach; reaching it unlocks a technology. | mission, objective, quest, milestone |
 | **influence** | The meta-currency every chronicle pays, scaled by how the city fared. | gold, XP |
@@ -54,7 +55,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **border** | The edge of the tiles the city holds; pushed out by culture. | frontier, territory |
 | **turn** | One pass of the chronicle's cycle of phases. | round |
 | **phase** | One part of the turn's cycle, in its fixed order; what the turn list names. | step, stage (in prose), section |
-| **settle phase** | The chronicle's opening, before its first turn: the city stands nowhere, the hand is dealt from the settle section, and none of the cycle runs. | turn 0, turn zero, opening turn, setup, deployment |
+| **settle phase** | The chronicle's opening, before its first turn: the city stands nowhere, the hand is the city section's card and the settle section, and none of the cycle runs. | turn 0, turn zero, opening turn, setup, deployment |
 | **hand** | The cards drawn this turn. | — |
 | **draw** | To take cards from the draw pile into the hand. | pull |
 | **play** | To put a card from the hand into effect, paying its cost. | cast, activate |

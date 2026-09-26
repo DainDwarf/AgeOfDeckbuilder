@@ -17,6 +17,7 @@ import {
   type CardId,
   type Chronicle,
   type ChronicleCard,
+  type CitySection,
   type Counters,
   costsOf,
   type TileBlock,
@@ -153,8 +154,15 @@ export type Schedule = {
   readonly entries: Readonly<Record<string, (turn: number) => number>>;
 };
 
-/** A deck's two sections: its cards, which the draw pile cycles, and its settle cards, in hand on the settle phase. */
-export type Deck = { readonly cards: readonly string[]; readonly settle: readonly string[] };
+/**
+ * A deck's three sections: its city section, its settle cards, in hand on the settle phase behind the
+ * city section's card, and its cards, which the draw pile cycles.
+ */
+export type Deck = {
+  readonly city: CitySection;
+  readonly settle: readonly string[];
+  readonly cards: readonly string[];
+};
 
 /** What a camp is, what it enters, and what its capture gives. */
 export type Camp = {
@@ -178,7 +186,7 @@ export type Age = {
 
 /**
  * The content a chronicle is played on, every entry named by its key: the tables every age shares,
- * the ages in the order of history, and the city — the building it stands as and how far it sees.
+ * and the ages in the order of history.
  */
 export type Catalogue = MapContent & {
   readonly units: Readonly<Record<string, UnitStats>>;
@@ -188,16 +196,13 @@ export type Catalogue = MapContent & {
   readonly events: Readonly<Record<string, ScheduledEvent>>;
   readonly capstones: Readonly<Record<string, Capstone>>;
   readonly ages: Readonly<Record<string, Age>>;
-  readonly city: {
-    readonly building: string;
-    readonly sight: number;
-    /** How many population the chronicle opens with besides the one on the city's tile. */
-    readonly idle: number;
-  };
 };
 
 /** The tables every age brings its content to. */
-export type Tables = Omit<Catalogue, 'version' | 'ages' | 'city'>;
+export type Tables = Omit<Catalogue, 'version' | 'ages'>;
+
+/** The steps past the centre part's reach within which no region keeps its camps. */
+export const FIRST_STEPS = 2;
 
 /** One age's content: its id, what it owns, and what it brings to the tables every age shares. */
 export type Slice = {
@@ -211,11 +216,7 @@ export type Slice = {
  * bring, and the ages table what each owns under its id. An id two slices bring to one table, and an
  * age two slices name, are refused before the catalogue is validated.
  */
-export function merged(
-  version: string,
-  city: Catalogue['city'],
-  slices: readonly Slice[],
-): Catalogue {
+export function merged(version: string, slices: readonly Slice[]): Catalogue {
   const ages: Record<string, Age> = {};
   for (const { id, owns } of slices) {
     if (Object.hasOwn(ages, id)) refuse({ version }, `two slices name the age ${id}`);
@@ -250,7 +251,6 @@ export function merged(
     features: union('features'),
     improvements: union('improvements'),
     ages,
-    city,
   });
 }
 
@@ -300,7 +300,15 @@ export function catalogued(content: Catalogue): Catalogue {
   if (ages.length === 0) refuse(content, 'no age is held');
   for (const [id, age] of ages) ageHeld(content, id, age);
   for (const [id, deck] of Object.entries(content.decks)) {
-    for (const card of [...deck.cards, ...deck.settle]) {
+    const { city } = deck;
+    buildingKind(content, city.building);
+    if (city.sight < 0) refuse(content, `the deck ${id}'s city sees ${city.sight}`);
+    if (city.idle < 0) refuse(content, `the deck ${id}'s city opens with ${city.idle} idle`);
+    const { kind } = cardOf(content, city.card);
+    if (kind !== 'settle') {
+      refuse(content, `the deck ${id} holds the ${kind} ${city.card} in its city section`);
+    }
+    for (const card of [city.card, ...deck.settle, ...deck.cards]) {
       if (cardOf(content, card).kind === 'hazard') {
         refuse(content, `the deck ${id} holds the hazard ${card}`);
       }
@@ -338,15 +346,10 @@ export function catalogued(content: Catalogue): Catalogue {
     const free = Object.values(event.answers).some(({ cost }) => freeWhateverTheChronicle(cost));
     if (!free) refuse(content, `the event ${id} deals no answer costing no stock`);
   }
-
-  buildingKind(content, content.city.building);
-  const { sight, idle } = content.city;
-  if (sight < 0) refuse(content, `the city sees ${sight}`);
-  if (idle < 0) refuse(content, `the city opens with ${idle} idle`);
   return content;
 }
 
-/** What one age owns, checked against the tables and the city of the catalogue holding it. */
+/** What one age owns, checked against the tables of the catalogue holding it. */
 function ageHeld(content: Catalogue, id: string, { schedule, camp, regions }: Age): void {
   if (Object.keys(schedule.entries).length === 0) {
     refuse(content, `the age ${id}'s schedule deals no event`);
@@ -411,11 +414,11 @@ function ageHeld(content: Catalogue, id: string, { schedule, camp, regions }: Ag
         `the region ${name} deals sized biomes of ${sized} tiles on a disc of ${discTiles(region.radius)}`,
       );
     }
-    const reach = region.centre + content.city.sight;
+    const reach = region.centre + FIRST_STEPS;
     if (region.campFromCentre <= reach) {
       refuse(
         content,
-        `the region ${name} keeps its camps ${region.campFromCentre} from the centre, within the settle's reach of ${reach}`,
+        `the region ${name} keeps its camps ${region.campFromCentre} from the centre, within the first steps' reach of ${reach}`,
       );
     }
   }
@@ -471,7 +474,7 @@ export function counterOf(catalogue: Catalogue, card: ChronicleCard): Counter {
   };
 }
 
-/** The two sections a deck lists; a deck the catalogue does not hold is refused. */
+/** The three sections a deck lists; a deck the catalogue does not hold is refused. */
 export function deckOf(catalogue: Catalogue, id: string): Deck {
   return entryOf(catalogue, catalogue.decks, id, 'deck');
 }

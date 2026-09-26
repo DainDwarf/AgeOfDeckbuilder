@@ -174,8 +174,9 @@ test('a building named on the settle card raises its card small at a rest and sh
   page,
 }) => {
   const problems = watch(page);
-  const [settle] = deckOf(CATALOGUE, firstsOf().deck).settle;
-  const city = { kind: 'building', id: CATALOGUE.city.building };
+  const { city: section } = deckOf(CATALOGUE, firstsOf().deck);
+  const settle = section.card;
+  const city = { kind: 'building', id: section.building };
 
   await openNew(page, 1);
   await capstoneClosed(page);

@@ -239,14 +239,12 @@ export function terraformable(
 
 /**
  * Whether a terraform into `to` reaches the tile: every tile but the city's, and the city's into a
- * terrain its building stands on alone.
+ * terrain the building in its slot stands on alone.
  */
 function reaches(catalogue: Catalogue, chronicle: Chronicle, at: TileCoords, to: string): boolean {
-  return (
-    chronicle.city === undefined ||
-    tileKey(chronicle.city) !== tileKey(at) ||
-    buildingKind(catalogue, catalogue.city.building).terrains.includes(to)
-  );
+  if (chronicle.city === undefined || tileKey(chronicle.city) !== tileKey(at)) return true;
+  const building = tileAt(chronicle.tiles, at)?.building;
+  return building === undefined || buildingKind(catalogue, building).terrains.includes(to);
 }
 
 /** No copy of this improvement on the tile: distinct ones stack, the same one never twice. */
@@ -317,16 +315,17 @@ export function entersOn(type: string): Aim & { readonly aim: 'tile' } {
 }
 
 /**
- * The settle: its building in the tile's slot, the city holding that tile alone with one population
- * on it and the city's idle count besides, and then the city standing on the tile from now on.
+ * The settle of the city section the chronicle carries: its building in the tile's slot, the city
+ * holding that tile alone with one population on it and the section's idle besides, and then the
+ * city standing on the tile from now on.
  */
 export function settled(catalogue: Catalogue, paid: Chronicle, at: TileCoords): Landed {
   const city = { q: at.q, r: at.r };
   const key = tileKey(city);
   const alone = (tiles: readonly TileCoords[]): boolean =>
     tiles.length === 1 && tileKey(tiles[0]) === key;
-  const population = 1 + catalogue.city.idle;
-  let landing = built(catalogue, paid, city, catalogue.city.building);
+  const population = 1 + paid.citySection.idle;
+  let landing = built(catalogue, paid, city, paid.citySection.building);
   landing = followed(landing, (left) =>
     alone(left.held)
       ? unchanged(left)

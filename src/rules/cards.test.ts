@@ -10,7 +10,7 @@ import {
   terraformed,
   throughWorker,
 } from './cards';
-import { type AimedCard, type Catalogue, cardOf, catalogued, deckOf } from './catalogue';
+import { type AimedCard, type Catalogue, cardOf, catalogued, type Deck, deckOf } from './catalogue';
 import { admitted, apply, byHand, type Command, outcome, refusalOf } from './chronicle';
 import { yielded } from './city';
 import {
@@ -26,6 +26,7 @@ import {
   CITY,
   camped,
   cityOf,
+  DECK,
   DECK_ID,
   DROUGHT,
   dealing,
@@ -71,9 +72,9 @@ import { walked } from './stages';
 import { type CardId, type Chronicle, idle, playable, type TileBlock } from './state';
 import { standsOn } from './units';
 
-/** A card aimed at a tile, ready to hand to `apply`. */
-function aimedAt(tile: TileCoords): Command {
-  return { type: 'play', index: 0, aim: 'tile', tile };
+/** A card of the hand, the first unless the fixture names another, aimed at a tile, ready to hand to `apply`. */
+function aimedAt(tile: TileCoords, index = 0): Command {
+  return { type: 'play', index, aim: 'tile', tile };
 }
 
 /** A card aimed at the unit standing on a tile, ready to hand to `apply`. */
@@ -394,13 +395,14 @@ test('a settle card is refused on an uncharted tile, on a terrain its content ta
 });
 
 test('a settle card aimed at nothing is refused on a tile', () => {
-  const opened = opening(plains(3), { deck: { cards: [], settle: ['PH_Stores', 'PH_Settle'] } });
+  const opened = opening(plains(3), { deck: { ...DECK, cards: [], settle: ['PH_Stores'] } });
 
-  expect(stagedBy(opened, aimedAt(CITY))).toEqual(['refused']);
+  expect(idsOf(opened.hand)).toEqual([DECK.city.card, 'PH_Stores']);
+  expect(stagedBy(opened, aimedAt(CITY, 1))).toEqual(['refused']);
 });
 
-/** A deck whose settle section enters two workers before the city settles, and holds no card besides. */
-const BANDS = { cards: [], settle: ['PH_Band', 'PH_Band', 'PH_Settle'] };
+/** A deck whose settle section enters two workers beside the city section's card, and holds no card besides. */
+const BANDS: Deck = { ...DECK, cards: [], settle: ['PH_Band', 'PH_Band'] };
 
 test('a settle card entering a unit admits every charted tile the unit stands on with no unit on it, and no camp, a guard standing on each from the opening', () => {
   const rough = { q: 1, r: 0 };
@@ -408,7 +410,7 @@ test('a settle card entering a unit admits every charted tile the unit stands on
   const out = { q: 3, r: 0 };
   const taken = { q: -1, r: 1 };
   const opened = opening(camped(madeOf(plains(3), 'mountain', [rough]), [camp]), { deck: BANDS });
-  const entered = outcome(apply(CATALOGUE, opened, aimedAt(taken)));
+  const entered = outcome(apply(CATALOGUE, opened, aimedAt(taken, 1)));
 
   expect(refusedFor(entered, 'PH_Band', out)).toBe('tile-uncharted');
   expect(refusedFor(entered, 'PH_Band', rough)).toBe('wrong-terrain');
@@ -422,7 +424,7 @@ test('a settle card entering a unit admits every charted tile the unit stands on
       .sort(),
   );
   for (const tile of [out, rough, taken, camp]) {
-    expect(stagedBy(entered, aimedAt(tile))).toEqual(['refused']);
+    expect(stagedBy(entered, aimedAt(tile, 1))).toEqual(['refused']);
   }
 });
 
@@ -430,11 +432,9 @@ test('a settle card entering a unit puts it on its tile full, takes no populatio
   const at = { q: 1, r: 1 };
   const opened = opening(plains(3), { deck: BANDS });
 
-  const stages = apply(CATALOGUE, opened, aimedAt(at));
+  const stages = apply(CATALOGUE, opened, aimedAt(at, 1));
   const before = outcome(stages);
-  const settled = outcome(
-    apply(CATALOGUE, before, { type: 'play', index: 1, aim: 'tile', tile: CITY }),
-  );
+  const settled = outcome(apply(CATALOGUE, before, aimedAt(CITY)));
   const after = outcome(apply(CATALOGUE, settled, aimedAt(CITY)));
 
   expect(namesOf(stages)).toEqual(['played', 'left', 'enter']);
@@ -446,7 +446,7 @@ test('a settle card entering a unit puts it on its tile full, takes no populatio
   expect(band.movePoints).toBe(band.stats.move);
   expect(band.action).toBe(band.stats.action);
   expect(before.population).toBe(0);
-  expect(idsOf(before.hand)).toEqual(['PH_Band', 'PH_Settle']);
+  expect(idsOf(before.hand)).toEqual(['PH_Settle', 'PH_Band']);
   expect(before.discardPile).toEqual([]);
 
   expect(settled.city).toEqual(CITY);
@@ -465,7 +465,7 @@ test('a unit entered on the settle phase neither moves nor attacks, and nothing 
     standing('player', warrior),
     standing('enemy', enemy),
   ]);
-  const entered = outcome(apply(CATALOGUE, opened, aimedAt({ q: 0, r: 1 })));
+  const entered = outcome(apply(CATALOGUE, opened, aimedAt({ q: 0, r: 1 }, 1)));
 
   for (const id of [1, 3]) {
     expect(byHand(CATALOGUE, entered, unitNamed(entered, id))).toEqual({
@@ -476,9 +476,7 @@ test('a unit entered on the settle phase neither moves nor attacks, and nothing 
   }
   expect(stagedBy(entered, attackOn(1, enemy))).toEqual(['refused']);
 
-  const settled = outcome(
-    apply(CATALOGUE, entered, { type: 'play', index: 1, aim: 'tile', tile: { q: -1, r: 0 } }),
-  );
+  const settled = outcome(apply(CATALOGUE, entered, aimedAt({ q: -1, r: 0 })));
   const ticked = outcome(apply(CATALOGUE, settled, { type: 'end-turn' }));
 
   expect(ticked.turn).toBe(1);

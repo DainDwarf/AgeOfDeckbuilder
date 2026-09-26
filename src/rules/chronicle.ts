@@ -143,6 +143,7 @@ export function beginChronicle(
     snapshots: [],
     rivers: map.rivers,
     centre: map.centre,
+    citySection: { ...deck.city },
     held: [],
     turn: 0,
     deals: [],
@@ -152,7 +153,7 @@ export function beginChronicle(
     units: [],
     nextUnit: 1,
     drawPile: shuffled.items,
-    hand: deck.settle.map(made),
+    hand: [deck.city.card, ...deck.settle].map(made),
     discardPile: [],
   };
   let guarded = begun;

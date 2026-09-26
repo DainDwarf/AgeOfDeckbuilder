@@ -14,5 +14,3 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 - **The headless simulator** — a consumer of the rules that runs only when asked and reports numbers, not diagnoses, tuned across the two ages; the reachability cache and the end of turn's cost per `apply` are looked at when it is made.
 
 ## Lines
-
-- **The city is the settle card's** — the catalogue holds no city record; a deck holds a city section naming its building, its sight, its idle population and its card; the chronicle carries the city section it was launched on and the save reads it; the settle puts that city down and sight reads its number; the catalogue refuses a region whose camps keep within the centre part's reach plus two. Doc-impact: `docs/DESIGN.md`, `docs/META.md`, `docs/CHRONICLE.md`, `docs/MAP.md`, `docs/GLOSSARY.md`, `docs/ages/NOMADIC.md`. [board/city-is-the-settle-cards.md](board/city-is-the-settle-cards.md)

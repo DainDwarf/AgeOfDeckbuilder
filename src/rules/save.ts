@@ -24,6 +24,7 @@ import type { Rng } from './rng';
 import type {
   Chronicle,
   ChronicleCard,
+  CitySection,
   Deal,
   DefeatCause,
   Ending,
@@ -148,6 +149,7 @@ function chronicleOf(catalogue: Catalogue, slot: Slot): Chronicle {
       list(catalogue, river, (item) => cornerOf(catalogue, item)),
     ),
     centre: list(catalogue, field('centre'), coords),
+    citySection: citySectionOf(catalogue, field('citySection')),
     city: optional(field('city'), coords),
     held: list(catalogue, field('held'), coords),
     turn: integer(catalogue, field('turn')),
@@ -174,6 +176,16 @@ function rngOf(catalogue: Catalogue, slot: Slot): Rng {
 
 function coordsIn(catalogue: Catalogue, field: (name: string) => Slot): TileCoords {
   return { q: integer(catalogue, field('q')), r: integer(catalogue, field('r')) };
+}
+
+function citySectionOf(catalogue: Catalogue, slot: Slot): CitySection {
+  const field = record(catalogue, slot);
+  return {
+    building: id(catalogue, field('building'), buildingKind),
+    sight: integer(catalogue, field('sight')),
+    idle: integer(catalogue, field('idle')),
+    card: id(catalogue, field('card'), cardOf),
+  };
 }
 
 function cornerOf(catalogue: Catalogue, slot: Slot): Corner {

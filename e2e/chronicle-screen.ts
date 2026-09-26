@@ -87,9 +87,9 @@ export function launchedOn(seed: number, deck?: Deck): Chronicle {
 }
 
 /**
- * A chronicle launched as `launchedOn` launches it and settled headlessly: the first settle card
- * played on the centre tile, the ones `onCity` names played on the city's tile, and the settle phase
- * ended with the rest in hand.
+ * A chronicle launched as `launchedOn` launches it and settled headlessly: the city section's card,
+ * first in hand, played on the centre tile, the ones `onCity` names played on the city's tile, and
+ * the settle phase ended with the rest in hand.
  */
 export function settledOn(seed: number, onCity: readonly CardId[] = [], deck?: Deck): Chronicle {
   let settling = playedOn(launchedOn(seed, deck), 0, CENTRE);

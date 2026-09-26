@@ -1,8 +1,9 @@
 import { expect, test } from 'vitest';
-import { type Catalogue, catalogued, entered } from './catalogue';
+import { entered } from './catalogue';
 import { apply, outcome } from './chronicle';
 import {
   CATALOGUE,
+  DECK,
   NO_DEALS,
   namesOf,
   opening,
@@ -23,7 +24,7 @@ import {
 import { seedRng } from './rng';
 import { charted, inSight } from './sight';
 import { walked } from './stages';
-import type { Chronicle, Snapshot } from './state';
+import type { Chronicle, CitySection, Snapshot } from './state';
 import type { UnitStats } from './units';
 
 const CITY: TileCoords = { q: 0, r: 0 };
@@ -41,7 +42,7 @@ const WATCHER: TileCoords = { q: 0, r: 5 };
 const SIGHT = 2;
 
 /** How far the fixture's city sees. */
-const CITY_SIGHT = CATALOGUE.city.sight;
+const CITY_SIGHT = DECK.city.sight;
 
 /** A tile so many steps off the watcher. */
 function off(q: number, r: number): TileCoords {
@@ -76,16 +77,16 @@ function ground(...relief: readonly Relief[]): Tile[] {
 
 /**
  * A city on that ground holding these tiles — its ring unless the test names others — with one
- * population on each.
+ * population on each, carrying the fixture deck's city section unless the test names another.
  */
 function cityOn(
   tiles: Tile[],
   holding: readonly TileCoords[] = RING,
-  catalogue: Catalogue = CATALOGUE,
+  citySection: CitySection = DECK.city,
 ): Chronicle {
   const held = [...holding];
-  return charted(catalogue, {
-    content: catalogue.version,
+  return charted(CATALOGUE, {
+    content: CATALOGUE.version,
     age: QUIET,
     seed: 7,
     rng: seedRng(7),
@@ -94,6 +95,7 @@ function cityOn(
     snapshots: [],
     rivers: [],
     centre: [],
+    citySection,
     city: CITY,
     held,
     turn: 1,
@@ -229,10 +231,9 @@ test('the city sees over the ground as a unit does: a forest beside it hides wha
 });
 
 test('a city of sight one sees the six tiles around it, and none beyond them', () => {
-  const narrow = catalogued({ ...CATALOGUE, city: { ...CATALOGUE.city, sight: 1 } });
   const tiles = ground();
-  const chronicle = cityOn(tiles, [CITY], narrow);
-  const seen = inSight(narrow, chronicle);
+  const chronicle = cityOn(tiles, [CITY], { ...DECK.city, sight: 1 });
+  const seen = inSight(CATALOGUE, chronicle);
 
   for (const tile of tiles) {
     if (distance(CITY, tile) > 2) continue;
@@ -276,9 +277,11 @@ test('nothing sees on the settle phase: a unit entered at the centre part’s ed
   const beyond = { q: 3 + CATALOGUE.units.PH_Worker.sight, r: 0 };
   const opened = opening(plains(RADIUS), {
     reach: 3,
-    deck: { cards: [], settle: ['PH_Band', 'PH_Settle'] },
+    deck: { ...DECK, cards: [], settle: ['PH_Band'] },
   });
-  const entered = settledOn(opened, at);
+  const entered = outcome(
+    apply(CATALOGUE, opened, { type: 'play', index: 1, aim: 'tile', tile: at }),
+  );
   const settled = settledOn(entered, CITY);
   const ticked = outcome(apply(CATALOGUE, settled, { type: 'end-turn' }));
 

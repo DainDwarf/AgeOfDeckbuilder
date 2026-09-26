@@ -84,7 +84,9 @@ export function inSight(catalogue: Catalogue, chronicle: Chronicle): ReadonlySet
   const seen = new Set(chronicle.held.map(tileKey));
 
   const watching =
-    chronicle.city === undefined ? [] : [{ from: chronicle.city, sight: catalogue.city.sight }];
+    chronicle.city === undefined
+      ? []
+      : [{ from: chronicle.city, sight: chronicle.citySection.sight }];
   for (const unit of chronicle.units) {
     if (unit.faction === 'player') watching.push({ from: unit.tile, sight: unit.stats.sight });
   }

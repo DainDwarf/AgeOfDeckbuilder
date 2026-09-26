@@ -91,9 +91,9 @@ const TABLES: Tables = {
       kind: 'settle',
       cost: {},
       aim: 'tile',
-      refuses: (catalogue, _chronicle, tile) =>
+      refuses: (catalogue, chronicle, tile) =>
         firstRefusal(
-          made(catalogue, tile, buildingKind(catalogue, catalogue.city.building).terrains),
+          made(catalogue, tile, buildingKind(catalogue, chronicle.citySection.building).terrains),
           slotFree(tile),
         ),
       effect: (catalogue, paid, at) => settled(catalogue, paid, at),
@@ -180,7 +180,8 @@ const TABLES: Tables = {
         ...Array<string>(2).fill('trapping'),
         ...Array<string>(2).fill('march'),
       ],
-      settle: ['settle', 'first-worker', 'first-scout'],
+      settle: ['first-worker', 'first-scout'],
+      city: { building: 'city', sight: 2, idle: 0, card: 'settle' },
     },
   },
   events: {

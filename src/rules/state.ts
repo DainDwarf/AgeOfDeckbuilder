@@ -24,6 +24,17 @@ export type Counters = Readonly<Record<string, number>>;
 export type ChronicleCard = { readonly id: CardId; readonly counters: Counters };
 
 /**
+ * The deck's city section: the city's building by id, how far the city sees, how many population the
+ * chronicle opens with besides the one on the city's tile, and the card that settles it.
+ */
+export type CitySection = {
+  readonly building: string;
+  readonly sight: number;
+  readonly idle: number;
+  readonly card: CardId;
+};
+
+/**
  * One chronicle's roll of its age's schedule, from a generator of its own that nothing the player
  * does steps: the turn the next deal is due on, and the capstone by its id with the turn it lands on.
  */
@@ -65,6 +76,8 @@ export type Chronicle = {
   readonly rivers: River[];
   /** The map's centre part: the whole of what is in sight on the settle phase before the city stands. */
   readonly centre: TileCoords[];
+  /** The city section of the deck the chronicle was launched on, as it stood at the launch. */
+  readonly citySection: CitySection;
   /** The tile the city stands on, and nothing at all until the settle puts it on one. */
   readonly city?: TileCoords;
   readonly held: TileCoords[];

@@ -101,7 +101,7 @@ test('Launch opens the chronicle on the defaults, and the address stays bare thr
   expect(launched.content).toBe(CATALOGUE.version);
   expect(launched.age).toBe(firsts.age);
   expect(idsOf([...launched.drawPile, ...launched.hand, ...launched.discardPile]).sort()).toEqual(
-    [...deck.cards, ...deck.settle].sort(),
+    [deck.city.card, ...deck.cards, ...deck.settle].sort(),
   );
 
   await expect.poll(() => standing(page, 'menu-button')).toBe(true);

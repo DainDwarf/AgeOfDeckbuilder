@@ -8,6 +8,7 @@ import {
   cardOf,
   catalogued,
   entered,
+  FIRST_STEPS,
   merged,
   type Schedule,
   type Slice,
@@ -220,12 +221,20 @@ test('a catalogue whose camp is a building it does not hold is refused', () => {
   expect(() => catalogued(content)).toThrow(/^fixture: /);
 });
 
-test('a catalogue whose city sees or opens with idle population below nought is refused', () => {
-  for (const below of [{ sight: -1 }, { idle: -1 }]) {
-    const content = changed({ city: { ...CATALOGUE.city, ...below } });
+test('a catalogue whose deck’s city section names a building it does not hold, or a city that sees or opens with idle population below nought, is refused', () => {
+  for (const off of [{ building: 'PH_Fort' }, { sight: -1 }, { idle: -1 }]) {
+    const content = changed({ decks: { deck: { ...DECK, city: { ...DECK.city, ...off } } } });
 
     expect(() => catalogued(content)).toThrow(/^fixture: /);
   }
+});
+
+test('a catalogue whose deck’s city section holds a card of another kind than settle is refused', () => {
+  const content = changed({
+    decks: { deck: { ...DECK, city: { ...DECK.city, card: 'PH_Harvest' } } },
+  });
+
+  expect(() => catalogued(content)).toThrow(/^fixture: /);
 });
 
 test('a catalogue whose deck names a card it does not hold is refused', () => {
@@ -271,19 +280,23 @@ test('a catalogue whose deck holds a settle card among its cards is refused', ()
   expect(() => catalogued(content)).toThrow(/^fixture: /);
 });
 
-test('a catalogue whose region’s camps may come within sight of the settle wherever it lands is refused', () => {
+test('a catalogue whose region’s camps keep within the centre part’s reach plus the first steps is refused, whatever the city sees', () => {
   const disc = REGIONS[REGION];
-  const reach = disc.centre + CATALOGUE.city.sight;
+  const reach = disc.centre + FIRST_STEPS;
   const near = changed(regioned({ [REGION]: { ...disc, campFromCentre: reach } }));
   const far = changed({
     version: 'far',
     ...regioned({ [REGION]: { ...disc, campFromCentre: reach + 1 } }),
   });
-  const seeing = changed({ city: { ...CATALOGUE.city, sight: disc.campFromCentre - disc.centre } });
+  const sight = disc.campFromCentre - disc.centre;
+  const seeing = changed({
+    version: 'seeing',
+    decks: { deck: { ...DECK, city: { ...DECK.city, sight } } },
+  });
 
   expect(() => catalogued(near)).toThrow(/^fixture: /);
   expect(catalogued(far)).toBe(far);
-  expect(() => catalogued(seeing)).toThrow(/^fixture: /);
+  expect(catalogued(seeing)).toBe(seeing);
 });
 
 test('a catalogue whose camp deals a reward it does not hold, or no reward at all, is refused', () => {
@@ -395,13 +408,13 @@ test('the merge refuses an id two ages bring to one table and an age two slices 
     owns: ageOf(CATALOGUE, AGE),
     brings: { cards: { PH_Harvest: cardOf(CATALOGUE, 'PH_Harvest') } },
   };
-  const { version, city } = CATALOGUE;
+  const { version } = CATALOGUE;
 
-  expect(() => merged(version, city, [...SLICES, later])).toThrow(/^fixture: /);
-  expect(() => merged(version, city, [...SLICES, { ...later, id: AGE, brings: {} }])).toThrow(
+  expect(() => merged(version, [...SLICES, later])).toThrow(/^fixture: /);
+  expect(() => merged(version, [...SLICES, { ...later, id: AGE, brings: {} }])).toThrow(
     /^fixture: /,
   );
-  expect(Object.keys(merged(version, city, [...SLICES, { ...later, brings: {} }]).ages)).toEqual([
+  expect(Object.keys(merged(version, [...SLICES, { ...later, brings: {} }]).ages)).toEqual([
     ...SLICES.map(({ id }) => id),
     'PH_Later',
   ]);

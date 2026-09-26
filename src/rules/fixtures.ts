@@ -81,6 +81,7 @@ import {
   type CardId,
   type Chronicle,
   type ChronicleCard,
+  type CitySection,
   type Deal,
   holds,
   type Timeline,
@@ -347,6 +348,9 @@ const BEELINE: EnemyScript = {
 /** The id the fixture catalogue lists its one deck under. */
 export const DECK_ID = 'deck';
 
+/** The city section of the fixture's deck, and of every chronicle the fixture builds directly. */
+const CITY_SECTION: CitySection = { building: 'PH_City', sight: 2, idle: 2, card: 'PH_Settle' };
+
 /** What the fixture's first age brings to the tables every age shares. */
 const TABLES: Tables = {
   units: {
@@ -524,7 +528,8 @@ const TABLES: Tables = {
         'PH_Harvest',
         'PH_Harvest',
       ],
-      settle: ['PH_Settle', 'PH_Claim'],
+      settle: ['PH_Claim'],
+      city: CITY_SECTION,
     },
   },
   events: EVENTS,
@@ -766,11 +771,7 @@ export const SLICES: readonly Slice[] = Object.entries(agesOver(CAMP, REGIONS)).
 );
 
 /** The content every fixture is played on, its numbers the fixture's own. */
-export const CATALOGUE: Catalogue = merged(
-  'fixture',
-  { building: 'PH_City', sight: 2, idle: 2 },
-  SLICES,
-);
+export const CATALOGUE: Catalogue = merged('fixture', SLICES);
 
 /**
  * A timeline dealing nothing in the quiet age: its next deal, and the capstone, on a turn past any a
@@ -868,6 +869,7 @@ export function cityOf(
       { q: 0, r: 5, terrain: 'plain', improvements: [] },
     ],
     rivers: [],
+    citySection: CITY_SECTION,
     city: CITY,
     held,
     turn: 1,
@@ -1173,7 +1175,7 @@ export function fullDraw(): CardId[] {
   return ['PH_Worker', 'PH_Warrior', 'PH_Farm', 'PH_March', 'PH_Harvest'];
 }
 
-/** The deck these chronicles are played on: two of each card, enough to draw a hand and cycle, and the settle. */
+/** The deck these chronicles are played on: two of each card, enough to draw a hand and cycle, the claim, and the city. */
 export const DECK: Deck = deckOf(CATALOGUE, DECK_ID);
 
 /**
