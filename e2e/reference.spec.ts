@@ -41,15 +41,20 @@ function namedIn(entry: string): Reference[] {
 
 /**
  * The first answer the deal standing offers whose rules entry names a card: the answer, where the
- * deal window lays it, and the card it names.
+ * deal window lays it, the card it names, and where that name stands among the entry's names.
  */
-function namingAnswer(dealt: Chronicle): { answer: string; at: number; named: string } {
+function namingAnswer(dealt: Chronicle): {
+  answer: string;
+  at: number;
+  named: string;
+  name: number;
+} {
   const [deal] = dealt.deals;
   if (deal?.of !== 'event') throw new Error(`turn ${dealt.turn} deals no event`);
   for (const [at, answer] of offered(NOMADIC, deal).entries()) {
-    const face = answerFace(NOMADIC, dealt, deal.event, answer);
-    const named = namedIn(face.rules).find((reference) => reference.kind === 'card');
-    if (named !== undefined) return { answer, at, named: named.id };
+    const names = namedIn(answerFace(NOMADIC, dealt, deal.event, answer).rules);
+    const name = names.findIndex((reference) => reference.kind === 'card');
+    if (name !== -1) return { answer, at, named: names[name].id, name };
   }
   throw new Error(`the ${deal.event} offers no answer naming a card`);
 }
@@ -79,7 +84,7 @@ test('a card named on a card raises it small at a rest and shows it large at a r
 }) => {
   const problems = watch(page);
   const dealt = leanSeason();
-  const { answer, at, named } = namingAnswer(dealt);
+  const { answer, at, named, name: naming } = namingAnswer(dealt);
   const answering = `deal-card-${at}`;
 
   await openSaved(page, dealt);
@@ -87,7 +92,7 @@ test('a card named on a card raises it small at a rest and shows it large at a r
   await rested(page);
   expect(await cardOnFace(page, answering)).toBe(answer);
 
-  const name = await nameOnScreen(page, answering);
+  const name = await nameOnScreen(page, answering, naming);
   await page.mouse.move(name.x, name.y);
   await expect.poll(() => cardOnFace(page, 'small-card-0')).toBe(named);
 
@@ -138,7 +143,7 @@ test('a card named on a card raises it small at a rest and shows it large at a r
   const large = await onScreen(page, 'inspection');
   await page.mouse.move(large.x, large.y);
   await expect.poll(() => cursorOverCanvas(page)).not.toBe(HAND);
-  const own = await nameOnScreen(page, 'inspection');
+  const own = await nameOnScreen(page, 'inspection', naming);
   await page.mouse.move(own.x, own.y);
   await expect.poll(() => cursorOverCanvas(page)).toBe(HAND);
 

@@ -2,6 +2,7 @@ import { expect, type Page, test } from '@playwright/test';
 import type Phaser from 'phaser';
 import { NOMADIC } from '../src/content/nomadic';
 import {
+  bareTile,
   click,
   onScreen,
   openSaved,
@@ -14,8 +15,9 @@ import {
   watch,
 } from './chronicle-screen';
 
-/** A charted tile with nothing on it, clear of the resource bar, the piles and the hand. */
-const BARE = { q: 0, r: -3 };
+const OPENED = settledOn(NOMADIC, 1);
+
+const BARE = bareTile(OPENED);
 
 /** Every slot of the Controls window as it reads before a single key has been rebound. */
 const AS_FOUND = [
@@ -185,7 +187,7 @@ async function outOfControls(page: Page): Promise<void> {
 test('a slot takes the next key pressed, and keeps it across a reload', async ({ page }) => {
   const problems = watch(page);
 
-  await openSaved(page, settledOn(NOMADIC, 1));
+  await openSaved(page, OPENED);
   await intoControls(page);
   expect(await rows(page)).toEqual(AS_FOUND);
 
@@ -224,7 +226,7 @@ test("a control fires on its key's place, and a key that prints nothing binds th
 }) => {
   const problems = watch(page);
 
-  await openSaved(page, settledOn(NOMADIC, 1));
+  await openSaved(page, OPENED);
 
   // The place W stands on in the US layout, under a layout that prints Z on it. The frame pans up,
   // so what stands on the map comes down the screen.
@@ -242,7 +244,7 @@ test("a control fires on its key's place, and a key that prints nothing binds th
 test('a key bound to a second slot leaves the slot that had it', async ({ page }) => {
   const problems = watch(page);
 
-  await openSaved(page, settledOn(NOMADIC, 1));
+  await openSaved(page, OPENED);
   await intoControls(page);
 
   await click(page, 'controls-pan-left-0');
@@ -259,7 +261,7 @@ test('the back key binds like any other, and the Back button closes without it',
 }) => {
   const problems = watch(page);
 
-  await openSaved(page, settledOn(NOMADIC, 1));
+  await openSaved(page, OPENED);
   await intoControls(page);
 
   await click(page, 'controls-pan-down-1');
@@ -294,7 +296,7 @@ test('the back key binds like any other, and the Back button closes without it',
 test('a slot takes the Tab key, which the game holds on to', async ({ page }) => {
   const problems = watch(page);
 
-  await openSaved(page, settledOn(NOMADIC, 1));
+  await openSaved(page, OPENED);
   await intoControls(page);
 
   await click(page, 'controls-pan-up-1');
@@ -313,7 +315,7 @@ test('a slot takes the Tab key, which the game holds on to', async ({ page }) =>
 test("a chord is the browser's, and binds nothing", async ({ page }) => {
   const problems = watch(page);
 
-  await openSaved(page, settledOn(NOMADIC, 1));
+  await openSaved(page, OPENED);
   await intoControls(page);
 
   await click(page, 'controls-pan-up-1');
@@ -372,7 +374,7 @@ test("a chord is the browser's, and binds nothing", async ({ page }) => {
 test('a slot bound to the space bar says so, instead of reading empty', async ({ page }) => {
   const problems = watch(page);
 
-  await openSaved(page, settledOn(NOMADIC, 1));
+  await openSaved(page, OPENED);
   await intoControls(page);
 
   await click(page, 'controls-pan-up-0');
@@ -385,7 +387,7 @@ test('a slot bound to the space bar says so, instead of reading empty', async ({
 test('Default puts every key back where it began', async ({ page }) => {
   const problems = watch(page);
 
-  await openSaved(page, settledOn(NOMADIC, 1));
+  await openSaved(page, OPENED);
   await intoControls(page);
 
   await click(page, 'controls-pan-up-0');
@@ -406,7 +408,7 @@ test('a slot takes a mouse button, and the button then pans the way a key does',
 }) => {
   const problems = watch(page);
 
-  await openSaved(page, settledOn(NOMADIC, 1));
+  await openSaved(page, OPENED);
   await intoControls(page);
 
   await click(page, 'controls-pan-up-1');
@@ -429,7 +431,7 @@ test('a key bound to a zoom zooms the map, and the wheel moved off it stops zoom
 }) => {
   const problems = watch(page);
 
-  await openSaved(page, settledOn(NOMADIC, 1));
+  await openSaved(page, OPENED);
   await intoControls(page);
 
   await click(page, 'controls-zoom-in-1');
@@ -473,7 +475,7 @@ test('a right click leaves a window standing, and the back key still steps out o
 }) => {
   const problems = watch(page);
 
-  await openSaved(page, settledOn(NOMADIC, 1));
+  await openSaved(page, OPENED);
   await intoControls(page);
 
   // The middle of the design space: the windows stand on it, and bare map lies under them.
@@ -496,7 +498,7 @@ test('a right drag carries the map as a left drag does, and the button on its ow
 }) => {
   const problems = watch(page);
 
-  await openSaved(page, settledOn(NOMADIC, 1));
+  await openSaved(page, OPENED);
 
   expect(await draggedBy(page, 'left', 120)).toBeCloseTo(120, 0);
   expect(await draggedBy(page, 'right', -120)).toBeCloseTo(-120, 0);
@@ -512,7 +514,7 @@ test('a right drag carries the map as a left drag does, and the button on its ow
 test('a press anywhere else lets go of the slot that was listening', async ({ page }) => {
   const problems = watch(page);
 
-  await openSaved(page, settledOn(NOMADIC, 1));
+  await openSaved(page, OPENED);
   await intoControls(page);
 
   await click(page, 'controls-pan-up-0');
