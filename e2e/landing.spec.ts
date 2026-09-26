@@ -1,57 +1,69 @@
 import { expect, type Page, test } from '@playwright/test';
-import { STAND_IN } from '../src/content/stand-in';
-import { deckOf } from '../src/rules/catalogue';
+import { NOMADIC } from '../src/content/nomadic';
 import { apply, outcome } from '../src/rules/chronicle';
 import { type TileCoords, tileKey } from '../src/rules/map';
 import { offered } from '../src/rules/schedule';
 import { inSight } from '../src/rules/sight';
 import { walked } from '../src/rules/stages';
+import type { Chronicle } from '../src/rules/state';
+import { type Bindings, bound, DEFAULTS, STORED, serialiseBindings } from '../src/ui/bindings';
 import {
   budget,
-  endedTurn,
   firstSeed,
   inside,
-  launch,
   mapFrame,
   onScreen,
-  open,
+  openSaved,
   rested,
+  settledOn,
   standing,
-  stoppedTurn,
   take,
   tileOnScreen,
   watch,
 } from './chronicle-screen';
 
-/** The schedule whose one event deals an answer that charts the tile it deals a feature onto. */
-const WILDS = 'PH_WildsSchedule';
+/** The event whose answer charts the tile it deals a feature onto, and that answer. */
+const HERD = 'herd';
+const FOLLOW = 'follow-it';
+
+/** The key the spec binds to the zoom-in's empty second slot, by its place. */
+const ZOOM_KEY = { code: 'KeyZ', press: 'z' };
 
 /**
- * The first seed whose first deal stands alone and deals the wilds, and whose `PH_Follow` charts a
- * tile the map does not draw on the chronicle the deal stands on; the turn that deal is due on, the
- * place `PH_Follow` stands in it, and the tile.
+ * The first seed whose first deal stands alone and deals the herd, and whose follow-it charts a tile
+ * the map does not draw on the chronicle the deal stands on: that chronicle, its turns ended with
+ * nothing to take before the deal, the place follow-it stands in the deal, and the tile.
  */
-function followRun(): { seed: number; due: number; at: number; tile: TileCoords } {
+function herdDealt(): { dealt: Chronicle; at: number; tile: TileCoords } {
   return firstSeed('charts a tile the map does not draw on its first deal', (seed) => {
-    const opened = launch(seed, deckOf(STAND_IN, 'PH_Deck'), WILDS);
-    const due = opened.timeline.next;
-
-    let chronicle = opened;
-    for (let turn = 1; turn < due - 1; turn++) chronicle = endedTurn(chronicle);
-    const dealt = outcome(apply(STAND_IN, chronicle, { type: 'end-turn' }));
+    let dealt = settledOn(NOMADIC, seed);
+    for (let turn = 0; turn < 20 && dealt.deals.length === 0; turn++) {
+      if (dealt.ending !== undefined) return undefined;
+      dealt = outcome(apply(NOMADIC, dealt, { type: 'end-turn' }));
+    }
     const [deal, ...behind] = dealt.deals;
-    if (deal?.of !== 'event' || deal.event !== 'PH_Wilds' || behind.length > 0) return undefined;
+    if (deal?.of !== 'event' || deal.event !== HERD || behind.length > 0) return undefined;
 
-    const at = offered(STAND_IN, deal).indexOf('PH_Follow');
-    const [tile] = [...walked(apply(STAND_IN, dealt, { type: 'take', at }))].flatMap((stage) =>
+    const at = offered(NOMADIC, deal).indexOf(FOLLOW);
+    const [tile] = [...walked(apply(NOMADIC, dealt, { type: 'take', at }))].flatMap((stage) =>
       stage.name === 'charted' ? [stage.tile] : [],
     );
     if (tile === undefined) return undefined;
     const key = tileKey(tile);
     const drawn =
-      inSight(STAND_IN, dealt).has(key) || dealt.snapshots.some((kept) => tileKey(kept) === key);
-    return drawn ? undefined : { seed, due, at, tile };
+      inSight(NOMADIC, dealt).has(key) || dealt.snapshots.some((kept) => tileKey(kept) === key);
+    return drawn ? undefined : { dealt, at, tile };
   });
+}
+
+/** The bindings kept as the ones the pages this one loads from now on find. */
+async function plantControls(page: Page, bindings: Bindings): Promise<void> {
+  await page.addInitScript(
+    ({ entry, kept }) => {
+      window.localStorage.setItem(entry, kept);
+    },
+    { entry: STORED, kept: serialiseBindings(bindings) },
+  );
 }
 
 /**
@@ -83,20 +95,23 @@ test("an answer's charted tile, pushed out of the frame under the deal window, i
   page,
 }) => {
   const problems = watch(page);
-  const run = followRun();
-  // The turns ended up to the due one, and the take that plays the rest of it out.
-  test.setTimeout(budget(run.due));
+  // The take plays the rest of the end of turn out.
+  test.setTimeout(budget(1));
+  const run = herdDealt();
   const key = tileKey(run.tile);
 
-  await open(page, run.seed, 'PH_Deck', WILDS);
-  // A wheel notch over the deal window's scrim is the scrim's, so the map is zoomed before it rises.
-  const frame = await mapFrame(page);
-  await page.mouse.move(frame.x + frame.width / 2, frame.y + frame.height / 2);
-  for (let notch = 0; notch < 2; notch++) await page.mouse.wheel(0, -100);
+  await plantControls(page, bound(DEFAULTS, 'zoom-in', 1, { code: ZOOM_KEY.code }));
+  await openSaved(page, run.dealt);
+  await expect.poll(() => standing(page, 'deal')).toBe(true);
   await rested(page);
 
-  for (let turn = 1; turn < run.due; turn++) await stoppedTurn(page);
-  await expect.poll(() => standing(page, 'deal')).toBe(true);
+  // A tile near the middle of the disc leaves a frame at full width only zoomed in.
+  const frame = await mapFrame(page);
+  const unzoomed = await tileOnScreen(page, run.tile);
+  await page.mouse.move(frame.x + frame.width / 2, frame.y + frame.height / 2);
+  for (let notch = 0; notch < 2; notch++) await page.keyboard.press(ZOOM_KEY.press);
+  await rested(page);
+  expect((await tileOnScreen(page, run.tile)).unit).toBeGreaterThan(unzoomed.unit);
 
   await pushOut(page, run.tile);
   expect(inside(await tileOnScreen(page, run.tile), frame)).toBe(false);

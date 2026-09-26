@@ -27,7 +27,7 @@ async function answered(page: Page): Promise<void> {
 /** How many glyphs each resource is owed: one for every point the tiles the map draws yield of it. */
 async function owed(page: Page): Promise<Glyphs> {
   const chronicle = await chronicleOf(page);
-  return glyphsOf(drawnFaces(chronicle), chronicle.rivers);
+  return glyphsOf(chronicle, drawnFaces(chronicle));
 }
 
 /** What the overlay would show with these resources on it, and nothing of every other. */

@@ -1,21 +1,18 @@
 import { expect, type Page, test } from '@playwright/test';
 import type Phaser from 'phaser';
-import { STAND_IN } from '../src/content/stand-in';
-import { deckOf } from '../src/rules/catalogue';
-import { type TileCoords, tileKey } from '../src/rules/map';
+import { NOMADIC } from '../src/content/nomadic';
+import { tileKey } from '../src/rules/map';
 import { inSight } from '../src/rules/sight';
 import {
   budget,
   chronicleOf,
   consoleKey,
-  endedTurn,
-  endTurn,
+  enemiesOf,
   enter,
-  firstSeed,
-  launch,
   marksIn,
-  open,
+  openSaved,
   rested,
+  settledOn,
   shows,
   standing,
   tileOnScreen,
@@ -24,27 +21,6 @@ import {
 
 /** A tile on bare map, clear of the resource bar, the piles and the hand; the opening never sees it. */
 const BARE = { q: 0, r: -3 };
-
-/** The chronicle an enemy stands on a tile of that nobody has ever charted. */
-type Run = { readonly seed: number; readonly turns: number; readonly enemy: TileCoords };
-
-/**
- * The first seed whose first ends of turn put an enemy on a tile the map draws nothing of: it stands
- * uncharted, so neither the enemy nor the ground under it is drawn until a veil comes off.
- */
-function unchartedEnemy(): Run {
-  return firstSeed('stands an enemy on an uncharted tile inside eight turns', (seed) => {
-    let chronicle = launch(seed, deckOf(STAND_IN, 'PH_Deck'));
-    for (let turns = 1; turns <= 8; turns++) {
-      chronicle = endedTurn(chronicle);
-      if (chronicle.ending !== undefined) return undefined;
-      const charted = new Set(chronicle.snapshots.map(tileKey));
-      const enemy = chronicle.units.find((unit) => !charted.has(tileKey(unit.tile)));
-      if (enemy !== undefined) return { seed, turns, enemy: enemy.tile };
-    }
-    return undefined;
-  });
-}
 
 /** What the console reads, line by line, the line being typed last of all. */
 function consoleLines(page: Page): Promise<string[]> {
@@ -100,7 +76,7 @@ test('the key above Tab opens the console, which then holds the keyboard', async
   // No turn is played out; the budget covers the boot and the gestures held over a dozen frames.
   test.setTimeout(budget(1));
 
-  await open(page, 1, 'PH_Deck');
+  await openSaved(page, settledOn(NOMADIC, 1));
   expect(await shows(page, 'console')).toBe(false);
 
   // The frame pans up under the pan key, so what stands on the map comes down the screen.
@@ -141,16 +117,17 @@ test('the key above Tab opens the console, which then holds the keyboard', async
 
 test('the two switches draw the whole map, and put the fog back where it was', async ({ page }) => {
   const problems = watch(page);
-  const run = unchartedEnemy();
-  test.setTimeout(budget(run.turns));
+  const stood = settledOn(NOMADIC, 1);
+  const [guard] = enemiesOf(stood);
+  const enemy = guard.tile;
+  expect(stood.snapshots.map(tileKey)).not.toContain(tileKey(enemy));
 
-  await open(page, run.seed, 'PH_Deck');
-  for (let turn = 0; turn < run.turns; turn++) await endTurn(page);
+  await openSaved(page, stood);
 
-  const stood = await chronicleOf(page);
-  const seen = inSight(STAND_IN, stood);
+  const seen = inSight(NOMADIC, stood);
   const fogged = stood.snapshots.filter((snapshot) => !seen.has(tileKey(snapshot))).length;
-  expect(await standing(page, `tile-${tileKey(run.enemy)}`)).toBe(false);
+  expect(await chronicleOf(page)).toEqual(stood);
+  expect(await standing(page, `tile-${tileKey(enemy)}`)).toBe(false);
   expect(await marksIn(page, 'terrain')).toBe(stood.snapshots.length);
 
   await consoleKey(page);
@@ -159,7 +136,7 @@ test('the two switches draw the whole map, and put the fog back where it was', a
   await consoleKey(page);
 
   // Every tile of the disc is drawn now, and every one of them out of sight stands under a scrim.
-  expect(await standing(page, `tile-${tileKey(run.enemy)}`)).toBe(true);
+  expect(await standing(page, `tile-${tileKey(enemy)}`)).toBe(true);
   expect(await marksIn(page, 'terrain')).toBe(stood.tiles.length);
   expect(await marksIn(page, 'fog')).toBe(stood.tiles.length - seen.size);
 
@@ -186,7 +163,7 @@ test('the two switches draw the whole map, and put the fog back where it was', a
   await consoleKey(page);
 
   // Both veils back: the map draws what it has charted, and no more.
-  expect(await standing(page, `tile-${tileKey(run.enemy)}`)).toBe(false);
+  expect(await standing(page, `tile-${tileKey(enemy)}`)).toBe(false);
   expect(await marksIn(page, 'terrain')).toBe(stood.snapshots.length);
   expect(await marksIn(page, 'fog')).toBe(fogged);
 

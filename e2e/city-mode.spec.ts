@@ -656,10 +656,10 @@ test('the tile wearing the culture threshold shows none of the overlay’s glyph
 
   const chronicle = await chronicleOf(page);
   const faces = drawnFaces(chronicle);
-  const all = glyphsOf(faces, chronicle.rivers);
+  const all = glyphsOf(chronicle, faces);
   const bare = glyphsOf(
+    chronicle,
     faces.filter((face) => tileKey(face) !== TOUCHING.key),
-    chronicle.rivers,
   );
   expect(bare).not.toEqual(all);
   expect(await glyphs(page)).toEqual(all);

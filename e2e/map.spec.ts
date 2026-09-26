@@ -1,36 +1,37 @@
 import { expect, type Page, test } from '@playwright/test';
-import { STAND_IN } from '../src/content/stand-in';
-import { deckOf } from '../src/rules/catalogue';
-import { apply } from '../src/rules/chronicle';
-import { type TileCoords, tileKey } from '../src/rules/map';
+import { NOMADIC } from '../src/content/nomadic';
+import { apply, outcome } from '../src/rules/chronicle';
+import { campUnit } from '../src/rules/enemies';
+import { CENTRE, type TileCoords, tileKey } from '../src/rules/map';
 import { inSight } from '../src/rules/sight';
 import { walked } from '../src/rules/stages';
+import type { Chronicle } from '../src/rules/state';
 import {
+  admits,
   aimed,
   budget,
+  campGround,
   chronicleOf,
   cityTileOf,
   dragOut,
-  dragUnit,
-  endedTurn,
   endTurn,
-  firstSeed,
   idsOf,
   inside,
-  launch,
   mapFrame,
   onScreen,
-  open,
+  openSaved,
   playedOut,
-  playersOf,
   rested,
   ringedTile,
+  type Step,
+  settledOn,
   shownCard,
   standing,
   tileOnScreen,
   tooltipUp,
+  unitEntered,
   watch,
-  workerRun,
+  workerStepped,
 } from './chronicle-screen';
 
 /** A point on bare map, clear of the resource bar, the piles and the hand; no tile is read off it. */
@@ -39,12 +40,30 @@ const BARE = { at: { q: 0, r: -3 }, key: '0,-3' };
 /** A bare tile the opening charts, clear of the same three: what a press picks out. */
 const CHARTED = { at: { q: 1, r: -2 }, key: '1,-2' };
 
-/** The tiles furthest east and furthest south: the last of the map to leave the frame. */
-const EAST: TileCoords = { q: 8, r: 0 };
-const SOUTH: TileCoords = { q: 0, r: 8 };
-
 /** What one wheel notch multiplies the zoom by. */
 const NOTCH = 1.3;
+
+/** The card the worker plays where it stands. */
+const GATHER = 'gather';
+
+/** Seed 1's bare turn 1. */
+const OPENED = settledOn(NOMADIC, 1);
+
+/** The tile of the list furthest along the measure given. */
+function furthest(tiles: readonly TileCoords[], by: (tile: TileCoords) => number): TileCoords {
+  const { q, r } = tiles.reduce((far, tile) => (by(tile) > by(far) ? tile : far));
+  return { q, r };
+}
+
+/** The tiles furthest east and furthest south: the last of the map to leave the frame. */
+const EAST = furthest(
+  OPENED.tiles.filter((tile) => tile.r === CENTRE.r),
+  (tile) => tile.q,
+);
+const SOUTH = furthest(
+  OPENED.tiles.filter((tile) => tile.q === CENTRE.q),
+  (tile) => tile.r,
+);
 
 type Point = { x: number; y: number };
 
@@ -83,39 +102,42 @@ async function pushOut(page: Page, coord: TileCoords): Promise<void> {
   }
 }
 
+/** The first seed's turn 1 whose first worker steps off the city onto a tile gather admits. */
+function gatherStep(): Step {
+  return workerStepped(
+    'steps its first worker off the city with gather to play there',
+    (stepped, tile) => admits(stepped, idsOf(stepped.hand).indexOf(GATHER), tile),
+  );
+}
+
 /**
- * The first seed whose enemy crosses the map in an end of turn all to itself — one move, no deal in
- * the same end of turn whose taking would land arrivals to carry the frame off after it, and a tile
- * of the crossing in sight, so that the map plays it at all — and how many ends of turn stand before
- * that one.
+ * Seed 1's bare turn 1 with a raider entered three tiles out, on the first tile whose end of turn is
+ * its one move with a tile of it in sight and no deal, and the crossing's two tiles.
  */
-function moveRun(): { seed: number; turns: number; from: TileCoords; to: TileCoords } {
-  return firstSeed('crosses an enemy in sight inside eight ends of turn', (seed) => {
-    let chronicle = launch(seed, deckOf(STAND_IN, 'PH_Deck'));
-    for (let turns = 0; turns <= 8 && chronicle.ending === undefined; turns++) {
-      const stages = [...walked(apply(STAND_IN, chronicle, { type: 'end-turn' }))];
-      const moves = stages.flatMap((stage) =>
-        stage.name === 'move'
-          ? [{ from: stage.from, to: stage.to, seen: inSight(STAND_IN, stage.chronicle) }]
-          : [],
-      );
-      const [crossing] = moves;
-      if (
-        moves.length === 1 &&
-        !stages.some((stage) => stage.name === 'deal') &&
-        (crossing.seen.has(tileKey(crossing.from)) || crossing.seen.has(tileKey(crossing.to)))
-      ) {
-        return { seed, turns, from: crossing.from, to: crossing.to };
-      }
-      chronicle = endedTurn(chronicle);
+function raiderThreeOff(): { chronicle: Chronicle; from: TileCoords; to: TileCoords } {
+  for (const tile of campGround(OPENED, 3)) {
+    const chronicle = unitEntered(OPENED, campUnit(NOMADIC, tile, 'raider'));
+    const stages = [...walked(apply(NOMADIC, chronicle, { type: 'end-turn' }))];
+    const moves = stages.flatMap((stage) =>
+      stage.name === 'move'
+        ? [{ from: stage.from, to: stage.to, seen: inSight(NOMADIC, stage.chronicle) }]
+        : [],
+    );
+    const [crossing] = moves;
+    if (
+      moves.length === 1 &&
+      !stages.some((stage) => stage.name === 'deal') &&
+      (crossing.seen.has(tileKey(crossing.from)) || crossing.seen.has(tileKey(crossing.to)))
+    ) {
+      return { chronicle, from: crossing.from, to: crossing.to };
     }
-    return undefined;
-  });
+  }
+  throw new Error('seed 1 crosses no raider entered three tiles out in sight');
 }
 
 test('the map is framed between the resource bar and the band, on the city', async ({ page }) => {
   const problems = watch(page);
-  await open(page, 1, 'PH_Deck');
+  await openSaved(page, OPENED);
 
   const frame = await mapFrame(page);
   const bar = await onScreen(page, 'bar-edge');
@@ -124,8 +146,7 @@ test('the map is framed between the resource bar and the band, on the city', asy
   expect(Math.abs(frame.y + frame.height - band.y)).toBeLessThan(2);
   expect((await onScreen(page, 'band')).y).toBeGreaterThan(frame.y + frame.height);
 
-  const city = await chronicleOf(page).then(cityTileOf);
-  const at = await onScreen(page, `tile-${tileKey(city)}`);
+  const at = await onScreen(page, `tile-${tileKey(cityTileOf(OPENED))}`);
   expect(Math.abs(at.x - (frame.x + frame.width / 2))).toBeLessThan(2);
   expect(Math.abs(at.y - (frame.y + frame.height / 2))).toBeLessThan(2);
 
@@ -134,7 +155,7 @@ test('the map is framed between the resource bar and the band, on the city', asy
 
 test('a drag on bare map carries the map with it, and picks out no tile', async ({ page }) => {
   const problems = watch(page);
-  await open(page, 1, 'PH_Deck');
+  await openSaved(page, OPENED);
 
   const before = await tileOnScreen(page, CHARTED.at);
   await drag(page, before, { x: 120, y: -80 });
@@ -152,7 +173,7 @@ test('a drag on bare map carries the map with it, and picks out no tile', async 
 
 test('a pan and a zoom carry the ringed tile and the panel beside it', async ({ page }) => {
   const problems = watch(page);
-  await open(page, 1, 'PH_Deck');
+  await openSaved(page, OPENED);
 
   const tile = await tileOnScreen(page, CHARTED.at);
   await page.mouse.click(tile.x, tile.y);
@@ -188,17 +209,11 @@ test('a pan and a zoom carry the ringed tile and the panel beside it', async ({ 
 
 test("a pan carries a panel row's tooltip along with the row", async ({ page }) => {
   const problems = watch(page);
-  const run = workerRun('PH_Farm');
+  const { entered } = gatherStep();
 
-  await open(page, run.seed, 'PH_Deck');
-  for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
+  await openSaved(page, entered);
 
-  const opened = await chronicleOf(page);
-  await dragOut(page, idsOf(opened.hand).indexOf('PH_Worker'));
-  await expect.poll(async () => playersOf(await chronicleOf(page)).length).toBe(1);
-  await dragUnit(page, cityTileOf(await chronicleOf(page)), run.tile);
-
-  const tile = await onScreen(page, `tile-${tileKey(run.tile)}`);
+  const tile = await onScreen(page, `tile-${tileKey(cityTileOf(entered))}`);
   await page.mouse.click(tile.x, tile.y, { button: 'right' });
   await expect.poll(() => shownCard(page)).toBe('unit');
   await rested(page);
@@ -233,33 +248,24 @@ test("a pan carries a panel row's tooltip along with the row", async ({ page }) 
 
 test('a drag on bare ground pans the map, and a drag from the unit moves it', async ({ page }) => {
   const problems = watch(page);
-  const run = workerRun('PH_Farm');
+  const step = gatherStep();
 
-  await open(page, run.seed, 'PH_Deck');
-  for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
+  await openSaved(page, step.entered);
 
-  const opened = await chronicleOf(page);
-  await dragOut(page, idsOf(opened.hand).indexOf('PH_Worker'));
-  await expect.poll(async () => playersOf(await chronicleOf(page)).length).toBe(1);
-
-  const entered = await chronicleOf(page);
   const before = await tileOnScreen(page, BARE.at);
   await drag(page, before, { x: 100, y: 60 });
 
   const after = await tileOnScreen(page, BARE.at);
   expect(after.x - before.x).toBeCloseTo(100, 0);
   expect(after.y - before.y).toBeCloseTo(60, 0);
-  const panned = await chronicleOf(page);
-  expect(playersOf(panned)[0].tile).toEqual(playersOf(entered)[0].tile);
+  expect(await chronicleOf(page)).toEqual(step.entered);
 
-  const city = await onScreen(page, `tile-${tileKey(cityTileOf(entered))}`);
-  const destination = await onScreen(page, `tile-${tileKey(run.tile)}`);
+  const city = await onScreen(page, `tile-${tileKey(cityTileOf(step.entered))}`);
+  const destination = await onScreen(page, `tile-${tileKey(step.tile)}`);
   await drag(page, city, { x: destination.x - city.x, y: destination.y - city.y });
   await playedOut(page);
 
-  await expect
-    .poll(async () => tileKey(playersOf(await chronicleOf(page))[0].tile))
-    .toBe(tileKey(run.tile));
+  await expect.poll(() => chronicleOf(page)).toEqual(step.stepped);
   // The press that took hold of the unit left the map where it stood.
   const held = await tileOnScreen(page, BARE.at);
   expect(held.x).toBeCloseTo(after.x, 0);
@@ -268,24 +274,18 @@ test('a drag on bare ground pans the map, and a drag from the unit moves it', as
   expect(problems).toEqual([]);
 });
 
-test('a drag during a tile aim pans the map, and the aim still builds after it', async ({
+test('a drag during a tile aim pans the map, and the aim still plays after it', async ({
   page,
 }) => {
   const problems = watch(page);
-  const run = workerRun('PH_Farm');
+  const step = gatherStep();
+  const index = idsOf(step.stepped.hand).indexOf(GATHER);
+  const gathered = outcome(
+    apply(NOMADIC, step.stepped, { type: 'play', index, aim: 'tile', tile: step.tile }),
+  );
 
-  await open(page, run.seed, 'PH_Deck');
-  for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
-
-  const opened = await chronicleOf(page);
-  await dragOut(page, idsOf(opened.hand).indexOf('PH_Worker'));
-  await expect.poll(async () => playersOf(await chronicleOf(page)).length).toBe(1);
-
-  const entered = await chronicleOf(page);
-  await dragUnit(page, cityTileOf(entered), run.tile);
-
-  const aiming = await chronicleOf(page);
-  await dragOut(page, idsOf(aiming.hand).indexOf('PH_Farm'));
+  await openSaved(page, step.stepped);
+  await dragOut(page, index);
   await aimed(page);
 
   const before = await tileOnScreen(page, BARE.at);
@@ -295,29 +295,19 @@ test('a drag during a tile aim pans the map, and the aim still builds after it',
   expect(after.x - before.x).toBeCloseTo(-90, 0);
   expect(after.y - before.y).toBeCloseTo(40, 0);
   expect(await standing(page, 'aim')).toBe(true);
-  const panned = await chronicleOf(page);
-  expect(panned.hand).toEqual(aiming.hand);
-  expect(
-    panned.tiles.find((tile) => tileKey(tile) === tileKey(run.tile))?.building,
-  ).toBeUndefined();
+  expect(await chronicleOf(page)).toEqual(step.stepped);
 
-  const target = await onScreen(page, `tile-${tileKey(run.tile)}`);
+  const target = await onScreen(page, `tile-${tileKey(step.tile)}`);
   await page.mouse.click(target.x, target.y);
   await playedOut(page);
-  await expect
-    .poll(
-      async () =>
-        (await chronicleOf(page)).tiles.find((tile) => tileKey(tile) === tileKey(run.tile))
-          ?.building,
-    )
-    .toBe('PH_Farm');
+  await expect.poll(() => chronicleOf(page)).toEqual(gathered);
 
   expect(problems).toEqual([]);
 });
 
 test('a wheel notch zooms the map about the pointer', async ({ page }) => {
   const problems = watch(page);
-  await open(page, 1, 'PH_Deck');
+  await openSaved(page, OPENED);
 
   const before = await tileOnScreen(page, BARE.at);
   const east = await tileOnScreen(page, EAST);
@@ -339,7 +329,7 @@ test('a wheel notch zooms the map about the pointer', async ({ page }) => {
 
 test('a held pan key moves the map, and lets go of it when it is released', async ({ page }) => {
   const problems = watch(page);
-  await open(page, 1, 'PH_Deck');
+  await openSaved(page, OPENED);
 
   const before = await tileOnScreen(page, BARE.at);
   await page.keyboard.down('w');
@@ -360,7 +350,7 @@ test('a held pan key moves the map, and lets go of it when it is released', asyn
 
 test('however far the map is dragged, it cannot leave the frame', async ({ page }) => {
   const problems = watch(page);
-  await open(page, 1, 'PH_Deck');
+  await openSaved(page, OPENED);
   const frame = await mapFrame(page);
 
   // Passes the width and the height of the frame at a time, well past the whole map's own size.
@@ -369,14 +359,13 @@ test('however far the map is dragged, it cannot leave the frame', async ({ page 
   const north = { x: frame.x + frame.width / 2, y: frame.y + frame.height / 3 };
   for (let pass = 0; pass < 4; pass++) await drag(page, north, { x: 0, y: -frame.height / 3 });
 
+  // The push west keeps the east end across the frame, and the push north the south end down it.
   const east = await tileOnScreen(page, EAST);
   const south = await tileOnScreen(page, SOUTH);
-  for (const at of [east, south]) {
-    expect(at.x).toBeGreaterThan(frame.x);
-    expect(at.x).toBeLessThan(frame.x + frame.width);
-    expect(at.y).toBeGreaterThan(frame.y);
-    expect(at.y).toBeLessThan(frame.y + frame.height);
-  }
+  expect(east.x).toBeGreaterThan(frame.x);
+  expect(east.x).toBeLessThan(frame.x + frame.width);
+  expect(south.y).toBeGreaterThan(frame.y);
+  expect(south.y).toBeLessThan(frame.y + frame.height);
 
   // One more of each pass finds the map already against its bounds.
   await drag(page, west, { x: 80 - frame.width, y: 0 });
@@ -390,12 +379,11 @@ test('however far the map is dragged, it cannot leave the frame', async ({ page 
 
 test('a stage on tiles the frame already holds pans nothing', async ({ page }) => {
   const problems = watch(page);
-  const run = moveRun();
-  // The run's ends of turn, the one the test ends after them, and the drag between the two.
-  test.setTimeout(budget(run.turns + 2));
+  test.setTimeout(budget(1));
+  const run = raiderThreeOff();
+  const crossed = outcome(apply(NOMADIC, run.chronicle, { type: 'end-turn' }));
 
-  await open(page, run.seed, 'PH_Deck');
-  for (let turn = 0; turn < run.turns; turn++) await endTurn(page);
+  await openSaved(page, run.chronicle);
 
   const frame = await mapFrame(page);
   const at = await tileOnScreen(page, run.to);
@@ -413,21 +401,18 @@ test('a stage on tiles the frame already holds pans nothing', async ({ page }) =
   const after = await tileOnScreen(page, run.to);
   expect(after.x).toBeCloseTo(before.x, 1);
   expect(after.y).toBeCloseTo(before.y, 1);
-  expect(
-    (await chronicleOf(page)).units.some((unit) => tileKey(unit.tile) === tileKey(run.to)),
-  ).toBe(true);
+  expect(await chronicleOf(page)).toEqual(crossed);
 
   expect(problems).toEqual([]);
 });
 
 test('a stage on tiles the frame does not show is brought into it', async ({ page }) => {
   const problems = watch(page);
-  const run = moveRun();
-  // The run's ends of turn, the one the test ends after them, and the drag that pushes the tile out.
-  test.setTimeout(budget(run.turns + 2));
+  test.setTimeout(budget(1));
+  const run = raiderThreeOff();
+  const crossed = outcome(apply(NOMADIC, run.chronicle, { type: 'end-turn' }));
 
-  await open(page, run.seed, 'PH_Deck');
-  for (let turn = 0; turn < run.turns; turn++) await endTurn(page);
+  await openSaved(page, run.chronicle);
 
   const frame = await mapFrame(page);
   await pushOut(page, run.to);
@@ -436,9 +421,7 @@ test('a stage on tiles the frame does not show is brought into it', async ({ pag
   await endTurn(page);
 
   expect(inside(await tileOnScreen(page, run.to), frame)).toBe(true);
-  expect(
-    (await chronicleOf(page)).units.some((unit) => tileKey(unit.tile) === tileKey(run.to)),
-  ).toBe(true);
+  expect(await chronicleOf(page)).toEqual(crossed);
 
   expect(problems).toEqual([]);
 });

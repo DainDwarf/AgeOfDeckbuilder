@@ -11,12 +11,15 @@ import {
   cardOf,
   type Deck,
   deckOf,
+  type Entering,
+  entered,
+  unitKind,
 } from '../src/rules/catalogue';
 import { admitted, apply, launched, outcome, refusalOf } from '../src/rules/chronicle';
 import {
   CENTRE,
+  distance,
   neighbours,
-  type River,
   riversAlong,
   type Tile,
   type TileCoords,
@@ -27,8 +30,9 @@ import {
 import { RESOURCES, type Resource, type Resources } from '../src/rules/resources';
 import { type ChronicleSave, writeSave } from '../src/rules/save';
 import { offered } from '../src/rules/schedule';
+import { charted } from '../src/rules/sight';
 import { type CardId, type Chronicle, type ChronicleCard, playable } from '../src/rules/state';
-import type { Unit } from '../src/rules/units';
+import { standsOn, type Unit, unitAt } from '../src/rules/units';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
 import type { PileKind } from '../src/ui/overlay';
 import { SAVE_ENTRY } from '../src/ui/save-entry';
@@ -662,11 +666,15 @@ export function drawnFaces(chronicle: Chronicle): Tile[] {
   return chronicle.snapshots.map((snapshot) => snapshot.tile);
 }
 
-/** How many glyphs each resource is owed for these faces: one for every point they yield of it. */
-export function glyphsOf(faces: readonly Tile[], rivers: readonly River[]): Glyphs {
+/**
+ * How many glyphs each resource is owed for these faces of the chronicle's map: one for every point
+ * they yield of it.
+ */
+export function glyphsOf(chronicle: Chronicle, faces: readonly Tile[]): Glyphs {
+  const catalogue = catalogueOf(chronicle.content);
   const owed = noGlyphs();
   for (const face of faces) {
-    const yields = tileYield(STAND_IN, face, rivers);
+    const yields = tileYield(catalogue, face, chronicle.rivers);
     for (const resource of RESOURCES) owed[resource] += yields[resource] ?? 0;
   }
   return owed;
@@ -772,6 +780,30 @@ export function workerStepped(
     }
     return undefined;
   });
+}
+
+/** The chronicle with the unit entered as every unit card enters one, and charted as a command is. */
+export function unitEntered(chronicle: Chronicle, entering: Entering): Chronicle {
+  const catalogue = catalogueOf(chronicle.content);
+  return charted(catalogue, entered(catalogue, chronicle, entering).chronicle);
+}
+
+/**
+ * The tiles that far from the city the camp's unit can stand on with nobody on them, in the order
+ * the map lists them.
+ */
+export function campGround(chronicle: Chronicle, away: number): TileCoords[] {
+  const catalogue = catalogueOf(chronicle.content);
+  const stats = unitKind(catalogue, catalogue.camp.unit);
+  const city = cityTileOf(chronicle);
+  return chronicle.tiles
+    .filter(
+      (tile) =>
+        distance(tile, city) === away &&
+        standsOn(catalogue, stats, tile) &&
+        unitAt(chronicle.units, tile) === undefined,
+    )
+    .map(({ q, r }) => ({ q, r }));
 }
 
 /**

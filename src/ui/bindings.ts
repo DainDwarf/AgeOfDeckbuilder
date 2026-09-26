@@ -71,7 +71,7 @@ export function pressOf(pointer: Phaser.Input.Pointer): Press | undefined {
 }
 
 /** Where the browser keeps the bindings; the origin is shared with whatever else the host serves. */
-const STORED = 'age-of-deckbuilder.controls';
+export const STORED = 'age-of-deckbuilder.controls';
 
 /**
  * What the browser prints for a key that prints nothing: one that composes the key after it, and one
