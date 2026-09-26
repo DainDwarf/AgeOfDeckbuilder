@@ -33,4 +33,4 @@ Biomes are content, like the terrain and feature lists: they grow without a desi
 
 ## The region ✅
 
-A **region** is one composition of all that: the disc's radius, how many biomes it is cut into and which kinds are dealt in what shares, the centre's among them, the share of each feature, how many camps and how far they keep from the centre and from one another, how far the centre part reaches, and the biome its rivers rise in and the river layer's numbers; the launch names one, and the generator deals the map it describes.
+A **region** is one composition of all that: the disc's radius, how many biomes it is cut into and which kinds are dealt in what shares, the centre's among them, the share of each feature, how many camps and how far they keep from the centre and from one another, how far the centre part reaches, and the biome its rivers rise in and the river layer's numbers; the launch names one, and the generator deals the map it describes. A region is an age's: each age has regions of its own, and what a region deals is that age's content, so one name deals a different map in each age; 🔧 every age offers the same regions by name.

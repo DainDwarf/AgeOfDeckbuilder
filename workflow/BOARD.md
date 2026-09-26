@@ -6,7 +6,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Rungs
 
-- **One catalogue** — every age's content in one catalogue, an age a slice of it, so a deck and its settle section hold cards of any age.
 - **The campaign and its screen** — the meta's state as a pure module a chronicle's ending pays into, victory or defeat alike: the technology tree, each technology needing the ones before it and the age transitions among its nodes, influence, the collection, the civilization's deck, saved beside the chronicle; the ending screen reads what was paid; the campaign screen is the home, with the tree, the influence, Continue reading what the chronicle in progress holds, New chronicle, Collection, and the menu's Campaign entry; a launch over a chronicle with achievements reached raises a warning, since an abandoned chronicle pays nothing.
 - **The launch screen** — age, region, civilization and deck, replacing the launch page; the address stays the developer's door.
 - **The collection screen** — the collection with the copies owned, the deck and its settle section edited from it, the settle card that settles the city fixed in the section, a copy bought for influence.
@@ -15,3 +14,7 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 - **The headless simulator** — a consumer of the rules that runs only when asked and reports numbers, not diagnoses, tuned across the two ages; the reachability cache and the end of turn's cost per `apply` are looked at when it is made.
 
 ## Lines
+
+- **One catalogue** — the list of catalogues becomes the one catalogue the boot hands everywhere, the content row and the `content=` key go, the save is read against it, and the version becomes the content's counter.
+- **The chronicle names its age** — the catalogue gains its ages, each owning its schedule, its camp and its regions; the Nomadic module becomes the first age's slice, merged with an id two ages name refused; a chronicle names its age, the save carries it, and the schedule row becomes the age row with `age=` replacing `schedule=`.
+- **The city is the settle card's** — the catalogue's city record moves into the settle card that settles the city, its building, its sight and the population it opens with the card's content, and the standing city keeps what the rules read of it.
