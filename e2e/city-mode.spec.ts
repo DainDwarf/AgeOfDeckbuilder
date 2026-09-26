@@ -1,72 +1,54 @@
 import { expect, type Page, test } from '@playwright/test';
-import { STAND_IN, STAND_IN_SCHEDULE } from '../src/content/stand-in';
-import { deckOf } from '../src/rules/catalogue';
+import { NOMADIC } from '../src/content/nomadic';
+import { gained } from '../src/rules/cards';
+import { apply, type Command, outcome } from '../src/rules/chronicle';
 import { claimable, tileCost } from '../src/rules/city';
-import { CENTRE, distance, runsAlong, type TileCoords, tileKey, tileYield } from '../src/rules/map';
-import { RESOURCES } from '../src/rules/resources';
+import { distance, neighbours, runsAlong, type TileCoords, tileKey } from '../src/rules/map';
+import { charted } from '../src/rules/sight';
 import type { Chronicle } from '../src/rules/state';
 import { LOOK } from '../src/ui/look';
 import { text } from '../src/ui/text';
 import {
-  type Border,
   besideTiles,
   budget,
+  capstoneClosed,
   chronicleOf,
   cityTileOf,
   click,
   consoleKey,
   counted,
-  dragOut,
   dragTiles,
   drawnFaces,
-  endTurn,
   enter,
   type Glyphs,
   glyphs,
   glyphsOf,
-  idsOf,
-  launch,
   marksIn,
+  nearestUncharted,
   noGlyphs,
-  open,
-  openOnCapstone,
+  openNew,
+  openSaved,
   playedOut,
   playersOf,
   refusalLines,
   rested,
   ringedTile,
-  settle,
+  settledOn,
   shownCard,
   shows,
   standing,
-  stepRun,
   thresholdShown,
   tileOnScreen,
   watch,
   wellFill,
 } from './chronicle-screen';
 
-/** A tile the opening's border touches and the city has charted: what a claim takes first. */
-const TOUCHING = { at: { q: 1, r: -2 }, key: '1,-2' };
+/** The settle card that enters the worker. */
+const FIRST_WORKER = 'first-worker';
 
-/** A tile beside the bare city, charted from the settle: what a claim on the bare city takes. */
-const BESIDE = { at: { q: 1, r: -1 }, key: '1,-1' };
-
-/** A tile out beyond the centre part the border does not touch, and uncharted from the opening. */
-const FAR = { at: { q: 1, r: -4 }, key: '1,-4' };
-
-/** A tile the city holds, and one population stands on from the opening. */
-const HELD = { at: { q: 0, r: -1 }, key: '0,-1' };
-
-/** Another one of them, on the other side of the city: what a drag carries one population from. */
-const WORKED = { at: { q: 0, r: 1 }, key: '0,1' };
-
-/** How many tiles the city holds from the opening, one population on each. */
-const RING = 7;
-
-/** The chronicle `open` settles on seed 1, with the border asked for. */
-function opening(border: Border = 'ring'): Chronicle {
-  return launch(1, deckOf(STAND_IN, 'PH_Deck'), STAND_IN_SCHEDULE, CENTRE, border);
+/** Seed 1's turn 1, the city settled and nothing else played. */
+function bareTurn(): Chronicle {
+  return settledOn(NOMADIC, 1);
 }
 
 /** The culture threshold a claim on the tile asks for, by the rules' own count. */
@@ -80,9 +62,46 @@ function thresholdWorn(chronicle: Chronicle, tile: TileCoords): string {
   return text('threshold.culture', { culture: threshold(chronicle, tile) });
 }
 
-/** How many claims the opening opens on, by the rules' own count: one mark to be drawn for each. */
-function claims(): number {
-  return claimable(STAND_IN, opening()).length;
+/** The first tile the city may claim, in the order the rules list them. */
+function firstClaim(chronicle: Chronicle): TileCoords {
+  const [tile] = claimable(NOMADIC, chronicle);
+  if (tile === undefined)
+    throw new Error(`turn ${chronicle.turn} holds no tile the city may claim`);
+  return tile;
+}
+
+/** The chronicle the command leaves; a refusal throws. */
+function applied(chronicle: Chronicle, command: Command): Chronicle {
+  const left = outcome(apply(NOMADIC, chronicle, command));
+  if (left === chronicle)
+    throw new Error(`the ${command.type} is refused on turn ${chronicle.turn}`);
+  return left;
+}
+
+/** Bare turn 1 with the culture threshold of a claim gained, and charted as a command is. */
+function culturePaid(): Chronicle {
+  const bare = bareTurn();
+  const culture = threshold(bare, firstClaim(bare));
+  return charted(NOMADIC, gained(bare, { culture }).chronicle);
+}
+
+/** Culture paid with the first tile the city may claim claimed: nobody stands on it. */
+function oneClaimed(): { chronicle: Chronicle; claimed: TileCoords } {
+  const paid = culturePaid();
+  const claimed = firstClaim(paid);
+  return { chronicle: applied(paid, { type: 'claim', tile: claimed }), claimed };
+}
+
+/** Turn 1 with the first worker entered on the city's tile, and the first neighbour it steps onto. */
+function workerOnCity(): { chronicle: Chronicle; step: TileCoords } {
+  const chronicle = settledOn(NOMADIC, 1, [FIRST_WORKER]);
+  const [worker] = playersOf(chronicle);
+  const step = neighbours(cityTileOf(chronicle)).find(
+    (tile) =>
+      outcome(apply(NOMADIC, chronicle, { type: 'move', unit: worker.id, tile })) !== chronicle,
+  );
+  if (step === undefined) throw new Error('the first worker steps off the city onto no neighbour');
+  return { chronicle, step };
 }
 
 /** Whether the chronicle screen shows city mode is on: both marks stand, or neither does. */
@@ -94,11 +113,10 @@ async function inCityMode(page: Page): Promise<boolean> {
 }
 
 /**
- * A tile the opening charts and leaves bare: its terrain and nothing else, no river running along
+ * A tile the chronicle charts and leaves bare: its terrain and nothing else, no river running along
  * it, outside the border. So it inspects its terrain, and a right click on it claims nothing.
  */
-async function bareTile(page: Page): Promise<TileCoords> {
-  const chronicle = await chronicleOf(page);
+function bareTile(chronicle: Chronicle): TileCoords {
   const seen = new Set(chronicle.snapshots.map(tileKey));
   const found = chronicle.tiles.find(
     (tile) =>
@@ -109,7 +127,7 @@ async function bareTile(page: Page): Promise<TileCoords> {
       tile.improvements.length === 0 &&
       !runsAlong(chronicle.rivers, tile),
   );
-  if (found === undefined) throw new Error('the opening charts no bare tile two tiles out');
+  if (found === undefined) throw new Error('the chronicle charts no bare tile two tiles out');
   return { q: found.q, r: found.r };
 }
 
@@ -123,29 +141,24 @@ async function answered(page: Page): Promise<void> {
 async function yielded(page: Page): Promise<{ inside: Glyphs; drawn: Glyphs }> {
   const chronicle = await chronicleOf(page);
   const held = new Set(chronicle.held.map(tileKey));
-  const inside = noGlyphs();
-  const drawn = noGlyphs();
-  for (const face of drawnFaces(chronicle)) {
-    const yields = tileYield(STAND_IN, face, chronicle.rivers);
-    for (const resource of RESOURCES) {
-      const points = yields[resource] ?? 0;
-      drawn[resource] += points;
-      if (held.has(tileKey(face))) inside[resource] += points;
-    }
-  }
-  return { inside, drawn };
+  const faces = drawnFaces(chronicle);
+  return {
+    inside: glyphsOf(
+      chronicle,
+      faces.filter((face) => held.has(tileKey(face))),
+    ),
+    drawn: glyphsOf(chronicle, faces),
+  };
 }
 
-test('before the settle neither the city key nor culture nor idle enters city mode, and once the city stands the city key does', async ({
+test('before the settle neither the city key nor culture nor idle enters city mode', async ({
   page,
 }) => {
   const problems = watch(page);
   test.setTimeout(budget(0));
 
-  await openOnCapstone(page, 1, 'PH_Deck');
-  await click(page, 'capstone-card-0');
-  await expect.poll(() => standing(page, 'capstone')).toBe(false);
-  await rested(page);
+  await openNew(page, NOMADIC, 1);
+  await capstoneClosed(page);
 
   await page.keyboard.press('c');
   await answered(page);
@@ -159,10 +172,6 @@ test('before the settle neither the city key nor culture nor idle enters city mo
   await answered(page);
   expect(await inCityMode(page)).toBe(false);
 
-  await settle(page, CENTRE, 'bare');
-  await page.keyboard.press('c');
-  await expect.poll(() => inCityMode(page)).toBe(true);
-
   expect(problems).toEqual([]);
 });
 
@@ -170,19 +179,21 @@ test('the city key enters city mode, where a click rings a tile and stands the c
   page,
 }) => {
   const problems = watch(page);
+  const bare = bareTurn();
+  const near = firstClaim(bare);
 
-  await open(page, 1, 'PH_Deck');
+  await openSaved(page, bare);
   expect(await inCityMode(page)).toBe(false);
 
   await page.keyboard.press('c');
   await expect.poll(() => inCityMode(page)).toBe(true);
 
-  const near = await tileOnScreen(page, TOUCHING.at);
-  await page.mouse.click(near.x, near.y);
-  await expect.poll(() => ringedTile(page)).toBe(TOUCHING.key);
-  expect(await thresholdShown(page)).toBe(thresholdWorn(opening(), TOUCHING.at));
+  const at = await tileOnScreen(page, near);
+  await page.mouse.click(at.x, at.y);
+  await expect.poll(() => ringedTile(page)).toBe(tileKey(near));
+  expect(await thresholdShown(page)).toBe(thresholdWorn(bare, near));
   expect(await refusalLines(page)).toBeUndefined();
-  expect((await chronicleOf(page)).held.map(tileKey)).not.toContain(TOUCHING.key);
+  expect((await chronicleOf(page)).held.map(tileKey)).not.toContain(tileKey(near));
 
   // The first back key drops the selection and what it wore; the mode stands until the next one.
   await page.keyboard.press('Escape');
@@ -198,11 +209,13 @@ test('the city key enters city mode, where a click rings a tile and stands the c
 
 test('city mode lets go of the selection as it comes on', async ({ page }) => {
   const problems = watch(page);
+  const bare = bareTurn();
+  const near = firstClaim(bare);
 
-  await open(page, 1, 'PH_Deck');
-  const near = await tileOnScreen(page, TOUCHING.at);
-  await page.mouse.click(near.x, near.y);
-  await expect.poll(() => ringedTile(page)).toBe(TOUCHING.key);
+  await openSaved(page, bare);
+  const at = await tileOnScreen(page, near);
+  await page.mouse.click(at.x, at.y);
+  await expect.poll(() => ringedTile(page)).toBe(tileKey(near));
 
   await page.keyboard.press('c');
   await expect.poll(() => inCityMode(page)).toBe(true);
@@ -215,9 +228,11 @@ test('a second left click on the city’s own tile enters city mode, and on any 
   page,
 }) => {
   const problems = watch(page);
+  const bare = bareTurn();
+  const own = cityTileOf(bare);
+  const near = firstClaim(bare);
 
-  await open(page, 1, 'PH_Deck');
-  const own = cityTileOf(await chronicleOf(page));
+  await openSaved(page, bare);
   const city = await tileOnScreen(page, own);
   await page.mouse.click(city.x, city.y);
   await expect.poll(() => ringedTile(page)).toBe(tileKey(own));
@@ -230,13 +245,13 @@ test('a second left click on the city’s own tile enters city mode, and on any 
   await page.keyboard.press('Escape');
   await expect.poll(() => inCityMode(page)).toBe(false);
 
-  const near = await tileOnScreen(page, TOUCHING.at);
-  await page.mouse.click(near.x, near.y);
-  await expect.poll(() => ringedTile(page)).toBe(TOUCHING.key);
+  const at = await tileOnScreen(page, near);
+  await page.mouse.click(at.x, at.y);
+  await expect.poll(() => ringedTile(page)).toBe(tileKey(near));
 
-  await page.mouse.click(near.x, near.y);
+  await page.mouse.click(at.x, at.y);
   await answered(page);
-  expect(await ringedTile(page)).toBe(TOUCHING.key);
+  expect(await ringedTile(page)).toBe(tileKey(near));
   expect(await inCityMode(page)).toBe(false);
 
   expect(problems).toEqual([]);
@@ -246,12 +261,13 @@ test('a right click in city mode inspects the tile under it without selecting, a
   page,
 }) => {
   const problems = watch(page);
+  const bare = bareTurn();
 
-  await open(page, 1, 'PH_Deck');
+  await openSaved(page, bare);
   await page.keyboard.press('c');
   await expect.poll(() => inCityMode(page)).toBe(true);
 
-  const at = await tileOnScreen(page, await bareTile(page));
+  const at = await tileOnScreen(page, bareTile(bare));
   await page.mouse.click(at.x, at.y, { button: 'right' });
   await expect.poll(() => shownCard(page)).toBe('terrain');
   expect(await ringedTile(page)).toBeUndefined();
@@ -286,19 +302,20 @@ test('a press beside the tiles in city mode drops the selection and the inspecti
   page,
 }) => {
   const problems = watch(page);
+  const bare = bareTurn();
+  const tile = bareTile(bare);
 
-  await open(page, 1, 'PH_Deck');
+  await openSaved(page, bare);
   await page.keyboard.press('c');
   await expect.poll(() => inCityMode(page)).toBe(true);
 
-  const bare = await bareTile(page);
-  const at = await tileOnScreen(page, bare);
+  const at = await tileOnScreen(page, tile);
   await page.mouse.click(at.x, at.y);
-  await expect.poll(() => ringedTile(page)).toBe(tileKey(bare));
+  await expect.poll(() => ringedTile(page)).toBe(tileKey(tile));
 
   await page.mouse.click(at.x, at.y, { button: 'right' });
   await expect.poll(() => shownCard(page)).toBe('terrain');
-  expect(await ringedTile(page)).toBe(tileKey(bare));
+  expect(await ringedTile(page)).toBe(tileKey(tile));
 
   const away = await besideTiles(page);
   await page.mouse.click(away.x, away.y);
@@ -312,7 +329,7 @@ test('a press beside the tiles in city mode drops the selection and the inspecti
 test('a press on culture or idle enters city mode, and the chip leaves it', async ({ page }) => {
   const problems = watch(page);
 
-  await open(page, 1, 'PH_Deck');
+  await openSaved(page, bareTurn());
 
   await click(page, 'reading-culture');
   await expect.poll(() => inCityMode(page)).toBe(true);
@@ -334,27 +351,23 @@ test('culture’s well fills while the city can pay for a tile it may claim, and
   page,
 }) => {
   const problems = watch(page);
-  const bare = opening('bare');
-  const owed = threshold(bare, BESIDE.at);
-  test.setTimeout(budget(owed + 1));
+  const paid = culturePaid();
+  const near = firstClaim(paid);
+  const claimed = applied(paid, { type: 'claim', tile: near });
 
-  await open(page, 1, 'PH_Deck', STAND_IN_SCHEDULE, CENTRE, 'bare');
-  expect(await wellFill(page, 'culture')).toBeUndefined();
-
-  for (let turn = 0; turn < owed; turn++) await endTurn(page);
-  expect((await chronicleOf(page)).resources.culture).toBe(owed);
+  await openSaved(page, paid);
   await expect.poll(() => wellFill(page, 'culture')).toBe(LOOK.accent);
 
   await page.keyboard.press('c');
   await expect.poll(() => inCityMode(page)).toBe(true);
-  const near = await tileOnScreen(page, BESIDE.at);
-  await page.mouse.click(near.x, near.y);
-  await expect.poll(() => thresholdShown(page)).toBe(thresholdWorn(bare, BESIDE.at));
+  const at = await tileOnScreen(page, near);
+  await page.mouse.click(at.x, at.y);
+  await expect.poll(() => thresholdShown(page)).toBe(thresholdWorn(paid, near));
 
-  await page.mouse.click(near.x, near.y);
+  await page.mouse.click(at.x, at.y);
   await playedOut(page);
 
-  expect((await chronicleOf(page)).held.map(tileKey)).toContain(BESIDE.key);
+  await expect.poll(() => chronicleOf(page)).toEqual(claimed);
   await expect.poll(() => wellFill(page, 'culture')).toBeUndefined();
 
   expect(problems).toEqual([]);
@@ -364,24 +377,30 @@ test('idle’s well fills while one population is idle over a tile the city hold
   page,
 }) => {
   const problems = watch(page);
+  const bare = bareTurn();
+  const own = cityTileOf(bare);
+  const unassigned = applied(bare, { type: 'assign', tile: own });
+  const assigned = applied(unassigned, { type: 'assign', tile: own });
 
-  await open(page, 1, 'PH_Deck');
+  await openSaved(page, bare);
   expect(await wellFill(page, 'idle')).toBeUndefined();
 
   await page.keyboard.press('c');
   await expect.poll(() => inCityMode(page)).toBe(true);
 
-  const held = await tileOnScreen(page, HELD.at);
-  await page.mouse.click(held.x, held.y);
-  await expect.poll(() => ringedTile(page)).toBe(HELD.key);
-  await page.mouse.click(held.x, held.y);
+  const city = await tileOnScreen(page, own);
+  await page.mouse.click(city.x, city.y);
+  await expect.poll(() => ringedTile(page)).toBe(tileKey(own));
+  await page.mouse.click(city.x, city.y);
   await playedOut(page);
-  expect(await counted(page, 'assigned')).toBe(RING - 1);
+  await expect.poll(() => chronicleOf(page)).toEqual(unassigned);
+  expect(await counted(page, 'assigned')).toBe(unassigned.assigned.length);
   await expect.poll(() => wellFill(page, 'idle')).toBe(LOOK.accent);
 
-  await page.mouse.click(held.x, held.y);
+  await page.mouse.click(city.x, city.y);
   await playedOut(page);
-  expect(await counted(page, 'assigned')).toBe(RING);
+  await expect.poll(() => chronicleOf(page)).toEqual(assigned);
+  expect(await counted(page, 'assigned')).toBe(assigned.assigned.length);
   await expect.poll(() => wellFill(page, 'idle')).toBeUndefined();
 
   expect(problems).toEqual([]);
@@ -391,42 +410,36 @@ test('city mode marks every tile the population stands on, and a second click on
   page,
 }) => {
   const problems = watch(page);
+  const bare = bareTurn();
+  const own = cityTileOf(bare);
+  const unassigned = applied(bare, { type: 'assign', tile: own });
 
-  await open(page, 1, 'PH_Deck');
+  await openSaved(page, bare);
   expect(await counted(page, 'assigned')).toBe(0);
 
   await page.keyboard.press('c');
   await expect.poll(() => inCityMode(page)).toBe(true);
-  expect(await counted(page, 'assigned')).toBe(RING);
-  expect(await counted(page, 'city-dim')).toBe(0);
+  expect(await counted(page, 'assigned')).toBe(bare.assigned.length);
+  expect(await counted(page, 'city-dim')).toBe(bare.held.length - bare.assigned.length);
 
-  const held = await tileOnScreen(page, HELD.at);
-  await page.mouse.click(held.x, held.y);
-  await expect.poll(() => ringedTile(page)).toBe(HELD.key);
-  expect(await counted(page, 'assigned')).toBe(RING);
+  const city = await tileOnScreen(page, own);
+  await page.mouse.click(city.x, city.y);
+  await expect.poll(() => ringedTile(page)).toBe(tileKey(own));
+  expect(await counted(page, 'assigned')).toBe(bare.assigned.length);
   expect(await refusalLines(page)).toBeUndefined();
   // The city holds it, so there is no claim on it to ask for anything.
   expect(await thresholdShown(page)).toBeUndefined();
 
-  await page.mouse.click(held.x, held.y);
-  await playedOut(page);
-  expect(await counted(page, 'assigned')).toBe(RING - 1);
-  expect(await counted(page, 'city-dim')).toBe(1);
-  await expect.poll(() => ringedTile(page)).toBe(HELD.key);
-
-  await page.mouse.click(held.x, held.y);
-  await playedOut(page);
-  expect(await counted(page, 'assigned')).toBe(RING);
-  expect(await counted(page, 'city-dim')).toBe(0);
-
-  // The city's own tile is one of the tiles it works, and its second click acts as any other's does.
-  const own = cityTileOf(await chronicleOf(page));
-  const city = await tileOnScreen(page, own);
   await page.mouse.click(city.x, city.y);
+  await playedOut(page);
+  expect(await counted(page, 'assigned')).toBe(unassigned.assigned.length);
+  expect(await counted(page, 'city-dim')).toBe(unassigned.held.length - unassigned.assigned.length);
   await expect.poll(() => ringedTile(page)).toBe(tileKey(own));
+
   await page.mouse.click(city.x, city.y);
   await playedOut(page);
-  expect(await counted(page, 'assigned')).toBe(RING - 1);
+  expect(await counted(page, 'assigned')).toBe(bare.assigned.length);
+  expect(await counted(page, 'city-dim')).toBe(bare.held.length - bare.assigned.length);
   expect(await inCityMode(page)).toBe(true);
 
   await page.keyboard.press('Escape');
@@ -441,32 +454,24 @@ test('a drag in city mode carries the population onto the tile the city holds an
   page,
 }) => {
   const problems = watch(page);
+  const { chronicle, claimed } = oneClaimed();
+  const own = cityTileOf(chronicle);
+  const carried = applied(chronicle, { type: 'reassign', from: own, to: claimed });
 
-  await open(page, 1, 'PH_Deck');
+  await openSaved(page, chronicle);
   await page.keyboard.press('c');
   await expect.poll(() => inCityMode(page)).toBe(true);
 
-  const held = await tileOnScreen(page, HELD.at);
-  await page.mouse.click(held.x, held.y);
-  await expect.poll(() => ringedTile(page)).toBe(HELD.key);
-  await page.mouse.click(held.x, held.y);
-  await playedOut(page);
-  expect(await counted(page, 'assigned')).toBe(RING - 1);
-  expect(await counted(page, 'city-dim')).toBe(1);
+  const city = await tileOnScreen(page, own);
+  await page.mouse.click(city.x, city.y);
+  await expect.poll(() => ringedTile(page)).toBe(tileKey(own));
 
-  const worked = await tileOnScreen(page, WORKED.at);
-  await page.mouse.click(worked.x, worked.y);
-  await expect.poll(() => ringedTile(page)).toBe(WORKED.key);
-
-  await dragTiles(page, WORKED.at, HELD.at);
-  const carried = await chronicleOf(page);
-
-  expect(carried.assigned.map(tileKey)).toContain(HELD.key);
-  expect(carried.assigned.map(tileKey)).not.toContain(WORKED.key);
-  expect(await counted(page, 'assigned')).toBe(RING - 1);
-  expect(await counted(page, 'city-dim')).toBe(1);
+  await dragTiles(page, own, claimed);
+  await expect.poll(() => chronicleOf(page)).toEqual(carried);
+  expect(await counted(page, 'assigned')).toBe(carried.assigned.length);
+  expect(await counted(page, 'city-dim')).toBe(carried.held.length - carried.assigned.length);
   // The tile it landed on takes the ring, so the next press on it is the city's next act there.
-  await expect.poll(() => ringedTile(page)).toBe(HELD.key);
+  await expect.poll(() => ringedTile(page)).toBe(tileKey(claimed));
 
   expect(problems).toEqual([]);
 });
@@ -475,27 +480,29 @@ test('a drag in city mode let go anywhere else changes nothing and leaves the se
   page,
 }) => {
   const problems = watch(page);
+  const { chronicle, claimed } = oneClaimed();
+  const own = cityTileOf(chronicle);
+  const outside = firstClaim(chronicle);
 
-  await open(page, 1, 'PH_Deck');
+  await openSaved(page, chronicle);
   await page.keyboard.press('c');
   await expect.poll(() => inCityMode(page)).toBe(true);
 
-  const held = await tileOnScreen(page, HELD.at);
-  await page.mouse.click(held.x, held.y);
-  await expect.poll(() => ringedTile(page)).toBe(HELD.key);
-  const before = await chronicleOf(page);
+  const city = await tileOnScreen(page, own);
+  await page.mouse.click(city.x, city.y);
+  await expect.poll(() => ringedTile(page)).toBe(tileKey(own));
 
-  await dragTiles(page, WORKED.at, TOUCHING.at);
+  await dragTiles(page, own, outside);
   await answered(page);
-  expect(await chronicleOf(page)).toEqual(before);
-  expect(await counted(page, 'assigned')).toBe(RING);
-  expect(await ringedTile(page)).toBe(HELD.key);
+  expect(await chronicleOf(page)).toEqual(chronicle);
+  expect(await counted(page, 'assigned')).toBe(chronicle.assigned.length);
+  expect(await ringedTile(page)).toBe(tileKey(own));
 
-  await dragTiles(page, WORKED.at, HELD.at);
+  await dragTiles(page, claimed, own);
   await answered(page);
-  expect(await chronicleOf(page)).toEqual(before);
-  expect(await counted(page, 'assigned')).toBe(RING);
-  expect(await ringedTile(page)).toBe(HELD.key);
+  expect(await chronicleOf(page)).toEqual(chronicle);
+  expect(await counted(page, 'assigned')).toBe(chronicle.assigned.length);
+  expect(await ringedTile(page)).toBe(tileKey(own));
 
   expect(problems).toEqual([]);
 });
@@ -504,29 +511,21 @@ test('a unit’s tile selected in city mode lights nothing, and a click on the t
   page,
 }) => {
   const problems = watch(page);
-  const run = stepRun();
-  // The run's ends of turn, and the worker entered on the turn it opens.
-  test.setTimeout(budget(run.turn + 1));
+  const { chronicle, step } = workerOnCity();
+  const own = cityTileOf(chronicle);
 
-  await open(page, run.seed, 'PH_Deck');
-  for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
-
-  const opened = await chronicleOf(page);
-  await dragOut(page, idsOf(opened.hand).indexOf('PH_Worker'));
-  await expect.poll(async () => playersOf(await chronicleOf(page)).length).toBe(1);
-
-  const entered = await chronicleOf(page);
+  await openSaved(page, chronicle);
   await page.keyboard.press('c');
   await expect.poll(() => inCityMode(page)).toBe(true);
 
-  await click(page, `tile-${tileKey(cityTileOf(entered))}`);
-  await expect.poll(() => ringedTile(page)).toBe(tileKey(cityTileOf(entered)));
+  await click(page, `tile-${tileKey(own)}`);
+  await expect.poll(() => ringedTile(page)).toBe(tileKey(own));
   expect(await marksIn(page, 'lit')).toBe(0);
 
-  await click(page, `tile-${tileKey(run.first)}`);
-  await expect.poll(() => ringedTile(page)).toBe(tileKey(run.first));
+  await click(page, `tile-${tileKey(step)}`);
+  await expect.poll(() => ringedTile(page)).toBe(tileKey(step));
   expect(await marksIn(page, 'lit')).toBe(0);
-  expect(await chronicleOf(page)).toEqual(entered);
+  expect(await chronicleOf(page)).toEqual(chronicle);
 
   expect(problems).toEqual([]);
 });
@@ -535,13 +534,14 @@ test('city mode marks every tile the city can claim, and leaving it takes the ma
   page,
 }) => {
   const problems = watch(page);
+  const bare = bareTurn();
 
-  await open(page, 1, 'PH_Deck');
+  await openSaved(page, bare);
   expect(await counted(page, 'claimable')).toBe(0);
 
   await page.keyboard.press('c');
   await expect.poll(() => inCityMode(page)).toBe(true);
-  expect(await counted(page, 'claimable')).toBe(claims());
+  expect(await counted(page, 'claimable')).toBe(claimable(NOMADIC, bare).length);
 
   await page.keyboard.press('Escape');
   await expect.poll(() => inCityMode(page)).toBe(false);
@@ -550,17 +550,17 @@ test('city mode marks every tile the city can claim, and leaving it takes the ma
   expect(problems).toEqual([]);
 });
 
-test('a second click the city cannot pay for claims nothing and says so, one it can pay for claims the tile, and one on no act of the city’s says nothing', async ({
+test('a second click the city cannot pay for claims nothing and says so, and one on no act of the city’s says nothing', async ({
   page,
 }) => {
   const problems = watch(page);
-  const bare = opening('bare');
-  const owed = threshold(bare, BESIDE.at);
-  const asked = thresholdWorn(bare, BESIDE.at);
-  const unpaid = [text('refusal.culture', { cost: owed })];
-  test.setTimeout(budget(owed + 1));
+  const bare = bareTurn();
+  const nearTile = firstClaim(bare);
+  const farTile = nearestUncharted(bare);
+  const asked = thresholdWorn(bare, nearTile);
+  const unpaid = [text('refusal.culture', { cost: threshold(bare, nearTile) })];
 
-  await open(page, 1, 'PH_Deck', STAND_IN_SCHEDULE, CENTRE, 'bare');
+  await openSaved(page, bare);
   await page.keyboard.press('c');
   await expect.poll(() => inCityMode(page)).toBe(true);
 
@@ -569,8 +569,8 @@ test('a second click the city cannot pay for claims nothing and says so, one it 
   await enter(page, 'uncharted');
   await consoleKey(page);
 
-  const near = await tileOnScreen(page, BESIDE.at);
-  const far = await tileOnScreen(page, FAR.at);
+  const near = await tileOnScreen(page, nearTile);
+  const far = await tileOnScreen(page, farTile);
 
   await page.mouse.click(near.x, near.y);
   await expect.poll(() => thresholdShown(page)).toBe(asked);
@@ -581,43 +581,62 @@ test('a second click the city cannot pay for claims nothing and says so, one it 
   expect(await refusalLines(page)).toEqual(unpaid);
   // The tile goes on wearing what the claim asks for, under the note.
   expect(await thresholdShown(page)).toBe(asked);
-  expect((await chronicleOf(page)).held.map(tileKey)).not.toContain(BESIDE.key);
+  expect(await chronicleOf(page)).toEqual(bare);
 
   await page.mouse.click(far.x, far.y);
-  await expect.poll(() => ringedTile(page)).toBe(FAR.key);
+  await expect.poll(() => ringedTile(page)).toBe(tileKey(farTile));
   expect(await thresholdShown(page)).toBeUndefined();
   expect(await refusalLines(page)).toBeUndefined();
 
   await page.mouse.click(far.x, far.y);
   await answered(page);
-  expect(await ringedTile(page)).toBe(FAR.key);
+  expect(await ringedTile(page)).toBe(tileKey(farTile));
   expect(await thresholdShown(page)).toBeUndefined();
   expect(await refusalLines(page)).toBeUndefined();
+  expect(await chronicleOf(page)).toEqual(bare);
 
-  for (let turn = 0; turn < owed; turn++) await endTurn(page);
-  expect((await chronicleOf(page)).resources.culture).toBe(owed);
+  expect(problems).toEqual([]);
+});
+
+test('a second click the city can pay for claims the tile, which stays selected and asks for nothing more', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const paid = culturePaid();
+  const nearTile = firstClaim(paid);
+  const farTile = nearestUncharted(paid);
+  const claimed = applied(paid, { type: 'claim', tile: nearTile });
+
+  await openSaved(page, paid);
+  await page.keyboard.press('c');
+  await expect.poll(() => inCityMode(page)).toBe(true);
+
+  await consoleKey(page);
+  await enter(page, 'uncharted');
+  await consoleKey(page);
+
+  const near = await tileOnScreen(page, nearTile);
+  const far = await tileOnScreen(page, farTile);
 
   await page.mouse.click(near.x, near.y);
-  await expect.poll(() => thresholdShown(page)).toBe(asked);
+  await expect.poll(() => thresholdShown(page)).toBe(thresholdWorn(paid, nearTile));
   await page.mouse.click(near.x, near.y);
   await playedOut(page);
-  const claimed = await chronicleOf(page);
 
-  expect(claimed.held.map(tileKey)).toContain(BESIDE.key);
-  expect(claimed.resources.culture).toBe(0);
-  expect(await counted(page, 'assigned')).toBe(bare.held.length + 1);
+  await expect.poll(() => chronicleOf(page)).toEqual(claimed);
+  expect(await counted(page, 'assigned')).toBe(claimed.assigned.length);
   // The tile claimed is a claim no longer, and the marks are the claims the moved border opens.
-  expect(claimable(STAND_IN, claimed).map(tileKey)).not.toContain(BESIDE.key);
-  expect(await counted(page, 'claimable')).toBe(claimable(STAND_IN, claimed).length);
+  expect(claimable(NOMADIC, claimed).map(tileKey)).not.toContain(tileKey(nearTile));
+  expect(await counted(page, 'claimable')).toBe(claimable(NOMADIC, claimed).length);
   // The tile the claim took stays selected, and asks for nothing more.
-  await expect.poll(() => ringedTile(page)).toBe(BESIDE.key);
+  await expect.poll(() => ringedTile(page)).toBe(tileKey(nearTile));
   expect(await thresholdShown(page)).toBeUndefined();
   expect(await refusalLines(page)).toBeUndefined();
 
   await page.mouse.click(far.x, far.y);
   await answered(page);
   expect(await refusalLines(page)).toBeUndefined();
-  expect(claimable(STAND_IN, claimed).map(tileKey)).not.toContain(FAR.key);
+  expect(claimable(NOMADIC, claimed).map(tileKey)).not.toContain(tileKey(farTile));
 
   expect(problems).toEqual([]);
 });
@@ -627,7 +646,7 @@ test('city mode shows what every tile inside the border yields, and nothing of a
 }) => {
   const problems = watch(page);
 
-  await open(page, 1, 'PH_Deck');
+  await openSaved(page, bareTurn());
   expect(await glyphs(page)).toEqual(noGlyphs());
 
   await page.keyboard.press('c');
@@ -648,8 +667,10 @@ test('the tile wearing the culture threshold shows none of the overlay’s glyph
   page,
 }) => {
   const problems = watch(page);
+  const bare = bareTurn();
+  const near = firstClaim(bare);
 
-  await open(page, 1, 'PH_Deck');
+  await openSaved(page, bare);
   await page.keyboard.press('Tab');
   await page.keyboard.press('c');
   await expect.poll(() => inCityMode(page)).toBe(true);
@@ -657,17 +678,17 @@ test('the tile wearing the culture threshold shows none of the overlay’s glyph
   const chronicle = await chronicleOf(page);
   const faces = drawnFaces(chronicle);
   const all = glyphsOf(chronicle, faces);
-  const bare = glyphsOf(
+  const worn = glyphsOf(
     chronicle,
-    faces.filter((face) => tileKey(face) !== TOUCHING.key),
+    faces.filter((face) => tileKey(face) !== tileKey(near)),
   );
-  expect(bare).not.toEqual(all);
+  expect(worn).not.toEqual(all);
   expect(await glyphs(page)).toEqual(all);
 
-  const near = await tileOnScreen(page, TOUCHING.at);
-  await page.mouse.click(near.x, near.y);
-  await expect.poll(() => thresholdShown(page)).toBe(thresholdWorn(opening(), TOUCHING.at));
-  expect(await glyphs(page)).toEqual(bare);
+  const at = await tileOnScreen(page, near);
+  await page.mouse.click(at.x, at.y);
+  await expect.poll(() => thresholdShown(page)).toBe(thresholdWorn(bare, near));
+  expect(await glyphs(page)).toEqual(worn);
 
   await page.keyboard.press('Escape');
   await expect.poll(() => thresholdShown(page)).toBeUndefined();
@@ -679,7 +700,7 @@ test('the tile wearing the culture threshold shows none of the overlay’s glyph
 test('a window standing over the chronicle screen takes the city key', async ({ page }) => {
   const problems = watch(page);
 
-  await open(page, 1, 'PH_Deck');
+  await openSaved(page, bareTurn());
 
   await click(page, 'menu-button');
   await expect.poll(() => standing(page, 'menu')).toBe(true);

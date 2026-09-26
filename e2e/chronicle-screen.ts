@@ -57,7 +57,7 @@ declare global {
  * What the city holds when the settle phase ends: the six tiles around it claimed by the settle
  * section's free claims, or its own tile alone.
  */
-export type Border = 'ring' | 'bare';
+type Border = 'ring' | 'bare';
 
 /**
  * The headless twin of `open`: the two must settle alike, or a spec's fixture is not the chronicle
@@ -100,7 +100,7 @@ export function cityTileOf(chronicle: Chronicle): TileCoords {
 }
 
 /** The region, the schedule and the deck a catalogue lists first. */
-function firstsOf(catalogue: Catalogue): { region: string; schedule: string; deck: string } {
+export function firstsOf(catalogue: Catalogue): { region: string; schedule: string; deck: string } {
   const first = (table: Readonly<Record<string, unknown>>, noun: string): string => {
     const [id] = Object.keys(table);
     if (id === undefined) throw new Error(`${catalogue.version} lists no ${noun}`);
@@ -115,8 +115,23 @@ function firstsOf(catalogue: Catalogue): { region: string; schedule: string; dec
 
 /**
  * A chronicle launched from a seed on the first region, schedule and deck the catalogue lists, or the
- * deck given, and settled headlessly: the first settle card played on the centre tile, the ones
- * `onCity` names played on the city's tile, and the settle phase ended with the rest in hand.
+ * deck given: the headless twin of `openNew`, the two launching alike.
+ */
+export function launchedOn(catalogue: Catalogue, seed: number, deck?: Deck): Chronicle {
+  const firsts = firstsOf(catalogue);
+  return launched(
+    catalogue,
+    firsts.region,
+    firsts.schedule,
+    seed,
+    deck ?? deckOf(catalogue, firsts.deck),
+  );
+}
+
+/**
+ * A chronicle launched as `launchedOn` launches it and settled headlessly: the first settle card
+ * played on the centre tile, the ones `onCity` names played on the city's tile, and the settle phase
+ * ended with the rest in hand.
  */
 export function settledOn(
   catalogue: Catalogue,
@@ -124,15 +139,7 @@ export function settledOn(
   onCity: readonly CardId[] = [],
   deck?: Deck,
 ): Chronicle {
-  const firsts = firstsOf(catalogue);
-  const opened = launched(
-    catalogue,
-    firsts.region,
-    firsts.schedule,
-    seed,
-    deck ?? deckOf(catalogue, firsts.deck),
-  );
-  let settling = playedOn(opened, 0, CENTRE);
+  let settling = playedOn(launchedOn(catalogue, seed, deck), 0, CENTRE);
   const city = cityTileOf(settling);
   for (const card of onCity)
     settling = playedOn(settling, idsOf(settling.hand).indexOf(card), city);
@@ -181,11 +188,8 @@ export function watch(page: Page): string[] {
 }
 
 /**
- * Opens the chronicle a seed, a deck and a schedule found, waits for its scene to run, closes the
- * capstone's window every chronicle opens on, and settles on the centre tile or the tile given, its
- * city holding the border asked for: turn 1 open on the chronicle screen, or the deal it stops on
- * standing. The card and not the back key closes the window: that key is rebindable, and specs
- * rebind it.
+ * Opens the chronicle a seed, a deck and a schedule found, closes the capstone's window, and settles
+ * as `settle` does: turn 1 open on the chronicle screen, or the deal it stops on standing.
  */
 export async function open(
   page: Page,
@@ -196,9 +200,7 @@ export async function open(
   border: Border = 'ring',
 ): Promise<void> {
   await openOnCapstone(page, seed, deck, schedule);
-  await click(page, 'capstone-card-0');
-  await expect.poll(() => standing(page, 'capstone')).toBe(false);
-  await rested(page);
+  await capstoneClosed(page);
   await settle(page, at, border);
 }
 
@@ -207,11 +209,7 @@ export async function open(
  * centre tile or the tile given pressed, the free claims played on the six tiles around the city
  * unless it is asked for bare, and the turn ended.
  */
-export async function settle(
-  page: Page,
-  at: TileCoords = CENTRE,
-  border: Border = 'ring',
-): Promise<void> {
+async function settle(page: Page, at: TileCoords = CENTRE, border: Border = 'ring'): Promise<void> {
   await dragOut(page, 0);
   await aimed(page);
   await click(page, `tile-${tileKey(at)}`);
@@ -252,11 +250,42 @@ export async function openOnCapstone(
   deck: string,
   schedule: string = STAND_IN_SCHEDULE,
 ): Promise<void> {
+  await openOnAddress(page, STAND_IN, seed, deck, schedule);
+}
+
+/**
+ * Opens a new chronicle on the address naming the content, the seed, and the first schedule and deck
+ * the catalogue lists, the region left to the boot's first; the capstone's window the opening raises
+ * is left standing.
+ */
+export async function openNew(page: Page, catalogue: Catalogue, seed: number): Promise<void> {
+  const { schedule, deck } = firstsOf(catalogue);
+  await openOnAddress(page, catalogue, seed, deck, schedule);
+}
+
+/** The boot begins a chronicle only on an address naming a deck; with none it stands on the launch page. */
+async function openOnAddress(
+  page: Page,
+  catalogue: Catalogue,
+  seed: number,
+  deck: string,
+  schedule: string,
+): Promise<void> {
   await readNames(page);
-  await page.goto(`/?content=${STAND_IN.version}&seed=${seed}&deck=${deck}&schedule=${schedule}`);
+  await page.goto(`/?content=${catalogue.version}&seed=${seed}&deck=${deck}&schedule=${schedule}`);
   await page.waitForFunction(() => window.game?.scene.isActive('ui') === true);
-  await rested(page);
   await expect.poll(() => standing(page, 'capstone')).toBe(true);
+  await rested(page);
+}
+
+/**
+ * Closes the capstone's window standing by a press on its card, and rests: the back key is
+ * rebindable, and specs rebind it.
+ */
+export async function capstoneClosed(page: Page): Promise<void> {
+  await click(page, 'capstone-card-0');
+  await expect.poll(() => standing(page, 'capstone')).toBe(false);
+  await rested(page);
 }
 
 /** Gives the pages this one loads from now on `window.named` and `window.counted`. */
@@ -316,7 +345,7 @@ export async function plant(page: Page, save: ChronicleSave): Promise<void> {
 /**
  * Opens the chronicle as the save the boot finds, on the first region and deck its content lists,
  * and closes the capstone's window every resumed chronicle opens under. The boot reads a save only
- * on the bare address; the card and not the back key closes the window, that key being rebindable.
+ * on the bare address.
  */
 export async function openSaved(page: Page, chronicle: Chronicle): Promise<void> {
   const { region, deck } = firstsOf(catalogueOf(chronicle.content));
@@ -326,9 +355,7 @@ export async function openSaved(page: Page, chronicle: Chronicle): Promise<void>
   await page.waitForFunction(() => window.game?.scene.isActive('ui') === true);
   await expect.poll(() => standing(page, 'capstone')).toBe(true);
   await rested(page);
-  await click(page, 'capstone-card-0');
-  await expect.poll(() => standing(page, 'capstone')).toBe(false);
-  await rested(page);
+  await capstoneClosed(page);
 }
 
 /** Waits for a drawn frame, so a camera moved since answers for where it now stands. */
@@ -806,6 +833,22 @@ export function campGround(chronicle: Chronicle, away: number): TileCoords[] {
     .map(({ q, r }) => ({ q, r }));
 }
 
+/** The tile nearest the city that has never been in sight: the closest dark ground to press on. */
+export function nearestUncharted(chronicle: Chronicle): TileCoords {
+  const seen = new Set(chronicle.snapshots.map(tileKey));
+  let nearest: TileCoords | undefined;
+  let away = Infinity;
+  for (const tile of chronicle.tiles) {
+    if (seen.has(tileKey(tile))) continue;
+    const off = distance(tile, cityTileOf(chronicle));
+    if (off >= away) continue;
+    away = off;
+    nearest = { q: tile.q, r: tile.r };
+  }
+  if (nearest === undefined) throw new Error('this chronicle has charted the whole disc');
+  return nearest;
+}
+
 /**
  * The first seed whose timeline's first deal stands alone and offers the raid first, with a tile
  * free for it to enter a warrior on — what the take lands is then one more warrior standing on the
@@ -863,56 +906,6 @@ function runOn(
     }
     return undefined;
   });
-}
-
-/** A chronicle whose turn `turn` can enter a worker and step it onto `first` and then `second`. */
-export type StepRun = {
-  readonly seed: number;
-  readonly turn: number;
-  readonly first: TileCoords;
-  readonly second: TileCoords;
-};
-
-/** The first seed with a turn in its first eight that opens on such a run. */
-export function stepRun(): StepRun {
-  return firstSeed('opens a turn on a worker and two steps', (seed) => {
-    let chronicle = launch(seed, deckOf(STAND_IN, 'PH_Deck'));
-    for (let turn = 1; turn <= 8; turn++) {
-      const steps = steppedThisTurn(chronicle);
-      if (steps !== undefined) return { seed, turn, ...steps };
-      chronicle = endedTurn(chronicle);
-    }
-    return undefined;
-  });
-}
-
-/**
- * The two tiles this hand's worker crosses to, one step at a time, and nothing when it cannot. The
- * worker is the only unit of the player's on the map.
- */
-function steppedThisTurn(
-  chronicle: Chronicle,
-): { first: TileCoords; second: TileCoords } | undefined {
-  const enter = idsOf(chronicle.hand).indexOf('PH_Worker');
-  if (enter === -1 || !playable(refusalOf(STAND_IN, chronicle, 'PH_Worker'))) return undefined;
-  const entered = outcome(apply(STAND_IN, chronicle, { type: 'play', index: enter, aim: 'none' }));
-  const [worker, ...others] = playersOf(entered);
-  if (worker === undefined || others.length > 0) return undefined;
-
-  for (const first of neighbours(cityTileOf(entered))) {
-    const stepped = outcome(
-      apply(STAND_IN, entered, { type: 'move', unit: worker.id, tile: first }),
-    );
-    if (stepped === entered) continue;
-    for (const second of neighbours(first)) {
-      if (tileKey(second) === tileKey(cityTileOf(entered))) continue;
-      const again = { type: 'move', unit: worker.id, tile: second } as const;
-      if (outcome(apply(STAND_IN, stepped, again)) !== stepped) {
-        return { first, second };
-      }
-    }
-  }
-  return undefined;
 }
 
 /** The first seed whose city is captured inside twenty turns of ending the turn and nothing else. */

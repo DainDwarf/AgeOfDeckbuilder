@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { NOMADIC } from '../src/content/nomadic';
 import { apply, outcome } from '../src/rules/chronicle';
 import { campUnit } from '../src/rules/enemies';
-import { distance, neighbours, type TileCoords, tileKey } from '../src/rules/map';
+import { neighbours, type TileCoords, tileKey } from '../src/rules/map';
 import { charted, chartedAt, inSight } from '../src/rules/sight';
 import type { Chronicle } from '../src/rules/state';
 import { reachable } from '../src/rules/units';
@@ -19,6 +19,7 @@ import {
   glyphs,
   glyphsOf,
   marksIn,
+  nearestUncharted,
   openSaved,
   playersOf,
   rested,
@@ -90,22 +91,6 @@ function enemyInFog(): { chronicle: Chronicle; fog: TileCoords } {
   if (fog === undefined) throw new Error('seed 1 leaves no ground four tiles from its city');
   const guarded = unitEntered(bare, campUnit(NOMADIC, fog, 'guard'));
   return { chronicle: charted(NOMADIC, chartedAt(NOMADIC, guarded, fog)), fog };
-}
-
-/** The tile nearest the city that has never been in sight: the closest dark ground to press on. */
-function nearestUncharted(chronicle: Chronicle): TileCoords {
-  const seen = new Set(chronicle.snapshots.map(tileKey));
-  let nearest: TileCoords | undefined;
-  let away = Infinity;
-  for (const tile of chronicle.tiles) {
-    if (seen.has(tileKey(tile))) continue;
-    const off = distance(tile, cityTileOf(chronicle));
-    if (off >= away) continue;
-    away = off;
-    nearest = { q: tile.q, r: tile.r };
-  }
-  if (nearest === undefined) throw new Error('this chronicle has charted the whole disc');
-  return nearest;
 }
 
 /**

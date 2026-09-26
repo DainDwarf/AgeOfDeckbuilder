@@ -1,23 +1,26 @@
 import { expect, test } from '@playwright/test';
-import { STAND_IN } from '../src/content/stand-in';
+import { NOMADIC } from '../src/content/nomadic';
 import { aimOf } from '../src/rules/cards';
 import { cardOf, deckOf } from '../src/rules/catalogue';
-import { admitted } from '../src/rules/chronicle';
-import { CENTRE, neighbours, tileAt, tileKey } from '../src/rules/map';
+import { admitted, apply, outcome } from '../src/rules/chronicle';
+import { CENTRE, tileAt, tileKey } from '../src/rules/map';
 import { LOOK } from '../src/ui/look';
 import { text } from '../src/ui/text';
 import {
   aimed,
   budget,
+  capstoneClosed,
   chronicleOf,
   click,
   dragOut,
   endTurnFill,
   endTurnLabel,
+  firstsOf,
   idsOf,
+  launchedOn,
   marksIn,
   onScreen,
-  openOnCapstone,
+  openNew,
   playedOut,
   rested,
   shows,
@@ -31,15 +34,16 @@ test('a chronicle opens on the settle phase with the city standing nowhere, and 
 }) => {
   const problems = watch(page);
   test.setTimeout(budget(0));
+  const before = launchedOn(NOMADIC, 1);
 
-  await openOnCapstone(page, 1, 'PH_Deck');
-  await click(page, 'capstone-card-0');
-  await expect.poll(() => standing(page, 'capstone')).toBe(false);
+  await openNew(page, NOMADIC, 1);
+  await capstoneClosed(page);
 
   const opened = await chronicleOf(page);
+  expect(opened).toEqual(before);
   expect(opened.turn).toBe(0);
   expect(opened.city).toBeUndefined();
-  expect(idsOf(opened.hand)).toEqual(deckOf(STAND_IN, 'PH_Deck').settle);
+  expect(idsOf(opened.hand)).toEqual(deckOf(NOMADIC, firstsOf(NOMADIC).deck).settle);
   expect(await standing(page, `hand-${opened.hand.length - 1}`)).toBe(true);
   expect(await standing(page, `hand-${opened.hand.length}`)).toBe(false);
 
@@ -59,11 +63,15 @@ test('a chronicle opens on the settle phase with the city standing nowhere, and 
   expect(await endTurnLabel(page)).toBe(text('button.settle-phase'));
   expect(await chronicleOf(page)).toEqual(opened);
 
-  const card = aimOf(cardOf(STAND_IN, 'PH_Settle'));
-  if (card.aim !== 'tile') throw new Error('PH_Settle is aimed at no tile');
-  const lit = admitted(STAND_IN, opened, card);
+  const settle = opened.hand[0].id;
+  const card = aimOf(cardOf(NOMADIC, settle));
+  if (card.aim !== 'tile') throw new Error(`${settle} is aimed at no tile`);
+  const lit = admitted(NOMADIC, opened, card);
   const at = lit.find((coord) => tileKey(coord) !== tileKey(CENTRE));
   if (at === undefined) throw new Error('the settle admits no tile off the centre');
+  const settled = outcome(
+    apply(NOMADIC, before, { type: 'play', index: 0, aim: 'tile', tile: at }),
+  );
 
   await dragOut(page, 0);
   await aimed(page);
@@ -71,10 +79,12 @@ test('a chronicle opens on the settle phase with the city standing nowhere, and 
 
   await click(page, `tile-${tileKey(at)}`);
   await playedOut(page);
-  await expect.poll(async () => (await chronicleOf(page)).city).toEqual(at);
+  await expect.poll(() => chronicleOf(page)).toEqual(settled);
 
   const standingCity = await chronicleOf(page);
-  expect(tileAt(standingCity.tiles, at)?.terrain).toBe('urban');
+  expect(standingCity.city).toEqual(at);
+  expect(tileAt(standingCity.tiles, at)?.building).toBe(NOMADIC.city.building);
+  expect(tileAt(standingCity.tiles, at)?.terrain).toBe(tileAt(opened.tiles, at)?.terrain);
   expect(await marksIn(page, 'border')).toBe(standingCity.held.length);
 
   const button = await onScreen(page, 'end-turn');
@@ -83,14 +93,14 @@ test('a chronicle opens on the settle phase with the city standing nowhere, and 
 
   await stoppedTurn(page);
   const ticked = await chronicleOf(page);
+  expect(ticked).toEqual(outcome(apply(NOMADIC, settled, { type: 'end-turn' })));
   expect(ticked.turn).toBe(1);
   expect(await endTurnFill(page)).toBe(LOOK.accent);
   expect(await shows(page, 'settle-phase-frame')).toBe(false);
   expect(await shows(page, 'settle-phase-chip')).toBe(false);
   expect(ticked.hand).toHaveLength(5);
   for (const pile of [ticked.hand, ticked.drawPile, ticked.discardPile]) {
-    expect(idsOf(pile)).not.toContain('PH_Settle');
-    expect(idsOf(pile)).not.toContain('PH_Claim');
+    for (const { id } of opened.hand) expect(idsOf(pile)).not.toContain(id);
   }
 
   expect(problems).toEqual([]);
@@ -102,10 +112,8 @@ test('city mode entered once the city stands hides the settle phase’s frame an
   const problems = watch(page);
   test.setTimeout(budget(0));
 
-  await openOnCapstone(page, 1, 'PH_Deck');
-  await click(page, 'capstone-card-0');
-  await expect.poll(() => standing(page, 'capstone')).toBe(false);
-  await rested(page);
+  await openNew(page, NOMADIC, 1);
+  await capstoneClosed(page);
 
   await dragOut(page, 0);
   await aimed(page);
@@ -123,52 +131,6 @@ test('city mode entered once the city stands hides the settle phase’s frame an
   await expect.poll(() => shows(page, 'city-chip')).toBe(false);
   expect(await shows(page, 'settle-phase-chip')).toBe(true);
   expect(await shows(page, 'settle-phase-frame')).toBe(true);
-
-  expect(problems).toEqual([]);
-});
-
-test('after the settle a free claim lights the six tiles around the city and no other, and a press on one holds it, brings one population that stands on it, and leaves the card in neither pile', async ({
-  page,
-}) => {
-  const problems = watch(page);
-  test.setTimeout(budget(0));
-
-  await openOnCapstone(page, 1, 'PH_Deck');
-  await click(page, 'capstone-card-0');
-  await expect.poll(() => standing(page, 'capstone')).toBe(false);
-  await rested(page);
-
-  await dragOut(page, 0);
-  await aimed(page);
-  await click(page, `tile-${tileKey(CENTRE)}`);
-  await playedOut(page);
-  await expect.poll(async () => (await chronicleOf(page)).city).toEqual(CENTRE);
-
-  const settled = await chronicleOf(page);
-  const card = aimOf(cardOf(STAND_IN, 'PH_Claim'));
-  if (card.aim !== 'tile') throw new Error('PH_Claim is aimed at no tile');
-  const around = neighbours(CENTRE).map(tileKey).sort();
-  expect(settled.hand[0].id).toBe('PH_Claim');
-  expect(admitted(STAND_IN, settled, card).map(tileKey).sort()).toEqual(around);
-
-  await click(page, 'hand-0');
-  await aimed(page);
-  expect(await marksIn(page, 'aim-lit')).toBe(around.length);
-
-  const [tile] = neighbours(CENTRE);
-  await click(page, `tile-${tileKey(tile)}`);
-  await playedOut(page);
-  await expect
-    .poll(async () => (await chronicleOf(page)).held.length)
-    .toBe(settled.held.length + 1);
-
-  const claimed = await chronicleOf(page);
-  expect(claimed.held.map(tileKey)).toContain(tileKey(tile));
-  expect(claimed.assigned.map(tileKey)).toContain(tileKey(tile));
-  expect(claimed.population).toBe(settled.population + 1);
-  expect(claimed.hand).toHaveLength(settled.hand.length - 1);
-  expect(idsOf(claimed.drawPile)).not.toContain('PH_Claim');
-  expect(idsOf(claimed.discardPile)).not.toContain('PH_Claim');
 
   expect(problems).toEqual([]);
 });
