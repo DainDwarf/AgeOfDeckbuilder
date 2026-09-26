@@ -35,9 +35,11 @@ const ZOOM_KEY = { code: 'KeyZ', press: 'z' };
  * nothing to take before the deal, the place follow-it stands in the deal, and the tile.
  */
 function herdDealt(): { dealt: Chronicle; at: number; tile: TileCoords } {
-  return firstSeed('charts a tile the map does not draw on its first deal', (seed) => {
+  const turns = 20;
+  const complaint = `deals the herd alone as its first deal within ${turns} ended turns, its follow-it charting a tile the map does not draw`;
+  return firstSeed(complaint, (seed) => {
     let dealt = settledOn(NOMADIC, seed);
-    for (let turn = 0; turn < 20 && dealt.deals.length === 0; turn++) {
+    for (let turn = 0; turn < turns && dealt.deals.length === 0; turn++) {
       if (dealt.ending !== undefined) return undefined;
       dealt = outcome(apply(NOMADIC, dealt, { type: 'end-turn' }));
     }

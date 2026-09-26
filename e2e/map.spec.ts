@@ -359,13 +359,12 @@ test('however far the map is dragged, it cannot leave the frame', async ({ page 
   const north = { x: frame.x + frame.width / 2, y: frame.y + frame.height / 3 };
   for (let pass = 0; pass < 4; pass++) await drag(page, north, { x: 0, y: -frame.height / 3 });
 
-  // The push west keeps the east end across the frame, and the push north the south end down it.
+  // The push west keeps the east end across the frame; the south end, the disc's south-east corner,
+  // stays in it both ways.
   const east = await tileOnScreen(page, EAST);
-  const south = await tileOnScreen(page, SOUTH);
   expect(east.x).toBeGreaterThan(frame.x);
   expect(east.x).toBeLessThan(frame.x + frame.width);
-  expect(south.y).toBeGreaterThan(frame.y);
-  expect(south.y).toBeLessThan(frame.y + frame.height);
+  expect(inside(await tileOnScreen(page, SOUTH), frame)).toBe(true);
 
   // One more of each pass finds the map already against its bounds.
   await drag(page, west, { x: 80 - frame.width, y: 0 });
