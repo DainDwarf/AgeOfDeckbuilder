@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
+import { ageOf } from '../src/rules/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
 import { type TileCoords, tileAt, tileKey } from '../src/rules/map';
 import { campsPlaced } from '../src/rules/schedule';
@@ -29,9 +30,8 @@ const WARRIOR = 'warrior';
 
 /** The tiles the camp's building stands on, in the order the map lists them. */
 function campsOf(chronicle: Chronicle): TileCoords[] {
-  return chronicle.tiles
-    .filter((tile) => tile.building === CATALOGUE.camp.building)
-    .map(({ q, r }) => ({ q, r }));
+  const { building } = ageOf(CATALOGUE, chronicle.age).camp;
+  return chronicle.tiles.filter((tile) => tile.building === building).map(({ q, r }) => ({ q, r }));
 }
 
 /**
@@ -89,7 +89,8 @@ test('a warrior standing on a camp through the enemy phase captures it, and the 
   expect(await chronicleOf(page)).toEqual(captured);
   expect(tileAt(captured.tiles, camp)?.building).toBeUndefined();
   expect(captured.deals[0]?.of).toBe('camp');
-  expect(await titleOf(page, 'deal')).toBe(buildingName(CATALOGUE.camp.building));
-  expect(await loreOf(page, 'deal')).toBe(campLore(CATALOGUE.camp.building));
+  const { building } = ageOf(CATALOGUE, captured.age).camp;
+  expect(await titleOf(page, 'deal')).toBe(buildingName(building));
+  expect(await loreOf(page, 'deal')).toBe(campLore(building));
   expect(problems).toEqual([]);
 });

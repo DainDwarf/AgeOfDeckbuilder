@@ -1,6 +1,7 @@
 import { aimOf, leavesChronicle, refuses, struck } from './cards';
 import {
   type AimedCard,
+  ageOf,
   type Catalogue,
   capstoneOf,
   cardMade,
@@ -116,11 +117,13 @@ const HAND_SIZE = 5;
 
 export function beginChronicle(
   catalogue: Catalogue,
+  age: string,
   seed: number,
   deck: Deck,
   map: HexMap,
   timeline: Timeline,
 ): Chronicle {
+  const { camp } = ageOf(catalogue, age);
   for (const coord of map.centre) {
     if (tileAt(map.tiles, coord) !== undefined) continue;
     refuse(
@@ -132,6 +135,7 @@ export function beginChronicle(
   const shuffled = shuffleItems(seedRng(seed), deck.cards.map(made));
   const begun: Chronicle = {
     content: catalogue.version,
+    age,
     seed,
     rng: shuffled.rng,
     timeline,
@@ -153,27 +157,32 @@ export function beginChronicle(
   };
   let guarded = begun;
   for (const { q, r, building } of map.tiles) {
-    if (building !== catalogue.camp.building) continue;
-    guarded = entered(catalogue, guarded, campUnit(catalogue, { q, r }, 'guard')).chronicle;
+    if (building !== camp.building) continue;
+    guarded = entered(
+      catalogue,
+      guarded,
+      campUnit(catalogue, guarded, { q, r }, 'guard'),
+    ).chronicle;
   }
   return charted(catalogue, guarded);
 }
 
 /**
- * A chronicle launched on a region and a schedule: the seed deals the region's map, the timeline
- * takes the generator the map left as its own, and the opening takes both from the same seed. The
- * one place a map, a timeline and a chronicle share one.
+ * A chronicle launched in an age, on one of its regions: the seed deals the region's map, the
+ * timeline rolled from the age's schedule takes the generator the map left as its own, and the
+ * opening takes both from the same seed. The one place a map, a timeline and a chronicle share one.
  */
 export function launched(
   catalogue: Catalogue,
+  age: string,
   region: string,
-  schedule: string,
   seed: number,
   deck: Deck,
 ): Chronicle {
-  const { tiles, rivers, centre, rng } = generateMap(catalogue, region, seedRng(seed));
-  const timeline = timelineOf(catalogue, schedule, rng);
-  return beginChronicle(catalogue, seed, deck, { tiles, rivers, centre }, timeline);
+  const map = generateMap(catalogue, ageOf(catalogue, age), region, seedRng(seed));
+  const timeline = timelineOf(catalogue, age, map.rng);
+  const { tiles, rivers, centre } = map;
+  return beginChronicle(catalogue, age, seed, deck, { tiles, rivers, centre }, timeline);
 }
 
 /**
@@ -810,13 +819,14 @@ function enemyActs(catalogue: Catalogue, chronicle: Chronicle, id: number): Sequ
  * and rides on the chronicle handed back.
  */
 function campsRolled(catalogue: Catalogue, chronicle: Chronicle): Sequence {
+  const { camp } = ageOf(catalogue, chronicle.age);
   let rolling: Sequence = unchanged(chronicle);
   for (const { q, r, building } of chronicle.tiles) {
-    if (building !== catalogue.camp.building) continue;
+    if (building !== camp.building) continue;
     rolling = followed(rolling, (left) => {
       const step = nextRng(left.rng);
       const drawn = { ...left, rng: step.rng };
-      if (step.value >= catalogue.camp.odds) return unchanged(drawn);
+      if (step.value >= camp.odds) return unchanged(drawn);
       return enteredAround(catalogue, drawn, { q, r }, 1, 'guard');
     });
   }
@@ -829,9 +839,10 @@ function campsRolled(catalogue: Catalogue, chronicle: Chronicle): Sequence {
  * building slot and its rewards dealt behind the deals already standing.
  */
 function captures(catalogue: Catalogue, chronicle: Chronicle): Sequence {
+  const camp = ageOf(catalogue, chronicle.age).camp.building;
   let capturing: Sequence = unchanged(chronicle);
   for (const { q, r, building } of chronicle.tiles) {
-    if (building !== catalogue.camp.building) continue;
+    if (building !== camp) continue;
     if (unitAt(chronicle.units, { q, r })?.faction !== 'player') continue;
     capturing = followed(capturing, (left) => campCaptured(catalogue, left, { q, r }));
   }
@@ -858,7 +869,7 @@ function campCaptured(
       landedAs(
         change('dealt', {
           ...left,
-          deals: [...left.deals, { of: 'camp', rewards: catalogue.camp.rewards }],
+          deals: [...left.deals, { of: 'camp', rewards: ageOf(catalogue, left.age).camp.rewards }],
         }),
       ),
     ),

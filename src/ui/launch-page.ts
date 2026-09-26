@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
-import type { Catalogue } from '../rules/catalogue';
+import { CATALOGUE } from '../content/catalogue';
+import { ageOf } from '../rules/catalogue';
 import { refuse } from '../rules/map-kinds';
 import type { Chronicle } from '../rules/state';
 import {
@@ -15,11 +16,10 @@ import { readsKeys } from './keys';
 import { css, LOOK } from './look';
 import { type TextKey, text } from './text';
 
-/** What a chronicle is launched on: the content, a region, a schedule and a deck, and a seed or nothing for a fresh one. */
+/** What a chronicle is launched on: an age, one of its regions and a deck, and a seed or nothing for a fresh one. */
 export type Choices = {
-  readonly catalogue: Catalogue;
+  readonly age: string;
   readonly region: string;
-  readonly schedule: string;
   readonly deck: string;
   readonly seed: number | undefined;
 };
@@ -27,20 +27,20 @@ export type Choices = {
 /** What the chronicle screen opens on: the choices a chronicle begins on, and the one resumed on them. */
 export type Opening = Choices & { readonly resumed?: Chronicle };
 
-/** The first region, schedule and deck the catalogue lists, on that seed. */
-export function firstsOf(catalogue: Catalogue, seed: number | undefined): Choices {
-  return {
-    catalogue,
-    region: firstOf(catalogue, catalogue.regions, 'region'),
-    schedule: firstOf(catalogue, catalogue.schedules, 'schedule'),
-    deck: firstOf(catalogue, catalogue.decks, 'deck'),
-    seed,
-  };
+/** The first age and deck the catalogue lists, and that age's first region, on that seed. */
+export function firstsOf(seed: number | undefined): Choices {
+  const age = firstOf(CATALOGUE.ages, 'age');
+  return { age, region: firstRegionOf(age), deck: firstOf(CATALOGUE.decks, 'deck'), seed };
 }
 
-function firstOf(catalogue: Catalogue, table: Readonly<Record<string, unknown>>, noun: string) {
+/** The first region the age lists; an age the catalogue does not hold is refused. */
+export function firstRegionOf(age: string): string {
+  return firstOf(ageOf(CATALOGUE, age).regions, 'region');
+}
+
+function firstOf(table: Readonly<Record<string, unknown>>, noun: string): string {
   const [first] = Object.keys(table);
-  if (first === undefined) refuse(catalogue, `no ${noun} is listed`);
+  if (first === undefined) refuse(CATALOGUE, `no ${noun} is listed`);
   return first;
 }
 
@@ -60,7 +60,7 @@ const TITLE_STYLE = { fontFamily: UI_FONT, fontSize: '26px', fontStyle: 'bold', 
 const LABEL_STYLE = { fontFamily: UI_FONT, fontSize: '18px', fontStyle: 'bold', color: INK };
 const FACE_STYLE = { fontFamily: UI_FONT, fontSize: '16px', fontStyle: 'bold', color: INK };
 
-type Row = 'region' | 'schedule' | 'deck';
+type Row = 'age' | 'region' | 'deck';
 
 /** The launch page: one row per choice, the seed slot under them and Launch under the slot. */
 export class LaunchPage extends Phaser.Scene {
@@ -95,11 +95,11 @@ export class LaunchPage extends Phaser.Scene {
 
     const choose = (row: Row, option: string): void => {
       switch (row) {
+        case 'age':
+          chosen = { ...chosen, age: option, region: firstRegionOf(option) };
+          break;
         case 'region':
           chosen = { ...chosen, region: option };
-          break;
-        case 'schedule':
-          chosen = { ...chosen, schedule: option };
           break;
         case 'deck':
           chosen = { ...chosen, deck: option };
@@ -110,11 +110,11 @@ export class LaunchPage extends Phaser.Scene {
 
     const lay = (): void => {
       root?.destroy();
-      const { catalogue } = chosen;
+      const { regions } = ageOf(CATALOGUE, chosen.age);
       const rows: { row: Row; options: readonly string[]; chosen: string }[] = [
-        { row: 'region', options: Object.keys(catalogue.regions), chosen: chosen.region },
-        { row: 'schedule', options: Object.keys(catalogue.schedules), chosen: chosen.schedule },
-        { row: 'deck', options: Object.keys(catalogue.decks), chosen: chosen.deck },
+        { row: 'age', options: Object.keys(CATALOGUE.ages), chosen: chosen.age },
+        { row: 'region', options: Object.keys(regions), chosen: chosen.region },
+        { row: 'deck', options: Object.keys(CATALOGUE.decks), chosen: chosen.deck },
       ];
 
       const title = addText(this, 0, 0, text('launch.title'), TITLE_STYLE).setOrigin(0.5, 0);

@@ -11,8 +11,8 @@ function wordsOf(error: unknown): string {
 }
 
 /** The chronicle kept as the save, over whatever stood; storage that refuses it leaves play going on. */
-export function keepChronicle({ catalogue, region, deck }: Choices, chronicle: Chronicle): void {
-  const text = writeSave(catalogue, { chronicle, region, deck });
+export function keepChronicle({ region, deck }: Choices, chronicle: Chronicle): void {
+  const text = writeSave(CATALOGUE, { chronicle, region, deck });
   try {
     window.localStorage.setItem(SAVE_ENTRY, text);
   } catch (error) {
@@ -38,9 +38,8 @@ export function savedChronicle(): Opening | undefined {
   try {
     const { chronicle, region, deck } = readSave(CATALOGUE, text);
     return {
-      catalogue: CATALOGUE,
+      age: chronicle.age,
       region,
-      schedule: chronicle.timeline.schedule,
       deck,
       seed: chronicle.seed,
       resumed: chronicle,

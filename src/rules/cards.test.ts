@@ -14,11 +14,13 @@ import { type AimedCard, type Catalogue, cardOf, catalogued, deckOf } from './ca
 import { admitted, apply, byHand, type Command, outcome, refusalOf } from './chronicle';
 import { yielded } from './city';
 import {
+  AGE,
   actionOf,
   assignTo,
   attackOn,
   buildingAt,
   builtOn,
+  CAMP,
   CATALOGUE,
   type Carrying,
   CITY,
@@ -44,7 +46,6 @@ import {
   pointsOf,
   REGION,
   ringed,
-  SCHEDULE,
   settledLaunch,
   stagedBy,
   standing,
@@ -370,7 +371,7 @@ test('the refresh instant is refused on a unit whose move points are full, its a
 
 test('a chronicle begun on a deck of the catalogue holds that deck’s cards and opens turn 1 on a full hand of them', () => {
   const deck = deckOf(CATALOGUE, DECK_ID);
-  const chronicle = settledLaunch(CATALOGUE, REGION, SCHEDULE, 2026, deck);
+  const chronicle = settledLaunch(CATALOGUE, AGE, REGION, 2026, deck);
 
   expect(chronicle.hand).toHaveLength(5);
   expect(everyCard(chronicle)).toEqual([...deck.cards].sort());
@@ -831,7 +832,7 @@ test('a terraformed tile loses its feature and every improvement not naming the 
 });
 
 test('an event’s terraform removes the building that does not stand on the new terrain, and keeps the one that does', () => {
-  const upheaval = { timeline: dealing({ turn: 2, event: 'PH_Upheaval' }) };
+  const upheaval = { ...dealing({ turn: 2, event: 'PH_Upheaval' }) };
   const farmed = cityOf(['urban', 'plain'], {
     ...upheaval,
     tiles: builtOn(field(2), 'PH_Farm', [UPHEAVAL]),
@@ -845,7 +846,7 @@ test('an event’s terraform removes the building that does not stand on the new
   expect(razed?.terrain).toBe('forest');
   expect(razed?.building).toBeUndefined();
   expect(kept?.terrain).toBe('forest');
-  expect(kept?.building).toBe(CATALOGUE.camp.building);
+  expect(kept?.building).toBe(CAMP.building);
 });
 
 test('a terraform leaves the rivers where they run: a river lies on no tile', () => {
@@ -945,7 +946,7 @@ function reshaping(to: Terrain): Catalogue {
 function upheaved(carrying: Carrying = {}): Chronicle {
   return cityOf(['urban', 'plain'], {
     tiles: field(2),
-    timeline: dealing({ turn: 2, event: 'PH_Upheaval' }),
+    ...dealing({ turn: 2, event: 'PH_Upheaval' }),
     ...carrying,
   });
 }
@@ -1364,7 +1365,7 @@ test('the urbanisation card names the first of its four reasons: worker, action,
       ...at,
       terrain: 'plain',
       improvements: [],
-      building: CATALOGUE.camp.building,
+      building: CAMP.building,
     }),
     [worker(at)],
   );
@@ -1552,7 +1553,7 @@ function chilled(answer: string): Chronicle {
   const city = cityOf(['urban', 'plain'], {
     ...NO_GROWTH,
     resources: { ...STOCKED, food: 3 * FREEZE },
-    timeline: dealing({ turn: 2, event: 'PH_Cold' }),
+    ...dealing({ turn: 2, event: 'PH_Cold' }),
   });
   return endedTurn(city, answer);
 }

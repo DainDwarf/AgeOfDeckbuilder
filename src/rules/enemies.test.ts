@@ -3,9 +3,11 @@ import { type Catalogue, catalogued, unitKind } from './catalogue';
 import { apply, outcome } from './chronicle';
 import { cityCommand, claimable } from './city';
 import {
+  agesOver,
   attackOn,
   attacksOf,
   buildingAt,
+  CAMP,
   CAMPS,
   CATALOGUE,
   CITY,
@@ -29,6 +31,7 @@ import {
   plains,
   pointsOf,
   REGION,
+  REGIONS,
   ringed,
   SCRIPT,
   stagedBy,
@@ -38,14 +41,14 @@ import {
   worker,
 } from './fixtures';
 import { CENTRE, distance, MOVE_POINT, neighbours, type TileCoords, tileKey } from './map';
-import { regionOf, terrainKind } from './map-kinds';
+import { terrainKind } from './map-kinds';
 import { RESOURCES } from './resources';
 import { nextRng, seedRng } from './rng';
 import { walked } from './stages';
 import type { Chronicle } from './state';
 import { unitAt } from './units';
 
-/** A timeline dealing the raid on the second turn, and no other deal. */
+/** An age and a timeline dealing the raid on the second turn, and no other deal. */
 const RAID_ON_SECOND = dealing({ turn: 2, event: 'PH_Hardship' });
 
 /** Every camp the end of turn stages a capture of, as the tile each stood on. */
@@ -178,7 +181,7 @@ test('a unit killed in the enemy phase captures the camp it stood on no longer',
   const taken = outcome(apply(CATALOGUE, besieging, { type: 'end-turn' }));
 
   expect(taken.units.some((unit) => unit.faction === 'player')).toBe(false);
-  expect(buildingAt(taken, camp)).toBe(CATALOGUE.camp.building);
+  expect(buildingAt(taken, camp)).toBe(CAMP.building);
   expect(taken.deals).toEqual([]);
 });
 
@@ -197,7 +200,7 @@ test('a chronicle that fell in the enemy phase captures no camp', () => {
     'enemy-phase',
     'ended',
   ]);
-  expect(buildingAt(fallen, camp)).toBe(CATALOGUE.camp.building);
+  expect(buildingAt(fallen, camp)).toBe(CAMP.building);
   expect(fallen.deals).toEqual([]);
 });
 
@@ -206,13 +209,13 @@ test('a captured camp is silent: the raid enters on a camp still standing', () =
   const held = cityOf(['urban'], {
     tiles: camped(field(4), CAMPS),
     units: besieged.map(worker),
-    timeline: RAID_ON_SECOND,
+    ...RAID_ON_SECOND,
   });
 
   const raided = endedTurn(held, 'PH_Raid');
 
   for (const camp of besieged) expect(buildingAt(raided, camp)).toBeUndefined();
-  expect(buildingAt(raided, kept)).toBe(CATALOGUE.camp.building);
+  expect(buildingAt(raided, kept)).toBe(CAMP.building);
   expect(raided.units.find((unit) => unit.faction === 'enemy')?.tile).toEqual(kept);
 });
 
@@ -222,7 +225,7 @@ const RAID_OF_THREE = dealing({ turn: 20, event: 'PH_Hardship' });
 const SEEDS = [1, 2, 3, 4, 5, 6, 7, 8];
 
 function raidingAt(raidCampOdds: number): Catalogue {
-  return catalogued({ ...CATALOGUE, camp: { ...CATALOGUE.camp, raidCampOdds } });
+  return catalogued({ ...CATALOGUE, ages: agesOver({ ...CAMP, raidCampOdds }, REGIONS) });
 }
 
 function enteredSince(before: Chronicle, after: Chronicle): TileCoords[] {
@@ -238,7 +241,7 @@ test('a raid of three enters on its camp’s tile, then on the nearest free tile
     tiles: camped(field(5), [camp]),
     units: taken.map(worker),
     turn: 19,
-    timeline: RAID_OF_THREE,
+    ...RAID_OF_THREE,
   });
 
   for (const seed of SEEDS) {
@@ -257,7 +260,7 @@ test('a raid through a camp a unit stands on enters beside the camp’s tile', (
   const city = cityOf(['urban'], {
     tiles: camped(field(5), [camp]),
     units: [standing('enemy', camp, { move: 0 })],
-    timeline: RAID_ON_SECOND,
+    ...RAID_ON_SECOND,
   });
 
   const entered = enteredSince(city, endedTurn(city, 'PH_Raid'));
@@ -267,7 +270,7 @@ test('a raid through a camp a unit stands on enters beside the camp’s tile', (
 });
 
 test('a raid drawn through the outer ring enters on a tile of the disc farthest from its centre, camps standing', () => {
-  const city = cityOf(['urban'], { tiles: camped(field(5), CAMPS), timeline: RAID_ON_SECOND });
+  const city = cityOf(['urban'], { tiles: camped(field(5), CAMPS), ...RAID_ON_SECOND });
 
   for (const seed of SEEDS) {
     const seeded = { ...city, rng: seedRng(seed) };
@@ -282,14 +285,14 @@ test('a chronicle whose every camp is captured takes its raid on the outer ring'
   const held = cityOf(['urban'], {
     tiles: camped(field(5), CAMPS),
     units: CAMPS.map(worker),
-    timeline: RAID_ON_SECOND,
+    ...RAID_ON_SECOND,
   });
 
   const raided = endedTurn(held, 'PH_Raid');
   const entered = enteredSince(held, raided);
 
   expect(raided.turn).toBe(2);
-  expect(raided.tiles.some((tile) => tile.building === CATALOGUE.camp.building)).toBe(false);
+  expect(raided.tiles.some((tile) => tile.building === CAMP.building)).toBe(false);
   expect(entered).toHaveLength(1);
   expect(distance(entered[0], CENTRE)).toBe(5);
 });
@@ -300,7 +303,7 @@ test('a raid never enters on the city’s tile, and one larger than the tiles le
   const city = cityOf(['urban'], {
     tiles: camped(only(4, [CITY, camp, beyond]), [camp]),
     turn: 19,
-    timeline: RAID_OF_THREE,
+    ...RAID_OF_THREE,
   });
 
   for (const seed of SEEDS) {
@@ -312,7 +315,7 @@ test('a raid never enters on the city’s tile, and one larger than the tiles le
 
 /** The fixture's content with its camp rolling at these odds. */
 function rolling(odds: number): Catalogue {
-  return catalogued({ ...CATALOGUE, camp: { ...CATALOGUE.camp, odds } });
+  return catalogued({ ...CATALOGUE, ages: agesOver({ ...CAMP, odds }, REGIONS) });
 }
 
 /** Every camp the end of turn stages a warrior entering on, as the tile each stood on. */
@@ -324,7 +327,7 @@ function entriesOf(catalogue: Catalogue, chronicle: Chronicle): string[] {
 
 /** The fixture's camps in the order the map lists their tiles. */
 function campsInTileOrder(chronicle: Chronicle): string[] {
-  return chronicle.tiles.filter((tile) => tile.building === CATALOGUE.camp.building).map(tileKey);
+  return chronicle.tiles.filter((tile) => tile.building === CAMP.building).map(tileKey);
 }
 
 test('at odds of one every camp enters a guard once the enemies have acted, a stage each in tile order ahead of the captures: on the camp where its tile is free, and beside it where a unit stands on it', () => {
@@ -368,7 +371,7 @@ test('at odds of one every camp enters a guard once the enemies have acted, a st
     enemiesOf(outcome(stages))
       .filter((unit) => unit.id >= city.nextUnit)
       .map((unit) => (unit.faction === 'enemy' ? unit.script : undefined)),
-  ).toEqual(camps.map(() => CATALOGUE.camp.scripts.guard));
+  ).toEqual(camps.map(() => CAMP.scripts.guard));
 });
 
 test('the chronicle opens with one guard on each camp the map was dealt, in tile order, ahead of every unit the settle enters', () => {
@@ -384,12 +387,12 @@ test('the chronicle opens with one guard on each camp the map was dealt, in tile
       tile: tileKey(unit.tile),
       script: unit.faction === 'enemy' ? unit.script : undefined,
     })),
-  ).toEqual(camps.map((tile, at) => ({ id: at + 1, tile, script: CATALOGUE.camp.scripts.guard })));
+  ).toEqual(camps.map((tile, at) => ({ id: at + 1, tile, script: CAMP.scripts.guard })));
   expect(unitAt(banded.units, CITY)?.id).toBe(camps.length + 1);
 });
 
 test('a raid enters raiders, whatever door it comes through', () => {
-  const city = cityOf(['urban'], { tiles: camped(field(5), CAMPS), timeline: RAID_ON_SECOND });
+  const city = cityOf(['urban'], { tiles: camped(field(5), CAMPS), ...RAID_ON_SECOND });
 
   for (const catalogue of [raidingAt(0), raidingAt(1)]) {
     const raided = endedTurn(city, 'PH_Raid', catalogue);
@@ -397,7 +400,7 @@ test('a raid enters raiders, whatever door it comes through', () => {
 
     expect(entered).toHaveLength(1);
     expect(entered.map((unit) => (unit.faction === 'enemy' ? unit.script : undefined))).toEqual([
-      CATALOGUE.camp.scripts.raider,
+      CAMP.scripts.raider,
     ]);
   }
 });
@@ -441,7 +444,7 @@ test('a warrior a camp rolls stands on the camp with the camp’s unit’s stats
     tiles: camped(field(4), CAMPS),
     drawPile: fullDraw(),
   });
-  const stats = unitKind(CATALOGUE, CATALOGUE.camp.unit);
+  const stats = unitKind(CATALOGUE, CAMP.unit);
 
   const after = outcome(apply(rolling(1), city, { type: 'end-turn' }));
 
@@ -460,7 +463,7 @@ test('a warrior a camp rolls stands on the camp with the camp’s unit’s stats
       stats,
       movePoints: stats.move,
       action: stats.action,
-      script: CATALOGUE.camp.scripts.guard,
+      script: CAMP.scripts.guard,
     })),
   );
 });
@@ -556,7 +559,7 @@ test('a camp captured is one camp-capture carrying its tile, over the camp leavi
   expect(buildingAt(retiled.chronicle, camp)).toBeUndefined();
   expect(retiled.chronicle.deals).toEqual([]);
   expect(dealt.name).toBe('dealt');
-  expect(dealt.chronicle.deals).toEqual([{ of: 'camp', rewards: CATALOGUE.camp.rewards }]);
+  expect(dealt.chronicle.deals).toEqual([{ of: 'camp', rewards: CAMP.rewards }]);
   expect(outcome(stages)).toBe(capture.chronicle);
 });
 
@@ -609,9 +612,9 @@ test('two camps captured the turn before an event is due deal two deals of rewar
     tiles: camped(field(4), [...camps, { q: -4, r: 0 }]),
     drawPile: fullDraw(),
     units: camps.map((camp) => standing('player', camp)),
-    timeline: RAID_ON_SECOND,
+    ...RAID_ON_SECOND,
   });
-  const rewards = { of: 'camp', rewards: CATALOGUE.camp.rewards };
+  const rewards = { of: 'camp', rewards: CAMP.rewards };
 
   const dealt = outcome(apply(CATALOGUE, besieging, { type: 'end-turn' }));
   const first = outcome(apply(CATALOGUE, dealt, { type: 'take', at: 0 }));
@@ -913,10 +916,10 @@ test('an enemy that reaches the city’s tile stands there, and captures the cit
 });
 
 test('the enemy that moves in from its camp reaches the city and captures it', () => {
-  const radius = regionOf(CATALOGUE, REGION).radius;
+  const radius = REGIONS[REGION].radius;
   let chronicle = cityOf(['urban'], {
     tiles: camped(field(radius), [{ q: radius, r: 0 }]),
-    timeline: RAID_ON_SECOND,
+    ...RAID_ON_SECOND,
   });
   for (let turn = 0; turn < 20 && chronicle.ending === undefined; turn++) {
     chronicle = endedTurn(chronicle, 'PH_Raid');

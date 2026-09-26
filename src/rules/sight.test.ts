@@ -1,7 +1,16 @@
 import { expect, test } from 'vitest';
 import { type Catalogue, catalogued, entered } from './catalogue';
 import { apply, outcome } from './chronicle';
-import { CATALOGUE, NO_DEALS, namesOf, opening, plains, SCRIPT, settledOn } from './fixtures';
+import {
+  CATALOGUE,
+  NO_DEALS,
+  namesOf,
+  opening,
+  plains,
+  QUIET,
+  SCRIPT,
+  settledOn,
+} from './fixtures';
 import {
   distance,
   MOVE_POINT,
@@ -77,6 +86,7 @@ function cityOn(
   const held = [...holding];
   return charted(catalogue, {
     content: catalogue.version,
+    age: QUIET,
     seed: 7,
     rng: seedRng(7),
     timeline: NO_DEALS,

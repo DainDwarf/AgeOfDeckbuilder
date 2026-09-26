@@ -116,7 +116,7 @@ function gatherStep(): Step {
  */
 function raiderThreeOff(): { chronicle: Chronicle; from: TileCoords; to: TileCoords } {
   for (const tile of campGround(OPENED, 3)) {
-    const chronicle = unitEntered(OPENED, campUnit(CATALOGUE, tile, 'raider'));
+    const chronicle = unitEntered(OPENED, campUnit(CATALOGUE, OPENED, tile, 'raider'));
     const stages = [...walked(apply(CATALOGUE, chronicle, { type: 'end-turn' }))];
     const moves = stages.flatMap((stage) =>
       stage.name === 'move'

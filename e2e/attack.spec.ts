@@ -1,6 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
-import { entered, unitKind } from '../src/rules/catalogue';
+import { ageOf, entered, unitKind } from '../src/rules/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
 import { neighbours, type TileCoords, tileAt, tileKey } from '../src/rules/map';
 import { charted } from '../src/rules/sight';
@@ -29,7 +29,8 @@ function besieged(): { chronicle: Chronicle; warrior: Unit; enemy: Unit } {
     const settled = settledOn(seed);
     const city = cityTileOf(settled);
     const guarded = entered(CATALOGUE, settled, { type: 'warrior', faction: 'player', tile: city });
-    const kind = unitKind(CATALOGUE, CATALOGUE.camp.unit);
+    const { camp } = ageOf(CATALOGUE, settled.age);
+    const kind = unitKind(CATALOGUE, camp.unit);
     const beside = neighbours(city).find(
       (tile) =>
         standsOn(CATALOGUE, kind, tileAt(guarded.chronicle.tiles, tile)) &&
@@ -37,10 +38,10 @@ function besieged(): { chronicle: Chronicle; warrior: Unit; enemy: Unit } {
     );
     if (beside === undefined) return undefined;
     const beset = entered(CATALOGUE, guarded.chronicle, {
-      type: CATALOGUE.camp.unit,
+      type: camp.unit,
       faction: 'enemy',
       tile: beside,
-      script: CATALOGUE.camp.scripts.raider,
+      script: camp.scripts.raider,
     });
     const chronicle = charted(CATALOGUE, beset.chronicle);
     const [warrior] = playersOf(chronicle);

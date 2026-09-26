@@ -32,6 +32,7 @@ test('an address naming a deck boots into the chronicle, stays as it was, and lo
 
   await page.waitForFunction(() => window.game?.scene.isActive('ui') === true);
   expect(named(page)).toBe(address);
+  expect((await chronicleOf(page)).age).toBe(firstsOf().age);
 
   expect(problems).toEqual([]);
 });
@@ -94,9 +95,11 @@ test('Launch opens the chronicle on the defaults, and the address stays bare thr
   await page.waitForFunction(() => window.game?.scene.isActive('ui') === true);
 
   const launched = await chronicleOf(page);
-  const deck = deckOf(CATALOGUE, 'nomadic');
+  const firsts = firstsOf();
+  const deck = deckOf(CATALOGUE, firsts.deck);
   expect(named(page)).toBe('');
   expect(launched.content).toBe(CATALOGUE.version);
+  expect(launched.age).toBe(firsts.age);
   expect(idsOf([...launched.drawPile, ...launched.hand, ...launched.discardPile]).sort()).toEqual(
     [...deck.cards, ...deck.settle].sort(),
   );

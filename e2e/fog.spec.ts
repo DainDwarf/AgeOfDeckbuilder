@@ -89,7 +89,7 @@ function enemyInFog(): { chronicle: Chronicle; fog: TileCoords } {
   const bare = settledOn(1);
   const [fog] = campGround(bare, 4);
   if (fog === undefined) throw new Error('seed 1 leaves no ground four tiles from its city');
-  const guarded = unitEntered(bare, campUnit(CATALOGUE, fog, 'guard'));
+  const guarded = unitEntered(bare, campUnit(CATALOGUE, bare, fog, 'guard'));
   return { chronicle: charted(CATALOGUE, chartedAt(CATALOGUE, guarded, fog)), fog };
 }
 

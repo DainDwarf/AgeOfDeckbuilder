@@ -16,7 +16,7 @@ import {
   throughWorker,
   unimproved,
 } from '../rules/cards';
-import { type Catalogue, catalogued } from '../rules/catalogue';
+import type { Age, Slice, Tables } from '../rules/catalogue';
 import { arrived, populationTaken, yielded } from '../rules/city';
 import { enteredAround } from '../rules/enemies';
 import { MOVE_POINT } from '../rules/map';
@@ -52,8 +52,7 @@ const HERD = { feature: 'wildlife', fromCity: 4 } as const;
 
 const RIVAL_CAMP = { fromCity: [3, 4], apart: 3 } as const;
 
-export const NOMADIC: Catalogue = catalogued({
-  version: '1',
+const TABLES: Tables = {
   units: {
     worker: {
       type: 'worker',
@@ -290,19 +289,6 @@ export const NOMADIC: Catalogue = catalogued({
         chronicle.tiles.some((tile) => tile.building === 'shelter'),
     },
   },
-  schedules: {
-    nomadic: {
-      spacing: [6, 9],
-      capstone: { id: 'first-shelter', window: [12, 18] },
-      entries: {
-        'lean-season': () => 1,
-        'rival-band': (turn) => (turn >= 10 ? 1 : 0),
-        wildfire: (turn) => (turn >= 10 ? 1 : 0),
-        departure: () => 1,
-        herd: () => 1 / 3,
-      },
-    },
-  },
   terrains: {
     plain: {
       yields: { food: 1 },
@@ -383,47 +369,67 @@ export const NOMADIC: Catalogue = catalogued({
   improvements: {
     trapping: { terrains: ['forest'], yields: { food: 1 } },
   },
-  regions: {
-    temperate: {
-      radius: 10,
-      centre: 3,
-      tilesPerBiome: 30,
-      centreBiome: 'heartland',
-      biomeShares: [
-        { biome: 'sea', share: 0.2 },
-        { biome: 'mountain', share: 0.1 },
-        { biome: 'woodland', share: 0.1 },
-        { biome: 'land', share: 0.6 },
-      ],
-      featureShares: [
-        { feature: 'fertile', share: 0.1 },
-        { feature: 'wildlife', share: 0.1 },
-        { feature: 'flint', share: 0.1 },
-      ],
-      camps: 4,
-      campFromCentre: 7,
-      campsApart: 4,
-      rivers: {
-        source: 'mountain',
-        relief: 1,
-        roughness: 0.5,
-        perRange: 2,
-        climb: 0.5,
-        meander: 1.5,
-        curl: 0.75,
-        edgesPerTile: 4,
-        leastEdges: 6,
-        draws: 60,
-      },
+};
+
+const REGIONS: Age['regions'] = {
+  temperate: {
+    radius: 10,
+    centre: 3,
+    tilesPerBiome: 30,
+    centreBiome: 'heartland',
+    biomeShares: [
+      { biome: 'sea', share: 0.2 },
+      { biome: 'mountain', share: 0.1 },
+      { biome: 'woodland', share: 0.1 },
+      { biome: 'land', share: 0.6 },
+    ],
+    featureShares: [
+      { feature: 'fertile', share: 0.1 },
+      { feature: 'wildlife', share: 0.1 },
+      { feature: 'flint', share: 0.1 },
+    ],
+    camps: 4,
+    campFromCentre: 7,
+    campsApart: 4,
+    rivers: {
+      source: 'mountain',
+      relief: 1,
+      roughness: 0.5,
+      perRange: 2,
+      climb: 0.5,
+      meander: 1.5,
+      curl: 0.75,
+      edgesPerTile: 4,
+      leastEdges: 6,
+      draws: 60,
     },
   },
-  camp: {
-    unit: 'warrior',
-    scripts: { guard: 'guard', raider: 'raider' },
-    building: 'camp',
-    rewards: ['stores', 'band-joins'],
-    odds: 0.08,
-    raidCampOdds: 0.8,
+};
+
+/** The Nomadic Age: what it owns, and what it brings to the tables every age shares. */
+export const NOMADIC: Slice = {
+  id: 'nomadic',
+  owns: {
+    schedule: {
+      spacing: [6, 9],
+      capstone: { id: 'first-shelter', window: [12, 18] },
+      entries: {
+        'lean-season': () => 1,
+        'rival-band': (turn) => (turn >= 10 ? 1 : 0),
+        wildfire: (turn) => (turn >= 10 ? 1 : 0),
+        departure: () => 1,
+        herd: () => 1 / 3,
+      },
+    },
+    camp: {
+      unit: 'warrior',
+      scripts: { guard: 'guard', raider: 'raider' },
+      building: 'camp',
+      rewards: ['stores', 'band-joins'],
+      odds: 0.08,
+      raidCampOdds: 0.8,
+    },
+    regions: REGIONS,
   },
-  city: { building: 'city', sight: 2, idle: 0 },
-});
+  brings: TABLES,
+};

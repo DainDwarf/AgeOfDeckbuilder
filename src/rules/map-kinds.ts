@@ -89,12 +89,12 @@ export type Region = {
   readonly rivers: RiverFlow;
 };
 
-// `map.ts` and `units.ts` read the catalogue through this shape rather than through `Catalogue`:
-// the catalogue's own type reaches them back through the chronicle and the units, and the lint
-// refuses an import cycle, a type-only one included.
+// `map.ts` and `units.ts` read the catalogue through these shapes rather than through `Catalogue`
+// and its `Age`: the catalogue's own type reaches them back through the chronicle and the units, and
+// the lint refuses an import cycle, a type-only one included.
 /**
  * The part of a catalogue the map is read through: the terrains and the layers a tile is made of,
- * the biomes and the regions a map is dealt from, and the building a camp is.
+ * and the biomes a map is dealt from.
  */
 export type MapContent = {
   readonly version: string;
@@ -103,6 +103,10 @@ export type MapContent = {
   readonly buildings: Readonly<Record<string, LayerKind>>;
   readonly features: Readonly<Record<string, FeatureKind>>;
   readonly improvements: Readonly<Record<string, LayerKind>>;
+};
+
+/** The part of an age a map is dealt from: its regions, and the building its camp is. */
+export type MapAge = {
   readonly regions: Readonly<Record<string, Region>>;
   readonly camp: { readonly building: string };
 };
@@ -132,9 +136,9 @@ export function improvementKind(catalogue: MapContent, id: string): LayerKind {
   return held(catalogue, catalogue.improvements, id, 'improvement');
 }
 
-/** The composition a map of that region is dealt from; a region the catalogue does not hold is refused. */
-export function regionOf(catalogue: MapContent, id: string): Region {
-  return held(catalogue, catalogue.regions, id, 'region');
+/** The composition a map of that region is dealt from; a region the age does not hold is refused. */
+export function regionOf(catalogue: MapContent, age: MapAge, id: string): Region {
+  return held(catalogue, age.regions, id, 'region');
 }
 
 /** The entry of one table of the catalogue a key names; a key the table does not hold is refused. */

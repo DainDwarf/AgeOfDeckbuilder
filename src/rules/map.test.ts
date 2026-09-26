@@ -1,5 +1,6 @@
 import { expect, test } from 'vitest';
-import { CATALOGUE, CLEARING, REGION } from './fixtures';
+import { ageOf } from './catalogue';
+import { AGE, CAMP, CATALOGUE, CLEARING, REGION } from './fixtures';
 import {
   CENTRE,
   type Corner,
@@ -24,20 +25,23 @@ import { seedRng } from './rng';
 
 const SEEDS = [0, 1, 1234, 0xdeadbeef | 0, 424242];
 
+/** What the age every map here is dealt in owns. */
+const OWNS = ageOf(CATALOGUE, AGE);
+
 /** The composition every map here is dealt from. */
-const DISC = regionOf(CATALOGUE, REGION);
+const DISC = regionOf(CATALOGUE, OWNS, REGION);
 
 function mapOf(seed: number): Tile[] {
-  return generateMap(CATALOGUE, REGION, seedRng(seed)).tiles;
+  return generateMap(CATALOGUE, OWNS, REGION, seedRng(seed)).tiles;
 }
 
 function riversOf(seed: number): River[] {
-  return generateMap(CATALOGUE, REGION, seedRng(seed)).rivers;
+  return generateMap(CATALOGUE, OWNS, REGION, seedRng(seed)).rivers;
 }
 
 /** The camps a map was dealt, in the order its tiles list them. */
 function campsOf(tiles: Tile[]): Tile[] {
-  return tiles.filter((tile) => tile.building === CATALOGUE.camp.building);
+  return tiles.filter((tile) => tile.building === CAMP.building);
 }
 
 /** The tiles of the map a corner is a corner of; a corner on the outer ring touches fewer than three. */
@@ -113,7 +117,7 @@ test('the generator puts urban on no tile, and the centre tile is its biome’s 
 
 test('the map hands out its centre part: every tile within the region’s reach of the disc’s centre, and no other', () => {
   for (const seed of SEEDS) {
-    const { tiles, centre } = generateMap(CATALOGUE, REGION, seedRng(seed));
+    const { tiles, centre } = generateMap(CATALOGUE, OWNS, REGION, seedRng(seed));
 
     expect(centre.map(tileKey).sort()).toEqual(
       tiles
@@ -152,7 +156,7 @@ test('a biome dealt to a size holds at least that many tiles, and no more over i
   const { growth } = biomeKind(CATALOGUE, 'clearing');
   const size = growth.kind === 'size' ? growth.size : Number.NaN;
   for (const seed of SEEDS) {
-    const { tiles } = generateMap(CATALOGUE, CLEARING, seedRng(seed));
+    const { tiles } = generateMap(CATALOGUE, OWNS, CLEARING, seedRng(seed));
     const glades = tiles.filter((tile) => tile.terrain === 'glade');
     const ringed = glades.filter((glade) =>
       neighbours(glade).every((coord) => {
@@ -171,9 +175,12 @@ test('a tile no biome reaches because a sized biome closed it off belongs to tha
   const hollow: MapContent = {
     ...CATALOGUE,
     biomes: { ...CATALOGUE.biomes, clearing: { ...clearing, growth: { kind: 'size', size: 6 } } },
+  };
+  const hollowed = {
+    ...OWNS,
     regions: {
       hollow: {
-        ...regionOf(CATALOGUE, CLEARING),
+        ...regionOf(CATALOGUE, OWNS, CLEARING),
         radius: 1,
         tilesPerBiome: 7,
         biomeShares: [],
@@ -183,7 +190,7 @@ test('a tile no biome reaches because a sized biome closed it off belongs to tha
   };
 
   for (const seed of SEEDS) {
-    const { tiles } = generateMap(hollow, 'hollow', seedRng(seed));
+    const { tiles } = generateMap(hollow, hollowed, 'hollow', seedRng(seed));
 
     expect(tiles.map((tile) => tile.terrain)).toEqual(Array(7).fill('glade'));
   }
@@ -196,7 +203,7 @@ test('a biome kind of a greater compactness grows rounder, its tiles nearer its 
   });
   const reachOf = (content: MapContent): number => {
     const glades = SEEDS.flatMap(
-      (seed) => generateMap(content, CLEARING, seedRng(seed)).tiles,
+      (seed) => generateMap(content, OWNS, CLEARING, seedRng(seed)).tiles,
     ).filter((tile) => tile.terrain === 'glade');
     return glades.reduce((total, glade) => total + distance(glade, CENTRE), 0) / glades.length;
   };
@@ -213,8 +220,8 @@ test('a biome kind of a greater growth weight grows larger', () => {
     },
   });
   const waterOn = (content: MapContent): number =>
-    SEEDS.flatMap((seed) => generateMap(content, REGION, seedRng(seed)).tiles).filter((tile) =>
-      water(content, tile.terrain),
+    SEEDS.flatMap((seed) => generateMap(content, OWNS, REGION, seedRng(seed)).tiles).filter(
+      (tile) => water(content, tile.terrain),
     ).length;
 
   expect(waterOn(seaWeighing(4))).toBeGreaterThan(waterOn(seaWeighing(1 / 4)));
@@ -392,7 +399,7 @@ test('every map is dealt its camps, each keeping its distance from the centre an
 
 test('a camp stands where the ground runs to the centre, never across the water', () => {
   for (const seed of SEEDS) {
-    const map = generateMap(CATALOGUE, REGION, seedRng(seed));
+    const map = generateMap(CATALOGUE, OWNS, REGION, seedRng(seed));
     const walked = pathCosts(
       CATALOGUE,
       map.tiles,
@@ -406,11 +413,11 @@ test('a camp stands where the ground runs to the centre, never across the water'
 });
 
 test('the generator fills a building slot with a camp and with nothing else', () => {
-  const ground = buildingKind(CATALOGUE, CATALOGUE.camp.building).terrains;
+  const ground = buildingKind(CATALOGUE, CAMP.building).terrains;
   for (const seed of SEEDS) {
     for (const tile of mapOf(seed)) {
       if (tile.building === undefined) continue;
-      expect(tile.building).toBe(CATALOGUE.camp.building);
+      expect(tile.building).toBe(CAMP.building);
       expect(ground).toContain(tile.terrain);
     }
   }

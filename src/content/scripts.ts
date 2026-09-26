@@ -1,4 +1,4 @@
-import type { Catalogue, EnemyScript } from '../rules/catalogue';
+import { ageOf, type Catalogue, type EnemyScript } from '../rules/catalogue';
 import {
   distance,
   movementCost,
@@ -77,8 +77,9 @@ function campOf(
   from: TileCoords,
   radius: number,
 ): TileCoords | undefined {
+  const { building } = ageOf(catalogue, chronicle.age).camp;
   const camps = chronicle.tiles
-    .filter((tile) => tile.building === catalogue.camp.building && distance(tile, from) <= radius)
+    .filter((tile) => tile.building === building && distance(tile, from) <= radius)
     .map(({ q, r }) => ({ tile: { q, r } }));
   return camps.length === 0 ? undefined : nearestTo(chronicle, camps, from).tile;
 }

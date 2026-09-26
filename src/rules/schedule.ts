@@ -1,14 +1,15 @@
 import { terraformed } from './cards';
 import {
   type Answer,
+  ageOf,
   type CampScript,
   type Catalogue,
   capstoneOf,
   cardMade,
   entered,
   eventOf,
+  type Schedule,
   type Span,
-  scheduleOf,
 } from './catalogue';
 import { populationKilled } from './city';
 import { campUnit, enteredAround, raidEntry } from './enemies';
@@ -43,31 +44,27 @@ import {
 import { damaged, unitAt } from './units';
 
 /**
- * A schedule rolled into the timeline a chronicle opens on, the generator handed in its own from then
- * on: the capstone's turn from the window, then the first due turn rolled as from a landing on turn
- * 0. A schedule the catalogue does not hold is refused.
+ * An age's schedule rolled into the timeline a chronicle opens on, the generator handed in its own
+ * from then on: the capstone's turn from the window, then the first due turn rolled as from a landing
+ * on turn 0. An age the catalogue does not hold is refused.
  */
-export function timelineOf(catalogue: Catalogue, id: string, rng: Rng): Timeline {
-  const schedule = scheduleOf(catalogue, id);
+export function timelineOf(catalogue: Catalogue, age: string, rng: Rng): Timeline {
+  const { schedule } = ageOf(catalogue, age);
   const capstone = withinSpan(rng, schedule.capstone.window);
   return rolledFrom(
-    catalogue,
-    {
-      schedule: id,
-      rng: capstone.rng,
-      capstone: { id: schedule.capstone.id, turn: capstone.turns },
-    },
+    schedule,
+    { rng: capstone.rng, capstone: { id: schedule.capstone.id, turn: capstone.turns } },
     0,
   );
 }
 
 /** The next due turn rolled from a landing by the spacing, from the timeline's own generator. */
 function rolledFrom(
-  catalogue: Catalogue,
+  schedule: Schedule,
   timeline: Omit<Timeline, 'next'>,
   landing: number,
 ): Timeline {
-  const spaced = withinSpan(timeline.rng, scheduleOf(catalogue, timeline.schedule).spacing);
+  const spaced = withinSpan(timeline.rng, schedule.spacing);
   return { ...timeline, rng: spaced.rng, next: landing + spaced.turns };
 }
 
@@ -76,9 +73,13 @@ function rolledFrom(
  * entries weighing anything on that turn whose need the chronicle meets; no event where none does.
  * Where no entry weighs anything on the turn it draws nothing.
  */
-function eventDrawn(catalogue: Catalogue, chronicle: Chronicle): { event?: string; rng: Rng } {
+function eventDrawn(
+  catalogue: Catalogue,
+  schedule: Schedule,
+  chronicle: Chronicle,
+): { event?: string; rng: Rng } {
   const { timeline, turn } = chronicle;
-  const weighing = Object.entries(scheduleOf(catalogue, timeline.schedule).entries)
+  const weighing = Object.entries(schedule.entries)
     .map(([entry, weight]): [string, number] => [entry, weight(turn)])
     .filter(([, weight]) => weight > 0);
   if (weighing.length === 0) return { rng: timeline.rng };
@@ -107,9 +108,10 @@ export function spanEnded(chronicle: Chronicle, turns: number): boolean {
  */
 export function events(catalogue: Catalogue, chronicle: Chronicle): Sequence<Group> {
   const { timeline, turn } = chronicle;
+  const { schedule } = ageOf(catalogue, chronicle.age);
   if (turn === timeline.capstone.turn) {
     const rolled = landedAs(
-      change('rolled', { ...chronicle, timeline: rolledFrom(catalogue, timeline, turn) }),
+      change('rolled', { ...chronicle, timeline: rolledFrom(schedule, timeline, turn) }),
     );
     const { lands } = capstoneOf(catalogue, timeline.capstone.id);
     return grouped(
@@ -119,12 +121,9 @@ export function events(catalogue: Catalogue, chronicle: Chronicle): Sequence<Gro
   }
 
   if (turn !== timeline.next) return unchanged(chronicle);
-  const { event, rng } = eventDrawn(catalogue, chronicle);
+  const { event, rng } = eventDrawn(catalogue, schedule, chronicle);
   const rolled = landedAs(
-    change('rolled', {
-      ...chronicle,
-      timeline: rolledFrom(catalogue, { ...timeline, rng }, turn),
-    }),
+    change('rolled', { ...chronicle, timeline: rolledFrom(schedule, { ...timeline, rng }, turn) }),
   );
   return grouped(
     { name: 'deal' },
@@ -394,12 +393,13 @@ export function laid(
  * and on none a unit stands on. It draws nothing.
  */
 export function reinforced(catalogue: Catalogue, chronicle: Chronicle, script: CampScript): Landed {
+  const camp = ageOf(catalogue, chronicle.age).camp.building;
   let landing = unchanged(chronicle);
   for (const { q, r, building } of chronicle.tiles) {
-    if (building !== catalogue.camp.building) continue;
+    if (building !== camp) continue;
     if (unitAt(landing.chronicle.units, { q, r }) !== undefined) continue;
     landing = followed(landing, (left) =>
-      entered(catalogue, left, campUnit(catalogue, { q, r }, script)),
+      entered(catalogue, left, campUnit(catalogue, left, { q, r }, script)),
     );
   }
   return landing;
@@ -421,7 +421,7 @@ function campTiles(
   const { city } = chronicle;
   if (city === undefined) return [];
   const [near, far] = fromCity;
-  const ground = buildingKind(catalogue, catalogue.camp.building).terrains;
+  const ground = buildingKind(catalogue, ageOf(catalogue, chronicle.age).camp.building).terrains;
   const reached = groundRunsTo(catalogue, chronicle.tiles, chronicle.rivers, city);
   return chronicle.tiles.filter(
     (tile) =>
@@ -437,7 +437,8 @@ function campTiles(
 }
 
 function campsStanding(catalogue: Catalogue, chronicle: Chronicle): TileCoords[] {
-  return chronicle.tiles.filter((tile) => tile.building === catalogue.camp.building);
+  const camp = ageOf(catalogue, chronicle.age).camp.building;
+  return chronicle.tiles.filter((tile) => tile.building === camp);
 }
 
 export function campPlaceable(
@@ -468,7 +469,7 @@ export function campsPlaced(
   if (chronicle.city === undefined) {
     refuse(catalogue, 'a camp was placed while the city stands nowhere');
   }
-  const camp = catalogue.camp.building;
+  const camp = ageOf(catalogue, chronicle.age).camp.building;
 
   let rng = chronicle.rng;
   const standing = campsStanding(catalogue, chronicle);

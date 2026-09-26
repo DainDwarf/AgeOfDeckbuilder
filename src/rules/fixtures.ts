@@ -25,15 +25,19 @@ import {
   unimproved,
 } from './cards';
 import {
+  type Age,
+  type Camp,
   type Catalogue,
   cardMade,
-  catalogued,
   type Deck,
   deckOf,
   type EnemyScript,
   type Entering,
   entered,
+  merged,
   type Schedule,
+  type Slice,
+  type Tables,
 } from './catalogue';
 import { apply, beginChronicle, type Command, launched, outcome } from './chronicle';
 import { arrived, bordered, populationKilled, populationTaken } from './city';
@@ -51,7 +55,7 @@ import {
   type TileCoords,
   tileKey,
 } from './map';
-import { buildingKind, improvementKind } from './map-kinds';
+import { buildingKind, improvementKind, type Region } from './map-kinds';
 import type { Resources } from './resources';
 import { seedRng } from './rng';
 import {
@@ -143,13 +147,13 @@ function besieged(catalogue: Catalogue, chronicle: Chronicle): Landed {
   let landing: Landed = placing;
   for (const camp of placing.placed) {
     landing = followed(landing, (left) =>
-      entered(catalogue, left, campUnit(catalogue, camp, 'raider')),
+      entered(catalogue, left, campUnit(catalogue, left, camp, 'raider')),
     );
   }
   return landing;
 }
 
-/** The events every fixture schedule deals from, each one also a schedule of its own through `dealing`. */
+/** The events every fixture age's schedule deals from, each one also an age of its own through `dealing`. */
 const EVENTS: Catalogue['events'] = {
   PH_Hardship: {
     answers: {
@@ -343,9 +347,8 @@ const BEELINE: EnemyScript = {
 /** The id the fixture catalogue lists its one deck under. */
 export const DECK_ID = 'deck';
 
-/** The content every fixture is played on, its numbers the fixture's own. */
-export const CATALOGUE: Catalogue = catalogued({
-  version: 'fixture',
+/** What the fixture's first age brings to the tables every age shares. */
+const TABLES: Tables = {
   units: {
     PH_Worker: {
       type: 'PH_Worker',
@@ -537,33 +540,6 @@ export const CATALOGUE: Catalogue = catalogued({
         chronicle.tiles.some((tile) => tile.building === TILLAGE && holds(chronicle, tile)),
     },
   },
-  schedules: {
-    schedule: {
-      spacing: [3, 7],
-      capstone: { id: 'PH_Siege', window: [27, 33] },
-      entries: { PH_Hardship: () => 1, PH_Blight: () => 1 },
-    },
-    quiet: {
-      spacing: [3, 7],
-      capstone: { id: 'PH_Tillage', window: [27, 33] },
-      entries: { PH_Hardship: (turn) => (turn >= FAR ? 1 : 0) },
-    },
-    wary: {
-      spacing: [3, 7],
-      capstone: { id: 'PH_Siege', window: [27, 33] },
-      entries: { PH_Hardship: () => 1, PH_Spoilage: () => 1 },
-    },
-    ...Object.fromEntries(
-      Object.keys(EVENTS).map((event): [string, Schedule] => [
-        event,
-        {
-          spacing: [FAR, FAR],
-          capstone: { id: 'PH_Siege', window: [FAR, FAR] },
-          entries: { [event]: () => 1 },
-        },
-      ]),
-    ),
-  },
   terrains: {
     plain: {
       yields: { food: 2 },
@@ -658,71 +634,74 @@ export const CATALOGUE: Catalogue = catalogued({
     },
     PH_Rubble: { terrains: ['plain'], yields: {}, movementCost: 2 * MOVE_POINT },
   },
-  regions: {
-    disc: {
-      radius: 8,
-      centre: 3,
-      tilesPerBiome: 26,
-      centreBiome: 'land',
-      biomeShares: [
-        { biome: 'sea', share: 0.3 },
-        { biome: 'mountain', share: 0.1 },
-      ],
-      featureShares: [{ feature: 'PH_Fertile', share: 1 / 6 }],
-      camps: 3,
-      campFromCentre: 6,
-      campsApart: 3,
-      rivers: {
-        source: 'mountain',
-        relief: 1,
-        roughness: 0.5,
-        perRange: 2,
-        climb: 0.5,
-        meander: 1.5,
-        curl: 0.75,
-        edgesPerTile: 4,
-        leastEdges: 6,
-        draws: 60,
-      },
-    },
-    clearing: {
-      radius: 7,
-      centre: 2,
-      tilesPerBiome: 28,
-      centreBiome: 'clearing',
-      biomeShares: [
-        { biome: 'sea', share: 0.2 },
-        { biome: 'mountain', share: 0.2 },
-        { biome: 'land', share: 0.6 },
-      ],
-      featureShares: [],
-      camps: 2,
-      campFromCentre: 6,
-      campsApart: 4,
-      rivers: {
-        source: 'mountain',
-        relief: 1,
-        roughness: 0.5,
-        perRange: 1,
-        climb: 0.5,
-        meander: 1,
-        curl: 0.75,
-        edgesPerTile: 4,
-        leastEdges: 4,
-        draws: 40,
-      },
+};
+
+/** The regions table every fixture age holds. */
+export const REGIONS: Readonly<Record<string, Region>> = {
+  disc: {
+    radius: 8,
+    centre: 3,
+    tilesPerBiome: 26,
+    centreBiome: 'land',
+    biomeShares: [
+      { biome: 'sea', share: 0.3 },
+      { biome: 'mountain', share: 0.1 },
+    ],
+    featureShares: [{ feature: 'PH_Fertile', share: 1 / 6 }],
+    camps: 3,
+    campFromCentre: 6,
+    campsApart: 3,
+    rivers: {
+      source: 'mountain',
+      relief: 1,
+      roughness: 0.5,
+      perRange: 2,
+      climb: 0.5,
+      meander: 1.5,
+      curl: 0.75,
+      edgesPerTile: 4,
+      leastEdges: 6,
+      draws: 60,
     },
   },
-  camp: {
-    unit: 'PH_Warrior',
-    scripts: { guard: 'PH_Sentry', raider: SCRIPT },
-    building: 'PH_Camp',
-    rewards: ['PH_Spoils', 'PH_Cache'],
-    odds: 0,
-    raidCampOdds: 1,
+  clearing: {
+    radius: 7,
+    centre: 2,
+    tilesPerBiome: 28,
+    centreBiome: 'clearing',
+    biomeShares: [
+      { biome: 'sea', share: 0.2 },
+      { biome: 'mountain', share: 0.2 },
+      { biome: 'land', share: 0.6 },
+    ],
+    featureShares: [],
+    camps: 2,
+    campFromCentre: 6,
+    campsApart: 4,
+    rivers: {
+      source: 'mountain',
+      relief: 1,
+      roughness: 0.5,
+      perRange: 1,
+      climb: 0.5,
+      meander: 1,
+      curl: 0.75,
+      edgesPerTile: 4,
+      leastEdges: 4,
+      draws: 40,
+    },
   },
-  city: { building: 'PH_City', sight: 2, idle: 2 },
-});
+};
+
+/** The camp every fixture age holds. */
+export const CAMP: Camp = {
+  unit: 'PH_Warrior',
+  scripts: { guard: 'PH_Sentry', raider: SCRIPT },
+  building: 'PH_Camp',
+  rewards: ['PH_Spoils', 'PH_Cache'],
+  odds: 0,
+  raidCampOdds: 1,
+};
 
 /** The region the fixture catalogue deals its maps from, its centre's biome one that spreads. */
 export const REGION = 'disc';
@@ -730,36 +709,89 @@ export const REGION = 'disc';
 /** The region whose centre's biome is dealt to a size: the one biome kind of the fixture that is. */
 export const CLEARING = 'clearing';
 
-/** The one schedule the fixture catalogue rolls its timelines from. */
-export const SCHEDULE = 'schedule';
+/** The first age of the fixture's ages table: the one its tests launch chronicles in. */
+export const AGE = 'age';
 
-/** The schedule the fixture's handed-in timelines roll on from: it deals nothing before `FAR`. */
-const QUIET = 'quiet';
+/** The age of the fixture's chronicles that name no other: its schedule deals nothing before `FAR`. */
+export const QUIET = 'quiet';
 
 /**
- * The schedule dealing the hardship and the spoilage alike, the spoilage only once the city's cards
- * hold the hunger.
+ * The age whose schedule deals the hardship and the spoilage alike, the spoilage only once the
+ * city's cards hold the hunger.
  */
 export const WARY = 'wary';
 
+/** Each fixture age's schedule, by the age's id, in the order of the ages table. */
+const SCHEDULES: Readonly<Record<string, Schedule>> = {
+  [AGE]: {
+    spacing: [3, 7],
+    capstone: { id: 'PH_Siege', window: [27, 33] },
+    entries: { PH_Hardship: () => 1, PH_Blight: () => 1 },
+  },
+  [QUIET]: {
+    spacing: [3, 7],
+    capstone: { id: 'PH_Tillage', window: [27, 33] },
+    entries: { PH_Hardship: (turn) => (turn >= FAR ? 1 : 0) },
+  },
+  [WARY]: {
+    spacing: [3, 7],
+    capstone: { id: 'PH_Siege', window: [27, 33] },
+    entries: { PH_Hardship: () => 1, PH_Spoilage: () => 1 },
+  },
+  ...Object.fromEntries(
+    Object.keys(EVENTS).map((event): [string, Schedule] => [
+      event,
+      {
+        spacing: [FAR, FAR],
+        capstone: { id: 'PH_Siege', window: [FAR, FAR] },
+        entries: { [event]: () => 1 },
+      },
+    ]),
+  ),
+};
+
+/** Every fixture age, each owning its own schedule over the camp and the regions handed in. */
+export function agesOver(
+  camp: Camp,
+  regions: Readonly<Record<string, Region>>,
+): Readonly<Record<string, Age>> {
+  return Object.fromEntries(
+    Object.entries(SCHEDULES).map(([id, schedule]) => [id, { schedule, camp, regions }]),
+  );
+}
+
+/** The fixture's slices, in the order of its ages: the first brings every table, the others nothing. */
+export const SLICES: readonly Slice[] = Object.entries(agesOver(CAMP, REGIONS)).map(
+  ([id, owns], at) => ({ id, owns, brings: at === 0 ? TABLES : {} }),
+);
+
+/** The content every fixture is played on, its numbers the fixture's own. */
+export const CATALOGUE: Catalogue = merged(
+  'fixture',
+  { building: 'PH_City', sight: 2, idle: 2 },
+  SLICES,
+);
+
 /**
- * A timeline dealing nothing: its next deal, and the capstone, on a turn past any a test ends, and
- * rolled on from a schedule that deals nothing before then. What a fixture chronicle carries unless
- * its test writes the deal it wants.
+ * A timeline dealing nothing in the quiet age: its next deal, and the capstone, on a turn past any a
+ * test ends. What a fixture chronicle carries unless its test writes the deal it wants.
  */
 export const NO_DEALS: Timeline = {
-  schedule: QUIET,
   rng: seedRng(7),
   next: FAR,
   capstone: { id: 'PH_Siege', turn: FAR },
 };
 
 /**
- * A timeline due on this turn, drawing from the schedule of this event alone, its next due turn past
- * any a test ends; its capstone as `NO_DEALS` has it.
+ * A chronicle's age and timeline due on this turn: the age whose schedule deals this event alone,
+ * and a timeline whose next due turn after this one is past any a test ends, its capstone as
+ * `NO_DEALS` has it.
  */
-export function dealing(deal: { readonly turn: number; readonly event: string }): Timeline {
-  return { ...NO_DEALS, schedule: deal.event, next: deal.turn };
+export function dealing(deal: {
+  readonly turn: number;
+  readonly event: string;
+}): Pick<Chronicle, 'age' | 'timeline'> {
+  return { age: deal.event, timeline: { ...NO_DEALS, next: deal.turn } };
 }
 
 export const CITY: TileCoords = { q: 0, r: 0 };
@@ -820,6 +852,7 @@ export function cityOf(
   const made = (id: CardId): ChronicleCard => cardMade(catalogue, id);
   const city: Chronicle = {
     content: catalogue.version,
+    age: QUIET,
     seed: 7,
     rng: seedRng(7),
     timeline: NO_DEALS,
@@ -881,9 +914,10 @@ export function plains(radius: number): Tile[] {
   return field(radius).map(({ q, r }): Tile => ({ q, r, terrain: 'plain', improvements: [] }));
 }
 
-/** What a fixture opening names: the deck, the timeline, and how far the centre part reaches. */
+/** What a fixture opening names: the deck, the age and the timeline, and how far the centre part reaches. */
 type Opening = {
   readonly deck?: Deck;
+  readonly age?: string;
   readonly timeline?: Timeline;
   readonly reach?: number;
 };
@@ -891,16 +925,16 @@ type Opening = {
 /**
  * The chronicle opened on these tiles through the rules, on the settle phase with the city nowhere:
  * its centre part every tile within `reach` of the centre, two unless the fixture names it, on the
- * fixture's deck and a timeline dealing nothing unless the fixture names others.
+ * fixture's deck, in the quiet age on a timeline dealing nothing unless the fixture names others.
  */
 export function opening(
   tiles: Tile[],
-  { deck = DECK, timeline = NO_DEALS, reach = 2 }: Opening = {},
+  { deck = DECK, age = QUIET, timeline = NO_DEALS, reach = 2 }: Opening = {},
 ): Chronicle {
   const centre = tiles
     .filter((tile) => distance(tile, CITY) <= reach)
     .map(({ q, r }) => ({ q, r }));
-  return beginChronicle(CATALOGUE, 7, deck, { tiles, rivers: [], centre }, timeline);
+  return beginChronicle(CATALOGUE, age, 7, deck, { tiles, rivers: [], centre }, timeline);
 }
 
 /** The chronicle with the first card of its hand played on a tile, refused or not. */
@@ -913,18 +947,18 @@ export function settledOn(
 }
 
 /**
- * Turn 1 as the end of the settle phase leaves it, standing on a deal where the schedule deals one
- * — and a chronicle waiting on a deal refuses every other command.
+ * Turn 1 as the end of the settle phase leaves it, standing on a deal where the age's schedule deals
+ * one — and a chronicle waiting on a deal refuses every other command.
  */
 export function settledLaunch(
   catalogue: Catalogue,
+  age: string,
   region: string,
-  schedule: string,
   seed: number,
   deck: Deck,
   at: TileCoords = CITY,
 ): Chronicle {
-  const settling = settledOn(launched(catalogue, region, schedule, seed, deck), at, catalogue);
+  const settling = settledOn(launched(catalogue, age, region, seed, deck), at, catalogue);
   if (settling.city === undefined)
     throw new Error(`seed ${seed} settles no city on ${tileKey(at)}`);
   return outcome(apply(catalogue, settling, { type: 'end-turn' }));
@@ -969,7 +1003,7 @@ export function builtOn(tiles: Tile[], building: BuildingTypeId, coords: TileCoo
 
 /** The same tiles, with a camp filling the building slot of the named ones. */
 export function camped(tiles: Tile[], coords: TileCoords[]): Tile[] {
-  return builtOn(tiles, CATALOGUE.camp.building, coords);
+  return builtOn(tiles, CAMP.building, coords);
 }
 
 function statsOf(stats: Partial<UnitStats>): UnitStats {

@@ -1,6 +1,7 @@
 import { expect, test } from 'vitest';
 import { apply, type Command, launched, outcome } from './chronicle';
 import {
+  AGE,
   CATALOGUE,
   CITY,
   camped,
@@ -17,7 +18,6 @@ import {
   opening,
   plains,
   REGION,
-  SCHEDULE,
   settledLaunch,
   settledOn,
   stagedBy,
@@ -42,23 +42,23 @@ function plainDisc(): Tile[] {
 }
 
 test('the same seed begins the same chronicle', () => {
-  expect(launched(CATALOGUE, REGION, SCHEDULE, 1234, DECK)).toEqual(
-    launched(CATALOGUE, REGION, SCHEDULE, 1234, DECK),
+  expect(launched(CATALOGUE, AGE, REGION, 1234, DECK)).toEqual(
+    launched(CATALOGUE, AGE, REGION, 1234, DECK),
   );
-  expect(launched(CATALOGUE, REGION, SCHEDULE, 1235, DECK)).not.toEqual(
-    launched(CATALOGUE, REGION, SCHEDULE, 1234, DECK),
+  expect(launched(CATALOGUE, AGE, REGION, 1235, DECK)).not.toEqual(
+    launched(CATALOGUE, AGE, REGION, 1234, DECK),
   );
 });
 
 test('a chronicle survives JSON and carries its generator on', () => {
-  const chronicle = launched(CATALOGUE, REGION, SCHEDULE, 1234, DECK);
+  const chronicle = launched(CATALOGUE, AGE, REGION, 1234, DECK);
 
   expect(JSON.parse(JSON.stringify(chronicle))).toEqual(chronicle);
   expect(chronicle.rng).not.toEqual(seedRng(chronicle.seed));
 });
 
 test('a chronicle opens on the settle phase with empty stores, the city standing nowhere, the settle cards in hand and the centre part alone in sight', () => {
-  const chronicle = launched(CATALOGUE, REGION, SCHEDULE, 1234, DECK);
+  const chronicle = launched(CATALOGUE, AGE, REGION, 1234, DECK);
   const centre = chronicle.centre.map(tileKey).sort();
 
   expect(chronicle.turn).toBe(0);
@@ -108,7 +108,7 @@ test('growth is staged on the food stock the turn ends with, before the income a
 });
 
 test('the hand holds five cards on turn 1, and five again after every turn', () => {
-  let chronicle = settledLaunch(CATALOGUE, REGION, SCHEDULE, 4242, DECK);
+  let chronicle = settledLaunch(CATALOGUE, AGE, REGION, 4242, DECK);
   expect(chronicle.hand).toHaveLength(5);
 
   for (let turn = 0; turn < 6; turn++) {

@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
-import { scheduleOf } from '../src/rules/catalogue';
+import { ageOf } from '../src/rules/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
 import { CENTRE, tileKey } from '../src/rules/map';
 import type { Chronicle } from '../src/rules/state';
@@ -29,8 +29,8 @@ import {
   watch,
 } from './chronicle-screen';
 
-/** The capstone the first schedule names. */
-const CAPSTONE = scheduleOf(CATALOGUE, firstsOf().schedule).capstone.id;
+/** The capstone the first age's schedule names. */
+const CAPSTONE = ageOf(CATALOGUE, firstsOf().age).schedule.capstone.id;
 
 /** Seed 1's bare turn 1 with its turns ended headlessly up to the turn before the capstone lands. */
 function beforeTheCapstone(): Chronicle {

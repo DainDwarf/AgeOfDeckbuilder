@@ -1,23 +1,14 @@
 import { expect, test } from 'vitest';
 import { catalogued } from './catalogue';
 import { apply, type Command, outcome } from './chronicle';
-import {
-  CATALOGUE,
-  DECK,
-  DECK_ID,
-  endedTurn,
-  FROST,
-  REGION,
-  SCHEDULE,
-  settledLaunch,
-} from './fixtures';
+import { AGE, CATALOGUE, DECK, DECK_ID, endedTurn, FROST, REGION, settledLaunch } from './fixtures';
 import { type ChronicleSave, readSave, writeSave } from './save';
 import { laid } from './schedule';
 import type { Chronicle, Counters } from './state';
 
 /** A chronicle three turns in, saved with what it was launched on. */
 function saved(): ChronicleSave {
-  let chronicle = settledLaunch(CATALOGUE, REGION, SCHEDULE, 4242, DECK);
+  let chronicle = settledLaunch(CATALOGUE, AGE, REGION, 4242, DECK);
   for (let turn = 1; turn < 3; turn++) chronicle = endedTurn(chronicle);
   return { chronicle, region: REGION, deck: DECK_ID };
 }
@@ -108,6 +99,23 @@ test('a save that is not a chronicle’s shape is refused', () => {
   expect(
     refusal((chronicle) => ({ ...chronicle, units: [{ ...unit, faction: 'neutral' }, ...others] })),
   ).toThrow("fixture: the save's chronicle.units[0].faction names no faction neutral");
+});
+
+test('a save whose chronicle names no age, or an age the catalogue does not hold, is refused', () => {
+  const save = saved();
+
+  expect(() =>
+    readSave(
+      CATALOGUE,
+      tampered(save, (chronicle) => ({ ...chronicle, age: undefined })),
+    ),
+  ).toThrow("fixture: the save's chronicle.age is not a string");
+  expect(() =>
+    readSave(
+      CATALOGUE,
+      tampered(save, (chronicle) => ({ ...chronicle, age: 'PH_Unheld' })),
+    ),
+  ).toThrow('fixture: no age is named PH_Unheld');
 });
 
 test('a save written on one content version is refused by a catalogue of another', () => {

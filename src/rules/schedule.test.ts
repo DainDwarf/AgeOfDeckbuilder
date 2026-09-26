@@ -1,13 +1,15 @@
 import { expect, test } from 'vitest';
 import { chartedTile } from './cards';
-import { type Catalogue, catalogued, eventOf } from './catalogue';
+import { ageOf, type Catalogue, catalogued, eventOf } from './catalogue';
 import { apply, type Command, launched, outcome } from './chronicle';
 import { growthThreshold } from './city';
 import {
+  AGE,
   AMBUSH,
   assignTo,
   buildingAt,
   builtOn,
+  CAMP,
   CAMPS,
   CATALOGUE,
   type Carrying,
@@ -33,9 +35,9 @@ import {
   only,
   opening,
   plains,
+  QUIET,
   REGION,
   ringed,
-  SCHEDULE,
   type Standing,
   settledOn,
   stagedBy,
@@ -110,14 +112,14 @@ function walkedFrom(
 const walks = new Map<string, Walk>();
 
 /**
- * A chronicle launched on the fixture's schedule from a seed, settled on the centre tile, and walked
+ * A chronicle launched in the fixture's first age from a seed, settled on the centre tile, and walked
  * to the fortieth turn.
  */
 function walked(seed: number, wanted = 'PH_Famine'): Walk {
   const key = `${seed} ${wanted}`;
   const known = walks.get(key);
   if (known !== undefined) return known;
-  const settled = settledOn(launched(CATALOGUE, REGION, SCHEDULE, seed, DECK), CITY);
+  const settled = settledOn(launched(CATALOGUE, AGE, REGION, seed, DECK), CITY);
   const walk = walkedFrom(CATALOGUE, settled, 40, wanted);
   walks.set(key, walk);
   return walk;
@@ -126,8 +128,11 @@ function walked(seed: number, wanted = 'PH_Famine'): Walk {
 /** The food stock a city waiting on an event holds: its one tile yields none, so only a famine moves it. */
 const STOCKED = 5;
 
-/** A timeline dealing the hardship, its raid first and its famine second, on that turn and on no other. */
-function dueOn(turn: number, event = 'PH_Hardship'): Timeline {
+/**
+ * An age and a timeline dealing the hardship, its raid first and its famine second, on that turn and
+ * on no other.
+ */
+function dueOn(turn: number, event = 'PH_Hardship'): Pick<Chronicle, 'age' | 'timeline'> {
   return dealing({ turn, event });
 }
 
@@ -137,7 +142,7 @@ function awaiting(due: number, carrying: Carrying = {}): Chronicle {
     tiles: camped(field(4), CAMPS),
     resources: { food: STOCKED, production: 0, military: 0, money: 0, science: 0, culture: 0 },
     turn: due - 1,
-    timeline: dueOn(due),
+    ...dueOn(due),
     ...carrying,
   });
 }
@@ -179,7 +184,7 @@ test('the same seed deals the same whatever answers are taken, and another seed 
 
 test('the capstone lands on a turn rolled at the launch, between the twenty-seventh and the thirty-third', () => {
   const turns = SEEDS.map(
-    (seed) => launched(CATALOGUE, REGION, SCHEDULE, seed, DECK).timeline.capstone.turn,
+    (seed) => launched(CATALOGUE, AGE, REGION, seed, DECK).timeline.capstone.turn,
   );
 
   for (const turn of turns) {
@@ -218,7 +223,7 @@ test('the blight is dealt as readily on the third turn as the twentieth', () => 
 });
 
 test('a timeline dealing on the first turn stops the end of the settle phase on its deal, and the take draws its hand', () => {
-  const settled = settledOn(opening(plains(4), { timeline: dueOn(1) }), CITY);
+  const settled = settledOn(opening(plains(4), { ...dueOn(1) }), CITY);
   const dealt = outcome(apply(CATALOGUE, settled, { type: 'end-turn' }));
   const taken = outcome(apply(CATALOGUE, dealt, { type: 'take', at: 1 }));
 
@@ -231,7 +236,7 @@ test('a timeline dealing on the first turn stops the end of the settle phase on 
 
 test('nothing is dealt before the due turn, and the raid enters a warrior on a camp', () => {
   const camp = { q: 4, r: 0 };
-  let chronicle = cityOf(['urban'], { tiles: camped(field(4), [camp]), timeline: dueOn(5) });
+  let chronicle = cityOf(['urban'], { tiles: camped(field(4), [camp]), ...dueOn(5) });
 
   for (let turn = 2; turn < 5; turn++) {
     chronicle = endedTurn(chronicle);
@@ -251,7 +256,7 @@ test('nothing is dealt before the due turn, and the raid enters a warrior on a c
 test('which camp the raid enters a warrior on is drawn from the seeded generator', () => {
   const disc = camped(field(4), CAMPS);
   const raidOf = (seed: number): TileCoords =>
-    endedTurn(cityOf(['urban'], { tiles: disc, rng: seedRng(seed), timeline: dueOn(2) }), 'PH_Raid')
+    endedTurn(cityOf(['urban'], { tiles: disc, rng: seedRng(seed), ...dueOn(2) }), 'PH_Raid')
       .units[0].tile;
 
   expect(raidOf(7)).toEqual(raidOf(7));
@@ -291,7 +296,7 @@ test('the famine lays its hazard on top of the draw pile, and leaves the city as
 
 test('a due turn deals its one event, and the turn ends there', () => {
   const standing = dealtBy(5, { drawPile: fullDraw() });
-  const blighted = dealtBy(5, { timeline: dueOn(5, 'PH_Blight') });
+  const blighted = dealtBy(5, { ...dueOn(5, 'PH_Blight') });
   const staged = stagedBy(awaiting(5, { drawPile: fullDraw() }), { type: 'end-turn' });
 
   expect(standing.deals).toEqual([{ of: 'event', event: 'PH_Hardship' }]);
@@ -302,10 +307,11 @@ test('a due turn deals its one event, and the turn ends there', () => {
   expect(staged).not.toContain('drawn');
 });
 
-/** A timeline of that schedule from a seed due on the second turn, and the hunger among the cards or not. */
-function spoiling(schedule: string, seed: number, hungry: boolean): Carrying {
+/** A timeline of that age's schedule from a seed due on the second turn, and the hunger among the cards or not. */
+function spoiling(age: string, seed: number, hungry: boolean): Carrying {
   return {
-    timeline: { ...NO_DEALS, schedule, rng: seedRng(seed), next: 2 },
+    age,
+    timeline: { ...NO_DEALS, rng: seedRng(seed), next: 2 },
     drawPile: hungry ? ['PH_Hunger', ...fullDraw()] : fullDraw(),
   };
 }
@@ -364,19 +370,21 @@ test('a due turn is one deal group over the next due turn rolled and the event d
 });
 
 test('a due turn weighing no entry above nought is a deal over the roll and a runtime error, and play goes on to the next due turn, which deals as any', () => {
+  const quiet = ageOf(CATALOGUE, QUIET);
   const late: Catalogue = catalogued({
     ...CATALOGUE,
-    schedules: {
-      ...CATALOGUE.schedules,
+    ages: {
+      ...CATALOGUE.ages,
       late: {
-        ...CATALOGUE.schedules.quiet,
-        entries: { PH_Hardship: (turn) => (turn >= 3 ? 1 : 0) },
+        ...quiet,
+        schedule: { ...quiet.schedule, entries: { PH_Hardship: (turn) => (turn >= 3 ? 1 : 0) } },
       },
     },
   });
   const city = awaiting(2, {
     drawPile: [...fullDraw(), ...fullDraw()],
-    timeline: { ...NO_DEALS, schedule: 'late', next: 2 },
+    age: 'late',
+    timeline: { ...NO_DEALS, next: 2 },
   });
 
   const stages = apply(late, city, { type: 'end-turn' });
@@ -399,7 +407,7 @@ test('a due turn weighing no entry above nought is a deal over the roll and a ru
 
 test('an answer taken is one answer group over the deal taken, its cost as one stock, and its landing', () => {
   const rich = dealtBy(5, {
-    timeline: dueOn(5, 'PH_Blight'),
+    ...dueOn(5, 'PH_Blight'),
     drawPile: fullDraw(),
     resources: {
       food: STOCKED,
@@ -446,13 +454,13 @@ test('a reward taken is one reward group over the deal taken and the card discar
   expect(rest).toEqual([]);
   expect(taken.chronicle.deals).toEqual([]);
   expect(taken.chronicle.discardPile).toEqual([]);
-  expect(idsOf(discarded.chronicle.discardPile)).toEqual([CATALOGUE.camp.rewards[0]]);
+  expect(idsOf(discarded.chronicle.discardPile)).toEqual([CAMP.rewards[0]]);
 });
 
 test('the same seed is due on the same turns whatever answers are taken, though what they let be dealt differs', () => {
   let differs = false;
   for (const seed of SEEDS.slice(0, 5)) {
-    const start = withUnits(settledOn(launched(CATALOGUE, REGION, WARY, seed, DECK), CITY), [
+    const start = withUnits(settledOn(launched(CATALOGUE, WARY, REGION, seed, DECK), CITY), [
       standing('player', CITY, { type: 'PH_Worker', worker: true, health: 9999 }),
     ]);
     const starved = walkedFrom(CATALOGUE, start, 20, 'PH_Famine');
@@ -496,7 +504,7 @@ test('the take lands the answer at its place in the order declared and no other,
 test('a raid with no free tile to enter on enters nobody, draws nothing, and resolves as a runtime error', () => {
   const held = cityOf(['urban'], {
     tiles: field(1),
-    timeline: dueOn(2),
+    ...dueOn(2),
     drawPile: fullDraw(),
     units: neighbours(CITY).map((tile) => standing('player', tile)),
   });
@@ -517,7 +525,7 @@ test('a raid with no free tile to enter on enters nobody, draws nothing, and res
 test('an answer taken pays its cost before it lands, and one the city cannot pay for is refused with nothing paid', () => {
   const stocked = (production: number): Chronicle =>
     dealtBy(5, {
-      timeline: dueOn(5, 'PH_Blight'),
+      ...dueOn(5, 'PH_Blight'),
       drawPile: fullDraw(),
       resources: { food: STOCKED, production, military: 0, money: 0, science: 0, culture: 0 },
     });
@@ -539,7 +547,7 @@ test('an answer taken pays its cost before it lands, and one the city cannot pay
 test('an answer whose cost reads the chronicle is refused where that reading outruns the stock, and pays exactly that reading where it does not', () => {
   const levied = (population: number): Chronicle =>
     dealtBy(5, {
-      timeline: dueOn(5, 'PH_Blight'),
+      ...dueOn(5, 'PH_Blight'),
       drawPile: fullDraw(),
       population,
       resources: { food: STOCKED, production: 40, military: 0, money: 0, science: 0, culture: 0 },
@@ -597,7 +605,7 @@ function landedOf(stages: readonly Stage[]): Chronicle {
 }
 
 /** The timeline dealing the fixture's upheaval at the end of a `cityOf` city's turn. */
-const UPHEAVAL_DUE: Carrying = { timeline: dueOn(2, 'PH_Upheaval') };
+const UPHEAVAL_DUE: Carrying = { ...dueOn(2, 'PH_Upheaval') };
 
 /** The city one end of turn on with its deal standing, and the stages the named answer taken resolves as. */
 function answerTaken(city: Chronicle, answer: string): { dealt: Chronicle; stages: Stage[] } {
@@ -671,7 +679,7 @@ test('an answer damaging the unit standing on a tile no unit stands on touches n
 });
 
 /** The timeline dealing the fixture's exodus at the end of a `cityOf` city's turn. */
-const EXODUS_DUE: Carrying = { timeline: dueOn(2, 'PH_Exodus') };
+const EXODUS_DUE: Carrying = { ...dueOn(2, 'PH_Exodus') };
 
 test('an answer taking one population takes an idle one, and leaves every tile assigned', () => {
   const city = cityOf(['urban', 'plain', 'hills'], { ...EXODUS_DUE, population: 4 });
@@ -720,7 +728,7 @@ test('an answer placing a camp near the city places one, and its raid enters a w
   const city = cityOf(['urban'], {
     ...NO_GROWTH,
     tiles: field(6),
-    timeline: dueOn(2, 'PH_Rivals'),
+    ...dueOn(2, 'PH_Rivals'),
   });
   const dealt = outcome(apply(CATALOGUE, city, { type: 'end-turn' }));
   const after = outcome(apply(CATALOGUE, dealt, { type: 'take', at: 0 }));
@@ -742,7 +750,7 @@ test('an event placing a camp near the city is not dealt where no tile near it t
   const cramped = cityOf(['urban'], {
     ...NO_GROWTH,
     tiles: field(2),
-    timeline: dueOn(2, 'PH_Rivals'),
+    ...dueOn(2, 'PH_Rivals'),
   });
   const passed = outcome(apply(CATALOGUE, cramped, { type: 'end-turn' }));
   const landing = eventOf(CATALOGUE, 'PH_Rivals').answers.PH_Encampment.lands(CATALOGUE, passed);
@@ -762,7 +770,7 @@ test('an event placing a camp near the city is not dealt where no tile near it t
  */
 function wooded(forest: TileCoords[], carrying: Carrying = {}): Chronicle {
   return cityOf(['urban'], {
-    timeline: dueOn(2, 'PH_Wildfire'),
+    ...dueOn(2, 'PH_Wildfire'),
     drawPile: fullDraw(),
     tiles: madeOf(field(5), 'forest', forest),
     ...carrying,
@@ -828,7 +836,7 @@ test('the forest tile a fire starts on is drawn once from the seeded generator, 
 
   for (const seed of SEEDS) {
     const city = cityOf(['urban', 'forest'], {
-      timeline: dueOn(2, 'PH_Wildfire'),
+      ...dueOn(2, 'PH_Wildfire'),
       drawPile: fullDraw(),
       tiles: madeOf(field(5), 'forest', [...starts, far]),
       rng: seedRng(seed),
@@ -853,7 +861,7 @@ test('the forest tile a fire starts on is drawn once from the seeded generator, 
 test('a fire kills the population working a burned tile, the city’s own tile included, and no idle population', () => {
   const beside = { q: 1, r: 0 };
   const city = cityOf(['forest', 'forest', 'plain'], {
-    timeline: dueOn(2, 'PH_Wildfire'),
+    ...dueOn(2, 'PH_Wildfire'),
     drawPile: fullDraw(),
     tiles: madeOf(field(5), 'forest', [CITY, beside]),
     population: 5,
@@ -870,7 +878,7 @@ test('a fire kills the population working a burned tile, the city’s own tile i
 
 test('a fire killing the city’s last population ends the chronicle in defeat on the take', () => {
   const city = cityOf(['forest'], {
-    timeline: dueOn(2, 'PH_Wildfire'),
+    ...dueOn(2, 'PH_Wildfire'),
     drawPile: fullDraw(),
     tiles: madeOf(field(5), 'forest', [CITY]),
   });
@@ -913,7 +921,7 @@ test('a camp on a burned tile stays, and the warrior on it takes the damage', ()
   const { landed } = aflame(city);
 
   expect(terrainOf(landed, camp)).toBe('plain');
-  expect(buildingAt(landed, camp)).toBe(CATALOGUE.camp.building);
+  expect(buildingAt(landed, camp)).toBe(CAMP.building);
   expect(unitAt(landed.units, camp)?.stats.health).toBe(1);
 });
 
@@ -945,7 +953,7 @@ function herded(open: TileCoords[], carrying: Carrying = {}): Chronicle {
     (tile) => distance(tile, CITY) <= HERD && !wanted.has(tileKey(tile)),
   );
   return cityOf(['urban'], {
-    timeline: dueOn(2, 'PH_Herd'),
+    ...dueOn(2, 'PH_Herd'),
     drawPile: fullDraw(),
     tiles: featured(field(5), 'PH_Fertile', covered),
     ...carrying,
@@ -1047,7 +1055,7 @@ test('a tile an answer charted stays charted as it was then, and in fog, through
 test('a landing resolves as one stage per change it makes, in the order it makes them, each carrying the tile it landed on', () => {
   const burning = { q: 1, r: 0 };
   const city = cityOf(['urban', 'forest'], {
-    timeline: dueOn(2, 'PH_Wildfire'),
+    ...dueOn(2, 'PH_Wildfire'),
     drawPile: fullDraw(),
     tiles: madeOf(field(5), 'forest', [burning]),
     units: [standing('player', burning, { health: FIRE.damage + 1 })],
@@ -1138,7 +1146,7 @@ function siegeLanded(carrying: Carrying = {}): Chronicle {
 /** The tiles a camp fills: what the siege placed, these fixtures standing with none of their own. */
 function campsOf(chronicle: Chronicle): TileCoords[] {
   return chronicle.tiles
-    .filter((tile) => tile.building === CATALOGUE.camp.building)
+    .filter((tile) => tile.building === CAMP.building)
     .map(({ q, r }) => ({ q, r }));
 }
 
@@ -1182,8 +1190,12 @@ function stoodOut(): Chronicle {
 }
 
 test('the capstone’s turn lands the capstone straight and draws the hand, dealing nothing, whatever deal was due on that turn', () => {
-  for (const timeline of [besieging(), besieging(dueOn(CAPSTONE))]) {
-    const awaited = awaitingCapstone({ timeline, drawPile: fullDraw() });
+  const due = dueOn(CAPSTONE);
+  for (const carrying of [
+    { timeline: besieging() },
+    { age: due.age, timeline: besieging(due.timeline) },
+  ]) {
+    const awaited = awaitingCapstone({ ...carrying, drawPile: fullDraw() });
     const landed = outcome(apply(CATALOGUE, awaited, { type: 'end-turn' }));
     const staged = stagedBy(awaited, { type: 'end-turn' });
 
@@ -1204,8 +1216,7 @@ test('the capstone’s turn lands the capstone straight and draws the hand, deal
 });
 
 test('the capstone’s turn drops a deal due past it, and the next deal is due three to seven turns after the landing', () => {
-  const past = { ...besieging(), schedule: SCHEDULE, next: CAPSTONE + 1 };
-  const landed = moated({ timeline: past });
+  const landed = moated({ age: AGE, timeline: { ...besieging(), next: CAPSTONE + 1 } });
   const walk = walkedFrom(CATALOGUE, landed, CAPSTONE + 2, 'PH_Famine');
   const { next } = landed.timeline;
 
@@ -1278,7 +1289,7 @@ test('a camp captured the turn before the capstone’s deals its rewards, and th
   );
   const taken = outcome(apply(CATALOGUE, dealt, { type: 'take', at: 0 }));
 
-  expect(dealt.deals).toEqual([{ of: 'camp', rewards: CATALOGUE.camp.rewards }]);
+  expect(dealt.deals).toEqual([{ of: 'camp', rewards: CAMP.rewards }]);
   expect(dealt.turn).toBe(CAPSTONE - 1);
   expect(stagedBy(dealt, { type: 'take', at: 0 })).toEqual([
     'reward',
@@ -1311,7 +1322,7 @@ test('a camp captured on the siege’s last turn holds the victory back until it
 
   expect(stagedBy(last, { type: 'end-turn' })).not.toContain('ended');
   expect(dealt.ending).toBeUndefined();
-  expect(dealt.deals).toEqual([{ of: 'camp', rewards: CATALOGUE.camp.rewards }]);
+  expect(dealt.deals).toEqual([{ of: 'camp', rewards: CAMP.rewards }]);
   expect(stagedBy(dealt, { type: 'take', at: 0 })).toEqual([
     'reward',
     'taken',
@@ -1334,7 +1345,9 @@ test('a capture that meets a capstone’s condition ends the chronicle on the ca
       PH_Siege: {
         lands: (_c, chronicle) => unchanged(chronicle),
         passes: (catalogue, chronicle) =>
-          chronicle.tiles.every((tile) => tile.building !== catalogue.camp.building),
+          chronicle.tiles.every(
+            (tile) => tile.building !== ageOf(catalogue, chronicle.age).camp.building,
+          ),
       },
     },
   };
@@ -1462,9 +1475,11 @@ test('each of the five turns after the landing enters a warrior on the camp stan
 test('the warrior the reinforcement enters is a stage of its own, raised after the tick and ahead of the deal', () => {
   const due = CAPSTONE + 3;
   const landed = moated();
+  const deal = dueOn(due);
   let reinforcing: Chronicle = {
     ...landed,
-    timeline: { ...dueOn(due), capstone: landed.timeline.capstone },
+    age: deal.age,
+    timeline: { ...deal.timeline, capstone: landed.timeline.capstone },
   };
 
   const opened = (stages: readonly Stage[]): string[] => {
@@ -1676,7 +1691,8 @@ test('a change that both leaves the city no population and meets a capstone’s 
 
 test('the schedule keeps dealing past the landing of a capstone no span passes', () => {
   const start = awaitingTillage({
-    timeline: { ...NO_DEALS, schedule: SCHEDULE, capstone: { id: 'PH_Tillage', turn: CAPSTONE } },
+    age: AGE,
+    timeline: { ...NO_DEALS, capstone: { id: 'PH_Tillage', turn: CAPSTONE } },
   });
   const { chronicle, landings } = walkedFrom(CATALOGUE, start, CAPSTONE + 40, 'PH_Famine');
   const dealt = landings.filter((landing) => landing.event !== undefined);

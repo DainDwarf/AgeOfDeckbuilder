@@ -1,4 +1,5 @@
 import {
+  ageOf,
   type Catalogue,
   capstoneOf,
   cardMade,
@@ -7,7 +8,6 @@ import {
   deckOf,
   enemyScript,
   eventOf,
-  scheduleOf,
   unitKind,
 } from './catalogue';
 import type { Corner, Tile, TileCoords } from './map';
@@ -33,7 +33,7 @@ import type {
 } from './state';
 import type { Faction, Unit, UnitStats } from './units';
 
-/** A chronicle's save: the chronicle, and the region and the deck it was launched on, by id. */
+/** A chronicle's save: the chronicle, and the region of its age and the deck it was launched on, by id. */
 export type ChronicleSave = {
   readonly chronicle: Chronicle;
   readonly region: string;
@@ -63,9 +63,11 @@ export function readSave(catalogue: Catalogue, text: string): ChronicleSave {
     return refuse(catalogue, 'the save is not JSON');
   }
   const field = record(catalogue, { raw: parsed, at: '' });
+  const chronicle = chronicleOf(catalogue, field('chronicle'));
+  const age = ageOf(catalogue, chronicle.age);
   return {
-    chronicle: chronicleOf(catalogue, field('chronicle')),
-    region: id(catalogue, field('region'), regionOf),
+    chronicle,
+    region: id(catalogue, field('region'), (held, named) => regionOf(held, age, named)),
     deck: id(catalogue, field('deck'), deckOf),
   };
 }
@@ -137,6 +139,7 @@ function chronicleOf(catalogue: Catalogue, slot: Slot): Chronicle {
   const coords = (item: Slot): TileCoords => coordsIn(catalogue, record(catalogue, item));
   return {
     content,
+    age: id(catalogue, field('age'), ageOf),
     seed: integer(catalogue, field('seed')),
     rng: rngOf(catalogue, field('rng')),
     tiles: list(catalogue, field('tiles'), (item) => tileOf(catalogue, item)),
@@ -210,7 +213,6 @@ function timelineOf(catalogue: Catalogue, slot: Slot): Timeline {
   const field = record(catalogue, slot);
   const capstone = record(catalogue, field('capstone'));
   return {
-    schedule: id(catalogue, field('schedule'), scheduleOf),
     rng: rngOf(catalogue, field('rng')),
     next: integer(catalogue, field('next')),
     capstone: {

@@ -1,4 +1,11 @@
-import { type CampScript, type Catalogue, type Entering, entered, unitKind } from './catalogue';
+import {
+  ageOf,
+  type CampScript,
+  type Catalogue,
+  type Entering,
+  entered,
+  unitKind,
+} from './catalogue';
 import { CENTRE, distance, groundRunsTo, type Tile, type TileCoords, tileKey } from './map';
 import { refuse } from './map-kinds';
 import { nextRng } from './rng';
@@ -6,21 +13,22 @@ import { change, followed, type Landed, landedAs, unchanged } from './stages';
 import type { Chronicle } from './state';
 import { standsOn, unitAt } from './units';
 
-/** The camp's unit, entering on the tile with the script the camp names for it. */
-export function campUnit(catalogue: Catalogue, tile: TileCoords, script: CampScript): Entering {
-  return {
-    type: catalogue.camp.unit,
-    faction: 'enemy',
-    tile,
-    script: catalogue.camp.scripts[script],
-  };
+/** The unit of the chronicle's age's camp, entering on the tile with the script the camp names for it. */
+export function campUnit(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  tile: TileCoords,
+  script: CampScript,
+): Entering {
+  const { camp } = ageOf(catalogue, chronicle.age);
+  return { type: camp.unit, faction: 'enemy', tile, script: camp.scripts[script] };
 }
 
 function raidGround(catalogue: Catalogue, chronicle: Chronicle): Tile[] {
   const { city } = chronicle;
   if (city === undefined) refuse(catalogue, 'a raid landed while the city stands nowhere');
   const reached = groundRunsTo(catalogue, chronicle.tiles, chronicle.rivers, city);
-  const stats = unitKind(catalogue, catalogue.camp.unit);
+  const stats = unitKind(catalogue, ageOf(catalogue, chronicle.age).camp.unit);
   return chronicle.tiles.filter(
     (tile) =>
       standsOn(catalogue, stats, tile) &&
@@ -58,7 +66,7 @@ export function enteredAround(
       entered(
         catalogue,
         drawn === undefined ? left : { ...left, rng: drawn.rng },
-        campUnit(catalogue, { q, r }, script),
+        campUnit(catalogue, left, { q, r }, script),
       ),
     );
   }
@@ -75,7 +83,8 @@ export function raidEntry(
 ): { readonly entry: TileCoords; readonly chronicle: Chronicle } | undefined {
   const ground = raidGround(catalogue, chronicle);
   if (ground.every((tile) => unitAt(chronicle.units, tile) !== undefined)) return undefined;
-  const camps = chronicle.tiles.filter((tile) => tile.building === catalogue.camp.building);
+  const { camp } = ageOf(catalogue, chronicle.age);
+  const camps = chronicle.tiles.filter((tile) => tile.building === camp.building);
   // The chronicle holds no radius: the disc's edge is read off its tiles, which the generator deals
   // around `CENTRE`.
   const edge = Math.max(...chronicle.tiles.map((tile) => distance(tile, CENTRE)));
@@ -83,7 +92,7 @@ export function raidEntry(
   if (camps.length === 0 && ring.length === 0) return undefined;
 
   const side = nextRng(chronicle.rng);
-  const drawn = side.value < catalogue.camp.raidCampOdds ? camps : ring;
+  const drawn = side.value < camp.raidCampOdds ? camps : ring;
   const entries = drawn.length > 0 ? drawn : drawn === camps ? ring : camps;
   const which = nextRng(side.rng);
   const { q, r } = entries[Math.floor(which.value * entries.length)];

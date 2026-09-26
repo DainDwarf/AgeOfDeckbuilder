@@ -4,6 +4,7 @@ import { CATALOGUE } from '../src/content/catalogue';
 import { aimOf, type CardKind } from '../src/rules/cards';
 import {
   type Aim,
+  ageOf,
   cardOf,
   type Deck,
   deckOf,
@@ -54,30 +55,32 @@ export function cityTileOf(chronicle: Chronicle): TileCoords {
   return chronicle.city;
 }
 
-/** The region, the schedule and the deck the catalogue lists first. */
-export function firstsOf(): { region: string; schedule: string; deck: string } {
+/** The age and the deck the catalogue lists first, and the first region that age lists. */
+export function firstsOf(): { age: string; region: string; deck: string } {
   const first = (table: Readonly<Record<string, unknown>>, noun: string): string => {
     const [id] = Object.keys(table);
     if (id === undefined) throw new Error(`${CATALOGUE.version} lists no ${noun}`);
     return id;
   };
+  const age = first(CATALOGUE.ages, 'age');
   return {
-    region: first(CATALOGUE.regions, 'region'),
-    schedule: first(CATALOGUE.schedules, 'schedule'),
+    age,
+    region: first(ageOf(CATALOGUE, age).regions, 'region'),
     deck: first(CATALOGUE.decks, 'deck'),
   };
 }
 
 /**
- * A chronicle launched from a seed on the first region, schedule and deck the catalogue lists, or the
- * deck given: the headless twin of `openNew`, the two launching alike.
+ * A chronicle launched from a seed in the first age the catalogue lists, on that age's first region
+ * and the catalogue's first deck, or the deck given: the headless twin of `openNew`, the two
+ * launching alike.
  */
 export function launchedOn(seed: number, deck?: Deck): Chronicle {
   const firsts = firstsOf();
   return launched(
     CATALOGUE,
+    firsts.age,
     firsts.region,
-    firsts.schedule,
     seed,
     deck ?? deckOf(CATALOGUE, firsts.deck),
   );
@@ -137,14 +140,14 @@ export function watch(page: Page): string[] {
 }
 
 /**
- * Opens a new chronicle on the address naming the seed, and the first schedule and deck the catalogue
+ * Opens a new chronicle on the address naming the seed, and the first age and deck the catalogue
  * lists, the region left to the boot's first; the capstone's window the opening raises is left
  * standing. The boot begins a chronicle only on an address naming a deck.
  */
 export async function openNew(page: Page, seed: number): Promise<void> {
-  const { schedule, deck } = firstsOf();
+  const { age, deck } = firstsOf();
   await readNames(page);
-  await page.goto(`/?seed=${seed}&deck=${deck}&schedule=${schedule}`);
+  await page.goto(`/?seed=${seed}&deck=${deck}&age=${age}`);
   await page.waitForFunction(() => window.game?.scene.isActive('ui') === true);
   await expect.poll(() => standing(page, 'capstone')).toBe(true);
   await rested(page);
@@ -791,7 +794,7 @@ export function unitEntered(chronicle: Chronicle, entering: Entering): Chronicle
  * the map lists them.
  */
 export function campGround(chronicle: Chronicle, away: number): TileCoords[] {
-  const stats = unitKind(CATALOGUE, CATALOGUE.camp.unit);
+  const stats = unitKind(CATALOGUE, ageOf(CATALOGUE, chronicle.age).camp.unit);
   const city = cityTileOf(chronicle);
   return chronicle.tiles
     .filter(

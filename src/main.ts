@@ -3,13 +3,13 @@ import './failed-boot';
 import Phaser from 'phaser';
 import { CATALOGUE } from './content/catalogue';
 import { booted } from './failed-boot';
-import { deckOf, scheduleOf } from './rules/catalogue';
+import { ageOf, deckOf } from './rules/catalogue';
 import { regionOf } from './rules/map-kinds';
 import { ChronicleScene } from './ui/chronicle-scene';
 import { DebugConsole } from './ui/debug-console';
 import { backingSize, followPointer, followWindow, releaseOnBlur } from './ui/design-space';
 import { readMouseKeys } from './ui/keys';
-import { type Choices, firstsOf, LaunchPage } from './ui/launch-page';
+import { type Choices, firstRegionOf, firstsOf, LaunchPage } from './ui/launch-page';
 import { css, LOOK } from './ui/look';
 import { MapScene } from './ui/map-scene';
 import { MenuScene } from './ui/menu-scene';
@@ -27,7 +27,7 @@ declare global {
 const address = new URLSearchParams(window.location.search);
 
 /** Every key the boot reads off the address; an address naming none of them is bare. */
-const ASKED = ['region', 'schedule', 'deck', 'seed'] as const;
+const ASKED = ['age', 'region', 'deck', 'seed'] as const;
 
 /** What the address names under that key, and nothing where it names nothing. */
 function asked(key: (typeof ASKED)[number]): string | undefined {
@@ -43,19 +43,21 @@ function askedSeed(): number | undefined {
   return Number.isInteger(seed) ? seed : undefined;
 }
 
-/** What the address names, each id resolved through the catalogue, and the firsts for the rest. */
+/**
+ * What the address names, each id resolved through the catalogue — a region through the named age's
+ * regions, or the first age's — and the firsts for the rest.
+ */
 function askedChoices(): Choices {
-  const firsts = firstsOf(CATALOGUE, askedSeed());
+  const firsts = firstsOf(askedSeed());
+  const age = asked('age') ?? firsts.age;
   const region = asked('region');
-  const schedule = asked('schedule');
   const deck = asked('deck');
-  if (region !== undefined) regionOf(CATALOGUE, region);
-  if (schedule !== undefined) scheduleOf(CATALOGUE, schedule);
+  if (region !== undefined) regionOf(CATALOGUE, ageOf(CATALOGUE, age), region);
   if (deck !== undefined) deckOf(CATALOGUE, deck);
   return {
     ...firsts,
-    region: region ?? firsts.region,
-    schedule: schedule ?? firsts.schedule,
+    age,
+    region: region ?? firstRegionOf(age),
     deck: deck ?? firsts.deck,
   };
 }

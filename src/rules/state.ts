@@ -24,12 +24,10 @@ export type Counters = Readonly<Record<string, number>>;
 export type ChronicleCard = { readonly id: CardId; readonly counters: Counters };
 
 /**
- * One chronicle's roll of its schedule, from a generator of its own that nothing the player does
- * steps: the schedule it rolls and draws from, the turn the next deal is due on, and the capstone by
- * its id with the turn it lands on.
+ * One chronicle's roll of its age's schedule, from a generator of its own that nothing the player
+ * does steps: the turn the next deal is due on, and the capstone by its id with the turn it lands on.
  */
 export type Timeline = {
-  readonly schedule: string;
   readonly rng: Rng;
   readonly next: number;
   readonly capstone: { readonly id: string; readonly turn: number };
@@ -53,6 +51,8 @@ export type Snapshot = TileCoords & { readonly tile: Tile; readonly unit?: Snaps
 export type Chronicle = {
   /** The version of the catalogue the chronicle was begun on, and the only one it is played on. */
   readonly content: string;
+  /** The age the chronicle is played in, set at the opening: what it owns is read through it. */
+  readonly age: string;
   readonly seed: number;
   readonly rng: Rng;
   readonly tiles: Tile[];

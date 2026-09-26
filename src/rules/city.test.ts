@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 import { aimOf, refuses } from './cards';
-import { type AimedCard, cardOf, type Deck } from './catalogue';
+import { type AimedCard, ageOf, cardOf, type Deck } from './catalogue';
 import { admitted, apply, type Command, launched, outcome } from './chronicle';
 import {
   assignWaiting,
@@ -13,6 +13,7 @@ import {
   tileRefusal,
 } from './city';
 import {
+  AGE,
   assignTo,
   CATALOGUE,
   type Carrying,
@@ -32,7 +33,6 @@ import {
   plains,
   REGION,
   ringed,
-  SCHEDULE,
   type Standing,
   settledLaunch,
   settledOn,
@@ -131,9 +131,9 @@ function withWorkerBeside(
  * border to find.
  */
 function darkBorder(): { opened: Chronicle; dark: TileCoords; city: TileCoords } {
-  const reach = regionOf(CATALOGUE, REGION).centre;
+  const reach = regionOf(CATALOGUE, ageOf(CATALOGUE, AGE), REGION).centre;
   for (let seed = 0; seed < 1000; seed++) {
-    const unsettled = launched(CATALOGUE, REGION, SCHEDULE, seed, claiming(6));
+    const unsettled = launched(CATALOGUE, AGE, REGION, seed, claiming(6));
     for (const city of unsettled.centre) {
       if (distance(city, CITY) !== reach) continue;
       let settling = settledOn(unsettled, city);
@@ -157,7 +157,7 @@ function darkBorder(): { opened: Chronicle; dark: TileCoords; city: TileCoords }
 
 test('the settle holds the city’s tile alone, one population on it and the city’s idle count besides', () => {
   for (const seed of [0, 1234, 0xdeadbeef | 0]) {
-    const chronicle = settledLaunch(CATALOGUE, REGION, SCHEDULE, seed, DECK);
+    const chronicle = settledLaunch(CATALOGUE, AGE, REGION, seed, DECK);
 
     expect(chronicle.held).toEqual([CITY]);
     expect(chronicle.assigned).toEqual([CITY]);

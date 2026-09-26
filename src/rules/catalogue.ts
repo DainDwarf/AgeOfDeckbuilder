@@ -5,6 +5,7 @@ import {
   featureKind,
   held,
   type MapContent,
+  type Region,
   refuse,
   terrainKind,
 } from './map-kinds';
@@ -155,12 +156,29 @@ export type Schedule = {
 /** A deck's two sections: its cards, which the draw pile cycles, and its settle cards, in hand on the settle phase. */
 export type Deck = { readonly cards: readonly string[]; readonly settle: readonly string[] };
 
+/** What a camp is, what it enters, and what its capture gives. */
+export type Camp = {
+  readonly unit: string;
+  /** The script each warrior of the camp's carries, named by what enters it. */
+  readonly scripts: Readonly<Record<CampScript, string>>;
+  readonly building: string;
+  /** What a capture deals, in the order dealt. */
+  readonly rewards: readonly string[];
+  /** The chance, at every enemy phase, that a camp standing enters a guard. */
+  readonly odds: number;
+  readonly raidCampOdds: number;
+};
+
+/** What an age owns: its schedule, its camp, and its regions by key. */
+export type Age = {
+  readonly schedule: Schedule;
+  readonly camp: Camp;
+  readonly regions: Readonly<Record<string, Region>>;
+};
+
 /**
- * The content a chronicle is played on: the stats a unit of each kind enters the map with, every
- * script an enemy can carry, the map content, the cards and the decks a chronicle is begun on,
- * the events, the capstones and the schedules its timeline is rolled from, what a camp is, enters
- * and gives on its capture, and the city: the building it stands as, how far it sees, and how many
- * idle population it opens with. Every one of them is named by its key.
+ * The content a chronicle is played on, every entry named by its key: the tables every age shares,
+ * the ages in the order of history, and the city — the building it stands as and how far it sees.
  */
 export type Catalogue = MapContent & {
   readonly units: Readonly<Record<string, UnitStats>>;
@@ -169,18 +187,7 @@ export type Catalogue = MapContent & {
   readonly decks: Readonly<Record<string, Deck>>;
   readonly events: Readonly<Record<string, ScheduledEvent>>;
   readonly capstones: Readonly<Record<string, Capstone>>;
-  readonly schedules: Readonly<Record<string, Schedule>>;
-  readonly camp: {
-    readonly unit: string;
-    /** The script each warrior of the camp's carries, named by what enters it. */
-    readonly scripts: Readonly<Record<CampScript, string>>;
-    readonly building: string;
-    /** What a capture deals, in the order dealt. */
-    readonly rewards: readonly string[];
-    /** The chance, at every enemy phase, that a camp standing enters a guard. */
-    readonly odds: number;
-    readonly raidCampOdds: number;
-  };
+  readonly ages: Readonly<Record<string, Age>>;
   readonly city: {
     readonly building: string;
     readonly sight: number;
@@ -188,6 +195,64 @@ export type Catalogue = MapContent & {
     readonly idle: number;
   };
 };
+
+/** The tables every age brings its content to. */
+export type Tables = Omit<Catalogue, 'version' | 'ages' | 'city'>;
+
+/** One age's content: its id, what it owns, and what it brings to the tables every age shares. */
+export type Slice = {
+  readonly id: string;
+  readonly owns: Age;
+  readonly brings: Partial<Tables>;
+};
+
+/**
+ * The catalogue built from the slices, in the order of history: each table the union of what they
+ * bring, and the ages table what each owns under its id. An id two slices bring to one table, and an
+ * age two slices name, are refused before the catalogue is validated.
+ */
+export function merged(
+  version: string,
+  city: Catalogue['city'],
+  slices: readonly Slice[],
+): Catalogue {
+  const ages: Record<string, Age> = {};
+  for (const { id, owns } of slices) {
+    if (Object.hasOwn(ages, id)) refuse({ version }, `two slices name the age ${id}`);
+    ages[id] = owns;
+  }
+  const union = <Table extends keyof Tables>(table: Table): Tables[Table] => {
+    const entries: Record<string, unknown> = {};
+    const broughtBy = new Map<string, string>();
+    for (const { id: age, brings } of slices) {
+      for (const [id, entry] of Object.entries(brings[table] ?? {})) {
+        const other = broughtBy.get(id);
+        if (other !== undefined) {
+          refuse({ version }, `the ages ${other} and ${age} both bring ${id} to the ${table}`);
+        }
+        broughtBy.set(id, age);
+        entries[id] = entry;
+      }
+    }
+    return entries as Tables[Table];
+  };
+  return catalogued({
+    version,
+    units: union('units'),
+    scripts: union('scripts'),
+    cards: union('cards'),
+    decks: union('decks'),
+    events: union('events'),
+    capstones: union('capstones'),
+    terrains: union('terrains'),
+    biomes: union('biomes'),
+    buildings: union('buildings'),
+    features: union('features'),
+    improvements: union('improvements'),
+    ages,
+    city,
+  });
+}
 
 export function catalogued(content: Catalogue): Catalogue {
   for (const [id, kind] of Object.entries(content.units)) {
@@ -231,50 +296,18 @@ export function catalogued(content: Catalogue): Catalogue {
       }
     }
   }
-  for (const [id, region] of Object.entries(content.regions)) {
-    biomeKind(content, region.centreBiome);
-    biomeKind(content, region.rivers.source);
-    for (const { biome } of region.biomeShares) biomeKind(content, biome);
-    for (const { feature } of region.featureShares) featureKind(content, feature);
-    const shared = sharedBiomes(region);
-    for (const { biome } of region.biomeShares) {
-      if (!shared.includes(biome))
-        refuse(content, `the region ${id} deals its share of ${biome} no biome`);
-    }
-    const dealt = dealtBiomes(region);
-    const leftover = dealt.length - shared.length;
-    if (biomeKind(content, region.centreBiome).growth.kind === 'size' && leftover > 0) {
-      refuse(
-        content,
-        `the region ${id} leaves ${leftover} biomes over its shares, and its centre kind ${region.centreBiome} is dealt to a size`,
-      );
-    }
-    let sized = 0;
-    for (const kind of [region.centreBiome, ...dealt]) {
-      const { growth } = biomeKind(content, kind);
-      if (growth.kind === 'size') sized += growth.size;
-    }
-    if (sized >= discTiles(region.radius)) {
-      refuse(
-        content,
-        `the region ${id} deals sized biomes of ${sized} tiles on a disc of ${discTiles(region.radius)}`,
-      );
-    }
-    const reach = region.centre + content.city.sight;
-    if (region.campFromCentre <= reach) {
-      refuse(
-        content,
-        `the region ${id} keeps its camps ${region.campFromCentre} from the centre, within the settle's reach of ${reach}`,
-      );
-    }
-  }
+  const ages = Object.entries(content.ages);
+  if (ages.length === 0) refuse(content, 'no age is held');
+  for (const [id, age] of ages) ageHeld(content, id, age);
   for (const [id, deck] of Object.entries(content.decks)) {
     for (const card of [...deck.cards, ...deck.settle]) {
       if (cardOf(content, card).kind === 'hazard') {
         refuse(content, `the deck ${id} holds the hazard ${card}`);
       }
-      if (content.camp.rewards.includes(card)) {
-        refuse(content, `the deck ${id} holds the camp's reward ${card}`);
+      for (const [age, { camp }] of ages) {
+        if (camp.rewards.includes(card)) {
+          refuse(content, `the deck ${id} holds the age ${age}'s camp's reward ${card}`);
+        }
       }
     }
     for (const card of deck.cards) {
@@ -293,21 +326,6 @@ export function catalogued(content: Catalogue): Catalogue {
     }
   }
 
-  for (const [id, schedule] of Object.entries(content.schedules)) {
-    if (Object.keys(schedule.entries).length === 0) {
-      refuse(content, `the schedule ${id} deals no event`);
-    }
-    for (const entry of Object.keys(schedule.entries)) {
-      const answers = Object.keys(eventOf(content, entry).answers).length;
-      if (answers < 2) refuse(content, `the schedule ${id} deals ${entry}, which deals ${answers}`);
-    }
-    capstoneOf(content, schedule.capstone.id);
-    for (const [least, most] of [schedule.spacing, schedule.capstone.window]) {
-      if (least < 1 || most < least) {
-        refuse(content, `the schedule ${id} rolls a span from ${least} to ${most}`);
-      }
-    }
-  }
   const dealtBy = new Map<string, string>();
   for (const [id, event] of Object.entries(content.events)) {
     for (const answer of Object.keys(event.answers)) {
@@ -321,26 +339,86 @@ export function catalogued(content: Catalogue): Catalogue {
     if (!free) refuse(content, `the event ${id} deals no answer costing no stock`);
   }
 
-  const campUnit = unitKind(content, content.camp.unit);
-  enemyScript(content, content.camp.scripts.guard);
-  enemyScript(content, content.camp.scripts.raider);
-  if (content.camp.rewards.length === 0) refuse(content, 'the camp deals no reward');
-  for (const reward of content.camp.rewards) cardOf(content, reward);
-  const { odds, raidCampOdds } = content.camp;
-  if (!(odds >= 0 && odds <= 1)) refuse(content, `the camp rolls at odds of ${odds}`);
-  if (!(raidCampOdds >= 0 && raidCampOdds <= 1)) {
-    refuse(content, `a raid enters through a camp at odds of ${raidCampOdds}`);
-  }
-  for (const terrain of buildingKind(content, content.camp.building).terrains) {
-    if (!standsOn(content, campUnit, { q: 0, r: 0, terrain, improvements: [] })) {
-      refuse(content, `the camp's unit ${content.camp.unit} cannot stand on ${terrain}`);
-    }
-  }
   buildingKind(content, content.city.building);
   const { sight, idle } = content.city;
   if (sight < 0) refuse(content, `the city sees ${sight}`);
   if (idle < 0) refuse(content, `the city opens with ${idle} idle`);
   return content;
+}
+
+/** What one age owns, checked against the tables and the city of the catalogue holding it. */
+function ageHeld(content: Catalogue, id: string, { schedule, camp, regions }: Age): void {
+  if (Object.keys(schedule.entries).length === 0) {
+    refuse(content, `the age ${id}'s schedule deals no event`);
+  }
+  for (const entry of Object.keys(schedule.entries)) {
+    const answers = Object.keys(eventOf(content, entry).answers).length;
+    if (answers < 2) {
+      refuse(content, `the age ${id}'s schedule deals ${entry}, which deals ${answers}`);
+    }
+  }
+  capstoneOf(content, schedule.capstone.id);
+  for (const [least, most] of [schedule.spacing, schedule.capstone.window]) {
+    if (least < 1 || most < least) {
+      refuse(content, `the age ${id}'s schedule rolls a span from ${least} to ${most}`);
+    }
+  }
+
+  const campUnit = unitKind(content, camp.unit);
+  enemyScript(content, camp.scripts.guard);
+  enemyScript(content, camp.scripts.raider);
+  if (camp.rewards.length === 0) refuse(content, `the age ${id}'s camp deals no reward`);
+  for (const reward of camp.rewards) cardOf(content, reward);
+  const { odds, raidCampOdds } = camp;
+  if (!(odds >= 0 && odds <= 1)) refuse(content, `the age ${id}'s camp rolls at odds of ${odds}`);
+  if (!(raidCampOdds >= 0 && raidCampOdds <= 1)) {
+    refuse(content, `a raid of the age ${id} enters through a camp at odds of ${raidCampOdds}`);
+  }
+  for (const terrain of buildingKind(content, camp.building).terrains) {
+    if (!standsOn(content, campUnit, { q: 0, r: 0, terrain, improvements: [] })) {
+      refuse(content, `the age ${id}'s camp's unit ${camp.unit} cannot stand on ${terrain}`);
+    }
+  }
+
+  const held = Object.entries(regions);
+  if (held.length === 0) refuse(content, `the age ${id} holds no region`);
+  for (const [name, region] of held) {
+    biomeKind(content, region.centreBiome);
+    biomeKind(content, region.rivers.source);
+    for (const { biome } of region.biomeShares) biomeKind(content, biome);
+    for (const { feature } of region.featureShares) featureKind(content, feature);
+    const shared = sharedBiomes(region);
+    for (const { biome } of region.biomeShares) {
+      if (!shared.includes(biome))
+        refuse(content, `the region ${name} deals its share of ${biome} no biome`);
+    }
+    const dealt = dealtBiomes(region);
+    const leftover = dealt.length - shared.length;
+    if (biomeKind(content, region.centreBiome).growth.kind === 'size' && leftover > 0) {
+      refuse(
+        content,
+        `the region ${name} leaves ${leftover} biomes over its shares, and its centre kind ${region.centreBiome} is dealt to a size`,
+      );
+    }
+    let sized = 0;
+    for (const kind of [region.centreBiome, ...dealt]) {
+      const { growth } = biomeKind(content, kind);
+      if (growth.kind === 'size') sized += growth.size;
+    }
+    if (sized >= discTiles(region.radius)) {
+      refuse(
+        content,
+        `the region ${name} deals sized biomes of ${sized} tiles on a disc of ${discTiles(region.radius)}`,
+      );
+    }
+    const reach = region.centre + content.city.sight;
+    if (region.campFromCentre <= reach) {
+      refuse(
+        content,
+        `the region ${name} keeps its camps ${region.campFromCentre} from the centre, within the settle's reach of ${reach}`,
+      );
+    }
+  }
 }
 
 function freeWhateverTheChronicle(cost: Answer['cost']): boolean {
@@ -408,9 +486,9 @@ export function capstoneOf(catalogue: Catalogue, id: string): Capstone {
   return held(catalogue, catalogue.capstones, id, 'capstone');
 }
 
-/** The schedule an id names; a schedule the catalogue does not hold is refused. */
-export function scheduleOf(catalogue: Catalogue, id: string): Schedule {
-  return held(catalogue, catalogue.schedules, id, 'schedule');
+/** What the age an id names owns; an age the catalogue does not hold is refused. */
+export function ageOf(catalogue: Catalogue, id: string): Age {
+  return held(catalogue, catalogue.ages, id, 'age');
 }
 
 /** A chronicle begun on any other version of the content than this catalogue's is refused. */

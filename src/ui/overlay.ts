@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { CARD_KINDS } from '../rules/cards';
-import { type Catalogue, cardOf } from '../rules/catalogue';
+import { ageOf, type Catalogue, cardOf } from '../rules/catalogue';
 import { answerCost, answerOf, answerRefusal, offered } from '../rules/schedule';
 import type { Group, Stage } from '../rules/stages';
 import {
@@ -1109,12 +1109,14 @@ function dealt(
           }),
         ),
       };
-    case 'camp':
+    case 'camp': {
+      const { building } = ageOf(catalogue, chronicle.age).camp;
       return {
-        heading: buildingName(catalogue.camp.building),
-        lore: campLore(catalogue.camp.building),
+        heading: buildingName(building),
+        lore: campLore(building),
         entries: ids.map((id, at) => offeredCard(cardFaceAtStart(catalogue, id), at)),
       };
+    }
   }
 }
 

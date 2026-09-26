@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { CATALOGUE } from '../content/catalogue';
 import { refuses } from '../rules/cards';
 import { deckOf } from '../rules/catalogue';
 import {
@@ -103,9 +104,9 @@ export class ChronicleScene extends Phaser.Scene implements OpensChronicles {
    * is handed.
    */
   private begin(seed: number | undefined): Chronicle {
-    const { catalogue, region, schedule, deck } = this.choices;
+    const { age, region, deck } = this.choices;
     const drawn = seed ?? (Math.random() * 2 ** 32) | 0;
-    const chronicle = launched(catalogue, region, schedule, drawn, deckOf(catalogue, deck));
+    const chronicle = launched(CATALOGUE, age, region, drawn, deckOf(CATALOGUE, deck));
     keepChronicle(this.choices, chronicle);
     return chronicle;
   }
@@ -156,8 +157,8 @@ export class ChronicleScene extends Phaser.Scene implements OpensChronicles {
     };
 
     const parts: Part[] = [];
-    const view = createMapView(map, map.strata, this.choices.catalogue, this.current);
-    const panel = createInfoPanel(map, map.strata.infopanel, this.choices.catalogue, tooltip.map);
+    const view = createMapView(map, map.strata, CATALOGUE, this.current);
+    const panel = createInfoPanel(map, map.strata.infopanel, CATALOGUE, tooltip.map);
     const note = createRefusalNote(map, map.strata.note);
     // The map's note hears only the presses this scene lets through to the map.
     this.input.on('pointerdown', note.hide);
@@ -194,7 +195,7 @@ export class ChronicleScene extends Phaser.Scene implements OpensChronicles {
     // go of (a new chronicle begun under it) commits nothing: the objects it was playing on are gone.
     const playOut = async (command: Command): Promise<void> => {
       if (this.sequence !== undefined) return;
-      const stages = apply(this.choices.catalogue, this.current, command);
+      const stages = apply(CATALOGUE, this.current, command);
       const after = outcome(stages);
       if (after !== this.current) keepChronicle(this.choices, after);
       const running = Symbol('play-out');
@@ -235,8 +236,7 @@ export class ChronicleScene extends Phaser.Scene implements OpensChronicles {
      */
     const thresholdOn = (found: PressedTile | undefined): Cost | undefined => {
       if (!cityMode || found === undefined) return undefined;
-      if (tileRefusal(this.choices.catalogue, this.current, found.tile) === undefined)
-        return undefined;
+      if (tileRefusal(CATALOGUE, this.current, found.tile) === undefined) return undefined;
       return tileCost(this.current, found.tile).find(({ resource }) => resource === 'culture');
     };
 
@@ -271,7 +271,7 @@ export class ChronicleScene extends Phaser.Scene implements OpensChronicles {
         return;
       }
       const cards = cardsOf(
-        this.choices.catalogue,
+        CATALOGUE,
         face.tile,
         face.asStands ? this.current.units : [],
         this.current.rivers,
@@ -286,9 +286,9 @@ export class ChronicleScene extends Phaser.Scene implements OpensChronicles {
     };
 
     const act = async (found: PressedTile): Promise<void> => {
-      const refusal = tileRefusal(this.choices.catalogue, this.current, found.tile);
+      const refusal = tileRefusal(CATALOGUE, this.current, found.tile);
       if (refusal === undefined) return;
-      const command = cityCommand(this.choices.catalogue, this.current, found.tile);
+      const command = cityCommand(CATALOGUE, this.current, found.tile);
       if (command === undefined) {
         note.overTile(refused(tileCost(this.current, found.tile), refusal), found.at);
         return;
@@ -376,7 +376,7 @@ export class ChronicleScene extends Phaser.Scene implements OpensChronicles {
 
     const overlay = createOverlay(
       overlayOf(this),
-      this.choices.catalogue,
+      CATALOGUE,
       (over) => {
         covered = over;
         covering();
@@ -389,7 +389,7 @@ export class ChronicleScene extends Phaser.Scene implements OpensChronicles {
     const endTurn = this.addEndTurn(ui.endTurn, () => {
       void playOut({ type: 'end-turn' });
     });
-    const hand = createHand(this, ui, tooltip.ui, this.choices.catalogue, {
+    const hand = createHand(this, ui, tooltip.ui, CATALOGUE, {
       play: (index) => {
         void playOut({ type: 'play', index, aim: 'none' });
       },
@@ -401,15 +401,12 @@ export class ChronicleScene extends Phaser.Scene implements OpensChronicles {
         // Nothing changes the chronicle while an aim stands, so the refusal it opens on is still the
         // rules' answer at the press that lands it, and no play is sent for one they would refuse.
         const { id } = this.current.hand[index];
-        const refusal = refusalOf(this.choices.catalogue, this.current, id);
+        const refusal = refusalOf(CATALOGUE, this.current, id);
         return view.aimTile(
-          admitted(this.choices.catalogue, this.current, card),
+          admitted(CATALOGUE, this.current, card),
           (tile) => {
             if (!playable(refusal)) {
-              note.overTile(
-                refused(costOf(this.choices.catalogue, id), refusal),
-                view.faceOf(tile),
-              );
+              note.overTile(refused(costOf(CATALOGUE, id), refusal), view.faceOf(tile));
               return;
             }
             hand.unselect();
@@ -418,9 +415,7 @@ export class ChronicleScene extends Phaser.Scene implements OpensChronicles {
           (found) => {
             const tile = tileAt(this.current.tiles, found.tile);
             const block =
-              tile === undefined
-                ? undefined
-                : refuses(this.choices.catalogue, this.current, card, tile);
+              tile === undefined ? undefined : refuses(CATALOGUE, this.current, card, tile);
             if (block === undefined) return;
             note.overTile(refusedAim(block), found.at);
           },
@@ -493,7 +488,7 @@ export class ChronicleScene extends Phaser.Scene implements OpensChronicles {
     const bar = createResourceBar(
       this,
       ui.bar,
-      this.choices.catalogue,
+      CATALOGUE,
       tooltip.ui,
       enterCityMode,
       (resource) => {
@@ -572,7 +567,7 @@ export class ChronicleScene extends Phaser.Scene implements OpensChronicles {
     parts.push(
       view,
       bar,
-      createPiles(this, ui, this.choices.catalogue, (pile) => overlay.browse(pile, this.current)),
+      createPiles(this, ui, CATALOGUE, (pile) => overlay.browse(pile, this.current)),
       hand,
       endTurn,
       { render: showSettleStanding },

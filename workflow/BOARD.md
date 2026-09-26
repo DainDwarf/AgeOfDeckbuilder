@@ -15,5 +15,4 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The chronicle names its age** — the catalogue holds an `ages` table and no `schedules` table, each age owning its schedule, its camp and its regions; the Nomadic module is the first age's slice, the catalogue their merge, an id two ages name refused and tested on fixture slices; a chronicle and its save name an age and the timeline no schedule; the launch page's rows are age, region, deck and seed, with `age=` replacing `schedule=`. Doc-impact: `docs/INTERFACE.md`. [board/chronicle-names-its-age.md](board/chronicle-names-its-age.md)
 - **The city is the settle card's** — the catalogue holds no city record; a settle card declares its city as data, its building, its sight and the idle population, and its effect settles that city; the chronicle's city carries its sight and the save reads it; the catalogue refuses a region whose camps keep within reach of any declared city and a deck whose settle section declares no city or two. Doc-impact: `docs/CHRONICLE.md`, `docs/MAP.md`. [board/city-is-the-settle-cards.md](board/city-is-the-settle-cards.md)

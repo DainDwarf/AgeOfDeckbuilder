@@ -1,6 +1,7 @@
 import {
   type Aim,
   type AimedCard,
+  ageOf,
   type Card,
   type Catalogue,
   cardOf,
@@ -232,7 +233,7 @@ export function terraformable(
   tile: Tile,
   to: string,
 ): TileBlock | undefined {
-  if (tile.building === catalogue.camp.building) return 'other-faction';
+  if (tile.building === ageOf(catalogue, chronicle.age).camp.building) return 'other-faction';
   return reaches(catalogue, chronicle, tile, to) ? undefined : 'wrong-terrain';
 }
 
