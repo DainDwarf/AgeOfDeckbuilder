@@ -1,9 +1,17 @@
 import { expect, type Page } from '@playwright/test';
 import type Phaser from 'phaser';
 import { catalogueOf } from '../src/content/catalogues';
+import { NOMADIC } from '../src/content/nomadic';
 import { STAND_IN, STAND_IN_REGION, STAND_IN_SCHEDULE } from '../src/content/stand-in';
-import { aimOf } from '../src/rules/cards';
-import { type AimedCard, type Catalogue, cardOf, type Deck, deckOf } from '../src/rules/catalogue';
+import { aimOf, type CardKind, refuses } from '../src/rules/cards';
+import {
+  type Aim,
+  type AimedCard,
+  type Catalogue,
+  cardOf,
+  type Deck,
+  deckOf,
+} from '../src/rules/catalogue';
 import { admitted, apply, launched, outcome, refusalOf } from '../src/rules/chronicle';
 import {
   CENTRE,
@@ -102,17 +110,24 @@ function firstsOf(catalogue: Catalogue): { region: string; schedule: string; dec
 }
 
 /**
- * A chronicle launched from a seed on the first region, schedule and deck the catalogue lists, and
- * settled headlessly: the first card of the settle section played on the centre tile, the settle
- * cards `onCity` names played on the city's tile, and the settle phase ended with the rest in hand.
+ * A chronicle launched from a seed on the first region, schedule and deck the catalogue lists, or the
+ * deck given, and settled headlessly: the first settle card played on the centre tile, the ones
+ * `onCity` names played on the city's tile, and the settle phase ended with the rest in hand.
  */
 export function settledOn(
   catalogue: Catalogue,
   seed: number,
   onCity: readonly CardId[] = [],
+  deck?: Deck,
 ): Chronicle {
-  const { region, schedule, deck } = firstsOf(catalogue);
-  const opened = launched(catalogue, region, schedule, seed, deckOf(catalogue, deck));
+  const firsts = firstsOf(catalogue);
+  const opened = launched(
+    catalogue,
+    firsts.region,
+    firsts.schedule,
+    seed,
+    deck ?? deckOf(catalogue, firsts.deck),
+  );
   let settling = playedOn(opened, 0, CENTRE);
   const city = cityTileOf(settling);
   for (const card of onCity)
@@ -683,6 +698,83 @@ export function firstSeed<T>(complaint: string, answer: (seed: number) => T | un
   throw new Error(`no seed under a thousand ${complaint}`);
 }
 
+/** A card of a hand as the rules judge it: its kind, what it is aimed at, whether they would play it. */
+export type Judged = {
+  readonly kind: CardKind;
+  readonly aim: Aim['aim'];
+  readonly playable: boolean;
+};
+
+/** Where the first card of the hand lies that `such` holds of, judged on the chronicle, or -1. */
+export function inHand(chronicle: Chronicle, such: (card: Judged) => boolean): number {
+  const catalogue = catalogueOf(chronicle.content);
+  return chronicle.hand.findIndex(({ id }) => {
+    const card = cardOf(catalogue, id);
+    const judged = playable(refusalOf(catalogue, chronicle, id));
+    return such({ kind: card.kind, aim: aimOf(card).aim, playable: judged });
+  });
+}
+
+/** Whether the card at that place in the hand is aimed at a tile or a unit and admits the tile. */
+export function admits(chronicle: Chronicle, index: number, at: TileCoords): boolean {
+  const held = chronicle.hand[index];
+  const tile = tileAt(chronicle.tiles, at);
+  if (held === undefined || tile === undefined) return false;
+  const catalogue = catalogueOf(chronicle.content);
+  const card = aimOf(cardOf(catalogue, held.id));
+  switch (card.aim) {
+    case 'tile':
+    case 'unit':
+      return refuses(catalogue, chronicle, card, tile) === undefined;
+    case 'none':
+    case 'discard-pile':
+      return false;
+  }
+}
+
+/**
+ * The first seed's turn 1 on the Nomadic content, its city settled bare, whose hand holds a card
+ * `such` holds of, and where that card lies; `named` tails the complaint when no seed does.
+ */
+export function bareWith(
+  named: string,
+  such: (card: Judged) => boolean,
+): { chronicle: Chronicle; index: number } {
+  return firstSeed(`opens turn 1 on ${named}`, (seed) => {
+    const chronicle = settledOn(NOMADIC, seed);
+    const index = inHand(chronicle, such);
+    return index === -1 ? undefined : { chronicle, index };
+  });
+}
+
+/** A turn 1 with the first worker entered on the city's tile, and the neighbour it steps onto. */
+export type Step = {
+  readonly entered: Chronicle;
+  readonly tile: TileCoords;
+  readonly stepped: Chronicle;
+};
+
+/**
+ * The first seed's turn 1 on the Nomadic content whose first worker, entered on the city's tile,
+ * steps onto a neighbour where `keeps` holds of the chronicle the step leaves: the first such
+ * neighbour. The worker is the only unit of the player's on the map.
+ */
+export function workerStepped(
+  complaint: string,
+  keeps: (stepped: Chronicle, tile: TileCoords) => boolean,
+): Step {
+  return firstSeed(complaint, (seed) => {
+    const entered = settledOn(NOMADIC, seed, ['first-worker']);
+    const [worker] = playersOf(entered);
+    for (const tile of neighbours(cityTileOf(entered))) {
+      const move = { type: 'move', unit: worker.id, tile } as const;
+      const stepped = outcome(apply(NOMADIC, entered, move));
+      if (stepped !== entered && keeps(stepped, tile)) return { entered, tile, stepped };
+    }
+    return undefined;
+  });
+}
+
 /**
  * The first seed whose timeline's first deal stands alone and offers the raid first, with a tile
  * free for it to enter a warrior on — what the take lands is then one more warrior standing on the
@@ -720,15 +812,6 @@ export function workerRun(
     card,
     `opens a turn on a worker, a move and ${card}`,
     (tile, chronicle) => playable(refusalOf(STAND_IN, chronicle, card)) && on(tile, chronicle),
-  );
-}
-
-/** The same run for a card the city cannot pay for: what a play it has no cost for is aimed at. */
-export function unaffordableRun(card: CardId): Run {
-  return runOn(
-    card,
-    `opens a turn on a worker, a move and ${card} unpaid for`,
-    (_, chronicle) => !playable(refusalOf(STAND_IN, chronicle, card)),
   );
 }
 
@@ -799,26 +882,6 @@ function steppedThisTurn(
     }
   }
   return undefined;
-}
-
-/** Where a card aimed at a tile that the city can pay for lies in the hand, or -1. */
-export function atTile(chronicle: Chronicle): number {
-  return idsOf(chronicle.hand).findIndex(
-    (id) =>
-      aimOf(cardOf(STAND_IN, id)).aim === 'tile' && playable(refusalOf(STAND_IN, chronicle, id)),
-  );
-}
-
-/** The first seed with a turn in its first eight that opens on such a card. */
-export function atTileRun(): { seed: number; turn: number } {
-  return firstSeed('opens a turn on a card aimed at a tile the city can pay for', (seed) => {
-    let chronicle = launch(seed, deckOf(STAND_IN, 'PH_Deck'));
-    for (let turn = 1; turn <= 8; turn++) {
-      if (atTile(chronicle) !== -1) return { seed, turn };
-      chronicle = endedTurn(chronicle);
-    }
-    return undefined;
-  });
 }
 
 /** The first seed whose city is captured inside twenty turns of ending the turn and nothing else. */
