@@ -44,15 +44,24 @@ export function cardFaceAtStart(catalogue: Catalogue, id: CardId): Face {
 }
 
 /**
- * The face a card named on a face is drawn as: made at the counters that face's reading hands under
- * the names the card declares, and at its start under every other.
+ * The card a face names, made at the counters that face's reading hands under the names the card
+ * declares, and at its start under every other.
  */
-export function namedCardFace(catalogue: Catalogue, id: CardId, reading: AnswerReading): Face {
+export function namedCardMade(
+  catalogue: Catalogue,
+  id: CardId,
+  reading: AnswerReading,
+): ChronicleCard {
   const declared = cardOf(catalogue, id).counters ?? {};
   const set = Object.fromEntries(
     Object.entries(reading).filter(([counter]) => Object.hasOwn(declared, counter)),
   );
-  return cardFace(catalogue, cardMade(catalogue, id, set));
+  return cardMade(catalogue, id, set);
+}
+
+/** The face a card named on a face is drawn as: the card `namedCardMade` makes of that face's reading. */
+export function namedCardFace(catalogue: Catalogue, id: CardId, reading: AnswerReading): Face {
+  return cardFace(catalogue, namedCardMade(catalogue, id, reading));
 }
 
 /** The face a capstone is drawn as: it costs nothing, and its rules entry reads no numbers. */

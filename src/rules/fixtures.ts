@@ -1,6 +1,7 @@
 /**
  * The fixtures the rules tests share, authored by the tests and entered through the rules. Nothing
  * outside a test imports this module: a rules module that did would ship fixtures in the build.
+ * Every id here carries the `PH_` prefix so that one leaking into shipped code is one search away.
  */
 import {
   built,
