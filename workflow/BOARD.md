@@ -16,7 +16,7 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The hand's specs open on their chronicle** — press, recall and refuse, reviewed the same way.
+- **The hand's specs open on their chronicle** — press and refuse open through the shared save opener on the Nomadic content, each test on the state it needs with its oracle read from the rules, and recall is deleted, no age's content aiming a card at the discard pile. Done when `e2e/press.spec.ts` and `e2e/refuse.spec.ts` import nothing from `src/content/stand-in.ts`, `e2e/recall.spec.ts` is gone, the report carries both specs' duration before and after, and CI is green. Doc-impact: none. [board/hand-specs-open-on-their-chronicle.md](board/hand-specs-open-on-their-chronicle.md)
 - **The worker's specs open on their chronicle** — building, worker-instants, harvest, rivers and inspect, reviewed the same way; a worker card no age's content reaches loses its spec.
 - **The map's specs open on their chronicle** — map, fog, console, landing and camps, reviewed the same way.
 - **The city's specs open on their chronicle** — city-mode, yields, settle and capstone, reviewed the same way; settle and capstone open on the save written before the settle.
