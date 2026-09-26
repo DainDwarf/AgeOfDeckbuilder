@@ -9,8 +9,6 @@ const POINT: number[] = [0, -14, 13, 9, -13, 9];
  * arrowhead. Each is its corners about its own centre, raw.
  */
 const UNIT_MARKS: Readonly<Record<string, number[]>> = {
-  PH_Worker: BLOCK,
-  PH_Warrior: POINT,
   worker: BLOCK,
   warrior: POINT,
   scout: [0, -14, 11, 12, 0, 5, -11, 12],
@@ -23,13 +21,10 @@ const WALL: number[] = [
 ];
 
 /**
- * Placeholder primitives until the art pass: the farm a house, the city and the camp a crenellated
- * wall, the shelter a tent, all of them wide enough to show under a unit.
+ * Placeholder primitives until the art pass: the city and the camp a crenellated wall, the shelter
+ * a tent, all of them wide enough to show under a unit.
  */
 const BUILDING_MARKS: Readonly<Record<string, number[]>> = {
-  PH_City: WALL,
-  PH_Farm: [-16, 8, -16, -2, 0, -13, 16, -2, 16, 8],
-  PH_Camp: WALL,
   city: WALL,
   camp: WALL,
   shelter: [-16, 10, 0, -13, 16, 10, 5, 10, 0, 2, -5, 10],
@@ -58,19 +53,13 @@ const FERTILE: number[] = [
  * wildlife a small triangle, the flint a shard.
  */
 const FEATURE_MARKS: Readonly<Record<string, number[]>> = {
-  PH_Fertile: FERTILE,
   fertile: FERTILE,
   wildlife: [-5, 4, 0, -4, 5, 4],
   flint: [-2, -5, 4, -1, 2, 5, -4, 1],
 };
 
-/**
- * Placeholder primitives until the art pass: the mine a cut into the ground, the road a straight
- * band, the trapping a funnel.
- */
+/** Placeholder primitives until the art pass: the trapping a funnel. */
 const IMPROVEMENT_MARKS: Readonly<Record<string, number[]>> = {
-  PH_Mine: [-5, 4, -2, -4, 2, -4, 5, 4],
-  PH_Road: [-5, -2, 5, -2, 5, 2, -5, 2],
   trapping: [-5, -4, 5, -4, 0, 5],
 };
 

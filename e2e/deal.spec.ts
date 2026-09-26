@@ -11,10 +11,10 @@ import {
   cardOnFace,
   chronicleOf,
   click,
-  endedTurn,
   enemiesOf,
   firstEntriesTaken,
   firstSeed,
+  leanSeason,
   loreOf,
   onScreen,
   openSaved,
@@ -28,28 +28,8 @@ import {
   watch,
 } from './chronicle-screen';
 
-/** The event dealt as the choice, and the answer of it that enters warriors. */
-const LEAN_SEASON = 'lean-season';
+/** The answer of the lean season that enters warriors. */
 const RATION = 'ration';
-
-/**
- * The chronicle of the first seed whose first deal is the lean season alone, offering the ration,
- * stopped on that deal, and where the ration stands among the answers offered.
- */
-function leanSeason(): { dealt: Chronicle; ration: number } {
-  return firstSeed(`deals the lean season alone first, offering ${RATION}`, (seed) => {
-    let chronicle = settledOn(NOMADIC, seed);
-    const due = chronicle.timeline.next;
-    while (chronicle.turn < due - 1 && chronicle.ending === undefined) {
-      chronicle = endedTurn(chronicle);
-    }
-    const dealt = outcome(apply(NOMADIC, chronicle, { type: 'end-turn' }));
-    const [deal, ...behind] = dealt.deals;
-    if (deal?.of !== 'event' || deal.event !== LEAN_SEASON || behind.length > 0) return undefined;
-    const ration = offered(NOMADIC, deal).indexOf(RATION);
-    return ration === -1 ? undefined : { dealt, ration };
-  });
-}
 
 /**
  * The chronicle of the first seed and turn, inside forty turns, whose deal offers an answer the city
@@ -78,10 +58,12 @@ test('the events phase deals a choice, and the turn plays on from the one taken'
 }) => {
   const problems = watch(page);
   test.setTimeout(budget(1));
-  const { dealt, ration } = leanSeason();
+  const dealt = leanSeason();
   const [deal] = dealt.deals;
   if (deal?.of !== 'event') throw new Error(`turn ${dealt.turn} deals no event`);
   const answers = offered(NOMADIC, deal);
+  const ration = answers.indexOf(RATION);
+  if (ration === -1) throw new Error(`the ${deal.event} offers no ${RATION}`);
   const after = outcome(apply(NOMADIC, dealt, { type: 'take', at: ration }));
 
   await openSaved(page, dealt);

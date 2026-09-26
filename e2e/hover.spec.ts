@@ -1,22 +1,26 @@
 import { expect, type Page, test } from '@playwright/test';
-import { STAND_IN } from '../src/content/stand-in';
+import { catalogueOf } from '../src/content/catalogues';
+import { NOMADIC } from '../src/content/nomadic';
 import { cardOf } from '../src/rules/catalogue';
+import { type TileCoords, tileKey } from '../src/rules/map';
 import { text } from '../src/ui/text';
 import {
+  bareTile,
   besideTheDeal,
   besideTiles,
   budget,
   cardOnFace,
   chronicleOf,
   cursorOverCanvas,
-  dealRun,
   endTurnLabel,
+  firstDealt,
   kindLabelOnScreen,
   offCanvas,
   onScreen,
-  open,
+  openSaved,
   rested,
   ringedTile,
+  settledOn,
   shownCard,
   standing,
   stoppedTurn,
@@ -41,7 +45,7 @@ test('a pointer that leaves the canvas over a resource raises no tooltip behind 
   const problems = watch(page);
 
   await page.setViewportSize(WINDOW);
-  await open(page, 1, 'PH_Deck');
+  await openSaved(page, settledOn(NOMADIC, 1));
 
   const food = await onScreen(page, 'reading-food');
   const bare = await offCanvas(page);
@@ -61,7 +65,7 @@ test('a tooltip standing over a resource goes down when the pointer leaves the c
   const problems = watch(page);
 
   await page.setViewportSize(WINDOW);
-  await open(page, 1, 'PH_Deck');
+  await openSaved(page, settledOn(NOMADIC, 1));
 
   const food = await onScreen(page, 'reading-food');
   const bare = await offCanvas(page);
@@ -84,7 +88,7 @@ test('the end-turn button reads the turn again when the pointer leaves the canva
   const problems = watch(page);
 
   await page.setViewportSize(WINDOW);
-  await open(page, 1, 'PH_Deck');
+  await openSaved(page, settledOn(NOMADIC, 1));
 
   const { turn } = await chronicleOf(page);
   const button = await onScreen(page, 'end-turn');
@@ -99,15 +103,17 @@ test('the end-turn button reads the turn again when the pointer leaves the canva
   expect(problems).toEqual([]);
 });
 
-// `open` ends the settle phase by clicking the button, so the pointer rests on it: the first
-// assertions have to come before any move.
+// The end of turn is pressed on the button and the pointer rests there through its play-out: the
+// first assertions have to come before any move.
 test('the end-turn button reads End turn under the pointer the last turn ended at', async ({
   page,
 }) => {
   const problems = watch(page);
+  test.setTimeout(budget(1));
 
   await page.setViewportSize(WINDOW);
-  await open(page, 1, 'PH_Deck');
+  await openSaved(page, settledOn(NOMADIC, 1));
+  await stoppedTurn(page);
 
   await expect.poll(() => endTurnLabel(page)).toBe(text('button.end-turn'));
   expect(await cursorOverCanvas(page)).toBe(HAND);
@@ -127,7 +133,7 @@ test('the end-turn button reads End turn when the pointer comes back straight on
   const problems = watch(page);
 
   await page.setViewportSize(WINDOW);
-  await open(page, 1, 'PH_Deck');
+  await openSaved(page, settledOn(NOMADIC, 1));
 
   const { turn } = await chronicleOf(page);
   const button = await onScreen(page, 'end-turn');
@@ -150,12 +156,9 @@ test('the end-turn button reads End turn when the pointer comes back straight on
 
 test('a reading hovered while the deal window stands raises no tooltip', async ({ page }) => {
   const problems = watch(page);
-  const run = dealRun();
-  test.setTimeout(budget(run.due));
 
   await page.setViewportSize(WINDOW);
-  await open(page, run.seed, 'PH_Deck');
-  for (let turn = 1; turn < run.due; turn++) await stoppedTurn(page);
+  await openSaved(page, firstDealt(1));
   await expect.poll(() => standing(page, 'deal')).toBe(true);
   await rested(page);
 
@@ -176,7 +179,7 @@ test('a tooltip standing over a reading goes down when the back key raises the m
   const problems = watch(page);
 
   await page.setViewportSize(WINDOW);
-  await open(page, 1, 'PH_Deck');
+  await openSaved(page, settledOn(NOMADIC, 1));
 
   const food = await onScreen(page, 'reading-food');
   await page.mouse.move(food.x, food.y);
@@ -197,7 +200,7 @@ test('the end-turn button reads End turn the moment the menu falls under a point
   const problems = watch(page);
 
   await page.setViewportSize(WINDOW);
-  await open(page, 1, 'PH_Deck');
+  await openSaved(page, settledOn(NOMADIC, 1));
 
   const { turn } = await chronicleOf(page);
   const button = await onScreen(page, 'end-turn');
@@ -216,14 +219,11 @@ test('the end-turn button reads End turn the moment the menu falls under a point
   expect(problems).toEqual([]);
 });
 
-/** A bare tile the opening charts, clear of the resource bar, the piles and the hand. */
-const CHARTED = { at: { q: 1, r: -2 }, key: '1,-2' };
-
-/** The charted tile inspected, and the pointer resting on the first row of its card. */
-async function onPanelRow(page: Page): Promise<void> {
-  const tile = await tileOnScreen(page, CHARTED.at);
+/** The bare tile inspected, and the pointer resting on the first row of its card. */
+async function onPanelRow(page: Page, at: TileCoords): Promise<void> {
+  const tile = await tileOnScreen(page, at);
   await page.mouse.click(tile.x, tile.y);
-  await expect.poll(() => ringedTile(page)).toBe(CHARTED.key);
+  await expect.poll(() => ringedTile(page)).toBe(tileKey(at));
   await page.keyboard.press('i');
   await expect.poll(() => shownCard(page)).toBe('terrain');
   const row = await onScreen(page, 'infopanel-row-0');
@@ -237,9 +237,10 @@ test("a panel row's tooltip does not rise once the pointer moves straight onto a
   const problems = watch(page);
 
   await page.setViewportSize(WINDOW);
-  await open(page, 1, 'PH_Deck');
+  const opened = settledOn(NOMADIC, 1);
+  await openSaved(page, opened);
 
-  await onPanelRow(page);
+  await onPanelRow(page, bareTile(opened));
   const food = await onScreen(page, 'reading-food');
   await page.mouse.move(food.x, food.y);
   await page.waitForTimeout(PAST_REST);
@@ -255,9 +256,10 @@ test("a panel row's tooltip rises when the pointer comes straight back onto it f
   const problems = watch(page);
 
   await page.setViewportSize(WINDOW);
-  await open(page, 1, 'PH_Deck');
+  const opened = settledOn(NOMADIC, 1);
+  await openSaved(page, opened);
 
-  await onPanelRow(page);
+  await onPanelRow(page, bareTile(opened));
   const row = await onScreen(page, 'infopanel-row-0');
   const food = await onScreen(page, 'reading-food');
   await page.mouse.move(food.x, food.y);
@@ -275,7 +277,7 @@ test('the end-turn button reads the turn again when the pointer moves straight o
   const problems = watch(page);
 
   await page.setViewportSize(WINDOW);
-  await open(page, 1, 'PH_Deck');
+  await openSaved(page, settledOn(NOMADIC, 1));
 
   const { turn } = await chronicleOf(page);
   const button = await onScreen(page, 'end-turn');
@@ -295,7 +297,7 @@ test('a hand card the pointer leaves the canvas over settles back into the hand'
   const problems = watch(page);
 
   await page.setViewportSize(WINDOW);
-  await open(page, 1, 'PH_Deck');
+  await openSaved(page, settledOn(NOMADIC, 1));
 
   const card = 'hand-0';
   const rest = await onScreen(page, card);
@@ -332,10 +334,12 @@ test("a card's kind label in the hand raises the bubble reading what its kind is
 }) => {
   const problems = watch(page);
 
-  await open(page, 1, 'PH_Deck');
+  const opened = settledOn(NOMADIC, 1);
+  await openSaved(page, opened);
 
-  const id = (await chronicleOf(page)).hand[0]?.id;
+  const id = opened.hand[0]?.id;
   if (id === undefined) throw new Error('the hand holds no card');
+  const { kind } = cardOf(catalogueOf(opened.content), id);
   const card = await onScreen(page, 'hand-0');
   const lying = await kindLabelOnScreen(page, 'hand-0');
 
@@ -343,7 +347,7 @@ test("a card's kind label in the hand raises the bubble reading what its kind is
   const label = await liftedLabel(page, lying);
   await page.mouse.move(label.x, label.y, { steps: 5 });
   await expect.poll(() => tooltipUp(page, 'tooltip-ui')).toBe(true);
-  expect(await tooltipText(page, 'tooltip-ui')).toBe(text(`tooltip.${cardOf(STAND_IN, id).kind}`));
+  expect(await tooltipText(page, 'tooltip-ui')).toBe(text(`tooltip.${kind}`));
   expect(await cursorOverCanvas(page)).toBe(HAND);
 
   const beside = await besideTiles(page);
@@ -362,11 +366,8 @@ test("an answer's kind label on the deal window raises the overlay's bubble read
   page,
 }) => {
   const problems = watch(page);
-  const run = dealRun();
-  test.setTimeout(budget(run.due));
 
-  await open(page, run.seed, 'PH_Deck');
-  for (let turn = 1; turn < run.due; turn++) await stoppedTurn(page);
+  await openSaved(page, firstDealt(1));
   await expect.poll(() => standing(page, 'deal')).toBe(true);
   await rested(page);
 

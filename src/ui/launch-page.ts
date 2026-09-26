@@ -79,7 +79,6 @@ export class LaunchPage extends Phaser.Scene {
     holdDesignSpace(this, this.cameras.main);
     let chosen: Choices = this.opening;
     const listed = CATALOGUES.map((each) => each.version);
-    if (!listed.includes(chosen.catalogue.version)) listed.push(chosen.catalogue.version);
     let typed = chosen.seed === undefined ? '' : String(chosen.seed);
     let root: Phaser.GameObjects.Container | undefined;
     let seedLabel: Phaser.GameObjects.Text | undefined;

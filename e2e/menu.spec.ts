@@ -1,46 +1,31 @@
 import { expect, type Page, test } from '@playwright/test';
-import { STAND_IN } from '../src/content/stand-in';
+import { NOMADIC } from '../src/content/nomadic';
 import { deckOf } from '../src/rules/catalogue';
+import { apply, outcome } from '../src/rules/chronicle';
 import { tileKey } from '../src/rules/map';
 import type { Chronicle } from '../src/rules/state';
 import {
   aimed,
+  bareAimable,
+  beforeTheFall,
   browse,
-  budget,
   chronicleOf,
   cityTileOf,
   click,
   counted,
   dragOut,
-  dragUnit,
-  endedTurn,
-  endTurn,
-  fallRun,
-  firstSeed,
+  firstsOf,
   idsOf,
-  launch,
   mapFrame,
   onScreen,
-  open,
-  playersOf,
+  openSaved,
   rested,
   ringedTile,
+  settledOn,
   standing,
   tileOnScreen,
   watch,
-  workerRun,
 } from './chronicle-screen';
-
-/** The first seed that stands its city through three ended turns. */
-function standingRun(): number {
-  return firstSeed('stands its city through three ended turns', (seed) => {
-    let chronicle = launch(seed, deckOf(STAND_IN, 'PH_Deck'));
-    for (let turn = 0; turn < 3; turn++) {
-      chronicle = endedTurn(chronicle);
-    }
-    return chronicle.ending === undefined ? seed : undefined;
-  });
-}
 
 /** Every card the chronicle holds, wherever it stands: the deck it was begun on. */
 function cardsHeld(chronicle: Chronicle): string[] {
@@ -56,7 +41,7 @@ async function raised(page: Page): Promise<void> {
 test('the menu walks in to Controls and closes back one step at a time', async ({ page }) => {
   const problems = watch(page);
 
-  await open(page, 1, 'PH_Deck');
+  await openSaved(page, settledOn(NOMADIC, 1));
   expect(await standing(page, 'menu')).toBe(false);
 
   await click(page, 'menu-button');
@@ -87,7 +72,7 @@ test('Escape raises the menu on a bare chronicle screen, and backs out of a brow
 }) => {
   const problems = watch(page);
 
-  await open(page, 1, 'PH_Deck');
+  await openSaved(page, settledOn(NOMADIC, 1));
 
   await page.keyboard.press('Escape');
   await expect.poll(() => standing(page, 'menu')).toBe(true);
@@ -109,28 +94,16 @@ test('Escape raises the menu on a bare chronicle screen, and backs out of a brow
 
 test('Escape lets go of the card being aimed before it raises the menu', async ({ page }) => {
   const problems = watch(page);
-  const run = workerRun('PH_Farm', (_, chronicle) => idsOf(chronicle.hand).includes('PH_March'));
+  const { chronicle: opened, index } = bareAimable();
 
-  await open(page, run.seed, 'PH_Deck');
-  for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
-
-  const opened = await chronicleOf(page);
-  await dragOut(page, idsOf(opened.hand).indexOf('PH_Worker'));
-  await expect.poll(async () => playersOf(await chronicleOf(page)).length).toBe(1);
-
-  // The refresh instant admits the tile of a unit that has spent move points, so the worker moves
-  // out first.
-  const standingStill = await chronicleOf(page);
-  await dragUnit(page, cityTileOf(standingStill), run.tile);
-
-  const entered = await chronicleOf(page);
-  await dragOut(page, idsOf(entered.hand).indexOf('PH_March'));
+  await openSaved(page, opened);
+  await dragOut(page, index);
   await aimed(page);
 
   await page.keyboard.press('Escape');
   await expect.poll(() => standing(page, 'aim')).toBe(false);
   expect(await standing(page, 'menu')).toBe(false);
-  expect((await chronicleOf(page)).hand).toEqual(entered.hand);
+  expect((await chronicleOf(page)).hand).toEqual(opened.hand);
 
   await page.keyboard.press('Escape');
   await expect.poll(() => standing(page, 'menu')).toBe(true);
@@ -143,7 +116,7 @@ test('a pan dragged onto the Menu button carries the map the whole way, and open
 }) => {
   const problems = watch(page);
 
-  await open(page, 1, 'PH_Deck');
+  await openSaved(page, settledOn(NOMADIC, 1));
   const city = cityTileOf(await chronicleOf(page));
   const button = await onScreen(page, 'menu-button');
   const travel = 80 * button.unit;
@@ -170,7 +143,7 @@ test('a pan dragged onto the Menu button carries the map the whole way, and open
 test('the selected tile waits under the menu', async ({ page }) => {
   const problems = watch(page);
 
-  await open(page, 1, 'PH_Deck');
+  await openSaved(page, settledOn(NOMADIC, 1));
   const opened = await chronicleOf(page);
   const city = tileKey(cityTileOf(opened));
   await click(page, `tile-${city}`);
@@ -189,11 +162,10 @@ test('the selected tile waits under the menu', async ({ page }) => {
 
 test('a new chronicle deals the same deck a fresh seed, on the settle phase', async ({ page }) => {
   const problems = watch(page);
+  const played = settledOn(NOMADIC, 1);
+  const deck = deckOf(NOMADIC, firstsOf(NOMADIC).deck);
 
-  await open(page, standingRun(), 'PH_Deck');
-  for (let turn = 0; turn < 3; turn++) await endTurn(page);
-  const played = await chronicleOf(page);
-  expect(played.turn).toBeGreaterThan(1);
+  await openSaved(page, played);
 
   await click(page, 'menu-button');
   await expect.poll(() => standing(page, 'menu')).toBe(true);
@@ -203,9 +175,7 @@ test('a new chronicle deals the same deck a fresh seed, on the settle phase', as
   const fresh = await chronicleOf(page);
   expect(fresh.turn).toBe(0);
   expect(fresh.seed).not.toBe(played.seed);
-  expect(cardsHeld(fresh)).toEqual(
-    [...cardsHeld(played), ...deckOf(STAND_IN, 'PH_Deck').settle].sort(),
-  );
+  expect(cardsHeld(fresh)).toEqual([...deck.cards, ...deck.settle].sort());
 
   expect(problems).toEqual([]);
 });
@@ -214,13 +184,11 @@ test('the menu opens over the defeat screen, and a new chronicle takes the chron
   page,
 }) => {
   const problems = watch(page);
-  const run = fallRun();
-  // The ends of turn the city falls on, and the new chronicle raised over the defeat screen after.
-  test.setTimeout(budget(run.turns + 1));
+  const fallen = outcome(apply(NOMADIC, beforeTheFall(), { type: 'end-turn' }));
 
-  await open(page, run.seed, 'PH_Deck');
-  for (let turn = 0; turn < run.turns; turn++) await endTurn(page);
+  await openSaved(page, fallen);
   await expect.poll(() => standing(page, 'defeat')).toBe(true);
+  expect(await standing(page, 'capstone')).toBe(false);
 
   await click(page, 'menu-button');
   await expect.poll(() => standing(page, 'menu')).toBe(true);

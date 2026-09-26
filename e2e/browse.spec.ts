@@ -1,33 +1,29 @@
 import { expect, type Page, test } from '@playwright/test';
 import type Phaser from 'phaser';
-import { STAND_IN } from '../src/content/stand-in';
-import { deckOf } from '../src/rules/catalogue';
+import { NOMADIC } from '../src/content/nomadic';
+import type { Chronicle } from '../src/rules/state';
 import {
   besideTheCards,
   browse,
   cardOnFace,
   chronicleOf,
   click,
+  doubledDeck,
   endedTurn,
-  endTurn,
-  firstSeed,
   kindLabelOnScreen,
-  launch,
   nameOnScreen,
   offsetOf,
   onScreen,
-  open,
+  openSaved,
   rested,
   ringed,
   scrolled,
+  settledOn,
   standing,
   tooltipUp,
   watch,
   wheel,
 } from './chronicle-screen';
-
-/** Five copies of each of five cards: a pile of these lays out taller than the browse's frame. */
-const DECK = 'PH_TallDeck';
 
 /** Longer than the hand-over a small card waits out before it goes down, so one going has gone. */
 const PAST_HANDOVER = 400;
@@ -56,15 +52,11 @@ async function nearest(
   return faces[best];
 }
 
-/** The first seed whose three ended turns leave the city standing on fifteen discarded cards. */
-function browseSeed(): number {
-  return firstSeed('ends three turns standing on fifteen discarded cards', (seed) => {
-    let chronicle = launch(seed, deckOf(STAND_IN, DECK));
-    for (let turn = 0; turn < 3; turn++) {
-      chronicle = endedTurn(chronicle);
-    }
-    return chronicle.ending === undefined && chronicle.discardPile.length === 15 ? seed : undefined;
-  });
+/** Seed 1 on the doubled deck, settled bare, with three turns ended: both piles overflow the browse's frame. */
+function overflowing(): Chronicle {
+  let chronicle = settledOn(NOMADIC, 1, [], doubledDeck());
+  for (let turn = 0; turn < 3; turn++) chronicle = endedTurn(chronicle);
+  return chronicle;
 }
 
 test('a pile of more cards than the frame holds scrolls, and stops on its first and last row', async ({
@@ -72,7 +64,7 @@ test('a pile of more cards than the frame holds scrolls, and stops on its first 
 }) => {
   const problems = watch(page);
 
-  await open(page, browseSeed(), DECK);
+  await openSaved(page, overflowing());
   await browse(page, 'draw-pile');
 
   const opened = await scrolled(page);
@@ -99,7 +91,6 @@ test('a pile of more cards than the frame holds scrolls, and stops on its first 
   await page.keyboard.press('Escape');
   await expect.poll(() => standing(page, 'browse')).toBe(false);
 
-  for (let turn = 0; turn < 3; turn++) await endTurn(page);
   await browse(page, 'discard-pile');
 
   const discarded = await scrolled(page);
@@ -118,17 +109,19 @@ test('a click rings a browsed card, a right click and the inspection key show it
 }) => {
   const problems = watch(page);
 
-  await open(page, browseSeed(), DECK);
-  const before = await chronicleOf(page);
+  const before = settledOn(NOMADIC, 1);
+  await openSaved(page, before);
   await browse(page, 'draw-pile');
 
-  // The deck holds five of each card, so one of the first six the browse lays out reads differently
-  // from the first, and which card stands large says where the inspection sits.
+  // Which card stands large says where the inspection sits, so the selection reads differently from
+  // the first card.
   const first = await cardOnFace(page, 'browse-card-0');
   const read = await Promise.all(
     [1, 2, 3, 4, 5].map((index) => cardOnFace(page, `browse-card-${index}`)),
   );
-  const other = 1 + read.findIndex((id) => id !== first);
+  const differing = read.findIndex((id) => id !== first);
+  if (differing === -1) throw new Error('the first six cards the browse lays out read alike');
+  const other = 1 + differing;
   const selection = `browse-card-${other}`;
 
   await click(page, 'browse-card-0');
@@ -198,8 +191,9 @@ test('a small card and a kind bubble raised off a browsed card move with it as t
 }) => {
   const problems = watch(page);
 
-  await open(page, browseSeed(), DECK);
-  const faces = (await chronicleOf(page)).drawPile.map((_, index) => `browse-card-${index}`);
+  const opened = overflowing();
+  await openSaved(page, opened);
+  const faces = opened.drawPile.map((_, index) => `browse-card-${index}`);
   await browse(page, 'draw-pile');
   await rested(page);
   const frame = await onScreen(page, 'browse-frame');

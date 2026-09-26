@@ -150,7 +150,7 @@ workflow/           the ephemeral task context: the board and its task files, th
 index.html          the page Phaser puts its canvas in; no UI of its own
 src/main.ts         boots the Phaser game; src/failed-boot.ts shows the page a failed boot leaves
 src/rules/          pure TypeScript: state, commands, the seeded generator
-src/content/        the catalogues: the ages' content, and the stand-in the e2e suite plays on; what the boot hands the rules and the screen
+src/content/        the catalogues: the ages' content; what the boot hands the rules and the screen
 src/ui/             Phaser scenes, and the design space they lay out in
 e2e/                Playwright specs
 .github/workflows/  the CI check

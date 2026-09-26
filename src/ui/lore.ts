@@ -1,16 +1,5 @@
 /** Every lore text, one entry each: the fiction a window reads over its cards. */
 const LORE = {
-  'event.PH_Hardship': 'PH_Hardship',
-  'event.PH_Toll': 'PH_Toll',
-  'event.PH_Newcomers': 'PH_Newcomers',
-  'event.PH_Wilds': 'PH_Wilds',
-  'camp.PH_Camp': 'PH_Camp',
-  'capstone-opening.PH_Siege': 'PH_Siege',
-  'capstone-landing.PH_Siege': 'PH_Siege',
-  'capstone-opening.PH_ShortSiege': 'PH_ShortSiege',
-  'capstone-landing.PH_ShortSiege': 'PH_ShortSiege',
-  'capstone-opening.PH_Tillage': 'PH_Tillage',
-  'capstone-landing.PH_Tillage': 'PH_Tillage',
   'event.lean-season':
     'Last season was cruel, and everyone in the land is starving. The neighbouring tribes have been eyeing each other hungrily.',
   'event.rival-band':

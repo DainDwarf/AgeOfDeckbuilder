@@ -1,6 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
 import { NOMADIC } from '../src/content/nomadic';
-import { type Deck, deckOf } from '../src/rules/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
 import { tileKey } from '../src/rules/map';
 import type { Chronicle } from '../src/rules/state';
@@ -9,13 +8,14 @@ import {
   admits,
   aimed,
   aimLine,
-  bareWith,
+  bareAimable,
   besideTheCards,
   browse,
   cardOnFace,
   chronicleOf,
   cityTileOf,
   click,
+  doubledDeck,
   dragOut,
   endedTurn,
   firstSeed,
@@ -35,6 +35,7 @@ import {
   settledOn,
   shownCard,
   standing,
+  tilePlayable,
   watch,
   wheel,
   workerStepped,
@@ -49,11 +50,6 @@ const LIFTED = 140;
 /** A unit card the city can pay for and nothing blocks: a card that plays at nothing. */
 function unitPlayable({ kind, playable }: Judged): boolean {
   return kind === 'unit' && playable;
-}
-
-/** A card aimed at a tile the city can pay for. */
-function tilePlayable({ aim, playable }: Judged): boolean {
-  return aim === 'tile' && playable;
 }
 
 /**
@@ -77,20 +73,9 @@ function playableAtNothing(): { opened: Chronicle; unit: number; tile: number } 
   );
 }
 
-/** The first seed's turn 1, settled bare, with a card aimed at a tile the city can pay for. */
-function bareAimable(): { chronicle: Chronicle; index: number } {
-  return bareWith('a card aimed at a tile the city can pay for', tilePlayable);
-}
-
 /** The chronicle the card at that place in the hand leaves, played at nothing. */
 function playedAtNothing(chronicle: Chronicle, index: number): Chronicle {
   return outcome(apply(NOMADIC, chronicle, { type: 'play', index, aim: 'none' }));
-}
-
-/** The Nomadic deck with its gather copies doubled, so the draw pile overflows the browse's frame. */
-function doubledDeck(): Deck {
-  const deck = deckOf(NOMADIC, 'nomadic');
-  return { ...deck, cards: [...deck.cards, ...deck.cards.filter((id) => id === 'gather')] };
 }
 
 /** Whether a named object stands where it was measured, to the page pixel. */

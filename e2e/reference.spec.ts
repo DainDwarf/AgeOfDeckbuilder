@@ -1,22 +1,28 @@
 import { expect, type Page, test } from '@playwright/test';
+import { NOMADIC } from '../src/content/nomadic';
+import { deckOf } from '../src/rules/catalogue';
+import { offered } from '../src/rules/schedule';
+import type { Chronicle } from '../src/rules/state';
+import { answerFace } from '../src/ui/face';
+import { referenceName } from '../src/ui/text';
+import { layOutRun, type Reference } from '../src/ui/text-run';
 import {
   besideTheDeal,
-  budget,
+  capstoneClosed,
   cardOnFace,
   chronicleOf,
-  click,
   cursorOverCanvas,
-  dealRun,
+  firstsOf,
+  leanSeason,
   nameOnScreen,
   onScreen,
-  open,
-  openOnCapstone,
+  openNew,
+  openSaved,
   referenceOnFace,
   rested,
   ringed,
   shows,
   standing,
-  stoppedTurn,
   watch,
 } from './chronicle-screen';
 
@@ -26,8 +32,27 @@ const HAND = 'pointer';
 /** Longer than the hand-over a small card waits out before it goes down, so one going has gone. */
 const PAST_HANDOVER = 400;
 
-/** The most cards shown large a stack holds. */
-const STACK_HOLDS = 12;
+/** What a rules entry names, laid out as a run on a measure of one to the character. */
+function namedIn(entry: string): Reference[] {
+  const measure = (content: string): number => content.length;
+  const metrics = { width: 24, glyph: 1, bearing: 0, space: 1 };
+  return layOutRun(entry, measure, metrics, referenceName).names.map((name) => name.reference);
+}
+
+/**
+ * The first answer the deal standing offers whose rules entry names a card: the answer, where the
+ * deal window lays it, and the card it names.
+ */
+function namingAnswer(dealt: Chronicle): { answer: string; at: number; named: string } {
+  const [deal] = dealt.deals;
+  if (deal?.of !== 'event') throw new Error(`turn ${dealt.turn} deals no event`);
+  for (const [at, answer] of offered(NOMADIC, deal).entries()) {
+    const face = answerFace(NOMADIC, dealt, deal.event, answer);
+    const named = namedIn(face.rules).find((reference) => reference.kind === 'card');
+    if (named !== undefined) return { answer, at, named: named.id };
+  }
+  throw new Error(`the ${deal.event} offers no answer naming a card`);
+}
 
 /**
  * The first name of the first card of the hand, read once the card has come to rest lifted under the
@@ -49,22 +74,22 @@ async function liftedName(
   return name;
 }
 
-test('a card named on a card raises it small at a rest and shows it large at a right click on the name or on the small card, and one named on a card shown large stands a new copy on top of the stack, twelve at most', async ({
+test('a card named on a card raises it small at a rest and shows it large at a right click on the name or on the small card, and one named on a card shown large stands over it', async ({
   page,
 }) => {
   const problems = watch(page);
-  const run = dealRun();
-  test.setTimeout(budget(run.due));
+  const dealt = leanSeason();
+  const { answer, at, named } = namingAnswer(dealt);
+  const answering = `deal-card-${at}`;
 
-  await open(page, run.seed, 'PH_Deck');
-  for (let turn = 1; turn < run.due; turn++) await stoppedTurn(page);
+  await openSaved(page, dealt);
   await expect.poll(() => standing(page, 'deal')).toBe(true);
   await rested(page);
-  expect(await cardOnFace(page, 'deal-card-1')).toBe('PH_Famine');
+  expect(await cardOnFace(page, answering)).toBe(answer);
 
-  const name = await nameOnScreen(page, 'deal-card-1');
+  const name = await nameOnScreen(page, answering);
   await page.mouse.move(name.x, name.y);
-  await expect.poll(() => cardOnFace(page, 'small-card-0')).toBe('PH_Hunger');
+  await expect.poll(() => cardOnFace(page, 'small-card-0')).toBe(named);
 
   const menu = await onScreen(page, 'menu-button');
   await page.mouse.move(menu.x, menu.y);
@@ -73,7 +98,7 @@ test('a card named on a card raises it small at a rest and shows it large at a r
   expect(await cursorOverCanvas(page)).toBe(HAND);
 
   await page.mouse.move(name.x, name.y);
-  await expect.poll(() => cardOnFace(page, 'small-card-0')).toBe('PH_Hunger');
+  await expect.poll(() => cardOnFace(page, 'small-card-0')).toBe(named);
 
   const small = await onScreen(page, 'small-card-0');
   await page.mouse.move(small.x, small.y, { steps: 5 });
@@ -86,78 +111,51 @@ test('a card named on a card raises it small at a rest and shows it large at a r
   await expect.poll(() => standing(page, 'small-card-0')).toBe(false);
 
   await page.mouse.move(name.x, name.y, { steps: 5 });
-  await expect.poll(() => cardOnFace(page, 'small-card-0')).toBe('PH_Hunger');
+  await expect.poll(() => cardOnFace(page, 'small-card-0')).toBe(named);
   await page.mouse.move(small.x, small.y, { steps: 5 });
-  const deeper = await nameOnScreen(page, 'small-card-0');
-  await page.mouse.move(deeper.x, deeper.y, { steps: 5 });
-  await expect.poll(() => cardOnFace(page, 'small-card-1')).toBe('PH_Hunger');
-  // The deeper card stands above the name that raised it: the body it leaves clear is below that name.
-  const body = { x: small.x, y: (deeper.y + name.y) / 2 };
-  await page.mouse.move(body.x, body.y, { steps: 5 });
   await page.waitForTimeout(PAST_HANDOVER);
-  expect(await standing(page, 'small-card-1')).toBe(false);
-  expect(await cursorOverCanvas(page)).toBe(HAND);
+  expect(await standing(page, 'small-card-0')).toBe(true);
 
-  await page.mouse.click(body.x, body.y, { button: 'right' });
-  await expect.poll(() => cardOnFace(page, 'inspection')).toBe('PH_Hunger');
+  await page.mouse.click(small.x, small.y, { button: 'right' });
+  await expect.poll(() => cardOnFace(page, 'inspection')).toBe(named);
   expect(await standing(page, 'small-card-0')).toBe(false);
   await page.keyboard.press('Escape');
   await expect.poll(() => standing(page, 'inspection')).toBe(false);
   expect(await standing(page, 'deal')).toBe(true);
 
   await page.mouse.click(name.x, name.y, { button: 'right' });
-  await expect.poll(() => cardOnFace(page, 'inspection')).toBe('PH_Hunger');
+  await expect.poll(() => cardOnFace(page, 'inspection')).toBe(named);
   expect(await standing(page, 'inspection-0')).toBe(false);
   await page.keyboard.press('Escape');
   await expect.poll(() => standing(page, 'inspection')).toBe(false);
   expect(await standing(page, 'deal')).toBe(true);
 
-  const second = await onScreen(page, 'deal-card-1');
-  await page.mouse.click(second.x, second.y, { button: 'right' });
-  await expect.poll(() => cardOnFace(page, 'inspection')).toBe('PH_Famine');
+  const card = await onScreen(page, answering);
+  await page.mouse.click(card.x, card.y, { button: 'right' });
+  await expect.poll(() => cardOnFace(page, 'inspection')).toBe(answer);
   await rested(page);
 
   const large = await onScreen(page, 'inspection');
   await page.mouse.move(large.x, large.y);
   await expect.poll(() => cursorOverCanvas(page)).not.toBe(HAND);
-  const named = await nameOnScreen(page, 'inspection');
-  await page.mouse.move(named.x, named.y);
+  const own = await nameOnScreen(page, 'inspection');
+  await page.mouse.move(own.x, own.y);
   await expect.poll(() => cursorOverCanvas(page)).toBe(HAND);
 
-  await page.mouse.click(named.x, named.y, { button: 'right' });
-  await expect.poll(() => cardOnFace(page, 'inspection')).toBe('PH_Hunger');
-  expect(await cardOnFace(page, 'inspection-0')).toBe('PH_Famine');
+  await page.mouse.click(own.x, own.y, { button: 'right' });
+  await expect.poll(() => cardOnFace(page, 'inspection')).toBe(named);
+  expect(await cardOnFace(page, 'inspection-0')).toBe(answer);
   await rested(page);
 
-  // Hunger names itself: each right click on the newest card's name stands another copy on top.
-  for (let count = 3; count <= STACK_HOLDS; count++) {
-    const own = await nameOnScreen(page, 'inspection');
-    await page.mouse.click(own.x, own.y, { button: 'right' });
-    await expect.poll(() => standing(page, `inspection-${count - 2}`)).toBe(true);
-    expect(await cardOnFace(page, 'inspection')).toBe('PH_Hunger');
-    expect(await cardOnFace(page, `inspection-${count - 2}`)).toBe('PH_Hunger');
-    expect(await cardOnFace(page, 'inspection-0')).toBe('PH_Famine');
-    await rested(page);
-  }
+  // Measured on the faces: two different cards place their names differently.
+  const top = await onScreen(page, 'inspection');
+  const beneath = await onScreen(page, 'inspection-0');
+  expect(beneath.x).toBeLessThan(top.x);
+  expect(beneath.y).toBeLessThan(top.y);
 
-  // Measured on two copies of one card: two different faces place their names differently.
-  const full = await nameOnScreen(page, 'inspection');
-  const beneath = await nameOnScreen(page, `inspection-${STACK_HOLDS - 2}`);
-  expect(beneath.x).toBeLessThan(full.x);
-  expect(beneath.y).toBeLessThan(full.y);
-  await page.mouse.click(full.x, full.y, { button: 'right' });
-  await rested(page);
-  expect(await standing(page, `inspection-${STACK_HOLDS - 1}`)).toBe(false);
-  expect(await standing(page, `inspection-${STACK_HOLDS - 2}`)).toBe(true);
-  await expect.poll(() => cardOnFace(page, 'small-card-0')).toBe('PH_Hunger');
-
-  for (let left = STACK_HOLDS - 1; left >= 1; left--) {
-    await page.keyboard.press('Escape');
-    await expect.poll(() => standing(page, `inspection-${left - 1}`)).toBe(false);
-    expect(await standing(page, 'inspection')).toBe(true);
-    if (left >= 2) expect(await standing(page, `inspection-${left - 2}`)).toBe(true);
-  }
-  expect(await cardOnFace(page, 'inspection')).toBe('PH_Famine');
+  await page.keyboard.press('Escape');
+  await expect.poll(() => standing(page, 'inspection-0')).toBe(false);
+  expect(await cardOnFace(page, 'inspection')).toBe(answer);
 
   await page.keyboard.press('Escape');
   await expect.poll(() => standing(page, 'inspection')).toBe(false);
@@ -170,15 +168,13 @@ test('a building named on the settle card raises its card small at a rest and sh
   page,
 }) => {
   const problems = watch(page);
-  test.setTimeout(budget(0));
+  const [settle] = deckOf(NOMADIC, firstsOf(NOMADIC).deck).settle;
+  const city = { kind: 'building', id: NOMADIC.city.building };
 
-  await openOnCapstone(page, 1, 'PH_Deck');
-  await click(page, 'capstone-card-0');
-  await expect.poll(() => standing(page, 'capstone')).toBe(false);
-  await rested(page);
+  await openNew(page, NOMADIC, 1);
+  await capstoneClosed(page);
   const opened = await chronicleOf(page);
-  expect(opened.hand[0].id).toBe('PH_Settle');
-  const city = { kind: 'building', id: 'PH_City' };
+  expect(opened.hand[0].id).toBe(settle);
 
   const card = await onScreen(page, 'hand-0');
   const lying = await nameOnScreen(page, 'hand-0');
@@ -207,7 +203,7 @@ test('a building named on the settle card raises its card small at a rest and sh
   await expect.poll(() => standing(page, 'inspection')).toBe(false);
 
   await page.mouse.click(card.x, card.y, { button: 'right' });
-  await expect.poll(() => cardOnFace(page, 'inspection')).toBe('PH_Settle');
+  await expect.poll(() => cardOnFace(page, 'inspection')).toBe(settle);
   await rested(page);
   const named = await nameOnScreen(page, 'inspection');
   await page.mouse.move(named.x, named.y);
@@ -215,11 +211,11 @@ test('a building named on the settle card raises its card small at a rest and sh
 
   await page.mouse.click(named.x, named.y, { button: 'right' });
   await expect.poll(() => referenceOnFace(page, 'inspection')).toEqual(city);
-  expect(await cardOnFace(page, 'inspection-0')).toBe('PH_Settle');
+  expect(await cardOnFace(page, 'inspection-0')).toBe(settle);
 
   await page.keyboard.press('Escape');
   await expect.poll(() => standing(page, 'inspection-0')).toBe(false);
-  expect(await cardOnFace(page, 'inspection')).toBe('PH_Settle');
+  expect(await cardOnFace(page, 'inspection')).toBe(settle);
   await page.keyboard.press('Escape');
   await expect.poll(() => standing(page, 'inspection')).toBe(false);
   expect(await standing(page, 'small-card-0')).toBe(false);

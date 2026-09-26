@@ -1,12 +1,12 @@
 import { expect, type Page, test } from '@playwright/test';
 import type Phaser from 'phaser';
 import { NOMADIC } from '../src/content/nomadic';
-import { STAND_IN } from '../src/content/stand-in';
 import { deckOf } from '../src/rules/catalogue';
 import {
   chronicleOf,
   click,
   consoleKey,
+  firstsOf,
   idsOf,
   readNames,
   rested,
@@ -40,7 +40,7 @@ test('an address naming a deck boots into the chronicle, stays as it was, and lo
 }) => {
   const problems = watch(page);
 
-  const address = `?content=${STAND_IN.version}&deck=PH_Deck`;
+  const address = `?content=${NOMADIC.version}&deck=${firstsOf(NOMADIC).deck}`;
   await page.goto(`/${address}`);
 
   const canvas = page.locator('canvas');
@@ -83,41 +83,6 @@ test("the bare address's launch page lists the ages' content alone", async ({ pa
 
   await expect.poll(() => standing(page, 'launch')).toBe(true);
   expect(await contentRow(page)).toEqual([{ version: NOMADIC.version, chosen: true }]);
-
-  expect(problems).toEqual([]);
-});
-
-test('an address naming content the page does not list and no deck opens the page with it listed and chosen', async ({
-  page,
-}) => {
-  const problems = watch(page);
-  await readNames(page);
-
-  await page.goto(`/?content=${STAND_IN.version}`);
-
-  await expect.poll(() => standing(page, 'launch')).toBe(true);
-  expect(await page.evaluate(() => window.game?.scene.isActive('ui'))).toBe(false);
-  expect(await contentRow(page)).toEqual([
-    { version: NOMADIC.version, chosen: false },
-    { version: STAND_IN.version, chosen: true },
-  ]);
-
-  await rested(page);
-  await click(page, `launch-content-${NOMADIC.version}`);
-  await expect
-    .poll(() => contentRow(page))
-    .toEqual([
-      { version: NOMADIC.version, chosen: true },
-      { version: STAND_IN.version, chosen: false },
-    ]);
-  await rested(page);
-  await click(page, `launch-content-${STAND_IN.version}`);
-  await expect
-    .poll(() => contentRow(page))
-    .toEqual([
-      { version: NOMADIC.version, chosen: false },
-      { version: STAND_IN.version, chosen: true },
-    ]);
 
   expect(problems).toEqual([]);
 });

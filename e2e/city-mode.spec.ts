@@ -3,12 +3,13 @@ import { NOMADIC } from '../src/content/nomadic';
 import { gained } from '../src/rules/cards';
 import { apply, type Command, outcome } from '../src/rules/chronicle';
 import { claimable, tileCost } from '../src/rules/city';
-import { distance, runsAlong, type TileCoords, tileKey } from '../src/rules/map';
+import { type TileCoords, tileKey } from '../src/rules/map';
 import { charted } from '../src/rules/sight';
 import type { Chronicle } from '../src/rules/state';
 import { LOOK } from '../src/ui/look';
 import { text } from '../src/ui/text';
 import {
+  bareTile,
   besideTiles,
   budget,
   capstoneClosed,
@@ -95,25 +96,6 @@ async function inCityMode(page: Page): Promise<boolean> {
   const frame = await shows(page, 'city-frame');
   expect(frame).toBe(chip);
   return chip;
-}
-
-/**
- * A tile the chronicle charts and leaves bare: its terrain and nothing else, no river running along
- * it, outside the border. So it inspects its terrain, and a right click on it claims nothing.
- */
-function bareTile(chronicle: Chronicle): TileCoords {
-  const seen = new Set(chronicle.snapshots.map(tileKey));
-  const found = chronicle.tiles.find(
-    (tile) =>
-      distance(tile, cityTileOf(chronicle)) === 2 &&
-      seen.has(tileKey(tile)) &&
-      tile.feature === undefined &&
-      tile.building === undefined &&
-      tile.improvements.length === 0 &&
-      !runsAlong(chronicle.rivers, tile),
-  );
-  if (found === undefined) throw new Error('the chronicle charts no bare tile two tiles out');
-  return { q: found.q, r: found.r };
 }
 
 /** Two frames, so whatever the last gesture handed the chronicle screen has been answered. */

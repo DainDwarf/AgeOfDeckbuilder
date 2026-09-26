@@ -1,23 +1,27 @@
 import { expect, type Page, test } from '@playwright/test';
-import { STAND_IN, STAND_IN_REGION } from '../src/content/stand-in';
-import { deckOf } from '../src/rules/catalogue';
+import { NOMADIC } from '../src/content/nomadic';
+import { apply, outcome } from '../src/rules/chronicle';
+import { CENTRE, tileKey } from '../src/rules/map';
 import { SAVE_ENTRY } from '../src/ui/save-entry';
 import { eventName } from '../src/ui/text';
 import {
+  aimed,
+  beforeTheFall,
   budget,
+  capstoneClosed,
   chronicleOf,
   click,
-  dealRun,
-  endedTurn,
-  endTurn,
-  launch,
-  open,
+  defeatShown,
+  dragOut,
+  firstDealt,
+  firstsOf,
+  openNew,
   plant,
+  playedOut,
   readNames,
   rested,
   standing,
   titleOf,
-  victoryShown,
   watch,
 } from './chronicle-screen';
 
@@ -30,11 +34,16 @@ async function resume(page: Page): Promise<void> {
 test('a chronicle reopened on the bare address stands where it stood, under its capstone’s window', async ({
   page,
 }) => {
-  test.setTimeout(budget(1));
+  test.setTimeout(budget(0));
   const problems = watch(page);
 
-  await open(page, 1, 'PH_Deck');
-  await endTurn(page);
+  await openNew(page, NOMADIC, 1);
+  await capstoneClosed(page);
+  await dragOut(page, 0);
+  await aimed(page);
+  await click(page, `tile-${tileKey(CENTRE)}`);
+  await playedOut(page);
+  await expect.poll(async () => (await chronicleOf(page)).city).toEqual(CENTRE);
   const stood = await chronicleOf(page);
 
   await resume(page);
@@ -75,17 +84,16 @@ test('an ended chronicle reopens on its ending screen, and no capstone’s windo
   page,
 }) => {
   const problems = watch(page);
-  let ended = launch(1, deckOf(STAND_IN, 'PH_Deck'), 'PH_ShortSchedule');
-  for (let turn = 0; turn < 3; turn++) ended = endedTurn(ended);
-  expect(ended.ending).toEqual({ outcome: 'victory', turn: 4 });
+  const fallen = outcome(apply(NOMADIC, beforeTheFall(), { type: 'end-turn' }));
+  const { region, deck } = firstsOf(NOMADIC);
 
   await readNames(page);
-  await plant(page, { chronicle: ended, region: STAND_IN_REGION, deck: 'PH_Deck' });
+  await plant(page, { chronicle: fallen, region, deck });
   await resume(page);
 
-  await expect.poll(() => victoryShown(page)).toBe(true);
+  await expect.poll(() => defeatShown(page)).toBe(true);
   expect(await standing(page, 'capstone')).toBe(false);
-  expect(await chronicleOf(page)).toEqual(ended);
+  expect(await chronicleOf(page)).toEqual(fallen);
 
   expect(problems).toEqual([]);
 });
@@ -94,12 +102,13 @@ test('a chronicle reopened waiting on a deal stands under its capstone’s windo
   page,
 }) => {
   const problems = watch(page);
-  const { dealt } = dealRun();
+  const dealt = firstDealt(1);
   const [deal] = dealt.deals;
   if (deal?.of !== 'event') throw new Error(`turn ${dealt.turn} deals no event`);
+  const { region, deck } = firstsOf(NOMADIC);
 
   await readNames(page);
-  await plant(page, { chronicle: dealt, region: STAND_IN_REGION, deck: 'PH_Deck' });
+  await plant(page, { chronicle: dealt, region, deck });
   await resume(page);
 
   await expect.poll(() => standing(page, 'capstone')).toBe(true);

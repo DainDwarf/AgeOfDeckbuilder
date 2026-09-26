@@ -2,11 +2,9 @@ import { expect, type Page } from '@playwright/test';
 import type Phaser from 'phaser';
 import { catalogueOf } from '../src/content/catalogues';
 import { NOMADIC } from '../src/content/nomadic';
-import { STAND_IN, STAND_IN_REGION, STAND_IN_SCHEDULE } from '../src/content/stand-in';
 import { aimOf, type CardKind } from '../src/rules/cards';
 import {
   type Aim,
-  type AimedCard,
   type Catalogue,
   cardOf,
   type Deck,
@@ -21,15 +19,14 @@ import {
   distance,
   neighbours,
   riversAlong,
+  runsAlong,
   type Tile,
   type TileCoords,
-  tileAt,
   tileKey,
   tileYield,
 } from '../src/rules/map';
 import { RESOURCES, type Resource, type Resources } from '../src/rules/resources';
 import { type ChronicleSave, writeSave } from '../src/rules/save';
-import { offered } from '../src/rules/schedule';
 import { charted } from '../src/rules/sight';
 import { type CardId, type Chronicle, type ChronicleCard, playable } from '../src/rules/state';
 import { standsOn, type Unit, unitAt } from '../src/rules/units';
@@ -51,46 +48,6 @@ declare global {
     /** How many objects of that name stand on the running scenes: a repaint leaves no second one. */
     counted?: (name: string) => number;
   }
-}
-
-/**
- * What the city holds when the settle phase ends: the six tiles around it claimed by the settle
- * section's free claims, or its own tile alone.
- */
-type Border = 'ring' | 'bare';
-
-/**
- * The headless twin of `open`: the two must settle alike, or a spec's fixture is not the chronicle
- * its page shows.
- */
-export function launch(
-  seed: number,
-  deck: Deck,
-  schedule: string = STAND_IN_SCHEDULE,
-  at: TileCoords = CENTRE,
-  border: Border = 'ring',
-): Chronicle {
-  const opened = launched(STAND_IN, STAND_IN_REGION, schedule, seed, deck);
-  let settling = outcome(
-    apply(STAND_IN, opened, { type: 'play', index: 0, aim: 'tile', tile: at }),
-  );
-  if (settling.city === undefined)
-    throw new Error(`seed ${seed} settles no city on ${tileKey(at)}`);
-  switch (border) {
-    case 'ring':
-      for (const tile of neighbours(at)) {
-        const claimed = outcome(
-          apply(STAND_IN, settling, { type: 'play', index: 0, aim: 'tile', tile }),
-        );
-        if (claimed.held.length === settling.held.length)
-          throw new Error(`seed ${seed} claims no ${tileKey(tile)} beside its city`);
-        settling = claimed;
-      }
-      break;
-    case 'bare':
-      break;
-  }
-  return outcome(apply(STAND_IN, settling, { type: 'end-turn' }));
 }
 
 /** The tile the city stands on, for a spec whose chronicle has settled it. */
@@ -188,89 +145,12 @@ export function watch(page: Page): string[] {
 }
 
 /**
- * Opens the chronicle a seed, a deck and a schedule found, closes the capstone's window, and settles
- * as `settle` does: turn 1 open on the chronicle screen, or the deal it stops on standing.
- */
-export async function open(
-  page: Page,
-  seed: number,
-  deck: string,
-  schedule: string = STAND_IN_SCHEDULE,
-  at: TileCoords = CENTRE,
-  border: Border = 'ring',
-): Promise<void> {
-  await openOnCapstone(page, seed, deck, schedule);
-  await capstoneClosed(page);
-  await settle(page, at, border);
-}
-
-/**
- * The settle as a player makes it on the settle phase: the first card of the hand dragged out, the
- * centre tile or the tile given pressed, the free claims played on the six tiles around the city
- * unless it is asked for bare, and the turn ended.
- */
-async function settle(page: Page, at: TileCoords = CENTRE, border: Border = 'ring'): Promise<void> {
-  await dragOut(page, 0);
-  await aimed(page);
-  await click(page, `tile-${tileKey(at)}`);
-  await playedOut(page);
-  await page.waitForFunction(
-    () => window.game?.scene.getScene<ChronicleScene>('ui').chronicle.city !== undefined,
-  );
-  switch (border) {
-    case 'ring':
-      for (const tile of neighbours(at)) await claimFree(page, tile);
-      break;
-    case 'bare':
-      break;
-  }
-  await stoppedTurn(page);
-}
-
-/**
- * A free claim as a player plays it on the settle phase: the first card of the hand selected, then
- * the tile pressed, waited out until the city holds one tile more.
- */
-async function claimFree(page: Page, tile: TileCoords): Promise<void> {
-  const { held } = await chronicleOf(page);
-  await click(page, 'hand-0');
-  await aimed(page);
-  await click(page, `tile-${tileKey(tile)}`);
-  await playedOut(page);
-  await page.waitForFunction(
-    (count) => window.game?.scene.getScene<ChronicleScene>('ui').chronicle.held.length === count,
-    held.length + 1,
-  );
-}
-
-/** The same as `open` before the settle, with the capstone's window left standing as the opening raised it. */
-export async function openOnCapstone(
-  page: Page,
-  seed: number,
-  deck: string,
-  schedule: string = STAND_IN_SCHEDULE,
-): Promise<void> {
-  await openOnAddress(page, STAND_IN, seed, deck, schedule);
-}
-
-/**
  * Opens a new chronicle on the address naming the content, the seed, and the first schedule and deck
  * the catalogue lists, the region left to the boot's first; the capstone's window the opening raises
- * is left standing.
+ * is left standing. The boot begins a chronicle only on an address naming a deck.
  */
 export async function openNew(page: Page, catalogue: Catalogue, seed: number): Promise<void> {
   const { schedule, deck } = firstsOf(catalogue);
-  await openOnAddress(page, catalogue, seed, deck, schedule);
-}
-
-/** The boot begins a chronicle only on an address naming a deck; with none it stands on the launch page. */
-async function openOnAddress(
-  page: Page,
-  catalogue: Catalogue,
-  seed: number,
-  deck: string,
-  schedule: string,
-): Promise<void> {
   await readNames(page);
   await page.goto(`/?content=${catalogue.version}&seed=${seed}&deck=${deck}&schedule=${schedule}`);
   await page.waitForFunction(() => window.game?.scene.isActive('ui') === true);
@@ -344,8 +224,8 @@ export async function plant(page: Page, save: ChronicleSave): Promise<void> {
 
 /**
  * Opens the chronicle as the save the boot finds, on the first region and deck its content lists,
- * and closes the capstone's window every resumed chronicle opens under. The boot reads a save only
- * on the bare address.
+ * and closes the capstone's window every resumed chronicle opens under but an ended one, which opens
+ * on its ending screen. The boot reads a save only on the bare address.
  */
 export async function openSaved(page: Page, chronicle: Chronicle): Promise<void> {
   const { region, deck } = firstsOf(catalogueOf(chronicle.content));
@@ -353,6 +233,10 @@ export async function openSaved(page: Page, chronicle: Chronicle): Promise<void>
   await plant(page, { chronicle, region, deck });
   await page.goto('/');
   await page.waitForFunction(() => window.game?.scene.isActive('ui') === true);
+  if (chronicle.ending !== undefined) {
+    await rested(page);
+    return;
+  }
   await expect.poll(() => standing(page, 'capstone')).toBe(true);
   await rested(page);
   await capstoneClosed(page);
@@ -591,6 +475,14 @@ export function victoryShown(page: Page): Promise<boolean> {
   });
 }
 
+/** Whether the defeat screen has risen over the chronicle screen: the rise ends at full alpha. */
+export function defeatShown(page: Page): Promise<boolean> {
+  return page.evaluate(() => {
+    const screen = window.named?.('defeat')?.object as Phaser.GameObjects.Container | undefined;
+    return screen?.visible === true && screen.alpha === 1;
+  });
+}
+
 /** Whether an object of that name stands on any running scene. */
 export function standing(page: Page, name: string): Promise<boolean> {
   return page.evaluate((target) => window.named?.(target) !== undefined, name);
@@ -781,6 +673,80 @@ export function bareWith(
   });
 }
 
+/** A card aimed at a tile the city can pay for. */
+export function tilePlayable({ aim, playable }: Judged): boolean {
+  return aim === 'tile' && playable;
+}
+
+/** The first seed's turn 1, settled bare, with a card aimed at a tile the city can pay for. */
+export function bareAimable(): { chronicle: Chronicle; index: number } {
+  return bareWith('a card aimed at a tile the city can pay for', tilePlayable);
+}
+
+/**
+ * A tile the chronicle charts and leaves bare: its terrain and nothing else, no river running along
+ * it, outside the border. So it inspects its terrain, and a right click on it claims nothing.
+ */
+export function bareTile(chronicle: Chronicle): TileCoords {
+  const seen = new Set(chronicle.snapshots.map(tileKey));
+  const found = chronicle.tiles.find(
+    (tile) =>
+      distance(tile, cityTileOf(chronicle)) === 2 &&
+      seen.has(tileKey(tile)) &&
+      tile.feature === undefined &&
+      tile.building === undefined &&
+      tile.improvements.length === 0 &&
+      !runsAlong(chronicle.rivers, tile),
+  );
+  if (found === undefined) throw new Error('the chronicle charts no bare tile two tiles out');
+  return { q: found.q, r: found.r };
+}
+
+/** The Nomadic deck's cards twice over and its settle section as it is: its piles overflow a browse's frame. */
+export function doubledDeck(): Deck {
+  const deck = deckOf(NOMADIC, firstsOf(NOMADIC).deck);
+  return { ...deck, cards: [...deck.cards, ...deck.cards] };
+}
+
+/**
+ * The seed's turn 1 on the Nomadic content, settled bare, with its turns ended up to the one before
+ * its timeline's first deal, and that end of turn applied: the chronicle stopped on the deal.
+ */
+export function firstDealt(seed: number): Chronicle {
+  let chronicle = settledOn(NOMADIC, seed);
+  const due = chronicle.timeline.next;
+  while (chronicle.turn < due - 1 && chronicle.ending === undefined) {
+    chronicle = endedTurn(chronicle);
+  }
+  return outcome(apply(NOMADIC, chronicle, { type: 'end-turn' }));
+}
+
+/** The chronicle of the first seed whose first deal is the lean season standing alone, stopped on it. */
+export function leanSeason(): Chronicle {
+  return firstSeed('deals the lean season alone first', (seed) => {
+    const dealt = firstDealt(seed);
+    const [deal, ...behind] = dealt.deals;
+    if (deal?.of !== 'event' || deal.event !== 'lean-season' || behind.length > 0) return undefined;
+    return dealt;
+  });
+}
+
+/**
+ * The chronicle of the first seed whose city is captured inside forty turns of ending the turn and
+ * nothing else, standing on the turn whose end captures it.
+ */
+export function beforeTheFall(): Chronicle {
+  return firstSeed('is captured inside forty turns', (seed) => {
+    let chronicle = settledOn(NOMADIC, seed);
+    for (let turn = 1; turn <= 40 && chronicle.ending === undefined; turn++) {
+      const ended = endedTurn(chronicle);
+      if (ended.ending?.outcome === 'defeat' && ended.ending.cause === 'capture') return chronicle;
+      chronicle = ended;
+    }
+    return undefined;
+  });
+}
+
 /** A turn 1 with the first worker entered on the city's tile, and the neighbour it steps onto. */
 export type Step = {
   readonly entered: Chronicle;
@@ -847,107 +813,6 @@ export function nearestUncharted(chronicle: Chronicle): TileCoords {
   }
   if (nearest === undefined) throw new Error('this chronicle has charted the whole disc');
   return nearest;
-}
-
-/**
- * The first seed whose timeline's first deal stands alone and offers the raid first, with a tile
- * free for it to enter a warrior on — what the take lands is then one more warrior standing on the
- * map — the turn that deal is due on, and the chronicle that end of turn leaves, the deal waiting.
- */
-export function dealRun(): { seed: number; due: number; dealt: Chronicle } {
-  return firstSeed('deals a raid first on its first deal', (seed) => {
-    const opened = launch(seed, deckOf(STAND_IN, 'PH_Deck'));
-    const due = opened.timeline.next;
-
-    let chronicle = opened;
-    for (let turn = 1; turn < due - 1; turn++) chronicle = endedTurn(chronicle);
-    const dealt = outcome(apply(STAND_IN, chronicle, { type: 'end-turn' }));
-    const [deal, ...behind] = dealt.deals;
-    if (deal === undefined || behind.length > 0) return undefined;
-    if (offered(STAND_IN, deal)[0] !== 'PH_Raid') return undefined;
-
-    const landed = outcome(apply(STAND_IN, dealt, { type: 'take', at: 0 }));
-    return enemiesOf(landed).length > enemiesOf(dealt).length ? { seed, due, dealt } : undefined;
-  });
-}
-
-/** A chronicle whose turn `turn` can enter a worker, move it onto `tile` and play a card there. */
-export type Run = { readonly seed: number; readonly turn: number; readonly tile: TileCoords };
-
-/**
- * The first seed with a turn in its first eight that opens on such a run, for a card the city can
- * pay for; `on` narrows which run counts, by the tile the unit lands on and the chronicle it lands in.
- */
-export function workerRun(
-  card: CardId,
-  on: (tile: Tile, chronicle: Chronicle) => boolean = () => true,
-): Run {
-  return runOn(
-    card,
-    `opens a turn on a worker, a move and ${card}`,
-    (tile, chronicle) => playable(refusalOf(STAND_IN, chronicle, card)) && on(tile, chronicle),
-  );
-}
-
-function runOn(
-  card: CardId,
-  complaint: string,
-  keeps: (tile: Tile, chronicle: Chronicle) => boolean,
-): Run {
-  const aimed = aimOf(cardOf(STAND_IN, card));
-  if (aimed.aim !== 'tile') throw new Error(`${card} is aimed at no tile`);
-
-  return firstSeed(complaint, (seed) => {
-    let chronicle = launch(seed, deckOf(STAND_IN, 'PH_Deck'));
-    for (let turn = 1; turn <= 8; turn++) {
-      const tile = workedThisTurn(chronicle, card, aimed, keeps);
-      if (tile !== undefined) return { seed, turn, tile };
-      chronicle = endedTurn(chronicle);
-    }
-    return undefined;
-  });
-}
-
-/** The first seed whose city is captured inside twenty turns of ending the turn and nothing else. */
-export function fallRun(): { seed: number; turns: number } {
-  return firstSeed('is captured inside twenty turns', (seed) => {
-    let chronicle = launch(seed, deckOf(STAND_IN, 'PH_Deck'));
-    for (let turns = 1; turns <= 20 && chronicle.ending === undefined; turns++) {
-      chronicle = endedTurn(chronicle);
-      const ending = chronicle.ending;
-      if (ending?.outcome === 'defeat' && ending.cause === 'capture') return { seed, turns };
-    }
-    return undefined;
-  });
-}
-
-/**
- * Where the card lands when this hand plays its worker, moves it one tile by hand and then aims
- * the card there, in that order. The worker has to be the only unit of the player's on the map, so
- * every spec built on the run finds it first among `playersOf`.
- */
-function workedThisTurn(
-  chronicle: Chronicle,
-  card: CardId,
-  aimed: AimedCard,
-  keeps: (tile: Tile, chronicle: Chronicle) => boolean,
-): TileCoords | undefined {
-  const enter = idsOf(chronicle.hand).indexOf('PH_Worker');
-  if (enter === -1 || !playable(refusalOf(STAND_IN, chronicle, 'PH_Worker'))) return undefined;
-  const entered = outcome(apply(STAND_IN, chronicle, { type: 'play', index: enter, aim: 'none' }));
-  const [worker, ...others] = playersOf(entered);
-  if (worker === undefined || others.length > 0 || !idsOf(entered.hand).includes(card))
-    return undefined;
-
-  for (const tile of neighbours(cityTileOf(entered))) {
-    const moved = outcome(apply(STAND_IN, entered, { type: 'move', unit: worker.id, tile }));
-    if (moved === entered) continue;
-    const standing = tileAt(moved.tiles, tile);
-    if (standing === undefined || !keeps(standing, moved)) continue;
-    if (admitted(STAND_IN, moved, aimed).some((coord) => tileKey(coord) === tileKey(tile)))
-      return tile;
-  }
-  return undefined;
 }
 
 /**
