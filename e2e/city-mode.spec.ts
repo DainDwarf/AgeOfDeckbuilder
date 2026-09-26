@@ -3,7 +3,7 @@ import { NOMADIC } from '../src/content/nomadic';
 import { gained } from '../src/rules/cards';
 import { apply, type Command, outcome } from '../src/rules/chronicle';
 import { claimable, tileCost } from '../src/rules/city';
-import { distance, neighbours, runsAlong, type TileCoords, tileKey } from '../src/rules/map';
+import { distance, runsAlong, type TileCoords, tileKey } from '../src/rules/map';
 import { charted } from '../src/rules/sight';
 import type { Chronicle } from '../src/rules/state';
 import { LOOK } from '../src/ui/look';
@@ -29,7 +29,6 @@ import {
   openNew,
   openSaved,
   playedOut,
-  playersOf,
   refusalLines,
   rested,
   ringedTile,
@@ -41,10 +40,8 @@ import {
   tileOnScreen,
   watch,
   wellFill,
+  workerStepped,
 } from './chronicle-screen';
-
-/** The settle card that enters the worker. */
-const FIRST_WORKER = 'first-worker';
 
 /** Seed 1's turn 1, the city settled and nothing else played. */
 function bareTurn(): Chronicle {
@@ -90,18 +87,6 @@ function oneClaimed(): { chronicle: Chronicle; claimed: TileCoords } {
   const paid = culturePaid();
   const claimed = firstClaim(paid);
   return { chronicle: applied(paid, { type: 'claim', tile: claimed }), claimed };
-}
-
-/** Turn 1 with the first worker entered on the city's tile, and the first neighbour it steps onto. */
-function workerOnCity(): { chronicle: Chronicle; step: TileCoords } {
-  const chronicle = settledOn(NOMADIC, 1, [FIRST_WORKER]);
-  const [worker] = playersOf(chronicle);
-  const step = neighbours(cityTileOf(chronicle)).find(
-    (tile) =>
-      outcome(apply(NOMADIC, chronicle, { type: 'move', unit: worker.id, tile })) !== chronicle,
-  );
-  if (step === undefined) throw new Error('the first worker steps off the city onto no neighbour');
-  return { chronicle, step };
 }
 
 /** Whether the chronicle screen shows city mode is on: both marks stand, or neither does. */
@@ -511,7 +496,10 @@ test('a unit’s tile selected in city mode lights nothing, and a click on the t
   page,
 }) => {
   const problems = watch(page);
-  const { chronicle, step } = workerOnCity();
+  const { entered: chronicle, tile: step } = workerStepped(
+    'steps its first worker off the city',
+    () => true,
+  );
   const own = cityTileOf(chronicle);
 
   await openSaved(page, chronicle);

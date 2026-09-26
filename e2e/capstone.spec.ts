@@ -112,8 +112,8 @@ test('the capstone’s landing holds the end of turn on its window, and the end 
   await playedOut(page);
   expect(await standing(page, 'capstone')).toBe(false);
   await expect.poll(() => chronicleOf(page)).toEqual(landed);
-  expect(landed.hand).toHaveLength(5);
-  expect(await standing(page, 'hand-0')).toBe(true);
+  expect(await standing(page, `hand-${landed.hand.length - 1}`)).toBe(true);
+  expect(await standing(page, `hand-${landed.hand.length}`)).toBe(false);
 
   await rested(page);
   expect(await standing(page, 'capstone')).toBe(false);
