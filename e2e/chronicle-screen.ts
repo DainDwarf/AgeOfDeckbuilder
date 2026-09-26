@@ -3,7 +3,7 @@ import type Phaser from 'phaser';
 import { catalogueOf } from '../src/content/catalogues';
 import { NOMADIC } from '../src/content/nomadic';
 import { STAND_IN, STAND_IN_REGION, STAND_IN_SCHEDULE } from '../src/content/stand-in';
-import { aimOf, type CardKind, refuses } from '../src/rules/cards';
+import { aimOf, type CardKind } from '../src/rules/cards';
 import {
   type Aim,
   type AimedCard,
@@ -718,14 +718,13 @@ export function inHand(chronicle: Chronicle, such: (card: Judged) => boolean): n
 /** Whether the card at that place in the hand is aimed at a tile or a unit and admits the tile. */
 export function admits(chronicle: Chronicle, index: number, at: TileCoords): boolean {
   const held = chronicle.hand[index];
-  const tile = tileAt(chronicle.tiles, at);
-  if (held === undefined || tile === undefined) return false;
+  if (held === undefined) return false;
   const catalogue = catalogueOf(chronicle.content);
   const card = aimOf(cardOf(catalogue, held.id));
   switch (card.aim) {
     case 'tile':
     case 'unit':
-      return refuses(catalogue, chronicle, card, tile) === undefined;
+      return admitted(catalogue, chronicle, card).some((tile) => tileKey(tile) === tileKey(at));
     case 'none':
     case 'discard-pile':
       return false;

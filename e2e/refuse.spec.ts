@@ -10,7 +10,6 @@ import {
   admits,
   aimed,
   bareWith,
-  budget,
   chronicleOf,
   cityTileOf,
   dragOut,
@@ -157,7 +156,6 @@ test('a press on a lit tile the city cannot pay for says the cost over it, and t
     (stepped, at) => admits(stepped, inHand(stepped, unpaid), at),
   );
   const index = inHand(aiming, unpaid);
-  test.setTimeout(budget(0));
 
   await openSaved(page, aiming);
   const card = await onScreen(page, `hand-${index}`);

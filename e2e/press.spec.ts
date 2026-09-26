@@ -12,7 +12,6 @@ import {
   bareWith,
   besideTheCards,
   browse,
-  budget,
   cardOnFace,
   chronicleOf,
   cityTileOf,
@@ -29,7 +28,6 @@ import {
   onScreen,
   openSaved,
   playedOut,
-  playersOf,
   rested,
   ringed,
   scrolled,
@@ -338,7 +336,6 @@ test('a right click while a unit is carried inspects the tile under it and leave
     tile,
     stepped,
   } = workerStepped('steps its first worker off the city', () => true);
-  test.setTimeout(budget(1));
 
   await openSaved(page, opened);
 
@@ -354,12 +351,10 @@ test('a right click while a unit is carried inspects the tile under it and leave
   await page.mouse.down({ button: 'right' });
   await page.mouse.up({ button: 'right' });
   await expect.poll(() => shownCard(page)).toBeDefined();
-  expect(tileKey(playersOf(await chronicleOf(page))[0].tile)).toBe(tileKey(city));
   expect(await chronicleOf(page)).toEqual(opened);
 
   await page.mouse.up();
   await playedOut(page);
-  expect(tileKey(playersOf(await chronicleOf(page))[0].tile)).toBe(tileKey(tile));
   expect(await chronicleOf(page)).toEqual(stepped);
 
   expect(problems).toEqual([]);
@@ -396,7 +391,6 @@ test('a right click while a press is held on the aim inspects the tile under it,
     (stepped, at) => admits(stepped, inHand(stepped, tilePlayable), at),
   );
   const index = inHand(moved, tilePlayable);
-  test.setTimeout(budget(1));
 
   await openSaved(page, moved);
   const home = await onScreen(page, `hand-${index}`);
@@ -506,7 +500,6 @@ test('the card being aimed wears a point and says what it is played at, and a ca
 }) => {
   const problems = watch(page);
   const { opened, unit, tile } = playableAtNothing();
-  test.setTimeout(budget(0));
 
   await openSaved(page, opened);
   const beside = await onScreen(page, `hand-${unit}`);
@@ -541,7 +534,6 @@ test('a card aimed at a unit says it is played at a unit', async ({ page }) => {
     (stepped, at) => admits(stepped, inHand(stepped, atUnit), at),
   );
   const index = inHand(moved, atUnit);
-  test.setTimeout(budget(0));
 
   await openSaved(page, moved);
   const home = await onScreen(page, `hand-${index}`);
