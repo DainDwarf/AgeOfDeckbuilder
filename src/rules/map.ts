@@ -527,14 +527,14 @@ function flowRivers(
  */
 function campsOn(
   catalogue: MapContent,
-  camp: BuildingTypeId,
+  building: BuildingTypeId,
   region: Region,
   initial: Rng,
   tiles: readonly Tile[],
   rivers: readonly River[],
 ): { rng: Rng; tiles: Tile[]; placed: number } {
   const { camps, campFromCentre, campsApart } = region;
-  const ground = buildingKind(catalogue, camp).terrains;
+  const ground = buildingKind(catalogue, building).terrains;
   const reached = groundRunsTo(catalogue, tiles, rivers, CENTRE);
 
   let rng = initial;
@@ -557,7 +557,7 @@ function campsOn(
   const camped = new Set(placed.map(tileKey));
   return {
     rng,
-    tiles: tiles.map((tile) => (camped.has(tileKey(tile)) ? { ...tile, building: camp } : tile)),
+    tiles: tiles.map((tile) => (camped.has(tileKey(tile)) ? { ...tile, building } : tile)),
     placed: placed.length,
   };
 }
@@ -580,20 +580,20 @@ export function generateMap(
   initial: Rng,
 ): HexMap & { readonly rng: Rng } {
   const region = regionOf(catalogue, age, regionId);
-  const camp = age.camp.building;
-  let deal = dealMap(catalogue, camp, region, initial);
+  const { building } = age.camp;
+  let deal = dealMap(catalogue, building, region, initial);
   for (let dealt = 1; deal.placed < region.camps; dealt++) {
     if (dealt === 10) {
       throw new Error(`this map was dealt 10 times and never held ${region.camps} camps`);
     }
-    deal = dealMap(catalogue, camp, region, deal.rng);
+    deal = dealMap(catalogue, building, region, deal.rng);
   }
   return { rng: deal.rng, tiles: deal.tiles, rivers: deal.rivers, centre: deal.centre };
 }
 
 function dealMap(
   catalogue: MapContent,
-  camp: BuildingTypeId,
+  building: BuildingTypeId,
   region: Region,
   initial: Rng,
 ): { rng: Rng; tiles: Tile[]; rivers: River[]; centre: TileCoords[]; placed: number } {
@@ -759,7 +759,7 @@ function dealMap(
 
   const camped = campsOn(
     catalogue,
-    camp,
+    building,
     region,
     rng,
     coords.map(({ q, r }, index) => ({

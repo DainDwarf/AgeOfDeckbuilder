@@ -113,36 +113,36 @@ export type MapAge = {
 
 /** What a tile of that terrain is; a terrain the catalogue does not hold is refused. */
 export function terrainKind(catalogue: MapContent, id: string): TerrainKind {
-  return held(catalogue, catalogue.terrains, id, 'terrain');
+  return entryOf(catalogue, catalogue.terrains, id, 'terrain');
 }
 
 /** What a biome of that kind is made of; a biome the catalogue does not hold is refused. */
 export function biomeKind(catalogue: MapContent, id: string): BiomeKind {
-  return held(catalogue, catalogue.biomes, id, 'biome');
+  return entryOf(catalogue, catalogue.biomes, id, 'biome');
 }
 
 /** What a building of that kind stands on and yields; a building the catalogue does not hold is refused. */
 export function buildingKind(catalogue: MapContent, id: string): LayerKind {
-  return held(catalogue, catalogue.buildings, id, 'building');
+  return entryOf(catalogue, catalogue.buildings, id, 'building');
 }
 
 /** What a feature of that kind lies on and yields; a feature the catalogue does not hold is refused. */
 export function featureKind(catalogue: MapContent, id: string): FeatureKind {
-  return held(catalogue, catalogue.features, id, 'feature');
+  return entryOf(catalogue, catalogue.features, id, 'feature');
 }
 
 /** What an improvement of that kind goes on and yields; one the catalogue does not hold is refused. */
 export function improvementKind(catalogue: MapContent, id: string): LayerKind {
-  return held(catalogue, catalogue.improvements, id, 'improvement');
+  return entryOf(catalogue, catalogue.improvements, id, 'improvement');
 }
 
 /** The composition a map of that region is dealt from; a region the age does not hold is refused. */
 export function regionOf(catalogue: MapContent, age: MapAge, id: string): Region {
-  return held(catalogue, age.regions, id, 'region');
+  return entryOf(catalogue, age.regions, id, 'region');
 }
 
 /** The entry of one table of the catalogue a key names; a key the table does not hold is refused. */
-export function held<T>(
+export function entryOf<T>(
   catalogue: { readonly version: string },
   table: Readonly<Record<string, T>>,
   id: string,

@@ -839,10 +839,10 @@ function campsRolled(catalogue: Catalogue, chronicle: Chronicle): Sequence {
  * building slot and its rewards dealt behind the deals already standing.
  */
 function captures(catalogue: Catalogue, chronicle: Chronicle): Sequence {
-  const camp = ageOf(catalogue, chronicle.age).camp.building;
+  const { building } = ageOf(catalogue, chronicle.age).camp;
   let capturing: Sequence = unchanged(chronicle);
-  for (const { q, r, building } of chronicle.tiles) {
-    if (building !== camp) continue;
+  for (const { q, r, building: slot } of chronicle.tiles) {
+    if (slot !== building) continue;
     if (unitAt(chronicle.units, { q, r })?.faction !== 'player') continue;
     capturing = followed(capturing, (left) => campCaptured(catalogue, left, { q, r }));
   }

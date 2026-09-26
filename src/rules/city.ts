@@ -134,13 +134,13 @@ export function grow(chronicle: Chronicle): Landed {
 export function claimable(catalogue: Catalogue, chronicle: Chronicle): TileCoords[] {
   const held = new Set(chronicle.held.map(tileKey));
   const chartedTiles = new Set(chronicle.snapshots.map(tileKey));
-  const camp = ageOf(catalogue, chronicle.age).camp.building;
+  const { building } = ageOf(catalogue, chronicle.age).camp;
   return chronicle.tiles
     .filter(
       (tile) =>
         chartedTiles.has(tileKey(tile)) &&
         !held.has(tileKey(tile)) &&
-        tile.building !== camp &&
+        tile.building !== building &&
         !occupied(chronicle.units, tile) &&
         neighbours(tile).some((coord) => held.has(tileKey(coord))),
     )

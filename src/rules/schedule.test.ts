@@ -223,7 +223,7 @@ test('the blight is dealt as readily on the third turn as the twentieth', () => 
 });
 
 test('a timeline dealing on the first turn stops the end of the settle phase on its deal, and the take draws its hand', () => {
-  const settled = settledOn(opening(plains(4), { ...dueOn(1) }), CITY);
+  const settled = settledOn(opening(plains(4), dueOn(1)), CITY);
   const dealt = outcome(apply(CATALOGUE, settled, { type: 'end-turn' }));
   const taken = outcome(apply(CATALOGUE, dealt, { type: 'take', at: 1 }));
 
@@ -296,7 +296,7 @@ test('the famine lays its hazard on top of the draw pile, and leaves the city as
 
 test('a due turn deals its one event, and the turn ends there', () => {
   const standing = dealtBy(5, { drawPile: fullDraw() });
-  const blighted = dealtBy(5, { ...dueOn(5, 'PH_Blight') });
+  const blighted = dealtBy(5, dueOn(5, 'PH_Blight'));
   const staged = stagedBy(awaiting(5, { drawPile: fullDraw() }), { type: 'end-turn' });
 
   expect(standing.deals).toEqual([{ of: 'event', event: 'PH_Hardship' }]);
@@ -604,8 +604,8 @@ function landedOf(stages: readonly Stage[]): Chronicle {
   return outcome(drawing < 0 ? read : read.slice(0, drawing));
 }
 
-/** The timeline dealing the fixture's upheaval at the end of a `cityOf` city's turn. */
-const UPHEAVAL_DUE: Carrying = { ...dueOn(2, 'PH_Upheaval') };
+/** The age and the timeline dealing the fixture's upheaval at the end of a `cityOf` city's turn. */
+const UPHEAVAL_DUE: Carrying = dueOn(2, 'PH_Upheaval');
 
 /** The city one end of turn on with its deal standing, and the stages the named answer taken resolves as. */
 function answerTaken(city: Chronicle, answer: string): { dealt: Chronicle; stages: Stage[] } {
@@ -678,8 +678,8 @@ test('an answer damaging the unit standing on a tile no unit stands on touches n
   expect(outcome(stages).units).toEqual(dealt.units);
 });
 
-/** The timeline dealing the fixture's exodus at the end of a `cityOf` city's turn. */
-const EXODUS_DUE: Carrying = { ...dueOn(2, 'PH_Exodus') };
+/** The age and the timeline dealing the fixture's exodus at the end of a `cityOf` city's turn. */
+const EXODUS_DUE: Carrying = dueOn(2, 'PH_Exodus');
 
 test('an answer taking one population takes an idle one, and leaves every tile assigned', () => {
   const city = cityOf(['urban', 'plain', 'hills'], { ...EXODUS_DUE, population: 4 });

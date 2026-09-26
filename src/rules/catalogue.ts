@@ -2,8 +2,8 @@ import { dealtBiomes, discTiles, sharedBiomes, type Tile, type TileCoords } from
 import {
   biomeKind,
   buildingKind,
+  entryOf,
   featureKind,
-  held,
   type MapContent,
   type Region,
   refuse,
@@ -432,17 +432,17 @@ function freeWhateverTheChronicle(cost: Answer['cost']): boolean {
 
 /** The stats a unit of that kind enters the map with; a kind the catalogue does not hold is refused. */
 export function unitKind(catalogue: Catalogue, id: string): UnitStats {
-  return held(catalogue, catalogue.units, id, 'unit kind');
+  return entryOf(catalogue, catalogue.units, id, 'unit kind');
 }
 
 /** The script an enemy names; a script the catalogue does not hold is refused. */
 export function enemyScript(catalogue: Catalogue, id: string): EnemyScript {
-  return held(catalogue, catalogue.scripts, id, 'enemy script');
+  return entryOf(catalogue, catalogue.scripts, id, 'enemy script');
 }
 
 /** The card an id names; a card the catalogue does not hold is refused. */
 export function cardOf(catalogue: Catalogue, id: string): Card {
-  return held(catalogue, catalogue.cards, id, 'card');
+  return entryOf(catalogue, catalogue.cards, id, 'card');
 }
 
 /**
@@ -473,22 +473,22 @@ export function counterOf(catalogue: Catalogue, card: ChronicleCard): Counter {
 
 /** The two sections a deck lists; a deck the catalogue does not hold is refused. */
 export function deckOf(catalogue: Catalogue, id: string): Deck {
-  return held(catalogue, catalogue.decks, id, 'deck');
+  return entryOf(catalogue, catalogue.decks, id, 'deck');
 }
 
 /** The event an id names; an event the catalogue does not hold is refused. */
 export function eventOf(catalogue: Catalogue, id: string): ScheduledEvent {
-  return held(catalogue, catalogue.events, id, 'event');
+  return entryOf(catalogue, catalogue.events, id, 'event');
 }
 
 /** The capstone an id names; a capstone the catalogue does not hold is refused. */
 export function capstoneOf(catalogue: Catalogue, id: string): Capstone {
-  return held(catalogue, catalogue.capstones, id, 'capstone');
+  return entryOf(catalogue, catalogue.capstones, id, 'capstone');
 }
 
 /** What the age an id names owns; an age the catalogue does not hold is refused. */
 export function ageOf(catalogue: Catalogue, id: string): Age {
-  return held(catalogue, catalogue.ages, id, 'age');
+  return entryOf(catalogue, catalogue.ages, id, 'age');
 }
 
 /** A chronicle begun on any other version of the content than this catalogue's is refused. */

@@ -96,7 +96,8 @@ export class LaunchPage extends Phaser.Scene {
     const choose = (row: Row, option: string): void => {
       switch (row) {
         case 'age':
-          chosen = { ...chosen, age: option, region: firstRegionOf(option) };
+          if (option !== chosen.age)
+            chosen = { ...chosen, age: option, region: firstRegionOf(option) };
           break;
         case 'region':
           chosen = { ...chosen, region: option };

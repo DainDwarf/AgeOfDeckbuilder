@@ -832,7 +832,7 @@ test('a terraformed tile loses its feature and every improvement not naming the 
 });
 
 test('an event’s terraform removes the building that does not stand on the new terrain, and keeps the one that does', () => {
-  const upheaval = { ...dealing({ turn: 2, event: 'PH_Upheaval' }) };
+  const upheaval = dealing({ turn: 2, event: 'PH_Upheaval' });
   const farmed = cityOf(['urban', 'plain'], {
     ...upheaval,
     tiles: builtOn(field(2), 'PH_Farm', [UPHEAVAL]),

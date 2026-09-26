@@ -14,7 +14,7 @@ import {
 import { populationKilled } from './city';
 import { campUnit, enteredAround, raidEntry } from './enemies';
 import { distance, type FeatureId, groundRunsTo, type Tile, type TileCoords, tileKey } from './map';
-import { buildingKind, featureKind, held, refuse } from './map-kinds';
+import { buildingKind, entryOf, featureKind, refuse } from './map-kinds';
 import { nextRng, pickWeighted, type Rng } from './rng';
 import {
   change,
@@ -147,7 +147,7 @@ export function offered(catalogue: Catalogue, deal: Deal): readonly string[] {
 
 /** The answer an id names among the event's; an answer the event does not deal is refused. */
 export function answerOf(catalogue: Catalogue, event: string, answer: string): Answer {
-  return held(catalogue, eventOf(catalogue, event).answers, answer, `answer of ${event}`);
+  return entryOf(catalogue, eventOf(catalogue, event).answers, answer, `answer of ${event}`);
 }
 
 /** What an answer costs on the chronicle as it stands. */
@@ -393,10 +393,10 @@ export function laid(
  * and on none a unit stands on. It draws nothing.
  */
 export function reinforced(catalogue: Catalogue, chronicle: Chronicle, script: CampScript): Landed {
-  const camp = ageOf(catalogue, chronicle.age).camp.building;
+  const { building } = ageOf(catalogue, chronicle.age).camp;
   let landing = unchanged(chronicle);
-  for (const { q, r, building } of chronicle.tiles) {
-    if (building !== camp) continue;
+  for (const { q, r, building: slot } of chronicle.tiles) {
+    if (slot !== building) continue;
     if (unitAt(landing.chronicle.units, { q, r }) !== undefined) continue;
     landing = followed(landing, (left) =>
       entered(catalogue, left, campUnit(catalogue, left, { q, r }, script)),
@@ -437,8 +437,8 @@ function campTiles(
 }
 
 function campsStanding(catalogue: Catalogue, chronicle: Chronicle): TileCoords[] {
-  const camp = ageOf(catalogue, chronicle.age).camp.building;
-  return chronicle.tiles.filter((tile) => tile.building === camp);
+  const { building } = ageOf(catalogue, chronicle.age).camp;
+  return chronicle.tiles.filter((tile) => tile.building === building);
 }
 
 export function campPlaceable(
@@ -469,7 +469,7 @@ export function campsPlaced(
   if (chronicle.city === undefined) {
     refuse(catalogue, 'a camp was placed while the city stands nowhere');
   }
-  const camp = ageOf(catalogue, chronicle.age).camp.building;
+  const { building } = ageOf(catalogue, chronicle.age).camp;
 
   let rng = chronicle.rng;
   const standing = campsStanding(catalogue, chronicle);
@@ -494,9 +494,7 @@ export function campsPlaced(
         changeOn('retiled', placing.tile, {
           ...left,
           rng: placing.rng,
-          tiles: left.tiles.map((tile) =>
-            tileKey(tile) === key ? { ...tile, building: camp } : tile,
-          ),
+          tiles: left.tiles.map((tile) => (tileKey(tile) === key ? { ...tile, building } : tile)),
         }),
       ),
     );
