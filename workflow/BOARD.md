@@ -16,6 +16,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The map's specs open on their chronicle** — map, fog, console, landing and camps, reviewed the same way.
+- **The map's specs open on their chronicle** — `e2e/map.spec.ts`, `e2e/fog.spec.ts`, `e2e/console.spec.ts`, `e2e/landing.spec.ts` and `e2e/camps.spec.ts` import nothing from `src/content/stand-in.ts` and open through the shared save opener on the Nomadic content, each fixture built through the rules' own helpers; the report carries the five specs' duration before and after; CI is green. Doc-impact: none. [board/map-specs-open-on-their-chronicle.md](board/map-specs-open-on-their-chronicle.md)
 - **The city's specs open on their chronicle** — city-mode, yields, settle and capstone, reviewed the same way; settle and capstone open on the save written before the settle.
 - **The screen's specs open on their chronicle, and the stand-in goes** — hover, reference, browse, menu, controls and window, reviewed the same way; then the helpers that settle through the screen, their headless twin and the stand-in catalogue are deleted, boot, resume and failed-boot staying on the address they test.
