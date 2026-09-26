@@ -37,4 +37,6 @@ The unordered pool of features that may or may not happen. Nothing here is promi
   - a count of the units still holding a move, on the bar or by the end-turn button;
   - a key that jumps the camera to the next unit still holding a move;
   - a sleep order, a unit's own state that dims it and keeps it out of the count until woken or until an enemy comes into its sight.
+- **An age filter on the collection screen**: the collection shown by age, which needs a card to know the age it belongs to; today the age's slice is its content module and no entry carries its age.
+- **Playing an age with a later age's cards**: earlier ages stay playable, and a deck holds cards of any age, so a Nomadic chronicle played with Bronze Age cards is a walk; whether its rewards, its influence or its unlocks are limited for it, and how.
 - **Rethink the card kinds**: today's instants mix cards nobody's action is needed for, cards that spend a worker's action, and action-spending cards that change the terrain — building, improvement, terraform; each its own kind, or all of them one action kind? More card content may be needed before the properties emerge. And whether the reward cards should be a reward kind or stay instants.
