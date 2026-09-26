@@ -239,12 +239,14 @@ export function terraformable(
 
 /**
  * Whether a terraform into `to` reaches the tile: every tile but the city's, and the city's into a
- * terrain the building in its slot stands on alone.
+ * terrain its building stands on alone.
  */
 function reaches(catalogue: Catalogue, chronicle: Chronicle, at: TileCoords, to: string): boolean {
-  if (chronicle.city === undefined || tileKey(chronicle.city) !== tileKey(at)) return true;
-  const building = tileAt(chronicle.tiles, at)?.building;
-  return building === undefined || buildingKind(catalogue, building).terrains.includes(to);
+  return (
+    chronicle.city === undefined ||
+    tileKey(chronicle.city) !== tileKey(at) ||
+    buildingKind(catalogue, chronicle.citySection.building).terrains.includes(to)
+  );
 }
 
 /** No copy of this improvement on the tile: distinct ones stack, the same one never twice. */

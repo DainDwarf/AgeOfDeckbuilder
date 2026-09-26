@@ -261,17 +261,18 @@ test('a catalogue whose deck holds any of the camp’s rewards in either section
   }
 });
 
-test('a catalogue whose deck’s settle section is empty or holds a card of another kind is refused', () => {
-  for (const settle of [
-    [],
-    ['PH_Harvest'],
-    ['PH_Settle', 'PH_Harvest'],
-    ['PH_Settle', 'PH_Worker'],
-  ]) {
+test('a catalogue whose deck’s settle section holds a card of another kind is refused', () => {
+  for (const settle of [['PH_Harvest'], ['PH_Settle', 'PH_Harvest'], ['PH_Settle', 'PH_Worker']]) {
     const content = changed({ decks: { deck: { ...DECK, settle } } });
 
     expect(() => catalogued(content)).toThrow(/^fixture: /);
   }
+});
+
+test('a catalogue whose deck’s settle section is empty is built', () => {
+  const content = changed({ decks: { deck: { ...DECK, settle: [] } } });
+
+  expect(() => catalogued(content)).not.toThrow();
 });
 
 test('a catalogue whose deck holds a settle card among its cards is refused', () => {

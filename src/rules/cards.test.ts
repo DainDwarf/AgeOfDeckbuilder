@@ -72,7 +72,7 @@ import { walked } from './stages';
 import { type CardId, type Chronicle, idle, playable, type TileBlock } from './state';
 import { standsOn } from './units';
 
-/** A card of the hand, the first unless the fixture names another, aimed at a tile, ready to hand to `apply`. */
+/** A card of the hand, the first unless the test names another, aimed at a tile, ready to hand to `apply`. */
 function aimedAt(tile: TileCoords, index = 0): Command {
   return { type: 'play', index, aim: 'tile', tile };
 }

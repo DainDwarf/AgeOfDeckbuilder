@@ -323,9 +323,6 @@ export function catalogued(content: Catalogue): Catalogue {
         refuse(content, `the deck ${id} holds the settle card ${card} among its cards`);
       }
     }
-    if (deck.settle.length === 0) {
-      refuse(content, `the deck ${id} holds no settle card in its settle section`);
-    }
     for (const card of deck.settle) {
       const { kind } = cardOf(content, card);
       if (kind !== 'settle') {
