@@ -23,6 +23,7 @@ import {
   ringed,
   shows,
   standing,
+  waitGameClock,
   watch,
 } from './chronicle-screen';
 
@@ -98,7 +99,7 @@ test('a card named on a card raises it small at a rest and shows it large at a r
 
   const menu = await onScreen(page, 'menu-button');
   await page.mouse.move(menu.x, menu.y);
-  await page.waitForTimeout(PAST_HANDOVER);
+  await waitGameClock(page, PAST_HANDOVER);
   expect(await standing(page, 'small-card-0')).toBe(false);
   expect(await cursorOverCanvas(page)).toBe(HAND);
 
@@ -107,7 +108,7 @@ test('a card named on a card raises it small at a rest and shows it large at a r
 
   const small = await onScreen(page, 'small-card-0');
   await page.mouse.move(small.x, small.y, { steps: 5 });
-  await page.waitForTimeout(PAST_HANDOVER);
+  await waitGameClock(page, PAST_HANDOVER);
   expect(await standing(page, 'small-card-0')).toBe(true);
   expect(await cursorOverCanvas(page)).toBe(HAND);
 
@@ -118,7 +119,7 @@ test('a card named on a card raises it small at a rest and shows it large at a r
   await page.mouse.move(name.x, name.y, { steps: 5 });
   await expect.poll(() => cardOnFace(page, 'small-card-0')).toBe(named);
   await page.mouse.move(small.x, small.y, { steps: 5 });
-  await page.waitForTimeout(PAST_HANDOVER);
+  await waitGameClock(page, PAST_HANDOVER);
   expect(await standing(page, 'small-card-0')).toBe(true);
 
   await page.mouse.click(small.x, small.y, { button: 'right' });
@@ -191,7 +192,7 @@ test('a building named on the settle card raises its card small at a rest and sh
 
   const small = await onScreen(page, 'small-card-0');
   await page.mouse.move(small.x, small.y, { steps: 5 });
-  await page.waitForTimeout(PAST_HANDOVER);
+  await waitGameClock(page, PAST_HANDOVER);
   expect(await referenceOnFace(page, 'small-card-0')).toEqual(city);
   expect(await cursorOverCanvas(page)).toBe(HAND);
 

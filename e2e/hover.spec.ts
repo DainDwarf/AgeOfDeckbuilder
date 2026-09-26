@@ -27,6 +27,7 @@ import {
   tileOnScreen,
   tooltipText,
   tooltipUp,
+  waitGameClock,
   watch,
 } from './chronicle-screen';
 
@@ -52,7 +53,7 @@ test('a pointer that leaves the canvas over a resource raises no tooltip behind 
 
   await page.mouse.move(food.x, food.y);
   await page.mouse.move(bare.x, bare.y, { steps: 5 });
-  await page.waitForTimeout(PAST_REST);
+  await waitGameClock(page, PAST_REST);
 
   expect(await tooltipUp(page, 'tooltip-ui')).toBe(false);
 
@@ -164,7 +165,7 @@ test('a reading hovered while the deal window stands raises no tooltip', async (
 
   const food = await onScreen(page, 'reading-food');
   await page.mouse.move(food.x, food.y);
-  await page.waitForTimeout(PAST_REST);
+  await waitGameClock(page, PAST_REST);
 
   expect(await tooltipUp(page, 'tooltip-ui')).toBe(false);
 
@@ -243,7 +244,7 @@ test("a panel row's tooltip does not rise once the pointer moves straight onto a
   await onPanelRow(page, bareTile(opened));
   const food = await onScreen(page, 'reading-food');
   await page.mouse.move(food.x, food.y);
-  await page.waitForTimeout(PAST_REST);
+  await waitGameClock(page, PAST_REST);
 
   expect(await tooltipUp(page, 'tooltip-map')).toBe(false);
 
@@ -263,7 +264,7 @@ test("a panel row's tooltip rises when the pointer comes straight back onto it f
   const row = await onScreen(page, 'infopanel-row-0');
   const food = await onScreen(page, 'reading-food');
   await page.mouse.move(food.x, food.y);
-  await page.waitForTimeout(PAST_REST);
+  await waitGameClock(page, PAST_REST);
   await page.mouse.move(row.x, row.y);
 
   await expect.poll(() => tooltipUp(page, 'tooltip-map')).toBe(true);

@@ -252,6 +252,23 @@ export function rested(page: Page): Promise<void> {
   );
 }
 
+/**
+ * Waits out a span of the game's own clock, the one a scene's timers run on. Phaser advances it by
+ * at most a sixtieth of a second a frame for its first 120 frames, so on a slow runner a wait on the
+ * wall clock ends before a timer of the same span does.
+ */
+export function waitGameClock(page: Page, span: number): Promise<void> {
+  return page.evaluate(
+    (ms) =>
+      new Promise<void>((done) => {
+        const [scene] = window.game?.scene.getScenes(true) ?? [];
+        if (scene === undefined) throw new Error('no scene is running');
+        scene.time.delayedCall(ms, () => done());
+      }),
+    span,
+  );
+}
+
 export function chronicleOf(page: Page): Promise<Chronicle> {
   return page.evaluate(() => {
     const scene = window.game?.scene.getScene<ChronicleScene>('ui');

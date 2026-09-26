@@ -17,6 +17,7 @@ import {
   openSaved,
   playing,
   settledOn,
+  waitGameClock,
   watch,
 } from './chronicle-screen';
 
@@ -100,7 +101,7 @@ test('a motion that throws still ends the turn and gives the chronicle screen ba
   await expect.poll(async () => (await chronicleOf(page)).turn).toBe(committed.turn);
   expect(await playing(page)).toBe(false);
 
-  await page.waitForTimeout(IN_THE_AIR);
+  await waitGameClock(page, IN_THE_AIR);
 
   expect(await chronicleOf(page)).toEqual(committed);
   expect(await paintedPiles(page)).toEqual({

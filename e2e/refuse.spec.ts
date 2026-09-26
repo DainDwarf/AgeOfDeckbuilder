@@ -23,6 +23,7 @@ import {
   rested,
   selected,
   standing,
+  waitGameClock,
   watch,
   workerStepped,
 } from './chronicle-screen';
@@ -74,7 +75,7 @@ test('a card the rules refuse stays selected, plays nothing, and stands its note
   expect(note.y).toBeLessThan(home.y);
   expect(Math.abs(note.x - home.x)).toBeLessThan(Math.abs(beside.x - home.x));
 
-  await page.waitForTimeout(A_WHILE);
+  await waitGameClock(page, A_WHILE);
   expect(await refusalLines(page)).toEqual(said);
 
   expect(problems).toEqual([]);

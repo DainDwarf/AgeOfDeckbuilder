@@ -21,6 +21,7 @@ import {
   settledOn,
   standing,
   tooltipUp,
+  waitGameClock,
   watch,
   wheel,
 } from './chronicle-screen';
@@ -213,7 +214,7 @@ test('a small card and a kind bubble raised off a browsed card move with it as t
   const start = await offsetOf(page);
   await page.mouse.wheel(0, name.height / frame.unit / 4);
   await expect.poll(() => offsetOf(page)).toBeGreaterThan(start);
-  await page.waitForTimeout(PAST_HANDOVER);
+  await waitGameClock(page, PAST_HANDOVER);
   expect(await standing(page, 'small-card-0')).toBe(true);
   const carried = await nameOnScreen(page, named);
   const followed = await onScreen(page, 'small-card-0');
