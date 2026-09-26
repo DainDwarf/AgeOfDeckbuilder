@@ -16,7 +16,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The worker's specs open on their chronicle** — `e2e/worker-instants.spec.ts`, `e2e/rivers.spec.ts` and `e2e/inspect.spec.ts` import nothing from `src/content/stand-in.ts` and open through the shared save opener on the Nomadic content; `e2e/building.spec.ts` and `e2e/harvest.spec.ts` are gone; the report carries the three specs' duration before and after; CI is green. Doc-impact: none. [board/worker-specs-open-on-their-chronicle.md](board/worker-specs-open-on-their-chronicle.md)
 - **The map's specs open on their chronicle** — map, fog, console, landing and camps, reviewed the same way.
 - **The city's specs open on their chronicle** — city-mode, yields, settle and capstone, reviewed the same way; settle and capstone open on the save written before the settle.
 - **The screen's specs open on their chronicle, and the stand-in goes** — hover, reference, browse, menu, controls and window, reviewed the same way; then the helpers that settle through the screen, their headless twin and the stand-in catalogue are deleted, boot, resume and failed-boot staying on the address they test.

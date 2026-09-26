@@ -1,41 +1,36 @@
 import { expect, type Page, test } from '@playwright/test';
-import { STAND_IN } from '../src/content/stand-in';
-import { deckOf } from '../src/rules/catalogue';
+import { NOMADIC } from '../src/content/nomadic';
 import {
   type FeatureId,
   MOVE_POINT,
   movementCost,
   neighbours,
   runsAlong,
-  type Terrain,
+  type Tile,
   type TileCoords,
   tileAt,
   tileKey,
   water,
 } from '../src/rules/map';
 import { featureKind, terrainKind } from '../src/rules/map-kinds';
+import type { Resources } from '../src/rules/resources';
 import type { Chronicle } from '../src/rules/state';
 import { featureName, text } from '../src/ui/text';
 import {
   besideTiles,
-  chronicleOf,
+  chipsOf,
   cityTileOf,
-  dragOut,
-  endTurn,
   firstSeed,
-  idsOf,
-  launch,
   onScreen,
-  open,
+  openSaved,
   panelLines,
   panelMovement,
-  playersOf,
   rested,
   ringedTile,
+  settledOn,
   shownCard,
   standing,
   watch,
-  workerRun,
 } from './chronicle-screen';
 
 declare global {
@@ -69,16 +64,35 @@ async function answered(page: Page): Promise<void> {
   await rested(page);
 }
 
-/** The first seed whose generator put a feature on a tile touching the city, well inside the frame. */
-function featureRun(): { seed: number; key: string; feature: FeatureId } {
-  return firstSeed('puts a feature beside the city', (seed) => {
-    const opened = launch(seed, deckOf(STAND_IN, 'PH_Deck'));
-    const { tiles } = opened;
-    const city = cityTileOf(opened);
-    const touching = new Set(neighbours(city).map(tileKey));
-    const found = tiles.find((tile) => tile.feature !== undefined && touching.has(tileKey(tile)));
-    if (found?.feature === undefined) return undefined;
-    return { seed, key: tileKey(found), feature: found.feature };
+/** A tile touching the city, and so well inside the frame, and what the search found on it. */
+type Beside<T> = { readonly tile: Tile; readonly found: T };
+
+/** The chronicle a search over the seeds found, the tile beside its city, and what was found there. */
+type Found<T> = Beside<T> & { readonly chronicle: Chronicle };
+
+/** The first of the city's neighbours that `found` answers, and its answer. */
+function besideOn<T>(
+  chronicle: Chronicle,
+  found: (tile: Tile) => T | undefined,
+): Beside<T> | undefined {
+  for (const at of neighbours(cityTileOf(chronicle))) {
+    const tile = tileAt(chronicle.tiles, at);
+    if (tile === undefined) continue;
+    const answer = found(tile);
+    if (answer !== undefined) return { tile, found: answer };
+  }
+  return undefined;
+}
+
+/** The first seed's turn 1 on the Nomadic content, its city settled bare, with a neighbour `found` answers. */
+function besideCity<T>(
+  complaint: string,
+  found: (tile: Tile, chronicle: Chronicle) => T | undefined,
+): Found<T> {
+  return firstSeed(complaint, (seed) => {
+    const chronicle = settledOn(NOMADIC, seed);
+    const beside = besideOn(chronicle, (tile) => found(tile, chronicle));
+    return beside === undefined ? undefined : { chronicle, ...beside };
   });
 }
 
@@ -103,105 +117,93 @@ function stepsClear(chronicle: Chronicle): boolean {
   );
 }
 
-/**
- * The first seed whose generator runs a river along a bare tile of a terrain a river feeds, touching
- * the city and so well inside the frame.
- */
-function riverRun(): { seed: number; key: string; terrain: Terrain } {
-  return firstSeed('runs a river along a fed tile beside the city', (seed) => {
-    const opened = launch(seed, deckOf(STAND_IN, 'PH_Deck'));
-    const { tiles, rivers } = opened;
-    const city = cityTileOf(opened);
-    const touching = new Set(neighbours(city).map(tileKey));
-    const found = tiles.find(
-      (tile) =>
-        touching.has(tileKey(tile)) &&
-        tile.feature === undefined &&
-        terrainKind(STAND_IN, tile.terrain).river !== undefined &&
-        runsAlong(rivers, tile),
-    );
-    if (found === undefined) return undefined;
-    return { seed, key: tileKey(found), terrain: found.terrain };
+/** The first seed's turn 1, with the first worker entered on the city, whose steps are clear. */
+function workerOnCity(): Chronicle {
+  return firstSeed('enters its first worker on a city whose steps are clear', (seed) => {
+    const chronicle = settledOn(NOMADIC, seed, ['first-worker']);
+    return stepsClear(chronicle) ? chronicle : undefined;
   });
 }
 
-/**
- * The first seed leaving a tile touching the city, and so well inside the frame, bare of feature,
- * building and improvement; a river may run along it, being a row of its terrain card, not a card.
- */
-function bareRun(): { seed: number; key: string } {
-  return firstSeed('leaves a tile beside the city bare', (seed) => {
-    const opened = launch(seed, deckOf(STAND_IN, 'PH_Deck'));
-    const { tiles } = opened;
-    const city = cityTileOf(opened);
-    const touching = new Set(neighbours(city).map(tileKey));
-    const found = tiles.find(
-      (tile) =>
-        touching.has(tileKey(tile)) &&
-        tile.feature === undefined &&
-        tile.building === undefined &&
-        tile.improvements.length === 0,
-    );
-    return found === undefined ? undefined : { seed, key: tileKey(found) };
-  });
+/** A tile beside the city with a feature on it, and the feature. */
+function featureBeside(): Found<FeatureId> {
+  return besideCity('puts a feature beside the city', (tile) => tile.feature);
 }
 
 /**
- * The first seed whose generator leaves a tile costing two move points beside the city, bare and
- * with nobody on it so its terrain card is the whole of its cycle, and charts a water tile from the
- * opening.
+ * A tile beside the city bare of feature, of a terrain a river feeds, a river running along it, and
+ * what the river gives it.
  */
-function costRun(): { seed: number; land: string; water: string } {
+function riverBeside(): Found<Partial<Resources>> {
+  return besideCity('runs a river along a fed tile beside the city', (tile, chronicle) =>
+    tile.feature === undefined && runsAlong(chronicle.rivers, tile)
+      ? terrainKind(NOMADIC, tile.terrain).river
+      : undefined,
+  );
+}
+
+/**
+ * A tile beside the city bare of feature, building and improvement, and its key; a river may run
+ * along it, being a row of its terrain card, not a card.
+ */
+function bareBeside(): Found<string> {
+  return besideCity('leaves a tile beside the city bare', (tile) =>
+    tile.feature === undefined && tile.building === undefined && tile.improvements.length === 0
+      ? tileKey(tile)
+      : undefined,
+  );
+}
+
+/**
+ * The first seed's bare turn 1 whose opening charts a water tile, and a tile beside the city costing
+ * two move points, bare and with nobody on it so its terrain card is the whole of its cycle: that
+ * tile, what entering it costs, and the water tile.
+ */
+function costBeside(): Found<number> & { readonly water: TileCoords } {
   return firstSeed(
     'leaves a tile costing two move points beside the city, and water in sight',
     (seed) => {
-      const chronicle = launch(seed, deckOf(STAND_IN, 'PH_Deck'));
-      const touching = new Set(neighbours(cityTileOf(chronicle)).map(tileKey));
-      const stood = new Set(chronicle.units.map((unit) => tileKey(unit.tile)));
-      const land = chronicle.tiles.find(
-        (tile) =>
-          touching.has(tileKey(tile)) &&
-          !stood.has(tileKey(tile)) &&
+      const chronicle = settledOn(NOMADIC, seed);
+      const wet = chronicle.snapshots.find((snapshot) => water(NOMADIC, snapshot.tile.terrain));
+      if (wet === undefined) return undefined;
+      const land = besideOn(chronicle, (tile) => {
+        const cost = movementCost(NOMADIC, tile);
+        const bare =
+          !chronicle.units.some((unit) => tileKey(unit.tile) === tileKey(tile)) &&
           tile.building === undefined &&
-          tile.improvements.length === 0 &&
-          movementCost(STAND_IN, tile) === 2 * MOVE_POINT,
-      );
-      const wet = chronicle.snapshots.find((snapshot) => water(STAND_IN, snapshot.tile.terrain));
-      if (land === undefined || wet === undefined) return undefined;
-      return { seed, land: tileKey(land), water: tileKey(wet) };
+          tile.improvements.length === 0;
+        return bare && cost === 2 * MOVE_POINT ? cost : undefined;
+      });
+      return land === undefined ? undefined : { chronicle, water: wet, ...land };
     },
   );
 }
 
-/** The three lines a ledger row reads from `name` on: its name, its chip, and what the chip counts. */
-async function rowFrom(page: Page, name: string): Promise<string[]> {
+/** The lines a ledger row reads from `name` on, as many as `count`. */
+async function rowFrom(page: Page, name: string, count: number): Promise<string[]> {
   const lines = await panelLines(page);
-  return lines.slice(lines.indexOf(name), lines.indexOf(name) + 3);
+  return lines.slice(lines.indexOf(name), lines.indexOf(name) + count);
 }
 
 test('a tile the generator gave a feature shows its mark, and the terrain card gives it a row of its own', async ({
   page,
 }) => {
   const problems = watch(page);
-  const run = featureRun();
+  const { chronicle, tile, found: feature } = featureBeside();
+  const key = tileKey(tile);
+  const row = [featureName(feature), ...chipsOf(featureKind(NOMADIC, feature).yields)];
 
-  await open(page, run.seed, 'PH_Deck');
-  expect(await standing(page, `feature-${run.key}`)).toBe(true);
+  await openSaved(page, chronicle);
+  expect(await standing(page, `feature-${key}`)).toBe(true);
 
   // Nothing stands on it and nothing is built on it: the terrain card is the whole of its cycle.
-  const at = await onScreen(page, `tile-${run.key}`);
+  const at = await onScreen(page, `tile-${key}`);
   await page.mouse.click(at.x, at.y);
-  await expect.poll(() => ringedTile(page)).toBe(run.key);
+  await expect.poll(() => ringedTile(page)).toBe(key);
   await page.keyboard.press('i');
   await expect.poll(() => shownCard(page)).toBe('terrain');
 
-  await expect
-    .poll(() => rowFrom(page, featureName(run.feature)))
-    .toEqual([
-      featureName(run.feature),
-      'panel-yield-food',
-      `+${featureKind(STAND_IN, run.feature).yields.food}`,
-    ]);
+  await expect.poll(() => rowFrom(page, featureName(feature), row.length)).toEqual(row);
 
   expect(problems).toEqual([]);
 });
@@ -210,30 +212,26 @@ test('a tile a river runs along gives the river a row of the terrain card, on wh
   page,
 }) => {
   const problems = watch(page);
-  const run = riverRun();
+  const { chronicle, tile, found: fed } = riverBeside();
+  const key = tileKey(tile);
+  const row = [text('panel.river'), ...chipsOf(fed)];
 
-  await open(page, run.seed, 'PH_Deck');
+  await openSaved(page, chronicle);
 
   // Nothing stands on it and nothing is built on it: the terrain card is the whole of its cycle.
-  const at = await onScreen(page, `tile-${run.key}`);
+  const at = await onScreen(page, `tile-${key}`);
   await page.mouse.click(at.x, at.y);
-  await expect.poll(() => ringedTile(page)).toBe(run.key);
+  await expect.poll(() => ringedTile(page)).toBe(key);
   await page.keyboard.press('i');
   await expect.poll(() => shownCard(page)).toBe('terrain');
 
-  await expect
-    .poll(() => rowFrom(page, text('panel.river')))
-    .toEqual([
-      text('panel.river'),
-      'panel-yield-food',
-      `+${terrainKind(STAND_IN, run.terrain).river?.food}`,
-    ]);
+  await expect.poll(() => rowFrom(page, text('panel.river'), row.length)).toEqual(row);
 
   // The tile holds that one card, so a further press leaves it standing.
   await page.keyboard.press('i');
   await answered(page);
   expect(await shownCard(page)).toBe('terrain');
-  expect(await ringedTile(page)).toBe(run.key);
+  expect(await ringedTile(page)).toBe(key);
 
   expect(problems).toEqual([]);
 });
@@ -242,17 +240,17 @@ test('the terrain card reads what entering the tile costs, and a dash on a tile 
   page,
 }) => {
   const problems = watch(page);
-  const run = costRun();
+  const { chronicle, tile, found: cost, water: wetTile } = costBeside();
 
-  await open(page, run.seed, 'PH_Deck');
+  await openSaved(page, chronicle);
 
   // Nothing stands on it and nothing is built on it: the terrain card is the whole of its cycle.
-  const land = await onScreen(page, `tile-${run.land}`);
+  const land = await onScreen(page, `tile-${tileKey(tile)}`);
   await page.mouse.click(land.x, land.y, { button: 'right' });
   await expect.poll(() => shownCard(page)).toBe('terrain');
-  expect(await panelMovement(page)).toBe(text('panel.movement', { cost: 2 }));
+  expect(await panelMovement(page)).toBe(text('panel.movement', { cost: cost / MOVE_POINT }));
 
-  const wet = await onScreen(page, `tile-${run.water}`);
+  const wet = await onScreen(page, `tile-${tileKey(wetTile)}`);
   await page.mouse.click(wet.x, wet.y, { button: 'right' });
   await expect.poll(() => panelMovement(page)).toBe(text('panel.no-movement'));
   expect(await shownCard(page)).toBe('terrain');
@@ -264,17 +262,10 @@ test('a click selects a tile, the inspection key steps its cards, and the back k
   page,
 }) => {
   const problems = watch(page);
-  const run = workerRun('PH_Farm', (_, chronicle) => stepsClear(chronicle));
+  const entered = workerOnCity();
 
-  await open(page, run.seed, 'PH_Deck');
-  for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
-
-  const opened = await chronicleOf(page);
-  await dragOut(page, idsOf(opened.hand).indexOf('PH_Worker'));
-  await expect.poll(async () => playersOf(await chronicleOf(page)).length).toBe(1);
-
-  const entered = await chronicleOf(page);
-  const cityTile = tileKey(playersOf(entered)[0].tile);
+  await openSaved(page, entered);
+  const cityTile = tileKey(cityTileOf(entered));
   const city = await onScreen(page, `tile-${cityTile}`);
   expect(await shownCard(page)).toBeUndefined();
   expect(await ringedTile(page)).toBeUndefined();
@@ -285,7 +276,7 @@ test('a click selects a tile, the inspection key steps its cards, and the back k
   expect(await shownCard(page)).toBeUndefined();
   expect(await ringedTile(page)).toBeUndefined();
 
-  // The city's tile carries all three cards: the worker that just entered, the city, the terrain.
+  // The city's tile carries all three cards: the worker entered at the settle, the city, the terrain.
   await page.mouse.click(city.x, city.y);
   await expect.poll(() => ringedTile(page)).toBe(cityTile);
   expect(await shownCard(page)).toBeUndefined();
@@ -309,7 +300,7 @@ test('a click selects a tile, the inspection key steps its cards, and the back k
   await expect.poll(() => ringedTile(page)).toBeUndefined();
   expect(await standing(page, 'menu')).toBe(false);
 
-  // West of the city: the run leaves nothing on it, and it is clear of the panel the city raises.
+  // West of the city: the search leaves nothing on it, and it is clear of the panel the city raises.
   const bareTile = tileKey(westOf(cityTileOf(entered)));
   const bare = await onScreen(page, `tile-${bareTile}`);
   await page.mouse.click(bare.x, bare.y);
@@ -344,11 +335,11 @@ test('a right click inspects and never selects, shows no browser menu, and the i
   page,
 }) => {
   const problems = watch(page);
-  const run = bareRun();
+  const { chronicle, found: key } = bareBeside();
 
-  await open(page, run.seed, 'PH_Deck');
-  const bare = await onScreen(page, `tile-${run.key}`);
-  const cityTile = await chronicleOf(page).then((chronicle) => tileKey(cityTileOf(chronicle)));
+  await openSaved(page, chronicle);
+  const bare = await onScreen(page, `tile-${key}`);
+  const cityTile = tileKey(cityTileOf(chronicle));
   const city = await onScreen(page, `tile-${cityTile}`);
 
   await watchBrowserMenu(page);
@@ -364,7 +355,7 @@ test('a right click inspects and never selects, shows no browser menu, and the i
   expect(await ringedTile(page)).toBeUndefined();
 
   // The press carried the map nowhere either: the tile stands where it stood.
-  const after = await onScreen(page, `tile-${run.key}`);
+  const after = await onScreen(page, `tile-${key}`);
   expect(after.x).toBeCloseTo(bare.x, 0);
   expect(after.y).toBeCloseTo(bare.y, 0);
 

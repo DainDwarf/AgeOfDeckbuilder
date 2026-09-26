@@ -24,7 +24,7 @@ import {
   tileKey,
   tileYield,
 } from '../src/rules/map';
-import { RESOURCES, type Resource } from '../src/rules/resources';
+import { RESOURCES, type Resource, type Resources } from '../src/rules/resources';
 import { type ChronicleSave, writeSave } from '../src/rules/save';
 import { offered } from '../src/rules/schedule';
 import { type CardId, type Chronicle, type ChronicleCard, playable } from '../src/rules/state';
@@ -952,6 +952,14 @@ export function panelLines(page: Page): Promise<string[]> {
             part.type === 'Text' ? (part as Phaser.GameObjects.Text).text : part.name,
           ),
       );
+  });
+}
+
+/** What `panelLines` reads of a row that gives these yields: each chip and what it counts, in resource order. */
+export function chipsOf(yields: Partial<Resources>): string[] {
+  return RESOURCES.flatMap((resource) => {
+    const amount = yields[resource];
+    return amount === undefined ? [] : [`panel-yield-${resource}`, `+${amount}`];
   });
 }
 

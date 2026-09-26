@@ -1,204 +1,108 @@
-import { expect, type Page, test } from '@playwright/test';
-import { STAND_IN } from '../src/content/stand-in';
-import { aimOf } from '../src/rules/cards';
+import { expect, test } from '@playwright/test';
+import { NOMADIC } from '../src/content/nomadic';
+import { gained } from '../src/rules/cards';
 import { cardOf } from '../src/rules/catalogue';
-import { admitted, apply, outcome, refusalOf } from '../src/rules/chronicle';
-import { type TileCoords, tileKey } from '../src/rules/map';
+import { apply, outcome } from '../src/rules/chronicle';
+import { type TileCoords, tileAt, tileKey } from '../src/rules/map';
 import { improvementKind } from '../src/rules/map-kinds';
-import { type CardId, type Chronicle, type ChronicleCard, playable } from '../src/rules/state';
-import type { ChronicleScene } from '../src/ui/chronicle-scene';
-import { text } from '../src/ui/text';
+import { charted } from '../src/rules/sight';
+import type { Chronicle } from '../src/rules/state';
+import { improvementName } from '../src/ui/text';
 import {
+  admits,
   aimed,
-  budget,
+  chipsOf,
   chronicleOf,
-  cityTileOf,
+  click,
   dragOut,
-  dragUnit,
-  endedTurn,
-  endTurn,
   idsOf,
   marksIn,
-  onScreen,
-  open,
+  openSaved,
   panelLines,
   playedOut,
   playersOf,
-  type Run,
-  refusalLines,
-  rested,
   ringedTile,
   shownCard,
-  standing,
   watch,
-  workerRun,
+  workerStepped,
 } from './chronicle-screen';
 
-/** Whether the road can be played on the tile: a worker with action left stands there, and the city can pay. */
-function roadLands(chronicle: Chronicle, at: TileCoords): boolean {
-  const road = aimOf(cardOf(STAND_IN, 'PH_Road'));
-  if (road.aim !== 'tile') throw new Error('PH_Road is aimed at no tile');
-  return (
-    idsOf(chronicle.hand).includes('PH_Road') &&
-    playable(refusalOf(STAND_IN, chronicle, 'PH_Road')) &&
-    admitted(STAND_IN, chronicle, road).some((coord) => tileKey(coord) === tileKey(at))
+/** The card that places the improvement, and the improvement it places. */
+const TRAPPING = 'trapping';
+
+/** A turn 1 whose worker stands on a forest beside the city, trapping in the hand and paid for. */
+type Paid = { readonly chronicle: Chronicle; readonly tile: TileCoords; readonly index: number };
+
+/**
+ * The first seed's turn 1 whose first worker steps off the city onto a forest with trapping in the
+ * hand, and trapping's cost gained: trapping then admits the worker's tile.
+ */
+function trappingPaid(): Paid {
+  const { stepped, tile } = workerStepped(
+    'steps its first worker onto a forest with trapping in the hand',
+    (moved, at) =>
+      tileAt(moved.tiles, at)?.terrain === 'forest' && idsOf(moved.hand).includes(TRAPPING),
   );
+  const chronicle = charted(NOMADIC, gained(stepped, cardOf(NOMADIC, TRAPPING).cost).chronicle);
+  const index = idsOf(chronicle.hand).indexOf(TRAPPING);
+  if (!admits(chronicle, index, tile))
+    throw new Error(`${TRAPPING} admits no ${tileKey(tile)} once paid for`);
+  return { chronicle, tile, index };
 }
 
-/** The run's turn opened, a worker entered and moved by hand onto the tile the run found. */
-async function moveOut(page: Page, run: Run): Promise<Chronicle> {
-  await open(page, run.seed, 'PH_Deck');
-  for (let turn = 1; turn < run.turn; turn++) await endTurn(page);
-
-  const opened = await chronicleOf(page);
-  await dragOut(page, idsOf(opened.hand).indexOf('PH_Worker'));
-  await page.waitForFunction(
-    () =>
-      window.game?.scene
-        .getScene<ChronicleScene>('ui')
-        .chronicle.units.filter((unit) => unit.faction === 'player').length === 1,
-  );
-
-  const entered = await chronicleOf(page);
-  await dragUnit(page, cityTileOf(entered), run.tile);
-
-  return chronicleOf(page);
+/** The chronicle trapping played at the worker's tile leaves. */
+function trappingPlaced({ chronicle, tile, index }: Paid): Chronicle {
+  const placed = outcome(apply(NOMADIC, chronicle, { type: 'play', index, aim: 'tile', tile }));
+  if (placed === chronicle) throw new Error(`${TRAPPING} is refused on ${tileKey(tile)}`);
+  return placed;
 }
 
-/** The card taken out of the hand and aimed at the tile the worker stands on. */
-async function aimAt(
-  page: Page,
-  hand: readonly ChronicleCard[],
-  card: CardId,
-  at: TileCoords,
-): Promise<void> {
-  const target = await onScreen(page, `tile-${tileKey(at)}`);
-  await dragOut(page, idsOf(hand).indexOf(card));
-  await aimed(page);
-  await page.mouse.click(target.x, target.y);
-  await playedOut(page);
-  await page.waitForFunction(
-    (held) => window.game?.scene.getScene<ChronicleScene>('ui').chronicle.hand.length === held,
-    hand.length - 1,
-  );
-}
-
-test('the mine card improves the hills the worker moved to', async ({ page }) => {
+test('the trapping card places trapping on the forest the worker stands on', async ({ page }) => {
   const problems = watch(page);
-  const run = workerRun('PH_Mine');
+  const paid = trappingPaid();
+  const placed = trappingPlaced(paid);
 
-  const moved = await moveOut(page, run);
+  await openSaved(page, paid.chronicle);
   const before = await marksIn(page, 'improvements');
-  await aimAt(page, moved.hand, 'PH_Mine', run.tile);
-
-  const after = await chronicleOf(page);
-  const improved = after.tiles.find((tile) => tileKey(tile) === tileKey(run.tile));
-
-  expect(improved?.improvements).toEqual(['PH_Mine']);
-  expect(await marksIn(page, 'improvements')).toBe(before + 1);
-  expect(after.resources.production).toBe(moved.resources.production - 3);
-  expect(playersOf(after)[0].tile).toEqual(run.tile);
-  expect(problems).toEqual([]);
-});
-
-test('the road on the worker that laid the mine is refused for its action, and lands on the next turn', async ({
-  page,
-}) => {
-  const problems = watch(page);
-  const run = workerRun('PH_Mine', (tile, moved) => {
-    const at = { q: tile.q, r: tile.r };
-    const mine = idsOf(moved.hand).indexOf('PH_Mine');
-    const mined = outcome(
-      apply(STAND_IN, moved, { type: 'play', index: mine, aim: 'tile', tile: at }),
-    );
-    if (!idsOf(mined.hand).includes('PH_Road') || !playable(refusalOf(STAND_IN, mined, 'PH_Road')))
-      return false;
-    const next = endedTurn(mined);
-    return next.ending === undefined && roadLands(next, at);
-  });
-  // The run's ends of turn, the worker entered and moved, the mine, and the turn after it.
-  test.setTimeout(budget(run.turn + 3));
-
-  const moved = await moveOut(page, run);
-  await aimAt(page, moved.hand, 'PH_Mine', run.tile);
-
-  const mined = await chronicleOf(page);
-  const target = await onScreen(page, `tile-${tileKey(run.tile)}`);
-  await dragOut(page, idsOf(mined.hand).indexOf('PH_Road'));
+  await dragOut(page, paid.index);
   await aimed(page);
-  await page.mouse.click(target.x, target.y);
-  await rested(page);
+  await click(page, `tile-${tileKey(paid.tile)}`);
+  await playedOut(page);
 
-  expect(await refusalLines(page)).toEqual([text('refusal.worker-spent')]);
-  expect(await chronicleOf(page)).toEqual(mined);
-
-  await page.keyboard.press('Escape');
-  await expect.poll(() => standing(page, 'aim')).toBe(false);
-  await endTurn(page);
-
-  const next = await chronicleOf(page);
-  await aimAt(page, next.hand, 'PH_Road', run.tile);
-
-  const after = await chronicleOf(page);
-  const improved = after.tiles.find((tile) => tileKey(tile) === tileKey(run.tile));
-
-  expect(improved?.improvements).toEqual(['PH_Mine', 'PH_Road']);
+  await expect.poll(() => chronicleOf(page)).toEqual(placed);
+  expect(tileAt(placed.tiles, paid.tile)?.improvements).toEqual([TRAPPING]);
+  expect(playersOf(placed)[0].tile).toEqual(paid.tile);
+  expect(await marksIn(page, 'improvements')).toBe(before + 1);
   expect(problems).toEqual([]);
 });
 
-test('the tile the mine improved inspects the mine on a card of its own, before its terrain', async ({
+test('the tile trapping was placed on inspects trapping on a card of its own, before its terrain', async ({
   page,
 }) => {
   const problems = watch(page);
-  const run = workerRun('PH_Mine');
+  const paid = trappingPaid();
 
-  const moved = await moveOut(page, run);
-  await aimAt(page, moved.hand, 'PH_Mine', run.tile);
+  await openSaved(page, trappingPlaced(paid));
 
-  // The worker that laid it still stands there, so the mine's card comes after the unit's.
-  const at = await onScreen(page, `tile-${tileKey(run.tile)}`);
-  await page.mouse.click(at.x, at.y);
-  await expect.poll(() => ringedTile(page)).toBe(tileKey(run.tile));
+  // The worker that placed it still stands there, so trapping's card comes after the unit's.
+  await click(page, `tile-${tileKey(paid.tile)}`);
+  await expect.poll(() => ringedTile(page)).toBe(tileKey(paid.tile));
   await page.keyboard.press('i');
   await expect.poll(() => shownCard(page)).toBe('unit');
   await page.keyboard.press('i');
   await expect.poll(() => shownCard(page)).toBe('building');
 
-  // Nothing is built on it, so the mine heads the card and its one row says what it gives.
+  // Nothing is built on it, so trapping heads the card and its one row says what it gives.
   await expect
     .poll(() => panelLines(page))
     .toEqual([
-      text('improvement.PH_Mine'),
-      text('improvement.PH_Mine'),
-      'panel-yield-production',
-      `+${improvementKind(STAND_IN, 'PH_Mine').yields.production}`,
+      improvementName(TRAPPING),
+      improvementName(TRAPPING),
+      ...chipsOf(improvementKind(NOMADIC, TRAPPING).yields),
     ]);
 
   await page.keyboard.press('i');
   await expect.poll(() => shownCard(page)).toBe('terrain');
 
-  expect(problems).toEqual([]);
-});
-
-test('the urbanisation card terraforms the plain the worker moved to, feature and all', async ({
-  page,
-}) => {
-  const problems = watch(page);
-  const run = workerRun('PH_Urbanisation', (tile) => tile.feature !== undefined);
-  const mark = `feature-${tileKey(run.tile)}`;
-
-  const moved = await moveOut(page, run);
-  expect(await standing(page, mark)).toBe(true);
-
-  await aimAt(page, moved.hand, 'PH_Urbanisation', run.tile);
-
-  const after = await chronicleOf(page);
-  const worked = after.tiles.find((tile) => tileKey(tile) === tileKey(run.tile));
-
-  expect(worked?.terrain).toBe('urban');
-  expect(worked?.feature).toBeUndefined();
-  expect(await standing(page, mark)).toBe(false);
-  expect(after.resources.production).toBe(moved.resources.production - 5);
-  expect(playersOf(after)[0].tile).toEqual(run.tile);
   expect(problems).toEqual([]);
 });
