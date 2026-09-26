@@ -16,4 +16,4 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The screen's specs open on their chronicle, and the stand-in goes** — hover, reference, browse, menu, controls and window, reviewed the same way; then the helpers that settle through the screen, their headless twin and the stand-in catalogue are deleted, boot, resume and failed-boot staying on the address they test.
+- **The screen's specs open on their chronicle, and the stand-in goes** — hover, reference, browse, menu, controls and window open on Nomadic fixtures through the shared openers, boot and resume move their fixtures while staying on the address they test, and the stand-in catalogue, its test, the lookup's fallback to it and every helper that settled through the screen are deleted; done when nothing under `e2e/` or `src/` imports the stand-in, the run skill and the ui-check agent name a Nomadic address, the report carries the eight specs' duration before and after, and CI is green. Doc-impact: `docs/INTERFACE.md`. [board/screen-specs-open-on-their-chronicle.md](board/screen-specs-open-on-their-chronicle.md)
