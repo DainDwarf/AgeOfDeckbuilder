@@ -16,5 +16,5 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The city's specs open on their chronicle** — city-mode, yields, settle and capstone, reviewed the same way; settle and capstone open on the save written before the settle.
+- **The city's specs open on their chronicle** — `e2e/city-mode.spec.ts`, `e2e/yields.spec.ts`, `e2e/settle.spec.ts` and `e2e/capstone.spec.ts` import nothing from `src/content/stand-in.ts` and open on the Nomadic content, a test on the chronicle's start through the address and every other through the shared save opener; the report carries the four specs' duration before and after; CI is green. Doc-impact: none. [board/city-specs-open-on-their-chronicle.md](board/city-specs-open-on-their-chronicle.md)
 - **The screen's specs open on their chronicle, and the stand-in goes** — hover, reference, browse, menu, controls and window, reviewed the same way; then the helpers that settle through the screen, their headless twin and the stand-in catalogue are deleted, boot, resume and failed-boot staying on the address they test.
