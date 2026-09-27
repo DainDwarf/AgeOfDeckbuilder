@@ -1,3 +1,4 @@
+import { withinReach } from './campaign';
 import { aimOf, leavesChronicle, refuses, struck } from './cards';
 import {
   type AimedCard,
@@ -160,7 +161,7 @@ export function beginChronicle(
     drawPile: shuffled.items,
     hand: [deck.city.card, ...deck.settle].map(made),
     discardPile: [],
-    achievements: withinReach(catalogue, age, unlocked),
+    achievements: achievementsWithinReach(catalogue, age, unlocked),
   };
   let guarded = begun;
   for (const { q, r, building } of map.tiles) {
@@ -179,17 +180,14 @@ export function beginChronicle(
  * reached: every one whose technology is not unlocked and needs none that is not. A technology the
  * catalogue does not hold is refused.
  */
-function withinReach(
+function achievementsWithinReach(
   catalogue: Catalogue,
   age: string,
   unlocked: readonly string[],
 ): ChronicleAchievement[] {
   for (const id of unlocked) technologyOf(catalogue, id);
   return Object.entries(ageOf(catalogue, age).achievements)
-    .filter(([, { technology }]) => {
-      if (unlocked.includes(technology)) return false;
-      return technologyOf(catalogue, technology).needs.every((need) => unlocked.includes(need));
-    })
+    .filter(([, { technology }]) => withinReach(catalogue, technology, unlocked))
     .map(([id]) => ({ id, reached: false }));
 }
 

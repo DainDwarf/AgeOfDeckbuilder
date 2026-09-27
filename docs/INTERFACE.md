@@ -1,6 +1,6 @@
 # Interface
 
-> How any screen is worked: the menu and what it lists, the keys and how they are rebound, the navbar and the bar, the launch page, a failed boot, the debug console, the three presses, a card's names and its label, and what stands over what. A design page, under [`DESIGN.md`](DESIGN.md)'s legend. What a press does to a thing only a chronicle has is [`CHRONICLE-SCREEN.md`](CHRONICLE-SCREEN.md)'s.
+> How any screen is worked: the menu and what it lists, the keys and how they are rebound, the navbar and the bar, the tree, the launch page, a failed boot, the debug console, the three presses, a card's names and its label, and what stands over what. A design page, under [`DESIGN.md`](DESIGN.md)'s legend. What a press does to a thing only a chronicle has is [`CHRONICLE-SCREEN.md`](CHRONICLE-SCREEN.md)'s.
 
 ## The menu ✅
 
@@ -13,6 +13,14 @@ A window closes back one step, to the window it was opened from and then to the 
 ## The navbar and the bar ✅
 
 Every screen of the meta wears the same two things, and the chronicle screen wears neither. The **navbar** is a panel down the left edge, the whole height of the screen: the game's name at its head, on two lines, and under it one button per screen of the meta. The button of the screen standing is sunk in a well, as a latched reading of the resource bar is, and answers no press; the others stand in the accent, and a press opens their screen. The **bar** runs along the top from the navbar to the Menu button, where the resource bar stands on the chronicle screen, and reads the influence at its left end as the resource bar reads a stock: a diamond in the accent, the word, the number. The pointer resting on the reading raises its tooltip under it, as a reading of the resource bar does; the reading answers no press.
+
+## The tree ✅
+
+The room the navbar and the bar leave the campaign screen holds the technology tree. Each age is a **ground** in a colour of its own, the grounds laid left to right in the order of history, each with its age's name at its head, and one ground washes into the next across their border. A technology stands on its age's ground, one column after the furthest technology it needs, and the technology that unlocks the next age stands on the border between the two grounds. Every column is centred on the room's middle, its technologies in the content's order, and a link runs from a technology to each one that needs it, around whatever plate stands in its way.
+
+A **plate** reads the technology's name, then **Goal** and the achievement's condition, then **Reward** and what the technology unlocks, the cards with their copies or the age, one to a line, and the influence the achievement pays, a diamond and the number; what a reward does not hold it does not read. Every plate of the tree is as tall as the tallest. A plate unlocked is sunk in a well, a check mark before its name; a plate within reach stands on the panel's paper; a mystery is greyed and reads ??? alone. A plate answers no press. A name in a plate's text stands in brackets, and the pointer resting on it raises its small card, as on a card.
+
+The tree moves left and right and no other way: the two keys that pan the map left and right move it while they are held, and a press held on the room drags it. The wheel does nothing here, whatever it is bound to. The tree stops at its ends, and a tree the room holds whole does not move. The screen opens with the technologies within reach centred in the room, from the leftmost of them where the room cannot hold them all, and on the tree's right end where none is within reach.
 
 ## The launch page 🔧
 

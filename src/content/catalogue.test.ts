@@ -26,12 +26,14 @@ import {
   buildingMarkOf,
   featureColourOf,
   featureMarkOf,
+  groundColourOf,
   improvementMarkOf,
   terrainColourOf,
   unitMarkOf,
 } from '../ui/marks';
 import {
-  achievementName,
+  achievementGoal,
+  ageName,
   answerName,
   answerRules,
   buildingName,
@@ -43,6 +45,7 @@ import {
   featureName,
   improvementName,
   referenceName,
+  technologyName,
   terrainName,
   unitName,
   victoryLine,
@@ -132,12 +135,13 @@ test('every card of the catalogue has a name, and a rules entry read at the coun
   }
 });
 
-test('every rules entry of the catalogue lays out, and every name on it resolves in the catalogue’s table of its kind', () => {
+test('every rules entry and every goal of the catalogue lays out, and every name on it resolves in the catalogue’s table of its kind', () => {
   const entries = [
     ...Object.keys(CATALOGUE.cards).map((id) => cardRules(cardMade(CATALOGUE, id))),
     ...Object.keys(CATALOGUE.capstones).map((id) => capstoneRules(id)),
   ];
   for (const age of AGES) {
+    entries.push(...Object.keys(ageOf(CATALOGUE, age).achievements).map(achievementGoal));
     const chronicle = settledIn(age);
     for (const event of Object.keys(ageOf(CATALOGUE, age).schedule.entries)) {
       for (const [name, answer] of Object.entries(eventOf(CATALOGUE, event).answers)) {
@@ -270,11 +274,16 @@ test('every answer of every event of an age’s schedule costs, lands and reads 
   }
 });
 
-test('every achievement of every age has a name on the screen', () => {
+test('every age of the catalogue has a name and a ground colour on the screen, every achievement it owns a goal, and every technology a name', () => {
   for (const age of AGES) {
+    expect(() => ageName(age)).not.toThrow();
+    expect(() => groundColourOf(age)).not.toThrow();
     for (const id of Object.keys(ageOf(CATALOGUE, age).achievements)) {
-      expect(() => achievementName(id)).not.toThrow();
+      expect(() => achievementGoal(id)).not.toThrow();
     }
+  }
+  for (const id of Object.keys(CATALOGUE.technologies)) {
+    expect(() => technologyName(id)).not.toThrow();
   }
 });
 

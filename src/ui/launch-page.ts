@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { CATALOGUE } from '../content/catalogue';
-import { ageOf, firstAge, firstDeck, firstRegion } from '../rules/catalogue';
+import { achievementOf, ageOf, firstAge, firstDeck, firstRegion } from '../rules/catalogue';
 import { type Chronicle, onSettlePhase } from '../rules/state';
 import { addText, answersPress, holdDesignSpace, onClick, UI_FONT } from './design-space';
 import { readsKeys } from './keys';
@@ -8,7 +8,7 @@ import { css, LOOK } from './look';
 import { backRaisesMenu, closeMenu } from './menu-scene';
 import { ROOM, wearNavbar } from './navbar';
 import { type Choices, type Opening, savedOpening } from './save-entry';
-import { achievementName, type TextKey, text } from './text';
+import { type TextKey, technologyName, text } from './text';
 
 /** The first age and deck the catalogue lists, and that age's first region, on that seed. */
 export function firstsOf(seed: number | undefined): Choices {
@@ -34,15 +34,20 @@ const FACE_STYLE = { fontFamily: UI_FONT, fontSize: '16px', fontStyle: 'bold', c
 
 type Row = 'age' | 'region' | 'deck';
 
-/** What Continue reads under its label: where the chronicle stands, then each achievement it reached. */
+/**
+ * What Continue reads under its label: where the chronicle stands, then each achievement it reached,
+ * under its technology's name.
+ */
 function readingsOf(chronicle: Chronicle): string[] {
+  const named = (id: string): string =>
+    technologyName(achievementOf(CATALOGUE, chronicle.age, id).technology);
   return [
     onSettlePhase(chronicle)
       ? text('launch.settle-phase')
       : text('launch.turn', { turn: chronicle.turn }),
     ...chronicle.achievements
       .filter(({ reached }) => reached)
-      .map(({ id }) => text('launch.reached', { achievement: achievementName(id) })),
+      .map(({ id }) => text('launch.reached', { achievement: named(id) })),
   ];
 }
 
@@ -58,7 +63,7 @@ export class LaunchPage extends Phaser.Scene {
   create(): void {
     holdDesignSpace(this, this.cameras.main);
     closeMenu(this);
-    const content = wearNavbar(this, 'launch');
+    const { content } = wearNavbar(this, 'launch');
     backRaisesMenu(this);
     let chosen: Choices = firstsOf(undefined);
     let typed = '';

@@ -40,6 +40,8 @@ export type Look = {
   readonly population: number;
   readonly wellFill: number;
   readonly wellLight: number;
+  readonly mysteryFill: number;
+  readonly mysteryInk: number;
   readonly cardEdge: number;
   readonly cardBack: number;
   readonly aimSlab: number;
@@ -57,6 +59,8 @@ export type Look = {
   readonly terrain: Readonly<Record<string, number>>;
   readonly feature: Readonly<Record<string, number>>;
   readonly building: Readonly<Record<string, BuildingRole>>;
+  /** The ground each age stands on in the technology tree, by the age's id. */
+  readonly ground: Readonly<Record<string, number>>;
 };
 
 // Roles that agree on a value today are still separate entries: one theme decision recolours one
@@ -81,6 +85,8 @@ export const LOOK: Look = {
   population: 0x6b6b7d,
   wellFill: 0xb4b9c0,
   wellLight: 0xeef0f3,
+  mysteryFill: 0x5c6068,
+  mysteryInk: 0x2a2e34,
   cardEdge: 0x6f757d,
   cardBack: 0x232833,
   aimSlab: 0x232833,
@@ -119,6 +125,9 @@ export const LOOK: Look = {
     city: 'built',
     camp: 'enemyRed',
     shelter: 'built',
+  },
+  ground: {
+    nomadic: 0x2a5a41,
   },
 };
 

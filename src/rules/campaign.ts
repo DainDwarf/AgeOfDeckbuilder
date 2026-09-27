@@ -31,6 +31,19 @@ export type Campaign = {
   readonly deck: CampaignDeck;
 };
 
+/**
+ * Whether a technology is within reach of the technologies unlocked: not unlocked itself, and needing
+ * none that is not. A technology the catalogue does not hold is refused.
+ */
+export function withinReach(
+  catalogue: Catalogue,
+  technology: string,
+  unlocked: readonly string[],
+): boolean {
+  if (unlocked.includes(technology)) return false;
+  return technologyOf(catalogue, technology).needs.every((need) => unlocked.includes(need));
+}
+
 /** The number a campaign's first card is dealt. */
 export const FIRST_CARD_NUMBER = 1;
 

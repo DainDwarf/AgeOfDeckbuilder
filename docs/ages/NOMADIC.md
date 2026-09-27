@@ -64,7 +64,7 @@ Lean season is food against a raid, a rival band is a raid now against a camp la
 
 ## The achievement ✅
 
-The age's one achievement is **The first shelter**, its victory, and it pays influence.
+The age's one achievement is its victory. It earns the technology **Settlement** and pays influence.
 
 ## The camps ✅
 

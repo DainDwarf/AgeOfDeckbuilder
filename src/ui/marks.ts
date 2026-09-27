@@ -73,6 +73,11 @@ export function terrainColourOf(terrain: string): number {
   return drawn(LOOK.terrain, terrain, 'no colour paints the terrain');
 }
 
+/** The colour an age's ground in the technology tree is painted in; an age with no colour is refused. */
+export function groundColourOf(age: string): number {
+  return drawn(LOOK.ground, age, 'no colour paints the ground of the age');
+}
+
 /** The corners a building's mark is drawn from; a building with no mark is refused. */
 export function buildingMarkOf(building: string): number[] {
   return drawn(BUILDING_MARKS, building, 'no mark is drawn for the building');

@@ -291,7 +291,7 @@ const TABLES: Tables = {
     },
   },
   technologies: {
-    'stone-age': { needs: [], unlocks: { cards: {} } },
+    settlement: { needs: [], unlocks: { cards: {} } },
   },
   terrains: {
     plain: {
@@ -438,7 +438,7 @@ export const NOMADIC: Slice = {
       'first-shelter': {
         count: (_catalogue, chronicle) => (chronicle.ending?.outcome === 'victory' ? 1 : 0),
         need: 1,
-        technology: 'stone-age',
+        technology: 'settlement',
         influence: 3,
       },
     },

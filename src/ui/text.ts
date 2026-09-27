@@ -1,9 +1,9 @@
 import type { ChronicleCard } from '../rules/state';
 import type { Reference } from './text-run';
 
-// A `rules.`, `answer-rules.` or `capstone-rules.` entry may mark a glyph `[<resource>]` and a name
-// `[<kind>:<id>]` — a `card`, `terrain`, `feature`, `improvement`, `building`, or a unit kind painted
-// for the faction `player` or `enemy` — which only a card face draws: elsewhere the mark shows.
+// A `rules.`, `answer-rules.`, `capstone-rules.` or `goal.` entry, and `plate.cards`, may mark a glyph
+// `[<resource>]` and a name `[<kind>:<id>]`, a kind `REFERENCE_KINDS` lists, which only a card face
+// and a plate draw: elsewhere the mark shows.
 /** Every player-facing sentence but the lore (`lore.ts`), one entry each. English is the only language. */
 const TEXT = {
   'label.food': 'Food',
@@ -190,12 +190,20 @@ const TEXT = {
   'defeat.population': "The city's population reached zero on turn {turn}.",
   'victory.title': 'Victory',
   'victory.first-shelter': 'The shelter was built. Nomadic Age is over.',
-  'achievement.first-shelter': 'The first shelter',
   'navbar.title': 'Age of\nDeckbuilder',
   'navbar.campaign': 'Campaign',
   'navbar.chronicle': 'Chronicle',
   'label.influence': 'Influence',
   'tooltip.influence': 'Spend it on copies of your cards',
+  'age.nomadic': 'Nomadic Age',
+  'technology.settlement': 'Settlement', // glossary exception: settlement
+  'goal.first-shelter': 'Build [card:shelter]',
+  'plate.unlocked': '✓ {technology}',
+  'plate.goal': 'Goal',
+  'plate.reward': 'Reward',
+  'plate.cards': '{copies} [card:{card}]',
+  'plate.age': 'The {age}',
+  'plate.mystery': '???',
   'launch.title': 'Launch a chronicle',
   'launch.age': 'Age',
   'launch.region': 'Region',
@@ -314,9 +322,19 @@ export function victoryLine(capstone: string): string {
   return named('victory', capstone, 'the capstone');
 }
 
-/** What an achievement is named on the screen; an achievement no entry names is refused. */
-export function achievementName(achievement: string): string {
-  return named('achievement', achievement, 'the achievement');
+/** What an age is named on the screen; an age no entry names is refused. */
+export function ageName(age: string): string {
+  return named('age', age, 'the age');
+}
+
+/** What a technology is named on the screen; a technology no entry names is refused. */
+export function technologyName(technology: string): string {
+  return named('technology', technology, 'the technology');
+}
+
+/** An achievement's condition in words; an achievement no entry names is refused. */
+export function achievementGoal(achievement: string): string {
+  return named('goal', achievement, 'the achievement');
 }
 
 /** The entry a content id names under its prefix; an id no entry names is refused. */

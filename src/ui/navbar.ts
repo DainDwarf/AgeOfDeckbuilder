@@ -8,6 +8,7 @@ import {
   DESIGN_WIDTH,
   MARGIN,
   onClick,
+  type Stratum,
   stratumOf,
   UI_FONT,
 } from './design-space';
@@ -23,7 +24,7 @@ import {
 } from './resource-bar';
 import { campaignHeld } from './save-entry';
 import { type TextKey, text } from './text';
-import { createTooltip } from './tooltip';
+import { createTooltip, type Tooltip } from './tooltip';
 
 /** A screen of the meta, by the key of the scene it stands on. */
 export type MetaScreen = 'campaign' | 'launch';
@@ -57,12 +58,25 @@ const TITLE_STYLE = {
 };
 const LABEL_STYLE = { fontFamily: UI_FONT, fontSize: '18px', fontStyle: 'bold', color: INK };
 
+/** Where a screen of the meta stands what it draws beside the navbar and the bar. */
+export type Worn = {
+  /** Over the navbar and the bar, under the bubbles. */
+  readonly content: Phaser.GameObjects.Layer;
+  /** The stratum the screen's one bubble stands on, over everything else the screen draws. */
+  readonly bubbles: Stratum;
+  readonly tooltip: Tooltip;
+};
+
 /**
  * The navbar down the left edge, the button of the screen standing sunk in a well, and the bar along
- * the top reading the influence; answers the layer the screen's own content stands on.
+ * the top reading the influence.
  */
-export function wearNavbar(scene: Phaser.Scene, standing: MetaScreen): Phaser.GameObjects.Layer {
-  scene.add.rectangle(0, 0, NAVBAR_WIDTH, DESIGN_HEIGHT, LOOK.panelFill).setOrigin(0, 0);
+export function wearNavbar(scene: Phaser.Scene, standing: MetaScreen): Worn {
+  // Interactive so that it is what the pointer is on over anything the screen slides under it.
+  scene.add
+    .rectangle(0, 0, NAVBAR_WIDTH, DESIGN_HEIGHT, LOOK.panelFill)
+    .setOrigin(0, 0)
+    .setInteractive();
   scene.add.rectangle(NAVBAR_WIDTH - 1, 0, 1, DESIGN_HEIGHT, LOOK.panelEdge).setOrigin(0, 0);
   const middle = NAVBAR_WIDTH / 2;
   const title = addText(scene, middle, MARGIN, text('navbar.title'), TITLE_STYLE)
@@ -93,8 +107,8 @@ export function wearNavbar(scene: Phaser.Scene, standing: MetaScreen): Phaser.Ga
   scene.add.rectangle(ROOM.x, 0, ROOM.width, BAR_HEIGHT, LOOK.panelFill).setOrigin(0, 0);
   scene.add.rectangle(ROOM.x, BAR_HEIGHT - 1, ROOM.width, 1, LOOK.panelEdge).setOrigin(0, 0);
 
-  const bubbles = scene.add.layer();
-  const tooltip = createTooltip(scene, stratumOf(bubbles, scene.cameras.main));
+  const bubbles = stratumOf(scene.add.layer(), scene.cameras.main);
+  const tooltip = createTooltip(scene, bubbles);
   const influence = createReading(scene, tooltip, {
     name: 'influence',
     colour: LOOK.accent,
@@ -118,6 +132,6 @@ export function wearNavbar(scene: Phaser.Scene, standing: MetaScreen): Phaser.Ga
   read(campaignHeld().influence);
 
   const content = scene.add.layer();
-  scene.children.bringToTop(bubbles);
-  return content;
+  scene.children.bringToTop(bubbles.layer);
+  return { content, bubbles, tooltip };
 }
