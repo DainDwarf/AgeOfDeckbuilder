@@ -18,7 +18,7 @@
 
 > ## The navbar and the bar ✅
 >
-> Every screen of the meta wears the same two things, and the chronicle screen wears neither. The **navbar** is a panel down the left edge, the whole height of the screen: the game's name at its head, on two lines, and under it one button per screen of the meta. The button of the screen standing is sunk in a well, as a latched reading of the resource bar is, and answers no press; the others stand in the accent, and a press opens their screen. The **bar** runs along the top from the navbar to the Menu button, where the resource bar stands on the chronicle screen, and reads the influence at its left end as the resource bar reads a stock: a diamond in the accent, the word, the number.
+> Every screen of the meta wears the same two things, and the chronicle screen wears neither. The **navbar** is a panel down the left edge, the whole height of the screen: the game's name at its head, on two lines, and under it one button per screen of the meta. The button of the screen standing is sunk in a well, as a latched reading of the resource bar is, and answers no press; the others stand in the accent, and a press opens their screen. The **bar** runs along the top from the navbar to the Menu button, where the resource bar stands on the chronicle screen, and reads the influence at its left end as the resource bar reads a stock: a diamond in the accent, the word, the number. The pointer resting on the reading raises its tooltip under it, as a reading of the resource bar does; the reading answers no press.
 
 - _The launch page_ becomes:
 
@@ -32,6 +32,7 @@ Player-facing text, every entry the line adds:
 | The navbar's button for the campaign screen | `Campaign` |
 | The navbar's button for the launch page | `Chronicle` |
 | The bar's reading, its word | `Influence` |
+| The bar's reading, its tooltip | `Spend it on copies of your cards` |
 | The menu's entry, over a chronicle | `Campaign` |
 
 The entry `New chronicle` goes. The influence's number is the campaign's, bare.
@@ -45,6 +46,7 @@ In:
 - The campaign screen: the navbar, the bar, and nothing else on it. The room right of the navbar and under the bar, 1040 × 672, is left bare for the tree.
 - The navbar, 240 wide from the top of the screen to its foot, in the panel's fill with the panel's edge down its right side. Its margins are the screen's margin, 24. The name stands at its head in the windows' title style, 26 bold, centred, on two lines. The buttons are 192 × 44, 12 apart, their words in the windows' label style, the first one margin under the name.
 - The bar, from the navbar's right edge to the screen's, as tall as the resource bar and drawn as it is: the panel's fill, the edge along its foot. The influence stands one margin in from its left end, drawn as a reading of the resource bar: the chip turned 45° in the accent, the word in the faint ink, the number in the ink.
+- The influence's tooltip, raised under the reading after the rest every tooltip waits for, on both meta screens. The reading is not pressed, so the pointer over it is an arrow.
 - The well of the screen standing is the resource bar's: the well's fill, the dark edge above and to the left, the light below and to the right, the word pressed down and right by one. It is not interactive, so the pointer over it is an arrow.
 - The launch page wears both; its box is centred in the room they leave. It opens on the first of each list, the seed blank, whatever the save holds.
 - The back key on the launch page opens the campaign screen. On the campaign screen nothing is left to back out of, so it raises the menu.
@@ -55,7 +57,6 @@ In:
 Out:
 
 - The tree, the civilization and the Collection button: the first is the next line, the other two wait for their content and their rung.
-- A tooltip on the influence.
 - What the ending screen reads and the ending's pay. An ended chronicle stays in the save, and Continue reads its turn, until that line.
 - The launch page's deck row, which stays and lists the catalogue's decks.
 
@@ -77,10 +78,11 @@ Corner cases decided:
 - An object made interactive is hit-tested from the next frame, and a spec rests before it presses (`docs/PHASER.md` → _Under a Playwright spec_).
 - `e2e/chronicle-screen.ts`'s `plant` writes a new campaign beside the chronicle; a spec that needs influence plants the campaign a won chronicle paid into, through `paidInto`, and the search for a won chronicle lives in `e2e/victory.spec.ts` today.
 - Player-facing text is keyed data, one entry per sentence: the name's two lines are one entry.
+- A tooltip is one bubble per surface, named after its scene, and a hover is read once a frame by the game's own pointer reading, never Phaser's over and out (`src/ui/tooltip.ts`, `docs/PHASER.md` → _The pointer's readings_); a spec waits out the rest on the game's clock.
 
 **Plan:**
 
-1. `src/ui/text.ts`: the five entries stand, `New chronicle` is gone.
+1. `src/ui/text.ts`: the six entries stand, `New chronicle` is gone.
 2. The navbar and the bar stand as one piece both meta screens draw, and the campaign screen stands as a scene drawing them.
 3. `src/ui/launch-page.ts`: the page wears them, centred in the room left, opens on the firsts, and its back key opens the campaign screen.
 4. `src/main.ts`: the campaign screen's scene is in the tower, and every address without `deck` or `continue` boots on it.
@@ -91,5 +93,5 @@ Corner cases decided:
 **Verify:**
 
 - `npm run check`, `npm test`, `npm run lint`.
-- The proof: `npx playwright test e2e/campaign.spec.ts`. It holds: the bare address with no save boots the campaign screen, Campaign sunk and Chronicle in the accent, the bar reading the new campaign's influence; on a planted campaign a won chronicle paid into, the bar reads that campaign's influence, read from the rules; Chronicle opens the launch page, Chronicle sunk there, and the back key opens the campaign screen again; over a chronicle the menu lists Campaign and no New chronicle, and Campaign leaves the chronicle in its save and opens the campaign screen, Continue then opening it as it stands.
+- The proof: `npx playwright test e2e/campaign.spec.ts`. It holds: the bare address with no save boots the campaign screen, Campaign sunk and Chronicle in the accent, the bar reading the new campaign's influence; on a planted campaign a won chronicle paid into, the bar reads that campaign's influence, read from the rules, and the pointer resting on the reading raises its tooltip; Chronicle opens the launch page, Chronicle sunk there, and the back key opens the campaign screen again; over a chronicle the menu lists Campaign and no New chronicle, and Campaign leaves the chronicle in its save and opens the campaign screen, Continue then opening it as it stands.
 - CI proves on the push: `boot`, `continue`, `menu`, `resume`, `victory`, `failed-boot`, `console`.
