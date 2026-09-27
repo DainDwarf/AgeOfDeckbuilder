@@ -348,7 +348,7 @@ export function createTree(
         case 'influence': {
           const middle = lineMiddle(1 + at);
           face.add([
-            scene.add.rectangle(values + 5, middle, DIAMOND, DIAMOND, LOOK.ink).setAngle(45),
+            scene.add.rectangle(values + 5, middle, DIAMOND, DIAMOND, LOOK.influence).setAngle(45),
             addText(scene, values + DIAMOND_TO_NUMBER, middle, String(line.amount), TEXT_STYLE)
               .setOrigin(0, 0.5)
               .setName(named),

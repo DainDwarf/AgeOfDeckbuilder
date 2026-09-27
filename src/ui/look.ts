@@ -40,6 +40,7 @@ export type Look = {
   readonly population: number;
   readonly wellFill: number;
   readonly wellLight: number;
+  readonly influence: number;
   readonly mysteryFill: number;
   readonly mysteryInk: number;
   readonly cardEdge: number;
@@ -85,6 +86,7 @@ export const LOOK: Look = {
   population: 0x6b6b7d,
   wellFill: 0xb4b9c0,
   wellLight: 0xeef0f3,
+  influence: 0xd9a441,
   mysteryFill: 0x5c6068,
   mysteryInk: 0x2a2e34,
   cardEdge: 0x6f757d,

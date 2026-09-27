@@ -72,14 +72,10 @@ function middleOf(column: number): number {
  * Every technology's column: one after the furthest it needs, on the ground of the age whose
  * achievement earns it, and the one that unlocks an age on that age's border whatever it needs.
  */
-function columnsOf(catalogue: Catalogue): Map<string, number> {
+function columnsOf(catalogue: Catalogue, doors: ReadonlyMap<string, string>): Map<string, number> {
   const ageOfTechnology = new Map<string, string>();
   for (const [age, { achievements }] of Object.entries(catalogue.ages)) {
     for (const { technology } of Object.values(achievements)) ageOfTechnology.set(technology, age);
-  }
-  const doors = new Map<string, string>();
-  for (const [id, { unlocks }] of Object.entries(catalogue.technologies)) {
-    if (unlocks.age !== undefined) doors.set(unlocks.age, id);
   }
   const opened = new Set(doors.values());
 
@@ -130,7 +126,12 @@ export function layOutTree(
   plateHeight: number,
   room: Room,
 ): Tree {
-  const columns = columnsOf(catalogue);
+  /** The technology that unlocks each age, by the age's id. */
+  const doors = new Map<string, string>();
+  for (const [id, { unlocks }] of Object.entries(catalogue.technologies)) {
+    if (unlocks.age !== undefined) doors.set(unlocks.age, id);
+  }
+  const columns = columnsOf(catalogue, doors);
   const stateOf = (id: string): PlateState => {
     if (unlocked.includes(id)) return 'unlocked';
     return withinReach(catalogue, id, unlocked) ? 'within-reach' : 'mystery';
@@ -193,11 +194,9 @@ export function layOutTree(
   const far = middleOf(last) + LEAD;
   const starts = ages.map((age, at) => {
     if (at === 0) return 0;
-    const door = Object.entries(catalogue.technologies).find(
-      ([, { unlocks }]) => unlocks.age === age,
-    );
+    const door = doors.get(age);
     if (door === undefined) throw new Error(`no technology unlocks the age ${age}`);
-    return middleOf(plateOf(door[0]).column);
+    return middleOf(plateOf(door).column);
   });
   const grounds = ages.map((age, at) => ({
     age,

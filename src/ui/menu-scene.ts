@@ -141,10 +141,6 @@ export function closeMenu(scene: Phaser.Scene): void {
   scene.game.scene.getScene<MenuScene>('menu').close();
 }
 
-/**
- * The menu taken down for the chronicle screen now rising, and its scrim announced while that screen
- * stands, for whatever that screen cannot swallow.
- */
 export function resetMenu(scene: Phaser.Scene, covering: (covered: boolean) => void): void {
   closeMenu(scene);
   whileUp(scene, scene.game.events, COVERED, covering);

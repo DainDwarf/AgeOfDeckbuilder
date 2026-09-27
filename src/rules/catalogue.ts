@@ -444,8 +444,10 @@ function ageHeld(content: Catalogue, id: string, { schedule, camp, regions }: Ag
 function treeHeld(content: Catalogue): void {
   const ownedBy = new Map<string, string>();
   const earnedBy = new Map<string, string>();
+  /** Where the age of the achievement that earns a technology stands in the order of history. */
+  const earnedIn = new Map<string, number>();
   const ages = Object.entries(content.ages);
-  for (const [age, { achievements }] of ages) {
+  for (const [at, [age, { achievements }]] of ages.entries()) {
     for (const [id, { need, influence, technology }] of Object.entries(achievements)) {
       const owner = ownedBy.get(id);
       if (owner !== undefined) refuse(content, `the ages ${owner} and ${age} both own ${id}`);
@@ -462,6 +464,7 @@ function treeHeld(content: Catalogue): void {
         refuse(content, `the technology ${technology} is earned by both ${earner} and ${id}`);
       }
       earnedBy.set(technology, id);
+      earnedIn.set(technology, at);
     }
   }
 
@@ -502,6 +505,29 @@ function treeHeld(content: Catalogue): void {
     settled.add(id);
   };
   for (const id of Object.keys(content.technologies)) needed(id, []);
+
+  const placeOf = (id: string): number => {
+    const at = earnedIn.get(id);
+    if (at === undefined) refuse(content, `the technology ${id} is earned by no achievement`);
+    return at;
+  };
+  for (const [id, { needs, unlocks }] of Object.entries(content.technologies)) {
+    const own = placeOf(id);
+    const [age] = ages[own];
+    for (const need of needs) {
+      const later = placeOf(need);
+      if (later <= own) continue;
+      refuse(
+        content,
+        `the technology ${id} of the age ${age} needs ${need} of the later age ${ages[later][0]}`,
+      );
+    }
+    if (unlocks.age === undefined || unlocks.age === ages[own + 1]?.[0]) continue;
+    refuse(
+      content,
+      `the technology ${id} of the age ${age} unlocks the age ${unlocks.age}, not the one after it`,
+    );
+  }
 }
 
 function freeWhateverTheChronicle(cost: Answer['cost']): boolean {

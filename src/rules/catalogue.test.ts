@@ -35,6 +35,7 @@ import {
   REGIONS,
   SLICES,
   victoryOf,
+  WARY,
 } from './fixtures';
 import { discTiles, generateMap, tileKey } from './map';
 import type { Region } from './map-kinds';
@@ -168,6 +169,33 @@ test('a catalogue whose age but the first is unlocked by no technology or by two
   );
   expect(() => catalogued(unlocking(AGE))).toThrow(
     `fixture: the first age ${AGE} is unlocked by ${GRANARY}`,
+  );
+});
+
+test('a catalogue whose technology needs one earned in a later age is refused, and one needing a technology of an earlier age is not', () => {
+  const { technology: later } = achievementOf(CATALOGUE, QUIET, victoryOf(QUIET));
+  const past = technologyOf(CATALOGUE, later);
+
+  expect(() =>
+    catalogued(researched({ [GRANARY]: { ...GRANARY_DECLARED, needs: [later] } })),
+  ).toThrow(
+    `fixture: the technology ${GRANARY} of the age ${AGE} needs ${later} of the later age ${QUIET}`,
+  );
+  expect(() => catalogued(researched({ [later]: { ...past, needs: [GRANARY] } }))).not.toThrow();
+});
+
+test('a catalogue whose technology unlocks an age other than the one right after its own is refused', () => {
+  const { technology: first } = achievementOf(CATALOGUE, AGE, victoryOf(AGE));
+  const { technology: second } = achievementOf(CATALOGUE, QUIET, victoryOf(QUIET));
+  expect(technologyOf(CATALOGUE, first).unlocks.age).toBe(QUIET);
+  expect(technologyOf(CATALOGUE, second).unlocks.age).toBe(WARY);
+  const swapped = researched({
+    [first]: { ...technologyOf(CATALOGUE, first), unlocks: { cards: {}, age: WARY } },
+    [second]: { ...technologyOf(CATALOGUE, second), unlocks: { cards: {}, age: QUIET } },
+  });
+
+  expect(() => catalogued(swapped)).toThrow(
+    `fixture: the technology ${first} of the age ${AGE} unlocks the age ${WARY}, not the one after it`,
   );
 });
 
