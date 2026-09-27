@@ -108,6 +108,7 @@ function cityOn(
     drawPile: [],
     hand: [],
     discardPile: [],
+    achievements: [],
   });
 }
 

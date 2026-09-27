@@ -1528,6 +1528,7 @@ export function createMapView(
       case 'dealt':
       case 'taken':
       case 'ended':
+      case 'reached':
       case 'runtime-error':
         return undefined;
     }

@@ -1,14 +1,26 @@
 import { expect, test } from 'vitest';
 import { catalogued } from './catalogue';
 import { apply, type Command, outcome } from './chronicle';
-import { AGE, CATALOGUE, DECK, DECK_ID, endedTurn, FROST, REGION, settledLaunch } from './fixtures';
+import {
+  AGE,
+  CATALOGUE,
+  DECK,
+  DECK_ID,
+  endedTurn,
+  FROST,
+  HOARD,
+  QUIET,
+  REGION,
+  settledLaunch,
+  victoryOf,
+} from './fixtures';
 import { type ChronicleSave, readSave, writeSave } from './save';
 import { laid } from './schedule';
 import type { Chronicle, Counters } from './state';
 
 /** A chronicle three turns in, saved with what it was launched on. */
 function saved(): ChronicleSave {
-  let chronicle = settledLaunch(CATALOGUE, AGE, REGION, 4242, DECK);
+  let chronicle = settledLaunch(CATALOGUE, AGE, REGION, 4242, DECK, []);
   for (let turn = 1; turn < 3; turn++) chronicle = endedTurn(chronicle);
   return { chronicle, region: REGION, deck: DECK_ID };
 }
@@ -133,6 +145,28 @@ test('a save whose chronicle carries no city section, or one naming a building o
   expect(reading({ ...section, card: 'PH_Unheld' })).toThrow('fixture: no card is named PH_Unheld');
   expect(reading({ ...section, sight: 1.5 })).toThrow(
     "fixture: the save's chronicle.citySection.sight is not an integer",
+  );
+});
+
+test('a save whose chronicle carries no achievements, one its age does not own, or one reached neither true nor false, is refused', () => {
+  const save = saved();
+  const reading = (achievements: object | undefined): (() => unknown) => {
+    const text = tampered(save, (chronicle) => ({ ...chronicle, achievements }));
+    return () => readSave(CATALOGUE, text);
+  };
+  const [first, ...rest] = save.chronicle.achievements;
+
+  expect(save.chronicle.age).toBe(AGE);
+  expect(first.id).toBe(HOARD);
+  expect(reading(undefined)).toThrow("fixture: the save's chronicle.achievements is not a list");
+  expect(reading([{ ...first, id: 'PH_Unheld' }, ...rest])).toThrow(
+    'fixture: no achievement is named PH_Unheld',
+  );
+  expect(reading([{ ...first, id: victoryOf(QUIET) }, ...rest])).toThrow(
+    `fixture: no achievement is named ${victoryOf(QUIET)}`,
+  );
+  expect(reading([{ ...first, reached: 1 }, ...rest])).toThrow(
+    "fixture: the save's chronicle.achievements[0].reached is not true or false",
   );
 });
 

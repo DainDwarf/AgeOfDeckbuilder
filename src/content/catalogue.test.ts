@@ -57,7 +57,7 @@ function regionIn(age: string): string {
 
 /** A chronicle launched and settled in the age, on its first region and the catalogue's first deck. */
 function settledIn(age: string): Chronicle {
-  return settledLaunch(CATALOGUE, age, regionIn(age), 1, deckOf(CATALOGUE, DECK));
+  return settledLaunch(CATALOGUE, age, regionIn(age), 1, deckOf(CATALOGUE, DECK), []);
 }
 
 /** What a rules entry names, laid out as a run on a measure of one to the character. */
@@ -155,7 +155,7 @@ test('every rules entry of the catalogue lays out, and every name on it resolves
 test('every card of the catalogue answers its refusal, and its admitted tiles, on a chronicle begun in each age on each deck', () => {
   for (const age of AGES) {
     for (const deck of Object.keys(CATALOGUE.decks)) {
-      const chronicle = launched(CATALOGUE, age, regionIn(age), 1, deckOf(CATALOGUE, deck));
+      const chronicle = launched(CATALOGUE, age, regionIn(age), 1, deckOf(CATALOGUE, deck), []);
       for (const id of Object.keys(CATALOGUE.cards)) {
         expect(() => refusalOf(CATALOGUE, chronicle, id)).not.toThrow();
         const card = aimOf(cardOf(CATALOGUE, id));
@@ -176,7 +176,14 @@ test('every card of the catalogue answers its refusal, and its admitted tiles, o
 test('each deck of the catalogue settles its city on the centre tile and reaches turn 1 in each age', () => {
   for (const age of AGES) {
     for (const deck of Object.keys(CATALOGUE.decks)) {
-      const chronicle = settledLaunch(CATALOGUE, age, regionIn(age), 1, deckOf(CATALOGUE, deck));
+      const chronicle = settledLaunch(
+        CATALOGUE,
+        age,
+        regionIn(age),
+        1,
+        deckOf(CATALOGUE, deck),
+        [],
+      );
 
       expect(chronicle.turn).toBe(1);
       expect(chronicle.city).toBeDefined();
@@ -255,6 +262,15 @@ test('every answer of every event of an age’s schedule costs, lands and reads 
     expect(() => capstone.lands(CATALOGUE, chronicle)).not.toThrow();
     expect(() => capstone.continues?.(CATALOGUE, chronicle)).not.toThrow();
     expect(capstone.passes(CATALOGUE, chronicle)).toBe(false);
+  }
+});
+
+test('every achievement of an age answers its count as an integer, on a chronicle launched and settled in that age', () => {
+  for (const age of AGES) {
+    const chronicle = settledIn(age);
+    for (const achievement of Object.values(ageOf(CATALOGUE, age).achievements)) {
+      expect(Number.isInteger(achievement.count(CATALOGUE, chronicle))).toBe(true);
+    }
   }
 });
 

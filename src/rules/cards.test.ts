@@ -372,7 +372,7 @@ test('the refresh instant is refused on a unit whose move points are full, its a
 
 test('a chronicle begun on a deck of the catalogue holds that deck’s cards and opens turn 1 on a full hand of them', () => {
   const deck = deckOf(CATALOGUE, DECK_ID);
-  const chronicle = settledLaunch(CATALOGUE, AGE, REGION, 2026, deck);
+  const chronicle = settledLaunch(CATALOGUE, AGE, REGION, 2026, deck, []);
 
   expect(chronicle.hand).toHaveLength(5);
   expect(everyCard(chronicle)).toEqual([...deck.cards].sort());

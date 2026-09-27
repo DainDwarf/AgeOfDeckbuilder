@@ -1,6 +1,7 @@
 import { aimOf, leavesChronicle, refuses, struck } from './cards';
 import {
   type AimedCard,
+  achievementOf,
   ageOf,
   type Catalogue,
   capstoneOf,
@@ -10,6 +11,7 @@ import {
   type Deck,
   enemyScript,
   entered,
+  technologyOf,
 } from './catalogue';
 import { assign, type CityCommand, claim, grow, income, reassign } from './city';
 import { campUnit, enteredAround } from './enemies';
@@ -48,6 +50,7 @@ import {
   type Block,
   type CardId,
   type Chronicle,
+  type ChronicleAchievement,
   type ChronicleCard,
   type Cost,
   costsOf,
@@ -122,6 +125,7 @@ export function beginChronicle(
   deck: Deck,
   map: HexMap,
   timeline: Timeline,
+  unlocked: readonly string[],
 ): Chronicle {
   const { camp } = ageOf(catalogue, age);
   for (const coord of map.centre) {
@@ -155,6 +159,7 @@ export function beginChronicle(
     drawPile: shuffled.items,
     hand: [deck.city.card, ...deck.settle].map(made),
     discardPile: [],
+    achievements: withinReach(catalogue, age, unlocked),
   };
   let guarded = begun;
   for (const { q, r, building } of map.tiles) {
@@ -169,6 +174,25 @@ export function beginChronicle(
 }
 
 /**
+ * The achievements of the age a chronicle launched with these technologies unlocked can reach, none
+ * reached: every one whose technology is not unlocked and needs none that is not. A technology the
+ * catalogue does not hold is refused.
+ */
+function withinReach(
+  catalogue: Catalogue,
+  age: string,
+  unlocked: readonly string[],
+): ChronicleAchievement[] {
+  for (const id of unlocked) technologyOf(catalogue, id);
+  return Object.entries(ageOf(catalogue, age).achievements)
+    .filter(([, { technology }]) => {
+      if (unlocked.includes(technology)) return false;
+      return technologyOf(catalogue, technology).needs.every((need) => unlocked.includes(need));
+    })
+    .map(([id]) => ({ id, reached: false }));
+}
+
+/**
  * A chronicle launched in an age, on one of its regions: the seed deals the region's map, the
  * timeline rolled from the age's schedule takes the generator the map left as its own, and the
  * opening takes both from the same seed. The one place a map, a timeline and a chronicle share one.
@@ -179,11 +203,12 @@ export function launched(
   region: string,
   seed: number,
   deck: Deck,
+  unlocked: readonly string[],
 ): Chronicle {
   const map = generateMap(catalogue, ageOf(catalogue, age), region, seedRng(seed));
   const timeline = timelineOf(catalogue, age, map.rng);
   const { tiles, rivers, centre } = map;
-  return beginChronicle(catalogue, age, seed, deck, { tiles, rivers, centre }, timeline);
+  return beginChronicle(catalogue, age, seed, deck, { tiles, rivers, centre }, timeline, unlocked);
 }
 
 /**
@@ -194,17 +219,15 @@ export function launched(
 export function apply(catalogue: Catalogue, chronicle: Chronicle, command: Command): Stage[] {
   checkContent(catalogue, chronicle);
   const stages = resolved(catalogue, chronicle, command);
-  return charting(catalogue, chronicle, passedOn(catalogue, chronicle, stages));
+  return charting(catalogue, chronicle, read(catalogue, chronicle, stages));
 }
 
 /**
- * The stages a command resolves as, cut at the first change after which the capstone's condition
- * holds: the `ended` of the victory right after it, and nothing that was resolved after it. The
- * condition is read from the capstone's landing on — after the `capstone-landing` group, and after
- * every change from then on — and never on a chronicle that has ended or whose city falls on it, the
- * fall being read first.
+ * The stages a command resolves as, every change, an `ended` among them, followed by a `reached` for
+ * each achievement its chronicle meets, and cut at the first the capstone passes on, the victory's
+ * `ended` after it.
  */
-function passedOn(catalogue: Catalogue, started: Chronicle, stages: readonly Stage[]): Stage[] {
+function read(catalogue: Catalogue, started: Chronicle, stages: readonly Stage[]): Stage[] {
   if (started.ending !== undefined) return [...stages];
   const { id, turn } = started.timeline.capstone;
   const { passes } = capstoneOf(catalogue, id);
@@ -214,24 +237,67 @@ function passedOn(catalogue: Catalogue, started: Chronicle, stages: readonly Sta
   const passesNow = (chronicle: Chronicle): boolean =>
     landed && chronicle.ending === undefined && !falls(chronicle) && passes(catalogue, chronicle);
 
-  const cut = (held: readonly Stage[]): Stage[] | undefined => {
-    for (const [at, stage] of held.entries()) {
+  // Every stage was built off the chronicle the command started on, so the record a `reached` makes
+  // is carried onto every stage after it here.
+  let record = started.achievements;
+  const carried = (chronicle: Chronicle): Chronicle =>
+    chronicle.achievements === record ? chronicle : { ...chronicle, achievements: record };
+  const reachedOn = (chronicle: Chronicle): Change[] => {
+    const raised: Change[] = [];
+    let standing = chronicle;
+    for (const [at, { id: achievement, reached }] of standing.achievements.entries()) {
+      if (reached) continue;
+      const { count, need } = achievementOf(catalogue, standing.age, achievement);
+      if (count(catalogue, standing) < need) continue;
+      record = standing.achievements.map((held, other) =>
+        other === at ? { ...held, reached: true } : held,
+      );
+      standing = { ...standing, achievements: record };
+      raised.push(change('reached', standing));
+    }
+    return raised;
+  };
+  const ended = (chronicle: Chronicle): Stage[] => {
+    const victorious = victory(chronicle);
+    return [victorious, ...reachedOn(victorious.chronicle)];
+  };
+
+  let over = false;
+  const walk = (held: readonly Stage[]): Stage[] => {
+    const walked: Stage[] = [];
+    for (const stage of held) {
       switch (stage.kind) {
-        case 'change':
-          if (passesNow(stage.chronicle))
-            return [...held.slice(0, at + 1), victory(stage.chronicle)];
-          break;
-        case 'group': {
-          const inner = cut(stage.stages);
-          if (inner !== undefined) {
-            const last = inner[inner.length - 1].chronicle;
-            return [...held.slice(0, at), { ...stage, stages: inner, chronicle: last }];
+        case 'change': {
+          const own = carried(stage.chronicle);
+          walked.push(own === stage.chronicle ? stage : { ...stage, chronicle: own });
+          walked.push(...reachedOn(own));
+          const last = walked[walked.length - 1].chronicle;
+          if (passesNow(last)) {
+            over = true;
+            return [...walked, ...ended(last)];
           }
+          break;
+        }
+        case 'group': {
+          const inner = walk(stage.stages);
+          const trailing = stage.stages[stage.stages.length - 1];
+          const chronicle =
+            over || (trailing !== undefined && trailing.chronicle === stage.chronicle)
+              ? inner[inner.length - 1].chronicle
+              : carried(stage.chronicle);
+          const same =
+            chronicle === stage.chronicle &&
+            inner.length === stage.stages.length &&
+            inner.every((child, at) => child === stage.stages[at]);
+          walked.push(same ? stage : { ...stage, stages: inner, chronicle });
+          if (over) return walked;
           switch (stage.name) {
             case 'capstone-landing':
               landed = true;
-              if (passesNow(stage.chronicle))
-                return [...held.slice(0, at + 1), victory(stage.chronicle)];
+              if (passesNow(chronicle)) {
+                over = true;
+                return [...walked, ...ended(chronicle)];
+              }
               break;
             case 'capstone-continued':
             case 'played':
@@ -254,9 +320,9 @@ function passedOn(catalogue: Catalogue, started: Chronicle, stages: readonly Sta
         }
       }
     }
-    return undefined;
+    return walked;
   };
-  return cut(stages) ?? [...stages];
+  return walk(stages);
 }
 
 /**
@@ -343,6 +409,7 @@ function chartedOn(stage: Change): TileCoords | undefined {
     case 'dealt':
     case 'taken':
     case 'ended':
+    case 'reached':
     case 'runtime-error':
       return undefined;
   }

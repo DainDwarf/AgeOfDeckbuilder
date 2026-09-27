@@ -16,8 +16,9 @@ import type { CardId, Chronicle, DefeatCause } from './state';
  * that pile as it stood before the change — the hand for `discarded` and `left`, the discard pile
  * for `recalled` — and none for a card that came out of no pile. `turn` is the turn ticked,
  * `rolled` the timeline's next due turn rolled, `dealt` a deal dealt behind the ones standing,
- * `taken` the deal standing taken, `ended` the chronicle's ending set, and `runtime-error` a content
- * defect met in play, followed through where nothing could move.
+ * `taken` the deal standing taken, `ended` the chronicle's ending set, `reached` one achievement of the
+ * chronicle's recorded reached, and `runtime-error` a content defect met in play, followed through
+ * where nothing could move.
  */
 export type Change = { readonly kind: 'change'; readonly chronicle: Chronicle } & (
   | { readonly name: PlainChange }
@@ -59,6 +60,7 @@ type PlainChange =
   | 'dealt'
   | 'taken'
   | 'ended'
+  | 'reached'
   | 'runtime-error';
 
 type PlacedChange = 'discarded' | 'recalled' | 'left';
@@ -139,7 +141,7 @@ export function leaf(stage: Stage): boolean {
 /**
  * Stages in the order they were raised, and the chronicle they leave: the last stage's, or the very
  * chronicle the sequence was handed where it raised none, apart from a draw of the generator that
- * raised no stage. Once a stage of it ends the chronicle, nothing follows it.
+ * raised no stage. Once a stage of it ends the chronicle, only a `reached` follows it.
  */
 export type Sequence<S extends Stage = Stage> = {
   readonly stages: readonly S[];

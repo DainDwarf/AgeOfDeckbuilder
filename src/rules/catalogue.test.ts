@@ -2,6 +2,7 @@ import { expect, test } from 'vitest';
 import {
   type Age,
   type Answer,
+  achievementOf,
   ageOf,
   type Camp,
   type Catalogue,
@@ -12,21 +13,28 @@ import {
   merged,
   type Schedule,
   type Slice,
+  type Technology,
+  technologyOf,
 } from './catalogue';
 import { apply, beginChronicle, launched } from './chronicle';
 import {
   AGE,
   CAMP,
   CATALOGUE,
+  CENSUS,
   CITY,
   CLEARING,
   cityOf,
   DECK,
   field,
+  GRANARY,
+  HOARD,
   NO_DEALS,
+  QUIET,
   REGION,
   REGIONS,
   SLICES,
+  victoryOf,
 } from './fixtures';
 import { discTiles, generateMap, tileKey } from './map';
 import type { Region } from './map-kinds';
@@ -57,6 +65,110 @@ function encamped(camp: Partial<Camp>): Catalogue {
 function regioned(regions: Readonly<Record<string, Region>>): Partial<Catalogue> {
   return { ages: { ...CATALOGUE.ages, [AGE]: { ...ageOf(CATALOGUE, AGE), regions } } };
 }
+
+/** The fixture's content with its first age's achievements laid over as the test lays them. */
+function achieved(achievements: Age['achievements']): Catalogue {
+  return aged({ achievements: { ...ageOf(CATALOGUE, AGE).achievements, ...achievements } });
+}
+
+/** The fixture's content with its technologies laid over as the test lays them. */
+function researched(technologies: Catalogue['technologies']): Catalogue {
+  return changed({ technologies: { ...CATALOGUE.technologies, ...technologies } });
+}
+
+const HOARD_DECLARED = achievementOf(CATALOGUE, AGE, HOARD);
+
+const GRANARY_DECLARED = technologyOf(CATALOGUE, GRANARY);
+
+test('a catalogue whose achievement needs a count below one, or pays influence below nought, is refused', () => {
+  for (const off of [{ need: 0 }, { need: 1.5 }, { influence: -1 }]) {
+    expect(() => catalogued(achieved({ [HOARD]: { ...HOARD_DECLARED, ...off } }))).toThrow(
+      /^fixture: /,
+    );
+  }
+  expect(() =>
+    catalogued(achieved({ [HOARD]: { ...HOARD_DECLARED, influence: 0 } })),
+  ).not.toThrow();
+});
+
+test('a catalogue whose achievement earns a technology it does not hold is refused', () => {
+  const content = achieved({ [HOARD]: { ...HOARD_DECLARED, technology: 'PH_Unheld' } });
+
+  expect(() => catalogued(content)).toThrow('fixture: no technology is named PH_Unheld');
+});
+
+test('a catalogue where two ages own one achievement is refused', () => {
+  const quiet = ageOf(CATALOGUE, QUIET);
+  const content = changed({
+    ages: {
+      ...CATALOGUE.ages,
+      [QUIET]: { ...quiet, achievements: { ...quiet.achievements, [HOARD]: HOARD_DECLARED } },
+    },
+  });
+
+  expect(() => catalogued(content)).toThrow(
+    `fixture: the ages ${AGE} and ${QUIET} both own ${HOARD}`,
+  );
+});
+
+test('a catalogue whose technology is earned by no achievement, or by two, is refused', () => {
+  const unearned = researched({ PH_Unearned: { needs: [], unlocks: { cards: {} } } });
+  const twice = achieved({ PH_Twice: HOARD_DECLARED });
+
+  expect(() => catalogued(unearned)).toThrow(
+    'fixture: the technology PH_Unearned is earned by no achievement',
+  );
+  expect(() => catalogued(twice)).toThrow(
+    `fixture: the technology ${GRANARY} is earned by both ${HOARD} and PH_Twice`,
+  );
+});
+
+test('a catalogue whose technology needs one it does not hold, or needs itself through the others, is refused', () => {
+  const needing = (needs: readonly string[]): Catalogue =>
+    researched({ [GRANARY]: { ...GRANARY_DECLARED, needs } });
+
+  expect(technologyOf(CATALOGUE, CENSUS).needs).toEqual([GRANARY]);
+  expect(() => catalogued(needing(['PH_Unheld']))).toThrow(
+    'fixture: no technology is named PH_Unheld',
+  );
+  expect(() => catalogued(needing([GRANARY]))).toThrow(
+    `fixture: the technology ${GRANARY} needs itself: ${GRANARY} needs ${GRANARY}`,
+  );
+  expect(() => catalogued(needing([CENSUS]))).toThrow(
+    `fixture: the technology ${GRANARY} needs itself: ${GRANARY} needs ${CENSUS} needs ${GRANARY}`,
+  );
+});
+
+test('a catalogue whose technology unlocks a card it does not hold, a card by fewer than one copy, or an age it does not hold, is refused', () => {
+  const unlocking: Technology['unlocks'][] = [
+    { cards: { PH_Scout: 2 } },
+    { cards: { PH_Harvest: 0 } },
+    { cards: {}, age: 'PH_Unheld' },
+  ];
+  for (const unlocks of unlocking) {
+    const content = researched({ [GRANARY]: { ...GRANARY_DECLARED, unlocks } });
+
+    expect(() => catalogued(content)).toThrow(/^fixture: /);
+  }
+});
+
+test('a catalogue whose age but the first is unlocked by no technology or by two, or whose first age is unlocked by one, is refused', () => {
+  const { technology } = achievementOf(CATALOGUE, AGE, victoryOf(AGE));
+  const past = technologyOf(CATALOGUE, technology);
+  const unlocking = (age: string): Catalogue =>
+    researched({ [GRANARY]: { ...GRANARY_DECLARED, unlocks: { cards: {}, age } } });
+
+  expect(past.unlocks.age).toBe(QUIET);
+  expect(() =>
+    catalogued(researched({ [technology]: { ...past, unlocks: { cards: {} } } })),
+  ).toThrow(`fixture: the age ${QUIET} is unlocked by nothing`);
+  expect(() => catalogued(unlocking(QUIET))).toThrow(
+    `fixture: the age ${QUIET} is unlocked by both ${GRANARY} and ${technology}`,
+  );
+  expect(() => catalogued(unlocking(AGE))).toThrow(
+    `fixture: the first age ${AGE} is unlocked by ${GRANARY}`,
+  );
+});
 
 test('a catalogue whose camp enters a unit kind it does not hold is refused', () => {
   const content = encamped({ unit: 'PH_Scout' });
@@ -415,10 +527,7 @@ test('the merge refuses an id two ages bring to one table and an age two slices 
   expect(() => merged(version, [...SLICES, { ...later, id: AGE, brings: {} }])).toThrow(
     /^fixture: /,
   );
-  expect(Object.keys(merged(version, [...SLICES, { ...later, brings: {} }]).ages)).toEqual([
-    ...SLICES.map(({ id }) => id),
-    'PH_Later',
-  ]);
+  expect(Object.keys(merged(version, SLICES).ages)).toEqual(SLICES.map(({ id }) => id));
 });
 
 test('a map of a region the age does not hold is refused', () => {
@@ -431,7 +540,7 @@ test('the opening on a map whose centre part names a tile the map does not hold 
   const holed = field(2).filter((tile) => tileKey(tile) !== tileKey(CITY));
   const map = { tiles: holed, rivers: [], centre: [CITY] };
 
-  expect(() => beginChronicle(CATALOGUE, AGE, 1, DECK, map, NO_DEALS)).toThrow(/^fixture: /);
+  expect(() => beginChronicle(CATALOGUE, AGE, 1, DECK, map, NO_DEALS, [])).toThrow(/^fixture: /);
 });
 
 test('a catalogue whose region’s rivers rise in a biome it does not hold is refused', () => {
@@ -445,7 +554,7 @@ test('a catalogue whose region’s rivers rise in a biome it does not hold is re
 
 test('a chronicle begun on another version of the content is refused by apply', () => {
   const other = catalogued(changed({ version: 'other' }));
-  const begun = launched(other, AGE, REGION, 1234, DECK);
+  const begun = launched(other, AGE, REGION, 1234, DECK, []);
 
   expect(() => apply(CATALOGUE, begun, { type: 'end-turn' })).toThrow(/^fixture: /);
   expect(apply(other, begun, { type: 'end-turn' }).length).toBeGreaterThan(0);

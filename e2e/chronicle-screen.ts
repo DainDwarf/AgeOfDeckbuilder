@@ -83,6 +83,7 @@ export function launchedOn(seed: number, deck?: Deck): Chronicle {
     firsts.region,
     seed,
     deck ?? deckOf(CATALOGUE, firsts.deck),
+    [],
   );
 }
 

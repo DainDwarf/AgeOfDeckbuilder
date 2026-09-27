@@ -49,6 +49,9 @@ export type Deal =
   | { readonly of: 'event'; readonly event: string }
   | { readonly of: 'camp'; readonly rewards: readonly CardId[] };
 
+/** An achievement a chronicle can reach, by its id among its age's, and whether it is reached. */
+export type ChronicleAchievement = { readonly id: string; readonly reached: boolean };
+
 /** What a snapshot keeps of the unit that stood on the tile: what its mark is drawn from. */
 export type SnapshotUnit = { readonly type: string; readonly faction: Faction };
 
@@ -107,6 +110,11 @@ export type Chronicle = {
   readonly drawPile: ChronicleCard[];
   readonly hand: ChronicleCard[];
   readonly discardPile: ChronicleCard[];
+  /**
+   * The achievements the chronicle can reach, named at the launch in the order its age declares
+   * them: no other is read on it.
+   */
+  readonly achievements: readonly ChronicleAchievement[];
   /** How the chronicle ended, and nothing at all while it runs: an ended one takes no command. */
   readonly ending?: Ending;
 };

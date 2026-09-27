@@ -177,11 +177,32 @@ export type Camp = {
   readonly raidCampOdds: number;
 };
 
-/** What an age owns: its schedule, its camp, and its regions by key. */
+/**
+ * An achievement: its count on the chronicle, read toward its need, the technology it earns, and the
+ * influence it pays.
+ */
+export type Achievement = {
+  readonly count: (catalogue: Catalogue, chronicle: Chronicle) => number;
+  readonly need: number;
+  readonly technology: string;
+  readonly influence: number;
+};
+
+/**
+ * A technology: the technologies it needs, and what it unlocks — cards, each with the copies that
+ * enter the collection, and at most one age.
+ */
+export type Technology = {
+  readonly needs: readonly string[];
+  readonly unlocks: { readonly cards: Readonly<Record<string, number>>; readonly age?: string };
+};
+
+/** What an age owns: its schedule, its camp, its regions by key, and its achievements by key in order. */
 export type Age = {
   readonly schedule: Schedule;
   readonly camp: Camp;
   readonly regions: Readonly<Record<string, Region>>;
+  readonly achievements: Readonly<Record<string, Achievement>>;
 };
 
 /**
@@ -195,6 +216,7 @@ export type Catalogue = MapContent & {
   readonly decks: Readonly<Record<string, Deck>>;
   readonly events: Readonly<Record<string, ScheduledEvent>>;
   readonly capstones: Readonly<Record<string, Capstone>>;
+  readonly technologies: Readonly<Record<string, Technology>>;
   readonly ages: Readonly<Record<string, Age>>;
 };
 
@@ -245,6 +267,7 @@ export function merged(version: string, slices: readonly Slice[]): Catalogue {
     decks: union('decks'),
     events: union('events'),
     capstones: union('capstones'),
+    technologies: union('technologies'),
     terrains: union('terrains'),
     biomes: union('biomes'),
     buildings: union('buildings'),
@@ -299,6 +322,7 @@ export function catalogued(content: Catalogue): Catalogue {
   const ages = Object.entries(content.ages);
   if (ages.length === 0) refuse(content, 'no age is held');
   for (const [id, age] of ages) ageHeld(content, id, age);
+  treeHeld(content);
   for (const [id, deck] of Object.entries(content.decks)) {
     const { city } = deck;
     buildingKind(content, city.building);
@@ -421,6 +445,70 @@ function ageHeld(content: Catalogue, id: string, { schedule, camp, regions }: Ag
   }
 }
 
+/** The technology tree, checked against the achievements every age owns. */
+function treeHeld(content: Catalogue): void {
+  const ownedBy = new Map<string, string>();
+  const earnedBy = new Map<string, string>();
+  const ages = Object.entries(content.ages);
+  for (const [age, { achievements }] of ages) {
+    for (const [id, { need, influence, technology }] of Object.entries(achievements)) {
+      const owner = ownedBy.get(id);
+      if (owner !== undefined) refuse(content, `the ages ${owner} and ${age} both own ${id}`);
+      ownedBy.set(id, age);
+      if (!Number.isInteger(need) || need < 1) {
+        refuse(content, `the achievement ${id} needs a count of ${need}`);
+      }
+      if (!Number.isInteger(influence) || influence < 0) {
+        refuse(content, `the achievement ${id} pays ${influence} influence`);
+      }
+      technologyOf(content, technology);
+      const earner = earnedBy.get(technology);
+      if (earner !== undefined) {
+        refuse(content, `the technology ${technology} is earned by both ${earner} and ${id}`);
+      }
+      earnedBy.set(technology, id);
+    }
+  }
+
+  const unlockedBy = new Map<string, string>();
+  for (const [id, { needs, unlocks }] of Object.entries(content.technologies)) {
+    if (!earnedBy.has(id)) refuse(content, `the technology ${id} is earned by no achievement`);
+    for (const need of needs) technologyOf(content, need);
+    for (const [card, copies] of Object.entries(unlocks.cards)) {
+      cardOf(content, card);
+      if (!Number.isInteger(copies) || copies < 1) {
+        refuse(content, `the technology ${id} unlocks ${copies} copies of ${card}`);
+      }
+    }
+    if (unlocks.age === undefined) continue;
+    ageOf(content, unlocks.age);
+    const other = unlockedBy.get(unlocks.age);
+    if (other !== undefined) {
+      refuse(content, `the age ${unlocks.age} is unlocked by both ${other} and ${id}`);
+    }
+    unlockedBy.set(unlocks.age, id);
+  }
+  for (const [at, [age]] of ages.entries()) {
+    const unlocker = unlockedBy.get(age);
+    if (at === 0 && unlocker !== undefined) {
+      refuse(content, `the first age ${age} is unlocked by ${unlocker}`);
+    }
+    if (at > 0 && unlocker === undefined) refuse(content, `the age ${age} is unlocked by nothing`);
+  }
+
+  const settled = new Set<string>();
+  const needed = (id: string, path: readonly string[]): void => {
+    if (settled.has(id)) return;
+    if (path.includes(id)) {
+      const ring = [...path.slice(path.indexOf(id)), id].join(' needs ');
+      refuse(content, `the technology ${id} needs itself: ${ring}`);
+    }
+    for (const need of technologyOf(content, id).needs) needed(need, [...path, id]);
+    settled.add(id);
+  };
+  for (const id of Object.keys(content.technologies)) needed(id, []);
+}
+
 function freeWhateverTheChronicle(cost: Answer['cost']): boolean {
   switch (typeof cost) {
     case 'function':
@@ -489,6 +577,16 @@ export function capstoneOf(catalogue: Catalogue, id: string): Capstone {
 /** What the age an id names owns; an age the catalogue does not hold is refused. */
 export function ageOf(catalogue: Catalogue, id: string): Age {
   return entryOf(catalogue, catalogue.ages, id, 'age');
+}
+
+/** The technology an id names; a technology the catalogue does not hold is refused. */
+export function technologyOf(catalogue: Catalogue, id: string): Technology {
+  return entryOf(catalogue, catalogue.technologies, id, 'technology');
+}
+
+/** The achievement an id names among an age's; one the age does not own is refused. */
+export function achievementOf(catalogue: Catalogue, age: string, id: string): Achievement {
+  return entryOf(catalogue, ageOf(catalogue, age).achievements, id, 'achievement');
 }
 
 /** A chronicle begun on any other version of the content than this catalogue's is refused. */

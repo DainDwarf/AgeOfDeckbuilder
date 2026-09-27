@@ -106,7 +106,7 @@ export class ChronicleScene extends Phaser.Scene implements OpensChronicles {
   private begin(seed: number | undefined): Chronicle {
     const { age, region, deck } = this.choices;
     const drawn = seed ?? (Math.random() * 2 ** 32) | 0;
-    const chronicle = launched(CATALOGUE, age, region, drawn, deckOf(CATALOGUE, deck));
+    const chronicle = launched(CATALOGUE, age, region, drawn, deckOf(CATALOGUE, deck), []);
     keepChronicle(this.choices, chronicle);
     return chronicle;
   }

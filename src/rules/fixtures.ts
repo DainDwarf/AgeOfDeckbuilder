@@ -351,8 +351,8 @@ export const DECK_ID = 'deck';
 /** The city section of the fixture's deck, and of every chronicle the fixture builds directly. */
 const CITY_SECTION: CitySection = { building: 'PH_City', sight: 2, idle: 2, card: 'PH_Settle' };
 
-/** What the fixture's first age brings to the tables every age shares. */
-const TABLES: Tables = {
+/** What the fixture's first age brings to the tables every age shares, its technologies aside. */
+const TABLES: Omit<Tables, 'technologies'> = {
   units: {
     PH_Worker: {
       type: 'PH_Worker',
@@ -755,19 +755,98 @@ const SCHEDULES: Readonly<Record<string, Schedule>> = {
   ),
 };
 
-/** Every fixture age, each owning its own schedule over the camp and the regions handed in. */
+/** The first fixture age's achievement the food stock reaches, earning `GRANARY`. */
+export const HOARD = 'PH_Hoard';
+
+/** The food stock that reaches `HOARD`. */
+export const HOARD_NEED = 20;
+
+/** The first fixture age's achievement the population reaches, earning `CENSUS`. */
+export const CROWD = 'PH_Crowd';
+
+/** The population that reaches `CROWD`. */
+export const CROWD_NEED = 6;
+
+/** The technology `HOARD` earns: it needs none, and unlocks two copies of a card. */
+export const GRANARY = 'PH_Granary';
+
+/** The technology `CROWD` earns: it needs `GRANARY`. */
+export const CENSUS = 'PH_Census';
+
+/** The achievement a fixture age's victory is. */
+export function victoryOf(age: string): string {
+  return `PH_Victory_${age}`;
+}
+
+/** The technology a fixture age's victory earns: it unlocks the next age of the table, if any. */
+function pastOf(age: string): string {
+  return `PH_Past_${age}`;
+}
+
+/** The fixture's ages, in the order of the ages table. */
+const AGES = Object.keys(SCHEDULES);
+
+/** The achievements a fixture age owns: its victory, and before it the first age's two others. */
+function achievementsOf(age: string): Age['achievements'] {
+  const victory: Age['achievements'] = {
+    [victoryOf(age)]: {
+      count: (_catalogue, chronicle) => (chronicle.ending?.outcome === 'victory' ? 1 : 0),
+      need: 1,
+      technology: pastOf(age),
+      influence: 2,
+    },
+  };
+  if (age !== AGE) return victory;
+  return {
+    [HOARD]: {
+      count: (_catalogue, chronicle) => chronicle.resources.food,
+      need: HOARD_NEED,
+      technology: GRANARY,
+      influence: 1,
+    },
+    [CROWD]: {
+      count: (_catalogue, chronicle) => chronicle.population,
+      need: CROWD_NEED,
+      technology: CENSUS,
+      influence: 0,
+    },
+    ...victory,
+  };
+}
+
+/** The fixture's technologies: the first age's two, and each age's victory unlocking the next age. */
+const TECHNOLOGIES: Tables['technologies'] = {
+  [GRANARY]: { needs: [], unlocks: { cards: { PH_Harvest: 2 } } },
+  [CENSUS]: { needs: [GRANARY], unlocks: { cards: {} } },
+  ...Object.fromEntries(
+    AGES.map((age, at) => {
+      const next = AGES[at + 1];
+      const unlocks = next === undefined ? { cards: {} } : { cards: {}, age: next };
+      return [pastOf(age), { needs: [], unlocks }];
+    }),
+  ),
+};
+
+/** Every fixture age, each owning its own schedule and achievements over the camp and the regions handed in. */
 export function agesOver(
   camp: Camp,
   regions: Readonly<Record<string, Region>>,
 ): Readonly<Record<string, Age>> {
   return Object.fromEntries(
-    Object.entries(SCHEDULES).map(([id, schedule]) => [id, { schedule, camp, regions }]),
+    Object.entries(SCHEDULES).map(([id, schedule]) => [
+      id,
+      { schedule, camp, regions, achievements: achievementsOf(id) },
+    ]),
   );
 }
 
 /** The fixture's slices, in the order of its ages: the first brings every table, the others nothing. */
 export const SLICES: readonly Slice[] = Object.entries(agesOver(CAMP, REGIONS)).map(
-  ([id, owns], at) => ({ id, owns, brings: at === 0 ? TABLES : {} }),
+  ([id, owns], at) => ({
+    id,
+    owns,
+    brings: at === 0 ? { ...TABLES, technologies: TECHNOLOGIES } : {},
+  }),
 );
 
 /** The content every fixture is played on, its numbers the fixture's own. */
@@ -839,9 +918,9 @@ export type Carrying = Partial<Omit<Chronicle, 'units' | 'nextUnit' | Pile>> & {
 } & Partial<Record<Pile, readonly CardId[]>>;
 
 /**
- * A city on `inside`, tile by tile, with one plain lying outside the border and no cards but the
- * ones the fixture names, made on the fixture's content unless the test hands in its own. Its
- * population stands one on each tile the city holds, and none is idle.
+ * A city on `inside`, tile by tile, with one plain lying outside the border and no cards and no
+ * achievements but the ones the fixture names, made on the fixture's content unless the test hands
+ * in its own. Its population stands one on each tile the city holds, and none is idle.
  */
 export function cityOf(
   inside: Terrain[],
@@ -879,6 +958,7 @@ export function cityOf(
     assigned: [...held],
     units: [],
     nextUnit: 1,
+    achievements: [],
     ...state,
     drawPile: drawPile.map(made),
     hand: hand.map(made),
@@ -936,7 +1016,7 @@ export function opening(
   const centre = tiles
     .filter((tile) => distance(tile, CITY) <= reach)
     .map(({ q, r }) => ({ q, r }));
-  return beginChronicle(CATALOGUE, age, 7, deck, { tiles, rivers: [], centre }, timeline);
+  return beginChronicle(CATALOGUE, age, 7, deck, { tiles, rivers: [], centre }, timeline, []);
 }
 
 /** The chronicle with the first card of its hand played on a tile, refused or not. */
@@ -958,9 +1038,10 @@ export function settledLaunch(
   region: string,
   seed: number,
   deck: Deck,
+  unlocked: readonly string[],
   at: TileCoords = CITY,
 ): Chronicle {
-  const settling = settledOn(launched(catalogue, age, region, seed, deck), at, catalogue);
+  const settling = settledOn(launched(catalogue, age, region, seed, deck, unlocked), at, catalogue);
   if (settling.city === undefined)
     throw new Error(`seed ${seed} settles no city on ${tileKey(at)}`);
   return outcome(apply(catalogue, settling, { type: 'end-turn' }));

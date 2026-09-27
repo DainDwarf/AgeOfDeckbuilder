@@ -1,9 +1,14 @@
 import { expect, test } from 'vitest';
+import { achievementOf, ageOf, type Catalogue } from './catalogue';
 import { apply, type Command, launched, outcome } from './chronicle';
 import {
   AGE,
+  builtOn,
   CATALOGUE,
+  type Carrying,
   CITY,
+  CROWD,
+  CROWD_NEED,
   camped,
   cityOf,
   DECK,
@@ -11,17 +16,24 @@ import {
   everyCard,
   field,
   fullDraw,
+  GRANARY,
+  HOARD,
+  HOARD_NEED,
   heldBy,
   idsOf,
+  NO_DEALS,
   NO_GROWTH,
   namesOf,
   opening,
   plains,
+  QUIET,
   REGION,
   settledLaunch,
   settledOn,
   stagedBy,
   standing,
+  TILLAGE,
+  victoryOf,
   worker,
 } from './fixtures';
 import { MOVE_POINT, type Tile, tileAt, tileKey } from './map';
@@ -29,7 +41,7 @@ import { RESOURCES } from './resources';
 import { seedRng } from './rng';
 import { inSight } from './sight';
 import { type Change, type Stage, walked } from './stages';
-import { type Chronicle, idle } from './state';
+import { type Chronicle, type ChronicleAchievement, idle } from './state';
 
 /** A disc of plain out to eight, with nothing on it but a fertile plain on its centre tile. */
 function plainDisc(): Tile[] {
@@ -42,23 +54,23 @@ function plainDisc(): Tile[] {
 }
 
 test('the same seed begins the same chronicle', () => {
-  expect(launched(CATALOGUE, AGE, REGION, 1234, DECK)).toEqual(
-    launched(CATALOGUE, AGE, REGION, 1234, DECK),
+  expect(launched(CATALOGUE, AGE, REGION, 1234, DECK, [])).toEqual(
+    launched(CATALOGUE, AGE, REGION, 1234, DECK, []),
   );
-  expect(launched(CATALOGUE, AGE, REGION, 1235, DECK)).not.toEqual(
-    launched(CATALOGUE, AGE, REGION, 1234, DECK),
+  expect(launched(CATALOGUE, AGE, REGION, 1235, DECK, [])).not.toEqual(
+    launched(CATALOGUE, AGE, REGION, 1234, DECK, []),
   );
 });
 
 test('a chronicle survives JSON and carries its generator on', () => {
-  const chronicle = launched(CATALOGUE, AGE, REGION, 1234, DECK);
+  const chronicle = launched(CATALOGUE, AGE, REGION, 1234, DECK, []);
 
   expect(JSON.parse(JSON.stringify(chronicle))).toEqual(chronicle);
   expect(chronicle.rng).not.toEqual(seedRng(chronicle.seed));
 });
 
 test('a chronicle opens on the settle phase with empty stores, the city standing nowhere, the deck’s city section carried, its card in hand before the settle cards, and the centre part alone in sight', () => {
-  const chronicle = launched(CATALOGUE, AGE, REGION, 1234, DECK);
+  const chronicle = launched(CATALOGUE, AGE, REGION, 1234, DECK, []);
   const centre = chronicle.centre.map(tileKey).sort();
 
   expect(chronicle.turn).toBe(0);
@@ -109,7 +121,7 @@ test('growth is staged on the food stock the turn ends with, before the income a
 });
 
 test('the hand holds five cards on turn 1, and five again after every turn', () => {
-  let chronicle = settledLaunch(CATALOGUE, AGE, REGION, 4242, DECK);
+  let chronicle = settledLaunch(CATALOGUE, AGE, REGION, 4242, DECK, []);
   expect(chronicle.hand).toHaveLength(5);
 
   for (let turn = 0; turn < 6; turn++) {
@@ -597,6 +609,153 @@ test('a settle card played leaves the chronicle, and the hand holds the city sec
   expect(idsOf(stocked.hand)).toEqual([DECK.city.card, 'PH_Band']);
   expect(stocked.discardPile).toEqual([]);
   expect(everyCard(stocked)).toEqual([DECK.city.card, 'PH_Band'].sort());
+});
+
+test('a chronicle is launched with the achievements of its age whose technology is not unlocked and needs none that is not, none reached, in the order the age declares them', () => {
+  const reachable = (unlocked: readonly string[]): readonly ChronicleAchievement[] =>
+    launched(CATALOGUE, AGE, REGION, 1234, DECK, unlocked).achievements;
+
+  expect(reachable([])).toEqual([
+    { id: HOARD, reached: false },
+    { id: victoryOf(AGE), reached: false },
+  ]);
+  expect(reachable([GRANARY])).toEqual([
+    { id: CROWD, reached: false },
+    { id: victoryOf(AGE), reached: false },
+  ]);
+  expect(() => reachable(['PH_Unheld'])).toThrow('fixture: no technology is named PH_Unheld');
+});
+
+/** A city in the first age, carrying the achievements a launch with these technologies unlocked names. */
+function reaching(unlocked: readonly string[], carrying: Carrying): Chronicle {
+  const { achievements } = launched(CATALOGUE, AGE, REGION, 1234, DECK, unlocked);
+  return cityOf(['urban', 'plain'], { age: AGE, achievements, ...carrying });
+}
+
+test('an achievement is recorded reached right after the change its count meets its need on, every stage after carries the record, and it is never read again', () => {
+  const city = reaching([], {
+    ...NO_GROWTH,
+    tiles: field(1),
+    drawPile: fullDraw(),
+    resources: {
+      food: HOARD_NEED - 1,
+      production: 0,
+      military: 0,
+      money: 0,
+      science: 0,
+      culture: 0,
+    },
+  });
+  const recorded = [
+    { id: HOARD, reached: true },
+    { id: victoryOf(AGE), reached: false },
+  ];
+
+  const stages = apply(CATALOGUE, city, { type: 'end-turn' });
+  const played = [...walked(stages)];
+  const at = played.findIndex(({ name }) => name === 'reached');
+  const met = played[at - 1];
+
+  expect(played.filter(({ name }) => name === 'reached')).toHaveLength(1);
+  expect(met.name).toBe('stock');
+  expect(met.chronicle.resources.food).toBeGreaterThanOrEqual(HOARD_NEED);
+  expect(met.chronicle.achievements).toEqual(city.achievements);
+  for (const stage of played.slice(0, at - 1)) {
+    if (stage.kind === 'change') expect(stage.chronicle.resources.food).toBeLessThan(HOARD_NEED);
+  }
+  for (const stage of played.slice(at)) expect(stage.chronicle.achievements).toEqual(recorded);
+  expect(outcome(stages).achievements).toEqual(recorded);
+  expect(stagedBy(outcome(stages), { type: 'end-turn' })).not.toContain('reached');
+});
+
+test('an achievement the launch did not name is never read, whatever its count', () => {
+  const growing = (unlocked: readonly string[]): Chronicle =>
+    reaching(unlocked, {
+      tiles: field(1),
+      held: [CITY],
+      population: CROWD_NEED - 1,
+      assigned: [CITY],
+      drawPile: fullDraw(),
+      resources: {
+        food: 2 * (CROWD_NEED - 1),
+        production: 0,
+        military: 0,
+        money: 0,
+        science: 0,
+        culture: 0,
+      },
+    });
+  const named = apply(CATALOGUE, growing([GRANARY]), { type: 'end-turn' });
+  const unnamed = apply(CATALOGUE, growing([]), { type: 'end-turn' });
+
+  expect(heldBy(named, 'grow').map(({ name }) => name)).toEqual(['stock', 'population', 'reached']);
+  expect(outcome(named).population).toBe(CROWD_NEED);
+  expect(heldBy(unnamed, 'grow').map(({ name }) => name)).toEqual(['stock', 'population']);
+  expect(outcome(unnamed).population).toBe(CROWD_NEED);
+  expect(namesOf(unnamed)).not.toContain('reached');
+});
+
+test('a victory is followed by its achievement, recorded after the ending, and an achievement the same change meets is recorded before the ending', () => {
+  const city = reaching([], {
+    tiles: builtOn(field(2), TILLAGE, [{ q: 1, r: 0 }]),
+    timeline: { ...NO_DEALS, capstone: { id: 'PH_Tillage', turn: 1 } },
+    hand: ['PH_Cache'],
+    resources: { food: HOARD_NEED, production: 0, military: 0, money: 0, science: 0, culture: 0 },
+  });
+
+  const stages = apply(CATALOGUE, city, PLAYED);
+  const [, left, hoarded, ended, won] = [...walked(stages)];
+
+  expect(namesOf(stages)).toEqual(['played', 'left', 'reached', 'ended', 'reached']);
+  expect(left.chronicle.achievements).toEqual(city.achievements);
+  expect(hoarded.chronicle.achievements).toEqual([
+    { id: HOARD, reached: true },
+    { id: victoryOf(AGE), reached: false },
+  ]);
+  expect(hoarded.chronicle.ending).toBeUndefined();
+  expect(ended.chronicle.ending).toEqual({ outcome: 'victory', turn: city.turn });
+  expect(ended.chronicle.achievements).toEqual(hoarded.chronicle.achievements);
+  expect(won.chronicle.achievements).toEqual([
+    { id: HOARD, reached: true },
+    { id: victoryOf(AGE), reached: true },
+  ]);
+  expect(outcome(stages)).toBe(won.chronicle);
+});
+
+test('the fall’s ending is read as any change: a victory’s achievement is not reached on it, and one the fall meets is recorded right after it', () => {
+  const quiet = ageOf(CATALOGUE, QUIET);
+  const victory = achievementOf(CATALOGUE, QUIET, victoryOf(QUIET));
+  const anyEnding: Catalogue = {
+    ...CATALOGUE,
+    ages: {
+      ...CATALOGUE.ages,
+      [QUIET]: {
+        ...quiet,
+        achievements: {
+          [victoryOf(QUIET)]: {
+            ...victory,
+            count: (_catalogue, chronicle) => (chronicle.ending === undefined ? 0 : 1),
+          },
+        },
+      },
+    },
+  };
+  const empty = cityOf(['urban'], {
+    tiles: field(2),
+    population: 0,
+    assigned: [],
+    achievements: [{ id: victoryOf(QUIET), reached: false }],
+  });
+
+  expect(namesOf(apply(CATALOGUE, empty, { type: 'end-turn' }))).toEqual([
+    'grow',
+    'stock',
+    'ended',
+  ]);
+  const fallen = apply(anyEnding, empty, { type: 'end-turn' });
+  expect(namesOf(fallen)).toEqual(['grow', 'stock', 'ended', 'reached']);
+  expect(outcome(fallen).ending).toEqual({ outcome: 'defeat', cause: 'population', turn: 1 });
+  expect(outcome(fallen).achievements).toEqual([{ id: victoryOf(QUIET), reached: true }]);
 });
 
 test('a chronicle that has ended takes no command at all', () => {

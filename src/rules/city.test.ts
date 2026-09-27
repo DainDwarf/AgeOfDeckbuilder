@@ -133,7 +133,7 @@ function withWorkerBeside(
 function darkBorder(): { opened: Chronicle; dark: TileCoords; city: TileCoords } {
   const reach = regionOf(CATALOGUE, ageOf(CATALOGUE, AGE), REGION).centre;
   for (let seed = 0; seed < 1000; seed++) {
-    const unsettled = launched(CATALOGUE, AGE, REGION, seed, claiming(6));
+    const unsettled = launched(CATALOGUE, AGE, REGION, seed, claiming(6), []);
     for (const city of unsettled.centre) {
       if (distance(city, CITY) !== reach) continue;
       let settling = settledOn(unsettled, city);
@@ -157,7 +157,7 @@ function darkBorder(): { opened: Chronicle; dark: TileCoords; city: TileCoords }
 
 test('the settle holds the city’s tile alone, one population on it and the idle population the city section names besides', () => {
   for (const seed of [0, 1234, 0xdeadbeef | 0]) {
-    const chronicle = settledLaunch(CATALOGUE, AGE, REGION, seed, DECK);
+    const chronicle = settledLaunch(CATALOGUE, AGE, REGION, seed, DECK, []);
 
     expect(chronicle.held).toEqual([CITY]);
     expect(chronicle.assigned).toEqual([CITY]);

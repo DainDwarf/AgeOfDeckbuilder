@@ -290,6 +290,9 @@ const TABLES: Tables = {
         chronicle.tiles.some((tile) => tile.building === 'shelter'),
     },
   },
+  technologies: {
+    'stone-age': { needs: [], unlocks: { cards: {} } },
+  },
   terrains: {
     plain: {
       yields: { food: 1 },
@@ -431,6 +434,14 @@ export const NOMADIC: Slice = {
       raidCampOdds: 0.8,
     },
     regions: REGIONS,
+    achievements: {
+      'first-shelter': {
+        count: (_catalogue, chronicle) => (chronicle.ending?.outcome === 'victory' ? 1 : 0),
+        need: 1,
+        technology: 'stone-age',
+        influence: 3,
+      },
+    },
   },
   brings: TABLES,
 };

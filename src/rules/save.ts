@@ -1,4 +1,5 @@
 import {
+  achievementOf,
   ageOf,
   type Catalogue,
   capstoneOf,
@@ -138,9 +139,10 @@ function chronicleOf(catalogue: Catalogue, slot: Slot): Chronicle {
   checkContent(catalogue, { content });
   const card = (item: Slot): ChronicleCard => cardIn(catalogue, item);
   const coords = (item: Slot): TileCoords => coordsIn(catalogue, record(catalogue, item));
+  const age = id(catalogue, field('age'), ageOf);
   return {
     content,
-    age: id(catalogue, field('age'), ageOf),
+    age,
     seed: integer(catalogue, field('seed')),
     rng: rngOf(catalogue, field('rng')),
     tiles: list(catalogue, field('tiles'), (item) => tileOf(catalogue, item)),
@@ -163,6 +165,13 @@ function chronicleOf(catalogue: Catalogue, slot: Slot): Chronicle {
     drawPile: list(catalogue, field('drawPile'), card),
     hand: list(catalogue, field('hand'), card),
     discardPile: list(catalogue, field('discardPile'), card),
+    achievements: list(catalogue, field('achievements'), (item) => {
+      const held = record(catalogue, item);
+      return {
+        id: id(catalogue, held('id'), (read, named) => achievementOf(read, age, named)),
+        reached: flag(catalogue, held('reached')),
+      };
+    }),
     ending: optional(field('ending'), (item) => endingOf(catalogue, item)),
   };
 }
