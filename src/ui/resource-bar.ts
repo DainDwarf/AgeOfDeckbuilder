@@ -223,7 +223,7 @@ export function createResourceBar(
  * read over each other, which is four digits and the stroke between them. A value wider than that
  * grows into the gap before the next reading instead of moving it.
  */
-export function digitSlot(scene: Phaser.Scene): number {
+function digitSlot(scene: Phaser.Scene): number {
   const digits = addText(scene, 0, 0, '00/00', VALUE_STYLE);
   const width = digits.width;
   digits.destroy();
@@ -327,9 +327,9 @@ function createEntry(
   return { ...reading, key, face, well, floor, ticking: { count: 0 } };
 }
 
-/** How wide a reading's content stands for the bar's flow: the value takes the slot it grows into. */
-export function readingWidth({ word }: Reading, slot: number): number {
-  return CHIP_TO_WORD + word.width + WORD_TO_VALUE + slot;
+/** How wide a reading's content stands for the bar's flow, its value taking the width handed. */
+export function readingWidth({ word }: Reading, value: number): number {
+  return CHIP_TO_WORD + word.width + WORD_TO_VALUE + value;
 }
 
 /** A reading where the layout stands it: its zone covers the bar's height, less the edge at its foot. */

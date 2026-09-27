@@ -115,7 +115,7 @@ test('on a campaign a won chronicle paid into, the bar reads its influence, and 
   expect(problems).toEqual([]);
 });
 
-test('Chronicle opens the launch page, Chronicle sunk there, and the back key opens the campaign screen again', async ({
+test('Chronicle opens the launch page, Chronicle sunk there, the back key raises the menu there, and Campaign opens the campaign screen', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -132,14 +132,23 @@ test('Chronicle opens the launch page, Chronicle sunk there, and the back key op
   );
 
   await page.keyboard.press('Escape');
+  await expect.poll(() => standing(page, 'menu')).toBe(true);
+  expect(await standing(page, 'menu-campaign')).toBe(false);
+  expect(await standing(page, 'launch')).toBe(true);
+  await page.keyboard.press('Escape');
+  await expect.poll(() => standing(page, 'menu')).toBe(false);
+  expect(await standing(page, 'launch')).toBe(true);
+
+  await rested(page);
+  await click(page, 'navbar-campaign');
   await campaignShown(page);
   expect(await standing(page, 'launch')).toBe(false);
-  expect(await standing(page, 'menu')).toBe(false);
+  expect(await buttonOf(page, 'campaign')).toEqual({ sunk: true });
 
   expect(problems).toEqual([]);
 });
 
-test('over a chronicle the menu lists Campaign and no New chronicle, and Campaign leaves the chronicle in its save for Continue to open as it stands', async ({
+test('over a chronicle the menu lists Campaign, and Campaign leaves the chronicle in its save for Continue to open as it stands', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -149,7 +158,6 @@ test('over a chronicle the menu lists Campaign and no New chronicle, and Campaig
   await click(page, 'menu-button');
   await expect.poll(() => standing(page, 'menu')).toBe(true);
   expect(await standing(page, 'menu-campaign')).toBe(true);
-  expect(await standing(page, 'menu-new-chronicle')).toBe(false);
 
   await rested(page);
   await click(page, 'menu-campaign');

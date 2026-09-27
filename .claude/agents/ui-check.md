@@ -42,7 +42,7 @@ const require = createRequire(`${process.cwd()}/`);
 const { chromium } = require('playwright');
 
 const out = '<scratchpad>'; // forward slashes
-const url = 'http://localhost:5173/?deck=nomadic'; // without a deck the app opens on the campaign screen
+const url = 'http://localhost:5173/?deck=nomadic';
 
 const browser = await chromium.launch();
 const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });

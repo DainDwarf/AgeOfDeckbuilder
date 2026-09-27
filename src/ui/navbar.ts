@@ -16,7 +16,6 @@ import { menuRoom } from './menu';
 import {
   createReading,
   createWell,
-  digitSlot,
   placeReading,
   placeWell,
   readingWidth,
@@ -60,10 +59,9 @@ const LABEL_STYLE = { fontFamily: UI_FONT, fontSize: '18px', fontStyle: 'bold', 
 
 /**
  * The navbar down the left edge, the button of the screen standing sunk in a well, and the bar along
- * the top reading the influence. The influence's tooltip stands on a layer added here, so what the
- * screen adds after this call is painted over it: a screen adds its own under a layer made before.
+ * the top reading the influence; answers the layer the screen's own content stands on.
  */
-export function wearNavbar(scene: Phaser.Scene, standing: MetaScreen): void {
+export function wearNavbar(scene: Phaser.Scene, standing: MetaScreen): Phaser.GameObjects.Layer {
   scene.add.rectangle(0, 0, NAVBAR_WIDTH, DESIGN_HEIGHT, LOOK.panelFill).setOrigin(0, 0);
   scene.add.rectangle(NAVBAR_WIDTH - 1, 0, 1, DESIGN_HEIGHT, LOOK.panelEdge).setOrigin(0, 0);
   const middle = NAVBAR_WIDTH / 2;
@@ -92,9 +90,8 @@ export function wearNavbar(scene: Phaser.Scene, standing: MetaScreen): void {
       .setName(`navbar-${screen}-label`);
   });
 
-  const width = DESIGN_WIDTH - NAVBAR_WIDTH;
-  scene.add.rectangle(NAVBAR_WIDTH, 0, width, BAR_HEIGHT, LOOK.panelFill).setOrigin(0, 0);
-  scene.add.rectangle(NAVBAR_WIDTH, BAR_HEIGHT - 1, width, 1, LOOK.panelEdge).setOrigin(0, 0);
+  scene.add.rectangle(ROOM.x, 0, ROOM.width, BAR_HEIGHT, LOOK.panelFill).setOrigin(0, 0);
+  scene.add.rectangle(ROOM.x, BAR_HEIGHT - 1, ROOM.width, 1, LOOK.panelEdge).setOrigin(0, 0);
 
   const bubbles = scene.add.layer();
   const tooltip = createTooltip(scene, stratumOf(bubbles, scene.cameras.main));
@@ -104,16 +101,23 @@ export function wearNavbar(scene: Phaser.Scene, standing: MetaScreen): void {
     word: text('label.influence'),
     tip: text('tooltip.influence'),
   });
-  influence.value.setText(String(campaignHeld().influence));
-  const [{ at, zone }] = layOutBar({
-    readings: [readingWidth(influence, digitSlot(scene))],
-    menu: menuRoom(scene),
-    width,
-    margin: MARGIN,
-  }).readings;
-  placeReading(influence, {
-    at: NAVBAR_WIDTH + at,
-    zone: { x: NAVBAR_WIDTH + zone.x, width: zone.width },
-  });
+
+  const read = (count: number): void => {
+    influence.value.setText(String(count));
+    const [{ at, zone }] = layOutBar({
+      readings: [readingWidth(influence, influence.value.width)],
+      menu: menuRoom(scene),
+      width: ROOM.width,
+      margin: MARGIN,
+    }).readings;
+    placeReading(influence, {
+      at: ROOM.x + at,
+      zone: { x: ROOM.x + zone.x, width: zone.width },
+    });
+  };
+  read(campaignHeld().influence);
+
+  const content = scene.add.layer();
   scene.children.bringToTop(bubbles);
+  return content;
 }

@@ -2,11 +2,10 @@ import Phaser from 'phaser';
 import { CATALOGUE } from '../content/catalogue';
 import { ageOf, firstAge, firstDeck, firstRegion } from '../rules/catalogue';
 import { type Chronicle, onSettlePhase } from '../rules/state';
-import { boundTo, keyPressed } from './bindings';
 import { addText, answersPress, holdDesignSpace, onClick, UI_FONT } from './design-space';
-import { readsKeys, takesMouseKeys } from './keys';
+import { readsKeys } from './keys';
 import { css, LOOK } from './look';
-import { closeMenu } from './menu-scene';
+import { backRaisesMenu, closeMenu } from './menu-scene';
 import { ROOM, wearNavbar } from './navbar';
 import { type Choices, type Opening, savedOpening } from './save-entry';
 import { achievementName, type TextKey, text } from './text';
@@ -59,8 +58,8 @@ export class LaunchPage extends Phaser.Scene {
   create(): void {
     holdDesignSpace(this, this.cameras.main);
     closeMenu(this);
-    const content = this.add.layer();
-    wearNavbar(this, 'launch');
+    const content = wearNavbar(this, 'launch');
+    backRaisesMenu(this);
     let chosen: Choices = firstsOf(undefined);
     let typed = '';
     let root: Phaser.GameObjects.Container | undefined;
@@ -236,10 +235,6 @@ export class LaunchPage extends Phaser.Scene {
     };
 
     readsKeys(this, (event) => {
-      if (boundTo(keyPressed(event), 'back')) {
-        this.scene.start('campaign');
-        return true;
-      }
       if (event.key === 'Enter') {
         launch();
         return true;
@@ -253,11 +248,6 @@ export class LaunchPage extends Phaser.Scene {
       if (typed.length >= SEED_DIGITS) return true;
       typed += event.key;
       paintSeed();
-      return true;
-    });
-    takesMouseKeys(this, (press) => {
-      if (!boundTo(press, 'back')) return false;
-      this.scene.start('campaign');
       return true;
     });
 

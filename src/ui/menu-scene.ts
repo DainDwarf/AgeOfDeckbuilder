@@ -119,6 +119,23 @@ export function raiseMenu(scene: Phaser.Scene): void {
   scene.game.scene.getScene<MenuScene>('menu').raise();
 }
 
+/**
+ * The back key, from the keyboard and the mouse alike, raising the menu on a screen that holds nothing
+ * to back out of. A key it takes still reaches every other reader on the scene's own keyboard.
+ */
+export function backRaisesMenu(scene: Phaser.Scene): void {
+  readsKeys(scene, (event) => {
+    if (!boundTo(keyPressed(event), 'back')) return false;
+    raiseMenu(scene);
+    return true;
+  });
+  takesMouseKeys(scene, (press) => {
+    if (!boundTo(press, 'back')) return false;
+    raiseMenu(scene);
+    return true;
+  });
+}
+
 /** The menu taken down for the screen now rising. */
 export function closeMenu(scene: Phaser.Scene): void {
   scene.game.scene.getScene<MenuScene>('menu').close();
