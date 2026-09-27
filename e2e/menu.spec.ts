@@ -1,9 +1,11 @@
 import { expect, type Page, test } from '@playwright/test';
+import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
 import { deckOf } from '../src/rules/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
 import { tileKey } from '../src/rules/map';
 import type { Chronicle } from '../src/rules/state';
+import { text } from '../src/ui/text';
 import {
   aimed,
   bareAimable,
@@ -32,10 +34,34 @@ function cardsHeld(chronicle: Chronicle): string[] {
   return idsOf([...chronicle.drawPile, ...chronicle.hand, ...chronicle.discardPile]).sort();
 }
 
-/** Waits for the chronicle screen a new chronicle raised: the menu gone, one hand laid out on it. */
-async function raised(page: Page): Promise<void> {
-  await expect.poll(() => standing(page, 'menu')).toBe(false);
+/** New chronicle pressed on the menu standing, and the page it opens waited for. */
+async function newChronicle(page: Page): Promise<void> {
+  await click(page, 'menu-new-chronicle');
+  await expect.poll(() => standing(page, 'launch-button')).toBe(true);
+}
+
+/** Launch pressed on the page standing, and the chronicle screen it raises waited for, one hand laid out on it. */
+async function launchedFromPage(page: Page): Promise<void> {
+  await rested(page);
+  await click(page, 'launch-button');
+  await page.waitForFunction(() => window.game?.scene.isActive('ui') === true);
   await expect.poll(() => counted(page, 'hand-0')).toBe(1);
+}
+
+/** Whether the page's face for that option of that row stands chosen. */
+function chosen(page: Page, row: string, option: string): Promise<boolean> {
+  return page.evaluate(
+    (name) => window.named?.(name)?.object.getData('chosen') === true,
+    `launch-${row}-${option}`,
+  );
+}
+
+/** What the page's seed slot reads. */
+function seedReads(page: Page): Promise<string | undefined> {
+  return page.evaluate(
+    () =>
+      (window.named?.('launch-seed-label')?.object as Phaser.GameObjects.Text | undefined)?.text,
+  );
 }
 
 test('the menu walks in to Controls and closes back one step at a time', async ({ page }) => {
@@ -160,17 +186,26 @@ test('the selected tile waits under the menu', async ({ page }) => {
   expect(problems).toEqual([]);
 });
 
-test('a new chronicle deals the same deck a fresh seed, on the settle phase', async ({ page }) => {
+test('New chronicle opens the page on the chronicle’s choices, the seed blank, and Launch there deals the same deck a fresh seed, on the settle phase', async ({
+  page,
+}) => {
   const problems = watch(page);
   const played = settledOn(1);
-  const deck = deckOf(CATALOGUE, firstsOf().deck);
+  const firsts = firstsOf();
+  const deck = deckOf(CATALOGUE, firsts.deck);
 
   await openSaved(page, played);
 
   await click(page, 'menu-button');
   await expect.poll(() => standing(page, 'menu')).toBe(true);
-  await click(page, 'menu-new-chronicle');
-  await raised(page);
+  await newChronicle(page);
+  expect(await standing(page, 'menu')).toBe(false);
+  expect(await chosen(page, 'age', firsts.age)).toBe(true);
+  expect(await chosen(page, 'region', firsts.region)).toBe(true);
+  expect(await chosen(page, 'deck', firsts.deck)).toBe(true);
+  expect(await seedReads(page)).toBe(text('launch.fresh'));
+
+  await launchedFromPage(page);
 
   const fresh = await chronicleOf(page);
   expect(fresh.turn).toBe(0);
@@ -180,7 +215,7 @@ test('a new chronicle deals the same deck a fresh seed, on the settle phase', as
   expect(problems).toEqual([]);
 });
 
-test('the menu opens over the defeat screen, and a new chronicle takes the chronicle screen back', async ({
+test('the menu opens over the defeat screen, and New chronicle then Launch take the chronicle screen back', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -193,8 +228,9 @@ test('the menu opens over the defeat screen, and a new chronicle takes the chron
   await click(page, 'menu-button');
   await expect.poll(() => standing(page, 'menu')).toBe(true);
 
-  await click(page, 'menu-new-chronicle');
-  await raised(page);
+  await newChronicle(page);
+  expect(await standing(page, 'defeat')).toBe(false);
+  await launchedFromPage(page);
 
   const fresh = await chronicleOf(page);
   expect(fresh.ending).toBeUndefined();

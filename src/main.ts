@@ -9,12 +9,12 @@ import { ChronicleScene } from './ui/chronicle-scene';
 import { DebugConsole } from './ui/debug-console';
 import { backingSize, followPointer, followWindow, releaseOnBlur } from './ui/design-space';
 import { readMouseKeys } from './ui/keys';
-import { type Choices, firstsOf, LaunchPage } from './ui/launch-page';
+import { firstsOf, LaunchPage } from './ui/launch-page';
 import { css, LOOK } from './ui/look';
 import { MapScene } from './ui/map-scene';
 import { MenuScene } from './ui/menu-scene';
 import { OverlayScene } from './ui/overlay-scene';
-import { savedOpening } from './ui/save-entry';
+import { type Choices, type Opening, savedOpening } from './ui/save-entry';
 
 // The e2e suite and browser-console debugging observe the running game through this handle;
 // it is optional because the window exists before the game does.
@@ -26,11 +26,8 @@ declare global {
 
 const address = new URLSearchParams(window.location.search);
 
-/** Every key the boot reads off the address; an address naming none of them is bare. */
-const ASKED = ['age', 'region', 'deck', 'seed'] as const;
-
 /** What the address names under that key, and nothing where it names nothing. */
-function asked(key: (typeof ASKED)[number]): string | undefined {
+function asked(key: 'continue' | 'age' | 'region' | 'deck' | 'seed'): string | undefined {
   const value = address.get(key);
   return value === null || value.trim() === '' ? undefined : value;
 }
@@ -62,9 +59,45 @@ function askedChoices(): Choices {
   };
 }
 
-const choices = askedChoices();
-const bare = ASKED.every((key) => asked(key) === undefined);
-const resumed = bare ? savedOpening() : undefined;
+/** The screen the boot opens: the page on the choices, or the chronicle screen on an opening. */
+type FirstScreen =
+  | { readonly on: 'launch'; readonly choices: Choices }
+  | { readonly on: 'chronicle'; readonly opening: Opening };
+
+/**
+ * What the address asks for: the chronicle the save holds, which it must hold; a chronicle launched
+ * straight on the choices, where it names a deck; and the page on them otherwise.
+ */
+function firstScreen(): FirstScreen {
+  if (asked('continue') !== undefined) {
+    const saved = savedOpening();
+    if (saved === undefined) throw new Error('the save holds no chronicle to continue');
+    return { on: 'chronicle', opening: saved };
+  }
+  const choices = askedChoices();
+  return asked('deck') === undefined
+    ? { on: 'launch', choices }
+    : { on: 'chronicle', opening: choices };
+}
+
+const first = firstScreen();
+
+/** The first screen started, over the console and the menu. */
+function startFirst(screen: FirstScreen): void {
+  switch (screen.on) {
+    case 'launch':
+      game.scene.start('launch', screen.choices);
+      return;
+    case 'chronicle':
+      game.scene.start('overlay');
+      game.scene.start('map');
+      game.scene.start('ui', screen.opening);
+      return;
+  }
+  const unlisted: never = screen;
+  throw new Error(`no first screen is ${JSON.stringify(unlisted)}`);
+}
+
 const backing = backingSize();
 const game = new Phaser.Game({
   type: Phaser.WEBGL,
@@ -86,22 +119,15 @@ game.scene.add('overlay', OverlayScene);
 game.scene.add('menu', MenuScene);
 game.scene.add('console', DebugConsole);
 // The ui scene reaches into the console's, the menu's, the overlay's and the map's as it is created,
-// so this order is load-bearing twice over: started last, none of them has the handle it is reached
-// by yet and the chronicle screen throws wherever the boot opens it.
+// and the page into the menu's, so this order is load-bearing twice over: started last, none of them
+// has the handle it is reached by yet and the screen the boot opens throws.
 game.events.once(Phaser.Core.Events.READY, () => {
   // A batch shader built for several textures tears a rotated Text (docs/PHASER.md). Not the config's
   // `maxTextures`: that caps the units every draw binds, and at one the browse's mask binds nothing.
   (game.renderer as Phaser.Renderer.WebGL.WebGLRenderer).renderNodes.setMaxParallelTextureUnits(1);
   game.scene.start('console');
   game.scene.start('menu');
-  const opening = resumed ?? (asked('deck') === undefined ? undefined : choices);
-  if (opening === undefined) {
-    game.scene.start('launch', choices);
-  } else {
-    game.scene.start('overlay');
-    game.scene.start('map');
-    game.scene.start('ui', opening);
-  }
+  startFirst(first);
   booted();
 });
 followWindow(game);

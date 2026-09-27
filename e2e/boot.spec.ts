@@ -82,7 +82,7 @@ test('the console over the launch page takes its digits and its Enter', async ({
   expect(problems).toEqual([]);
 });
 
-test('Launch opens the chronicle on the defaults, and the address stays bare through Launch and New chronicle', async ({
+test('Launch opens the chronicle on the defaults, and the address stays bare through Launch, New chronicle and Launch again', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -108,6 +108,11 @@ test('Launch opens the chronicle on the defaults, and the address stays bare thr
   await click(page, 'menu-button');
   await expect.poll(() => standing(page, 'menu')).toBe(true);
   await click(page, 'menu-new-chronicle');
+  await expect.poll(() => standing(page, 'launch-button')).toBe(true);
+  expect(named(page)).toBe('');
+  await rested(page);
+  await click(page, 'launch-button');
+  await page.waitForFunction(() => window.game?.scene.isActive('ui') === true);
   await expect.poll(async () => (await chronicleOf(page)).seed).not.toBe(launched.seed);
   expect(named(page)).toBe('');
 

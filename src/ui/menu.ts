@@ -25,7 +25,7 @@ import { text } from './text';
 /** Every window the menu opens. */
 export type MenuWindow = 'menu' | 'settings' | 'controls';
 
-/** What pressing a window's button does: opens the window it names, or begins a fresh chronicle. */
+/** What pressing a window's button does: opens the window it names, or leaves the chronicle for the page. */
 export type MenuPress = Exclude<MenuWindow, 'menu'> | 'new-chronicle';
 
 /**

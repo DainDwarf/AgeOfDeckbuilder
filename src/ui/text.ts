@@ -190,6 +190,7 @@ const TEXT = {
   'defeat.population': "The city's population reached zero on turn {turn}.",
   'victory.title': 'Victory',
   'victory.first-shelter': 'The shelter was built. Nomadic Age is over.',
+  'achievement.first-shelter': 'The first shelter',
   'launch.title': 'Launch a chronicle',
   'launch.age': 'Age',
   'launch.region': 'Region',
@@ -197,6 +198,10 @@ const TEXT = {
   'launch.seed': 'Seed',
   'launch.fresh': 'Fresh',
   'launch.button': 'Launch',
+  'launch.continue': 'Continue',
+  'launch.turn': 'Turn {turn}',
+  'launch.settle-phase': 'Settle phase',
+  'launch.reached': '✓ {achievement}',
   'boot.failed': 'The game could not start', // glossary exception: start
   'console.line': '> {line}',
   'console.no-entry': 'no such entry: {word}',
@@ -302,6 +307,11 @@ export function capstoneRules(capstone: string): string {
 /** The line the victory screen reads for passing a capstone; a capstone no entry names is refused. */
 export function victoryLine(capstone: string): string {
   return named('victory', capstone, 'the capstone');
+}
+
+/** What an achievement is named on the screen; an achievement no entry names is refused. */
+export function achievementName(achievement: string): string {
+  return named('achievement', achievement, 'the achievement');
 }
 
 /** The entry a content id names under its prefix; an id no entry names is refused. */

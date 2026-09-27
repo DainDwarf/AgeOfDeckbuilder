@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { CATALOGUE } from '../content/catalogue';
 import { ageOf, firstAge, firstDeck, firstRegion } from '../rules/catalogue';
-import type { Chronicle } from '../rules/state';
+import { type Chronicle, onSettlePhase } from '../rules/state';
 import {
   addText,
   answersPress,
@@ -13,18 +13,9 @@ import {
 } from './design-space';
 import { readsKeys } from './keys';
 import { css, LOOK } from './look';
-import { type TextKey, text } from './text';
-
-/** What a chronicle is launched on: an age, one of its regions and a deck, and a seed or nothing for a fresh one. */
-export type Choices = {
-  readonly age: string;
-  readonly region: string;
-  readonly deck: string;
-  readonly seed: number | undefined;
-};
-
-/** What the chronicle screen opens on: the choices a chronicle begins on, and the one resumed on them. */
-export type Opening = Choices & { readonly resumed?: Chronicle };
+import { closeMenu } from './menu-scene';
+import { type Choices, type Opening, savedOpening } from './save-entry';
+import { achievementName, type TextKey, text } from './text';
 
 /** The first age and deck the catalogue lists, and that age's first region, on that seed. */
 export function firstsOf(seed: number | undefined): Choices {
@@ -50,7 +41,22 @@ const FACE_STYLE = { fontFamily: UI_FONT, fontSize: '16px', fontStyle: 'bold', c
 
 type Row = 'age' | 'region' | 'deck';
 
-/** The launch page: one row per choice, the seed slot under them and Launch under the slot. */
+/** What Continue reads under its label: where the chronicle stands, then each achievement it reached. */
+function readingsOf(chronicle: Chronicle): string[] {
+  return [
+    onSettlePhase(chronicle)
+      ? text('launch.settle-phase')
+      : text('launch.turn', { turn: chronicle.turn }),
+    ...chronicle.achievements
+      .filter(({ reached }) => reached)
+      .map(({ id }) => text('launch.reached', { achievement: achievementName(id) })),
+  ];
+}
+
+/**
+ * The launch page: Continue over the rows while the save holds a chronicle, one row per choice, the
+ * seed slot under them and Launch under the slot.
+ */
 export class LaunchPage extends Phaser.Scene {
   private opening!: Choices;
 
@@ -64,17 +70,22 @@ export class LaunchPage extends Phaser.Scene {
 
   create(): void {
     holdDesignSpace(this, this.cameras.main);
+    closeMenu(this);
     let chosen: Choices = this.opening;
     let typed = chosen.seed === undefined ? '' : String(chosen.seed);
     let root: Phaser.GameObjects.Container | undefined;
     let seedLabel: Phaser.GameObjects.Text | undefined;
 
-    const launch = (): void => {
+    const open = (opening: Opening): void => {
       // Queued ahead of the start below, so the overlay's keyboard plugin stands ahead of the ui
       // scene's and the map is up before the ui scene reaches into it (docs/PHASER.md).
       this.scene.launch('overlay');
       this.scene.launch('map');
-      this.scene.start('ui', { ...chosen, seed: typed === '' ? undefined : Number(typed) });
+      this.scene.start('ui', opening);
+    };
+
+    const launch = (): void => {
+      open({ ...chosen, seed: typed === '' ? undefined : Number(typed) });
     };
 
     const paintSeed = (): void => {
@@ -126,21 +137,45 @@ export class LaunchPage extends Phaser.Scene {
         }),
       }));
 
+      const saved = savedOpening();
+      const continued =
+        saved === undefined
+          ? undefined
+          : {
+              saved,
+              label: addText(this, 0, 0, text('launch.continue'), LABEL_STYLE).setName(
+                'launch-continue-label',
+              ),
+              lines: readingsOf(saved.resumed).map((reading, index) =>
+                addText(this, 0, 0, reading, FACE_STYLE).setName(`launch-continue-line-${index}`),
+              ),
+            };
+      const continuing = continued === undefined ? [] : [continued.label, ...continued.lines];
+      const continueHeight =
+        BUTTON_HEIGHT + (continued?.lines.reduce((sum, line) => sum + line.height, 0) ?? 0);
+      const continueRoom = continued === undefined ? 0 : continueHeight + PADDING;
+
       const widest = Math.max(
         SEED_WIDTH,
         ...laid.map(({ faces }) =>
           faces.reduce((sum, { face }, index) => sum + face.width + (index > 0 ? FACE_GAP : 0), 0),
         ),
       );
-      const width = Math.max(WIDTH, 2 * PADDING + LABEL_WIDTH + widest);
+      const width = Math.max(
+        WIDTH,
+        2 * PADDING + LABEL_WIDTH + widest,
+        ...continuing.map((line) => 2 * PADDING + 2 * FACE_PADDING + line.width),
+      );
       const count = laid.length + 1;
       const rowsHeight = count * FACE_HEIGHT + (count - 1) * ROW_GAP;
-      const height = PADDING + title.height + PADDING + rowsHeight + 2 * PADDING + BUTTON_HEIGHT;
+      const height =
+        PADDING + title.height + PADDING + continueRoom + rowsHeight + 2 * PADDING + BUTTON_HEIGHT;
       const top = Math.round((DESIGN_HEIGHT - height) / 2);
       const middle = DESIGN_WIDTH / 2;
       const left = middle - width / 2 + PADDING;
       const right = middle + width / 2 - PADDING;
-      const body = top + PADDING + title.height + PADDING;
+      const head = top + PADDING + title.height + PADDING;
+      const body = head + continueRoom;
       const rowY = (index: number): number =>
         body + index * (FACE_HEIGHT + ROW_GAP) + FACE_HEIGHT / 2;
 
@@ -149,6 +184,27 @@ export class LaunchPage extends Phaser.Scene {
         .setStrokeStyle(1, LOOK.panelEdge);
       title.setPosition(middle, top + PADDING);
       root = this.add.container(0, 0, [box, title]).setName('launch');
+
+      if (continued !== undefined) {
+        const face = this.add
+          .rectangle(
+            middle,
+            head + continueHeight / 2,
+            width - 2 * PADDING,
+            continueHeight,
+            LOOK.accent,
+          )
+          .setName('launch-continue')
+          .setInteractive();
+        answersPress(face);
+        onClick(face, () => open(continued.saved));
+        root.add(face);
+        let y = head + (BUTTON_HEIGHT - continued.label.height) / 2;
+        for (const line of continuing) {
+          root.add(line.setOrigin(0.5, 0).setPosition(middle, y));
+          y += line.height;
+        }
+      }
 
       const labelled = (key: TextKey, index: number): Phaser.GameObjects.Text =>
         addText(this, left, rowY(index), text(key), LABEL_STYLE).setOrigin(0, 0.5);

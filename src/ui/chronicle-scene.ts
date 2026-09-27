@@ -41,7 +41,6 @@ import {
 import { createHand } from './hand';
 import { cardsOf, createInfoPanel } from './infopanel';
 import { onKeyDown } from './keys';
-import type { Choices, Opening } from './launch-page';
 import { css, LOOK } from './look';
 import { createMapView, type PressedTile } from './map';
 import { mapOf } from './map-scene';
@@ -51,7 +50,7 @@ import { overlayOf } from './overlay-scene';
 import { createPiles } from './piles';
 import { createRefusalNote, refused, refusedAim } from './refusal-note';
 import { createResourceBar } from './resource-bar';
-import { campaignHeld, keepChronicle } from './save-entry';
+import { type Choices, campaignHeld, keepChronicle, type Opening } from './save-entry';
 import { createStanding } from './standing';
 import { text } from './text';
 import { createTooltip } from './tooltip';
@@ -119,20 +118,16 @@ export class ChronicleScene extends Phaser.Scene implements OpensChronicles {
   }
 
   /**
-   * A fresh chronicle on a new seed and the same choices: the restart takes down every object,
-   * listener, tween and timer the old chronicle screen left standing, and the play-out it was in
-   * the middle of is let go of here, its tail committing nothing.
+   * The chronicle left standing in its save and the page opened on its choices, the seed blank: the
+   * play-out the screen was in the middle of is let go of here, its tail committing nothing.
    */
   newChronicle(): void {
     this.sequence = undefined;
     stopAllMotion(this);
     stopAllMotion(mapOf(this));
-    // Queued ahead of the restart below, and a start on a running scene stops it first, so the
-    // overlay and the map go down and come back up ahead of this one: the overlay's keyboard plugin
-    // ahead of this one's, the map up before this one reaches into it (docs/PHASER.md).
-    this.scene.launch('overlay');
-    this.scene.launch('map');
-    this.scene.restart({ ...this.choices, seed: undefined });
+    this.scene.stop('overlay');
+    this.scene.stop('map');
+    this.scene.start('launch', { ...this.choices, seed: undefined });
   }
 
   create(): void {
@@ -199,7 +194,7 @@ export class ChronicleScene extends Phaser.Scene implements OpensChronicles {
 
     // The button and the hand are dead for the whole play-out: a card played or hovered under it would
     // be animated, reverted, and kill the very tweens the stages wait on. A play-out the screen has let
-    // go of (a new chronicle begun under it) commits nothing: the objects it was playing on are gone.
+    // go of (the screen left for the page under it) commits nothing: the objects it was playing on are gone.
     const playOut = async (command: Command): Promise<void> => {
       if (this.sequence !== undefined) return;
       const stages = apply(CATALOGUE, this.current, command);

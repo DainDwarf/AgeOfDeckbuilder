@@ -1,26 +1,39 @@
 import { CATALOGUE } from '../content/catalogue';
 import { type Campaign, newCampaign } from '../rules/campaign';
 import { firstDeck } from '../rules/catalogue';
-import { readSave, writeSave } from '../rules/save';
+import { type ChronicleSave, readSave, writeSave } from '../rules/save';
 import type { Chronicle } from '../rules/state';
-import type { Choices, Opening } from './launch-page';
+
+/** What a chronicle is launched on: an age, one of its regions and a deck, and a seed or nothing for a fresh one. */
+export type Choices = {
+  readonly age: string;
+  readonly region: string;
+  readonly deck: string;
+  readonly seed: number | undefined;
+};
+
+/** What the chronicle screen opens on: the choices a chronicle begins on, and the one resumed on them. */
+export type Opening = Choices & { readonly resumed?: Chronicle };
 
 /** Where the browser keeps the save; the origin is shared with whatever else the host serves. */
 export const SAVE_ENTRY = 'age-of-deckbuilder.save';
 
-/** What the save was read as: the campaign held, and the chronicle it resumes on, where one was read. */
-type Reading = { readonly campaign: Campaign; readonly resumed: Opening | undefined };
+/** The chronicle in progress, on the choices it was launched on. */
+type Saved = Opening & { readonly resumed: Chronicle };
 
-let reading: Reading | undefined;
+/** What the save holds: the campaign, and the chronicle in progress, where one stands. */
+type Held = { readonly campaign: Campaign; readonly opening: Saved | undefined };
+
+let held: Held | undefined;
 
 function wordsOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-/** The save as read the first time anything asks for it; every later ask answers that reading. */
-function read(): Reading {
-  reading ??= readEntry();
-  return reading;
+/** The save as it stands: read the first time anything asks for it, and every write kept in it after. */
+function read(): Held {
+  held ??= readEntry();
+  return held;
 }
 
 /** The campaign the save holds, or a new one on the first deck. */
@@ -28,9 +41,13 @@ export function campaignHeld(): Campaign {
   return read().campaign;
 }
 
-/** The chronicle the save holds, on the choices it was launched on, where one could be read. */
-export function savedOpening(): Opening | undefined {
-  return read().resumed;
+/** The chronicle the save holds as it stands now, on the choices it was launched on, where one stands. */
+export function savedOpening(): Saved | undefined {
+  return read().opening;
+}
+
+function openingOf({ chronicle, region, deck }: ChronicleSave): Saved {
+  return { age: chronicle.age, region, deck, seed: chronicle.seed, resumed: chronicle };
 }
 
 /** The text kept as the save, over whatever stood; storage that refuses it leaves play going on. */
@@ -44,15 +61,18 @@ function kept(text: string): void {
 
 /** The chronicle kept as the save, beside the campaign held. */
 export function keepChronicle({ region, deck }: Choices, chronicle: Chronicle): void {
-  kept(writeSave(CATALOGUE, campaignHeld(), { chronicle, region, deck }));
+  const { campaign } = read();
+  const progress = { chronicle, region, deck };
+  held = { campaign, opening: openingOf(progress) };
+  kept(writeSave(CATALOGUE, campaign, progress));
 }
 
 /**
  * The save the browser keeps, read: the console says why each thing was dropped, and the entry is
  * rewritten without it, or removed where nothing of it stands.
  */
-function readEntry(): Reading {
-  const fresh = { campaign: newCampaign(CATALOGUE, firstDeck(CATALOGUE)), resumed: undefined };
+function readEntry(): Held {
+  const fresh = { campaign: newCampaign(CATALOGUE, firstDeck(CATALOGUE)), opening: undefined };
   let storage: Storage;
   let text: string | null;
   try {
@@ -69,15 +89,8 @@ function readEntry(): Reading {
   } else if (progress === undefined) {
     storage.removeItem(SAVE_ENTRY);
   }
-  const resumed =
-    progress === undefined
-      ? undefined
-      : {
-          age: progress.chronicle.age,
-          region: progress.region,
-          deck: progress.deck,
-          seed: progress.chronicle.seed,
-          resumed: progress.chronicle,
-        };
-  return { campaign: campaign ?? fresh.campaign, resumed };
+  return {
+    campaign: campaign ?? fresh.campaign,
+    opening: progress === undefined ? undefined : openingOf(progress),
+  };
 }

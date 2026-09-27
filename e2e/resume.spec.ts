@@ -11,6 +11,7 @@ import {
   capstoneClosed,
   chronicleOf,
   click,
+  continued,
   defeatShown,
   dragOut,
   firstDealt,
@@ -26,12 +27,11 @@ import {
 } from './chronicle-screen';
 
 async function resume(page: Page): Promise<void> {
-  await page.goto('/');
-  await page.waitForFunction(() => window.game?.scene.isActive('ui') === true);
+  await continued(page);
   await rested(page);
 }
 
-test('a chronicle reopened on the bare address stands where it stood, under its capstone’s window', async ({
+test('a chronicle continued through the address stands where it stood, under its capstone’s window', async ({
   page,
 }) => {
   test.setTimeout(budget(0));

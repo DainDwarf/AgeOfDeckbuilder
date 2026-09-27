@@ -31,6 +31,7 @@ import {
   unitMarkOf,
 } from '../ui/marks';
 import {
+  achievementName,
   answerName,
   answerRules,
   buildingName,
@@ -266,6 +267,14 @@ test('every answer of every event of an age’s schedule costs, lands and reads 
     expect(() => capstone.lands(CATALOGUE, chronicle)).not.toThrow();
     expect(() => capstone.continues?.(CATALOGUE, chronicle)).not.toThrow();
     expect(capstone.passes(CATALOGUE, chronicle)).toBe(false);
+  }
+});
+
+test('every achievement of every age has a name on the screen', () => {
+  for (const age of AGES) {
+    for (const id of Object.keys(ageOf(CATALOGUE, age).achievements)) {
+      expect(() => achievementName(id)).not.toThrow();
+    }
   }
 });
 
