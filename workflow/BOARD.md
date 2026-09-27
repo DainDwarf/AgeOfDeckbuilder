@@ -14,7 +14,8 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The campaign's tree** — every achievement on the campaign screen with its condition and its technology, in three states — its technology unlocked, within the next chronicle's reach, waiting on a technology before it — on a surface that pans and zooms as the map does, by drag, wheel and keys.
+- **The campaign's tree** — the campaign screen shows the technology tree: one plate per technology on its age's ground, unlocked, within reach or a mystery, moved left and right by drag and by the two pan keys; `e2e/tree.spec.ts` and the layout's Vitest tests pass. Doc-impact: `docs/META.md`, `docs/INTERFACE.md`, `docs/ages/NOMADIC.md`. [board/campaign-tree.md](board/campaign-tree.md)
+- **A plate's name is shown large** — a right click on a name in a plate's text shows the named thing large on the campaign screen, as it does on a card; the cards shown large are the chronicle's overlay's today, which no screen of the meta starts.
 - **The address loses its doors** — remove the developer's doors of deck, age, region and seed on the address: the specs that open through them open on a planted save, one test launches through the meta's screens, and the `ui-check` agent and the `run` skill follow.
 - **The ending pays** — a chronicle is launched on the campaign's deck, its ending pays into the campaign once and the save keeps it, a chronicle that has paid leaves the save, and the ending screen reads the influence and the achievements under the outcome; the launch page loses its deck row.
 - **Conditions read on the charted chronicle** — the capstone's and the achievements' conditions are read before the charting, so a condition on what the chronicle has charted reads one command late; swap the two passes.
