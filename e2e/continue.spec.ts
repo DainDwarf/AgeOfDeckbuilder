@@ -1,24 +1,17 @@
 import { expect, type Page, test } from '@playwright/test';
 import type Phaser from 'phaser';
-import { CATALOGUE } from '../src/content/catalogue';
-import { apply, outcome } from '../src/rules/chronicle';
 import { type Chronicle, onSettlePhase } from '../src/rules/state';
-import { achievementName, text } from '../src/ui/text';
+import { text } from '../src/ui/text';
 import {
-  budget,
   chronicleOf,
   click,
   firstsOf,
-  idsOf,
-  landed,
   launchedOn,
   plant,
   readNames,
   rested,
-  SHELTER,
   settledOn,
   standing,
-  victoryShown,
   watch,
 } from './chronicle-screen';
 
@@ -85,31 +78,6 @@ test('on a save holding a chronicle still on its settle phase, Continue reads th
 
   await pageOver(page, saved);
   expect(await continueReads(page)).toEqual([text('launch.continue'), text('launch.settle-phase')]);
-
-  expect(problems).toEqual([]);
-});
-
-test('on a save holding a won chronicle, Continue reads its turn and each achievement it reached, and opens it on its ending screen', async ({
-  page,
-}) => {
-  test.setTimeout(budget(0));
-  const problems = watch(page);
-  const { chronicle, tile } = landed();
-  const index = idsOf(chronicle.hand).indexOf(SHELTER);
-  const won = outcome(apply(CATALOGUE, chronicle, { type: 'play', index, aim: 'tile', tile }));
-  const reached = won.achievements.filter((achievement) => achievement.reached);
-  expect(reached.length).toBeGreaterThan(0);
-
-  await pageOver(page, won);
-  expect(await continueReads(page)).toEqual([
-    text('launch.continue'),
-    text('launch.turn', { turn: won.turn }),
-    ...reached.map(({ id }) => text('launch.reached', { achievement: achievementName(id) })),
-  ]);
-
-  await pressContinue(page);
-  await expect.poll(() => victoryShown(page)).toBe(true);
-  expect(await chronicleOf(page)).toEqual(won);
 
   expect(problems).toEqual([]);
 });

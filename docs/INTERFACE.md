@@ -16,7 +16,7 @@ The **launch page** is a stand-in for the meta's launch screen, and the bare add
 
 ## A failed boot ✅
 
-When the game cannot start — the browser gives no WebGL, or the address names what the content does not hold — the page says so in place of the blank screen: that the game could not start, and under it the error's own words, so a report can carry them. Nothing on that page is pressed, and the game does not go on.
+When the game cannot start, the page says so in place of the blank screen: that the game could not start, and under it the error's own words, so a report can carry them. Nothing on that page is pressed, and the game does not go on.
 
 ## The debug console ✅
 

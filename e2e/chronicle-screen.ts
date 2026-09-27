@@ -2,7 +2,7 @@ import { expect, type Page } from '@playwright/test';
 import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
 import { newCampaign } from '../src/rules/campaign';
-import { aimOf, type CardKind, gained } from '../src/rules/cards';
+import { aimOf, type CardKind } from '../src/rules/cards';
 import {
   type Aim,
   ageOf,
@@ -729,44 +729,6 @@ export function firstDealt(seed: number): Chronicle {
     chronicle = endedTurn(chronicle);
   }
   return outcome(apply(CATALOGUE, chronicle, { type: 'end-turn' }));
-}
-
-/** The card the capstone's landing lays, and the building its play builds. */
-export const SHELTER = 'shelter';
-
-/**
- * The first seed's capstone landing turn, the shelter in the hand, with a tile beside the city
- * claimed, the shelter's cost gained and a worker entered on that tile, and the tile: the shelter's
- * aim admits it.
- */
-export function landed(): { chronicle: Chronicle; tile: TileCoords } {
-  const card = cardOf(CATALOGUE, SHELTER);
-  const aim = aimOf(card);
-  if (aim.aim !== 'tile') throw new Error(`${SHELTER} is aimed at no tile`);
-  return firstSeed('lands its capstone with a shelter to build beside the city', (seed) => {
-    let turned = settledOn(seed);
-    while (turned.turn < turned.timeline.capstone.turn && turned.ending === undefined) {
-      turned = endedTurn(turned);
-    }
-    if (turned.ending !== undefined || !idsOf(turned.hand).includes(SHELTER)) return undefined;
-
-    for (const tile of neighbours(cityTileOf(turned))) {
-      const claimed = outcome(apply(CATALOGUE, turned, { type: 'claim', tile }));
-      if (claimed === turned) continue;
-      const paid = gained(claimed, card.cost).chronicle;
-      const worked = entered(CATALOGUE, paid, {
-        type: 'worker',
-        faction: 'player',
-        tile,
-      }).chronicle;
-      const chronicle = charted(CATALOGUE, worked);
-      if (!playable(refusalOf(CATALOGUE, chronicle, SHELTER))) continue;
-      if (admitted(CATALOGUE, chronicle, aim).some((coord) => tileKey(coord) === tileKey(tile))) {
-        return { chronicle, tile };
-      }
-    }
-    return undefined;
-  });
 }
 
 /** The chronicle of the first seed whose first deal is the lean season standing alone, stopped on it. */
