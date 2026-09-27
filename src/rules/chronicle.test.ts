@@ -14,6 +14,8 @@ import {
   DECK,
   endedTurn,
   everyCard,
+  FEAST,
+  FEAST_NEED,
   field,
   fullDraw,
   GRANARY,
@@ -617,9 +619,11 @@ test('a chronicle is launched with the achievements of its age whose technology 
 
   expect(reachable([])).toEqual([
     { id: HOARD, reached: false },
+    { id: FEAST, reached: false },
     { id: victoryOf(AGE), reached: false },
   ]);
   expect(reachable([GRANARY])).toEqual([
+    { id: FEAST, reached: false },
     { id: CROWD, reached: false },
     { id: victoryOf(AGE), reached: false },
   ]);
@@ -648,6 +652,7 @@ test('an achievement is recorded reached right after the change its count meets 
   });
   const recorded = [
     { id: HOARD, reached: true },
+    { id: FEAST, reached: false },
     { id: victoryOf(AGE), reached: false },
   ];
 
@@ -666,6 +671,38 @@ test('an achievement is recorded reached right after the change its count meets 
   for (const stage of played.slice(at)) expect(stage.chronicle.achievements).toEqual(recorded);
   expect(outcome(stages).achievements).toEqual(recorded);
   expect(stagedBy(outcome(stages), { type: 'end-turn' })).not.toContain('reached');
+});
+
+test('two achievements one change meets are each recorded as a reached of its own, in the order the age declares them', () => {
+  const city = reaching([], {
+    hand: ['PH_Spoils'],
+    resources: {
+      food: HOARD_NEED - 1,
+      production: 0,
+      military: 0,
+      money: 0,
+      science: 0,
+      culture: 0,
+    },
+  });
+
+  const stages = apply(CATALOGUE, city, PLAYED);
+  const [, , gained, first, second] = [...walked(stages)];
+
+  expect(FEAST_NEED).toBeGreaterThan(HOARD_NEED);
+  expect(city.resources.food).toBeLessThan(HOARD_NEED);
+  expect(gained.chronicle.resources.food).toBeGreaterThanOrEqual(FEAST_NEED);
+  expect(namesOf(stages)).toEqual(['played', 'left', 'stock', 'reached', 'reached']);
+  expect(first.chronicle.achievements).toEqual([
+    { id: HOARD, reached: true },
+    { id: FEAST, reached: false },
+    { id: victoryOf(AGE), reached: false },
+  ]);
+  expect(second.chronicle.achievements).toEqual([
+    { id: HOARD, reached: true },
+    { id: FEAST, reached: true },
+    { id: victoryOf(AGE), reached: false },
+  ]);
 });
 
 test('an achievement the launch did not name is never read, whatever its count', () => {
@@ -710,6 +747,7 @@ test('a victory is followed by its achievement, recorded after the ending, and a
   expect(left.chronicle.achievements).toEqual(city.achievements);
   expect(hoarded.chronicle.achievements).toEqual([
     { id: HOARD, reached: true },
+    { id: FEAST, reached: false },
     { id: victoryOf(AGE), reached: false },
   ]);
   expect(hoarded.chronicle.ending).toBeUndefined();
@@ -717,6 +755,7 @@ test('a victory is followed by its achievement, recorded after the ending, and a
   expect(ended.chronicle.achievements).toEqual(hoarded.chronicle.achievements);
   expect(won.chronicle.achievements).toEqual([
     { id: HOARD, reached: true },
+    { id: FEAST, reached: false },
     { id: victoryOf(AGE), reached: true },
   ]);
   expect(outcome(stages)).toBe(won.chronicle);

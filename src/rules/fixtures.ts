@@ -761,6 +761,12 @@ export const HOARD = 'PH_Hoard';
 /** The food stock that reaches `HOARD`. */
 export const HOARD_NEED = 20;
 
+/** The first fixture age's achievement the food stock reaches past `HOARD`'s need, earning `LARDER`. */
+export const FEAST = 'PH_Feast';
+
+/** The food stock that reaches `FEAST`. */
+export const FEAST_NEED = 25;
+
 /** The first fixture age's achievement the population reaches, earning `CENSUS`. */
 export const CROWD = 'PH_Crowd';
 
@@ -772,6 +778,9 @@ export const GRANARY = 'PH_Granary';
 
 /** The technology `CROWD` earns: it needs `GRANARY`. */
 export const CENSUS = 'PH_Census';
+
+/** The technology `FEAST` earns: it needs none, and unlocks nothing. */
+const LARDER = 'PH_Larder';
 
 /** The achievement a fixture age's victory is. */
 export function victoryOf(age: string): string {
@@ -786,7 +795,7 @@ function pastOf(age: string): string {
 /** The fixture's ages, in the order of the ages table. */
 const AGES = Object.keys(SCHEDULES);
 
-/** The achievements a fixture age owns: its victory, and before it the first age's two others. */
+/** The achievements a fixture age owns: its victory, and before it the first age's three others. */
 function achievementsOf(age: string): Age['achievements'] {
   const victory: Age['achievements'] = {
     [victoryOf(age)]: {
@@ -804,6 +813,12 @@ function achievementsOf(age: string): Age['achievements'] {
       technology: GRANARY,
       influence: 1,
     },
+    [FEAST]: {
+      count: (_catalogue, chronicle) => chronicle.resources.food,
+      need: FEAST_NEED,
+      technology: LARDER,
+      influence: 1,
+    },
     [CROWD]: {
       count: (_catalogue, chronicle) => chronicle.population,
       need: CROWD_NEED,
@@ -814,10 +829,11 @@ function achievementsOf(age: string): Age['achievements'] {
   };
 }
 
-/** The fixture's technologies: the first age's two, and each age's victory unlocking the next age. */
+/** The fixture's technologies: the first age's three, and each age's victory unlocking the next age. */
 const TECHNOLOGIES: Tables['technologies'] = {
   [GRANARY]: { needs: [], unlocks: { cards: { PH_Harvest: 2 } } },
   [CENSUS]: { needs: [GRANARY], unlocks: { cards: {} } },
+  [LARDER]: { needs: [], unlocks: { cards: {} } },
   ...Object.fromEntries(
     AGES.map((age, at) => {
       const next = AGES[at + 1];

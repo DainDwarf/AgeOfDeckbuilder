@@ -31,6 +31,7 @@ The unordered pool of features that may or may not happen. Nothing here is promi
 - **A tile that adds sight**: a layer of a tile, a building or an improvement, adding to the sight of the unit standing on it.
 - **A building that adds an entry point**: units enter the map on the city's tile alone; a keyword for a building that opens another door.
 - **A rolled centre part**: the centre part's radius rolled by the generator instead of named by the region; a generator change, pitched running.
+- **An exploration achievement** (Stone Age): an achievement whose count reads what the chronicle has charted.
 - **Herbalism** (Stone Age): a technology unlocking the Heal card — 2 food, heal a unit on a player-held tile.
 - **An in-game codex**: the rules by section, the card kinds and the keywords among them, read in the game; a right click on a card's kind label opens the codex on that kind, and a keyword standing in a card's text, Single use first, stands in brackets and opens on its own — today the label raises a one-line tooltip and the keyword is plain text.
 - **Unit legibility**: a unit forgotten at the end of a turn feels like a slip, and the cure is a state shown, never a warning or a gate on End turn. Three readings, each its own line when taken:

@@ -219,15 +219,19 @@ export function launched(
 export function apply(catalogue: Catalogue, chronicle: Chronicle, command: Command): Stage[] {
   checkContent(catalogue, chronicle);
   const stages = resolved(catalogue, chronicle, command);
-  return charting(catalogue, chronicle, read(catalogue, chronicle, stages));
+  return charting(catalogue, chronicle, conditionsRead(catalogue, chronicle, stages));
 }
 
 /**
  * The stages a command resolves as, every change, an `ended` among them, followed by a `reached` for
  * each achievement its chronicle meets, and cut at the first the capstone passes on, the victory's
- * `ended` after it.
+ * `ended` after it; the capstone is never read on a chronicle whose city falls on it.
  */
-function read(catalogue: Catalogue, started: Chronicle, stages: readonly Stage[]): Stage[] {
+function conditionsRead(
+  catalogue: Catalogue,
+  started: Chronicle,
+  stages: readonly Stage[],
+): Stage[] {
   if (started.ending !== undefined) return [...stages];
   const { id, turn } = started.timeline.capstone;
   const { passes } = capstoneOf(catalogue, id);
