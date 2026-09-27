@@ -32,8 +32,8 @@ const VALUE_STYLE = { fontFamily: UI_FONT, fontSize: '18px', color: css(LOOK.ink
 const CHIP_TO_WORD = 18;
 const WORD_TO_VALUE = 8;
 
-/** How far a reading in its well is pressed down and to the right. */
-const SUNK = 1;
+/** How far what sits in a well is pressed down and to the right. */
+export const SUNK = 1;
 
 /** The readings the bar carries, in the order it reads them. */
 const READINGS: readonly BarReading[] = [...RESOURCES, 'idle'];
@@ -46,11 +46,16 @@ function managesCity(key: BarReading): key is (typeof CITY_READINGS)[number] {
   return CITY_READINGS.some((reading) => reading === key);
 }
 
-type Entry = {
-  readonly key: BarReading;
+/** A reading as a bar draws one: the diamond, the word, the value, and the zone its tooltip is raised from. */
+export type Reading = {
   readonly chip: Phaser.GameObjects.Rectangle;
   readonly word: Phaser.GameObjects.Text;
   readonly value: Phaser.GameObjects.Text;
+  readonly hover: Phaser.GameObjects.Zone;
+};
+
+type Entry = Reading & {
+  readonly key: BarReading;
   /** The chip, the word and the value together: what the well presses into the bar. */
   readonly face: Phaser.GameObjects.Container;
   /** The well the reading sits in while it is latched down or its act waits; it stands only then. */
@@ -58,7 +63,6 @@ type Entry = {
   readonly floor: Phaser.GameObjects.Rectangle;
   /** What the value reads, as the number a rise ticks through; the text follows it. */
   readonly ticking: { count: number };
-  readonly hover: Phaser.GameObjects.Zone;
 };
 
 export type ResourceBar = {
@@ -90,7 +94,7 @@ export function createResourceBar(
 
   const entries = READINGS.map((key) => createEntry(scene, bar, tooltip, key));
   const layout = layOutBar({
-    readings: entries.map((entry) => widthOf(entry, slot)),
+    readings: entries.map((entry) => readingWidth(entry, slot)),
     menu: menuRoom(scene),
     width: DESIGN_WIDTH,
     margin: MARGIN,
@@ -219,7 +223,7 @@ export function createResourceBar(
  * read over each other, which is four digits and the stroke between them. A value wider than that
  * grows into the gap before the next reading instead of moving it.
  */
-function digitSlot(scene: Phaser.Scene): number {
+export function digitSlot(scene: Phaser.Scene): number {
   const digits = addText(scene, 0, 0, '00/00', VALUE_STYLE);
   const width = digits.width;
   digits.destroy();
@@ -227,12 +231,12 @@ function digitSlot(scene: Phaser.Scene): number {
 }
 
 /**
- * The well of one reading: the floor it sits on, the edge it is cut into above and to the left, and
- * the light that catches below and to the right. Laid out where the reading is placed.
+ * A well: the floor what sits in it rests on, named `<name>-floor`, the edge it is cut into above and
+ * to the left, and the light that catches below and to the right. Laid out by `placeWell`.
  */
-function createWell(
+export function createWell(
   scene: Phaser.Scene,
-  key: BarReading,
+  name: string,
 ): { well: Phaser.GameObjects.Container; floor: Phaser.GameObjects.Rectangle } {
   const [floor, ...edges] = [
     LOOK.wellFill,
@@ -241,23 +245,22 @@ function createWell(
     LOOK.wellLight,
     LOOK.wellLight,
   ].map((colour) => scene.add.rectangle(0, 0, 1, 1, colour).setOrigin(0, 0));
-  floor.setName(`reading-${key}-floor`);
-  const well = scene.add
-    .container(0, 0, [floor, ...edges])
-    .setName(`reading-${key}-well`)
-    .setVisible(false);
+  floor.setName(`${name}-floor`);
+  const well = scene.add.container(0, 0, [floor, ...edges]).setName(`${name}-well`);
   return { well, floor };
 }
 
-/** The well's five rectangles laid over the reading's own zone: the floor, then the four edges. */
-function placeWell(well: Phaser.GameObjects.Container, x: number, width: number): void {
-  const height = BAR_HEIGHT - 1;
+/** The well's five rectangles laid over a rectangle: the floor, then the four edges. */
+export function placeWell(
+  well: Phaser.GameObjects.Container,
+  { x, y, width, height }: { x: number; y: number; width: number; height: number },
+): void {
   const [floor, top, left, bottom, right] = well.list as Phaser.GameObjects.Rectangle[];
-  floor.setPosition(x, 0).setSize(width, height);
-  top.setPosition(x, 0).setSize(width, 1);
-  left.setPosition(x, 0).setSize(1, height);
-  bottom.setPosition(x, height - 1).setSize(width, 1);
-  right.setPosition(x + width - 1, 0).setSize(1, height);
+  floor.setPosition(x, y).setSize(width, height);
+  top.setPosition(x, y).setSize(width, 1);
+  left.setPosition(x, y).setSize(1, height);
+  bottom.setPosition(x, y + height - 1).setSize(width, 1);
+  right.setPosition(x + width - 1, y).setSize(1, height);
 }
 
 function chipColour(key: BarReading): number {
@@ -274,49 +277,79 @@ function chipColour(key: BarReading): number {
   }
 }
 
+/**
+ * A reading named `reading-<name>`, its value `reading-<name>-value`, whose tooltip is raised under
+ * it. The caller adds its parts to the bar and places it; its zone's coordinates are the screen's.
+ */
+export function createReading(
+  scene: Phaser.Scene,
+  tooltip: Tooltip,
+  shown: { name: string; colour: number; word: string; tip: string },
+): Reading {
+  const chip = scene.add.rectangle(0, 0, 10, 10, shown.colour).setAngle(45);
+  const word = addText(scene, 0, 0, shown.word, WORD_STYLE).setOrigin(0, 0.5);
+  const value = addText(scene, 0, 0, '', VALUE_STYLE)
+    .setOrigin(0, 0.5)
+    .setName(`reading-${shown.name}-value`);
+  const hover = scene.add
+    .zone(0, 0, 1, BAR_HEIGHT)
+    .setOrigin(0, 0)
+    .setName(`reading-${shown.name}`)
+    .setInteractive();
+  onHover(
+    hover,
+    () => {
+      tooltip.under(shown.tip, hover.x, hover.x + hover.width / 2, BAR_HEIGHT + 8);
+    },
+    () => tooltip.hide(),
+  );
+  return { chip, word, value, hover };
+}
+
 function createEntry(
   scene: Phaser.Scene,
   bar: Phaser.GameObjects.Container,
   tooltip: Tooltip,
   key: BarReading,
 ): Entry {
-  const chip = scene.add.rectangle(0, 0, 10, 10, chipColour(key)).setAngle(45);
-  const word = addText(scene, 0, 0, text(`label.${key}`), WORD_STYLE).setOrigin(0, 0.5);
-  const value = addText(scene, 0, 0, '', VALUE_STYLE)
-    .setOrigin(0, 0.5)
-    .setName(`reading-${key}-value`);
-  const hover = scene.add
-    .zone(0, 0, 1, BAR_HEIGHT)
-    .setOrigin(0, 0)
-    .setName(`reading-${key}`)
-    .setInteractive();
-  onHover(
-    hover,
-    () => {
-      tooltip.under(text(`tooltip.${key}`), hover.x, hover.x + hover.width / 2, BAR_HEIGHT + 8);
-    },
-    () => tooltip.hide(),
-  );
+  const reading = createReading(scene, tooltip, {
+    name: key,
+    colour: chipColour(key),
+    word: text(`label.${key}`),
+    tip: text(`tooltip.${key}`),
+  });
+  const { chip, word, value, hover } = reading;
   // The well is added first, so the reading it holds is painted inside it.
-  const { well, floor } = createWell(scene, key);
+  const { well, floor } = createWell(scene, `reading-${key}`);
+  well.setVisible(false);
   const face = scene.add.container(0, 0, [chip, word, value]);
   bar.add([well, face, hover]);
-  return { key, chip, word, value, face, well, floor, ticking: { count: 0 }, hover };
+  return { ...reading, key, face, well, floor, ticking: { count: 0 } };
 }
 
-function widthOf({ word }: Entry, slot: number): number {
+/** How wide a reading's content stands for the bar's flow: the value takes the slot it grows into. */
+export function readingWidth({ word }: Reading, slot: number): number {
   return CHIP_TO_WORD + word.width + WORD_TO_VALUE + slot;
 }
 
-/** One reading where the layout stands it: the press covers the zone the well is drawn in. */
-function place(entry: Entry, { at, zone }: Placed): void {
+/** A reading where the layout stands it: its zone covers the bar's height, less the edge at its foot. */
+export function placeReading({ chip, word, value, hover }: Reading, { at, zone }: Placed): void {
   const middle = BAR_HEIGHT / 2;
-  const { chip, word, value, hover, well } = entry;
   chip.setPosition(at + 5, middle);
   word.setPosition(at + CHIP_TO_WORD, middle);
   value.setPosition(at + CHIP_TO_WORD + word.width + WORD_TO_VALUE, middle);
-  placeWell(well, zone.x, zone.width);
   hover.setPosition(zone.x, 0).setSize(zone.width, BAR_HEIGHT - 1);
+}
+
+/** One reading where the layout stands it: the press covers the zone the well is drawn in. */
+function place(entry: Entry, placed: Placed): void {
+  placeReading(entry, placed);
+  placeWell(entry.well, {
+    x: placed.zone.x,
+    y: 0,
+    width: placed.zone.width,
+    height: BAR_HEIGHT - 1,
+  });
 }
 
 /**

@@ -16,7 +16,7 @@ You answer exactly one question: **is anything broken?** Layout, overlap, clippi
 
 One `<canvas>` and nothing else. Phaser draws every pixel; there are no DOM elements, no selectors, no queryable text. You see what a player sees, and you find things the way a player does — by looking at the picture and by clicking where the picture says something is.
 
-The bare URL boots on the launch page, which offers Continue while the save holds a chronicle; `?continue=1` opens the save's chronicle straight. A URL that names a deck opens the chronicle screen — the map, the hand, the piles, the resource bar — of the chronicle it names, straight, and writes it over the save: `?seed=<integer>` picks the map, `?deck=` the cards, and the same URL opens the same chronicle every time. The chronicle screen writes nothing into the URL. The app stores the player's key bindings and the save. The checklist you are handed is what bounds the check.
+The bare URL boots on the campaign screen, whose Chronicle button opens the launch page, which offers Continue while the save holds a chronicle; `?continue=1` opens the save's chronicle straight. A URL that names a deck opens the chronicle screen — the map, the hand, the piles, the resource bar — of the chronicle it names, straight, and writes it over the save: `?seed=<integer>` picks the map, `?deck=` the cards, and the same URL opens the same chronicle every time. The chronicle screen writes nothing into the URL. The app stores the player's key bindings and the save. The checklist you are handed is what bounds the check.
 
 ## Bound your work
 
@@ -42,7 +42,7 @@ const require = createRequire(`${process.cwd()}/`);
 const { chromium } = require('playwright');
 
 const out = '<scratchpad>'; // forward slashes
-const url = 'http://localhost:5173/?deck=nomadic'; // without a deck the app opens on the launch page
+const url = 'http://localhost:5173/?deck=nomadic'; // without a deck the app opens on the campaign screen
 
 const browser = await chromium.launch();
 const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });

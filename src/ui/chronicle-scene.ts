@@ -44,7 +44,7 @@ import { onKeyDown } from './keys';
 import { css, LOOK } from './look';
 import { createMapView, type PressedTile } from './map';
 import { mapOf } from './map-scene';
-import { type OpensChronicles, raiseMenu, resetMenu } from './menu-scene';
+import { type LeavesChronicles, raiseMenu, resetMenu } from './menu-scene';
 import { createOverlay } from './overlay';
 import { overlayOf } from './overlay-scene';
 import { createPiles } from './piles';
@@ -72,7 +72,7 @@ const LABEL_STYLE = {
   color: css(LOOK.ink),
 };
 
-export class ChronicleScene extends Phaser.Scene implements OpensChronicles {
+export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
   private choices!: Choices;
   private current!: Chronicle;
   /** The play-out running on the chronicle screen as it stands, and nothing while none is. */
@@ -118,16 +118,16 @@ export class ChronicleScene extends Phaser.Scene implements OpensChronicles {
   }
 
   /**
-   * The chronicle left standing in its save and the page opened on its choices, the seed blank: the
-   * play-out the screen was in the middle of is let go of here, its tail committing nothing.
+   * The chronicle left standing in its save and the campaign screen opened: the play-out the screen
+   * was in the middle of is let go of here, its tail committing nothing.
    */
-  newChronicle(): void {
+  leave(): void {
     this.sequence = undefined;
     stopAllMotion(this);
     stopAllMotion(mapOf(this));
     this.scene.stop('overlay');
     this.scene.stop('map');
-    this.scene.start('launch', { ...this.choices, seed: undefined });
+    this.scene.start('campaign');
   }
 
   create(): void {

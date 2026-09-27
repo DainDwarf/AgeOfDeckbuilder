@@ -13,7 +13,7 @@ import { LOOK } from './look';
 import { behind, createMenuButton, createWindow, type MenuWindow, type Opened } from './menu';
 
 /** What the menu asks of the chronicle scene at the press, and all it ever holds of it. */
-export type OpensChronicles = Phaser.Scene & { newChronicle(): void };
+export type LeavesChronicles = Phaser.Scene & { leave(): void };
 
 /** What the menu says on the game's emitter as its scrim rises and falls. */
 const COVERED = 'menu-covered';
@@ -60,8 +60,8 @@ export class MenuScene extends Phaser.Scene {
       const laid = createWindow(this, which, {
         press: (press) => {
           switch (press) {
-            case 'new-chronicle':
-              this.game.scene.getScene<OpensChronicles>('ui').newChronicle();
+            case 'campaign':
+              this.game.scene.getScene<LeavesChronicles>('ui').leave();
               return;
             case 'settings':
             case 'controls':

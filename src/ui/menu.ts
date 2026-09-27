@@ -25,8 +25,8 @@ import { text } from './text';
 /** Every window the menu opens. */
 export type MenuWindow = 'menu' | 'settings' | 'controls';
 
-/** What pressing a window's button does: opens the window it names, or leaves the chronicle for the page. */
-export type MenuPress = Exclude<MenuWindow, 'menu'> | 'new-chronicle';
+/** What pressing a window's button does: opens the window it names, or leaves the chronicle for the campaign screen. */
+export type MenuPress = Exclude<MenuWindow, 'menu'> | 'campaign';
 
 /**
  * The windows: what each one lists, in the order it lists them, and the one it closes back to. The
@@ -37,7 +37,7 @@ const WINDOWS: Record<
   MenuWindow,
   { readonly buttons: readonly MenuPress[]; readonly from?: MenuWindow }
 > = {
-  menu: { buttons: ['settings', 'new-chronicle'] },
+  menu: { buttons: ['settings', 'campaign'] },
   settings: { buttons: ['controls'], from: 'menu' },
   controls: { buttons: [], from: 'settings' },
 };
@@ -47,10 +47,10 @@ export function behind(which: MenuWindow): MenuWindow | undefined {
   return WINDOWS[which].from;
 }
 
-/** What a window lists on the screen standing: New chronicle stands over a chronicle alone. */
+/** What a window lists on the screen standing: Campaign stands over a chronicle and its ending screen alone. */
 function listed(scene: Phaser.Scene, which: MenuWindow): readonly MenuPress[] {
   return WINDOWS[which].buttons.filter(
-    (press) => press !== 'new-chronicle' || scene.scene.isActive('ui'),
+    (press) => press !== 'campaign' || scene.scene.isActive('ui'),
   );
 }
 
@@ -276,8 +276,8 @@ function menuLabel(scene: Phaser.Scene): Phaser.GameObjects.Text {
 }
 
 /**
- * The room the Menu button takes at the right end of the resource bar: the button stands on the menu
- * scene and the bar's flow ends before it, so both measure it here.
+ * The room the Menu button takes at the right end of the strip along the top: the button stands on the
+ * menu scene and the flow of whichever bar stands there ends before it, so both measure it here.
  */
 export function menuRoom(scene: Phaser.Scene): number {
   const label = menuLabel(scene);

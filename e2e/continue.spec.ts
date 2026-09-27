@@ -3,6 +3,8 @@ import type Phaser from 'phaser';
 import { type Chronicle, onSettlePhase } from '../src/rules/state';
 import { text } from '../src/ui/text';
 import {
+  campaignShown,
+  chronicleButton,
   chronicleOf,
   click,
   firstsOf,
@@ -31,13 +33,14 @@ function continueReads(page: Page): Promise<string[]> {
   });
 }
 
-/** The chronicle planted as the save, and the page the bare address boots on waited for. */
+/** The chronicle planted as the save, and the page Chronicle opens from the campaign screen waited for. */
 async function pageOver(page: Page, chronicle: Chronicle): Promise<void> {
   const { region, deck } = firstsOf();
   await readNames(page);
   await plant(page, { chronicle, region, deck });
   await page.goto('/');
-  await expect.poll(() => standing(page, 'launch-button')).toBe(true);
+  await campaignShown(page);
+  await chronicleButton(page);
 }
 
 /** Continue pressed, and the chronicle screen it opens waited for. */
@@ -47,7 +50,7 @@ async function pressContinue(page: Page): Promise<void> {
   await page.waitForFunction(() => window.game?.scene.isActive('ui') === true);
 }
 
-test('on a save holding a chronicle the bare address lands on the page, Continue reads its turn, and the press opens it where it stood', async ({
+test('on a save holding a chronicle the bare address lands on the campaign screen, Continue on the page reads its turn, and the press opens it where it stood', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -87,22 +90,23 @@ test('with no save the page stands with no Continue', async ({ page }) => {
   await readNames(page);
 
   await page.goto('/');
-  await expect.poll(() => standing(page, 'launch-button')).toBe(true);
+  await campaignShown(page);
+  await chronicleButton(page);
   expect(await standing(page, 'launch-continue')).toBe(false);
 
   expect(problems).toEqual([]);
 });
 
-test('the menu’s New chronicle leaves the chronicle launched on the page in its save, and Continue opens it as it stands', async ({
+test('the menu’s Campaign leaves the chronicle launched on the page in its save, and Continue opens it as it stands', async ({
   page,
 }) => {
   const problems = watch(page);
   await readNames(page);
 
   await page.goto('/');
-  await expect.poll(() => standing(page, 'launch-button')).toBe(true);
+  await campaignShown(page);
+  await chronicleButton(page);
   expect(await standing(page, 'launch-continue')).toBe(false);
-  await rested(page);
   await click(page, 'launch-button');
   await page.waitForFunction(() => window.game?.scene.isActive('ui') === true);
   const launched = await chronicleOf(page);
@@ -111,9 +115,11 @@ test('the menu’s New chronicle leaves the chronicle launched on the page in it
   await expect.poll(() => standing(page, 'menu-button')).toBe(true);
   await click(page, 'menu-button');
   await expect.poll(() => standing(page, 'menu')).toBe(true);
-  await click(page, 'menu-new-chronicle');
-  await expect.poll(() => standing(page, 'launch-continue')).toBe(true);
+  await rested(page);
+  await click(page, 'menu-campaign');
+  await campaignShown(page);
   expect(await standing(page, 'menu')).toBe(false);
+  await chronicleButton(page);
   expect(await continueReads(page)).toEqual([text('launch.continue'), text('launch.settle-phase')]);
 
   await pressContinue(page);

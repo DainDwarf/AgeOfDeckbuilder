@@ -5,6 +5,7 @@ import { CATALOGUE } from './content/catalogue';
 import { booted } from './failed-boot';
 import { ageOf, deckOf, firstRegion } from './rules/catalogue';
 import { regionOf } from './rules/map-kinds';
+import { CampaignScreen } from './ui/campaign-screen';
 import { ChronicleScene } from './ui/chronicle-scene';
 import { DebugConsole } from './ui/debug-console';
 import { backingSize, followPointer, followWindow, releaseOnBlur } from './ui/design-space';
@@ -59,14 +60,14 @@ function askedChoices(): Choices {
   };
 }
 
-/** The screen the boot opens: the page on the choices, or the chronicle screen on an opening. */
+/** The screen the boot opens: the campaign screen, or the chronicle screen on an opening. */
 type FirstScreen =
-  | { readonly on: 'launch'; readonly choices: Choices }
+  | { readonly on: 'campaign' }
   | { readonly on: 'chronicle'; readonly opening: Opening };
 
 /**
  * What the address asks for: the chronicle the save holds, which it must hold; a chronicle launched
- * straight on the choices, where it names a deck; and the page on them otherwise.
+ * straight on the choices, where it names a deck; and the campaign screen otherwise.
  */
 function firstScreen(): FirstScreen {
   if (asked('continue') !== undefined) {
@@ -74,10 +75,8 @@ function firstScreen(): FirstScreen {
     if (saved === undefined) throw new Error('the save holds no chronicle to continue');
     return { on: 'chronicle', opening: saved };
   }
-  const choices = askedChoices();
-  return asked('deck') === undefined
-    ? { on: 'launch', choices }
-    : { on: 'chronicle', opening: choices };
+  if (asked('deck') === undefined) return { on: 'campaign' };
+  return { on: 'chronicle', opening: askedChoices() };
 }
 
 const first = firstScreen();
@@ -85,8 +84,8 @@ const first = firstScreen();
 /** The first screen started, over the console and the menu. */
 function startFirst(screen: FirstScreen): void {
   switch (screen.on) {
-    case 'launch':
-      game.scene.start('launch', screen.choices);
+    case 'campaign':
+      game.scene.start('campaign');
       return;
     case 'chronicle':
       game.scene.start('overlay');
@@ -112,6 +111,7 @@ window.game = game;
 // The tower's barriers rest on this; on, a stopped release strands a drag off the hand (docs/PHASER.md).
 game.input.globalTopOnly = false;
 // Added bottom up, started top down: render order is the add order, key order the start order (docs/PHASER.md).
+game.scene.add('campaign', CampaignScreen);
 game.scene.add('launch', LaunchPage);
 game.scene.add('map', MapScene);
 game.scene.add('ui', ChronicleScene);
@@ -119,8 +119,8 @@ game.scene.add('overlay', OverlayScene);
 game.scene.add('menu', MenuScene);
 game.scene.add('console', DebugConsole);
 // The ui scene reaches into the console's, the menu's, the overlay's and the map's as it is created,
-// and the page into the menu's, so this order is load-bearing twice over: started last, none of them
-// has the handle it is reached by yet and the screen the boot opens throws.
+// and the campaign screen and the page into the menu's, so this order is load-bearing twice over:
+// started last, none of them has the handle it is reached by yet and the screen the boot opens throws.
 game.events.once(Phaser.Core.Events.READY, () => {
   // A batch shader built for several textures tears a rotated Text (docs/PHASER.md). Not the config's
   // `maxTextures`: that caps the units every draw binds, and at one the browse's mask binds nothing.

@@ -1,8 +1,8 @@
 import { expect, type Page } from '@playwright/test';
 import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
-import { newCampaign } from '../src/rules/campaign';
-import { aimOf, type CardKind } from '../src/rules/cards';
+import { type Campaign, newCampaign } from '../src/rules/campaign';
+import { aimOf, type CardKind, gained } from '../src/rules/cards';
 import {
   type Aim,
   ageOf,
@@ -204,13 +204,38 @@ export async function readNames(page: Page): Promise<void> {
  * the first deck; a save the reading would refuse throws here.
  */
 export async function plant(page: Page, save: ChronicleSave): Promise<void> {
-  const text = writeSave(CATALOGUE, newCampaign(CATALOGUE, firstsOf().deck), save);
+  await kept(page, writeSave(CATALOGUE, newCampaign(CATALOGUE, firstsOf().deck), save));
+}
+
+/**
+ * The campaign kept as the save the pages this one loads from now on find, with no chronicle beside
+ * it; a save the reading would refuse throws here.
+ */
+export async function plantCampaign(page: Page, campaign: Campaign): Promise<void> {
+  await kept(page, writeSave(CATALOGUE, campaign));
+}
+
+async function kept(page: Page, text: string): Promise<void> {
   await page.addInitScript(
-    ({ entry, kept }) => {
-      window.localStorage.setItem(entry, kept);
+    ({ entry, saved }) => {
+      window.localStorage.setItem(entry, saved);
     },
-    { entry: SAVE_ENTRY, kept: text },
+    { entry: SAVE_ENTRY, saved: text },
   );
+}
+
+/** Waits for the campaign screen to stand, the navbar pressable on it. */
+export async function campaignShown(page: Page): Promise<void> {
+  await page.waitForFunction(() => window.game?.scene.isActive('campaign') === true);
+  await expect.poll(() => standing(page, 'navbar-launch')).toBe(true);
+  await rested(page);
+}
+
+/** Chronicle pressed on the navbar standing, and the launch page it opens waited for. */
+export async function chronicleButton(page: Page): Promise<void> {
+  await click(page, 'navbar-launch');
+  await expect.poll(() => standing(page, 'launch-button')).toBe(true);
+  await rested(page);
 }
 
 /** Opens the chronicle the save holds straight, as the address word `continue` does. */
@@ -752,6 +777,44 @@ export function beforeTheFall(): Chronicle {
       const ended = endedTurn(chronicle);
       if (ended.ending?.outcome === 'defeat' && ended.ending.cause === 'capture') return chronicle;
       chronicle = ended;
+    }
+    return undefined;
+  });
+}
+
+/** The card the capstone's landing lays, and the building its play builds. */
+export const SHELTER = 'shelter';
+
+/**
+ * The first seed's capstone landing turn, the shelter in the hand, with a tile beside the city
+ * claimed, the shelter's cost gained and a worker entered on that tile, and the tile: the shelter's
+ * aim admits it.
+ */
+export function landed(): { chronicle: Chronicle; tile: TileCoords } {
+  const card = cardOf(CATALOGUE, SHELTER);
+  const aim = aimOf(card);
+  if (aim.aim !== 'tile') throw new Error(`${SHELTER} is aimed at no tile`);
+  return firstSeed('lands its capstone with a shelter to build beside the city', (seed) => {
+    let turned = settledOn(seed);
+    while (turned.turn < turned.timeline.capstone.turn && turned.ending === undefined) {
+      turned = endedTurn(turned);
+    }
+    if (turned.ending !== undefined || !idsOf(turned.hand).includes(SHELTER)) return undefined;
+
+    for (const tile of neighbours(cityTileOf(turned))) {
+      const claimed = outcome(apply(CATALOGUE, turned, { type: 'claim', tile }));
+      if (claimed === turned) continue;
+      const paid = gained(claimed, card.cost).chronicle;
+      const worked = entered(CATALOGUE, paid, {
+        type: 'worker',
+        faction: 'player',
+        tile,
+      }).chronicle;
+      const chronicle = charted(CATALOGUE, worked);
+      if (!playable(refusalOf(CATALOGUE, chronicle, SHELTER))) continue;
+      if (admitted(CATALOGUE, chronicle, aim).some((coord) => tileKey(coord) === tileKey(tile))) {
+        return { chronicle, tile };
+      }
     }
     return undefined;
   });

@@ -11,6 +11,8 @@ import {
   bareAimable,
   beforeTheFall,
   browse,
+  campaignShown,
+  chronicleButton,
   chronicleOf,
   cityTileOf,
   click,
@@ -34,10 +36,15 @@ function cardsHeld(chronicle: Chronicle): string[] {
   return idsOf([...chronicle.drawPile, ...chronicle.hand, ...chronicle.discardPile]).sort();
 }
 
-/** New chronicle pressed on the menu standing, and the page it opens waited for. */
-async function newChronicle(page: Page): Promise<void> {
-  await click(page, 'menu-new-chronicle');
-  await expect.poll(() => standing(page, 'launch-button')).toBe(true);
+/**
+ * Campaign pressed on the menu standing, the campaign screen it opens waited for, and Chronicle
+ * pressed there, the page it opens waited for.
+ */
+async function campaignThenChronicle(page: Page): Promise<void> {
+  await rested(page);
+  await click(page, 'menu-campaign');
+  await campaignShown(page);
+  await chronicleButton(page);
 }
 
 /** Launch pressed on the page standing, and the chronicle screen it raises waited for, one hand laid out on it. */
@@ -186,7 +193,7 @@ test('the selected tile waits under the menu', async ({ page }) => {
   expect(problems).toEqual([]);
 });
 
-test('New chronicle opens the page on the chronicle’s choices, the seed blank, and Launch there deals the same deck a fresh seed, on the settle phase', async ({
+test('Campaign opens the campaign screen, Chronicle there the page on the firsts, the seed blank, and Launch deals the first deck a fresh seed, on the settle phase', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -198,7 +205,7 @@ test('New chronicle opens the page on the chronicle’s choices, the seed blank,
 
   await click(page, 'menu-button');
   await expect.poll(() => standing(page, 'menu')).toBe(true);
-  await newChronicle(page);
+  await campaignThenChronicle(page);
   expect(await standing(page, 'menu')).toBe(false);
   expect(await chosen(page, 'age', firsts.age)).toBe(true);
   expect(await chosen(page, 'region', firsts.region)).toBe(true);
@@ -215,7 +222,7 @@ test('New chronicle opens the page on the chronicle’s choices, the seed blank,
   expect(problems).toEqual([]);
 });
 
-test('the menu opens over the defeat screen, and New chronicle then Launch take the chronicle screen back', async ({
+test('the menu opens over the defeat screen, and Campaign, Chronicle then Launch take the chronicle screen back', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -228,7 +235,7 @@ test('the menu opens over the defeat screen, and New chronicle then Launch take 
   await click(page, 'menu-button');
   await expect.poll(() => standing(page, 'menu')).toBe(true);
 
-  await newChronicle(page);
+  await campaignThenChronicle(page);
   expect(await standing(page, 'defeat')).toBe(false);
   await launchedFromPage(page);
 

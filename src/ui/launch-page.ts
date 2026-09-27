@@ -2,18 +2,12 @@ import Phaser from 'phaser';
 import { CATALOGUE } from '../content/catalogue';
 import { ageOf, firstAge, firstDeck, firstRegion } from '../rules/catalogue';
 import { type Chronicle, onSettlePhase } from '../rules/state';
-import {
-  addText,
-  answersPress,
-  DESIGN_HEIGHT,
-  DESIGN_WIDTH,
-  holdDesignSpace,
-  onClick,
-  UI_FONT,
-} from './design-space';
-import { readsKeys } from './keys';
+import { boundTo, keyPressed } from './bindings';
+import { addText, answersPress, holdDesignSpace, onClick, UI_FONT } from './design-space';
+import { readsKeys, takesMouseKeys } from './keys';
 import { css, LOOK } from './look';
 import { closeMenu } from './menu-scene';
+import { ROOM, wearNavbar } from './navbar';
 import { type Choices, type Opening, savedOpening } from './save-entry';
 import { achievementName, type TextKey, text } from './text';
 
@@ -58,21 +52,17 @@ function readingsOf(chronicle: Chronicle): string[] {
  * seed slot under them and Launch under the slot.
  */
 export class LaunchPage extends Phaser.Scene {
-  private opening!: Choices;
-
   constructor() {
     super('launch');
-  }
-
-  init(choices: Choices): void {
-    this.opening = choices;
   }
 
   create(): void {
     holdDesignSpace(this, this.cameras.main);
     closeMenu(this);
-    let chosen: Choices = this.opening;
-    let typed = chosen.seed === undefined ? '' : String(chosen.seed);
+    const content = this.add.layer();
+    wearNavbar(this, 'launch');
+    let chosen: Choices = firstsOf(undefined);
+    let typed = '';
     let root: Phaser.GameObjects.Container | undefined;
     let seedLabel: Phaser.GameObjects.Text | undefined;
 
@@ -170,8 +160,8 @@ export class LaunchPage extends Phaser.Scene {
       const rowsHeight = count * FACE_HEIGHT + (count - 1) * ROW_GAP;
       const height =
         PADDING + title.height + PADDING + continueRoom + rowsHeight + 2 * PADDING + BUTTON_HEIGHT;
-      const top = Math.round((DESIGN_HEIGHT - height) / 2);
-      const middle = DESIGN_WIDTH / 2;
+      const top = ROOM.y + Math.round((ROOM.height - height) / 2);
+      const middle = ROOM.x + ROOM.width / 2;
       const left = middle - width / 2 + PADDING;
       const right = middle + width / 2 - PADDING;
       const head = top + PADDING + title.height + PADDING;
@@ -184,6 +174,7 @@ export class LaunchPage extends Phaser.Scene {
         .setStrokeStyle(1, LOOK.panelEdge);
       title.setPosition(middle, top + PADDING);
       root = this.add.container(0, 0, [box, title]).setName('launch');
+      content.add(root);
 
       if (continued !== undefined) {
         const face = this.add
@@ -245,21 +236,28 @@ export class LaunchPage extends Phaser.Scene {
     };
 
     readsKeys(this, (event) => {
+      if (boundTo(keyPressed(event), 'back')) {
+        this.scene.start('campaign');
+        return true;
+      }
       if (event.key === 'Enter') {
         launch();
         return true;
       }
       if (event.key === 'Backspace') {
         typed = typed.slice(0, -1);
-        // A seed the address handed in may be negative, and no key types the sign back.
-        if (typed === '-') typed = '';
         paintSeed();
         return true;
       }
       if (!/^[0-9]$/.test(event.key)) return false;
-      if (typed.replace('-', '').length >= SEED_DIGITS) return true;
+      if (typed.length >= SEED_DIGITS) return true;
       typed += event.key;
       paintSeed();
+      return true;
+    });
+    takesMouseKeys(this, (press) => {
+      if (!boundTo(press, 'back')) return false;
+      this.scene.start('campaign');
       return true;
     });
 

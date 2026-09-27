@@ -1,5 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
+import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
+import { newCampaign } from '../src/rules/campaign';
 import { apply, outcome } from '../src/rules/chronicle';
 import { CENTRE, tileKey } from '../src/rules/map';
 import { SAVE_ENTRY } from '../src/ui/save-entry';
@@ -8,6 +10,7 @@ import {
   aimed,
   beforeTheFall,
   budget,
+  campaignShown,
   capstoneClosed,
   chronicleOf,
   click,
@@ -57,7 +60,7 @@ test('a chronicle continued through the address stands where it stood, under its
   expect(problems).toEqual([]);
 });
 
-test('a save that cannot be read is dropped, the console says why, and the launch page boots', async ({
+test('a save that cannot be read is dropped, the console says why, and the campaign screen boots on a new campaign', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -72,8 +75,15 @@ test('a save that cannot be read is dropped, the console says why, and the launc
 
   await page.goto('/');
 
-  await expect.poll(() => standing(page, 'launch')).toBe(true);
+  await campaignShown(page);
   expect(await page.evaluate(() => window.game?.scene.isActive('ui'))).toBe(false);
+  expect(
+    await page.evaluate(
+      () =>
+        (window.named?.('reading-influence-value')?.object as Phaser.GameObjects.Text | undefined)
+          ?.text,
+    ),
+  ).toBe(String(newCampaign(CATALOGUE, firstsOf().deck).influence));
   expect(await page.evaluate((entry) => window.localStorage.getItem(entry), SAVE_ENTRY)).toBe(null);
   expect(warnings).toContainEqual(expect.stringContaining('the save is not JSON'));
 

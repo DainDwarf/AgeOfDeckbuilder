@@ -2,6 +2,8 @@ import { expect, type Page, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
 import { deckOf } from '../src/rules/catalogue';
 import {
+  campaignShown,
+  chronicleButton,
   chronicleOf,
   click,
   consoleKey,
@@ -37,21 +39,24 @@ test('an address naming a deck boots into the chronicle, stays as it was, and lo
   expect(problems).toEqual([]);
 });
 
-test('the bare address with no save boots the launch page and logs nothing', async ({ page }) => {
+test('the bare address with no save boots the campaign screen, whose menu lists no Campaign, and logs nothing', async ({
+  page,
+}) => {
   const problems = watch(page);
   await readNames(page);
 
   await page.goto('/');
 
-  await expect.poll(() => standing(page, 'launch')).toBe(true);
+  await campaignShown(page);
   expect(await page.evaluate(() => window.game?.scene.isActive('ui'))).toBe(false);
+  expect(await standing(page, 'launch')).toBe(false);
 
   await expect.poll(() => standing(page, 'menu-button')).toBe(true);
   await rested(page);
   await click(page, 'menu-button');
   await expect.poll(() => standing(page, 'menu')).toBe(true);
   expect(await standing(page, 'menu-settings')).toBe(true);
-  expect(await standing(page, 'menu-new-chronicle')).toBe(false);
+  expect(await standing(page, 'menu-campaign')).toBe(false);
 
   await page.keyboard.press('Escape');
   await expect.poll(() => standing(page, 'menu')).toBe(false);
@@ -64,8 +69,8 @@ test('the console over the launch page takes its digits and its Enter', async ({
   await readNames(page);
 
   await page.goto('/');
-  await expect.poll(() => standing(page, 'launch')).toBe(true);
-  await rested(page);
+  await campaignShown(page);
+  await chronicleButton(page);
   await page.keyboard.type('12');
 
   await consoleKey(page);
@@ -82,15 +87,16 @@ test('the console over the launch page takes its digits and its Enter', async ({
   expect(problems).toEqual([]);
 });
 
-test('Launch opens the chronicle on the defaults, and the address stays bare through Launch, New chronicle and Launch again', async ({
+test('Launch opens the chronicle on the firsts, and the address stays bare through Chronicle, Launch, Campaign, Chronicle and Launch again', async ({
   page,
 }) => {
   const problems = watch(page);
   await readNames(page);
 
   await page.goto('/');
-  await expect.poll(() => standing(page, 'launch-button')).toBe(true);
-  await rested(page);
+  await campaignShown(page);
+  await chronicleButton(page);
+  expect(named(page)).toBe('');
   await click(page, 'launch-button');
   await page.waitForFunction(() => window.game?.scene.isActive('ui') === true);
 
@@ -107,10 +113,12 @@ test('Launch opens the chronicle on the defaults, and the address stays bare thr
   await expect.poll(() => standing(page, 'menu-button')).toBe(true);
   await click(page, 'menu-button');
   await expect.poll(() => standing(page, 'menu')).toBe(true);
-  await click(page, 'menu-new-chronicle');
-  await expect.poll(() => standing(page, 'launch-button')).toBe(true);
-  expect(named(page)).toBe('');
   await rested(page);
+  await click(page, 'menu-campaign');
+  await campaignShown(page);
+  expect(named(page)).toBe('');
+  await chronicleButton(page);
+  expect(named(page)).toBe('');
   await click(page, 'launch-button');
   await page.waitForFunction(() => window.game?.scene.isActive('ui') === true);
   await expect.poll(async () => (await chronicleOf(page)).seed).not.toBe(launched.seed);
