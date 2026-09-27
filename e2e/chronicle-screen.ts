@@ -1,6 +1,7 @@
 import { expect, type Page } from '@playwright/test';
 import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
+import { newCampaign } from '../src/rules/campaign';
 import { aimOf, type CardKind } from '../src/rules/cards';
 import {
   type Aim,
@@ -10,6 +11,7 @@ import {
   deckOf,
   type Entering,
   entered,
+  firstDeck,
   unitKind,
 } from '../src/rules/catalogue';
 import { admitted, apply, launched, outcome, refusalOf } from '../src/rules/chronicle';
@@ -66,7 +68,7 @@ export function firstsOf(): { age: string; region: string; deck: string } {
   return {
     age,
     region: first(ageOf(CATALOGUE, age).regions, 'region'),
-    deck: first(CATALOGUE.decks, 'deck'),
+    deck: firstDeck(CATALOGUE),
   };
 }
 
@@ -205,11 +207,11 @@ export async function readNames(page: Page): Promise<void> {
 }
 
 /**
- * The chronicle kept as the save the pages this one loads from now on find; a save the reading would
- * refuse throws here.
+ * The chronicle kept as the save the pages this one loads from now on find, beside a new campaign on
+ * the first deck; a save the reading would refuse throws here.
  */
 export async function plant(page: Page, save: ChronicleSave): Promise<void> {
-  const text = writeSave(CATALOGUE, save);
+  const text = writeSave(CATALOGUE, newCampaign(CATALOGUE, firstsOf().deck), save);
   await page.addInitScript(
     ({ entry, kept }) => {
       window.localStorage.setItem(entry, kept);

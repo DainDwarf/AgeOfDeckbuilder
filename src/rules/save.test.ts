@@ -1,4 +1,5 @@
 import { expect, test } from 'vitest';
+import { type Campaign, newCampaign, paidInto } from './campaign';
 import { catalogued } from './catalogue';
 import { apply, type Command, outcome } from './chronicle';
 import {
@@ -9,6 +10,7 @@ import {
   endedTurn,
   FROST,
   HOARD,
+  hoardedVictory,
   QUIET,
   REGION,
   settledLaunch,
@@ -25,30 +27,66 @@ function saved(): ChronicleSave {
   return { chronicle, region: REGION, deck: DECK_ID };
 }
 
+/** A campaign a won chronicle has paid into: technologies, influence, and cards in no section. */
+function campaign(): Campaign {
+  return paidInto(CATALOGUE, newCampaign(CATALOGUE, DECK_ID), hoardedVictory()).campaign;
+}
+
 /** The save's text with the chronicle it holds changed after it was written. */
 function tampered(save: ChronicleSave, change: (chronicle: Chronicle) => object): string {
-  const written = JSON.parse(writeSave(CATALOGUE, save)) as ChronicleSave;
+  const written = JSON.parse(writeSave(CATALOGUE, campaign(), save)) as ChronicleSave;
   return JSON.stringify({ ...written, chronicle: change(written.chronicle) });
+}
+
+/** What reading the text drops, the campaign beside the chronicle standing whole. */
+function chronicleDropped(text: string): readonly string[] {
+  const read = readSave(CATALOGUE, text);
+  expect(read.campaign).toEqual(campaign());
+  expect(read.chronicle).toBeUndefined();
+  return read.dropped;
+}
+
+/** The save's text with the campaign it holds changed after it was written beside a chronicle. */
+function campaignTampered(change: (campaign: Campaign) => object): string {
+  const written = JSON.parse(writeSave(CATALOGUE, campaign(), saved())) as { campaign: Campaign };
+  return JSON.stringify({ ...written, campaign: change(written.campaign) });
+}
+
+/** What reading the text refuses of the campaign, the chronicle beside it standing whole. */
+function campaignRefused(text: string): readonly string[] {
+  const read = readSave(CATALOGUE, text);
+  expect(read.campaign).toBeUndefined();
+  expect(read.chronicle).toEqual(saved());
+  return read.dropped;
 }
 
 test('a chronicle saved and read back is the chronicle, and plays the next command to the same outcome', () => {
   const save = saved();
-  const read = readSave(CATALOGUE, writeSave(CATALOGUE, save));
+  const read = readSave(CATALOGUE, writeSave(CATALOGUE, campaign(), save));
   const command: Command = { type: 'end-turn' };
 
-  expect(read).toEqual(save);
-  const played = outcome(apply(CATALOGUE, read.chronicle, command));
+  expect(read).toEqual({ campaign: campaign(), chronicle: save, dropped: [] });
+  if (read.chronicle === undefined) throw new Error('the chronicle was dropped');
+  const played = outcome(apply(CATALOGUE, read.chronicle.chronicle, command));
   expect(played.turn).toBe(save.chronicle.turn + 1);
   expect(played).toEqual(outcome(apply(CATALOGUE, save.chronicle, command)));
 });
 
-test('a save carrying a card no catalogue holds is refused', () => {
+test('a campaign saved with no chronicle in progress reads back alone', () => {
+  expect(readSave(CATALOGUE, writeSave(CATALOGUE, campaign()))).toEqual({
+    campaign: campaign(),
+    chronicle: undefined,
+    dropped: [],
+  });
+});
+
+test('a save carrying a card no catalogue holds drops its chronicle, and the campaign stands', () => {
   const text = tampered(saved(), (chronicle) => ({
     ...chronicle,
     drawPile: [{ ...chronicle.drawPile[0], id: 'PH_Unheld' }, ...chronicle.drawPile.slice(1)],
   }));
 
-  expect(() => readSave(CATALOGUE, text)).toThrow('fixture: no card is named PH_Unheld');
+  expect(chronicleDropped(text)).toEqual(['fixture: no card is named PH_Unheld']);
 });
 
 test('a chronicle carrying a card no catalogue holds is refused its save', () => {
@@ -56,7 +94,7 @@ test('a chronicle carrying a card no catalogue holds is refused its save', () =>
   const [card, ...rest] = save.chronicle.drawPile;
   const chronicle = { ...save.chronicle, drawPile: [{ ...card, id: 'PH_Unheld' }, ...rest] };
 
-  expect(() => writeSave(CATALOGUE, { ...save, chronicle })).toThrow(
+  expect(() => writeSave(CATALOGUE, campaign(), { ...save, chronicle })).toThrow(
     'fixture: no card is named PH_Unheld',
   );
 });
@@ -71,110 +109,358 @@ test('a card in a save carries the counters its content declares, no fewer and n
       drawPile: [{ ...frost, counters }, ...rest],
     }));
 
-  expect(readSave(CATALOGUE, carrying({ amount: FROST })).chronicle).toEqual(chronicle);
-  expect(() => readSave(CATALOGUE, carrying({}))).toThrow(
+  expect(readSave(CATALOGUE, carrying({ amount: FROST })).chronicle?.chronicle).toEqual(chronicle);
+  expect(chronicleDropped(carrying({}))).toEqual([
     "fixture: the save's chronicle.drawPile[0].counters lacks the counter amount the card PH_Frost declares",
-  );
-  expect(() => readSave(CATALOGUE, carrying({ amount: FROST, thaw: 1 }))).toThrow(
+  ]);
+  expect(chronicleDropped(carrying({ amount: FROST, thaw: 1 }))).toEqual([
     'fixture: the card PH_Frost declares no counter thaw',
-  );
+  ]);
 });
 
-test('a save that is not a chronicle’s shape is refused', () => {
+test('a save that is not JSON, or not an object, drops both its parts', () => {
+  expect(readSave(CATALOGUE, '{"chronicle":')).toEqual({
+    dropped: ['fixture: the save is not JSON'],
+  });
+  expect(readSave(CATALOGUE, '[]')).toEqual({ dropped: ['fixture: the save is not an object'] });
+});
+
+test('a chronicle that is not a chronicle’s shape is dropped', () => {
   const save = saved();
   const [unit, ...others] = save.chronicle.units;
-  const refusal = (change: (chronicle: Chronicle) => object): (() => unknown) => {
-    const text = tampered(save, change);
-    return () => readSave(CATALOGUE, text);
-  };
+  const dropped = (change: (chronicle: Chronicle) => object): readonly string[] =>
+    chronicleDropped(tampered(save, change));
 
-  expect(() => readSave(CATALOGUE, '{"chronicle":')).toThrow('fixture: the save is not JSON');
-  expect(() => readSave(CATALOGUE, '[]')).toThrow('fixture: the save is not an object');
-  expect(refusal((chronicle) => ({ ...chronicle, rng: undefined }))).toThrow(
+  expect(dropped((chronicle) => ({ ...chronicle, rng: undefined }))).toEqual([
     "fixture: the save's chronicle.rng is not a list",
-  );
-  expect(refusal((chronicle) => ({ ...chronicle, turn: String(chronicle.turn) }))).toThrow(
+  ]);
+  expect(dropped((chronicle) => ({ ...chronicle, turn: String(chronicle.turn) }))).toEqual([
     "fixture: the save's chronicle.turn is not an integer",
-  );
-  expect(refusal((chronicle) => ({ ...chronicle, seed: chronicle.seed + 0.5 }))).toThrow(
+  ]);
+  expect(dropped((chronicle) => ({ ...chronicle, seed: chronicle.seed + 0.5 }))).toEqual([
     "fixture: the save's chronicle.seed is not an integer",
-  );
+  ]);
   expect(
-    refusal((chronicle) => ({ ...chronicle, resources: { ...chronicle.resources, wood: 1 } })),
-  ).toThrow("fixture: the save's chronicle.resources names no resource wood");
+    dropped((chronicle) => ({ ...chronicle, resources: { ...chronicle.resources, wood: 1 } })),
+  ).toEqual(["fixture: the save's chronicle.resources names no resource wood"]);
   expect(
-    refusal((chronicle) => ({
+    dropped((chronicle) => ({
       ...chronicle,
       units: [{ ...unit, stats: { ...unit.stats, health: 1.5 } }, ...others],
     })),
-  ).toThrow("fixture: the save's chronicle.units[0].stats.health is not an integer");
+  ).toEqual(["fixture: the save's chronicle.units[0].stats.health is not an integer"]);
   expect(
-    refusal((chronicle) => ({ ...chronicle, units: [{ ...unit, faction: 'neutral' }, ...others] })),
-  ).toThrow("fixture: the save's chronicle.units[0].faction names no faction neutral");
+    dropped((chronicle) => ({ ...chronicle, units: [{ ...unit, faction: 'neutral' }, ...others] })),
+  ).toEqual(["fixture: the save's chronicle.units[0].faction names no faction neutral"]);
 });
 
-test('a save whose chronicle names no age, or an age the catalogue does not hold, is refused', () => {
+test('a save whose chronicle names no age, or an age the catalogue does not hold, drops it', () => {
   const save = saved();
 
-  expect(() =>
-    readSave(
-      CATALOGUE,
-      tampered(save, (chronicle) => ({ ...chronicle, age: undefined })),
-    ),
-  ).toThrow("fixture: the save's chronicle.age is not a string");
-  expect(() =>
-    readSave(
-      CATALOGUE,
-      tampered(save, (chronicle) => ({ ...chronicle, age: 'PH_Unheld' })),
-    ),
-  ).toThrow('fixture: no age is named PH_Unheld');
+  expect(
+    chronicleDropped(tampered(save, (chronicle) => ({ ...chronicle, age: undefined }))),
+  ).toEqual(["fixture: the save's chronicle.age is not a string"]);
+  expect(
+    chronicleDropped(tampered(save, (chronicle) => ({ ...chronicle, age: 'PH_Unheld' }))),
+  ).toEqual(['fixture: no age is named PH_Unheld']);
 });
 
-test('a save whose chronicle carries no city section, or one naming a building or a card the catalogue does not hold, is refused', () => {
+test('a save whose chronicle carries no city section, or one naming a building or a card the catalogue does not hold, drops it', () => {
   const save = saved();
-  const reading = (citySection: object | undefined): (() => unknown) => {
-    const text = tampered(save, (chronicle) => ({ ...chronicle, citySection }));
-    return () => readSave(CATALOGUE, text);
-  };
+  const reading = (citySection: object | undefined): readonly string[] =>
+    chronicleDropped(tampered(save, (chronicle) => ({ ...chronicle, citySection })));
   const section = save.chronicle.citySection;
 
-  expect(reading(undefined)).toThrow("fixture: the save's chronicle.citySection is not an object");
-  expect(reading({ ...section, building: 'PH_Fort' })).toThrow(
+  expect(reading(undefined)).toEqual([
+    "fixture: the save's chronicle.citySection is not an object",
+  ]);
+  expect(reading({ ...section, building: 'PH_Fort' })).toEqual([
     'fixture: no building is named PH_Fort',
-  );
-  expect(reading({ ...section, card: 'PH_Unheld' })).toThrow('fixture: no card is named PH_Unheld');
-  expect(reading({ ...section, sight: 1.5 })).toThrow(
+  ]);
+  expect(reading({ ...section, card: 'PH_Unheld' })).toEqual([
+    'fixture: no card is named PH_Unheld',
+  ]);
+  expect(reading({ ...section, sight: 1.5 })).toEqual([
     "fixture: the save's chronicle.citySection.sight is not an integer",
-  );
+  ]);
 });
 
-test('a save whose chronicle carries no achievements, one its age does not own, or one reached neither true nor false, is refused', () => {
+test('a save whose chronicle carries no achievements, one its age does not own, or one reached neither true nor false, drops it', () => {
   const save = saved();
-  const reading = (achievements: object | undefined): (() => unknown) => {
-    const text = tampered(save, (chronicle) => ({ ...chronicle, achievements }));
-    return () => readSave(CATALOGUE, text);
-  };
+  const reading = (achievements: object | undefined): readonly string[] =>
+    chronicleDropped(tampered(save, (chronicle) => ({ ...chronicle, achievements })));
   const [first, ...rest] = save.chronicle.achievements;
 
   expect(save.chronicle.age).toBe(AGE);
   expect(first.id).toBe(HOARD);
-  expect(reading(undefined)).toThrow("fixture: the save's chronicle.achievements is not a list");
-  expect(reading([{ ...first, id: 'PH_Unheld' }, ...rest])).toThrow(
+  expect(reading(undefined)).toEqual(["fixture: the save's chronicle.achievements is not a list"]);
+  expect(reading([{ ...first, id: 'PH_Unheld' }, ...rest])).toEqual([
     'fixture: no achievement is named PH_Unheld',
-  );
-  expect(reading([{ ...first, id: victoryOf(QUIET) }, ...rest])).toThrow(
+  ]);
+  expect(reading([{ ...first, id: victoryOf(QUIET) }, ...rest])).toEqual([
     `fixture: no achievement is named ${victoryOf(QUIET)}`,
-  );
-  expect(reading([{ ...first, reached: 1 }, ...rest])).toThrow(
+  ]);
+  expect(reading([{ ...first, reached: 1 }, ...rest])).toEqual([
     "fixture: the save's chronicle.achievements[0].reached is not true or false",
-  );
+  ]);
 });
 
-test('a save written on one content version is refused by a catalogue of another', () => {
-  const text = writeSave(CATALOGUE, saved());
+test('a save written on one content version drops its chronicle on a catalogue of another, and its campaign stands', () => {
+  const text = writeSave(CATALOGUE, campaign(), saved());
   const next = catalogued({ ...CATALOGUE, version: 'fixture-next' });
 
-  expect(() => readSave(next, text)).toThrow(
-    'fixture-next: a chronicle begun on fixture is played on no other content',
+  expect(readSave(next, text)).toEqual({
+    campaign: campaign(),
+    chronicle: undefined,
+    dropped: ['fixture-next: a chronicle begun on fixture is played on no other content'],
+  });
+});
+
+test('a campaign that is not a campaign’s shape is refused whole, and the chronicle beside it stands', () => {
+  const refused = (change: (campaign: Campaign) => object): readonly string[] =>
+    campaignRefused(campaignTampered(change));
+
+  expect(refused(() => ({}))).toEqual(["fixture: the save's campaign.nextCard is not an integer"]);
+  expect(
+    campaignRefused(
+      JSON.stringify({ ...JSON.parse(writeSave(CATALOGUE, campaign(), saved())), campaign: 1 }),
+    ),
+  ).toEqual(["fixture: the save's campaign is not an object"]);
+  expect(refused((held) => ({ ...held, influence: String(held.influence) }))).toEqual([
+    "fixture: the save's campaign.influence is not an integer",
+  ]);
+  expect(refused((held) => ({ ...held, technologies: {} }))).toEqual([
+    "fixture: the save's campaign.technologies is not a list",
+  ]);
+  expect(refused((held) => ({ ...held, collection: [...held.collection, 'PH_Worker'] }))).toEqual([
+    `fixture: the save's campaign.collection[${campaign().collection.length}] is not an object`,
+  ]);
+  expect(refused((held) => ({ ...held, deck: { ...held.deck, settle: 1 } }))).toEqual([
+    "fixture: the save's campaign.deck.settle is not a list",
+  ]);
+  expect(
+    refused((held) => ({
+      ...held,
+      deck: { ...held.deck, city: { ...held.deck.city, sight: 1.5 } },
+    })),
+  ).toEqual(["fixture: the save's campaign.deck.city.sight is not an integer"]);
+  expect(
+    refused((held) => ({
+      ...held,
+      deck: { ...held.deck, city: { ...held.deck.city, idle: 'two' } },
+    })),
+  ).toEqual(["fixture: the save's campaign.deck.city.idle is not an integer"]);
+});
+
+test('a campaign holding a card number the next number does not exceed, or a number two cards hold, is refused whole', () => {
+  const held = campaign();
+  const last = held.collection.length - 1;
+  const [first, second, ...rest] = held.collection;
+
+  expect(
+    campaignRefused(
+      campaignTampered((written) => ({ ...written, nextCard: written.nextCard - 1 })),
+    ),
+  ).toEqual([
+    `fixture: the save's campaign.collection[${last}] is numbered ${held.nextCard - 1}, not below the next number ${held.nextCard - 1}`,
+  ]);
+  expect(
+    campaignRefused(
+      campaignTampered((written) => ({
+        ...written,
+        collection: [first, { ...second, number: first.number }, ...rest],
+      })),
+    ),
+  ).toEqual([
+    `fixture: the save's campaign.collection[1] is numbered ${first.number}, a number another card holds`,
+  ]);
+  expect(
+    campaignRefused(
+      campaignTampered((written) => ({
+        ...written,
+        collection: [{ ...first, number: held.deck.city.card.number }, second, ...rest],
+      })),
+    ),
+  ).toEqual([
+    `fixture: the save's campaign.collection[0] is numbered ${held.deck.city.card.number}, a number another card holds`,
+  ]);
+});
+
+/** What reading the text leaves of the campaign, and the reasons it dropped, the chronicle standing. */
+function campaignRead(text: string): { campaign?: Campaign; dropped: readonly string[] } {
+  const { chronicle, ...read } = readSave(CATALOGUE, text);
+  expect(chronicle).toEqual(saved());
+  return read;
+}
+
+test('a technology the catalogue does not bring, or one named a second time, is dropped with its reason, and the rest stands', () => {
+  const held = campaign();
+  const [technology] = held.technologies;
+  const at = held.technologies.length;
+
+  expect(
+    campaignRead(
+      campaignTampered((written) => ({
+        ...written,
+        technologies: [...written.technologies, 'PH_Unheld', technology],
+      })),
+    ),
+  ).toEqual({
+    campaign: held,
+    dropped: [
+      `fixture: the save's campaign.technologies[${at}] names no technology PH_Unheld`,
+      `fixture: the save's campaign.technologies[${at + 1}] names the technology ${technology} a second time`,
+    ],
+  });
+});
+
+test('a card of the collection the catalogue does not hold is dropped, and every number the deck names it by with it', () => {
+  const held = campaign();
+  const [number] = held.deck.cards;
+  const at = held.collection.findIndex((card) => card.number === number);
+
+  expect(
+    campaignRead(
+      campaignTampered((written) => ({
+        ...written,
+        collection: written.collection.map((card, other) =>
+          other === at ? { ...card, id: 'PH_Unheld' } : card,
+        ),
+      })),
+    ),
+  ).toEqual({
+    campaign: {
+      ...held,
+      collection: held.collection.filter((_, other) => other !== at),
+      deck: { ...held.deck, cards: held.deck.cards.slice(1) },
+    },
+    dropped: [
+      `fixture: the save's campaign.collection[${at}] names no card PH_Unheld`,
+      `fixture: the save's campaign.deck.cards[0] names no card of the collection numbered ${number}`,
+    ],
+  });
+});
+
+test('a deck number naming no card of the collection, or naming one a second time, is dropped with its reason', () => {
+  const held = campaign();
+  const [number] = held.deck.cards;
+  const at = held.deck.cards.length;
+
+  expect(
+    campaignRead(
+      campaignTampered((written) => ({
+        ...written,
+        deck: {
+          ...written.deck,
+          cards: [...written.deck.cards, held.deck.city.card.number, number],
+        },
+      })),
+    ),
+  ).toEqual({
+    campaign: held,
+    dropped: [
+      `fixture: the save's campaign.deck.cards[${at}] names no card of the collection numbered ${held.deck.city.card.number}`,
+      `fixture: the save's campaign.deck.cards[${at + 1}] names the card numbered ${number} a second time`,
+    ],
+  });
+});
+
+test('a card in a section its kind does not fit is dropped from the deck and kept in the collection', () => {
+  const held = campaign();
+  const [settle] = held.deck.settle;
+  const [card, ...cards] = held.deck.cards;
+  const idOf = (number: number): string | undefined =>
+    held.collection.find((owned) => owned.number === number)?.id;
+
+  expect(
+    campaignRead(
+      campaignTampered((written) => ({
+        ...written,
+        deck: { ...written.deck, settle: [card], cards: [settle, ...cards] },
+      })),
+    ),
+  ).toEqual({
+    campaign: { ...held, deck: { ...held.deck, settle: [], cards } },
+    dropped: [
+      `fixture: the save's campaign.deck.settle[0] holds the unit ${idOf(card)} in its settle section`,
+      `fixture: the save's campaign.deck.cards[0] holds the settle card ${idOf(settle)} among its cards`,
+    ],
+  });
+});
+
+test('a hazard or a camp’s reward in the deck is dropped from it and kept in the collection', () => {
+  const held = campaign();
+  const owned = [
+    { number: held.nextCard, id: 'PH_Hunger' },
+    { number: held.nextCard + 1, id: 'PH_Spoils' },
+  ];
+  const at = held.deck.cards.length;
+  const grown = {
+    ...held,
+    nextCard: held.nextCard + 2,
+    collection: [...held.collection, ...owned],
+  };
+
+  expect(
+    campaignRead(
+      campaignTampered(() => ({
+        ...grown,
+        deck: { ...grown.deck, cards: [...grown.deck.cards, ...owned.map(({ number }) => number)] },
+      })),
+    ),
+  ).toEqual({
+    campaign: grown,
+    dropped: [
+      `fixture: the save's campaign.deck.cards[${at}] holds the hazard PH_Hunger`,
+      `fixture: the save's campaign.deck.cards[${at + 1}] holds the age ${AGE}'s camp's reward PH_Spoils`,
+    ],
+  });
+});
+
+test('a city section whose building or card the catalogue does not hold, or whose card is not a settle card, is the first deck’s again, its card a new card', () => {
+  const held = campaign();
+  const restored = {
+    ...held,
+    nextCard: held.nextCard + 1,
+    deck: {
+      ...held.deck,
+      city: { ...DECK.city, card: { number: held.nextCard, id: DECK.city.card } },
+    },
+  };
+  const cityRead = (city: object): ReturnType<typeof campaignRead> =>
+    campaignRead(
+      campaignTampered((written) => ({
+        ...written,
+        deck: {
+          ...written.deck,
+          city: { ...written.deck.city, sight: DECK.city.sight + 1, ...city },
+        },
+      })),
+    );
+  const { card } = held.deck.city;
+
+  expect(cityRead({ building: 'PH_Fort' })).toEqual({
+    campaign: restored,
+    dropped: ["fixture: the save's campaign.deck.city names no building PH_Fort"],
+  });
+  expect(cityRead({ card: { ...card, id: 'PH_Unheld' } })).toEqual({
+    campaign: restored,
+    dropped: ["fixture: the save's campaign.deck.city names no card PH_Unheld"],
+  });
+  expect(cityRead({ card: { ...card, id: 'PH_Harvest' } })).toEqual({
+    campaign: restored,
+    dropped: [
+      "fixture: the save's campaign.deck.city holds the instant PH_Harvest in its city section",
+    ],
+  });
+});
+
+test('a campaign the reading would drop anything of is refused its save', () => {
+  const held = campaign();
+
+  expect(() =>
+    writeSave(CATALOGUE, { ...held, technologies: [...held.technologies, 'PH_Unheld'] }),
+  ).toThrow(
+    `fixture: the save's campaign.technologies[${held.technologies.length}] names no technology PH_Unheld`,
   );
 });

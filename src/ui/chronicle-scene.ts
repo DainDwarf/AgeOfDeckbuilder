@@ -51,7 +51,7 @@ import { overlayOf } from './overlay-scene';
 import { createPiles } from './piles';
 import { createRefusalNote, refused, refusedAim } from './refusal-note';
 import { createResourceBar } from './resource-bar';
-import { keepChronicle } from './save-entry';
+import { campaignHeld, keepChronicle } from './save-entry';
 import { createStanding } from './standing';
 import { text } from './text';
 import { createTooltip } from './tooltip';
@@ -106,7 +106,14 @@ export class ChronicleScene extends Phaser.Scene implements OpensChronicles {
   private begin(seed: number | undefined): Chronicle {
     const { age, region, deck } = this.choices;
     const drawn = seed ?? (Math.random() * 2 ** 32) | 0;
-    const chronicle = launched(CATALOGUE, age, region, drawn, deckOf(CATALOGUE, deck), []);
+    const chronicle = launched(
+      CATALOGUE,
+      age,
+      region,
+      drawn,
+      deckOf(CATALOGUE, deck),
+      campaignHeld().technologies,
+    );
     keepChronicle(this.choices, chronicle);
     return chronicle;
   }

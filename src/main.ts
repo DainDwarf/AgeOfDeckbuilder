@@ -14,7 +14,7 @@ import { css, LOOK } from './ui/look';
 import { MapScene } from './ui/map-scene';
 import { MenuScene } from './ui/menu-scene';
 import { OverlayScene } from './ui/overlay-scene';
-import { savedChronicle } from './ui/save-entry';
+import { openedSave } from './ui/save-entry';
 
 // The e2e suite and browser-console debugging observe the running game through this handle;
 // it is optional because the window exists before the game does.
@@ -64,7 +64,8 @@ function askedChoices(): Choices {
 
 const choices = askedChoices();
 const bare = ASKED.every((key) => asked(key) === undefined);
-const resumed = bare ? savedChronicle() : undefined;
+const saved = openedSave();
+const resumed = bare ? saved : undefined;
 const backing = backingSize();
 const game = new Phaser.Game({
   type: Phaser.WEBGL,

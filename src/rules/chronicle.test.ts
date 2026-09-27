@@ -5,7 +5,6 @@ import {
   AGE,
   builtOn,
   CATALOGUE,
-  type Carrying,
   CITY,
   CROWD,
   CROWD_NEED,
@@ -30,6 +29,7 @@ import {
   plains,
   QUIET,
   REGION,
+  reaching,
   settledLaunch,
   settledOn,
   stagedBy,
@@ -629,12 +629,6 @@ test('a chronicle is launched with the achievements of its age whose technology 
   ]);
   expect(() => reachable(['PH_Unheld'])).toThrow('fixture: no technology is named PH_Unheld');
 });
-
-/** A city in the first age, carrying the achievements a launch with these technologies unlocked names. */
-function reaching(unlocked: readonly string[], carrying: Carrying): Chronicle {
-  const { achievements } = launched(CATALOGUE, AGE, REGION, 1234, DECK, unlocked);
-  return cityOf(['urban', 'plain'], { age: AGE, achievements, ...carrying });
-}
 
 test('an achievement is recorded reached right after the change its count meets its need on, every stage after carries the record, and it is never read again', () => {
   const city = reaching([], {

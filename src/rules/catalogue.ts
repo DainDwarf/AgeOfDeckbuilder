@@ -328,29 +328,15 @@ export function catalogued(content: Catalogue): Catalogue {
     buildingKind(content, city.building);
     if (city.sight < 0) refuse(content, `the deck ${id}'s city sees ${city.sight}`);
     if (city.idle < 0) refuse(content, `the deck ${id}'s city opens with ${city.idle} idle`);
-    const { kind } = cardOf(content, city.card);
-    if (kind !== 'settle') {
-      refuse(content, `the deck ${id} holds the ${kind} ${city.card} in its city section`);
-    }
-    for (const card of [city.card, ...deck.settle, ...deck.cards]) {
-      if (cardOf(content, card).kind === 'hazard') {
-        refuse(content, `the deck ${id} holds the hazard ${card}`);
-      }
-      for (const [age, { camp }] of ages) {
-        if (camp.rewards.includes(card)) {
-          refuse(content, `the deck ${id} holds the age ${age}'s camp's reward ${card}`);
-        }
-      }
-    }
-    for (const card of deck.cards) {
-      if (cardOf(content, card).kind === 'settle') {
-        refuse(content, `the deck ${id} holds the settle card ${card} among its cards`);
-      }
-    }
-    for (const card of deck.settle) {
-      const { kind } = cardOf(content, card);
-      if (kind !== 'settle') {
-        refuse(content, `the deck ${id} holds the ${kind} ${card} in its settle section`);
+    const sections = [
+      ['city', [city.card]],
+      ['settle', deck.settle],
+      ['cards', deck.cards],
+    ] as const;
+    for (const [section, cards] of sections) {
+      for (const card of cards) {
+        const misfit = misfitIn(content, section, card);
+        if (misfit !== undefined) refuse(content, `the deck ${id} ${misfit}`);
       }
     }
   }
@@ -562,6 +548,40 @@ export function counterOf(catalogue: Catalogue, card: ChronicleCard): Counter {
 /** The three sections a deck lists; a deck the catalogue does not hold is refused. */
 export function deckOf(catalogue: Catalogue, id: string): Deck {
   return entryOf(catalogue, catalogue.decks, id, 'deck');
+}
+
+/** The deck the catalogue lists first: the civilization's. A catalogue listing none is refused. */
+export function firstDeck(catalogue: Catalogue): string {
+  const [first] = Object.keys(catalogue.decks);
+  if (first === undefined) refuse(catalogue, 'no deck is listed');
+  return first;
+}
+
+/** A section of a deck, by the name the deck lists it under. */
+export type DeckSection = keyof Deck;
+
+/**
+ * What keeps a card out of a section of a deck, as the deck would hold it, and nothing where it fits
+ * there: no deck holds a hazard or an age's camp's reward, the cards hold no settle card, and the city
+ * and the settle section nothing else. A card the catalogue does not hold is refused.
+ */
+export function misfitIn(
+  catalogue: Catalogue,
+  section: DeckSection,
+  card: CardId,
+): string | undefined {
+  const { kind } = cardOf(catalogue, card);
+  if (kind === 'hazard') return `holds the hazard ${card}`;
+  for (const [age, { camp }] of Object.entries(catalogue.ages)) {
+    if (camp.rewards.includes(card)) return `holds the age ${age}'s camp's reward ${card}`;
+  }
+  switch (section) {
+    case 'cards':
+      return kind === 'settle' ? `holds the settle card ${card} among its cards` : undefined;
+    case 'city':
+    case 'settle':
+      return kind === 'settle' ? undefined : `holds the ${kind} ${card} in its ${section} section`;
+  }
 }
 
 /** The event an id names; an event the catalogue does not hold is refused. */

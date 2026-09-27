@@ -1,4 +1,5 @@
 import { expect, test } from 'vitest';
+import { newCampaign } from '../rules/campaign';
 import { aimOf } from '../rules/cards';
 import {
   ageOf,
@@ -14,6 +15,7 @@ import {
 import { admitted, launched, refusalOf } from '../rules/chronicle';
 import { settledLaunch } from '../rules/fixtures';
 import { seedRng } from '../rules/rng';
+import { writeSave } from '../rules/save';
 import { answerCost, timelineOf } from '../rules/schedule';
 import type { Chronicle } from '../rules/state';
 import { campLore, capstoneLore, eventLore } from '../ui/lore';
@@ -188,6 +190,12 @@ test('each deck of the catalogue settles its city on the centre tile and reaches
       expect(chronicle.turn).toBe(1);
       expect(chronicle.city).toBeDefined();
     }
+  }
+});
+
+test('a new campaign opens on each deck of the catalogue, and its save reads back whole', () => {
+  for (const deck of Object.keys(CATALOGUE.decks)) {
+    expect(() => writeSave(CATALOGUE, newCampaign(CATALOGUE, deck))).not.toThrow();
   }
 });
 

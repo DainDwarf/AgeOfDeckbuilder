@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { CATALOGUE } from '../content/catalogue';
-import { ageOf } from '../rules/catalogue';
+import { ageOf, firstDeck } from '../rules/catalogue';
 import { refuse } from '../rules/map-kinds';
 import type { Chronicle } from '../rules/state';
 import {
@@ -30,7 +30,7 @@ export type Opening = Choices & { readonly resumed?: Chronicle };
 /** The first age and deck the catalogue lists, and that age's first region, on that seed. */
 export function firstsOf(seed: number | undefined): Choices {
   const age = firstOf(CATALOGUE.ages, 'age');
-  return { age, region: firstRegionOf(age), deck: firstOf(CATALOGUE.decks, 'deck'), seed };
+  return { age, region: firstRegionOf(age), deck: firstDeck(CATALOGUE), seed };
 }
 
 /** The first region the age lists; an age the catalogue does not hold is refused. */

@@ -154,5 +154,10 @@ export function entryOf<T>(
 
 /** Every refusal of the content goes through here, its message opening with the version refusing. */
 export function refuse(catalogue: { readonly version: string }, reason: string): never {
-  throw new Error(`${catalogue.version}: ${reason}`);
+  throw new Error(refusal(catalogue, reason));
+}
+
+/** A refusal's words, for what is dropped and not thrown: the version refusing, then the reason. */
+export function refusal(catalogue: { readonly version: string }, reason: string): string {
+  return `${catalogue.version}: ${reason}`;
 }

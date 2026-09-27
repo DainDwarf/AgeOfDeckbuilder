@@ -1,3 +1,4 @@
+import { type Campaign, type CampaignCard, type CampaignDeck, dealt } from './campaign';
 import {
   achievementOf,
   ageOf,
@@ -9,6 +10,8 @@ import {
   deckOf,
   enemyScript,
   eventOf,
+  firstDeck,
+  misfitIn,
   unitKind,
 } from './catalogue';
 import type { Corner, Tile, TileCoords } from './map';
@@ -16,6 +19,7 @@ import {
   buildingKind,
   featureKind,
   improvementKind,
+  refusal,
   refuse,
   regionOf,
   terrainKind,
@@ -23,6 +27,7 @@ import {
 import { RESOURCES, type Resources } from './resources';
 import type { Rng } from './rng';
 import type {
+  CardId,
   Chronicle,
   ChronicleCard,
   CitySection,
@@ -42,30 +47,77 @@ export type ChronicleSave = {
   readonly deck: string;
 };
 
-/** A save as text; one the reading would refuse is refused, so a written save always reads back. */
+/**
+ * What a save's text reads as: the campaign, the chronicle in progress, each nothing where it could
+ * not be read, and the reason for everything dropped on the way.
+ */
+export type SaveRead = {
+  readonly campaign?: Campaign;
+  readonly chronicle?: ChronicleSave;
+  readonly dropped: readonly string[];
+};
+
+/**
+ * A save as text: the campaign, beside the chronicle in progress where one is. One the reading would
+ * drop anything of is refused, so a written save always reads back whole.
+ */
 export function writeSave(
   catalogue: Catalogue,
-  { chronicle, region, deck }: ChronicleSave,
+  campaign: Campaign,
+  progress?: ChronicleSave,
 ): string {
-  const text = JSON.stringify({ chronicle, region, deck });
-  readSave(catalogue, text);
+  const text = JSON.stringify(
+    progress === undefined
+      ? { campaign }
+      : { campaign, chronicle: progress.chronicle, region: progress.region, deck: progress.deck },
+  );
+  const [reason] = readSave(catalogue, text).dropped;
+  if (reason !== undefined) throw new Error(reason);
   return text;
 }
 
 /**
- * The save the text holds, read against the catalogue: a chronicle's whole or nothing. Text that is
- * not a chronicle's shape, a chronicle of another content, and an id or a counter the catalogue does
- * not hold are refused; a field the shape does not name is dropped.
+ * The save the text holds, read against the catalogue, each part with its own fate: the chronicle
+ * whole or dropped, the campaign refused for its shape alone. A field no shape names goes unread.
  */
-export function readSave(catalogue: Catalogue, text: string): ChronicleSave {
-  let parsed: unknown;
+export function readSave(catalogue: Catalogue, text: string): SaveRead {
+  const dropped: string[] = [];
+  const field = kept(dropped, () => record(catalogue, { raw: parsed(catalogue, text), at: '' }));
+  if (field === undefined) return { dropped };
+  const campaign = kept(dropped, () => campaignOf(catalogue, field('campaign')));
+  dropped.push(...(campaign?.dropped ?? []));
+  const progress = field('chronicle');
+  const chronicle =
+    progress.raw === undefined
+      ? undefined
+      : kept(dropped, () => chronicleSaveOf(catalogue, progress, field));
+  return { campaign: campaign?.campaign, chronicle, dropped };
+}
+
+function parsed(catalogue: Catalogue, text: string): unknown {
   try {
-    parsed = JSON.parse(text);
+    return JSON.parse(text);
   } catch {
     return refuse(catalogue, 'the save is not JSON');
   }
-  const field = record(catalogue, { raw: parsed, at: '' });
-  const chronicle = chronicleOf(catalogue, field('chronicle'));
+}
+
+/** What a read answers, and nothing where it is refused, the refusal kept among the reasons. */
+function kept<T>(dropped: string[], read: () => T): T | undefined {
+  try {
+    return read();
+  } catch (error) {
+    dropped.push(error instanceof Error ? error.message : String(error));
+    return undefined;
+  }
+}
+
+function chronicleSaveOf(
+  catalogue: Catalogue,
+  slot: Slot,
+  field: (name: string) => Slot,
+): ChronicleSave {
+  const chronicle = chronicleOf(catalogue, slot);
   const age = ageOf(catalogue, chronicle.age);
   return {
     chronicle,
@@ -77,8 +129,132 @@ export function readSave(catalogue: Catalogue, text: string): ChronicleSave {
 /** One value of the parsed text, and where in the save it stands. */
 type Slot = { readonly raw: unknown; readonly at: string };
 
-function refused(catalogue: Catalogue, { at }: Slot, reason: string): never {
-  return refuse(catalogue, `${at === '' ? 'the save' : `the save's ${at}`} ${reason}`);
+function where({ at }: Slot): string {
+  return at === '' ? 'the save' : `the save's ${at}`;
+}
+
+function refused(catalogue: Catalogue, slot: Slot, reason: string): never {
+  return refuse(catalogue, `${where(slot)} ${reason}`);
+}
+
+/**
+ * The campaign part of a save, and the reasons for what the catalogue could not resolve of it. A card
+ * number held twice or not below the next number is its shape broken.
+ */
+function campaignOf(
+  catalogue: Catalogue,
+  slot: Slot,
+): { readonly campaign: Campaign; readonly dropped: readonly string[] } {
+  const dropped: string[] = [];
+  const stands = (item: Slot, misfit: string | undefined): boolean => {
+    if (misfit === undefined) return true;
+    dropped.push(refusal(catalogue, `${where(item)} ${misfit}`));
+    return false;
+  };
+  const field = record(catalogue, slot);
+  let nextCard = integer(catalogue, field('nextCard'));
+  const cardIn = (item: Slot): { readonly slot: Slot; readonly card: CampaignCard } => {
+    const held = record(catalogue, item);
+    return {
+      slot: item,
+      card: { number: integer(catalogue, held('number')), id: string(catalogue, held('id')) },
+    };
+  };
+  const collection = list(catalogue, field('collection'), cardIn);
+  const deck = record(catalogue, field('deck'));
+  const citySlot = deck('city');
+  const city = record(catalogue, citySlot);
+  const cityCard = cardIn(city('card'));
+  const section = {
+    building: string(catalogue, city('building')),
+    sight: integer(catalogue, city('sight')),
+    idle: integer(catalogue, city('idle')),
+  };
+  const numbered = (name: 'settle' | 'cards'): { slot: Slot; number: number }[] =>
+    list(catalogue, deck(name), (item) => ({ slot: item, number: integer(catalogue, item) }));
+  const settle = numbered('settle');
+  const cards = numbered('cards');
+  const technologies = list(catalogue, field('technologies'), (item) => ({
+    slot: item,
+    id: string(catalogue, item),
+  }));
+  const influence = integer(catalogue, field('influence'));
+
+  const dealtNumbers = new Set<number>();
+  for (const { slot: item, card } of [cityCard, ...collection]) {
+    if (card.number >= nextCard) {
+      refused(catalogue, item, `is numbered ${card.number}, not below the next number ${nextCard}`);
+    }
+    if (dealtNumbers.has(card.number)) {
+      refused(catalogue, item, `is numbered ${card.number}, a number another card holds`);
+    }
+    dealtNumbers.add(card.number);
+  }
+
+  const unlocked: string[] = [];
+  for (const { slot: item, id: technology } of technologies) {
+    const misfit = !Object.hasOwn(catalogue.technologies, technology)
+      ? `names no technology ${technology}`
+      : unlocked.includes(technology)
+        ? `names the technology ${technology} a second time`
+        : undefined;
+    if (stands(item, misfit)) unlocked.push(technology);
+  }
+
+  const owned = new Map<number, CardId>();
+  for (const { slot: item, card } of collection) {
+    if (
+      stands(item, Object.hasOwn(catalogue.cards, card.id) ? undefined : `names no card ${card.id}`)
+    ) {
+      owned.set(card.number, card.id);
+    }
+  }
+
+  const named = new Set<number>();
+  const sectionOf = (
+    name: 'settle' | 'cards',
+    held: readonly { slot: Slot; number: number }[],
+  ): number[] =>
+    held.flatMap(({ slot: item, number }) => {
+      const card = owned.get(number);
+      const misfit =
+        card === undefined
+          ? `names no card of the collection numbered ${number}`
+          : named.has(number)
+            ? `names the card numbered ${number} a second time`
+            : misfitIn(catalogue, name, card);
+      if (!stands(item, misfit)) return [];
+      named.add(number);
+      return [number];
+    });
+  const settleHeld = sectionOf('settle', settle);
+  const cardsHeld = sectionOf('cards', cards);
+
+  let cityHeld: CampaignDeck['city'];
+  const cityMisfit = !Object.hasOwn(catalogue.buildings, section.building)
+    ? `names no building ${section.building}`
+    : !Object.hasOwn(catalogue.cards, cityCard.card.id)
+      ? `names no card ${cityCard.card.id}`
+      : misfitIn(catalogue, 'city', cityCard.card.id);
+  if (stands(citySlot, cityMisfit)) {
+    cityHeld = { ...section, card: cityCard.card };
+  } else {
+    const { city: first } = deckOf(catalogue, firstDeck(catalogue));
+    const restored = dealt(nextCard, [first.card]);
+    cityHeld = { ...first, card: restored.cards[0] };
+    nextCard = restored.nextCard;
+  }
+
+  return {
+    campaign: {
+      technologies: unlocked,
+      influence,
+      nextCard,
+      collection: collection.flatMap(({ card }) => (owned.has(card.number) ? [card] : [])),
+      deck: { city: cityHeld, settle: settleHeld, cards: cardsHeld },
+    },
+    dropped,
+  };
 }
 
 function integer(catalogue: Catalogue, slot: Slot): number {

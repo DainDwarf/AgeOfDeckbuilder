@@ -1063,6 +1063,26 @@ export function settledLaunch(
   return outcome(apply(catalogue, settling, { type: 'end-turn' }));
 }
 
+/** A city in the first age, carrying the achievements a launch with these technologies unlocked names. */
+export function reaching(unlocked: readonly string[], carrying: Carrying): Chronicle {
+  const { achievements } = launched(CATALOGUE, AGE, REGION, 1234, DECK, unlocked);
+  return cityOf(['urban', 'plain'], { age: AGE, achievements, ...carrying });
+}
+
+/**
+ * A first-age chronicle launched with nothing unlocked, `HOARD` reached and then won on the tillage:
+ * a victory with two achievements reached.
+ */
+export function hoardedVictory(): Chronicle {
+  const city = reaching([], {
+    tiles: builtOn(field(2), TILLAGE, [{ q: 1, r: 0 }]),
+    timeline: { ...NO_DEALS, capstone: { id: 'PH_Tillage', turn: 1 } },
+    hand: ['PH_Cache'],
+    resources: { food: HOARD_NEED, production: 0, military: 0, money: 0, science: 0, culture: 0 },
+  });
+  return outcome(apply(CATALOGUE, city, { type: 'play', index: 0, aim: 'none' }));
+}
+
 /** The same disc with every tile but the named ones under water: what leaves a fixture one corridor. */
 export function only(radius: number, land: TileCoords[]): Tile[] {
   const kept = new Set(land.map(tileKey));
