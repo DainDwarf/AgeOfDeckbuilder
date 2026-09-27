@@ -31,6 +31,9 @@ export type Campaign = {
   readonly deck: CampaignDeck;
 };
 
+/** The number a campaign's first card is dealt. */
+export const FIRST_CARD_NUMBER = 1;
+
 /** New cards dealt the next numbers, in order, and the number the card after them takes. */
 export function dealt(
   nextCard: number,
@@ -48,7 +51,7 @@ export function dealt(
  */
 export function newCampaign(catalogue: Catalogue, deck: string): Campaign {
   const { city, settle, cards } = deckOf(catalogue, deck);
-  const cityCard = dealt(1, [city.card]);
+  const cityCard = dealt(FIRST_CARD_NUMBER, [city.card]);
   const settled = dealt(cityCard.nextCard, settle);
   const drawn = dealt(settled.nextCard, cards);
   const numbers = (owned: readonly CampaignCard[]): number[] => owned.map(({ number }) => number);

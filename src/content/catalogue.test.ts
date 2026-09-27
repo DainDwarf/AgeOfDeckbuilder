@@ -11,6 +11,8 @@ import {
   deckOf,
   enemyScript,
   eventOf,
+  firstDeck,
+  firstRegion,
 } from '../rules/catalogue';
 import { admitted, launched, refusalOf } from '../rules/chronicle';
 import { settledLaunch } from '../rules/fixtures';
@@ -49,17 +51,10 @@ import { CATALOGUE } from './catalogue';
 
 const AGES = Object.keys(CATALOGUE.ages);
 
-const [DECK] = Object.keys(CATALOGUE.decks);
-
-/** The first region the age lists. */
-function regionIn(age: string): string {
-  const [region] = Object.keys(ageOf(CATALOGUE, age).regions);
-  return region;
-}
-
 /** A chronicle launched and settled in the age, on its first region and the catalogue's first deck. */
 function settledIn(age: string): Chronicle {
-  return settledLaunch(CATALOGUE, age, regionIn(age), 1, deckOf(CATALOGUE, DECK), []);
+  const deck = deckOf(CATALOGUE, firstDeck(CATALOGUE));
+  return settledLaunch(CATALOGUE, age, firstRegion(CATALOGUE, age), 1, deck, []);
 }
 
 /** What a rules entry names, laid out as a run on a measure of one to the character. */
@@ -157,7 +152,8 @@ test('every rules entry of the catalogue lays out, and every name on it resolves
 test('every card of the catalogue answers its refusal, and its admitted tiles, on a chronicle begun in each age on each deck', () => {
   for (const age of AGES) {
     for (const deck of Object.keys(CATALOGUE.decks)) {
-      const chronicle = launched(CATALOGUE, age, regionIn(age), 1, deckOf(CATALOGUE, deck), []);
+      const region = firstRegion(CATALOGUE, age);
+      const chronicle = launched(CATALOGUE, age, region, 1, deckOf(CATALOGUE, deck), []);
       for (const id of Object.keys(CATALOGUE.cards)) {
         expect(() => refusalOf(CATALOGUE, chronicle, id)).not.toThrow();
         const card = aimOf(cardOf(CATALOGUE, id));
@@ -181,7 +177,7 @@ test('each deck of the catalogue settles its city on the centre tile and reaches
       const chronicle = settledLaunch(
         CATALOGUE,
         age,
-        regionIn(age),
+        firstRegion(CATALOGUE, age),
         1,
         deckOf(CATALOGUE, deck),
         [],

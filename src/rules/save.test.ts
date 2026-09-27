@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { type Campaign, newCampaign, paidInto } from './campaign';
+import { type Campaign, FIRST_CARD_NUMBER, newCampaign, paidInto } from './campaign';
 import { catalogued } from './catalogue';
 import { apply, type Command, outcome } from './chronicle';
 import {
@@ -16,9 +16,11 @@ import {
   settledLaunch,
   victoryOf,
 } from './fixtures';
+import { RESOURCES } from './resources';
 import { type ChronicleSave, readSave, writeSave } from './save';
 import { laid } from './schedule';
 import type { Chronicle, Counters } from './state';
+import type { Unit } from './units';
 
 /** A chronicle three turns in, saved with what it was launched on. */
 function saved(): ChronicleSave {
@@ -154,6 +156,87 @@ test('a chronicle that is not a chronicle’s shape is dropped', () => {
   ).toEqual(["fixture: the save's chronicle.units[0].faction names no faction neutral"]);
 });
 
+/** The chronicle with its first unit changed. */
+function firstUnit(chronicle: Chronicle, change: (unit: Unit) => object): Chronicle {
+  const [unit, ...others] = chronicle.units;
+  return { ...chronicle, units: [change(unit) as Unit, ...others] };
+}
+
+const STATS = ['health', 'damage', 'range', 'move', 'action', 'sight'] as const;
+
+test.each<[string, (chronicle: Chronicle) => object, string]>([
+  [
+    'a city that sees a negative sight',
+    (chronicle) => ({ ...chronicle, citySection: { ...chronicle.citySection, sight: -1 } }),
+    'chronicle.citySection sees -1',
+  ],
+  [
+    'a city that opens with a negative idle',
+    (chronicle) => ({ ...chronicle, citySection: { ...chronicle.citySection, idle: -1 } }),
+    'chronicle.citySection opens with -1 idle',
+  ],
+  ['a negative turn', (chronicle) => ({ ...chronicle, turn: -1 }), 'chronicle stands on turn -1'],
+  [
+    'a timeline dealing next on a negative turn',
+    (chronicle) => ({ ...chronicle, timeline: { ...chronicle.timeline, next: -1 } }),
+    'chronicle.timeline deals next on turn -1',
+  ],
+  [
+    'a capstone landing on a negative turn',
+    (chronicle) => ({
+      ...chronicle,
+      timeline: {
+        ...chronicle.timeline,
+        capstone: { ...chronicle.timeline.capstone, turn: -1 },
+      },
+    }),
+    'chronicle.timeline.capstone lands on turn -1',
+  ],
+  ...RESOURCES.map((resource): [string, (chronicle: Chronicle) => object, string] => [
+    `a negative stock of ${resource}`,
+    (chronicle) => ({ ...chronicle, resources: { ...chronicle.resources, [resource]: -1 } }),
+    `chronicle.resources holds a stock of -1 ${resource}`,
+  ]),
+  [
+    'a negative population',
+    (chronicle) => ({ ...chronicle, population: -1 }),
+    'chronicle holds -1 population',
+  ],
+  [
+    'a negative next unit number',
+    (chronicle) => ({ ...chronicle, nextUnit: -1 }),
+    'chronicle holds the next unit number -1',
+  ],
+  [
+    'a unit numbered below zero',
+    (chronicle) => firstUnit(chronicle, (unit) => ({ ...unit, id: -1 })),
+    'chronicle.units[0] is numbered -1',
+  ],
+  [
+    'a unit with negative move points left',
+    (chronicle) => firstUnit(chronicle, (unit) => ({ ...unit, movePoints: -1 })),
+    'chronicle.units[0] has -1 move points left',
+  ],
+  [
+    'a unit with negative action left',
+    (chronicle) => firstUnit(chronicle, (unit) => ({ ...unit, action: -1 })),
+    'chronicle.units[0] has -1 action left',
+  ],
+  ...STATS.map((stat): [string, (chronicle: Chronicle) => object, string] => [
+    `a unit with a negative ${stat}`,
+    (chronicle) =>
+      firstUnit(chronicle, (unit) => ({ ...unit, stats: { ...unit.stats, [stat]: -1 } })),
+    `chronicle.units[0].stats has a ${stat} of -1`,
+  ]),
+  [
+    'an ending on a negative turn',
+    (chronicle) => ({ ...chronicle, ending: { outcome: 'victory', turn: -1 } }),
+    'chronicle.ending ended on turn -1',
+  ],
+])('a save whose chronicle holds %s drops it', (_, change, reason) => {
+  expect(chronicleDropped(tampered(saved(), change))).toEqual([`fixture: the save's ${reason}`]);
+});
+
 test('a save whose chronicle names no age, or an age the catalogue does not hold, drops it', () => {
   const save = saved();
 
@@ -284,6 +367,57 @@ test('a campaign holding a card number the next number does not exceed, or a num
   ).toEqual([
     `fixture: the save's campaign.collection[0] is numbered ${held.deck.city.card.number}, a number another card holds`,
   ]);
+});
+
+test('a campaign holding a card numbered below the first number is refused whole', () => {
+  expect(
+    campaignRefused(
+      campaignTampered((written) => {
+        const [first, ...rest] = written.collection;
+        return { ...written, collection: [{ ...first, number: FIRST_CARD_NUMBER - 1 }, ...rest] };
+      }),
+    ),
+  ).toEqual([
+    `fixture: the save's campaign.collection[0] is numbered ${FIRST_CARD_NUMBER - 1}, below the first number ${FIRST_CARD_NUMBER}`,
+  ]);
+});
+
+test('a campaign holding a next number below the first number is refused whole', () => {
+  const below = FIRST_CARD_NUMBER - 1;
+
+  expect(campaignRefused(campaignTampered((written) => ({ ...written, nextCard: below })))).toEqual(
+    [
+      `fixture: the save's campaign holds the next number ${below}, below the first number ${FIRST_CARD_NUMBER}`,
+    ],
+  );
+});
+
+test('a campaign holding negative influence is refused whole', () => {
+  expect(campaignRefused(campaignTampered((written) => ({ ...written, influence: -1 })))).toEqual([
+    "fixture: the save's campaign holds -1 influence",
+  ]);
+});
+
+test('a campaign whose city sees a negative sight is refused whole', () => {
+  expect(
+    campaignRefused(
+      campaignTampered((written) => ({
+        ...written,
+        deck: { ...written.deck, city: { ...written.deck.city, sight: -1 } },
+      })),
+    ),
+  ).toEqual(["fixture: the save's campaign.deck.city sees -1"]);
+});
+
+test('a campaign whose city opens with a negative idle is refused whole', () => {
+  expect(
+    campaignRefused(
+      campaignTampered((written) => ({
+        ...written,
+        deck: { ...written.deck, city: { ...written.deck.city, idle: -1 } },
+      })),
+    ),
+  ).toEqual(["fixture: the save's campaign.deck.city opens with -1 idle"]);
 });
 
 /** What reading the text leaves of the campaign, and the reasons it dropped, the chronicle standing. */
@@ -455,12 +589,15 @@ test('a city section whose building or card the catalogue does not hold, or whos
   });
 });
 
-test('a campaign the reading would drop anything of is refused its save', () => {
+test('a campaign the reading would drop anything of, or refuse whole, is refused its save', () => {
   const held = campaign();
 
   expect(() =>
     writeSave(CATALOGUE, { ...held, technologies: [...held.technologies, 'PH_Unheld'] }),
   ).toThrow(
     `fixture: the save's campaign.technologies[${held.technologies.length}] names no technology PH_Unheld`,
+  );
+  expect(() => writeSave(CATALOGUE, { ...held, influence: -1 })).toThrow(
+    "fixture: the save's campaign holds -1 influence",
   );
 });

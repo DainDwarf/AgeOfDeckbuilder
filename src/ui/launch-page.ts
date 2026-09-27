@@ -1,7 +1,6 @@
 import Phaser from 'phaser';
 import { CATALOGUE } from '../content/catalogue';
-import { ageOf, firstDeck } from '../rules/catalogue';
-import { refuse } from '../rules/map-kinds';
+import { ageOf, firstAge, firstDeck, firstRegion } from '../rules/catalogue';
 import type { Chronicle } from '../rules/state';
 import {
   addText,
@@ -29,19 +28,8 @@ export type Opening = Choices & { readonly resumed?: Chronicle };
 
 /** The first age and deck the catalogue lists, and that age's first region, on that seed. */
 export function firstsOf(seed: number | undefined): Choices {
-  const age = firstOf(CATALOGUE.ages, 'age');
-  return { age, region: firstRegionOf(age), deck: firstDeck(CATALOGUE), seed };
-}
-
-/** The first region the age lists; an age the catalogue does not hold is refused. */
-export function firstRegionOf(age: string): string {
-  return firstOf(ageOf(CATALOGUE, age).regions, 'region');
-}
-
-function firstOf(table: Readonly<Record<string, unknown>>, noun: string): string {
-  const [first] = Object.keys(table);
-  if (first === undefined) refuse(CATALOGUE, `no ${noun} is listed`);
-  return first;
+  const age = firstAge(CATALOGUE);
+  return { age, region: firstRegion(CATALOGUE, age), deck: firstDeck(CATALOGUE), seed };
 }
 
 const WIDTH = 480;
@@ -97,7 +85,7 @@ export class LaunchPage extends Phaser.Scene {
       switch (row) {
         case 'age':
           if (option !== chosen.age)
-            chosen = { ...chosen, age: option, region: firstRegionOf(option) };
+            chosen = { ...chosen, age: option, region: firstRegion(CATALOGUE, option) };
           break;
         case 'region':
           chosen = { ...chosen, region: option };

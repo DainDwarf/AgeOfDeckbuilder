@@ -14,7 +14,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | --- | --- | --- |
 | **age** | One span of history: the unit a chronicle plays through, the campaign unlocks, and content is partitioned by. | era, epoch, period, tier |
 | **campaign** | Humanity's history as the player has unlocked it — the meta's progression. | tech tree, map (for the meta) |
-| **collection** | Every card the player owns, with the copies owned of each. | library, pool, inventory |
+| **collection** | Every card the player owns, every copy a card of its own. | library, pool, inventory |
 | **civilization** | A playable identity: starting units, one passive rule, a look, and its deck. | people, nation, civ, board |
 | **deck** | A civilization's set of cards, fixed for a chronicle. | loadout |
 | **settle section** | The part of the deck that holds its settle cards; with the city section's card, the hand of the settle phase. | opening hand, starting hand, sideboard, reserve |

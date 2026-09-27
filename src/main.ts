@@ -3,18 +3,18 @@ import './failed-boot';
 import Phaser from 'phaser';
 import { CATALOGUE } from './content/catalogue';
 import { booted } from './failed-boot';
-import { ageOf, deckOf } from './rules/catalogue';
+import { ageOf, deckOf, firstRegion } from './rules/catalogue';
 import { regionOf } from './rules/map-kinds';
 import { ChronicleScene } from './ui/chronicle-scene';
 import { DebugConsole } from './ui/debug-console';
 import { backingSize, followPointer, followWindow, releaseOnBlur } from './ui/design-space';
 import { readMouseKeys } from './ui/keys';
-import { type Choices, firstRegionOf, firstsOf, LaunchPage } from './ui/launch-page';
+import { type Choices, firstsOf, LaunchPage } from './ui/launch-page';
 import { css, LOOK } from './ui/look';
 import { MapScene } from './ui/map-scene';
 import { MenuScene } from './ui/menu-scene';
 import { OverlayScene } from './ui/overlay-scene';
-import { openedSave } from './ui/save-entry';
+import { savedOpening } from './ui/save-entry';
 
 // The e2e suite and browser-console debugging observe the running game through this handle;
 // it is optional because the window exists before the game does.
@@ -57,15 +57,14 @@ function askedChoices(): Choices {
   return {
     ...firsts,
     age,
-    region: region ?? firstRegionOf(age),
+    region: region ?? firstRegion(CATALOGUE, age),
     deck: deck ?? firsts.deck,
   };
 }
 
 const choices = askedChoices();
 const bare = ASKED.every((key) => asked(key) === undefined);
-const saved = openedSave();
-const resumed = bare ? saved : undefined;
+const resumed = bare ? savedOpening() : undefined;
 const backing = backingSize();
 const game = new Phaser.Game({
   type: Phaser.WEBGL,

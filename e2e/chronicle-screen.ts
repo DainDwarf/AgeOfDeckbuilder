@@ -11,7 +11,9 @@ import {
   deckOf,
   type Entering,
   entered,
+  firstAge,
   firstDeck,
+  firstRegion,
   unitKind,
 } from '../src/rules/catalogue';
 import { admitted, apply, launched, outcome, refusalOf } from '../src/rules/chronicle';
@@ -59,17 +61,8 @@ export function cityTileOf(chronicle: Chronicle): TileCoords {
 
 /** The age and the deck the catalogue lists first, and the first region that age lists. */
 export function firstsOf(): { age: string; region: string; deck: string } {
-  const first = (table: Readonly<Record<string, unknown>>, noun: string): string => {
-    const [id] = Object.keys(table);
-    if (id === undefined) throw new Error(`${CATALOGUE.version} lists no ${noun}`);
-    return id;
-  };
-  const age = first(CATALOGUE.ages, 'age');
-  return {
-    age,
-    region: first(ageOf(CATALOGUE, age).regions, 'region'),
-    deck: firstDeck(CATALOGUE),
-  };
+  const age = firstAge(CATALOGUE);
+  return { age, region: firstRegion(CATALOGUE, age), deck: firstDeck(CATALOGUE) };
 }
 
 /**

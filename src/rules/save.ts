@@ -1,4 +1,10 @@
-import { type Campaign, type CampaignCard, type CampaignDeck, dealt } from './campaign';
+import {
+  type Campaign,
+  type CampaignCard,
+  type CampaignDeck,
+  dealt,
+  FIRST_CARD_NUMBER,
+} from './campaign';
 import {
   achievementOf,
   ageOf,
@@ -139,7 +145,8 @@ function refused(catalogue: Catalogue, slot: Slot, reason: string): never {
 
 /**
  * The campaign part of a save, and the reasons for what the catalogue could not resolve of it. A card
- * number held twice or not below the next number is its shape broken.
+ * number below the first, held twice or not below the next number is its shape broken, and so is a
+ * next number below the first and a negative influence, sight or idle.
  */
 function campaignOf(
   catalogue: Catalogue,
@@ -153,12 +160,24 @@ function campaignOf(
   };
   const field = record(catalogue, slot);
   let nextCard = integer(catalogue, field('nextCard'));
+  if (nextCard < FIRST_CARD_NUMBER) {
+    refused(
+      catalogue,
+      slot,
+      `holds the next number ${nextCard}, below the first number ${FIRST_CARD_NUMBER}`,
+    );
+  }
   const cardIn = (item: Slot): { readonly slot: Slot; readonly card: CampaignCard } => {
     const held = record(catalogue, item);
-    return {
-      slot: item,
-      card: { number: integer(catalogue, held('number')), id: string(catalogue, held('id')) },
-    };
+    const number = integer(catalogue, held('number'));
+    if (number < FIRST_CARD_NUMBER) {
+      refused(
+        catalogue,
+        item,
+        `is numbered ${number}, below the first number ${FIRST_CARD_NUMBER}`,
+      );
+    }
+    return { slot: item, card: { number, id: string(catalogue, held('id')) } };
   };
   const collection = list(catalogue, field('collection'), cardIn);
   const deck = record(catalogue, field('deck'));
@@ -167,8 +186,7 @@ function campaignOf(
   const cityCard = cardIn(city('card'));
   const section = {
     building: string(catalogue, city('building')),
-    sight: integer(catalogue, city('sight')),
-    idle: integer(catalogue, city('idle')),
+    ...cityCounts(catalogue, citySlot, city),
   };
   const numbered = (name: 'settle' | 'cards'): { slot: Slot; number: number }[] =>
     list(catalogue, deck(name), (item) => ({ slot: item, number: integer(catalogue, item) }));
@@ -178,7 +196,7 @@ function campaignOf(
     slot: item,
     id: string(catalogue, item),
   }));
-  const influence = integer(catalogue, field('influence'));
+  const influence = count(catalogue, field('influence'), slot, (held) => `holds ${held} influence`);
 
   const dealtNumbers = new Set<number>();
   for (const { slot: item, card } of [cityCard, ...collection]) {
@@ -262,6 +280,30 @@ function integer(catalogue: Catalogue, slot: Slot): number {
   return slot.raw as number;
 }
 
+/** An integer counting something, refused below zero with the reason said of what holds it. */
+function count(
+  catalogue: Catalogue,
+  slot: Slot,
+  holder: Slot,
+  reason: (value: number) => string,
+): number {
+  const value = integer(catalogue, slot);
+  if (value < 0) refused(catalogue, holder, reason(value));
+  return value;
+}
+
+/** How far a city section's city sees and the idle population it opens with. */
+function cityCounts(
+  catalogue: Catalogue,
+  slot: Slot,
+  field: (name: string) => Slot,
+): { readonly sight: number; readonly idle: number } {
+  return {
+    sight: count(catalogue, field('sight'), slot, (sight) => `sees ${sight}`),
+    idle: count(catalogue, field('idle'), slot, (idle) => `opens with ${idle} idle`),
+  };
+}
+
 function flag(catalogue: Catalogue, slot: Slot): boolean {
   if (typeof slot.raw !== 'boolean') refused(catalogue, slot, 'is not true or false');
   return slot.raw;
@@ -330,14 +372,19 @@ function chronicleOf(catalogue: Catalogue, slot: Slot): Chronicle {
     citySection: citySectionOf(catalogue, field('citySection')),
     city: optional(field('city'), coords),
     held: list(catalogue, field('held'), coords),
-    turn: integer(catalogue, field('turn')),
+    turn: count(catalogue, field('turn'), slot, (turn) => `stands on turn ${turn}`),
     timeline: timelineOf(catalogue, field('timeline')),
     deals: list(catalogue, field('deals'), (item) => dealOf(catalogue, item)),
     resources: resourcesOf(catalogue, field('resources')),
-    population: integer(catalogue, field('population')),
+    population: count(catalogue, field('population'), slot, (held) => `holds ${held} population`),
     assigned: list(catalogue, field('assigned'), coords),
     units: list(catalogue, field('units'), (item) => unitOf(catalogue, item)),
-    nextUnit: integer(catalogue, field('nextUnit')),
+    nextUnit: count(
+      catalogue,
+      field('nextUnit'),
+      slot,
+      (next) => `holds the next unit number ${next}`,
+    ),
     drawPile: list(catalogue, field('drawPile'), card),
     hand: list(catalogue, field('hand'), card),
     discardPile: list(catalogue, field('discardPile'), card),
@@ -367,8 +414,7 @@ function citySectionOf(catalogue: Catalogue, slot: Slot): CitySection {
   const field = record(catalogue, slot);
   return {
     building: id(catalogue, field('building'), buildingKind),
-    sight: integer(catalogue, field('sight')),
-    idle: integer(catalogue, field('idle')),
+    ...cityCounts(catalogue, slot, field),
     card: id(catalogue, field('card'), cardOf),
   };
 }
@@ -408,13 +454,14 @@ function snapshotOf(catalogue: Catalogue, slot: Slot): Snapshot {
 
 function timelineOf(catalogue: Catalogue, slot: Slot): Timeline {
   const field = record(catalogue, slot);
-  const capstone = record(catalogue, field('capstone'));
+  const capstoneSlot = field('capstone');
+  const capstone = record(catalogue, capstoneSlot);
   return {
     rng: rngOf(catalogue, field('rng')),
-    next: integer(catalogue, field('next')),
+    next: count(catalogue, field('next'), slot, (turn) => `deals next on turn ${turn}`),
     capstone: {
       id: id(catalogue, capstone('id'), capstoneOf),
-      turn: integer(catalogue, capstone('turn')),
+      turn: count(catalogue, capstone('turn'), capstoneSlot, (turn) => `lands on turn ${turn}`),
     },
   };
 }
@@ -443,7 +490,14 @@ function resourcesOf(catalogue: Catalogue, slot: Slot): Resources {
   }
   const field = record(catalogue, slot);
   const stock = {} as Resources;
-  for (const resource of RESOURCES) stock[resource] = integer(catalogue, field(resource));
+  for (const resource of RESOURCES) {
+    stock[resource] = count(
+      catalogue,
+      field(resource),
+      slot,
+      (held) => `holds a stock of ${held} ${resource}`,
+    );
+  }
   return stock;
 }
 
@@ -461,11 +515,16 @@ function factionOf(catalogue: Catalogue, slot: Slot): Faction {
 function unitOf(catalogue: Catalogue, slot: Slot): Unit {
   const field = record(catalogue, slot);
   const standing = {
-    id: integer(catalogue, field('id')),
+    id: count(catalogue, field('id'), slot, (number) => `is numbered ${number}`),
     stats: statsOf(catalogue, field('stats')),
     tile: coordsIn(catalogue, record(catalogue, field('tile'))),
-    movePoints: integer(catalogue, field('movePoints')),
-    action: integer(catalogue, field('action')),
+    movePoints: count(
+      catalogue,
+      field('movePoints'),
+      slot,
+      (points) => `has ${points} move points left`,
+    ),
+    action: count(catalogue, field('action'), slot, (action) => `has ${action} action left`),
   };
   const faction = factionOf(catalogue, field('faction'));
   switch (faction) {
@@ -478,15 +537,17 @@ function unitOf(catalogue: Catalogue, slot: Slot): Unit {
 
 function statsOf(catalogue: Catalogue, slot: Slot): UnitStats {
   const field = record(catalogue, slot);
+  const stat = (name: string): number =>
+    count(catalogue, field(name), slot, (value) => `has a ${name} of ${value}`);
   return {
     type: id(catalogue, field('type'), unitKind),
     worker: flag(catalogue, field('worker')),
-    health: integer(catalogue, field('health')),
-    damage: integer(catalogue, field('damage')),
-    range: integer(catalogue, field('range')),
-    move: integer(catalogue, field('move')),
-    action: integer(catalogue, field('action')),
-    sight: integer(catalogue, field('sight')),
+    health: stat('health'),
+    damage: stat('damage'),
+    range: stat('range'),
+    move: stat('move'),
+    action: stat('action'),
+    sight: stat('sight'),
   };
 }
 
@@ -512,7 +573,7 @@ function cardIn(catalogue: Catalogue, slot: Slot): ChronicleCard {
 
 function endingOf(catalogue: Catalogue, slot: Slot): Ending {
   const field = record(catalogue, slot);
-  const turn = integer(catalogue, field('turn'));
+  const turn = count(catalogue, field('turn'), slot, (ended) => `ended on turn ${ended}`);
   const named = field('outcome');
   const outcome = string(catalogue, named) as Ending['outcome'];
   switch (outcome) {

@@ -552,8 +552,26 @@ export function deckOf(catalogue: Catalogue, id: string): Deck {
 
 /** The deck the catalogue lists first: the civilization's. A catalogue listing none is refused. */
 export function firstDeck(catalogue: Catalogue): string {
-  const [first] = Object.keys(catalogue.decks);
-  if (first === undefined) refuse(catalogue, 'no deck is listed');
+  return firstListed(catalogue, catalogue.decks, 'deck');
+}
+
+/** The age the catalogue lists first. A catalogue listing none is refused. */
+export function firstAge(catalogue: Catalogue): string {
+  return firstListed(catalogue, catalogue.ages, 'age');
+}
+
+/** The region the age lists first; an age the catalogue does not hold, or one listing none, is refused. */
+export function firstRegion(catalogue: Catalogue, age: string): string {
+  return firstListed(catalogue, ageOf(catalogue, age).regions, 'region');
+}
+
+function firstListed(
+  catalogue: Catalogue,
+  table: Readonly<Record<string, unknown>>,
+  noun: string,
+): string {
+  const [first] = Object.keys(table);
+  if (first === undefined) refuse(catalogue, `no ${noun} is listed`);
   return first;
 }
 
