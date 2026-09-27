@@ -40,6 +40,7 @@ import { discTiles, generateMap, tileKey } from './map';
 import type { Region } from './map-kinds';
 import { seedRng } from './rng';
 import { timelineOf } from './schedule';
+import { LEAST_STATS } from './units';
 
 /** The fixture's content with what the test changes laid over it. */
 function changed(content: Partial<Catalogue>): Catalogue {
@@ -214,6 +215,27 @@ test('a catalogue whose unit kind names itself by another key is refused', () =>
   });
 
   expect(() => catalogued(content)).toThrow(/^fixture: /);
+});
+
+test.each(Object.entries(LEAST_STATS))(
+  'a catalogue whose unit kind has a %s below %i is refused',
+  (stat, least) => {
+    const kind = { ...CATALOGUE.units.PH_Warrior, [stat]: least - 1 };
+    const content = changed({ units: { ...CATALOGUE.units, PH_Warrior: kind } });
+
+    expect(() => catalogued(content)).toThrow(
+      `fixture: the unit kind PH_Warrior has a ${stat} of ${least - 1}`,
+    );
+  },
+);
+
+test('a catalogue whose unit kind has a stat that is not a whole number is refused', () => {
+  const kind = { ...CATALOGUE.units.PH_Warrior, damage: 1.5 };
+  const content = changed({ units: { ...CATALOGUE.units, PH_Warrior: kind } });
+
+  expect(() => catalogued(content)).toThrow(
+    'fixture: the unit kind PH_Warrior has a damage of 1.5',
+  );
 });
 
 test('a catalogue whose biome names a terrain it does not hold is refused', () => {

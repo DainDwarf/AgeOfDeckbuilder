@@ -20,7 +20,7 @@ import { RESOURCES } from './resources';
 import { type ChronicleSave, readSave, writeSave } from './save';
 import { laid } from './schedule';
 import type { Chronicle, Counters } from './state';
-import type { Unit } from './units';
+import { FIRST_UNIT_NUMBER, LEAST_STATS, type Unit } from './units';
 
 /** A chronicle three turns in, saved with what it was launched on. */
 function saved(): ChronicleSave {
@@ -162,8 +162,6 @@ function firstUnit(chronicle: Chronicle, change: (unit: Unit) => object): Chroni
   return { ...chronicle, units: [change(unit) as Unit, ...others] };
 }
 
-const STATS = ['health', 'damage', 'range', 'move', 'action', 'sight'] as const;
-
 test.each<[string, (chronicle: Chronicle) => object, string]>([
   [
     'a city that sees a negative sight',
@@ -203,14 +201,14 @@ test.each<[string, (chronicle: Chronicle) => object, string]>([
     'chronicle holds -1 population',
   ],
   [
-    'a negative next unit number',
-    (chronicle) => ({ ...chronicle, nextUnit: -1 }),
-    'chronicle holds the next unit number -1',
+    'a next unit number below the first unit number',
+    (chronicle) => ({ ...chronicle, nextUnit: FIRST_UNIT_NUMBER - 1 }),
+    `chronicle holds the next unit number ${FIRST_UNIT_NUMBER - 1}, below the first unit number ${FIRST_UNIT_NUMBER}`,
   ],
   [
-    'a unit numbered below zero',
-    (chronicle) => firstUnit(chronicle, (unit) => ({ ...unit, id: -1 })),
-    'chronicle.units[0] is numbered -1',
+    'a unit numbered below the first unit number',
+    (chronicle) => firstUnit(chronicle, (unit) => ({ ...unit, id: FIRST_UNIT_NUMBER - 1 })),
+    `chronicle.units[0] is numbered ${FIRST_UNIT_NUMBER - 1}, below the first unit number ${FIRST_UNIT_NUMBER}`,
   ],
   [
     'a unit with negative move points left',
@@ -222,12 +220,14 @@ test.each<[string, (chronicle: Chronicle) => object, string]>([
     (chronicle) => firstUnit(chronicle, (unit) => ({ ...unit, action: -1 })),
     'chronicle.units[0] has -1 action left',
   ],
-  ...STATS.map((stat): [string, (chronicle: Chronicle) => object, string] => [
-    `a unit with a negative ${stat}`,
-    (chronicle) =>
-      firstUnit(chronicle, (unit) => ({ ...unit, stats: { ...unit.stats, [stat]: -1 } })),
-    `chronicle.units[0].stats has a ${stat} of -1`,
-  ]),
+  ...Object.entries(LEAST_STATS).map(
+    ([stat, least]): [string, (chronicle: Chronicle) => object, string] => [
+      `a unit with a ${stat} below ${least}`,
+      (chronicle) =>
+        firstUnit(chronicle, (unit) => ({ ...unit, stats: { ...unit.stats, [stat]: least - 1 } })),
+      `chronicle.units[0].stats has a ${stat} of ${least - 1}`,
+    ],
+  ),
   [
     'an ending on a negative turn',
     (chronicle) => ({ ...chronicle, ending: { outcome: 'victory', turn: -1 } }),
@@ -235,6 +235,30 @@ test.each<[string, (chronicle: Chronicle) => object, string]>([
   ],
 ])('a save whose chronicle holds %s drops it', (_, change, reason) => {
   expect(chronicleDropped(tampered(saved(), change))).toEqual([`fixture: the save's ${reason}`]);
+});
+
+test('a save whose chronicle holds a unit number the next unit number does not exceed drops it', () => {
+  const { nextUnit } = saved().chronicle;
+
+  expect(
+    chronicleDropped(
+      tampered(saved(), (chronicle) => firstUnit(chronicle, (unit) => ({ ...unit, id: nextUnit }))),
+    ),
+  ).toEqual([
+    `fixture: the save's chronicle.units[0] is numbered ${nextUnit}, not below the next unit number ${nextUnit}`,
+  ]);
+});
+
+test('a save whose chronicle holds two units of one number drops it', () => {
+  const [unit] = saved().chronicle.units;
+
+  expect(
+    chronicleDropped(
+      tampered(saved(), (chronicle) => ({ ...chronicle, units: [unit, ...chronicle.units] })),
+    ),
+  ).toEqual([
+    `fixture: the save's chronicle.units[1] is numbered ${unit.id}, a number another unit holds`,
+  ]);
 });
 
 test('a save whose chronicle names no age, or an age the catalogue does not hold, drops it', () => {

@@ -63,6 +63,7 @@ import {
 } from './state';
 import {
   attackable,
+  FIRST_UNIT_NUMBER,
   type Landing,
   occupied,
   reachable,
@@ -155,7 +156,7 @@ export function beginChronicle(
     population: 0,
     assigned: [],
     units: [],
-    nextUnit: 1,
+    nextUnit: FIRST_UNIT_NUMBER,
     drawPile: shuffled.items,
     hand: [deck.city.card, ...deck.settle].map(made),
     discardPile: [],

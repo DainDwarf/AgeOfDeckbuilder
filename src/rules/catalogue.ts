@@ -22,7 +22,7 @@ import {
   costsOf,
   type TileBlock,
 } from './state';
-import { type Landing, standsOn, type Unit, type UnitStats } from './units';
+import { type Landing, LEAST_STATS, standsOn, type Unit, type UnitStats } from './units';
 
 /**
  * What an enemy does in the enemy phase, asked of the enemy itself as the phase stands it. The phase
@@ -280,6 +280,15 @@ export function merged(version: string, slices: readonly Slice[]): Catalogue {
 export function catalogued(content: Catalogue): Catalogue {
   for (const [id, kind] of Object.entries(content.units)) {
     if (kind.type !== id) refuse(content, `the unit kind ${id} names itself ${kind.type}`);
+    for (const [stat, least] of Object.entries(LEAST_STATS) as [
+      keyof typeof LEAST_STATS,
+      number,
+    ][]) {
+      const value = kind[stat];
+      if (!Number.isInteger(value) || value < least) {
+        refuse(content, `the unit kind ${id} has a ${stat} of ${value}`);
+      }
+    }
   }
   for (const [id, biome] of Object.entries(content.biomes)) {
     terrainKind(content, biome.origin);

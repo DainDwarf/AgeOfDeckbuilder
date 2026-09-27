@@ -42,6 +42,19 @@ export type Unit = {
   readonly action: number;
 } & ({ readonly faction: 'player' } | { readonly faction: 'enemy'; readonly script: string });
 
+/** The least each number of a unit's stats may stand at. */
+export const LEAST_STATS: Readonly<Record<Exclude<keyof UnitStats, 'type' | 'worker'>, number>> = {
+  health: 1,
+  damage: 0,
+  range: 0,
+  move: 0,
+  action: 0,
+  sight: 0,
+};
+
+/** The number a chronicle's first unit is dealt. */
+export const FIRST_UNIT_NUMBER = 1;
+
 /** A tile a unit can land on, and the move points crossing to it spends. */
 export type Landing = { readonly tile: TileCoords; readonly cost: number };
 

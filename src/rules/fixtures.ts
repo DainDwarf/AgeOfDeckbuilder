@@ -88,6 +88,7 @@ import {
 } from './state';
 import {
   type Faction,
+  FIRST_UNIT_NUMBER,
   type Landing,
   leastHealth,
   reachable,
@@ -973,7 +974,7 @@ export function cityOf(
     population: held.length,
     assigned: [...held],
     units: [],
-    nextUnit: 1,
+    nextUnit: FIRST_UNIT_NUMBER,
     achievements: [],
     ...state,
     drawPile: drawPile.map(made),
