@@ -14,5 +14,5 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **Conditions read on the charted chronicle** — the capstone's and the achievements' conditions are read before the charting, so a condition on what the chronicle has charted reads one command late; swap the two passes.
+- **Conditions read on the charted chronicle** — a command's stages are charted before the capstone's and the achievements' conditions are read on them; `npm test` passes with a test in `src/rules/chronicle.test.ts` proving an achievement that counts charted tiles is recorded right after the move that charts the tile it needs, in the same command. Doc-impact: none. [board/conditions-read-on-the-charted-chronicle.md](board/conditions-read-on-the-charted-chronicle.md)
 - **Warn when the game cannot save** — the game should warn the user when it cannot save, as when the browser's storage refuses a write.
