@@ -6,7 +6,7 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Rungs
 
-- **The launch screen** — age, region, civilization and deck, replacing the launch page; the address stays the developer's door.
+- **The launch screen** — age, region, civilization and deck, replacing the launch page; no seed is chosen, every launch drawing a fresh one.
 - **The collection screen** — the collection with the copies owned, the deck and its settle section edited from it, the city section's card shown at the head of the settle section, a copy bought for influence.
 - **The Stone Age** — the age page and its content, the age the Nomadic victory unlocks: its settle, land, units, cards and buildings, events, capstone and camps, and its achievements with the technologies they unlock, cards and settle cards among them; with it the achievement reading, a condition read on the chronicle after every change and recorded in it, folded into the campaign's seam once done, and the warning a launch over a chronicle with achievements reached raises, since an abandoned chronicle pays nothing.
 - **Pin an achievement** — one achievement pinned on the campaign screen shows on the chronicle screen as a ledger: its goal in words, a count against its need where it has one, a check mark once reached, a cross mark once failed.
@@ -15,7 +15,7 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 ## Lines
 
 - **A plate's name is shown large** — a right click on a plate's name or its small card shows the named thing large on the campaign screen in the chronicle's stack, on a scrim the pan keys still move the tree under; `e2e/tree.spec.ts` proves the right click and the back key. Doc-impact: `docs/INTERFACE.md`. [board/plate-name-shown-large.md](board/plate-name-shown-large.md)
-- **The address loses its doors** — remove the developer's doors of deck, age, region and seed on the address: the specs that open through them open on a planted save, one test launches through the meta's screens, and the `ui-check` agent and the `run` skill follow.
+- **The address loses its doors** — the boot reads no deck, age, region or seed from the address; the specs that opened through them open on a planted save, `e2e/boot.spec.ts`'s Launch test holds its chronicle equal to the rules' launch on its seed, the three address tests are gone, and the `ui-check` agent and the `run` skill follow. Doc-impact: `docs/INTERFACE.md`, `docs/META.md`. [board/address-loses-its-doors.md](board/address-loses-its-doors.md)
 - **The ending pays** — a chronicle is launched on the campaign's deck, its ending pays into the campaign once and the save keeps it, a chronicle that has paid leaves the save, and the ending screen reads the influence and the achievements under the outcome; the launch page loses its deck row.
 - **Conditions read on the charted chronicle** — the capstone's and the achievements' conditions are read before the charting, so a condition on what the chronicle has charted reads one command late; swap the two passes.
 - **Warn when the game cannot save** — the game should warn the user when it cannot save, as when the browser's storage refuses a write.

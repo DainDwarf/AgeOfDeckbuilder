@@ -7,6 +7,7 @@ The unordered pool of features that may or may not happen. Nothing here is promi
 - **Content-stage board**: when content exists, track each piece through Design (number-less) → Implement (provisional numbers) → Balance (measured + feel) → Polish (text, art, lore), one stage per session batched across pieces. Worked well before.
 - **Pure UI modules apart from Phaser's** (v0.0.6): `src/ui/face.ts` and `src/ui/bar-layout.ts` are pure, tested by Vitest in Node, and sit beside the Phaser modules; whether the UI parts that are internal and the parts that use Phaser get different folders, a naming convention, or nothing.
 - **The render factor can change after boot**: regrow the bitmap, re-zoom cameras, re-rasterize text while the game runs. Four consumers: itch.io's fullscreen button, a settings render-scale slider, monitor-hopping, resizing the window after boot. Decide after the art style locks — pixel art would replace this whole strategy with integer scaling.
+- **A seed from the console**: once the launch screen chooses no seed, the debug console launches a chronicle on the seed it is given, so a map a playtester describes can be reopened without a save built by hand.
 
 ## Game
 
