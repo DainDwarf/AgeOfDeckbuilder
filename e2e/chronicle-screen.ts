@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { expect, type Page } from '@playwright/test';
 import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
@@ -67,8 +68,7 @@ export function firstsOf(): { age: string; region: string; deck: string } {
 
 /**
  * A chronicle launched from a seed in the first age the catalogue lists, on that age's first region
- * and the catalogue's first deck, or the deck given: the headless twin of `openNew`, the two
- * launching alike.
+ * and the catalogue's first deck, or the deck given.
  */
 export function launchedOn(seed: number, deck?: Deck): Chronicle {
   const firsts = firstsOf();
@@ -136,15 +136,14 @@ export function watch(page: Page): string[] {
 }
 
 /**
- * Opens a new chronicle on the address naming the seed, and the first age and deck the catalogue
- * lists, the region left to the boot's first; the capstone's window the opening raises is left
- * standing. The boot begins a chronicle only on an address naming a deck.
+ * Opens the chronicle `launchedOn` launches from the seed, planted as the save on the first region
+ * and deck the catalogue lists; the capstone's window the opening raises is left standing.
  */
 export async function openNew(page: Page, seed: number): Promise<void> {
-  const { age, deck } = firstsOf();
+  const { region, deck } = firstsOf();
   await readNames(page);
-  await page.goto(`/?seed=${seed}&deck=${deck}&age=${age}`);
-  await page.waitForFunction(() => window.game?.scene.isActive('ui') === true);
+  await plant(page, { chronicle: launchedOn(seed), region, deck });
+  await continued(page);
   await expect.poll(() => standing(page, 'capstone')).toBe(true);
   await rested(page);
 }
@@ -200,27 +199,31 @@ export async function readNames(page: Page): Promise<void> {
 }
 
 /**
- * The chronicle kept as the save the pages this one loads from now on find, beside a new campaign on
- * the first deck; a save the reading would refuse throws here.
+ * The chronicle kept as the save the next page this one loads finds, beside a new campaign on the
+ * first deck; a save the reading would refuse throws here.
  */
 export async function plant(page: Page, save: ChronicleSave): Promise<void> {
   await kept(page, writeSave(CATALOGUE, newCampaign(CATALOGUE, firstsOf().deck), save));
 }
 
 /**
- * The campaign kept as the save the pages this one loads from now on find, with no chronicle beside
- * it; a save the reading would refuse throws here.
+ * The campaign kept as the save the next page this one loads finds, with no chronicle beside it; a
+ * save the reading would refuse throws here.
  */
 export async function plantCampaign(page: Page, campaign: Campaign): Promise<void> {
   await kept(page, writeSave(CATALOGUE, campaign));
 }
 
+/** The text kept as the save the next page this one loads finds; a page after it finds what play left. */
 async function kept(page: Page, text: string): Promise<void> {
   await page.addInitScript(
-    ({ entry, saved }) => {
+    ({ entry, saved, mark }) => {
+      // An init script runs again at every load of the page, and would write over what play kept.
+      if (window.sessionStorage.getItem(mark) !== null) return;
+      window.sessionStorage.setItem(mark, '');
       window.localStorage.setItem(entry, saved);
     },
-    { entry: SAVE_ENTRY, saved: text },
+    { entry: SAVE_ENTRY, saved: text, mark: `planted-${randomUUID()}` },
   );
 }
 

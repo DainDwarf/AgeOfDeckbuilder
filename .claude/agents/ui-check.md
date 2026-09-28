@@ -16,7 +16,7 @@ You answer exactly one question: **is anything broken?** Layout, overlap, clippi
 
 One `<canvas>` and nothing else. Phaser draws every pixel; there are no DOM elements, no selectors, no queryable text. You see what a player sees, and you find things the way a player does — by looking at the picture and by clicking where the picture says something is.
 
-The bare URL boots on the campaign screen, whose Chronicle button opens the launch page, which offers Continue while the save holds a chronicle; `?continue=1` opens the save's chronicle straight. A URL that names a deck opens the chronicle screen — the map, the hand, the piles, the resource bar — of the chronicle it names, straight, and writes it over the save: `?seed=<integer>` picks the map, `?deck=` the cards, and the same URL opens the same chronicle every time. The chronicle screen writes nothing into the URL. The app stores the player's key bindings and the save. The checklist you are handed is what bounds the check.
+The bare URL boots on the campaign screen, whose Chronicle button opens the launch page, which offers Continue while the save holds a chronicle; `?continue=1` opens the save's chronicle straight, and any other URL boots on the campaign screen. The launch page's Launch, or Enter, opens the chronicle screen — the map, the hand, the piles, the resource bar — on a new chronicle, on the seed typed on the page in digits or a fresh one; the same seed opens the same chronicle every time. The chronicle screen writes nothing into the URL. The app stores the player's key bindings and the save. The checklist you are handed is what bounds the check.
 
 ## Bound your work
 
@@ -42,7 +42,7 @@ const require = createRequire(`${process.cwd()}/`);
 const { chromium } = require('playwright');
 
 const out = '<scratchpad>'; // forward slashes
-const url = 'http://localhost:5173/?deck=nomadic';
+const url = 'http://localhost:5173/';
 
 const browser = await chromium.launch();
 const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
@@ -126,7 +126,7 @@ Anything else is reported. Every `pageerror` and every `error` line is a FAIL, w
 
 **Seed it directly**: write the app's storage on the fresh profile, then open `?continue=1` where a chronicle is planted, the bare URL otherwise. Seed a whole, coherent state, never a patch of the fields you care about — a state the game itself never reaches produces bugs that may not be real.
 
-A chronicle is reached by its `?seed=` and `?deck=`, and turns are played on the end-turn button. A chronicle further on is seeded by `page.evaluate` writing the save under the entry `SAVE_ENTRY` names in `src/ui/save-entry.ts`, then opening `?continue=1`. A URL that names a deck opens its chronicle straight and writes over the planted save.
+A new chronicle is reached from the bare URL: Chronicle on the campaign screen, the seed typed in digits, Enter; turns are played on the end-turn button. A chronicle further on is seeded by `page.evaluate` writing the save under the entry `SAVE_ENTRY` names in `src/ui/save-entry.ts`, then opening `?continue=1`.
 
 **Never play to earn state**, and never drive a chronicle to completion. If a checklist step can only be satisfied by playing through, stop and report it as "not checked (needs play-through)"; the caller hands it to a human.
 

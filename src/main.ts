@@ -1,21 +1,18 @@
 // First, before any import that can throw as it is evaluated: the watch is only as early as it is.
 import './failed-boot';
 import Phaser from 'phaser';
-import { CATALOGUE } from './content/catalogue';
 import { booted } from './failed-boot';
-import { ageOf, deckOf, firstRegion } from './rules/catalogue';
-import { regionOf } from './rules/map-kinds';
 import { CampaignScreen } from './ui/campaign-screen';
 import { ChronicleScene } from './ui/chronicle-scene';
 import { DebugConsole } from './ui/debug-console';
 import { backingSize, followPointer, followWindow, releaseOnBlur } from './ui/design-space';
 import { readMouseKeys } from './ui/keys';
-import { firstsOf, LaunchPage } from './ui/launch-page';
+import { LaunchPage } from './ui/launch-page';
 import { css, LOOK } from './ui/look';
 import { MapScene } from './ui/map-scene';
 import { MenuScene } from './ui/menu-scene';
 import { OverlayScene, overlayAhead } from './ui/overlay-scene';
-import { type Choices, type Opening, savedOpening } from './ui/save-entry';
+import { type Opening, savedOpening } from './ui/save-entry';
 
 // The e2e suite and browser-console debugging observe the running game through this handle;
 // it is optional because the window exists before the game does.
@@ -25,58 +22,21 @@ declare global {
   }
 }
 
-const address = new URLSearchParams(window.location.search);
-
-/** What the address names under that key, and nothing where it names nothing. */
-function asked(key: 'continue' | 'age' | 'region' | 'deck' | 'seed'): string | undefined {
-  const value = address.get(key);
-  return value === null || value.trim() === '' ? undefined : value;
-}
-
-/** The seed asked for in the address, so a chronicle can be replayed and a spec can be written. */
-function askedSeed(): number | undefined {
-  const value = asked('seed');
-  if (value === undefined) return undefined;
-  const seed = Number(value);
-  return Number.isInteger(seed) ? seed : undefined;
-}
-
-/**
- * What the address names, each id resolved through the catalogue — a region through the named age's
- * regions, or the first age's — and the firsts for the rest.
- */
-function askedChoices(): Choices {
-  const firsts = firstsOf(askedSeed());
-  const age = asked('age') ?? firsts.age;
-  const region = asked('region');
-  const deck = asked('deck');
-  if (region !== undefined) regionOf(CATALOGUE, ageOf(CATALOGUE, age), region);
-  if (deck !== undefined) deckOf(CATALOGUE, deck);
-  return {
-    ...firsts,
-    age,
-    region: region ?? firstRegion(CATALOGUE, age),
-    deck: deck ?? firsts.deck,
-  };
-}
-
 /** The screen the boot opens: the campaign screen, or the chronicle screen on an opening. */
 type FirstScreen =
   | { readonly on: 'campaign' }
   | { readonly on: 'chronicle'; readonly opening: Opening };
 
 /**
- * What the address asks for: the chronicle the save holds, which it must hold; a chronicle launched
- * straight on the choices, where it names a deck; and the campaign screen otherwise.
+ * What the address asks for: the chronicle the save holds, which it must hold, where it names
+ * `continue`; and the campaign screen otherwise.
  */
 function firstScreen(): FirstScreen {
-  if (asked('continue') !== undefined) {
-    const saved = savedOpening();
-    if (saved === undefined) throw new Error('the save holds no chronicle to continue');
-    return { on: 'chronicle', opening: saved };
-  }
-  if (asked('deck') === undefined) return { on: 'campaign' };
-  return { on: 'chronicle', opening: askedChoices() };
+  const asked = new URLSearchParams(window.location.search).get('continue');
+  if (asked === null || asked.trim() === '') return { on: 'campaign' };
+  const saved = savedOpening();
+  if (saved === undefined) throw new Error('the save holds no chronicle to continue');
+  return { on: 'chronicle', opening: saved };
 }
 
 const first = firstScreen();

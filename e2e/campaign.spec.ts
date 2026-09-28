@@ -76,19 +76,6 @@ test('the bare address with no save boots the campaign screen, Campaign sunk, Ch
   expect(problems).toEqual([]);
 });
 
-test('an address naming no deck boots the campaign screen, and reads nothing else it names', async ({
-  page,
-}) => {
-  const problems = watch(page);
-  await readNames(page);
-
-  await page.goto('/?seed=12&age=nowhere&region=nowhere');
-  await campaignShown(page);
-  expect(await page.evaluate(() => window.game?.scene.isActive('ui'))).toBe(false);
-
-  expect(problems).toEqual([]);
-});
-
 test('on a campaign a won chronicle paid into, the bar reads its influence, and the pointer resting on the reading raises its tooltip under an arrow', async ({
   page,
 }) => {

@@ -1,14 +1,11 @@
 import { expect, type Page, test } from '@playwright/test';
-import { CATALOGUE } from '../src/content/catalogue';
-import { deckOf } from '../src/rules/catalogue';
 import {
   campaignShown,
   chronicleButton,
   chronicleOf,
   click,
   consoleKey,
-  firstsOf,
-  idsOf,
+  launchedOn,
   readNames,
   rested,
   standing,
@@ -19,25 +16,6 @@ import {
 function named(page: Page): string {
   return new URL(page.url()).search;
 }
-
-test('an address naming a deck boots into the chronicle, stays as it was, and logs nothing', async ({
-  page,
-}) => {
-  const problems = watch(page);
-
-  const address = `?deck=${firstsOf().deck}`;
-  await page.goto(`/${address}`);
-
-  const canvas = page.locator('canvas');
-  await expect(canvas).toBeVisible();
-  expect(await canvas.evaluate((element: HTMLCanvasElement) => element.width)).toBeGreaterThan(0);
-
-  await page.waitForFunction(() => window.game?.scene.isActive('ui') === true);
-  expect(named(page)).toBe(address);
-  expect((await chronicleOf(page)).age).toBe(firstsOf().age);
-
-  expect(problems).toEqual([]);
-});
 
 test('the bare address with no save boots the campaign screen, whose menu lists no Campaign, and logs nothing', async ({
   page,
@@ -101,14 +79,8 @@ test('Launch opens the chronicle on the firsts, and the address stays bare throu
   await page.waitForFunction(() => window.game?.scene.isActive('ui') === true);
 
   const launched = await chronicleOf(page);
-  const firsts = firstsOf();
-  const deck = deckOf(CATALOGUE, firsts.deck);
   expect(named(page)).toBe('');
-  expect(launched.content).toBe(CATALOGUE.version);
-  expect(launched.age).toBe(firsts.age);
-  expect(idsOf([...launched.drawPile, ...launched.hand, ...launched.discardPile]).sort()).toEqual(
-    [deck.city.card, ...deck.cards, ...deck.settle].sort(),
-  );
+  expect(launched).toEqual(launchedOn(launched.seed));
 
   await expect.poll(() => standing(page, 'menu-button')).toBe(true);
   await click(page, 'menu-button');

@@ -129,22 +129,6 @@ test('the menu’s Campaign leaves the chronicle launched on the page in its sav
   expect(problems).toEqual([]);
 });
 
-test('continue named beside a deck the catalogue does not hold opens the chronicle the save holds, and nothing else is read', async ({
-  page,
-}) => {
-  const problems = watch(page);
-  const saved = settledOn(1);
-  const { region, deck } = firstsOf();
-  await readNames(page);
-  await plant(page, { chronicle: saved, region, deck });
-
-  await page.goto('/?deck=nowhere&seed=7&continue=1');
-  await page.waitForFunction(() => window.game?.scene.isActive('ui') === true);
-  expect(await chronicleOf(page)).toEqual(saved);
-
-  expect(problems).toEqual([]);
-});
-
 test('continue on a save holding no chronicle fails the boot', async ({ page }) => {
   const problems = watch(page);
 
