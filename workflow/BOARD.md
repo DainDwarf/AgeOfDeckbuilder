@@ -15,3 +15,5 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 - **A design page for the meta's screens** — the navbar and the bar, the tree and the launch screen move out of `docs/INTERFACE.md` into `docs/META-SCREEN.md`, as `docs/CHRONICLE-SCREEN.md` is for the chronicle's, ahead of the collection screen.
 - **A seed from the console** — the launch screen chooses no seed, so the debug console launches a chronicle on the seed it is given, and a map a playtester describes is reopened without a save built by hand.
+- **The specs read a refusal's lines from the game's one function** — `e2e/refuse.spec.ts` and `e2e/deal.spec.ts` each build the lines a refusal says the way `src/ui/refusal-note.ts` does, three copies of one composition.
+- **The code says place for an improvement** — the rules helpers `improved` and `unimproved`, the refusal reason `improvement-laid` and a comment's "lays" carry words the glossary forbids under place, the refusal's text checked along with them.
