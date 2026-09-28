@@ -334,6 +334,27 @@ export function onClick(
 /** A scrim risen over a scene, said of its input plugin; nothing inside Phaser listens to it. */
 export const COVERED = 'covered';
 
+/** The two scrims that rise over a screen: the overlay's, and the menu's. */
+export type Scrim = 'overlay' | 'menu';
+
+/**
+ * What a screen is told as either scrim rises over it or falls: the first to rise says `COVERED` of
+ * its input plugin and lets go of the press it holds.
+ */
+export function awayUnder(scene: Phaser.Scene): (scrim: Scrim, up: boolean) => void {
+  const standing = new Set<Scrim>();
+  return (scrim, up) => {
+    const away = standing.size > 0;
+    if (up) standing.add(scrim);
+    else standing.delete(scrim);
+    if (away || standing.size === 0) return;
+    scene.input.emit(COVERED);
+    // After the pointer event that raised the scrim: Phaser's dispatch is synchronous, and a release
+    // inside it walks the plugin's lists mid-walk.
+    queueMicrotask(() => letGoOfPress(scene.game));
+  };
+}
+
 type Hovering = { hovered: boolean; readonly enter: () => void; readonly leave: () => void };
 
 const hovers = new Map<Phaser.GameObjects.GameObject, Hovering[]>();

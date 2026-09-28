@@ -85,6 +85,7 @@ const first = firstScreen();
 function startFirst(screen: FirstScreen): void {
   switch (screen.on) {
     case 'campaign':
+      game.scene.start('overlay');
       game.scene.start('campaign');
       return;
     case 'chronicle':
@@ -118,9 +119,8 @@ game.scene.add('ui', ChronicleScene);
 game.scene.add('overlay', OverlayScene);
 game.scene.add('menu', MenuScene);
 game.scene.add('console', DebugConsole);
-// The ui scene reaches into the console's, the menu's, the overlay's and the map's as it is created,
-// and the campaign screen and the page into the menu's, so this order is load-bearing twice over:
-// started last, none of them has the handle it is reached by yet and the screen the boot opens throws.
+// The screen the boot opens reaches into the scenes started ahead of it as it is created: one started
+// after it has no handle yet to be reached by, and the boot throws.
 game.events.once(Phaser.Core.Events.READY, () => {
   // A batch shader built for several textures tears a rotated Text (docs/PHASER.md). Not the config's
   // `maxTextures`: that caps the units every draw binds, and at one the browse's mask binds nothing.

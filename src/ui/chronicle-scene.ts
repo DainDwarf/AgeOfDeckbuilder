@@ -26,10 +26,10 @@ import { resetConsole } from './debug-console';
 import {
   addText,
   answersPress,
+  awayUnder,
   COVERED,
   DESIGN_WIDTH,
   holdDesignSpace,
-  letGoOfPress,
   MARGIN,
   onClick,
   onHover,
@@ -125,7 +125,8 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
     this.sequence = undefined;
     stopAllMotion(this);
     stopAllMotion(mapOf(this));
-    this.scene.stop('overlay');
+    // Restarted ahead of the campaign screen, which draws on it too: key order is start order.
+    this.scene.launch('overlay');
     this.scene.stop('map');
     this.scene.start('campaign');
   }
@@ -356,32 +357,13 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       },
     );
 
-    /** Whether the overlay's scrim stands over the screen, and whether a window of the menu does. */
-    let covered = false;
-    let underMenu = false;
-    /** Whether the screen is away: the pointer has left the game for whichever scrim covers it. */
-    let away = false;
-
-    /**
-     * The screen away under either scrim and back when the last of them falls. The press it holds is
-     * let go of after the pointer event that raised the scrim: Phaser's dispatch is synchronous, and
-     * a release inside it walks the plugin's lists mid-walk.
-     */
-    const covering = (): void => {
-      const under = covered || underMenu;
-      if (under === away) return;
-      away = under;
-      if (!under) return;
-      this.input.emit(COVERED);
-      queueMicrotask(() => letGoOfPress(this.game));
-    };
+    const away = awayUnder(this);
 
     const overlay = createOverlay(
       overlayOf(this),
       CATALOGUE,
       (over) => {
-        covered = over;
-        covering();
+        away('overlay', over);
       },
       (at) => {
         void playOut({ type: 'take', at });
@@ -557,8 +539,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       view.showVeils(veils);
     });
     resetMenu(this, (under) => {
-      underMenu = under;
-      covering();
+      away('menu', under);
       // The overlay's own scrim is no cover to the overlay: whatever it raises wipes what stood.
       if (under) overlayOf(this).input.emit(COVERED);
       // The menu takes every key it stands under and offers none of them on, so a pan key held as

@@ -13,12 +13,11 @@ export type Strata = {
 };
 
 /**
- * The scrim and what it carries, on a scene of its own: started ahead of the chronicle screen
- * wherever a chronicle opens and restarted ahead of it, so its keyboard plugin hears a key first. It
- * is never put to sleep — while nothing stands it is awake and empty, and the pointer falls through.
+ * The scrim and what it carries, started anew ahead of every screen that opens so its keyboard plugin
+ * hears a key first, and never put to sleep: while nothing stands, the pointer falls through it.
  */
 export class OverlayScene extends Phaser.Scene {
-  /** Where whatever the chronicle screen raises on the overlay is added. */
+  /** Where whatever the screen under it raises on the overlay is added. */
   strata!: Strata;
 
   /** What the widget drawn here answers a key or a mouse key with, and nothing while none is built. */
@@ -37,8 +36,8 @@ export class OverlayScene extends Phaser.Scene {
       smallCard: stratumOf(this.add.layer().setName('small-card'), camera),
       tooltip: stratumOf(this.add.layer().setName('tooltip'), camera),
     };
-    // A restart keeps the instance and its fields (docs/PHASER.md), so the widget of the chronicle
-    // that has just gone down would answer keys until the next one is built.
+    // A restart keeps the instance and its fields (docs/PHASER.md), so the widget of the screen that
+    // has just gone down would answer keys until the next one is built.
     this.taker = undefined;
     holdDesignSpace(this, camera);
     stopsThePointer(this, () => 'every');

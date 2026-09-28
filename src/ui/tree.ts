@@ -1,13 +1,14 @@
 import Phaser from 'phaser';
 import { CATALOGUE } from '../content/catalogue';
 import { type Achievement, technologyOf } from '../rules/catalogue';
-import { bindings, type Control, type Press, pressOf } from './bindings';
+import { type Bind, bindings, boundTo, type Control, type Press, pressOf } from './bindings';
 import { createKindBubble, type Name } from './card-face';
 import {
   addText,
   answersPress,
   dragged,
   MARGIN,
+  onClick,
   onHover,
   TEXT_INSET,
   UI_FONT,
@@ -60,6 +61,11 @@ const PANS: readonly { control: Control; way: number }[] = [
   { control: 'pan-left', way: -1 },
   { control: 'pan-right', way: 1 },
 ];
+
+/** Whether the press is one of the two keys that move the tree. */
+export function movesTree(press: Bind): boolean {
+  return PANS.some(({ control }) => boundTo(press, control));
+}
 
 /** One line of a reward: an entry read as a run, or the influence the achievement pays. */
 type RewardLine =
@@ -148,13 +154,13 @@ export type TreeView = {
 
 /**
  * The technology tree in the room the navbar and the bar leave, for a campaign holding these
- * technologies unlocked: its grounds, its links and its plates, moved left and right by the two pan
- * keys and a drag, and the names on its plates raising their small cards at a rest.
+ * technologies unlocked; a right click on a name of a plate hands `inspect` what it names.
  */
 export function createTree(
   scene: Phaser.Scene,
   { bubbles, tooltip }: Worn,
   unlocked: readonly string[],
+  inspect: (name: Name) => void,
 ): TreeView {
   const readings = readingsOf();
   const plateHeight =
@@ -204,7 +210,7 @@ export function createTree(
   }
   root.add(links);
 
-  const small = createSmallCards(scene, bubbles, CATALOGUE, createKindBubble(tooltip), () => {});
+  const small = createSmallCards(scene, bubbles, CATALOGUE, createKindBubble(tooltip), inspect);
   /** The name the pointer is on, and whether the tree is being carried, which holds every rest off. */
   let hovered: Raiser | undefined;
   let carrying = false;
@@ -331,6 +337,15 @@ export function createTree(
             if (hovered === raiser) hovered = undefined;
             if (!carrying) small.over(undefined);
           },
+        );
+        onClick(
+          zone,
+          () => {
+            // The name travels with the tree: a press that dragged it is released on it.
+            if (drag?.press === 'right' && drag.panned) return;
+            inspect(each);
+          },
+          'right',
         );
         face.add(zone);
       }

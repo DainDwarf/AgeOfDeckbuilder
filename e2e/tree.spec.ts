@@ -15,10 +15,12 @@ import {
   idsOf,
   landed,
   nameOnScreen,
+  onScreen,
   plantCampaign,
   readNames,
   rested,
   SHELTER,
+  standing,
   waitGameClock,
   watch,
 } from './chronicle-screen';
@@ -120,6 +122,35 @@ test('on a new campaign the first age’s technology stands within reach on its 
   const name = await nameOnScreen(page, PLATE);
   await page.mouse.move(name.x, name.y);
   await expect.poll(() => cardOnFace(page, 'small-card-0')).toBe(named?.id);
+
+  expect(problems).toEqual([]);
+});
+
+test('on a new campaign a right click on the name in the within-reach plate’s goal shows that card large, the back key takes it down and raises no menu, and a right click on the small card the name raises shows it large again', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  await openCampaign(page);
+  const [named] = namedIn(achievementGoal(ACHIEVEMENT));
+  expect(named?.kind).toBe('card');
+
+  const name = await nameOnScreen(page, PLATE);
+  await page.mouse.click(name.x, name.y, { button: 'right' });
+  await expect.poll(() => cardOnFace(page, 'inspection')).toBe(named?.id);
+  await rested(page);
+
+  await page.keyboard.press('Escape');
+  await expect.poll(() => standing(page, 'inspection')).toBe(false);
+  await rested(page);
+  expect(await standing(page, 'menu')).toBe(false);
+
+  await expect.poll(() => cardOnFace(page, 'small-card-0')).toBe(named?.id);
+  await rested(page);
+  const small = await onScreen(page, 'small-card-0');
+  await page.mouse.move(small.x, small.y, { steps: 5 });
+  await rested(page);
+  await page.mouse.click(small.x, small.y, { button: 'right' });
+  await expect.poll(() => cardOnFace(page, 'inspection')).toBe(named?.id);
 
   expect(problems).toEqual([]);
 });

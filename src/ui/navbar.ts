@@ -96,7 +96,12 @@ export function wearNavbar(scene: Phaser.Scene, standing: MetaScreen): Worn {
         .setName(`navbar-${screen}`)
         .setInteractive();
       answersPress(face);
-      onClick(face, () => scene.scene.start(screen));
+      onClick(face, () => {
+        // Restarted ahead of the screen, so its keyboard plugin hears a key first and nothing the
+        // screen going down built on it answers one (docs/PHASER.md).
+        scene.scene.launch('overlay');
+        scene.scene.start(screen);
+      });
     }
     const pressed = sunk ? SUNK : 0;
     addText(scene, middle + pressed, y + BUTTON_HEIGHT / 2 + pressed, text(word), LABEL_STYLE)

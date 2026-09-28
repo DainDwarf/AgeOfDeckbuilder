@@ -31,15 +31,7 @@ import {
   UI_FONT,
   whileUp,
 } from './design-space';
-import {
-  answerFace,
-  capstoneFace,
-  cardFace,
-  cardFaceAtStart,
-  type Face,
-  namedCardFace,
-} from './face';
-import { createThingCard, type Thing } from './infopanel';
+import { answerFace, capstoneFace, cardFace, cardFaceAtStart, type Face } from './face';
 import { isWheelNotch } from './keys';
 import { css, LOOK } from './look';
 import { campLore, capstoneLore, eventLore, type Raising } from './lore';
@@ -47,6 +39,7 @@ import { raiseMenu } from './menu-scene';
 import type { OverlayScene } from './overlay-scene';
 import { createRefusalNote, refused } from './refusal-note';
 import { createSmallCards, type Raiser, raiserOf } from './small-card';
+import { createStack } from './stack';
 import { buildingName, cardName, eventName, text, victoryLine } from './text';
 import { createTooltip } from './tooltip';
 
@@ -54,13 +47,6 @@ const TITLE_INK = css(LOOK.paleInk);
 
 const BROWSE_WIDTH = 180;
 const BROWSE_GAP = 26;
-const INSPECTION_WIDTH = 380;
-
-/** How far each card shown large peeks out, up and to the left, from under the card over it. */
-const BAND = 14;
-
-/** The most cards shown large that stand at once. */
-const STACK_HOLDS = 12;
 
 /** The pointer's travel over these last milliseconds is the speed a release flings the grid at. */
 const FLING_WINDOW = 80;
@@ -191,39 +177,8 @@ type Offering = Browsing | AimWindow | Dealing | Capstone;
 /** The two windows that ring one of the cards they offer. */
 type Ringing = Browsing | Dealing;
 
-/** One card shown large: a face and what it is drawn refused by, or a thing a name names. */
-type Inspected =
-  | { readonly shows: 'face'; readonly face: Face; readonly refusal: Refusal }
-  | { readonly shows: 'thing'; readonly thing: Thing };
-
-/** What a name names, as it stands large: a card as its face, which nothing refuses. */
-function inspectedOf(catalogue: Catalogue, { reference, reading }: Name): Inspected {
-  switch (reference.kind) {
-    case 'card':
-      return {
-        shows: 'face',
-        face: namedCardFace(catalogue, reference.id, reading),
-        refusal: NO_REFUSAL,
-      };
-    case 'terrain':
-    case 'feature':
-    case 'improvement':
-    case 'building':
-    case 'player':
-    case 'enemy':
-      return { shows: 'thing', thing: reference };
-  }
-}
-
-/**
- * The cards shown large, earliest first, over what the first of them was taken off: the stack a
- * name on the newest of them grows on top.
- */
-type Inspection = {
-  readonly stands: 'inspection';
-  readonly stack: readonly Inspected[];
-  readonly over: Offering | undefined;
-};
+/** The cards shown large, over what the first of them was taken off. */
+type Inspection = { readonly stands: 'inspection'; readonly over: Offering | undefined };
 
 /**
  * What the scrim carries: a pile's cards, the aim window, the deal window, the capstone's window,
@@ -261,6 +216,7 @@ export function createOverlay(
   const small = createSmallCards(scene, scene.strata.smallCard, catalogue, kinds, (name) => {
     inspectNamed(name);
   });
+  const stack = createStack(scene, catalogue, kinds);
 
   let shown: Phaser.GameObjects.GameObject[] = [];
   /** What stands on the scrim, and nothing while the scrim is down. */
@@ -291,6 +247,7 @@ export function createOverlay(
   /** What the scrim carries taken down, the scrim itself left up: every raise replaces through here. */
   const wipe = (): void => {
     small.down();
+    stack.down();
     note.hide();
     for (const object of shown) object.destroy();
     shown = [];
@@ -338,91 +295,42 @@ export function createOverlay(
     covering(true);
   };
 
-  /**
-   * The stack of cards shown large, centred on its whole extent: the newest whole at its bottom
-   * right, each card beneath it a band up and to the left of the one over it.
-   */
-  const showStack = (stack: readonly Inspected[], over: Offering | undefined): void => {
+  /** The scrim cleared for the stack, over what its first card is taken off. */
+  const standStack = (over: Offering | undefined): void => {
     wipe();
     cover();
-    carried = { stands: 'inspection', stack, over };
-    const height = heightOf(INSPECTION_WIDTH);
-    const newest = stack.length - 1;
-    const left = (DESIGN_WIDTH - INSPECTION_WIDTH - newest * BAND) / 2;
-    const top = (DESIGN_HEIGHT - height - newest * BAND) / 2;
-    /** One card of the stack drawn large; only the newest face's names answer a press. */
-    const drawnOf = (inspected: Inspected, index: number): Phaser.GameObjects.Container => {
-      switch (inspected.shows) {
-        case 'face': {
-          const drawn: CardFace = createCardFace(scene, inspected.face, inspected.refusal, {
-            width: INSPECTION_WIDTH,
-            names:
-              index === newest
-                ? {
-                    over: (name) => {
-                      small.over(name === undefined ? undefined : raiserOf(drawn, name));
-                    },
-                    inspect: (name) => {
-                      inspectNamed(name);
-                    },
-                    kind: (over) => {
-                      kinds.over(drawn, over);
-                    },
-                  }
-                : undefined,
-          });
-          return drawn.root.setData('card', inspected.face.id);
-        }
-        case 'thing':
-          return createThingCard(scene, catalogue, inspected.thing, INSPECTION_WIDTH);
-      }
-    };
-    for (const [index, inspected] of stack.entries()) {
-      const root = drawnOf(inspected, index);
-      root
-        .setName(index === newest ? 'inspection' : `inspection-${index}`)
-        .setPosition(left + index * BAND + INSPECTION_WIDTH / 2, top + index * BAND + height)
-        // The card is interactive so that both presses on it reach nothing beneath, the scrim
-        // included; only its names answer one.
-        .setInteractive({
-          hitArea: new Phaser.Geom.Rectangle(
-            -INSPECTION_WIDTH / 2,
-            -height,
-            INSPECTION_WIDTH,
-            height,
-          ),
-          hitAreaCallback: Phaser.Geom.Rectangle.Contains,
-        });
-      carries(root);
-    }
+    carried = { stands: 'inspection', over };
   };
 
   const showInspection = (face: Face, refusal: Refusal, over: Offering | undefined): void => {
-    showStack([{ shows: 'face', face, refusal }], over);
+    standStack(over);
+    stack.show(face, refusal);
   };
 
   /**
-   * What a name names, on top of the stack while a card stands large, and nothing more once the
-   * stack is full; shown large alone over the window standing otherwise.
+   * What a name names, on top of the stack while a card stands large; shown large alone over the
+   * window standing otherwise.
    */
   const inspectNamed = (name: Name): void => {
-    const named = inspectedOf(catalogue, name);
     if (carried === undefined) {
-      showStack([named], undefined);
+      standStack(undefined);
+      stack.named(name);
       return;
     }
     switch (carried.stands) {
       case 'inspection':
-        if (carried.stack.length < STACK_HOLDS) showStack([...carried.stack, named], carried.over);
+        stack.named(name);
         return;
       case 'browse':
       case 'aim-window':
       case 'deal':
       case 'capstone':
-        showStack([named], carried);
+        standStack(carried);
+        stack.named(name);
         return;
       case 'ending':
-        showStack([named], undefined);
+        standStack(undefined);
+        stack.named(name);
         return;
     }
   };
@@ -847,9 +755,9 @@ export function createOverlay(
    * The newest card shown large taken down, and the last of them onto what it was taken off: the one
    * path, whichever way.
    */
-  const takeDownNewest = ({ stack, over }: Inspection): void => {
-    if (stack.length > 1) showStack(stack.slice(0, -1), over);
-    else if (over === undefined) close();
+  const takeDownNewest = ({ over }: Inspection): void => {
+    if (stack.takeDownNewest()) return;
+    if (over === undefined) close();
     else raise(over);
   };
 
