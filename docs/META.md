@@ -1,6 +1,6 @@
 # Meta
 
-> The meta around a chronicle: the loop its screens make, the campaign and its technology tree, achievements, influence, the collection and the deck, and the save. A design page, under [`DESIGN.md`](DESIGN.md)'s legend. How any screen is worked is [`INTERFACE.md`](INTERFACE.md)'s; what a chronicle is, [`CHRONICLE.md`](CHRONICLE.md)'s; how a chronicle is launched, [`DESIGN.md`](DESIGN.md)'s.
+> The meta around a chronicle: the loop its screens make, the campaign and its technology tree, achievements, influence, the collection and the deck, and the save. A design page, under [`DESIGN.md`](DESIGN.md)'s legend. How any screen is worked is [`INTERFACE.md`](INTERFACE.md)'s; how its screens are shown, [`META-SCREENS.md`](META-SCREENS.md)'s; what a chronicle is, [`CHRONICLE.md`](CHRONICLE.md)'s; how a chronicle is launched, [`DESIGN.md`](DESIGN.md)'s.
 
 ## The loop ✅
 
