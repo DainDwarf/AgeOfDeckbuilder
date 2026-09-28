@@ -7,13 +7,13 @@ import { aimOf, type CardKind, gained } from '../src/rules/cards';
 import {
   type Aim,
   ageOf,
+  type Civilization,
   cardOf,
-  type Deck,
-  deckOf,
+  civilizationOf,
   type Entering,
   entered,
   firstAge,
-  firstDeck,
+  firstCivilization,
   firstRegion,
   unitKind,
 } from '../src/rules/catalogue';
@@ -60,24 +60,28 @@ export function cityTileOf(chronicle: Chronicle): TileCoords {
   return chronicle.city;
 }
 
-/** The age and the deck the catalogue lists first, and the first region that age lists. */
-export function firstsOf(): { age: string; region: string; deck: string } {
+/** The age and the civilization the catalogue lists first, and the first region that age lists. */
+export function firstsOf(): { age: string; region: string; civilization: string } {
   const age = firstAge(CATALOGUE);
-  return { age, region: firstRegion(CATALOGUE, age), deck: firstDeck(CATALOGUE) };
+  return {
+    age,
+    region: firstRegion(CATALOGUE, age),
+    civilization: firstCivilization(CATALOGUE),
+  };
 }
 
 /**
  * A chronicle launched from a seed in the first age the catalogue lists, on that age's first region
- * and the catalogue's first deck, or the deck given.
+ * and the catalogue's first civilization, or the civilization given.
  */
-export function launchedOn(seed: number, deck?: Deck): Chronicle {
+export function launchedOn(seed: number, civilization?: Civilization): Chronicle {
   const firsts = firstsOf();
   return launched(
     CATALOGUE,
     firsts.age,
     firsts.region,
     seed,
-    deck ?? deckOf(CATALOGUE, firsts.deck),
+    civilization ?? civilizationOf(CATALOGUE, firsts.civilization),
     [],
   );
 }
@@ -87,8 +91,12 @@ export function launchedOn(seed: number, deck?: Deck): Chronicle {
  * first in hand, played on the centre tile, the ones `onCity` names played on the city's tile, and
  * the settle phase ended with the rest in hand.
  */
-export function settledOn(seed: number, onCity: readonly CardId[] = [], deck?: Deck): Chronicle {
-  let settling = playedOn(launchedOn(seed, deck), 0, CENTRE);
+export function settledOn(
+  seed: number,
+  onCity: readonly CardId[] = [],
+  civilization?: Civilization,
+): Chronicle {
+  let settling = playedOn(launchedOn(seed, civilization), 0, CENTRE);
   const city = cityTileOf(settling);
   for (const card of onCity)
     settling = playedOn(settling, idsOf(settling.hand).indexOf(card), city);
@@ -187,10 +195,10 @@ export async function readNames(page: Page): Promise<void> {
 
 /**
  * The chronicle kept as the save the next page this one loads finds, beside a new campaign on the
- * first deck; a save the reading would refuse throws here.
+ * first civilization; a save the reading would refuse throws here.
  */
 export async function plant(page: Page, save: ChronicleSave): Promise<void> {
-  await kept(page, writeSave(CATALOGUE, newCampaign(CATALOGUE, firstsOf().deck), save));
+  await kept(page, writeSave(CATALOGUE, newCampaign(CATALOGUE, firstsOf().civilization), save));
 }
 
 /**
@@ -235,14 +243,14 @@ export async function continued(page: Page): Promise<void> {
 }
 
 /**
- * Opens the chronicle as the save the boot finds, on the first region and deck the catalogue lists,
- * and closes the capstone's window every resumed chronicle opens under but an ended one, which opens
- * on its ending screen.
+ * Opens the chronicle as the save the boot finds, on the first region and civilization the
+ * catalogue lists, and closes the capstone's window every resumed chronicle opens under but an
+ * ended one, which opens on its ending screen.
  */
 export async function openSaved(page: Page, chronicle: Chronicle): Promise<void> {
-  const { region, deck } = firstsOf();
+  const { region, civilization } = firstsOf();
   await readNames(page);
-  await plant(page, { chronicle, region, deck });
+  await plant(page, { chronicle, region, civilization });
   await continued(page);
   if (chronicle.ending !== undefined) {
     await rested(page);
@@ -727,10 +735,10 @@ export function bareTile(chronicle: Chronicle): TileCoords {
   return { q: found.q, r: found.r };
 }
 
-/** The Nomadic deck's cards twice over and its settle section as it is: its piles overflow a browse's frame. */
-export function doubledDeck(): Deck {
-  const deck = deckOf(CATALOGUE, firstsOf().deck);
-  return { ...deck, cards: [...deck.cards, ...deck.cards] };
+/** The Nomadic civilization with its cards twice over and its settle section as it is: its piles overflow a browse's frame. */
+export function doubledCivilization(): Civilization {
+  const civilization = civilizationOf(CATALOGUE, firstsOf().civilization);
+  return { ...civilization, cards: [...civilization.cards, ...civilization.cards] };
 }
 
 /**

@@ -1,7 +1,7 @@
 import {
   type Campaign,
   type CampaignCard,
-  type CampaignDeck,
+  type CampaignCivilization,
   dealt,
   FIRST_CARD_NUMBER,
 } from './campaign';
@@ -13,10 +13,10 @@ import {
   cardMade,
   cardOf,
   checkContent,
-  deckOf,
+  civilizationOf,
   enemyScript,
   eventOf,
-  firstDeck,
+  firstCivilization,
   misfitIn,
   unitKind,
 } from './catalogue';
@@ -46,11 +46,11 @@ import type {
 } from './state';
 import { type Faction, FIRST_UNIT_NUMBER, LEAST_STATS, type Unit, type UnitStats } from './units';
 
-/** A chronicle's save: the chronicle, and the region of its age and the deck it was launched on, by id. */
+/** A chronicle's save: the chronicle, and the region of its age and the civilization it was launched on, by id. */
 export type ChronicleSave = {
   readonly chronicle: Chronicle;
   readonly region: string;
-  readonly deck: string;
+  readonly civilization: string;
 };
 
 /**
@@ -75,7 +75,12 @@ export function writeSave(
   const text = JSON.stringify(
     progress === undefined
       ? { campaign }
-      : { campaign, chronicle: progress.chronicle, region: progress.region, deck: progress.deck },
+      : {
+          campaign,
+          chronicle: progress.chronicle,
+          region: progress.region,
+          civilization: progress.civilization,
+        },
   );
   const [reason] = readSave(catalogue, text).dropped;
   if (reason !== undefined) throw new Error(reason);
@@ -128,7 +133,7 @@ function chronicleSaveOf(
   return {
     chronicle,
     region: id(catalogue, field('region'), (held, named) => regionOf(held, age, named)),
-    deck: id(catalogue, field('deck'), deckOf),
+    civilization: id(catalogue, field('civilization'), civilizationOf),
   };
 }
 
@@ -178,8 +183,8 @@ function campaignOf(
     return { slot: item, card: { number, id: string(catalogue, held('id')) } };
   };
   const collection = list(catalogue, field('collection'), cardIn);
-  const deck = record(catalogue, field('deck'));
-  const citySlot = deck('city');
+  const civilization = record(catalogue, field('civilization'));
+  const citySlot = civilization('city');
   const city = record(catalogue, citySlot);
   const cityCard = cardIn(city('card'));
   const section = {
@@ -187,7 +192,10 @@ function campaignOf(
     ...cityCounts(catalogue, citySlot, city),
   };
   const numbered = (name: 'settle' | 'cards'): { slot: Slot; number: number }[] =>
-    list(catalogue, deck(name), (item) => ({ slot: item, number: integer(catalogue, item) }));
+    list(catalogue, civilization(name), (item) => ({
+      slot: item,
+      number: integer(catalogue, item),
+    }));
   const settle = numbered('settle');
   const cards = numbered('cards');
   const technologies = list(catalogue, field('technologies'), (item) => ({
@@ -242,7 +250,7 @@ function campaignOf(
   const settleHeld = sectionOf('settle', settle);
   const cardsHeld = sectionOf('cards', cards);
 
-  let cityHeld: CampaignDeck['city'];
+  let cityHeld: CampaignCivilization['city'];
   const cityMisfit = !Object.hasOwn(catalogue.buildings, section.building)
     ? `names no building ${section.building}`
     : !Object.hasOwn(catalogue.cards, cityCard.card.id)
@@ -251,7 +259,7 @@ function campaignOf(
   if (stands(citySlot, cityMisfit)) {
     cityHeld = { ...section, card: cityCard.card };
   } else {
-    const { city: first } = deckOf(catalogue, firstDeck(catalogue));
+    const { city: first } = civilizationOf(catalogue, firstCivilization(catalogue));
     const restored = dealt(nextCard, [first.card]);
     cityHeld = { ...first, card: restored.cards[0] };
     nextCard = restored.nextCard;
@@ -263,7 +271,7 @@ function campaignOf(
       influence,
       nextCard,
       collection: collection.flatMap(({ card }) => (owned.has(card.number) ? [card] : [])),
-      deck: { city: cityHeld, settle: settleHeld, cards: cardsHeld },
+      civilization: { city: cityHeld, settle: settleHeld, cards: cardsHeld },
     },
     dropped,
   };

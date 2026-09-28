@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { CATALOGUE } from '../content/catalogue';
 import { refuses } from '../rules/cards';
-import { deckOf } from '../rules/catalogue';
+import { civilizationOf } from '../rules/catalogue';
 import {
   admitted,
   apply,
@@ -103,14 +103,14 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
    * is handed.
    */
   private begin(seed: number | undefined): Chronicle {
-    const { age, region, deck } = this.choices;
+    const { age, region, civilization } = this.choices;
     const drawn = seed ?? (Math.random() * 2 ** 32) | 0;
     const chronicle = launched(
       CATALOGUE,
       age,
       region,
       drawn,
-      deckOf(CATALOGUE, deck),
+      civilizationOf(CATALOGUE, civilization),
       campaignHeld().technologies,
     );
     keepChronicle(this.choices, chronicle);

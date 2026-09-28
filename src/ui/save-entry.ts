@@ -1,14 +1,14 @@
 import { CATALOGUE } from '../content/catalogue';
 import { type Campaign, newCampaign } from '../rules/campaign';
-import { firstDeck } from '../rules/catalogue';
+import { firstCivilization } from '../rules/catalogue';
 import { type ChronicleSave, readSave, writeSave } from '../rules/save';
 import type { Chronicle } from '../rules/state';
 
-/** What a chronicle is launched on: an age, one of its regions and a deck, and a seed or nothing for a fresh one. */
+/** What a chronicle is launched on: an age, one of its regions and a civilization, and a seed or nothing for a fresh one. */
 export type Choices = {
   readonly age: string;
   readonly region: string;
-  readonly deck: string;
+  readonly civilization: string;
   readonly seed: number | undefined;
 };
 
@@ -36,7 +36,7 @@ function read(): Held {
   return held;
 }
 
-/** The campaign the save holds, or a new one on the first deck. */
+/** The campaign the save holds, or a new one on the first civilization. */
 export function campaignHeld(): Campaign {
   return read().campaign;
 }
@@ -46,8 +46,8 @@ export function savedOpening(): Saved | undefined {
   return read().opening;
 }
 
-function openingOf({ chronicle, region, deck }: ChronicleSave): Saved {
-  return { age: chronicle.age, region, deck, seed: chronicle.seed, resumed: chronicle };
+function openingOf({ chronicle, region, civilization }: ChronicleSave): Saved {
+  return { age: chronicle.age, region, civilization, seed: chronicle.seed, resumed: chronicle };
 }
 
 /** The text kept as the save, over whatever stood; storage that refuses it leaves play going on. */
@@ -60,9 +60,9 @@ function kept(text: string): void {
 }
 
 /** The chronicle kept as the save, beside the campaign held. */
-export function keepChronicle({ region, deck }: Choices, chronicle: Chronicle): void {
+export function keepChronicle({ region, civilization }: Choices, chronicle: Chronicle): void {
   const { campaign } = read();
-  const progress = { chronicle, region, deck };
+  const progress = { chronicle, region, civilization };
   held = { campaign, opening: openingOf(progress) };
   kept(writeSave(CATALOGUE, campaign, progress));
 }
@@ -72,7 +72,10 @@ export function keepChronicle({ region, deck }: Choices, chronicle: Chronicle): 
  * rewritten without it, or removed where nothing of it stands.
  */
 function readEntry(): Held {
-  const fresh = { campaign: newCampaign(CATALOGUE, firstDeck(CATALOGUE)), opening: undefined };
+  const fresh = {
+    campaign: newCampaign(CATALOGUE, firstCivilization(CATALOGUE)),
+    opening: undefined,
+  };
   let storage: Storage;
   let text: string | null;
   try {

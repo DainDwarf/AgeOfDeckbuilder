@@ -5,11 +5,11 @@ import {
   achievementOf,
   ageOf,
   type Catalogue,
+  type Civilization,
   capstoneOf,
   cardMade,
   cardOf,
   checkContent,
-  type Deck,
   enemyScript,
   entered,
   technologyOf,
@@ -124,7 +124,7 @@ export function beginChronicle(
   catalogue: Catalogue,
   age: string,
   seed: number,
-  deck: Deck,
+  civilization: Civilization,
   map: HexMap,
   timeline: Timeline,
   unlocked: readonly string[],
@@ -138,7 +138,7 @@ export function beginChronicle(
     );
   }
   const made = (id: CardId): ChronicleCard => cardMade(catalogue, id);
-  const shuffled = shuffleItems(seedRng(seed), deck.cards.map(made));
+  const shuffled = shuffleItems(seedRng(seed), civilization.cards.map(made));
   const begun: Chronicle = {
     content: catalogue.version,
     age,
@@ -149,7 +149,7 @@ export function beginChronicle(
     snapshots: [],
     rivers: map.rivers,
     centre: map.centre,
-    citySection: { ...deck.city },
+    citySection: { ...civilization.city },
     held: [],
     turn: 0,
     deals: [],
@@ -159,7 +159,7 @@ export function beginChronicle(
     units: [],
     nextUnit: FIRST_UNIT_NUMBER,
     drawPile: shuffled.items,
-    hand: [deck.city.card, ...deck.settle].map(made),
+    hand: [civilization.city.card, ...civilization.settle].map(made),
     discardPile: [],
     achievements: achievementsWithinReach(catalogue, age, unlocked),
   };
@@ -201,13 +201,21 @@ export function launched(
   age: string,
   region: string,
   seed: number,
-  deck: Deck,
+  civilization: Civilization,
   unlocked: readonly string[],
 ): Chronicle {
   const map = generateMap(catalogue, ageOf(catalogue, age), region, seedRng(seed));
   const timeline = timelineOf(catalogue, age, map.rng);
   const { tiles, rivers, centre } = map;
-  return beginChronicle(catalogue, age, seed, deck, { tiles, rivers, centre }, timeline, unlocked);
+  return beginChronicle(
+    catalogue,
+    age,
+    seed,
+    civilization,
+    { tiles, rivers, centre },
+    timeline,
+    unlocked,
+  );
 }
 
 /**

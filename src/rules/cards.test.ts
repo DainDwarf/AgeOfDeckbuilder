@@ -10,7 +10,14 @@ import {
   terraformed,
   throughWorker,
 } from './cards';
-import { type AimedCard, type Catalogue, cardOf, catalogued, type Deck, deckOf } from './catalogue';
+import {
+  type AimedCard,
+  type Catalogue,
+  type Civilization,
+  cardOf,
+  catalogued,
+  civilizationOf,
+} from './catalogue';
 import { admitted, apply, byHand, type Command, outcome, refusalOf } from './chronicle';
 import { yielded } from './city';
 import {
@@ -24,10 +31,10 @@ import {
   CATALOGUE,
   type Carrying,
   CITY,
+  CIVILIZATION,
+  CIVILIZATION_ID,
   camped,
   cityOf,
-  DECK,
-  DECK_ID,
   DROUGHT,
   dealing,
   endedTurn,
@@ -370,12 +377,12 @@ test('the refresh instant is refused on a unit whose move points are full, its a
   expect(outcome(apply(CATALOGUE, city, aimedAtUnit(CITY)))).toBe(city);
 });
 
-test('a chronicle begun on a deck of the catalogue holds that deck’s cards and opens turn 1 on a full hand of them', () => {
-  const deck = deckOf(CATALOGUE, DECK_ID);
-  const chronicle = settledLaunch(CATALOGUE, AGE, REGION, 2026, deck, []);
+test('a chronicle begun on a civilization of the catalogue holds its deck’s cards and opens turn 1 on a full hand of them', () => {
+  const civilization = civilizationOf(CATALOGUE, CIVILIZATION_ID);
+  const chronicle = settledLaunch(CATALOGUE, AGE, REGION, 2026, civilization, []);
 
   expect(chronicle.hand).toHaveLength(5);
-  expect(everyCard(chronicle)).toEqual([...deck.cards].sort());
+  expect(everyCard(chronicle)).toEqual([...civilization.cards].sort());
 });
 
 test('a settle card is refused on an uncharted tile, on a terrain its content takes no city on, and on a filled slot', () => {
@@ -395,21 +402,25 @@ test('a settle card is refused on an uncharted tile, on a terrain its content ta
 });
 
 test('a settle card aimed at nothing is refused on a tile', () => {
-  const opened = opening(plains(3), { deck: { ...DECK, cards: [], settle: ['PH_Stores'] } });
+  const opened = opening(plains(3), {
+    civilization: { ...CIVILIZATION, cards: [], settle: ['PH_Stores'] },
+  });
 
-  expect(idsOf(opened.hand)).toEqual([DECK.city.card, 'PH_Stores']);
+  expect(idsOf(opened.hand)).toEqual([CIVILIZATION.city.card, 'PH_Stores']);
   expect(stagedBy(opened, aimedAt(CITY, 1))).toEqual(['refused']);
 });
 
-/** A deck whose settle section enters two workers beside the city section's card, and holds no card besides. */
-const BANDS: Deck = { ...DECK, cards: [], settle: ['PH_Band', 'PH_Band'] };
+/** A civilization whose settle section enters two workers beside the city section's card, and holds no card besides. */
+const BANDS: Civilization = { ...CIVILIZATION, cards: [], settle: ['PH_Band', 'PH_Band'] };
 
 test('a settle card entering a unit admits every charted tile the unit stands on with no unit on it, and no camp, a guard standing on each from the opening', () => {
   const rough = { q: 1, r: 0 };
   const camp = { q: 0, r: 1 };
   const out = { q: 3, r: 0 };
   const taken = { q: -1, r: 1 };
-  const opened = opening(camped(madeOf(plains(3), 'mountain', [rough]), [camp]), { deck: BANDS });
+  const opened = opening(camped(madeOf(plains(3), 'mountain', [rough]), [camp]), {
+    civilization: BANDS,
+  });
   const entered = outcome(apply(CATALOGUE, opened, aimedAt(taken, 1)));
 
   expect(refusedFor(entered, 'PH_Band', out)).toBe('tile-uncharted');
@@ -430,7 +441,7 @@ test('a settle card entering a unit admits every charted tile the unit stands on
 
 test('a settle card entering a unit puts it on its tile full, takes no population and leaves the chronicle, before the settle and after it', () => {
   const at = { q: 1, r: 1 };
-  const opened = opening(plains(3), { deck: BANDS });
+  const opened = opening(plains(3), { civilization: BANDS });
 
   const stages = apply(CATALOGUE, opened, aimedAt(at, 1));
   const before = outcome(stages);
@@ -461,7 +472,7 @@ test('a unit entered on the settle phase neither moves nor attacks, and nothing 
   const warrior = { q: 1, r: 0 };
   const enemy = { q: 2, r: 0 };
   const onto = { q: 1, r: -1 };
-  const opened = withUnits(opening(plains(3), { deck: BANDS }), [
+  const opened = withUnits(opening(plains(3), { civilization: BANDS }), [
     standing('player', warrior),
     standing('enemy', enemy),
   ]);

@@ -7,7 +7,7 @@ import {
   cardOnFace,
   chronicleOf,
   click,
-  doubledDeck,
+  doubledCivilization,
   endedTurn,
   kindLabelOnScreen,
   nameOnScreen,
@@ -52,9 +52,9 @@ async function nearest(
   return faces[best];
 }
 
-/** Seed 1 on the doubled deck, settled bare, with three turns ended: both piles overflow the browse's frame. */
+/** Seed 1 on the doubled civilization, settled bare, with three turns ended: both piles overflow the browse's frame. */
 function overflowing(): Chronicle {
-  let chronicle = settledOn(1, [], doubledDeck());
+  let chronicle = settledOn(1, [], doubledCivilization());
   for (let turn = 0; turn < 3; turn++) chronicle = endedTurn(chronicle);
   return chronicle;
 }

@@ -82,7 +82,7 @@ test('a save that cannot be read is dropped, the console says why, and the campa
         (window.named?.('reading-influence-value')?.object as Phaser.GameObjects.Text | undefined)
           ?.text,
     ),
-  ).toBe(String(newCampaign(CATALOGUE, firstsOf().deck).influence));
+  ).toBe(String(newCampaign(CATALOGUE, firstsOf().civilization).influence));
   expect(await page.evaluate((entry) => window.localStorage.getItem(entry), SAVE_ENTRY)).toBe(null);
   expect(warnings).toContainEqual(expect.stringContaining('the save is not JSON'));
 
@@ -94,10 +94,10 @@ test('an ended chronicle reopens on its ending screen, and no capstone’s windo
 }) => {
   const problems = watch(page);
   const fallen = outcome(apply(CATALOGUE, beforeTheFall(), { type: 'end-turn' }));
-  const { region, deck } = firstsOf();
+  const { region, civilization } = firstsOf();
 
   await readNames(page);
-  await plant(page, { chronicle: fallen, region, deck });
+  await plant(page, { chronicle: fallen, region, civilization });
   await resume(page);
 
   await expect.poll(() => defeatShown(page)).toBe(true);
@@ -114,10 +114,10 @@ test('a chronicle reopened waiting on a deal stands under its capstone’s windo
   const dealt = firstDealt(1);
   const [deal] = dealt.deals;
   if (deal?.of !== 'event') throw new Error(`turn ${dealt.turn} deals no event`);
-  const { region, deck } = firstsOf();
+  const { region, civilization } = firstsOf();
 
   await readNames(page);
-  await plant(page, { chronicle: dealt, region, deck });
+  await plant(page, { chronicle: dealt, region, civilization });
   await resume(page);
 
   await expect.poll(() => standing(page, 'capstone')).toBe(true);

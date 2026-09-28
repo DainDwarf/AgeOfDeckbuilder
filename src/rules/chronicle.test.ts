@@ -6,11 +6,11 @@ import {
   builtOn,
   CATALOGUE,
   CITY,
+  CIVILIZATION,
   CROWD,
   CROWD_NEED,
   camped,
   cityOf,
-  DECK,
   endedTurn,
   everyCard,
   FEAST,
@@ -56,23 +56,23 @@ function plainDisc(): Tile[] {
 }
 
 test('the same seed begins the same chronicle', () => {
-  expect(launched(CATALOGUE, AGE, REGION, 1234, DECK, [])).toEqual(
-    launched(CATALOGUE, AGE, REGION, 1234, DECK, []),
+  expect(launched(CATALOGUE, AGE, REGION, 1234, CIVILIZATION, [])).toEqual(
+    launched(CATALOGUE, AGE, REGION, 1234, CIVILIZATION, []),
   );
-  expect(launched(CATALOGUE, AGE, REGION, 1235, DECK, [])).not.toEqual(
-    launched(CATALOGUE, AGE, REGION, 1234, DECK, []),
+  expect(launched(CATALOGUE, AGE, REGION, 1235, CIVILIZATION, [])).not.toEqual(
+    launched(CATALOGUE, AGE, REGION, 1234, CIVILIZATION, []),
   );
 });
 
 test('a chronicle survives JSON and carries its generator on', () => {
-  const chronicle = launched(CATALOGUE, AGE, REGION, 1234, DECK, []);
+  const chronicle = launched(CATALOGUE, AGE, REGION, 1234, CIVILIZATION, []);
 
   expect(JSON.parse(JSON.stringify(chronicle))).toEqual(chronicle);
   expect(chronicle.rng).not.toEqual(seedRng(chronicle.seed));
 });
 
-test('a chronicle opens on the settle phase with empty stores, the city standing nowhere, the deck’s city section carried, its card in hand before the settle cards, and the centre part alone in sight', () => {
-  const chronicle = launched(CATALOGUE, AGE, REGION, 1234, DECK, []);
+test('a chronicle opens on the settle phase with empty stores, the city standing nowhere, the civilization’s city section carried, its card in hand before the settle cards, and the centre part alone in sight', () => {
+  const chronicle = launched(CATALOGUE, AGE, REGION, 1234, CIVILIZATION, []);
   const centre = chronicle.centre.map(tileKey).sort();
 
   expect(chronicle.turn).toBe(0);
@@ -80,9 +80,9 @@ test('a chronicle opens on the settle phase with empty stores, the city standing
   expect(chronicle.city).toBeUndefined();
   expect(chronicle.population).toBe(0);
   expect(chronicle.held).toEqual([]);
-  expect(chronicle.citySection).toEqual(DECK.city);
-  expect(idsOf(chronicle.hand)).toEqual([DECK.city.card, ...DECK.settle]);
-  expect(idsOf(chronicle.drawPile).sort()).toEqual([...DECK.cards].sort());
+  expect(chronicle.citySection).toEqual(CIVILIZATION.city);
+  expect(idsOf(chronicle.hand)).toEqual([CIVILIZATION.city.card, ...CIVILIZATION.settle]);
+  expect(idsOf(chronicle.drawPile).sort()).toEqual([...CIVILIZATION.cards].sort());
   expect(centre.length).toBeGreaterThan(1);
   expect([...inSight(CATALOGUE, chronicle)].sort()).toEqual(centre);
   expect(chronicle.snapshots.map(tileKey).sort()).toEqual(centre);
@@ -123,7 +123,7 @@ test('growth is staged on the food stock the turn ends with, before the income a
 });
 
 test('the hand holds five cards on turn 1, and five again after every turn', () => {
-  let chronicle = settledLaunch(CATALOGUE, AGE, REGION, 4242, DECK, []);
+  let chronicle = settledLaunch(CATALOGUE, AGE, REGION, 4242, CIVILIZATION, []);
   expect(chronicle.hand).toHaveLength(5);
 
   for (let turn = 0; turn < 6; turn++) {
@@ -234,7 +234,7 @@ test('a pile change carries the places in the pile its cards came out of, and a 
   });
 
   const settling = opening(plainDisc(), {
-    deck: { ...DECK, settle: ['PH_Settle', 'PH_Settle'] },
+    civilization: { ...CIVILIZATION, settle: ['PH_Settle', 'PH_Settle'] },
   });
 
   expect(
@@ -294,13 +294,13 @@ test('a unit card is played over its cost, one population fewer, and the unit en
 });
 
 test('a second settle raises no change for a row it leaves where it stood: the population already at what the settle gives', () => {
-  const opened = opening(plainDisc(), { deck: { ...DECK, settle: ['PH_Settle'] } });
+  const opened = opening(plainDisc(), { civilization: { ...CIVILIZATION, settle: ['PH_Settle'] } });
   const first = settledOn(opened, CITY);
   const moved = { q: 1, r: 0 };
 
   const held = playedOver(first, { type: 'play', index: 0, aim: 'tile', tile: moved });
 
-  expect(first.population).toBe(1 + DECK.city.idle);
+  expect(first.population).toBe(1 + CIVILIZATION.city.idle);
   expect(held.map(({ name }) => name)).toEqual([
     'left',
     'retiled',
@@ -315,7 +315,7 @@ test('a second settle raises no change for a row it leaves where it stood: the p
 });
 
 test('the settle is played over the card leaving and the settle’s own changes, all on the city’s tile', () => {
-  const opened = opening(plainDisc(), { deck: { ...DECK, settle: [] } });
+  const opened = opening(plainDisc(), { civilization: { ...CIVILIZATION, settle: [] } });
 
   const held = playedOver(opened, { type: 'play', index: 0, aim: 'tile', tile: CITY });
   const [left, ...changes] = held;
@@ -334,9 +334,9 @@ test('the settle is played over the card leaving and the settle’s own changes,
   for (const change of [...changes.slice(0, 3), assigned, stood]) {
     expect(change).toMatchObject({ tile: CITY });
   }
-  expect(tileAt(built.chronicle.tiles, CITY)?.building).toBe(DECK.city.building);
+  expect(tileAt(built.chronicle.tiles, CITY)?.building).toBe(CIVILIZATION.city.building);
   expect(holding.chronicle.held).toEqual([CITY]);
-  expect(population.chronicle.population).toBe(1 + DECK.city.idle);
+  expect(population.chronicle.population).toBe(1 + CIVILIZATION.city.idle);
   expect(assigned.chronicle.assigned).toEqual([CITY]);
   for (const change of changes.slice(0, 4)) expect(change.chronicle.city).toBeUndefined();
   expect(stood.chronicle.city).toEqual(CITY);
@@ -346,7 +346,7 @@ test('the settle is played over the card leaving and the settle’s own changes,
 });
 
 test('the settle raises no ending: the city stands only once everything it runs on is in place', () => {
-  const opened = opening(plainDisc(), { deck: { ...DECK, settle: [] } });
+  const opened = opening(plainDisc(), { civilization: { ...CIVILIZATION, settle: [] } });
 
   const names = stagedBy(opened, { type: 'play', index: 0, aim: 'tile', tile: CITY });
 
@@ -499,7 +499,7 @@ test('a city whose food stock of nought would grow at no population falls on the
 test('every card of the deck is in exactly one pile through a full cycle', () => {
   let chronicle = endedTurn(settledOn(opening(plains(3)), CITY));
   const deck = everyCard(chronicle);
-  expect(deck).toHaveLength(DECK.cards.length);
+  expect(deck).toHaveLength(CIVILIZATION.cards.length);
 
   for (let turn = 0; turn < 8; turn++) {
     chronicle = outcome(apply(CATALOGUE, chronicle, { type: 'play', index: 0, aim: 'none' }));
@@ -546,13 +546,13 @@ test('a city with no population left falls on the first change a command makes, 
 });
 
 test('the settle puts the city on its tile: its terrain and building, no feature, that tile alone held and staffed, and the card in no pile', () => {
-  const opened = opening(plainDisc(), { deck: { ...DECK, settle: [] } });
+  const opened = opening(plainDisc(), { civilization: { ...CIVILIZATION, settle: [] } });
   const settled = settledOn(opened, CITY);
   const centre = tileAt(settled.tiles, CITY);
 
   expect(settled.city).toEqual(CITY);
   expect(centre?.terrain).toBe('urban');
-  expect(centre?.building).toBe(DECK.city.building);
+  expect(centre?.building).toBe(CIVILIZATION.city.building);
   expect(centre?.feature).toBeUndefined();
   for (const tile of settled.tiles) {
     if (tileKey(tile) === tileKey(CITY)) continue;
@@ -561,10 +561,10 @@ test('the settle puts the city on its tile: its terrain and building, no feature
   }
   expect(settled.held).toEqual([CITY]);
   expect(settled.assigned).toEqual([CITY]);
-  expect(idle(settled)).toBe(DECK.city.idle);
+  expect(idle(settled)).toBe(CIVILIZATION.city.idle);
   expect(settled.hand).toEqual([]);
   expect(settled.discardPile).toEqual([]);
-  expect(everyCard(settled)).toEqual([...DECK.cards].sort());
+  expect(everyCard(settled)).toEqual([...CIVILIZATION.cards].sort());
 });
 
 test('ending the settle phase is refused while the city stands nowhere, and a chronicle standing nowhere never falls for its population', () => {
@@ -579,7 +579,7 @@ test('ending the settle phase is refused while the city stands nowhere, and a ch
 });
 
 test('the end of the settle phase runs none of the cycle: turn 1 and its hand drawn, no income, no growth, and the settle cards left in hand gone', () => {
-  const opened = opening(plains(3), { deck: { ...DECK, settle: ['PH_Settle'] } });
+  const opened = opening(plains(3), { civilization: { ...CIVILIZATION, settle: ['PH_Settle'] } });
   const settled = settledOn(opened, CITY);
   const stocked: Chronicle = { ...settled, resources: { ...settled.resources, food: 99 } };
 
@@ -596,26 +596,26 @@ test('the end of the settle phase runs none of the cycle: turn 1 and its hand dr
   expect(after.hand).toHaveLength(5);
   expect(after.resources).toEqual(stocked.resources);
   expect(after.population).toBe(stocked.population);
-  expect(everyCard(after)).toEqual([...DECK.cards].sort());
+  expect(everyCard(after)).toEqual([...CIVILIZATION.cards].sort());
 });
 
 test('a settle card played leaves the chronicle, and the hand holds the city section’s card, then the settle section in the deck’s order', () => {
   const opened = opening(plains(3), {
-    deck: { ...DECK, cards: [], settle: ['PH_Stores', 'PH_Band'] },
+    civilization: { ...CIVILIZATION, cards: [], settle: ['PH_Stores', 'PH_Band'] },
   });
 
   const stocked = outcome(apply(CATALOGUE, opened, { type: 'play', index: 1, aim: 'none' }));
 
-  expect(idsOf(opened.hand)).toEqual([DECK.city.card, 'PH_Stores', 'PH_Band']);
+  expect(idsOf(opened.hand)).toEqual([CIVILIZATION.city.card, 'PH_Stores', 'PH_Band']);
   expect(stocked.resources.food).toBe(2);
-  expect(idsOf(stocked.hand)).toEqual([DECK.city.card, 'PH_Band']);
+  expect(idsOf(stocked.hand)).toEqual([CIVILIZATION.city.card, 'PH_Band']);
   expect(stocked.discardPile).toEqual([]);
-  expect(everyCard(stocked)).toEqual([DECK.city.card, 'PH_Band'].sort());
+  expect(everyCard(stocked)).toEqual([CIVILIZATION.city.card, 'PH_Band'].sort());
 });
 
 test('a chronicle is launched with the achievements of its age whose technology is not unlocked and needs none that is not, none reached, in the order the age declares them', () => {
   const reachable = (unlocked: readonly string[]): readonly ChronicleAchievement[] =>
-    launched(CATALOGUE, AGE, REGION, 1234, DECK, unlocked).achievements;
+    launched(CATALOGUE, AGE, REGION, 1234, CIVILIZATION, unlocked).achievements;
 
   expect(reachable([])).toEqual([
     { id: HOARD, reached: false },

@@ -7,11 +7,11 @@ import {
   cardMade,
   cardOf,
   catalogued,
+  civilizationOf,
   counterOf,
-  deckOf,
   enemyScript,
   eventOf,
-  firstDeck,
+  firstCivilization,
   firstRegion,
 } from '../rules/catalogue';
 import { admitted, launched, refusalOf } from '../rules/chronicle';
@@ -55,10 +55,10 @@ import { CATALOGUE } from './catalogue';
 
 const AGES = Object.keys(CATALOGUE.ages);
 
-/** A chronicle launched and settled in the age, on its first region and the catalogue's first deck. */
+/** A chronicle launched and settled in the age, on its first region and the catalogue's first civilization. */
 function settledIn(age: string): Chronicle {
-  const deck = deckOf(CATALOGUE, firstDeck(CATALOGUE));
-  return settledLaunch(CATALOGUE, age, firstRegion(CATALOGUE, age), 1, deck, []);
+  const civilization = civilizationOf(CATALOGUE, firstCivilization(CATALOGUE));
+  return settledLaunch(CATALOGUE, age, firstRegion(CATALOGUE, age), 1, civilization, []);
 }
 
 /** What a rules entry names, laid out as a run on a measure of one to the character. */
@@ -154,11 +154,18 @@ test('every rules entry and every goal of the catalogue lays out, and every name
   }
 });
 
-test('every card of the catalogue answers its refusal, and its admitted tiles, on a chronicle begun in each age on each deck', () => {
+test('every card of the catalogue answers its refusal, and its admitted tiles, on a chronicle begun in each age on each civilization', () => {
   for (const age of AGES) {
-    for (const deck of Object.keys(CATALOGUE.decks)) {
+    for (const civilization of Object.keys(CATALOGUE.civilizations)) {
       const region = firstRegion(CATALOGUE, age);
-      const chronicle = launched(CATALOGUE, age, region, 1, deckOf(CATALOGUE, deck), []);
+      const chronicle = launched(
+        CATALOGUE,
+        age,
+        region,
+        1,
+        civilizationOf(CATALOGUE, civilization),
+        [],
+      );
       for (const id of Object.keys(CATALOGUE.cards)) {
         expect(() => refusalOf(CATALOGUE, chronicle, id)).not.toThrow();
         const card = aimOf(cardOf(CATALOGUE, id));
@@ -176,15 +183,15 @@ test('every card of the catalogue answers its refusal, and its admitted tiles, o
   }
 });
 
-test('each deck of the catalogue settles its city on the centre tile and reaches turn 1 in each age', () => {
+test('each civilization of the catalogue settles its city on the centre tile and reaches turn 1 in each age', () => {
   for (const age of AGES) {
-    for (const deck of Object.keys(CATALOGUE.decks)) {
+    for (const civilization of Object.keys(CATALOGUE.civilizations)) {
       const chronicle = settledLaunch(
         CATALOGUE,
         age,
         firstRegion(CATALOGUE, age),
         1,
-        deckOf(CATALOGUE, deck),
+        civilizationOf(CATALOGUE, civilization),
         [],
       );
 
@@ -194,9 +201,9 @@ test('each deck of the catalogue settles its city on the centre tile and reaches
   }
 });
 
-test('a new campaign opens on each deck of the catalogue, and its save reads back whole', () => {
-  for (const deck of Object.keys(CATALOGUE.decks)) {
-    expect(() => writeSave(CATALOGUE, newCampaign(CATALOGUE, deck))).not.toThrow();
+test('a new campaign opens on each civilization of the catalogue, and its save reads back whole', () => {
+  for (const civilization of Object.keys(CATALOGUE.civilizations)) {
+    expect(() => writeSave(CATALOGUE, newCampaign(CATALOGUE, civilization))).not.toThrow();
   }
 });
 

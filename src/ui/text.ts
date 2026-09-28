@@ -207,7 +207,7 @@ const TEXT = {
   'launch.title': 'Launch a chronicle',
   'launch.age': 'Age',
   'launch.region': 'Region',
-  'launch.deck': 'Deck',
+  'launch.civilization': 'Civilization',
   'launch.seed': 'Seed',
   'launch.fresh': 'Fresh',
   'launch.button': 'Launch',

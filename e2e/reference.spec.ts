@@ -1,6 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
-import { deckOf } from '../src/rules/catalogue';
+import { civilizationOf } from '../src/rules/catalogue';
 import { offered } from '../src/rules/schedule';
 import type { Chronicle } from '../src/rules/state';
 import { answerFace } from '../src/ui/face';
@@ -173,7 +173,7 @@ test('a building named on the settle card raises its card small at a rest and sh
   page,
 }) => {
   const problems = watch(page);
-  const { city: section } = deckOf(CATALOGUE, firstsOf().deck);
+  const { city: section } = civilizationOf(CATALOGUE, firstsOf().civilization);
   const settle = section.card;
   const city = { kind: 'building', id: section.building };
 

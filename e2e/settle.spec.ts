@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
 import { aimOf } from '../src/rules/cards';
-import { cardOf, deckOf } from '../src/rules/catalogue';
+import { cardOf, civilizationOf } from '../src/rules/catalogue';
 import { admitted, apply, outcome } from '../src/rules/chronicle';
 import { CENTRE, tileAt, tileKey } from '../src/rules/map';
 import { LOOK } from '../src/ui/look';
@@ -41,8 +41,8 @@ test('a chronicle opens on the settle phase with the city standing nowhere, and 
   expect(opened).toEqual(before);
   expect(opened.turn).toBe(0);
   expect(opened.city).toBeUndefined();
-  const deck = deckOf(CATALOGUE, firstsOf().deck);
-  expect(idsOf(opened.hand)).toEqual([deck.city.card, ...deck.settle]);
+  const civilization = civilizationOf(CATALOGUE, firstsOf().civilization);
+  expect(idsOf(opened.hand)).toEqual([civilization.city.card, ...civilization.settle]);
   expect(await standing(page, `hand-${opened.hand.length - 1}`)).toBe(true);
   expect(await standing(page, `hand-${opened.hand.length}`)).toBe(false);
 
@@ -82,7 +82,7 @@ test('a chronicle opens on the settle phase with the city standing nowhere, and 
 
   const standingCity = await chronicleOf(page);
   expect(standingCity.city).toEqual(at);
-  expect(tileAt(standingCity.tiles, at)?.building).toBe(deck.city.building);
+  expect(tileAt(standingCity.tiles, at)?.building).toBe(civilization.city.building);
   expect(tileAt(standingCity.tiles, at)?.terrain).toBe(tileAt(opened.tiles, at)?.terrain);
   expect(await marksIn(page, 'border')).toBe(standingCity.held.length);
 

@@ -14,9 +14,9 @@ import {
   CATALOGUE,
   type Carrying,
   CITY,
+  CIVILIZATION,
   camped,
   cityOf,
-  DECK,
   dealing,
   ENCAMPED,
   EXPLOSION,
@@ -119,7 +119,7 @@ function walked(seed: number, wanted = 'PH_Famine'): Walk {
   const key = `${seed} ${wanted}`;
   const known = walks.get(key);
   if (known !== undefined) return known;
-  const settled = settledOn(launched(CATALOGUE, AGE, REGION, seed, DECK, []), CITY);
+  const settled = settledOn(launched(CATALOGUE, AGE, REGION, seed, CIVILIZATION, []), CITY);
   const walk = walkedFrom(CATALOGUE, settled, 40, wanted);
   walks.set(key, walk);
   return walk;
@@ -184,7 +184,7 @@ test('the same seed deals the same whatever answers are taken, and another seed 
 
 test('the capstone lands on a turn rolled at the launch, between the twenty-seventh and the thirty-third', () => {
   const turns = SEEDS.map(
-    (seed) => launched(CATALOGUE, AGE, REGION, seed, DECK, []).timeline.capstone.turn,
+    (seed) => launched(CATALOGUE, AGE, REGION, seed, CIVILIZATION, []).timeline.capstone.turn,
   );
 
   for (const turn of turns) {
@@ -460,9 +460,10 @@ test('a reward taken is one reward group over the deal taken and the card discar
 test('the same seed is due on the same turns whatever answers are taken, though what they let be dealt differs', () => {
   let differs = false;
   for (const seed of SEEDS.slice(0, 5)) {
-    const start = withUnits(settledOn(launched(CATALOGUE, WARY, REGION, seed, DECK, []), CITY), [
-      standing('player', CITY, { type: 'PH_Worker', worker: true, health: 9999 }),
-    ]);
+    const start = withUnits(
+      settledOn(launched(CATALOGUE, WARY, REGION, seed, CIVILIZATION, []), CITY),
+      [standing('player', CITY, { type: 'PH_Worker', worker: true, health: 9999 })],
+    );
     const starved = walkedFrom(CATALOGUE, start, 20, 'PH_Famine');
     const raided = walkedFrom(CATALOGUE, start, 20, 'PH_Raid');
     const through = Math.min(raided.turn, starved.turn);

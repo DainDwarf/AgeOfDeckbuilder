@@ -170,7 +170,7 @@ const TABLES: Tables = {
       effect: (_catalogue, paid) => arrived(paid),
     },
   },
-  decks: {
+  civilizations: {
     nomadic: {
       cards: [
         ...Array<string>(8).fill('gather'),

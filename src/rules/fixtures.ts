@@ -28,9 +28,9 @@ import {
   type Age,
   type Camp,
   type Catalogue,
+  type Civilization,
   cardMade,
-  type Deck,
-  deckOf,
+  civilizationOf,
   type EnemyScript,
   type Entering,
   entered,
@@ -346,10 +346,10 @@ const BEELINE: EnemyScript = {
   attacks: (_catalogue, chronicle, enemy) => leastHealth(chronicle.units, enemy),
 };
 
-/** The id the fixture catalogue lists its one deck under. */
-export const DECK_ID = 'deck';
+/** The id the fixture catalogue lists its one civilization under. */
+export const CIVILIZATION_ID = 'civilization';
 
-/** The city section of the fixture's deck, and of every chronicle the fixture builds directly. */
+/** The city section of the fixture's civilization, and of every chronicle the fixture builds directly. */
 const CITY_SECTION: CitySection = { building: 'PH_City', sight: 2, idle: 2, card: 'PH_Settle' };
 
 /** What the fixture's first age brings to the tables every age shares, its technologies aside. */
@@ -515,8 +515,8 @@ const TABLES: Omit<Tables, 'technologies'> = {
       },
     },
   },
-  decks: {
-    [DECK_ID]: {
+  civilizations: {
+    [CIVILIZATION_ID]: {
       cards: [
         'PH_Worker',
         'PH_Worker',
@@ -1013,9 +1013,9 @@ export function plains(radius: number): Tile[] {
   return field(radius).map(({ q, r }): Tile => ({ q, r, terrain: 'plain', improvements: [] }));
 }
 
-/** What a fixture opening names: the deck, the age and the timeline, and how far the centre part reaches. */
+/** What a fixture opening names: the civilization, the age and the timeline, and how far the centre part reaches. */
 type Opening = {
-  readonly deck?: Deck;
+  readonly civilization?: Civilization;
   readonly age?: string;
   readonly timeline?: Timeline;
   readonly reach?: number;
@@ -1023,17 +1023,25 @@ type Opening = {
 
 /**
  * The chronicle opened on these tiles through the rules, on the settle phase with the city nowhere:
- * its centre part every tile within `reach` of the centre, two unless the fixture names it, on the
- * fixture's deck, in the quiet age on a timeline dealing nothing unless the fixture names others.
+ * its centre part every tile within `reach` of the centre, two unless named, on the fixture's
+ * civilization in the quiet age on a timeline dealing nothing, unless the fixture names others.
  */
 export function opening(
   tiles: Tile[],
-  { deck = DECK, age = QUIET, timeline = NO_DEALS, reach = 2 }: Opening = {},
+  { civilization = CIVILIZATION, age = QUIET, timeline = NO_DEALS, reach = 2 }: Opening = {},
 ): Chronicle {
   const centre = tiles
     .filter((tile) => distance(tile, CITY) <= reach)
     .map(({ q, r }) => ({ q, r }));
-  return beginChronicle(CATALOGUE, age, 7, deck, { tiles, rivers: [], centre }, timeline, []);
+  return beginChronicle(
+    CATALOGUE,
+    age,
+    7,
+    civilization,
+    { tiles, rivers: [], centre },
+    timeline,
+    [],
+  );
 }
 
 /** The chronicle with the first card of its hand played on a tile, refused or not. */
@@ -1054,11 +1062,12 @@ export function settledLaunch(
   age: string,
   region: string,
   seed: number,
-  deck: Deck,
+  civilization: Civilization,
   unlocked: readonly string[],
   at: TileCoords = CITY,
 ): Chronicle {
-  const settling = settledOn(launched(catalogue, age, region, seed, deck, unlocked), at, catalogue);
+  const launch = launched(catalogue, age, region, seed, civilization, unlocked);
+  const settling = settledOn(launch, at, catalogue);
   if (settling.city === undefined)
     throw new Error(`seed ${seed} settles no city on ${tileKey(at)}`);
   return outcome(apply(catalogue, settling, { type: 'end-turn' }));
@@ -1066,7 +1075,7 @@ export function settledLaunch(
 
 /** A city in the first age, carrying the achievements a launch with these technologies unlocked names. */
 export function reaching(unlocked: readonly string[], carrying: Carrying): Chronicle {
-  const { achievements } = launched(CATALOGUE, AGE, REGION, 1234, DECK, unlocked);
+  const { achievements } = launched(CATALOGUE, AGE, REGION, 1234, CIVILIZATION, unlocked);
   return cityOf(['urban', 'plain'], { age: AGE, achievements, ...carrying });
 }
 
@@ -1293,8 +1302,8 @@ export function fullDraw(): CardId[] {
   return ['PH_Worker', 'PH_Warrior', 'PH_Farm', 'PH_March', 'PH_Harvest'];
 }
 
-/** The deck these chronicles are played on: two of each card, enough to draw a hand and cycle, the claim, and the city. */
-export const DECK: Deck = deckOf(CATALOGUE, DECK_ID);
+/** The civilization these chronicles are played on: two of each card, enough to draw a hand and cycle, the claim, and the city. */
+export const CIVILIZATION: Civilization = civilizationOf(CATALOGUE, CIVILIZATION_ID);
 
 /**
  * One whole turn, on the fixture's content unless the test hands in its own: the end of turn, and an

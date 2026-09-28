@@ -35,9 +35,9 @@ function continueReads(page: Page): Promise<string[]> {
 
 /** The chronicle planted as the save, and the page Chronicle opens from the campaign screen waited for. */
 async function pageOver(page: Page, chronicle: Chronicle): Promise<void> {
-  const { region, deck } = firstsOf();
+  const { region, civilization } = firstsOf();
   await readNames(page);
-  await plant(page, { chronicle, region, deck });
+  await plant(page, { chronicle, region, civilization });
   await page.goto('/');
   await campaignShown(page);
   await chronicleButton(page);

@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 import { aimOf, refuses } from './cards';
-import { type AimedCard, ageOf, cardOf, type Deck } from './catalogue';
+import { type AimedCard, ageOf, type Civilization, cardOf } from './catalogue';
 import { admitted, apply, type Command, launched, outcome } from './chronicle';
 import {
   assignWaiting,
@@ -18,11 +18,11 @@ import {
   CATALOGUE,
   type Carrying,
   CITY,
+  CIVILIZATION,
   camped,
   cityOf,
   claimOf,
   culture,
-  DECK,
   everyCard,
   field,
   heldBy,
@@ -68,9 +68,9 @@ function alone(carrying: Carrying = {}): Chronicle {
   return cityOf(['urban'], { tiles: field(3), population: 3, ...carrying });
 }
 
-/** The fixture's deck with this many free claims in its settle section. */
-function claiming(claims: number): Deck {
-  return { ...DECK, settle: Array<string>(claims).fill('PH_Claim') };
+/** The fixture's civilization with this many free claims in its settle section. */
+function claiming(claims: number): Civilization {
+  return { ...CIVILIZATION, settle: Array<string>(claims).fill('PH_Claim') };
 }
 
 /** The first card of the hand played at a tile: a free claim, on a hand the settle left holding them. */
@@ -157,11 +157,11 @@ function darkBorder(): { opened: Chronicle; dark: TileCoords; city: TileCoords }
 
 test('the settle holds the city’s tile alone, one population on it and the idle population the city section names besides', () => {
   for (const seed of [0, 1234, 0xdeadbeef | 0]) {
-    const chronicle = settledLaunch(CATALOGUE, AGE, REGION, seed, DECK, []);
+    const chronicle = settledLaunch(CATALOGUE, AGE, REGION, seed, CIVILIZATION, []);
 
     expect(chronicle.held).toEqual([CITY]);
     expect(chronicle.assigned).toEqual([CITY]);
-    expect(idle(chronicle)).toBe(DECK.city.idle);
+    expect(idle(chronicle)).toBe(CIVILIZATION.city.idle);
   }
 });
 
@@ -183,7 +183,7 @@ test('a free claim holds the tile, brings one population that stands on it, and 
 });
 
 test('six free claims make the next claim cost fourteen culture', () => {
-  let chronicle = settledOn(opening(plains(3), { deck: claiming(6) }), CITY);
+  let chronicle = settledOn(opening(plains(3), { civilization: claiming(6) }), CITY);
   for (const tile of neighbours(CITY)) {
     chronicle = outcome(apply(CATALOGUE, chronicle, freeClaim(tile)));
   }

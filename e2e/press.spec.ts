@@ -15,7 +15,7 @@ import {
   chronicleOf,
   cityTileOf,
   click,
-  doubledDeck,
+  doubledCivilization,
   dragOut,
   endedTurn,
   firstSeed,
@@ -671,7 +671,7 @@ test('a browse released off the canvas stays open, and the next gesture scrolls 
   const problems = watch(page);
 
   await page.setViewportSize(WINDOW);
-  await openSaved(page, settledOn(1, [], doubledDeck()));
+  await openSaved(page, settledOn(1, [], doubledCivilization()));
   await browse(page, 'draw-pile');
 
   const opened = await scrolled(page);

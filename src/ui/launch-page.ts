@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { CATALOGUE } from '../content/catalogue';
-import { achievementOf, ageOf, firstAge, firstDeck, firstRegion } from '../rules/catalogue';
+import { achievementOf, ageOf, firstAge, firstCivilization, firstRegion } from '../rules/catalogue';
 import { type Chronicle, onSettlePhase } from '../rules/state';
 import { addText, answersPress, holdDesignSpace, onClick, UI_FONT } from './design-space';
 import { readsKeys } from './keys';
@@ -27,7 +27,7 @@ const TITLE_STYLE = { fontFamily: UI_FONT, fontSize: '26px', fontStyle: 'bold', 
 const LABEL_STYLE = { fontFamily: UI_FONT, fontSize: '18px', fontStyle: 'bold', color: INK };
 const FACE_STYLE = { fontFamily: UI_FONT, fontSize: '16px', fontStyle: 'bold', color: INK };
 
-type Row = 'age' | 'region' | 'deck';
+type Row = 'age' | 'region' | 'civilization';
 
 /**
  * What Continue reads under its label: where the chronicle stands, then each achievement it reached,
@@ -64,7 +64,7 @@ export class LaunchPage extends Phaser.Scene {
     let chosen: Choices = {
       age,
       region: firstRegion(CATALOGUE, age),
-      deck: firstDeck(CATALOGUE),
+      civilization: firstCivilization(CATALOGUE),
       seed: undefined,
     };
     let typed = '';
@@ -95,8 +95,8 @@ export class LaunchPage extends Phaser.Scene {
         case 'region':
           chosen = { ...chosen, region: option };
           break;
-        case 'deck':
-          chosen = { ...chosen, deck: option };
+        case 'civilization':
+          chosen = { ...chosen, civilization: option };
           break;
       }
       lay();
@@ -108,7 +108,11 @@ export class LaunchPage extends Phaser.Scene {
       const rows: { row: Row; options: readonly string[]; chosen: string }[] = [
         { row: 'age', options: Object.keys(CATALOGUE.ages), chosen: chosen.age },
         { row: 'region', options: Object.keys(regions), chosen: chosen.region },
-        { row: 'deck', options: Object.keys(CATALOGUE.decks), chosen: chosen.deck },
+        {
+          row: 'civilization',
+          options: Object.keys(CATALOGUE.civilizations),
+          chosen: chosen.civilization,
+        },
       ];
 
       const title = addText(this, 0, 0, text('launch.title'), TITLE_STYLE).setOrigin(0.5, 0);

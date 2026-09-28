@@ -1,7 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
 import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
-import { deckOf } from '../src/rules/catalogue';
+import { civilizationOf } from '../src/rules/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
 import { tileKey } from '../src/rules/map';
 import type { Chronicle } from '../src/rules/state';
@@ -31,7 +31,7 @@ import {
   watch,
 } from './chronicle-screen';
 
-/** Every card the chronicle holds, wherever it stands: the deck it was begun on. */
+/** Every card the chronicle holds, wherever it stands: the cards of the civilization it was begun on. */
 function cardsHeld(chronicle: Chronicle): string[] {
   return idsOf([...chronicle.drawPile, ...chronicle.hand, ...chronicle.discardPile]).sort();
 }
@@ -193,13 +193,13 @@ test('the selected tile waits under the menu', async ({ page }) => {
   expect(problems).toEqual([]);
 });
 
-test('Campaign opens the campaign screen, Chronicle there the page on the firsts, the seed blank, and Launch deals the first deck a fresh seed, on the settle phase', async ({
+test('Campaign opens the campaign screen, Chronicle there the page on the firsts, the seed blank, and Launch deals the first civilization a fresh seed, on the settle phase', async ({
   page,
 }) => {
   const problems = watch(page);
   const played = settledOn(1);
   const firsts = firstsOf();
-  const deck = deckOf(CATALOGUE, firsts.deck);
+  const civilization = civilizationOf(CATALOGUE, firsts.civilization);
 
   await openSaved(page, played);
 
@@ -209,7 +209,7 @@ test('Campaign opens the campaign screen, Chronicle there the page on the firsts
   expect(await standing(page, 'menu')).toBe(false);
   expect(await chosen(page, 'age', firsts.age)).toBe(true);
   expect(await chosen(page, 'region', firsts.region)).toBe(true);
-  expect(await chosen(page, 'deck', firsts.deck)).toBe(true);
+  expect(await chosen(page, 'civilization', firsts.civilization)).toBe(true);
   expect(await seedReads(page)).toBe(text('launch.fresh'));
 
   await launchedFromPage(page);
@@ -217,7 +217,9 @@ test('Campaign opens the campaign screen, Chronicle there the page on the firsts
   const fresh = await chronicleOf(page);
   expect(fresh.turn).toBe(0);
   expect(fresh.seed).not.toBe(played.seed);
-  expect(cardsHeld(fresh)).toEqual([deck.city.card, ...deck.cards, ...deck.settle].sort());
+  expect(cardsHeld(fresh)).toEqual(
+    [civilization.city.card, ...civilization.cards, ...civilization.settle].sort(),
+  );
 
   expect(problems).toEqual([]);
 });

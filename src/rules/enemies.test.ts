@@ -11,11 +11,11 @@ import {
   CAMPS,
   CATALOGUE,
   CITY,
+  CIVILIZATION,
   camped,
   cityOf,
   claimOf,
   culture,
-  DECK,
   dealing,
   endedTurn,
   enemiesOf,
@@ -377,7 +377,7 @@ test('at odds of one every camp enters a guard once the enemies have acted, a st
 
 test('the chronicle opens with one guard on each camp the map was dealt, in tile order, ahead of every unit the settle enters', () => {
   const opened = opening(camped(plains(5), CAMPS), {
-    deck: { ...DECK, cards: [], settle: ['PH_Band'] },
+    civilization: { ...CIVILIZATION, cards: [], settle: ['PH_Band'] },
   });
   const camps = campsInTileOrder(opened);
   const banded = outcome(

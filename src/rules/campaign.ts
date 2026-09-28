@@ -1,4 +1,10 @@
-import { achievementOf, type Catalogue, checkContent, deckOf, technologyOf } from './catalogue';
+import {
+  achievementOf,
+  type Catalogue,
+  checkContent,
+  civilizationOf,
+  technologyOf,
+} from './catalogue';
 import { refuse } from './map-kinds';
 import type { CardId, Chronicle, CitySection } from './state';
 
@@ -9,10 +15,10 @@ import type { CardId, Chronicle, CitySection } from './state';
 export type CampaignCard = { readonly number: number; readonly id: CardId };
 
 /**
- * The campaign's deck: its city section, holding its card as a card of its own outside the
+ * The campaign's civilization: its city section, holding its card as a card of its own outside the
  * collection, and its settle section and its cards, each naming cards of the collection by number.
  */
-export type CampaignDeck = {
+export type CampaignCivilization = {
   readonly city: Omit<CitySection, 'card'> & { readonly card: CampaignCard };
   readonly settle: readonly number[];
   readonly cards: readonly number[];
@@ -28,7 +34,7 @@ export type Campaign = {
    */
   readonly nextCard: number;
   readonly collection: readonly CampaignCard[];
-  readonly deck: CampaignDeck;
+  readonly civilization: CampaignCivilization;
 };
 
 /**
@@ -59,11 +65,12 @@ export function dealt(
 }
 
 /**
- * A campaign opened on a deck of the catalogue: nothing unlocked, no influence, and a card of its own
- * for each card the deck lists, the deck naming each in the section it came from.
+ * A campaign opened on a civilization of the catalogue: nothing unlocked, no influence, and a card
+ * of its own for each card the civilization lists, the civilization naming each in the section it
+ * came from.
  */
-export function newCampaign(catalogue: Catalogue, deck: string): Campaign {
-  const { city, settle, cards } = deckOf(catalogue, deck);
+export function newCampaign(catalogue: Catalogue, civilization: string): Campaign {
+  const { city, settle, cards } = civilizationOf(catalogue, civilization);
   const cityCard = dealt(FIRST_CARD_NUMBER, [city.card]);
   const settled = dealt(cityCard.nextCard, settle);
   const drawn = dealt(settled.nextCard, cards);
@@ -73,7 +80,7 @@ export function newCampaign(catalogue: Catalogue, deck: string): Campaign {
     influence: 0,
     nextCard: drawn.nextCard,
     collection: [...settled.cards, ...drawn.cards],
-    deck: {
+    civilization: {
       city: { ...city, card: cityCard.cards[0] },
       settle: numbers(settled.cards),
       cards: numbers(drawn.cards),

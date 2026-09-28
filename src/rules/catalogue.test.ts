@@ -23,9 +23,9 @@ import {
   CATALOGUE,
   CENSUS,
   CITY,
+  CIVILIZATION,
   CLEARING,
   cityOf,
-  DECK,
   field,
   GRANARY,
   HOARD,
@@ -383,31 +383,47 @@ test('a catalogue whose camp is a building it does not hold is refused', () => {
   expect(() => catalogued(content)).toThrow(/^fixture: /);
 });
 
-test('a catalogue whose deck’s city section names a building it does not hold, or a city that sees or opens with idle population below nought, is refused', () => {
+test('a catalogue whose civilization’s city section names a building it does not hold, or a city that sees or opens with idle population below nought, is refused', () => {
   for (const off of [{ building: 'PH_Fort' }, { sight: -1 }, { idle: -1 }]) {
-    const content = changed({ decks: { deck: { ...DECK, city: { ...DECK.city, ...off } } } });
+    const content = changed({
+      civilizations: { civilization: { ...CIVILIZATION, city: { ...CIVILIZATION.city, ...off } } },
+    });
 
     expect(() => catalogued(content)).toThrow(/^fixture: /);
   }
 });
 
-test('a catalogue whose deck’s city section holds a card of another kind than settle is refused', () => {
+test('a catalogue whose civilization’s city section holds a card of another kind than settle is refused', () => {
   const content = changed({
-    decks: { deck: { ...DECK, city: { ...DECK.city, card: 'PH_Harvest' } } },
+    civilizations: {
+      civilization: { ...CIVILIZATION, city: { ...CIVILIZATION.city, card: 'PH_Harvest' } },
+    },
   });
 
   expect(() => catalogued(content)).toThrow(/^fixture: /);
 });
 
 test('a catalogue whose deck names a card it does not hold is refused', () => {
-  const content = changed({ decks: { deck: { ...DECK, cards: [...DECK.cards, 'PH_Scout'] } } });
+  const content = changed({
+    civilizations: {
+      civilization: { ...CIVILIZATION, cards: [...CIVILIZATION.cards, 'PH_Scout'] },
+    },
+  });
 
   expect(() => catalogued(content)).toThrow(/^fixture: /);
 });
 
 test('a catalogue whose deck holds a hazard in either section is refused', () => {
-  const cards = changed({ decks: { deck: { ...DECK, cards: [...DECK.cards, 'PH_Hunger'] } } });
-  const settle = changed({ decks: { deck: { ...DECK, settle: [...DECK.settle, 'PH_Hunger'] } } });
+  const cards = changed({
+    civilizations: {
+      civilization: { ...CIVILIZATION, cards: [...CIVILIZATION.cards, 'PH_Hunger'] },
+    },
+  });
+  const settle = changed({
+    civilizations: {
+      civilization: { ...CIVILIZATION, settle: [...CIVILIZATION.settle, 'PH_Hunger'] },
+    },
+  });
 
   expect(() => catalogued(cards)).toThrow(/^fixture: /);
   expect(() => catalogued(settle)).toThrow(/^fixture: /);
@@ -415,8 +431,14 @@ test('a catalogue whose deck holds a hazard in either section is refused', () =>
 
 test('a catalogue whose deck holds any of the camp’s rewards in either section is refused', () => {
   for (const reward of CAMP.rewards) {
-    const cards = changed({ decks: { deck: { ...DECK, cards: [...DECK.cards, reward] } } });
-    const settle = changed({ decks: { deck: { ...DECK, settle: [...DECK.settle, reward] } } });
+    const cards = changed({
+      civilizations: { civilization: { ...CIVILIZATION, cards: [...CIVILIZATION.cards, reward] } },
+    });
+    const settle = changed({
+      civilizations: {
+        civilization: { ...CIVILIZATION, settle: [...CIVILIZATION.settle, reward] },
+      },
+    });
 
     expect(() => catalogued(cards)).toThrow(/^fixture: /);
     expect(() => catalogued(settle)).toThrow(/^fixture: /);
@@ -425,20 +447,24 @@ test('a catalogue whose deck holds any of the camp’s rewards in either section
 
 test('a catalogue whose deck’s settle section holds a card of another kind is refused', () => {
   for (const settle of [['PH_Harvest'], ['PH_Settle', 'PH_Harvest'], ['PH_Settle', 'PH_Worker']]) {
-    const content = changed({ decks: { deck: { ...DECK, settle } } });
+    const content = changed({ civilizations: { civilization: { ...CIVILIZATION, settle } } });
 
     expect(() => catalogued(content)).toThrow(/^fixture: /);
   }
 });
 
 test('a catalogue whose deck’s settle section is empty is built', () => {
-  const content = changed({ decks: { deck: { ...DECK, settle: [] } } });
+  const content = changed({ civilizations: { civilization: { ...CIVILIZATION, settle: [] } } });
 
   expect(() => catalogued(content)).not.toThrow();
 });
 
 test('a catalogue whose deck holds a settle card among its cards is refused', () => {
-  const content = changed({ decks: { deck: { ...DECK, cards: [...DECK.cards, 'PH_Settle'] } } });
+  const content = changed({
+    civilizations: {
+      civilization: { ...CIVILIZATION, cards: [...CIVILIZATION.cards, 'PH_Settle'] },
+    },
+  });
 
   expect(() => catalogued(content)).toThrow(/^fixture: /);
 });
@@ -454,7 +480,7 @@ test('a catalogue whose region’s camps keep within the centre part’s reach p
   const sight = disc.campFromCentre - disc.centre;
   const seeing = changed({
     version: 'seeing',
-    decks: { deck: { ...DECK, city: { ...DECK.city, sight } } },
+    civilizations: { civilization: { ...CIVILIZATION, city: { ...CIVILIZATION.city, sight } } },
   });
 
   expect(() => catalogued(near)).toThrow(/^fixture: /);
@@ -590,7 +616,9 @@ test('the opening on a map whose centre part names a tile the map does not hold 
   const holed = field(2).filter((tile) => tileKey(tile) !== tileKey(CITY));
   const map = { tiles: holed, rivers: [], centre: [CITY] };
 
-  expect(() => beginChronicle(CATALOGUE, AGE, 1, DECK, map, NO_DEALS, [])).toThrow(/^fixture: /);
+  expect(() => beginChronicle(CATALOGUE, AGE, 1, CIVILIZATION, map, NO_DEALS, [])).toThrow(
+    /^fixture: /,
+  );
 });
 
 test('a catalogue whose region’s rivers rise in a biome it does not hold is refused', () => {
@@ -604,7 +632,7 @@ test('a catalogue whose region’s rivers rise in a biome it does not hold is re
 
 test('a chronicle begun on another version of the content is refused by apply', () => {
   const other = catalogued(changed({ version: 'other' }));
-  const begun = launched(other, AGE, REGION, 1234, DECK, []);
+  const begun = launched(other, AGE, REGION, 1234, CIVILIZATION, []);
 
   expect(() => apply(CATALOGUE, begun, { type: 'end-turn' })).toThrow(/^fixture: /);
   expect(apply(other, begun, { type: 'end-turn' }).length).toBeGreaterThan(0);

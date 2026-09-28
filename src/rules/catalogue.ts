@@ -155,10 +155,10 @@ export type Schedule = {
 };
 
 /**
- * A deck's three sections: its city section, its settle cards, in hand on the settle phase behind the
- * city section's card, and its cards, which the draw pile cycles.
+ * A civilization: its city section, and its deck in two sections, its settle cards, in hand on the
+ * settle phase behind the city section's card, and its cards, which the draw pile cycles.
  */
-export type Deck = {
+export type Civilization = {
   readonly city: CitySection;
   readonly settle: readonly string[];
   readonly cards: readonly string[];
@@ -213,7 +213,7 @@ export type Catalogue = MapContent & {
   readonly units: Readonly<Record<string, UnitStats>>;
   readonly scripts: Readonly<Record<string, EnemyScript>>;
   readonly cards: Readonly<Record<string, Card>>;
-  readonly decks: Readonly<Record<string, Deck>>;
+  readonly civilizations: Readonly<Record<string, Civilization>>;
   readonly events: Readonly<Record<string, ScheduledEvent>>;
   readonly capstones: Readonly<Record<string, Capstone>>;
   readonly technologies: Readonly<Record<string, Technology>>;
@@ -264,7 +264,7 @@ export function merged(version: string, slices: readonly Slice[]): Catalogue {
     units: union('units'),
     scripts: union('scripts'),
     cards: union('cards'),
-    decks: union('decks'),
+    civilizations: union('civilizations'),
     events: union('events'),
     capstones: union('capstones'),
     technologies: union('technologies'),
@@ -332,20 +332,22 @@ export function catalogued(content: Catalogue): Catalogue {
   if (ages.length === 0) refuse(content, 'no age is held');
   for (const [id, age] of ages) ageHeld(content, id, age);
   treeHeld(content);
-  for (const [id, deck] of Object.entries(content.decks)) {
-    const { city } = deck;
+  for (const [id, civilization] of Object.entries(content.civilizations)) {
+    const { city } = civilization;
     buildingKind(content, city.building);
-    if (city.sight < 0) refuse(content, `the deck ${id}'s city sees ${city.sight}`);
-    if (city.idle < 0) refuse(content, `the deck ${id}'s city opens with ${city.idle} idle`);
+    if (city.sight < 0) refuse(content, `the civilization ${id}'s city sees ${city.sight}`);
+    if (city.idle < 0) {
+      refuse(content, `the civilization ${id}'s city opens with ${city.idle} idle`);
+    }
     const sections = [
       ['city', [city.card]],
-      ['settle', deck.settle],
-      ['cards', deck.cards],
+      ['settle', civilization.settle],
+      ['cards', civilization.cards],
     ] as const;
     for (const [section, cards] of sections) {
       for (const card of cards) {
         const misfit = misfitIn(content, section, card);
-        if (misfit !== undefined) refuse(content, `the deck ${id} ${misfit}`);
+        if (misfit !== undefined) refuse(content, `the civilization ${id} ${misfit}`);
       }
     }
   }
@@ -580,14 +582,14 @@ export function counterOf(catalogue: Catalogue, card: ChronicleCard): Counter {
   };
 }
 
-/** The three sections a deck lists; a deck the catalogue does not hold is refused. */
-export function deckOf(catalogue: Catalogue, id: string): Deck {
-  return entryOf(catalogue, catalogue.decks, id, 'deck');
+/** The civilization an id names; a civilization the catalogue does not hold is refused. */
+export function civilizationOf(catalogue: Catalogue, id: string): Civilization {
+  return entryOf(catalogue, catalogue.civilizations, id, 'civilization');
 }
 
-/** The deck the catalogue lists first: the civilization's. A catalogue listing none is refused. */
-export function firstDeck(catalogue: Catalogue): string {
-  return firstListed(catalogue, catalogue.decks, 'deck');
+/** The civilization the catalogue lists first. A catalogue listing none is refused. */
+export function firstCivilization(catalogue: Catalogue): string {
+  return firstListed(catalogue, catalogue.civilizations, 'civilization');
 }
 
 /** The age the catalogue lists first. A catalogue listing none is refused. */
@@ -610,19 +612,15 @@ function firstListed(
   return first;
 }
 
-/** A section of a deck, by the name the deck lists it under. */
-export type DeckSection = keyof Deck;
+/** A section of a civilization, by the name the civilization lists it under. */
+export type Section = keyof Civilization;
 
 /**
- * What keeps a card out of a section of a deck, as the deck would hold it, and nothing where it fits
- * there: no deck holds a hazard or an age's camp's reward, the cards hold no settle card, and the city
- * and the settle section nothing else. A card the catalogue does not hold is refused.
+ * What keeps a card out of a section of a civilization, and nothing where it fits there: none holds
+ * a hazard or an age's camp's reward, the cards no settle card, and the city and the settle section
+ * nothing else. A card the catalogue does not hold is refused.
  */
-export function misfitIn(
-  catalogue: Catalogue,
-  section: DeckSection,
-  card: CardId,
-): string | undefined {
+export function misfitIn(catalogue: Catalogue, section: Section, card: CardId): string | undefined {
   const { kind } = cardOf(catalogue, card);
   if (kind === 'hazard') return `holds the hazard ${card}`;
   for (const [age, { camp }] of Object.entries(catalogue.ages)) {
