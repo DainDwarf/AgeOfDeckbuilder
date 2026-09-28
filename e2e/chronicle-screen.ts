@@ -236,6 +236,14 @@ export async function chronicleButton(page: Page): Promise<void> {
   await rested(page);
 }
 
+/** The launch screen Chronicle opens from the campaign screen of a bare boot. */
+export async function openLaunch(page: Page): Promise<void> {
+  await readNames(page);
+  await page.goto('/');
+  await campaignShown(page);
+  await chronicleButton(page);
+}
+
 /** Opens the chronicle the save holds straight, as the address word `continue` does. */
 export async function continued(page: Page): Promise<void> {
   await page.goto('/?continue=1');

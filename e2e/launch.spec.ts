@@ -5,13 +5,11 @@ import { freshCampaign } from '../src/rules/save';
 import { text } from '../src/ui/text';
 import type { Reference } from '../src/ui/text-run';
 import {
-  campaignShown,
   cardOnFace,
-  chronicleButton,
   kindLabelOnScreen,
   nameOnScreen,
   onScreen,
-  readNames,
+  openLaunch,
   referenceOnFace,
   rested,
   standing,
@@ -24,14 +22,6 @@ import {
 const [[CIVILIZATION, OWNED]] = Object.entries(freshCampaign(CATALOGUE).civilizations);
 const PILE = `launch-civilization-${CIVILIZATION}`;
 const CITY_CARD = `${PILE}-card`;
-
-/** The launch screen Chronicle opens from the campaign screen of a bare boot. */
-async function openLaunch(page: Page): Promise<void> {
-  await readNames(page);
-  await page.goto('/');
-  await campaignShown(page);
-  await chronicleButton(page);
-}
 
 /** What the first name on the city card names, read off the face itself. */
 function firstNamed(page: Page): Promise<Reference | undefined> {

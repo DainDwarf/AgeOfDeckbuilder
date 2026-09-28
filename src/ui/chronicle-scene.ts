@@ -22,7 +22,7 @@ import { createBand } from './band';
 import { boundTo } from './bindings';
 import { CARD_BASELINE, CARD_HEIGHT } from './card-face';
 import { EASE, ended, stopAllMotion, stopMotion } from './card-motion';
-import { resetConsole } from './debug-console';
+import { offerSeed, resetConsole } from './debug-console';
 import {
   addText,
   answersPress,
@@ -84,10 +84,10 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
     super('ui');
   }
 
-  init({ resumed, ...choices }: Opening): void {
+  init({ resumed, seed, ...choices }: Opening): void {
     this.choices = choices;
     this.payment = undefined;
-    this.current = resumed ?? this.begin();
+    this.current = resumed ?? this.begin(seed);
   }
 
   /** The chronicle as it stands, for whoever holds the game through `window.game`. */
@@ -101,18 +101,18 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
   }
 
   /**
-   * A chronicle on the choices, from a fresh seed, kept as the save. The fresh seed is the one place
-   * entropy enters the game: `src/rules/` draws only from the seed it is handed.
+   * A chronicle on the choices, from the seed typed or else a fresh one, kept as the save. The fresh
+   * seed is the one place entropy enters the game: `src/rules/` draws only from the seed it is handed.
    */
-  private begin(): Chronicle {
+  private begin(typed: number | undefined): Chronicle {
     const { age, region, civilization } = this.choices;
-    const drawn = (Math.random() * 2 ** 32) | 0;
+    const seed = typed === undefined ? (Math.random() * 2 ** 32) | 0 : typed;
     const campaign = campaignHeld();
     const chronicle = launched(
       CATALOGUE,
       age,
       region,
-      drawn,
+      seed,
       civilizationIn(CATALOGUE, campaign, civilization),
       campaign.technologies,
     );
@@ -120,17 +120,25 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
     return chronicle;
   }
 
-  /**
-   * The campaign screen opened: the play-out the screen was in the middle of is let go of here, its
-   * tail committing nothing.
-   */
-  leave(): void {
+  /** The play-out the screen was in the middle of let go of, its tail committing nothing. */
+  private letGo(): void {
     this.sequence = undefined;
     stopAllMotion(this);
     stopAllMotion(mapOf(this));
+  }
+
+  /** The campaign screen opened. */
+  leave(): void {
+    this.letGo();
     overlayAhead(this.scene);
     this.scene.stop('map');
     this.scene.start('campaign');
+  }
+
+  /** A new chronicle on the choices this one was launched on and the seed typed. */
+  private launchOn(seed: number): void {
+    this.letGo();
+    openChronicle(this.scene, { ...this.choices, seed });
   }
 
   create(): void {
@@ -544,6 +552,12 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
     resetConsole(this, (veils) => {
       view.showVeils(veils);
     });
+    offerSeed(this, {
+      seed: () => this.current.seed,
+      launch: (seed) => {
+        this.launchOn(seed);
+      },
+    });
     resetMenu(this, (under) => {
       away('menu', under);
       // The overlay's own scrim is no cover to the overlay: whatever it raises wipes what stood.
@@ -667,4 +681,18 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
     interact();
     return part;
   }
+}
+
+/**
+ * The chronicle screen opened on the opening, in place of the screen calling or as the boot's first.
+ * The overlay is put ahead and the map started before it: it reaches into both as it is created.
+ */
+export function openChronicle(
+  scenes: Phaser.Scenes.ScenePlugin | Phaser.Scenes.SceneManager,
+  opening: Opening,
+): void {
+  overlayAhead(scenes);
+  if (scenes instanceof Phaser.Scenes.ScenePlugin) scenes.launch('map');
+  else scenes.start('map');
+  scenes.start('ui', opening);
 }

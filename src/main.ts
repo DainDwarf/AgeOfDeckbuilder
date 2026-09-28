@@ -3,7 +3,7 @@ import './failed-boot';
 import Phaser from 'phaser';
 import { booted } from './failed-boot';
 import { CampaignScreen } from './ui/campaign-screen';
-import { ChronicleScene } from './ui/chronicle-scene';
+import { ChronicleScene, openChronicle } from './ui/chronicle-scene';
 import { DebugConsole } from './ui/debug-console';
 import { backingSize, followPointer, followWindow, releaseOnBlur } from './ui/design-space';
 import { readMouseKeys } from './ui/keys';
@@ -43,14 +43,13 @@ const first = firstScreen();
 
 /** The first screen started, over the console and the menu. */
 function startFirst(screen: FirstScreen): void {
-  overlayAhead(game.scene);
   switch (screen.on) {
     case 'campaign':
+      overlayAhead(game.scene);
       game.scene.start('campaign');
       return;
     case 'chronicle':
-      game.scene.start('map');
-      game.scene.start('ui', screen.opening);
+      openChronicle(game.scene, screen.opening);
       return;
   }
   const unlisted: never = screen;

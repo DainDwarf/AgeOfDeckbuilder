@@ -11,8 +11,15 @@ export type Choices = {
   readonly civilization: string;
 };
 
-/** What the chronicle screen opens on: the choices a chronicle begins on, and the one resumed on them. */
-export type Opening = Choices & { readonly resumed?: Chronicle };
+/**
+ * What the chronicle screen opens on: the choices a chronicle begins on, and either the one resumed
+ * on them or the seed typed for a new one.
+ */
+export type Opening = Choices &
+  (
+    | { readonly resumed: Chronicle; readonly seed?: never }
+    | { readonly resumed?: never; readonly seed?: number }
+  );
 
 /** Where the browser keeps the save; the origin is shared with whatever else the host serves. */
 export const SAVE_ENTRY = 'age-of-deckbuilder.save';

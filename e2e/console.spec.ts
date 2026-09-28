@@ -1,16 +1,28 @@
 import { expect, type Page, test } from '@playwright/test';
 import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
+import { civilizationIn } from '../src/rules/campaign';
+import { launched } from '../src/rules/chronicle';
 import { tileKey } from '../src/rules/map';
+import { freshCampaign, readSave } from '../src/rules/save';
 import { inSight } from '../src/rules/sight';
+import type { Chronicle } from '../src/rules/state';
+import type { ChronicleScene } from '../src/ui/chronicle-scene';
+import { openingChoices } from '../src/ui/launch-layout';
+import { type Choices, SAVE_ENTRY } from '../src/ui/save-entry';
+import { text } from '../src/ui/text';
 import {
   budget,
+  campaignShown,
   chronicleOf,
   consoleKey,
   enemiesOf,
   enter,
+  firstsOf,
   marksIn,
+  openLaunch,
   openSaved,
+  readNames,
   rested,
   settledOn,
   shows,
@@ -26,7 +38,7 @@ const BARE = { q: 0, r: -3 };
 function consoleLines(page: Page): Promise<string[]> {
   return page.evaluate(() => {
     const root = window.named?.('console')?.object as Phaser.GameObjects.Container | undefined;
-    if (root === undefined) throw new Error('the console is not on the chronicle screen');
+    if (root === undefined) throw new Error('no console stands on the screen');
     return root.list
       .filter((part) => part.type === 'Text')
       .map((part) => (part as Phaser.GameObjects.Text).text);
@@ -58,6 +70,40 @@ function bandAndLines(page: Page): Promise<{ bar: number; highest: number }> {
       ),
     };
   });
+}
+
+/** The console as a new chronicle leaves it: closed, and no line run. */
+const CLEARED = ['', '', '', '', '> '];
+
+/** The chronicle the rules launch on the choices and the seed, the new campaign's deck dealt. */
+function launchedFresh({ age, region, civilization }: Choices, seed: number): Chronicle {
+  const campaign = freshCampaign(CATALOGUE);
+  return launched(
+    CATALOGUE,
+    age,
+    region,
+    seed,
+    civilizationIn(CATALOGUE, campaign, civilization),
+    campaign.technologies,
+  );
+}
+
+/** Waits for the chronicle screen to stand on a chronicle of that seed. */
+async function standsOnSeed(page: Page, seed: number): Promise<void> {
+  await page.waitForFunction(
+    (wanted) =>
+      window.game?.scene.isActive('ui') === true &&
+      window.game.scene.getScene<ChronicleScene>('ui').chronicle.seed === wanted,
+    seed,
+  );
+  await rested(page);
+}
+
+/** The chronicle the save holds, read as the game reads it. */
+async function heldChronicle(page: Page): Promise<Chronicle | undefined> {
+  const saved = await page.evaluate((entry) => window.localStorage.getItem(entry), SAVE_ENTRY);
+  if (saved === null) throw new Error('the game keeps no save');
+  return readSave(CATALOGUE, saved).chronicle?.chronicle;
 }
 
 /** How far the map moved down the screen under a key held for a dozen frames. */
@@ -166,6 +212,82 @@ test('the two switches draw the whole map, and put the fog back where it was', a
   expect(await standing(page, `tile-${tileKey(enemy)}`)).toBe(false);
   expect(await marksIn(page, 'terrain')).toBe(stood.snapshots.length);
   expect(await marksIn(page, 'fog')).toBe(fogged);
+
+  expect(problems).toEqual([]);
+});
+
+test('seed with a number on the launch screen opens the chronicle the rules launch on its choices and that seed, and closes the console', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const seed = 90210;
+  const choices = openingChoices(CATALOGUE, freshCampaign(CATALOGUE));
+
+  await openLaunch(page);
+  await consoleKey(page);
+  await enter(page, 'seed');
+  expect(await consoleLines(page)).toEqual(['', '', '> seed', text('console.no-chronicle'), '> ']);
+
+  await enter(page, `seed ${seed}`);
+  await standsOnSeed(page, seed);
+  const oracle = launchedFresh(choices, seed);
+  expect(await chronicleOf(page)).toEqual(oracle);
+  expect(await heldChronicle(page)).toEqual(oracle);
+  expect(await shows(page, 'console')).toBe(false);
+  expect(await consoleLines(page)).toEqual(CLEARED);
+
+  expect(problems).toEqual([]);
+});
+
+test('seed on the chronicle screen answers the seed of the chronicle standing, and with another number launches on its choices and that seed', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const stood = settledOn(1);
+  const other = -7;
+  expect(other).not.toBe(stood.seed);
+
+  await openSaved(page, stood);
+  await consoleKey(page);
+  await enter(page, 'seed');
+  expect(await consoleLines(page)).toEqual([
+    '',
+    '',
+    '> seed',
+    text('console.seed', { seed: stood.seed }),
+    '> ',
+  ]);
+
+  await enter(page, `seed ${other}`);
+  await standsOnSeed(page, other);
+  const oracle = launchedFresh(firstsOf(), other);
+  expect(await chronicleOf(page)).toEqual(oracle);
+  expect(await heldChronicle(page)).toEqual(oracle);
+  expect(await shows(page, 'console')).toBe(false);
+  expect(await consoleLines(page)).toEqual(CLEARED);
+
+  await consoleKey(page);
+  await enter(page, 'seed');
+  expect((await consoleLines(page))[3]).toBe(text('console.seed', { seed: other }));
+
+  expect(problems).toEqual([]);
+});
+
+test('seed with a number on the campaign screen says it launches nothing there, and opens no chronicle screen', async ({
+  page,
+}) => {
+  const problems = watch(page);
+
+  await readNames(page);
+  await page.goto('/');
+  await campaignShown(page);
+  await consoleKey(page);
+  await enter(page, 'seed 3');
+  expect(await consoleLines(page)).toEqual(['', '', '> seed 3', text('console.no-launch'), '> ']);
+
+  await rested(page);
+  expect(await page.evaluate(() => window.game?.scene.isActive('ui'))).toBe(false);
+  expect(await page.evaluate(() => window.game?.scene.isActive('campaign'))).toBe(true);
 
   expect(problems).toEqual([]);
 });

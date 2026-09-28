@@ -222,7 +222,11 @@ const TEXT = {
   'refused-save.line':
     'This browser refuses the save: what is played from here is lost when the page closes', // glossary exception: lost
   'console.line': '> {line}',
-  'console.no-entry': 'no such entry: {word}',
+  'console.no-entry': 'no such entry: {line}',
+  'console.seed': 'seed: {seed}',
+  'console.no-chronicle': 'no chronicle',
+  'console.no-launch': 'no launch from this screen',
+  'console.not-a-seed': 'not a seed: {typed}',
   'console.uncharted-veil-on': 'uncharted veil: on',
   'console.uncharted-veil-off': 'uncharted veil: off',
   'console.fog-veil-on': 'fog veil: on',

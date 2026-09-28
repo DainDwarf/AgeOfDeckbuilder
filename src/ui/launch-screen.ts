@@ -11,6 +11,8 @@ import {
   type KindBubble,
   metricsOf,
 } from './card-face';
+import { openChronicle } from './chronicle-scene';
+import { offerSeed } from './debug-console';
 import {
   addText,
   answersPress,
@@ -32,7 +34,7 @@ import { css, LOOK } from './look';
 import { groundColourOf, terrainColourOf } from './marks';
 import { backRaisesMenu, resetMenu } from './menu-scene';
 import { ROOM, wearNavbar } from './navbar';
-import { overlayAhead, overlayOf } from './overlay-scene';
+import { overlayOf } from './overlay-scene';
 import { type Choices, campaignHeld, type Opening, savedOpening } from './save-entry';
 import { createSmallCards, raiserOf, type SmallCards } from './small-card';
 import { type ShownLarge, standLarge } from './stack';
@@ -351,11 +353,14 @@ export class LaunchScreen extends Phaser.Scene {
     let root: Phaser.GameObjects.Container | undefined;
 
     const open = (opening: Opening): void => {
-      overlayAhead(this.scene);
-      // Queued ahead of the start below, so the map is up before the ui scene reaches into it.
-      this.scene.launch('map');
-      this.scene.start('ui', opening);
+      openChronicle(this.scene, opening);
     };
+    offerSeed(this, {
+      seed: () => savedOpening()?.resumed.seed,
+      launch: (seed) => {
+        open({ ...chosen, seed });
+      },
+    });
 
     const choose = (row: Row, option: string): void => {
       switch (row) {

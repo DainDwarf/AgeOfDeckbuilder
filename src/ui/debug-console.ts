@@ -48,6 +48,12 @@ const CONSOLE_STYLE = {
 /** One line the console has run: what it read, and whether it was the console's answer. */
 type Line = { readonly line: string; readonly answer: boolean };
 
+/** What the screen standing offers `seed`: the seed it reads now, and its launch, where it has one. */
+export type Seeding = {
+  readonly seed: () => number | undefined;
+  readonly launch: ((seed: number) => void) | undefined;
+};
+
 /**
  * The debug console, on a scene of its own: started first at boot, so every key reaches it ahead of
  * every other scene, and never stopped, so it outlives every chronicle. Nothing it holds is made
@@ -56,6 +62,9 @@ type Line = { readonly line: string; readonly answer: boolean };
 export class DebugConsole extends Phaser.Scene {
   /** The console closed, the lines it ran cleared, and both veils back on. */
   reset!: () => void;
+
+  /** What the screen standing offers `seed`, and nothing between one screen and the next. */
+  seeding: Seeding | undefined;
 
   constructor() {
     super('console');
@@ -112,11 +121,16 @@ export class DebugConsole extends Phaser.Scene {
       if (history.length > HISTORY) history.shift();
     };
 
-    /** The line entered: it and its answer stay in view, and the map hears whatever it switched. */
+    /** The line entered: it and its answer stay in view, and the map and the screen hear it. */
     const run = (): void => {
       const line = typed;
       typed = '';
-      const ran = runLine(line, veils);
+      const seeding = this.seeding;
+      if (seeding === undefined) throw new Error('no screen stands under the console');
+      const ran = runLine(line, veils, {
+        seed: seeding.seed(),
+        launches: seeding.launch !== undefined,
+      });
       if (ran.answer !== undefined) {
         keep(text('console.line', { line }), false);
         keep(ran.answer, true);
@@ -126,6 +140,7 @@ export class DebugConsole extends Phaser.Scene {
         this.game.events.emit(VEILED, veils);
       }
       paint();
+      if (ran.launch !== undefined) seeding.launch?.(ran.launch);
     };
 
     const show = (on: boolean): void => {
@@ -169,4 +184,13 @@ export class DebugConsole extends Phaser.Scene {
 export function resetConsole(scene: Phaser.Scene, veiled: (veils: Veils) => void): void {
   scene.game.scene.getScene<DebugConsole>('console').reset();
   whileUp(scene, scene.game.events, VEILED, veiled);
+}
+
+/** What `seed` reads and launches on, for as long as the screen now rising stands. */
+export function offerSeed(scene: Phaser.Scene, seeding: Seeding): void {
+  const held = scene.game.scene.getScene<DebugConsole>('console');
+  held.seeding = seeding;
+  scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+    if (held.seeding === seeding) held.seeding = undefined;
+  });
 }
