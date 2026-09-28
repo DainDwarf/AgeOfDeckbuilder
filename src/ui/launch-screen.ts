@@ -4,26 +4,38 @@ import { agesReached, type CampaignCivilization } from '../rules/campaign';
 import { achievementOf, ageOf } from '../rules/catalogue';
 import { biomeKind } from '../rules/map-kinds';
 import { type Chronicle, NO_REFUSAL, onSettlePhase } from '../rules/state';
-import { createCardBack, createCardFace, metricsOf } from './card-face';
+import {
+  createCardBack,
+  createCardFace,
+  createKindBubble,
+  type KindBubble,
+  metricsOf,
+} from './card-face';
 import {
   addText,
   answersPress,
+  awayUnder,
+  COVERED,
   corners,
   DESIGN_WIDTH,
   hexagon,
   holdDesignSpace,
   MARGIN,
   onClick,
+  onHover,
+  type Stratum,
   UI_FONT,
 } from './design-space';
 import { cardFaceAtStart } from './face';
 import { openingChoices, ringOf, withAge } from './launch-layout';
 import { css, LOOK } from './look';
 import { groundColourOf, terrainColourOf } from './marks';
-import { backRaisesMenu, closeMenu } from './menu-scene';
+import { backRaisesMenu, resetMenu } from './menu-scene';
 import { ROOM, wearNavbar } from './navbar';
-import { overlayAhead } from './overlay-scene';
+import { overlayAhead, overlayOf } from './overlay-scene';
 import { type Choices, campaignHeld, type Opening, savedOpening } from './save-entry';
+import { createSmallCards, raiserOf, type SmallCards } from './small-card';
+import { type ShownLarge, standLarge } from './stack';
 import { ageName, civilizationName, regionName, type TextKey, technologyName, text } from './text';
 
 const LEFT = ROOM.x + MARGIN;
@@ -198,6 +210,14 @@ function regionsOf(scene: Phaser.Scene, age: string, region: string): Choice[] {
   });
 }
 
+/** What the city section's card on a pile answers the rest and the right click with. */
+type CityCardPresses = {
+  readonly on: Stratum;
+  readonly small: SmallCards;
+  readonly kinds: KindBubble;
+  readonly large: ShownLarge;
+};
+
 /**
  * The campaign's civilizations in a row, each a pile of card backs under its city section's card,
  * face up, over its name and the counts of its cards and of its settle cards.
@@ -206,6 +226,7 @@ function pilesOf(
   scene: Phaser.Scene,
   civilizations: Readonly<Record<string, CampaignCivilization>>,
   civilization: string,
+  { on, small, kinds, large }: CityCardPresses,
 ): Choice[] {
   const { height, radius } = metricsOf(PILE_WIDTH);
   const foot = PILE_TOP + height;
@@ -217,9 +238,12 @@ function pilesOf(
       return createCardBack(scene, { width: PILE_WIDTH }).setPosition(x + step, foot + step);
     });
     const lift = chosen ? PILE_LIFT : 0;
-    const face = createCardFace(scene, cardFaceAtStart(CATALOGUE, owned.city.card.id), NO_REFUSAL, {
-      width: PILE_WIDTH,
-    }).root.setPosition(x, foot - lift);
+    const shown = cardFaceAtStart(CATALOGUE, owned.city.card.id);
+    const card = createCardFace(scene, shown, NO_REFUSAL, { width: PILE_WIDTH });
+    const face = card.root
+      .setPosition(x, foot - lift)
+      .setName(`launch-civilization-${id}-card`)
+      .setData('card', shown.id);
     const edge = chosen
       ? [
           scene.add
@@ -251,6 +275,37 @@ function pilesOf(
     const zone = scene.add
       .zone(bounds.centerX, bounds.centerY, bounds.width, bounds.height)
       .setInteractive();
+
+    zone.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+      const at = on.at(pointer.x, pointer.y);
+      const named = card.nameAt(at.x, at.y);
+      small.over(named === undefined ? undefined : raiserOf(card, named));
+      kinds.over(card, card.kindAt(at.x, at.y));
+    });
+    onHover(
+      zone,
+      () => {},
+      () => {
+        small.over(undefined);
+        kinds.over(card, false);
+      },
+    );
+    onClick(
+      zone,
+      (pointer) => {
+        const at = on.at(pointer.x, pointer.y);
+        const named = card.nameAt(at.x, at.y);
+        if (named !== undefined) {
+          large.named(named);
+          return;
+        }
+        const local = face.getLocalPoint(at.x, at.y);
+        if (Math.abs(local.x) <= PILE_WIDTH / 2 && local.y <= 0 && local.y >= -height) {
+          large.show(shown);
+        }
+      },
+      'right',
+    );
     return { row: 'civilization', option: id, chosen, parts: [...parts, zone], hits: [zone] };
   });
 }
@@ -263,9 +318,28 @@ export class LaunchScreen extends Phaser.Scene {
 
   create(): void {
     holdDesignSpace(this, this.cameras.main);
-    closeMenu(this);
-    const { content } = wearNavbar(this, 'launch');
+    const { content, bubbles, tooltip } = wearNavbar(this, 'launch');
     backRaisesMenu(this);
+    const away = awayUnder(this);
+    const overlay = overlayOf(this);
+    const large = standLarge(
+      overlay,
+      (up) => {
+        away('overlay', up);
+      },
+      () => false,
+    );
+    resetMenu(this, (under) => {
+      away('menu', under);
+      if (under) overlay.input.emit(COVERED);
+    });
+    const kinds = createKindBubble(tooltip);
+    const presses = {
+      on: bubbles,
+      small: createSmallCards(this, bubbles, CATALOGUE, kinds, large.named),
+      kinds,
+      large,
+    };
     const campaign = campaignHeld();
     const reached = agesReached(CATALOGUE, campaign);
     let chosen: Choices = openingChoices(CATALOGUE, campaign);
@@ -319,6 +393,7 @@ export class LaunchScreen extends Phaser.Scene {
       addText(this, LEFT, y, text(key), PALE_STYLE).setOrigin(0, 0.5);
 
     const lay = (): void => {
+      presses.small.down();
       root?.destroy();
       root = this.add.container(0, 0).setName('launch');
       content.add(root);
@@ -335,7 +410,7 @@ export class LaunchScreen extends Phaser.Scene {
         word('launch.region', 222),
         ...regionsOf(this, chosen.age, chosen.region).map(drawn),
         word('launch.civilization', 450),
-        ...pilesOf(this, campaign.civilizations, chosen.civilization).map(drawn),
+        ...pilesOf(this, campaign.civilizations, chosen.civilization, presses).map(drawn),
         ...buttonsOf(this, open, () => chosen),
       ]);
     };

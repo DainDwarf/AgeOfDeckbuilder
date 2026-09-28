@@ -1,12 +1,23 @@
 import Phaser from 'phaser';
+import { CATALOGUE } from '../content/catalogue';
 import type { Catalogue } from '../rules/catalogue';
 import { NO_REFUSAL, type Refusal } from '../rules/state';
-import { type CardFace, createCardFace, heightOf, type KindBubble, type Name } from './card-face';
-import { DESIGN_HEIGHT, DESIGN_WIDTH } from './design-space';
+import { type Bind, boundTo } from './bindings';
+import {
+  type CardFace,
+  createCardFace,
+  createKindBubble,
+  heightOf,
+  type KindBubble,
+  type Name,
+} from './card-face';
+import { DESIGN_HEIGHT, DESIGN_WIDTH, onClick } from './design-space';
 import { type Face, namedCardFace } from './face';
 import { createThingCard, type Thing } from './infopanel';
+import { LOOK } from './look';
 import type { OverlayScene } from './overlay-scene';
 import { createSmallCards, raiserOf } from './small-card';
+import { createTooltip } from './tooltip';
 
 const WIDTH = 380;
 
@@ -129,6 +140,67 @@ export function createStack(scene: OverlayScene, catalogue: Catalogue, kinds: Ki
     },
     down(): void {
       lay([]);
+    },
+  };
+}
+
+/** A screen of the meta's cards shown large. */
+export type ShownLarge = {
+  /** The face shown large alone. */
+  show(face: Face): void;
+  /** What the name names, on top of the stack. */
+  named(name: Name): void;
+};
+
+/**
+ * The stack of cards shown large on a scrim of the overlay's over the whole screen, for a screen of
+ * the meta: a press on the scrim and the back key walk it down, and while a card stands the screen
+ * under it hears no key and no mouse key but those `passes` lets through.
+ */
+export function standLarge(
+  overlay: OverlayScene,
+  covering: (covered: boolean) => void,
+  passes: (press: Bind) => boolean,
+): ShownLarge {
+  const scrim = overlay.add
+    .rectangle(0, 0, DESIGN_WIDTH, DESIGN_HEIGHT, LOOK.scrim.colour, LOOK.scrim.strength)
+    .setOrigin(0, 0)
+    .setVisible(false);
+  overlay.strata.scrim.layer.add(scrim);
+  const stack = createStack(
+    overlay,
+    CATALOGUE,
+    createKindBubble(createTooltip(overlay, overlay.strata.tooltip)),
+  );
+
+  const takeDownNewest = (): void => {
+    if (stack.takeDownNewest()) return;
+    scrim.setVisible(false).disableInteractive();
+    covering(false);
+  };
+  onClick(scrim, takeDownNewest);
+  onClick(scrim, takeDownNewest, 'right');
+
+  overlay.takes((press) => {
+    if (!stack.standing) return false;
+    if (boundTo(press, 'back')) takeDownNewest();
+    return !passes(press);
+  });
+
+  const stand = (): void => {
+    if (stack.standing) return;
+    scrim.setVisible(true).setInteractive();
+    covering(true);
+  };
+
+  return {
+    show(face) {
+      stand();
+      stack.show(face, NO_REFUSAL);
+    },
+    named(name) {
+      stand();
+      stack.named(name);
     },
   };
 }

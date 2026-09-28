@@ -12,5 +12,3 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 - **The headless simulator** — a consumer of the rules that runs only when asked and reports numbers, not diagnoses, tuned across the two ages; the reachability cache and the end of turn's cost per `apply` are looked at when it is made.
 
 ## Lines
-
-- **The city card on the launch screen answers the presses** — the city section's card on a civilization's pile answers the right click, shown large, the rest on its names and on its kind label, as a card face does anywhere; a left click on it still chooses the civilization and the rest of the pile answers no right click; `npm run check`, `npm test`, `npm run lint` and `e2e/launch.spec.ts` pass. Doc-impact: `docs/INTERFACE.md`. [board/launch-city-card-presses.md](board/launch-city-card-presses.md)

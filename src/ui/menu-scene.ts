@@ -184,17 +184,13 @@ export function backRaisesMenu(scene: Phaser.Scene): void {
   });
 }
 
-/** The menu taken down for the screen now rising. */
-export function closeMenu(scene: Phaser.Scene): void {
-  scene.game.scene.getScene<MenuScene>('menu').close();
-}
-
 /**
  * The menu taken down for the screen now rising, which hears every scrim of the menu scene rise and
  * fall from then on, and at once the refused-save window's, which may stand already.
  */
 export function resetMenu(scene: Phaser.Scene, covering: (covered: boolean) => void): void {
-  closeMenu(scene);
+  const menu = scene.game.scene.getScene<MenuScene>('menu');
+  menu.close();
   whileUp(scene, scene.game.events, COVERED, covering);
-  if (scene.game.scene.getScene<MenuScene>('menu').covered()) covering(true);
+  if (menu.covered()) covering(true);
 }
