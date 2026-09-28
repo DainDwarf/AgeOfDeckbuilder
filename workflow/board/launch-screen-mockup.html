@@ -1,0 +1,305 @@
+<title>Launch Screen Mockup</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --page: #0d1117;
+    --panel: #d4d7db;
+    --edge: #6f757d;
+    --ink: #0d1014;
+    --pale: #d4d7db;
+    --faint: #9aa1a9;
+    --accent: #d9a441;
+    --slab: #232833;
+  }
+  html, body { background: var(--page); }
+  body {
+    color: var(--pale);
+    font-family: system-ui, "Segoe UI", sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+    padding-inline: 16px;
+    padding-block: 24px 48px;
+  }
+  main { max-width: 1280px; margin-inline: auto; display: flex; flex-direction: column; gap: 20px; }
+  h1 { font-size: 26px; margin: 0; text-wrap: balance; }
+  p { margin: 0; max-width: 70ch; color: var(--faint); }
+  .stage { border: 1px solid var(--edge); background: var(--page); }
+  .stage svg { display: block; width: 100%; height: auto; }
+  .stage [data-pick] { cursor: pointer; }
+  .controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px 24px; }
+  fieldset { border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  legend { padding: 0; font-weight: 700; font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--faint); margin-bottom: 6px; }
+  .seg { display: flex; flex-wrap: wrap; gap: 6px; }
+  .seg button {
+    font: inherit; font-weight: 700; color: var(--pale);
+    background: var(--slab); border: 1px solid var(--edge);
+    padding: 6px 12px; cursor: pointer;
+  }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: var(--ink); border-color: var(--accent); }
+  .seg button:focus-visible { outline: 2px solid var(--pale); outline-offset: 2px; }
+  .seg small { font-weight: 400; }
+  .note { border-top: 1px solid var(--edge); padding-top: 16px; display: flex; flex-direction: column; gap: 8px; }
+  .note strong { color: var(--pale); }
+</style>
+
+<main>
+  <h1>The launch screen</h1>
+  <p>The screen at the game's size, 1280 by 720, under the navbar and the bar as they stand today. Press an age, a region or a civilization to choose it. The controls under the screen change what the campaign holds and how the choices are drawn.</p>
+
+  <div class="stage"><svg id="stage" viewBox="0 0 1280 720" role="img" aria-label="Mockup of the launch screen"></svg></div>
+
+  <div class="controls" id="controls"></div>
+
+  <div class="note">
+    <p><strong>Real today:</strong> the Nomadic Age and its ground colour, the Temperate region and its shares of sea, mountain, woodland and land, the Nomadic civilization with 17 cards and 2 settle cards, every colour of the navbar, the bar, the buttons and the terrain.</p>
+    <p><strong>Made up for the mockup:</strong> the other ages' colours, the other regions and their sand and ice, the other civilizations' names and counts, the turn and the achievement Continue reads.</p>
+  </div>
+</main>
+
+<script>
+(() => {
+  const C = {
+    page: '#0d1117', panel: '#d4d7db', edge: '#6f757d', ink: '#0d1014', pale: '#d4d7db',
+    faint: '#9aa1a9', accent: '#d9a441', well: '#b4b9c0', wellLight: '#eef0f3',
+    mystery: '#5c6068', mysteryInk: '#2a2e34', cardBack: '#232833', cardEdge: '#6f757d',
+    art: '#b6bbc2', artEdge: '#9aa0a8',
+  };
+  const T = {
+    plain: '#7d9c55', forest: '#2f6f4e', hills: '#9a8555', mountain: '#6b5f57',
+    coast: '#3d6d9e', ocean: '#2b4f7a', sand: '#c9b37a', ice: '#dfe8ee', tundra: '#8fa39a',
+  };
+  const AGES = [
+    { name: 'Nomadic Age', ground: '#2a5a41' },
+    { name: 'Stone Age', ground: '#5b6470' },
+    { name: 'Bronze Age', ground: '#8a5a2b' },
+    { name: 'Iron Age', ground: '#47506b' },
+  ];
+  // Centre first, then the ring clockwise from the right.
+  const REGIONS = [
+    { name: 'Temperate', hexes: ['plain', 'plain', 'forest', 'plain', 'ocean', 'mountain', 'hills'] },
+    { name: 'Desert', hexes: ['sand', 'sand', 'hills', 'sand', 'sand', 'mountain', 'plain'] },
+    { name: 'Coast', hexes: ['plain', 'ocean', 'coast', 'plain', 'forest', 'coast', 'ocean'] },
+    { name: 'Mountains', hexes: ['hills', 'mountain', 'mountain', 'hills', 'forest', 'mountain', 'plain'] },
+    { name: 'Polar', hexes: ['tundra', 'ice', 'ice', 'tundra', 'ocean', 'ice', 'tundra'] },
+  ];
+  const CIVS = [
+    { name: 'Nomadic', counts: '17 cards · 2 settle cards' },
+    { name: 'Riverfolk', counts: '21 cards · 3 settle cards' },
+    { name: 'Highlanders', counts: '19 cards · 2 settle cards' },
+  ];
+
+  const CONTROLS = [
+    { key: 'layout', legend: 'Layout', options: [['bands', 'Bands', true], ['panel', 'Panel as today']] },
+    { key: 'mark', legend: 'The chosen one', options: [['raised', 'Larger, the others dimmed', true], ['ring', 'Ringed in the accent']] },
+    { key: 'hex', legend: 'A region is drawn as', options: [['rosette', 'Seven hexagons', true], ['single', 'One hexagon']] },
+    { key: 'unreached', legend: 'An age not reached', options: [['mystery', 'A mystery on the arrow', true], ['hidden', 'Not drawn']] },
+    { key: 'ages', legend: 'Ages in the game', options: [[1, '1'], [2, '2'], [4, '4']] },
+    { key: 'reached', legend: 'Furthest age reached', options: [[1, '1'], [2, '2'], [3, '3'], [4, '4']] },
+    { key: 'regions', legend: 'Regions of the age', options: [[1, '1'], [3, '3'], [5, '5']] },
+    { key: 'civs', legend: 'Civilizations owned', options: [[1, '1'], [2, '2'], [3, '3']] },
+    { key: 'progress', legend: 'A chronicle in progress', options: [['no', 'No'], ['yes', 'Yes']] },
+  ];
+
+  const state = {
+    layout: 'bands', mark: 'raised', hex: 'rosette', unreached: 'mystery',
+    ages: 2, reached: 1, regions: 3, civs: 1, progress: 'yes',
+    age: 0, region: 0, civ: 0,
+  };
+
+  const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  const txt = (x, y, s, o = {}) =>
+    `<text x="${x}" y="${y}" font-size="${o.size ?? 18}" font-weight="${o.weight ?? 700}" fill="${o.fill ?? C.ink}" text-anchor="${o.anchor ?? 'middle'}" dominant-baseline="central" pointer-events="none">${esc(s)}</text>`;
+  const rect = (x, y, w, h, fill, stroke, extra = '') =>
+    `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${fill}"${stroke ? ` stroke="${stroke}" stroke-width="1"` : ''} ${extra}/>`;
+
+  function hexPoints(cx, cy, r) {
+    const pts = [];
+    for (let k = 0; k < 6; k++) {
+      const a = ((-90 + 60 * k) * Math.PI) / 180;
+      pts.push(`${(cx + r * Math.cos(a)).toFixed(1)},${(cy + r * Math.sin(a)).toFixed(1)}`);
+    }
+    return pts.join(' ');
+  }
+
+  function chrome() {
+    let s = rect(0, 0, 1280, 720, C.page);
+    s += rect(0, 0, 240, 720, C.panel) + rect(239, 0, 1, 720, C.edge);
+    s += txt(120, 40, 'Age of', { size: 26 }) + txt(120, 72, 'Deckbuilder', { size: 26 });
+    s += rect(24, 112, 192, 44, C.accent) + txt(120, 134, 'Campaign');
+    s += rect(24, 168, 192, 44, C.well) + rect(24, 168, 192, 2, C.edge) + rect(24, 168, 2, 44, C.edge)
+      + rect(24, 210, 192, 2, C.wellLight) + rect(214, 168, 2, 44, C.wellLight) + txt(121, 191, 'Chronicle');
+    s += rect(240, 0, 1040, 48, C.panel) + rect(240, 47, 1040, 1, C.edge);
+    s += `<polygon points="272,16 280,24 272,32 264,24" fill="${C.accent}" stroke="${C.ink}" stroke-width="1"/>`;
+    s += txt(290, 24, 'Influence', { anchor: 'start', size: 16 }) + txt(372, 24, '3', { anchor: 'start', size: 16 });
+    s += rect(1172, 8, 84, 32, C.accent) + txt(1214, 24, 'Menu', { size: 16 });
+    return s;
+  }
+
+  const dim = (chosen) => (state.mark === 'raised' && !chosen ? ' opacity="0.5"' : '');
+  const edgeOf = (chosen, quiet) =>
+    chosen ? (state.mark === 'ring' ? [C.accent, 3] : [C.pale, 2]) : [quiet, 1];
+
+  function arrow(x, y, w, h, size) {
+    const shown = state.unreached === 'hidden' ? Math.min(state.reached, state.ages) : state.ages;
+    const notch = h * 0.4;
+    const each = (w - notch) / shown;
+    let s = '';
+    const order = [...Array(shown).keys()].sort((a, b) => (a === state.age) - (b === state.age));
+    for (const i of order) {
+      const reached = i < state.reached;
+      const chosen = reached && i === state.age;
+      const grow = chosen && state.mark === 'raised' ? h * 0.14 : 0;
+      const x0 = x + i * each, x1 = x0 + each, top = y - grow, bottom = y + h + grow, mid = y + h / 2;
+      const pts = [[x0, top], [x1, top], [x1 + notch, mid], [x1, bottom], [x0, bottom]];
+      if (i > 0) pts.push([x0 + notch, mid]);
+      const [stroke, width] = edgeOf(chosen, C.page);
+      s += `<g${reached ? ` data-pick="age:${i}"` : ''}${reached ? dim(chosen) : ''}>`;
+      s += `<polygon points="${pts.map((p) => p.join(',')).join(' ')}" fill="${reached ? AGES[i].ground : C.mystery}" stroke="${stroke}" stroke-width="${chosen ? width : 2}"/>`;
+      s += txt(x0 + each / 2 + notch / 2, mid, reached ? AGES[i].name : '???', { size, fill: reached ? C.pale : C.mysteryInk });
+      s += '</g>';
+    }
+    return s;
+  }
+
+  function region(i, cx, cy, scale, ink) {
+    const chosen = i === state.region;
+    const k = scale * (chosen && state.mark === 'raised' ? 1.15 : 1);
+    const { name, hexes } = REGIONS[i];
+    const [stroke, width] = edgeOf(chosen, C.ink);
+    let s = `<g data-pick="region:${i}"${dim(chosen)}>`;
+    if (state.hex === 'single') {
+      s += `<polygon points="${hexPoints(cx, cy, 52 * k)}" fill="${T[hexes[0]]}" stroke="${stroke}" stroke-width="${width}"/>`;
+    } else {
+      const r = 21 * k, d = Math.sqrt(3) * r;
+      s += `<polygon points="${hexPoints(cx, cy, r)}" fill="${T[hexes[0]]}" stroke="${stroke}" stroke-width="${width}"/>`;
+      for (let n = 0; n < 6; n++) {
+        const a = (60 * n * Math.PI) / 180;
+        s += `<polygon points="${hexPoints(cx + d * Math.cos(a), cy + d * Math.sin(a), r)}" fill="${T[hexes[n + 1]]}" stroke="${stroke}" stroke-width="${width}"/>`;
+      }
+    }
+    s += txt(cx, cy + 62 * scale + 18, name, { size: scale < 1 ? 14 : 18, fill: ink });
+    return s + '</g>';
+  }
+
+  function deck(i, x, y, scale, ink) {
+    const chosen = i === state.civ;
+    const w = 100 * scale, h = 140 * scale;
+    const lift = chosen && state.mark === 'raised' ? 10 * scale : 0;
+    const [stroke, width] = edgeOf(chosen, C.cardEdge);
+    let s = `<g data-pick="civ:${i}"${dim(chosen)}>`;
+    for (let b = 3; b >= 1; b--) {
+      s += `<rect x="${x + b * 5 * scale}" y="${y + b * 5 * scale}" width="${w}" height="${h}" fill="${C.cardBack}" stroke="${C.cardEdge}" stroke-width="1"/>`;
+    }
+    s += `<rect x="${x}" y="${y - lift}" width="${w}" height="${h}" fill="${C.panel}" stroke="${stroke}" stroke-width="${width}"/>`;
+    s += txt(x + w / 2, y - lift + 16 * scale, 'Settlement', { size: Math.max(9, 15 * scale) });
+    s += `<rect x="${x + 10 * scale}" y="${y - lift + 30 * scale}" width="${w - 20 * scale}" height="${60 * scale}" fill="${C.art}" stroke="${C.artEdge}" stroke-width="1"/>`;
+    s += `<polygon points="${hexPoints(x + w / 2, y - lift + 60 * scale, 20 * scale)}" fill="#cfc6b4" stroke="${C.ink}" stroke-width="1"/>`;
+    s += txt(x + w / 2, y - lift + 118 * scale, 'Settle', { size: Math.max(9, 11 * scale), weight: 400, fill: '#4a5058' });
+    s += txt(x + w / 2, y + h + 15 * scale + 14, CIVS[i].name, { size: scale < 1 ? 14 : 18, fill: scale < 1 ? C.ink : C.pale });
+    s += txt(x + w / 2, y + h + 15 * scale + (scale < 1 ? 30 : 36), CIVS[i].counts, { size: scale < 1 ? 12 : 14, weight: 400, fill: ink });
+    return s + '</g>';
+  }
+
+  function buttons(x, y, w) {
+    let s = '';
+    if (state.progress === 'yes') {
+      s += rect(x, y, w, 88, C.accent) + txt(x + w / 2, y + 22, 'Continue')
+        + txt(x + w / 2, y + 48, 'Turn 7', { size: 16 }) + txt(x + w / 2, y + 68, '✓ Settlement', { size: 16 });
+      y += 88 + 24;
+    } else {
+      s += rect(x, y, w, 44, C.mystery) + txt(x + w / 2, y + 22, 'Continue', { fill: C.mysteryInk });
+      y += 44 + 24;
+    }
+    s += rect(x, y, w, 44, C.accent) + txt(x + w / 2, y + 22, 'Launch');
+    return s;
+  }
+
+  function buttonsHead(x, y, w) {
+    if (state.progress === 'yes') {
+      return rect(x, y, w, 88, C.accent) + txt(x + w / 2, y + 22, 'Continue')
+        + txt(x + w / 2, y + 48, 'Turn 7', { size: 16 }) + txt(x + w / 2, y + 68, '✓ Settlement', { size: 16 });
+    }
+    return rect(x, y, w, 44, C.mystery) + txt(x + w / 2, y + 22, 'Continue', { fill: C.mysteryInk });
+  }
+
+  function bands() {
+    const left = 264, right = 1256;
+    const label = (y, word) => txt(left, y, word, { anchor: 'start', fill: C.pale });
+    let s = label(84, 'Age') + arrow(left, 110, right - left, 64, 18);
+    s += label(222, 'Region');
+    for (let i = 0; i < state.regions; i++) s += region(i, left + 70 + i * 170, 310, 1, C.pale);
+    s += label(450, 'Civilization');
+    for (let i = 0; i < state.civs; i++) s += deck(i, left + 30 + i * 190, 476, 1, C.faint);
+    const tall = (state.progress === 'yes' ? 88 : 44) + 24 + 44;
+    s += buttons(right - 300, 696 - tall, 300);
+    return s;
+  }
+
+  function panel() {
+    const width = 700, x = 240 + (1040 - width) / 2, left = x + 30, right = x + width - 30;
+    const cont = (state.progress === 'yes' ? 88 : 44) + 24;
+    const height = 30 + 30 + 24 + cont + 80 + 130 + 150 + 20 + 44 + 30;
+    const top = 48 + Math.round((672 - height) / 2);
+    let s = rect(x, top, width, height, C.panel, C.edge);
+    s += txt(x + width / 2, top + 45, 'Launch a chronicle', { size: 26 });
+    let y = top + 84;
+    s += buttonsHead(left, y, width - 60);
+    y += cont;
+    const label = (at, word) => txt(left, at, word, { anchor: 'start' });
+    s += label(y + 40, 'Age') + arrow(right - 500, y + 18, 500, 44, 14);
+    y += 80;
+    s += label(y + 55, 'Region');
+    for (let i = 0; i < state.regions; i++) s += region(i, right - 45 - (state.regions - 1 - i) * 100, y + 50, 0.55, C.ink);
+    y += 130;
+    s += label(y + 55, 'Civilization');
+    for (let i = 0; i < state.civs; i++) s += deck(i, right - 75 - (state.civs - 1 - i) * 150, y + 8, 0.6, '#4a5058');
+    y += 150 + 20;
+    s += rect(left, y, width - 60, 44, C.accent) + txt(x + width / 2, y + 22, 'Launch');
+    return s;
+  }
+
+  function settle() {
+    state.reached = Math.min(state.reached, state.ages);
+    state.age = Math.min(state.age, state.reached - 1);
+    state.region = Math.min(state.region, state.regions - 1);
+    state.civ = Math.min(state.civ, state.civs - 1);
+  }
+
+  function draw() {
+    settle();
+    document.getElementById('stage').innerHTML =
+      `<g font-family='system-ui, "Segoe UI", sans-serif'>${chrome()}${state.layout === 'bands' ? bands() : panel()}</g>`;
+    for (const button of document.querySelectorAll('#controls button')) {
+      const value = button.dataset.value;
+      button.setAttribute('aria-pressed', String(String(state[button.dataset.key]) === value));
+      if (button.dataset.key === 'reached') button.hidden = Number(value) > state.ages;
+    }
+  }
+
+  const controls = document.getElementById('controls');
+  controls.innerHTML = CONTROLS.map(({ key, legend, options }) =>
+    `<fieldset><legend>${legend}</legend><div class="seg">${options.map(([value, word, best]) =>
+      `<button type="button" id="c-${key}-${value}" data-key="${key}" data-value="${value}">${word}${best ? ' <small>· recommended</small>' : ''}</button>`).join('')}</div></fieldset>`).join('');
+
+  controls.addEventListener('click', (event) => {
+    const button = event.target.closest('button');
+    if (!button) return;
+    const { key, value } = button.dataset;
+    const before = state.reached;
+    state[key] = /^\d+$/.test(value) ? Number(value) : value;
+    // The age is given by the campaign: a new furthest age is the one chosen.
+    if (key === 'reached' && state.reached !== before) state.age = state.reached - 1;
+    draw();
+  });
+
+  document.getElementById('stage').addEventListener('click', (event) => {
+    const picked = event.target.closest('[data-pick]');
+    if (!picked) return;
+    const [row, index] = picked.dataset.pick.split(':');
+    state[row] = Number(index);
+    draw();
+  });
+
+  draw();
+})();
+</script>

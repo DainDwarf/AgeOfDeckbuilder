@@ -6,10 +6,13 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Rungs
 
-- **The launch screen** — age, region and civilization, replacing the launch page; no seed is chosen, every launch drawing a fresh one.
 - **The collection screen** — the collection with the copies owned, the deck and its settle section edited from it, the city section's card shown at the head of the settle section, a copy bought for influence.
 - **The Stone Age** — the age page and its content, the age the Nomadic victory unlocks: its settle, land, units, cards and buildings, events, capstone and camps, and its achievements with the technologies they unlock, cards and settle cards among them; with it the achievement reading, a condition read on the chronicle after every change and recorded in it, folded into the campaign's seam once done, and the warning a launch over a chronicle with achievements reached raises, since an abandoned chronicle pays nothing.
 - **Pin an achievement** — one achievement pinned on the campaign screen shows on the chronicle screen as a ledger: its goal in words, a count against its need where it has one, a check mark once reached, a cross mark once failed.
 - **The headless simulator** — a consumer of the rules that runs only when asked and reports numbers, not diagnoses, tuned across the two ages; the reachability cache and the end of turn's cost per `apply` are looked at when it is made.
 
 ## Lines
+
+- **The launch screen chooses no seed** — the launch page is the launch screen by name in the docs, the code and the specs; it holds no seed slot and hears no key but the back key, every Launch drawing a fresh seed; `npm run check`, `npm test`, `npm run lint` and `e2e/boot.spec.ts` pass. Doc-impact: `docs/INTERFACE.md`. [board/launch-screen-no-seed.md](board/launch-screen-no-seed.md)
+- **The launch screen draws its choices** — the age is chosen on a time arrow, the region among clusters of hexagons, the civilization among piles of cards, the chosen one larger and the others dimmed; the screen opens on the furthest age reached; Continue always stands, greyed while the save holds no chronicle; `npm run check`, `npm test`, `npm run lint` and `e2e/continue.spec.ts` pass, and the `visual-check` finds nothing broken. Doc-impact: `docs/INTERFACE.md`, `docs/META.md`. [board/launch-screen-choices.md](board/launch-screen-choices.md)
+- **The city card on the launch screen answers the presses** — the city section's card on a civilization's pile answers the right click, shown large, and the rest on its names, as a card face does on every other screen.
