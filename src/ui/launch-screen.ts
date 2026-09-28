@@ -299,10 +299,7 @@ function pilesOf(
           large.named(named);
           return;
         }
-        const local = face.getLocalPoint(at.x, at.y);
-        if (Math.abs(local.x) <= PILE_WIDTH / 2 && local.y <= 0 && local.y >= -height) {
-          large.show(shown);
-        }
+        if (card.cardAt(at.x, at.y)) large.show(shown);
       },
       'right',
     );

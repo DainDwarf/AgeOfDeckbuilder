@@ -119,6 +119,8 @@ export type CardFace = {
   spotOf(name: Name): Spot;
   /** Whether the kind label lies under a point of the surface the face is drawn on. */
   kindAt(x: number, y: number): boolean;
+  /** Whether the card lies under a point of the surface the face is drawn on. */
+  cardAt(x: number, y: number): boolean;
   /** The kind's tooltip raised on the bubble, beside the label as it stands when the bubble is painted. */
   explainKind(tooltip: Tooltip): void;
 };
@@ -330,6 +332,10 @@ export function createCardFace(
       return (
         Math.abs(local.x) <= kind.width / 2 && Math.abs(local.y - kindMiddle) <= kind.height / 2
       );
+    },
+    cardAt(x: number, y: number): boolean {
+      const local = root.getLocalPoint(x, y);
+      return Math.abs(local.x) <= width / 2 && local.y <= 0 && local.y >= -height;
     },
     explainKind(tooltip: Tooltip): void {
       tooltip.beside(text(`tooltip.${face.kind}`), () =>
