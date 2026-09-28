@@ -19,7 +19,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **deck** | A civilization's cards: its settle section and the cards the draw pile cycles. | loadout |
 | **settle section** | The part of the deck that holds its settle cards; with the city section's card, the hand of the settle phase. | opening hand, starting hand, sideboard, reserve |
 | **city section** | The part of a civilization that holds the city — its building, its sight, its idle population — and the card that settles it. | city slot, capital card |
-| **technology** | What an achievement teaches the campaign for good: new cards, better buildings, better units. | tech, advancement, upgrade, research |
+| **technology** | One step of the campaign, learned for good by reaching its achievement; it unlocks new cards, better buildings, better units. | tech, advancement, upgrade, research |
 | **learned technology** | A technology whose achievement has paid. | unlocked technology, researched |
 | **available technology** | A technology not learned whose every needed technology is learned. | within reach, reachable |
 | **unknown technology** | A technology that needs one not learned; the player is told only that it is there. | mystery, locked, secret |
