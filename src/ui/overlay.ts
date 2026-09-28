@@ -36,6 +36,7 @@ import { answerFace, capstoneFace, cardFace, cardFaceAtStart, type Face } from '
 import { isWheelNotch } from './keys';
 import { css, LOOK } from './look';
 import { campLore, capstoneLore, eventLore, type Raising } from './lore';
+import { BUTTON_HEIGHT, createButton } from './menu';
 import { raiseMenu } from './menu-scene';
 import type { OverlayScene } from './overlay-scene';
 import { createRefusalNote, refused } from './refusal-note';
@@ -186,6 +187,12 @@ type Inspection = { readonly stands: 'inspection'; readonly over: Offering | und
  */
 type Carried = Offering | Inspection | { readonly stands: 'ending' };
 
+/** The ending screen raised, and its button. */
+type Raised = {
+  readonly screen: Phaser.GameObjects.Container;
+  readonly button: Phaser.GameObjects.Rectangle;
+};
+
 /** Where a drag of the grid was pressed, what the grid stood at, and where the pointer has been. */
 type Scroll = {
   readonly y: number;
@@ -194,9 +201,9 @@ type Scroll = {
 };
 
 /**
- * The scrim and what stands on it, drawn on the overlay scene: the scrim covers the screen beneath
- * whenever anything stands, so nothing there answers a pointer, and `covering` is told as it goes up
- * and comes down. The ending screen reads what `paid` answers once the chronicle has ended.
+ * The scrim and what stands on it, on the overlay scene: nothing beneath answers a pointer while
+ * anything stands, and `covering` is told as the scrim goes up and comes down. The ending screen
+ * reads what `paid` answers once the chronicle has ended, and its button leaves through `leave`.
  */
 export function createOverlay(
   scene: OverlayScene,
@@ -204,6 +211,7 @@ export function createOverlay(
   covering: (covered: boolean) => void,
   take: (at: number) => void,
   paid: () => Payment | undefined,
+  leave: () => void,
 ): Overlay {
   const on = scene.strata.carried;
   const scrim = scene.add
@@ -235,8 +243,8 @@ export function createOverlay(
   let standingDeal: Dealing | undefined;
   /** Whether the first render has opened the screen on the capstone's window. */
   let opened = false;
-  /** The ending screen still coming up; a render owns the rise and takes it down. */
-  let rising: Phaser.GameObjects.Container | undefined;
+  /** The ending screen still coming up, its button dead until `risen`; a render may cut the rise short. */
+  let rising: Raised | undefined;
 
   /** One thing raised on the scrim: it stands on the `carried` stratum and goes at the next wipe. */
   const carries = <T extends Phaser.GameObjects.GameObject>(object: T): T => {
@@ -252,6 +260,7 @@ export function createOverlay(
     note.hide();
     for (const object of shown) object.destroy();
     shown = [];
+    rising = undefined;
     grid = undefined;
     scrolling = undefined;
     fling = 0;
@@ -688,10 +697,10 @@ export function createOverlay(
   };
 
   /**
-   * The chronicle ended, on the screen that says so: the outcome, and under it the ledger of what it
-   * paid, one block centred on the screen.
+   * The chronicle ended, on the screen that says so: the outcome, under it the ledger of what it
+   * paid and under that its button, one block centred on the screen.
    */
-  const showEnding = (on: Ended): Phaser.GameObjects.Container => {
+  const showEnding = (on: Ended): Raised => {
     wipe();
     cover();
     carried = { stands: 'ending' };
@@ -759,35 +768,57 @@ export function createOverlay(
         .setName('ending-total'),
     );
 
-    const lowered = (DESIGN_HEIGHT - (y + total.height / 2)) / 2;
+    const buttonY = y + total.height / 2 + gap + BUTTON_HEIGHT / 2;
+    const button = createButton(
+      scene,
+      DESIGN_WIDTH / 2,
+      buttonY,
+      'end-chronicle',
+      text('ending.end-chronicle'),
+      leave,
+    );
+    button.face.disableInteractive();
+    parts.push(button.face, button.label);
+
+    const lowered = (DESIGN_HEIGHT - (buttonY + BUTTON_HEIGHT / 2)) / 2;
     for (const part of parts) part.y += lowered;
-    return carries(scene.add.container(0, 0, parts).setName(on.ending.outcome));
+    const screen = carries(scene.add.container(0, 0, parts).setName(on.ending.outcome));
+    return { screen, button: button.face };
+  };
+
+  /** The rise over, however it ended: the button answers from here. */
+  const risen = (): void => {
+    const raised = rising;
+    if (raised === undefined) return;
+    rising = undefined;
+    raised.button.setInteractive();
   };
 
   /** The ending as it lands: the scrim and the screen rise together, out of nothing and a little low. */
   const raiseEnding = (on: Ended): Promise<void> => {
-    const screen = showEnding(on).setAlpha(0).setY(12);
-    rising = screen;
+    const raised = showEnding(on);
+    raised.screen.setAlpha(0).setY(12);
+    rising = raised;
     scrim.setAlpha(0);
 
     const climb = { duration: 1200, ease: EASE };
     return Promise.all([
       ended(scene.tweens.add({ targets: scrim, alpha: LOOK.scrim.strength, ...climb })),
-      ended(scene.tweens.add({ targets: screen, alpha: 1, y: 0, ...climb })),
+      ended(scene.tweens.add({ targets: raised.screen, alpha: 1, y: 0, ...climb })),
     ]).then(() => {
-      if (rising === screen) rising = undefined;
+      if (rising === raised) risen();
     });
   };
 
   /** The rise cut short and stood up where it was going: a render leaves the screen full. */
   const stand = (): void => {
-    const screen = rising;
-    if (screen === undefined) return;
-    rising = undefined;
+    const raised = rising;
+    if (raised === undefined) return;
     stopMotion(scene, scrim);
-    stopMotion(scene, screen);
+    stopMotion(scene, raised.screen);
     scrim.setAlpha(LOOK.scrim.strength);
-    screen.setAlpha(1).setY(0);
+    raised.screen.setAlpha(1).setY(0);
+    risen();
   };
 
   /** What the ending screen reads of the chronicle that has ended, and what it paid. */

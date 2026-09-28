@@ -26,7 +26,7 @@ import {
   watch,
 } from './chronicle-screen';
 
-test('the play that ends the chronicle pays it into the campaign: the ending screen reads what it paid, the save holds the campaign paid into and no chronicle, and the campaign screen reads the influence paid', async ({
+test('the play that ends the chronicle pays it into the campaign: the ending screen reads what it paid, the save holds the campaign paid into and no chronicle, and the campaign screen its End chronicle opens reads the influence paid', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -66,10 +66,9 @@ test('the play that ends the chronicle pays it into the campaign: the ending scr
     dropped: [],
   });
 
-  await click(page, 'menu-button');
-  await expect.poll(() => standing(page, 'menu')).toBe(true);
+  expect(await textOf(page, 'end-chronicle-label')).toBe(text('ending.end-chronicle'));
   await rested(page);
-  await click(page, 'menu-campaign');
+  await click(page, 'end-chronicle');
   await campaignShown(page);
   expect(await textOf(page, 'reading-influence-value')).toBe(String(paid.campaign.influence));
   await chronicleButton(page);

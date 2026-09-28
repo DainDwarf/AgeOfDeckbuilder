@@ -13,5 +13,3 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 - **The headless simulator** — a consumer of the rules that runs only when asked and reports numbers, not diagnoses, tuned across the two ages; the reachability cache and the end of turn's cost per `apply` are looked at when it is made.
 
 ## Lines
-
-- **End chronicle on end screen** — the ending screen carries an **End chronicle** button under its ledger, part of the centred block, which opens the campaign screen once the screen has risen; `e2e/ending.spec.ts` leaves the ending screen through it and passes. Doc-impact: `docs/CHRONICLE-SCREEN.md`. [board/end-chronicle-on-end-screen.md](board/end-chronicle-on-end-screen.md)

@@ -191,6 +191,7 @@ const TEXT = {
   'victory.title': 'Victory',
   'victory.first-shelter': 'The shelter was built. Nomadic Age is over.',
   'ending.reached': '✓ {achievement}',
+  'ending.end-chronicle': 'End chronicle',
   'navbar.title': 'Age of\nDeckbuilder',
   'navbar.campaign': 'Campaign',
   'navbar.chronicle': 'Chronicle',

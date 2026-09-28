@@ -57,7 +57,7 @@ function listed(scene: Phaser.Scene, which: MenuWindow): readonly MenuPress[] {
 const WIDTH = 480;
 const PADDING = 30;
 const BUTTON_WIDTH = 320;
-const BUTTON_HEIGHT = 44;
+export const BUTTON_HEIGHT = 44;
 const BUTTON_GAP = 12;
 
 /** One control's row: its two slots, and how far the next row stands below it. */
@@ -112,6 +112,25 @@ function pressable(
   onClick(face, pressed);
   const label = addText(scene, at.x, at.y, '', style).setOrigin(0.5).setName(`${name}-label`);
   return { face, label };
+}
+
+/** A button of a window, centred on `x` and `y`, reading `reads`. */
+export function createButton(
+  scene: Phaser.Scene,
+  x: number,
+  y: number,
+  name: string,
+  reads: string,
+  pressed: () => void,
+): { face: Phaser.GameObjects.Rectangle; label: Phaser.GameObjects.Text } {
+  const { face, label } = pressable(
+    scene,
+    { x, y, width: BUTTON_WIDTH, height: BUTTON_HEIGHT },
+    name,
+    LABEL_STYLE,
+    pressed,
+  );
+  return { face, label: label.setText(reads) };
 }
 
 /** How far below the title a window's own content reaches, the padding above it included. */
@@ -253,19 +272,15 @@ export function createWindow(scene: Phaser.Scene, which: MenuWindow, on: Presses
 
   const root = scene.add.container(0, 0, [box, title]).setName(which);
   buttons.forEach((press, index) => {
-    const { face, label } = pressable(
+    const { face, label } = createButton(
       scene,
-      {
-        x: middle,
-        y: body + index * (BUTTON_HEIGHT + BUTTON_GAP) + BUTTON_HEIGHT / 2,
-        width: BUTTON_WIDTH,
-        height: BUTTON_HEIGHT,
-      },
+      middle,
+      body + index * (BUTTON_HEIGHT + BUTTON_GAP) + BUTTON_HEIGHT / 2,
       `${which}-${press}`,
-      LABEL_STYLE,
+      text(`menu.${press}`),
       () => on.press(press),
     );
-    root.add([face, label.setText(text(`menu.${press}`))]);
+    root.add([face, label]);
   });
 
   const binds = which === 'controls' ? layControls(scene, root, body, on.back) : () => false;
@@ -297,19 +312,14 @@ export function createRefusedSaveWindow(
   title.setPosition(middle, top + PADDING);
   line.setPosition(middle, top + PADDING + title.height + PADDING);
 
-  const { face, label } = pressable(
+  const { face, label } = createButton(
     scene,
-    {
-      x: middle,
-      y: top + height - PADDING - BUTTON_HEIGHT / 2,
-      width: BUTTON_WIDTH,
-      height: BUTTON_HEIGHT,
-    },
+    middle,
+    top + height - PADDING - BUTTON_HEIGHT / 2,
     'refused-save-back',
-    LABEL_STYLE,
+    text('control.back'),
     back,
   );
-  label.setText(text('control.back'));
   return scene.add.container(0, 0, [box, title, line, face, label]).setName('refused-save');
 }
 

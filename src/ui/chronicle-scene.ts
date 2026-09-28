@@ -372,6 +372,9 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
         void playOut({ type: 'take', at });
       },
       () => this.payment,
+      () => {
+        this.leave();
+      },
     );
 
     const endTurn = this.addEndTurn(ui.endTurn, () => {
