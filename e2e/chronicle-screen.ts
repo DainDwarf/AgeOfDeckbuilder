@@ -735,7 +735,7 @@ export function bareTile(chronicle: Chronicle): TileCoords {
   return { q: found.q, r: found.r };
 }
 
-/** The Nomadic civilization with its cards twice over and its settle section as it is: its piles overflow a browse's frame. */
+/** The first civilization with its cards twice over and its settle section as it is: its piles overflow a browse's frame. */
 export function doubledCivilization(): Civilization {
   const civilization = civilizationOf(CATALOGUE, firstsOf().civilization);
   return { ...civilization, cards: [...civilization.cards, ...civilization.cards] };

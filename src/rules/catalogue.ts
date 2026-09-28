@@ -613,14 +613,18 @@ function firstListed(
 }
 
 /** A section of a civilization, by the name the civilization lists it under. */
-export type Section = keyof Civilization;
+export type CivilizationSection = keyof Civilization;
 
 /**
  * What keeps a card out of a section of a civilization, and nothing where it fits there: none holds
  * a hazard or an age's camp's reward, the cards no settle card, and the city and the settle section
  * nothing else. A card the catalogue does not hold is refused.
  */
-export function misfitIn(catalogue: Catalogue, section: Section, card: CardId): string | undefined {
+export function misfitIn(
+  catalogue: Catalogue,
+  section: CivilizationSection,
+  card: CardId,
+): string | undefined {
   const { kind } = cardOf(catalogue, card);
   if (kind === 'hazard') return `holds the hazard ${card}`;
   for (const [age, { camp }] of Object.entries(catalogue.ages)) {

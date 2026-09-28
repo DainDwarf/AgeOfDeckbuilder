@@ -377,7 +377,7 @@ test('the refresh instant is refused on a unit whose move points are full, its a
   expect(outcome(apply(CATALOGUE, city, aimedAtUnit(CITY)))).toBe(city);
 });
 
-test('a chronicle begun on a civilization of the catalogue holds its deck’s cards and opens turn 1 on a full hand of them', () => {
+test('a chronicle begun on a civilization of the catalogue holds its cards and opens turn 1 on a full hand of them', () => {
   const civilization = civilizationOf(CATALOGUE, CIVILIZATION_ID);
   const chronicle = settledLaunch(CATALOGUE, AGE, REGION, 2026, civilization, []);
 
