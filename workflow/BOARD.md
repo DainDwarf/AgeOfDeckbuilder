@@ -14,6 +14,5 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The ending pays** — a chronicle is launched on the civilization of the campaign the launch page's row names and its save names that civilization; the command that ends a chronicle writes the save once, holding the campaign it paid into and no chronicle; the ending screen reads a ledger of the achievements reached and the influence paid under the outcome, the whole block centred; `e2e/ending.spec.ts` passes. Doc-impact: `docs/META.md`, `docs/CHRONICLE-SCREEN.md`, `docs/INTERFACE.md`. [board/the-ending-pays.md](board/the-ending-pays.md)
 - **Conditions read on the charted chronicle** — the capstone's and the achievements' conditions are read before the charting, so a condition on what the chronicle has charted reads one command late; swap the two passes.
 - **Warn when the game cannot save** — the game should warn the user when it cannot save, as when the browser's storage refuses a write.

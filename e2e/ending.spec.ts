@@ -1,0 +1,88 @@
+import { expect, type Page, test } from '@playwright/test';
+import type Phaser from 'phaser';
+import { CATALOGUE } from '../src/content/catalogue';
+import { newCampaign, paidInto } from '../src/rules/campaign';
+import { achievementOf } from '../src/rules/catalogue';
+import { apply, outcome } from '../src/rules/chronicle';
+import { tileKey } from '../src/rules/map';
+import { readSave } from '../src/rules/save';
+import { SAVE_ENTRY } from '../src/ui/save-entry';
+import { technologyName, text } from '../src/ui/text';
+import {
+  aimed,
+  budget,
+  campaignShown,
+  chronicleButton,
+  click,
+  dragOut,
+  firstsOf,
+  idsOf,
+  landed,
+  openSaved,
+  playedOut,
+  rested,
+  SHELTER,
+  standing,
+  victoryShown,
+  watch,
+} from './chronicle-screen';
+
+/** What the named text reads, and nothing where none of that name stands. */
+function reads(page: Page, name: string): Promise<string | undefined> {
+  return page.evaluate(
+    (target) => (window.named?.(target)?.object as Phaser.GameObjects.Text | undefined)?.text,
+    name,
+  );
+}
+
+test('the play that ends the chronicle pays it into the campaign: the ending screen reads what it paid, the save holds the campaign paid into and no chronicle, and the campaign screen reads the influence paid', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  test.setTimeout(budget(1));
+  const { chronicle, tile } = landed();
+  const index = idsOf(chronicle.hand).indexOf(SHELTER);
+  const won = outcome(apply(CATALOGUE, chronicle, { type: 'play', index, aim: 'tile', tile }));
+  const paid = paidInto(CATALOGUE, newCampaign(CATALOGUE, firstsOf().civilization), won);
+
+  await openSaved(page, chronicle);
+  await dragOut(page, index);
+  await aimed(page);
+  await click(page, `tile-${tileKey(tile)}`);
+  await playedOut(page);
+  await expect.poll(() => victoryShown(page)).toBe(true);
+
+  expect(paid.achievements.length).toBeGreaterThan(0);
+  expect(paid.influence).toBeGreaterThan(0);
+  for (const [at, id] of paid.achievements.entries()) {
+    const { technology, influence } = achievementOf(CATALOGUE, won.age, id);
+    expect(await reads(page, `ending-row-${at}`)).toBe(
+      text('ending.reached', { achievement: technologyName(technology) }),
+    );
+    expect(await reads(page, `ending-row-${at}-influence`)).toBe(
+      influence > 0 ? String(influence) : undefined,
+    );
+  }
+  expect(await reads(page, `ending-row-${paid.achievements.length}`)).toBeUndefined();
+  expect(await reads(page, 'ending-total-label')).toBe(text('label.influence'));
+  expect(await reads(page, 'ending-total')).toBe(String(paid.influence));
+
+  const saved = await page.evaluate((entry) => window.localStorage.getItem(entry), SAVE_ENTRY);
+  if (saved === null) throw new Error('the game keeps no save');
+  expect(readSave(CATALOGUE, saved)).toEqual({
+    campaign: paid.campaign,
+    chronicle: undefined,
+    dropped: [],
+  });
+
+  await click(page, 'menu-button');
+  await expect.poll(() => standing(page, 'menu')).toBe(true);
+  await rested(page);
+  await click(page, 'menu-campaign');
+  await campaignShown(page);
+  expect(await reads(page, 'reading-influence-value')).toBe(String(paid.campaign.influence));
+  await chronicleButton(page);
+  expect(await standing(page, 'launch-continue')).toBe(false);
+
+  expect(problems).toEqual([]);
+});

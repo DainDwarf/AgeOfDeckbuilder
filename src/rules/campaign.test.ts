@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { type CampaignCard, newCampaign, paidInto } from './campaign';
+import { type CampaignCard, civilizationIn, newCampaign, paidInto } from './campaign';
 import { achievementOf, technologyOf } from './catalogue';
 import { apply, outcome } from './chronicle';
 import {
@@ -20,30 +20,33 @@ function numbersOf(cards: readonly CampaignCard[]): number[] {
   return cards.map(({ number }) => number);
 }
 
-test('a new campaign unlocks nothing and holds no influence, and owns a card of its own for each card its civilization lists, each numbered once from one', () => {
+test('a new campaign unlocks nothing and holds no influence, and owns one civilization, named as the catalogue’s, and a card of its own for each card that civilization lists, each numbered once from one', () => {
   const campaign = newCampaign(CATALOGUE, CIVILIZATION_ID);
-  const { card, ...city } = campaign.civilization.city;
+  const civilization = campaign.civilizations[CIVILIZATION_ID];
+  const { card } = civilization.city;
   const numbers = [card.number, ...numbersOf(campaign.collection)];
 
+  expect(Object.keys(campaign.civilizations)).toEqual([CIVILIZATION_ID]);
   expect(campaign.technologies).toEqual([]);
   expect(campaign.influence).toBe(0);
   expect([...numbers].sort((a, b) => a - b)).toEqual(numbers.map((_, at) => at + 1));
   expect(campaign.nextCard).toBe(numbers.length + 1);
-  expect({ ...city, card: card.id }).toEqual(CIVILIZATION.city);
   expect(numbersOf(campaign.collection)).not.toContain(card.number);
+  expect([...civilization.settle, ...civilization.cards].sort((a, b) => a - b)).toEqual(
+    numbersOf(campaign.collection).sort((a, b) => a - b),
+  );
 });
 
-test('a new campaign’s deck names every card of its collection, each in the section of the catalogue’s civilization it came from', () => {
+test('a new campaign’s civilization is launched on as the catalogue’s it was opened on: its city section, and its cards by id in the order listed', () => {
   const campaign = newCampaign(CATALOGUE, CIVILIZATION_ID);
-  const owned = new Map(campaign.collection.map(({ number, id }) => [number, id]));
-  const named = (numbers: readonly number[]): (string | undefined)[] =>
-    numbers.map((number) => owned.get(number));
 
-  expect(named(campaign.civilization.settle)).toEqual(CIVILIZATION.settle);
-  expect(named(campaign.civilization.cards)).toEqual(CIVILIZATION.cards);
-  expect(
-    [...campaign.civilization.settle, ...campaign.civilization.cards].sort((a, b) => a - b),
-  ).toEqual(numbersOf(campaign.collection).sort((a, b) => a - b));
+  expect(civilizationIn(CATALOGUE, campaign, CIVILIZATION_ID)).toEqual(CIVILIZATION);
+});
+
+test('a civilization the campaign does not hold is launched on by no chronicle', () => {
+  expect(() =>
+    civilizationIn(CATALOGUE, newCampaign(CATALOGUE, CIVILIZATION_ID), 'PH_Unheld'),
+  ).toThrow('fixture: the campaign holds no civilization named PH_Unheld');
 });
 
 test('an ended chronicle pays into the campaign each achievement it reached, in its order: the technology unlocked, the influence added, and the cards the technology unlocks entering the collection as new cards in no section of the deck', () => {
@@ -68,7 +71,7 @@ test('an ended chronicle pays into the campaign each achievement it reached, in 
     influence: opened.influence + paid.influence,
     nextCard: opened.nextCard + unlocks.length,
     collection: [...opened.collection, ...paid.entered],
-    civilization: opened.civilization,
+    civilizations: opened.civilizations,
   });
 });
 

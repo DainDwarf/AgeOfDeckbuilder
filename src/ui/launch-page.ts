@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { CATALOGUE } from '../content/catalogue';
-import { achievementOf, ageOf, firstAge, firstCivilization, firstRegion } from '../rules/catalogue';
+import { achievementOf, ageOf, firstAge, firstRegion } from '../rules/catalogue';
 import { type Chronicle, onSettlePhase } from '../rules/state';
 import { addText, answersPress, holdDesignSpace, onClick, UI_FONT } from './design-space';
 import { readsKeys } from './keys';
@@ -8,7 +8,7 @@ import { css, LOOK } from './look';
 import { backRaisesMenu, closeMenu } from './menu-scene';
 import { ROOM, wearNavbar } from './navbar';
 import { overlayAhead } from './overlay-scene';
-import { type Choices, type Opening, savedOpening } from './save-entry';
+import { type Choices, campaignHeld, type Opening, savedOpening } from './save-entry';
 import { type TextKey, technologyName, text } from './text';
 
 const WIDTH = 480;
@@ -61,10 +61,11 @@ export class LaunchPage extends Phaser.Scene {
     const { content } = wearNavbar(this, 'launch');
     backRaisesMenu(this);
     const age = firstAge(CATALOGUE);
+    const civilizations = Object.keys(campaignHeld().civilizations);
     let chosen: Choices = {
       age,
       region: firstRegion(CATALOGUE, age),
-      civilization: firstCivilization(CATALOGUE),
+      civilization: civilizations[0],
       seed: undefined,
     };
     let typed = '';
@@ -108,11 +109,7 @@ export class LaunchPage extends Phaser.Scene {
       const rows: { row: Row; options: readonly string[]; chosen: string }[] = [
         { row: 'age', options: Object.keys(CATALOGUE.ages), chosen: chosen.age },
         { row: 'region', options: Object.keys(regions), chosen: chosen.region },
-        {
-          row: 'civilization',
-          options: Object.keys(CATALOGUE.civilizations),
-          chosen: chosen.civilization,
-        },
+        { row: 'civilization', options: civilizations, chosen: chosen.civilization },
       ];
 
       const title = addText(this, 0, 0, text('launch.title'), TITLE_STYLE).setOrigin(0.5, 0);

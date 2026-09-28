@@ -244,18 +244,13 @@ export async function continued(page: Page): Promise<void> {
 
 /**
  * Opens the chronicle as the save the boot finds, on the first region and civilization the
- * catalogue lists, and closes the capstone's window every resumed chronicle opens under but an
- * ended one, which opens on its ending screen.
+ * catalogue lists, and closes the capstone's window every resumed chronicle opens under.
  */
 export async function openSaved(page: Page, chronicle: Chronicle): Promise<void> {
   const { region, civilization } = firstsOf();
   await readNames(page);
   await plant(page, { chronicle, region, civilization });
   await continued(page);
-  if (chronicle.ending !== undefined) {
-    await rested(page);
-    return;
-  }
   await expect.poll(() => standing(page, 'capstone')).toBe(true);
   await rested(page);
   await capstoneClosed(page);

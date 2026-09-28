@@ -2,7 +2,6 @@ import { expect, type Page, test } from '@playwright/test';
 import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
 import { civilizationOf } from '../src/rules/catalogue';
-import { apply, outcome } from '../src/rules/chronicle';
 import { tileKey } from '../src/rules/map';
 import type { Chronicle } from '../src/rules/state';
 import { text } from '../src/ui/text';
@@ -11,6 +10,7 @@ import {
   bareAimable,
   beforeTheFall,
   browse,
+  budget,
   campaignShown,
   chronicleButton,
   chronicleOf,
@@ -27,6 +27,7 @@ import {
   ringedTile,
   settledOn,
   standing,
+  stoppedTurn,
   tileOnScreen,
   watch,
 } from './chronicle-screen';
@@ -228,9 +229,10 @@ test('the menu opens over the defeat screen, and Campaign, Chronicle then Launch
   page,
 }) => {
   const problems = watch(page);
-  const fallen = outcome(apply(CATALOGUE, beforeTheFall(), { type: 'end-turn' }));
+  test.setTimeout(budget(1));
 
-  await openSaved(page, fallen);
+  await openSaved(page, beforeTheFall());
+  await stoppedTurn(page);
   await expect.poll(() => standing(page, 'defeat')).toBe(true);
   expect(await standing(page, 'capstone')).toBe(false);
 

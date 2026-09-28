@@ -190,6 +190,7 @@ const TEXT = {
   'defeat.population': "The city's population reached zero on turn {turn}.",
   'victory.title': 'Victory',
   'victory.first-shelter': 'The shelter was built. Nomadic Age is over.',
+  'ending.reached': '✓ {achievement}',
   'navbar.title': 'Age of\nDeckbuilder',
   'navbar.campaign': 'Campaign',
   'navbar.chronicle': 'Chronicle',

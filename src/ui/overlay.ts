@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
+import type { Payment } from '../rules/campaign';
 import { CARD_KINDS } from '../rules/cards';
-import { ageOf, type Catalogue, cardOf } from '../rules/catalogue';
+import { achievementOf, ageOf, type Catalogue, cardOf } from '../rules/catalogue';
 import { answerCost, answerOf, answerRefusal, offered } from '../rules/schedule';
 import type { Group, Stage } from '../rules/stages';
 import {
@@ -40,7 +41,7 @@ import type { OverlayScene } from './overlay-scene';
 import { createRefusalNote, refused } from './refusal-note';
 import { createSmallCards, type Raiser, raiserOf } from './small-card';
 import { createStack } from './stack';
-import { buildingName, cardName, eventName, text, victoryLine } from './text';
+import { buildingName, cardName, eventName, technologyName, text, victoryLine } from './text';
 import { createTooltip } from './tooltip';
 
 const TITLE_INK = css(LOOK.paleInk);
@@ -76,9 +77,8 @@ export type Overlay = {
   /** What a name names shown large, as a right click on a name shows it wherever the name stands. */
   inspectNamed(name: Name): void;
   /**
-   * Raises the capstone's window on the first render, or stands the ending screen where the chronicle
-   * opened has ended; after it, the deal window while the chronicle waits on a deal and the ending
-   * screen once it has ended, and nothing while it runs.
+   * Raises the capstone's window on the first render; after it, the deal window while the chronicle
+   * waits on a deal and the ending screen once it has ended, and nothing while it runs.
    */
   render(chronicle: Chronicle): void;
   /**
@@ -196,13 +196,14 @@ type Scroll = {
 /**
  * The scrim and what stands on it, drawn on the overlay scene: the scrim covers the screen beneath
  * whenever anything stands, so nothing there answers a pointer, and `covering` is told as it goes up
- * and comes down.
+ * and comes down. The ending screen reads what `paid` answers once the chronicle has ended.
  */
 export function createOverlay(
   scene: OverlayScene,
   catalogue: Catalogue,
   covering: (covered: boolean) => void,
   take: (at: number) => void,
+  paid: () => Payment | undefined,
 ): Overlay {
   const on = scene.strata.carried;
   const scrim = scene.add
@@ -232,7 +233,7 @@ export function createOverlay(
   let raisedOn: Ended | undefined;
   /** The deal standing, so no render raises its window twice; the take lets it go. */
   let standingDeal: Dealing | undefined;
-  /** Whether the first render has opened the screen, on the capstone's window or the ending screen. */
+  /** Whether the first render has opened the screen on the capstone's window. */
   let opened = false;
   /** The ending screen still coming up; a render owns the rise and takes it down. */
   let rising: Phaser.GameObjects.Container | undefined;
@@ -693,7 +694,10 @@ export function createOverlay(
     }
   };
 
-  /** The chronicle ended, on the screen that says so; the caller decides whether it rises or stands. */
+  /**
+   * The chronicle ended, on the screen that says so: the outcome, and under it the ledger of what it
+   * paid, one block centred on the screen.
+   */
   const showEnding = (on: Ended): Phaser.GameObjects.Container => {
     wipe();
     cover();
@@ -701,19 +705,68 @@ export function createOverlay(
     raisedOn = on;
 
     const said = says(on);
-    const title = addText(scene, DESIGN_WIDTH / 2, DESIGN_HEIGHT / 2 - 12, said.title, {
+    const reached = on.payment.achievements.map((id) => achievementOf(catalogue, on.age, id));
+    const width = 340;
+    const pitch = 34;
+    const gap = 44;
+    const ruleRoom = 0.4 * pitch;
+    const ledgerHeight = (reached.length + 1) * pitch + (reached.length > 0 ? ruleRoom : 0);
+    const middle = DESIGN_HEIGHT / 2 - (gap + ledgerHeight) / 2;
+    const style = (bold: boolean): Phaser.Types.GameObjects.Text.TextStyle => ({
+      fontFamily: UI_FONT,
+      fontSize: '22px',
+      fontStyle: bold ? 'bold' : 'normal',
+      color: TITLE_INK,
+    });
+    const title = addText(scene, DESIGN_WIDTH / 2, middle - 12, said.title, {
       fontFamily: UI_FONT,
       fontSize: '72px',
       fontStyle: 'bold',
       color: TITLE_INK,
     }).setOrigin(0.5, 1);
-    const line = addText(scene, DESIGN_WIDTH / 2, DESIGN_HEIGHT / 2 + 12, said.line, {
-      fontFamily: UI_FONT,
-      fontSize: '22px',
-      color: TITLE_INK,
-    }).setOrigin(0.5, 0);
+    const line = addText(scene, DESIGN_WIDTH / 2, middle + 12, said.line, style(false)).setOrigin(
+      0.5,
+      0,
+    );
 
-    return carries(scene.add.container(0, 0, [title, line]).setName(on.ending.outcome));
+    const left = (DESIGN_WIDTH - width) / 2;
+    const right = left + width;
+    const diamond = (x: number, y: number): Phaser.GameObjects.Rectangle =>
+      scene.add.rectangle(x, y, 10, 10, LOOK.influence).setAngle(45);
+    const parts: Phaser.GameObjects.GameObject[] = [title, line];
+    let y = line.y + line.height + gap + pitch / 2;
+    reached.forEach(({ technology, influence }, at) => {
+      const achievement = technologyName(technology);
+      parts.push(
+        addText(scene, left, y, text('ending.reached', { achievement }), style(false))
+          .setOrigin(0, 0.5)
+          .setName(`ending-row-${at}`),
+      );
+      if (influence > 0) {
+        const number = addText(scene, right, y, String(influence), style(false))
+          .setOrigin(1, 0.5)
+          .setName(`ending-row-${at}-influence`);
+        parts.push(diamond(number.x - number.width - 18, y), number);
+      }
+      y += pitch;
+    });
+    if (reached.length > 0) {
+      parts.push(
+        scene.add.rectangle(left, y - pitch / 2 + 4, width, 1, LOOK.panelEdge).setOrigin(0, 0),
+      );
+      y += ruleRoom;
+    }
+    parts.push(
+      diamond(left + 7, y),
+      addText(scene, left + 22, y, text('label.influence'), style(true))
+        .setOrigin(0, 0.5)
+        .setName('ending-total-label'),
+      addText(scene, right, y, String(on.payment.influence), style(true))
+        .setOrigin(1, 0.5)
+        .setName('ending-total'),
+    );
+
+    return carries(scene.add.container(0, 0, parts).setName(on.ending.outcome));
   };
 
   /** The ending as it lands: the scrim and the screen rise together, out of nothing and a little low. */
@@ -742,10 +795,17 @@ export function createOverlay(
     screen.setAlpha(1).setY(0);
   };
 
+  /** What the ending screen reads of the chronicle that has ended, and what it paid. */
+  const endedOf = (chronicle: Chronicle, ending: Ending): Ended => {
+    const payment = paid();
+    if (payment === undefined) throw new Error('the chronicle ended with no payment held');
+    return { ending, timeline: chronicle.timeline, age: chronicle.age, payment };
+  };
+
   /** What stands over the chronicle as it stands: its ending screen, else the deal it waits on. */
   const standAs = (chronicle: Chronicle): void => {
     if (chronicle.ending !== undefined && raisedOn === undefined)
-      void raiseEnding({ ending: chronicle.ending, timeline: chronicle.timeline });
+      void raiseEnding(endedOf(chronicle, chronicle.ending));
     else if (chronicle.deals[0] !== undefined && standingDeal === undefined)
       showDeal({ stands: 'deal', on: chronicle, deal: chronicle.deals[0], selected: undefined });
     else stand();
@@ -955,9 +1015,7 @@ export function createOverlay(
         return;
       }
       opened = true;
-      if (chronicle.ending === undefined)
-        showCapstone({ stands: 'capstone', on: chronicle, raised: 'opening' });
-      else showEnding({ ending: chronicle.ending, timeline: chronicle.timeline });
+      showCapstone({ stands: 'capstone', on: chronicle, raised: 'opening' });
     },
     play(stage: Stage): Promise<void> | undefined {
       switch (stage.kind) {
@@ -967,8 +1025,9 @@ export function createOverlay(
           if (stage.stages.length > 0) return grouped(stage);
           break;
       }
-      const { ending, timeline, deals } = stage.chronicle;
-      if (ending !== undefined && raisedOn === undefined) return raiseEnding({ ending, timeline });
+      const { ending, deals } = stage.chronicle;
+      if (ending !== undefined && raisedOn === undefined)
+        return raiseEnding(endedOf(stage.chronicle, ending));
       // Every camp captured deals before the camps after it are captured: the window waits for the
       // render the play-out ends on, which a render of this stage would pre-empt.
       return deals.length > 0 ? Promise.resolve() : undefined;
@@ -976,8 +1035,14 @@ export function createOverlay(
   };
 }
 
-/** What of an ended chronicle its ending screen reads: how it ended, and the capstone it was on. */
-type Ended = Pick<Chronicle, 'timeline'> & { readonly ending: Ending };
+/**
+ * What of an ended chronicle its ending screen reads: how it ended, the capstone it was on, and what
+ * it paid, its achievements read in its age.
+ */
+type Ended = Pick<Chronicle, 'timeline' | 'age'> & {
+  readonly ending: Ending;
+  readonly payment: Payment;
+};
 
 /** What the ending screen reads: its title, and the one line under it. */
 function says({ ending, timeline }: Ended): { title: string; line: string } {

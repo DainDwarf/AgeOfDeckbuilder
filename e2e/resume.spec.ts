@@ -2,19 +2,16 @@ import { expect, type Page, test } from '@playwright/test';
 import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
 import { newCampaign } from '../src/rules/campaign';
-import { apply, outcome } from '../src/rules/chronicle';
 import { CENTRE, tileKey } from '../src/rules/map';
 import { SAVE_ENTRY } from '../src/ui/save-entry';
 import { eventName } from '../src/ui/text';
 import {
   aimed,
-  beforeTheFall,
   budget,
   campaignShown,
   chronicleOf,
   click,
   continued,
-  defeatShown,
   dragOut,
   firstDealt,
   firstsOf,
@@ -85,24 +82,6 @@ test('a save that cannot be read is dropped, the console says why, and the campa
   ).toBe(String(newCampaign(CATALOGUE, firstsOf().civilization).influence));
   expect(await page.evaluate((entry) => window.localStorage.getItem(entry), SAVE_ENTRY)).toBe(null);
   expect(warnings).toContainEqual(expect.stringContaining('the save is not JSON'));
-
-  expect(problems).toEqual([]);
-});
-
-test('an ended chronicle reopens on its ending screen, and no capstone’s window rises', async ({
-  page,
-}) => {
-  const problems = watch(page);
-  const fallen = outcome(apply(CATALOGUE, beforeTheFall(), { type: 'end-turn' }));
-  const { region, civilization } = firstsOf();
-
-  await readNames(page);
-  await plant(page, { chronicle: fallen, region, civilization });
-  await resume(page);
-
-  await expect.poll(() => defeatShown(page)).toBe(true);
-  expect(await standing(page, 'capstone')).toBe(false);
-  expect(await chronicleOf(page)).toEqual(fallen);
 
   expect(problems).toEqual([]);
 });

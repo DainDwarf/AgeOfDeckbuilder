@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { CATALOGUE } from '../content/catalogue';
+import { civilizationIn, type Payment } from '../rules/campaign';
 import { refuses } from '../rules/cards';
-import { civilizationOf } from '../rules/catalogue';
 import {
   admitted,
   apply,
@@ -75,6 +75,8 @@ const LABEL_STYLE = {
 export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
   private choices!: Choices;
   private current!: Chronicle;
+  /** What the chronicle paid into the campaign as it ended, and nothing before it has. */
+  private payment: Payment | undefined;
   /** The play-out running on the chronicle screen as it stands, and nothing while none is. */
   private sequence: symbol | undefined;
 
@@ -84,6 +86,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
 
   init({ resumed, ...choices }: Opening): void {
     this.choices = choices;
+    this.payment = undefined;
     this.current = resumed ?? this.begin(choices.seed);
   }
 
@@ -105,21 +108,22 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
   private begin(seed: number | undefined): Chronicle {
     const { age, region, civilization } = this.choices;
     const drawn = seed ?? (Math.random() * 2 ** 32) | 0;
+    const campaign = campaignHeld();
     const chronicle = launched(
       CATALOGUE,
       age,
       region,
       drawn,
-      civilizationOf(CATALOGUE, civilization),
-      campaignHeld().technologies,
+      civilizationIn(CATALOGUE, campaign, civilization),
+      campaign.technologies,
     );
     keepChronicle(this.choices, chronicle);
     return chronicle;
   }
 
   /**
-   * The chronicle left standing in its save and the campaign screen opened: the play-out the screen
-   * was in the middle of is let go of here, its tail committing nothing.
+   * The campaign screen opened: the play-out the screen was in the middle of is let go of here, its
+   * tail committing nothing.
    */
   leave(): void {
     this.sequence = undefined;
@@ -199,7 +203,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       if (this.sequence !== undefined) return;
       const stages = apply(CATALOGUE, this.current, command);
       const after = outcome(stages);
-      if (after !== this.current) keepChronicle(this.choices, after);
+      if (after !== this.current) this.payment = keepChronicle(this.choices, after);
       const running = Symbol('play-out');
       this.sequence = running;
 
@@ -367,6 +371,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       (at) => {
         void playOut({ type: 'take', at });
       },
+      () => this.payment,
     );
 
     const endTurn = this.addEndTurn(ui.endTurn, () => {

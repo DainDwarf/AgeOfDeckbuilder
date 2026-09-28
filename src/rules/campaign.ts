@@ -1,6 +1,7 @@
 import {
   achievementOf,
   type Catalogue,
+  type Civilization,
   checkContent,
   civilizationOf,
   technologyOf,
@@ -15,8 +16,8 @@ import type { CardId, Chronicle, CitySection } from './state';
 export type CampaignCard = { readonly number: number; readonly id: CardId };
 
 /**
- * The campaign's civilization: its city section, holding its card as a card of its own outside the
- * collection, and its settle section and its cards, each naming cards of the collection by number.
+ * A civilization the campaign owns: its city section, holding its card as a card of its own outside
+ * the collection, and its settle section and its cards, each naming cards of the collection by number.
  */
 export type CampaignCivilization = {
   readonly city: Omit<CitySection, 'card'> & { readonly card: CampaignCard };
@@ -24,17 +25,18 @@ export type CampaignCivilization = {
   readonly cards: readonly number[];
 };
 
-/** The meta's progression: what the chronicles have paid into it, and the cards it owns. */
+/** The meta's progression: what the chronicles have paid into it, the cards it owns and its civilizations. */
 export type Campaign = {
   readonly technologies: readonly string[];
   readonly influence: number;
   /**
    * The number the next card dealt takes. It only counts up from one, so no number is dealt twice,
-   * the city section's card's included.
+   * a city section's card's included.
    */
   readonly nextCard: number;
   readonly collection: readonly CampaignCard[];
-  readonly civilization: CampaignCivilization;
+  /** The civilizations the campaign owns, by name; it never holds none. */
+  readonly civilizations: Readonly<Record<string, CampaignCivilization>>;
 };
 
 /**
@@ -65,9 +67,9 @@ export function dealt(
 }
 
 /**
- * A campaign opened on a civilization of the catalogue: nothing unlocked, no influence, and a card
- * of its own for each card the civilization lists, the civilization naming each in the section it
- * came from.
+ * A campaign opened on a civilization of the catalogue: nothing unlocked, no influence, and the one
+ * civilization, named as the catalogue's, with a card of its own for each card the catalogue's lists,
+ * naming each in the section it came from.
  */
 export function newCampaign(catalogue: Catalogue, civilization: string): Campaign {
   const { city, settle, cards } = civilizationOf(catalogue, civilization);
@@ -80,12 +82,43 @@ export function newCampaign(catalogue: Catalogue, civilization: string): Campaig
     influence: 0,
     nextCard: drawn.nextCard,
     collection: [...settled.cards, ...drawn.cards],
-    civilization: {
-      city: { ...city, card: cityCard.cards[0] },
-      settle: numbers(settled.cards),
-      cards: numbers(drawn.cards),
+    civilizations: {
+      [civilization]: {
+        city: { ...city, card: cityCard.cards[0] },
+        settle: numbers(settled.cards),
+        cards: numbers(drawn.cards),
+      },
     },
   };
+}
+
+/**
+ * The campaign's civilization of that name as a chronicle is launched on it: its city section, and
+ * each card of its sections by id, in the section's order. A name the campaign does not hold, and a
+ * number naming no card of the collection, are refused.
+ */
+export function civilizationIn(
+  catalogue: Catalogue,
+  campaign: Campaign,
+  name: string,
+): Civilization {
+  if (!Object.hasOwn(campaign.civilizations, name)) {
+    refuse(catalogue, `the campaign holds no civilization named ${name}`);
+  }
+  const { city, settle, cards } = campaign.civilizations[name];
+  const owned = new Map(campaign.collection.map(({ number, id }) => [number, id]));
+  const ids = (numbers: readonly number[]): CardId[] =>
+    numbers.map((number) => {
+      const id = owned.get(number);
+      if (id === undefined) {
+        refuse(
+          catalogue,
+          `the civilization ${name} names no card of the collection numbered ${number}`,
+        );
+      }
+      return id;
+    });
+  return { city: { ...city, card: city.card.id }, settle: ids(settle), cards: ids(cards) };
 }
 
 /** What an ended chronicle paid into the campaign, and the campaign it left. */

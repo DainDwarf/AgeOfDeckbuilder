@@ -1,10 +1,10 @@
 import { CATALOGUE } from '../content/catalogue';
-import { type Campaign, newCampaign } from '../rules/campaign';
+import { type Campaign, newCampaign, type Payment } from '../rules/campaign';
 import { firstCivilization } from '../rules/catalogue';
-import { type ChronicleSave, readSave, writeSave } from '../rules/save';
+import { type ChronicleSave, keptAfter, readSave, writeSave } from '../rules/save';
 import type { Chronicle } from '../rules/state';
 
-/** What a chronicle is launched on: an age, one of its regions and a civilization, and a seed or nothing for a fresh one. */
+/** What a chronicle is launched on: an age, one of its regions and a civilization of the campaign, and a seed or nothing for a fresh one. */
 export type Choices = {
   readonly age: string;
   readonly region: string;
@@ -59,12 +59,21 @@ function kept(text: string): void {
   }
 }
 
-/** The chronicle kept as the save, beside the campaign held. */
-export function keepChronicle({ region, civilization }: Choices, chronicle: Chronicle): void {
-  const { campaign } = read();
-  const progress = { chronicle, region, civilization };
-  held = { campaign, opening: openingOf(progress) };
-  kept(writeSave(CATALOGUE, campaign, progress));
+/**
+ * The chronicle kept as the save, beside the campaign held; an ended one is kept as the campaign it
+ * paid into, and the payment is answered.
+ */
+export function keepChronicle(
+  { region, civilization }: Choices,
+  chronicle: Chronicle,
+): Payment | undefined {
+  const after = keptAfter(CATALOGUE, read().campaign, { chronicle, region, civilization });
+  held = {
+    campaign: after.campaign,
+    opening: after.chronicle === undefined ? undefined : openingOf(after.chronicle),
+  };
+  kept(writeSave(CATALOGUE, after.campaign, after.chronicle));
+  return after.payment;
 }
 
 /**

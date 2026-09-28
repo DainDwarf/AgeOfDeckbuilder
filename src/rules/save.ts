@@ -4,6 +4,9 @@ import {
   type CampaignCivilization,
   dealt,
   FIRST_CARD_NUMBER,
+  newCampaign,
+  type Payment,
+  paidInto,
 } from './campaign';
 import {
   achievementOf,
@@ -46,7 +49,7 @@ import type {
 } from './state';
 import { type Faction, FIRST_UNIT_NUMBER, LEAST_STATS, type Unit, type UnitStats } from './units';
 
-/** A chronicle's save: the chronicle, and the region of its age and the civilization it was launched on, by id. */
+/** A chronicle's save: the chronicle, the region of its age it was launched on, by id, and the campaign's civilization, by name. */
 export type ChronicleSave = {
   readonly chronicle: Chronicle;
   readonly region: string;
@@ -98,11 +101,30 @@ export function readSave(catalogue: Catalogue, text: string): SaveRead {
   const campaign = kept(dropped, () => campaignOf(catalogue, field('campaign')));
   dropped.push(...(campaign?.dropped ?? []));
   const progress = field('chronicle');
+  const standing = (): Campaign =>
+    campaign?.campaign ?? newCampaign(catalogue, firstCivilization(catalogue));
   const chronicle =
     progress.raw === undefined
       ? undefined
-      : kept(dropped, () => chronicleSaveOf(catalogue, progress, field));
+      : kept(dropped, () => chronicleSaveOf(catalogue, progress, field, standing()));
   return { campaign: campaign?.campaign, chronicle, dropped };
+}
+
+/**
+ * What a save keeps after a command: the campaign beside the chronicle, or, where the chronicle has
+ * ended, the campaign it paid into, the payment, and no chronicle.
+ */
+export type Kept = {
+  readonly campaign: Campaign;
+  readonly chronicle?: ChronicleSave;
+  readonly payment?: Payment;
+};
+
+/** The campaign and the chronicle as a save keeps them after a command. */
+export function keptAfter(catalogue: Catalogue, campaign: Campaign, progress: ChronicleSave): Kept {
+  if (progress.chronicle.ending === undefined) return { campaign, chronicle: progress };
+  const payment = paidInto(catalogue, campaign, progress.chronicle);
+  return { campaign: payment.campaign, payment };
 }
 
 function parsed(catalogue: Catalogue, text: string): unknown {
@@ -123,18 +145,30 @@ function kept<T>(dropped: string[], read: () => T): T | undefined {
   }
 }
 
+/**
+ * The chronicle part of a save, its civilization named among the campaign's that stands. An ended
+ * chronicle is refused.
+ */
 function chronicleSaveOf(
   catalogue: Catalogue,
   slot: Slot,
   field: (name: string) => Slot,
+  campaign: Campaign,
 ): ChronicleSave {
   const chronicle = chronicleOf(catalogue, slot);
+  if (chronicle.ending !== undefined) refused(catalogue, slot, 'has ended');
   const age = ageOf(catalogue, chronicle.age);
-  return {
-    chronicle,
-    region: id(catalogue, field('region'), (held, named) => regionOf(held, age, named)),
-    civilization: id(catalogue, field('civilization'), civilizationOf),
-  };
+  const region = id(catalogue, field('region'), (held, named) => regionOf(held, age, named));
+  const civilizationSlot = field('civilization');
+  const civilization = string(catalogue, civilizationSlot);
+  if (!Object.hasOwn(campaign.civilizations, civilization)) {
+    refused(
+      catalogue,
+      civilizationSlot,
+      `names no civilization of the campaign named ${civilization}`,
+    );
+  }
+  return { chronicle, region, civilization };
 }
 
 /** One value of the parsed text, and where in the save it stands. */
@@ -151,7 +185,7 @@ function refused(catalogue: Catalogue, slot: Slot, reason: string): never {
 /**
  * The campaign part of a save, and the reasons for what the catalogue could not resolve of it. A card
  * number below the first, held twice or not below the next number is its shape broken, and so is a
- * next number below the first and a negative influence, sight or idle.
+ * next number below the first, a negative influence, sight or idle, and no civilization held.
  */
 function campaignOf(
   catalogue: Catalogue,
@@ -183,21 +217,31 @@ function campaignOf(
     return { slot: item, card: { number, id: string(catalogue, held('id')) } };
   };
   const collection = list(catalogue, field('collection'), cardIn);
-  const civilization = record(catalogue, field('civilization'));
-  const citySlot = civilization('city');
-  const city = record(catalogue, citySlot);
-  const cityCard = cardIn(city('card'));
-  const section = {
-    building: string(catalogue, city('building')),
-    ...cityCounts(catalogue, citySlot, city),
-  };
-  const numbered = (name: 'settle' | 'cards'): { slot: Slot; number: number }[] =>
-    list(catalogue, civilization(name), (item) => ({
-      slot: item,
-      number: integer(catalogue, item),
-    }));
-  const settle = numbered('settle');
-  const cards = numbered('cards');
+  const civilizationsSlot = field('civilizations');
+  const civilizationsHeld = record(catalogue, civilizationsSlot);
+  const names = Object.keys(object(catalogue, civilizationsSlot));
+  if (names.length === 0) refused(catalogue, civilizationsSlot, 'holds no civilization');
+  const civilizations = names.map((name) => {
+    const civilization = record(catalogue, civilizationsHeld(name));
+    const citySlot = civilization('city');
+    const city = record(catalogue, citySlot);
+    const numbered = (section: 'settle' | 'cards'): { slot: Slot; number: number }[] =>
+      list(catalogue, civilization(section), (item) => ({
+        slot: item,
+        number: integer(catalogue, item),
+      }));
+    return {
+      name,
+      citySlot,
+      cityCard: cardIn(city('card')),
+      section: {
+        building: string(catalogue, city('building')),
+        ...cityCounts(catalogue, citySlot, city),
+      },
+      settle: numbered('settle'),
+      cards: numbered('cards'),
+    };
+  });
   const technologies = list(catalogue, field('technologies'), (item) => ({
     slot: item,
     id: string(catalogue, item),
@@ -206,7 +250,9 @@ function campaignOf(
 
   dealtOnce(
     catalogue,
-    [cityCard, ...collection].map(({ slot: item, card }) => ({ slot: item, number: card.number })),
+    [...civilizations.map(({ cityCard }) => cityCard), ...collection].map(
+      ({ slot: item, card }) => ({ slot: item, number: card.number }),
+    ),
     nextCard,
     { next: 'the next number', holder: 'card' },
   );
@@ -230,39 +276,46 @@ function campaignOf(
     }
   }
 
-  const named = new Set<number>();
-  const sectionOf = (
-    name: 'settle' | 'cards',
-    held: readonly { slot: Slot; number: number }[],
-  ): number[] =>
-    held.flatMap(({ slot: item, number }) => {
-      const card = owned.get(number);
-      const misfit =
-        card === undefined
-          ? `names no card of the collection numbered ${number}`
-          : named.has(number)
-            ? `names the card numbered ${number} a second time`
-            : misfitIn(catalogue, name, card);
-      if (!stands(item, misfit)) return [];
-      named.add(number);
-      return [number];
-    });
-  const settleHeld = sectionOf('settle', settle);
-  const cardsHeld = sectionOf('cards', cards);
+  const held: [string, CampaignCivilization][] = [];
+  for (const { name, citySlot, cityCard, section, settle, cards } of civilizations) {
+    const named = new Set<number>();
+    const sectionOf = (
+      kind: 'settle' | 'cards',
+      numbers: readonly { slot: Slot; number: number }[],
+    ): number[] =>
+      numbers.flatMap(({ slot: item, number }) => {
+        const card = owned.get(number);
+        const misfit =
+          card === undefined
+            ? `names no card of the collection numbered ${number}`
+            : named.has(number)
+              ? `names the card numbered ${number} a second time`
+              : misfitIn(catalogue, kind, card);
+        if (!stands(item, misfit)) return [];
+        named.add(number);
+        return [number];
+      });
+    const settleHeld = sectionOf('settle', settle);
+    const cardsHeld = sectionOf('cards', cards);
 
-  let cityHeld: CampaignCivilization['city'];
-  const cityMisfit = !Object.hasOwn(catalogue.buildings, section.building)
-    ? `names no building ${section.building}`
-    : !Object.hasOwn(catalogue.cards, cityCard.card.id)
-      ? `names no card ${cityCard.card.id}`
-      : misfitIn(catalogue, 'city', cityCard.card.id);
-  if (stands(citySlot, cityMisfit)) {
-    cityHeld = { ...section, card: cityCard.card };
-  } else {
-    const { city: first } = civilizationOf(catalogue, firstCivilization(catalogue));
-    const restored = dealt(nextCard, [first.card]);
-    cityHeld = { ...first, card: restored.cards[0] };
-    nextCard = restored.nextCard;
+    let cityHeld: CampaignCivilization['city'];
+    const cityMisfit = !Object.hasOwn(catalogue.buildings, section.building)
+      ? `names no building ${section.building}`
+      : !Object.hasOwn(catalogue.cards, cityCard.card.id)
+        ? `names no card ${cityCard.card.id}`
+        : misfitIn(catalogue, 'city', cityCard.card.id);
+    if (stands(citySlot, cityMisfit)) {
+      cityHeld = { ...section, card: cityCard.card };
+    } else {
+      const authored = Object.hasOwn(catalogue.civilizations, name)
+        ? name
+        : firstCivilization(catalogue);
+      const { city } = civilizationOf(catalogue, authored);
+      const restored = dealt(nextCard, [city.card]);
+      cityHeld = { ...city, card: restored.cards[0] };
+      nextCard = restored.nextCard;
+    }
+    held.push([name, { city: cityHeld, settle: settleHeld, cards: cardsHeld }]);
   }
 
   return {
@@ -271,7 +324,7 @@ function campaignOf(
       influence,
       nextCard,
       collection: collection.flatMap(({ card }) => (owned.has(card.number) ? [card] : [])),
-      civilization: { city: cityHeld, settle: settleHeld, cards: cardsHeld },
+      civilizations: Object.fromEntries(held),
     },
     dropped,
   };

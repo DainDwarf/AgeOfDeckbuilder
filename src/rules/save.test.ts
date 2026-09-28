@@ -1,5 +1,11 @@
 import { expect, test } from 'vitest';
-import { type Campaign, FIRST_CARD_NUMBER, newCampaign, paidInto } from './campaign';
+import {
+  type Campaign,
+  type CampaignCivilization,
+  FIRST_CARD_NUMBER,
+  newCampaign,
+  paidInto,
+} from './campaign';
 import { catalogued } from './catalogue';
 import { apply, type Command, outcome } from './chronicle';
 import {
@@ -17,9 +23,9 @@ import {
   victoryOf,
 } from './fixtures';
 import { RESOURCES } from './resources';
-import { type ChronicleSave, readSave, writeSave } from './save';
+import { type ChronicleSave, keptAfter, readSave, writeSave } from './save';
 import { laid } from './schedule';
-import type { Chronicle, Counters } from './state';
+import type { Chronicle, CitySection, Counters } from './state';
 import { FIRST_UNIT_NUMBER, LEAST_STATS, type Unit } from './units';
 
 /** A chronicle three turns in, saved with what it was launched on. */
@@ -33,6 +39,22 @@ function saved(): ChronicleSave {
 function campaign(): Campaign {
   return paidInto(CATALOGUE, newCampaign(CATALOGUE, CIVILIZATION_ID), hoardedVictory()).campaign;
 }
+
+/** The fixture's civilization as the campaign holds it. */
+function heldCivilization(held: Campaign): CampaignCivilization {
+  return held.civilizations[CIVILIZATION_ID];
+}
+
+/** The campaign with the fixture's civilization changed. */
+function withCivilization(
+  held: Campaign,
+  change: (civilization: CampaignCivilization) => object,
+): object {
+  return { ...held, civilizations: { [CIVILIZATION_ID]: change(heldCivilization(held)) } };
+}
+
+/** Where in the save the fixture's civilization stands. */
+const CIVILIZATION_AT = `campaign.civilizations.${CIVILIZATION_ID}`;
 
 /** The save's text with the chronicle it holds changed after it was written. */
 function tampered(save: ChronicleSave, change: (chronicle: Chronicle) => object): string {
@@ -343,20 +365,33 @@ test('a campaign that is not a campaign’s shape is refused whole, and the chro
     `fixture: the save's campaign.collection[${campaign().collection.length}] is not an object`,
   ]);
   expect(
-    refused((held) => ({ ...held, civilization: { ...held.civilization, settle: 1 } })),
-  ).toEqual(["fixture: the save's campaign.civilization.settle is not a list"]);
-  expect(
-    refused((held) => ({
+    refused(({ civilizations, ...held }) => ({
       ...held,
-      civilization: { ...held.civilization, city: { ...held.civilization.city, sight: 1.5 } },
+      civilization: civilizations[CIVILIZATION_ID],
     })),
-  ).toEqual(["fixture: the save's campaign.civilization.city.sight is not an integer"]);
+  ).toEqual(["fixture: the save's campaign.civilizations is not an object"]);
+  expect(refused((held) => ({ ...held, civilizations: {} }))).toEqual([
+    "fixture: the save's campaign.civilizations holds no civilization",
+  ]);
   expect(
-    refused((held) => ({
-      ...held,
-      civilization: { ...held.civilization, city: { ...held.civilization.city, idle: 'two' } },
-    })),
-  ).toEqual(["fixture: the save's campaign.civilization.city.idle is not an integer"]);
+    refused((held) => withCivilization(held, (civilization) => ({ ...civilization, settle: 1 }))),
+  ).toEqual([`fixture: the save's ${CIVILIZATION_AT}.settle is not a list`]);
+  expect(
+    refused((held) =>
+      withCivilization(held, (civilization) => ({
+        ...civilization,
+        city: { ...civilization.city, sight: 1.5 },
+      })),
+    ),
+  ).toEqual([`fixture: the save's ${CIVILIZATION_AT}.city.sight is not an integer`]);
+  expect(
+    refused((held) =>
+      withCivilization(held, (civilization) => ({
+        ...civilization,
+        city: { ...civilization.city, idle: 'two' },
+      })),
+    ),
+  ).toEqual([`fixture: the save's ${CIVILIZATION_AT}.city.idle is not an integer`]);
 });
 
 test('a campaign holding a card number the next number does not exceed, or a number two cards hold, is refused whole', () => {
@@ -385,11 +420,15 @@ test('a campaign holding a card number the next number does not exceed, or a num
     campaignRefused(
       campaignTampered((written) => ({
         ...written,
-        collection: [{ ...first, number: held.civilization.city.card.number }, second, ...rest],
+        collection: [
+          { ...first, number: heldCivilization(held).city.card.number },
+          second,
+          ...rest,
+        ],
       })),
     ),
   ).toEqual([
-    `fixture: the save's campaign.collection[0] is numbered ${held.civilization.city.card.number}, a number another card holds`,
+    `fixture: the save's campaign.collection[0] is numbered ${heldCivilization(held).city.card.number}, a number another card holds`,
   ]);
 });
 
@@ -425,26 +464,27 @@ test('a campaign holding negative influence is refused whole', () => {
 test('a campaign whose city sees a negative sight is refused whole', () => {
   expect(
     campaignRefused(
-      campaignTampered((written) => ({
-        ...written,
-        civilization: {
-          ...written.civilization,
-          city: { ...written.civilization.city, sight: -1 },
-        },
-      })),
+      campaignTampered((written) =>
+        withCivilization(written, (civilization) => ({
+          ...civilization,
+          city: { ...civilization.city, sight: -1 },
+        })),
+      ),
     ),
-  ).toEqual(["fixture: the save's campaign.civilization.city sees -1"]);
+  ).toEqual([`fixture: the save's ${CIVILIZATION_AT}.city sees -1`]);
 });
 
 test('a campaign whose city opens with a negative idle is refused whole', () => {
   expect(
     campaignRefused(
-      campaignTampered((written) => ({
-        ...written,
-        civilization: { ...written.civilization, city: { ...written.civilization.city, idle: -1 } },
-      })),
+      campaignTampered((written) =>
+        withCivilization(written, (civilization) => ({
+          ...civilization,
+          city: { ...civilization.city, idle: -1 },
+        })),
+      ),
     ),
-  ).toEqual(["fixture: the save's campaign.civilization.city opens with -1 idle"]);
+  ).toEqual([`fixture: the save's ${CIVILIZATION_AT}.city opens with -1 idle`]);
 });
 
 /** What reading the text leaves of the campaign, and the reasons it dropped, the chronicle standing. */
@@ -477,7 +517,7 @@ test('a technology the catalogue does not bring, or one named a second time, is 
 
 test('a card of the collection the catalogue does not hold is dropped, and every number the deck names it by with it', () => {
   const held = campaign();
-  const [number] = held.civilization.cards;
+  const [number] = heldCivilization(held).cards;
   const at = held.collection.findIndex((card) => card.number === number);
 
   expect(
@@ -491,60 +531,65 @@ test('a card of the collection the catalogue does not hold is dropped, and every
     ),
   ).toEqual({
     campaign: {
-      ...held,
+      ...withCivilization(held, (civilization) => ({
+        ...civilization,
+        cards: civilization.cards.slice(1),
+      })),
       collection: held.collection.filter((_, other) => other !== at),
-      civilization: { ...held.civilization, cards: held.civilization.cards.slice(1) },
     },
     dropped: [
       `fixture: the save's campaign.collection[${at}] names no card PH_Unheld`,
-      `fixture: the save's campaign.civilization.cards[0] names no card of the collection numbered ${number}`,
+      `fixture: the save's ${CIVILIZATION_AT}.cards[0] names no card of the collection numbered ${number}`,
     ],
   });
 });
 
 test('a deck number naming no card of the collection, or naming one a second time, is dropped with its reason', () => {
   const held = campaign();
-  const [number] = held.civilization.cards;
-  const at = held.civilization.cards.length;
+  const { cards, city } = heldCivilization(held);
+  const [number] = cards;
+  const at = cards.length;
 
   expect(
     campaignRead(
-      campaignTampered((written) => ({
-        ...written,
-        civilization: {
-          ...written.civilization,
-          cards: [...written.civilization.cards, held.civilization.city.card.number, number],
-        },
-      })),
+      campaignTampered((written) =>
+        withCivilization(written, (civilization) => ({
+          ...civilization,
+          cards: [...civilization.cards, city.card.number, number],
+        })),
+      ),
     ),
   ).toEqual({
     campaign: held,
     dropped: [
-      `fixture: the save's campaign.civilization.cards[${at}] names no card of the collection numbered ${held.civilization.city.card.number}`,
-      `fixture: the save's campaign.civilization.cards[${at + 1}] names the card numbered ${number} a second time`,
+      `fixture: the save's ${CIVILIZATION_AT}.cards[${at}] names no card of the collection numbered ${city.card.number}`,
+      `fixture: the save's ${CIVILIZATION_AT}.cards[${at + 1}] names the card numbered ${number} a second time`,
     ],
   });
 });
 
 test('a card in a section its kind does not fit is dropped from the deck and kept in the collection', () => {
   const held = campaign();
-  const [settle] = held.civilization.settle;
-  const [card, ...cards] = held.civilization.cards;
+  const [settle] = heldCivilization(held).settle;
+  const [card, ...cards] = heldCivilization(held).cards;
   const idOf = (number: number): string | undefined =>
     held.collection.find((owned) => owned.number === number)?.id;
 
   expect(
     campaignRead(
-      campaignTampered((written) => ({
-        ...written,
-        civilization: { ...written.civilization, settle: [card], cards: [settle, ...cards] },
-      })),
+      campaignTampered((written) =>
+        withCivilization(written, (civilization) => ({
+          ...civilization,
+          settle: [card],
+          cards: [settle, ...cards],
+        })),
+      ),
     ),
   ).toEqual({
-    campaign: { ...held, civilization: { ...held.civilization, settle: [], cards } },
+    campaign: withCivilization(held, (civilization) => ({ ...civilization, settle: [], cards })),
     dropped: [
-      `fixture: the save's campaign.civilization.settle[0] holds the unit ${idOf(card)} in its settle section`,
-      `fixture: the save's campaign.civilization.cards[0] holds the settle card ${idOf(settle)} among its cards`,
+      `fixture: the save's ${CIVILIZATION_AT}.settle[0] holds the unit ${idOf(card)} in its settle section`,
+      `fixture: the save's ${CIVILIZATION_AT}.cards[0] holds the settle card ${idOf(settle)} among its cards`,
     ],
   });
 });
@@ -555,7 +600,7 @@ test('a hazard or a camp’s reward in the deck is dropped from it and kept in t
     { number: held.nextCard, id: 'PH_Hunger' },
     { number: held.nextCard + 1, id: 'PH_Spoils' },
   ];
-  const at = held.civilization.cards.length;
+  const at = heldCivilization(held).cards.length;
   const grown = {
     ...held,
     nextCard: held.nextCard + 2,
@@ -564,58 +609,105 @@ test('a hazard or a camp’s reward in the deck is dropped from it and kept in t
 
   expect(
     campaignRead(
-      campaignTampered(() => ({
-        ...grown,
-        civilization: {
-          ...grown.civilization,
-          cards: [...grown.civilization.cards, ...owned.map(({ number }) => number)],
-        },
-      })),
+      campaignTampered(() =>
+        withCivilization(grown, (civilization) => ({
+          ...civilization,
+          cards: [...civilization.cards, ...owned.map(({ number }) => number)],
+        })),
+      ),
     ),
   ).toEqual({
     campaign: grown,
     dropped: [
-      `fixture: the save's campaign.civilization.cards[${at}] holds the hazard PH_Hunger`,
-      `fixture: the save's campaign.civilization.cards[${at + 1}] holds the age ${AGE}'s camp's reward PH_Spoils`,
+      `fixture: the save's ${CIVILIZATION_AT}.cards[${at}] holds the hazard PH_Hunger`,
+      `fixture: the save's ${CIVILIZATION_AT}.cards[${at + 1}] holds the age ${AGE}'s camp's reward PH_Spoils`,
     ],
   });
 });
 
-test('a city section whose building or card the catalogue does not hold, or whose card is not a settle card, is the first civilization’s again, its card a new card', () => {
+test('a city section whose building or card the catalogue does not hold, or whose card is not a settle card, is the one its civilization was authored with again, its card a new card', () => {
   const held = campaign();
-  const restored = {
-    ...held,
-    nextCard: held.nextCard + 1,
-    civilization: {
-      ...held.civilization,
-      city: { ...CIVILIZATION.city, card: { number: held.nextCard, id: CIVILIZATION.city.card } },
-    },
-  };
+  const restored = withCivilization({ ...held, nextCard: held.nextCard + 1 }, (civilization) => ({
+    ...civilization,
+    city: { ...CIVILIZATION.city, card: { number: held.nextCard, id: CIVILIZATION.city.card } },
+  }));
   const cityRead = (city: object): ReturnType<typeof campaignRead> =>
     campaignRead(
-      campaignTampered((written) => ({
-        ...written,
-        civilization: {
-          ...written.civilization,
-          city: { ...written.civilization.city, sight: CIVILIZATION.city.sight + 1, ...city },
-        },
-      })),
+      campaignTampered((written) =>
+        withCivilization(written, (civilization) => ({
+          ...civilization,
+          city: { ...civilization.city, sight: CIVILIZATION.city.sight + 1, ...city },
+        })),
+      ),
     );
-  const { card } = held.civilization.city;
+  const { card } = heldCivilization(held).city;
 
   expect(cityRead({ building: 'PH_Fort' })).toEqual({
     campaign: restored,
-    dropped: ["fixture: the save's campaign.civilization.city names no building PH_Fort"],
+    dropped: [`fixture: the save's ${CIVILIZATION_AT}.city names no building PH_Fort`],
   });
   expect(cityRead({ card: { ...card, id: 'PH_Unheld' } })).toEqual({
     campaign: restored,
-    dropped: ["fixture: the save's campaign.civilization.city names no card PH_Unheld"],
+    dropped: [`fixture: the save's ${CIVILIZATION_AT}.city names no card PH_Unheld`],
   });
   expect(cityRead({ card: { ...card, id: 'PH_Harvest' } })).toEqual({
     campaign: restored,
     dropped: [
-      "fixture: the save's campaign.civilization.city holds the instant PH_Harvest in its city section",
+      `fixture: the save's ${CIVILIZATION_AT}.city holds the instant PH_Harvest in its city section`,
     ],
+  });
+});
+
+test('a city section the save cannot resolve is the catalogue’s civilization’s of that name, and the catalogue’s first where it holds none of that name', () => {
+  const first = { ...CIVILIZATION.city, sight: CIVILIZATION.city.sight + 3 };
+  const catalogue = catalogued({
+    ...CATALOGUE,
+    civilizations: { first: { ...CIVILIZATION, city: first }, ...CATALOGUE.civilizations },
+  });
+  const held = campaign();
+  const civilization = heldCivilization(held);
+  const named = (name: string, city: CampaignCivilization['city'], nextCard: number): Campaign => ({
+    ...held,
+    nextCard,
+    civilizations: { [name]: { ...civilization, city } },
+  });
+  const read = (name: string): Campaign | undefined =>
+    readSave(
+      catalogue,
+      JSON.stringify({
+        campaign: named(name, { ...civilization.city, building: 'PH_Fort' }, held.nextCard),
+      }),
+    ).campaign;
+  const restored = (name: string, city: CitySection): Campaign =>
+    named(name, { ...city, card: { number: held.nextCard, id: city.card } }, held.nextCard + 1);
+
+  expect(read(CIVILIZATION_ID)).toEqual(restored(CIVILIZATION_ID, CIVILIZATION.city));
+  expect(read('PH_Unheld')).toEqual(restored('PH_Unheld', first));
+});
+
+test('a chronicle naming a civilization the campaign does not hold is dropped, and the campaign stands', () => {
+  const text = JSON.stringify({
+    ...JSON.parse(writeSave(CATALOGUE, campaign(), saved())),
+    civilization: 'PH_Unheld',
+  });
+
+  expect(chronicleDropped(text)).toEqual([
+    "fixture: the save's civilization names no civilization of the campaign named PH_Unheld",
+  ]);
+});
+
+test('an ended chronicle is kept as the campaign it paid into and no chronicle; one in progress is kept beside the campaign, which it has not paid', () => {
+  const opened = newCampaign(CATALOGUE, CIVILIZATION_ID);
+  const won = hoardedVictory();
+  const progress = saved();
+
+  expect(keptAfter(CATALOGUE, opened, { ...progress, chronicle: won })).toEqual({
+    campaign: paidInto(CATALOGUE, opened, won).campaign,
+    payment: paidInto(CATALOGUE, opened, won),
+  });
+  expect(keptAfter(CATALOGUE, opened, progress)).toEqual({
+    campaign: opened,
+    chronicle: progress,
   });
 });
 
