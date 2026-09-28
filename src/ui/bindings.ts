@@ -1,4 +1,5 @@
 import type Phaser from 'phaser';
+import { store, stored } from './storage';
 import { type TextKey, text } from './text';
 
 /**
@@ -208,14 +209,14 @@ function nulled(bind: Bind | undefined): Bind | null {
 let current: Bindings | undefined;
 
 export function bindings(): Bindings {
-  current ??= parseBindings(window.localStorage.getItem(STORED));
+  current ??= parseBindings(stored(STORED));
   return current;
 }
 
 /** The one place a binding changes: what the player set outlives the page. */
 function keep(next: Bindings): void {
   current = next;
-  window.localStorage.setItem(STORED, serialiseBindings(next));
+  store(STORED, serialiseBindings(next));
 }
 
 export function rebind(control: Control, slot: number, press: Bind): void {

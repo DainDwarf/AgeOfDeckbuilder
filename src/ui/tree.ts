@@ -148,7 +148,7 @@ function addRun(scene: Phaser.Scene, entry: string): { label: Phaser.GameObjects
 }
 
 export type TreeView = {
-  /** A window of the menu risen over the screen, or fallen. */
+  /** A window of the menu or the refused-save window risen over the screen, or the last fallen. */
   cover(under: boolean): void;
 };
 

@@ -217,6 +217,9 @@ const TEXT = {
   'launch.settle-phase': 'Settle phase',
   'launch.reached': '✓ {achievement}',
   'boot.failed': 'The game could not start', // glossary exception: start
+  'refused-save.title': 'The game cannot save',
+  'refused-save.line':
+    'This browser refuses the save: what is played from here is lost when the page closes', // glossary exception: lost
   'console.line': '> {line}',
   'console.no-entry': 'no such entry: {word}',
   'console.uncharted-veil-on': 'uncharted veil: on',

@@ -147,7 +147,7 @@ export function watch(page: Page): string[] {
  * Closes the capstone's window standing by a press on its card, and rests: the back key is
  * rebindable, and specs rebind it.
  */
-async function capstoneClosed(page: Page): Promise<void> {
+export async function capstoneClosed(page: Page): Promise<void> {
   await click(page, 'capstone-card-0');
   await expect.poll(() => standing(page, 'capstone')).toBe(false);
   await rested(page);

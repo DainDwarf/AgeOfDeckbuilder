@@ -14,6 +14,5 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **Warn when the game cannot save** — `npx playwright test e2e/refused-save.spec.ts` passes, proving a storage refused from the start boots onto the campaign screen with the refused-save window standing, Back takes it down and the game runs on, and a write refused mid-chronicle raises the window once over the chronicle screen, a second refusal raising nothing; `docs/INTERFACE.md` holds _A refused save_. Doc-impact: `docs/INTERFACE.md`. [board/warn-when-the-game-cannot-save.md](board/warn-when-the-game-cannot-save.md)
 - **Specs read a named text through textOf** — `rg -nU 'named\?\.\([^)]*\)\?\.object as\s*\|?\s*Phaser\.GameObjects\.Text' e2e` finds `textOf`'s own line alone; `npm run check` and `npm run lint` pass. Doc-impact: none. [board/specs-read-a-named-text-through-textof.md](board/specs-read-a-named-text-through-textof.md)
 - **Specs build the fresh campaign through freshCampaign** — `rg -n 'newCampaign\(CATALOGUE, firstsOf\(\)\.civilization\)' e2e` finds nothing and `rg -n 'freshCampaign\(CATALOGUE\)' e2e` finds eight sites; `npm run check` and `npm run lint` pass. Doc-impact: none. [board/specs-build-the-fresh-campaign-through-freshcampaign.md](board/specs-build-the-fresh-campaign-through-freshcampaign.md)

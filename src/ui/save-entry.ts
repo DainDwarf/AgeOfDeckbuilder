@@ -2,6 +2,7 @@ import { CATALOGUE } from '../content/catalogue';
 import type { Campaign, Payment } from '../rules/campaign';
 import { type ChronicleSave, freshCampaign, keptAfter, readSave, writeSave } from '../rules/save';
 import type { Chronicle } from '../rules/state';
+import { store, stored, unstore } from './storage';
 
 /** What a chronicle is launched on: an age, one of its regions and a civilization of the campaign, and a seed or nothing for a fresh one. */
 export type Choices = {
@@ -25,10 +26,6 @@ type Held = { readonly campaign: Campaign; readonly opening: Saved | undefined }
 
 let held: Held | undefined;
 
-function wordsOf(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 /** The save as it stands: read the first time anything asks for it, and every write kept in it after. */
 function read(): Held {
   held ??= readEntry();
@@ -49,15 +46,6 @@ function openingOf({ chronicle, region, civilization }: ChronicleSave): Saved {
   return { age: chronicle.age, region, civilization, seed: chronicle.seed, resumed: chronicle };
 }
 
-/** The text kept as the save, over whatever stood; storage that refuses it leaves play going on. */
-function kept(text: string): void {
-  try {
-    window.localStorage.setItem(SAVE_ENTRY, text);
-  } catch (error) {
-    console.warn(wordsOf(error));
-  }
-}
-
 /**
  * The chronicle kept as the save, beside the campaign held; an ended one is kept as the campaign it
  * paid into, and the payment is answered.
@@ -71,7 +59,7 @@ export function keepChronicle(
     campaign: after.campaign,
     opening: after.chronicle === undefined ? undefined : openingOf(after.chronicle),
   };
-  kept(writeSave(CATALOGUE, after.campaign, after.chronicle));
+  store(SAVE_ENTRY, writeSave(CATALOGUE, after.campaign, after.chronicle));
   return after.payment;
 }
 
@@ -84,21 +72,14 @@ function readEntry(): Held {
     campaign: freshCampaign(CATALOGUE),
     opening: undefined,
   };
-  let storage: Storage;
-  let text: string | null;
-  try {
-    storage = window.localStorage;
-    text = storage.getItem(SAVE_ENTRY);
-  } catch {
-    return fresh;
-  }
+  const text = stored(SAVE_ENTRY);
   if (text === null) return fresh;
   const { campaign, chronicle: progress, dropped } = readSave(CATALOGUE, text);
   for (const reason of dropped) console.warn(reason);
   if (campaign !== undefined) {
-    if (dropped.length > 0) kept(writeSave(CATALOGUE, campaign, progress));
+    if (dropped.length > 0) store(SAVE_ENTRY, writeSave(CATALOGUE, campaign, progress));
   } else if (progress === undefined) {
-    storage.removeItem(SAVE_ENTRY);
+    unstore(SAVE_ENTRY);
   }
   return {
     campaign: campaign ?? fresh.campaign,

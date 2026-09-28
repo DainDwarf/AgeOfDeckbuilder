@@ -75,6 +75,13 @@ const INK = css(LOOK.ink);
 const TITLE_STYLE = { fontFamily: UI_FONT, fontSize: '26px', fontStyle: 'bold', color: INK };
 const LABEL_STYLE = { fontFamily: UI_FONT, fontSize: '18px', fontStyle: 'bold', color: INK };
 const SLOT_STYLE = { fontFamily: UI_FONT, fontSize: '16px', fontStyle: 'bold', color: INK };
+const LINE_STYLE = {
+  fontFamily: UI_FONT,
+  fontSize: '18px',
+  color: INK,
+  align: 'center',
+  wordWrap: { width: WIDTH - 2 * PADDING },
+};
 
 /** A window standing on the scrim, and the keyboard's one way into it. */
 export type Opened = {
@@ -263,6 +270,47 @@ export function createWindow(scene: Phaser.Scene, which: MenuWindow, on: Presses
 
   const binds = which === 'controls' ? layControls(scene, root, body, on.back) : () => false;
   return { root, binds };
+}
+
+/**
+ * The window a refused save raises, centred on the design space: its title, the line under it, and
+ * Back, which `back` answers. The box takes the pointer as a menu window's does.
+ */
+export function createRefusedSaveWindow(
+  scene: Phaser.Scene,
+  back: () => void,
+): Phaser.GameObjects.Container {
+  const title = addText(scene, 0, 0, text('refused-save.title'), TITLE_STYLE)
+    .setOrigin(0.5, 0)
+    .setName('refused-save-title');
+  const line = addText(scene, 0, 0, text('refused-save.line'), LINE_STYLE)
+    .setOrigin(0.5, 0)
+    .setName('refused-save-line');
+
+  const height = PADDING + title.height + PADDING + line.height + PADDING + BUTTON_HEIGHT + PADDING;
+  const top = Math.round((DESIGN_HEIGHT - height) / 2);
+  const middle = DESIGN_WIDTH / 2;
+  const box = scene.add
+    .rectangle(middle, top + height / 2, WIDTH, height, LOOK.panelFill)
+    .setStrokeStyle(1, LOOK.panelEdge)
+    .setInteractive();
+  title.setPosition(middle, top + PADDING);
+  line.setPosition(middle, top + PADDING + title.height + PADDING);
+
+  const { face, label } = pressable(
+    scene,
+    {
+      x: middle,
+      y: top + height - PADDING - BUTTON_HEIGHT / 2,
+      width: BUTTON_WIDTH,
+      height: BUTTON_HEIGHT,
+    },
+    'refused-save-back',
+    LABEL_STYLE,
+    back,
+  );
+  label.setText(text('control.back'));
+  return scene.add.container(0, 0, [box, title, line, face, label]).setName('refused-save');
 }
 
 /** How tall the Menu button stands in the bar's strip, and how far it reaches around its label. */

@@ -355,7 +355,7 @@ export function onClick(
 /** A scrim risen over a scene, said of its input plugin; nothing inside Phaser listens to it. */
 export const COVERED = 'covered';
 
-/** The two scrims that rise over a screen: the overlay's, and the menu's. */
+/** The two scenes whose scrims rise over a screen: the overlay's, and the menu's. */
 export type Scrim = 'overlay' | 'menu';
 
 /**

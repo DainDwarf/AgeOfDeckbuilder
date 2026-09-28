@@ -1,6 +1,6 @@
 # Interface
 
-> How any screen is worked: the menu and what it lists, the keys and how they are rebound, the navbar and the bar, the tree, the launch page, a failed boot, the debug console, the three presses, a card's names and its label, and what stands over what. A design page, under [`DESIGN.md`](DESIGN.md)'s legend. What a press does to a thing only a chronicle has is [`CHRONICLE-SCREEN.md`](CHRONICLE-SCREEN.md)'s.
+> How any screen is worked: the menu and what it lists, the keys and how they are rebound, the navbar and the bar, the tree, the launch page, a failed boot, a refused save, the debug console, the three presses, a card's names and its label, and what stands over what. A design page, under [`DESIGN.md`](DESIGN.md)'s legend. What a press does to a thing only a chronicle has is [`CHRONICLE-SCREEN.md`](CHRONICLE-SCREEN.md)'s.
 
 ## The menu ✅
 
@@ -29,6 +29,10 @@ The **launch page** is a stand-in for the meta's launch screen: **Chronicle** op
 ## A failed boot ✅
 
 When the game cannot start, the page says so in place of the blank screen: that the game could not start, and under it the error's own words, so a report can carry them. Nothing on that page is pressed, and the game does not go on.
+
+## A refused save ✅
+
+When the browser refuses to keep what the game writes — the save, or the keys the player binds — the game says so once, in a window on a scrim of its own: that the game cannot save, and that what is played from then on is lost when the page closes. Back, the back key or a press on the scrim takes it down and play goes on, and the window is not raised again until the page is loaded again; a browser that refuses its storage from the start raises it at the boot, and the game starts on a new campaign and the keys as they began.
 
 ## The debug console ✅
 
@@ -64,7 +68,7 @@ Two verbs cover it all. **Select** is the tile the map rings, the card lifted ou
 
 The chronicle screen is drawn on two surfaces: the **map**, which pans and zooms, and the **UI**, which holds still and stands over the whole map. On the map the order is a tile's own: the terrain, then the tiles lit and the units glowed on it, its buildings, its units, the fog, city mode's marks, the yield overlay's dim, what stays at full strength through that dim, the ring, the yield glyphs and the culture threshold; the infopanel stands over all of that. On the UI the band the hand and the piles stand in is lowest, the frame and chip of a mode over it, then the piles and the resting cards of the hand, the resource bar, the end-turn button, a card in motion, a card lifted out of the hand, and the line naming what that card is aimed at. A refusal's note stands over everything on the surface it is raised from.
 
-The **scrim** cuts that order in two. Everything named so far is under it, and what it carries — a browse, the aim window, the deal window, the capstone's window, a card shown large, the ending screen, and the note a refusal raises over a window's card — stands on it. Under the scrim the chronicle screen hears the keys that pan and zoom the map and no other, and a wheel notch over the scrim is the scrim's whatever it binds: it scrolls what scrolls and reaches nothing beneath. The **menu** stands over all of that, on every screen and the ending screen included: its button, and a window of it on a scrim of its own that rises with the window over whatever stands, the button among it. The **debug console** stands over all of it.
+The **scrim** cuts that order in two. Everything named so far is under it, and what it carries — a browse, the aim window, the deal window, the capstone's window, a card shown large, the ending screen, and the note a refusal raises over a window's card — stands on it. Under the scrim the chronicle screen hears the keys that pan and zoom the map and no other, and a wheel notch over the scrim is the scrim's whatever it binds: it scrolls what scrolls and reaches nothing beneath. The **menu** stands over all of that, on every screen and the ending screen included: its button, and a window of it on a scrim of its own that rises with the window over whatever stands, the button among it. The window a refused save raises stands over the menu, on a scrim of its own. The **debug console** stands over all of it.
 
 A **tooltip** stands over everything but the menu and the console, on the surface it was raised from: a hover reaches only what the pointer can reach, so a bubble is never drawn under the thing it was raised beside. The pointer is on the one thing that stands topmost under it, across every surface, at every moment: a thing rising, falling or coming live under a pointer that holds still is hovered or left as one the pointer moved onto or off. A scrim rising is, to whatever stands under it, the pointer leaving the game: every hover there ends, a standing tooltip among them, and once the scrim falls the pointer is on whatever stands under it again, before it moves. A press the pointer holds as a scrim rises is let go of where it stands, whatever raised the scrim: a card, a unit or a population being carried comes home and nothing plays, nothing is selected, and the release that comes under the scrim lands as nothing.
 
