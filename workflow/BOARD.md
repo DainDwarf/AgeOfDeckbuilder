@@ -14,7 +14,7 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **Scrims answer the same presses** — align the behaviour of the scrims: the menu's and the refused-save window's take down on a left click only, while the overlay's, on the chronicle screen and under the campaign screen's cards shown large, answer a right click too.
+- **Scrims answer the same presses** — a right click on a scrim does what a left click on it does, on every scrim: the menu's, the refused-save window's, the overlay's on the chronicle screen and under the campaign screen's cards shown large; `docs/INTERFACE.md` says so; `npx playwright test e2e/press.spec.ts` passes with the browse walked back by right presses alone; `npm run check`, `npm test` and `npm run lint` pass. Doc-impact: `docs/INTERFACE.md`. [board/scrims-answer-the-same-presses.md](board/scrims-answer-the-same-presses.md)
 - **Specs read a named text through textOf** — `rg -nU 'named\?\.\([^)]*\)\?\.object as\s*\|?\s*Phaser\.GameObjects\.Text' e2e` finds `textOf`'s own line alone; `npm run check` and `npm run lint` pass. Doc-impact: none. [board/specs-read-a-named-text-through-textof.md](board/specs-read-a-named-text-through-textof.md)
 - **Specs build the fresh campaign through freshCampaign** — `rg -n 'newCampaign\(CATALOGUE, firstsOf\(\)\.civilization\)' e2e` finds nothing and `rg -n 'freshCampaign\(CATALOGUE\)' e2e` finds eight sites; `npm run check` and `npm run lint` pass. Doc-impact: none. [board/specs-build-the-fresh-campaign-through-freshcampaign.md](board/specs-build-the-fresh-campaign-through-freshcampaign.md)
 - **End chronicle on end screen** - Add an "End chronicle" button on the ending screens, that puts you back onto the meta.
