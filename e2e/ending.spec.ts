@@ -1,5 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
-import type Phaser from 'phaser';
+import { expect, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
 import { newCampaign, paidInto } from '../src/rules/campaign';
 import { achievementOf } from '../src/rules/catalogue';
@@ -23,17 +22,10 @@ import {
   rested,
   SHELTER,
   standing,
+  textOf,
   victoryShown,
   watch,
 } from './chronicle-screen';
-
-/** What the named text reads, and nothing where none of that name stands. */
-function reads(page: Page, name: string): Promise<string | undefined> {
-  return page.evaluate(
-    (target) => (window.named?.(target)?.object as Phaser.GameObjects.Text | undefined)?.text,
-    name,
-  );
-}
 
 test('the play that ends the chronicle pays it into the campaign: the ending screen reads what it paid, the save holds the campaign paid into and no chronicle, and the campaign screen reads the influence paid', async ({
   page,
@@ -56,16 +48,16 @@ test('the play that ends the chronicle pays it into the campaign: the ending scr
   expect(paid.influence).toBeGreaterThan(0);
   for (const [at, id] of paid.achievements.entries()) {
     const { technology, influence } = achievementOf(CATALOGUE, won.age, id);
-    expect(await reads(page, `ending-row-${at}`)).toBe(
+    expect(await textOf(page, `ending-row-${at}`)).toBe(
       text('ending.reached', { achievement: technologyName(technology) }),
     );
-    expect(await reads(page, `ending-row-${at}-influence`)).toBe(
+    expect(await textOf(page, `ending-row-${at}-influence`)).toBe(
       influence > 0 ? String(influence) : undefined,
     );
   }
-  expect(await reads(page, `ending-row-${paid.achievements.length}`)).toBeUndefined();
-  expect(await reads(page, 'ending-total-label')).toBe(text('label.influence'));
-  expect(await reads(page, 'ending-total')).toBe(String(paid.influence));
+  expect(await textOf(page, `ending-row-${paid.achievements.length}`)).toBeUndefined();
+  expect(await textOf(page, 'ending-total-label')).toBe(text('label.influence'));
+  expect(await textOf(page, 'ending-total')).toBe(String(paid.influence));
 
   const saved = await page.evaluate((entry) => window.localStorage.getItem(entry), SAVE_ENTRY);
   if (saved === null) throw new Error('the game keeps no save');
@@ -80,7 +72,7 @@ test('the play that ends the chronicle pays it into the campaign: the ending scr
   await rested(page);
   await click(page, 'menu-campaign');
   await campaignShown(page);
-  expect(await reads(page, 'reading-influence-value')).toBe(String(paid.campaign.influence));
+  expect(await textOf(page, 'reading-influence-value')).toBe(String(paid.campaign.influence));
   await chronicleButton(page);
   expect(await standing(page, 'launch-continue')).toBe(false);
 

@@ -1,5 +1,4 @@
 import { expect, type Page, test } from '@playwright/test';
-import type Phaser from 'phaser';
 import { type Chronicle, onSettlePhase } from '../src/rules/state';
 import { text } from '../src/ui/text';
 import {
@@ -14,23 +13,20 @@ import {
   rested,
   settledOn,
   standing,
+  textOf,
   watch,
 } from './chronicle-screen';
 
 /** What Continue reads on the page: its label, then every line under it in order. */
-function continueReads(page: Page): Promise<string[]> {
-  return page.evaluate(() => {
-    const read = (name: string): string | undefined =>
-      (window.named?.(name)?.object as Phaser.GameObjects.Text | undefined)?.text;
-    const lines: string[] = [];
-    const label = read('launch-continue-label');
-    if (label !== undefined) lines.push(label);
-    for (let at = 0; ; at++) {
-      const line = read(`launch-continue-line-${at}`);
-      if (line === undefined) return lines;
-      lines.push(line);
-    }
-  });
+async function continueReads(page: Page): Promise<string[]> {
+  const lines: string[] = [];
+  const label = await textOf(page, 'launch-continue-label');
+  if (label !== undefined) lines.push(label);
+  for (let at = 0; ; at++) {
+    const line = await textOf(page, `launch-continue-line-${at}`);
+    if (line === undefined) return lines;
+    lines.push(line);
+  }
 }
 
 /** The chronicle planted as the save, and the page Chronicle opens from the campaign screen waited for. */

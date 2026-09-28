@@ -514,6 +514,14 @@ export function defeatShown(page: Page): Promise<boolean> {
   });
 }
 
+/** What the named text reads, and nothing where none of that name stands. */
+export function textOf(page: Page, name: string): Promise<string | undefined> {
+  return page.evaluate(
+    (target) => (window.named?.(target)?.object as Phaser.GameObjects.Text | undefined)?.text,
+    name,
+  );
+}
+
 /** Whether an object of that name stands on any running scene. */
 export function standing(page: Page, name: string): Promise<boolean> {
   return page.evaluate((target) => window.named?.(target) !== undefined, name);

@@ -101,13 +101,26 @@ export function readSave(catalogue: Catalogue, text: string): SaveRead {
   const campaign = kept(dropped, () => campaignOf(catalogue, field('campaign')));
   dropped.push(...(campaign?.dropped ?? []));
   const progress = field('chronicle');
-  const standing = (): Campaign =>
-    campaign?.campaign ?? newCampaign(catalogue, firstCivilization(catalogue));
   const chronicle =
     progress.raw === undefined
       ? undefined
-      : kept(dropped, () => chronicleSaveOf(catalogue, progress, field, standing()));
+      : kept(dropped, () =>
+          chronicleSaveOf(
+            catalogue,
+            progress,
+            field,
+            campaign?.campaign ?? freshCampaign(catalogue),
+          ),
+        );
   return { campaign: campaign?.campaign, chronicle, dropped };
+}
+
+/**
+ * The campaign that stands where the save holds none it can read: a new one on the catalogue's first
+ * civilization.
+ */
+export function freshCampaign(catalogue: Catalogue): Campaign {
+  return newCampaign(catalogue, firstCivilization(catalogue));
 }
 
 /**

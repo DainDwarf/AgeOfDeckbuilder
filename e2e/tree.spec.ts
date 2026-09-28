@@ -21,6 +21,7 @@ import {
   rested,
   SHELTER,
   standing,
+  textOf,
   waitGameClock,
   watch,
 } from './chronicle-screen';
@@ -49,26 +50,27 @@ function rewardOf(): string[] {
 }
 
 /** What a plate stands as and reads: its state, its name, its goal, and its reward's lines. */
-function plateReads(
+async function plateReads(
   page: Page,
   plate: string,
 ): Promise<{ state: string; name: string; goal: string; reward: string[] }> {
-  return page.evaluate((named) => {
-    const read = (name: string): string | undefined =>
-      (window.named?.(name)?.object as Phaser.GameObjects.Text | undefined)?.text;
+  const state = await page.evaluate((named) => {
     const face = window.named?.(named)?.object;
     if (face === undefined) throw new Error(`there is no ${named}`);
-    const reward: string[] = [];
-    for (let at = 0; read(`${named}-reward-${at}`) !== undefined; at++) {
-      reward.push(read(`${named}-reward-${at}`) ?? '');
-    }
-    return {
-      state: face.getData('state') as string,
-      name: read(`${named}-name`) ?? '',
-      goal: read(`${named}-goal`) ?? '',
-      reward,
-    };
+    return face.getData('state') as string;
   }, plate);
+  const reward: string[] = [];
+  for (let at = 0; ; at++) {
+    const line = await textOf(page, `${plate}-reward-${at}`);
+    if (line === undefined) break;
+    reward.push(line);
+  }
+  return {
+    state,
+    name: (await textOf(page, `${plate}-name`)) ?? '',
+    goal: (await textOf(page, `${plate}-goal`)) ?? '',
+    reward,
+  };
 }
 
 /** Where the named object spans across the screen, in design units. */

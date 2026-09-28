@@ -710,30 +710,29 @@ export function createOverlay(
     const pitch = 34;
     const gap = 44;
     const ruleRoom = 0.4 * pitch;
-    const ledgerHeight = (reached.length + 1) * pitch + (reached.length > 0 ? ruleRoom : 0);
-    const middle = DESIGN_HEIGHT / 2 - (gap + ledgerHeight) / 2;
     const style = (bold: boolean): Phaser.Types.GameObjects.Text.TextStyle => ({
       fontFamily: UI_FONT,
       fontSize: '22px',
       fontStyle: bold ? 'bold' : 'normal',
       color: TITLE_INK,
     });
-    const title = addText(scene, DESIGN_WIDTH / 2, middle - 12, said.title, {
+    const title = addText(scene, DESIGN_WIDTH / 2, 0, said.title, {
       fontFamily: UI_FONT,
       fontSize: '72px',
       fontStyle: 'bold',
       color: TITLE_INK,
-    }).setOrigin(0.5, 1);
-    const line = addText(scene, DESIGN_WIDTH / 2, middle + 12, said.line, style(false)).setOrigin(
-      0.5,
-      0,
-    );
+    }).setOrigin(0.5, 0);
+    const line = addText(scene, DESIGN_WIDTH / 2, title.height + 24, said.line, style(false));
+    line.setOrigin(0.5, 0);
 
     const left = (DESIGN_WIDTH - width) / 2;
     const right = left + width;
     const diamond = (x: number, y: number): Phaser.GameObjects.Rectangle =>
       scene.add.rectangle(x, y, 10, 10, LOOK.influence).setAngle(45);
-    const parts: Phaser.GameObjects.GameObject[] = [title, line];
+    const parts: (Phaser.GameObjects.GameObject & Phaser.GameObjects.Components.Transform)[] = [
+      title,
+      line,
+    ];
     let y = line.y + line.height + gap + pitch / 2;
     reached.forEach(({ technology, influence }, at) => {
       const achievement = technologyName(technology);
@@ -756,16 +755,19 @@ export function createOverlay(
       );
       y += ruleRoom;
     }
+    const total = addText(scene, left + 22, y, text('label.influence'), style(true))
+      .setOrigin(0, 0.5)
+      .setName('ending-total-label');
     parts.push(
       diamond(left + 7, y),
-      addText(scene, left + 22, y, text('label.influence'), style(true))
-        .setOrigin(0, 0.5)
-        .setName('ending-total-label'),
+      total,
       addText(scene, right, y, String(on.payment.influence), style(true))
         .setOrigin(1, 0.5)
         .setName('ending-total'),
     );
 
+    const lowered = (DESIGN_HEIGHT - (y + total.height / 2)) / 2;
+    for (const part of parts) part.y += lowered;
     return carries(scene.add.container(0, 0, parts).setName(on.ending.outcome));
   };
 

@@ -1,7 +1,6 @@
 import { CATALOGUE } from '../content/catalogue';
-import { type Campaign, newCampaign, type Payment } from '../rules/campaign';
-import { firstCivilization } from '../rules/catalogue';
-import { type ChronicleSave, keptAfter, readSave, writeSave } from '../rules/save';
+import type { Campaign, Payment } from '../rules/campaign';
+import { type ChronicleSave, freshCampaign, keptAfter, readSave, writeSave } from '../rules/save';
 import type { Chronicle } from '../rules/state';
 
 /** What a chronicle is launched on: an age, one of its regions and a civilization of the campaign, and a seed or nothing for a fresh one. */
@@ -82,7 +81,7 @@ export function keepChronicle(
  */
 function readEntry(): Held {
   const fresh = {
-    campaign: newCampaign(CATALOGUE, firstCivilization(CATALOGUE)),
+    campaign: freshCampaign(CATALOGUE),
     opening: undefined,
   };
   let storage: Storage;
