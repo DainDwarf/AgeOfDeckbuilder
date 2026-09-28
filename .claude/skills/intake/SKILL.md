@@ -25,7 +25,9 @@ Five checks, in order; stop at the first that decides the line's fate:
 
 ## 3. Discuss
 
-Present what you found and the forks: one or two options each, with trade-offs and a recommendation, in prose. A pick-one prompt is for a scoping fact only. A UI change is pitched as a live mockup built from real values, the variables that change the answer as controls, one option marked recommended; a generator change is pitched running, and its dossier says whether the process is fixed or rolled and how wide it may vary. End the turn and wait; one fork may take several turns. The design pages first — much is pre-decided. A fork that is the implementer's — where a function lives, how a module is cut — is named as such and left out.
+Open with the restatement, in plain words and three sentences at most: what the line is for, what changes for the player, and what it takes away. Every clause of the line that removes or changes something the player sees is put to the user as a question, and so is every lean a memory holds; nothing is filed as following without a decision. Where the line, a rung still on the board and a design page disagree, say which and ask.
+
+Then present what you found and the forks: one or two options each, with trade-offs and a recommendation, in prose. A pick-one prompt is for a scoping fact only. A UI change is pitched as a live mockup built from real values, the variables that change the answer as controls, one option marked recommended; a generator change is pitched running, and its dossier says whether the process is fixed or rolled and how wide it may vary. End the turn and wait; one fork may take several turns. The design pages first — much is pre-decided. A fork that is the implementer's — where a function lives, how a module is cut — is named as such and left out, and so is any choice the user could not tell apart in the game. A sentence about what the code does is checked against the code before it is said.
 
 ## 4. Write the dossier
 
