@@ -1,5 +1,4 @@
 import { expect, type Page, test } from '@playwright/test';
-import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
 import { civilizationOf } from '../src/rules/catalogue';
 import { tileKey } from '../src/rules/map';
@@ -28,6 +27,7 @@ import {
   settledOn,
   standing,
   stoppedTurn,
+  textOf,
   tileOnScreen,
   watch,
 } from './chronicle-screen';
@@ -66,10 +66,7 @@ function chosen(page: Page, row: string, option: string): Promise<boolean> {
 
 /** What the page's seed slot reads. */
 function seedReads(page: Page): Promise<string | undefined> {
-  return page.evaluate(
-    () =>
-      (window.named?.('launch-seed-label')?.object as Phaser.GameObjects.Text | undefined)?.text,
-  );
+  return textOf(page, 'launch-seed-label');
 }
 
 test('the menu walks in to Controls and closes back one step at a time', async ({ page }) => {

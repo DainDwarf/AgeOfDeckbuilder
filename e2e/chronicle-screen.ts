@@ -941,10 +941,7 @@ export async function panelRows(page: Page): Promise<PanelRow[]> {
 
 /** What the card the infopanel is standing reads of the tile's movement cost, or nothing on one that reads none. */
 export function panelMovement(page: Page): Promise<string | undefined> {
-  return page.evaluate(() => {
-    const reading = window.named?.('panel-movement')?.object as Phaser.GameObjects.Text | undefined;
-    return reading?.text;
-  });
+  return textOf(page, 'panel-movement');
 }
 
 /** Which card of the tile the infopanel is showing, or nothing while it stands down. */
@@ -1005,10 +1002,7 @@ export function thresholdShown(page: Page): Promise<string | undefined> {
  * while that window stands down.
  */
 export function titleOf(page: Page, name: string): Promise<string | undefined> {
-  return page.evaluate((target) => {
-    const title = window.named?.(target)?.object as Phaser.GameObjects.Text | undefined;
-    return title?.text;
-  }, `${name}-title`);
+  return textOf(page, `${name}-title`);
 }
 
 /**
@@ -1016,10 +1010,7 @@ export function titleOf(page: Page, name: string): Promise<string | undefined> {
  * while that window stands down.
  */
 export function loreOf(page: Page, name: string): Promise<string | undefined> {
-  return page.evaluate((target) => {
-    const lore = window.named?.(target)?.object as Phaser.GameObjects.Text | undefined;
-    return lore?.text;
-  }, `${name}-lore`);
+  return textOf(page, `${name}-lore`);
 }
 
 /** What the line over the hand says the card being aimed is played at, or nothing while none stands. */
@@ -1034,12 +1025,10 @@ export function aimLine(page: Page): Promise<string | undefined> {
 }
 
 /** What the end-turn button reads right now: the turn it stands on, or the hover's own word. */
-export function endTurnLabel(page: Page): Promise<string> {
-  return page.evaluate(() => {
-    const label = window.named?.('end-turn-label')?.object as Phaser.GameObjects.Text | undefined;
-    if (label === undefined) throw new Error('the end-turn button is not on the chronicle screen');
-    return label.text;
-  });
+export async function endTurnLabel(page: Page): Promise<string> {
+  const label = await textOf(page, 'end-turn-label');
+  if (label === undefined) throw new Error('the end-turn button is not on the chronicle screen');
+  return label;
 }
 
 /** What the end-turn button is painted. */

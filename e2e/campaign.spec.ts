@@ -22,6 +22,7 @@ import {
   SHELTER,
   settledOn,
   standing,
+  textOf,
   tooltipText,
   tooltipUp,
   watch,
@@ -29,11 +30,7 @@ import {
 
 /** What the bar's influence reads. */
 function influenceReads(page: Page): Promise<string | undefined> {
-  return page.evaluate(
-    () =>
-      (window.named?.('reading-influence-value')?.object as Phaser.GameObjects.Text | undefined)
-        ?.text,
-  );
+  return textOf(page, 'reading-influence-value');
 }
 
 /**

@@ -1,5 +1,4 @@
 import { expect, type Page, test } from '@playwright/test';
-import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
 import { cultureThreshold, growthThreshold } from '../src/rules/city';
@@ -17,6 +16,7 @@ import {
   openSaved,
   playing,
   settledOn,
+  textOf,
   waitGameClock,
   watch,
 } from './chronicle-screen';
@@ -56,32 +56,27 @@ async function breakNextMotion(page: Page): Promise<void> {
 }
 
 /** What the two piles read on the chronicle screen. */
-function paintedPiles(page: Page): Promise<{ draw: string; discard: string }> {
-  return page.evaluate(() => {
-    const reading = (name: string): string => {
-      const count = window.named?.(name)?.object as Phaser.GameObjects.Text | undefined;
-      if (count === undefined) throw new Error(`there is no ${name}`);
-      return count.text;
-    };
-    return { draw: reading('draw-pile-count'), discard: reading('discard-pile-count') };
-  });
+async function paintedPiles(page: Page): Promise<{ draw: string; discard: string }> {
+  const reading = async (name: string): Promise<string> => {
+    const count = await textOf(page, name);
+    if (count === undefined) throw new Error(`there is no ${name}`);
+    return count;
+  };
+  return { draw: await reading('draw-pile-count'), discard: await reading('discard-pile-count') };
 }
 
 /** What the bar reads for each of those readings. */
-function paintedReadings(page: Page, readings: readonly string[]): Promise<Record<string, string>> {
-  return page.evaluate(
-    (keys) =>
-      Object.fromEntries(
-        keys.map((key) => {
-          const value = window.named?.(`reading-${key}-value`)?.object as
-            | Phaser.GameObjects.Text
-            | undefined;
-          if (value === undefined) throw new Error(`there is no reading for ${key}`);
-          return [key, value.text];
-        }),
-      ),
-    readings,
-  );
+async function paintedReadings(
+  page: Page,
+  readings: readonly string[],
+): Promise<Record<string, string>> {
+  const read: Record<string, string> = {};
+  for (const key of readings) {
+    const value = await textOf(page, `reading-${key}-value`);
+    if (value === undefined) throw new Error(`there is no reading for ${key}`);
+    read[key] = value;
+  }
+  return read;
 }
 
 test('a motion that throws still ends the turn and gives the chronicle screen back', async ({

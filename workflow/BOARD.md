@@ -14,6 +14,5 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **Specs read a named text through textOf** — `rg -nU 'named\?\.\([^)]*\)\?\.object as\s*\|?\s*Phaser\.GameObjects\.Text' e2e` finds `textOf`'s own line alone; `npm run check` and `npm run lint` pass. Doc-impact: none. [board/specs-read-a-named-text-through-textof.md](board/specs-read-a-named-text-through-textof.md)
 - **Specs build the fresh campaign through freshCampaign** — `rg -n 'newCampaign\(CATALOGUE, firstsOf\(\)\.civilization\)' e2e` finds nothing and `rg -n 'freshCampaign\(CATALOGUE\)' e2e` finds eight sites; `npm run check` and `npm run lint` pass. Doc-impact: none. [board/specs-build-the-fresh-campaign-through-freshcampaign.md](board/specs-build-the-fresh-campaign-through-freshcampaign.md)
 - **End chronicle on end screen** - Add an "End chronicle" button on the ending screens, that puts you back onto the meta.

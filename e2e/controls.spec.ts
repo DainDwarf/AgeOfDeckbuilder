@@ -1,5 +1,4 @@
 import { expect, type Page, test } from '@playwright/test';
-import type Phaser from 'phaser';
 import {
   bareTile,
   click,
@@ -10,6 +9,7 @@ import {
   settledOn,
   shownCard,
   standing,
+  textOf,
   tileOnScreen,
   watch,
 } from './chronicle-screen';
@@ -49,12 +49,11 @@ const LISTED = [
 const NOTCH = 1.3;
 
 /** What one slot of the Controls window reads. */
-function slotReads(page: Page, control: string, slot: number): Promise<string> {
-  return page.evaluate((name) => {
-    const label = window.named?.(name)?.object as Phaser.GameObjects.Text | undefined;
-    if (label === undefined) throw new Error(`there is no ${name}`);
-    return label.text;
-  }, `controls-${control}-${slot}-label`);
+async function slotReads(page: Page, control: string, slot: number): Promise<string> {
+  const name = `controls-${control}-${slot}-label`;
+  const label = await textOf(page, name);
+  if (label === undefined) throw new Error(`there is no ${name}`);
+  return label;
 }
 
 /** Every slot the Controls window lists, row by row, as it reads them. */
