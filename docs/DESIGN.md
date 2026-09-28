@@ -38,7 +38,7 @@ The three choices lead to the settle phase: the chronicle opens unsettled, and i
 
 Two axes of progression:
 
-- **Depth is achievements.** A goal reached during a chronicle unlocks a **technology**: new cards, better buildings, better units. A victory in an age unlocks the next age.
+- **Depth is achievements.** A **technology** is learned by a goal reached during a chronicle: new cards, better buildings, better units. A victory in an age unlocks the next age.
 - **Breadth is influence**, the meta-currency every chronicle pays, victory or defeat, scaled by how the city fared. It buys copies of owned cards, modifications to owned cards, and faster starts.
 
 ## Scope ✅

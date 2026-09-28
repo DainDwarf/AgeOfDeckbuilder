@@ -4,8 +4,8 @@ What the game **is**: the standing design. Not a journal of how it came to be �
 
 - [`DESIGN.md`](DESIGN.md) — the game in broad strokes: the pitch, the chronicle, launching a chronicle, the meta, scope. Names the other design pages; together they are the spec, every section marked decided or provisional, its rationale inline.
 - [`INTERFACE.md`](INTERFACE.md) — how any screen is worked: the menu, Controls, the debug console, the three presses, a card's names, what stands over what.
-- [`META.md`](META.md) — the meta around a chronicle: the loop its screens make, the campaign and its technology tree, achievements, influence, the collection and the deck, the save.
-- [`META-SCREENS.md`](META-SCREENS.md) — how the meta is shown and worked on its screens: the navbar and the bar, the campaign screen, the launch screen.
+- [`META.md`](META.md) — the meta around a chronicle: the campaign and its technology tree, achievements, influence, the collection and the deck, the save.
+- [`META-SCREENS.md`](META-SCREENS.md) — how the meta is shown and worked on its screens: the navbar and the bar, the campaign screen, the launch screen, the collection screen.
 - [`CHRONICLE.md`](CHRONICLE.md) — the rules a chronicle is played by: the settle phase, the turn, sight, the city, units, cards, events.
 - [`MAP.md`](MAP.md) — what the map is made of and how it is dealt: the tile and its layers, the river, the generator and the region.
 - [`CHRONICLE-SCREEN.md`](CHRONICLE-SCREEN.md) — how the chronicle is shown and worked on its screen: the chronicle screen, the resource bar, the yield overlay.

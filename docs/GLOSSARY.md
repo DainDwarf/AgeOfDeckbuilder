@@ -19,8 +19,11 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **deck** | A civilization's cards: its settle section and the cards the draw pile cycles. | loadout |
 | **settle section** | The part of the deck that holds its settle cards; with the city section's card, the hand of the settle phase. | opening hand, starting hand, sideboard, reserve |
 | **city section** | The part of a civilization that holds the city — its building, its sight, its idle population — and the card that settles it. | city slot, capital card |
-| **technology** | A permanent unlock earned by an achievement: new cards, better buildings, better units. | tech, advancement, upgrade, research |
-| **achievement** | A goal a chronicle can reach; reaching it unlocks a technology. | mission, objective, quest, milestone |
+| **technology** | What an achievement teaches the campaign for good: new cards, better buildings, better units. | tech, advancement, upgrade, research |
+| **learned technology** | A technology whose achievement has paid. | unlocked technology, researched |
+| **available technology** | A technology not learned whose every needed technology is learned. | within reach, reachable |
+| **unknown technology** | A technology that needs one not learned; the player is told only that it is there. | mystery, locked, secret |
+| **achievement** | A goal a chronicle can reach; its technology is learned by reaching it. | mission, objective, quest, milestone |
 | **influence** | The meta-currency every chronicle pays, scaled by how the city fared. | gold, XP |
 | **save** | The chronicle in progress and the meta, kept on the player's machine. | savegame, save file, save slot, checkpoint, autosave |
 | **chronicle** | One city's story through one age, from its opening to victory or defeat — what a roguelite calls a run. | run, playthrough, attempt, session |
@@ -78,7 +81,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **elevation** | How high a terrain stands over the ground; what blocks sight, and what lifts the river layer's height. | altitude, tallness |
 | **fog** | A tile seen before and out of sight now. | fog of war, shroud, dimmed, remembered |
 | **charted** | A tile that has been in sight, in sight now or in fog. | explored, revealed, discovered, known, seen (of a tile's state) |
-| **uncharted** | A tile never yet in sight. | unexplored, unknown, unrevealed, black, hidden |
+| **uncharted** | A tile never yet in sight. | unexplored, unrevealed, black, hidden |
 | **instant** | A card with an immediate effect: on the city, on a tile, or one thing with one unit. | action (for a card), spell, effect card |
 | **hazard** | A card no deck holds: an event brings it into a chronicle, and it strikes while held. | penalty, curse, drawback, upkeep, affliction, bane |
 | **strike** | What a hazard does to the chronicle at the end of a turn it is still in the hand. | bite, trigger, proc, go off |
