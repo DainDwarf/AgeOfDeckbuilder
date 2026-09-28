@@ -632,7 +632,7 @@ test('a right press beside the card shown large takes it down and leaves the car
   expect(problems).toEqual([]);
 });
 
-test('a right press beside the cards drops the card a browse shows large, and does nothing while none stands', async ({
+test('right presses beside the cards walk a browse back: the card shown large, the ring, the browse', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -644,22 +644,26 @@ test('a right press beside the cards drops the card a browse shows large, and do
   await click(page, 'browse-card-0');
   await expect.poll(() => ringed(page, 'browse-card-0')).toBe(true);
 
-  // Nothing stands large, so the right press beside the cards has nothing to take down.
-  const away = await besideTheCards(page);
-  await page.mouse.click(away.x, away.y, { button: 'right' });
-  await rested(page);
-  expect(await standing(page, 'browse')).toBe(true);
-  expect(await ringed(page, 'browse-card-0')).toBe(true);
-
   const other = await onScreen(page, 'browse-card-1');
   await page.mouse.click(other.x, other.y, { button: 'right' });
   await expect.poll(() => standing(page, 'inspection')).toBe(true);
   expect(await standing(page, 'browse')).toBe(false);
 
+  const away = await besideTheCards(page);
+  await rested(page);
   await page.mouse.click(away.x, away.y, { button: 'right' });
   await expect.poll(() => standing(page, 'browse')).toBe(true);
   expect(await standing(page, 'inspection')).toBe(false);
   expect(await ringed(page, 'browse-card-0')).toBe(true);
+
+  await rested(page);
+  await page.mouse.click(away.x, away.y, { button: 'right' });
+  await expect.poll(() => ringed(page, 'browse-card-0')).toBe(false);
+  expect(await standing(page, 'browse')).toBe(true);
+
+  await page.mouse.click(away.x, away.y, { button: 'right' });
+  await expect.poll(() => standing(page, 'browse')).toBe(false);
+  expect(await standing(page, 'menu')).toBe(false);
   expect(await chronicleOf(page)).toEqual(before);
 
   expect(problems).toEqual([]);

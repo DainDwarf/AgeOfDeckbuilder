@@ -90,6 +90,13 @@ test('the events phase deals a choice, and the turn plays on from the one taken'
   await page.keyboard.press('Escape');
   await expect.poll(() => ringed(page, 'deal-card-0')).toBe(false);
 
+  await click(page, 'deal-card-0');
+  await expect.poll(() => ringed(page, 'deal-card-0')).toBe(true);
+  await page.mouse.click(beside.x, beside.y, { button: 'right' });
+  await expect.poll(() => ringed(page, 'deal-card-0')).toBe(false);
+  await rested(page);
+  expect(await standing(page, 'deal')).toBe(true);
+
   await page.keyboard.press('Escape');
   await expect.poll(() => standing(page, 'menu')).toBe(true);
   await page.keyboard.press('Escape');

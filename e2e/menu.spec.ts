@@ -101,6 +101,36 @@ test('the menu walks in to Controls and closes back one step at a time', async (
   expect(problems).toEqual([]);
 });
 
+test('a right click on the scrim of the menu steps back one window, as a left click there does', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const opened = settledOn(1);
+
+  await openSaved(page, opened);
+  await click(page, 'menu-button');
+  await expect.poll(() => standing(page, 'menu')).toBe(true);
+  await click(page, 'menu-settings');
+  await expect.poll(() => standing(page, 'settings')).toBe(true);
+  await click(page, 'settings-controls');
+  await expect.poll(() => standing(page, 'controls')).toBe(true);
+
+  // The Menu button stands under the scrim, clear of every window's box.
+  const scrim = await onScreen(page, 'menu-button');
+  await rested(page);
+  await page.mouse.click(scrim.x, scrim.y, { button: 'right' });
+  await expect.poll(() => standing(page, 'settings')).toBe(true);
+  expect(await standing(page, 'controls')).toBe(false);
+
+  await rested(page);
+  await page.mouse.click(scrim.x, scrim.y);
+  await expect.poll(() => standing(page, 'menu')).toBe(true);
+  expect(await standing(page, 'settings')).toBe(false);
+  expect(await chronicleOf(page)).toEqual(opened);
+
+  expect(problems).toEqual([]);
+});
+
 test('Escape raises the menu on a bare chronicle screen, and backs out of a browse without it', async ({
   page,
 }) => {

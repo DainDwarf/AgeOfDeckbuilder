@@ -11,6 +11,7 @@ import {
   continued,
   firstSeed,
   firstsOf,
+  onScreen,
   plant,
   playedOut,
   readNames,
@@ -106,6 +107,31 @@ test('a browser refusing its storage from the start boots the campaign screen un
   await click(page, 'menu-button');
   await expect.poll(() => standing(page, 'menu')).toBe(true);
   expect(await standing(page, 'refused-save')).toBe(false);
+
+  expect(problems).toEqual([]);
+});
+
+test('a right click on its scrim takes the refused-save window down, and the menu opens after it', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  await readNames(page);
+  await refuseStorage(page);
+
+  await page.goto('/');
+  await campaignShown(page);
+  await refusedSaveShown(page);
+
+  // The Menu button stands under the scrim, clear of the window's box.
+  const scrim = await onScreen(page, 'menu-button');
+  await rested(page);
+  await page.mouse.click(scrim.x, scrim.y, { button: 'right' });
+  await expect.poll(() => standing(page, 'refused-save')).toBe(false);
+  expect(await standing(page, 'menu')).toBe(false);
+  await rested(page);
+
+  await click(page, 'menu-button');
+  await expect.poll(() => standing(page, 'menu')).toBe(true);
 
   expect(problems).toEqual([]);
 });

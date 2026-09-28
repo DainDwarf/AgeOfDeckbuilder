@@ -419,15 +419,15 @@ export function createOverlay(
 
   /**
    * A pile's cards laid out below `top`, and the frame that scrolls and flings them: `pressed` takes
-   * the press and the number the card under it was offered as, and nothing where it landed between
-   * them. Every card face is named after the grid and its place on the screen, the first drawn
-   * first, and carries the card it stands and the number it was offered as in its data.
+   * a press on a card and the number that card was offered as, and a press between them is a press
+   * on the scrim. Every card face is named after the grid and its place on the screen, the first
+   * drawn first, and carries the card it stands and the number it was offered as in its data.
    */
   const layGrid = (
     name: string,
     cards: readonly Offered[],
     top: number,
-    pressed: (at: number | undefined, press: Press) => void,
+    pressed: (at: number, press: Press) => void,
   ): Grid => {
     const height = heightOf(BROWSE_WIDTH);
     const frameHeight = DESIGN_HEIGHT - MARGIN - top;
@@ -475,14 +475,19 @@ export function createOverlay(
         overKind(undefined);
       },
     );
+    const press = (pointer: Phaser.Input.Pointer, button: Press): void => {
+      const at = under(pointer)?.at;
+      if (at === undefined) beside();
+      else pressed(at, button);
+    };
     onClick(frame, (pointer) => {
-      pressed(under(pointer)?.at, 'left');
+      press(pointer, 'left');
     });
     onClick(
       frame,
       (pointer) => {
         const named = nameUnder(pointer)?.name;
-        if (named === undefined) pressed(under(pointer)?.at, 'right');
+        if (named === undefined) press(pointer, 'right');
         else inspectNamed(named);
       },
       'right',
@@ -548,12 +553,10 @@ export function createOverlay(
       (at, press) => {
         switch (press) {
           case 'left':
-            if (at === undefined) back();
-            else ring(browsing, at);
+            ring(browsing, at);
             return;
           case 'right':
-            if (at !== undefined)
-              showInspection(cardFace(catalogue, browsing.cards[at]), NO_REFUSAL, browsing);
+            showInspection(cardFace(catalogue, browsing.cards[at]), NO_REFUSAL, browsing);
             return;
         }
       },
@@ -576,7 +579,7 @@ export function createOverlay(
     const laid = layGrid('deal', entries, title.y + title.height + MARGIN, (at, press) => {
       switch (press) {
         case 'left': {
-          if (at === undefined || at !== dealing.selected) {
+          if (at !== dealing.selected) {
             ring(dealing, at);
             return;
           }
@@ -592,7 +595,7 @@ export function createOverlay(
           return;
         }
         case 'right':
-          if (at !== undefined) showInspection(entries[at].face, entries[at].refusal, dealing);
+          showInspection(entries[at].face, entries[at].refusal, dealing);
           return;
       }
     });
@@ -633,14 +636,13 @@ export function createOverlay(
       'capstone',
       [{ face, costs: [], refusal: NO_REFUSAL, at: 0 }],
       title.y + title.height + MARGIN,
-      (at, press) => {
+      (_at, press) => {
         switch (press) {
           case 'left':
-            if (at === undefined) back();
-            else closeCapstone(announcement);
+            closeCapstone(announcement);
             return;
           case 'right':
-            if (at !== undefined) showInspection(face, NO_REFUSAL, announcement);
+            showInspection(face, NO_REFUSAL, announcement);
             return;
         }
       },
@@ -659,10 +661,6 @@ export function createOverlay(
     layGrid('aim-window', aim.cards, title.y + title.height + MARGIN, (at, press) => {
       switch (press) {
         case 'left':
-          if (at === undefined) {
-            closeAim();
-            return;
-          }
           // The aim landed, so the window closes without saying it closed with nothing paid.
           close();
           aim.chosen(at);
@@ -849,8 +847,8 @@ export function createOverlay(
   };
 
   /**
-   * A left press beside the things a window offers: it takes the window back one step, as the back
-   * key does, and drops the ring and no more than that on the deal window.
+   * A press on the scrim, either click: the back key's one step, which never raises the menu, and
+   * the ring dropped and no more on the deal window.
    */
   const beside = (): void => {
     if (carried === undefined) return;
@@ -921,25 +919,7 @@ export function createOverlay(
   };
 
   onClick(scrim, beside);
-
-  onClick(
-    scrim,
-    () => {
-      if (carried === undefined) return;
-      switch (carried.stands) {
-        case 'inspection':
-          takeDownNewest(carried);
-          return;
-        case 'browse':
-        case 'aim-window':
-        case 'deal':
-        case 'capstone':
-        case 'ending':
-          return;
-      }
-    },
-    'right',
-  );
+  onClick(scrim, beside, 'right');
 
   /**
    * Every key and mouse key while anything stands on the scrim, and none at all while nothing does:

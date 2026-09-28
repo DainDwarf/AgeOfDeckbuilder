@@ -131,7 +131,9 @@ export class MenuScene extends Phaser.Scene {
     };
 
     onClick(scrim, back);
+    onClick(scrim, back, 'right');
     onClick(refusedSaveScrim, takeDownRefusedSave);
+    onClick(refusedSaveScrim, takeDownRefusedSave, 'right');
     stopsThePointer(this, () => (covered ? 'every' : 'no button held'));
 
     readsKeys(this, (event) => {
