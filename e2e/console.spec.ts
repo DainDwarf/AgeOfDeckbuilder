@@ -216,7 +216,7 @@ test('the two switches draw the whole map, and put the fog back where it was', a
   expect(problems).toEqual([]);
 });
 
-test('seed with a number on the launch screen opens the chronicle the rules launch on its choices and that seed, and closes the console', async ({
+test('the launch screen holds no switch, and seed with a number there opens the chronicle the rules launch on its choices and that seed, and closes the console', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -225,8 +225,22 @@ test('seed with a number on the launch screen opens the chronicle the rules laun
 
   await openLaunch(page);
   await consoleKey(page);
+  await enter(page, 'fog');
+  expect(await consoleLines(page)).toEqual([
+    '',
+    '',
+    '> fog',
+    text('console.no-entry', { line: 'fog' }),
+    '> ',
+  ]);
   await enter(page, 'seed');
-  expect(await consoleLines(page)).toEqual(['', '', '> seed', text('console.no-chronicle'), '> ']);
+  expect(await consoleLines(page)).toEqual([
+    '> fog',
+    text('console.no-entry', { line: 'fog' }),
+    '> seed',
+    text('console.no-chronicle'),
+    '> ',
+  ]);
 
   await enter(page, `seed ${seed}`);
   await standsOnSeed(page, seed);
@@ -273,7 +287,7 @@ test('seed on the chronicle screen answers the seed of the chronicle standing, a
   expect(problems).toEqual([]);
 });
 
-test('seed with a number on the campaign screen says it launches nothing there, and opens no chronicle screen', async ({
+test('the campaign screen holds no entry: seed alone and with a number are answered no entry, and open no chronicle screen', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -282,8 +296,15 @@ test('seed with a number on the campaign screen says it launches nothing there, 
   await page.goto('/');
   await campaignShown(page);
   await consoleKey(page);
+  await enter(page, 'seed');
   await enter(page, 'seed 3');
-  expect(await consoleLines(page)).toEqual(['', '', '> seed 3', text('console.no-launch'), '> ']);
+  expect(await consoleLines(page)).toEqual([
+    '> seed',
+    text('console.no-entry', { line: 'seed' }),
+    '> seed 3',
+    text('console.no-entry', { line: 'seed 3' }),
+    '> ',
+  ]);
 
   await rested(page);
   expect(await page.evaluate(() => window.game?.scene.isActive('ui'))).toBe(false);

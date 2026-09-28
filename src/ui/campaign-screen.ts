@@ -1,11 +1,11 @@
 import Phaser from 'phaser';
 import { CATALOGUE } from '../content/catalogue';
-import { offerSeed } from './debug-console';
+import { offerEntries } from './debug-console';
 import { awayUnder, COVERED, holdDesignSpace } from './design-space';
 import { backRaisesMenu, resetMenu } from './menu-scene';
 import { wearNavbar } from './navbar';
 import { overlayOf } from './overlay-scene';
-import { campaignHeld, savedOpening } from './save-entry';
+import { campaignHeld } from './save-entry';
 import { standLarge } from './stack';
 import { createTree, movesTree } from './tree';
 
@@ -30,7 +30,7 @@ export class CampaignScreen extends Phaser.Scene {
       movesTree,
     );
     const tree = createTree(this, worn, CATALOGUE, campaignHeld().technologies, large.named);
-    offerSeed(this, { seed: () => savedOpening()?.resumed.seed, launch: undefined });
+    offerEntries(this, { seed: undefined, veiled: undefined });
     resetMenu(this, (under) => {
       tree.cover(under);
       away('menu', under);

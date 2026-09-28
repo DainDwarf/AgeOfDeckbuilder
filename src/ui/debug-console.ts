@@ -7,7 +7,6 @@ import {
   DESIGN_WIDTH,
   holdDesignSpace,
   MARGIN,
-  whileUp,
 } from './design-space';
 import { readsKeys } from './keys';
 import { css, LOOK } from './look';
@@ -16,9 +15,6 @@ import { VEILS_ON, type Veils } from './veils';
 
 /** The place the key that opens the console stands on: the one above Tab, whatever it prints. */
 const CONSOLE_KEY = 'Backquote';
-
-/** What the console throws a veil's switch on, for whatever screen is drawn under it. */
-const VEILED = 'veiled';
 
 /** How many lines already run stand above the line being typed. */
 const HISTORY = 4;
@@ -48,10 +44,15 @@ const CONSOLE_STYLE = {
 /** One line the console has run: what it read, and whether it was the console's answer. */
 type Line = { readonly line: string; readonly answer: boolean };
 
-/** What the screen standing offers `seed`: the seed it reads now, and its launch, where it has one. */
-export type Seeding = {
-  readonly seed: () => number | undefined;
-  readonly launch: ((seed: number) => void) | undefined;
+/**
+ * The entries the screen standing holds: `seed`, with the seed it reads now and its launch, and the two
+ * switches, with the map that draws the veils they leave.
+ */
+export type Holding = {
+  readonly seed:
+    | { readonly reads: () => number | undefined; readonly launch: (seed: number) => void }
+    | undefined;
+  readonly veiled: ((veils: Veils) => void) | undefined;
 };
 
 /**
@@ -63,8 +64,8 @@ export class DebugConsole extends Phaser.Scene {
   /** The console closed, the lines it ran cleared, and both veils back on. */
   reset!: () => void;
 
-  /** What the screen standing offers `seed`, and nothing between one screen and the next. */
-  seeding: Seeding | undefined;
+  /** The entries the screen standing holds, and nothing between one screen and the next. */
+  holding: Holding | undefined;
 
   constructor() {
     super('console');
@@ -125,20 +126,23 @@ export class DebugConsole extends Phaser.Scene {
     const run = (): void => {
       const line = typed;
       typed = '';
-      const seeding = this.seeding;
-      if (seeding === undefined) throw new Error('no screen stands under the console');
-      const { seed, launch } = seeding;
-      const ran = runLine(line, veils, { seed: seed(), launches: launch !== undefined });
+      const holding = this.holding;
+      if (holding === undefined) throw new Error('no screen stands under the console');
+      const { seed, veiled } = holding;
+      const ran = runLine(line, veils, {
+        seed: seed === undefined ? undefined : { reads: seed.reads() },
+        switches: veiled !== undefined,
+      });
       if (ran.answer !== undefined) {
         keep(text('console.line', { line }), false);
         keep(ran.answer, true);
       }
       if (ran.veils !== veils) {
         veils = ran.veils;
-        this.game.events.emit(VEILED, veils);
+        veiled?.(veils);
       }
       paint();
-      if (ran.launch !== undefined && launch !== undefined) launch(ran.launch);
+      if (ran.launch !== undefined) seed?.launch(ran.launch);
     };
 
     const show = (on: boolean): void => {
@@ -177,18 +181,17 @@ export class DebugConsole extends Phaser.Scene {
 
 /**
  * The console put back where it began for the chronicle screen now rising, which therefore opens
- * under both veils, and every switch the console throws while that screen stands.
+ * under both veils.
  */
-export function resetConsole(scene: Phaser.Scene, veiled: (veils: Veils) => void): void {
+export function resetConsole(scene: Phaser.Scene): void {
   scene.game.scene.getScene<DebugConsole>('console').reset();
-  whileUp(scene, scene.game.events, VEILED, veiled);
 }
 
-/** What `seed` reads and launches on, for as long as the screen now rising stands. */
-export function offerSeed(scene: Phaser.Scene, seeding: Seeding): void {
+/** The entries the console answers, for as long as the screen now rising stands. */
+export function offerEntries(scene: Phaser.Scene, holding: Holding): void {
   const held = scene.game.scene.getScene<DebugConsole>('console');
-  held.seeding = seeding;
+  held.holding = holding;
   scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-    if (held.seeding === seeding) held.seeding = undefined;
+    if (held.holding === holding) held.holding = undefined;
   });
 }

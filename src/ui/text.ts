@@ -225,7 +225,6 @@ const TEXT = {
   'console.no-entry': 'no such entry: {line}',
   'console.seed': 'seed: {seed}',
   'console.no-chronicle': 'no chronicle',
-  'console.no-launch': 'no launch from this screen',
   'console.not-a-seed': 'not a seed: {typed}',
   'console.uncharted-veil-on': 'uncharted veil: on',
   'console.uncharted-veil-off': 'uncharted veil: off',

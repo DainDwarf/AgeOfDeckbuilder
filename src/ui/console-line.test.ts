@@ -2,11 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { runLine, type Screen } from './console-line';
 import { VEILS_ON, type Veils } from './veils';
 
-/** A screen that reads a chronicle's seed and launches on one typed. */
-const LAUNCHING: Screen = { seed: -42, launches: true };
+/** A screen holding every entry: `seed`, reading a chronicle's seed, and the two switches. */
+const LAUNCHING: Screen = { seed: { reads: -42 }, switches: true };
 
-/** A screen that reads a chronicle's seed and launches none. */
-const STILL: Screen = { seed: 42, launches: false };
+/** A screen holding `seed` alone, reading a chronicle's seed, and no switch. */
+const SEEDING: Screen = { seed: { reads: 42 }, switches: false };
+
+/** A screen holding no entry. */
+const BARE: Screen = { seed: undefined, switches: false };
 
 /** The veils a switch already thrown once leaves: the uncharted veil off, the fog standing. */
 function uncharted(): Veils {
@@ -79,7 +82,7 @@ describe('seed run at the console', () => {
   });
 
   it('answers that there is no chronicle where the screen reads no seed', () => {
-    expect(runLine('seed', VEILS_ON, { seed: undefined, launches: true }).answer).toBe(
+    expect(runLine('seed', VEILS_ON, { seed: { reads: undefined }, switches: false }).answer).toBe(
       'no chronicle',
     );
   });
@@ -121,14 +124,35 @@ describe('seed run at the console', () => {
       expect(ran.veils).toBe(VEILS_ON);
     }
   });
+});
 
-  it('answers that the screen launches nothing where a seed is typed on one that does not', () => {
-    const ran = runLine('seed 5', VEILS_ON, STILL);
-    expect(ran.answer).toBe('no launch from this screen');
+describe('a line run on a screen holding some entries', () => {
+  it('answers a switch the screen does not hold as no entry, and leaves the veils as they were', () => {
+    const veils = uncharted();
+    for (const line of ['fog', 'uncharted']) {
+      const ran = runLine(line, veils, SEEDING);
+      expect(ran.answer).toBe(`no such entry: ${line}`);
+      expect(ran.veils).toBe(veils);
+    }
+  });
+
+  it('reads the seed and launches on one where the screen holds seed and no switch', () => {
+    expect(runLine('seed', VEILS_ON, SEEDING).answer).toBe('seed: 42');
+    expect(runLine('seed 5', VEILS_ON, SEEDING).launch).toBe(5);
+  });
+
+  it('still refuses what is not a seed where the screen holds seed and no switch', () => {
+    const ran = runLine('seed abc', VEILS_ON, SEEDING);
+    expect(ran.answer).toBe('not a seed: abc');
     expect(ran.launch).toBeUndefined();
   });
 
-  it('refuses what is not a seed ahead of the screen that launches nothing', () => {
-    expect(runLine('seed abc', VEILS_ON, STILL).answer).toBe('not a seed: abc');
+  it('answers every line as no entry on a screen holding none, and launches nothing', () => {
+    for (const line of ['seed', 'seed 3', '  seed abc ', 'fog', 'uncharted']) {
+      const ran = runLine(line, VEILS_ON, BARE);
+      expect(ran.answer).toBe(`no such entry: ${line.trim()}`);
+      expect(ran.launch).toBeUndefined();
+      expect(ran.veils).toBe(VEILS_ON);
+    }
   });
 });

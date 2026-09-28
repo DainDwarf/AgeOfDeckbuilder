@@ -22,7 +22,7 @@ import { createBand } from './band';
 import { boundTo } from './bindings';
 import { CARD_BASELINE, CARD_HEIGHT } from './card-face';
 import { EASE, ended, stopAllMotion, stopMotion } from './card-motion';
-import { offerSeed, resetConsole } from './debug-console';
+import { offerEntries, resetConsole } from './debug-console';
 import {
   addText,
   answersPress,
@@ -549,13 +549,16 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       if (!leaveCityMode()) raiseMenu(this);
     });
 
-    resetConsole(this, (veils) => {
-      view.showVeils(veils);
-    });
-    offerSeed(this, {
-      seed: () => this.current.seed,
-      launch: (seed) => {
-        this.launchOn(seed);
+    resetConsole(this);
+    offerEntries(this, {
+      seed: {
+        reads: () => this.current.seed,
+        launch: (seed) => {
+          this.launchOn(seed);
+        },
+      },
+      veiled: (veils) => {
+        view.showVeils(veils);
       },
     });
     resetMenu(this, (under) => {

@@ -12,7 +12,7 @@ import {
   metricsOf,
 } from './card-face';
 import { openChronicle } from './chronicle-scene';
-import { offerSeed } from './debug-console';
+import { offerEntries } from './debug-console';
 import {
   addText,
   answersPress,
@@ -355,11 +355,14 @@ export class LaunchScreen extends Phaser.Scene {
     const open = (opening: Opening): void => {
       openChronicle(this.scene, opening);
     };
-    offerSeed(this, {
-      seed: () => savedOpening()?.resumed.seed,
-      launch: (seed) => {
-        open({ ...chosen, seed });
+    offerEntries(this, {
+      seed: {
+        reads: () => savedOpening()?.resumed.seed,
+        launch: (seed) => {
+          open({ ...chosen, seed });
+        },
       },
+      veiled: undefined,
     });
 
     const choose = (row: Row, option: string): void => {

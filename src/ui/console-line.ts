@@ -23,8 +23,14 @@ function seedOf(typed: string): number | undefined {
   return read === 0 ? 0 : read;
 }
 
-/** What the screen under the console holds for `seed`: the seed it reads, and whether it launches. */
-export type Screen = { readonly seed: number | undefined; readonly launches: boolean };
+/**
+ * The entries the screen under the console holds: `seed`, with the seed it reads there, where it holds
+ * it, and whether it holds the two switches.
+ */
+export type Screen = {
+  readonly seed: { readonly reads: number | undefined } | undefined;
+  readonly switches: boolean;
+};
 
 /**
  * What a line left behind: the veils the map draws under, the one line the console answers, and the
@@ -46,28 +52,25 @@ export function runLine(line: string, veils: Veils, screen: Screen): Ran {
 
   const [word] = trimmed.split(/\s/, 1);
   const after = trimmed.slice(word.length).trim();
-  if (word === 'seed') return seeded(after, veils, screen);
+  const unheld: Ran = { veils, answer: text('console.no-entry', { line: trimmed }) };
+  if (word === 'seed')
+    return screen.seed === undefined ? unheld : seeded(after, veils, screen.seed.reads);
 
   const entry = SWITCHES.find((each) => each === word);
-  if (entry === undefined || after.length > 0) {
-    return { veils, answer: text('console.no-entry', { line: trimmed }) };
-  }
+  if (entry === undefined || after.length > 0 || !screen.switches) return unheld;
 
   const thrown: Veils = { ...veils, [entry]: !veils[entry] };
   return { veils: thrown, answer: text(stateOf(entry, thrown[entry])) };
 }
 
 /** `seed` with what stood after it: the seed read where nothing did, and a launch on a seed typed. */
-function seeded(after: string, veils: Veils, screen: Screen): Ran {
+function seeded(after: string, veils: Veils, reads: number | undefined): Ran {
   if (after.length === 0) {
     const answer =
-      screen.seed === undefined
-        ? text('console.no-chronicle')
-        : text('console.seed', { seed: screen.seed });
+      reads === undefined ? text('console.no-chronicle') : text('console.seed', { seed: reads });
     return { veils, answer };
   }
   const seed = seedOf(after);
   if (seed === undefined) return { veils, answer: text('console.not-a-seed', { typed: after }) };
-  if (!screen.launches) return { veils, answer: text('console.no-launch') };
   return { veils, answer: undefined, launch: seed };
 }
