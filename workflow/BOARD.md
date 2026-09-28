@@ -7,10 +7,11 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 ## Rungs
 
 - **The collection screen** — the collection with the copies owned, the deck and its settle section edited from it, the city section's card shown at the head of the settle section, a copy bought for influence; its intake decides the glossary's word for what influence pays for a copy, which `docs/META.md` calls a price.
-- **The Stone Age** — the age page and its content, the age the Nomadic victory unlocks: its settle, land, units, cards and buildings, events, capstone and camps, and its achievements with the technologies they unlock, cards and settle cards among them; with it the achievement reading, a condition read on the chronicle after every change and recorded in it, folded into the campaign's seam once done, and the warning a launch over a chronicle with achievements reached raises, since an abandoned chronicle pays nothing.
+- **The Stone Age** — the age page and its content, the age the Nomadic victory unlocks: its settle, land, units, cards and buildings, events, capstone and camps, and its achievements with the technologies they unlock, cards and settle cards among them; with it the warning a launch over a chronicle with achievements reached raises, since an abandoned chronicle pays nothing.
 - **Pin an achievement** — one achievement pinned on the campaign screen shows on the chronicle screen as a ledger: its goal in words, a count against its need where it has one, a check mark once reached, a cross mark once failed.
 - **The headless simulator** — a consumer of the rules that runs only when asked and reports numbers, not diagnoses, tuned across the two ages; the reachability cache and the end of turn's cost per `apply` are looked at when it is made.
 
 ## Lines
 
 - **A design page for the meta's screens** — the navbar and the bar, the tree and the launch screen move out of `docs/INTERFACE.md` into `docs/META-SCREEN.md`, as `docs/CHRONICLE-SCREEN.md` is for the chronicle's, ahead of the collection screen.
+- **A seed from the console** — the launch screen chooses no seed, so the debug console launches a chronicle on the seed it is given, and a map a playtester describes is reopened without a save built by hand.
