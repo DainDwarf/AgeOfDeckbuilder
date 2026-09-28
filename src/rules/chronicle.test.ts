@@ -791,6 +791,46 @@ test('the fall’s ending is read as any change: a victory’s achievement is no
   expect(outcome(fallen).achievements).toEqual([{ id: victoryOf(QUIET), reached: true }]);
 });
 
+test('an achievement that counts the charted tiles is recorded right after the move that charts the tile it needs, in the same command', () => {
+  const city = reaching([], { tiles: field(6), units: [standing('player', { q: 0, r: 3 })] });
+  const age = ageOf(CATALOGUE, AGE);
+  const hoard = achievementOf(CATALOGUE, AGE, HOARD);
+  const exploring: Catalogue = {
+    ...CATALOGUE,
+    ages: {
+      ...CATALOGUE.ages,
+      [AGE]: {
+        ...age,
+        achievements: {
+          ...age.achievements,
+          [HOARD]: {
+            ...hoard,
+            count: (_catalogue, chronicle) => chronicle.snapshots.length,
+            need: city.snapshots.length + 1,
+          },
+        },
+      },
+    },
+  };
+
+  const stages = apply(exploring, city, {
+    type: 'move',
+    unit: city.units[0].id,
+    tile: { q: 0, r: 4 },
+  });
+  const [moved, reached] = [...walked(stages)];
+
+  expect(namesOf(stages)).toEqual(['move', 'reached']);
+  expect(moved.chronicle.snapshots.length).toBeGreaterThan(city.snapshots.length);
+  expect(moved.chronicle.achievements).toEqual(city.achievements);
+  expect(reached.chronicle.snapshots).toBe(moved.chronicle.snapshots);
+  expect(reached.chronicle.achievements).toEqual([
+    { id: HOARD, reached: true },
+    { id: FEAST, reached: false },
+    { id: victoryOf(AGE), reached: false },
+  ]);
+});
+
 test('a chronicle that has ended takes no command at all', () => {
   const city = cityOf(['urban'], {
     tiles: field(2),
