@@ -1,14 +1,21 @@
 import { expect, type Page, test } from '@playwright/test';
+import { CATALOGUE } from '../src/content/catalogue';
+import { ageOf } from '../src/rules/catalogue';
+import { capstoneLore } from '../src/ui/lore';
+import { text } from '../src/ui/text';
 import {
   campaignShown,
+  cardOnFace,
   chronicleButton,
   chronicleOf,
   click,
   consoleKey,
   launchedOn,
+  loreOf,
   readNames,
   rested,
   standing,
+  titleOf,
   watch,
 } from './chronicle-screen';
 
@@ -65,7 +72,7 @@ test('the console over the launch page takes its digits and its Enter', async ({
   expect(problems).toEqual([]);
 });
 
-test('Launch opens the chronicle on the firsts, and the address stays bare through Chronicle, Launch, Campaign, Chronicle and Launch again', async ({
+test('Launch opens the chronicle on the firsts under its capstone’s window, and the address stays bare through Chronicle, Launch, Campaign, Chronicle and Launch again', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -82,7 +89,21 @@ test('Launch opens the chronicle on the firsts, and the address stays bare throu
   expect(named(page)).toBe('');
   expect(launched).toEqual(launchedOn(launched.seed));
 
+  const capstone = ageOf(CATALOGUE, launched.age).schedule.capstone.id;
+  await expect.poll(() => standing(page, 'capstone')).toBe(true);
+  expect(await titleOf(page, 'capstone')).toBe(text('capstone.title'));
+  expect(await loreOf(page, 'capstone')).toBe(capstoneLore(capstone, 'opening'));
+  expect(await cardOnFace(page, 'capstone-card-0')).toBe(capstone);
+
   await expect.poll(() => standing(page, 'menu-button')).toBe(true);
+  await rested(page);
+  await click(page, 'menu-button');
+  await expect.poll(() => standing(page, 'menu')).toBe(true);
+  await page.keyboard.press('Escape');
+  await expect.poll(() => standing(page, 'menu')).toBe(false);
+  expect(await standing(page, 'capstone')).toBe(true);
+
+  await rested(page);
   await click(page, 'menu-button');
   await expect.poll(() => standing(page, 'menu')).toBe(true);
   await rested(page);

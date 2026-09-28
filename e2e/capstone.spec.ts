@@ -2,24 +2,18 @@ import { expect, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
 import { ageOf } from '../src/rules/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
-import { CENTRE, tileKey } from '../src/rules/map';
 import type { Chronicle } from '../src/rules/state';
 import { capstoneLore } from '../src/ui/lore';
 import { text } from '../src/ui/text';
 import {
-  aimed,
   budget,
-  capstoneClosed,
   cardOnFace,
   chronicleOf,
   click,
-  dragOut,
   endedTurn,
   firstsOf,
-  launchedOn,
   loreOf,
   onScreen,
-  openAnnounced,
   openSaved,
   playedOut,
   rested,
@@ -44,42 +38,6 @@ function beforeTheCapstone(): Chronicle {
     throw new Error(`seed 1 stands on no open turn before the capstone lands on turn ${landing}`);
   return chronicle;
 }
-
-test('the chronicle’s opening announces the capstone, once', async ({ page }) => {
-  const problems = watch(page);
-  // The settle's turn ended to prove the window does not come back.
-  test.setTimeout(budget(0));
-
-  await openAnnounced(page, launchedOn(1));
-  expect(await titleOf(page, 'capstone')).toBe(text('capstone.title'));
-  expect(await loreOf(page, 'capstone')).toBe(capstoneLore(CAPSTONE, 'opening'));
-  expect(await cardOnFace(page, 'capstone-card-0')).toBe(CAPSTONE);
-
-  const card = await onScreen(page, 'capstone-card-0');
-  await page.mouse.click(card.x, card.y, { button: 'right' });
-  await expect.poll(() => cardOnFace(page, 'inspection')).toBe(CAPSTONE);
-  await page.keyboard.press('Escape');
-  await expect.poll(() => standing(page, 'inspection')).toBe(false);
-  expect(await standing(page, 'capstone')).toBe(true);
-
-  await click(page, 'menu-button');
-  await expect.poll(() => standing(page, 'menu')).toBe(true);
-  await page.keyboard.press('Escape');
-  await expect.poll(() => standing(page, 'menu')).toBe(false);
-  expect(await standing(page, 'capstone')).toBe(true);
-
-  await capstoneClosed(page);
-
-  await dragOut(page, 0);
-  await aimed(page);
-  await click(page, `tile-${tileKey(CENTRE)}`);
-  await playedOut(page);
-  await expect.poll(async () => (await chronicleOf(page)).city).toEqual(CENTRE);
-  await stoppedTurn(page);
-  expect(await standing(page, 'capstone')).toBe(false);
-
-  expect(problems).toEqual([]);
-});
 
 test('the capstone’s landing holds the end of turn on its window, and the end of turn goes on to draw the hand once it closes', async ({
   page,

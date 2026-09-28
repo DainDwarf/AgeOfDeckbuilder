@@ -94,6 +94,7 @@ test('a chronicle opens on the settle phase with the city standing nowhere, and 
   const ticked = await chronicleOf(page);
   expect(ticked).toEqual(outcome(apply(CATALOGUE, settled, { type: 'end-turn' })));
   expect(ticked.turn).toBe(1);
+  expect(await standing(page, 'capstone')).toBe(false);
   expect(await endTurnFill(page)).toBe(LOOK.accent);
   expect(await shows(page, 'settle-phase-frame')).toBe(false);
   expect(await shows(page, 'settle-phase-chip')).toBe(false);
