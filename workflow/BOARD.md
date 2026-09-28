@@ -14,4 +14,4 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **End chronicle on end screen** - Add an "End chronicle" button on the ending screens, that puts you back onto the meta.
+- **End chronicle on end screen** — the ending screen carries an **End chronicle** button under its ledger, part of the centred block, which opens the campaign screen once the screen has risen; `e2e/ending.spec.ts` leaves the ending screen through it and passes. Doc-impact: `docs/CHRONICLE-SCREEN.md`. [board/end-chronicle-on-end-screen.md](board/end-chronicle-on-end-screen.md)
