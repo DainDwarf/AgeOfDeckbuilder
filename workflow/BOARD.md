@@ -16,3 +16,5 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 - **Conditions read on the charted chronicle** — a command's stages are charted before the capstone's and the achievements' conditions are read on them; `npm test` passes with a test in `src/rules/chronicle.test.ts` proving an achievement that counts charted tiles is recorded right after the move that charts the tile it needs, in the same command. Doc-impact: none. [board/conditions-read-on-the-charted-chronicle.md](board/conditions-read-on-the-charted-chronicle.md)
 - **Warn when the game cannot save** — the game should warn the user when it cannot save, as when the browser's storage refuses a write.
+- **Specs read a named text through textOf** — the named-text readers still copied inline in the e2e specs and in `e2e/chronicle-screen.ts`'s own helpers move to the shared `textOf`.
+- **Specs build the fresh campaign through freshCampaign** — the specs and `plant` that build the fresh campaign as `newCampaign(CATALOGUE, firstsOf().civilization)` read `freshCampaign(CATALOGUE)` instead.
