@@ -15,10 +15,10 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **age** | One span of history: the unit a chronicle plays through, the campaign unlocks, and content is partitioned by. | era, epoch, period, tier |
 | **campaign** | Humanity's history as the player has unlocked it — the meta's progression. | tech tree, map (for the meta) |
 | **collection** | Every card the player owns, every copy a card of its own. | library, pool, inventory |
-| **civilization** | A playable identity: starting units, one passive rule, a look, and its deck. | people, nation, civ, board |
-| **deck** | A civilization's set of cards, fixed for a chronicle. | loadout |
+| **civilization** | What a chronicle is played as, unlocked by the campaign: a city section and a deck. | people, nation, civ, board |
+| **deck** | A civilization's cards: its settle section and the cards the draw pile cycles. | loadout |
 | **settle section** | The part of the deck that holds its settle cards; with the city section's card, the hand of the settle phase. | opening hand, starting hand, sideboard, reserve |
-| **city section** | The part of the deck that holds the city — its building, its sight, its idle population — and the card that settles it. | city slot, capital card |
+| **city section** | The part of a civilization that holds the city — its building, its sight, its idle population — and the card that settles it. | city slot, capital card |
 | **technology** | A permanent unlock earned by an achievement: new cards, better buildings, better units. | tech, advancement, upgrade, research |
 | **achievement** | A goal a chronicle can reach; reaching it unlocks a technology. | mission, objective, quest, milestone |
 | **influence** | The meta-currency every chronicle pays, scaled by how the city fared. | gold, XP |

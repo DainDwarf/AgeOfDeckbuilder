@@ -26,14 +26,13 @@ A **chronicle** is one city's story, told once — the roguelite's unit of play,
 
 ## Launching a chronicle ✅
 
-Four choices, each with one job:
+Three choices, each with one job:
 
 - **Age** — given by the campaign: the furthest age reached, the Nomadic Age for a new campaign. Earlier ages stay playable, for the influence and the achievements missed. The age is never a difficulty pick.
 - **Region** — a bias on map generation: temperate, desert, coast, mountains, polar, … The region is the **difficulty dial**, and honestly so: a harsh region pays more influence, and some achievements are reachable only from a region that has what they need. 🔧 A freely chosen region with no such stakes was rejected: every launch would take the easiest.
-- **Civilization** — who you are: starting units, one passive rule, a look. A civilization owns its deck — one deck per civilization, edited as a facet of it — and its city: the deck's city section holds what the city is — its building, how far it sees, the population it opens with — and the card that settles it, one tile-aim every civilization shares that puts the city section's city on the tile. 🔧
-- **Deck** — built in the meta from the shared collection, fixed for the chronicle, in three sections: its **city section**, its **settle cards**, played on the settle phase alone, and its **cards**, which the draw pile cycles; the chronicle carries the city section as it stood at the launch, and reads the city off it from the settle on.
+- **Civilization** — who you are and what you play: starting units, one passive rule, a look. It is one thing in two parts. Its **city section** holds what the city is — its building, how far it sees, the population it opens with — and the card that settles it, one tile-aim every civilization shares that puts the city section's city on the tile. Its **deck** is its cards, built in the meta from the shared collection, in two sections: its **settle cards**, played on the settle phase alone, and its **cards**, which the draw pile cycles. The city is what leans a civilization one way, and the deck is what the player makes of it. A civilization is unlocked by the campaign, authored with its city section and the deck it opens with. The chronicle is dealt its cards from the deck at the launch, carries the city section as it stood then, and reads the city off it from the settle on. 🔧
 
-The four choices lead to the settle phase: the chronicle opens unsettled, and its first act is the settle.
+The three choices lead to the settle phase: the chronicle opens unsettled, and its first act is the settle.
 
 ## The meta — humanity's history ✅
 

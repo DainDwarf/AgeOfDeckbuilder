@@ -6,7 +6,7 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Rungs
 
-- **The launch screen** — age, region, civilization and deck, replacing the launch page; no seed is chosen, every launch drawing a fresh one.
+- **The launch screen** — age, region and civilization, replacing the launch page; no seed is chosen, every launch drawing a fresh one.
 - **The collection screen** — the collection with the copies owned, the deck and its settle section edited from it, the city section's card shown at the head of the settle section, a copy bought for influence.
 - **The Stone Age** — the age page and its content, the age the Nomadic victory unlocks: its settle, land, units, cards and buildings, events, capstone and camps, and its achievements with the technologies they unlock, cards and settle cards among them; with it the achievement reading, a condition read on the chronicle after every change and recorded in it, folded into the campaign's seam once done, and the warning a launch over a chronicle with achievements reached raises, since an abandoned chronicle pays nothing.
 - **Pin an achievement** — one achievement pinned on the campaign screen shows on the chronicle screen as a ledger: its goal in words, a count against its need where it has one, a check mark once reached, a cross mark once failed.
