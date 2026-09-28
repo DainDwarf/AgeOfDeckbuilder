@@ -136,19 +136,6 @@ export function watch(page: Page): string[] {
 }
 
 /**
- * Opens the chronicle `launchedOn` launches from the seed, planted as the save on the first region
- * and deck the catalogue lists; the capstone's window the opening raises is left standing.
- */
-export async function openNew(page: Page, seed: number): Promise<void> {
-  const { region, deck } = firstsOf();
-  await readNames(page);
-  await plant(page, { chronicle: launchedOn(seed), region, deck });
-  await continued(page);
-  await expect.poll(() => standing(page, 'capstone')).toBe(true);
-  await rested(page);
-}
-
-/**
  * Closes the capstone's window standing by a press on its card, and rests: the back key is
  * rebindable, and specs rebind it.
  */
@@ -253,17 +240,27 @@ export async function continued(page: Page): Promise<void> {
  * on its ending screen.
  */
 export async function openSaved(page: Page, chronicle: Chronicle): Promise<void> {
+  if (chronicle.ending !== undefined) {
+    await openedOn(page, chronicle);
+    await rested(page);
+    return;
+  }
+  await openAnnounced(page, chronicle);
+  await capstoneClosed(page);
+}
+
+/** Opens the chronicle as `openSaved` does, the capstone's window it opens under left standing. */
+export async function openAnnounced(page: Page, chronicle: Chronicle): Promise<void> {
+  await openedOn(page, chronicle);
+  await expect.poll(() => standing(page, 'capstone')).toBe(true);
+  await rested(page);
+}
+
+async function openedOn(page: Page, chronicle: Chronicle): Promise<void> {
   const { region, deck } = firstsOf();
   await readNames(page);
   await plant(page, { chronicle, region, deck });
   await continued(page);
-  if (chronicle.ending !== undefined) {
-    await rested(page);
-    return;
-  }
-  await expect.poll(() => standing(page, 'capstone')).toBe(true);
-  await rested(page);
-  await capstoneClosed(page);
 }
 
 /** Waits for a drawn frame, so a camera moved since answers for where it now stands. */

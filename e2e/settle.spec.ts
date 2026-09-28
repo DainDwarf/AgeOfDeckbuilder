@@ -9,7 +9,6 @@ import { text } from '../src/ui/text';
 import {
   aimed,
   budget,
-  capstoneClosed,
   chronicleOf,
   click,
   dragOut,
@@ -20,7 +19,7 @@ import {
   launchedOn,
   marksIn,
   onScreen,
-  openNew,
+  openSaved,
   playedOut,
   rested,
   shows,
@@ -36,8 +35,7 @@ test('a chronicle opens on the settle phase with the city standing nowhere, and 
   test.setTimeout(budget(0));
   const before = launchedOn(1);
 
-  await openNew(page, 1);
-  await capstoneClosed(page);
+  await openSaved(page, before);
 
   const opened = await chronicleOf(page);
   expect(opened).toEqual(before);
@@ -113,8 +111,7 @@ test('city mode entered once the city stands hides the settle phase’s frame an
   const problems = watch(page);
   test.setTimeout(budget(0));
 
-  await openNew(page, 1);
-  await capstoneClosed(page);
+  await openSaved(page, launchedOn(1));
 
   await dragOut(page, 0);
   await aimed(page);

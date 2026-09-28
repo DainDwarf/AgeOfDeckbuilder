@@ -11,7 +11,6 @@ import {
   beforeTheFall,
   budget,
   campaignShown,
-  capstoneClosed,
   chronicleOf,
   click,
   continued,
@@ -19,7 +18,8 @@ import {
   dragOut,
   firstDealt,
   firstsOf,
-  openNew,
+  launchedOn,
+  openSaved,
   plant,
   playedOut,
   readNames,
@@ -40,8 +40,7 @@ test('a chronicle continued through the address stands where it stood, under its
   test.setTimeout(budget(0));
   const problems = watch(page);
 
-  await openNew(page, 1);
-  await capstoneClosed(page);
+  await openSaved(page, launchedOn(1));
   await dragOut(page, 0);
   await aimed(page);
   await click(page, `tile-${tileKey(CENTRE)}`);

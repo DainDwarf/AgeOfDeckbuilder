@@ -12,7 +12,6 @@ import {
   bareTile,
   besideTiles,
   budget,
-  capstoneClosed,
   chronicleOf,
   cityTileOf,
   click,
@@ -24,10 +23,10 @@ import {
   type Glyphs,
   glyphs,
   glyphsOf,
+  launchedOn,
   marksIn,
   nearestUncharted,
   noGlyphs,
-  openNew,
   openSaved,
   playedOut,
   refusalLines,
@@ -124,8 +123,7 @@ test('before the settle neither the city key nor culture nor idle enters city mo
   const problems = watch(page);
   test.setTimeout(budget(0));
 
-  await openNew(page, 1);
-  await capstoneClosed(page);
+  await openSaved(page, launchedOn(1));
 
   await page.keyboard.press('c');
   await answered(page);

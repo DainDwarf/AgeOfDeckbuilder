@@ -11,12 +11,6 @@ import { overlayAhead } from './overlay-scene';
 import { type Choices, type Opening, savedOpening } from './save-entry';
 import { type TextKey, technologyName, text } from './text';
 
-/** The first age and deck the catalogue lists, and that age's first region, on no seed. */
-function firstsOf(): Choices {
-  const age = firstAge(CATALOGUE);
-  return { age, region: firstRegion(CATALOGUE, age), deck: firstDeck(CATALOGUE), seed: undefined };
-}
-
 const WIDTH = 480;
 const PADDING = 30;
 const LABEL_WIDTH = 120;
@@ -66,7 +60,13 @@ export class LaunchPage extends Phaser.Scene {
     closeMenu(this);
     const { content } = wearNavbar(this, 'launch');
     backRaisesMenu(this);
-    let chosen: Choices = firstsOf();
+    const age = firstAge(CATALOGUE);
+    let chosen: Choices = {
+      age,
+      region: firstRegion(CATALOGUE, age),
+      deck: firstDeck(CATALOGUE),
+      seed: undefined,
+    };
     let typed = '';
     let root: Phaser.GameObjects.Container | undefined;
     let seedLabel: Phaser.GameObjects.Text | undefined;

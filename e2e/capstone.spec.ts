@@ -16,9 +16,10 @@ import {
   dragOut,
   endedTurn,
   firstsOf,
+  launchedOn,
   loreOf,
   onScreen,
-  openNew,
+  openAnnounced,
   openSaved,
   playedOut,
   rested,
@@ -49,7 +50,7 @@ test('the chronicle’s opening announces the capstone, once', async ({ page }) 
   // The settle's turn ended to prove the window does not come back.
   test.setTimeout(budget(0));
 
-  await openNew(page, 1);
+  await openAnnounced(page, launchedOn(1));
   expect(await titleOf(page, 'capstone')).toBe(text('capstone.title'));
   expect(await loreOf(page, 'capstone')).toBe(capstoneLore(CAPSTONE, 'opening'));
   expect(await cardOnFace(page, 'capstone-card-0')).toBe(CAPSTONE);

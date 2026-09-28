@@ -8,15 +8,14 @@ import { referenceName } from '../src/ui/text';
 import { layOutRun, type Reference } from '../src/ui/text-run';
 import {
   besideTheDeal,
-  capstoneClosed,
   cardOnFace,
   chronicleOf,
   cursorOverCanvas,
   firstsOf,
+  launchedOn,
   leanSeason,
   nameOnScreen,
   onScreen,
-  openNew,
   openSaved,
   referenceOnFace,
   rested,
@@ -178,8 +177,7 @@ test('a building named on the settle card raises its card small at a rest and sh
   const settle = section.card;
   const city = { kind: 'building', id: section.building };
 
-  await openNew(page, 1);
-  await capstoneClosed(page);
+  await openSaved(page, launchedOn(1));
   const opened = await chronicleOf(page);
   expect(opened.hand[0].id).toBe(settle);
 
