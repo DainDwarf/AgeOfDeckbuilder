@@ -27,14 +27,16 @@ import { campaignHeld } from './save-entry';
 import { type TextKey, text } from './text';
 import { createTooltip, type Tooltip } from './tooltip';
 
-/** A screen of the meta, by the key of the scene it stands on. */
-export type MetaScreen = 'campaign' | 'launch';
+/** Every screen of the meta, by the key of the scene it stands on, in the navbar's order, top down. */
+export const META_SCREENS = ['campaign', 'launch'] as const;
 
-/** The navbar's buttons, top down: the screen each opens and its word. */
-const BUTTONS: readonly { readonly screen: MetaScreen; readonly word: TextKey }[] = [
-  { screen: 'campaign', word: 'navbar.campaign' },
-  { screen: 'launch', word: 'navbar.chronicle' },
-];
+export type MetaScreen = (typeof META_SCREENS)[number];
+
+/** The word each screen's navbar button reads. */
+const WORDS: Record<MetaScreen, TextKey> = {
+  campaign: 'navbar.campaign',
+  launch: 'navbar.chronicle',
+};
 
 const NAVBAR_WIDTH = 240;
 const BUTTON_WIDTH = NAVBAR_WIDTH - 2 * MARGIN;
@@ -85,7 +87,8 @@ export function wearNavbar(scene: Phaser.Scene, standing: MetaScreen): Worn {
     .setName('navbar-title');
 
   const first = MARGIN + title.height + MARGIN;
-  BUTTONS.forEach(({ screen, word }, index) => {
+  META_SCREENS.forEach((screen, index) => {
+    const word = WORDS[screen];
     const y = first + index * (BUTTON_HEIGHT + BUTTON_GAP);
     const sunk = screen === standing;
     if (sunk) {

@@ -5,9 +5,8 @@ import { paidInto } from '../src/rules/campaign';
 import { achievementOf } from '../src/rules/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
 import { type TileCoords, tileKey } from '../src/rules/map';
-import { freshCampaign, readSave } from '../src/rules/save';
+import { freshCampaign } from '../src/rules/save';
 import type { Chronicle } from '../src/rules/state';
-import { SAVE_ENTRY } from '../src/ui/save-entry';
 import { technologyName, text } from '../src/ui/text';
 import {
   aimed,
@@ -17,6 +16,7 @@ import {
   click,
   cursorOverCanvas,
   dragOut,
+  heldSave,
   idsOf,
   landed,
   onScreen,
@@ -81,9 +81,7 @@ test('the play that ends the chronicle pays it into the campaign: the ending scr
   expect(await textOf(page, 'ending-total-label')).toBe(text('label.influence'));
   expect(await textOf(page, 'ending-total')).toBe(String(paid.influence));
 
-  const saved = await page.evaluate((entry) => window.localStorage.getItem(entry), SAVE_ENTRY);
-  if (saved === null) throw new Error('the game keeps no save');
-  expect(readSave(CATALOGUE, saved)).toEqual({
+  expect(await heldSave(page)).toEqual({
     campaign: paid.campaign,
     chronicle: undefined,
     dropped: [],

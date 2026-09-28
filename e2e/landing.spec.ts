@@ -6,7 +6,7 @@ import { offered } from '../src/rules/schedule';
 import { inSight } from '../src/rules/sight';
 import { walked } from '../src/rules/stages';
 import type { Chronicle } from '../src/rules/state';
-import { type Bindings, bound, DEFAULTS, STORED, serialiseBindings } from '../src/ui/bindings';
+import { bound, DEFAULTS } from '../src/ui/bindings';
 import {
   budget,
   firstSeed,
@@ -14,6 +14,7 @@ import {
   mapFrame,
   onScreen,
   openSaved,
+  plantControls,
   rested,
   settledOn,
   standing,
@@ -56,16 +57,6 @@ function herdDealt(): { dealt: Chronicle; at: number; tile: TileCoords } {
       inSight(CATALOGUE, dealt).has(key) || dealt.snapshots.some((kept) => tileKey(kept) === key);
     return drawn ? undefined : { dealt, at, tile };
   });
-}
-
-/** The bindings kept as the ones the pages this one loads from now on find. */
-async function plantControls(page: Page, bindings: Bindings): Promise<void> {
-  await page.addInitScript(
-    ({ entry, kept }) => {
-      window.localStorage.setItem(entry, kept);
-    },
-    { entry: STORED, kept: serialiseBindings(bindings) },
-  );
 }
 
 /**

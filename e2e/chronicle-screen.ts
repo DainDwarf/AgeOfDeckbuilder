@@ -30,10 +30,17 @@ import {
   tileYield,
 } from '../src/rules/map';
 import { RESOURCES, type Resource, type Resources } from '../src/rules/resources';
-import { type ChronicleSave, freshCampaign, writeSave } from '../src/rules/save';
+import {
+  type ChronicleSave,
+  freshCampaign,
+  readSave,
+  type SaveRead,
+  writeSave,
+} from '../src/rules/save';
 import { charted } from '../src/rules/sight';
 import { type CardId, type Chronicle, type ChronicleCard, playable } from '../src/rules/state';
 import { standsOn, type Unit, unitAt } from '../src/rules/units';
+import { type Bindings, STORED, serialiseBindings } from '../src/ui/bindings';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
 import type { PileKind } from '../src/ui/overlay';
 import { SAVE_ENTRY } from '../src/ui/save-entry';
@@ -207,6 +214,28 @@ export async function plant(page: Page, save: ChronicleSave): Promise<void> {
  */
 export async function plantCampaign(page: Page, campaign: Campaign): Promise<void> {
   await kept(page, writeSave(CATALOGUE, campaign));
+}
+
+/** The bindings kept as the ones the pages this one loads from now on find. */
+export async function plantControls(page: Page, bindings: Bindings): Promise<void> {
+  await page.addInitScript(
+    ({ entry, kept }) => {
+      window.localStorage.setItem(entry, kept);
+    },
+    { entry: STORED, kept: serialiseBindings(bindings) },
+  );
+}
+
+/** What the browser keeps under the entry right now, and nothing where it keeps nothing. */
+export function storedUnder(page: Page, entry: string): Promise<string | null> {
+  return page.evaluate((key) => window.localStorage.getItem(key), entry);
+}
+
+/** The save the game keeps, read as the game reads it; a game that keeps none throws here. */
+export async function heldSave(page: Page): Promise<SaveRead> {
+  const saved = await storedUnder(page, SAVE_ENTRY);
+  if (saved === null) throw new Error('the game keeps no save');
+  return readSave(CATALOGUE, saved);
 }
 
 /** The text kept as the save the next page this one loads finds; a page after it finds what play left. */

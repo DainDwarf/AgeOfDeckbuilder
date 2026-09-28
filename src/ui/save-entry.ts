@@ -1,6 +1,7 @@
 import { CATALOGUE } from '../content/catalogue';
 import type { Campaign, Payment } from '../rules/campaign';
 import { type ChronicleSave, freshCampaign, keptAfter, readSave, writeSave } from '../rules/save';
+import { readSaveFile, type Save, type SaveFileRead, writeSaveFile } from '../rules/save-file';
 import type { Chronicle } from '../rules/state';
 import { store, stored, unstore } from './storage';
 
@@ -52,6 +53,12 @@ function openingOf({ chronicle, region, civilization }: ChronicleSave): Saved {
   return { age: chronicle.age, region, civilization, resumed: chronicle };
 }
 
+/** The save held from now on, whole, and the browser's entry written with it. */
+export function keepSave({ campaign, chronicle }: Save): void {
+  held = { campaign, opening: chronicle === undefined ? undefined : openingOf(chronicle) };
+  store(SAVE_ENTRY, writeSave(CATALOGUE, campaign, chronicle));
+}
+
 /**
  * The chronicle kept as the save, beside the campaign held; an ended one is kept as the campaign it
  * paid into, and the payment is answered.
@@ -61,12 +68,32 @@ export function keepChronicle(
   chronicle: Chronicle,
 ): Payment | undefined {
   const after = keptAfter(CATALOGUE, read().campaign, { chronicle, region, civilization });
-  held = {
-    campaign: after.campaign,
-    opening: after.chronicle === undefined ? undefined : openingOf(after.chronicle),
-  };
-  store(SAVE_ENTRY, writeSave(CATALOGUE, after.campaign, after.chronicle));
+  keepSave(after);
   return after.payment;
+}
+
+/** The save as the game holds it now, as a save file's text. */
+export function saveFileText(): string {
+  const { campaign, opening } = read();
+  return writeSaveFile(
+    CATALOGUE,
+    campaign,
+    opening === undefined
+      ? undefined
+      : { chronicle: opening.resumed, region: opening.region, civilization: opening.civilization },
+  );
+}
+
+/** A save file's text, read: the console says why each thing was refused or dropped. */
+export function readSaveFileText(text: string): SaveFileRead {
+  const read = readSaveFile(CATALOGUE, text);
+  for (const reason of read.dropped) console.warn(reason);
+  return read;
+}
+
+/** The save replaced by a new campaign on the first civilization. */
+export function clearSave(): void {
+  keepSave({ campaign: freshCampaign(CATALOGUE) });
 }
 
 /**

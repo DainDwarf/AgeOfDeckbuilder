@@ -13,13 +13,11 @@ import {
   CATALOGUE,
   CIVILIZATION,
   CIVILIZATION_ID,
-  endedTurn,
+  chronicleSaved,
   FROST,
   HOARD,
   hoardedVictory,
   QUIET,
-  REGION,
-  settledLaunch,
   victoryOf,
 } from './fixtures';
 import { RESOURCES } from './resources';
@@ -27,13 +25,6 @@ import { type ChronicleSave, keptAfter, readSave, writeSave } from './save';
 import { laid } from './schedule';
 import type { Chronicle, CitySection, Counters } from './state';
 import { FIRST_UNIT_NUMBER, LEAST_STATS, type Unit } from './units';
-
-/** A chronicle three turns in, saved with what it was launched on. */
-function saved(): ChronicleSave {
-  let chronicle = settledLaunch(CATALOGUE, AGE, REGION, 4242, CIVILIZATION, []);
-  for (let turn = 1; turn < 3; turn++) chronicle = endedTurn(chronicle);
-  return { chronicle, region: REGION, civilization: CIVILIZATION_ID };
-}
 
 /** A campaign a won chronicle has paid into: technologies, influence, and cards in no section. */
 function campaign(): Campaign {
@@ -72,7 +63,9 @@ function chronicleDropped(text: string): readonly string[] {
 
 /** The save's text with the campaign it holds changed after it was written beside a chronicle. */
 function campaignTampered(change: (campaign: Campaign) => object): string {
-  const written = JSON.parse(writeSave(CATALOGUE, campaign(), saved())) as { campaign: Campaign };
+  const written = JSON.parse(writeSave(CATALOGUE, campaign(), chronicleSaved())) as {
+    campaign: Campaign;
+  };
   return JSON.stringify({ ...written, campaign: change(written.campaign) });
 }
 
@@ -80,12 +73,12 @@ function campaignTampered(change: (campaign: Campaign) => object): string {
 function campaignRefused(text: string): readonly string[] {
   const read = readSave(CATALOGUE, text);
   expect(read.campaign).toBeUndefined();
-  expect(read.chronicle).toEqual(saved());
+  expect(read.chronicle).toEqual(chronicleSaved());
   return read.dropped;
 }
 
 test('a chronicle saved and read back is the chronicle, and plays the next command to the same outcome', () => {
-  const save = saved();
+  const save = chronicleSaved();
   const read = readSave(CATALOGUE, writeSave(CATALOGUE, campaign(), save));
   const command: Command = { type: 'end-turn' };
 
@@ -105,7 +98,7 @@ test('a campaign saved with no chronicle in progress reads back alone', () => {
 });
 
 test('a save carrying a card no catalogue holds drops its chronicle, and the campaign stands', () => {
-  const text = tampered(saved(), (chronicle) => ({
+  const text = tampered(chronicleSaved(), (chronicle) => ({
     ...chronicle,
     drawPile: [{ ...chronicle.drawPile[0], id: 'PH_Unheld' }, ...chronicle.drawPile.slice(1)],
   }));
@@ -114,7 +107,7 @@ test('a save carrying a card no catalogue holds drops its chronicle, and the cam
 });
 
 test('a chronicle carrying a card no catalogue holds is refused its save', () => {
-  const save = saved();
+  const save = chronicleSaved();
   const [card, ...rest] = save.chronicle.drawPile;
   const chronicle = { ...save.chronicle, drawPile: [{ ...card, id: 'PH_Unheld' }, ...rest] };
 
@@ -124,7 +117,7 @@ test('a chronicle carrying a card no catalogue holds is refused its save', () =>
 });
 
 test('a card in a save carries the counters its content declares, no fewer and no more', () => {
-  const save = saved();
+  const save = chronicleSaved();
   const chronicle = laid(CATALOGUE, save.chronicle, 'PH_Frost').chronicle;
   const [frost, ...rest] = chronicle.drawPile;
   const carrying = (counters: Counters): string =>
@@ -150,7 +143,7 @@ test('a save that is not JSON, or not an object, drops both its parts', () => {
 });
 
 test('a chronicle that is not a chronicle’s shape is dropped', () => {
-  const save = saved();
+  const save = chronicleSaved();
   const [unit, ...others] = save.chronicle.units;
   const dropped = (change: (chronicle: Chronicle) => object): readonly string[] =>
     chronicleDropped(tampered(save, change));
@@ -256,15 +249,19 @@ test.each<[string, (chronicle: Chronicle) => object, string]>([
     'chronicle.ending ended on turn -1',
   ],
 ])('a save whose chronicle holds %s drops it', (_, change, reason) => {
-  expect(chronicleDropped(tampered(saved(), change))).toEqual([`fixture: the save's ${reason}`]);
+  expect(chronicleDropped(tampered(chronicleSaved(), change))).toEqual([
+    `fixture: the save's ${reason}`,
+  ]);
 });
 
 test('a save whose chronicle holds a unit number the next unit number does not exceed drops it', () => {
-  const { nextUnit } = saved().chronicle;
+  const { nextUnit } = chronicleSaved().chronicle;
 
   expect(
     chronicleDropped(
-      tampered(saved(), (chronicle) => firstUnit(chronicle, (unit) => ({ ...unit, id: nextUnit }))),
+      tampered(chronicleSaved(), (chronicle) =>
+        firstUnit(chronicle, (unit) => ({ ...unit, id: nextUnit })),
+      ),
     ),
   ).toEqual([
     `fixture: the save's chronicle.units[0] is numbered ${nextUnit}, not below the next unit number ${nextUnit}`,
@@ -272,11 +269,14 @@ test('a save whose chronicle holds a unit number the next unit number does not e
 });
 
 test('a save whose chronicle holds two units of one number drops it', () => {
-  const [unit] = saved().chronicle.units;
+  const [unit] = chronicleSaved().chronicle.units;
 
   expect(
     chronicleDropped(
-      tampered(saved(), (chronicle) => ({ ...chronicle, units: [unit, ...chronicle.units] })),
+      tampered(chronicleSaved(), (chronicle) => ({
+        ...chronicle,
+        units: [unit, ...chronicle.units],
+      })),
     ),
   ).toEqual([
     `fixture: the save's chronicle.units[1] is numbered ${unit.id}, a number another unit holds`,
@@ -284,7 +284,7 @@ test('a save whose chronicle holds two units of one number drops it', () => {
 });
 
 test('a save whose chronicle names no age, or an age the catalogue does not hold, drops it', () => {
-  const save = saved();
+  const save = chronicleSaved();
 
   expect(
     chronicleDropped(tampered(save, (chronicle) => ({ ...chronicle, age: undefined }))),
@@ -295,7 +295,7 @@ test('a save whose chronicle names no age, or an age the catalogue does not hold
 });
 
 test('a save whose chronicle carries no city section, or one naming a building or a card the catalogue does not hold, drops it', () => {
-  const save = saved();
+  const save = chronicleSaved();
   const reading = (citySection: object | undefined): readonly string[] =>
     chronicleDropped(tampered(save, (chronicle) => ({ ...chronicle, citySection })));
   const section = save.chronicle.citySection;
@@ -315,7 +315,7 @@ test('a save whose chronicle carries no city section, or one naming a building o
 });
 
 test('a save whose chronicle carries no achievements, one its age does not own, or one reached neither true nor false, drops it', () => {
-  const save = saved();
+  const save = chronicleSaved();
   const reading = (achievements: object | undefined): readonly string[] =>
     chronicleDropped(tampered(save, (chronicle) => ({ ...chronicle, achievements })));
   const [first, ...rest] = save.chronicle.achievements;
@@ -335,7 +335,7 @@ test('a save whose chronicle carries no achievements, one its age does not own, 
 });
 
 test('a save written on one content version drops its chronicle on a catalogue of another, and its campaign stands', () => {
-  const text = writeSave(CATALOGUE, campaign(), saved());
+  const text = writeSave(CATALOGUE, campaign(), chronicleSaved());
   const next = catalogued({ ...CATALOGUE, version: 'fixture-next' });
 
   expect(readSave(next, text)).toEqual({
@@ -352,7 +352,10 @@ test('a campaign that is not a campaign’s shape is refused whole, and the chro
   expect(refused(() => ({}))).toEqual(["fixture: the save's campaign.nextCard is not an integer"]);
   expect(
     campaignRefused(
-      JSON.stringify({ ...JSON.parse(writeSave(CATALOGUE, campaign(), saved())), campaign: 1 }),
+      JSON.stringify({
+        ...JSON.parse(writeSave(CATALOGUE, campaign(), chronicleSaved())),
+        campaign: 1,
+      }),
     ),
   ).toEqual(["fixture: the save's campaign is not an object"]);
   expect(refused((held) => ({ ...held, influence: String(held.influence) }))).toEqual([
@@ -490,7 +493,7 @@ test('a campaign whose city opens with a negative idle is refused whole', () => 
 /** What reading the text leaves of the campaign, and the reasons it dropped, the chronicle standing. */
 function campaignRead(text: string): { campaign?: Campaign; dropped: readonly string[] } {
   const { chronicle, ...read } = readSave(CATALOGUE, text);
-  expect(chronicle).toEqual(saved());
+  expect(chronicle).toEqual(chronicleSaved());
   return read;
 }
 
@@ -687,7 +690,7 @@ test('a city section the save cannot resolve is the catalogue’s civilization�
 
 test('a chronicle naming a civilization the campaign does not hold is dropped, and the campaign stands', () => {
   const text = JSON.stringify({
-    ...JSON.parse(writeSave(CATALOGUE, campaign(), saved())),
+    ...JSON.parse(writeSave(CATALOGUE, campaign(), chronicleSaved())),
     civilization: 'PH_Unheld',
   });
 
@@ -699,7 +702,7 @@ test('a chronicle naming a civilization the campaign does not hold is dropped, a
 test('an ended chronicle is kept as the campaign it paid into and no chronicle; one in progress is kept beside the campaign, which it has not paid', () => {
   const opened = newCampaign(CATALOGUE, CIVILIZATION_ID);
   const won = hoardedVictory();
-  const progress = saved();
+  const progress = chronicleSaved();
 
   expect(keptAfter(CATALOGUE, opened, { ...progress, chronicle: won })).toEqual({
     campaign: paidInto(CATALOGUE, opened, won).campaign,

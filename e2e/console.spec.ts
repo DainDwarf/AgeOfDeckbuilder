@@ -4,12 +4,12 @@ import { CATALOGUE } from '../src/content/catalogue';
 import { civilizationIn } from '../src/rules/campaign';
 import { launched } from '../src/rules/chronicle';
 import { tileKey } from '../src/rules/map';
-import { freshCampaign, readSave } from '../src/rules/save';
+import { freshCampaign } from '../src/rules/save';
 import { inSight } from '../src/rules/sight';
 import type { Chronicle } from '../src/rules/state';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
 import { openingChoices } from '../src/ui/launch-layout';
-import { type Choices, SAVE_ENTRY } from '../src/ui/save-entry';
+import type { Choices } from '../src/ui/save-entry';
 import { text } from '../src/ui/text';
 import {
   budget,
@@ -19,6 +19,7 @@ import {
   enemiesOf,
   enter,
   firstsOf,
+  heldSave,
   marksIn,
   openLaunch,
   openSaved,
@@ -101,9 +102,7 @@ async function standsOnSeed(page: Page, seed: number): Promise<void> {
 
 /** The chronicle the save holds, read as the game reads it. */
 async function heldChronicle(page: Page): Promise<Chronicle | undefined> {
-  const saved = await page.evaluate((entry) => window.localStorage.getItem(entry), SAVE_ENTRY);
-  if (saved === null) throw new Error('the game keeps no save');
-  return readSave(CATALOGUE, saved).chronicle?.chronicle;
+  return (await heldSave(page)).chronicle?.chronicle;
 }
 
 /** How far the map moved down the screen under a key held for a dozen frames. */

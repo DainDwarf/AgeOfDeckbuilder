@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import type { Save } from '../rules/save-file';
 import { type Bind, boundTo, keyPressed } from './bindings';
 import {
   DESIGN_HEIGHT,
@@ -15,13 +16,21 @@ import {
   createMenuButton,
   createRefusedSaveWindow,
   createWindow,
+  type MenuPress,
   type MenuWindow,
   type Opened,
+  type Said,
 } from './menu';
+import { META_SCREENS } from './navbar';
+import { overlayAhead } from './overlay-scene';
+import { clearSave, keepSave, readSaveFileText, saveFileText } from './save-entry';
 import { onRefused } from './storage';
 
 /** What the menu asks of the chronicle scene at the press, and all it ever holds of it. */
 export type LeavesChronicles = Phaser.Scene & { leave(): void };
+
+/** A window of the menu standing, and the save its import's warning would keep, where it is that. */
+type Standing = { readonly which: MenuWindow; readonly laid: Opened; readonly importing?: Save };
 
 /** What the menu says on the game's emitter as the first of its scrims rises and the last falls. */
 const COVERED = 'menu-covered';
@@ -55,7 +64,7 @@ export class MenuScene extends Phaser.Scene {
     const refusedSaveScrim = createScrim(this).setDepth(1);
 
     /** The window standing, and nothing while the scrim is down. */
-    let standing: { which: MenuWindow; laid: Opened } | undefined;
+    let standing: Standing | undefined;
 
     /** The refused-save window standing, and nothing while its scrim is down. */
     let refusedSave: Phaser.GameObjects.Container | undefined;
@@ -83,24 +92,76 @@ export class MenuScene extends Phaser.Scene {
       cover();
     });
 
-    const raise = (which: MenuWindow): void => {
+    const raise = (which: MenuWindow, said: Said = {}, importing?: Save): Standing => {
       standing?.laid.root.destroy();
-      const laid = createWindow(this, which, {
-        press: (press) => {
-          switch (press) {
-            case 'campaign':
-              this.game.scene.getScene<LeavesChronicles>('ui').leave();
-              return;
-            case 'settings':
-            case 'controls':
-              raise(press);
-              return;
-          }
-        },
-        back: () => back(),
-      });
-      standing = { which, laid };
+      const laid = createWindow(this, which, { press: pressed, back: () => back() }, said);
+      standing = { which, laid, importing };
       cover();
+      return standing;
+    };
+
+    /** The campaign screen started anew in place of whatever screen stands, on the save as it now is. */
+    const campaignStands = (): void => {
+      const scenes = this.game.scene;
+      if (scenes.isActive('ui')) {
+        scenes.getScene<LeavesChronicles>('ui').leave();
+        return;
+      }
+      for (const key of META_SCREENS) {
+        if (!scenes.isActive(key)) continue;
+        const screen = scenes.getScene(key);
+        overlayAhead(screen.scene);
+        screen.scene.start('campaign');
+      }
+    };
+
+    /** A save file's text, arriving for the window it was chosen from: refused on it, or warned of. */
+    const chosen = (asked: Standing, text: string): void => {
+      if (standing !== asked) return;
+      const { save, dropped } = readSaveFileText(text);
+      if (save === undefined) raise('manage-save', { under: 'manage-save.refused' });
+      else raise('import-warning', dropped.length > 0 ? { over: 'manage-save.dropped' } : {}, save);
+    };
+
+    const pressed = (press: MenuPress): void => {
+      switch (press) {
+        case 'campaign':
+          campaignStands();
+          return;
+        case 'manage-save':
+        case 'settings':
+        case 'controls':
+          raise(press);
+          return;
+        case 'back':
+          back();
+          return;
+        case 'export':
+          raise('manage-save');
+          download(saveFileName(new Date()), saveFileText());
+          return;
+        case 'import': {
+          const asked = raise('manage-save');
+          chooseFile((text) => chosen(asked, text));
+          return;
+        }
+        case 'clear':
+          raise('clear-warning');
+          return;
+        case 'import-through': {
+          const save = standing?.importing;
+          if (save === undefined) throw new Error('the import went through with no save file read');
+          keepSave(save);
+          campaignStands();
+          return;
+        }
+        case 'clear-through':
+          clearSave();
+          campaignStands();
+          return;
+      }
+      const unlisted: never = press;
+      throw new Error(`no menu press is ${JSON.stringify(unlisted)}`);
     };
 
     const close = (): void => {
@@ -160,6 +221,38 @@ function createScrim(scene: Phaser.Scene): Phaser.GameObjects.Rectangle {
     .setOrigin(0, 0)
     .setVisible(false)
     .setInteractive();
+}
+
+/** The save file's name, dated the player's own day. */
+function saveFileName(day: Date): string {
+  const two = (count: number): string => String(count).padStart(2, '0');
+  const date = `${day.getFullYear()}-${two(day.getMonth() + 1)}-${two(day.getDate())}`;
+  return `age-of-deckbuilder-save-${date}.adbsave`;
+}
+
+/** The text handed to the player as a file of that name, through the browser's own download. */
+function download(name: string, text: string): void {
+  const address = URL.createObjectURL(new Blob([text], { type: 'application/octet-stream' }));
+  const link = document.createElement('a');
+  link.href = address;
+  link.download = name;
+  link.click();
+  // A browser may fetch the address after the click has returned.
+  setTimeout(() => URL.revokeObjectURL(address), 60_000);
+}
+
+// The browser opens its file window only inside a press of the player's: a button's release is
+// answered from inside the DOM's own mouseup (phaser/src/input/mouse/MouseManager.js:412,
+// phaser/src/input/InputPlugin.js:2041), so nothing between the release and the click may await.
+/** The browser's own file window, and the text of the file chosen in it once read; none chosen, nothing. */
+function chooseFile(chosen: (text: string) => void): void {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.addEventListener('change', () => {
+    const file = input.files?.[0];
+    if (file !== undefined) void file.text().then(chosen);
+  });
+  input.click();
 }
 
 /** The menu raised over whatever stands, for whichever screen asked for it. */

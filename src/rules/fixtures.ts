@@ -58,6 +58,7 @@ import {
 import { buildingKind, improvementKind, type Region } from './map-kinds';
 import type { Resources } from './resources';
 import { seedRng } from './rng';
+import type { ChronicleSave } from './save';
 import {
   burned,
   campPlaceable,
@@ -1091,6 +1092,13 @@ export function hoardedVictory(): Chronicle {
     resources: { food: HOARD_NEED, production: 0, military: 0, money: 0, science: 0, culture: 0 },
   });
   return outcome(apply(CATALOGUE, city, { type: 'play', index: 0, aim: 'none' }));
+}
+
+/** A chronicle three turns in, saved with what it was launched on. */
+export function chronicleSaved(): ChronicleSave {
+  let chronicle = settledLaunch(CATALOGUE, AGE, REGION, 4242, CIVILIZATION, []);
+  for (let turn = 1; turn < 3; turn++) chronicle = endedTurn(chronicle);
+  return { chronicle, region: REGION, civilization: CIVILIZATION_ID };
 }
 
 /** The same disc with every tile but the named ones under water: what leaves a fixture one corridor. */

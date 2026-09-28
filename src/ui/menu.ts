@@ -20,27 +20,86 @@ import {
   UI_FONT,
 } from './design-space';
 import { css, LOOK } from './look';
-import { text } from './text';
+import { type TextKey, text } from './text';
 
-/** Every window the menu opens. */
-export type MenuWindow = 'menu' | 'settings' | 'controls';
-
-/** What pressing a window's button does: opens the window it names, or leaves the chronicle for the campaign screen. */
-export type MenuPress = Exclude<MenuWindow, 'menu'> | 'campaign';
+/** Every window the menu opens; a warning is a window of its own. */
+export type MenuWindow =
+  | 'menu'
+  | 'settings'
+  | 'controls'
+  | 'manage-save'
+  | 'import-warning'
+  | 'clear-warning';
 
 /**
- * The windows: what each one lists, in the order it lists them, and the one it closes back to. The
- * menu closes back to nothing, which is the chronicle screen. Controls lists the bindings instead
- * of buttons.
+ * What pressing a window's button does: opens the window it names, leaves the chronicle for the
+ * campaign screen, steps back, or one of the save's doors, a warning's press going through.
+ */
+export type MenuPress =
+  | 'manage-save'
+  | 'settings'
+  | 'controls'
+  | 'campaign'
+  | 'export'
+  | 'import'
+  | 'clear'
+  | 'import-through'
+  | 'clear-through'
+  | 'back';
+
+/** What each press's button reads. */
+const LABELS: Record<MenuPress, TextKey> = {
+  'manage-save': 'menu.manage-save',
+  settings: 'menu.settings',
+  controls: 'menu.controls',
+  campaign: 'menu.campaign',
+  export: 'manage-save.export',
+  import: 'manage-save.import',
+  clear: 'manage-save.clear',
+  'import-through': 'manage-save.import',
+  'clear-through': 'manage-save.clear',
+  back: 'control.back',
+};
+
+/**
+ * The windows: the title each one reads, the lines under it, what it lists, in the order it lists
+ * them, and the one it closes back to. The menu closes back to nothing, which is the chronicle
+ * screen. Controls lists the bindings instead of buttons.
  */
 const WINDOWS: Record<
   MenuWindow,
-  { readonly buttons: readonly MenuPress[]; readonly from?: MenuWindow }
+  {
+    readonly title: TextKey;
+    readonly lines?: readonly TextKey[];
+    readonly buttons: readonly MenuPress[];
+    readonly from?: MenuWindow;
+  }
 > = {
-  menu: { buttons: ['settings', 'campaign'] },
-  settings: { buttons: ['controls'], from: 'menu' },
-  controls: { buttons: [], from: 'settings' },
+  menu: { title: 'menu.menu', buttons: ['manage-save', 'settings', 'campaign'] },
+  settings: { title: 'menu.settings', buttons: ['controls'], from: 'menu' },
+  controls: { title: 'menu.controls', buttons: [], from: 'settings' },
+  'manage-save': {
+    title: 'menu.manage-save',
+    lines: ['manage-save.line'],
+    buttons: ['export', 'import', 'clear', 'back'],
+    from: 'menu',
+  },
+  'import-warning': {
+    title: 'menu.manage-save',
+    lines: ['manage-save.line', 'manage-save.import-warning'],
+    buttons: ['import-through', 'back'],
+    from: 'manage-save',
+  },
+  'clear-warning': {
+    title: 'menu.manage-save',
+    lines: ['manage-save.line', 'manage-save.clear-warning'],
+    buttons: ['clear-through', 'back'],
+    from: 'manage-save',
+  },
 };
+
+/** What a window reads besides what it always does: a line after its own, and one under its buttons. */
+export type Said = { readonly over?: TextKey; readonly under?: TextKey };
 
 /** The window this one closes back to; nothing for the one that closes back to the chronicle screen. */
 export function behind(which: MenuWindow): MenuWindow | undefined {
@@ -250,34 +309,71 @@ function layControls(
   };
 }
 
-/**
- * One window, centred on the design space: the box in the panel language, its title, and what it
- * lists. The box takes the pointer so that a press on it is not a press on the scrim behind, which
- * backs the window out. The caller takes the window down.
- */
-export function createWindow(scene: Phaser.Scene, which: MenuWindow, on: Presses): Opened {
-  const buttons = listed(scene, which);
-  const title = addText(scene, 0, 0, text(`menu.${which}`), TITLE_STYLE).setOrigin(0.5, 0);
+/** A line a window reads, wrapped to the window and named after its entry. */
+function lineOf(scene: Phaser.Scene, key: TextKey): Phaser.GameObjects.Text {
+  return addText(scene, 0, 0, text(key), LINE_STYLE).setOrigin(0.5, 0).setName(key);
+}
 
-  const height = 2 * PADDING + title.height + bodyHeight(which, buttons);
+/** How far a run of lines reaches, the padding above each included. */
+function linesHeight(lines: readonly Phaser.GameObjects.Text[]): number {
+  return lines.reduce((sum, line) => sum + PADDING + line.height, 0);
+}
+
+/**
+ * One window, centred on the design space: the box in the panel language, its title, its lines, what
+ * it lists, and the line said under that. The box takes the pointer so that a press on it is not a
+ * press on the scrim behind, which backs the window out. The caller takes the window down.
+ */
+export function createWindow(
+  scene: Phaser.Scene,
+  which: MenuWindow,
+  on: Presses,
+  said: Said = {},
+): Opened {
+  const shape = WINDOWS[which];
+  const buttons = listed(scene, which);
+  const title = addText(scene, 0, 0, text(shape.title), TITLE_STYLE)
+    .setOrigin(0.5, 0)
+    .setName(`${which}-title`);
+  const over = [...(shape.lines ?? []), ...(said.over === undefined ? [] : [said.over])].map(
+    (key) => lineOf(scene, key),
+  );
+  const under = said.under === undefined ? [] : [lineOf(scene, said.under)];
+
+  const height =
+    2 * PADDING +
+    title.height +
+    linesHeight(over) +
+    bodyHeight(which, buttons) +
+    linesHeight(under);
   const top = Math.round((DESIGN_HEIGHT - height) / 2);
   const middle = DESIGN_WIDTH / 2;
-  const body = top + PADDING + title.height + PADDING;
 
   const box = scene.add
     .rectangle(middle, top + height / 2, WIDTH, height, LOOK.panelFill)
     .setStrokeStyle(1, LOOK.panelEdge)
     .setInteractive();
   title.setPosition(middle, top + PADDING);
+  let y = top + PADDING + title.height;
+  for (const line of over) {
+    line.setPosition(middle, y + PADDING);
+    y += PADDING + line.height;
+  }
+  const body = y + PADDING;
+  y += bodyHeight(which, buttons);
+  for (const line of under) {
+    line.setPosition(middle, y + PADDING);
+    y += PADDING + line.height;
+  }
 
-  const root = scene.add.container(0, 0, [box, title]).setName(which);
+  const root = scene.add.container(0, 0, [box, title, ...over, ...under]).setName(which);
   buttons.forEach((press, index) => {
     const { face, label } = createButton(
       scene,
       middle,
       body + index * (BUTTON_HEIGHT + BUTTON_GAP) + BUTTON_HEIGHT / 2,
       `${which}-${press}`,
-      text(`menu.${press}`),
+      text(LABELS[press]),
       () => on.press(press),
     );
     root.add([face, label]);

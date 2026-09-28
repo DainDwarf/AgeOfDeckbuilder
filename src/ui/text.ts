@@ -162,6 +162,18 @@ const TEXT = {
   'menu.settings': 'Settings',
   'menu.controls': 'Controls',
   'menu.campaign': 'Campaign',
+  'menu.manage-save': 'Manage Save',
+  'manage-save.line': 'The game saves by itself. This is for a copy to keep or to send.',
+  'manage-save.export': 'Export save',
+  'manage-save.import': 'Import save',
+  'manage-save.clear': 'Clear save',
+  'manage-save.import-warning':
+    'Importing replaces the campaign and the chronicle in progress. This cannot be undone.',
+  'manage-save.dropped':
+    'Part of this save file is not compatible with this version of the game and will be left out.',
+  'manage-save.clear-warning':
+    'Clearing erases the campaign and the chronicle in progress. This cannot be undone.',
+  'manage-save.refused': 'This file is not a save of this game.',
   'control.pan-up': 'Pan up',
   'control.pan-left': 'Pan left',
   'control.pan-down': 'Pan down',

@@ -21,6 +21,7 @@ import {
   readNames,
   rested,
   standing,
+  storedUnder,
   textOf,
   titleOf,
   watch,
@@ -76,7 +77,7 @@ test('a save that cannot be read is dropped, the console says why, and the campa
   expect(await textOf(page, 'reading-influence-value')).toBe(
     String(freshCampaign(CATALOGUE).influence),
   );
-  expect(await page.evaluate((entry) => window.localStorage.getItem(entry), SAVE_ENTRY)).toBe(null);
+  expect(await storedUnder(page, SAVE_ENTRY)).toBe(null);
   expect(warnings).toContainEqual(expect.stringContaining('the save is not JSON'));
 
   expect(problems).toEqual([]);
