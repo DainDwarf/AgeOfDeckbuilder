@@ -13,4 +13,4 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The city card on the launch screen answers the presses** — the city section's card on a civilization's pile answers the right click, shown large, and the rest on its names, as a card face does on every other screen.
+- **The city card on the launch screen answers the presses** — the city section's card on a civilization's pile answers the right click, shown large, the rest on its names and on its kind label, as a card face does anywhere; a left click on it still chooses the civilization and the rest of the pile answers no right click; `npm run check`, `npm test`, `npm run lint` and `e2e/launch.spec.ts` pass. Doc-impact: `docs/INTERFACE.md`. [board/launch-city-card-presses.md](board/launch-city-card-presses.md)
