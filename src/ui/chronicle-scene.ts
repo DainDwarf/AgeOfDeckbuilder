@@ -692,6 +692,7 @@ export function openChronicle(
   opening: Opening,
 ): void {
   overlayAhead(scenes);
+  // A scene's plugin queues the start, and its own `start` would stop the scene calling it.
   if (scenes instanceof Phaser.Scenes.ScenePlugin) scenes.launch('map');
   else scenes.start('map');
   scenes.start('ui', opening);

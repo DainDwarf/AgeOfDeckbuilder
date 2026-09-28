@@ -127,10 +127,8 @@ export class DebugConsole extends Phaser.Scene {
       typed = '';
       const seeding = this.seeding;
       if (seeding === undefined) throw new Error('no screen stands under the console');
-      const ran = runLine(line, veils, {
-        seed: seeding.seed(),
-        launches: seeding.launch !== undefined,
-      });
+      const { seed, launch } = seeding;
+      const ran = runLine(line, veils, { seed: seed(), launches: launch !== undefined });
       if (ran.answer !== undefined) {
         keep(text('console.line', { line }), false);
         keep(ran.answer, true);
@@ -140,7 +138,7 @@ export class DebugConsole extends Phaser.Scene {
         this.game.events.emit(VEILED, veils);
       }
       paint();
-      if (ran.launch !== undefined) seeding.launch?.(ran.launch);
+      if (ran.launch !== undefined && launch !== undefined) launch(ran.launch);
     };
 
     const show = (on: boolean): void => {
