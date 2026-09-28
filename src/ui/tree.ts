@@ -338,15 +338,8 @@ export function createTree(
             if (!carrying) small.over(undefined);
           },
         );
-        onClick(
-          zone,
-          () => {
-            // The name travels with the tree: a press that dragged it is released on it.
-            if (drag?.press === 'right' && drag.panned) return;
-            inspect(each);
-          },
-          'right',
-        );
+        // The name travels with the tree: a press that dragged it is released on it.
+        onClick(zone, () => inspect(each), 'right', 'within slack');
         face.add(zone);
       }
     };

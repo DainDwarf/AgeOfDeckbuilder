@@ -178,7 +178,7 @@ export function createSmallCards(
         hitAreaCallback: Phaser.Geom.Rectangle.Contains,
       });
     answersPress(root);
-    onClick(root, () => inspect(raiser.name), 'right');
+    onClick(root, () => inspect(raiser.name), 'right', 'within slack');
     onHover(
       root,
       () => {
