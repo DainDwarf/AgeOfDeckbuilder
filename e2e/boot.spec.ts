@@ -14,6 +14,7 @@ import {
   loreOf,
   readNames,
   rested,
+  shows,
   standing,
   titleOf,
   watch,
@@ -49,25 +50,30 @@ test('the bare address with no save boots the campaign screen, whose menu lists 
   expect(problems).toEqual([]);
 });
 
-test('the console over the launch page takes its digits and its Enter', async ({ page }) => {
+test('Enter on the launch screen launches nothing, and the back key under the console closes the console and raises no menu', async ({
+  page,
+}) => {
   const problems = watch(page);
   await readNames(page);
 
   await page.goto('/');
   await campaignShown(page);
   await chronicleButton(page);
-  await page.keyboard.type('12');
 
-  await consoleKey(page);
-  await page.keyboard.type('345');
   await page.keyboard.press('Enter');
   await rested(page);
   expect(await page.evaluate(() => window.game?.scene.isActive('ui'))).toBe(false);
-  await consoleKey(page);
+  expect(await standing(page, 'launch-button')).toBe(true);
 
-  await page.keyboard.press('Enter');
-  await page.waitForFunction(() => window.game?.scene.isActive('ui') === true);
-  expect((await chronicleOf(page)).seed).toBe(12);
+  await consoleKey(page);
+  expect(await shows(page, 'console')).toBe(true);
+  await page.keyboard.press('Escape');
+  await rested(page);
+  expect(await shows(page, 'console')).toBe(false);
+  expect(await standing(page, 'menu')).toBe(false);
+
+  await page.keyboard.press('Escape');
+  await expect.poll(() => standing(page, 'menu')).toBe(true);
 
   expect(problems).toEqual([]);
 });

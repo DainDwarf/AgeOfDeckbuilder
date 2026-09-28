@@ -4,12 +4,11 @@ import { type ChronicleSave, freshCampaign, keptAfter, readSave, writeSave } fro
 import type { Chronicle } from '../rules/state';
 import { store, stored, unstore } from './storage';
 
-/** What a chronicle is launched on: an age, one of its regions and a civilization of the campaign, and a seed or nothing for a fresh one. */
+/** What a chronicle is launched on: an age, one of its regions and a civilization of the campaign. */
 export type Choices = {
   readonly age: string;
   readonly region: string;
   readonly civilization: string;
-  readonly seed: number | undefined;
 };
 
 /** What the chronicle screen opens on: the choices a chronicle begins on, and the one resumed on them. */
@@ -43,7 +42,7 @@ export function savedOpening(): Saved | undefined {
 }
 
 function openingOf({ chronicle, region, civilization }: ChronicleSave): Saved {
-  return { age: chronicle.age, region, civilization, seed: chronicle.seed, resumed: chronicle };
+  return { age: chronicle.age, region, civilization, resumed: chronicle };
 }
 
 /**

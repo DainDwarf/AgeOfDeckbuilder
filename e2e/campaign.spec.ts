@@ -97,7 +97,7 @@ test('on a campaign a won chronicle paid into, the bar reads its influence, and 
   expect(problems).toEqual([]);
 });
 
-test('Chronicle opens the launch page, Chronicle sunk there, the back key raises the menu there, and Campaign opens the campaign screen', async ({
+test('Chronicle opens the launch screen, Chronicle sunk there, the back key raises the menu there, and Campaign opens the campaign screen', async ({
   page,
 }) => {
   const problems = watch(page);

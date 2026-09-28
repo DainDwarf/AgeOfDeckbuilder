@@ -87,7 +87,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
   init({ resumed, ...choices }: Opening): void {
     this.choices = choices;
     this.payment = undefined;
-    this.current = resumed ?? this.begin(choices.seed);
+    this.current = resumed ?? this.begin();
   }
 
   /** The chronicle as it stands, for whoever holds the game through `window.game`. */
@@ -101,13 +101,12 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
   }
 
   /**
-   * A chronicle on the choices, from the seed it was asked for or from a fresh one, kept as the save.
-   * The fresh one is the one place entropy enters the game: `src/rules/` draws only from the seed it
-   * is handed.
+   * A chronicle on the choices, from a fresh seed, kept as the save. The fresh seed is the one place
+   * entropy enters the game: `src/rules/` draws only from the seed it is handed.
    */
-  private begin(seed: number | undefined): Chronicle {
+  private begin(): Chronicle {
     const { age, region, civilization } = this.choices;
-    const drawn = seed ?? (Math.random() * 2 ** 32) | 0;
+    const drawn = (Math.random() * 2 ** 32) | 0;
     const campaign = campaignHeld();
     const chronicle = launched(
       CATALOGUE,
@@ -198,7 +197,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
 
     // The button and the hand are dead for the whole play-out: a card played or hovered under it would
     // be animated, reverted, and kill the very tweens the stages wait on. A play-out the screen has let
-    // go of (the screen left for the page under it) commits nothing: the objects it was playing on are gone.
+    // go of (the screen left for the campaign screen) commits nothing: the objects it was playing on are gone.
     const playOut = async (command: Command): Promise<void> => {
       if (this.sequence !== undefined) return;
       const stages = apply(CATALOGUE, this.current, command);

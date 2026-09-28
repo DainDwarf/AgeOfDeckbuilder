@@ -229,7 +229,7 @@ export async function campaignShown(page: Page): Promise<void> {
   await rested(page);
 }
 
-/** Chronicle pressed on the navbar standing, and the launch page it opens waited for. */
+/** Chronicle pressed on the navbar standing, and the launch screen it opens waited for. */
 export async function chronicleButton(page: Page): Promise<void> {
   await click(page, 'navbar-launch');
   await expect.poll(() => standing(page, 'launch-button')).toBe(true);

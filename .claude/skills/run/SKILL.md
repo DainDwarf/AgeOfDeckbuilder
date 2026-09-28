@@ -13,7 +13,7 @@ One job: get the app up and hand back how to reach it. Whatever happens afterwar
 2. **Probe it before launching.** An instance from an earlier session may still be listening; the OS remembers even though the session does not. If a page comes back, that is the answer — report the URL, say it was already up, and stop.
 3. **Otherwise launch `npm run dev` in the background.** It never returns; a foreground call hangs the turn.
 4. **Read the address out of the launch output** with the Read tool — Vite prints `Local: http://…` once it is listening. Report that line's URL, not an assumed one.
-5. **Say what the address opens.** The bare address is the normal door: it boots on the campaign screen, whose Chronicle button opens the launch page, which offers Continue while the save holds a chronicle and launches a new one. `?continue=1` opens the save's chronicle straight; any other address boots on the campaign screen. The chronicle screen writes nothing into the address.
+5. **Say what the address opens.** The bare address is the normal door: it boots on the campaign screen, whose Chronicle button opens the launch screen, which offers Continue while the save holds a chronicle and launches a new one. `?continue=1` opens the save's chronicle straight; any other address boots on the campaign screen. The chronicle screen writes nothing into the address.
 
 ## Rules
 

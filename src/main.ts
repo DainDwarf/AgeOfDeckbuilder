@@ -7,7 +7,7 @@ import { ChronicleScene } from './ui/chronicle-scene';
 import { DebugConsole } from './ui/debug-console';
 import { backingSize, followPointer, followWindow, releaseOnBlur } from './ui/design-space';
 import { readMouseKeys } from './ui/keys';
-import { LaunchPage } from './ui/launch-page';
+import { LaunchScreen } from './ui/launch-screen';
 import { css, LOOK } from './ui/look';
 import { MapScene } from './ui/map-scene';
 import { MenuScene } from './ui/menu-scene';
@@ -72,7 +72,7 @@ window.game = game;
 game.input.globalTopOnly = false;
 // Added bottom up, started top down: render order is the add order, key order the start order (docs/PHASER.md).
 game.scene.add('campaign', CampaignScreen);
-game.scene.add('launch', LaunchPage);
+game.scene.add('launch', LaunchScreen);
 game.scene.add('map', MapScene);
 game.scene.add('ui', ChronicleScene);
 game.scene.add('overlay', OverlayScene);

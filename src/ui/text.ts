@@ -210,8 +210,6 @@ const TEXT = {
   'launch.age': 'Age',
   'launch.region': 'Region',
   'launch.civilization': 'Civilization',
-  'launch.seed': 'Seed',
-  'launch.fresh': 'Fresh',
   'launch.button': 'Launch',
   'launch.continue': 'Continue',
   'launch.turn': 'Turn {turn}',

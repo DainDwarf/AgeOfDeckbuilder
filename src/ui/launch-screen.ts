@@ -3,7 +3,6 @@ import { CATALOGUE } from '../content/catalogue';
 import { achievementOf, ageOf, firstAge, firstRegion } from '../rules/catalogue';
 import { type Chronicle, onSettlePhase } from '../rules/state';
 import { addText, answersPress, holdDesignSpace, onClick, UI_FONT } from './design-space';
-import { readsKeys } from './keys';
 import { css, LOOK } from './look';
 import { backRaisesMenu, closeMenu } from './menu-scene';
 import { ROOM, wearNavbar } from './navbar';
@@ -18,8 +17,6 @@ const FACE_HEIGHT = 34;
 const FACE_PADDING = 16;
 const FACE_GAP = 10;
 const ROW_GAP = 8;
-const SEED_WIDTH = 160;
-const SEED_DIGITS = 10;
 const BUTTON_HEIGHT = 44;
 
 const INK = css(LOOK.ink);
@@ -46,11 +43,8 @@ function readingsOf(chronicle: Chronicle): string[] {
   ];
 }
 
-/**
- * The launch page: Continue over the rows while the save holds a chronicle, one row per choice, the
- * seed slot under them and Launch under the slot.
- */
-export class LaunchPage extends Phaser.Scene {
+/** The launch screen: Continue over the rows while the save holds a chronicle, one row per choice, and Launch under them. */
+export class LaunchScreen extends Phaser.Scene {
   constructor() {
     super('launch');
   }
@@ -66,25 +60,14 @@ export class LaunchPage extends Phaser.Scene {
       age,
       region: firstRegion(CATALOGUE, age),
       civilization: civilizations[0],
-      seed: undefined,
     };
-    let typed = '';
     let root: Phaser.GameObjects.Container | undefined;
-    let seedLabel: Phaser.GameObjects.Text | undefined;
 
     const open = (opening: Opening): void => {
       overlayAhead(this.scene);
       // Queued ahead of the start below, so the map is up before the ui scene reaches into it.
       this.scene.launch('map');
       this.scene.start('ui', opening);
-    };
-
-    const launch = (): void => {
-      open({ ...chosen, seed: typed === '' ? undefined : Number(typed) });
-    };
-
-    const paintSeed = (): void => {
-      seedLabel?.setText(typed === '' ? text('launch.fresh') : typed);
     };
 
     const choose = (row: Row, option: string): void => {
@@ -151,7 +134,6 @@ export class LaunchPage extends Phaser.Scene {
       const continueRoom = continued === undefined ? 0 : continueHeight + PADDING;
 
       const widest = Math.max(
-        SEED_WIDTH,
         ...laid.map(({ faces }) =>
           faces.reduce((sum, { face }, index) => sum + face.width + (index > 0 ? FACE_GAP : 0), 0),
         ),
@@ -161,7 +143,7 @@ export class LaunchPage extends Phaser.Scene {
         2 * PADDING + LABEL_WIDTH + widest,
         ...continuing.map((line) => 2 * PADDING + 2 * FACE_PADDING + line.width),
       );
-      const count = laid.length + 1;
+      const count = laid.length;
       const rowsHeight = count * FACE_HEIGHT + (count - 1) * ROW_GAP;
       const height =
         PADDING + title.height + PADDING + continueRoom + rowsHeight + 2 * PADDING + BUTTON_HEIGHT;
@@ -216,46 +198,18 @@ export class LaunchPage extends Phaser.Scene {
         }
       });
 
-      const seedRow = laid.length;
-      const slot = this.add
-        .rectangle(right - SEED_WIDTH / 2, rowY(seedRow), SEED_WIDTH, FACE_HEIGHT, LOOK.panelFill)
-        .setStrokeStyle(1, LOOK.panelEdge)
-        .setName('launch-seed');
-      seedLabel = addText(this, slot.x, slot.y, '', FACE_STYLE)
-        .setOrigin(0.5)
-        .setName('launch-seed-label');
-      root.add([labelled('launch.seed', seedRow), slot, seedLabel]);
-      paintSeed();
-
       const buttonY = body + rowsHeight + PADDING + BUTTON_HEIGHT / 2;
       const button = this.add
         .rectangle(middle, buttonY, width - 2 * PADDING, BUTTON_HEIGHT, LOOK.accent)
         .setName('launch-button')
         .setInteractive();
       answersPress(button);
-      onClick(button, launch);
+      onClick(button, () => open(chosen));
       const buttonLabel = addText(this, middle, buttonY, text('launch.button'), LABEL_STYLE)
         .setOrigin(0.5)
         .setName('launch-button-label');
       root.add([button, buttonLabel]);
     };
-
-    readsKeys(this, (event) => {
-      if (event.key === 'Enter') {
-        launch();
-        return true;
-      }
-      if (event.key === 'Backspace') {
-        typed = typed.slice(0, -1);
-        paintSeed();
-        return true;
-      }
-      if (!/^[0-9]$/.test(event.key)) return false;
-      if (typed.length >= SEED_DIGITS) return true;
-      typed += event.key;
-      paintSeed();
-      return true;
-    });
 
     lay();
   }

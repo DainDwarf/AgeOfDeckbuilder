@@ -3,7 +3,6 @@ import { CATALOGUE } from '../src/content/catalogue';
 import { civilizationOf } from '../src/rules/catalogue';
 import { tileKey } from '../src/rules/map';
 import type { Chronicle } from '../src/rules/state';
-import { text } from '../src/ui/text';
 import {
   aimed,
   bareAimable,
@@ -27,7 +26,6 @@ import {
   settledOn,
   standing,
   stoppedTurn,
-  textOf,
   tileOnScreen,
   watch,
 } from './chronicle-screen';
@@ -39,7 +37,7 @@ function cardsHeld(chronicle: Chronicle): string[] {
 
 /**
  * Campaign pressed on the menu standing, the campaign screen it opens waited for, and Chronicle
- * pressed there, the page it opens waited for.
+ * pressed there, the launch screen it opens waited for.
  */
 async function campaignThenChronicle(page: Page): Promise<void> {
   await rested(page);
@@ -48,25 +46,20 @@ async function campaignThenChronicle(page: Page): Promise<void> {
   await chronicleButton(page);
 }
 
-/** Launch pressed on the page standing, and the chronicle screen it raises waited for, one hand laid out on it. */
-async function launchedFromPage(page: Page): Promise<void> {
+/** Launch pressed on the launch screen standing, and the chronicle screen it raises waited for, one hand laid out on it. */
+async function launchedFromScreen(page: Page): Promise<void> {
   await rested(page);
   await click(page, 'launch-button');
   await page.waitForFunction(() => window.game?.scene.isActive('ui') === true);
   await expect.poll(() => counted(page, 'hand-0')).toBe(1);
 }
 
-/** Whether the page's face for that option of that row stands chosen. */
+/** Whether the launch screen's face for that option of that row stands chosen. */
 function chosen(page: Page, row: string, option: string): Promise<boolean> {
   return page.evaluate(
     (name) => window.named?.(name)?.object.getData('chosen') === true,
     `launch-${row}-${option}`,
   );
-}
-
-/** What the page's seed slot reads. */
-function seedReads(page: Page): Promise<string | undefined> {
-  return textOf(page, 'launch-seed-label');
 }
 
 test('the menu walks in to Controls and closes back one step at a time', async ({ page }) => {
@@ -221,7 +214,7 @@ test('the selected tile waits under the menu', async ({ page }) => {
   expect(problems).toEqual([]);
 });
 
-test('Campaign opens the campaign screen, Chronicle there the page on the firsts, the seed blank, and Launch deals the first civilization a fresh seed, on the settle phase', async ({
+test('Campaign opens the campaign screen, Chronicle there the launch screen on the firsts, and Launch deals the first civilization a fresh seed, on the settle phase', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -238,9 +231,8 @@ test('Campaign opens the campaign screen, Chronicle there the page on the firsts
   expect(await chosen(page, 'age', firsts.age)).toBe(true);
   expect(await chosen(page, 'region', firsts.region)).toBe(true);
   expect(await chosen(page, 'civilization', firsts.civilization)).toBe(true);
-  expect(await seedReads(page)).toBe(text('launch.fresh'));
 
-  await launchedFromPage(page);
+  await launchedFromScreen(page);
 
   const fresh = await chronicleOf(page);
   expect(fresh.turn).toBe(0);
@@ -268,7 +260,7 @@ test('the menu opens over the defeat screen, and Campaign, Chronicle then Launch
 
   await campaignThenChronicle(page);
   expect(await standing(page, 'defeat')).toBe(false);
-  await launchedFromPage(page);
+  await launchedFromScreen(page);
 
   const fresh = await chronicleOf(page);
   expect(fresh.ending).toBeUndefined();

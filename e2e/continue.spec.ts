@@ -17,7 +17,7 @@ import {
   watch,
 } from './chronicle-screen';
 
-/** What Continue reads on the page: its label, then every line under it in order. */
+/** What Continue reads on the launch screen: its label, then every line under it in order. */
 async function continueReads(page: Page): Promise<string[]> {
   const lines: string[] = [];
   const label = await textOf(page, 'launch-continue-label');
@@ -29,8 +29,8 @@ async function continueReads(page: Page): Promise<string[]> {
   }
 }
 
-/** The chronicle planted as the save, and the page Chronicle opens from the campaign screen waited for. */
-async function pageOver(page: Page, chronicle: Chronicle): Promise<void> {
+/** The chronicle planted as the save, and the launch screen Chronicle opens from the campaign screen waited for. */
+async function launchScreenOver(page: Page, chronicle: Chronicle): Promise<void> {
   const { region, civilization } = firstsOf();
   await readNames(page);
   await plant(page, { chronicle, region, civilization });
@@ -46,7 +46,7 @@ async function pressContinue(page: Page): Promise<void> {
   await page.waitForFunction(() => window.game?.scene.isActive('ui') === true);
 }
 
-test('on a save holding a chronicle the bare address lands on the campaign screen, Continue on the page reads its turn, and the press opens it where it stood', async ({
+test('on a save holding a chronicle the bare address lands on the campaign screen, Continue on the launch screen reads its turn, and the press opens it where it stood', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -54,7 +54,7 @@ test('on a save holding a chronicle the bare address lands on the campaign scree
 
   expect(onSettlePhase(saved)).toBe(false);
 
-  await pageOver(page, saved);
+  await launchScreenOver(page, saved);
   expect(await page.evaluate(() => window.game?.scene.isActive('ui'))).toBe(false);
   expect(await continueReads(page)).toEqual([
     text('launch.continue'),
@@ -75,13 +75,13 @@ test('on a save holding a chronicle still on its settle phase, Continue reads th
   const saved = launchedOn(1);
   expect(onSettlePhase(saved)).toBe(true);
 
-  await pageOver(page, saved);
+  await launchScreenOver(page, saved);
   expect(await continueReads(page)).toEqual([text('launch.continue'), text('launch.settle-phase')]);
 
   expect(problems).toEqual([]);
 });
 
-test('with no save the page stands with no Continue', async ({ page }) => {
+test('with no save the launch screen stands with no Continue', async ({ page }) => {
   const problems = watch(page);
   await readNames(page);
 
@@ -93,7 +93,7 @@ test('with no save the page stands with no Continue', async ({ page }) => {
   expect(problems).toEqual([]);
 });
 
-test('the menu’s Campaign leaves the chronicle launched on the page in its save, and Continue opens it as it stands', async ({
+test('the menu’s Campaign leaves the chronicle launched on the launch screen in its save, and Continue opens it as it stands', async ({
   page,
 }) => {
   const problems = watch(page);

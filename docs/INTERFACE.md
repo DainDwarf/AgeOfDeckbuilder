@@ -1,6 +1,6 @@
 # Interface
 
-> How any screen is worked: the menu and what it lists, the keys and how they are rebound, the navbar and the bar, the tree, the launch page, a failed boot, a refused save, the debug console, the three presses, a card's names and its label, and what stands over what. A design page, under [`DESIGN.md`](DESIGN.md)'s legend. What a press does to a thing only a chronicle has is [`CHRONICLE-SCREEN.md`](CHRONICLE-SCREEN.md)'s.
+> How any screen is worked: the menu and what it lists, the keys and how they are rebound, the navbar and the bar, the tree, the launch screen, a failed boot, a refused save, the debug console, the three presses, a card's names and its label, and what stands over what. A design page, under [`DESIGN.md`](DESIGN.md)'s legend. What a press does to a thing only a chronicle has is [`CHRONICLE-SCREEN.md`](CHRONICLE-SCREEN.md)'s.
 
 ## The menu ✅
 
@@ -22,9 +22,9 @@ A **plate** reads the technology's name, then **Goal** and the achievement's con
 
 The tree moves left and right and no other way: the two keys that pan the map left and right move it while they are held, and a press held on the room drags it. The wheel does nothing here, whatever it is bound to. The tree stops at its ends, and a tree the room holds whole does not move. The screen opens with the technologies within reach centred in the room, from the leftmost of them where the room cannot hold them all, and on the tree's right end where none is within reach. A card shown large stands on a scrim over the whole screen, the navbar and the bar among it; under it the campaign screen hears the two keys that move the tree and no other.
 
-## The launch page 🔧
+## The launch screen 🔧
 
-The **launch page** is a stand-in for the meta's launch screen: **Chronicle** opens it, and it wears the navbar and the bar. The page is one row per choice — the age, the region, the civilization and the seed — the first of each list chosen until another is pressed, the civilization row listing the campaign's civilizations by name, the seed typed in digits or left blank for a fresh one, and **Launch** under the rows, which opens the chronicle on those choices; Enter presses it too. While the save holds a chronicle, **Continue** stands at the head of the page, over the rows, reading where that chronicle stands — the settle phase, or its turn — and under that the achievements it has reached, and opens it where it stood; Launch then ends that chronicle, which pays nothing. The address is the developer's door and the test suite's: one that names `continue` opens the chronicle the save holds straight, and the boot fails where the save holds none; any other address boots on the campaign screen, whatever else it names; and the chronicle screen writes nothing into the address. The launch screen replaces the page; the address stays.
+**Chronicle** opens the **launch screen**, which wears the navbar and the bar. The screen is one row per choice — the age, the region and the civilization — the first of each list chosen until another is pressed, the civilization row listing the campaign's civilizations, and **Launch** under the rows, which opens the chronicle on those choices, on a seed drawn fresh at every launch. The screen hears no key but the back key. While the save holds a chronicle, **Continue** stands at the head of the screen, over the rows, reading where that chronicle stands — the settle phase, or its turn — and under that the achievements it has reached, and opens it where it stood; Launch then ends that chronicle, which pays nothing. The address is the developer's door and the test suite's: one that names `continue` opens the chronicle the save holds straight, and the boot fails where the save holds none; any other address boots on the campaign screen, whatever else it names; and the chronicle screen writes nothing into the address.
 
 ## A failed boot ✅
 
@@ -36,7 +36,7 @@ When the browser refuses to keep what the game writes — the save, or the keys 
 
 ## The debug console ✅
 
-The **debug console** is a dark panel down the top of the screen, on every screen, the launch page among them, with the last lines run above the line being typed. What it covers reads dimly through it, so the bar is still there to be read and the console writes clear of it. While it stands the keyboard is its — every key types, Backspace deletes, Enter runs the line, and Escape or the key that opened it closes it — so nothing the game binds hears a key meanwhile. The pointer is not its: the map still pans and zooms under it. An entry is one word and Enter, and it is answered in one line; a word the console holds no entry for is answered `no such entry: <word>`. The console binds no key of the player's and stands in no Controls window, and a new chronicle closes it and puts every entry back where it began.
+The **debug console** is a dark panel down the top of the screen, on every screen, the launch screen among them, with the last lines run above the line being typed. What it covers reads dimly through it, so the bar is still there to be read and the console writes clear of it. While it stands the keyboard is its — every key types, Backspace deletes, Enter runs the line, and Escape or the key that opened it closes it — so nothing the game binds hears a key meanwhile. The pointer is not its: the map still pans and zooms under it. An entry is one word and Enter, and it is answered in one line; a word the console holds no entry for is answered `no such entry: <word>`. The console binds no key of the player's and stands in no Controls window, and a new chronicle closes it and puts every entry back where it began.
 
 ## The presses ✅
 
