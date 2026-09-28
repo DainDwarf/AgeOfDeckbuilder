@@ -37,6 +37,7 @@ export function store(key: string, text: string): void {
   }
 }
 
+/** Nothing kept under the key any more. */
 export function unstore(key: string): void {
   try {
     window.localStorage.removeItem(key);

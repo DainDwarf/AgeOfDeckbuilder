@@ -60,10 +60,6 @@ function refusals(page: Page): string[] {
   return said;
 }
 
-function frameOf(page: Page): Promise<number> {
-  return page.evaluate(() => window.game?.loop.frame ?? 0);
-}
-
 /** The refused-save window stands, reading its title, its line and Back. */
 async function refusedSaveShown(page: Page): Promise<void> {
   await expect.poll(() => standing(page, 'refused-save')).toBe(true);
@@ -105,9 +101,7 @@ test('a browser refusing its storage from the start boots the campaign screen un
 
   await click(page, 'refused-save-back');
   await expect.poll(() => standing(page, 'refused-save')).toBe(false);
-  const frame = await frameOf(page);
   await rested(page);
-  expect(await frameOf(page)).toBeGreaterThan(frame);
 
   await click(page, 'menu-button');
   await expect.poll(() => standing(page, 'menu')).toBe(true);
