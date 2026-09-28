@@ -214,7 +214,7 @@ function pilesOf(
     const x = PILE_FIRST + at * PILE_APART + PILE_WIDTH / 2;
     const backs = Array.from({ length: PILE_BACKS }, (_, under) => {
       const step = (PILE_BACKS - under) * BACK_STEP;
-      return createCardBack(scene, false, PILE_WIDTH).setPosition(x + step, foot + step);
+      return createCardBack(scene, { width: PILE_WIDTH }).setPosition(x + step, foot + step);
     });
     const lift = chosen ? PILE_LIFT : 0;
     const face = createCardFace(scene, cardFaceAtStart(CATALOGUE, owned.city.card.id), NO_REFUSAL, {
@@ -282,15 +282,19 @@ export class LaunchScreen extends Phaser.Scene {
       switch (row) {
         case 'age':
           chosen = withAge(CATALOGUE, chosen, option);
-          break;
+          lay();
+          return;
         case 'region':
           chosen = { ...chosen, region: option };
-          break;
+          lay();
+          return;
         case 'civilization':
           chosen = { ...chosen, civilization: option };
-          break;
+          lay();
+          return;
       }
-      lay();
+      const unlisted: never = row;
+      throw new Error(`no launch row is ${JSON.stringify(unlisted)}`);
     };
 
     const drawn = ({

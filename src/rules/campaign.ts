@@ -4,6 +4,7 @@ import {
   type Civilization,
   checkContent,
   civilizationOf,
+  firstAge,
   technologyOf,
 } from './catalogue';
 import { refuse } from './map-kinds';
@@ -63,7 +64,8 @@ export function agesReached(catalogue: Catalogue, campaign: Campaign): string[] 
       return age === undefined ? [] : [age];
     }),
   );
-  return Object.keys(catalogue.ages).filter((age, at) => at === 0 || unlocked.has(age));
+  const first = firstAge(catalogue);
+  return Object.keys(catalogue.ages).filter((age) => age === first || unlocked.has(age));
 }
 
 /** The number a campaign's first card is dealt. */

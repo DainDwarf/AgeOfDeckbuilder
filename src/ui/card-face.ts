@@ -381,8 +381,7 @@ export function createKindBubble(tooltip: Tooltip): KindBubble {
 /** The face-down card the draw pile shows, about its own bottom centre; worn when the pile is dry. */
 export function createCardBack(
   scene: Phaser.Scene,
-  faded = false,
-  width = CARD_WIDTH,
+  { faded = false, width = CARD_WIDTH }: { faded?: boolean; width?: number } = {},
 ): Phaser.GameObjects.Container {
   const tone = faded ? worn : (colour: number): number => colour;
   const height = heightOf(width);

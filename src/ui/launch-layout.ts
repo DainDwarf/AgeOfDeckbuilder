@@ -47,8 +47,7 @@ export function ringOf(region: Region): string[] {
   if (shares.length === 0) return Array<string>(RING).fill(region.centreBiome);
 
   // Shares are decimals: a tie is read within a hair, or 0.6 / 3 loses to 0.2 / 1.
-  const HAIR = 1e-9;
-  const ahead = (a: number, b: number): number => (Math.abs(a - b) < HAIR ? 0 : a - b);
+  const ahead = (a: number, b: number): number => (Math.abs(a - b) < 1e-9 ? 0 : a - b);
   const drawn = shares
     .map((held, named) => ({ ...held, named }))
     .sort((a, b) => ahead(b.share, a.share) || a.named - b.named)

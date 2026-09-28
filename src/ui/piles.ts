@@ -71,7 +71,10 @@ export function createPiles(
       carrier = undefined;
     }
     shown = chronicle;
-    drawn.show(createCardBack(scene, chronicle.drawPile.length === 0), chronicle.drawPile.length);
+    drawn.show(
+      createCardBack(scene, { faded: chronicle.drawPile.length === 0 }),
+      chronicle.drawPile.length,
+    );
     discarded.show(
       topOf(chronicle.discardPile[chronicle.discardPile.length - 1]),
       chronicle.discardPile.length,
