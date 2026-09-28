@@ -53,7 +53,7 @@ Once the review is LOOKS GOOD (or its blocking findings are fixed): check `CLAUD
 
 ## 6. Hand back
 
-Report to the user, while the CI run goes on: what shipped, the commit and the run's id, the deviations, the review verdict with its advisories one line each, the implementer's discoveries one line each, the authored sentences, each quoted with its key or page and one line on where a player or reader meets it, the specs the dossier lists as CI's, what to inspect and how, and what the next line would do. Then stop — the user reads the report, answers the authored sentences, and orders what becomes a shave or a `/todo`; the next line is a new invocation.
+Report to the user, while the CI run goes on: what shipped, the commit and the run's id, the deviations, the review verdict with its advisories one line each, the implementer's discoveries one line each, the authored sentences, each quoted with its key or page and one line on where a player or reader meets it, the specs the dossier lists as CI's, what to inspect and how, and what the next line would do. Every deviation, advisory and discovery relayed says what the user does with it: nothing, with the precedent it follows; look, with what to see on screen, folded into what to inspect; or pick, two options with a recommendation. A detail the design left open that changes what the screen looks like is a look. Then stop — the user reads the report, answers the authored sentences, and orders what becomes a shave or a `/todo`; the next line is a new invocation.
 
 The run's verdict is relayed the turn it lands, whatever the conversation is on; a red spec becomes a fold or a board line on the user's say.
 
