@@ -11,11 +11,12 @@ The names, settled with the user:
 
 - the plate's states `'unlocked'`, `'within-reach'`, `'mystery'` become `'learned'`, `'available'`, `'unknown'`;
 - the text keys `plate.unlocked` and `plate.mystery` become `plate.learned` and `plate.unknown`;
+- the text gains `launch.unknown-age`, read by the segment of an age not reached in place of the plate's entry;
 - the look's `mysteryFill` and `mysteryInk` become `unknownFill` and `unknownInk`, read by the plate of an unknown technology and by the segment of an age not reached;
 - the look gains `greyedFill` and `greyedInk`, read by Continue with no chronicle to open, on the values the button wears today;
 - the rules' check `withinReach` becomes `available`.
 
-The two player-facing sentences, kept word for word: `'plate.learned': '✓ {technology}'` and `'plate.unknown': '???'`.
+The player-facing sentences, the two kept word for word and the new one reading as the segment reads today: `'plate.learned': '✓ {technology}'`, `'plate.unknown': '???'` and `'launch.unknown-age': '???'`.
 
 The two refusals that say it, reworded: "the achievement ${id} earns ${technology}, which is already unlocked" becomes "the achievement ${id} earns ${technology}, which is already learned". No other refusal moves.
 
@@ -34,7 +35,7 @@ The two refusals that say it, reworded: "the achievement ${id} earns ${technolog
 - Out: `unknown`, the TypeScript type.
 - Out: `CHANGELOG.md`, which a rename sweep skips.
 - Corner, decided: the two greys hold the same values today and stay two roles of the look, as its own comment says of roles that agree.
-- Corner, decided: the segment of an age not reached reads the text key `plate.unknown`, as it reads `plate.mystery` today; no entry of its own.
+- Corner, decided: the segment of an age not reached reads an entry of its own, `launch.unknown-age`, and the plate's entry is read by the plate alone; the two hold the same sentence today. The look's unknown pair stays shared by the two.
 
 **Traps:**
 
@@ -49,9 +50,9 @@ The two refusals that say it, reworded: "the achievement ${id} earns ${technolog
 **Plan:**
 
 1. `src/rules/` — the check carries its new name and every site says learned and available, in `campaign.ts`, `chronicle.ts`, `save.ts` and `fixtures.ts`, the refusal reworded; the tests follow, their titles and the helper of `catalogue.test.ts` included. `npm run check` and `npm test` pass.
-2. `src/ui/look.ts` holds the unknown pair and the greyed pair; `src/ui/text.ts` holds the two keys under their new names.
+2. `src/ui/look.ts` holds the unknown pair and the greyed pair; `src/ui/text.ts` holds the two keys under their new names and the age's entry.
 3. `src/ui/tree-layout.ts` and `src/ui/tree.ts` carry the three states and say learned of a link; `src/ui/tree-layout.test.ts` follows, titles included.
-4. `src/ui/launch-screen.ts` says unknown of an age not reached and reads the greyed pair for Continue.
+4. `src/ui/launch-screen.ts` says unknown of an age not reached, reads that age's own entry, and reads the greyed pair for Continue.
 5. `e2e/tree.spec.ts` and `e2e/continue.spec.ts` follow, titles included.
 6. `docs/META-SCREENS.md` holds the two sentences as written above.
 7. The searches of Verify match as said.
