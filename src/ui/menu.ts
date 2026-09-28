@@ -114,7 +114,7 @@ function pressable(
   return { face, label };
 }
 
-/** A button of a window, centred on `x` and `y`, reading `reads`. */
+/** A button as the menu draws one, centred on `x` and `y`, reading `reads`. */
 export function createButton(
   scene: Phaser.Scene,
   x: number,

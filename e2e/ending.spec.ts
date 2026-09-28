@@ -1,10 +1,12 @@
-import { expect, test } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
+import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
 import { paidInto } from '../src/rules/campaign';
 import { achievementOf } from '../src/rules/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
-import { tileKey } from '../src/rules/map';
+import { type TileCoords, tileKey } from '../src/rules/map';
 import { freshCampaign, readSave } from '../src/rules/save';
+import type { Chronicle } from '../src/rules/state';
 import { SAVE_ENTRY } from '../src/ui/save-entry';
 import { technologyName, text } from '../src/ui/text';
 import {
@@ -13,9 +15,11 @@ import {
   campaignShown,
   chronicleButton,
   click,
+  cursorOverCanvas,
   dragOut,
   idsOf,
   landed,
+  onScreen,
   openSaved,
   playedOut,
   rested,
@@ -25,6 +29,29 @@ import {
   victoryShown,
   watch,
 } from './chronicle-screen';
+
+/** The cursor over something that answers a press. */
+const HAND = 'pointer';
+
+/** The chronicle opened and the play that wins it made: the ending screen rises from here. */
+async function playTheWin(
+  page: Page,
+  chronicle: Chronicle,
+  index: number,
+  tile: TileCoords,
+): Promise<void> {
+  await openSaved(page, chronicle);
+  await dragOut(page, index);
+  await aimed(page);
+  await click(page, `tile-${tileKey(tile)}`);
+}
+
+/** The alpha the victory screen stands at, and nothing where none stands. */
+function victoryAlpha(page: Page): Promise<number | undefined> {
+  return page.evaluate(
+    () => (window.named?.('victory')?.object as Phaser.GameObjects.Container | undefined)?.alpha,
+  );
+}
 
 test('the play that ends the chronicle pays it into the campaign: the ending screen reads what it paid, the save holds the campaign paid into and no chronicle, and the campaign screen its End chronicle opens reads the influence paid', async ({
   page,
@@ -36,10 +63,7 @@ test('the play that ends the chronicle pays it into the campaign: the ending scr
   const won = outcome(apply(CATALOGUE, chronicle, { type: 'play', index, aim: 'tile', tile }));
   const paid = paidInto(CATALOGUE, freshCampaign(CATALOGUE), won);
 
-  await openSaved(page, chronicle);
-  await dragOut(page, index);
-  await aimed(page);
-  await click(page, `tile-${tileKey(tile)}`);
+  await playTheWin(page, chronicle, index, tile);
   await playedOut(page);
   await expect.poll(() => victoryShown(page)).toBe(true);
 
@@ -73,6 +97,52 @@ test('the play that ends the chronicle pays it into the campaign: the ending scr
   expect(await textOf(page, 'reading-influence-value')).toBe(String(paid.campaign.influence));
   await chronicleButton(page);
   expect(await standing(page, 'launch-continue')).toBe(false);
+
+  expect(problems).toEqual([]);
+});
+
+test('End chronicle answers no press and reads an arrow while the ending screen rises, and reads the hand under a pointer resting on it once the screen has risen', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  test.setTimeout(budget(1));
+  const { chronicle, tile } = landed();
+  const index = idsOf(chronicle.hand).indexOf(SHELTER);
+
+  await playTheWin(page, chronicle, index, tile);
+  // The rise is a tween on the overlay's clock, held in the first frame the screen shows at all, so
+  // the press below lands mid-rise however slow the runner. Held at alpha 0 it would prove nothing:
+  // Phaser hit-tests nothing that does not render.
+  await page.waitForFunction(() => {
+    const screen = window.named?.('victory')?.object as Phaser.GameObjects.Container | undefined;
+    if (screen === undefined || screen.alpha === 0) return false;
+    window.game?.scene.getScene('overlay').tweens.pauseAll();
+    return true;
+  });
+  expect(await victoryAlpha(page)).toBeGreaterThan(0);
+  expect(await victoryAlpha(page)).toBeLessThan(1);
+
+  await rested(page);
+  const at = await onScreen(page, 'end-chronicle');
+  await page.mouse.move(at.x, at.y);
+  await rested(page);
+  expect(await cursorOverCanvas(page)).not.toBe(HAND);
+  await page.mouse.down();
+  await page.mouse.up();
+  await rested(page);
+  expect(await victoryAlpha(page)).toBeLessThan(1);
+  expect(await page.evaluate(() => window.game?.scene.isActive('campaign'))).toBe(false);
+  expect(await cursorOverCanvas(page)).not.toBe(HAND);
+
+  await page.evaluate(() => {
+    window.game?.scene.getScene('overlay').tweens.resumeAll();
+  });
+  await expect.poll(() => victoryShown(page)).toBe(true);
+  await rested(page);
+  expect(await cursorOverCanvas(page)).toBe(HAND);
+  await page.mouse.down();
+  await page.mouse.up();
+  await campaignShown(page);
 
   expect(problems).toEqual([]);
 });
