@@ -1,5 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
+import type Phaser from 'phaser';
 import { type Chronicle, onSettlePhase } from '../src/rules/state';
+import { LOOK } from '../src/ui/look';
 import { text } from '../src/ui/text';
 import {
   campaignShown,
@@ -27,6 +29,15 @@ async function continueReads(page: Page): Promise<string[]> {
     if (line === undefined) return lines;
     lines.push(line);
   }
+}
+
+/** What the named rectangle is painted. */
+function fillOf(page: Page, name: string): Promise<number> {
+  return page.evaluate((target) => {
+    const face = window.named?.(target)?.object as Phaser.GameObjects.Rectangle | undefined;
+    if (face === undefined) throw new Error(`there is no ${target} on the launch screen`);
+    return face.fillColor;
+  }, name);
 }
 
 /** The chronicle planted as the save, and the launch screen Chronicle opens from the campaign screen waited for. */
@@ -81,14 +92,22 @@ test('on a save holding a chronicle still on its settle phase, Continue reads th
   expect(problems).toEqual([]);
 });
 
-test('with no save the launch screen stands with no Continue', async ({ page }) => {
+test('with no save Continue stands greyed, reads its word alone, and a press on it opens nothing', async ({
+  page,
+}) => {
   const problems = watch(page);
   await readNames(page);
 
   await page.goto('/');
   await campaignShown(page);
   await chronicleButton(page);
-  expect(await standing(page, 'launch-continue')).toBe(false);
+  expect(await fillOf(page, 'launch-continue')).toBe(LOOK.mysteryFill);
+  expect(await continueReads(page)).toEqual([text('launch.continue')]);
+
+  await click(page, 'launch-continue');
+  await rested(page);
+  expect(await page.evaluate(() => window.game?.scene.isActive('ui'))).toBe(false);
+  expect(await standing(page, 'launch-button')).toBe(true);
 
   expect(problems).toEqual([]);
 });
@@ -102,7 +121,8 @@ test('the menu’s Campaign leaves the chronicle launched on the launch screen i
   await page.goto('/');
   await campaignShown(page);
   await chronicleButton(page);
-  expect(await standing(page, 'launch-continue')).toBe(false);
+  expect(await fillOf(page, 'launch-continue')).toBe(LOOK.mysteryFill);
+  expect(await continueReads(page)).toEqual([text('launch.continue')]);
   await click(page, 'launch-button');
   await page.waitForFunction(() => window.game?.scene.isActive('ui') === true);
   const launched = await chronicleOf(page);

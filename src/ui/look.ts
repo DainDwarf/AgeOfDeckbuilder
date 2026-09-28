@@ -43,6 +43,13 @@ export type Look = {
   readonly influence: number;
   readonly mysteryFill: number;
   readonly mysteryInk: number;
+  /** The edge around the chosen one of a row of the launch screen. */
+  readonly chosenEdge: number;
+  /** The strength the others of that row rest at. */
+  readonly unchosen: number;
+  readonly arrowEdge: number;
+  readonly regionEdge: number;
+  readonly deckCounts: number;
   readonly cardEdge: number;
   readonly cardBack: number;
   readonly aimSlab: number;
@@ -89,6 +96,11 @@ export const LOOK: Look = {
   influence: 0xd9a441,
   mysteryFill: 0x5c6068,
   mysteryInk: 0x2a2e34,
+  chosenEdge: 0xd4d7db,
+  unchosen: 0.5,
+  arrowEdge: 0x0d1117,
+  regionEdge: 0x0d1014,
+  deckCounts: 0x9aa1a9,
   cardEdge: 0x6f757d,
   cardBack: 0x232833,
   aimSlab: 0x232833,

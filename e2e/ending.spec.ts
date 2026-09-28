@@ -24,7 +24,6 @@ import {
   playedOut,
   rested,
   SHELTER,
-  standing,
   textOf,
   victoryShown,
   watch,
@@ -96,7 +95,8 @@ test('the play that ends the chronicle pays it into the campaign: the ending scr
   await campaignShown(page);
   expect(await textOf(page, 'reading-influence-value')).toBe(String(paid.campaign.influence));
   await chronicleButton(page);
-  expect(await standing(page, 'launch-continue')).toBe(false);
+  expect(await textOf(page, 'launch-continue-label')).toBe(text('launch.continue'));
+  expect(await textOf(page, 'launch-continue-line-0')).toBeUndefined();
 
   expect(problems).toEqual([]);
 });

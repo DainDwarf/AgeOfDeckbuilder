@@ -13,5 +13,4 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The launch screen draws its choices** — the age is chosen on a time arrow, the region among clusters of hexagons, the civilization among piles of cards, the chosen one larger and the others dimmed; the screen opens on the furthest age reached; Continue always stands, greyed while the save holds no chronicle; `npm run check`, `npm test`, `npm run lint` and `e2e/continue.spec.ts` pass, and the `visual-check` finds nothing broken. Doc-impact: `docs/INTERFACE.md`, `docs/META.md`. [board/launch-screen-choices.md](board/launch-screen-choices.md)
 - **The city card on the launch screen answers the presses** — the city section's card on a civilization's pile answers the right click, shown large, and the rest on its names, as a card face does on every other screen.

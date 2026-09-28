@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { type CampaignCard, civilizationIn, newCampaign, paidInto } from './campaign';
+import { agesReached, type CampaignCard, civilizationIn, newCampaign, paidInto } from './campaign';
 import { achievementOf, technologyOf } from './catalogue';
 import { apply, outcome } from './chronicle';
 import {
@@ -130,6 +130,23 @@ test('a chronicle that has not ended is refused its payment', () => {
   expect(() => paidInto(CATALOGUE, newCampaign(CATALOGUE, CIVILIZATION_ID), running)).toThrow(
     'fixture: a chronicle that has not ended pays nothing',
   );
+});
+
+test('a new campaign has reached the first age alone', () => {
+  expect(agesReached(CATALOGUE, newCampaign(CATALOGUE, CIVILIZATION_ID))).toEqual([AGE]);
+});
+
+test('a campaign paid an age’s victory has reached the age its technology unlocks, beside the first, in the order of history', () => {
+  const { campaign } = paidInto(
+    CATALOGUE,
+    newCampaign(CATALOGUE, CIVILIZATION_ID),
+    hoardedVictory(),
+  );
+  const { technology } = achievementOf(CATALOGUE, AGE, victoryOf(AGE));
+  const next = technologyOf(CATALOGUE, technology).unlocks.age;
+
+  expect(next).toBeDefined();
+  expect(agesReached(CATALOGUE, campaign)).toEqual([AGE, next]);
 });
 
 test('a chronicle paid in a second time is refused: the technology its achievement earns is already unlocked', () => {

@@ -52,6 +52,20 @@ export function withinReach(
   return technologyOf(catalogue, technology).needs.every((need) => unlocked.includes(need));
 }
 
+/**
+ * The ages the campaign has reached, in the order of history: the first age, and every age a
+ * technology it has unlocked unlocks. A technology the catalogue does not hold is refused.
+ */
+export function agesReached(catalogue: Catalogue, campaign: Campaign): string[] {
+  const unlocked = new Set(
+    campaign.technologies.flatMap((technology) => {
+      const { age } = technologyOf(catalogue, technology).unlocks;
+      return age === undefined ? [] : [age];
+    }),
+  );
+  return Object.keys(catalogue.ages).filter((age, at) => at === 0 || unlocked.has(age));
+}
+
 /** The number a campaign's first card is dealt. */
 export const FIRST_CARD_NUMBER = 1;
 

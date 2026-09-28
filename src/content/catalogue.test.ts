@@ -16,10 +16,12 @@ import {
 } from '../rules/catalogue';
 import { admitted, launched, refusalOf } from '../rules/chronicle';
 import { settledLaunch } from '../rules/fixtures';
+import { biomeKind } from '../rules/map-kinds';
 import { seedRng } from '../rules/rng';
 import { writeSave } from '../rules/save';
 import { answerCost, timelineOf } from '../rules/schedule';
 import type { Chronicle } from '../rules/state';
+import { ringOf } from '../ui/launch-layout';
 import { campLore, capstoneLore, eventLore } from '../ui/lore';
 import {
   buildingColourOf,
@@ -41,10 +43,12 @@ import {
   capstoneRules,
   cardName,
   cardRules,
+  civilizationName,
   eventName,
   featureName,
   improvementName,
   referenceName,
+  regionName,
   technologyName,
   terrainName,
   unitName,
@@ -291,6 +295,23 @@ test('every age of the catalogue has a name and a ground colour on the screen, e
   }
   for (const id of Object.keys(CATALOGUE.technologies)) {
     expect(() => technologyName(id)).not.toThrow();
+  }
+});
+
+test('every region of every age has a name on the screen, and a colour for its middle hexagon and each around it', () => {
+  for (const age of AGES) {
+    for (const [id, region] of Object.entries(ageOf(CATALOGUE, age).regions)) {
+      expect(() => regionName(id)).not.toThrow();
+      for (const biome of [region.centreBiome, ...ringOf(region)]) {
+        expect(() => terrainColourOf(biomeKind(CATALOGUE, biome).origin)).not.toThrow();
+      }
+    }
+  }
+});
+
+test('every civilization of the catalogue has a name on the screen', () => {
+  for (const id of Object.keys(CATALOGUE.civilizations)) {
+    expect(() => civilizationName(id)).not.toThrow();
   }
 });
 

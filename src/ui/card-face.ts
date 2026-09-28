@@ -379,16 +379,22 @@ export function createKindBubble(tooltip: Tooltip): KindBubble {
 }
 
 /** The face-down card the draw pile shows, about its own bottom centre; worn when the pile is dry. */
-export function createCardBack(scene: Phaser.Scene, faded = false): Phaser.GameObjects.Container {
+export function createCardBack(
+  scene: Phaser.Scene,
+  faded = false,
+  width = CARD_WIDTH,
+): Phaser.GameObjects.Container {
   const tone = faded ? worn : (colour: number): number => colour;
+  const height = heightOf(width);
   const paper = scene.add.graphics();
-  drawCardSurface(paper, -CARD_WIDTH / 2, -CARD_HEIGHT, {
+  drawCardSurface(paper, -width / 2, -height, {
+    width,
     face: tone(LOOK.cardBack),
     edge: tone(LOOK.cardEdge),
   });
 
   const emblem = scene.add
-    .polygon(0, -CARD_HEIGHT / 2, hexagon(CARD_WIDTH * 0.28 - 3), 0, 0)
+    .polygon(0, -height / 2, hexagon(width * 0.28 - 3), 0, 0)
     .setStrokeStyle(3, tone(LOOK.accent));
 
   return scene.add.container(0, 0, [paper, emblem]);

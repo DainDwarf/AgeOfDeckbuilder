@@ -206,7 +206,8 @@ const TEXT = {
   'plate.cards': '{copies} [card:{card}]',
   'plate.age': 'The {age}',
   'plate.mystery': '???',
-  'launch.title': 'Launch a chronicle',
+  'region.temperate': 'Temperate',
+  'civilization.nomadic': 'Nomadic',
   'launch.age': 'Age',
   'launch.region': 'Region',
   'launch.civilization': 'Civilization',
@@ -215,6 +216,7 @@ const TEXT = {
   'launch.turn': 'Turn {turn}',
   'launch.settle-phase': 'Settle phase',
   'launch.reached': '✓ {achievement}',
+  'launch.deck': 'Cards: {cards} · Settle cards: {settle}',
   'boot.failed': 'The game could not start', // glossary exception: start
   'refused-save.title': 'The game cannot save',
   'refused-save.line':
@@ -328,6 +330,16 @@ export function victoryLine(capstone: string): string {
 /** What an age is named on the screen; an age no entry names is refused. */
 export function ageName(age: string): string {
   return named('age', age, 'the age');
+}
+
+/** What a region is named on the screen; a region no entry names is refused. */
+export function regionName(region: string): string {
+  return named('region', region, 'the region');
+}
+
+/** What a civilization is named on the screen; a civilization no entry names is refused. */
+export function civilizationName(civilization: string): string {
+  return named('civilization', civilization, 'the civilization');
 }
 
 /** What a technology is named on the screen; a technology no entry names is refused. */
