@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { CATALOGUE } from '../content/catalogue';
 import { awayUnder, COVERED, holdDesignSpace } from './design-space';
 import { backRaisesMenu, resetMenu } from './menu-scene';
 import { wearNavbar } from './navbar';
@@ -21,12 +22,13 @@ export class CampaignScreen extends Phaser.Scene {
     const overlay = overlayOf(this);
     const large = standLarge(
       overlay,
+      CATALOGUE,
       (up) => {
         away('overlay', up);
       },
       movesTree,
     );
-    const tree = createTree(this, worn, campaignHeld().technologies, large.named);
+    const tree = createTree(this, worn, CATALOGUE, campaignHeld().technologies, large.named);
     resetMenu(this, (under) => {
       tree.cover(under);
       away('menu', under);

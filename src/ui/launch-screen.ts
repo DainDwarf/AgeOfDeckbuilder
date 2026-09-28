@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { CATALOGUE } from '../content/catalogue';
 import { agesReached, type CampaignCivilization } from '../rules/campaign';
-import { achievementOf, ageOf } from '../rules/catalogue';
+import { achievementOf, ageOf, type Catalogue } from '../rules/catalogue';
 import { biomeKind } from '../rules/map-kinds';
 import { type Chronicle, NO_REFUSAL, onSettlePhase } from '../rules/state';
 import {
@@ -93,9 +93,9 @@ type Choice = {
  * What Continue reads under its label: where the chronicle stands, then each achievement it reached,
  * under its technology's name.
  */
-function readingsOf(chronicle: Chronicle): string[] {
+function readingsOf(catalogue: Catalogue, chronicle: Chronicle): string[] {
   const named = (id: string): string =>
-    technologyName(achievementOf(CATALOGUE, chronicle.age, id).technology);
+    technologyName(achievementOf(catalogue, chronicle.age, id).technology);
   return [
     onSettlePhase(chronicle)
       ? text('launch.settle-phase')
@@ -127,10 +127,11 @@ function pressedOnShape(polygon: Phaser.GameObjects.Polygon): Phaser.GameObjects
 /** The time arrow: one segment per age, in the order of history, a mystery for each not reached. */
 function arrowOf(
   scene: Phaser.Scene,
+  catalogue: Catalogue,
   reached: readonly string[],
   age: string,
 ): { choices: Choice[]; mysteries: Phaser.GameObjects.Container[] } {
-  const ages = Object.keys(CATALOGUE.ages);
+  const ages = Object.keys(catalogue.ages);
   const each = (RIGHT - LEFT - NOTCH) / ages.length;
   const choices: Choice[] = [];
   const mysteries: Phaser.GameObjects.Container[] = [];
@@ -180,10 +181,15 @@ function arrowOf(
 }
 
 /** The chosen age's regions in a row, each a cluster of seven hexagons over its name. */
-function regionsOf(scene: Phaser.Scene, age: string, region: string): Choice[] {
+function regionsOf(
+  scene: Phaser.Scene,
+  catalogue: Catalogue,
+  age: string,
+  region: string,
+): Choice[] {
   const touching = Math.sqrt(3) * HEX_RADIUS;
-  const colourOf = (biome: string): number => terrainColourOf(biomeKind(CATALOGUE, biome).origin);
-  return Object.entries(ageOf(CATALOGUE, age).regions).map(([id, held], at): Choice => {
+  const colourOf = (biome: string): number => terrainColourOf(biomeKind(catalogue, biome).origin);
+  return Object.entries(ageOf(catalogue, age).regions).map(([id, held], at): Choice => {
     const chosen = id === region;
     const x = CLUSTER_FIRST + at * CLUSTER_APART;
     const hexagons = [held.centreBiome, ...ringOf(held)].map((biome, place) => {
@@ -224,6 +230,7 @@ type CityCardPresses = {
  */
 function pilesOf(
   scene: Phaser.Scene,
+  catalogue: Catalogue,
   civilizations: Readonly<Record<string, CampaignCivilization>>,
   civilization: string,
   { on, small, kinds, large }: CityCardPresses,
@@ -238,7 +245,7 @@ function pilesOf(
       return createCardBack(scene, { width: PILE_WIDTH }).setPosition(x + step, foot + step);
     });
     const lift = chosen ? PILE_LIFT : 0;
-    const shown = cardFaceAtStart(CATALOGUE, owned.city.card.id);
+    const shown = cardFaceAtStart(catalogue, owned.city.card.id);
     const card = createCardFace(scene, shown, NO_REFUSAL, { width: PILE_WIDTH });
     const face = card.root
       .setPosition(x, foot - lift)
@@ -321,6 +328,7 @@ export class LaunchScreen extends Phaser.Scene {
     const overlay = overlayOf(this);
     const large = standLarge(
       overlay,
+      CATALOGUE,
       (up) => {
         away('overlay', up);
       },
@@ -395,7 +403,7 @@ export class LaunchScreen extends Phaser.Scene {
       root = this.add.container(0, 0).setName('launch');
       content.add(root);
 
-      const arrow = arrowOf(this, reached, chosen.age);
+      const arrow = arrowOf(this, CATALOGUE, reached, chosen.age);
       const lastChosen = (choices: Choice[]): Choice[] => [
         ...choices.filter(({ chosen: held }) => !held),
         ...choices.filter(({ chosen: held }) => held),
@@ -405,10 +413,12 @@ export class LaunchScreen extends Phaser.Scene {
         ...arrow.mysteries,
         ...lastChosen(arrow.choices).map(drawn),
         word('launch.region', 222),
-        ...regionsOf(this, chosen.age, chosen.region).map(drawn),
+        ...regionsOf(this, CATALOGUE, chosen.age, chosen.region).map(drawn),
         word('launch.civilization', 450),
-        ...pilesOf(this, campaign.civilizations, chosen.civilization, presses).map(drawn),
-        ...buttonsOf(this, open, () => chosen),
+        ...pilesOf(this, CATALOGUE, campaign.civilizations, chosen.civilization, presses).map(
+          drawn,
+        ),
+        ...buttonsOf(this, CATALOGUE, open, () => chosen),
       ]);
     };
 
@@ -422,6 +432,7 @@ export class LaunchScreen extends Phaser.Scene {
  */
 function buttonsOf(
   scene: Phaser.Scene,
+  catalogue: Catalogue,
   open: (opening: Opening) => void,
   choices: () => Choices,
 ): Phaser.GameObjects.GameObject[] {
@@ -447,10 +458,11 @@ function buttonsOf(
   )
     .setOrigin(0.5, 0)
     .setName('launch-continue-label');
-  const lines = (saved === undefined ? [] : readingsOf(saved.resumed)).map((reading, index) =>
-    addText(scene, middle, 0, reading, LINE_STYLE)
-      .setOrigin(0.5, 0)
-      .setName(`launch-continue-line-${index}`),
+  const lines = (saved === undefined ? [] : readingsOf(catalogue, saved.resumed)).map(
+    (reading, index) =>
+      addText(scene, middle, 0, reading, LINE_STYLE)
+        .setOrigin(0.5, 0)
+        .setName(`launch-continue-line-${index}`),
   );
   const height = BUTTON_HEIGHT + lines.reduce((sum, line) => sum + line.height, 0);
   const top = LAUNCH_BOTTOM - BUTTON_HEIGHT - BUTTON_GAP - height;

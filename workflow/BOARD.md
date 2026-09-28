@@ -12,5 +12,3 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 - **The headless simulator** — a consumer of the rules that runs only when asked and reports numbers, not diagnoses, tuned across the two ages; the reachability cache and the end of turn's cost per `apply` are looked at when it is made.
 
 ## Lines
-
-- **The screen fetches the catalogue, the pieces receive it** — in `src/ui/`, outside the tests, `CATALOGUE` is read only inside the methods of a scene class and in `src/ui/save-entry.ts`: `src/ui/tree.ts` and `src/ui/stack.ts` no longer import it, the launch screen's helpers outside its class take it as an argument, and the campaign screen reads it and hands it down; `DOGMAS.md` carries the rule; `npm run check`, `npm test`, `npm run lint` and `e2e/tree.spec.ts` pass. Doc-impact: none. [board/screen-fetches-catalogue.md](board/screen-fetches-catalogue.md)

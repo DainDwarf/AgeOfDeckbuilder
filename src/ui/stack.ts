@@ -1,5 +1,4 @@
 import Phaser from 'phaser';
-import { CATALOGUE } from '../content/catalogue';
 import type { Catalogue } from '../rules/catalogue';
 import { NO_REFUSAL, type Refusal } from '../rules/state';
 import { type Bind, boundTo } from './bindings';
@@ -159,6 +158,7 @@ export type ShownLarge = {
  */
 export function standLarge(
   overlay: OverlayScene,
+  catalogue: Catalogue,
   covering: (covered: boolean) => void,
   passes: (press: Bind) => boolean,
 ): ShownLarge {
@@ -169,7 +169,7 @@ export function standLarge(
   overlay.strata.scrim.layer.add(scrim);
   const stack = createStack(
     overlay,
-    CATALOGUE,
+    catalogue,
     createKindBubble(createTooltip(overlay, overlay.strata.tooltip)),
   );
 

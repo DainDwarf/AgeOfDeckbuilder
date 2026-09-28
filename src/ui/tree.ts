@@ -1,6 +1,5 @@
 import Phaser from 'phaser';
-import { CATALOGUE } from '../content/catalogue';
-import { type Achievement, technologyOf } from '../rules/catalogue';
+import { type Achievement, type Catalogue, technologyOf } from '../rules/catalogue';
 import { type Bind, bindings, boundTo, type Control, type Press, pressOf } from './bindings';
 import { createKindBubble, type Name } from './card-face';
 import {
@@ -80,18 +79,18 @@ type Reading = {
 };
 
 /** Every technology's reading, from the achievement that earns it. */
-function readingsOf(): Map<string, Reading> {
+function readingsOf(catalogue: Catalogue): Map<string, Reading> {
   const earning = new Map<string, { id: string; achievement: Achievement }>();
-  for (const { achievements } of Object.values(CATALOGUE.ages)) {
+  for (const { achievements } of Object.values(catalogue.ages)) {
     for (const [id, achievement] of Object.entries(achievements)) {
       earning.set(achievement.technology, { id, achievement });
     }
   }
   const readings = new Map<string, Reading>();
-  for (const technology of Object.keys(CATALOGUE.technologies)) {
+  for (const technology of Object.keys(catalogue.technologies)) {
     const earned = earning.get(technology);
     if (earned === undefined) throw new Error(`no achievement earns the technology ${technology}`);
-    const { unlocks } = technologyOf(CATALOGUE, technology);
+    const { unlocks } = technologyOf(catalogue, technology);
     const reward: RewardLine[] = [
       ...Object.entries(unlocks.cards).map(
         ([card, copies]): RewardLine => ({
@@ -159,13 +158,14 @@ export type TreeView = {
 export function createTree(
   scene: Phaser.Scene,
   { bubbles, tooltip }: Worn,
+  catalogue: Catalogue,
   unlocked: readonly string[],
   inspect: (name: Name) => void,
 ): TreeView {
-  const readings = readingsOf();
+  const readings = readingsOf(catalogue);
   const plateHeight =
     2 * PAD_Y + NAME_LINE + TEXT_LINE * Math.max(...[...readings.values()].map(linesOf));
-  const tree = layOutTree(CATALOGUE, unlocked, plateHeight, { ...ROOM, margin: MARGIN });
+  const tree = layOutTree(catalogue, unlocked, plateHeight, { ...ROOM, margin: MARGIN });
 
   // Under the navbar and the bar, which cover it as it slides.
   const layer = scene.add.layer();
@@ -210,7 +210,7 @@ export function createTree(
   }
   root.add(links);
 
-  const small = createSmallCards(scene, bubbles, CATALOGUE, createKindBubble(tooltip), inspect);
+  const small = createSmallCards(scene, bubbles, catalogue, createKindBubble(tooltip), inspect);
   /** The name the pointer is on, and whether the tree is being carried, which holds every rest off. */
   let hovered: Raiser | undefined;
   let carrying = false;
