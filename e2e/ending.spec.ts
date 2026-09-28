@@ -1,10 +1,10 @@
 import { expect, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
-import { newCampaign, paidInto } from '../src/rules/campaign';
+import { paidInto } from '../src/rules/campaign';
 import { achievementOf } from '../src/rules/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
 import { tileKey } from '../src/rules/map';
-import { readSave } from '../src/rules/save';
+import { freshCampaign, readSave } from '../src/rules/save';
 import { SAVE_ENTRY } from '../src/ui/save-entry';
 import { technologyName, text } from '../src/ui/text';
 import {
@@ -14,7 +14,6 @@ import {
   chronicleButton,
   click,
   dragOut,
-  firstsOf,
   idsOf,
   landed,
   openSaved,
@@ -35,7 +34,7 @@ test('the play that ends the chronicle pays it into the campaign: the ending scr
   const { chronicle, tile } = landed();
   const index = idsOf(chronicle.hand).indexOf(SHELTER);
   const won = outcome(apply(CATALOGUE, chronicle, { type: 'play', index, aim: 'tile', tile }));
-  const paid = paidInto(CATALOGUE, newCampaign(CATALOGUE, firstsOf().civilization), won);
+  const paid = paidInto(CATALOGUE, freshCampaign(CATALOGUE), won);
 
   await openSaved(page, chronicle);
   await dragOut(page, index);

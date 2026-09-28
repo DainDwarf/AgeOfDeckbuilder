@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { expect, type Page } from '@playwright/test';
 import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
-import { type Campaign, newCampaign } from '../src/rules/campaign';
+import type { Campaign } from '../src/rules/campaign';
 import { aimOf, type CardKind, gained } from '../src/rules/cards';
 import {
   type Aim,
@@ -30,7 +30,7 @@ import {
   tileYield,
 } from '../src/rules/map';
 import { RESOURCES, type Resource, type Resources } from '../src/rules/resources';
-import { type ChronicleSave, writeSave } from '../src/rules/save';
+import { type ChronicleSave, freshCampaign, writeSave } from '../src/rules/save';
 import { charted } from '../src/rules/sight';
 import { type CardId, type Chronicle, type ChronicleCard, playable } from '../src/rules/state';
 import { standsOn, type Unit, unitAt } from '../src/rules/units';
@@ -198,7 +198,7 @@ export async function readNames(page: Page): Promise<void> {
  * first civilization; a save the reading would refuse throws here.
  */
 export async function plant(page: Page, save: ChronicleSave): Promise<void> {
-  await kept(page, writeSave(CATALOGUE, newCampaign(CATALOGUE, firstsOf().civilization), save));
+  await kept(page, writeSave(CATALOGUE, freshCampaign(CATALOGUE), save));
 }
 
 /**

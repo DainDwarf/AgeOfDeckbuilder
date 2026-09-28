@@ -1,7 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
-import { newCampaign } from '../src/rules/campaign';
 import { CENTRE, tileKey } from '../src/rules/map';
+import { freshCampaign } from '../src/rules/save';
 import { SAVE_ENTRY } from '../src/ui/save-entry';
 import { eventName } from '../src/ui/text';
 import {
@@ -74,7 +74,7 @@ test('a save that cannot be read is dropped, the console says why, and the campa
   await campaignShown(page);
   expect(await page.evaluate(() => window.game?.scene.isActive('ui'))).toBe(false);
   expect(await textOf(page, 'reading-influence-value')).toBe(
-    String(newCampaign(CATALOGUE, firstsOf().civilization).influence),
+    String(freshCampaign(CATALOGUE).influence),
   );
   expect(await page.evaluate((entry) => window.localStorage.getItem(entry), SAVE_ENTRY)).toBe(null);
   expect(warnings).toContainEqual(expect.stringContaining('the save is not JSON'));

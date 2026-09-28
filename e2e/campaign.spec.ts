@@ -1,8 +1,9 @@
 import { expect, type Page, test } from '@playwright/test';
 import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
-import { newCampaign, paidInto } from '../src/rules/campaign';
+import { paidInto } from '../src/rules/campaign';
 import { apply, outcome } from '../src/rules/chronicle';
+import { freshCampaign } from '../src/rules/save';
 import { LOOK } from '../src/ui/look';
 import { text } from '../src/ui/text';
 import {
@@ -11,7 +12,6 @@ import {
   chronicleOf,
   click,
   cursorOverCanvas,
-  firstsOf,
   idsOf,
   landed,
   onScreen,
@@ -66,9 +66,7 @@ test('the bare address with no save boots the campaign screen, Campaign sunk, Ch
   expect(await page.evaluate(() => window.game?.scene.isActive('ui'))).toBe(false);
   expect(await buttonOf(page, 'campaign')).toEqual({ sunk: true });
   expect(await buttonOf(page, 'launch')).toEqual(ACCENT);
-  expect(await influenceReads(page)).toBe(
-    String(newCampaign(CATALOGUE, firstsOf().civilization).influence),
-  );
+  expect(await influenceReads(page)).toBe(String(freshCampaign(CATALOGUE).influence));
 
   expect(problems).toEqual([]);
 });
@@ -80,7 +78,7 @@ test('on a campaign a won chronicle paid into, the bar reads its influence, and 
   const { chronicle, tile } = landed();
   const index = idsOf(chronicle.hand).indexOf(SHELTER);
   const won = outcome(apply(CATALOGUE, chronicle, { type: 'play', index, aim: 'tile', tile }));
-  const opened = newCampaign(CATALOGUE, firstsOf().civilization);
+  const opened = freshCampaign(CATALOGUE);
   const { campaign } = paidInto(CATALOGUE, opened, won);
   expect(campaign.influence).not.toBe(opened.influence);
 
@@ -111,9 +109,7 @@ test('Chronicle opens the launch page, Chronicle sunk there, the back key raises
 
   expect(await buttonOf(page, 'launch')).toEqual({ sunk: true });
   expect(await buttonOf(page, 'campaign')).toEqual(ACCENT);
-  expect(await influenceReads(page)).toBe(
-    String(newCampaign(CATALOGUE, firstsOf().civilization).influence),
-  );
+  expect(await influenceReads(page)).toBe(String(freshCampaign(CATALOGUE).influence));
 
   await page.keyboard.press('Escape');
   await expect.poll(() => standing(page, 'menu')).toBe(true);

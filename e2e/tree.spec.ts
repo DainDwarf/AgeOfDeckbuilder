@@ -1,9 +1,10 @@
 import { expect, type Page, test } from '@playwright/test';
 import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
-import { newCampaign, paidInto } from '../src/rules/campaign';
+import { paidInto } from '../src/rules/campaign';
 import { ageOf, firstAge, technologyOf } from '../src/rules/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
+import { freshCampaign } from '../src/rules/save';
 import { DEFAULTS } from '../src/ui/bindings';
 import { achievementGoal, ageName, referenceName, technologyName, text } from '../src/ui/text';
 import { layOutRun, type Reference } from '../src/ui/text-run';
@@ -11,7 +12,6 @@ import { WASH } from '../src/ui/tree-layout';
 import {
   campaignShown,
   cardOnFace,
-  firstsOf,
   idsOf,
   landed,
   nameOnScreen,
@@ -95,10 +95,7 @@ function treeAt(page: Page): Promise<number> {
 }
 
 /** The campaign screen booted on the campaign, its tree standing. */
-async function openCampaign(
-  page: Page,
-  campaign = newCampaign(CATALOGUE, firstsOf().civilization),
-) {
+async function openCampaign(page: Page, campaign = freshCampaign(CATALOGUE)) {
   await readNames(page);
   await plantCampaign(page, campaign);
   await page.goto('/');
@@ -167,7 +164,7 @@ test('on a campaign a won chronicle paid into, its technology stands unlocked, t
   const { chronicle, tile } = landed();
   const index = idsOf(chronicle.hand).indexOf(SHELTER);
   const won = outcome(apply(CATALOGUE, chronicle, { type: 'play', index, aim: 'tile', tile }));
-  const { campaign } = paidInto(CATALOGUE, newCampaign(CATALOGUE, firstsOf().civilization), won);
+  const { campaign } = paidInto(CATALOGUE, freshCampaign(CATALOGUE), won);
   expect(campaign.technologies).toContain(TECHNOLOGY);
 
   await openCampaign(page, campaign);
