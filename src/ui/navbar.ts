@@ -14,6 +14,7 @@ import {
 } from './design-space';
 import { css, LOOK } from './look';
 import { menuRoom } from './menu';
+import { overlayAhead } from './overlay-scene';
 import {
   createReading,
   createWell,
@@ -97,9 +98,7 @@ export function wearNavbar(scene: Phaser.Scene, standing: MetaScreen): Worn {
         .setInteractive();
       answersPress(face);
       onClick(face, () => {
-        // Restarted ahead of the screen, so its keyboard plugin hears a key first and nothing the
-        // screen going down built on it answers one (docs/PHASER.md).
-        scene.scene.launch('overlay');
+        overlayAhead(scene.scene);
         scene.scene.start(screen);
       });
     }

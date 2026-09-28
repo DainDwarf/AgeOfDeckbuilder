@@ -46,7 +46,7 @@ import { createMapView, type PressedTile } from './map';
 import { mapOf } from './map-scene';
 import { type LeavesChronicles, raiseMenu, resetMenu } from './menu-scene';
 import { createOverlay } from './overlay';
-import { overlayOf } from './overlay-scene';
+import { overlayAhead, overlayOf } from './overlay-scene';
 import { createPiles } from './piles';
 import { createRefusalNote, refused, refusedAim } from './refusal-note';
 import { createResourceBar } from './resource-bar';
@@ -125,8 +125,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
     this.sequence = undefined;
     stopAllMotion(this);
     stopAllMotion(mapOf(this));
-    // Restarted ahead of the campaign screen, which draws on it too: key order is start order.
-    this.scene.launch('overlay');
+    overlayAhead(this.scene);
     this.scene.stop('map');
     this.scene.start('campaign');
   }

@@ -14,7 +14,7 @@ import { firstsOf, LaunchPage } from './ui/launch-page';
 import { css, LOOK } from './ui/look';
 import { MapScene } from './ui/map-scene';
 import { MenuScene } from './ui/menu-scene';
-import { OverlayScene } from './ui/overlay-scene';
+import { OverlayScene, overlayAhead } from './ui/overlay-scene';
 import { type Choices, type Opening, savedOpening } from './ui/save-entry';
 
 // The e2e suite and browser-console debugging observe the running game through this handle;
@@ -83,13 +83,12 @@ const first = firstScreen();
 
 /** The first screen started, over the console and the menu. */
 function startFirst(screen: FirstScreen): void {
+  overlayAhead(game.scene);
   switch (screen.on) {
     case 'campaign':
-      game.scene.start('overlay');
       game.scene.start('campaign');
       return;
     case 'chronicle':
-      game.scene.start('overlay');
       game.scene.start('map');
       game.scene.start('ui', screen.opening);
       return;

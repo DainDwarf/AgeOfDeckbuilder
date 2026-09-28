@@ -7,6 +7,7 @@ import { readsKeys } from './keys';
 import { css, LOOK } from './look';
 import { backRaisesMenu, closeMenu } from './menu-scene';
 import { ROOM, wearNavbar } from './navbar';
+import { overlayAhead } from './overlay-scene';
 import { type Choices, type Opening, savedOpening } from './save-entry';
 import { type TextKey, technologyName, text } from './text';
 
@@ -71,9 +72,8 @@ export class LaunchPage extends Phaser.Scene {
     let seedLabel: Phaser.GameObjects.Text | undefined;
 
     const open = (opening: Opening): void => {
-      // Queued ahead of the start below, so the overlay's keyboard plugin stands ahead of the ui
-      // scene's and the map is up before the ui scene reaches into it (docs/PHASER.md).
-      this.scene.launch('overlay');
+      overlayAhead(this.scene);
+      // Queued ahead of the start below, so the map is up before the ui scene reaches into it.
       this.scene.launch('map');
       this.scene.start('ui', opening);
     };

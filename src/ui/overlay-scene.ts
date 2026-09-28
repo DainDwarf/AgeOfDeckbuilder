@@ -13,8 +13,8 @@ export type Strata = {
 };
 
 /**
- * The scrim and what it carries, started anew ahead of every screen that opens so its keyboard plugin
- * hears a key first, and never put to sleep: while nothing stands, the pointer falls through it.
+ * The scrim and what it carries, started through `overlayAhead` and never put to sleep: while
+ * nothing stands, the pointer falls through it.
  */
 export class OverlayScene extends Phaser.Scene {
   /** Where whatever the screen under it raises on the overlay is added. */
@@ -49,6 +49,16 @@ export class OverlayScene extends Phaser.Scene {
   takes(taker: (press: Bind) => boolean): void {
     this.taker = taker;
   }
+}
+
+/**
+ * The overlay started anew, before the screen about to open is started: its keyboard plugin then
+ * hears a key first, and nothing the screen before built on it answers one (docs/PHASER.md).
+ */
+export function overlayAhead(scenes: Phaser.Scenes.ScenePlugin | Phaser.Scenes.SceneManager): void {
+  // A scene's plugin queues the start, and its own `start` would stop the scene calling it.
+  if (scenes instanceof Phaser.Scenes.ScenePlugin) scenes.launch('overlay');
+  else scenes.start('overlay');
 }
 
 /** The overlay scene of the game, for whichever screen draws on it. */
