@@ -52,6 +52,8 @@ export type Look = {
   readonly arrowEdge: number;
   readonly regionEdge: number;
   readonly deckCounts: number;
+  /** The edge between the two panels of the collection screen. */
+  readonly panelDivide: number;
   readonly cardEdge: number;
   readonly cardBack: number;
   readonly aimSlab: number;
@@ -105,6 +107,7 @@ export const LOOK: Look = {
   arrowEdge: 0x0d1117,
   regionEdge: 0x0d1014,
   deckCounts: 0x9aa1a9,
+  panelDivide: 0x2c3340,
   cardEdge: 0x6f757d,
   cardBack: 0x232833,
   aimSlab: 0x232833,

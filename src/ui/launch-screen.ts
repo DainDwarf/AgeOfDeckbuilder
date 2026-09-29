@@ -3,15 +3,10 @@ import { CATALOGUE } from '../content/catalogue';
 import { agesReached, type CampaignCivilization } from '../rules/campaign';
 import { achievementOf, ageOf, type Catalogue } from '../rules/catalogue';
 import { biomeKind } from '../rules/map-kinds';
-import { type Chronicle, NO_REFUSAL, onSettlePhase } from '../rules/state';
-import {
-  createCardBack,
-  createCardFace,
-  createKindBubble,
-  type KindBubble,
-  metricsOf,
-} from './card-face';
+import { type Chronicle, onSettlePhase } from '../rules/state';
+import { createKindBubble } from './card-face';
 import { openChronicle } from './chronicle-scene';
+import { createPile } from './civilization-pile';
 import { offerEntries } from './debug-console';
 import {
   addText,
@@ -24,11 +19,8 @@ import {
   holdDesignSpace,
   MARGIN,
   onClick,
-  onHover,
-  type Stratum,
   UI_FONT,
 } from './design-space';
-import { cardFaceAtStart } from './face';
 import { openingChoices, ringOf, withAge } from './launch-layout';
 import { css, LOOK } from './look';
 import { groundColourOf, terrainColourOf } from './marks';
@@ -36,9 +28,9 @@ import { backRaisesMenu, resetMenu } from './menu-scene';
 import { ROOM, wearNavbar } from './navbar';
 import { overlayOf } from './overlay-scene';
 import { type Choices, campaignHeld, type Opening, savedOpening } from './save-entry';
-import { createSmallCards, raiserOf, type SmallCards } from './small-card';
-import { type ShownLarge, standLarge } from './stack';
-import { ageName, civilizationName, regionName, type TextKey, technologyName, text } from './text';
+import { createSmallCards } from './small-card';
+import { type Inspecting, standLarge } from './stack';
+import { ageName, regionName, type TextKey, technologyName, text } from './text';
 
 const LEFT = ROOM.x + MARGIN;
 const RIGHT = DESIGN_WIDTH - MARGIN;
@@ -58,12 +50,6 @@ const REGION_NAME_Y = 390;
 const PILE_FIRST = LEFT + 30;
 const PILE_APART = 190;
 const PILE_TOP = 476;
-const PILE_WIDTH = 100;
-const PILE_BACKS = 3;
-const BACK_STEP = 5;
-const PILE_LIFT = 10;
-const CIVILIZATION_NAME_Y = 645;
-const DECK_COUNTS_Y = 667;
 
 const BUTTON_WIDTH = 300;
 const BUTTON_HEIGHT = 44;
@@ -79,7 +65,6 @@ const PALE_STYLE = { ...LABEL_STYLE, color: PALE };
 const UNKNOWN_STYLE = { ...LABEL_STYLE, color: css(LOOK.unknownInk) };
 const GREYED_STYLE = { ...LABEL_STYLE, color: css(LOOK.greyedInk) };
 const LINE_STYLE = { fontFamily: UI_FONT, fontSize: '16px', fontStyle: 'bold', color: INK };
-const COUNTS_STYLE = { fontFamily: UI_FONT, fontSize: '14px', color: css(LOOK.deckCounts) };
 
 type Row = 'age' | 'region' | 'civilization';
 
@@ -219,101 +204,25 @@ function regionsOf(
   });
 }
 
-/** What the city section's card on a pile answers the rest and the right click with. */
-type CityCardPresses = {
-  readonly on: Stratum;
-  readonly small: SmallCards;
-  readonly kinds: KindBubble;
-  readonly large: ShownLarge;
-};
-
-/**
- * The campaign's civilizations in a row, each a pile of card backs under its city section's card,
- * face up, over its name and the counts of its cards and of its settle cards.
- */
+/** The campaign's civilizations in a row, each its pile. */
 function pilesOf(
   scene: Phaser.Scene,
   catalogue: Catalogue,
   civilizations: Readonly<Record<string, CampaignCivilization>>,
   civilization: string,
-  { on, small, kinds, large }: CityCardPresses,
+  inspecting: Inspecting,
 ): Choice[] {
-  const { height, radius } = metricsOf(PILE_WIDTH);
-  const foot = PILE_TOP + height;
   return Object.entries(civilizations).map(([id, owned], at): Choice => {
     const chosen = id === civilization;
-    const x = PILE_FIRST + at * PILE_APART + PILE_WIDTH / 2;
-    const backs = Array.from({ length: PILE_BACKS }, (_, under) => {
-      const step = (PILE_BACKS - under) * BACK_STEP;
-      return createCardBack(scene, { width: PILE_WIDTH }).setPosition(x + step, foot + step);
-    });
-    const lift = chosen ? PILE_LIFT : 0;
-    const shown = cardFaceAtStart(catalogue, owned.city.card.id);
-    const card = createCardFace(scene, shown, NO_REFUSAL, { width: PILE_WIDTH });
-    const face = card.root
-      .setPosition(x, foot - lift)
-      .setName(`launch-civilization-${id}-card`)
-      .setData('card', shown.id);
-    const edge = chosen
-      ? [
-          scene.add
-            .graphics({ x, y: foot - lift })
-            .lineStyle(EDGE, LOOK.chosenEdge)
-            .strokeRoundedRect(-PILE_WIDTH / 2, -height, PILE_WIDTH, height, radius),
-        ]
-      : [];
-    const name = addText(scene, x, CIVILIZATION_NAME_Y, civilizationName(id), PALE_STYLE).setOrigin(
-      0.5,
-    );
-    const counts = addText(
+    const { parts, zone } = createPile(
       scene,
-      x,
-      DECK_COUNTS_Y,
-      text('launch.deck', { cards: owned.cards.length, settle: owned.settle.length }),
-      COUNTS_STYLE,
-    ).setOrigin(0.5);
-    const parts = [...backs, face, ...edge, name, counts];
-    const bounds = Phaser.Geom.Rectangle.Union(
-      new Phaser.Geom.Rectangle(
-        x - PILE_WIDTH / 2,
-        PILE_TOP - lift,
-        PILE_WIDTH + PILE_BACKS * BACK_STEP,
-        height + lift + PILE_BACKS * BACK_STEP,
-      ),
-      Phaser.Geom.Rectangle.Union(name.getBounds(), counts.getBounds()),
+      catalogue,
+      owned,
+      { left: PILE_FIRST + at * PILE_APART, top: PILE_TOP, chosen },
+      inspecting,
+      `launch-civilization-${id}`,
     );
-    const zone = scene.add
-      .zone(bounds.centerX, bounds.centerY, bounds.width, bounds.height)
-      .setInteractive();
-
-    zone.on('pointermove', (pointer: Phaser.Input.Pointer) => {
-      const at = on.at(pointer.x, pointer.y);
-      const named = card.nameAt(at.x, at.y);
-      small.over(named === undefined ? undefined : raiserOf(card, named));
-      kinds.over(card, card.kindAt(at.x, at.y));
-    });
-    onHover(
-      zone,
-      () => {},
-      () => {
-        small.over(undefined);
-        kinds.over(card, false);
-      },
-    );
-    onClick(
-      zone,
-      (pointer) => {
-        const at = on.at(pointer.x, pointer.y);
-        const named = card.nameAt(at.x, at.y);
-        if (named !== undefined) {
-          large.named(named);
-          return;
-        }
-        if (card.cardAt(at.x, at.y)) large.show(shown);
-      },
-      'right',
-    );
-    return { row: 'civilization', option: id, chosen, parts: [...parts, zone], hits: [zone] };
+    return { row: 'civilization', option: id, chosen, parts, hits: [zone] };
   });
 }
 
@@ -342,7 +251,7 @@ export class LaunchScreen extends Phaser.Scene {
       if (under) overlay.input.emit(COVERED);
     });
     const kinds = createKindBubble(tooltip);
-    const presses = {
+    const inspecting: Inspecting = {
       on: bubbles,
       small: createSmallCards(this, bubbles, CATALOGUE, kinds, large.named),
       kinds,
@@ -407,7 +316,7 @@ export class LaunchScreen extends Phaser.Scene {
       addText(this, LEFT, y, text(key), PALE_STYLE).setOrigin(0, 0.5);
 
     const lay = (): void => {
-      presses.small.down();
+      inspecting.small.down();
       root?.destroy();
       root = this.add.container(0, 0).setName('launch');
       content.add(root);
@@ -424,7 +333,7 @@ export class LaunchScreen extends Phaser.Scene {
         word('launch.region', 222),
         ...regionsOf(this, CATALOGUE, chosen.age, chosen.region).map(drawn),
         word('launch.civilization', 450),
-        ...pilesOf(this, CATALOGUE, campaign.civilizations, chosen.civilization, presses).map(
+        ...pilesOf(this, CATALOGUE, campaign.civilizations, chosen.civilization, inspecting).map(
           drawn,
         ),
         ...buttonsOf(this, CATALOGUE, open, () => chosen),

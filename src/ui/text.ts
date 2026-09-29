@@ -207,6 +207,7 @@ const TEXT = {
   'navbar.title': 'Age of\nDeckbuilder',
   'navbar.campaign': 'Campaign',
   'navbar.chronicle': 'Chronicle',
+  'navbar.collection': 'Collection',
   'label.influence': 'Influence',
   'tooltip.influence': 'Spend it on copies of your cards',
   'age.nomadic': 'Nomadic Age',
@@ -229,7 +230,10 @@ const TEXT = {
   'launch.turn': 'Turn {turn}',
   'launch.settle-phase': 'Settle phase',
   'launch.reached': '✓ {achievement}',
-  'launch.deck': 'Cards: {cards} · Settle cards: {settle}',
+  'pile.counts': 'Cards: {cards}\nSettle: {settle}',
+  'collection.collection': 'Collection',
+  'collection.civilizations': 'Civilizations',
+  'collection.copies': 'Copies {copies}',
   'boot.failed': 'The game could not start', // glossary exception: start
   'refused-save.title': 'The game cannot save',
   'refused-save.line':

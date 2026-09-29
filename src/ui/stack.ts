@@ -10,12 +10,12 @@ import {
   type KindBubble,
   type Name,
 } from './card-face';
-import { DESIGN_HEIGHT, DESIGN_WIDTH, onClick } from './design-space';
+import { DESIGN_HEIGHT, DESIGN_WIDTH, onClick, onHover, type Stratum } from './design-space';
 import { type Face, namedCardFace } from './face';
 import { createThingCard, type Thing } from './infopanel';
 import { LOOK } from './look';
 import type { OverlayScene } from './overlay-scene';
-import { createSmallCards, raiserOf } from './small-card';
+import { createSmallCards, raiserOf, type SmallCards } from './small-card';
 import { createTooltip } from './tooltip';
 
 const WIDTH = 380;
@@ -203,4 +203,53 @@ export function standLarge(
       stack.named(name);
     },
   };
+}
+
+/** What a face on a screen of the meta answers the rest and the right click with. */
+export type Inspecting = {
+  /** The stratum the screen's small cards and bubble stand on. */
+  readonly on: Stratum;
+  readonly small: SmallCards;
+  readonly kinds: KindBubble;
+  readonly large: ShownLarge;
+};
+
+/**
+ * The face answering through a zone laid over it: the rest on a name raises its small card, and on
+ * the kind label the kind's bubble; the right click on a name shows the named thing large, and on
+ * the rest of the card the face itself.
+ */
+export function inspectedThrough(
+  zone: Phaser.GameObjects.Zone,
+  card: CardFace,
+  shown: Face,
+  { on, small, kinds, large }: Inspecting,
+): void {
+  zone.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+    const at = on.at(pointer.x, pointer.y);
+    const named = card.nameAt(at.x, at.y);
+    small.over(named === undefined ? undefined : raiserOf(card, named));
+    kinds.over(card, card.kindAt(at.x, at.y));
+  });
+  onHover(
+    zone,
+    () => {},
+    () => {
+      small.over(undefined);
+      kinds.over(card, false);
+    },
+  );
+  onClick(
+    zone,
+    (pointer) => {
+      const at = on.at(pointer.x, pointer.y);
+      const named = card.nameAt(at.x, at.y);
+      if (named !== undefined) {
+        large.named(named);
+        return;
+      }
+      if (card.cardAt(at.x, at.y)) large.show(shown);
+    },
+    'right',
+  );
 }

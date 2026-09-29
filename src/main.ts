@@ -4,6 +4,7 @@ import Phaser from 'phaser';
 import { booted } from './failed-boot';
 import { CampaignScreen } from './ui/campaign-screen';
 import { ChronicleScene, openChronicle } from './ui/chronicle-scene';
+import { CollectionScreen } from './ui/collection-screen';
 import { DebugConsole } from './ui/debug-console';
 import { backingSize, followPointer, followWindow, releaseOnBlur } from './ui/design-space';
 import { readMouseKeys } from './ui/keys';
@@ -72,6 +73,7 @@ game.input.globalTopOnly = false;
 // Added bottom up, started top down: render order is the add order, key order the start order (docs/PHASER.md).
 game.scene.add('campaign', CampaignScreen);
 game.scene.add('launch', LaunchScreen);
+game.scene.add('collection', CollectionScreen);
 game.scene.add('map', MapScene);
 game.scene.add('ui', ChronicleScene);
 game.scene.add('overlay', OverlayScene);

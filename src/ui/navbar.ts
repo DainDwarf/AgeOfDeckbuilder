@@ -28,7 +28,7 @@ import { type TextKey, text } from './text';
 import { createTooltip, type Tooltip } from './tooltip';
 
 /** Every screen of the meta, by the key of the scene it stands on, in the navbar's order, top down. */
-export const META_SCREENS = ['campaign', 'launch'] as const;
+export const META_SCREENS = ['campaign', 'launch', 'collection'] as const;
 
 export type MetaScreen = (typeof META_SCREENS)[number];
 
@@ -36,6 +36,7 @@ export type MetaScreen = (typeof META_SCREENS)[number];
 const WORDS: Record<MetaScreen, TextKey> = {
   campaign: 'navbar.campaign',
   launch: 'navbar.chronicle',
+  collection: 'navbar.collection',
 };
 
 const NAVBAR_WIDTH = 240;
