@@ -26,4 +26,10 @@ The chosen age and the chosen region stand larger than the others and the chosen
 
 ## The collection screen ✅
 
-On the collection screen a copy moves between the collection and the deck by a press, and between the collection and the settle section the same way. The city section's card stands at the head of the settle section, fixed there and never moved out.
+The room the navbar and the bar leave the collection screen holds two panels, the collection on the left and the civilizations on the right, and the screen stands in one of three **modes**, which differ by how far the right panel reaches: the right panel grows leftwards from the collection mode into the deck editing mode, and from that into the civilization mode. The screen opens on the collection mode, always. Nothing is selected on this screen: a press acts. Buying raises no warning.
+
+In the **collection mode** the collection takes most of the room: every card owned, with its copies owned, and it is where a copy is bought. The right panel holds the civilizations the campaign owns, each a pile as on the launch screen, and a press on a pile opens the deck editing mode on its civilization.
+
+In the **deck editing mode** the two panels stand side by side, the collection and the civilization being edited. The civilization's panel holds its settle section and under it its deck, each card a row, and the city section's card stands at the head of the settle section, fixed there and never removed. A press on a card of the collection adds one copy of it to the deck, and a press on a card of the deck removes one; a card dragged from one panel onto the other does the same. A settle card is added to the settle section and removed from it the same way. The civilization's panel holds the way into the civilization mode.
+
+In the **civilization mode** the civilization's panel takes the whole room and the collection is not shown. The cards of the settle section and of the deck stand as card faces, and a copy is added and removed from there. A card added takes a copy owned that the deck does not hold, where there is one; where there is none, the one press buys a copy and adds it.

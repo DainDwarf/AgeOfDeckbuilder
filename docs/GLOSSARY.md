@@ -25,6 +25,8 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **unknown technology** | A technology that needs one not learned; the player is told only that it is there. | mystery, locked, secret |
 | **achievement** | A goal a chronicle can reach; its technology is learned by reaching it. | mission, objective, quest, milestone |
 | **influence** | The meta-currency every chronicle pays, scaled by how the city fared. | gold, XP |
+| **price** | The influence one more copy of a card is bought for. | fee, rate, value (for a card) |
+| **buy** | To pay a card's price in influence and add one more copy of it to the collection. | purchase, acquire |
 | **save** | The chronicle in progress and the meta, kept on the player's machine. | savegame, save slot, checkpoint, autosave |
 | **chronicle** | One city's story through one age, from its opening to victory or defeat — what a roguelite calls a run. | run, playthrough, attempt, session |
 | **city** | A settlement on the map; the player owns exactly one — _the_ city, what a chronicle is about. | town, capital, base, settlement |
@@ -66,11 +68,12 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **aim window** | The window offering the discard pile's cards to a card aimed there. | browse (for the aim window), picker, chooser, selector |
 | **being aimed** | The state of a selected card while what its aim admits is offered, until it lands or is put back. | armed, pending, targeting, in flight |
 | **stock** | The city's holding of one resource: what income adds to and every cost is paid out of. | reserve, treasury, pool, supply, balance, bank |
-| **cost** | What the city pays out of its stocks to play something, for example a card. | price, fee, charge, toll |
+| **cost** | What the city pays out of its stocks to play something, for example a card. | fee, charge, toll |
 | **unaffordable** | What the city cannot pay for: its cost exceeds the stocks. | unpayable, short, lacking, too expensive |
 | **discard** | To send a card from the hand to the discard pile. | throw away, dump |
 | **recall** | To put a card from the discard pile into the hand; what a recall instant does. | retrieve, recover, reclaim, salvage |
-| **add** | To put a new card on a pile or into the collection. | lay (for a card), put (for a card on a pile), gain (for a card), give (for a card), insert, shuffle in |
+| **add** | To put a new card on a pile or into the collection, or a card of the collection into a deck. | lay (for a card), put (for a card on a pile), gain (for a card), give (for a card), insert, shuffle in |
+| **remove** | To take a card out of a deck; the reverse of add. | destroy, sacrifice, trash |
 | **single use** | A keyword on a card: played, it leaves the chronicle instead of going to the discard pile. | one-use, gone once played, consumed, exhaust, exile |
 | **counter** | A named number a card carries in a chronicle, declared by its content and set when the card is made. | token, charge, variable |
 | **draw pile** | The cards not yet drawn this cycle; refilled from the discard pile when empty. | library |
@@ -89,7 +92,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **worker** | A non-fighting unit that cards are played through to change tiles: build, terraform, place an improvement. | builder, engineer, labourer |
 | **population** | The city's inhabitants: assigned to tiles for income, turned into units by unit cards. | inhabitants, citizens, workforce, pops |
 | **assign** | To put one population on a tile inside the border. | allocate |
-| **unassign** | To take one population off the tile it stands on; the reverse of assign. | remove, free up, release |
+| **unassign** | To take one population off the tile it stands on; the reverse of assign. | free up, release |
 | **idle** | One population assigned to no tile; what a unit card takes. | unemployed, spare, unassigned (as a noun) |
 | **grow** | What the city does at the growth phase: it gains one population, paid in food. | birth, breed, spawn (for population), expand |
 | **growth threshold** | The food the next population costs. | step, growth cost, food cap |
@@ -103,7 +106,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **road** | An improvement that names its tile's movement cost outright. | path, track, highway, trail |
 | **bridge** | A river edge with a road on both banks, crossed as if no river ran there. | ford, viaduct, span |
 | **yield** | What a tile's layers and the river running along it give at income, resource by resource. | output, produce, harvest |
-| **claim** | To take a charted tile adjacent to one the city holds into the border, for culture. | buy, purchase, expand, annex |
+| **claim** | To take a charted tile adjacent to one the city holds into the border, for culture. | purchase, expand, annex |
 | **culture** | The resource that claims tiles. | — |
 | **culture threshold** | The culture the next claim costs. | claim cost, step |
 | **health** | A unit's remaining life; at zero the unit is killed. | HP, hit points, hitpoints, life |

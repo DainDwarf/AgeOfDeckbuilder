@@ -6,9 +6,19 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Rungs
 
-- **The collection screen** — the collection with the copies owned, the deck and its settle section edited from it, the city section's card shown at the head of the settle section, a copy bought for influence; its intake decides the glossary's word for what influence pays for a copy, which `docs/META.md` calls a price.
 - **The Stone Age** — the age page and its content, the age the Nomadic victory unlocks: its settle, land, units, cards and buildings, events, capstone and camps, and its achievements with the technologies they unlock, cards and settle cards among them; with it the warning a launch over a chronicle with achievements reached raises, since an abandoned chronicle pays nothing.
 - **Pin an achievement** — one achievement pinned on the campaign screen shows on the chronicle screen as a ledger: its goal in words, a count against its need where it has one, a check mark once reached, a cross mark once failed.
 - **The headless simulator** — a consumer of the rules that runs only when asked and reports numbers, not diagnoses, tuned across the two ages; the reachability cache and the end of turn's cost per `apply` are looked at when it is made.
 
 ## Lines
+
+The eight lines of the collection screen share one mockup, [board/collection-screen-mockup.html](board/collection-screen-mockup.html), which holds the three modes and names the artifact it is published to at its head: a line's intake refines its own mode in it, and the last line's ship deletes it.
+
+- **The collection screen shows the collection** — the navbar's Collection button and the screen in its collection mode, read only: every card owned as a stack with its copies owned, and the civilizations' piles on the right.
+- **A civilization's deck opens beside the collection** — a press on a pile grows the right panel into the deck editing mode, read only: the settle section and the deck as rows, the city section's card at the head, the copies this deck holds read on the collection, and the way back.
+- **A copy is added to a deck and removed by a press** — the campaign's two moves in the rules, a copy shared by every deck it is added to, a settle card going to the settle section, and the save written at each.
+- **A copy is dragged across** — a card of the collection dragged onto the civilization's panel is added, and a row dragged onto the collection is removed.
+- **A card has a price** — the price declared on every card's content and held by the catalogue's coherence test, and read on the collection under its card.
+- **A copy is bought for influence** — the campaign's move in the rules and the button that buys, which answers nothing while the influence is short of the price.
+- **The civilization stands alone** — the civilization mode, read only: the right panel over the whole room, the settle section and the deck as card faces, and the way in and out.
+- **A copy is added or bought from the deck** — in the civilization mode a copy is removed and added from the deck itself, the add taking a copy owned where one is free and buying one where none is; its ship deletes the mockup.
