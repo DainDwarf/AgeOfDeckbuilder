@@ -41,6 +41,7 @@ import { raiseMenu } from './menu-scene';
 import type { OverlayScene } from './overlay-scene';
 import { refused } from './refusal-lines';
 import { createRefusalNote } from './refusal-note';
+import { createScroll, reachOf } from './scroll';
 import { createSmallCards, type Raiser, raiserOf } from './small-card';
 import { createStack } from './stack';
 import { buildingName, cardName, eventName, technologyName, text, victoryLine } from './text';
@@ -50,13 +51,6 @@ const TITLE_INK = css(LOOK.paleInk);
 
 const BROWSE_WIDTH = 180;
 const BROWSE_GAP = 26;
-
-/** The pointer's travel over these last milliseconds is the speed a release flings the grid at. */
-const FLING_WINDOW = 80;
-
-/** What is left of a fling's speed after a millisecond, and the speed it is dropped at. */
-const FLING_DECAY = 0.994;
-const FLING_STILL = 0.01;
 
 export type PileKind = 'draw-pile' | 'discard-pile';
 
@@ -121,8 +115,6 @@ type Grid = {
   readonly frame: Phaser.GameObjects.Zone;
   readonly placed: readonly Placed[];
   readonly height: number;
-  /** The furthest the cards scroll; zero when they all fit inside the frame. */
-  readonly overflow: number;
 };
 
 /**
@@ -194,13 +186,6 @@ type Raised = {
   readonly button: Phaser.GameObjects.Rectangle;
 };
 
-/** Where a drag of the grid was pressed, what the grid stood at, and where the pointer has been. */
-type Scroll = {
-  readonly y: number;
-  readonly from: number;
-  readonly trail: { time: number; y: number }[];
-};
-
 /**
  * The scrim and what stands on it, on the overlay scene: nothing beneath answers a pointer while
  * anything stands, and `covering` is told as the scrim goes up and comes down. The ending screen
@@ -232,12 +217,15 @@ export function createOverlay(
   /** What stands on the scrim, and nothing while the scrim is down. */
   let carried: Carried | undefined;
   let grid: Grid | undefined;
-  /** How far the grid is scrolled, kept while a card taken off it is inspected. */
-  let offset = 0;
-  let fling = 0;
-  let scrolling: Scroll | undefined;
   /** Whether the grid has moved since the name and the label under the pointer were read off it. */
   let moved = false;
+  /** How far the grid is scrolled, kept while a card taken off it is inspected. */
+  const scroll = createScroll((offset) => {
+    grid?.root.setY(-offset);
+    small.follow();
+    tooltip.follow();
+    moved = true;
+  });
   /** The chronicle the ending screen was raised on: a render raises the screen once and no more. */
   let raisedOn: Ended | undefined;
   /** The deal standing, so no render raises its window twice; the take lets it go. */
@@ -263,8 +251,7 @@ export function createOverlay(
     shown = [];
     rising = undefined;
     grid = undefined;
-    scrolling = undefined;
-    fling = 0;
+    scroll.stand(scroll.offset);
     moved = false;
   };
 
@@ -347,21 +334,6 @@ export function createOverlay(
   };
 
   /**
-   * Moves the grid, never past either end of its cards, and whatever its cards raised with it; what
-   * the pointer is on is read again at the next frame.
-   */
-  const scrollTo = (to: number): void => {
-    if (grid === undefined) return;
-    const was = offset;
-    offset = Math.min(Math.max(to, 0), grid.overflow);
-    grid.root.setY(-offset);
-    if (offset === was) return;
-    small.follow();
-    tooltip.follow();
-    moved = true;
-  };
-
-  /**
    * The heading a window's cards stand under, named after the window it heads; the caller stands
    * whatever else belongs beside it.
    */
@@ -423,8 +395,8 @@ export function createOverlay(
 
   /** The grid's name and kind label under the pointer told what they raise; neither while it is dragged. */
   const pointOnGrid = (pointer: Phaser.Input.Pointer): void => {
-    small.over(scrolling === undefined ? nameUnder(pointer) : undefined);
-    overKind(scrolling === undefined ? kindUnder(pointer) : undefined);
+    small.over(scroll.dragged ? undefined : nameUnder(pointer));
+    overKind(scroll.dragged ? undefined : kindUnder(pointer));
   };
 
   /**
@@ -445,7 +417,7 @@ export function createOverlay(
     );
     const rows = Math.max(1, Math.ceil(cards.length / columns));
     const spanY = rows * height + (rows - 1) * BROWSE_GAP;
-    const overflow = Math.max(0, spanY - frameHeight);
+    const overflow = reachOf(frameHeight, spanY);
     const firstY = top + Math.max(0, (frameHeight - spanY) / 2);
 
     const frame = scene.add
@@ -456,23 +428,16 @@ export function createOverlay(
     carries(frame);
 
     frame.on('pointerdown', () => {
-      fling = 0;
+      scroll.press();
     });
     frame.on('dragstart', (pointer: Phaser.Input.Pointer) => {
-      scrolling = { y: on.at(pointer.downX, pointer.downY).y, from: offset, trail: [] };
+      scroll.grab(on.at(pointer.downX, pointer.downY).y);
     });
     frame.on('drag', (pointer: Phaser.Input.Pointer) => {
-      if (scrolling === undefined) return;
-      const at = on.at(pointer.x, pointer.y);
-      scrolling.trail.push({ time: scene.time.now, y: at.y });
-      if (scrolling.trail.length > 8) scrolling.trail.shift();
-      scrollTo(scrolling.from - (at.y - scrolling.y));
+      scroll.drag(on.at(pointer.x, pointer.y).y, scene.time.now);
     });
     frame.on('dragend', (pointer: Phaser.Input.Pointer) => {
-      const dragged = scrolling;
-      scrolling = undefined;
-      if (dragged === undefined || releasedOffCanvas(pointer)) return;
-      fling = -speedOf(dragged.trail, scene.time.now);
+      scroll.release(scene.time.now, !releasedOffCanvas(pointer));
     });
     frame.on('pointermove', pointOnGrid);
     onHover(
@@ -532,9 +497,10 @@ export function createOverlay(
       return { ...offered, x, y, drawn };
     });
 
-    const laid = { root, frame, placed, height, overflow };
+    const laid = { root, frame, placed, height };
     grid = laid;
-    scrollTo(offset);
+    scroll.reach(overflow);
+    root.setY(-scroll.offset);
     return laid;
   };
 
@@ -951,30 +917,25 @@ export function createOverlay(
   scene.input.on(
     'wheel',
     (_pointer: Phaser.Input.Pointer, _over: unknown, _dx: number, dy: number) => {
-      if (grid === undefined) return;
-      fling = 0;
-      scrollTo(offset + dy);
+      if (grid !== undefined) scroll.wheel(dy);
     },
   );
 
   whileUp(scene, scene.events, Phaser.Scenes.Events.UPDATE, (_time: number, delta: number) => {
-    // Here and not in `scrollTo`: the wheel scrolls from inside Phaser's dispatch, where a hit test
-    // refills the list being walked (docs/PHASER.md).
+    // Here and not in the scroll's move: the wheel scrolls from inside Phaser's dispatch, where a hit
+    // test refills the list being walked (docs/PHASER.md).
     if (moved) {
       moved = false;
       if (grid !== undefined && thingUnder(scene.game) === grid.frame) {
         pointOnGrid(scene.input.activePointer);
       }
     }
-    if (fling === 0 || grid === undefined) return;
-    const to = offset + fling * delta;
-    scrollTo(to);
-    fling = to === offset && Math.abs(fling) > FLING_STILL ? fling * FLING_DECAY ** delta : 0;
+    if (grid !== undefined) scroll.step(delta);
   });
 
   return {
     browse(pile: PileKind, chronicle: Chronicle): void {
-      offset = 0;
+      scroll.stand(0);
       showBrowse({
         stands: 'browse',
         pile,
@@ -983,7 +944,7 @@ export function createOverlay(
       });
     },
     aimDiscardPile(chronicle, aimed, chosen, closed): () => void {
-      offset = 0;
+      scroll.stand(0);
       showAim({
         aimed,
         cards: chronicle.discardPile
@@ -1089,15 +1050,6 @@ function cardAt(grid: Grid, x: number, y: number): Placed | undefined {
     (card) =>
       Math.abs(x - card.x) <= BROWSE_WIDTH / 2 && local <= card.y && local >= card.y - grid.height,
   );
-}
-
-/** How fast the pointer was travelling as it was released, in design units per millisecond. */
-function speedOf(trail: readonly { time: number; y: number }[], now: number): number {
-  const last = trail[trail.length - 1];
-  const first = trail.find((sample) => now - sample.time <= FLING_WINDOW);
-  if (last === undefined || first === undefined || now - last.time > FLING_WINDOW) return 0;
-  if (last.time === first.time) return 0;
-  return (last.y - first.y) / (last.time - first.time);
 }
 
 /** The draw pile gives its draw order away to no one: it reads by kind, then by name. */

@@ -15,6 +15,7 @@ import { type Face, namedCardFace } from './face';
 import { createThingCard, type Thing } from './infopanel';
 import { LOOK } from './look';
 import type { OverlayScene } from './overlay-scene';
+import type { Box } from './scroll';
 import { createSmallCards, raiserOf, type SmallCards } from './small-card';
 import { createTooltip } from './tooltip';
 
@@ -214,35 +215,33 @@ export type Inspecting = {
   readonly large: ShownLarge;
 };
 
+/** A point of the design space. */
+type Point = { readonly x: number; readonly y: number };
+
+/** What a face on a screen of the meta answers the pointer with, read at a point of the design space. */
+export type Answers = {
+  /** The pointer on the face's ground at this point, or off it. */
+  point(at: Point | undefined): void;
+  /** The right click at this point. */
+  inspect(at: Point): void;
+};
+
 /**
- * The face answering through a zone laid over it: the rest on a name raises its small card, and on
- * the kind label the kind's bubble; the right click on a name shows the named thing large, and on
- * the rest of the card the face itself.
+ * The rest on a name raises its small card, and on the kind label the kind's bubble; the right click
+ * on a name shows the named thing large, and on the rest of the card the face itself.
  */
-export function inspectedThrough(
-  zone: Phaser.GameObjects.Zone,
+export function answersOf(
   card: CardFace,
   shown: Face,
-  { on, small, kinds, large }: Inspecting,
-): void {
-  zone.on('pointermove', (pointer: Phaser.Input.Pointer) => {
-    const at = on.at(pointer.x, pointer.y);
-    const named = card.nameAt(at.x, at.y);
-    small.over(named === undefined ? undefined : raiserOf(card, named));
-    kinds.over(card, card.kindAt(at.x, at.y));
-  });
-  onHover(
-    zone,
-    () => {},
-    () => {
-      small.over(undefined);
-      kinds.over(card, false);
+  { small, kinds, large }: Inspecting,
+): Answers {
+  return {
+    point(at) {
+      const named = at === undefined ? undefined : card.nameAt(at.x, at.y);
+      small.over(named === undefined ? undefined : raiserOf(card, named));
+      kinds.over(card, at !== undefined && card.kindAt(at.x, at.y));
     },
-  );
-  onClick(
-    zone,
-    (pointer) => {
-      const at = on.at(pointer.x, pointer.y);
+    inspect(at) {
       const named = card.nameAt(at.x, at.y);
       if (named !== undefined) {
         large.named(named);
@@ -250,6 +249,35 @@ export function inspectedThrough(
       }
       if (card.cardAt(at.x, at.y)) large.show(shown);
     },
+  };
+}
+
+/** A zone laid over the box, answering the rest and the right click through it. */
+export function inspectedThrough(
+  scene: Phaser.Scene,
+  box: Box,
+  answers: Answers,
+  on: Stratum,
+): Phaser.GameObjects.Zone {
+  const zone = scene.add
+    .zone(box.x + box.width / 2, box.y + box.height / 2, box.width, box.height)
+    .setInteractive();
+  zone.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+    answers.point(on.at(pointer.x, pointer.y));
+  });
+  onHover(
+    zone,
+    () => {},
+    () => {
+      answers.point(undefined);
+    },
+  );
+  onClick(
+    zone,
+    (pointer) => {
+      answers.inspect(on.at(pointer.x, pointer.y));
+    },
     'right',
   );
+  return zone;
 }

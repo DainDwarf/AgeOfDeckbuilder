@@ -6,7 +6,8 @@ import { createCardBack, createCardFace, metricsOf } from './card-face';
 import { addText, UI_FONT } from './design-space';
 import { cardFaceAtStart } from './face';
 import { css, LOOK } from './look';
-import { type Inspecting, inspectedThrough } from './stack';
+import type { Box } from './scroll';
+import { type Answers, answersOf, type Inspecting } from './stack';
 import { text } from './text';
 
 const PILE_WIDTH = 100;
@@ -28,8 +29,10 @@ const COUNTS_STYLE = {
 
 export type Pile = {
   readonly parts: readonly Phaser.GameObjects.GameObject[];
-  /** Over the whole pile and its counts, the last of its parts. */
-  readonly zone: Phaser.GameObjects.Zone;
+  /** Over the whole pile and its counts. */
+  readonly box: Box;
+  /** What the pile answers the rest and the right click with, on its card. */
+  readonly answers: Answers;
   /** Where its counts end. */
   readonly bottom: number;
 };
@@ -37,7 +40,7 @@ export type Pile = {
 /**
  * A civilization's pile from the left and the top handed: card backs under its city section's card,
  * face up, raised in a pale edge where it is chosen, and under them the count of its cards over the
- * count of its settle cards. Its zone answers the rest and the right click on the card.
+ * count of its settle cards.
  */
 export function createPile(
   scene: Phaser.Scene,
@@ -82,9 +85,10 @@ export function createPile(
     new Phaser.Geom.Rectangle(left, top - lift, PILE_SPAN, height + lift + PILE_BACKS * BACK_STEP),
     counts.getBounds(),
   );
-  const zone = scene.add
-    .zone(bounds.centerX, bounds.centerY, bounds.width, bounds.height)
-    .setInteractive();
-  inspectedThrough(zone, card, shown, inspecting);
-  return { parts: [...backs, face, ...edge, counts, zone], zone, bottom: bounds.bottom };
+  return {
+    parts: [...backs, face, ...edge, counts],
+    box: bounds,
+    answers: answersOf(card, shown, inspecting),
+    bottom: bounds.bottom,
+  };
 }

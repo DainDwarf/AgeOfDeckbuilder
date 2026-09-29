@@ -29,7 +29,7 @@ import { ROOM, wearNavbar } from './navbar';
 import { overlayOf } from './overlay-scene';
 import { type Choices, campaignHeld, type Opening, savedOpening } from './save-entry';
 import { createSmallCards } from './small-card';
-import { type Inspecting, standLarge } from './stack';
+import { type Inspecting, inspectedThrough, standLarge } from './stack';
 import { ageName, regionName, type TextKey, technologyName, text } from './text';
 
 const LEFT = ROOM.x + MARGIN;
@@ -214,7 +214,7 @@ function pilesOf(
 ): Choice[] {
   return Object.entries(civilizations).map(([id, owned], at): Choice => {
     const chosen = id === civilization;
-    const { parts, zone } = createPile(
+    const pile = createPile(
       scene,
       catalogue,
       owned,
@@ -222,7 +222,8 @@ function pilesOf(
       inspecting,
       `launch-civilization-${id}`,
     );
-    return { row: 'civilization', option: id, chosen, parts, hits: [zone] };
+    const zone = inspectedThrough(scene, pile.box, pile.answers, inspecting.on);
+    return { row: 'civilization', option: id, chosen, parts: [...pile.parts, zone], hits: [zone] };
   });
 }
 

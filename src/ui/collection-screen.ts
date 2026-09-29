@@ -11,19 +11,23 @@ import {
   addText,
   awayUnder,
   COVERED,
+  DESIGN_HEIGHT,
   DESIGN_WIDTH,
   holdDesignSpace,
   MARGIN,
+  stratumOf,
   UI_FONT,
 } from './design-space';
 import { cardFaceAtStart } from './face';
+import { isWheelNotch, takesMouseKeys } from './keys';
 import { css, LOOK } from './look';
 import { backRaisesMenu, resetMenu } from './menu-scene';
 import { ROOM, wearNavbar } from './navbar';
 import { overlayOf } from './overlay-scene';
+import { createPanel, type Held, type PanelOf } from './panel';
 import { campaignHeld } from './save-entry';
 import { createSmallCards } from './small-card';
-import { type Inspecting, inspectedThrough, standLarge } from './stack';
+import { answersOf, type Inspecting, standLarge } from './stack';
 import { cardName, type TextKey, text } from './text';
 
 const PANEL_WIDTH = 160;
@@ -60,7 +64,7 @@ function stackOf(
   { id, copies }: CollectionStack,
   { left, top }: { left: number; top: number },
   inspecting: Inspecting,
-): { root: Phaser.GameObjects.Container; bottom: number } {
+): { root: Phaser.GameObjects.Container; held: Held; bottom: number } {
   const height = heightOf(CARD_WIDTH);
   const under = Math.min(copies - 1, UNDER_MOST);
   const unders = Array.from({ length: under }, (_, at) => {
@@ -82,17 +86,18 @@ function stackOf(
     text('collection.copies', { copies }),
     COPIES_STYLE,
   ).setName(`collection-card-${id}-copies`);
-  const zone = scene.add
-    .zone(left + CARD_WIDTH / 2, top + height / 2, CARD_WIDTH, height)
-    .setInteractive();
-  inspectedThrough(zone, card, shown, inspecting);
   return {
-    root: scene.add
-      .container(0, 0, [...unders, face, count, zone])
-      .setName(`collection-stack-${id}`),
+    root: scene.add.container(0, 0, [...unders, face, count]).setName(`collection-stack-${id}`),
+    held: {
+      box: { x: left, y: top, width: CARD_WIDTH, height },
+      answers: answersOf(card, shown, inspecting),
+    },
     bottom: count.y + count.height,
   };
 }
+
+/** What a panel of the screen draws from the top handed, the things in it that answer, and where it ends. */
+type Filled = Pick<PanelOf, 'parts' | 'held' | 'foot'>;
 
 /** The collection's stacks, six to a line from the top handed, the lines centred in the left panel. */
 function collectionOf(
@@ -101,28 +106,24 @@ function collectionOf(
   stacks: readonly CollectionStack[],
   top: number,
   inspecting: Inspecting,
-): Phaser.GameObjects.Container[] {
+): Filled {
   const span = ACROSS * STACK_WIDTH + (ACROSS - 1) * STACKS_APART;
   const first = (ROOM.x + PANEL_LEFT - span) / 2;
-  const drawn: Phaser.GameObjects.Container[] = [];
+  const parts: Phaser.GameObjects.Container[] = [];
+  const held: Held[] = [];
   let lineTop = top;
+  let foot = top;
   for (let from = 0; from < stacks.length; from += ACROSS) {
-    let bottom = lineTop;
     for (const [column, stack] of stacks.slice(from, from + ACROSS).entries()) {
       const left = first + column * (STACK_WIDTH + STACKS_APART);
-      const { root, bottom: foot } = stackOf(
-        scene,
-        catalogue,
-        stack,
-        { left, top: lineTop },
-        inspecting,
-      );
-      drawn.push(root);
-      bottom = Math.max(bottom, foot);
+      const drawn = stackOf(scene, catalogue, stack, { left, top: lineTop }, inspecting);
+      parts.push(drawn.root);
+      held.push(drawn.held);
+      foot = Math.max(foot, drawn.bottom);
     }
-    lineTop = bottom + LINES_APART;
+    lineTop = foot + LINES_APART;
   }
-  return drawn;
+  return { parts, held, foot };
 }
 
 /** The campaign's civilizations top down from the top handed, each its pile, centred in the right panel. */
@@ -132,10 +133,13 @@ function civilizationsOf(
   civilizations: Readonly<Record<string, CampaignCivilization>>,
   top: number,
   inspecting: Inspecting,
-): Phaser.GameObjects.Container[] {
+): Filled {
   const left = PANEL_LEFT + 1 + (PANEL_WIDTH - 1 - PILE_SPAN) / 2;
+  const parts: Phaser.GameObjects.Container[] = [];
+  const held: Held[] = [];
   let pileTop = top;
-  return Object.entries(civilizations).map(([id, owned]) => {
+  let foot = top;
+  for (const [id, owned] of Object.entries(civilizations)) {
     const name = `collection-civilization-${id}`;
     const pile = createPile(
       scene,
@@ -145,9 +149,12 @@ function civilizationsOf(
       inspecting,
       name,
     );
+    parts.push(scene.add.container(0, 0, [...pile.parts]).setName(name));
+    held.push({ box: pile.box, answers: pile.answers });
+    foot = pile.bottom;
     pileTop = pile.bottom + PILES_APART;
-    return scene.add.container(0, 0, [...pile.parts]).setName(name);
-  });
+  }
+  return { parts, held, foot };
 }
 
 /**
@@ -162,6 +169,8 @@ export class CollectionScreen extends Phaser.Scene {
   create(): void {
     holdDesignSpace(this, this.cameras.main);
     const { content, bubbles, tooltip } = wearNavbar(this, 'collection');
+    // Ahead of `backRaisesMenu`: a notch taken here reaches none of the screen's readers after it.
+    takesMouseKeys(this, isWheelNotch);
     backRaisesMenu(this);
     const away = awayUnder(this);
     const overlay = overlayOf(this);
@@ -192,6 +201,7 @@ export class CollectionScreen extends Phaser.Scene {
     const cards = word('collection.collection', (ROOM.x + PANEL_LEFT) / 2);
     const civilizations = word('collection.civilizations', (PANEL_LEFT + DESIGN_WIDTH) / 2);
     const top = cards.y + cards.height + WORD_GAP;
+    const height = DESIGN_HEIGHT - MARGIN - top;
 
     content.add(
       this.add
@@ -199,16 +209,39 @@ export class CollectionScreen extends Phaser.Scene {
           this.add.rectangle(PANEL_LEFT, ROOM.y, 1, ROOM.height, LOOK.panelDivide).setOrigin(0, 0),
           cards,
           civilizations,
-          ...collectionOf(
-            this,
-            CATALOGUE,
-            stacksOf(CATALOGUE, campaign.collection, cardName),
-            top,
-            inspecting,
-          ),
-          ...civilizationsOf(this, CATALOGUE, campaign.civilizations, top, inspecting),
         ])
         .setName('collection'),
+    );
+    const panels = stratumOf(content, this.cameras.main);
+    const follow = (): void => {
+      inspecting.small.follow();
+      tooltip.follow();
+    };
+    createPanel(
+      this,
+      panels,
+      {
+        name: 'collection-panel',
+        frame: { x: ROOM.x, y: top, width: PANEL_LEFT - ROOM.x, height },
+        ...collectionOf(
+          this,
+          CATALOGUE,
+          stacksOf(CATALOGUE, campaign.collection, cardName),
+          top,
+          inspecting,
+        ),
+      },
+      follow,
+    );
+    createPanel(
+      this,
+      panels,
+      {
+        name: 'civilizations-panel',
+        frame: { x: PANEL_LEFT + 1, y: top, width: PANEL_WIDTH - 1, height },
+        ...civilizationsOf(this, CATALOGUE, campaign.civilizations, top, inspecting),
+      },
+      follow,
     );
   }
 }
