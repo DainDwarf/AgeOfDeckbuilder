@@ -20,6 +20,7 @@ import {
   enemyScript,
   eventOf,
   firstCivilization,
+  heldByNoDeck,
   misfitIn,
   unitKind,
 } from './catalogue';
@@ -285,9 +286,10 @@ function campaignOf(
 
   const owned = new Map<number, CardId>();
   for (const { slot: item, card } of collection) {
-    if (
-      stands(item, Object.hasOwn(catalogue.cards, card.id) ? undefined : `names no card ${card.id}`)
-    ) {
+    const unheld = Object.hasOwn(catalogue.cards, card.id)
+      ? heldByNoDeck(catalogue, card.id)
+      : `no card ${card.id}`;
+    if (stands(item, unheld === undefined ? undefined : `names ${unheld}`)) {
       owned.set(card.number, card.id);
     }
   }

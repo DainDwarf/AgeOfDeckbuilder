@@ -486,7 +486,8 @@ function treeHeld(content: Catalogue): void {
     if (!earnedBy.has(id)) refuse(content, `the technology ${id} is earned by no achievement`);
     for (const need of needs) technologyOf(content, need);
     for (const [card, copies] of Object.entries(unlocks.cards)) {
-      cardOf(content, card);
+      const unheld = heldByNoDeck(content, card);
+      if (unheld !== undefined) refuse(content, `the technology ${id} unlocks ${unheld}`);
       if (!Number.isInteger(copies) || copies < 1) {
         refuse(content, `the technology ${id} unlocks ${copies} copies of ${card}`);
       }
@@ -632,20 +633,30 @@ function firstListed(
 export type CivilizationSection = keyof Civilization;
 
 /**
+ * A card no deck holds, named as what it is — a hazard, an age's camp's reward — and nothing for a
+ * card a deck may hold. A card the catalogue does not hold is refused.
+ */
+export function heldByNoDeck(catalogue: Catalogue, card: CardId): string | undefined {
+  if (cardOf(catalogue, card).kind === 'hazard') return `the hazard ${card}`;
+  for (const [age, { camp }] of Object.entries(catalogue.ages)) {
+    if (camp.rewards.includes(card)) return `the age ${age}'s camp's reward ${card}`;
+  }
+  return undefined;
+}
+
+/**
  * What keeps a card out of a section of a civilization, and nothing where it fits there: none holds
- * a hazard or an age's camp's reward, the cards no settle card, and the city and the settle section
- * nothing else. A card the catalogue does not hold is refused.
+ * a card no deck holds, the cards no settle card, and the city and the settle section nothing else.
+ * A card the catalogue does not hold is refused.
  */
 export function misfitIn(
   catalogue: Catalogue,
   section: CivilizationSection,
   card: CardId,
 ): string | undefined {
+  const unheld = heldByNoDeck(catalogue, card);
+  if (unheld !== undefined) return `holds ${unheld}`;
   const { kind } = cardOf(catalogue, card);
-  if (kind === 'hazard') return `holds the hazard ${card}`;
-  for (const [age, { camp }] of Object.entries(catalogue.ages)) {
-    if (camp.rewards.includes(card)) return `holds the age ${age}'s camp's reward ${card}`;
-  }
   switch (section) {
     case 'cards':
       return kind === 'settle' ? `holds the settle card ${card} among its cards` : undefined;

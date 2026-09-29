@@ -155,6 +155,25 @@ test('a catalogue whose technology unlocks a card it does not hold, a card by fe
   }
 });
 
+test('a catalogue whose technology unlocks a hazard or a camp’s reward is refused', () => {
+  const [reward] = CAMP.rewards;
+  const unlocking = (card: string): Catalogue =>
+    withTechnologies({
+      [GRANARY]: {
+        ...GRANARY_DECLARED,
+        unlocks: { ...GRANARY_DECLARED.unlocks, cards: { [card]: 1 } },
+      },
+    });
+
+  expect(cardOf(CATALOGUE, 'PH_Hunger').kind).toBe('hazard');
+  expect(() => catalogued(unlocking('PH_Hunger'))).toThrow(
+    `fixture: the technology ${GRANARY} unlocks the hazard PH_Hunger`,
+  );
+  expect(() => catalogued(unlocking(reward))).toThrow(
+    `fixture: the technology ${GRANARY} unlocks the age ${AGE}'s camp's reward ${reward}`,
+  );
+});
+
 test('a catalogue whose age but the first is unlocked by no technology or by two, or whose first age is unlocked by one, is refused', () => {
   const { technology } = achievementOf(CATALOGUE, AGE, victoryOf(AGE));
   const past = technologyOf(CATALOGUE, technology);

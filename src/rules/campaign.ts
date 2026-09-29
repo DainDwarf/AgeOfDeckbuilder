@@ -6,7 +6,6 @@ import {
   checkContent,
   civilizationOf,
   firstAge,
-  misfitIn,
   technologyOf,
 } from './catalogue';
 import { refuse } from './map-kinds';
@@ -170,7 +169,7 @@ function withCivilization(
 
 /**
  * The campaign with a copy of the card its civilization of that name does not hold, whatever another
- * holds, added to its section. A card no section holds, and one it holds every copy of, are refused.
+ * holds, added to its section. A card it holds every copy of is refused.
  */
 export function addedTo(
   catalogue: Catalogue,
@@ -180,9 +179,6 @@ export function addedTo(
 ): Campaign {
   const civilization = heldCivilization(catalogue, campaign, name);
   const section = sectionOf(catalogue, card);
-  if (misfitIn(catalogue, section, card) !== undefined) {
-    refuse(catalogue, `no section of a civilization holds the card ${card}`);
-  }
   const holds = new Set([...civilization.settle, ...civilization.cards]);
   const free = campaign.collection.find(({ number, id }) => id === card && !holds.has(number));
   if (free === undefined) {

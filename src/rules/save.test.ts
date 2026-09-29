@@ -597,33 +597,35 @@ test('a card in a section its kind does not fit is dropped from the deck and kep
   });
 });
 
-test('a hazard or a camp’s reward in the deck is dropped from it and kept in the collection', () => {
+test('a copy of a hazard or of a camp’s reward is dropped from the collection, and every number the deck names it by with it', () => {
   const held = campaign();
   const owned = [
     { number: held.nextCard, id: 'PH_Hunger' },
     { number: held.nextCard + 1, id: 'PH_Spoils' },
   ];
-  const at = heldCivilization(held).cards.length;
-  const grown = {
-    ...held,
-    nextCard: held.nextCard + 2,
-    collection: [...held.collection, ...owned],
-  };
+  const at = held.collection.length;
+  const cardsAt = heldCivilization(held).cards.length;
+  const nextCard = held.nextCard + 2;
 
   expect(
     campaignRead(
       campaignTampered(() =>
-        withCivilization(grown, (civilization) => ({
-          ...civilization,
-          cards: [...civilization.cards, ...owned.map(({ number }) => number)],
-        })),
+        withCivilization(
+          { ...held, nextCard, collection: [...held.collection, ...owned] },
+          (civilization) => ({
+            ...civilization,
+            cards: [...civilization.cards, ...owned.map(({ number }) => number)],
+          }),
+        ),
       ),
     ),
   ).toEqual({
-    campaign: grown,
+    campaign: { ...held, nextCard },
     dropped: [
-      `fixture: the save's ${CIVILIZATION_AT}.cards[${at}] holds the hazard PH_Hunger`,
-      `fixture: the save's ${CIVILIZATION_AT}.cards[${at + 1}] holds the age ${AGE}'s camp's reward PH_Spoils`,
+      `fixture: the save's campaign.collection[${at}] names the hazard PH_Hunger`,
+      `fixture: the save's campaign.collection[${at + 1}] names the age ${AGE}'s camp's reward PH_Spoils`,
+      `fixture: the save's ${CIVILIZATION_AT}.cards[${cardsAt}] names no card of the collection numbered ${held.nextCard}`,
+      `fixture: the save's ${CIVILIZATION_AT}.cards[${cardsAt + 1}] names no card of the collection numbered ${held.nextCard + 1}`,
     ],
   });
 });

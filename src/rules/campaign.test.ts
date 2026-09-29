@@ -10,7 +10,7 @@ import {
   paidInto,
   removedFrom,
 } from './campaign';
-import { achievementOf, type Civilization, cardOf, technologyOf } from './catalogue';
+import { achievementOf, type Civilization, technologyOf } from './catalogue';
 import { apply, outcome } from './chronicle';
 import {
   AGE,
@@ -260,21 +260,5 @@ test('a card of which a civilization holds every copy owned is added to it no fu
   );
   expect(() => removedFrom(CATALOGUE, emptied, CIVILIZATION_ID, card)).toThrow(
     `fixture: the civilization ${CIVILIZATION_ID} holds no ${card}`,
-  );
-});
-
-test('a card of the collection no section of a civilization holds is added to none', () => {
-  const opened = newCampaign(CATALOGUE, CIVILIZATION_ID);
-  const hazard = Object.keys(CATALOGUE.cards).find((id) => cardOf(CATALOGUE, id).kind === 'hazard');
-  if (hazard === undefined) throw new Error('the fixture holds no hazard');
-  const owning = dealt(opened.nextCard, [hazard]);
-  const campaign = {
-    ...opened,
-    nextCard: owning.nextCard,
-    collection: [...opened.collection, ...owning.cards],
-  };
-
-  expect(() => addedTo(CATALOGUE, campaign, CIVILIZATION_ID, hazard)).toThrow(
-    `fixture: no section of a civilization holds the card ${hazard}`,
   );
 });
