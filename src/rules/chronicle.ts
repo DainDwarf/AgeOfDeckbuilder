@@ -161,7 +161,7 @@ export function beginChronicle(
     drawPile: shuffled.items,
     hand: [civilization.city.card, ...civilization.settle].map(made),
     discardPile: [],
-    achievements: achievementsOfAvailable(catalogue, age, learned),
+    achievements: achievementsOfAvailableTechnologies(catalogue, age, learned),
   };
   let guarded = begun;
   for (const { q, r, building } of map.tiles) {
@@ -176,7 +176,7 @@ export function beginChronicle(
 }
 
 /** A technology the catalogue does not hold is refused, a learned one included. */
-function achievementsOfAvailable(
+function achievementsOfAvailableTechnologies(
   catalogue: Catalogue,
   age: string,
   learned: readonly string[],

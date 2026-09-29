@@ -40,7 +40,7 @@ export type Campaign = {
   readonly civilizations: Readonly<Record<string, CampaignCivilization>>;
 };
 
-/** Whether a technology is available; one the catalogue does not hold is refused. */
+/** A technology the catalogue does not hold is refused. */
 export function available(
   catalogue: Catalogue,
   technology: string,
