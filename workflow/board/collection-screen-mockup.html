@@ -114,7 +114,14 @@ h1 { font-size: 22px; font-weight: 600; margin: 0; text-wrap: balance; }
 .row .n { font-weight: 700; width: 30px; text-align: right; font-variant-numeric: tabular-nums; }
 .empty { font-size: 13px; color: var(--g-counts); border: 1px dashed var(--g-faint); padding: 10px; }
 .fixed-face { outline: 2px solid var(--g-pale); outline-offset: 2px; }
-.ghost { position: fixed; left: 0; top: 0; pointer-events: none; z-index: 10; transform-origin: 0 0; opacity: .9; }
+.ghost { position: fixed; left: 0; top: 0; pointer-events: none; z-index: 10; transform-origin: 0 0; }
+.ghost.homing { transition: transform 150ms ease-out; }
+.ghost .row { width: var(--row); margin: 0; }
+.side.dropping.faint::after { display: none; }
+.scroll.grabbed { cursor: grabbing; }
+.controls.line { border-top: 0; padding-top: 0; }
+.controls.line .tag { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--mark); align-self: center; }
+@media (prefers-reduced-motion: reduce) { .ghost.homing { transition: none; } }
 </style>
 
 <div class="wrap">
@@ -136,6 +143,19 @@ h1 { font-size: 22px; font-weight: 600; margin: 0; text-wrap: balance; }
       <input id="influence" type="number" min="0" max="999" value="40" style="width:90px"></div>
     <button class="reset" id="reset" type="button">Start over</button>
   </div>
+  <div class="controls line">
+    <span class="tag">A copy is dragged across</span>
+    <div class="control"><label for="split">A held press on a card that can land</label>
+      <select id="split"><option value="direction">Sideways carries, up or down scrolls (recommended)</option><option value="carry">Always carries</option></select></div>
+    <div class="control"><label for="carries">What a held press carries</label>
+      <select id="carries"><option value="lands">Only a card that can land (recommended)</option><option value="every">Every stack and row</option></select></div>
+    <div class="control"><label for="carried">Carried as</label>
+      <select id="carried"><option value="grabbed">What was grabbed: a face, a row (recommended)</option><option value="face">A card face, from a row too</option></select></div>
+    <div class="control"><label for="mark">Over the panel it lands on</label>
+      <select id="mark"><option value="edge">A pale dashed edge (recommended)</option><option value="none">No mark</option></select></div>
+    <div class="control"><label for="home">Let go where it cannot land</label>
+      <select id="home"><option value="slide">Slides home in 150 ms (recommended)</option><option value="vanish">Vanishes</option></select></div>
+  </div>
 
   <div class="frame" id="frame"><div class="stage" id="stage"></div></div>
 
@@ -148,6 +168,11 @@ h1 { font-size: 22px; font-weight: 600; margin: 0; text-wrap: balance; }
       <li>A press on a stack puts one copy in; a press on a row takes one out.</li>
       <li>A stack dragged onto the right panel, or a row dragged onto the left, does the same.</li>
       <li>A copy put in one deck is still free for every other deck.</li>
+    </ul></section>
+    <section><h2>A copy is dragged across</h2><ul>
+      <li>A press held anywhere on a panel still drags it. On a card that can land, the first move past the slack decides: mostly sideways carries the card, mostly up or down scrolls the panel. Try it on <b>Four ages, 48 cards</b>.</li>
+      <li>A card lands anywhere on the other side of the line between the panels, head included. Let go on its own side, on the bar or the navbar, and it comes home with nothing changed.</li>
+      <li>The carried card is held where it was grabbed, at full strength, and the stack or row it left stands as it was until the release.</li>
     </ul></section>
     <section><h2>Civilization mode</h2><ul>
       <li>− takes a copy out. + puts one in: a copy owned and not yet in this deck where there is one, a copy bought where there is none, and then the button reads its price.</li>
@@ -209,9 +234,10 @@ h1 { font-size: 22px; font-weight: 600; margin: 0; text-wrap: balance; }
     enter(state.mode);
   }
 
+  function every() { return el('carries').value === 'every'; }
   function civ() { return state.civs[state.at]; }
   function inDeck(card) { return civ().deck[card.id] || 0; }
-  function card(id) { return state.cards.filter(function (c) { return c.id === id; })[0]; }
+  function card(id) { return id === CITY.id ? CITY : state.cards.filter(function (c) { return c.id === id; })[0]; }
   function enter(mode) {
     state.mode = mode;
     el('mode').value = mode;
@@ -263,7 +289,7 @@ h1 { font-size: 22px; font-weight: 600; margin: 0; text-wrap: balance; }
       var free = c.owned - inDeck(c);
       var reads = editing ? 'In deck <b>' + inDeck(c) + '/' + c.owned + '</b>' : 'Copies <b>' + c.owned + '</b>';
       return '<div class="cell" style="--w:' + width + 'px">' +
-        stack(c, width, c.owned, editing && free > 0 ? 'in' : '', editing && free === 0) +
+        stack(c, width, c.owned, editing && free > 0 ? 'in' : every() ? 'none' : '', editing && free === 0) +
         '<div class="under-line"><span>' + reads + '</span>' + buy(c.id) + '</div></div>';
     }).join('');
     return '<div class="pane"><div class="head mid"><span class="word">Collection</span>' +
@@ -298,7 +324,7 @@ h1 { font-size: 22px; font-weight: 600; margin: 0; text-wrap: balance; }
     return '<div class="pane"><div class="head sides"><button type="button" class="tool" data-act="mode" data-id="civilization">« Civilization</button>' +
       '<span class="word">' + civ().name + '</span></div>' +
       '<div class="scroll">' + section('Settle', true) + '<div class="rows" style="margin-top:10px">' +
-      '<div class="row fixed"><span class="costs"></span><span class="name">' + CITY.name + '</span><span class="kind">' + CITY.kind + '</span><span class="n"></span></div>' +
+      '<div class="row fixed"' + (every() ? ' data-drag="none" data-id="' + CITY.id + '"' : '') + '><span class="costs"></span><span class="name">' + CITY.name + '</span><span class="kind">' + CITY.kind + '</span><span class="n"></span></div>' +
       rows(true) + '</div>' + section('Deck', false, 'margin:16px 0 10px') + '<div class="rows">' +
       (deck || '<div class="empty">The deck holds no card</div>') + '</div></div></div>';
   }
@@ -369,6 +395,7 @@ h1 { font-size: 22px; font-weight: 600; margin: 0; text-wrap: balance; }
   function take(c) { if (c && inDeck(c) > 0) { civ().deck[c.id] = inDeck(c) - 1; return true; } return false; }
 
   el('stage').addEventListener('click', function (event) {
+    if (swallow) { swallow = false; return; }
     var target = event.target.closest('[data-act]');
     if (!target) return;
     var act = target.getAttribute('data-act');
@@ -387,11 +414,28 @@ h1 { font-size: 22px; font-weight: 600; margin: 0; text-wrap: balance; }
     render();
   });
 
+  /** A panel dragged by its bare ground: the scroll element, where the press landed, how far it stood. */
+  var grabbed = null;
+  /** Whether the click after a release is a panel's drag ending, and presses nothing. */
+  var swallow = false;
+
   el('stage').addEventListener('pointerdown', function (event) {
+    swallow = false;
     if (event.button !== 0 || event.target.closest('button')) return;
     var target = event.target.closest('[data-drag]');
-    if (!target) return;
-    held = { drag: target.getAttribute('data-drag'), id: target.getAttribute('data-id'), x: event.clientX, y: event.clientY, ghost: null };
+    if (target) {
+      var shape = target.classList.contains('row') && el('carried').value === 'grabbed' ? 'row' : 'face';
+      var box = (shape === 'row' ? target : target.querySelector('.face')).getBoundingClientRect();
+      held = { drag: target.getAttribute('data-drag'), id: target.getAttribute('data-id'), x: event.clientX, y: event.clientY,
+        shape: shape, from: { x: box.left, y: box.top }, row: target.offsetWidth, html: target.outerHTML,
+        scroll: target.closest('.scroll'), ghost: null };
+      event.preventDefault();
+      return;
+    }
+    var scroll = event.target.closest('.scroll');
+    if (!scroll) return;
+    grabbed = { scroll: scroll, y: event.clientY, from: scroll.scrollTop, moved: false };
+    scroll.classList.add('grabbed');
     event.preventDefault();
   });
   function over(event) {
@@ -399,32 +443,57 @@ h1 { font-size: 22px; font-weight: 600; margin: 0; text-wrap: balance; }
     var pane = under && under.closest('[data-pane]');
     return pane ? pane.getAttribute('data-pane') : '';
   }
-  function lands(pane) { return held.drag === 'in' ? pane === 'right' : pane === 'left'; }
+  function lands(drag, pane) { return drag === 'in' ? pane === 'right' : drag === 'out' ? pane === 'left' : false; }
+  function place(ghost, x, y) { ghost.style.transform = 'translate(' + x + 'px,' + y + 'px) scale(' + scale + ')'; }
   window.addEventListener('pointermove', function (event) {
+    if (grabbed) {
+      if (Math.abs(event.clientY - grabbed.y) >= SLACK * scale) grabbed.moved = true;
+      grabbed.scroll.scrollTop = grabbed.from - (event.clientY - grabbed.y) / scale;
+      return;
+    }
     if (!held) return;
     if (!held.ghost) {
-      if (Math.hypot(event.clientX - held.x, event.clientY - held.y) < SLACK * scale) return;
+      var dx = event.clientX - held.x, dy = event.clientY - held.y;
+      if (Math.hypot(dx, dy) < SLACK * scale) return;
+      if (el('split').value === 'direction' && Math.abs(dy) > Math.abs(dx) && held.scroll) {
+        grabbed = { scroll: held.scroll, y: held.y, from: held.scroll.scrollTop, moved: true };
+        grabbed.scroll.classList.add('grabbed');
+        held = null;
+        grabbed.scroll.scrollTop = grabbed.from - dy / scale;
+        return;
+      }
       held.ghost = document.createElement('div');
       held.ghost.className = 'ghost';
-      held.ghost.innerHTML = face(card(held.id), 100);
+      var c = card(held.id);
+      held.ghost.innerHTML = held.shape === 'row'
+        ? '<div style="--w:' + el('width').value + 'px;--row:' + held.row + 'px">' + held.html + '</div>'
+        : face(c, Number(el('width').value));
       document.body.appendChild(held.ghost);
     }
-    held.ghost.style.transform = 'translate(' + (event.clientX - 50 * scale) + 'px,' + (event.clientY - 70 * scale) + 'px) scale(' + scale + ')';
+    place(held.ghost, held.from.x + event.clientX - held.x, held.from.y + event.clientY - held.y);
     var pane = over(event);
+    var faint = el('mark').value === 'none';
     el('left').classList.toggle('dropping', held.drag === 'out' && pane === 'left');
     el('right').classList.toggle('dropping', held.drag === 'in' && pane === 'right');
+    el('left').classList.toggle('faint', faint);
+    el('right').classList.toggle('faint', faint);
   });
+  function goHome(was) {
+    var ghost = was.ghost;
+    if (el('home').value === 'vanish') { ghost.remove(); return; }
+    ghost.classList.add('homing');
+    place(ghost, was.from.x, was.from.y);
+    setTimeout(function () { ghost.remove(); }, 160);
+  }
   function release(event, landed) {
+    if (grabbed) { swallow = grabbed.moved; grabbed.scroll.classList.remove('grabbed'); grabbed = null; return; }
     if (!held) return;
     var was = held;
     held = null;
     el('left').classList.remove('dropping');
     el('right').classList.remove('dropping');
-    if (was.ghost) was.ghost.remove();
-    if (!landed) return;
-    held = was;
-    var acts = was.ghost ? lands(over(event)) : true;
-    held = null;
+    var acts = landed && (was.ghost ? lands(was.drag, over(event)) : was.drag !== 'none');
+    if (was.ghost) { if (acts) was.ghost.remove(); else goHome(was); }
     if (!acts) return;
     if (was.drag === 'in' ? put(card(was.id)) : take(card(was.id))) render();
   }
@@ -433,6 +502,7 @@ h1 { font-size: 22px; font-weight: 600; margin: 0; text-wrap: balance; }
 
   el('width').addEventListener('input', render);
   el('panel').addEventListener('input', render);
+  el('carries').addEventListener('change', render);
   el('mode').addEventListener('change', function () { enter(el('mode').value); render(); });
   ['size', 'civs', 'influence'].forEach(function (id) { el(id).addEventListener('change', function () { open(); render(); }); });
   el('reset').addEventListener('click', function () { open(); render(); });

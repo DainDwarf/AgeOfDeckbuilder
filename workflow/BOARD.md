@@ -14,7 +14,7 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 The lines of the collection screen share one mockup, [board/collection-screen-mockup.html](board/collection-screen-mockup.html), which holds the three modes and names the artifact it is published to at its head: a line's intake refines its own mode in it, and the line that says so deletes it at its ship.
 
-- **A copy is dragged across** — a card of the collection dragged onto the civilization's panel is added, and a row dragged onto the collection is removed; from then a press held on a stack carries its card, and a panel is dragged by its bare ground alone.
+- **A copy is dragged across** — in the deck editing mode a stack with a copy free dragged onto the civilization's side adds a copy, a deck row dragged onto the collection's side removes one, a card let go elsewhere slides back and changes nothing, and a press held on anything else of a panel still drags it; `docs/META-SCREENS.md` says so and the new test in `e2e/deck-editing.spec.ts` passes. Doc-impact: `docs/META-SCREENS.md`. [board/a-copy-is-dragged-across.md](board/a-copy-is-dragged-across.md)
 - **A card has a price** — the price declared on every card's content and held by the catalogue's coherence test, and read on the collection under its card.
 - **A copy is bought for influence** — the campaign's move in the rules and the button that buys, which answers nothing while the influence is short of the price.
 - **The civilization stands alone** — the civilization mode, read only: the right panel over the whole room, the settle section and the deck as card faces, and the way in and out.
