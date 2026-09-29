@@ -14,7 +14,7 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 The lines of the collection screen share one mockup, [board/collection-screen-mockup.html](board/collection-screen-mockup.html), which holds the three modes and names the artifact it is published to at its head: a line's intake refines its own mode in it, and the line that says so deletes it at its ship.
 
-- **A card has a price** — the price declared on every card's content and held by the catalogue's coherence test, and read on the collection under its card.
+- **A card has a price** — every age declares a base price, the catalogue refuses one that is not a whole number of at least 1, the rules answer a card's price as its age's base price doubled for every copy owned past the first, one test holding that on the fixture, and the price reads under every stack of the collection, in the collection mode and in the deck editing mode, `e2e/collection.spec.ts` reading it from the rules. Doc-impact: `docs/META.md`, `docs/GLOSSARY.md`, `docs/META-SCREENS.md`. [board/a-card-has-a-price.md](board/a-card-has-a-price.md)
 - **A copy is bought for influence** — the campaign's move in the rules and the button that buys, which answers nothing while the influence is short of the price.
 - **The civilization stands alone** — the civilization mode, read only: the right panel over the whole room, the settle section and the deck as card faces, and the way in and out.
 - **A copy is added or bought from the deck** — in the civilization mode a copy is removed and added from the deck itself, the add taking a copy owned where one is free and buying one where none is; its ship deletes the mockup.

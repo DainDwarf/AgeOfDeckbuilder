@@ -126,7 +126,7 @@ h1 { font-size: 22px; font-weight: 600; margin: 0; text-wrap: balance; }
 
 <div class="wrap">
   <h1>The collection screen in three modes</h1>
-  <p class="lede">One panel on the right that grows leftwards: the collection, then a deck being edited, then the civilization alone. Every press works, and in the deck editing mode a card drags across. The Nomadic cards, their costs and their counts are the game's; every price, every card past the Nomadic Age and every civilization but Nomadic is a placeholder.</p>
+  <p class="lede">One panel on the right that grows leftwards: the collection, then a deck being edited, then the civilization alone. Every press works, and in the deck editing mode a card drags across. The Nomadic cards, their costs and their counts are the game's; every card past the Nomadic Age and every civilization but Nomadic is a placeholder, and so is every base price past the Stone Age.</p>
 
   <div class="controls">
     <div class="control"><label for="mode">Mode</label>
@@ -162,6 +162,7 @@ h1 { font-size: 22px; font-weight: 600; margin: 0; text-wrap: balance; }
   <div class="notes">
     <section><h2>Collection mode</h2><ul>
       <li>Every card owned with its copies, and a price button that buys one more.</li>
+      <li>A price is the base price of the card's age, doubled for every copy owned past the first. The Nomadic Age and the Stone Age have a base price of 1.</li>
       <li>A press on a civilization's pile opens its deck for editing.</li>
     </ul></section>
     <section><h2>Deck editing mode</h2><ul>
@@ -179,7 +180,7 @@ h1 { font-size: 22px; font-weight: 600; margin: 0; text-wrap: balance; }
       <li>A card taken down to none stays where it stood, at half strength, until the mode is left.</li>
     </ul></section>
     <section><h2>Placeholders</h2><ul>
-      <li>Every price is 10.</li>
+      <li>The base prices past the Stone Age: 2, then 4.</li>
       <li>The words on the three mode buttons and under the stacks.</li>
       <li>"Card 9" and up, "Civilization 2" and "Civilization 3".</li>
     </ul></section>
@@ -201,8 +202,10 @@ h1 { font-size: 22px; font-weight: 600; margin: 0; text-wrap: balance; }
   var CITY = { id: 'settle', name: 'Settlement', kind: 'settle', costs: [], rules: 'Place the [City]' };
   var KINDS = ['unit', 'instant', 'building', 'instant', 'settle'];
   var RESOURCES = ['food', 'production', 'military', 'culture'];
-  var PRICE = 10;
   var SLACK = 8;
+  /** The base price of the age a placeholder card is of: the Stone Age's, then two ages to come. */
+  function baseOf(i) { return i < 12 ? 1 : i < 26 ? 2 : 4; }
+  function priceOf(c) { return c.base * Math.pow(2, Math.max(c.owned, 1) - 1); }
 
   var el = function (id) { return document.getElementById(id); };
   var state, scale = 1, held = null;
@@ -210,7 +213,7 @@ h1 { font-size: 22px; font-weight: 600; margin: 0; text-wrap: balance; }
   function open() {
     var extra = Number(el('size').value);
     var cards = NOMADIC.map(function (c) {
-      return { id: c.id, name: c.name, kind: c.kind, costs: c.costs, rules: c.rules, owned: c.owned };
+      return { id: c.id, name: c.name, kind: c.kind, costs: c.costs, rules: c.rules, owned: c.owned, base: 1 };
     });
     var nomadic = {}, second = {}, third = {};
     NOMADIC.forEach(function (c, at) {
@@ -222,7 +225,7 @@ h1 { font-size: 22px; font-weight: 600; margin: 0; text-wrap: balance; }
       var owned = 1 + (i % 3);
       var id = 'card-' + (i + 9);
       cards.push({ id: id, name: 'Card ' + (i + 9), kind: KINDS[i % KINDS.length],
-        costs: [[RESOURCES[i % 4], 1 + (i % 3)]], rules: 'Placeholder', owned: owned });
+        costs: [[RESOURCES[i % 4], 1 + (i % 3)]], rules: 'Placeholder', owned: owned, base: baseOf(i) });
       if (i % 4 === 0) nomadic[id] = owned;
       if (i % 3 === 0) second[id] = 1;
       if (i % 2 === 1) third[id] = owned;
@@ -259,11 +262,11 @@ h1 { font-size: 22px; font-weight: 600; margin: 0; text-wrap: balance; }
     return '<div class="stack' + (dim ? ' dim' : '') + '" style="--w:' + width + 'px"' +
       (drag ? ' data-drag="' + drag + '" data-id="' + c.id + '"' : '') + '>' + under + face(c, width) + '</div>';
   }
-  function price(short) {
-    return '<span class="diamond"></span>' + PRICE;
+  function price(c) {
+    return '<span class="diamond"></span>' + priceOf(c);
   }
-  function buy(id) {
-    return '<button type="button" class="buy' + (state.influence < PRICE ? ' short' : '') + '" data-act="buy" data-id="' + id + '">' + price() + '</button>';
+  function buy(c) {
+    return '<button type="button" class="buy' + (state.influence < priceOf(c) ? ' short' : '') + '" data-act="buy" data-id="' + c.id + '">' + price(c) + '</button>';
   }
   function totals(deck) {
     var cards = 0, settle = 0;
@@ -290,7 +293,7 @@ h1 { font-size: 22px; font-weight: 600; margin: 0; text-wrap: balance; }
       var reads = editing ? 'In deck <b>' + inDeck(c) + '/' + c.owned + '</b>' : 'Copies <b>' + c.owned + '</b>';
       return '<div class="cell" style="--w:' + width + 'px">' +
         stack(c, width, c.owned, editing && free > 0 ? 'in' : every() ? 'none' : '', editing && free === 0) +
-        '<div class="under-line"><span>' + reads + '</span>' + buy(c.id) + '</div></div>';
+        '<div class="under-line"><span>' + reads + '</span>' + buy(c) + '</div></div>';
     }).join('');
     return '<div class="pane"><div class="head mid"><span class="word">Collection</span>' +
       (editing ? '<button type="button" class="tool" data-act="mode" data-id="collection">Collection »</button>' : '') + '</div>' +
@@ -333,13 +336,13 @@ h1 { font-size: 22px; font-weight: 600; margin: 0; text-wrap: balance; }
     var cell = function (c) {
       var n = inDeck(c);
       var buys = n >= c.owned;
-      var short = buys && state.influence < PRICE;
+      var short = buys && state.influence < priceOf(c);
       return '<div class="cell" style="--w:' + width + 'px">' + stack(c, width, n, '', n === 0) +
         '<div class="under-line"><span class="stepper">' +
         '<button type="button" class="step' + (n === 0 ? ' short' : '') + '" data-act="out" data-id="' + c.id + '">−</button>' +
         '<b>' + n + '/' + c.owned + '</b></span>' +
         '<button type="button" class="step' + (short ? ' short' : '') + '" data-act="more" data-id="' + c.id + '">+' +
-        (buys ? ' ' + price() : '') + '</button></div></div>';
+        (buys ? ' ' + price(c) : '') + '</button></div></div>';
     };
     var shown = state.shown.map(card).filter(Boolean);
     var settle = shown.filter(function (c) { return c.kind === 'settle'; }).map(cell).join('');
@@ -403,12 +406,12 @@ h1 { font-size: 22px; font-weight: 600; margin: 0; text-wrap: balance; }
     var c = card(id);
     if (act === 'edit') { state.at = Number(id); enter('editing'); }
     else if (act === 'mode') enter(id);
-    else if (act === 'buy' && c && state.influence >= PRICE) { state.influence -= PRICE; c.owned++; }
+    else if (act === 'buy' && c && state.influence >= priceOf(c)) { state.influence -= priceOf(c); c.owned++; }
     else if (act === 'out') { if (!take(c)) return; }
     else if (act === 'more' && c) {
       if (!put(c)) {
-        if (state.influence < PRICE) return;
-        state.influence -= PRICE; c.owned++; put(c);
+        if (state.influence < priceOf(c)) return;
+        state.influence -= priceOf(c); c.owned++; put(c);
       }
     } else return;
     render();
