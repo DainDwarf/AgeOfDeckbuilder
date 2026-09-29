@@ -2,9 +2,11 @@ import {
   achievementOf,
   type Catalogue,
   type Civilization,
+  cardOf,
   checkContent,
   civilizationOf,
   firstAge,
+  misfitIn,
   technologyOf,
 } from './catalogue';
 import { refuse } from './map-kinds';
@@ -115,10 +117,7 @@ export function civilizationIn(
   campaign: Campaign,
   name: string,
 ): Civilization {
-  if (!Object.hasOwn(campaign.civilizations, name)) {
-    refuse(catalogue, `the campaign holds no civilization named ${name}`);
-  }
-  const { city, settle, cards } = campaign.civilizations[name];
+  const { city, settle, cards } = heldCivilization(catalogue, campaign, name);
   const owned = new Map(campaign.collection.map(({ number, id }) => [number, id]));
   const ids = (numbers: readonly number[]): CardId[] =>
     numbers.map((number) => {
@@ -132,6 +131,88 @@ export function civilizationIn(
       return id;
     });
   return { city: { ...city, card: city.card.id }, settle: ids(settle), cards: ids(cards) };
+}
+
+/** The campaign's civilization of that name; a name the campaign does not hold is refused. */
+function heldCivilization(
+  catalogue: Catalogue,
+  campaign: Campaign,
+  name: string,
+): CampaignCivilization {
+  if (!Object.hasOwn(campaign.civilizations, name)) {
+    refuse(catalogue, `the campaign holds no civilization named ${name}`);
+  }
+  return campaign.civilizations[name];
+}
+
+/** The section of a civilization a card stands in. */
+function sectionOf(catalogue: Catalogue, card: CardId): 'settle' | 'cards' {
+  const { kind } = cardOf(catalogue, card);
+  switch (kind) {
+    case 'settle':
+      return 'settle';
+    case 'unit':
+    case 'building':
+    case 'instant':
+    case 'hazard':
+      return 'cards';
+  }
+}
+
+/** The campaign with the civilization of that name standing as handed. */
+function withCivilization(
+  campaign: Campaign,
+  name: string,
+  civilization: CampaignCivilization,
+): Campaign {
+  return { ...campaign, civilizations: { ...campaign.civilizations, [name]: civilization } };
+}
+
+/**
+ * The campaign with a copy of the card its civilization of that name does not hold, whatever another
+ * holds, added to its section. A card no section holds, and one it holds every copy of, are refused.
+ */
+export function addedTo(
+  catalogue: Catalogue,
+  campaign: Campaign,
+  name: string,
+  card: CardId,
+): Campaign {
+  const civilization = heldCivilization(catalogue, campaign, name);
+  const section = sectionOf(catalogue, card);
+  if (misfitIn(catalogue, section, card) !== undefined) {
+    refuse(catalogue, `no section of a civilization holds the card ${card}`);
+  }
+  const holds = new Set([...civilization.settle, ...civilization.cards]);
+  const free = campaign.collection.find(({ number, id }) => id === card && !holds.has(number));
+  if (free === undefined) {
+    refuse(catalogue, `the civilization ${name} holds every copy of ${card} the collection owns`);
+  }
+  return withCivilization(campaign, name, {
+    ...civilization,
+    [section]: [...civilization[section], free.number],
+  });
+}
+
+/**
+ * The campaign with a copy of the card removed from its civilization of that name, out of the
+ * section it stands in. A card the civilization does not hold is refused.
+ */
+export function removedFrom(
+  catalogue: Catalogue,
+  campaign: Campaign,
+  name: string,
+  card: CardId,
+): Campaign {
+  const civilization = heldCivilization(catalogue, campaign, name);
+  const section = sectionOf(catalogue, card);
+  const owned = new Map(campaign.collection.map(({ number, id }) => [number, id]));
+  const at = civilization[section].findIndex((number) => owned.get(number) === card);
+  if (at === -1) refuse(catalogue, `the civilization ${name} holds no ${card}`);
+  return withCivilization(campaign, name, {
+    ...civilization,
+    [section]: civilization[section].filter((_, index) => index !== at),
+  });
 }
 
 /** What an ended chronicle paid into the campaign, and the campaign it left. */

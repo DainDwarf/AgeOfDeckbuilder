@@ -57,6 +57,9 @@ const KIND_STYLE = {
 function answersOf(face: Face, { large }: Inspecting): Answers {
   return {
     point() {},
+    rests() {
+      return false;
+    },
     inspect() {
       large.show(face);
     },
@@ -141,10 +144,12 @@ export function deckPanelOf(
     city,
     deck,
     counts,
+    remove,
   }: {
     readonly city: CardId;
     readonly deck: DeckRows;
     readonly counts: { readonly cards: number; readonly settle: number };
+    readonly remove: (card: CardId) => void;
   },
   {
     left,
@@ -172,9 +177,15 @@ export function deckPanelOf(
     return from + Math.max(label.height, count.height);
   };
 
-  const row = (face: Face, copies: number | undefined, box: Box, name: string): void => {
+  const row = (
+    face: Face,
+    copies: number | undefined,
+    box: Box,
+    name: string,
+    press?: () => void,
+  ): void => {
     parts.push(rowOf(scene, face, copies, box, radius, name));
-    held.push({ box, answers: answersOf(face, inspecting) });
+    held.push({ box, answers: answersOf(face, inspecting), press });
   };
 
   const rows = (stacks: readonly CollectionStack[], from: number): number => {
@@ -186,6 +197,7 @@ export function deckPanelOf(
         copies,
         { x: left, y, width, height: ROW_HEIGHT },
         `deck-row-${id}`,
+        () => remove(id),
       );
       y += ROW_HEIGHT;
     }

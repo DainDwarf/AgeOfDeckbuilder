@@ -57,6 +57,22 @@ test('a panel its room holds whole does not move, whatever the wheel, the drag a
   expect(moves).toEqual([]);
 });
 
+test('a panel laid again at the offset it stood at stands there, and one now holding less stands no further than its last line', () => {
+  const holds = 1000;
+  const { scroll } = panelHolding(holds);
+  scroll.wheel(500);
+  const stood = scroll.offset;
+
+  const again = panelHolding(holds).scroll;
+  again.stand(stood);
+  const shorter = panelHolding(FRAME.height + 100).scroll;
+  shorter.stand(stood);
+
+  expect(stood).toBeGreaterThan(100);
+  expect(again.offset).toBe(stood);
+  expect(shorter.offset).toBe(100);
+});
+
 test('a card scrolled out of its panel answers nothing at the place it would stand, and the card scrolled in answers where it stands', () => {
   const first = { box: { x: 20, y: FRAME.y, width: 100, height: 140 } };
   const last = { box: { x: 20, y: FRAME.y + FRAME.height + 20, width: 100, height: 140 } };

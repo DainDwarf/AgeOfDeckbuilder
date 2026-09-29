@@ -60,10 +60,21 @@ function openingOf({ chronicle, region, civilization }: ChronicleSave): Saved {
   return { age: chronicle.age, region, civilization, resumed: chronicle };
 }
 
+function progressOf(opening: Saved | undefined): ChronicleSave | undefined {
+  return opening === undefined
+    ? undefined
+    : { chronicle: opening.resumed, region: opening.region, civilization: opening.civilization };
+}
+
 /** The save held from now on, whole, and the browser's entry written with it. */
 export function keepSave({ campaign, chronicle }: Save): void {
   held = { campaign, opening: chronicle === undefined ? undefined : openingOf(chronicle) };
   store(SAVE_ENTRY, writeSave(CATALOGUE, campaign, chronicle));
+}
+
+/** The campaign kept as the save's, beside the chronicle in progress, where one stands. */
+export function keepCampaign(campaign: Campaign): void {
+  keepSave({ campaign, chronicle: progressOf(read().opening) });
 }
 
 /**
@@ -82,13 +93,7 @@ export function keepChronicle(
 /** The save as the game holds it now, as a save file's text. */
 export function saveFileText(): string {
   const { campaign, opening } = read();
-  return writeSaveFile(
-    CATALOGUE,
-    campaign,
-    opening === undefined
-      ? undefined
-      : { chronicle: opening.resumed, region: opening.region, civilization: opening.civilization },
-  );
+  return writeSaveFile(CATALOGUE, campaign, progressOf(opening));
 }
 
 /** A save file's text, read: the console says why each thing was refused or dropped. */

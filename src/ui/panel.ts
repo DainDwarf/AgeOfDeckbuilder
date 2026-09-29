@@ -31,19 +31,23 @@ export type PanelOf = { readonly name: string; readonly frame: Box } & Filled;
 
 /** A panel standing on its screen. */
 export type Panel = {
+  /** How far it is scrolled. */
+  readonly offset: number;
   /** Takes the panel down, and everything it answers with. */
   down(): void;
 };
 
 /**
- * A panel cut at its frame and scrolled as a browse is, every press on it answered through its frame
- * by the thing standing under the pointer; `follow` is told each time it moves.
+ * A panel cut at its frame and scrolled as a browse is, from the offset handed as far as it reaches,
+ * every press on it answered through its frame by the thing under the pointer; `follow` is told each
+ * time it moves.
  */
 export function createPanel(
   scene: Phaser.Scene,
   on: Stratum,
   { name, frame, parts, held, foot }: PanelOf,
   follow: () => void,
+  offset = 0,
 ): Panel {
   const root = scene.add.container(0, 0, [...parts]).setName(name);
   on.layer.add(root);
@@ -78,9 +82,11 @@ export function createPanel(
     moved = true;
   });
   scroll.reach(reachOf(frame.height, foot - frame.y));
+  scroll.stand(offset);
   answersPress(zone, (pointer) => {
     const at = on.at(pointer.x, pointer.y);
-    return heldAt(frame, scroll.offset, held, at.x, at.y)?.press !== undefined;
+    const under = heldAt(frame, scroll.offset, held, at.x, at.y);
+    return under !== undefined && (under.press !== undefined || under.answers.rests(at));
   });
 
   /** The thing the pointer was last read on, and nothing while it is on none. */
@@ -142,6 +148,9 @@ export function createPanel(
   const stopStepping = whileUp(scene, scene.events, Phaser.Scenes.Events.UPDATE, step);
 
   return {
+    get offset() {
+      return scroll.offset;
+    },
     down() {
       point(undefined);
       stopStepping();

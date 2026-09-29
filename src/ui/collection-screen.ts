@@ -1,8 +1,8 @@
 import Phaser from 'phaser';
 import { CATALOGUE } from '../content/catalogue';
-import type { CampaignCivilization } from '../rules/campaign';
+import { addedTo, type Campaign, type CampaignCivilization, removedFrom } from '../rules/campaign';
 import type { Catalogue } from '../rules/catalogue';
-import { NO_REFUSAL } from '../rules/state';
+import { type CardId, NO_REFUSAL } from '../rules/state';
 import {
   createCardFace,
   createKindBubble,
@@ -36,7 +36,7 @@ import { backRaisesMenu, resetMenu } from './menu-scene';
 import { ROOM, wearNavbar } from './navbar';
 import { overlayOf } from './overlay-scene';
 import { createPanel, type Filled, type Held, type Panel } from './panel';
-import { campaignHeld } from './save-entry';
+import { campaignHeld, keepCampaign } from './save-entry';
 import { createSmallCards } from './small-card';
 import { answersOf, type Inspecting, standLarge } from './stack';
 import { cardName, civilizationName, text } from './text';
@@ -105,6 +105,7 @@ function stackOf(
   { left, top }: { left: number; top: number },
   reading: Reading,
   inspecting: Inspecting,
+  press: (() => void) | undefined,
 ): { root: Phaser.GameObjects.Container; held: Held; bottom: number } {
   const tone = reading.dimmed ? dimmed : (colour: number): number => colour;
   const height = heightOf(CARD_WIDTH);
@@ -140,6 +141,7 @@ function stackOf(
     held: {
       box: { x: left, y: top, width: CARD_WIDTH, height },
       answers: answersOf(card, shown, inspecting),
+      press,
     },
     bottom: count.y + count.height,
   };
@@ -147,7 +149,8 @@ function stackOf(
 
 /**
  * The collection's stacks from the top handed, as many to a line as `across` says, the lines centred
- * between the room's left and the panel's right handed, each stack reading what `readingOf` says.
+ * between the room's left and the panel's right handed, each stack reading what `readingOf` says and
+ * answering a left click where `pressOf` hands a press.
  */
 function collectionOf(
   scene: Phaser.Scene,
@@ -155,6 +158,7 @@ function collectionOf(
   stacks: readonly CollectionStack[],
   { top, right, across }: { top: number; right: number; across: number },
   readingOf: (stack: CollectionStack) => Reading,
+  pressOf: (stack: CollectionStack) => (() => void) | undefined,
   inspecting: Inspecting,
 ): Filled {
   const span = across * STACK_WIDTH + (across - 1) * STACKS_APART;
@@ -173,6 +177,7 @@ function collectionOf(
         { left, top: lineTop },
         readingOf(stack),
         inspecting,
+        pressOf(stack),
       );
       parts.push(drawn.root);
       held.push(drawn.held);
@@ -278,9 +283,6 @@ export class CollectionScreen extends Phaser.Scene {
       kinds,
       large,
     };
-    const campaign = campaignHeld();
-    const stacks = stacksOf(CATALOGUE, campaign.collection, cardName);
-
     const screen = this.add.container(0, 0).setName('collection');
     content.add(screen);
     const panels = stratumOf(content, this.cameras.main);
@@ -291,11 +293,15 @@ export class CollectionScreen extends Phaser.Scene {
 
     let laid: { readonly head: Phaser.GameObjects.Container; readonly panels: Panel[] } | undefined;
 
-    const lay = (mode: Mode): void => {
+    /** The screen laid in the mode, its panels at the offsets handed, in order, or at their tops. */
+    const lay = (mode: Mode, offsets: readonly number[] = []): void => {
       if (laid !== undefined) {
         for (const panel of laid.panels) panel.down();
         laid.head.destroy();
       }
+      const campaign = campaignHeld();
+      const stacks = stacksOf(CATALOGUE, campaign.collection, cardName);
+      const [leftOffset, rightOffset] = offsets;
       const { right, across } = shapeOf(mode);
       const divide = DESIGN_WIDTH - right;
       const word = (label: string, x: number): Phaser.GameObjects.Text =>
@@ -335,10 +341,12 @@ export class CollectionScreen extends Phaser.Scene {
                     stacks,
                     { top, right: divide, across },
                     reading,
+                    () => undefined,
                     inspecting,
                   ),
                 },
                 follow,
+                leftOffset,
               ),
               createPanel(
                 this,
@@ -358,6 +366,7 @@ export class CollectionScreen extends Phaser.Scene {
                   ),
                 },
                 follow,
+                rightOffset,
               ),
             ],
           };
@@ -398,6 +407,22 @@ export class CollectionScreen extends Phaser.Scene {
             const held = heldIn(deck, id);
             return { reads: text('collection.in-deck', { held, copies }), dimmed: held === copies };
           };
+          const edit = (move: (held: Campaign) => Campaign): void => {
+            keepCampaign(move(campaignHeld()));
+            lay(
+              mode,
+              laid?.panels.map(({ offset }) => offset),
+            );
+          };
+          const add = ({ id, copies }: CollectionStack): (() => void) | undefined =>
+            heldIn(deck, id) < copies
+              ? () => {
+                  edit((held) => addedTo(CATALOGUE, held, civilization, id));
+                }
+              : undefined;
+          const remove = (card: CardId): void => {
+            edit((held) => removedFrom(CATALOGUE, held, civilization, card));
+          };
           const owned = campaign.civilizations[civilization];
           laid = {
             head,
@@ -414,10 +439,12 @@ export class CollectionScreen extends Phaser.Scene {
                     stacks,
                     { top, right: divide, across },
                     reading,
+                    add,
                     inspecting,
                   ),
                 },
                 follow,
+                leftOffset,
               ),
               createPanel(
                 this,
@@ -428,7 +455,7 @@ export class CollectionScreen extends Phaser.Scene {
                   ...deckPanelOf(
                     this,
                     CATALOGUE,
-                    { city: owned.city.card.id, deck, counts: countsOf(owned) },
+                    { city: owned.city.card.id, deck, counts: countsOf(owned), remove },
                     {
                       left: frame.x + MARGIN,
                       right: DESIGN_WIDTH - MARGIN,
@@ -439,6 +466,7 @@ export class CollectionScreen extends Phaser.Scene {
                   ),
                 },
                 follow,
+                rightOffset,
               ),
             ],
           };

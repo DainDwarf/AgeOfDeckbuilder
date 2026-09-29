@@ -228,6 +228,8 @@ type Point = { readonly x: number; readonly y: number };
 export type Answers = {
   /** The pointer on the face's ground at this point, or off it. */
   point(at: Point | undefined): void;
+  /** Whether the pointer resting at this point raises anything. */
+  rests(at: Point): boolean;
   /** The right click at this point. */
   inspect(at: Point): void;
 };
@@ -246,6 +248,9 @@ export function answersOf(
       const named = at === undefined ? undefined : card.nameAt(at.x, at.y);
       small.over(named === undefined ? undefined : raiserOf(card, named));
       kinds.over(card, at !== undefined && card.kindAt(at.x, at.y));
+    },
+    rests(at) {
+      return card.nameAt(at.x, at.y) !== undefined || card.kindAt(at.x, at.y);
     },
     inspect(at) {
       const named = card.nameAt(at.x, at.y);
