@@ -1,10 +1,7 @@
 import type { Campaign } from './campaign';
 import type { Catalogue } from './catalogue';
 import { refusal } from './map-kinds';
-import { type ChronicleSave, readSave, writeSave } from './save';
-
-/** The save whole: the campaign, beside the chronicle in progress where one is. */
-export type Save = { readonly campaign: Campaign; readonly chronicle?: ChronicleSave };
+import { type ChronicleSave, readSave, type Save, writeSave } from './save';
 
 /**
  * What a save file's text reads as: the save it holds, nothing where it is refused, and the reason

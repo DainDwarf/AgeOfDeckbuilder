@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { expect, type Page } from '@playwright/test';
 import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
-import type { Campaign } from '../src/rules/campaign';
+import { type Campaign, paidInto } from '../src/rules/campaign';
 import { aimOf, type CardKind, gained } from '../src/rules/cards';
 import {
   type Aim,
@@ -856,6 +856,14 @@ export function landed(): { chronicle: Chronicle; tile: TileCoords } {
     }
     return undefined;
   });
+}
+
+/** A new campaign the win on the first seed's capstone landing has paid into. */
+export function wonCampaign(): Campaign {
+  const { chronicle, tile } = landed();
+  const index = idsOf(chronicle.hand).indexOf(SHELTER);
+  const won = outcome(apply(CATALOGUE, chronicle, { type: 'play', index, aim: 'tile', tile }));
+  return paidInto(CATALOGUE, freshCampaign(CATALOGUE), won).campaign;
 }
 
 /** A turn 1 with the first worker entered on the city's tile, and the neighbour it steps onto. */

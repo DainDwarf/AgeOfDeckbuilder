@@ -1,5 +1,4 @@
 import Phaser from 'phaser';
-import type { Save } from '../rules/save-file';
 import { type Bind, boundTo, keyPressed } from './bindings';
 import {
   DESIGN_HEIGHT,
@@ -15,11 +14,14 @@ import {
   behind,
   createMenuButton,
   createRefusedSaveWindow,
+  createWarning,
   createWindow,
   type MenuPress,
   type MenuWindow,
   type Opened,
+  type Opens,
   type Said,
+  type Warning,
 } from './menu';
 import { META_SCREENS } from './navbar';
 import { overlayAhead } from './overlay-scene';
@@ -29,8 +31,8 @@ import { onRefused } from './storage';
 /** What the menu asks of the chronicle scene at the press, and all it ever holds of it. */
 export type LeavesChronicles = Phaser.Scene & { leave(): void };
 
-/** A window of the menu standing, and the save its import's warning would keep, where it is that. */
-type Standing = { readonly which: MenuWindow; readonly laid: Opened; readonly importing?: Save };
+/** A window of the menu standing. */
+type Standing = { readonly which: MenuWindow; readonly laid: Opened };
 
 /** What the menu says on the game's emitter as the first of its scrims rises and the last falls. */
 const COVERED = 'menu-covered';
@@ -92,13 +94,33 @@ export class MenuScene extends Phaser.Scene {
       cover();
     });
 
-    const raise = (which: MenuWindow, said: Said = {}, importing?: Save): Standing => {
+    const presses = { press: (press: MenuPress) => pressed(press), back: () => back() };
+
+    /** The window laid in place of the one standing, and standing from now on. */
+    const stand = (which: MenuWindow, lay: () => Opened): Standing => {
       standing?.laid.root.destroy();
-      const laid = createWindow(this, which, { press: pressed, back: () => back() }, said);
-      standing = { which, laid, importing };
+      standing = { which, laid: lay() };
       cover();
       return standing;
     };
+
+    const raise = (which: Opens, said: Said = {}): Standing =>
+      stand(which, () => createWindow(this, which, presses, said));
+
+    /** The warning raised, whose press goes through with what `through` does, and the campaign screen after. */
+    const warn = (which: Warning, through: () => void, said: Said = {}): Standing =>
+      stand(which, () =>
+        createWarning(
+          this,
+          which,
+          presses,
+          () => {
+            through();
+            campaignStands();
+          },
+          said,
+        ),
+      );
 
     /** The campaign screen started anew in place of whatever screen stands, on the save as it now is. */
     const campaignStands = (): void => {
@@ -120,7 +142,12 @@ export class MenuScene extends Phaser.Scene {
       if (standing !== asked) return;
       const { save, dropped } = readSaveFileText(text);
       if (save === undefined) raise('manage-save', { under: 'manage-save.refused' });
-      else raise('import-warning', dropped.length > 0 ? { over: 'manage-save.dropped' } : {}, save);
+      else
+        warn(
+          'import-warning',
+          () => keepSave(save),
+          dropped.length > 0 ? { over: 'manage-save.dropped' } : {},
+        );
     };
 
     const pressed = (press: MenuPress): void => {
@@ -146,18 +173,7 @@ export class MenuScene extends Phaser.Scene {
           return;
         }
         case 'clear':
-          raise('clear-warning');
-          return;
-        case 'import-through': {
-          const save = standing?.importing;
-          if (save === undefined) throw new Error('the import went through with no save file read');
-          keepSave(save);
-          campaignStands();
-          return;
-        }
-        case 'clear-through':
-          clearSave();
-          campaignStands();
+          warn('clear-warning', clearSave);
           return;
       }
       const unlisted: never = press;

@@ -22,18 +22,18 @@ import {
 import { css, LOOK } from './look';
 import { type TextKey, text } from './text';
 
-/** Every window the menu opens; a warning is a window of its own. */
-export type MenuWindow =
-  | 'menu'
-  | 'settings'
-  | 'controls'
-  | 'manage-save'
-  | 'import-warning'
-  | 'clear-warning';
+/** A warning: a window of its own, whose first button is the press it warns of, going through. */
+export type Warning = 'import-warning' | 'clear-warning';
+
+/** Every window the menu opens. */
+export type MenuWindow = 'menu' | 'settings' | 'controls' | 'manage-save' | Warning;
+
+/** A window a press or a step back opens: every one but a warning. */
+export type Opens = Exclude<MenuWindow, Warning>;
 
 /**
  * What pressing a window's button does: opens the window it names, leaves the chronicle for the
- * campaign screen, steps back, or one of the save's doors, a warning's press going through.
+ * campaign screen, steps back, or one of the save's doors.
  */
 export type MenuPress =
   | 'manage-save'
@@ -43,8 +43,6 @@ export type MenuPress =
   | 'export'
   | 'import'
   | 'clear'
-  | 'import-through'
-  | 'clear-through'
   | 'back';
 
 /** What each press's button reads. */
@@ -56,9 +54,13 @@ const LABELS: Record<MenuPress, TextKey> = {
   export: 'manage-save.export',
   import: 'manage-save.import',
   clear: 'manage-save.clear',
-  'import-through': 'manage-save.import',
-  'clear-through': 'manage-save.clear',
   back: 'control.back',
+};
+
+/** What each warning's press, going through, reads. */
+const THROUGH: Record<Warning, TextKey> = {
+  'import-warning': 'manage-save.import',
+  'clear-warning': 'manage-save.clear',
 };
 
 /**
@@ -72,7 +74,7 @@ const WINDOWS: Record<
     readonly title: TextKey;
     readonly lines?: readonly TextKey[];
     readonly buttons: readonly MenuPress[];
-    readonly from?: MenuWindow;
+    readonly from?: Opens;
   }
 > = {
   menu: { title: 'menu.menu', buttons: ['manage-save', 'settings', 'campaign'] },
@@ -87,13 +89,13 @@ const WINDOWS: Record<
   'import-warning': {
     title: 'menu.manage-save',
     lines: ['manage-save.line', 'manage-save.import-warning'],
-    buttons: ['import-through', 'back'],
+    buttons: ['back'],
     from: 'manage-save',
   },
   'clear-warning': {
     title: 'menu.manage-save',
     lines: ['manage-save.line', 'manage-save.clear-warning'],
-    buttons: ['clear-through', 'back'],
+    buttons: ['back'],
     from: 'manage-save',
   },
 };
@@ -102,7 +104,7 @@ const WINDOWS: Record<
 export type Said = { readonly over?: TextKey; readonly under?: TextKey };
 
 /** The window this one closes back to; nothing for the one that closes back to the chronicle screen. */
-export function behind(which: MenuWindow): MenuWindow | undefined {
+export function behind(which: MenuWindow): Opens | undefined {
   return WINDOWS[which].from;
 }
 
@@ -193,10 +195,10 @@ export function createButton(
 }
 
 /** How far below the title a window's own content reaches, the padding above it included. */
-function bodyHeight(which: MenuWindow, buttons: readonly MenuPress[]): number {
+function bodyHeight(which: MenuWindow, buttons: number): number {
   if (which === 'controls') return PADDING + ROWS_HEIGHT + PADDING + BUTTON_HEIGHT;
-  if (buttons.length === 0) return 0;
-  return PADDING + buttons.length * BUTTON_HEIGHT + (buttons.length - 1) * BUTTON_GAP;
+  if (buttons === 0) return 0;
+  return PADDING + buttons * BUTTON_HEIGHT + (buttons - 1) * BUTTON_GAP;
 }
 
 /**
@@ -319,19 +321,53 @@ function linesHeight(lines: readonly Phaser.GameObjects.Text[]): number {
   return lines.reduce((sum, line) => sum + PADDING + line.height, 0);
 }
 
-/**
- * One window, centred on the design space: the box in the panel language, its title, its lines, what
- * it lists, and the line said under that. The box takes the pointer so that a press on it is not a
- * press on the scrim behind, which backs the window out. The caller takes the window down.
- */
+/** A button of a window: its name, what it reads, and what pressing it does. */
+type Button = { readonly name: string; readonly reads: string; readonly pressed: () => void };
+
+/** The buttons a window lists on the screen standing, each answered by the window's presses. */
+function buttonsOf(scene: Phaser.Scene, which: MenuWindow, on: Presses): Button[] {
+  return listed(scene, which).map((press) => ({
+    name: `${which}-${press}`,
+    reads: text(LABELS[press]),
+    pressed: () => on.press(press),
+  }));
+}
+
+/** A window of the menu other than a warning, centred on the design space. */
 export function createWindow(
   scene: Phaser.Scene,
-  which: MenuWindow,
+  which: Opens,
   on: Presses,
   said: Said = {},
 ): Opened {
+  return layWindow(scene, which, buttonsOf(scene, which, on), on, said);
+}
+
+/** A warning, centred on the design space, its first button the press it warns of, `through`. */
+export function createWarning(
+  scene: Phaser.Scene,
+  which: Warning,
+  on: Presses,
+  through: () => void,
+  said: Said = {},
+): Opened {
+  const going = { name: `${which}-through`, reads: text(THROUGH[which]), pressed: through };
+  return layWindow(scene, which, [going, ...buttonsOf(scene, which, on)], on, said);
+}
+
+/**
+ * One window: the box in the panel language, its title, its lines, its buttons, and the line said
+ * under them. The box takes the pointer so that a press on it is not a press on the scrim behind,
+ * which backs the window out. The caller takes the window down.
+ */
+function layWindow(
+  scene: Phaser.Scene,
+  which: MenuWindow,
+  buttons: readonly Button[],
+  on: Presses,
+  said: Said,
+): Opened {
   const shape = WINDOWS[which];
-  const buttons = listed(scene, which);
   const title = addText(scene, 0, 0, text(shape.title), TITLE_STYLE)
     .setOrigin(0.5, 0)
     .setName(`${which}-title`);
@@ -344,7 +380,7 @@ export function createWindow(
     2 * PADDING +
     title.height +
     linesHeight(over) +
-    bodyHeight(which, buttons) +
+    bodyHeight(which, buttons.length) +
     linesHeight(under);
   const top = Math.round((DESIGN_HEIGHT - height) / 2);
   const middle = DESIGN_WIDTH / 2;
@@ -360,21 +396,21 @@ export function createWindow(
     y += PADDING + line.height;
   }
   const body = y + PADDING;
-  y += bodyHeight(which, buttons);
+  y += bodyHeight(which, buttons.length);
   for (const line of under) {
     line.setPosition(middle, y + PADDING);
     y += PADDING + line.height;
   }
 
   const root = scene.add.container(0, 0, [box, title, ...over, ...under]).setName(which);
-  buttons.forEach((press, index) => {
+  buttons.forEach(({ name, reads, pressed }, index) => {
     const { face, label } = createButton(
       scene,
       middle,
       body + index * (BUTTON_HEIGHT + BUTTON_GAP) + BUTTON_HEIGHT / 2,
-      `${which}-${press}`,
-      text(LABELS[press]),
-      () => on.press(press),
+      name,
+      reads,
+      pressed,
     );
     root.add([face, label]);
   });

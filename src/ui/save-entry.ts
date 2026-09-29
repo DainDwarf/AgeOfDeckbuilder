@@ -1,7 +1,14 @@
 import { CATALOGUE } from '../content/catalogue';
 import type { Campaign, Payment } from '../rules/campaign';
-import { type ChronicleSave, freshCampaign, keptAfter, readSave, writeSave } from '../rules/save';
-import { readSaveFile, type Save, type SaveFileRead, writeSaveFile } from '../rules/save-file';
+import {
+  type ChronicleSave,
+  freshCampaign,
+  keptAfter,
+  readSave,
+  type Save,
+  writeSave,
+} from '../rules/save';
+import { readSaveFile, type SaveFileRead, writeSaveFile } from '../rules/save-file';
 import type { Chronicle } from '../rules/state';
 import { store, stored, unstore } from './storage';
 

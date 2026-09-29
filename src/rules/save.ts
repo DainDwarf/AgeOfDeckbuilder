@@ -56,6 +56,9 @@ export type ChronicleSave = {
   readonly civilization: string;
 };
 
+/** The save whole: the campaign, beside the chronicle in progress where one is. */
+export type Save = { readonly campaign: Campaign; readonly chronicle?: ChronicleSave };
+
 /**
  * What a save's text reads as: the campaign, the chronicle in progress, each nothing where it could
  * not be read, and the reason for everything dropped on the way.

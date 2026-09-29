@@ -3,20 +3,23 @@ import { expect, type Page, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
 import { catalogued, civilizationOf } from '../src/rules/catalogue';
 import { launched } from '../src/rules/chronicle';
-import { freshCampaign, writeSave } from '../src/rules/save';
-import { readSaveFile, type Save, writeSaveFile } from '../src/rules/save-file';
+import { freshCampaign, type Save, writeSave } from '../src/rules/save';
+import { readSaveFile, writeSaveFile } from '../src/rules/save-file';
 import { bound, DEFAULTS, STORED } from '../src/ui/bindings';
 import { SAVE_ENTRY } from '../src/ui/save-entry';
 import { text } from '../src/ui/text';
 import {
   campaignShown,
+  chronicleButton,
   click,
   counted,
   firstsOf,
   heldSave,
   onScreen,
   openSaved,
+  plantCampaign,
   plantControls,
+  readNames,
   rested,
   settledOn,
   standing,
@@ -24,6 +27,7 @@ import {
   textOf,
   titleOf,
   watch,
+  wonCampaign,
 } from './chronicle-screen';
 
 /** The save a spec opens on: a new campaign, and the first seed's chronicle settled beside it. */
@@ -75,8 +79,8 @@ async function imported(page: Page, held: string): Promise<void> {
 }
 
 /** The warning's press gone through, and the campaign screen it stands waited for. */
-async function goneThrough(page: Page, warning: string, press: string): Promise<void> {
-  await click(page, `${warning}-${press}`);
+async function goneThrough(page: Page, warning: string): Promise<void> {
+  await click(page, `${warning}-through`);
   await expect.poll(() => standing(page, warning)).toBe(false);
   await campaignShown(page);
   expect(await page.evaluate(() => window.game?.scene.isActive('ui'))).toBe(false);
@@ -98,11 +102,11 @@ test('the menu lists Manage Save first, whose window reads its line over its fou
 
   await click(page, 'menu-button');
   await expect.poll(() => standing(page, 'menu')).toBe(true);
+  await rested(page);
   expect(await textOf(page, 'menu-manage-save-label')).toBe(text('menu.manage-save'));
   expect((await onScreen(page, 'menu-manage-save')).y).toBeLessThan(
     (await onScreen(page, 'menu-settings')).y,
   );
-  await rested(page);
   await click(page, 'menu-manage-save');
   await expect.poll(() => standing(page, 'manage-save')).toBe(true);
   await rested(page);
@@ -145,7 +149,7 @@ test('Clear save warns in its sentence, Back and the back key take the warning d
   await expect.poll(() => standing(page, 'clear-warning')).toBe(true);
   expect(await titleOf(page, 'clear-warning')).toBe(text('menu.manage-save'));
   expect(await textOf(page, 'manage-save.clear-warning')).toBe(text('manage-save.clear-warning'));
-  expect(await textOf(page, 'clear-warning-clear-through-label')).toBe(text('manage-save.clear'));
+  expect(await textOf(page, 'clear-warning-through-label')).toBe(text('manage-save.clear'));
   expect(await textOf(page, 'clear-warning-back-label')).toBe(text('control.back'));
   expect(await standing(page, 'manage-save-export')).toBe(false);
   await rested(page);
@@ -166,7 +170,7 @@ test('Clear save warns in its sentence, Back and the back key take the warning d
   await click(page, 'manage-save-clear');
   await expect.poll(() => standing(page, 'clear-warning')).toBe(true);
   await rested(page);
-  await goneThrough(page, 'clear-warning', 'clear-through');
+  await goneThrough(page, 'clear-warning');
   expect(await heldSave(page)).toEqual(keptAs({ campaign: freshCampaign(CATALOGUE) }));
   expect(await storedUnder(page, STORED)).toBe(keys);
 
@@ -184,7 +188,7 @@ test('Import save on a save file exported warns with no second sentence, and the
   await click(page, 'manage-save-clear');
   await expect.poll(() => standing(page, 'clear-warning')).toBe(true);
   await rested(page);
-  await goneThrough(page, 'clear-warning', 'clear-through');
+  await goneThrough(page, 'clear-warning');
 
   await manageSave(page);
   await imported(page, file.text);
@@ -192,14 +196,12 @@ test('Import save on a save file exported warns with no second sentence, and the
   expect(await titleOf(page, 'import-warning')).toBe(text('menu.manage-save'));
   expect(await textOf(page, 'manage-save.import-warning')).toBe(text('manage-save.import-warning'));
   expect(await textOf(page, 'manage-save.dropped')).toBeUndefined();
-  expect(await textOf(page, 'import-warning-import-through-label')).toBe(
-    text('manage-save.import'),
-  );
+  expect(await textOf(page, 'import-warning-through-label')).toBe(text('manage-save.import'));
   expect(await textOf(page, 'import-warning-back-label')).toBe(text('control.back'));
   expect(await heldSave(page)).toEqual(keptAs({ campaign: freshCampaign(CATALOGUE) }));
   await rested(page);
 
-  await goneThrough(page, 'import-warning', 'import-through');
+  await goneThrough(page, 'import-warning');
   const { save } = readSaveFile(CATALOGUE, file.text);
   if (save === undefined) throw new Error('the save file exported is refused');
   expect(await heldSave(page)).toEqual(keptAs(save));
@@ -239,7 +241,7 @@ test('Import save on a save file whose chronicle names a content version the gam
   expect(await textOf(page, 'manage-save.dropped')).toBe(text('manage-save.dropped'));
   await rested(page);
 
-  await goneThrough(page, 'import-warning', 'import-through');
+  await goneThrough(page, 'import-warning');
   expect(await heldSave(page)).toEqual(keptAs(read.save));
 
   expect(problems).toEqual([]);
@@ -267,6 +269,54 @@ test('Import save on a file that is no save raises the refused line and no warni
   expect(await standing(page, 'import-warning')).toBe(false);
   expect(await storedUnder(page, SAVE_ENTRY)).toBe(kept);
   expect(await page.evaluate(() => window.game?.scene.isActive('ui'))).toBe(true);
+
+  expect(problems).toEqual([]);
+});
+
+test('over the campaign screen, the import gone through stands the campaign screen anew on the save the file holds', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const opened = freshCampaign(CATALOGUE);
+  const campaign = wonCampaign();
+  expect(campaign.influence).not.toBe(opened.influence);
+  await readNames(page);
+  await page.goto('/');
+  await campaignShown(page);
+  expect(await textOf(page, 'reading-influence-value')).toBe(String(opened.influence));
+
+  await manageSave(page);
+  await imported(page, writeSaveFile(CATALOGUE, campaign));
+  await expect.poll(() => standing(page, 'import-warning')).toBe(true);
+  await rested(page);
+  await goneThrough(page, 'import-warning');
+  expect(await textOf(page, 'reading-influence-value')).toBe(String(campaign.influence));
+  expect(await heldSave(page)).toEqual(keptAs({ campaign }));
+
+  expect(problems).toEqual([]);
+});
+
+test('over the launch screen, the clear gone through stands the campaign screen on a new campaign', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const opened = freshCampaign(CATALOGUE);
+  const campaign = wonCampaign();
+  expect(campaign.influence).not.toBe(opened.influence);
+  await readNames(page);
+  await plantCampaign(page, campaign);
+  await page.goto('/');
+  await campaignShown(page);
+  await chronicleButton(page);
+
+  await manageSave(page);
+  await click(page, 'manage-save-clear');
+  await expect.poll(() => standing(page, 'clear-warning')).toBe(true);
+  await rested(page);
+  await goneThrough(page, 'clear-warning');
+  expect(await page.evaluate(() => window.game?.scene.isActive('launch'))).toBe(false);
+  expect(await textOf(page, 'reading-influence-value')).toBe(String(opened.influence));
+  expect(await heldSave(page)).toEqual(keptAs({ campaign: opened }));
 
   expect(problems).toEqual([]);
 });
