@@ -222,7 +222,7 @@ export type Inspecting = {
 };
 
 /** A point of the design space. */
-type Point = { readonly x: number; readonly y: number };
+export type Point = { readonly x: number; readonly y: number };
 
 /** What a face on a screen of the meta answers the pointer with, read at a point of the design space. */
 export type Answers = {

@@ -119,7 +119,7 @@ function speedOf(trail: readonly Sample[], now: number): number {
 }
 
 /** Whether a point of the design space lies in the box, its edges included. */
-function inside(box: Box, x: number, y: number): boolean {
+export function inside(box: Box, x: number, y: number): boolean {
   return x >= box.x && x <= box.x + box.width && y >= box.y && y <= box.y + box.height;
 }
 

@@ -12,6 +12,9 @@ export const TURN_OVER = 120;
 
 export const EASE = 'Sine.easeInOut';
 
+/** How long a card let go of with nothing done takes to slide back to where it was lifted from. */
+export const SLIDE_HOME = 150;
+
 /** How long a block of that many cards is in the air, from the first leaving to the last landing. */
 export function blockLength(cards: number): number {
   return cards === 0 ? 0 : TRAVEL + (cards - 1) * STAGGER;

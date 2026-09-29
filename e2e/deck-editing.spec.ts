@@ -19,6 +19,7 @@ import {
   onScreen,
   readNames,
   rested,
+  shows,
   standing,
   textOf,
   watch,
@@ -39,6 +40,9 @@ const STACKS = stacksOf(CATALOGUE, CAMPAIGN.collection, cardName);
 
 /** How many stacks a line holds in the deck editing mode. */
 const ACROSS = 4;
+
+/** How far sideways a press held on a stack moves, in design units: past the drag slack, and then some. */
+const SIDEWAYS = 40;
 
 /** How many of the ids are this one. */
 function copiesIn(ids: readonly CardId[], id: CardId): number {
@@ -150,9 +154,17 @@ async function readsAs(page: Page, campaign: Campaign): Promise<void> {
   }
 }
 
+/** The save waited for until it holds the campaign handed, and a drawn frame after. */
+async function saved(page: Page, campaign: Campaign): Promise<void> {
+  await expect
+    .poll(async () => (await heldSave(page).catch(() => undefined))?.campaign)
+    .toEqual(campaign);
+  await rested(page);
+}
+
 /**
  * A left click on the named object, the save waited for until it holds the campaign `move` makes of
- * the one handed, and a drawn frame after: the campaign the save now holds.
+ * the one handed: the campaign the save now holds.
  */
 async function pressed(
   page: Page,
@@ -163,11 +175,29 @@ async function pressed(
   const moved = move(campaign);
   const at = await onScreen(page, name);
   await page.mouse.click(at.x, at.y);
-  await expect
-    .poll(async () => (await heldSave(page).catch(() => undefined))?.campaign)
-    .toEqual(moved);
-  await rested(page);
+  await saved(page, moved);
   return moved;
+}
+
+/** A press held on the named object and moved in steps to the point handed, a drawn frame after, not let go. */
+async function heldTo(page: Page, name: string, to: { x: number; y: number }): Promise<void> {
+  const from = await onScreen(page, name);
+  await page.mouse.move(from.x, from.y);
+  await rested(page);
+  await page.mouse.down();
+  await page.mouse.move((from.x + to.x) / 2, (from.y + to.y) / 2, { steps: 5 });
+  await page.mouse.move(to.x, to.y, { steps: 5 });
+  await rested(page);
+}
+
+/** The first stack of the collection with a copy the first civilization's deck leaves free, or with none. */
+function stackWith(campaign: Campaign, free: boolean): CardId {
+  const { settle, cards } = civilizationIn(CATALOGUE, campaign, CIVILIZATION);
+  const found = STACKS.find(
+    ({ id, copies }) => copiesIn([...settle, ...cards], id) < copies === free,
+  );
+  if (found === undefined) throw new Error(`no stack has ${free ? 'a' : 'no'} copy free`);
+  return found.id;
 }
 
 test('on the collection screen the pointer on a civilization’s pile is the hand', async ({
@@ -379,6 +409,54 @@ test('in the deck editing mode a left click on a row removes a copy of its card 
   await collectionOpened(page);
   await pilePressed(page);
   await readsAs(page, campaign);
+
+  expect(problems).toEqual([]);
+});
+
+test('in the deck editing mode a stack with a copy free dragged onto the civilization’s side adds a copy and a row dragged onto the collection’s side removes one, each written to the save, a card let go on its own side slides back and changes nothing, and a stack whose copies the deck all holds carries nothing', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  await openDeck(page);
+  const civilizationSide = await onScreen(page, 'civilization-panel-frame');
+  const collectionSide = await onScreen(page, 'collection-panel-frame');
+  let campaign = CAMPAIGN;
+
+  const [{ id: removing }] = rowsOf(DECK.cards);
+  await heldTo(page, `deck-row-${removing}`, collectionSide);
+  expect(await cardOnFace(page, 'carried-card')).toBe(removing);
+  expect(await shows(page, 'landing-edge')).toBe(true);
+  await page.mouse.up();
+  campaign = removedFrom(CATALOGUE, campaign, CIVILIZATION, removing);
+  await saved(page, campaign);
+  await readsAs(page, campaign);
+  expect(await standing(page, 'carried-card')).toBe(false);
+
+  const adding = stackWith(campaign, true);
+  await heldTo(page, `collection-card-${adding}`, collectionSide);
+  expect(await cardOnFace(page, 'carried-card')).toBe(adding);
+  expect(await shows(page, 'landing-edge')).toBe(false);
+  await page.mouse.up();
+  await expect.poll(() => standing(page, 'carried-card')).toBe(false);
+  expect((await heldSave(page)).campaign).toEqual(campaign);
+  await readsAs(page, campaign);
+
+  await heldTo(page, `collection-card-${adding}`, civilizationSide);
+  expect(await cardOnFace(page, 'carried-card')).toBe(adding);
+  expect(await shows(page, 'landing-edge')).toBe(true);
+  await page.mouse.up();
+  campaign = addedTo(CATALOGUE, campaign, CIVILIZATION, adding);
+  await saved(page, campaign);
+  await readsAs(page, campaign);
+  expect(await standing(page, 'carried-card')).toBe(false);
+
+  const whole = `collection-card-${stackWith(campaign, false)}`;
+  const at = await onScreen(page, whole);
+  await heldTo(page, whole, { x: at.x + SIDEWAYS * at.unit, y: at.y });
+  expect(await standing(page, 'carried-card')).toBe(false);
+  await page.mouse.up();
+  await rested(page);
+  expect((await heldSave(page)).campaign).toEqual(campaign);
 
   expect(problems).toEqual([]);
 });

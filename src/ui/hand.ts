@@ -17,7 +17,7 @@ import {
   createKindBubble,
   type Name,
 } from './card-face';
-import { ended, STAGGER, stopMotion, travel, turnOver } from './card-motion';
+import { ended, SLIDE_HOME, STAGGER, stopMotion, travel, turnOver } from './card-motion';
 import {
   answersPress,
   DESIGN_WIDTH,
@@ -200,7 +200,7 @@ export function createHand(
     aimedNoMore(slot);
     slot.face.select(false);
     slot.hovered = false;
-    return settle(slot, 150);
+    return settle(slot, SLIDE_HOME);
   };
 
   /**
@@ -306,7 +306,7 @@ export function createHand(
     carrying.slot.face.select(false);
     const at = on.resting.at(pointer.x, pointer.y);
     if (carrying.grabbed.y - at.y <= PLAY_HEIGHT) {
-      settle(carrying.slot, 150);
+      settle(carrying.slot, SLIDE_HOME);
       return;
     }
     act(select(carrying.slot));

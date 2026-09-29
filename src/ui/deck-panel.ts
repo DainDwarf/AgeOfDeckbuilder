@@ -145,11 +145,13 @@ export function deckPanelOf(
     deck,
     counts,
     remove,
+    lands,
   }: {
     readonly city: CardId;
     readonly deck: DeckRows;
     readonly counts: { readonly cards: number; readonly settle: number };
     readonly remove: (card: CardId) => void;
+    readonly lands: Box;
   },
   {
     left,
@@ -185,7 +187,19 @@ export function deckPanelOf(
     press?: () => void,
   ): void => {
     parts.push(rowOf(scene, face, copies, box, radius, name));
-    held.push({ box, answers: answersOf(face, inspecting), press });
+    held.push({
+      box,
+      answers: answersOf(face, inspecting),
+      press,
+      carry:
+        press === undefined
+          ? undefined
+          : {
+              copy: () => rowOf(scene, face, copies, box, radius, 'carried-card'),
+              lands,
+              land: press,
+            },
+    });
   };
 
   const rows = (stacks: readonly CollectionStack[], from: number): number => {

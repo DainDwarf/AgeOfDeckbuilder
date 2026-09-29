@@ -35,7 +35,7 @@ import { css, LOOK, overPage } from './look';
 import { backRaisesMenu, resetMenu } from './menu-scene';
 import { ROOM, wearNavbar } from './navbar';
 import { overlayOf } from './overlay-scene';
-import { createPanel, type Filled, type Held, type Panel } from './panel';
+import { createCarrier, createPanel, type Filled, type Held, type Panel } from './panel';
 import { campaignHeld, keepCampaign } from './save-entry';
 import { createSmallCards } from './small-card';
 import { answersOf, type Inspecting, standLarge } from './stack';
@@ -106,9 +106,11 @@ function stackOf(
   reading: Reading,
   inspecting: Inspecting,
   press: (() => void) | undefined,
+  lands: Box | undefined,
 ): { root: Phaser.GameObjects.Container; held: Held; bottom: number } {
   const tone = reading.dimmed ? dimmed : (colour: number): number => colour;
   const height = heightOf(CARD_WIDTH);
+  const place = { x: left + CARD_WIDTH / 2, y: top + height };
   const under = Math.min(copies - 1, UNDER_MOST);
   const unders = Array.from({ length: under }, (_, at) => {
     const step = (under - at) * UNDER_STEP;
@@ -123,7 +125,7 @@ function stackOf(
   const shown = cardFaceAtStart(catalogue, id);
   const card = createCardFace(scene, shown, NO_REFUSAL, { width: CARD_WIDTH, tone });
   const face = card.root
-    .setPosition(left + CARD_WIDTH / 2, top + height)
+    .setPosition(place.x, place.y)
     .setName(`collection-card-${id}`)
     .setData('card', id);
   const count = addText(
@@ -142,6 +144,18 @@ function stackOf(
       box: { x: left, y: top, width: CARD_WIDTH, height },
       answers: answersOf(card, shown, inspecting),
       press,
+      carry:
+        press === undefined || lands === undefined
+          ? undefined
+          : {
+              copy: () =>
+                createCardFace(scene, shown, NO_REFUSAL, { width: CARD_WIDTH })
+                  .root.setPosition(place.x, place.y)
+                  .setName('carried-card')
+                  .setData('card', id),
+              lands,
+              land: press,
+            },
     },
     bottom: count.y + count.height,
   };
@@ -150,13 +164,13 @@ function stackOf(
 /**
  * The collection's stacks from the top handed, as many to a line as `across` says, the lines centred
  * between the room's left and the panel's right handed, each stack reading what `readingOf` says and
- * answering a left click where `pressOf` hands a press.
+ * answering a left click where `pressOf` hands a press, and a press held into `lands` where handed.
  */
 function collectionOf(
   scene: Phaser.Scene,
   catalogue: Catalogue,
   stacks: readonly CollectionStack[],
-  { top, right, across }: { top: number; right: number; across: number },
+  { top, right, across, lands }: { top: number; right: number; across: number; lands?: Box },
   readingOf: (stack: CollectionStack) => Reading,
   pressOf: (stack: CollectionStack) => (() => void) | undefined,
   inspecting: Inspecting,
@@ -178,6 +192,7 @@ function collectionOf(
         readingOf(stack),
         inspecting,
         pressOf(stack),
+        lands,
       );
       parts.push(drawn.root);
       held.push(drawn.held);
@@ -290,12 +305,14 @@ export class CollectionScreen extends Phaser.Scene {
       inspecting.small.follow();
       tooltip.follow();
     };
+    const carrier = createCarrier(this, panels);
 
     let laid: { readonly head: Phaser.GameObjects.Container; readonly panels: Panel[] } | undefined;
 
     /** The screen laid in the mode, its panels at the offsets handed, in order, or at their tops. */
     const lay = (mode: Mode, offsets: readonly number[] = []): void => {
       inspecting.small.down();
+      carrier.down();
       if (laid !== undefined) {
         for (const panel of laid.panels) panel.down();
         laid.head.destroy();
@@ -347,6 +364,7 @@ export class CollectionScreen extends Phaser.Scene {
                   ),
                 },
                 follow,
+                carrier,
                 leftOffset,
               ),
               createPanel(
@@ -367,6 +385,7 @@ export class CollectionScreen extends Phaser.Scene {
                   ),
                 },
                 follow,
+                carrier,
                 rightOffset,
               ),
             ],
@@ -425,6 +444,8 @@ export class CollectionScreen extends Phaser.Scene {
             edit((held) => removedFrom(CATALOGUE, held, civilization, card));
           };
           const owned = campaign.civilizations[civilization];
+          const collectionSide: Box = { ...ROOM, width: divide - ROOM.x };
+          const civilizationSide: Box = { ...ROOM, x: divide, width: DESIGN_WIDTH - divide };
           laid = {
             head,
             panels: [
@@ -438,13 +459,14 @@ export class CollectionScreen extends Phaser.Scene {
                     this,
                     CATALOGUE,
                     stacks,
-                    { top, right: divide, across },
+                    { top, right: divide, across, lands: civilizationSide },
                     reading,
                     add,
                     inspecting,
                   ),
                 },
                 follow,
+                carrier,
                 leftOffset,
               ),
               createPanel(
@@ -456,7 +478,13 @@ export class CollectionScreen extends Phaser.Scene {
                   ...deckPanelOf(
                     this,
                     CATALOGUE,
-                    { city: owned.city.card.id, deck, counts: countsOf(owned), remove },
+                    {
+                      city: owned.city.card.id,
+                      deck,
+                      counts: countsOf(owned),
+                      remove,
+                      lands: collectionSide,
+                    },
                     {
                       left: frame.x + MARGIN,
                       right: DESIGN_WIDTH - MARGIN,
@@ -467,6 +495,7 @@ export class CollectionScreen extends Phaser.Scene {
                   ),
                 },
                 follow,
+                carrier,
                 rightOffset,
               ),
             ],
