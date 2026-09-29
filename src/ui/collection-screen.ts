@@ -295,6 +295,7 @@ export class CollectionScreen extends Phaser.Scene {
 
     /** The screen laid in the mode, its panels at the offsets handed, in order, or at their tops. */
     const lay = (mode: Mode, offsets: readonly number[] = []): void => {
+      inspecting.small.down();
       if (laid !== undefined) {
         for (const panel of laid.panels) panel.down();
         laid.head.destroy();
