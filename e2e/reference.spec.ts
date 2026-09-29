@@ -41,7 +41,7 @@ function namedIn(entry: string): Reference[] {
 
 /**
  * The first answer the deal standing offers whose rules entry names a card: the answer, where the
- * deal window lays it, the card it names, and where that name stands among the entry's names.
+ * deal window lays it out, the card it names, and where that name stands among the entry's names.
  */
 function namingAnswer(dealt: Chronicle): {
   answer: string;
