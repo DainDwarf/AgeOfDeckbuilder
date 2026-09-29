@@ -22,7 +22,7 @@ import {
 } from './fixtures';
 import { RESOURCES } from './resources';
 import { type ChronicleSave, keptAfter, readSave, writeSave } from './save';
-import { laid } from './schedule';
+import { addedToDrawPileTop } from './schedule';
 import type { Chronicle, CitySection, Counters } from './state';
 import { FIRST_UNIT_NUMBER, LEAST_STATS, type Unit } from './units';
 
@@ -118,7 +118,7 @@ test('a chronicle carrying a card no catalogue holds is refused its save', () =>
 
 test('a card in a save carries the counters its content declares, no fewer and no more', () => {
   const save = chronicleSaved();
-  const chronicle = laid(CATALOGUE, save.chronicle, 'PH_Frost').chronicle;
+  const chronicle = addedToDrawPileTop(CATALOGUE, save.chronicle, 'PH_Frost').chronicle;
   const [frost, ...rest] = chronicle.drawPile;
   const carrying = (counters: Counters): string =>
     tampered({ ...save, chronicle }, (written) => ({

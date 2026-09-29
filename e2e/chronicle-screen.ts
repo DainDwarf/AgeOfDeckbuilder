@@ -820,7 +820,7 @@ export function beforeTheFall(): Chronicle {
   });
 }
 
-/** The card the capstone's landing lays, and the building its play builds. */
+/** The card the capstone's landing adds, and the building its play builds. */
 export const SHELTER = 'shelter';
 
 /**

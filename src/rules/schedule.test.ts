@@ -273,7 +273,7 @@ test('a raid enters one warrior, and one more for every ten turns', () => {
   for (let due = 20; due <= 29; due++) expect([...new Set(raiders(due))]).toEqual([3]);
 });
 
-test('a famine taken on any turn lays its hazard and leaves the food stock as it stood', () => {
+test('a famine taken on any turn adds its hazard and leaves the food stock as it stood', () => {
   for (const due of [3, 14, 20]) {
     const landed = endedTurn(awaiting(due), 'PH_Famine');
 
@@ -282,7 +282,7 @@ test('a famine taken on any turn lays its hazard and leaves the food stock as it
   }
 });
 
-test('the famine lays its hazard on top of the draw pile, and leaves the city as it stood', () => {
+test('the famine adds its hazard to the top of the draw pile, and leaves the city as it stood', () => {
   const waiting = awaiting(15, { drawPile: fullDraw() });
   const after = endedTurn(waiting, 'PH_Famine');
 
@@ -427,10 +427,10 @@ test('an answer taken is one answer group over the deal taken, its cost as one s
   expect(taken.chronicle.deals).toEqual([]);
   expect(taken.chronicle.resources).toEqual(rich.resources);
   expect(paid.chronicle.resources.production).toBe(rich.resources.production - EXPLOSION);
-  expect(enduring.map(({ name }) => name)).toEqual(['taken', 'laid']);
+  expect(enduring.map(({ name }) => name)).toEqual(['taken', 'added']);
 });
 
-test('a reward taken is one reward group over the deal taken and the card discarded', () => {
+test('a reward taken is one reward group over the deal taken and the card added', () => {
   const camp = { q: 4, r: 0 };
   const dealt = outcome(
     apply(
@@ -445,16 +445,16 @@ test('a reward taken is one reward group over the deal taken and the card discar
     ),
   );
 
-  const [taken, discarded, ...rest] = heldBy(
+  const [taken, added, ...rest] = heldBy(
     apply(CATALOGUE, dealt, { type: 'take', at: 0 }),
     'reward',
   );
 
-  expect([taken.name, discarded.name]).toEqual(['taken', 'discarded']);
+  expect([taken.name, added.name]).toEqual(['taken', 'added']);
   expect(rest).toEqual([]);
   expect(taken.chronicle.deals).toEqual([]);
   expect(taken.chronicle.discardPile).toEqual([]);
-  expect(idsOf(discarded.chronicle.discardPile)).toEqual([CAMP.rewards[0]]);
+  expect(idsOf(added.chronicle.discardPile)).toEqual([CAMP.rewards[0]]);
 });
 
 test('the same seed is due on the same turns whatever answers are taken, though what they let be dealt differs', () => {
@@ -1295,7 +1295,7 @@ test('a camp captured the turn before the capstone’s deals its rewards, and th
   expect(stagedBy(dealt, { type: 'take', at: 0 })).toEqual([
     'reward',
     'taken',
-    'discarded',
+    'added',
     'turn',
     'turn',
     'capstone-landing',
@@ -1327,7 +1327,7 @@ test('a camp captured on the siege’s last turn holds the victory back until it
   expect(stagedBy(dealt, { type: 'take', at: 0 })).toEqual([
     'reward',
     'taken',
-    'discarded',
+    'added',
     'turn',
     'turn',
     'ended',

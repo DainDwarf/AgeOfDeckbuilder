@@ -256,8 +256,8 @@ test('a pile change carries the places in the pile its cards came out of, and a 
   );
 
   expect(
-    changeNamed(heldBy(apply(CATALOGUE, dealt, { type: 'take', at: 0 }), 'reward'), 'discarded'),
-  ).toMatchObject({ places: [] });
+    changeNamed(heldBy(apply(CATALOGUE, dealt, { type: 'take', at: 0 }), 'reward'), 'added'),
+  ).not.toHaveProperty('places');
 
   const recalling = cityOf(['urban'], {
     hand: ['PH_Harvest', 'PH_Recall'],

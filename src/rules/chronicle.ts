@@ -405,7 +405,7 @@ function chartedOn(stage: Change): TileCoords | undefined {
     case 'stock':
     case 'population':
     case 'assigned':
-    case 'laid':
+    case 'added':
     case 'drawn':
     case 'discarded':
     case 'recalled':

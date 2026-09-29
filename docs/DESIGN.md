@@ -22,7 +22,7 @@ A **chronicle** is one city's story, told once — the roguelite's unit of play,
 - Five core resources: **food, production, military, money, science**. 🔧 Their jobs: food grows the population; production builds buildings and units and shapes tiles; military pays for military units, instants and fortifications; money trades for other goods and accumulates; science pays for manipulating the cards — drawing, discarding and the like. **Culture pushes the border out**, and the tiles inside it are the city's; population is the city's inhabitants, assigned to its tiles.
 - **Deterministic.** Every random draw comes from a seeded generator carried in the state, so a chronicle replays from its seed.
 - A chronicle lasts **30–60 minutes**, shorter in the earlier ages where the verbs are fewer. 🔧
-- **The map is the draft.** 🔧 What the map holds can yield a card that joins the deck for this chronicle only: a camp's capture deals its rewards. The deck built in the meta is who you are; the map is what you found.
+- **The map is the draft.** 🔧 What the map holds can yield a card added to the deck for this chronicle only: a camp's capture deals its rewards. The deck built in the meta is who you are; the map is what you found.
 
 ## Launching a chronicle ✅
 

@@ -146,7 +146,7 @@ export function createPiles(
       case 'stock':
       case 'population':
       case 'assigned':
-      case 'laid':
+      case 'added':
       case 'drawn':
       case 'recalled':
       case 'left':

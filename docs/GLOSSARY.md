@@ -70,6 +70,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **unaffordable** | What the city cannot pay for: its cost exceeds the stocks. | unpayable, short, lacking, too expensive |
 | **discard** | To send a card from the hand to the discard pile. | throw away, dump |
 | **recall** | To put a card from the discard pile into the hand; what a recall instant does. | retrieve, recover, reclaim, salvage |
+| **add** | To put a new card on a pile or into the collection. | lay (for a card), put (for a card on a pile), gain (for a card), give (for a card), insert, shuffle in |
 | **single use** | A keyword on a card: played, it leaves the chronicle instead of going to the discard pile. | one-use, gone once played, consumed, exhaust, exile |
 | **counter** | A named number a card carries in a chronicle, declared by its content and set when the card is made. | token, charge, variable |
 | **draw pile** | The cards not yet drawn this cycle; refilled from the discard pile when empty. | library |
@@ -83,7 +84,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **charted** | A tile that has been in sight, in sight now or in fog. | explored, revealed, discovered, known, seen (of a tile's state) |
 | **uncharted** | A tile never yet in sight. | unexplored, unrevealed, black, hidden |
 | **instant** | A card with an immediate effect: on the city, on a tile, or one thing with one unit. | action (for a card), spell, effect card |
-| **hazard** | A card no deck holds: an event brings it into a chronicle, and it strikes while held. | penalty, curse, drawback, upkeep, affliction, bane |
+| **hazard** | A card no deck holds: an event adds it to a chronicle's piles, and it strikes while held. | penalty, curse, drawback, upkeep, affliction, bane |
 | **strike** | What a hazard does to the chronicle at the end of a turn it is still in the hand. | bite, trigger, proc, go off |
 | **worker** | A non-fighting unit that cards are played through to change tiles: build, terraform, place an improvement. | builder, engineer, labourer |
 | **population** | The city's inhabitants: assigned to tiles for income, turned into units by unit cards. | inhabitants, citizens, workforce, pops |

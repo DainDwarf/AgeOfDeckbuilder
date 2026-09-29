@@ -18,7 +18,6 @@ import { buildingKind, entryOf, featureKind, refuse } from './map-kinds';
 import { nextRng, pickWeighted, type Rng } from './rng';
 import {
   change,
-  changeFrom,
   changeOn,
   followed,
   type Group,
@@ -187,14 +186,12 @@ export function answered(catalogue: Catalogue, chronicle: Chronicle, answer: Ans
 }
 
 /**
- * A reward taken off the chronicle the deal is popped from: it is made and laid in the discard pile;
- * a card the catalogue does not hold is refused.
+ * A reward taken off the chronicle the deal is popped from: it is made and added to the discard
+ * pile; a card the catalogue does not hold is refused.
  */
 export function rewarded(catalogue: Catalogue, chronicle: Chronicle, card: CardId): Landed {
   const made = cardMade(catalogue, card);
-  return landedAs(
-    changeFrom('discarded', [], { ...chronicle, discardPile: [...chronicle.discardPile, made] }),
-  );
+  return landedAs(change('added', { ...chronicle, discardPile: [...chronicle.discardPile, made] }));
 }
 
 /**
@@ -375,17 +372,17 @@ export function featureDealt(
 }
 
 /**
- * A card made with the counters set and laid on top of the draw pile; a card the catalogue does not
- * hold, and a counter set that it does not declare, are refused.
+ * A card made with the counters set and added to the top of the draw pile; a card the catalogue
+ * does not hold, and a counter set that it does not declare, are refused.
  */
-export function laid(
+export function addedToDrawPileTop(
   catalogue: Catalogue,
   chronicle: Chronicle,
   card: CardId,
   set: Counters = {},
 ): Landed {
   const made = cardMade(catalogue, card, set);
-  return landedAs(change('laid', { ...chronicle, drawPile: [made, ...chronicle.drawPile] }));
+  return landedAs(change('added', { ...chronicle, drawPile: [made, ...chronicle.drawPile] }));
 }
 
 /**

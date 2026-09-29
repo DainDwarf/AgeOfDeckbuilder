@@ -562,7 +562,7 @@ export function createHand(
       case 'stock':
       case 'population':
       case 'assigned':
-      case 'laid':
+      case 'added':
       case 'recalled':
       case 'shuffled':
       case 'left':

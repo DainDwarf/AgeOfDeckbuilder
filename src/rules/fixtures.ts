@@ -60,6 +60,7 @@ import type { Resources } from './resources';
 import { seedRng } from './rng';
 import type { ChronicleSave } from './save';
 import {
+  addedToDrawPileTop,
   burned,
   campPlaceable,
   campsPlaced,
@@ -68,7 +69,6 @@ import {
   featureDealt,
   fireRead,
   fireStartable,
-  laid,
   offered,
   raided,
   reinforced,
@@ -114,7 +114,7 @@ export const DROUGHT = 4;
 /** What the counter of the fixture's frost starts at: the food it strikes off the stock. */
 export const FROST = 2;
 
-/** The counter the fixture's freeze sets on the frost it lays: the food that frost strikes off. */
+/** The counter the fixture's freeze sets on the frost it adds: the food that frost strikes off. */
 export const FREEZE = 5;
 
 /** The production the fixture's explosion costs: the one answer of the fixture whose flat cost asks a stock. */
@@ -168,7 +168,7 @@ const EVENTS: Catalogue['events'] = {
       PH_Famine: {
         cost: {},
         reads: () => ({}),
-        lands: (catalogue, chronicle) => laid(catalogue, chronicle, 'PH_Hunger'),
+        lands: (catalogue, chronicle) => addedToDrawPileTop(catalogue, chronicle, 'PH_Hunger'),
       },
     },
   },
@@ -177,7 +177,7 @@ const EVENTS: Catalogue['events'] = {
       PH_Endure: {
         cost: { food: 0 },
         reads: () => ({}),
-        lands: (catalogue, chronicle) => laid(catalogue, chronicle, 'PH_Hunger'),
+        lands: (catalogue, chronicle) => addedToDrawPileTop(catalogue, chronicle, 'PH_Hunger'),
       },
       PH_Explosion: {
         cost: { production: EXPLOSION },
@@ -289,17 +289,19 @@ const EVENTS: Catalogue['events'] = {
       PH_Chill: {
         cost: {},
         reads: () => ({}),
-        lands: (catalogue, chronicle) => laid(catalogue, chronicle, 'PH_Frost'),
+        lands: (catalogue, chronicle) => addedToDrawPileTop(catalogue, chronicle, 'PH_Frost'),
       },
       PH_Freeze: {
         cost: {},
         reads: () => ({ amount: FREEZE, cards: 1 }),
-        lands: (catalogue, chronicle) => laid(catalogue, chronicle, 'PH_Frost', { amount: FREEZE }),
+        lands: (catalogue, chronicle) =>
+          addedToDrawPileTop(catalogue, chronicle, 'PH_Frost', { amount: FREEZE }),
       },
       PH_Thaw: {
         cost: {},
         reads: () => ({}),
-        lands: (catalogue, chronicle) => laid(catalogue, chronicle, 'PH_Frost', { thaw: 1 }),
+        lands: (catalogue, chronicle) =>
+          addedToDrawPileTop(catalogue, chronicle, 'PH_Frost', { thaw: 1 }),
       },
     },
   },

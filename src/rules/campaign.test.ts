@@ -49,7 +49,7 @@ test('a civilization the campaign does not hold is launched on by no chronicle',
   ).toThrow('fixture: the campaign holds no civilization named PH_Unheld');
 });
 
-test('an ended chronicle pays into the campaign each achievement it reached, in its order: the technology learned, the influence added, and the cards the technology unlocks entering the collection as new cards in no section of the deck', () => {
+test('an ended chronicle pays into the campaign each achievement it reached, in its order: the technology learned, the influence added, and the cards the technology unlocks added to the collection as new cards in no section of the deck', () => {
   const won = hoardedVictory();
   const opened = newCampaign(CATALOGUE, CIVILIZATION_ID);
   const hoard = achievementOf(CATALOGUE, AGE, HOARD);

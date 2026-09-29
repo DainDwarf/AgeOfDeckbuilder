@@ -1517,7 +1517,7 @@ export function createMapView(
       case 'stock':
       case 'population':
       case 'assigned':
-      case 'laid':
+      case 'added':
       case 'drawn':
       case 'discarded':
       case 'recalled':

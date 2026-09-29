@@ -127,7 +127,7 @@ test('a unit of the player’s standing on a camp when the turn ends captures it
   expect(taken.discardPile).toEqual([]);
 });
 
-test('a capture deals the camp’s rewards and stops the end of turn before the tick, and the take resumes it: the one taken is laid in the discard pile, the other gone', () => {
+test('a capture deals the camp’s rewards and stops the end of turn before the tick, and the take resumes it: the one taken is added to the discard pile, the other gone', () => {
   const camp = { q: 4, r: 0 };
   const besieging = cityOf(['urban'], {
     ...NO_GROWTH,
@@ -144,7 +144,7 @@ test('a capture deals the camp’s rewards and stops the end of turn before the 
   expect(stagedBy(dealt, { type: 'take', at: 1 })).toEqual([
     'reward',
     'taken',
-    'discarded',
+    'added',
     'turn',
     'turn',
     'drawn',
@@ -631,12 +631,12 @@ test('two camps captured the turn before an event is due deal two deals of rewar
   for (const camp of camps) expect(buildingAt(dealt, camp)).toBeUndefined();
   expect(dealt.deals).toEqual([rewards, rewards]);
   expect(dealt.turn).toBe(besieging.turn);
-  expect(stagedBy(dealt, { type: 'take', at: 0 })).toEqual(['reward', 'taken', 'discarded']);
+  expect(stagedBy(dealt, { type: 'take', at: 0 })).toEqual(['reward', 'taken', 'added']);
   expect(first.turn).toBe(besieging.turn);
   expect(stagedBy(first, { type: 'take', at: 1 })).toEqual([
     'reward',
     'taken',
-    'discarded',
+    'added',
     'turn',
     'turn',
     'deal',

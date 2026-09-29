@@ -4,7 +4,7 @@ import type { CardId, Chronicle, DefeatCause } from './state';
 /**
  * One row of the chronicle moved, and the chronicle it leaves. `stock` carries the tile if one
  * yielded it; `discarded`, `recalled` and `left` carry where their cards came out of, indices into
- * the pile as it stood before — the hand, the discard pile for `recalled` — and none out of no pile.
+ * the pile as it stood before — the hand, the discard pile for `recalled`.
  */
 export type Change = { readonly kind: 'change'; readonly chronicle: Chronicle } & (
   | { readonly name: PlainChange }
@@ -37,7 +37,7 @@ export type Stage = Change | Group;
 
 /** The changes that carry nothing but the chronicle they leave. */
 type PlainChange =
-  | 'laid'
+  | 'added'
   | 'population'
   | 'drawn'
   | 'shuffled'

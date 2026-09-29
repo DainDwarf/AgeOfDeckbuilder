@@ -1557,7 +1557,7 @@ test('a hazard’s strike takes what it names off the stock, and a strike that o
   expect(spared.resources.food).toBe(1 + yielded);
 });
 
-/** Turn 2 of a city dealt the cold, `answer` taken: the frost it laid drawn into the hand. */
+/** Turn 2 of a city dealt the cold, `answer` taken: the frost it added drawn into the hand. */
 function chilled(answer: string): Chronicle {
   const city = cityOf(['urban', 'plain'], {
     ...NO_GROWTH,
@@ -1567,7 +1567,7 @@ function chilled(answer: string): Chronicle {
   return endedTurn(city, answer);
 }
 
-test('a card laid with its counter set carries the value set, and its strike takes that value', () => {
+test('a card added with its counter set carries the value set, and its strike takes that value', () => {
   const frozen = chilled('PH_Freeze');
   const [strike] = strikesOf(frozen);
 
@@ -1575,7 +1575,7 @@ test('a card laid with its counter set carries the value set, and its strike tak
   expect(strike.left.resources.food).toBe(frozen.resources.food - FREEZE);
 });
 
-test('a card laid with no counter set carries the value its content starts it at, and its strike takes that value', () => {
+test('a card added with no counter set carries the value its content starts it at, and its strike takes that value', () => {
   const chill = chilled('PH_Chill');
   const [strike] = strikesOf(chill);
 
@@ -1583,7 +1583,7 @@ test('a card laid with no counter set carries the value its content starts it at
   expect(strike.left.resources.food).toBe(chill.resources.food - FROST);
 });
 
-test('a card laid with a counter its content does not declare is refused', () => {
+test('a card added with a counter its content does not declare is refused', () => {
   expect(() => chilled('PH_Thaw')).toThrow('fixture: the card PH_Frost declares no counter thaw');
 });
 

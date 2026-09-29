@@ -22,6 +22,7 @@ import { enteredAround } from '../rules/enemies';
 import { MOVE_POINT } from '../rules/map';
 import { buildingKind, improvementKind } from '../rules/map-kinds';
 import {
+  addedToDrawPileTop,
   burned,
   campPlaceable,
   campsPlaced,
@@ -30,7 +31,6 @@ import {
   featureDealt,
   fireRead,
   fireStartable,
-  laid,
   raided,
   tileCharted,
 } from '../rules/schedule';
@@ -191,7 +191,9 @@ const TABLES: Tables = {
           cost: {},
           reads: (_catalogue, chronicle) => ({ food: hungerFood(chronicle.turn) }),
           lands: (catalogue, chronicle) =>
-            laid(catalogue, chronicle, 'hunger', { food: hungerFood(chronicle.turn) }),
+            addedToDrawPileTop(catalogue, chronicle, 'hunger', {
+              food: hungerFood(chronicle.turn),
+            }),
         },
         ration: {
           cost: {},
@@ -285,7 +287,7 @@ const TABLES: Tables = {
   },
   capstones: {
     'first-shelter': {
-      lands: (catalogue, chronicle) => laid(catalogue, chronicle, 'shelter'),
+      lands: (catalogue, chronicle) => addedToDrawPileTop(catalogue, chronicle, 'shelter'),
       passes: (_catalogue, chronicle) =>
         chronicle.tiles.some((tile) => tile.building === 'shelter'),
     },

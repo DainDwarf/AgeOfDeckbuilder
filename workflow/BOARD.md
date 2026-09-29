@@ -12,5 +12,3 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 - **The headless simulator** — a consumer of the rules that runs only when asked and reports numbers, not diagnoses, tuned across the two ages; the reachability cache and the end of turn's cost per `apply` are looked at when it is made.
 
 ## Lines
-
-- **Add is the verb for a new card** — the glossary holds the row **add**; no design page, and under `src/` and `e2e/` no identifier, comment or test title, says lay of a card, or says a card enters, joins or is brought into a chronicle, a deck or the collection; the rules' change is `added`, raised for a card an answer or the capstone adds to the draw pile and for a reward added to the discard pile alike; the two entries that said Put say Add; the screen plays as it did; `e2e/capstone.spec.ts` proves it. Doc-impact: `docs/GLOSSARY.md`, `docs/CHRONICLE.md`, `docs/DESIGN.md`, `docs/CHRONICLE-SCREEN.md`, `docs/INTERFACE.md`, `docs/META.md`, `docs/ages/NOMADIC.md`. [board/add-is-the-verb-for-a-new-card.md](board/add-is-the-verb-for-a-new-card.md)

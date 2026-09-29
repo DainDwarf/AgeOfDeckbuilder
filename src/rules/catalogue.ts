@@ -189,8 +189,8 @@ export type Achievement = {
 };
 
 /**
- * A technology: the technologies it needs, and what it unlocks — cards, each with the copies that
- * enter the collection, and at most one age.
+ * A technology: the technologies it needs, and what it unlocks — cards, each with the copies added
+ * to the collection, and at most one age.
  */
 export type Technology = {
   readonly needs: readonly string[];
