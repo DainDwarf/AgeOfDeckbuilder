@@ -12,9 +12,12 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-The eight lines of the collection screen share one mockup, [board/collection-screen-mockup.html](board/collection-screen-mockup.html), which holds the three modes and names the artifact it is published to at its head: a line's intake refines its own mode in it, and the last line's ship deletes it.
+- **A card knows its age** — the catalogue records the age that brought each card as it is merged, no card's content changing, and the rules answer a card's age.
 
-- **The collection screen shows the collection** — the navbar's Collection button and the screen in its collection mode, read only: every card owned as a stack with its copies owned, and the civilizations' piles on the right.
+The nine lines of the collection screen share one mockup, [board/collection-screen-mockup.html](board/collection-screen-mockup.html), which holds the three modes and names the artifact it is published to at its head: a line's intake refines its own mode in it, and the last line's ship deletes it.
+
+- **The collection screen shows the collection** — the navbar's Collection button opens the collection screen on a new campaign: every card owned stands as one stack reading its copies, six to a line, by age, then kind, then name; each civilization's pile stands on the right over its two counts, as it now does on the launch screen; a right click shows a card large; `e2e/collection.spec.ts` passes. Doc-impact: `docs/META-SCREENS.md`, `docs/INTERFACE.md`. [board/the-collection-screen-shows-the-collection.md](board/the-collection-screen-shows-the-collection.md)
+- **The collection scrolls** — a panel of the collection screen holding more than its room shows is scrolled by the wheel under the pointer and dragged by a press held on it.
 - **A civilization's deck opens beside the collection** — a press on a pile grows the right panel into the deck editing mode, read only: the settle section and the deck as rows, the city section's card at the head, the copies this deck holds read on the collection, and the way back.
 - **A copy is added to a deck and removed by a press** — the campaign's two moves in the rules, a copy shared by every deck it is added to, a settle card going to the settle section, and the save written at each.
 - **A copy is dragged across** — a card of the collection dragged onto the civilization's panel is added, and a row dragged onto the collection is removed.
@@ -22,3 +25,4 @@ The eight lines of the collection screen share one mockup, [board/collection-scr
 - **A copy is bought for influence** — the campaign's move in the rules and the button that buys, which answers nothing while the influence is short of the price.
 - **The civilization stands alone** — the civilization mode, read only: the right panel over the whole room, the settle section and the deck as card faces, and the way in and out.
 - **A copy is added or bought from the deck** — in the civilization mode a copy is removed and added from the deck itself, the add taking a copy owned where one is free and buying one where none is; its ship deletes the mockup.
+- **A right click on a pile inspects the deck** — on the collection screen and on the launch screen a right click on a civilization's pile shows its whole deck, not the city section's card.

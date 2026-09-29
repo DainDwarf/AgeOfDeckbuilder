@@ -55,14 +55,16 @@ h1 { font-size: 22px; font-weight: 600; margin: 0; text-wrap: balance; }
 .room { position: absolute; left: 240px; top: 48px; width: 1040px; height: 672px; color: var(--g-pale); display: flex; overflow: hidden; }
 .side { height: 100%; overflow: hidden; position: relative; }
 .side.left { flex: 1; min-width: 0; }
-.side.right { flex: none; width: 240px; border-left: 1px solid var(--g-row-edge); transition: width .22s ease; }
+.side.right { flex: none; width: var(--panel, 160px); border-left: 1px solid var(--g-row-edge); transition: width .22s ease; }
 .room.editing .side.right { width: 400px; }
 .room.civilization .side.right { width: 1040px; border-left-color: transparent; }
 @media (prefers-reduced-motion: reduce) { .side.right { transition: none; } }
 .side.dropping::after { content: ""; position: absolute; inset: 6px; border: 2px dashed var(--g-pale); pointer-events: none; }
 .pane { height: 100%; padding: 24px 24px 0; display: flex; flex-direction: column; gap: 10px; }
 .left .pane { min-width: 640px; }
+.room.collection .right .pane { padding-inline: 12px; }
 .head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; white-space: nowrap; }
+.head.mid { justify-content: center; }
 .word { font-size: 18px; font-weight: 700; }
 .counts { font-size: 14px; color: var(--g-counts); }
 .tools { display: flex; justify-content: space-between; gap: 8px; }
@@ -70,6 +72,7 @@ h1 { font-size: 22px; font-weight: 600; margin: 0; text-wrap: balance; }
 .section { font-size: 13px; letter-spacing: .1em; text-transform: uppercase; color: var(--g-counts); margin-top: 6px; }
 .scroll { flex: 1; overflow-y: auto; min-height: 0; padding: 6px 12px 24px 0; scrollbar-width: thin; scrollbar-color: var(--g-greyed) transparent; }
 .grid { display: grid; grid-template-columns: repeat(auto-fill, calc(var(--w) + 12px)); gap: 18px 10px; }
+.left .grid { justify-content: center; }
 .cell { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; width: calc(var(--w) + 12px); }
 .stack { position: relative; width: calc(var(--w) + 12px); height: calc(var(--w) * 1.4 + 12px); }
 .stack[data-drag], .pile, .row[data-drag] { cursor: pointer; }
@@ -95,9 +98,9 @@ h1 { font-size: 22px; font-weight: 600; margin: 0; text-wrap: balance; }
 .buy .diamond, .step .diamond { background: var(--g-ink); }
 .step { min-width: 24px; justify-content: center; padding: 0 6px; font-size: 15px; }
 .stepper { display: flex; align-items: center; gap: 6px; }
-.piles { display: flex; flex-direction: column; gap: 22px; }
-.pile { display: flex; flex-direction: column; gap: 4px; }
-.pile .name { font-size: 16px; font-weight: 700; margin-top: 4px; }
+.piles { display: flex; flex-direction: column; gap: 22px; align-items: center; }
+.pile { display: flex; flex-direction: column; gap: 4px; width: 112px; }
+.pile .counts { width: 100px; text-align: center; white-space: pre-line; line-height: 1.35; margin-top: 6px; }
 .rows { display: flex; flex-direction: column; gap: 4px; }
 .row { display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 10px; background: var(--g-row); border: 1px solid var(--g-row-edge); font-size: 14px; white-space: nowrap; }
 .row.fixed { border-style: dashed; border-color: var(--g-greyed); background: transparent; }
@@ -123,6 +126,8 @@ h1 { font-size: 22px; font-weight: 600; margin: 0; text-wrap: balance; }
       <select id="civs"><option value="1">One, as in v0.0.5</option><option value="3">Three, as from v0.0.7</option></select></div>
     <div class="control"><label for="width">Card width <output id="widthOut">110</output></label>
       <input id="width" type="range" min="90" max="130" step="10" value="110"></div>
+    <div class="control"><label for="panel">Civilizations panel <output id="panelOut">160</output></label>
+      <input id="panel" type="range" min="150" max="200" step="10" value="160"></div>
     <div class="control"><label for="influence">Influence to open with</label>
       <input id="influence" type="number" min="0" max="999" value="40" style="width:90px"></div>
     <button class="reset" id="reset" type="button">Start over</button>
@@ -239,29 +244,35 @@ h1 { font-size: 22px; font-weight: 600; margin: 0; text-wrap: balance; }
     return 'Cards: ' + cards + ' · Settle cards: ' + settle;
   }
 
+  function pileTotals(deck) {
+    var cards = 0, settle = 0;
+    state.cards.forEach(function (c) {
+      var n = deck[c.id] || 0;
+      if (c.kind === 'settle') settle += n; else cards += n;
+    });
+    return 'Cards: ' + cards + '\n' + 'Settle: ' + settle;
+  }
+
   function left(width) {
     var editing = state.mode === 'editing';
-    var copies = 0;
     var cells = state.cards.map(function (c) {
-      copies += c.owned;
       var free = c.owned - inDeck(c);
       var reads = editing ? 'In deck <b>' + inDeck(c) + '/' + c.owned + '</b>' : 'Copies <b>' + c.owned + '</b>';
       return '<div class="cell" style="--w:' + width + 'px">' +
         stack(c, width, c.owned, editing && free > 0 ? 'in' : '', editing && free === 0) +
         '<div class="under-line"><span>' + reads + '</span>' + buy(c.id) + '</div></div>';
     }).join('');
-    return '<div class="pane"><div class="head"><span class="word">Collection</span>' +
-      '<span class="counts">' + state.cards.length + ' cards · ' + copies + ' copies</span></div>' +
+    return '<div class="pane"><div class="head mid"><span class="word">Collection</span></div>' +
       '<div class="scroll"><div class="grid" style="--w:' + width + 'px">' + cells + '</div></div></div>';
   }
 
   function piles() {
-    return '<div class="pane"><div class="head"><span class="word">Civilizations</span></div><div class="scroll"><div class="piles">' +
+    return '<div class="pane"><div class="head mid"><span class="word">Civilizations</span></div><div class="scroll"><div class="piles">' +
       state.civs.map(function (c, at) {
         var backs = '';
         for (var i = 3; i > 0; i--) backs += '<div class="under back" style="left:' + i * 4 + 'px;top:' + i * 4 + 'px"></div>';
         return '<div class="pile" data-act="edit" data-id="' + at + '"><div class="stack" style="--w:100px">' + backs + face(CITY, 100) + '</div>' +
-          '<span class="name">' + c.name + '</span><span class="counts">' + totals(c.deck) + '</span></div>';
+          '<span class="counts">' + pileTotals(c.deck) + '</span></div>';
       }).join('') + '</div></div></div>';
   }
 
@@ -328,6 +339,8 @@ h1 { font-size: 22px; font-weight: 600; margin: 0; text-wrap: balance; }
       keep[side] = s ? s.scrollTop : 0;
     });
     el('room').className = 'room ' + state.mode;
+    el('panelOut').textContent = el('panel').value;
+    el('room').style.setProperty('--panel', el('panel').value + 'px');
     el('held').textContent = state.influence;
     el('left').innerHTML = left(width);
     el('right').innerHTML = state.mode === 'collection' ? piles() : state.mode === 'editing' ? editing() : civilization(width);
@@ -410,6 +423,7 @@ h1 { font-size: 22px; font-weight: 600; margin: 0; text-wrap: balance; }
   window.addEventListener('pointercancel', function (event) { release(event, false); });
 
   el('width').addEventListener('input', render);
+  el('panel').addEventListener('input', render);
   el('mode').addEventListener('change', function () { enter(el('mode').value); render(); });
   ['size', 'civs', 'influence'].forEach(function (id) { el(id).addEventListener('change', function () { open(); render(); }); });
   el('reset').addEventListener('click', function () { open(); render(); });
