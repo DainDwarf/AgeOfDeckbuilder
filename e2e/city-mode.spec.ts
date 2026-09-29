@@ -2,11 +2,12 @@ import { expect, type Page, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
 import { gained } from '../src/rules/cards';
 import { apply, type Command, outcome } from '../src/rules/chronicle';
-import { claimable, tileCost } from '../src/rules/city';
+import { claimable, tileCost, tileRefusal } from '../src/rules/city';
 import { type TileCoords, tileKey } from '../src/rules/map';
 import { charted } from '../src/rules/sight';
 import type { Chronicle } from '../src/rules/state';
 import { LOOK } from '../src/ui/look';
+import { refused } from '../src/ui/refusal-lines';
 import { text } from '../src/ui/text';
 import {
   bareTile,
@@ -526,7 +527,10 @@ test('a second click the city cannot pay for claims nothing and says so, and one
   const nearTile = firstClaim(bare);
   const farTile = nearestUncharted(bare);
   const asked = thresholdWorn(bare, nearTile);
-  const unpaid = [text('refusal.culture', { cost: threshold(bare, nearTile) })];
+  const refusal = tileRefusal(CATALOGUE, bare, nearTile);
+  if (refusal === undefined)
+    throw new Error(`turn ${bare.turn} has no act of the city's on the tile`);
+  const unpaid = refused(tileCost(bare, nearTile), refusal);
 
   await openSaved(page, bare);
   await page.keyboard.press('c');

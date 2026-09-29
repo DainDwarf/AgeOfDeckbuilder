@@ -29,7 +29,8 @@ import {
 } from './design-space';
 import { cardFace } from './face';
 import { PILE_PLACE } from './piles';
-import { createRefusalNote, refused } from './refusal-note';
+import { refused } from './refusal-lines';
+import { createRefusalNote } from './refusal-note';
 import { createSmallCards, type Raiser } from './small-card';
 import type { Tooltip } from './tooltip';
 

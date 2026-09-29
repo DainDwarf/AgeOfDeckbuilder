@@ -4,7 +4,8 @@ import { apply, outcome } from '../src/rules/chronicle';
 import { answerCost, answerOf, answerRefusal, offered } from '../src/rules/schedule';
 import { type Chronicle, playable } from '../src/rules/state';
 import { eventLore } from '../src/ui/lore';
-import { eventName, text } from '../src/ui/text';
+import { refused } from '../src/ui/refusal-lines';
+import { eventName } from '../src/ui/text';
 import {
   besideTheDeal,
   budget,
@@ -128,10 +129,10 @@ test('the take of an answer the city cannot pay for says why over the card, and 
   const [deal] = dealt.deals;
   if (deal?.of !== 'event') throw new Error(`turn ${dealt.turn} deals no event`);
   const at = offered(CATALOGUE, deal).indexOf(answer);
-  const refusal = answerRefusal(CATALOGUE, dealt, deal.event, answer);
-  const said = answerCost(CATALOGUE, dealt, answerOf(CATALOGUE, deal.event, answer))
-    .filter(({ resource }) => refusal.unaffordable.includes(resource))
-    .map(({ resource, amount }) => text(`refusal.${resource}`, { cost: amount }));
+  const said = refused(
+    answerCost(CATALOGUE, dealt, answerOf(CATALOGUE, deal.event, answer)),
+    answerRefusal(CATALOGUE, dealt, deal.event, answer),
+  );
 
   await openSaved(page, dealt);
   await expect.poll(() => standing(page, 'deal')).toBe(true);

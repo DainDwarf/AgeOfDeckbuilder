@@ -5,7 +5,7 @@ import { cardOf } from '../src/rules/catalogue';
 import { costOf, refusalOf } from '../src/rules/chronicle';
 import { tileAt, tileKey } from '../src/rules/map';
 import type { CardId, Chronicle } from '../src/rules/state';
-import { text } from '../src/ui/text';
+import { refused, refusedAim, type Said } from '../src/ui/refusal-lines';
 import {
   admits,
   aimed,
@@ -28,15 +28,8 @@ import {
   workerStepped,
 } from './chronicle-screen';
 
-/** Every reason the rules refuse this card, in the words the note says them in. */
-function reasons(chronicle: Chronicle, id: CardId): string[] {
-  const refusal = refusalOf(CATALOGUE, chronicle, id);
-  return [
-    ...costOf(CATALOGUE, id)
-      .filter(({ resource }) => refusal.unaffordable.includes(resource))
-      .map(({ resource, amount }) => text(`refusal.${resource}`, { cost: amount })),
-    ...refusal.blocked.map((block) => text(`refusal.${block}`)),
-  ];
+function reasons(chronicle: Chronicle, id: CardId): Said {
+  return refused(costOf(CATALOGUE, id), refusalOf(CATALOGUE, chronicle, id));
 }
 
 /** The first card the rules refuse on turn 1, dragged past the play height and released on the canvas. */
@@ -107,7 +100,7 @@ test('a press on a tile an aim refuses says one reason over it, and the card sta
   await page.mouse.click(face.x, face.y);
   await rested(page);
 
-  expect(await refusalLines(page)).toEqual([text(`refusal.${block}`)]);
+  expect(await refusalLines(page)).toEqual(refusedAim(block));
   expect(await standing(page, 'aim')).toBe(true);
   expect(await chronicleOf(page)).toEqual(opened);
 

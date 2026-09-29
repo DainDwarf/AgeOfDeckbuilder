@@ -1,9 +1,8 @@
 import type Phaser from 'phaser';
-import type { Block, Cost, Refusal } from '../rules/state';
 import { addText, DESIGN_WIDTH, drawBubble, MARGIN, type Stratum, UI_FONT } from './design-space';
 import { css, LOOK } from './look';
 import type { TileFace } from './map';
-import { text } from './text';
+import type { Said } from './refusal-lines';
 
 /** The clear water between the note and what it points at; its tail crosses most of that. */
 const STANDOFF = 8;
@@ -15,9 +14,6 @@ type Place = (width: number, height: number, unit: number) => Placement;
 
 /** The note's own corner, and how far along its bottom edge the tail comes down. */
 type Placement = { left: number; top: number; at: number };
-
-/** What a note says: one sentence per reason, in the order the bubble reads them. */
-export type Said = readonly string[];
 
 export type RefusalNote = {
   /**
@@ -31,30 +27,6 @@ export type RefusalNote = {
   rescale(): void;
   hide(): void;
 };
-
-/** The sentence one thing standing in the way says. */
-function blocking(block: Block): string {
-  return text(`refusal.${block}`);
-}
-
-/**
- * What the note says over anything refused that carries a cost — a card of the hand, an answer of a
- * deal, the city's act on a tile: of what it costs, only what the city cannot pay, then what stands
- * in the way.
- */
-export function refused(costs: readonly Cost[], refusal: Refusal): Said {
-  return [
-    ...costs
-      .filter(({ resource }) => refusal.unaffordable.includes(resource))
-      .map(({ resource, amount }) => text(`refusal.${resource}`, { cost: amount })),
-    ...refusal.blocked.map(blocking),
-  ];
-}
-
-/** What the note over a tile a card is aimed at says: the one thing the aim has against it. */
-export function refusedAim(block: Block): Said {
-  return [blocking(block)];
-}
 
 /**
  * The bubble a cost and a refusal answer with, on the surface it was raised from: one stands per
