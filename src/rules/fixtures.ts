@@ -1064,24 +1064,24 @@ export function settledLaunch(
   region: string,
   seed: number,
   civilization: Civilization,
-  unlocked: readonly string[],
+  learned: readonly string[],
   at: TileCoords = CITY,
 ): Chronicle {
-  const launch = launched(catalogue, age, region, seed, civilization, unlocked);
+  const launch = launched(catalogue, age, region, seed, civilization, learned);
   const settling = settledOn(launch, at, catalogue);
   if (settling.city === undefined)
     throw new Error(`seed ${seed} settles no city on ${tileKey(at)}`);
   return outcome(apply(catalogue, settling, { type: 'end-turn' }));
 }
 
-/** A city in the first age, carrying the achievements a launch with these technologies unlocked names. */
-export function reaching(unlocked: readonly string[], carrying: Carrying): Chronicle {
-  const { achievements } = launched(CATALOGUE, AGE, REGION, 1234, CIVILIZATION, unlocked);
+/** A city in the first age, carrying the achievements a launch with these technologies learned names. */
+export function reaching(learned: readonly string[], carrying: Carrying): Chronicle {
+  const { achievements } = launched(CATALOGUE, AGE, REGION, 1234, CIVILIZATION, learned);
   return cityOf(['urban', 'plain'], { age: AGE, achievements, ...carrying });
 }
 
 /**
- * A first-age chronicle launched with nothing unlocked, `HOARD` reached and then won on the tillage:
+ * A first-age chronicle launched with nothing learned, `HOARD` reached and then won on the tillage:
  * a victory with two achievements reached.
  */
 export function hoardedVictory(): Chronicle {

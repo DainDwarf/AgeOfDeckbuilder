@@ -273,14 +273,14 @@ function campaignOf(
     { next: 'the next number', holder: 'card' },
   );
 
-  const unlocked: string[] = [];
+  const learned: string[] = [];
   for (const { slot: item, id: technology } of technologies) {
     const misfit = !Object.hasOwn(catalogue.technologies, technology)
       ? `names no technology ${technology}`
-      : unlocked.includes(technology)
+      : learned.includes(technology)
         ? `names the technology ${technology} a second time`
         : undefined;
-    if (stands(item, misfit)) unlocked.push(technology);
+    if (stands(item, misfit)) learned.push(technology);
   }
 
   const owned = new Map<number, CardId>();
@@ -336,7 +336,7 @@ function campaignOf(
 
   return {
     campaign: {
-      technologies: unlocked,
+      technologies: learned,
       influence,
       nextCard,
       collection: collection.flatMap(({ card }) => (owned.has(card.number) ? [card] : [])),

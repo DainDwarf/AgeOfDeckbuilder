@@ -40,22 +40,19 @@ export type Campaign = {
   readonly civilizations: Readonly<Record<string, CampaignCivilization>>;
 };
 
-/**
- * Whether a technology is within reach of the technologies unlocked: not unlocked itself, and needing
- * none that is not. A technology the catalogue does not hold is refused.
- */
-export function withinReach(
+/** Whether a technology is available; one the catalogue does not hold is refused. */
+export function available(
   catalogue: Catalogue,
   technology: string,
-  unlocked: readonly string[],
+  learned: readonly string[],
 ): boolean {
-  if (unlocked.includes(technology)) return false;
-  return technologyOf(catalogue, technology).needs.every((need) => unlocked.includes(need));
+  if (learned.includes(technology)) return false;
+  return technologyOf(catalogue, technology).needs.every((need) => learned.includes(need));
 }
 
 /**
  * The ages the campaign has reached, in the order of history: the first age, and every age a
- * technology it has unlocked unlocks. A technology the catalogue does not hold is refused.
+ * technology it has learned unlocks. A technology the catalogue does not hold is refused.
  */
 export function agesReached(catalogue: Catalogue, campaign: Campaign): string[] {
   const unlocked = new Set(
@@ -83,7 +80,7 @@ export function dealt(
 }
 
 /**
- * A campaign opened on a civilization of the catalogue: nothing unlocked, no influence, and the one
+ * A campaign opened on a civilization of the catalogue: nothing learned, no influence, and the one
  * civilization, named as the catalogue's, with a card of its own for each card the catalogue's lists,
  * naming each in the section it came from.
  */
@@ -148,7 +145,7 @@ export type Payment = {
 
 /**
  * An ended chronicle paid into the campaign, achievement by achievement in the chronicle's order. A
- * chronicle that has not ended, and an achievement reached whose technology is already unlocked, are
+ * chronicle that has not ended, and an achievement reached whose technology is already learned, are
  * refused.
  */
 export function paidInto(catalogue: Catalogue, campaign: Campaign, chronicle: Chronicle): Payment {
@@ -157,21 +154,21 @@ export function paidInto(catalogue: Catalogue, campaign: Campaign, chronicle: Ch
     refuse(catalogue, 'a chronicle that has not ended pays nothing');
   let { technologies, influence, nextCard } = campaign;
   const achievements: string[] = [];
-  const unlocked: string[] = [];
+  const learned: string[] = [];
   const entered: CampaignCard[] = [];
   for (const { id, reached } of chronicle.achievements) {
     if (!reached) continue;
     const achievement = achievementOf(catalogue, chronicle.age, id);
     const { technology } = achievement;
     if (technologies.includes(technology)) {
-      refuse(catalogue, `the achievement ${id} earns ${technology}, which is already unlocked`);
+      refuse(catalogue, `the achievement ${id} earns ${technology}, which is already learned`);
     }
     const ids = Object.entries(technologyOf(catalogue, technology).unlocks.cards).flatMap(
       ([card, copies]) => Array.from({ length: copies }, () => card),
     );
     const cards = dealt(nextCard, ids);
     achievements.push(id);
-    unlocked.push(technology);
+    learned.push(technology);
     entered.push(...cards.cards);
     technologies = [...technologies, technology];
     influence += achievement.influence;
@@ -187,7 +184,7 @@ export function paidInto(catalogue: Catalogue, campaign: Campaign, chronicle: Ch
     },
     influence: influence - campaign.influence,
     achievements,
-    technologies: unlocked,
+    technologies: learned,
     entered,
   };
 }

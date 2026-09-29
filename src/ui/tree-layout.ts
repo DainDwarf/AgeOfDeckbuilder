@@ -4,7 +4,7 @@
  * measured from the tree's left end, vertically from the top of the room it stands in.
  */
 
-import { withinReach } from '../rules/campaign';
+import { available } from '../rules/campaign';
 import { type Catalogue, technologyOf } from '../rules/catalogue';
 
 export const PLATE_WIDTH = 236;
@@ -17,8 +17,7 @@ const LEAD = 200;
 /** How wide the wash one ground runs into the next with is, centred on the border between them. */
 export const WASH = 180;
 
-/** How a technology stands for the campaign: unlocked, within reach of those unlocked, or a mystery. */
-export type PlateState = 'unlocked' | 'within-reach' | 'mystery';
+export type PlateState = 'learned' | 'available' | 'unknown';
 
 export type Plate = {
   readonly technology: string;
@@ -35,8 +34,8 @@ export type Point = { readonly x: number; readonly y: number };
 export type Link = {
   readonly from: string;
   readonly to: string;
-  /** Whether the technology it runs from is unlocked. */
-  readonly unlocked: boolean;
+  /** Whether the technology it runs from is learned. */
+  readonly learned: boolean;
   readonly points: readonly Point[];
 };
 
@@ -60,7 +59,7 @@ export type Tree = {
 export type Room = {
   readonly width: number;
   readonly height: number;
-  /** How far the leftmost technology within reach opens off the room's left edge, where it must. */
+  /** How far the leftmost available technology opens off the room's left edge, where it must. */
   readonly margin: number;
 };
 
@@ -116,13 +115,9 @@ function laneThrough(tops: readonly number[], height: number, straight: number):
   );
 }
 
-/**
- * The tree the catalogue lays out for a campaign holding these technologies unlocked, every plate
- * that tall, in a room that size.
- */
 export function layOutTree(
   catalogue: Catalogue,
-  unlocked: readonly string[],
+  learned: readonly string[],
   plateHeight: number,
   room: Room,
 ): Tree {
@@ -133,8 +128,8 @@ export function layOutTree(
   }
   const columns = columnsOf(catalogue, doors);
   const stateOf = (id: string): PlateState => {
-    if (unlocked.includes(id)) return 'unlocked';
-    return withinReach(catalogue, id, unlocked) ? 'within-reach' : 'mystery';
+    if (learned.includes(id)) return 'learned';
+    return available(catalogue, id, learned) ? 'available' : 'unknown';
   };
 
   const byColumn = new Map<number, string[]>();
@@ -185,7 +180,7 @@ export function layOutTree(
         points.push({ x: left, y }, { x: left + PLATE_WIDTH, y });
       }
       points.push(end);
-      links.push({ from: need, to: to.technology, unlocked: from.state === 'unlocked', points });
+      links.push({ from: need, to: to.technology, learned: from.state === 'learned', points });
     }
   }
 
@@ -207,11 +202,11 @@ export function layOutTree(
   const width = far + WASH / 2;
   const least = 0;
   const most = Math.max(least, width - room.width);
-  const reach = plates.filter(({ state }) => state === 'within-reach');
+  const availablePlates = plates.filter(({ state }) => state === 'available');
   const opening = (() => {
-    if (reach.length === 0) return most;
-    const left = Math.min(...reach.map(({ x }) => x));
-    const right = Math.max(...reach.map(({ x }) => x + PLATE_WIDTH));
+    if (availablePlates.length === 0) return most;
+    const left = Math.min(...availablePlates.map(({ x }) => x));
+    const right = Math.max(...availablePlates.map(({ x }) => x + PLATE_WIDTH));
     if (right - left > room.width - 2 * room.margin) return left - room.margin;
     return (left + right) / 2 - room.width / 2;
   })();

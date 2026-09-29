@@ -41,8 +41,10 @@ export type Look = {
   readonly wellFill: number;
   readonly wellLight: number;
   readonly influence: number;
-  readonly mysteryFill: number;
-  readonly mysteryInk: number;
+  readonly unknownFill: number;
+  readonly unknownInk: number;
+  readonly greyedFill: number;
+  readonly greyedInk: number;
   /** The edge around the chosen one of a row of the launch screen. */
   readonly chosenEdge: number;
   /** The strength the others of that row rest at. */
@@ -94,8 +96,10 @@ export const LOOK: Look = {
   wellFill: 0xb4b9c0,
   wellLight: 0xeef0f3,
   influence: 0xd9a441,
-  mysteryFill: 0x5c6068,
-  mysteryInk: 0x2a2e34,
+  unknownFill: 0x5c6068,
+  unknownInk: 0x2a2e34,
+  greyedFill: 0x5c6068,
+  greyedInk: 0x2a2e34,
   chosenEdge: 0xd4d7db,
   unchosen: 0.5,
   arrowEdge: 0x0d1117,

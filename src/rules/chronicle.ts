@@ -1,4 +1,4 @@
-import { withinReach } from './campaign';
+import { available } from './campaign';
 import { aimOf, leavesChronicle, refuses, struck } from './cards';
 import {
   type AimedCard,
@@ -127,7 +127,7 @@ export function beginChronicle(
   civilization: Civilization,
   map: HexMap,
   timeline: Timeline,
-  unlocked: readonly string[],
+  learned: readonly string[],
 ): Chronicle {
   const { camp } = ageOf(catalogue, age);
   for (const coord of map.centre) {
@@ -161,7 +161,7 @@ export function beginChronicle(
     drawPile: shuffled.items,
     hand: [civilization.city.card, ...civilization.settle].map(made),
     discardPile: [],
-    achievements: achievementsWithinReach(catalogue, age, unlocked),
+    achievements: achievementsOfAvailable(catalogue, age, learned),
   };
   let guarded = begun;
   for (const { q, r, building } of map.tiles) {
@@ -175,19 +175,15 @@ export function beginChronicle(
   return charted(catalogue, guarded);
 }
 
-/**
- * The achievements of the age a chronicle launched with these technologies unlocked can reach, none
- * reached: every one whose technology is not unlocked and needs none that is not. A technology the
- * catalogue does not hold is refused.
- */
-function achievementsWithinReach(
+/** A technology the catalogue does not hold is refused, a learned one included. */
+function achievementsOfAvailable(
   catalogue: Catalogue,
   age: string,
-  unlocked: readonly string[],
+  learned: readonly string[],
 ): ChronicleAchievement[] {
-  for (const id of unlocked) technologyOf(catalogue, id);
+  for (const id of learned) technologyOf(catalogue, id);
   return Object.entries(ageOf(catalogue, age).achievements)
-    .filter(([, { technology }]) => withinReach(catalogue, technology, unlocked))
+    .filter(([, { technology }]) => available(catalogue, technology, learned))
     .map(([id]) => ({ id, reached: false }));
 }
 
@@ -202,7 +198,7 @@ export function launched(
   region: string,
   seed: number,
   civilization: Civilization,
-  unlocked: readonly string[],
+  learned: readonly string[],
 ): Chronicle {
   const map = generateMap(catalogue, ageOf(catalogue, age), region, seedRng(seed));
   const timeline = timelineOf(catalogue, age, map.rng);
@@ -214,7 +210,7 @@ export function launched(
     civilization,
     { tiles, rivers, centre },
     timeline,
-    unlocked,
+    learned,
   );
 }
 

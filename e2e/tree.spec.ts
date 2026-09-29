@@ -102,14 +102,14 @@ async function openCampaign(page: Page, campaign = freshCampaign(CATALOGUE)) {
   await campaignShown(page);
 }
 
-test('on a new campaign the first age’s technology stands within reach on its age’s ground, reading its name, its goal and its reward, and the pointer resting on the name in its goal raises that card small', async ({
+test('on a new campaign the first age’s technology stands available on its age’s ground, reading its name, its goal and its reward, and the pointer resting on the name in its goal raises that card small', async ({
   page,
 }) => {
   const problems = watch(page);
   await openCampaign(page);
 
   expect(await plateReads(page, PLATE)).toEqual({
-    state: 'within-reach',
+    state: 'available',
     name: technologyName(TECHNOLOGY),
     goal: achievementGoal(ACHIEVEMENT),
     reward: rewardOf(),
@@ -128,7 +128,7 @@ test('on a new campaign the first age’s technology stands within reach on its 
   expect(problems).toEqual([]);
 });
 
-test('on a new campaign a right click on the name in the within-reach plate’s goal shows that card large, the back key takes it down and raises no menu, and a right click on the small card the name raises shows it large again', async ({
+test('on a new campaign a right click on the name in the available plate’s goal shows that card large, the back key takes it down and raises no menu, and a right click on the small card the name raises shows it large again', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -157,7 +157,7 @@ test('on a new campaign a right click on the name in the within-reach plate’s 
   expect(problems).toEqual([]);
 });
 
-test('on a campaign a won chronicle paid into, its technology stands unlocked, the check mark before its name', async ({
+test('on a campaign a won chronicle paid into, its technology stands learned, the check mark before its name', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -170,8 +170,8 @@ test('on a campaign a won chronicle paid into, its technology stands unlocked, t
   await openCampaign(page, campaign);
 
   expect(await plateReads(page, PLATE)).toEqual({
-    state: 'unlocked',
-    name: text('plate.unlocked', { technology: technologyName(TECHNOLOGY) }),
+    state: 'learned',
+    name: text('plate.learned', { technology: technologyName(TECHNOLOGY) }),
     goal: achievementGoal(ACHIEVEMENT),
     reward: rewardOf(),
   });

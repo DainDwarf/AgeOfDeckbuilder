@@ -76,7 +76,8 @@ const INK = css(LOOK.ink);
 const PALE = css(LOOK.paleInk);
 const LABEL_STYLE = { fontFamily: UI_FONT, fontSize: '18px', fontStyle: 'bold', color: INK };
 const PALE_STYLE = { ...LABEL_STYLE, color: PALE };
-const MYSTERY_STYLE = { ...LABEL_STYLE, color: css(LOOK.mysteryInk) };
+const UNKNOWN_STYLE = { ...LABEL_STYLE, color: css(LOOK.unknownInk) };
+const GREYED_STYLE = { ...LABEL_STYLE, color: css(LOOK.greyedInk) };
 const LINE_STYLE = { fontFamily: UI_FONT, fontSize: '16px', fontStyle: 'bold', color: INK };
 const COUNTS_STYLE = { fontFamily: UI_FONT, fontSize: '14px', color: css(LOOK.deckCounts) };
 
@@ -126,17 +127,17 @@ function pressedOnShape(polygon: Phaser.GameObjects.Polygon): Phaser.GameObjects
   return polygon.setInteractive(polygon.geom, Phaser.Geom.Polygon.Contains);
 }
 
-/** The time arrow: one segment per age, in the order of history, a mystery for each not reached. */
+/** The time arrow: one segment per age in the order of history, each age not reached unknown. */
 function arrowOf(
   scene: Phaser.Scene,
   catalogue: Catalogue,
   reached: readonly string[],
   age: string,
-): { choices: Choice[]; mysteries: Phaser.GameObjects.Container[] } {
+): { choices: Choice[]; unknownAges: Phaser.GameObjects.Container[] } {
   const ages = Object.keys(catalogue.ages);
   const each = (RIGHT - LEFT - NOTCH) / ages.length;
   const choices: Choice[] = [];
-  const mysteries: Phaser.GameObjects.Container[] = [];
+  const unknownAges: Phaser.GameObjects.Container[] = [];
   for (const [at, id] of ages.entries()) {
     const known = reached.includes(id);
     const chosen = id === age;
@@ -154,16 +155,16 @@ function arrowOf(
       [from, bottom],
       ...(at > 0 ? [[from + NOTCH, middle] as [number, number]] : []),
     ];
-    const segment = polygonOn(scene, raw, known ? groundColourOf(id) : LOOK.mysteryFill);
+    const segment = polygonOn(scene, raw, known ? groundColourOf(id) : LOOK.unknownFill);
     const x = from + each / 2 + NOTCH / 2;
     if (!known) {
       segment.setStrokeStyle(EDGE, LOOK.arrowEdge);
-      const mystery = addText(scene, x, middle, text('plate.mystery'), MYSTERY_STYLE).setOrigin(
+      const label = addText(scene, x, middle, text('launch.unknown-age'), UNKNOWN_STYLE).setOrigin(
         0.5,
       );
-      mysteries.push(
+      unknownAges.push(
         scene.add
-          .container(0, 0, [segment, mystery])
+          .container(0, 0, [segment, label])
           .setName(`launch-age-${id}`)
           .setData('chosen', false),
       );
@@ -179,7 +180,7 @@ function arrowOf(
       hits: [pressedOnShape(segment)],
     });
   }
-  return { choices, mysteries };
+  return { choices, unknownAges };
 }
 
 /** The chosen age's regions in a row, each a cluster of seven hexagons over its name. */
@@ -418,7 +419,7 @@ export class LaunchScreen extends Phaser.Scene {
       ];
       root.add([
         word('launch.age', 84),
-        ...arrow.mysteries,
+        ...arrow.unknownAges,
         ...lastChosen(arrow.choices).map(drawn),
         word('launch.region', 222),
         ...regionsOf(this, CATALOGUE, chosen.age, chosen.region).map(drawn),
@@ -462,7 +463,7 @@ function buttonsOf(
     middle,
     0,
     text('launch.continue'),
-    saved === undefined ? MYSTERY_STYLE : LABEL_STYLE,
+    saved === undefined ? GREYED_STYLE : LABEL_STYLE,
   )
     .setOrigin(0.5, 0)
     .setName('launch-continue-label');
@@ -480,7 +481,7 @@ function buttonsOf(
       top + height / 2,
       BUTTON_WIDTH,
       height,
-      saved === undefined ? LOOK.mysteryFill : LOOK.accent,
+      saved === undefined ? LOOK.greyedFill : LOOK.accent,
     )
     .setName('launch-continue');
   if (saved !== undefined) {

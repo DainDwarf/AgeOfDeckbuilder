@@ -74,7 +74,7 @@ function achieved(achievements: Age['achievements']): Catalogue {
 }
 
 /** The fixture's content with its technologies laid over as the test lays them. */
-function researched(technologies: Catalogue['technologies']): Catalogue {
+function technologied(technologies: Catalogue['technologies']): Catalogue {
   return changed({ technologies: { ...CATALOGUE.technologies, ...technologies } });
 }
 
@@ -114,7 +114,7 @@ test('a catalogue where two ages own one achievement is refused', () => {
 });
 
 test('a catalogue whose technology is earned by no achievement, or by two, is refused', () => {
-  const unearned = researched({ PH_Unearned: { needs: [], unlocks: { cards: {} } } });
+  const unearned = technologied({ PH_Unearned: { needs: [], unlocks: { cards: {} } } });
   const twice = achieved({ PH_Twice: HOARD_DECLARED });
 
   expect(() => catalogued(unearned)).toThrow(
@@ -127,7 +127,7 @@ test('a catalogue whose technology is earned by no achievement, or by two, is re
 
 test('a catalogue whose technology needs one it does not hold, or needs itself through the others, is refused', () => {
   const needing = (needs: readonly string[]): Catalogue =>
-    researched({ [GRANARY]: { ...GRANARY_DECLARED, needs } });
+    technologied({ [GRANARY]: { ...GRANARY_DECLARED, needs } });
 
   expect(technologyOf(CATALOGUE, CENSUS).needs).toEqual([GRANARY]);
   expect(() => catalogued(needing(['PH_Unheld']))).toThrow(
@@ -148,7 +148,7 @@ test('a catalogue whose technology unlocks a card it does not hold, a card by fe
     { cards: {}, age: 'PH_Unheld' },
   ];
   for (const unlocks of unlocking) {
-    const content = researched({ [GRANARY]: { ...GRANARY_DECLARED, unlocks } });
+    const content = technologied({ [GRANARY]: { ...GRANARY_DECLARED, unlocks } });
 
     expect(() => catalogued(content)).toThrow(/^fixture: /);
   }
@@ -158,11 +158,11 @@ test('a catalogue whose age but the first is unlocked by no technology or by two
   const { technology } = achievementOf(CATALOGUE, AGE, victoryOf(AGE));
   const past = technologyOf(CATALOGUE, technology);
   const unlocking = (age: string): Catalogue =>
-    researched({ [GRANARY]: { ...GRANARY_DECLARED, unlocks: { cards: {}, age } } });
+    technologied({ [GRANARY]: { ...GRANARY_DECLARED, unlocks: { cards: {}, age } } });
 
   expect(past.unlocks.age).toBe(QUIET);
   expect(() =>
-    catalogued(researched({ [technology]: { ...past, unlocks: { cards: {} } } })),
+    catalogued(technologied({ [technology]: { ...past, unlocks: { cards: {} } } })),
   ).toThrow(`fixture: the age ${QUIET} is unlocked by nothing`);
   expect(() => catalogued(unlocking(QUIET))).toThrow(
     `fixture: the age ${QUIET} is unlocked by both ${GRANARY} and ${technology}`,
@@ -177,11 +177,11 @@ test('a catalogue whose technology needs one earned in a later age is refused, a
   const past = technologyOf(CATALOGUE, later);
 
   expect(() =>
-    catalogued(researched({ [GRANARY]: { ...GRANARY_DECLARED, needs: [later] } })),
+    catalogued(technologied({ [GRANARY]: { ...GRANARY_DECLARED, needs: [later] } })),
   ).toThrow(
     `fixture: the technology ${GRANARY} of the age ${AGE} needs ${later} of the later age ${QUIET}`,
   );
-  expect(() => catalogued(researched({ [later]: { ...past, needs: [GRANARY] } }))).not.toThrow();
+  expect(() => catalogued(technologied({ [later]: { ...past, needs: [GRANARY] } }))).not.toThrow();
 });
 
 test('a catalogue whose technology unlocks an age other than the one right after its own is refused', () => {
@@ -189,7 +189,7 @@ test('a catalogue whose technology unlocks an age other than the one right after
   const { technology: second } = achievementOf(CATALOGUE, QUIET, victoryOf(QUIET));
   expect(technologyOf(CATALOGUE, first).unlocks.age).toBe(QUIET);
   expect(technologyOf(CATALOGUE, second).unlocks.age).toBe(WARY);
-  const swapped = researched({
+  const swapped = technologied({
     [first]: { ...technologyOf(CATALOGUE, first), unlocks: { cards: {}, age: WARY } },
     [second]: { ...technologyOf(CATALOGUE, second), unlocks: { cards: {}, age: QUIET } },
   });

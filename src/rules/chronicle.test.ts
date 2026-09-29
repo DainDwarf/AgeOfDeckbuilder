@@ -613,21 +613,21 @@ test('a settle card played leaves the chronicle, and the hand holds the city sec
   expect(everyCard(stocked)).toEqual([CIVILIZATION.city.card, 'PH_Band'].sort());
 });
 
-test('a chronicle is launched with the achievements of its age whose technology is not unlocked and needs none that is not, none reached, in the order the age declares them', () => {
-  const reachable = (unlocked: readonly string[]): readonly ChronicleAchievement[] =>
-    launched(CATALOGUE, AGE, REGION, 1234, CIVILIZATION, unlocked).achievements;
+test('a chronicle is launched with the achievements of its age whose technology is not learned and needs none that is not, none reached, in the order the age declares them', () => {
+  const launchedWith = (learned: readonly string[]): readonly ChronicleAchievement[] =>
+    launched(CATALOGUE, AGE, REGION, 1234, CIVILIZATION, learned).achievements;
 
-  expect(reachable([])).toEqual([
+  expect(launchedWith([])).toEqual([
     { id: HOARD, reached: false },
     { id: FEAST, reached: false },
     { id: victoryOf(AGE), reached: false },
   ]);
-  expect(reachable([GRANARY])).toEqual([
+  expect(launchedWith([GRANARY])).toEqual([
     { id: FEAST, reached: false },
     { id: CROWD, reached: false },
     { id: victoryOf(AGE), reached: false },
   ]);
-  expect(() => reachable(['PH_Unheld'])).toThrow('fixture: no technology is named PH_Unheld');
+  expect(() => launchedWith(['PH_Unheld'])).toThrow('fixture: no technology is named PH_Unheld');
 });
 
 test('an achievement is recorded reached right after the change its count meets its need on, every stage after carries the record, and it is never read again', () => {
@@ -700,8 +700,8 @@ test('two achievements one change meets are each recorded as a reached of its ow
 });
 
 test('an achievement the launch did not name is never read, whatever its count', () => {
-  const growing = (unlocked: readonly string[]): Chronicle =>
-    reaching(unlocked, {
+  const growing = (learned: readonly string[]): Chronicle =>
+    reaching(learned, {
       tiles: field(1),
       held: [CITY],
       population: CROWD_NEED - 1,

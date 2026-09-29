@@ -30,7 +30,7 @@ const GLYPH = (2 / 3) * TEXT_SIZE;
 const NAME_STYLE = { fontFamily: UI_FONT, fontSize: '16px', fontStyle: 'bold', color: INK };
 const TEXT_STYLE = { fontFamily: UI_FONT, fontSize: `${TEXT_SIZE}px`, color: INK };
 const LABEL_STYLE = { fontFamily: UI_FONT, fontSize: '11px', color: css(LOOK.faintInk) };
-const MYSTERY_STYLE = { ...NAME_STYLE, color: css(LOOK.mysteryInk) };
+const UNKNOWN_STYLE = { ...NAME_STYLE, color: css(LOOK.unknownInk) };
 const AGE_STYLE = {
   fontFamily: UI_FONT,
   fontSize: '20px',
@@ -153,19 +153,19 @@ export type TreeView = {
 
 /**
  * The technology tree in the room the navbar and the bar leave, for a campaign holding these
- * technologies unlocked; a right click on a name of a plate hands `inspect` what it names.
+ * technologies learned; a right click on a name of a plate hands `inspect` what it names.
  */
 export function createTree(
   scene: Phaser.Scene,
   { bubbles, tooltip }: Worn,
   catalogue: Catalogue,
-  unlocked: readonly string[],
+  learned: readonly string[],
   inspect: (name: Name) => void,
 ): TreeView {
   const readings = readingsOf(catalogue);
   const plateHeight =
     2 * PAD_Y + NAME_LINE + TEXT_LINE * Math.max(...[...readings.values()].map(linesOf));
-  const tree = layOutTree(catalogue, unlocked, plateHeight, { ...ROOM, margin: MARGIN });
+  const tree = layOutTree(catalogue, learned, plateHeight, { ...ROOM, margin: MARGIN });
 
   // Under the navbar and the bar, which cover it as it slides.
   const layer = scene.add.layer();
@@ -200,7 +200,7 @@ export function createTree(
   }
 
   const links = scene.add.graphics();
-  for (const { unlocked: pale, points } of tree.links) {
+  for (const { learned: pale, points } of tree.links) {
     links.lineStyle(LINK_WEIGHT, pale ? LOOK.paleInk : LOOK.ink, pale ? 1 : FAINT_LINK);
     const [first, ...rest] = points;
     links.beginPath();
@@ -231,7 +231,6 @@ export function createTree(
     return Math.max(...widths) + LABEL_GAP;
   })();
 
-  /** What a plate stands on: a well unlocked, the panel's paper within reach, grey a mystery. */
   const backingOf = (state: PlateState, id: string): Phaser.GameObjects.GameObject => {
     const paper = (fill: number): Phaser.GameObjects.Rectangle =>
       scene.add
@@ -239,15 +238,15 @@ export function createTree(
         .setOrigin(0, 0)
         .setStrokeStyle(1, LOOK.panelEdge);
     switch (state) {
-      case 'unlocked': {
+      case 'learned': {
         const { well } = createWell(scene, id);
         placeWell(well, { x: 0, y: 0, width: PLATE_WIDTH, height: plateHeight });
         return well;
       }
-      case 'within-reach':
+      case 'available':
         return paper(LOOK.panelFill);
-      case 'mystery':
-        return paper(LOOK.mysteryFill);
+      case 'unknown':
+        return paper(LOOK.unknownFill);
     }
   };
 
@@ -260,9 +259,9 @@ export function createTree(
     face.setData('names', names);
 
     face.add(backingOf(state, id));
-    if (state === 'mystery') {
+    if (state === 'unknown') {
       face.add(
-        addText(scene, PLATE_WIDTH / 2, plateHeight / 2, text('plate.mystery'), MYSTERY_STYLE)
+        addText(scene, PLATE_WIDTH / 2, plateHeight / 2, text('plate.unknown'), UNKNOWN_STYLE)
           .setOrigin(0.5)
           .setName(`${id}-name`),
       );
@@ -271,14 +270,14 @@ export function createTree(
 
     const reading = readings.get(technology);
     if (reading === undefined) throw new Error(`the technology ${technology} reads nothing`);
-    const pressed = state === 'unlocked' ? SUNK : 0;
+    const pressed = state === 'learned' ? SUNK : 0;
     const left = PAD_X + pressed;
     const values = left + labelColumn;
     const lineMiddle = (line: number): number =>
       pressed + PAD_Y + NAME_LINE + (line + 0.5) * TEXT_LINE;
 
     const name =
-      state === 'unlocked' ? text('plate.unlocked', { technology: reading.name }) : reading.name;
+      state === 'learned' ? text('plate.learned', { technology: reading.name }) : reading.name;
     face.add(
       addText(scene, left, pressed + PAD_Y + NAME_LINE / 2, name, NAME_STYLE)
         .setOrigin(0, 0.5)

@@ -53,8 +53,8 @@ const TREE: Catalogue = (() => {
 
 const EVERY = Object.keys(TREE.technologies);
 
-function laid(unlocked: readonly string[] = [], room = ROOM): Tree {
-  return layOutTree(TREE, unlocked, PLATE_HEIGHT, room);
+function laid(learned: readonly string[] = [], room = ROOM): Tree {
+  return layOutTree(TREE, learned, PLATE_HEIGHT, room);
 }
 
 function plateOf(tree: Tree, technology: string): Plate {
@@ -149,35 +149,35 @@ test('every column is centred on the room’s middle, its technologies in the co
   expect(plateOf(tree, FIRE).y).toBeLessThan(plateOf(tree, WEAVING).y);
 });
 
-test('a technology unlocked is unlocked, one needing none that is not is within reach, and one needing one not unlocked is a mystery', () => {
+test('a technology learned is learned, one needing none that is not is available, and one needing one not learned is unknown', () => {
   const tree = laid([FIRE]);
   const states = Object.fromEntries(
     tree.plates.map(({ technology, state }) => [technology, state]),
   );
 
   expect(states).toEqual({
-    [FIRE]: 'unlocked',
-    [POTTERY]: 'within-reach',
-    [WEAVING]: 'within-reach',
-    [KILN]: 'mystery',
-    [DOOR]: 'within-reach',
-    [WHEEL]: 'mystery',
-    [BRONZE]: 'mystery',
+    [FIRE]: 'learned',
+    [POTTERY]: 'available',
+    [WEAVING]: 'available',
+    [KILN]: 'unknown',
+    [DOOR]: 'available',
+    [WHEEL]: 'unknown',
+    [BRONZE]: 'unknown',
   });
 });
 
-test('a link runs from a technology to each one that needs it, from an unlocked technology or not, and a mystery’s among them', () => {
+test('a link runs from a technology to each one that needs it, from a learned technology or not, and an unknown technology’s among them', () => {
   const tree = laid([FIRE]);
-  const links = tree.links.map(({ from, to, unlocked }) => ({ from, to, unlocked }));
+  const links = tree.links.map(({ from, to, learned }) => ({ from, to, learned }));
 
   expect(links).toHaveLength(5);
   expect(links).toEqual(
     expect.arrayContaining([
-      { from: FIRE, to: POTTERY, unlocked: true },
-      { from: FIRE, to: KILN, unlocked: true },
-      { from: POTTERY, to: KILN, unlocked: false },
-      { from: DOOR, to: WHEEL, unlocked: false },
-      { from: WHEEL, to: BRONZE, unlocked: false },
+      { from: FIRE, to: POTTERY, learned: true },
+      { from: FIRE, to: KILN, learned: true },
+      { from: POTTERY, to: KILN, learned: false },
+      { from: DOOR, to: WHEEL, learned: false },
+      { from: WHEEL, to: BRONZE, learned: false },
     ]),
   );
 });
@@ -222,21 +222,21 @@ test('the tree stops at its ends, and a tree the room holds whole does not move'
   for (const at of [-100, 0, 100, tree.width]) expect(stopped(whole, at)).toBe(whole.least);
 });
 
-test('the screen opens with the technologies within reach centred in the room, from the leftmost of them where it cannot hold them all, and on the right end where none is within reach', () => {
+test('the screen opens with the available technologies centred in the room, from the leftmost of them where it cannot hold them all, and on the right end where none is available', () => {
   const alone = laid([FIRE, POTTERY, WEAVING, KILN, DOOR]);
-  expect(alone.plates.filter(({ state }) => state === 'within-reach')).toEqual([
+  expect(alone.plates.filter(({ state }) => state === 'available')).toEqual([
     plateOf(alone, WHEEL),
   ]);
   expect(middleOf(plateOf(alone, WHEEL)).x - alone.opening).toBe(ROOM.width / 2);
 
   const spread = laid();
-  const reach = spread.plates.filter(({ state }) => state === 'within-reach');
-  const left = Math.min(...reach.map(({ x }) => x));
-  const right = Math.max(...reach.map(({ x }) => x + PLATE_WIDTH));
+  const availablePlates = spread.plates.filter(({ state }) => state === 'available');
+  const left = Math.min(...availablePlates.map(({ x }) => x));
+  const right = Math.max(...availablePlates.map(({ x }) => x + PLATE_WIDTH));
   expect(right - left).toBeGreaterThan(ROOM.width);
   expect(left - spread.opening).toBe(ROOM.margin);
 
   const done = laid(EVERY);
-  expect(done.plates.some(({ state }) => state === 'within-reach')).toBe(false);
+  expect(done.plates.some(({ state }) => state === 'available')).toBe(false);
   expect(done.opening).toBe(done.most);
 });
