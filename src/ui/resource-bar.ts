@@ -277,7 +277,6 @@ function chipColour(key: BarReading): number {
   }
 }
 
-/** The one way a reading's diamond is drawn, at the place handed, in the colour it is known by. */
 export function chipAt(
   scene: Phaser.Scene,
   { x, y }: { x: number; y: number },

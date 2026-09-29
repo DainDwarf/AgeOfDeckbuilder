@@ -847,10 +847,7 @@ const TECHNOLOGIES: Tables['technologies'] = {
   ),
 };
 
-/**
- * Every fixture age, each owning its own schedule and achievements over the camp and the regions
- * handed in, and a base price of its own: the first age's 3, and one more for each age after it.
- */
+/** Every fixture age, each owning its own schedule and achievements over the camp and the regions handed in. */
 export function agesOver(
   camp: Camp,
   regions: Readonly<Record<string, Region>>,
