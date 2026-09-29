@@ -14,7 +14,7 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 The lines of the collection screen share one mockup, [board/collection-screen-mockup.html](board/collection-screen-mockup.html), which holds the three modes and names the artifact it is published to at its head: a line's intake refines its own mode in it, and the line that says so deletes it at its ship.
 
-- **A small card going down under a relaid panel** — a panel laid again at an offset other than zero stands there from inside the click, and a small card still going down may ask its face, now destroyed, for its place; no panel holds more than its room yet.
+- **A small card going down under a relaid panel** — the collection screen's re-lay takes every small card down before its panels go down, as the launch screen's does, and check, test and lint pass. Doc-impact: none. [board/small-card-under-a-relaid-panel.md](board/small-card-under-a-relaid-panel.md)
 - **A copy is dragged across** — a card of the collection dragged onto the civilization's panel is added, and a row dragged onto the collection is removed; from then a press held on a stack carries its card, and a panel is dragged by its bare ground alone.
 - **A card has a price** — the price declared on every card's content and held by the catalogue's coherence test, and read on the collection under its card.
 - **A copy is bought for influence** — the campaign's move in the rules and the button that buys, which answers nothing while the influence is short of the price.
