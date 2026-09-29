@@ -21,7 +21,7 @@ import {
   UI_FONT,
 } from './design-space';
 import { cardFace } from './face';
-import { css, LOOK } from './look';
+import { css, LOOK, worn } from './look';
 import type { PileKind } from './overlay';
 
 /** Where each pile's top card lies, about its own bottom centre, as a card is drawn. */
@@ -58,7 +58,7 @@ export function createPiles(
   const topOf = (card: ChronicleCard | undefined): Phaser.GameObjects.Container =>
     card === undefined
       ? createEmptySlot(scene)
-      : createCardFace(scene, cardFace(catalogue, card), NO_REFUSAL, { faded: true }).root;
+      : createCardFace(scene, cardFace(catalogue, card), NO_REFUSAL, { tone: worn }).root;
 
   const render = (chronicle: Chronicle): void => {
     // Whoever is waiting on the wait is let go, so a cancelled one leaves nothing hanging on it.

@@ -12,19 +12,26 @@ import {
 import { createScroll, heldAt, reachOf } from './scroll';
 import type { Answers } from './stack';
 
-/** A thing a panel holds that answers the pointer: its box as it stands unscrolled, and its answers. */
-export type Held = { readonly box: Box; readonly answers: Answers };
-
 /**
- * What a panel is made of: its name, the frame it is cut at, its first line standing at the frame's
- * top; what it draws, the things in it that answer, and where its last line ends.
+ * A thing a panel holds that answers the pointer: its box as it stands unscrolled, its answers, and
+ * what a left click on it does, where it does anything.
  */
-export type PanelOf = {
-  readonly name: string;
-  readonly frame: Box;
+export type Held = { readonly box: Box; readonly answers: Answers; readonly press?: () => void };
+
+/** What a panel draws from its frame's top, the things in it that answer, and where its last line ends. */
+export type Filled = {
   readonly parts: readonly Phaser.GameObjects.GameObject[];
   readonly held: readonly Held[];
   readonly foot: number;
+};
+
+/** What a panel is made of: its name, the frame it is cut at, and what it holds. */
+export type PanelOf = { readonly name: string; readonly frame: Box } & Filled;
+
+/** A panel standing on its screen. */
+export type Panel = {
+  /** Takes the panel down, and everything it answers with. */
+  down(): void;
 };
 
 /**
@@ -36,7 +43,7 @@ export function createPanel(
   on: Stratum,
   { name, frame, parts, held, foot }: PanelOf,
   follow: () => void,
-): void {
+): Panel {
   const root = scene.add.container(0, 0, [...parts]).setName(name);
   on.layer.add(root);
   // Off every display list, or it paints; the mask's destroy leaves it standing (docs/PHASER.md).
@@ -59,8 +66,11 @@ export function createPanel(
     .setInteractive({ draggable: true });
   on.layer.add(zone);
 
-  /** Whether the panel has moved since the thing under the pointer was read off it. */
-  let moved = false;
+  /**
+   * Whether the thing under the pointer is to be read off the panel again: once it is laid, under a
+   * pointer that may hold still, and each time it moves.
+   */
+  let moved = true;
   const scroll = createScroll((offset) => {
     root.setY(-offset);
     follow();
@@ -110,8 +120,12 @@ export function createPanel(
     },
     'right',
   );
+  onClick(zone, (pointer) => {
+    const at = on.at(pointer.x, pointer.y);
+    heldAt(frame, scroll.offset, held, at.x, at.y)?.press?.();
+  });
 
-  whileUp(scene, scene.events, Phaser.Scenes.Events.UPDATE, (_time: number, delta: number) => {
+  const step = (_time: number, delta: number): void => {
     // Here and not in the move: the wheel scrolls from inside Phaser's dispatch, where a hit test
     // refills the list being walked (docs/PHASER.md).
     if (moved) {
@@ -119,5 +133,15 @@ export function createPanel(
       if (thingUnder(scene.game) === zone) point(scene.input.activePointer);
     }
     scroll.step(delta);
-  });
+  };
+  whileUp(scene, scene.events, Phaser.Scenes.Events.UPDATE, step);
+
+  return {
+    down() {
+      point(undefined);
+      scene.events.off(Phaser.Scenes.Events.UPDATE, step);
+      zone.destroy();
+      root.destroy();
+    },
+  };
 }

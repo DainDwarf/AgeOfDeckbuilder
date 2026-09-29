@@ -47,7 +47,7 @@ async function openCollection(page: Page): Promise<void> {
   await rested(page);
 }
 
-test('the navbar’s Collection opens the collection screen on a new campaign, Collection sunk: each card owned stands once reading its copies, six to a line in the collection’s order, and each civilization’s pile reads its two counts', async ({
+test('the navbar’s Collection opens the collection screen on a new campaign, Collection sunk: each card owned stands once reading its copies, six to a line in the collection’s order, and each civilization’s pile reads its two counts, the city section’s card among its settle cards', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -84,7 +84,7 @@ test('the navbar’s Collection opens the collection screen on a new campaign, C
     expect(await textOf(page, `${pile}-counts`)).toBe(
       text('pile.counts', {
         cards: civilization.cards.length,
-        settle: civilization.settle.length,
+        settle: civilization.settle.length + 1,
       }),
     );
     expect((await placeOf(page, `${pile}-card`)).x).toBeGreaterThan(rightmost);

@@ -3,6 +3,7 @@ import type { CampaignCivilization } from '../rules/campaign';
 import type { Catalogue } from '../rules/catalogue';
 import { NO_REFUSAL } from '../rules/state';
 import { createCardBack, createCardFace, metricsOf } from './card-face';
+import { countsOf } from './collection-layout';
 import { addText, type Box, UI_FONT } from './design-space';
 import { cardFaceAtStart } from './face';
 import { css, LOOK } from './look';
@@ -39,7 +40,7 @@ export type Pile = {
 /**
  * A civilization's pile from the left and the top handed: card backs under its city section's card,
  * face up, raised in a pale edge where it is chosen, and under them the count of its cards over the
- * count of its settle cards.
+ * count of its settle cards, the city section's card among them.
  */
 export function createPile(
   scene: Phaser.Scene,
@@ -75,7 +76,7 @@ export function createPile(
     scene,
     x,
     foot + PILE_BACKS * BACK_STEP + COUNTS_GAP,
-    text('pile.counts', { cards: owned.cards.length, settle: owned.settle.length }),
+    text('pile.counts', countsOf(owned)),
     COUNTS_STYLE,
   )
     .setOrigin(0.5, 0)

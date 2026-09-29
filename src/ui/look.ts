@@ -54,6 +54,12 @@ export type Look = {
   readonly deckCounts: number;
   /** The edge between the two panels of the collection screen. */
   readonly panelDivide: number;
+  /** The strength a stack of the collection stands at whose every copy the deck holds. */
+  readonly whollyHeld: number;
+  /** The edge around the city section's row of a deck. */
+  readonly cityRowEdge: number;
+  /** The edge of a button that changes the collection screen's mode. */
+  readonly modeButtonEdge: number;
   readonly cardEdge: number;
   readonly cardBack: number;
   readonly aimSlab: number;
@@ -108,6 +114,9 @@ export const LOOK: Look = {
   regionEdge: 0x0d1014,
   deckCounts: 0x9aa1a9,
   panelDivide: 0x2c3340,
+  whollyHeld: 0.5,
+  cityRowEdge: 0xd4d7db,
+  modeButtonEdge: 0x5c6068,
   cardEdge: 0x6f757d,
   cardBack: 0x232833,
   aimSlab: 0x232833,
@@ -155,6 +164,16 @@ export const LOOK: Look = {
 /** A colour in the notation a text style takes it in. */
 export function css(colour: number): string {
   return `#${colour.toString(16).padStart(6, '0')}`;
+}
+
+/** A colour as it shows laid at this strength over the page's own colour. */
+export function overPage(colour: number, strength: number): number {
+  const channel = (shift: number): number => {
+    const over = (colour >> shift) & 0xff;
+    const under = (LOOK.page >> shift) & 0xff;
+    return Math.round(over * strength + under * (1 - strength));
+  };
+  return (channel(16) << 16) | (channel(8) << 8) | channel(0);
 }
 
 /** A colour worn down as the discard pile's top card and a dry draw pile are: CSS `grayscale(0.35) brightness(0.75)`. */

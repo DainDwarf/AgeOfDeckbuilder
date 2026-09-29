@@ -1,9 +1,9 @@
 import { expect, test } from 'vitest';
-import { dealt, FIRST_CARD_NUMBER } from '../rules/campaign';
+import { dealt, FIRST_CARD_NUMBER, newCampaign, paidInto } from '../rules/campaign';
 import { merged } from '../rules/catalogue';
-import { CATALOGUE, SLICES } from '../rules/fixtures';
+import { CATALOGUE, CIVILIZATION_ID, hoardedVictory, SLICES } from '../rules/fixtures';
 import type { CardId } from '../rules/state';
-import { stacksOf } from './collection-layout';
+import { countsOf, deckRowsOf, heldIn, stacksOf } from './collection-layout';
 
 /** The names the player reads the fixture's cards by, the test's own. */
 const NAMES: Readonly<Record<CardId, string>> = {
@@ -37,6 +37,28 @@ function twoAges() {
   return merged('fixture', [
     { ...first, brings: { ...first.brings, cards: firstCards } },
     { ...second, brings: { cards: { PH_Stores, PH_Worker } } },
+    ...rest,
+  ]);
+}
+
+/**
+ * The fixture's content with its civilization listing two settle cards, one of them twice, and three
+ * cards, one of them three times, neither section in the collection's order.
+ */
+function edited() {
+  const settle = ['PH_Claim', 'PH_Band', 'PH_Claim'];
+  const cards = ['PH_March', 'PH_Worker', 'PH_March', 'PH_Farm', 'PH_March'];
+  const [first, ...rest] = SLICES;
+  const civilizations = first.brings.civilizations ?? {};
+  const listed = civilizations[CIVILIZATION_ID];
+  return merged('fixture', [
+    {
+      ...first,
+      brings: {
+        ...first.brings,
+        civilizations: { ...civilizations, [CIVILIZATION_ID]: { ...listed, settle, cards } },
+      },
+    },
     ...rest,
   ]);
 }
@@ -83,4 +105,55 @@ test('a hazard stands after every other kind of its age', () => {
     { id: 'PH_March', copies: 1 },
     { id: 'PH_Hunger', copies: 1 },
   ]);
+});
+
+test('a civilization’s settle section and its deck each stand every card they hold once, with the copies they hold, in the collection’s order, and the city section’s card in neither', () => {
+  const catalogue = edited();
+
+  expect(
+    deckRowsOf(catalogue, newCampaign(catalogue, CIVILIZATION_ID), CIVILIZATION_ID, nameOf),
+  ).toEqual({
+    settle: [
+      { id: 'PH_Band', copies: 1 },
+      { id: 'PH_Claim', copies: 2 },
+    ],
+    cards: [
+      { id: 'PH_Worker', copies: 1 },
+      { id: 'PH_Farm', copies: 1 },
+      { id: 'PH_March', copies: 3 },
+    ],
+  });
+});
+
+test('a civilization counts its cards, and its settle cards with the city section’s card among them', () => {
+  const catalogue = edited();
+  const campaign = newCampaign(catalogue, CIVILIZATION_ID);
+
+  expect(countsOf(campaign.civilizations[CIVILIZATION_ID])).toEqual({ cards: 5, settle: 4 });
+});
+
+test('a card of the collection reads the copies a deck holds of it, in its settle section as in the rest, and none where the deck holds none', () => {
+  const catalogue = edited();
+  const deck = deckRowsOf(
+    catalogue,
+    newCampaign(catalogue, CIVILIZATION_ID),
+    CIVILIZATION_ID,
+    nameOf,
+  );
+
+  expect(heldIn(deck, 'PH_Claim')).toBe(2);
+  expect(heldIn(deck, 'PH_March')).toBe(3);
+  expect(heldIn(deck, 'PH_Harvest')).toBe(0);
+});
+
+test('the copies a won chronicle adds to the collection stand in no deck', () => {
+  const { campaign } = paidInto(
+    CATALOGUE,
+    newCampaign(CATALOGUE, CIVILIZATION_ID),
+    hoardedVictory(),
+  );
+  const stacks = stacksOf(CATALOGUE, campaign.collection, nameOf);
+
+  expect(stacks.find(({ id }) => id === 'PH_Harvest')?.copies).toBe(4);
+  expect(heldIn(deckRowsOf(CATALOGUE, campaign, CIVILIZATION_ID, nameOf), 'PH_Harvest')).toBe(2);
 });

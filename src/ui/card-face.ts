@@ -126,21 +126,21 @@ export type CardFace = {
 };
 
 /**
- * A face, drawn about its own bottom centre so a container's angle fans it from that corner. The
- * refusal marks the costs the city cannot pay, and any refusal at all draws the face unplayable.
+ * A face, drawn about its own bottom centre so a container's angle fans it from that corner, every
+ * colour of it through the tone. The refusal marks the costs the city cannot pay, and any refusal
+ * at all draws the face unplayable.
  */
 export function createCardFace(
   scene: Phaser.Scene,
   face: Face,
   refusal: Refusal,
   {
-    faded = false,
+    tone = (colour: number): number => colour,
     width = CARD_WIDTH,
     names: presses,
-  }: { faded?: boolean; width?: number; names?: NamePresses } = {},
+  }: { tone?: (colour: number) => number; width?: number; names?: NamePresses } = {},
 ): CardFace {
   const { height, em, pad, radius } = metricsOf(width);
-  const tone = faded ? worn : (colour: number): number => colour;
   const palette: Paper = playable(refusal) ? LOOK.affordableCard : LOOK.unaffordableCard;
 
   const left = -width / 2 + 1 + pad;
@@ -434,7 +434,10 @@ function cardOutline(): { x: number; y: number }[] {
 }
 
 /** Dashes of six on, five off, stretched so a whole number of them spans the outline. */
-function dashAlong(outline: Phaser.GameObjects.Graphics, points: { x: number; y: number }[]): void {
+export function dashAlong(
+  outline: Phaser.GameObjects.Graphics,
+  points: { x: number; y: number }[],
+): void {
   const lengths: number[] = [];
   let total = 0;
   for (let i = 0; i + 1 < points.length; i++) {
