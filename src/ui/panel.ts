@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { consoleCovers } from './debug-console';
 import {
+  answersPress,
   type Box,
   onClick,
   onHover,
@@ -77,6 +78,10 @@ export function createPanel(
     moved = true;
   });
   scroll.reach(reachOf(frame.height, foot - frame.y));
+  answersPress(zone, (pointer) => {
+    const at = on.at(pointer.x, pointer.y);
+    return heldAt(frame, scroll.offset, held, at.x, at.y)?.press !== undefined;
+  });
 
   /** The thing the pointer was last read on, and nothing while it is on none. */
   let pointed: Held | undefined;
@@ -134,12 +139,12 @@ export function createPanel(
     }
     scroll.step(delta);
   };
-  whileUp(scene, scene.events, Phaser.Scenes.Events.UPDATE, step);
+  const stopStepping = whileUp(scene, scene.events, Phaser.Scenes.Events.UPDATE, step);
 
   return {
     down() {
       point(undefined);
-      scene.events.off(Phaser.Scenes.Events.UPDATE, step);
+      stopStepping();
       zone.destroy();
       root.destroy();
     },

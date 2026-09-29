@@ -145,21 +145,25 @@ export function releaseOnBlur(game: Phaser.Game): void {
 }
 
 /**
- * A listener for as long as the scene is up. Every emitter the scene listens on — its own, the
- * scale manager's, the game's — outlives its shutdown, so one left on any of them is called again
- * by the chronicle screen a restart raises, holding every object the chronicle screen it was made
- * on has since destroyed.
+ * A listener until the scene shuts down, or until what it hands back is called. Every emitter the
+ * scene listens on outlives its shutdown, so one left on any of them is called again by the screen
+ * a restart raises, holding every object the screen it was made on has since destroyed.
  */
 export function whileUp<A extends unknown[]>(
   scene: Phaser.Scene,
   on: Phaser.Events.EventEmitter,
   event: string,
   handler: (...args: A) => void,
-): void {
+): () => void {
   on.on(event, handler);
-  scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+  const off = (): void => {
     on.off(event, handler);
-  });
+  };
+  scene.events.once(Phaser.Scenes.Events.SHUTDOWN, off);
+  return () => {
+    off();
+    scene.events.off(Phaser.Scenes.Events.SHUTDOWN, off);
+  };
 }
 
 // Everything here reads the window and the scale manager live, never the RESIZE event's size
@@ -387,11 +391,20 @@ export function awayUnder(scene: Phaser.Scene): (scrim: Scrim, up: boolean) => v
 type Hovering = { hovered: boolean; readonly enter: () => void; readonly leave: () => void };
 
 const hovers = new Map<Phaser.GameObjects.GameObject, Hovering[]>();
-const answering = new WeakSet<Phaser.GameObjects.GameObject>();
+const answering = new WeakMap<
+  Phaser.GameObjects.GameObject,
+  (pointer: Phaser.Input.Pointer) => boolean
+>();
 
-/** The object marked as answering a press: the pointer on it is the hand. */
-export function answersPress<T extends Phaser.GameObjects.GameObject>(object: T): T {
-  answering.add(object);
+/**
+ * The object marked as answering a press where `where` says it does, everywhere on it unless told:
+ * the pointer there is the hand, read each frame.
+ */
+export function answersPress<T extends Phaser.GameObjects.GameObject>(
+  object: T,
+  where: (pointer: Phaser.Input.Pointer) => boolean = () => true,
+): T {
+  answering.set(object, where);
   return object;
 }
 
@@ -454,7 +467,8 @@ export function followPointer(game: Phaser.Game): void {
         hovering.enter();
       }
     }
-    const pointing = under !== undefined && answering.has(under);
+    const where = under === undefined ? undefined : answering.get(under);
+    const pointing = where?.(game.input.activePointer) === true;
     if (pointing === pointed) return;
     pointed = pointing;
     game.canvas.style.cursor = pointing ? 'pointer' : '';

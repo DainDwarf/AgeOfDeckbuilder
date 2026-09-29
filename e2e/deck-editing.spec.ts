@@ -56,21 +56,45 @@ function placeOf(page: Page, name: string): Promise<{ x: number; y: number }> {
   }, name);
 }
 
-/**
- * The collection screen a bare boot's navbar opens, and the deck editing mode a press on the first
- * civilization's pile opens on it.
- */
-async function openDeck(page: Page): Promise<void> {
+/** The collection screen a bare boot's navbar opens. */
+async function openCollection(page: Page): Promise<void> {
   await readNames(page);
   await page.goto('/');
   await campaignShown(page);
   await click(page, 'navbar-collection');
   await expect.poll(() => standing(page, 'collection-mode')).toBe(true);
   await rested(page);
+}
+
+/** The deck editing mode a press on the first civilization's pile opens, and a drawn frame after it. */
+async function pilePressed(page: Page): Promise<void> {
   await click(page, `collection-civilization-${CIVILIZATION}`);
   await expect.poll(() => standing(page, 'deck-editing-mode')).toBe(true);
   await rested(page);
 }
+
+/** The collection screen a bare boot's navbar opens, in the deck editing mode on its first civilization. */
+async function openDeck(page: Page): Promise<void> {
+  await openCollection(page);
+  await pilePressed(page);
+}
+
+test('on the collection screen the pointer on a civilization’s pile is the hand, and holding still where its press opened the deck editing mode, the arrow', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  await openCollection(page);
+
+  const pile = await onScreen(page, `collection-civilization-${CIVILIZATION}`);
+  await page.mouse.move(pile.x, pile.y);
+  await rested(page);
+  expect(await cursorOverCanvas(page)).toBe('pointer');
+
+  await pilePressed(page);
+  expect(await cursorOverCanvas(page)).toBe('');
+
+  expect(problems).toEqual([]);
+});
 
 test('a press on a civilization’s pile opens the deck editing mode on it: its name, its settle section under its count with the city section’s card at its head, its deck under its count, each card a row reading its copies in the collection’s order, and the collection four stacks to a line reading the copies the deck holds, dimmed where it holds them all', async ({
   page,

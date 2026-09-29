@@ -89,7 +89,7 @@ function shapeOf(mode: Mode): { readonly right: number; readonly across: number 
 /** What a stack reads under it, and whether it stands dimmed. */
 type Reading = { readonly reads: string; readonly dimmed: boolean };
 
-/** A colour as it stands on a dimmed stack. */
+/** A colour as it stands on a dimmed stack: a container's alpha fades each child alone, so the cards under the face would show through it. */
 function dimmed(colour: number): number {
   return overPage(colour, LOOK.whollyHeld);
 }

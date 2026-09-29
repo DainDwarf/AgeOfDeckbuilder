@@ -34,7 +34,7 @@ The **debug console** is a dark panel down the top of the screen, on every scree
 
 Three presses work every screen: the **left click** selects, the **right click** inspects, and the **inspection key** inspects the selection. The two clicks press the screen and are not keys: neither binds to anything, and Controls lists neither. A press is held by the button that landed it, and that button's release alone lets it go; a second button pressed meanwhile is a click of its own, answered at its own release on the thing under the pointer, and the hold stands through it, a scrim that click raises excepted.
 
-**The pointer is a hand over a button, a reading on the resource bar, a card in the hand, the cards a window lays out, a small card, a name and a card's kind label**, and an arrow over everything else, the map, a card shown large and a scrim among it. It reads the one thing the pointer is on, as every hover does, so it is right the moment that thing rises, falls or comes live under a pointer that holds still.
+**The pointer is a hand over a thing that answers a left click or a rest**, and an arrow beside the things and over the map and a scrim, whatever those answer. It reads the one thing the pointer is on, as every hover does, so it is right the moment that thing rises, falls or comes live under a pointer that holds still.
 
 **The selection is one thing, a tile or a card, and the left click makes it.** A press on a thing selects it, a new selection drops the old one whatever it was, and a press beside the things drops it and the inspection with it. A left click on the selection acts on it, and what it does is the selected thing's own.
 
