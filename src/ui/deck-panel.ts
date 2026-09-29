@@ -191,14 +191,7 @@ export function deckPanelOf(
       box,
       answers: answersOf(face, inspecting),
       press,
-      carry:
-        press === undefined
-          ? undefined
-          : {
-              copy: () => rowOf(scene, face, copies, box, radius, 'carried-card'),
-              lands,
-              land: press,
-            },
+      carry: { copy: () => rowOf(scene, face, copies, box, radius, 'carried-card'), lands },
     });
   };
 

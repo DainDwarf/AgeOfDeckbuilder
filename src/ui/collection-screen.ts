@@ -145,7 +145,7 @@ function stackOf(
       answers: answersOf(card, shown, inspecting),
       press,
       carry:
-        press === undefined || lands === undefined
+        lands === undefined
           ? undefined
           : {
               copy: () =>
@@ -154,7 +154,6 @@ function stackOf(
                   .setName('carried-card')
                   .setData('card', id),
               lands,
-              land: press,
             },
     },
     bottom: count.y + count.height,

@@ -18,19 +18,18 @@ import { createScroll, heldAt, inside, reachOf } from './scroll';
 import type { Answers, Point } from './stack';
 
 /**
- * What a press held on a thing carries: its copy, drawn where the thing stands unscrolled, the box
- * of the design space a release lands it in, and what landing there does.
+ * What a press held on a thing carries: its copy, drawn where the thing stands unscrolled, and the
+ * box of the design space a release lands it in, where it does what a left click on the thing does.
  */
 export type Carry = {
   readonly copy: () => Phaser.GameObjects.Container;
   readonly lands: Box;
-  readonly land: () => void;
 };
 
 /**
  * A thing a panel holds that answers the pointer: its box as it stands unscrolled, its answers, what
  * a left click on it does, where it does anything, and what a press held on it carries, where it
- * carries anything.
+ * carries anything; a thing no left click answers carries nothing, whatever carry it declares.
  */
 export type Held = {
   readonly box: Box;
@@ -45,15 +44,12 @@ export type Carrier = {
   readonly carrying: boolean;
   /**
    * The thing's copy lifted off a panel scrolled this far, under a press that landed at `from` and
-   * stands at `at`.
+   * stands at `at`; a landing runs `press`.
    */
-  lift(carry: Carry, offset: number, from: Point, at: Point): void;
+  lift(carry: Carry, press: () => void, offset: number, from: Point, at: Point): void;
   /** The card carried and every one sliding home taken down at once. */
   down(): void;
 };
-
-const EDGE_WIDTH = 2;
-const EDGE_INSET = 6;
 
 /**
  * The carrier of a screen's panels, standing what it carries on the stratum handed: the copy follows
@@ -64,6 +60,7 @@ export function createCarrier(scene: Phaser.Scene, on: Stratum): Carrier {
   let carried:
     | {
         readonly carry: Carry;
+        readonly press: () => void;
         readonly copy: Phaser.GameObjects.Container;
         readonly edge: Phaser.GameObjects.Graphics;
         readonly home: Point;
@@ -111,7 +108,7 @@ export function createCarrier(scene: Phaser.Scene, on: Stratum): Carrier {
     const landed = carried;
     letGo();
     landed.copy.destroy();
-    landed.carry.land();
+    landed.press();
   });
   whileUp(scene, scene.input, 'pointerupoutside', slideHome);
 
@@ -119,11 +116,11 @@ export function createCarrier(scene: Phaser.Scene, on: Stratum): Carrier {
     get carrying() {
       return carried !== undefined;
     },
-    lift(carry, offset, from, at) {
+    lift(carry, press, offset, from, at) {
       const copy = carry.copy();
       const { x, y, width, height } = carry.lands;
-      const off = EDGE_INSET + EDGE_WIDTH / 2;
-      const edge = scene.add.graphics().lineStyle(EDGE_WIDTH, LOOK.paleInk).setName('landing-edge');
+      const off = 6 + 2 / 2;
+      const edge = scene.add.graphics().lineStyle(2, LOOK.paleInk).setName('landing-edge');
       dashAlong(edge, [
         { x: x + off, y: y + off },
         { x: x + width - off, y: y + off },
@@ -132,7 +129,7 @@ export function createCarrier(scene: Phaser.Scene, on: Stratum): Carrier {
         { x: x + off, y: y + off },
       ]);
       on.layer.add([edge, copy]);
-      carried = { carry, copy, edge, home: { x: copy.x, y: copy.y - offset }, from };
+      carried = { carry, press, copy, edge, home: { x: copy.x, y: copy.y - offset }, from };
       follow(at);
     },
     down() {
@@ -238,9 +235,9 @@ export function createPanel(
   });
   zone.on('dragstart', (pointer: Phaser.Input.Pointer) => {
     const from = on.at(pointer.downX, pointer.downY);
-    const carry = heldAt(frame, scroll.offset, held, from.x, from.y)?.carry;
-    if (carry === undefined) scroll.grab(from.y);
-    else carrier.lift(carry, scroll.offset, from, on.at(pointer.x, pointer.y));
+    const under = heldAt(frame, scroll.offset, held, from.x, from.y);
+    if (under?.carry === undefined || under.press === undefined) scroll.grab(from.y);
+    else carrier.lift(under.carry, under.press, scroll.offset, from, on.at(pointer.x, pointer.y));
   });
   zone.on('drag', (pointer: Phaser.Input.Pointer) => {
     scroll.drag(on.at(pointer.x, pointer.y).y, scene.time.now);
