@@ -235,6 +235,7 @@ const TEXT = {
   'collection.civilizations': 'Civilizations',
   'collection.copies': 'Copies {copies}',
   'collection.in-deck': 'In deck {held}/{copies}',
+  'collection.price': '{price}',
   'collection.to-collection': 'Collection »',
   'collection.to-civilization': '« Civilization',
   'collection.settle': 'Settle',

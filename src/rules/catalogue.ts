@@ -197,8 +197,12 @@ export type Technology = {
   readonly unlocks: { readonly cards: Readonly<Record<string, number>>; readonly age?: string };
 };
 
-/** What an age owns: its schedule, its camp, its regions by key, and its achievements by key in order. */
+/**
+ * What an age owns: its schedule, its camp, its regions by key, its achievements by key in order, and
+ * the base price of its cards.
+ */
 export type Age = {
+  readonly basePrice: number;
   readonly schedule: Schedule;
   readonly camp: Camp;
   readonly regions: Readonly<Record<string, Region>>;
@@ -379,7 +383,14 @@ export function catalogued(content: Catalogue): Catalogue {
 }
 
 /** What one age owns, checked against the tables of the catalogue holding it. */
-function ageHeld(content: Catalogue, id: string, { schedule, camp, regions }: Age): void {
+function ageHeld(
+  content: Catalogue,
+  id: string,
+  { basePrice, schedule, camp, regions }: Age,
+): void {
+  if (!Number.isInteger(basePrice) || basePrice < 1) {
+    refuse(content, `the age ${id} sets a base price of ${basePrice}`);
+  }
   if (Object.keys(schedule.entries).length === 0) {
     refuse(content, `the age ${id}'s schedule deals no event`);
   }

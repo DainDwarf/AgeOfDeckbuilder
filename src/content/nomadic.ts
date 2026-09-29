@@ -416,6 +416,7 @@ const REGIONS: Age['regions'] = {
 export const NOMADIC: Slice = {
   id: 'nomadic',
   owns: {
+    basePrice: 1,
     schedule: {
       spacing: [6, 9],
       capstone: { id: 'first-shelter', window: [12, 18] },

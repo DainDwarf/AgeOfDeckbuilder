@@ -1,6 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
 import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
+import { priceOf } from '../src/rules/campaign';
 import { freshCampaign } from '../src/rules/save';
 import { stacksOf } from '../src/ui/collection-layout';
 import { cardName, text } from '../src/ui/text';
@@ -47,7 +48,7 @@ async function openCollection(page: Page): Promise<void> {
   await rested(page);
 }
 
-test('the navbar’s Collection opens the collection screen on a new campaign, Collection sunk: each card owned stands once reading its copies, six to a line in the collection’s order, and each civilization’s pile reads its two counts, the city section’s card among its settle cards', async ({
+test('the navbar’s Collection opens the collection screen on a new campaign, Collection sunk: each card owned stands once reading its copies and its price, six to a line in the collection’s order, and each civilization’s pile reads its two counts, the city section’s card among its settle cards', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -69,6 +70,9 @@ test('the navbar’s Collection opens the collection screen on a new campaign, C
     expect(await cardOnFace(page, `collection-card-${id}`)).toBe(id);
     expect(await textOf(page, `collection-card-${id}-copies`)).toBe(
       text('collection.copies', { copies }),
+    );
+    expect(await textOf(page, `collection-card-${id}-price`)).toBe(
+      text('collection.price', { price: priceOf(CATALOGUE, CAMPAIGN, id) }),
     );
     placed.push({ id, at: await placeOf(page, `collection-card-${id}`) });
   }

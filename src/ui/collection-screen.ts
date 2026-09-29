@@ -1,6 +1,12 @@
 import Phaser from 'phaser';
 import { CATALOGUE } from '../content/catalogue';
-import { addedTo, type Campaign, type CampaignCivilization, removedFrom } from '../rules/campaign';
+import {
+  addedTo,
+  type Campaign,
+  type CampaignCivilization,
+  priceOf,
+  removedFrom,
+} from '../rules/campaign';
 import type { Catalogue } from '../rules/catalogue';
 import { type CardId, NO_REFUSAL } from '../rules/state';
 import {
@@ -36,6 +42,7 @@ import { backRaisesMenu, resetMenu } from './menu-scene';
 import { ROOM, wearNavbar } from './navbar';
 import { overlayOf } from './overlay-scene';
 import { createCarrier, createPanel, type Filled, type Held, type Panel } from './panel';
+import { chipAt } from './resource-bar';
 import { campaignHeld, keepCampaign } from './save-entry';
 import { createSmallCards } from './small-card';
 import { answersOf, type Inspecting, standLarge } from './stack';
@@ -51,6 +58,7 @@ const STACK_WIDTH = CARD_WIDTH + UNDER_MOST * UNDER_STEP;
 const STACKS_APART = 10;
 const LINES_APART = 18;
 const COPIES_GAP = 6;
+const CHIP_TO_PRICE = 11;
 
 const PILES_APART = 22;
 
@@ -96,7 +104,8 @@ function dimmed(colour: number): number {
 
 /**
  * One stack from the left and the top handed: a card under its face for each copy past the first,
- * three at most, each a step further right and down, and its reading under them.
+ * three at most, each a step further right and down, its reading under them, and on that line at
+ * its right edge its price.
  */
 function stackOf(
   scene: Phaser.Scene,
@@ -104,6 +113,7 @@ function stackOf(
   { id, copies }: CollectionStack,
   { left, top }: { left: number; top: number },
   reading: Reading,
+  price: number,
   inspecting: Inspecting,
   press: (() => void) | undefined,
   lands: Box | undefined,
@@ -135,9 +145,23 @@ function stackOf(
     reading.reads,
     COPIES_STYLE,
   ).setName(`collection-card-${id}-copies`);
+  const priced = addText(
+    scene,
+    left + STACK_WIDTH,
+    count.y,
+    text('collection.price', { price }),
+    COPIES_STYLE,
+  )
+    .setOrigin(1, 0)
+    .setName(`collection-card-${id}-price`);
+  const chip = chipAt(
+    scene,
+    { x: priced.x - priced.width - CHIP_TO_PRICE, y: count.y + count.height / 2 },
+    LOOK.influence,
+  ).setName(`collection-card-${id}-price-chip`);
   return {
     root: scene.add
-      .container(0, 0, [...unders, face, count])
+      .container(0, 0, [...unders, face, count, chip, priced])
       .setName(`collection-stack-${id}`)
       .setData('dimmed', reading.dimmed),
     held: {
@@ -161,19 +185,20 @@ function stackOf(
 }
 
 /**
- * The collection's stacks from the top handed, as many to a line as `across` says, the lines centred
- * between the room's left and the panel's right handed, each stack reading what `readingOf` says and
- * answering a left click where `pressOf` hands a press, and a press held into `lands` where handed.
+ * The campaign's collection as stacks from the top handed, `across` to a line, the lines centred
+ * between the room's left and the panel's right handed, each reading what `readingOf` says, answering
+ * a left click where `pressOf` hands a press, and a press held into `lands` where handed.
  */
 function collectionOf(
   scene: Phaser.Scene,
   catalogue: Catalogue,
-  stacks: readonly CollectionStack[],
+  campaign: Campaign,
   { top, right, across, lands }: { top: number; right: number; across: number; lands?: Box },
   readingOf: (stack: CollectionStack) => Reading,
   pressOf: (stack: CollectionStack) => (() => void) | undefined,
   inspecting: Inspecting,
 ): Filled {
+  const stacks = stacksOf(catalogue, campaign.collection, cardName);
   const span = across * STACK_WIDTH + (across - 1) * STACKS_APART;
   const first = (ROOM.x + right - span) / 2;
   const parts: Phaser.GameObjects.Container[] = [];
@@ -189,6 +214,7 @@ function collectionOf(
         stack,
         { left, top: lineTop },
         readingOf(stack),
+        priceOf(catalogue, campaign, stack.id),
         inspecting,
         pressOf(stack),
         lands,
@@ -317,7 +343,6 @@ export class CollectionScreen extends Phaser.Scene {
         laid.head.destroy();
       }
       const campaign = campaignHeld();
-      const stacks = stacksOf(CATALOGUE, campaign.collection, cardName);
       const [leftOffset, rightOffset] = offsets;
       const { right, across } = shapeOf(mode);
       const divide = DESIGN_WIDTH - right;
@@ -355,7 +380,7 @@ export class CollectionScreen extends Phaser.Scene {
                   ...collectionOf(
                     this,
                     CATALOGUE,
-                    stacks,
+                    campaign,
                     { top, right: divide, across },
                     reading,
                     () => undefined,
@@ -457,7 +482,7 @@ export class CollectionScreen extends Phaser.Scene {
                   ...collectionOf(
                     this,
                     CATALOGUE,
-                    stacks,
+                    campaign,
                     { top, right: divide, across, lands: civilizationSide },
                     reading,
                     add,

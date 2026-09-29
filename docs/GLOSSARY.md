@@ -26,6 +26,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **achievement** | A goal a chronicle can reach; its technology is learned by reaching it. | mission, objective, quest, milestone |
 | **influence** | The meta-currency every chronicle pays, scaled by how the city fared. | gold, XP |
 | **price** | The influence one more copy of a card is bought for. | fee, rate, value (for a card) |
+| **base price** | The price of a card owned once, which the card's age sets for all its cards. | base cost, starting price, flat price |
 | **buy** | To pay a card's price in influence and add one more copy of it to the collection. | purchase, acquire |
 | **save** | The chronicle in progress and the meta, kept on the player's machine. | savegame, save slot, checkpoint, autosave |
 | **chronicle** | One city's story through one age, from its opening to victory or defeat — what a roguelite calls a run. | run, playthrough, attempt, session |

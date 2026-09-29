@@ -277,6 +277,15 @@ function chipColour(key: BarReading): number {
   }
 }
 
+/** The one way a reading's diamond is drawn, at the place handed, in the colour it is known by. */
+export function chipAt(
+  scene: Phaser.Scene,
+  { x, y }: { x: number; y: number },
+  colour: number,
+): Phaser.GameObjects.Rectangle {
+  return scene.add.rectangle(x, y, 10, 10, colour).setAngle(45);
+}
+
 /**
  * A reading named `reading-<name>`, its value `reading-<name>-value`, whose tooltip is raised under
  * it. The caller adds its parts to the bar and places it; its zone's coordinates are the screen's.
@@ -286,7 +295,7 @@ export function createReading(
   tooltip: Tooltip,
   shown: { name: string; colour: number; word: string; tip: string },
 ): Reading {
-  const chip = scene.add.rectangle(0, 0, 10, 10, shown.colour).setAngle(45);
+  const chip = chipAt(scene, { x: 0, y: 0 }, shown.colour);
   const word = addText(scene, 0, 0, shown.word, WORD_STYLE).setOrigin(0, 0.5);
   const value = addText(scene, 0, 0, '', VALUE_STYLE)
     .setOrigin(0, 0.5)

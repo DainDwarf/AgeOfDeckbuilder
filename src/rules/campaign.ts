@@ -1,7 +1,9 @@
 import {
   achievementOf,
+  ageOf,
   type Catalogue,
   type Civilization,
+  cardAge,
   cardOf,
   checkContent,
   civilizationOf,
@@ -142,6 +144,16 @@ function heldCivilization(
     refuse(catalogue, `the campaign holds no civilization named ${name}`);
   }
   return campaign.civilizations[name];
+}
+
+/**
+ * The price of a card of the collection: the base price of the card's age, doubled for every copy
+ * the collection owns past the first. A card it owns no copy of is refused.
+ */
+export function priceOf(catalogue: Catalogue, campaign: Campaign, card: CardId): number {
+  const copies = campaign.collection.filter(({ id }) => id === card).length;
+  if (copies === 0) refuse(catalogue, `the collection owns no copy of ${card}`);
+  return ageOf(catalogue, cardAge(catalogue, card)).basePrice * 2 ** (copies - 1);
 }
 
 /** The section of a civilization a card stands in. */

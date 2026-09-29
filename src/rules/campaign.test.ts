@@ -8,9 +8,10 @@ import {
   dealt,
   newCampaign,
   paidInto,
+  priceOf,
   removedFrom,
 } from './campaign';
-import { achievementOf, type Civilization, technologyOf } from './catalogue';
+import { achievementOf, ageOf, type Civilization, cardAge, technologyOf } from './catalogue';
 import { apply, outcome } from './chronicle';
 import {
   AGE,
@@ -22,7 +23,9 @@ import {
   HOARD,
   HOARD_NEED,
   hoardedVictory,
+  QUIET,
   reaching,
+  twoAges,
   victoryOf,
 } from './fixtures';
 import { readSave, writeSave } from './save';
@@ -191,6 +194,36 @@ test('a chronicle paid in a second time is refused: the technology its achieveme
 
   expect(() => paidInto(CATALOGUE, campaign, won)).toThrow(
     `fixture: the achievement ${HOARD} earns ${technology}, which is already learned`,
+  );
+});
+
+test('a card’s price is the base price of its age owning one copy, doubled for every copy owned past the first, a copy a chronicle paid in counted as any other; a card the collection owns no copy of has none', () => {
+  const catalogue = twoAges();
+  const opened = newCampaign(catalogue, CIVILIZATION_ID);
+  const { campaign } = paidInto(catalogue, opened, hoardedVictory());
+  const owned = (held: Campaign, card: CardId): number =>
+    copiesIn(
+      held.collection.map(({ id }) => id),
+      card,
+    );
+  const first = ageOf(catalogue, AGE).basePrice;
+  const second = ageOf(catalogue, QUIET).basePrice;
+
+  expect(second).not.toBe(first);
+  expect([cardAge(catalogue, 'PH_Claim'), cardAge(catalogue, 'PH_Warrior')]).toEqual([AGE, AGE]);
+  expect(cardAge(catalogue, 'PH_Worker')).toBe(QUIET);
+  expect([owned(opened, 'PH_Claim'), owned(opened, 'PH_Warrior')]).toEqual([1, 2]);
+  expect(owned(opened, 'PH_Worker')).toBe(2);
+  expect([owned(opened, 'PH_Harvest'), owned(campaign, 'PH_Harvest')]).toEqual([2, 4]);
+
+  expect(priceOf(catalogue, opened, 'PH_Claim')).toBe(first);
+  expect(priceOf(catalogue, opened, 'PH_Warrior')).toBe(2 * first);
+  expect(priceOf(catalogue, opened, 'PH_Worker')).toBe(2 * second);
+  expect(priceOf(catalogue, opened, 'PH_Harvest')).toBe(2 * first);
+  expect(priceOf(catalogue, campaign, 'PH_Harvest')).toBe(8 * first);
+  expect(owned(campaign, 'PH_Stores')).toBe(0);
+  expect(() => priceOf(catalogue, campaign, 'PH_Stores')).toThrow(
+    'fixture: the collection owns no copy of PH_Stores',
   );
 });
 

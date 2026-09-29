@@ -94,6 +94,15 @@ test('a catalogue whose achievement needs a count below one, or pays influence b
   ).not.toThrow();
 });
 
+test('a catalogue whose age sets a base price that is not a whole number of at least one is refused', () => {
+  for (const basePrice of [0, -1, 1.5]) {
+    expect(() => catalogued(aged({ basePrice }))).toThrow(
+      `fixture: the age ${AGE} sets a base price of ${basePrice}`,
+    );
+  }
+  expect(() => catalogued(aged({ basePrice: 1 }))).not.toThrow();
+});
+
 test('a catalogue whose achievement earns a technology it does not hold is refused', () => {
   const content = achieved({ [HOARD]: { ...HOARD_DECLARED, technology: 'PH_Unheld' } });
 

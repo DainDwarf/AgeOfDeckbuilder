@@ -1,7 +1,7 @@
 import { expect, test } from 'vitest';
 import { dealt, FIRST_CARD_NUMBER, newCampaign, paidInto } from '../rules/campaign';
 import { merged } from '../rules/catalogue';
-import { CATALOGUE, CIVILIZATION_ID, hoardedVictory, SLICES } from '../rules/fixtures';
+import { CATALOGUE, CIVILIZATION_ID, hoardedVictory, SLICES, twoAges } from '../rules/fixtures';
 import type { CardId } from '../rules/state';
 import { countsOf, deckRowsOf, heldIn, stacksOf } from './collection-layout';
 
@@ -27,17 +27,6 @@ function nameOf(card: CardId): string {
 /** A collection of these cards, one copy for each time an id is named, dealt as the campaign deals. */
 function collectionOf(...ids: CardId[]) {
   return dealt(FIRST_CARD_NUMBER, ids).cards;
-}
-
-/** The fixture's content with its stores and its worker cards brought by its second age. */
-function twoAges() {
-  const [first, second, ...rest] = SLICES;
-  const { PH_Stores, PH_Worker, ...firstCards } = first.brings.cards ?? {};
-  return merged('fixture', [
-    { ...first, brings: { ...first.brings, cards: firstCards } },
-    { ...second, brings: { cards: { PH_Stores, PH_Worker } } },
-    ...rest,
-  ]);
 }
 
 /**

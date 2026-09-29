@@ -41,6 +41,7 @@ import { raiseMenu } from './menu-scene';
 import type { OverlayScene } from './overlay-scene';
 import { refused } from './refusal-lines';
 import { createRefusalNote } from './refusal-note';
+import { chipAt } from './resource-bar';
 import { createScroll, reachOf } from './scroll';
 import { createSmallCards, type Raiser, raiserOf } from './small-card';
 import { createStack } from './stack';
@@ -697,7 +698,7 @@ export function createOverlay(
     const left = (DESIGN_WIDTH - width) / 2;
     const right = left + width;
     const diamond = (x: number, y: number): Phaser.GameObjects.Rectangle =>
-      scene.add.rectangle(x, y, 10, 10, LOOK.influence).setAngle(45);
+      chipAt(scene, { x, y }, LOOK.influence);
     const parts: (Phaser.GameObjects.GameObject & Phaser.GameObjects.Components.Transform)[] = [
       title,
       line,

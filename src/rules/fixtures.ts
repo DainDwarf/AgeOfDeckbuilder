@@ -847,15 +847,18 @@ const TECHNOLOGIES: Tables['technologies'] = {
   ),
 };
 
-/** Every fixture age, each owning its own schedule and achievements over the camp and the regions handed in. */
+/**
+ * Every fixture age, each owning its own schedule and achievements over the camp and the regions
+ * handed in, and a base price of its own: the first age's 3, and one more for each age after it.
+ */
 export function agesOver(
   camp: Camp,
   regions: Readonly<Record<string, Region>>,
 ): Readonly<Record<string, Age>> {
   return Object.fromEntries(
-    Object.entries(SCHEDULES).map(([id, schedule]) => [
+    Object.entries(SCHEDULES).map(([id, schedule], at) => [
       id,
-      { schedule, camp, regions, achievements: achievementsOf(id) },
+      { basePrice: 3 + at, schedule, camp, regions, achievements: achievementsOf(id) },
     ]),
   );
 }
@@ -871,6 +874,17 @@ export const SLICES: readonly Slice[] = Object.entries(agesOver(CAMP, REGIONS)).
 
 /** The content every fixture is played on, its numbers the fixture's own. */
 export const CATALOGUE: Catalogue = merged('fixture', SLICES);
+
+/** The fixture's content with its stores and its worker cards brought by its second age. */
+export function twoAges(): Catalogue {
+  const [first, second, ...rest] = SLICES;
+  const { PH_Stores, PH_Worker, ...firstCards } = first.brings.cards ?? {};
+  return merged('fixture', [
+    { ...first, brings: { ...first.brings, cards: firstCards } },
+    { ...second, brings: { cards: { PH_Stores, PH_Worker } } },
+    ...rest,
+  ]);
+}
 
 /**
  * A timeline dealing nothing in the quiet age: its next deal, and the capstone, on a turn past any a
