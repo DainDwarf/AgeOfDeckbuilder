@@ -4,8 +4,6 @@ import { civilizationOf } from '../src/rules/catalogue';
 import { offered } from '../src/rules/schedule';
 import type { Chronicle } from '../src/rules/state';
 import { answerFace } from '../src/ui/face';
-import { referenceName } from '../src/ui/text';
-import { layOutRun, type Reference } from '../src/ui/text-run';
 import {
   besideTheDeal,
   cardOnFace,
@@ -14,6 +12,7 @@ import {
   firstsOf,
   launchedOn,
   leanSeason,
+  namedIn,
   nameOnScreen,
   onScreen,
   openSaved,
@@ -31,13 +30,6 @@ const HAND = 'pointer';
 
 /** Longer than the hand-over a small card waits out before it goes down, so one going has gone. */
 const PAST_HANDOVER = 400;
-
-/** What a rules entry names, laid out as a run on a measure of one to the character. */
-function namedIn(entry: string): Reference[] {
-  const measure = (content: string): number => content.length;
-  const metrics = { width: 24, glyph: 1, bearing: 0, space: 1 };
-  return layOutRun(entry, measure, metrics, referenceName).names.map((name) => name.reference);
-}
 
 /**
  * The first answer the deal standing offers whose rules entry names a card: the answer, where the

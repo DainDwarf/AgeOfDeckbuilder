@@ -1,5 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
-import type Phaser from 'phaser';
+import { expect, test } from '@playwright/test';
 import type { Chronicle } from '../src/rules/state';
 import {
   besideTheCards,
@@ -8,6 +7,7 @@ import {
   chronicleOf,
   click,
   doubledCivilization,
+  drawsName,
   endedTurn,
   kindLabelOnScreen,
   nameOnScreen,
@@ -27,15 +27,6 @@ import {
 
 /** Longer than the hand-over a small card waits out before it goes down, so one going has gone. */
 const PAST_HANDOVER = 400;
-
-/** Whether the named face's rules entry draws a name. */
-function drawsName(page: Page, face: string): Promise<boolean> {
-  return page.evaluate((target) => {
-    const root = window.named?.(target)?.object as Phaser.GameObjects.Container | undefined;
-    if (root === undefined) throw new Error(`nothing named ${target} is on the chronicle screen`);
-    return ((root.getData('names') as unknown[] | undefined) ?? []).length > 0;
-  }, face);
-}
 
 /** The face whose spot on the page stands nearest the height `y`. */
 async function nearest(

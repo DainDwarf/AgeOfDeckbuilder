@@ -44,6 +44,8 @@ import { type Bindings, STORED, serialiseBindings } from '../src/ui/bindings';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
 import type { PileKind } from '../src/ui/overlay';
 import { SAVE_ENTRY } from '../src/ui/save-entry';
+import { referenceName } from '../src/ui/text';
+import { layOutRun, type Reference } from '../src/ui/text-run';
 
 declare global {
   interface Window {
@@ -368,6 +370,22 @@ export function onScreen(page: Page, name: string): Promise<OnScreen> {
       unit,
     };
   }, name);
+}
+
+/** What an entry names, in its order, laid out as a run on a measure of one to the character. */
+export function namedIn(entry: string): Reference[] {
+  const measure = (content: string): number => content.length;
+  const metrics = { width: Number.POSITIVE_INFINITY, glyph: 1, bearing: 0, space: 1 };
+  return layOutRun(entry, measure, metrics, referenceName).names.map((name) => name.reference);
+}
+
+/** Whether the named face's rules entry draws a name. */
+export function drawsName(page: Page, face: string): Promise<boolean> {
+  return page.evaluate((target) => {
+    const root = window.named?.(target)?.object as Phaser.GameObjects.Container | undefined;
+    if (root === undefined) throw new Error(`nothing named ${target} is on the screen`);
+    return ((root.getData('names') as unknown[] | undefined) ?? []).length > 0;
+  }, face);
 }
 
 /**

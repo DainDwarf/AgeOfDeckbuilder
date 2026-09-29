@@ -6,14 +6,14 @@ import { ageOf, firstAge, technologyOf } from '../src/rules/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
 import { freshCampaign } from '../src/rules/save';
 import { DEFAULTS } from '../src/ui/bindings';
-import { achievementGoal, ageName, referenceName, technologyName, text } from '../src/ui/text';
-import { layOutRun, type Reference } from '../src/ui/text-run';
+import { achievementGoal, ageName, technologyName, text } from '../src/ui/text';
 import { WASH } from '../src/ui/tree-layout';
 import {
   campaignShown,
   cardOnFace,
   idsOf,
   landed,
+  namedIn,
   nameOnScreen,
   onScreen,
   plantCampaign,
@@ -31,13 +31,6 @@ const AGE = firstAge(CATALOGUE);
 const [[ACHIEVEMENT, EARNED]] = Object.entries(ageOf(CATALOGUE, AGE).achievements);
 const TECHNOLOGY = EARNED.technology;
 const PLATE = `plate-${TECHNOLOGY}`;
-
-/** What an entry names, laid out as a run on a measure of one to the character. */
-function namedIn(entry: string): Reference[] {
-  const measure = (content: string): number => content.length;
-  const metrics = { width: Number.POSITIVE_INFINITY, glyph: 1, bearing: 0, space: 1 };
-  return layOutRun(entry, measure, metrics, referenceName).names.map((name) => name.reference);
-}
 
 /** What the plate's reward reads, line by line: what the technology unlocks, and the influence. */
 function rewardOf(): string[] {

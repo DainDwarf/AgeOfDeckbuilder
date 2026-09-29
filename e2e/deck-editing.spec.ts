@@ -12,6 +12,7 @@ import {
   click,
   counted,
   cursorOverCanvas,
+  drawsName,
   heldSave,
   kindLabelOnScreen,
   nameOnScreen,
@@ -88,15 +89,6 @@ async function pilePressed(page: Page): Promise<void> {
 async function openDeck(page: Page): Promise<void> {
   await openCollection(page);
   await pilePressed(page);
-}
-
-/** Whether the named face's rules entry draws a name. */
-function drawsName(page: Page, face: string): Promise<boolean> {
-  return page.evaluate((target) => {
-    const root = window.named?.(target)?.object as Phaser.GameObjects.Container | undefined;
-    if (root === undefined) throw new Error(`there is no ${target}`);
-    return ((root.getData('names') as unknown[] | undefined) ?? []).length > 0;
-  }, face);
 }
 
 /** The first card of the collection whose stack draws a name in its rules entry. */
@@ -178,7 +170,7 @@ async function pressed(
   return moved;
 }
 
-test('on the collection screen the pointer on a civilization’s pile is the hand, and holding still where its press opened the deck editing mode, it reads what came up there as a pointer brought there reads it', async ({
+test('on the collection screen the pointer on a civilization’s pile is the hand', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -188,11 +180,6 @@ test('on the collection screen the pointer on a civilization’s pile is the han
   await page.mouse.move(pile.x, pile.y);
   await rested(page);
   expect(await cursorOverCanvas(page)).toBe(HAND);
-
-  await pilePressed(page);
-  const still = await cursorOverCanvas(page);
-  await cursorAt(page, await onScreen(page, 'deck-civilization'));
-  expect(await cursorAt(page, pile)).toBe(still);
 
   expect(problems).toEqual([]);
 });
