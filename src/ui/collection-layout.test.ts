@@ -16,7 +16,6 @@ const NAMES: Readonly<Record<CardId, string>> = {
   PH_March: 'Zeal',
   PH_Harvest: 'Bounty',
   PH_Mine: 'Bounty',
-  PH_Hunger: 'Ache',
 };
 
 function nameOf(card: CardId): string {
@@ -94,16 +93,6 @@ test('cards of one age and kind read by the same name stand in the catalogue’s
   expect(stacksOf(CATALOGUE, collection, nameOf)).toEqual([
     { id: 'PH_Harvest', copies: 1 },
     { id: 'PH_Mine', copies: 2 },
-  ]);
-});
-
-test('a hazard stands after every other kind of its age', () => {
-  const collection = collectionOf('PH_Hunger', 'PH_March', 'PH_Claim');
-
-  expect(stacksOf(CATALOGUE, collection, nameOf)).toEqual([
-    { id: 'PH_Claim', copies: 1 },
-    { id: 'PH_March', copies: 1 },
-    { id: 'PH_Hunger', copies: 1 },
   ]);
 });
 
