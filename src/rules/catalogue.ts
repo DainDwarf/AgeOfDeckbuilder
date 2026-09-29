@@ -218,10 +218,12 @@ export type Catalogue = MapContent & {
   readonly capstones: Readonly<Record<string, Capstone>>;
   readonly technologies: Readonly<Record<string, Technology>>;
   readonly ages: Readonly<Record<string, Age>>;
+  /** The age of every card of the cards table, by the card's id. */
+  readonly cardAges: Readonly<Record<string, string>>;
 };
 
 /** The tables every age brings its content to. */
-export type Tables = Omit<Catalogue, 'version' | 'ages'>;
+export type Tables = Omit<Catalogue, 'version' | 'ages' | 'cardAges'>;
 
 /** The steps past the centre part's reach within which no region keeps its camps. */
 export const FIRST_STEPS = 2;
@@ -235,8 +237,8 @@ export type Slice = {
 
 /**
  * The catalogue built from the slices, in the order of history: each table the union of what they
- * bring, and the ages table what each owns under its id. An id two slices bring to one table, and an
- * age two slices name, are refused before the catalogue is validated.
+ * bring, each card of its slice's age, and the ages table what each owns under its id. An id two
+ * slices bring to one table, and an age two slices name, are refused before it is validated.
  */
 export function merged(version: string, slices: readonly Slice[]): Catalogue {
   const ages: Record<string, Age> = {};
@@ -244,36 +246,40 @@ export function merged(version: string, slices: readonly Slice[]): Catalogue {
     if (Object.hasOwn(ages, id)) refuse({ version }, `two slices name the age ${id}`);
     ages[id] = owns;
   }
-  const union = <Table extends keyof Tables>(table: Table): Tables[Table] => {
+  const union = <Table extends keyof Tables>(table: Table) => {
     const entries: Record<string, unknown> = {};
-    const broughtBy = new Map<string, string>();
+    const broughtBy: Record<string, string> = {};
     for (const { id: age, brings } of slices) {
       for (const [id, entry] of Object.entries(brings[table] ?? {})) {
-        const other = broughtBy.get(id);
-        if (other !== undefined) {
-          refuse({ version }, `the ages ${other} and ${age} both bring ${id} to the ${table}`);
+        if (Object.hasOwn(broughtBy, id)) {
+          refuse(
+            { version },
+            `the ages ${broughtBy[id]} and ${age} both bring ${id} to the ${table}`,
+          );
         }
-        broughtBy.set(id, age);
+        broughtBy[id] = age;
         entries[id] = entry;
       }
     }
-    return entries as Tables[Table];
+    return { entries: entries as Tables[Table], broughtBy };
   };
+  const cards = union('cards');
   return catalogued({
     version,
-    units: union('units'),
-    scripts: union('scripts'),
-    cards: union('cards'),
-    civilizations: union('civilizations'),
-    events: union('events'),
-    capstones: union('capstones'),
-    technologies: union('technologies'),
-    terrains: union('terrains'),
-    biomes: union('biomes'),
-    buildings: union('buildings'),
-    features: union('features'),
-    improvements: union('improvements'),
+    units: union('units').entries,
+    scripts: union('scripts').entries,
+    cards: cards.entries,
+    civilizations: union('civilizations').entries,
+    events: union('events').entries,
+    capstones: union('capstones').entries,
+    technologies: union('technologies').entries,
+    terrains: union('terrains').entries,
+    biomes: union('biomes').entries,
+    buildings: union('buildings').entries,
+    features: union('features').entries,
+    improvements: union('improvements').entries,
     ages,
+    cardAges: cards.broughtBy,
   });
 }
 
@@ -332,6 +338,11 @@ export function catalogued(content: Catalogue): Catalogue {
   if (ages.length === 0) refuse(content, 'no age is held');
   for (const [id, age] of ages) ageHeld(content, id, age);
   treeHeld(content);
+  for (const id of Object.keys(content.cards)) {
+    if (!Object.hasOwn(content.cardAges, id)) refuse(content, `the card ${id} is of no age`);
+    ageOf(content, content.cardAges[id]);
+  }
+  for (const id of Object.keys(content.cardAges)) cardOf(content, id);
   for (const [id, civilization] of Object.entries(content.civilizations)) {
     const { city } = civilization;
     buildingKind(content, city.building);
@@ -554,6 +565,11 @@ export function enemyScript(catalogue: Catalogue, id: string): EnemyScript {
 /** The card an id names; a card the catalogue does not hold is refused. */
 export function cardOf(catalogue: Catalogue, id: string): Card {
   return entryOf(catalogue, catalogue.cards, id, 'card');
+}
+
+/** The age a card is of: the age whose slice brought it. A card the catalogue does not hold is refused. */
+export function cardAge(catalogue: Catalogue, id: string): string {
+  return entryOf(catalogue, catalogue.cardAges, id, 'card');
 }
 
 /**

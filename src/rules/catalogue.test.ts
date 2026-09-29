@@ -6,6 +6,7 @@ import {
   ageOf,
   type Camp,
   type Catalogue,
+  cardAge,
   cardOf,
   catalogued,
   entered,
@@ -606,6 +607,26 @@ test('the merge refuses an id two ages bring to one table and an age two slices 
     /^fixture: /,
   );
   expect(Object.keys(merged(version, SLICES).ages)).toEqual(SLICES.map(({ id }) => id));
+});
+
+test('a card is of the age whose slice brings it, a catalogue holding a card of no age it holds is refused when it is built, and a card it does not hold is refused its age', () => {
+  const harvest = cardOf(CATALOGUE, 'PH_Harvest');
+  const later = merged(
+    CATALOGUE.version,
+    SLICES.map((slice) =>
+      slice.id === QUIET ? { ...slice, brings: { cards: { PH_Novel: harvest } } } : slice,
+    ),
+  );
+  const unaged = changed({ cards: { ...CATALOGUE.cards, PH_Novel: harvest } });
+  const unheld = changed({ cardAges: { ...CATALOGUE.cardAges, PH_Harvest: 'PH_Unheld' } });
+  const stray = changed({ cardAges: { ...CATALOGUE.cardAges, PH_Novel: AGE } });
+
+  expect(cardAge(later, 'PH_Harvest')).toBe(AGE);
+  expect(cardAge(later, 'PH_Novel')).toBe(QUIET);
+  expect(() => catalogued(unaged)).toThrow('fixture: the card PH_Novel is of no age');
+  expect(() => catalogued(unheld)).toThrow('fixture: no age is named PH_Unheld');
+  expect(() => catalogued(stray)).toThrow('fixture: no card is named PH_Novel');
+  expect(() => cardAge(CATALOGUE, 'PH_Scout')).toThrow('fixture: no card is named PH_Scout');
 });
 
 test('a map of a region the age does not hold is refused', () => {

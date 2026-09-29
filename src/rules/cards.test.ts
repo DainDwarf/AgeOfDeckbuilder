@@ -524,6 +524,7 @@ test('a card whose effect names a building, an improvement or a terrain the cata
         ),
       },
     },
+    cardAges: { ...CATALOGUE.cardAges, PH_Keep: AGE, PH_Well: AGE, PH_Drain: AGE },
   });
 
   for (const id of ['PH_Keep', 'PH_Well', 'PH_Drain']) {
@@ -932,6 +933,7 @@ function reshaping(to: Terrain): Catalogue {
         effect: (catalogue, paid, at) => terraformed(catalogue, paid, at, to),
       },
     },
+    cardAges: { ...CATALOGUE.cardAges, PH_Sink: AGE, PH_Collapse: AGE },
     events: {
       ...CATALOGUE.events,
       PH_Upheaval: {
@@ -1312,6 +1314,7 @@ const FORAGING: Catalogue = catalogued({
       ),
     },
   },
+  cardAges: { ...CATALOGUE.cardAges, PH_Forage: AGE },
 });
 
 test('the forage card names the first of its three reasons: worker, action, then held', () => {

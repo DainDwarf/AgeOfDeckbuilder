@@ -12,8 +12,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **A card knows its age** — the rules answer the age of any card the catalogue holds, the age whose slice brought it, with no card's content declaring it; a catalogue holding a card of no age it holds is refused when it is built; one test on the fixture proves both. Doc-impact: `docs/META.md`. [board/a-card-knows-its-age.md](board/a-card-knows-its-age.md)
-
 The nine lines of the collection screen share one mockup, [board/collection-screen-mockup.html](board/collection-screen-mockup.html), which holds the three modes and names the artifact it is published to at its head: a line's intake refines its own mode in it, and the last line's ship deletes it.
 
 - **The collection screen shows the collection** — the navbar's Collection button opens the collection screen on a new campaign: every card owned stands as one stack reading its copies, six to a line, by age, then kind, then name; each civilization's pile stands on the right over its two counts, as it now does on the launch screen; a right click shows a card large; `e2e/collection.spec.ts` passes. Doc-impact: `docs/META-SCREENS.md`, `docs/INTERFACE.md`. [board/the-collection-screen-shows-the-collection.md](board/the-collection-screen-shows-the-collection.md)
