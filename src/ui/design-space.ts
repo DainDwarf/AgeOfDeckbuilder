@@ -5,6 +5,14 @@ import { LOOK } from './look';
 export const DESIGN_WIDTH = 1280;
 export const DESIGN_HEIGHT = 720;
 
+/** A box of the design space: its top-left corner and its size. */
+export type Box = {
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+};
+
 export const UI_FONT = 'system-ui, "Segoe UI", sans-serif';
 export const CONSOLE_FONT = 'ui-monospace, Consolas, "Courier New", monospace';
 

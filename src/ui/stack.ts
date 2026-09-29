@@ -10,12 +10,18 @@ import {
   type KindBubble,
   type Name,
 } from './card-face';
-import { DESIGN_HEIGHT, DESIGN_WIDTH, onClick, onHover, type Stratum } from './design-space';
+import {
+  type Box,
+  DESIGN_HEIGHT,
+  DESIGN_WIDTH,
+  onClick,
+  onHover,
+  type Stratum,
+} from './design-space';
 import { type Face, namedCardFace } from './face';
 import { createThingCard, type Thing } from './infopanel';
 import { LOOK } from './look';
 import type { OverlayScene } from './overlay-scene';
-import type { Box } from './scroll';
 import { createSmallCards, raiserOf, type SmallCards } from './small-card';
 import { createTooltip } from './tooltip';
 

@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { consoleCovers } from './debug-console';
 import {
+  type Box,
   onClick,
   onHover,
   releasedOffCanvas,
@@ -8,7 +9,7 @@ import {
   thingUnder,
   whileUp,
 } from './design-space';
-import { type Box, createScroll, heldAt, reachOf } from './scroll';
+import { createScroll, heldAt, reachOf } from './scroll';
 import type { Answers } from './stack';
 
 /** A thing a panel holds that answers the pointer: its box as it stands unscrolled, and its answers. */

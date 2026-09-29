@@ -1,5 +1,6 @@
 import { expect, test } from 'vitest';
-import { type Box, createScroll, heldAt, reachOf, type Scroll } from './scroll';
+import type { Box } from './design-space';
+import { createScroll, heldAt, reachOf, type Scroll } from './scroll';
 
 /** A panel's frame: its first line stands at its top. */
 const FRAME: Box = { x: 0, y: 100, width: 400, height: 300 };
@@ -14,7 +15,7 @@ function panelHolding(holds: number): { scroll: Scroll; moves: number[] } {
   return { scroll, moves };
 }
 
-/** A drag down the panel by this far, fast, let go of on the canvas, and every frame of its run. */
+/** A drag down the panel by this far, fast, let go of on the canvas, and every frame of its fling. */
 function flung(scroll: Scroll, by: number): void {
   scroll.grab(200);
   for (let at = 0; at <= 5; at++) scroll.drag(200 + (by * at) / 5, 1000 + 10 * at);
@@ -22,7 +23,7 @@ function flung(scroll: Scroll, by: number): void {
   for (let frame = 0; frame < 2000; frame++) scroll.step(16);
 }
 
-test('a panel holding more than its room stops at its first line and at its last, however far the wheel, the drag and the run carry it', () => {
+test('a panel holding more than its room stops at its first line and at its last, however far the wheel, the drag and the fling carry it', () => {
   const holds = 1000;
   const { scroll } = panelHolding(holds);
 
@@ -44,7 +45,7 @@ test('a panel holding more than its room stops at its first line and at its last
   expect(FRAME.y + holds - scroll.offset).toBe(FRAME.y + FRAME.height);
 });
 
-test('a panel its room holds whole does not move, whatever the wheel, the drag and the run', () => {
+test('a panel its room holds whole does not move, whatever the wheel, the drag and the fling', () => {
   const { scroll, moves } = panelHolding(FRAME.height - 20);
 
   scroll.wheel(250);

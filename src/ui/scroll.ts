@@ -1,19 +1,13 @@
 /** What scrolls on a screen computes before it draws: how far it moves, and what answers where. */
 
-/** A box of the design space: its top-left corner and its size. */
-export type Box = {
-  readonly x: number;
-  readonly y: number;
-  readonly width: number;
-  readonly height: number;
-};
+import type { Box } from './design-space';
 
 /** The pointer's travel over these last milliseconds is the speed a release runs the scroll on at. */
-const RUN_WINDOW = 80;
+const FLING_WINDOW = 80;
 
-/** What is left of a run's speed after a millisecond, and the speed it is dropped at. */
-const RUN_DECAY = 0.994;
-const RUN_STILL = 0.01;
+/** What is left of a fling's speed after a millisecond, and the speed it is dropped at. */
+const FLING_DECAY = 0.994;
+const FLING_STILL = 0.01;
 
 /** How many of the pointer's last places a drag keeps. */
 const TRAIL = 8;
@@ -37,9 +31,9 @@ export type Scroll = {
   reach(reach: number): void;
   /** Stands at this offset, held within its reach, neither dragged nor running on. */
   stand(at: number): void;
-  /** A press on it: a run stops. */
+  /** A press on it: a fling stops. */
   press(): void;
-  /** The wheel turned by this much: a run stops, and it moves as far. */
+  /** The wheel turned by this much: a fling stops, and it moves as far. */
   wheel(by: number): void;
   /** A drag begun where its press landed, at this height of the design space. */
   grab(y: number): void;
@@ -47,7 +41,7 @@ export type Scroll = {
   drag(y: number, time: number): void;
   /** The drag let go of at this time: it runs on at the drag's speed where it `runs`, and stands where not. */
   release(time: number, runs: boolean): void;
-  /** One frame of a run, this many milliseconds long. */
+  /** One frame of a fling, this many milliseconds long. */
   step(delta: number): void;
 };
 
@@ -58,8 +52,8 @@ export type Scroll = {
 export function createScroll(moved: (offset: number) => void): Scroll {
   let offset = 0;
   let furthest = 0;
-  /** The run's speed in design units a millisecond, and zero while it stands. */
-  let run = 0;
+  /** The fling's speed in design units a millisecond, and zero while it stands. */
+  let fling = 0;
   let held: Drag | undefined;
 
   const moveTo = (at: number): void => {
@@ -80,15 +74,15 @@ export function createScroll(moved: (offset: number) => void): Scroll {
       moveTo(offset);
     },
     stand(at: number): void {
-      run = 0;
+      fling = 0;
       held = undefined;
       moveTo(at);
     },
     press(): void {
-      run = 0;
+      fling = 0;
     },
     wheel(by: number): void {
-      run = 0;
+      fling = 0;
       moveTo(offset + by);
     },
     grab(y: number): void {
@@ -104,13 +98,13 @@ export function createScroll(moved: (offset: number) => void): Scroll {
       const was = held;
       held = undefined;
       if (was === undefined || !runs) return;
-      run = -speedOf(was.trail, time);
+      fling = -speedOf(was.trail, time);
     },
     step(delta: number): void {
-      if (run === 0) return;
-      const to = offset + run * delta;
+      if (fling === 0) return;
+      const to = offset + fling * delta;
       moveTo(to);
-      run = to === offset && Math.abs(run) > RUN_STILL ? run * RUN_DECAY ** delta : 0;
+      fling = to === offset && Math.abs(fling) > FLING_STILL ? fling * FLING_DECAY ** delta : 0;
     },
   };
 }
@@ -118,8 +112,8 @@ export function createScroll(moved: (offset: number) => void): Scroll {
 /** How fast the pointer was travelling as it was released, in design units a millisecond. */
 function speedOf(trail: readonly Sample[], now: number): number {
   const last = trail[trail.length - 1];
-  const first = trail.find((sample) => now - sample.time <= RUN_WINDOW);
-  if (last === undefined || first === undefined || now - last.time > RUN_WINDOW) return 0;
+  const first = trail.find((sample) => now - sample.time <= FLING_WINDOW);
+  if (last === undefined || first === undefined || now - last.time > FLING_WINDOW) return 0;
   if (last.time === first.time) return 0;
   return (last.y - first.y) / (last.time - first.time);
 }

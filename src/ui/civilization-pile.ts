@@ -3,10 +3,9 @@ import type { CampaignCivilization } from '../rules/campaign';
 import type { Catalogue } from '../rules/catalogue';
 import { NO_REFUSAL } from '../rules/state';
 import { createCardBack, createCardFace, metricsOf } from './card-face';
-import { addText, UI_FONT } from './design-space';
+import { addText, type Box, UI_FONT } from './design-space';
 import { cardFaceAtStart } from './face';
 import { css, LOOK } from './look';
-import type { Box } from './scroll';
 import { type Answers, answersOf, type Inspecting } from './stack';
 import { text } from './text';
 
