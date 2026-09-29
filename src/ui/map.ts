@@ -528,7 +528,7 @@ export function createMapView(
   const features = group(strata.terrain, 'features');
   const rings = group(strata.terrain, 'border');
   const lighted = group(strata.lit, 'lit');
-  const improved = group(strata.buildings, 'improvements');
+  const improvements = group(strata.buildings, 'improvements');
   const built = group(strata.buildings, 'buildings');
   const marks = group(strata.units, 'units');
   const fog = group(strata.fog, 'fog');
@@ -1043,7 +1043,7 @@ export function createMapView(
     }
     face.improvements.forEach((improvement, index) => {
       paint(
-        improved,
+        improvements,
         improvementMark(scene, improvement)
           .setPosition(row.improvements[index], y - ROW_RISE)
           .setName(`improvement-${improvement}-${key}`),
@@ -1071,13 +1071,13 @@ export function createMapView(
 
   /**
    * Every layer of every tile the map draws, on the chronicle it stands on. A terraform changes a
-   * tile's terrain and takes its feature with it, an improvement is improved onto it and a building
-   * is built on it, so every layer follows every render.
+   * tile's terrain and takes its feature with it, an improvement is placed on it and a building is
+   * built on it, so every layer follows every render.
    */
   const paintTiles = (): void => {
     wipe(ground);
     wipe(features);
-    wipe(improved);
+    wipe(improvements);
     wipe(built);
     wipe(fog);
     if (shown === undefined) return;
@@ -1400,7 +1400,7 @@ export function createMapView(
       { ids: one(to.feature), xs: [is.feature] },
     );
     compare(
-      improved,
+      improvements,
       (id) => `improvement-${id}-${key}`,
       (id) => improvementMark(scene, id),
       y - ROW_RISE,

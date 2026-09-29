@@ -10,7 +10,8 @@ import {
   entersOn,
   firstRefusal,
   gained,
-  improved,
+  improvementAbsent,
+  improvementPlaced,
   inside,
   made,
   movePointsSpent,
@@ -22,7 +23,6 @@ import {
   terraformable,
   terraformed,
   throughWorker,
-  unimproved,
 } from './cards';
 import {
   type Age,
@@ -437,9 +437,9 @@ const TABLES: Omit<Tables, 'technologies'> = {
         (catalogue, _chronicle, tile) =>
           firstRefusal(
             made(catalogue, tile, improvementKind(catalogue, 'PH_Mine').terrains),
-            unimproved(catalogue, tile, 'PH_Mine'),
+            improvementAbsent(catalogue, tile, 'PH_Mine'),
           ),
-        (catalogue, paid, at) => improved(catalogue, paid, at, 'PH_Mine'),
+        (catalogue, paid, at) => improvementPlaced(catalogue, paid, at, 'PH_Mine'),
       ),
     },
     PH_Road: {
@@ -449,9 +449,9 @@ const TABLES: Omit<Tables, 'technologies'> = {
         (catalogue, _chronicle, tile) =>
           firstRefusal(
             made(catalogue, tile, improvementKind(catalogue, 'PH_Road').terrains),
-            unimproved(catalogue, tile, 'PH_Road'),
+            improvementAbsent(catalogue, tile, 'PH_Road'),
           ),
-        (catalogue, paid, at) => improved(catalogue, paid, at, 'PH_Road'),
+        (catalogue, paid, at) => improvementPlaced(catalogue, paid, at, 'PH_Road'),
       ),
     },
     PH_Urbanisation: {

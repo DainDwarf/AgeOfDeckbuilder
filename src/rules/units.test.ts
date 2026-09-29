@@ -24,7 +24,7 @@ import type { Chronicle } from './state';
 import { attackable } from './units';
 
 /** The same tiles, with the named ones carrying the improvement. */
-function improvedWith(tiles: Tile[], improvement: ImprovementId, coords: TileCoords[]): Tile[] {
+function carrying(tiles: Tile[], improvement: ImprovementId, coords: TileCoords[]): Tile[] {
   const named = new Set(coords.map(tileKey));
   return tiles.map((tile) =>
     named.has(tileKey(tile))
@@ -437,7 +437,7 @@ test('a unit crosses further over a road than beside it: half a move point to th
     { q: 4, r: 0 },
   ];
   const city = cityOf(['urban'], {
-    tiles: improvedWith(field(4), 'PH_Road', road),
+    tiles: carrying(field(4), 'PH_Road', road),
     units: [standing('player', CITY, { move: 2 * MOVE_POINT, sight: 4 })],
   });
 
@@ -457,7 +457,7 @@ test('a river edge with a road on both banks is a bridge, crossed as if no river
   const across = { q: 2, r: 0 };
   const on = { q: 3, r: 0 };
   const city = cityOf(['urban'], {
-    tiles: improvedWith(field(3), 'PH_Road', [bank, across]),
+    tiles: carrying(field(3), 'PH_Road', [bank, across]),
     rivers: [riverBetween(bank, across)],
     units: [standing('player', CITY, { move: 2 * MOVE_POINT, sight: 4 })],
   });
@@ -475,7 +475,7 @@ test('a road on one bank alone leaves the crossing spending every move point', (
   const on = { q: 3, r: 0 };
   const shore = (roads: TileCoords[]): Chronicle =>
     cityOf(['urban'], {
-      tiles: improvedWith(field(3), 'PH_Road', roads),
+      tiles: carrying(field(3), 'PH_Road', roads),
       rivers: [riverBetween(bank, across)],
       units: [standing('player', CITY, { move: 2 * MOVE_POINT, sight: 4 })],
     });
@@ -494,7 +494,7 @@ test('a layer naming a movement cost that does not bridge leaves the crossing sp
   const across = { q: 2, r: 0 };
   const on = { q: 3, r: 0 };
   const city = cityOf(['urban'], {
-    tiles: improvedWith(field(3), 'PH_Trail', [bank, across]),
+    tiles: carrying(field(3), 'PH_Trail', [bank, across]),
     rivers: [riverBetween(bank, across)],
     units: [standing('player', CITY, { move: 2 * MOVE_POINT, sight: 4 })],
   });
@@ -519,7 +519,7 @@ test('a tile two layers each name a movement cost for costs the lower, whichever
     ['PH_Trail', 'PH_Road'],
   ]) {
     const city = cityOf(['urban'], {
-      tiles: improvedWith(improvedWith(field(4), first, line), second, line),
+      tiles: carrying(carrying(field(4), first, line), second, line),
       units: [standing('player', CITY, { move: 2 * MOVE_POINT, sight: 4 })],
     });
 
@@ -533,7 +533,7 @@ test('a tile two layers each name a movement cost for costs the lower, whichever
 test('a layer naming a movement cost above its terrain’s takes the tile to it', () => {
   const heaped = { q: 1, r: 0 };
   const city = cityOf(['urban'], {
-    tiles: improvedWith(field(3), 'PH_Rubble', [heaped]),
+    tiles: carrying(field(3), 'PH_Rubble', [heaped]),
     units: [standing('player', CITY, { move: 3 * MOVE_POINT, sight: 4 })],
   });
 

@@ -130,7 +130,7 @@ export type TileBlock =
   | 'wrong-terrain'
   | 'slot-filled'
   | 'other-faction'
-  | 'improvement-laid'
+  | 'improvement-placed'
   | 'no-unit'
   | 'unit-standing'
   | 'move-full'

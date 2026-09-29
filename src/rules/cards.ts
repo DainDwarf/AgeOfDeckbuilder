@@ -250,13 +250,13 @@ function reaches(catalogue: Catalogue, chronicle: Chronicle, at: TileCoords, to:
 }
 
 /** No copy of this improvement on the tile: distinct ones stack, the same one never twice. */
-export function unimproved(
+export function improvementAbsent(
   catalogue: Catalogue,
   tile: Tile,
   improvement: string,
 ): TileBlock | undefined {
   improvementKind(catalogue, improvement);
-  return tile.improvements.includes(improvement) ? 'improvement-laid' : undefined;
+  return tile.improvements.includes(improvement) ? 'improvement-placed' : undefined;
 }
 
 /** A unit of the player's standing on the tile: the whole of what a card aimed at a unit admits. */
@@ -372,8 +372,8 @@ export function built(
   return retiled(paid, at, (tile) => ({ ...tile, building }));
 }
 
-/** The improvement an instant lays: the tile carries it from now on, and the worker stays put. */
-export function improved(
+/** The improvement an instant places: the tile carries it from now on, and the worker stays put. */
+export function improvementPlaced(
   catalogue: Catalogue,
   paid: Chronicle,
   at: TileCoords,
@@ -387,11 +387,9 @@ export function improved(
 }
 
 /**
- * The terrain a tile is terraformed into: the feature that lay on the old terrain goes with it, and
- * so does every improvement and the building whose kind does not name the new terrain; the ones
- * whose kind names it stay. A unit standing on the tile that cannot stand on the new terrain is
- * killed. The city's tile, into a terrain the city's building does not stand on, is left as it
- * stands, and nothing is raised.
+ * The terrain a tile is terraformed into: its feature goes, and so do every improvement and the
+ * building whose kind does not name the new terrain, and a unit that cannot stand on it is killed.
+ * The city's tile, into a terrain the city's building does not stand on, is left as it stands.
  */
 export function terraformed(
   catalogue: Catalogue,

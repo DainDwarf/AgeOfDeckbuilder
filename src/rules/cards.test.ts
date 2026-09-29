@@ -2,7 +2,7 @@ import { expect, test } from 'vitest';
 import {
   aimOf,
   built,
-  improved,
+  improvementPlaced,
   made,
   outside,
   refuses,
@@ -513,7 +513,7 @@ test('a card whose effect names a building, an improvement or a terrain the cata
         kind: 'instant',
         cost: {},
         ...throughWorker(onPlain, (catalogue, paid, on) =>
-          improved(catalogue, paid, on, 'PH_Well'),
+          improvementPlaced(catalogue, paid, on, 'PH_Well'),
         ),
       },
       PH_Drain: {
@@ -684,7 +684,7 @@ test('a farm standing on a tile adds its food to what that tile yields at income
   expect(farmed.resources.food).toBe(bare.resources.food + 1);
 });
 
-test('the mine card improves the hills a worker stands on, inside the border and outside it', () => {
+test('the mine card places a mine on the hills a worker stands on, inside the border and outside it', () => {
   for (const at of [
     { q: 1, r: 0 },
     { q: 2, r: 0 },
@@ -760,11 +760,11 @@ test('a tile takes the same improvement once and never a second time', () => {
   const once = endedTurn(outcome(apply(CATALOGUE, city, aimedAt(at))));
 
   expect(admittedTiles(once, 'PH_Mine')).toEqual([]);
-  expect(refusedFor(once, 'PH_Mine', at)).toBe('improvement-laid');
+  expect(refusedFor(once, 'PH_Mine', at)).toBe('improvement-placed');
   expect(outcome(apply(CATALOGUE, once, aimedAt(at)))).toEqual(once);
 });
 
-test('a mine improved onto a tile adds its production to what that tile yields at income', () => {
+test('a mine placed on a tile adds its production to what that tile yields at income', () => {
   const at = { q: 1, r: 0 };
   const city = workedTile(at, 'hills', {
     ...NO_GROWTH,
@@ -782,7 +782,7 @@ test('a mine improved onto a tile adds its production to what that tile yields a
   expect(mined.resources.production).toBe(bare.resources.production + 1);
 });
 
-test('the road card improves every terrain a worker of the player’s stands on', () => {
+test('the road card places a road on every terrain a worker of the player’s stands on', () => {
   const at = { q: 1, r: 0 };
   for (const terrain of ['plain', 'forest', 'hills', 'urban'] as Terrain[]) {
     const city = workedTile(at, terrain, { hand: ['PH_Road'], resources: production(2) });
@@ -1353,7 +1353,7 @@ test('the mine card names the first of its four reasons: worker, action, terrain
       at,
     ),
   ).toBe('worker-spent');
-  expect(refusedFor(mined, 'PH_Mine', at)).toBe('improvement-laid');
+  expect(refusedFor(mined, 'PH_Mine', at)).toBe('improvement-placed');
   expect(refusedFor(worked, 'PH_Mine', at)).toBeUndefined();
 });
 

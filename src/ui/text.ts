@@ -150,7 +150,7 @@ const TEXT = {
   'refusal.wrong-terrain': 'Wrong terrain',
   'refusal.slot-filled': 'A building already stands here',
   'refusal.other-faction': 'That tile belongs to another faction',
-  'refusal.improvement-laid': 'That improvement is already here',
+  'refusal.improvement-placed': 'That improvement is already here',
   'refusal.no-unit': 'No unit stands here',
   'refusal.unit-standing': 'A unit already stands here',
   'refusal.move-full': 'Unit move points are full',

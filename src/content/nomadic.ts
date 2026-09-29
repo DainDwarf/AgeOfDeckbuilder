@@ -4,7 +4,8 @@ import {
   entersOn,
   firstRefusal,
   gained,
-  improved,
+  improvementAbsent,
+  improvementPlaced,
   inside,
   made,
   movePointsSpent,
@@ -14,7 +15,6 @@ import {
   shocked,
   slotFree,
   throughWorker,
-  unimproved,
 } from '../rules/cards';
 import type { Age, Slice, Tables } from '../rules/catalogue';
 import { arrived, populationTaken, yielded } from '../rules/city';
@@ -118,9 +118,9 @@ const TABLES: Tables = {
         (catalogue, _chronicle, tile) =>
           firstRefusal(
             made(catalogue, tile, improvementKind(catalogue, 'trapping').terrains),
-            unimproved(catalogue, tile, 'trapping'),
+            improvementAbsent(catalogue, tile, 'trapping'),
           ),
-        (catalogue, paid, at) => improved(catalogue, paid, at, 'trapping'),
+        (catalogue, paid, at) => improvementPlaced(catalogue, paid, at, 'trapping'),
       ),
     },
     march: {

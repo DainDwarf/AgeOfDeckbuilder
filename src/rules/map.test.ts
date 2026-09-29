@@ -251,7 +251,7 @@ test('a feature lies on the terrain it belongs to', () => {
   }
 });
 
-test('the generator improves nothing: every tile of a fresh map is bare of improvements', () => {
+test('the generator places no improvement: every tile of a fresh map is bare of improvements', () => {
   for (const seed of SEEDS) {
     for (const tile of mapOf(seed)) expect(tile.improvements).toEqual([]);
   }

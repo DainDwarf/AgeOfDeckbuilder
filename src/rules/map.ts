@@ -67,8 +67,8 @@ export type TileCoords = { readonly q: number; readonly r: number };
 
 /**
  * A tile is its layers: the terrain it is made of, the one feature the generator may have put on
- * it, the improvements it has been improved with — distinct ones, never the same twice — and the
- * one building slot it offers.
+ * it, the improvements placed on it — distinct ones, never the same twice — and the one building
+ * slot it offers.
  */
 export type Tile = TileCoords & {
   readonly terrain: Terrain;
