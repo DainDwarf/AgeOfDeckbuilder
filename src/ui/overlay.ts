@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+import type Phaser from 'phaser';
 import type { Payment } from '../rules/campaign';
 import { achievementOf, ageOf, type Catalogue } from '../rules/catalogue';
 import { answerCost, answerOf, answerRefusal, offered } from '../rules/schedule';
@@ -14,25 +14,20 @@ import {
   playable,
   type Refusal,
 } from '../rules/state';
-import { type Bind, boundTo, type Press } from './bindings';
+import { type Bind, boundTo } from './bindings';
 import { inspectingUnder, layBrowse } from './browse';
 import { type CardFace, createCardFace, createKindBubble, heightOf, type Name } from './card-face';
 import { EASE, ended, stopMotion } from './card-motion';
 import { pileStacksOf } from './collection-layout';
 import {
   addText,
-  answersPress,
   DESIGN_HEIGHT,
   DESIGN_WIDTH,
   headingOf,
   MARGIN,
   onClick,
-  onHover,
-  releasedOffCanvas,
   TITLE_INK,
-  thingUnder,
   UI_FONT,
-  whileUp,
 } from './design-space';
 import { answerFace, capstoneFace, cardFace, cardFaceAtStart, type Face } from './face';
 import { LOOK } from './look';
@@ -40,13 +35,12 @@ import { campLore, capstoneLore, eventLore, type Raising } from './lore';
 import { BUTTON_HEIGHT, createButton } from './menu';
 import { raiseMenu } from './menu-scene';
 import type { OverlayScene } from './overlay-scene';
-import { createCarrier, type Panel } from './panel';
+import { createCarrier, createPanel, type Held, type Panel } from './panel';
 import { refused } from './refusal-lines';
 import { createRefusalNote } from './refusal-note';
 import { chipAt } from './resource-bar';
-import { createScroll, reachOf } from './scroll';
-import { createSmallCards, type Raiser, raiserOf } from './small-card';
-import { standLarge } from './stack';
+import { createSmallCards } from './small-card';
+import { answersOf, standLarge } from './stack';
 import { buildingName, cardName, eventName, technologyName, text, victoryLine } from './text';
 import { createTooltip } from './tooltip';
 
@@ -107,11 +101,9 @@ type Placed = Offered & {
   readonly drawn: CardFace;
 };
 
-/** The grid of cards a window stands on, and how far it moves. */
-type Grid = {
-  readonly root: Phaser.GameObjects.Container;
-  /** What the cards scroll within, and what the pointer is on while it is on the grid. */
-  readonly frame: Phaser.GameObjects.Zone;
+/** A window's cards laid on its panel, and how tall one of them stands. */
+type Laid = {
+  readonly panel: Panel;
   readonly placed: readonly Placed[];
   readonly height: number;
 };
@@ -203,17 +195,10 @@ export function createOverlay(
   let shown: Phaser.GameObjects.GameObject[] = [];
   /** What stands on the scrim, and nothing while the scrim is down. */
   let carried: Carried | undefined;
-  let grid: Grid | undefined;
-  /** The browse's panel, and nothing while no browse stands. */
-  let browsed: Panel | undefined;
-  /** Whether the grid has moved since the name and the label under the pointer were read off it. */
-  let moved = false;
-  /** How far the grid is scrolled. */
-  const scroll = createScroll((offset) => {
-    grid?.root.setY(-offset);
-    follow();
-    moved = true;
-  });
+  /** The panel of the browse or the window standing, and nothing while neither stands. */
+  let panel: Panel | undefined;
+  /** The cards of the window standing, and none while no window stands. */
+  let onWindow: readonly Placed[] = [];
 
   /** The cards shown large, over whatever stands on the scrim as it stood, or over nothing. */
   // The overlay holds one taker, and this is it: `takes` hears the keys of every window, the deal,
@@ -225,20 +210,10 @@ export function createOverlay(
     },
     takes: (press) => takes(press),
   });
-  /** A card rising large holds the grid where it stands and takes down the note over its card. */
-  const rise = (): void => {
-    scroll.stand(scroll.offset);
+  /** What a face on the scrim answers the rest and the right click with. */
+  const inspecting = inspectingUnder(on, small, kinds, large, () => {
+    panel?.holdStill();
     note.hide();
-  };
-  const inspecting = inspectingUnder(on, small, kinds, {
-    show(face) {
-      rise();
-      large.show(face);
-    },
-    named(name) {
-      rise();
-      large.named(name);
-    },
   });
   const carrier = createCarrier(scene, on);
   /** The chronicle the ending screen was raised on: a render raises the screen once and no more. */
@@ -261,15 +236,13 @@ export function createOverlay(
   const wipe = (): void => {
     small.down();
     large.down();
-    browsed?.down();
-    browsed = undefined;
+    panel?.down();
+    panel = undefined;
+    onWindow = [];
     note.hide();
     for (const object of shown) object.destroy();
     shown = [];
     rising = undefined;
-    grid = undefined;
-    scroll.stand(0);
-    moved = false;
   };
 
   const close = (): void => {
@@ -310,8 +283,8 @@ export function createOverlay(
   const raiseTitle = (name: string, heading: string): Phaser.GameObjects.Text =>
     carries(headingOf(scene, name, heading));
 
-  /** A window's lore, named after the window it stands in, just over the row its grid laid. */
-  const raiseLore = (name: string, lore: string, laid: Grid): void => {
+  /** A window's lore, named after the window it stands in, just over the first row its cards laid. */
+  const raiseLore = (name: string, lore: string, laid: Laid): void => {
     const rowTop = laid.placed[0].y - laid.height;
     const line = addText(scene, DESIGN_WIDTH / 2, rowTop - 16, lore, {
       fontFamily: UI_FONT,
@@ -325,122 +298,28 @@ export function createOverlay(
     carries(line);
   };
 
-  /** The card of the standing grid a press landed on, and nothing where it landed between them. */
-  const under = (pointer: Phaser.Input.Pointer): Placed | undefined => {
-    if (grid === undefined) return undefined;
-    const at = on.at(pointer.x, pointer.y);
-    return cardAt(grid, at.x, at.y);
-  };
-
-  /** The name on a card of the standing grid under the pointer, and nothing where none lies. */
-  const nameUnder = (pointer: Phaser.Input.Pointer): Raiser | undefined => {
-    const card = under(pointer);
-    if (card === undefined) return undefined;
-    const at = on.at(pointer.x, pointer.y);
-    const name = card.drawn.nameAt(at.x, at.y);
-    return name === undefined ? undefined : raiserOf(card.drawn, name);
-  };
-
-  /** The card of the standing grid whose kind label lies under the pointer, and nothing where none does. */
-  const kindUnder = (pointer: Phaser.Input.Pointer): CardFace | undefined => {
-    const card = under(pointer);
-    if (card === undefined) return undefined;
-    const at = on.at(pointer.x, pointer.y);
-    return card.drawn.kindAt(at.x, at.y) ? card.drawn : undefined;
-  };
-
-  /** Every card of the standing grid told whether the pointer is on its kind label. */
-  const overKind = (face: CardFace | undefined): void => {
-    for (const card of grid?.placed ?? []) kinds.over(card.drawn, card.drawn === face);
-  };
-
-  /** The grid's name and kind label under the pointer told what they raise; neither while it is dragged. */
-  const pointOnGrid = (pointer: Phaser.Input.Pointer): void => {
-    small.over(scroll.dragged ? undefined : nameUnder(pointer));
-    overKind(scroll.dragged ? undefined : kindUnder(pointer));
-  };
-
   /**
-   * Every card face is named `<name>-card-<n>` after its place on the screen, the first drawn first,
-   * and carries its card and the number it was offered as in its data.
+   * A window's cards on its panel, centred in its frame while they fit, a left click on one running
+   * `pressed`: each face is named `<name>-card-<n>`, the first drawn first, and carries its card and
+   * the number it was offered as in its data.
    */
-  const layGrid = (
+  const layWindow = (
     name: string,
     cards: readonly Offered[],
     top: number,
-    pressed: (card: Placed, press: Press) => void,
-  ): Grid => {
+    pressed: (card: Placed) => void,
+  ): Laid => {
     const height = heightOf(GRID_WIDTH);
-    const frameHeight = DESIGN_HEIGHT - MARGIN - top;
-    const columns = Math.max(
-      1,
-      Math.floor((DESIGN_WIDTH - 2 * MARGIN + GRID_GAP) / (GRID_WIDTH + GRID_GAP)),
-    );
+    const frame = {
+      x: MARGIN,
+      y: top,
+      width: DESIGN_WIDTH - 2 * MARGIN,
+      height: DESIGN_HEIGHT - MARGIN - top,
+    };
+    const columns = Math.max(1, Math.floor((frame.width + GRID_GAP) / (GRID_WIDTH + GRID_GAP)));
     const rows = Math.max(1, Math.ceil(cards.length / columns));
     const spanY = rows * height + (rows - 1) * GRID_GAP;
-    const overflow = reachOf(frameHeight, spanY);
-    const firstY = top + Math.max(0, (frameHeight - spanY) / 2);
-
-    const frame = scene.add
-      .zone(DESIGN_WIDTH / 2, top + frameHeight / 2, DESIGN_WIDTH - 2 * MARGIN, frameHeight)
-      .setName(`${name}-frame`)
-      .setInteractive({ draggable: true });
-    answersPress(frame);
-    carries(frame);
-
-    frame.on('pointerdown', () => {
-      scroll.press();
-    });
-    frame.on('dragstart', (pointer: Phaser.Input.Pointer) => {
-      scroll.grab(on.at(pointer.downX, pointer.downY).y);
-    });
-    frame.on('drag', (pointer: Phaser.Input.Pointer) => {
-      scroll.drag(on.at(pointer.x, pointer.y).y, scene.time.now);
-    });
-    frame.on('dragend', (pointer: Phaser.Input.Pointer) => {
-      scroll.release(scene.time.now, !releasedOffCanvas(pointer));
-    });
-    frame.on('pointermove', pointOnGrid);
-    onHover(
-      frame,
-      () => {
-        pointOnGrid(scene.input.activePointer);
-      },
-      () => {
-        small.over(undefined);
-        overKind(undefined);
-      },
-    );
-    const press = (pointer: Phaser.Input.Pointer, button: Press): void => {
-      const card = under(pointer);
-      if (card === undefined) back();
-      else pressed(card, button);
-    };
-    onClick(frame, (pointer) => {
-      press(pointer, 'left');
-    });
-    onClick(
-      frame,
-      (pointer) => {
-        const named = nameUnder(pointer)?.name;
-        if (named === undefined) press(pointer, 'right');
-        else inspectNamed(named);
-      },
-      'right',
-    );
-
-    const root = carries(scene.add.container(0, 0).setName(name).setData('overflow', overflow));
-    // Off every display list, or it paints; the mask's destroy leaves it standing (docs/PHASER.md).
-    const stencil = new Phaser.GameObjects.Rectangle(
-      scene,
-      frame.x,
-      frame.y,
-      frame.width,
-      frame.height,
-      0xffffff,
-    );
-    shown.push(stencil);
-    root.enableFilters().filters?.external.addMask(stencil, false, on.camera);
+    const firstY = top + Math.max(0, (frame.height - spanY) / 2);
 
     const placed = cards.map((offered, index): Placed => {
       const row = Math.floor(index / columns);
@@ -450,26 +329,45 @@ export function createOverlay(
       const x = (DESIGN_WIDTH - spanX) / 2 + column * (GRID_WIDTH + GRID_GAP) + GRID_WIDTH / 2;
       const y = firstY + row * (height + GRID_GAP) + height;
       const drawn = createCardFace(scene, offered.face, offered.refusal, { width: GRID_WIDTH });
-      root.add(
-        drawn.root
-          .setPosition(x, y)
-          .setName(`${name}-card-${index}`)
-          .setData({ at: offered.at, card: offered.face.id }),
-      );
+      drawn.root
+        .setPosition(x, y)
+        .setName(`${name}-card-${index}`)
+        .setData({ at: offered.at, card: offered.face.id });
       return { ...offered, x, y, drawn };
     });
 
-    const laid = { root, frame, placed, height };
-    grid = laid;
-    scroll.reach(overflow);
-    root.setY(-scroll.offset);
-    return laid;
+    panel = createPanel(
+      scene,
+      on,
+      {
+        name,
+        frame,
+        parts: placed.map(({ drawn }) => drawn.root),
+        held: placed.map(
+          (card): Held => ({
+            box: { x: card.x - GRID_WIDTH / 2, y: card.y - height, width: GRID_WIDTH, height },
+            answers: answersOf(card.drawn, card.face, inspecting),
+            press: () => {
+              pressed(card);
+            },
+          }),
+        ),
+        foot: firstY + spanY,
+        beside: () => {
+          back();
+        },
+      },
+      follow,
+      carrier,
+    );
+    onWindow = placed;
+    return { panel, placed, height };
   };
 
   /** The one entry of the deal ringed, and none ringed at all where nothing is selected. */
   const ring = (dealing: Dealing, at: number | undefined): void => {
     dealing.selected = at;
-    for (const card of grid?.placed ?? []) card.drawn.select(card.at === at);
+    for (const card of onWindow) card.drawn.select(card.at === at);
   };
 
   /** A pile's browse raised, laid out as the civilization's browse lays out a civilization. */
@@ -498,7 +396,7 @@ export function createOverlay(
       },
     );
     shown.push(laid.title);
-    browsed = laid.panel;
+    panel = laid.panel;
   };
 
   /** The deal window raised. It closes on the take alone, and the landing plays out under the caller. */
@@ -508,27 +406,19 @@ export function createOverlay(
 
     const { heading, lore, entries } = dealt(catalogue, dealing.on, dealing.deal);
     const title = raiseTitle('deal', heading);
-    const laid = layGrid('deal', entries, title.y + title.height + MARGIN, (card, press) => {
-      switch (press) {
-        case 'left': {
-          if (card.at !== dealing.selected) {
-            ring(dealing, card.at);
-            return;
-          }
-          if (!playable(card.refusal)) {
-            const over = card.y + laid.root.y - laid.height;
-            note.overCard(refused(card.costs, card.refusal), card.x, over);
-            return;
-          }
-          standingDeal = undefined;
-          close();
-          take(card.at);
-          return;
-        }
-        case 'right':
-          inspecting.large.show(card.face);
-          return;
+    const laid = layWindow('deal', entries, title.y + title.height + MARGIN, (card) => {
+      if (card.at !== dealing.selected) {
+        ring(dealing, card.at);
+        return;
       }
+      if (!playable(card.refusal)) {
+        const over = card.y - laid.panel.offset - laid.height;
+        note.overCard(refused(card.costs, card.refusal), card.x, over);
+        return;
+      }
+      standingDeal = undefined;
+      close();
+      take(card.at);
     });
     raiseLore('deal', lore, laid);
     ring(dealing, dealing.selected);
@@ -558,19 +448,12 @@ export function createOverlay(
     const { id } = announcement.on.timeline.capstone;
     const face = capstoneFace(id);
     const title = raiseTitle('capstone', text('capstone.title'));
-    const laid = layGrid(
+    const laid = layWindow(
       'capstone',
       [{ face, costs: [], refusal: NO_REFUSAL, at: 0 }],
       title.y + title.height + MARGIN,
-      (_card, press) => {
-        switch (press) {
-          case 'left':
-            closeCapstone(announcement);
-            return;
-          case 'right':
-            inspecting.large.show(face);
-            return;
-        }
+      () => {
+        closeCapstone(announcement);
       },
     );
     raiseLore('capstone', capstoneLore(id, announcement.raised), laid);
@@ -581,17 +464,10 @@ export function createOverlay(
     raiseOnScrim({ stands: 'aim-window', aim });
 
     const title = raiseTitle('aim-window', text('aim.discard-pile', { card: cardName(aim.aimed) }));
-    layGrid('aim-window', aim.cards, title.y + title.height + MARGIN, (card, press) => {
-      switch (press) {
-        case 'left':
-          // The aim landed, so the window closes without saying it closed with nothing paid.
-          close();
-          aim.chosen(card.at);
-          return;
-        case 'right':
-          inspecting.large.show(card.face);
-          return;
-      }
+    layWindow('aim-window', aim.cards, title.y + title.height + MARGIN, (card) => {
+      // The aim landed, so the window closes without saying it closed with nothing paid.
+      close();
+      aim.chosen(card.at);
     });
   };
 
@@ -817,27 +693,11 @@ export function createOverlay(
 
   scene.scrolls({
     pan(way, delta) {
-      if (large.standing) return;
-      if (grid !== undefined) scroll.pan(way, delta);
-      else browsed?.pan(way, delta);
+      if (!large.standing) panel?.pan(way, delta);
     },
     wheel(by) {
-      if (large.standing) return;
-      if (grid !== undefined) scroll.wheel(by);
-      else browsed?.wheel(by);
+      if (!large.standing) panel?.wheel(by);
     },
-  });
-
-  whileUp(scene, scene.events, Phaser.Scenes.Events.UPDATE, (_time: number, delta: number) => {
-    // Here and not in the scroll's move: the wheel scrolls from inside Phaser's dispatch, where a hit
-    // test refills the list being walked (docs/PHASER.md).
-    if (moved) {
-      moved = false;
-      if (grid !== undefined && thingUnder(scene.game) === grid.frame) {
-        pointOnGrid(scene.input.activePointer);
-      }
-    }
-    if (grid !== undefined) scroll.step(delta);
   });
 
   return {
@@ -939,15 +799,6 @@ function dealt(
       };
     }
   }
-}
-
-/** The card lying under a design-space point, and nothing where the point falls between cards. */
-function cardAt(grid: Grid, x: number, y: number): Placed | undefined {
-  const local = y - grid.root.y;
-  return grid.placed.find(
-    (card) =>
-      Math.abs(x - card.x) <= GRID_WIDTH / 2 && local <= card.y && local >= card.y - grid.height,
-  );
 }
 
 function pileOf(chronicle: Chronicle, pile: PileKind): readonly ChronicleCard[] {

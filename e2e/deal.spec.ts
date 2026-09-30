@@ -12,6 +12,7 @@ import {
   cardOnFace,
   chronicleOf,
   click,
+  cursorAt,
   enemiesOf,
   firstEntriesTaken,
   firstSeed,
@@ -31,6 +32,9 @@ import {
 
 /** The answer of the lean season that enters warriors. */
 const RATION = 'ration';
+
+/** The cursor over something that answers a left click or a rest. */
+const HAND = 'pointer';
 
 /**
  * The chronicle of the first seed and turn, inside forty turns, whose deal offers an answer the city
@@ -76,7 +80,11 @@ test('the events phase deals a choice, and the turn plays on from the one taken'
     expect(await cardOnFace(page, `deal-card-${at}`)).toBe(answer);
   }
 
+  const first = await onScreen(page, 'deal-card-0');
   const second = await onScreen(page, 'deal-card-1');
+  expect(await cursorAt(page, { x: (first.x + second.x) / 2, y: first.y })).toBe('');
+  expect(await cursorAt(page, second)).toBe(HAND);
+
   await page.mouse.click(second.x, second.y, { button: 'right' });
   await expect.poll(() => cardOnFace(page, 'inspection')).toBe(answers[1]);
   expect(await standing(page, 'deal')).toBe(true);

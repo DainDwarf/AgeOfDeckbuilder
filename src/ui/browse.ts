@@ -238,7 +238,9 @@ export function standBrowse(
   const small = createSmallCards(overlay, overlay.strata.smallCard, catalogue, kinds, (name) => {
     inspecting.large.named(name);
   });
-  const inspecting = inspectingUnder(on, small, kinds, large);
+  const inspecting = inspectingUnder(on, small, kinds, large, () => {
+    standing?.panel.holdStill();
+  });
   const carrier = createCarrier(overlay, on);
   const follow = (): void => {
     small.follow();
@@ -281,13 +283,14 @@ export function standBrowse(
 
 /**
  * What a browse's faces answer with, on the stratum handed: a card shown large over the browse takes
- * down the small cards its names raised.
+ * down the small cards its names raised, `rising` told first.
  */
 export function inspectingUnder(
   on: Inspecting['on'],
   small: Inspecting['small'],
   kinds: Inspecting['kinds'],
   large: ShownLarge,
+  rising: () => void,
 ): Inspecting {
   return {
     on,
@@ -295,10 +298,12 @@ export function inspectingUnder(
     kinds,
     large: {
       show(face) {
+        rising();
         small.down();
         large.show(face);
       },
       named(name) {
+        rising();
         small.down();
         large.named(name);
       },

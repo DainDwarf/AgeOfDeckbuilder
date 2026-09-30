@@ -172,6 +172,8 @@ export type Panel = {
   pan(way: number, delta: number): void;
   /** The wheel turned by this much, down above zero. */
   wheel(by: number): void;
+  /** Stands where it is scrolled, a fling running on it stopped. */
+  holdStill(): void;
   /** Whether it is among the objects an input event of its scene hands as under the pointer. */
   under(over: readonly Phaser.GameObjects.GameObject[]): boolean;
   /** Takes the panel down, and everything it answers with. */
@@ -267,7 +269,9 @@ export function createPanel(
   zone.on('pointermove', point);
   onHover(
     zone,
-    () => {},
+    () => {
+      point(scene.input.activePointer);
+    },
     () => {
       point(undefined);
     },
@@ -316,6 +320,9 @@ export function createPanel(
     },
     wheel(by) {
       scroll.wheel(by);
+    },
+    holdStill() {
+      scroll.stand(scroll.offset);
     },
     under(over) {
       return over.includes(zone);
