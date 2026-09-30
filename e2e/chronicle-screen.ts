@@ -260,6 +260,21 @@ export async function campaignShown(page: Page): Promise<void> {
   await rested(page);
 }
 
+/** The collection screen the navbar opens from the campaign screen a boot stands on. */
+export async function collectionOpened(page: Page): Promise<void> {
+  await campaignShown(page);
+  await click(page, 'navbar-collection');
+  await expect.poll(() => standing(page, 'collection-mode')).toBe(true);
+  await rested(page);
+}
+
+/** The deck editing mode a press on the civilization's pile opens, and a drawn frame after it. */
+export async function pilePressed(page: Page, civilization: string): Promise<void> {
+  await click(page, `collection-civilization-${civilization}`);
+  await expect.poll(() => standing(page, 'deck-editing-mode')).toBe(true);
+  await rested(page);
+}
+
 /** Chronicle pressed on the navbar standing, and the launch screen it opens waited for. */
 export async function chronicleButton(page: Page): Promise<void> {
   await click(page, 'navbar-launch');
@@ -462,6 +477,23 @@ export function kindLabelOnScreen(
 /** The cursor the page shows over the canvas. */
 export function cursorOverCanvas(page: Page): Promise<string> {
   return page.locator('canvas').evaluate((canvas: HTMLCanvasElement) => canvas.style.cursor);
+}
+
+/** The cursor the pointer shows moved to this point, a drawn frame after. */
+export async function cursorAt(page: Page, at: { x: number; y: number }): Promise<string> {
+  await page.mouse.move(at.x, at.y);
+  await rested(page);
+  return cursorOverCanvas(page);
+}
+
+/** Where the named object stands in the design space: the point it is drawn about, a face's bottom centre. */
+export function placeOf(page: Page, name: string): Promise<{ x: number; y: number }> {
+  return page.evaluate((target) => {
+    const found = window.named?.(target)?.object as Phaser.GameObjects.Container | undefined;
+    if (found === undefined) throw new Error(`there is no ${target}`);
+    const at = found.getWorldTransformMatrix();
+    return { x: at.tx, y: at.ty };
+  }, name);
 }
 
 /**

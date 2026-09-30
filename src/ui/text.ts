@@ -243,6 +243,7 @@ const TEXT = {
   'collection.cards': 'Cards: {cards}',
   'collection.row-copies': '×{copies}',
   'collection.empty-deck': 'The deck holds no card',
+  'collection.civilization-title': '{civilization} Civilization',
   'boot.failed': 'The game could not start', // glossary exception: start
   'refused-save.title': 'The game cannot save',
   'refused-save.line':

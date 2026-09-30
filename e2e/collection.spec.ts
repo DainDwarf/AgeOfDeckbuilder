@@ -1,5 +1,4 @@
 import { expect, type Page, test } from '@playwright/test';
-import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
 import { bought, priceOf, unaffordableIn } from '../src/rules/campaign';
 import { freshCampaign } from '../src/rules/save';
@@ -13,6 +12,7 @@ import {
   cursorOverCanvas,
   heldSave,
   onScreen,
+  placeOf,
   plantCampaign,
   readNames,
   rested,
@@ -33,16 +33,6 @@ const STACKS = stacksOf(CATALOGUE, CAMPAIGN.collection, cardName);
 
 /** How many stacks a line holds. */
 const ACROSS = 6;
-
-/** Where the named face stands in the design space: its own bottom centre, which every face is drawn about. */
-function placeOf(page: Page, name: string): Promise<{ x: number; y: number }> {
-  return page.evaluate((target) => {
-    const face = window.named?.(target)?.object as Phaser.GameObjects.Container | undefined;
-    if (face === undefined) throw new Error(`there is no ${target}`);
-    const at = face.getWorldTransformMatrix();
-    return { x: at.tx, y: at.ty };
-  }, name);
-}
 
 /** Collection pressed on the navbar of the campaign screen a bare boot opens, and its screen waited for. */
 async function openCollection(page: Page): Promise<void> {

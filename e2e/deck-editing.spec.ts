@@ -1,5 +1,4 @@
 import { expect, type Page, test } from '@playwright/test';
-import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
 import { addedTo, type Campaign, civilizationIn, removedFrom } from '../src/rules/campaign';
 import { freshCampaign } from '../src/rules/save';
@@ -7,16 +6,19 @@ import type { CardId } from '../src/rules/state';
 import { stacksOf } from '../src/ui/collection-layout';
 import { cardName, civilizationName, text } from '../src/ui/text';
 import {
-  campaignShown,
   cardOnFace,
   click,
+  collectionOpened,
   counted,
+  cursorAt,
   cursorOverCanvas,
   drawsName,
   heldSave,
   kindLabelOnScreen,
   nameOnScreen,
   onScreen,
+  pilePressed,
+  placeOf,
   readNames,
   rested,
   shows,
@@ -57,24 +59,6 @@ function rowsOf(ids: readonly CardId[]): { id: CardId; copies: number }[] {
   }));
 }
 
-/** Where the named object stands in the design space: the point it is drawn about. */
-function placeOf(page: Page, name: string): Promise<{ x: number; y: number }> {
-  return page.evaluate((target) => {
-    const found = window.named?.(target)?.object as Phaser.GameObjects.Container | undefined;
-    if (found === undefined) throw new Error(`there is no ${target}`);
-    const at = found.getWorldTransformMatrix();
-    return { x: at.tx, y: at.ty };
-  }, name);
-}
-
-/** The collection screen the navbar opens from the campaign screen a boot stands on. */
-async function collectionOpened(page: Page): Promise<void> {
-  await campaignShown(page);
-  await click(page, 'navbar-collection');
-  await expect.poll(() => standing(page, 'collection-mode')).toBe(true);
-  await rested(page);
-}
-
 /** The collection screen a bare boot's navbar opens. */
 async function openCollection(page: Page): Promise<void> {
   await readNames(page);
@@ -82,30 +66,16 @@ async function openCollection(page: Page): Promise<void> {
   await collectionOpened(page);
 }
 
-/** The deck editing mode a press on the first civilization's pile opens, and a drawn frame after it. */
-async function pilePressed(page: Page): Promise<void> {
-  await click(page, `collection-civilization-${CIVILIZATION}`);
-  await expect.poll(() => standing(page, 'deck-editing-mode')).toBe(true);
-  await rested(page);
-}
-
 /** The collection screen a bare boot's navbar opens, in the deck editing mode on its first civilization. */
 async function openDeck(page: Page): Promise<void> {
   await openCollection(page);
-  await pilePressed(page);
+  await pilePressed(page, CIVILIZATION);
 }
 
 /** The first card of the collection whose stack draws a name in its rules entry. */
 async function namingCard(page: Page): Promise<CardId> {
   for (const { id } of STACKS) if (await drawsName(page, `collection-card-${id}`)) return id;
   throw new Error('no card of the collection draws a name');
-}
-
-/** The cursor the pointer shows moved to this point, a drawn frame after. */
-async function cursorAt(page: Page, at: { x: number; y: number }): Promise<string> {
-  await page.mouse.move(at.x, at.y);
-  await rested(page);
-  return cursorOverCanvas(page);
 }
 
 /** Whether the card's stack stands dimmed, and nothing where no stack of it stands. */
@@ -307,7 +277,7 @@ test('in the deck editing mode a right click on a row shows its card large, the 
   expect(problems).toEqual([]);
 });
 
-test('in the deck editing mode « Civilization stands as a button, the hand over it, a press on it leaving the mode as it stands, and Collection » returns to the collection mode', async ({
+test('in the deck editing mode « Civilization stands as a button, the hand over it, and Collection » returns to the collection mode', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -317,9 +287,6 @@ test('in the deck editing mode « Civilization stands as a button, the hand over
   await page.mouse.move(onward.x, onward.y);
   await rested(page);
   expect(await cursorOverCanvas(page)).toBe(HAND);
-  await page.mouse.click(onward.x, onward.y);
-  await rested(page);
-  expect(await standing(page, 'deck-editing-mode')).toBe(true);
 
   await click(page, 'collection-to-collection');
   await expect.poll(() => standing(page, 'collection-mode')).toBe(true);
@@ -407,7 +374,7 @@ test('in the deck editing mode a left click on a row removes a copy of its card 
 
   await page.reload();
   await collectionOpened(page);
-  await pilePressed(page);
+  await pilePressed(page, CIVILIZATION);
   await readsAs(page, campaign);
 
   expect(problems).toEqual([]);
