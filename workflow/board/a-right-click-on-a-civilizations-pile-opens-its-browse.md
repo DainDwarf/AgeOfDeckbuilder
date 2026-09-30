@@ -23,12 +23,9 @@ A new paragraph follows that one:
 
 `docs/INTERFACE.md`, _A card's names and its label_: the list of faces whose kind label answers the rest gains "in a civilization's browse" after "on a stack and on a pile of the collection screen".
 
-`docs/GLOSSARY.md`:
+`docs/GLOSSARY.md`, the **inspect** row: "To show a tile's cards in the infopanel, one at a time, to show a card large, or to open a civilization's browse." The **browse** row stands as it is.
 
-- **inspect** — "To show a tile's cards in the infopanel, one at a time, to show a card large, or to open a civilization's browse."
-- **browse** — "A window offering a pile's cards to be read: the draw pile's, the discard pile's, a civilization's."
-
-`docs/CHRONICLE-SCREEN.md` is not touched: a chronicle pile's browse keeps its left click and its look until the two lines behind this one.
+`docs/CHRONICLE-SCREEN.md` is not touched: a chronicle pile's browse keeps its left click and its look until the line behind this one.
 
 Player-facing text, `src/ui/text.ts`:
 
@@ -55,7 +52,7 @@ In:
 
 Out:
 
-- The chronicle screen's piles: their left click and their browse's look are the two lines behind this one on the board.
+- The chronicle screen's piles: their left click and their browse's look are the line behind this one on the board.
 - The collection mode's stacks, the deck editing mode and the civilization mode keep their readings as they are; no badge lands there.
 - The deck editing mode and the civilization mode show no pile, so no browse opens from them.
 - Whether a wheel notch may be bound to the back key is its own line on the board; over the browse a wheel notch scrolls and does nothing else.
@@ -71,7 +68,7 @@ Corner cases decided:
 
 - Both screens reach a pile's right click through `Pile.answers` of `src/ui/civilization-pile.ts` (the launch screen by `inspectedThrough`, the collection screen as a panel's `Held.answers`), and `answersOf` in `src/ui/stack.ts` shows the face large only where `cardAt` holds; the pile's box is wider than its card and holds the backs and the counts.
 - A card shown large on a screen of the meta stands through `standLarge` (`src/ui/stack.ts`), which owns a scrim and a claim on the overlay's keys (`overlay.takes`), and tells the screen it is covered (`away('overlay', …)`). The browse is a second thing standing on that overlay: the back key and a press on a scrim must find the card shown large first and the browse second, and the screen stays covered from the browse's rise to its close, a card large over it or not.
-- The chronicle screen's browse (`src/ui/overlay.ts`) lays faces, rings one and is typed on a chronicle's piles; it is not this browse. Its look is changed by a line of its own; this line leaves `overlay.ts` behaving as it does.
+- The chronicle screen's browse (`src/ui/overlay.ts`) lays faces, rings one and is typed on a chronicle's piles; it is not this browse. Its look is changed by the line behind this one; this line leaves `overlay.ts` behaving as it does.
 - The collection screen claims the wheel notch ahead of `backRaisesMenu` (`takesMouseKeys(this, isWheelNotch)`); the launch screen claims nothing of the wheel today, and the browse scrolls on both.
 - The launch screen's `lay()` destroys and redraws the room on every choice; the right click must not pass through `choose`.
 - A scrolled container's mask: the stencil stays off every display list and is destroyed by hand — `docs/PHASER.md`, _Rendering under WebGL_. A thing raised answers a press only from the next frame, and a spec rests before it presses it — `docs/PHASER.md`, _Under a Playwright spec_; presses across the screen's scene and the overlay's — _Input across scenes_.
