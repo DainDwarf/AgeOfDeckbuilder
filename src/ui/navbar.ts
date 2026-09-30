@@ -69,6 +69,8 @@ export type Worn = {
   /** The stratum the screen's one bubble stands on, over everything else the screen draws. */
   readonly bubbles: Stratum;
   readonly tooltip: Tooltip;
+  /** The bar reads the influence the save holds, as it stands now. */
+  readInfluence(): void;
 };
 
 /**
@@ -124,8 +126,8 @@ export function wearNavbar(scene: Phaser.Scene, standing: MetaScreen): Worn {
     tip: text('tooltip.influence'),
   });
 
-  const read = (count: number): void => {
-    influence.value.setText(String(count));
+  const readInfluence = (): void => {
+    influence.value.setText(String(campaignHeld().influence));
     const [{ at, zone }] = layOutBar({
       readings: [readingWidth(influence, influence.value.width)],
       menu: menuRoom(scene),
@@ -137,9 +139,9 @@ export function wearNavbar(scene: Phaser.Scene, standing: MetaScreen): Worn {
       zone: { x: ROOM.x + zone.x, width: zone.width },
     });
   };
-  read(campaignHeld().influence);
+  readInfluence();
 
   const content = scene.add.layer();
   scene.children.bringToTop(bubbles.layer);
-  return { content, bubbles, tooltip };
+  return { content, bubbles, tooltip, readInfluence };
 }

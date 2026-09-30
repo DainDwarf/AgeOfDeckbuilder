@@ -1,7 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
 import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
-import { priceOf } from '../src/rules/campaign';
+import { bought, priceOf, unaffordableIn } from '../src/rules/campaign';
 import { freshCampaign } from '../src/rules/save';
 import { stacksOf } from '../src/ui/collection-layout';
 import { cardName, text } from '../src/ui/text';
@@ -11,13 +11,19 @@ import {
   click,
   counted,
   cursorOverCanvas,
+  heldSave,
   onScreen,
+  plantCampaign,
   readNames,
   rested,
   standing,
   textOf,
   watch,
+  wonCampaign,
 } from './chronicle-screen';
+
+/** The cursor over something that answers a left click or a rest. */
+const HAND = 'pointer';
 
 /** A new campaign, as the bare address with no save opens on. */
 const CAMPAIGN = freshCampaign(CATALOGUE);
@@ -93,6 +99,53 @@ test('the navbar’s Collection opens the collection screen on a new campaign, C
     );
     expect((await placeOf(page, `${pile}-card`)).x).toBeGreaterThan(rightmost);
   }
+
+  expect(problems).toEqual([]);
+});
+
+test('on a campaign a won chronicle paid into, a press on the price of an affordable card buys a copy of it: the bar reads the influence less the price, the stack one copy more and its price doubled, and the save the campaign the buy makes; the price of an unaffordable card stands greyed, no hand, and a press on it buys nothing', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const campaign = wonCampaign();
+  const firstLine = stacksOf(CATALOGUE, campaign.collection, cardName).slice(0, ACROSS);
+  const card = firstLine.find(({ id }) => !unaffordableIn(CATALOGUE, campaign, id));
+  const greyed = firstLine.find(({ id }) => unaffordableIn(CATALOGUE, campaign, id));
+  if (card === undefined || greyed === undefined) {
+    throw new Error('the won campaign’s first line holds no affordable and unaffordable card both');
+  }
+  const price = priceOf(CATALOGUE, campaign, card.id);
+  const after = bought(CATALOGUE, campaign, card.id);
+
+  await plantCampaign(page, campaign);
+  await openCollection(page);
+  expect(await textOf(page, 'reading-influence-value')).toBe(String(campaign.influence));
+
+  const button = await onScreen(page, `collection-card-${card.id}-buy`);
+  await page.mouse.move(button.x, button.y);
+  await rested(page);
+  expect(await cursorOverCanvas(page)).toBe(HAND);
+
+  await page.mouse.click(button.x, button.y);
+  await expect.poll(async () => (await heldSave(page)).campaign).toEqual(after);
+  await rested(page);
+  expect(await textOf(page, 'reading-influence-value')).toBe(String(campaign.influence - price));
+  expect(await textOf(page, `collection-card-${card.id}-copies`)).toBe(
+    text('collection.copies', { copies: card.copies + 1 }),
+  );
+  expect(await textOf(page, `collection-card-${card.id}-price`)).toBe(
+    text('collection.price', { price: priceOf(CATALOGUE, after, card.id) }),
+  );
+
+  const unaffordable = await onScreen(page, `collection-card-${greyed.id}-buy`);
+  await page.mouse.move(unaffordable.x, unaffordable.y);
+  await rested(page);
+  expect(await cursorOverCanvas(page)).toBe('');
+
+  await page.mouse.click(unaffordable.x, unaffordable.y);
+  await rested(page);
+  expect(await textOf(page, 'reading-influence-value')).toBe(String(after.influence));
+  expect((await heldSave(page)).campaign).toEqual(after);
 
   expect(problems).toEqual([]);
 });

@@ -156,6 +156,36 @@ export function priceOf(catalogue: Catalogue, campaign: Campaign, card: CardId):
   return ageOf(catalogue, cardAge(catalogue, card)).basePrice * 2 ** (copies - 1);
 }
 
+/**
+ * Whether a card of the collection is unaffordable: its price is more than the influence. A card the
+ * collection owns no copy of is refused.
+ */
+export function unaffordableIn(catalogue: Catalogue, campaign: Campaign, card: CardId): boolean {
+  return priceOf(catalogue, campaign, card) > campaign.influence;
+}
+
+/**
+ * The campaign with one more copy of the card bought: its price paid out of the influence, and the
+ * copy dealt into the collection, in no section of any civilization. An unaffordable card, and a card
+ * the collection owns no copy of, are refused.
+ */
+export function bought(catalogue: Catalogue, campaign: Campaign, card: CardId): Campaign {
+  const price = priceOf(catalogue, campaign, card);
+  if (unaffordableIn(catalogue, campaign, card)) {
+    refuse(
+      catalogue,
+      `the influence ${campaign.influence} does not cover the price ${price} of ${card}`,
+    );
+  }
+  const copy = dealt(campaign.nextCard, [card]);
+  return {
+    ...campaign,
+    influence: campaign.influence - price,
+    nextCard: copy.nextCard,
+    collection: [...campaign.collection, ...copy.cards],
+  };
+}
+
 /** The section of a civilization a card stands in. */
 function sectionOf(catalogue: Catalogue, card: CardId): 'settle' | 'cards' {
   const { kind } = cardOf(catalogue, card);

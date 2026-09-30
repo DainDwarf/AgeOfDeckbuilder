@@ -2,6 +2,7 @@ import { expect, test } from 'vitest';
 import {
   addedTo,
   agesReached,
+  bought,
   type Campaign,
   type CampaignCard,
   civilizationIn,
@@ -223,6 +224,38 @@ test('a card’s price is the base price of its age owning one copy, doubled for
   expect(priceOf(catalogue, campaign, 'PH_Harvest')).toBe(8 * first);
   expect(owned(campaign, 'PH_Stores')).toBe(0);
   expect(() => priceOf(catalogue, campaign, 'PH_Stores')).toThrow(
+    'fixture: the collection owns no copy of PH_Stores',
+  );
+});
+
+test('a copy is bought for its price in influence and dealt into the collection as a new card in no section, and its price doubles; an unaffordable card and a card the collection owns no copy of are not bought', () => {
+  const { campaign } = paidInto(
+    CATALOGUE,
+    newCampaign(CATALOGUE, CIVILIZATION_ID),
+    hoardedVictory(),
+  );
+  const owned = [...new Set(campaign.collection.map(({ id }) => id))];
+  const price = (card: CardId): number => priceOf(CATALOGUE, campaign, card);
+  const card = owned.find((id) => price(id) <= campaign.influence);
+  const unaffordable = owned.find((id) => price(id) > campaign.influence);
+  if (card === undefined || unaffordable === undefined) {
+    throw new Error('the fixture’s paid campaign holds no affordable and unaffordable card');
+  }
+
+  const after = bought(CATALOGUE, campaign, card);
+
+  expect(after).toEqual({
+    ...campaign,
+    influence: campaign.influence - price(card),
+    nextCard: campaign.nextCard + 1,
+    collection: [...campaign.collection, { number: campaign.nextCard, id: card }],
+  });
+  expect(priceOf(CATALOGUE, after, card)).toBe(2 * price(card));
+  expect(() => bought(CATALOGUE, campaign, unaffordable)).toThrow(
+    `fixture: the influence ${campaign.influence} does not cover the price ${price(unaffordable)} of ${unaffordable}`,
+  );
+  expect(owned).not.toContain('PH_Stores');
+  expect(() => bought(CATALOGUE, campaign, 'PH_Stores')).toThrow(
     'fixture: the collection owns no copy of PH_Stores',
   );
 });

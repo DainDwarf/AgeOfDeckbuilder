@@ -70,7 +70,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **being aimed** | The state of a selected card while what its aim admits is offered, until it lands or is put back. | armed, pending, targeting, in flight |
 | **stock** | The city's holding of one resource: what income adds to and every cost is paid out of. | reserve, treasury, pool, supply, balance, bank |
 | **cost** | What the city pays out of its stocks to play something, for example a card. | fee, charge, toll |
-| **unaffordable** | What the city cannot pay for: its cost exceeds the stocks. | unpayable, short, lacking, too expensive |
+| **unaffordable** | What cannot be paid for: a card whose cost the city's stocks do not cover, or whose price the influence does not. | unpayable, short, lacking, too expensive |
 | **discard** | To send a card from the hand to the discard pile. | throw away, dump |
 | **recall** | To put a card from the discard pile into the hand; what a recall instant does. | retrieve, recover, reclaim, salvage |
 | **add** | To put a new card on a pile or into the collection, or a card of the collection into a deck. | lay (for a card), put (for a card on a pile), gain (for a card), give (for a card), insert, shuffle in |

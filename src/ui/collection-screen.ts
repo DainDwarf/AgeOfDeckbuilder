@@ -2,10 +2,12 @@ import Phaser from 'phaser';
 import { CATALOGUE } from '../content/catalogue';
 import {
   addedTo,
+  bought,
   type Campaign,
   type CampaignCivilization,
   priceOf,
   removedFrom,
+  unaffordableIn,
 } from '../rules/campaign';
 import type { Catalogue } from '../rules/catalogue';
 import { type CardId, NO_REFUSAL } from '../rules/state';
@@ -45,7 +47,7 @@ import { createCarrier, createPanel, type Filled, type Held, type Panel } from '
 import { chipAt } from './resource-bar';
 import { campaignHeld, keepCampaign } from './save-entry';
 import { createSmallCards } from './small-card';
-import { answersOf, type Inspecting, standLarge } from './stack';
+import { type Answers, answersOf, type Inspecting, standLarge } from './stack';
 import { cardName, civilizationName, text } from './text';
 
 const PANE_TOP = ROOM.y + MARGIN;
@@ -58,7 +60,9 @@ const STACK_WIDTH = CARD_WIDTH + UNDER_MOST * UNDER_STEP;
 const STACKS_APART = 10;
 const LINES_APART = 18;
 const COPIES_GAP = 6;
-const CHIP_TO_PRICE = 11;
+const CHIP_TO_PRICE = 9;
+const BUY_HEIGHT = 22;
+const BUY_PAD = 3;
 
 const PILES_APART = 22;
 
@@ -72,6 +76,13 @@ const WORD_STYLE = {
   color: css(LOOK.paleInk),
 };
 const COPIES_STYLE = { fontFamily: UI_FONT, fontSize: '14px', color: css(LOOK.deckCounts) };
+const PRICE_STYLE = {
+  fontFamily: UI_FONT,
+  fontSize: '13px',
+  fontStyle: 'bold',
+  color: css(LOOK.ink),
+};
+const GREYED_PRICE_STYLE = { ...PRICE_STYLE, color: css(LOOK.greyedInk) };
 const BUTTON_STYLE = {
   fontFamily: UI_FONT,
   fontSize: '13px',
@@ -102,10 +113,19 @@ function dimmed(colour: number): number {
   return overPage(colour, LOOK.whollyHeld);
 }
 
+/** What the button of a price answers: no rest and no right click. */
+const ANSWERS_NOTHING: Answers = {
+  point() {},
+  rests() {
+    return false;
+  },
+  inspect() {},
+};
+
 /**
  * One stack from the left and the top handed: a card under its face for each copy past the first,
  * three at most, each a step further right and down, its reading under them, and on that line at
- * its right edge its price.
+ * its right edge its price as a button that buys, greyed where no buy is handed.
  */
 function stackOf(
   scene: Phaser.Scene,
@@ -113,11 +133,11 @@ function stackOf(
   { id, copies }: CollectionStack,
   { left, top }: { left: number; top: number },
   reading: Reading,
-  price: number,
+  { price, buy }: { price: number; buy: (() => void) | undefined },
   inspecting: Inspecting,
   press: (() => void) | undefined,
   lands: Box | undefined,
-): { root: Phaser.GameObjects.Container; held: Held; bottom: number } {
+): { root: Phaser.GameObjects.Container; held: Held[]; bottom: number } {
   const tone = reading.dimmed ? dimmed : (colour: number): number => colour;
   const height = heightOf(CARD_WIDTH);
   const place = { x: left + CARD_WIDTH / 2, y: top + height };
@@ -138,56 +158,70 @@ function stackOf(
     .setPosition(place.x, place.y)
     .setName(`collection-card-${id}`)
     .setData('card', id);
-  const count = addText(
-    scene,
-    left,
-    top + height + UNDER_MOST * UNDER_STEP + COPIES_GAP,
-    reading.reads,
-    COPIES_STYLE,
-  ).setName(`collection-card-${id}-copies`);
+  const lineTop = top + height + UNDER_MOST * UNDER_STEP + COPIES_GAP;
+  const middle = lineTop + BUY_HEIGHT / 2;
+  const right = left + STACK_WIDTH;
+  const count = addText(scene, left, middle, reading.reads, COPIES_STYLE)
+    .setOrigin(0, 0.5)
+    .setName(`collection-card-${id}-copies`);
   const priced = addText(
     scene,
-    left + STACK_WIDTH,
-    count.y,
+    right - BUY_PAD + TEXT_INSET.x,
+    middle,
     text('collection.price', { price }),
-    COPIES_STYLE,
+    buy === undefined ? GREYED_PRICE_STYLE : PRICE_STYLE,
   )
-    .setOrigin(1, 0)
+    .setOrigin(1, 0.5)
     .setName(`collection-card-${id}-price`);
   const chip = chipAt(
     scene,
-    { x: priced.x - priced.width - CHIP_TO_PRICE, y: count.y + count.height / 2 },
-    LOOK.influence,
+    { x: priced.x - priced.width - CHIP_TO_PRICE, y: middle },
+    buy === undefined ? LOOK.greyedInk : LOOK.influence,
   ).setName(`collection-card-${id}-price-chip`);
+  const buyLeft = chip.getBounds().left - BUY_PAD;
+  const button: Box = { x: buyLeft, y: lineTop, width: right - buyLeft, height: BUY_HEIGHT };
+  const ground = scene.add
+    .rectangle(
+      button.x,
+      button.y,
+      button.width,
+      button.height,
+      buy === undefined ? LOOK.greyedFill : LOOK.panelFill,
+    )
+    .setOrigin(0, 0)
+    .setName(`collection-card-${id}-buy`);
   return {
     root: scene.add
-      .container(0, 0, [...unders, face, count, chip, priced])
+      .container(0, 0, [...unders, face, count, ground, chip, priced])
       .setName(`collection-stack-${id}`)
       .setData('dimmed', reading.dimmed),
-    held: {
-      box: { x: left, y: top, width: CARD_WIDTH, height },
-      answers: answersOf(card, shown, inspecting),
-      press,
-      carry:
-        lands === undefined
-          ? undefined
-          : {
-              copy: () =>
-                createCardFace(scene, shown, NO_REFUSAL, { width: CARD_WIDTH })
-                  .root.setPosition(place.x, place.y)
-                  .setName('carried-card')
-                  .setData('card', id),
-              lands,
-            },
-    },
-    bottom: count.y + count.height,
+    held: [
+      {
+        box: { x: left, y: top, width: CARD_WIDTH, height },
+        answers: answersOf(card, shown, inspecting),
+        press,
+        carry:
+          lands === undefined
+            ? undefined
+            : {
+                copy: () =>
+                  createCardFace(scene, shown, NO_REFUSAL, { width: CARD_WIDTH })
+                    .root.setPosition(place.x, place.y)
+                    .setName('carried-card')
+                    .setData('card', id),
+                lands,
+              },
+      },
+      { box: button, answers: ANSWERS_NOTHING, press: buy },
+    ],
+    bottom: button.y + button.height,
   };
 }
 
 /**
  * The campaign's collection as stacks from the top handed, `across` to a line, the lines centred
- * between the room's left and the panel's right handed, each reading what `readingOf` says, answering
- * a left click where `pressOf` hands a press, and a press held into `lands` where handed.
+ * between the room's left and `right`, each reading what `readingOf` says, answering a left click
+ * where `pressOf` hands one and a press held into `lands` where handed; an affordable price runs `buy`.
  */
 function collectionOf(
   scene: Phaser.Scene,
@@ -196,6 +230,7 @@ function collectionOf(
   { top, right, across, lands }: { top: number; right: number; across: number; lands?: Box },
   readingOf: (stack: CollectionStack) => Reading,
   pressOf: (stack: CollectionStack) => (() => void) | undefined,
+  buy: (card: CardId) => void,
   inspecting: Inspecting,
 ): Filled {
   const stacks = stacksOf(catalogue, campaign.collection, cardName);
@@ -214,13 +249,20 @@ function collectionOf(
         stack,
         { left, top: lineTop },
         readingOf(stack),
-        priceOf(catalogue, campaign, stack.id),
+        {
+          price: priceOf(catalogue, campaign, stack.id),
+          buy: unaffordableIn(catalogue, campaign, stack.id)
+            ? undefined
+            : () => {
+                buy(stack.id);
+              },
+        },
         inspecting,
         pressOf(stack),
         lands,
       );
       parts.push(drawn.root);
-      held.push(drawn.held);
+      held.push(...drawn.held);
       foot = Math.max(foot, drawn.bottom);
     }
     lineTop = foot + LINES_APART;
@@ -297,7 +339,7 @@ export class CollectionScreen extends Phaser.Scene {
 
   create(): void {
     holdDesignSpace(this, this.cameras.main);
-    const { content, bubbles, tooltip } = wearNavbar(this, 'collection');
+    const { content, bubbles, tooltip, readInfluence } = wearNavbar(this, 'collection');
     // Ahead of `backRaisesMenu`: a notch taken here reaches none of the screen's readers after it.
     takesMouseKeys(this, isWheelNotch);
     backRaisesMenu(this);
@@ -334,6 +376,15 @@ export class CollectionScreen extends Phaser.Scene {
 
     let laid: { readonly head: Phaser.GameObjects.Container; readonly panels: Panel[] } | undefined;
 
+    /** The campaign moved and kept, and the screen laid again in the mode, its panels where they stood. */
+    const edit = (mode: Mode, move: (held: Campaign) => Campaign): void => {
+      keepCampaign(move(campaignHeld()));
+      lay(
+        mode,
+        laid?.panels.map(({ offset }) => offset),
+      );
+    };
+
     /** The screen laid in the mode, its panels at the offsets handed, in order, or at their tops. */
     const lay = (mode: Mode, offsets: readonly number[] = []): void => {
       inspecting.small.down();
@@ -342,7 +393,11 @@ export class CollectionScreen extends Phaser.Scene {
         for (const panel of laid.panels) panel.down();
         laid.head.destroy();
       }
+      readInfluence();
       const campaign = campaignHeld();
+      const buy = (card: CardId): void => {
+        edit(mode, (held) => bought(CATALOGUE, held, card));
+      };
       const [leftOffset, rightOffset] = offsets;
       const { right, across } = shapeOf(mode);
       const divide = DESIGN_WIDTH - right;
@@ -384,6 +439,7 @@ export class CollectionScreen extends Phaser.Scene {
                     { top, right: divide, across },
                     reading,
                     () => undefined,
+                    buy,
                     inspecting,
                   ),
                 },
@@ -451,21 +507,14 @@ export class CollectionScreen extends Phaser.Scene {
             const held = heldIn(deck, id);
             return { reads: text('collection.in-deck', { held, copies }), dimmed: held === copies };
           };
-          const edit = (move: (held: Campaign) => Campaign): void => {
-            keepCampaign(move(campaignHeld()));
-            lay(
-              mode,
-              laid?.panels.map(({ offset }) => offset),
-            );
-          };
           const add = ({ id, copies }: CollectionStack): (() => void) | undefined =>
             heldIn(deck, id) < copies
               ? () => {
-                  edit((held) => addedTo(CATALOGUE, held, civilization, id));
+                  edit(mode, (held) => addedTo(CATALOGUE, held, civilization, id));
                 }
               : undefined;
           const remove = (card: CardId): void => {
-            edit((held) => removedFrom(CATALOGUE, held, civilization, card));
+            edit(mode, (held) => removedFrom(CATALOGUE, held, civilization, card));
           };
           const owned = campaign.civilizations[civilization];
           const collectionSide: Box = { ...ROOM, width: divide - ROOM.x };
@@ -486,6 +535,7 @@ export class CollectionScreen extends Phaser.Scene {
                     { top, right: divide, across, lands: civilizationSide },
                     reading,
                     add,
+                    buy,
                     inspecting,
                   ),
                 },
