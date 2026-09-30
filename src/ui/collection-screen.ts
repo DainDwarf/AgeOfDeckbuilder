@@ -11,7 +11,7 @@ import {
 } from '../rules/campaign';
 import type { Catalogue } from '../rules/catalogue';
 import { type CardId, NO_REFUSAL } from '../rules/state';
-import { standBrowse } from './browse';
+import { inspectingUnder, standBrowse } from './browse';
 import { createCardFace, createKindBubble, metricsOf } from './card-face';
 import { createPile, PILE_SPAN } from './civilization-pile';
 import {
@@ -259,13 +259,14 @@ export class CollectionScreen extends Phaser.Scene {
       if (under) overlay.input.emit(COVERED);
     });
     offerEntries(this, { seed: undefined, veiled: undefined });
+    let laid: { readonly head: Phaser.GameObjects.Container; readonly panels: Panel[] } | undefined;
     const kinds = createKindBubble(tooltip);
-    const inspecting: Inspecting = {
-      on: bubbles,
-      small: createSmallCards(this, bubbles, CATALOGUE, kinds, large.named),
-      kinds,
-      large,
-    };
+    const small = createSmallCards(this, bubbles, CATALOGUE, kinds, (name) => {
+      inspecting.large.named(name);
+    });
+    const inspecting = inspectingUnder(bubbles, small, kinds, large, () => {
+      for (const panel of laid?.panels ?? []) panel.holdStill();
+    });
     const screen = this.add.container(0, 0).setName('collection');
     content.add(screen);
     const panels = stratumOf(content, this.cameras.main);
@@ -275,7 +276,6 @@ export class CollectionScreen extends Phaser.Scene {
     };
     const carrier = createCarrier(this, panels);
 
-    let laid: { readonly head: Phaser.GameObjects.Container; readonly panels: Panel[] } | undefined;
     onScrollKeys(this, (way, delta) => {
       for (const panel of laid?.panels ?? []) if (panel.pointed) panel.pan(way, delta);
     });

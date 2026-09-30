@@ -282,8 +282,8 @@ export function standBrowse(
 }
 
 /**
- * What a browse's faces answer with, on the stratum handed: a card shown large over the browse takes
- * down the small cards its names raised, `rising` told first.
+ * What a screen's faces answer with, on the stratum handed: a card shown large over them takes down
+ * the small cards their names raised, `rising` told first.
  */
 export function inspectingUnder(
   on: Inspecting['on'],
