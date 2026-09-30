@@ -12,4 +12,5 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
+- **A browse hears the wheel anywhere on the scrim** — a browse on a scrim scrolls under the wheel wherever the pointer stands, as a window's grid already does and as the scrim sentence in `docs/INTERFACE.md` says; today it hears the wheel only over its frame.
 - **A setting inverts the wheel** — the Controls window holds two rows under the zooms, **Wheel zoom** reading Up zooms in or Up zooms out and **Wheel scroll** reading Up scrolls up or Up scrolls down, a press turning each the other way, the map and every scrolling surface following, **Default** putting both back, and both kept in the browser with the bindings. Doc-impact: `docs/INTERFACE.md`. [board/a-setting-inverts-the-wheel.md](board/a-setting-inverts-the-wheel.md)
