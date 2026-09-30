@@ -10,8 +10,8 @@ import {
   keyLabel,
   rebind,
   restoreDefaults,
-  WHEELS,
-  type Wheel,
+  WHEELED,
+  type Wheeled,
 } from './bindings';
 import {
   addText,
@@ -134,17 +134,17 @@ const ROW_GAP = 8;
 /** A row of the Controls window: a control's two slots, or one of the wheel's two buttons. */
 type Row =
   | { readonly kind: 'control'; readonly control: Control }
-  | { readonly kind: 'wheel'; readonly wheel: Wheel };
+  | { readonly kind: 'wheel'; readonly wheeled: Wheeled };
 
 /** The Controls window's rows, top down: the wheel's two stand under the zoom-out row. */
 const ROWS: readonly Row[] = CONTROLS.flatMap((control): Row[] => [
   { kind: 'control', control },
-  ...(control === 'zoom-out' ? WHEELS.map((wheel): Row => ({ kind: 'wheel', wheel })) : []),
+  ...(control === 'zoom-out' ? WHEELED.map((wheeled): Row => ({ kind: 'wheel', wheeled })) : []),
 ]);
 
 /** What a wheel's row reads, and what its button reads with the wheel turning each way. */
 const WHEEL_READS: Record<
-  Wheel,
+  Wheeled,
   { readonly row: TextKey; readonly upright: TextKey; readonly inverted: TextKey }
 > = {
   zoom: { row: 'wheel.zoom', upright: 'wheel.up-zooms-in', inverted: 'wheel.up-zooms-out' },
@@ -244,7 +244,7 @@ function layControls(
   /** The slot waiting for a key, and nothing while none waits. */
   let listening: { control: Control; slot: number } | undefined;
   const slots: { control: Control; slot: number; label: Phaser.GameObjects.Text }[] = [];
-  const wheels: { wheel: Wheel; label: Phaser.GameObjects.Text }[] = [];
+  const wheels: { wheeled: Wheeled; label: Phaser.GameObjects.Text }[] = [];
 
   const paint = (): void => {
     const held = bindings();
@@ -259,9 +259,9 @@ function layControls(
             : keyLabel(bind),
       );
     }
-    for (const { wheel, label } of wheels) {
-      const reads = WHEEL_READS[wheel];
-      label.setText(text(inverted()[wheel] ? reads.inverted : reads.upright));
+    for (const { wheeled, label } of wheels) {
+      const reads = WHEEL_READS[wheeled];
+      label.setText(text(inverted()[wheeled] ? reads.inverted : reads.upright));
     }
   };
 
@@ -296,21 +296,21 @@ function layControls(
         ];
       }
       case 'wheel': {
-        const { wheel } = row;
+        const { wheeled } = row;
         const width = 2 * SLOT_WIDTH + SLOT_GAP;
         const { face, label } = pressable(
           scene,
           { x: right - width / 2, y, width, height: SLOT_HEIGHT },
-          `controls-wheel-${wheel}`,
+          `controls-wheel-${wheeled}`,
           SLOT_STYLE,
           () => {
             listening = undefined;
-            invert(wheel);
+            invert(wheeled);
             paint();
           },
         );
-        wheels.push({ wheel, label });
-        return [rowLabel(text(WHEEL_READS[wheel].row), y), face, label];
+        wheels.push({ wheeled, label });
+        return [rowLabel(text(WHEEL_READS[wheeled].row), y), face, label];
       }
     }
   };

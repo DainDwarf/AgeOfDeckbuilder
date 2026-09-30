@@ -1,5 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
-import type { Wheel } from '../src/ui/bindings';
+import type { Wheeled } from '../src/ui/bindings';
 import {
   bareTile,
   browse,
@@ -193,8 +193,8 @@ async function notchedOver(page: Page, at: { x: number; y: number }): Promise<nu
 }
 
 /** What the button of one of the wheel's two rows reads. */
-function wheelReads(page: Page, turned: Wheel): Promise<string | undefined> {
-  return textOf(page, `controls-wheel-${turned}-label`);
+function wheelReads(page: Page, wheeled: Wheeled): Promise<string | undefined> {
+  return textOf(page, `controls-wheel-${wheeled}-label`);
 }
 
 /** Out of Controls and back to a bare chronicle screen, on the back key. */

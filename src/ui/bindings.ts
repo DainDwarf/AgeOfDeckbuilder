@@ -160,12 +160,12 @@ export function bound(bindings: Bindings, control: Control, slot: number, press:
 }
 
 /** The two the wheel turns: the map's zoom, and whatever scrolls. */
-export const WHEELS = ['zoom', 'scroll'] as const;
+export const WHEELED = ['zoom', 'scroll'] as const;
 
-export type Wheel = (typeof WHEELS)[number];
+export type Wheeled = (typeof WHEELED)[number];
 
 /** Whether each turns the other way from where it began: a notch up zooming out, or scrolling down. */
-export type Inverted = Readonly<Record<Wheel, boolean>>;
+export type Inverted = Readonly<Record<Wheeled, boolean>>;
 
 export const UPRIGHT: Inverted = { zoom: false, scroll: false };
 
@@ -222,10 +222,10 @@ export function parseBindings(stored: string | null): Bindings {
 /** Which way the wheel was kept turning: whatever is not a boolean stands at its default. */
 export function parseInverted(stored: string | null): Inverted {
   const kept = entriesOf(keptOf(stored).inverted);
-  const parsed = {} as Record<Wheel, boolean>;
-  for (const wheel of WHEELS) {
-    const each = kept[wheel];
-    parsed[wheel] = typeof each === 'boolean' ? each : UPRIGHT[wheel];
+  const parsed = {} as Record<Wheeled, boolean>;
+  for (const wheeled of WHEELED) {
+    const each = kept[wheeled];
+    parsed[wheeled] = typeof each === 'boolean' ? each : UPRIGHT[wheeled];
   }
   return parsed;
 }
@@ -242,12 +242,12 @@ function nulled(bind: Bind | undefined): Bind | null {
 }
 
 /** What the Controls window sets. */
-type Kept = { readonly bindings: Bindings; readonly inverted: Inverted };
+type Chosen = { readonly bindings: Bindings; readonly inverted: Inverted };
 
 /** What the game runs on, read from the browser the first time it is asked for. */
-let current: Kept | undefined;
+let current: Chosen | undefined;
 
-function held(): Kept {
+function held(): Chosen {
   if (current === undefined) {
     const kept = stored(STORED);
     current = { bindings: parseBindings(kept), inverted: parseInverted(kept) };
@@ -264,7 +264,7 @@ export function inverted(): Inverted {
 }
 
 /** The one place a binding or the wheel changes: what the player set outlives the page. */
-function keep(next: Kept): void {
+function keep(next: Chosen): void {
   current = next;
   store(STORED, serialiseControls(next.bindings, next.inverted));
 }
@@ -274,9 +274,9 @@ export function rebind(control: Control, slot: number, press: Bind): void {
 }
 
 /** The wheel turning that one the other way. */
-export function invert(wheel: Wheel): void {
+export function invert(wheeled: Wheeled): void {
   const was = inverted();
-  keep({ ...held(), inverted: { ...was, [wheel]: !was[wheel] } });
+  keep({ ...held(), inverted: { ...was, [wheeled]: !was[wheeled] } });
 }
 
 export function restoreDefaults(): void {
