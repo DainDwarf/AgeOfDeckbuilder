@@ -73,7 +73,7 @@ function readingApart(): Chronicle {
   return hazardsAdded(settledOn(1), [0, 0, 1]);
 }
 
-test('a pile of more stacks than the frame holds scrolls, and stops on its first and last line', async ({
+test('a pile of more stacks than the frame holds scrolls under the wheel wherever the pointer stands, a notch off the frame moving it as far as the same notch over it, and stops on its first and last line', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -87,9 +87,19 @@ test('a pile of more stacks than the frame holds scrolls, and stops on its first
 
   await wheel(page, 120);
   await expect.poll(() => offsetOf(page)).toBeGreaterThan(0);
+  const notch = await offsetOf(page);
+  // Short of the last line, or a notch moved twice would stop there all the same.
+  expect(notch).toBeLessThan(opened.overflow);
   await wheel(page, 4000);
   await expect.poll(() => offsetOf(page)).toBe(opened.overflow);
   await wheel(page, -4000);
+  await expect.poll(() => offsetOf(page)).toBe(0);
+
+  const title = await onScreen(page, 'browse-title');
+  await page.mouse.move(title.x, title.y);
+  await page.mouse.wheel(0, 120);
+  await expect.poll(() => offsetOf(page)).toBe(notch);
+  await page.mouse.wheel(0, -4000);
   await expect.poll(() => offsetOf(page)).toBe(0);
 
   const frame = await onScreen(page, 'browse-frame');
@@ -118,7 +128,7 @@ test('a pile of more stacks than the frame holds scrolls, and stops on its first
   expect(problems).toEqual([]);
 });
 
-test('the two keys that pan the map up and down scroll a browse while they are held, wherever the pointer stands, and stop it on its last line and on its first; a tap moves it less than a hold, the two that pan it left and right move nothing, and a card shown large holds it still', async ({
+test('the two keys that pan the map up and down scroll a browse while they are held, wherever the pointer stands, and stop it on its last line and on its first; a tap moves it less than a hold, the two that pan it left and right move nothing, and a card shown large holds it still under them and under the wheel, over the frame and off it', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -164,6 +174,12 @@ test('the two keys that pan the map up and down scroll a browse while they are h
   await expect.poll(() => standing(page, 'inspection')).toBe(true);
   expect(await heldFor(down.code, 200)).toBe(tapped);
   expect(await heldFor(up.code, 200)).toBe(tapped);
+  await wheel(page, 120);
+  const title = await onScreen(page, 'browse-title');
+  await page.mouse.move(title.x, title.y);
+  await page.mouse.wheel(0, 120);
+  await rested(page);
+  expect(await offsetOf(page)).toBe(tapped);
   await page.keyboard.press('Escape');
   await expect.poll(() => standing(page, 'inspection')).toBe(false);
   expect(await standing(page, 'browse')).toBe(true);

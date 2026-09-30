@@ -160,6 +160,12 @@ export type PanelOf = {
   readonly beside?: () => void;
 } & Filled;
 
+/**
+ * Where the wheel scrolls a panel: over its frame alone, or wherever the pointer stands, its screen
+ * handing it every notch.
+ */
+export type Wheeled = 'under the pointer' | 'wherever the pointer stands';
+
 /** A panel standing on its screen. */
 export type Panel = {
   /** How far it is scrolled. */
@@ -171,6 +177,8 @@ export type Panel = {
   readonly pointed: boolean;
   /** One frame of a key held, this many milliseconds long, down above zero. */
   pan(way: number, delta: number): void;
+  /** The wheel turned by this much where the pointer stands: nothing while the debug console covers it. */
+  wheel(pointer: Phaser.Input.Pointer, by: number): void;
   /** Takes the panel down, and everything it answers with. */
   down(): void;
 };
@@ -186,6 +194,7 @@ export function createPanel(
   { name, frame, parts, held, foot, beside }: PanelOf,
   follow: () => void,
   carrier: Carrier,
+  wheeled: Wheeled,
   offset = 0,
 ): Panel {
   const root = scene.add.container(0, 0, [...parts]).setName(name);
@@ -261,9 +270,15 @@ export function createPanel(
   zone.on('dragend', (pointer: Phaser.Input.Pointer) => {
     scroll.release(scene.time.now, !releasedOffCanvas(pointer));
   });
-  zone.on('wheel', (pointer: Phaser.Input.Pointer, _dx: number, dy: number) => {
-    if (!consoleCovers(scene, on.at(pointer.x, pointer.y))) scroll.wheel(dy);
-  });
+  const wheel = (pointer: Phaser.Input.Pointer, by: number): void => {
+    if (!consoleCovers(scene, on.at(pointer.x, pointer.y))) scroll.wheel(by);
+  };
+  // Over the frame a screen handing every notch hears it as well, and the notch would move it twice.
+  if (wheeled === 'under the pointer') {
+    zone.on('wheel', (pointer: Phaser.Input.Pointer, _dx: number, dy: number) => {
+      wheel(pointer, dy);
+    });
+  }
   zone.on('pointermove', point);
   onHover(
     zone,
@@ -314,6 +329,7 @@ export function createPanel(
     pan(way, delta) {
       scroll.pan(way, delta);
     },
+    wheel,
     down() {
       point(undefined);
       stopStepping();

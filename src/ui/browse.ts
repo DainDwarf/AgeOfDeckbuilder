@@ -16,6 +16,7 @@ import {
   onClick,
   ownBoxOf,
   UI_FONT,
+  whileUp,
 } from './design-space';
 import { cardFaceAtStart, type Face } from './face';
 import { css, LOOK } from './look';
@@ -131,7 +132,7 @@ function stackCellOf(
 /**
  * A browse named `name` on the stratum its faces answer on, under its title: its stacks eight to a
  * line from the frame's top left, scrolled as a panel is, and a press of either button beside them
- * running `beside`. Answers its title and its panel, which the caller takes down.
+ * running `beside`. Answers its title and its panel, which the caller hands the wheel and takes down.
  */
 export function layBrowse(
   overlay: OverlayScene,
@@ -181,6 +182,7 @@ export function layBrowse(
     },
     follow,
     carrier,
+    'wherever the pointer stands',
   );
   return { title, panel };
 }
@@ -230,6 +232,14 @@ export function standBrowse(
   overlay.scrolls((way, delta) => {
     if (!large.standing) standing?.panel.pan(way, delta);
   });
+  whileUp(
+    overlay,
+    overlay.input,
+    'wheel',
+    (pointer: Phaser.Input.Pointer, _over: unknown, _dx: number, dy: number) => {
+      if (!large.standing) standing?.panel.wheel(pointer, dy);
+    },
+  );
   const small = createSmallCards(overlay, overlay.strata.smallCard, catalogue, kinds, (name) => {
     inspecting.large.named(name);
   });

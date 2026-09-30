@@ -817,9 +817,11 @@ export function createOverlay(
 
   scene.input.on(
     'wheel',
-    (_pointer: Phaser.Input.Pointer, _over: unknown, _dx: number, dy: number) => {
-      // The scene's wheel hears a notch whatever stands over the grid, a card shown large included.
-      if (grid !== undefined && !large.standing) scroll.wheel(dy);
+    (pointer: Phaser.Input.Pointer, _over: unknown, _dx: number, dy: number) => {
+      // The scene's wheel hears a notch whatever stands over what scrolls, a card shown large included.
+      if (large.standing) return;
+      if (grid !== undefined) scroll.wheel(dy);
+      else browsed?.wheel(pointer, dy);
     },
   );
   scene.scrolls((way, delta) => {

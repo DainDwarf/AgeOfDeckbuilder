@@ -12,5 +12,4 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **A browse hears the wheel anywhere on the scrim** — the pile browse and the civilization's browse both scroll under a wheel turned anywhere on their scrim, off the frame included, a card shown large holding them still, `docs/META-SCREENS.md` saying so and `e2e/browse.spec.ts` proving it on the pile browse. Doc-impact: `docs/META-SCREENS.md`. [board/a-browse-hears-the-wheel-anywhere-on-the-scrim.md](board/a-browse-hears-the-wheel-anywhere-on-the-scrim.md)
 - **A setting inverts the wheel** — the Controls window holds two rows under the zooms, **Wheel zoom** reading Up zooms in or Up zooms out and **Wheel scroll** reading Up scrolls up or Up scrolls down, a press turning each the other way, the map and every scrolling surface following, **Default** putting both back, and both kept in the browser with the bindings. Doc-impact: `docs/INTERFACE.md`. [board/a-setting-inverts-the-wheel.md](board/a-setting-inverts-the-wheel.md)
