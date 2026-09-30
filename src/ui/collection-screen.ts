@@ -24,8 +24,8 @@ import {
   standingIn,
 } from './collection-layout';
 import {
-  CARD_WIDTH,
   type Cell,
+  COLLECTION_CARD_WIDTH,
   linesOf,
   priceButtonOf,
   type Reading,
@@ -156,7 +156,7 @@ function collectionOf(
                 carry: {
                   copy: () =>
                     createCardFace(scene, cardFaceAtStart(catalogue, id), NO_REFUSAL, {
-                      width: CARD_WIDTH,
+                      width: COLLECTION_CARD_WIDTH,
                     })
                       .root.setPosition(box.x + box.width / 2, box.y + box.height)
                       .setName('carried-card')
@@ -497,7 +497,7 @@ export class CollectionScreen extends Phaser.Scene {
                       left: frame.x + MARGIN,
                       right: DESIGN_WIDTH - MARGIN,
                       top,
-                      radius: metricsOf(CARD_WIDTH).radius,
+                      radius: metricsOf(COLLECTION_CARD_WIDTH).radius,
                     },
                     inspecting,
                   ),
@@ -572,7 +572,7 @@ export class CollectionScreen extends Phaser.Scene {
                       left: (ROOM.x + DESIGN_WIDTH - spanOf(across)) / 2,
                       top,
                       across,
-                      radius: metricsOf(CARD_WIDTH).radius,
+                      radius: metricsOf(COLLECTION_CARD_WIDTH).radius,
                     },
                     inspecting,
                   ),

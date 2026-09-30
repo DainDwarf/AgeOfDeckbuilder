@@ -12,7 +12,7 @@ import { type Answers, answersOf, type Inspecting } from './stack';
 import { text } from './text';
 
 /** How wide a card of the collection screen stands. */
-export const CARD_WIDTH = 110;
+export const COLLECTION_CARD_WIDTH = 110;
 const UNDER_MOST = 3;
 const UNDER_STEP = 4;
 const UNDER_REACH = UNDER_MOST * UNDER_STEP;
@@ -60,7 +60,7 @@ const ANSWERS_NOTHING: Answers = {
 };
 
 /** How wide this many stacks of faces this wide stand side by side. */
-export function spanOf(across: number, card = CARD_WIDTH): number {
+export function spanOf(across: number, card = COLLECTION_CARD_WIDTH): number {
   return across * (card + UNDER_REACH) + (across - 1) * STACKS_APART;
 }
 
@@ -74,7 +74,7 @@ export function linesOf(
     left,
     top,
     across,
-    card = CARD_WIDTH,
+    card = COLLECTION_CARD_WIDTH,
   }: { left: number; top: number; across: number; card?: number },
 ): Filled {
   const parts: Phaser.GameObjects.GameObject[] = [];
@@ -114,13 +114,14 @@ export type LaidStack = {
 };
 
 /**
- * A stack's cards laid: the cards under its face, its face drawn, the box they cover together, and
- * where a stack of the most copies would end, whatever this one holds.
+ * A stack's cards laid: the cards under its face, its face drawn and its box, the box they cover
+ * together, and where a stack of the most copies would end, whatever this one holds.
  */
 export type StackedCards = {
   readonly unders: readonly Phaser.GameObjects.Graphics[];
   readonly card: CardFace;
   readonly shown: Face;
+  readonly face: Box;
   readonly box: Box;
   readonly foot: number;
 };
@@ -171,6 +172,7 @@ export function stackedCardsOf(
     unders,
     card,
     shown,
+    face: { x: left, y: top, width, height },
     box: { x: left, y: top, width: width + reach, height: height + reach },
     foot: top + height + UNDER_REACH,
   };
@@ -197,11 +199,11 @@ export function stackOf(
   },
 ): LaidStack {
   const { id } = stack;
-  const { unders, card, shown, foot } = stackedCardsOf(scene, catalogue, {
+  const { unders, card, shown, face, foot } = stackedCardsOf(scene, catalogue, {
     stack,
     left,
     top,
-    width: CARD_WIDTH,
+    width: COLLECTION_CARD_WIDTH,
     name: `${name}-card-${id}`,
     tone: reading.dimmed ? dimmed : undefined,
   });
@@ -215,12 +217,9 @@ export function stackOf(
       .container(0, 0, [...unders, card.root, count])
       .setName(`${name}-stack-${id}`)
       .setData('dimmed', reading.dimmed),
-    face: {
-      box: { x: left, y: top, width: CARD_WIDTH, height: heightOf(CARD_WIDTH) },
-      answers: answersOf(card, shown, inspecting),
-    },
+    face: { box: face, answers: answersOf(card, shown, inspecting) },
     reading: count,
-    line: { top: lineTop, middle, left, right: left + CARD_WIDTH + UNDER_REACH },
+    line: { top: lineTop, middle, left, right: left + COLLECTION_CARD_WIDTH + UNDER_REACH },
     bottom: lineTop + LINE_HEIGHT,
   };
 }

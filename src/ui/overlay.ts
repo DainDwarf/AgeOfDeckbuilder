@@ -350,10 +350,6 @@ export function createOverlay(
     }
   };
 
-  /**
-   * The heading a window's cards stand under, named after the window it heads; the caller stands
-   * whatever else belongs beside it.
-   */
   const raiseTitle = (name: string, heading: string): Phaser.GameObjects.Text =>
     carries(headingOf(scene, name, heading));
 

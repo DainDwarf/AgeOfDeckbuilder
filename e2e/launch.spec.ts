@@ -1,9 +1,8 @@
 import { expect, type Page, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
-import { civilizationIn } from '../src/rules/campaign';
 import { cardOf } from '../src/rules/catalogue';
 import { freshCampaign } from '../src/rules/save';
-import { deckRowsOf } from '../src/ui/collection-layout';
+import { browseOf } from '../src/ui/collection-layout';
 import { cardName, civilizationName, text } from '../src/ui/text';
 import type { Reference } from '../src/ui/text-run';
 import {
@@ -33,13 +32,8 @@ const CITY_CARD = `${PILE}-card`;
 
 const BROWSE = 'civilization-browse';
 
-/** Every card the civilization holds, the city section's card counted. */
-const HELD = civilizationIn(CATALOGUE, CAMPAIGN, CIVILIZATION);
-const CARDS = 1 + HELD.settle.length + HELD.cards.length;
-
-/** The browse's stacks: the city section's card, then each section in the collection's order. */
-const ROWS = deckRowsOf(CATALOGUE, CAMPAIGN, CIVILIZATION, cardName);
-const STACKS = [{ id: HELD.city.card, copies: 1 }, ...ROWS.settle, ...ROWS.cards];
+/** The civilization's browse: the count of its cards, and its stacks in the order the browse stands them in. */
+const { count: CARDS, stacks: STACKS } = browseOf(CATALOGUE, CAMPAIGN, CIVILIZATION, cardName);
 
 /** What the first name on the city card names, read off the face itself. */
 function firstNamed(page: Page): Promise<Reference | undefined> {

@@ -5,8 +5,8 @@ import { type CardId, NO_REFUSAL } from '../rules/state';
 import { createCardFace, dashAlong, heightOf } from './card-face';
 import { type CollectionStack, copiesIn, type DeckRows, stacksOf } from './collection-layout';
 import {
-  CARD_WIDTH,
   type Cell,
+  COLLECTION_CARD_WIDTH,
   linesOf,
   priceButtonOf,
   signButtonOf,
@@ -395,10 +395,10 @@ export function civilizationPanelOf(
 
   const cityCell: Cell = ({ left: x, top: y }) => {
     const shown = cardFaceAtStart(catalogue, city);
-    const card = createCardFace(scene, shown, NO_REFUSAL, { width: CARD_WIDTH });
-    const box = { x, y, width: CARD_WIDTH, height: heightOf(CARD_WIDTH) };
+    const card = createCardFace(scene, shown, NO_REFUSAL, { width: COLLECTION_CARD_WIDTH });
+    const box = { x, y, width: COLLECTION_CARD_WIDTH, height: heightOf(COLLECTION_CARD_WIDTH) };
     card.root
-      .setPosition(x + CARD_WIDTH / 2, y + box.height)
+      .setPosition(x + COLLECTION_CARD_WIDTH / 2, y + box.height)
       .setName('civilization-city')
       .setData('card', city);
     return {

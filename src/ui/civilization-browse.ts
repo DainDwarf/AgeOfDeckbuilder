@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import type { Campaign } from '../rules/campaign';
 import type { Catalogue } from '../rules/catalogue';
 import { boundTo } from './bindings';
-import { CARD_WIDTH, createKindBubble, heightOf, metricsOf } from './card-face';
+import { CARD_WIDTH, createKindBubble, metricsOf } from './card-face';
 import { browseOf, type CollectionStack } from './collection-layout';
 import { type Cell, linesOf, spanOf, stackedCardsOf } from './collection-stack';
 import { cityEdgeOf } from './deck-panel';
@@ -92,14 +92,13 @@ function stackCellOf(
 ): Cell {
   return ({ left, top }) => {
     const name = `${NAME}-card-${at}`;
-    const { unders, card, shown, box, foot } = stackedCardsOf(scene, catalogue, {
+    const { unders, card, shown, face, box, foot } = stackedCardsOf(scene, catalogue, {
       stack,
       left,
       top,
       width: CARD_WIDTH,
       name,
     });
-    const face: Box = { x: left, y: top, width: CARD_WIDTH, height: heightOf(CARD_WIDTH) };
     const badge = badgeOf(
       scene,
       { right: face.x + face.width + BADGE_OUT, bottom: face.y + face.height + BADGE_OUT },

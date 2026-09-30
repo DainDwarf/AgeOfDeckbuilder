@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
 import { bought, priceOf, unaffordableIn } from '../src/rules/campaign';
 import { freshCampaign } from '../src/rules/save';
-import { stacksOf } from '../src/ui/collection-layout';
+import { browseOf, stacksOf } from '../src/ui/collection-layout';
 import { cardName, civilizationName, text } from '../src/ui/text';
 import {
   cardOnFace,
@@ -137,19 +137,17 @@ test('in the collection mode a right click on a civilization’s pile, on its co
 }) => {
   const problems = watch(page);
   await openCollection(page);
-  const [[civilization, owned]] = Object.entries(CAMPAIGN.civilizations);
+  const [civilization] = Object.keys(CAMPAIGN.civilizations);
+  const { count, stacks } = browseOf(CATALOGUE, CAMPAIGN, civilization, cardName);
 
   const counts = await onScreen(page, `collection-civilization-${civilization}-counts`);
   await page.mouse.click(counts.x, counts.y, { button: 'right' });
   await expect.poll(() => standing(page, BROWSE)).toBe(true);
   await rested(page);
   expect(await titleOf(page, BROWSE)).toBe(
-    text('browse.civilization', {
-      civilization: civilizationName(civilization),
-      count: 1 + owned.settle.length + owned.cards.length,
-    }),
+    text('browse.civilization', { civilization: civilizationName(civilization), count }),
   );
-  expect(await cardOnFace(page, `${BROWSE}-card-0`)).toBe(owned.city.card.id);
+  expect(await cardOnFace(page, `${BROWSE}-card-0`)).toBe(stacks[0].id);
   expect(await standing(page, 'deck-editing-mode')).toBe(false);
 
   await page.keyboard.press('Escape');

@@ -189,8 +189,7 @@ export function standLarge(
     .rectangle(0, 0, DESIGN_WIDTH, DESIGN_HEIGHT, LOOK.scrim.colour, LOOK.scrim.strength)
     .setOrigin(0, 0)
     .setVisible(false)
-    // A Layer draws its children by depth, then in the order added (phaser/src/gameobjects/layer/
-    // LayerWebGLRenderer.js:39, Layer.js:296-320), and the window beneath lays its pieces here later.
+    // Over the window beneath, whose pieces join this stratum later (docs/PHASER.md, Scenes and stacking).
     .setDepth(1);
   overlay.strata.scrim.layer.add(scrim);
   const stack = createStack(overlay, catalogue, beneath.kinds);
