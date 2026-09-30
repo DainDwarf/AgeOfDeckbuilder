@@ -1,6 +1,6 @@
-import Phaser from 'phaser';
+import type Phaser from 'phaser';
 import { type Achievement, type Catalogue, technologyOf } from '../rules/catalogue';
-import { bindings, type Control, type Press, pressOf } from './bindings';
+import { type Control, type Press, pressOf } from './bindings';
 import { createKindBubble, type Name } from './card-face';
 import {
   addText,
@@ -11,13 +11,13 @@ import {
   onHover,
   ownBoxOf,
   UI_FONT,
-  whileUp,
 } from './design-space';
-import { onKeyDown, onKeyUp } from './keys';
+import { onHeldKeys } from './keys';
 import { css, LOOK } from './look';
 import { groundColourOf } from './marks';
 import { ROOM, type Worn } from './navbar';
 import { createWell, placeWell, SUNK } from './resource-bar';
+import { PAN_SPEED } from './scroll';
 import { createSmallCards, type Raiser } from './small-card';
 import { achievementGoal, ageName, referenceName, technologyName, text } from './text';
 import { layOutRun, type Run } from './text-run';
@@ -51,9 +51,6 @@ const DIAMOND_TO_NUMBER = 14;
 
 const LINK_WEIGHT = 2;
 const FAINT_LINK = 0.45;
-
-/** How fast a held key moves the tree, in design pixels a second. */
-const PAN_SPEED = 1200;
 
 /** The two controls that move the tree, and the way each one carries it. */
 const PANS: readonly { control: Control; way: number }[] = [
@@ -408,31 +405,10 @@ export function createTree(
   });
   scene.input.on('pointerupoutside', letGo);
 
-  /** Every key held down right now, and every one pressed since the last frame, by its place's code. */
-  const held = new Set<string>();
-  const tapped = new Set<string>();
   let covered = false;
-  onKeyDown(scene, (press) => {
-    held.add(press.code);
-    tapped.add(press.code);
-  });
-  onKeyUp(scene, (press) => {
-    held.delete(press.code);
-  });
-  // A window that loses focus under a held key is never sent that key's release.
-  whileUp(scene, scene.game.events, Phaser.Core.Events.BLUR, () => {
-    held.clear();
-    tapped.clear();
-  });
-  whileUp(scene, scene.events, Phaser.Scenes.Events.UPDATE, (_time: number, delta: number) => {
-    const pressing = (slot: { code: string } | undefined): boolean =>
-      slot !== undefined && (held.has(slot.code) || tapped.has(slot.code));
+  onHeldKeys(scene, (pressing, delta) => {
     let way = 0;
-    if (!covered) {
-      const keys = bindings();
-      for (const pan of PANS) if (keys[pan.control].some(pressing)) way += pan.way;
-    }
-    tapped.clear();
+    if (!covered) for (const pan of PANS) if (pressing(pan.control)) way += pan.way;
     const moved = way !== 0 && moveTo(scroll + (way * PAN_SPEED * delta) / 1000);
     if (drag?.panned !== true) carry(moved);
   });

@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 import type { Box } from './design-space';
-import { createScroll, heldAt, reachOf, type Scroll } from './scroll';
+import { createScroll, heldAt, PAN_SPEED, reachOf, type Scroll } from './scroll';
 
 /** A panel's frame: its first line stands at its top. */
 const FRAME: Box = { x: 0, y: 100, width: 400, height: 300 };
@@ -45,11 +45,44 @@ test('a panel holding more than its room stops at its first line and at its last
   expect(FRAME.y + holds - scroll.offset).toBe(FRAME.y + FRAME.height);
 });
 
-test('a panel its room holds whole does not move, whatever the wheel, the drag and the fling', () => {
+test('a key held moves a panel as far as the map pans in that time, stops at its first line and at its last, stops a fling, and moves no panel a press is dragging', () => {
+  const holds = 1000;
+  const { scroll } = panelHolding(holds);
+
+  scroll.pan(1, 100);
+  expect(scroll.offset).toBe((PAN_SPEED * 100) / 1000);
+  scroll.pan(-1, 50);
+  expect(scroll.offset).toBe((PAN_SPEED * 50) / 1000);
+
+  scroll.pan(-1, 5000);
+  expect(scroll.offset).toBe(0);
+  scroll.pan(1, 5000);
+  expect(FRAME.y + holds - scroll.offset).toBe(FRAME.y + FRAME.height);
+
+  scroll.stand(300);
+  scroll.grab(200);
+  for (let at = 0; at <= 5; at++) scroll.drag(200 - 40 * at, 1000 + 10 * at);
+  const dragged = scroll.offset;
+  scroll.pan(1, 100);
+  expect(scroll.offset).toBe(dragged);
+  scroll.release(1050, true);
+  scroll.step(16);
+  const flinging = scroll.offset;
+  expect(flinging).toBeGreaterThan(dragged);
+  scroll.pan(-1, 16);
+  const stopped = scroll.offset;
+  expect(stopped).toBe(flinging - (PAN_SPEED * 16) / 1000);
+  for (let frame = 0; frame < 100; frame++) scroll.step(16);
+  expect(scroll.offset).toBe(stopped);
+});
+
+test('a panel its room holds whole does not move, whatever the wheel, a key, the drag and the fling', () => {
   const { scroll, moves } = panelHolding(FRAME.height - 20);
 
   scroll.wheel(250);
   scroll.wheel(-250);
+  scroll.pan(1, 1000);
+  scroll.pan(-1, 1000);
   flung(scroll, -400);
   flung(scroll, 400);
 

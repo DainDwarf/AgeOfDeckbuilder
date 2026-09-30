@@ -24,7 +24,7 @@ import {
   type Warning,
 } from './menu';
 import { META_SCREENS } from './navbar';
-import { overlayAhead } from './overlay-scene';
+import { type CoversOverlay, overlayAhead } from './overlay-scene';
 import { clearSave, keepSave, readSaveFileText, saveFileText } from './save-entry';
 import { onRefused } from './storage';
 
@@ -42,7 +42,7 @@ const COVERED = 'menu-covered';
  * console and before every screen, so the console takes a key ahead of it and it takes one ahead of
  * whatever stands under it, and never stopped, so it outlives every chronicle.
  */
-export class MenuScene extends Phaser.Scene {
+export class MenuScene extends Phaser.Scene implements CoversOverlay {
   /** The menu raised on its first window, over whatever stands. */
   raise!: () => void;
 

@@ -50,6 +50,7 @@ import {
   UI_FONT,
 } from './design-space';
 import { cardFaceAtStart } from './face';
+import { onScrollKeys } from './keys';
 import { css, LOOK } from './look';
 import { backRaisesMenu, resetMenu } from './menu-scene';
 import { ROOM, wearNavbar } from './navbar';
@@ -275,6 +276,9 @@ export class CollectionScreen extends Phaser.Scene {
     const carrier = createCarrier(this, panels);
 
     let laid: { readonly head: Phaser.GameObjects.Container; readonly panels: Panel[] } | undefined;
+    onScrollKeys(this, (way, delta) => {
+      for (const panel of laid?.panels ?? []) if (panel.pointed) panel.pan(way, delta);
+    });
 
     /** The campaign moved and kept, and the screen laid again in the mode, its panels where they stood. */
     const edit = (mode: Mode, move: (held: Campaign) => Campaign): void => {

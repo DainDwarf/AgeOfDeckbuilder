@@ -9,6 +9,9 @@ const FLING_WINDOW = 80;
 const FLING_DECAY = 0.994;
 const FLING_STILL = 0.01;
 
+/** How fast a held key pans the map, and moves whatever else it moves, in design pixels a second. */
+export const PAN_SPEED = 1200;
+
 /** How many of the pointer's last places a drag keeps. */
 const TRAIL = 8;
 
@@ -35,6 +38,11 @@ export type Scroll = {
   press(): void;
   /** The wheel turned by this much: a fling stops, and it moves as far. */
   wheel(by: number): void;
+  /**
+   * One frame of a key held, this many milliseconds long, down above zero: a fling stops, and it
+   * moves at the pan speed; while it is dragged it holds still.
+   */
+  pan(way: number, delta: number): void;
   /** A drag begun where its press landed, at this height of the design space. */
   grab(y: number): void;
   /** The pointer dragging it, at this height and this time. */
@@ -84,6 +92,11 @@ export function createScroll(moved: (offset: number) => void): Scroll {
     wheel(by: number): void {
       fling = 0;
       moveTo(offset + by);
+    },
+    pan(way: number, delta: number): void {
+      if (way === 0 || held !== undefined) return;
+      fling = 0;
+      moveTo(offset + (way * PAN_SPEED * delta) / 1000);
     },
     grab(y: number): void {
       held = { y, from: offset, trail: [] };

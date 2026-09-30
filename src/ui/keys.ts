@@ -1,5 +1,14 @@
-import type Phaser from 'phaser';
-import { type Bind, boundTo, CONTROLS, keyPressed, mouseCode, PRESSES } from './bindings';
+import Phaser from 'phaser';
+import {
+  type Bind,
+  bindings,
+  boundTo,
+  CONTROLS,
+  type Control,
+  keyPressed,
+  mouseCode,
+  PRESSES,
+} from './bindings';
 import { whileUp } from './design-space';
 
 /** The two the game reads its controls from, wherever the press came from. */
@@ -140,4 +149,49 @@ export function readsKeys(scene: Phaser.Scene, reads: (event: KeyboardEvent) => 
 export function onKeyUp(scene: Phaser.Scene, released: (press: Bind) => void): void {
   scene.input.keyboard?.on('keyup', (event: KeyboardEvent) => released(keyPressed(event)));
   whileUp(scene, scene.game.events, UP, released);
+}
+
+/**
+ * Every frame while the scene is up, whether a key carries a control — one held down, or one tapped
+ * since the last frame, so a tap moves one frame — and how long the frame lasted.
+ */
+export function onHeldKeys(
+  scene: Phaser.Scene,
+  frame: (pressing: (control: Control) => boolean, delta: number) => void,
+): void {
+  const held = new Set<string>();
+  const tapped = new Set<string>();
+  onKeyDown(scene, (press) => {
+    held.add(press.code);
+    tapped.add(press.code);
+  });
+  onKeyUp(scene, (press) => {
+    held.delete(press.code);
+  });
+  // A window that loses focus under a held key is never sent that key's release, and what it moves
+  // would move on for ever.
+  whileUp(scene, scene.game.events, Phaser.Core.Events.BLUR, () => {
+    held.clear();
+    tapped.clear();
+  });
+  const carries = (slot: Bind | undefined): boolean =>
+    slot !== undefined && (held.has(slot.code) || tapped.has(slot.code));
+  whileUp(scene, scene.events, Phaser.Scenes.Events.UPDATE, (_time: number, delta: number) => {
+    frame((control) => bindings()[control].some(carries), delta);
+    tapped.clear();
+  });
+}
+
+/**
+ * Every frame while the scene is up in which the two keys that pan the map up and down carry what
+ * scrolls, the way they carry it, down above zero, and how long the frame lasted.
+ */
+export function onScrollKeys(
+  scene: Phaser.Scene,
+  frame: (way: number, delta: number) => void,
+): void {
+  onHeldKeys(scene, (pressing, delta) => {
+    const way = (pressing('pan-down') ? 1 : 0) - (pressing('pan-up') ? 1 : 0);
+    if (way !== 0) frame(way, delta);
+  });
 }

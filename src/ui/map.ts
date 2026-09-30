@@ -25,7 +25,7 @@ import { type Change, type Group, type Stage, walked } from '../rules/stages';
 import { assignedTo, type Chronicle, type Cost, type Snapshot } from '../rules/state';
 import { type Faction, type Landing, type Unit, unitAt, unitOf } from '../rules/units';
 import { MAP_FRAME } from './band';
-import { type Bind, bindings, boundTo, type Control, type Press, pressOf } from './bindings';
+import { boundTo, type Control, type Press, pressOf } from './bindings';
 import { EASE, ended, stopMotion } from './card-motion';
 import {
   addText,
@@ -38,9 +38,8 @@ import {
   renderFactor,
   type Stratum,
   UI_FONT,
-  whileUp,
 } from './design-space';
-import { onKeyDown, onKeyUp } from './keys';
+import { onHeldKeys, onKeyDown } from './keys';
 import { css, type Glow, LOOK } from './look';
 import type { MapStrata } from './map-scene';
 import {
@@ -52,6 +51,7 @@ import {
   terrainColourOf,
   unitMarkOf,
 } from './marks';
+import { PAN_SPEED } from './scroll';
 import { text } from './text';
 import { VEILS_ON, type Veils } from './veils';
 
@@ -113,9 +113,6 @@ const MAX_ZOOM = 3.5;
 
 /** What one notch of zoom multiplies the zoom by. */
 const ZOOM_PER_NOTCH = 1.3;
-
-/** How fast a held key pans the frame, in design pixels a second. */
-const PAN_SPEED = 1200;
 
 /** How much of the map stays inside the frame however far it is panned, in design pixels. */
 const KEPT = 360;
@@ -792,45 +789,21 @@ export function createMapView(
     moveTo(at.x - (at.x - centre.x) * away, at.y - (at.y - centre.y) * away, next);
   };
 
-  /** Every key held down right now, by the code of the place it binds under. */
-  const held = new Set<string>();
-
-  /** Every key pressed since the last frame, held or let go of again. */
-  const tapped = new Set<string>();
-
   onKeyDown(scene, (press) => {
-    held.add(press.code);
-    tapped.add(press.code);
     if (boundTo(press, 'zoom-in')) zoomBy(1);
     else if (boundTo(press, 'zoom-out')) zoomBy(-1);
   });
-  onKeyUp(scene, (press) => {
-    held.delete(press.code);
-  });
 
-  // A window that loses focus under a held key is never sent that key's release, and the frame
-  // would pan on for ever.
-  whileUp(scene, scene.game.events, Phaser.Core.Events.BLUR, () => {
-    held.clear();
-    tapped.clear();
-  });
-
-  /** Whether a key carries its control this frame: one held down, or one tapped since the last. */
-  const pressing = (slot: Bind | undefined): boolean =>
-    slot !== undefined && (held.has(slot.code) || tapped.has(slot.code));
-
-  whileUp(scene, scene.events, Phaser.Scenes.Events.UPDATE, (_time: number, delta: number) => {
+  onHeldKeys(scene, (pressing, delta) => {
     let x = 0;
     let y = 0;
     if (taking) {
-      const keys = bindings();
       for (const pan of PANS) {
-        if (!keys[pan.control].some(pressing)) continue;
+        if (!pressing(pan.control)) continue;
         x += pan.x;
         y += pan.y;
       }
     }
-    tapped.clear();
     if (x === 0 && y === 0) return;
     const step = (PAN_SPEED * delta) / 1000 / zoom / Math.hypot(x, y);
     moveTo(centre.x + x * step, centre.y + y * step, zoom);

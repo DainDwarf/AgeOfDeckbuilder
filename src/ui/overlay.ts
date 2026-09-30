@@ -822,6 +822,11 @@ export function createOverlay(
       if (grid !== undefined && !large.standing) scroll.wheel(dy);
     },
   );
+  scene.scrolls((way, delta) => {
+    if (large.standing) return;
+    if (grid !== undefined) scroll.pan(way, delta);
+    else browsed?.pan(way, delta);
+  });
 
   whileUp(scene, scene.events, Phaser.Scenes.Events.UPDATE, (_time: number, delta: number) => {
     // Here and not in the scroll's move: the wheel scrolls from inside Phaser's dispatch, where a hit

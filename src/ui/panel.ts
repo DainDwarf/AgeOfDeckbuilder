@@ -164,6 +164,13 @@ export type PanelOf = {
 export type Panel = {
   /** How far it is scrolled. */
   readonly offset: number;
+  /**
+   * Whether the pointer is on it. Read from the game loop alone: a hit test inside an input handler
+   * refills the list Phaser's dispatch is walking (docs/PHASER.md).
+   */
+  readonly pointed: boolean;
+  /** One frame of a key held, this many milliseconds long, down above zero. */
+  pan(way: number, delta: number): void;
   /** Takes the panel down, and everything it answers with. */
   down(): void;
 };
@@ -300,6 +307,12 @@ export function createPanel(
   return {
     get offset() {
       return scroll.offset;
+    },
+    get pointed() {
+      return thingUnder(scene.game) === zone;
+    },
+    pan(way, delta) {
+      scroll.pan(way, delta);
     },
     down() {
       point(undefined);

@@ -12,5 +12,4 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The pan keys scroll panels and browses** — the two keys that pan the map up and down scroll what scrolls frontmost while they are held, at the speed the map pans: the collection screen's panel under the pointer, a browse or a window's grid on a scrim wherever the pointer stands, and a card shown large holds it still. Doc-impact: `docs/INTERFACE.md`, `docs/META-SCREENS.md`, `docs/CHRONICLE-SCREEN.md`. [board/pan-keys-scroll-panels.md](board/pan-keys-scroll-panels.md)
 - **A setting inverts the wheel** — the Controls window holds two rows under the zooms, **Wheel zoom** reading Up zooms in or Up zooms out and **Wheel scroll** reading Up scrolls up or Up scrolls down, a press turning each the other way, the map and every scrolling surface following, **Default** putting both back, and both kept in the browser with the bindings. Doc-impact: `docs/INTERFACE.md`. [board/a-setting-inverts-the-wheel.md](board/a-setting-inverts-the-wheel.md)

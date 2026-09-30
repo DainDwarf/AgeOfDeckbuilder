@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
 import { cardOf } from '../src/rules/catalogue';
 import type { Chronicle } from '../src/rules/state';
+import { DEFAULTS } from '../src/ui/bindings';
 import type { PileKind } from '../src/ui/overlay';
 import { cardRules, text } from '../src/ui/text';
 import {
@@ -113,6 +114,69 @@ test('a pile of more stacks than the frame holds scrolls, and stops on its first
   await expect.poll(() => offsetOf(page)).toBe(discarded.overflow);
   await wheel(page, -4000);
   await expect.poll(() => offsetOf(page)).toBe(0);
+
+  expect(problems).toEqual([]);
+});
+
+test('the two keys that pan the map up and down scroll a browse while they are held, wherever the pointer stands, and stop it on its last line and on its first; a tap moves it less than a hold, the two that pan it left and right move nothing, and a card shown large holds it still', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const [down] = DEFAULTS['pan-down'];
+  const [up] = DEFAULTS['pan-up'];
+  if (down === undefined || up === undefined) throw new Error('a pan key stands on no key');
+
+  /** How far the browse stands scrolled after the key has been held that long on the game's clock. */
+  const heldFor = async (key: string, span: number): Promise<number> => {
+    await page.keyboard.down(key);
+    await waitGameClock(page, span);
+    await page.keyboard.up(key);
+    await rested(page);
+    return offsetOf(page);
+  };
+
+  await openSaved(page, overflowingPiles());
+  await browse(page, 'draw-pile');
+  const { overflow } = await scrolled(page);
+  const away = await besideTheCards(page);
+  await page.mouse.move(away.x, away.y);
+  await rested(page);
+
+  await page.keyboard.down(down.code);
+  await expect.poll(() => offsetOf(page)).toBe(overflow);
+  await waitGameClock(page, 200);
+  expect(await offsetOf(page)).toBe(overflow);
+  await page.keyboard.up(down.code);
+
+  await page.keyboard.down(up.code);
+  await expect.poll(() => offsetOf(page)).toBe(0);
+  await page.keyboard.up(up.code);
+  await rested(page);
+
+  await page.keyboard.press(down.code);
+  await rested(page);
+  await rested(page);
+  const tapped = await offsetOf(page);
+  expect(tapped).toBeGreaterThan(0);
+
+  const first = await onScreen(page, 'browse-card-0');
+  await page.mouse.click(first.x, first.y, { button: 'right' });
+  await expect.poll(() => standing(page, 'inspection')).toBe(true);
+  expect(await heldFor(down.code, 200)).toBe(tapped);
+  expect(await heldFor(up.code, 200)).toBe(tapped);
+  await page.keyboard.press('Escape');
+  await expect.poll(() => standing(page, 'inspection')).toBe(false);
+  expect(await standing(page, 'browse')).toBe(true);
+
+  for (const control of ['pan-left', 'pan-right'] as const) {
+    for (const slot of DEFAULTS[control]) {
+      if (slot === undefined) continue;
+      expect(await heldFor(slot.code, 200)).toBe(tapped);
+    }
+  }
+
+  expect(await heldFor(up.code, 200)).toBe(0);
+  expect(await heldFor(down.code, 200)).toBeGreaterThan(tapped);
 
   expect(problems).toEqual([]);
 });

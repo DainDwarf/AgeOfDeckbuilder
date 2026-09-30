@@ -227,6 +227,9 @@ export function standBrowse(
       return true;
     },
   });
+  overlay.scrolls((way, delta) => {
+    if (!large.standing) standing?.panel.pan(way, delta);
+  });
   const small = createSmallCards(overlay, overlay.strata.smallCard, catalogue, kinds, (name) => {
     inspecting.large.named(name);
   });
