@@ -96,11 +96,15 @@ h1 { font-size: 22px; font-weight: 600; margin: 0; text-wrap: balance; }
 .chip.military { background: var(--g-military); } .chip.culture { background: var(--g-culture); }
 .under-line { display: flex; align-items: center; justify-content: space-between; width: var(--w); font-size: 13px; color: var(--g-counts); gap: 6px; white-space: nowrap; }
 .under-line b { color: var(--g-pale); font-weight: 700; }
-.buy, .step { font: inherit; border: 0; background: var(--g-accent); color: var(--g-ink); font-weight: 700; font-size: 13px; height: 24px; padding: 0 8px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; border-radius: 0; }
+.buy, .step { font: inherit; border: 0; background: var(--g-panel); color: var(--g-ink); font-weight: 700; font-size: 13px; height: 22px; padding: 0 6px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; border-radius: 0; }
 .buy.short, .step.short { background: var(--g-greyed); color: var(--g-greyed-ink); cursor: default; }
+.buy .diamond, .step .diamond { background: var(--g-accent); }
 .buy.short .diamond, .step.short .diamond { background: var(--g-greyed-ink); }
-.buy .diamond, .step .diamond { background: var(--g-ink); }
-.step { min-width: 24px; justify-content: center; padding: 0 6px; font-size: 15px; }
+.section.beside { justify-content: flex-start; }
+.head.mid .tool.lead { right: auto; left: 0; }
+.block { margin: 0 auto; }
+.block .grid { justify-content: start; }
+.step { min-width: 22px; justify-content: center; }
 .stepper { display: flex; align-items: center; gap: 6px; }
 .piles { display: flex; flex-direction: column; gap: 22px; align-items: center; }
 .pile { display: flex; flex-direction: column; gap: 4px; width: 112px; }
@@ -130,7 +134,7 @@ h1 { font-size: 22px; font-weight: 600; margin: 0; text-wrap: balance; }
 
   <div class="controls">
     <div class="control"><label for="mode">Mode</label>
-      <select id="mode"><option value="collection">Collection</option><option value="editing" selected>Deck editing</option><option value="civilization">Civilization</option></select></div>
+      <select id="mode"><option value="collection">Collection</option><option value="editing">Deck editing</option><option value="civilization" selected>Civilization</option></select></div>
     <div class="control"><label for="size">Collection</label>
       <select id="size"><option value="0">New campaign, Nomadic only</option><option value="12">Two ages, 20 cards</option><option value="40">Four ages, 48 cards</option></select></div>
     <div class="control"><label for="civs">Civilizations</label>
@@ -142,6 +146,13 @@ h1 { font-size: 22px; font-weight: 600; margin: 0; text-wrap: balance; }
     <div class="control"><label for="influence">Influence to open with</label>
       <input id="influence" type="number" min="0" max="999" value="40" style="width:90px"></div>
     <button class="reset" id="reset" type="button">Start over</button>
+  </div>
+  <div class="controls line">
+    <span class="tag">The civilization mode</span>
+    <div class="control"><label for="line">Shown as it stands after</label>
+      <select id="line"><option value="reads">The first line: read only</option><option value="edits" selected>The second line: a copy added or bought</option></select></div>
+    <div class="control"><label for="count">A section's count beside its word</label>
+      <select id="count"><option value="civilization">In the civilization mode only (recommended)</option><option value="both">In the deck editing mode too</option><option value="edge">Nowhere: at the right edge</option></select></div>
   </div>
   <div class="controls line">
     <span class="tag">A copy is dragged across</span>
@@ -176,7 +187,8 @@ h1 { font-size: 22px; font-weight: 600; margin: 0; text-wrap: balance; }
       <li>The carried card is held where it was grabbed, at full strength, and the stack or row it left stands as it was until the release.</li>
     </ul></section>
     <section><h2>Civilization mode</h2><ul>
-      <li>− takes a copy out. + puts one in: a copy owned and not yet in this deck where there is one, a copy bought where there is none, and then the button reads its price.</li>
+      <li>The first line ships it read only: the name over the room, centred, the two sections with their counts beside their words, seven stacks to a line, and Collection », which brings the collection back beside the civilization.</li>
+      <li>The second line adds the buttons, on the panel's paper. − takes a copy out. + puts in a copy owned that this deck does not hold; where the deck holds them all the button reads the price alone, and a press buys a copy and puts it in.</li>
       <li>A card taken down to none stays where it stood, at half strength, until the mode is left.</li>
     </ul></section>
     <section><h2>Placeholders</h2><ul>
@@ -312,7 +324,9 @@ h1 { font-size: 22px; font-weight: 600; margin: 0; text-wrap: balance; }
 
   function section(word, settle, style) {
     var cards = state.cards.reduce(function (sum, c) { return (c.kind === 'settle') === settle ? sum + inDeck(c) : sum; }, settle ? 1 : 0);
-    return '<div class="section"' + (style ? ' style="' + style + '"' : '') + '><span>' + word + '</span><span class="counts">Cards: ' + cards + '</span></div>';
+    var where = el('count').value;
+    var beside = where === 'both' || (where === 'civilization' && state.mode === 'civilization');
+    return '<div class="section' + (beside ? ' beside' : '') + '"' + (style ? ' style="' + style + '"' : '') + '><span>' + word + '</span><span class="counts">Cards: ' + cards + '</span></div>';
   }
   function row(c, n) {
     return '<div class="row" data-drag="out" data-id="' + c.id + '"><span class="costs">' + chips(c.costs) + '</span>' +
@@ -333,28 +347,33 @@ h1 { font-size: 22px; font-weight: 600; margin: 0; text-wrap: balance; }
   }
 
   function civilization(width) {
+    var reads = el('line').value === 'reads';
     var cell = function (c) {
       var n = inDeck(c);
       var buys = n >= c.owned;
       var short = buys && state.influence < priceOf(c);
+      if (reads) return '<div class="cell" style="--w:' + width + 'px">' + stack(c, width, n, '', false) +
+        '<div class="under-line"><span>In deck <b>' + n + '/' + c.owned + '</b></span></div></div>';
       return '<div class="cell" style="--w:' + width + 'px">' + stack(c, width, n, '', n === 0) +
         '<div class="under-line"><span class="stepper">' +
         '<button type="button" class="step' + (n === 0 ? ' short' : '') + '" data-act="out" data-id="' + c.id + '">−</button>' +
         '<b>' + n + '/' + c.owned + '</b></span>' +
-        '<button type="button" class="step' + (short ? ' short' : '') + '" data-act="more" data-id="' + c.id + '">+' +
-        (buys ? ' ' + price(c) : '') + '</button></div></div>';
+        '<button type="button" class="step' + (short ? ' short' : '') + '" data-act="more" data-id="' + c.id + '">' +
+        (buys ? price(c) : '+') + '</button></div></div>';
     };
-    var shown = state.shown.map(card).filter(Boolean);
+    var shown = state.shown.map(card).filter(function (c) { return c && (!reads || inDeck(c) > 0); });
     var settle = shown.filter(function (c) { return c.kind === 'settle'; }).map(cell).join('');
     var rest = shown.filter(function (c) { return c.kind !== 'settle'; }).map(cell).join('');
-    return '<div class="pane"><div class="head sides">' +
-      '<button type="button" class="tool" data-act="mode" data-id="editing">Deck editing »</button>' +
-      '<span class="word">' + civ().name + '</span></div>' +
-      '<div class="scroll">' + section('Settle', true) +
+    var across = Math.floor((1040 - 48 + 10) / (width + 22));
+    var span = across * (width + 12) + (across - 1) * 10;
+    return '<div class="pane"><div class="head mid">' +
+      '<button type="button" class="tool lead" data-act="mode" data-id="editing">Collection »</button>' +
+      '<span class="word">' + civ().name + ' Civilization</span></div>' +
+      '<div class="scroll"><div class="block" style="width:' + span + 'px">' + section('Settle', true) +
       '<div class="grid" style="--w:' + width + 'px;margin-top:10px"><div class="cell" style="--w:' + width + 'px">' +
       '<div class="stack" style="--w:' + width + 'px">' + face(CITY, width, 'fixed-face') + '</div></div>' + settle + '</div>' +
       section('Deck', false, 'margin:20px 0 10px') +
-      '<div class="grid" style="--w:' + width + 'px">' + (rest || '<div class="empty">The deck holds no card</div>') + '</div></div></div>';
+      '<div class="grid" style="--w:' + width + 'px">' + (rest || '<div class="empty">The deck holds no card</div>') + '</div></div></div></div>';
   }
 
   function frame() {
@@ -506,6 +525,8 @@ h1 { font-size: 22px; font-weight: 600; margin: 0; text-wrap: balance; }
   el('width').addEventListener('input', render);
   el('panel').addEventListener('input', render);
   el('carries').addEventListener('change', render);
+  el('line').addEventListener('change', render);
+  el('count').addEventListener('change', render);
   el('mode').addEventListener('change', function () { enter(el('mode').value); render(); });
   ['size', 'civs', 'influence'].forEach(function (id) { el(id).addEventListener('change', function () { open(); render(); }); });
   el('reset').addEventListener('click', function () { open(); render(); });
