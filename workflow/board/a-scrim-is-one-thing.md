@@ -25,6 +25,6 @@
 **Plan:**
 
 1. The one scrim, where the implementer puts it (`src/ui/design-space.ts` or a file of its own), and the five sites through it: `src/ui/overlay.ts`, `src/ui/browse.ts`, `src/ui/stack.ts`, `src/ui/menu-scene.ts`. Leaves standing: every scrim drawn and pressed the same way, one place saying what a press on a scrim is.
-2. `workflow/BOARD.md`: the line deleted, this file with it.
+2. `workflow/BRANCH.md`: the line deleted, this file with it.
 
 **Verify:** `npm run check`, `npm test`, `npm run lint`; the proof spec `npx playwright test e2e/menu.spec.ts`, whose tests press the menu's scrim with either button and back out of a browse. CI's on the push: `refused-save.spec.ts`, `browse.spec.ts`, `deal.spec.ts`, `press.spec.ts`, `launch.spec.ts`, `collection.spec.ts`, `inspect.spec.ts`, `ending.spec.ts`, `boot.spec.ts`.

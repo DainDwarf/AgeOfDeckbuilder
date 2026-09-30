@@ -28,6 +28,6 @@
 **Plan:**
 
 1. The kit built once, in the module the implementer names (`src/ui/browse.ts` is the natural home); `src/ui/overlay.ts` and `src/ui/browse.ts` standing on it, the browse raised and taken down one way; the callers `src/ui/chronicle-scene.ts`, `src/ui/collection-screen.ts`, `src/ui/launch-screen.ts`, and `src/ui/campaign-screen.ts` if the kit serves it, following the shape. Leaves standing: one kit, the same screens.
-2. `workflow/BOARD.md`: the line deleted, this file with it.
+2. `workflow/BRANCH.md`: the line deleted, this file with it.
 
 **Verify:** `npm run check`, `npm test`, `npm run lint`; the proof spec `npx playwright test e2e/browse.spec.ts`. CI's on the push: `launch.spec.ts`, `collection.spec.ts`, `deck-editing.spec.ts`, `civilization-mode.spec.ts`, `campaign.spec.ts`, `press.spec.ts`, `deal.spec.ts`, `boot.spec.ts`, `ending.spec.ts`, `menu.spec.ts`, `hover.spec.ts`, `reference.spec.ts`.

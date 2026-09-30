@@ -31,6 +31,6 @@
 
 1. `src/ui/overlay.ts`: the three windows laid through `createPanel`, their layout kept as cells of their own; the grid, its readers, its update step and `cardAt` gone; the scrim's gestures handed to the one panel standing. `src/ui/panel.ts`: what the windows need of it and the browse lacked, the fling held as a card rises large. Leaves standing: the three windows as they stood, the arrow between their cards, the overlay about a hundred and fifty lines shorter.
 2. `e2e/deal.spec.ts`: a step in the existing deal test — between two cards the pointer is the arrow, over a card the hand. Leaves standing: the proof.
-3. `workflow/BOARD.md`: the line deleted, this file with it.
+3. `workflow/BRANCH.md`: the line deleted, this file with it.
 
 **Verify:** `npm run check`, `npm test`, `npm run lint`; the proof spec `npx playwright test e2e/deal.spec.ts`. CI's on the push: `camps.spec.ts`, `capstone.spec.ts`, `landing.spec.ts`, `boot.spec.ts`, `continue.spec.ts`, `resume.spec.ts`, `ending.spec.ts`, `victory.spec.ts`, `refuse.spec.ts`, `press.spec.ts`, `browse.spec.ts`, `menu.spec.ts`, `hover.spec.ts`, `pointer-sweep.spec.ts`, `inspect.spec.ts`, `reference.spec.ts`.
