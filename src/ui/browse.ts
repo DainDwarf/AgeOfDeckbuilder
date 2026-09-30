@@ -181,7 +181,6 @@ export function layBrowse(
     },
     follow,
     carrier,
-    'wherever the pointer stands',
   );
   return { title, panel };
 }
@@ -228,15 +227,14 @@ export function standBrowse(
       return true;
     },
   });
-  overlay.scrolls((way, delta) => {
-    if (!large.standing) standing?.panel.pan(way, delta);
-  });
-  overlay.input.on(
-    'wheel',
-    (pointer: Phaser.Input.Pointer, _over: unknown, _dx: number, dy: number) => {
-      if (!large.standing) standing?.panel.wheel(pointer, dy);
+  overlay.scrolls({
+    pan(way, delta) {
+      if (!large.standing) standing?.panel.pan(way, delta);
     },
-  );
+    wheel(by) {
+      if (!large.standing) standing?.panel.wheel(by);
+    },
+  });
   const small = createSmallCards(overlay, overlay.strata.smallCard, catalogue, kinds, (name) => {
     inspecting.large.named(name);
   });

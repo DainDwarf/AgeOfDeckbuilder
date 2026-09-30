@@ -50,7 +50,7 @@ import {
   UI_FONT,
 } from './design-space';
 import { cardFaceAtStart } from './face';
-import { onScrollKeys } from './keys';
+import { onScrollKeys, onWheel } from './keys';
 import { css, LOOK } from './look';
 import { backRaisesMenu, resetMenu } from './menu-scene';
 import { ROOM, wearNavbar } from './navbar';
@@ -279,6 +279,9 @@ export class CollectionScreen extends Phaser.Scene {
     onScrollKeys(this, (way, delta) => {
       for (const panel of laid?.panels ?? []) if (panel.pointed) panel.pan(way, delta);
     });
+    onWheel(this, (by, over) => {
+      for (const panel of laid?.panels ?? []) if (panel.under(over)) panel.wheel(by);
+    });
 
     /** The campaign moved and kept, and the screen laid again in the mode, its panels where they stood. */
     const edit = (mode: Mode, move: (held: Campaign) => Campaign): void => {
@@ -370,7 +373,6 @@ export class CollectionScreen extends Phaser.Scene {
                 },
                 follow,
                 carrier,
-                'under the pointer',
                 leftOffset,
               ),
               createPanel(
@@ -397,7 +399,6 @@ export class CollectionScreen extends Phaser.Scene {
                 },
                 follow,
                 carrier,
-                'under the pointer',
                 rightOffset,
               ),
             ],
@@ -478,7 +479,6 @@ export class CollectionScreen extends Phaser.Scene {
                 },
                 follow,
                 carrier,
-                'under the pointer',
                 leftOffset,
               ),
               createPanel(
@@ -508,7 +508,6 @@ export class CollectionScreen extends Phaser.Scene {
                 },
                 follow,
                 carrier,
-                'under the pointer',
                 rightOffset,
               ),
             ],
@@ -584,7 +583,6 @@ export class CollectionScreen extends Phaser.Scene {
                 },
                 follow,
                 carrier,
-                'under the pointer',
                 offset,
               ),
             ],

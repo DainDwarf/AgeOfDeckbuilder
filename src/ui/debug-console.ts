@@ -67,9 +67,6 @@ export class DebugConsole extends Phaser.Scene {
   /** The entries the screen standing holds, and nothing between one screen and the next. */
   holding: Holding | undefined;
 
-  /** Whether the console stands over this point of the design space. */
-  covers!: (at: { x: number; y: number }) => boolean;
-
   constructor() {
     super('console');
   }
@@ -171,8 +168,6 @@ export class DebugConsole extends Phaser.Scene {
       return true;
     });
 
-    this.covers = ({ x, y }) => open && x >= 0 && x < DESIGN_WIDTH && y >= 0 && y < HEIGHT;
-
     this.reset = (): void => {
       history.length = 0;
       typed = '';
@@ -190,11 +185,6 @@ export class DebugConsole extends Phaser.Scene {
  */
 export function resetConsole(scene: Phaser.Scene): void {
   scene.game.scene.getScene<DebugConsole>('console').reset();
-}
-
-/** Whether the console stands over this point of the design space. */
-export function consoleCovers(scene: Phaser.Scene, at: { x: number; y: number }): boolean {
-  return scene.game.scene.getScene<DebugConsole>('console').covers(at);
 }
 
 /** The entries the console answers, for as long as the screen now rising stands. */

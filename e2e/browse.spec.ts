@@ -1,4 +1,5 @@
-import { expect, test } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
+import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
 import { cardOf } from '../src/rules/catalogue';
 import type { Chronicle } from '../src/rules/state';
@@ -11,11 +12,14 @@ import {
   cardOnFace,
   chronicleOf,
   click,
+  consoleKey,
   cursorAt,
   drawsName,
   endedTurn,
+  type Frame,
   firstSeed,
   hazardsAdded,
+  inside,
   kindLabelOnScreen,
   namedIn,
   namedOn,
@@ -63,6 +67,29 @@ async function nearest(
   }
   if (best === undefined) throw new Error('no face to choose from');
   return faces[best];
+}
+
+/** Where the named object's bounds stand on the page. */
+function boundsOnScreen(page: Page, name: string): Promise<Frame> {
+  return page.evaluate((target) => {
+    const found = window.named?.(target);
+    if (found === undefined) throw new Error(`nothing named ${target} is on the screen`);
+    const object = found.object as Phaser.GameObjects.GameObject &
+      Phaser.GameObjects.Components.GetBounds;
+    const bounds = object.getBounds();
+    const { camera } = found;
+    const origin = camera.getWorldPoint(0, 0);
+    const stepped = camera.getWorldPoint(1, 1);
+    const canvas = camera.scene.game.canvas;
+    const rect = canvas.getBoundingClientRect();
+    const unit = rect.width / canvas.width / (stepped.x - origin.x);
+    return {
+      x: rect.left + (bounds.x - origin.x) * unit,
+      y: rect.top + (bounds.y - origin.y) * unit,
+      width: bounds.width * unit,
+      height: bounds.height * unit,
+    };
+  }, name);
 }
 
 /**
@@ -124,6 +151,40 @@ test('a pile of more stacks than the frame holds scrolls under the wheel whereve
   await expect.poll(() => offsetOf(page)).toBe(discarded.overflow);
   await wheel(page, -4000);
   await expect.poll(() => offsetOf(page)).toBe(0);
+
+  expect(problems).toEqual([]);
+});
+
+test('a wheel turned with Control held moves a browse nothing, and a wheel over the debug console where it covers the frame scrolls it', async ({
+  page,
+}) => {
+  const problems = watch(page);
+
+  await openSaved(page, overflowingPiles());
+  await browse(page, 'draw-pile');
+  await rested(page);
+  const opened = await scrolled(page);
+  expect(opened.offset).toBe(0);
+  expect(opened.overflow).toBeGreaterThan(0);
+
+  const frame = await onScreen(page, 'browse-frame');
+  await page.mouse.move(frame.x, frame.y);
+  await page.keyboard.down('Control');
+  await page.mouse.wheel(0, 120);
+  await page.keyboard.up('Control');
+  await rested(page);
+  await rested(page);
+  expect(await offsetOf(page)).toBe(0);
+
+  await consoleKey(page);
+  const strip = await boundsOnScreen(page, 'console');
+  const framed = await boundsOnScreen(page, 'browse-frame');
+  const covered = { x: framed.x + framed.width / 2, y: (framed.y + strip.y + strip.height) / 2 };
+  expect(inside(covered, strip)).toBe(true);
+  expect(inside(covered, framed)).toBe(true);
+  await page.mouse.move(covered.x, covered.y);
+  await page.mouse.wheel(0, 120);
+  await expect.poll(() => offsetOf(page)).toBeGreaterThan(0);
 
   expect(problems).toEqual([]);
 });

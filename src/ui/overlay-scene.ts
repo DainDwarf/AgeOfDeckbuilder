@@ -1,10 +1,16 @@
 import Phaser from 'phaser';
 import { type Bind, keyPressed } from './bindings';
 import { holdDesignSpace, type Stratum, stopsThePointer, stratumOf } from './design-space';
-import { onScrollKeys, readsKeys, takesMouseKeys } from './keys';
+import { onScrollKeys, onWheel, readsKeys, takesMouseKeys } from './keys';
 
 /** What the overlay asks of the menu scene, and all it ever holds of it: whether a window of it stands. */
 export type CoversOverlay = Phaser.Scene & { covered(): boolean };
+
+/** What scrolls on the overlay, handed a frame of a key held and a turn of the wheel, down above zero. */
+export type Scroller = {
+  pan(way: number, delta: number): void;
+  wheel(by: number): void;
+};
 
 /** The overlay's strata, in the order they stand, all painted by its one camera. */
 export type Strata = {
@@ -26,8 +32,8 @@ export class OverlayScene extends Phaser.Scene {
   /** What the widget drawn here answers a key or a mouse key with, and nothing while none is built. */
   private taker: ((press: Bind) => boolean) | undefined;
 
-  /** What the widget drawn here scrolls a frame of a key held with, and nothing while none is built. */
-  private scroller: ((way: number, delta: number) => void) | undefined;
+  /** What the widget drawn here scrolls with, and nothing while none is built. */
+  private scroller: Scroller | undefined;
 
   constructor() {
     super('overlay');
@@ -43,7 +49,7 @@ export class OverlayScene extends Phaser.Scene {
       tooltip: stratumOf(this.add.layer().setName('tooltip'), camera),
     };
     // A restart keeps the instance and its fields (docs/PHASER.md), so the widget of the screen that
-    // has just gone down would answer keys until the next one is built.
+    // has just gone down would answer keys and the wheel until the next one is built.
     this.taker = undefined;
     this.scroller = undefined;
     holdDesignSpace(this, camera);
@@ -54,10 +60,14 @@ export class OverlayScene extends Phaser.Scene {
     );
     // Ahead of the taker's: a mouse key it takes reaches no reader subscribed after it.
     onScrollKeys(this, (way, delta) => {
-      if (!this.game.scene.getScene<CoversOverlay>('menu').covered()) this.scroller?.(way, delta);
+      if (!this.game.scene.getScene<CoversOverlay>('menu').covered())
+        this.scroller?.pan(way, delta);
     });
     readsKeys(this, (event) => this.taker?.(keyPressed(event)) === true);
     takesMouseKeys(this, (press) => this.taker?.(press) === true);
+    onWheel(this, (by) => {
+      this.scroller?.wheel(by);
+    });
   }
 
   /** The one widget drawn on this scene, offered every key and mouse key ahead of the screen under it. */
@@ -66,10 +76,11 @@ export class OverlayScene extends Phaser.Scene {
   }
 
   /**
-   * The one widget drawn on this scene, handed every frame the two keys that pan the map up and down
-   * carry what scrolls, wherever the pointer stands, while no window of the menu stands over it.
+   * The one widget drawn on this scene, handed wherever the pointer stands every frame the two keys
+   * that pan the map up and down carry what scrolls, while no window of the menu stands over it, and
+   * every turn of the wheel, which a window of the menu stops before it reaches here.
    */
-  scrolls(scroller: (way: number, delta: number) => void): void {
+  scrolls(scroller: Scroller): void {
     this.scroller = scroller;
   }
 }

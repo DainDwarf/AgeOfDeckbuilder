@@ -815,19 +815,17 @@ export function createOverlay(
     return true;
   };
 
-  scene.input.on(
-    'wheel',
-    (pointer: Phaser.Input.Pointer, _over: unknown, _dx: number, dy: number) => {
-      // The scene's wheel hears a notch whatever stands over what scrolls, a card shown large included.
+  scene.scrolls({
+    pan(way, delta) {
       if (large.standing) return;
-      if (grid !== undefined) scroll.wheel(dy);
-      else browsed?.wheel(pointer, dy);
+      if (grid !== undefined) scroll.pan(way, delta);
+      else browsed?.pan(way, delta);
     },
-  );
-  scene.scrolls((way, delta) => {
-    if (large.standing) return;
-    if (grid !== undefined) scroll.pan(way, delta);
-    else browsed?.pan(way, delta);
+    wheel(by) {
+      if (large.standing) return;
+      if (grid !== undefined) scroll.wheel(by);
+      else browsed?.wheel(by);
+    },
   });
 
   whileUp(scene, scene.events, Phaser.Scenes.Events.UPDATE, (_time: number, delta: number) => {

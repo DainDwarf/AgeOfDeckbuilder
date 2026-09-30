@@ -787,14 +787,20 @@ export function glyphsOf(chronicle: Chronicle, faces: readonly Tile[]): Glyphs {
   return owed;
 }
 
-/** How far the browse stands scrolled, and how far it can: its panel scrolls by its own `y`. */
-export function scrolled(page: Page): Promise<{ offset: number; overflow: number }> {
-  return page.evaluate(() => {
-    const grid = window.named?.('browse')?.object as Phaser.GameObjects.Container | undefined;
-    if (grid === undefined) throw new Error('no browse is open');
+/**
+ * How far the panel of that name, the browse's by default, stands scrolled, and how far it can: a
+ * panel scrolls by its own `y`.
+ */
+export function scrolled(
+  page: Page,
+  name = 'browse',
+): Promise<{ offset: number; overflow: number }> {
+  return page.evaluate((target) => {
+    const grid = window.named?.(target)?.object as Phaser.GameObjects.Container | undefined;
+    if (grid === undefined) throw new Error(`no ${target} stands`);
     // A y of 0 negated is -0, which `toBe(0)` refuses: adding 0 reads it +0.
     return { offset: -grid.y + 0, overflow: grid.getData('overflow') as number };
-  });
+  }, name);
 }
 
 /** How many pieces of river the map draws on a chronicle: one for each run along a tile it charted. */
@@ -1271,8 +1277,8 @@ export function ringedTile(page: Page): Promise<string | undefined> {
   });
 }
 
-export function offsetOf(page: Page): Promise<number> {
-  return scrolled(page).then(({ offset }) => offset);
+export function offsetOf(page: Page, name = 'browse'): Promise<number> {
+  return scrolled(page, name).then(({ offset }) => offset);
 }
 
 /** The key above Tab, pressed by its place: the console opens under it, and closes again. */

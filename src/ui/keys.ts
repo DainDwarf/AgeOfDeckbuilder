@@ -72,26 +72,45 @@ export function readMouseKeys(game: Phaser.Game): void {
   );
 }
 
+/**
+ * Every turn of the wheel Phaser hands the scene, by as much as the browser measured, down above
+ * zero, with the interactive object under the pointer in this scene, where one is, and when it
+ * turned.
+ */
+export function onWheel(
+  scene: Phaser.Scene,
+  wheeled: (by: number, over: readonly Phaser.GameObjects.GameObject[], time: number) => void,
+): void {
+  scene.input.on(
+    Phaser.Input.Events.POINTER_WHEEL,
+    (
+      pointer: Phaser.Input.Pointer,
+      over: readonly Phaser.GameObjects.GameObject[],
+      _dx: number,
+      dy: number,
+    ) => {
+      const event = pointer.event as WheelEvent;
+      if (!chorded(event)) wheeled(dy, over, event.timeStamp);
+    },
+  );
+}
+
 /** Every whole notch of the wheel Phaser hands the scene, told as how many, up below zero. */
 export function onWheelNotches(scene: Phaser.Scene, notched: (notches: number) => void): void {
   /** How far the wheel has turned towards its next notch, and when it last turned. */
   let rolled = 0;
   let turned = 0;
-  scene.input.on(
-    'wheel',
-    (pointer: Phaser.Input.Pointer, _over: unknown, _dx: number, dy: number) => {
-      const event = pointer.event as WheelEvent;
-      if (dy === 0 || chorded(event)) return;
-      const lapsed = event.timeStamp - turned > NOTCH_WINDOW;
-      turned = event.timeStamp;
-      if (lapsed || Math.sign(dy) !== Math.sign(rolled)) rolled = 0;
-      rolled += dy;
+  onWheel(scene, (by, _over, time) => {
+    if (by === 0) return;
+    const lapsed = time - turned > NOTCH_WINDOW;
+    turned = time;
+    if (lapsed || Math.sign(by) !== Math.sign(rolled)) rolled = 0;
+    rolled += by;
 
-      const notches = Math.trunc(rolled / NOTCH);
-      rolled -= notches * NOTCH;
-      if (notches !== 0) notched(notches);
-    },
-  );
+    const notches = Math.trunc(rolled / NOTCH);
+    rolled -= notches * NOTCH;
+    if (notches !== 0) notched(notches);
+  });
 }
 
 /** Whether one of the controls stands on this key, and the browser is to be kept out of it. */

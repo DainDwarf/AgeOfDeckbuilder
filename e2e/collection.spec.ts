@@ -9,11 +9,13 @@ import {
   counted,
   cursorOverCanvas,
   heldSave,
+  offsetOf,
   onScreen,
   openCollection,
   placeOf,
   plantCampaign,
   rested,
+  scrolled,
   standing,
   textOf,
   titleOf,
@@ -155,6 +157,40 @@ test('in the collection mode a right click on a civilization’s pile, on its co
   await rested(page);
   expect(await standing(page, 'collection-mode')).toBe(true);
   expect(await standing(page, 'menu')).toBe(false);
+
+  expect(problems).toEqual([]);
+});
+
+test('in the collection mode of a new campaign the wheel scrolls the collection panel under the pointer; over the civilizations panel it leaves it where it stood, and turned with Control held it moves it nothing', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const panel = 'collection-panel';
+  await openCollection(page);
+  const opened = await scrolled(page, panel);
+  expect(opened.offset).toBe(0);
+  expect(opened.overflow).toBeGreaterThan(0);
+
+  const frame = await onScreen(page, `${panel}-frame`);
+  await page.mouse.move(frame.x, frame.y);
+  await page.mouse.wheel(0, 120);
+  await expect.poll(() => offsetOf(page, panel)).toBeGreaterThan(0);
+  const stood = await offsetOf(page, panel);
+
+  const civilizations = await onScreen(page, 'civilizations-panel-frame');
+  await page.mouse.move(civilizations.x, civilizations.y);
+  await page.mouse.wheel(0, -120);
+  await rested(page);
+  await rested(page);
+  expect(await offsetOf(page, panel)).toBe(stood);
+
+  await page.mouse.move(frame.x, frame.y);
+  await page.keyboard.down('Control');
+  await page.mouse.wheel(0, -120);
+  await page.keyboard.up('Control');
+  await rested(page);
+  await rested(page);
+  expect(await offsetOf(page, panel)).toBe(stood);
 
   expect(problems).toEqual([]);
 });
