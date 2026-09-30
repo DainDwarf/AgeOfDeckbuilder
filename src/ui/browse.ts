@@ -8,10 +8,10 @@ import { type Cell, linesOf, spanOf, stackedCardsOf } from './collection-stack';
 import { cityEdgeOf } from './deck-panel';
 import {
   addText,
-  BAR_HEIGHT,
   type Box,
   DESIGN_HEIGHT,
   DESIGN_WIDTH,
+  headingOf,
   MARGIN,
   onClick,
   ownBoxOf,
@@ -26,9 +26,6 @@ import { createSmallCards } from './small-card';
 import { answersAround, type Inspecting, type ShownLarge, standLarge } from './stack';
 import { cardName, civilizationName, text } from './text';
 import { createTooltip } from './tooltip';
-
-/** The ink a window's title reads in. */
-export const TITLE_INK = css(LOOK.paleInk);
 
 const CIVILIZATION_BROWSE = 'civilization-browse';
 
@@ -46,22 +43,6 @@ const BADGE_STYLE = {
   fontStyle: 'bold',
   color: css(LOOK.paleInk),
 };
-
-/** The heading a window's cards stand under, named after the window it heads. */
-export function headingOf(
-  scene: Phaser.Scene,
-  name: string,
-  heading: string,
-): Phaser.GameObjects.Text {
-  return addText(scene, DESIGN_WIDTH / 2, BAR_HEIGHT + MARGIN, heading, {
-    fontFamily: UI_FONT,
-    fontSize: '26px',
-    fontStyle: 'bold',
-    color: TITLE_INK,
-  })
-    .setName(`${name}-title`)
-    .setOrigin(0.5, 0);
-}
 
 /**
  * One stack of a browse: the face its front card shows, the copies its badge reads, and whether a

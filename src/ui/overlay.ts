@@ -15,7 +15,7 @@ import {
   type Refusal,
 } from '../rules/state';
 import { type Bind, boundTo, type Press } from './bindings';
-import { headingOf, inspectingUnder, layBrowse, TITLE_INK } from './browse';
+import { inspectingUnder, layBrowse } from './browse';
 import { type CardFace, createCardFace, createKindBubble, heightOf, type Name } from './card-face';
 import { EASE, ended, stopMotion } from './card-motion';
 import { pileStacksOf } from './collection-layout';
@@ -24,10 +24,12 @@ import {
   answersPress,
   DESIGN_HEIGHT,
   DESIGN_WIDTH,
+  headingOf,
   MARGIN,
   onClick,
   onHover,
   releasedOffCanvas,
+  TITLE_INK,
   thingUnder,
   UI_FONT,
   whileUp,
@@ -230,6 +232,8 @@ export function createOverlay(
     boundTo(press, 'back');
 
   /** The cards shown large over a browse, which stands under them as it stood. */
+  // The overlay holds one taker, and this is it: `takes` hears the keys of every window, the deal,
+  // the aim window, the capstone's and the ending screen, only as the `Beneath` handed here.
   const browseLarge = standLarge(scene, catalogue, covering, (press) => !holds(press), {
     kinds,
     get standing() {

@@ -43,7 +43,7 @@ import { type CardId, type Chronicle, type ChronicleCard, playable } from '../sr
 import { standsOn, type Unit, unitAt } from '../src/rules/units';
 import { type Bindings, STORED, serialiseBindings } from '../src/ui/bindings';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
-import { pileStacksOf } from '../src/ui/collection-layout';
+import { type PileStack, pileStacksOf } from '../src/ui/collection-layout';
 import type { PileKind } from '../src/ui/overlay';
 import { SAVE_ENTRY } from '../src/ui/save-entry';
 import { cardName, referenceName } from '../src/ui/text';
@@ -894,9 +894,9 @@ export function hazardsAdded(chronicle: Chronicle, steps: readonly number[]): Ch
  */
 const OVERFLOWING = 32;
 
-/** How many stacks a browse lays out of a pile: a card for each reading of its counters. */
-export function stacksIn(pile: readonly ChronicleCard[]): number {
-  return pileStacksOf(CATALOGUE, pile, cardName).length;
+/** The stacks a browse lays out of a pile, as the rules read them. */
+export function pileStacks(pile: readonly ChronicleCard[]): PileStack[] {
+  return pileStacksOf(CATALOGUE, pile, cardName);
 }
 
 /**
@@ -908,14 +908,14 @@ export function overflowingPiles(): Chronicle {
     settledOn(1),
     Array.from({ length: 2 * OVERFLOWING }, (_, reading) => reading),
   );
-  while (stacksIn(chronicle.discardPile) < OVERFLOWING) {
+  while (pileStacks(chronicle.discardPile).length < OVERFLOWING) {
     if (chronicle.ending !== undefined) throw new Error('the chronicle ends before its piles fill');
     // A hand of hazards striking the city takes its population to none: it gains what they read.
     const read = chronicle.hand.flatMap(({ counters }) => Object.values(counters));
     const fed = gained(chronicle, { food: read.reduce((sum, value) => sum + value, 0) });
     chronicle = endedTurn(fed.chronicle);
   }
-  if (stacksIn(chronicle.drawPile) < OVERFLOWING) {
+  if (pileStacks(chronicle.drawPile).length < OVERFLOWING) {
     throw new Error('the draw pile runs short of stacks before the discard pile fills');
   }
   return chronicle;

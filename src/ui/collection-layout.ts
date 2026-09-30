@@ -1,6 +1,6 @@
 /**
- * What the collection screen computes before it draws: the order its stacks, a deck's rows and a
- * browse stand in, and what a civilization counts.
+ * What is computed before cards stand in the collection's order: the collection screen's stacks, a
+ * deck's rows, a civilization's browse and a chronicle pile's, and what a civilization counts.
  */
 
 import { type Campaign, type CampaignCivilization, civilizationIn } from '../rules/campaign';

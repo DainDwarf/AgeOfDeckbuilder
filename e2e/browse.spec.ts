@@ -2,9 +2,8 @@ import { expect, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
 import { cardOf } from '../src/rules/catalogue';
 import type { Chronicle } from '../src/rules/state';
-import { pileStacksOf } from '../src/ui/collection-layout';
 import type { PileKind } from '../src/ui/overlay';
-import { cardName, cardRules, text } from '../src/ui/text';
+import { cardRules, text } from '../src/ui/text';
 import {
   besideTheCards,
   browse,
@@ -24,6 +23,7 @@ import {
   onScreen,
   openSaved,
   overflowingPiles,
+  pileStacks,
   pileTop,
   placeOf,
   rested,
@@ -62,11 +62,6 @@ async function nearest(
   }
   if (best === undefined) throw new Error('no face to choose from');
   return faces[best];
-}
-
-/** The stacks a browse of the pile lays out, as the rules read them. */
-function stacksOf(pile: Chronicle['drawPile']) {
-  return pileStacksOf(CATALOGUE, pile, cardName);
 }
 
 /**
@@ -128,7 +123,7 @@ test('a left click on a pile opens nothing and keeps the selection; a right clic
   const problems = watch(page);
 
   const before = readingApart();
-  const stacks = stacksOf(before.drawPile);
+  const stacks = pileStacks(before.drawPile);
   await openSaved(page, before);
 
   const home = await onScreen(page, 'hand-0');
@@ -203,7 +198,7 @@ test('a small card and a kind bubble raised off a browsed stack move with it as 
 
   const opened = overflowingPiles();
   await openSaved(page, opened);
-  const faces = stacksOf(opened.drawPile).map((_, at) => `browse-card-${at}`);
+  const faces = pileStacks(opened.drawPile).map((_, at) => `browse-card-${at}`);
   await browse(page, 'draw-pile');
   await rested(page);
   const frame = await onScreen(page, 'browse-frame');

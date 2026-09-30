@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { type Press, pressOf } from './bindings';
-import { LOOK } from './look';
+import { css, LOOK } from './look';
 
 export const DESIGN_WIDTH = 1280;
 export const DESIGN_HEIGHT = 720;
@@ -504,4 +504,23 @@ export function addText(
     resolution: Math.ceil(renderFactor()),
     padding: TEXT_INSET,
   });
+}
+
+/** The ink a window's title reads in. */
+export const TITLE_INK = css(LOOK.paleInk);
+
+/** The heading a window's cards stand under, named after the window it heads. */
+export function headingOf(
+  scene: Phaser.Scene,
+  name: string,
+  heading: string,
+): Phaser.GameObjects.Text {
+  return addText(scene, DESIGN_WIDTH / 2, BAR_HEIGHT + MARGIN, heading, {
+    fontFamily: UI_FONT,
+    fontSize: '26px',
+    fontStyle: 'bold',
+    color: TITLE_INK,
+  })
+    .setName(`${name}-title`)
+    .setOrigin(0.5, 0);
 }

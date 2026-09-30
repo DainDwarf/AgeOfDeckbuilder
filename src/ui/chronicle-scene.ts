@@ -52,6 +52,7 @@ import { refused, refusedAim } from './refusal-lines';
 import { createRefusalNote } from './refusal-note';
 import { createResourceBar } from './resource-bar';
 import { type Choices, campaignHeld, keepChronicle, type Opening } from './save-entry';
+import { createSmallCards } from './small-card';
 import { createStanding } from './standing';
 import { text } from './text';
 import { createTooltip } from './tooltip';
@@ -169,8 +170,15 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       map: createTooltip(map, map.strata.tooltip),
       ui: createTooltip(this, ui.tooltip),
     };
-    // One for the surface's every face: a second would hide the first's bubble as its own goes down.
+    // One of each for the surface's every face, the hand's and the piles': a second bubble would hide
+    // the first's as its own goes down, and a second chain would stand a small card beside the first's.
     const kinds = createKindBubble(tooltip.ui);
+    const faces = {
+      kinds,
+      small: createSmallCards(this, ui.smallCard, CATALOGUE, kinds, (name) => {
+        overlay.inspectNamed(name);
+      }),
+    };
 
     const parts: Part[] = [];
     const view = createMapView(map, map.strata, CATALOGUE, this.current);
@@ -390,7 +398,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
     const endTurn = this.addEndTurn(ui.endTurn, () => {
       void playOut({ type: 'end-turn' });
     });
-    const hand = createHand(this, ui, kinds, CATALOGUE, {
+    const hand = createHand(this, ui, faces, CATALOGUE, {
       play: (index) => {
         void playOut({ type: 'play', index, aim: 'none' });
       },
@@ -576,7 +584,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
     parts.push(
       view,
       bar,
-      createPiles(this, ui, CATALOGUE, kinds, {
+      createPiles(this, ui, CATALOGUE, faces, {
         browse: (pile) => overlay.browse(pile, this.current),
         inspectNamed: (name) => overlay.inspectNamed(name),
       }),

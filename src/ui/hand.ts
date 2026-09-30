@@ -31,7 +31,7 @@ import { cardFace } from './face';
 import { PILE_PLACE } from './piles';
 import { refused } from './refusal-lines';
 import { createRefusalNote } from './refusal-note';
-import { createSmallCards, type Raiser } from './small-card';
+import type { Raiser, SmallCards } from './small-card';
 
 /** The clear water between a pile and the lane the hand fans out in. */
 const LANE_PAD = 28;
@@ -112,9 +112,8 @@ export function createHand(
     readonly lifted: Stratum;
     readonly aimLine: Stratum;
     readonly note: Stratum;
-    readonly smallCard: Stratum;
   },
-  kinds: KindBubble,
+  { kinds, small }: { readonly kinds: KindBubble; readonly small: SmallCards },
   catalogue: Catalogue,
   presses: HandPresses,
 ): Hand {
@@ -122,11 +121,10 @@ export function createHand(
   const laneWidth = DESIGN_WIDTH - 2 * laneLeft;
   const note = createRefusalNote(scene, on.note);
   const line = createAimLine(scene, on.aimLine);
-  const small = createSmallCards(scene, on.smallCard, catalogue, kinds, (name) =>
-    presses.inspectNamed(name),
-  );
 
   let slots: Slot[] = [];
+  /** Whether the small cards standing were raised off a name of the hand's, and not the piles'. */
+  let chained = false;
   /** What the hand has in the air and no slot holds; a render owns it and takes it down. */
   let flying: Phaser.GameObjects.Container[] = [];
   let dragged: Drag | undefined;
@@ -338,6 +336,7 @@ export function createHand(
       name,
       where: () => slot.face.spotOf(name),
       hold: (held) => {
+        chained = held;
         slot.held = held;
         if (dragged === undefined && slots.includes(slot)) settle(slot, 120);
       },
@@ -351,7 +350,7 @@ export function createHand(
   };
 
   const render = (chronicle: Chronicle): void => {
-    small.down();
+    if (chained) small.down();
     note.hide();
     unselect();
     for (const face of [...flying, ...slots.map((slot) => slot.face.root)]) {

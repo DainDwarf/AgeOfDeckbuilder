@@ -27,7 +27,7 @@ import {
 import { cardFace } from './face';
 import { css, LOOK, worn } from './look';
 import type { PileKind } from './overlay';
-import { createSmallCards, raiserOf, type SmallCards } from './small-card';
+import { raiserOf, type SmallCards } from './small-card';
 
 /** Where each pile's top card lies, about its own bottom centre, as a card is drawn. */
 export const PILE_PLACE: Record<PileKind, { readonly x: number; readonly y: number }> = {
@@ -55,14 +55,11 @@ export type PilePresses = {
  */
 export function createPiles(
   scene: Phaser.Scene,
-  on: { readonly resting: Stratum; readonly flight: Stratum; readonly smallCard: Stratum },
+  on: { readonly resting: Stratum; readonly flight: Stratum },
   catalogue: Catalogue,
-  kinds: KindBubble,
+  { kinds, small }: { readonly kinds: KindBubble; readonly small: SmallCards },
   presses: PilePresses,
 ): Piles {
-  const small = createSmallCards(scene, on.smallCard, catalogue, kinds, (name) => {
-    presses.inspectNamed(name);
-  });
   const answers = { small, kinds, presses };
   const drawn = createPile(scene, on.resting, 'draw-pile', answers);
   const discarded = createPile(scene, on.resting, 'discard-pile', answers);
@@ -256,6 +253,8 @@ function createPile(
   on.layer.add([pill, count, press]);
 
   let shown: Top | undefined;
+  /** Whether the small cards standing were raised off a name of this pile's top, and not the hand's. */
+  let chained = false;
 
   const nameUnder = (pointer: Phaser.Input.Pointer): Name | undefined => {
     const at = on.at(pointer.x, pointer.y);
@@ -271,7 +270,16 @@ function createPile(
     const face = shown?.face;
     if (face === undefined) return;
     const name = nameUnder(pointer);
-    small.over(name === undefined ? undefined : raiserOf(face, name));
+    small.over(
+      name === undefined
+        ? undefined
+        : {
+            ...raiserOf(face, name),
+            hold: (on) => {
+              chained = on;
+            },
+          },
+    );
     kinds.over(face, onKind(pointer));
   });
   onHover(
@@ -295,7 +303,7 @@ function createPile(
   /** What the top card's names and its label raised, taken down as the card leaves the top. */
   const letGo = (): void => {
     if (shown?.face === undefined) return;
-    small.down();
+    if (chained) small.down();
     kinds.over(shown.face, false);
   };
 
