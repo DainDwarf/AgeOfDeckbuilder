@@ -406,6 +406,7 @@ export class CollectionScreen extends Phaser.Scene {
           onClick(back.face, () => {
             lay({ shows: 'collection' });
           });
+          const deck = deckRowsOf(CATALOGUE, campaign, civilization, cardName);
           const onward = modeButtonOf(
             this,
             text('collection.to-civilization'),
@@ -428,7 +429,6 @@ export class CollectionScreen extends Phaser.Scene {
             .container(0, 0, [...shared, ...back.parts, ...onward.parts, name])
             .setName('deck-editing-mode');
           screen.add(head);
-          const deck = deckRowsOf(CATALOGUE, campaign, civilization, cardName);
           const reading = ({ id, copies }: CollectionStack): Reading => {
             const held = heldIn(deck, id);
             return { reads: text('collection.in-deck', { held, copies }), dimmed: held === copies };

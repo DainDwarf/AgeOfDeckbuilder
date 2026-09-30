@@ -50,7 +50,7 @@ function dimmed(colour: number): number {
   return overPage(colour, LOOK.whollyHeld);
 }
 
-/** What the button of a price answers: no rest and no right click. */
+/** What a button on a reading line answers: no rest and no right click. */
 const ANSWERS_NOTHING: Answers = {
   point() {},
   rests() {
