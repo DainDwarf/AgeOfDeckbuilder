@@ -5,6 +5,7 @@ import {
   boundTo,
   CONTROLS,
   type Control,
+  inverted,
   keyPressed,
   mouseCode,
   PRESSES,
@@ -77,7 +78,7 @@ export function readMouseKeys(game: Phaser.Game): void {
  * zero, with the interactive object under the pointer in this scene, where one is, and when it
  * turned.
  */
-export function onWheel(
+function onBareWheel(
   scene: Phaser.Scene,
   wheeled: (by: number, over: readonly Phaser.GameObjects.GameObject[], time: number) => void,
 ): void {
@@ -95,12 +96,23 @@ export function onWheel(
   );
 }
 
-/** Every whole notch of the wheel Phaser hands the scene, told as how many, up below zero. */
+/**
+ * Every turn of the wheel Phaser hands the scene, as far as what scrolls is to move, down above zero,
+ * with the interactive object under the pointer in this scene, where one is.
+ */
+export function onWheel(
+  scene: Phaser.Scene,
+  wheeled: (by: number, over: readonly Phaser.GameObjects.GameObject[]) => void,
+): void {
+  onBareWheel(scene, (by, over) => wheeled(inverted().scroll ? -by : by, over));
+}
+
+/** Every whole notch of the wheel Phaser hands the scene, told as how many the map zooms, out above zero. */
 export function onWheelNotches(scene: Phaser.Scene, notched: (notches: number) => void): void {
   /** How far the wheel has turned towards its next notch, and when it last turned. */
   let rolled = 0;
   let turned = 0;
-  onWheel(scene, (by, _over, time) => {
+  onBareWheel(scene, (by, _over, time) => {
     if (by === 0) return;
     const lapsed = time - turned > NOTCH_WINDOW;
     turned = time;
@@ -109,7 +121,7 @@ export function onWheelNotches(scene: Phaser.Scene, notched: (notches: number) =
 
     const notches = Math.trunc(rolled / NOTCH);
     rolled -= notches * NOTCH;
-    if (notches !== 0) notched(notches);
+    if (notches !== 0) notched(inverted().zoom ? -notches : notches);
   });
 }
 

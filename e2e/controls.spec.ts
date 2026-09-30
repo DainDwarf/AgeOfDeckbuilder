@@ -1,21 +1,27 @@
 import { expect, type Page, test } from '@playwright/test';
+import type { Wheel } from '../src/ui/bindings';
 import {
   bareTile,
   browse,
+  capstoneClosed,
   click,
   launchedOn,
   liftedName,
   nameOnScreen,
+  offsetOf,
   onScreen,
   openSaved,
+  overflowingPiles,
   rested,
   ringedTile,
+  scrolled,
   settledOn,
   shownCard,
   standing,
   textOf,
   tileOnScreen,
   watch,
+  wheel,
 } from './chronicle-screen';
 
 const OPENED = settledOn(1);
@@ -184,6 +190,11 @@ async function notchedOver(page: Page, at: { x: number; y: number }): Promise<nu
   await rested(page);
   await rested(page);
   return (await tileOnScreen(page, BARE)).unit / before.unit;
+}
+
+/** What the button of one of the wheel's two rows reads. */
+function wheelReads(page: Page, turned: Wheel): Promise<string | undefined> {
+  return textOf(page, `controls-wheel-${turned}-label`);
 }
 
 /** Out of Controls and back to a bare chronicle screen, on the back key. */
@@ -510,6 +521,57 @@ test('under a browse the map hears no pan, no zoom and no notch, and a pan key h
   await page.keyboard.press('Escape');
   await expect.poll(() => standing(page, 'browse')).toBe(false);
   expect(await grewBy(page, () => page.keyboard.press('='))).toBeCloseTo(NOTCH, 2);
+
+  expect(problems).toEqual([]);
+});
+
+test('a press on a row of the wheel turns the map or what scrolls the other way, kept across a reload, and Default turns both back', async ({
+  page,
+}) => {
+  const problems = watch(page);
+
+  await openSaved(page, overflowingPiles());
+  await intoControls(page);
+  expect(await wheelReads(page, 'zoom')).toBe('Up zooms in');
+  expect(await wheelReads(page, 'scroll')).toBe('Up scrolls up');
+
+  await click(page, 'controls-pan-up-0');
+  await expect.poll(() => slotReads(page, 'pan-up', 0)).toBe('Press a key');
+  await click(page, 'controls-wheel-zoom');
+  await expect.poll(() => wheelReads(page, 'zoom')).toBe('Up zooms out');
+  expect(await slotReads(page, 'pan-up', 0)).toBe('W');
+  await click(page, 'controls-wheel-scroll');
+  await expect.poll(() => wheelReads(page, 'scroll')).toBe('Up scrolls down');
+
+  await page.reload();
+  await page.waitForFunction(() => window.game?.scene.isActive('ui') === true);
+  await expect.poll(() => standing(page, 'capstone')).toBe(true);
+  await rested(page);
+  await capstoneClosed(page);
+
+  expect(await grewBy(page, () => page.mouse.wheel(0, -100))).toBeCloseTo(1 / NOTCH, 2);
+
+  await browse(page, 'draw-pile');
+  const { overflow } = await scrolled(page);
+  await wheel(page, -4000);
+  await expect.poll(() => offsetOf(page)).toBe(overflow);
+  await wheel(page, 120);
+  await expect.poll(() => offsetOf(page)).toBeLessThan(overflow);
+  await page.keyboard.press('Escape');
+  await expect.poll(() => standing(page, 'browse')).toBe(false);
+
+  await intoControls(page);
+  expect(await wheelReads(page, 'zoom')).toBe('Up zooms out');
+  expect(await wheelReads(page, 'scroll')).toBe('Up scrolls down');
+  await click(page, 'controls-default');
+  await expect.poll(() => wheelReads(page, 'zoom')).toBe('Up zooms in');
+  expect(await wheelReads(page, 'scroll')).toBe('Up scrolls up');
+  await outOfControls(page);
+
+  expect(await grewBy(page, () => page.mouse.wheel(0, -100))).toBeCloseTo(NOTCH, 2);
+  await browse(page, 'draw-pile');
+  await wheel(page, 120);
+  await expect.poll(() => offsetOf(page)).toBeGreaterThan(0);
 
   expect(problems).toEqual([]);
 });

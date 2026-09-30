@@ -76,7 +76,10 @@ export function pressOf(pointer: Phaser.Input.Pointer): Press | undefined {
   return PRESSES.get(pointer.button);
 }
 
-/** Where the browser keeps the bindings; the origin is shared with whatever else the host serves. */
+/**
+ * Where the browser keeps what the Controls window sets; the origin is shared with whatever else the
+ * host serves.
+ */
 export const STORED = 'age-of-deckbuilder.controls';
 
 /**
@@ -156,6 +159,16 @@ export function bound(bindings: Bindings, control: Control, slot: number, press:
   return moved;
 }
 
+/** The two the wheel turns: the map's zoom, and whatever scrolls. */
+export const WHEELS = ['zoom', 'scroll'] as const;
+
+export type Wheel = (typeof WHEELS)[number];
+
+/** Whether each turns the other way from where it began: a notch up zooming out, or scrolling down. */
+export type Inverted = Readonly<Record<Wheel, boolean>>;
+
+export const UPRIGHT: Inverted = { zoom: false, scroll: false };
+
 /** One stored slot's key, and nothing when what was stored cannot be one. */
 function bindOf(stored: unknown): Bind | undefined {
   if (typeof stored !== 'object' || stored === null || Array.isArray(stored)) return undefined;
@@ -184,50 +197,90 @@ function slotsOf(stored: unknown): Slots | undefined {
   return [pair[0], pair[1]];
 }
 
+/** An object's entries, and none when what was handed is not an object. */
+function entriesOf(raw: unknown): Record<string, unknown> {
+  return typeof raw === 'object' && raw !== null ? (raw as Record<string, unknown>) : {};
+}
+
+/** What was kept, read as JSON, and nothing where it cannot be. */
+function keptOf(stored: string | null): Record<string, unknown> {
+  try {
+    return entriesOf(stored === null ? undefined : JSON.parse(stored));
+  } catch {
+    return {};
+  }
+}
+
 /** What was kept, control by control: whatever it does not cover stands at its default. */
 export function parseBindings(stored: string | null): Bindings {
-  let raw: unknown;
-  try {
-    raw = stored === null ? undefined : JSON.parse(stored);
-  } catch {
-    raw = undefined;
-  }
-  const kept = typeof raw === 'object' && raw !== null ? (raw as Record<string, unknown>) : {};
+  const kept = keptOf(stored);
   const parsed = {} as Record<Control, Slots>;
   for (const control of CONTROLS) parsed[control] = slotsOf(kept[control]) ?? DEFAULTS[control];
   return parsed;
 }
 
-export function serialiseBindings(bindings: Bindings): string {
-  return JSON.stringify(
-    Object.fromEntries(CONTROLS.map((control) => [control, [...bindings[control]].map(nulled)])),
-  );
+/** Which way the wheel was kept turning: whatever is not a boolean stands at its default. */
+export function parseInverted(stored: string | null): Inverted {
+  const kept = entriesOf(keptOf(stored).inverted);
+  const parsed = {} as Record<Wheel, boolean>;
+  for (const wheel of WHEELS) {
+    const each = kept[wheel];
+    parsed[wheel] = typeof each === 'boolean' ? each : UPRIGHT[wheel];
+  }
+  return parsed;
+}
+
+export function serialiseControls(bindings: Bindings, inverted: Inverted): string {
+  return JSON.stringify({
+    ...Object.fromEntries(CONTROLS.map((control) => [control, [...bindings[control]].map(nulled)])),
+    inverted,
+  });
 }
 
 function nulled(bind: Bind | undefined): Bind | null {
   return bind ?? null;
 }
 
-/** The bindings the game runs on, read from the browser the first time they are asked for. */
-let current: Bindings | undefined;
+/** What the Controls window sets. */
+type Kept = { readonly bindings: Bindings; readonly inverted: Inverted };
 
-export function bindings(): Bindings {
-  current ??= parseBindings(stored(STORED));
+/** What the game runs on, read from the browser the first time it is asked for. */
+let current: Kept | undefined;
+
+function held(): Kept {
+  if (current === undefined) {
+    const kept = stored(STORED);
+    current = { bindings: parseBindings(kept), inverted: parseInverted(kept) };
+  }
   return current;
 }
 
-/** The one place a binding changes: what the player set outlives the page. */
-function keep(next: Bindings): void {
+export function bindings(): Bindings {
+  return held().bindings;
+}
+
+export function inverted(): Inverted {
+  return held().inverted;
+}
+
+/** The one place a binding or the wheel changes: what the player set outlives the page. */
+function keep(next: Kept): void {
   current = next;
-  store(STORED, serialiseBindings(next));
+  store(STORED, serialiseControls(next.bindings, next.inverted));
 }
 
 export function rebind(control: Control, slot: number, press: Bind): void {
-  keep(bound(bindings(), control, slot, press));
+  keep({ ...held(), bindings: bound(bindings(), control, slot, press) });
+}
+
+/** The wheel turning that one the other way. */
+export function invert(wheel: Wheel): void {
+  const was = inverted();
+  keep({ ...held(), inverted: { ...was, [wheel]: !was[wheel] } });
 }
 
 export function restoreDefaults(): void {
-  keep(DEFAULTS);
+  keep({ bindings: DEFAULTS, inverted: UPRIGHT });
 }
 
 /** Whether the key pressed stands in one of the two places a control is bound to. */

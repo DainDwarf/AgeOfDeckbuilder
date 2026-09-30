@@ -8,7 +8,9 @@ import {
   keyLabel,
   keyPressed,
   parseBindings,
-  serialiseBindings,
+  parseInverted,
+  serialiseControls,
+  UPRIGHT,
 } from './bindings';
 
 /** A press, as the browser reports one: the place the key stands on, and what that key printed. */
@@ -120,7 +122,7 @@ describe('binding a key', () => {
 describe('the bindings kept in the browser', () => {
   it('come back as they were left', () => {
     const kept = bound(rebound(), 'back', 1, press('KeyB', 'b'));
-    expect(parseBindings(serialiseBindings(kept))).toEqual(kept);
+    expect(parseBindings(serialiseControls(kept, { zoom: true, scroll: true }))).toEqual(kept);
   });
 
   it('are the defaults when nothing was kept', () => {
@@ -160,5 +162,38 @@ describe('the bindings kept in the browser', () => {
     expect(parsed['pan-up']).toEqual([{ code: 'KeyK', printed: 'K' }, undefined]);
     expect(parsed['pan-left']).toEqual(DEFAULTS['pan-left']);
     expect(parsed.back).toEqual(DEFAULTS.back);
+  });
+});
+
+describe('which way the wheel turns, kept in the browser beside the bindings', () => {
+  it('comes back as it was left, the bindings beside it', () => {
+    const kept = serialiseControls(rebound(), { zoom: true, scroll: false });
+    expect(parseInverted(kept)).toEqual({ zoom: true, scroll: false });
+    expect(parseBindings(kept)).toEqual(rebound());
+    expect(parseInverted(serialiseControls(DEFAULTS, { zoom: false, scroll: true }))).toEqual({
+      zoom: false,
+      scroll: true,
+    });
+  });
+
+  it('turns both the way they began when nothing was kept, or nothing readable', () => {
+    for (const kept of [null, '', 'not json at all', '[]', '"W"', '{"inverted":7}']) {
+      expect(parseInverted(kept)).toEqual(UPRIGHT);
+    }
+  });
+
+  it('turns the way it began where what was kept holds the bindings alone', () => {
+    expect(parseInverted('{"pan-up":[{"code":"KeyK","printed":"K"},null]}')).toEqual(UPRIGHT);
+  });
+
+  it('turns one the way it began where what was kept for it is not a boolean, the other as kept', () => {
+    expect(parseInverted('{"inverted":{"zoom":"yes","scroll":true}}')).toEqual({
+      zoom: false,
+      scroll: true,
+    });
+    expect(parseInverted('{"inverted":{"zoom":true,"scroll":1}}')).toEqual({
+      zoom: true,
+      scroll: false,
+    });
   });
 });

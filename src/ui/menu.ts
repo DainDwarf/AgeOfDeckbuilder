@@ -5,9 +5,13 @@ import {
   bindings,
   CONTROLS,
   type Control,
+  invert,
+  inverted,
   keyLabel,
   rebind,
   restoreDefaults,
+  WHEELS,
+  type Wheel,
 } from './bindings';
 import {
   addText,
@@ -127,8 +131,32 @@ const SLOT_HEIGHT = 34;
 const SLOT_GAP = 10;
 const ROW_GAP = 8;
 
-/** How far the rows of slots reach below the top of the Controls window's body. */
-const ROWS_HEIGHT = CONTROLS.length * SLOT_HEIGHT + (CONTROLS.length - 1) * ROW_GAP;
+/** A row of the Controls window: a control's two slots, or one of the wheel's two buttons. */
+type Row =
+  | { readonly kind: 'control'; readonly control: Control }
+  | { readonly kind: 'wheel'; readonly wheel: Wheel };
+
+/** The Controls window's rows, top down: the wheel's two stand under the zoom-out row. */
+const ROWS: readonly Row[] = CONTROLS.flatMap((control): Row[] => [
+  { kind: 'control', control },
+  ...(control === 'zoom-out' ? WHEELS.map((wheel): Row => ({ kind: 'wheel', wheel })) : []),
+]);
+
+/** What a wheel's row reads, and what its button reads with the wheel turning each way. */
+const WHEEL_READS: Record<
+  Wheel,
+  { readonly row: TextKey; readonly upright: TextKey; readonly inverted: TextKey }
+> = {
+  zoom: { row: 'wheel.zoom', upright: 'wheel.up-zooms-in', inverted: 'wheel.up-zooms-out' },
+  scroll: {
+    row: 'wheel.scroll',
+    upright: 'wheel.up-scrolls-up',
+    inverted: 'wheel.up-scrolls-down',
+  },
+};
+
+/** How far the rows reach below the top of the Controls window's body. */
+const ROWS_HEIGHT = ROWS.length * SLOT_HEIGHT + (ROWS.length - 1) * ROW_GAP;
 
 /** The panel's own dark ink: a window stands in the panel language, not on the scrim. */
 const INK = css(LOOK.ink);
@@ -202,9 +230,8 @@ function bodyHeight(which: MenuWindow, buttons: number): number {
 }
 
 /**
- * The Controls window's body: one row per control, its label on the left and its two slots on the
- * right, and the two buttons under them. A slot pressed listens for the key that binds it, and the
- * next press of anything else lets go of the listen without binding.
+ * The Controls window's body: its rows, each its label on the left, and the two buttons under them. A
+ * slot pressed listens for the key that binds it, and the next press of anything else lets go of it.
  */
 function layControls(
   scene: Phaser.Scene,
@@ -213,9 +240,11 @@ function layControls(
   back: () => void,
 ): (press: Bind) => boolean {
   const middle = DESIGN_WIDTH / 2;
+  const right = middle + WIDTH / 2 - PADDING;
   /** The slot waiting for a key, and nothing while none waits. */
   let listening: { control: Control; slot: number } | undefined;
   const slots: { control: Control; slot: number; label: Phaser.GameObjects.Text }[] = [];
+  const wheels: { wheel: Wheel; label: Phaser.GameObjects.Text }[] = [];
 
   const paint = (): void => {
     const held = bindings();
@@ -230,38 +259,64 @@ function layControls(
             : keyLabel(bind),
       );
     }
+    for (const { wheel, label } of wheels) {
+      const reads = WHEEL_READS[wheel];
+      label.setText(text(inverted()[wheel] ? reads.inverted : reads.upright));
+    }
   };
 
-  CONTROLS.forEach((control, index) => {
-    const y = top + index * (SLOT_HEIGHT + ROW_GAP) + SLOT_HEIGHT / 2;
-    root.add(
-      addText(
-        scene,
-        middle - WIDTH / 2 + PADDING,
-        y,
-        text(`control.${control}`),
-        LABEL_STYLE,
-      ).setOrigin(0, 0.5),
-    );
-    for (const slot of [0, 1]) {
-      const { face, label } = pressable(
-        scene,
-        {
-          x: middle + WIDTH / 2 - PADDING - (1 - slot) * (SLOT_WIDTH + SLOT_GAP) - SLOT_WIDTH / 2,
-          y,
-          width: SLOT_WIDTH,
-          height: SLOT_HEIGHT,
-        },
-        `controls-${control}-${slot}`,
-        SLOT_STYLE,
-        () => {
-          listening = { control, slot };
-          paint();
-        },
-      );
-      slots.push({ control, slot, label });
-      root.add([face, label]);
+  const rowLabel = (reads: string, y: number): Phaser.GameObjects.Text =>
+    addText(scene, middle - WIDTH / 2 + PADDING, y, reads, LABEL_STYLE).setOrigin(0, 0.5);
+
+  const rowOf = (row: Row, y: number): Phaser.GameObjects.GameObject[] => {
+    switch (row.kind) {
+      case 'control': {
+        const { control } = row;
+        return [
+          rowLabel(text(`control.${control}`), y),
+          ...[0, 1].flatMap((slot) => {
+            const { face, label } = pressable(
+              scene,
+              {
+                x: right - (1 - slot) * (SLOT_WIDTH + SLOT_GAP) - SLOT_WIDTH / 2,
+                y,
+                width: SLOT_WIDTH,
+                height: SLOT_HEIGHT,
+              },
+              `controls-${control}-${slot}`,
+              SLOT_STYLE,
+              () => {
+                listening = { control, slot };
+                paint();
+              },
+            );
+            slots.push({ control, slot, label });
+            return [face, label];
+          }),
+        ];
+      }
+      case 'wheel': {
+        const { wheel } = row;
+        const width = 2 * SLOT_WIDTH + SLOT_GAP;
+        const { face, label } = pressable(
+          scene,
+          { x: right - width / 2, y, width, height: SLOT_HEIGHT },
+          `controls-wheel-${wheel}`,
+          SLOT_STYLE,
+          () => {
+            listening = undefined;
+            invert(wheel);
+            paint();
+          },
+        );
+        wheels.push({ wheel, label });
+        return [rowLabel(text(WHEEL_READS[wheel].row), y), face, label];
+      }
     }
+  };
+
+  ROWS.forEach((row, index) => {
+    root.add(rowOf(row, top + index * (SLOT_HEIGHT + ROW_GAP) + SLOT_HEIGHT / 2));
   });
 
   const width = (WIDTH - 2 * PADDING - BUTTON_GAP) / 2;

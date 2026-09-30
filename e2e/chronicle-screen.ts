@@ -41,7 +41,7 @@ import { addedToDrawPileTop } from '../src/rules/schedule';
 import { charted } from '../src/rules/sight';
 import { type CardId, type Chronicle, type ChronicleCard, playable } from '../src/rules/state';
 import { standsOn, type Unit, unitAt } from '../src/rules/units';
-import { type Bindings, STORED, serialiseBindings } from '../src/ui/bindings';
+import { type Bindings, STORED, serialiseControls, UPRIGHT } from '../src/ui/bindings';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
 import { type PileStack, pileStacksOf } from '../src/ui/collection-layout';
 import type { PileKind } from '../src/ui/overlay';
@@ -220,13 +220,13 @@ export async function plantCampaign(page: Page, campaign: Campaign): Promise<voi
   await kept(page, writeSave(CATALOGUE, campaign));
 }
 
-/** The bindings kept as the ones the pages this one loads from now on find. */
+/** The bindings kept as the ones the pages this one loads from now on find, the wheel as it began. */
 export async function plantControls(page: Page, bindings: Bindings): Promise<void> {
   await page.addInitScript(
     ({ entry, kept }) => {
       window.localStorage.setItem(entry, kept);
     },
-    { entry: STORED, kept: serialiseBindings(bindings) },
+    { entry: STORED, kept: serialiseControls(bindings, UPRIGHT) },
   );
 }
 
