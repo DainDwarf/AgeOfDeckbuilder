@@ -475,13 +475,21 @@ export function followPointer(game: Phaser.Game): void {
   });
 }
 
-// Phaser sizes a Text's backing canvas from a box it measures at 1× — sideways from the advance
-// width rather than the ink box — but rasterises the glyphs at `resolution`, and a hinted outline
-// is not proportional, so ink falls outside the canvas on every side, further sideways than
-// vertically. The padding holds that overflow; being symmetric per axis, a centred text does not
-// move.
-/** How far outside its own box a text is padded: what a caller measuring one takes back out. */
-export const TEXT_INSET = { x: 2, y: 1 };
+// Phaser sizes a Text's canvas at 1×, sideways by the advance width, but rasterises hinted glyphs
+// at `resolution`, so ink overflows it on every side, most sideways. The padding holds it, symmetric
+// so a centred text does not move; a Text's `width` and `height` carry it, `ownBoxOf` does not.
+/** How far outside its own box a text is padded. */
+const TEXT_INSET = { x: 2, y: 1 };
+
+/** A text's own box, its padding taken out, in its parent's space, its scale and angle unread. */
+export function ownBoxOf(label: Phaser.GameObjects.Text): Box {
+  return {
+    x: label.x - label.originX * label.width + TEXT_INSET.x,
+    y: label.y - label.originY * label.height + TEXT_INSET.y,
+    width: label.width - 2 * TEXT_INSET.x,
+    height: label.height - 2 * TEXT_INSET.y,
+  };
+}
 
 export function addText(
   scene: Phaser.Scene,

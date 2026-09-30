@@ -9,7 +9,7 @@ import {
   MARGIN,
   onClick,
   onHover,
-  TEXT_INSET,
+  ownBoxOf,
   UI_FONT,
 } from './design-space';
 import type { AnswerReading, Face } from './face';
@@ -221,8 +221,9 @@ export function createCardFace(
     },
   }).setOrigin(0.5, 1);
 
-  const lineHeight = (rules.height - 2 * TEXT_INSET.y) / run.lines;
-  const runTop = rules.y - rules.height + TEXT_INSET.y;
+  const ownRules = ownBoxOf(rules);
+  const lineHeight = ownRules.height / run.lines;
+  const runTop = ownRules.y;
   const glyphs = run.glyphs.map((glyph) =>
     scene.add
       .rectangle(
@@ -338,9 +339,10 @@ export function createCardFace(
       return Math.abs(local.x) <= width / 2 && local.y <= 0 && local.y >= -height;
     },
     explainKind(tooltip: Tooltip): void {
-      tooltip.beside(text(`tooltip.${face.kind}`), () =>
-        root.getWorldTransformMatrix().transformPoint(kind.width / 2 - TEXT_INSET.x, kindMiddle),
-      );
+      tooltip.beside(text(`tooltip.${face.kind}`), () => {
+        const ownKind = ownBoxOf(kind);
+        return root.getWorldTransformMatrix().transformPoint(ownKind.x + ownKind.width, kindMiddle);
+      });
     },
   };
 }

@@ -33,8 +33,8 @@ import {
   holdDesignSpace,
   MARGIN,
   onClick,
+  ownBoxOf,
   stratumOf,
-  TEXT_INSET,
   UI_FONT,
 } from './design-space';
 import { cardFaceAtStart } from './face';
@@ -60,7 +60,7 @@ const STACK_WIDTH = CARD_WIDTH + UNDER_MOST * UNDER_STEP;
 const STACKS_APART = 10;
 const LINES_APART = 18;
 const COPIES_GAP = 6;
-const CHIP_TO_PRICE = 9;
+const CHIP_TO_PRICE = 11;
 const BUY_HEIGHT = 22;
 const BUY_PAD = 3;
 
@@ -166,16 +166,18 @@ function stackOf(
     .setName(`collection-card-${id}-copies`);
   const priced = addText(
     scene,
-    right - BUY_PAD + TEXT_INSET.x,
+    0,
     middle,
     text('collection.price', { price }),
     buy === undefined ? GREYED_PRICE_STYLE : PRICE_STYLE,
   )
     .setOrigin(1, 0.5)
     .setName(`collection-card-${id}-price`);
+  const unplaced = ownBoxOf(priced);
+  priced.setX(right - BUY_PAD - (unplaced.x + unplaced.width));
   const chip = chipAt(
     scene,
-    { x: priced.x - priced.width - CHIP_TO_PRICE, y: middle },
+    { x: ownBoxOf(priced).x - CHIP_TO_PRICE, y: middle },
     buy === undefined ? LOOK.greyedInk : LOOK.influence,
   ).setName(`collection-card-${id}-price-chip`);
   const buyLeft = chip.getBounds().left - BUY_PAD;
@@ -316,7 +318,7 @@ function modeButtonOf(
   name: string,
 ): { face: Phaser.GameObjects.Rectangle; parts: Phaser.GameObjects.GameObject[] } {
   const words = addText(scene, 0, y, label, BUTTON_STYLE).setOrigin(0.5).setName(`${name}-label`);
-  const width = words.width - 2 * TEXT_INSET.x + 2 * BUTTON_PAD + 2;
+  const width = ownBoxOf(words).width + 2 * BUTTON_PAD + 2;
   const middle = to === 'left' ? x - width / 2 : x + width / 2;
   words.setX(middle);
   const face = scene.add

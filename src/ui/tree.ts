@@ -9,7 +9,7 @@ import {
   MARGIN,
   onClick,
   onHover,
-  TEXT_INSET,
+  ownBoxOf,
   UI_FONT,
   whileUp,
 } from './design-space';
@@ -313,7 +313,7 @@ export function createTree(
           x: centre + (from + to) / 2,
           y: middle,
           width: to - from,
-          height: drawn.height - 2 * TEXT_INSET.y,
+          height: ownBoxOf(drawn).height,
         };
         names.push(each);
         const raiser: Raiser = {
