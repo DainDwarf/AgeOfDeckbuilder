@@ -1,6 +1,6 @@
 /**
- * What the collection screen computes before it draws: the order its stacks and a deck's rows stand
- * in, and what a civilization counts.
+ * What the collection screen computes before it draws: the order its stacks, a deck's rows and a
+ * civilization's browse stand in, and what a civilization counts.
  */
 
 import { type Campaign, type CampaignCivilization, civilizationIn } from '../rules/campaign';
@@ -65,6 +65,26 @@ export function deckRowsOf(
       nameOf,
     );
   return { settle: rows(settle), cards: rows(cards) };
+}
+
+/** What a civilization's browse stands: the count of every card it holds, and each card once with its copies. */
+export type Browse = { readonly count: number; readonly stacks: readonly CollectionStack[] };
+
+/**
+ * The browse of the campaign's civilization of that name: the city section's card first, then the
+ * settle section, then the deck, each section in the collection's order. A name the campaign does
+ * not hold is refused.
+ */
+export function browseOf(
+  catalogue: Catalogue,
+  campaign: Campaign,
+  civilization: string,
+  nameOf: (card: CardId) => string,
+): Browse {
+  const { city } = civilizationIn(catalogue, campaign, civilization);
+  const { settle, cards } = deckRowsOf(catalogue, campaign, civilization, nameOf);
+  const stacks = [{ id: city.card, copies: 1 }, ...settle, ...cards];
+  return { count: stacks.reduce((held, { copies }) => held + copies, 0), stacks };
 }
 
 /**

@@ -38,7 +38,7 @@ Three presses work every screen: the **left click** selects, the **right click**
 
 **The selection is one thing, a tile or a card, and the left click makes it.** A press on a thing selects it, a new selection drops the old one whatever it was, and a press beside the things drops it and the inspection with it. A left click on the selection acts on it, and what it does is the selected thing's own.
 
-**The right click inspects and never selects.** It inspects the thing under it — a tile in the infopanel, a card shown large — and pressed again on the same thing steps its cards on; a card has but the one, so a second right click on a card shown large does nothing, a name on it excepted, and neither does a left click on it: a press beside it, or the back key, takes it down. A press beside the things, where no scrim stands, drops the inspection and leaves the selection standing. It does this in every state the screen can be in, so nothing half done has to be undone to inspect a thing.
+**The right click inspects and never selects.** It inspects the thing under it — a tile in the infopanel, a card shown large, a civilization's pile in its browse — and pressed again on the same thing steps its cards on; a card has but the one, so a second right click on a card shown large does nothing, a name on it excepted, and neither does a left click on it: a press beside it, or the back key, takes it down. A press beside the things, where no scrim stands, drops the inspection and leaves the selection standing. It does this in every state the screen can be in, so nothing half done has to be undone to inspect a thing.
 
 **A press on a scrim is one step back, and the two clicks are one press there.** It takes down the newest card shown large, then drops a window's own selection, then closes the window, as the back key does, and never raises the menu. The deal window is closed by no press: a press on its scrim drops its selection and no more.
 
@@ -48,7 +48,7 @@ Three presses work every screen: the **left click** selects, the **right click**
 
 The **back key** walks these back in this order: the thing shown large, the newest of them where several stand, then a window's own selection and then the window, then the inspection, then the selection.
 
-Two verbs cover it all. **Select** is the tile the map rings, the card lifted out of the hand, or the card ringed in a window; **inspect** is the tile in the infopanel and the card shown large. "Zoom" stays the map's word.
+Two verbs cover it all. **Select** is the tile the map rings, the card lifted out of the hand, or the card ringed in a window; **inspect** is the tile in the infopanel, the card shown large and the civilization's pile in its browse. "Zoom" stays the map's word.
 
 ## A card's names and its label ✅
 
@@ -56,7 +56,7 @@ Two verbs cover it all. **Select** is the tile the map rings, the card lifted ou
 
 **A right click on a name shows the named thing large**; while a card stands large, a right click on a name — on that card, or on a small card raised from it — stands the named thing over it, on top of the stack, a new copy whether or not it stands in it already. Each card beneath the newest peeks out by a thin band, up and to the left, and the stack stands centred as the one card does, so a deep one covers the resource bar; a stack holds twelve, and once twelve stand a right click on a name adds nothing, the rest on it still raising its small card. Only the newest card's names answer a press or a rest. A left click on a name is the card's own, and a small card answers the right click as the name that raised it does, and no other press.
 
-**A card's kind label answers the rest.** The pointer resting on the label at a card face's foot raises the one bubble of the surface the face stands on, beside the label, reading in one line what the kind is; the pointer leaving the label takes it down. Every card face answers so but a pile's top card on the chronicle screen — in the hand, in a browse, in the aim window, on the deal and capstone windows, on a pile of the launch screen, on a stack and on a pile of the collection screen, shown large and small alike — and the label answers no press of its own: a click on it is the card's.
+**A card's kind label answers the rest.** The pointer resting on the label at a card face's foot raises the one bubble of the surface the face stands on, beside the label, reading in one line what the kind is; the pointer leaving the label takes it down. Every card face answers so but a pile's top card on the chronicle screen — in the hand, in a browse, in the aim window, on the deal and capstone windows, on a pile of the launch screen, on a stack and on a pile of the collection screen, in a civilization's browse, shown large and small alike — and the label answers no press of its own: a click on it is the card's.
 
 ## What stands over what ✅
 

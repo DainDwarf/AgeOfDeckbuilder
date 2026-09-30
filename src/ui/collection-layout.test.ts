@@ -10,7 +10,15 @@ import {
 import { merged } from '../rules/catalogue';
 import { CATALOGUE, CIVILIZATION_ID, hoardedVictory, SLICES, twoAges } from '../rules/fixtures';
 import type { CardId } from '../rules/state';
-import { copiesIn, countsOf, deckRowsOf, heldIn, stacksOf, standingIn } from './collection-layout';
+import {
+  browseOf,
+  copiesIn,
+  countsOf,
+  deckRowsOf,
+  heldIn,
+  stacksOf,
+  standingIn,
+} from './collection-layout';
 
 /** The names the player reads the fixture's cards by, the test's own. */
 const NAMES: Readonly<Record<CardId, string>> = {
@@ -103,6 +111,24 @@ test('a civilization’s settle section and its deck each stand every card they 
       { id: 'PH_Claim', copies: 2 },
     ],
     cards: [
+      { id: 'PH_Worker', copies: 1 },
+      { id: 'PH_Farm', copies: 1 },
+      { id: 'PH_March', copies: 3 },
+    ],
+  });
+});
+
+test('a civilization’s browse stands its city section’s card first, once, then its settle section, then its deck, each in the collection’s order, and counts every card it holds', () => {
+  const catalogue = edited();
+
+  expect(
+    browseOf(catalogue, newCampaign(catalogue, CIVILIZATION_ID), CIVILIZATION_ID, nameOf),
+  ).toEqual({
+    count: 9,
+    stacks: [
+      { id: 'PH_Settle', copies: 1 },
+      { id: 'PH_Band', copies: 1 },
+      { id: 'PH_Claim', copies: 2 },
       { id: 'PH_Worker', copies: 1 },
       { id: 'PH_Farm', copies: 1 },
       { id: 'PH_March', copies: 3 },

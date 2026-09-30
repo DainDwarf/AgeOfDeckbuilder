@@ -1,8 +1,10 @@
 import { expect, type Page, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
+import { civilizationIn } from '../src/rules/campaign';
 import { cardOf } from '../src/rules/catalogue';
 import { freshCampaign } from '../src/rules/save';
-import { text } from '../src/ui/text';
+import { deckRowsOf } from '../src/ui/collection-layout';
+import { cardName, civilizationName, text } from '../src/ui/text';
 import type { Reference } from '../src/ui/text-run';
 import {
   cardOnFace,
@@ -10,18 +12,34 @@ import {
   nameOnScreen,
   onScreen,
   openLaunch,
+  placeOf,
   referenceOnFace,
   rested,
   standing,
+  textOf,
+  titleOf,
   tooltipText,
   tooltipUp,
   watch,
 } from './chronicle-screen';
 
+/** A new campaign, as the bare address with no save opens on. */
+const CAMPAIGN = freshCampaign(CATALOGUE);
+
 /** The civilization a new campaign owns first, and the card its city section holds. */
-const [[CIVILIZATION, OWNED]] = Object.entries(freshCampaign(CATALOGUE).civilizations);
+const [[CIVILIZATION, OWNED]] = Object.entries(CAMPAIGN.civilizations);
 const PILE = `launch-civilization-${CIVILIZATION}`;
 const CITY_CARD = `${PILE}-card`;
+
+const BROWSE = 'civilization-browse';
+
+/** Every card the civilization holds, the city section's card counted. */
+const HELD = civilizationIn(CATALOGUE, CAMPAIGN, CIVILIZATION);
+const CARDS = 1 + HELD.settle.length + HELD.cards.length;
+
+/** The browse's stacks: the city section's card, then each section in the collection's order. */
+const ROWS = deckRowsOf(CATALOGUE, CAMPAIGN, CIVILIZATION, cardName);
+const STACKS = [{ id: HELD.city.card, copies: 1 }, ...ROWS.settle, ...ROWS.cards];
 
 /** What the first name on the city card names, read off the face itself. */
 function firstNamed(page: Page): Promise<Reference | undefined> {
@@ -45,7 +63,7 @@ function chosen(page: Page): Promise<boolean> {
   return page.evaluate((target) => window.named?.(target)?.object.getData('chosen') === true, PILE);
 }
 
-test('on the launch screen the pointer resting on the civilization’s city card’s kind label raises what the kind is, a right click on the card shows it large, and the back key takes it down and raises no menu', async ({
+test('on the launch screen the kind label on the civilization’s pile raises what the kind is; a right click on the pile raises its browse, the civilization’s name and count over a stack per card it holds, the city section’s card first, each reading its copies; a right click on a stack shows its card large, the back key takes it down onto the browse, then closes the browse and raises no menu; a right click on a name on the pile shows the named thing large and raises no browse', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -61,13 +79,47 @@ test('on the launch screen the pointer resting on the civilization’s city card
 
   const card = await onScreen(page, CITY_CARD);
   await page.mouse.click(card.x, card.y, { button: 'right' });
+  await expect.poll(() => standing(page, BROWSE)).toBe(true);
+  await rested(page);
+  expect(await standing(page, 'inspection')).toBe(false);
+  expect(await titleOf(page, BROWSE)).toBe(
+    text('browse.civilization', { civilization: civilizationName(CIVILIZATION), count: CARDS }),
+  );
+  const placed: { x: number; y: number }[] = [];
+  for (const [at, { id, copies }] of STACKS.entries()) {
+    expect(await cardOnFace(page, `${BROWSE}-card-${at}`)).toBe(id);
+    expect(await textOf(page, `${BROWSE}-card-${at}-copies`)).toBe(
+      text('collection.row-copies', { copies }),
+    );
+    placed.push(await placeOf(page, `${BROWSE}-card-${at}`));
+  }
+  expect(await standing(page, `${BROWSE}-card-${STACKS.length}`)).toBe(false);
+  const read = placed.map((at, index) => ({ at, index }));
+  read.sort((a, b) => a.at.y - b.at.y || a.at.x - b.at.x);
+  expect(read.map(({ index }) => index)).toEqual(STACKS.map((_, index) => index));
+
+  const first = await onScreen(page, `${BROWSE}-card-0`);
+  await page.mouse.click(first.x, first.y, { button: 'right' });
   await expect.poll(() => cardOnFace(page, 'inspection')).toBe(OWNED.city.card.id);
   await rested(page);
 
   await page.keyboard.press('Escape');
   await expect.poll(() => standing(page, 'inspection')).toBe(false);
   await rested(page);
+  expect(await standing(page, BROWSE)).toBe(true);
+
+  await page.keyboard.press('Escape');
+  await expect.poll(() => standing(page, BROWSE)).toBe(false);
+  await rested(page);
   expect(await standing(page, 'menu')).toBe(false);
+
+  const named = await firstNamed(page);
+  expect(named).toBeDefined();
+  const name = await nameOnScreen(page, CITY_CARD);
+  await page.mouse.click(name.x, name.y, { button: 'right' });
+  await expect.poll(() => namedOn(page, 'inspection')).toEqual(named);
+  await rested(page);
+  expect(await standing(page, BROWSE)).toBe(false);
 
   expect(problems).toEqual([]);
 });

@@ -158,6 +158,7 @@ const TEXT = {
   'refusal.no-claim': 'The city cannot claim that tile',
   'browse.draw-pile': 'Draw pile — {count}',
   'browse.discard-pile': 'Discard pile — {count}',
+  'browse.civilization': '{civilization} — {count}',
   'menu.menu': 'Menu',
   'menu.settings': 'Settings',
   'menu.controls': 'Controls',

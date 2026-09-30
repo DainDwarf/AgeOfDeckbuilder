@@ -7,7 +7,7 @@ import { countsOf } from './collection-layout';
 import { addText, type Box, UI_FONT } from './design-space';
 import { cardFaceAtStart } from './face';
 import { css, LOOK } from './look';
-import { type Answers, answersOf, type Inspecting } from './stack';
+import { type Answers, answersAround, type Inspecting } from './stack';
 import { text } from './text';
 
 const PILE_WIDTH = 100;
@@ -31,7 +31,7 @@ export type Pile = {
   readonly parts: readonly Phaser.GameObjects.GameObject[];
   /** Over the whole pile and its counts. */
   readonly box: Box;
-  /** What the pile answers the rest and the right click with, on its card. */
+  /** What the pile answers the rest and the right click with, over its whole box. */
   readonly answers: Answers;
   /** Where its counts end. */
   readonly bottom: number;
@@ -39,8 +39,8 @@ export type Pile = {
 
 /**
  * A civilization's pile from the left and the top handed: card backs under its city section's card,
- * face up, raised in a pale edge where it is chosen, and under them the count of its cards over the
- * count of its settle cards, the city section's card among them.
+ * face up, raised in a pale edge where it is chosen, and under them its counts. A right click on it
+ * runs `browse`, a name on its card excepted.
  */
 export function createPile(
   scene: Phaser.Scene,
@@ -49,6 +49,7 @@ export function createPile(
   { left, top, chosen }: { left: number; top: number; chosen: boolean },
   inspecting: Inspecting,
   name: string,
+  browse: () => void,
 ): Pile {
   const { height, radius } = metricsOf(PILE_WIDTH);
   const x = left + PILE_WIDTH / 2;
@@ -88,7 +89,7 @@ export function createPile(
   return {
     parts: [...backs, face, ...edge, counts],
     box: bounds,
-    answers: answersOf(card, shown, inspecting),
+    answers: answersAround(card, shown, inspecting, browse),
     bottom: bounds.bottom,
   };
 }

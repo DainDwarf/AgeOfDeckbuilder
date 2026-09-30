@@ -3,7 +3,7 @@ import { CATALOGUE } from '../src/content/catalogue';
 import { bought, priceOf, unaffordableIn } from '../src/rules/campaign';
 import { freshCampaign } from '../src/rules/save';
 import { stacksOf } from '../src/ui/collection-layout';
-import { cardName, text } from '../src/ui/text';
+import { cardName, civilizationName, text } from '../src/ui/text';
 import {
   cardOnFace,
   counted,
@@ -16,9 +16,13 @@ import {
   rested,
   standing,
   textOf,
+  titleOf,
   watch,
   wonCampaign,
 } from './chronicle-screen';
+
+/** The browse a right click on a pile raises. */
+const BROWSE = 'civilization-browse';
 
 /** The cursor over something that answers a left click or a rest. */
 const HAND = 'pointer';
@@ -124,6 +128,35 @@ test('on a campaign a won chronicle paid into, a press on the price of an afford
   await rested(page);
   expect(await textOf(page, 'reading-influence-value')).toBe(String(after.influence));
   expect((await heldSave(page)).campaign).toEqual(after);
+
+  expect(problems).toEqual([]);
+});
+
+test('in the collection mode a right click on a civilization’s pile, on its counts, raises its browse and opens no deck editing mode, and the back key closes the browse onto the collection mode and raises no menu', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  await openCollection(page);
+  const [[civilization, owned]] = Object.entries(CAMPAIGN.civilizations);
+
+  const counts = await onScreen(page, `collection-civilization-${civilization}-counts`);
+  await page.mouse.click(counts.x, counts.y, { button: 'right' });
+  await expect.poll(() => standing(page, BROWSE)).toBe(true);
+  await rested(page);
+  expect(await titleOf(page, BROWSE)).toBe(
+    text('browse.civilization', {
+      civilization: civilizationName(civilization),
+      count: 1 + owned.settle.length + owned.cards.length,
+    }),
+  );
+  expect(await cardOnFace(page, `${BROWSE}-card-0`)).toBe(owned.city.card.id);
+  expect(await standing(page, 'deck-editing-mode')).toBe(false);
+
+  await page.keyboard.press('Escape');
+  await expect.poll(() => standing(page, BROWSE)).toBe(false);
+  await rested(page);
+  expect(await standing(page, 'collection-mode')).toBe(true);
+  expect(await standing(page, 'menu')).toBe(false);
 
   expect(problems).toEqual([]);
 });

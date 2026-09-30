@@ -1,10 +1,10 @@
 import type Phaser from 'phaser';
 import type { Catalogue } from '../rules/catalogue';
 import { NO_REFUSAL } from '../rules/state';
-import { createCardFace, drawCardSurface, heightOf } from './card-face';
+import { type CardFace, createCardFace, drawCardSurface, heightOf } from './card-face';
 import type { CollectionStack } from './collection-layout';
 import { addText, type Box, ownBoxOf, UI_FONT } from './design-space';
-import { cardFaceAtStart } from './face';
+import { cardFaceAtStart, type Face } from './face';
 import { css, LOOK, overPage } from './look';
 import type { Filled, Held } from './panel';
 import { chipAt } from './resource-bar';
@@ -15,7 +15,7 @@ import { text } from './text';
 export const CARD_WIDTH = 110;
 const UNDER_MOST = 3;
 const UNDER_STEP = 4;
-const STACK_WIDTH = CARD_WIDTH + UNDER_MOST * UNDER_STEP;
+const UNDER_REACH = UNDER_MOST * UNDER_STEP;
 const STACKS_APART = 10;
 const LINES_APART = 18;
 const COPIES_GAP = 6;
@@ -59,15 +59,23 @@ const ANSWERS_NOTHING: Answers = {
   inspect() {},
 };
 
-/** How wide this many stacks stand side by side. */
-export function spanOf(across: number): number {
-  return across * STACK_WIDTH + (across - 1) * STACKS_APART;
+/** How wide this many stacks of faces this wide stand side by side. */
+export function spanOf(across: number, card = CARD_WIDTH): number {
+  return across * (card + UNDER_REACH) + (across - 1) * STACKS_APART;
 }
 
-/** The cells `across` to a line from the left and the top handed, each line under the foot of the one before. */
+/**
+ * The cells of stacks of faces `card` wide, `across` to a line from the left and the top handed,
+ * each line under the foot of the one before.
+ */
 export function linesOf(
   cells: readonly Cell[],
-  { left, top, across }: { left: number; top: number; across: number },
+  {
+    left,
+    top,
+    across,
+    card = CARD_WIDTH,
+  }: { left: number; top: number; across: number; card?: number },
 ): Filled {
   const parts: Phaser.GameObjects.GameObject[] = [];
   const held: Held[] = [];
@@ -75,7 +83,10 @@ export function linesOf(
   let foot = top;
   for (let from = 0; from < cells.length; from += across) {
     for (const [column, cell] of cells.slice(from, from + across).entries()) {
-      const drawn = cell({ left: left + column * (STACK_WIDTH + STACKS_APART), top: lineTop });
+      const drawn = cell({
+        left: left + column * (card + UNDER_REACH + STACKS_APART),
+        top: lineTop,
+      });
       parts.push(...drawn.parts);
       held.push(...drawn.held);
       foot = Math.max(foot, drawn.bottom);
@@ -103,14 +114,74 @@ export type LaidStack = {
 };
 
 /**
- * One stack, its parts named from `name`: a card under its face for each copy past the first, three
- * at most, stepped right and down, and its reading under them.
+ * A stack's cards laid: the cards under its face, its face drawn, the box they cover together, and
+ * where a stack of the most copies would end, whatever this one holds.
  */
-export function stackOf(
+export type StackedCards = {
+  readonly unders: readonly Phaser.GameObjects.Graphics[];
+  readonly card: CardFace;
+  readonly shown: Face;
+  readonly box: Box;
+  readonly foot: number;
+};
+
+/**
+ * A stack's cards from the left and the top handed, its face `width` wide and named `name`: a card
+ * under its face for each copy past the first, three at most, stepped right and down.
+ */
+export function stackedCardsOf(
   scene: Phaser.Scene,
   catalogue: Catalogue,
   {
     stack: { id, copies },
+    left,
+    top,
+    width,
+    name,
+    tone = (colour: number): number => colour,
+  }: {
+    readonly stack: CollectionStack;
+    readonly left: number;
+    readonly top: number;
+    readonly width: number;
+    readonly name: string;
+    readonly tone?: (colour: number) => number;
+  },
+): StackedCards {
+  const height = heightOf(width);
+  const under = Math.min(copies - 1, UNDER_MOST);
+  const unders = Array.from({ length: under }, (_, at) => {
+    const step = (under - at) * UNDER_STEP;
+    const surface = scene.add.graphics();
+    drawCardSurface(surface, left + step, top + step, {
+      width,
+      face: tone(LOOK.affordableCard.face),
+      edge: tone(LOOK.cardEdge),
+    });
+    return surface;
+  });
+  const shown = cardFaceAtStart(catalogue, id);
+  const card = createCardFace(scene, shown, NO_REFUSAL, { width, tone });
+  card.root
+    .setPosition(left + width / 2, top + height)
+    .setName(name)
+    .setData('card', id);
+  const reach = under * UNDER_STEP;
+  return {
+    unders,
+    card,
+    shown,
+    box: { x: left, y: top, width: width + reach, height: height + reach },
+    foot: top + height + UNDER_REACH,
+  };
+}
+
+/** One stack, its parts named from `name`, its reading under its cards. */
+export function stackOf(
+  scene: Phaser.Scene,
+  catalogue: Catalogue,
+  {
+    stack,
     left,
     top,
     name,
@@ -125,41 +196,31 @@ export function stackOf(
     readonly inspecting: Inspecting;
   },
 ): LaidStack {
-  const tone = reading.dimmed ? dimmed : (colour: number): number => colour;
-  const height = heightOf(CARD_WIDTH);
-  const under = Math.min(copies - 1, UNDER_MOST);
-  const unders = Array.from({ length: under }, (_, at) => {
-    const step = (under - at) * UNDER_STEP;
-    const surface = scene.add.graphics();
-    drawCardSurface(surface, left + step, top + step, {
-      width: CARD_WIDTH,
-      face: tone(LOOK.affordableCard.face),
-      edge: tone(LOOK.cardEdge),
-    });
-    return surface;
+  const { id } = stack;
+  const { unders, card, shown, foot } = stackedCardsOf(scene, catalogue, {
+    stack,
+    left,
+    top,
+    width: CARD_WIDTH,
+    name: `${name}-card-${id}`,
+    tone: reading.dimmed ? dimmed : undefined,
   });
-  const shown = cardFaceAtStart(catalogue, id);
-  const card = createCardFace(scene, shown, NO_REFUSAL, { width: CARD_WIDTH, tone });
-  const face = card.root
-    .setPosition(left + CARD_WIDTH / 2, top + height)
-    .setName(`${name}-card-${id}`)
-    .setData('card', id);
-  const lineTop = top + height + UNDER_MOST * UNDER_STEP + COPIES_GAP;
+  const lineTop = foot + COPIES_GAP;
   const middle = lineTop + LINE_HEIGHT / 2;
   const count = addText(scene, left, middle, reading.reads, COPIES_STYLE)
     .setOrigin(0, 0.5)
     .setName(`${name}-card-${id}-copies`);
   return {
     root: scene.add
-      .container(0, 0, [...unders, face, count])
+      .container(0, 0, [...unders, card.root, count])
       .setName(`${name}-stack-${id}`)
       .setData('dimmed', reading.dimmed),
     face: {
-      box: { x: left, y: top, width: CARD_WIDTH, height },
+      box: { x: left, y: top, width: CARD_WIDTH, height: heightOf(CARD_WIDTH) },
       answers: answersOf(card, shown, inspecting),
     },
     reading: count,
-    line: { top: lineTop, middle, left, right: left + STACK_WIDTH },
+    line: { top: lineTop, middle, left, right: left + CARD_WIDTH + UNDER_REACH },
     bottom: lineTop + LINE_HEIGHT,
   };
 }

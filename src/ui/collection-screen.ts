@@ -12,6 +12,7 @@ import {
 import type { Catalogue } from '../rules/catalogue';
 import { type CardId, NO_REFUSAL } from '../rules/state';
 import { createCardFace, createKindBubble, metricsOf } from './card-face';
+import { standBrowse } from './civilization-browse';
 import { createPile, PILE_SPAN } from './civilization-pile';
 import {
   type CollectionStack,
@@ -57,7 +58,7 @@ import { overlayOf } from './overlay-scene';
 import { createCarrier, createPanel, type Filled, type Held, type Panel } from './panel';
 import { campaignHeld, keepCampaign } from './save-entry';
 import { createSmallCards } from './small-card';
-import { type Inspecting, standLarge } from './stack';
+import type { Inspecting } from './stack';
 import { cardName, civilizationName, text } from './text';
 
 const PANE_TOP = ROOM.y + MARGIN;
@@ -171,14 +172,18 @@ function collectionOf(
 
 /**
  * The campaign's civilizations top down from the top handed, each its pile, centred in the right
- * panel from its left handed; a press on a pile opens its civilization.
+ * panel from its left handed; a press on a pile opens its civilization, a right click raises its
+ * browse.
  */
 function civilizationsOf(
   scene: Phaser.Scene,
   catalogue: Catalogue,
   civilizations: Readonly<Record<string, CampaignCivilization>>,
   { top, frame }: { top: number; frame: Box },
-  open: (civilization: string) => void,
+  {
+    open,
+    browse,
+  }: { open: (civilization: string) => void; browse: (civilization: string) => void },
   inspecting: Inspecting,
 ): Filled {
   const left = frame.x + (frame.width - PILE_SPAN) / 2;
@@ -195,6 +200,9 @@ function civilizationsOf(
       { left, top: pileTop, chosen: false },
       inspecting,
       name,
+      () => {
+        browse(id);
+      },
     );
     parts.push(scene.add.container(0, 0, [...pile.parts]).setName(name));
     held.push({ box: pile.box, answers: pile.answers, press: () => open(id) });
@@ -245,14 +253,9 @@ export class CollectionScreen extends Phaser.Scene {
     backRaisesMenu(this);
     const away = awayUnder(this);
     const overlay = overlayOf(this);
-    const large = standLarge(
-      overlay,
-      CATALOGUE,
-      (up) => {
-        away('overlay', up);
-      },
-      () => false,
-    );
+    const { large, open: browse } = standBrowse(overlay, CATALOGUE, (up) => {
+      away('overlay', up);
+    });
     resetMenu(this, (under) => {
       away('menu', under);
       if (under) overlay.input.emit(COVERED);
@@ -379,8 +382,13 @@ export class CollectionScreen extends Phaser.Scene {
                     CATALOGUE,
                     campaign.civilizations,
                     { top, frame },
-                    (civilization) => {
-                      lay({ shows: 'deck editing', civilization });
+                    {
+                      open: (civilization) => {
+                        lay({ shows: 'deck editing', civilization });
+                      },
+                      browse: (civilization) => {
+                        browse(campaignHeld(), civilization);
+                      },
                     },
                     inspecting,
                   ),

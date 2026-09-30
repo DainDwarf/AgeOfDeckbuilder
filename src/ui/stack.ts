@@ -159,37 +159,52 @@ export type ShownLarge = {
 };
 
 /**
- * The stack of cards shown large on a scrim of the overlay's over the whole screen, for a screen of
- * the meta: a press on the scrim and the back key walk it down, and while a card stands the screen
- * under it hears no key and no mouse key but those `passes` lets through.
+ * A window a screen of the meta stands on the overlay's scrim stratum, under its cards shown large,
+ * the overlay's one kind bubble shared with them.
+ */
+export type Beneath = {
+  readonly kinds: KindBubble;
+  readonly standing: boolean;
+  /** Whether it takes a key or a mouse key pressed while it stands and no card stands large. */
+  takes(press: Bind): boolean;
+};
+
+/**
+ * The stack of cards shown large on a scrim of the overlay's over the whole screen and the window
+ * beneath, walked down by a press on the scrim and the back key; the screen hears no key but those
+ * `passes` lets through while a card stands, and `covering` says it is covered while either stands.
  */
 export function standLarge(
   overlay: OverlayScene,
   catalogue: Catalogue,
   covering: (covered: boolean) => void,
   passes: (press: Bind) => boolean,
+  beneath: Beneath = {
+    kinds: createKindBubble(createTooltip(overlay, overlay.strata.tooltip)),
+    standing: false,
+    takes: () => false,
+  },
 ): ShownLarge {
   const scrim = overlay.add
     .rectangle(0, 0, DESIGN_WIDTH, DESIGN_HEIGHT, LOOK.scrim.colour, LOOK.scrim.strength)
     .setOrigin(0, 0)
-    .setVisible(false);
+    .setVisible(false)
+    // A Layer draws its children by depth, then in the order added (phaser/src/gameobjects/layer/
+    // LayerWebGLRenderer.js:39, Layer.js:296-320), and the window beneath lays its pieces here later.
+    .setDepth(1);
   overlay.strata.scrim.layer.add(scrim);
-  const stack = createStack(
-    overlay,
-    catalogue,
-    createKindBubble(createTooltip(overlay, overlay.strata.tooltip)),
-  );
+  const stack = createStack(overlay, catalogue, beneath.kinds);
 
   const takeDownNewest = (): void => {
     if (stack.takeDownNewest()) return;
     scrim.setVisible(false).disableInteractive();
-    covering(false);
+    if (!beneath.standing) covering(false);
   };
   onClick(scrim, takeDownNewest);
   onClick(scrim, takeDownNewest, 'right');
 
   overlay.takes((press) => {
-    if (!stack.standing) return false;
+    if (!stack.standing) return beneath.standing && beneath.takes(press);
     if (boundTo(press, 'back')) takeDownNewest();
     return !passes(press);
   });
@@ -259,6 +274,28 @@ export function answersOf(
         return;
       }
       if (card.cardAt(at.x, at.y)) large.show(shown);
+    },
+  };
+}
+
+/**
+ * The face's answers, a right click off its names doing what `elsewhere` does wherever it lands, on
+ * the face and around it.
+ */
+export function answersAround(
+  card: CardFace,
+  shown: Face,
+  inspecting: Inspecting,
+  elsewhere: () => void,
+): Answers {
+  const { point, rests } = answersOf(card, shown, inspecting);
+  return {
+    point,
+    rests,
+    inspect(at) {
+      const named = card.nameAt(at.x, at.y);
+      if (named === undefined) elsewhere();
+      else inspecting.large.named(named);
     },
   };
 }

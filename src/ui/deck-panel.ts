@@ -159,7 +159,11 @@ function sectionOf(
 }
 
 /** The pale edge around the city section's card, standing in the box at the roundness handed. */
-function cityEdgeOf(scene: Phaser.Scene, box: Box, radius: number): Phaser.GameObjects.Graphics {
+export function cityEdgeOf(
+  scene: Phaser.Scene,
+  box: Box,
+  radius: number,
+): Phaser.GameObjects.Graphics {
   const off = CITY_EDGE_OFF + CITY_EDGE / 2;
   return scene.add
     .graphics()

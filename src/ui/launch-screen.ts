@@ -6,6 +6,7 @@ import { biomeKind } from '../rules/map-kinds';
 import { type Chronicle, onSettlePhase } from '../rules/state';
 import { createKindBubble } from './card-face';
 import { openChronicle } from './chronicle-scene';
+import { standBrowse } from './civilization-browse';
 import { createPile } from './civilization-pile';
 import { offerEntries } from './debug-console';
 import {
@@ -29,7 +30,7 @@ import { ROOM, wearNavbar } from './navbar';
 import { overlayOf } from './overlay-scene';
 import { type Choices, campaignHeld, type Opening, savedOpening } from './save-entry';
 import { createSmallCards } from './small-card';
-import { type Inspecting, inspectedThrough, standLarge } from './stack';
+import { type Inspecting, inspectedThrough } from './stack';
 import { ageName, regionName, type TextKey, technologyName, text } from './text';
 
 const LEFT = ROOM.x + MARGIN;
@@ -204,13 +205,14 @@ function regionsOf(
   });
 }
 
-/** The campaign's civilizations in a row, each its pile. */
+/** The campaign's civilizations in a row, each its pile, a right click on it raising its browse. */
 function pilesOf(
   scene: Phaser.Scene,
   catalogue: Catalogue,
   civilizations: Readonly<Record<string, CampaignCivilization>>,
   civilization: string,
   inspecting: Inspecting,
+  browse: (civilization: string) => void,
 ): Choice[] {
   return Object.entries(civilizations).map(([id, owned], at): Choice => {
     const chosen = id === civilization;
@@ -221,6 +223,9 @@ function pilesOf(
       { left: PILE_FIRST + at * PILE_APART, top: PILE_TOP, chosen },
       inspecting,
       `launch-civilization-${id}`,
+      () => {
+        browse(id);
+      },
     );
     const zone = inspectedThrough(scene, pile.box, pile.answers, inspecting.on);
     return { row: 'civilization', option: id, chosen, parts: [...pile.parts, zone], hits: [zone] };
@@ -239,14 +244,9 @@ export class LaunchScreen extends Phaser.Scene {
     backRaisesMenu(this);
     const away = awayUnder(this);
     const overlay = overlayOf(this);
-    const large = standLarge(
-      overlay,
-      CATALOGUE,
-      (up) => {
-        away('overlay', up);
-      },
-      () => false,
-    );
+    const { large, open: browse } = standBrowse(overlay, CATALOGUE, (up) => {
+      away('overlay', up);
+    });
     resetMenu(this, (under) => {
       away('menu', under);
       if (under) overlay.input.emit(COVERED);
@@ -334,9 +334,16 @@ export class LaunchScreen extends Phaser.Scene {
         word('launch.region', 222),
         ...regionsOf(this, CATALOGUE, chosen.age, chosen.region).map(drawn),
         word('launch.civilization', 450),
-        ...pilesOf(this, CATALOGUE, campaign.civilizations, chosen.civilization, inspecting).map(
-          drawn,
-        ),
+        ...pilesOf(
+          this,
+          CATALOGUE,
+          campaign.civilizations,
+          chosen.civilization,
+          inspecting,
+          (civilization) => {
+            browse(campaignHeld(), civilization);
+          },
+        ).map(drawn),
         ...buttonsOf(this, CATALOGUE, open, () => chosen),
       ]);
     };

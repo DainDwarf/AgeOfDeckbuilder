@@ -86,6 +86,22 @@ export type Overlay = {
   play(stage: Stage): Promise<void> | undefined;
 };
 
+/** The heading a window's cards stand under, named after the window it heads. */
+export function headingOf(
+  scene: Phaser.Scene,
+  name: string,
+  heading: string,
+): Phaser.GameObjects.Text {
+  return addText(scene, DESIGN_WIDTH / 2, BAR_HEIGHT + MARGIN, heading, {
+    fontFamily: UI_FONT,
+    fontSize: '26px',
+    fontStyle: 'bold',
+    color: TITLE_INK,
+  })
+    .setName(`${name}-title`)
+    .setOrigin(0.5, 0);
+}
+
 /**
  * One face offered on the scrim, what the entry costs the city — which its note says, whether or not
  * the face wears a chip for it — what it is drawn refused by, and the number a press on it answers by.
@@ -338,17 +354,8 @@ export function createOverlay(
    * The heading a window's cards stand under, named after the window it heads; the caller stands
    * whatever else belongs beside it.
    */
-  const raiseTitle = (name: string, heading: string): Phaser.GameObjects.Text => {
-    const title = addText(scene, DESIGN_WIDTH / 2, BAR_HEIGHT + MARGIN, heading, {
-      fontFamily: UI_FONT,
-      fontSize: '26px',
-      fontStyle: 'bold',
-      color: TITLE_INK,
-    })
-      .setName(`${name}-title`)
-      .setOrigin(0.5, 0);
-    return carries(title);
-  };
+  const raiseTitle = (name: string, heading: string): Phaser.GameObjects.Text =>
+    carries(headingOf(scene, name, heading));
 
   /** A window's lore, named after the window it stands in, just over the row its grid laid. */
   const raiseLore = (name: string, lore: string, laid: Grid): void => {

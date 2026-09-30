@@ -150,8 +150,15 @@ export type Filled = {
   readonly foot: number;
 };
 
-/** What a panel is made of: its name, the frame it is cut at, and what it holds. */
-export type PanelOf = { readonly name: string; readonly frame: Box } & Filled;
+/**
+ * What a panel is made of: its name, the frame it is cut at, what it holds, and what a press of
+ * either button beside what it holds does, where it does anything.
+ */
+export type PanelOf = {
+  readonly name: string;
+  readonly frame: Box;
+  readonly beside?: () => void;
+} & Filled;
 
 /** A panel standing on its screen. */
 export type Panel = {
@@ -169,7 +176,7 @@ export type Panel = {
 export function createPanel(
   scene: Phaser.Scene,
   on: Stratum,
-  { name, frame, parts, held, foot }: PanelOf,
+  { name, frame, parts, held, foot, beside }: PanelOf,
   follow: () => void,
   carrier: Carrier,
   offset = 0,
@@ -260,13 +267,17 @@ export function createPanel(
     zone,
     (pointer) => {
       const at = on.at(pointer.x, pointer.y);
-      heldAt(frame, scroll.offset, held, at.x, at.y)?.answers.inspect(at);
+      const under = heldAt(frame, scroll.offset, held, at.x, at.y);
+      if (under === undefined) beside?.();
+      else under.answers.inspect(at);
     },
     'right',
   );
   onClick(zone, (pointer) => {
     const at = on.at(pointer.x, pointer.y);
-    heldAt(frame, scroll.offset, held, at.x, at.y)?.press?.();
+    const under = heldAt(frame, scroll.offset, held, at.x, at.y);
+    if (under === undefined) beside?.();
+    else under.press?.();
   });
 
   const step = (_time: number, delta: number): void => {
