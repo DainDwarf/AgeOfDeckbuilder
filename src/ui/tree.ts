@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { type Achievement, type Catalogue, technologyOf } from '../rules/catalogue';
-import { type Bind, bindings, boundTo, type Control, type Press, pressOf } from './bindings';
+import { bindings, type Control, type Press, pressOf } from './bindings';
 import { createKindBubble, type Name } from './card-face';
 import {
   addText,
@@ -13,7 +13,7 @@ import {
   UI_FONT,
   whileUp,
 } from './design-space';
-import { isWheelNotch, onKeyDown, onKeyUp } from './keys';
+import { onKeyDown, onKeyUp } from './keys';
 import { css, LOOK } from './look';
 import { groundColourOf } from './marks';
 import { ROOM, type Worn } from './navbar';
@@ -60,11 +60,6 @@ const PANS: readonly { control: Control; way: number }[] = [
   { control: 'pan-left', way: -1 },
   { control: 'pan-right', way: 1 },
 ];
-
-/** Whether the press is one of the two keys that move the tree. */
-export function movesTree(press: Bind): boolean {
-  return PANS.some(({ control }) => boundTo(press, control));
-}
 
 /** One line of a reward: an entry read as a run, or the influence the achievement pays. */
 type RewardLine =
@@ -147,7 +142,7 @@ function addRun(scene: Phaser.Scene, entry: string): { label: Phaser.GameObjects
 }
 
 export type TreeView = {
-  /** A window of the menu or the refused-save window risen over the screen, or the last fallen. */
+  /** A scrim risen over the screen, or the last fallen. */
   cover(under: boolean): void;
 };
 
@@ -418,7 +413,6 @@ export function createTree(
   const tapped = new Set<string>();
   let covered = false;
   onKeyDown(scene, (press) => {
-    if (isWheelNotch(press)) return;
     held.add(press.code);
     tapped.add(press.code);
   });

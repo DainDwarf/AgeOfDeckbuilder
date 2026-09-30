@@ -6,7 +6,6 @@ import { offered } from '../src/rules/schedule';
 import { inSight } from '../src/rules/sight';
 import { walked } from '../src/rules/stages';
 import type { Chronicle } from '../src/rules/state';
-import { bound, DEFAULTS } from '../src/ui/bindings';
 import {
   budget,
   firstSeed,
@@ -14,10 +13,10 @@ import {
   mapFrame,
   onScreen,
   openSaved,
-  plantControls,
   rested,
   settledOn,
   standing,
+  stoppedTurn,
   take,
   tileOnScreen,
   watch,
@@ -27,21 +26,21 @@ import {
 const HERD = 'herd';
 const FOLLOW = 'follow-it';
 
-/** The key the spec binds to the zoom-in's empty second slot, by its place. */
-const ZOOM_KEY = { code: 'KeyZ', press: 'z' };
-
 /**
- * The first seed whose first deal stands alone and deals the herd, and whose follow-it charts a tile
- * the map does not draw on the chronicle the deal stands on: that chronicle, its turns ended with
- * nothing to take before the deal, the place follow-it stands in the deal, and the tile.
+ * The first seed whose first deal stands alone, deals the herd, and has follow-it chart a tile the
+ * map does not draw under the deal: the chronicle whose end of turn deals it, the turns before it
+ * ended with nothing to take, where follow-it stands in the deal, and the tile.
  */
-function herdDealt(): { dealt: Chronicle; at: number; tile: TileCoords } {
+function herdDealt(): { before: Chronicle; at: number; tile: TileCoords } {
   const turns = 20;
-  const complaint = `deals the herd alone as its first deal within ${turns} ended turns, its follow-it charting a tile the map does not draw`;
+  const complaint = `deals the herd alone as its first deal at one of ${turns} ended turns, its follow-it charting a tile the map does not draw`;
   return firstSeed(complaint, (seed) => {
-    let dealt = settledOn(seed);
+    let before = settledOn(seed);
+    if (before.deals.length > 0) return undefined;
+    let dealt = before;
     for (let turn = 0; turn < turns && dealt.deals.length === 0; turn++) {
       if (dealt.ending !== undefined) return undefined;
+      before = dealt;
       dealt = outcome(apply(CATALOGUE, dealt, { type: 'end-turn' }));
     }
     const [deal, ...behind] = dealt.deals;
@@ -55,7 +54,7 @@ function herdDealt(): { dealt: Chronicle; at: number; tile: TileCoords } {
     const key = tileKey(tile);
     const drawn =
       inSight(CATALOGUE, dealt).has(key) || dealt.snapshots.some((kept) => tileKey(kept) === key);
-    return drawn ? undefined : { dealt, at, tile };
+    return drawn ? undefined : { before, at, tile };
   });
 }
 
@@ -84,29 +83,31 @@ async function pushOut(page: Page, coord: TileCoords): Promise<void> {
   }
 }
 
-test("an answer's charted tile, pushed out of the frame under the deal window, is brought into it and drawn", async ({
+test("an answer's charted tile, out of the frame under the deal window, is brought into it and drawn", async ({
   page,
 }) => {
   const problems = watch(page);
-  // The take plays the rest of the end of turn out.
-  test.setTimeout(budget(1));
+  // The end of turn stops on the deal, and the take plays the rest of it out.
+  test.setTimeout(budget(2));
   const run = herdDealt();
   const key = tileKey(run.tile);
 
-  await plantControls(page, bound(DEFAULTS, 'zoom-in', 1, { code: ZOOM_KEY.code }));
-  await openSaved(page, run.dealt);
-  await expect.poll(() => standing(page, 'deal')).toBe(true);
+  await openSaved(page, run.before);
   await rested(page);
 
-  // A tile near the middle of the disc leaves a frame at full width only zoomed in.
+  // A tile near the middle of the disc leaves a frame at full width only zoomed in, and under the
+  // deal window the map hears no key: it is zoomed and panned before the turn ends.
   const frame = await mapFrame(page);
   const unzoomed = await tileOnScreen(page, run.tile);
   await page.mouse.move(frame.x + frame.width / 2, frame.y + frame.height / 2);
-  for (let notch = 0; notch < 2; notch++) await page.keyboard.press(ZOOM_KEY.press);
+  for (let notch = 0; notch < 2; notch++) await page.keyboard.press('=');
   await rested(page);
   expect((await tileOnScreen(page, run.tile)).unit).toBeGreaterThan(unzoomed.unit);
 
   await pushOut(page, run.tile);
+  await stoppedTurn(page);
+  await expect.poll(() => standing(page, 'deal')).toBe(true);
+  await rested(page);
   expect(inside(await tileOnScreen(page, run.tile), frame)).toBe(false);
   expect(await standing(page, `tile-${key}`)).toBe(false);
   expect(await standing(page, `feature-${key}`)).toBe(false);

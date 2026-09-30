@@ -35,7 +35,6 @@ import {
   whileUp,
 } from './design-space';
 import { answerFace, capstoneFace, cardFace, cardFaceAtStart, type Face } from './face';
-import { isWheelNotch } from './keys';
 import { LOOK } from './look';
 import { campLore, capstoneLore, eventLore, type Raising } from './lore';
 import { BUTTON_HEIGHT, createButton } from './menu';
@@ -216,18 +215,10 @@ export function createOverlay(
     moved = true;
   });
 
-  /** Whether a press is the scrim's while anything stands on it: every other key passes to the screen. */
-  const holds = (press: Bind): boolean =>
-    isWheelNotch(press) ||
-    boundTo(press, 'city') ||
-    boundTo(press, 'yields') ||
-    boundTo(press, 'inspect') ||
-    boundTo(press, 'back');
-
   /** The cards shown large, over whatever stands on the scrim as it stood, or over nothing. */
   // The overlay holds one taker, and this is it: `takes` hears the keys of every window, the deal,
   // the aim window, the capstone's and the ending screen, only as the `Beneath` handed here.
-  const large = standLarge(scene, catalogue, covering, (press) => !holds(press), {
+  const large = standLarge(scene, catalogue, covering, {
     kinds,
     get standing() {
       return carried !== undefined;
@@ -813,14 +804,12 @@ export function createOverlay(
   onClick(scrim, back, 'right');
 
   /**
-   * The presses the scrim holds while anything stands on it and no card stands large over it: the
-   * city key and the yield key are swallowed, the inspection key shows a ringed card large, the back
-   * key walks what stands back and raises the menu where it has nothing left to walk.
+   * Every press the scrim holds while anything stands on it and no card stands large over it: the
+   * inspection key shows a ringed card large, the back key walks what stands back and raises the
+   * menu where it has nothing left to walk, and every other key is swallowed.
    */
   const takes = (press: Bind): boolean => {
-    if (carried === undefined || !holds(press)) return false;
-    // What scrolls a standing grid or a browse is Phaser's own wheel, and never this press.
-    if (isWheelNotch(press)) return true;
+    if (carried === undefined) return false;
     if (boundTo(press, 'inspect')) inspectSelection();
     else if (boundTo(press, 'back') && !back()) raiseMenu(scene);
     return true;

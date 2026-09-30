@@ -1,6 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
 import {
   bareTile,
+  browse,
   click,
   onScreen,
   openSaved,
@@ -24,8 +25,8 @@ const AS_FOUND = [
   ['A', '←'],
   ['S', '↓'],
   ['D', '→'],
-  ['Wheel up', '—'],
-  ['Wheel down', '—'],
+  ['=', '—'],
+  ['-', '—'],
   ['C', '—'],
   ['Tab', '—'],
   ['I', '—'],
@@ -45,7 +46,7 @@ const LISTED = [
   'back',
 ];
 
-/** What one press of a zoom key multiplies the map's size by. */
+/** What one notch of zoom multiplies the map's size by, a press of a zoom key or of the wheel. */
 const NOTCH = 1.3;
 
 /** What one slot of the Controls window reads. */
@@ -424,46 +425,62 @@ test('a slot takes a mouse button, and the button then pans the way a key does',
   expect(problems).toEqual([]);
 });
 
-test('a key bound to a zoom zooms the map, and the wheel moved off it stops zooming', async ({
+test('the zooms stand on = and -, the wheel zooms beside them, and a slot listening takes no notch', async ({
   page,
 }) => {
   const problems = watch(page);
 
   await openSaved(page, OPENED);
-  await intoControls(page);
 
+  expect(await grewBy(page, () => page.keyboard.press('='))).toBeCloseTo(NOTCH, 2);
+  expect(await grewBy(page, () => page.keyboard.press('-'))).toBeCloseTo(1 / NOTCH, 2);
+  expect(await grewBy(page, () => page.mouse.wheel(0, -100))).toBeCloseTo(NOTCH, 2);
+
+  await intoControls(page);
   await click(page, 'controls-zoom-in-1');
+  await expect.poll(() => slotReads(page, 'zoom-in', 1)).toBe('Press a key');
+
+  const slot = await onScreen(page, 'controls-zoom-in-1');
+  await page.mouse.move(slot.x, slot.y);
+  await page.mouse.wheel(0, -100);
+  await rested(page);
+  await rested(page);
+  expect(await slotReads(page, 'zoom-in', 1)).toBe('Press a key');
+
   await page.keyboard.press('e');
   await expect.poll(() => slotReads(page, 'zoom-in', 1)).toBe('E');
+  expect(await slotReads(page, 'zoom-in', 0)).toBe('=');
   await outOfControls(page);
 
   expect(await grewBy(page, () => page.keyboard.press('e'))).toBeCloseTo(NOTCH, 2);
   expect(await grewBy(page, () => page.mouse.wheel(0, -100))).toBeCloseTo(NOTCH, 2);
 
-  await intoControls(page);
-  await click(page, 'controls-pan-up-1');
-  await expect.poll(() => slotReads(page, 'pan-up', 1)).toBe('Press a key');
+  expect(problems).toEqual([]);
+});
 
-  // The slot is listening, so the notch is the key it takes and not the zoom it used to be.
+test('under a browse the map hears no pan, no zoom and no notch, and a pan key held as it rose pans no further', async ({
+  page,
+}) => {
+  const problems = watch(page);
+
+  await openSaved(page, OPENED);
+
+  await page.keyboard.down('w');
+  await browse(page, 'draw-pile');
+  await rested(page);
+  const risen = await tileOnScreen(page, BARE);
+  for (let frame = 0; frame < 12; frame++) await rested(page);
+  const held = await tileOnScreen(page, BARE);
+  await page.keyboard.up('w');
+  expect(Math.abs(held.y - risen.y)).toBeLessThan(1);
+
+  expect(Math.abs(await heldBy(page, 'w'))).toBeLessThan(1);
+  expect(await grewBy(page, () => page.keyboard.press('='))).toBeCloseTo(1, 2);
   expect(await grewBy(page, () => page.mouse.wheel(0, -100))).toBeCloseTo(1, 2);
-  expect(await slotReads(page, 'pan-up', 1)).toBe('Wheel up');
-  expect(await slotReads(page, 'zoom-in', 0)).toBe('—');
-  await outOfControls(page);
 
-  // A notch is a press and a release at once, so it pans the one frame that follows it: the frame
-  // goes up, what stands on the map comes down the screen, and nothing about it zooms.
-  const before = await tileOnScreen(page, BARE);
-  await page.mouse.move(before.x, before.y);
-  await page.mouse.wheel(0, -100);
-  await rested(page);
-  await rested(page);
-
-  const nudged = await tileOnScreen(page, BARE);
-  expect(nudged.unit / before.unit).toBeCloseTo(1, 2);
-  expect(nudged.y - before.y).toBeGreaterThan(0);
-  expect(nudged.y - before.y).toBeLessThan(await heldBy(page, 'w'));
-
-  expect(await grewBy(page, () => page.keyboard.press('e'))).toBeCloseTo(NOTCH, 2);
+  await page.keyboard.press('Escape');
+  await expect.poll(() => standing(page, 'browse')).toBe(false);
+  expect(await grewBy(page, () => page.keyboard.press('='))).toBeCloseTo(NOTCH, 2);
 
   expect(problems).toEqual([]);
 });

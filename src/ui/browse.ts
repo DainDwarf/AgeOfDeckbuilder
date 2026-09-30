@@ -18,7 +18,6 @@ import {
   UI_FONT,
 } from './design-space';
 import { cardFaceAtStart, type Face } from './face';
-import { isWheelNotch } from './keys';
 import { css, LOOK } from './look';
 import type { OverlayScene } from './overlay-scene';
 import { type Carrier, createCarrier, createPanel, type Panel } from './panel';
@@ -218,14 +217,13 @@ export function standBrowse(
     covering(false);
   };
 
-  const large = standLarge(overlay, catalogue, covering, () => false, {
+  const large = standLarge(overlay, catalogue, covering, {
     kinds,
     get standing() {
       return standing !== undefined;
     },
     takes(press) {
-      // A notch scrolls the browse through Phaser's own wheel, whatever it is bound to.
-      if (!isWheelNotch(press) && boundTo(press, 'back')) close();
+      if (boundTo(press, 'back')) close();
       return true;
     },
   });

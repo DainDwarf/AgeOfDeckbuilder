@@ -111,7 +111,7 @@ const EVERY_RESOURCE: ReadonlySet<Resource> = new Set(RESOURCES);
 const MIN_ZOOM = 0.75;
 const MAX_ZOOM = 3.5;
 
-/** What one press of a zoom key multiplies the zoom by. */
+/** What one notch of zoom multiplies the zoom by. */
 const ZOOM_PER_NOTCH = 1.3;
 
 /** How fast a held key pans the frame, in design pixels a second. */
@@ -215,8 +215,10 @@ export type MapView = {
   showCityMarks(on: boolean): void;
   /** Draws the map under these veils: what the console's two switches take off and put back. */
   showVeils(veils: Veils): void;
-  /** Whether the pan and zoom keys reach the map; they do not while a menu window stands. */
+  /** Whether the pan and zoom keys and the wheel move the map; they do not while a scrim stands. */
   live(on: boolean): void;
+  /** Notches of zoom, in above zero, about the pointer. */
+  zoom(notches: number): void;
 };
 
 /** The one way a tile's terrain is drawn: the hexagonal face, at the size a tile is drawn at. */
@@ -777,9 +779,13 @@ export function createMapView(
     return catcher;
   };
 
-  /** One notch of zoom, about the pointer: what the map showed under it before shows under it now. */
-  const zoomBy = (by: number): void => {
-    const next = Math.min(Math.max(zoom * by, MIN_ZOOM), MAX_ZOOM);
+  /**
+   * Notches of zoom, in above zero, about the pointer: what the map showed under it before shows
+   * under it now.
+   */
+  const zoomBy = (notches: number): void => {
+    if (!taking) return;
+    const next = Math.min(Math.max(zoom * ZOOM_PER_NOTCH ** notches, MIN_ZOOM), MAX_ZOOM);
     const pointer = scene.input.activePointer;
     const at = map.at(pointer.x, pointer.y);
     const away = zoom / next;
@@ -789,19 +795,14 @@ export function createMapView(
   /** Every key held down right now, by the code of the place it binds under. */
   const held = new Set<string>();
 
-  /**
-   * Every key pressed since the last frame, held or let go of again. A notch of the wheel is pressed
-   * and released at once, so it is never in `held` on any frame, and a pan bound to it would read
-   * nothing.
-   */
+  /** Every key pressed since the last frame, held or let go of again. */
   const tapped = new Set<string>();
 
   onKeyDown(scene, (press) => {
     held.add(press.code);
     tapped.add(press.code);
-    if (!taking) return;
-    if (boundTo(press, 'zoom-in')) zoomBy(ZOOM_PER_NOTCH);
-    else if (boundTo(press, 'zoom-out')) zoomBy(1 / ZOOM_PER_NOTCH);
+    if (boundTo(press, 'zoom-in')) zoomBy(1);
+    else if (boundTo(press, 'zoom-out')) zoomBy(-1);
   });
   onKeyUp(scene, (press) => {
     held.delete(press.code);
@@ -1566,6 +1567,8 @@ export function createMapView(
     live(on: boolean): void {
       taking = on;
     },
+
+    zoom: zoomBy,
 
     render,
 

@@ -61,18 +61,16 @@ describe('binding a key', () => {
     expect(DEFAULTS.inspect[1]).toBeUndefined();
   });
 
-  it('binds a wheel notch like any other key, and moves it off the zoom that had it', () => {
-    const after = bound(DEFAULTS, 'pan-up', 1, { code: 'WheelUp' });
-    expect(after['zoom-in']).toEqual([undefined, undefined]);
-    expect(reads(after, 'zoom-out', 0)).toBe('Wheel down');
-    expect(reads(after, 'pan-up', 0)).toBe('W');
-    expect(reads(after, 'pan-up', 1)).toBe('Wheel up');
-  });
-
   it('fills a zoom that stands on one key alone', () => {
     const after = bound(DEFAULTS, 'zoom-in', 1, press('KeyE', 'e'));
-    expect(reads(after, 'zoom-in', 0)).toBe('Wheel up');
+    expect(reads(after, 'zoom-in', 0)).toBe('=');
     expect(reads(after, 'zoom-in', 1)).toBe('E');
+  });
+
+  it('moves a zoom key bound elsewhere as any key moves', () => {
+    const after = bound(DEFAULTS, 'city', 1, press('Minus', '-'));
+    expect(after['zoom-out']).toEqual([undefined, undefined]);
+    expect(reads(after, 'city', 1)).toBe('-');
   });
 
   it('reads a key in either case as the one key', () => {
@@ -106,6 +104,8 @@ describe('binding a key', () => {
   it('reads a key never rebound by the US keycap of its place', () => {
     expect(reads(DEFAULTS, 'pan-down', 0)).toBe('S');
     expect(reads(DEFAULTS, 'pan-down', 1)).toBe('↓');
+    expect(reads(DEFAULTS, 'zoom-in', 0)).toBe('=');
+    expect(reads(DEFAULTS, 'zoom-out', 0)).toBe('-');
     expect(reads(DEFAULTS, 'yields', 0)).toBe('Tab');
     expect(reads(DEFAULTS, 'back', 0)).toBe('Escape');
   });
@@ -143,6 +143,14 @@ describe('the bindings kept in the browser', () => {
     );
     expect(parsed.back).toEqual([{ code: 'Escape' }, undefined]);
     expect(parsed.city).toEqual([undefined, { code: 'KeyC' }]);
+  });
+
+  it('leave the slot empty where what was kept is a notch of the wheel', () => {
+    const parsed = parseBindings(
+      '{"zoom-in":[{"code":"WheelUp"},{"code":"KeyE"}],"pan-up":[{"code":"KeyW"},{"code":"WheelDown"}]}',
+    );
+    expect(parsed['zoom-in']).toEqual([undefined, { code: 'KeyE' }]);
+    expect(parsed['pan-up']).toEqual([{ code: 'KeyW' }, undefined]);
   });
 
   it('stand at their default for every control the kept bindings do not cover', () => {

@@ -33,6 +33,7 @@ import {
   MARGIN,
   onClick,
   onHover,
+  type Scrim,
   type Stratum,
   stopsThePointer,
   stratumOf,
@@ -40,7 +41,7 @@ import {
 } from './design-space';
 import { createHand } from './hand';
 import { cardsOf, createInfoPanel } from './infopanel';
-import { onKeyDown } from './keys';
+import { onKeyDown, onWheelNotches } from './keys';
 import { css, LOOK } from './look';
 import { createMapView, type PressedTile } from './map';
 import { mapOf } from './map-scene';
@@ -379,12 +380,17 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
     );
 
     const away = awayUnder(this);
+    // Either scrim takes every key it stands under and offers none of them on, so a pan key held as
+    // it rises would pan on for ever.
+    const under = (scrim: Scrim, up: boolean): void => {
+      view.live(!away(scrim, up));
+    };
 
     const overlay = createOverlay(
       overlayOf(this),
       CATALOGUE,
       (over) => {
-        away('overlay', over);
+        under('overlay', over);
       },
       (at) => {
         void playOut({ type: 'take', at });
@@ -529,8 +535,14 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       showYields();
     };
 
+    // On this scene and not the map's: this one stops the pointer over the hand and the bar, where
+    // the wheel still zooms.
+    onWheelNotches(this, (notches) => {
+      view.zoom(-notches);
+    });
+
     // The one place the city key, the yield key, the inspection key and the back key are answered.
-    // A window on the overlay takes all four ahead of this scene, so nothing here is gated on what
+    // A window on the overlay takes every key ahead of this scene, so nothing here is gated on what
     // stands over the screen; the map's own reader answers the pan and zoom keys.
     onKeyDown(this, (press) => {
       if (boundTo(press, 'city')) {
@@ -572,14 +584,11 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
         view.showVeils(veils);
       },
     });
-    resetMenu(this, (under) => {
-      away('menu', under);
+    resetMenu(this, (up) => {
+      under('menu', up);
       // The overlay's own scrims are no cover to the overlay: whatever rises on them takes down what
       // it covers.
-      if (under) overlayOf(this).input.emit(COVERED);
-      // The menu takes every key it stands under and offers none of them on, so a pan key held as
-      // its window rises would pan on for ever; the overlay lets the two through and freezes nothing.
-      view.live(!under);
+      if (up) overlayOf(this).input.emit(COVERED);
     });
 
     parts.push(

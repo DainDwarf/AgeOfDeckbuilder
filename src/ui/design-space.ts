@@ -371,20 +371,21 @@ export const COVERED = 'covered';
 export type Scrim = 'overlay' | 'menu';
 
 /**
- * What a screen is told as either scrim rises over it or falls: the first to rise says `COVERED` of
- * its input plugin and lets go of the press it holds.
+ * What a screen is told as either scrim rises over it or falls, answering whether either still
+ * stands: the first to rise says `COVERED` of its input plugin and lets go of the press it holds.
  */
-export function awayUnder(scene: Phaser.Scene): (scrim: Scrim, up: boolean) => void {
+export function awayUnder(scene: Phaser.Scene): (scrim: Scrim, up: boolean) => boolean {
   const standing = new Set<Scrim>();
   return (scrim, up) => {
     const away = standing.size > 0;
     if (up) standing.add(scrim);
     else standing.delete(scrim);
-    if (away || standing.size === 0) return;
+    if (away || standing.size === 0) return standing.size > 0;
     scene.input.emit(COVERED);
     // After the pointer event that raised the scrim: Phaser's dispatch is synchronous, and a release
     // inside it walks the plugin's lists mid-walk.
     queueMicrotask(() => letGoOfPress(scene.game));
+    return true;
   };
 }
 

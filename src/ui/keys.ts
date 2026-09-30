@@ -6,15 +6,6 @@ import { whileUp } from './design-space';
 const DOWN = 'key-down';
 const UP = 'key-up';
 
-/** The code of a wheel notch's place: the way the wheel turned. */
-const WHEEL_UP = 'WheelUp';
-const WHEEL_DOWN = 'WheelDown';
-
-/** Whether the press is a notch of the wheel, for a reader whose rule for one differs. */
-export function isWheelNotch(press: Bind): boolean {
-  return press.code === WHEEL_UP || press.code === WHEEL_DOWN;
-}
-
 /** What the browser measures one notch of the wheel as. */
 const NOTCH = 100;
 
@@ -42,18 +33,9 @@ function chorded(event: { ctrlKey: boolean; metaKey: boolean; altKey: boolean })
 }
 
 /**
- * The mouse as a set of keys: every button but the two that press the chronicle screen binds
- * like a key and presses nothing, and a notch of the wheel either way binds like a key too.
- * Phaser's mouse manager passes over an event whose default is already prevented, so preventing it
- * here — before a chord is dropped, or the chord would reach Phaser as a press — is what takes the
- * press off the chronicle screen, and it is only the press: the browser's own menu comes of the
- * `contextmenu` event, which the game's `disableContextMenu` kills. The wheel's own default is left
- * standing, so Phaser still hears the wheel that scrolls a pile being browsed.
- *
- * Heard on the way down, ahead of Phaser's listeners on the canvas; a button's release is heard
- * wherever it lands, so one pressed on the canvas and let go of off it still comes up. A notch has
- * no release of its own and is pressed and let go of at once — a notch left held would carry
- * whatever it binds for ever.
+ * Every mouse button but the two that press the chronicle screen, as a key. Preventing the press is
+ * what keeps it off Phaser (docs/PHASER.md), so it is prevented ahead of a chord's drop; a release
+ * is heard wherever it lands, so a button let go of off the canvas still comes up.
  */
 export function readMouseKeys(game: Phaser.Game): void {
   const held = new Set<number>();
@@ -79,31 +61,27 @@ export function readMouseKeys(game: Phaser.Game): void {
     },
     true,
   );
+}
 
+/** Every whole notch of the wheel Phaser hands the scene, told as how many, up below zero. */
+export function onWheelNotches(scene: Phaser.Scene, notched: (notches: number) => void): void {
   /** How far the wheel has turned towards its next notch, and when it last turned. */
   let rolled = 0;
   let turned = 0;
-  window.addEventListener(
+  scene.input.on(
     'wheel',
-    (event) => {
-      if (event.target !== game.canvas || event.deltaY === 0 || chorded(event)) return;
+    (pointer: Phaser.Input.Pointer, _over: unknown, _dx: number, dy: number) => {
+      const event = pointer.event as WheelEvent;
+      if (dy === 0 || chorded(event)) return;
       const lapsed = event.timeStamp - turned > NOTCH_WINDOW;
       turned = event.timeStamp;
-      if (lapsed || Math.sign(event.deltaY) !== Math.sign(rolled)) rolled = 0;
-      rolled += event.deltaY;
+      if (lapsed || Math.sign(dy) !== Math.sign(rolled)) rolled = 0;
+      rolled += dy;
 
       const notches = Math.trunc(rolled / NOTCH);
       rolled -= notches * NOTCH;
-      const code = notches < 0 ? WHEEL_UP : WHEEL_DOWN;
-      for (let notch = Math.abs(notches); notch > 0; notch--) {
-        // A press of its own for each notch: one object would carry the first notch's mark to the rest.
-        const turn: Taken = { code, taken: false };
-        const released: Bind = { code };
-        game.events.emit(DOWN, turn);
-        game.events.emit(UP, released);
-      }
+      if (notches !== 0) notched(notches);
     },
-    true,
   );
 }
 
@@ -131,9 +109,9 @@ export function onKeyDown(scene: Phaser.Scene, pressed: (press: Bind) => void): 
 }
 
 /**
- * Every mouse key and wheel notch pressed while the scene is up, offered to be taken: one taken
- * reaches no scene that started later. A release is never offered. The keyboard's own keys come
- * through the scene's keyboard plugin, which stops them itself.
+ * Every mouse key pressed while the scene is up, offered to be taken: one taken reaches no scene
+ * that started later. A release is never offered. The keyboard's own keys come through the scene's
+ * keyboard plugin, which stops them itself.
  */
 export function takesMouseKeys(scene: Phaser.Scene, takes: (press: Bind) => boolean): void {
   whileUp(scene, scene.game.events, DOWN, (press: Taken) => {

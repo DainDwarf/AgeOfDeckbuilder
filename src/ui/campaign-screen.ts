@@ -7,7 +7,7 @@ import { wearNavbar } from './navbar';
 import { overlayOf } from './overlay-scene';
 import { campaignHeld } from './save-entry';
 import { standLarge } from './stack';
-import { createTree, movesTree } from './tree';
+import { createTree } from './tree';
 
 /** The campaign screen: the navbar and the bar, and the technology tree in the room they leave. */
 export class CampaignScreen extends Phaser.Scene {
@@ -21,19 +21,13 @@ export class CampaignScreen extends Phaser.Scene {
     backRaisesMenu(this);
     const away = awayUnder(this);
     const overlay = overlayOf(this);
-    const large = standLarge(
-      overlay,
-      CATALOGUE,
-      (up) => {
-        away('overlay', up);
-      },
-      movesTree,
-    );
+    const large = standLarge(overlay, CATALOGUE, (up) => {
+      tree.cover(away('overlay', up));
+    });
     const tree = createTree(this, worn, CATALOGUE, campaignHeld().technologies, large.named);
     offerEntries(this, { seed: undefined, veiled: undefined });
     resetMenu(this, (under) => {
-      tree.cover(under);
-      away('menu', under);
+      tree.cover(away('menu', under));
       if (under) overlay.input.emit(COVERED);
     });
   }

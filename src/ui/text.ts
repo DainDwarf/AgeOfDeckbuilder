@@ -196,8 +196,6 @@ const TEXT = {
   'key.mouse-1': 'Middle click',
   'key.mouse-3': 'Mouse 4',
   'key.mouse-4': 'Mouse 5',
-  'key.wheel-up': 'Wheel up',
-  'key.wheel-down': 'Wheel down',
   'defeat.title': 'Defeat',
   'defeat.capture': 'An enemy captured the city on turn {turn}.',
   'defeat.population': "The city's population reached zero on turn {turn}.",

@@ -50,7 +50,6 @@ import {
   UI_FONT,
 } from './design-space';
 import { cardFaceAtStart } from './face';
-import { isWheelNotch, takesMouseKeys } from './keys';
 import { css, LOOK } from './look';
 import { backRaisesMenu, resetMenu } from './menu-scene';
 import { ROOM, wearNavbar } from './navbar';
@@ -248,8 +247,6 @@ export class CollectionScreen extends Phaser.Scene {
   create(): void {
     holdDesignSpace(this, this.cameras.main);
     const { content, bubbles, tooltip, readInfluence } = wearNavbar(this, 'collection');
-    // Ahead of `backRaisesMenu`: a notch taken here reaches none of the screen's readers after it.
-    takesMouseKeys(this, isWheelNotch);
     backRaisesMenu(this);
     const away = awayUnder(this);
     const overlay = overlayOf(this);

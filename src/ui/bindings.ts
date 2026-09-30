@@ -38,8 +38,8 @@ export const DEFAULTS: Bindings = {
   'pan-left': [{ code: 'KeyA' }, { code: 'ArrowLeft' }],
   'pan-down': [{ code: 'KeyS' }, { code: 'ArrowDown' }],
   'pan-right': [{ code: 'KeyD' }, { code: 'ArrowRight' }],
-  'zoom-in': [{ code: 'WheelUp' }, undefined],
-  'zoom-out': [{ code: 'WheelDown' }, undefined],
+  'zoom-in': [{ code: 'Equal' }, undefined],
+  'zoom-out': [{ code: 'Minus' }, undefined],
   city: [{ code: 'KeyC' }, undefined],
   yields: [{ code: 'Tab' }, undefined],
   inspect: [{ code: 'KeyI' }, undefined],
@@ -64,7 +64,15 @@ export const PRESSES: ReadonlyMap<number, Press> = new Map([
   [2, 'right'],
 ]);
 
-const UNBINDABLE: ReadonlySet<string> = new Set([...PRESSES.keys()].map(mouseCode));
+/**
+ * What a slot kept in the browser may hold and never binds: the two buttons above, and the wheel's
+ * two notches, which a launch that still bound the wheel kept under these codes.
+ */
+const UNBINDABLE: ReadonlySet<string> = new Set([
+  ...[...PRESSES.keys()].map(mouseCode),
+  'WheelUp',
+  'WheelDown',
+]);
 
 /** Which press a pointer is making, and nothing for a button that presses the screen with neither. */
 export function pressOf(pointer: Phaser.Input.Pointer): Press | undefined {
@@ -102,8 +110,6 @@ const NAMED: Record<string, TextKey> = {
   Mouse1: 'key.mouse-1',
   Mouse3: 'key.mouse-3',
   Mouse4: 'key.mouse-4',
-  WheelUp: 'key.wheel-up',
-  WheelDown: 'key.wheel-down',
 };
 
 /** The glyph a US keyboard prints on the punctuation places. */

@@ -175,14 +175,13 @@ export type Beneath = {
 
 /**
  * The stack of cards shown large on a scrim of the overlay's over the whole screen and the window
- * beneath, walked down by a press on the scrim and the back key; the screen hears no key but those
- * `passes` lets through while a card stands, and `covering` says it is covered while either stands.
+ * beneath, walked down by a press on the scrim and the back key; the screen hears no key while a
+ * card stands, and `covering` says it is covered while either stands.
  */
 export function standLarge(
   overlay: OverlayScene,
   catalogue: Catalogue,
   covering: (covered: boolean) => void,
-  passes: (press: Bind) => boolean,
   beneath: Beneath = {
     kinds: createKindBubble(createTooltip(overlay, overlay.strata.tooltip)),
     standing: false,
@@ -212,7 +211,7 @@ export function standLarge(
   overlay.takes((press) => {
     if (!stack.standing) return beneath.standing && beneath.takes(press);
     if (boundTo(press, 'back')) takeDownNewest();
-    return !passes(press);
+    return true;
   });
 
   const stand = (): void => {
