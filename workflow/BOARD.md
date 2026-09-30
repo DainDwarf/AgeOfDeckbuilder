@@ -12,4 +12,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **Whether the wheel may be rebound** — the campaign screen raises the menu on a wheel notch bound to the back key, where `docs/META-SCREENS.md` says the wheel does nothing there whatever it is bound to: decide whether the wheel may be bound at all.
+- **The wheel binds nowhere, and under a scrim the screen hears no key** — no slot of the Controls window takes a wheel notch, the wheel zooms the map and scrolls what scrolls frontmost under the pointer, `=` and `-` are the zooms' default keys, and while anything stands on a scrim the map and the tree under it hear no pan and no zoom, the campaign screen no longer raising the menu on a notch bound to the back key. Doc-impact: `docs/INTERFACE.md`, `docs/META-SCREENS.md`. [board/the-wheel-binds-nowhere.md](board/the-wheel-binds-nowhere.md)
+- **The pan keys scroll panels and browses** — the keys that pan the map up and down scroll whatever scrolls frontmost, a panel of the collection screen under the pointer, a browse or a grid on a scrim, so no panel needs the wheel or a drag.
+- **A setting inverts the wheel** — a setting turns the wheel's zoom the other way, and one its scroll, the wheel binding nowhere.
