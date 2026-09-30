@@ -64,10 +64,7 @@ export const PRESSES: ReadonlyMap<number, Press> = new Map([
   [2, 'right'],
 ]);
 
-/**
- * What a slot kept in the browser may hold and never binds: the two buttons above, and the wheel's
- * two notches, which a launch that still bound the wheel kept under these codes.
- */
+/** What a slot kept in the browser may hold and never binds: the two buttons above and the wheel's two notches. */
 const UNBINDABLE: ReadonlySet<string> = new Set([
   ...[...PRESSES.keys()].map(mouseCode),
   'WheelUp',
