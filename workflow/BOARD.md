@@ -12,8 +12,5 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-The lines of the collection screen share one mockup, [board/collection-screen-mockup.html](board/collection-screen-mockup.html), which holds the three modes and names the artifact it is published to at its head: a line's intake refines its own mode in it, and the line that says so deletes it at its ship.
-
-- **A copy is added or bought from the deck** — in the civilization mode each stack reads its copies held over owned between two buttons: − removes a copy, + adds a copy owned that the deck does not hold, and where the deck holds them all the button reads the card's price and one press buys a copy and adds it, greyed while unaffordable; a card taken down to none stands dimmed until the mode is left; `e2e/civilization-mode.spec.ts` removes, adds and buys, each read from the rules and written to the save; the ship deletes the mockup and the Lines section's paragraph about it. Doc-impact: `docs/META-SCREENS.md`. [board/a-copy-is-added-or-bought-from-the-deck.md](board/a-copy-is-added-or-bought-from-the-deck.md)
 - **A right click on a pile inspects the deck** — on the collection screen and on the launch screen a right click on a civilization's pile shows its whole deck, not the city section's card.
 - **Whether the wheel may be rebound** — the campaign screen raises the menu on a wheel notch bound to the back key, where `docs/META-SCREENS.md` says the wheel does nothing there whatever it is bound to: decide whether the wheel may be bound at all.

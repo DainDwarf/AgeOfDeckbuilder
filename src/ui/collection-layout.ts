@@ -67,6 +67,16 @@ export function deckRowsOf(
   return { settle: rows(settle), cards: rows(cards) };
 }
 
+/**
+ * The rows that stood, in the order they stood, each reading the copies the deck holds of its card
+ * now, a card it no longer holds among them at none.
+ */
+export function standingIn(stood: DeckRows, deck: DeckRows): DeckRows {
+  const now = (rows: readonly CollectionStack[]): CollectionStack[] =>
+    rows.map(({ id }) => ({ id, copies: heldIn(deck, id) }));
+  return { settle: now(stood.settle), cards: now(stood.cards) };
+}
+
 /** How many copies of the card the stacks hold together, and none where no stack is of it. */
 export function copiesIn(stacks: readonly CollectionStack[], card: CardId): number {
   return stacks.filter(({ id }) => id === card).reduce((held, { copies }) => held + copies, 0);

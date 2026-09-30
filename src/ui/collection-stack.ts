@@ -24,13 +24,13 @@ const CHIP_TO_PRICE = 11;
 const BUY_PAD = 3;
 
 const COPIES_STYLE = { fontFamily: UI_FONT, fontSize: '14px', color: css(LOOK.deckCounts) };
-const PRICE_STYLE = {
+const BUTTON_STYLE = {
   fontFamily: UI_FONT,
   fontSize: '13px',
   fontStyle: 'bold',
   color: css(LOOK.ink),
 };
-const GREYED_PRICE_STYLE = { ...PRICE_STYLE, color: css(LOOK.greyedInk) };
+const GREYED_BUTTON_STYLE = { ...BUTTON_STYLE, color: css(LOOK.greyedInk) };
 
 /** What a stack reads under it, and whether it stands dimmed. */
 export type Reading = { readonly reads: string; readonly dimmed: boolean };
@@ -90,8 +90,15 @@ export type LaidStack = {
   /** What a piece laid on the stack joins. */
   readonly root: Phaser.GameObjects.Container;
   readonly face: Held;
-  /** The reading line's top and middle, and the stack's right end. */
-  readonly line: { readonly top: number; readonly middle: number; readonly right: number };
+  /** What the stack reads, standing at the reading line's left end. */
+  readonly reading: Phaser.GameObjects.Text;
+  /** The reading line's top and middle, and the stack's two ends. */
+  readonly line: {
+    readonly top: number;
+    readonly middle: number;
+    readonly left: number;
+    readonly right: number;
+  };
   readonly bottom: number;
 };
 
@@ -151,9 +158,56 @@ export function stackOf(
       box: { x: left, y: top, width: CARD_WIDTH, height },
       answers: answersOf(card, shown, inspecting),
     },
-    line: { top: lineTop, middle, right: left + STACK_WIDTH },
+    reading: count,
+    line: { top: lineTop, middle, left, right: left + STACK_WIDTH },
     bottom: lineTop + LINE_HEIGHT,
   };
+}
+
+/**
+ * A button as wide as the stack's reading line is tall, at the line's left or right end, joining the
+ * stack, its parts named from `name`, its sign centred in it: greyed where no press is handed.
+ */
+export function signButtonOf(
+  scene: Phaser.Scene,
+  { root, line, bottom }: LaidStack,
+  {
+    name,
+    sign,
+    end,
+    press,
+  }: {
+    readonly name: string;
+    readonly sign: string;
+    readonly end: 'left' | 'right';
+    readonly press: (() => void) | undefined;
+  },
+): Held {
+  const side = bottom - line.top;
+  const x = ((): number => {
+    switch (end) {
+      case 'left':
+        return line.left;
+      case 'right':
+        return line.right - side;
+    }
+  })();
+  const button: Box = { x, y: line.top, width: side, height: side };
+  const ground = scene.add
+    .rectangle(x, line.top, side, side, press === undefined ? LOOK.greyedFill : LOOK.panelFill)
+    .setOrigin(0, 0)
+    .setName(name);
+  const signed = addText(
+    scene,
+    x + side / 2,
+    line.middle,
+    sign,
+    press === undefined ? GREYED_BUTTON_STYLE : BUTTON_STYLE,
+  )
+    .setOrigin(0.5)
+    .setName(`${name}-sign`);
+  root.add([ground, signed]);
+  return { box: button, answers: ANSWERS_NOTHING, press };
 }
 
 /**
@@ -174,7 +228,7 @@ export function priceButtonOf(
     0,
     line.middle,
     text('collection.price', { price }),
-    buy === undefined ? GREYED_PRICE_STYLE : PRICE_STYLE,
+    buy === undefined ? GREYED_BUTTON_STYLE : BUTTON_STYLE,
   )
     .setOrigin(1, 0.5)
     .setName(`${name}-price`);

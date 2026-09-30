@@ -1,15 +1,26 @@
 import { expect, type Page, test } from '@playwright/test';
+import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
-import { type Campaign, civilizationIn, removedFrom } from '../src/rules/campaign';
+import {
+  addedTo,
+  bought,
+  type Campaign,
+  civilizationIn,
+  priceOf,
+  removedFrom,
+  unaffordableIn,
+} from '../src/rules/campaign';
 import { freshCampaign } from '../src/rules/save';
 import type { CardId } from '../src/rules/state';
-import { deckRowsOf, stacksOf } from '../src/ui/collection-layout';
+import { deckRowsOf } from '../src/ui/collection-layout';
+import { LOOK } from '../src/ui/look';
 import { cardName, civilizationName, text } from '../src/ui/text';
 import {
   cardOnFace,
   click,
   counted,
   cursorAt,
+  fillOf,
   heldSave,
   kindLabelOnScreen,
   onScreen,
@@ -17,10 +28,13 @@ import {
   pilePressed,
   placeOf,
   plantCampaign,
+  pressed,
   rested,
+  stackDimmed,
   standing,
   textOf,
   watch,
+  wonCampaign,
 } from './chronicle-screen';
 
 /** The cursor over something that answers a left click or a rest. */
@@ -58,23 +72,60 @@ const PLANTED = plantedCampaign();
 const OWNED = PLANTED.campaign.civilizations[CIVILIZATION];
 const ROWS = deckRowsOf(CATALOGUE, PLANTED.campaign, CIVILIZATION, cardName);
 
-/** How many copies of the card the planted campaign's collection owns. */
-function ownedOf(card: CardId): number {
-  const found = stacksOf(CATALOGUE, PLANTED.campaign.collection, cardName).find(
-    ({ id }) => id === card,
-  );
-  if (found === undefined) throw new Error(`the collection owns no copy of ${card}`);
-  return found.copies;
+/** How many copies of the card the campaign's collection owns. */
+function ownedIn(campaign: Campaign, card: CardId): number {
+  return campaign.collection.filter(({ id }) => id === card).length;
 }
 
-/** The planted campaign's collection screen, in the civilization mode « Civilization opens on its first civilization. */
-async function openCivilization(page: Page): Promise<void> {
-  await plantCampaign(page, PLANTED.campaign);
-  await openCollection(page);
-  await pilePressed(page, CIVILIZATION);
+/**
+ * The first civilization's cards on the campaign whose stacks stand on the first line of a section,
+ * the city section's card first on the settle section's: those the panel at its top shows whole.
+ */
+function firstLines(campaign: Campaign): { id: CardId; copies: number }[] {
+  const { settle, cards } = deckRowsOf(CATALOGUE, campaign, CIVILIZATION, cardName);
+  return [
+    ...settle.slice(0, ACROSS - 1),
+    ...(settle.length < ACROSS ? cards.slice(0, ACROSS) : []),
+  ];
+}
+
+/** A card of the rows whose copies the campaign's first civilization holds every one of, where one does. */
+function whollyHeld(
+  campaign: Campaign,
+  rows: readonly { id: CardId; copies: number }[],
+  such: (card: CardId) => boolean,
+): { id: CardId; copies: number } | undefined {
+  return rows.find(({ id, copies }) => copies === ownedIn(campaign, id) && such(id));
+}
+
+/** In deck editing on the first civilization, « Civilization pressed, and a drawn frame after. */
+async function civilizationPressed(page: Page): Promise<void> {
   await click(page, 'collection-to-civilization');
   await expect.poll(() => standing(page, 'civilization-mode')).toBe(true);
   await rested(page);
+}
+
+/** The campaign's collection screen, in the civilization mode « Civilization opens on its first civilization. */
+async function openCivilization(page: Page, campaign: Campaign = PLANTED.campaign): Promise<void> {
+  await plantCampaign(page, campaign);
+  await openCollection(page);
+  await pilePressed(page, CIVILIZATION);
+  await civilizationPressed(page);
+}
+
+/** The named object's left and right ends and its middle across, in design units. */
+function acrossOf(
+  page: Page,
+  name: string,
+): Promise<{ left: number; right: number; middle: number }> {
+  return page.evaluate((target) => {
+    const found = window.named?.(target)?.object as
+      | (Phaser.GameObjects.GameObject & Phaser.GameObjects.Components.GetBounds)
+      | undefined;
+    if (found === undefined) throw new Error(`there is no ${target}`);
+    const bounds = found.getBounds();
+    return { left: bounds.left, right: bounds.right, middle: bounds.centerX };
+  }, name);
 }
 
 /** The named faces read top down, each line left to right. */
@@ -84,7 +135,7 @@ async function readOrder(page: Page, names: readonly string[]): Promise<string[]
   return placed.sort((a, b) => a.at.y - b.at.y || a.at.x - b.at.x).map(({ name }) => name);
 }
 
-test('in the deck editing mode « Civilization opens the civilization mode on its civilization: the name over the room, neither the collection nor the rows standing, each section’s count beside its word, the city section’s card at the head of the settle section, each card the deck holds a stack reading its copies held over owned in the collection’s order, seven to a line, no button under any, and a card it holds no copy of not standing', async ({
+test('in the deck editing mode « Civilization opens the civilization mode on its civilization: the name over the room, neither the collection nor the rows standing, each section’s count beside its word, the city section’s card at the head of the settle section, each card the deck holds a stack reading its copies held over owned in the collection’s order, seven to a line, and a card it holds no copy of not standing', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -115,16 +166,15 @@ test('in the deck editing mode « Civilization opens the civilization mode on it
   expect(await cardOnFace(page, 'civilization-city')).toBe(OWNED.city.card.id);
   expect(await counted(page, `civilization-card-${PLANTED.gone}`)).toBe(0);
   const fewer = ROWS.cards.find(({ id }) => id === PLANTED.fewer);
-  expect(fewer?.copies).toBeLessThan(ownedOf(PLANTED.fewer));
+  expect(fewer?.copies).toBeLessThan(ownedIn(PLANTED.campaign, PLANTED.fewer));
 
   for (const { id, copies } of [...ROWS.settle, ...ROWS.cards]) {
     const face = `civilization-card-${id}`;
     expect(await counted(page, face)).toBe(1);
     expect(await cardOnFace(page, face)).toBe(id);
     expect(await textOf(page, `${face}-copies`)).toBe(
-      text('collection.in-deck', { held: copies, copies: ownedOf(id) }),
+      text('collection.held-of-owned', { held: copies, copies: ownedIn(PLANTED.campaign, id) }),
     );
-    expect(await standing(page, `${face}-buy`)).toBe(false);
   }
 
   const settleFaces = [
@@ -227,6 +277,130 @@ test('in the civilization mode Collection » returns to the deck editing mode on
       text('collection.row-copies', { copies }),
     );
   }
+
+  expect(problems).toEqual([]);
+});
+
+test('in the civilization mode each stack’s reading stands centred between its buttons, − under a stack removes a copy, the reading, the section’s count and the save following, the last copy removed leaves the stack dimmed reading none over owned, − greyed, no hand and answering no press, + adds a copy back, undimmed, and a card at no copy stands no more once the mode is left and opened again', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const shown = firstLines(PLANTED.campaign);
+  const whole = whollyHeld(PLANTED.campaign, shown, (id) =>
+    ROWS.cards.some((row) => row.id === id),
+  );
+  if (whole === undefined) throw new Error('the planted deck’s first line holds no card wholly');
+  const { id } = whole;
+  const owned = ownedIn(PLANTED.campaign, id);
+  const face = `civilization-card-${id}`;
+  const cardsCount = (campaign: Campaign): string =>
+    text('collection.cards', {
+      cards: civilizationIn(CATALOGUE, campaign, CIVILIZATION).cards.length,
+    });
+  await openCivilization(page);
+
+  for (const { id: card, copies } of shown) {
+    const stack = `civilization-card-${card}`;
+    const more = copies < ownedIn(PLANTED.campaign, card) ? `${stack}-add` : `${stack}-buy`;
+    const reading = await acrossOf(page, `${stack}-copies`);
+    const left = await acrossOf(page, `${stack}-remove`);
+    const right = await acrossOf(page, more);
+    expect(reading.middle).toBeCloseTo((left.right + right.left) / 2, 0);
+  }
+
+  let campaign = PLANTED.campaign;
+  for (let held = whole.copies - 1; held >= 0; held--) {
+    campaign = await pressed(page, `${face}-remove`, campaign, (from) =>
+      removedFrom(CATALOGUE, from, CIVILIZATION, id),
+    );
+    expect(await textOf(page, `${face}-copies`)).toBe(
+      text('collection.held-of-owned', { held, copies: owned }),
+    );
+    expect(await textOf(page, 'civilization-section-cards-count')).toBe(cardsCount(campaign));
+    expect(await counted(page, face)).toBe(1);
+  }
+  expect(await stackDimmed(page, `civilization-stack-${id}`)).toBe(true);
+  expect(await fillOf(page, `${face}-remove`)).toBe(LOOK.greyedFill);
+  expect(await fillOf(page, `${face}-add`)).toBe(LOOK.panelFill);
+  expect(await cursorAt(page, await onScreen(page, `${face}-remove`))).toBe('');
+  expect(await cursorAt(page, await onScreen(page, `${face}-add`))).toBe(HAND);
+
+  await click(page, `${face}-remove`);
+  await rested(page);
+  expect((await heldSave(page)).campaign).toEqual(campaign);
+
+  campaign = await pressed(page, `${face}-add`, campaign, (from) =>
+    addedTo(CATALOGUE, from, CIVILIZATION, id),
+  );
+  expect(await textOf(page, `${face}-copies`)).toBe(
+    text('collection.held-of-owned', { held: 1, copies: owned }),
+  );
+  expect(await textOf(page, 'civilization-section-cards-count')).toBe(cardsCount(campaign));
+  expect(await stackDimmed(page, `civilization-stack-${id}`)).toBe(false);
+  expect(await fillOf(page, `${face}-remove`)).toBe(LOOK.panelFill);
+
+  campaign = await pressed(page, `${face}-remove`, campaign, (from) =>
+    removedFrom(CATALOGUE, from, CIVILIZATION, id),
+  );
+  expect(await stackDimmed(page, `civilization-stack-${id}`)).toBe(true);
+  await click(page, 'collection-to-deck-editing');
+  await expect.poll(() => standing(page, 'deck-editing-mode')).toBe(true);
+  await rested(page);
+  await civilizationPressed(page);
+  expect(await counted(page, face)).toBe(0);
+  expect((await heldSave(page)).campaign).toEqual(campaign);
+
+  expect(problems).toEqual([]);
+});
+
+test('in the civilization mode, on a campaign a won chronicle paid into, under a stack whose copies the deck all holds the right button reads the card’s price, and a press on it buys a copy and adds it: the bar, the reading, the doubled price and the save following at once; the price of an unaffordable card stands greyed, no hand, and a press on it changes nothing', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const campaign = wonCampaign();
+  const card = whollyHeld(
+    campaign,
+    firstLines(campaign),
+    (id) => !unaffordableIn(CATALOGUE, campaign, id),
+  );
+  if (card === undefined) {
+    throw new Error('the won campaign’s first lines hold no affordable card the deck wholly holds');
+  }
+  const price = priceOf(CATALOGUE, campaign, card.id);
+  const after = addedTo(CATALOGUE, bought(CATALOGUE, campaign, card.id), CIVILIZATION, card.id);
+  const greyed = whollyHeld(after, firstLines(after), (id) => unaffordableIn(CATALOGUE, after, id));
+  if (greyed === undefined) {
+    throw new Error(
+      'the won campaign’s first lines hold no unaffordable card the deck wholly holds',
+    );
+  }
+  const face = `civilization-card-${card.id}`;
+
+  await openCivilization(page, campaign);
+  expect(await textOf(page, 'reading-influence-value')).toBe(String(campaign.influence));
+  expect(await textOf(page, `${face}-price`)).toBe(text('collection.price', { price }));
+  expect(await fillOf(page, `${face}-buy`)).toBe(LOOK.panelFill);
+  expect(await cursorAt(page, await onScreen(page, `${face}-buy`))).toBe(HAND);
+
+  await pressed(page, `${face}-buy`, campaign, () => after);
+  expect(await textOf(page, 'reading-influence-value')).toBe(String(campaign.influence - price));
+  expect(await textOf(page, `${face}-copies`)).toBe(
+    text('collection.held-of-owned', {
+      held: card.copies + 1,
+      copies: ownedIn(campaign, card.id) + 1,
+    }),
+  );
+  expect(await textOf(page, `${face}-price`)).toBe(
+    text('collection.price', { price: priceOf(CATALOGUE, after, card.id) }),
+  );
+
+  const unaffordable = `civilization-card-${greyed.id}-buy`;
+  expect(await fillOf(page, unaffordable)).toBe(LOOK.greyedFill);
+  expect(await cursorAt(page, await onScreen(page, unaffordable))).toBe('');
+  await click(page, unaffordable);
+  await rested(page);
+  expect(await textOf(page, 'reading-influence-value')).toBe(String(after.influence));
+  expect((await heldSave(page)).campaign).toEqual(after);
 
   expect(problems).toEqual([]);
 });

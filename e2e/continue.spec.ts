@@ -1,5 +1,4 @@
 import { expect, type Page, test } from '@playwright/test';
-import type Phaser from 'phaser';
 import { type Chronicle, onSettlePhase } from '../src/rules/state';
 import { LOOK } from '../src/ui/look';
 import { text } from '../src/ui/text';
@@ -8,6 +7,7 @@ import {
   chronicleButton,
   chronicleOf,
   click,
+  fillOf,
   firstsOf,
   launchedOn,
   plant,
@@ -29,15 +29,6 @@ async function continueReads(page: Page): Promise<string[]> {
     if (line === undefined) return lines;
     lines.push(line);
   }
-}
-
-/** What the named rectangle is painted. */
-function fillOf(page: Page, name: string): Promise<number> {
-  return page.evaluate((target) => {
-    const face = window.named?.(target)?.object as Phaser.GameObjects.Rectangle | undefined;
-    if (face === undefined) throw new Error(`there is no ${target} on the launch screen`);
-    return face.fillColor;
-  }, name);
 }
 
 /** The chronicle planted as the save, and the launch screen Chronicle opens from the campaign screen waited for. */

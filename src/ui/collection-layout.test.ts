@@ -1,9 +1,16 @@
 import { expect, test } from 'vitest';
-import { dealt, FIRST_CARD_NUMBER, newCampaign, paidInto } from '../rules/campaign';
+import {
+  addedTo,
+  dealt,
+  FIRST_CARD_NUMBER,
+  newCampaign,
+  paidInto,
+  removedFrom,
+} from '../rules/campaign';
 import { merged } from '../rules/catalogue';
 import { CATALOGUE, CIVILIZATION_ID, hoardedVictory, SLICES, twoAges } from '../rules/fixtures';
 import type { CardId } from '../rules/state';
-import { copiesIn, countsOf, deckRowsOf, heldIn, stacksOf } from './collection-layout';
+import { copiesIn, countsOf, deckRowsOf, heldIn, stacksOf, standingIn } from './collection-layout';
 
 /** The names the player reads the fixture's cards by, the test's own. */
 const NAMES: Readonly<Record<CardId, string>> = {
@@ -122,6 +129,31 @@ test('a card of the collection reads the copies a deck holds of it, in its settl
   expect(heldIn(deck, 'PH_Claim')).toBe(2);
   expect(heldIn(deck, 'PH_March')).toBe(3);
   expect(heldIn(deck, 'PH_Harvest')).toBe(0);
+});
+
+test('the rows that stood read the copies the deck holds now, in the order they stood, a card taken down to none among them and a card added since not', () => {
+  const catalogue = edited();
+  const campaign = removedFrom(
+    catalogue,
+    newCampaign(catalogue, CIVILIZATION_ID),
+    CIVILIZATION_ID,
+    'PH_Worker',
+  );
+  const stood = deckRowsOf(catalogue, campaign, CIVILIZATION_ID, nameOf);
+  const added = addedTo(catalogue, campaign, CIVILIZATION_ID, 'PH_Worker');
+  const lessFarm = removedFrom(catalogue, added, CIVILIZATION_ID, 'PH_Farm');
+  const now = removedFrom(catalogue, lessFarm, CIVILIZATION_ID, 'PH_Claim');
+
+  expect(standingIn(stood, deckRowsOf(catalogue, now, CIVILIZATION_ID, nameOf))).toEqual({
+    settle: [
+      { id: 'PH_Band', copies: 1 },
+      { id: 'PH_Claim', copies: 1 },
+    ],
+    cards: [
+      { id: 'PH_Farm', copies: 0 },
+      { id: 'PH_March', copies: 3 },
+    ],
+  });
 });
 
 test('the copies a won chronicle adds to the collection stand in no deck', () => {

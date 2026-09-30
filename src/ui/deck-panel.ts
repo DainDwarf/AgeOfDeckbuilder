@@ -1,15 +1,24 @@
 import type Phaser from 'phaser';
+import { type Campaign, priceOf, unaffordableIn } from '../rules/campaign';
 import type { Catalogue } from '../rules/catalogue';
 import { type CardId, NO_REFUSAL } from '../rules/state';
 import { createCardFace, dashAlong, heightOf } from './card-face';
-import { type CollectionStack, copiesIn, type DeckRows } from './collection-layout';
-import { CARD_WIDTH, type Cell, linesOf, spanOf, stackOf } from './collection-stack';
+import { type CollectionStack, copiesIn, type DeckRows, stacksOf } from './collection-layout';
+import {
+  CARD_WIDTH,
+  type Cell,
+  linesOf,
+  priceButtonOf,
+  signButtonOf,
+  spanOf,
+  stackOf,
+} from './collection-stack';
 import { addText, type Box, ownBoxOf, UI_FONT } from './design-space';
 import { cardFaceAtStart, type Face } from './face';
 import { css, LOOK } from './look';
 import type { Filled, Held } from './panel';
 import { type Answers, answersOf, type Inspecting } from './stack';
-import { type TextKey, text } from './text';
+import { cardName, type TextKey, text } from './text';
 
 const SECTION_TOP = 6;
 const UNDER_SECTION = 10;
@@ -287,10 +296,18 @@ export function deckPanelOf(
   return { parts, held, foot: empty.bottom };
 }
 
+/** What the buttons under a stack of the civilization mode run on its card. */
+export type CopyMoves = {
+  readonly remove: (card: CardId) => void;
+  readonly add: (card: CardId) => void;
+  /** Buys a copy and adds it. */
+  readonly buy: (card: CardId) => void;
+};
+
 /**
  * The civilization's panel of the civilization mode, a block `across` stacks wide from the left and
- * the top handed: each section under its word, its count beside it, each card a stack reading the
- * copies held over those the `owned` stacks hold, the city section's card a face alone at the head.
+ * the top handed: each section under its word, its count beside it, each card a stack reading its
+ * copies held over owned between its two buttons, the city section's card a face alone at the head.
  */
 export function civilizationPanelOf(
   scene: Phaser.Scene,
@@ -299,12 +316,14 @@ export function civilizationPanelOf(
     city,
     deck,
     counts,
-    owned,
+    campaign,
+    moves,
   }: {
     readonly city: CardId;
     readonly deck: DeckRows;
     readonly counts: { readonly cards: number; readonly settle: number };
-    readonly owned: readonly CollectionStack[];
+    readonly campaign: Campaign;
+    readonly moves: CopyMoves;
   },
   {
     left,
@@ -331,21 +350,43 @@ export function civilizationPanelOf(
     return bottom + UNDER_SECTION;
   };
 
+  const owned = stacksOf(catalogue, campaign.collection, cardName);
+
   const stack =
     (row: CollectionStack): Cell =>
     ({ left: x, top: y }) => {
+      const { id, copies: held } = row;
+      const copies = copiesIn(owned, id);
+      const name = `civilization-card-${id}`;
       const laid = stackOf(scene, catalogue, {
         stack: row,
         left: x,
         top: y,
         name: 'civilization',
-        reading: {
-          reads: text('collection.in-deck', { held: row.copies, copies: copiesIn(owned, row.id) }),
-          dimmed: false,
-        },
+        reading: { reads: text('collection.held-of-owned', { held, copies }), dimmed: held === 0 },
         inspecting,
       });
-      return { parts: [laid.root], held: [laid.face], bottom: laid.bottom };
+      const remove = signButtonOf(scene, laid, {
+        name: `${name}-remove`,
+        sign: text('collection.remove-copy'),
+        end: 'left',
+        press: held > 0 ? () => moves.remove(id) : undefined,
+      });
+      const more =
+        held < copies
+          ? signButtonOf(scene, laid, {
+              name: `${name}-add`,
+              sign: text('collection.add-copy'),
+              end: 'right',
+              press: () => moves.add(id),
+            })
+          : priceButtonOf(scene, laid, {
+              name,
+              price: priceOf(catalogue, campaign, id),
+              buy: unaffordableIn(catalogue, campaign, id) ? undefined : () => moves.buy(id),
+            });
+      laid.reading.setOrigin(0.5).setX((remove.box.x + remove.box.width + more.box.x) / 2);
+      return { parts: [laid.root], held: [laid.face, remove, more], bottom: laid.bottom };
     };
 
   const cityCell: Cell = ({ left: x, top: y }) => {

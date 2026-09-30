@@ -13,7 +13,15 @@ import type { Catalogue } from '../rules/catalogue';
 import { type CardId, NO_REFUSAL } from '../rules/state';
 import { createCardFace, createKindBubble, metricsOf } from './card-face';
 import { createPile, PILE_SPAN } from './civilization-pile';
-import { type CollectionStack, countsOf, deckRowsOf, heldIn, stacksOf } from './collection-layout';
+import {
+  type CollectionStack,
+  countsOf,
+  type DeckRows,
+  deckRowsOf,
+  heldIn,
+  stacksOf,
+  standingIn,
+} from './collection-layout';
 import {
   CARD_WIDTH,
   type Cell,
@@ -73,11 +81,14 @@ const BUTTON_STYLE = {
   color: css(LOOK.paleInk),
 };
 
-/** The mode the screen stands in, and the civilization it shows where it shows one. */
+/**
+ * The mode the screen stands in, the civilization it shows where it shows one, and in the
+ * civilization mode the rows its deck held as the mode opened, which stand until it is left.
+ */
 type Mode =
   | { readonly shows: 'collection' }
   | { readonly shows: 'deck editing'; readonly civilization: string }
-  | { readonly shows: 'civilization'; readonly civilization: string };
+  | { readonly shows: 'civilization'; readonly civilization: string; readonly stood: DeckRows };
 
 /** How wide the right panel stands in a mode, and how many stacks a line of its stacks holds. */
 function shapeOf(mode: Mode): { readonly right: number; readonly across: number } {
@@ -402,7 +413,7 @@ export class CollectionScreen extends Phaser.Scene {
             'collection-to-civilization',
           );
           onClick(onward.face, () => {
-            lay({ shows: 'civilization', civilization });
+            lay({ shows: 'civilization', civilization, stood: deck });
           });
           const name = addText(
             this,
@@ -492,7 +503,7 @@ export class CollectionScreen extends Phaser.Scene {
           return;
         }
         case 'civilization': {
-          const { civilization } = mode;
+          const { civilization, stood } = mode;
           const [offset] = offsets;
           const title = word(
             text('collection.civilization-title', {
@@ -529,9 +540,25 @@ export class CollectionScreen extends Phaser.Scene {
                     CATALOGUE,
                     {
                       city: owned.city.card.id,
-                      deck: deckRowsOf(CATALOGUE, campaign, civilization, cardName),
+                      deck: standingIn(
+                        stood,
+                        deckRowsOf(CATALOGUE, campaign, civilization, cardName),
+                      ),
                       counts: countsOf(owned),
-                      owned: stacksOf(CATALOGUE, campaign.collection, cardName),
+                      campaign,
+                      moves: {
+                        remove: (card) => {
+                          edit(mode, (held) => removedFrom(CATALOGUE, held, civilization, card));
+                        },
+                        add: (card) => {
+                          edit(mode, (held) => addedTo(CATALOGUE, held, civilization, card));
+                        },
+                        buy: (card) => {
+                          edit(mode, (held) =>
+                            addedTo(CATALOGUE, bought(CATALOGUE, held, card), civilization, card),
+                          );
+                        },
+                      },
                     },
                     {
                       left: (ROOM.x + DESIGN_WIDTH - spanOf(across)) / 2,

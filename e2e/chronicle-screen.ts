@@ -240,6 +240,31 @@ export async function heldSave(page: Page): Promise<SaveRead> {
   return readSave(CATALOGUE, saved);
 }
 
+/** The save waited for until it holds the campaign handed, and a drawn frame after. */
+export async function saved(page: Page, campaign: Campaign): Promise<void> {
+  await expect
+    .poll(async () => (await heldSave(page).catch(() => undefined))?.campaign)
+    .toEqual(campaign);
+  await rested(page);
+}
+
+/**
+ * A left click on the named object, the save waited for until it holds the campaign `move` makes of
+ * the one handed: the campaign the save now holds.
+ */
+export async function pressed(
+  page: Page,
+  name: string,
+  campaign: Campaign,
+  move: (campaign: Campaign) => Campaign,
+): Promise<Campaign> {
+  const moved = move(campaign);
+  const at = await onScreen(page, name);
+  await page.mouse.click(at.x, at.y);
+  await saved(page, moved);
+  return moved;
+}
+
 /** The text kept as the save the next page this one loads finds; a page after it finds what play left. */
 async function kept(page: Page, text: string): Promise<void> {
   await page.addInitScript(
@@ -1131,6 +1156,23 @@ export async function endTurnLabel(page: Page): Promise<string> {
   const label = await textOf(page, 'end-turn-label');
   if (label === undefined) throw new Error('the end-turn button is not on the chronicle screen');
   return label;
+}
+
+/** What the named rectangle is painted. */
+export function fillOf(page: Page, name: string): Promise<number> {
+  return page.evaluate((target) => {
+    const face = window.named?.(target)?.object as Phaser.GameObjects.Rectangle | undefined;
+    if (face === undefined) throw new Error(`there is no ${target} on the screen`);
+    return face.fillColor;
+  }, name);
+}
+
+/** Whether the named stack stands dimmed, and nothing where no stack of that name stands. */
+export function stackDimmed(page: Page, name: string): Promise<boolean | undefined> {
+  return page.evaluate(
+    (target) => window.named?.(target)?.object.getData('dimmed') as boolean | undefined,
+    name,
+  );
 }
 
 /** What the end-turn button is painted. */

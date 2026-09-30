@@ -20,8 +20,11 @@ import {
   openCollection,
   pilePressed,
   placeOf,
+  pressed,
   rested,
+  saved,
   shows,
+  stackDimmed,
   standing,
   textOf,
   watch,
@@ -73,10 +76,7 @@ async function namingCard(page: Page): Promise<CardId> {
 
 /** Whether the card's stack stands dimmed, and nothing where no stack of it stands. */
 function dimmed(page: Page, id: CardId): Promise<boolean | undefined> {
-  return page.evaluate(
-    (target) => window.named?.(target)?.object.getData('dimmed') as boolean | undefined,
-    `collection-stack-${id}`,
-  );
+  return stackDimmed(page, `collection-stack-${id}`);
 }
 
 /**
@@ -115,31 +115,6 @@ async function readsAs(page: Page, campaign: Campaign): Promise<void> {
     );
     expect(await dimmed(page, id)).toBe(holds === copies);
   }
-}
-
-/** The save waited for until it holds the campaign handed, and a drawn frame after. */
-async function saved(page: Page, campaign: Campaign): Promise<void> {
-  await expect
-    .poll(async () => (await heldSave(page).catch(() => undefined))?.campaign)
-    .toEqual(campaign);
-  await rested(page);
-}
-
-/**
- * A left click on the named object, the save waited for until it holds the campaign `move` makes of
- * the one handed: the campaign the save now holds.
- */
-async function pressed(
-  page: Page,
-  name: string,
-  campaign: Campaign,
-  move: (campaign: Campaign) => Campaign,
-): Promise<Campaign> {
-  const moved = move(campaign);
-  const at = await onScreen(page, name);
-  await page.mouse.click(at.x, at.y);
-  await saved(page, moved);
-  return moved;
 }
 
 /** A press held on the named object and moved in steps to the point handed, a drawn frame after, not let go. */
