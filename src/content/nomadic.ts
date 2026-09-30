@@ -16,7 +16,7 @@ import {
   slotFree,
   throughWorker,
 } from '../rules/cards';
-import type { Age, Slice, Tables } from '../rules/catalogue';
+import type { Age, Card, Slice, Tables } from '../rules/catalogue';
 import { arrived, populationTaken, yielded } from '../rules/city';
 import { enteredAround } from '../rules/enemies';
 import { MOVE_POINT } from '../rules/map';
@@ -51,6 +51,15 @@ const WILDFIRE: Fire = { burns: 'forest', leaves: 'plain', fromCity: 4, around: 
 const HERD = { feature: 'wildlife', fromCity: 4 } as const;
 
 const RIVAL_CAMP = { fromCity: [3, 4], apart: 3 } as const;
+
+const PLACEHOLDER: Card = {
+  kind: 'instant',
+  cost: {},
+  aim: 'none',
+  effect: (_catalogue, paid) => unchanged(paid),
+};
+
+const PLACEHOLDERS = Array.from({ length: 20 }, (_, index) => `placeholder-${index + 1}`);
 
 const TABLES: Tables = {
   units: {
@@ -169,6 +178,7 @@ const TABLES: Tables = {
       aim: 'none',
       effect: (_catalogue, paid) => arrived(paid),
     },
+    ...Object.fromEntries(PLACEHOLDERS.map((id) => [id, PLACEHOLDER])),
   },
   civilizations: {
     nomadic: {
@@ -179,6 +189,7 @@ const TABLES: Tables = {
         'scout',
         ...Array<string>(2).fill('trapping'),
         ...Array<string>(2).fill('march'),
+        ...PLACEHOLDERS,
       ],
       settle: ['first-worker', 'first-scout'],
       city: { building: 'city', sight: 2, idle: 0, card: 'settle' },
