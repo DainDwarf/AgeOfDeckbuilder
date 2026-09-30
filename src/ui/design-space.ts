@@ -262,16 +262,22 @@ export function holdDesignSpace(scene: Phaser.Scene, camera: Phaser.Cameras.Scen
 type Moves = 'every' | 'no button held';
 
 /**
- * Every press and wheel on an interactive object of this scene kept from the scenes beneath, a
- * move as `moves` answers at that move, never a release: stopped, it would strand a drag beneath.
- * One listener per event, not per object: `topOnly` skips a stop on an object lying under another.
+ * Every press on an interactive object here kept from the scenes beneath, a wheel and a move as
+ * `wheels` and `moves` answer, never a release: that would strand a drag beneath. One listener per
+ * event, not per object: `topOnly` skips a stop on an object lying under another.
  */
-export function stopsThePointer(scene: Phaser.Scene, moves: () => Moves): void {
+export function stopsThePointer(
+  scene: Phaser.Scene,
+  moves: () => Moves,
+  wheels: () => boolean,
+): void {
   const stop = (): void => {
     scene.input.stopPropagation();
   };
   scene.input.on('gameobjectdown', stop);
-  scene.input.on('gameobjectwheel', stop);
+  scene.input.on('gameobjectwheel', () => {
+    if (wheels()) stop();
+  });
   scene.input.on('gameobjectmove', (pointer: Phaser.Input.Pointer) => {
     switch (moves()) {
       case 'every':

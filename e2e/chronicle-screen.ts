@@ -474,6 +474,26 @@ export function nameOnScreen(
   );
 }
 
+/**
+ * The first name of the first card of the hand, read once the card has come to rest lifted under the
+ * pointer: the lift carries the name up off where it lay.
+ */
+export async function liftedName(
+  page: Page,
+  lying: { x: number; y: number },
+): Promise<{ x: number; y: number }> {
+  let name = lying;
+  await expect
+    .poll(async () => {
+      const was = await nameOnScreen(page, 'hand-0');
+      await rested(page);
+      name = await nameOnScreen(page, 'hand-0');
+      return name.y < lying.y && name.y === was.y;
+    })
+    .toBe(true);
+  return name;
+}
+
 /** Where the named face's kind label sits on the page, and how tall it stands there. */
 export function kindLabelOnScreen(
   page: Page,

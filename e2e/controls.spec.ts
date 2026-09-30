@@ -3,6 +3,9 @@ import {
   bareTile,
   browse,
   click,
+  launchedOn,
+  liftedName,
+  nameOnScreen,
   onScreen,
   openSaved,
   rested,
@@ -168,6 +171,16 @@ async function grewBy(page: Page, gesture: () => Promise<void>): Promise<number>
   const before = await tileOnScreen(page, BARE);
   await page.mouse.move(before.x, before.y);
   await gesture();
+  await rested(page);
+  await rested(page);
+  return (await tileOnScreen(page, BARE)).unit / before.unit;
+}
+
+/** How much larger the map stands after a notch of the wheel with the pointer brought to that point. */
+async function notchedOver(page: Page, at: { x: number; y: number }): Promise<number> {
+  const before = await tileOnScreen(page, BARE);
+  await page.mouse.move(at.x, at.y, { steps: 5 });
+  await page.mouse.wheel(0, -100);
   await rested(page);
   await rested(page);
   return (await tileOnScreen(page, BARE)).unit / before.unit;
@@ -440,11 +453,7 @@ test('the zooms stand on = and -, the wheel zooms beside them, and a slot listen
   await click(page, 'controls-zoom-in-1');
   await expect.poll(() => slotReads(page, 'zoom-in', 1)).toBe('Press a key');
 
-  const slot = await onScreen(page, 'controls-zoom-in-1');
-  await page.mouse.move(slot.x, slot.y);
-  await page.mouse.wheel(0, -100);
-  await rested(page);
-  await rested(page);
+  expect(await notchedOver(page, await onScreen(page, 'controls-zoom-in-1'))).toBeCloseTo(1, 2);
   expect(await slotReads(page, 'zoom-in', 1)).toBe('Press a key');
 
   await page.keyboard.press('e');
@@ -454,6 +463,26 @@ test('the zooms stand on = and -, the wheel zooms beside them, and a slot listen
 
   expect(await grewBy(page, () => page.keyboard.press('e'))).toBeCloseTo(NOTCH, 2);
   expect(await grewBy(page, () => page.mouse.wheel(0, -100))).toBeCloseTo(NOTCH, 2);
+
+  expect(problems).toEqual([]);
+});
+
+test('a notch zooms the map over the Menu button and over a small card raised from the hand', async ({
+  page,
+}) => {
+  const problems = watch(page);
+
+  await openSaved(page, launchedOn(1));
+  expect(await notchedOver(page, await onScreen(page, 'menu-button'))).toBeCloseTo(NOTCH, 2);
+
+  const card = await onScreen(page, 'hand-0');
+  const lying = await nameOnScreen(page, 'hand-0');
+  await page.mouse.move(card.x, card.y);
+  const name = await liftedName(page, lying);
+  await page.mouse.move(name.x, name.y, { steps: 5 });
+  await expect.poll(() => standing(page, 'small-card-0')).toBe(true);
+  expect(await notchedOver(page, await onScreen(page, 'small-card-0'))).toBeCloseTo(NOTCH, 2);
+  expect(await standing(page, 'small-card-0')).toBe(true);
 
   expect(problems).toEqual([]);
 });

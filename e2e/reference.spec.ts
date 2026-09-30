@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
 import { civilizationOf } from '../src/rules/catalogue';
 import { offered } from '../src/rules/schedule';
@@ -12,6 +12,7 @@ import {
   firstsOf,
   launchedOn,
   leanSeason,
+  liftedName,
   namedIn,
   nameOnScreen,
   onScreen,
@@ -49,26 +50,6 @@ function namingAnswer(dealt: Chronicle): {
     if (name !== -1) return { answer, at, named: names[name].id, name };
   }
   throw new Error(`the ${deal.event} offers no answer naming a card`);
-}
-
-/**
- * The first name of the first card of the hand, read once the card has come to rest lifted under the
- * pointer: the lift carries the name up off where it lay.
- */
-async function liftedName(
-  page: Page,
-  lying: { x: number; y: number },
-): Promise<{ x: number; y: number }> {
-  let name = lying;
-  await expect
-    .poll(async () => {
-      const was = await nameOnScreen(page, 'hand-0');
-      await rested(page);
-      name = await nameOnScreen(page, 'hand-0');
-      return name.y < lying.y && name.y === was.y;
-    })
-    .toBe(true);
-  return name;
 }
 
 test('a card named on a card raises it small at a rest and shows it large at a right click on the name or on the small card, and one named on a card shown large stands over it', async ({

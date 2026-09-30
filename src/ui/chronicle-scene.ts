@@ -163,7 +163,11 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       tooltip: stratum(),
     };
     holdDesignSpace(this, camera);
-    stopsThePointer(this, () => 'no button held');
+    stopsThePointer(
+      this,
+      () => 'no button held',
+      () => true,
+    );
     createBand(this, ui.band);
 
     /** The one bubble each surface raises; the overlay builds its own. */

@@ -211,7 +211,12 @@ export class MenuScene extends Phaser.Scene {
     onClick(scrim, back, 'right');
     onClick(refusedSaveScrim, takeDownRefusedSave);
     onClick(refusedSaveScrim, takeDownRefusedSave, 'right');
-    stopsThePointer(this, () => (covered ? 'every' : 'no button held'));
+    // The Menu button answers no wheel, and the chronicle screen zooms under it.
+    stopsThePointer(
+      this,
+      () => (covered ? 'every' : 'no button held'),
+      () => covered,
+    );
 
     readsKeys(this, (event) => {
       if (!covered) return false;

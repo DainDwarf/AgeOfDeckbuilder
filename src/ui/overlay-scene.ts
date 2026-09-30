@@ -40,7 +40,11 @@ export class OverlayScene extends Phaser.Scene {
     // has just gone down would answer keys until the next one is built.
     this.taker = undefined;
     holdDesignSpace(this, camera);
-    stopsThePointer(this, () => 'every');
+    stopsThePointer(
+      this,
+      () => 'every',
+      () => true,
+    );
     readsKeys(this, (event) => this.taker?.(keyPressed(event)) === true);
     takesMouseKeys(this, (press) => this.taker?.(press) === true);
   }
