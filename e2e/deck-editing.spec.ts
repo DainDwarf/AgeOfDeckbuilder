@@ -17,9 +17,9 @@ import {
   kindLabelOnScreen,
   nameOnScreen,
   onScreen,
+  openCollection,
   pilePressed,
   placeOf,
-  readNames,
   rested,
   shows,
   standing,
@@ -47,7 +47,7 @@ const ACROSS = 4;
 const SIDEWAYS = 40;
 
 /** How many of the ids are this one. */
-function copiesIn(ids: readonly CardId[], id: CardId): number {
+function idsCounted(ids: readonly CardId[], id: CardId): number {
   return ids.filter((held) => held === id).length;
 }
 
@@ -55,15 +55,8 @@ function copiesIn(ids: readonly CardId[], id: CardId): number {
 function rowsOf(ids: readonly CardId[]): { id: CardId; copies: number }[] {
   return STACKS.filter(({ id }) => ids.includes(id)).map(({ id }) => ({
     id,
-    copies: copiesIn(ids, id),
+    copies: idsCounted(ids, id),
   }));
-}
-
-/** The collection screen a bare boot's navbar opens. */
-async function openCollection(page: Page): Promise<void> {
-  await readNames(page);
-  await page.goto('/');
-  await collectionOpened(page);
 }
 
 /** The collection screen a bare boot's navbar opens, in the deck editing mode on its first civilization. */
@@ -115,7 +108,7 @@ async function readsAs(page: Page, campaign: Campaign): Promise<void> {
   }
   const held = [...settle, ...cards];
   for (const { id, copies } of STACKS) {
-    const holds = copiesIn(held, id);
+    const holds = idsCounted(held, id);
     if (holds === 0) expect(await counted(page, `deck-row-${id}`)).toBe(0);
     expect(await textOf(page, `collection-card-${id}-copies`)).toBe(
       text('collection.in-deck', { held: holds, copies }),
@@ -164,7 +157,7 @@ async function heldTo(page: Page, name: string, to: { x: number; y: number }): P
 function stackWith(campaign: Campaign, free: boolean): CardId {
   const { settle, cards } = civilizationIn(CATALOGUE, campaign, CIVILIZATION);
   const found = STACKS.find(
-    ({ id, copies }) => copiesIn([...settle, ...cards], id) < copies === free,
+    ({ id, copies }) => idsCounted([...settle, ...cards], id) < copies === free,
   );
   if (found === undefined) throw new Error(`no stack has ${free ? 'a' : 'no'} copy free`);
   return found.id;
@@ -232,7 +225,7 @@ test('a press on a civilization’s pile opens the deck editing mode on it: its 
   const held = [...DECK.settle, ...DECK.cards];
   const placed: { id: CardId; at: { x: number; y: number } }[] = [];
   for (const { id, copies } of STACKS) {
-    const holds = copiesIn(held, id);
+    const holds = idsCounted(held, id);
     expect(await textOf(page, `collection-card-${id}-copies`)).toBe(
       text('collection.in-deck', { held: holds, copies }),
     );

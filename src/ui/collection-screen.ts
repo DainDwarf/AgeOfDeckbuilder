@@ -10,11 +10,19 @@ import {
   unaffordableIn,
 } from '../rules/campaign';
 import type { Catalogue } from '../rules/catalogue';
-import type { CardId } from '../rules/state';
-import { createKindBubble, metricsOf } from './card-face';
+import { type CardId, NO_REFUSAL } from '../rules/state';
+import { createCardFace, createKindBubble, metricsOf } from './card-face';
 import { createPile, PILE_SPAN } from './civilization-pile';
 import { type CollectionStack, countsOf, deckRowsOf, heldIn, stacksOf } from './collection-layout';
-import { CARD_WIDTH, type Cell, linesOf, type Reading, spanOf, stackOf } from './collection-stack';
+import {
+  CARD_WIDTH,
+  type Cell,
+  linesOf,
+  priceButtonOf,
+  type Reading,
+  spanOf,
+  stackOf,
+} from './collection-stack';
 import { offerEntries } from './debug-console';
 import { civilizationPanelOf, deckPanelOf } from './deck-panel';
 import {
@@ -32,6 +40,7 @@ import {
   stratumOf,
   UI_FONT,
 } from './design-space';
+import { cardFaceAtStart } from './face';
 import { isWheelNotch, takesMouseKeys } from './keys';
 import { css, LOOK } from './look';
 import { backRaisesMenu, resetMenu } from './menu-scene';
@@ -82,44 +91,69 @@ function shapeOf(mode: Mode): { readonly right: number; readonly across: number 
   }
 }
 
+/** What a stack of the collection answers a left click with, and the box a press held on it lands in. */
+type Moves = {
+  readonly pressOf: (stack: CollectionStack) => (() => void) | undefined;
+  readonly lands: Box;
+};
+
 /**
  * The campaign's collection as stacks from the top handed, `across` to a line, the lines centred
- * between the room's left and `right`, each reading what `readingOf` says, answering a left click
- * where `pressOf` hands one and a press held into `lands` where handed; an affordable price runs `buy`.
+ * between the room's left and `right`, each reading what `readingOf` says and moving where `moves`
+ * are handed, its price a button; an affordable price runs `buy`.
  */
 function collectionOf(
   scene: Phaser.Scene,
   catalogue: Catalogue,
   campaign: Campaign,
-  { top, right, across, lands }: { top: number; right: number; across: number; lands?: Box },
+  { top, right, across }: { top: number; right: number; across: number },
   readingOf: (stack: CollectionStack) => Reading,
-  pressOf: (stack: CollectionStack) => (() => void) | undefined,
+  moves: Moves | undefined,
   buy: (card: CardId) => void,
   inspecting: Inspecting,
 ): Filled {
   const stacks = stacksOf(catalogue, campaign.collection, cardName);
   const cells = stacks.map(
     (stack): Cell =>
-      (at) =>
-        stackOf(
-          scene,
-          catalogue,
+      ({ left, top }) => {
+        const { id } = stack;
+        const laid = stackOf(scene, catalogue, {
           stack,
-          at,
-          'collection',
-          readingOf(stack),
-          {
-            price: priceOf(catalogue, campaign, stack.id),
-            buy: unaffordableIn(catalogue, campaign, stack.id)
-              ? undefined
-              : () => {
-                  buy(stack.id);
-                },
-          },
+          left,
+          top,
+          name: 'collection',
+          reading: readingOf(stack),
           inspecting,
-          pressOf(stack),
-          lands,
-        ),
+        });
+        const price = priceButtonOf(scene, laid, {
+          name: `collection-card-${id}`,
+          price: priceOf(catalogue, campaign, id),
+          buy: unaffordableIn(catalogue, campaign, id)
+            ? undefined
+            : () => {
+                buy(id);
+              },
+        });
+        const { box } = laid.face;
+        const face: Held =
+          moves === undefined
+            ? laid.face
+            : {
+                ...laid.face,
+                press: moves.pressOf(stack),
+                carry: {
+                  copy: () =>
+                    createCardFace(scene, cardFaceAtStart(catalogue, id), NO_REFUSAL, {
+                      width: CARD_WIDTH,
+                    })
+                      .root.setPosition(box.x + box.width / 2, box.y + box.height)
+                      .setName('carried-card')
+                      .setData('card', id),
+                  lands: moves.lands,
+                },
+              };
+        return { parts: [laid.root], held: [face, price], bottom: laid.bottom };
+      },
   );
   return linesOf(cells, { left: (ROOM.x + right - spanOf(across)) / 2, top, across });
 }
@@ -314,7 +348,7 @@ export class CollectionScreen extends Phaser.Scene {
                     campaign,
                     { top, right: divide, across },
                     reading,
-                    () => undefined,
+                    undefined,
                     buy,
                     inspecting,
                   ),
@@ -413,9 +447,9 @@ export class CollectionScreen extends Phaser.Scene {
                     this,
                     CATALOGUE,
                     campaign,
-                    { top, right: divide, across, lands: civilizationSide },
+                    { top, right: divide, across },
                     reading,
-                    add,
+                    { pressOf: add, lands: civilizationSide },
                     buy,
                     inspecting,
                   ),
@@ -497,7 +531,7 @@ export class CollectionScreen extends Phaser.Scene {
                       city: owned.city.card.id,
                       deck: deckRowsOf(CATALOGUE, campaign, civilization, cardName),
                       counts: countsOf(owned),
-                      collection: campaign.collection,
+                      owned: stacksOf(CATALOGUE, campaign.collection, cardName),
                     },
                     {
                       left: (ROOM.x + DESIGN_WIDTH - spanOf(across)) / 2,

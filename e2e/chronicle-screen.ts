@@ -268,6 +268,13 @@ export async function collectionOpened(page: Page): Promise<void> {
   await rested(page);
 }
 
+/** The collection screen the navbar opens from the campaign screen a boot of the bare address stands on. */
+export async function openCollection(page: Page): Promise<void> {
+  await readNames(page);
+  await page.goto('/');
+  await collectionOpened(page);
+}
+
 /** The deck editing mode a press on the civilization's pile opens, and a drawn frame after it. */
 export async function pilePressed(page: Page, civilization: string): Promise<void> {
   await click(page, `collection-civilization-${civilization}`);

@@ -2,7 +2,7 @@ import type Phaser from 'phaser';
 import type { Catalogue } from '../rules/catalogue';
 import { type CardId, NO_REFUSAL } from '../rules/state';
 import { createCardFace, dashAlong, heightOf } from './card-face';
-import type { CollectionStack, DeckRows } from './collection-layout';
+import { type CollectionStack, copiesIn, type DeckRows } from './collection-layout';
 import { CARD_WIDTH, type Cell, linesOf, spanOf, stackOf } from './collection-stack';
 import { addText, type Box, ownBoxOf, UI_FONT } from './design-space';
 import { cardFaceAtStart, type Face } from './face';
@@ -290,7 +290,7 @@ export function deckPanelOf(
 /**
  * The civilization's panel of the civilization mode, a block `across` stacks wide from the left and
  * the top handed: each section under its word, its count beside it, each card a stack reading the
- * copies held over those the collection owns, the city section's card a face alone at the head.
+ * copies held over those the `owned` stacks hold, the city section's card a face alone at the head.
  */
 export function civilizationPanelOf(
   scene: Phaser.Scene,
@@ -299,12 +299,12 @@ export function civilizationPanelOf(
     city,
     deck,
     counts,
-    collection,
+    owned,
   }: {
     readonly city: CardId;
     readonly deck: DeckRows;
     readonly counts: { readonly cards: number; readonly settle: number };
-    readonly collection: readonly { readonly id: CardId }[];
+    readonly owned: readonly CollectionStack[];
   },
   {
     left,
@@ -333,25 +333,20 @@ export function civilizationPanelOf(
 
   const stack =
     (row: CollectionStack): Cell =>
-    (at) =>
-      stackOf(
-        scene,
-        catalogue,
-        row,
-        at,
-        'civilization',
-        {
-          reads: text('collection.in-deck', {
-            held: row.copies,
-            copies: collection.filter(({ id }) => id === row.id).length,
-          }),
+    ({ left: x, top: y }) => {
+      const laid = stackOf(scene, catalogue, {
+        stack: row,
+        left: x,
+        top: y,
+        name: 'civilization',
+        reading: {
+          reads: text('collection.in-deck', { held: row.copies, copies: copiesIn(owned, row.id) }),
           dimmed: false,
         },
-        undefined,
         inspecting,
-        undefined,
-        undefined,
-      );
+      });
+      return { parts: [laid.root], held: [laid.face], bottom: laid.bottom };
+    };
 
   const cityCell: Cell = ({ left: x, top: y }) => {
     const shown = cardFaceAtStart(catalogue, city);

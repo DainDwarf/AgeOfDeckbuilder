@@ -8,16 +8,15 @@ import { cardName, civilizationName, text } from '../src/ui/text';
 import {
   cardOnFace,
   click,
-  collectionOpened,
   counted,
   cursorAt,
   heldSave,
   kindLabelOnScreen,
   onScreen,
+  openCollection,
   pilePressed,
   placeOf,
   plantCampaign,
-  readNames,
   rested,
   standing,
   textOf,
@@ -71,9 +70,7 @@ function ownedOf(card: CardId): number {
 /** The planted campaign's collection screen, in the civilization mode « Civilization opens on its first civilization. */
 async function openCivilization(page: Page): Promise<void> {
   await plantCampaign(page, PLANTED.campaign);
-  await readNames(page);
-  await page.goto('/');
-  await collectionOpened(page);
+  await openCollection(page);
   await pilePressed(page, CIVILIZATION);
   await click(page, 'collection-to-civilization');
   await expect.poll(() => standing(page, 'civilization-mode')).toBe(true);

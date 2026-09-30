@@ -67,11 +67,14 @@ export function deckRowsOf(
   return { settle: rows(settle), cards: rows(cards) };
 }
 
+/** How many copies of the card the stacks hold together, and none where no stack is of it. */
+export function copiesIn(stacks: readonly CollectionStack[], card: CardId): number {
+  return stacks.filter(({ id }) => id === card).reduce((held, { copies }) => held + copies, 0);
+}
+
 /** How many copies of the card the deck holds, its settle section and the rest together. */
 export function heldIn(deck: DeckRows, card: CardId): number {
-  return [...deck.settle, ...deck.cards]
-    .filter(({ id }) => id === card)
-    .reduce((held, { copies }) => held + copies, 0);
+  return copiesIn([...deck.settle, ...deck.cards], card);
 }
 
 /** What a civilization counts: its cards, and its settle cards with the city section's card among them. */

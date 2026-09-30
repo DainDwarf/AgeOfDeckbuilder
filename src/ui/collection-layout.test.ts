@@ -3,7 +3,7 @@ import { dealt, FIRST_CARD_NUMBER, newCampaign, paidInto } from '../rules/campai
 import { merged } from '../rules/catalogue';
 import { CATALOGUE, CIVILIZATION_ID, hoardedVictory, SLICES, twoAges } from '../rules/fixtures';
 import type { CardId } from '../rules/state';
-import { countsOf, deckRowsOf, heldIn, stacksOf } from './collection-layout';
+import { copiesIn, countsOf, deckRowsOf, heldIn, stacksOf } from './collection-layout';
 
 /** The names the player reads the fixture's cards by, the test's own. */
 const NAMES: Readonly<Record<CardId, string>> = {
@@ -132,6 +132,6 @@ test('the copies a won chronicle adds to the collection stand in no deck', () =>
   );
   const stacks = stacksOf(CATALOGUE, campaign.collection, nameOf);
 
-  expect(stacks.find(({ id }) => id === 'PH_Harvest')?.copies).toBe(4);
+  expect(copiesIn(stacks, 'PH_Harvest')).toBe(4);
   expect(heldIn(deckRowsOf(CATALOGUE, campaign, CIVILIZATION_ID, nameOf), 'PH_Harvest')).toBe(2);
 });

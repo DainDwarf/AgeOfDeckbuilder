@@ -19,8 +19,8 @@ const STACK_WIDTH = CARD_WIDTH + UNDER_MOST * UNDER_STEP;
 const STACKS_APART = 10;
 const LINES_APART = 18;
 const COPIES_GAP = 6;
+const LINE_HEIGHT = 22;
 const CHIP_TO_PRICE = 11;
-const BUY_HEIGHT = 22;
 const BUY_PAD = 3;
 
 const COPIES_STYLE = { fontFamily: UI_FONT, fontSize: '14px', color: css(LOOK.deckCounts) };
@@ -34,9 +34,6 @@ const GREYED_PRICE_STYLE = { ...PRICE_STYLE, color: css(LOOK.greyedInk) };
 
 /** What a stack reads under it, and whether it stands dimmed. */
 export type Reading = { readonly reads: string; readonly dimmed: boolean };
-
-/** A card's price, and what a press on it buys, where it buys. */
-export type Priced = { readonly price: number; readonly buy: (() => void) | undefined };
 
 /** What a cell of a line draws, the things in it that answer, and where it ends. */
 export type Drawn = {
@@ -88,26 +85,41 @@ export function linesOf(
   return { parts, held, foot };
 }
 
+/** A stack laid: its container, its face's answers where the face stands, its reading line, and its foot. */
+export type LaidStack = {
+  /** What a piece laid on the stack joins. */
+  readonly root: Phaser.GameObjects.Container;
+  readonly face: Held;
+  /** The reading line's top and middle, and the stack's right end. */
+  readonly line: { readonly top: number; readonly middle: number; readonly right: number };
+  readonly bottom: number;
+};
+
 /**
- * One stack from the left and the top handed, its parts named from `name`: a card under its face for
- * each copy past the first, three at most, stepped right and down, its reading under them, and where
- * it is priced its price at the line's right as a button that buys, greyed where no buy is handed.
+ * One stack, its parts named from `name`: a card under its face for each copy past the first, three
+ * at most, stepped right and down, and its reading under them.
  */
 export function stackOf(
   scene: Phaser.Scene,
   catalogue: Catalogue,
-  { id, copies }: CollectionStack,
-  { left, top }: { left: number; top: number },
-  name: string,
-  reading: Reading,
-  priced: Priced | undefined,
-  inspecting: Inspecting,
-  press: (() => void) | undefined,
-  lands: Box | undefined,
-): Drawn {
+  {
+    stack: { id, copies },
+    left,
+    top,
+    name,
+    reading,
+    inspecting,
+  }: {
+    readonly stack: CollectionStack;
+    readonly left: number;
+    readonly top: number;
+    readonly name: string;
+    readonly reading: Reading;
+    readonly inspecting: Inspecting;
+  },
+): LaidStack {
   const tone = reading.dimmed ? dimmed : (colour: number): number => colour;
   const height = heightOf(CARD_WIDTH);
-  const place = { x: left + CARD_WIDTH / 2, y: top + height };
   const under = Math.min(copies - 1, UNDER_MOST);
   const unders = Array.from({ length: under }, (_, at) => {
     const step = (under - at) * UNDER_STEP;
@@ -122,58 +134,64 @@ export function stackOf(
   const shown = cardFaceAtStart(catalogue, id);
   const card = createCardFace(scene, shown, NO_REFUSAL, { width: CARD_WIDTH, tone });
   const face = card.root
-    .setPosition(place.x, place.y)
+    .setPosition(left + CARD_WIDTH / 2, top + height)
     .setName(`${name}-card-${id}`)
     .setData('card', id);
   const lineTop = top + height + UNDER_MOST * UNDER_STEP + COPIES_GAP;
-  const middle = lineTop + BUY_HEIGHT / 2;
+  const middle = lineTop + LINE_HEIGHT / 2;
   const count = addText(scene, left, middle, reading.reads, COPIES_STYLE)
     .setOrigin(0, 0.5)
     .setName(`${name}-card-${id}-copies`);
-  const faceHeld: Held = {
-    box: { x: left, y: top, width: CARD_WIDTH, height },
-    answers: answersOf(card, shown, inspecting),
-    press,
-    carry:
-      lands === undefined
-        ? undefined
-        : {
-            copy: () =>
-              createCardFace(scene, shown, NO_REFUSAL, { width: CARD_WIDTH })
-                .root.setPosition(place.x, place.y)
-                .setName('carried-card')
-                .setData('card', id),
-            lands,
-          },
+  return {
+    root: scene.add
+      .container(0, 0, [...unders, face, count])
+      .setName(`${name}-stack-${id}`)
+      .setData('dimmed', reading.dimmed),
+    face: {
+      box: { x: left, y: top, width: CARD_WIDTH, height },
+      answers: answersOf(card, shown, inspecting),
+    },
+    line: { top: lineTop, middle, right: left + STACK_WIDTH },
+    bottom: lineTop + LINE_HEIGHT,
   };
-  const root = scene.add
-    .container(0, 0, [...unders, face, count])
-    .setName(`${name}-stack-${id}`)
-    .setData('dimmed', reading.dimmed);
-  if (priced === undefined) {
-    return { parts: [root], held: [faceHeld], bottom: lineTop + BUY_HEIGHT };
-  }
+}
 
-  const { price, buy } = priced;
-  const right = left + STACK_WIDTH;
-  const priceText = addText(
+/**
+ * The price as a button on the stack's reading line at its right end, joining the stack, its parts
+ * named from `name`: greyed where no buy is handed, and a press on it runs the buy.
+ */
+export function priceButtonOf(
+  scene: Phaser.Scene,
+  { root, line, bottom }: LaidStack,
+  {
+    name,
+    price,
+    buy,
+  }: { readonly name: string; readonly price: number; readonly buy: (() => void) | undefined },
+): Held {
+  const priced = addText(
     scene,
     0,
-    middle,
+    line.middle,
     text('collection.price', { price }),
     buy === undefined ? GREYED_PRICE_STYLE : PRICE_STYLE,
   )
     .setOrigin(1, 0.5)
-    .setName(`${name}-card-${id}-price`);
-  const unplaced = ownBoxOf(priceText);
-  priceText.setX(right - BUY_PAD - (unplaced.x + unplaced.width));
+    .setName(`${name}-price`);
+  const unplaced = ownBoxOf(priced);
+  priced.setX(line.right - BUY_PAD - (unplaced.x + unplaced.width));
   const chip = chipAt(
     scene,
-    { x: ownBoxOf(priceText).x - CHIP_TO_PRICE, y: middle },
+    { x: ownBoxOf(priced).x - CHIP_TO_PRICE, y: line.middle },
     buy === undefined ? LOOK.greyedInk : LOOK.influence,
-  ).setName(`${name}-card-${id}-price-chip`);
+  ).setName(`${name}-price-chip`);
   const buyLeft = chip.getBounds().left - BUY_PAD;
-  const button: Box = { x: buyLeft, y: lineTop, width: right - buyLeft, height: BUY_HEIGHT };
+  const button: Box = {
+    x: buyLeft,
+    y: line.top,
+    width: line.right - buyLeft,
+    height: bottom - line.top,
+  };
   const ground = scene.add
     .rectangle(
       button.x,
@@ -183,11 +201,7 @@ export function stackOf(
       buy === undefined ? LOOK.greyedFill : LOOK.panelFill,
     )
     .setOrigin(0, 0)
-    .setName(`${name}-card-${id}-buy`);
-  root.add([ground, chip, priceText]);
-  return {
-    parts: [root],
-    held: [faceHeld, { box: button, answers: ANSWERS_NOTHING, press: buy }],
-    bottom: button.y + button.height,
-  };
+    .setName(`${name}-buy`);
+  root.add([ground, chip, priced]);
+  return { box: button, answers: ANSWERS_NOTHING, press: buy };
 }

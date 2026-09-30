@@ -1,20 +1,18 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
 import { bought, priceOf, unaffordableIn } from '../src/rules/campaign';
 import { freshCampaign } from '../src/rules/save';
 import { stacksOf } from '../src/ui/collection-layout';
 import { cardName, text } from '../src/ui/text';
 import {
-  campaignShown,
   cardOnFace,
-  click,
   counted,
   cursorOverCanvas,
   heldSave,
   onScreen,
+  openCollection,
   placeOf,
   plantCampaign,
-  readNames,
   rested,
   standing,
   textOf,
@@ -33,16 +31,6 @@ const STACKS = stacksOf(CATALOGUE, CAMPAIGN.collection, cardName);
 
 /** How many stacks a line holds. */
 const ACROSS = 6;
-
-/** Collection pressed on the navbar of the campaign screen a bare boot opens, and its screen waited for. */
-async function openCollection(page: Page): Promise<void> {
-  await readNames(page);
-  await page.goto('/');
-  await campaignShown(page);
-  await click(page, 'navbar-collection');
-  await expect.poll(() => standing(page, 'collection')).toBe(true);
-  await rested(page);
-}
 
 test('the navbar’s Collection opens the collection screen on a new campaign, Collection sunk: each card owned stands once reading its copies and its price, six to a line in the collection’s order, and each civilization’s pile reads its two counts, the city section’s card among its settle cards', async ({
   page,
