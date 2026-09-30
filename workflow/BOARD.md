@@ -12,5 +12,4 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **A chronicle pile's browse opens on a right click, in the civilization's browse's design** — on the chronicle screen a right click on the draw pile or the discard pile opens its browse and a left click on a pile does nothing; the browse lays the pile out as the civilization's browse lays a civilization out, one stack per card that reads the same with its copies on a badge, in the order of the collection, with no ring and no inspection key; a name on the discard pile's top card answers the rest and the right click; `npx playwright test e2e/browse.spec.ts` passes on the tests that prove it. Doc-impact: `docs/CHRONICLE-SCREEN.md`, `docs/INTERFACE.md`, `docs/GLOSSARY.md`. [board/a-chronicle-piles-browse-opens-on-a-right-click.md](board/a-chronicle-piles-browse-opens-on-a-right-click.md)
 - **Whether the wheel may be rebound** — the campaign screen raises the menu on a wheel notch bound to the back key, where `docs/META-SCREENS.md` says the wheel does nothing there whatever it is bound to: decide whether the wheel may be bound at all.

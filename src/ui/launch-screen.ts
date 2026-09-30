@@ -4,9 +4,9 @@ import { agesReached, type CampaignCivilization } from '../rules/campaign';
 import { achievementOf, ageOf, type Catalogue } from '../rules/catalogue';
 import { biomeKind } from '../rules/map-kinds';
 import { type Chronicle, onSettlePhase } from '../rules/state';
+import { standBrowse } from './browse';
 import { createKindBubble } from './card-face';
 import { openChronicle } from './chronicle-scene';
-import { standBrowse } from './civilization-browse';
 import { createPile } from './civilization-pile';
 import { offerEntries } from './debug-console';
 import {

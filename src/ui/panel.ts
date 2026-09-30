@@ -213,7 +213,9 @@ export function createPanel(
     follow();
     moved = true;
   });
-  scroll.reach(reachOf(frame.height, foot - frame.y));
+  const reach = reachOf(frame.height, foot - frame.y);
+  root.setData('overflow', reach);
+  scroll.reach(reach);
   scroll.stand(offset);
   answersPress(zone, (pointer) => {
     const at = on.at(pointer.x, pointer.y);

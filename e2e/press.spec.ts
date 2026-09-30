@@ -14,8 +14,6 @@ import {
   cardOnFace,
   chronicleOf,
   cityTileOf,
-  click,
-  doubledCivilization,
   dragOut,
   endedTurn,
   firstSeed,
@@ -27,9 +25,9 @@ import {
   offsetOf,
   onScreen,
   openSaved,
+  overflowingPiles,
   playedOut,
   rested,
-  ringed,
   scrolled,
   selected,
   settledOn,
@@ -632,7 +630,7 @@ test('a right press beside the card shown large takes it down and leaves the car
   expect(problems).toEqual([]);
 });
 
-test('right presses beside the cards walk a browse back: the card shown large, the ring, the browse', async ({
+test('right presses beside the cards walk a browse back: the card shown large, then the browse', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -641,26 +639,18 @@ test('right presses beside the cards walk a browse back: the card shown large, t
   await openSaved(page, before);
   await browse(page, 'draw-pile');
 
-  await click(page, 'browse-card-0');
-  await expect.poll(() => ringed(page, 'browse-card-0')).toBe(true);
-
   const other = await onScreen(page, 'browse-card-1');
   await page.mouse.click(other.x, other.y, { button: 'right' });
   await expect.poll(() => standing(page, 'inspection')).toBe(true);
-  expect(await standing(page, 'browse')).toBe(false);
+  expect(await standing(page, 'browse')).toBe(true);
 
   const away = await besideTheCards(page);
   await rested(page);
   await page.mouse.click(away.x, away.y, { button: 'right' });
-  await expect.poll(() => standing(page, 'browse')).toBe(true);
-  expect(await standing(page, 'inspection')).toBe(false);
-  expect(await ringed(page, 'browse-card-0')).toBe(true);
-
-  await rested(page);
-  await page.mouse.click(away.x, away.y, { button: 'right' });
-  await expect.poll(() => ringed(page, 'browse-card-0')).toBe(false);
+  await expect.poll(() => standing(page, 'inspection')).toBe(false);
   expect(await standing(page, 'browse')).toBe(true);
 
+  await rested(page);
   await page.mouse.click(away.x, away.y, { button: 'right' });
   await expect.poll(() => standing(page, 'browse')).toBe(false);
   expect(await standing(page, 'menu')).toBe(false);
@@ -675,7 +665,7 @@ test('a browse released off the canvas stays open, and the next gesture scrolls 
   const problems = watch(page);
 
   await page.setViewportSize(WINDOW);
-  await openSaved(page, settledOn(1, [], doubledCivilization()));
+  await openSaved(page, overflowingPiles());
   await browse(page, 'draw-pile');
 
   const opened = await scrolled(page);

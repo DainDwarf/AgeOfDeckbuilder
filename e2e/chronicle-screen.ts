@@ -37,14 +37,16 @@ import {
   type SaveRead,
   writeSave,
 } from '../src/rules/save';
+import { addedToDrawPileTop } from '../src/rules/schedule';
 import { charted } from '../src/rules/sight';
 import { type CardId, type Chronicle, type ChronicleCard, playable } from '../src/rules/state';
 import { standsOn, type Unit, unitAt } from '../src/rules/units';
 import { type Bindings, STORED, serialiseBindings } from '../src/ui/bindings';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
+import { pileStacksOf } from '../src/ui/collection-layout';
 import type { PileKind } from '../src/ui/overlay';
 import { SAVE_ENTRY } from '../src/ui/save-entry';
-import { referenceName } from '../src/ui/text';
+import { cardName, referenceName } from '../src/ui/text';
 import { layOutRun, type Reference } from '../src/ui/text-run';
 
 declare global {
@@ -671,6 +673,15 @@ export function referenceOnFace(
   }, name);
 }
 
+/** What the named card a name raised stands: a card by its face, any other thing by its reference. */
+export async function namedOn(
+  page: Page,
+  name: string,
+): Promise<{ kind: string; id: string } | undefined> {
+  const card = await cardOnFace(page, name);
+  return card === undefined ? referenceOnFace(page, name) : { kind: 'card', id: card };
+}
+
 /** Whether the named card face wears the ring: every one carries it, shown while it is selected. */
 export function ringed(page: Page, name: string): Promise<boolean> {
   return page.evaluate((target) => {
@@ -756,12 +767,13 @@ export function glyphsOf(chronicle: Chronicle, faces: readonly Tile[]): Glyphs {
   return owed;
 }
 
-/** How far the browse's grid stands scrolled, and how far it can: the grid scrolls by its own `y`. */
+/** How far the browse stands scrolled, and how far it can: its panel scrolls by its own `y`. */
 export function scrolled(page: Page): Promise<{ offset: number; overflow: number }> {
   return page.evaluate(() => {
     const grid = window.named?.('browse')?.object as Phaser.GameObjects.Container | undefined;
     if (grid === undefined) throw new Error('no browse is open');
-    return { offset: -grid.y, overflow: grid.getData('overflow') as number };
+    // A y of 0 negated is -0, which `toBe(0)` refuses: adding 0 reads it +0.
+    return { offset: -grid.y + 0, overflow: grid.getData('overflow') as number };
   });
 }
 
@@ -857,10 +869,56 @@ export function bareTile(chronicle: Chronicle): TileCoords {
   return { q: found.q, r: found.r };
 }
 
-/** The first civilization with its cards twice over and its settle section as it is: its piles overflow a browse's frame. */
-export function doubledCivilization(): Civilization {
-  const civilization = civilizationOf(CATALOGUE, firstsOf().civilization);
-  return { ...civilization, cards: [...civilization.cards, ...civilization.cards] };
+/**
+ * The chronicle with the first hazard that carries a counter added to its draw pile's top once for
+ * each step handed, its counter read that many up from the one it starts at, the last added on top.
+ */
+export function hazardsAdded(chronicle: Chronicle, steps: readonly number[]): Chronicle {
+  const found = Object.entries(CATALOGUE.cards).find(
+    ([, card]) => card.kind === 'hazard' && Object.keys(card.counters ?? {}).length > 0,
+  );
+  if (found === undefined) throw new Error('the catalogue holds no hazard carrying a counter');
+  const [hazard, { counters = {} }] = found;
+  const [counter] = Object.keys(counters);
+  let adding = chronicle;
+  for (const step of steps) {
+    const set = { [counter]: counters[counter] + step };
+    adding = addedToDrawPileTop(CATALOGUE, adding, hazard, set).chronicle;
+  }
+  return adding;
+}
+
+/**
+ * How many stacks each pile of `overflowingPiles` holds at least: four lines of a browse, which
+ * reach past its frame further than a drag of a spec's travels.
+ */
+const OVERFLOWING = 32;
+
+/** How many stacks a browse lays out of a pile: a card for each reading of its counters. */
+export function stacksIn(pile: readonly ChronicleCard[]): number {
+  return pileStacksOf(CATALOGUE, pile, cardName).length;
+}
+
+/**
+ * Seed 1's turn 1, settled bare, a hazard added to its draw pile's top at enough readings of its
+ * counter to overflow both piles, and turns ended until those drawn overflow the discard pile.
+ */
+export function overflowingPiles(): Chronicle {
+  let chronicle = hazardsAdded(
+    settledOn(1),
+    Array.from({ length: 2 * OVERFLOWING }, (_, reading) => reading),
+  );
+  while (stacksIn(chronicle.discardPile) < OVERFLOWING) {
+    if (chronicle.ending !== undefined) throw new Error('the chronicle ends before its piles fill');
+    // A hand of hazards striking the city takes its population to none: it gains what they read.
+    const read = chronicle.hand.flatMap(({ counters }) => Object.values(counters));
+    const fed = gained(chronicle, { food: read.reduce((sum, value) => sum + value, 0) });
+    chronicle = endedTurn(fed.chronicle);
+  }
+  if (stacksIn(chronicle.drawPile) < OVERFLOWING) {
+    throw new Error('the draw pile runs short of stacks before the discard pile fills');
+  }
+  return chronicle;
 }
 
 /**
@@ -1216,9 +1274,21 @@ export async function click(page: Page, name: string): Promise<void> {
   await page.mouse.click(at.x, at.y);
 }
 
-/** Opens a pile's browse, and waits for its cards to be laid out. */
+/** A point on the pile just under its top card's top edge, where neither a name nor the kind label lies. */
+export async function pileTop(page: Page, pile: PileKind): Promise<{ x: number; y: number }> {
+  const zone = await onScreen(page, pile);
+  const height = await page.evaluate((target) => {
+    const zone = window.named?.(target)?.object as Phaser.GameObjects.Zone | undefined;
+    if (zone === undefined) throw new Error(`there is no ${target} on the chronicle screen`);
+    return zone.height;
+  }, pile);
+  return { x: zone.x, y: zone.y - (height / 2 - 12) * zone.unit };
+}
+
+/** Opens a pile's browse by a right click on its top, and waits for its stacks to be laid out. */
 export async function browse(page: Page, pile: PileKind): Promise<void> {
-  await click(page, pile);
+  const at = await pileTop(page, pile);
+  await page.mouse.click(at.x, at.y, { button: 'right' });
   await expect.poll(() => standing(page, 'browse')).toBe(true);
 }
 

@@ -3,11 +3,12 @@ import type { Campaign } from '../rules/campaign';
 import type { Catalogue } from '../rules/catalogue';
 import { boundTo } from './bindings';
 import { CARD_WIDTH, createKindBubble, metricsOf } from './card-face';
-import { browseOf, type CollectionStack } from './collection-layout';
+import { browseOf } from './collection-layout';
 import { type Cell, linesOf, spanOf, stackedCardsOf } from './collection-stack';
 import { cityEdgeOf } from './deck-panel';
 import {
   addText,
+  BAR_HEIGHT,
   type Box,
   DESIGN_HEIGHT,
   DESIGN_WIDTH,
@@ -16,17 +17,20 @@ import {
   ownBoxOf,
   UI_FONT,
 } from './design-space';
+import { cardFaceAtStart, type Face } from './face';
 import { isWheelNotch } from './keys';
 import { css, LOOK } from './look';
-import { headingOf } from './overlay';
 import type { OverlayScene } from './overlay-scene';
-import { createCarrier, createPanel, type Panel } from './panel';
+import { type Carrier, createCarrier, createPanel, type Panel } from './panel';
 import { createSmallCards } from './small-card';
 import { answersAround, type Inspecting, type ShownLarge, standLarge } from './stack';
 import { cardName, civilizationName, text } from './text';
 import { createTooltip } from './tooltip';
 
-const NAME = 'civilization-browse';
+/** The ink a window's title reads in. */
+export const TITLE_INK = css(LOOK.paleInk);
+
+const CIVILIZATION_BROWSE = 'civilization-browse';
 
 const ACROSS = 8;
 
@@ -43,11 +47,30 @@ const BADGE_STYLE = {
   color: css(LOOK.paleInk),
 };
 
-/** A screen of the meta's cards shown large, and the browse of its civilizations they stand over. */
-export type Browsing = {
-  readonly large: ShownLarge;
-  /** The browse of the campaign's civilization of that name raised. */
-  open(campaign: Campaign, civilization: string): void;
+/** The heading a window's cards stand under, named after the window it heads. */
+export function headingOf(
+  scene: Phaser.Scene,
+  name: string,
+  heading: string,
+): Phaser.GameObjects.Text {
+  return addText(scene, DESIGN_WIDTH / 2, BAR_HEIGHT + MARGIN, heading, {
+    fontFamily: UI_FONT,
+    fontSize: '26px',
+    fontStyle: 'bold',
+    color: TITLE_INK,
+  })
+    .setName(`${name}-title`)
+    .setOrigin(0.5, 0);
+}
+
+/**
+ * One stack of a browse: the face its front card shows, the copies its badge reads, and whether a
+ * pale edge stands around it.
+ */
+export type BrowseStack = {
+  readonly shown: Face;
+  readonly copies: number;
+  readonly edged: boolean;
 };
 
 /**
@@ -77,38 +100,36 @@ function badgeOf(
 }
 
 /**
- * The stack in the browse's `at`th place, its copies on its badge, the city section's in a pale
- * edge: the right click anywhere on it off a name shows its card large.
+ * The stack in the `name` browse's `at`th place, its copies on its badge: the right click anywhere on
+ * it off a name shows its card large.
  */
 function stackCellOf(
   scene: Phaser.Scene,
-  catalogue: Catalogue,
-  {
-    stack,
-    at,
-    city,
-  }: { readonly stack: CollectionStack; readonly at: number; readonly city: boolean },
+  name: string,
+  { stack, at }: { readonly stack: BrowseStack; readonly at: number },
   inspecting: Inspecting,
 ): Cell {
   return ({ left, top }) => {
-    const name = `${NAME}-card-${at}`;
-    const { unders, card, shown, face, box, foot } = stackedCardsOf(scene, catalogue, {
-      stack,
+    const card = `${name}-card-${at}`;
+    const stacked = stackedCardsOf(scene, {
+      shown: stack.shown,
+      copies: stack.copies,
       left,
       top,
       width: CARD_WIDTH,
-      name,
+      name: card,
     });
+    const { face, box } = stacked;
     const badge = badgeOf(
       scene,
       { right: face.x + face.width + BADGE_OUT, bottom: face.y + face.height + BADGE_OUT },
       stack.copies,
-      `${name}-copies`,
+      `${card}-copies`,
     );
-    const edge = city ? [cityEdgeOf(scene, face, metricsOf(CARD_WIDTH).radius)] : [];
+    const edge = stack.edged ? [cityEdgeOf(scene, face, metricsOf(CARD_WIDTH).radius)] : [];
     const root = scene.add
-      .container(0, 0, [...edge, ...unders, card.root, ...badge.parts])
-      .setName(`${NAME}-stack-${at}`);
+      .container(0, 0, [...edge, ...stacked.unders, stacked.card.root, ...badge.parts])
+      .setName(`${name}-stack-${at}`);
     return {
       parts: [root],
       held: [
@@ -117,15 +138,79 @@ function stackCellOf(
             new Phaser.Geom.Rectangle(box.x, box.y, box.width, box.height),
             new Phaser.Geom.Rectangle(badge.box.x, badge.box.y, badge.box.width, badge.box.height),
           ),
-          answers: answersAround(card, shown, inspecting, () => {
-            inspecting.large.show(shown);
+          answers: answersAround(stacked.card, stacked.shown, inspecting, () => {
+            inspecting.large.show(stacked.shown);
           }),
         },
       ],
-      bottom: foot,
+      bottom: stacked.foot,
     };
   };
 }
+
+/**
+ * A browse named `name` on the stratum its faces answer on, under its title: its stacks eight to a
+ * line from the frame's top left, scrolled as a panel is, and a press of either button beside them
+ * running `beside`. Answers its title and its panel, which the caller takes down.
+ */
+export function layBrowse(
+  overlay: OverlayScene,
+  {
+    name,
+    heading,
+    stacks,
+  }: {
+    readonly name: string;
+    readonly heading: string;
+    readonly stacks: readonly BrowseStack[];
+  },
+  inspecting: Inspecting,
+  {
+    beside,
+    follow,
+    carrier,
+  }: {
+    readonly beside: () => void;
+    readonly follow: () => void;
+    readonly carrier: Carrier;
+  },
+): { readonly title: Phaser.GameObjects.Text; readonly panel: Panel } {
+  const { on } = inspecting;
+  const title = headingOf(overlay, name, heading);
+  on.layer.add(title);
+  const top = title.y + title.height + MARGIN;
+  const cells = stacks.map((stack, at) => stackCellOf(overlay, name, { stack, at }, inspecting));
+  const panel = createPanel(
+    overlay,
+    on,
+    {
+      name,
+      frame: {
+        x: MARGIN,
+        y: top,
+        width: DESIGN_WIDTH - 2 * MARGIN,
+        height: DESIGN_HEIGHT - MARGIN - top,
+      },
+      beside,
+      ...linesOf(cells, {
+        left: (DESIGN_WIDTH - spanOf(ACROSS, CARD_WIDTH)) / 2,
+        top,
+        across: ACROSS,
+        card: CARD_WIDTH,
+      }),
+    },
+    follow,
+    carrier,
+  );
+  return { title, panel };
+}
+
+/** A screen of the meta's cards shown large, and the browse of its civilizations they stand over. */
+export type Browsing = {
+  readonly large: ShownLarge;
+  /** The browse of the campaign's civilization of that name raised. */
+  open(campaign: Campaign, civilization: string): void;
+};
 
 /**
  * The cards shown large of a screen of the meta, and under them the browse of a civilization, on the
@@ -164,20 +249,9 @@ export function standBrowse(
     },
   });
   const small = createSmallCards(overlay, overlay.strata.smallCard, catalogue, kinds, (name) => {
-    over.named(name);
+    inspecting.large.named(name);
   });
-  /** A card shown large over the browse: the small cards its names raised go down under it. */
-  const over: ShownLarge = {
-    show(face) {
-      small.down();
-      large.show(face);
-    },
-    named(name) {
-      small.down();
-      large.named(name);
-    },
-  };
-  const inspecting: Inspecting = { on, small, kinds, large: over };
+  const inspecting = inspectingUnder(on, small, kinds, large);
   const carrier = createCarrier(overlay, on);
   const follow = (): void => {
     small.follow();
@@ -194,40 +268,53 @@ export function standBrowse(
         .setInteractive();
       onClick(scrim, close);
       onClick(scrim, close, 'right');
-      const title = headingOf(
+      on.layer.add(scrim);
+      const { title, panel } = layBrowse(
         overlay,
-        NAME,
-        text('browse.civilization', { civilization: civilizationName(civilization), count }),
-      );
-      on.layer.add([scrim, title]);
-      const top = title.y + title.height + MARGIN;
-      const cells = stacks.map((stack, at) =>
-        stackCellOf(overlay, catalogue, { stack, at, city: at === 0 }, inspecting),
-      );
-      const panel = createPanel(
-        overlay,
-        on,
         {
-          name: NAME,
-          frame: {
-            x: MARGIN,
-            y: top,
-            width: DESIGN_WIDTH - 2 * MARGIN,
-            height: DESIGN_HEIGHT - MARGIN - top,
-          },
-          beside: close,
-          ...linesOf(cells, {
-            left: (DESIGN_WIDTH - spanOf(ACROSS, CARD_WIDTH)) / 2,
-            top,
-            across: ACROSS,
-            card: CARD_WIDTH,
+          name: CIVILIZATION_BROWSE,
+          heading: text('browse.civilization', {
+            civilization: civilizationName(civilization),
+            count,
           }),
+          stacks: stacks.map(({ id, copies }, at) => ({
+            shown: cardFaceAtStart(catalogue, id),
+            copies,
+            edged: at === 0,
+          })),
         },
-        follow,
-        carrier,
+        inspecting,
+        { beside: close, follow, carrier },
       );
       standing = { parts: [scrim, title], panel };
       covering(true);
+    },
+  };
+}
+
+/**
+ * What a browse's faces answer with, on the stratum handed: a card shown large over the browse takes
+ * down the small cards its names raised.
+ */
+export function inspectingUnder(
+  on: Inspecting['on'],
+  small: Inspecting['small'],
+  kinds: Inspecting['kinds'],
+  large: ShownLarge,
+): Inspecting {
+  return {
+    on,
+    small,
+    kinds,
+    large: {
+      show(face) {
+        small.down();
+        large.show(face);
+      },
+      named(name) {
+        small.down();
+        large.named(name);
+      },
     },
   };
 }

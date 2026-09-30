@@ -11,8 +11,8 @@ import {
 } from '../rules/campaign';
 import type { Catalogue } from '../rules/catalogue';
 import { type CardId, NO_REFUSAL } from '../rules/state';
+import { standBrowse } from './browse';
 import { createCardFace, createKindBubble, metricsOf } from './card-face';
-import { standBrowse } from './civilization-browse';
 import { createPile, PILE_SPAN } from './civilization-pile';
 import {
   type CollectionStack,

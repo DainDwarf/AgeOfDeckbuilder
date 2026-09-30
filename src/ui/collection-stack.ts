@@ -127,21 +127,22 @@ export type StackedCards = {
 };
 
 /**
- * A stack's cards from the left and the top handed, its face `width` wide and named `name`: a card
- * under its face for each copy past the first, three at most, stepped right and down.
+ * A stack of the face's copies from the left and the top handed, its face `width` wide and named
+ * `name`: a card under its face for each copy past the first, three at most, stepped right and down.
  */
 export function stackedCardsOf(
   scene: Phaser.Scene,
-  catalogue: Catalogue,
   {
-    stack: { id, copies },
+    shown,
+    copies,
     left,
     top,
     width,
     name,
     tone = (colour: number): number => colour,
   }: {
-    readonly stack: CollectionStack;
+    readonly shown: Face;
+    readonly copies: number;
     readonly left: number;
     readonly top: number;
     readonly width: number;
@@ -161,12 +162,11 @@ export function stackedCardsOf(
     });
     return surface;
   });
-  const shown = cardFaceAtStart(catalogue, id);
   const card = createCardFace(scene, shown, NO_REFUSAL, { width, tone });
   card.root
     .setPosition(left + width / 2, top + height)
     .setName(name)
-    .setData('card', id);
+    .setData('card', shown.id);
   const reach = under * UNDER_STEP;
   return {
     unders,
@@ -199,8 +199,9 @@ export function stackOf(
   },
 ): LaidStack {
   const { id } = stack;
-  const { unders, card, shown, face, foot } = stackedCardsOf(scene, catalogue, {
-    stack,
+  const { unders, card, shown, face, foot } = stackedCardsOf(scene, {
+    shown: cardFaceAtStart(catalogue, id),
+    copies: stack.copies,
     left,
     top,
     width: COLLECTION_CARD_WIDTH,

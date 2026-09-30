@@ -1,7 +1,6 @@
 import Phaser from 'phaser';
 import type { Payment } from '../rules/campaign';
-import { CARD_KINDS } from '../rules/cards';
-import { achievementOf, ageOf, type Catalogue, cardOf } from '../rules/catalogue';
+import { achievementOf, ageOf, type Catalogue } from '../rules/catalogue';
 import { answerCost, answerOf, answerRefusal, offered } from '../rules/schedule';
 import type { Group, Stage } from '../rules/stages';
 import {
@@ -16,12 +15,13 @@ import {
   type Refusal,
 } from '../rules/state';
 import { type Bind, boundTo, type Press } from './bindings';
+import { headingOf, inspectingUnder, layBrowse, TITLE_INK } from './browse';
 import { type CardFace, createCardFace, createKindBubble, heightOf, type Name } from './card-face';
 import { EASE, ended, stopMotion } from './card-motion';
+import { pileStacksOf } from './collection-layout';
 import {
   addText,
   answersPress,
-  BAR_HEIGHT,
   DESIGN_HEIGHT,
   DESIGN_WIDTH,
   MARGIN,
@@ -34,35 +34,32 @@ import {
 } from './design-space';
 import { answerFace, capstoneFace, cardFace, cardFaceAtStart, type Face } from './face';
 import { isWheelNotch } from './keys';
-import { css, LOOK } from './look';
+import { LOOK } from './look';
 import { campLore, capstoneLore, eventLore, type Raising } from './lore';
 import { BUTTON_HEIGHT, createButton } from './menu';
 import { raiseMenu } from './menu-scene';
 import type { OverlayScene } from './overlay-scene';
+import { createCarrier, type Panel } from './panel';
 import { refused } from './refusal-lines';
 import { createRefusalNote } from './refusal-note';
 import { chipAt } from './resource-bar';
 import { createScroll, reachOf } from './scroll';
 import { createSmallCards, type Raiser, raiserOf } from './small-card';
-import { createStack } from './stack';
+import { createStack, standLarge } from './stack';
 import { buildingName, cardName, eventName, technologyName, text, victoryLine } from './text';
 import { createTooltip } from './tooltip';
 
-const TITLE_INK = css(LOOK.paleInk);
-
-const BROWSE_WIDTH = 180;
-const BROWSE_GAP = 26;
+const GRID_WIDTH = 180;
+const GRID_GAP = 26;
 
 export type PileKind = 'draw-pile' | 'discard-pile';
 
 export type Overlay = {
   browse(pile: PileKind, chronicle: Chronicle): void;
   /**
-   * The discard pile offered to a card aimed at it, newest card first as the browse offers it: a
-   * press on one of its cards lands the aim where that card lies in the pile, a right click on one
-   * shows it large, and a press beside them or the back key closes the window with nothing paid.
-   * The card being aimed, which the window's title names, is in the hand, so the pile never holds
-   * it and never offers it. Answers the way to close it from outside.
+   * The discard pile offered to a card aimed at it, newest card first; `chosen` is told where in the
+   * pile the card pressed lies. The card being aimed is in the hand, so the pile never offers it.
+   * Answers the way to close it from outside.
    */
   aimDiscardPile(
     chronicle: Chronicle,
@@ -85,22 +82,6 @@ export type Overlay = {
    */
   play(stage: Stage): Promise<void> | undefined;
 };
-
-/** The heading a window's cards stand under, named after the window it heads. */
-export function headingOf(
-  scene: Phaser.Scene,
-  name: string,
-  heading: string,
-): Phaser.GameObjects.Text {
-  return addText(scene, DESIGN_WIDTH / 2, BAR_HEIGHT + MARGIN, heading, {
-    fontFamily: UI_FONT,
-    fontSize: '26px',
-    fontStyle: 'bold',
-    color: TITLE_INK,
-  })
-    .setName(`${name}-title`)
-    .setOrigin(0.5, 0);
-}
 
 /**
  * One face offered on the scrim, what the entry costs the city — which its note says, whether or not
@@ -125,7 +106,7 @@ type Placed = Offered & {
   readonly drawn: CardFace;
 };
 
-/** The grid of cards a browse or an aim stands on, and how far it moves. */
+/** The grid of cards a window stands on, and how far it moves. */
 type Grid = {
   readonly root: Phaser.GameObjects.Container;
   /** What the cards scroll within, and what the pointer is on while it is on the grid. */
@@ -145,14 +126,8 @@ type Aiming = {
   readonly closed: () => void;
 };
 
-/** A pile's cards on the scrim, and which of them the browse has selected. */
-type Browsing = {
-  readonly stands: 'browse';
-  readonly pile: PileKind;
-  readonly cards: readonly ChronicleCard[];
-  /** The number the ringed card was offered as, and nothing while none is ringed. */
-  selected: number | undefined;
-};
+/** A pile's browse on the scrim, which selects nothing. */
+type Browsing = { readonly stands: 'browse' };
 
 /** The aim window on the scrim, over what it offers. */
 type AimWindow = { readonly stands: 'aim-window'; readonly aim: Aiming };
@@ -182,20 +157,17 @@ type Capstone = { readonly stands: 'capstone'; readonly on: Chronicle } & {
 /** What the capstone's window carries beside each raising: the landing's is told when it closes. */
 type RaisedWith = { readonly opening: object; readonly landing: { readonly closed: () => void } };
 
-/** The windows that lay out cards, which a card shown large is taken off. */
-type Offering = Browsing | AimWindow | Dealing | Capstone;
-
-/** The two windows that ring one of the cards they offer. */
-type Ringing = Browsing | Dealing;
+/** The windows that lay out cards on the grid, which a card shown large is taken off. */
+type Offering = AimWindow | Dealing | Capstone;
 
 /** The cards shown large, over what the first of them was taken off. */
 type Inspection = { readonly stands: 'inspection'; readonly over: Offering | undefined };
 
 /**
- * What the scrim carries: a pile's cards, the aim window, the deal window, the capstone's window,
+ * What the scrim carries: a pile's browse, the aim window, the deal window, the capstone's window,
  * the cards shown large over what they were taken off, or the ending screen.
  */
-type Carried = Offering | Inspection | { readonly stands: 'ending' };
+type Carried = Browsing | Offering | Inspection | { readonly stands: 'ending' };
 
 /** The ending screen raised, and its button. */
 type Raised = {
@@ -229,20 +201,44 @@ export function createOverlay(
     inspectNamed(name);
   });
   const stack = createStack(scene, catalogue, kinds);
+  const follow = (): void => {
+    small.follow();
+    tooltip.follow();
+  };
 
   let shown: Phaser.GameObjects.GameObject[] = [];
   /** What stands on the scrim, and nothing while the scrim is down. */
   let carried: Carried | undefined;
   let grid: Grid | undefined;
+  /** The browse's panel, and nothing while no browse stands. */
+  let browsed: Panel | undefined;
   /** Whether the grid has moved since the name and the label under the pointer were read off it. */
   let moved = false;
   /** How far the grid is scrolled, kept while a card taken off it is inspected. */
   const scroll = createScroll((offset) => {
     grid?.root.setY(-offset);
-    small.follow();
-    tooltip.follow();
+    follow();
     moved = true;
   });
+
+  /** Whether a press is the scrim's while anything stands on it: every other key passes to the screen. */
+  const holds = (press: Bind): boolean =>
+    isWheelNotch(press) ||
+    boundTo(press, 'city') ||
+    boundTo(press, 'yields') ||
+    boundTo(press, 'inspect') ||
+    boundTo(press, 'back');
+
+  /** The cards shown large over a browse, which stands under them as it stood. */
+  const browseLarge = standLarge(scene, catalogue, covering, (press) => !holds(press), {
+    kinds,
+    get standing() {
+      return carried !== undefined;
+    },
+    takes: (press) => takes(press),
+  });
+  const browsing = inspectingUnder(scene.strata.scrim, small, kinds, browseLarge);
+  const carrier = createCarrier(scene, scene.strata.scrim);
   /** The chronicle the ending screen was raised on: a render raises the screen once and no more. */
   let raisedOn: Ended | undefined;
   /** The deal standing, so no render raises its window twice; the take lets it go. */
@@ -263,6 +259,9 @@ export function createOverlay(
   const wipe = (): void => {
     small.down();
     stack.down();
+    browseLarge.down();
+    browsed?.down();
+    browsed = undefined;
     note.hide();
     for (const object of shown) object.destroy();
     shown = [];
@@ -337,6 +336,8 @@ export function createOverlay(
         stack.named(name);
         return;
       case 'browse':
+        browsing.large.named(name);
+        return;
       case 'aim-window':
       case 'deal':
       case 'capstone':
@@ -413,14 +414,14 @@ export function createOverlay(
     top: number,
     pressed: (card: Placed, press: Press) => void,
   ): Grid => {
-    const height = heightOf(BROWSE_WIDTH);
+    const height = heightOf(GRID_WIDTH);
     const frameHeight = DESIGN_HEIGHT - MARGIN - top;
     const columns = Math.max(
       1,
-      Math.floor((DESIGN_WIDTH - 2 * MARGIN + BROWSE_GAP) / (BROWSE_WIDTH + BROWSE_GAP)),
+      Math.floor((DESIGN_WIDTH - 2 * MARGIN + GRID_GAP) / (GRID_WIDTH + GRID_GAP)),
     );
     const rows = Math.max(1, Math.ceil(cards.length / columns));
-    const spanY = rows * height + (rows - 1) * BROWSE_GAP;
+    const spanY = rows * height + (rows - 1) * GRID_GAP;
     const overflow = reachOf(frameHeight, spanY);
     const firstY = top + Math.max(0, (frameHeight - spanY) / 2);
 
@@ -487,11 +488,10 @@ export function createOverlay(
       const row = Math.floor(index / columns);
       const column = index % columns;
       const inRow = Math.min(columns, cards.length - row * columns);
-      const spanX = inRow * BROWSE_WIDTH + (inRow - 1) * BROWSE_GAP;
-      const x =
-        (DESIGN_WIDTH - spanX) / 2 + column * (BROWSE_WIDTH + BROWSE_GAP) + BROWSE_WIDTH / 2;
-      const y = firstY + row * (height + BROWSE_GAP) + height;
-      const drawn = createCardFace(scene, offered.face, offered.refusal, { width: BROWSE_WIDTH });
+      const spanX = inRow * GRID_WIDTH + (inRow - 1) * GRID_GAP;
+      const x = (DESIGN_WIDTH - spanX) / 2 + column * (GRID_WIDTH + GRID_GAP) + GRID_WIDTH / 2;
+      const y = firstY + row * (height + GRID_GAP) + height;
+      const drawn = createCardFace(scene, offered.face, offered.refusal, { width: GRID_WIDTH });
       root.add(
         drawn.root
           .setPosition(x, y)
@@ -508,38 +508,41 @@ export function createOverlay(
     return laid;
   };
 
-  /** The one card of a window ringed, and none ringed at all where nothing is selected. */
-  const ring = (ringing: Ringing, at: number | undefined): void => {
-    ringing.selected = at;
+  /** The one entry of the deal ringed, and none ringed at all where nothing is selected. */
+  const ring = (dealing: Dealing, at: number | undefined): void => {
+    dealing.selected = at;
     for (const card of grid?.placed ?? []) card.drawn.select(card.at === at);
   };
 
-  /** A browse raised, and raised again where the back from a card shown large brings it. */
-  const showBrowse = (browsing: Browsing): void => {
+  /** A pile's browse raised, laid out as the civilization's browse lays out a civilization. */
+  const showBrowse = (pile: PileKind, chronicle: Chronicle): void => {
     wipe();
     cover();
-    carried = browsing;
+    carried = { stands: 'browse' };
 
-    const title = raiseTitle(
-      'browse',
-      text(`browse.${browsing.pile}`, { count: browsing.cards.length }),
-    );
-    layGrid(
-      'browse',
-      browsing.cards.map((card, at) => offeredCard(cardFace(catalogue, card), at)),
-      title.y + title.height + MARGIN,
-      (card, press) => {
-        switch (press) {
-          case 'left':
-            ring(browsing, card.at);
-            return;
-          case 'right':
-            showInspection(card.face, NO_REFUSAL, browsing);
-            return;
-        }
+    const cards = pileOf(chronicle, pile);
+    const laid = layBrowse(
+      scene,
+      {
+        name: 'browse',
+        heading: text(`browse.${pile}`, { count: cards.length }),
+        stacks: pileStacksOf(catalogue, cards, cardName).map(({ card, copies }) => ({
+          shown: cardFace(catalogue, card),
+          copies,
+          edged: false,
+        })),
+      },
+      browsing,
+      {
+        beside: () => {
+          back();
+        },
+        follow,
+        carrier,
       },
     );
-    ring(browsing, browsing.selected);
+    shown.push(laid.title);
+    browsed = laid.panel;
   };
 
   /**
@@ -652,9 +655,6 @@ export function createOverlay(
   /** A window raised again, as the card it was showing large is put back. */
   const raise = (what: Offering): void => {
     switch (what.stands) {
-      case 'browse':
-        showBrowse(what);
-        return;
       case 'aim-window':
         showAim(what.aim);
         return;
@@ -825,8 +825,7 @@ export function createOverlay(
         takeDownNewest(carried);
         return true;
       case 'browse':
-        if (carried.selected === undefined) close();
-        else ring(carried, undefined);
+        close();
         return true;
       case 'aim-window':
         closeAim();
@@ -843,17 +842,10 @@ export function createOverlay(
     }
   };
 
-  /** The inspection key while a window stands: it shows the ringed card of one that rings large. */
+  /** The inspection key while a window stands: it shows the ringed entry of the deal large. */
   const inspectSelection = (): void => {
     if (carried === undefined) return;
     switch (carried.stands) {
-      case 'browse': {
-        const at = carried.selected;
-        if (at !== undefined) {
-          showInspection(cardFace(catalogue, carried.cards[at]), NO_REFUSAL, carried);
-        }
-        return;
-      }
       case 'deal': {
         const entry =
           carried.selected === undefined
@@ -862,6 +854,7 @@ export function createOverlay(
         if (entry !== undefined) showInspection(entry.face, entry.refusal, carried);
         return;
       }
+      case 'browse':
       case 'aim-window':
       case 'capstone':
       case 'inspection':
@@ -899,24 +892,18 @@ export function createOverlay(
   onClick(scrim, back, 'right');
 
   /**
-   * Every key and mouse key while anything stands on the scrim, and none at all while nothing does:
-   * the city key and the yield key are swallowed, the inspection key shows a ringed card large, the
-   * back key walks what stands back and raises the menu where it has nothing left to walk.
+   * The presses the scrim holds while anything stands on it and no card of a browse stands large: the
+   * city key and the yield key are swallowed, the inspection key shows a ringed card large, the back
+   * key walks what stands back and raises the menu where it has nothing left to walk.
    */
   const takes = (press: Bind): boolean => {
-    if (carried === undefined) return false;
-    // What scrolls a standing grid is Phaser's own wheel, below, and never this press.
+    if (carried === undefined || !holds(press)) return false;
+    // What scrolls a standing grid or a browse is Phaser's own wheel, and never this press.
     if (isWheelNotch(press)) return true;
-    if (boundTo(press, 'city') || boundTo(press, 'yields')) return true;
-    if (boundTo(press, 'inspect')) {
-      inspectSelection();
-      return true;
-    }
-    if (!boundTo(press, 'back')) return false;
-    if (!back()) raiseMenu(scene);
+    if (boundTo(press, 'inspect')) inspectSelection();
+    else if (boundTo(press, 'back') && !back()) raiseMenu(scene);
     return true;
   };
-  scene.takes(takes);
 
   scene.input.on(
     'wheel',
@@ -938,15 +925,7 @@ export function createOverlay(
   });
 
   return {
-    browse(pile: PileKind, chronicle: Chronicle): void {
-      scroll.stand(0);
-      showBrowse({
-        stands: 'browse',
-        pile,
-        cards: cardsOf(catalogue, pile, chronicle),
-        selected: undefined,
-      });
-    },
+    browse: showBrowse,
     aimDiscardPile(chronicle, aimed, chosen, closed): () => void {
       scroll.stand(0);
       showAim({
@@ -1052,21 +1031,15 @@ function cardAt(grid: Grid, x: number, y: number): Placed | undefined {
   const local = y - grid.root.y;
   return grid.placed.find(
     (card) =>
-      Math.abs(x - card.x) <= BROWSE_WIDTH / 2 && local <= card.y && local >= card.y - grid.height,
+      Math.abs(x - card.x) <= GRID_WIDTH / 2 && local <= card.y && local >= card.y - grid.height,
   );
 }
 
-/** The draw pile gives its draw order away to no one: it reads by kind, then by name. */
-function cardsOf(
-  catalogue: Catalogue,
-  pile: PileKind,
-  chronicle: Chronicle,
-): readonly ChronicleCard[] {
-  if (pile === 'discard-pile') return [...chronicle.discardPile].reverse();
-  return [...chronicle.drawPile].sort(
-    (a, b) =>
-      CARD_KINDS.indexOf(cardOf(catalogue, a.id).kind) -
-        CARD_KINDS.indexOf(cardOf(catalogue, b.id).kind) ||
-      cardName(a.id).localeCompare(cardName(b.id)),
-  );
+function pileOf(chronicle: Chronicle, pile: PileKind): readonly ChronicleCard[] {
+  switch (pile) {
+    case 'draw-pile':
+      return chronicle.drawPile;
+    case 'discard-pile':
+      return chronicle.discardPile;
+  }
 }

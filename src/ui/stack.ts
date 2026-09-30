@@ -150,7 +150,7 @@ export function createStack(scene: OverlayScene, catalogue: Catalogue, kinds: Ki
   };
 }
 
-/** A screen of the meta's cards shown large. */
+/** Cards shown large on the overlay. */
 export type ShownLarge = {
   /** The face shown large alone. */
   show(face: Face): void;
@@ -158,8 +158,14 @@ export type ShownLarge = {
   named(name: Name): void;
 };
 
+/** The cards shown large of `standLarge`, which its caller may take down. */
+export type StandingLarge = ShownLarge & {
+  /** Every card taken down at once, and the scrim they stand on. */
+  down(): void;
+};
+
 /**
- * A window a screen of the meta stands on the overlay's scrim stratum, under its cards shown large,
+ * What a screen stands on the overlay under its cards shown large, its windows on the scrim stratum,
  * the overlay's one kind bubble shared with them.
  */
 export type Beneath = {
@@ -184,7 +190,7 @@ export function standLarge(
     standing: false,
     takes: () => false,
   },
-): ShownLarge {
+): StandingLarge {
   const scrim = overlay.add
     .rectangle(0, 0, DESIGN_WIDTH, DESIGN_HEIGHT, LOOK.scrim.colour, LOOK.scrim.strength)
     .setOrigin(0, 0)
@@ -194,10 +200,13 @@ export function standLarge(
   overlay.strata.scrim.layer.add(scrim);
   const stack = createStack(overlay, catalogue, beneath.kinds);
 
-  const takeDownNewest = (): void => {
-    if (stack.takeDownNewest()) return;
+  const lower = (): void => {
     scrim.setVisible(false).disableInteractive();
     if (!beneath.standing) covering(false);
+  };
+
+  const takeDownNewest = (): void => {
+    if (!stack.takeDownNewest()) lower();
   };
   onClick(scrim, takeDownNewest);
   onClick(scrim, takeDownNewest, 'right');
@@ -223,10 +232,15 @@ export function standLarge(
       stand();
       stack.named(name);
     },
+    down() {
+      if (!stack.standing) return;
+      stack.down();
+      lower();
+    },
   };
 }
 
-/** What a face on a screen of the meta answers the rest and the right click with. */
+/** What a face on a screen of the meta or in a browse answers the rest and the right click with. */
 export type Inspecting = {
   /** The stratum the screen's small cards and bubble stand on. */
   readonly on: Stratum;
@@ -238,7 +252,10 @@ export type Inspecting = {
 /** A point of the design space. */
 export type Point = { readonly x: number; readonly y: number };
 
-/** What a face on a screen of the meta answers the pointer with, read at a point of the design space. */
+/**
+ * What a face on a screen of the meta or in a browse answers the pointer with, read at a point of the
+ * design space.
+ */
 export type Answers = {
   /** The pointer on the face's ground at this point, or off it. */
   point(at: Point | undefined): void;

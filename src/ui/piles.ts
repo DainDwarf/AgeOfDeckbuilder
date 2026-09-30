@@ -6,9 +6,12 @@ import {
   CARD_BASELINE,
   CARD_HEIGHT,
   CARD_WIDTH,
+  type CardFace,
   createCardBack,
   createCardFace,
   createEmptySlot,
+  type KindBubble,
+  type Name,
 } from './card-face';
 import { blockLength, EASE, ended, SHUFFLE, stopMotion, travel } from './card-motion';
 import {
@@ -17,12 +20,14 @@ import {
   DESIGN_WIDTH,
   MARGIN,
   onClick,
+  onHover,
   type Stratum,
   UI_FONT,
 } from './design-space';
 import { cardFace } from './face';
 import { css, LOOK, worn } from './look';
 import type { PileKind } from './overlay';
+import { createSmallCards, raiserOf, type SmallCards } from './small-card';
 
 /** Where each pile's top card lies, about its own bottom centre, as a card is drawn. */
 export const PILE_PLACE: Record<PileKind, { readonly x: number; readonly y: number }> = {
@@ -35,6 +40,14 @@ export type Piles = {
   play(stage: Stage): Promise<void> | undefined;
 };
 
+/** What the presses on the piles are answered by. */
+export type PilePresses = {
+  /** The pile's browse raised. */
+  browse(pile: PileKind): void;
+  /** What a name on the discard pile's top card names, shown large. */
+  inspectNamed(name: Name): void;
+};
+
 /**
  * The draw pile face down on the left, the discard pile face up and worn on the right. The discard
  * pile takes the hand's cards only once the last of them has landed, and the shuffle carries the
@@ -42,12 +55,17 @@ export type Piles = {
  */
 export function createPiles(
   scene: Phaser.Scene,
-  on: { readonly resting: Stratum; readonly flight: Stratum },
+  on: { readonly resting: Stratum; readonly flight: Stratum; readonly smallCard: Stratum },
   catalogue: Catalogue,
-  browse: (pile: PileKind) => void,
+  kinds: KindBubble,
+  presses: PilePresses,
 ): Piles {
-  const drawn = createPile(scene, on.resting, 'draw-pile', browse);
-  const discarded = createPile(scene, on.resting, 'discard-pile', browse);
+  const small = createSmallCards(scene, on.smallCard, catalogue, kinds, (name) => {
+    presses.inspectNamed(name);
+  });
+  const answers = { small, kinds, presses };
+  const drawn = createPile(scene, on.resting, 'draw-pile', answers);
+  const discarded = createPile(scene, on.resting, 'discard-pile', answers);
 
   /** The chronicle the piles stand on: how many cards are in the air is read from it. */
   let shown: Chronicle | undefined;
@@ -55,10 +73,11 @@ export function createPiles(
   let waiting: { readonly event: Phaser.Time.TimerEvent; readonly done: () => void } | undefined;
   let carrier: Phaser.GameObjects.Container | undefined;
 
-  const topOf = (card: ChronicleCard | undefined): Phaser.GameObjects.Container =>
-    card === undefined
-      ? createEmptySlot(scene)
-      : createCardFace(scene, cardFace(catalogue, card), NO_REFUSAL, { tone: worn }).root;
+  const topOf = (card: ChronicleCard | undefined): Top => {
+    if (card === undefined) return { card: createEmptySlot(scene) };
+    const face = createCardFace(scene, cardFace(catalogue, card), NO_REFUSAL, { tone: worn });
+    return { card: face.root, face };
+  };
 
   const render = (chronicle: Chronicle): void => {
     // Whoever is waiting on the wait is let go, so a cancelled one leaves nothing hanging on it.
@@ -72,7 +91,7 @@ export function createPiles(
     }
     shown = chronicle;
     drawn.show(
-      createCardBack(scene, { faded: chronicle.drawPile.length === 0 }),
+      { card: createCardBack(scene, { faded: chronicle.drawPile.length === 0 }) },
       chronicle.drawPile.length,
     );
     discarded.show(
@@ -89,7 +108,7 @@ export function createPiles(
     const carrying = scene.add.container(from.x, from.y, [carried, back]);
     on.flight.layer.add(carrying);
     carrier = carrying;
-    discarded.show(createEmptySlot(scene), 0);
+    discarded.show({ card: createEmptySlot(scene) }, 0);
 
     await Promise.all([
       travel(scene, carrying, { ...PILE_PLACE['draw-pile'], rotation: 0 }, 0, SHUFFLE),
@@ -196,17 +215,29 @@ export function createPiles(
   };
 }
 
+/** A pile's top: what is drawn there, and its face where it is a card face up. */
+type Top = { readonly card: Phaser.GameObjects.Container; readonly face?: CardFace };
+
 type Pile = {
-  show(card: Phaser.GameObjects.Container, count: number): void;
+  show(top: Top, count: number): void;
   /** Hands the shown card over: the pile forgets it, and the next `show` leaves it standing. */
   lift(): Phaser.GameObjects.Container | undefined;
 };
 
+/**
+ * One pile: a right click on it raises its browse, a name on its top card excepted, which answers
+ * the rest and the right click as a name does anywhere, and the top card's kind label answers the
+ * rest; no left click answers it.
+ */
 function createPile(
   scene: Phaser.Scene,
   on: Stratum,
   pile: PileKind,
-  browse: (pile: PileKind) => void,
+  {
+    small,
+    kinds,
+    presses,
+  }: { readonly small: SmallCards; readonly kinds: KindBubble; readonly presses: PilePresses },
 ): Pile {
   const { x, y } = PILE_PLACE[pile];
   const pill = scene.add.graphics();
@@ -222,15 +253,59 @@ function createPile(
     .zone(x, y - CARD_HEIGHT / 2, CARD_WIDTH, CARD_HEIGHT)
     .setName(pile)
     .setInteractive();
-  answersPress(press);
-  onClick(press, () => browse(pile));
   on.layer.add([pill, count, press]);
 
-  let shown: Phaser.GameObjects.Container | undefined;
+  let shown: Top | undefined;
+
+  const nameUnder = (pointer: Phaser.Input.Pointer): Name | undefined => {
+    const at = on.at(pointer.x, pointer.y);
+    return shown?.face?.nameAt(at.x, at.y);
+  };
+  const onKind = (pointer: Phaser.Input.Pointer): boolean => {
+    const at = on.at(pointer.x, pointer.y);
+    return shown?.face?.kindAt(at.x, at.y) === true;
+  };
+
+  answersPress(press, (pointer) => nameUnder(pointer) !== undefined || onKind(pointer));
+  press.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+    const face = shown?.face;
+    if (face === undefined) return;
+    const name = nameUnder(pointer);
+    small.over(name === undefined ? undefined : raiserOf(face, name));
+    kinds.over(face, onKind(pointer));
+  });
+  onHover(
+    press,
+    () => {},
+    () => {
+      small.over(undefined);
+      if (shown?.face !== undefined) kinds.over(shown.face, false);
+    },
+  );
+  onClick(
+    press,
+    (pointer) => {
+      const name = nameUnder(pointer);
+      if (name === undefined) presses.browse(pile);
+      else presses.inspectNamed(name);
+    },
+    'right',
+  );
+
+  /** What the top card's names and its label raised, taken down as the card leaves the top. */
+  const letGo = (): void => {
+    if (shown?.face === undefined) return;
+    small.down();
+    kinds.over(shown.face, false);
+  };
+
   return {
-    show(card: Phaser.GameObjects.Container, remaining: number): void {
-      shown?.destroy();
-      shown = card.setPosition(x, y);
+    show(top: Top, remaining: number): void {
+      letGo();
+      shown?.card.destroy();
+      shown = top;
+      const { card } = top;
+      card.setPosition(x, y).setName(`${pile}-top`);
       on.layer.addAt(card, on.layer.getIndex(pill));
 
       count.setText(String(remaining));
@@ -246,7 +321,8 @@ function createPile(
       pill.fillRoundedRect(centre.x - width / 2, centre.y - height / 2, width, height, height / 2);
     },
     lift(): Phaser.GameObjects.Container | undefined {
-      const lifted = shown;
+      letGo();
+      const lifted = shown?.card;
       shown = undefined;
       return lifted;
     },

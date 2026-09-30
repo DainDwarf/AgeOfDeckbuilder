@@ -20,7 +20,7 @@ import { type Chronicle, type Cost, onSettlePhase, playable } from '../rules/sta
 import { unitOf } from '../rules/units';
 import { createBand } from './band';
 import { boundTo } from './bindings';
-import { CARD_BASELINE, CARD_HEIGHT } from './card-face';
+import { CARD_BASELINE, CARD_HEIGHT, createKindBubble } from './card-face';
 import { EASE, ended, stopAllMotion, stopMotion } from './card-motion';
 import { offerEntries, resetConsole } from './debug-console';
 import {
@@ -169,6 +169,8 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       map: createTooltip(map, map.strata.tooltip),
       ui: createTooltip(this, ui.tooltip),
     };
+    // One for the surface's every face: a second would hide the first's bubble as its own goes down.
+    const kinds = createKindBubble(tooltip.ui);
 
     const parts: Part[] = [];
     const view = createMapView(map, map.strata, CATALOGUE, this.current);
@@ -388,7 +390,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
     const endTurn = this.addEndTurn(ui.endTurn, () => {
       void playOut({ type: 'end-turn' });
     });
-    const hand = createHand(this, ui, tooltip.ui, CATALOGUE, {
+    const hand = createHand(this, ui, kinds, CATALOGUE, {
       play: (index) => {
         void playOut({ type: 'play', index, aim: 'none' });
       },
@@ -574,7 +576,10 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
     parts.push(
       view,
       bar,
-      createPiles(this, ui, CATALOGUE, (pile) => overlay.browse(pile, this.current)),
+      createPiles(this, ui, CATALOGUE, kinds, {
+        browse: (pile) => overlay.browse(pile, this.current),
+        inspectNamed: (name) => overlay.inspectNamed(name),
+      }),
       hand,
       endTurn,
       { render: showSettleStanding },

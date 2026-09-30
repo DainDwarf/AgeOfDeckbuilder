@@ -1,24 +1,40 @@
 import { expect, test } from '@playwright/test';
+import { CATALOGUE } from '../src/content/catalogue';
+import { cardOf } from '../src/rules/catalogue';
 import type { Chronicle } from '../src/rules/state';
+import { pileStacksOf } from '../src/ui/collection-layout';
+import type { PileKind } from '../src/ui/overlay';
+import { cardName, cardRules, text } from '../src/ui/text';
 import {
   besideTheCards,
   browse,
   cardOnFace,
   chronicleOf,
   click,
-  doubledCivilization,
+  cursorAt,
   drawsName,
   endedTurn,
+  firstSeed,
+  hazardsAdded,
   kindLabelOnScreen,
+  namedIn,
+  namedOn,
   nameOnScreen,
   offsetOf,
   onScreen,
   openSaved,
+  overflowingPiles,
+  pileTop,
+  placeOf,
   rested,
   ringed,
   scrolled,
+  selected,
   settledOn,
   standing,
+  textOf,
+  titleOf,
+  tooltipText,
   tooltipUp,
   waitGameClock,
   watch,
@@ -27,6 +43,11 @@ import {
 
 /** Longer than the hand-over a small card waits out before it goes down, so one going has gone. */
 const PAST_HANDOVER = 400;
+
+/** The cursor over something that answers a left click or a rest. */
+const HAND = 'pointer';
+
+const PILES: readonly PileKind[] = ['draw-pile', 'discard-pile'];
 
 /** The face whose spot on the page stands nearest the height `y`. */
 async function nearest(
@@ -43,19 +64,25 @@ async function nearest(
   return faces[best];
 }
 
-/** Seed 1 on the doubled civilization, settled bare, with three turns ended: both piles overflow the browse's frame. */
-function overflowing(): Chronicle {
-  let chronicle = settledOn(1, [], doubledCivilization());
-  for (let turn = 0; turn < 3; turn++) chronicle = endedTurn(chronicle);
-  return chronicle;
+/** The stacks a browse of the pile lays out, as the rules read them. */
+function stacksOf(pile: Chronicle['drawPile']) {
+  return pileStacksOf(CATALOGUE, pile, cardName);
 }
 
-test('a pile of more cards than the frame holds scrolls, and stops on its first and last row', async ({
+/**
+ * Seed 1's turn 1, settled bare, a hazard added to its draw pile twice at the reading its counter
+ * starts at and once at the next: two copies alike, and two of one card that read apart.
+ */
+function readingApart(): Chronicle {
+  return hazardsAdded(settledOn(1), [0, 0, 1]);
+}
+
+test('a pile of more stacks than the frame holds scrolls, and stops on its first and last line', async ({
   page,
 }) => {
   const problems = watch(page);
 
-  await openSaved(page, overflowing());
+  await openSaved(page, overflowingPiles());
   await browse(page, 'draw-pile');
 
   const opened = await scrolled(page);
@@ -95,96 +122,88 @@ test('a pile of more cards than the frame holds scrolls, and stops on its first 
   expect(problems).toEqual([]);
 });
 
-test('a click rings a browsed card, a right click and the inspection key show it large, and a press beside walks back out', async ({
+test('a left click on a pile opens nothing and keeps the selection; a right click opens its browse, a stack per card that reads the same with its copies on a badge, in the order of the collection; a stack answers no left click, a right click shows it large over the browse, the inspection key does nothing, and the back key walks back the card, then the browse, onto the selection', async ({
   page,
 }) => {
   const problems = watch(page);
 
-  const before = settledOn(1);
+  const before = readingApart();
+  const stacks = stacksOf(before.drawPile);
   await openSaved(page, before);
-  await browse(page, 'draw-pile');
 
-  // Which card stands large says where the inspection sits, so the selection reads differently from
-  // the first card.
-  const first = await cardOnFace(page, 'browse-card-0');
-  const read = await Promise.all(
-    [1, 2, 3, 4, 5].map((index) => cardOnFace(page, `browse-card-${index}`)),
-  );
-  const differing = read.findIndex((id) => id !== first);
-  if (differing === -1) throw new Error('the first six cards the browse lays out read alike');
-  const other = 1 + differing;
-  const selection = `browse-card-${other}`;
-
-  await click(page, 'browse-card-0');
-  await expect.poll(() => ringed(page, 'browse-card-0')).toBe(true);
-
-  await click(page, selection);
-  await expect.poll(() => ringed(page, selection)).toBe(true);
-  expect(await ringed(page, 'browse-card-0')).toBe(false);
-
-  // A card in a browse is there to be seen and no more: a click on the selection does nothing.
-  await click(page, selection);
+  const home = await onScreen(page, 'hand-0');
+  await click(page, 'hand-0');
   await rested(page);
-  expect(await ringed(page, selection)).toBe(true);
+  for (const pile of PILES) {
+    const at = await pileTop(page, pile);
+    await page.mouse.click(at.x, at.y);
+  }
+  await rested(page);
+  expect(await standing(page, 'browse')).toBe(false);
+  expect(await selected(page, 0, home)).toBe(true);
+
+  await browse(page, 'draw-pile');
+  await rested(page);
+  expect(await titleOf(page, 'browse')).toBe(
+    text('browse.draw-pile', { count: before.drawPile.length }),
+  );
+  const placed: { x: number; y: number }[] = [];
+  for (const [at, { card, copies }] of stacks.entries()) {
+    expect(await cardOnFace(page, `browse-card-${at}`)).toBe(card.id);
+    expect(await textOf(page, `browse-card-${at}-copies`)).toBe(
+      text('collection.row-copies', { copies }),
+    );
+    expect(await ringed(page, `browse-card-${at}`)).toBe(false);
+    placed.push(await placeOf(page, `browse-card-${at}`));
+  }
+  expect(await standing(page, `browse-card-${stacks.length}`)).toBe(false);
+  const read = placed.map((at, index) => ({ at, index }));
+  read.sort((a, b) => a.at.y - b.at.y || a.at.x - b.at.x);
+  expect(read.map(({ index }) => index)).toEqual(stacks.map((_, index) => index));
+
+  const first = await onScreen(page, 'browse-card-0');
+  await page.mouse.click(first.x, first.y);
+  await rested(page);
+  expect(await ringed(page, 'browse-card-0')).toBe(false);
   expect(await standing(page, 'inspection')).toBe(false);
   expect(await standing(page, 'browse')).toBe(true);
 
-  const at = await onScreen(page, 'browse-card-0');
-  await page.mouse.click(at.x, at.y, { button: 'right' });
-  await expect.poll(() => cardOnFace(page, 'inspection')).toBe(first);
-  expect(await standing(page, 'browse')).toBe(false);
+  await page.keyboard.press('KeyI');
+  await rested(page);
+  expect(await standing(page, 'inspection')).toBe(false);
+  expect(await standing(page, 'browse')).toBe(true);
+
+  await page.mouse.click(first.x, first.y, { button: 'right' });
+  await expect.poll(() => cardOnFace(page, 'inspection')).toBe(stacks[0].card.id);
+  expect(await standing(page, 'browse')).toBe(true);
 
   // A card stands large, so the inspection key does nothing.
   await page.keyboard.press('KeyI');
   await rested(page);
-  expect(await cardOnFace(page, 'inspection')).toBe(first);
+  expect(await cardOnFace(page, 'inspection')).toBe(stacks[0].card.id);
 
-  // The right click never selects, so the back key finds the browse's own selection standing.
   await page.keyboard.press('Escape');
-  await expect.poll(() => standing(page, 'browse')).toBe(true);
-  expect(await standing(page, 'inspection')).toBe(false);
-  expect(await ringed(page, selection)).toBe(true);
-
-  await page.keyboard.press('KeyI');
-  await expect.poll(() => cardOnFace(page, 'inspection')).toBe(read[other - 1]);
-  await page.keyboard.press('Escape');
-  await expect.poll(() => standing(page, 'browse')).toBe(true);
-  expect(await ringed(page, selection)).toBe(true);
-
-  // Between the first two cards of the row: on the frame the grid scrolls on, and on neither card.
-  const beside = await onScreen(page, 'browse-card-1');
-  await page.mouse.click((at.x + beside.x) / 2, at.y);
-  await expect.poll(() => ringed(page, selection)).toBe(false);
+  await expect.poll(() => standing(page, 'inspection')).toBe(false);
   expect(await standing(page, 'browse')).toBe(true);
 
-  const away = await besideTheCards(page);
-  await page.mouse.click(away.x, away.y);
-  await expect.poll(() => standing(page, 'browse')).toBe(false);
-
-  // The selection dies with the window.
-  await browse(page, 'draw-pile');
-  expect(await ringed(page, selection)).toBe(false);
-
-  await click(page, 'browse-card-0');
-  await expect.poll(() => ringed(page, 'browse-card-0')).toBe(true);
-  await page.keyboard.press('Escape');
-  await expect.poll(() => ringed(page, 'browse-card-0')).toBe(false);
-  expect(await standing(page, 'browse')).toBe(true);
   await page.keyboard.press('Escape');
   await expect.poll(() => standing(page, 'browse')).toBe(false);
+  await rested(page);
+  expect(await standing(page, 'menu')).toBe(false);
+  expect(await selected(page, 0, home)).toBe(true);
 
   expect(await chronicleOf(page)).toEqual(before);
   expect(problems).toEqual([]);
 });
 
-test('a small card and a kind bubble raised off a browsed card move with it as the wheel scrolls, and go down once the scroll takes what raised them out from under a still pointer', async ({
+test('a small card and a kind bubble raised off a browsed stack move with it as the wheel scrolls, and go down once the scroll takes what raised them out from under a still pointer', async ({
   page,
 }) => {
   const problems = watch(page);
 
-  const opened = overflowing();
+  const opened = overflowingPiles();
   await openSaved(page, opened);
-  const faces = opened.drawPile.map((_, index) => `browse-card-${index}`);
+  const faces = stacksOf(opened.drawPile).map((_, at) => `browse-card-${at}`);
   await browse(page, 'draw-pile');
   await rested(page);
   const frame = await onScreen(page, 'browse-frame');
@@ -238,6 +257,44 @@ test('a small card and a kind bubble raised off a browsed card move with it as t
 
   await page.mouse.wheel(0, (2 * label.height) / frame.unit);
   await expect.poll(() => tooltipUp(page, 'tooltip-overlay')).toBe(false);
+
+  expect(problems).toEqual([]);
+});
+
+test('on the discard pile’s top card a rest on a name raises the named thing small and a right click on it shows it large, no browse rising; the kind label raises what the kind is; the pointer is the hand there and the arrow elsewhere on the piles', async ({
+  page,
+}) => {
+  const problems = watch(page);
+
+  const opened = firstSeed('ends its first turn on a card naming a thing', (seed) => {
+    const ended = endedTurn(settledOn(seed));
+    const top = ended.discardPile.at(-1);
+    return top !== undefined && namedIn(cardRules(top)).length > 0 ? ended : undefined;
+  });
+  const top = opened.discardPile[opened.discardPile.length - 1];
+  const [named] = namedIn(cardRules(top));
+  await openSaved(page, opened);
+
+  const face = 'discard-pile-top';
+  const name = await nameOnScreen(page, face);
+  expect(await cursorAt(page, name)).toBe(HAND);
+  await expect.poll(() => namedOn(page, 'small-card-0')).toEqual(named);
+
+  await page.mouse.click(name.x, name.y, { button: 'right' });
+  await expect.poll(() => namedOn(page, 'inspection')).toEqual(named);
+  await rested(page);
+  expect(await standing(page, 'browse')).toBe(false);
+  await page.keyboard.press('Escape');
+  await expect.poll(() => standing(page, 'inspection')).toBe(false);
+
+  const label = await kindLabelOnScreen(page, face);
+  expect(await cursorAt(page, label)).toBe(HAND);
+  await expect.poll(() => tooltipUp(page, 'tooltip-ui')).toBe(true);
+  expect(await tooltipText(page, 'tooltip-ui')).toBe(
+    text(`tooltip.${cardOf(CATALOGUE, top.id).kind}`),
+  );
+
+  for (const pile of PILES) expect(await cursorAt(page, await pileTop(page, pile))).toBe('');
 
   expect(problems).toEqual([]);
 });

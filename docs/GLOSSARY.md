@@ -39,7 +39,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **collection screen** | The screen the deck is edited on and influence spent, showing the collection. | deck builder, deck editor, shop, store |
 | **city mode** | The chronicle screen's second mode, in which the player acts on the city: assigns, unassigns, claims. | build mode, manage mode, edit mode, planning mode |
 | **select** | To make a tile or a card the selection, the one thing a screen holds at a time. | pick, highlight, focus, arm, target (for a tile or a card) |
-| **inspect** | To show a tile's cards in the infopanel, one at a time, to show a card large, or to open a civilization's browse. | read (a tile), examine, view, look at, zoom (for a card) |
+| **inspect** | To show a tile's cards in the infopanel, one at a time, to show a card large, or to open a pile's browse. | read (a tile), examine, view, look at, zoom (for a card) |
 | **tile** | One hexagon of the map, of one terrain. | hex, cell, square, territory |
 | **region** | The launch choice that biases map generation; the difficulty dial. | site, location, start |
 | **unit** | A mobile piece on the map, the player's or not. | army, troop, piece, token |

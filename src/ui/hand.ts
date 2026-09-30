@@ -14,7 +14,7 @@ import {
   type CardFace,
   createCardBack,
   createCardFace,
-  createKindBubble,
+  type KindBubble,
   type Name,
 } from './card-face';
 import { ended, SLIDE_HOME, STAGGER, stopMotion, travel, turnOver } from './card-motion';
@@ -32,7 +32,6 @@ import { PILE_PLACE } from './piles';
 import { refused } from './refusal-lines';
 import { createRefusalNote } from './refusal-note';
 import { createSmallCards, type Raiser } from './small-card';
-import type { Tooltip } from './tooltip';
 
 /** The clear water between a pile and the lane the hand fans out in. */
 const LANE_PAD = 28;
@@ -115,7 +114,7 @@ export function createHand(
     readonly note: Stratum;
     readonly smallCard: Stratum;
   },
-  tooltip: Tooltip,
+  kinds: KindBubble,
   catalogue: Catalogue,
   presses: HandPresses,
 ): Hand {
@@ -123,7 +122,6 @@ export function createHand(
   const laneWidth = DESIGN_WIDTH - 2 * laneLeft;
   const note = createRefusalNote(scene, on.note);
   const line = createAimLine(scene, on.aimLine);
-  const kinds = createKindBubble(tooltip);
   const small = createSmallCards(scene, on.smallCard, catalogue, kinds, (name) =>
     presses.inspectNamed(name),
   );

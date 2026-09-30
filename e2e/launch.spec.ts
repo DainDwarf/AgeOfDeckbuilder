@@ -8,11 +8,11 @@ import type { Reference } from '../src/ui/text-run';
 import {
   cardOnFace,
   kindLabelOnScreen,
+  namedOn,
   nameOnScreen,
   onScreen,
   openLaunch,
   placeOf,
-  referenceOnFace,
   rested,
   standing,
   textOf,
@@ -42,15 +42,6 @@ function firstNamed(page: Page): Promise<Reference | undefined> {
     const names = face?.getData('names') as { reference: Reference }[] | undefined;
     return names?.[0]?.reference;
   }, CITY_CARD);
-}
-
-/** What the named card a name raised stands: a card by its face, any other thing by its reference. */
-async function namedOn(
-  page: Page,
-  name: string,
-): Promise<{ kind: string; id: string } | undefined> {
-  const card = await cardOnFace(page, name);
-  return card === undefined ? referenceOnFace(page, name) : { kind: 'card', id: card };
 }
 
 function chosen(page: Page): Promise<boolean> {

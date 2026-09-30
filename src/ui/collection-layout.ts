@@ -1,21 +1,45 @@
 /**
  * What the collection screen computes before it draws: the order its stacks, a deck's rows and a
- * civilization's browse stand in, and what a civilization counts.
+ * browse stand in, and what a civilization counts.
  */
 
 import { type Campaign, type CampaignCivilization, civilizationIn } from '../rules/campaign';
 import { CARD_KINDS } from '../rules/cards';
 import { type Catalogue, cardAge, cardOf } from '../rules/catalogue';
-import type { CardId } from '../rules/state';
+import type { CardId, ChronicleCard } from '../rules/state';
 
 /** A card standing once, and how many copies of it are held where it stands. */
 export type CollectionStack = { readonly id: CardId; readonly copies: number };
 
+/** Where a card stands in the collection's order, read once for every card sorted. */
+type Place = {
+  readonly age: number;
+  readonly kind: number;
+  readonly name: string;
+  readonly listed: number;
+};
+
 /**
- * Every card of the cards handed once, with its copies: by age in the order of history, then by kind
- * in the kinds' declared order, then by the name the player reads it by; cards alike in all three in
+ * Where each card stands in the collection's order: by age in the order of history, then by kind in
+ * the kinds' declared order, then by the name the player reads it by; cards alike in all three in
  * the catalogue's order. A card the catalogue does not hold is refused.
  */
+function placesOf(catalogue: Catalogue, nameOf: (card: CardId) => string): (id: CardId) => Place {
+  const ages = Object.keys(catalogue.ages);
+  const listed = Object.keys(catalogue.cards);
+  return (id) => ({
+    age: ages.indexOf(cardAge(catalogue, id)),
+    kind: CARD_KINDS.indexOf(cardOf(catalogue, id).kind),
+    name: nameOf(id),
+    listed: listed.indexOf(id),
+  });
+}
+
+function byPlace(a: Place, b: Place): number {
+  return a.age - b.age || a.kind - b.kind || a.name.localeCompare(b.name) || a.listed - b.listed;
+}
+
+/** Every card of the cards handed once, with its copies, in the collection's order. */
 export function stacksOf(
   catalogue: Catalogue,
   collection: readonly { readonly id: CardId }[],
@@ -23,20 +47,45 @@ export function stacksOf(
 ): CollectionStack[] {
   const copies = new Map<CardId, number>();
   for (const { id } of collection) copies.set(id, (copies.get(id) ?? 0) + 1);
-  const ages = Object.keys(catalogue.ages);
-  const listed = Object.keys(catalogue.cards);
+  const placeOf = placesOf(catalogue, nameOf);
   return [...copies]
-    .map(([id, held]) => ({
-      stack: { id, copies: held },
-      age: ages.indexOf(cardAge(catalogue, id)),
-      kind: CARD_KINDS.indexOf(cardOf(catalogue, id).kind),
-      name: nameOf(id),
-      listed: listed.indexOf(id),
-    }))
-    .sort(
-      (a, b) =>
-        a.age - b.age || a.kind - b.kind || a.name.localeCompare(b.name) || a.listed - b.listed,
-    )
+    .map(([id, held]) => ({ stack: { id, copies: held }, place: placeOf(id) }))
+    .sort((a, b) => byPlace(a.place, b.place))
+    .map(({ stack }) => stack);
+}
+
+/** A card of a chronicle's pile standing once, and how many copies that read the same the pile holds. */
+export type PileStack = { readonly card: ChronicleCard; readonly copies: number };
+
+/**
+ * Every card of a chronicle's pile once for each reading of its counters, with the copies that read
+ * so, in the collection's order; the stacks of one card by their counters, the smaller first, read in
+ * the order the card declares them. Where a card lies in the pile is read nowhere.
+ */
+export function pileStacksOf(
+  catalogue: Catalogue,
+  pile: readonly ChronicleCard[],
+  nameOf: (card: CardId) => string,
+): PileStack[] {
+  const byCounters = (a: ChronicleCard, b: ChronicleCard): number => {
+    for (const counter of Object.keys(cardOf(catalogue, a.id).counters ?? {})) {
+      const apart = a.counters[counter] - b.counters[counter];
+      if (apart !== 0) return apart;
+    }
+    return 0;
+  };
+  const stacks: { card: ChronicleCard; copies: number }[] = [];
+  for (const card of pile) {
+    const alike = stacks.find(
+      (stack) => stack.card.id === card.id && byCounters(stack.card, card) === 0,
+    );
+    if (alike === undefined) stacks.push({ card, copies: 1 });
+    else alike.copies += 1;
+  }
+  const placeOf = placesOf(catalogue, nameOf);
+  return stacks
+    .map((stack) => ({ stack, place: placeOf(stack.card.id) }))
+    .sort((a, b) => byPlace(a.place, b.place) || byCounters(a.stack.card, b.stack.card))
     .map(({ stack }) => stack);
 }
 

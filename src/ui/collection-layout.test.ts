@@ -7,7 +7,7 @@ import {
   paidInto,
   removedFrom,
 } from '../rules/campaign';
-import { merged } from '../rules/catalogue';
+import { cardMade, merged } from '../rules/catalogue';
 import { CATALOGUE, CIVILIZATION_ID, hoardedVictory, SLICES, twoAges } from '../rules/fixtures';
 import type { CardId } from '../rules/state';
 import {
@@ -16,6 +16,7 @@ import {
   countsOf,
   deckRowsOf,
   heldIn,
+  pileStacksOf,
   stacksOf,
   standingIn,
 } from './collection-layout';
@@ -31,6 +32,7 @@ const NAMES: Readonly<Record<CardId, string>> = {
   PH_March: 'Zeal',
   PH_Harvest: 'Bounty',
   PH_Mine: 'Bounty',
+  PH_Frost: 'Rime',
 };
 
 function nameOf(card: CardId): string {
@@ -98,6 +100,22 @@ test('cards of one age and kind read by the same name stand in the catalogue’s
     { id: 'PH_Harvest', copies: 1 },
     { id: 'PH_Mine', copies: 2 },
   ]);
+});
+
+test('a chronicle’s pile stands each card once for each reading of its counters, with the copies that read so, in the collection’s order, the smaller reading first, wherever its cards lie in the pile', () => {
+  const frost = (amount: number) => cardMade(CATALOGUE, 'PH_Frost', { amount });
+  const march = cardMade(CATALOGUE, 'PH_March');
+  const worker = cardMade(CATALOGUE, 'PH_Worker');
+  const pile = [frost(5), march, frost(2), worker, march, frost(5)];
+  const stacks = [
+    { card: worker, copies: 1 },
+    { card: march, copies: 2 },
+    { card: frost(2), copies: 1 },
+    { card: frost(5), copies: 2 },
+  ];
+
+  expect(pileStacksOf(CATALOGUE, pile, nameOf)).toEqual(stacks);
+  expect(pileStacksOf(CATALOGUE, [...pile].reverse(), nameOf)).toEqual(stacks);
 });
 
 test('a civilization’s settle section and its deck each stand every card they hold once, with the copies they hold, in the collection’s order, and the city section’s card in neither', () => {
