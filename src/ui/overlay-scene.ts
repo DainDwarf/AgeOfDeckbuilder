@@ -6,7 +6,7 @@ import { readsKeys, takesMouseKeys } from './keys';
 /** The overlay's strata, in the order they stand, all painted by its one camera. */
 export type Strata = {
   readonly scrim: Stratum;
-  readonly carried: Stratum;
+  readonly large: Stratum;
   readonly note: Stratum;
   readonly smallCard: Stratum;
   readonly tooltip: Stratum;
@@ -31,7 +31,7 @@ export class OverlayScene extends Phaser.Scene {
     const camera = this.cameras.main;
     this.strata = {
       scrim: stratumOf(this.add.layer().setName('scrim'), camera),
-      carried: stratumOf(this.add.layer().setName('carried'), camera),
+      large: stratumOf(this.add.layer().setName('large'), camera),
       note: stratumOf(this.add.layer().setName('note'), camera),
       smallCard: stratumOf(this.add.layer().setName('small-card'), camera),
       tooltip: stratumOf(this.add.layer().setName('tooltip'), camera),

@@ -446,7 +446,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
           closed,
         );
       },
-      inspect: (card, refusal) => overlay.inspect(card, refusal),
+      inspect: (card) => overlay.inspect(card),
       inspectNamed: (name) => overlay.inspectNamed(name),
     });
 
@@ -543,7 +543,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       }
       if (boundTo(press, 'inspect')) {
         const selected = hand.selection();
-        if (selected !== undefined) overlay.inspect(selected.card, selected.refusal);
+        if (selected !== undefined) overlay.inspect(selected);
         else if (selection !== undefined) inspect(selection);
         return;
       }
@@ -574,7 +574,8 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
     });
     resetMenu(this, (under) => {
       away('menu', under);
-      // The overlay's own scrim is no cover to the overlay: whatever it raises wipes what stood.
+      // The overlay's own scrims are no cover to the overlay: whatever rises on them takes down what
+      // it covers.
       if (under) overlayOf(this).input.emit(COVERED);
       // The menu takes every key it stands under and offers none of them on, so a pan key held as
       // its window rises would pan on for ever; the overlay lets the two through and freezes nothing.

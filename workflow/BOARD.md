@@ -12,5 +12,4 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The aim, deal and capstone windows stand under a card shown large the browse's way** — the overlay stands every card shown large through its one `standLarge`, the window beneath left standing dimmed as it stood and never laid again, the `inspection` state and the second stack gone, every card shown large drawn plain; `e2e/deal.spec.ts` proves the deal standing under its answer shown large with its ring kept. Doc-impact: `docs/INTERFACE.md`, `docs/CHRONICLE-SCREEN.md`. [board/windows-stand-under-a-card-shown-large.md](board/windows-stand-under-a-card-shown-large.md)
 - **Whether the wheel may be rebound** — the campaign screen raises the menu on a wheel notch bound to the back key, where `docs/META-SCREENS.md` says the wheel does nothing there whatever it is bound to: decide whether the wheel may be bound at all.

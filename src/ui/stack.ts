@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import type { Catalogue } from '../rules/catalogue';
-import { NO_REFUSAL, type Refusal } from '../rules/state';
+import { NO_REFUSAL } from '../rules/state';
 import { type Bind, boundTo } from './bindings';
 import {
   type CardFace,
@@ -33,20 +33,16 @@ const BAND = 14;
 /** The most cards shown large that stand at once. */
 const HOLDS = 12;
 
-/** One card shown large: a face and what it is drawn refused by, or a thing a name names. */
+/** One card shown large: a face, or a thing a name names. */
 type Inspected =
-  | { readonly shows: 'face'; readonly face: Face; readonly refusal: Refusal }
+  | { readonly shows: 'face'; readonly face: Face }
   | { readonly shows: 'thing'; readonly thing: Thing };
 
-/** What a name names, as it stands large: a card as its face, which nothing refuses. */
+/** What a name names, as it stands large: a card as its face. */
 function inspectedOf(catalogue: Catalogue, { reference, reading }: Name): Inspected {
   switch (reference.kind) {
     case 'card':
-      return {
-        shows: 'face',
-        face: namedCardFace(catalogue, reference.id, reading),
-        refusal: NO_REFUSAL,
-      };
+      return { shows: 'face', face: namedCardFace(catalogue, reference.id, reading) };
     case 'terrain':
     case 'feature':
     case 'improvement':
@@ -57,11 +53,11 @@ function inspectedOf(catalogue: Catalogue, { reference, reading }: Name): Inspec
   }
 }
 
-export type Stack = {
+type Stack = {
   /** Whether a card stands large. */
   readonly standing: boolean;
   /** The face shown large alone, whatever stood. */
-  show(face: Face, refusal: Refusal): void;
+  show(face: Face): void;
   /** What the name names on top of the stack, alone where none stands, and nothing more once it is full. */
   named(name: Name): void;
   /** The newest card taken down; whether a card still stands. */
@@ -71,7 +67,7 @@ export type Stack = {
 };
 
 /** The stack of cards shown large, on the overlay; the scrim it stands on is the caller's. */
-export function createStack(scene: OverlayScene, catalogue: Catalogue, kinds: KindBubble): Stack {
+function createStack(scene: OverlayScene, catalogue: Catalogue, kinds: KindBubble): Stack {
   const small = createSmallCards(scene, scene.strata.smallCard, catalogue, kinds, (name) => {
     named(name);
   });
@@ -90,7 +86,7 @@ export function createStack(scene: OverlayScene, catalogue: Catalogue, kinds: Ki
     const drawnOf = (inspected: Inspected, index: number): Phaser.GameObjects.Container => {
       switch (inspected.shows) {
         case 'face': {
-          const face: CardFace = createCardFace(scene, inspected.face, inspected.refusal, {
+          const face: CardFace = createCardFace(scene, inspected.face, NO_REFUSAL, {
             width: WIDTH,
             names:
               index === newest
@@ -123,7 +119,7 @@ export function createStack(scene: OverlayScene, catalogue: Catalogue, kinds: Ki
           hitArea: new Phaser.Geom.Rectangle(-WIDTH / 2, -height, WIDTH, height),
           hitAreaCallback: Phaser.Geom.Rectangle.Contains,
         });
-      scene.strata.carried.layer.add(root);
+      scene.strata.large.layer.add(root);
       return root;
     });
   };
@@ -136,8 +132,8 @@ export function createStack(scene: OverlayScene, catalogue: Catalogue, kinds: Ki
     get standing() {
       return cards.length > 0;
     },
-    show(face: Face, refusal: Refusal): void {
-      lay([{ shows: 'face', face, refusal }]);
+    show(face: Face): void {
+      lay([{ shows: 'face', face }]);
     },
     named,
     takeDownNewest(): boolean {
@@ -160,6 +156,8 @@ export type ShownLarge = {
 
 /** The cards shown large of `standLarge`, which its caller may take down. */
 export type StandingLarge = ShownLarge & {
+  /** Whether a card stands large. */
+  readonly standing: boolean;
   /** Every card taken down at once, and the scrim they stand on. */
   down(): void;
 };
@@ -224,9 +222,12 @@ export function standLarge(
   };
 
   return {
+    get standing() {
+      return stack.standing;
+    },
     show(face) {
       stand();
-      stack.show(face, NO_REFUSAL);
+      stack.show(face);
     },
     named(name) {
       stand();

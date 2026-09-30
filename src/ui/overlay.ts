@@ -47,7 +47,7 @@ import { createRefusalNote } from './refusal-note';
 import { chipAt } from './resource-bar';
 import { createScroll, reachOf } from './scroll';
 import { createSmallCards, type Raiser, raiserOf } from './small-card';
-import { createStack, standLarge } from './stack';
+import { standLarge } from './stack';
 import { buildingName, cardName, eventName, technologyName, text, victoryLine } from './text';
 import { createTooltip } from './tooltip';
 
@@ -69,7 +69,7 @@ export type Overlay = {
     chosen: (at: number) => void,
     closed: () => void,
   ): () => void;
-  inspect(card: ChronicleCard, refusal: Refusal): void;
+  inspect(card: ChronicleCard): void;
   /** What a name names shown large, as a right click on a name shows it wherever the name stands. */
   inspectNamed(name: Name): void;
   /**
@@ -159,17 +159,11 @@ type Capstone = { readonly stands: 'capstone'; readonly on: Chronicle } & {
 /** What the capstone's window carries beside each raising: the landing's is told when it closes. */
 type RaisedWith = { readonly opening: object; readonly landing: { readonly closed: () => void } };
 
-/** The windows that lay out cards on the grid, which a card shown large is taken off. */
-type Offering = AimWindow | Dealing | Capstone;
-
-/** The cards shown large, over what the first of them was taken off. */
-type Inspection = { readonly stands: 'inspection'; readonly over: Offering | undefined };
-
 /**
- * What the scrim carries: a pile's browse, the aim window, the deal window, the capstone's window,
- * the cards shown large over what they were taken off, or the ending screen.
+ * What the scrim carries: a pile's browse, the aim window, the deal window, the capstone's window, or
+ * the ending screen.
  */
-type Carried = Browsing | Offering | Inspection | { readonly stands: 'ending' };
+type Carried = Browsing | AimWindow | Dealing | Capstone | { readonly stands: 'ending' };
 
 /** The ending screen raised, and its button. */
 type Raised = {
@@ -190,19 +184,18 @@ export function createOverlay(
   paid: () => Payment | undefined,
   leave: () => void,
 ): Overlay {
-  const on = scene.strata.carried;
+  const on = scene.strata.scrim;
   const scrim = scene.add
     .rectangle(0, 0, DESIGN_WIDTH, DESIGN_HEIGHT, LOOK.scrim.colour, LOOK.scrim.strength)
     .setOrigin(0, 0)
     .setVisible(false);
-  scene.strata.scrim.layer.add(scrim);
+  on.layer.add(scrim);
   const note = createRefusalNote(scene, scene.strata.note);
   const tooltip = createTooltip(scene, scene.strata.tooltip);
   const kinds = createKindBubble(tooltip);
   const small = createSmallCards(scene, scene.strata.smallCard, catalogue, kinds, (name) => {
     inspectNamed(name);
   });
-  const stack = createStack(scene, catalogue, kinds);
   const follow = (): void => {
     small.follow();
     tooltip.follow();
@@ -216,7 +209,7 @@ export function createOverlay(
   let browsed: Panel | undefined;
   /** Whether the grid has moved since the name and the label under the pointer were read off it. */
   let moved = false;
-  /** How far the grid is scrolled, kept while a card taken off it is inspected. */
+  /** How far the grid is scrolled. */
   const scroll = createScroll((offset) => {
     grid?.root.setY(-offset);
     follow();
@@ -231,18 +224,32 @@ export function createOverlay(
     boundTo(press, 'inspect') ||
     boundTo(press, 'back');
 
-  /** The cards shown large over a browse, which stands under them as it stood. */
+  /** The cards shown large, over whatever stands on the scrim as it stood, or over nothing. */
   // The overlay holds one taker, and this is it: `takes` hears the keys of every window, the deal,
   // the aim window, the capstone's and the ending screen, only as the `Beneath` handed here.
-  const browseLarge = standLarge(scene, catalogue, covering, (press) => !holds(press), {
+  const large = standLarge(scene, catalogue, covering, (press) => !holds(press), {
     kinds,
     get standing() {
       return carried !== undefined;
     },
     takes: (press) => takes(press),
   });
-  const browsing = inspectingUnder(scene.strata.scrim, small, kinds, browseLarge);
-  const carrier = createCarrier(scene, scene.strata.scrim);
+  /** A card rising large holds the grid where it stands and takes down the note over its card. */
+  const rise = (): void => {
+    scroll.stand(scroll.offset);
+    note.hide();
+  };
+  const inspecting = inspectingUnder(on, small, kinds, {
+    show(face) {
+      rise();
+      large.show(face);
+    },
+    named(name) {
+      rise();
+      large.named(name);
+    },
+  });
+  const carrier = createCarrier(scene, on);
   /** The chronicle the ending screen was raised on: a render raises the screen once and no more. */
   let raisedOn: Ended | undefined;
   /** The deal standing, so no render raises its window twice; the take lets it go. */
@@ -252,18 +259,17 @@ export function createOverlay(
   /** The ending screen still coming up, its button dead until `risen`; a render may cut the rise short. */
   let rising: Raised | undefined;
 
-  /** One thing raised on the scrim: it stands on the `carried` stratum and goes at the next wipe. */
+  /** One thing raised on the scrim: it stands on the scrim stratum and goes at the next wipe. */
   const carries = <T extends Phaser.GameObjects.GameObject>(object: T): T => {
     on.layer.add(object);
     shown.push(object);
     return object;
   };
 
-  /** What the scrim carries taken down, the scrim itself left up: every raise replaces through here. */
+  /** What the scrim carries taken down, the cards shown large among it, the scrim itself left up. */
   const wipe = (): void => {
     small.down();
-    stack.down();
-    browseLarge.down();
+    large.down();
     browsed?.down();
     browsed = undefined;
     note.hide();
@@ -271,7 +277,7 @@ export function createOverlay(
     shown = [];
     rising = undefined;
     grid = undefined;
-    scroll.stand(scroll.offset);
+    scroll.stand(0);
     moved = false;
   };
 
@@ -282,26 +288,10 @@ export function createOverlay(
     covering(false);
   };
 
-  /** The aim window wherever it stands: on the scrim, or under a card it is showing large. */
-  const aimStanding = (what: Carried | undefined): Aiming | undefined => {
-    if (what === undefined) return undefined;
-    switch (what.stands) {
-      case 'aim-window':
-        return what.aim;
-      case 'inspection':
-        return aimStanding(what.over);
-      case 'browse':
-      case 'deal':
-      case 'capstone':
-      case 'ending':
-        return undefined;
-    }
-  };
-
   /** The aim window closed with nothing paid: the one path, whichever way it was closed. */
   const closeAim = (): void => {
-    const aim = aimStanding(carried);
-    if (aim === undefined) return;
+    if (carried?.stands !== 'aim-window') return;
+    const { aim } = carried;
     close();
     aim.closed();
   };
@@ -313,46 +303,17 @@ export function createOverlay(
     covering(true);
   };
 
-  /** The scrim cleared for the stack, over what its first card is taken off. */
-  const standStack = (over: Offering | undefined): void => {
+  /** What the scrim carries replaced by what is raised, the scrim up: every raise replaces through here. */
+  const raiseOnScrim = (what: Carried): void => {
+    // Ahead of the wipe: a card shown large over nothing then comes down without uncovering the screen.
+    carried = what;
     wipe();
     cover();
-    carried = { stands: 'inspection', over };
   };
 
-  const showInspection = (face: Face, refusal: Refusal, over: Offering | undefined): void => {
-    standStack(over);
-    stack.show(face, refusal);
-  };
-
-  /**
-   * What a name names, on top of the stack while a card stands large; shown large alone over the
-   * window standing otherwise.
-   */
+  /** What a name names, shown large on top of the stack, over whatever stands. */
   const inspectNamed = (name: Name): void => {
-    if (carried === undefined) {
-      standStack(undefined);
-      stack.named(name);
-      return;
-    }
-    switch (carried.stands) {
-      case 'inspection':
-        stack.named(name);
-        return;
-      case 'browse':
-        browsing.large.named(name);
-        return;
-      case 'aim-window':
-      case 'deal':
-      case 'capstone':
-        standStack(carried);
-        stack.named(name);
-        return;
-      case 'ending':
-        standStack(undefined);
-        stack.named(name);
-        return;
-    }
+    inspecting.large.named(name);
   };
 
   const raiseTitle = (name: string, heading: string): Phaser.GameObjects.Text =>
@@ -451,7 +412,9 @@ export function createOverlay(
     frame.on('pointermove', pointOnGrid);
     onHover(
       frame,
-      () => {},
+      () => {
+        pointOnGrid(scene.input.activePointer);
+      },
       () => {
         small.over(undefined);
         overKind(undefined);
@@ -520,9 +483,7 @@ export function createOverlay(
 
   /** A pile's browse raised, laid out as the civilization's browse lays out a civilization. */
   const showBrowse = (pile: PileKind, chronicle: Chronicle): void => {
-    wipe();
-    cover();
-    carried = { stands: 'browse' };
+    raiseOnScrim({ stands: 'browse' });
 
     const cards = pileOf(chronicle, pile);
     const laid = layBrowse(
@@ -536,7 +497,7 @@ export function createOverlay(
           edged: false,
         })),
       },
-      browsing,
+      inspecting,
       {
         beside: () => {
           back();
@@ -549,14 +510,9 @@ export function createOverlay(
     browsed = laid.panel;
   };
 
-  /**
-   * The deal window raised, and raised again where the back from a card shown large brings it. It
-   * closes on the take alone, and the landing plays out under the caller.
-   */
+  /** The deal window raised. It closes on the take alone, and the landing plays out under the caller. */
   const showDeal = (dealing: Dealing): void => {
-    wipe();
-    cover();
-    carried = dealing;
+    raiseOnScrim(dealing);
     standingDeal = dealing;
 
     const { heading, lore, entries } = dealt(catalogue, dealing.on, dealing.deal);
@@ -579,7 +535,7 @@ export function createOverlay(
           return;
         }
         case 'right':
-          showInspection(card.face, card.refusal, dealing);
+          inspecting.large.show(card.face);
           return;
       }
     });
@@ -604,14 +560,9 @@ export function createOverlay(
     }
   };
 
-  /**
-   * The capstone's window raised, and raised again where the back from a card shown large brings it.
-   * A left press on its card closes it for good, as a press beside it does.
-   */
+  /** The capstone's window raised. A left press on its card closes it for good, as a press beside it does. */
   const showCapstone = (announcement: Capstone): void => {
-    wipe();
-    cover();
-    carried = announcement;
+    raiseOnScrim(announcement);
 
     const { id } = announcement.on.timeline.capstone;
     const face = capstoneFace(id);
@@ -626,7 +577,7 @@ export function createOverlay(
             closeCapstone(announcement);
             return;
           case 'right':
-            showInspection(face, NO_REFUSAL, announcement);
+            inspecting.large.show(face);
             return;
         }
       },
@@ -634,12 +585,9 @@ export function createOverlay(
     raiseLore('capstone', capstoneLore(id, announcement.raised), laid);
   };
 
-  /** The aim window raised, and raised again where the back from a card shown large brings it. */
+  /** The aim window raised. */
   const showAim = (aim: Aiming): void => {
-    wipe();
-    cover();
-    const raised: AimWindow = { stands: 'aim-window', aim };
-    carried = raised;
+    raiseOnScrim({ stands: 'aim-window', aim });
 
     const title = raiseTitle('aim-window', text('aim.discard-pile', { card: cardName(aim.aimed) }));
     layGrid('aim-window', aim.cards, title.y + title.height + MARGIN, (card, press) => {
@@ -650,25 +598,10 @@ export function createOverlay(
           aim.chosen(card.at);
           return;
         case 'right':
-          showInspection(card.face, NO_REFUSAL, raised);
+          inspecting.large.show(card.face);
           return;
       }
     });
-  };
-
-  /** A window raised again, as the card it was showing large is put back. */
-  const raise = (what: Offering): void => {
-    switch (what.stands) {
-      case 'aim-window':
-        showAim(what.aim);
-        return;
-      case 'deal':
-        showDeal(what);
-        return;
-      case 'capstone':
-        showCapstone(what);
-        return;
-    }
   };
 
   /**
@@ -676,9 +609,7 @@ export function createOverlay(
    * paid and under that its button, one block centred on the screen.
    */
   const showEnding = (on: Ended): Raised => {
-    wipe();
-    cover();
-    carried = { stands: 'ending' };
+    raiseOnScrim({ stands: 'ending' });
     raisedOn = on;
 
     const said = says(on);
@@ -812,22 +743,9 @@ export function createOverlay(
     else stand();
   };
 
-  /**
-   * The newest card shown large taken down, and the last of them onto what it was taken off: the one
-   * path, whichever way.
-   */
-  const takeDownNewest = ({ over }: Inspection): void => {
-    if (stack.takeDownNewest()) return;
-    if (over === undefined) close();
-    else raise(over);
-  };
-
   const back = (): boolean => {
     if (carried === undefined) return false;
     switch (carried.stands) {
-      case 'inspection':
-        takeDownNewest(carried);
-        return true;
       case 'browse':
         close();
         return true;
@@ -855,13 +773,12 @@ export function createOverlay(
           carried.selected === undefined
             ? undefined
             : dealt(catalogue, carried.on, carried.deal).entries[carried.selected];
-        if (entry !== undefined) showInspection(entry.face, entry.refusal, carried);
+        if (entry !== undefined) inspecting.large.show(entry.face);
         return;
       }
       case 'browse':
       case 'aim-window':
       case 'capstone':
-      case 'inspection':
       case 'ending':
         return;
     }
@@ -896,7 +813,7 @@ export function createOverlay(
   onClick(scrim, back, 'right');
 
   /**
-   * The presses the scrim holds while anything stands on it and no card of a browse stands large: the
+   * The presses the scrim holds while anything stands on it and no card stands large over it: the
    * city key and the yield key are swallowed, the inspection key shows a ringed card large, the back
    * key walks what stands back and raises the menu where it has nothing left to walk.
    */
@@ -912,7 +829,8 @@ export function createOverlay(
   scene.input.on(
     'wheel',
     (_pointer: Phaser.Input.Pointer, _over: unknown, _dx: number, dy: number) => {
-      if (grid !== undefined) scroll.wheel(dy);
+      // The scene's wheel hears a notch whatever stands over the grid, a card shown large included.
+      if (grid !== undefined && !large.standing) scroll.wheel(dy);
     },
   );
 
@@ -931,7 +849,6 @@ export function createOverlay(
   return {
     browse: showBrowse,
     aimDiscardPile(chronicle, aimed, chosen, closed): () => void {
-      scroll.stand(0);
       showAim({
         aimed,
         cards: chronicle.discardPile
@@ -942,8 +859,8 @@ export function createOverlay(
       });
       return closeAim;
     },
-    inspect(card: ChronicleCard, refusal: Refusal): void {
-      showInspection(cardFace(catalogue, card), refusal, undefined);
+    inspect(card: ChronicleCard): void {
+      inspecting.large.show(cardFace(catalogue, card));
     },
     inspectNamed,
     render(chronicle: Chronicle): void {

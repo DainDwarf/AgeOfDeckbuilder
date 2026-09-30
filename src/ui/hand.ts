@@ -73,7 +73,7 @@ export type Hand = {
   /** The one gate on the hand's pointer: no hover, no click and no drag while it is shut. */
   live(on: boolean): void;
   /** The card the hand has selected, for whoever shows it large; nothing while none is. */
-  selection(): { readonly card: ChronicleCard; readonly refusal: Refusal } | undefined;
+  selection(): ChronicleCard | undefined;
   /** Lets the selected card go, the aim it stands on with it, and answers whether one was. */
   unselect(): boolean;
 };
@@ -91,7 +91,7 @@ export type HandPresses = {
   aimTile(index: number, card: AimedCard, released: () => void): () => void;
   /** The aim window raised on the discard pile; `closed` says it came down with nothing paid. */
   aimDiscardPile(index: number, closed: () => void): () => void;
-  inspect(card: ChronicleCard, refusal: Refusal): void;
+  inspect(card: ChronicleCard): void;
   /** What a name on a card of the hand names, shown large. */
   inspectNamed(name: Name): void;
 };
@@ -452,7 +452,7 @@ export function createHand(
         slot.face.root,
         (pointer) => {
           const named = nameUnder(slot, pointer)?.name;
-          if (named === undefined) presses.inspect(slot.card, slot.refusal);
+          if (named === undefined) presses.inspect(slot.card);
           else presses.inspectNamed(named);
         },
         'right',
@@ -600,9 +600,8 @@ export function createHand(
   return {
     render,
     live,
-    selection(): { readonly card: ChronicleCard; readonly refusal: Refusal } | undefined {
-      if (selected === undefined) return undefined;
-      return { card: selected.slot.card, refusal: selected.slot.refusal };
+    selection(): ChronicleCard | undefined {
+      return selected?.slot.card;
     },
     unselect,
     play(stage: Stage): Promise<void> | undefined {
