@@ -79,7 +79,7 @@ h1 { font-size: 22px; font-weight: 600; margin: 0; text-wrap: balance; }
 .left .grid { justify-content: center; }
 .cell { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; width: calc(var(--w) + 12px); }
 .stack { position: relative; width: calc(var(--w) + 12px); height: calc(var(--w) * 1.4 + 12px); }
-.stack[data-drag], .pile, .row[data-drag] { cursor: pointer; }
+.stack[data-drag], .stack[data-act], .pile, .row[data-drag] { cursor: pointer; }
 .stack .under { position: absolute; width: var(--w); height: calc(var(--w) * 1.4); background: var(--g-panel); border: 1px solid var(--g-card-edge); border-radius: calc(var(--w) * .13 * .45); }
 .stack .under.back { background: var(--g-card-back); }
 .stack .face { position: absolute; left: 0; top: 0; }
@@ -153,6 +153,10 @@ h1 { font-size: 22px; font-weight: 600; margin: 0; text-wrap: balance; }
       <select id="line"><option value="reads">The first line: read only</option><option value="edits" selected>The second line: a copy added or bought</option></select></div>
     <div class="control"><label for="count">A section's count beside its word</label>
       <select id="count"><option value="civilization">In the civilization mode only (recommended)</option><option value="both">In the deck editing mode too</option><option value="edge">Nowhere: at the right edge</option></select></div>
+    <div class="control"><label for="none">A card taken down to none</label>
+      <select id="none"><option value="stays">Stays, dimmed, until the mode is left (recommended)</option><option value="goes">Goes at once</option></select></div>
+    <div class="control"><label for="facepress">A press on a card face</label>
+      <select id="facepress"><option value="nothing">Does nothing: the buttons alone (recommended)</option><option value="out">Removes a copy, as a row does</option></select></div>
   </div>
   <div class="controls line">
     <span class="tag">A copy is dragged across</span>
@@ -189,7 +193,9 @@ h1 { font-size: 22px; font-weight: 600; margin: 0; text-wrap: balance; }
     <section><h2>Civilization mode</h2><ul>
       <li>The first line ships it read only: the name over the room, centred, the two sections with their counts beside their words, seven stacks to a line, and Collection », which brings the collection back beside the civilization.</li>
       <li>The second line adds the buttons, on the panel's paper. − takes a copy out. + puts in a copy owned that this deck does not hold; where the deck holds them all the button reads the price alone, and a press buys a copy and puts it in.</li>
-      <li>A card taken down to none stays where it stood, at half strength, until the mode is left.</li>
+      <li>A card taken down to none stays where it stood, at half strength, until the mode is left: + puts it back. Set to go at once, the stack leaves and the ones after it close up under the pointer.</li>
+      <li>Between the two buttons the reading is the two numbers alone, held over owned, centred in the room the buttons leave: the words "In deck" do not fit beside two buttons.</li>
+      <li>A card face answers the right click and nothing else; set to remove, a press on it does what − does.</li>
     </ul></section>
     <section><h2>Placeholders</h2><ul>
       <li>The base prices past the Stone Age: 2, then 4.</li>
@@ -354,14 +360,16 @@ h1 { font-size: 22px; font-weight: 600; margin: 0; text-wrap: balance; }
       var short = buys && state.influence < priceOf(c);
       if (reads) return '<div class="cell" style="--w:' + width + 'px">' + stack(c, width, n, '', false) +
         '<div class="under-line"><span>In deck <b>' + n + '/' + c.owned + '</b></span></div></div>';
-      return '<div class="cell" style="--w:' + width + 'px">' + stack(c, width, n, '', n === 0) +
-        '<div class="under-line"><span class="stepper">' +
+      var laid = stack(c, width, n, '', n === 0);
+      if (el('facepress').value === 'out' && n > 0) laid = laid.replace('<div class="stack', '<div data-act="out" data-id="' + c.id + '" class="stack');
+      return '<div class="cell" style="--w:' + width + 'px">' + laid +
+        '<div class="under-line">' +
         '<button type="button" class="step' + (n === 0 ? ' short' : '') + '" data-act="out" data-id="' + c.id + '">−</button>' +
-        '<b>' + n + '/' + c.owned + '</b></span>' +
+        '<b>' + n + '/' + c.owned + '</b>' +
         '<button type="button" class="step' + (short ? ' short' : '') + '" data-act="more" data-id="' + c.id + '">' +
         (buys ? price(c) : '+') + '</button></div></div>';
     };
-    var shown = state.shown.map(card).filter(function (c) { return c && (!reads || inDeck(c) > 0); });
+    var shown = state.shown.map(card).filter(function (c) { return c && (!(reads || el('none').value === 'goes') || inDeck(c) > 0); });
     var settle = shown.filter(function (c) { return c.kind === 'settle'; }).map(cell).join('');
     var rest = shown.filter(function (c) { return c.kind !== 'settle'; }).map(cell).join('');
     var across = Math.floor((1040 - 48 + 10) / (width + 22));
@@ -527,6 +535,8 @@ h1 { font-size: 22px; font-weight: 600; margin: 0; text-wrap: balance; }
   el('carries').addEventListener('change', render);
   el('line').addEventListener('change', render);
   el('count').addEventListener('change', render);
+  el('none').addEventListener('change', render);
+  el('facepress').addEventListener('change', render);
   el('mode').addEventListener('change', function () { enter(el('mode').value); render(); });
   ['size', 'civs', 'influence'].forEach(function (id) { el(id).addEventListener('change', function () { open(); render(); }); });
   el('reset').addEventListener('click', function () { open(); render(); });
