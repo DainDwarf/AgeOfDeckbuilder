@@ -95,10 +95,10 @@ export function createCarrier(scene: Phaser.Scene, on: Stratum): Carrier {
 
   // Phaser ends a drag at any button's release (docs/PHASER.md), so the carry reads the scene's own
   // moves and releases, and stands through a right click until the left button comes up.
-  whileUp(scene, scene.input, 'pointermove', (pointer: Phaser.Input.Pointer) => {
+  scene.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
     follow(on.at(pointer.x, pointer.y));
   });
-  whileUp(scene, scene.input, 'pointerup', (pointer: Phaser.Input.Pointer) => {
+  scene.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
     if (carried === undefined || pressOf(pointer) !== 'left') return;
     const at = on.at(pointer.x, pointer.y);
     if (!inside(carried.carry.lands, at.x, at.y)) {
@@ -110,7 +110,7 @@ export function createCarrier(scene: Phaser.Scene, on: Stratum): Carrier {
     landed.copy.destroy();
     landed.press();
   });
-  whileUp(scene, scene.input, 'pointerupoutside', slideHome);
+  scene.input.on('pointerupoutside', slideHome);
 
   return {
     get carrying() {

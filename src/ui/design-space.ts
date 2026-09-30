@@ -145,9 +145,9 @@ export function releaseOnBlur(game: Phaser.Game): void {
 }
 
 /**
- * A listener until the scene shuts down, or until what it hands back is called. Every emitter the
- * scene listens on outlives its shutdown, so one left on any of them is called again by the screen
- * a restart raises, holding every object the screen it was made on has since destroyed.
+ * A listener until the scene shuts down, or until what it hands back is called. The scene's own
+ * events, the game's and the scale manager's outlive its shutdown, so one left on them is called
+ * again by the screen a restart raises; the scene's input drops its listeners at shutdown itself.
  */
 export function whileUp<A extends unknown[]>(
   scene: Phaser.Scene,

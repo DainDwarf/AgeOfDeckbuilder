@@ -16,7 +16,6 @@ import {
   onClick,
   ownBoxOf,
   UI_FONT,
-  whileUp,
 } from './design-space';
 import { cardFaceAtStart, type Face } from './face';
 import { css, LOOK } from './look';
@@ -232,9 +231,7 @@ export function standBrowse(
   overlay.scrolls((way, delta) => {
     if (!large.standing) standing?.panel.pan(way, delta);
   });
-  whileUp(
-    overlay,
-    overlay.input,
+  overlay.input.on(
     'wheel',
     (pointer: Phaser.Input.Pointer, _over: unknown, _dx: number, dy: number) => {
       if (!large.standing) standing?.panel.wheel(pointer, dy);
