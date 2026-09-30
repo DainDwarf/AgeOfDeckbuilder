@@ -12,6 +12,7 @@ That design is the code's shape and states no fact of the game, so no line write
 
 ## The lines
 
+- **The specs read a screen in one question** — the deck editing specs time out on the padded content because every reading waits out a software-drawn frame, and the pan-keys browse spec right-clicks a card a slow runner's tap has scrolled out of the frame.
 - **A setting inverts the wheel** — the Controls window holds two rows under the zooms, **Wheel zoom** reading Up zooms in or Up zooms out and **Wheel scroll** reading Up scrolls up or Up scrolls down, a press turning each the other way, the map and every scrolling surface following through the one reading of the wheel, **Default** putting both back, and both kept in the browser with the bindings. Doc-impact: `docs/INTERFACE.md`. [board/a-setting-inverts-the-wheel.md](board/a-setting-inverts-the-wheel.md)
 - **A window's grid is a panel** — the aim, deal and capstone windows lay their cards through the panel a browse is laid through, keeping their layout to the pixel, the deal its ring and its refusal note; the overlay holds no grid of its own, and its gestures go to the one panel standing. Doc-impact: none. [board/a-windows-grid-is-a-panel.md](board/a-windows-grid-is-a-panel.md)
 - **A scrim is one thing** — one function draws every scrim and wires its two clicks as the one step back its owner hands it, and the overlay, the browse, the cards shown large and the menu's two each own one built through it. Doc-impact: none. [board/a-scrim-is-one-thing.md](board/a-scrim-is-one-thing.md)
