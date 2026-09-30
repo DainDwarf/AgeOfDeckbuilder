@@ -206,7 +206,8 @@ test('the two keys that pan the map up and down scroll a browse while they are h
     return offsetOf(page);
   };
 
-  await openSaved(page, overflowingPiles());
+  const opened = overflowingPiles();
+  await openSaved(page, opened);
   await browse(page, 'draw-pile');
   const { overflow } = await scrolled(page);
   const away = await besideTheCards(page);
@@ -230,8 +231,11 @@ test('the two keys that pan the map up and down scroll a browse while they are h
   const tapped = await offsetOf(page);
   expect(tapped).toBeGreaterThan(0);
 
-  const first = await onScreen(page, 'browse-card-0');
-  await page.mouse.click(first.x, first.y, { button: 'right' });
+  const frame = await onScreen(page, 'browse-frame');
+  const faces = pileStacks(opened.drawPile).map((_, at) => `browse-card-${at}`);
+  const middle = await nearest(frame.y, faces, (face) => onScreen(page, face));
+  const shown = await onScreen(page, middle);
+  await page.mouse.click(shown.x, shown.y, { button: 'right' });
   await expect.poll(() => standing(page, 'inspection')).toBe(true);
   expect(await heldFor(down.code, 200)).toBe(tapped);
   expect(await heldFor(up.code, 200)).toBe(tapped);

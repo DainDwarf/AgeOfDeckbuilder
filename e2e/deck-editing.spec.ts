@@ -19,8 +19,8 @@ import {
   onScreen,
   openCollection,
   pilePressed,
-  placeOf,
   pressed,
+  readings,
   rested,
   saved,
   shows,
@@ -74,9 +74,13 @@ async function namingCard(page: Page): Promise<CardId> {
   throw new Error('no card of the collection draws a name');
 }
 
+function stackOf(id: CardId): string {
+  return `collection-stack-${id}`;
+}
+
 /** Whether the card's stack stands dimmed, and nothing where no stack of it stands. */
 function dimmed(page: Page, id: CardId): Promise<boolean | undefined> {
-  return stackDimmed(page, `collection-stack-${id}`);
+  return stackDimmed(page, stackOf(id));
 }
 
 /**
@@ -86,34 +90,39 @@ function dimmed(page: Page, id: CardId): Promise<boolean | undefined> {
  */
 async function readsAs(page: Page, campaign: Campaign): Promise<void> {
   const { settle, cards } = civilizationIn(CATALOGUE, campaign, CIVILIZATION);
-  expect(await textOf(page, 'deck-section-settle-count')).toBe(
+  const rows = [
+    ...rowsOf(settle).map((row) => ({ ...row, inSettle: true })),
+    ...rowsOf(cards).map((row) => ({ ...row, inSettle: false })),
+  ];
+  const seen = await readings(page, [
+    'deck-section-settle-count',
+    'deck-section-cards-count',
+    'deck-empty',
+    'deck-section-cards',
+    ...rows.map(({ id }) => `deck-row-${id}-copies`),
+    ...STACKS.flatMap(({ id }) => [`deck-row-${id}`, `collection-card-${id}-copies`, stackOf(id)]),
+  ]);
+  expect(seen('deck-section-settle-count').text).toBe(
     text('collection.cards', { cards: settle.length + 1 }),
   );
-  expect(await textOf(page, 'deck-section-cards-count')).toBe(
+  expect(seen('deck-section-cards-count').text).toBe(
     text('collection.cards', { cards: cards.length }),
   );
-  expect(await standing(page, 'deck-empty')).toBe(cards.length === 0);
-  const cardsWord = (await placeOf(page, 'deck-section-cards')).y;
-  for (const [ids, inSettle] of [
-    [settle, true],
-    [cards, false],
-  ] as const) {
-    for (const { id, copies } of rowsOf(ids)) {
-      expect(await counted(page, `deck-row-${id}`)).toBe(1);
-      expect(await textOf(page, `deck-row-${id}-copies`)).toBe(
-        text('collection.row-copies', { copies }),
-      );
-      expect((await placeOf(page, `deck-row-${id}`)).y < cardsWord).toBe(inSettle);
-    }
+  expect(seen('deck-empty').standing).toBe(cards.length === 0);
+  const cardsWord = seen('deck-section-cards').place.y;
+  for (const { id, copies, inSettle } of rows) {
+    expect(seen(`deck-row-${id}`).count).toBe(1);
+    expect(seen(`deck-row-${id}-copies`).text).toBe(text('collection.row-copies', { copies }));
+    expect(seen(`deck-row-${id}`).place.y < cardsWord).toBe(inSettle);
   }
   const held = [...settle, ...cards];
   for (const { id, copies } of STACKS) {
     const holds = idsCounted(held, id);
-    if (holds === 0) expect(await counted(page, `deck-row-${id}`)).toBe(0);
-    expect(await textOf(page, `collection-card-${id}-copies`)).toBe(
+    if (holds === 0) expect(seen(`deck-row-${id}`).count).toBe(0);
+    expect(seen(`collection-card-${id}-copies`).text).toBe(
       text('collection.in-deck', { held: holds, copies }),
     );
-    expect(await dimmed(page, id)).toBe(holds === copies);
+    expect(seen(stackOf(id)).dimmed).toBe(holds === copies);
   }
 }
 
@@ -179,21 +188,31 @@ test('a press on a civilization’s pile opens the deck editing mode on it: its 
   expect(await standing(page, 'deck-empty')).toBe(false);
 
   const rows = [...rowsOf(DECK.settle), ...rowsOf(DECK.cards)];
+  const seen = await readings(page, [
+    'deck-city',
+    'deck-section-settle',
+    'deck-section-cards',
+    ...Object.keys(CATALOGUE.cards).map((id) => `deck-row-${id}`),
+    ...rows.map(({ id }) => `deck-row-${id}-copies`),
+    ...STACKS.flatMap(({ id }) => [
+      `collection-card-${id}`,
+      `collection-card-${id}-copies`,
+      stackOf(id),
+    ]),
+  ]);
   for (const id of Object.keys(CATALOGUE.cards)) {
-    expect(await counted(page, `deck-row-${id}`)).toBe(rows.some((row) => row.id === id) ? 1 : 0);
+    expect(seen(`deck-row-${id}`).count).toBe(rows.some((row) => row.id === id) ? 1 : 0);
   }
-  const heights: number[] = [(await placeOf(page, 'deck-city')).y];
+  const heights: number[] = [seen('deck-city').place.y];
   for (const { id, copies } of rows) {
-    expect(await cardOnFace(page, `deck-row-${id}`)).toBe(id);
-    expect(await textOf(page, `deck-row-${id}-copies`)).toBe(
-      text('collection.row-copies', { copies }),
-    );
-    heights.push((await placeOf(page, `deck-row-${id}`)).y);
+    expect(seen(`deck-row-${id}`).card).toBe(id);
+    expect(seen(`deck-row-${id}-copies`).text).toBe(text('collection.row-copies', { copies }));
+    heights.push(seen(`deck-row-${id}`).place.y);
   }
   expect(heights).toEqual([...heights].sort((a, b) => a - b));
   const lastSettle = rowsOf(DECK.settle).length;
-  const cardsWord = (await placeOf(page, 'deck-section-cards')).y;
-  expect((await placeOf(page, 'deck-section-settle')).y).toBeLessThan(heights[0]);
+  const cardsWord = seen('deck-section-cards').place.y;
+  expect(seen('deck-section-settle').place.y).toBeLessThan(heights[0]);
   expect(cardsWord).toBeGreaterThan(heights[lastSettle]);
   expect(cardsWord).toBeLessThan(heights[lastSettle + 1]);
 
@@ -201,11 +220,11 @@ test('a press on a civilization’s pile opens the deck editing mode on it: its 
   const placed: { id: CardId; at: { x: number; y: number } }[] = [];
   for (const { id, copies } of STACKS) {
     const holds = idsCounted(held, id);
-    expect(await textOf(page, `collection-card-${id}-copies`)).toBe(
+    expect(seen(`collection-card-${id}-copies`).text).toBe(
       text('collection.in-deck', { held: holds, copies }),
     );
-    expect(await dimmed(page, id)).toBe(holds === copies);
-    placed.push({ id, at: await placeOf(page, `collection-card-${id}`) });
+    expect(seen(stackOf(id)).dimmed).toBe(holds === copies);
+    placed.push({ id, at: seen(`collection-card-${id}`).place });
   }
   const read = [...placed].sort((a, b) => a.at.y - b.at.y || a.at.x - b.at.x);
   expect(read.map(({ id }) => id)).toEqual(STACKS.map(({ id }) => id));
@@ -261,10 +280,12 @@ test('in the deck editing mode « Civilization stands as a button, the hand over
   await rested(page);
   expect(await standing(page, 'deck-editing-mode')).toBe(false);
   expect(await standing(page, `collection-civilization-${CIVILIZATION}`)).toBe(true);
+  const seen = await readings(
+    page,
+    STACKS.map(({ id }) => `collection-card-${id}-copies`),
+  );
   for (const { id, copies } of STACKS) {
-    expect(await textOf(page, `collection-card-${id}-copies`)).toBe(
-      text('collection.copies', { copies }),
-    );
+    expect(seen(`collection-card-${id}-copies`).text).toBe(text('collection.copies', { copies }));
   }
 
   expect(problems).toEqual([]);

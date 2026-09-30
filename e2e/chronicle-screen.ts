@@ -743,6 +743,61 @@ export function counted(page: Page, name: string): Promise<number> {
   }, name);
 }
 
+/**
+ * What one name reads: what `standing`, `counted`, `textOf`, `stackDimmed` and `cardOnFace` answer
+ * for it, and the place `placeOf` answers, which throws as it does where nothing of the name stands.
+ */
+export type Reading = {
+  readonly standing: boolean;
+  readonly count: number;
+  readonly text: string | undefined;
+  readonly dimmed: boolean | undefined;
+  readonly card: string | undefined;
+  readonly place: { x: number; y: number };
+};
+
+/**
+ * Every name handed read in one question to the page, and the reading of one of them; a name not
+ * handed throws. Each question to the page waits out the frame being drawn.
+ */
+export async function readings(
+  page: Page,
+  names: readonly string[],
+): Promise<(name: string) => Reading> {
+  const answers = await page.evaluate((targets) => {
+    const count = window.counted;
+    if (count === undefined) throw new Error('no chronicle was opened on this page');
+    return targets.map((target) => {
+      const object = window.named?.(target)?.object;
+      const at = (object as Phaser.GameObjects.Container | undefined)?.getWorldTransformMatrix();
+      return {
+        name: target,
+        standing: object !== undefined,
+        count: count(target),
+        text: (object as Phaser.GameObjects.Text | undefined)?.text,
+        dimmed: object?.getData('dimmed') as boolean | undefined,
+        card: object === undefined ? undefined : (object.getData('card') as string),
+        place: at === undefined ? undefined : { x: at.tx, y: at.ty },
+      };
+    });
+  }, names);
+  const read = new Map<string, Reading>();
+  for (const { name, place, ...answer } of answers) {
+    read.set(name, {
+      ...answer,
+      get place() {
+        if (place === undefined) throw new Error(`there is no ${name}`);
+        return place;
+      },
+    });
+  }
+  return (name) => {
+    const reading = read.get(name);
+    if (reading === undefined) throw new Error(`${name} was not read`);
+    return reading;
+  };
+}
+
 /** How many marks the named container of the map is showing. */
 export function marksIn(page: Page, name: string): Promise<number> {
   return page.evaluate((target) => {
