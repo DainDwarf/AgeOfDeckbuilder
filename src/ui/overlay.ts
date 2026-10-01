@@ -216,13 +216,10 @@ export function createOverlay(
     aim.closed();
   };
 
-  /** What the scrim carries replaced by what `raise` raises, the scrim up: every raise replaces through here. */
-  const raiseOnScrim = (what: Carried, raise: () => void = browser.raise): void => {
+  /** What the scrim carries replaced, the scrim up for what is raised on it. */
+  const raiseOnScrim = (what: Carried): void => {
     carried = what;
-    raise();
-    // The ending's rise brings the scrim up from nothing, so every raise states the alpha it wants.
-    stopMotion(scene, scrim);
-    scrim.setAlpha(LOOK.scrim.strength);
+    browser.raise();
   };
 
   /** What a name names, shown large on top of the stack, over whatever stands. */
@@ -314,16 +311,15 @@ export function createOverlay(
   /** A pile's browse raised, laid out as the civilization's browse lays out a civilization. */
   const showBrowse = (pile: PileKind, chronicle: Chronicle): void => {
     const cards = pileOf(chronicle, pile);
-    raiseOnScrim({ stands: 'browse' }, () => {
-      browser.browse({
-        name: 'browse',
-        heading: text(`browse.${pile}`, { count: cards.length }),
-        stacks: pileStacksOf(catalogue, cards, cardName).map(({ card, copies }) => ({
-          shown: cardFace(catalogue, card),
-          copies,
-          edged: false,
-        })),
-      });
+    carried = { stands: 'browse' };
+    browser.browse({
+      name: 'browse',
+      heading: text(`browse.${pile}`, { count: cards.length }),
+      stacks: pileStacksOf(catalogue, cards, cardName).map(({ card, copies }) => ({
+        shown: cardFace(catalogue, card),
+        copies,
+        edged: false,
+      })),
     });
   };
 
@@ -504,7 +500,7 @@ export function createOverlay(
 
     const climb = { duration: 1200, ease: EASE };
     return Promise.all([
-      ended(scene.tweens.add({ targets: scrim, alpha: LOOK.scrim.strength, ...climb })),
+      ended(scene.tweens.add({ targets: scrim, alpha: 1, ...climb })),
       ended(scene.tweens.add({ targets: raised.screen, alpha: 1, y: 0, ...climb })),
     ]).then(() => {
       if (rising === raised) risen();
@@ -517,7 +513,7 @@ export function createOverlay(
     if (raised === undefined) return;
     stopMotion(scene, scrim);
     stopMotion(scene, raised.screen);
-    scrim.setAlpha(LOOK.scrim.strength);
+    scrim.setAlpha(1);
     raised.screen.setAlpha(1).setY(0);
     risen();
   };

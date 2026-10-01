@@ -12,5 +12,4 @@ That design is the code's shape and states no fact of the game, so no line write
 
 ## The lines
 
-- **The overlay's scrim at its strength** — the chronicle's overlay scrim shows at the look's scrim strength, 0.82, as every other scrim does: a pile's browse, the aim, deal and capstone windows and the ending dim the screen as the menu and the collection's and launch screen's browses do, and the ending still rises with its scrim out of nothing. Doc-impact: none. [board/the-overlays-scrim-at-its-strength.md](board/the-overlays-scrim-at-its-strength.md)
 - **The padding leaves** — the twenty placeholder cards, their text entries and every test that holds only on them leave the branch, the collection panel's wheel test among them, and the suite passes on the Nomadic content alone. Doc-impact: none. [board/the-padding-leaves.md](board/the-padding-leaves.md)

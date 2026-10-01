@@ -3,6 +3,7 @@ import type { Campaign } from '../rules/campaign';
 import type { Catalogue } from '../rules/catalogue';
 import { type Bind, boundTo } from './bindings';
 import { CARD_WIDTH, createKindBubble, metricsOf } from './card-face';
+import { stopMotion } from './card-motion';
 import { browseOf } from './collection-layout';
 import { type Cell, linesOf, spanOf, stackedCardsOf } from './collection-stack';
 import { cityEdgeOf } from './deck-panel';
@@ -240,7 +241,9 @@ export function standBrowser(
       // Ahead of the wipe: a card shown large over nothing then comes down without uncovering the screen.
       up = true;
       wipe();
-      scrim.setVisible(true);
+      // A screen may fade the scrim in from nothing, so every raise stands it whole.
+      stopMotion(overlay, scrim);
+      scrim.setAlpha(1).setVisible(true);
       screen.covering(true);
     },
     carries(object) {
