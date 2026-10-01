@@ -287,6 +287,13 @@ function sidesOf(scene: Phaser.Scene, right: number): Sides {
   };
 }
 
+/** What an affordable price in the collection panel runs: the card bought, the screen laid again in the mode. */
+function buyIn(screen: Screen, mode: Mode): (card: CardId) => void {
+  return (card) => {
+    screen.edit(mode, (held) => bought(screen.catalogue, held, card));
+  };
+}
+
 /** The collection mode: the collection on the left and the civilizations on the right, each panel under its word. */
 function collectionModeOf(
   screen: Screen,
@@ -294,7 +301,7 @@ function collectionModeOf(
   campaign: Campaign,
   [leftOffset, rightOffset]: readonly number[],
 ): Laid {
-  const { scene, catalogue } = screen;
+  const { scene } = screen;
   const { right, across } = shapeOf(mode);
   const { shared, top, divide, left, frame } = sidesOf(scene, right);
   const civilizations = wordOf(scene, text('collection.civilizations'), divide + right / 2);
@@ -304,9 +311,6 @@ function collectionModeOf(
     reads: text('collection.copies', { copies }),
     dimmed: false,
   });
-  const buy = (card: CardId): void => {
-    screen.edit(mode, (held) => bought(catalogue, held, card));
-  };
   return {
     head,
     panels: [
@@ -321,7 +325,7 @@ function collectionModeOf(
             { top, right: divide, across },
             reading,
             undefined,
-            buy,
+            buyIn(screen, mode),
           ),
         },
         leftOffset,
@@ -419,9 +423,6 @@ function deckEditingModeOf(
   const remove = (card: CardId): void => {
     screen.edit(mode, (held) => removedFrom(catalogue, held, civilization, card));
   };
-  const buy = (card: CardId): void => {
-    screen.edit(mode, (held) => bought(catalogue, held, card));
-  };
   const owned = campaign.civilizations[civilization];
   const collectionSide: Box = { ...ROOM, width: divide - ROOM.x };
   const civilizationSide: Box = { ...ROOM, x: divide, width: DESIGN_WIDTH - divide };
@@ -439,7 +440,7 @@ function deckEditingModeOf(
             { top, right: divide, across },
             reading,
             { pressOf: add, lands: civilizationSide },
-            buy,
+            buyIn(screen, mode),
           ),
         },
         leftOffset,
