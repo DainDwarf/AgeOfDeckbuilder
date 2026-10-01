@@ -9,9 +9,8 @@ import {
   removedFrom,
   unaffordableIn,
 } from '../rules/campaign';
-import type { Catalogue } from '../rules/catalogue';
 import { type CardId, NO_REFUSAL } from '../rules/state';
-import { inspectingUnder, standBrowse } from './browse';
+import { standBrowse } from './browse';
 import { createCardFace, createKindBubble, metricsOf } from './card-face';
 import { createPile, PILE_SPAN } from './civilization-pile';
 import {
@@ -64,8 +63,7 @@ import {
   type Surface,
 } from './panel';
 import { campaignHeld, keepCampaign } from './save-entry';
-import { createSmallCards } from './small-card';
-import type { Inspecting } from './stack';
+import { type Laying, layingOf } from './stack';
 import { cardName, civilizationName, text } from './text';
 
 const PANE_TOP = ROOM.y + MARGIN;
@@ -98,6 +96,8 @@ type Mode =
   | { readonly shows: 'deck editing'; readonly civilization: string }
   | { readonly shows: 'civilization'; readonly civilization: string; readonly stood: DeckRows };
 
+type ModeOf<Shows extends Mode['shows']> = Extract<Mode, { readonly shows: Shows }>;
+
 /** How wide the right panel stands in a mode, and how many stacks a line of its stacks holds. */
 function shapeOf(mode: Mode): { readonly right: number; readonly across: number } {
   switch (mode.shows) {
@@ -109,6 +109,24 @@ function shapeOf(mode: Mode): { readonly right: number; readonly across: number 
       return { right: ROOM.width, across: 7 };
   }
 }
+
+/**
+ * What a mode of the collection screen is laid with: what its pieces are laid with, the surface its
+ * panels stand on, and the container its head joins.
+ */
+type Screen = Laying &
+  Surface & {
+    readonly root: Phaser.GameObjects.Container;
+    /** The screen laid in the mode, its panels at the offsets handed, in order, or at their tops. */
+    readonly lay: (mode: Mode, offsets?: readonly number[]) => void;
+    /** The campaign moved and kept, and the screen laid again in the mode, its panels where they stood. */
+    readonly edit: (mode: Mode, move: (held: Campaign) => Campaign) => void;
+    /** The browse of the campaign's civilization of that name raised. */
+    readonly browse: (civilization: string) => void;
+  };
+
+/** A mode as it stands: its head, and its panels in order. */
+type Laid = { readonly head: Phaser.GameObjects.Container; readonly panels: readonly Panel[] };
 
 /** What a stack of the collection answers a left click with, and the box a press held on it lands in. */
 type Moves = {
@@ -122,27 +140,25 @@ type Moves = {
  * are handed, its price a button; an affordable price runs `buy`.
  */
 function collectionOf(
-  scene: Phaser.Scene,
-  catalogue: Catalogue,
+  laying: Laying,
   campaign: Campaign,
   { top, right, across }: { top: number; right: number; across: number },
   readingOf: (stack: CollectionStack) => Reading,
   moves: Moves | undefined,
   buy: (card: CardId) => void,
-  inspecting: Inspecting,
 ): Filled {
+  const { scene, catalogue } = laying;
   const stacks = stacksOf(catalogue, campaign.collection, cardName);
   const cells = stacks.map(
     (stack): Cell =>
       ({ left, top }) => {
         const { id } = stack;
-        const laid = stackOf(scene, catalogue, {
+        const laid = stackOf(laying, {
           stack,
           left,
           top,
           name: 'collection',
           reading: readingOf(stack),
-          inspecting,
         });
         const price = priceButtonOf(scene, laid, {
           name: `collection-card-${id}`,
@@ -183,16 +199,15 @@ function collectionOf(
  * browse.
  */
 function civilizationsOf(
-  scene: Phaser.Scene,
-  catalogue: Catalogue,
+  laying: Laying,
   civilizations: Readonly<Record<string, CampaignCivilization>>,
   { top, frame }: { top: number; frame: Box },
   {
     open,
     browse,
   }: { open: (civilization: string) => void; browse: (civilization: string) => void },
-  inspecting: Inspecting,
 ): Filled {
+  const { scene } = laying;
   const left = frame.x + (frame.width - PILE_SPAN) / 2;
   const parts: Phaser.GameObjects.Container[] = [];
   const held: Held[] = [];
@@ -200,17 +215,9 @@ function civilizationsOf(
   let foot = top;
   for (const [id, owned] of Object.entries(civilizations)) {
     const name = `collection-civilization-${id}`;
-    const pile = createPile(
-      scene,
-      catalogue,
-      owned,
-      { left, top: pileTop, chosen: false },
-      inspecting,
-      name,
-      () => {
-        browse(id);
-      },
-    );
+    const pile = createPile(laying, owned, { left, top: pileTop, chosen: false }, name, () => {
+      browse(id);
+    });
     parts.push(scene.add.container(0, 0, [...pile.parts]).setName(name));
     held.push({ box: pile.box, answers: pile.answers, press: () => open(id) });
     foot = pile.bottom;
@@ -242,6 +249,317 @@ function modeButtonOf(
   return { face, parts: [face, words] };
 }
 
+function wordOf(scene: Phaser.Scene, label: string, x: number): Phaser.GameObjects.Text {
+  return addText(scene, x, PANE_TOP, label, WORD_STYLE).setOrigin(0.5, 0);
+}
+
+/** Where the panels start under a word of the head, how tall they stand, and the height of the word's middle. */
+function underOf(shown: Phaser.GameObjects.Text): { top: number; height: number; middle: number } {
+  const top = shown.y + shown.height + WORD_GAP;
+  return { top, height: DESIGN_HEIGHT - MARGIN - top, middle: shown.y + shown.height / 2 };
+}
+
+/** The collection's word and the line between the panels, where they divide, and both panels' frames under them. */
+type Sides = {
+  readonly shared: Phaser.GameObjects.GameObject[];
+  readonly top: number;
+  readonly middle: number;
+  readonly divide: number;
+  readonly left: Box;
+  readonly frame: Box;
+};
+
+/** The sides of a mode whose right panel stands `right` wide. */
+function sidesOf(scene: Phaser.Scene, right: number): Sides {
+  const divide = DESIGN_WIDTH - right;
+  const cards = wordOf(scene, text('collection.collection'), (ROOM.x + divide) / 2);
+  const { top, height, middle } = underOf(cards);
+  const edge = scene.add
+    .rectangle(divide, ROOM.y, 1, ROOM.height, LOOK.panelDivide)
+    .setOrigin(0, 0);
+  return {
+    shared: [edge, cards],
+    top,
+    middle,
+    divide,
+    left: { x: ROOM.x, y: top, width: divide - ROOM.x, height },
+    frame: { x: divide + 1, y: top, width: right - 1, height },
+  };
+}
+
+/** The collection mode: the collection on the left and the civilizations on the right, each panel under its word. */
+function collectionModeOf(
+  screen: Screen,
+  mode: ModeOf<'collection'>,
+  campaign: Campaign,
+  [leftOffset, rightOffset]: readonly number[],
+): Laid {
+  const { scene, catalogue } = screen;
+  const { right, across } = shapeOf(mode);
+  const { shared, top, divide, left, frame } = sidesOf(scene, right);
+  const civilizations = wordOf(scene, text('collection.civilizations'), divide + right / 2);
+  const head = scene.add.container(0, 0, [...shared, civilizations]).setName('collection-mode');
+  screen.root.add(head);
+  const reading = ({ copies }: CollectionStack): Reading => ({
+    reads: text('collection.copies', { copies }),
+    dimmed: false,
+  });
+  const buy = (card: CardId): void => {
+    screen.edit(mode, (held) => bought(catalogue, held, card));
+  };
+  return {
+    head,
+    panels: [
+      createPanel(
+        screen,
+        {
+          name: 'collection-panel',
+          frame: left,
+          ...collectionOf(
+            screen,
+            campaign,
+            { top, right: divide, across },
+            reading,
+            undefined,
+            buy,
+          ),
+        },
+        leftOffset,
+      ),
+      createPanel(
+        screen,
+        {
+          name: 'civilizations-panel',
+          frame,
+          ...civilizationsOf(
+            screen,
+            campaign.civilizations,
+            { top, frame },
+            {
+              open: (civilization) => {
+                screen.lay({ shows: 'deck editing', civilization });
+              },
+              browse: screen.browse,
+            },
+          ),
+        },
+        rightOffset,
+      ),
+    ],
+  };
+}
+
+/**
+ * The deck editing mode's head over its sides: the way back to the collection, the way on to the
+ * civilization mode carrying the deck's rows as they stand, and the civilization's name.
+ */
+function deckEditingHeadOf(
+  screen: Screen,
+  { civilization, deck }: { readonly civilization: string; readonly deck: DeckRows },
+  { shared, middle, divide, frame }: Sides,
+): Phaser.GameObjects.Container {
+  const { scene } = screen;
+  const back = modeButtonOf(
+    scene,
+    text('collection.to-collection'),
+    { x: divide - MARGIN, y: middle, to: 'left' },
+    'collection-to-collection',
+  );
+  onClick(back.face, () => {
+    screen.lay({ shows: 'collection' });
+  });
+  const onward = modeButtonOf(
+    scene,
+    text('collection.to-civilization'),
+    { x: frame.x + MARGIN, y: middle, to: 'right' },
+    'collection-to-civilization',
+  );
+  onClick(onward.face, () => {
+    screen.lay({ shows: 'civilization', civilization, stood: deck });
+  });
+  const name = addText(
+    scene,
+    DESIGN_WIDTH - MARGIN,
+    PANE_TOP,
+    civilizationName(civilization),
+    WORD_STYLE,
+  )
+    .setOrigin(1, 0)
+    .setName('deck-civilization');
+  return scene.add
+    .container(0, 0, [...shared, ...back.parts, ...onward.parts, name])
+    .setName('deck-editing-mode');
+}
+
+/** The deck editing mode: the collection beside the civilization being edited. */
+function deckEditingModeOf(
+  screen: Screen,
+  mode: ModeOf<'deck editing'>,
+  campaign: Campaign,
+  [leftOffset, rightOffset]: readonly number[],
+): Laid {
+  const { scene, catalogue } = screen;
+  const { civilization } = mode;
+  const { right, across } = shapeOf(mode);
+  const sides = sidesOf(scene, right);
+  const { top, divide, left, frame } = sides;
+  const deck = deckRowsOf(catalogue, campaign, civilization, cardName);
+  const head = deckEditingHeadOf(screen, { civilization, deck }, sides);
+  screen.root.add(head);
+  const reading = ({ id, copies }: CollectionStack): Reading => {
+    const held = heldIn(deck, id);
+    return { reads: text('collection.in-deck', { held, copies }), dimmed: held === copies };
+  };
+  const add = ({ id, copies }: CollectionStack): (() => void) | undefined =>
+    heldIn(deck, id) < copies
+      ? () => {
+          screen.edit(mode, (held) => addedTo(catalogue, held, civilization, id));
+        }
+      : undefined;
+  const remove = (card: CardId): void => {
+    screen.edit(mode, (held) => removedFrom(catalogue, held, civilization, card));
+  };
+  const buy = (card: CardId): void => {
+    screen.edit(mode, (held) => bought(catalogue, held, card));
+  };
+  const owned = campaign.civilizations[civilization];
+  const collectionSide: Box = { ...ROOM, width: divide - ROOM.x };
+  const civilizationSide: Box = { ...ROOM, x: divide, width: DESIGN_WIDTH - divide };
+  return {
+    head,
+    panels: [
+      createPanel(
+        screen,
+        {
+          name: 'collection-panel',
+          frame: left,
+          ...collectionOf(
+            screen,
+            campaign,
+            { top, right: divide, across },
+            reading,
+            { pressOf: add, lands: civilizationSide },
+            buy,
+          ),
+        },
+        leftOffset,
+      ),
+      createPanel(
+        screen,
+        {
+          name: 'civilization-panel',
+          frame,
+          ...deckPanelOf(
+            screen,
+            {
+              city: owned.city.card.id,
+              deck,
+              counts: countsOf(owned),
+              remove,
+              lands: collectionSide,
+            },
+            {
+              left: frame.x + MARGIN,
+              right: DESIGN_WIDTH - MARGIN,
+              top,
+              radius: metricsOf(COLLECTION_CARD_WIDTH).radius,
+            },
+          ),
+        },
+        rightOffset,
+      ),
+    ],
+  };
+}
+
+/** The civilization mode: the civilization alone, its deck's rows standing where the mode opened them. */
+function civilizationModeOf(
+  screen: Screen,
+  mode: ModeOf<'civilization'>,
+  campaign: Campaign,
+  [offset]: readonly number[],
+): Laid {
+  const { scene, catalogue } = screen;
+  const { civilization, stood } = mode;
+  const { right, across } = shapeOf(mode);
+  const title = wordOf(
+    scene,
+    text('collection.civilization-title', { civilization: civilizationName(civilization) }),
+    ROOM.x + ROOM.width / 2,
+  ).setName('civilization-title');
+  const { top, height, middle } = underOf(title);
+  const back = modeButtonOf(
+    scene,
+    text('collection.to-collection'),
+    { x: ROOM.x + MARGIN, y: middle, to: 'right' },
+    'collection-to-deck-editing',
+  );
+  onClick(back.face, () => {
+    screen.lay({ shows: 'deck editing', civilization });
+  });
+  const head = scene.add.container(0, 0, [title, ...back.parts]).setName('civilization-mode');
+  screen.root.add(head);
+  const owned = campaign.civilizations[civilization];
+  return {
+    head,
+    panels: [
+      createPanel(
+        screen,
+        {
+          name: 'civilization-mode-panel',
+          frame: { x: ROOM.x, y: top, width: right, height },
+          ...civilizationPanelOf(
+            screen,
+            {
+              city: owned.city.card.id,
+              deck: standingIn(stood, deckRowsOf(catalogue, campaign, civilization, cardName)),
+              counts: countsOf(owned),
+              campaign,
+              moves: {
+                remove: (card) => {
+                  screen.edit(mode, (held) => removedFrom(catalogue, held, civilization, card));
+                },
+                add: (card) => {
+                  screen.edit(mode, (held) => addedTo(catalogue, held, civilization, card));
+                },
+                buy: (card) => {
+                  screen.edit(mode, (held) =>
+                    addedTo(catalogue, bought(catalogue, held, card), civilization, card),
+                  );
+                },
+              },
+            },
+            {
+              left: (ROOM.x + DESIGN_WIDTH - spanOf(across)) / 2,
+              top,
+              across,
+              radius: metricsOf(COLLECTION_CARD_WIDTH).radius,
+            },
+          ),
+        },
+        offset,
+      ),
+    ],
+  };
+}
+
+/** The mode laid on the campaign handed, its panels at the offsets handed. */
+function modeLaid(
+  screen: Screen,
+  mode: Mode,
+  campaign: Campaign,
+  offsets: readonly number[],
+): Laid {
+  switch (mode.shows) {
+    case 'collection':
+      return collectionModeOf(screen, mode, campaign, offsets);
+    case 'deck editing':
+      return deckEditingModeOf(screen, mode, campaign, offsets);
+    case 'civilization':
+      return civilizationModeOf(screen, mode, campaign, offsets);
+  }
+}
+
 /**
  * The collection screen: the collection on the left and the civilizations on the right, each panel
  * under its word, or in the deck editing mode the collection beside the civilization being edited,
@@ -266,23 +584,21 @@ export class CollectionScreen extends Phaser.Scene {
       if (under) overlay.input.emit(COVERED);
     });
     offerEntries(this, { seed: undefined, veiled: undefined });
-    let laid: { readonly head: Phaser.GameObjects.Container; readonly panels: Panel[] } | undefined;
-    const kinds = createKindBubble(tooltip);
-    const small = createSmallCards(this, bubbles, CATALOGUE, kinds, (name) => {
-      inspecting.large.named(name);
+    let laid: Laid | undefined;
+    const laying = layingOf(this, CATALOGUE, {
+      on: bubbles,
+      smallOn: bubbles,
+      kinds: createKindBubble(tooltip),
+      large,
+      rising: () => {
+        for (const panel of laid?.panels ?? []) panel.holdStill();
+      },
     });
-    const inspecting = inspectingUnder(bubbles, small, kinds, large, () => {
-      for (const panel of laid?.panels ?? []) panel.holdStill();
-    });
-    const screen = this.add.container(0, 0).setName('collection');
-    content.add(screen);
+    const { inspecting } = laying;
+    const root = this.add.container(0, 0).setName('collection');
+    content.add(root);
     const panels = stratumOf(content, this.cameras.main);
-    const follow = (): void => {
-      inspecting.small.follow();
-      tooltip.follow();
-    };
     const carrier = createCarrier(this, panels);
-    const surface: Surface = { scene: this, on: panels, follow, carrier };
 
     onScrollKeys(this, (way, delta) => {
       for (const panel of laid?.panels ?? []) if (panel.pointed) panel.pan(way, delta);
@@ -291,302 +607,37 @@ export class CollectionScreen extends Phaser.Scene {
       for (const panel of laid?.panels ?? []) if (panel.under(over)) panel.wheel(by);
     });
 
-    /** The campaign moved and kept, and the screen laid again in the mode, its panels where they stood. */
-    const edit = (mode: Mode, move: (held: Campaign) => Campaign): void => {
-      keepCampaign(move(campaignHeld()));
-      lay(
-        mode,
-        laid?.panels.map(({ offset }) => offset),
-      );
+    const screen: Screen = {
+      ...laying,
+      on: panels,
+      follow: () => {
+        inspecting.small.follow();
+        tooltip.follow();
+      },
+      carrier,
+      root,
+      lay: (mode, offsets = []) => {
+        inspecting.small.down();
+        carrier.down();
+        if (laid !== undefined) {
+          for (const panel of laid.panels) panel.down();
+          laid.head.destroy();
+        }
+        readInfluence();
+        laid = modeLaid(screen, mode, campaignHeld(), offsets);
+      },
+      edit: (mode, move) => {
+        keepCampaign(move(campaignHeld()));
+        screen.lay(
+          mode,
+          laid?.panels.map(({ offset }) => offset),
+        );
+      },
+      browse: (civilization) => {
+        browse(campaignHeld(), civilization);
+      },
     };
 
-    /** The screen laid in the mode, its panels at the offsets handed, in order, or at their tops. */
-    const lay = (mode: Mode, offsets: readonly number[] = []): void => {
-      inspecting.small.down();
-      carrier.down();
-      if (laid !== undefined) {
-        for (const panel of laid.panels) panel.down();
-        laid.head.destroy();
-      }
-      readInfluence();
-      const campaign = campaignHeld();
-      const buy = (card: CardId): void => {
-        edit(mode, (held) => bought(CATALOGUE, held, card));
-      };
-      const { right, across } = shapeOf(mode);
-      const divide = DESIGN_WIDTH - right;
-      const word = (label: string, x: number): Phaser.GameObjects.Text =>
-        addText(this, x, PANE_TOP, label, WORD_STYLE).setOrigin(0.5, 0);
-      /** Where the panels start under a word of the head, how tall they stand, and the height of the word's middle. */
-      const under = (
-        shown: Phaser.GameObjects.Text,
-      ): { top: number; height: number; middle: number } => {
-        const top = shown.y + shown.height + WORD_GAP;
-        return { top, height: DESIGN_HEIGHT - MARGIN - top, middle: shown.y + shown.height / 2 };
-      };
-      /** The collection's word and the line between the panels, and both panels' frames under them. */
-      const sides = (): {
-        shared: Phaser.GameObjects.GameObject[];
-        top: number;
-        middle: number;
-        left: Box;
-        frame: Box;
-      } => {
-        const cards = word(text('collection.collection'), (ROOM.x + divide) / 2);
-        const { top, height, middle } = under(cards);
-        const edge = this.add
-          .rectangle(divide, ROOM.y, 1, ROOM.height, LOOK.panelDivide)
-          .setOrigin(0, 0);
-        return {
-          shared: [edge, cards],
-          top,
-          middle,
-          left: { x: ROOM.x, y: top, width: divide - ROOM.x, height },
-          frame: { x: divide + 1, y: top, width: right - 1, height },
-        };
-      };
-
-      switch (mode.shows) {
-        case 'collection': {
-          const [leftOffset, rightOffset] = offsets;
-          const { shared, top, left, frame } = sides();
-          const civilizations = word(text('collection.civilizations'), divide + right / 2);
-          const head = this.add
-            .container(0, 0, [...shared, civilizations])
-            .setName('collection-mode');
-          screen.add(head);
-          const reading = ({ copies }: CollectionStack): Reading => ({
-            reads: text('collection.copies', { copies }),
-            dimmed: false,
-          });
-          laid = {
-            head,
-            panels: [
-              createPanel(
-                surface,
-                {
-                  name: 'collection-panel',
-                  frame: left,
-                  ...collectionOf(
-                    this,
-                    CATALOGUE,
-                    campaign,
-                    { top, right: divide, across },
-                    reading,
-                    undefined,
-                    buy,
-                    inspecting,
-                  ),
-                },
-                leftOffset,
-              ),
-              createPanel(
-                surface,
-                {
-                  name: 'civilizations-panel',
-                  frame,
-                  ...civilizationsOf(
-                    this,
-                    CATALOGUE,
-                    campaign.civilizations,
-                    { top, frame },
-                    {
-                      open: (civilization) => {
-                        lay({ shows: 'deck editing', civilization });
-                      },
-                      browse: (civilization) => {
-                        browse(campaignHeld(), civilization);
-                      },
-                    },
-                    inspecting,
-                  ),
-                },
-                rightOffset,
-              ),
-            ],
-          };
-          return;
-        }
-        case 'deck editing': {
-          const { civilization } = mode;
-          const [leftOffset, rightOffset] = offsets;
-          const { shared, top, middle, left, frame } = sides();
-          const back = modeButtonOf(
-            this,
-            text('collection.to-collection'),
-            { x: divide - MARGIN, y: middle, to: 'left' },
-            'collection-to-collection',
-          );
-          onClick(back.face, () => {
-            lay({ shows: 'collection' });
-          });
-          const deck = deckRowsOf(CATALOGUE, campaign, civilization, cardName);
-          const onward = modeButtonOf(
-            this,
-            text('collection.to-civilization'),
-            { x: frame.x + MARGIN, y: middle, to: 'right' },
-            'collection-to-civilization',
-          );
-          onClick(onward.face, () => {
-            lay({ shows: 'civilization', civilization, stood: deck });
-          });
-          const name = addText(
-            this,
-            DESIGN_WIDTH - MARGIN,
-            PANE_TOP,
-            civilizationName(civilization),
-            WORD_STYLE,
-          )
-            .setOrigin(1, 0)
-            .setName('deck-civilization');
-          const head = this.add
-            .container(0, 0, [...shared, ...back.parts, ...onward.parts, name])
-            .setName('deck-editing-mode');
-          screen.add(head);
-          const reading = ({ id, copies }: CollectionStack): Reading => {
-            const held = heldIn(deck, id);
-            return { reads: text('collection.in-deck', { held, copies }), dimmed: held === copies };
-          };
-          const add = ({ id, copies }: CollectionStack): (() => void) | undefined =>
-            heldIn(deck, id) < copies
-              ? () => {
-                  edit(mode, (held) => addedTo(CATALOGUE, held, civilization, id));
-                }
-              : undefined;
-          const remove = (card: CardId): void => {
-            edit(mode, (held) => removedFrom(CATALOGUE, held, civilization, card));
-          };
-          const owned = campaign.civilizations[civilization];
-          const collectionSide: Box = { ...ROOM, width: divide - ROOM.x };
-          const civilizationSide: Box = { ...ROOM, x: divide, width: DESIGN_WIDTH - divide };
-          laid = {
-            head,
-            panels: [
-              createPanel(
-                surface,
-                {
-                  name: 'collection-panel',
-                  frame: left,
-                  ...collectionOf(
-                    this,
-                    CATALOGUE,
-                    campaign,
-                    { top, right: divide, across },
-                    reading,
-                    { pressOf: add, lands: civilizationSide },
-                    buy,
-                    inspecting,
-                  ),
-                },
-                leftOffset,
-              ),
-              createPanel(
-                surface,
-                {
-                  name: 'civilization-panel',
-                  frame,
-                  ...deckPanelOf(
-                    this,
-                    CATALOGUE,
-                    {
-                      city: owned.city.card.id,
-                      deck,
-                      counts: countsOf(owned),
-                      remove,
-                      lands: collectionSide,
-                    },
-                    {
-                      left: frame.x + MARGIN,
-                      right: DESIGN_WIDTH - MARGIN,
-                      top,
-                      radius: metricsOf(COLLECTION_CARD_WIDTH).radius,
-                    },
-                    inspecting,
-                  ),
-                },
-                rightOffset,
-              ),
-            ],
-          };
-          return;
-        }
-        case 'civilization': {
-          const { civilization, stood } = mode;
-          const [offset] = offsets;
-          const title = word(
-            text('collection.civilization-title', {
-              civilization: civilizationName(civilization),
-            }),
-            ROOM.x + ROOM.width / 2,
-          ).setName('civilization-title');
-          const { top, height, middle } = under(title);
-          const back = modeButtonOf(
-            this,
-            text('collection.to-collection'),
-            { x: ROOM.x + MARGIN, y: middle, to: 'right' },
-            'collection-to-deck-editing',
-          );
-          onClick(back.face, () => {
-            lay({ shows: 'deck editing', civilization });
-          });
-          const head = this.add
-            .container(0, 0, [title, ...back.parts])
-            .setName('civilization-mode');
-          screen.add(head);
-          const owned = campaign.civilizations[civilization];
-          laid = {
-            head,
-            panels: [
-              createPanel(
-                surface,
-                {
-                  name: 'civilization-mode-panel',
-                  frame: { x: ROOM.x, y: top, width: right, height },
-                  ...civilizationPanelOf(
-                    this,
-                    CATALOGUE,
-                    {
-                      city: owned.city.card.id,
-                      deck: standingIn(
-                        stood,
-                        deckRowsOf(CATALOGUE, campaign, civilization, cardName),
-                      ),
-                      counts: countsOf(owned),
-                      campaign,
-                      moves: {
-                        remove: (card) => {
-                          edit(mode, (held) => removedFrom(CATALOGUE, held, civilization, card));
-                        },
-                        add: (card) => {
-                          edit(mode, (held) => addedTo(CATALOGUE, held, civilization, card));
-                        },
-                        buy: (card) => {
-                          edit(mode, (held) =>
-                            addedTo(CATALOGUE, bought(CATALOGUE, held, card), civilization, card),
-                          );
-                        },
-                      },
-                    },
-                    {
-                      left: (ROOM.x + DESIGN_WIDTH - spanOf(across)) / 2,
-                      top,
-                      across,
-                      radius: metricsOf(COLLECTION_CARD_WIDTH).radius,
-                    },
-                    inspecting,
-                  ),
-                },
-                offset,
-              ),
-            ],
-          };
-          return;
-        }
-      }
-      const unlisted: never = mode;
-      throw new Error(`no mode of the collection screen is ${JSON.stringify(unlisted)}`);
-    };
-
-    lay({ shows: 'collection' });
+    screen.lay({ shows: 'collection' });
   }
 }

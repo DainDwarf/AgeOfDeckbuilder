@@ -1,13 +1,12 @@
 import Phaser from 'phaser';
 import type { CampaignCivilization } from '../rules/campaign';
-import type { Catalogue } from '../rules/catalogue';
 import { NO_REFUSAL } from '../rules/state';
 import { createCardBack, createCardFace, metricsOf } from './card-face';
 import { countsOf } from './collection-layout';
 import { addText, type Box, UI_FONT } from './design-space';
 import { cardFaceAtStart } from './face';
 import { css, LOOK } from './look';
-import { type Answers, answersAround, type Inspecting } from './stack';
+import { type Answers, answersAround, type Laying } from './stack';
 import { text } from './text';
 
 const PILE_WIDTH = 100;
@@ -43,11 +42,9 @@ export type Pile = {
  * runs `browse`, a name on its card excepted.
  */
 export function createPile(
-  scene: Phaser.Scene,
-  catalogue: Catalogue,
+  { scene, catalogue, inspecting }: Laying,
   owned: CampaignCivilization,
   { left, top, chosen }: { left: number; top: number; chosen: boolean },
-  inspecting: Inspecting,
   name: string,
   browse: () => void,
 ): Pile {

@@ -12,5 +12,4 @@ That design is the code's shape and states no fact of the game, so no line write
 
 ## The lines
 
-- **The collection screen lays a mode at a time** — each mode of the collection screen is laid by a function of its own, at module level, and the scene, the catalogue and what the faces answer with travel as one value, built one way by the collection screen and the launch screen, through every function that lays a piece of either. Doc-impact: none. [board/the-collection-screen-lays-a-mode-at-a-time.md](board/the-collection-screen-lays-a-mode-at-a-time.md)
 - **The ending screen stands in its own file** — the ending screen, its ledger and its rise leave `src/ui/overlay.ts` for a file of their own, which never holds the scrim, the browser fading its own scrim in, and what the chronicle screen hands the overlay travels as one value. Doc-impact: none. [board/the-ending-screen-stands-in-its-own-file.md](board/the-ending-screen-stands-in-its-own-file.md)

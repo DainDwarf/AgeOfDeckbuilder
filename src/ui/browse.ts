@@ -22,8 +22,7 @@ import { cardFaceAtStart, type Face } from './face';
 import { css, LOOK } from './look';
 import type { OverlayScene } from './overlay-scene';
 import { createPanel, type Panel, type PanelOf, type Surface } from './panel';
-import { createSmallCards } from './small-card';
-import { answersAround, type Inspecting, type ShownLarge, standLarge } from './stack';
+import { answersAround, type Inspecting, layingOf, type ShownLarge, standLarge } from './stack';
 import { cardName, civilizationName, text } from './text';
 import { createTooltip } from './tooltip';
 
@@ -198,21 +197,24 @@ export function standBrowser(
     },
     takes: (press) => screen.takes(press),
   });
-  const small = createSmallCards(overlay, overlay.strata.smallCard, catalogue, kinds, (name) => {
-    inspecting.large.named(name);
-  });
-  const inspecting = inspectingUnder(on, small, kinds, large, () => {
-    panel?.holdStill();
-    screen.risingLarge?.();
+  const { inspecting } = layingOf(overlay, catalogue, {
+    on,
+    smallOn: overlay.strata.smallCard,
+    kinds,
+    large,
+    rising: () => {
+      panel?.holdStill();
+      screen.risingLarge?.();
+    },
   });
   const follow = (): void => {
-    small.follow();
+    inspecting.small.follow();
     tooltip.follow();
   };
 
   /** What stands taken down, the cards shown large among it, the scrim itself left as it is. */
   const wipe = (): void => {
-    small.down();
+    inspecting.small.down();
     large.down();
     panel?.down();
     panel = undefined;
@@ -334,36 +336,6 @@ export function standBrowse(
           edged: at === 0,
         })),
       });
-    },
-  };
-}
-
-/**
- * What a screen's faces answer with, on the stratum handed: a card shown large over them takes down
- * the small cards their names raised, `rising` told first.
- */
-export function inspectingUnder(
-  on: Inspecting['on'],
-  small: Inspecting['small'],
-  kinds: Inspecting['kinds'],
-  large: ShownLarge,
-  rising: () => void,
-): Inspecting {
-  return {
-    on,
-    small,
-    kinds,
-    large: {
-      show(face) {
-        rising();
-        small.down();
-        large.show(face);
-      },
-      named(name) {
-        rising();
-        small.down();
-        large.named(name);
-      },
     },
   };
 }

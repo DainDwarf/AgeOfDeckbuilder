@@ -1,5 +1,4 @@
 import type Phaser from 'phaser';
-import type { Catalogue } from '../rules/catalogue';
 import { NO_REFUSAL } from '../rules/state';
 import { type CardFace, createCardFace, drawCardSurface, heightOf } from './card-face';
 import type { CollectionStack } from './collection-layout';
@@ -8,7 +7,7 @@ import { cardFaceAtStart, type Face } from './face';
 import { css, LOOK, overPage } from './look';
 import type { Filled, Held } from './panel';
 import { chipAt } from './resource-bar';
-import { type Answers, answersOf, type Inspecting } from './stack';
+import { type Answers, answersOf, type Laying } from './stack';
 import { text } from './text';
 
 /** How wide a card of the collection screen stands. */
@@ -180,22 +179,19 @@ export function stackedCardsOf(
 
 /** One stack, its parts named from `name`, its reading under its cards. */
 export function stackOf(
-  scene: Phaser.Scene,
-  catalogue: Catalogue,
+  { scene, catalogue, inspecting }: Laying,
   {
     stack,
     left,
     top,
     name,
     reading,
-    inspecting,
   }: {
     readonly stack: CollectionStack;
     readonly left: number;
     readonly top: number;
     readonly name: string;
     readonly reading: Reading;
-    readonly inspecting: Inspecting;
   },
 ): LaidStack {
   const { id } = stack;

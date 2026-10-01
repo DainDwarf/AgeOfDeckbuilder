@@ -29,8 +29,7 @@ import { backRaisesMenu, resetMenu } from './menu-scene';
 import { ROOM, wearNavbar } from './navbar';
 import { overlayOf } from './overlay-scene';
 import { type Choices, campaignHeld, type Opening, savedOpening } from './save-entry';
-import { createSmallCards } from './small-card';
-import { type Inspecting, inspectedThrough } from './stack';
+import { inspectedThrough, type Laying, layingOf } from './stack';
 import { ageName, regionName, type TextKey, technologyName, text } from './text';
 
 const LEFT = ROOM.x + MARGIN;
@@ -115,8 +114,7 @@ function pressedOnShape(polygon: Phaser.GameObjects.Polygon): Phaser.GameObjects
 
 /** The time arrow: one segment per age in the order of history, each age not reached unknown. */
 function arrowOf(
-  scene: Phaser.Scene,
-  catalogue: Catalogue,
+  { scene, catalogue }: Laying,
   reached: readonly string[],
   age: string,
 ): { choices: Choice[]; unknownAges: Phaser.GameObjects.Container[] } {
@@ -170,12 +168,7 @@ function arrowOf(
 }
 
 /** The chosen age's regions in a row, each a cluster of seven hexagons over its name. */
-function regionsOf(
-  scene: Phaser.Scene,
-  catalogue: Catalogue,
-  age: string,
-  region: string,
-): Choice[] {
+function regionsOf({ scene, catalogue }: Laying, age: string, region: string): Choice[] {
   const touching = Math.sqrt(3) * HEX_RADIUS;
   const colourOf = (biome: string): number => terrainColourOf(biomeKind(catalogue, biome).origin);
   return Object.entries(ageOf(catalogue, age).regions).map(([id, held], at): Choice => {
@@ -207,21 +200,18 @@ function regionsOf(
 
 /** The campaign's civilizations in a row, each its pile, a right click on it raising its browse. */
 function pilesOf(
-  scene: Phaser.Scene,
-  catalogue: Catalogue,
+  laying: Laying,
   civilizations: Readonly<Record<string, CampaignCivilization>>,
   civilization: string,
-  inspecting: Inspecting,
   browse: (civilization: string) => void,
 ): Choice[] {
+  const { scene, inspecting } = laying;
   return Object.entries(civilizations).map(([id, owned], at): Choice => {
     const chosen = id === civilization;
     const pile = createPile(
-      scene,
-      catalogue,
+      laying,
       owned,
       { left: PILE_FIRST + at * PILE_APART, top: PILE_TOP, chosen },
-      inspecting,
       `launch-civilization-${id}`,
       () => {
         browse(id);
@@ -251,13 +241,12 @@ export class LaunchScreen extends Phaser.Scene {
       away('menu', under);
       if (under) overlay.input.emit(COVERED);
     });
-    const kinds = createKindBubble(tooltip);
-    const inspecting: Inspecting = {
+    const laying = layingOf(this, CATALOGUE, {
       on: bubbles,
-      small: createSmallCards(this, bubbles, CATALOGUE, kinds, large.named),
-      kinds,
+      smallOn: bubbles,
+      kinds: createKindBubble(tooltip),
       large,
-    };
+    });
     const campaign = campaignHeld();
     const reached = agesReached(CATALOGUE, campaign);
     let chosen: Choices = openingChoices(CATALOGUE, campaign);
@@ -317,12 +306,12 @@ export class LaunchScreen extends Phaser.Scene {
       addText(this, LEFT, y, text(key), PALE_STYLE).setOrigin(0, 0.5);
 
     const lay = (): void => {
-      inspecting.small.down();
+      laying.inspecting.small.down();
       root?.destroy();
       root = this.add.container(0, 0).setName('launch');
       content.add(root);
 
-      const arrow = arrowOf(this, CATALOGUE, reached, chosen.age);
+      const arrow = arrowOf(laying, reached, chosen.age);
       const lastChosen = (choices: Choice[]): Choice[] => [
         ...choices.filter(({ chosen: held }) => !held),
         ...choices.filter(({ chosen: held }) => held),
@@ -332,19 +321,12 @@ export class LaunchScreen extends Phaser.Scene {
         ...arrow.unknownAges,
         ...lastChosen(arrow.choices).map(drawn),
         word('launch.region', 222),
-        ...regionsOf(this, CATALOGUE, chosen.age, chosen.region).map(drawn),
+        ...regionsOf(laying, chosen.age, chosen.region).map(drawn),
         word('launch.civilization', 450),
-        ...pilesOf(
-          this,
-          CATALOGUE,
-          campaign.civilizations,
-          chosen.civilization,
-          inspecting,
-          (civilization) => {
-            browse(campaignHeld(), civilization);
-          },
-        ).map(drawn),
-        ...buttonsOf(this, CATALOGUE, open, () => chosen),
+        ...pilesOf(laying, campaign.civilizations, chosen.civilization, (civilization) => {
+          browse(campaignHeld(), civilization);
+        }).map(drawn),
+        ...buttonsOf(laying, open, () => chosen),
       ]);
     };
 
@@ -357,8 +339,7 @@ export class LaunchScreen extends Phaser.Scene {
  * they stand; Continue greyed and answering no press while the save holds no chronicle.
  */
 function buttonsOf(
-  scene: Phaser.Scene,
-  catalogue: Catalogue,
+  { scene, catalogue }: Laying,
   open: (opening: Opening) => void,
   choices: () => Choices,
 ): Phaser.GameObjects.GameObject[] {

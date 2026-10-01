@@ -244,6 +244,58 @@ export type Inspecting = {
   readonly large: ShownLarge;
 };
 
+/** What a screen lays its pieces with: its scene, the catalogue, and what their faces answer with. */
+export type Laying = {
+  readonly scene: Phaser.Scene;
+  readonly catalogue: Catalogue;
+  readonly inspecting: Inspecting;
+};
+
+/**
+ * What a screen lays its pieces with, their faces read on `on` and the small cards their names raise
+ * standing on `smallOn`: a card shown large over them takes down those small cards, `rising` told
+ * first.
+ */
+export function layingOf(
+  scene: Phaser.Scene,
+  catalogue: Catalogue,
+  {
+    on,
+    smallOn,
+    kinds,
+    large,
+    rising,
+  }: {
+    readonly on: Stratum;
+    readonly smallOn: Stratum;
+    readonly kinds: KindBubble;
+    readonly large: ShownLarge;
+    readonly rising?: () => void;
+  },
+): Laying {
+  const small = createSmallCards(scene, smallOn, catalogue, kinds, (name) => {
+    inspecting.large.named(name);
+  });
+  const inspecting: Inspecting = {
+    on,
+    small,
+    kinds,
+    large: {
+      show(face) {
+        rising?.();
+        small.down();
+        large.show(face);
+      },
+      named(name) {
+        rising?.();
+        small.down();
+        large.named(name);
+      },
+    },
+  };
+  return { scene, catalogue, inspecting };
+}
+
 /** A point of the design space. */
 export type Point = { readonly x: number; readonly y: number };
 
