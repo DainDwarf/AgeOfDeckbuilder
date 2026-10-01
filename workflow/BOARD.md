@@ -15,4 +15,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The Stone Age's region** — the age's temperate region on a bigger disc than the Nomadic one, with its camps and its centre part, pitched running at several sizes with the frame and the end of turn measured; the age's content page, `docs/ages/STONE.md`, opens with it.
+- **The Stone Age's region** — the Stone Age owns a temperate region of its own, written whole in its module: a disc of radius 12, six camps no nearer the centre than 7 and 4 apart, the centre part reaching 3, and the Nomadic composition otherwise; the catalogue's coherence test passes and `docs/ages/STONE.md` opens with the land. Doc-impact: `docs/ages/STONE.md`, `docs/index.md`. [board/stone-age-region.md](board/stone-age-region.md)
+- **A biome keeps away from the kinds it names** — a biome kind may name kinds it keeps away from, and takes, of the origins already scattered, the one furthest from every origin of those kinds; it draws nothing, so a region naming none deals the maps it deals today; one test on the fixture.
+- **The desert** — the Stone Age's temperate region deals one desert biome beside its two woodlands, spreading as the land does and keeping away from the seas: its tile gives nothing, walks and sees as plain does and gives food along a river; the oasis, a feature on it, gives food and is dealt as rarely as the others; the city, the camps and the Shelter do not stand on it; it is painted a pale sand of its own, `0xd6c08a`.
