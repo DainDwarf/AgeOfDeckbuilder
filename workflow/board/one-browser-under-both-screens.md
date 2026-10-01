@@ -12,7 +12,8 @@
 - In: a browse is raised one way — scrim up, title, panel — and taken down one way, whichever pile or civilization it shows; today the two callers build and dismantle the same shape apart.
 - In: the campaign screen keeps its cards shown large alone; whether the kit serves it too is the implementer's, with nothing lost.
 - In, as a suggestion the implementer decides: what every piece of a screen is handed — the scene, the stratum it stands on, what its faces answer with, the following of the pointer, the carrier — travels as one value through what this line touches, so the signatures it passes through shed their threaded tuple.
-- Out: any visible change; the windows' own logic; the chronicle scene beyond what the kit's shape moves.
+- In: a browse taken down takes its carrier down with it (`down`, `src/ui/panel.ts`), so a card still sliding home from it goes when the browse closes. Today the meta's `close` leaves it sliding, and since the scrim is built once at the bottom of the scrim stratum, a browse reopened within the slide stands under that card. This is the one visible change the line makes.
+- Out: any other visible change; the windows' own logic; the chronicle scene beyond what the kit's shape moves.
 
 **Traps:**
 
