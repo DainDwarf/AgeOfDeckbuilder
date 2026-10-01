@@ -3,7 +3,7 @@ import type { Campaign } from '../rules/campaign';
 import type { Catalogue } from '../rules/catalogue';
 import { type Bind, boundTo } from './bindings';
 import { CARD_WIDTH, createKindBubble, metricsOf } from './card-face';
-import { stopMotion } from './card-motion';
+import { ended, stopMotion } from './card-motion';
 import { browseOf } from './collection-layout';
 import { type Cell, linesOf, spanOf, stackedCardsOf } from './collection-stack';
 import { cityEdgeOf } from './deck-panel';
@@ -148,16 +148,23 @@ export type OnScrim = {
   readonly risingLarge?: () => void;
 };
 
+/** How long the scrim takes to fade in from nothing, and on what ease. */
+type Fade = { readonly duration: number; readonly ease: string };
+
 /**
  * The kit a screen stands on the overlay: the scrim and what stands on it, one panel among it, the
  * small cards and the kind bubble its faces raise, and the cards shown large over it; no carrier.
  */
 export type Browser = Surface & {
   readonly inspecting: Inspecting;
-  readonly scrim: Phaser.GameObjects.Rectangle;
   readonly large: ShownLarge;
-  /** What stands taken down, and the scrim up for what is raised next. */
-  raise(): void;
+  /**
+   * What stands taken down, and the scrim up for what is raised next: whole, or fading in from
+   * nothing over `fade`, settling once it is whole however the fade ended.
+   */
+  raise(fade?: Fade): Promise<void>;
+  /** The scrim whole, a fade in flight cut short. */
+  standWhole(): void;
   /** One thing raised on the scrim, which goes with what stands. */
   carries<T extends Phaser.GameObjects.GameObject>(object: T): T;
   /**
@@ -237,16 +244,20 @@ export function standBrowser(
     on,
     follow,
     inspecting,
-    scrim,
     large,
-    raise() {
+    raise(fade) {
       // Ahead of the wipe: a card shown large over nothing then comes down without uncovering the screen.
       up = true;
       wipe();
-      // A screen may fade the scrim in from nothing, so every raise stands it whole.
       stopMotion(overlay, scrim);
-      scrim.setAlpha(1).setVisible(true);
+      scrim.setAlpha(fade === undefined ? 1 : 0).setVisible(true);
       screen.covering(true);
+      if (fade === undefined) return Promise.resolve();
+      return ended(overlay.tweens.add({ targets: scrim, alpha: 1, ...fade }));
+    },
+    standWhole() {
+      stopMotion(overlay, scrim);
+      scrim.setAlpha(1);
     },
     carries(object) {
       on.layer.add(object);
@@ -263,7 +274,7 @@ export function standBrowser(
       return panel;
     },
     browse({ name, heading, stacks }) {
-      browser.raise();
+      void browser.raise();
       const title = browser.carries(headingOf(overlay, name, heading));
       const top = title.y + title.height + MARGIN;
       const cells = stacks.map((stack, at) => stackCellOf(browser, name, { stack, at }));

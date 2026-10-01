@@ -390,20 +390,20 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       view.live(!away(scrim, up));
     };
 
-    const overlay = createOverlay(
-      overlayOf(this),
-      CATALOGUE,
-      (over) => {
+    const overlay = createOverlay({
+      scene: overlayOf(this),
+      catalogue: CATALOGUE,
+      covering: (over) => {
         under('overlay', over);
       },
-      (at) => {
+      take: (at) => {
         void playOut({ type: 'take', at });
       },
-      () => this.payment,
-      () => {
+      paid: () => this.payment,
+      leave: () => {
         this.leave();
       },
-    );
+    });
 
     const endTurn = this.addEndTurn(ui.endTurn, () => {
       void playOut({ type: 'end-turn' });
