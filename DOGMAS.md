@@ -88,7 +88,7 @@ How this code base is shaped, and what a change never deviates from:
 
 ## Git
 
-- **Commit directly to `main`.** Solo trunk-based work; no feature branch and fast-forward ceremony. Branches are for experiments that may be discarded.
+- **A line commits directly to `main`; a change of several lines may take a branch.** Solo trunk-based work. A finished branch lands through a GitHub pull request, never a local fast-forward: after its Prep commit a push is of the branch, and the merge is the user's. Why: the pull request is the merge the history shows.
 - **Claude owns commit granularity.** A shipped line is committed once its trinity has landed and the review passed; a contained unit never waits for sign-off. One unit per commit — never two interleaved.
 - **A content change and its measurement are one commit**; the mechanism it needed lands in its own inert commit before it.
 - **During a tuning pass, edits stay uncommitted** until the user says the numbers are right. Say once that the tree carries the change; never roll back or ask keep-or-revert mid-pass.
