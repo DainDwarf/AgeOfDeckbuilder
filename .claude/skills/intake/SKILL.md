@@ -31,7 +31,7 @@ Then present what you found and the forks: one or two options each, with trade-o
 
 ## 4. Reconcile
 
-Once every fork is settled, and not before, search the tree for what already does each job the settled design names: what it lays out, what it stands on, the gestures it hears. Each likeness is put to the user in the player's terms, the standing one beside the projected one, with what differs between them, measured. For each, one of three is chosen, with a recommendation: the projected goes through the standing one as it is; the two become one, in the projected form or one between them, the standing one reshaped in this line or in a line ahead of it; or they stay apart, for a difference that is meant. A difference that is meant is what the shared door takes as a parameter; the rest goes. Nothing found is said in one line.
+Once every fork is settled, and not before, search the tree for what already does each job the settled design names. Each likeness is put to the user in the player's terms, the standing one beside the projected one, with what differs between them, measured. For each, one of three is chosen, with a recommendation: the projected goes through the standing one as it is; the two become one, in the projected form or one between them, the standing one reshaped in this line or in a line ahead of it; or they stay apart, for a difference that is meant. A difference that is meant is what the shared door takes as a parameter; the rest goes. Nothing found is said in one line.
 
 ## 5. Write the dossier
 

@@ -111,6 +111,7 @@ How this code base is shaped, and what a change never deviates from:
 - **`CHANGELOG.md` is for players**, written at a version bump, in their words, and never reworded after: a past entry keeps its words even where the glossary has since forbidden one, a rename sweep skips it, and a stale sentence in it is history, not a finding.
 - **`CLAUDE.md` stays short.** It is loaded every session; detail lives in `docs/` pages read on demand.
 - **Skills state their rules plainly** — no justifying, no referencing another skill. Calibration numbers are data and stay.
+- **A rule is stated without a list of its cases.** A dogma, a charter line or a design sentence names the rule and stops. Why: a later session reads a list as exhaustive and maintains it as one.
 - **A paragraph is one line.** No markdown file is hard-wrapped; Prettier keeps it so (`npm run fmt`) and `npm run lint` refuses a wrapped one. Why: a phrase broken across a line break is invisible to a search, and an edit mid-paragraph no longer reflows what follows.
 
 ## Tooling
