@@ -13,3 +13,4 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 ## Lines
 
 - **The accent is split into the meanings it paints** — `LOOK.accent` is one entry named for its value and read for several meanings; each use reads an entry named for what it means, and no pixel moves.
+- **The spec helpers read the page once** — `readings` (`e2e/chronicle-screen.ts`) repeats the in-page reading of five helpers beside it where one reader installed by `readNames` would hold it, `namingCard` asks one question per stack, `boundsOnScreen` (`e2e/browse.spec.ts`) re-copies `onScreen`'s camera conversion, a deck-editing test asks four questions before its batch, the browse's pan-key test re-asks a spot it just read, and `readings`' docstring carries a reason.
