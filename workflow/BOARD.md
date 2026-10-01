@@ -11,5 +11,3 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 - **The headless simulator** — a consumer of the rules that runs only when asked and reports numbers, not diagnoses, tuned across the two ages; the reachability cache and the end of turn's cost per `apply` are looked at when it is made.
 
 ## Lines
-
-- **The spec helpers read the page once** — `e2e/` converts a camera's point to the page in one place and reads a named object in one place, both installed by `readNames` and asked by `readings` and by every single-name helper of `e2e/chronicle-screen.ts`; `e2e/browse.spec.ts`, `e2e/collection.spec.ts`, `e2e/civilization-mode.spec.ts`, `e2e/deck-editing.spec.ts` and `e2e/launch.spec.ts` ask the page no question per stack, row or face and never re-ask a spot they just read; `readings`' docstring carries no reason; `DOGMAS.md` _Testing_ says a spec reads what stands together in one question; and no assertion is removed or loosened. Doc-impact: none. [board/spec-helpers-read-once.md](board/spec-helpers-read-once.md)

@@ -12,7 +12,6 @@ import {
   counted,
   cursorAt,
   cursorOverCanvas,
-  drawsName,
   heldSave,
   kindLabelOnScreen,
   nameOnScreen,
@@ -21,12 +20,12 @@ import {
   pilePressed,
   pressed,
   readings,
+  readOrder,
   rested,
   saved,
   shows,
   stackDimmed,
   standing,
-  textOf,
   watch,
 } from './chronicle-screen';
 
@@ -70,8 +69,13 @@ async function openDeck(page: Page): Promise<void> {
 
 /** The first card of the collection whose stack draws a name in its rules entry. */
 async function namingCard(page: Page): Promise<CardId> {
-  for (const { id } of STACKS) if (await drawsName(page, `collection-card-${id}`)) return id;
-  throw new Error('no card of the collection draws a name');
+  const seen = await readings(
+    page,
+    STACKS.map(({ id }) => `collection-card-${id}`),
+  );
+  const found = STACKS.find(({ id }) => seen(`collection-card-${id}`).drawsName);
+  if (found === undefined) throw new Error('no card of the collection draws a name');
+  return found.id;
 }
 
 function stackOf(id: CardId): string {
@@ -167,28 +171,17 @@ test('a press on a civilization’s pile opens the deck editing mode on it: its 
   const problems = watch(page);
   await openDeck(page);
 
-  expect(await standing(page, 'collection-mode')).toBe(false);
-  expect(await standing(page, `collection-civilization-${CIVILIZATION}`)).toBe(false);
-  expect(await textOf(page, 'deck-civilization')).toBe(civilizationName(CIVILIZATION));
-  expect(await textOf(page, 'collection-to-collection-label')).toBe(
-    text('collection.to-collection'),
-  );
-  expect(await textOf(page, 'collection-to-civilization-label')).toBe(
-    text('collection.to-civilization'),
-  );
-
-  expect(await textOf(page, 'deck-section-settle-count')).toBe(
-    text('collection.cards', { cards: DECK.settle.length + 1 }),
-  );
-  expect(await textOf(page, 'deck-section-cards-count')).toBe(
-    text('collection.cards', { cards: DECK.cards.length }),
-  );
-  expect(await cardOnFace(page, 'deck-city')).toBe(OWNED.city.card.id);
-  expect(await standing(page, 'deck-city-copies')).toBe(false);
-  expect(await standing(page, 'deck-empty')).toBe(false);
-
   const rows = [...rowsOf(DECK.settle), ...rowsOf(DECK.cards)];
   const seen = await readings(page, [
+    'collection-mode',
+    `collection-civilization-${CIVILIZATION}`,
+    'deck-civilization',
+    'collection-to-collection-label',
+    'collection-to-civilization-label',
+    'deck-section-settle-count',
+    'deck-section-cards-count',
+    'deck-city-copies',
+    'deck-empty',
     'deck-city',
     'deck-section-settle',
     'deck-section-cards',
@@ -200,6 +193,23 @@ test('a press on a civilization’s pile opens the deck editing mode on it: its 
       stackOf(id),
     ]),
   ]);
+
+  expect(seen('collection-mode').standing).toBe(false);
+  expect(seen(`collection-civilization-${CIVILIZATION}`).standing).toBe(false);
+  expect(seen('deck-civilization').text).toBe(civilizationName(CIVILIZATION));
+  expect(seen('collection-to-collection-label').text).toBe(text('collection.to-collection'));
+  expect(seen('collection-to-civilization-label').text).toBe(text('collection.to-civilization'));
+
+  expect(seen('deck-section-settle-count').text).toBe(
+    text('collection.cards', { cards: DECK.settle.length + 1 }),
+  );
+  expect(seen('deck-section-cards-count').text).toBe(
+    text('collection.cards', { cards: DECK.cards.length }),
+  );
+  expect(seen('deck-city').card).toBe(OWNED.city.card.id);
+  expect(seen('deck-city-copies').standing).toBe(false);
+  expect(seen('deck-empty').standing).toBe(false);
+
   for (const id of Object.keys(CATALOGUE.cards)) {
     expect(seen(`deck-row-${id}`).count).toBe(rows.some((row) => row.id === id) ? 1 : 0);
   }
@@ -226,7 +236,7 @@ test('a press on a civilization’s pile opens the deck editing mode on it: its 
     expect(seen(stackOf(id)).dimmed).toBe(holds === copies);
     placed.push({ id, at: seen(`collection-card-${id}`).place });
   }
-  const read = [...placed].sort((a, b) => a.at.y - b.at.y || a.at.x - b.at.x);
+  const read = readOrder(placed, ({ at }) => at);
   expect(read.map(({ id }) => id)).toEqual(STACKS.map(({ id }) => id));
   const [first] = read;
   expect(read.filter(({ at }) => at.y === first.at.y)).toHaveLength(

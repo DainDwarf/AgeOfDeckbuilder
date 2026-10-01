@@ -12,11 +12,11 @@ import {
   nameOnScreen,
   onScreen,
   openLaunch,
-  placeOf,
+  readings,
+  readOrder,
   rested,
   ringed,
   standing,
-  textOf,
   titleOf,
   tooltipText,
   tooltipUp,
@@ -74,20 +74,21 @@ test('on the launch screen the kind label on the civilization’s pile raises wh
   expect(await titleOf(page, BROWSE)).toBe(
     text('browse.civilization', { civilization: civilizationName(CIVILIZATION), count: CARDS }),
   );
-  const placed: { x: number; y: number }[] = [];
+  const seen = await readings(page, [
+    ...STACKS.flatMap((_, at) => [`${BROWSE}-card-${at}`, `${BROWSE}-card-${at}-copies`]),
+    `${BROWSE}-card-${STACKS.length}`,
+  ]);
   for (const [at, { id, copies }] of STACKS.entries()) {
-    expect(await cardOnFace(page, `${BROWSE}-card-${at}`)).toBe(id);
-    expect(await textOf(page, `${BROWSE}-card-${at}-copies`)).toBe(
+    expect(seen(`${BROWSE}-card-${at}`).card).toBe(id);
+    expect(seen(`${BROWSE}-card-${at}-copies`).text).toBe(
       text('collection.row-copies', { copies }),
     );
-    placed.push(await placeOf(page, `${BROWSE}-card-${at}`));
   }
-  expect(await standing(page, `${BROWSE}-card-${STACKS.length}`)).toBe(false);
-  const read = placed.map((at, index) => ({ at, index }));
-  read.sort((a, b) => a.at.y - b.at.y || a.at.x - b.at.x);
-  expect(read.map(({ index }) => index)).toEqual(STACKS.map((_, index) => index));
+  expect(seen(`${BROWSE}-card-${STACKS.length}`).standing).toBe(false);
+  const indices = STACKS.map((_, index) => index);
+  expect(readOrder(indices, (index) => seen(`${BROWSE}-card-${index}`).place)).toEqual(indices);
 
-  const first = await onScreen(page, `${BROWSE}-card-0`);
+  const first = seen(`${BROWSE}-card-0`).onScreen;
   await page.mouse.click(first.x, first.y, { button: 'right' });
   await expect.poll(() => cardOnFace(page, 'inspection')).toBe(OWNED.city.card.id);
   await rested(page);

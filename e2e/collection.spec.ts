@@ -6,13 +6,13 @@ import { browseOf, stacksOf } from '../src/ui/collection-layout';
 import { cardName, civilizationName, text } from '../src/ui/text';
 import {
   cardOnFace,
-  counted,
   cursorOverCanvas,
   heldSave,
   onScreen,
   openCollection,
-  placeOf,
   plantCampaign,
+  readings,
+  readOrder,
   rested,
   standing,
   textOf,
@@ -48,23 +48,29 @@ test('the navbar’s Collection opens the collection screen on a new campaign, C
   const owned = new Set(CAMPAIGN.collection.map(({ id }) => id));
   expect(STACKS.map(({ id }) => id).sort()).toEqual([...owned].sort());
   expect(STACKS.length).toBeGreaterThan(ACROSS);
+  const seen = await readings(page, [
+    ...Object.keys(CATALOGUE.cards).map((id) => `collection-card-${id}`),
+    ...STACKS.flatMap(({ id }) => [`collection-card-${id}-copies`, `collection-card-${id}-price`]),
+    ...Object.keys(CAMPAIGN.civilizations).flatMap((id) => [
+      `collection-civilization-${id}-card`,
+      `collection-civilization-${id}-counts`,
+    ]),
+  ]);
   for (const id of Object.keys(CATALOGUE.cards)) {
-    expect(await counted(page, `collection-card-${id}`)).toBe(owned.has(id) ? 1 : 0);
+    expect(seen(`collection-card-${id}`).count).toBe(owned.has(id) ? 1 : 0);
   }
 
   const placed: { id: string; at: { x: number; y: number } }[] = [];
   for (const { id } of STACKS) {
     const copies = CAMPAIGN.collection.filter((card) => card.id === id).length;
-    expect(await cardOnFace(page, `collection-card-${id}`)).toBe(id);
-    expect(await textOf(page, `collection-card-${id}-copies`)).toBe(
-      text('collection.copies', { copies }),
-    );
-    expect(await textOf(page, `collection-card-${id}-price`)).toBe(
+    expect(seen(`collection-card-${id}`).card).toBe(id);
+    expect(seen(`collection-card-${id}-copies`).text).toBe(text('collection.copies', { copies }));
+    expect(seen(`collection-card-${id}-price`).text).toBe(
       text('collection.price', { price: priceOf(CATALOGUE, CAMPAIGN, id) }),
     );
-    placed.push({ id, at: await placeOf(page, `collection-card-${id}`) });
+    placed.push({ id, at: seen(`collection-card-${id}`).place });
   }
-  const read = [...placed].sort((a, b) => a.at.y - b.at.y || a.at.x - b.at.x);
+  const read = readOrder(placed, ({ at }) => at);
   expect(read.map(({ id }) => id)).toEqual(STACKS.map(({ id }) => id));
   const [first] = read;
   expect(read.filter(({ at }) => at.y === first.at.y)).toHaveLength(ACROSS);
@@ -72,14 +78,14 @@ test('the navbar’s Collection opens the collection screen on a new campaign, C
   const rightmost = Math.max(...placed.map(({ at }) => at.x));
   for (const [id, civilization] of Object.entries(CAMPAIGN.civilizations)) {
     const pile = `collection-civilization-${id}`;
-    expect(await cardOnFace(page, `${pile}-card`)).toBe(civilization.city.card.id);
-    expect(await textOf(page, `${pile}-counts`)).toBe(
+    expect(seen(`${pile}-card`).card).toBe(civilization.city.card.id);
+    expect(seen(`${pile}-counts`).text).toBe(
       text('pile.counts', {
         cards: civilization.cards.length,
         settle: civilization.settle.length + 1,
       }),
     );
-    expect((await placeOf(page, `${pile}-card`)).x).toBeGreaterThan(rightmost);
+    expect(seen(`${pile}-card`).place.x).toBeGreaterThan(rightmost);
   }
 
   expect(problems).toEqual([]);

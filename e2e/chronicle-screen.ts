@@ -49,6 +49,25 @@ import { SAVE_ENTRY } from '../src/ui/save-entry';
 import { cardName, referenceName } from '../src/ui/text';
 import { layOutRun, type Reference } from '../src/ui/text-run';
 
+/** What the page answers of a reading: its value, or what a read of it throws. */
+type Answer<T> = { value: T } | { complaint: string };
+
+/** What the page answers of one name, each reading as `Reading` reads it. */
+type PageReading = {
+  standing: boolean;
+  count: number;
+  text: string | undefined;
+  dimmed: boolean | undefined;
+  card: string | undefined;
+  place: Answer<{ x: number; y: number }>;
+  ringed: Answer<boolean>;
+  names: Answer<Spot[]>;
+  onScreen: Answer<OnScreen>;
+  kindLabelOnScreen: Answer<Spot>;
+  boundsOnScreen: Answer<Frame>;
+  across: Answer<Across>;
+};
+
 declare global {
   interface Window {
     /**
@@ -60,8 +79,8 @@ declare global {
     ) =>
       | { object: Phaser.GameObjects.GameObject; camera: Phaser.Cameras.Scene2D.Camera }
       | undefined;
-    /** How many objects of that name stand on the running scenes: a repaint leaves no second one. */
-    counted?: (name: string) => number;
+    /** What one name reads on the running scenes. */
+    readName?: (name: string) => PageReading;
   }
 }
 
@@ -144,6 +163,12 @@ export function budget(turns: number): number {
 /** Where a named object's centre sits on the page, and what one design unit measures there. */
 export type OnScreen = { x: number; y: number; unit: number };
 
+/** Where a line of text a face draws sits on the page, its middle, and how tall it stands there. */
+type Spot = { x: number; y: number; height: number };
+
+/** An object's left and right ends and its middle across, in design units. */
+type Across = { left: number; right: number; middle: number };
+
 /** Everything the run logged that it should not have; a clean run leaves it empty. */
 export function watch(page: Page): string[] {
   const problems: string[] = [];
@@ -164,7 +189,7 @@ export async function capstoneClosed(page: Page): Promise<void> {
   await rested(page);
 }
 
-/** Gives the pages this one loads from now on `window.named` and `window.counted`. */
+/** Gives the pages this one loads from now on `window.named` and `window.readName`. */
 export async function readNames(page: Page): Promise<void> {
   await page.addInitScript(() => {
     const within = (
@@ -190,18 +215,135 @@ export async function readNames(page: Page): Promise<void> {
         camera: scene.cameras.main,
       }));
 
-    window.named = (name) => {
-      for (const place of places()) {
-        const object = within(place.list, name, [])[0];
-        if (object === undefined) continue;
-        return { object, camera: place.camera };
-      }
-      return undefined;
+    /** Every object of the name on the running scenes, in the order walked, under its camera. */
+    const everyNamed = (
+      name: string,
+    ): { object: Phaser.GameObjects.GameObject; camera: Phaser.Cameras.Scene2D.Camera }[] =>
+      places().flatMap((place) =>
+        within(place.list, name, []).map((object) => ({ object, camera: place.camera })),
+      );
+
+    window.named = (name) => everyNamed(name)[0];
+
+    /** Where a point of the camera's world sits on the page, and what one unit of it measures there. */
+    const onPage = (camera: Phaser.Cameras.Scene2D.Camera, x: number, y: number): OnScreen => {
+      // The camera converts canvas pixels into its own surface; two points walk that backwards.
+      const origin = camera.getWorldPoint(0, 0);
+      const stepped = camera.getWorldPoint(1, 1);
+      const canvas = camera.scene.game.canvas;
+      const rect = canvas.getBoundingClientRect();
+      const unit = rect.width / canvas.width / (stepped.x - origin.x);
+      return { x: rect.left + (x - origin.x) * unit, y: rect.top + (y - origin.y) * unit, unit };
     };
 
-    window.counted = (name) =>
-      places().reduce((total, place) => total + within(place.list, name, []).length, 0);
+    const answer = <T>(read: () => T): Answer<T> => {
+      try {
+        return { value: read() };
+      } catch (error) {
+        return { complaint: error instanceof Error ? error.message : String(error) };
+      }
+    };
+
+    window.readName = (name) => {
+      const all = everyNamed(name);
+      const object = all[0]?.object;
+      const found = (): {
+        object: Phaser.GameObjects.GameObject;
+        camera: Phaser.Cameras.Scene2D.Camera;
+      } => {
+        const first = all[0];
+        if (first === undefined) throw new Error(`nothing named ${name} stands on the screen`);
+        return first;
+      };
+      // `getData` gives an object that holds none a data manager of its own.
+      const data = (key: string): unknown =>
+        (object?.data as Phaser.Data.DataManager | null | undefined)?.get(key);
+      const matrix = (): Phaser.GameObjects.Components.TransformMatrix => {
+        const transformed = found().object as Partial<Phaser.GameObjects.Components.Transform>;
+        const at = transformed.getWorldTransformMatrix?.();
+        if (at === undefined) throw new Error(`${name} stands at no place`);
+        return at;
+      };
+      const bounds = (): Phaser.Geom.Rectangle => {
+        const bounded = found().object as Partial<Phaser.GameObjects.Components.GetBounds>;
+        const box = bounded.getBounds?.();
+        if (box === undefined) throw new Error(`${name} has no bounds`);
+        return box;
+      };
+      const part = (named: string, complaint: string): Phaser.GameObjects.GameObject => {
+        const parts = (found().object as Partial<Phaser.GameObjects.Container>).list;
+        const inside = Array.isArray(parts) ? parts.find((one) => one.name === named) : undefined;
+        if (inside === undefined) throw new Error(complaint);
+        return inside;
+      };
+      return {
+        standing: object !== undefined,
+        count: all.length,
+        text: (object as Phaser.GameObjects.Text | undefined)?.text,
+        dimmed: data('dimmed') as boolean | undefined,
+        card: object === undefined ? undefined : (data('card') as string),
+        place: answer(() => {
+          const at = matrix();
+          return { x: at.tx, y: at.ty };
+        }),
+        ringed: answer(() => {
+          const ring = part('ring', `${name} is no card face`);
+          return (ring as Phaser.GameObjects.GameObject & { visible: boolean }).visible;
+        }),
+        names: answer(() => {
+          const { camera } = found();
+          const drawn = (data('names') as Spot[] | undefined) ?? [];
+          if (drawn.length === 0) return [];
+          const at = matrix();
+          return drawn.map((spot) => {
+            const middle = at.transformPoint(spot.x, spot.y);
+            const shown = onPage(camera, middle.x, middle.y);
+            return { x: shown.x, y: shown.y, height: spot.height * shown.unit };
+          });
+        }),
+        onScreen: answer(() => {
+          const box = bounds();
+          return onPage(found().camera, box.centerX, box.centerY);
+        }),
+        kindLabelOnScreen: answer(() => {
+          const label = part(
+            'kind-label',
+            `${name} wears no kind label`,
+          ) as Phaser.GameObjects.Text;
+          const middle = matrix().transformPoint(
+            label.x + (0.5 - label.originX) * label.width,
+            label.y + (0.5 - label.originY) * label.height,
+          );
+          const shown = onPage(found().camera, middle.x, middle.y);
+          return { x: shown.x, y: shown.y, height: label.height * shown.unit };
+        }),
+        boundsOnScreen: answer(() => {
+          const box = bounds();
+          const corner = onPage(found().camera, box.x, box.y);
+          return {
+            x: corner.x,
+            y: corner.y,
+            width: box.width * corner.unit,
+            height: box.height * corner.unit,
+          };
+        }),
+        across: answer(() => {
+          const box = bounds();
+          return { left: box.left, right: box.right, middle: box.centerX };
+        }),
+      };
+    };
   });
+}
+
+/** What the page answers of one name, and nothing on a page `readNames` never reached. */
+function asked(page: Page, name: string): Promise<PageReading | undefined> {
+  return page.evaluate((target) => window.readName?.(target), name);
+}
+
+/** What one name reads, in one question to the page. */
+async function reading(page: Page, name: string): Promise<Reading> {
+  return readingOf(name, await asked(page, name));
 }
 
 /**
@@ -398,27 +540,8 @@ export function playing(page: Page): Promise<boolean> {
   return page.evaluate(() => window.game?.scene.getScene<ChronicleScene>('ui').playing === true);
 }
 
-export function onScreen(page: Page, name: string): Promise<OnScreen> {
-  return page.evaluate((target) => {
-    const found = window.named?.(target);
-    if (found === undefined) throw new Error(`nothing named ${target} is on the chronicle screen`);
-    const object = found.object as Phaser.GameObjects.GameObject &
-      Phaser.GameObjects.Components.GetBounds;
-
-    // The camera converts canvas pixels into its own surface; two points walk that backwards.
-    const camera = found.camera;
-    const origin = camera.getWorldPoint(0, 0);
-    const stepped = camera.getWorldPoint(1, 1);
-    const canvas = camera.scene.game.canvas;
-    const rect = canvas.getBoundingClientRect();
-    const unit = rect.width / canvas.width / (stepped.x - origin.x);
-    const bounds = object.getBounds();
-    return {
-      x: rect.left + (bounds.centerX - origin.x) * unit,
-      y: rect.top + (bounds.centerY - origin.y) * unit,
-      unit,
-    };
-  }, name);
+export async function onScreen(page: Page, name: string): Promise<OnScreen> {
+  return (await reading(page, name)).onScreen;
 }
 
 /** What an entry names, in its order, laid out as a run on a measure of one to the character. */
@@ -428,50 +551,12 @@ export function namedIn(entry: string): Reference[] {
   return layOutRun(entry, measure, metrics, referenceName).names.map((name) => name.reference);
 }
 
-/** Whether the named face's rules entry draws a name. */
-export function drawsName(page: Page, face: string): Promise<boolean> {
-  return page.evaluate((target) => {
-    const root = window.named?.(target)?.object as Phaser.GameObjects.Container | undefined;
-    if (root === undefined) throw new Error(`nothing named ${target} is on the screen`);
-    return ((root.getData('names') as unknown[] | undefined) ?? []).length > 0;
-  }, face);
-}
-
 /**
  * Where a name the named face's rules entry draws sits on the page, the first it draws at 0, and how
  * tall its line stands there.
  */
-export function nameOnScreen(
-  page: Page,
-  face: string,
-  at = 0,
-): Promise<{ x: number; y: number; height: number }> {
-  return page.evaluate(
-    ({ target, index }) => {
-      const found = window.named?.(target);
-      if (found === undefined)
-        throw new Error(`nothing named ${target} is on the chronicle screen`);
-      const root = found.object as Phaser.GameObjects.Container;
-      const name = (
-        root.getData('names') as { x: number; y: number; height: number }[] | undefined
-      )?.[index];
-      if (name === undefined) throw new Error(`${target} draws no name at ${index}`);
-      const middle = root.getWorldTransformMatrix().transformPoint(name.x, name.y);
-
-      const camera = found.camera;
-      const origin = camera.getWorldPoint(0, 0);
-      const stepped = camera.getWorldPoint(1, 1);
-      const canvas = camera.scene.game.canvas;
-      const rect = canvas.getBoundingClientRect();
-      const unit = rect.width / canvas.width / (stepped.x - origin.x);
-      return {
-        x: rect.left + (middle.x - origin.x) * unit,
-        y: rect.top + (middle.y - origin.y) * unit,
-        height: name.height * unit,
-      };
-    },
-    { target: face, index: at },
-  );
+export async function nameOnScreen(page: Page, face: string, at = 0): Promise<Spot> {
+  return nameAt(face, await asked(page, face), at);
 }
 
 /**
@@ -495,37 +580,8 @@ export async function liftedName(
 }
 
 /** Where the named face's kind label sits on the page, and how tall it stands there. */
-export function kindLabelOnScreen(
-  page: Page,
-  face: string,
-): Promise<{ x: number; y: number; height: number }> {
-  return page.evaluate((target) => {
-    const found = window.named?.(target);
-    if (found === undefined) throw new Error(`nothing named ${target} is on the chronicle screen`);
-    const root = found.object as Phaser.GameObjects.Container;
-    const label = root.list.find((part) => part.name === 'kind-label') as
-      | Phaser.GameObjects.Text
-      | undefined;
-    if (label === undefined) throw new Error(`${target} wears no kind label`);
-    const middle = root
-      .getWorldTransformMatrix()
-      .transformPoint(
-        label.x + (0.5 - label.originX) * label.width,
-        label.y + (0.5 - label.originY) * label.height,
-      );
-
-    const camera = found.camera;
-    const origin = camera.getWorldPoint(0, 0);
-    const stepped = camera.getWorldPoint(1, 1);
-    const canvas = camera.scene.game.canvas;
-    const rect = canvas.getBoundingClientRect();
-    const unit = rect.width / canvas.width / (stepped.x - origin.x);
-    return {
-      x: rect.left + (middle.x - origin.x) * unit,
-      y: rect.top + (middle.y - origin.y) * unit,
-      height: label.height * unit,
-    };
-  }, face);
+export async function kindLabelOnScreen(page: Page, face: string): Promise<Spot> {
+  return (await reading(page, face)).kindLabelOnScreen;
 }
 
 /** The cursor the page shows over the canvas. */
@@ -538,16 +594,6 @@ export async function cursorAt(page: Page, at: { x: number; y: number }): Promis
   await page.mouse.move(at.x, at.y);
   await rested(page);
   return cursorOverCanvas(page);
-}
-
-/** Where the named object stands in the design space: the point it is drawn about, a face's bottom centre. */
-export function placeOf(page: Page, name: string): Promise<{ x: number; y: number }> {
-  return page.evaluate((target) => {
-    const found = window.named?.(target)?.object as Phaser.GameObjects.Container | undefined;
-    if (found === undefined) throw new Error(`there is no ${target}`);
-    const at = found.getWorldTransformMatrix();
-    return { x: at.tx, y: at.ty };
-  }, name);
 }
 
 /**
@@ -656,27 +702,21 @@ export function defeatShown(page: Page): Promise<boolean> {
 }
 
 /** What the named text reads, and nothing where none of that name stands. */
-export function textOf(page: Page, name: string): Promise<string | undefined> {
-  return page.evaluate(
-    (target) => (window.named?.(target)?.object as Phaser.GameObjects.Text | undefined)?.text,
-    name,
-  );
+export async function textOf(page: Page, name: string): Promise<string | undefined> {
+  return (await reading(page, name)).text;
 }
 
 /** Whether an object of that name stands on any running scene. */
-export function standing(page: Page, name: string): Promise<boolean> {
-  return page.evaluate((target) => window.named?.(target) !== undefined, name);
+export async function standing(page: Page, name: string): Promise<boolean> {
+  return (await reading(page, name)).standing;
 }
 
 /**
  * Which card the named face stands, and nothing where no such face is up: a browse's cards and the
  * card shown large each carry theirs.
  */
-export function cardOnFace(page: Page, name: string): Promise<string | undefined> {
-  return page.evaluate((target) => {
-    const face = window.named?.(target)?.object;
-    return face === undefined ? undefined : (face.getData('card') as string);
-  }, name);
+export async function cardOnFace(page: Page, name: string): Promise<string | undefined> {
+  return (await reading(page, name)).card;
 }
 
 /**
@@ -703,14 +743,8 @@ export async function namedOn(
 }
 
 /** Whether the named card face wears the ring: every one carries it, shown while it is selected. */
-export function ringed(page: Page, name: string): Promise<boolean> {
-  return page.evaluate((target) => {
-    const card = window.named?.(target)?.object as Phaser.GameObjects.Container | undefined;
-    if (card === undefined) throw new Error(`there is no ${target} on the chronicle screen`);
-    const ring = card.list.find((part) => part.name === 'ring');
-    if (ring === undefined) throw new Error(`${target} is no card face`);
-    return (ring as Phaser.GameObjects.GameObject & { visible: boolean }).visible;
-  }, name);
+export async function ringed(page: Page, name: string): Promise<boolean> {
+  return (await reading(page, name)).ringed;
 }
 
 /** Whether the named object is shown; what a mode raises stands there hidden while it is off. */
@@ -736,66 +770,112 @@ export function wellFill(page: Page, key: string): Promise<number | undefined> {
 }
 
 /** How many objects of that name stand on the chronicle screen: one still painted, plus any left over. */
-export function counted(page: Page, name: string): Promise<number> {
-  return page.evaluate((target) => {
-    if (window.counted === undefined) throw new Error('no chronicle was opened on this page');
-    return window.counted(target);
-  }, name);
+export async function counted(page: Page, name: string): Promise<number> {
+  return (await reading(page, name)).count;
 }
 
-/**
- * What one name reads: what `standing`, `counted`, `textOf`, `stackDimmed` and `cardOnFace` answer
- * for it, and the place `placeOf` answers, which throws as it does where nothing of the name stands.
- */
+/** What one name reads; a reading the name cannot give throws where it is read. */
 export type Reading = {
   readonly standing: boolean;
   readonly count: number;
   readonly text: string | undefined;
   readonly dimmed: boolean | undefined;
   readonly card: string | undefined;
+  /** Where the object stands in the design space: the point it is drawn about, a face's bottom centre. */
   readonly place: { x: number; y: number };
+  readonly ringed: boolean;
+  /** Whether the face's rules entry draws a name. */
+  readonly drawsName: boolean;
+  readonly onScreen: OnScreen;
+  readonly nameOnScreen: Spot;
+  readonly kindLabelOnScreen: Spot;
+  /** Where the object's bounds stand on the page. */
+  readonly boundsOnScreen: Frame;
+  readonly across: Across;
 };
+
+/** The reading of what the page answered of a name; a page `readNames` never reached answers nothing. */
+function readingOf(name: string, answered: PageReading | undefined): Reading {
+  return {
+    standing: answered?.standing ?? false,
+    get count() {
+      if (answered === undefined) throw new Error('no chronicle was opened on this page');
+      return answered.count;
+    },
+    text: answered?.text,
+    dimmed: answered?.dimmed,
+    card: answered?.card,
+    get place() {
+      return owed(name, answered?.place);
+    },
+    get ringed() {
+      return owed(name, answered?.ringed);
+    },
+    get drawsName() {
+      return owed(name, answered?.names).length > 0;
+    },
+    get onScreen() {
+      return owed(name, answered?.onScreen);
+    },
+    get nameOnScreen() {
+      return nameAt(name, answered, 0);
+    },
+    get kindLabelOnScreen() {
+      return owed(name, answered?.kindLabelOnScreen);
+    },
+    get boundsOnScreen() {
+      return owed(name, answered?.boundsOnScreen);
+    },
+    get across() {
+      return owed(name, answered?.across);
+    },
+  };
+}
+
+/** The value the page answered of a reading of the name; what it complained of throws. */
+function owed<T>(name: string, answer: Answer<T> | undefined): T {
+  if (answer === undefined) throw new Error(`nothing named ${name} stands on the screen`);
+  if ('complaint' in answer) throw new Error(answer.complaint);
+  return answer.value;
+}
+
+/** Where the name at that place among those the face draws sits on the page. */
+function nameAt(face: string, answered: PageReading | undefined, at: number): Spot {
+  const spot = owed(face, answered?.names)[at];
+  if (spot === undefined) throw new Error(`${face} draws no name at ${at}`);
+  return spot;
+}
 
 /**
  * Every name handed read in one question to the page, and the reading of one of them; a name not
- * handed throws. Each question to the page waits out the frame being drawn.
+ * handed throws.
  */
 export async function readings(
   page: Page,
   names: readonly string[],
 ): Promise<(name: string) => Reading> {
-  const answers = await page.evaluate((targets) => {
-    const count = window.counted;
-    if (count === undefined) throw new Error('no chronicle was opened on this page');
-    return targets.map((target) => {
-      const object = window.named?.(target)?.object;
-      const at = (object as Phaser.GameObjects.Container | undefined)?.getWorldTransformMatrix();
-      return {
-        name: target,
-        standing: object !== undefined,
-        count: count(target),
-        text: (object as Phaser.GameObjects.Text | undefined)?.text,
-        dimmed: object?.getData('dimmed') as boolean | undefined,
-        card: object === undefined ? undefined : (object.getData('card') as string),
-        place: at === undefined ? undefined : { x: at.tx, y: at.ty },
-      };
-    });
-  }, names);
-  const read = new Map<string, Reading>();
-  for (const { name, place, ...answer } of answers) {
-    read.set(name, {
-      ...answer,
-      get place() {
-        if (place === undefined) throw new Error(`there is no ${name}`);
-        return place;
-      },
-    });
-  }
+  const answers = await page.evaluate(
+    (targets) => targets.map((target) => window.readName?.(target)),
+    names,
+  );
+  const read = new Map(names.map((name, at) => [name, readingOf(name, answers[at])]));
   return (name) => {
     const reading = read.get(name);
     if (reading === undefined) throw new Error(`${name} was not read`);
     return reading;
   };
+}
+
+/** The items in the order their places read on the screen: top down, each line left to right. */
+export function readOrder<T>(
+  items: readonly T[],
+  placeOf: (item: T) => { x: number; y: number },
+): T[] {
+  return [...items].sort((a, b) => {
+    const first = placeOf(a);
+    const second = placeOf(b);
+    return first.y - second.y || first.x - second.x;
+  });
 }
 
 /** How many marks the named container of the map is showing. */
@@ -1301,11 +1381,8 @@ export function fillOf(page: Page, name: string): Promise<number> {
 }
 
 /** Whether the named stack stands dimmed, and nothing where no stack of that name stands. */
-export function stackDimmed(page: Page, name: string): Promise<boolean | undefined> {
-  return page.evaluate(
-    (target) => window.named?.(target)?.object.getData('dimmed') as boolean | undefined,
-    name,
-  );
+export async function stackDimmed(page: Page, name: string): Promise<boolean | undefined> {
+  return (await reading(page, name)).dimmed;
 }
 
 /** What the end-turn button is painted. */

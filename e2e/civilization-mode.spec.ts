@@ -1,5 +1,4 @@
 import { expect, type Page, test } from '@playwright/test';
-import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
 import {
   addedTo,
@@ -26,9 +25,10 @@ import {
   onScreen,
   openCollection,
   pilePressed,
-  placeOf,
   plantCampaign,
   pressed,
+  readings,
+  readOrder,
   rested,
   stackDimmed,
   standing,
@@ -113,91 +113,80 @@ async function openCivilization(page: Page, campaign: Campaign = PLANTED.campaig
   await civilizationPressed(page);
 }
 
-/** The named object's left and right ends and its middle across, in design units. */
-function acrossOf(
-  page: Page,
-  name: string,
-): Promise<{ left: number; right: number; middle: number }> {
-  return page.evaluate((target) => {
-    const found = window.named?.(target)?.object as
-      | (Phaser.GameObjects.GameObject & Phaser.GameObjects.Components.GetBounds)
-      | undefined;
-    if (found === undefined) throw new Error(`there is no ${target}`);
-    const bounds = found.getBounds();
-    return { left: bounds.left, right: bounds.right, middle: bounds.centerX };
-  }, name);
-}
-
-/** The named faces read top down, each line left to right. */
-async function readOrder(page: Page, names: readonly string[]): Promise<string[]> {
-  const placed: { name: string; at: { x: number; y: number } }[] = [];
-  for (const name of names) placed.push({ name, at: await placeOf(page, name) });
-  return placed.sort((a, b) => a.at.y - b.at.y || a.at.x - b.at.x).map(({ name }) => name);
-}
-
 test('in the deck editing mode « Civilization opens the civilization mode on its civilization: the name over the room, neither the collection nor the rows standing, each section’s count beside its word, the city section’s card at the head of the settle section, each card the deck holds a stack reading its copies held over owned in the collection’s order, seven to a line, and a card it holds no copy of not standing', async ({
   page,
 }) => {
   const problems = watch(page);
   await openCivilization(page);
 
-  expect(await textOf(page, 'civilization-title')).toBe(
-    text('collection.civilization-title', { civilization: civilizationName(CIVILIZATION) }),
-  );
-  expect(await textOf(page, 'collection-to-deck-editing-label')).toBe(
-    text('collection.to-collection'),
-  );
-  for (const gone of ['deck-editing-mode', 'collection-panel', 'civilization-panel']) {
-    expect(await standing(page, gone)).toBe(false);
-  }
-
+  const absent = ['deck-editing-mode', 'collection-panel', 'civilization-panel'];
   const { settle, cards } = civilizationIn(CATALOGUE, PLANTED.campaign, CIVILIZATION);
-  for (const [section, count] of [
+  const sections = [
     ['civilization-section-settle', settle.length + 1],
     ['civilization-section-cards', cards.length],
-  ] as const) {
-    expect(await textOf(page, `${section}-count`)).toBe(text('collection.cards', { cards: count }));
-    const word = await placeOf(page, section);
-    const beside = await placeOf(page, `${section}-count`);
-    expect(beside.y).toBe(word.y);
-    expect(beside.x).toBeGreaterThan(word.x);
-  }
-
-  expect(await cardOnFace(page, 'civilization-city')).toBe(OWNED.city.card.id);
-  expect(await counted(page, `civilization-card-${PLANTED.gone}`)).toBe(0);
-  const fewer = ROWS.cards.find(({ id }) => id === PLANTED.fewer);
-  expect(fewer?.copies).toBeLessThan(ownedIn(PLANTED.campaign, PLANTED.fewer));
-
-  for (const { id, copies } of [...ROWS.settle, ...ROWS.cards]) {
-    const face = `civilization-card-${id}`;
-    expect(await counted(page, face)).toBe(1);
-    expect(await cardOnFace(page, face)).toBe(id);
-    expect(await textOf(page, `${face}-copies`)).toBe(
-      text('collection.held-of-owned', { held: copies, copies: ownedIn(PLANTED.campaign, id) }),
-    );
-  }
-
+  ] as const;
+  const rows = [...ROWS.settle, ...ROWS.cards];
   const settleFaces = [
     'civilization-city',
     ...ROWS.settle.map(({ id }) => `civilization-card-${id}`),
   ];
   const deckFaces = ROWS.cards.map(({ id }) => `civilization-card-${id}`);
+  const seen = await readings(page, [
+    'civilization-title',
+    'collection-to-deck-editing-label',
+    ...absent,
+    ...sections.flatMap(([section]) => [section, `${section}-count`]),
+    'civilization-city',
+    `civilization-card-${PLANTED.gone}`,
+    ...rows.flatMap(({ id }) => [`civilization-card-${id}`, `civilization-card-${id}-copies`]),
+  ]);
+
+  expect(seen('civilization-title').text).toBe(
+    text('collection.civilization-title', { civilization: civilizationName(CIVILIZATION) }),
+  );
+  expect(seen('collection-to-deck-editing-label').text).toBe(text('collection.to-collection'));
+  for (const gone of absent) {
+    expect(seen(gone).standing).toBe(false);
+  }
+
+  for (const [section, count] of sections) {
+    expect(seen(`${section}-count`).text).toBe(text('collection.cards', { cards: count }));
+    const word = seen(section).place;
+    const beside = seen(`${section}-count`).place;
+    expect(beside.y).toBe(word.y);
+    expect(beside.x).toBeGreaterThan(word.x);
+  }
+
+  expect(seen('civilization-city').card).toBe(OWNED.city.card.id);
+  expect(seen(`civilization-card-${PLANTED.gone}`).count).toBe(0);
+  const fewer = ROWS.cards.find(({ id }) => id === PLANTED.fewer);
+  expect(fewer?.copies).toBeLessThan(ownedIn(PLANTED.campaign, PLANTED.fewer));
+
+  for (const { id, copies } of rows) {
+    const face = `civilization-card-${id}`;
+    expect(seen(face).count).toBe(1);
+    expect(seen(face).card).toBe(id);
+    expect(seen(`${face}-copies`).text).toBe(
+      text('collection.held-of-owned', { held: copies, copies: ownedIn(PLANTED.campaign, id) }),
+    );
+  }
+
   for (const faces of [settleFaces, deckFaces]) {
-    expect(await readOrder(page, faces)).toEqual(faces);
-    const firstLine = (await placeOf(page, faces[0])).y;
+    expect(readOrder(faces, (face) => seen(face).place)).toEqual(faces);
+    const firstLine = seen(faces[0]).place.y;
     let inLine = 0;
-    for (const face of faces) if ((await placeOf(page, face)).y === firstLine) inLine++;
+    for (const face of faces) if (seen(face).place.y === firstLine) inLine++;
     expect(inLine).toBe(Math.min(ACROSS, faces.length));
   }
 
-  const settleWord = (await placeOf(page, 'civilization-section-settle')).y;
-  const deckWord = (await placeOf(page, 'civilization-section-cards')).y;
+  const settleWord = seen('civilization-section-settle').place.y;
+  const deckWord = seen('civilization-section-cards').place.y;
   for (const face of settleFaces) {
-    const { y } = await placeOf(page, face);
+    const { y } = seen(face).place;
     expect(y).toBeGreaterThan(settleWord);
     expect(y).toBeLessThan(deckWord);
   }
-  for (const face of deckFaces) expect((await placeOf(page, face)).y).toBeGreaterThan(deckWord);
+  for (const face of deckFaces) expect(seen(face).place.y).toBeGreaterThan(deckWord);
 
   expect(problems).toEqual([]);
 });
@@ -272,10 +261,12 @@ test('in the civilization mode Collection » returns to the deck editing mode on
   await rested(page);
   expect(await standing(page, 'civilization-mode')).toBe(false);
   expect(await textOf(page, 'deck-civilization')).toBe(civilizationName(CIVILIZATION));
+  const seen = await readings(
+    page,
+    ROWS.cards.map(({ id }) => `deck-row-${id}-copies`),
+  );
   for (const { id, copies } of ROWS.cards) {
-    expect(await textOf(page, `deck-row-${id}-copies`)).toBe(
-      text('collection.row-copies', { copies }),
-    );
+    expect(seen(`deck-row-${id}-copies`).text).toBe(text('collection.row-copies', { copies }));
   }
 
   expect(problems).toEqual([]);
@@ -299,13 +290,19 @@ test('in the civilization mode each stack’s reading stands centred between its
     });
   await openCivilization(page);
 
-  for (const { id: card, copies } of shown) {
+  const buttons = shown.map(({ id: card, copies }) => {
     const stack = `civilization-card-${card}`;
     const more = copies < ownedIn(PLANTED.campaign, card) ? `${stack}-add` : `${stack}-buy`;
-    const reading = await acrossOf(page, `${stack}-copies`);
-    const left = await acrossOf(page, `${stack}-remove`);
-    const right = await acrossOf(page, more);
-    expect(reading.middle).toBeCloseTo((left.right + right.left) / 2, 0);
+    return { reading: `${stack}-copies`, less: `${stack}-remove`, more };
+  });
+  const seen = await readings(
+    page,
+    buttons.flatMap(({ reading, less, more }) => [reading, less, more]),
+  );
+  for (const { reading, less, more } of buttons) {
+    const left = seen(less).across;
+    const right = seen(more).across;
+    expect(seen(reading).across.middle).toBeCloseTo((left.right + right.left) / 2, 0);
   }
 
   let campaign = PLANTED.campaign;

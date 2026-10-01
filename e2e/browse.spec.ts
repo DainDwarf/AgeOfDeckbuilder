@@ -1,5 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
-import type Phaser from 'phaser';
+import { expect, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
 import { cardOf } from '../src/rules/catalogue';
 import type { Chronicle } from '../src/rules/state';
@@ -14,9 +13,7 @@ import {
   click,
   consoleKey,
   cursorAt,
-  drawsName,
   endedTurn,
-  type Frame,
   firstSeed,
   hazardsAdded,
   inside,
@@ -30,14 +27,14 @@ import {
   overflowingPiles,
   pileStacks,
   pileTop,
-  placeOf,
+  readings,
+  readOrder,
   rested,
   ringed,
   scrolled,
   selected,
   settledOn,
   standing,
-  textOf,
   titleOf,
   tooltipText,
   tooltipUp,
@@ -54,42 +51,17 @@ const HAND = 'pointer';
 
 const PILES: readonly PileKind[] = ['draw-pile', 'discard-pile'];
 
-/** The face whose spot on the page stands nearest the height `y`. */
-async function nearest(
+/** The face whose spot on the page stands nearest the height `y`, and that spot; a tie goes to the first. */
+function nearest<At extends { y: number }>(
   y: number,
-  faces: readonly string[],
-  spot: (face: string) => Promise<{ y: number }>,
-): Promise<string> {
-  const spots = await Promise.all(faces.map(spot));
-  let best: number | undefined;
-  for (const [index, at] of spots.entries()) {
-    if (best === undefined || Math.abs(at.y - y) < Math.abs(spots[best].y - y)) best = index;
+  spots: readonly { face: string; at: At }[],
+): { face: string; at: At } {
+  let best: { face: string; at: At } | undefined;
+  for (const spot of spots) {
+    if (best === undefined || Math.abs(spot.at.y - y) < Math.abs(best.at.y - y)) best = spot;
   }
   if (best === undefined) throw new Error('no face to choose from');
-  return faces[best];
-}
-
-/** Where the named object's bounds stand on the page. */
-function boundsOnScreen(page: Page, name: string): Promise<Frame> {
-  return page.evaluate((target) => {
-    const found = window.named?.(target);
-    if (found === undefined) throw new Error(`nothing named ${target} is on the screen`);
-    const object = found.object as Phaser.GameObjects.GameObject &
-      Phaser.GameObjects.Components.GetBounds;
-    const bounds = object.getBounds();
-    const { camera } = found;
-    const origin = camera.getWorldPoint(0, 0);
-    const stepped = camera.getWorldPoint(1, 1);
-    const canvas = camera.scene.game.canvas;
-    const rect = canvas.getBoundingClientRect();
-    const unit = rect.width / canvas.width / (stepped.x - origin.x);
-    return {
-      x: rect.left + (bounds.x - origin.x) * unit,
-      y: rect.top + (bounds.y - origin.y) * unit,
-      width: bounds.width * unit,
-      height: bounds.height * unit,
-    };
-  }, name);
+  return best;
 }
 
 /**
@@ -177,8 +149,9 @@ test('a wheel turned with Control held moves a browse nothing, and a wheel over 
   expect(await offsetOf(page)).toBe(0);
 
   await consoleKey(page);
-  const strip = await boundsOnScreen(page, 'console');
-  const framed = await boundsOnScreen(page, 'browse-frame');
+  const seen = await readings(page, ['console', 'browse-frame']);
+  const strip = seen('console').boundsOnScreen;
+  const framed = seen('browse-frame').boundsOnScreen;
   const covered = { x: framed.x + framed.width / 2, y: (framed.y + strip.y + strip.height) / 2 };
   expect(inside(covered, strip)).toBe(true);
   expect(inside(covered, framed)).toBe(true);
@@ -231,10 +204,12 @@ test('the two keys that pan the map up and down scroll a browse while they are h
   const tapped = await offsetOf(page);
   expect(tapped).toBeGreaterThan(0);
 
-  const frame = await onScreen(page, 'browse-frame');
   const faces = pileStacks(opened.drawPile).map((_, at) => `browse-card-${at}`);
-  const middle = await nearest(frame.y, faces, (face) => onScreen(page, face));
-  const shown = await onScreen(page, middle);
+  const seen = await readings(page, ['browse-frame', ...faces]);
+  const { at: shown } = nearest(
+    seen('browse-frame').onScreen.y,
+    faces.map((face) => ({ face, at: seen(face).onScreen })),
+  );
   await page.mouse.click(shown.x, shown.y, { button: 'right' });
   await expect.poll(() => standing(page, 'inspection')).toBe(true);
   expect(await heldFor(down.code, 200)).toBe(tapped);
@@ -287,21 +262,20 @@ test('a left click on a pile opens nothing and keeps the selection; a right clic
   expect(await titleOf(page, 'browse')).toBe(
     text('browse.draw-pile', { count: before.drawPile.length }),
   );
-  const placed: { x: number; y: number }[] = [];
+  const seen = await readings(page, [
+    ...stacks.flatMap((_, at) => [`browse-card-${at}`, `browse-card-${at}-copies`]),
+    `browse-card-${stacks.length}`,
+  ]);
   for (const [at, { card, copies }] of stacks.entries()) {
-    expect(await cardOnFace(page, `browse-card-${at}`)).toBe(card.id);
-    expect(await textOf(page, `browse-card-${at}-copies`)).toBe(
-      text('collection.row-copies', { copies }),
-    );
-    expect(await ringed(page, `browse-card-${at}`)).toBe(false);
-    placed.push(await placeOf(page, `browse-card-${at}`));
+    expect(seen(`browse-card-${at}`).card).toBe(card.id);
+    expect(seen(`browse-card-${at}-copies`).text).toBe(text('collection.row-copies', { copies }));
+    expect(seen(`browse-card-${at}`).ringed).toBe(false);
   }
-  expect(await standing(page, `browse-card-${stacks.length}`)).toBe(false);
-  const read = placed.map((at, index) => ({ at, index }));
-  read.sort((a, b) => a.at.y - b.at.y || a.at.x - b.at.x);
-  expect(read.map(({ index }) => index)).toEqual(stacks.map((_, index) => index));
+  expect(seen(`browse-card-${stacks.length}`).standing).toBe(false);
+  const indices = stacks.map((_, index) => index);
+  expect(readOrder(indices, (index) => seen(`browse-card-${index}`).place)).toEqual(indices);
 
-  const first = await onScreen(page, 'browse-card-0');
+  const first = seen('browse-card-0').onScreen;
   await page.mouse.click(first.x, first.y);
   await rested(page);
   expect(await ringed(page, 'browse-card-0')).toBe(false);
@@ -346,14 +320,16 @@ test('a small card and a kind bubble raised off a browsed stack move with it as 
   const faces = pileStacks(opened.drawPile).map((_, at) => `browse-card-${at}`);
   await browse(page, 'draw-pile');
   await rested(page);
-  const frame = await onScreen(page, 'browse-frame');
+  const opening = await readings(page, ['browse-frame', ...faces]);
+  const frame = opening('browse-frame').onScreen;
 
-  const naming: string[] = [];
-  for (const face of faces) if (await drawsName(page, face)) naming.push(face);
   // Nearest the frame's middle: a face at an edge sits under the title or the mask, or runs out of scroll.
-  const named = await nearest(frame.y, naming, (face) => nameOnScreen(page, face));
-
-  const name = await nameOnScreen(page, named);
+  const { face: named, at: name } = nearest(
+    frame.y,
+    faces
+      .filter((face) => opening(face).drawsName)
+      .map((face) => ({ face, at: opening(face).nameOnScreen })),
+  );
   await page.mouse.move(name.x, name.y, { steps: 5 });
   await expect.poll(() => standing(page, 'small-card-0')).toBe(true);
   await rested(page);
@@ -376,9 +352,11 @@ test('a small card and a kind bubble raised off a browsed stack move with it as 
 
   const away = await besideTheCards(page);
   await page.mouse.move(away.x, away.y, { steps: 5 });
-  const labelled = await nearest(frame.y, faces, (face) => kindLabelOnScreen(page, face));
-
-  const label = await kindLabelOnScreen(page, labelled);
+  const scrolledTo = await readings(page, faces);
+  const { face: labelled, at: label } = nearest(
+    frame.y,
+    faces.map((face) => ({ face, at: scrolledTo(face).kindLabelOnScreen })),
+  );
   await page.mouse.move(label.x, label.y, { steps: 5 });
   await expect.poll(() => tooltipUp(page, 'tooltip-overlay')).toBe(true);
   await rested(page);
