@@ -17,6 +17,8 @@ import {
   nameOnScreen,
   onScreen,
   plantCampaign,
+  reading,
+  readings,
   readNames,
   rested,
   SHELTER,
@@ -31,6 +33,10 @@ const AGE = firstAge(CATALOGUE);
 const [[ACHIEVEMENT, EARNED]] = Object.entries(ageOf(CATALOGUE, AGE).achievements);
 const TECHNOLOGY = EARNED.technology;
 const PLATE = `plate-${TECHNOLOGY}`;
+
+/** The age the first age's technology unlocks, and the last age of the catalogue. */
+const NEXT = technologyOf(CATALOGUE, TECHNOLOGY).unlocks.age;
+const LAST = Object.keys(CATALOGUE.ages).at(-1);
 
 /** What the plate's reward reads, line by line: what the technology unlocks, and the influence. */
 function rewardOf(): string[] {
@@ -66,18 +72,6 @@ async function plateReads(
   };
 }
 
-/** Where the named object spans across the screen, in design units. */
-function spanOf(page: Page, name: string): Promise<{ left: number; right: number }> {
-  return page.evaluate((target) => {
-    const found = window.named?.(target)?.object as
-      | (Phaser.GameObjects.GameObject & Phaser.GameObjects.Components.GetBounds)
-      | undefined;
-    if (found === undefined) throw new Error(`there is no ${target}`);
-    const bounds = found.getBounds();
-    return { left: bounds.left, right: bounds.right };
-  }, name);
-}
-
 /** Where the tree stands: its left end, in design units. */
 function treeAt(page: Page): Promise<number> {
   return page.evaluate(() => {
@@ -95,7 +89,7 @@ async function openCampaign(page: Page, campaign = freshCampaign(CATALOGUE)) {
   await campaignShown(page);
 }
 
-test('on a new campaign the first age’s technology stands available on its age’s ground, reading its name, its goal and its reward, and the pointer resting on the name in its goal raises that card small', async ({
+test('on a new campaign the first age’s technology stands available on the border between its age’s ground and the next age’s, reading its name, its goal and its reward, and the pointer resting on the name in its goal raises that card small', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -107,10 +101,11 @@ test('on a new campaign the first age’s technology stands available on its age
     goal: achievementGoal(ACHIEVEMENT),
     reward: rewardOf(),
   });
-  const ground = await spanOf(page, `ground-${AGE}`);
-  const plate = await spanOf(page, PLATE);
-  expect(plate.left).toBeGreaterThan(ground.left);
-  expect(plate.right).toBeLessThan(ground.right);
+  const seen = await readings(page, [`ground-${AGE}`, `ground-${NEXT}`, PLATE]);
+  const border = seen(`ground-${AGE}`).across.right;
+  expect(seen(`ground-${NEXT}`).across.left).toBe(border);
+  expect(seen(PLATE).across.left).toBeLessThan(border);
+  expect(seen(PLATE).across.right).toBeGreaterThan(border);
 
   const [named] = namedIn(achievementGoal(ACHIEVEMENT));
   expect(named?.kind).toBe('card');
@@ -181,7 +176,7 @@ test('a tree the room holds whole stands where it is under the two pan keys, a d
   const problems = watch(page);
   await openCampaign(page);
 
-  const ground = await spanOf(page, `ground-${AGE}`);
+  const ground = (await reading(page, `ground-${LAST}`)).across;
   const right = await page.evaluate(
     () => window.game?.scene.getScene('campaign').cameras.main.worldView.right ?? 0,
   );

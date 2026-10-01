@@ -293,7 +293,7 @@ const TABLES: Tables = {
     },
   },
   technologies: {
-    settlement: { needs: [], unlocks: { cards: {} } },
+    settlement: { needs: [], unlocks: { cards: {}, age: 'stone' } },
   },
   terrains: {
     plain: {

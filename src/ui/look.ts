@@ -167,6 +167,7 @@ export const LOOK: Look = {
   },
   ground: {
     nomadic: 0x2a5a41,
+    stone: 0x4b4f58,
   },
 };
 

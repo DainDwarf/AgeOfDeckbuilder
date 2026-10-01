@@ -216,6 +216,7 @@ const TEXT = {
   'label.influence': 'Influence',
   'tooltip.influence': 'Spend it on copies of your cards',
   'age.nomadic': 'Nomadic Age',
+  'age.stone': 'Stone Age',
   'technology.settlement': 'Settlement', // glossary exception: settlement
   'goal.first-shelter': 'Build [card:shelter]',
   'plate.learned': '✓ {technology}',

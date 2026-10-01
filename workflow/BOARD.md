@@ -15,5 +15,4 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The Stone Age is launchable** — the catalogue holds a second age after the Nomadic one that Settlement unlocks, its region, camp, events and capstone the Nomadic ones on a spacing and a capstone window of its own and no achievement yet; the coherence tests pass over it, `e2e/launch.spec.ts` proves that a campaign that has learned Settlement opens the launch screen on it and launches a chronicle of it, and the Nomadic page says Settlement unlocks it. Doc-impact: `docs/ages/NOMADIC.md`. [board/stone-age-launchable.md](board/stone-age-launchable.md)
 - **The Stone Age's region** — the age's temperate region on a bigger disc than the Nomadic one, with its camps and its centre part, pitched running at several sizes with the frame and the end of turn measured; the age's content page, `docs/ages/STONE.md`, opens with it.

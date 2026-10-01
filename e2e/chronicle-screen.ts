@@ -59,6 +59,7 @@ type PageReading = {
   count: number;
   text: string | undefined;
   dimmed: boolean | undefined;
+  selected: boolean | undefined;
   card: string | undefined;
   reference: { kind: string; id: string } | undefined;
   shows: Answer<boolean>;
@@ -288,6 +289,7 @@ export async function readNames(page: Page): Promise<void> {
         count: all.length,
         text: (object as Phaser.GameObjects.Text | undefined)?.text,
         dimmed: data('dimmed') as boolean | undefined,
+        selected: data('selected') as boolean | undefined,
         card: object === undefined ? undefined : (data('card') as string),
         reference: data('reference') as { kind: string; id: string } | undefined,
         shows: answer(
@@ -469,6 +471,14 @@ export async function chronicleButton(page: Page): Promise<void> {
   await click(page, 'navbar-launch');
   await expect.poll(() => standing(page, 'launch-button')).toBe(true);
   await rested(page);
+}
+
+/** Launch pressed on the launch screen standing, and the chronicle screen it raises waited for, one hand laid out on it. */
+export async function launchedFromScreen(page: Page): Promise<void> {
+  await rested(page);
+  await click(page, 'launch-button');
+  await page.waitForFunction(() => window.game?.scene.isActive('ui') === true);
+  await expect.poll(() => counted(page, 'hand-0')).toBe(1);
 }
 
 /** The launch screen Chronicle opens from the campaign screen of a bare boot. */
@@ -784,6 +794,8 @@ export type Reading = {
   readonly count: number;
   readonly text: string | undefined;
   readonly dimmed: boolean | undefined;
+  /** Whether a launch screen's option stands selected. */
+  readonly selected: boolean | undefined;
   readonly card: string | undefined;
   /** What the card of a thing a name names stands, by its kind and id. */
   readonly reference: { kind: string; id: string } | undefined;
@@ -815,6 +827,7 @@ function readingOf(name: string, answered: PageReading | undefined): Reading {
     },
     text: answered?.text,
     dimmed: answered?.dimmed,
+    selected: answered?.selected,
     card: answered?.card,
     reference: answered?.reference,
     get shows() {

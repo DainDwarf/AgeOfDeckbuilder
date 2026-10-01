@@ -14,13 +14,14 @@ import {
   chronicleOf,
   cityTileOf,
   click,
-  counted,
   dragOut,
   firstsOf,
   idsOf,
+  launchedFromScreen,
   mapFrame,
   onScreen,
   openSaved,
+  readings,
   rested,
   ringedTile,
   settledOn,
@@ -44,22 +45,6 @@ async function campaignThenChronicle(page: Page): Promise<void> {
   await click(page, 'menu-campaign');
   await campaignShown(page);
   await chronicleButton(page);
-}
-
-/** Launch pressed on the launch screen standing, and the chronicle screen it raises waited for, one hand laid out on it. */
-async function launchedFromScreen(page: Page): Promise<void> {
-  await rested(page);
-  await click(page, 'launch-button');
-  await page.waitForFunction(() => window.game?.scene.isActive('ui') === true);
-  await expect.poll(() => counted(page, 'hand-0')).toBe(1);
-}
-
-/** Whether the launch screen's face for that option of that row stands selected. */
-function optionSelected(page: Page, row: string, option: string): Promise<boolean> {
-  return page.evaluate(
-    (name) => window.named?.(name)?.object.getData('selected') === true,
-    `launch-${row}-${option}`,
-  );
 }
 
 test('the menu walks in to Controls and closes back one step at a time', async ({ page }) => {
@@ -228,9 +213,13 @@ test('Campaign opens the campaign screen, Chronicle there the launch screen on t
   await expect.poll(() => standing(page, 'menu')).toBe(true);
   await campaignThenChronicle(page);
   expect(await standing(page, 'menu')).toBe(false);
-  expect(await optionSelected(page, 'age', firsts.age)).toBe(true);
-  expect(await optionSelected(page, 'region', firsts.region)).toBe(true);
-  expect(await optionSelected(page, 'civilization', firsts.civilization)).toBe(true);
+  const options = [
+    `launch-age-${firsts.age}`,
+    `launch-region-${firsts.region}`,
+    `launch-civilization-${firsts.civilization}`,
+  ];
+  const seen = await readings(page, options);
+  for (const option of options) expect(seen(option).selected).toBe(true);
 
   await launchedFromScreen(page);
 
