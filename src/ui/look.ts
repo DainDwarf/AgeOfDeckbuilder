@@ -154,11 +154,13 @@ export const LOOK: Look = {
     mountain: 0x6b5f57,
     coast: 0x3d6d9e,
     ocean: 0x2b4f7a,
+    desert: 0xd6c08a,
   },
   feature: {
     fertile: 0x4a7a2d,
     wildlife: 0x8a5a2b,
     flint: 0x4b4f58,
+    oasis: 0x2f8f83,
   },
   building: {
     city: 'civilization',

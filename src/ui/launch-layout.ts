@@ -33,6 +33,22 @@ export function withAge(catalogue: Catalogue, choices: Choices, age: string): Ch
 }
 
 /**
+ * The age's regions in the row, each with the biomes of its cluster, the middle hexagon's first: read
+ * from the region of its name in the first age, in the order of history, that holds one.
+ */
+export function clustersOf(
+  catalogue: Catalogue,
+  age: string,
+): { region: string; biomes: string[] }[] {
+  const ages = Object.values(catalogue.ages);
+  return Object.entries(ageOf(catalogue, age).regions).map(([region, own]) => {
+    const first =
+      ages.find(({ regions }) => Object.hasOwn(regions, region))?.regions[region] ?? own;
+    return { region, biomes: [first.centreBiome, ...ringOf(first)] };
+  });
+}
+
+/**
  * The biome of each hexagon around the region's middle one, clockwise from the right, a biome's side
  * by side in the shares' order: one to each biome they name, the six largest at most, the rest one by
  * one to the largest share per hexagon it would hold, a tie to the larger share, then the first named.

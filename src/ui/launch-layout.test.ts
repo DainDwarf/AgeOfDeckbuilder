@@ -14,7 +14,7 @@ import {
   victoryOf,
 } from '../rules/fixtures';
 import type { Region } from '../rules/map-kinds';
-import { openingChoices, RING, ringOf, withAge } from './launch-layout';
+import { clustersOf, openingChoices, RING, ringOf, withAge } from './launch-layout';
 
 /** A fixture region whose shares are these, in this order. */
 function sharing(...shares: [string, number][]): Region {
@@ -66,6 +66,27 @@ test('selecting another age takes its first region where it holds none of the se
   const choices = { age: AGE, region: CLEARING, civilization: CIVILIZATION_ID };
 
   expect(withAge(glen, choices, second.id)).toEqual({ ...choices, age: second.id, region: 'glen' });
+});
+
+test('a region’s cluster is drawn from the region of its name in the first age holding one, whichever age is selected', () => {
+  const [first, second, ...rest] = SLICES;
+  const reshared = sharing(['mountain', 0.3], ['sea', 0.1]);
+  const later = merged('fixture', [
+    first,
+    {
+      ...second,
+      owns: { ...second.owns, regions: { ...second.owns.regions, [REGION]: reshared } },
+    },
+    ...rest,
+  ]);
+  const firstAges = Object.entries(REGIONS).map(([region, held]) => ({
+    region,
+    biomes: [held.centreBiome, ...ringOf(held)],
+  }));
+
+  expect(ringOf(reshared)).not.toEqual(ringOf(REGIONS[REGION]));
+  expect(clustersOf(later, first.id)).toEqual(firstAges);
+  expect(clustersOf(later, second.id)).toEqual(firstAges);
 });
 
 test('each biome a region’s shares name stands on one hexagon around the middle one, the rest go to the largest share, and one biome’s stand side by side in the order named', () => {

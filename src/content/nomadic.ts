@@ -363,8 +363,11 @@ const TABLES: Tables = {
     },
   },
   buildings: {
-    city: { terrains: ['plain', 'forest', 'hills'], yields: { military: 1, culture: 1 } },
-    camp: { terrains: ['plain', 'forest', 'hills'], yields: {} },
+    city: {
+      terrains: ['plain', 'forest', 'hills', 'desert'],
+      yields: { military: 1, culture: 1 },
+    },
+    camp: { terrains: ['plain', 'forest', 'hills', 'desert'], yields: {} },
     shelter: { terrains: ['plain', 'forest', 'hills'], yields: {} },
   },
   features: {

@@ -50,12 +50,13 @@ const FERTILE: number[] = [
 
 /**
  * Placeholder primitives until the art pass: the fertile plain a small hexagon of its own green, the
- * wildlife a small triangle, the flint a shard.
+ * wildlife a small triangle, the flint a shard, the oasis a small square.
  */
 const FEATURE_MARKS: Readonly<Record<string, number[]>> = {
   fertile: FERTILE,
   wildlife: [-5, 4, 0, -4, 5, 4],
   flint: [-2, -5, 4, -1, 2, 5, -4, 1],
+  oasis: [-4, -4, 4, -4, 4, 4, -4, 4],
 };
 
 /** Placeholder primitives until the art pass: the trapping a funnel. */

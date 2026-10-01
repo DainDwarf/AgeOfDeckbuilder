@@ -1,4 +1,5 @@
 import type { Age, Slice } from '../rules/catalogue';
+import { MOVE_POINT } from '../rules/map';
 import { NOMADIC } from './nomadic';
 
 const { basePrice, schedule, camp } = NOMADIC.owns;
@@ -13,12 +14,14 @@ const REGIONS: Age['regions'] = {
       { biome: 'sea', share: 0.2 },
       { biome: 'mountain', share: 0.1 },
       { biome: 'woodland', share: 0.1 },
-      { biome: 'land', share: 0.6 },
+      { biome: 'desert', share: 0.07, keepsAwayFrom: ['sea'] },
+      { biome: 'land', share: 0.53 },
     ],
     featureShares: [
       { feature: 'fertile', share: 0.1 },
       { feature: 'wildlife', share: 0.1 },
       { feature: 'flint', share: 0.1 },
+      { feature: 'oasis', share: 0.1 },
     ],
     camps: 6,
     campFromCentre: 7,
@@ -52,5 +55,28 @@ export const STONE: Slice = {
     regions: REGIONS,
     achievements: {},
   },
-  brings: {},
+  brings: {
+    terrains: {
+      desert: {
+        yields: {},
+        movementCost: MOVE_POINT,
+        water: false,
+        elevation: 0,
+        river: { food: 1 },
+      },
+    },
+    features: {
+      oasis: { terrain: 'desert', yields: { food: 1 } },
+    },
+    biomes: {
+      desert: {
+        origin: 'desert',
+        interior: { desert: 0.9, hills: 0.1 },
+        rim: { desert: 0.9, hills: 0.1 },
+        rimWidths: [1],
+        growth: { kind: 'weight', weight: 1 },
+        compactness: 1,
+      },
+    },
+  },
 };

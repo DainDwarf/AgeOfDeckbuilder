@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { CATALOGUE } from '../content/catalogue';
 import { agesReached, type CampaignCivilization } from '../rules/campaign';
-import { achievementOf, ageOf, type Catalogue } from '../rules/catalogue';
+import { achievementOf, type Catalogue } from '../rules/catalogue';
 import { biomeKind } from '../rules/map-kinds';
 import { type Chronicle, onSettlePhase } from '../rules/state';
 import { standBrowse } from './browse';
@@ -22,7 +22,7 @@ import {
   onClick,
   UI_FONT,
 } from './design-space';
-import { openingChoices, ringOf, withAge } from './launch-layout';
+import { clustersOf, openingChoices, withAge } from './launch-layout';
 import { css, LOOK } from './look';
 import { groundColourOf, terrainColourOf } from './marks';
 import { backRaisesMenu, resetMenu } from './menu-scene';
@@ -171,10 +171,10 @@ function arrowOf(
 function regionsOf({ scene, catalogue }: Laying, age: string, region: string): Option[] {
   const touching = Math.sqrt(3) * HEX_RADIUS;
   const colourOf = (biome: string): number => terrainColourOf(biomeKind(catalogue, biome).origin);
-  return Object.entries(ageOf(catalogue, age).regions).map(([id, held], at): Option => {
+  return clustersOf(catalogue, age).map(({ region: id, biomes }, at): Option => {
     const selected = id === region;
     const x = CLUSTER_FIRST + at * CLUSTER_APART;
-    const hexagons = [held.centreBiome, ...ringOf(held)].map((biome, place) => {
+    const hexagons = biomes.map((biome, place) => {
       const angle = (Math.PI / 3) * (place - 1);
       const away = place === 0 ? 0 : touching;
       return pressedOnShape(

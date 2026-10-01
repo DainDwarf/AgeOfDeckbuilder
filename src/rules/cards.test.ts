@@ -1333,6 +1333,21 @@ test('the forage card names the first of its three reasons: worker, action, then
   expect(refusedFor(beyond, 'PH_Forage', out, FORAGING)).toBeUndefined();
 });
 
+test('the forage card played on a tile that gives nothing spends the worker’s action and gains nothing', () => {
+  const out = { q: 2, r: 0 };
+  const barren = catalogued({
+    ...FORAGING,
+    terrains: { ...FORAGING.terrains, hills: { ...FORAGING.terrains.hills, yields: {} } },
+  });
+  const city = workedTile(out, 'hills', { hand: ['PH_Forage'] }, barren);
+
+  const after = outcome(apply(barren, city, aimedAt(out)));
+
+  expect(idsOf(after.discardPile)).toEqual(['PH_Forage']);
+  expect(actionOf(after, 1)).toBe(actionOf(city, 1) - 1);
+  expect(after.resources).toEqual(city.resources);
+});
+
 test('the mine card names the first of its four reasons: worker, action, terrain, then improvement', () => {
   const at = { q: 1, r: 0 };
   const plain = ringed(2, { hand: ['PH_Road'], resources: production(2) });

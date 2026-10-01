@@ -14,5 +14,3 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 - **The balance pass** — the Stone Age's numbers, measured through the simulator and felt in play.
 
 ## Lines
-
-- **The desert** — the Stone Age's temperate region deals one desert biome among its lands, rolled rounder than the land and kept away from the seas; the desert terrain and the oasis stand in the catalogue with their names, their colours and the oasis's mark, the city and the camp standing on desert and the Shelter not; a region's cluster on the launch screen is drawn from the first age that holds a region of its name, so the screen draws what it draws today, and one test on the fixture holds that rule; one test on the fixture holds that a card gaining its worker's tile's yield gains nothing on a tile that gives nothing and still spends the action; the catalogue's coherence test passes, `docs/ages/STONE.md` says the land and `docs/META-SCREENS.md` the cluster. Doc-impact: `docs/ages/STONE.md`, `docs/META-SCREENS.md`. [board/the-desert.md](board/the-desert.md)

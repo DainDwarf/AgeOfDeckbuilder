@@ -21,7 +21,7 @@ import { seedRng } from '../rules/rng';
 import { writeSave } from '../rules/save';
 import { answerCost, timelineOf } from '../rules/schedule';
 import type { Chronicle } from '../rules/state';
-import { ringOf } from '../ui/launch-layout';
+import { clustersOf } from '../ui/launch-layout';
 import { campLore, capstoneLore, eventLore } from '../ui/lore';
 import {
   buildingColourOf,
@@ -300,9 +300,9 @@ test('every age of the catalogue has a name and a ground colour on the screen, e
 
 test('every region of every age has a name on the screen, and a colour for its middle hexagon and each around it', () => {
   for (const age of AGES) {
-    for (const [id, region] of Object.entries(ageOf(CATALOGUE, age).regions)) {
-      expect(() => regionName(id)).not.toThrow();
-      for (const biome of [region.centreBiome, ...ringOf(region)]) {
+    for (const { region, biomes } of clustersOf(CATALOGUE, age)) {
+      expect(() => regionName(region)).not.toThrow();
+      for (const biome of biomes) {
         expect(() => terrainColourOf(biomeKind(CATALOGUE, biome).origin)).not.toThrow();
       }
     }
