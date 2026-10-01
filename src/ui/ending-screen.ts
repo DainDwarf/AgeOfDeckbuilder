@@ -154,7 +154,7 @@ function drawEnding(
 
 /**
  * The ledger of what the chronicle paid, from `top` down: a row per achievement reached, the
- * influence it paid at its end where it paid any, then the influence paid in all, under a rule where
+ * influence it paid at the row's end where it paid any, then the influence paid in all, under a rule where
  * a row stands over it.
  */
 function ledgerOf(
