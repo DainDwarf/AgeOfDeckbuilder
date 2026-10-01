@@ -52,9 +52,9 @@ function buttonOf(
   }, screen);
 }
 
-const ACCENT = { sunk: false, fill: LOOK.accent, pressable: true };
+const AS_BUTTON = { sunk: false, fill: LOOK.button, pressable: true };
 
-test('the bare address with no save boots the campaign screen, Campaign sunk, Chronicle in the accent, and the bar reading a new campaign’s influence', async ({
+test('the bare address with no save boots the campaign screen, Campaign sunk, Chronicle standing as a button, and the bar reading a new campaign’s influence', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -65,7 +65,7 @@ test('the bare address with no save boots the campaign screen, Campaign sunk, Ch
 
   expect(await page.evaluate(() => window.game?.scene.isActive('ui'))).toBe(false);
   expect(await buttonOf(page, 'campaign')).toEqual({ sunk: true });
-  expect(await buttonOf(page, 'launch')).toEqual(ACCENT);
+  expect(await buttonOf(page, 'launch')).toEqual(AS_BUTTON);
   expect(await influenceReads(page)).toBe(String(freshCampaign(CATALOGUE).influence));
 
   expect(problems).toEqual([]);
@@ -108,7 +108,7 @@ test('Chronicle opens the launch screen, Chronicle sunk there, the back key rais
   await chronicleButton(page);
 
   expect(await buttonOf(page, 'launch')).toEqual({ sunk: true });
-  expect(await buttonOf(page, 'campaign')).toEqual(ACCENT);
+  expect(await buttonOf(page, 'campaign')).toEqual(AS_BUTTON);
   expect(await influenceReads(page)).toBe(String(freshCampaign(CATALOGUE).influence));
 
   await page.keyboard.press('Escape');

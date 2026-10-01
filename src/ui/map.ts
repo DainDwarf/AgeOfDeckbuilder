@@ -57,7 +57,7 @@ import { VEILS_ON, type Veils } from './veils';
 
 const TILE_SIZE = 24;
 
-const FACTION_COLOURS: Record<Faction, number> = { player: LOOK.accent, enemy: LOOK.enemyRed };
+const FACTION_COLOURS: Record<Faction, number> = { player: LOOK.civilization, enemy: LOOK.enemy };
 
 /**
  * Placeholder primitives until the art pass: a river a line along its corners on the map, and a
@@ -90,7 +90,7 @@ const THRESHOLD_STYLE = {
   fontFamily: UI_FONT,
   fontSize: '12px',
   fontStyle: 'bold',
-  color: css(LOOK.lit),
+  color: css(LOOK.thresholdInk),
   stroke: css(LOOK.mapOutline),
   strokeThickness: 2.5,
 };
@@ -304,10 +304,7 @@ function yieldMark(scene: Phaser.Scene, resource: Resource): Phaser.GameObjects.
   return diamond(scene, GLYPH, LOOK.reading[resource]).setName(`yield-${resource}`);
 }
 
-/**
- * The one way a tile is ringed: a hexagon just inside its face, in the colour of whoever rings it —
- * the accent on every tile the city holds, culture's own on every tile it may claim.
- */
+/** The one way a tile is ringed: a hexagon just inside its face, in the colour given. */
 function ringMark(
   scene: Phaser.Scene,
   coord: TileCoords,
@@ -1123,7 +1120,7 @@ export function createMapView(
     const { city } = shown;
     for (const coord of shown.held) {
       const weight = city !== undefined && same(coord, city) ? CITY_RING : RING;
-      rings.add(ringMark(scene, coord, LOOK.accent, weight));
+      rings.add(ringMark(scene, coord, LOOK.civilization, weight));
     }
   };
 
@@ -1677,7 +1674,7 @@ export function createMapView(
       if (tile !== undefined) {
         const { x, y } = positionOf(tile);
         selected.add(
-          scene.add.polygon(x, y, hexagon(TILE_SIZE - 2), 0, 0).setStrokeStyle(4, LOOK.lit),
+          scene.add.polygon(x, y, hexagon(TILE_SIZE - 2), 0, 0).setStrokeStyle(4, LOOK.selected),
         );
       }
       paintThreshold();

@@ -14,6 +14,7 @@ import {
   openLaunch,
   placeOf,
   rested,
+  ringed,
   standing,
   textOf,
   titleOf,
@@ -44,8 +45,11 @@ function firstNamed(page: Page): Promise<Reference | undefined> {
   }, CITY_CARD);
 }
 
-function chosen(page: Page): Promise<boolean> {
-  return page.evaluate((target) => window.named?.(target)?.object.getData('chosen') === true, PILE);
+function pileSelected(page: Page): Promise<boolean> {
+  return page.evaluate(
+    (target) => window.named?.(target)?.object.getData('selected') === true,
+    PILE,
+  );
 }
 
 test('on the launch screen the kind label on the civilization’s pile raises what the kind is; a right click on the pile raises its browse, the civilization’s name and count over a stack per card it holds, the city section’s card first, each reading its copies; a right click on a stack shows its card large, the back key takes it down onto the browse, then closes the browse and raises no menu; a right click on a name on the pile shows the named thing large and raises no browse', async ({
@@ -109,7 +113,7 @@ test('on the launch screen the kind label on the civilization’s pile raises wh
   expect(problems).toEqual([]);
 });
 
-test('on the launch screen the pointer resting on a name on the city card raises the named thing small, and a left click there leaves the civilization chosen and takes the small card down', async ({
+test('on the launch screen the pointer resting on a name on the city card raises the named thing small, and a left click there leaves the civilization selected, its card ringed, and takes the small card down', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -123,7 +127,8 @@ test('on the launch screen the pointer resting on a name on the city card raises
 
   await page.mouse.click(name.x, name.y);
   await rested(page);
-  expect(await chosen(page)).toBe(true);
+  expect(await pileSelected(page)).toBe(true);
+  expect(await ringed(page, CITY_CARD)).toBe(true);
   expect(await standing(page, 'small-card-0')).toBe(false);
   expect(await standing(page, 'inspection')).toBe(false);
 

@@ -68,11 +68,11 @@ const LINE_STYLE = { fontFamily: UI_FONT, fontSize: '16px', fontStyle: 'bold', c
 
 type Row = 'age' | 'region' | 'civilization';
 
-/** A choice's drawing, the parts of it a press lands on, and how a press on it chooses. */
-type Choice = {
+/** An option's drawing, the parts of it a press lands on, and how a press on it selects. */
+type Option = {
   readonly row: Row;
   readonly option: string;
-  readonly chosen: boolean;
+  readonly selected: boolean;
   readonly parts: readonly Phaser.GameObjects.GameObject[];
   readonly hits: readonly Phaser.GameObjects.GameObject[];
 };
@@ -117,15 +117,15 @@ function arrowOf(
   { scene, catalogue }: Laying,
   reached: readonly string[],
   age: string,
-): { choices: Choice[]; unknownAges: Phaser.GameObjects.Container[] } {
+): { options: Option[]; unknownAges: Phaser.GameObjects.Container[] } {
   const ages = Object.keys(catalogue.ages);
   const each = (RIGHT - LEFT - NOTCH) / ages.length;
-  const choices: Choice[] = [];
+  const options: Option[] = [];
   const unknownAges: Phaser.GameObjects.Container[] = [];
   for (const [at, id] of ages.entries()) {
     const known = reached.includes(id);
-    const chosen = id === age;
-    const grow = chosen ? ARROW_GROWTH : 0;
+    const selected = id === age;
+    const grow = selected ? ARROW_GROWTH : 0;
     const from = LEFT + at * each;
     const to = from + each;
     const top = ARROW_TOP - grow;
@@ -150,29 +150,29 @@ function arrowOf(
         scene.add
           .container(0, 0, [segment, label])
           .setName(`launch-age-${id}`)
-          .setData('chosen', false),
+          .setData('selected', false),
       );
       continue;
     }
-    segment.setStrokeStyle(EDGE, chosen ? LOOK.chosenEdge : LOOK.arrowEdge);
+    segment.setStrokeStyle(EDGE, selected ? LOOK.selected : LOOK.arrowEdge);
     const name = addText(scene, x, middle, ageName(id), PALE_STYLE).setOrigin(0.5);
-    choices.push({
+    options.push({
       row: 'age',
       option: id,
-      chosen,
+      selected,
       parts: [segment, name],
       hits: [pressedOnShape(segment)],
     });
   }
-  return { choices, unknownAges };
+  return { options, unknownAges };
 }
 
-/** The chosen age's regions in a row, each a cluster of seven hexagons over its name. */
-function regionsOf({ scene, catalogue }: Laying, age: string, region: string): Choice[] {
+/** The selected age's regions in a row, each a cluster of seven hexagons over its name. */
+function regionsOf({ scene, catalogue }: Laying, age: string, region: string): Option[] {
   const touching = Math.sqrt(3) * HEX_RADIUS;
   const colourOf = (biome: string): number => terrainColourOf(biomeKind(catalogue, biome).origin);
-  return Object.entries(ageOf(catalogue, age).regions).map(([id, held], at): Choice => {
-    const chosen = id === region;
+  return Object.entries(ageOf(catalogue, age).regions).map(([id, held], at): Option => {
+    const selected = id === region;
     const x = CLUSTER_FIRST + at * CLUSTER_APART;
     const hexagons = [held.centreBiome, ...ringOf(held)].map((biome, place) => {
       const angle = (Math.PI / 3) * (place - 1);
@@ -185,16 +185,22 @@ function regionsOf({ scene, catalogue }: Laying, age: string, region: string): C
             hexagon(HEX_RADIUS),
             colourOf(biome),
           )
-          .setStrokeStyle(chosen ? EDGE : 1, chosen ? LOOK.chosenEdge : LOOK.regionEdge),
+          .setStrokeStyle(selected ? EDGE : 1, selected ? LOOK.selected : LOOK.regionEdge),
       );
     });
     const cluster = scene.add
       .container(x, CLUSTER_Y, hexagons)
-      .setScale(chosen ? CLUSTER_GROWTH : 1);
+      .setScale(selected ? CLUSTER_GROWTH : 1);
     const name = addText(scene, x, REGION_NAME_Y, regionName(id), PALE_STYLE)
       .setOrigin(0.5)
       .setInteractive();
-    return { row: 'region', option: id, chosen, parts: [cluster, name], hits: [...hexagons, name] };
+    return {
+      row: 'region',
+      option: id,
+      selected,
+      parts: [cluster, name],
+      hits: [...hexagons, name],
+    };
   });
 }
 
@@ -204,21 +210,27 @@ function pilesOf(
   civilizations: Readonly<Record<string, CampaignCivilization>>,
   civilization: string,
   browse: (civilization: string) => void,
-): Choice[] {
+): Option[] {
   const { scene, inspecting } = laying;
-  return Object.entries(civilizations).map(([id, owned], at): Choice => {
-    const chosen = id === civilization;
+  return Object.entries(civilizations).map(([id, owned], at): Option => {
+    const selected = id === civilization;
     const pile = createPile(
       laying,
       owned,
-      { left: PILE_FIRST + at * PILE_APART, top: PILE_TOP, chosen },
+      { left: PILE_FIRST + at * PILE_APART, top: PILE_TOP, selected },
       `launch-civilization-${id}`,
       () => {
         browse(id);
       },
     );
     const zone = inspectedThrough(scene, pile.box, pile.answers, inspecting.on);
-    return { row: 'civilization', option: id, chosen, parts: [...pile.parts, zone], hits: [zone] };
+    return {
+      row: 'civilization',
+      option: id,
+      selected,
+      parts: [...pile.parts, zone],
+      hits: [zone],
+    };
   });
 }
 
@@ -265,7 +277,7 @@ export class LaunchScreen extends Phaser.Scene {
       veiled: undefined,
     });
 
-    const choose = (row: Row, option: string): void => {
+    const select = (row: Row, option: string): void => {
       switch (row) {
         case 'age':
           chosen = withAge(CATALOGUE, chosen, option);
@@ -287,19 +299,19 @@ export class LaunchScreen extends Phaser.Scene {
     const drawn = ({
       row,
       option,
-      chosen: held,
+      selected,
       parts,
       hits,
-    }: Choice): Phaser.GameObjects.Container => {
+    }: Option): Phaser.GameObjects.Container => {
       for (const hit of hits) {
         answersPress(hit);
-        onClick(hit, () => choose(row, option));
+        onClick(hit, () => select(row, option));
       }
       return this.add
         .container(0, 0, [...parts])
         .setName(`launch-${row}-${option}`)
-        .setData('chosen', held)
-        .setAlpha(held ? 1 : LOOK.unchosen);
+        .setData('selected', selected)
+        .setAlpha(selected ? 1 : LOOK.unselected);
     };
 
     const word = (key: TextKey, y: number): Phaser.GameObjects.Text =>
@@ -312,14 +324,14 @@ export class LaunchScreen extends Phaser.Scene {
       content.add(root);
 
       const arrow = arrowOf(laying, reached, chosen.age);
-      const lastChosen = (choices: Choice[]): Choice[] => [
-        ...choices.filter(({ chosen: held }) => !held),
-        ...choices.filter(({ chosen: held }) => held),
+      const lastSelected = (options: Option[]): Option[] => [
+        ...options.filter(({ selected }) => !selected),
+        ...options.filter(({ selected }) => selected),
       ];
       root.add([
         word('launch.age', 84),
         ...arrow.unknownAges,
-        ...lastChosen(arrow.choices).map(drawn),
+        ...lastSelected(arrow.options).map(drawn),
         word('launch.region', 222),
         ...regionsOf(laying, chosen.age, chosen.region).map(drawn),
         word('launch.civilization', 450),
@@ -346,7 +358,7 @@ function buttonsOf(
   const middle = RIGHT - BUTTON_WIDTH / 2;
   const launchY = LAUNCH_BOTTOM - BUTTON_HEIGHT / 2;
   const launch = scene.add
-    .rectangle(middle, launchY, BUTTON_WIDTH, BUTTON_HEIGHT, LOOK.accent)
+    .rectangle(middle, launchY, BUTTON_WIDTH, BUTTON_HEIGHT, LOOK.button)
     .setName('launch-button')
     .setInteractive();
   answersPress(launch);
@@ -379,7 +391,7 @@ function buttonsOf(
       top + height / 2,
       BUTTON_WIDTH,
       height,
-      saved === undefined ? LOOK.greyedFill : LOOK.accent,
+      saved === undefined ? LOOK.greyedFill : LOOK.button,
     )
     .setName('launch-continue');
   if (saved !== undefined) {

@@ -20,7 +20,7 @@ const STYLE = {
   fontFamily: UI_FONT,
   fontSize: '14px',
   fontStyle: 'bold',
-  color: css(LOOK.accent),
+  color: css(LOOK.selected),
 };
 
 export type AimLine = {

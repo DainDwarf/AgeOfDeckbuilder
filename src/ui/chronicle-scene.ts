@@ -467,7 +467,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
     });
     const cityStanding = createStanding(this, ui.standing, {
       name: 'city',
-      colour: LOOK.accent,
+      colour: LOOK.cityMode,
       label: text('button.city-mode'),
       leave: () => {
         leaveCityMode();
@@ -611,7 +611,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
   }
 
   private addEndTurn(on: Stratum, endTurn: () => void): Part & { live(on: boolean): void } {
-    const button = answersPress(this.add.rectangle(0, 0, 1, 1, LOOK.accent).setName('end-turn'));
+    const button = answersPress(this.add.rectangle(0, 0, 1, 1, LOOK.button).setName('end-turn'));
     const label = addText(this, 0, 0, '', LABEL_STYLE)
       .setOrigin(0.5, 0.5)
       .setName('end-turn-label');
@@ -639,7 +639,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
     let turn = 1;
     let settlePhase = false;
     const paint = (): void => {
-      button.setFillStyle(settlePhase ? LOOK.settlePhase : LOOK.accent);
+      button.setFillStyle(settlePhase ? LOOK.settlePhase : LOOK.button);
       if (settlePhase) {
         label.setText(text(hover.hovered ? 'button.end-settle-phase' : 'button.settle-phase'));
         return;

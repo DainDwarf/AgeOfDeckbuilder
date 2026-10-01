@@ -95,7 +95,7 @@ test('a chronicle opens on the settle phase with the city standing nowhere, and 
   expect(ticked).toEqual(outcome(apply(CATALOGUE, settled, { type: 'end-turn' })));
   expect(ticked.turn).toBe(1);
   expect(await standing(page, 'capstone')).toBe(false);
-  expect(await endTurnFill(page)).toBe(LOOK.accent);
+  expect(await endTurnFill(page)).toBe(LOOK.button);
   expect(await shows(page, 'settle-phase-frame')).toBe(false);
   expect(await shows(page, 'settle-phase-chip')).toBe(false);
   expect(ticked.hand).toHaveLength(5);

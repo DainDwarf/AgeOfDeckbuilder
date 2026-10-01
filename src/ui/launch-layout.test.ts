@@ -49,14 +49,14 @@ test('the launch screen opens on the furthest age the campaign has reached, and 
   });
 });
 
-test('choosing another age keeps the region where that age holds one of its name', () => {
+test('selecting another age keeps the region where that age holds one of its name', () => {
   const choices = { age: AGE, region: CLEARING, civilization: CIVILIZATION_ID };
 
   expect(firstRegion(CATALOGUE, QUIET)).not.toBe(CLEARING);
   expect(withAge(CATALOGUE, choices, QUIET)).toEqual({ ...choices, age: QUIET });
 });
 
-test('choosing another age takes its first region where it holds none of the chosen one’s name', () => {
+test('selecting another age takes its first region where it holds none of the selected one’s name', () => {
   const [first, second] = SLICES;
   const glen = merged('fixture', [
     first,

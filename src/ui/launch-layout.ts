@@ -22,7 +22,7 @@ export function openingChoices(catalogue: Catalogue, campaign: Campaign): Choice
 }
 
 /**
- * The choices with another age chosen: the region kept where that age holds one of its name, and
+ * The choices with another age selected: the region kept where that age holds one of its name, and
  * the age's first region where it does not.
  */
 export function withAge(catalogue: Catalogue, choices: Choices, age: string): Choices {

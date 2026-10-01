@@ -14,7 +14,7 @@ const UNIT_MARKS: Readonly<Record<string, number[]>> = {
   scout: [0, -14, 11, 12, 0, 5, -11, 12],
 };
 
-/** The wall the city is drawn as, and the camp with it: a camp is the city's mark in enemy red. */
+/** The wall the city is drawn as, and the camp with it. */
 const WALL: number[] = [
   -15, 10, -15, -12, -8, -12, -8, -6, -4, -6, -4, -12, 4, -12, 4, -6, 8, -6, 8, -12, 15, -12, 15,
   10,

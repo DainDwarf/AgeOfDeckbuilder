@@ -54,10 +54,10 @@ async function launchedFromScreen(page: Page): Promise<void> {
   await expect.poll(() => counted(page, 'hand-0')).toBe(1);
 }
 
-/** Whether the launch screen's face for that option of that row stands chosen. */
-function chosen(page: Page, row: string, option: string): Promise<boolean> {
+/** Whether the launch screen's face for that option of that row stands selected. */
+function optionSelected(page: Page, row: string, option: string): Promise<boolean> {
   return page.evaluate(
-    (name) => window.named?.(name)?.object.getData('chosen') === true,
+    (name) => window.named?.(name)?.object.getData('selected') === true,
     `launch-${row}-${option}`,
   );
 }
@@ -228,9 +228,9 @@ test('Campaign opens the campaign screen, Chronicle there the launch screen on t
   await expect.poll(() => standing(page, 'menu')).toBe(true);
   await campaignThenChronicle(page);
   expect(await standing(page, 'menu')).toBe(false);
-  expect(await chosen(page, 'age', firsts.age)).toBe(true);
-  expect(await chosen(page, 'region', firsts.region)).toBe(true);
-  expect(await chosen(page, 'civilization', firsts.civilization)).toBe(true);
+  expect(await optionSelected(page, 'age', firsts.age)).toBe(true);
+  expect(await optionSelected(page, 'region', firsts.region)).toBe(true);
+  expect(await optionSelected(page, 'civilization', firsts.civilization)).toBe(true);
 
   await launchedFromScreen(page);
 

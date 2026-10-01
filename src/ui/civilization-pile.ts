@@ -14,7 +14,6 @@ const PILE_BACKS = 3;
 const BACK_STEP = 5;
 const PILE_LIFT = 10;
 const COUNTS_GAP = 10;
-const EDGE = 2;
 
 /** How wide a pile stands, the steps of its backs included. */
 export const PILE_SPAN = PILE_WIDTH + PILE_BACKS * BACK_STEP;
@@ -38,38 +37,31 @@ export type Pile = {
 
 /**
  * A civilization's pile from the left and the top handed: card backs under its city section's card,
- * face up, raised in a pale edge where it is chosen, and under them its counts. A right click on it
- * runs `browse`, a name on its card excepted.
+ * face up, raised and its card selected where it is selected, and under them its counts. A right
+ * click on it runs `browse`, a name on its card excepted.
  */
 export function createPile(
   { scene, catalogue, inspecting }: Laying,
   owned: CampaignCivilization,
-  { left, top, chosen }: { left: number; top: number; chosen: boolean },
+  { left, top, selected }: { left: number; top: number; selected: boolean },
   name: string,
   browse: () => void,
 ): Pile {
-  const { height, radius } = metricsOf(PILE_WIDTH);
+  const { height } = metricsOf(PILE_WIDTH);
   const x = left + PILE_WIDTH / 2;
   const foot = top + height;
   const backs = Array.from({ length: PILE_BACKS }, (_, under) => {
     const step = (PILE_BACKS - under) * BACK_STEP;
     return createCardBack(scene, { width: PILE_WIDTH }).setPosition(x + step, foot + step);
   });
-  const lift = chosen ? PILE_LIFT : 0;
+  const lift = selected ? PILE_LIFT : 0;
   const shown = cardFaceAtStart(catalogue, owned.city.card.id);
   const card = createCardFace(scene, shown, NO_REFUSAL, { width: PILE_WIDTH });
+  card.select(selected);
   const face = card.root
     .setPosition(x, foot - lift)
     .setName(`${name}-card`)
     .setData('card', shown.id);
-  const edge = chosen
-    ? [
-        scene.add
-          .graphics({ x, y: foot - lift })
-          .lineStyle(EDGE, LOOK.chosenEdge)
-          .strokeRoundedRect(-PILE_WIDTH / 2, -height, PILE_WIDTH, height, radius),
-      ]
-    : [];
   const counts = addText(
     scene,
     x,
@@ -84,7 +76,7 @@ export function createPile(
     counts.getBounds(),
   );
   return {
-    parts: [...backs, face, ...edge, counts],
+    parts: [...backs, face, counts],
     box: bounds,
     answers: answersAround(card, shown, inspecting, browse),
     bottom: bounds.bottom,

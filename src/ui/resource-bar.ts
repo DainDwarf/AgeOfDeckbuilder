@@ -125,7 +125,7 @@ export function createResourceBar(
       const filled = waiting.has(entry.key);
       const down = filled || (entry.key !== 'idle' && latched.has(entry.key));
       entry.well.setVisible(down);
-      entry.floor.setFillStyle(filled ? LOOK.accent : LOOK.wellFill);
+      entry.floor.setFillStyle(filled ? LOOK.actWaiting : LOOK.wellFill);
       entry.face.setPosition(down ? SUNK : 0, down ? SUNK : 0);
       entry.word.setColor(down ? SUNK_WORD_INK : WORD_INK);
     }
@@ -381,7 +381,7 @@ function readingOf(chronicle: Chronicle, key: BarReading): { count: number; over
   }
 }
 
-/** The readings whose act in city mode is waiting on the player: what fills a well in the accent. */
+/** The readings whose act in city mode is waiting on the player. */
 function actsWaiting(catalogue: Catalogue, chronicle: Chronicle): ReadonlySet<BarReading> {
   const waiting = new Set<BarReading>();
   if (claimWaiting(catalogue, chronicle)) waiting.add('culture');

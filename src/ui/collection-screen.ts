@@ -211,7 +211,7 @@ function civilizationsOf(
   let foot = top;
   for (const [id, owned] of Object.entries(civilizations)) {
     const name = `collection-civilization-${id}`;
-    const pile = createPile(laying, owned, { left, top: pileTop, chosen: false }, name, () => {
+    const pile = createPile(laying, owned, { left, top: pileTop, selected: false }, name, () => {
       browse(id);
     });
     parts.push(scene.add.container(0, 0, [...pile.parts]).setName(name));

@@ -282,14 +282,19 @@ export function createCardFace(
   art.strokeRoundedRect(left + 0.5, artTop + 0.5, right - left - 1, artHeight - 1, 0.2 * em);
 
   const ring = scene.add.graphics().setName('ring').setVisible(false);
-  ring.lineStyle(RING_WEIGHT, LOOK.accent);
-  ring.strokeRoundedRect(
-    -width / 2 - RING_STANDOFF,
-    -height - RING_STANDOFF,
-    width + 2 * RING_STANDOFF,
-    height + 2 * RING_STANDOFF,
-    radius + RING_STANDOFF,
-  );
+  for (const [weight, colour] of [
+    [RING_WEIGHT + 2, LOOK.selectedEdge],
+    [RING_WEIGHT, LOOK.selected],
+  ] as const) {
+    ring.lineStyle(weight, colour);
+    ring.strokeRoundedRect(
+      -width / 2 - RING_STANDOFF,
+      -height - RING_STANDOFF,
+      width + 2 * RING_STANDOFF,
+      height + 2 * RING_STANDOFF,
+      radius + RING_STANDOFF,
+    );
+  }
 
   root.add([art, name, kind, rules, ...glyphs, ring, ...zones]);
 
@@ -310,9 +315,9 @@ export function createCardFace(
           0,
           -height - RING_STANDOFF - RING_WEIGHT / 2 - POINT_HEIGHT / 2,
           corners([-POINT_WIDTH / 2, POINT_HEIGHT, POINT_WIDTH / 2, POINT_HEIGHT, 0, 0]),
-          LOOK.accent,
+          LOOK.selected,
         )
-        .setStrokeStyle(1, LOOK.aimPointEdge)
+        .setStrokeStyle(1, LOOK.selectedEdge)
         .setName('aim-point');
       root.add(point);
     },
@@ -402,7 +407,7 @@ export function createCardBack(
 
   const emblem = scene.add
     .polygon(0, -height / 2, hexagon(width * 0.28 - 3), 0, 0)
-    .setStrokeStyle(3, tone(LOOK.accent));
+    .setStrokeStyle(3, tone(LOOK.civilization));
 
   return scene.add.container(0, 0, [paper, emblem]);
 }

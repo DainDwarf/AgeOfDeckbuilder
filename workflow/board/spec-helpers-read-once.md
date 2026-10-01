@@ -38,7 +38,7 @@ Corner cases, decided:
 - The small-card test's second `nearest` runs after a scroll and a pointer move: it is its own batch, never merged with the first.
 - `nearest` keeps its tie: the first face in the order handed.
 
-Out, each found and left standing: the per-object questions on small fixed sets in `e2e/camps.spec.ts`, `e2e/settle.spec.ts`, `e2e/broken-motion.spec.ts`, `e2e/ending.spec.ts`, `e2e/controls.spec.ts`, `e2e/deal.spec.ts` and `e2e/yields.spec.ts`; the open-ended line loops of `e2e/continue.spec.ts` and `e2e/tree.spec.ts`; `tileOnScreen`'s three questions, `glyphs`' one per resource and `pileTop`'s two; `spanOf` and the inline `standing` of `e2e/tree.spec.ts`, the inline bounds of `e2e/map.spec.ts` and of `e2e/console.spec.ts`; the helpers that read the texts inside a named container; `chosen` in `e2e/launch.spec.ts` and `e2e/menu.spec.ts`; `HAND` and `PILES` repeated across specs.
+Out, each found and left standing: the per-object questions on small fixed sets in `e2e/camps.spec.ts`, `e2e/settle.spec.ts`, `e2e/broken-motion.spec.ts`, `e2e/ending.spec.ts`, `e2e/controls.spec.ts`, `e2e/deal.spec.ts` and `e2e/yields.spec.ts`; the open-ended line loops of `e2e/continue.spec.ts` and `e2e/tree.spec.ts`; `tileOnScreen`'s three questions, `glyphs`' one per resource and `pileTop`'s two; `spanOf` and the inline `standing` of `e2e/tree.spec.ts`, the inline bounds of `e2e/map.spec.ts` and of `e2e/console.spec.ts`; the helpers that read the texts inside a named container; `pileSelected` in `e2e/launch.spec.ts` and `optionSelected` in `e2e/menu.spec.ts`; `HAND` and `PILES` repeated across specs.
 
 What the reconcile chose:
 
@@ -56,7 +56,6 @@ What the reconcile chose:
 - Not every named object carries every reading. A Layer mixes in neither a transform nor bounds (`node_modules/phaser/src/gameobjects/layer/Layer.js:83-92`) and several are named: the map's groups in `src/ui/map.ts`, the strata in `src/ui/overlay-scene.ts`. A Graphics carries a transform and no `getBounds` (`node_modules/phaser/src/gameobjects/graphics/Graphics.js:89-97`). Today `readings` calls `getWorldTransformMatrix` on whatever is named and is only ever handed containers and texts; once `standing`, `counted` and `textOf` go through the reader, every named object of every spec passes through it.
 - A reading that a single-name helper throws for throws when it is read off the batch, never while the page is asked: `readings` is handed names nothing stands under, on purpose, as `place` shows today.
 - `placeOf` answers in design units, `onScreen` on the page. They are two readings and stay two.
-- The line ahead on the board, the accent's split, edits `e2e/launch.spec.ts` and `e2e/campaign.spec.ts` for the data key `chosen` and a constant: this line touches neither.
 - `e2e/` docstrings say what a helper answers, in a line or two; none says why. A hook flags a comment block longer than three lines on an edit under `e2e/`.
 
 **Plan:**

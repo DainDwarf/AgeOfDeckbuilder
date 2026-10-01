@@ -185,7 +185,7 @@ export type Presses = {
   back(): void;
 };
 
-/** An accent face carrying a label: the one shape every button of a window is drawn as. */
+/** A face carrying a label: the one shape every button of a window is drawn as. */
 function pressable(
   scene: Phaser.Scene,
   at: { x: number; y: number; width: number; height: number },
@@ -194,7 +194,7 @@ function pressable(
   pressed: () => void,
 ): { face: Phaser.GameObjects.Rectangle; label: Phaser.GameObjects.Text } {
   const face = scene.add
-    .rectangle(at.x, at.y, at.width, at.height, LOOK.accent)
+    .rectangle(at.x, at.y, at.width, at.height, LOOK.button)
     .setName(name)
     .setInteractive();
   answersPress(face);

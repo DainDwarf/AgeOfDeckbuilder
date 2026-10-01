@@ -322,7 +322,7 @@ test('culture’s well fills while the city can pay for a tile it may claim, and
   const claimed = applied(paid, { type: 'claim', tile: near });
 
   await openSaved(page, paid);
-  await expect.poll(() => wellFill(page, 'culture')).toBe(LOOK.accent);
+  await expect.poll(() => wellFill(page, 'culture')).toBe(LOOK.actWaiting);
 
   await page.keyboard.press('c');
   await expect.poll(() => inCityMode(page)).toBe(true);
@@ -361,7 +361,7 @@ test('idle’s well fills while one population is idle over a tile the city hold
   await playedOut(page);
   await expect.poll(() => chronicleOf(page)).toEqual(unassigned);
   expect(await counted(page, 'assigned')).toBe(unassigned.assigned.length);
-  await expect.poll(() => wellFill(page, 'idle')).toBe(LOOK.accent);
+  await expect.poll(() => wellFill(page, 'idle')).toBe(LOOK.actWaiting);
 
   await page.mouse.click(city.x, city.y);
   await playedOut(page);

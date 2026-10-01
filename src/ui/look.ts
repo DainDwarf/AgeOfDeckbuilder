@@ -18,11 +18,19 @@ export type Paper = {
 };
 
 /** Which role paints a building's mark. */
-export type BuildingRole = 'built' | 'enemyRed';
+export type BuildingRole = 'built' | 'civilization' | 'enemy';
 
 /** Every colour of the screen, by the role it paints. */
 export type Look = {
-  readonly accent: number;
+  readonly button: number;
+  readonly cityMode: number;
+  readonly actWaiting: number;
+  readonly civilization: number;
+  readonly enemy: number;
+  readonly pileCount: number;
+  readonly selected: number;
+  readonly selectedEdge: number;
+  readonly thresholdInk: number;
   readonly settlePhase: number;
   readonly panelFill: number;
   readonly panelEdge: number;
@@ -35,7 +43,6 @@ export type Look = {
   readonly mapRim: number;
   readonly lit: number;
   readonly river: number;
-  readonly enemyRed: number;
   readonly built: number;
   readonly population: number;
   readonly wellFill: number;
@@ -45,10 +52,8 @@ export type Look = {
   readonly unknownInk: number;
   readonly greyedFill: number;
   readonly greyedInk: number;
-  /** The edge around the chosen one of a row of the launch screen. */
-  readonly chosenEdge: number;
-  /** The strength the others of that row rest at. */
-  readonly unchosen: number;
+  /** The strength an option of the launch screen rests at while another of its row is selected. */
+  readonly unselected: number;
   readonly arrowEdge: number;
   readonly regionEdge: number;
   readonly deckCounts: number;
@@ -63,7 +68,6 @@ export type Look = {
   readonly cardEdge: number;
   readonly cardBack: number;
   readonly aimSlab: number;
-  readonly aimPointEdge: number;
   readonly emptyEdge: number;
   readonly unaffordableMark: number;
   readonly affordableCard: Paper;
@@ -84,7 +88,15 @@ export type Look = {
 // Roles that agree on a value today are still separate entries: one theme decision recolours one
 // role, and a merge here would drag the others with it.
 export const LOOK: Look = {
-  accent: 0xd9a441,
+  button: 0xd9a441,
+  cityMode: 0xd9a441,
+  actWaiting: 0xd9a441,
+  civilization: 0xd9a441,
+  enemy: 0xb4453c,
+  pileCount: 0xd9a441,
+  selected: 0xf2f6ff,
+  selectedEdge: 0x0d1014,
+  thresholdInk: 0xf2f6ff,
   settlePhase: 0x9fbb3a,
   panelFill: 0xd4d7db,
   panelEdge: 0x6f757d,
@@ -98,7 +110,6 @@ export const LOOK: Look = {
   mapRim: 0x5c6068,
   lit: 0xf2f6ff,
   river: 0x62a9e0,
-  enemyRed: 0xb4453c,
   built: 0xcfc6b4,
   population: 0x6b6b7d,
   wellFill: 0xb4b9c0,
@@ -108,8 +119,7 @@ export const LOOK: Look = {
   unknownInk: 0x2a2e34,
   greyedFill: 0x5c6068,
   greyedInk: 0x2a2e34,
-  chosenEdge: 0xd4d7db,
-  unchosen: 0.5,
+  unselected: 0.5,
   arrowEdge: 0x0d1117,
   regionEdge: 0x0d1014,
   deckCounts: 0x9aa1a9,
@@ -120,7 +130,6 @@ export const LOOK: Look = {
   cardEdge: 0x6f757d,
   cardBack: 0x232833,
   aimSlab: 0x232833,
-  aimPointEdge: 0x0d1014,
   emptyEdge: 0x4a5058,
   unaffordableMark: 0xc0392b,
   affordableCard: { face: 0xd4d7db, art: 0xb6bbc2, artEdge: 0x9aa0a8, ink: 0x0d1014 },
@@ -152,8 +161,8 @@ export const LOOK: Look = {
     flint: 0x4b4f58,
   },
   building: {
-    city: 'built',
-    camp: 'enemyRed',
+    city: 'civilization',
+    camp: 'enemy',
     shelter: 'built',
   },
   ground: {

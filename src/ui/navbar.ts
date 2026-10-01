@@ -99,7 +99,7 @@ export function wearNavbar(scene: Phaser.Scene, standing: MetaScreen): Worn {
       placeWell(well, { x: MARGIN, y, width: BUTTON_WIDTH, height: BUTTON_HEIGHT });
     } else {
       const face = scene.add
-        .rectangle(middle, y + BUTTON_HEIGHT / 2, BUTTON_WIDTH, BUTTON_HEIGHT, LOOK.accent)
+        .rectangle(middle, y + BUTTON_HEIGHT / 2, BUTTON_WIDTH, BUTTON_HEIGHT, LOOK.button)
         .setName(`navbar-${screen}`)
         .setInteractive();
       answersPress(face);

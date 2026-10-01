@@ -325,7 +325,7 @@ function createPile(
       };
       count.setPosition(centre.x, centre.y);
       pill.clear();
-      pill.fillStyle(LOOK.accent);
+      pill.fillStyle(LOOK.pileCount);
       pill.fillRoundedRect(centre.x - width / 2, centre.y - height / 2, width, height, height / 2);
     },
     lift(): Phaser.GameObjects.Container | undefined {
