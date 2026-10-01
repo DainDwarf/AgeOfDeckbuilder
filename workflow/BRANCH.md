@@ -12,6 +12,5 @@ That design is the code's shape and states no fact of the game, so no line write
 
 ## The lines
 
-- **A scrim is one thing** — one function draws every scrim and wires its two clicks as the one step back its owner hands it, and the overlay, the browse, the cards shown large and the menu's two each own one built through it. Doc-impact: none. [board/a-scrim-is-one-thing.md](board/a-scrim-is-one-thing.md)
 - **One browser under both screens** — the chronicle's overlay is the meta's browser with its windows and its ending added: the kit both build today, the tooltip and its bubble, the small cards, the cards shown large and their taker, the carrier, the following of the pointer, the scrim and the gestures' door, is built once, and a browse is raised and taken down one way. Doc-impact: none. [board/one-browser-under-both-screens.md](board/one-browser-under-both-screens.md)
 - **The padding leaves** — the twenty placeholder cards, their text entries and every test that holds only on them leave the branch, the collection panel's wheel test among them, and the suite passes on the Nomadic content alone. Doc-impact: none. [board/the-padding-leaves.md](board/the-padding-leaves.md)

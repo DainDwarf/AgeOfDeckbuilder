@@ -12,6 +12,7 @@ import {
 } from './card-face';
 import {
   type Box,
+  createScrim,
   DESIGN_HEIGHT,
   DESIGN_WIDTH,
   onClick,
@@ -20,7 +21,6 @@ import {
 } from './design-space';
 import { type Face, namedCardFace } from './face';
 import { createThingCard, type Thing } from './infopanel';
-import { LOOK } from './look';
 import type { OverlayScene } from './overlay-scene';
 import { createSmallCards, raiserOf, type SmallCards } from './small-card';
 import { createTooltip } from './tooltip';
@@ -188,25 +188,20 @@ export function standLarge(
     takes: () => false,
   },
 ): StandingLarge {
-  const scrim = overlay.add
-    .rectangle(0, 0, DESIGN_WIDTH, DESIGN_HEIGHT, LOOK.scrim.colour, LOOK.scrim.strength)
-    .setOrigin(0, 0)
-    .setVisible(false)
+  const scrim = createScrim(overlay, () => takeDownNewest())
     // Over the window beneath, whose pieces join this stratum later (docs/PHASER.md, Scenes and stacking).
     .setDepth(1);
   overlay.strata.scrim.layer.add(scrim);
   const stack = createStack(overlay, catalogue, beneath.kinds);
 
   const lower = (): void => {
-    scrim.setVisible(false).disableInteractive();
+    scrim.setVisible(false);
     if (!beneath.standing) covering(false);
   };
 
   const takeDownNewest = (): void => {
     if (!stack.takeDownNewest()) lower();
   };
-  onClick(scrim, takeDownNewest);
-  onClick(scrim, takeDownNewest, 'right');
 
   overlay.takes((press) => {
     if (!stack.standing) return beneath.standing && beneath.takes(press);
@@ -216,7 +211,7 @@ export function standLarge(
 
   const stand = (): void => {
     if (stack.standing) return;
-    scrim.setVisible(true).setInteractive();
+    scrim.setVisible(true);
     covering(true);
   };
 

@@ -1,15 +1,7 @@
 import Phaser from 'phaser';
 import { type Bind, boundTo, keyPressed } from './bindings';
-import {
-  DESIGN_HEIGHT,
-  DESIGN_WIDTH,
-  holdDesignSpace,
-  onClick,
-  stopsThePointer,
-  whileUp,
-} from './design-space';
+import { createScrim, holdDesignSpace, stopsThePointer, whileUp } from './design-space';
 import { readsKeys, takesMouseKeys } from './keys';
-import { LOOK } from './look';
 import {
   behind,
   createMenuButton,
@@ -61,9 +53,9 @@ export class MenuScene extends Phaser.Scene implements CoversOverlay {
     createMenuButton(this, () => this.raise());
 
     // Added after the button, which they therefore cover: a press there is a press on a scrim.
-    const scrim = createScrim(this);
+    const scrim = createScrim(this, () => back());
     // Its depth and its window's keep them over a window of the menu raised after them.
-    const refusedSaveScrim = createScrim(this).setDepth(1);
+    const refusedSaveScrim = createScrim(this, () => takeDownRefusedSave()).setDepth(1);
 
     /** The window standing, and nothing while the scrim is down. */
     let standing: Standing | undefined;
@@ -207,10 +199,6 @@ export class MenuScene extends Phaser.Scene implements CoversOverlay {
       if (boundTo(press, 'back')) back();
     };
 
-    onClick(scrim, back);
-    onClick(scrim, back, 'right');
-    onClick(refusedSaveScrim, takeDownRefusedSave);
-    onClick(refusedSaveScrim, takeDownRefusedSave, 'right');
     // The Menu button answers no wheel, and the chronicle screen zooms under it.
     stopsThePointer(
       this,
@@ -233,15 +221,6 @@ export class MenuScene extends Phaser.Scene implements CoversOverlay {
     this.close = close;
     this.covered = () => covered;
   }
-}
-
-/** A scrim over the whole design space, down until a window rises on it. */
-function createScrim(scene: Phaser.Scene): Phaser.GameObjects.Rectangle {
-  return scene.add
-    .rectangle(0, 0, DESIGN_WIDTH, DESIGN_HEIGHT, LOOK.scrim.colour, LOOK.scrim.strength)
-    .setOrigin(0, 0)
-    .setVisible(false)
-    .setInteractive();
 }
 
 /** The save file's name, dated the player's own day. */

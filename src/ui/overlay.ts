@@ -21,11 +21,11 @@ import { EASE, ended, stopMotion } from './card-motion';
 import { pileStacksOf } from './collection-layout';
 import {
   addText,
+  createScrim,
   DESIGN_HEIGHT,
   DESIGN_WIDTH,
   headingOf,
   MARGIN,
-  onClick,
   TITLE_INK,
   UI_FONT,
 } from './design-space';
@@ -176,10 +176,7 @@ export function createOverlay(
   leave: () => void,
 ): Overlay {
   const on = scene.strata.scrim;
-  const scrim = scene.add
-    .rectangle(0, 0, DESIGN_WIDTH, DESIGN_HEIGHT, LOOK.scrim.colour, LOOK.scrim.strength)
-    .setOrigin(0, 0)
-    .setVisible(false);
+  const scrim = createScrim(scene, () => back());
   on.layer.add(scrim);
   const note = createRefusalNote(scene, scene.strata.note);
   const tooltip = createTooltip(scene, scene.strata.tooltip);
@@ -248,7 +245,7 @@ export function createOverlay(
   const close = (): void => {
     wipe();
     carried = undefined;
-    scrim.setVisible(false).disableInteractive();
+    scrim.setVisible(false);
     covering(false);
   };
 
@@ -263,7 +260,7 @@ export function createOverlay(
   // The ending's rise brings the scrim up from nothing, so every cover states the alpha it wants.
   const cover = (): void => {
     stopMotion(scene, scrim);
-    scrim.setVisible(true).setAlpha(LOOK.scrim.strength).setInteractive();
+    scrim.setVisible(true).setAlpha(LOOK.scrim.strength);
     covering(true);
   };
 
@@ -675,9 +672,6 @@ export function createOverlay(
         return undefined;
     }
   };
-
-  onClick(scrim, back);
-  onClick(scrim, back, 'right');
 
   /**
    * Every press the scrim holds while anything stands on it and no card stands large over it: the

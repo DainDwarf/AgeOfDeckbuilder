@@ -370,6 +370,22 @@ export function onClick(
   });
 }
 
+/**
+ * A scrim over the whole design space, down until it is shown, and a click of either button on it the
+ * one step back its owner hands. It goes up and down by its visibility alone: a hidden object is no
+ * hit (docs/PHASER.md).
+ */
+export function createScrim(scene: Phaser.Scene, back: () => void): Phaser.GameObjects.Rectangle {
+  const scrim = scene.add
+    .rectangle(0, 0, DESIGN_WIDTH, DESIGN_HEIGHT, LOOK.scrim.colour, LOOK.scrim.strength)
+    .setOrigin(0, 0)
+    .setVisible(false)
+    .setInteractive();
+  onClick(scrim, back);
+  onClick(scrim, back, 'right');
+  return scrim;
+}
+
 /** A scrim risen over a scene, said of its input plugin; nothing inside Phaser listens to it. */
 export const COVERED = 'covered';
 

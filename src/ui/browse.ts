@@ -9,11 +9,11 @@ import { cityEdgeOf } from './deck-panel';
 import {
   addText,
   type Box,
+  createScrim,
   DESIGN_HEIGHT,
   DESIGN_WIDTH,
   headingOf,
   MARGIN,
-  onClick,
   ownBoxOf,
   UI_FONT,
 } from './design-space';
@@ -202,18 +202,19 @@ export function standBrowse(
   covering: (covered: boolean) => void,
 ): Browsing {
   const on = overlay.strata.scrim;
+  const scrim = createScrim(overlay, () => close());
+  on.layer.add(scrim);
   const tooltip = createTooltip(overlay, overlay.strata.tooltip);
   const kinds = createKindBubble(tooltip);
-  let standing:
-    | { readonly parts: readonly Phaser.GameObjects.GameObject[]; readonly panel: Panel }
-    | undefined;
+  let standing: { readonly title: Phaser.GameObjects.Text; readonly panel: Panel } | undefined;
 
   const close = (): void => {
     if (standing === undefined) return;
     small.down();
     standing.panel.down();
-    for (const part of standing.parts) part.destroy();
+    standing.title.destroy();
     standing = undefined;
+    scrim.setVisible(false);
     covering(false);
   };
 
@@ -251,13 +252,7 @@ export function standBrowse(
     large,
     open(campaign, civilization) {
       const { count, stacks } = browseOf(catalogue, campaign, civilization, cardName);
-      const scrim = overlay.add
-        .rectangle(0, 0, DESIGN_WIDTH, DESIGN_HEIGHT, LOOK.scrim.colour, LOOK.scrim.strength)
-        .setOrigin(0, 0)
-        .setInteractive();
-      onClick(scrim, close);
-      onClick(scrim, close, 'right');
-      on.layer.add(scrim);
+      scrim.setVisible(true);
       const { title, panel } = layBrowse(
         overlay,
         {
@@ -275,7 +270,7 @@ export function standBrowse(
         inspecting,
         { beside: close, follow, carrier },
       );
-      standing = { parts: [scrim, title], panel };
+      standing = { title, panel };
       covering(true);
     },
   };
