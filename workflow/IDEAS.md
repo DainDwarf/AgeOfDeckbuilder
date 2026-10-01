@@ -4,7 +4,7 @@ The unordered pool of features that may or may not happen. Nothing here is promi
 
 ## Harness
 
-- **Content-stage board**: when content exists, track each piece through Design (number-less) → Implement (provisional numbers) → Balance (measured + feel) → Polish (text, art, lore), one stage per session batched across pieces. Worked well before.
+- **Content-stage board** (to try at the Stone Age rung): when content exists, track each piece through Design (number-less) → Implement (provisional numbers) → Balance (measured + feel) → Polish (text, art, lore), one stage per session batched across pieces. Worked well before.
 - **Pure UI modules apart from Phaser's** (v0.0.6): `src/ui/face.ts` and `src/ui/bar-layout.ts` are pure, tested by Vitest in Node, and sit beside the Phaser modules; whether the UI parts that are internal and the parts that use Phaser get different folders, a naming convention, or nothing.
 - **Every text measured through `ownBoxOf`** (v0.0.6, the look): about sixty layouts in `src/ui/` read a text's padded `width`, `height` or bounds, so `addText`'s padding sits inside their spacing; routed through `ownBoxOf` each moves by 2–4 px and its spacing is looked at again, which the screens redone in the look pass do anyway.
 - **The render factor can change after boot**: regrow the bitmap, re-zoom cameras, re-rasterize text while the game runs. Four consumers: itch.io's fullscreen button, a settings render-scale slider, monitor-hopping, resizing the window after boot. Decide after the art style locks — pixel art would replace this whole strategy with integer scaling.
@@ -12,12 +12,11 @@ The unordered pool of features that may or may not happen. Nothing here is promi
 ## Game
 
 - **Bridges are a technology**: the placeholder road line lets roads on both banks of a river edge lift the crossing's drain; in the end design that bridge is gated behind a technology the player unlocks, and roads alone do not span a river.
-- **Cache or precompute movement reachability**: today it is recomputed per command; measure before building anything.
 - **Colour ledger** (art-style pass scope): every UI colour resolves through one theme lookup, so an alternate theme — colour-blind-friendly included — becomes content, not surgery.
 - **Colour never carries gameplay meaning alone** (art-style pass scope): resource chips and anything gameplay-critical get shape/glyph redundancy, fixing colour-blindness in every theme at once — including the default.
 - **Animation speed settings**: the player sets how fast the staged motions play. The e2e suite runs on the fastest one: an end of turn plays out its animations in 2–3 s at today's speed, and most of the suite's time is spent watching them; only the specs that test a motion or a rest mid-way keep real speed.
 - **State cursors and cursor images** (v0.0.6, the look): the cursor says what a press would do now — not-allowed on a card the rules refuse, grab and grabbing on a hand card's drag and the map's pan — and the game draws a cursor of its own, a browser cursor image (no lag, no animation, about 32 px) or one drawn in the canvas (animated, a frame behind the mouse). A cursor that is always there goes unseen; the change is the signal.
-- **A coherent cursor pass** (v0.0.6, the look): the cursor state was never designed as a whole — which things show the hand grew one site at a time, and `docs/INTERFACE.md`'s list of where the hand shows already misses a pile, the chip and a choice on the launch screen, which show it. A pass settles what the cursor says across every surface, in the design and in the code together.
+- **A coherent cursor pass** (v0.0.6, the look): the cursor state was never designed as a whole — which things show the hand grew one site at a time. A pass settles what the cursor says across every surface, in the design and in the code together.
 - **Income flies in from the tiles** (v0.0.6, the look): at the income stage each yielding tile sends its resource to the bar.
 - **Copy a replay**: one action puts version, seed, deck, the commands played and the last error on the clipboard, so any game a player pastes back can be replayed to the turn.
 - **A technology that announces the coming event**: events are not announced, and a technology or a civilization's rule could grant it. The event is drawn on its due turn, so only the turn is known ahead: either the announcement is of the turn alone, or the announcing effect draws the event early and its need may have gone stale by the time it lands.
