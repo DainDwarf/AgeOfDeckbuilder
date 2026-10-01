@@ -11,3 +11,6 @@ That design is the code's shape and states no fact of the game, so no line write
 **The padding.** The content holds too few cards for any panel or browse of the meta to overflow, so the branch stands twenty placeholder cards in the Nomadic civilization's deck while it lives, and every panel and browse of a new campaign overflows. They never reach `main`: the last line takes them out, and with them every test that holds only on them. A line whose test holds only on the padding names that test in its hand-back, and the padding's line lists it before it ships. The collection panel's wheel test is the one foreseen; the Stone Age rung already carries the spec that proves the collection scrolls on real content.
 
 ## The lines
+
+- **The collection screen lays a mode at a time** — the collection screen's lay is cut into one function per mode, and the scene, the catalogue and what the faces answer with travel as one value, so its long functions and its wide signatures shrink.
+- **The ending screen stands in its own file** — the ending screen moves out of the overlay into a file of its own, so the overlay's closure shrinks.
