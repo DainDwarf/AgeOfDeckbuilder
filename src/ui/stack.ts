@@ -237,7 +237,7 @@ export function standLarge(
 
 /** What a face on a screen of the meta or in a browse answers the rest and the right click with. */
 export type Inspecting = {
-  /** The stratum the screen's small cards and bubble stand on. */
+  /** The stratum the pointer is read on over the screen's faces. */
   readonly on: Stratum;
   readonly small: SmallCards;
   readonly kinds: KindBubble;

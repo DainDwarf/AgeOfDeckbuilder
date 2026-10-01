@@ -26,9 +26,8 @@ export type Carry = {
 };
 
 /**
- * A thing a panel holds that answers the pointer: its box as it stands unscrolled, its answers, what
- * a left click on it does, where it does anything, and what a press held on it carries, where it
- * carries anything; a thing no left click answers carries nothing, whatever carry it declares.
+ * A thing a panel holds that answers the pointer, its box as it stands unscrolled. A thing no left
+ * click answers, or on a surface with no carrier, carries nothing, whatever carry it declares.
  */
 export type Held = {
   readonly box: Box;
@@ -161,13 +160,13 @@ export type PanelOf = {
 
 /**
  * What a screen's panels stand on: its scene, the stratum they are laid on, what is told each time
- * one moves, and the carrier over all of them.
+ * one moves, and the carrier over all of them, where they carry anything.
  */
 export type Surface = {
   readonly scene: Phaser.Scene;
   readonly on: Stratum;
   readonly follow: () => void;
-  readonly carrier: Carrier;
+  readonly carrier?: Carrier;
 };
 
 /** A panel standing on its screen. */
@@ -250,7 +249,7 @@ export function createPanel(
   /** The thing under the pointer told it is pointed at; none while the panel is dragged or a card carried. */
   const point = (pointer: Phaser.Input.Pointer | undefined): void => {
     const at =
-      pointer === undefined || scroll.dragged || carrier.carrying
+      pointer === undefined || scroll.dragged || carrier?.carrying === true
         ? undefined
         : on.at(pointer.x, pointer.y);
     const under = at === undefined ? undefined : heldAt(frame, scroll.offset, held, at.x, at.y);
@@ -265,8 +264,9 @@ export function createPanel(
   zone.on('dragstart', (pointer: Phaser.Input.Pointer) => {
     const from = on.at(pointer.downX, pointer.downY);
     const under = heldAt(frame, scroll.offset, held, from.x, from.y);
-    if (under?.carry === undefined || under.press === undefined) scroll.grab(from.y);
-    else carrier.lift(under.carry, under.press, scroll.offset, from, on.at(pointer.x, pointer.y));
+    if (carrier === undefined || under?.carry === undefined || under.press === undefined) {
+      scroll.grab(from.y);
+    } else carrier.lift(under.carry, under.press, scroll.offset, from, on.at(pointer.x, pointer.y));
   });
   zone.on('drag', (pointer: Phaser.Input.Pointer) => {
     scroll.drag(on.at(pointer.x, pointer.y).y, scene.time.now);
@@ -304,8 +304,9 @@ export function createPanel(
   const step = (_time: number, delta: number): void => {
     // Here and not in the move: the wheel scrolls from inside Phaser's dispatch, where a hit test
     // refills the list being walked (docs/PHASER.md).
-    if (carrier.carrying !== paused) {
-      paused = carrier.carrying;
+    const carrying = carrier?.carrying === true;
+    if (carrying !== paused) {
+      paused = carrying;
       moved = true;
     }
     if (moved) {

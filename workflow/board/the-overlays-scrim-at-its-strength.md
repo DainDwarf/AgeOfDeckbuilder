@@ -11,6 +11,7 @@
 - In: the chronicle's overlay scrim shows at `LOOK.scrim.strength` and nothing less: everything that stands on it today — a pile's browse, the aim window, the deal window, the capstone's window, the ending — stands on a scrim as dark as the menu's. Settled with the user over real screenshots: every scrim at 0.82, the chronicle's growing darker, rather than the look's value lowered to the 0.67 the chronicle shows today.
 - In: the ending's rise still brings the scrim up from nothing to its full strength in the same time and ease, and a render cut short still stands it at full strength.
 - In, following from it: a card shown large over a chronicle window stands on two scrims, the large stack's over the overlay's, and is darker behind it than today. Accepted as part of the choice.
+- In, following from it: once a raise stands the scrim at full object alpha, that alpha and the `stopMotion` before it move into the browser's `raise` (`standBrowser`, `src/ui/browse.ts`), the meta's browses unchanged by it since their scrim already stands at full object alpha, and `raiseOnScrim`'s `raise` parameter (`src/ui/overlay.ts`) goes: it exists only because `browser.browse` raises the scrim itself.
 - Out: the look's value itself, every other scrim, the large stack's scrim, anything else on screen.
 
 **Traps:**
@@ -23,7 +24,7 @@
 
 **Plan:**
 
-1. `src/ui/overlay.ts`: the scrim shown at its fill's strength alone, the ending's rise and stand going to full object alpha. Leaves standing: one strength on every scrim, read from the look once.
+1. `src/ui/overlay.ts` and `src/ui/browse.ts`: the scrim shown at its fill's strength alone, every raise standing it at full object alpha through the browser's `raise`, the ending's rise and stand going to full object alpha. Leaves standing: one strength on every scrim, read from the look once, and one raise.
 2. `workflow/BRANCH.md`: the line deleted, this file with it.
 
 **Verify:** `npm run check`, `npm test`, `npm run lint`; the proof spec `npx playwright test e2e/ending.spec.ts`, which walks the ending's rise and the render that cuts it short. CI's on the push: `browse.spec.ts`, `deal.spec.ts`, `capstone.spec.ts`, `inspect.spec.ts`, `victory.spec.ts`, `fall.spec.ts`, `menu.spec.ts`.

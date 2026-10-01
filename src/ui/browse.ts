@@ -20,7 +20,7 @@ import {
 import { cardFaceAtStart, type Face } from './face';
 import { css, LOOK } from './look';
 import type { OverlayScene } from './overlay-scene';
-import { createCarrier, createPanel, type Panel, type PanelOf, type Surface } from './panel';
+import { createPanel, type Panel, type PanelOf, type Surface } from './panel';
 import { createSmallCards } from './small-card';
 import { answersAround, type Inspecting, type ShownLarge, standLarge } from './stack';
 import { cardName, civilizationName, text } from './text';
@@ -150,7 +150,7 @@ export type OnScrim = {
 
 /**
  * The kit a screen stands on the overlay: the scrim and what stands on it, one panel among it, the
- * small cards and the kind bubble its faces raise, the cards shown large over it, and the carrier.
+ * small cards and the kind bubble its faces raise, and the cards shown large over it; no carrier.
  */
 export type Browser = Surface & {
   readonly inspecting: Inspecting;
@@ -204,7 +204,6 @@ export function standBrowser(
     panel?.holdStill();
     screen.risingLarge?.();
   });
-  const carrier = createCarrier(overlay, on);
   const follow = (): void => {
     small.follow();
     tooltip.follow();
@@ -216,7 +215,6 @@ export function standBrowser(
     large.down();
     panel?.down();
     panel = undefined;
-    carrier.down();
     for (const object of shown) object.destroy();
     shown = [];
     screen.down?.();
@@ -235,7 +233,6 @@ export function standBrowser(
     scene: overlay,
     on,
     follow,
-    carrier,
     inspecting,
     scrim,
     large,
@@ -282,7 +279,6 @@ export function standBrowser(
       });
     },
     close() {
-      if (!up) return;
       wipe();
       up = false;
       scrim.setVisible(false);
