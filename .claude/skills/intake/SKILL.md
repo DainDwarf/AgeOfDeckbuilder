@@ -29,9 +29,13 @@ Open with the restatement, in plain words and three sentences at most: what the 
 
 Then present what you found and the forks: one or two options each, with trade-offs and a recommendation, in prose. A pick-one prompt is for a scoping fact only. A UI change is pitched as a live mockup built from real values, the variables that change the answer as controls, one option marked recommended; a generator change is pitched running, and its dossier says whether the process is fixed or rolled and how wide it may vary. End the turn and wait; one fork may take several turns. The design pages first — much is pre-decided. A fork that is the implementer's — where a function lives, how a module is cut — is named as such and left out, and so is any choice the user could not tell apart in the game. A sentence about what the code does is checked against the code before it is said.
 
-## 4. Write the dossier
+## 4. Reconcile
 
-Once every fork is settled, and not before, write `workflow/board/<slug>.md`:
+Once every fork is settled, and not before, search the tree for what already does each job the settled design names: what it lays out, what it stands on, the gestures it hears. Each likeness is put to the user in the player's terms, the standing one beside the projected one, with what differs between them, measured. For each, one of three is chosen, with a recommendation: the projected goes through the standing one as it is; the two become one, in the projected form or one between them, the standing one reshaped in this line or in a line ahead of it; or they stay apart, for a difference that is meant. A difference that is meant is what the shared door takes as a parameter; the rest goes. Nothing found is said in one line.
+
+## 5. Write the dossier
+
+Once every fork is settled and every likeness chosen, and not before, write `workflow/board/<slug>.md`:
 
 ```
 # <Title>
@@ -39,7 +43,7 @@ Once every fork is settled, and not before, write `workflow/board/<slug>.md`:
 **Line:** the board line, verbatim, with its done-condition.
 **Spec:** the `docs/` pages and section headings that are the spec, the sentences to add or change in them, written out, and every player-facing sentence the line foresees — a text-table entry, a card's text — written out, so the hand-back's _Authored_ list holds only what intake did not foresee.
 **Doc-impact:** the pages, or "none — <why>".
-**Scope:** what is in, what is out, the corner cases decided here and how.
+**Scope:** what is in, what is out, the corner cases decided here and how, and what the reconcile chose for each likeness.
 **Traps:** the non-local facts the implementer cannot see from the files it edits.
 **Plan:** the files the change touches and the order the work lands in, each step by what it leaves standing. Never a function, a signature, or which function owns what: the implementer reads the code once, at the ship, and decides that.
 **Verify:** the commands to run; the one spec that proves the line, by name, or none; and the specs CI proves on the push, listed for the hand-back.
