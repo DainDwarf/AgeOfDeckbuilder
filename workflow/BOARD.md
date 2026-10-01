@@ -11,3 +11,5 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 - **The headless simulator** — a consumer of the rules that runs only when asked and reports numbers, not diagnoses, tuned across the two ages; the reachability cache and the end of turn's cost per `apply` are looked at when it is made.
 
 ## Lines
+
+- **The accent is split into the meanings it paints** — `LOOK.accent` is one entry named for its value and read for several meanings; each use reads an entry named for what it means, and no pixel moves.
