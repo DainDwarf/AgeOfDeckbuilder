@@ -110,13 +110,9 @@ function shapeOf(mode: Mode): { readonly right: number; readonly across: number 
   }
 }
 
-/**
- * What a mode of the collection screen is laid with: what its pieces are laid with, the surface its
- * panels stand on, and the container its head joins.
- */
+/** What a mode of the collection screen is laid with: what its pieces are laid with, and the surface its panels stand on. */
 type Screen = Laying &
   Surface & {
-    readonly root: Phaser.GameObjects.Container;
     /** The screen laid in the mode, its panels at the offsets handed, in order, or at their tops. */
     readonly lay: (mode: Mode, offsets?: readonly number[]) => void;
     /** The campaign moved and kept, and the screen laid again in the mode, its panels where they stood. */
@@ -306,7 +302,6 @@ function collectionModeOf(
   const { shared, top, divide, left, frame } = sidesOf(scene, right);
   const civilizations = wordOf(scene, text('collection.civilizations'), divide + right / 2);
   const head = scene.add.container(0, 0, [...shared, civilizations]).setName('collection-mode');
-  screen.root.add(head);
   const reading = ({ copies }: CollectionStack): Reading => ({
     reads: text('collection.copies', { copies }),
     dimmed: false,
@@ -409,7 +404,6 @@ function deckEditingModeOf(
   const { top, divide, left, frame } = sides;
   const deck = deckRowsOf(catalogue, campaign, civilization, cardName);
   const head = deckEditingHeadOf(screen, { civilization, deck }, sides);
-  screen.root.add(head);
   const reading = ({ id, copies }: CollectionStack): Reading => {
     const held = heldIn(deck, id);
     return { reads: text('collection.in-deck', { held, copies }), dimmed: held === copies };
@@ -499,7 +493,6 @@ function civilizationModeOf(
     screen.lay({ shows: 'deck editing', civilization });
   });
   const head = scene.add.container(0, 0, [title, ...back.parts]).setName('civilization-mode');
-  screen.root.add(head);
   const owned = campaign.civilizations[civilization];
   return {
     head,
@@ -616,7 +609,6 @@ export class CollectionScreen extends Phaser.Scene {
         tooltip.follow();
       },
       carrier,
-      root,
       lay: (mode, offsets = []) => {
         inspecting.small.down();
         carrier.down();
@@ -626,6 +618,7 @@ export class CollectionScreen extends Phaser.Scene {
         }
         readInfluence();
         laid = modeLaid(screen, mode, campaignHeld(), offsets);
+        root.add(laid.head);
       },
       edit: (mode, move) => {
         keepCampaign(move(campaignHeld()));
