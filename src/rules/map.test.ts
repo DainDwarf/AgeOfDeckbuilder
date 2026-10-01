@@ -20,7 +20,15 @@ import {
   tilesOfEdge,
   water,
 } from './map';
-import { biomeKind, buildingKind, featureKind, type MapContent, regionOf } from './map-kinds';
+import {
+  type BiomeShare,
+  biomeKind,
+  buildingKind,
+  featureKind,
+  type MapAge,
+  type MapContent,
+  regionOf,
+} from './map-kinds';
 import { seedRng } from './rng';
 
 const SEEDS = [0, 1, 1234, 0xdeadbeef | 0, 424242];
@@ -225,6 +233,24 @@ test('a biome kind of a greater growth weight grows larger', () => {
     ).length;
 
   expect(waterOn(seaWeighing(4))).toBeGreaterThan(waterOn(seaWeighing(1 / 4)));
+});
+
+test('a biome a region keeps away from the seas lies further from the water than it does keeping away from nothing', () => {
+  const sharing = (clearing: BiomeShare): MapAge => ({
+    ...OWNS,
+    regions: { glade: { ...DISC, biomeShares: [...DISC.biomeShares, clearing] } },
+  });
+  const shoreOf = (age: MapAge): number =>
+    SEEDS.reduce((total, seed) => {
+      const { tiles } = generateMap(CATALOGUE, age, 'glade', seedRng(seed));
+      const wet = tiles.filter((tile) => water(CATALOGUE, tile.terrain));
+      const glades = tiles.filter((tile) => tile.terrain === 'glade');
+      return total + Math.min(...glades.flatMap((glade) => wet.map((at) => distance(glade, at))));
+    }, 0);
+
+  expect(
+    shoreOf(sharing({ biome: 'clearing', share: 0.15, keepsAwayFrom: ['sea'] })),
+  ).toBeGreaterThan(shoreOf(sharing({ biome: 'clearing', share: 0.15 })));
 });
 
 test('a sea is rimmed with coast, the terrain no biome scatters over its interior', () => {

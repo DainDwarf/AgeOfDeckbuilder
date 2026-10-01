@@ -428,9 +428,15 @@ function ageHeld(
   for (const [name, region] of held) {
     biomeKind(content, region.centreBiome);
     biomeKind(content, region.rivers.source);
-    for (const { biome } of region.biomeShares) biomeKind(content, biome);
+    for (const { biome, keepsAwayFrom = [] } of region.biomeShares) {
+      biomeKind(content, biome);
+      for (const kind of keepsAwayFrom) biomeKind(content, kind);
+      if (keepsAwayFrom.includes(biome)) {
+        refuse(content, `the region ${name} keeps its share of ${biome} away from ${biome}`);
+      }
+    }
     for (const { feature } of region.featureShares) featureKind(content, feature);
-    const shared = sharedBiomes(region);
+    const shared = sharedBiomes(region).map(({ biome }) => biome);
     for (const { biome } of region.biomeShares) {
       if (!shared.includes(biome))
         refuse(content, `the region ${name} deals its share of ${biome} no biome`);

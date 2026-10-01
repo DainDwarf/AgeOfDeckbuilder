@@ -15,5 +15,4 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **A region keeps a biome away from the kinds it names** — a region may name, beside a biome's share, the kinds that biome keeps away from, and the generator starts each biome of that share from the scattered origin furthest from theirs, drawing nothing, so a region naming none deals the maps it deals today; one test on the fixture holds the rule, the catalogue refuses a kind it does not hold and a biome kept away from its own kind, and `docs/MAP.md` says so. Doc-impact: `docs/MAP.md`. [board/region-keeps-biome-away.md](board/region-keeps-biome-away.md)
 - **The desert** — the Stone Age's temperate region deals one desert biome beside its two woodlands, spreading as the land does, and keeps it away from the seas: its tile gives nothing, walks and sees as plain does and gives food along a river; the oasis, a feature on it, gives food and is dealt as rarely as the others; the city, the camps and the Shelter do not stand on it; it is painted a pale sand of its own, `0xd6c08a`.

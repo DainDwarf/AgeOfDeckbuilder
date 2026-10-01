@@ -392,9 +392,38 @@ test('a catalogue whose region names a biome or a feature it does not hold is re
   const ruins = changed(
     regioned({ [REGION]: { ...disc, featureShares: [{ feature: 'PH_Ruins', share: 1 }] } }),
   );
+  const kept = changed(
+    regioned({
+      [REGION]: {
+        ...disc,
+        biomeShares: [{ biome: 'sea', share: 0.3, keepsAwayFrom: ['tundra'] }],
+      },
+    }),
+  );
 
   expect(() => catalogued(tundra)).toThrow(/^fixture: /);
   expect(() => catalogued(ruins)).toThrow(/^fixture: /);
+  expect(() => catalogued(kept)).toThrow(/^fixture: /);
+});
+
+test('a catalogue whose region keeps a biome away from its own kind is refused', () => {
+  const disc = REGIONS[REGION];
+  const keeping = (kind: string): Catalogue =>
+    changed({
+      version: 'keeping',
+      ...regioned({
+        [REGION]: {
+          ...disc,
+          biomeShares: [
+            { biome: 'sea', share: 0.3, keepsAwayFrom: [kind] },
+            { biome: 'mountain', share: 0.1 },
+          ],
+        },
+      }),
+    });
+
+  expect(() => catalogued(keeping('sea'))).toThrow(/^keeping: /);
+  expect(catalogued(keeping('mountain')).version).toBe('keeping');
 });
 
 test('a catalogue whose layer names a movement cost of zero is refused', () => {

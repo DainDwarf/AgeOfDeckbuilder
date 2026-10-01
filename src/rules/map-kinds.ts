@@ -70,6 +70,13 @@ export type RiverFlow = {
   readonly draws: number;
 };
 
+/** A kind a region deals in a share, and the kinds each biome of that share keeps away from. */
+export type BiomeShare = {
+  readonly biome: string;
+  readonly share: number;
+  readonly keepsAwayFrom?: readonly string[];
+};
+
 /**
  * One composition of the map: the disc's radius, how many biomes it is cut into and which kinds are
  * dealt in what shares, the share of each feature, how many camps and how far each keeps from the
@@ -81,7 +88,7 @@ export type Region = {
   readonly centre: number;
   readonly tilesPerBiome: number;
   readonly centreBiome: string;
-  readonly biomeShares: readonly { readonly biome: string; readonly share: number }[];
+  readonly biomeShares: readonly BiomeShare[];
   readonly featureShares: readonly { readonly feature: string; readonly share: number }[];
   readonly camps: number;
   readonly campFromCentre: number;

@@ -1,4 +1,5 @@
 import {
+  type BiomeShare,
   biomeKind,
   buildingKind,
   featureKind,
@@ -361,15 +362,16 @@ function biomeCount({ radius, tilesPerBiome }: Region): number {
 }
 
 /**
- * The biomes the region's shares deal, the centre's own aside: the quota each share is worth, dealt
- * as quotas rather than diced one by one, because independent dice deal a map with no sea at all.
+ * The share each biome the region's shares deal comes of, the centre's own aside: the quota each
+ * share is worth, dealt as quotas rather than diced one by one, because independent dice deal a map
+ * with no sea at all.
  */
-export function sharedBiomes(region: Region): Biome[] {
+export function sharedBiomes(region: Region): BiomeShare[] {
   const count = biomeCount(region);
-  const dealt: Biome[] = [];
-  for (const { biome, share } of region.biomeShares) {
-    const quota = Math.min(Math.round((count - 1) * share), count - 1 - dealt.length);
-    for (let i = 0; i < quota; i++) dealt.push(biome);
+  const dealt: BiomeShare[] = [];
+  for (const share of region.biomeShares) {
+    const quota = Math.min(Math.round((count - 1) * share.share), count - 1 - dealt.length);
+    for (let i = 0; i < quota; i++) dealt.push(share);
   }
   return dealt;
 }
@@ -379,9 +381,43 @@ export function sharedBiomes(region: Region): Biome[] {
  * centre's kind for whatever they leave over.
  */
 export function dealtBiomes(region: Region): Biome[] {
-  const dealt = sharedBiomes(region);
+  const dealt = sharedBiomes(region).map(({ biome }) => biome);
   while (dealt.length < biomeCount(region) - 1) dealt.push(region.centreBiome);
   return dealt;
+}
+
+/**
+ * The origins as scattered, the centre's first, once each biome a share keeps away from kinds has
+ * taken its own. It draws nothing, or every seed a spec searched would deal another map.
+ */
+function keptAway(
+  coords: readonly TileCoords[],
+  kinds: readonly Biome[],
+  shared: readonly BiomeShare[],
+  scattered: readonly number[],
+): number[] {
+  const origins = [...scattered];
+  const taken = new Set<number>();
+  for (const [at, { keepsAwayFrom = [] }] of shared.entries()) {
+    const biome = at + 1;
+    const from = origins.flatMap((tile, holder) =>
+      keepsAwayFrom.includes(kinds[holder]) ? [coords[tile]] : [],
+    );
+    if (from.length === 0) continue;
+    let pick = origins[biome];
+    let furthest = -1;
+    for (const tile of scattered.slice(1)) {
+      if (taken.has(tile)) continue;
+      const nearest = Math.min(...from.map((origin) => distance(coords[tile], origin)));
+      if (nearest <= furthest) continue;
+      pick = tile;
+      furthest = nearest;
+    }
+    const holder = origins.indexOf(pick);
+    [origins[holder], origins[biome]] = [origins[biome], pick];
+    taken.add(pick);
+  }
+  return origins;
 }
 
 function flowRivers(
@@ -622,7 +658,10 @@ function dealMap(
 
   const dealt = dealtBiomes(region);
   const kinds = [centreBiome, ...dealt];
-  const originTiles = [centreIndex, ...scattered.items.slice(0, dealt.length)];
+  const originTiles = keptAway(coords, kinds, sharedBiomes(region), [
+    centreIndex,
+    ...scattered.items.slice(0, dealt.length),
+  ]);
   const origins = new Set(originTiles);
 
   const owner: (number | undefined)[] = new Array(coords.length);
