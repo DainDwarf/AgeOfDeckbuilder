@@ -15,7 +15,7 @@
 
 **Traps:**
 
-- The cause: the scrim's rectangle carries the strength as its fill alpha (`createScrim`, `src/ui/design-space.ts`), and the overlay sets the object's alpha to the same strength at every cover and at the ending's rise and stand (`src/ui/overlay.ts`, `cover`, `raiseEnding`, `stand`). Phaser multiplies the two (`node_modules/phaser/src/gameobjects/shape/rectangle/RectangleWebGLRenderer.js:49`, `src.fillAlpha * alpha`), so the scrim shows at 0.82 × 0.82.
+- The cause: the scrim's rectangle carries the strength as its fill alpha (`createScrim`, `src/ui/design-space.ts`), and the overlay sets the object's alpha to the same strength at every cover and at the ending's rise and stand (`src/ui/overlay.ts`, `raiseOnScrim`, `raiseEnding`, `stand`). Phaser multiplies the two (`node_modules/phaser/src/gameobjects/shape/rectangle/RectangleWebGLRenderer.js:49`, `src.fillAlpha * alpha`), so the scrim shows at 0.82 × 0.82.
 - The ends of a fade are not colours: an object alpha of `0` or `1` stays a literal at its use site and never enters `LOOK`, which holds only a strength something rests at.
 - An object at alpha 0 fails `willRender` and is no hit (`docs/PHASER.md`, _The pointer's readings_); the ending's scrim swallows presses once it has risen, which the rise's start at nothing already rests on.
 - No spec reads the scrim's alpha, and none may: a test asserts no Phaser detail (`DOGMAS.md`, _Testing_). The ending's specs read the ending screen's own alpha (`e2e/chronicle-screen.ts:646`, `:654`; `e2e/ending.spec.ts:51`, `:116`), which this line leaves alone.

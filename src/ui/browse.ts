@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import type { Campaign } from '../rules/campaign';
 import type { Catalogue } from '../rules/catalogue';
-import { boundTo } from './bindings';
+import { type Bind, boundTo } from './bindings';
 import { CARD_WIDTH, createKindBubble, metricsOf } from './card-face';
 import { browseOf } from './collection-layout';
 import { type Cell, linesOf, spanOf, stackedCardsOf } from './collection-stack';
@@ -20,7 +20,7 @@ import {
 import { cardFaceAtStart, type Face } from './face';
 import { css, LOOK } from './look';
 import type { OverlayScene } from './overlay-scene';
-import { type Carrier, createCarrier, createPanel, type Panel } from './panel';
+import { createCarrier, createPanel, type Panel, type PanelOf, type Surface } from './panel';
 import { createSmallCards } from './small-card';
 import { answersAround, type Inspecting, type ShownLarge, standLarge } from './stack';
 import { cardName, civilizationName, text } from './text';
@@ -84,10 +84,9 @@ function badgeOf(
  * it off a name shows its card large.
  */
 function stackCellOf(
-  scene: Phaser.Scene,
+  { scene, inspecting }: Browser,
   name: string,
   { stack, at }: { readonly stack: BrowseStack; readonly at: number },
-  inspecting: Inspecting,
 ): Cell {
   return ({ left, top }) => {
     const card = `${name}-card-${at}`;
@@ -128,61 +127,169 @@ function stackCellOf(
   };
 }
 
+/** A browse's name, its title, and its stacks in the order they stand. */
+export type BrowseOf = {
+  readonly name: string;
+  readonly heading: string;
+  readonly stacks: readonly BrowseStack[];
+};
+
+/** What a screen hands the browser it stands on the overlay. */
+export type OnScrim = {
+  /** Told the screen is covered from the first thing to rise on the overlay to the last to go. */
+  readonly covering: (covered: boolean) => void;
+  /** Whether it takes a key or a mouse key pressed while anything stands and no card stands large. */
+  readonly takes: (press: Bind) => boolean;
+  /** A press on the scrim, or beside what a panel on it holds. */
+  readonly back: () => void;
+  /** What the screen raised on the scrim beyond the browser's, taken down with what stands. */
+  readonly down?: () => void;
+  /** A card about to rise large over what stands. */
+  readonly risingLarge?: () => void;
+};
+
 /**
- * A browse named `name` on the stratum its faces answer on, under its title: its stacks eight to a
- * line from the frame's top left, scrolled as a panel is, and a press of either button beside them
- * running `beside`. Answers its title and its panel, which the caller hands the wheel and takes down.
+ * The kit a screen stands on the overlay: the scrim and what stands on it, one panel among it, the
+ * small cards and the kind bubble its faces raise, the cards shown large over it, and the carrier.
  */
-export function layBrowse(
+export type Browser = Surface & {
+  readonly inspecting: Inspecting;
+  readonly scrim: Phaser.GameObjects.Rectangle;
+  readonly large: ShownLarge;
+  /** What stands taken down, and the scrim up for what is raised next. */
+  raise(): void;
+  /** One thing raised on the scrim, which goes with what stands. */
+  carries<T extends Phaser.GameObjects.GameObject>(object: T): T;
+  /**
+   * The panel laid on the scrim, which goes with what stands: the wheel and the two keys that pan up
+   * and down scroll it, a card rising large holds it still, and a press beside what it holds steps back.
+   */
+  lay(of: Omit<PanelOf, 'beside'>): Panel;
+  /** A browse raised under its title, its stacks eight to a line from the frame's top left. */
+  browse(of: BrowseOf): void;
+  /** What stands taken down, and the scrim with it. */
+  close(): void;
+};
+
+/** The browser of a screen, on the overlay. */
+export function standBrowser(
   overlay: OverlayScene,
-  {
-    name,
-    heading,
-    stacks,
-  }: {
-    readonly name: string;
-    readonly heading: string;
-    readonly stacks: readonly BrowseStack[];
-  },
-  inspecting: Inspecting,
-  {
-    beside,
-    follow,
-    carrier,
-  }: {
-    readonly beside: () => void;
-    readonly follow: () => void;
-    readonly carrier: Carrier;
-  },
-): { readonly title: Phaser.GameObjects.Text; readonly panel: Panel } {
-  const { on } = inspecting;
-  const title = headingOf(overlay, name, heading);
-  on.layer.add(title);
-  const top = title.y + title.height + MARGIN;
-  const cells = stacks.map((stack, at) => stackCellOf(overlay, name, { stack, at }, inspecting));
-  const panel = createPanel(
-    overlay,
-    on,
-    {
-      name,
-      frame: {
-        x: MARGIN,
-        y: top,
-        width: DESIGN_WIDTH - 2 * MARGIN,
-        height: DESIGN_HEIGHT - MARGIN - top,
-      },
-      beside,
-      ...linesOf(cells, {
-        left: (DESIGN_WIDTH - spanOf(ACROSS, CARD_WIDTH)) / 2,
-        top,
-        across: ACROSS,
-        card: CARD_WIDTH,
-      }),
+  catalogue: Catalogue,
+  screen: OnScrim,
+): Browser {
+  const on = overlay.strata.scrim;
+  const scrim = createScrim(overlay, () => {
+    screen.back();
+  });
+  on.layer.add(scrim);
+  const tooltip = createTooltip(overlay, overlay.strata.tooltip);
+  const kinds = createKindBubble(tooltip);
+  /** Whether the scrim stands, from the raise to the close. */
+  let up = false;
+  let panel: Panel | undefined;
+  let shown: Phaser.GameObjects.GameObject[] = [];
+
+  // The overlay holds one taker and this is it: whatever stands hears a key only through `takes`.
+  const large = standLarge(overlay, catalogue, screen.covering, {
+    kinds,
+    get standing() {
+      return up;
     },
+    takes: (press) => screen.takes(press),
+  });
+  const small = createSmallCards(overlay, overlay.strata.smallCard, catalogue, kinds, (name) => {
+    inspecting.large.named(name);
+  });
+  const inspecting = inspectingUnder(on, small, kinds, large, () => {
+    panel?.holdStill();
+    screen.risingLarge?.();
+  });
+  const carrier = createCarrier(overlay, on);
+  const follow = (): void => {
+    small.follow();
+    tooltip.follow();
+  };
+
+  /** What stands taken down, the cards shown large among it, the scrim itself left as it is. */
+  const wipe = (): void => {
+    small.down();
+    large.down();
+    panel?.down();
+    panel = undefined;
+    carrier.down();
+    for (const object of shown) object.destroy();
+    shown = [];
+    screen.down?.();
+  };
+
+  overlay.scrolls({
+    pan(way, delta) {
+      if (!large.standing) panel?.pan(way, delta);
+    },
+    wheel(by) {
+      if (!large.standing) panel?.wheel(by);
+    },
+  });
+
+  const browser: Browser = {
+    scene: overlay,
+    on,
     follow,
     carrier,
-  );
-  return { title, panel };
+    inspecting,
+    scrim,
+    large,
+    raise() {
+      // Ahead of the wipe: a card shown large over nothing then comes down without uncovering the screen.
+      up = true;
+      wipe();
+      scrim.setVisible(true);
+      screen.covering(true);
+    },
+    carries(object) {
+      on.layer.add(object);
+      shown.push(object);
+      return object;
+    },
+    lay(of) {
+      panel = createPanel(browser, {
+        ...of,
+        beside: () => {
+          screen.back();
+        },
+      });
+      return panel;
+    },
+    browse({ name, heading, stacks }) {
+      browser.raise();
+      const title = browser.carries(headingOf(overlay, name, heading));
+      const top = title.y + title.height + MARGIN;
+      const cells = stacks.map((stack, at) => stackCellOf(browser, name, { stack, at }));
+      browser.lay({
+        name,
+        frame: {
+          x: MARGIN,
+          y: top,
+          width: DESIGN_WIDTH - 2 * MARGIN,
+          height: DESIGN_HEIGHT - MARGIN - top,
+        },
+        ...linesOf(cells, {
+          left: (DESIGN_WIDTH - spanOf(ACROSS, CARD_WIDTH)) / 2,
+          top,
+          across: ACROSS,
+          card: CARD_WIDTH,
+        }),
+      });
+    },
+    close() {
+      if (!up) return;
+      wipe();
+      up = false;
+      scrim.setVisible(false);
+      screen.covering(false);
+    },
+  };
+  return browser;
 }
 
 /** A screen of the meta's cards shown large, and the browse of its civilizations they stand over. */
@@ -201,77 +308,33 @@ export function standBrowse(
   catalogue: Catalogue,
   covering: (covered: boolean) => void,
 ): Browsing {
-  const on = overlay.strata.scrim;
-  const scrim = createScrim(overlay, () => close());
-  on.layer.add(scrim);
-  const tooltip = createTooltip(overlay, overlay.strata.tooltip);
-  const kinds = createKindBubble(tooltip);
-  let standing: { readonly title: Phaser.GameObjects.Text; readonly panel: Panel } | undefined;
-
-  const close = (): void => {
-    if (standing === undefined) return;
-    small.down();
-    standing.panel.down();
-    standing.title.destroy();
-    standing = undefined;
-    scrim.setVisible(false);
-    covering(false);
-  };
-
-  const large = standLarge(overlay, catalogue, covering, {
-    kinds,
-    get standing() {
-      return standing !== undefined;
-    },
+  const browser = standBrowser(overlay, catalogue, {
+    covering,
     takes(press) {
-      if (boundTo(press, 'back')) close();
+      if (boundTo(press, 'back')) browser.close();
       return true;
     },
-  });
-  overlay.scrolls({
-    pan(way, delta) {
-      if (!large.standing) standing?.panel.pan(way, delta);
-    },
-    wheel(by) {
-      if (!large.standing) standing?.panel.wheel(by);
+    back() {
+      browser.close();
     },
   });
-  const small = createSmallCards(overlay, overlay.strata.smallCard, catalogue, kinds, (name) => {
-    inspecting.large.named(name);
-  });
-  const inspecting = inspectingUnder(on, small, kinds, large, () => {
-    standing?.panel.holdStill();
-  });
-  const carrier = createCarrier(overlay, on);
-  const follow = (): void => {
-    small.follow();
-    tooltip.follow();
-  };
 
   return {
-    large,
+    large: browser.large,
     open(campaign, civilization) {
       const { count, stacks } = browseOf(catalogue, campaign, civilization, cardName);
-      scrim.setVisible(true);
-      const { title, panel } = layBrowse(
-        overlay,
-        {
-          name: CIVILIZATION_BROWSE,
-          heading: text('browse.civilization', {
-            civilization: civilizationName(civilization),
-            count,
-          }),
-          stacks: stacks.map(({ id, copies }, at) => ({
-            shown: cardFaceAtStart(catalogue, id),
-            copies,
-            edged: at === 0,
-          })),
-        },
-        inspecting,
-        { beside: close, follow, carrier },
-      );
-      standing = { title, panel };
-      covering(true);
+      browser.browse({
+        name: CIVILIZATION_BROWSE,
+        heading: text('browse.civilization', {
+          civilization: civilizationName(civilization),
+          count,
+        }),
+        stacks: stacks.map(({ id, copies }, at) => ({
+          shown: cardFaceAtStart(catalogue, id),
+          copies,
+          edged: at === 0,
+        })),
+      });
     },
   };
 }

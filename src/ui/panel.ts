@@ -159,6 +159,17 @@ export type PanelOf = {
   readonly beside?: () => void;
 } & Filled;
 
+/**
+ * What a screen's panels stand on: its scene, the stratum they are laid on, what is told each time
+ * one moves, and the carrier over all of them.
+ */
+export type Surface = {
+  readonly scene: Phaser.Scene;
+  readonly on: Stratum;
+  readonly follow: () => void;
+  readonly carrier: Carrier;
+};
+
 /** A panel standing on its screen. */
 export type Panel = {
   /** How far it is scrolled. */
@@ -183,14 +194,11 @@ export type Panel = {
 /**
  * A panel cut at its frame and scrolled as a browse is, from the offset handed as far as it reaches,
  * every press on it answered through its frame by the thing under the pointer, and a press held on a
- * thing that carries handed to the carrier; `follow` is told each time it moves.
+ * thing that carries handed to the carrier.
  */
 export function createPanel(
-  scene: Phaser.Scene,
-  on: Stratum,
+  { scene, on, follow, carrier }: Surface,
   { name, frame, parts, held, foot, beside }: PanelOf,
-  follow: () => void,
-  carrier: Carrier,
   offset = 0,
 ): Panel {
   const root = scene.add.container(0, 0, [...parts]).setName(name);

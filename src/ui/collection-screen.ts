@@ -55,7 +55,14 @@ import { css, LOOK } from './look';
 import { backRaisesMenu, resetMenu } from './menu-scene';
 import { ROOM, wearNavbar } from './navbar';
 import { overlayOf } from './overlay-scene';
-import { createCarrier, createPanel, type Filled, type Held, type Panel } from './panel';
+import {
+  createCarrier,
+  createPanel,
+  type Filled,
+  type Held,
+  type Panel,
+  type Surface,
+} from './panel';
 import { campaignHeld, keepCampaign } from './save-entry';
 import { createSmallCards } from './small-card';
 import type { Inspecting } from './stack';
@@ -275,6 +282,7 @@ export class CollectionScreen extends Phaser.Scene {
       tooltip.follow();
     };
     const carrier = createCarrier(this, panels);
+    const surface: Surface = { scene: this, on: panels, follow, carrier };
 
     onScrollKeys(this, (way, delta) => {
       for (const panel of laid?.panels ?? []) if (panel.pointed) panel.pan(way, delta);
@@ -355,8 +363,7 @@ export class CollectionScreen extends Phaser.Scene {
             head,
             panels: [
               createPanel(
-                this,
-                panels,
+                surface,
                 {
                   name: 'collection-panel',
                   frame: left,
@@ -371,13 +378,10 @@ export class CollectionScreen extends Phaser.Scene {
                     inspecting,
                   ),
                 },
-                follow,
-                carrier,
                 leftOffset,
               ),
               createPanel(
-                this,
-                panels,
+                surface,
                 {
                   name: 'civilizations-panel',
                   frame,
@@ -397,8 +401,6 @@ export class CollectionScreen extends Phaser.Scene {
                     inspecting,
                   ),
                 },
-                follow,
-                carrier,
                 rightOffset,
               ),
             ],
@@ -461,8 +463,7 @@ export class CollectionScreen extends Phaser.Scene {
             head,
             panels: [
               createPanel(
-                this,
-                panels,
+                surface,
                 {
                   name: 'collection-panel',
                   frame: left,
@@ -477,13 +478,10 @@ export class CollectionScreen extends Phaser.Scene {
                     inspecting,
                   ),
                 },
-                follow,
-                carrier,
                 leftOffset,
               ),
               createPanel(
-                this,
-                panels,
+                surface,
                 {
                   name: 'civilization-panel',
                   frame,
@@ -506,8 +504,6 @@ export class CollectionScreen extends Phaser.Scene {
                     inspecting,
                   ),
                 },
-                follow,
-                carrier,
                 rightOffset,
               ),
             ],
@@ -542,8 +538,7 @@ export class CollectionScreen extends Phaser.Scene {
             head,
             panels: [
               createPanel(
-                this,
-                panels,
+                surface,
                 {
                   name: 'civilization-mode-panel',
                   frame: { x: ROOM.x, y: top, width: right, height },
@@ -581,8 +576,6 @@ export class CollectionScreen extends Phaser.Scene {
                     inspecting,
                   ),
                 },
-                follow,
-                carrier,
                 offset,
               ),
             ],

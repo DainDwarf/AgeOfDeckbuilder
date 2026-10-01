@@ -15,13 +15,12 @@ import {
   type Refusal,
 } from '../rules/state';
 import { type Bind, boundTo } from './bindings';
-import { inspectingUnder, layBrowse } from './browse';
-import { type CardFace, createCardFace, createKindBubble, heightOf, type Name } from './card-face';
+import { standBrowser } from './browse';
+import { type CardFace, createCardFace, heightOf, type Name } from './card-face';
 import { EASE, ended, stopMotion } from './card-motion';
 import { pileStacksOf } from './collection-layout';
 import {
   addText,
-  createScrim,
   DESIGN_HEIGHT,
   DESIGN_WIDTH,
   headingOf,
@@ -35,14 +34,12 @@ import { campLore, capstoneLore, eventLore, type Raising } from './lore';
 import { BUTTON_HEIGHT, createButton } from './menu';
 import { raiseMenu } from './menu-scene';
 import type { OverlayScene } from './overlay-scene';
-import { createCarrier, createPanel, type Held, type Panel } from './panel';
+import type { Held, Panel } from './panel';
 import { refused } from './refusal-lines';
 import { createRefusalNote } from './refusal-note';
 import { chipAt } from './resource-bar';
-import { createSmallCards } from './small-card';
-import { answersOf, standLarge } from './stack';
+import { answersOf } from './stack';
 import { buildingName, cardName, eventName, technologyName, text, victoryLine } from './text';
-import { createTooltip } from './tooltip';
 
 const GRID_WIDTH = 180;
 const GRID_GAP = 26;
@@ -175,44 +172,11 @@ export function createOverlay(
   paid: () => Payment | undefined,
   leave: () => void,
 ): Overlay {
-  const on = scene.strata.scrim;
-  const scrim = createScrim(scene, () => back());
-  on.layer.add(scrim);
   const note = createRefusalNote(scene, scene.strata.note);
-  const tooltip = createTooltip(scene, scene.strata.tooltip);
-  const kinds = createKindBubble(tooltip);
-  const small = createSmallCards(scene, scene.strata.smallCard, catalogue, kinds, (name) => {
-    inspectNamed(name);
-  });
-  const follow = (): void => {
-    small.follow();
-    tooltip.follow();
-  };
-
-  let shown: Phaser.GameObjects.GameObject[] = [];
   /** What stands on the scrim, and nothing while the scrim is down. */
   let carried: Carried | undefined;
-  /** The panel of the browse or the window standing, and nothing while neither stands. */
-  let panel: Panel | undefined;
   /** The cards of the window standing, and none while no window stands. */
   let onWindow: readonly Placed[] = [];
-
-  /** The cards shown large, over whatever stands on the scrim as it stood, or over nothing. */
-  // The overlay holds one taker, and this is it: `takes` hears the keys of every window, the deal,
-  // the aim window, the capstone's and the ending screen, only as the `Beneath` handed here.
-  const large = standLarge(scene, catalogue, covering, {
-    kinds,
-    get standing() {
-      return carried !== undefined;
-    },
-    takes: (press) => takes(press),
-  });
-  /** What a face on the scrim answers the rest and the right click with. */
-  const inspecting = inspectingUnder(on, small, kinds, large, () => {
-    panel?.holdStill();
-    note.hide();
-  });
-  const carrier = createCarrier(scene, on);
   /** The chronicle the ending screen was raised on: a render raises the screen once and no more. */
   let raisedOn: Ended | undefined;
   /** The deal standing, so no render raises its window twice; the take lets it go. */
@@ -222,31 +186,26 @@ export function createOverlay(
   /** The ending screen still coming up, its button dead until `risen`; a render may cut the rise short. */
   let rising: Raised | undefined;
 
-  /** One thing raised on the scrim: it stands on the scrim stratum and goes at the next wipe. */
-  const carries = <T extends Phaser.GameObjects.GameObject>(object: T): T => {
-    on.layer.add(object);
-    shown.push(object);
-    return object;
-  };
-
-  /** What the scrim carries taken down, the cards shown large among it, the scrim itself left up. */
-  const wipe = (): void => {
-    small.down();
-    large.down();
-    panel?.down();
-    panel = undefined;
-    onWindow = [];
-    note.hide();
-    for (const object of shown) object.destroy();
-    shown = [];
-    rising = undefined;
-  };
+  const browser = standBrowser(scene, catalogue, {
+    covering,
+    takes: (press) => takes(press),
+    back: () => {
+      back();
+    },
+    down: () => {
+      onWindow = [];
+      note.hide();
+      rising = undefined;
+    },
+    risingLarge: () => {
+      note.hide();
+    },
+  });
+  const { inspecting, scrim, carries } = browser;
 
   const close = (): void => {
-    wipe();
+    browser.close();
     carried = undefined;
-    scrim.setVisible(false);
-    covering(false);
   };
 
   /** The aim window closed with nothing paid: the one path, whichever way it was closed. */
@@ -257,19 +216,13 @@ export function createOverlay(
     aim.closed();
   };
 
-  // The ending's rise brings the scrim up from nothing, so every cover states the alpha it wants.
-  const cover = (): void => {
-    stopMotion(scene, scrim);
-    scrim.setVisible(true).setAlpha(LOOK.scrim.strength);
-    covering(true);
-  };
-
-  /** What the scrim carries replaced by what is raised, the scrim up: every raise replaces through here. */
-  const raiseOnScrim = (what: Carried): void => {
-    // Ahead of the wipe: a card shown large over nothing then comes down without uncovering the screen.
+  /** What the scrim carries replaced by what `raise` raises, the scrim up: every raise replaces through here. */
+  const raiseOnScrim = (what: Carried, raise: () => void = browser.raise): void => {
     carried = what;
-    wipe();
-    cover();
+    raise();
+    // The ending's rise brings the scrim up from nothing, so every raise states the alpha it wants.
+    stopMotion(scene, scrim);
+    scrim.setAlpha(LOOK.scrim.strength);
   };
 
   /** What a name names, shown large on top of the stack, over whatever stands. */
@@ -333,30 +286,21 @@ export function createOverlay(
       return { ...offered, x, y, drawn };
     });
 
-    panel = createPanel(
-      scene,
-      on,
-      {
-        name,
-        frame,
-        parts: placed.map(({ drawn }) => drawn.root),
-        held: placed.map(
-          (card): Held => ({
-            box: { x: card.x - GRID_WIDTH / 2, y: card.y - height, width: GRID_WIDTH, height },
-            answers: answersOf(card.drawn, card.face, inspecting),
-            press: () => {
-              pressed(card);
-            },
-          }),
-        ),
-        foot: firstY + spanY,
-        beside: () => {
-          back();
-        },
-      },
-      follow,
-      carrier,
-    );
+    const panel = browser.lay({
+      name,
+      frame,
+      parts: placed.map(({ drawn }) => drawn.root),
+      held: placed.map(
+        (card): Held => ({
+          box: { x: card.x - GRID_WIDTH / 2, y: card.y - height, width: GRID_WIDTH, height },
+          answers: answersOf(card.drawn, card.face, inspecting),
+          press: () => {
+            pressed(card);
+          },
+        }),
+      ),
+      foot: firstY + spanY,
+    });
     onWindow = placed;
     return { panel, placed, height };
   };
@@ -369,12 +313,9 @@ export function createOverlay(
 
   /** A pile's browse raised, laid out as the civilization's browse lays out a civilization. */
   const showBrowse = (pile: PileKind, chronicle: Chronicle): void => {
-    raiseOnScrim({ stands: 'browse' });
-
     const cards = pileOf(chronicle, pile);
-    const laid = layBrowse(
-      scene,
-      {
+    raiseOnScrim({ stands: 'browse' }, () => {
+      browser.browse({
         name: 'browse',
         heading: text(`browse.${pile}`, { count: cards.length }),
         stacks: pileStacksOf(catalogue, cards, cardName).map(({ card, copies }) => ({
@@ -382,18 +323,8 @@ export function createOverlay(
           copies,
           edged: false,
         })),
-      },
-      inspecting,
-      {
-        beside: () => {
-          back();
-        },
-        follow,
-        carrier,
-      },
-    );
-    shown.push(laid.title);
-    panel = laid.panel;
+      });
+    });
   };
 
   /** The deal window raised. It closes on the take alone, and the landing plays out under the caller. */
@@ -684,15 +615,6 @@ export function createOverlay(
     else if (boundTo(press, 'back') && !back()) raiseMenu(scene);
     return true;
   };
-
-  scene.scrolls({
-    pan(way, delta) {
-      if (!large.standing) panel?.pan(way, delta);
-    },
-    wheel(by) {
-      if (!large.standing) panel?.wheel(by);
-    },
-  });
 
   return {
     browse: showBrowse,
