@@ -11,5 +11,3 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 - **The headless simulator** — a consumer of the rules that runs only when asked and reports numbers, not diagnoses, tuned across the two ages; the reachability cache and the end of turn's cost per `apply` are looked at when it is made.
 
 ## Lines
-
-- **The one door** — the branch `OneDoor` puts every scroll on a scrim through one panel and every wheel through one reading, on content padded for its length; its design and its lines are on [`BRANCH.md`](BRANCH.md).
