@@ -38,6 +38,7 @@ Scope grows in place when exploration reveals adjacent work that shares the abst
 - Before writing a helper or re-typing a value, search for the one that already answers it, in `src/` and in the specs' shared helpers alike; the report's Done names what was reused.
 - Gameplay terms come from `docs/GLOSSARY.md` — the exact word, in text and in identifiers.
 - Tests follow `DOGMAS.md` → _Testing_. Never weaken or delete a test to make it pass.
+- Before adding a test or an assertion, read the tests beside it: what a neighbouring test or a whole-screen equality already proves is not asserted again.
 - Comments are for traps only. No paraphrase, no history, no rationale, no `TODO`. Before reporting, reread every comment and docstring the diff adds or touches against that rule, and cut what paraphrases the code, narrates, or restates a rule a `docs/` page already holds.
 - Update every `docs/` page in the doc-impact list in the same change. A pivot is an edit — the old fact is gone, not marked deprecated.
 - Delete the board line and its task file as the last step, once verification passes.
