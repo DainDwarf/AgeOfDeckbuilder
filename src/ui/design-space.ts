@@ -371,8 +371,8 @@ export function onClick(
 }
 
 /**
- * A scrim over the whole design space, down until it is shown, and a click of either button on it the
- * one step back its owner hands. It goes up and down by its visibility alone: a hidden object is no
+ * A scrim over the whole design space, down until it is shown; a click of either button on it takes
+ * the step back its owner hands. It goes up and down by its visibility alone: a hidden object is no
  * hit (docs/PHASER.md).
  */
 export function createScrim(scene: Phaser.Scene, back: () => void): Phaser.GameObjects.Rectangle {
