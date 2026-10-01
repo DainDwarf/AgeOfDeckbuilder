@@ -36,6 +36,8 @@ How this project is built. Human-chosen; every session works by them, `/intake` 
 - **Glossary candidates are drawn free of every constraint, and checked for collisions only afterwards.** Suggest from plain English alone — never filtered against the glossary, the design or the code, and never trimmed because a word is already spoken for. Once the term is chosen, look up what it collides with and hand the user that list as a warning, not as an objection. The new term wins: an older glossary row, a design sentence or a code identifier holding that word yields and is renamed in the same unit of work. Why: filtering candidates by what is unclaimed yields the best _available_ word, which is not the right one, and the name is permanent while the rename is cheap.
 - **A card name is content, not vocabulary.** Prose cites a card by its verbatim name; code reaches it only through its text key, never a re-typed literal.
 - **Card text is the shortest phrasing that is unambiguous.** Then shorten it again.
+- **A player-facing entry ends in no period**, the ending screen's excepted, and an answer addresses the player and reads its cost in its text.
+- **A count never stands in a sentence's subject.** A player-facing sentence takes a singular subject so one entry serves every number, and a reference is never pluralised; a sentence that cannot take one gets a plural branch inside its entry, never a second key.
 - **UI tooltips are glanceable one-liners** — what it is, where it comes from. They name no specific card or scenario and explain no mechanic; the codex is for learning, tooltips are for players who already know.
 - **Explanatory text stays generic.** Onboarding copy describes systems, never the specific content the player is about to meet.
 
