@@ -7,15 +7,14 @@ import { cardName, civilizationName, text } from '../src/ui/text';
 import type { Reference } from '../src/ui/text-run';
 import {
   cardOnFace,
-  kindLabelOnScreen,
   namedOn,
-  nameOnScreen,
   onScreen,
   openLaunch,
+  type Reading,
+  reading,
   readings,
   readOrder,
   rested,
-  ringed,
   standing,
   titleOf,
   tooltipText,
@@ -36,13 +35,9 @@ const BROWSE = 'civilization-browse';
 /** The civilization's browse: the count of its cards, and its stacks in the order the browse stands them in. */
 const { count: CARDS, stacks: STACKS } = browseOf(CATALOGUE, CAMPAIGN, CIVILIZATION, cardName);
 
-/** What the first name on the city card names, read off the face itself. */
-function firstNamed(page: Page): Promise<Reference | undefined> {
-  return page.evaluate((target) => {
-    const face = window.named?.(target)?.object;
-    const names = face?.getData('names') as { reference: Reference }[] | undefined;
-    return names?.[0]?.reference;
-  }, CITY_CARD);
+/** What the first name a face draws names, and nothing where no face stands or it draws none. */
+function firstNamed(face: Reading): Reference | undefined {
+  return face.standing ? face.references[0] : undefined;
 }
 
 function pileSelected(page: Page): Promise<boolean> {
@@ -57,9 +52,10 @@ test('on the launch screen the kind label on the civilization’s pile raises wh
 }) => {
   const problems = watch(page);
   await openLaunch(page);
-  expect(await cardOnFace(page, CITY_CARD)).toBe(OWNED.city.card.id);
+  const opened = await reading(page, CITY_CARD);
+  expect(opened.card).toBe(OWNED.city.card.id);
 
-  const label = await kindLabelOnScreen(page, CITY_CARD);
+  const label = opened.kindLabelOnScreen;
   await page.mouse.move(label.x, label.y);
   await expect.poll(() => tooltipUp(page, 'tooltip-launch')).toBe(true);
   expect(await tooltipText(page, 'tooltip-launch')).toBe(
@@ -70,14 +66,15 @@ test('on the launch screen the kind label on the civilization’s pile raises wh
   await page.mouse.click(card.x, card.y, { button: 'right' });
   await expect.poll(() => standing(page, BROWSE)).toBe(true);
   await rested(page);
-  expect(await standing(page, 'inspection')).toBe(false);
-  expect(await titleOf(page, BROWSE)).toBe(
-    text('browse.civilization', { civilization: civilizationName(CIVILIZATION), count: CARDS }),
-  );
   const seen = await readings(page, [
+    'inspection',
     ...STACKS.flatMap((_, at) => [`${BROWSE}-card-${at}`, `${BROWSE}-card-${at}-copies`]),
     `${BROWSE}-card-${STACKS.length}`,
   ]);
+  expect(seen('inspection').standing).toBe(false);
+  expect(await titleOf(page, BROWSE)).toBe(
+    text('browse.civilization', { civilization: civilizationName(CIVILIZATION), count: CARDS }),
+  );
   for (const [at, { id, copies }] of STACKS.entries()) {
     expect(seen(`${BROWSE}-card-${at}`).card).toBe(id);
     expect(seen(`${BROWSE}-card-${at}-copies`).text).toBe(
@@ -101,11 +98,12 @@ test('on the launch screen the kind label on the civilization’s pile raises wh
   await page.keyboard.press('Escape');
   await expect.poll(() => standing(page, BROWSE)).toBe(false);
   await rested(page);
-  expect(await standing(page, 'menu')).toBe(false);
+  const closed = await readings(page, ['menu', CITY_CARD]);
+  expect(closed('menu').standing).toBe(false);
 
-  const named = await firstNamed(page);
+  const named = firstNamed(closed(CITY_CARD));
   expect(named).toBeDefined();
-  const name = await nameOnScreen(page, CITY_CARD);
+  const name = closed(CITY_CARD).nameOnScreen;
   await page.mouse.click(name.x, name.y, { button: 'right' });
   await expect.poll(() => namedOn(page, 'inspection')).toEqual(named);
   await rested(page);
@@ -119,19 +117,21 @@ test('on the launch screen the pointer resting on a name on the city card raises
 }) => {
   const problems = watch(page);
   await openLaunch(page);
-  const named = await firstNamed(page);
+  const opened = await reading(page, CITY_CARD);
+  const named = firstNamed(opened);
   expect(named).toBeDefined();
 
-  const name = await nameOnScreen(page, CITY_CARD);
+  const name = opened.nameOnScreen;
   await page.mouse.move(name.x, name.y);
   await expect.poll(() => namedOn(page, 'small-card-0')).toEqual(named);
 
   await page.mouse.click(name.x, name.y);
   await rested(page);
   expect(await pileSelected(page)).toBe(true);
-  expect(await ringed(page, CITY_CARD)).toBe(true);
-  expect(await standing(page, 'small-card-0')).toBe(false);
-  expect(await standing(page, 'inspection')).toBe(false);
+  const clicked = await readings(page, [CITY_CARD, 'small-card-0', 'inspection']);
+  expect(clicked(CITY_CARD).ringed).toBe(true);
+  expect(clicked('small-card-0').standing).toBe(false);
+  expect(clicked('inspection').standing).toBe(false);
 
   expect(problems).toEqual([]);
 });

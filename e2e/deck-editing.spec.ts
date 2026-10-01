@@ -9,7 +9,6 @@ import {
   cardOnFace,
   click,
   collectionOpened,
-  counted,
   cursorAt,
   cursorOverCanvas,
   heldSave,
@@ -19,12 +18,11 @@ import {
   openCollection,
   pilePressed,
   pressed,
+  type Reading,
   readings,
   readOrder,
   rested,
   saved,
-  shows,
-  stackDimmed,
   standing,
   watch,
 } from './chronicle-screen';
@@ -67,12 +65,8 @@ async function openDeck(page: Page): Promise<void> {
   await pilePressed(page, CIVILIZATION);
 }
 
-/** The first card of the collection whose stack draws a name in its rules entry. */
-async function namingCard(page: Page): Promise<CardId> {
-  const seen = await readings(
-    page,
-    STACKS.map(({ id }) => `collection-card-${id}`),
-  );
+/** The first card of the collection whose stack draws a name in its rules entry, off readings of every stack's face. */
+function namingCard(seen: (name: string) => Reading): CardId {
   const found = STACKS.find(({ id }) => seen(`collection-card-${id}`).drawsName);
   if (found === undefined) throw new Error('no card of the collection draws a name');
   return found.id;
@@ -82,17 +76,16 @@ function stackOf(id: CardId): string {
   return `collection-stack-${id}`;
 }
 
-/** Whether the card's stack stands dimmed, and nothing where no stack of it stands. */
-function dimmed(page: Page, id: CardId): Promise<boolean | undefined> {
-  return stackDimmed(page, stackOf(id));
-}
-
 /**
  * The deck editing mode reads the campaign's first civilization as it stands: each section's count,
- * each card it holds a row reading its copies in its own section, no row for a card it does not
- * hold, and each stack reading the copies it holds, dimmed where it holds them all.
+ * each card it holds a row reading its copies in its own section, no row for a card it does not hold,
+ * each stack its copies held, dimmed where it holds them all; what it read, `also` with it, comes back.
  */
-async function readsAs(page: Page, campaign: Campaign): Promise<void> {
+async function readsAs(
+  page: Page,
+  campaign: Campaign,
+  also: readonly string[] = [],
+): Promise<(name: string) => Reading> {
   const { settle, cards } = civilizationIn(CATALOGUE, campaign, CIVILIZATION);
   const rows = [
     ...rowsOf(settle).map((row) => ({ ...row, inSettle: true })),
@@ -105,6 +98,7 @@ async function readsAs(page: Page, campaign: Campaign): Promise<void> {
     'deck-section-cards',
     ...rows.map(({ id }) => `deck-row-${id}-copies`),
     ...STACKS.flatMap(({ id }) => [`deck-row-${id}`, `collection-card-${id}-copies`, stackOf(id)]),
+    ...also,
   ]);
   expect(seen('deck-section-settle-count').text).toBe(
     text('collection.cards', { cards: settle.length + 1 }),
@@ -128,6 +122,7 @@ async function readsAs(page: Page, campaign: Campaign): Promise<void> {
     );
     expect(seen(stackOf(id)).dimmed).toBe(holds === copies);
   }
+  return seen;
 }
 
 /** A press held on the named object and moved in steps to the point handed, a drawn frame after, not let go. */
@@ -288,12 +283,13 @@ test('in the deck editing mode « Civilization stands as a button, the hand over
   await click(page, 'collection-to-collection');
   await expect.poll(() => standing(page, 'collection-mode')).toBe(true);
   await rested(page);
-  expect(await standing(page, 'deck-editing-mode')).toBe(false);
-  expect(await standing(page, `collection-civilization-${CIVILIZATION}`)).toBe(true);
-  const seen = await readings(
-    page,
-    STACKS.map(({ id }) => `collection-card-${id}-copies`),
-  );
+  const seen = await readings(page, [
+    'deck-editing-mode',
+    `collection-civilization-${CIVILIZATION}`,
+    ...STACKS.map(({ id }) => `collection-card-${id}-copies`),
+  ]);
+  expect(seen('deck-editing-mode').standing).toBe(false);
+  expect(seen(`collection-civilization-${CIVILIZATION}`).standing).toBe(true);
   for (const { id, copies } of STACKS) {
     expect(seen(`collection-card-${id}-copies`).text).toBe(text('collection.copies', { copies }));
   }
@@ -306,9 +302,13 @@ test('in the collection mode the pointer on a stack is the hand over a name of i
 }) => {
   const problems = watch(page);
   await openCollection(page);
-  const face = `collection-card-${await namingCard(page)}`;
+  const seen = await readings(
+    page,
+    STACKS.map(({ id }) => `collection-card-${id}`),
+  );
+  const face = `collection-card-${namingCard(seen)}`;
 
-  expect(await cursorAt(page, await onScreen(page, face))).toBe('');
+  expect(await cursorAt(page, seen(face).onScreen)).toBe('');
   expect(await cursorAt(page, await kindLabelOnScreen(page, face))).toBe(HAND);
   expect(await cursorAt(page, await nameOnScreen(page, face))).toBe(HAND);
 
@@ -320,13 +320,17 @@ test('in the deck editing mode the pointer is the hand over a row and the arrow 
 }) => {
   const problems = watch(page);
   await openDeck(page);
-  const card = await namingCard(page);
-  const face = `collection-card-${card}`;
   const [{ id }] = rowsOf(DECK.cards);
+  const seen = await readings(page, [
+    ...STACKS.flatMap((stack) => [`collection-card-${stack.id}`, stackOf(stack.id)]),
+    `deck-row-${id}`,
+  ]);
+  const card = namingCard(seen);
+  const face = `collection-card-${card}`;
 
-  expect(await dimmed(page, card)).toBe(true);
+  expect(seen(stackOf(card)).dimmed).toBe(true);
 
-  expect(await cursorAt(page, await onScreen(page, `deck-row-${id}`))).toBe(HAND);
+  expect(await cursorAt(page, seen(`deck-row-${id}`).onScreen)).toBe(HAND);
   expect(await cursorAt(page, await onScreen(page, 'deck-city'))).toBe('');
   expect(await cursorAt(page, await onScreen(page, face))).toBe('');
   expect(await cursorAt(page, await kindLabelOnScreen(page, face))).toBe(HAND);
@@ -348,23 +352,24 @@ test('in the deck editing mode a left click on a row removes a copy of its card 
   campaign = await pressed(page, `deck-row-${many.id}`, campaign, (held) =>
     removedFrom(CATALOGUE, held, CIVILIZATION, many.id),
   );
-  await readsAs(page, campaign);
-  expect(await cursorAt(page, await onScreen(page, `collection-card-${many.id}`))).toBe(HAND);
+  const removed = await readsAs(page, campaign, [`collection-card-${many.id}`]);
+  expect(await cursorAt(page, removed(`collection-card-${many.id}`).onScreen)).toBe(HAND);
 
   campaign = await pressed(page, `collection-card-${many.id}`, campaign, (held) =>
     addedTo(CATALOGUE, held, CIVILIZATION, many.id),
   );
-  expect(await dimmed(page, many.id)).toBe(true);
+  const added = await readsAs(page, campaign);
+  expect(added(stackOf(many.id)).dimmed).toBe(true);
   expect(await cursorOverCanvas(page)).toBe('');
-  await readsAs(page, campaign);
 
+  let emptied: ((name: string) => Reading) | undefined;
   for (let copy = 0; copy < settle.copies; copy++) {
     campaign = await pressed(page, `deck-row-${settle.id}`, campaign, (held) =>
       removedFrom(CATALOGUE, held, CIVILIZATION, settle.id),
     );
-    await readsAs(page, campaign);
+    emptied = await readsAs(page, campaign);
   }
-  expect(await counted(page, `deck-row-${settle.id}`)).toBe(0);
+  expect(emptied?.(`deck-row-${settle.id}`).count).toBe(0);
 
   campaign = await pressed(page, `collection-card-${settle.id}`, campaign, (held) =>
     addedTo(CATALOGUE, held, CIVILIZATION, settle.id),
@@ -384,40 +389,44 @@ test('in the deck editing mode a stack with a copy free dragged onto the civiliz
 }) => {
   const problems = watch(page);
   await openDeck(page);
-  const civilizationSide = await onScreen(page, 'civilization-panel-frame');
-  const collectionSide = await onScreen(page, 'collection-panel-frame');
+  const sides = await readings(page, ['civilization-panel-frame', 'collection-panel-frame']);
+  const civilizationSide = sides('civilization-panel-frame').onScreen;
+  const collectionSide = sides('collection-panel-frame').onScreen;
   let campaign = CAMPAIGN;
 
   const [{ id: removing }] = rowsOf(DECK.cards);
   await heldTo(page, `deck-row-${removing}`, collectionSide);
-  expect(await cardOnFace(page, 'carried-card')).toBe(removing);
-  expect(await shows(page, 'landing-edge')).toBe(true);
+  const rowCarried = await readings(page, ['carried-card', 'landing-edge']);
+  expect(rowCarried('carried-card').card).toBe(removing);
+  expect(rowCarried('landing-edge').shows).toBe(true);
   await page.mouse.up();
   campaign = removedFrom(CATALOGUE, campaign, CIVILIZATION, removing);
   await saved(page, campaign);
-  await readsAs(page, campaign);
-  expect(await standing(page, 'carried-card')).toBe(false);
+  const removed = await readsAs(page, campaign, ['carried-card']);
+  expect(removed('carried-card').standing).toBe(false);
 
   const adding = stackWith(campaign, true);
   await heldTo(page, `collection-card-${adding}`, collectionSide);
-  expect(await cardOnFace(page, 'carried-card')).toBe(adding);
-  expect(await shows(page, 'landing-edge')).toBe(false);
+  const stackHome = await readings(page, ['carried-card', 'landing-edge']);
+  expect(stackHome('carried-card').card).toBe(adding);
+  expect(stackHome('landing-edge').shows).toBe(false);
   await page.mouse.up();
   await expect.poll(() => standing(page, 'carried-card')).toBe(false);
   expect((await heldSave(page)).campaign).toEqual(campaign);
   await readsAs(page, campaign);
 
   await heldTo(page, `collection-card-${adding}`, civilizationSide);
-  expect(await cardOnFace(page, 'carried-card')).toBe(adding);
-  expect(await shows(page, 'landing-edge')).toBe(true);
+  const stackCarried = await readings(page, ['carried-card', 'landing-edge']);
+  expect(stackCarried('carried-card').card).toBe(adding);
+  expect(stackCarried('landing-edge').shows).toBe(true);
   await page.mouse.up();
   campaign = addedTo(CATALOGUE, campaign, CIVILIZATION, adding);
   await saved(page, campaign);
-  await readsAs(page, campaign);
-  expect(await standing(page, 'carried-card')).toBe(false);
-
   const whole = `collection-card-${stackWith(campaign, false)}`;
-  const at = await onScreen(page, whole);
+  const added = await readsAs(page, campaign, ['carried-card', whole]);
+  expect(added('carried-card').standing).toBe(false);
+
+  const at = added(whole).onScreen;
   await heldTo(page, whole, { x: at.x + SIDEWAYS * at.unit, y: at.y });
   expect(await standing(page, 'carried-card')).toBe(false);
   await page.mouse.up();

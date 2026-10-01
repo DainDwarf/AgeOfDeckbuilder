@@ -11,5 +11,3 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 - **The headless simulator** — a consumer of the rules that runs only when asked and reports numbers, not diagnoses, tuned across the two ages; the reachability cache and the end of turn's cost per `apply` are looked at when it is made.
 
 ## Lines
-
-- **The last single reads join the reader** — the in-page reader `readNames` installs answers whether a name is shown, the reference its face carries, the colour it is filled and the reference of each name a face draws, and `shows`, `referenceOnFace`, `namedOn`, `fillOf` and `endTurnFill` of `e2e/chronicle-screen.ts` and `firstNamed` of `e2e/launch.spec.ts` hold no in-page reading of their own; in `e2e/browse.spec.ts`, `e2e/collection.spec.ts`, `e2e/civilization-mode.spec.ts`, `e2e/deck-editing.spec.ts` and `e2e/launch.spec.ts`, reads of what the reader answers that stand at one moment — no gesture, `rested` or poll between them — are one question; and no assertion is removed or loosened. Doc-impact: none. [board/last-single-reads.md](board/last-single-reads.md)

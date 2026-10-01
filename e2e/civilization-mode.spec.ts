@@ -19,7 +19,6 @@ import {
   click,
   counted,
   cursorAt,
-  fillOf,
   heldSave,
   kindLabelOnScreen,
   onScreen,
@@ -259,12 +258,13 @@ test('in the civilization mode Collection » returns to the deck editing mode on
   await click(page, 'collection-to-deck-editing');
   await expect.poll(() => standing(page, 'deck-editing-mode')).toBe(true);
   await rested(page);
-  expect(await standing(page, 'civilization-mode')).toBe(false);
-  expect(await textOf(page, 'deck-civilization')).toBe(civilizationName(CIVILIZATION));
-  const seen = await readings(
-    page,
-    ROWS.cards.map(({ id }) => `deck-row-${id}-copies`),
-  );
+  const seen = await readings(page, [
+    'civilization-mode',
+    'deck-civilization',
+    ...ROWS.cards.map(({ id }) => `deck-row-${id}-copies`),
+  ]);
+  expect(seen('civilization-mode').standing).toBe(false);
+  expect(seen('deck-civilization').text).toBe(civilizationName(CIVILIZATION));
   for (const { id, copies } of ROWS.cards) {
     expect(seen(`deck-row-${id}-copies`).text).toBe(text('collection.row-copies', { copies }));
   }
@@ -305,21 +305,25 @@ test('in the civilization mode each stack’s reading stands centred between its
     expect(seen(reading).across.middle).toBeCloseTo((left.right + right.left) / 2, 0);
   }
 
+  const stack = `civilization-stack-${id}`;
+  const sectionCount = 'civilization-section-cards-count';
   let campaign = PLANTED.campaign;
   for (let held = whole.copies - 1; held >= 0; held--) {
     campaign = await pressed(page, `${face}-remove`, campaign, (from) =>
       removedFrom(CATALOGUE, from, CIVILIZATION, id),
     );
-    expect(await textOf(page, `${face}-copies`)).toBe(
+    const removed = await readings(page, [`${face}-copies`, sectionCount, face]);
+    expect(removed(`${face}-copies`).text).toBe(
       text('collection.held-of-owned', { held, copies: owned }),
     );
-    expect(await textOf(page, 'civilization-section-cards-count')).toBe(cardsCount(campaign));
-    expect(await counted(page, face)).toBe(1);
+    expect(removed(sectionCount).text).toBe(cardsCount(campaign));
+    expect(removed(face).count).toBe(1);
   }
-  expect(await stackDimmed(page, `civilization-stack-${id}`)).toBe(true);
-  expect(await fillOf(page, `${face}-remove`)).toBe(LOOK.greyedFill);
-  expect(await fillOf(page, `${face}-add`)).toBe(LOOK.panelFill);
-  expect(await cursorAt(page, await onScreen(page, `${face}-remove`))).toBe('');
+  const emptied = await readings(page, [stack, `${face}-remove`, `${face}-add`]);
+  expect(emptied(stack).dimmed).toBe(true);
+  expect(emptied(`${face}-remove`).fill).toBe(LOOK.greyedFill);
+  expect(emptied(`${face}-add`).fill).toBe(LOOK.panelFill);
+  expect(await cursorAt(page, emptied(`${face}-remove`).onScreen)).toBe('');
   expect(await cursorAt(page, await onScreen(page, `${face}-add`))).toBe(HAND);
 
   await click(page, `${face}-remove`);
@@ -329,17 +333,18 @@ test('in the civilization mode each stack’s reading stands centred between its
   campaign = await pressed(page, `${face}-add`, campaign, (from) =>
     addedTo(CATALOGUE, from, CIVILIZATION, id),
   );
-  expect(await textOf(page, `${face}-copies`)).toBe(
+  const added = await readings(page, [`${face}-copies`, sectionCount, stack, `${face}-remove`]);
+  expect(added(`${face}-copies`).text).toBe(
     text('collection.held-of-owned', { held: 1, copies: owned }),
   );
-  expect(await textOf(page, 'civilization-section-cards-count')).toBe(cardsCount(campaign));
-  expect(await stackDimmed(page, `civilization-stack-${id}`)).toBe(false);
-  expect(await fillOf(page, `${face}-remove`)).toBe(LOOK.panelFill);
+  expect(added(sectionCount).text).toBe(cardsCount(campaign));
+  expect(added(stack).dimmed).toBe(false);
+  expect(added(`${face}-remove`).fill).toBe(LOOK.panelFill);
 
   campaign = await pressed(page, `${face}-remove`, campaign, (from) =>
     removedFrom(CATALOGUE, from, CIVILIZATION, id),
   );
-  expect(await stackDimmed(page, `civilization-stack-${id}`)).toBe(true);
+  expect(await stackDimmed(page, stack)).toBe(true);
   await click(page, 'collection-to-deck-editing');
   await expect.poll(() => standing(page, 'deck-editing-mode')).toBe(true);
   await rested(page);
@@ -374,26 +379,33 @@ test('in the civilization mode, on a campaign a won chronicle paid into, under a
   const face = `civilization-card-${card.id}`;
 
   await openCivilization(page, campaign);
-  expect(await textOf(page, 'reading-influence-value')).toBe(String(campaign.influence));
-  expect(await textOf(page, `${face}-price`)).toBe(text('collection.price', { price }));
-  expect(await fillOf(page, `${face}-buy`)).toBe(LOOK.panelFill);
-  expect(await cursorAt(page, await onScreen(page, `${face}-buy`))).toBe(HAND);
+  const opened = await readings(page, ['reading-influence-value', `${face}-price`, `${face}-buy`]);
+  expect(opened('reading-influence-value').text).toBe(String(campaign.influence));
+  expect(opened(`${face}-price`).text).toBe(text('collection.price', { price }));
+  expect(opened(`${face}-buy`).fill).toBe(LOOK.panelFill);
+  expect(await cursorAt(page, opened(`${face}-buy`).onScreen)).toBe(HAND);
 
   await pressed(page, `${face}-buy`, campaign, () => after);
-  expect(await textOf(page, 'reading-influence-value')).toBe(String(campaign.influence - price));
-  expect(await textOf(page, `${face}-copies`)).toBe(
+  const unaffordable = `civilization-card-${greyed.id}-buy`;
+  const afterBuy = await readings(page, [
+    'reading-influence-value',
+    `${face}-copies`,
+    `${face}-price`,
+    unaffordable,
+  ]);
+  expect(afterBuy('reading-influence-value').text).toBe(String(campaign.influence - price));
+  expect(afterBuy(`${face}-copies`).text).toBe(
     text('collection.held-of-owned', {
       held: card.copies + 1,
       copies: ownedIn(campaign, card.id) + 1,
     }),
   );
-  expect(await textOf(page, `${face}-price`)).toBe(
+  expect(afterBuy(`${face}-price`).text).toBe(
     text('collection.price', { price: priceOf(CATALOGUE, after, card.id) }),
   );
 
-  const unaffordable = `civilization-card-${greyed.id}-buy`;
-  expect(await fillOf(page, unaffordable)).toBe(LOOK.greyedFill);
-  expect(await cursorAt(page, await onScreen(page, unaffordable))).toBe('');
+  expect(afterBuy(unaffordable).fill).toBe(LOOK.greyedFill);
+  expect(await cursorAt(page, afterBuy(unaffordable).onScreen)).toBe('');
   await click(page, unaffordable);
   await rested(page);
   expect(await textOf(page, 'reading-influence-value')).toBe(String(after.influence));

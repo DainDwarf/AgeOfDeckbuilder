@@ -42,13 +42,10 @@ test('the navbar’s Collection opens the collection screen on a new campaign, C
   const problems = watch(page);
   await openCollection(page);
 
-  expect(await standing(page, 'navbar-collection-well')).toBe(true);
-  expect(await standing(page, 'navbar-collection')).toBe(false);
-
   const owned = new Set(CAMPAIGN.collection.map(({ id }) => id));
-  expect(STACKS.map(({ id }) => id).sort()).toEqual([...owned].sort());
-  expect(STACKS.length).toBeGreaterThan(ACROSS);
   const seen = await readings(page, [
+    'navbar-collection-well',
+    'navbar-collection',
     ...Object.keys(CATALOGUE.cards).map((id) => `collection-card-${id}`),
     ...STACKS.flatMap(({ id }) => [`collection-card-${id}-copies`, `collection-card-${id}-price`]),
     ...Object.keys(CAMPAIGN.civilizations).flatMap((id) => [
@@ -56,6 +53,12 @@ test('the navbar’s Collection opens the collection screen on a new campaign, C
       `collection-civilization-${id}-counts`,
     ]),
   ]);
+
+  expect(seen('navbar-collection-well').standing).toBe(true);
+  expect(seen('navbar-collection').standing).toBe(false);
+
+  expect(STACKS.map(({ id }) => id).sort()).toEqual([...owned].sort());
+  expect(STACKS.length).toBeGreaterThan(ACROSS);
   for (const id of Object.keys(CATALOGUE.cards)) {
     expect(seen(`collection-card-${id}`).count).toBe(owned.has(id) ? 1 : 0);
   }
@@ -107,9 +110,13 @@ test('on a campaign a won chronicle paid into, a press on the price of an afford
 
   await plantCampaign(page, campaign);
   await openCollection(page);
-  expect(await textOf(page, 'reading-influence-value')).toBe(String(campaign.influence));
+  const opened = await readings(page, [
+    'reading-influence-value',
+    `collection-card-${card.id}-buy`,
+  ]);
+  expect(opened('reading-influence-value').text).toBe(String(campaign.influence));
 
-  const button = await onScreen(page, `collection-card-${card.id}-buy`);
+  const button = opened(`collection-card-${card.id}-buy`).onScreen;
   await page.mouse.move(button.x, button.y);
   await rested(page);
   expect(await cursorOverCanvas(page)).toBe(HAND);
@@ -117,15 +124,21 @@ test('on a campaign a won chronicle paid into, a press on the price of an afford
   await page.mouse.click(button.x, button.y);
   await expect.poll(async () => (await heldSave(page)).campaign).toEqual(after);
   await rested(page);
-  expect(await textOf(page, 'reading-influence-value')).toBe(String(campaign.influence - price));
-  expect(await textOf(page, `collection-card-${card.id}-copies`)).toBe(
+  const afterBuy = await readings(page, [
+    'reading-influence-value',
+    `collection-card-${card.id}-copies`,
+    `collection-card-${card.id}-price`,
+    `collection-card-${greyed.id}-buy`,
+  ]);
+  expect(afterBuy('reading-influence-value').text).toBe(String(campaign.influence - price));
+  expect(afterBuy(`collection-card-${card.id}-copies`).text).toBe(
     text('collection.copies', { copies: card.copies + 1 }),
   );
-  expect(await textOf(page, `collection-card-${card.id}-price`)).toBe(
+  expect(afterBuy(`collection-card-${card.id}-price`).text).toBe(
     text('collection.price', { price: priceOf(CATALOGUE, after, card.id) }),
   );
 
-  const unaffordable = await onScreen(page, `collection-card-${greyed.id}-buy`);
+  const unaffordable = afterBuy(`collection-card-${greyed.id}-buy`).onScreen;
   await page.mouse.move(unaffordable.x, unaffordable.y);
   await rested(page);
   expect(await cursorOverCanvas(page)).toBe('');
@@ -153,14 +166,16 @@ test('in the collection mode a right click on a civilization’s pile, on its co
   expect(await titleOf(page, BROWSE)).toBe(
     text('browse.civilization', { civilization: civilizationName(civilization), count }),
   );
-  expect(await cardOnFace(page, `${BROWSE}-card-0`)).toBe(stacks[0].id);
-  expect(await standing(page, 'deck-editing-mode')).toBe(false);
+  const raised = await readings(page, [`${BROWSE}-card-0`, 'deck-editing-mode']);
+  expect(raised(`${BROWSE}-card-0`).card).toBe(stacks[0].id);
+  expect(raised('deck-editing-mode').standing).toBe(false);
 
   await page.keyboard.press('Escape');
   await expect.poll(() => standing(page, BROWSE)).toBe(false);
   await rested(page);
-  expect(await standing(page, 'collection-mode')).toBe(true);
-  expect(await standing(page, 'menu')).toBe(false);
+  const closed = await readings(page, ['collection-mode', 'menu']);
+  expect(closed('collection-mode').standing).toBe(true);
+  expect(closed('menu').standing).toBe(false);
 
   expect(problems).toEqual([]);
 });

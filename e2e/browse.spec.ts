@@ -30,7 +30,6 @@ import {
   readings,
   readOrder,
   rested,
-  ringed,
   scrolled,
   selected,
   settledOn,
@@ -278,14 +277,16 @@ test('a left click on a pile opens nothing and keeps the selection; a right clic
   const first = seen('browse-card-0').onScreen;
   await page.mouse.click(first.x, first.y);
   await rested(page);
-  expect(await ringed(page, 'browse-card-0')).toBe(false);
-  expect(await standing(page, 'inspection')).toBe(false);
-  expect(await standing(page, 'browse')).toBe(true);
+  const clicked = await readings(page, ['browse-card-0', 'inspection', 'browse']);
+  expect(clicked('browse-card-0').ringed).toBe(false);
+  expect(clicked('inspection').standing).toBe(false);
+  expect(clicked('browse').standing).toBe(true);
 
   await page.keyboard.press('KeyI');
   await rested(page);
-  expect(await standing(page, 'inspection')).toBe(false);
-  expect(await standing(page, 'browse')).toBe(true);
+  const keyed = await readings(page, ['inspection', 'browse']);
+  expect(keyed('inspection').standing).toBe(false);
+  expect(keyed('browse').standing).toBe(true);
 
   await page.mouse.click(first.x, first.y, { button: 'right' });
   await expect.poll(() => cardOnFace(page, 'inspection')).toBe(stacks[0].card.id);
@@ -340,9 +341,10 @@ test('a small card and a kind bubble raised off a browsed stack move with it as 
   await page.mouse.wheel(0, name.height / frame.unit / 4);
   await expect.poll(() => offsetOf(page)).toBeGreaterThan(start);
   await waitGameClock(page, PAST_HANDOVER);
-  expect(await standing(page, 'small-card-0')).toBe(true);
-  const carried = await nameOnScreen(page, named);
-  const followed = await onScreen(page, 'small-card-0');
+  const wheeled = await readings(page, ['small-card-0', named]);
+  expect(wheeled('small-card-0').standing).toBe(true);
+  const carried = wheeled(named).nameOnScreen;
+  const followed = wheeled('small-card-0').onScreen;
   expect(carried.y).toBeLessThan(name.y);
   expect(followed.x - carried.x).toBeCloseTo(small.x - name.x, 1);
   expect(followed.y - carried.y).toBeCloseTo(small.y - name.y, 1);
@@ -366,8 +368,9 @@ test('a small card and a kind bubble raised off a browsed stack move with it as 
   await page.mouse.wheel(0, label.height / frame.unit / 4);
   await expect.poll(() => offsetOf(page)).toBeGreaterThan(at);
   await rested(page);
-  const moved = await kindLabelOnScreen(page, labelled);
-  const beside = await onScreen(page, 'tooltip-overlay');
+  const carriedOn = await readings(page, [labelled, 'tooltip-overlay']);
+  const moved = carriedOn(labelled).kindLabelOnScreen;
+  const beside = carriedOn('tooltip-overlay').onScreen;
   expect(await tooltipUp(page, 'tooltip-overlay')).toBe(true);
   expect(moved.y).toBeLessThan(label.y);
   expect(beside.x - moved.x).toBeCloseTo(bubble.x - label.x, 1);

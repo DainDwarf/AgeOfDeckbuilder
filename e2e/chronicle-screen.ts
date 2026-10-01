@@ -42,6 +42,7 @@ import { charted } from '../src/rules/sight';
 import { type CardId, type Chronicle, type ChronicleCard, playable } from '../src/rules/state';
 import { standsOn, type Unit, unitAt } from '../src/rules/units';
 import { type Bindings, STORED, serialiseControls, UPRIGHT } from '../src/ui/bindings';
+import type { Name } from '../src/ui/card-face';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
 import { type PileStack, pileStacksOf } from '../src/ui/collection-layout';
 import type { PileKind } from '../src/ui/overlay';
@@ -59,9 +60,12 @@ type PageReading = {
   text: string | undefined;
   dimmed: boolean | undefined;
   card: string | undefined;
+  reference: { kind: string; id: string } | undefined;
+  shows: Answer<boolean>;
+  fill: Answer<number | undefined>;
   place: Answer<{ x: number; y: number }>;
   ringed: Answer<boolean>;
-  names: Answer<Spot[]>;
+  names: Answer<DrawnName[]>;
   onScreen: Answer<OnScreen>;
   kindLabelOnScreen: Answer<Spot>;
   boundsOnScreen: Answer<Frame>;
@@ -165,6 +169,9 @@ export type OnScreen = { x: number; y: number; unit: number };
 
 /** Where a line of text a face draws sits on the page, its middle, and how tall it stands there. */
 type Spot = { x: number; y: number; height: number };
+
+/** A name a face draws: where it sits on the page, and what it names. */
+type DrawnName = { spot: Spot; reference: Reference };
 
 /** An object's left and right ends and its middle across, in design units. */
 type Across = { left: number; right: number; middle: number };
@@ -282,6 +289,12 @@ export async function readNames(page: Page): Promise<void> {
         text: (object as Phaser.GameObjects.Text | undefined)?.text,
         dimmed: data('dimmed') as boolean | undefined,
         card: object === undefined ? undefined : (data('card') as string),
+        reference: data('reference') as { kind: string; id: string } | undefined,
+        shows: answer(
+          () =>
+            (found().object as Partial<Phaser.GameObjects.Components.Visible>).visible as boolean,
+        ),
+        fill: answer(() => (found().object as Partial<Phaser.GameObjects.Shape>).fillColor),
         place: answer(() => {
           const at = matrix();
           return { x: at.tx, y: at.ty };
@@ -292,13 +305,13 @@ export async function readNames(page: Page): Promise<void> {
         }),
         names: answer(() => {
           const { camera } = found();
-          const drawn = (data('names') as Spot[] | undefined) ?? [];
+          const drawn = (data('names') as Name[] | undefined) ?? [];
           if (drawn.length === 0) return [];
           const at = matrix();
-          return drawn.map((spot) => {
-            const middle = at.transformPoint(spot.x, spot.y);
+          return drawn.map(({ x, y, height, reference }) => {
+            const middle = at.transformPoint(x, y);
             const shown = onPage(camera, middle.x, middle.y);
-            return { x: shown.x, y: shown.y, height: spot.height * shown.unit };
+            return { spot: { x: shown.x, y: shown.y, height: height * shown.unit }, reference };
           });
         }),
         onScreen: answer(() => {
@@ -342,7 +355,7 @@ function asked(page: Page, name: string): Promise<PageReading | undefined> {
 }
 
 /** What one name reads, in one question to the page. */
-async function reading(page: Page, name: string): Promise<Reading> {
+export async function reading(page: Page, name: string): Promise<Reading> {
   return readingOf(name, await asked(page, name));
 }
 
@@ -723,14 +736,11 @@ export async function cardOnFace(page: Page, name: string): Promise<string | und
  * What the named card of a thing a name names stands, by its kind and id, and nothing where no such
  * card is up: a small card and a card shown large each carry theirs.
  */
-export function referenceOnFace(
+export async function referenceOnFace(
   page: Page,
   name: string,
 ): Promise<{ kind: string; id: string } | undefined> {
-  return page.evaluate((target) => {
-    const card = window.named?.(target)?.object;
-    return card?.getData('reference') as { kind: string; id: string } | undefined;
-  }, name);
+  return (await reading(page, name)).reference;
 }
 
 /** What the named card a name raised stands: a card by its face, any other thing by its reference. */
@@ -738,8 +748,8 @@ export async function namedOn(
   page: Page,
   name: string,
 ): Promise<{ kind: string; id: string } | undefined> {
-  const card = await cardOnFace(page, name);
-  return card === undefined ? referenceOnFace(page, name) : { kind: 'card', id: card };
+  const { card, reference } = await reading(page, name);
+  return card === undefined ? reference : { kind: 'card', id: card };
 }
 
 /** Whether the named card face wears the ring: every one carries it, shown while it is selected. */
@@ -748,14 +758,8 @@ export async function ringed(page: Page, name: string): Promise<boolean> {
 }
 
 /** Whether the named object is shown; what a mode raises stands there hidden while it is off. */
-export function shows(page: Page, name: string): Promise<boolean> {
-  return page.evaluate((target) => {
-    const found = window.named?.(target)?.object as
-      | (Phaser.GameObjects.GameObject & { visible: boolean })
-      | undefined;
-    if (found === undefined) throw new Error(`there is no ${target}`);
-    return found.visible;
-  }, name);
+export async function shows(page: Page, name: string): Promise<boolean> {
+  return (await reading(page, name)).shows;
 }
 
 /** What the floor of a reading's well is painted, and nothing at all while that well is down. */
@@ -781,11 +785,18 @@ export type Reading = {
   readonly text: string | undefined;
   readonly dimmed: boolean | undefined;
   readonly card: string | undefined;
+  /** What the card of a thing a name names stands, by its kind and id. */
+  readonly reference: { kind: string; id: string } | undefined;
+  readonly shows: boolean;
+  /** What the object is painted; an object that carries no fill answers nothing. */
+  readonly fill: number | undefined;
   /** Where the object stands in the design space: the point it is drawn about, a face's bottom centre. */
   readonly place: { x: number; y: number };
   readonly ringed: boolean;
   /** Whether the face's rules entry draws a name. */
   readonly drawsName: boolean;
+  /** What each name the face's rules entry draws names, in the order it draws them. */
+  readonly references: readonly Reference[];
   readonly onScreen: OnScreen;
   readonly nameOnScreen: Spot;
   readonly kindLabelOnScreen: Spot;
@@ -805,6 +816,13 @@ function readingOf(name: string, answered: PageReading | undefined): Reading {
     text: answered?.text,
     dimmed: answered?.dimmed,
     card: answered?.card,
+    reference: answered?.reference,
+    get shows() {
+      return owed(name, answered?.shows);
+    },
+    get fill() {
+      return owed(name, answered?.fill);
+    },
     get place() {
       return owed(name, answered?.place);
     },
@@ -813,6 +831,9 @@ function readingOf(name: string, answered: PageReading | undefined): Reading {
     },
     get drawsName() {
       return owed(name, answered?.names).length > 0;
+    },
+    get references() {
+      return owed(name, answered?.names).map(({ reference }) => reference);
     },
     get onScreen() {
       return owed(name, answered?.onScreen);
@@ -841,9 +862,9 @@ function owed<T>(name: string, answer: Answer<T> | undefined): T {
 
 /** Where the name at that place among those the face draws sits on the page. */
 function nameAt(face: string, answered: PageReading | undefined, at: number): Spot {
-  const spot = owed(face, answered?.names)[at];
-  if (spot === undefined) throw new Error(`${face} draws no name at ${at}`);
-  return spot;
+  const drawn = owed(face, answered?.names)[at];
+  if (drawn === undefined) throw new Error(`${face} draws no name at ${at}`);
+  return drawn.spot;
 }
 
 /**
@@ -1372,12 +1393,8 @@ export async function endTurnLabel(page: Page): Promise<string> {
 }
 
 /** What the named rectangle is painted. */
-export function fillOf(page: Page, name: string): Promise<number> {
-  return page.evaluate((target) => {
-    const face = window.named?.(target)?.object as Phaser.GameObjects.Rectangle | undefined;
-    if (face === undefined) throw new Error(`there is no ${target} on the screen`);
-    return face.fillColor;
-  }, name);
+export async function fillOf(page: Page, name: string): Promise<number | undefined> {
+  return (await reading(page, name)).fill;
 }
 
 /** Whether the named stack stands dimmed, and nothing where no stack of that name stands. */
@@ -1386,12 +1403,8 @@ export async function stackDimmed(page: Page, name: string): Promise<boolean | u
 }
 
 /** What the end-turn button is painted. */
-export function endTurnFill(page: Page): Promise<number> {
-  return page.evaluate(() => {
-    const button = window.named?.('end-turn')?.object as Phaser.GameObjects.Rectangle | undefined;
-    if (button === undefined) throw new Error('the end-turn button is not on the chronicle screen');
-    return button.fillColor;
-  });
+export function endTurnFill(page: Page): Promise<number | undefined> {
+  return fillOf(page, 'end-turn');
 }
 
 /** Which tile the map is ringing, or nothing while none is selected. */
