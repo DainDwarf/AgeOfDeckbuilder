@@ -14,7 +14,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **A card aimed at the hand** — a card aimed at the hand is played at another card of the hand, and the rules tests hold it discarding that card on the fixture; the chronicle screen aims it in the hand from its second click, under the point and the line; no card of the game uses it yet. Doc-impact: `docs/CHRONICLE.md`, `docs/CHRONICLE-SCREEN.md`. [board/card-aimed-at-the-hand.md](board/card-aimed-at-the-hand.md)
 - **The doors** — Agriculture, Trapping, Fire and Herbalism, the first column of the Stone Age's tree, each needing Settlement, each with its goal and every card it unlocks, Trapping leaving the Nomadic Age; their design is settled in words in [board/stone-age-pool.md](board/stone-age-pool.md), and their numbers and texts are this line's intake; Fire is the first card of the game aimed at the hand, and the spec that plays one on screen lands here.
 - **The pinned achievement** — one achievement pinned on the campaign screen shows on the chronicle screen as a ledger: its goal in words, a count against its need where it has one, a check mark once reached, a cross mark once failed.
 - **The launch warning** — the warning a launch over a chronicle with achievements reached raises, since an abandoned chronicle pays nothing.

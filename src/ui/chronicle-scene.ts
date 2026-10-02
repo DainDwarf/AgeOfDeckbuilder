@@ -409,8 +409,8 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       void playOut({ type: 'end-turn' });
     });
     const hand = createHand(this, ui, faces, CATALOGUE, {
-      play: (index) => {
-        void playOut({ type: 'play', index, aim: 'none' });
+      play: (index, aimed) => {
+        void playOut({ type: 'play', index, ...aimed });
       },
       dismiss,
       aimTile: (index, card, released) => {

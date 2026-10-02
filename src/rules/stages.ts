@@ -36,7 +36,7 @@ type GroupHead =
 /** The one step a command resolves as, a change or a group, each carrying the chronicle it leaves. */
 export type Stage = Change | Group;
 
-/** What a card is played at: nothing, a tile, a unit or a card of the discard pile. */
+/** What a card is played at: nothing, a tile, a unit, a card of the discard pile or of the hand. */
 export type Aimed =
   | { readonly aim: 'none' }
   | { readonly aim: 'tile'; readonly tile: TileCoords }
@@ -50,6 +50,14 @@ export type Aimed =
       /**
        * Where in the discard pile the card aimed at it lies, in the pile as it stood before the
        * play: the play sends the card being played to the pile before the effect resolves.
+       */
+      readonly card: number;
+    }
+  | {
+      readonly aim: 'hand';
+      /**
+       * Where in the hand the card aimed at lies, in the hand as it stood before the play: the play
+       * takes the card being played out of the hand before the effect resolves.
        */
       readonly card: number;
     };

@@ -63,6 +63,7 @@ function charted(aim: Aim): Aim {
     case 'none':
     case 'unit':
     case 'discard-pile':
+    case 'hand':
       return aim;
   }
 }
@@ -449,6 +450,25 @@ export function recalled(paid: Chronicle, at: number): Landed {
       ...paid,
       hand: [...paid.hand, paid.discardPile[at]],
       discardPile: paid.discardPile.filter((_, index) => index !== at),
+    }),
+  );
+}
+
+/**
+ * The cards at those places of the hand gone to the discard pile, in hand order, and nothing where no
+ * place is named; a place the hand does not hold is a `runtime-error` and discards nothing.
+ */
+export function discarded(chronicle: Chronicle, places: readonly number[]): Landed {
+  if (places.length === 0) return unchanged(chronicle);
+  if (places.some((at) => chronicle.hand[at] === undefined)) {
+    return landedAs(change('runtime-error', chronicle));
+  }
+  const leaving = chronicle.hand.map((_, at) => at).filter((at) => places.includes(at));
+  return landedAs(
+    changeFrom('discarded', leaving, {
+      ...chronicle,
+      hand: chronicle.hand.filter((_, at) => !places.includes(at)),
+      discardPile: [...chronicle.discardPile, ...leaving.map((at) => chronicle.hand[at])],
     }),
   );
 }

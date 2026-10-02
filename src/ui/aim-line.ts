@@ -23,9 +23,12 @@ const STYLE = {
   color: css(LOOK.selected),
 };
 
+/** What a card being aimed wears the point for: a tile, a unit or a card of the hand. */
+export type PointedAim = AimedCard['aim'] | 'hand';
+
 export type AimLine = {
   /** Says what the card being aimed is played at, over the hand, until it is taken down. */
-  show(id: CardId, aim: AimedCard['aim']): void;
+  show(id: CardId, aim: PointedAim): void;
   hide(): void;
 };
 
@@ -42,7 +45,7 @@ export function createAimLine(scene: Phaser.Scene, on: Stratum): AimLine {
   };
 
   return {
-    show(id: CardId, aim: AimedCard['aim']): void {
+    show(id: CardId, aim: PointedAim): void {
       hide();
       const label = addText(scene, PAD_X, PAD_Y, sentence(id, aim), STYLE);
       const width = label.width + 2 * PAD_X;
@@ -65,12 +68,14 @@ export function createAimLine(scene: Phaser.Scene, on: Stratum): AimLine {
 }
 
 /** The sentence one aim is said in, the card named by its own name. */
-function sentence(id: CardId, aim: AimedCard['aim']): string {
+function sentence(id: CardId, aim: PointedAim): string {
   const card = cardName(id);
   switch (aim) {
     case 'tile':
       return text('aim.tile', { card });
     case 'unit':
       return text('aim.unit', { card });
+    case 'hand':
+      return text('aim.hand', { card });
   }
 }

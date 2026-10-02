@@ -180,6 +180,7 @@ test('every card of the catalogue answers its refusal, and its admitted tiles, o
             break;
           case 'none':
           case 'discard-pile':
+          case 'hand':
             break;
         }
       }

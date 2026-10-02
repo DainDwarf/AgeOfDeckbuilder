@@ -1010,6 +1010,7 @@ export function admits(chronicle: Chronicle, index: number, at: TileCoords): boo
       return admitted(CATALOGUE, chronicle, card).some((tile) => tileKey(tile) === tileKey(at));
     case 'none':
     case 'discard-pile':
+    case 'hand':
       return false;
   }
 }

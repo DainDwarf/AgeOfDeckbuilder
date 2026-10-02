@@ -1,5 +1,5 @@
 import { available } from './campaign';
-import { aimOf, leavesChronicle, refuses, struck } from './cards';
+import { aimOf, discarded, leavesChronicle, refuses, struck } from './cards';
 import {
   type Achievement,
   type AimedCard,
@@ -94,7 +94,7 @@ export type Command =
  */
 export type UnitCommand = Extract<Command, { readonly unit: number }>;
 
-/** One card of the hand played, aimed the way the card is: at nothing, a tile, a unit or the discard pile. */
+/** One card of the hand played, aimed the way the card is: at nothing, a tile, a unit, the discard pile or the hand. */
 type PlayCommand = Extract<Command, { readonly type: 'play' }>;
 
 /** A full hand. */
@@ -505,7 +505,7 @@ function endOfTurn(catalogue: Catalogue, chronicle: Chronicle): Sequence {
   if (onSettlePhase(chronicle)) return opened(catalogue, chronicle);
   return course(chronicle, [
     (left) => struck(catalogue, left),
-    discarded,
+    (left) => discarded(left, everyPlace(left.hand)),
     (left) => grouped({ name: 'grow' }, grow(left)),
     (left) => grouped({ name: 'income' }, income(catalogue, left)),
     (left) => enemyPhase(catalogue, left),
@@ -647,9 +647,9 @@ export function admitted(
 
 /**
  * Every block a card the city can pay for still stands against: there is nothing for it to resolve
- * on. A card that lands whole and one aimed at the discard pile answer with the blocks they declare,
- * in the order they declare them; a card aimed at a tile or at a unit answers with none, the map
- * being no part of what the hand judges it by.
+ * on. A card that lands whole and one aimed at a pile answer with the blocks they declare, in the
+ * order they declare them; a card aimed at a tile or at a unit answers with none, the map being no
+ * part of what the hand judges it by.
  */
 function blocked(catalogue: Catalogue, chronicle: Chronicle, id: CardId): Block[] {
   const card = aimOf(cardOf(catalogue, id));
@@ -657,6 +657,7 @@ function blocked(catalogue: Catalogue, chronicle: Chronicle, id: CardId): Block[
     case 'none':
       return card.blocked?.(catalogue, chronicle) ?? [];
     case 'discard-pile':
+    case 'hand':
       return card.blocked(catalogue, chronicle);
     case 'tile':
     case 'unit':
@@ -705,7 +706,8 @@ function aimedBy(command: PlayCommand): Aimed {
     case 'unit':
       return { aim: command.aim, tile: command.tile };
     case 'discard-pile':
-      return { aim: 'discard-pile', card: command.card };
+    case 'hand':
+      return { aim: command.aim, card: command.card };
   }
 }
 
@@ -713,8 +715,9 @@ function aimedBy(command: PlayCommand): Aimed {
  * The card's effect with what the play aimed it at, judged on the chronicle before anything is paid,
  * ready for the chronicle its cost is paid on. A play aimed another way than the card is aimed lands
  * nowhere. A card aimed at a tile or at a unit takes one the aim admits and no other; one aimed at
- * the discard pile takes a place the pile holds as it stands; a card that lands whole takes nothing
- * at all. `undefined` refuses the play.
+ * the discard pile takes a place the pile holds as it stands; one aimed at the hand a place of
+ * another card the hand holds, which its effect takes one place earlier when it lay after the card
+ * played; a card that lands whole takes nothing at all. `undefined` refuses the play.
  */
 function aimedEffect(
   catalogue: Catalogue,
@@ -742,6 +745,13 @@ function aimedEffect(
       if (at < 0 || at >= chronicle.discardPile.length) return undefined;
       return (paid) => card.effect(catalogue, paid, at);
     }
+    case 'hand': {
+      if (command.aim !== 'hand') return undefined;
+      const at = command.card;
+      if (at === command.index || chronicle.hand[at] === undefined) return undefined;
+      const left = at > command.index ? at - 1 : at;
+      return (paid) => card.effect(catalogue, paid, left);
+    }
   }
 }
 
@@ -753,6 +763,7 @@ function aimedTile(command: PlayCommand, aim: AimedCard['aim']): TileCoords | un
   switch (command.aim) {
     case 'none':
     case 'discard-pile':
+    case 'hand':
       return undefined;
     case 'tile':
     case 'unit':
@@ -864,18 +875,6 @@ function shuffle(chronicle: Chronicle): Chronicle {
 
   const shuffled = shuffleItems(chronicle.rng, chronicle.discardPile);
   return { ...chronicle, rng: shuffled.rng, drawPile: shuffled.items, discardPile: [] };
-}
-
-/** The end of the turn: what is left of the hand goes to the discard pile, and nothing where none is. */
-function discarded(chronicle: Chronicle): Landed {
-  if (chronicle.hand.length === 0) return unchanged(chronicle);
-  return landedAs(
-    changeFrom('discarded', everyPlace(chronicle.hand), {
-      ...chronicle,
-      hand: [],
-      discardPile: [...chronicle.discardPile, ...chronicle.hand],
-    }),
-  );
 }
 
 /** Every place of a pile, in pile order. */

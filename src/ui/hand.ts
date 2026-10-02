@@ -2,9 +2,9 @@ import Phaser from 'phaser';
 import { aimOf } from '../rules/cards';
 import { type AimedCard, type Catalogue, cardOf } from '../rules/catalogue';
 import { costOf, refusalOf } from '../rules/chronicle';
-import type { Change, Group, Stage } from '../rules/stages';
+import type { Aimed, Change, Group, Stage } from '../rules/stages';
 import { type Chronicle, type ChronicleCard, playable, type Refusal } from '../rules/state';
-import { createAimLine } from './aim-line';
+import { createAimLine, type PointedAim } from './aim-line';
 import { pressOf } from './bindings';
 import {
   CARD_BASELINE,
@@ -64,8 +64,11 @@ type Drag = {
   carried: boolean;
 };
 
-/** The selected card, and how the aim it is being aimed by is taken down while one stands. */
-type Selected = { readonly slot: Slot; cancel: (() => void) | undefined };
+/**
+ * The selected card, how the aim it is being aimed by is taken down while one stands, and whether it
+ * is being aimed at the hand.
+ */
+type Selected = { readonly slot: Slot; cancel: (() => void) | undefined; atHand: boolean };
 
 export type Hand = {
   render(chronicle: Chronicle): void;
@@ -83,8 +86,8 @@ export type Hand = {
  * what to call when it comes down, and answers the way to take it down from outside.
  */
 export type HandPresses = {
-  /** Plays the card at this place in the hand, which aims at nothing. */
-  play(index: number): void;
+  /** Plays the card at this place in the hand, at nothing or at another card of the hand. */
+  play(index: number, aimed: Extract<Aimed, { readonly aim: 'none' | 'hand' }>): void;
   /** The hand has taken the selection: whatever else the screen selects or inspects goes. */
   dismiss(): void;
   /** The map lit for the card's aim; `released` says the aim is off it and the card let go of. */
@@ -179,8 +182,8 @@ export function createHand(
     );
   };
 
-  /** The card aimed at a tile or at a unit says so: the point on its ring, the line over the hand. */
-  const aiming = (slot: Slot, aim: AimedCard['aim']): void => {
+  /** The card being aimed says so: the point on its ring, the line over the hand. */
+  const aiming = (slot: Slot, aim: PointedAim): void => {
     slot.face.aim(true);
     line.show(slot.card.id, aim);
   };
@@ -235,12 +238,12 @@ export function createHand(
   /**
    * The card the hand takes as the selection: whatever it held comes home, the card lifts out of the
    * lane and takes the ring, and one that aims at a tile or at a unit is being aimed from here. A
-   * card aimed at the discard pile waits for its second press to raise the window.
+   * card aimed at the discard pile or at the hand waits for its second press.
    */
   const select = (slot: Slot): Selected => {
     unselect();
     presses.dismiss();
-    const standing: Selected = { slot, cancel: undefined };
+    const standing: Selected = { slot, cancel: undefined, atHand: false };
     selected = standing;
     slot.face.select(true);
     settle(slot, 120);
@@ -249,6 +252,7 @@ export function createHand(
     switch (card.aim) {
       case 'none':
       case 'discard-pile':
+      case 'hand':
         break;
       case 'tile':
       case 'unit':
@@ -274,15 +278,28 @@ export function createHand(
     switch (card.aim) {
       case 'none':
         letGo = slot;
-        presses.play(slot.index);
+        presses.play(slot.index, { aim: 'none' });
         break;
       case 'discard-pile':
         standing.cancel = presses.aimDiscardPile(slot.index, closing(slot));
+        break;
+      case 'hand':
+        standing.atHand = true;
+        aiming(slot, card.aim);
         break;
       case 'tile':
       case 'unit':
         break;
     }
+  };
+
+  /**
+   * No refusal is read here: the hand offers the aim to a playable card alone, and the rules admit
+   * every other card of the hand.
+   */
+  const playAt = (standing: Selected, at: Slot): void => {
+    letGo = standing.slot;
+    presses.play(standing.slot.index, { aim: 'hand', card: at.index });
   };
 
   /** The card carried to where the pointer stands, ringed once it is clear of the play height. */
@@ -445,6 +462,7 @@ export function createHand(
       onClick(slot.face.root, () => {
         const standing = selected;
         if (standing?.slot === slot) act(standing);
+        else if (standing?.atHand === true) playAt(standing, slot);
         else select(slot);
       });
 

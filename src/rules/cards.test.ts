@@ -2,6 +2,7 @@ import { expect, test } from 'vitest';
 import {
   aimOf,
   built,
+  discarded,
   improvementPlaced,
   made,
   outside,
@@ -75,7 +76,7 @@ import {
 } from './map';
 import { terrainKind } from './map-kinds';
 import { RESOURCES, type Resources } from './resources';
-import { walked } from './stages';
+import { plays, walked } from './stages';
 import { type CardId, type Chronicle, idle, playable, type TileBlock } from './state';
 import { standsOn } from './units';
 
@@ -92,6 +93,11 @@ function aimedAtUnit(tile: TileCoords): Command {
 /** A card aimed at where a card lies in the discard pile, ready to hand to `apply`. */
 function aimedAtPile(card: number): Command {
   return { type: 'play', index: 0, aim: 'discard-pile', card };
+}
+
+/** The card at `index` of the hand aimed at where another card lies in it, ready to hand to `apply`. */
+function aimedAtHand(index: number, card: number): Command {
+  return { type: 'play', index, aim: 'hand', card };
 }
 
 /** The named card, for a fixture that expects it to be aimed at a tile or at a unit. */
@@ -351,6 +357,61 @@ test('a recall the city cannot pay for stays in the hand and costs nothing', () 
 
   expect(stagedBy(short, aimedAtPile(0))).toEqual(['refused']);
   expect(outcome(apply(CATALOGUE, short, aimedAtPile(0)))).toBe(short);
+});
+
+test('the discard instant discards the card of the hand it is played at, before it or after it, over itself on the discard pile', () => {
+  const city = cityOf(['urban'], {
+    hand: ['PH_Farm', 'PH_Discard', 'PH_Harvest', 'PH_Mine'],
+    discardPile: ['PH_Road'],
+    resources: science(1),
+  });
+
+  const before = apply(CATALOGUE, city, aimedAtHand(1, 0));
+  const after = apply(CATALOGUE, city, aimedAtHand(1, 2));
+
+  expect(namesOf(after)).toEqual(['played', 'discarded', 'stock', 'discarded']);
+  expect(plays(after)[0].aimed).toEqual({ aim: 'hand', card: 2 });
+  expect(idsOf(outcome(before).hand)).toEqual(['PH_Harvest', 'PH_Mine']);
+  expect(idsOf(outcome(before).discardPile)).toEqual(['PH_Road', 'PH_Discard', 'PH_Farm']);
+  expect(idsOf(outcome(after).hand)).toEqual(['PH_Farm', 'PH_Mine']);
+  expect(idsOf(outcome(after).discardPile)).toEqual(['PH_Road', 'PH_Discard', 'PH_Harvest']);
+  expect(outcome(after).resources.science).toBe(0);
+  expect(everyCard(outcome(before))).toEqual(everyCard(city));
+  expect(everyCard(outcome(after))).toEqual(everyCard(city));
+});
+
+test('the discard instant is refused at itself, at a card the hand does not hold, and at nothing', () => {
+  const city = cityOf(['urban'], {
+    hand: ['PH_Farm', 'PH_Discard'],
+    resources: science(1),
+  });
+
+  const refusedPlays: Command[] = [
+    aimedAtHand(1, 1),
+    aimedAtHand(1, 2),
+    aimedAtHand(1, -1),
+    { type: 'play', index: 1, aim: 'none' },
+  ];
+  for (const command of refusedPlays) {
+    expect(stagedBy(city, command)).toEqual(['refused']);
+    expect(outcome(apply(CATALOGUE, city, command))).toBe(city);
+  }
+});
+
+test('a hand holding no other card blocks the discard instant in it', () => {
+  const alone = cityOf(['urban'], { hand: ['PH_Discard'], resources: science(1) });
+
+  expect(refusalOf(CATALOGUE, alone, 'PH_Discard').blocked).toEqual(['hand']);
+  expect(playable(refusalOf(CATALOGUE, alone, 'PH_Discard'))).toBe(false);
+});
+
+test('a discard of a place the hand does not hold raises a runtime error and discards nothing', () => {
+  const city = cityOf(['urban'], { hand: ['PH_Farm'] });
+
+  const landing = discarded(city, [0, 1]);
+
+  expect(landing.stages.map(({ name }) => name)).toEqual(['runtime-error']);
+  expect(landing.chronicle).toBe(city);
 });
 
 test('the refresh instant refreshes move points alone, and leaves a spent action spent', () => {
