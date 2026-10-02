@@ -14,7 +14,7 @@ import {
   firstCivilization,
   firstRegion,
 } from '../rules/catalogue';
-import { admitted, launched, refusalOf } from '../rules/chronicle';
+import { admitted, apply, launched, refusalOf } from '../rules/chronicle';
 import { settledLaunch } from '../rules/fixtures';
 import { biomeKind } from '../rules/map-kinds';
 import { seedRng } from '../rules/rng';
@@ -315,11 +315,14 @@ test('every civilization of the catalogue has a name on the screen', () => {
   }
 });
 
-test('every achievement of an age answers its count as an integer, on a chronicle launched and settled in that age', () => {
+test('every achievement of an age answers the tally a turn ended leaves it and its count on that tally as integers, on a chronicle launched and settled in that age', () => {
   for (const age of AGES) {
     const chronicle = settledIn(age);
+    const stages = apply(CATALOGUE, chronicle, { type: 'end-turn' });
     for (const achievement of Object.values(ageOf(CATALOGUE, age).achievements)) {
-      expect(Number.isInteger(achievement.count(CATALOGUE, chronicle))).toBe(true);
+      const tally = achievement.tallies?.(CATALOGUE, chronicle, stages, {}) ?? {};
+      for (const value of Object.values(tally)) expect(Number.isInteger(value)).toBe(true);
+      expect(Number.isInteger(achievement.count(CATALOGUE, chronicle, tally))).toBe(true);
     }
   }
 });

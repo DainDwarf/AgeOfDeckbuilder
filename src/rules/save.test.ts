@@ -10,6 +10,7 @@ import { catalogued } from './catalogue';
 import { apply, type Command, outcome } from './chronicle';
 import {
   AGE,
+  achievementIn,
   CATALOGUE,
   CIVILIZATION,
   CIVILIZATION_ID,
@@ -18,6 +19,11 @@ import {
   HOARD,
   hoardedVictory,
   QUIET,
+  REGION,
+  roadOn,
+  SURVEY,
+  SURVEYED,
+  surveying,
   victoryOf,
 } from './fixtures';
 import { RESOURCES } from './resources';
@@ -87,6 +93,20 @@ test('a chronicle saved and read back is the chronicle, and plays the next comma
   const played = outcome(apply(CATALOGUE, read.chronicle.chronicle, command));
   expect(played.turn).toBe(save.chronicle.turn + 1);
   expect(played).toEqual(outcome(apply(CATALOGUE, save.chronicle, command)));
+});
+
+test('a chronicle saved and read back keeps every achievement’s tally, and counts on from it', () => {
+  const [plain, , forest] = SURVEYED;
+  const surveyed = outcome(apply(CATALOGUE, surveying(), roadOn(plain)));
+  const save = { chronicle: surveyed, region: REGION, civilization: CIVILIZATION_ID };
+
+  const read = readSave(CATALOGUE, writeSave(CATALOGUE, campaign(), save));
+
+  expect(achievementIn(surveyed, SURVEY).tally).toEqual({ plain: 1 });
+  expect(read.chronicle).toEqual(save);
+  if (read.chronicle === undefined) throw new Error('the chronicle was dropped');
+  const counted = outcome(apply(CATALOGUE, read.chronicle.chronicle, roadOn(forest)));
+  expect(achievementIn(counted, SURVEY).reached).toBe(true);
 });
 
 test('a campaign saved with no chronicle in progress reads back alone', () => {
@@ -314,7 +334,7 @@ test('a save whose chronicle carries no city section, or one naming a building o
   ]);
 });
 
-test('a save whose chronicle carries no achievements, one its age does not own, or one reached neither true nor false, drops it', () => {
+test('a save whose chronicle carries no achievements, one its age does not own, one reached neither true nor false, or one carrying no tally, drops it', () => {
   const save = chronicleSaved();
   const reading = (achievements: object | undefined): readonly string[] =>
     chronicleDropped(tampered(save, (chronicle) => ({ ...chronicle, achievements })));
@@ -331,6 +351,9 @@ test('a save whose chronicle carries no achievements, one its age does not own, 
   ]);
   expect(reading([{ ...first, reached: 1 }, ...rest])).toEqual([
     "fixture: the save's chronicle.achievements[0].reached is not true or false",
+  ]);
+  expect(reading([{ ...first, tally: undefined }, ...rest])).toEqual([
+    "fixture: the save's chronicle.achievements[0].tally is not an object",
   ]);
 });
 

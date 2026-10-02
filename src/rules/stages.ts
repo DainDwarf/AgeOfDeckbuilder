@@ -28,12 +28,41 @@ export type Group = {
 /** What a group is named and carries, before the stages it holds. */
 type GroupHead =
   | { readonly name: PlainGroup }
+  | { readonly name: 'played'; readonly card: CardId; readonly aimed: Aimed }
   | { readonly name: 'strike'; readonly card: CardId }
   | { readonly name: 'attack'; readonly attacker: TileCoords; readonly target: TileCoords }
   | { readonly name: 'camp-capture'; readonly tile: TileCoords };
 
 /** The one step a command resolves as, a change or a group, each carrying the chronicle it leaves. */
 export type Stage = Change | Group;
+
+/** What a card is played at: nothing, a tile, a unit or a card of the discard pile. */
+export type Aimed =
+  | { readonly aim: 'none' }
+  | { readonly aim: 'tile'; readonly tile: TileCoords }
+  | {
+      readonly aim: 'unit';
+      /** The tile the unit it is aimed at stands on: a unit is played at through the map. */
+      readonly tile: TileCoords;
+    }
+  | {
+      readonly aim: 'discard-pile';
+      /**
+       * Where in the discard pile the card aimed at it lies, in the pile as it stood before the
+       * play: the play sends the card being played to the pile before the effect resolves.
+       */
+      readonly card: number;
+    };
+
+/** One card played: the group carrying the card and what it was aimed at. */
+export type Play = Extract<Group, { readonly name: 'played' }>;
+
+/** Every card the stages played, in the order the walk plays them. */
+export function plays(stages: readonly Stage[]): Play[] {
+  return [...walked(stages)].filter(
+    (stage): stage is Play => stage.kind === 'group' && stage.name === 'played',
+  );
+}
 
 /** The changes that carry nothing but the chronicle they leave. */
 type PlainChange =
@@ -46,6 +75,7 @@ type PlainChange =
   | 'dealt'
   | 'taken'
   | 'ended'
+  | 'tallied'
   | 'reached'
   | 'runtime-error';
 
@@ -66,7 +96,6 @@ type TiledChange =
 
 /** The groups that carry nothing but the stages they hold and the chronicle they leave. */
 type PlainGroup =
-  | 'played'
   | 'refused'
   | 'assign'
   | 'claim'

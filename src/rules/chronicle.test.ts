@@ -1,8 +1,9 @@
 import { expect, test } from 'vitest';
-import { achievementOf, ageOf, type Catalogue } from './catalogue';
+import { achievementOf, ageOf, type Catalogue, capstoneOf } from './catalogue';
 import { apply, type Command, launched, outcome } from './chronicle';
 import {
   AGE,
+  achievementIn,
   builtOn,
   CATALOGUE,
   CITY,
@@ -30,10 +31,15 @@ import {
   QUIET,
   REGION,
   reaching,
+  roadOn,
+  SURVEY,
+  SURVEY_NEED,
+  SURVEYED,
   settledLaunch,
   settledOn,
   stagedBy,
   standing,
+  surveying,
   TILLAGE,
   victoryOf,
   worker,
@@ -618,14 +624,16 @@ test('a chronicle is launched with the achievements of its age whose technology 
     launched(CATALOGUE, AGE, REGION, 1234, CIVILIZATION, learned).achievements;
 
   expect(launchedWith([])).toEqual([
-    { id: HOARD, reached: false },
-    { id: FEAST, reached: false },
-    { id: victoryOf(AGE), reached: false },
+    { id: HOARD, reached: false, tally: {} },
+    { id: FEAST, reached: false, tally: {} },
+    { id: SURVEY, reached: false, tally: {} },
+    { id: victoryOf(AGE), reached: false, tally: {} },
   ]);
   expect(launchedWith([GRANARY])).toEqual([
-    { id: FEAST, reached: false },
-    { id: CROWD, reached: false },
-    { id: victoryOf(AGE), reached: false },
+    { id: FEAST, reached: false, tally: {} },
+    { id: CROWD, reached: false, tally: {} },
+    { id: SURVEY, reached: false, tally: {} },
+    { id: victoryOf(AGE), reached: false, tally: {} },
   ]);
   expect(() => launchedWith(['PH_Unheld'])).toThrow('fixture: no technology is named PH_Unheld');
 });
@@ -645,9 +653,10 @@ test('an achievement is recorded reached right after the change its count meets 
     },
   });
   const recorded = [
-    { id: HOARD, reached: true },
-    { id: FEAST, reached: false },
-    { id: victoryOf(AGE), reached: false },
+    { id: HOARD, reached: true, tally: {} },
+    { id: FEAST, reached: false, tally: {} },
+    { id: SURVEY, reached: false, tally: {} },
+    { id: victoryOf(AGE), reached: false, tally: {} },
   ];
 
   const stages = apply(CATALOGUE, city, { type: 'end-turn' });
@@ -688,14 +697,16 @@ test('two achievements one change meets are each recorded as a reached of its ow
   expect(gained.chronicle.resources.food).toBeGreaterThanOrEqual(FEAST_NEED);
   expect(namesOf(stages)).toEqual(['played', 'left', 'stock', 'reached', 'reached']);
   expect(first.chronicle.achievements).toEqual([
-    { id: HOARD, reached: true },
-    { id: FEAST, reached: false },
-    { id: victoryOf(AGE), reached: false },
+    { id: HOARD, reached: true, tally: {} },
+    { id: FEAST, reached: false, tally: {} },
+    { id: SURVEY, reached: false, tally: {} },
+    { id: victoryOf(AGE), reached: false, tally: {} },
   ]);
   expect(second.chronicle.achievements).toEqual([
-    { id: HOARD, reached: true },
-    { id: FEAST, reached: true },
-    { id: victoryOf(AGE), reached: false },
+    { id: HOARD, reached: true, tally: {} },
+    { id: FEAST, reached: true, tally: {} },
+    { id: SURVEY, reached: false, tally: {} },
+    { id: victoryOf(AGE), reached: false, tally: {} },
   ]);
 });
 
@@ -740,17 +751,19 @@ test('a victory is followed by its achievement, recorded after the ending, and a
   expect(namesOf(stages)).toEqual(['played', 'left', 'reached', 'ended', 'reached']);
   expect(left.chronicle.achievements).toEqual(city.achievements);
   expect(hoarded.chronicle.achievements).toEqual([
-    { id: HOARD, reached: true },
-    { id: FEAST, reached: false },
-    { id: victoryOf(AGE), reached: false },
+    { id: HOARD, reached: true, tally: {} },
+    { id: FEAST, reached: false, tally: {} },
+    { id: SURVEY, reached: false, tally: {} },
+    { id: victoryOf(AGE), reached: false, tally: {} },
   ]);
   expect(hoarded.chronicle.ending).toBeUndefined();
   expect(ended.chronicle.ending).toEqual({ outcome: 'victory', turn: city.turn });
   expect(ended.chronicle.achievements).toEqual(hoarded.chronicle.achievements);
   expect(won.chronicle.achievements).toEqual([
-    { id: HOARD, reached: true },
-    { id: FEAST, reached: false },
-    { id: victoryOf(AGE), reached: true },
+    { id: HOARD, reached: true, tally: {} },
+    { id: FEAST, reached: false, tally: {} },
+    { id: SURVEY, reached: false, tally: {} },
+    { id: victoryOf(AGE), reached: true, tally: {} },
   ]);
   expect(outcome(stages)).toBe(won.chronicle);
 });
@@ -777,7 +790,7 @@ test('the fall’s ending is read as any change: a victory’s achievement is no
     tiles: field(2),
     population: 0,
     assigned: [],
-    achievements: [{ id: victoryOf(QUIET), reached: false }],
+    achievements: [{ id: victoryOf(QUIET), reached: false, tally: {} }],
   });
 
   expect(namesOf(apply(CATALOGUE, empty, { type: 'end-turn' }))).toEqual([
@@ -788,7 +801,9 @@ test('the fall’s ending is read as any change: a victory’s achievement is no
   const fallen = apply(anyEnding, empty, { type: 'end-turn' });
   expect(namesOf(fallen)).toEqual(['grow', 'stock', 'ended', 'reached']);
   expect(outcome(fallen).ending).toEqual({ outcome: 'defeat', cause: 'population', turn: 1 });
-  expect(outcome(fallen).achievements).toEqual([{ id: victoryOf(QUIET), reached: true }]);
+  expect(outcome(fallen).achievements).toEqual([
+    { id: victoryOf(QUIET), reached: true, tally: {} },
+  ]);
 });
 
 test('an achievement that counts the charted tiles is recorded right after the move that charts the tile it needs, in the same command', () => {
@@ -825,10 +840,80 @@ test('an achievement that counts the charted tiles is recorded right after the m
   expect(moved.chronicle.achievements).toEqual(city.achievements);
   expect(reached.chronicle.snapshots).toBe(moved.chronicle.snapshots);
   expect(reached.chronicle.achievements).toEqual([
-    { id: HOARD, reached: true },
-    { id: FEAST, reached: false },
-    { id: victoryOf(AGE), reached: false },
+    { id: HOARD, reached: true, tally: {} },
+    { id: FEAST, reached: false, tally: {} },
+    { id: SURVEY, reached: false, tally: {} },
+    { id: victoryOf(AGE), reached: false, tally: {} },
   ]);
+});
+
+test('an achievement keeping a tally is reached at the end of the command whose deed brings its count to the need, whatever was played between', () => {
+  const [plain, other, forest] = SURVEYED;
+  const first = apply(CATALOGUE, surveying(), roadOn(plain));
+  const between = apply(CATALOGUE, outcome(first), { type: 'play', index: 2, aim: 'none' });
+  const second = apply(CATALOGUE, outcome(between), roadOn(other));
+  const third = apply(CATALOGUE, outcome(second), roadOn(forest));
+
+  expect(SURVEY_NEED).toBe(2);
+  expect(namesOf(first).at(-1)).toBe('tallied');
+  expect(achievementIn(outcome(first), SURVEY)).toEqual({
+    id: SURVEY,
+    reached: false,
+    tally: { plain: 1 },
+  });
+  expect(namesOf(between)).toEqual(['played', 'discarded', 'stock', 'stock']);
+  expect(achievementIn(outcome(second), SURVEY)).toEqual({
+    id: SURVEY,
+    reached: false,
+    tally: { plain: 2 },
+  });
+  expect(third.slice(-2).map(({ name }) => name)).toEqual(['tallied', 'reached']);
+  expect(achievementIn(outcome(third), SURVEY)).toEqual({
+    id: SURVEY,
+    reached: true,
+    tally: { plain: 2, forest: 1 },
+  });
+  for (const stage of walked(third.slice(0, -1))) {
+    expect(achievementIn(stage.chronicle, SURVEY).reached).toBe(false);
+  }
+});
+
+test('a command the chronicle ends on moves no tally, so a deed whose count it would bring to the need is not recorded', () => {
+  const [plain, , forest] = SURVEYED;
+  const tillage = capstoneOf(CATALOGUE, 'PH_Tillage');
+  const paving: Catalogue = {
+    ...CATALOGUE,
+    capstones: {
+      ...CATALOGUE.capstones,
+      PH_Tillage: {
+        ...tillage,
+        passes: (_catalogue, chronicle) =>
+          tileAt(chronicle.tiles, forest)?.improvements.includes('PH_Road') === true,
+      },
+    },
+  };
+  const surveyed = outcome(
+    apply(
+      paving,
+      surveying({ timeline: { ...NO_DEALS, capstone: { id: 'PH_Tillage', turn: 1 } } }),
+      roadOn(plain),
+    ),
+  );
+
+  const stages = apply(paving, surveyed, roadOn(forest));
+
+  expect(achievementIn(surveyed, SURVEY).tally).toEqual({ plain: 1 });
+  expect(namesOf(apply(CATALOGUE, surveyed, roadOn(forest))).slice(-2)).toEqual([
+    'tallied',
+    'reached',
+  ]);
+  expect(outcome(stages).ending).toEqual({ outcome: 'victory', turn: surveyed.turn });
+  expect(namesOf(stages)).not.toContain('tallied');
+  expect(achievementIn(outcome(stages), SURVEY)).toEqual({
+    id: SURVEY,
+    reached: false,
+    tally: { plain: 1 },
+  });
 });
 
 test('a chronicle that has ended takes no command at all', () => {

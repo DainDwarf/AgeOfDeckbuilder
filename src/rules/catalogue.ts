@@ -11,7 +11,7 @@ import {
 } from './map-kinds';
 import type { Resources } from './resources';
 import type { Rng } from './rng';
-import { changeOn, type Landed, landedAs } from './stages';
+import { changeOn, type Landed, landedAs, type Stage } from './stages';
 import {
   type Block,
   type CardId,
@@ -20,6 +20,7 @@ import {
   type CitySection,
   type Counters,
   costsOf,
+  type Tally,
   type TileBlock,
 } from './state';
 import { type Landing, LEAST_STATS, standsOn, type Unit, type UnitStats } from './units';
@@ -178,14 +179,21 @@ export type Camp = {
 };
 
 /**
- * An achievement: its count on the chronicle, read toward its need, the technology it earns, and the
- * influence it pays.
+ * An achievement: its count on the chronicle and its tally, read toward its need, the technology it
+ * earns, the influence it pays, and, for one that keeps a tally, the tally a command leaves it, read
+ * off the chronicle the command started on, the stages it resolved as and the tally as it stood.
  */
 export type Achievement = {
-  readonly count: (catalogue: Catalogue, chronicle: Chronicle) => number;
+  readonly count: (catalogue: Catalogue, chronicle: Chronicle, tally: Tally) => number;
   readonly need: number;
   readonly technology: string;
   readonly influence: number;
+  readonly tallies?: (
+    catalogue: Catalogue,
+    started: Chronicle,
+    stages: readonly Stage[],
+    tally: Tally,
+  ) => Tally;
 };
 
 /**

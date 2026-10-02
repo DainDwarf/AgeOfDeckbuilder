@@ -53,6 +53,7 @@ import {
   type Terrain,
   type Tile,
   type TileCoords,
+  tileAt,
   tileKey,
 } from './map';
 import { buildingKind, improvementKind, type Region } from './map-kinds';
@@ -77,10 +78,11 @@ import {
   unitDamaged,
 } from './schedule';
 import { charted } from './sight';
-import { followed, type Group, type Landed, type Stage, unchanged, walked } from './stages';
+import { followed, type Group, type Landed, plays, type Stage, unchanged, walked } from './stages';
 import {
   type CardId,
   type Chronicle,
+  type ChronicleAchievement,
   type ChronicleCard,
   type CitySection,
   type Deal,
@@ -777,6 +779,19 @@ export const CROWD = 'PH_Crowd';
 /** The population that reaches `CROWD`. */
 export const CROWD_NEED = 6;
 
+/**
+ * The first fixture age's achievement a deed reaches, earning `SURVEYING`: its tally counts the road
+ * played through a worker by the terrain of the tile it was played on, and its count is the kinds of
+ * terrain the tally names.
+ */
+export const SURVEY = 'PH_Survey';
+
+/** The kinds of terrain that reach `SURVEY`. */
+export const SURVEY_NEED = 2;
+
+/** The technology `SURVEY` earns: it needs none, and unlocks nothing. */
+const SURVEYING = 'PH_Surveying';
+
 /** The technology `HOARD` earns: it needs none, and unlocks two copies of a card. */
 export const GRANARY = 'PH_Granary';
 
@@ -799,7 +814,7 @@ function pastOf(age: string): string {
 /** The fixture's ages, in the order of the ages table. */
 const AGES = Object.keys(SCHEDULES);
 
-/** The achievements a fixture age owns: its victory, and before it the first age's three others. */
+/** The achievements a fixture age owns: its victory, and before it the first age's four others. */
 function achievementsOf(age: string): Age['achievements'] {
   const victory: Age['achievements'] = {
     [victoryOf(age)]: {
@@ -829,15 +844,32 @@ function achievementsOf(age: string): Age['achievements'] {
       technology: CENSUS,
       influence: 0,
     },
+    [SURVEY]: {
+      tallies: (_catalogue, started, stages, tally) => {
+        let kept = tally;
+        for (const { card, aimed } of plays(stages)) {
+          if (card !== 'PH_Road' || aimed.aim !== 'tile') continue;
+          const terrain = tileAt(started.tiles, aimed.tile)?.terrain;
+          if (terrain === undefined) continue;
+          kept = { ...kept, [terrain]: (kept[terrain] ?? 0) + 1 };
+        }
+        return kept;
+      },
+      count: (_catalogue, _chronicle, tally) => Object.keys(tally).length,
+      need: SURVEY_NEED,
+      technology: SURVEYING,
+      influence: 1,
+    },
     ...victory,
   };
 }
 
-/** The fixture's technologies: the first age's three, and each age's victory unlocking the next age. */
+/** The fixture's technologies: the first age's four, and each age's victory unlocking the next age. */
 const TECHNOLOGIES: Tables['technologies'] = {
   [GRANARY]: { needs: [], unlocks: { cards: { PH_Harvest: 2 } } },
   [CENSUS]: { needs: [GRANARY], unlocks: { cards: {} } },
   [LARDER]: { needs: [], unlocks: { cards: {} } },
+  [SURVEYING]: { needs: [], unlocks: { cards: {} } },
   ...Object.fromEntries(
     AGES.map((age, at) => {
       const next = AGES[at + 1];
@@ -1105,6 +1137,39 @@ export function hoardedVictory(): Chronicle {
     resources: { food: HOARD_NEED, production: 0, military: 0, money: 0, science: 0, culture: 0 },
   });
   return outcome(apply(CATALOGUE, city, { type: 'play', index: 0, aim: 'none' }));
+}
+
+/** The tiles a fixture plays the road on toward `SURVEY`: two plains, then a forest. */
+export const SURVEYED: readonly [TileCoords, TileCoords, TileCoords] = [
+  { q: 1, r: 0 },
+  { q: -1, r: 0 },
+  { q: 0, r: 1 },
+];
+
+/**
+ * A first-age city with nothing learned, a worker on each tile of `SURVEYED`, a road in hand for
+ * each and a harvest after them, and the stocks to play them all.
+ */
+export function surveying(carrying: Carrying = {}): Chronicle {
+  return reaching([], {
+    tiles: madeOf(field(2), 'forest', [SURVEYED[2]]),
+    units: SURVEYED.map(worker),
+    hand: ['PH_Road', 'PH_Road', 'PH_Road', 'PH_Harvest'],
+    resources: { food: 0, production: 6, military: 0, money: 0, science: 1, culture: 0 },
+    ...carrying,
+  });
+}
+
+/** The road at that place of the hand, the first unless named, played on a tile. */
+export function roadOn(tile: TileCoords, index = 0): Command {
+  return { type: 'play', index, aim: 'tile', tile };
+}
+
+/** The achievement of the chronicle's row that the id names. A row without it throws. */
+export function achievementIn(chronicle: Chronicle, id: string): ChronicleAchievement {
+  const held = chronicle.achievements.find((achievement) => achievement.id === id);
+  if (held === undefined) throw new Error(`the chronicle's row holds no ${id}`);
+  return held;
 }
 
 /** A chronicle three turns in, saved with what it was launched on. */

@@ -50,8 +50,18 @@ export type Deal =
   | { readonly of: 'event'; readonly event: string }
   | { readonly of: 'camp'; readonly rewards: readonly CardId[] };
 
-/** An achievement a chronicle can reach, by its id among its age's, and whether it is reached. */
-export type ChronicleAchievement = { readonly id: string; readonly reached: boolean };
+/** An achievement's tally: named numbers of its own, by name. */
+export type Tally = Readonly<Record<string, number>>;
+
+/**
+ * An achievement a chronicle can reach, by its id among its age's, whether it is reached, and its
+ * tally, empty where it keeps none.
+ */
+export type ChronicleAchievement = {
+  readonly id: string;
+  readonly reached: boolean;
+  readonly tally: Tally;
+};
 
 /** What a snapshot keeps of the unit that stood on the tile: what its mark is drawn from. */
 export type SnapshotUnit = { readonly type: string; readonly faction: Faction };

@@ -171,6 +171,7 @@ export function createPiles(
       case 'dealt':
       case 'taken':
       case 'ended':
+      case 'tallied':
       case 'reached':
       case 'runtime-error':
         return undefined;

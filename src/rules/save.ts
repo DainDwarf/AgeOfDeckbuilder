@@ -46,6 +46,7 @@ import type {
   Ending,
   Snapshot,
   SnapshotUnit,
+  Tally,
   Timeline,
 } from './state';
 import { type Faction, FIRST_UNIT_NUMBER, LEAST_STATS, type Unit, type UnitStats } from './units';
@@ -499,10 +500,21 @@ function chronicleOf(catalogue: Catalogue, slot: Slot): Chronicle {
       return {
         id: id(catalogue, held('id'), (read, named) => achievementOf(read, age, named)),
         reached: flag(catalogue, held('reached')),
+        tally: tallyOf(catalogue, held('tally')),
       };
     }),
     ending: optional(field('ending'), (item) => endingOf(catalogue, item)),
   };
+}
+
+/** An achievement's tally: every name it carries, each an integer. */
+function tallyOf(catalogue: Catalogue, slot: Slot): Tally {
+  return Object.fromEntries(
+    Object.entries(object(catalogue, slot)).map(([name, raw]) => [
+      name,
+      integer(catalogue, { raw, at: `${slot.at}.${name}` }),
+    ]),
+  );
 }
 
 function rngOf(catalogue: Catalogue, slot: Slot): Rng {
