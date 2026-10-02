@@ -6,7 +6,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Rungs
 
-- **The Stone Age's technologies** — the age's technology tree and every card it unlocks, buildings, improvements, units and settle cards among them, each technology with its achievement, cut from the pool in [board/stone-age-pool.md](board/stone-age-pool.md); with it one achievement pinned on the campaign screen showing on the chronicle screen as a ledger: its goal in words, a count against its need where it has one, a check mark once reached, a cross mark once failed; the warning a launch over a chronicle with achievements reached raises, since an abandoned chronicle pays nothing; and the spec that proves the collection scrolls, its cards being the first to fill the room, and a drag that runs on fired inside the page, since Playwright's own mouse moves come too far apart to set a panel running.
 - **The Stone Age's schedule** — the age's own events, its capstone and its victory with the technology it earns, on a chronicle longer than the Nomadic one, hard to impossible on the deck the age opens with and beatable once its tree is climbed; with it the ending's scaled pay.
 - **New enemies** — the enemy units the Stone Age adds, the scripts they follow and the camps they enter from.
 - **Neutrals and sites** — the neutral faction, and the sites that belong to no faction and pay a reward once.
@@ -14,3 +13,12 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 - **The balance pass** — the Stone Age's numbers, measured through the simulator and felt in play.
 
 ## Lines
+
+- **The pinned achievement** — one achievement pinned on the campaign screen shows on the chronicle screen as a ledger: its goal in words, a count against its need where it has one, a check mark once reached, a cross mark once failed.
+- **The launch warning** — the warning a launch over a chronicle with achievements reached raises, since an abandoned chronicle pays nothing.
+- **The doors** — Agriculture, Trapping, Fire and Herbalism, the first column of the Stone Age's tree and one to a family, each technology with its achievement, done with the Nomadic deck, and every card it unlocks; whether Trapping leaves the Nomadic Age is settled here; the tree these lines share is in [board/stone-age-pool.md](board/stone-age-pool.md).
+- **The field's climb** — Irrigation, Grinding stone and Bread, each technology with its achievement and every card it unlocks.
+- **The wild's climb** — Bow and arrow, Fishing, Domestication, Clothmaking and Raft, each technology with its achievement and every card it unlocks.
+- **The hearth's climb** — Pottery, Dyes and Bartering, and Granary, which needs Pottery, each technology with its achievement and every card it unlocks.
+- **The sky's climb** — Burial rites, Calendar and Megalith, each technology with its achievement and every card it unlocks.
+- **The collection scrolls** — the spec that proves the collection scrolls, its cards being the first to fill the room, and a drag that runs on fired inside the page, since Playwright's own mouse moves come too far apart to set a panel running.

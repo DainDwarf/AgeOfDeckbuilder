@@ -1,44 +1,50 @@
 # The Stone Age's pool
 
-A pool of possibilities from the brainstorm that cut the Stone Age rung. Nothing here is decided, promised or linked to a mechanism; each section is read at the cut of the rung it names and deleted with it. The ideas tagged Stone Age in [`IDEAS.md`](../IDEAS.md) belong to the same pool and are not repeated here.
+A pool of possibilities from the brainstorm that cut the Stone Age rung. Nothing here is decided, promised or linked to a mechanism; each section is read at the cut of the rung it names and deleted with it. The technologies' section is the exception: its rung is cut, what it holds is settled unless it says otherwise, it is the ground the technology lines share, and it is deleted with the last of them. The ideas tagged Stone Age in [`IDEAS.md`](../IDEAS.md) belong to the same pool and are not repeated here.
 
 The age in one sentence: the chronicle where the economy comes home — it opens as a band that still lives off the map and ends as a village that lives off its border.
 
 ## For the technologies
 
-**The user's list:** fire, grinding stone, bread, granary, agriculture, irrigation, domestication, bow and arrow, fishing, clothmaking, pottery, bead-making, dyes, megalith, sun stones, raft, herbalism, burial rites, calendar, bartering.
+**How a line is settled:** by ping-pong, one question a turn. A technology is served as two or three takes that differ on purpose, never as one table; it is designed in words without numbers, shipped on provisional numbers and played, and the next line is designed after. Every reason the user gives for striking or twisting a take is added to the taste list below. A line is cut again when its turn shows it wrong.
 
-**Claude's first table.** The user would change a lot of it; it is a starting point to argue with, not a draft. Its one principle for goals: the goal is the need the technology answers. Sun stones are not placed on it.
+**The frame:**
 
-| Technology | Could unlock | Goal could be |
-| --- | --- | --- |
-| Fire | Burn (forest to plain), a hearth building | let a Wildfire burn |
-| Agriculture | Farm improvement on plain | hold a large population |
-| Irrigation | food along the river, an answer to drought | hold many river tiles |
-| Grinding stone, Bread | food turned into growth now | work several fertile tiles |
-| Granary | building that shields the stock from Hunger | hold a large food stock |
-| Domestication | Pasture; a dog unit | follow or hunt herds |
-| Fishing, Raft | coast worked, water crossed | chart or hold coast |
-| Bow and arrow | Archer | kill enemies, capture a camp |
-| Herbalism | Heal | survive Sickness |
-| Clothmaking | a unit's health raised for good | lose no unit |
-| Pottery | keep a card in hand over the end of turn | — |
-| Bead-making, Dyes | culture sources | claim many tiles, chart every terrain |
-| Burial rites | culture when a population is killed | have population killed |
-| Megalith | the great culture building | — |
-| Calendar | the coming event's turn announced | last to a late turn |
-| Bartering | an exchange with the village | meet one |
+- The tree is five columns deep, to be felt. Not every technology on it may be kept.
+- A goal is practice: it is done with the cards of the technologies its technology needs, so every link of the tree has a reason. A feat, a goal that bends the whole chronicle, stands here and there. A goal that lands on its own while the chronicle is played as usual is avoided. The first column's goals are done with the Nomadic deck.
+- The technologies are grouped by way of life, four families: the field, the wild, the hearth, the sky. The families are not wholly separate: a technology may need one of another family.
+- The age opens every resource. Money and science may be under-represented, and are still there in some capacity.
+- The doors land first, as one line, so one chronicle plays the four goals; each family's climb is designed after its door has been played. Granary lands with the hearth, since it needs Pottery.
 
-**Single use, to settle with the buildings in front of us.** The user may reconsider whether buildings, improvements and even units are single use, and if they are, wants a technology whose card draws a card that left the chronicle, settle cards excepted, so that editing the deck's buildings does not become a set plan for the city.
+**The skeleton, the user's tree** (names and links; a link's reason is tested against the practice rule when its technology is designed, and moves if it finds no goal):
+
+- Column 1, the doors, one to a family: Agriculture (the field); Trapping (the wild); Fire (the hearth); Herbalism (the sky).
+- Column 2: Irrigation (needs Agriculture); Grinding stone (needs Agriculture); Bow and arrow (needs Trapping); Domestication (needs Trapping, Agriculture); Fishing (needs Trapping); Pottery (needs Fire); Burial rites (needs Herbalism).
+- Column 3: Bread (needs Grinding stone); Clothmaking (needs Bow and arrow); Raft (needs Fishing); Calendar (needs Herbalism, Irrigation).
+- Column 4: Granary (needs Bread, Pottery); Dyes (needs Pottery, Clothmaking); Megalith (needs Burial rites, Calendar).
+- Column 5: Bartering (needs Dyes).
+
+The field is Agriculture, Irrigation, Grinding stone, Bread and Granary; the wild is Trapping, Bow and arrow, Domestication, Fishing, Clothmaking and Raft; the hearth is Fire, Pottery, Dyes and Bartering; the sky is Herbalism, Burial rites, Calendar and Megalith.
+
+**Taste**, the user's reasons, read before every serve:
+
+- This is only the first age with a tree to climb: difficulty and complexity do not scale fast. Goals may grow more feat-like in later ages.
+
+**Left out, and side notes:**
+
+- Sun stones and bead-making are off the tree, at least for now.
+- Trapping as a technology may take Trapping out of the Nomadic Age: settled at the doors.
+- Clothmaking may become tanning to sit better in the wild, a polish decision.
+
+**Single use, to settle with the buildings in front of us**, at the first line whose technologies bring a building. The user may reconsider whether buildings, improvements and even units are single use, and if they are, wants a technology whose card draws a card that left the chronicle, settle cards excepted, so that editing the deck's buildings does not become a set plan for the city.
 
 - Single use is already a keyword any unit, building or instant card carries, card by card, so each card is asked "one of these, or many?" and nothing is decided for a whole kind.
 - Claude's lean: buildings single use, improvements and units cycling. A second draw of a city-wide building is blank anyway and the deck thins as the city is built; a farm is wanted on many tiles; units are killed and the schedule never ends.
-- What single-use buildings change: `docs/CHRONICLE.md` says a copy bought "makes the deck faster, never the city bigger", and copies would become the city's size, the price doubling per copy; a pillaged single-use building is gone for the chronicle.
+- What single-use buildings change: `docs/CHRONICLE.md` rejects consuming a building card on play and says a copy bought "makes the deck faster, never the city bigger"; copies would become the city's size, the price doubling per copy; a pillaged single-use building is gone for the chronicle.
 - The fetch technology answers both, and which building to repeat is then chosen on the map, in the chronicle. It needs one mechanism: a card that leaves the chronicle is dropped today, so a third pile would keep what left, and a card would be aimed at it as a recall is aimed at the discard pile.
 
 **Open, unanswered:**
 
-- Resources. Claude's lean is none new: the age deepens the four, bartering is goods for goods, money waits for the Bronze Age. The other option is beads as the first money.
 - Whether Settlement unlocks cards of its own, a first building among them, since it unlocks none today.
 - The eight Gathers of the Nomadic deck becoming dead draws as the border thickens, so the player's own deck editing is the transition.
 
