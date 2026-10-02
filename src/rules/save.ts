@@ -46,7 +46,6 @@ import type {
   Ending,
   Snapshot,
   SnapshotUnit,
-  Tally,
   Timeline,
 } from './state';
 import { type Faction, FIRST_UNIT_NUMBER, LEAST_STATS, type Unit, type UnitStats } from './units';
@@ -427,6 +426,15 @@ function object(catalogue: Catalogue, slot: Slot): Readonly<Record<string, unkno
   return raw as Record<string, unknown>;
 }
 
+function integers(catalogue: Catalogue, slot: Slot): Record<string, number> {
+  return Object.fromEntries(
+    Object.entries(object(catalogue, slot)).map(([name, raw]) => [
+      name,
+      integer(catalogue, { raw, at: `${slot.at}.${name}` }),
+    ]),
+  );
+}
+
 /** The fields of an object of the save, by name; one it does not carry is absent. */
 function record(catalogue: Catalogue, slot: Slot): (name: string) => Slot {
   const fields = object(catalogue, slot);
@@ -500,21 +508,11 @@ function chronicleOf(catalogue: Catalogue, slot: Slot): Chronicle {
       return {
         id: id(catalogue, held('id'), (read, named) => achievementOf(read, age, named)),
         reached: flag(catalogue, held('reached')),
-        tally: tallyOf(catalogue, held('tally')),
+        tally: integers(catalogue, held('tally')),
       };
     }),
     ending: optional(field('ending'), (item) => endingOf(catalogue, item)),
   };
-}
-
-/** An achievement's tally: every name it carries, each an integer. */
-function tallyOf(catalogue: Catalogue, slot: Slot): Tally {
-  return Object.fromEntries(
-    Object.entries(object(catalogue, slot)).map(([name, raw]) => [
-      name,
-      integer(catalogue, { raw, at: `${slot.at}.${name}` }),
-    ]),
-  );
 }
 
 function rngOf(catalogue: Catalogue, slot: Slot): Rng {
@@ -681,12 +679,7 @@ function cardIn(catalogue: Catalogue, slot: Slot): ChronicleCard {
   const card = string(catalogue, field('id'));
   const declared = cardOf(catalogue, card).counters ?? {};
   const counters = field('counters');
-  const carried = Object.fromEntries(
-    Object.entries(object(catalogue, counters)).map(([name, raw]) => [
-      name,
-      integer(catalogue, { raw, at: `${counters.at}.${name}` }),
-    ]),
-  );
+  const carried = integers(catalogue, counters);
   for (const name of Object.keys(declared)) {
     if (!Object.hasOwn(carried, name)) {
       refused(catalogue, counters, `lacks the counter ${name} the card ${card} declares`);

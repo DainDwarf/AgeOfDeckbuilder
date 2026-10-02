@@ -207,14 +207,7 @@ export function apply(catalogue: Catalogue, chronicle: Chronicle, command: Comma
   return conditionsRead(catalogue, chronicle, stages);
 }
 
-/**
- * The charted stages a command resolves as, every change, an `ended` among them, followed by a
- * `reached` for each achievement keeping no tally that its chronicle meets, and cut at the first the
- * capstone passes on, the victory's `ended` after it; the capstone is never read on a chronicle whose
- * city falls on it. A command the chronicle does not end on then closes on one `tallied` for each
- * achievement whose tally it moved, in the order of the row, and a `reached` for each achievement
- * keeping a tally that its count meets.
- */
+/** The capstone is never read on a chronicle whose city falls on it. */
 function conditionsRead(
   catalogue: Catalogue,
   started: Chronicle,
