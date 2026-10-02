@@ -14,6 +14,7 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
+- **The launch reads the achievements** — every achievement is read on the chronicle as it is launched, one met there recorded at the launch, and a command that moves several tallies raises one `tallied` per achievement whose tally moved; two rules tests on the fixture hold it — a goal met on the launched chronicle recorded at the launch, a command moving two tallies raising two `tallied` — and `docs/META.md` says so. Doc-impact: `docs/META.md`. [board/the-launch-reads-the-achievements.md](board/the-launch-reads-the-achievements.md)
 - **A card aimed at the hand** — a card chooses another card of the hand as its aim, as one is aimed at the discard pile today, and the chronicle screen offers the choice; the first card to need it discards the one chosen.
 - **The doors** — Agriculture, Trapping, Fire and Herbalism, the first column of the Stone Age's tree, each needing Settlement, each with its goal and every card it unlocks, Trapping leaving the Nomadic Age; their design is settled in words in [board/stone-age-pool.md](board/stone-age-pool.md), and their numbers and texts are this line's intake.
 - **The pinned achievement** — one achievement pinned on the campaign screen shows on the chronicle screen as a ledger: its goal in words, a count against its need where it has one, a check mark once reached, a cross mark once failed.
