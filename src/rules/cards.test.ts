@@ -3,6 +3,7 @@ import {
   aimOf,
   built,
   discarded,
+  featureRemoved,
   improvementPlaced,
   made,
   outside,
@@ -67,6 +68,7 @@ import {
 } from './fixtures';
 import {
   cornersOf,
+  type FeatureId,
   MOVE_POINT,
   type Terrain,
   type Tile,
@@ -1434,6 +1436,49 @@ test('the mine card names the first of its four reasons: worker, action, terrain
   ).toBe('worker-spent');
   expect(refusedFor(mined, 'PH_Mine', at)).toBe('improvement-placed');
   expect(refusedFor(worked, 'PH_Mine', at)).toBeUndefined();
+});
+
+test('a card removing a feature takes it off the tile the worker stands on, inside the border and outside it, and leaves every other layer standing', () => {
+  for (const at of [
+    { q: 1, r: 0 },
+    { q: 2, r: 0 },
+  ]) {
+    const city = withTile(workedTile(at, 'plain', { hand: ['PH_Hunt'] }), {
+      ...at,
+      terrain: 'plain',
+      feature: 'PH_Fertile',
+      improvements: ['PH_Road'],
+    });
+    const others = (chronicle: Chronicle): Tile[] =>
+      chronicle.tiles.filter((tile) => tileKey(tile) !== tileKey(at));
+
+    const stages = apply(CATALOGUE, city, aimedAt(at));
+    const after = outcome(stages);
+
+    expect(namesOf(stages)).toEqual(['played', 'discarded', 'action-spent', 'retiled']);
+    expect(tileAt(after.tiles, at)).toEqual({ ...at, terrain: 'plain', improvements: ['PH_Road'] });
+    expect(others(after)).toEqual(others(city));
+    expect(unitNamed(after, 1).tile).toEqual(at);
+    expect(actionOf(after, 1)).toBe(actionOf(city, 1) - 1);
+    expect(featureRemoved(after, at).stages).toEqual([]);
+  }
+});
+
+test('a card asking for one feature of several names the first of its reasons: worker, action, then feature', () => {
+  const at = { q: 1, r: 0 };
+  const bare = ringed(2);
+  const carrying = (terrain: Terrain, feature?: FeatureId): Chronicle =>
+    withTile(bare, { ...at, terrain, feature, improvements: [] });
+  const worked = (terrain: Terrain, feature?: FeatureId): Chronicle =>
+    withUnits(carrying(terrain, feature), [worker(at)]);
+  const spent = withUnits(carrying('plain', 'PH_Fertile'), [standing('player', at, WORKER, 0, 0)]);
+
+  expect(refusedFor(carrying('plain', 'PH_Fertile'), 'PH_Hunt', at)).toBe('no-worker');
+  expect(refusedFor(spent, 'PH_Hunt', at)).toBe('worker-spent');
+  expect(refusedFor(worked('plain'), 'PH_Hunt', at)).toBe('wrong-feature');
+  expect(refusedFor(worked('hills', 'PH_Flint'), 'PH_Hunt', at)).toBe('wrong-feature');
+  expect(refusedFor(worked('plain', 'PH_Fertile'), 'PH_Hunt', at)).toBeUndefined();
+  expect(refusedFor(worked('forest', 'PH_Game'), 'PH_Hunt', at)).toBeUndefined();
 });
 
 test('the urbanisation card names the first of its four reasons: worker, action, terrain, then faction', () => {

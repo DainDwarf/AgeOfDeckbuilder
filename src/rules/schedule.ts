@@ -1,4 +1,4 @@
-import { terraformed } from './cards';
+import { featurePlaced, terraformed } from './cards';
 import {
   type Answer,
   ageOf,
@@ -359,16 +359,8 @@ export function featureDealt(
   if (candidates.length === 0) return unchanged(chronicle);
   const step = nextRng(chronicle.rng);
   const dealt = candidates[Math.floor(step.value * candidates.length)];
-  const key = tileKey(dealt);
   const at = { q: dealt.q, r: dealt.r };
-  const landing = landedAs(
-    changeOn('retiled', at, {
-      ...chronicle,
-      rng: step.rng,
-      tiles: chronicle.tiles.map((tile) => (tileKey(tile) === key ? { ...tile, feature } : tile)),
-    }),
-  );
-  return { ...landing, at };
+  return { ...featurePlaced(catalogue, { ...chronicle, rng: step.rng }, at, feature), at };
 }
 
 /**

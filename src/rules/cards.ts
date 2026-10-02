@@ -10,8 +10,8 @@ import {
   unitKind,
 } from './catalogue';
 import { claimable, populationTaken } from './city';
-import { type Tile, type TileCoords, tileAt, tileKey } from './map';
-import { buildingKind, improvementKind, refuse, terrainKind } from './map-kinds';
+import { type FeatureId, type Tile, type TileCoords, tileAt, tileKey } from './map';
+import { buildingKind, featureKind, improvementKind, refuse, terrainKind } from './map-kinds';
 import { RESOURCES, type Resource, type Resources } from './resources';
 import {
   change,
@@ -218,6 +218,18 @@ export function made(
   return terrains.includes(tile.terrain) ? undefined : 'wrong-terrain';
 }
 
+/** The features a card asks the tile to carry, any one of them. */
+export function featureAmong(
+  catalogue: Catalogue,
+  tile: Tile,
+  features: readonly FeatureId[],
+): TileBlock | undefined {
+  for (const feature of features) featureKind(catalogue, feature);
+  return tile.feature !== undefined && features.includes(tile.feature)
+    ? undefined
+    : 'wrong-feature';
+}
+
 /** A tile's one building slot, free: what a building fills and a settle needs empty. */
 export function slotFree(tile: Tile): TileBlock | undefined {
   return tile.building === undefined ? undefined : 'slot-filled';
@@ -402,6 +414,23 @@ export function improvementPlaced(
     ...tile,
     improvements: [...tile.improvements, improvement],
   }));
+}
+
+/** The feature placed on a tile: the tile carries it from now on. */
+export function featurePlaced(
+  catalogue: Catalogue,
+  paid: Chronicle,
+  at: TileCoords,
+  feature: FeatureId,
+): Landed {
+  featureKind(catalogue, feature);
+  return retiled(paid, at, (tile) => ({ ...tile, feature }));
+}
+
+/** The feature removed from a tile: the tile carries none from now on, and nothing where it carried none. */
+export function featureRemoved(paid: Chronicle, at: TileCoords): Landed {
+  if (tileAt(paid.tiles, at)?.feature === undefined) return unchanged(paid);
+  return retiled(paid, at, (tile) => ({ ...tile, feature: undefined }));
 }
 
 /**

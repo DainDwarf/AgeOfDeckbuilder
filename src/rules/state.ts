@@ -138,6 +138,7 @@ export type TileBlock =
   | 'outside-border'
   | 'inside-border'
   | 'wrong-terrain'
+  | 'wrong-feature'
   | 'slot-filled'
   | 'other-faction'
   | 'improvement-placed'

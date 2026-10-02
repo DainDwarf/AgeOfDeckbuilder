@@ -993,7 +993,7 @@ function campCaptured(
   tile: TileCoords,
 ): Sequence<Group> {
   const at = tileKey(tile);
-  const cleared = landedAs(
+  const removed = landedAs(
     changeOn('retiled', tile, {
       ...chronicle,
       tiles: chronicle.tiles.map((other) =>
@@ -1003,7 +1003,7 @@ function campCaptured(
   );
   return grouped(
     { name: 'camp-capture', tile },
-    followed(cleared, (left) =>
+    followed(removed, (left) =>
       landedAs(
         change('dealt', {
           ...left,

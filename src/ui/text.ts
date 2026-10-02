@@ -157,6 +157,7 @@ const TEXT = {
   'refusal.outside-border': 'Outside the city border',
   'refusal.inside-border': 'Inside the city border',
   'refusal.wrong-terrain': 'Wrong terrain',
+  'refusal.wrong-feature': 'Wrong feature',
   'refusal.slot-filled': 'A building already stands here',
   'refusal.other-faction': 'That tile belongs to another faction',
   'refusal.improvement-placed': 'That improvement is already here',

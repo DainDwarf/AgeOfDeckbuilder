@@ -1009,6 +1009,18 @@ test('a feature is dealt onto one tile near the city carrying none, drawn once f
   expect(dealtOn.size).toBeGreaterThan(1);
 });
 
+test('a tile whose feature a card removed is dealt that feature again by an answer, and stands as it stood before the removal', () => {
+  const at = { q: HERD, r: 0 };
+  const city = herded([], { hand: ['PH_Hunt'], units: [worker(at)] });
+
+  const hunted = outcome(apply(CATALOGUE, city, { type: 'play', index: 0, aim: 'tile', tile: at }));
+  const { landed } = followed(hunted);
+
+  expect(featureOf(city, at)).toBe('PH_Fertile');
+  expect(featureOf(hunted, at)).toBeUndefined();
+  expect(tileAt(landed.tiles, at)).toEqual(tileAt(city.tiles, at));
+});
+
 test('a tile an answer charts is charted where it was not, its snapshot holding what the answer dealt onto it and whoever stands on it, and it is in fog as the answer lands', () => {
   const at = { q: HERD, r: 0 };
   const { dealt, landed } = followed(herded([at], { units: [standing('enemy', at, {}, 0, 0)] }));
@@ -1340,7 +1352,7 @@ test('a camp captured on the siege’s last turn holds the victory back until it
 
 test('a capture that meets a capstone’s condition ends the chronicle on the capture, its rewards never dealt', () => {
   const camp = { q: 4, r: 0 };
-  const cleared: Catalogue = {
+  const campsRemoved: Catalogue = {
     ...CATALOGUE,
     capstones: {
       PH_Siege: {
@@ -1359,7 +1371,7 @@ test('a capture that meets a capstone’s condition ends the chronicle on the ca
     turn: CAPSTONE,
     timeline: besieging(),
   });
-  const stages = apply(cleared, last, { type: 'end-turn' });
+  const stages = apply(campsRemoved, last, { type: 'end-turn' });
 
   expect(heldBy(stages, 'camp-capture').map(({ name }) => name)).toEqual(['retiled', 'ended']);
   expect(namesOf(stages).slice(-3)).toEqual(['camp-capture', 'retiled', 'ended']);

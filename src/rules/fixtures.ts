@@ -9,6 +9,8 @@ import {
   discarded,
   enters,
   entersOn,
+  featureAmong,
+  featureRemoved,
   firstRefusal,
   gained,
   improvementAbsent,
@@ -459,6 +461,14 @@ const TABLES: Omit<Tables, 'technologies'> = {
         (catalogue, paid, at) => terraformed(catalogue, paid, at, 'urban'),
       ),
     },
+    PH_Hunt: {
+      kind: 'instant',
+      cost: {},
+      ...throughWorker(
+        (catalogue, _chronicle, tile) => featureAmong(catalogue, tile, ['PH_Fertile', 'PH_Game']),
+        (_catalogue, paid, at) => featureRemoved(paid, at),
+      ),
+    },
     PH_Recall: {
       kind: 'instant',
       cost: { science: 2 },
@@ -622,6 +632,8 @@ const TABLES: Omit<Tables, 'technologies'> = {
   },
   features: {
     PH_Fertile: { terrain: 'plain', yields: { food: 1 } },
+    PH_Game: { terrain: 'forest', yields: { food: 1 } },
+    PH_Flint: { terrain: 'hills', yields: { production: 1 } },
   },
   improvements: {
     PH_Mine: { terrains: ['hills'], yields: { production: 1 } },
