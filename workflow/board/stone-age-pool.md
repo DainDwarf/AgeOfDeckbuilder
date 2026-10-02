@@ -14,7 +14,7 @@ The age in one sentence: the chronicle where the economy comes home — it opens
 - A goal is practice: it is done with the cards of the technologies its technology needs, so every link of the tree has a reason. A feat, a goal that bends the whole chronicle, stands here and there. A goal that lands on its own while the chronicle is played as usual is avoided. The first column's goals are done with the Nomadic deck.
 - The technologies are grouped by way of life, four families: the field, the wild, the hearth, the sky. The families are not wholly separate: a technology may need one of another family.
 - The age opens every resource. Money and science may be under-represented, and are still there in some capacity.
-- The doors land first, as one line, so one chronicle plays the four goals; each family's climb is designed after its door has been played. Granary lands with the hearth, since it needs Pottery.
+- The doors land first, as one line after the mechanisms they rest on, so one chronicle plays the four goals; each family's climb is designed after its door has been played. Granary lands with the hearth, since it needs Pottery.
 
 **The skeleton, the user's tree** (names and links; a link's reason is tested against the practice rule when its technology is designed, and moves if it finds no goal):
 
@@ -26,22 +26,37 @@ The age in one sentence: the chronicle where the economy comes home — it opens
 
 The field is Agriculture, Irrigation, Grinding stone, Bread and Granary; the wild is Trapping, Bow and arrow, Domestication, Fishing, Clothmaking and Raft; the hearth is Fire, Pottery, Dyes and Bartering; the sky is Herbalism, Burial rites, Calendar and Megalith.
 
+**The doors, settled in words** at their line's cut (2026-10-02). Their numbers — copies unlocked, influence paid, needs, costs — and their texts are the doors' intake, once the two lines they rest on have landed: a goal reading what was done, and a card aimed at the hand.
+
+- Every door needs Settlement: the four read ??? until the Nomadic Age is won, and are available together after it.
+- **Trapping, the wild.** Trapping leaves the Nomadic Age: the Nomadic civilization's deck opens without it, on Gather, the three units and March, and the card is the Stone Age's, unlocked by the technology. The card is an improvement giving food, placed through a worker for production, on a forest carrying wildlife and nowhere else. The goal counts a deed: food gained through Gather played on tiles carrying wildlife, toward a need high enough to demand the player's focus.
+- **Agriculture, the field.** Farm is a building on any plain, inside the border as any building, giving food, single use: the copies owned are how many the city builds. The goal reads the chronicle as it stands: plain tiles inside the border, toward a need that demands focus; the city's own tile counts when it stands on plain, and so does a forest inside the border burned to plain.
+- **Fire, the hearth.** The previous game's Fire: an instant costing nothing that discards another chosen card of the hand and gains science. A hazard discarded so does not strike that turn, by the rules as they stand, and comes around again. Science gets its source here and no sink until the science-based cards arrive. The goal counts a deed: turns ended on an empty hand, toward a need; the user doubts how much control the player has over it, so it is the first thing to playtest.
+- **Herbalism, the sky.** Heal, as the idea jotted it at 2 food: it costs food, is aimed at a unit standing inside the border, brings it back to full health, and is refused on a unit at full health. The goal counts a deed: Gather played on four kinds of terrain, which in the temperate region is every kind a worker stands on — plain, forest, hills, desert — and a Gather on bare desert gains nothing and counts. Measured over 200 seeds of the Stone Age's temperate region: the nearest desert tile is a median 7 tiles and 4.5 worker turns from the centre, 2.5 turns at the nearest tenth, 7 at the furthest, and on 1 seed no desert is walked to at all.
+- Corners left to the doors' intake: a campaign begun before keeps its two Trapping copies; `e2e/worker-instants.spec.ts` plays Trapping on a Nomadic chronicle; whether a hand emptied by a discard counts as an empty hand once Fire is owned; the Nomadic deck found thin in play has `IDEAS.md`'s Hunting to try.
+
 **Taste**, the user's reasons, read before every serve:
 
 - This is only the first age with a tree to climb: difficulty and complexity do not scale fast. Goals may grow more feat-like in later ages.
+- A goal demands the player's focus: its need is high enough that playing as usual does not reach it. A deed counted is taken over a position struck.
+- A feature is what a family works: one feature on two terrains gives two technologies their ground, wildlife on forest for Trapping and on plain for Domestication.
+- A goal is read from its technology's fiction: "herbalism comes from knowing the land".
+- A card the previous game had comes over as it was; ask before designing one, since Fire was served three takes for nothing.
+- An age left thin by a card moving out is answered after playtest, never filled ahead of it.
+- A doubt about how much control the player has over a goal sends it to playtest and does not drop it.
+- Buildings are tried as single use, the copies owned being the limit, until a technology brings back what left the chronicle.
 
 **Left out, and side notes:**
 
 - Sun stones and bead-making are off the tree, at least for now.
-- Trapping as a technology may take Trapping out of the Nomadic Age: settled at the doors.
 - Clothmaking may become tanning to sit better in the wild, a polish decision.
+- A technology whose card brings back a card that left the chronicle is wanted and stands nowhere on the skeleton yet; its place is the user's to say. The glossary's words are "left the chronicle": "remove" is a card taken out of a deck.
 
-**Single use, to settle with the buildings in front of us**, at the first line whose technologies bring a building. The user may reconsider whether buildings, improvements and even units are single use, and if they are, wants a technology whose card draws a card that left the chronicle, settle cards excepted, so that editing the deck's buildings does not become a set plan for the city.
+**Single use, settled for a trial** at the doors' cut: the keyword stands on each building card, so Farm carries it and reads it on its face, and the Shelter, which ends the chronicle, does not. The rules do not change. If the trial holds, moving it to the kind is a line of its own. `docs/CHRONICLE.md`'s _Cards_ loses "A copy bought in the meta makes the deck faster, never the city bigger. Consuming a building card on play was rejected: the deck would be the city's blueprint and the chronicle merely where it is built." and takes, with the doors: "🔧 A building card that carries single use builds once: the copies a deck holds are how many of that building the city can build, and a copy bought in the meta makes the city bigger."
 
-- Single use is already a keyword any unit, building or instant card carries, card by card, so each card is asked "one of these, or many?" and nothing is decided for a whole kind.
-- Claude's lean: buildings single use, improvements and units cycling. A second draw of a city-wide building is blank anyway and the deck thins as the city is built; a farm is wanted on many tiles; units are killed and the schedule never ends.
-- What single-use buildings change: `docs/CHRONICLE.md` rejects consuming a building card on play and says a copy bought "makes the deck faster, never the city bigger"; copies would become the city's size, the price doubling per copy; a pillaged single-use building is gone for the chronicle.
-- The fetch technology answers both, and which building to repeat is then chosen on the map, in the chronicle. It needs one mechanism: a card that leaves the chronicle is dropped today, so a third pile would keep what left, and a card would be aimed at it as a recall is aimed at the discard pile.
+- Improvements and units cycle: a farm was the one wanted on many tiles and is a building now; units are killed and the schedule never ends.
+- A pillaged single-use building is gone for the chronicle, and its copies' price doubles per copy.
+- The technology that brings back what left needs one mechanism: a card that leaves the chronicle is dropped today, so a third pile would keep what left, and a card would be aimed at it as a recall is aimed at the discard pile.
 
 **Open, unanswered:**
 

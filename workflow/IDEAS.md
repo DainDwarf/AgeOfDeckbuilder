@@ -32,7 +32,6 @@ The unordered pool of features that may or may not happen. Nothing here is promi
 - **A building that adds an entry point**: units enter the map on the city's tile alone; a keyword for a building that opens another door.
 - **A rolled centre part**: the centre part's radius rolled by the generator instead of named by the region; a generator change, pitched running.
 - **An exploration achievement** (Stone Age): an achievement whose count reads what the chronicle has charted.
-- **Herbalism** (Stone Age): a technology unlocking the Heal card — 2 food, heal a unit on a player-held tile.
 - **An in-game codex**: the rules by section, the card kinds and the keywords among them, read in the game; a right click on a card's kind label opens the codex on that kind, and a keyword standing in a card's text, Single use first, stands in brackets and opens on its own — today the label raises a one-line tooltip and the keyword is plain text.
 - **Unit legibility**: a unit forgotten at the end of a turn feels like a slip, and the cure is a state shown, never a warning or a gate on End turn. Three readings, each its own line when taken:
   - a count of the units still holding a move, on the bar or by the end-turn button;
@@ -42,3 +41,4 @@ The unordered pool of features that may or may not happen. Nothing here is promi
 - **Playing an age with a later age's cards**: earlier ages stay playable, and a deck holds cards of any age, so a Nomadic chronicle played with Bronze Age cards is a walk; whether its rewards, its influence or its unlocks are limited for it, and how.
 - **A minimize button on the scrim's windows**: the map holds still under the deal window, a browse, the aim window and the capstone's, and a button setting the window aside would let the map be read and moved under it; taken only if play finds the map held still there blocking.
 - **Rethink the card kinds**: today's instants mix cards nobody's action is needed for, cards that spend a worker's action, and action-spending cards that change the terrain — building, improvement, terraform; each its own kind, or all of them one action kind? More card content may be needed before the properties emerge. And whether the reward cards should be a reward kind or stay instants.
+- **Hunting** (Nomadic Age): an instant that removes a wildlife feature for a one-time food gain; a candidate if balancing and play find the Nomadic deck too light once Trapping has left it.

@@ -14,10 +14,13 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
+- **A goal reads what was done** — an achievement may keep a tally, named numbers the chronicle and the save carry, moved after every command from the chronicle as it stood before and what the command did, and read by its count; three rules tests on the fixture hold it — a goal reached by a deed counted over several commands, a tally kept through the save, a command the chronicle ends on moving none — and `docs/META.md` says so. Doc-impact: `docs/META.md`. [board/a-goal-reads-what-was-done.md](board/a-goal-reads-what-was-done.md)
+- **A card aimed at the hand** — a card chooses another card of the hand as its aim, as one is aimed at the discard pile today, and the chronicle screen offers the choice; the first card to need it discards the one chosen.
+- **The doors** — Agriculture, Trapping, Fire and Herbalism, the first column of the Stone Age's tree, each needing Settlement, each with its goal and every card it unlocks, Trapping leaving the Nomadic Age; their design is settled in words in [board/stone-age-pool.md](board/stone-age-pool.md), and their numbers and texts are this line's intake.
 - **The pinned achievement** — one achievement pinned on the campaign screen shows on the chronicle screen as a ledger: its goal in words, a count against its need where it has one, a check mark once reached, a cross mark once failed.
 - **The launch warning** — the warning a launch over a chronicle with achievements reached raises, since an abandoned chronicle pays nothing.
-- **The doors** — Agriculture, Trapping, Fire and Herbalism, the first column of the Stone Age's tree and one to a family, each technology with its achievement, done with the Nomadic deck, and every card it unlocks; whether Trapping leaves the Nomadic Age is settled here; the tree these lines share is in [board/stone-age-pool.md](board/stone-age-pool.md).
 - **The field's climb** — Irrigation, Grinding stone and Bread, each technology with its achievement and every card it unlocks.
+- **Wildlife on the plain** — wildlife lies on plain as on forest and gives the same, so the wild's technologies work one feature on two terrains: a feature lying on several terrains, and both ages' feature shares dealt again for it.
 - **The wild's climb** — Bow and arrow, Fishing, Domestication, Clothmaking and Raft, each technology with its achievement and every card it unlocks.
 - **The hearth's climb** — Pottery, Dyes and Bartering, and Granary, which needs Pottery, each technology with its achievement and every card it unlocks.
 - **The sky's climb** — Burial rites, Calendar and Megalith, each technology with its achievement and every card it unlocks.
