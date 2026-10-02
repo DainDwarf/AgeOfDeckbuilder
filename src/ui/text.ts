@@ -102,6 +102,8 @@ const TEXT = {
   'rules.stores': 'Single use.\n4[food] 4[production]',
   'card.band-joins': 'Capture',
   'rules.band-joins': 'Single use.\nGain one population',
+  'card.fire': 'Fire',
+  'rules.fire': 'Discard another card. Gain 1[science]',
   'event.lean-season': 'Lean season',
   'answer.share': 'Share food',
   'answer-rules.share': 'Add [card:hunger] to the top of the draw pile. It takes {food} [food]',
@@ -222,7 +224,9 @@ const TEXT = {
   'age.nomadic': 'Nomadic Age',
   'age.stone': 'Stone Age',
   'technology.settlement': 'Settlement', // glossary exception: settlement
+  'technology.fire': 'Fire',
   'goal.first-shelter': 'Build [card:shelter]',
+  'goal.fire': 'Play 5 cards in a single turn, {need} times',
   'plate.learned': '✓ {technology}',
   'plate.goal': 'Goal',
   'plate.reward': 'Reward',

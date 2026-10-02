@@ -476,15 +476,12 @@ const TABLES: Omit<Tables, 'technologies'> = {
       kind: 'instant',
       cost: { science: 2 },
       aim: 'discard-pile',
-      blocked: (_catalogue, chronicle) =>
-        chronicle.discardPile.length === 0 ? ['discard-pile'] : [],
       effect: (_catalogue, paid, at) => recalled(paid, at),
     },
     PH_Discard: {
       kind: 'instant',
       cost: { science: 1 },
       aim: 'hand',
-      blocked: (_catalogue, chronicle) => (chronicle.hand.length <= 1 ? ['hand'] : []),
       effect: (_catalogue, paid, at) => discarded(paid, [at]),
     },
     PH_Spoils: {

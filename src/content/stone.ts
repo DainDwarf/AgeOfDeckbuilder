@@ -1,5 +1,8 @@
+import { discarded, gained } from '../rules/cards';
 import type { Age, Slice } from '../rules/catalogue';
+import { turnsPlaying } from '../rules/chronicle';
 import { MOVE_POINT } from '../rules/map';
+import { followed } from '../rules/stages';
 import { NOMADIC } from './nomadic';
 
 const { basePrice, schedule, camp } = NOMADIC.owns;
@@ -53,9 +56,23 @@ export const STONE: Slice = {
     },
     camp,
     regions: REGIONS,
-    achievements: {},
+    achievements: {
+      fire: { ...turnsPlaying(5), need: 3, technology: 'fire', influence: 1 },
+    },
   },
   brings: {
+    cards: {
+      fire: {
+        kind: 'instant',
+        cost: {},
+        aim: 'hand',
+        effect: (_catalogue, paid, at) =>
+          followed(discarded(paid, [at]), (left) => gained(left, { science: 1 })),
+      },
+    },
+    technologies: {
+      fire: { needs: ['settlement'], unlocks: { cards: { fire: 1 } } },
+    },
     terrains: {
       desert: {
         yields: {},

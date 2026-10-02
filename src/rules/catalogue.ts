@@ -49,9 +49,9 @@ export type EnemyScript = {
  * whole, and names what blocks it where the map or the city can hold it up; a `tile` aim answers the
  * first reason it refuses a tile for and nothing at all on one it admits, and hands its effect the
  * tile that was chosen; a `unit` aim is the same over the tiles a unit of the player's stands on,
- * which it is asked of before its own reasons; a `discard-pile` or a `hand` aim names what blocks it
- * the way an aim of `none` does, and hands its effect where in that pile the card chosen lies on the
- * chronicle the card's cost is paid on, which the effect takes.
+ * which it is asked of before its own reasons; a `discard-pile` or a `hand` aim hands its effect
+ * where in that pile the card chosen lies on the chronicle the card's cost is paid on, which the
+ * effect takes.
  */
 export type Aim =
   | {
@@ -79,12 +79,10 @@ export type Aim =
     }
   | {
       readonly aim: 'discard-pile';
-      readonly blocked: (catalogue: Catalogue, chronicle: Chronicle) => Block[];
       readonly effect: (catalogue: Catalogue, paid: Chronicle, at: number) => Landed;
     }
   | {
       readonly aim: 'hand';
-      readonly blocked: (catalogue: Catalogue, chronicle: Chronicle) => Block[];
       readonly effect: (catalogue: Catalogue, paid: Chronicle, at: number) => Landed;
     };
 

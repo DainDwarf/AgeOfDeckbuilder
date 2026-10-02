@@ -1,6 +1,6 @@
 # The Stone Age
 
-> What the Stone Age is made of: its land. A content page under [`DESIGN.md`](../DESIGN.md)'s legend. The rules it is played by are [`CHRONICLE.md`](../CHRONICLE.md)'s and its map [`MAP.md`](../MAP.md)'s, and this page repeats none of them; no number stands on it. The terrains, the features and the biomes it shares with the Nomadic Age are [`NOMADIC.md`](NOMADIC.md)'s.
+> What the Stone Age is made of: its land, its technologies and its cards. A content page under [`DESIGN.md`](../DESIGN.md)'s legend. The rules it is played by are [`CHRONICLE.md`](../CHRONICLE.md)'s and its map [`MAP.md`](../MAP.md)'s, and this page repeats none of them; no number stands on it. The terrains, the features and the biomes it shares with the Nomadic Age are [`NOMADIC.md`](NOMADIC.md)'s.
 
 ## The land ✅
 
@@ -11,3 +11,13 @@ The desert is a biome of its own, desert nearly throughout with hills among it, 
 | Terrain | Gives   | Feature   | Gives |
 | ------- | ------- | --------- | ----- |
 | desert  | nothing | **oasis** | food  |
+
+## The technologies 🔧
+
+A goal is practice: it is done with the cards of the technologies its technology needs, and one whose technology needs Settlement alone with the deck the age opens on.
+
+- **Fire** needs Settlement. Its goal counts a deed: the turns on which as many cards were played as a hand is drawn to, a hazard paid for among them, each turn once however many more are played, and the settle phase never. It unlocks the card **Fire** and pays influence. Turns ended on an empty hand was rejected: the deck has no floor, and an empty deck ends every turn on one.
+
+## The cards 🔧
+
+- **Fire**, an instant costing nothing, aimed at another card of the hand: that card is discarded and the city gains science. A hazard discarded so does not strike that turn, and comes around again. Science has its source here, and nothing in the age costs it.

@@ -669,9 +669,7 @@ export function admitted(
 
 /**
  * Every block a card the city can pay for still stands against: there is nothing for it to resolve
- * on. A card that lands whole and one aimed at a pile answer with the blocks they declare, in the
- * order they declare them; a card aimed at a tile or at a unit answers with none, the map being no
- * part of what the hand judges it by.
+ * on. A card aimed at the hand is judged as one the hand holds, so a hand of one card blocks it.
  */
 function blocked(catalogue: Catalogue, chronicle: Chronicle, id: CardId): Block[] {
   const card = aimOf(cardOf(catalogue, id));
@@ -679,8 +677,9 @@ function blocked(catalogue: Catalogue, chronicle: Chronicle, id: CardId): Block[
     case 'none':
       return card.blocked?.(catalogue, chronicle) ?? [];
     case 'discard-pile':
+      return chronicle.discardPile.length === 0 ? ['discard-pile'] : [];
     case 'hand':
-      return card.blocked(catalogue, chronicle);
+      return chronicle.hand.length <= 1 ? ['hand'] : [];
     case 'tile':
     case 'unit':
       return [];
