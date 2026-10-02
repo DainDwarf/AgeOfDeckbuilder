@@ -46,13 +46,13 @@ const FERTILE: number[] = [
   -5,
 ];
 
-/**
- * Placeholder primitives until the art pass: the fertile plain a small hexagon of its own green, the
- * wildlife a small triangle, the flint a shard, the oasis a small square.
- */
+const TRIANGLE: number[] = [-5, 4, 0, -4, 5, 4];
+
+/** Placeholder primitives until the art pass. */
 const FEATURE_MARKS: Readonly<Record<string, number[]>> = {
   fertile: FERTILE,
-  wildlife: [-5, 4, 0, -4, 5, 4],
+  deer: TRIANGLE,
+  cattle: TRIANGLE,
   flint: [-2, -5, 4, -1, 2, 5, -4, 1],
   oasis: [-4, -4, 4, -4, 4, 4, -4, 4],
 };

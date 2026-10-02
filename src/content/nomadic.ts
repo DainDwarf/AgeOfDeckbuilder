@@ -47,7 +47,7 @@ function hungerFood(turn: number): number {
 
 const WILDFIRE: Fire = { burns: 'forest', leaves: 'plain', fromCity: 4, around: 1, damage: 2 };
 
-const HERD = { feature: 'wildlife', fromCity: 4 } as const;
+const HERD = { feature: 'deer', fromCity: 4 } as const;
 
 const RIVAL_CAMP = { fromCity: [3, 4], apart: 3 } as const;
 
@@ -359,7 +359,8 @@ const TABLES: Tables = {
   },
   features: {
     fertile: { terrain: 'plain', yields: { food: 1 } },
-    wildlife: { terrain: 'forest', yields: { food: 1 } },
+    deer: { terrain: 'forest', yields: { food: 1 } },
+    cattle: { terrain: 'plain', yields: { food: 1 } },
     flint: { terrain: 'hills', yields: { production: 1 } },
   },
   improvements: {
@@ -380,8 +381,9 @@ const REGIONS: Age['regions'] = {
       { biome: 'land', share: 0.6 },
     ],
     featureShares: [
-      { feature: 'fertile', share: 0.1 },
-      { feature: 'wildlife', share: 0.1 },
+      { feature: 'fertile', share: 0.05 },
+      { feature: 'deer', share: 0.05 },
+      { feature: 'cattle', share: 0.05 },
       { feature: 'flint', share: 0.1 },
     ],
     camps: 4,

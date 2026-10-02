@@ -14,16 +14,16 @@ The civilization's city section holds the city and its card, and its deck's sett
 
 A terrain gives one point of one resource, a feature gives the second, and the river gives food along plain and forest. So a bare tile is thin, a featured tile or a river tile is worth walking to, and the band is always looking for the tile that has two.
 
-| Terrain  | Gives                      | Feature      | Gives      |
-| -------- | -------------------------- | ------------ | ---------- |
-| plain    | food                       | **fertile**  | food       |
-| forest   | production                 | **wildlife** | food       |
-| hills    | production                 | **flint**    | production |
-| coast    | food                       | —            | —          |
-| ocean    | nothing                    | —            | —          |
-| mountain | nothing; beyond every unit | —            | —          |
+| Terrain | Gives | Feature | Gives |
+| --- | --- | --- | --- |
+| plain | food | **fertile** or **cattle** | food |
+| forest | production | **deer** | food |
+| hills | production | **flint** | production |
+| coast | food | — | — |
+| ocean | nothing | — | — |
+| mountain | nothing; beyond every unit | — | — |
 
-Forest and hills give the same at income and cost the same to walk, and differ in what they see over and which feature they carry: a new player learns that hills are the lookout. Forest is raised, hills higher and mountain highest, and the rest lies flat; coast, ocean and mountain are crossed by nothing. Features are dealt rarely enough to be sought after; their shares are tuning. Forest is scattered over the land and also gathers in woodlands, biomes of their own that are forest nearly throughout.
+Forest and hills give the same at income and cost the same to walk, and differ in what they see over and which feature they carry: a new player learns that hills are the lookout. Forest is raised, hills higher and mountain highest, and the rest lies flat; coast, ocean and mountain are crossed by nothing. Features are dealt rarely enough to be sought after, fertile, deer and cattle rarer than flint, so going for more of any of them is a journey; their shares are tuning. Forest is scattered over the land and also gathers in woodlands, biomes of their own that are forest nearly throughout.
 
 ## The units ✅
 
@@ -52,9 +52,9 @@ Five events, each with its lore, each a problem the chronicle deals with two ans
 
 - **Lean season.** _Share food_: the hazard **Hunger** is added to the top of the draw pile, its counter set to the food it takes, more on a later turn; it strikes the food stock for that amount while it stays in the hand, empties a stock that cannot cover the strike and kills one population then, the city's last no exception, and costs production to be rid of, the same whatever it takes. The answer names the Hunger as it will add it and says what it takes. A cost rising with the strike was rejected: the strike growing already tilts the choice toward paying, and a late Hunger a small city could not shed is a second escalation on the same event. _Keep to yourself_: the stock is kept, and the envious enter as a raid.
 - **A rival band.** _Fight them_: their warriors enter the map as one raid and come. _Make room_: a new camp is placed near the city with its guards on and around it, one at first — a door for the raids to come, and a capture with its rewards for a band bold enough. Both answers cost no stock: raiders at the city now against a camp beside it for good. A rival band needs a tile near the city that takes a camp, and is not dealt without one.
-- **Wildfire.** _Let it burn_: a fire starts on a forest tile near the city, drawn seeded, and that tile and every forest tile around it become plain, so the map has visibly changed; the fire is a terraform, so the wildlife and the trapping go with the forest, the population working a burned tile is killed, the city's own tile and the city's last no exception, and a unit standing on one, whatever its faction, takes damage enough to kill a worker. The answer reads what the fire costs before it is chosen — the tiles burned, the population killed, the player's units caught in it — and never where it burns. _Cut a firebreak_: production paid, the forest stands. Wildfire needs a forest near the city to start on, and is not dealt without one. Every forest in sight of the city burning was rejected: a harm aimed at the city reads as unjust, where a fire somewhere in the band's country may or may not find it.
+- **Wildfire.** _Let it burn_: a fire starts on a forest tile near the city, drawn seeded, and that tile and every forest tile around it become plain, so the map has visibly changed; the fire is a terraform, so the deer and the trapping go with the forest, the population working a burned tile is killed, the city's own tile and the city's last no exception, and a unit standing on one, whatever its faction, takes damage enough to kill a worker. The answer reads what the fire costs before it is chosen — the tiles burned, the population killed, the player's units caught in it — and never where it burns. _Cut a firebreak_: production paid, the forest stands. Wildfire needs a forest near the city to start on, and is not dealt without one. Every forest in sight of the city burning was rejected: a harm aimed at the city reads as unjust, where a fire somewhere in the band's country may or may not find it.
 - **Departure.** _Let them go_: one population leaves the city, the city's last no exception. _Keep them_: culture paid, more the larger the city.
-- **The herd**, rare and fortunate. _Hunt it_: food now. _Follow it_: wildlife is dealt onto a forest tile near the city that carries no feature, drawn seeded, and the band knows where the herd went: the tile is charted where it was not, in fog unless something sees it. The herd needs such a forest near the city, and is not dealt without one. Both are gains; a fortunate event is a breath, not a decision.
+- **The herd**, rare and fortunate. _Hunt it_: food now. _Follow it_: deer are dealt onto a forest tile near the city that carries no feature, drawn seeded, and the band knows where the herd went: the tile is charted where it was not, in fog unless something sees it. The herd needs such a forest near the city, and is not dealt without one. Both are gains; a fortunate event is a breath, not a decision.
 
 Lean season is food against a raid, a rival band is a raid now against a camp later, Wildfire is production against the map, Departure is culture against population.
 

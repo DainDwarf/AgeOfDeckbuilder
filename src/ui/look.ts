@@ -158,7 +158,8 @@ export const LOOK: Look = {
   },
   feature: {
     fertile: 0x4a7a2d,
-    wildlife: 0x8a5a2b,
+    deer: 0x8a5a2b,
+    cattle: 0xf2f6ff,
     flint: 0x4b4f58,
     oasis: 0x2f8f83,
   },
