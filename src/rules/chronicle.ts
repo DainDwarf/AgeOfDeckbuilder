@@ -1,6 +1,7 @@
 import { available } from './campaign';
 import { aimOf, leavesChronicle, refuses, struck } from './cards';
 import {
+  type Achievement,
   type AimedCard,
   achievementOf,
   ageOf,
@@ -151,7 +152,9 @@ export function beginChronicle(
       campUnit(catalogue, guarded, { q, r }, 'guard'),
     ).chronicle;
   }
-  return charted(catalogue, guarded);
+  const seen = charted(catalogue, guarded);
+  const raised = reachedOn(catalogue, seen, () => true);
+  return raised.length === 0 ? seen : outcome(raised);
 }
 
 /** A technology the catalogue does not hold is refused, a learned one included. */
@@ -208,8 +211,9 @@ export function apply(catalogue: Catalogue, chronicle: Chronicle, command: Comma
  * The charted stages a command resolves as, every change, an `ended` among them, followed by a
  * `reached` for each achievement keeping no tally that its chronicle meets, and cut at the first the
  * capstone passes on, the victory's `ended` after it; the capstone is never read on a chronicle whose
- * city falls on it. A command the chronicle does not end on then closes on one `tallied` where it
- * moved a tally, and a `reached` for each achievement keeping a tally that its count meets.
+ * city falls on it. A command the chronicle does not end on then closes on one `tallied` for each
+ * achievement whose tally it moved, in the order of the row, and a `reached` for each achievement
+ * keeping a tally that its count meets.
  */
 function conditionsRead(
   catalogue: Catalogue,
@@ -230,25 +234,15 @@ function conditionsRead(
   let record = started.achievements;
   const carried = (chronicle: Chronicle): Chronicle =>
     chronicle.achievements === record ? chronicle : { ...chronicle, achievements: record };
-  const reachedOn = (chronicle: Chronicle, keepingTally: boolean): Change[] => {
-    const raised: Change[] = [];
-    let standing = chronicle;
-    for (const [at, { id: achievement, reached, tally }] of standing.achievements.entries()) {
-      if (reached) continue;
-      const { count, need, tallies } = achievementOf(catalogue, standing.age, achievement);
-      if ((tallies !== undefined) !== keepingTally) continue;
-      if (count(catalogue, standing, tally) < need) continue;
-      record = standing.achievements.map((held, other) =>
-        other === at ? { ...held, reached: true } : held,
-      );
-      standing = { ...standing, achievements: record };
-      raised.push(change('reached', standing));
-    }
+  const keepsNoTally = ({ tallies }: Achievement): boolean => tallies === undefined;
+  const recording = (chronicle: Chronicle): Change[] => {
+    const raised = reachedOn(catalogue, chronicle, keepsNoTally);
+    if (raised.length > 0) record = outcome(raised).achievements;
     return raised;
   };
   const ended = (chronicle: Chronicle): Stage[] => {
     const victorious = victory(chronicle);
-    return [victorious, ...reachedOn(victorious.chronicle, false)];
+    return [victorious, ...recording(victorious.chronicle)];
   };
 
   let over = false;
@@ -259,7 +253,7 @@ function conditionsRead(
         case 'change': {
           const own = carried(stage.chronicle);
           walked.push(own === stage.chronicle ? stage : { ...stage, chronicle: own });
-          walked.push(...reachedOn(own, false));
+          walked.push(...recording(own));
           const last = walked[walked.length - 1].chronicle;
           if (passesNow(last)) {
             over = true;
@@ -315,17 +309,51 @@ function conditionsRead(
   const left = outcome(read);
   if (left.ending !== undefined) return read;
 
-  let moved = false;
-  const row = left.achievements.map((held) => {
+  const tallied: Change[] = [];
+  let standing = left;
+  for (const [at, held] of left.achievements.entries()) {
     const { tallies } = achievementOf(catalogue, left.age, held.id);
-    if (held.reached || tallies === undefined) return held;
+    if (held.reached || tallies === undefined) continue;
     const tally = tallies(catalogue, started, read, held.tally);
-    if (sameTally(tally, held.tally)) return held;
-    moved = true;
-    return { ...held, tally };
-  });
-  const tallied = moved ? [change('tallied', { ...left, achievements: row })] : [];
-  return [...read, ...tallied, ...reachedOn(outcome([...read, ...tallied]), true)];
+    if (sameTally(tally, held.tally)) continue;
+    standing = {
+      ...standing,
+      achievements: standing.achievements.map((other, place) =>
+        place === at ? { ...other, tally } : other,
+      ),
+    };
+    tallied.push(change('tallied', standing));
+  }
+  const keepsTally = ({ tallies }: Achievement): boolean => tallies !== undefined;
+  return [...read, ...tallied, ...reachedOn(catalogue, standing, keepsTally)];
+}
+
+/**
+ * A `reached` for each achievement of the row not yet reached, among those `reads` admits, that its
+ * count meets on the chronicle, in the order of the row, each carrying the record of the ones before
+ * it.
+ */
+function reachedOn(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  reads: (achievement: Achievement) => boolean,
+): Change[] {
+  const raised: Change[] = [];
+  let standing = chronicle;
+  for (const [at, { id, reached, tally }] of chronicle.achievements.entries()) {
+    if (reached) continue;
+    const achievement = achievementOf(catalogue, standing.age, id);
+    if (!reads(achievement)) continue;
+    if (achievement.count(catalogue, standing, tally) < achievement.need) continue;
+    standing = {
+      ...standing,
+      achievements: standing.achievements.map((held, other) =>
+        other === at ? { ...held, reached: true } : held,
+      ),
+    };
+    raised.push(change('reached', standing));
+  }
+  return raised;
 }
 
 /** Whether two tallies hold the same numbers under the same names. */

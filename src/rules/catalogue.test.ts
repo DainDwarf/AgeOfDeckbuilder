@@ -1,6 +1,5 @@
 import { expect, test } from 'vitest';
 import {
-  type Age,
   type Answer,
   achievementOf,
   ageOf,
@@ -20,12 +19,15 @@ import {
 import { apply, beginChronicle, launched } from './chronicle';
 import {
   AGE,
+  achieved,
+  aged,
   CAMP,
   CATALOGUE,
   CENSUS,
   CITY,
   CIVILIZATION,
   CLEARING,
+  changed,
   cityOf,
   field,
   GRANARY,
@@ -44,16 +46,6 @@ import { seedRng } from './rng';
 import { timelineOf } from './schedule';
 import { LEAST_STATS } from './units';
 
-/** The fixture's content with what the test changes laid over it. */
-function changed(content: Partial<Catalogue>): Catalogue {
-  return { ...CATALOGUE, ...content };
-}
-
-/** The fixture's content with what its first age owns changed as the test lays it over. */
-function aged(owns: Partial<Age>): Catalogue {
-  return changed({ ages: { ...CATALOGUE.ages, [AGE]: { ...ageOf(CATALOGUE, AGE), ...owns } } });
-}
-
 /** The fixture's content with its first age's schedule changed as the test lays it over. */
 function rescheduled(schedule: Partial<Schedule>): Catalogue {
   return aged({ schedule: { ...ageOf(CATALOGUE, AGE).schedule, ...schedule } });
@@ -67,11 +59,6 @@ function encamped(camp: Partial<Camp>): Catalogue {
 /** The fixture's content with its first age's regions replaced by the ones the test names. */
 function regioned(regions: Readonly<Record<string, Region>>): Partial<Catalogue> {
   return { ages: { ...CATALOGUE.ages, [AGE]: { ...ageOf(CATALOGUE, AGE), regions } } };
-}
-
-/** The fixture's content with its first age's achievements laid over as the test lays them. */
-function achieved(achievements: Age['achievements']): Catalogue {
-  return aged({ achievements: { ...ageOf(CATALOGUE, AGE).achievements, ...achievements } });
 }
 
 /** The fixture's content with its technologies laid over as the test lays them. */

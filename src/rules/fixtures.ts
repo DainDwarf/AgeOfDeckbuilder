@@ -26,6 +26,7 @@ import {
 } from './cards';
 import {
   type Age,
+  ageOf,
   type Camp,
   type Catalogue,
   type Civilization,
@@ -913,6 +914,21 @@ export function twoAges(): Catalogue {
     { ...second, brings: { cards: { PH_Stores, PH_Worker } } },
     ...rest,
   ]);
+}
+
+/** The fixture's content with what the test changes laid over it. */
+export function changed(content: Partial<Catalogue>): Catalogue {
+  return { ...CATALOGUE, ...content };
+}
+
+/** The fixture's content with what its first age owns changed as the test lays it over. */
+export function aged(owns: Partial<Age>): Catalogue {
+  return changed({ ages: { ...CATALOGUE.ages, [AGE]: { ...ageOf(CATALOGUE, AGE), ...owns } } });
+}
+
+/** The fixture's content with its first age's achievements laid over as the test lays them. */
+export function achieved(achievements: Age['achievements']): Catalogue {
+  return aged({ achievements: { ...ageOf(CATALOGUE, AGE).achievements, ...achievements } });
 }
 
 /**
