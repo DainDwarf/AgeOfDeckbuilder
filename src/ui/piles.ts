@@ -64,8 +64,6 @@ export function createPiles(
   const drawn = createPile(scene, on.resting, 'draw-pile', answers);
   const discarded = createPile(scene, on.resting, 'discard-pile', answers);
 
-  /** The chronicle the piles stand on: how many cards are in the air is read from it. */
-  let shown: Chronicle | undefined;
   /** What the piles have in the air; a render owns both and takes them down. */
   let waiting: { readonly event: Phaser.Time.TimerEvent; readonly done: () => void } | undefined;
   let carrier: Phaser.GameObjects.Container | undefined;
@@ -86,7 +84,6 @@ export function createPiles(
       carrier.destroy();
       carrier = undefined;
     }
-    shown = chronicle;
     drawn.show(
       { card: createCardBack(scene, { faded: chronicle.drawPile.length === 0 }) },
       chronicle.drawPile.length,
@@ -132,10 +129,9 @@ export function createPiles(
    * The block of cards the hand no longer holds lands on the discard pile all at once, once the last
    * card is down.
    */
-  const landed = (chronicle: Chronicle): Promise<void> =>
+  const landed = (cards: number, chronicle: Chronicle): Promise<void> =>
     new Promise((done) => {
-      const left = (shown?.hand.length ?? 0) - chronicle.hand.length;
-      const event = scene.time.delayedCall(blockLength(Math.max(0, left)), () => {
+      const event = scene.time.delayedCall(blockLength(cards), () => {
         waiting = undefined;
         render(chronicle);
         done();
@@ -146,7 +142,7 @@ export function createPiles(
   const changed = (stage: Change): Promise<void> | undefined => {
     switch (stage.name) {
       case 'discarded':
-        return landed(stage.chronicle);
+        return landed(stage.places.length, stage.chronicle);
       case 'shuffled':
         return shuffle(stage.chronicle);
       case 'enter':
