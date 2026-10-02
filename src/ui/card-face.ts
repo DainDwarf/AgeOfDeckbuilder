@@ -222,7 +222,7 @@ export function createCardFace(
   }).setOrigin(0.5, 1);
 
   const ownRules = ownBoxOf(rules);
-  const lineHeight = ownRules.height / run.lines;
+  const lineHeight = ownRules.height / run.widths.length;
   const runTop = ownRules.y;
   const glyphs = run.glyphs.map((glyph) =>
     scene.add

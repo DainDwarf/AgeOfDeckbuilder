@@ -145,7 +145,11 @@ test('every rules entry and every goal of the catalogue lays out, and every name
     ...Object.keys(CATALOGUE.capstones).map((id) => capstoneRules(id)),
   ];
   for (const age of AGES) {
-    entries.push(...Object.keys(ageOf(CATALOGUE, age).achievements).map(achievementGoal));
+    entries.push(
+      ...Object.entries(ageOf(CATALOGUE, age).achievements).map(([id, { need }]) =>
+        achievementGoal(id, need),
+      ),
+    );
     const chronicle = settledIn(age);
     for (const event of Object.keys(ageOf(CATALOGUE, age).schedule.entries)) {
       for (const [name, answer] of Object.entries(eventOf(CATALOGUE, event).answers)) {
@@ -290,8 +294,8 @@ test('every age of the catalogue has a name and a ground colour on the screen, e
   for (const age of AGES) {
     expect(() => ageName(age)).not.toThrow();
     expect(() => groundColourOf(age)).not.toThrow();
-    for (const id of Object.keys(ageOf(CATALOGUE, age).achievements)) {
-      expect(() => achievementGoal(id)).not.toThrow();
+    for (const [id, { need }] of Object.entries(ageOf(CATALOGUE, age).achievements)) {
+      expect(() => achievementGoal(id, need)).not.toThrow();
     }
   }
   for (const id of Object.keys(CATALOGUE.technologies)) {

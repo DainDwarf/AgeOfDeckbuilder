@@ -98,7 +98,7 @@ test('on a new campaign the first age’s technology stands available on the bor
   expect(await plateReads(page, PLATE)).toEqual({
     state: 'available',
     name: technologyName(TECHNOLOGY),
-    goal: achievementGoal(ACHIEVEMENT),
+    goal: achievementGoal(ACHIEVEMENT, EARNED.need),
     reward: rewardOf(),
   });
   const seen = await readings(page, [`ground-${AGE}`, `ground-${NEXT}`, PLATE]);
@@ -107,7 +107,7 @@ test('on a new campaign the first age’s technology stands available on the bor
   expect(seen(PLATE).across.left).toBeLessThan(border);
   expect(seen(PLATE).across.right).toBeGreaterThan(border);
 
-  const [named] = namedIn(achievementGoal(ACHIEVEMENT));
+  const [named] = namedIn(achievementGoal(ACHIEVEMENT, EARNED.need));
   expect(named?.kind).toBe('card');
   const name = await nameOnScreen(page, PLATE);
   await page.mouse.move(name.x, name.y);
@@ -121,7 +121,7 @@ test('on a new campaign a right click on the name in the available plate’s goa
 }) => {
   const problems = watch(page);
   await openCampaign(page);
-  const [named] = namedIn(achievementGoal(ACHIEVEMENT));
+  const [named] = namedIn(achievementGoal(ACHIEVEMENT, EARNED.need));
   expect(named?.kind).toBe('card');
 
   const name = await nameOnScreen(page, PLATE);
@@ -160,7 +160,7 @@ test('on a campaign a won chronicle paid into, its technology stands learned, th
   expect(await plateReads(page, PLATE)).toEqual({
     state: 'learned',
     name: text('plate.learned', { technology: technologyName(TECHNOLOGY) }),
-    goal: achievementGoal(ACHIEVEMENT),
+    goal: achievementGoal(ACHIEVEMENT, EARNED.need),
     reward: rewardOf(),
   });
   expect(await page.evaluate((well) => window.named?.(well) !== undefined, `${PLATE}-well`)).toBe(

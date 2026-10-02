@@ -390,9 +390,9 @@ export function technologyName(technology: string): string {
   return named('technology', technology, 'the technology');
 }
 
-/** An achievement's condition in words; an achievement no entry names is refused. */
-export function achievementGoal(achievement: string): string {
-  return named('goal', achievement, 'the achievement');
+/** An achievement's condition in words, with the need it counts toward; an achievement no entry names is refused. */
+export function achievementGoal(achievement: string, need: number): string {
+  return named('goal', achievement, 'the achievement', { need });
 }
 
 /** The entry a content id names under its prefix; an id no entry names is refused. */

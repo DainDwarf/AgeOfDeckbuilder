@@ -99,20 +99,19 @@ function readingsOf(catalogue: Catalogue): Map<string, Reading> {
     ];
     readings.set(technology, {
       name: technologyName(technology),
-      goal: achievementGoal(earned.id),
+      goal: achievementGoal(earned.id, earned.achievement.need),
       reward,
     });
   }
   return readings;
 }
 
-/** How many lines a plate reads under the name: the goal's, then the reward's, one at least. */
-function linesOf(reading: Reading): number {
-  return 1 + Math.max(1, reading.reward.length);
-}
-
-/** An entry drawn as a run on one line, its names and glyphs where the run stands them. */
-function addRun(scene: Phaser.Scene, entry: string): { label: Phaser.GameObjects.Text; run: Run } {
+/** An entry drawn as a run wrapped at that width, its names and glyphs where the run stands them. */
+function addRun(
+  scene: Phaser.Scene,
+  entry: string,
+  width: number,
+): { label: Phaser.GameObjects.Text; run: Run } {
   // Phaser runs the callback from inside updateText, on a context whose font it has just synced.
   let run!: Run;
   const label = addText(scene, 0, 0, entry, {
@@ -124,7 +123,7 @@ function addRun(scene: Phaser.Scene, entry: string): { label: Phaser.GameObjects
           content,
           measure,
           {
-            width: Number.POSITIVE_INFINITY,
+            width,
             glyph: GLYPH,
             bearing: TEXT_SIZE / 4,
             space: measure(' '),
@@ -155,6 +154,22 @@ export function createTree(
   inspect: (name: Name) => void,
 ): TreeView {
   const readings = readingsOf(catalogue);
+  const labelColumn = (() => {
+    const widths = (['plate.goal', 'plate.reward'] as const).map((key) => {
+      const probe = addText(scene, 0, 0, text(key).toUpperCase(), LABEL_STYLE);
+      const { width } = probe;
+      probe.destroy();
+      return width;
+    });
+    return Math.max(...widths) + LABEL_GAP;
+  })();
+  const goalWidth = PLATE_WIDTH - 2 * PAD_X - labelColumn;
+  /** How many lines a plate reads under the name: the goal's, then the reward's, one at least. */
+  const linesOf = ({ goal, reward }: Reading): number => {
+    const { label, run } = addRun(scene, goal, goalWidth);
+    label.destroy();
+    return run.widths.length + Math.max(1, reward.length);
+  };
   const plateHeight =
     2 * PAD_Y + NAME_LINE + TEXT_LINE * Math.max(...[...readings.values()].map(linesOf));
   const tree = layOutTree(catalogue, learned, plateHeight, { ...ROOM, margin: MARGIN });
@@ -212,16 +227,6 @@ export function createTree(
     if (on) small.down();
     else small.over(hovered);
   };
-
-  const labelColumn = (() => {
-    const widths = (['plate.goal', 'plate.reward'] as const).map((key) => {
-      const probe = addText(scene, 0, 0, text(key).toUpperCase(), LABEL_STYLE);
-      const { width } = probe;
-      probe.destroy();
-      return width;
-    });
-    return Math.max(...widths) + LABEL_GAP;
-  })();
 
   const backingOf = (state: PlateState, id: string): Phaser.GameObjects.GameObject => {
     const paper = (fill: number): Phaser.GameObjects.Rectangle =>
@@ -284,28 +289,40 @@ export function createTree(
       );
     };
 
-    const runLine = (entry: string, line: number, named: string): void => {
-      const middle = lineMiddle(line);
-      const { label: drawn, run } = addRun(scene, entry);
-      drawn.setOrigin(0, 0.5).setPosition(values, middle).setName(named);
+    /** An entry drawn as a run from that line down, wrapped at that width; how many lines it took. */
+    const drawRun = (entry: string, line: number, named: string, width: number): number => {
+      const { label: drawn, run } = addRun(scene, entry, width);
+      const pitch = ownBoxOf(drawn).height / run.widths.length;
+      const middleOf = (at: number): number => lineMiddle(line) + at * pitch;
+      drawn
+        .setOrigin(0, 0.5)
+        .setPosition(values, middleOf((run.widths.length - 1) / 2))
+        .setName(named);
       face.add(drawn);
-      const centre = values + drawn.width / 2;
+      const { x: start } = ownBoxOf(drawn);
+      const centreOf = (at: number): number => start + run.widths[at] / 2;
       for (const glyph of run.glyphs) {
         const side = GLYPH / Math.SQRT2;
         face.add(
           scene.add
-            .rectangle(centre + glyph.x, middle, side, side, LOOK.reading[glyph.resource])
+            .rectangle(
+              centreOf(glyph.line) + glyph.x,
+              middleOf(glyph.line),
+              side,
+              side,
+              LOOK.reading[glyph.resource],
+            )
             .setAngle(45),
         );
       }
-      for (const { reference, from, to } of run.names) {
+      for (const { reference, from, to, line: on } of run.names) {
         const each: Name = {
           reference,
           reading: {},
-          x: centre + (from + to) / 2,
-          y: middle,
+          x: centreOf(on) + (from + to) / 2,
+          y: middleOf(on),
           width: to - from,
-          height: ownBoxOf(drawn).height,
+          height: pitch,
         };
         names.push(each);
         const raiser: Raiser = {
@@ -333,19 +350,20 @@ export function createTree(
         onClick(zone, () => inspect(each), 'right', 'within slack');
         face.add(zone);
       }
+      return run.widths.length;
     };
 
     label('plate.goal', 0, 'goal');
-    runLine(reading.goal, 0, `${id}-goal`);
-    label('plate.reward', 1, 'reward');
+    const under = drawRun(reading.goal, 0, `${id}-goal`, goalWidth);
+    label('plate.reward', under, 'reward');
     const rewardLine = (line: RewardLine, at: number): void => {
       const named = `${id}-reward-${at}`;
       switch (line.kind) {
         case 'run':
-          runLine(line.entry, 1 + at, named);
+          drawRun(line.entry, under + at, named, Number.POSITIVE_INFINITY);
           return;
         case 'influence': {
-          const middle = lineMiddle(1 + at);
+          const middle = lineMiddle(under + at);
           face.add([
             scene.add.rectangle(values + 5, middle, DIAMOND, DIAMOND, LOOK.influence).setAngle(45),
             addText(scene, values + DIAMOND_TO_NUMBER, middle, String(line.amount), TEXT_STYLE)

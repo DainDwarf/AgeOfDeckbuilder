@@ -46,9 +46,10 @@ export type Named = {
 };
 
 export type Run = {
-  /** The run as one Text draws it, centred: its words, and spaces wherever a glyph stands. */
+  /** The run as one Text draws it: its words, and spaces wherever a glyph stands. */
   readonly content: string;
-  readonly lines: number;
+  /** How wide each line draws, top down, to the pixel a Text centres it on. */
+  readonly widths: readonly number[];
   readonly glyphs: readonly Glyph[];
   readonly names: readonly Named[];
 };
@@ -169,9 +170,10 @@ export function layOutRun(entry: string, measure: Measure, metrics: Metrics, nam
 
   const glyphs: Glyph[] = [];
   const names: Named[] = [];
+  // A Text centres each line on its width ceiled to the pixel, so a mark is placed from that.
+  const widths = lines.map((line) => Math.ceil(measure(line.drawn)));
   for (const [index, line] of lines.entries()) {
-    // A Text centres each line on its width ceiled to the pixel, so a mark is placed from that.
-    const width = Math.ceil(measure(line.drawn));
+    const width = widths[index];
     for (const { resource, at } of line.glyphs) {
       const middle = measure(line.drawn.slice(0, at)) + (spaces * metrics.space) / 2;
       glyphs.push({ resource, x: middle - width / 2, line: index });
@@ -187,7 +189,7 @@ export function layOutRun(entry: string, measure: Measure, metrics: Metrics, nam
   }
   return {
     content: lines.map((line) => line.drawn).join('\n'),
-    lines: lines.length,
+    widths,
     glyphs,
     names,
   };
