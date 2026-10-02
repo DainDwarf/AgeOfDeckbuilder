@@ -4,7 +4,7 @@
  * Every id here carries the `PH_` prefix so that one leaking into shipped code is one search away.
  */
 import {
-  built,
+  builds,
   claimableTile,
   discarded,
   enters,
@@ -13,7 +13,6 @@ import {
   gained,
   improvementAbsent,
   improvementPlaced,
-  inside,
   made,
   movePointsSpent,
   recalled,
@@ -58,7 +57,7 @@ import {
   tileAt,
   tileKey,
 } from './map';
-import { buildingKind, improvementKind, type Region } from './map-kinds';
+import { improvementKind, type Region } from './map-kinds';
 import type { Resources } from './resources';
 import { seedRng } from './rng';
 import type { ChronicleSave } from './save';
@@ -410,19 +409,7 @@ const TABLES: Omit<Tables, 'technologies'> = {
     },
     PH_Worker: { kind: 'unit', cost: { food: 2 }, ...enters('PH_Worker') },
     PH_Warrior: { kind: 'unit', cost: { military: 2 }, ...enters('PH_Warrior') },
-    PH_Farm: {
-      kind: 'building',
-      cost: { production: 3 },
-      ...throughWorker(
-        (catalogue, chronicle, tile) =>
-          firstRefusal(
-            made(catalogue, tile, buildingKind(catalogue, 'PH_Farm').terrains),
-            inside(chronicle, tile),
-            slotFree(tile),
-          ),
-        (catalogue, paid, at) => built(catalogue, paid, at, 'PH_Farm'),
-      ),
-    },
+    PH_Farm: { kind: 'building', cost: { production: 3 }, ...builds('PH_Farm') },
     PH_March: {
       kind: 'instant',
       cost: {},

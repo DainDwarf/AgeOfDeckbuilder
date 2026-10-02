@@ -22,12 +22,13 @@ const WALL: number[] = [
 
 /**
  * Placeholder primitives until the art pass: the city and the camp a crenellated wall, the shelter
- * a tent, all of them wide enough to show under a unit.
+ * a tent, the farm a flat rectangle, all of them wide enough to show under a unit.
  */
 const BUILDING_MARKS: Readonly<Record<string, number[]>> = {
   city: WALL,
   camp: WALL,
   shelter: [-16, 10, 0, -13, 16, 10, 5, 10, 0, 2, -5, 10],
+  farm: [-16, -6, 16, -6, 16, 6, -16, 6],
 };
 
 /** Half the width of the fertile plain's hexagon, whose corners stand five from its centre. */

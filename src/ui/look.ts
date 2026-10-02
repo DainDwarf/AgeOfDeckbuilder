@@ -166,6 +166,7 @@ export const LOOK: Look = {
     city: 'civilization',
     camp: 'enemy',
     shelter: 'built',
+    farm: 'built',
   },
   ground: {
     nomadic: 0x2a5a41,

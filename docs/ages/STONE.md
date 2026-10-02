@@ -16,8 +16,10 @@ The desert is a biome of its own, desert nearly throughout with hills among it, 
 
 A goal is practice: it is done with the cards of the technologies its technology needs, and one whose technology needs Settlement alone with the deck the age opens on.
 
+- **Agriculture** needs Settlement. Its goal reads the chronicle as it stands: the plain tiles inside the border, the city's own tile counted when it stands on plain. It unlocks the card **Farm** and pays influence.
 - **Fire** needs Settlement. Its goal counts a deed: the turns on which as many cards were played as a hand is drawn to, a hazard paid for among them, each turn once however many more are played, and the settle phase never. It unlocks the card **Fire** and pays influence. Turns ended on an empty hand was rejected: the deck has no floor, and an empty deck ends every turn on one.
 
 ## The cards 🔧
 
+- **Farm**, a building on plain giving food, built through a worker for production, single use: the copies a deck holds are how many farms the city builds.
 - **Fire**, an instant costing nothing, aimed at another card of the hand: that card is discarded and the city gains science. A hazard discarded so does not strike that turn, and comes around again. Science has its source here, and nothing in the age costs it.

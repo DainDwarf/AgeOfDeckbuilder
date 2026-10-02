@@ -318,6 +318,23 @@ export function entersOn(type: string): Aim & { readonly aim: 'tile' } {
 }
 
 /**
+ * How a building card builds its building, the refusal and the effect as one pair so neither is
+ * written without the other: aimed through a worker at a tile of a terrain the building stands on,
+ * inside the border, its slot free; then the building fills that slot.
+ */
+export function builds(building: string): Aim & { readonly aim: 'tile' } {
+  return throughWorker(
+    (catalogue, chronicle, tile) =>
+      firstRefusal(
+        made(catalogue, tile, buildingKind(catalogue, building).terrains),
+        inside(chronicle, tile),
+        slotFree(tile),
+      ),
+    (catalogue, paid, at) => built(catalogue, paid, at, building),
+  );
+}
+
+/**
  * The settle of the city section the chronicle carries: its building in the tile's slot, the city
  * holding that tile alone with one population on it and the section's idle besides, and then the
  * city standing on the tile from now on.

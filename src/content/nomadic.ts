@@ -1,12 +1,11 @@
 import {
-  built,
+  builds,
   enters,
   entersOn,
   firstRefusal,
   gained,
   improvementAbsent,
   improvementPlaced,
-  inside,
   made,
   movePointsSpent,
   outside,
@@ -130,19 +129,7 @@ const TABLES: Tables = {
       refuses: (_catalogue, chronicle, tile) => movePointsSpent(chronicle, tile),
       effect: (_catalogue, paid, at) => refreshed(paid, at),
     },
-    shelter: {
-      kind: 'building',
-      cost: { production: 8 },
-      ...throughWorker(
-        (catalogue, chronicle, tile) =>
-          firstRefusal(
-            made(catalogue, tile, buildingKind(catalogue, 'shelter').terrains),
-            inside(chronicle, tile),
-            slotFree(tile),
-          ),
-        (catalogue, paid, at) => built(catalogue, paid, at, 'shelter'),
-      ),
-    },
+    shelter: { kind: 'building', cost: { production: 8 }, ...builds('shelter') },
     hunger: {
       kind: 'hazard',
       cost: { production: 2 },

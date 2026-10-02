@@ -1,7 +1,7 @@
-import { discarded, gained } from '../rules/cards';
+import { builds, discarded, gained } from '../rules/cards';
 import type { Age, Slice } from '../rules/catalogue';
 import { turnsPlaying } from '../rules/chronicle';
-import { MOVE_POINT } from '../rules/map';
+import { MOVE_POINT, tileAt } from '../rules/map';
 import { followed } from '../rules/stages';
 import { NOMADIC } from './nomadic';
 
@@ -57,11 +57,25 @@ export const STONE: Slice = {
     camp,
     regions: REGIONS,
     achievements: {
+      agriculture: {
+        count: (_catalogue, chronicle) =>
+          chronicle.held.filter((coord) => tileAt(chronicle.tiles, coord)?.terrain === 'plain')
+            .length,
+        need: 5,
+        technology: 'agriculture',
+        influence: 1,
+      },
       fire: { ...turnsPlaying(5), need: 3, technology: 'fire', influence: 1 },
     },
   },
   brings: {
     cards: {
+      farm: {
+        kind: 'building',
+        cost: { production: 4 },
+        singleUse: true,
+        ...builds('farm'),
+      },
       fire: {
         kind: 'instant',
         cost: {},
@@ -71,6 +85,7 @@ export const STONE: Slice = {
       },
     },
     technologies: {
+      agriculture: { needs: ['settlement'], unlocks: { cards: { farm: 1 } } },
       fire: { needs: ['settlement'], unlocks: { cards: { fire: 1 } } },
     },
     terrains: {
@@ -84,6 +99,9 @@ export const STONE: Slice = {
     },
     features: {
       oasis: { terrain: 'desert', yields: { food: 1 } },
+    },
+    buildings: {
+      farm: { terrains: ['plain'], yields: { food: 2 } },
     },
     biomes: {
       desert: {
