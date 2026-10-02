@@ -20,10 +20,7 @@ const WALL: number[] = [
   10,
 ];
 
-/**
- * Placeholder primitives until the art pass: the city and the camp a crenellated wall, the shelter
- * a tent, the farm a flat rectangle, all of them wide enough to show under a unit.
- */
+/** Placeholder primitives until the art pass, each wide enough to show under a unit. */
 const BUILDING_MARKS: Readonly<Record<string, number[]>> = {
   city: WALL,
   camp: WALL,

@@ -27,9 +27,9 @@ import {
 const FARM = 'farm';
 
 /**
- * The first seed's turn 1, its city settled bare, on the first civilization with one copy of the farm
- * in its deck, whose hand holds the farm; a tile beside the city claimed, the farm's cost gained and
- * a worker entered on that tile, and the tile: the farm's aim admits it.
+ * The first seed's turn 1 with the farm in hand, a copy added to the first civilization's deck: a
+ * claim's culture gained, a tile beside the city claimed, the farm's cost gained and a worker
+ * entered there, the farm's aim admitting the tile.
  */
 function farmAdmitted(): { chronicle: Chronicle; tile: TileCoords; index: number } {
   const first = civilizationOf(CATALOGUE, firstCivilization(CATALOGUE));
