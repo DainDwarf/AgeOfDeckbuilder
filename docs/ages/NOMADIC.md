@@ -29,7 +29,7 @@ Forest and hills give the same at income and cost the same to walk, and differ i
 
 Three units, and no unit has two jobs.
 
-- **The worker** is the nomadic unit. It spends its action on the cards played through it — Gather, Trapping — and attacks nothing.
+- **The worker** is the nomadic unit. It spends its action on the cards played through it — Gather, Trapping, Hunt — and attacks nothing.
 - **The warrior** attacks and only attacks.
 - **The scout** sees far, moves far and is weak. It is what turns finding a camp and the good tiles into a play instead of a wait.
 
@@ -42,9 +42,10 @@ The deck the draw pile cycles, each card the lesson it carries:
 - **Worker**, costing food, **Warrior**, costing military, and **Scout**, costing military: one population leaves the tiles to become a unit, and the city's last is never taken.
 - **Gather**, the age's card, costing nothing: aimed at a worker outside the border, it spends the worker's action and gains the yield of the tile the worker stands on, whatever its layers and the river give; on a tile the city holds it is refused, for the border is the population's to work. It is the most copied card in the deck by far, so a hand rarely lacks one. Units act on tiles through cards, and the wealth is out on the map. Gather inside the border was rejected: a worker at home doubled the tiles the population already works, the city's own building among them, and never left.
 - **Trapping** 🔧, an improvement on forest giving food, played through a worker for production: a worker changes the map for good, and an improvement counts wherever the tile is — inside the border at income, outside it through Gather.
+- **Hunt**, an instant costing nothing, played through a worker standing on a tile carrying deer or cattle, inside the border or out: the feature is removed and the city gains food once. The tile's standing yield against food now, and the hunt that walks from tile to tile against the worker that stays on one.
 - **March**, the refresh, aimed at a unit, costing military: move points, and the card that gets a worker home ahead of a raid or a warrior onto a camp a turn early.
 
-Gather is the most copied, then the units, then a few Trapping and March; the deck's size is tuning. An instant gaining food with no worker was rejected: it makes Gather the worse way to feed the city on the turns the hand holds both. A terraform, burning forest to plain, was left to the Stone Age: Trapping already teaches that the map changes for a card.
+Gather is the most copied, then the units, then a few Trapping, Hunt and March; the deck's size is tuning. An instant gaining food with no worker was rejected: it makes Gather the worse way to feed the city on the turns the hand holds both. A terraform, burning forest to plain, was left to the Stone Age: Trapping already teaches that the map changes for a card.
 
 ## The events ✅
 

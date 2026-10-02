@@ -94,6 +94,8 @@ const TEXT = {
   'rules.gather': "Gain the yield of a [player:worker]'s tile",
   'card.trapping': 'Trapping',
   'rules.trapping': 'Place [improvement:trapping] on [terrain:forest]',
+  'card.hunt': 'Hunt',
+  'rules.hunt': "Remove a [player:worker]'s [feature:deer] or [feature:cattle]. Gain 6[food]",
   'card.march': 'March',
   'rules.march': "Refresh a unit's move points",
   'card.shelter': 'Shelter',

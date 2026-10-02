@@ -2,6 +2,8 @@ import {
   builds,
   enters,
   entersOn,
+  featureAmong,
+  featureRemoved,
   firstRefusal,
   gained,
   improvementAbsent,
@@ -122,6 +124,15 @@ const TABLES: Tables = {
         (catalogue, paid, at) => improvementPlaced(catalogue, paid, at, 'trapping'),
       ),
     },
+    hunt: {
+      kind: 'instant',
+      cost: {},
+      ...throughWorker(
+        (catalogue, _chronicle, tile) => featureAmong(catalogue, tile, ['deer', 'cattle']),
+        (_catalogue, paid, at) =>
+          followed(featureRemoved(paid, at), (left) => gained(left, { food: 6 })),
+      ),
+    },
     march: {
       kind: 'instant',
       cost: { military: 1 },
@@ -165,6 +176,7 @@ const TABLES: Tables = {
         ...Array<string>(2).fill('warrior'),
         'scout',
         ...Array<string>(2).fill('trapping'),
+        ...Array<string>(2).fill('hunt'),
         ...Array<string>(2).fill('march'),
       ],
       settle: ['first-worker', 'first-scout'],

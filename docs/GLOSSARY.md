@@ -74,7 +74,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **discard** | To send a card from the hand to the discard pile. | throw away, dump |
 | **recall** | To put a card from the discard pile into the hand; what a recall instant does. | retrieve, recover, reclaim, salvage |
 | **add** | To put a new card on a pile or into the collection, or a card of the collection into a deck. | lay (for a card), put (for a card on a pile), gain (for a card), give (for a card), insert, shuffle in |
-| **remove** | To take a card out of a deck; the reverse of add. | destroy, sacrifice, trash |
+| **remove** | To take a card out of a deck, the reverse of add, or a layer off a tile. | destroy, sacrifice, trash, clear, strip |
 | **single use** | A keyword on a card: played, it leaves the chronicle instead of going to the discard pile. | one-use, gone once played, consumed, exhaust, exile |
 | **counter** | A named number a card carries in a chronicle, declared by its content and set when the card is made. | token, charge, variable |
 | **draw pile** | The cards not yet drawn this cycle; refilled from the discard pile when empty. | library |
