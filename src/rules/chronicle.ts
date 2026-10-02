@@ -45,6 +45,7 @@ import {
   grouped,
   type Landed,
   landedAs,
+  plays,
   type Sequence,
   type Stage,
   unchanged,
@@ -347,6 +348,27 @@ function reachedOn(
     raised.push(change('reached', standing));
   }
   return raised;
+}
+
+/**
+ * An achievement's tally and count for the turns on which that many cards were played: a turn is
+ * counted once, by the play that brings it to the number, and the settle phase never.
+ */
+export function turnsPlaying(cards: number): Required<Pick<Achievement, 'tallies' | 'count'>> {
+  if (!Number.isInteger(cards) || cards < 1) {
+    throw new Error(`a turn is counted at a whole number of cards, one at least, not ${cards}`);
+  }
+  return {
+    tallies: (_catalogue, started, stages, tally) => {
+      const played = plays(stages).length;
+      if (played === 0 || onSettlePhase(started)) return tally;
+      const before = tally.turn === started.turn ? (tally.played ?? 0) : 0;
+      const after = before + played;
+      const counted = before < cards && after >= cards ? 1 : 0;
+      return { turn: started.turn, played: after, turns: (tally.turns ?? 0) + counted };
+    },
+    count: (_catalogue, _chronicle, tally) => tally.turns ?? 0,
+  };
 }
 
 /** Whether two tallies hold the same numbers under the same names. */

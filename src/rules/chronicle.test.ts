@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 import { type Achievement, achievementOf, ageOf, type Catalogue, capstoneOf } from './catalogue';
-import { apply, type Command, launched, outcome } from './chronicle';
+import { apply, type Command, launched, outcome, turnsPlaying } from './chronicle';
 import {
   AGE,
   achieved,
@@ -960,6 +960,46 @@ test('a command moving the tallies of two achievements raises a tallied for each
     { id: SURVEY, reached: false, tally: { plain: 1 } },
     { id: victoryOf(AGE), reached: false, tally: {} },
   ]);
+});
+
+test('an achievement counting the turns on which that many cards were played counts a turn once, at the play that brings it to the number, a hazard paid for among them, and nothing played on the settle phase', () => {
+  const cards = 2;
+  const need = 2;
+  const counting = achieved({
+    [HOARD]: { ...achievementOf(CATALOGUE, AGE, HOARD), ...turnsPlaying(cards), need },
+  });
+  const { count } = achievementOf(counting, AGE, HOARD);
+  const countOn = (chronicle: Chronicle): number =>
+    count(counting, chronicle, achievementIn(chronicle, HOARD).tally);
+  const played = (chronicle: Chronicle, index = 0): Chronicle =>
+    outcome(apply(counting, chronicle, { type: 'play', index, aim: 'none' }));
+
+  const settling = opening(plains(3), {
+    age: AGE,
+    civilization: { ...CIVILIZATION, cards: [], settle: ['PH_Stores', 'PH_Stores'] },
+  });
+  const settled = played(played(settling, 1), 1);
+  const city = reaching([], {
+    hand: ['PH_Harvest', 'PH_Hunger', 'PH_Harvest'],
+    drawPile: ['PH_Harvest', 'PH_Harvest', 'PH_Harvest', 'PH_Harvest', 'PH_Harvest'],
+    resources: { food: 0, production: 3, military: 0, money: 0, science: 10, culture: 0 },
+  });
+  const first = played(city);
+  const paid = played(first);
+  const third = played(paid);
+  const next = endedTurn(third, undefined, counting);
+  const once = played(next);
+  const twice = played(once);
+
+  expect(idsOf(settled.hand)).toEqual([CIVILIZATION.city.card]);
+  expect(settled.turn).toBe(0);
+  expect(countOn(settled)).toBe(0);
+  expect([first, paid, third].map(countOn)).toEqual([0, 1, 1]);
+  expect(idsOf(third.hand)).toEqual([]);
+  expect(next.turn).toBe(city.turn + 1);
+  expect([once, twice].map(countOn)).toEqual([1, need]);
+  expect(achievementIn(once, HOARD).reached).toBe(false);
+  expect(achievementIn(twice, HOARD).reached).toBe(true);
 });
 
 test('a chronicle that has ended takes no command at all', () => {
