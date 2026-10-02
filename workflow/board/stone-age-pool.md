@@ -29,11 +29,11 @@ The field is Agriculture, Irrigation, Grinding stone, Bread and Granary; the wil
 **The doors, settled in words** at their line's cut (2026-10-02). Their numbers — copies unlocked, influence paid, needs, costs — and their texts are each door's intake, on its own line.
 
 - Every door needs Settlement: the four read ??? until the Nomadic Age is won, and are available together after it.
-- **Trapping, the wild.** Trapping leaves the Nomadic Age: the Nomadic civilization's deck opens without it, on Gather, the three units and March, and the card is the Stone Age's, unlocked by the technology. The card is an improvement giving food, placed through a worker for production, on a forest carrying wildlife and nowhere else. The goal counts a deed: food gained through Gather played on tiles carrying wildlife, toward a need high enough to demand the player's focus.
+- **Trapping, the wild.** Trapping leaves the Nomadic Age: the Nomadic civilization's deck opens without it, on Gather, the three units, March and Hunt, and the card is the Stone Age's, unlocked by the technology. The card is an improvement giving food, placed through a worker for production, on a forest carrying wildlife and nowhere else. The goal counts a deed: the wildlife hunted through Hunt, the Nomadic card that removes a wildlife for a one-time gain of food, toward a need high enough to demand the player's focus; wildlife lies on plain as on forest by then. Food gained through Gather on tiles carrying wildlife was dropped at Trapping's intake: one worker parked on one tile reaches it.
 - **Agriculture, the field.** Farm is a building on any plain, inside the border as any building, giving food, single use: the copies owned are how many the city builds. The goal reads the chronicle as it stands: plain tiles inside the border, toward a need that demands focus; the city's own tile counts when it stands on plain, and so does a forest inside the border burned to plain.
 - **Fire, the hearth.** The previous game's Fire: an instant costing nothing that discards another chosen card of the hand and gains science. A hazard discarded so does not strike that turn, by the rules as they stand, and comes around again. Science gets its source here and no sink until the science-based cards arrive. The goal counts a deed: turns on which five cards were played, toward a need; turns ended on an empty hand was dropped at Fire's intake, an empty deck ending every turn on one; how often a player manages it is the first thing to playtest.
 - **Herbalism, the sky.** Heal, as the idea jotted it at 2 food: it costs food, is aimed at a unit standing inside the border, brings it back to full health, and is refused on a unit at full health. The goal counts a deed: Gather played on four kinds of terrain, which in the temperate region is every kind a worker stands on — plain, forest, hills, desert — and a Gather on bare desert gains nothing and counts. Measured over 200 seeds of the Stone Age's temperate region: the nearest desert tile is a median 7 tiles and 4.5 worker turns from the centre, 2.5 turns at the nearest tenth, 7 at the furthest, and on 1 seed no desert is walked to at all.
-- Corners left to the doors' intakes: a campaign begun before keeps its two Trapping copies; `e2e/worker-instants.spec.ts` plays Trapping on a Nomadic chronicle; the Nomadic deck found thin in play has `IDEAS.md`'s Hunting to try.
+- Corners left to the doors' intakes: a campaign begun before keeps its two Trapping copies; `e2e/worker-instants.spec.ts` plays Trapping on a Nomadic chronicle.
 
 **Taste**, the user's reasons, read before every serve:
 
@@ -51,6 +51,8 @@ The field is Agriculture, Irrigation, Grinding stone, Bread and Granary; the wil
 - A goal's sentence is the plain deed with its numbers, never a state with its exceptions: "Play 5 cards in a single turn, 3 times".
 - A door's reward is served small: Fire's was cut from two copies to one, with 1 influence.
 - A plate keeps its width and a long goal wraps; height is the scarce side of the tree's room.
+- A goal's ground is dealt scarce: going for more of it is a journey, and the journey is what makes the goal interesting. A share is never raised so that the ground lies near the centre.
+- A goal is a deed that moves the player: parking one worker on one tile and pressing one card every turn was dropped for hunting from tile to tile.
 
 **Left out, and side notes:**
 
