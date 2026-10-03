@@ -38,6 +38,7 @@ The unordered pool of features that may or may not happen. Nothing here is promi
   - a count of the units still holding a move, on the bar or by the end-turn button;
   - a key that jumps the camera to the next unit still holding a move;
   - a sleep order, a unit's own state that dims it and keeps it out of the count until woken or until an enemy comes into its sight.
+- **A health bar on units**: a unit on the map shows its health, which only the infopanel reads today.
 - **An age filter on the collection screen**: the collection shown by age.
 - **Playing an age with a later age's cards**: earlier ages stay playable, and a deck holds cards of any age, so a Nomadic chronicle played with Bronze Age cards is a walk; whether its rewards, its influence or its unlocks are limited for it, and how.
 - **A minimize button on the scrim's windows**: the map holds still under the deal window, a browse, the aim window and the capstone's, and a button setting the window aside would let the map be read and moved under it; taken only if play finds the map held still there blocking.

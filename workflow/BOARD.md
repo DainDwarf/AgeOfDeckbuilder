@@ -14,7 +14,7 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **Herbalism** — the sky's door, needing Settlement: its goal counts the kinds of terrain Gather was played on, and it unlocks Heal, which costs food and brings a unit inside the border back to full health; its design is settled in words in [board/stone-age-pool.md](board/stone-age-pool.md), and its numbers and texts are this line's intake; healing a unit lands here.
+- **Herbalism** — Herbalism stands in the Stone Age's content as the technology of the sky's door, needing Settlement: its achievement counts the kinds of terrain Gather was played on toward 4, unlocks one copy of Heal and pays 1 influence; Heal costs 2 food and heals a unit of the player's standing inside the border to full health, refused on one at full health; healing a unit is proven on the fixture; `e2e/heal.spec.ts` plays the card on screen; `npm run check`, `npm test` and `npm run lint` pass. Doc-impact: `docs/CHRONICLE.md`, `docs/ages/STONE.md`. [board/herbalism.md](board/herbalism.md)
 - **The pinned achievement** — one achievement pinned on the campaign screen shows on the chronicle screen as a ledger: its goal in words, a count against its need where it has one, a check mark once reached, a cross mark once failed.
 - **The launch warning** — the warning a launch over a chronicle with achievements reached raises, since an abandoned chronicle pays nothing.
 - **The tree's columns** — re-thinking either how the tree is put in columns, or how the tree is displayed in general: the skeleton's next column holds seven technologies, and seven plates need 776 units of the room's 672 at today's plate height, more once a goal wraps.
