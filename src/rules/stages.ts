@@ -93,6 +93,7 @@ type PlacedChange = 'discarded' | 'recalled' | 'left';
 type TiledChange =
   | 'enter'
   | 'damaged'
+  | 'healed'
   | 'killed'
   | 'refreshed'
   | 'action-spent'

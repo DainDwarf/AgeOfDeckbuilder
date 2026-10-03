@@ -7,6 +7,7 @@ import {
   cardOf,
   counterOf,
   entered,
+  fullHealth,
   unitKind,
 } from './catalogue';
 import { claimable, populationTaken } from './city';
@@ -300,6 +301,18 @@ export function movePointsSpent(chronicle: Chronicle, tile: TileCoords): TileBlo
     : 'move-full';
 }
 
+/** Health a heal has room to bring back up: a unit at its full health or above is already full. */
+export function healthLost(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  tile: TileCoords,
+): TileBlock | undefined {
+  const standing = unitAt(chronicle.units, tile);
+  return standing !== undefined && standing.stats.health < fullHealth(catalogue, standing.stats)
+    ? undefined
+    : 'health-full';
+}
+
 /**
  * How a unit card enters its unit, the block and the effect as one pair so neither is written
  * without the other: the city keeps its last population, needs one idle to turn into the unit, and
@@ -532,6 +545,25 @@ export function refreshed(paid: Chronicle, at: TileCoords): Landed {
     changeOn('refreshed', at, {
       ...paid,
       units: paid.units.map((unit) => (unit.id === marching.id ? refreshedMovePoints(unit) : unit)),
+    }),
+  );
+}
+
+/**
+ * The unit standing on the tile, whatever its faction, healed to its full health, and nothing where
+ * none stands there or its health is not below full.
+ */
+export function healed(catalogue: Catalogue, paid: Chronicle, at: TileCoords): Landed {
+  const hurt = unitAt(paid.units, at);
+  if (hurt === undefined) return unchanged(paid);
+  const health = fullHealth(catalogue, hurt.stats);
+  if (hurt.stats.health >= health) return unchanged(paid);
+  return landedAs(
+    changeOn('healed', at, {
+      ...paid,
+      units: paid.units.map((unit) =>
+        unit.id === hurt.id ? { ...unit, stats: { ...unit.stats, health } } : unit,
+      ),
     }),
   );
 }

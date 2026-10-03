@@ -145,6 +145,7 @@ export type TileBlock =
   | 'no-unit'
   | 'unit-standing'
   | 'move-full'
+  | 'health-full'
   | 'no-claim';
 
 /**

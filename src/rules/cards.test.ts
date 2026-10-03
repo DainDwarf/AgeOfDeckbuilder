@@ -20,6 +20,7 @@ import {
   cardOf,
   catalogued,
   civilizationOf,
+  unitKind,
 } from './catalogue';
 import { admitted, apply, byHand, type Command, outcome, refusalOf } from './chronicle';
 import { yielded } from './city';
@@ -439,6 +440,46 @@ test('the refresh instant is refused on a unit whose move points are full, its a
 
   expect(stagedBy(city, aimedAtUnit(CITY))).toEqual(['refused']);
   expect(outcome(apply(CATALOGUE, city, aimedAtUnit(CITY)))).toBe(city);
+});
+
+test('the heal instant heals one unit of the player’s to its kind’s health, and leaves its move points and its action as they stand', () => {
+  const city = cityOf(['urban'], {
+    tiles: field(3),
+    hand: ['PH_Heal'],
+    units: [
+      standing('player', CITY, { type: 'PH_Warrior', health: 1 }, MOVE_POINT, 0),
+      standing('player', { q: 1, r: 1 }, { type: 'PH_Warrior', health: 1 }),
+    ],
+  });
+
+  const stages = apply(CATALOGUE, city, aimedAtUnit(CITY));
+
+  expect(namesOf(stages)).toEqual(['played', 'discarded', 'healed']);
+  expect(unitNamed(outcome(stages), 1).stats.health).toBe(unitKind(CATALOGUE, 'PH_Warrior').health);
+  expect(unitNamed(outcome(stages), 2).stats.health).toBe(1);
+  expect(pointsOf(outcome(stages), 1)).toBe(MOVE_POINT);
+  expect(actionOf(outcome(stages), 1)).toBe(0);
+});
+
+test('the heal instant is refused on a unit at its kind’s health or above it, and its effect there changes nothing', () => {
+  const full = unitKind(CATALOGUE, 'PH_Warrior').health;
+  const above = { q: 1, r: 1 };
+  const city = cityOf(['urban'], {
+    tiles: field(3),
+    hand: ['PH_Heal'],
+    units: [
+      standing('player', CITY, { type: 'PH_Warrior', health: full }),
+      standing('player', above, { type: 'PH_Warrior', health: full + 1 }),
+    ],
+  });
+  const card = aimedCard('PH_Heal');
+  if (card.aim !== 'unit') throw new Error('the heal is aimed at no unit');
+
+  expect(refusedFor(city, 'PH_Heal', CITY)).toBe('health-full');
+  expect(refusedFor(city, 'PH_Heal', above)).toBe('health-full');
+  expect(stagedBy(city, aimedAtUnit(CITY))).toEqual(['refused']);
+  expect(outcome(apply(CATALOGUE, city, aimedAtUnit(CITY)))).toBe(city);
+  expect(card.effect(CATALOGUE, city, above)).toEqual({ stages: [], chronicle: city });
 });
 
 test('a chronicle begun on a civilization of the catalogue holds its cards and opens turn 1 on a full hand of them', () => {

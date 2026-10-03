@@ -1287,8 +1287,8 @@ export function createMapView(
     });
   };
 
-  /** The unit on a tile damaged by no attacker: its marker bumps as an attack's target does. */
-  const damagedOn = (coord: TileCoords, chronicle: Chronicle): Promise<void> | undefined => {
+  /** The unit on a tile damaged or healed by no attacker: its marker bumps as an attack's target does. */
+  const bumpedOn = (coord: TileCoords, chronicle: Chronicle): Promise<void> | undefined => {
     const marker = markerOn(coord);
     if (marker === undefined) return undefined;
     const token = takeOff();
@@ -1475,7 +1475,8 @@ export function createMapView(
           () => arriving(stage.chronicle),
         );
       case 'damaged':
-        return staged([stage.tile], stage.chronicle, () => damagedOn(stage.tile, stage.chronicle));
+      case 'healed':
+        return staged([stage.tile], stage.chronicle, () => bumpedOn(stage.tile, stage.chronicle));
       case 'killed':
         return staged([stage.tile], stage.chronicle, () => killedOn(stage.tile, stage.chronicle));
       case 'retiled':

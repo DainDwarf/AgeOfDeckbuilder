@@ -166,6 +166,7 @@ const TEXT = {
   'refusal.no-unit': 'No unit stands here',
   'refusal.unit-standing': 'A unit already stands here',
   'refusal.move-full': 'Unit move points are full',
+  'refusal.health-full': 'Unit health is full',
   'refusal.discard-pile': 'The discard pile is empty',
   'refusal.hand': 'No other card in the hand',
   'refusal.no-claim': 'The city cannot claim that tile',

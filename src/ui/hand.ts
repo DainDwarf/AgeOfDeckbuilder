@@ -567,6 +567,7 @@ export function createHand(
       case 'enter':
       case 'move':
       case 'damaged':
+      case 'healed':
       case 'killed':
       case 'refreshed':
       case 'action-spent':

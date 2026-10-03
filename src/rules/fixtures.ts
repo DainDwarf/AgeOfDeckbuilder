@@ -13,6 +13,8 @@ import {
   featureRemoved,
   firstRefusal,
   gained,
+  healed,
+  healthLost,
   made,
   movePointsSpent,
   placesImprovement,
@@ -41,7 +43,14 @@ import {
   type Slice,
   type Tables,
 } from './catalogue';
-import { apply, beginChronicle, type Command, launched, outcome } from './chronicle';
+import {
+  apply,
+  beginChronicle,
+  type Command,
+  launched,
+  outcome,
+  terrainsPlayedOn,
+} from './chronicle';
 import { arrived, bordered, populationKilled, populationTaken } from './city';
 import { campUnit, enteredAround } from './enemies';
 import {
@@ -55,7 +64,6 @@ import {
   type Terrain,
   type Tile,
   type TileCoords,
-  tileAt,
   tileKey,
 } from './map';
 import type { Region } from './map-kinds';
@@ -80,7 +88,7 @@ import {
   unitDamaged,
 } from './schedule';
 import { charted } from './sight';
-import { followed, type Group, type Landed, plays, type Stage, unchanged, walked } from './stages';
+import { followed, type Group, type Landed, type Stage, unchanged, walked } from './stages';
 import {
   type CardId,
   type Chronicle,
@@ -417,6 +425,13 @@ const TABLES: Omit<Tables, 'technologies'> = {
       aim: 'unit',
       refuses: (_catalogue, chronicle, tile) => movePointsSpent(chronicle, tile),
       effect: (_catalogue, paid, at) => refreshed(paid, at),
+    },
+    PH_Heal: {
+      kind: 'instant',
+      cost: {},
+      aim: 'unit',
+      refuses: (catalogue, chronicle, tile) => healthLost(catalogue, chronicle, tile),
+      effect: (catalogue, paid, at) => healed(catalogue, paid, at),
     },
     PH_Harvest: {
       kind: 'instant',
@@ -831,17 +846,7 @@ function achievementsOf(age: string): Age['achievements'] {
       influence: 0,
     },
     [SURVEY]: {
-      tallies: (_catalogue, started, stages, tally) => {
-        let kept = tally;
-        for (const { card, aimed } of plays(stages)) {
-          if (card !== 'PH_Road' || aimed.aim !== 'tile') continue;
-          const terrain = tileAt(started.tiles, aimed.tile)?.terrain;
-          if (terrain === undefined) continue;
-          kept = { ...kept, [terrain]: (kept[terrain] ?? 0) + 1 };
-        }
-        return kept;
-      },
-      count: (_catalogue, _chronicle, tally) => Object.keys(tally).length,
+      ...terrainsPlayedOn('PH_Road'),
       need: SURVEY_NEED,
       technology: SURVEYING,
       influence: 1,

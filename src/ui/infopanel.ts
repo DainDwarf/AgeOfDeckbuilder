@@ -1,5 +1,5 @@
 import type Phaser from 'phaser';
-import { type Catalogue, unitKind } from '../rules/catalogue';
+import { type Catalogue, fullHealth, unitKind } from '../rules/catalogue';
 import {
   type BuildingTypeId,
   type FeatureId,
@@ -177,14 +177,11 @@ function inMovePoints(hundredths: number): string {
   return (hundredths / MOVE_POINT).toString();
 }
 
-/**
- * What a stat's row reads: what the unit has left over its own number, where it has two. Full health
- * is its kind's, read off the catalogue.
- */
+/** What a stat's row reads: what the unit has left over its own number, where it has two. */
 function readingOf(catalogue: Catalogue, unit: UnitReading, stat: (typeof STATS)[number]): string {
   switch (stat) {
     case 'health':
-      return `${unit.stats.health} / ${unitKind(catalogue, unit.stats.type).health}`;
+      return `${unit.stats.health} / ${fullHealth(catalogue, unit.stats)}`;
     case 'move':
       return `${inMovePoints(unit.movePoints)} / ${inMovePoints(unit.stats.move)}`;
     case 'action':

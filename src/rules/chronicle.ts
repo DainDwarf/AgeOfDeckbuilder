@@ -371,6 +371,41 @@ export function turnsPlaying(cards: number): Required<Pick<Achievement, 'tallies
   };
 }
 
+/**
+ * An achievement's tally and count for the kinds of terrain a card was played on, each read as the
+ * tile stood when the card was played; a play aimed at no tile counts none. A card the catalogue does
+ * not hold is refused.
+ */
+export function terrainsPlayedOn(card: CardId): Required<Pick<Achievement, 'tallies' | 'count'>> {
+  return {
+    tallies: (catalogue, started, stages, tally) => {
+      cardOf(catalogue, card);
+      let kept = tally;
+      for (const play of plays(stages)) {
+        if (play.card !== card) continue;
+        const terrain = terrainAimed(started, play.aimed);
+        if (terrain === undefined) continue;
+        kept = { ...kept, [terrain]: (kept[terrain] ?? 0) + 1 };
+      }
+      return kept;
+    },
+    count: (_catalogue, _chronicle, tally) => Object.keys(tally).length,
+  };
+}
+
+/** The terrain of the tile a play was aimed at, on the chronicle it was played on, and none off the map. */
+function terrainAimed(started: Chronicle, aimed: Aimed): string | undefined {
+  switch (aimed.aim) {
+    case 'tile':
+    case 'unit':
+      return tileAt(started.tiles, aimed.tile)?.terrain;
+    case 'none':
+    case 'discard-pile':
+    case 'hand':
+      return undefined;
+  }
+}
+
 /** Whether two tallies hold the same numbers under the same names. */
 function sameTally(one: Tally, other: Tally): boolean {
   const names = Object.keys(one);
@@ -444,6 +479,7 @@ function chartedOn(stage: Change): TileCoords | undefined {
     case 'enter':
     case 'move':
     case 'damaged':
+    case 'healed':
     case 'killed':
     case 'refreshed':
     case 'action-spent':

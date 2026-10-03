@@ -605,6 +605,11 @@ export function unitKind(catalogue: Catalogue, id: string): UnitStats {
   return entryOf(catalogue, catalogue.units, id, 'unit kind');
 }
 
+/** A unit's full health: its kind's, read off the catalogue by the type the unit carries. */
+export function fullHealth(catalogue: Catalogue, stats: UnitStats): number {
+  return unitKind(catalogue, stats.type).health;
+}
+
 /** The script an enemy names; a script the catalogue does not hold is refused. */
 export function enemyScript(catalogue: Catalogue, id: string): EnemyScript {
   return entryOf(catalogue, catalogue.scripts, id, 'enemy script');
