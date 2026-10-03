@@ -4,10 +4,9 @@ import { CATALOGUE } from '../src/content/catalogue';
 import { available, pinned, unpinned } from '../src/rules/campaign';
 import { gained } from '../src/rules/cards';
 import { achievementOf, cardOf, firstAge } from '../src/rules/catalogue';
-import { apply, countOn, outcome } from '../src/rules/chronicle';
-import { claimable, cultureThreshold } from '../src/rules/city';
+import { countOn } from '../src/rules/chronicle';
 import { tileKey } from '../src/rules/map';
-import type { Chronicle, ChronicleAchievement } from '../src/rules/state';
+import type { Chronicle } from '../src/rules/state';
 import { achievementGoal, technologyName, text } from '../src/ui/text';
 import {
   aimed,
@@ -17,6 +16,7 @@ import {
   click,
   dragOut,
   firstSeed,
+  HOLDING,
   idsOf,
   onDeer,
   openSaved,
@@ -24,8 +24,10 @@ import {
   playedOn,
   playedOut,
   pressed,
+  reachedByClaims,
   readings,
   readNames,
+  rowOf,
   secondEra,
   settledOn,
   standing,
@@ -38,9 +40,6 @@ import {
 const HUNTING = 'trapping';
 const HUNT = 'hunt';
 
-/** The technology whose achievement counts what the city holds, which claims alone reach. */
-const HOLDING = 'agriculture';
-
 /** What the pinned achievement draws, read in one question. */
 const PARTS = [
   'pinned-achievement-name',
@@ -48,16 +47,6 @@ const PARTS = [
   'pinned-achievement-count',
   'pinned-achievement-well',
 ] as const;
-
-/** The row of the chronicle's achievement that earns the technology; one it does not read throws. */
-function rowOf(chronicle: Chronicle, technology: string): ChronicleAchievement {
-  const row = chronicle.achievements.find(
-    ({ id }) => achievementOf(CATALOGUE, chronicle.age, id).technology === technology,
-  );
-  if (row === undefined)
-    throw new Error(`the chronicle reads no achievement earning ${technology}`);
-  return row;
-}
 
 /** Whether each plate wears the pin's edge, read in one question. */
 function edged(page: Page, technologies: readonly string[]): Promise<boolean[]> {
@@ -150,23 +139,7 @@ test('a chronicle of the second age that has reached the pinned technology’s a
 }) => {
   const problems = watch(page);
   const campaign = pinned(CATALOGUE, wonCampaign(), HOLDING);
-  const era = secondEra(campaign);
-  const reached = firstSeed(`reaches the achievement earning ${HOLDING} by claims`, (seed) => {
-    let chronicle = settledOn(seed, [], undefined, era);
-    while (!rowOf(chronicle, HOLDING).reached) {
-      const counted = countOn(CATALOGUE, chronicle, rowOf(chronicle, HOLDING));
-      const culture = gained(chronicle, { culture: cultureThreshold(chronicle) }).chronicle;
-      const next = claimable(CATALOGUE, culture)
-        .map((tile) => outcome(apply(CATALOGUE, culture, { type: 'claim', tile })))
-        .find((claimed) => {
-          const row = rowOf(claimed, HOLDING);
-          return row.reached || countOn(CATALOGUE, claimed, row) > counted;
-        });
-      if (next === undefined) return undefined;
-      chronicle = next;
-    }
-    return chronicle;
-  });
+  const reached = reachedByClaims(secondEra(campaign));
 
   await openSaved(page, reached, campaign);
   const seen = await readings(page, PARTS);

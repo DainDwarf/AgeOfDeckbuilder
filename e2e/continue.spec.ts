@@ -1,5 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
-import { type Chronicle, onSettlePhase } from '../src/rules/state';
+import { onSettlePhase } from '../src/rules/state';
 import { LOOK } from '../src/ui/look';
 import { text } from '../src/ui/text';
 import {
@@ -8,9 +8,8 @@ import {
   chronicleOf,
   click,
   fillOf,
-  firstsOf,
   launchedOn,
-  plant,
+  launchScreenOver,
   readNames,
   rested,
   settledOn,
@@ -29,16 +28,6 @@ async function continueReads(page: Page): Promise<string[]> {
     if (line === undefined) return lines;
     lines.push(line);
   }
-}
-
-/** The chronicle planted as the save, and the launch screen Chronicle opens from the campaign screen waited for. */
-async function launchScreenOver(page: Page, chronicle: Chronicle): Promise<void> {
-  const { region, civilization } = firstsOf();
-  await readNames(page);
-  await plant(page, { chronicle, region, civilization });
-  await page.goto('/');
-  await campaignShown(page);
-  await chronicleButton(page);
 }
 
 /** Continue pressed, and the chronicle screen it opens waited for. */

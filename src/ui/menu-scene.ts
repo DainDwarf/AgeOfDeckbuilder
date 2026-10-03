@@ -38,6 +38,9 @@ export class MenuScene extends Phaser.Scene implements CoversOverlay {
   /** The menu raised on its first window, over whatever stands. */
   raise!: () => void;
 
+  /** The launch warning raised over the launch screen, listing what is reached; going through launches. */
+  warnOfLaunch!: (reached: readonly string[], launch: () => void) => void;
+
   /** The whole menu taken down, the scrim with it; the refused-save window stays. */
   close!: () => void;
 
@@ -99,20 +102,9 @@ export class MenuScene extends Phaser.Scene implements CoversOverlay {
     const raise = (which: Opens, said: Said = {}): Standing =>
       stand(which, () => createWindow(this, which, presses, said));
 
-    /** The warning raised, whose press goes through with what `through` does, and the campaign screen after. */
+    /** The warning raised, whose press goes through with what `through` does. */
     const warn = (which: Warning, through: () => void, said: Said = {}): Standing =>
-      stand(which, () =>
-        createWarning(
-          this,
-          which,
-          presses,
-          () => {
-            through();
-            campaignStands();
-          },
-          said,
-        ),
-      );
+      stand(which, () => createWarning(this, which, presses, through, said));
 
     /** The campaign screen started anew in place of whatever screen stands, on the save as it now is. */
     const campaignStands = (): void => {
@@ -137,7 +129,10 @@ export class MenuScene extends Phaser.Scene implements CoversOverlay {
       else
         warn(
           'import-warning',
-          () => keepSave(save),
+          () => {
+            keepSave(save);
+            campaignStands();
+          },
           dropped.length > 0 ? { over: 'manage-save.dropped' } : {},
         );
     };
@@ -165,7 +160,10 @@ export class MenuScene extends Phaser.Scene implements CoversOverlay {
           return;
         }
         case 'clear':
-          warn('clear-warning', clearSave);
+          warn('clear-warning', () => {
+            clearSave();
+            campaignStands();
+          });
           return;
       }
       const unlisted: never = press;
@@ -218,6 +216,9 @@ export class MenuScene extends Phaser.Scene implements CoversOverlay {
     });
 
     this.raise = () => raise('menu');
+    this.warnOfLaunch = (reached, launch) => {
+      warn('launch-warning', launch, { listed: { heading: 'launch.unpaid', lines: reached } });
+    };
     this.close = close;
     this.covered = () => covered;
   }
@@ -258,6 +259,15 @@ function chooseFile(chosen: (text: string) => void): void {
 /** The menu raised over whatever stands, for whichever screen asked for it. */
 export function raiseMenu(scene: Phaser.Scene): void {
   scene.game.scene.getScene<MenuScene>('menu').raise();
+}
+
+/** The launch warning raised over the launch screen, for the scene standing it. */
+export function warnOfLaunch(
+  scene: Phaser.Scene,
+  reached: readonly string[],
+  launch: () => void,
+): void {
+  scene.game.scene.getScene<MenuScene>('menu').warnOfLaunch(reached, launch);
 }
 
 /**

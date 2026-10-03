@@ -260,6 +260,9 @@ const TEXT = {
   'launch.continue': 'Continue',
   'launch.turn': 'Turn {turn}',
   'launch.settle-phase': 'Settle phase',
+  'launch.warning':
+    'Launching ends the chronicle in progress, and its achievements are not paid. This cannot be undone.',
+  'launch.unpaid': 'Achievement you will lose:',
   'pile.counts': 'Cards: {cards}\nSettle: {settle}',
   'collection.collection': 'Collection',
   'collection.civilizations': 'Civilizations',

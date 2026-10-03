@@ -1,15 +1,12 @@
 import { expect, type Page, test } from '@playwright/test';
 import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
-import { civilizationIn } from '../src/rules/campaign';
-import { launched } from '../src/rules/chronicle';
 import { tileKey } from '../src/rules/map';
 import { freshCampaign } from '../src/rules/save';
 import { inSight } from '../src/rules/sight';
 import type { Chronicle } from '../src/rules/state';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
 import { openingChoices } from '../src/ui/launch-layout';
-import type { Choices } from '../src/ui/save-entry';
 import { text } from '../src/ui/text';
 import {
   budget,
@@ -20,6 +17,7 @@ import {
   enter,
   firstsOf,
   heldSave,
+  launchedAs,
   marksIn,
   openLaunch,
   openSaved,
@@ -75,19 +73,6 @@ function bandAndLines(page: Page): Promise<{ bar: number; highest: number }> {
 
 /** The console as a new chronicle leaves it: closed, and no line run. */
 const CLEARED = ['', '', '', '', '> '];
-
-/** The chronicle the rules launch on the choices and the seed, the new campaign's deck dealt. */
-function launchedFresh({ age, region, civilization }: Choices, seed: number): Chronicle {
-  const campaign = freshCampaign(CATALOGUE);
-  return launched(
-    CATALOGUE,
-    age,
-    region,
-    seed,
-    civilizationIn(CATALOGUE, campaign, civilization),
-    campaign.technologies,
-  );
-}
 
 /** Waits for the chronicle screen to stand on a chronicle of that seed. */
 async function standsOnSeed(page: Page, seed: number): Promise<void> {
@@ -243,7 +228,7 @@ test('the launch screen holds no switch, and seed with a number there opens the 
 
   await enter(page, `seed ${seed}`);
   await standsOnSeed(page, seed);
-  const oracle = launchedFresh(choices, seed);
+  const oracle = launchedAs(freshCampaign(CATALOGUE), choices, seed);
   expect(await chronicleOf(page)).toEqual(oracle);
   expect(await heldChronicle(page)).toEqual(oracle);
   expect(await shows(page, 'console')).toBe(false);
@@ -273,7 +258,7 @@ test('seed on the chronicle screen answers the seed of the chronicle standing, a
 
   await enter(page, `seed ${other}`);
   await standsOnSeed(page, other);
-  const oracle = launchedFresh(firstsOf(), other);
+  const oracle = launchedAs(freshCampaign(CATALOGUE), firstsOf(), other);
   expect(await chronicleOf(page)).toEqual(oracle);
   expect(await heldChronicle(page)).toEqual(oracle);
   expect(await shows(page, 'console')).toBe(false);

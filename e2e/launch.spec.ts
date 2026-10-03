@@ -1,9 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
 import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
-import { civilizationIn } from '../src/rules/campaign';
 import { ageOf, cardOf, firstAge, firstRegion, technologyOf } from '../src/rules/catalogue';
-import { launched } from '../src/rules/chronicle';
 import { freshCampaign } from '../src/rules/save';
 import { browseOf } from '../src/ui/collection-layout';
 import { ageName, cardName, civilizationName, text } from '../src/ui/text';
@@ -12,6 +10,7 @@ import {
   cardOnFace,
   chronicleOf,
   click,
+  launchedAs,
   launchedFromScreen,
   namedOn,
   onScreen,
@@ -217,14 +216,7 @@ test('on a campaign that has learned the first age’s technology the launch scr
   await launchedFromScreen(page);
   const chronicle = await chronicleOf(page);
   expect(chronicle).toEqual(
-    launched(
-      CATALOGUE,
-      UNLOCKED,
-      REGION,
-      chronicle.seed,
-      civilizationIn(CATALOGUE, campaign, civilization),
-      campaign.technologies,
-    ),
+    launchedAs(campaign, { age: UNLOCKED, region: REGION, civilization }, chronicle.seed),
   );
 
   expect(problems).toEqual([]);

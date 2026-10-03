@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { expect, type Page } from '@playwright/test';
 import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
-import { agesReached, type Campaign, paidInto } from '../src/rules/campaign';
+import { agesReached, type Campaign, civilizationIn, paidInto } from '../src/rules/campaign';
 import {
   aimOf,
   type CardKind,
@@ -13,6 +13,7 @@ import {
 } from '../src/rules/cards';
 import {
   type Aim,
+  achievementOf,
   ageOf,
   type Civilization,
   cardOf,
@@ -24,7 +25,8 @@ import {
   firstRegion,
   unitKind,
 } from '../src/rules/catalogue';
-import { admitted, apply, launched, outcome, refusalOf } from '../src/rules/chronicle';
+import { admitted, apply, countOn, launched, outcome, refusalOf } from '../src/rules/chronicle';
+import { claimable, cultureThreshold } from '../src/rules/city';
 import {
   CENTRE,
   distance,
@@ -49,14 +51,20 @@ import {
 import { addedToDrawPileTop } from '../src/rules/schedule';
 import { charted } from '../src/rules/sight';
 import { type Aimed, followed, unchanged } from '../src/rules/stages';
-import { type CardId, type Chronicle, type ChronicleCard, playable } from '../src/rules/state';
+import {
+  type CardId,
+  type Chronicle,
+  type ChronicleAchievement,
+  type ChronicleCard,
+  playable,
+} from '../src/rules/state';
 import { standsOn, type Unit, unitAt } from '../src/rules/units';
 import { type Bindings, STORED, serialiseControls, UPRIGHT } from '../src/ui/bindings';
 import type { Name } from '../src/ui/card-face';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
 import { type PileStack, pileStacksOf } from '../src/ui/collection-layout';
 import type { PileKind } from '../src/ui/overlay';
-import { SAVE_ENTRY } from '../src/ui/save-entry';
+import { type Choices, SAVE_ENTRY } from '../src/ui/save-entry';
 import { cardName, referenceName } from '../src/ui/text';
 import { layOutRun, type Reference } from '../src/ui/text-run';
 
@@ -130,6 +138,42 @@ export function secondEra(campaign: Campaign): Era {
   return { age, learned: campaign.technologies };
 }
 
+/** The technology whose achievement counts what the city holds, which claims alone reach. */
+export const HOLDING = 'agriculture';
+
+/** The row of the chronicle's achievement that earns the technology; one it does not read throws. */
+export function rowOf(chronicle: Chronicle, technology: string): ChronicleAchievement {
+  const row = chronicle.achievements.find(
+    ({ id }) => achievementOf(CATALOGUE, chronicle.age, id).technology === technology,
+  );
+  if (row === undefined)
+    throw new Error(`the chronicle reads no achievement earning ${technology}`);
+  return row;
+}
+
+/**
+ * The first seed's chronicle in the era's age, settled bare and taken by claims alone to the
+ * achievement earning `HOLDING`.
+ */
+export function reachedByClaims(era: Era): Chronicle {
+  return firstSeed(`reaches the achievement earning ${HOLDING} by claims`, (seed) => {
+    let chronicle = settledOn(seed, [], undefined, era);
+    while (!rowOf(chronicle, HOLDING).reached) {
+      const counted = countOn(CATALOGUE, chronicle, rowOf(chronicle, HOLDING));
+      const culture = gained(chronicle, { culture: cultureThreshold(chronicle) }).chronicle;
+      const next = claimable(CATALOGUE, culture)
+        .map((tile) => outcome(apply(CATALOGUE, culture, { type: 'claim', tile })))
+        .find((claimed) => {
+          const row = rowOf(claimed, HOLDING);
+          return row.reached || countOn(CATALOGUE, claimed, row) > counted;
+        });
+      if (next === undefined) return undefined;
+      chronicle = next;
+    }
+    return chronicle;
+  });
+}
+
 /**
  * A chronicle launched from a seed in the era's age, the first age the catalogue lists with nothing
  * learned unless one is given, on that age's first region and the catalogue's first civilization, or
@@ -143,6 +187,18 @@ export function launchedOn(seed: number, civilization?: Civilization, era = firs
     seed,
     civilization ?? civilizationOf(CATALOGUE, firstCivilization(CATALOGUE)),
     era.learned,
+  );
+}
+
+/** The chronicle the rules launch on the choices and the seed, beside the campaign. */
+export function launchedAs(campaign: Campaign, choices: Choices, seed: number): Chronicle {
+  return launched(
+    CATALOGUE,
+    choices.age,
+    choices.region,
+    seed,
+    civilizationIn(CATALOGUE, campaign, choices.civilization),
+    campaign.technologies,
   );
 }
 
@@ -527,6 +583,32 @@ export async function launchedFromScreen(page: Page): Promise<void> {
   await expect.poll(() => counted(page, 'hand-0')).toBe(1);
 }
 
+/**
+ * The chronicle planted as the save the next page this one loads finds, on its age's first region and
+ * the first civilization the catalogue lists, beside the campaign `plant` keeps it beside, and that
+ * page given the names.
+ */
+async function plantSaved(page: Page, chronicle: Chronicle, campaign?: Campaign): Promise<void> {
+  const region = firstRegion(CATALOGUE, chronicle.age);
+  await readNames(page);
+  await plant(page, { chronicle, region, civilization: firstCivilization(CATALOGUE) }, campaign);
+}
+
+/**
+ * The chronicle planted as `plantSaved` plants it, and the launch screen Chronicle opens from the
+ * campaign screen waited for.
+ */
+export async function launchScreenOver(
+  page: Page,
+  chronicle: Chronicle,
+  campaign?: Campaign,
+): Promise<void> {
+  await plantSaved(page, chronicle, campaign);
+  await page.goto('/');
+  await campaignShown(page);
+  await chronicleButton(page);
+}
+
 /** The launch screen Chronicle opens from the campaign screen of a bare boot. */
 export async function openLaunch(page: Page): Promise<void> {
   await readNames(page);
@@ -542,8 +624,7 @@ export async function continued(page: Page): Promise<void> {
 }
 
 /**
- * Opens the chronicle as the save the boot finds, on its age's first region and the first
- * civilization the catalogue lists, beside the campaign `plant` keeps it beside, and closes the
+ * Opens the chronicle as the save the boot finds, planted as `plantSaved` plants it, and closes the
  * capstone's window every resumed chronicle opens under.
  */
 export async function openSaved(
@@ -551,9 +632,7 @@ export async function openSaved(
   chronicle: Chronicle,
   campaign?: Campaign,
 ): Promise<void> {
-  const region = firstRegion(CATALOGUE, chronicle.age);
-  await readNames(page);
-  await plant(page, { chronicle, region, civilization: firstCivilization(CATALOGUE) }, campaign);
+  await plantSaved(page, chronicle, campaign);
   await continued(page);
   await expect.poll(() => standing(page, 'capstone')).toBe(true);
   await rested(page);

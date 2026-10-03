@@ -25,7 +25,7 @@ import {
 import { clustersOf, openingChoices, withAge } from './launch-layout';
 import { css, LOOK } from './look';
 import { groundColourOf, terrainColourOf } from './marks';
-import { backRaisesMenu, resetMenu } from './menu-scene';
+import { backRaisesMenu, resetMenu, warnOfLaunch } from './menu-scene';
 import { ROOM, wearNavbar } from './navbar';
 import { overlayOf } from './overlay-scene';
 import { type Choices, campaignHeld, type Opening, savedOpening } from './save-entry';
@@ -77,20 +77,22 @@ type Option = {
   readonly hits: readonly Phaser.GameObjects.GameObject[];
 };
 
-/**
- * What Continue reads under its label: where the chronicle stands, then each achievement it reached,
- * under its technology's name.
- */
-function readingsOf(catalogue: Catalogue, chronicle: Chronicle): string[] {
+/** Each achievement the chronicle has reached, read under its technology's name. */
+function reachedOf(catalogue: Catalogue, chronicle: Chronicle): string[] {
   const named = (id: string): string =>
     technologyName(achievementOf(catalogue, chronicle.age, id).technology);
+  return chronicle.achievements
+    .filter(({ reached }) => reached)
+    .map(({ id }) => text('achievement.reached', { achievement: named(id) }));
+}
+
+/** What Continue reads under its label: where the chronicle stands, then what it has reached. */
+function readingsOf(catalogue: Catalogue, chronicle: Chronicle): string[] {
   return [
     onSettlePhase(chronicle)
       ? text('launch.settle-phase')
       : text('launch.turn', { turn: chronicle.turn }),
-    ...chronicle.achievements
-      .filter(({ reached }) => reached)
-      .map(({ id }) => text('achievement.reached', { achievement: named(id) })),
+    ...reachedOf(catalogue, chronicle),
   ];
 }
 
@@ -348,7 +350,8 @@ export class LaunchScreen extends Phaser.Scene {
 
 /**
  * Continue over Launch at the room's bottom right, Launch opening the chronicle on the choices as
- * they stand; Continue greyed and answering no press while the save holds no chronicle.
+ * they stand, through the launch warning where the saved chronicle has reached an achievement;
+ * Continue greyed and answering no press while the save holds no chronicle.
  */
 function buttonsOf(
   { scene, catalogue }: Laying,
@@ -362,7 +365,12 @@ function buttonsOf(
     .setName('launch-button')
     .setInteractive();
   answersPress(launch);
-  onClick(launch, () => open(choices()));
+  onClick(launch, () => {
+    const held = savedOpening();
+    const reached = held === undefined ? [] : reachedOf(catalogue, held.resumed);
+    if (reached.length === 0) open(choices());
+    else warnOfLaunch(scene, reached, () => open(choices()));
+  });
   const launchLabel = addText(scene, middle, launchY, text('launch.button'), LABEL_STYLE)
     .setOrigin(0.5)
     .setName('launch-button-label');

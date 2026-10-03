@@ -27,7 +27,7 @@ import { css, LOOK } from './look';
 import { type TextKey, text } from './text';
 
 /** A warning: a window of its own, whose first button is the press it warns of, going through. */
-export type Warning = 'import-warning' | 'clear-warning';
+export type Warning = 'import-warning' | 'clear-warning' | 'launch-warning';
 
 /** Every window the menu opens. */
 export type MenuWindow = 'menu' | 'settings' | 'controls' | 'manage-save' | Warning;
@@ -65,12 +65,13 @@ const LABELS: Record<MenuPress, TextKey> = {
 const THROUGH: Record<Warning, TextKey> = {
   'import-warning': 'manage-save.import',
   'clear-warning': 'manage-save.clear',
+  'launch-warning': 'launch.button',
 };
 
 /**
  * The windows: the title each one reads, the lines under it, what it lists, in the order it lists
- * them, and the one it closes back to. The menu closes back to nothing, which is the chronicle
- * screen. Controls lists the bindings instead of buttons.
+ * them, and the one it closes back to; one that names none closes onto the screen standing. Controls
+ * lists the bindings instead of buttons.
  */
 const WINDOWS: Record<
   MenuWindow,
@@ -102,12 +103,19 @@ const WINDOWS: Record<
     buttons: ['back'],
     from: 'manage-save',
   },
+  'launch-warning': { title: 'navbar.chronicle', lines: ['launch.warning'], buttons: ['back'] },
 };
 
-/** What a window reads besides what it always does: a line after its own, and one under its buttons. */
-export type Said = { readonly over?: TextKey; readonly under?: TextKey };
+/** Lines read off the save, stacked tight under the line heading them. */
+export type Listed = { readonly heading: TextKey; readonly lines: readonly string[] };
 
-/** The window this one closes back to; nothing for the one that closes back to the chronicle screen. */
+/**
+ * What a window reads besides what it always does: a line after its own, a list after that, and a
+ * line under its buttons.
+ */
+export type Said = { readonly over?: TextKey; readonly listed?: Listed; readonly under?: TextKey };
+
+/** The window this one closes back to; nothing for one that closes onto the screen standing. */
 export function behind(which: MenuWindow): Opens | undefined {
   return WINDOWS[which].from;
 }
@@ -411,9 +419,9 @@ export function createWarning(
 }
 
 /**
- * One window: the box in the panel language, its title, its lines, its buttons, and the line said
- * under them. The box takes the pointer so that a press on it is not a press on the scrim behind,
- * which backs the window out. The caller takes the window down.
+ * One window: the box in the panel language, its title, its lines, the list said, its buttons, and
+ * the line said under them. The box takes the pointer so that a press on it is not a press on the
+ * scrim behind, which backs the window out. The caller takes the window down.
  */
 function layWindow(
   scene: Phaser.Scene,
@@ -429,12 +437,26 @@ function layWindow(
   const over = [...(shape.lines ?? []), ...(said.over === undefined ? [] : [said.over])].map(
     (key) => lineOf(scene, key),
   );
+  const listed =
+    said.listed === undefined
+      ? []
+      : [
+          lineOf(scene, said.listed.heading),
+          ...said.listed.lines.map((reads, index) =>
+            addText(scene, 0, 0, reads, LINE_STYLE)
+              .setOrigin(0.5, 0)
+              .setName(`${which}-listed-${index}`),
+          ),
+        ];
+  const listedHeight =
+    listed.length === 0 ? 0 : PADDING + listed.reduce((sum, line) => sum + line.height, 0);
   const under = said.under === undefined ? [] : [lineOf(scene, said.under)];
 
   const height =
     2 * PADDING +
     title.height +
     linesHeight(over) +
+    listedHeight +
     bodyHeight(which, buttons.length) +
     linesHeight(under);
   const top = Math.round((DESIGN_HEIGHT - height) / 2);
@@ -450,6 +472,11 @@ function layWindow(
     line.setPosition(middle, y + PADDING);
     y += PADDING + line.height;
   }
+  if (listed.length > 0) y += PADDING;
+  for (const line of listed) {
+    line.setPosition(middle, y);
+    y += line.height;
+  }
   const body = y + PADDING;
   y += bodyHeight(which, buttons.length);
   for (const line of under) {
@@ -457,7 +484,7 @@ function layWindow(
     y += PADDING + line.height;
   }
 
-  const root = scene.add.container(0, 0, [box, title, ...over, ...under]).setName(which);
+  const root = scene.add.container(0, 0, [box, title, ...over, ...listed, ...under]).setName(which);
   buttons.forEach(({ name, reads, pressed }, index) => {
     const { face, label } = createButton(
       scene,
