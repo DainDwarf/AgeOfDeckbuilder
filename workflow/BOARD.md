@@ -6,7 +6,7 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Rungs
 
-- **The Stone Age's schedule** — the age's own events, its capstone and its victory with the technology it earns, on a chronicle longer than the Nomadic one, hard to impossible on the deck the age opens with and beatable once its tree is climbed; with it the ending's scaled pay.
+- **The Stone Age's schedule** — the age's own events, its capstone and its victory with the technology it earns, on a chronicle longer than the Nomadic one, hard to impossible on the deck the age opens with and beatable once its tree is climbed; with it the ending's scaled pay, a Nomadic chronicle replayed paying no influence, the Nomadic Age being the tutorial.
 - **New enemies** — the enemy units the Stone Age adds, the scripts they follow and the camps they enter from.
 - **Neutrals and sites** — the neutral faction, and the sites that belong to no faction and pay a reward once.
 - **The headless simulator** — a consumer of the rules that runs only when asked and reports numbers, not diagnoses, tuned across the two ages; the reachability cache and the end of turn's cost per `apply` are looked at when it is made.

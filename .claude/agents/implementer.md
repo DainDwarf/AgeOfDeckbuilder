@@ -36,6 +36,7 @@ Scope grows in place when exploration reveals adjacent work that shares the abst
 - Locality first; one choke point per invariant; no shallow modules.
 - When you add or touch a choke point, grep for every path the invariant covers and route each one through it before reporting; a path you leave outside goes under Deviations.
 - Before writing a helper or re-typing a value, search for the one that already answers it, in `src/` and in the specs' shared helpers alike; the report's Done names what was reused.
+- A block you would copy from a neighbour to do the same job is not copied: the neighbour's block becomes a helper both call, in this diff, and the report's Done names it.
 - Search for a name before taking it. Where the tree already uses it for another thing, both names are on trial: the one that says less about which thing it is gets renamed, both where the word is generic enough to name either, in this diff, whatever files the rename opens, and the report's Done names each rename. A glossary term never yields.
 - Gameplay terms come from `docs/GLOSSARY.md` — the exact word, in text and in identifiers.
 - Tests follow `DOGMAS.md` → _Testing_. Never weaken or delete a test to make it pass.

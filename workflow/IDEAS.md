@@ -4,7 +4,7 @@ The unordered pool of features that may or may not happen. Nothing here is promi
 
 ## Harness
 
-- **Content-stage board** (to try at the Bronze Age: it needs the headless simulator): when content exists, track each piece through Design (number-less) → Implement (provisional numbers) → Balance (measured + feel) → Polish (text, art, lore), one stage per session batched across pieces. Worked well before.
+- **Content-stage board** (to try at the Bronze Age: it needs the headless simulator): when content exists, track each piece through Design (number-less) → Implement (provisional numbers) → Balance (measured + feel) → Polish (text, art, lore), one stage per session batched across pieces. Worked well before. Its Design stage is a ping-pong: a piece of content served as two or three takes that differ on purpose, one question a turn, never one finished table, each reason for striking or twisting a take kept on a taste list read before the next serve.
 - **A spec for every card of the content**: one e2e test per card, playing it on screen, so a card's effect is proven on the game's content; the catalogue's coherence test plays no card.
 - **Pure UI modules apart from Phaser's** (v0.0.6): `src/ui/face.ts` and `src/ui/bar-layout.ts` are pure, tested by Vitest in Node, and sit beside the Phaser modules; whether the UI parts that are internal and the parts that use Phaser get different folders, a naming convention, or nothing.
 - **Every text measured through `ownBoxOf`** (v0.0.6, the look): about sixty layouts in `src/ui/` read a text's padded `width`, `height` or bounds, so `addText`'s padding sits inside their spacing; routed through `ownBoxOf` each moves by 2–4 px and its spacing is looked at again, which the screens redone in the look pass do anyway.
