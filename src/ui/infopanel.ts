@@ -16,7 +16,7 @@ import { RESOURCES, type Resource, type Resources } from '../rules/resources';
 import { type Unit, unitAt } from '../rules/units';
 import { CARD_HEIGHT, CARD_WIDTH, drawCardSurface, metricsOf } from './card-face';
 import { stopMotion } from './card-motion';
-import { addText, onHover, type Stratum, UI_FONT } from './design-space';
+import { addText, onClick, onHover, type Stratum, UI_FONT } from './design-space';
 import { css, LOOK } from './look';
 import {
   buildingMark,
@@ -202,10 +202,14 @@ type Face = {
 /** Where the panel stands on the map, and what it measures in there, for the bubbles its rows raise. */
 type Box = { left: number; top: number; unit: number };
 
-/** What a row does with the one bubble: raises it beside its own middle in the card, or lets it go. */
-type RowBubble = {
+/**
+ * What a row answers: the one bubble raised beside its own middle in the card or let go, and a left
+ * click on it.
+ */
+type RowAnswers = {
   raise(centre: number, message: string): void;
   drop(): void;
+  click(): void;
 };
 
 /**
@@ -219,9 +223,13 @@ export function createInfoPanel(
   on: Stratum,
   catalogue: Catalogue,
   tooltip: Tooltip,
+  unaim: () => void,
 ): InfoPanel {
   const ghosts = scene.add.graphics();
-  const panel = scene.add.container(0, 0, [ghosts]).setName('infopanel').setVisible(false);
+  // Interactive, so no press reaches the map's catchers under it, and never marked as answering one.
+  const stop = scene.add.zone(0, 0, CARD_WIDTH, CARD_HEIGHT).setOrigin(0, 0).setInteractive();
+  onClick(stop, unaim);
+  const panel = scene.add.container(0, 0, [ghosts, stop]).setName('infopanel').setVisible(false);
   on.layer.add(panel);
 
   let standing: Face | undefined;
@@ -232,7 +240,7 @@ export function createInfoPanel(
   /** The face the panel is standing beside, and nothing while it stands nowhere. */
   let beside: TileFace | undefined;
 
-  const bubble: RowBubble = {
+  const answers: RowAnswers = {
     raise(centre: number, message: string): void {
       tooltip.beside(message, () => ({
         x: box.left + CARD_WIDTH * box.unit,
@@ -242,6 +250,7 @@ export function createInfoPanel(
     drop(): void {
       tooltip.hide();
     },
+    click: unaim,
   };
 
   /** Level with the face it reads, clear of its rim, at the size on screen the card was laid out at. */
@@ -255,6 +264,7 @@ export function createInfoPanel(
     for (let ghost = behind; ghost >= 1; ghost--) {
       drawCardSurface(ghosts, ghost * GHOST_OFFSET, ghost * GHOST_OFFSET);
     }
+    stop.setSize(CARD_WIDTH + behind * GHOST_OFFSET, CARD_HEIGHT + behind * GHOST_OFFSET);
     panel.setScale(box.unit).setPosition(box.left, box.top);
   };
 
@@ -272,7 +282,7 @@ export function createInfoPanel(
   };
 
   const hide = (): void => {
-    bubble.drop();
+    answers.drop();
     settle();
     standing?.root.destroy();
     standing = undefined;
@@ -285,7 +295,7 @@ export function createInfoPanel(
     hide,
 
     show(cards: Card[], index: number, at: TileFace, cycling: boolean): void {
-      bubble.drop();
+      answers.drop();
       settle();
 
       behind = cards.length - 1;
@@ -294,9 +304,9 @@ export function createInfoPanel(
       const outgoing = standing;
       if (!cycling) outgoing?.root.destroy();
 
-      const face = buildFace(scene, catalogue, cards[index], CARD_WIDTH, bubble);
-      // Under the card it replaces, so the dissolve uncovers it, and over the ghosts either way.
-      panel.addAt(face.root, 1);
+      const face = buildFace(scene, catalogue, cards[index], CARD_WIDTH, answers);
+      // Under the card it replaces, so the dissolve uncovers it, and over the stop either way.
+      panel.addAt(face.root, panel.getIndex(stop) + 1);
       standing = face;
 
       if (cycling && outgoing !== undefined) {
@@ -320,7 +330,7 @@ export function createInfoPanel(
 
     rescale(): void {
       if (beside === undefined) return;
-      bubble.drop();
+      answers.drop();
       stand(beside);
     },
   };
@@ -328,14 +338,14 @@ export function createInfoPanel(
 
 /**
  * The card's head over its rows, laid out in the card's own type and spacing at `width`, from its
- * top-left corner; a row raises a bubble only where one is handed.
+ * top-left corner; a row raises a bubble and answers a left click only where its answers are handed.
  */
 function buildFace(
   scene: Phaser.Scene,
   catalogue: Catalogue,
   card: Drawing,
   width: number,
-  bubble: RowBubble | undefined,
+  answers: RowAnswers | undefined,
 ): Face {
   const { em, pad } = metricsOf(width);
   const style = stylesOf(em);
@@ -350,10 +360,9 @@ function buildFace(
 
   const head = headOf(scene, card);
   const mark = fitMark(head.mark, markBox).setPosition(left + markBox / 2, middle);
-  const name = addText(scene, left + markBox + 0.5 * em, middle, head.name, style.title).setOrigin(
-    0,
-    0.5,
-  );
+  const name = addText(scene, left + markBox + 0.5 * em, middle, head.name, style.title)
+    .setOrigin(0, 0.5)
+    .setName('panel-name');
 
   const ruleY = Math.round(middle + 1.15 * em);
   const rule = scene.add.rectangle(left, ruleY, right - left, 1, LOOK.cardEdge).setOrigin(0, 0);
@@ -372,7 +381,7 @@ function buildFace(
 
   /** The box a term raises its bubble from, named so a spec finds the rows in the order drawn. */
   const listen = (x: number, rowTop: number, across: number, down: number, term: Term): void => {
-    if (bubble === undefined) return;
+    if (answers === undefined) return;
     const hover = scene.add
       .zone(x, rowTop, across, down)
       .setOrigin(0, 0)
@@ -380,9 +389,10 @@ function buildFace(
       .setInteractive();
     onHover(
       hover,
-      () => bubble.raise(rowTop + down / 2, text(`tooltip.${term}`)),
-      () => bubble.drop(),
+      () => answers.raise(rowTop + down / 2, text(`tooltip.${term}`)),
+      () => answers.drop(),
     );
+    onClick(hover, answers.click);
     contents.push(hover);
     hovers.push(hover);
   };
@@ -403,14 +413,10 @@ function buildFace(
     return { root: scene.add.container(0, 0, contents), hovers };
   }
 
-  for (const row of card.rows) {
-    const rowName = addText(
-      scene,
-      left + 0.75 * em + 0.3 * em,
-      0,
-      nameOf(row),
-      style.label,
-    ).setOrigin(0, 0.5);
+  for (const [at, row] of card.rows.entries()) {
+    const rowName = addText(scene, left + 0.75 * em + 0.3 * em, 0, nameOf(row), style.label)
+      .setOrigin(0, 0.5)
+      .setName(`panel-row-${at}-name`);
     const line = rowName.height;
     rowName.setY(rowTop + line / 2);
     contents.push(

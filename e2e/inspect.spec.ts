@@ -313,8 +313,11 @@ test('a click selects a tile, the inspection key steps its cards, and the back k
   expect(await ringedTile(page)).toBe(bareTile);
 
   // A click on another tile selects it, and the inspection standing on the last one is let go of.
-  await page.mouse.click(city.x, city.y);
-  await expect.poll(() => ringedTile(page)).toBe(cityTile);
+  // West of the bare tile, so the panel standing east of it is not over the tile pressed.
+  const furtherTile = tileKey(westOf(westOf(cityTileOf(entered))));
+  const further = await onScreen(page, `tile-${furtherTile}`);
+  await page.mouse.click(further.x, further.y);
+  await expect.poll(() => ringedTile(page)).toBe(furtherTile);
   expect(await shownCard(page)).toBeUndefined();
 
   const beside = await besideTiles(page);

@@ -189,7 +189,9 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
 
     const parts: Part[] = [];
     const view = createMapView(map, map.strata, CATALOGUE, this.current);
-    const panel = createInfoPanel(map, map.strata.infopanel, CATALOGUE, tooltip.map);
+    const panel = createInfoPanel(map, map.strata.infopanel, CATALOGUE, tooltip.map, () => {
+      hand.unaim();
+    });
     const note = createRefusalNote(map, map.strata.note);
     // The map's note hears only the presses this scene lets through to the map.
     this.input.on('pointerdown', note.hide);
@@ -506,12 +508,8 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       return true;
     };
 
-    const unaim = (): void => {
-      hand.unaim();
-    };
-
     const bar = createResourceBar(this, ui.bar, CATALOGUE, tooltip.ui, {
-      unaim,
+      unaim: hand.unaim,
       cityMode: enterCityMode,
       toggleYield: (resource) => {
         toggleYield(resource);
@@ -604,6 +602,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       createPiles(this, ui, CATALOGUE, faces, {
         browse: (pile) => overlay.browse(pile, this.current),
         inspectNamed: (name) => overlay.inspectNamed(name),
+        unaim: hand.unaim,
       }),
       hand,
       endTurn,
@@ -619,7 +618,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
           inspect: (name) => {
             overlay.inspectNamed(name);
           },
-          unaim,
+          unaim: hand.unaim,
         },
       ),
       overlay,

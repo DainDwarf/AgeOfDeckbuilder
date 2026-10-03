@@ -54,7 +54,7 @@ export function createPinnedAchievement(
     .setName('pinned-achievement');
   // Interactive, so no press reaches the map under it, and never marked as answering one.
   const stop = scene.add.zone(0, 0, PLATE_WIDTH, height).setOrigin(0, 0).setInteractive();
-  onClick(stop, unaim);
+  onClick(stop, unaim, 'left', 'within slack');
   const paper = paperOf(scene, PLATE_WIDTH, height, LOOK.panelFill);
   const { well } = createWell(scene, 'pinned-achievement');
   placeWell(well, { x: 0, y: 0, width: PLATE_WIDTH, height });
@@ -79,6 +79,7 @@ export function createPinnedAchievement(
     { over: (raiser, over) => small.over(over ? raiser : undefined), inspect, click: unaim },
   );
   run.label.setName('pinned-achievement-goal');
+  content.setName('pinned-achievement-face').setData('names', run.names);
 
   return {
     render(standing: Chronicle): void {

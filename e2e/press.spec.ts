@@ -5,7 +5,7 @@ import { achievementOf } from '../src/rules/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
 import { tileKey } from '../src/rules/map';
 import type { Chronicle } from '../src/rules/state';
-import { cardName, text } from '../src/ui/text';
+import { achievementGoal, cardName, text } from '../src/ui/text';
 import {
   admits,
   aimed,
@@ -25,12 +25,15 @@ import {
   inHand,
   type Judged,
   mapFrame,
+  namedIn,
+  nameOnScreen,
   type OnScreen,
   offCanvas,
   offsetOf,
   onScreen,
   openSaved,
   overflowingPiles,
+  pileTop,
   playedOut,
   readings,
   rested,
@@ -595,7 +598,7 @@ test('a click on the resource bar lets the card being aimed go and lands as on a
   expect(problems).toEqual([]);
 });
 
-test('a click on the pinned achievement lets the card being aimed go and reaches no tile under it', async ({
+test('a click on the pinned achievement, a name in its goal included, lets the card being aimed go and reaches no tile under it', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -607,12 +610,18 @@ test('a click on the pinned achievement lets the card being aimed go and reaches
     era,
   );
   const pin = opened.achievements
-    .map(({ id }) => achievementOf(CATALOGUE, opened.age, id).technology)
-    .find((technology) => unpinnable(CATALOGUE, technology, won.technologies) === undefined);
+    .map(({ id }) => ({ id, ...achievementOf(CATALOGUE, opened.age, id) }))
+    .find(
+      ({ id, technology, need }) =>
+        unpinnable(CATALOGUE, technology, won.technologies) === undefined &&
+        namedIn(achievementGoal(id, need)).length > 0,
+    );
   if (pin === undefined)
-    throw new Error(`the ${era.age} age reads no achievement of a pinnable technology`);
+    throw new Error(
+      `the ${era.age} age reads no achievement of a pinnable technology whose goal names a thing`,
+    );
 
-  await openSaved(page, opened, pinned(CATALOGUE, won, pin));
+  await openSaved(page, opened, pinned(CATALOGUE, won, pin.technology));
   const home = await onScreen(page, `hand-${index}`);
 
   await page.mouse.click(home.x, home.y);
@@ -622,6 +631,75 @@ test('a click on the pinned achievement lets the card being aimed go and reaches
   expect(await ringedTile(page)).toBeUndefined();
   await expect.poll(() => selected(page, index, home)).toBe(false);
   expect(await chronicleOf(page)).toEqual(opened);
+
+  await page.mouse.click(home.x, home.y);
+  await aimed(page);
+  const name = await nameOnScreen(page, 'pinned-achievement-face');
+  await page.mouse.click(name.x, name.y);
+  await expect.poll(() => standing(page, 'aim')).toBe(false);
+  expect(await standing(page, 'inspection')).toBe(false);
+  await expect.poll(() => selected(page, index, home)).toBe(false);
+  expect(await chronicleOf(page)).toEqual(opened);
+
+  expect(problems).toEqual([]);
+});
+
+test('a left click on either pile lets the card being aimed go and raises no browse', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const { chronicle: opened, index } = bareAimable();
+
+  await openSaved(page, opened);
+  const home = await onScreen(page, `hand-${index}`);
+
+  for (const pile of ['draw-pile', 'discard-pile'] as const) {
+    await page.mouse.click(home.x, home.y);
+    await aimed(page);
+    const top = await pileTop(page, pile);
+    await page.mouse.click(top.x, top.y);
+    await expect.poll(() => standing(page, 'aim')).toBe(false);
+    expect(await standing(page, 'browse')).toBe(false);
+    await expect.poll(() => selected(page, index, home)).toBe(false);
+    expect(await chronicleOf(page)).toEqual(opened);
+  }
+
+  expect(problems).toEqual([]);
+});
+
+test('a left click anywhere on the infopanel reaches no tile under it, and lets the card being aimed go with the inspection standing', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const { chronicle: opened, index } = bareAimable();
+
+  await openSaved(page, opened);
+  const home = await onScreen(page, `hand-${index}`);
+  const city = await onScreen(page, `tile-${tileKey(cityTileOf(opened))}`);
+
+  /** The card aimed, then the city's tile inspected under the aim. */
+  const aimedAndInspected = async (): Promise<void> => {
+    await page.mouse.click(home.x, home.y);
+    await aimed(page);
+    await page.mouse.click(city.x, city.y, { button: 'right' });
+    await expect.poll(() => shownCard(page)).toBeDefined();
+    await rested(page);
+  };
+
+  // A row's tooltip zone, a row's name beside it, and the head.
+  for (const on of ['infopanel-row-0', 'panel-row-0-name', 'panel-name']) {
+    await aimedAndInspected();
+    await click(page, on);
+    await expect.poll(() => standing(page, 'aim')).toBe(false);
+    expect(await shownCard(page)).toBeDefined();
+    await expect.poll(() => selected(page, index, home)).toBe(false);
+    expect(await chronicleOf(page)).toEqual(opened);
+  }
+
+  await click(page, 'panel-name');
+  await rested(page);
+  expect(await shownCard(page)).toBeDefined();
+  expect(await ringedTile(page)).toBeUndefined();
 
   expect(problems).toEqual([]);
 });
