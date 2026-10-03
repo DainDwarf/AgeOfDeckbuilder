@@ -14,7 +14,7 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The launch warning** — the warning a launch over a chronicle with achievements reached raises, since an abandoned chronicle pays nothing.
+- **The launch warning** — Launch over a saved chronicle that has reached an achievement raises a warning titled Chronicle, listing those achievements, that Back, the back key or the scrim takes down unchanged and Launch goes through; one with none reached launches at once; `e2e/launch-warning.spec.ts` proves it. Doc-impact: `docs/META-SCREENS.md`. [board/launch-warning.md](board/launch-warning.md)
 - **The tree's columns** — re-thinking either how the tree is put in columns, or how the tree is displayed in general: the skeleton's next column holds seven technologies, and seven plates need 776 units of the room's 672 at today's plate height, more once a goal wraps.
 - **The field's climb** — Irrigation, Grinding stone and Bread, each technology with its achievement and every card it unlocks.
 - **The wild's climb** — Bow and arrow, Fishing, Domestication, Clothmaking and Raft, each technology with its achievement and every card it unlocks.
