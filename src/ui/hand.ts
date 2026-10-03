@@ -79,8 +79,6 @@ export type Hand = {
   selection(): ChronicleCard | undefined;
   /** Lets the selected card go, the aim it stands on with it, and answers whether one was. */
   unselect(): boolean;
-  /** Whether the selected card is being aimed. */
-  beingAimed(): boolean;
   /** Lets the card being aimed go as `unselect` does; a card selected and not being aimed stays. */
   unaim(): void;
   /** Whether the object is a card of the hand, every left click on which the hand answers itself. */
@@ -632,7 +630,6 @@ export function createHand(
       return selected?.slot.card;
     },
     unselect,
-    beingAimed,
     unaim(): void {
       if (beingAimed()) unselect();
     },

@@ -70,6 +70,8 @@ export type ResourceBar = {
   play(stage: Stage): Promise<void> | undefined;
   /** Latches down the readings of these resources, and lets every other one back up. */
   latch(shown: ReadonlySet<Resource>): void;
+  /** Whether the object is the bar's paper between its readings, which is beside the things. */
+  isPaper(object: Phaser.GameObjects.GameObject): boolean;
 };
 
 export function createResourceBar(
@@ -86,12 +88,12 @@ export function createResourceBar(
   const bar = scene.add.container(0, 0);
   on.layer.add(bar);
   // Never marked as answering a press, or the pointer is the hand over the whole bar.
-  const ground = scene.add
+  const paper = scene.add
     .rectangle(0, 0, DESIGN_WIDTH, BAR_HEIGHT, LOOK.panelFill)
     .setOrigin(0, 0)
     .setName('resource-bar')
     .setInteractive();
-  bar.add(ground);
+  bar.add(paper);
   bar.add(
     scene.add
       .rectangle(0, BAR_HEIGHT - 1, DESIGN_WIDTH, 1, LOOK.panelEdge)
@@ -223,6 +225,9 @@ export function createResourceBar(
     latch(shown: ReadonlySet<Resource>): void {
       latched = shown;
       dress();
+    },
+    isPaper(object: Phaser.GameObjects.GameObject): boolean {
+      return object === paper;
     },
   };
 }

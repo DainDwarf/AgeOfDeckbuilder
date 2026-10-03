@@ -13,7 +13,7 @@ import {
   type UnitCommand,
 } from '../rules/chronicle';
 import { cityCommand, type ReassignCommand, tileCost, tileRefusal } from '../rules/city';
-import { tileAt, tileKey } from '../rules/map';
+import { type TileCoords, tileAt, tileKey } from '../rules/map';
 import { RESOURCES, type Resource } from '../rules/resources';
 import { leaf, type Stage, walked } from '../rules/stages';
 import { type Chronicle, type Cost, onSettlePhase, playable } from '../rules/state';
@@ -44,7 +44,7 @@ import { createHand } from './hand';
 import { cardsOf, createInfoPanel } from './infopanel';
 import { onKeyDown, onWheelNotches } from './keys';
 import { css, LOOK } from './look';
-import { createMapView, type MapAim, type PressedTile } from './map';
+import { createMapView, type PressedTile } from './map';
 import { mapOf } from './map-scene';
 import { type LeavesChronicles, raiseMenu, resetMenu } from './menu-scene';
 import { createOverlay } from './overlay';
@@ -69,6 +69,23 @@ type Part = {
    */
   play?(stage: Stage): Promise<void> | undefined;
 };
+
+/** Where a left press landed or was let go: on a thing, on a drawn tile, or beside the things. */
+type Place =
+  | { readonly kind: 'thing'; readonly on: Phaser.GameObjects.GameObject }
+  | { readonly kind: 'tile'; readonly tile: TileCoords }
+  | { readonly kind: 'beside' };
+
+function samePlace(one: Place, other: Place): boolean {
+  switch (one.kind) {
+    case 'thing':
+      return other.kind === 'thing' && other.on === one.on;
+    case 'tile':
+      return other.kind === 'tile' && tileKey(other.tile) === tileKey(one.tile);
+    case 'beside':
+      return other.kind === 'beside';
+  }
+}
 
 const LABEL_STYLE = {
   fontFamily: UI_FONT,
@@ -292,6 +309,12 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       view.markSelected(found?.tile, thresholdOn(found));
     };
 
+    /** The unit being aimed let go of: its tile selected no more, the inspection standing. */
+    const unaimUnit = (): void => {
+      selection = undefined;
+      view.markSelected(undefined, undefined);
+    };
+
     /**
      * One step of the inspection on a tile: the next of its cards in the infopanel, and after the
      * last of them the first again. The one place the infopanel is shown.
@@ -349,30 +372,22 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
     };
 
     view.onPress(
-      (found, press) => {
-        switch (press) {
-          case 'right':
-            if (found === undefined) uninspect();
-            else inspect(found);
-            return;
-          case 'left':
-            if (
-              found === undefined ||
-              selection === undefined ||
-              tileKey(found.tile) !== tileKey(selection.tile)
-            ) {
-              select(found);
-              return;
-            }
-            if (cityMode) void act(found);
-            else if (
-              this.current.city !== undefined &&
-              tileKey(found.tile) === tileKey(this.current.city)
-            ) {
-              enterCityMode();
-            }
-            return;
+      (found) => {
+        if (selection === undefined || tileKey(found.tile) !== tileKey(selection.tile)) {
+          select(found);
+          return;
         }
+        if (cityMode) void act(found);
+        else if (
+          this.current.city !== undefined &&
+          tileKey(found.tile) === tileKey(this.current.city)
+        ) {
+          enterCityMode();
+        }
+      },
+      (found) => {
+        if (found === undefined) uninspect();
+        else inspect(found);
       },
       () => {
         panel.rescale();
@@ -412,9 +427,6 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       void playOut({ type: 'end-turn' });
     });
 
-    /** The aim on the map a card being aimed stands on, and nothing while none does. */
-    let aimOnMap: MapAim | undefined;
-
     const hand = createHand(this, ui, faces, CATALOGUE, {
       play: (index, aimed) => {
         void playOut({ type: 'play', index, ...aimed });
@@ -425,7 +437,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
         // rules' answer at the press that lands it, and no play is sent for one they would refuse.
         const { id } = this.current.hand[index];
         const refusal = refusalOf(CATALOGUE, this.current, id);
-        aimOnMap = view.aimTile(
+        return view.aimTile(
           admitted(CATALOGUE, this.current, card),
           (tile) => {
             if (!playable(refusal)) {
@@ -442,12 +454,8 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
             if (block === undefined) return;
             note.overTile(refusedAim(block), found.at);
           },
-          () => {
-            aimOnMap = undefined;
-            released();
-          },
+          released,
         );
-        return aimOnMap.letGo;
       },
       aimDiscardPile: (index, closed) => {
         return overlay.aimDiscardPile(
@@ -461,56 +469,6 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       },
       inspect: (card) => overlay.inspect(card),
       inspectNamed: (name) => overlay.inspectNamed(name),
-    });
-
-    /**
-     * The one door a left click takes while a card is being aimed: what stands over the map answers its
-     * own click ahead of it, a card of the hand every click on it, and the map's own press after it.
-     */
-    const clickedThroughAim = (on: Phaser.GameObjects.GameObject | undefined): void => {
-      if (on !== undefined && hand.owns(on)) return;
-      const click = view.clickOn(on);
-      switch (click.kind) {
-        case 'carried':
-          return;
-        case 'click':
-          if (aimOnMap === undefined) hand.unaim();
-          else aimOnMap.click(click.tile);
-          return;
-        case 'elsewhere':
-          hand.unaim();
-          return;
-      }
-      const unlisted: never = click;
-      throw new Error(`no click on the map is ${JSON.stringify(unlisted)}`);
-    };
-
-    /** What the left press held landed on, where it landed with a card being aimed. */
-    let aimPress: { readonly on: Phaser.GameObjects.GameObject | undefined } | undefined;
-    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-      if (pressOf(pointer) !== 'left') return;
-      aimPress = undefined;
-      if (!hand.beingAimed()) return;
-      // After Phaser's dispatch of this press: a hit test inside it refills the list being walked
-      // (docs/PHASER.md).
-      queueMicrotask(() => {
-        aimPress = { on: thingUnder(this.game) };
-      });
-    });
-    this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
-      if (pressOf(pointer) !== 'left') return;
-      // After the map scene's dispatch of this release too, in which the map learns whether its press
-      // was a click.
-      queueMicrotask(() => {
-        const held = aimPress;
-        aimPress = undefined;
-        if (held === undefined) return;
-        const on = thingUnder(this.game);
-        if (on === held.on) clickedThroughAim(on);
-      });
-    });
-    this.input.on('pointerupoutside', () => {
-      aimPress = undefined;
     });
 
     const settleStanding = createStanding(this, ui.standing, {
@@ -587,6 +545,66 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       yields = yields.size > 0 ? new Set() : new Set(RESOURCES);
       showYields();
     };
+
+    // Read outside Phaser's dispatch: a hit test inside it refills the list being walked
+    // (docs/PHASER.md).
+    const placeUnder = (): { readonly place: Place; readonly onMap: boolean } => {
+      const on = thingUnder(this.game);
+      const onMap = view.placeOf(on);
+      if (onMap !== undefined) {
+        const { tile } = onMap;
+        return {
+          place: tile === undefined ? { kind: 'beside' } : { kind: 'tile', tile },
+          onMap: true,
+        };
+      }
+      if (on === undefined || bar.isPaper(on)) return { place: { kind: 'beside' }, onMap: false };
+      return { place: { kind: 'thing', on }, onMap: false };
+    };
+
+    /** The one door every left click takes, after the thing it lands on has answered its own. */
+    const clicked = (place: Place): void => {
+      switch (place.kind) {
+        case 'thing':
+          if (hand.owns(place.on)) return;
+          hand.unaim();
+          if (view.unitBeingAimed()) unaimUnit();
+          return;
+        case 'tile':
+          view.click(place.tile);
+          return;
+        case 'beside':
+          dismiss();
+          return;
+      }
+      const unlisted: never = place;
+      throw new Error(`no place is ${JSON.stringify(unlisted)}`);
+    };
+
+    /** Where the left press held landed, and whether on the map. */
+    let held: { readonly place: Place; readonly onMap: boolean } | undefined;
+    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      if (pressOf(pointer) !== 'left') return;
+      held = undefined;
+      queueMicrotask(() => {
+        held = placeUnder();
+      });
+    });
+    this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
+      if (pressOf(pointer) !== 'left') return;
+      // After the map scene's dispatch of this release too, in which the map lets go of what its press
+      // took hold of.
+      queueMicrotask(() => {
+        const from = held;
+        held = undefined;
+        if (from === undefined || (from.onMap && view.carried())) return;
+        const to = placeUnder();
+        if (samePlace(from.place, to.place)) clicked(to.place);
+      });
+    });
+    this.input.on('pointerupoutside', () => {
+      held = undefined;
+    });
 
     // On this scene and not the map's: this one stops the pointer over the hand and the bar, where
     // the wheel still zooms.

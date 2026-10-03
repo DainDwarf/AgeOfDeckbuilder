@@ -1,10 +1,12 @@
 import { expect, type Page, test } from '@playwright/test';
+import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
 import { pinned, unpinnable } from '../src/rules/campaign';
 import { achievementOf } from '../src/rules/catalogue';
-import { apply, outcome } from '../src/rules/chronicle';
+import { apply, byHand, outcome } from '../src/rules/chronicle';
 import { CENTRE, type TileCoords, tileKey } from '../src/rules/map';
 import type { Chronicle } from '../src/rules/state';
+import { unitAt } from '../src/rules/units';
 import { achievementGoal, cardName, text } from '../src/ui/text';
 import {
   admits,
@@ -23,6 +25,7 @@ import {
   cursorAt,
   dragBetween,
   dragOut,
+  eastOf,
   endedTurn,
   firstSeed,
   inHand,
@@ -39,6 +42,7 @@ import {
   overflowingPiles,
   pileTop,
   playedOut,
+  reading,
   readings,
   rested,
   ringedTile,
@@ -112,6 +116,40 @@ async function carriedUnder(page: Page, tile: TileCoords, name: string): Promise
   if (Math.hypot(now.x - to.x, now.y - to.y) >= 2) {
     throw new Error(`the map stops short of carrying ${face} under ${name}`);
   }
+}
+
+/** The tile the map rings, how many marks it lights for a unit, and the infopanel's card, if up. */
+function marked(
+  page: Page,
+): Promise<{ ringed: string | undefined; lit: number; inspecting: string | undefined }> {
+  return page.evaluate(() => {
+    const ring = window.named?.('selected')?.object;
+    const lit = window.named?.('lit')?.object as Phaser.GameObjects.Layer | undefined;
+    const panel = window.named?.('infopanel')?.object as Phaser.GameObjects.Container | undefined;
+    if (ring === undefined || lit === undefined || panel === undefined) {
+      throw new Error('the map is not on the chronicle screen');
+    }
+    return {
+      ringed: ring.getData('tile') as string | undefined,
+      lit: lit.list.length,
+      inspecting: panel.visible ? (panel.getData('card') as string) : undefined,
+    };
+  });
+}
+
+/** A point on the resource bar's paper: between the bar's left end and its first reading, food. */
+async function onThePaper(page: Page): Promise<{ x: number; y: number }> {
+  const seen = await readings(page, ['resource-bar', 'reading-food']);
+  const bar = seen('resource-bar').boundsOnScreen;
+  const food = seen('reading-food').boundsOnScreen;
+  return { x: (bar.x + food.x) / 2, y: food.y + food.height / 2 };
+}
+
+/** A point on the band, inside its left end and short of the draw pile, which stands a margin in. */
+async function onTheBand(page: Page): Promise<{ x: number; y: number }> {
+  const band = await reading(page, 'band');
+  const { x, y, height } = band.boundsOnScreen;
+  return { x: x + 8 * band.onScreen.unit, y: y + height / 2 };
 }
 
 test('a hand card released off the canvas comes home, plays nothing, and leaves the next press clean', async ({
@@ -584,7 +622,7 @@ test('a click beside the tiles lets the card being aimed go, as it drops a selec
   expect(problems).toEqual([]);
 });
 
-test('a click on the resource bar lets the card being aimed go and lands as on a clean screen: nothing on its bare ground, and the yield latched on a yield reading', async ({
+test('a click on the bar’s paper drops the card being aimed, and one on a yield reading lets it go and latches the yield', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -592,16 +630,12 @@ test('a click on the resource bar lets the card being aimed go and lands as on a
 
   await openSaved(page, opened);
   const home = await onScreen(page, `hand-${index}`);
-  // Food is the bar's first reading: its bare ground runs from the bar's left end to that zone.
-  const seen = await readings(page, ['resource-bar', 'reading-food']);
-  const bar = seen('resource-bar').boundsOnScreen;
-  const food = seen('reading-food').boundsOnScreen;
-  const ground = { x: (bar.x + food.x) / 2, y: food.y + food.height / 2 };
+  const paper = await onThePaper(page);
 
   await page.mouse.click(home.x, home.y);
   await aimed(page);
-  expect(await cursorAt(page, ground)).toBe('');
-  await page.mouse.click(ground.x, ground.y);
+  expect(await cursorAt(page, paper)).toBe('');
+  await page.mouse.click(paper.x, paper.y);
   await expect.poll(() => standing(page, 'aim')).toBe(false);
   await expect.poll(() => selected(page, index, home)).toBe(false);
   expect(await chronicleOf(page)).toEqual(opened);
@@ -793,6 +827,139 @@ test('a left click anywhere on the infopanel reaches no tile under it, and lets 
   await rested(page);
   expect(await shownCard(page)).toBeDefined();
   expect(await ringedTile(page)).toBeUndefined();
+
+  expect(problems).toEqual([]);
+});
+
+test('a click on a yield reading, a pile or the infopanel lets a unit being aimed go with the inspection standing, and the reading latches its yield', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const { entered: opened } = workerStepped('steps its first worker off the city', () => true);
+  const city = tileKey(cityTileOf(opened));
+
+  await openSaved(page, opened);
+  const face = await onScreen(page, `tile-${city}`);
+  const pile = await pileTop(page, 'draw-pile');
+
+  const presses: [string, () => Promise<void>][] = [
+    ['reading-food', () => click(page, 'reading-food')],
+    ['draw-pile', () => page.mouse.click(pile.x, pile.y)],
+    ['panel-name', () => click(page, 'panel-name')],
+  ];
+  for (const [on, press] of presses) {
+    await page.mouse.click(face.x, face.y);
+    await page.mouse.click(face.x, face.y, { button: 'right' });
+    await expect.poll(async () => (await marked(page)).inspecting).toBeDefined();
+    await rested(page);
+    const aiming = await marked(page);
+    expect(aiming.ringed, on).toBe(city);
+    expect(aiming.lit, on).toBeGreaterThan(0);
+
+    await press();
+    await expect
+      .poll(() => marked(page), on)
+      .toEqual({ ringed: undefined, lit: 0, inspecting: aiming.inspecting });
+  }
+  expect(await shows(page, 'reading-food-well')).toBe(true);
+  expect(await chronicleOf(page)).toEqual(opened);
+
+  expect(problems).toEqual([]);
+});
+
+test('a unit that lights and glows nothing stays selected through a click on a pile', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const { stepped: opened, tile } = workerStepped(
+    'steps its first worker off the city onto a tile it can do nothing more from',
+    (stepped, at) => {
+      const worker = unitAt(stepped.units, at);
+      if (worker === undefined) return false;
+      const { landings, targets } = byHand(CATALOGUE, stepped, worker);
+      return landings.length === 0 && targets.length === 0;
+    },
+  );
+  const key = tileKey(tile);
+
+  await openSaved(page, opened);
+  await click(page, `tile-${key}`);
+  await expect.poll(async () => (await marked(page)).ringed).toBe(key);
+
+  const pile = await pileTop(page, 'draw-pile');
+  await page.mouse.click(pile.x, pile.y);
+  await rested(page);
+  expect(await marked(page)).toEqual({ ringed: key, lit: 0, inspecting: undefined });
+  expect(await chronicleOf(page)).toEqual(opened);
+
+  expect(problems).toEqual([]);
+});
+
+test('a click on the band or on the bar’s paper drops a selected tile and the inspection with it, and the band drops a selected card', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const { opened, unit } = playableAtNothing();
+  const city = tileKey(cityTileOf(opened));
+
+  await openSaved(page, opened);
+  const face = await onScreen(page, `tile-${city}`);
+  const home = await onScreen(page, `hand-${unit}`);
+  const band = await onTheBand(page);
+  const paper = await onThePaper(page);
+
+  for (const [on, at] of [
+    ['band', band],
+    ['paper', paper],
+  ] as const) {
+    await page.mouse.click(face.x, face.y);
+    await page.mouse.click(face.x, face.y, { button: 'right' });
+    await expect.poll(async () => (await marked(page)).inspecting).toBeDefined();
+    await rested(page);
+    expect((await marked(page)).ringed, on).toBe(city);
+
+    await page.mouse.click(at.x, at.y);
+    await expect
+      .poll(() => marked(page), on)
+      .toEqual({ ringed: undefined, lit: 0, inspecting: undefined });
+  }
+
+  await page.mouse.click(home.x, home.y);
+  await rested(page);
+  expect(await selected(page, unit, home)).toBe(true);
+  await page.mouse.click(band.x, band.y);
+  await expect.poll(() => selected(page, unit, home)).toBe(false);
+  expect(await chronicleOf(page)).toEqual(opened);
+
+  expect(problems).toEqual([]);
+});
+
+test('a press landed on one tile and let go on its neighbour inside the drag slack is no click, and selects nothing', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const opened = settledOn(1);
+  const city = cityTileOf(opened);
+
+  await openSaved(page, opened);
+  const seen = await readings(page, [`tile-${tileKey(city)}`, `tile-${tileKey(eastOf(city))}`]);
+  const from = seen(`tile-${tileKey(city)}`).onScreen;
+  const to = seen(`tile-${tileKey(eastOf(city))}`).onScreen;
+  // Two map units either side of the edge the tiles share, well inside the drag slack.
+  const across = Math.hypot(to.x - from.x, to.y - from.y);
+  const step = {
+    x: ((to.x - from.x) / across) * 2 * from.unit,
+    y: ((to.y - from.y) / across) * 2 * from.unit,
+  };
+  const edge = { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 };
+
+  await page.mouse.move(edge.x - step.x, edge.y - step.y);
+  await page.mouse.down();
+  await page.mouse.move(edge.x + step.x, edge.y + step.y);
+  await page.mouse.up();
+  await rested(page);
+  expect(await ringedTile(page)).toBeUndefined();
+  expect(await chronicleOf(page)).toEqual(opened);
 
   expect(problems).toEqual([]);
 });
