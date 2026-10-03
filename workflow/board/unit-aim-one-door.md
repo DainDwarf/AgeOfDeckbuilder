@@ -12,7 +12,7 @@ In:
 
 - A selected unit of the player's that lights or glows anything is being aimed, and the place that answers a left click for a card being aimed answers it for the unit.
 - A click on a tile it lights or a unit it glows is the step or the attack, as today, and nothing is refused.
-- A click on any other tile lets it go and selects that tile, as today.
+- A click on any other tile, its own excepted, lets it go and selects that tile, as today; a second click on its own tile acts on the selection, as today, the city's entering city mode.
 - A click on anything else — the bar's ground, a reading, a pile, the infopanel, the pinned achievement, the settle phase's chip — lets the unit go: its tile is selected no more, the tiles it lit go dark, and the click then lands as on a clean screen, a yield reading toggling its yield.
 
 Out: a unit's drag, which reads where it lands as it does; the slide home, the next line's; city mode, which lights no unit and so aims none; a card of the hand, the end-turn button, culture and idle, each of which drops the selection already; the right click, the wheel and every key, through all of which the unit stays selected.

@@ -11,7 +11,7 @@
 In, for a card aimed at a tile, at a unit or at the hand:
 
 - A left click on a thing of the aim's kind is the play attempted there, as today: played, or refused in a note with the aim standing. A card aimed at a unit still says that no unit stands on a tile that holds none.
-- A left click on anything else lets the card go and then lands, in the one press, as on a clean screen. One place decides this, reading what the pointer is on; the resource bar, the piles, the infopanel and the pinned achievement no longer take a way to let a card go.
+- A left click on anything else, the card itself excepted, lets the card go and then lands, in the one press, as on a clean screen. One place decides this, reading what the pointer is on; the resource bar, the piles, the infopanel and the pinned achievement no longer take a way to let a card go.
 - The end-turn button is live through an aim: a click on it lets the card go and ends the turn.
 - The line naming the aim stops a press: a click on it lets the card go and does nothing else.
 - The settle phase's chip stops a press, a card being aimed or not: with one, the click lets it go; with none, nothing is selected and nothing changes.
