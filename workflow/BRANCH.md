@@ -35,5 +35,3 @@ A selected unit that lights and glows nothing, and an enemy's tile, are a select
 **In the code** one place answers every press the screen's things do not answer themselves, left and right, aimed or not, reading what the pointer is on as the hover and the cursor already do; no thing on the screen is handed a way to let a card go. One place hears a release off the canvas and says which button holds no more, on every screen. A thing that stops a press and answers none is interactive and not marked as answering, as the infopanel and the pinned achievement are, so the pointer over it stays the arrow.
 
 ## The lines
-
-- **A unit and a population slide home** — a unit or a population dragged and let go off where it lands slides home as fast as a card of the hand does, whatever let it go; `e2e/map.spec.ts` is green. Doc-impact: none — the first line says it. [board/slide-home.md](board/slide-home.md)

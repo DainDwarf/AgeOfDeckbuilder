@@ -26,7 +26,7 @@ import { assignedTo, type Chronicle, type Cost, type Snapshot } from '../rules/s
 import { type Faction, type Landing, type Unit, unitAt, unitOf } from '../rules/units';
 import { MAP_FRAME } from './band';
 import { boundTo, type Control, type Press, pressOf } from './bindings';
-import { EASE, ended, stopMotion } from './card-motion';
+import { EASE, ended, SLIDE_HOME, stopMotion } from './card-motion';
 import {
   addText,
   corners,
@@ -285,7 +285,9 @@ export function unitMark(
  */
 function unitMarker(scene: Phaser.Scene, unit: Unit): Phaser.GameObjects.Container {
   const { x, y } = positionOf(unit.tile);
-  const marker = scene.add.container(x, y, [unitMark(scene, unit.stats.type, unit.faction)]);
+  const marker = scene.add
+    .container(x, y, [unitMark(scene, unit.stats.type, unit.faction)])
+    .setName(`unit-${tileKey(unit.tile)}`);
   if (unit.faction === 'player' && unit.movePoints <= 0 && unit.action <= 0) {
     marker.add(
       scene.add
@@ -508,6 +510,9 @@ type Grab = { readonly from: { x: number; y: number }; dragging: boolean } & (
   | { readonly kind: 'assigned'; readonly tile: TileCoords }
 );
 
+/** The mark a press takes hold of: a unit's, or a population's. */
+type GrabMark = Phaser.GameObjects.Container | Phaser.GameObjects.Rectangle;
+
 /**
  * The map and everything standing on it, on a surface of its own that pans and zooms under the UI.
  * Every layer of every tile, the border and the units are redrawn on each state change; and a card
@@ -570,25 +575,69 @@ export function createMapView(
   /** What the left press on the map has hold of; nothing while it holds nothing. */
   let grabbed: Grab | undefined;
 
+  /** Each mark a press let go of sliding home: where home is, and the slide. */
+  const homing = new Map<
+    GrabMark,
+    { readonly x: number; readonly y: number; readonly slide: Phaser.Tweens.Tween }
+  >();
+
+  /** The mark a press has hold of, and nothing where the map draws none. */
+  const markOf = (grab: Grab): GrabMark | undefined => {
+    switch (grab.kind) {
+      case 'unit':
+        return markers.get(grab.unit);
+      case 'assigned':
+        return assignedMarks.get(tileKey(grab.tile));
+    }
+  };
+
   /**
-   * What the press has hold of, back where the map draws it standing: the unit on the tile it stands
-   * on, the population under the tile it is assigned to.
+   * Where the map draws what a press has hold of standing: the unit on the tile it stands on, the
+   * population under the tile it is assigned to.
    */
-  const bringHome = (): void => {
-    if (grabbed === undefined) return;
-    switch (grabbed.kind) {
+  const homeOf = (grab: Grab): { x: number; y: number } | undefined => {
+    switch (grab.kind) {
       case 'unit': {
-        const standing = shown === undefined ? undefined : unitOf(shown.units, grabbed.unit);
-        if (standing === undefined) return;
-        const home = positionOf(standing.tile);
-        markers.get(grabbed.unit)?.setPosition(home.x, home.y);
-        return;
+        const standing = shown === undefined ? undefined : unitOf(shown.units, grab.unit);
+        return standing === undefined ? undefined : positionOf(standing.tile);
       }
-      case 'assigned': {
-        const home = assignedAt(grabbed.tile);
-        assignedMarks.get(tileKey(grabbed.tile))?.setPosition(home.x, home.y);
-        return;
-      }
+      case 'assigned':
+        return assignedAt(grab.tile);
+    }
+  };
+
+  /** What a press had hold of sliding home from where it was let go. */
+  const slideHome = (grab: Grab): void => {
+    const mark = markOf(grab);
+    const home = homeOf(grab);
+    if (mark === undefined || home === undefined) return;
+    const over = (): void => {
+      homing.delete(mark);
+    };
+    const slide = scene.tweens.add({
+      targets: mark,
+      x: home.x,
+      y: home.y,
+      duration: SLIDE_HOME,
+      ease: EASE,
+      onComplete: over,
+      onStop: over,
+    });
+    homing.set(mark, { ...home, slide });
+  };
+
+  /** A press taking hold: what it holds, if it is sliding home, stops where it stands. */
+  const takeHold = (grab: Grab): void => {
+    grabbed = grab;
+    const mark = markOf(grab);
+    if (mark !== undefined) homing.get(mark)?.slide.stop();
+  };
+
+  /** Every mark sliding home set there at once. */
+  const homeAtOnce = (): void => {
+    for (const [mark, { x, y, slide }] of [...homing]) {
+      slide.stop();
+      mark.setPosition(x, y);
     }
   };
 
@@ -1548,6 +1597,7 @@ export function createMapView(
     render,
 
     play(stage: Stage): Promise<void> | undefined {
+      homeAtOnce();
       switch (stage.kind) {
         case 'change':
           return covered.has(stage) ? undefined : changed(stage);
@@ -1580,19 +1630,12 @@ export function createMapView(
       const carry = (pointer: Phaser.Input.Pointer): void => {
         if (grabbed === undefined || !travelled(grabbed, pointer)) return;
         const at = map.at(pointer.x, pointer.y);
-        switch (grabbed.kind) {
-          case 'unit':
-            markers.get(grabbed.unit)?.setPosition(at.x, at.y);
-            return;
-          case 'assigned':
-            assignedMarks.get(tileKey(grabbed.tile))?.setPosition(at.x, at.y);
-            return;
-        }
+        markOf(grabbed)?.setPosition(at.x, at.y);
       };
       scene.input.on('pointermove', carry);
 
-      const letGo = (): void => {
-        bringHome();
+      const letGo = (grab: Grab): void => {
+        slideHome(grab);
         grabbed = undefined;
         lightUnit(selection);
       };
@@ -1625,12 +1668,12 @@ export function createMapView(
           const from = { x: pointer.x, y: pointer.y };
           if (marking) {
             if (!assignedTo(shown, under)) return true;
-            grabbed = { kind: 'assigned', tile: under, from, dragging: false };
+            takeHold({ kind: 'assigned', tile: under, from, dragging: false });
             return false;
           }
           const standing = unitAt(shown.units, under);
           if (standing?.faction !== 'player') return true;
-          grabbed = { kind: 'unit', unit: standing.id, from, dragging: false };
+          takeHold({ kind: 'unit', unit: standing.id, from, dragging: false });
           lightUnit(under);
           return false;
         },
@@ -1638,12 +1681,12 @@ export function createMapView(
           const holding = grabbed;
           if (holding === undefined) return;
           if (!holding.dragging) {
-            letGo();
+            letGo(holding);
             return;
           }
           const at = map.at(pointer.x, pointer.y);
           const on = tileUnder(at.x, at.y);
-          bringHome();
+          slideHome(holding);
           grabbed = undefined;
           // After Phaser's dispatch of this release: a hit test inside it refills the list being
           // walked (docs/PHASER.md).
@@ -1668,7 +1711,7 @@ export function createMapView(
           });
         },
         abandon: () => {
-          if (grabbed !== undefined) letGo();
+          if (grabbed !== undefined) letGo(grabbed);
         },
       });
     },
@@ -1716,7 +1759,7 @@ export function createMapView(
           case 'unit':
             break;
           case 'assigned':
-            bringHome();
+            slideHome(grabbed);
             grabbed = undefined;
             break;
         }

@@ -35,7 +35,6 @@ import {
   marked,
   namedIn,
   nameOnScreen,
-  type OnScreen,
   offCanvas,
   offsetOf,
   onScreen,
@@ -54,6 +53,7 @@ import {
   shownCard,
   shows,
   standing,
+  stillAt,
   tilePlayable,
   watch,
   wheel,
@@ -96,12 +96,6 @@ function playableAtNothing(): { opened: Chronicle; unit: number; tile: number } 
 /** The chronicle the card at that place in the hand leaves, played at nothing. */
 function playedAtNothing(chronicle: Chronicle, index: number): Chronicle {
   return outcome(apply(CATALOGUE, chronicle, { type: 'play', index, aim: 'none' }));
-}
-
-/** Whether a named object stands where it was measured, to the page pixel. */
-async function stillAt(page: Page, name: string, was: OnScreen): Promise<boolean> {
-  const now = await onScreen(page, name);
-  return Math.round(now.x - was.x) === 0 && Math.round(now.y - was.y) === 0;
 }
 
 /**

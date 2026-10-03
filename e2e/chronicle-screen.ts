@@ -618,6 +618,12 @@ export async function onScreen(page: Page, name: string): Promise<OnScreen> {
   return (await reading(page, name)).onScreen;
 }
 
+/** Whether a named object stands where it was measured, to the page pixel. */
+export async function stillAt(page: Page, name: string, was: OnScreen): Promise<boolean> {
+  const now = await onScreen(page, name);
+  return Math.round(now.x - was.x) === 0 && Math.round(now.y - was.y) === 0;
+}
+
 /** What an entry names, in its order, laid out as a run on a measure of one to the character. */
 export function namedIn(entry: string): Reference[] {
   const measure = (content: string): number => content.length;
