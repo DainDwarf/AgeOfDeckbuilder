@@ -11,7 +11,14 @@ import {
 } from './catalogue';
 import { claimable, populationTaken } from './city';
 import { type FeatureId, type Tile, type TileCoords, tileAt, tileKey } from './map';
-import { buildingKind, featureKind, improvementKind, refuse, terrainKind } from './map-kinds';
+import {
+  buildingKind,
+  featureKind,
+  improvementKind,
+  type LayerKind,
+  refuse,
+  terrainKind,
+} from './map-kinds';
 import { RESOURCES, type Resource, type Resources } from './resources';
 import {
   change,
@@ -230,6 +237,14 @@ export function featureAmong(
     : 'wrong-feature';
 }
 
+/** The ground a layer of that kind goes on: the feature it names, carried, then one of its terrains. */
+function groundFor(catalogue: Catalogue, tile: Tile, layer: LayerKind): TileBlock | undefined {
+  return firstRefusal(
+    layer.feature === undefined ? undefined : featureAmong(catalogue, tile, [layer.feature]),
+    made(catalogue, tile, layer.terrains),
+  );
+}
+
 /** A tile's one building slot, free: what a building fills and a settle needs empty. */
 export function slotFree(tile: Tile): TileBlock | undefined {
   return tile.building === undefined ? undefined : 'slot-filled';
@@ -331,18 +346,34 @@ export function entersOn(type: string): Aim & { readonly aim: 'tile' } {
 
 /**
  * How a building card builds its building, the refusal and the effect as one pair so neither is
- * written without the other: aimed through a worker at a tile of a terrain the building stands on,
+ * written without the other: aimed through a worker at a tile of the ground the building goes on,
  * inside the border, its slot free; then the building fills that slot.
  */
 export function builds(building: string): Aim & { readonly aim: 'tile' } {
   return throughWorker(
     (catalogue, chronicle, tile) =>
       firstRefusal(
-        made(catalogue, tile, buildingKind(catalogue, building).terrains),
+        groundFor(catalogue, tile, buildingKind(catalogue, building)),
         inside(chronicle, tile),
         slotFree(tile),
       ),
     (catalogue, paid, at) => built(catalogue, paid, at, building),
+  );
+}
+
+/**
+ * How an improvement card places its improvement, the refusal and the effect as one pair so neither
+ * is written without the other: aimed through a worker at a tile of the ground the improvement goes
+ * on, not carrying it yet; then the tile carries it.
+ */
+export function placesImprovement(improvement: string): Aim & { readonly aim: 'tile' } {
+  return throughWorker(
+    (catalogue, _chronicle, tile) =>
+      firstRefusal(
+        groundFor(catalogue, tile, improvementKind(catalogue, improvement)),
+        improvementAbsent(catalogue, tile, improvement),
+      ),
+    (catalogue, paid, at) => improvementPlaced(catalogue, paid, at, improvement),
   );
 }
 
@@ -416,7 +447,29 @@ export function improvementPlaced(
   }));
 }
 
-/** The feature placed on a tile: the tile carries it from now on. */
+/**
+ * A tile whose terrain or feature has just changed, keeping every layer whose kind names its terrain
+ * and, where the kind names one, the feature it carries; every other layer is removed.
+ */
+function relayered(catalogue: Catalogue, tile: Tile): Tile {
+  const keeps = ({ terrains, feature }: LayerKind): boolean =>
+    terrains.includes(tile.terrain) && (feature === undefined || feature === tile.feature);
+  return {
+    ...tile,
+    improvements: tile.improvements.filter((improvement) =>
+      keeps(improvementKind(catalogue, improvement)),
+    ),
+    building:
+      tile.building !== undefined && keeps(buildingKind(catalogue, tile.building))
+        ? tile.building
+        : undefined,
+  };
+}
+
+/**
+ * The feature placed on a tile: the tile carries it from now on, and every layer that goes with the
+ * one it replaces is removed with it.
+ */
 export function featurePlaced(
   catalogue: Catalogue,
   paid: Chronicle,
@@ -424,19 +477,22 @@ export function featurePlaced(
   feature: FeatureId,
 ): Landed {
   featureKind(catalogue, feature);
-  return retiled(paid, at, (tile) => ({ ...tile, feature }));
-}
-
-/** The feature removed from a tile: the tile carries none from now on, and nothing where it carried none. */
-export function featureRemoved(paid: Chronicle, at: TileCoords): Landed {
-  if (tileAt(paid.tiles, at)?.feature === undefined) return unchanged(paid);
-  return retiled(paid, at, (tile) => ({ ...tile, feature: undefined }));
+  return retiled(paid, at, (tile) => relayered(catalogue, { ...tile, feature }));
 }
 
 /**
- * The terrain a tile is terraformed into: its feature goes, and so do every improvement and the
- * building whose kind does not name the new terrain, and a unit that cannot stand on it is killed.
- * The city's tile, into a terrain the city's building does not stand on, is left as it stands.
+ * The feature removed from a tile with every layer that goes with it: the tile carries none from now
+ * on, and nothing where it carried none.
+ */
+export function featureRemoved(catalogue: Catalogue, paid: Chronicle, at: TileCoords): Landed {
+  if (tileAt(paid.tiles, at)?.feature === undefined) return unchanged(paid);
+  return retiled(paid, at, (tile) => relayered(catalogue, { ...tile, feature: undefined }));
+}
+
+/**
+ * The terrain a tile is terraformed into: its feature goes, and so does every layer that goes with
+ * the old terrain or the feature, and a unit that cannot stand on it is killed. The city's tile, into
+ * a terrain the city's building does not stand on, is left as it stands.
  */
 export function terraformed(
   catalogue: Catalogue,
@@ -446,19 +502,10 @@ export function terraformed(
 ): Landed {
   terrainKind(catalogue, to);
   if (!reaches(catalogue, paid, at, to)) return unchanged(paid);
-  const relayered = retiled(paid, at, (tile) => ({
-    ...tile,
-    terrain: to,
-    feature: undefined,
-    improvements: tile.improvements.filter((improvement) =>
-      improvementKind(catalogue, improvement).terrains.includes(to),
-    ),
-    building:
-      tile.building !== undefined && buildingKind(catalogue, tile.building).terrains.includes(to)
-        ? tile.building
-        : undefined,
-  }));
-  return followed(relayered, (left) => {
+  const relaid = retiled(paid, at, (tile) =>
+    relayered(catalogue, { ...tile, terrain: to, feature: undefined }),
+  );
+  return followed(relaid, (left) => {
     const standing = unitAt(left.units, at);
     if (standing === undefined || standsOn(catalogue, standing.stats, tileAt(left.tiles, at))) {
       return unchanged(left);

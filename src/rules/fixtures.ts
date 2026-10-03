@@ -13,10 +13,9 @@ import {
   featureRemoved,
   firstRefusal,
   gained,
-  improvementAbsent,
-  improvementPlaced,
   made,
   movePointsSpent,
+  placesImprovement,
   recalled,
   refreshed,
   settled,
@@ -59,7 +58,7 @@ import {
   tileAt,
   tileKey,
 } from './map';
-import { improvementKind, type Region } from './map-kinds';
+import type { Region } from './map-kinds';
 import type { Resources } from './resources';
 import { seedRng } from './rng';
 import type { ChronicleSave } from './save';
@@ -425,30 +424,10 @@ const TABLES: Omit<Tables, 'technologies'> = {
       aim: 'none',
       effect: (_catalogue, paid) => gained(paid, { food: 2 }),
     },
-    PH_Mine: {
-      kind: 'instant',
-      cost: { production: 3 },
-      ...throughWorker(
-        (catalogue, _chronicle, tile) =>
-          firstRefusal(
-            made(catalogue, tile, improvementKind(catalogue, 'PH_Mine').terrains),
-            improvementAbsent(catalogue, tile, 'PH_Mine'),
-          ),
-        (catalogue, paid, at) => improvementPlaced(catalogue, paid, at, 'PH_Mine'),
-      ),
-    },
-    PH_Road: {
-      kind: 'instant',
-      cost: { production: 2 },
-      ...throughWorker(
-        (catalogue, _chronicle, tile) =>
-          firstRefusal(
-            made(catalogue, tile, improvementKind(catalogue, 'PH_Road').terrains),
-            improvementAbsent(catalogue, tile, 'PH_Road'),
-          ),
-        (catalogue, paid, at) => improvementPlaced(catalogue, paid, at, 'PH_Road'),
-      ),
-    },
+    PH_Mine: { kind: 'instant', cost: { production: 3 }, ...placesImprovement('PH_Mine') },
+    PH_Road: { kind: 'instant', cost: { production: 2 }, ...placesImprovement('PH_Road') },
+    PH_Snare: { kind: 'instant', cost: { production: 2 }, ...placesImprovement('PH_Snare') },
+    PH_Lodge: { kind: 'building', cost: { production: 3 }, ...builds('PH_Lodge') },
     PH_Urbanisation: {
       kind: 'instant',
       cost: { production: 5 },
@@ -466,7 +445,7 @@ const TABLES: Omit<Tables, 'technologies'> = {
       cost: {},
       ...throughWorker(
         (catalogue, _chronicle, tile) => featureAmong(catalogue, tile, ['PH_Fertile', 'PH_Game']),
-        (_catalogue, paid, at) => featureRemoved(paid, at),
+        (catalogue, paid, at) => featureRemoved(catalogue, paid, at),
       ),
     },
     PH_Recall: {
@@ -629,6 +608,7 @@ const TABLES: Omit<Tables, 'technologies'> = {
     PH_City: { terrains: ['urban'], yields: {} },
     PH_Farm: { terrains: ['plain'], yields: { food: 1 } },
     PH_Camp: { terrains: ['plain', 'forest', 'hills'], yields: {} },
+    PH_Lodge: { terrains: ['forest'], feature: 'PH_Game', yields: { food: 1 } },
   },
   features: {
     PH_Fertile: { terrain: 'plain', yields: { food: 1 } },
@@ -649,6 +629,7 @@ const TABLES: Omit<Tables, 'technologies'> = {
       movementCost: (3 * MOVE_POINT) / 4,
     },
     PH_Rubble: { terrains: ['plain'], yields: {}, movementCost: 2 * MOVE_POINT },
+    PH_Snare: { terrains: ['forest'], feature: 'PH_Game', yields: { food: 1 } },
   },
 };
 

@@ -41,7 +41,7 @@ import {
   WARY,
 } from './fixtures';
 import { discTiles, generateMap, tileKey } from './map';
-import type { Region } from './map-kinds';
+import type { LayerKind, Region } from './map-kinds';
 import { seedRng } from './rng';
 import { timelineOf } from './schedule';
 import { LEAST_STATS } from './units';
@@ -422,6 +422,42 @@ test('a catalogue whose layer names a movement cost of zero is refused', () => {
   });
 
   expect(() => catalogued(content)).toThrow(/^fixture: /);
+});
+
+test('a catalogue whose layer names a feature it does not hold, or one lying on a terrain the layer does not name, is refused', () => {
+  const snare = CATALOGUE.improvements.PH_Snare;
+  const lodge = CATALOGUE.buildings.PH_Lodge;
+  for (const content of [
+    changed({
+      improvements: { ...CATALOGUE.improvements, PH_Snare: { ...snare, feature: 'PH_Ruins' } },
+    }),
+    changed({
+      improvements: { ...CATALOGUE.improvements, PH_Snare: { ...snare, terrains: ['plain'] } },
+    }),
+    changed({ buildings: { ...CATALOGUE.buildings, PH_Lodge: { ...lodge, feature: 'PH_Ruins' } } }),
+    changed({ buildings: { ...CATALOGUE.buildings, PH_Lodge: { ...lodge, terrains: ['plain'] } } }),
+  ]) {
+    expect(() => catalogued(content)).toThrow(/^fixture: /);
+  }
+});
+
+test('a catalogue whose civilization’s city or whose camp is a building naming a feature is refused, and the same building naming none is not', () => {
+  const { feature, ...unnamed } = CATALOGUE.buildings.PH_Lodge;
+  for (const lodge of [unnamed, { ...unnamed, feature }] as LayerKind[]) {
+    const buildings = { ...CATALOGUE.buildings, PH_Lodge: lodge };
+    const city = changed({
+      buildings,
+      civilizations: {
+        civilization: { ...CIVILIZATION, city: { ...CIVILIZATION.city, building: 'PH_Lodge' } },
+      },
+    });
+    const camp = changed({ ...encamped({ building: 'PH_Lodge' }), buildings });
+
+    for (const content of [city, camp]) {
+      if (lodge.feature === undefined) expect(catalogued(content).version).toBe('fixture');
+      else expect(() => catalogued(content)).toThrow(/^fixture: /);
+    }
+  }
 });
 
 test('a catalogue whose camp is a building it does not hold is refused', () => {

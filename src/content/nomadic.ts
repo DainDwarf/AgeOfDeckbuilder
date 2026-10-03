@@ -129,8 +129,8 @@ const TABLES: Tables = {
       cost: {},
       ...throughWorker(
         (catalogue, _chronicle, tile) => featureAmong(catalogue, tile, ['deer', 'cattle']),
-        (_catalogue, paid, at) =>
-          followed(featureRemoved(paid, at), (left) => gained(left, { food: 6 })),
+        (catalogue, paid, at) =>
+          followed(featureRemoved(catalogue, paid, at), (left) => gained(left, { food: 6 })),
       ),
     },
     march: {

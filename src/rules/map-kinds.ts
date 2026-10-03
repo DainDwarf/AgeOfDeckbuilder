@@ -42,6 +42,8 @@ export type BiomeKind = {
  */
 export type LayerKind = {
   readonly terrains: readonly string[];
+  /** The feature it goes on and goes with, for one that names one. */
+  readonly feature?: string;
   readonly yields: Partial<Resources>;
   readonly movementCost?: number;
   readonly bridge?: boolean;

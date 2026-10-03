@@ -3,6 +3,7 @@ import {
   aimOf,
   built,
   discarded,
+  featurePlaced,
   featureRemoved,
   improvementPlaced,
   made,
@@ -1460,7 +1461,7 @@ test('a card removing a feature takes it off the tile the worker stands on, insi
     expect(others(after)).toEqual(others(city));
     expect(unitNamed(after, 1).tile).toEqual(at);
     expect(actionOf(after, 1)).toBe(actionOf(city, 1) - 1);
-    expect(featureRemoved(after, at).stages).toEqual([]);
+    expect(featureRemoved(CATALOGUE, after, at).stages).toEqual([]);
   }
 });
 
@@ -1479,6 +1480,141 @@ test('a card asking for one feature of several names the first of its reasons: w
   expect(refusedFor(worked('hills', 'PH_Flint'), 'PH_Hunt', at)).toBe('wrong-feature');
   expect(refusedFor(worked('plain', 'PH_Fertile'), 'PH_Hunt', at)).toBeUndefined();
   expect(refusedFor(worked('forest', 'PH_Game'), 'PH_Hunt', at)).toBeUndefined();
+});
+
+test('an improvement naming a feature names the first of its reasons: worker, action, the feature whatever the terrain, then improvement', () => {
+  const at = { q: 2, r: 0 };
+  const bare = ringed(2);
+  const carrying = (
+    terrain: Terrain,
+    feature?: FeatureId,
+    improvements: string[] = [],
+  ): Chronicle => withTile(bare, { ...at, terrain, feature, improvements });
+  const worked = (terrain: Terrain, feature?: FeatureId, improvements?: string[]): Chronicle =>
+    withUnits(carrying(terrain, feature, improvements), [worker(at)]);
+  const spent = withUnits(carrying('forest', 'PH_Game'), [standing('player', at, WORKER, 0, 0)]);
+
+  expect(refusedFor(carrying('forest', 'PH_Game'), 'PH_Snare', at)).toBe('no-worker');
+  expect(refusedFor(spent, 'PH_Snare', at)).toBe('worker-spent');
+  expect(refusedFor(worked('forest'), 'PH_Snare', at)).toBe('wrong-feature');
+  expect(refusedFor(worked('plain'), 'PH_Snare', at)).toBe('wrong-feature');
+  expect(refusedFor(worked('plain', 'PH_Fertile'), 'PH_Snare', at)).toBe('wrong-feature');
+  expect(refusedFor(worked('forest', 'PH_Game', ['PH_Snare']), 'PH_Snare', at)).toBe(
+    'improvement-placed',
+  );
+  expect(refusedFor(worked('forest', 'PH_Game'), 'PH_Snare', at)).toBeUndefined();
+});
+
+test('the snare card places a snare on the game the worker stands on, and the game stays', () => {
+  const at = { q: 2, r: 0 };
+  const city = withTile(
+    workedTile(at, 'forest', { hand: ['PH_Snare'], resources: production(2) }),
+    {
+      ...at,
+      terrain: 'forest',
+      feature: 'PH_Game',
+      improvements: [],
+    },
+  );
+
+  const after = tileAt(outcome(apply(CATALOGUE, city, aimedAt(at))).tiles, at);
+
+  expect(after).toEqual({
+    ...at,
+    terrain: 'forest',
+    feature: 'PH_Game',
+    improvements: ['PH_Snare'],
+  });
+});
+
+test('a building naming a feature names the first of its reasons: worker, action, the feature whatever the terrain, border, then slot', () => {
+  const inside = { q: 1, r: 0 };
+  const out = { q: 2, r: 0 };
+  const worked = (at: TileCoords, terrain: Terrain, feature?: FeatureId, building?: string) =>
+    withUnits(withTile(ringed(2), { ...at, terrain, feature, improvements: [], building }), [
+      worker(at),
+    ]);
+
+  expect(refusedFor(worked(inside, 'forest'), 'PH_Lodge', inside)).toBe('wrong-feature');
+  expect(refusedFor(worked(inside, 'plain', 'PH_Fertile'), 'PH_Lodge', inside)).toBe(
+    'wrong-feature',
+  );
+  expect(refusedFor(worked(out, 'forest', 'PH_Game'), 'PH_Lodge', out)).toBe('outside-border');
+  expect(refusedFor(worked(inside, 'forest', 'PH_Game', CAMP.building), 'PH_Lodge', inside)).toBe(
+    'slot-filled',
+  );
+  expect(refusedFor(worked(inside, 'forest', 'PH_Game'), 'PH_Lodge', inside)).toBeUndefined();
+});
+
+/**
+ * A tile carrying the game, the snare and the lodge that go with it and the road that does not,
+ * with a worker of the player's standing on it.
+ */
+function trapped(at: TileCoords, carrying: Carrying = {}, catalogue = CATALOGUE): Chronicle {
+  return withTile(workedTile(at, 'forest', carrying, catalogue), {
+    ...at,
+    terrain: 'forest',
+    feature: 'PH_Game',
+    improvements: ['PH_Snare', 'PH_Road'],
+    building: 'PH_Lodge',
+  });
+}
+
+test('a card removing a feature removes every layer naming it in the one change of its tile, and leaves the others', () => {
+  const at = { q: 1, r: 0 };
+  const city = trapped(at, { hand: ['PH_Hunt'] });
+
+  const stages = apply(CATALOGUE, city, aimedAt(at));
+
+  expect(namesOf(stages)).toEqual(['played', 'discarded', 'action-spent', 'retiled']);
+  expect(tileAt(outcome(stages).tiles, at)).toEqual({
+    ...at,
+    terrain: 'forest',
+    improvements: ['PH_Road'],
+  });
+});
+
+test('a terraform into a terrain a layer naming a feature names removes that layer with the feature', () => {
+  const quaked = endedTurn(
+    trapped(UPHEAVAL, dealing({ turn: 2, event: 'PH_Upheaval' })),
+    'PH_Quake',
+  );
+
+  expect(tileAt(quaked.tiles, UPHEAVAL)).toEqual({
+    ...UPHEAVAL,
+    terrain: 'forest',
+    improvements: ['PH_Road'],
+  });
+});
+
+test('a feature placed over another removes every layer naming the one it replaces', () => {
+  const at = { q: 1, r: 0 };
+  const swarming = catalogued({
+    ...CATALOGUE,
+    features: { ...CATALOGUE.features, PH_Hive: { terrain: 'forest', yields: {} } },
+    cards: {
+      ...CATALOGUE.cards,
+      PH_Swarm: {
+        kind: 'instant',
+        cost: {},
+        ...throughWorker(
+          () => undefined,
+          (catalogue, paid, on) => featurePlaced(catalogue, paid, on, 'PH_Hive'),
+        ),
+      },
+    },
+    cardAges: { ...CATALOGUE.cardAges, PH_Swarm: AGE },
+  });
+  const city = trapped(at, { hand: ['PH_Swarm'] }, swarming);
+
+  const after = tileAt(outcome(apply(swarming, city, aimedAt(at))).tiles, at);
+
+  expect(after).toEqual({
+    ...at,
+    terrain: 'forest',
+    feature: 'PH_Hive',
+    improvements: ['PH_Road'],
+  });
 });
 
 test('the urbanisation card names the first of its four reasons: worker, action, terrain, then faction', () => {

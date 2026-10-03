@@ -347,6 +347,14 @@ export function catalogued(content: Catalogue): Catalogue {
       if (layer.movementCost !== undefined && layer.movementCost < 1) {
         refuse(content, `the ${noun} ${id} names a movement cost of ${layer.movementCost}`);
       }
+      if (layer.feature === undefined) continue;
+      const { terrain } = featureKind(content, layer.feature);
+      if (!layer.terrains.includes(terrain)) {
+        refuse(
+          content,
+          `the ${noun} ${id} names the feature ${layer.feature}, which lies on ${terrain}, a terrain it does not name`,
+        );
+      }
     }
   }
   const ages = Object.entries(content.ages);
@@ -360,7 +368,13 @@ export function catalogued(content: Catalogue): Catalogue {
   for (const id of Object.keys(content.cardAges)) cardOf(content, id);
   for (const [id, civilization] of Object.entries(content.civilizations)) {
     const { city } = civilization;
-    buildingKind(content, city.building);
+    const { feature } = buildingKind(content, city.building);
+    if (feature !== undefined) {
+      refuse(
+        content,
+        `the civilization ${id}'s city ${city.building} names the feature ${feature}`,
+      );
+    }
     if (city.sight < 0) refuse(content, `the civilization ${id}'s city sees ${city.sight}`);
     if (city.idle < 0) {
       refuse(content, `the civilization ${id}'s city opens with ${city.idle} idle`);
@@ -428,7 +442,11 @@ function ageHeld(
   if (!(raidCampOdds >= 0 && raidCampOdds <= 1)) {
     refuse(content, `a raid of the age ${id} enters through a camp at odds of ${raidCampOdds}`);
   }
-  for (const terrain of buildingKind(content, camp.building).terrains) {
+  const campKind = buildingKind(content, camp.building);
+  if (campKind.feature !== undefined) {
+    refuse(content, `the age ${id}'s camp ${camp.building} names the feature ${campKind.feature}`);
+  }
+  for (const terrain of campKind.terrains) {
     if (!standsOn(content, campUnit, { q: 0, r: 0, terrain, improvements: [] })) {
       refuse(content, `the age ${id}'s camp's unit ${camp.unit} cannot stand on ${terrain}`);
     }
