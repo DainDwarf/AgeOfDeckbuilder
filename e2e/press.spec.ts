@@ -1,5 +1,4 @@
 import { expect, type Page, test } from '@playwright/test';
-import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
 import { pinned, unpinnable } from '../src/rules/campaign';
 import { achievementOf } from '../src/rules/catalogue';
@@ -25,6 +24,7 @@ import {
   cursorAt,
   dragBetween,
   dragOut,
+  dragSlack,
   eastOf,
   endedTurn,
   firstSeed,
@@ -32,17 +32,18 @@ import {
   type Judged,
   launchedOn,
   mapFrame,
+  marked,
   namedIn,
   nameOnScreen,
   type OnScreen,
   offCanvas,
   offsetOf,
   onScreen,
+  onTheBand,
   openSaved,
   overflowingPiles,
   pileTop,
   playedOut,
-  reading,
   readings,
   rested,
   ringedTile,
@@ -118,38 +119,12 @@ async function carriedUnder(page: Page, tile: TileCoords, name: string): Promise
   }
 }
 
-/** The tile the map rings, how many marks it lights for a unit, and the infopanel's card, if up. */
-function marked(
-  page: Page,
-): Promise<{ ringed: string | undefined; lit: number; inspecting: string | undefined }> {
-  return page.evaluate(() => {
-    const ring = window.named?.('selected')?.object;
-    const lit = window.named?.('lit')?.object as Phaser.GameObjects.Layer | undefined;
-    const panel = window.named?.('infopanel')?.object as Phaser.GameObjects.Container | undefined;
-    if (ring === undefined || lit === undefined || panel === undefined) {
-      throw new Error('the map is not on the chronicle screen');
-    }
-    return {
-      ringed: ring.getData('tile') as string | undefined,
-      lit: lit.list.length,
-      inspecting: panel.visible ? (panel.getData('card') as string) : undefined,
-    };
-  });
-}
-
 /** A point on the resource bar's paper: between the bar's left end and its first reading, food. */
 async function onThePaper(page: Page): Promise<{ x: number; y: number }> {
   const seen = await readings(page, ['resource-bar', 'reading-food']);
   const bar = seen('resource-bar').boundsOnScreen;
   const food = seen('reading-food').boundsOnScreen;
   return { x: (bar.x + food.x) / 2, y: food.y + food.height / 2 };
-}
-
-/** A point on the band, inside its left end and short of the draw pile, which stands a margin in. */
-async function onTheBand(page: Page): Promise<{ x: number; y: number }> {
-  const band = await reading(page, 'band');
-  const { x, y, height } = band.boundsOnScreen;
-  return { x: x + 8 * band.onScreen.unit, y: y + height / 2 };
 }
 
 test('a hand card released off the canvas comes home, plays nothing, and leaves the next press clean', async ({
@@ -934,22 +909,53 @@ test('a click on the band or on the bar’s paper drops a selected tile and the 
   expect(problems).toEqual([]);
 });
 
-test('a press landed on one tile and let go on its neighbour inside the drag slack is no click, and selects nothing', async ({
+test('a press landed on the band and let go on the Menu button, then one landed on the Menu button and let go on the band, drop nothing', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const opened = settledOn(1);
+  const city = tileKey(cityTileOf(opened));
+
+  await openSaved(page, opened);
+  const face = await onScreen(page, `tile-${city}`);
+  const band = await onTheBand(page);
+  const menu = await onScreen(page, 'menu-button');
+
+  await page.mouse.click(face.x, face.y);
+  await expect.poll(() => ringedTile(page)).toBe(city);
+
+  await page.mouse.move(band.x, band.y);
+  await page.mouse.down();
+  await page.mouse.move(menu.x, menu.y, { steps: 5 });
+  await page.mouse.up();
+  await page.mouse.down();
+  await page.mouse.move(band.x, band.y, { steps: 5 });
+  await page.mouse.up();
+  await rested(page);
+  expect(await ringedTile(page)).toBe(city);
+  expect(await standing(page, 'menu')).toBe(false);
+  expect(await chronicleOf(page)).toEqual(opened);
+
+  expect(problems).toEqual([]);
+});
+
+test('a press landed on one tile and let go on its neighbour inside the drag slack is no click, selects nothing and carries the map nowhere', async ({
   page,
 }) => {
   const problems = watch(page);
   const opened = settledOn(1);
   const city = cityTileOf(opened);
+  const face = `tile-${tileKey(city)}`;
 
   await openSaved(page, opened);
-  const seen = await readings(page, [`tile-${tileKey(city)}`, `tile-${tileKey(eastOf(city))}`]);
-  const from = seen(`tile-${tileKey(city)}`).onScreen;
+  const seen = await readings(page, [face, `tile-${tileKey(eastOf(city))}`]);
+  const from = seen(face).onScreen;
   const to = seen(`tile-${tileKey(eastOf(city))}`).onScreen;
-  // Two map units either side of the edge the tiles share, well inside the drag slack.
+  const quarter = (await dragSlack(page)) / 4;
   const across = Math.hypot(to.x - from.x, to.y - from.y);
   const step = {
-    x: ((to.x - from.x) / across) * 2 * from.unit,
-    y: ((to.y - from.y) / across) * 2 * from.unit,
+    x: ((to.x - from.x) / across) * quarter,
+    y: ((to.y - from.y) / across) * quarter,
   };
   const edge = { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 };
 
@@ -959,6 +965,7 @@ test('a press landed on one tile and let go on its neighbour inside the drag sla
   await page.mouse.up();
   await rested(page);
   expect(await ringedTile(page)).toBeUndefined();
+  expect(await stillAt(page, face, from)).toBe(true);
   expect(await chronicleOf(page)).toEqual(opened);
 
   expect(problems).toEqual([]);

@@ -34,5 +34,4 @@ A selected unit that lights and glows nothing, and an enemy's tile, are a select
 
 ## The lines
 
-- **Every right click through the door** — a right press on the map is answered only where it is let go on the thing it landed on, the tile it landed on or the map beyond its tiles, and a right press let go on another thing does nothing; a right click beside the things drops the inspection and leaves the selection and any aim standing; `e2e/inspect.spec.ts` is green. Doc-impact: none — `docs/INTERFACE.md` and `docs/CHRONICLE-SCREEN.md` say it. [board/right-click-one-door.md](board/right-click-one-door.md)
 - **A unit and a population slide home** — a unit or a population dragged and let go off where it lands slides home as fast as a card of the hand does, whatever let it go; `e2e/map.spec.ts` is green. Doc-impact: none — the first line says it. [board/slide-home.md](board/slide-home.md)

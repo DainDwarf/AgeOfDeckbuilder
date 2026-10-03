@@ -705,6 +705,13 @@ export async function besideTiles(page: Page): Promise<{ x: number; y: number }>
   return { x: city.x - 440 * city.unit, y: city.y - 160 * city.unit };
 }
 
+/** A point on the band, inside its left end and short of the draw pile, which stands a margin in. */
+export async function onTheBand(page: Page): Promise<{ x: number; y: number }> {
+  const band = await reading(page, 'band');
+  const { x, y, height } = band.boundsOnScreen;
+  return { x: x + 8 * band.onScreen.unit, y: y + height / 2 };
+}
+
 /** A rectangle on the page. */
 export type Frame = { x: number; y: number; width: number; height: number };
 
@@ -733,6 +740,19 @@ export function mapFrame(page: Page): Promise<Frame> {
       width: camera.width * unit,
       height: camera.height * unit,
     };
+  });
+}
+
+/** How far a press travels on the page before it is a drag and no longer a click. */
+export function dragSlack(page: Page): Promise<number> {
+  return page.evaluate(() => {
+    const scene = window.game?.scene.getScene('map');
+    if (scene === null || scene === undefined) throw new Error('the map scene is not running');
+    const canvas = scene.game.canvas;
+    // Phaser measures the slack between raw pointer positions, in the backing store's pixels.
+    return (
+      (scene.input.dragDistanceThreshold * canvas.getBoundingClientRect().width) / canvas.width
+    );
   });
 }
 
@@ -1545,6 +1565,32 @@ export function ringedTile(page: Page): Promise<string | undefined> {
     const ring = window.named?.('selected')?.object;
     if (ring === undefined) throw new Error('the ring is not on the chronicle screen');
     return ring.getData('tile') as string | undefined;
+  });
+}
+
+/**
+ * The tile the map rings, how many marks it lights for a unit, and the infopanel's card with where
+ * it stands on the map, if up.
+ */
+export function marked(page: Page): Promise<{
+  ringed: string | undefined;
+  lit: number;
+  inspecting: { card: string; x: number; y: number } | undefined;
+}> {
+  return page.evaluate(() => {
+    const ring = window.named?.('selected')?.object;
+    const lit = window.named?.('lit')?.object as Phaser.GameObjects.Layer | undefined;
+    const panel = window.named?.('infopanel')?.object as Phaser.GameObjects.Container | undefined;
+    if (ring === undefined || lit === undefined || panel === undefined) {
+      throw new Error('the map is not on the chronicle screen');
+    }
+    return {
+      ringed: ring.getData('tile') as string | undefined,
+      lit: lit.list.length,
+      inspecting: panel.visible
+        ? { card: panel.getData('card') as string, x: panel.x, y: panel.y }
+        : undefined,
+    };
   });
 }
 

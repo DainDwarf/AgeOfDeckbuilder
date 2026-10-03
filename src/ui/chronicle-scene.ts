@@ -19,7 +19,7 @@ import { leaf, type Stage, walked } from '../rules/stages';
 import { type Chronicle, type Cost, onSettlePhase, playable } from '../rules/state';
 import { unitOf } from '../rules/units';
 import { createBand } from './band';
-import { boundTo, pressOf } from './bindings';
+import { boundTo, type Press, pressOf } from './bindings';
 import { CARD_BASELINE, CARD_HEIGHT, createKindBubble } from './card-face';
 import { EASE, ended, stopAllMotion, stopMotion } from './card-motion';
 import { offerEntries, resetConsole } from './debug-console';
@@ -70,7 +70,7 @@ type Part = {
   play?(stage: Stage): Promise<void> | undefined;
 };
 
-/** Where a left press landed or was let go: on a thing, on a drawn tile, or beside the things. */
+/** Where a press landed or was let go: on a thing, on a drawn tile, or beside the things. */
 type Place =
   | { readonly kind: 'thing'; readonly on: Phaser.GameObjects.GameObject }
   | { readonly kind: 'tile'; readonly tile: TileCoords }
@@ -350,14 +350,14 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       }
       await playOut(command);
       if (this.playing) return;
-      select({ tile: found.tile, at: view.faceOf(found.tile) });
+      select(view.pressedOn(found.tile));
     };
 
     const commandUnit = async (command: UnitCommand): Promise<void> => {
       await playOut(command);
       if (this.playing) return;
       const on = unitOf(this.current.units, command.unit)?.tile;
-      if (on !== undefined) select({ tile: on, at: view.faceOf(on) });
+      if (on !== undefined) select(view.pressedOn(on));
     };
 
     /**
@@ -368,7 +368,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
     const reassign = async (command: ReassignCommand): Promise<void> => {
       await playOut(command);
       if (this.playing) return;
-      select({ tile: command.to, at: view.faceOf(command.to) });
+      select(view.pressedOn(command.to));
     };
 
     view.onPress(
@@ -384,10 +384,6 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
         ) {
           enterCityMode();
         }
-      },
-      (found) => {
-        if (found === undefined) uninspect();
-        else inspect(found);
       },
       () => {
         panel.rescale();
@@ -563,7 +559,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
     };
 
     /** The one door every left click takes, after the thing it lands on has answered its own. */
-    const clicked = (place: Place): void => {
+    const leftClicked = (place: Place): void => {
       switch (place.kind) {
         case 'thing':
           if (hand.owns(place.on)) return;
@@ -581,29 +577,64 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       throw new Error(`no place is ${JSON.stringify(unlisted)}`);
     };
 
-    /** Where the left press held landed, and whether on the map. */
-    let held: { readonly place: Place; readonly onMap: boolean } | undefined;
+    /** The one door every right click takes, after the thing it lands on has answered its own. */
+    const rightClicked = (place: Place): void => {
+      switch (place.kind) {
+        case 'thing':
+          return;
+        case 'tile':
+          inspect(view.pressedOn(place.tile));
+          return;
+        case 'beside':
+          uninspect();
+          return;
+      }
+      const unlisted: never = place;
+      throw new Error(`no place is ${JSON.stringify(unlisted)}`);
+    };
+
+    // A press a scene above takes never reaches this scene, so a landing is tied to its press: by the
+    // button, and by the pointer's `downTime`, which Phaser writes only as a gesture's first button
+    // goes down (phaser/src/input/Pointer.js:672-677).
+    /** Where each press held landed, whether on the map, and the pointer's `downTime` then. */
+    const landings = new Map<
+      Press,
+      { readonly at: number; readonly place: Place; readonly onMap: boolean }
+    >();
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-      if (pressOf(pointer) !== 'left') return;
-      held = undefined;
+      const press = pressOf(pointer);
+      if (press === undefined) return;
+      const at = pointer.downTime;
       queueMicrotask(() => {
-        held = placeUnder();
+        landings.set(press, { at, ...placeUnder() });
       });
     });
     this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
-      if (pressOf(pointer) !== 'left') return;
+      const press = pressOf(pointer);
+      if (press === undefined) return;
+      const at = pointer.downTime;
       // After the map scene's dispatch of this release too, in which the map lets go of what its press
       // took hold of.
       queueMicrotask(() => {
-        const from = held;
-        held = undefined;
-        if (from === undefined || (from.onMap && view.carried())) return;
+        const from = landings.get(press);
+        landings.delete(press);
+        if (from === undefined || from.at !== at || (from.onMap && view.carried(press))) return;
         const to = placeUnder();
-        if (samePlace(from.place, to.place)) clicked(to.place);
+        if (!samePlace(from.place, to.place)) return;
+        switch (press) {
+          case 'left':
+            leftClicked(to.place);
+            return;
+          case 'right':
+            rightClicked(to.place);
+            return;
+        }
+        const unlisted: never = press;
+        throw new Error(`no press is ${JSON.stringify(unlisted)}`);
       });
     });
     this.input.on('pointerupoutside', () => {
-      held = undefined;
+      landings.clear();
     });
 
     // On this scene and not the map's: this one stops the pointer over the hand and the bar, where
