@@ -2,12 +2,12 @@
 
 **Line:** **Herbalism** — Herbalism stands in the Stone Age's content as the technology of the sky's door, needing Settlement: its achievement counts the kinds of terrain Gather was played on toward 4, unlocks one copy of Heal and pays 1 influence; Heal costs 2 food and heals a unit of the player's standing inside the border to full health, refused on one at full health; healing a unit is proven on the fixture; `e2e/heal.spec.ts` plays the card on screen; `npm run check`, `npm test` and `npm run lint` pass. Doc-impact: `docs/CHRONICLE.md`, `docs/ages/STONE.md`.
 
-**Spec:** `docs/CHRONICLE.md` _Units and combat_ and _Cards_ (a unit's health, the instant, a card aimed at a unit), `docs/META.md` _The campaign_ (an achievement, its tally, what a technology unlocks) and `docs/ages/STONE.md` are the spec. The sentences that change:
+**Spec:** `docs/CHRONICLE.md` _Units and combat_ and _Cards_ (a unit's health, a card aimed at a unit), `docs/META.md` _The campaign_ (an achievement, its tally, what a technology unlocks) and `docs/ages/STONE.md` are the spec. The sentences that change:
 
 - `docs/CHRONICLE.md` _Units and combat_, the opening paragraph: after "and a unit at zero health is killed." one sentence is added: "A unit enters at its kind's health, its full health; lost health stays lost until a **heal** brings it back up, never above full." The rest of the paragraph stands.
-- `docs/CHRONICLE.md` _Cards_, the Instant bullet: the list takes "**heal** a unit" between "**refresh** a unit's move points" and "**recall** a card from the discard pile"; after "it is refused on a unit whose move points are full." one sentence is added: "The heal takes one unit and brings its health back to full, leaving its move points and its action as they stand; it is refused on a unit at full health."
+- `docs/CHRONICLE.md` _Cards_ stands as it is: the Instant paragraph's list of effects takes nothing, and what Heal does is its own entry's on the age's page.
 - `docs/ages/STONE.md` _The technologies_, a bullet after Fire's: "- **Herbalism** needs Settlement. Its goal counts a deed: the kinds of terrain Gather is played on, each read as the tile stands when the card is played, a Gather that gains nothing counted like any other. It unlocks the card **Heal** and pays influence."
-- `docs/ages/STONE.md` _The cards_, a bullet after Fire's: "- **Heal**, an instant costing food, aimed at a unit standing inside the border, the city's own tile included: the unit is healed to full health and keeps its move points and its action. Nothing else in the age heals. A heal that spends the unit's action was rejected: the food and the walk home are its price."
+- `docs/ages/STONE.md` _The cards_, a bullet after Fire's: "- **Heal**, an instant costing food, aimed at a unit standing inside the border, the city's own tile included: the unit is healed to full health and keeps its move points and its action, and a unit at full health is refused. Nothing else in the age heals. A heal that spends the unit's action was rejected: the food and the walk home are its price."
 
 The player-facing entries, each ending in no period:
 
