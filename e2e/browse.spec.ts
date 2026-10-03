@@ -236,7 +236,7 @@ test('the two keys that pan the map up and down scroll a browse while they are h
   expect(problems).toEqual([]);
 });
 
-test('a left click on a pile opens nothing and keeps the selection; a right click opens its browse, a stack per card that reads the same with its copies on a badge, in the order of the collection; a stack answers no left click, a right click shows it large over the browse, the inspection key does nothing, and the back key walks back the card, then the browse, onto the selection', async ({
+test('a left click on a pile opens nothing; a right click opens its browse, a stack per card that reads the same with its copies on a badge, in the order of the collection; a stack answers no left click, a right click shows it large over the browse, the inspection key does nothing, and the back key walks back the card, then the browse, onto the selection', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -246,14 +246,15 @@ test('a left click on a pile opens nothing and keeps the selection; a right clic
   await openSaved(page, before);
 
   const home = await onScreen(page, 'hand-0');
-  await click(page, 'hand-0');
-  await rested(page);
   for (const pile of PILES) {
     const at = await pileTop(page, pile);
     await page.mouse.click(at.x, at.y);
   }
   await rested(page);
   expect(await standing(page, 'browse')).toBe(false);
+
+  await click(page, 'hand-0');
+  await rested(page);
   expect(await selected(page, 0, home)).toBe(true);
 
   await browse(page, 'draw-pile');

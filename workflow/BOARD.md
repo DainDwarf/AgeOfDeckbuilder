@@ -14,6 +14,7 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
+- **One rule for the aim** — clarify and unify how an aim and a unit's drag (an aim shortcutted) work: an aim is cancelled by a click on something not of its aim's kind, or on something standing in front and covering what it aims at; an aim on the right kind whose conditions are not met raises its error message and stays in aim mode. Known today: a press on the settle phase's chip reaches the tile under it, and a click or an aim released over the infopanel, the pinned achievement or a chip still lands on the tile under them.
 - **The launch warning** — the warning a launch over a chronicle with achievements reached raises, since an abandoned chronicle pays nothing.
 - **The tree's columns** — re-thinking either how the tree is put in columns, or how the tree is displayed in general: the skeleton's next column holds seven technologies, and seven plates need 776 units of the room's 672 at today's plate height, more once a goal wraps.
 - **The field's climb** — Irrigation, Grinding stone and Bread, each technology with its achievement and every card it unlocks.
