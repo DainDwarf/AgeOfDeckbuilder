@@ -14,6 +14,7 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
+- **The aim let go off the corners** — a left click on the pinned achievement or on the resource bar while a card is being aimed lets the card go and then lands as it would on a clean screen, as `docs/CHRONICLE-SCREEN.md` _The hand and the aim_ says of a press on anything else; `e2e/press.spec.ts` is green. Doc-impact: none — the design already says it. [board/aim-off-the-corners.md](board/aim-off-the-corners.md)
 - **The launch warning** — the warning a launch over a chronicle with achievements reached raises, since an abandoned chronicle pays nothing.
 - **The tree's columns** — re-thinking either how the tree is put in columns, or how the tree is displayed in general: the skeleton's next column holds seven technologies, and seven plates need 776 units of the room's 672 at today's plate height, more once a goal wraps.
 - **The field's climb** — Irrigation, Grinding stone and Bread, each technology with its achievement and every card it unlocks.
