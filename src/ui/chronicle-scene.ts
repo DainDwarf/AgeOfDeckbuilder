@@ -33,6 +33,7 @@ import {
   MARGIN,
   onClick,
   onHover,
+  onLetGoOffCanvas,
   type Scrim,
   type Stratum,
   stopsThePointer,
@@ -625,8 +626,8 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
         throw new Error(`no press is ${JSON.stringify(unlisted)}`);
       });
     });
-    this.input.on('pointerupoutside', () => {
-      landings.clear();
+    onLetGoOffCanvas(this, (press) => {
+      landings.delete(press);
     });
 
     // On this scene and not the map's: this one stops the pointer over the hand and the bar, where

@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { type Press, pressOf } from './bindings';
+import { PRESSES, type Press, pressOf } from './bindings';
 import { css, LOOK } from './look';
 
 export const DESIGN_WIDTH = 1280;
@@ -128,7 +128,7 @@ export function followWindow(game: Phaser.Game): void {
  */
 export function letGoOfPress(game: Phaser.Game): void {
   if (game.input.mousePointer?.isDown !== true) return;
-  // Button 0 whichever button is held: whoever answers this reads no button off the pointer.
+  // No button left holding is what lets go of every press, whichever button held it.
   window.dispatchEvent(
     new MouseEvent('mouseup', { bubbles: true, button: 0, buttons: 0, clientX: -1, clientY: -1 }),
   );
@@ -302,12 +302,6 @@ export function dragged(
   return travel >= scene.input.dragDistanceThreshold;
 }
 
-// A release off the canvas is known by the element it landed on, never by a coordinate: the pointer
-// only reads a camera while it is over one, so `worldX` / `worldY` are left where it went out.
-export function releasedOffCanvas(pointer: Phaser.Input.Pointer): boolean {
-  return pointer.upElement !== pointer.manager.game.canvas;
-}
-
 /**
  * How far a click's press may travel: anywhere, or less than the drag slack from where it landed. A
  * press landed while the other button holds is that button's second click, and goes anywhere.
@@ -316,6 +310,21 @@ export type Travel = 'anywhere' | 'within slack';
 
 /** The bit each press's button sets in a pointer's `buttons`. */
 const HOLDS: Readonly<Record<Press, number>> = { left: 1, right: 2 };
+
+/**
+ * Every press a release off the canvas lets go, handed once each: the press of every button the
+ * pointer no longer holds, a scrim's and a lost focus's let-go included, until what it hands back is
+ * called.
+ */
+export function onLetGoOffCanvas(scene: Phaser.Scene, letGo: (press: Press) => void): () => void {
+  const heard = (pointer: Phaser.Input.Pointer): void => {
+    for (const press of PRESSES.values()) if ((pointer.buttons & HOLDS[press]) === 0) letGo(press);
+  };
+  scene.input.on('pointerupoutside', heard);
+  return () => {
+    scene.input.off('pointerupoutside', heard);
+  };
+}
 
 /**
  * A click: one press landed and released on the same object, not a drag of the object it began. A
@@ -355,18 +364,19 @@ export function onClick(
   if (travel === 'within slack') input.on('pointermove', moved);
   target.on('dragstart', drop);
   // The scene sees a release the target never does — it was hidden, disabled or removed meanwhile —
-  // and after the target when it sees both. On the canvas this press's own button lets it go, so it
-  // stands through a second button's click; off the canvas any button abandons it.
+  // and after the target when it sees both.
   const released = (pointer: Phaser.Input.Pointer): void => {
     if (pressOf(pointer) === press) drop();
   };
   input.on('pointerup', released);
-  input.on('pointerupoutside', drop);
+  const unheard = onLetGoOffCanvas(scene, (gone) => {
+    if (gone === press) drop();
+  });
   // The scene outlives the target, so these go when the target does.
   target.once('destroy', () => {
     input.off('pointermove', moved);
     input.off('pointerup', released);
-    input.off('pointerupoutside', drop);
+    unheard();
   });
 }
 

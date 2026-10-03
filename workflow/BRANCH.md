@@ -36,5 +36,4 @@ A selected unit that lights and glows nothing, and an enemy's tile, are a select
 
 ## The lines
 
-- **A held press is let go by its own button alone** — on every screen a press held stands through the other button's release, on the canvas and off it, and is let go by its own button's release, by a scrim rising and by the window losing focus: a unit, a population, a card of the hand or of a deck being dragged, the map, the tree or a panel being dragged, and a click held on a thing; one place under `src/ui/` hears a release off the canvas; `e2e/press.spec.ts` is green. Doc-impact: none — `docs/INTERFACE.md` says it. [board/held-press-own-button.md](board/held-press-own-button.md)
 - **A unit and a population slide home** — a unit or a population dragged and let go off where it lands slides home as fast as a card of the hand does, whatever let it go; `e2e/map.spec.ts` is green. Doc-impact: none — the first line says it. [board/slide-home.md](board/slide-home.md)

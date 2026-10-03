@@ -24,7 +24,7 @@ import {
   MARGIN,
   onClick,
   onHover,
-  releasedOffCanvas,
+  onLetGoOffCanvas,
   type Stratum,
 } from './design-space';
 import { cardFace } from './face';
@@ -60,8 +60,6 @@ type Drag = {
   readonly slot: Slot;
   readonly grabbed: { x: number; y: number };
   readonly lifted: { x: number; y: number };
-  /** Whether Phaser's drag is over and the hand is carrying the card on its own. */
-  carried: boolean;
 };
 
 /**
@@ -339,16 +337,15 @@ export function createHand(
     letGoOf(carrying.slot);
   };
 
-  // Phaser ends the drag at any button's release and sends no `drag` after it, so from a second
-  // button's release the carry is the hand's own: the card follows the pointer here until the
-  // button that took it comes up, and an abandon reaches it in either state.
-  scene.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
-    if (dragged?.carried === true) carry(pointer);
-  });
+  // Phaser ends a drag at any button's release (docs/PHASER.md): past its start, the card reads the
+  // scene's own moves and releases.
+  scene.input.on('pointermove', carry);
   scene.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
-    if (dragged?.carried === true && pressOf(pointer) === 'left') resolve(pointer);
+    if (pressOf(pointer) === 'left') resolve(pointer);
   });
-  scene.input.on('pointerupoutside', abandonDrag);
+  onLetGoOffCanvas(scene, (press) => {
+    if (press === 'left') abandonDrag();
+  });
 
   /** The name of this card under the pointer, handed over as the small cards take one. */
   const nameUnder = (slot: Slot, pointer: Phaser.Input.Pointer): Raiser | undefined => {
@@ -427,25 +424,11 @@ export function createHand(
             slot,
             grabbed: on.resting.at(pointer.downX, pointer.downY),
             lifted: { x: slot.home.x, y: restingY(slot) },
-            carried: false,
           };
         })
         .on('pointermove', (pointer: Phaser.Input.Pointer) => {
           small.over(dragged === undefined ? nameUnder(slot, pointer) : undefined);
           kinds.over(slot.face, dragged === undefined && onKind(slot, pointer));
-        })
-        .on('drag', carry)
-        .on('dragend', (pointer: Phaser.Input.Pointer) => {
-          if (dragged === undefined) return;
-          if (pressOf(pointer) !== 'left') {
-            dragged.carried = true;
-            return;
-          }
-          if (releasedOffCanvas(pointer)) {
-            abandonDrag();
-            return;
-          }
-          resolve(pointer);
         });
 
       answersPress(slot.face.root);

@@ -3,7 +3,15 @@ import type { Campaign } from '../rules/campaign';
 import { type Achievement, type Catalogue, technologyOf } from '../rules/catalogue';
 import { type Control, type Press, pressOf } from './bindings';
 import { createKindBubble, type Name } from './card-face';
-import { addText, answersPress, dragged, MARGIN, onClick, UI_FONT } from './design-space';
+import {
+  addText,
+  answersPress,
+  dragged,
+  MARGIN,
+  onClick,
+  onLetGoOffCanvas,
+  UI_FONT,
+} from './design-space';
 import { onHeldKeys } from './keys';
 import { css, LOOK } from './look';
 import { groundColourOf } from './marks';
@@ -361,7 +369,9 @@ export function createTree(
   scene.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
     if (drag !== undefined && pressOf(pointer) === drag.press) letGo();
   });
-  scene.input.on('pointerupoutside', letGo);
+  onLetGoOffCanvas(scene, (press) => {
+    if (drag?.press === press) letGo();
+  });
 
   let covered = false;
   onHeldKeys(scene, (pressing, delta) => {

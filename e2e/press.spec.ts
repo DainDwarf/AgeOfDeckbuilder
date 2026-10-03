@@ -173,6 +173,89 @@ test('a hand card released off the canvas comes home, plays nothing, and leaves 
   expect(problems).toEqual([]);
 });
 
+test('a unit carried stands through the right button pressed and let go off the canvas, and the left release on a tile it lights steps it there', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const {
+    entered: opened,
+    tile,
+    stepped,
+  } = workerStepped('steps its first worker off the city', () => true);
+
+  await page.setViewportSize(WINDOW);
+  await openSaved(page, opened);
+
+  const from = await onScreen(page, `tile-${tileKey(cityTileOf(opened))}`);
+  const onto = await onScreen(page, `tile-${tileKey(tile)}`);
+  const bare = await offCanvas(page);
+
+  await page.mouse.move(from.x, from.y);
+  await page.mouse.down();
+  await page.mouse.move(bare.x, bare.y, { steps: 5 });
+  await page.mouse.down({ button: 'right' });
+  await page.mouse.up({ button: 'right' });
+  await page.mouse.move(onto.x, onto.y, { steps: 5 });
+  await page.mouse.up();
+  await playedOut(page);
+  expect(await chronicleOf(page)).toEqual(stepped);
+
+  expect(problems).toEqual([]);
+});
+
+test('a hand card dragged stands through the right button pressed on the canvas and let go off it, and the left release clear of the hand plays it', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const { opened, unit } = playableAtNothing();
+
+  await page.setViewportSize(WINDOW);
+  await openSaved(page, opened);
+
+  const home = await onScreen(page, `hand-${unit}`);
+  const bare = await offCanvas(page);
+
+  await page.mouse.move(home.x, home.y);
+  await page.mouse.down();
+  await page.mouse.move(home.x, home.y - LIFTED * home.unit, { steps: 5 });
+  await page.mouse.down({ button: 'right' });
+  await page.mouse.move(bare.x, bare.y, { steps: 5 });
+  await page.mouse.up({ button: 'right' });
+  await page.mouse.move(home.x, home.y - LIFTED * home.unit, { steps: 5 });
+  await page.mouse.up();
+  await playedOut(page);
+  await expect.poll(() => chronicleOf(page)).toEqual(playedAtNothing(opened, unit));
+
+  expect(problems).toEqual([]);
+});
+
+test('a click held on the end-turn button stands through the right button let go off the canvas, and the left release on the button ends the turn', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  test.setTimeout(budget(1));
+  const opened = settledOn(1);
+
+  await page.setViewportSize(WINDOW);
+  await openSaved(page, opened);
+
+  const button = await onScreen(page, 'end-turn');
+  const bare = await offCanvas(page);
+
+  await page.mouse.move(button.x, button.y);
+  await page.mouse.down();
+  await page.mouse.move(bare.x, bare.y, { steps: 5 });
+  await page.mouse.down({ button: 'right' });
+  await page.mouse.up({ button: 'right' });
+  await page.mouse.move(button.x, button.y, { steps: 5 });
+  await page.mouse.up();
+  await expect
+    .poll(() => chronicleOf(page))
+    .toEqual(outcome(apply(CATALOGUE, opened, { type: 'end-turn' })));
+
+  expect(problems).toEqual([]);
+});
+
 test('a hand card whose release the blur swallowed comes home, and the next press plays it', async ({
   page,
 }) => {

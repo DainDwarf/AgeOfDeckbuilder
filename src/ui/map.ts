@@ -34,6 +34,7 @@ import {
   DESIGN_WIDTH,
   dragged,
   hexagon,
+  onLetGoOffCanvas,
   onResize,
   renderFactor,
   type Stratum,
@@ -750,17 +751,15 @@ export function createMapView(
       if (press !== taken) return;
       if (ended() && press === 'left') on.release?.(pointer);
     };
-    const abandon = (): void => {
-      if (ended()) on.abandon?.();
-    };
-
     scene.input.on('pointermove', pan);
     scene.input.on('pointerup', release);
-    scene.input.on('pointerupoutside', abandon);
+    const unheard = onLetGoOffCanvas(scene, (press) => {
+      if (press === taken && ended()) on.abandon?.();
+    });
     return () => {
       scene.input.off('pointermove', pan);
       scene.input.off('pointerup', release);
-      scene.input.off('pointerupoutside', abandon);
+      unheard();
     };
   };
 
