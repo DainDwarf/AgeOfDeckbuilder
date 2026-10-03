@@ -35,3 +35,4 @@ A selected unit that lights and glows nothing, and an enemy's tile, are a select
 ## The lines
 
 - **A unit and a population slide home** — a unit or a population dragged and let go off where it lands slides home as fast as a card of the hand does, whatever let it go; `e2e/map.spec.ts` is green. Doc-impact: none — the first line says it. [board/slide-home.md](board/slide-home.md)
+- **A second button let go off the canvas** — on every screen, a second button let go outside the game window lets a held press go, where the page says only the press's own button lets it go.

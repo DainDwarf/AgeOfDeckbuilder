@@ -593,32 +593,24 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       throw new Error(`no place is ${JSON.stringify(unlisted)}`);
     };
 
-    // A press a scene above takes never reaches this scene, so a landing is tied to its press: by the
-    // button, and by the pointer's `downTime`, which Phaser writes only as a gesture's first button
-    // goes down (phaser/src/input/Pointer.js:672-677).
-    /** Where each press held landed, whether on the map, and the pointer's `downTime` then. */
-    const landings = new Map<
-      Press,
-      { readonly at: number; readonly place: Place; readonly onMap: boolean }
-    >();
+    /** Where each press held landed, and whether on the map. */
+    const landings = new Map<Press, { readonly place: Place; readonly onMap: boolean }>();
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       const press = pressOf(pointer);
       if (press === undefined) return;
-      const at = pointer.downTime;
       queueMicrotask(() => {
-        landings.set(press, { at, ...placeUnder() });
+        landings.set(press, placeUnder());
       });
     });
     this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
       const press = pressOf(pointer);
       if (press === undefined) return;
-      const at = pointer.downTime;
       // After the map scene's dispatch of this release too, in which the map lets go of what its press
       // took hold of.
       queueMicrotask(() => {
         const from = landings.get(press);
         landings.delete(press);
-        if (from === undefined || from.at !== at || (from.onMap && view.carried(press))) return;
+        if (from === undefined || (from.onMap && view.carried(press))) return;
         const to = placeUnder();
         if (!samePlace(from.place, to.place)) return;
         switch (press) {
