@@ -21,6 +21,7 @@ import { ended, SLIDE_HOME, STAGGER, stopMotion, travel, turnOver } from './card
 import {
   answersPress,
   DESIGN_WIDTH,
+  type Hover,
   MARGIN,
   onClick,
   onHover,
@@ -50,6 +51,9 @@ type Slot = {
   readonly playable: boolean;
   /** Where the pointer is on the card: its outline, and down to where it rests while it is hovered. */
   readonly hitArea: Phaser.Geom.Rectangle;
+  /** Whether the pointer is on the card, the hand live or dead. */
+  readonly hover: Hover;
+  /** Whether the card stands lifted by the pointer on it. */
   hovered: boolean;
   /** Whether a small card raised off one of its names stands, which keeps it lifted. */
   held: boolean;
@@ -137,14 +141,17 @@ export function createHand(
   let selected: Selected | undefined;
   /** The card the hand has let go of, waiting on the stages its play resolves as. */
   let letGo: Slot | undefined;
-  /** Whether the hand takes the pointer at all; a play-out puts it down for as long as it runs. */
+  /** Whether the hand answers the pointer; a play-out puts it down for as long as it runs. */
   let taking = true;
 
+  // A dead card stays interactive, so a press on it stops there, and no leave comes as the hand dies:
+  // a bubble or a rest on a name the pointer on a card began is let go of here.
   const live = (on: boolean): void => {
     taking = on;
+    if (on) return;
     for (const slot of slots) {
-      if (on) slot.face.root.setInteractive();
-      else slot.face.root.disableInteractive();
+      kinds.over(slot.face, false);
+      if (slot.hover.hovered) small.over(undefined);
     }
   };
 
@@ -389,8 +396,9 @@ export function createHand(
     slots = chronicle.hand.map((card, index) => {
       const off = index - (held - 1) / 2;
       const refusal = refusalOf(catalogue, chronicle, card.id);
+      const face = createCardFace(scene, cardFace(catalogue, card), refusal);
       const slot: Slot = {
-        face: createCardFace(scene, cardFace(catalogue, card), refusal),
+        face,
         card,
         index,
         home: {
@@ -400,6 +408,21 @@ export function createHand(
         refusal,
         playable: playable(refusal),
         hitArea: new Phaser.Geom.Rectangle(-CARD_WIDTH / 2, -CARD_HEIGHT, CARD_WIDTH, CARD_HEIGHT),
+        hover: onHover(
+          face.root,
+          () => {
+            if (dragged !== undefined || !taking) return;
+            slot.hovered = true;
+            settle(slot, 120);
+          },
+          () => {
+            small.over(undefined);
+            kinds.over(face, false);
+            if (dragged !== undefined || !taking) return;
+            slot.hovered = false;
+            settle(slot, 120);
+          },
+        ),
         hovered: false,
         held: false,
       };
@@ -416,6 +439,7 @@ export function createHand(
           draggable: true,
         })
         .on('dragstart', (pointer: Phaser.Input.Pointer) => {
+          if (!taking) return;
           kinds.over(slot.face, false);
           unselect();
           slot.hovered = true;
@@ -427,28 +451,15 @@ export function createHand(
           };
         })
         .on('pointermove', (pointer: Phaser.Input.Pointer) => {
-          small.over(dragged === undefined ? nameUnder(slot, pointer) : undefined);
-          kinds.over(slot.face, dragged === undefined && onKind(slot, pointer));
+          const answering = taking && dragged === undefined;
+          small.over(answering ? nameUnder(slot, pointer) : undefined);
+          kinds.over(slot.face, answering && onKind(slot, pointer));
         });
 
-      answersPress(slot.face.root);
-      onHover(
-        slot.face.root,
-        () => {
-          if (dragged !== undefined) return;
-          slot.hovered = true;
-          settle(slot, 120);
-        },
-        () => {
-          small.over(undefined);
-          kinds.over(slot.face, false);
-          if (dragged !== undefined || !taking) return;
-          slot.hovered = false;
-          settle(slot, 120);
-        },
-      );
+      answersPress(slot.face.root, () => taking);
 
       onClick(slot.face.root, () => {
+        if (!taking) return;
         const standing = selected;
         if (standing?.slot === slot) act(standing);
         else if (standing?.atHand === true) playAt(standing, slot);
@@ -458,6 +469,7 @@ export function createHand(
       onClick(
         slot.face.root,
         (pointer) => {
+          if (!taking) return;
           const named = nameUnder(slot, pointer)?.name;
           if (named === undefined) presses.inspect(slot.card);
           else presses.inspectNamed(named);
@@ -467,7 +479,6 @@ export function createHand(
 
       return slot;
     });
-    live(taking);
   };
 
   /** A card in the air, over every card of its block that left before it. */

@@ -6,6 +6,7 @@ import { apply, byHand, outcome } from '../src/rules/chronicle';
 import { CENTRE, type TileCoords, tileKey } from '../src/rules/map';
 import type { Chronicle } from '../src/rules/state';
 import { unitAt } from '../src/rules/units';
+import type { ChronicleScene } from '../src/ui/chronicle-scene';
 import { achievementGoal, cardName, text } from '../src/ui/text';
 import {
   admits,
@@ -103,14 +104,35 @@ function playedAtNothing(chronicle: Chronicle, index: number): Chronicle {
  * so a press that fell through the object would land on it.
  */
 async function carriedUnder(page: Page, tile: TileCoords, name: string): Promise<void> {
+  await carriedTo(page, tile, await onScreen(page, name), name);
+}
+
+/** Carries the map by a drag off the tile until the tile stands at that point of the page, on `what`. */
+async function carriedTo(
+  page: Page,
+  tile: TileCoords,
+  to: { x: number; y: number },
+  what: string,
+): Promise<void> {
   const face = `tile-${tileKey(tile)}`;
-  const to = await onScreen(page, name);
   await dragBetween(page, await onScreen(page, face), to);
   await rested(page);
   const now = await onScreen(page, face);
   if (Math.hypot(now.x - to.x, now.y - to.y) >= 2) {
-    throw new Error(`the map stops short of carrying ${face} under ${name}`);
+    throw new Error(`the map stops short of carrying ${face} under ${what}`);
   }
+}
+
+/**
+ * The first seed's turn 1, settled bare, whose end of turn sends the hand off as its first stage, no
+ * hazard striking ahead of it.
+ */
+function leavingFirst(): Chronicle {
+  return firstSeed('ends its turn 1 on the hand leaving first', (seed) => {
+    const opened = settledOn(seed);
+    const [first] = apply(CATALOGUE, opened, { type: 'end-turn' });
+    return first?.name === 'discarded' ? opened : undefined;
+  });
 }
 
 /** A point on the resource bar's paper: between the bar's left end and its first reading, food. */
@@ -720,6 +742,63 @@ test('the end-turn button clicked while a card is aimed at a tile lets the card 
     .poll(() => chronicleOf(page))
     .toEqual(outcome(apply(CATALOGUE, opened, { type: 'end-turn' })));
   expect(await standing(page, 'aim')).toBe(false);
+
+  expect(problems).toEqual([]);
+});
+
+test('a click on the top of a card of the hand while the end of turn plays out stops on the card, and no tile under it is ringed', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  test.setTimeout(budget(1));
+  const opened = leavingFirst();
+
+  await openSaved(page, opened);
+  const card = `hand-${Math.floor(opened.hand.length / 2)}`;
+  const seen = await readings(page, [card, 'end-turn']);
+  const home = seen(card).onScreen;
+  const top = seen(card).boundsOnScreen;
+  const button = seen('end-turn').onScreen;
+  const frame = await mapFrame(page);
+  const at = { x: top.x + top.width / 2, y: (top.y + frame.y + frame.height) / 2 };
+
+  await carriedTo(page, cityTileOf(opened), at, `the top of ${card}`);
+  await page.mouse.move(button.x, button.y);
+  await expect.poll(() => stillAt(page, card, home)).toBe(true);
+
+  // The hand leaves at the end of turn's first stage and is out of its lane a frame later, so both
+  // clicks land in one task; the screen reads where a click landed only after it, hence the wait.
+  const landedPlaying = await page.evaluate(
+    async (points) => {
+      const game = window.game;
+      if (game === undefined) throw new Error('the game is not running');
+      const clicked = ({ x, y }: { x: number; y: number }): void => {
+        for (const [type, buttons] of [
+          ['mousedown', 1],
+          ['mouseup', 0],
+        ] as const) {
+          game.canvas.dispatchEvent(
+            new MouseEvent(type, {
+              bubbles: true,
+              cancelable: true,
+              clientX: x,
+              clientY: y,
+              buttons,
+            }),
+          );
+        }
+      };
+      clicked(points.button);
+      await null;
+      clicked(points.at);
+      return game.scene.getScene<ChronicleScene>('ui').playing;
+    },
+    { button, at },
+  );
+  expect(landedPlaying).toBe(true);
+
+  await playedOut(page);
+  expect(await ringedTile(page)).toBeUndefined();
 
   expect(problems).toEqual([]);
 });
