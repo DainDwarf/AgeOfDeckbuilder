@@ -37,6 +37,7 @@ import {
   onResize,
   renderFactor,
   type Stratum,
+  thingUnder,
   UI_FONT,
 } from './design-space';
 import { onHeldKeys, onKeyDown } from './keys';
@@ -1640,26 +1641,31 @@ export function createMapView(
 
           bringHome();
           grabbed = undefined;
-          switch (holding.kind) {
-            case 'unit':
-              if (on !== undefined && commandUnitOn(holding.unit, on)) return;
-              lightUnit(selection);
-              break;
-            case 'assigned': {
-              const command =
-                on === undefined || shown === undefined
-                  ? undefined
-                  : cityDrag(shown, holding.tile, on);
-              if (command !== undefined) {
-                reassigned(command);
-                return;
+          // After Phaser's dispatch of this release: a hit test inside it refills the list being
+          // walked (docs/PHASER.md).
+          queueMicrotask(() => {
+            const landed = thingUnder(scene.game) === catcher ? on : undefined;
+            switch (holding.kind) {
+              case 'unit':
+                if (landed !== undefined && commandUnitOn(holding.unit, landed)) return;
+                lightUnit(selection);
+                break;
+              case 'assigned': {
+                const command =
+                  landed === undefined || shown === undefined
+                    ? undefined
+                    : cityDrag(shown, holding.tile, landed);
+                if (command !== undefined) {
+                  reassigned(command);
+                  return;
+                }
+                break;
               }
-              break;
             }
-          }
 
-          if (holding.dragging) return;
-          pressed(on === undefined ? undefined : pressedOn(on), press);
+            if (holding.dragging) return;
+            pressed(on === undefined ? undefined : pressedOn(on), press);
+          });
         },
         abandon: () => {
           if (grabbed !== undefined) letGo();

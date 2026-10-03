@@ -30,6 +30,7 @@ import {
   shownCard,
   standing,
   watch,
+  westOf,
 } from './chronicle-screen';
 
 declare global {
@@ -92,11 +93,6 @@ function besideCity<T>(
     const chronicle = settledOn(seed);
     return besideOn(chronicle, (tile) => found(tile, chronicle));
   });
-}
-
-/** The tile west of one: the panel stands east of the tile it reads, so this one is clear of it. */
-function westOf({ q, r }: TileCoords): TileCoords {
-  return { q: q - 1, r };
 }
 
 /**

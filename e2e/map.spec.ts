@@ -1,8 +1,13 @@
 import { expect, type Page, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
+import { type Campaign, pinned, unpinnable } from '../src/rules/campaign';
+import { gained } from '../src/rules/cards';
+import { achievementOf } from '../src/rules/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
+import { cultureThreshold } from '../src/rules/city';
 import { campUnit } from '../src/rules/enemies';
 import { CENTRE, type TileCoords, tileKey } from '../src/rules/map';
+import { freshCampaign } from '../src/rules/save';
 import { inSight } from '../src/rules/sight';
 import { walked } from '../src/rules/stages';
 import type { Chronicle } from '../src/rules/state';
@@ -14,23 +19,29 @@ import {
   chronicleOf,
   cityTileOf,
   dragOut,
+  dragTiles,
+  eastOf,
   endTurn,
+  firstSeed,
   idsOf,
   inside,
   mapFrame,
   onScreen,
   openSaved,
   playedOut,
+  readings,
   rested,
   ringedTile,
   type Step,
   settledOn,
   shownCard,
+  shows,
   standing,
   tileOnScreen,
   tooltipUp,
   unitEntered,
   watch,
+  westOf,
   workerStepped,
 } from './chronicle-screen';
 
@@ -108,6 +119,52 @@ function gatherStep(): Step {
     'steps its first worker off the city with gather to play there',
     (stepped, tile) => admits(stepped, idsOf(stepped.hand).indexOf(GATHER), tile),
   );
+}
+
+/** The first seed's turn 1 whose first worker steps off the city onto the tile beside it `side` names. */
+function workerStepsTo(side: (city: TileCoords) => TileCoords): Step {
+  return workerStepped(
+    'steps its first worker off the city onto the tile beside it along q',
+    (stepped, tile) => tileKey(tile) === tileKey(side(cityTileOf(stepped))),
+  );
+}
+
+/**
+ * The first seed's bare turn 1 with the tile east of the city claimed, the claim's culture gained
+ * first: a tile the city holds and nobody stands on, beside the population on the city's tile.
+ */
+function claimedEast(): { chronicle: Chronicle; claimed: TileCoords } {
+  return firstSeed('claims the tile east of the city on its bare turn 1', (seed) => {
+    const bare = settledOn(seed);
+    const claimed = eastOf(cityTileOf(bare));
+    const paid = gained(bare, { culture: cultureThreshold(bare) }).chronicle;
+    const chronicle = outcome(apply(CATALOGUE, paid, { type: 'claim', tile: claimed }));
+    return chronicle === paid ? undefined : { chronicle, claimed };
+  });
+}
+
+/** A new campaign pinning a technology whose achievement the chronicle reads. */
+function pinningRead(chronicle: Chronicle): Campaign {
+  const fresh = freshCampaign(CATALOGUE);
+  const technology = chronicle.achievements
+    .map(({ id }) => achievementOf(CATALOGUE, chronicle.age, id).technology)
+    .find((read) => unpinnable(CATALOGUE, read, fresh.technologies) === undefined);
+  if (technology === undefined)
+    throw new Error(`the ${chronicle.age} age reads no achievement a new campaign may pin`);
+  return pinned(CATALOGUE, fresh, technology);
+}
+
+/** Whether the named object stands over the one tile and clear of the other, read in one question. */
+async function standsOver(
+  page: Page,
+  name: string,
+  over: TileCoords,
+  clear: TileCoords,
+): Promise<boolean[]> {
+  const tiles = [`tile-${tileKey(over)}`, `tile-${tileKey(clear)}`];
+  const seen = await readings(page, [name, ...tiles]);
+  const box = seen(name).boundsOnScreen;
+  return tiles.map((tile) => inside(seen(tile).onScreen, box));
 }
 
 /**
@@ -270,6 +327,82 @@ test('a drag on bare ground pans the map, and a drag from the unit moves it', as
   const held = await tileOnScreen(page, BARE.at);
   expect(held.x).toBeCloseTo(after.x, 0);
   expect(held.y).toBeCloseTo(after.y, 0);
+
+  expect(problems).toEqual([]);
+});
+
+test('a unit carried onto a lit tile the infopanel stands over and let go there comes home, the selection where it was', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const step = workerStepsTo(eastOf);
+  const city = cityTileOf(step.entered);
+
+  await openSaved(page, step.entered);
+
+  const home = await onScreen(page, `tile-${tileKey(city)}`);
+  await page.mouse.click(home.x, home.y);
+  await expect.poll(() => ringedTile(page)).toBe(tileKey(city));
+  await page.mouse.click(home.x, home.y, { button: 'right' });
+  await expect.poll(() => shownCard(page)).toBeDefined();
+  await rested(page);
+  expect(await standsOver(page, 'infopanel', step.tile, city)).toEqual([true, false]);
+
+  await dragTiles(page, city, step.tile);
+  expect(await chronicleOf(page)).toEqual(step.entered);
+  expect(await ringedTile(page)).toBe(tileKey(city));
+
+  expect(problems).toEqual([]);
+});
+
+test('a population carried in city mode onto a tile the infopanel stands over and let go there comes home, and nothing changes', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const { chronicle, claimed } = claimedEast();
+  const city = cityTileOf(chronicle);
+
+  await openSaved(page, chronicle);
+  await page.keyboard.press('c');
+  await expect.poll(() => shows(page, 'city-chip')).toBe(true);
+
+  const home = await onScreen(page, `tile-${tileKey(city)}`);
+  await page.mouse.click(home.x, home.y, { button: 'right' });
+  await expect.poll(() => shownCard(page)).toBeDefined();
+  await rested(page);
+  expect(await standsOver(page, 'infopanel', claimed, city)).toEqual([true, false]);
+
+  await dragTiles(page, city, claimed);
+  expect(await chronicleOf(page)).toEqual(chronicle);
+  expect(await ringedTile(page)).toBeUndefined();
+
+  expect(problems).toEqual([]);
+});
+
+test('a unit carried onto a lit tile the pinned achievement stands over and let go there comes home', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const step = workerStepsTo(westOf);
+  const city = cityTileOf(step.entered);
+
+  await openSaved(page, step.entered, pinningRead(step.entered));
+
+  const tile = `tile-${tileKey(step.tile)}`;
+  const seen = await readings(page, ['pinned-achievement', tile, `tile-${tileKey(city)}`]);
+  const plate = seen('pinned-achievement').boundsOnScreen;
+  const from = seen(tile).onScreen;
+  // Half the step to the city: the tile lands inside the plate and the city as far outside it.
+  const inset = (seen(`tile-${tileKey(city)}`).onScreen.x - from.x) / 2;
+  await drag(page, from, {
+    x: plate.x + plate.width - inset - from.x,
+    y: plate.y + plate.height / 2 - from.y,
+  });
+  expect(await standsOver(page, 'pinned-achievement', step.tile, city)).toEqual([true, false]);
+  expect(inside(await tileOnScreen(page, city), await mapFrame(page))).toBe(true);
+
+  await dragTiles(page, city, step.tile);
+  expect(await chronicleOf(page)).toEqual(step.entered);
 
   expect(problems).toEqual([]);
 });

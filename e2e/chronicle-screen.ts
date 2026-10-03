@@ -687,6 +687,15 @@ export async function tileOnScreen(page: Page, coord: TileCoords): Promise<OnScr
   };
 }
 
+/** The tiles beside one along q, east and west: the infopanel stands east of the tile it reads. */
+export function eastOf({ q, r }: TileCoords): TileCoords {
+  return { q: q + 1, r };
+}
+
+export function westOf({ q, r }: TileCoords): TileCoords {
+  return { q: q - 1, r };
+}
+
 /**
  * A point beside the tiles: up and left of the centre, inside the map's frame, which starts under
  * the resource bar, and far enough out for the nearest tile to be well outside the map's disc.

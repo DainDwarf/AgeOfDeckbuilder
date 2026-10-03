@@ -457,8 +457,8 @@ export function onHover(
   };
 }
 
-// Read from the game loop, never from an input handler: a hit test refills the array Phaser's
-// dispatch is walking (docs/PHASER.md).
+// Never read inside Phaser's input dispatch: a hit test refills the array it is walking
+// (docs/PHASER.md).
 /** The topmost interactive object under the pointer across the running scenes, if any. */
 export function thingUnder(game: Phaser.Game): Phaser.GameObjects.GameObject | undefined {
   const pointer = game.input.activePointer;
