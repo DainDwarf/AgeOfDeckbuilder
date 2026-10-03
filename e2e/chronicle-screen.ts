@@ -1299,6 +1299,30 @@ export function withCard(card: CardId): Civilization {
   return { ...first, cards: [...first.cards, card] };
 }
 
+/** The card of the catalogue aimed at the hand. */
+export const AIMED_AT_HAND = (() => {
+  const found = Object.keys(CATALOGUE.cards).find(
+    (id) => aimOf(cardOf(CATALOGUE, id)).aim === 'hand',
+  );
+  if (found === undefined) throw new Error('no card of the catalogue is aimed at the hand');
+  return found;
+})();
+
+/**
+ * The first seed's turn 1, its city settled bare, on the first civilization with one copy of the card
+ * aimed at the hand in its deck, whose hand holds that card and the city can play it; where it lies,
+ * and where the first other card of the hand lies.
+ */
+export function aimableAtHand(): { opened: Chronicle; card: number; other: number } {
+  const civilization = withCard(AIMED_AT_HAND);
+  return firstSeed('opens turn 1 on the card aimed at the hand, playable', (seed) => {
+    const opened = settledOn(seed, [], civilization);
+    const card = inHand(opened, ({ aim, playable }) => aim === 'hand' && playable);
+    if (card === -1) return undefined;
+    return { opened, card, other: card === 0 ? 1 : 0 };
+  });
+}
+
 /**
  * The chronicle with the first tile beside the city made the terrain of the feature Trapping names,
  * that feature and the improvements named placed on it, and a worker entered there.
@@ -1607,12 +1631,21 @@ export async function dragOut(page: Page, index: number): Promise<void> {
 export async function dragTiles(page: Page, from: TileCoords, to: TileCoords): Promise<void> {
   const held = await onScreen(page, `tile-${tileKey(from)}`);
   const landing = await onScreen(page, `tile-${tileKey(to)}`);
-  await page.mouse.move(held.x, held.y);
-  await page.mouse.down();
-  await page.mouse.move((held.x + landing.x) / 2, (held.y + landing.y) / 2, { steps: 5 });
-  await page.mouse.move(landing.x, landing.y, { steps: 5 });
-  await page.mouse.up();
+  await dragBetween(page, held, landing);
   await playedOut(page);
+}
+
+/** A left press landed on one page point, carried to another past the drag slack, and let go there. */
+export async function dragBetween(
+  page: Page,
+  from: { x: number; y: number },
+  to: { x: number; y: number },
+): Promise<void> {
+  await page.mouse.move(from.x, from.y);
+  await page.mouse.down();
+  await page.mouse.move((from.x + to.x) / 2, (from.y + to.y) / 2, { steps: 5 });
+  await page.mouse.move(to.x, to.y, { steps: 5 });
+  await page.mouse.up();
 }
 
 /** The same gesture onto a tile the unit lands on, waited out until it stands there. */

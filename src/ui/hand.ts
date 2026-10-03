@@ -79,8 +79,12 @@ export type Hand = {
   selection(): ChronicleCard | undefined;
   /** Lets the selected card go, the aim it stands on with it, and answers whether one was. */
   unselect(): boolean;
+  /** Whether the selected card is being aimed. */
+  beingAimed(): boolean;
   /** Lets the card being aimed go as `unselect` does; a card selected and not being aimed stays. */
   unaim(): void;
+  /** Whether the object is a card of the hand, every left click on which the hand answers itself. */
+  owns(object: Phaser.GameObjects.GameObject): boolean;
 };
 
 /**
@@ -227,6 +231,8 @@ export function createHand(
       if (standing === undefined || standing.slot !== slot) return;
       standing.cancel = undefined;
     };
+
+  const beingAimed = (): boolean => selected?.cancel !== undefined || selected?.atHand === true;
 
   const unselect = (): boolean => {
     const standing = selected;
@@ -626,8 +632,12 @@ export function createHand(
       return selected?.slot.card;
     },
     unselect,
+    beingAimed,
     unaim(): void {
-      if (selected?.cancel !== undefined || selected?.atHand === true) unselect();
+      if (beingAimed()) unselect();
+    },
+    owns(object: Phaser.GameObjects.GameObject): boolean {
+      return slots.some((slot) => slot.face.root === object);
     },
     play(stage: Stage): Promise<void> | undefined {
       switch (stage.kind) {

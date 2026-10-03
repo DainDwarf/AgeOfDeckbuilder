@@ -78,13 +78,11 @@ export function createResourceBar(
   catalogue: Catalogue,
   tooltip: Tooltip,
   presses: {
-    /** What a left click anywhere on the bar does first, a reading's own act after it. */
-    unaim: () => void;
     cityMode: () => void;
     toggleYield: (resource: Resource) => void;
   },
 ): ResourceBar {
-  const { unaim, cityMode, toggleYield } = presses;
+  const { cityMode, toggleYield } = presses;
   const bar = scene.add.container(0, 0);
   on.layer.add(bar);
   // Never marked as answering a press, or the pointer is the hand over the whole bar.
@@ -93,7 +91,6 @@ export function createResourceBar(
     .setOrigin(0, 0)
     .setName('resource-bar')
     .setInteractive();
-  onClick(ground, unaim);
   bar.add(ground);
   bar.add(
     scene.add
@@ -116,7 +113,6 @@ export function createResourceBar(
   for (const entry of entries) {
     const { key } = entry;
     onClick(answersPress(entry.hover), () => {
-      unaim();
       if (managesCity(key)) cityMode();
       else toggleYield(key);
     });

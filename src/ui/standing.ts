@@ -80,7 +80,8 @@ export function createStanding(scene: Phaser.Scene, on: Stratum, stood: Stood): 
       frame.setVisible(on);
       chip.setVisible(on);
       label.setVisible(on);
-      if (on && leave !== undefined) chip.setInteractive();
+      // Interactive while it stands, answering a press or not, so no press reaches the map under it.
+      if (on) chip.setInteractive();
       else chip.disableInteractive();
     },
   };

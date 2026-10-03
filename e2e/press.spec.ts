@@ -3,27 +3,31 @@ import { CATALOGUE } from '../src/content/catalogue';
 import { pinned, unpinnable } from '../src/rules/campaign';
 import { achievementOf } from '../src/rules/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
-import { tileKey } from '../src/rules/map';
+import { CENTRE, type TileCoords, tileKey } from '../src/rules/map';
 import type { Chronicle } from '../src/rules/state';
 import { achievementGoal, cardName, text } from '../src/ui/text';
 import {
   admits,
+  aimableAtHand,
   aimed,
   aimLine,
   bareAimable,
   bareWith,
   besideTheCards,
   browse,
+  budget,
   cardOnFace,
   chronicleOf,
   cityTileOf,
   click,
   cursorAt,
+  dragBetween,
   dragOut,
   endedTurn,
   firstSeed,
   inHand,
   type Judged,
+  launchedOn,
   mapFrame,
   namedIn,
   nameOnScreen,
@@ -93,6 +97,21 @@ function playedAtNothing(chronicle: Chronicle, index: number): Chronicle {
 async function stillAt(page: Page, name: string, was: OnScreen): Promise<boolean> {
   const now = await onScreen(page, name);
   return Math.round(now.x - was.x) === 0 && Math.round(now.y - was.y) === 0;
+}
+
+/**
+ * Carries the map by a drag off the tile until the tile stands under the middle of the named object,
+ * so a press that fell through the object would land on it.
+ */
+async function carriedUnder(page: Page, tile: TileCoords, name: string): Promise<void> {
+  const face = `tile-${tileKey(tile)}`;
+  const to = await onScreen(page, name);
+  await dragBetween(page, await onScreen(page, face), to);
+  await rested(page);
+  const now = await onScreen(page, face);
+  if (Math.hypot(now.x - to.x, now.y - to.y) >= 2) {
+    throw new Error(`the map stops short of carrying ${face} under ${name}`);
+  }
 }
 
 test('a hand card released off the canvas comes home, plays nothing, and leaves the next press clean', async ({
@@ -598,6 +617,80 @@ test('a click on the resource bar lets the card being aimed go and lands as on a
   expect(problems).toEqual([]);
 });
 
+test('the end-turn button clicked while a card is aimed at a tile lets the card go and ends the turn', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  test.setTimeout(budget(1));
+  const { chronicle: opened, index } = bareAimable();
+
+  await openSaved(page, opened);
+  const home = await onScreen(page, `hand-${index}`);
+
+  await page.mouse.click(home.x, home.y);
+  await aimed(page);
+  await click(page, 'end-turn');
+  await expect
+    .poll(() => chronicleOf(page))
+    .toEqual(outcome(apply(CATALOGUE, opened, { type: 'end-turn' })));
+  expect(await standing(page, 'aim')).toBe(false);
+
+  expect(problems).toEqual([]);
+});
+
+test('a click on the line naming the aim lets the card go and reaches no tile under it', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const { chronicle: opened, index } = bareAimable();
+
+  await openSaved(page, opened);
+  const home = await onScreen(page, `hand-${index}`);
+
+  await page.mouse.click(home.x, home.y);
+  await aimed(page);
+  await carriedUnder(page, cityTileOf(opened), 'aim-line');
+  await click(page, 'aim-line');
+  await expect.poll(() => standing(page, 'aim')).toBe(false);
+  await expect.poll(() => selected(page, index, home)).toBe(false);
+  expect(await chronicleOf(page)).toEqual(opened);
+
+  expect(problems).toEqual([]);
+});
+
+test('on the settle phase the chip and the dead end-turn button stop a press: each lets the settle card being aimed go and settles nothing, and the chip on a clean screen rings no tile', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const opened = launchedOn(1);
+
+  await openSaved(page, opened);
+  const home = await onScreen(page, 'hand-0');
+
+  await carriedUnder(page, CENTRE, 'settle-phase-chip');
+  await click(page, 'settle-phase-chip');
+  await rested(page);
+  expect(await ringedTile(page)).toBeUndefined();
+
+  await page.mouse.click(home.x, home.y);
+  await aimed(page);
+  await click(page, 'settle-phase-chip');
+  await expect.poll(() => standing(page, 'aim')).toBe(false);
+  await expect.poll(() => selected(page, 0, home)).toBe(false);
+  expect(await chronicleOf(page)).toEqual(opened);
+
+  // The centre stands under the chip, which a press on it would land on: its neighbour carries the map.
+  await carriedUnder(page, { q: CENTRE.q, r: CENTRE.r + 1 }, 'end-turn');
+  await page.mouse.click(home.x, home.y);
+  await aimed(page);
+  await click(page, 'end-turn');
+  await expect.poll(() => standing(page, 'aim')).toBe(false);
+  await expect.poll(() => selected(page, 0, home)).toBe(false);
+  expect(await chronicleOf(page)).toEqual(opened);
+
+  expect(problems).toEqual([]);
+});
+
 test('a click on the pinned achievement, a name in its goal included, lets the card being aimed go and reaches no tile under it', async ({
   page,
 }) => {
@@ -719,6 +812,29 @@ test('a drag while a card is being aimed takes the aim down and plays the card i
   await dragOut(page, unit);
   expect(await standing(page, 'aim')).toBe(false);
   await expect.poll(() => chronicleOf(page)).toEqual(playedAtNothing(opened, unit));
+
+  expect(problems).toEqual([]);
+});
+
+test('a drag that carries the map leaves a card aimed at the hand being aimed', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const { opened, card } = aimableAtHand();
+
+  await openSaved(page, opened);
+  const home = await onScreen(page, `hand-${card}`);
+
+  await page.mouse.click(home.x, home.y);
+  await rested(page);
+  await page.mouse.click(home.x, home.y);
+  await expect.poll(() => standing(page, 'aim-point')).toBe(true);
+
+  const city = await onScreen(page, `tile-${tileKey(cityTileOf(opened))}`);
+  await dragBetween(page, city, { x: city.x + 120 * city.unit, y: city.y - 80 * city.unit });
+  await rested(page);
+  expect(await standing(page, 'aim-point')).toBe(true);
+  expect(await chronicleOf(page)).toEqual(opened);
 
   expect(problems).toEqual([]);
 });

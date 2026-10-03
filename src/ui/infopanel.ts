@@ -16,7 +16,7 @@ import { RESOURCES, type Resource, type Resources } from '../rules/resources';
 import { type Unit, unitAt } from '../rules/units';
 import { CARD_HEIGHT, CARD_WIDTH, drawCardSurface, metricsOf } from './card-face';
 import { stopMotion } from './card-motion';
-import { addText, onClick, onHover, type Stratum, UI_FONT } from './design-space';
+import { addText, onHover, type Stratum, UI_FONT } from './design-space';
 import { css, LOOK } from './look';
 import {
   buildingMark,
@@ -202,14 +202,10 @@ type Face = {
 /** Where the panel stands on the map, and what it measures in there, for the bubbles its rows raise. */
 type Box = { left: number; top: number; unit: number };
 
-/**
- * What a row answers: the one bubble raised beside its own middle in the card or let go, and a left
- * click on it.
- */
+/** What a row answers: the one bubble raised beside its own middle in the card or let go. */
 type RowAnswers = {
   raise(centre: number, message: string): void;
   drop(): void;
-  click(): void;
 };
 
 /**
@@ -223,12 +219,10 @@ export function createInfoPanel(
   on: Stratum,
   catalogue: Catalogue,
   tooltip: Tooltip,
-  unaim: () => void,
 ): InfoPanel {
   const ghosts = scene.add.graphics();
   // Interactive, so no press reaches the map's catchers under it, and never marked as answering one.
   const stop = scene.add.zone(0, 0, CARD_WIDTH, CARD_HEIGHT).setOrigin(0, 0).setInteractive();
-  onClick(stop, unaim);
   const panel = scene.add.container(0, 0, [ghosts, stop]).setName('infopanel').setVisible(false);
   on.layer.add(panel);
 
@@ -250,7 +244,6 @@ export function createInfoPanel(
     drop(): void {
       tooltip.hide();
     },
-    click: unaim,
   };
 
   /** Level with the face it reads, clear of its rim, at the size on screen the card was laid out at. */
@@ -338,7 +331,7 @@ export function createInfoPanel(
 
 /**
  * The card's head over its rows, laid out in the card's own type and spacing at `width`, from its
- * top-left corner; a row raises a bubble and answers a left click only where its answers are handed.
+ * top-left corner; a row raises a bubble only where its answers are handed.
  */
 function buildFace(
   scene: Phaser.Scene,
@@ -392,7 +385,6 @@ function buildFace(
       () => answers.raise(rowTop + down / 2, text(`tooltip.${term}`)),
       () => answers.drop(),
     );
-    onClick(hover, answers.click);
     contents.push(hover);
     hovers.push(hover);
   };

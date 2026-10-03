@@ -18,6 +18,7 @@ import {
   campGround,
   chronicleOf,
   cityTileOf,
+  dragBetween,
   dragOut,
   dragTiles,
   eastOf,
@@ -80,11 +81,7 @@ type Point = { x: number; y: number };
 
 /** Drags from a page point by a page offset, well past the slack that tells a drag from a click. */
 async function drag(page: Page, from: Point, by: Point): Promise<void> {
-  await page.mouse.move(from.x, from.y);
-  await page.mouse.down();
-  await page.mouse.move(from.x + by.x / 2, from.y + by.y / 2, { steps: 5 });
-  await page.mouse.move(from.x + by.x, from.y + by.y, { steps: 5 });
-  await page.mouse.up();
+  await dragBetween(page, from, { x: from.x + by.x, y: from.y + by.y });
   await rested(page);
 }
 

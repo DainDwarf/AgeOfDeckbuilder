@@ -4,7 +4,7 @@ import { countOn } from '../rules/chronicle';
 import type { Chronicle } from '../rules/state';
 import { MAP_FRAME } from './band';
 import type { Name } from './card-face';
-import { addText, onClick, type Stratum } from './design-space';
+import { addText, type Stratum } from './design-space';
 import { LOOK } from './look';
 import {
   drawRun,
@@ -35,9 +35,8 @@ export function createPinnedAchievement(
   chronicle: Chronicle,
   pin: string | undefined,
   small: SmallCards,
-  presses: { inspect: (name: Name) => void; unaim: () => void },
+  inspect: (name: Name) => void,
 ): { render(chronicle: Chronicle): void } {
-  const { inspect, unaim } = presses;
   const held = chronicle.achievements.find(
     ({ id }) => achievementOf(catalogue, chronicle.age, id).technology === pin,
   );
@@ -54,7 +53,6 @@ export function createPinnedAchievement(
     .setName('pinned-achievement');
   // Interactive, so no press reaches the map under it, and never marked as answering one.
   const stop = scene.add.zone(0, 0, PLATE_WIDTH, height).setOrigin(0, 0).setInteractive();
-  onClick(stop, unaim, 'left', 'within slack');
   const paper = paperOf(scene, PLATE_WIDTH, height, LOOK.panelFill);
   const { well } = createWell(scene, 'pinned-achievement');
   placeWell(well, { x: 0, y: 0, width: PLATE_WIDTH, height });
@@ -76,7 +74,7 @@ export function createPinnedAchievement(
     goal,
     { x: PAD_X, y: PAD_Y + NAME_LINE + TEXT_LINE / 2 },
     inner,
-    { over: (raiser, over) => small.over(over ? raiser : undefined), inspect, click: unaim },
+    { over: (raiser, over) => small.over(over ? raiser : undefined), inspect },
   );
   run.label.setName('pinned-achievement-goal');
   content.setName('pinned-achievement-face').setData('names', run.names);

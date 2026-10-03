@@ -19,7 +19,7 @@ import { leaf, type Stage, walked } from '../rules/stages';
 import { type Chronicle, type Cost, onSettlePhase, playable } from '../rules/state';
 import { unitOf } from '../rules/units';
 import { createBand } from './band';
-import { boundTo } from './bindings';
+import { boundTo, pressOf } from './bindings';
 import { CARD_BASELINE, CARD_HEIGHT, createKindBubble } from './card-face';
 import { EASE, ended, stopAllMotion, stopMotion } from './card-motion';
 import { offerEntries, resetConsole } from './debug-console';
@@ -37,13 +37,14 @@ import {
   type Stratum,
   stopsThePointer,
   stratumOf,
+  thingUnder,
   UI_FONT,
 } from './design-space';
 import { createHand } from './hand';
 import { cardsOf, createInfoPanel } from './infopanel';
 import { onKeyDown, onWheelNotches } from './keys';
 import { css, LOOK } from './look';
-import { createMapView, type PressedTile } from './map';
+import { createMapView, type MapAim, type PressedTile } from './map';
 import { mapOf } from './map-scene';
 import { type LeavesChronicles, raiseMenu, resetMenu } from './menu-scene';
 import { createOverlay } from './overlay';
@@ -189,9 +190,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
 
     const parts: Part[] = [];
     const view = createMapView(map, map.strata, CATALOGUE, this.current);
-    const panel = createInfoPanel(map, map.strata.infopanel, CATALOGUE, tooltip.map, () => {
-      hand.unaim();
-    });
+    const panel = createInfoPanel(map, map.strata.infopanel, CATALOGUE, tooltip.map);
     const note = createRefusalNote(map, map.strata.note);
     // The map's note hears only the presses this scene lets through to the map.
     this.input.on('pointerdown', note.hide);
@@ -412,20 +411,21 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
     const endTurn = this.addEndTurn(ui.endTurn, () => {
       void playOut({ type: 'end-turn' });
     });
+
+    /** The aim on the map a card being aimed stands on, and nothing while none does. */
+    let aimOnMap: MapAim | undefined;
+
     const hand = createHand(this, ui, faces, CATALOGUE, {
       play: (index, aimed) => {
         void playOut({ type: 'play', index, ...aimed });
       },
       dismiss,
       aimTile: (index, card, released) => {
-        // The aiming catcher lies under the hand and the piles, so the button is the one thing
-        // left on the UI that has to be dead for the length of the aim.
-        endTurn.live(false);
         // Nothing changes the chronicle while an aim stands, so the refusal it opens on is still the
         // rules' answer at the press that lands it, and no play is sent for one they would refuse.
         const { id } = this.current.hand[index];
         const refusal = refusalOf(CATALOGUE, this.current, id);
-        return view.aimTile(
+        aimOnMap = view.aimTile(
           admitted(CATALOGUE, this.current, card),
           (tile) => {
             if (!playable(refusal)) {
@@ -443,14 +443,13 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
             note.overTile(refusedAim(block), found.at);
           },
           () => {
-            endTurn.live(true);
+            aimOnMap = undefined;
             released();
           },
         );
+        return aimOnMap.letGo;
       },
       aimDiscardPile: (index, closed) => {
-        // The scrim the window stands on swallows the button, the hand and the piles along with the
-        // map, so nothing here has to be put down for the length of this aim.
         return overlay.aimDiscardPile(
           this.current,
           this.current.hand[index].id,
@@ -462,6 +461,56 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       },
       inspect: (card) => overlay.inspect(card),
       inspectNamed: (name) => overlay.inspectNamed(name),
+    });
+
+    /**
+     * The one door a left click takes while a card is being aimed: what stands over the map answers its
+     * own click ahead of it, a card of the hand every click on it, and the map's own press after it.
+     */
+    const clickedThroughAim = (on: Phaser.GameObjects.GameObject | undefined): void => {
+      if (on !== undefined && hand.owns(on)) return;
+      const click = view.clickOn(on);
+      switch (click.kind) {
+        case 'carried':
+          return;
+        case 'click':
+          if (aimOnMap === undefined) hand.unaim();
+          else aimOnMap.click(click.tile);
+          return;
+        case 'elsewhere':
+          hand.unaim();
+          return;
+      }
+      const unlisted: never = click;
+      throw new Error(`no click on the map is ${JSON.stringify(unlisted)}`);
+    };
+
+    /** What the left press held landed on, where it landed with a card being aimed. */
+    let aimPress: { readonly on: Phaser.GameObjects.GameObject | undefined } | undefined;
+    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      if (pressOf(pointer) !== 'left') return;
+      aimPress = undefined;
+      if (!hand.beingAimed()) return;
+      // After Phaser's dispatch of this press: a hit test inside it refills the list being walked
+      // (docs/PHASER.md).
+      queueMicrotask(() => {
+        aimPress = { on: thingUnder(this.game) };
+      });
+    });
+    this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
+      if (pressOf(pointer) !== 'left') return;
+      // After the map scene's dispatch of this release too, in which the map learns whether its press
+      // was a click.
+      queueMicrotask(() => {
+        const held = aimPress;
+        aimPress = undefined;
+        if (held === undefined) return;
+        const on = thingUnder(this.game);
+        if (on === held.on) clickedThroughAim(on);
+      });
+    });
+    this.input.on('pointerupoutside', () => {
+      aimPress = undefined;
     });
 
     const settleStanding = createStanding(this, ui.standing, {
@@ -509,7 +558,6 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
     };
 
     const bar = createResourceBar(this, ui.bar, CATALOGUE, tooltip.ui, {
-      unaim: hand.unaim,
       cityMode: enterCityMode,
       toggleYield: (resource) => {
         toggleYield(resource);
@@ -602,7 +650,6 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       createPiles(this, ui, CATALOGUE, faces, {
         browse: (pile) => overlay.browse(pile, this.current),
         inspectNamed: (name) => overlay.inspectNamed(name),
-        unaim: hand.unaim,
       }),
       hand,
       endTurn,
@@ -614,11 +661,8 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
         this.current,
         campaignHeld().pin,
         faces.small,
-        {
-          inspect: (name) => {
-            overlay.inspectNamed(name);
-          },
-          unaim: hand.unaim,
+        (name) => {
+          overlay.inspectNamed(name);
         },
       ),
       overlay,
@@ -627,7 +671,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
   }
 
   private addEndTurn(on: Stratum, endTurn: () => void): Part & { live(on: boolean): void } {
-    const button = answersPress(this.add.rectangle(0, 0, 1, 1, LOOK.button).setName('end-turn'));
+    const button = this.add.rectangle(0, 0, 1, 1, LOOK.button).setName('end-turn');
     const label = addText(this, 0, 0, '', LABEL_STYLE)
       .setOrigin(0.5, 0.5)
       .setName('end-turn-label');
@@ -649,30 +693,32 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
     const height = label.height + 24;
     const x = DESIGN_WIDTH - MARGIN - width / 2;
     const y = CARD_BASELINE - CARD_HEIGHT - 14 - height / 2;
-    button.setPosition(x, y).setSize(width, height);
+    // Interactive dead or live, so no press reaches the map under it.
+    button.setPosition(x, y).setSize(width, height).setInteractive();
     label.setPosition(x, y);
+
+    /** Whether the screen wants the button live, and whether the city it would end the turn of stands. */
+    let wanted = true;
+    let standing = false;
+    const live = (): boolean => wanted && standing;
+    answersPress(button, live);
 
     let turn = 1;
     let settlePhase = false;
     const paint = (): void => {
       button.setFillStyle(settlePhase ? LOOK.settlePhase : LOOK.button);
+      const hovered = hover.hovered && live();
       if (settlePhase) {
-        label.setText(text(hover.hovered ? 'button.end-settle-phase' : 'button.settle-phase'));
+        label.setText(text(hovered ? 'button.end-settle-phase' : 'button.settle-phase'));
         return;
       }
-      label.setText(hover.hovered ? text('button.end-turn') : text('button.turn', { turn }));
+      label.setText(hovered ? text('button.end-turn') : text('button.turn', { turn }));
     };
 
     const hover = onHover(button, paint, paint);
-    onClick(button, endTurn);
-
-    /** Whether the screen wants the button live, and whether the city it would end the turn of stands. */
-    let wanted = true;
-    let standing = false;
-    const interact = (): void => {
-      if (wanted && standing) button.setInteractive();
-      else button.disableInteractive();
-    };
+    onClick(button, () => {
+      if (live()) endTurn();
+    });
 
     /** The label a roll is carrying off the button; a render owns it and takes it down. */
     let leaving: Phaser.GameObjects.Text | undefined;
@@ -687,10 +733,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       label.setPosition(x, y).setAlpha(1);
       turn = chronicle.turn;
       settlePhase = onSettlePhase(chronicle);
-      if (standing !== (chronicle.city !== undefined)) {
-        standing = chronicle.city !== undefined;
-        interact();
-      }
+      standing = chronicle.city !== undefined;
       paint();
     };
 
@@ -722,10 +765,9 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       },
       live(on: boolean): void {
         wanted = on;
-        interact();
+        paint();
       },
     };
-    interact();
     return part;
   }
 }
