@@ -48,7 +48,7 @@ import {
 } from '../src/rules/save';
 import { addedToDrawPileTop } from '../src/rules/schedule';
 import { charted } from '../src/rules/sight';
-import { followed, unchanged } from '../src/rules/stages';
+import { type Aimed, followed, unchanged } from '../src/rules/stages';
 import { type CardId, type Chronicle, type ChronicleCard, playable } from '../src/rules/state';
 import { standsOn, type Unit, unitAt } from '../src/rules/units';
 import { type Bindings, STORED, serialiseControls, UPRIGHT } from '../src/ui/bindings';
@@ -150,10 +150,26 @@ export function settledOn(
 
 /** The chronicle the card at that place in the hand leaves, played on the tile; a refusal throws. */
 export function playedOn(chronicle: Chronicle, index: number, tile: TileCoords): Chronicle {
-  const played = outcome(apply(CATALOGUE, chronicle, { type: 'play', index, aim: 'tile', tile }));
+  return playedAs(chronicle, index, { aim: 'tile', tile });
+}
+
+/**
+ * The chronicle the card at that place in the hand leaves, played at the unit standing on the tile;
+ * a refusal throws.
+ */
+export function playedAtUnit(chronicle: Chronicle, index: number, tile: TileCoords): Chronicle {
+  return playedAs(chronicle, index, { aim: 'unit', tile });
+}
+
+function playedAs(
+  chronicle: Chronicle,
+  index: number,
+  aimed: Extract<Aimed, { readonly tile: TileCoords }>,
+): Chronicle {
+  const played = outcome(apply(CATALOGUE, chronicle, { type: 'play', index, ...aimed }));
   if (played === chronicle) {
     const card = chronicle.hand[index]?.id ?? `no card at ${index}`;
-    throw new Error(`seed ${chronicle.seed} refuses ${card} on ${tileKey(tile)}`);
+    throw new Error(`seed ${chronicle.seed} refuses ${card} on ${tileKey(aimed.tile)}`);
   }
   return played;
 }

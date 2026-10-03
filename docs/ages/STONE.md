@@ -19,9 +19,11 @@ A goal is practice: it is done with the cards of the technologies its technology
 - **Agriculture** needs Settlement. Its goal reads the chronicle as it stands: the plain tiles inside the border, the city's own tile counted when it stands on plain. It unlocks the card **Farm** and pays influence.
 - **Trapping** needs Settlement. Its goal counts a deed: the times Hunt is played, each a deer or a cattle removed from its tile. It unlocks the card **Trapping** and pays influence. Food gained through Gather on tiles carrying deer was rejected: one worker parked on one tile reaches it.
 - **Fire** needs Settlement. Its goal counts a deed: the turns on which as many cards were played as a hand is drawn to, a hazard paid for among them, each turn once however many more are played, and the settle phase never. It unlocks the card **Fire** and pays influence. Turns ended on an empty hand was rejected: the deck has no floor, and an empty deck ends every turn on one.
+- **Herbalism** needs Settlement. Its goal counts a deed: the kinds of terrain Gather is played on, each read as the tile stands when the card is played, a Gather that gains nothing counted like any other. It unlocks the card **Heal** and pays influence.
 
 ## The cards 🔧
 
 - **Farm**, a building on plain giving food, built through a worker for production, single use: the copies a deck holds are how many farms the city builds.
 - **Trapping**, an improvement giving food, placed through a worker for production on a tile carrying deer and nowhere else. It goes with the deer, so a Hunt played there removes both. An improvement counts wherever the tile is — inside the border at income, outside it through Gather.
 - **Fire**, an instant costing nothing, aimed at another card of the hand: that card is discarded and the city gains science. A hazard discarded so does not strike that turn, and comes around again. Science has its source here, and nothing in the age costs it.
+- **Heal**, an instant costing food, aimed at a unit standing inside the border, the city's own tile included: the unit is healed to full health and keeps its move points and its action, and a unit at full health is refused. Nothing else in the age heals. A heal that spends the unit's action was rejected: the food and the walk home are its price.

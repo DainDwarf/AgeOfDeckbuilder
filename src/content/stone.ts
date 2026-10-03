@@ -1,6 +1,15 @@
-import { builds, discarded, gained, placesImprovement } from '../rules/cards';
+import {
+  builds,
+  discarded,
+  firstRefusal,
+  gained,
+  healed,
+  healthLost,
+  inside,
+  placesImprovement,
+} from '../rules/cards';
 import type { Age, Slice } from '../rules/catalogue';
-import { turnsPlaying } from '../rules/chronicle';
+import { terrainsPlayedOn, turnsPlaying } from '../rules/chronicle';
 import { MOVE_POINT, tileAt } from '../rules/map';
 import { followed, plays } from '../rules/stages';
 import { NOMADIC } from './nomadic';
@@ -77,6 +86,12 @@ export const STONE: Slice = {
         influence: 1,
       },
       fire: { ...turnsPlaying(5), need: 3, technology: 'fire', influence: 1 },
+      herbalism: {
+        ...terrainsPlayedOn('gather'),
+        need: 4,
+        technology: 'herbalism',
+        influence: 1,
+      },
     },
   },
   brings: {
@@ -95,11 +110,20 @@ export const STONE: Slice = {
         effect: (_catalogue, paid, at) =>
           followed(discarded(paid, [at]), (left) => gained(left, { science: 1 })),
       },
+      heal: {
+        kind: 'instant',
+        cost: { food: 2 },
+        aim: 'unit',
+        refuses: (catalogue, chronicle, tile) =>
+          firstRefusal(inside(chronicle, tile), healthLost(catalogue, chronicle, tile)),
+        effect: (catalogue, paid, at) => healed(catalogue, paid, at),
+      },
     },
     technologies: {
       agriculture: { needs: ['settlement'], unlocks: { cards: { farm: 1 } } },
       trapping: { needs: ['settlement'], unlocks: { cards: { trapping: 1 } } },
       fire: { needs: ['settlement'], unlocks: { cards: { fire: 1 } } },
+      herbalism: { needs: ['settlement'], unlocks: { cards: { heal: 1 } } },
     },
     terrains: {
       desert: {
