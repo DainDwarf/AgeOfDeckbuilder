@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { expect, type Page } from '@playwright/test';
 import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
-import { type Campaign, paidInto } from '../src/rules/campaign';
+import { agesReached, type Campaign, paidInto } from '../src/rules/campaign';
 import {
   aimOf,
   type CardKind,
@@ -121,6 +121,13 @@ export type Era = { readonly age: string; readonly learned: readonly string[] };
 /** The first age the catalogue lists, nothing learned. */
 function firstEra(): Era {
   return { age: firstAge(CATALOGUE), learned: [] };
+}
+
+/** The second age the campaign has reached, and the technologies it has learned. */
+export function secondEra(campaign: Campaign): Era {
+  const [, age] = agesReached(CATALOGUE, campaign);
+  if (age === undefined) throw new Error('the campaign has reached no second age');
+  return { age, learned: campaign.technologies };
 }
 
 /**
@@ -1060,15 +1067,16 @@ export function admits(chronicle: Chronicle, index: number, at: TileCoords): boo
 }
 
 /**
- * The first seed's turn 1 on the Nomadic content, its city settled bare, whose hand holds a card
- * `such` holds of, and where that card lies; `named` tails the complaint when no seed does.
+ * The first seed's turn 1 in the era's age, the first unless given, its city settled bare, whose hand
+ * holds a card `such` holds of, and where it lies; `named` tails the complaint when no seed does.
  */
 export function bareWith(
   named: string,
   such: (card: Judged) => boolean,
+  era = firstEra(),
 ): { chronicle: Chronicle; index: number } {
-  return firstSeed(`opens turn 1 on ${named}`, (seed) => {
-    const chronicle = settledOn(seed);
+  return firstSeed(`opens the ${era.age} age’s turn 1 on ${named}`, (seed) => {
+    const chronicle = settledOn(seed, [], undefined, era);
     const index = inHand(chronicle, such);
     return index === -1 ? undefined : { chronicle, index };
   });

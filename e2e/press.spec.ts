@@ -1,5 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
+import { pinned, unpinnable } from '../src/rules/campaign';
+import { achievementOf } from '../src/rules/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
 import { tileKey } from '../src/rules/map';
 import type { Chronicle } from '../src/rules/state';
@@ -9,11 +11,14 @@ import {
   aimed,
   aimLine,
   bareAimable,
+  bareWith,
   besideTheCards,
   browse,
   cardOnFace,
   chronicleOf,
   cityTileOf,
+  click,
+  cursorAt,
   dragOut,
   endedTurn,
   firstSeed,
@@ -27,15 +32,20 @@ import {
   openSaved,
   overflowingPiles,
   playedOut,
+  readings,
   rested,
+  ringedTile,
   scrolled,
+  secondEra,
   selected,
   settledOn,
   shownCard,
+  shows,
   standing,
   tilePlayable,
   watch,
   wheel,
+  wonCampaign,
   workerStepped,
 } from './chronicle-screen';
 
@@ -546,6 +556,70 @@ test('a click beside the tiles lets the card being aimed go, as it drops a selec
   await page.mouse.click(frame.x + 10, frame.y + 10);
 
   await expect.poll(() => standing(page, 'aim')).toBe(false);
+  await expect.poll(() => selected(page, index, home)).toBe(false);
+  expect(await chronicleOf(page)).toEqual(opened);
+
+  expect(problems).toEqual([]);
+});
+
+test('a click on the resource bar lets the card being aimed go and lands as on a clean screen: nothing on its bare ground, and the yield latched on a yield reading', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const { chronicle: opened, index } = bareAimable();
+
+  await openSaved(page, opened);
+  const home = await onScreen(page, `hand-${index}`);
+  // Food is the bar's first reading: its bare ground runs from the bar's left end to that zone.
+  const seen = await readings(page, ['resource-bar', 'reading-food']);
+  const bar = seen('resource-bar').boundsOnScreen;
+  const food = seen('reading-food').boundsOnScreen;
+  const ground = { x: (bar.x + food.x) / 2, y: food.y + food.height / 2 };
+
+  await page.mouse.click(home.x, home.y);
+  await aimed(page);
+  expect(await cursorAt(page, ground)).toBe('');
+  await page.mouse.click(ground.x, ground.y);
+  await expect.poll(() => standing(page, 'aim')).toBe(false);
+  await expect.poll(() => selected(page, index, home)).toBe(false);
+  expect(await chronicleOf(page)).toEqual(opened);
+
+  await page.mouse.click(home.x, home.y);
+  await aimed(page);
+  await click(page, 'reading-food');
+  await expect.poll(() => standing(page, 'aim')).toBe(false);
+  expect(await shows(page, 'reading-food-well')).toBe(true);
+  await expect.poll(() => selected(page, index, home)).toBe(false);
+  expect(await chronicleOf(page)).toEqual(opened);
+
+  expect(problems).toEqual([]);
+});
+
+test('a click on the pinned achievement lets the card being aimed go and reaches no tile under it', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const won = wonCampaign();
+  const era = secondEra(won);
+  const { chronicle: opened, index } = bareWith(
+    'a card aimed at a tile the city can pay for',
+    tilePlayable,
+    era,
+  );
+  const pin = opened.achievements
+    .map(({ id }) => achievementOf(CATALOGUE, opened.age, id).technology)
+    .find((technology) => unpinnable(CATALOGUE, technology, won.technologies) === undefined);
+  if (pin === undefined)
+    throw new Error(`the ${era.age} age reads no achievement of a pinnable technology`);
+
+  await openSaved(page, opened, pinned(CATALOGUE, won, pin));
+  const home = await onScreen(page, `hand-${index}`);
+
+  await page.mouse.click(home.x, home.y);
+  await aimed(page);
+  await click(page, 'pinned-achievement-name');
+  await expect.poll(() => standing(page, 'aim')).toBe(false);
+  expect(await ringedTile(page)).toBeUndefined();
   await expect.poll(() => selected(page, index, home)).toBe(false);
   expect(await chronicleOf(page)).toEqual(opened);
 

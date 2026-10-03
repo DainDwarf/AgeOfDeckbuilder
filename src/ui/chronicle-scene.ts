@@ -506,16 +506,17 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       return true;
     };
 
-    const bar = createResourceBar(
-      this,
-      ui.bar,
-      CATALOGUE,
-      tooltip.ui,
-      enterCityMode,
-      (resource) => {
+    const unaim = (): void => {
+      hand.unaim();
+    };
+
+    const bar = createResourceBar(this, ui.bar, CATALOGUE, tooltip.ui, {
+      unaim,
+      cityMode: enterCityMode,
+      toggleYield: (resource) => {
         toggleYield(resource);
       },
-    );
+    });
 
     /**
      * The resources the yield overlay shows, empty while it is off. It is a display and not a mode:
@@ -614,8 +615,11 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
         this.current,
         campaignHeld().pin,
         faces.small,
-        (name) => {
-          overlay.inspectNamed(name);
+        {
+          inspect: (name) => {
+            overlay.inspectNamed(name);
+          },
+          unaim,
         },
       ),
       overlay,

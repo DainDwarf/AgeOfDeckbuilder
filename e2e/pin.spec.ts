@@ -1,7 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
 import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
-import { agesReached, available, type Campaign, pinned, unpinned } from '../src/rules/campaign';
+import { available, pinned, unpinned } from '../src/rules/campaign';
 import { gained } from '../src/rules/cards';
 import { achievementOf, cardOf, firstAge } from '../src/rules/catalogue';
 import { apply, countOn, outcome } from '../src/rules/chronicle';
@@ -16,7 +16,6 @@ import {
   chronicleOf,
   click,
   dragOut,
-  type Era,
   firstSeed,
   idsOf,
   onDeer,
@@ -27,6 +26,7 @@ import {
   pressed,
   readings,
   readNames,
+  secondEra,
   settledOn,
   standing,
   textOf,
@@ -48,13 +48,6 @@ const PARTS = [
   'pinned-achievement-count',
   'pinned-achievement-well',
 ] as const;
-
-/** The second age the campaign has reached, and the technologies it has learned. */
-function secondEra(campaign: Campaign): Era {
-  const [, age] = agesReached(CATALOGUE, campaign);
-  if (age === undefined) throw new Error('the campaign has reached no second age');
-  return { age, learned: campaign.technologies };
-}
 
 /** The row of the chronicle's achievement that earns the technology; one it does not read throws. */
 function rowOf(chronicle: Chronicle, technology: string): ChronicleAchievement {
