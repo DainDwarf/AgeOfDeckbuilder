@@ -106,7 +106,7 @@ const WINDOWS: Record<
   'launch-warning': { title: 'navbar.chronicle', lines: ['launch.warning'], buttons: ['back'] },
 };
 
-/** Lines read off the save, stacked tight under the line heading them. */
+/** Lines stacked tight under the line heading them. */
 export type Listed = { readonly heading: TextKey; readonly lines: readonly string[] };
 
 /**
@@ -437,7 +437,7 @@ function layWindow(
   const over = [...(shape.lines ?? []), ...(said.over === undefined ? [] : [said.over])].map(
     (key) => lineOf(scene, key),
   );
-  const listed =
+  const list =
     said.listed === undefined
       ? []
       : [
@@ -448,15 +448,15 @@ function layWindow(
               .setName(`${which}-listed-${index}`),
           ),
         ];
-  const listedHeight =
-    listed.length === 0 ? 0 : PADDING + listed.reduce((sum, line) => sum + line.height, 0);
+  const listHeight =
+    list.length === 0 ? 0 : PADDING + list.reduce((sum, line) => sum + line.height, 0);
   const under = said.under === undefined ? [] : [lineOf(scene, said.under)];
 
   const height =
     2 * PADDING +
     title.height +
     linesHeight(over) +
-    listedHeight +
+    listHeight +
     bodyHeight(which, buttons.length) +
     linesHeight(under);
   const top = Math.round((DESIGN_HEIGHT - height) / 2);
@@ -472,8 +472,8 @@ function layWindow(
     line.setPosition(middle, y + PADDING);
     y += PADDING + line.height;
   }
-  if (listed.length > 0) y += PADDING;
-  for (const line of listed) {
+  if (list.length > 0) y += PADDING;
+  for (const line of list) {
     line.setPosition(middle, y);
     y += line.height;
   }
@@ -484,7 +484,7 @@ function layWindow(
     y += PADDING + line.height;
   }
 
-  const root = scene.add.container(0, 0, [box, title, ...over, ...listed, ...under]).setName(which);
+  const root = scene.add.container(0, 0, [box, title, ...over, ...list, ...under]).setName(which);
   buttons.forEach(({ name, reads, pressed }, index) => {
     const { face, label } = createButton(
       scene,
