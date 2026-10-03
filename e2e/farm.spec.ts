@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
 import { gained } from '../src/rules/cards';
-import { cardOf, civilizationOf, firstCivilization } from '../src/rules/catalogue';
+import { cardOf } from '../src/rules/catalogue';
 import { apply, outcome, refusalOf } from '../src/rules/chronicle';
 import { cultureThreshold } from '../src/rules/city';
 import { neighbours, type TileCoords, tileKey } from '../src/rules/map';
@@ -21,6 +21,7 @@ import {
   settledOn,
   unitEntered,
   watch,
+  withCard,
 } from './chronicle-screen';
 
 /** The card that builds the farm. */
@@ -32,8 +33,7 @@ const FARM = 'farm';
  * entered there, the farm's aim admitting the tile.
  */
 function farmAdmitted(): { chronicle: Chronicle; tile: TileCoords; index: number } {
-  const first = civilizationOf(CATALOGUE, firstCivilization(CATALOGUE));
-  const civilization = { ...first, cards: [...first.cards, FARM] };
+  const civilization = withCard(FARM);
   const { cost } = cardOf(CATALOGUE, FARM);
   return firstSeed('opens turn 1 on a farm to build beside the city', (seed) => {
     const opened = settledOn(seed, [], civilization);

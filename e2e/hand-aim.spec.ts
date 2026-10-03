@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
 import { aimOf } from '../src/rules/cards';
-import { cardOf, civilizationOf, firstCivilization } from '../src/rules/catalogue';
+import { cardOf } from '../src/rules/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
 import type { Chronicle } from '../src/rules/state';
 import { cardName, text } from '../src/ui/text';
@@ -18,6 +18,7 @@ import {
   settledOn,
   standing,
   watch,
+  withCard,
 } from './chronicle-screen';
 
 /** The card of the catalogue aimed at the hand. */
@@ -35,8 +36,7 @@ const AIMED = (() => {
  * and where the first other card of the hand lies.
  */
 function aimableAtHand(): { opened: Chronicle; card: number; other: number } {
-  const first = civilizationOf(CATALOGUE, firstCivilization(CATALOGUE));
-  const civilization = { ...first, cards: [...first.cards, AIMED] };
+  const civilization = withCard(AIMED);
   return firstSeed('opens turn 1 on the card aimed at the hand, playable', (seed) => {
     const opened = settledOn(seed, [], civilization);
     const card = inHand(opened, ({ aim, playable }) => aim === 'hand' && playable);

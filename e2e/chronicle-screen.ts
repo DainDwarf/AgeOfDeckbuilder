@@ -3,7 +3,14 @@ import { expect, type Page } from '@playwright/test';
 import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
 import { type Campaign, paidInto } from '../src/rules/campaign';
-import { aimOf, type CardKind, gained } from '../src/rules/cards';
+import {
+  aimOf,
+  type CardKind,
+  featurePlaced,
+  gained,
+  improvementPlaced,
+  terraformed,
+} from '../src/rules/cards';
 import {
   type Aim,
   ageOf,
@@ -26,9 +33,11 @@ import {
   runsAlong,
   type Tile,
   type TileCoords,
+  tileAt,
   tileKey,
   tileYield,
 } from '../src/rules/map';
+import { featureKind, improvementKind } from '../src/rules/map-kinds';
 import { RESOURCES, type Resource, type Resources } from '../src/rules/resources';
 import {
   type ChronicleSave,
@@ -39,6 +48,7 @@ import {
 } from '../src/rules/save';
 import { addedToDrawPileTop } from '../src/rules/schedule';
 import { charted } from '../src/rules/sight';
+import { followed, unchanged } from '../src/rules/stages';
 import { type CardId, type Chronicle, type ChronicleCard, playable } from '../src/rules/state';
 import { standsOn, type Unit, unitAt } from '../src/rules/units';
 import { type Bindings, STORED, serialiseControls, UPRIGHT } from '../src/ui/bindings';
@@ -1227,6 +1237,39 @@ export function workerStepped(
 /** The chronicle with the unit entered as every unit card enters one, and charted as a command is. */
 export function unitEntered(chronicle: Chronicle, entering: Entering): Chronicle {
   return charted(CATALOGUE, entered(CATALOGUE, chronicle, entering).chronicle);
+}
+
+/** The card that places the improvement, and the improvement it places. */
+export const TRAPPING = 'trapping';
+
+/** The first civilization the catalogue lists, with one copy of the card added to its cards. */
+export function withCard(card: CardId): Civilization {
+  const first = civilizationOf(CATALOGUE, firstCivilization(CATALOGUE));
+  return { ...first, cards: [...first.cards, card] };
+}
+
+/**
+ * The chronicle with the first tile beside the city made the terrain of the feature Trapping names,
+ * that feature and the improvements named placed on it, and a worker entered there.
+ */
+export function onDeer(
+  chronicle: Chronicle,
+  improvements: readonly string[],
+): { chronicle: Chronicle; tile: TileCoords } {
+  const { feature } = improvementKind(CATALOGUE, TRAPPING);
+  if (feature === undefined) throw new Error(`${TRAPPING} names no feature`);
+  const { terrain } = featureKind(CATALOGUE, feature);
+  const [tile] = neighbours(cityTileOf(chronicle));
+  let ground =
+    tileAt(chronicle.tiles, tile)?.terrain === terrain
+      ? unchanged(chronicle)
+      : terraformed(CATALOGUE, chronicle, tile, terrain);
+  ground = followed(ground, (left) => featurePlaced(CATALOGUE, left, tile, feature));
+  for (const improvement of improvements) {
+    ground = followed(ground, (left) => improvementPlaced(CATALOGUE, left, tile, improvement));
+  }
+  const worked = unitEntered(ground.chronicle, { type: 'worker', faction: 'player', tile });
+  return { chronicle: worked, tile };
 }
 
 /**

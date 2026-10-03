@@ -347,13 +347,14 @@ export function catalogued(content: Catalogue): Catalogue {
       if (layer.movementCost !== undefined && layer.movementCost < 1) {
         refuse(content, `the ${noun} ${id} names a movement cost of ${layer.movementCost}`);
       }
-      if (layer.feature === undefined) continue;
-      const { terrain } = featureKind(content, layer.feature);
-      if (!layer.terrains.includes(terrain)) {
-        refuse(
-          content,
-          `the ${noun} ${id} names the feature ${layer.feature}, which lies on ${terrain}, a terrain it does not name`,
-        );
+      if (layer.feature !== undefined) {
+        const { terrain } = featureKind(content, layer.feature);
+        if (!layer.terrains.includes(terrain)) {
+          refuse(
+            content,
+            `the ${noun} ${id} names the feature ${layer.feature}, which lies on ${terrain}, a terrain it does not name`,
+          );
+        }
       }
     }
   }

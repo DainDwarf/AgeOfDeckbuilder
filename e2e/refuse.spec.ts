@@ -13,19 +13,23 @@ import {
   chronicleOf,
   cityTileOf,
   dragOut,
+  firstSeed,
   inHand,
   type Judged,
   mapFrame,
   type OnScreen,
+  onDeer,
   onScreen,
   openSaved,
   refusalLines,
   rested,
   selected,
+  settledOn,
   standing,
+  TRAPPING,
   waitGameClock,
   watch,
-  workerStepped,
+  withCard,
 } from './chronicle-screen';
 
 function reasons(chronicle: Chronicle, id: CardId): Said {
@@ -145,11 +149,21 @@ test('a press on a lit tile the city cannot pay for says the cost over it, and t
 }) => {
   const problems = watch(page);
   const unpaid = ({ aim, playable }: Judged): boolean => aim === 'tile' && !playable;
-  const { stepped: aiming, tile } = workerStepped(
-    'steps its first worker onto a tile a card aimed at a tile the city cannot pay for admits',
-    (stepped, at) => admits(stepped, inHand(stepped, unpaid), at),
+  const civilization = withCard(TRAPPING);
+  const {
+    chronicle: aiming,
+    tile,
+    index,
+  } = firstSeed(
+    'opens turn 1 on a card aimed at a tile the city cannot pay for, admitting the deer its worker stands on',
+    (seed) => {
+      const opened = settledOn(seed, [], civilization);
+      if (inHand(opened, unpaid) === -1) return undefined;
+      const ground = onDeer(opened, []);
+      const at = inHand(ground.chronicle, unpaid);
+      return admits(ground.chronicle, at, ground.tile) ? { ...ground, index: at } : undefined;
+    },
   );
-  const index = inHand(aiming, unpaid);
 
   await openSaved(page, aiming);
   const card = await onScreen(page, `hand-${index}`);

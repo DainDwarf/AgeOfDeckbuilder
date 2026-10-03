@@ -1,21 +1,20 @@
 import { expect, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
-import { featurePlaced, gained, improvementPlaced, terraformed } from '../src/rules/cards';
-import { cardOf, civilizationOf, firstCivilization } from '../src/rules/catalogue';
-import { type FeatureId, neighbours, type TileCoords, tileAt, tileKey } from '../src/rules/map';
-import { featureKind, improvementKind } from '../src/rules/map-kinds';
-import { followed, unchanged } from '../src/rules/stages';
+import { gained } from '../src/rules/cards';
+import { cardOf } from '../src/rules/catalogue';
+import { type TileCoords, tileKey } from '../src/rules/map';
+import { improvementKind } from '../src/rules/map-kinds';
 import type { CardId, Chronicle } from '../src/rules/state';
 import { improvementName } from '../src/ui/text';
 import {
   aimed,
   chronicleOf,
-  cityTileOf,
   click,
   dragOut,
   firstSeed,
   idsOf,
   marksIn,
+  onDeer,
   openSaved,
   panelRows,
   playedOn,
@@ -23,57 +22,35 @@ import {
   ringedTile,
   settledOn,
   shownCard,
-  unitEntered,
+  TRAPPING,
   watch,
+  withCard,
 } from './chronicle-screen';
-
-/** The card that places the improvement, and the improvement it places. */
-const TRAPPING = 'trapping';
 
 /** The card that removes the feature. */
 const HUNT = 'hunt';
-
-/** The feature the trapping goes on. */
-function deer(): FeatureId {
-  const { feature } = improvementKind(CATALOGUE, TRAPPING);
-  if (feature === undefined) throw new Error(`${TRAPPING} names no feature`);
-  return feature;
-}
 
 /** A turn 1 whose worker stands on the deer beside the city, a card in the hand and paid for. */
 type Paid = { readonly chronicle: Chronicle; readonly tile: TileCoords; readonly index: number };
 
 /**
- * The first seed's turn 1 with the card in hand and a copy of Trapping in the first civilization's
- * deck: the first tile beside the city made the deer's terrain, the deer and the improvements named
- * placed on it, a worker entered there and the card paid for.
+ * The first seed's turn 1 with the card in hand and a copy of Trapping in the deck, on the deer the
+ * improvements named are placed on, with the card paid for.
  */
-function onDeer(card: CardId, improvements: readonly string[]): Paid {
-  const first = civilizationOf(CATALOGUE, firstCivilization(CATALOGUE));
-  const civilization = { ...first, cards: [...first.cards, TRAPPING] };
-  const feature = deer();
-  const { terrain } = featureKind(CATALOGUE, feature);
+function paidOnDeer(card: CardId, improvements: readonly string[]): Paid {
+  const civilization = withCard(TRAPPING);
   return firstSeed(`opens turn 1 on ${card} in hand`, (seed) => {
     const opened = settledOn(seed, [], civilization);
     if (!idsOf(opened.hand).includes(card)) return undefined;
-    const [tile] = neighbours(cityTileOf(opened));
-    let ground =
-      tileAt(opened.tiles, tile)?.terrain === terrain
-        ? unchanged(opened)
-        : terraformed(CATALOGUE, opened, tile, terrain);
-    ground = followed(ground, (left) => featurePlaced(CATALOGUE, left, tile, feature));
-    for (const improvement of improvements) {
-      ground = followed(ground, (left) => improvementPlaced(CATALOGUE, left, tile, improvement));
-    }
-    ground = followed(ground, (left) => gained(left, cardOf(CATALOGUE, card).cost));
-    const chronicle = unitEntered(ground.chronicle, { type: 'worker', faction: 'player', tile });
+    const { chronicle: worked, tile } = onDeer(opened, improvements);
+    const chronicle = gained(worked, cardOf(CATALOGUE, card).cost).chronicle;
     return { chronicle, tile, index: idsOf(chronicle.hand).indexOf(card) };
   });
 }
 
 test('the trapping card places trapping on the deer the worker stands on', async ({ page }) => {
   const problems = watch(page);
-  const paid = onDeer(TRAPPING, []);
+  const paid = paidOnDeer(TRAPPING, []);
   const placed = playedOn(paid.chronicle, paid.index, paid.tile);
 
   await openSaved(page, paid.chronicle);
@@ -92,7 +69,7 @@ test('the tile trapping was placed on inspects trapping on a card of its own, be
   page,
 }) => {
   const problems = watch(page);
-  const paid = onDeer(TRAPPING, []);
+  const paid = paidOnDeer(TRAPPING, []);
 
   await openSaved(page, playedOn(paid.chronicle, paid.index, paid.tile));
 
@@ -122,7 +99,7 @@ test('the hunt card played on a trapped deer removes the deer and the trapping w
   page,
 }) => {
   const problems = watch(page);
-  const paid = onDeer(HUNT, [TRAPPING]);
+  const paid = paidOnDeer(HUNT, [TRAPPING]);
   const hunted = playedOn(paid.chronicle, paid.index, paid.tile);
 
   await openSaved(page, paid.chronicle);
