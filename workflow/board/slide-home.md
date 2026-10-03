@@ -2,7 +2,7 @@
 
 **Line:** **A unit and a population slide home** — a unit or a population dragged and let go off where it lands slides home as fast as a card of the hand does, whatever let it go; `e2e/map.spec.ts` is green. Doc-impact: none — the first line says it.
 
-**Spec:** [`../BRANCH.md`](../BRANCH.md), _The design_; on the pages, `docs/INTERFACE.md` _The presses_, "let go anywhere else, a thing standing over where it would land included, it slides home, as fast whatever it is, and nothing changes". No sentence is added or changed, and no player-facing entry.
+**Spec:** [`../BRANCH.md`](../BRANCH.md), _The design_; on the pages, `docs/INTERFACE.md` _The presses_, "let go anywhere else, a thing standing over where it would land included, it comes home, as fast whatever it is, and nothing changes". No sentence is added or changed, and no player-facing entry.
 
 **Doc-impact:** none — the first line of the branch says it.
 
