@@ -1,34 +1,31 @@
 import type Phaser from 'phaser';
+import type { Campaign } from '../rules/campaign';
 import { type Achievement, type Catalogue, technologyOf } from '../rules/catalogue';
 import { type Control, type Press, pressOf } from './bindings';
 import { createKindBubble, type Name } from './card-face';
-import {
-  addText,
-  answersPress,
-  dragged,
-  MARGIN,
-  onClick,
-  onHover,
-  ownBoxOf,
-  UI_FONT,
-} from './design-space';
+import { addText, answersPress, dragged, MARGIN, onClick, UI_FONT } from './design-space';
 import { onHeldKeys } from './keys';
 import { css, LOOK } from './look';
 import { groundColourOf } from './marks';
 import { ROOM, type Worn } from './navbar';
+import {
+  drawRun,
+  linesOf,
+  NAME_LINE,
+  NAME_STYLE,
+  PAD_X,
+  PAD_Y,
+  paperOf,
+  type RunNames,
+  TEXT_LINE,
+  TEXT_STYLE,
+} from './plate';
 import { createWell, placeWell, SUNK } from './resource-bar';
 import { PAN_SPEED } from './scroll';
 import { createSmallCards, type Raiser } from './small-card';
-import { achievementGoal, ageName, referenceName, technologyName, text } from './text';
-import { layOutRun, type Run } from './text-run';
-import { layOutTree, PLATE_WIDTH, type Plate, type PlateState, stopped, WASH } from './tree-layout';
+import { achievementGoal, ageName, technologyName, text } from './text';
+import { layOutTree, PLATE_WIDTH, type Plate, stopped, WASH } from './tree-layout';
 
-const INK = css(LOOK.ink);
-const TEXT_SIZE = 14;
-/** A glyph a run marks, corner to corner. */
-const GLYPH = (2 / 3) * TEXT_SIZE;
-const NAME_STYLE = { fontFamily: UI_FONT, fontSize: '16px', fontStyle: 'bold', color: INK };
-const TEXT_STYLE = { fontFamily: UI_FONT, fontSize: `${TEXT_SIZE}px`, color: INK };
 const LABEL_STYLE = { fontFamily: UI_FONT, fontSize: '11px', color: css(LOOK.faintInk) };
 const UNKNOWN_STYLE = { ...NAME_STYLE, color: css(LOOK.unknownInk) };
 const AGE_STYLE = {
@@ -38,11 +35,7 @@ const AGE_STYLE = {
   color: css(LOOK.paleInk),
 };
 
-/** A plate's inside: the padding round its lines, how far apart they stand, and the labels' gutter. */
-const PAD_X = 12;
-const PAD_Y = 8;
-const NAME_LINE = 22;
-const TEXT_LINE = 18;
+/** The gutter between a plate's labels and what they label. */
 const LABEL_GAP = 8;
 
 /** The influence's diamond, and how far the number stands off the start of its line. */
@@ -106,52 +99,23 @@ function readingsOf(catalogue: Catalogue): Map<string, Reading> {
   return readings;
 }
 
-/** An entry drawn as a run wrapped at that width, its names and glyphs where the run stands them. */
-function addRun(
-  scene: Phaser.Scene,
-  entry: string,
-  width: number,
-): { label: Phaser.GameObjects.Text; run: Run } {
-  // Phaser runs the callback from inside updateText, on a context whose font it has just synced.
-  let run!: Run;
-  const label = addText(scene, 0, 0, entry, {
-    ...TEXT_STYLE,
-    wordWrap: {
-      callback: (content, textObject) => {
-        const measure = (drawn: string): number => textObject.context.measureText(drawn).width;
-        run = layOutRun(
-          content,
-          measure,
-          {
-            width,
-            glyph: GLYPH,
-            bearing: TEXT_SIZE / 4,
-            space: measure(' '),
-          },
-          referenceName,
-        );
-        return run.content.split('\n');
-      },
-    },
-  });
-  return { label, run };
-}
-
 export type TreeView = {
   /** A scrim risen over the screen, or the last fallen. */
   cover(under: boolean): void;
 };
 
 /**
- * The technology tree in the room the navbar and the bar leave, for a campaign holding these
- * technologies learned; a right click on a name of a plate hands `inspect` what it names.
+ * The technology tree in the room the navbar and the bar leave, for the campaign; a right click on a
+ * name of a plate hands `inspect` what it names, and a left click on an available plate hands `pinMoved`
+ * the technology the pin moves to, nothing where it is taken off.
  */
 export function createTree(
   scene: Phaser.Scene,
   { bubbles, tooltip }: Worn,
   catalogue: Catalogue,
-  learned: readonly string[],
+  { technologies: learned, pin: pinnedAtOpening }: Pick<Campaign, 'technologies' | 'pin'>,
   inspect: (name: Name) => void,
+  pinMoved: (technology: string | undefined) => void,
 ): TreeView {
   const readings = readingsOf(catalogue);
   const labelColumn = (() => {
@@ -165,13 +129,10 @@ export function createTree(
   })();
   const goalWidth = PLATE_WIDTH - 2 * PAD_X - labelColumn;
   /** How many lines a plate reads under the name: the goal's, then the reward's, one at least. */
-  const linesOf = ({ goal, reward }: Reading): number => {
-    const { label, run } = addRun(scene, goal, goalWidth);
-    label.destroy();
-    return run.widths.length + Math.max(1, reward.length);
-  };
+  const plateLines = ({ goal, reward }: Reading): number =>
+    linesOf(scene, goal, goalWidth) + Math.max(1, reward.length);
   const plateHeight =
-    2 * PAD_Y + NAME_LINE + TEXT_LINE * Math.max(...[...readings.values()].map(linesOf));
+    2 * PAD_Y + NAME_LINE + TEXT_LINE * Math.max(...[...readings.values()].map(plateLines));
   const tree = layOutTree(catalogue, learned, plateHeight, { ...ROOM, margin: MARGIN });
 
   // Under the navbar and the bar, which cover it as it slides.
@@ -228,22 +189,47 @@ export function createTree(
     else small.over(hovered);
   };
 
-  const backingOf = (state: PlateState, id: string): Phaser.GameObjects.GameObject => {
-    const paper = (fill: number): Phaser.GameObjects.Rectangle =>
-      scene.add
-        .rectangle(0, 0, PLATE_WIDTH, plateHeight, fill)
-        .setOrigin(0, 0)
-        .setStrokeStyle(1, LOOK.panelEdge);
+  /** The technology pinned, and the edge each available plate wears while its technology is. */
+  let pinnedTechnology = pinnedAtOpening;
+  const edges = new Map<string, Phaser.GameObjects.Rectangle>();
+  const edge = (technology: string | undefined, on: boolean): void => {
+    if (technology === undefined) return;
+    edges.get(technology)?.setVisible(on);
+  };
+  const press = (technology: string): void => {
+    const next = technology === pinnedTechnology ? undefined : technology;
+    edge(pinnedTechnology, false);
+    edge(next, true);
+    pinnedTechnology = next;
+    pinMoved(next);
+  };
+
+  /** The plate's backing: sunk in a well, or its paper, which an available plate's press lands on. */
+  const backingOf = (plate: Plate, id: string): Phaser.GameObjects.GameObject[] => {
+    const { technology, state } = plate;
     switch (state) {
       case 'learned': {
         const { well } = createWell(scene, id);
         placeWell(well, { x: 0, y: 0, width: PLATE_WIDTH, height: plateHeight });
-        return well;
+        return [well];
       }
-      case 'available':
-        return paper(LOOK.panelFill);
+      case 'available': {
+        const paper = answersPress(
+          paperOf(scene, PLATE_WIDTH, plateHeight, LOOK.panelFill).setInteractive(),
+        );
+        // The tree's drag begins on the scene's own press: one that dragged it ends on a plate.
+        onClick(paper, () => press(technology), 'left', 'within slack');
+        const shown = scene.add
+          .rectangle(0, 0, PLATE_WIDTH, plateHeight)
+          .setOrigin(0, 0)
+          .setStrokeStyle(2, LOOK.pin)
+          .setName(`${id}-pin`)
+          .setVisible(false);
+        edges.set(technology, shown);
+        return [paper, shown];
+      }
       case 'unknown':
-        return paper(LOOK.unknownFill);
+        return [paperOf(scene, PLATE_WIDTH, plateHeight, LOOK.unknownFill)];
     }
   };
 
@@ -255,7 +241,7 @@ export function createTree(
     const names: Name[] = [];
     face.setData('names', names);
 
-    face.add(backingOf(state, id));
+    face.add(backingOf(plate, id));
     if (state === 'unknown') {
       face.add(
         addText(scene, PLATE_WIDTH / 2, plateHeight / 2, text('plate.unknown'), UNKNOWN_STYLE)
@@ -289,78 +275,31 @@ export function createTree(
       );
     };
 
+    const answers: RunNames = {
+      over: (raiser, on) => {
+        if (on) hovered = raiser;
+        else if (hovered === raiser) hovered = undefined;
+        if (!carrying) small.over(on ? raiser : undefined);
+      },
+      inspect,
+      click: state === 'available' ? () => press(technology) : undefined,
+    };
     /** An entry drawn as a run from that line down, wrapped at that width; how many lines it took. */
-    const drawRun = (entry: string, line: number, named: string, width: number): number => {
-      const { label: drawn, run } = addRun(scene, entry, width);
-      const pitch = ownBoxOf(drawn).height / run.widths.length;
-      const middleOf = (at: number): number => lineMiddle(line) + at * pitch;
-      drawn
-        .setOrigin(0, 0.5)
-        .setPosition(values, middleOf((run.widths.length - 1) / 2))
-        .setName(named);
-      face.add(drawn);
-      const { x: start } = ownBoxOf(drawn);
-      const centreOf = (at: number): number => start + run.widths[at] / 2;
-      for (const glyph of run.glyphs) {
-        const side = GLYPH / Math.SQRT2;
-        face.add(
-          scene.add
-            .rectangle(
-              centreOf(glyph.line) + glyph.x,
-              middleOf(glyph.line),
-              side,
-              side,
-              LOOK.reading[glyph.resource],
-            )
-            .setAngle(45),
-        );
-      }
-      for (const { reference, from, to, line: on } of run.names) {
-        const each: Name = {
-          reference,
-          reading: {},
-          x: centreOf(on) + (from + to) / 2,
-          y: middleOf(on),
-          width: to - from,
-          height: pitch,
-        };
-        names.push(each);
-        const raiser: Raiser = {
-          name: each,
-          where: () => {
-            const at = face.getWorldTransformMatrix().transformPoint(each.x, each.y);
-            return { x: at.x, top: at.y - each.height / 2, bottom: at.y + each.height / 2 };
-          },
-        };
-        const zone = answersPress(
-          scene.add.zone(each.x, each.y, each.width, each.height).setInteractive(),
-        );
-        onHover(
-          zone,
-          () => {
-            hovered = raiser;
-            if (!carrying) small.over(raiser);
-          },
-          () => {
-            if (hovered === raiser) hovered = undefined;
-            if (!carrying) small.over(undefined);
-          },
-        );
-        // The name travels with the tree: a press that dragged it is released on it.
-        onClick(zone, () => inspect(each), 'right', 'within slack');
-        face.add(zone);
-      }
-      return run.widths.length;
+    const run = (entry: string, line: number, named: string, width: number): number => {
+      const drawn = drawRun(scene, face, entry, { x: values, y: lineMiddle(line) }, width, answers);
+      drawn.label.setName(named);
+      names.push(...drawn.names);
+      return drawn.lines;
     };
 
     label('plate.goal', 0, 'goal');
-    const under = drawRun(reading.goal, 0, `${id}-goal`, goalWidth);
+    const under = run(reading.goal, 0, `${id}-goal`, goalWidth);
     label('plate.reward', under, 'reward');
     const rewardLine = (line: RewardLine, at: number): void => {
       const named = `${id}-reward-${at}`;
       switch (line.kind) {
         case 'run':
-          drawRun(line.entry, under + at, named, Number.POSITIVE_INFINITY);
+          run(line.entry, under + at, named, Number.POSITIVE_INFINITY);
           return;
         case 'influence': {
           const middle = lineMiddle(under + at);
@@ -379,6 +318,7 @@ export function createTree(
     for (const [at, line] of reading.reward.entries()) rewardLine(line, at);
   };
   for (const plate of tree.plates) drawPlate(plate);
+  edge(pinnedTechnology, true);
 
   let scroll = tree.opening;
   const place = (): void => {

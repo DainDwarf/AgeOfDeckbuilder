@@ -175,7 +175,7 @@ function ledgerOf(
   reached.forEach(({ technology, influence }, at) => {
     const achievement = technologyName(technology);
     parts.push(
-      addText(scene, left, y, text('ending.reached', { achievement }), style(false))
+      addText(scene, left, y, text('achievement.reached', { achievement }), style(false))
         .setOrigin(0, 0.5)
         .setName(`ending-row-${at}`),
     );

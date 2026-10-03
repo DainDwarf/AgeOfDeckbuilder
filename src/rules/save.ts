@@ -7,6 +7,7 @@ import {
   newCampaign,
   type Payment,
   paidInto,
+  unpinnable,
 } from './campaign';
 import {
   achievementOf,
@@ -264,6 +265,8 @@ function campaignOf(
     id: string(catalogue, item),
   }));
   const influence = count(catalogue, field('influence'), slot, (held) => `holds ${held} influence`);
+  const pinSlot = field('pin');
+  const pin = optional(pinSlot, (item) => string(catalogue, item));
 
   dealtOnce(
     catalogue,
@@ -283,6 +286,13 @@ function campaignOf(
         : undefined;
     if (stands(item, misfit)) learned.push(technology);
   }
+
+  const unpinnableAs = pin === undefined ? undefined : unpinnable(catalogue, pin, learned);
+  const pinHeld =
+    pin !== undefined &&
+    stands(pinSlot, unpinnableAs === undefined ? undefined : `names ${unpinnableAs}`)
+      ? { pin }
+      : {};
 
   const owned = new Map<number, CardId>();
   for (const { slot: item, card } of collection) {
@@ -343,6 +353,7 @@ function campaignOf(
       nextCard,
       collection: collection.flatMap(({ card }) => (owned.has(card.number) ? [card] : [])),
       civilizations: Object.fromEntries(held),
+      ...pinHeld,
     },
     dropped,
   };

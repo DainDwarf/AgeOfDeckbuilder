@@ -9,6 +9,9 @@ const STROKE = 8;
 /** How far the chip stands clear of the stroke's inner edge, above it and to its right. */
 const CLEAR = 16;
 
+/** How far the chip stands in from the map's top edge and from its right one. */
+export const CHIP_INSET = STROKE + CLEAR;
+
 /** How far the chip's fill reaches past its label, sideways and down. */
 const PADDING = { x: 40, y: 10 };
 
@@ -64,8 +67,8 @@ export function createStanding(scene: Phaser.Scene, on: Stratum, stood: Stood): 
 
   const width = label.width + PADDING.x;
   const height = label.height + PADDING.y;
-  const x = MAP_FRAME.x + MAP_FRAME.width - STROKE - CLEAR - width;
-  const y = MAP_FRAME.y + STROKE + CLEAR;
+  const x = MAP_FRAME.x + MAP_FRAME.width - CHIP_INSET - width;
+  const y = MAP_FRAME.y + CHIP_INSET;
   chip.setPosition(x, y).setSize(width, height);
   label.setPosition(x + width / 2, y + height / 2);
 

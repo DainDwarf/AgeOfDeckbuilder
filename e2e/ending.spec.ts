@@ -71,7 +71,7 @@ test('the play that ends the chronicle pays it into the campaign: the ending scr
   for (const [at, id] of paid.achievements.entries()) {
     const { technology, influence } = achievementOf(CATALOGUE, won.age, id);
     expect(await textOf(page, `ending-row-${at}`)).toBe(
-      text('ending.reached', { achievement: technologyName(technology) }),
+      text('achievement.reached', { achievement: technologyName(technology) }),
     );
     expect(await textOf(page, `ending-row-${at}-influence`)).toBe(
       influence > 0 ? String(influence) : undefined,

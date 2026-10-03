@@ -90,7 +90,7 @@ function readingsOf(catalogue: Catalogue, chronicle: Chronicle): string[] {
       : text('launch.turn', { turn: chronicle.turn }),
     ...chronicle.achievements
       .filter(({ reached }) => reached)
-      .map(({ id }) => text('launch.reached', { achievement: named(id) })),
+      .map(({ id }) => text('achievement.reached', { achievement: named(id) })),
   ];
 }
 

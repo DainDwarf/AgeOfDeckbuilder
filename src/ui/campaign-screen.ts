@@ -1,11 +1,12 @@
 import Phaser from 'phaser';
 import { CATALOGUE } from '../content/catalogue';
+import { pinned, unpinned } from '../rules/campaign';
 import { offerEntries } from './debug-console';
 import { awayUnder, COVERED, holdDesignSpace } from './design-space';
 import { backRaisesMenu, resetMenu } from './menu-scene';
 import { wearNavbar } from './navbar';
 import { overlayOf } from './overlay-scene';
-import { campaignHeld } from './save-entry';
+import { campaignHeld, keepCampaign } from './save-entry';
 import { standLarge } from './stack';
 import { createTree } from './tree';
 
@@ -24,7 +25,12 @@ export class CampaignScreen extends Phaser.Scene {
     const large = standLarge(overlay, CATALOGUE, (up) => {
       tree.cover(away('overlay', up));
     });
-    const tree = createTree(this, worn, CATALOGUE, campaignHeld().technologies, large.named);
+    const tree = createTree(this, worn, CATALOGUE, campaignHeld(), large.named, (technology) => {
+      const campaign = campaignHeld();
+      keepCampaign(
+        technology === undefined ? unpinned(campaign) : pinned(CATALOGUE, campaign, technology),
+      );
+    });
     offerEntries(this, { seed: undefined, veiled: undefined });
     resetMenu(this, (under) => {
       tree.cover(away('menu', under));

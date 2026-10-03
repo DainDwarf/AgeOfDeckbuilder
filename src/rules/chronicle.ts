@@ -322,6 +322,15 @@ function conditionsRead(
   return [...read, ...tallied, ...reachedOn(catalogue, standing, keepsTally)];
 }
 
+/** The count of an achievement of the chronicle's row, read on the chronicle beside its tally. */
+export function countOn(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  { id, tally }: ChronicleAchievement,
+): number {
+  return achievementOf(catalogue, chronicle.age, id).count(catalogue, chronicle, tally);
+}
+
 /**
  * A `reached` for each achievement of the row not yet reached, among those `reads` admits, that its
  * count meets on the chronicle, in the order of the row, each carrying the record of the ones before
@@ -334,11 +343,11 @@ function reachedOn(
 ): Change[] {
   const raised: Change[] = [];
   let standing = chronicle;
-  for (const [at, { id, reached, tally }] of chronicle.achievements.entries()) {
-    if (reached) continue;
-    const achievement = achievementOf(catalogue, standing.age, id);
+  for (const [at, held] of chronicle.achievements.entries()) {
+    if (held.reached) continue;
+    const achievement = achievementOf(catalogue, standing.age, held.id);
     if (!reads(achievement)) continue;
-    if (achievement.count(catalogue, standing, tally) < achievement.need) continue;
+    if (countOn(catalogue, standing, held) < achievement.need) continue;
     standing = {
       ...standing,
       achievements: standing.achievements.map((held, other) =>

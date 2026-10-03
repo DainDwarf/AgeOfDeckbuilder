@@ -41,6 +41,8 @@ export type Campaign = {
   readonly collection: readonly CampaignCard[];
   /** The civilizations the campaign owns, by name; it never holds none. */
   readonly civilizations: Readonly<Record<string, CampaignCivilization>>;
+  /** The technology the campaign pins, where it pins one. */
+  readonly pin?: string;
 };
 
 /** A technology the catalogue does not hold is refused. */
@@ -51,6 +53,35 @@ export function available(
 ): boolean {
   if (learned.includes(technology)) return false;
   return technologyOf(catalogue, technology).needs.every((need) => learned.includes(need));
+}
+
+/**
+ * What keeps a technology from being pinned beside the technologies learned, named as what it is, and
+ * nothing for an available technology.
+ */
+export function unpinnable(
+  catalogue: Catalogue,
+  technology: string,
+  learned: readonly string[],
+): string | undefined {
+  if (!Object.hasOwn(catalogue.technologies, technology)) return `no technology ${technology}`;
+  if (learned.includes(technology)) return `the learned technology ${technology}`;
+  return available(catalogue, technology, learned)
+    ? undefined
+    : `the unknown technology ${technology}`;
+}
+
+/** The campaign pinning the technology, in place of any it pinned; one not available is refused. */
+export function pinned(catalogue: Catalogue, campaign: Campaign, technology: string): Campaign {
+  const misfit = unpinnable(catalogue, technology, campaign.technologies);
+  if (misfit !== undefined) refuse(catalogue, `the pin names ${misfit}`);
+  return { ...campaign, pin: technology };
+}
+
+/** The campaign pinning nothing. */
+export function unpinned(campaign: Campaign): Campaign {
+  const { pin: _, ...rest } = campaign;
+  return rest;
 }
 
 /**
@@ -263,9 +294,9 @@ export type Payment = {
 };
 
 /**
- * An ended chronicle paid into the campaign, achievement by achievement in the chronicle's order. A
- * chronicle that has not ended, and an achievement reached whose technology is already learned, are
- * refused.
+ * An ended chronicle paid into the campaign, achievement by achievement in the chronicle's order, and
+ * the pin taken off a technology it learns. A chronicle that has not ended, and an achievement reached
+ * whose technology is already learned, are refused.
  */
 export function paidInto(catalogue: Catalogue, campaign: Campaign, chronicle: Chronicle): Payment {
   checkContent(catalogue, chronicle);
@@ -293,14 +324,18 @@ export function paidInto(catalogue: Catalogue, campaign: Campaign, chronicle: Ch
     influence += achievement.influence;
     nextCard = cards.nextCard;
   }
+  const paid: Campaign = {
+    ...campaign,
+    technologies,
+    influence,
+    nextCard,
+    collection: [...campaign.collection, ...entered],
+  };
   return {
-    campaign: {
-      ...campaign,
-      technologies,
-      influence,
-      nextCard,
-      collection: [...campaign.collection, ...entered],
-    },
+    campaign:
+      paid.pin === undefined || unpinnable(catalogue, paid.pin, technologies) === undefined
+        ? paid
+        : unpinned(paid),
     influence: influence - campaign.influence,
     achievements,
     technologies: learned,

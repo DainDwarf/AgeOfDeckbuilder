@@ -14,7 +14,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The pinned achievement** — a left click on an available technology's plate pins it, the pin kept in the save, and a chronicle that reads the pinned technology's achievement shows it in the map's top left corner: the technology's name, its goal, its count over its need, a check mark once reached; `e2e/pin.spec.ts` is green. Doc-impact: `docs/GLOSSARY.md`, `docs/META.md`, `docs/META-SCREENS.md`, `docs/CHRONICLE-SCREEN.md`, `docs/INTERFACE.md`. [board/pinned-achievement.md](board/pinned-achievement.md)
 - **The launch warning** — the warning a launch over a chronicle with achievements reached raises, since an abandoned chronicle pays nothing.
 - **The tree's columns** — re-thinking either how the tree is put in columns, or how the tree is displayed in general: the skeleton's next column holds seven technologies, and seven plates need 776 units of the room's 672 at today's plate height, more once a goal wraps.
 - **The field's climb** — Irrigation, Grinding stone and Bread, each technology with its achievement and every card it unlocks.

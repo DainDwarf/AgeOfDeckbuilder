@@ -2,6 +2,7 @@ import { expect, test } from 'vitest';
 import {
   addedTo,
   agesReached,
+  available,
   bought,
   type Campaign,
   type CampaignCard,
@@ -9,18 +10,22 @@ import {
   dealt,
   newCampaign,
   paidInto,
+  pinned,
   priceOf,
   removedFrom,
+  unpinned,
 } from './campaign';
 import { achievementOf, ageOf, type Civilization, cardAge, technologyOf } from './catalogue';
 import { apply, outcome } from './chronicle';
 import {
   AGE,
   CATALOGUE,
+  CENSUS,
   CIVILIZATION,
   CIVILIZATION_ID,
   cityOf,
   field,
+  GRANARY,
   HOARD,
   HOARD_NEED,
   hoardedVictory,
@@ -169,6 +174,56 @@ test('a chronicle that has not ended is refused its payment', () => {
   expect(() => paidInto(CATALOGUE, newCampaign(CATALOGUE, CIVILIZATION_ID), running)).toThrow(
     'fixture: a chronicle that has not ended pays nothing',
   );
+});
+
+/** An available technology of the campaign other than `GRANARY`, which `HOARD` earns. */
+function besideGranary(campaign: Campaign): string {
+  const technology = Object.keys(CATALOGUE.technologies).find(
+    (held) => held !== GRANARY && available(CATALOGUE, held, campaign.technologies),
+  );
+  if (technology === undefined)
+    throw new Error('the campaign has no available technology beside GRANARY');
+  return technology;
+}
+
+test('a campaign pins an available technology, a second pin moves it, and the pin is taken off; a technology learned, one unknown and one the catalogue does not hold are pinned by nothing', () => {
+  const opened = newCampaign(CATALOGUE, CIVILIZATION_ID);
+  const other = besideGranary(opened);
+  const { campaign: paid } = paidInto(CATALOGUE, opened, hoardedVictory());
+
+  const first = pinned(CATALOGUE, opened, GRANARY);
+  const moved = pinned(CATALOGUE, first, other);
+
+  expect(first).toEqual({ ...opened, pin: GRANARY });
+  expect(moved).toEqual({ ...opened, pin: other });
+  expect(unpinned(moved)).toStrictEqual(opened);
+  expect(paid.technologies).toContain(GRANARY);
+  expect(() => pinned(CATALOGUE, paid, GRANARY)).toThrow(
+    `fixture: the pin names the learned technology ${GRANARY}`,
+  );
+  expect(() => pinned(CATALOGUE, opened, CENSUS)).toThrow(
+    `fixture: the pin names the unknown technology ${CENSUS}`,
+  );
+  expect(() => pinned(CATALOGUE, opened, 'PH_Unheld')).toThrow(
+    'fixture: the pin names no technology PH_Unheld',
+  );
+});
+
+test('an ended chronicle that learns the pinned technology leaves nothing pinned, and one that learns another leaves the pin standing', () => {
+  const opened = newCampaign(CATALOGUE, CIVILIZATION_ID);
+  const other = besideGranary(opened);
+  const won = hoardedVictory();
+  const { campaign } = paidInto(CATALOGUE, opened, won);
+
+  expect(campaign.technologies).toContain(GRANARY);
+  expect(campaign.technologies).not.toContain(other);
+  expect(paidInto(CATALOGUE, pinned(CATALOGUE, opened, GRANARY), won).campaign).toStrictEqual(
+    campaign,
+  );
+  expect(paidInto(CATALOGUE, pinned(CATALOGUE, opened, other), won).campaign).toEqual({
+    ...campaign,
+    pin: other,
+  });
 });
 
 test('a new campaign has reached the first age alone', () => {

@@ -30,6 +30,7 @@ export type Look = {
   readonly pileCount: number;
   readonly selected: number;
   readonly selectedEdge: number;
+  readonly pin: number;
   readonly thresholdInk: number;
   readonly settlePhase: number;
   readonly panelFill: number;
@@ -96,6 +97,7 @@ export const LOOK: Look = {
   pileCount: 0xd9a441,
   selected: 0xf2f6ff,
   selectedEdge: 0x0d1014,
+  pin: 0xf2f6ff,
   thresholdInk: 0xf2f6ff,
   settlePhase: 0x9fbb3a,
   panelFill: 0xd4d7db,

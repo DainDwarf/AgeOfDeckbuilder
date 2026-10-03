@@ -5,6 +5,7 @@ import {
   FIRST_CARD_NUMBER,
   newCampaign,
   paidInto,
+  pinned,
 } from './campaign';
 import { catalogued } from './catalogue';
 import { apply, type Command, outcome } from './chronicle';
@@ -12,10 +13,12 @@ import {
   AGE,
   achievementIn,
   CATALOGUE,
+  CENSUS,
   CIVILIZATION,
   CIVILIZATION_ID,
   chronicleSaved,
   FROST,
+  GRANARY,
   HOARD,
   hoardedVictory,
   QUIET,
@@ -538,6 +541,36 @@ test('a technology the catalogue does not bring, or one named a second time, is 
       `fixture: the save's campaign.technologies[${at}] names no technology PH_Unheld`,
       `fixture: the save's campaign.technologies[${at + 1}] names the technology ${technology} a second time`,
     ],
+  });
+});
+
+test('a campaign’s pin writes as a save and reads back', () => {
+  const held = pinned(CATALOGUE, campaign(), CENSUS);
+
+  expect(readSave(CATALOGUE, writeSave(CATALOGUE, held))).toEqual({
+    campaign: held,
+    chronicle: undefined,
+    dropped: [],
+  });
+});
+
+test('a pin naming a technology the catalogue does not hold, one learned or one unknown is dropped with its reason, and the rest stands', () => {
+  const held = campaign();
+  const read = (change: object): ReturnType<typeof campaignRead> =>
+    campaignRead(campaignTampered((written) => ({ ...written, ...change })));
+
+  expect(held.technologies).toContain(GRANARY);
+  expect(read({ pin: 'PH_Unheld' })).toEqual({
+    campaign: held,
+    dropped: ["fixture: the save's campaign.pin names no technology PH_Unheld"],
+  });
+  expect(read({ pin: GRANARY })).toEqual({
+    campaign: held,
+    dropped: [`fixture: the save's campaign.pin names the learned technology ${GRANARY}`],
+  });
+  expect(read({ technologies: [], pin: CENSUS })).toEqual({
+    campaign: { ...held, technologies: [] },
+    dropped: [`fixture: the save's campaign.pin names the unknown technology ${CENSUS}`],
   });
 });
 

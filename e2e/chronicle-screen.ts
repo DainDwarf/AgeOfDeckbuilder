@@ -115,19 +115,27 @@ export function firstsOf(): { age: string; region: string; civilization: string 
   };
 }
 
+/** The age a chronicle is launched in, and the technologies learned it reads its achievements by. */
+export type Era = { readonly age: string; readonly learned: readonly string[] };
+
+/** The first age the catalogue lists, nothing learned. */
+function firstEra(): Era {
+  return { age: firstAge(CATALOGUE), learned: [] };
+}
+
 /**
- * A chronicle launched from a seed in the first age the catalogue lists, on that age's first region
- * and the catalogue's first civilization, or the civilization given.
+ * A chronicle launched from a seed in the era's age, the first age the catalogue lists with nothing
+ * learned unless one is given, on that age's first region and the catalogue's first civilization, or
+ * the civilization given.
  */
-export function launchedOn(seed: number, civilization?: Civilization): Chronicle {
-  const firsts = firstsOf();
+export function launchedOn(seed: number, civilization?: Civilization, era = firstEra()): Chronicle {
   return launched(
     CATALOGUE,
-    firsts.age,
-    firsts.region,
+    era.age,
+    firstRegion(CATALOGUE, era.age),
     seed,
-    civilization ?? civilizationOf(CATALOGUE, firsts.civilization),
-    [],
+    civilization ?? civilizationOf(CATALOGUE, firstCivilization(CATALOGUE)),
+    era.learned,
   );
 }
 
@@ -140,8 +148,9 @@ export function settledOn(
   seed: number,
   onCity: readonly CardId[] = [],
   civilization?: Civilization,
+  era = firstEra(),
 ): Chronicle {
-  let settling = playedOn(launchedOn(seed, civilization), 0, CENTRE);
+  let settling = playedOn(launchedOn(seed, civilization, era), 0, CENTRE);
   const city = cityTileOf(settling);
   for (const card of onCity)
     settling = playedOn(settling, idsOf(settling.hand).indexOf(card), city);
@@ -388,11 +397,15 @@ export async function reading(page: Page, name: string): Promise<Reading> {
 }
 
 /**
- * The chronicle kept as the save the next page this one loads finds, beside a new campaign on the
- * first civilization; a save the reading would refuse throws here.
+ * The chronicle kept as the save the next page this one loads finds, beside the campaign, a new one
+ * on the first civilization unless one is given; a save the reading would refuse throws here.
  */
-export async function plant(page: Page, save: ChronicleSave): Promise<void> {
-  await kept(page, writeSave(CATALOGUE, freshCampaign(CATALOGUE), save));
+export async function plant(
+  page: Page,
+  save: ChronicleSave,
+  campaign = freshCampaign(CATALOGUE),
+): Promise<void> {
+  await kept(page, writeSave(CATALOGUE, campaign, save));
 }
 
 /**
@@ -522,13 +535,18 @@ export async function continued(page: Page): Promise<void> {
 }
 
 /**
- * Opens the chronicle as the save the boot finds, on the first region and civilization the
- * catalogue lists, and closes the capstone's window every resumed chronicle opens under.
+ * Opens the chronicle as the save the boot finds, on its age's first region and the first
+ * civilization the catalogue lists, beside the campaign `plant` keeps it beside, and closes the
+ * capstone's window every resumed chronicle opens under.
  */
-export async function openSaved(page: Page, chronicle: Chronicle): Promise<void> {
-  const { region, civilization } = firstsOf();
+export async function openSaved(
+  page: Page,
+  chronicle: Chronicle,
+  campaign?: Campaign,
+): Promise<void> {
+  const region = firstRegion(CATALOGUE, chronicle.age);
   await readNames(page);
-  await plant(page, { chronicle, region, civilization });
+  await plant(page, { chronicle, region, civilization: firstCivilization(CATALOGUE) }, campaign);
   await continued(page);
   await expect.poll(() => standing(page, 'capstone')).toBe(true);
   await rested(page);

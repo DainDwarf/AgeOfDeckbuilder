@@ -49,6 +49,7 @@ import { type LeavesChronicles, raiseMenu, resetMenu } from './menu-scene';
 import { createOverlay } from './overlay';
 import { overlayAhead, overlayOf } from './overlay-scene';
 import { createPiles } from './piles';
+import { createPinnedAchievement } from './pinned-achievement';
 import { refused, refusedAim } from './refusal-lines';
 import { createRefusalNote } from './refusal-note';
 import { createResourceBar } from './resource-bar';
@@ -151,6 +152,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
     const ui = {
       band: stratum(),
       standing: stratum(),
+      pinned: stratum(),
       /** The piles and the resting cards of the hand. */
       resting: stratum(),
       bar: stratum(),
@@ -605,6 +607,17 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       hand,
       endTurn,
       { render: showSettleStanding },
+      createPinnedAchievement(
+        this,
+        ui.pinned,
+        CATALOGUE,
+        this.current,
+        campaignHeld().pin,
+        faces.small,
+        (name) => {
+          overlay.inspectNamed(name);
+        },
+      ),
       overlay,
     );
     paint();
