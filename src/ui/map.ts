@@ -1759,7 +1759,6 @@ export function createMapView(
           case 'unit':
             break;
           case 'assigned':
-            slideHome(grabbed);
             grabbed = undefined;
             break;
         }
