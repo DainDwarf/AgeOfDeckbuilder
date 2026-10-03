@@ -88,7 +88,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **fog** | A tile seen before and out of sight now. | fog of war, shroud, dimmed, remembered |
 | **charted** | A tile that has been in sight, in sight now or in fog. | explored, revealed, discovered, known, seen (of a tile's state) |
 | **uncharted** | A tile never yet in sight. | unexplored, unrevealed, black, hidden |
-| **instant** | A card with an immediate effect: on the city, on a tile, or one thing with one unit. | action (for a card), spell, effect card |
+| **instant** | A card with an immediate effect. | action (for a card), spell, effect card |
 | **hazard** | A card no deck holds: an event adds it to a chronicle's piles, and it strikes while held. | penalty, curse, drawback, upkeep, affliction, bane |
 | **strike** | What a hazard does to the chronicle at the end of a turn it is still in the hand. | bite, trigger, proc, go off |
 | **worker** | A non-fighting unit that cards are played through to change tiles: build, terraform, place an improvement. | builder, engineer, labourer |
