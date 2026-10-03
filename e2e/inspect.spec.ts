@@ -19,11 +19,16 @@ import { featureName, text } from '../src/ui/text';
 import {
   besideTiles,
   cityTileOf,
+  dragSlack,
   firstSeed,
+  marked,
   onScreen,
+  onTheBand,
   openSaved,
   panelMovement,
   panelRows,
+  reading,
+  readings,
   rested,
   ringedTile,
   settledOn,
@@ -373,6 +378,44 @@ test('a right click inspects and never selects, shows no browser menu, and the i
   await page.keyboard.press('i');
   await expect.poll(() => shownCard(page)).toBe('building');
   expect(await ringedTile(page)).toBe(cityTile);
+
+  expect(problems).toEqual([]);
+});
+
+test('a right press let go on the infopanel inspects nothing new, and a right click on the band drops the inspection and leaves the selection standing', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const chronicle = settledOn(1);
+  const cityTile = tileKey(cityTileOf(chronicle));
+  const westTile = tileKey(westOf(cityTileOf(chronicle)));
+
+  await openSaved(page, chronicle);
+  const seen = await readings(page, [`tile-${cityTile}`, `tile-${westTile}`]);
+  const city = seen(`tile-${cityTile}`).onScreen;
+  const west = seen(`tile-${westTile}`).onScreen;
+  const band = await onTheBand(page);
+
+  await page.mouse.click(city.x, city.y);
+  await expect.poll(() => ringedTile(page)).toBe(cityTile);
+
+  // The infopanel stands east of the tile it reads, so it stands over part of the city's tile.
+  await page.mouse.click(west.x, west.y, { button: 'right' });
+  await expect.poll(() => shownCard(page)).toBeDefined();
+  await rested(page);
+  const inspected = await marked(page);
+
+  const quarter = (await dragSlack(page)) / 4;
+  const edge = (await reading(page, 'infopanel')).boundsOnScreen.x;
+  await page.mouse.move(edge - quarter, west.y);
+  await page.mouse.down({ button: 'right' });
+  await page.mouse.move(edge + quarter, west.y);
+  await page.mouse.up({ button: 'right' });
+  await answered(page);
+  expect(await marked(page)).toEqual(inspected);
+
+  await page.mouse.click(band.x, band.y, { button: 'right' });
+  await expect.poll(() => marked(page)).toEqual({ ...inspected, inspecting: undefined });
 
   expect(problems).toEqual([]);
 });

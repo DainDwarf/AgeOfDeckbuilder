@@ -13,13 +13,13 @@ import {
   type UnitCommand,
 } from '../rules/chronicle';
 import { cityCommand, type ReassignCommand, tileCost, tileRefusal } from '../rules/city';
-import { tileAt, tileKey } from '../rules/map';
+import { type TileCoords, tileAt, tileKey } from '../rules/map';
 import { RESOURCES, type Resource } from '../rules/resources';
 import { leaf, type Stage, walked } from '../rules/stages';
 import { type Chronicle, type Cost, onSettlePhase, playable } from '../rules/state';
 import { unitOf } from '../rules/units';
 import { createBand } from './band';
-import { boundTo } from './bindings';
+import { boundTo, type Press, pressOf } from './bindings';
 import { CARD_BASELINE, CARD_HEIGHT, createKindBubble } from './card-face';
 import { EASE, ended, stopAllMotion, stopMotion } from './card-motion';
 import { offerEntries, resetConsole } from './debug-console';
@@ -33,10 +33,12 @@ import {
   MARGIN,
   onClick,
   onHover,
+  onLetGoOffCanvas,
   type Scrim,
   type Stratum,
   stopsThePointer,
   stratumOf,
+  thingUnder,
   UI_FONT,
 } from './design-space';
 import { createHand } from './hand';
@@ -68,6 +70,23 @@ type Part = {
    */
   play?(stage: Stage): Promise<void> | undefined;
 };
+
+/** Where a press landed or was let go: on a thing, on a drawn tile, or beside the things. */
+type Place =
+  | { readonly kind: 'thing'; readonly on: Phaser.GameObjects.GameObject }
+  | { readonly kind: 'tile'; readonly tile: TileCoords }
+  | { readonly kind: 'beside' };
+
+function samePlace(one: Place, other: Place): boolean {
+  switch (one.kind) {
+    case 'thing':
+      return other.kind === 'thing' && other.on === one.on;
+    case 'tile':
+      return other.kind === 'tile' && tileKey(other.tile) === tileKey(one.tile);
+    case 'beside':
+      return other.kind === 'beside';
+  }
+}
 
 const LABEL_STYLE = {
   fontFamily: UI_FONT,
@@ -189,9 +208,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
 
     const parts: Part[] = [];
     const view = createMapView(map, map.strata, CATALOGUE, this.current);
-    const panel = createInfoPanel(map, map.strata.infopanel, CATALOGUE, tooltip.map, () => {
-      hand.unaim();
-    });
+    const panel = createInfoPanel(map, map.strata.infopanel, CATALOGUE, tooltip.map);
     const note = createRefusalNote(map, map.strata.note);
     // The map's note hears only the presses this scene lets through to the map.
     this.input.on('pointerdown', note.hide);
@@ -293,6 +310,12 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       view.markSelected(found?.tile, thresholdOn(found));
     };
 
+    /** The unit being aimed let go of: its tile selected no more, the inspection standing. */
+    const unaimUnit = (): void => {
+      selection = undefined;
+      view.markSelected(undefined, undefined);
+    };
+
     /**
      * One step of the inspection on a tile: the next of its cards in the infopanel, and after the
      * last of them the first again. The one place the infopanel is shown.
@@ -328,14 +351,14 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       }
       await playOut(command);
       if (this.playing) return;
-      select({ tile: found.tile, at: view.faceOf(found.tile) });
+      select(view.pressedOn(found.tile));
     };
 
     const commandUnit = async (command: UnitCommand): Promise<void> => {
       await playOut(command);
       if (this.playing) return;
       const on = unitOf(this.current.units, command.unit)?.tile;
-      if (on !== undefined) select({ tile: on, at: view.faceOf(on) });
+      if (on !== undefined) select(view.pressedOn(on));
     };
 
     /**
@@ -346,33 +369,21 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
     const reassign = async (command: ReassignCommand): Promise<void> => {
       await playOut(command);
       if (this.playing) return;
-      select({ tile: command.to, at: view.faceOf(command.to) });
+      select(view.pressedOn(command.to));
     };
 
     view.onPress(
-      (found, press) => {
-        switch (press) {
-          case 'right':
-            if (found === undefined) uninspect();
-            else inspect(found);
-            return;
-          case 'left':
-            if (
-              found === undefined ||
-              selection === undefined ||
-              tileKey(found.tile) !== tileKey(selection.tile)
-            ) {
-              select(found);
-              return;
-            }
-            if (cityMode) void act(found);
-            else if (
-              this.current.city !== undefined &&
-              tileKey(found.tile) === tileKey(this.current.city)
-            ) {
-              enterCityMode();
-            }
-            return;
+      (found) => {
+        if (selection === undefined || tileKey(found.tile) !== tileKey(selection.tile)) {
+          select(found);
+          return;
+        }
+        if (cityMode) void act(found);
+        else if (
+          this.current.city !== undefined &&
+          tileKey(found.tile) === tileKey(this.current.city)
+        ) {
+          enterCityMode();
         }
       },
       () => {
@@ -412,15 +423,13 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
     const endTurn = this.addEndTurn(ui.endTurn, () => {
       void playOut({ type: 'end-turn' });
     });
+
     const hand = createHand(this, ui, faces, CATALOGUE, {
       play: (index, aimed) => {
         void playOut({ type: 'play', index, ...aimed });
       },
       dismiss,
       aimTile: (index, card, released) => {
-        // The aiming catcher lies under the hand and the piles, so the button is the one thing
-        // left on the UI that has to be dead for the length of the aim.
-        endTurn.live(false);
         // Nothing changes the chronicle while an aim stands, so the refusal it opens on is still the
         // rules' answer at the press that lands it, and no play is sent for one they would refuse.
         const { id } = this.current.hand[index];
@@ -442,15 +451,10 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
             if (block === undefined) return;
             note.overTile(refusedAim(block), found.at);
           },
-          () => {
-            endTurn.live(true);
-            released();
-          },
+          released,
         );
       },
       aimDiscardPile: (index, closed) => {
-        // The scrim the window stands on swallows the button, the hand and the piles along with the
-        // map, so nothing here has to be put down for the length of this aim.
         return overlay.aimDiscardPile(
           this.current,
           this.current.hand[index].id,
@@ -509,7 +513,6 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
     };
 
     const bar = createResourceBar(this, ui.bar, CATALOGUE, tooltip.ui, {
-      unaim: hand.unaim,
       cityMode: enterCityMode,
       toggleYield: (resource) => {
         toggleYield(resource);
@@ -539,6 +542,93 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       yields = yields.size > 0 ? new Set() : new Set(RESOURCES);
       showYields();
     };
+
+    // Read outside Phaser's dispatch: a hit test inside it refills the list being walked
+    // (docs/PHASER.md).
+    const placeUnder = (): { readonly place: Place; readonly onMap: boolean } => {
+      const on = thingUnder(this.game);
+      const onMap = view.placeOf(on);
+      if (onMap !== undefined) {
+        const { tile } = onMap;
+        return {
+          place: tile === undefined ? { kind: 'beside' } : { kind: 'tile', tile },
+          onMap: true,
+        };
+      }
+      if (on === undefined || bar.isPaper(on)) return { place: { kind: 'beside' }, onMap: false };
+      return { place: { kind: 'thing', on }, onMap: false };
+    };
+
+    /** The one door every left click takes, after the thing it lands on has answered its own. */
+    const leftClicked = (place: Place): void => {
+      switch (place.kind) {
+        case 'thing':
+          if (hand.owns(place.on)) return;
+          hand.unaim();
+          if (view.unitBeingAimed()) unaimUnit();
+          return;
+        case 'tile':
+          view.click(place.tile);
+          return;
+        case 'beside':
+          dismiss();
+          return;
+      }
+      const unlisted: never = place;
+      throw new Error(`no place is ${JSON.stringify(unlisted)}`);
+    };
+
+    /** The one door every right click takes, after the thing it lands on has answered its own. */
+    const rightClicked = (place: Place): void => {
+      switch (place.kind) {
+        case 'thing':
+          return;
+        case 'tile':
+          inspect(view.pressedOn(place.tile));
+          return;
+        case 'beside':
+          uninspect();
+          return;
+      }
+      const unlisted: never = place;
+      throw new Error(`no place is ${JSON.stringify(unlisted)}`);
+    };
+
+    /** Where each press held landed, and whether on the map. */
+    const landings = new Map<Press, { readonly place: Place; readonly onMap: boolean }>();
+    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      const press = pressOf(pointer);
+      if (press === undefined) return;
+      queueMicrotask(() => {
+        landings.set(press, placeUnder());
+      });
+    });
+    this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
+      const press = pressOf(pointer);
+      if (press === undefined) return;
+      // After the map scene's dispatch of this release too, in which the map lets go of what its press
+      // took hold of.
+      queueMicrotask(() => {
+        const from = landings.get(press);
+        landings.delete(press);
+        if (from === undefined || (from.onMap && view.carried(press))) return;
+        const to = placeUnder();
+        if (!samePlace(from.place, to.place)) return;
+        switch (press) {
+          case 'left':
+            leftClicked(to.place);
+            return;
+          case 'right':
+            rightClicked(to.place);
+            return;
+        }
+        const unlisted: never = press;
+        throw new Error(`no press is ${JSON.stringify(unlisted)}`);
+      });
+    });
+    onLetGoOffCanvas(this, (press) => {
+      landings.delete(press);
+    });
 
     // On this scene and not the map's: this one stops the pointer over the hand and the bar, where
     // the wheel still zooms.
@@ -602,7 +692,6 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       createPiles(this, ui, CATALOGUE, faces, {
         browse: (pile) => overlay.browse(pile, this.current),
         inspectNamed: (name) => overlay.inspectNamed(name),
-        unaim: hand.unaim,
       }),
       hand,
       endTurn,
@@ -614,11 +703,8 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
         this.current,
         campaignHeld().pin,
         faces.small,
-        {
-          inspect: (name) => {
-            overlay.inspectNamed(name);
-          },
-          unaim: hand.unaim,
+        (name) => {
+          overlay.inspectNamed(name);
         },
       ),
       overlay,
@@ -627,7 +713,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
   }
 
   private addEndTurn(on: Stratum, endTurn: () => void): Part & { live(on: boolean): void } {
-    const button = answersPress(this.add.rectangle(0, 0, 1, 1, LOOK.button).setName('end-turn'));
+    const button = this.add.rectangle(0, 0, 1, 1, LOOK.button).setName('end-turn');
     const label = addText(this, 0, 0, '', LABEL_STYLE)
       .setOrigin(0.5, 0.5)
       .setName('end-turn-label');
@@ -649,30 +735,32 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
     const height = label.height + 24;
     const x = DESIGN_WIDTH - MARGIN - width / 2;
     const y = CARD_BASELINE - CARD_HEIGHT - 14 - height / 2;
-    button.setPosition(x, y).setSize(width, height);
+    // Interactive dead or live, so no press reaches the map under it.
+    button.setPosition(x, y).setSize(width, height).setInteractive();
     label.setPosition(x, y);
+
+    /** Whether the screen wants the button live, and whether the city it would end the turn of stands. */
+    let wanted = true;
+    let standing = false;
+    const live = (): boolean => wanted && standing;
+    answersPress(button, live);
 
     let turn = 1;
     let settlePhase = false;
     const paint = (): void => {
       button.setFillStyle(settlePhase ? LOOK.settlePhase : LOOK.button);
+      const hovered = hover.hovered && live();
       if (settlePhase) {
-        label.setText(text(hover.hovered ? 'button.end-settle-phase' : 'button.settle-phase'));
+        label.setText(text(hovered ? 'button.end-settle-phase' : 'button.settle-phase'));
         return;
       }
-      label.setText(hover.hovered ? text('button.end-turn') : text('button.turn', { turn }));
+      label.setText(hovered ? text('button.end-turn') : text('button.turn', { turn }));
     };
 
     const hover = onHover(button, paint, paint);
-    onClick(button, endTurn);
-
-    /** Whether the screen wants the button live, and whether the city it would end the turn of stands. */
-    let wanted = true;
-    let standing = false;
-    const interact = (): void => {
-      if (wanted && standing) button.setInteractive();
-      else button.disableInteractive();
-    };
+    onClick(button, () => {
+      if (live()) endTurn();
+    });
 
     /** The label a roll is carrying off the button; a render owns it and takes it down. */
     let leaving: Phaser.GameObjects.Text | undefined;
@@ -687,10 +775,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       label.setPosition(x, y).setAlpha(1);
       turn = chronicle.turn;
       settlePhase = onSettlePhase(chronicle);
-      if (standing !== (chronicle.city !== undefined)) {
-        standing = chronicle.city !== undefined;
-        interact();
-      }
+      standing = chronicle.city !== undefined;
       paint();
     };
 
@@ -722,10 +807,9 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       },
       live(on: boolean): void {
         wanted = on;
-        interact();
+        paint();
       },
     };
-    interact();
     return part;
   }
 }

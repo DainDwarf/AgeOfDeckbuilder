@@ -26,7 +26,7 @@ import { assignedTo, type Chronicle, type Cost, type Snapshot } from '../rules/s
 import { type Faction, type Landing, type Unit, unitAt, unitOf } from '../rules/units';
 import { MAP_FRAME } from './band';
 import { boundTo, type Control, type Press, pressOf } from './bindings';
-import { EASE, ended, stopMotion } from './card-motion';
+import { EASE, ended, SLIDE_HOME, stopMotion } from './card-motion';
 import {
   addText,
   corners,
@@ -34,6 +34,7 @@ import {
   DESIGN_WIDTH,
   dragged,
   hexagon,
+  onLetGoOffCanvas,
   onResize,
   renderFactor,
   type Stratum,
@@ -161,12 +162,8 @@ export type MapView = {
   render(chronicle: Chronicle): void;
   play(stage: Stage): Promise<void> | undefined;
   /**
-   * Lights those of the tiles it is given that the map draws and aims at them until it is let go of;
-   * a tile the map does not draw is never aimed at. A left press on a lit tile is `chosen`, and the
-   * aim goes on standing: whoever raised it decides what that press lands as and cancels it. A left
-   * press on any other tile of the map is `refused` with where that tile stands, and the aim goes on
-   * standing too. A left press on no tile at all lets the aim go, as the cancel does, and `released`
-   * says so. A right press is reported to `onPress` as any other is and leaves the aim standing.
+   * Lights those of the tiles it is given that the map draws, aims at them, and answers the way to
+   * let the aim go, which `released` follows.
    */
   aimTile(
     tiles: TileCoords[],
@@ -175,17 +172,28 @@ export type MapView = {
     released: () => void,
   ): () => void;
   /**
-   * Reports the tile every press the UI leaves lands on and the button it came from, and nothing
-   * when it lands off the map; `zoomed` fires whenever the zoom changes, so whatever stands on the
-   * map at a size of its own stands again. `commanded` is the command a press on one of the lit
-   * unit's tiles is — its step onto a landing, or its attack on a unit glowed — and `reassigned` the
-   * one a drag in city mode is, from the tile the population stands on onto a tile the city holds and
-   * nobody stands on; neither is a tile press. A drag that lands anywhere else brings what it took
-   * hold of home and is no press either. Called once; while a card is aimed the aim takes the left
-   * press and this hears the right one alone.
+   * Where the pointer is on the map, it being on this thing: on a drawn tile or beside the tiles;
+   * nothing where the thing is none of the map's.
+   */
+  placeOf(
+    on: Phaser.GameObjects.GameObject | undefined,
+  ): { readonly tile: TileCoords | undefined } | undefined;
+  /** Whether the last press of that button landed on the map carried it or what it took hold of. */
+  carried(press: Press): boolean;
+  /**
+   * A left click on a drawn tile: the aim's while one stands, else the step or the attack of the unit
+   * lit where it lights or glows that tile, else the tile reported to `onPress`.
+   */
+  click(tile: TileCoords): void;
+  /** Whether a unit of the player's on the selected tile lights or glows anything: it is being aimed. */
+  unitBeingAimed(): boolean;
+  /**
+   * Reports a click on a drawn tile to `clicked`; `commanded` is the step or the attack a click or a
+   * drag onto a lit unit's tile is, and `reassigned` the population a drag in city mode carries.
+   * Called once.
    */
   onPress(
-    pressed: (found: PressedTile | undefined, press: Press) => void,
+    clicked: (found: PressedTile) => void,
     zoomed: () => void,
     commanded: (command: UnitCommand) => void,
     reassigned: (command: ReassignCommand) => void,
@@ -198,6 +206,8 @@ export type MapView = {
   markSelected(tile: TileCoords | undefined, cost: Cost | undefined): void;
   /** Where a tile's face stands, for whatever floats beside a tile no press picked out. */
   faceOf(tile: TileCoords): TileFace;
+  /** A tile named as a press landed on it names it: where its face stands goes with it. */
+  pressedOn(tile: TileCoords): PressedTile;
   /** The face the map draws of a tile, and nothing at all for a tile it draws none of. */
   drawnAs(tile: TileCoords): Drawn | undefined;
   /**
@@ -275,7 +285,9 @@ export function unitMark(
  */
 function unitMarker(scene: Phaser.Scene, unit: Unit): Phaser.GameObjects.Container {
   const { x, y } = positionOf(unit.tile);
-  const marker = scene.add.container(x, y, [unitMark(scene, unit.stats.type, unit.faction)]);
+  const marker = scene.add
+    .container(x, y, [unitMark(scene, unit.stats.type, unit.faction)])
+    .setName(`unit-${tileKey(unit.tile)}`);
   if (unit.faction === 'player' && unit.movePoints <= 0 && unit.action <= 0) {
     marker.add(
       scene.add
@@ -498,6 +510,9 @@ type Grab = { readonly from: { x: number; y: number }; dragging: boolean } & (
   | { readonly kind: 'assigned'; readonly tile: TileCoords }
 );
 
+/** The mark a press takes hold of: a unit's, or a population's. */
+type GrabMark = Phaser.GameObjects.Container | Phaser.GameObjects.Rectangle;
+
 /**
  * The map and everything standing on it, on a surface of its own that pans and zooms under the UI.
  * Every layer of every tile, the border and the units are redrawn on each state change; and a card
@@ -560,31 +575,79 @@ export function createMapView(
   /** What the left press on the map has hold of; nothing while it holds nothing. */
   let grabbed: Grab | undefined;
 
+  /** Each mark a press let go of sliding home: where home is, and the slide. */
+  const homing = new Map<
+    GrabMark,
+    { readonly x: number; readonly y: number; readonly slide: Phaser.Tweens.Tween }
+  >();
+
+  /** The mark a press has hold of, and nothing where the map draws none. */
+  const markOf = (grab: Grab): GrabMark | undefined => {
+    switch (grab.kind) {
+      case 'unit':
+        return markers.get(grab.unit);
+      case 'assigned':
+        return assignedMarks.get(tileKey(grab.tile));
+    }
+  };
+
   /**
-   * What the press has hold of, back where the map draws it standing: the unit on the tile it stands
-   * on, the population under the tile it is assigned to.
+   * Where the map draws what a press has hold of standing: the unit on the tile it stands on, the
+   * population under the tile it is assigned to.
    */
-  const bringHome = (): void => {
-    if (grabbed === undefined) return;
-    switch (grabbed.kind) {
+  const homeOf = (grab: Grab): { x: number; y: number } | undefined => {
+    switch (grab.kind) {
       case 'unit': {
-        const standing = shown === undefined ? undefined : unitOf(shown.units, grabbed.unit);
-        if (standing === undefined) return;
-        const home = positionOf(standing.tile);
-        markers.get(grabbed.unit)?.setPosition(home.x, home.y);
-        return;
+        const standing = shown === undefined ? undefined : unitOf(shown.units, grab.unit);
+        return standing === undefined ? undefined : positionOf(standing.tile);
       }
-      case 'assigned': {
-        const home = assignedAt(grabbed.tile);
-        assignedMarks.get(tileKey(grabbed.tile))?.setPosition(home.x, home.y);
-        return;
-      }
+      case 'assigned':
+        return assignedAt(grab.tile);
+    }
+  };
+
+  /** What a press had hold of sliding home from where it was let go. */
+  const slideHome = (grab: Grab): void => {
+    const mark = markOf(grab);
+    const home = homeOf(grab);
+    if (mark === undefined || home === undefined) return;
+    const over = (): void => {
+      homing.delete(mark);
+    };
+    const slide = scene.tweens.add({
+      targets: mark,
+      x: home.x,
+      y: home.y,
+      duration: SLIDE_HOME,
+      ease: EASE,
+      onComplete: over,
+      onStop: over,
+    });
+    homing.set(mark, { ...home, slide });
+  };
+
+  /** A press taking hold: what it holds, if it is sliding home, stops where it stands. */
+  const takeHold = (grab: Grab): void => {
+    grabbed = grab;
+    const mark = markOf(grab);
+    if (mark !== undefined) homing.get(mark)?.slide.stop();
+  };
+
+  /** Every mark sliding home set there at once. */
+  const homeAtOnce = (): void => {
+    for (const [mark, { x, y, slide }] of [...homing]) {
+      slide.stop();
+      mark.setPosition(x, y);
     }
   };
 
   let presser: Phaser.GameObjects.Zone | undefined;
-  /** Where the map reports a press; an aim reports its right press through it too. */
-  let report: ((found: PressedTile | undefined, press: Press) => void) | undefined;
+  /** What a left click on a drawn tile is while no aim stands. */
+  let clickedTile: ((tile: TileCoords) => void) | undefined;
+  /** What a left click on a drawn tile is to the aim standing, and nothing while none does. */
+  let aimClicked: ((tile: TileCoords) => void) | undefined;
+  /** Whether each button's last press on a catcher carried the map or what it took hold of. */
+  const carrying: Record<Press, boolean> = { left: false, right: false };
   let rescale: (() => void) | undefined;
   let taking = true;
 
@@ -689,17 +752,15 @@ export function createMapView(
        */
       down?: (pointer: Phaser.Input.Pointer) => boolean;
       /**
-       * `held` says the release let the press go; a second button's click answers false, and
-       * whatever that press has hold of stands through it.
+       * The left press let go; a second button's release lets nothing go, and whatever the press has
+       * hold of stands through it.
        */
-      release: (pointer: Phaser.Input.Pointer, press: Press, held: boolean) => void;
+      release?: (pointer: Phaser.Input.Pointer) => void;
       abandon?: () => void;
     },
   ): (() => void) => {
     /** Which button is holding the press, and nothing while none is. */
     let taken: Press | undefined;
-    /** The other button pressed while the press is held, and nothing while none waits. */
-    let second: Press | undefined;
     /** Where the press landed on the canvas, and the middle the map held then, while it may pan. */
     let from: { x: number; y: number; centre: { x: number; y: number } } | undefined;
     let panned = false;
@@ -707,10 +768,8 @@ export function createMapView(
     catcher.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       const press = pressOf(pointer);
       if (press === undefined) return;
-      if (taken !== undefined) {
-        if (press !== taken) second = press;
-        return;
-      }
+      carrying[press] = false;
+      if (taken !== undefined) return;
       taken = press;
       panned = false;
       const mayPan = press === 'right' || (on.down?.(pointer) ?? true);
@@ -720,9 +779,10 @@ export function createMapView(
     });
 
     const pan = (pointer: Phaser.Input.Pointer): void => {
-      if (from === undefined) return;
+      if (from === undefined || taken === undefined) return;
       if (!panned && !dragged(scene, from, pointer)) return;
       panned = true;
+      carrying[taken] = true;
       const was = map.at(from.x, from.y);
       const to = map.at(pointer.x, pointer.y);
       moveTo(from.centre.x - (to.x - was.x), from.centre.y - (to.y - was.y), zoom);
@@ -737,27 +797,18 @@ export function createMapView(
     };
     const release = (pointer: Phaser.Input.Pointer): void => {
       const press = pressOf(pointer);
-      if (press === undefined) return;
-      if (press === taken) {
-        if (ended()) on.release(pointer, press, true);
-        return;
-      }
-      if (press !== second) return;
-      second = undefined;
-      on.release(pointer, press, false);
+      if (press !== taken) return;
+      if (ended() && press === 'left') on.release?.(pointer);
     };
-    const abandon = (): void => {
-      second = undefined;
-      if (ended()) on.abandon?.();
-    };
-
     scene.input.on('pointermove', pan);
     scene.input.on('pointerup', release);
-    scene.input.on('pointerupoutside', abandon);
+    const unheard = onLetGoOffCanvas(scene, (press) => {
+      if (press === taken && ended()) on.abandon?.();
+    });
     return () => {
       scene.input.off('pointermove', pan);
       scene.input.off('pointerup', release);
-      scene.input.off('pointerupoutside', abandon);
+      unheard();
     };
   };
 
@@ -1546,6 +1597,7 @@ export function createMapView(
     render,
 
     play(stage: Stage): Promise<void> | undefined {
+      homeAtOnce();
       switch (stage.kind) {
         case 'change':
           return covered.has(stage) ? undefined : changed(stage);
@@ -1558,13 +1610,12 @@ export function createMapView(
     },
 
     onPress(
-      pressed: (found: PressedTile | undefined, press: Press) => void,
+      clicked: (found: PressedTile) => void,
       zoomed: () => void,
       commanded: (command: UnitCommand) => void,
       reassigned: (command: ReassignCommand) => void,
     ): void {
       rescale = zoomed;
-      report = pressed;
       const catcher = catcherZone('press');
       presser = catcher;
 
@@ -1572,25 +1623,19 @@ export function createMapView(
       const travelled = (grab: Grab, pointer: Phaser.Input.Pointer): boolean => {
         if (!grab.dragging && !dragged(scene, grab.from, pointer)) return false;
         grab.dragging = true;
+        carrying.left = true;
         return true;
       };
 
       const carry = (pointer: Phaser.Input.Pointer): void => {
         if (grabbed === undefined || !travelled(grabbed, pointer)) return;
         const at = map.at(pointer.x, pointer.y);
-        switch (grabbed.kind) {
-          case 'unit':
-            markers.get(grabbed.unit)?.setPosition(at.x, at.y);
-            return;
-          case 'assigned':
-            assignedMarks.get(tileKey(grabbed.tile))?.setPosition(at.x, at.y);
-            return;
-        }
+        markOf(grabbed)?.setPosition(at.x, at.y);
       };
       scene.input.on('pointermove', carry);
 
-      const letGo = (): void => {
-        bringHome();
+      const letGo = (grab: Grab): void => {
+        slideHome(grab);
         grabbed = undefined;
         lightUnit(selection);
       };
@@ -1609,6 +1654,11 @@ export function createMapView(
         return false;
       };
 
+      clickedTile = (tile) => {
+        if (lit !== undefined && commandUnitOn(lit.unit, tile)) return;
+        clicked(pressedOn(tile));
+      };
+
       takePress(catcher, {
         down: (pointer) => {
           if (shown === undefined) return true;
@@ -1618,57 +1668,50 @@ export function createMapView(
           const from = { x: pointer.x, y: pointer.y };
           if (marking) {
             if (!assignedTo(shown, under)) return true;
-            grabbed = { kind: 'assigned', tile: under, from, dragging: false };
+            takeHold({ kind: 'assigned', tile: under, from, dragging: false });
             return false;
           }
           const standing = unitAt(shown.units, under);
           if (standing?.faction !== 'player') return true;
-          grabbed = { kind: 'unit', unit: standing.id, from, dragging: false };
+          takeHold({ kind: 'unit', unit: standing.id, from, dragging: false });
           lightUnit(under);
           return false;
         },
-        release: (pointer, press, held) => {
-          const at = map.at(pointer.x, pointer.y);
-          const on = tileUnder(at.x, at.y);
-          const holding = held ? grabbed : undefined;
-          if (holding === undefined) {
-            if (press === 'left' && on !== undefined && lit !== undefined) {
-              if (commandUnitOn(lit.unit, on)) return;
-            }
-            pressed(on === undefined ? undefined : pressedOn(on), press);
+        release: (pointer) => {
+          const holding = grabbed;
+          if (holding === undefined) return;
+          if (!holding.dragging) {
+            letGo(holding);
             return;
           }
-
-          bringHome();
+          const at = map.at(pointer.x, pointer.y);
+          const on = tileUnder(at.x, at.y);
+          slideHome(holding);
           grabbed = undefined;
           // After Phaser's dispatch of this release: a hit test inside it refills the list being
           // walked (docs/PHASER.md).
           queueMicrotask(() => {
             const landed = thingUnder(scene.game) === catcher ? on : undefined;
-            switch (holding.kind) {
-              case 'unit':
-                if (landed !== undefined && commandUnitOn(holding.unit, landed)) return;
-                lightUnit(selection);
-                break;
-              case 'assigned': {
-                const command =
-                  landed === undefined || shown === undefined
-                    ? undefined
-                    : cityDrag(shown, holding.tile, landed);
-                if (command !== undefined) {
-                  reassigned(command);
-                  return;
+            if (landed !== undefined && shown !== undefined) {
+              switch (holding.kind) {
+                case 'unit':
+                  if (commandUnitOn(holding.unit, landed)) return;
+                  break;
+                case 'assigned': {
+                  const command = cityDrag(shown, holding.tile, landed);
+                  if (command !== undefined) {
+                    reassigned(command);
+                    return;
+                  }
+                  break;
                 }
-                break;
               }
             }
-
-            if (holding.dragging) return;
-            pressed(on === undefined ? undefined : pressedOn(on), press);
+            lightUnit(selection);
           });
         },
         abandon: () => {
-          if (grabbed !== undefined) letGo();
+          if (grabbed !== undefined) letGo(grabbed);
         },
       });
     },
@@ -1694,6 +1737,8 @@ export function createMapView(
       return faceAt(tile);
     },
 
+    pressedOn,
+
     drawnAs(tile: TileCoords): Drawn | undefined {
       const standing = shown === undefined ? undefined : tileAt(shown.tiles, tile);
       return standing === undefined ? undefined : drawnOf(standing);
@@ -1714,7 +1759,6 @@ export function createMapView(
           case 'unit':
             break;
           case 'assigned':
-            bringHome();
             grabbed = undefined;
             break;
         }
@@ -1739,30 +1783,41 @@ export function createMapView(
       const lit = tiles.filter((coord) => drawn.has(tileKey(coord)));
       for (const coord of lit) glow.add(glowTile(scene, coord, LOOK.lit, LOOK.litGlow));
 
-      const letGo = (): void => {
+      const click = (tile: TileCoords): void => {
+        if (lit.some((coord) => same(coord, tile))) chosen(tile);
+        else refused(pressedOn(tile));
+      };
+      aimClicked = click;
+
+      const stop = takePress(catcher, {});
+
+      return () => {
         stop();
         close();
+        if (aimClicked === click) aimClicked = undefined;
         released();
       };
+    },
 
-      const stop = takePress(catcher, {
-        release: (pointer, press) => {
-          const at = map.at(pointer.x, pointer.y);
-          const on = tileUnder(at.x, at.y);
-          switch (press) {
-            case 'right':
-              report?.(on === undefined ? undefined : pressedOn(on), press);
-              return;
-            case 'left':
-              if (on === undefined) letGo();
-              else if (lit.some((coord) => same(coord, on))) chosen(on);
-              else refused(pressedOn(on));
-              return;
-          }
-        },
-      });
+    placeOf(
+      on: Phaser.GameObjects.GameObject | undefined,
+    ): { readonly tile: TileCoords | undefined } | undefined {
+      if (!(on instanceof Phaser.GameObjects.Zone) || !catchers.has(on)) return undefined;
+      const pointer = scene.input.activePointer;
+      const at = map.at(pointer.x, pointer.y);
+      return { tile: tileUnder(at.x, at.y) };
+    },
 
-      return letGo;
+    carried(press: Press): boolean {
+      return carrying[press];
+    },
+
+    click(tile: TileCoords): void {
+      (aimClicked ?? clickedTile)?.(tile);
+    },
+
+    unitBeingAimed(): boolean {
+      return lit !== undefined && (lit.landings.length > 0 || lit.targets.length > 0);
     },
   };
 }

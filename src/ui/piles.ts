@@ -46,8 +46,6 @@ export type PilePresses = {
   browse(pile: PileKind): void;
   /** What a name on the discard pile's top card names, shown large. */
   inspectNamed(name: Name): void;
-  /** What a left click on a pile does, and all it does. */
-  unaim(): void;
 };
 
 /**
@@ -299,7 +297,6 @@ function createPile(
     },
     'right',
   );
-  onClick(press, presses.unaim);
 
   /** What the top card's names and its label raised, taken down as the card leaves the top. */
   const letGo = (): void => {

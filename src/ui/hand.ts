@@ -21,10 +21,11 @@ import { ended, SLIDE_HOME, STAGGER, stopMotion, travel, turnOver } from './card
 import {
   answersPress,
   DESIGN_WIDTH,
+  type Hover,
   MARGIN,
   onClick,
   onHover,
-  releasedOffCanvas,
+  onLetGoOffCanvas,
   type Stratum,
 } from './design-space';
 import { cardFace } from './face';
@@ -50,6 +51,9 @@ type Slot = {
   readonly playable: boolean;
   /** Where the pointer is on the card: its outline, and down to where it rests while it is hovered. */
   readonly hitArea: Phaser.Geom.Rectangle;
+  /** Whether the pointer is on the card, the hand live or dead. */
+  readonly hover: Hover;
+  /** Whether the card stands lifted by the pointer on it. */
   hovered: boolean;
   /** Whether a small card raised off one of its names stands, which keeps it lifted. */
   held: boolean;
@@ -60,8 +64,6 @@ type Drag = {
   readonly slot: Slot;
   readonly grabbed: { x: number; y: number };
   readonly lifted: { x: number; y: number };
-  /** Whether Phaser's drag is over and the hand is carrying the card on its own. */
-  carried: boolean;
 };
 
 /**
@@ -81,6 +83,8 @@ export type Hand = {
   unselect(): boolean;
   /** Lets the card being aimed go as `unselect` does; a card selected and not being aimed stays. */
   unaim(): void;
+  /** Whether the object is a card of the hand, every left click on which the hand answers itself. */
+  owns(object: Phaser.GameObjects.GameObject): boolean;
 };
 
 /**
@@ -137,14 +141,17 @@ export function createHand(
   let selected: Selected | undefined;
   /** The card the hand has let go of, waiting on the stages its play resolves as. */
   let letGo: Slot | undefined;
-  /** Whether the hand takes the pointer at all; a play-out puts it down for as long as it runs. */
+  /** Whether the hand answers the pointer; a play-out puts it down for as long as it runs. */
   let taking = true;
 
+  // A dead card stays interactive, so a press on it stops there, and no leave comes as the hand dies:
+  // a bubble or a rest on a name the pointer on a card began is let go of here.
   const live = (on: boolean): void => {
     taking = on;
+    if (on) return;
     for (const slot of slots) {
-      if (on) slot.face.root.setInteractive();
-      else slot.face.root.disableInteractive();
+      kinds.over(slot.face, false);
+      if (slot.hover.hovered) small.over(undefined);
     }
   };
 
@@ -227,6 +234,8 @@ export function createHand(
       if (standing === undefined || standing.slot !== slot) return;
       standing.cancel = undefined;
     };
+
+  const beingAimed = (): boolean => selected?.cancel !== undefined || selected?.atHand === true;
 
   const unselect = (): boolean => {
     const standing = selected;
@@ -335,16 +344,15 @@ export function createHand(
     letGoOf(carrying.slot);
   };
 
-  // Phaser ends the drag at any button's release and sends no `drag` after it, so from a second
-  // button's release the carry is the hand's own: the card follows the pointer here until the
-  // button that took it comes up, and an abandon reaches it in either state.
-  scene.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
-    if (dragged?.carried === true) carry(pointer);
-  });
+  // Phaser ends a drag at any button's release (docs/PHASER.md): past its start, the card reads the
+  // scene's own moves and releases.
+  scene.input.on('pointermove', carry);
   scene.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
-    if (dragged?.carried === true && pressOf(pointer) === 'left') resolve(pointer);
+    if (pressOf(pointer) === 'left') resolve(pointer);
   });
-  scene.input.on('pointerupoutside', abandonDrag);
+  onLetGoOffCanvas(scene, (press) => {
+    if (press === 'left') abandonDrag();
+  });
 
   /** The name of this card under the pointer, handed over as the small cards take one. */
   const nameUnder = (slot: Slot, pointer: Phaser.Input.Pointer): Raiser | undefined => {
@@ -388,8 +396,9 @@ export function createHand(
     slots = chronicle.hand.map((card, index) => {
       const off = index - (held - 1) / 2;
       const refusal = refusalOf(catalogue, chronicle, card.id);
+      const face = createCardFace(scene, cardFace(catalogue, card), refusal);
       const slot: Slot = {
-        face: createCardFace(scene, cardFace(catalogue, card), refusal),
+        face,
         card,
         index,
         home: {
@@ -399,6 +408,21 @@ export function createHand(
         refusal,
         playable: playable(refusal),
         hitArea: new Phaser.Geom.Rectangle(-CARD_WIDTH / 2, -CARD_HEIGHT, CARD_WIDTH, CARD_HEIGHT),
+        hover: onHover(
+          face.root,
+          () => {
+            if (dragged !== undefined || !taking) return;
+            slot.hovered = true;
+            settle(slot, 120);
+          },
+          () => {
+            small.over(undefined);
+            kinds.over(face, false);
+            if (dragged !== undefined || !taking) return;
+            slot.hovered = false;
+            settle(slot, 120);
+          },
+        ),
         hovered: false,
         held: false,
       };
@@ -415,6 +439,7 @@ export function createHand(
           draggable: true,
         })
         .on('dragstart', (pointer: Phaser.Input.Pointer) => {
+          if (!taking) return;
           kinds.over(slot.face, false);
           unselect();
           slot.hovered = true;
@@ -423,45 +448,18 @@ export function createHand(
             slot,
             grabbed: on.resting.at(pointer.downX, pointer.downY),
             lifted: { x: slot.home.x, y: restingY(slot) },
-            carried: false,
           };
         })
         .on('pointermove', (pointer: Phaser.Input.Pointer) => {
-          small.over(dragged === undefined ? nameUnder(slot, pointer) : undefined);
-          kinds.over(slot.face, dragged === undefined && onKind(slot, pointer));
-        })
-        .on('drag', carry)
-        .on('dragend', (pointer: Phaser.Input.Pointer) => {
-          if (dragged === undefined) return;
-          if (pressOf(pointer) !== 'left') {
-            dragged.carried = true;
-            return;
-          }
-          if (releasedOffCanvas(pointer)) {
-            abandonDrag();
-            return;
-          }
-          resolve(pointer);
+          const answering = taking && dragged === undefined;
+          small.over(answering ? nameUnder(slot, pointer) : undefined);
+          kinds.over(slot.face, answering && onKind(slot, pointer));
         });
 
-      answersPress(slot.face.root);
-      onHover(
-        slot.face.root,
-        () => {
-          if (dragged !== undefined) return;
-          slot.hovered = true;
-          settle(slot, 120);
-        },
-        () => {
-          small.over(undefined);
-          kinds.over(slot.face, false);
-          if (dragged !== undefined || !taking) return;
-          slot.hovered = false;
-          settle(slot, 120);
-        },
-      );
+      answersPress(slot.face.root, () => taking);
 
       onClick(slot.face.root, () => {
+        if (!taking) return;
         const standing = selected;
         if (standing?.slot === slot) act(standing);
         else if (standing?.atHand === true) playAt(standing, slot);
@@ -471,6 +469,7 @@ export function createHand(
       onClick(
         slot.face.root,
         (pointer) => {
+          if (!taking) return;
           const named = nameUnder(slot, pointer)?.name;
           if (named === undefined) presses.inspect(slot.card);
           else presses.inspectNamed(named);
@@ -480,7 +479,6 @@ export function createHand(
 
       return slot;
     });
-    live(taking);
   };
 
   /** A card in the air, over every card of its block that left before it. */
@@ -627,7 +625,10 @@ export function createHand(
     },
     unselect,
     unaim(): void {
-      if (selected?.cancel !== undefined || selected?.atHand === true) unselect();
+      if (beingAimed()) unselect();
+    },
+    owns(object: Phaser.GameObjects.GameObject): boolean {
+      return slots.some((slot) => slot.face.root === object);
     },
     play(stage: Stage): Promise<void> | undefined {
       switch (stage.kind) {

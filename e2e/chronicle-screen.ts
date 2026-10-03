@@ -618,6 +618,12 @@ export async function onScreen(page: Page, name: string): Promise<OnScreen> {
   return (await reading(page, name)).onScreen;
 }
 
+/** Whether a named object stands where it was measured, to the page pixel. */
+export async function stillAt(page: Page, name: string, was: OnScreen): Promise<boolean> {
+  const now = await onScreen(page, name);
+  return Math.round(now.x - was.x) === 0 && Math.round(now.y - was.y) === 0;
+}
+
 /** What an entry names, in its order, laid out as a run on a measure of one to the character. */
 export function namedIn(entry: string): Reference[] {
   const measure = (content: string): number => content.length;
@@ -705,6 +711,13 @@ export async function besideTiles(page: Page): Promise<{ x: number; y: number }>
   return { x: city.x - 440 * city.unit, y: city.y - 160 * city.unit };
 }
 
+/** A point on the band, inside its left end and short of the draw pile, which stands a margin in. */
+export async function onTheBand(page: Page): Promise<{ x: number; y: number }> {
+  const band = await reading(page, 'band');
+  const { x, y, height } = band.boundsOnScreen;
+  return { x: x + 8 * band.onScreen.unit, y: y + height / 2 };
+}
+
 /** A rectangle on the page. */
 export type Frame = { x: number; y: number; width: number; height: number };
 
@@ -733,6 +746,19 @@ export function mapFrame(page: Page): Promise<Frame> {
       width: camera.width * unit,
       height: camera.height * unit,
     };
+  });
+}
+
+/** How far a press travels on the page before it is a drag and no longer a click. */
+export function dragSlack(page: Page): Promise<number> {
+  return page.evaluate(() => {
+    const scene = window.game?.scene.getScene('map');
+    if (scene === null || scene === undefined) throw new Error('the map scene is not running');
+    const canvas = scene.game.canvas;
+    // Phaser measures the slack between raw pointer positions, in the backing store's pixels.
+    return (
+      (scene.input.dragDistanceThreshold * canvas.getBoundingClientRect().width) / canvas.width
+    );
   });
 }
 
@@ -1299,6 +1325,30 @@ export function withCard(card: CardId): Civilization {
   return { ...first, cards: [...first.cards, card] };
 }
 
+/** The card of the catalogue aimed at the hand. */
+export const AIMED_AT_HAND = (() => {
+  const found = Object.keys(CATALOGUE.cards).find(
+    (id) => aimOf(cardOf(CATALOGUE, id)).aim === 'hand',
+  );
+  if (found === undefined) throw new Error('no card of the catalogue is aimed at the hand');
+  return found;
+})();
+
+/**
+ * The first seed's turn 1, its city settled bare, on the first civilization with one copy of the card
+ * aimed at the hand in its deck, whose hand holds that card and the city can play it; where it lies,
+ * and where the first other card of the hand lies.
+ */
+export function aimableAtHand(): { opened: Chronicle; card: number; other: number } {
+  const civilization = withCard(AIMED_AT_HAND);
+  return firstSeed('opens turn 1 on the card aimed at the hand, playable', (seed) => {
+    const opened = settledOn(seed, [], civilization);
+    const card = inHand(opened, ({ aim, playable }) => aim === 'hand' && playable);
+    if (card === -1) return undefined;
+    return { opened, card, other: card === 0 ? 1 : 0 };
+  });
+}
+
 /**
  * The chronicle with the first tile beside the city made the terrain of the feature Trapping names,
  * that feature and the improvements named placed on it, and a worker entered there.
@@ -1524,6 +1574,32 @@ export function ringedTile(page: Page): Promise<string | undefined> {
   });
 }
 
+/**
+ * The tile the map rings, how many marks it lights for a unit, and the infopanel's card with where
+ * it stands on the map, if up.
+ */
+export function marked(page: Page): Promise<{
+  ringed: string | undefined;
+  lit: number;
+  inspecting: { card: string; x: number; y: number } | undefined;
+}> {
+  return page.evaluate(() => {
+    const ring = window.named?.('selected')?.object;
+    const lit = window.named?.('lit')?.object as Phaser.GameObjects.Layer | undefined;
+    const panel = window.named?.('infopanel')?.object as Phaser.GameObjects.Container | undefined;
+    if (ring === undefined || lit === undefined || panel === undefined) {
+      throw new Error('the map is not on the chronicle screen');
+    }
+    return {
+      ringed: ring.getData('tile') as string | undefined,
+      lit: lit.list.length,
+      inspecting: panel.visible
+        ? { card: panel.getData('card') as string, x: panel.x, y: panel.y }
+        : undefined,
+    };
+  });
+}
+
 export function offsetOf(page: Page): Promise<number> {
   return scrolled(page).then(({ offset }) => offset);
 }
@@ -1607,12 +1683,21 @@ export async function dragOut(page: Page, index: number): Promise<void> {
 export async function dragTiles(page: Page, from: TileCoords, to: TileCoords): Promise<void> {
   const held = await onScreen(page, `tile-${tileKey(from)}`);
   const landing = await onScreen(page, `tile-${tileKey(to)}`);
-  await page.mouse.move(held.x, held.y);
-  await page.mouse.down();
-  await page.mouse.move((held.x + landing.x) / 2, (held.y + landing.y) / 2, { steps: 5 });
-  await page.mouse.move(landing.x, landing.y, { steps: 5 });
-  await page.mouse.up();
+  await dragBetween(page, held, landing);
   await playedOut(page);
+}
+
+/** A left press landed on one page point, carried to another past the drag slack, and let go there. */
+export async function dragBetween(
+  page: Page,
+  from: { x: number; y: number },
+  to: { x: number; y: number },
+): Promise<void> {
+  await page.mouse.move(from.x, from.y);
+  await page.mouse.down();
+  await page.mouse.move((from.x + to.x) / 2, (from.y + to.y) / 2, { steps: 5 });
+  await page.mouse.move(to.x, to.y, { steps: 5 });
+  await page.mouse.up();
 }
 
 /** The same gesture onto a tile the unit lands on, waited out until it stands there. */

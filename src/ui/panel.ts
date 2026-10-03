@@ -7,7 +7,7 @@ import {
   type Box,
   onClick,
   onHover,
-  releasedOffCanvas,
+  onLetGoOffCanvas,
   type Stratum,
   thingUnder,
   whileUp,
@@ -108,7 +108,9 @@ export function createCarrier(scene: Phaser.Scene, on: Stratum): Carrier {
     landed.copy.destroy();
     landed.press();
   });
-  scene.input.on('pointerupoutside', slideHome);
+  onLetGoOffCanvas(scene, (press) => {
+    if (press === 'left') slideHome();
+  });
 
   return {
     get carrying() {
@@ -268,11 +270,18 @@ export function createPanel(
       scroll.grab(from.y);
     } else carrier.lift(under.carry, under.press, scroll.offset, from, on.at(pointer.x, pointer.y));
   });
-  zone.on('drag', (pointer: Phaser.Input.Pointer) => {
+  // Phaser ends a drag at any button's release (docs/PHASER.md): the scroll reads the scene's own
+  // moves and releases.
+  const dragTo = (pointer: Phaser.Input.Pointer): void => {
     scroll.drag(on.at(pointer.x, pointer.y).y, scene.time.now);
-  });
-  zone.on('dragend', (pointer: Phaser.Input.Pointer) => {
-    scroll.release(scene.time.now, !releasedOffCanvas(pointer));
+  };
+  const released = (pointer: Phaser.Input.Pointer): void => {
+    if (pressOf(pointer) === 'left') scroll.release(scene.time.now, true);
+  };
+  scene.input.on('pointermove', dragTo);
+  scene.input.on('pointerup', released);
+  const unheard = onLetGoOffCanvas(scene, (press) => {
+    if (press === 'left') scroll.release(scene.time.now, false);
   });
   zone.on('pointermove', point);
   onHover(
@@ -339,6 +348,9 @@ export function createPanel(
     down() {
       point(undefined);
       stopStepping();
+      scene.input.off('pointermove', dragTo);
+      scene.input.off('pointerup', released);
+      unheard();
       zone.destroy();
       root.destroy();
     },

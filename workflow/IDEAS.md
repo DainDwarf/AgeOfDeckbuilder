@@ -38,6 +38,10 @@ The unordered pool of features that may or may not happen. Nothing here is promi
   - a count of the units still holding a move, on the bar or by the end-turn button;
   - a key that jumps the camera to the next unit still holding a move;
   - a sleep order, a unit's own state that dims it and keeps it out of the count until woken or until an enemy comes into its sight.
+- **A unit's movement along its path**: three parts resting on the rules handing out the route, which today know a landing's cost and a move's two ends only. Each its own line when taken:
+  - the path shown for a unit of the player's on a hover or a drag, with how many turns the way takes;
+  - the move played along that path instead of one jump from source to target, for the player's units and the others alike;
+  - a move ordered over several turns, the unit's aim then admitting any tile it can walk to, and how the rest of the way is walked: a phase at the start or the end of the turn, a button beside the walk through every unit, a continue-movement button or key. With every tile admitted, how another tile is selected while a unit is being aimed is that line's question.
 - **A health bar on units**: a unit on the map shows its health, which only the infopanel reads today.
 - **An age filter on the collection screen**: the collection shown by age.
 - **Playing an age with a later age's cards**: earlier ages stay playable, and a deck holds cards of any age, so a Nomadic chronicle played with Bronze Age cards is a walk; whether its rewards, its influence or its unlocks are limited for it, and how.

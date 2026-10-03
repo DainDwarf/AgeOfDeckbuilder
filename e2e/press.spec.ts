@@ -2,35 +2,44 @@ import { expect, type Page, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
 import { pinned, unpinnable } from '../src/rules/campaign';
 import { achievementOf } from '../src/rules/catalogue';
-import { apply, outcome } from '../src/rules/chronicle';
-import { tileKey } from '../src/rules/map';
+import { apply, byHand, outcome } from '../src/rules/chronicle';
+import { CENTRE, type TileCoords, tileKey } from '../src/rules/map';
 import type { Chronicle } from '../src/rules/state';
+import { unitAt } from '../src/rules/units';
+import type { ChronicleScene } from '../src/ui/chronicle-scene';
 import { achievementGoal, cardName, text } from '../src/ui/text';
 import {
   admits,
+  aimableAtHand,
   aimed,
   aimLine,
   bareAimable,
   bareWith,
   besideTheCards,
   browse,
+  budget,
   cardOnFace,
   chronicleOf,
   cityTileOf,
   click,
   cursorAt,
+  dragBetween,
   dragOut,
+  dragSlack,
+  eastOf,
   endedTurn,
   firstSeed,
   inHand,
   type Judged,
+  launchedOn,
   mapFrame,
+  marked,
   namedIn,
   nameOnScreen,
-  type OnScreen,
   offCanvas,
   offsetOf,
   onScreen,
+  onTheBand,
   openSaved,
   overflowingPiles,
   pileTop,
@@ -45,6 +54,7 @@ import {
   shownCard,
   shows,
   standing,
+  stillAt,
   tilePlayable,
   watch,
   wheel,
@@ -89,10 +99,48 @@ function playedAtNothing(chronicle: Chronicle, index: number): Chronicle {
   return outcome(apply(CATALOGUE, chronicle, { type: 'play', index, aim: 'none' }));
 }
 
-/** Whether a named object stands where it was measured, to the page pixel. */
-async function stillAt(page: Page, name: string, was: OnScreen): Promise<boolean> {
-  const now = await onScreen(page, name);
-  return Math.round(now.x - was.x) === 0 && Math.round(now.y - was.y) === 0;
+/**
+ * Carries the map by a drag off the tile until the tile stands under the middle of the named object,
+ * so a press that fell through the object would land on it.
+ */
+async function carriedUnder(page: Page, tile: TileCoords, name: string): Promise<void> {
+  await carriedTo(page, tile, await onScreen(page, name), name);
+}
+
+/** Carries the map by a drag off the tile until the tile stands at that point of the page, on `what`. */
+async function carriedTo(
+  page: Page,
+  tile: TileCoords,
+  to: { x: number; y: number },
+  what: string,
+): Promise<void> {
+  const face = `tile-${tileKey(tile)}`;
+  await dragBetween(page, await onScreen(page, face), to);
+  await rested(page);
+  const now = await onScreen(page, face);
+  if (Math.hypot(now.x - to.x, now.y - to.y) >= 2) {
+    throw new Error(`the map stops short of carrying ${face} under ${what}`);
+  }
+}
+
+/**
+ * The first seed's turn 1, settled bare, whose end of turn sends the hand off as its first stage, no
+ * hazard striking ahead of it.
+ */
+function leavingFirst(): Chronicle {
+  return firstSeed('ends its turn 1 on the hand leaving first', (seed) => {
+    const opened = settledOn(seed);
+    const [first] = apply(CATALOGUE, opened, { type: 'end-turn' });
+    return first?.name === 'discarded' ? opened : undefined;
+  });
+}
+
+/** A point on the resource bar's paper: between the bar's left end and its first reading, food. */
+async function onThePaper(page: Page): Promise<{ x: number; y: number }> {
+  const seen = await readings(page, ['resource-bar', 'reading-food']);
+  const bar = seen('resource-bar').boundsOnScreen;
+  const food = seen('reading-food').boundsOnScreen;
+  return { x: (bar.x + food.x) / 2, y: food.y + food.height / 2 };
 }
 
 test('a hand card released off the canvas comes home, plays nothing, and leaves the next press clean', async ({
@@ -137,6 +185,89 @@ test('a hand card released off the canvas comes home, plays nothing, and leaves 
 
   await page.mouse.click(home.x, home.y, { button: 'right' });
   await expect.poll(() => standing(page, 'inspection')).toBe(true);
+
+  expect(problems).toEqual([]);
+});
+
+test('a unit carried stands through the right button pressed and let go off the canvas, and the left release on a tile it lights steps it there', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const {
+    entered: opened,
+    tile,
+    stepped,
+  } = workerStepped('steps its first worker off the city', () => true);
+
+  await page.setViewportSize(WINDOW);
+  await openSaved(page, opened);
+
+  const from = await onScreen(page, `tile-${tileKey(cityTileOf(opened))}`);
+  const onto = await onScreen(page, `tile-${tileKey(tile)}`);
+  const bare = await offCanvas(page);
+
+  await page.mouse.move(from.x, from.y);
+  await page.mouse.down();
+  await page.mouse.move(bare.x, bare.y, { steps: 5 });
+  await page.mouse.down({ button: 'right' });
+  await page.mouse.up({ button: 'right' });
+  await page.mouse.move(onto.x, onto.y, { steps: 5 });
+  await page.mouse.up();
+  await playedOut(page);
+  expect(await chronicleOf(page)).toEqual(stepped);
+
+  expect(problems).toEqual([]);
+});
+
+test('a hand card dragged stands through the right button pressed on the canvas and let go off it, and the left release clear of the hand plays it', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const { opened, unit } = playableAtNothing();
+
+  await page.setViewportSize(WINDOW);
+  await openSaved(page, opened);
+
+  const home = await onScreen(page, `hand-${unit}`);
+  const bare = await offCanvas(page);
+
+  await page.mouse.move(home.x, home.y);
+  await page.mouse.down();
+  await page.mouse.move(home.x, home.y - LIFTED * home.unit, { steps: 5 });
+  await page.mouse.down({ button: 'right' });
+  await page.mouse.move(bare.x, bare.y, { steps: 5 });
+  await page.mouse.up({ button: 'right' });
+  await page.mouse.move(home.x, home.y - LIFTED * home.unit, { steps: 5 });
+  await page.mouse.up();
+  await playedOut(page);
+  await expect.poll(() => chronicleOf(page)).toEqual(playedAtNothing(opened, unit));
+
+  expect(problems).toEqual([]);
+});
+
+test('a click held on the end-turn button stands through the right button let go off the canvas, and the left release on the button ends the turn', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  test.setTimeout(budget(1));
+  const opened = settledOn(1);
+
+  await page.setViewportSize(WINDOW);
+  await openSaved(page, opened);
+
+  const button = await onScreen(page, 'end-turn');
+  const bare = await offCanvas(page);
+
+  await page.mouse.move(button.x, button.y);
+  await page.mouse.down();
+  await page.mouse.move(bare.x, bare.y, { steps: 5 });
+  await page.mouse.down({ button: 'right' });
+  await page.mouse.up({ button: 'right' });
+  await page.mouse.move(button.x, button.y, { steps: 5 });
+  await page.mouse.up();
+  await expect
+    .poll(() => chronicleOf(page))
+    .toEqual(outcome(apply(CATALOGUE, opened, { type: 'end-turn' })));
 
   expect(problems).toEqual([]);
 });
@@ -565,7 +696,7 @@ test('a click beside the tiles lets the card being aimed go, as it drops a selec
   expect(problems).toEqual([]);
 });
 
-test('a click on the resource bar lets the card being aimed go and lands as on a clean screen: nothing on its bare ground, and the yield latched on a yield reading', async ({
+test('a click on the bar’s paper drops the card being aimed, and one on a yield reading lets it go and latches the yield', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -573,16 +704,12 @@ test('a click on the resource bar lets the card being aimed go and lands as on a
 
   await openSaved(page, opened);
   const home = await onScreen(page, `hand-${index}`);
-  // Food is the bar's first reading: its bare ground runs from the bar's left end to that zone.
-  const seen = await readings(page, ['resource-bar', 'reading-food']);
-  const bar = seen('resource-bar').boundsOnScreen;
-  const food = seen('reading-food').boundsOnScreen;
-  const ground = { x: (bar.x + food.x) / 2, y: food.y + food.height / 2 };
+  const paper = await onThePaper(page);
 
   await page.mouse.click(home.x, home.y);
   await aimed(page);
-  expect(await cursorAt(page, ground)).toBe('');
-  await page.mouse.click(ground.x, ground.y);
+  expect(await cursorAt(page, paper)).toBe('');
+  await page.mouse.click(paper.x, paper.y);
   await expect.poll(() => standing(page, 'aim')).toBe(false);
   await expect.poll(() => selected(page, index, home)).toBe(false);
   expect(await chronicleOf(page)).toEqual(opened);
@@ -593,6 +720,137 @@ test('a click on the resource bar lets the card being aimed go and lands as on a
   await expect.poll(() => standing(page, 'aim')).toBe(false);
   expect(await shows(page, 'reading-food-well')).toBe(true);
   await expect.poll(() => selected(page, index, home)).toBe(false);
+  expect(await chronicleOf(page)).toEqual(opened);
+
+  expect(problems).toEqual([]);
+});
+
+test('the end-turn button clicked while a card is aimed at a tile lets the card go and ends the turn', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  test.setTimeout(budget(1));
+  const { chronicle: opened, index } = bareAimable();
+
+  await openSaved(page, opened);
+  const home = await onScreen(page, `hand-${index}`);
+
+  await page.mouse.click(home.x, home.y);
+  await aimed(page);
+  await click(page, 'end-turn');
+  await expect
+    .poll(() => chronicleOf(page))
+    .toEqual(outcome(apply(CATALOGUE, opened, { type: 'end-turn' })));
+  expect(await standing(page, 'aim')).toBe(false);
+
+  expect(problems).toEqual([]);
+});
+
+test('a click on the top of a card of the hand while the end of turn plays out stops on the card, and no tile under it is ringed', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  test.setTimeout(budget(1));
+  const opened = leavingFirst();
+
+  await openSaved(page, opened);
+  const card = `hand-${Math.floor(opened.hand.length / 2)}`;
+  const seen = await readings(page, [card, 'end-turn']);
+  const home = seen(card).onScreen;
+  const top = seen(card).boundsOnScreen;
+  const button = seen('end-turn').onScreen;
+  const frame = await mapFrame(page);
+  const at = { x: top.x + top.width / 2, y: (top.y + frame.y + frame.height) / 2 };
+
+  await carriedTo(page, cityTileOf(opened), at, `the top of ${card}`);
+  await page.mouse.move(button.x, button.y);
+  await expect.poll(() => stillAt(page, card, home)).toBe(true);
+
+  // The hand leaves at the end of turn's first stage and is out of its lane a frame later, so both
+  // clicks land in one task; the screen reads where a click landed only after it, hence the wait.
+  const landedPlaying = await page.evaluate(
+    async (points) => {
+      const game = window.game;
+      if (game === undefined) throw new Error('the game is not running');
+      const clicked = ({ x, y }: { x: number; y: number }): void => {
+        for (const [type, buttons] of [
+          ['mousedown', 1],
+          ['mouseup', 0],
+        ] as const) {
+          game.canvas.dispatchEvent(
+            new MouseEvent(type, {
+              bubbles: true,
+              cancelable: true,
+              clientX: x,
+              clientY: y,
+              buttons,
+            }),
+          );
+        }
+      };
+      clicked(points.button);
+      await null;
+      clicked(points.at);
+      return game.scene.getScene<ChronicleScene>('ui').playing;
+    },
+    { button, at },
+  );
+  expect(landedPlaying).toBe(true);
+
+  await playedOut(page);
+  expect(await ringedTile(page)).toBeUndefined();
+
+  expect(problems).toEqual([]);
+});
+
+test('a click on the line naming the aim lets the card go and reaches no tile under it', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const { chronicle: opened, index } = bareAimable();
+
+  await openSaved(page, opened);
+  const home = await onScreen(page, `hand-${index}`);
+
+  await page.mouse.click(home.x, home.y);
+  await aimed(page);
+  await carriedUnder(page, cityTileOf(opened), 'aim-line');
+  await click(page, 'aim-line');
+  await expect.poll(() => standing(page, 'aim')).toBe(false);
+  await expect.poll(() => selected(page, index, home)).toBe(false);
+  expect(await chronicleOf(page)).toEqual(opened);
+
+  expect(problems).toEqual([]);
+});
+
+test('on the settle phase the chip and the dead end-turn button stop a press: each lets the settle card being aimed go and settles nothing, and the chip on a clean screen rings no tile', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const opened = launchedOn(1);
+
+  await openSaved(page, opened);
+  const home = await onScreen(page, 'hand-0');
+
+  await carriedUnder(page, CENTRE, 'settle-phase-chip');
+  await click(page, 'settle-phase-chip');
+  await rested(page);
+  expect(await ringedTile(page)).toBeUndefined();
+
+  await page.mouse.click(home.x, home.y);
+  await aimed(page);
+  await click(page, 'settle-phase-chip');
+  await expect.poll(() => standing(page, 'aim')).toBe(false);
+  await expect.poll(() => selected(page, 0, home)).toBe(false);
+  expect(await chronicleOf(page)).toEqual(opened);
+
+  // The centre stands under the chip, which a press on it would land on: its neighbour carries the map.
+  await carriedUnder(page, { q: CENTRE.q, r: CENTRE.r + 1 }, 'end-turn');
+  await page.mouse.click(home.x, home.y);
+  await aimed(page);
+  await click(page, 'end-turn');
+  await expect.poll(() => standing(page, 'aim')).toBe(false);
+  await expect.poll(() => selected(page, 0, home)).toBe(false);
   expect(await chronicleOf(page)).toEqual(opened);
 
   expect(problems).toEqual([]);
@@ -704,6 +962,171 @@ test('a left click anywhere on the infopanel reaches no tile under it, and lets 
   expect(problems).toEqual([]);
 });
 
+test('a click on a yield reading, a pile or the infopanel lets a unit being aimed go with the inspection standing, and the reading latches its yield', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const { entered: opened } = workerStepped('steps its first worker off the city', () => true);
+  const city = tileKey(cityTileOf(opened));
+
+  await openSaved(page, opened);
+  const face = await onScreen(page, `tile-${city}`);
+  const pile = await pileTop(page, 'draw-pile');
+
+  const presses: [string, () => Promise<void>][] = [
+    ['reading-food', () => click(page, 'reading-food')],
+    ['draw-pile', () => page.mouse.click(pile.x, pile.y)],
+    ['panel-name', () => click(page, 'panel-name')],
+  ];
+  for (const [on, press] of presses) {
+    await page.mouse.click(face.x, face.y);
+    await page.mouse.click(face.x, face.y, { button: 'right' });
+    await expect.poll(async () => (await marked(page)).inspecting).toBeDefined();
+    await rested(page);
+    const aiming = await marked(page);
+    expect(aiming.ringed, on).toBe(city);
+    expect(aiming.lit, on).toBeGreaterThan(0);
+
+    await press();
+    await expect
+      .poll(() => marked(page), on)
+      .toEqual({ ringed: undefined, lit: 0, inspecting: aiming.inspecting });
+  }
+  expect(await shows(page, 'reading-food-well')).toBe(true);
+  expect(await chronicleOf(page)).toEqual(opened);
+
+  expect(problems).toEqual([]);
+});
+
+test('a unit that lights and glows nothing stays selected through a click on a pile', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const { stepped: opened, tile } = workerStepped(
+    'steps its first worker off the city onto a tile it can do nothing more from',
+    (stepped, at) => {
+      const worker = unitAt(stepped.units, at);
+      if (worker === undefined) return false;
+      const { landings, targets } = byHand(CATALOGUE, stepped, worker);
+      return landings.length === 0 && targets.length === 0;
+    },
+  );
+  const key = tileKey(tile);
+
+  await openSaved(page, opened);
+  await click(page, `tile-${key}`);
+  await expect.poll(async () => (await marked(page)).ringed).toBe(key);
+
+  const pile = await pileTop(page, 'draw-pile');
+  await page.mouse.click(pile.x, pile.y);
+  await rested(page);
+  expect(await marked(page)).toEqual({ ringed: key, lit: 0, inspecting: undefined });
+  expect(await chronicleOf(page)).toEqual(opened);
+
+  expect(problems).toEqual([]);
+});
+
+test('a click on the band or on the bar’s paper drops a selected tile and the inspection with it, and the band drops a selected card', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const { opened, unit } = playableAtNothing();
+  const city = tileKey(cityTileOf(opened));
+
+  await openSaved(page, opened);
+  const face = await onScreen(page, `tile-${city}`);
+  const home = await onScreen(page, `hand-${unit}`);
+  const band = await onTheBand(page);
+  const paper = await onThePaper(page);
+
+  for (const [on, at] of [
+    ['band', band],
+    ['paper', paper],
+  ] as const) {
+    await page.mouse.click(face.x, face.y);
+    await page.mouse.click(face.x, face.y, { button: 'right' });
+    await expect.poll(async () => (await marked(page)).inspecting).toBeDefined();
+    await rested(page);
+    expect((await marked(page)).ringed, on).toBe(city);
+
+    await page.mouse.click(at.x, at.y);
+    await expect
+      .poll(() => marked(page), on)
+      .toEqual({ ringed: undefined, lit: 0, inspecting: undefined });
+  }
+
+  await page.mouse.click(home.x, home.y);
+  await rested(page);
+  expect(await selected(page, unit, home)).toBe(true);
+  await page.mouse.click(band.x, band.y);
+  await expect.poll(() => selected(page, unit, home)).toBe(false);
+  expect(await chronicleOf(page)).toEqual(opened);
+
+  expect(problems).toEqual([]);
+});
+
+test('a press landed on the band and let go on the Menu button, then one landed on the Menu button and let go on the band, drop nothing', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const opened = settledOn(1);
+  const city = tileKey(cityTileOf(opened));
+
+  await openSaved(page, opened);
+  const face = await onScreen(page, `tile-${city}`);
+  const band = await onTheBand(page);
+  const menu = await onScreen(page, 'menu-button');
+
+  await page.mouse.click(face.x, face.y);
+  await expect.poll(() => ringedTile(page)).toBe(city);
+
+  await page.mouse.move(band.x, band.y);
+  await page.mouse.down();
+  await page.mouse.move(menu.x, menu.y, { steps: 5 });
+  await page.mouse.up();
+  await page.mouse.down();
+  await page.mouse.move(band.x, band.y, { steps: 5 });
+  await page.mouse.up();
+  await rested(page);
+  expect(await ringedTile(page)).toBe(city);
+  expect(await standing(page, 'menu')).toBe(false);
+  expect(await chronicleOf(page)).toEqual(opened);
+
+  expect(problems).toEqual([]);
+});
+
+test('a press landed on one tile and let go on its neighbour inside the drag slack is no click, selects nothing and carries the map nowhere', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const opened = settledOn(1);
+  const city = cityTileOf(opened);
+  const face = `tile-${tileKey(city)}`;
+
+  await openSaved(page, opened);
+  const seen = await readings(page, [face, `tile-${tileKey(eastOf(city))}`]);
+  const from = seen(face).onScreen;
+  const to = seen(`tile-${tileKey(eastOf(city))}`).onScreen;
+  const quarter = (await dragSlack(page)) / 4;
+  const across = Math.hypot(to.x - from.x, to.y - from.y);
+  const step = {
+    x: ((to.x - from.x) / across) * quarter,
+    y: ((to.y - from.y) / across) * quarter,
+  };
+  const edge = { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 };
+
+  await page.mouse.move(edge.x - step.x, edge.y - step.y);
+  await page.mouse.down();
+  await page.mouse.move(edge.x + step.x, edge.y + step.y);
+  await page.mouse.up();
+  await rested(page);
+  expect(await ringedTile(page)).toBeUndefined();
+  expect(await stillAt(page, face, from)).toBe(true);
+  expect(await chronicleOf(page)).toEqual(opened);
+
+  expect(problems).toEqual([]);
+});
+
 test('a drag while a card is being aimed takes the aim down and plays the card it lifts', async ({
   page,
 }) => {
@@ -719,6 +1142,29 @@ test('a drag while a card is being aimed takes the aim down and plays the card i
   await dragOut(page, unit);
   expect(await standing(page, 'aim')).toBe(false);
   await expect.poll(() => chronicleOf(page)).toEqual(playedAtNothing(opened, unit));
+
+  expect(problems).toEqual([]);
+});
+
+test('a drag that carries the map leaves a card aimed at the hand being aimed', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const { opened, card } = aimableAtHand();
+
+  await openSaved(page, opened);
+  const home = await onScreen(page, `hand-${card}`);
+
+  await page.mouse.click(home.x, home.y);
+  await rested(page);
+  await page.mouse.click(home.x, home.y);
+  await expect.poll(() => standing(page, 'aim-point')).toBe(true);
+
+  const city = await onScreen(page, `tile-${tileKey(cityTileOf(opened))}`);
+  await dragBetween(page, city, { x: city.x + 120 * city.unit, y: city.y - 80 * city.unit });
+  await rested(page);
+  expect(await standing(page, 'aim-point')).toBe(true);
+  expect(await chronicleOf(page)).toEqual(opened);
 
   expect(problems).toEqual([]);
 });

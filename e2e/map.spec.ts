@@ -18,6 +18,7 @@ import {
   campGround,
   chronicleOf,
   cityTileOf,
+  dragBetween,
   dragOut,
   dragTiles,
   eastOf,
@@ -37,6 +38,7 @@ import {
   shownCard,
   shows,
   standing,
+  stillAt,
   tileOnScreen,
   tooltipUp,
   unitEntered,
@@ -80,11 +82,7 @@ type Point = { x: number; y: number };
 
 /** Drags from a page point by a page offset, well past the slack that tells a drag from a click. */
 async function drag(page: Page, from: Point, by: Point): Promise<void> {
-  await page.mouse.move(from.x, from.y);
-  await page.mouse.down();
-  await page.mouse.move(from.x + by.x / 2, from.y + by.y / 2, { steps: 5 });
-  await page.mouse.move(from.x + by.x, from.y + by.y, { steps: 5 });
-  await page.mouse.up();
+  await dragBetween(page, from, { x: from.x + by.x, y: from.y + by.y });
   await rested(page);
 }
 
@@ -340,7 +338,10 @@ test('a unit carried onto a lit tile the infopanel stands over and let go there 
 
   await openSaved(page, step.entered);
 
-  const home = await onScreen(page, `tile-${tileKey(city)}`);
+  const mark = `unit-${tileKey(city)}`;
+  const seen = await readings(page, [`tile-${tileKey(city)}`, mark]);
+  const home = seen(`tile-${tileKey(city)}`).onScreen;
+  const stood = seen(mark).onScreen;
   await page.mouse.click(home.x, home.y);
   await expect.poll(() => ringedTile(page)).toBe(tileKey(city));
   await page.mouse.click(home.x, home.y, { button: 'right' });
@@ -349,6 +350,7 @@ test('a unit carried onto a lit tile the infopanel stands over and let go there 
   expect(await standsOver(page, 'infopanel', step.tile, city)).toEqual([true, false]);
 
   await dragTiles(page, city, step.tile);
+  await expect.poll(() => stillAt(page, mark, stood)).toBe(true);
   expect(await chronicleOf(page)).toEqual(step.entered);
   expect(await ringedTile(page)).toBe(tileKey(city));
 
@@ -366,13 +368,16 @@ test('a population carried in city mode onto a tile the infopanel stands over an
   await page.keyboard.press('c');
   await expect.poll(() => shows(page, 'city-chip')).toBe(true);
 
-  const home = await onScreen(page, `tile-${tileKey(city)}`);
+  const seen = await readings(page, [`tile-${tileKey(city)}`, 'assigned']);
+  const home = seen(`tile-${tileKey(city)}`).onScreen;
+  const stood = seen('assigned').onScreen;
   await page.mouse.click(home.x, home.y, { button: 'right' });
   await expect.poll(() => shownCard(page)).toBeDefined();
   await rested(page);
   expect(await standsOver(page, 'infopanel', claimed, city)).toEqual([true, false]);
 
   await dragTiles(page, city, claimed);
+  await expect.poll(() => stillAt(page, 'assigned', stood)).toBe(true);
   expect(await chronicleOf(page)).toEqual(chronicle);
   expect(await ringedTile(page)).toBeUndefined();
 
@@ -399,9 +404,13 @@ test('a unit carried onto a lit tile the pinned achievement stands over and let 
     y: plate.y + plate.height / 2 - from.y,
   });
   expect(await standsOver(page, 'pinned-achievement', step.tile, city)).toEqual([true, false]);
-  expect(inside(await tileOnScreen(page, city), await mapFrame(page))).toBe(true);
+  const mark = `unit-${tileKey(city)}`;
+  const dragged = await readings(page, [`tile-${tileKey(city)}`, mark]);
+  expect(inside(dragged(`tile-${tileKey(city)}`).onScreen, await mapFrame(page))).toBe(true);
+  const stood = dragged(mark).onScreen;
 
   await dragTiles(page, city, step.tile);
+  await expect.poll(() => stillAt(page, mark, stood)).toBe(true);
   expect(await chronicleOf(page)).toEqual(step.entered);
 
   expect(problems).toEqual([]);

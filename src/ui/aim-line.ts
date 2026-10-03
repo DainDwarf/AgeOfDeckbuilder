@@ -57,8 +57,10 @@ export function createAimLine(scene: Phaser.Scene, on: Stratum): AimLine {
       slab.lineStyle(1, LOOK.cardEdge);
       slab.strokeRect(0.5, 0.5, width - 1, height - 1);
 
+      // Interactive, so no press reaches the map under it, and never marked as answering one.
+      const stop = scene.add.zone(0, 0, width, height).setOrigin(0, 0).setInteractive();
       line = scene.add
-        .container((DESIGN_WIDTH - width) / 2, BOTTOM - height, [slab, label])
+        .container((DESIGN_WIDTH - width) / 2, BOTTOM - height, [slab, label, stop])
         .setName('aim-line');
       on.layer.add(line);
     },
