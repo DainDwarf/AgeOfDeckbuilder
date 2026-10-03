@@ -1,8 +1,8 @@
-import { builds, discarded, gained } from '../rules/cards';
+import { builds, discarded, gained, placesImprovement } from '../rules/cards';
 import type { Age, Slice } from '../rules/catalogue';
 import { turnsPlaying } from '../rules/chronicle';
 import { MOVE_POINT, tileAt } from '../rules/map';
-import { followed } from '../rules/stages';
+import { followed, plays } from '../rules/stages';
 import { NOMADIC } from './nomadic';
 
 const { basePrice, schedule, camp } = NOMADIC.owns;
@@ -66,6 +66,16 @@ export const STONE: Slice = {
         technology: 'agriculture',
         influence: 1,
       },
+      trapping: {
+        tallies: (_catalogue, _started, stages, tally) => {
+          const hunts = plays(stages).filter(({ card }) => card === 'hunt').length;
+          return hunts === 0 ? tally : { ...tally, hunts: (tally.hunts ?? 0) + hunts };
+        },
+        count: (_catalogue, _chronicle, tally) => tally.hunts ?? 0,
+        need: 6,
+        technology: 'trapping',
+        influence: 1,
+      },
       fire: { ...turnsPlaying(5), need: 3, technology: 'fire', influence: 1 },
     },
   },
@@ -77,6 +87,7 @@ export const STONE: Slice = {
         singleUse: true,
         ...builds('farm'),
       },
+      trapping: { kind: 'instant', cost: { production: 2 }, ...placesImprovement('trapping') },
       fire: {
         kind: 'instant',
         cost: {},
@@ -87,6 +98,7 @@ export const STONE: Slice = {
     },
     technologies: {
       agriculture: { needs: ['settlement'], unlocks: { cards: { farm: 1 } } },
+      trapping: { needs: ['settlement'], unlocks: { cards: { trapping: 1 } } },
       fire: { needs: ['settlement'], unlocks: { cards: { fire: 1 } } },
     },
     terrains: {
@@ -103,6 +115,9 @@ export const STONE: Slice = {
     },
     buildings: {
       farm: { terrains: ['plain'], yields: { food: 2 } },
+    },
+    improvements: {
+      trapping: { terrains: ['forest'], feature: 'deer', yields: { food: 1 } },
     },
     biomes: {
       desert: {

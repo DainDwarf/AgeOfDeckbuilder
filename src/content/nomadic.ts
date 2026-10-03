@@ -6,8 +6,6 @@ import {
   featureRemoved,
   firstRefusal,
   gained,
-  improvementAbsent,
-  improvementPlaced,
   made,
   movePointsSpent,
   outside,
@@ -21,7 +19,7 @@ import type { Age, Slice, Tables } from '../rules/catalogue';
 import { arrived, populationTaken, yielded } from '../rules/city';
 import { enteredAround } from '../rules/enemies';
 import { MOVE_POINT } from '../rules/map';
-import { buildingKind, improvementKind } from '../rules/map-kinds';
+import { buildingKind } from '../rules/map-kinds';
 import {
   addedToDrawPileTop,
   burned,
@@ -112,18 +110,6 @@ const TABLES: Tables = {
         (catalogue, paid, at) => yielded(catalogue, paid, at),
       ),
     },
-    trapping: {
-      kind: 'instant',
-      cost: { production: 2 },
-      ...throughWorker(
-        (catalogue, _chronicle, tile) =>
-          firstRefusal(
-            made(catalogue, tile, improvementKind(catalogue, 'trapping').terrains),
-            improvementAbsent(catalogue, tile, 'trapping'),
-          ),
-        (catalogue, paid, at) => improvementPlaced(catalogue, paid, at, 'trapping'),
-      ),
-    },
     hunt: {
       kind: 'instant',
       cost: {},
@@ -175,7 +161,6 @@ const TABLES: Tables = {
         ...Array<string>(2).fill('worker'),
         ...Array<string>(2).fill('warrior'),
         'scout',
-        ...Array<string>(2).fill('trapping'),
         ...Array<string>(2).fill('hunt'),
         ...Array<string>(2).fill('march'),
       ],
@@ -375,9 +360,7 @@ const TABLES: Tables = {
     cattle: { terrain: 'plain', yields: { food: 1 } },
     flint: { terrain: 'hills', yields: { production: 1 } },
   },
-  improvements: {
-    trapping: { terrains: ['forest'], yields: { food: 1 } },
-  },
+  improvements: {},
 };
 
 const REGIONS: Age['regions'] = {

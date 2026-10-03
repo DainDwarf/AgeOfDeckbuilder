@@ -139,7 +139,7 @@ export function settledOn(
 }
 
 /** The chronicle the card at that place in the hand leaves, played on the tile; a refusal throws. */
-function playedOn(chronicle: Chronicle, index: number, tile: TileCoords): Chronicle {
+export function playedOn(chronicle: Chronicle, index: number, tile: TileCoords): Chronicle {
   const played = outcome(apply(CATALOGUE, chronicle, { type: 'play', index, aim: 'tile', tile }));
   if (played === chronicle) {
     const card = chronicle.hand[index]?.id ?? `no card at ${index}`;

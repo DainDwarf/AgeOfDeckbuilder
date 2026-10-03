@@ -14,7 +14,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **Trapping** — Trapping stands in the Stone Age's content as the technology of the wild's door, needing Settlement: its achievement counts the plays of Hunt toward 6, unlocks one copy of the card and pays 1 influence; the card goes on a tile carrying deer and on no other, and the Nomadic deck opens without it; a layer that names a feature goes only on a tile carrying it and is removed with the feature, proven on the fixture; `e2e/trapping.spec.ts` plays the card, and a Hunt on a trapped deer, on screen; `npm run check`, `npm test` and `npm run lint` pass. Doc-impact: `docs/MAP.md`, `docs/ages/STONE.md`, `docs/ages/NOMADIC.md`. [board/trapping.md](board/trapping.md)
 - **Herbalism** — the sky's door, needing Settlement: its goal counts the kinds of terrain Gather was played on, and it unlocks Heal, which costs food and brings a unit inside the border back to full health; its design is settled in words in [board/stone-age-pool.md](board/stone-age-pool.md), and its numbers and texts are this line's intake; healing a unit lands here.
 - **The pinned achievement** — one achievement pinned on the campaign screen shows on the chronicle screen as a ledger: its goal in words, a count against its need where it has one, a check mark once reached, a cross mark once failed.
 - **The launch warning** — the warning a launch over a chronicle with achievements reached raises, since an abandoned chronicle pays nothing.
