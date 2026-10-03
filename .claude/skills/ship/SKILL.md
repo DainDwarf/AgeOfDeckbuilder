@@ -46,6 +46,7 @@ Spawn the `egress-reviewer` with: the diff (`git diff` plus the list of untracke
 
 - **Blocking findings** go back to the implementer agent that did the work, continued with SendMessage so it keeps its context, with the finding quoted. A fresh implementer is spawned only when that agent is gone. After two rejection rounds, stop and hand the disagreement to the user compressed to its inflexion point.
 - **Advisory findings** are relayed in one line each, not acted on unless the user says so.
+- **On a cleanup line**, what the review or the implementer's report finds that could also be tidied is tidied in that line, before the commit, and never offered as a follow-up line or parked.
 
 ## 5. Commit
 
