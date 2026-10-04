@@ -16,14 +16,14 @@ The age in one sentence: the chronicle where the economy comes home — it opens
 - The age opens every resource. Money and science may be under-represented, and are still there in some capacity.
 - Each technology is a line of its own, and a family's technologies are designed after its door has been played. A technology's line stands on the board after the lines of what it needs.
 
-**The skeleton, the user's tree** (names and links, each column in the order it stands, top to bottom; a link's reason is tested against the practice rule when its technology is designed, and moves if it finds no goal):
+**The skeleton, the user's tree** (names and links, each column in the order it stands, top to bottom):
 
 - Column 1, the doors, one to a family: Herbalism (the sky); Agriculture (the field); Trapping (the wild); Fire (the hearth).
 - Column 2: Burial rites (needs Herbalism); Irrigation (needs Agriculture, Herbalism); Domestication (needs Trapping, Agriculture); Bow and arrow (needs Trapping); Pottery (needs Fire).
 - Column 3: Calendar (needs Irrigation, Burial rites); Bread (needs Irrigation); Clothmaking (needs Domestication); Fishing (needs Bow and arrow).
 - Column 4: Megalith (needs Calendar); Bartering (needs Clothmaking, Bread); Raft (needs Fishing).
 
-In that order no link crosses another. A column stands in the content's order, so a technology is declared where its column holds it, column by column, each column top to bottom: the sky's first, then the field's, the wild's and the hearth's, Raft excepted, which stands under Bartering. A link that moves at a technology's intake is drawn again before its order is kept.
+In that order no link crosses another. A column stands in the content's order, so a technology is declared where its column holds it, column by column, each column top to bottom: the sky's first, then the field's, the wild's and the hearth's, Raft excepted, which stands under Bartering.
 
 Pottery, Burial rites, Bread and Megalith are maybes, each decided at its line's intake; the others the user is rather sure of, knowing what they unlock.
 
@@ -47,6 +47,9 @@ The field is Agriculture, Irrigation and Bread; the wild is Trapping, Domesticat
 - A plate keeps its width and a long goal wraps; height is the scarce side of the tree's room.
 - A goal's ground is dealt scarce: going for more of it is a journey, and the journey is what makes the goal interesting. A share is never raised so that the ground lies near the centre.
 - A goal is a deed that moves the player: parking one worker on one tile and pressing one card every turn was dropped for hunting from tile to tile.
+- A link is the user's and stays where the tree draws it, a goal done with the cards of one of its technologies alone included: Irrigation keeps Herbalism though its goal is Farm's.
+- A card's ground follows its fiction before its text's length: irrigation on forest or hills "sounds a bit weird", so it names plain and desert.
+- A need is kept low where reaching it means buying copies: two Farms, so that one copy bought is enough.
 
 **Left out, and side notes:**
 
