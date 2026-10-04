@@ -16,7 +16,7 @@ The player-facing entries, verbatim:
 - `technology.domestication`: `Domestication`
 - `goal.domestication`: `Play [card:gather] on [feature:cattle] {need} times`
 
-The content's numbers, provisional and the user's: the card Pasture is an instant costing 2 production, placed as Trapping's card is; the improvement Pasture goes on plain, names cattle and gives 1 food; the technology needs Trapping and Agriculture and unlocks one copy of Pasture; the achievement needs 10 and pays 1 influence.
+The content's numbers, provisional: the card Pasture is an instant costing 2 production, placed as Trapping's card is; the improvement Pasture goes on plain, names cattle and gives 1 food; the technology needs Trapping and Agriculture and unlocks one copy of Pasture; the achievement needs 10 and pays 1 influence.
 
 **Doc-impact:** `docs/ages/STONE.md`.
 
