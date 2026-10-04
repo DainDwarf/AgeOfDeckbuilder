@@ -14,8 +14,8 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
+- **The parked crumbs** — the camps' placement and capture raise their tile change through the door `src/rules/cards.ts` holds; one fixture test proves a card aimed at a unit counts the terrain its unit stands on; `WARRIOR`, `WORKER`, `HUNT` and `paidOnDeer` are each declared once, in `e2e/chronicle-screen.ts`; the launch warning's none-reached test asserts no warning stands after the press; no test asserts `SURVEY_NEED`; Nomadic's Gather reads played through a worker; `npm test` green and `e2e/pin.spec.ts` proves it. Doc-impact: `docs/ages/NOMADIC.md`. [board/parked-crumbs.md](board/parked-crumbs.md)
 - **The tree's columns** — re-thinking either how the tree is put in columns, or how the tree is displayed in general: the skeleton's next column holds seven technologies, and seven plates need 776 units of the room's 672 at today's plate height, more once a goal wraps.
-- **The parked crumbs** — six leftovers of the last ships tidied in one pass: the camps' tile change through the helper (`src/rules/schedule.ts`, `src/rules/chronicle.ts`), `terrainAimed`'s unreached branch for a card aimed at a unit, `WARRIOR` shared by `e2e/heal.spec.ts` and `e2e/camps.spec.ts`, `e2e/pin.spec.ts`'s seed search through `paidOnDeer`, the launch warning spec's explicit no-warning assertion, and `SURVEY_NEED` no longer asserted by its own test.
 - **The field's climb** — Irrigation, Grinding stone and Bread, each technology with its achievement and every card it unlocks.
 - **The wild's climb** — Bow and arrow, Fishing, Domestication, Clothmaking and Raft, each technology with its achievement and every card it unlocks.
 - **The hearth's climb** — Pottery, Dyes and Bartering, and Granary, which needs Pottery, each technology with its achievement and every card it unlocks.
