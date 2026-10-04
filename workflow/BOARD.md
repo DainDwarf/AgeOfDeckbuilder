@@ -15,6 +15,7 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 ## Lines
 
 - **The tree's columns** — re-thinking either how the tree is put in columns, or how the tree is displayed in general: the skeleton's next column holds seven technologies, and seven plates need 776 units of the room's 672 at today's plate height, more once a goal wraps.
+- **The parked crumbs** — six leftovers of the last ships tidied in one pass: the camps' tile change through the helper (`src/rules/schedule.ts`, `src/rules/chronicle.ts`), `terrainAimed`'s unreached branch for a card aimed at a unit, `WARRIOR` shared by `e2e/heal.spec.ts` and `e2e/camps.spec.ts`, `e2e/pin.spec.ts`'s seed search through `paidOnDeer`, the launch warning spec's explicit no-warning assertion, and `SURVEY_NEED` no longer asserted by its own test.
 - **The field's climb** — Irrigation, Grinding stone and Bread, each technology with its achievement and every card it unlocks.
 - **The wild's climb** — Bow and arrow, Fishing, Domestication, Clothmaking and Raft, each technology with its achievement and every card it unlocks.
 - **The hearth's climb** — Pottery, Dyes and Bartering, and Granary, which needs Pottery, each technology with its achievement and every card it unlocks.
