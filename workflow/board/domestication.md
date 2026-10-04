@@ -4,7 +4,7 @@
 
 **Spec:** [`docs/ages/STONE.md`](../../docs/ages/STONE.md), _The technologies_ and _The cards_; the shared ground is [`stone-age-pool.md`](stone-age-pool.md), _For the technologies_. The sentences, verbatim:
 
-- _The technologies_, its opening paragraph, replaced whole by: "A goal is a focus themed on its technology: a deed read from the technology's fiction, asked for more often than a chronicle played as usual gives it."
+- _The technologies_, its opening paragraph, replaced whole by: "A goal is a focus themed on its technology: it is read from the technology's fiction and asks for more than a chronicle played as usual gives."
 - _The technologies_, a bullet after Irrigation's: "**Domestication** needs Trapping and Agriculture. Its goal counts a deed: the times Gather is played on a tile carrying cattle, the same tile as often as a worker gathers there. It unlocks the card **Pasture** and pays influence."
 - _The cards_, a bullet after Irrigation's: "**Pasture**, an improvement giving food, placed through a worker for production on a tile carrying cattle and nowhere else. It goes with the cattle, so a Hunt played there removes both."
 
@@ -28,7 +28,6 @@ The content's numbers, provisional and the user's: the card Pasture is an instan
 - The goal counts every Gather played on a tile carrying cattle, read as the tile stands when the card is played, the same tile as often as it is played there. A worker standing on one herd reaches it: the user's choice, knowing Trapping's rejected goal on the same page, whose sentence stays as it stands.
 - Gather is refused inside the border, so a herd the city holds counts nothing; a tile carrying a Pasture counts like any other.
 - Pasture is the first improvement that shares a tile with another: a cattle tile a river runs along takes Irrigation too, and a Farm inside the border. The rules allow it as they stand. On the map the three marks of that tile's row, 11 apart on a tile 41.6 wide, reach about 2 and 5 units past the tile's upper edges, computed and not shot: accepted until the look pass, not to be fixed or raised here.
-- The page's opening sentence says "a deed" and Agriculture's goal reads the chronicle as it stands: the sentence is the user's, verbatim, and is not reworded at the ship.
 - A chronicle in progress may lose the count its Trapping or Irrigation goal held when the counter's tally changes its names: no care is owed a save before the Bronze Age.
 - Reconcile, the goal's count: Trapping's goal counts Hunts anywhere, Irrigation's counts Farms built along a river, Domestication's counts Gathers on cattle. They become one counter of a card's plays on a ground, the ground being what it takes — anywhere, along a river, carrying a named feature; Trapping's and Irrigation's are reshaped onto it in this line, and the fixture's river achievement with them. Herbalism's counter, the kinds of terrain, counts another thing and stays apart.
 - Reconcile, the card: Pasture goes through the door Trapping's card goes through, as it is.

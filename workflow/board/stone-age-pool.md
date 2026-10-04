@@ -11,7 +11,7 @@ The age in one sentence: the chronicle where the economy comes home — it opens
 **The frame:**
 
 - The tree is four columns deep, and no column holds more than five technologies: five of today's plates stand 638 of the room's 672 tall. A plate reads four lines under its name at most, the goal's and the reward's together: a fifth puts a column of five 56 over the room, and the tree's display is then a line of its own, ahead of the technology that needs it.
-- A goal is a focus themed on its technology: a deed read from the technology's fiction, asked for more often than a chronicle played as usual gives it. A feat, a goal that bends the whole chronicle, stands here and there. What a technology needs is the user's link and binds its goal to no card.
+- A goal is a focus themed on its technology: it is read from the technology's fiction and asks for more than a chronicle played as usual gives. A feat, a goal that bends the whole chronicle, stands here and there. What a technology needs is the user's link and binds its goal to no card.
 - The technologies are grouped by way of life, four families: the field, the wild, the hearth, the sky. The families are not wholly separate: a technology may need one of another family.
 - The age opens every resource. Money and science may be under-represented, and are still there in some capacity.
 - Each technology is a line of its own, and a family's technologies are designed after its door has been played. A technology's line stands on the board after the lines of what it needs.
