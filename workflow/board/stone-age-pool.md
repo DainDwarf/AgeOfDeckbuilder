@@ -11,7 +11,7 @@ The age in one sentence: the chronicle where the economy comes home — it opens
 **The frame:**
 
 - The tree is four columns deep, and no column holds more than five technologies: five of today's plates stand 638 of the room's 672 tall. A plate reads four lines under its name at most, the goal's and the reward's together: a fifth puts a column of five 56 over the room, and the tree's display is then a line of its own, ahead of the technology that needs it.
-- A goal is practice: it is done with the cards of the technologies its technology needs, so every link of the tree has a reason. A feat, a goal that bends the whole chronicle, stands here and there. A goal that lands on its own while the chronicle is played as usual is avoided. The first column's goals are done with the Nomadic deck.
+- A goal is a focus themed on its technology: a deed read from the technology's fiction, asked for more often than a chronicle played as usual gives it. A feat, a goal that bends the whole chronicle, stands here and there. What a technology needs is the user's link and binds its goal to no card.
 - The technologies are grouped by way of life, four families: the field, the wild, the hearth, the sky. The families are not wholly separate: a technology may need one of another family.
 - The age opens every resource. Money and science may be under-represented, and are still there in some capacity.
 - Each technology is a line of its own, and a family's technologies are designed after its door has been played. A technology's line stands on the board after the lines of what it needs.
@@ -50,6 +50,10 @@ The field is Agriculture, Irrigation and Bread; the wild is Trapping, Domesticat
 - A link is the user's and stays where the tree draws it, a goal done with the cards of one of its technologies alone included: Irrigation keeps Herbalism though its goal is Farm's.
 - A card's ground follows its fiction before its text's length: irrigation on forest or hills "sounds a bit weird", so it names plain and desert.
 - A need is kept low where reaching it means buying copies: two Farms, so that one copy bought is enough.
+- A goal is never served as practice, done with the cards of the technologies its technology needs: that clause drew the serves towards bad ideas on two technologies. Takes are served from the technology's own theme.
+- A goal counting features claimed is chance, not focus: features are few by design.
+- A goal a parked worker reaches may stand for a trial, the balance pass making it a focus: Gather on cattle, the same tile reused.
+- Improvements of one price and one gain feel like one card: Pasture kept Trapping's and Irrigation's numbers, and the three are weighed at the balance pass.
 
 **Left out, and side notes:**
 

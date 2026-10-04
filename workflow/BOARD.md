@@ -10,11 +10,11 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 - **New enemies** — the enemy units the Stone Age adds, the scripts they follow and the camps they enter from.
 - **Neutrals and sites** — the neutral faction, and the sites that belong to no faction and pay a reward once.
 - **The headless simulator** — a consumer of the rules that runs only when asked and reports numbers, not diagnoses, tuned across the two ages; the reachability cache and the end of turn's cost per `apply` are looked at when it is made.
-- **The balance pass** — the Stone Age's numbers, measured through the simulator and felt in play.
+- **The balance pass** — the Stone Age's numbers, measured through the simulator and felt in play; Domestication's goal, which a worker standing on one herd reaches, made a focus, and Trapping, Irrigation and Pasture, three improvements of one price and one gain, weighed against one another.
 
 ## Lines
 
-- **Domestication** — the wild's technology that needs Trapping and Agriculture, with its achievement and every card it unlocks.
+- **Domestication** — the technology Domestication, its achievement and the card Pasture stand in the Stone Age's content after Irrigation's, every goal that counts a card's plays on a ground reads one counter proven on the fixture, the catalogue's coherence test passes and `docs/ages/STONE.md` says so. Doc-impact: `docs/ages/STONE.md`. [board/domestication.md](board/domestication.md)
 - **Bow and arrow** — the wild's technology that needs Trapping, with its achievement and every card it unlocks.
 - **Clothmaking** — the wild's technology that needs Domestication, with its achievement and every card it unlocks.
 - **Fishing** — the wild's technology that needs Bow and arrow, with its achievement and every card it unlocks.
