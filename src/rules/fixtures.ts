@@ -49,7 +49,7 @@ import {
   type Command,
   launched,
   outcome,
-  playsAlongRiver,
+  playsOn,
   terrainsPlayedOn,
 } from './chronicle';
 import { arrived, bordered, populationKilled, populationTaken } from './city';
@@ -862,7 +862,7 @@ function achievementsOf(age: string): Age['achievements'] {
       influence: 1,
     },
     [RIVERSIDE]: {
-      ...playsAlongRiver('PH_Farm'),
+      ...playsOn('PH_Farm', { on: 'river' }),
       need: RIVERSIDE_NEED,
       technology: DITCHING,
       influence: 1,

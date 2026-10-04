@@ -9,9 +9,9 @@ import {
   placesImprovement,
 } from '../rules/cards';
 import type { Age, Slice } from '../rules/catalogue';
-import { playsAlongRiver, terrainsPlayedOn, turnsPlaying } from '../rules/chronicle';
+import { playsOn, terrainsPlayedOn, turnsPlaying } from '../rules/chronicle';
 import { MOVE_POINT, tileAt } from '../rules/map';
-import { followed, plays } from '../rules/stages';
+import { followed } from '../rules/stages';
 import { NOMADIC } from './nomadic';
 
 const { basePrice, schedule, camp } = NOMADIC.owns;
@@ -82,18 +82,14 @@ export const STONE: Slice = {
         influence: 1,
       },
       trapping: {
-        tallies: (_catalogue, _started, stages, tally) => {
-          const hunts = plays(stages).filter(({ card }) => card === 'hunt').length;
-          return hunts === 0 ? tally : { ...tally, hunts: (tally.hunts ?? 0) + hunts };
-        },
-        count: (_catalogue, _chronicle, tally) => tally.hunts ?? 0,
+        ...playsOn('hunt', { on: 'anywhere' }),
         need: 6,
         technology: 'trapping',
         influence: 1,
       },
       fire: { ...turnsPlaying(5), need: 3, technology: 'fire', influence: 1 },
       irrigation: {
-        ...playsAlongRiver('farm'),
+        ...playsOn('farm', { on: 'river' }),
         need: 2,
         technology: 'irrigation',
         influence: 1,

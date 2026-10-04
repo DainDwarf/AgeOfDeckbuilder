@@ -5,6 +5,7 @@ import {
   type Command,
   launched,
   outcome,
+  playsOn,
   terrainsPlayedOn,
   turnsPlaying,
 } from './chronicle';
@@ -1027,6 +1028,42 @@ test('an achievement counting a card’s plays along a river counts each one aim
     id: RIVERSIDE,
     reached: true,
     tally: { plays: 2 },
+  });
+});
+
+test('an achievement counting a card’s plays on a feature counts one on a tile carrying it as the tile stood when the card was played, and none on a tile carrying another', () => {
+  const [carrying, other] = [
+    { q: 1, r: 0 },
+    { q: 0, r: 1 },
+  ];
+  const hunting = achieved({
+    [HOARD]: {
+      ...achievementOf(CATALOGUE, AGE, HOARD),
+      ...playsOn('PH_Hunt', { on: 'feature', feature: 'PH_Fertile' }),
+      need: 2,
+    },
+  });
+  const city = reaching([], {
+    tiles: field(2).map((tile): Tile => {
+      if (tileKey(tile) === tileKey(carrying)) return { ...tile, feature: 'PH_Fertile' };
+      if (tileKey(tile) === tileKey(other))
+        return { ...tile, terrain: 'forest', feature: 'PH_Game' };
+      return tile;
+    }),
+    units: [other, carrying].map(worker),
+    hand: ['PH_Hunt', 'PH_Hunt'],
+  });
+
+  const elsewhere = apply(hunting, city, aimedAt(other));
+  const hunted = apply(hunting, outcome(elsewhere), aimedAt(carrying));
+
+  expect(tileAt(outcome(elsewhere).tiles, other)?.feature).toBeUndefined();
+  expect(namesOf(elsewhere)).not.toContain('tallied');
+  expect(tileAt(outcome(hunted).tiles, carrying)?.feature).toBeUndefined();
+  expect(achievementIn(outcome(hunted), HOARD)).toEqual({
+    id: HOARD,
+    reached: false,
+    tally: { plays: 1 },
   });
 });
 

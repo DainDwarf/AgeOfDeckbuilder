@@ -17,8 +17,16 @@ import {
 } from './catalogue';
 import { assign, type CityCommand, claim, grow, income, reassign } from './city';
 import { campUnit, enteredAround } from './enemies';
-import { generateMap, type HexMap, runsAlong, type TileCoords, tileAt, tileKey } from './map';
-import { refuse } from './map-kinds';
+import {
+  type FeatureId,
+  generateMap,
+  type HexMap,
+  runsAlong,
+  type TileCoords,
+  tileAt,
+  tileKey,
+} from './map';
+import { featureKind, refuse } from './map-kinds';
 import { nextRng, seedRng, shuffle as shuffleItems } from './rng';
 import {
   answered,
@@ -404,23 +412,44 @@ export function terrainsPlayedOn(card: CardId): Required<Pick<Achievement, 'tall
   };
 }
 
+/** The ground a card's plays are counted on: anywhere, along a river, or carrying a feature. */
+export type PlayedGround =
+  | { readonly on: 'anywhere' }
+  | { readonly on: 'river' }
+  | { readonly on: 'feature'; readonly feature: FeatureId };
+
 /**
- * An achievement's tally and count for the plays of a card on a tile a river runs along, the play
- * aimed at a unit counted by the tile its unit stands on; a play aimed at no tile counts none. A card
- * the catalogue does not hold is refused.
+ * An achievement's tally and count for the plays of a card on a ground, read on the tile as it stood
+ * when the card was played, a play aimed at a unit on its unit's tile; a play aimed at no tile counts
+ * on no ground naming a tile. A card or a feature the catalogue does not hold is refused.
  */
-export function playsAlongRiver(card: CardId): Required<Pick<Achievement, 'tallies' | 'count'>> {
+export function playsOn(
+  card: CardId,
+  ground: PlayedGround,
+): Required<Pick<Achievement, 'tallies' | 'count'>> {
   return {
     tallies: (catalogue, started, stages, tally) => {
       cardOf(catalogue, card);
-      const along = plays(stages).filter((play) => {
-        const aimedAt = tileAimed(play.aimed);
-        return play.card === card && aimedAt !== undefined && runsAlong(started.rivers, aimedAt);
-      }).length;
-      return along === 0 ? tally : { ...tally, plays: (tally.plays ?? 0) + along };
+      if (ground.on === 'feature') featureKind(catalogue, ground.feature);
+      const counted = plays(stages).filter(
+        (play) => play.card === card && onGround(started, tileAimed(play.aimed), ground),
+      ).length;
+      return counted === 0 ? tally : { ...tally, plays: (tally.plays ?? 0) + counted };
     },
     count: (_catalogue, _chronicle, tally) => tally.plays ?? 0,
   };
+}
+
+/** Whether a play aimed at that tile, or at none, stands on the ground on the chronicle. */
+function onGround(chronicle: Chronicle, at: TileCoords | undefined, ground: PlayedGround): boolean {
+  switch (ground.on) {
+    case 'anywhere':
+      return true;
+    case 'river':
+      return at !== undefined && runsAlong(chronicle.rivers, at);
+    case 'feature':
+      return at !== undefined && tileAt(chronicle.tiles, at)?.feature === ground.feature;
+  }
 }
 
 /** The tile a play was aimed at, the one its unit stands on for a play aimed at a unit. */
