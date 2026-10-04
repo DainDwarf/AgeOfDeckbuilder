@@ -67,6 +67,12 @@ export const STONE: Slice = {
     camp,
     regions: REGIONS,
     achievements: {
+      herbalism: {
+        ...terrainsPlayedOn('gather'),
+        need: 4,
+        technology: 'herbalism',
+        influence: 1,
+      },
       agriculture: {
         count: (_catalogue, chronicle) =>
           chronicle.held.filter((coord) => tileAt(chronicle.tiles, coord)?.terrain === 'plain')
@@ -86,12 +92,6 @@ export const STONE: Slice = {
         influence: 1,
       },
       fire: { ...turnsPlaying(5), need: 3, technology: 'fire', influence: 1 },
-      herbalism: {
-        ...terrainsPlayedOn('gather'),
-        need: 4,
-        technology: 'herbalism',
-        influence: 1,
-      },
       irrigation: {
         ...playsAlongRiver('farm'),
         need: 2,
