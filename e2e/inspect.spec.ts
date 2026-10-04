@@ -10,12 +10,13 @@ import {
   type TileCoords,
   tileAt,
   tileKey,
+  tileYield,
   water,
 } from '../src/rules/map';
-import { featureKind, terrainKind } from '../src/rules/map-kinds';
+import { featureKind } from '../src/rules/map-kinds';
 import type { Resources } from '../src/rules/resources';
 import type { Chronicle } from '../src/rules/state';
-import { featureName, text } from '../src/ui/text';
+import { featureName, terrainName, text } from '../src/ui/text';
 import {
   besideTiles,
   cityTileOf,
@@ -31,6 +32,7 @@ import {
   readings,
   rested,
   ringedTile,
+  riverRows,
   settledOn,
   shownCard,
   standing,
@@ -130,13 +132,16 @@ function featureBeside(): Found<FeatureId> {
 }
 
 /**
- * A tile beside the city bare of feature, of a terrain a river feeds, a river running along it, and
- * what the river gives it.
+ * A tile beside the city bare of feature, building and improvement, a river running along it, and
+ * what it yields.
  */
 function riverBeside(): Found<Partial<Resources>> {
-  return besideCity('runs a river along a fed tile beside the city', (tile, chronicle) =>
-    tile.feature === undefined && runsAlong(chronicle.rivers, tile)
-      ? terrainKind(CATALOGUE, tile.terrain).river
+  return besideCity('runs a river along a bare tile beside the city', (tile, chronicle) =>
+    tile.feature === undefined &&
+    tile.building === undefined &&
+    tile.improvements.length === 0 &&
+    runsAlong(chronicle.rivers, tile)
+      ? tileYield(CATALOGUE, tile)
       : undefined,
   );
 }
@@ -202,11 +207,11 @@ test('a tile the generator gave a feature shows its mark, and the terrain card g
   expect(problems).toEqual([]);
 });
 
-test('a tile a river runs along gives the river a row of the terrain card, on what it gives that tile', async ({
+test('a tile a river runs along gives the river a row of the terrain card, and the river gives the tile no yield', async ({
   page,
 }) => {
   const problems = watch(page);
-  const { chronicle, tile, found: fed } = riverBeside();
+  const { chronicle, tile, found: yields } = riverBeside();
   const key = tileKey(tile);
 
   await openSaved(page, chronicle);
@@ -218,9 +223,14 @@ test('a tile a river runs along gives the river a row of the terrain card, on wh
   await page.keyboard.press('i');
   await expect.poll(() => shownCard(page)).toBe('terrain');
 
+  // The tile is bare, so its terrain's row gives the whole of what the rules say it yields.
   await expect
-    .poll(() => panelRows(page))
-    .toContainEqual({ text: text('panel.river'), yields: fed });
+    .poll(() => riverRows(page))
+    .toEqual([
+      { text: text('panel.river'), yields: {} },
+      { text: text('panel.no-yield'), yields: {} },
+    ]);
+  expect(await panelRows(page)).toContainEqual({ text: terrainName(tile.terrain), yields });
 
   // The tile holds that one card, so a further press leaves it standing.
   await page.keyboard.press('i');

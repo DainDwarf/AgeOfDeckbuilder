@@ -280,20 +280,8 @@ const TABLES: Tables = {
     settlement: { needs: [], unlocks: { cards: {}, age: 'stone' } },
   },
   terrains: {
-    plain: {
-      yields: { food: 1 },
-      movementCost: MOVE_POINT,
-      water: false,
-      elevation: 0,
-      river: { food: 1 },
-    },
-    forest: {
-      yields: { production: 1 },
-      movementCost: 2 * MOVE_POINT,
-      water: false,
-      elevation: 1,
-      river: { food: 1 },
-    },
+    plain: { yields: { food: 1 }, movementCost: MOVE_POINT, water: false, elevation: 0 },
+    forest: { yields: { production: 1 }, movementCost: 2 * MOVE_POINT, water: false, elevation: 1 },
     hills: {
       yields: { production: 1 },
       movementCost: 2 * MOVE_POINT,

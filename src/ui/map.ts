@@ -969,7 +969,7 @@ export function createMapView(
       const face = drawnOf(tile);
       if (face === undefined) continue;
       const asked = inside.has(tileKey(tile)) ? EVERY_RESOURCE : showing;
-      const yields = tileYield(catalogue, face.tile, shown.rivers);
+      const yields = tileYield(catalogue, face.tile);
       const owed: Resource[] = [];
       for (const resource of RESOURCES) {
         if (!asked.has(resource)) continue;

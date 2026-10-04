@@ -110,11 +110,8 @@ async function yielded(page: Page): Promise<{ inside: Glyphs; drawn: Glyphs }> {
   const held = new Set(chronicle.held.map(tileKey));
   const faces = drawnFaces(chronicle);
   return {
-    inside: glyphsOf(
-      chronicle,
-      faces.filter((face) => held.has(tileKey(face))),
-    ),
-    drawn: glyphsOf(chronicle, faces),
+    inside: glyphsOf(faces.filter((face) => held.has(tileKey(face)))),
+    drawn: glyphsOf(faces),
   };
 }
 
@@ -649,11 +646,8 @@ test('the tile wearing the culture threshold shows none of the overlay’s glyph
 
   const chronicle = await chronicleOf(page);
   const faces = drawnFaces(chronicle);
-  const all = glyphsOf(chronicle, faces);
-  const worn = glyphsOf(
-    chronicle,
-    faces.filter((face) => tileKey(face) !== tileKey(near)),
-  );
+  const all = glyphsOf(faces);
+  const worn = glyphsOf(faces.filter((face) => tileKey(face) !== tileKey(near)));
   expect(worn).not.toEqual(all);
   expect(await glyphs(page)).toEqual(all);
 

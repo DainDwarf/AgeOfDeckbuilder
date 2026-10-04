@@ -14,7 +14,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **Irrigation** — Irrigation stands in the Stone Age's content as the field's technology needing Agriculture and Herbalism: its achievement counts the Farms built on a tile a river runs along toward 2, unlocks one copy of the card and pays 1 influence; the card places the improvement, giving food, on a plain or a desert tile a river runs along and on no other; a river gives a tile nothing of its own, in the rules, in both ages' content and on the pages; a layer that names the river goes only on a tile a river runs along, and a count of a card's plays on tiles a river runs along, each proven on the fixture; the four doors are declared Herbalism, Agriculture, Trapping, Fire; `e2e/irrigation.spec.ts` plays the card on screen; `npm run check`, `npm test` and `npm run lint` pass. Doc-impact: `docs/MAP.md`, `docs/GLOSSARY.md`, `docs/CHRONICLE-SCREEN.md`, `docs/ages/NOMADIC.md`, `docs/ages/STONE.md`. [board/irrigation.md](board/irrigation.md)
 - **Domestication** — the wild's technology that needs Trapping and Agriculture, with its achievement and every card it unlocks.
 - **Bow and arrow** — the wild's technology that needs Trapping, with its achievement and every card it unlocks.
 - **Clothmaking** — the wild's technology that needs Domestication, with its achievement and every card it unlocks.

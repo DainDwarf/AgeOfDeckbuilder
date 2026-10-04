@@ -9,7 +9,7 @@ import {
   placesImprovement,
 } from '../rules/cards';
 import type { Age, Slice } from '../rules/catalogue';
-import { terrainsPlayedOn, turnsPlaying } from '../rules/chronicle';
+import { playsAlongRiver, terrainsPlayedOn, turnsPlaying } from '../rules/chronicle';
 import { MOVE_POINT, tileAt } from '../rules/map';
 import { followed, plays } from '../rules/stages';
 import { NOMADIC } from './nomadic';
@@ -92,6 +92,12 @@ export const STONE: Slice = {
         technology: 'herbalism',
         influence: 1,
       },
+      irrigation: {
+        ...playsAlongRiver('farm'),
+        need: 2,
+        technology: 'irrigation',
+        influence: 1,
+      },
     },
   },
   brings: {
@@ -103,6 +109,7 @@ export const STONE: Slice = {
         ...builds('farm'),
       },
       trapping: { kind: 'instant', cost: { production: 2 }, ...placesImprovement('trapping') },
+      irrigation: { kind: 'instant', cost: { production: 2 }, ...placesImprovement('irrigation') },
       fire: {
         kind: 'instant',
         cost: {},
@@ -120,10 +127,11 @@ export const STONE: Slice = {
       },
     },
     technologies: {
+      herbalism: { needs: ['settlement'], unlocks: { cards: { heal: 1 } } },
       agriculture: { needs: ['settlement'], unlocks: { cards: { farm: 1 } } },
       trapping: { needs: ['settlement'], unlocks: { cards: { trapping: 1 } } },
       fire: { needs: ['settlement'], unlocks: { cards: { fire: 1 } } },
-      herbalism: { needs: ['settlement'], unlocks: { cards: { heal: 1 } } },
+      irrigation: { needs: ['agriculture', 'herbalism'], unlocks: { cards: { irrigation: 1 } } },
     },
     terrains: {
       desert: {
@@ -131,7 +139,6 @@ export const STONE: Slice = {
         movementCost: MOVE_POINT,
         water: false,
         elevation: 0,
-        river: { food: 1 },
       },
     },
     features: {
@@ -142,6 +149,7 @@ export const STONE: Slice = {
     },
     improvements: {
       trapping: { terrains: ['forest'], feature: 'deer', yields: { food: 1 } },
+      irrigation: { terrains: ['plain', 'desert'], river: true, yields: { food: 1 } },
     },
     biomes: {
       desert: {

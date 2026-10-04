@@ -65,7 +65,7 @@ import type { ChronicleScene } from '../src/ui/chronicle-scene';
 import { type PileStack, pileStacksOf } from '../src/ui/collection-layout';
 import type { PileKind } from '../src/ui/overlay';
 import { type Choices, SAVE_ENTRY } from '../src/ui/save-entry';
-import { cardName, referenceName } from '../src/ui/text';
+import { cardName, referenceName, text } from '../src/ui/text';
 import { layOutRun, type Reference } from '../src/ui/text-run';
 
 /** What the page answers of a reading: its value, or what a read of it throws. */
@@ -1114,13 +1114,13 @@ export function drawnFaces(chronicle: Chronicle): Tile[] {
 }
 
 /**
- * How many glyphs each resource is owed for these faces of the chronicle's map: one for every point
- * they yield of it.
+ * How many glyphs each resource is owed for these faces of the map: one for every point they yield
+ * of it.
  */
-export function glyphsOf(chronicle: Chronicle, faces: readonly Tile[]): Glyphs {
+export function glyphsOf(faces: readonly Tile[]): Glyphs {
   const owed = noGlyphs();
   for (const face of faces) {
-    const yields = tileYield(CATALOGUE, face, chronicle.rivers);
+    const yields = tileYield(CATALOGUE, face);
     for (const resource of RESOURCES) owed[resource] += yields[resource] ?? 0;
   }
   return owed;
@@ -1571,6 +1571,16 @@ export async function panelRows(page: Page): Promise<PanelRow[]> {
     row.yields[resource] = Number(lines[at]);
   }
   return rows;
+}
+
+/**
+ * The River row of the card the infopanel is standing and the row drawn after it, which is what it
+ * gives when it gives nothing; nothing where the card holds no River row.
+ */
+export async function riverRows(page: Page): Promise<PanelRow[]> {
+  const rows = await panelRows(page);
+  const at = rows.findIndex((row) => row.text === text('panel.river'));
+  return at === -1 ? [] : rows.slice(at, at + 2);
 }
 
 /** What the card the infopanel is standing reads of the tile's movement cost, or nothing on one that reads none. */

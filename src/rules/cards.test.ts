@@ -170,32 +170,6 @@ function workedTile(
   );
 }
 
-test('a plain a river runs along stops taking its food once the tile is terraformed', () => {
-  const at = { q: 1, r: 0 };
-  const city = workedTile(at, 'plain', {
-    ...NO_GROWTH,
-    hand: ['PH_Urbanisation'],
-    resources: production(5),
-    rivers: [cornersOf(at).slice(0, 2)],
-  });
-
-  const plain = outcome(
-    apply(CATALOGUE, { ...city, resources: production(0) }, { type: 'end-turn' }),
-  );
-  const urban = outcome(
-    apply(CATALOGUE, outcome(apply(CATALOGUE, city, aimedAt(at))), { type: 'end-turn' }),
-  );
-
-  for (const resource of RESOURCES) {
-    expect(urban.resources[resource]).toBe(
-      plain.resources[resource] -
-        (terrainKind(CATALOGUE, 'plain').yields[resource] ?? 0) -
-        (terrainKind(CATALOGUE, 'plain').river?.[resource] ?? 0) +
-        (terrainKind(CATALOGUE, 'urban').yields[resource] ?? 0),
-    );
-  }
-});
-
 test('playing a card pays its cost and sends it to the discard pile', () => {
   const city = cityOf(['urban'], {
     hand: ['PH_Harvest', 'PH_March'],

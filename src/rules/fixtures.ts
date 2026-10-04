@@ -552,19 +552,12 @@ const TABLES: Omit<Tables, 'technologies'> = {
     },
   },
   terrains: {
-    plain: {
-      yields: { food: 2 },
-      movementCost: MOVE_POINT,
-      water: false,
-      elevation: 0,
-      river: { food: 1 },
-    },
+    plain: { yields: { food: 2 }, movementCost: MOVE_POINT, water: false, elevation: 0 },
     forest: {
       yields: { food: 1, production: 1 },
       movementCost: 2 * MOVE_POINT,
       water: false,
       elevation: 1,
-      river: { food: 1 },
     },
     hills: {
       yields: { production: 2 },

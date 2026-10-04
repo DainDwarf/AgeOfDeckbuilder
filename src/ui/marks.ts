@@ -57,9 +57,10 @@ const FEATURE_MARKS: Readonly<Record<string, number[]>> = {
   oasis: [-4, -4, 4, -4, 4, 4, -4, 4],
 };
 
-/** Placeholder primitives until the art pass: the trapping a funnel. */
+/** Placeholder primitives until the art pass: the trapping a funnel, the irrigation a channel. */
 const IMPROVEMENT_MARKS: Readonly<Record<string, number[]>> = {
   trapping: [-5, -4, 5, -4, 0, 5],
+  irrigation: [-6, -2, 6, -2, 6, 2, -6, 2],
 };
 
 /** The corners a unit kind's mark is drawn from; a kind with no mark is refused. */

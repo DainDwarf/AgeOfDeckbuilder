@@ -37,7 +37,7 @@ type Row =
   | { readonly kind: 'improvement'; readonly improvement: ImprovementId }
   | { readonly kind: 'feature'; readonly feature: FeatureId }
   | { readonly kind: 'terrain'; readonly terrain: Terrain }
-  | { readonly kind: 'river'; readonly terrain: Terrain };
+  | { readonly kind: 'river' };
 
 /** What a unit card reads: a unit on the map, or a unit kind read as a unit fresh of it. */
 type UnitReading = Pick<Unit, 'stats' | 'faction' | 'movePoints' | 'action'>;
@@ -120,7 +120,7 @@ export function cardsOf(
 
   const ground: Row[] = [{ kind: 'terrain', terrain: tile.terrain }];
   if (tile.feature !== undefined) ground.push({ kind: 'feature', feature: tile.feature });
-  if (runsAlong(rivers, tile)) ground.push({ kind: 'river', terrain: tile.terrain });
+  if (runsAlong(rivers, tile)) ground.push({ kind: 'river' });
   cards.push({ kind: 'terrain', rows: ground, movementCost: movementCost(catalogue, tile) });
 
   return cards;
@@ -565,7 +565,7 @@ function yieldsIn(catalogue: Catalogue, row: Row): Partial<Resources> {
     case 'terrain':
       return terrainKind(catalogue, row.terrain).yields;
     case 'river':
-      return terrainKind(catalogue, row.terrain).river ?? {};
+      return {};
   }
 }
 

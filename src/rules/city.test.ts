@@ -42,7 +42,6 @@ import {
   worker,
 } from './fixtures';
 import {
-  cornersOf,
   distance,
   neighbours,
   type Terrain,
@@ -272,60 +271,6 @@ test('an assigned tile yields what all four of its layers declare, summed', () =
         (improvementKind(CATALOGUE, 'PH_Mine').yields[resource] ?? 0) +
         (buildingKind(CATALOGUE, 'PH_Farm').yields[resource] ?? 0),
     );
-  }
-});
-
-test('a river running along a tile gives it one food at income, however many edges it runs along', () => {
-  const at = { q: 1, r: 0 };
-  const around = cornersOf(at);
-  const bare = outcome(
-    apply(CATALOGUE, cityOf(['urban', 'plain'], NO_GROWTH), { type: 'end-turn' }),
-  );
-
-  for (const river of [around.slice(0, 2), around.slice(0, 4)]) {
-    const city = cityOf(['urban', 'plain'], { ...NO_GROWTH, rivers: [river] });
-
-    const after = outcome(apply(CATALOGUE, city, { type: 'end-turn' }));
-
-    for (const resource of RESOURCES) {
-      expect(after.resources[resource]).toBe(
-        bare.resources[resource] + (terrainKind(CATALOGUE, 'plain').river?.[resource] ?? 0),
-      );
-    }
-  }
-});
-
-test('two rivers meeting at a tile give it the one food between them', () => {
-  const at = { q: 1, r: 0 };
-  const around = cornersOf(at);
-  const bare = outcome(
-    apply(CATALOGUE, cityOf(['urban', 'plain'], NO_GROWTH), { type: 'end-turn' }),
-  );
-  const city = cityOf(['urban', 'plain'], {
-    ...NO_GROWTH,
-    rivers: [around.slice(1, 3), around.slice(2, 4)],
-  });
-
-  const after = outcome(apply(CATALOGUE, city, { type: 'end-turn' }));
-
-  for (const resource of RESOURCES) {
-    expect(after.resources[resource]).toBe(
-      bare.resources[resource] + (terrainKind(CATALOGUE, 'plain').river?.[resource] ?? 0),
-    );
-  }
-});
-
-test('a river running along a terrain it feeds nothing gives that tile nothing', () => {
-  const at = { q: 1, r: 0 };
-  const bare = outcome(
-    apply(CATALOGUE, cityOf(['urban', 'hills'], NO_GROWTH), { type: 'end-turn' }),
-  );
-  const city = cityOf(['urban', 'hills'], { ...NO_GROWTH, rivers: [cornersOf(at).slice(0, 2)] });
-
-  const after = outcome(apply(CATALOGUE, city, { type: 'end-turn' }));
-
-  for (const resource of RESOURCES) {
-    expect(after.resources[resource]).toBe(bare.resources[resource]);
   }
 });
 

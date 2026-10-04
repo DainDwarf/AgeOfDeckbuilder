@@ -161,7 +161,7 @@ test('the overlay, the inspection and a press read what the map draws, and widen
   await expect.poll(() => shows(page, 'yield-dim')).toBe(true);
   const kept = stood.snapshots.find((snapshot) => tileKey(snapshot) === tileKey(fog));
   expect(kept?.unit?.faction).toBe('enemy');
-  expect(await glyphs(page)).toEqual(glyphsOf(stood, drawnFaces(stood)));
+  expect(await glyphs(page)).toEqual(glyphsOf(drawnFaces(stood)));
 
   // The tile in fog inspects as it was last seen, and the enemy on it is a mark and not a card.
   const fogged = await tileOnScreen(page, fog);
@@ -189,7 +189,7 @@ test('the overlay, the inspection and a press read what the map draws, and widen
   await consoleKey(page);
 
   // The veil off, the map draws the whole disc: the overlay widens with it, and the press lands.
-  expect(await glyphs(page)).toEqual(glyphsOf(stood, stood.tiles));
+  expect(await glyphs(page)).toEqual(glyphsOf(stood.tiles));
   await page.mouse.click(dark.x, dark.y);
   await expect.poll(() => ringedTile(page)).toBe(tileKey(uncharted));
 

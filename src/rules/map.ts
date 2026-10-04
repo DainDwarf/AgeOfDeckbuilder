@@ -89,16 +89,11 @@ export type HexMap = {
 export const CENTRE: TileCoords = { q: 0, r: 0 };
 
 /**
- * What a tile's layers and the river running along it give at income, resource by resource: the one
- * answer income and the yield overlay both read. A resource left out is none of it.
+ * What a tile's layers give at income, resource by resource: the one answer income and the yield
+ * overlay both read. A resource left out is none of it.
  */
-export function tileYield(
-  catalogue: MapContent,
-  tile: Tile,
-  rivers: readonly River[],
-): Partial<Resources> {
-  const ground = terrainKind(catalogue, tile.terrain);
-  const summed: Partial<Resources> = { ...ground.yields };
+export function tileYield(catalogue: MapContent, tile: Tile): Partial<Resources> {
+  const summed: Partial<Resources> = { ...terrainKind(catalogue, tile.terrain).yields };
   const add = (yields: Partial<Resources>): void => {
     for (const [resource, amount] of Object.entries(yields) as [Resource, number][]) {
       summed[resource] = (summed[resource] ?? 0) + amount;
@@ -107,7 +102,6 @@ export function tileYield(
   if (tile.feature !== undefined) add(featureKind(catalogue, tile.feature).yields);
   for (const improvement of tile.improvements) add(improvementKind(catalogue, improvement).yields);
   if (tile.building !== undefined) add(buildingKind(catalogue, tile.building).yields);
-  if (runsAlong(rivers, tile)) add(ground.river ?? {});
   return summed;
 }
 

@@ -107,7 +107,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **improvement** | A layer a worker places on a tile; unlike a building, a tile holds any number. | — |
 | **road** | An improvement that names its tile's movement cost outright. | path, track, highway, trail |
 | **bridge** | A river edge with a road on both banks, crossed as if no river ran there. | ford, viaduct, span |
-| **yield** | What a tile's layers and the river running along it give at income, resource by resource. | output, produce, harvest |
+| **yield** | What a tile's layers give at income, resource by resource. | output, produce, harvest |
 | **claim** | To take a charted tile adjacent to one the city holds into the border, for culture. | purchase, expand, annex |
 | **culture** | The resource that claims tiles. | — |
 | **culture threshold** | The culture the next claim costs. | claim cost, step |
