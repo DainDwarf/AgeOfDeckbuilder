@@ -50,7 +50,7 @@ export const CARD_LIFT = 32;
 const RING_STANDOFF = 3.5;
 const RING_WEIGHT = 3;
 
-/** The point a card being aimed wears, its base on the ring's outer edge and its apex towards the map. */
+/** The point a card being aimed wears over its ring, its apex towards the map. */
 const POINT_WIDTH = 18;
 const POINT_HEIGHT = 12;
 
