@@ -14,8 +14,7 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The tree's columns** — the Stone Age's four doors are declared in the order their column stands in, Herbalism, Agriculture, Trapping, Fire, their achievements in the same order, and `docs/ages/STONE.md` lists them so. Doc-impact: `docs/ages/STONE.md`. [board/the-trees-columns.md](board/the-trees-columns.md)
-- **The field's climb** — Irrigation and Bread, each technology with its achievement and every card it unlocks.
+- **The field's climb** — Irrigation and Bread, each technology with its achievement and every card it unlocks; with it the four doors re-declared in the order the tree stands them in, Herbalism first.
 - **The wild's climb** — Bow and arrow, Fishing, Domestication, Clothmaking and Raft, each technology with its achievement and every card it unlocks.
 - **The hearth's climb** — Pottery, and Bartering, which needs Clothmaking and Bread, each technology with its achievement and every card it unlocks.
 - **The sky's climb** — Burial rites, Calendar and Megalith, each technology with its achievement and every card it unlocks.
