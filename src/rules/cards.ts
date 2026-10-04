@@ -11,7 +11,7 @@ import {
   unitKind,
 } from './catalogue';
 import { claimable, populationTaken } from './city';
-import { type FeatureId, type Tile, type TileCoords, tileAt, tileKey } from './map';
+import { type FeatureId, runsAlong, type Tile, type TileCoords, tileAt, tileKey } from './map';
 import {
   buildingKind,
   featureKind,
@@ -238,9 +238,18 @@ export function featureAmong(
     : 'wrong-feature';
 }
 
-/** The ground a layer of that kind goes on: the feature it names, carried, then one of its terrains. */
-function groundFor(catalogue: Catalogue, tile: Tile, layer: LayerKind): TileBlock | undefined {
+/**
+ * The ground a layer of that kind goes on: a river running along the tile, where it names the river,
+ * then the feature it names, carried, then one of its terrains.
+ */
+function groundFor(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  tile: Tile,
+  layer: LayerKind,
+): TileBlock | undefined {
   return firstRefusal(
+    layer.river === true && !runsAlong(chronicle.rivers, tile) ? 'no-river' : undefined,
     layer.feature === undefined ? undefined : featureAmong(catalogue, tile, [layer.feature]),
     made(catalogue, tile, layer.terrains),
   );
@@ -366,7 +375,7 @@ export function builds(building: string): Aim & { readonly aim: 'tile' } {
   return throughWorker(
     (catalogue, chronicle, tile) =>
       firstRefusal(
-        groundFor(catalogue, tile, buildingKind(catalogue, building)),
+        groundFor(catalogue, chronicle, tile, buildingKind(catalogue, building)),
         inside(chronicle, tile),
         slotFree(tile),
       ),
@@ -381,9 +390,9 @@ export function builds(building: string): Aim & { readonly aim: 'tile' } {
  */
 export function placesImprovement(improvement: string): Aim & { readonly aim: 'tile' } {
   return throughWorker(
-    (catalogue, _chronicle, tile) =>
+    (catalogue, chronicle, tile) =>
       firstRefusal(
-        groundFor(catalogue, tile, improvementKind(catalogue, improvement)),
+        groundFor(catalogue, chronicle, tile, improvementKind(catalogue, improvement)),
         improvementAbsent(catalogue, tile, improvement),
       ),
     (catalogue, paid, at) => improvementPlaced(catalogue, paid, at, improvement),

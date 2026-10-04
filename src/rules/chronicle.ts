@@ -17,7 +17,7 @@ import {
 } from './catalogue';
 import { assign, type CityCommand, claim, grow, income, reassign } from './city';
 import { campUnit, enteredAround } from './enemies';
-import { generateMap, type HexMap, type TileCoords, tileAt, tileKey } from './map';
+import { generateMap, type HexMap, runsAlong, type TileCoords, tileAt, tileKey } from './map';
 import { refuse } from './map-kinds';
 import { nextRng, seedRng, shuffle as shuffleItems } from './rng';
 import {
@@ -392,7 +392,9 @@ export function terrainsPlayedOn(card: CardId): Required<Pick<Achievement, 'tall
       let kept = tally;
       for (const play of plays(stages)) {
         if (play.card !== card) continue;
-        const terrain = terrainAimed(started, play.aimed);
+        const aimedAt = tileAimed(play.aimed);
+        if (aimedAt === undefined) continue;
+        const terrain = tileAt(started.tiles, aimedAt)?.terrain;
         if (terrain === undefined) continue;
         kept = { ...kept, [terrain]: (kept[terrain] ?? 0) + 1 };
       }
@@ -402,12 +404,31 @@ export function terrainsPlayedOn(card: CardId): Required<Pick<Achievement, 'tall
   };
 }
 
-/** The terrain of the tile a play was aimed at, on the chronicle it was played on, and none off the map. */
-function terrainAimed(started: Chronicle, aimed: Aimed): string | undefined {
+/**
+ * An achievement's tally and count for the plays of a card on a tile a river runs along, the play
+ * aimed at a unit counted by the tile its unit stands on; a play aimed at no tile counts none. A card
+ * the catalogue does not hold is refused.
+ */
+export function playsAlongRiver(card: CardId): Required<Pick<Achievement, 'tallies' | 'count'>> {
+  return {
+    tallies: (catalogue, started, stages, tally) => {
+      cardOf(catalogue, card);
+      const along = plays(stages).filter((play) => {
+        const aimedAt = tileAimed(play.aimed);
+        return play.card === card && aimedAt !== undefined && runsAlong(started.rivers, aimedAt);
+      }).length;
+      return along === 0 ? tally : { ...tally, plays: (tally.plays ?? 0) + along };
+    },
+    count: (_catalogue, _chronicle, tally) => tally.plays ?? 0,
+  };
+}
+
+/** The tile a play was aimed at, the one its unit stands on for a play aimed at a unit. */
+function tileAimed(aimed: Aimed): TileCoords | undefined {
   switch (aimed.aim) {
     case 'tile':
     case 'unit':
-      return tileAt(started.tiles, aimed.tile)?.terrain;
+      return aimed.tile;
     case 'none':
     case 'discard-pile':
     case 'hand':

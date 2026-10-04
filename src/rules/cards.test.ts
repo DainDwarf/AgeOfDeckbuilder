@@ -27,6 +27,7 @@ import { yielded } from './city';
 import {
   AGE,
   actionOf,
+  aimedAt,
   aimedAtUnit,
   assignTo,
   attackOn,
@@ -59,6 +60,7 @@ import {
   pointsOf,
   REGION,
   ringed,
+  riverBetween,
   settledLaunch,
   stagedBy,
   standing,
@@ -73,6 +75,7 @@ import {
   cornersOf,
   type FeatureId,
   MOVE_POINT,
+  type River,
   type Terrain,
   type Tile,
   type TileCoords,
@@ -84,11 +87,6 @@ import { RESOURCES, type Resources } from './resources';
 import { plays, walked } from './stages';
 import { type CardId, type Chronicle, idle, playable, type TileBlock } from './state';
 import { standsOn } from './units';
-
-/** A card of the hand, the first unless the test names another, aimed at a tile, ready to hand to `apply`. */
-function aimedAt(tile: TileCoords, index = 0): Command {
-  return { type: 'play', index, aim: 'tile', tile };
-}
 
 /** A card aimed at where a card lies in the discard pile, ready to hand to `apply`. */
 function aimedAtPile(card: number): Command {
@@ -1585,6 +1583,60 @@ test('a building naming a feature names the first of its reasons: worker, action
     'slot-filled',
   );
   expect(refusedFor(worked(inside, 'forest', 'PH_Game'), 'PH_Lodge', inside)).toBeUndefined();
+});
+
+test('an improvement naming the river names the first of its reasons: worker, action, the river whatever the terrain, terrain, then improvement', () => {
+  const at = { q: 2, r: 0 };
+  const along = [riverBetween(at, { q: 2, r: -1 })];
+  const away = [riverBetween({ q: -2, r: 0 }, { q: -2, r: 1 })];
+  const carrying = (terrain: Terrain, rivers: River[], improvements: string[] = []): Chronicle =>
+    withTile(ringed(2, { rivers }), { ...at, terrain, improvements });
+  const worked = (terrain: Terrain, rivers: River[], improvements?: string[]): Chronicle =>
+    withUnits(carrying(terrain, rivers, improvements), [worker(at)]);
+  const spent = withUnits(carrying('plain', along), [standing('player', at, WORKER_STATS, 0, 0)]);
+
+  expect(refusedFor(carrying('plain', along), 'PH_Ditch', at)).toBe('no-worker');
+  expect(refusedFor(spent, 'PH_Ditch', at)).toBe('worker-spent');
+  expect(refusedFor(worked('plain', away), 'PH_Ditch', at)).toBe('no-river');
+  expect(refusedFor(worked('hills', away), 'PH_Ditch', at)).toBe('no-river');
+  expect(refusedFor(worked('hills', along), 'PH_Ditch', at)).toBe('wrong-terrain');
+  expect(refusedFor(worked('plain', along, ['PH_Ditch']), 'PH_Ditch', at)).toBe(
+    'improvement-placed',
+  );
+  expect(refusedFor(worked('plain', along), 'PH_Ditch', at)).toBeUndefined();
+  expect(refusedFor(worked('forest', along), 'PH_Ditch', at)).toBeUndefined();
+});
+
+test('the ditch card places a ditch on the tile a river runs along that the worker stands on', () => {
+  const at = { q: 2, r: 0 };
+  const city = workedTile(at, 'plain', {
+    hand: ['PH_Ditch'],
+    resources: production(2),
+    rivers: [riverBetween(at, { q: 2, r: -1 })],
+  });
+
+  const after = tileAt(outcome(apply(CATALOGUE, city, aimedAt(at))).tiles, at);
+
+  expect(after).toEqual({ ...at, terrain: 'plain', improvements: ['PH_Ditch'] });
+});
+
+test('a building naming the river names the first of its reasons: the river whatever the terrain, terrain, border, then slot', () => {
+  const inside = { q: 1, r: 0 };
+  const out = { q: 2, r: 0 };
+  const along = [riverBetween(inside, { q: 1, r: -1 }), riverBetween(out, { q: 2, r: -1 })];
+  const worked = (at: TileCoords, terrain: Terrain, rivers: River[], building?: string) =>
+    withUnits(withTile(ringed(2, { rivers }), { ...at, terrain, improvements: [], building }), [
+      worker(at),
+    ]);
+
+  expect(refusedFor(worked(inside, 'plain', []), 'PH_Mill', inside)).toBe('no-river');
+  expect(refusedFor(worked(inside, 'hills', []), 'PH_Mill', inside)).toBe('no-river');
+  expect(refusedFor(worked(inside, 'hills', along), 'PH_Mill', inside)).toBe('wrong-terrain');
+  expect(refusedFor(worked(out, 'plain', along), 'PH_Mill', out)).toBe('outside-border');
+  expect(refusedFor(worked(inside, 'plain', along, CAMP.building), 'PH_Mill', inside)).toBe(
+    'slot-filled',
+  );
+  expect(refusedFor(worked(inside, 'plain', along), 'PH_Mill', inside)).toBeUndefined();
 });
 
 /**

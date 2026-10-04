@@ -12,6 +12,7 @@ import { apply, type Command, outcome } from './chronicle';
 import {
   AGE,
   achievementIn,
+  aimedAt,
   CATALOGUE,
   CENSUS,
   CIVILIZATION,
@@ -23,7 +24,6 @@ import {
   hoardedVictory,
   QUIET,
   REGION,
-  roadOn,
   SURVEY,
   SURVEYED,
   surveying,
@@ -100,7 +100,7 @@ test('a chronicle saved and read back is the chronicle, and plays the next comma
 
 test('a chronicle saved and read back keeps every achievement’s tally, and counts on from it', () => {
   const [plain, , forest] = SURVEYED;
-  const surveyed = outcome(apply(CATALOGUE, surveying(), roadOn(plain)));
+  const surveyed = outcome(apply(CATALOGUE, surveying(), aimedAt(plain)));
   const save = { chronicle: surveyed, region: REGION, civilization: CIVILIZATION_ID };
 
   const read = readSave(CATALOGUE, writeSave(CATALOGUE, campaign(), save));
@@ -108,7 +108,7 @@ test('a chronicle saved and read back keeps every achievement’s tally, and cou
   expect(achievementIn(surveyed, SURVEY).tally).toEqual({ plain: 1 });
   expect(read.chronicle).toEqual(save);
   if (read.chronicle === undefined) throw new Error('the chronicle was dropped');
-  const counted = outcome(apply(CATALOGUE, read.chronicle.chronicle, roadOn(forest)));
+  const counted = outcome(apply(CATALOGUE, read.chronicle.chronicle, aimedAt(forest)));
   expect(achievementIn(counted, SURVEY).reached).toBe(true);
 });
 

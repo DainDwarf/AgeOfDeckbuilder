@@ -158,6 +158,7 @@ const TEXT = {
   'refusal.tile-uncharted': 'Uncharted',
   'refusal.no-worker': 'Needs a worker',
   'refusal.worker-spent': 'The worker has no action left',
+  'refusal.no-river': 'Needs a river',
   'refusal.outside-border': 'Outside the city border',
   'refusal.inside-border': 'Inside the city border',
   'refusal.wrong-terrain': 'Wrong terrain',

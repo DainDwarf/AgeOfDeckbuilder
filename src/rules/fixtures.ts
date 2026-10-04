@@ -49,6 +49,7 @@ import {
   type Command,
   launched,
   outcome,
+  playsAlongRiver,
   terrainsPlayedOn,
 } from './chronicle';
 import { arrived, bordered, populationKilled, populationTaken } from './city';
@@ -443,6 +444,8 @@ const TABLES: Omit<Tables, 'technologies'> = {
     PH_Road: { kind: 'instant', cost: { production: 2 }, ...placesImprovement('PH_Road') },
     PH_Snare: { kind: 'instant', cost: { production: 2 }, ...placesImprovement('PH_Snare') },
     PH_Lodge: { kind: 'building', cost: { production: 3 }, ...builds('PH_Lodge') },
+    PH_Ditch: { kind: 'instant', cost: { production: 2 }, ...placesImprovement('PH_Ditch') },
+    PH_Mill: { kind: 'building', cost: { production: 3 }, ...builds('PH_Mill') },
     PH_Urbanisation: {
       kind: 'instant',
       cost: { production: 5 },
@@ -624,6 +627,7 @@ const TABLES: Omit<Tables, 'technologies'> = {
     PH_Farm: { terrains: ['plain'], yields: { food: 1 } },
     PH_Camp: { terrains: ['plain', 'forest', 'hills'], yields: {} },
     PH_Lodge: { terrains: ['forest'], feature: 'PH_Game', yields: { food: 1 } },
+    PH_Mill: { terrains: ['plain'], river: true, yields: { production: 1 } },
   },
   features: {
     PH_Fertile: { terrain: 'plain', yields: { food: 1 } },
@@ -645,6 +649,7 @@ const TABLES: Omit<Tables, 'technologies'> = {
     },
     PH_Rubble: { terrains: ['plain'], yields: {}, movementCost: 2 * MOVE_POINT },
     PH_Snare: { terrains: ['forest'], feature: 'PH_Game', yields: { food: 1 } },
+    PH_Ditch: { terrains: ['plain', 'forest'], river: true, yields: { food: 1 } },
   },
 };
 
@@ -793,6 +798,18 @@ const SURVEY_NEED = 2;
 /** The technology `SURVEY` earns: it needs none, and unlocks nothing. */
 const SURVEYING = 'PH_Surveying';
 
+/**
+ * The first fixture age's achievement a deed reaches, earning `DITCHING`: its tally counts the farm
+ * built on a tile a river runs along.
+ */
+export const RIVERSIDE = 'PH_Riverside';
+
+/** The farms built along a river that reach `RIVERSIDE`. */
+const RIVERSIDE_NEED = 2;
+
+/** The technology `RIVERSIDE` earns: it needs none, and unlocks nothing. */
+const DITCHING = 'PH_Ditching';
+
 /** The technology `HOARD` earns: it needs none, and unlocks two copies of a card. */
 export const GRANARY = 'PH_Granary';
 
@@ -815,7 +832,7 @@ function pastOf(age: string): string {
 /** The fixture's ages, in the order of the ages table. */
 const AGES = Object.keys(SCHEDULES);
 
-/** The achievements a fixture age owns: its victory, and before it the first age's four others. */
+/** The achievements a fixture age owns: its victory, and before it the first age's five others. */
 function achievementsOf(age: string): Age['achievements'] {
   const victory: Age['achievements'] = {
     [victoryOf(age)]: {
@@ -851,16 +868,23 @@ function achievementsOf(age: string): Age['achievements'] {
       technology: SURVEYING,
       influence: 1,
     },
+    [RIVERSIDE]: {
+      ...playsAlongRiver('PH_Farm'),
+      need: RIVERSIDE_NEED,
+      technology: DITCHING,
+      influence: 1,
+    },
     ...victory,
   };
 }
 
-/** The fixture's technologies: the first age's four, and each age's victory unlocking the next age. */
+/** The fixture's technologies: the first age's five, and each age's victory unlocking the next age. */
 const TECHNOLOGIES: Tables['technologies'] = {
   [GRANARY]: { needs: [], unlocks: { cards: { PH_Harvest: 2 } } },
   [CENSUS]: { needs: [GRANARY], unlocks: { cards: {} } },
   [LARDER]: { needs: [], unlocks: { cards: {} } },
   [SURVEYING]: { needs: [], unlocks: { cards: {} } },
+  [DITCHING]: { needs: [], unlocks: { cards: {} } },
   ...Object.fromEntries(
     AGES.map((age, at) => {
       const next = AGES[at + 1];
@@ -1166,8 +1190,8 @@ export function surveying(carrying: Carrying = {}): Chronicle {
   });
 }
 
-/** The road at that place of the hand, the first unless named, played on a tile. */
-export function roadOn(tile: TileCoords, index = 0): Command {
+/** A card of the hand, the first unless the test names another, aimed at a tile, ready to hand to `apply`. */
+export function aimedAt(tile: TileCoords, index = 0): Command {
   return { type: 'play', index, aim: 'tile', tile };
 }
 

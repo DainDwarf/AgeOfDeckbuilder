@@ -4,6 +4,7 @@ import {
   buildingKind,
   entryOf,
   featureKind,
+  type LayerKind,
   type MapContent,
   type Region,
   refuse,
@@ -369,12 +370,9 @@ export function catalogued(content: Catalogue): Catalogue {
   for (const id of Object.keys(content.cardAges)) cardOf(content, id);
   for (const [id, civilization] of Object.entries(content.civilizations)) {
     const { city } = civilization;
-    const { feature } = buildingKind(content, city.building);
-    if (feature !== undefined) {
-      refuse(
-        content,
-        `the civilization ${id}'s city ${city.building} names the feature ${feature}`,
-      );
+    const cityNames = groundNamed(buildingKind(content, city.building));
+    if (cityNames !== undefined) {
+      refuse(content, `the civilization ${id}'s city ${city.building} names ${cityNames}`);
     }
     if (city.sight < 0) refuse(content, `the civilization ${id}'s city sees ${city.sight}`);
     if (city.idle < 0) {
@@ -444,8 +442,9 @@ function ageHeld(
     refuse(content, `a raid of the age ${id} enters through a camp at odds of ${raidCampOdds}`);
   }
   const campKind = buildingKind(content, camp.building);
-  if (campKind.feature !== undefined) {
-    refuse(content, `the age ${id}'s camp ${camp.building} names the feature ${campKind.feature}`);
+  const campNames = groundNamed(campKind);
+  if (campNames !== undefined) {
+    refuse(content, `the age ${id}'s camp ${camp.building} names ${campNames}`);
   }
   for (const terrain of campKind.terrains) {
     if (!standsOn(content, campUnit, { q: 0, r: 0, terrain, improvements: [] })) {
@@ -498,6 +497,16 @@ function ageHeld(
       );
     }
   }
+}
+
+/**
+ * The feature or the river a building names, in a refusal's words, and nothing where it names
+ * neither: the settle and a camp's placing never ask the ground a layer goes on, so a city's or a
+ * camp's building naming either is refused.
+ */
+function groundNamed({ feature, river }: LayerKind): string | undefined {
+  if (feature !== undefined) return `the feature ${feature}`;
+  return river === true ? 'the river' : undefined;
 }
 
 /** The technology tree, checked against the achievements every age owns. */

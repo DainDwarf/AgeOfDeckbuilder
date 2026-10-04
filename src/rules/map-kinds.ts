@@ -44,6 +44,8 @@ export type LayerKind = {
   readonly terrains: readonly string[];
   /** The feature it goes on and goes with, for one that names one. */
   readonly feature?: string;
+  /** Whether it names the river: it goes only on a tile a river runs along. */
+  readonly river?: boolean;
   readonly yields: Partial<Resources>;
   readonly movementCost?: number;
   readonly bridge?: boolean;

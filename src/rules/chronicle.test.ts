@@ -12,6 +12,7 @@ import {
   AGE,
   achieved,
   achievementIn,
+  aimedAt,
   aimedAtUnit,
   builtOn,
   CATALOGUE,
@@ -39,8 +40,9 @@ import {
   plains,
   QUIET,
   REGION,
+  RIVERSIDE,
   reaching,
-  roadOn,
+  riverBetween,
   SURVEY,
   SURVEYED,
   settledLaunch,
@@ -635,12 +637,14 @@ test('a chronicle is launched with the achievements of its age whose technology 
     { id: HOARD, reached: false, tally: {} },
     { id: FEAST, reached: false, tally: {} },
     { id: SURVEY, reached: false, tally: {} },
+    { id: RIVERSIDE, reached: false, tally: {} },
     { id: victoryOf(AGE), reached: false, tally: {} },
   ]);
   expect(launchedWith([GRANARY])).toEqual([
     { id: FEAST, reached: false, tally: {} },
     { id: CROWD, reached: false, tally: {} },
     { id: SURVEY, reached: false, tally: {} },
+    { id: RIVERSIDE, reached: false, tally: {} },
     { id: victoryOf(AGE), reached: false, tally: {} },
   ]);
   expect(() => launchedWith(['PH_Unheld'])).toThrow('fixture: no technology is named PH_Unheld');
@@ -663,6 +667,7 @@ test('an achievement its count meets on the chronicle as it is launched is recor
     { id: HOARD, reached: true, tally: {} },
     { id: FEAST, reached: false, tally: {} },
     { id: SURVEY, reached: true, tally: {} },
+    { id: RIVERSIDE, reached: false, tally: {} },
     { id: victoryOf(AGE), reached: false, tally: {} },
   ]);
   expect({ ...launch, achievements: [] }).toEqual({
@@ -689,6 +694,7 @@ test('an achievement is recorded reached right after the change its count meets 
     { id: HOARD, reached: true, tally: {} },
     { id: FEAST, reached: false, tally: {} },
     { id: SURVEY, reached: false, tally: {} },
+    { id: RIVERSIDE, reached: false, tally: {} },
     { id: victoryOf(AGE), reached: false, tally: {} },
   ];
 
@@ -733,12 +739,14 @@ test('two achievements one change meets are each recorded as a reached of its ow
     { id: HOARD, reached: true, tally: {} },
     { id: FEAST, reached: false, tally: {} },
     { id: SURVEY, reached: false, tally: {} },
+    { id: RIVERSIDE, reached: false, tally: {} },
     { id: victoryOf(AGE), reached: false, tally: {} },
   ]);
   expect(second.chronicle.achievements).toEqual([
     { id: HOARD, reached: true, tally: {} },
     { id: FEAST, reached: true, tally: {} },
     { id: SURVEY, reached: false, tally: {} },
+    { id: RIVERSIDE, reached: false, tally: {} },
     { id: victoryOf(AGE), reached: false, tally: {} },
   ]);
 });
@@ -787,6 +795,7 @@ test('a victory is followed by its achievement, recorded after the ending, and a
     { id: HOARD, reached: true, tally: {} },
     { id: FEAST, reached: false, tally: {} },
     { id: SURVEY, reached: false, tally: {} },
+    { id: RIVERSIDE, reached: false, tally: {} },
     { id: victoryOf(AGE), reached: false, tally: {} },
   ]);
   expect(hoarded.chronicle.ending).toBeUndefined();
@@ -796,6 +805,7 @@ test('a victory is followed by its achievement, recorded after the ending, and a
     { id: HOARD, reached: true, tally: {} },
     { id: FEAST, reached: false, tally: {} },
     { id: SURVEY, reached: false, tally: {} },
+    { id: RIVERSIDE, reached: false, tally: {} },
     { id: victoryOf(AGE), reached: true, tally: {} },
   ]);
   expect(outcome(stages)).toBe(won.chronicle);
@@ -864,16 +874,17 @@ test('an achievement that counts the charted tiles is recorded right after the m
     { id: HOARD, reached: true, tally: {} },
     { id: FEAST, reached: false, tally: {} },
     { id: SURVEY, reached: false, tally: {} },
+    { id: RIVERSIDE, reached: false, tally: {} },
     { id: victoryOf(AGE), reached: false, tally: {} },
   ]);
 });
 
 test('an achievement keeping a tally is reached at the end of the command whose deed brings its count to the need, whatever was played between', () => {
   const [plain, other, forest] = SURVEYED;
-  const first = apply(CATALOGUE, surveying(), roadOn(plain));
+  const first = apply(CATALOGUE, surveying(), aimedAt(plain));
   const between = apply(CATALOGUE, outcome(first), { type: 'play', index: 2, aim: 'none' });
-  const second = apply(CATALOGUE, outcome(between), roadOn(other));
-  const third = apply(CATALOGUE, outcome(second), roadOn(forest));
+  const second = apply(CATALOGUE, outcome(between), aimedAt(other));
+  const third = apply(CATALOGUE, outcome(second), aimedAt(forest));
 
   expect(namesOf(first).at(-1)).toBe('tallied');
   expect(achievementIn(outcome(first), SURVEY)).toEqual({
@@ -916,14 +927,14 @@ test('a command the chronicle ends on moves no tally, so a deed whose count it w
     apply(
       paving,
       surveying({ timeline: { ...NO_DEALS, capstone: { id: 'PH_Tillage', turn: 1 } } }),
-      roadOn(plain),
+      aimedAt(plain),
     ),
   );
 
-  const stages = apply(paving, surveyed, roadOn(forest));
+  const stages = apply(paving, surveyed, aimedAt(forest));
 
   expect(achievementIn(surveyed, SURVEY).tally).toEqual({ plain: 1 });
-  expect(namesOf(apply(CATALOGUE, surveyed, roadOn(forest))).slice(-2)).toEqual([
+  expect(namesOf(apply(CATALOGUE, surveyed, aimedAt(forest))).slice(-2)).toEqual([
     'tallied',
     'reached',
   ]);
@@ -943,7 +954,7 @@ test('a command moving the tallies of two achievements raises a tallied for each
     [HOARD]: { ...achievementOf(CATALOGUE, AGE, HOARD), tallies, count, need: 1 },
   });
 
-  const stages = apply(twoTallies, surveying(), roadOn(plain));
+  const stages = apply(twoTallies, surveying(), aimedAt(plain));
   const [hoarded, surveyed, met] = [...walked(stages)].slice(-3);
 
   expect(namesOf(stages).slice(-3)).toEqual(['tallied', 'tallied', 'reached']);
@@ -951,18 +962,21 @@ test('a command moving the tallies of two achievements raises a tallied for each
     { id: HOARD, reached: false, tally: { plain: 1 } },
     { id: FEAST, reached: false, tally: {} },
     { id: SURVEY, reached: false, tally: {} },
+    { id: RIVERSIDE, reached: false, tally: {} },
     { id: victoryOf(AGE), reached: false, tally: {} },
   ]);
   expect(surveyed.chronicle.achievements).toEqual([
     { id: HOARD, reached: false, tally: { plain: 1 } },
     { id: FEAST, reached: false, tally: {} },
     { id: SURVEY, reached: false, tally: { plain: 1 } },
+    { id: RIVERSIDE, reached: false, tally: {} },
     { id: victoryOf(AGE), reached: false, tally: {} },
   ]);
   expect(met.chronicle.achievements).toEqual([
     { id: HOARD, reached: true, tally: { plain: 1 } },
     { id: FEAST, reached: false, tally: {} },
     { id: SURVEY, reached: false, tally: { plain: 1 } },
+    { id: RIVERSIDE, reached: false, tally: {} },
     { id: victoryOf(AGE), reached: false, tally: {} },
   ]);
 });
@@ -983,6 +997,40 @@ test('an achievement counting the kinds of terrain a card is played on counts a 
     id: HOARD,
     reached: true,
     tally: { forest: 1 },
+  });
+});
+
+test('an achievement counting a card’s plays along a river counts each one aimed at a tile a river runs along, and none aimed elsewhere', () => {
+  const [banked, bent] = [
+    { q: 1, r: 0 },
+    { q: 0, r: 1 },
+  ];
+  const dry = { q: -1, r: 0 };
+  const city = reaching([], {
+    tiles: field(2),
+    held: [CITY, banked, bent, dry],
+    rivers: [riverBetween(banked, { q: 2, r: -1 }), riverBetween(bent, { q: 1, r: 1 })],
+    units: [banked, dry, bent].map(worker),
+    hand: ['PH_Farm', 'PH_Farm', 'PH_Farm'],
+    resources: { food: 0, production: 9, military: 0, money: 0, science: 0, culture: 0 },
+  });
+
+  const first = apply(CATALOGUE, city, aimedAt(banked));
+  const elsewhere = apply(CATALOGUE, outcome(first), aimedAt(dry));
+  const second = apply(CATALOGUE, outcome(elsewhere), aimedAt(bent));
+
+  expect(achievementIn(outcome(first), RIVERSIDE)).toEqual({
+    id: RIVERSIDE,
+    reached: false,
+    tally: { plays: 1 },
+  });
+  expect(tileAt(outcome(elsewhere).tiles, dry)?.building).toBe('PH_Farm');
+  expect(namesOf(elsewhere)).not.toContain('tallied');
+  expect(second.slice(-2).map(({ name }) => name)).toEqual(['tallied', 'reached']);
+  expect(achievementIn(outcome(second), RIVERSIDE)).toEqual({
+    id: RIVERSIDE,
+    reached: true,
+    tally: { plays: 2 },
   });
 });
 

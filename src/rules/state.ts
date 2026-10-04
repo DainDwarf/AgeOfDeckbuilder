@@ -135,6 +135,7 @@ export type TileBlock =
   | 'tile-uncharted'
   | 'no-worker'
   | 'worker-spent'
+  | 'no-river'
   | 'outside-border'
   | 'inside-border'
   | 'wrong-terrain'
