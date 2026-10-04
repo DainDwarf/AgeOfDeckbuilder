@@ -14,9 +14,9 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The tree's columns** — re-thinking either how the tree is put in columns, or how the tree is displayed in general: the skeleton's next column holds seven technologies, and seven plates need 776 units of the room's 672 at today's plate height, more once a goal wraps.
-- **The field's climb** — Irrigation, Grinding stone and Bread, each technology with its achievement and every card it unlocks.
+- **The tree's columns** — the Stone Age's four doors are declared in the order their column stands in, Herbalism, Agriculture, Trapping, Fire, their achievements in the same order, and `docs/ages/STONE.md` lists them so. Doc-impact: `docs/ages/STONE.md`. [board/the-trees-columns.md](board/the-trees-columns.md)
+- **The field's climb** — Irrigation and Bread, each technology with its achievement and every card it unlocks.
 - **The wild's climb** — Bow and arrow, Fishing, Domestication, Clothmaking and Raft, each technology with its achievement and every card it unlocks.
-- **The hearth's climb** — Pottery, Dyes and Bartering, and Granary, which needs Pottery, each technology with its achievement and every card it unlocks.
+- **The hearth's climb** — Pottery, and Bartering, which needs Clothmaking and Bread, each technology with its achievement and every card it unlocks.
 - **The sky's climb** — Burial rites, Calendar and Megalith, each technology with its achievement and every card it unlocks.
 - **The collection scrolls** — the spec that proves the collection scrolls, its cards being the first to fill the room, and a drag that runs on fired inside the page, since Playwright's own mouse moves come too far apart to set a panel running.

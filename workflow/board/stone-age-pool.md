@@ -10,21 +10,24 @@ The age in one sentence: the chronicle where the economy comes home — it opens
 
 **The frame:**
 
-- The tree is five columns deep, to be felt. Not every technology on it may be kept.
+- The tree is four columns deep, and no column holds more than five technologies: five of today's plates stand 638 of the room's 672 tall. A plate reads four lines under its name at most, the goal's and the reward's together: a fifth puts a column of five 56 over the room, and the tree's display is then a line of its own, ahead of the technology that needs it.
 - A goal is practice: it is done with the cards of the technologies its technology needs, so every link of the tree has a reason. A feat, a goal that bends the whole chronicle, stands here and there. A goal that lands on its own while the chronicle is played as usual is avoided. The first column's goals are done with the Nomadic deck.
 - The technologies are grouped by way of life, four families: the field, the wild, the hearth, the sky. The families are not wholly separate: a technology may need one of another family.
 - The age opens every resource. Money and science may be under-represented, and are still there in some capacity.
-- Each family's climb is designed after its door has been played. Granary lands with the hearth, since it needs Pottery.
+- Each family's climb is designed after its door has been played. Bartering lands with the hearth, after the field and the wild, since it needs Clothmaking and Bread.
 
-**The skeleton, the user's tree** (names and links; a link's reason is tested against the practice rule when its technology is designed, and moves if it finds no goal):
+**The skeleton, the user's tree** (names and links, each column in the order it stands, top to bottom; a link's reason is tested against the practice rule when its technology is designed, and moves if it finds no goal):
 
-- Column 1, the doors, one to a family: Agriculture (the field); Trapping (the wild); Fire (the hearth); Herbalism (the sky).
-- Column 2: Irrigation (needs Agriculture); Grinding stone (needs Agriculture); Bow and arrow (needs Trapping); Domestication (needs Trapping, Agriculture); Fishing (needs Trapping); Pottery (needs Fire); Burial rites (needs Herbalism).
-- Column 3: Bread (needs Grinding stone); Clothmaking (needs Bow and arrow); Raft (needs Fishing); Calendar (needs Herbalism, Irrigation).
-- Column 4: Granary (needs Bread, Pottery); Dyes (needs Pottery, Clothmaking); Megalith (needs Burial rites, Calendar).
-- Column 5: Bartering (needs Dyes).
+- Column 1, the doors, one to a family: Herbalism (the sky); Agriculture (the field); Trapping (the wild); Fire (the hearth).
+- Column 2: Burial rites (needs Herbalism); Irrigation (needs Agriculture, Herbalism); Domestication (needs Trapping, Agriculture); Bow and arrow (needs Trapping); Pottery (needs Fire).
+- Column 3: Calendar (needs Irrigation, Burial rites); Bread (needs Irrigation); Clothmaking (needs Domestication); Fishing (needs Bow and arrow).
+- Column 4: Megalith (needs Calendar); Bartering (needs Clothmaking, Bread); Raft (needs Fishing).
 
-The field is Agriculture, Irrigation, Grinding stone, Bread and Granary; the wild is Trapping, Bow and arrow, Domestication, Fishing, Clothmaking and Raft; the hearth is Fire, Pottery, Dyes and Bartering; the sky is Herbalism, Burial rites, Calendar and Megalith.
+In that order no link crosses another. A column stands in the content's order, so a technology is declared where its column holds it, column by column, each column top to bottom: the sky's first, then the field's, the wild's and the hearth's, Raft excepted, which stands under Bartering. A link that moves at a technology's intake is drawn again before its order is kept.
+
+Pottery, Burial rites, Bread and Megalith are maybes, each decided at its line's intake; the others the user is rather sure of, knowing what they unlock.
+
+The field is Agriculture, Irrigation and Bread; the wild is Trapping, Domestication, Bow and arrow, Clothmaking, Fishing and Raft; the hearth is Fire, Pottery and Bartering; the sky is Herbalism, Burial rites, Calendar and Megalith.
 
 **Taste**, the user's reasons, read before every serve:
 
@@ -48,6 +51,7 @@ The field is Agriculture, Irrigation, Grinding stone, Bread and Granary; the wil
 **Left out, and side notes:**
 
 - Sun stones and bead-making are off the tree, at least for now.
+- Grinding stone, Granary and Dyes are off the tree: nineteen technologies were too many.
 - Clothmaking may become tanning to sit better in the wild, a polish decision.
 - A technology whose card brings back a card that left the chronicle is wanted and stands nowhere on the skeleton yet; its place is the user's to say. The glossary's words are "left the chronicle": "remove" is a card taken out of a deck.
 
