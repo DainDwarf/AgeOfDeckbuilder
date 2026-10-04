@@ -20,6 +20,7 @@ import {
   playedOut,
   settledOn,
   unitEntered,
+  WORKER,
   watch,
   withCard,
 } from './chronicle-screen';
@@ -43,7 +44,7 @@ function farmAdmitted(): { chronicle: Chronicle; tile: TileCoords; index: number
       const claimed = outcome(apply(CATALOGUE, cultured, { type: 'claim', tile }));
       if (claimed === cultured) continue;
       const paid = gained(claimed, cost).chronicle;
-      const chronicle = unitEntered(paid, { type: 'worker', faction: 'player', tile });
+      const chronicle = unitEntered(paid, { type: WORKER, faction: 'player', tile });
       if (!playable(refusalOf(CATALOGUE, chronicle, FARM))) continue;
       const index = idsOf(chronicle.hand).indexOf(FARM);
       if (admits(chronicle, index, tile)) return { chronicle, tile, index };

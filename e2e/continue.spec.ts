@@ -8,6 +8,7 @@ import {
   chronicleOf,
   click,
   fillOf,
+  launchedFromScreen,
   launchedOn,
   launchScreenOver,
   readNames,
@@ -103,8 +104,7 @@ test('the menu’s Campaign leaves the chronicle launched on the launch screen i
   await chronicleButton(page);
   expect(await fillOf(page, 'launch-continue')).toBe(LOOK.greyedFill);
   expect(await continueReads(page)).toEqual([text('launch.continue')]);
-  await click(page, 'launch-button');
-  await page.waitForFunction(() => window.game?.scene.isActive('ui') === true);
+  await launchedFromScreen(page);
   const launched = await chronicleOf(page);
   expect(onSettlePhase(launched)).toBe(true);
 

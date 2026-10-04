@@ -788,7 +788,7 @@ export const CROWD_NEED = 6;
 export const SURVEY = 'PH_Survey';
 
 /** The kinds of terrain that reach `SURVEY`. */
-export const SURVEY_NEED = 2;
+const SURVEY_NEED = 2;
 
 /** The technology `SURVEY` earns: it needs none, and unlocks nothing. */
 const SURVEYING = 'PH_Surveying';
@@ -1171,6 +1171,11 @@ export function roadOn(tile: TileCoords, index = 0): Command {
   return { type: 'play', index, aim: 'tile', tile };
 }
 
+/** A card aimed at the unit standing on a tile, ready to hand to `apply`. */
+export function aimedAtUnit(tile: TileCoords): Command {
+  return { type: 'play', index: 0, aim: 'unit', tile };
+}
+
 /** The achievement of the chronicle's row that the id names. A row without it throws. */
 export function achievementIn(chronicle: Chronicle, id: string): ChronicleAchievement {
   const held = chronicle.achievements.find((achievement) => achievement.id === id);
@@ -1360,7 +1365,7 @@ export function worker(tile: TileCoords): Standing {
 }
 
 /** What a worker of these fixtures carries: what says which tiles one of them can stand on. */
-export const WORKER = worker(CITY).stats;
+export const WORKER_STATS = worker(CITY).stats;
 
 export function everyCard(chronicle: Chronicle): CardId[] {
   return idsOf([...chronicle.drawPile, ...chronicle.hand, ...chronicle.discardPile]).sort();

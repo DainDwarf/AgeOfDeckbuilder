@@ -8,10 +8,10 @@ import { type Choices, SAVE_ENTRY } from '../src/ui/save-entry';
 import { technologyName, text } from '../src/ui/text';
 import {
   chronicleOf,
+  chronicleRaised,
   click,
   heldSave,
   launchedAs,
-  launchedFromScreen,
   launchScreenOver,
   onScreen,
   reachedByClaims,
@@ -119,7 +119,7 @@ test('Launch over a saved chronicle that has reached an achievement raises the w
 
   await warned(page);
   await click(page, `${WARNING}-through`);
-  await page.waitForFunction(() => window.game?.scene.isActive('ui') === true);
+  await chronicleRaised(page);
   const chronicle = await chronicleOf(page);
   expect(chronicle).toEqual(launchedAs(campaign, choices, chronicle.seed));
   await expect
@@ -139,7 +139,10 @@ test('Launch over a saved chronicle that has reached no achievement opens the ne
   expect(reachedIn(saved)).toEqual([]);
 
   await launchScreenOver(page, saved, campaign);
-  await launchedFromScreen(page);
+  await rested(page);
+  await click(page, 'launch-button');
+  expect(await standing(page, WARNING)).toBe(false);
+  await chronicleRaised(page);
   const chronicle = await chronicleOf(page);
   expect(chronicle).toEqual(
     launchedAs(campaign, openingChoices(CATALOGUE, campaign), chronicle.seed),

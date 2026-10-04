@@ -22,11 +22,9 @@ import {
   stoppedTurn,
   titleOf,
   unitEntered,
+  WARRIOR,
   watch,
 } from './chronicle-screen';
-
-/** The unit kind of the player's that captures the camp. */
-const WARRIOR = 'warrior';
 
 /** The tiles the camp's building stands on, in the order the map lists them. */
 function campsOf(chronicle: Chronicle): TileCoords[] {

@@ -10,6 +10,7 @@ import {
   chronicleOf,
   click,
   consoleKey,
+  launchedFromScreen,
   launchedOn,
   loreOf,
   readNames,
@@ -88,8 +89,7 @@ test('Launch opens the chronicle on the firsts under its capstone’s window, an
   await campaignShown(page);
   await chronicleButton(page);
   expect(named(page)).toBe('');
-  await click(page, 'launch-button');
-  await page.waitForFunction(() => window.game?.scene.isActive('ui') === true);
+  await launchedFromScreen(page);
 
   const launched = await chronicleOf(page);
   expect(named(page)).toBe('');
@@ -118,8 +118,7 @@ test('Launch opens the chronicle on the firsts under its capstone’s window, an
   expect(named(page)).toBe('');
   await chronicleButton(page);
   expect(named(page)).toBe('');
-  await click(page, 'launch-button');
-  await page.waitForFunction(() => window.game?.scene.isActive('ui') === true);
+  await launchedFromScreen(page);
   await expect.poll(async () => (await chronicleOf(page)).seed).not.toBe(launched.seed);
   expect(named(page)).toBe('');
 

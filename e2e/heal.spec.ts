@@ -18,15 +18,13 @@ import {
   playedOut,
   settledOn,
   unitEntered,
+  WARRIOR,
   watch,
   withCard,
 } from './chronicle-screen';
 
 /** The card that heals. */
 const HEAL = 'heal';
-
-/** The kind of the unit the spec hurts. */
-const WARRIOR = 'warrior';
 
 test('the heal card played at a damaged warrior on the city’s tile heals it to full health', async ({
   page,

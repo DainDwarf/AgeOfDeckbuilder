@@ -2,8 +2,7 @@ import { expect, type Page, test } from '@playwright/test';
 import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
 import { available, pinned, unpinned } from '../src/rules/campaign';
-import { gained } from '../src/rules/cards';
-import { achievementOf, cardOf, firstAge } from '../src/rules/catalogue';
+import { achievementOf, firstAge } from '../src/rules/catalogue';
 import { countOn } from '../src/rules/chronicle';
 import { tileKey } from '../src/rules/map';
 import type { Chronicle } from '../src/rules/state';
@@ -15,11 +14,10 @@ import {
   chronicleOf,
   click,
   dragOut,
-  firstSeed,
   HOLDING,
-  idsOf,
-  onDeer,
+  HUNT,
   openSaved,
+  paidOnDeer,
   plantCampaign,
   playedOn,
   playedOut,
@@ -36,9 +34,8 @@ import {
   wonCampaign,
 } from './chronicle-screen';
 
-/** The technology whose achievement counts the hunts played, and the card played to count one. */
+/** The technology whose achievement counts the hunts played. */
 const HUNTING = 'trapping';
-const HUNT = 'hunt';
 
 /** What the pinned achievement draws, read in one question. */
 const PARTS = [
@@ -98,13 +95,7 @@ test('a chronicle of the second age beside a campaign pinning a technology it re
   test.setTimeout(budget(1));
   const campaign = pinned(CATALOGUE, wonCampaign(), HUNTING);
   const era = secondEra(campaign);
-  const paid = firstSeed(`opens the ${era.age} age’s turn 1 on ${HUNT} in hand`, (seed) => {
-    const opened = settledOn(seed, [], undefined, era);
-    if (!idsOf(opened.hand).includes(HUNT)) return undefined;
-    const { chronicle: worked, tile } = onDeer(opened, []);
-    const chronicle = gained(worked, cardOf(CATALOGUE, HUNT).cost).chronicle;
-    return { chronicle, tile, index: idsOf(chronicle.hand).indexOf(HUNT) };
-  });
+  const paid = paidOnDeer(HUNT, [], undefined, era);
   const hunted = playedOn(paid.chronicle, paid.index, paid.tile);
   const { id } = rowOf(paid.chronicle, HUNTING);
   const { need } = achievementOf(CATALOGUE, era.age, id);

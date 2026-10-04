@@ -1,5 +1,5 @@
 import { available } from './campaign';
-import { aimOf, discarded, leavesChronicle, refuses, struck } from './cards';
+import { aimOf, discarded, leavesChronicle, refuses, retiled, struck } from './cards';
 import {
   type Achievement,
   type AimedCard,
@@ -1037,15 +1037,7 @@ function campCaptured(
   chronicle: Chronicle,
   tile: TileCoords,
 ): Sequence<Group> {
-  const at = tileKey(tile);
-  const removed = landedAs(
-    changeOn('retiled', tile, {
-      ...chronicle,
-      tiles: chronicle.tiles.map((other) =>
-        tileKey(other) === at ? { ...other, building: undefined } : other,
-      ),
-    }),
-  );
+  const removed = retiled(chronicle, tile, (camp) => ({ ...camp, building: undefined }));
   return grouped(
     { name: 'camp-capture', tile },
     followed(removed, (left) =>

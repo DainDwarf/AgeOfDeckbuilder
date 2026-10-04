@@ -575,10 +575,15 @@ export async function chronicleButton(page: Page): Promise<void> {
   await rested(page);
 }
 
-/** Launch pressed on the launch screen standing, and the chronicle screen it raises waited for, one hand laid out on it. */
+/** Launch pressed on the launch screen standing, and the chronicle screen it raises waited for. */
 export async function launchedFromScreen(page: Page): Promise<void> {
   await rested(page);
   await click(page, 'launch-button');
+  await chronicleRaised(page);
+}
+
+/** The chronicle screen a launch raises waited for, one hand laid out on it. */
+export async function chronicleRaised(page: Page): Promise<void> {
   await page.waitForFunction(() => window.game?.scene.isActive('ui') === true);
   await expect.poll(() => counted(page, 'hand-0')).toBe(1);
 }
@@ -1339,11 +1344,7 @@ export function landed(): { chronicle: Chronicle; tile: TileCoords } {
       const claimed = outcome(apply(CATALOGUE, turned, { type: 'claim', tile }));
       if (claimed === turned) continue;
       const paid = gained(claimed, card.cost).chronicle;
-      const worked = entered(CATALOGUE, paid, {
-        type: 'worker',
-        faction: 'player',
-        tile,
-      }).chronicle;
+      const worked = entered(CATALOGUE, paid, { type: WORKER, faction: 'player', tile }).chronicle;
       const chronicle = charted(CATALOGUE, worked);
       if (!playable(refusalOf(CATALOGUE, chronicle, SHELTER))) continue;
       if (admitted(CATALOGUE, chronicle, aim).some((coord) => tileKey(coord) === tileKey(tile))) {
@@ -1395,8 +1396,17 @@ export function unitEntered(chronicle: Chronicle, entering: Entering): Chronicle
   return charted(CATALOGUE, entered(CATALOGUE, chronicle, entering).chronicle);
 }
 
+/** The unit kind cards are played through. */
+export const WORKER = 'worker';
+
+/** The unit kind of the player's that fights. */
+export const WARRIOR = 'warrior';
+
 /** The card that places the improvement, and the improvement it places. */
 export const TRAPPING = 'trapping';
+
+/** The card that removes a tile's feature. */
+export const HUNT = 'hunt';
 
 /** The first civilization the catalogue lists, with one copy of the card added to its cards. */
 export function withCard(card: CardId): Civilization {
@@ -1448,8 +1458,34 @@ export function onDeer(
   for (const improvement of improvements) {
     ground = followed(ground, (left) => improvementPlaced(CATALOGUE, left, tile, improvement));
   }
-  const worked = unitEntered(ground.chronicle, { type: 'worker', faction: 'player', tile });
+  const worked = unitEntered(ground.chronicle, { type: WORKER, faction: 'player', tile });
   return { chronicle: worked, tile };
+}
+
+/** A turn 1 whose worker stands on a tile beside the city, a card in the hand and paid for. */
+export type Paid = {
+  readonly chronicle: Chronicle;
+  readonly tile: TileCoords;
+  readonly index: number;
+};
+
+/**
+ * The first seed's turn 1, launched as `settledOn` launches it, with the card in hand, on the deer
+ * the improvements named are placed on, with the card paid for.
+ */
+export function paidOnDeer(
+  card: CardId,
+  improvements: readonly string[],
+  civilization?: Civilization,
+  era = firstEra(),
+): Paid {
+  return firstSeed(`opens the ${era.age} age’s turn 1 on ${card} in hand`, (seed) => {
+    const opened = settledOn(seed, [], civilization, era);
+    if (!idsOf(opened.hand).includes(card)) return undefined;
+    const { chronicle: worked, tile } = onDeer(opened, improvements);
+    const chronicle = gained(worked, cardOf(CATALOGUE, card).cost).chronicle;
+    return { chronicle, tile, index: idsOf(chronicle.hand).indexOf(card) };
+  });
 }
 
 /**

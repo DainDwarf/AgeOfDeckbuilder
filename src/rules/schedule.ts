@@ -1,4 +1,4 @@
-import { featurePlaced, terraformed } from './cards';
+import { built, featurePlaced, terraformed } from './cards';
 import {
   type Answer,
   ageOf,
@@ -477,15 +477,8 @@ export function campsPlaced(
 
   let landing = unchanged(chronicle);
   for (const placing of placings) {
-    const key = tileKey(placing.tile);
     landing = followed(landing, (left) =>
-      landedAs(
-        changeOn('retiled', placing.tile, {
-          ...left,
-          rng: placing.rng,
-          tiles: left.tiles.map((tile) => (tileKey(tile) === key ? { ...tile, building } : tile)),
-        }),
-      ),
+      built(catalogue, { ...left, rng: placing.rng }, placing.tile, building),
     );
   }
   return { ...landing, placed: placings.map(({ tile }) => tile) };

@@ -17,6 +17,7 @@ import {
   ringedTile,
   settledOn,
   standing,
+  WARRIOR,
   watch,
 } from './chronicle-screen';
 
@@ -28,7 +29,7 @@ function besieged(): { chronicle: Chronicle; warrior: Unit; enemy: Unit } {
   return firstSeed('stands an enemy beside its city', (seed) => {
     const settled = settledOn(seed);
     const city = cityTileOf(settled);
-    const guarded = entered(CATALOGUE, settled, { type: 'warrior', faction: 'player', tile: city });
+    const guarded = entered(CATALOGUE, settled, { type: WARRIOR, faction: 'player', tile: city });
     const { camp } = ageOf(CATALOGUE, settled.age);
     const kind = unitKind(CATALOGUE, camp.unit);
     const beside = neighbours(city).find(

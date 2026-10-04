@@ -37,7 +37,7 @@ import {
   SCRIPT,
   stagedBy,
   standing,
-  WORKER,
+  WORKER_STATS,
   withUnits,
   worker,
 } from './fixtures';
@@ -176,7 +176,10 @@ test('a unit killed in the enemy phase captures the camp it stood on no longer',
   const besieging = cityOf(['urban'], {
     ...NO_GROWTH,
     tiles: camped(field(4), [camp]),
-    units: [worker(camp), standing('enemy', { q: 3, r: 0 }, { move: 0, damage: WORKER.health })],
+    units: [
+      worker(camp),
+      standing('enemy', { q: 3, r: 0 }, { move: 0, damage: WORKER_STATS.health }),
+    ],
   });
 
   const taken = outcome(apply(CATALOGUE, besieging, { type: 'end-turn' }));

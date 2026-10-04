@@ -425,7 +425,7 @@ export function settled(catalogue: Catalogue, paid: Chronicle, at: TileCoords): 
 }
 
 /** One tile of the map layered over, every other tile left as it stands: the one `retiled` change. */
-function retiled(paid: Chronicle, at: TileCoords, after: (tile: Tile) => Tile): Landed {
+export function retiled(paid: Chronicle, at: TileCoords, after: (tile: Tile) => Tile): Landed {
   const key = tileKey(at);
   return landedAs(
     changeOn('retiled', at, {
@@ -435,7 +435,7 @@ function retiled(paid: Chronicle, at: TileCoords, after: (tile: Tile) => Tile): 
   );
 }
 
-/** The building a building card builds: it fills the slot of the tile the card was aimed at. */
+/** The building filling the building slot of a tile. */
 export function built(
   catalogue: Catalogue,
   paid: Chronicle,

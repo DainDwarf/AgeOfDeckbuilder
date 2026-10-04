@@ -2,29 +2,25 @@ import { expect, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
 import { gained } from '../src/rules/cards';
 import { cardOf } from '../src/rules/catalogue';
-import { type TileCoords, tileKey } from '../src/rules/map';
+import { tileKey } from '../src/rules/map';
 import { charted } from '../src/rules/sight';
-import type { CardId, Chronicle } from '../src/rules/state';
+import type { CardId } from '../src/rules/state';
 import {
   admits,
   aimed,
   chronicleOf,
   click,
   dragOut,
+  HUNT,
   idsOf,
   marksIn,
   openSaved,
+  type Paid,
   playedOn,
   playedOut,
   watch,
   workerStepped,
 } from './chronicle-screen';
-
-/** The card that removes the feature. */
-const HUNT = 'hunt';
-
-/** A turn 1 whose worker stands on a tile beside the city, a card in the hand and paid for. */
-type Paid = { readonly chronicle: Chronicle; readonly tile: TileCoords; readonly index: number };
 
 /**
  * The first seed's turn 1 whose first worker steps off the city onto a tile the card in the hand

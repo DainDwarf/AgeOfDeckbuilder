@@ -1,10 +1,18 @@
 import { expect, test } from 'vitest';
 import { type Achievement, achievementOf, ageOf, type Catalogue, capstoneOf } from './catalogue';
-import { apply, type Command, launched, outcome, turnsPlaying } from './chronicle';
+import {
+  apply,
+  type Command,
+  launched,
+  outcome,
+  terrainsPlayedOn,
+  turnsPlaying,
+} from './chronicle';
 import {
   AGE,
   achieved,
   achievementIn,
+  aimedAtUnit,
   builtOn,
   CATALOGUE,
   CITY,
@@ -34,7 +42,6 @@ import {
   reaching,
   roadOn,
   SURVEY,
-  SURVEY_NEED,
   SURVEYED,
   settledLaunch,
   settledOn,
@@ -868,7 +875,6 @@ test('an achievement keeping a tally is reached at the end of the command whose 
   const second = apply(CATALOGUE, outcome(between), roadOn(other));
   const third = apply(CATALOGUE, outcome(second), roadOn(forest));
 
-  expect(SURVEY_NEED).toBe(2);
   expect(namesOf(first).at(-1)).toBe('tallied');
   expect(achievementIn(outcome(first), SURVEY)).toEqual({
     id: SURVEY,
@@ -940,7 +946,6 @@ test('a command moving the tallies of two achievements raises a tallied for each
   const stages = apply(twoTallies, surveying(), roadOn(plain));
   const [hoarded, surveyed, met] = [...walked(stages)].slice(-3);
 
-  expect(SURVEY_NEED).toBeGreaterThan(1);
   expect(namesOf(stages).slice(-3)).toEqual(['tallied', 'tallied', 'reached']);
   expect(hoarded.chronicle.achievements).toEqual([
     { id: HOARD, reached: false, tally: { plain: 1 } },
@@ -960,6 +965,25 @@ test('a command moving the tallies of two achievements raises a tallied for each
     { id: SURVEY, reached: false, tally: { plain: 1 } },
     { id: victoryOf(AGE), reached: false, tally: {} },
   ]);
+});
+
+test('an achievement counting the kinds of terrain a card is played on counts a card aimed at a unit by the terrain of the tile its unit stands on', () => {
+  const [, , forest] = SURVEYED;
+  const marching = achieved({
+    [HOARD]: { ...achievementOf(CATALOGUE, AGE, HOARD), ...terrainsPlayedOn('PH_March'), need: 1 },
+  });
+  const city = surveying({
+    units: [standing('player', forest, {}, MOVE_POINT)],
+    hand: ['PH_March'],
+  });
+
+  const stages = apply(marching, city, aimedAtUnit(forest));
+
+  expect(achievementIn(outcome(stages), HOARD)).toEqual({
+    id: HOARD,
+    reached: true,
+    tally: { forest: 1 },
+  });
 });
 
 test('an achievement counting the turns on which that many cards were played counts a turn once, at the play that brings it to the number, a hazard paid for among them, and nothing played on the settle phase', () => {

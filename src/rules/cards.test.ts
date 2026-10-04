@@ -27,6 +27,7 @@ import { yielded } from './city';
 import {
   AGE,
   actionOf,
+  aimedAtUnit,
   assignTo,
   attackOn,
   buildingAt,
@@ -63,7 +64,7 @@ import {
   standing,
   UPHEAVAL,
   unitNamed,
-  WORKER,
+  WORKER_STATS,
   withTile,
   withUnits,
   worker,
@@ -87,11 +88,6 @@ import { standsOn } from './units';
 /** A card of the hand, the first unless the test names another, aimed at a tile, ready to hand to `apply`. */
 function aimedAt(tile: TileCoords, index = 0): Command {
   return { type: 'play', index, aim: 'tile', tile };
-}
-
-/** A card aimed at the unit standing on a tile, ready to hand to `apply`. */
-function aimedAtUnit(tile: TileCoords): Command {
-  return { type: 'play', index: 0, aim: 'unit', tile };
 }
 
 /** A card aimed at where a card lies in the discard pile, ready to hand to `apply`. */
@@ -169,7 +165,7 @@ function workedTile(
     2,
     {
       tiles,
-      units: standsOn(CATALOGUE, WORKER, tileAt(tiles, at)) ? [worker(at)] : [],
+      units: standsOn(CATALOGUE, WORKER_STATS, tileAt(tiles, at)) ? [worker(at)] : [],
       ...carrying,
     },
     catalogue,
@@ -850,7 +846,7 @@ test('the mine card is refused on every terrain but the hills it goes on', () =>
 
     expect(admittedTiles(city, 'PH_Mine')).toEqual([]);
     expect(refusedFor(city, 'PH_Mine', at)).toBe(
-      standsOn(CATALOGUE, WORKER, tileAt(city.tiles, at)) ? 'wrong-terrain' : 'no-worker',
+      standsOn(CATALOGUE, WORKER_STATS, tileAt(city.tiles, at)) ? 'wrong-terrain' : 'no-worker',
     );
     expect(outcome(apply(CATALOGUE, city, aimedAt(at)))).toEqual(city);
   }
@@ -1161,7 +1157,7 @@ test('the urbanisation card is refused on every terrain but the plain it terrafo
 
     expect(admittedTiles(city, 'PH_Urbanisation')).toEqual([]);
     expect(refusedFor(city, 'PH_Urbanisation', at)).toBe(
-      standsOn(CATALOGUE, WORKER, tileAt(city.tiles, at)) ? 'wrong-terrain' : 'no-worker',
+      standsOn(CATALOGUE, WORKER_STATS, tileAt(city.tiles, at)) ? 'wrong-terrain' : 'no-worker',
     );
     expect(outcome(apply(CATALOGUE, city, aimedAt(at)))).toEqual(city);
   }
@@ -1365,9 +1361,9 @@ test('the refresh instant leaves a worker’s spent action spent, and the card r
   const mined = outcome(apply(CATALOGUE, moved, aimedAt(at)));
   const refreshed = outcome(apply(CATALOGUE, mined, aimedAtUnit(at)));
 
-  expect(pointsOf(moved, 1)).toBeLessThan(WORKER.move);
+  expect(pointsOf(moved, 1)).toBeLessThan(WORKER_STATS.move);
   expect(pointsOf(mined, 1)).toBe(0);
-  expect(pointsOf(refreshed, 1)).toBe(WORKER.move);
+  expect(pointsOf(refreshed, 1)).toBe(WORKER_STATS.move);
   expect(idsOf(refreshed.discardPile)).toEqual(['PH_Mine', 'PH_March']);
   expect(actionOf(refreshed, 1)).toBe(0);
   expect(refusedFor(refreshed, 'PH_Road', at)).toBe('worker-spent');
@@ -1513,7 +1509,9 @@ test('a card asking for one feature of several names the first of its reasons: w
     withTile(bare, { ...at, terrain, feature, improvements: [] });
   const worked = (terrain: Terrain, feature?: FeatureId): Chronicle =>
     withUnits(carrying(terrain, feature), [worker(at)]);
-  const spent = withUnits(carrying('plain', 'PH_Fertile'), [standing('player', at, WORKER, 0, 0)]);
+  const spent = withUnits(carrying('plain', 'PH_Fertile'), [
+    standing('player', at, WORKER_STATS, 0, 0),
+  ]);
 
   expect(refusedFor(carrying('plain', 'PH_Fertile'), 'PH_Hunt', at)).toBe('no-worker');
   expect(refusedFor(spent, 'PH_Hunt', at)).toBe('worker-spent');
@@ -1533,7 +1531,9 @@ test('an improvement naming a feature names the first of its reasons: worker, ac
   ): Chronicle => withTile(bare, { ...at, terrain, feature, improvements });
   const worked = (terrain: Terrain, feature?: FeatureId, improvements?: string[]): Chronicle =>
     withUnits(carrying(terrain, feature, improvements), [worker(at)]);
-  const spent = withUnits(carrying('forest', 'PH_Game'), [standing('player', at, WORKER, 0, 0)]);
+  const spent = withUnits(carrying('forest', 'PH_Game'), [
+    standing('player', at, WORKER_STATS, 0, 0),
+  ]);
 
   expect(refusedFor(carrying('forest', 'PH_Game'), 'PH_Snare', at)).toBe('no-worker');
   expect(refusedFor(spent, 'PH_Snare', at)).toBe('worker-spent');
