@@ -4,6 +4,7 @@ import { apply, outcome } from './chronicle';
 import { cityCommand, claimable } from './city';
 import {
   agesOver,
+  aimedAt,
   attackOn,
   attacksOf,
   buildingAt,
@@ -383,9 +384,7 @@ test('the chronicle opens with one guard on each camp the map was dealt, in tile
     civilization: { ...CIVILIZATION, cards: [], settle: ['PH_Band'] },
   });
   const camps = campsInTileOrder(opened);
-  const banded = outcome(
-    apply(CATALOGUE, opened, { type: 'play', index: 1, aim: 'tile', tile: CITY }),
-  );
+  const banded = outcome(apply(CATALOGUE, opened, aimedAt(CITY, 1)));
 
   expect(
     opened.units.map((unit) => ({

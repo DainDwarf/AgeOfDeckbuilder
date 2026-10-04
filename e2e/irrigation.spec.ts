@@ -55,7 +55,7 @@ function paidAlongRiver(): { chronicle: Chronicle; tile: TileCoords; index: numb
   });
 }
 
-test('the irrigation card places irrigation on the plain a river runs along that the worker stands on', async ({
+test('the irrigation card places irrigation on the tile a river runs along that the worker stands on', async ({
   page,
 }) => {
   const problems = watch(page);

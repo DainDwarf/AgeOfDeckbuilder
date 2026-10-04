@@ -2,6 +2,7 @@ import { expect, test } from 'vitest';
 import { entered } from './catalogue';
 import { apply, outcome } from './chronicle';
 import {
+  aimedAt,
   CATALOGUE,
   CIVILIZATION,
   NO_DEALS,
@@ -281,9 +282,7 @@ test('nothing sees on the settle phase: a unit entered at the centre part’s ed
     reach: 3,
     civilization: { ...CIVILIZATION, cards: [], settle: ['PH_Band'] },
   });
-  const entered = outcome(
-    apply(CATALOGUE, opened, { type: 'play', index: 1, aim: 'tile', tile: at }),
-  );
+  const entered = outcome(apply(CATALOGUE, opened, aimedAt(at, 1)));
   const settled = settledOn(entered, CITY);
   const ticked = outcome(apply(CATALOGUE, settled, { type: 'end-turn' }));
 

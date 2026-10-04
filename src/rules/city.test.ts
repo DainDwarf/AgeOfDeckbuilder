@@ -14,6 +14,7 @@ import {
 } from './city';
 import {
   AGE,
+  aimedAt,
   assignTo,
   CATALOGUE,
   type Carrying,
@@ -70,11 +71,6 @@ function alone(carrying: Carrying = {}): Chronicle {
 /** The fixture's civilization with this many free claims in its settle section. */
 function claiming(claims: number): Civilization {
   return { ...CIVILIZATION, settle: Array<string>(claims).fill('PH_Claim') };
-}
-
-/** The first card of the hand played at a tile: a free claim, on a hand the settle left holding them. */
-function freeClaim(tile: TileCoords): Command {
-  return { type: 'play', index: 0, aim: 'tile', tile };
 }
 
 /** The free claim's aim. */
@@ -138,7 +134,7 @@ function darkBorder(): { opened: Chronicle; dark: TileCoords; city: TileCoords }
       let settling = settledOn(unsettled, city);
       if (settling.city === undefined) continue;
       for (const tile of neighbours(city)) {
-        settling = outcome(apply(CATALOGUE, settling, freeClaim(tile)));
+        settling = outcome(apply(CATALOGUE, settling, aimedAt(tile)));
       }
       const ended = outcome(apply(CATALOGUE, settling, { type: 'end-turn' }));
       const opened = outcome(apply(CATALOGUE, ended, { type: 'end-turn' }));
@@ -168,7 +164,7 @@ test('a free claim holds the tile, brings one population that stands on it, and 
   const settled = settledOn(opening(plains(3)), CITY);
   const [tile] = neighbours(CITY);
 
-  const stages = apply(CATALOGUE, settled, freeClaim(tile));
+  const stages = apply(CATALOGUE, settled, aimedAt(tile));
   const after = outcome(stages);
 
   expect(idsOf(settled.hand)).toEqual(['PH_Claim']);
@@ -184,7 +180,7 @@ test('a free claim holds the tile, brings one population that stands on it, and 
 test('six free claims make the next claim cost fourteen culture', () => {
   let chronicle = settledOn(opening(plains(3), { civilization: claiming(6) }), CITY);
   for (const tile of neighbours(CITY)) {
-    chronicle = outcome(apply(CATALOGUE, chronicle, freeClaim(tile)));
+    chronicle = outcome(apply(CATALOGUE, chronicle, aimedAt(tile)));
   }
   const next = { q: 2, r: 0 };
   const paying: Chronicle = { ...chronicle, resources: culture(14) };
@@ -202,7 +198,7 @@ test('a free claim aimed at a tile the city holds, one the border does not touch
   expect(admitted(CATALOGUE, opened, claimCard())).toEqual([]);
   for (const tile of [CITY, { q: 2, r: 0 }, camp]) {
     expect(claimRefusal(settled, tile)).toBe('no-claim');
-    expect(stagedBy(settled, freeClaim(tile))).toEqual(['refused']);
+    expect(stagedBy(settled, aimedAt(tile))).toEqual(['refused']);
   }
   expect(admitted(CATALOGUE, settled, claimCard()).map(tileKey).sort()).toEqual(
     claimable(CATALOGUE, settled).map(tileKey).sort(),

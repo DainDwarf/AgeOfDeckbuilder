@@ -1313,9 +1313,7 @@ test('the turn refreshes a worker’s action, and the card it refused lands on t
   expect(actionOf(ticked, 1)).toBe(actionOf(city, 1));
   expect(refusedFor(ticked, 'PH_Road', at)).toBeUndefined();
 
-  const after = outcome(
-    apply(CATALOGUE, ticked, { type: 'play', index: road, aim: 'tile', tile: at }),
-  );
+  const after = outcome(apply(CATALOGUE, ticked, aimedAt(at, road)));
 
   expect(tileAt(after.tiles, at)?.improvements).toEqual(['PH_Mine', 'PH_Road']);
 });

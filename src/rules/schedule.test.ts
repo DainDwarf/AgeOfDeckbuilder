@@ -6,6 +6,7 @@ import { growthThreshold } from './city';
 import {
   AGE,
   AMBUSH,
+  aimedAt,
   assignTo,
   buildingAt,
   builtOn,
@@ -1013,7 +1014,7 @@ test('a tile whose feature a card removed is dealt that feature again by an answ
   const at = { q: HERD, r: 0 };
   const city = herded([], { hand: ['PH_Hunt'], units: [worker(at)] });
 
-  const hunted = outcome(apply(CATALOGUE, city, { type: 'play', index: 0, aim: 'tile', tile: at }));
+  const hunted = outcome(apply(CATALOGUE, city, aimedAt(at)));
   const { landed } = followed(hunted);
 
   expect(featureOf(city, at)).toBe('PH_Fertile');

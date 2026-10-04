@@ -1119,7 +1119,7 @@ export function settledOn(
   tile: TileCoords,
   catalogue: Catalogue = CATALOGUE,
 ): Chronicle {
-  return outcome(apply(catalogue, chronicle, { type: 'play', index: 0, aim: 'tile', tile }));
+  return outcome(apply(catalogue, chronicle, aimedAt(tile)));
 }
 
 /**

@@ -314,7 +314,7 @@ test('a second settle raises no change for a row it leaves where it stood: the p
   const first = settledOn(opened, CITY);
   const moved = { q: 1, r: 0 };
 
-  const held = playedOver(first, { type: 'play', index: 0, aim: 'tile', tile: moved });
+  const held = playedOver(first, aimedAt(moved));
 
   expect(first.population).toBe(1 + CIVILIZATION.city.idle);
   expect(held.map(({ name }) => name)).toEqual([
@@ -325,15 +325,13 @@ test('a second settle raises no change for a row it leaves where it stood: the p
     'assigned',
     'settled',
   ]);
-  expect(
-    outcome(apply(CATALOGUE, first, { type: 'play', index: 0, aim: 'tile', tile: moved })).city,
-  ).toEqual(moved);
+  expect(outcome(apply(CATALOGUE, first, aimedAt(moved))).city).toEqual(moved);
 });
 
 test('the settle is played over the card leaving and the settle’s own changes, all on the city’s tile', () => {
   const opened = opening(plainDisc(), { civilization: { ...CIVILIZATION, settle: [] } });
 
-  const held = playedOver(opened, { type: 'play', index: 0, aim: 'tile', tile: CITY });
+  const held = playedOver(opened, aimedAt(CITY));
   const [left, ...changes] = held;
   const [, built, holding, population, assigned, stood] = changes;
 
@@ -356,15 +354,13 @@ test('the settle is played over the card leaving and the settle’s own changes,
   expect(assigned.chronicle.assigned).toEqual([CITY]);
   for (const change of changes.slice(0, 4)) expect(change.chronicle.city).toBeUndefined();
   expect(stood.chronicle.city).toEqual(CITY);
-  expect(
-    outcome(apply(CATALOGUE, opened, { type: 'play', index: 0, aim: 'tile', tile: CITY })).ending,
-  ).toBeUndefined();
+  expect(outcome(apply(CATALOGUE, opened, aimedAt(CITY))).ending).toBeUndefined();
 });
 
 test('the settle raises no ending: the city stands only once everything it runs on is in place', () => {
   const opened = opening(plainDisc(), { civilization: { ...CIVILIZATION, settle: [] } });
 
-  const names = stagedBy(opened, { type: 'play', index: 0, aim: 'tile', tile: CITY });
+  const names = stagedBy(opened, aimedAt(CITY));
 
   expect(names).not.toContain('ended');
   expect(names[names.length - 1]).toBe('settled');
