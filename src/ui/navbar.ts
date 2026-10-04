@@ -82,6 +82,7 @@ export function wearNavbar(scene: Phaser.Scene, standing: MetaScreen): Worn {
   scene.add
     .rectangle(0, 0, NAVBAR_WIDTH, DESIGN_HEIGHT, LOOK.panelFill)
     .setOrigin(0, 0)
+    .setName('navbar')
     .setInteractive();
   scene.add.rectangle(NAVBAR_WIDTH - 1, 0, 1, DESIGN_HEIGHT, LOOK.panelEdge).setOrigin(0, 0);
   const middle = NAVBAR_WIDTH / 2;

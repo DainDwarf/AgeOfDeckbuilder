@@ -17,7 +17,6 @@ import {
   nameOnScreen,
   onScreen,
   plantCampaign,
-  reading,
   readings,
   readNames,
   rested,
@@ -72,12 +71,31 @@ async function plateReads(
   };
 }
 
-/** Where the tree stands: its left end, in design units. */
-function treeAt(page: Page): Promise<number> {
+/**
+ * Where the tree's two ends stand, in design units: its left end, and its right end half a wash past
+ * where the last age's ground ends.
+ */
+function treeEnds(page: Page): Promise<{ left: number; right: number }> {
+  return page.evaluate(
+    ({ last, wash }) => {
+      const tree = window.named?.('tree')?.object as Phaser.GameObjects.Container | undefined;
+      const ground = window.named?.(`ground-${last}`)?.object as
+        | Phaser.GameObjects.Rectangle
+        | undefined;
+      if (tree === undefined || ground === undefined) throw new Error('there is no tree');
+      return { left: tree.x, right: tree.x + ground.x + ground.width + wash / 2 };
+    },
+    { last: LAST, wash: WASH },
+  );
+}
+
+/** The room's two edges, in design units: the navbar's right edge, and the screen's. */
+function roomEdges(page: Page): Promise<{ left: number; right: number }> {
   return page.evaluate(() => {
-    const tree = window.named?.('tree')?.object as Phaser.GameObjects.Container | undefined;
-    if (tree === undefined) throw new Error('there is no tree');
-    return tree.x;
+    const navbar = window.named?.('navbar')?.object as Phaser.GameObjects.Rectangle | undefined;
+    const right = window.game?.scene.getScene('campaign').cameras.main.worldView.right;
+    if (navbar === undefined || right === undefined) throw new Error('there is no campaign screen');
+    return { left: navbar.getBounds().right, right };
   });
 }
 
@@ -170,46 +188,56 @@ test('on a campaign a won chronicle paid into, its technology stands learned, th
   expect(problems).toEqual([]);
 });
 
-test('a tree the room holds whole stands where it is under the two pan keys, a drag and a wheel notch', async ({
+test('a tree wider than the room moves under the two pan keys and a drag, stopping at its ends, and not under a wheel notch', async ({
   page,
 }) => {
   const problems = watch(page);
   await openCampaign(page);
+  await rested(page);
 
-  const ground = (await reading(page, `ground-${LAST}`)).across;
-  const right = await page.evaluate(
-    () => window.game?.scene.getScene('campaign').cameras.main.worldView.right ?? 0,
-  );
-  expect(ground.right + WASH / 2).toBeLessThanOrEqual(right);
-  const standing = await treeAt(page);
+  const room = await roomEdges(page);
+  const opened = await treeEnds(page);
+  const span = opened.right - opened.left;
+  expect(span).toBeGreaterThan(room.right - room.left);
+  /** Where the tree's left end stands with its right end on the room's right edge. */
+  const rightEnd = room.right - span;
+  /** The key held until the tree stands at that end, then held on past it, and let go. */
+  const heldPast = async (code: string, end: number): Promise<void> => {
+    await page.keyboard.down(code);
+    await expect.poll(async () => (await treeEnds(page)).left).toBeCloseTo(end);
+    await waitGameClock(page, 200);
+    await page.keyboard.up(code);
+    await rested(page);
+    expect((await treeEnds(page)).left).toBeCloseTo(end);
+  };
 
-  for (const control of ['pan-left', 'pan-right'] as const) {
-    for (const slot of DEFAULTS[control]) {
-      if (slot === undefined) continue;
-      await page.keyboard.down(slot.code);
-      await waitGameClock(page, 200);
-      await page.keyboard.up(slot.code);
-      await rested(page);
-      expect(await treeAt(page)).toBe(standing);
-    }
+  const [first] = DEFAULTS['pan-left'];
+  if (first === undefined) throw new Error('pan-left holds no key by default');
+  await heldPast(first.code, room.left);
+  for (const [at, rightward] of DEFAULTS['pan-right'].entries()) {
+    const leftward = DEFAULTS['pan-left'][at];
+    if (rightward === undefined || leftward === undefined) continue;
+    await heldPast(rightward.code, rightEnd);
+    await heldPast(leftward.code, room.left);
   }
 
-  const room = await page.locator('canvas').evaluate((canvas: HTMLCanvasElement) => {
+  const press = await page.locator('canvas').evaluate((canvas: HTMLCanvasElement) => {
     const rect = canvas.getBoundingClientRect();
     return { x: rect.left + rect.width * 0.8, y: rect.top + rect.height * 0.8 };
   });
-  await page.mouse.move(room.x, room.y);
+  await page.mouse.move(press.x, press.y);
   await page.mouse.down();
-  await page.mouse.move(room.x - 300, room.y, { steps: 10 });
+  await page.mouse.move(press.x - 300, press.y, { steps: 10 });
   await rested(page);
-  expect(await treeAt(page)).toBe(standing);
+  const dragged = (await treeEnds(page)).left;
+  expect(dragged).toBeLessThan(room.left);
   await page.mouse.up();
   await rested(page);
-  expect(await treeAt(page)).toBe(standing);
+  expect((await treeEnds(page)).left).toBe(dragged);
 
   await page.mouse.wheel(0, 100);
   await rested(page);
-  expect(await treeAt(page)).toBe(standing);
+  expect((await treeEnds(page)).left).toBe(dragged);
 
   expect(problems).toEqual([]);
 });
