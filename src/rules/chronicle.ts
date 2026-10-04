@@ -412,7 +412,7 @@ export function terrainsPlayedOn(card: CardId): Required<Pick<Achievement, 'tall
   };
 }
 
-/** The ground a card's plays are counted on: anywhere, along a river, or carrying a feature. */
+/** The ground a card's plays are counted on. */
 export type PlayedGround =
   | { readonly on: 'anywhere' }
   | { readonly on: 'river' }
