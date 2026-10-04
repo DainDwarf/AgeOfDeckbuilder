@@ -997,6 +997,42 @@ test('an achievement counting the kinds of terrain a card is played on counts a 
   });
 });
 
+test('an achievement counting a card’s plays anywhere counts each one whatever tile it is aimed at, and none of another card', () => {
+  const [fertile, game] = [
+    { q: 1, r: 0 },
+    { q: 0, r: 1 },
+  ];
+  const hunting = achieved({
+    [HOARD]: {
+      ...achievementOf(CATALOGUE, AGE, HOARD),
+      ...playsOn('PH_Hunt', { on: 'anywhere' }),
+      need: 2,
+    },
+  });
+  const city = reaching([], {
+    tiles: field(2).map((tile): Tile => {
+      if (tileKey(tile) === tileKey(fertile)) return { ...tile, feature: 'PH_Fertile' };
+      if (tileKey(tile) === tileKey(game))
+        return { ...tile, terrain: 'forest', feature: 'PH_Game' };
+      return tile;
+    }),
+    units: [fertile, game].map(worker),
+    hand: ['PH_Hunt', 'PH_Cache', 'PH_Hunt'],
+  });
+
+  const first = apply(hunting, city, aimedAt(fertile));
+  const other = apply(hunting, outcome(first), { type: 'play', index: 0, aim: 'none' });
+  const second = apply(hunting, outcome(other), aimedAt(game));
+
+  expect(achievementIn(outcome(first), HOARD).tally).toEqual({ plays: 1 });
+  expect(namesOf(other)).not.toContain('tallied');
+  expect(achievementIn(outcome(second), HOARD)).toEqual({
+    id: HOARD,
+    reached: true,
+    tally: { plays: 2 },
+  });
+});
+
 test('an achievement counting a card’s plays along a river counts each one aimed at a tile a river runs along, and none aimed elsewhere', () => {
   const [banked, bent] = [
     { q: 1, r: 0 },
