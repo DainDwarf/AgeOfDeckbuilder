@@ -14,7 +14,7 @@ The age in one sentence: the chronicle where the economy comes home — it opens
 - A goal is practice: it is done with the cards of the technologies its technology needs, so every link of the tree has a reason. A feat, a goal that bends the whole chronicle, stands here and there. A goal that lands on its own while the chronicle is played as usual is avoided. The first column's goals are done with the Nomadic deck.
 - The technologies are grouped by way of life, four families: the field, the wild, the hearth, the sky. The families are not wholly separate: a technology may need one of another family.
 - The age opens every resource. Money and science may be under-represented, and are still there in some capacity.
-- Each family's climb is designed after its door has been played. Bartering lands with the hearth, after the field and the wild, since it needs Clothmaking and Bread.
+- Each technology is a line of its own, and a family's technologies are designed after its door has been played. A technology's line stands on the board after the lines of what it needs.
 
 **The skeleton, the user's tree** (names and links, each column in the order it stands, top to bottom; a link's reason is tested against the practice rule when its technology is designed, and moves if it finds no goal):
 

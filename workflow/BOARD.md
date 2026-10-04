@@ -14,8 +14,16 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The field's climb** — Irrigation and Bread, each technology with its achievement and every card it unlocks; with it the four doors re-declared in the order the tree stands them in, Herbalism first.
-- **The wild's climb** — Bow and arrow, Fishing, Domestication, Clothmaking and Raft, each technology with its achievement and every card it unlocks.
-- **The hearth's climb** — Pottery, and Bartering, which needs Clothmaking and Bread, each technology with its achievement and every card it unlocks.
-- **The sky's climb** — Burial rites, Calendar and Megalith, each technology with its achievement and every card it unlocks.
+- **Irrigation** — the field's technology that needs Agriculture and Herbalism, with its achievement and every card it unlocks; with it the four doors re-declared in the order the tree stands them in, Herbalism first.
+- **Bread** — the field's technology that needs Irrigation, with its achievement and every card it unlocks, if it is kept.
+- **Domestication** — the wild's technology that needs Trapping and Agriculture, with its achievement and every card it unlocks.
+- **Bow and arrow** — the wild's technology that needs Trapping, with its achievement and every card it unlocks.
+- **Clothmaking** — the wild's technology that needs Domestication, with its achievement and every card it unlocks.
+- **Fishing** — the wild's technology that needs Bow and arrow, with its achievement and every card it unlocks.
+- **Raft** — the wild's technology that needs Fishing, with its achievement and every card it unlocks.
+- **Pottery** — the hearth's technology that needs Fire, with its achievement and every card it unlocks, if it is kept.
+- **Bartering** — the hearth's technology that needs Clothmaking and Bread, with its achievement and every card it unlocks.
+- **Burial rites** — the sky's technology that needs Herbalism, with its achievement and every card it unlocks, if it is kept.
+- **Calendar** — the sky's technology that needs Irrigation and Burial rites, with its achievement and every card it unlocks.
+- **Megalith** — the sky's technology that needs Calendar, with its achievement and every card it unlocks, if it is kept.
 - **The collection scrolls** — the spec that proves the collection scrolls, its cards being the first to fill the room, and a drag that runs on fired inside the page, since Playwright's own mouse moves come too far apart to set a panel running.
