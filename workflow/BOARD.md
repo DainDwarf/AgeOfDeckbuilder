@@ -14,7 +14,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **Domestication** — the technology Domestication, its achievement and the card Pasture stand in the Stone Age's content after Irrigation's, every goal that counts a card's plays on a ground reads one counter proven on the fixture, the catalogue's coherence test passes and `docs/ages/STONE.md` says so. Doc-impact: `docs/ages/STONE.md`. [board/domestication.md](board/domestication.md)
 - **Bow and arrow** — the wild's technology that needs Trapping, with its achievement and every card it unlocks.
 - **Clothmaking** — the wild's technology that needs Domestication, with its achievement and every card it unlocks.
 - **Fishing** — the wild's technology that needs Bow and arrow, with its achievement and every card it unlocks.

@@ -94,6 +94,12 @@ export const STONE: Slice = {
         technology: 'irrigation',
         influence: 1,
       },
+      domestication: {
+        ...playsOn('gather', { on: 'feature', feature: 'cattle' }),
+        need: 10,
+        technology: 'domestication',
+        influence: 1,
+      },
     },
   },
   brings: {
@@ -106,6 +112,7 @@ export const STONE: Slice = {
       },
       trapping: { kind: 'instant', cost: { production: 2 }, ...placesImprovement('trapping') },
       irrigation: { kind: 'instant', cost: { production: 2 }, ...placesImprovement('irrigation') },
+      pasture: { kind: 'instant', cost: { production: 2 }, ...placesImprovement('pasture') },
       fire: {
         kind: 'instant',
         cost: {},
@@ -128,6 +135,7 @@ export const STONE: Slice = {
       trapping: { needs: ['settlement'], unlocks: { cards: { trapping: 1 } } },
       fire: { needs: ['settlement'], unlocks: { cards: { fire: 1 } } },
       irrigation: { needs: ['agriculture', 'herbalism'], unlocks: { cards: { irrigation: 1 } } },
+      domestication: { needs: ['trapping', 'agriculture'], unlocks: { cards: { pasture: 1 } } },
     },
     terrains: {
       desert: {
@@ -146,6 +154,7 @@ export const STONE: Slice = {
     improvements: {
       trapping: { terrains: ['forest'], feature: 'deer', yields: { food: 1 } },
       irrigation: { terrains: ['plain', 'desert'], river: true, yields: { food: 1 } },
+      pasture: { terrains: ['plain'], feature: 'cattle', yields: { food: 1 } },
     },
     biomes: {
       desert: {
