@@ -14,7 +14,7 @@
 - `docs/ages/NOMADIC.md` _The cards_, Gather: "whatever its layers and the river give" becomes "whatever its layers give".
 - `docs/ages/STONE.md` _The land_, the desert: "A desert tile gives nothing, lies flat and is walked as plain is, and the river gives it food as it does plain and forest." becomes "A desert tile gives nothing, lies flat and is walked as plain is."; "So the desert is ground to cross, and its oases and its river banks are what is worth the walk." becomes "So the desert is ground to cross, and its oases and the river banks Irrigation goes on are what is worth the walk."
 - `docs/ages/STONE.md` _The technologies_: the bullets stand in the tree's order, Herbalism first, then Agriculture, Trapping, Fire, each as it reads today, and one follows them: "- **Irrigation** needs Agriculture and Herbalism. Its goal counts a deed: the times Farm is built on a tile a river runs along. It unlocks the card **Irrigation** and pays influence."
-- `docs/ages/STONE.md` _The cards_, a bullet after Heal's: "- **Irrigation**, an improvement giving food, placed through a worker for production on a plain or a desert tile a river runs along and nowhere else. It is the whole of what a river gives: no tile along one gains anything until it is irrigated."
+- `docs/ages/STONE.md` _The cards_, a bullet after Heal's: "- **Irrigation**, an improvement giving food, placed through a worker for production on a plain or a desert tile a river runs along and nowhere else."
 
 The player-facing entries, each ending in no period:
 
