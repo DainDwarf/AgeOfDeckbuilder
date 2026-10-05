@@ -1,9 +1,10 @@
 import { expect, type Page, test } from '@playwright/test';
 import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
-import { ageOf, cardOf, firstAge, firstRegion, technologyOf } from '../src/rules/catalogue';
+import { ageOf, cardOf, firstAge, technologyOf } from '../src/rules/catalogue';
 import { freshCampaign } from '../src/rules/save';
 import { browseOf } from '../src/ui/collection-layout';
+import { openingChoices } from '../src/ui/launch-layout';
 import { ageName, cardName, civilizationName, text } from '../src/ui/text';
 import type { Reference } from '../src/ui/text-run';
 import {
@@ -49,11 +50,9 @@ const { technology: UNLOCKER, age: UNLOCKED } = (() => {
   throw new Error(`no technology the age ${FIRST} earns unlocks an age`);
 })();
 
-/** The unlocked age's first region, and the segments of the two ages on the time arrow. */
-const REGION = firstRegion(CATALOGUE, UNLOCKED);
+/** The segments of the two ages on the time arrow. */
 const FIRST_AGE = `launch-age-${FIRST}`;
 const UNLOCKED_AGE = `launch-age-${UNLOCKED}`;
-const REGION_OPTION = `launch-region-${REGION}`;
 
 /** The civilization's browse: the count of its cards, and its stacks in the order the browse stands them in. */
 const { count: CARDS, stacks: STACKS } = browseOf(CATALOGUE, CAMPAIGN, CIVILIZATION, cardName);
@@ -192,18 +191,19 @@ test('on a new campaign the age the first age’s technology unlocks stands on t
   expect(problems).toEqual([]);
 });
 
-test('on a campaign that has learned the first age’s technology the launch screen opens on the age it unlocks and that age’s first region; a press on the first age selects it and keeps the region, a press on the unlocked age selects it again, and Launch opens the chronicle the rules launch on that age, that region, the campaign’s civilization and the seed drawn, with the campaign’s technologies learned', async ({
+test('on a campaign that has learned the first age’s technology the launch screen opens on the age it unlocks and the first region of that age the campaign has reached; a press on the first age selects it and keeps the region, a press on the unlocked age selects it again, and Launch opens the chronicle the rules launch on that age, that region, the campaign’s civilization and the seed drawn, with the campaign’s technologies learned', async ({
   page,
 }) => {
   const problems = watch(page);
   const campaign = wonCampaign();
   expect(campaign.technologies).toContain(UNLOCKER);
-  expect(Object.keys(ageOf(CATALOGUE, FIRST).regions)).toContain(REGION);
+  const { region } = openingChoices(CATALOGUE, campaign);
+  expect(Object.keys(ageOf(CATALOGUE, FIRST).regions)).toContain(region);
   const [civilization] = Object.keys(campaign.civilizations);
 
   await plantCampaign(page, campaign);
   await openLaunch(page);
-  const options = [FIRST_AGE, UNLOCKED_AGE, REGION_OPTION];
+  const options = [FIRST_AGE, UNLOCKED_AGE, `launch-region-${region}`];
   expect(await selection(page, options)).toEqual([false, true, true]);
 
   await click(page, FIRST_AGE);
@@ -216,7 +216,7 @@ test('on a campaign that has learned the first age’s technology the launch scr
   await launchedFromScreen(page);
   const chronicle = await chronicleOf(page);
   expect(chronicle).toEqual(
-    launchedAs(campaign, { age: UNLOCKED, region: REGION, civilization }, chronicle.seed),
+    launchedAs(campaign, { age: UNLOCKED, region, civilization }, chronicle.seed),
   );
 
   expect(problems).toEqual([]);
