@@ -12,7 +12,16 @@ import {
   unitKind,
 } from './catalogue';
 import { claimable, populationTaken } from './city';
-import { type FeatureId, runsAlong, type Tile, type TileCoords, tileAt, tileKey } from './map';
+import {
+  distance,
+  type FeatureId,
+  movementCost,
+  runsAlong,
+  type Tile,
+  type TileCoords,
+  tileAt,
+  tileKey,
+} from './map';
 import {
   buildingKind,
   featureKind,
@@ -43,7 +52,7 @@ import {
   idle,
   type TileBlock,
 } from './state';
-import { refreshedMovePoints, spentAction, standsOn, unitAt } from './units';
+import { refreshedMovePoints, spentAction, standsOn, type Unit, unitAt } from './units';
 
 /** The declared order of the kinds, which is the order a sorted list of cards reads in. */
 export const CARD_KINDS = ['settle', 'unit', 'building', 'instant', 'hazard'] as const;
@@ -72,10 +81,9 @@ function charted(aim: Aim): Aim {
   switch (aim.aim) {
     case 'tile':
       return {
-        aim: 'tile',
+        ...aim,
         refuses: (catalogue, chronicle, tile) =>
           firstRefusal(chartedTile(chronicle, tile), aim.refuses(catalogue, chronicle, tile)),
-        effect: aim.effect,
       };
     case 'none':
     case 'unit':
@@ -157,6 +165,25 @@ export function refuses(
   }
 }
 
+/**
+ * The units a card aimed at this tile could be played through, one of them named on the play where
+ * there are several: those beside it that can be the one, for a card played through a unit beside
+ * its tile, and none for any other card.
+ */
+export function playedThrough(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  card: AimedCard,
+  tile: Tile,
+): Unit[] {
+  switch (card.aim) {
+    case 'tile':
+      return card.through?.(catalogue, chronicle, tile) ?? [];
+    case 'unit':
+      return [];
+  }
+}
+
 /** The first check that refuses, in the order the aim hands them over: the one reason it answers. */
 export function firstRefusal(...checks: readonly (TileBlock | undefined)[]): TileBlock | undefined {
   return checks.find((reason) => reason !== undefined);
@@ -211,6 +238,79 @@ function acted(paid: Chronicle, at: TileCoords): Landed {
       units: paid.units.map((unit) => (unit.id === acting.id ? spentAction(unit) : unit)),
     }),
   );
+}
+
+/** How a card embarks a unit of the player's ashore beside its tile: embarked, its move is `move`. */
+export function embarks(move: number): Aim & { readonly aim: 'tile' } {
+  return stepped(true, () => move);
+}
+
+/** How a card disembarks an embarked unit of the player's beside its tile: its move is its own again. */
+export function disembarks(): Aim & { readonly aim: 'tile' } {
+  return stepped(false, (catalogue, unit) => unitKind(catalogue, unit.stats.type).move);
+}
+
+/**
+ * A unit of the player's beside the tile stepping onto it, embarking or disembarking, played through
+ * that unit: the tile charted, of a terrain the step enters, and free; a unit beside it to step; one
+ * of those standing on it once stepped, and holding action. It spends one, and moves on `move`.
+ */
+function stepped(
+  embarking: boolean,
+  move: (catalogue: Catalogue, unit: Unit) => number,
+): Aim & { readonly aim: 'tile' } {
+  const onto = (catalogue: Catalogue, unit: Unit): Unit => ({
+    ...unit,
+    embarked: embarking,
+    stats: { ...unit.stats, move: move(catalogue, unit) },
+  });
+  const beside = (chronicle: Chronicle, tile: TileCoords): Unit[] =>
+    chronicle.units.filter(
+      (unit) =>
+        unit.faction === 'player' && unit.embarked !== embarking && distance(unit.tile, tile) === 1,
+    );
+  const steppers = (catalogue: Catalogue, chronicle: Chronicle, tile: Tile): Unit[] =>
+    beside(chronicle, tile).filter((unit) =>
+      standsOn(catalogue, onto(catalogue, unit).stats, embarking, tile),
+    );
+  const missing: TileBlock = embarking ? 'no-unit-beside' : 'no-embarked-beside';
+  return {
+    aim: 'tile',
+    refuses: (catalogue, chronicle, tile) => {
+      const able = steppers(catalogue, chronicle, tile);
+      return firstRefusal(
+        chartedTile(chronicle, tile),
+        movementCost(catalogue, tile, embarking) === undefined ? 'wrong-terrain' : undefined,
+        unitAt(chronicle.units, tile) === undefined ? undefined : 'unit-standing',
+        beside(chronicle, tile).length > 0 ? undefined : missing,
+        able.length > 0 ? undefined : 'wrong-terrain',
+        able.some((unit) => unit.action > 0) ? undefined : 'unit-spent',
+      );
+    },
+    through: (catalogue, chronicle, tile) =>
+      steppers(catalogue, chronicle, tile).filter((unit) => unit.action > 0),
+    effect: (catalogue, paid, at, through) => {
+      const stepping = through === undefined ? undefined : unitAt(paid.units, through);
+      if (through === undefined || stepping === undefined) {
+        return landedAs(change('runtime-error', paid));
+      }
+      const tile = { q: at.q, r: at.r };
+      return followed(acted(paid, through), (left) =>
+        landedAs({
+          kind: 'change',
+          name: 'move',
+          from: through,
+          to: tile,
+          chronicle: {
+            ...left,
+            units: left.units.map((unit) =>
+              unit.id === stepping.id ? { ...onto(catalogue, unit), tile } : unit,
+            ),
+          },
+        }),
+      );
+    },
+  };
 }
 
 /** The tile inside the city's border. */
@@ -377,7 +477,7 @@ export function entersOn(type: string): Aim & { readonly aim: 'tile' } {
     aim: 'tile',
     refuses: (catalogue, chronicle, tile) =>
       firstRefusal(
-        standsOn(catalogue, unitKind(catalogue, type), tile) ? undefined : 'wrong-terrain',
+        standsOn(catalogue, unitKind(catalogue, type), false, tile) ? undefined : 'wrong-terrain',
         unitAt(chronicle.units, tile) === undefined ? undefined : 'unit-standing',
       ),
     effect: (catalogue, paid, at) =>
@@ -549,7 +649,10 @@ export function terraformed(
   );
   return followed(relaid, (left) => {
     const standing = unitAt(left.units, at);
-    if (standing === undefined || standsOn(catalogue, standing.stats, tileAt(left.tiles, at))) {
+    if (
+      standing === undefined ||
+      standsOn(catalogue, standing.stats, standing.embarked, tileAt(left.tiles, at))
+    ) {
       return unchanged(left);
     }
     return landedAs(

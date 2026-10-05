@@ -3,10 +3,13 @@ import { improvementPlaced } from './cards';
 import { apply, byHand, type Command, outcome } from './chronicle';
 import {
   actionOf,
+  aimedAt,
   attackOn,
+  attacksOf,
   CATALOGUE,
   CITY,
   cityOf,
+  EMBARKED_MOVE,
   FOOD,
   field,
   madeOf,
@@ -622,7 +625,7 @@ test('a unit crosses to a tile the cheapest way, not the fewest tiles', () => {
   expect(pointsOf(round, 1)).toBe(0);
 });
 
-test('water is crossed by nobody, and so is everything only water leads to', () => {
+test('water is crossed by no unit ashore, and neither is everything only water leads to', () => {
   const city = cityOf(['urban'], {
     tiles: field(2, [{ q: 1, r: 0 }]),
     units: [standing('player', CITY, { move: 2 * MOVE_POINT })],
@@ -717,4 +720,64 @@ test('the same move on the same chronicle gives the same chronicle back', () => 
     outcome(apply(CATALOGUE, city, moveTo(1, { q: 1, r: 0 }))),
   );
   expect(city).toEqual(untouched);
+});
+
+test('an embarked unit moves on the card’s move over the water embarked units enter, and onto no land', () => {
+  const coast = [
+    { q: 1, r: 0 },
+    { q: 2, r: 0 },
+    { q: 3, r: 0 },
+  ];
+  const city = cityOf(['urban'], {
+    tiles: field(3, coast),
+    hand: ['PH_Embark'],
+    units: [standing('player', CITY, { sight: 4 })],
+  });
+  const embarked = outcome(apply(CATALOGUE, city, aimedAt(coast[0])));
+  const ticked = outcome(apply(CATALOGUE, embarked, { type: 'end-turn' }));
+
+  expect(pointsOf(ticked, 1)).toBe(EMBARKED_MOVE);
+  expect(unitNamed(outcome(apply(CATALOGUE, ticked, moveTo(1, coast[2]))), 1).tile).toEqual(
+    coast[2],
+  );
+  expect(outcome(apply(CATALOGUE, ticked, moveTo(1, { q: 1, r: 1 })))).toEqual(ticked);
+  expect(outcome(apply(CATALOGUE, ticked, moveTo(1, CITY)))).toEqual(ticked);
+});
+
+test('an embarked unit attacks nothing, whatever its range and damage', () => {
+  const coast = { q: 1, r: 0 };
+  const city = cityOf(['urban'], {
+    tiles: field(3, [coast]),
+    hand: ['PH_Embark'],
+    units: [
+      standing('player', CITY, { damage: 2, range: 2 }),
+      standing('enemy', { q: 2, r: 0 }, { move: 0, range: 1 }),
+    ],
+  });
+  const embarked = outcome(apply(CATALOGUE, city, aimedAt(coast)));
+  const ticked = outcome(apply(CATALOGUE, embarked, { type: 'end-turn' }));
+
+  expect(actionOf(ticked, 1)).toBeGreaterThan(0);
+  expect(attackable(ticked.units, unitNamed(ticked, 1))).toEqual([]);
+  expect(stagedBy(ticked, attackOn(1, { q: 2, r: 0 }))).toEqual(['refused']);
+});
+
+test('a unit whose range is one attacks no embarked unit, and one of a longer range attacks it anywhere within its range', () => {
+  const coast = { q: 1, r: 0 };
+  const city = cityOf(['urban'], {
+    tiles: field(3, [coast]),
+    hand: ['PH_Embark'],
+    units: [
+      standing('player', CITY, { health: 5 }),
+      standing('enemy', { q: 2, r: 0 }, { move: 0, range: 1 }),
+      standing('enemy', { q: 1, r: 1 }, { move: 0, range: 2 }),
+      standing('enemy', { q: 3, r: 0 }, { move: 0, range: 2 }),
+    ],
+  });
+  const embarked = outcome(apply(CATALOGUE, city, aimedAt(coast)));
+
+  expect(attacksOf(embarked)).toEqual([
+    ['1,1', '1,0'],
+    ['3,0', '1,0'],
+  ]);
 });

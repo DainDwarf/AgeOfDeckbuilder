@@ -15,10 +15,13 @@ import {
   aimedAt,
   CATALOGUE,
   CENSUS,
+  CITY,
   CIVILIZATION,
   CIVILIZATION_ID,
   chronicleSaved,
+  cityOf,
   FROST,
+  field,
   GRANARY,
   HOARD,
   hoardedVictory,
@@ -26,6 +29,7 @@ import {
   REGION,
   SURVEY,
   SURVEYED,
+  standing,
   surveying,
   victoryOf,
 } from './fixtures';
@@ -110,6 +114,22 @@ test('a chronicle saved and read back keeps every achievement’s tally, and cou
   if (read.chronicle === undefined) throw new Error('the chronicle was dropped');
   const counted = outcome(apply(CATALOGUE, read.chronicle.chronicle, aimedAt(forest)));
   expect(achievementIn(counted, SURVEY).reached).toBe(true);
+});
+
+test('a chronicle saved with a unit embarked reads back with it embarked', () => {
+  const coast = { q: 1, r: 0 };
+  const city = cityOf(['urban'], {
+    tiles: field(2, [coast]),
+    hand: ['PH_Embark'],
+    units: [standing('player', CITY)],
+  });
+  const embarked = outcome(apply(CATALOGUE, city, aimedAt(coast)));
+  const save = { chronicle: embarked, region: REGION, civilization: CIVILIZATION_ID };
+
+  const read = readSave(CATALOGUE, writeSave(CATALOGUE, campaign(), save));
+
+  expect(embarked.units[0].embarked).toBe(true);
+  expect(read.chronicle).toEqual(save);
 });
 
 test('a campaign saved with no chronicle in progress reads back alone', () => {

@@ -121,7 +121,7 @@ export function cardsOf(
   const ground: Row[] = [{ kind: 'terrain', terrain: tile.terrain }];
   if (tile.feature !== undefined) ground.push({ kind: 'feature', feature: tile.feature });
   if (runsAlong(rivers, tile)) ground.push({ kind: 'river' });
-  cards.push({ kind: 'terrain', rows: ground, movementCost: movementCost(catalogue, tile) });
+  cards.push({ kind: 'terrain', rows: ground, movementCost: movementCost(catalogue, tile, false) });
 
   return cards;
 }

@@ -1,6 +1,8 @@
 import { expect, test } from 'vitest';
 import { type Catalogue, catalogued } from '../rules/catalogue';
+import { apply, outcome } from '../rules/chronicle';
 import {
+  aimedAt,
   attacksOf,
   CATALOGUE,
   CITY,
@@ -155,6 +157,27 @@ test('a guard whose camp a fellow holds lands in range of a unit it could strike
   expect(attacksOf(beside({ q: 2, r: 0 }, 2 * MOVE_POINT), GUARDING)).toEqual([['3,0', '2,0']]);
   expect(movesOf(beside({ q: 1, r: 0 }, MOVE_POINT), GUARDING)).toEqual([['4,-2', '3,-1']]);
   expect(attacksOf(beside({ q: 1, r: 0 }, MOVE_POINT), GUARDING)).toEqual([]);
+});
+
+test('a guard whose range is one passes over an embarked unit as over one out of its reach, and one of a longer range closes on it and strikes', () => {
+  const camp = { q: 4, r: 0 };
+  const coast = { q: 1, r: 0 };
+  const guarded = (range: number): Chronicle =>
+    cityOf(['urban'], {
+      tiles: camped(field(4, [coast]), [camp]),
+      hand: ['PH_Embark'],
+      units: [
+        standing('player', { q: 0, r: 1 }),
+        standing('enemy', camp, { move: 0 }),
+        standing('enemy', { q: 4, r: -2 }, { move: 2 * MOVE_POINT, range }),
+      ],
+    });
+  const embarked = (range: number): Chronicle =>
+    outcome(apply(CATALOGUE, guarded(range), aimedAt(coast)));
+
+  expect(asked(GUARDING, embarked(1))).toEqual(asked(GUARDING, guarded(1)));
+  expect(movesOf(embarked(2), GUARDING)).toEqual([['4,-2', '3,0']]);
+  expect(attacksOf(embarked(2), GUARDING)).toEqual([['3,0', '1,0']]);
 });
 
 test('a guard whose camp a unit of another faction stands on closes on that unit and strikes it', () => {

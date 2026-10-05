@@ -34,7 +34,7 @@ function besieged(): { chronicle: Chronicle; warrior: Unit; enemy: Unit } {
     const kind = unitKind(CATALOGUE, camp.unit);
     const beside = neighbours(city).find(
       (tile) =>
-        standsOn(CATALOGUE, kind, tileAt(guarded.chronicle.tiles, tile)) &&
+        standsOn(CATALOGUE, kind, false, tileAt(guarded.chronicle.tiles, tile)) &&
         unitAt(guarded.chronicle.units, tile) === undefined,
     );
     if (beside === undefined) return undefined;

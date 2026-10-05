@@ -431,7 +431,7 @@ test('a camp stands where the ground runs to the centre, never across the water'
       map.tiles,
       map.rivers,
       CENTRE,
-      { kind: 'whole-map', move: MOVE_POINT },
+      { kind: 'whole-map', move: MOVE_POINT, embarked: false },
       () => false,
     );
     for (const camp of campsOf(map.tiles)) expect(walked.has(tileKey(camp))).toBe(true);

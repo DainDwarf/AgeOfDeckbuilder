@@ -29,10 +29,9 @@ export type UnitStats = {
 };
 
 /**
- * A unit standing on the map, with the move points it has left to cross tiles on and the action it
- * has left to spend. An enemy is the one that carries a script — the enemy phase asks it where
- * to move and what to attack. `id` is the number the chronicle dealt it as it entered: what every
- * command names it by, whoever else enters or is killed around it.
+ * A unit standing on the map, with the move points and the action it has left. An enemy carries the
+ * script the enemy phase asks where it moves and what it attacks. `id` is the number dealt it as it
+ * entered: what every command names it by, whoever else enters or is killed around it.
  */
 export type Unit = {
   readonly id: number;
@@ -40,6 +39,7 @@ export type Unit = {
   readonly tile: TileCoords;
   readonly movePoints: number;
   readonly action: number;
+  readonly embarked: boolean;
 } & ({ readonly faction: 'player' } | { readonly faction: 'enemy'; readonly script: string });
 
 /** The least each number of a unit's stats may stand at. */
@@ -92,11 +92,16 @@ export function unitOf(units: readonly Unit[], id: number): Unit | undefined {
 }
 
 /**
- * Whether a unit of these stats can stand on a tile at all: the tile names a movement cost, and the
- * unit's move covers it. Move points never run above the move, so the answer holds all turn.
+ * Whether a unit of these stats, embarked or ashore, can stand on a tile at all: the tile names it a
+ * movement cost its move covers. Move points never run above the move, so the answer holds all turn.
  */
-export function standsOn(catalogue: MapContent, stats: UnitStats, tile: Tile | undefined): boolean {
-  const cost = movementCost(catalogue, tile);
+export function standsOn(
+  catalogue: MapContent,
+  stats: UnitStats,
+  embarked: boolean,
+  tile: Tile | undefined,
+): boolean {
+  const cost = movementCost(catalogue, tile, embarked);
   return cost !== undefined && cost <= stats.move;
 }
 
@@ -128,7 +133,7 @@ export function reachable(catalogue: MapContent, chronicle: Crossed, unit: Unit)
     chronicle.tiles,
     chronicle.rivers,
     unit.tile,
-    { kind: 'unit', points: unit.movePoints },
+    { kind: 'unit', points: unit.movePoints, embarked: unit.embarked },
     (coord) => {
       const at = tileKey(coord);
       if (chartedTiles !== undefined && !chartedTiles.has(at)) return true;
@@ -146,35 +151,37 @@ export function reachable(catalogue: MapContent, chronicle: Crossed, unit: Unit)
 }
 
 /**
- * What a unit an enemy script attacks: the unit of another faction within its range holding the
- * least health, and nothing when none is there or the unit is a worker.
+ * Whether a unit can attack another standing that many tiles away, action and sight aside: a worker
+ * and an embarked unit attack nothing, no unit its own faction, and a unit whose range is one no
+ * embarked unit; any other attack lands within the attacker's range.
+ */
+export function canAttack(attacker: Unit, target: Unit, away: number): boolean {
+  if (attacker.stats.worker || attacker.embarked) return false;
+  if (target.faction === attacker.faction) return false;
+  if (target.embarked && attacker.stats.range <= 1) return false;
+  return away <= attacker.stats.range;
+}
+
+/**
+ * What a unit an enemy script attacks: the unit it can attack from where it stands holding the least
+ * health, and nothing when it can attack none.
  */
 export function leastHealth(units: readonly Unit[], attacker: Unit): Unit | undefined {
-  if (attacker.stats.worker) return undefined;
-
   let target: Unit | undefined;
   for (const other of units) {
-    if (other.faction === attacker.faction) continue;
-    if (distance(other.tile, attacker.tile) > attacker.stats.range) continue;
+    if (!canAttack(attacker, other, distance(other.tile, attacker.tile))) continue;
     if (target === undefined || other.stats.health < target.stats.health) target = other;
   }
   return target;
 }
 
 /**
- * Every unit of another faction within a unit's range, while it has the action an attack spends; a
- * worker, or a unit with none, reaches nothing. Range alone: sight is not read here.
+ * Every unit a unit can attack from where it stands, while it has the action an attack spends.
+ * Range alone: sight is not read here.
  */
 export function attackable(units: readonly Unit[], attacker: Unit): Unit[] {
-  if (attacker.stats.worker || attacker.action <= 0) return [];
-
-  const targets: Unit[] = [];
-  for (const other of units) {
-    if (other.faction === attacker.faction) continue;
-    if (distance(other.tile, attacker.tile) > attacker.stats.range) continue;
-    targets.push(other);
-  }
-  return targets;
+  if (attacker.action <= 0) return [];
+  return units.filter((other) => canAttack(attacker, other, distance(other.tile, attacker.tile)));
 }
 
 /** A unit losing health by an amount, whatever took it: at zero health or below it is killed. */

@@ -47,7 +47,7 @@ function overTheHills(): { chronicle: Chronicle; archer: Unit; seen: Unit; hidde
     const { camp } = ageOf(CATALOGUE, armed.age);
     const kind = unitKind(CATALOGUE, camp.unit);
     const enemyOn = (chronicle: Chronicle, tile: TileCoords): Chronicle | undefined =>
-      standsOn(CATALOGUE, kind, tileAt(chronicle.tiles, tile)) &&
+      standsOn(CATALOGUE, kind, false, tileAt(chronicle.tiles, tile)) &&
       unitAt(chronicle.units, tile) === undefined
         ? unitEntered(chronicle, {
             type: camp.unit,

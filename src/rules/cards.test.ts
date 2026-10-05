@@ -3,11 +3,13 @@ import {
   aimOf,
   built,
   discarded,
+  embarks,
   featurePlaced,
   featureRemoved,
   improvementPlaced,
   made,
   outside,
+  playedThrough,
   refuses,
   terraformable,
   terraformed,
@@ -40,9 +42,11 @@ import {
   CIVILIZATION,
   CIVILIZATION_ID,
   camped,
+  changed,
   cityOf,
   DROUGHT,
   dealing,
+  EMBARKED_MOVE,
   endedTurn,
   everyCard,
   FOOD,
@@ -163,7 +167,7 @@ function workedTile(
     2,
     {
       tiles,
-      units: standsOn(CATALOGUE, WORKER_STATS, tileAt(tiles, at)) ? [worker(at)] : [],
+      units: standsOn(CATALOGUE, WORKER_STATS, false, tileAt(tiles, at)) ? [worker(at)] : [],
       ...carrying,
     },
     catalogue,
@@ -502,7 +506,7 @@ test('a settle card entering a unit admits every charted tile the unit stands on
   expect(refusedFor(entered, 'PH_Band', camp)).toBe('unit-standing');
   expect(admittedTiles(entered, 'PH_Band').map(tileKey).sort()).toEqual(
     entered.snapshots
-      .filter((snapshot) => standsOn(CATALOGUE, CATALOGUE.units.PH_Worker, snapshot.tile))
+      .filter((snapshot) => standsOn(CATALOGUE, CATALOGUE.units.PH_Worker, false, snapshot.tile))
       .filter((snapshot) => ![taken, camp].some((tile) => tileKey(snapshot) === tileKey(tile)))
       .map(tileKey)
       .sort(),
@@ -818,7 +822,9 @@ test('the mine card is refused on every terrain but the hills it goes on', () =>
 
     expect(admittedTiles(city, 'PH_Mine')).toEqual([]);
     expect(refusedFor(city, 'PH_Mine', at)).toBe(
-      standsOn(CATALOGUE, WORKER_STATS, tileAt(city.tiles, at)) ? 'wrong-terrain' : 'no-worker',
+      standsOn(CATALOGUE, WORKER_STATS, false, tileAt(city.tiles, at))
+        ? 'wrong-terrain'
+        : 'no-worker',
     );
     expect(outcome(apply(CATALOGUE, city, aimedAt(at)))).toEqual(city);
   }
@@ -1110,6 +1116,27 @@ test('a unit standing on a tile terraformed into a terrain it can stand on stays
   expect(after.units).toEqual(city.units);
 });
 
+test('an embarked unit standing on a tile terraformed into one embarked units do not enter is killed, ground it stands on ashore included', () => {
+  const at = { q: 1, r: 0 };
+  const catalogue = reshaping('plain');
+  const city = ringed(
+    2,
+    {
+      tiles: field(2, [at]),
+      hand: ['PH_Embark', 'PH_Collapse'],
+      units: [standing('player', CITY)],
+    },
+    catalogue,
+  );
+  const embarked = outcome(apply(catalogue, city, aimedAt(at)));
+
+  const after = outcome(apply(catalogue, embarked, aimedAt(at)));
+
+  expect(unitNamed(embarked, 1).tile).toEqual(at);
+  expect(tileAt(after.tiles, at)?.terrain).toBe('plain');
+  expect(after.units).toEqual([]);
+});
+
 test('the worker that terraforms its own tile into a terrain it cannot stand on is killed', () => {
   const at = { q: 1, r: 0 };
   const catalogue = reshaping('coast');
@@ -1129,7 +1156,9 @@ test('the urbanisation card is refused on every terrain but the plain it terrafo
 
     expect(admittedTiles(city, 'PH_Urbanisation')).toEqual([]);
     expect(refusedFor(city, 'PH_Urbanisation', at)).toBe(
-      standsOn(CATALOGUE, WORKER_STATS, tileAt(city.tiles, at)) ? 'wrong-terrain' : 'no-worker',
+      standsOn(CATALOGUE, WORKER_STATS, false, tileAt(city.tiles, at))
+        ? 'wrong-terrain'
+        : 'no-worker',
     );
     expect(outcome(apply(CATALOGUE, city, aimedAt(at)))).toEqual(city);
   }
@@ -2074,4 +2103,133 @@ test('a card the city falls short for is refused for the resource it is short of
 
   expect(refusalOf(CATALOGUE, short, 'PH_Farm').unaffordable).toEqual(['production']);
   expect(refusalOf(CATALOGUE, paid, 'PH_Farm')).toEqual({ unaffordable: [], blocked: [] });
+});
+
+test('a card embarks a unit of the player’s ashore beside a charted, free tile embarked units enter, the unit spending its action and moving on the card’s move: refused for each of those in that order', () => {
+  const coast = { q: 1, r: 0 };
+  const onward = { q: 2, r: 0 };
+  const far = { q: 6, r: 0 };
+  const deep = { q: 0, r: 1 };
+  const lonely = { q: -2, r: 2 };
+  const spent = { q: -2, r: 0 };
+  const shore = { q: -3, r: 0 };
+  const city = cityOf(['urban'], {
+    tiles: madeOf(field(6, [coast, onward, far, lonely, shore]), 'deep', [deep]),
+    hand: ['PH_Embark', 'PH_Embark'],
+    units: [standing('player', CITY), standing('player', spent, {}, undefined, 0)],
+  });
+  const shallow = changed({
+    cards: { ...CATALOGUE.cards, PH_Embark: { kind: 'instant', cost: {}, ...embarks(0) } },
+  });
+
+  expect(refusedFor(city, 'PH_Embark', far)).toBe('tile-uncharted');
+  expect(refusedFor(city, 'PH_Embark', { q: 1, r: 1 })).toBe('wrong-terrain');
+  expect(refusedFor(city, 'PH_Embark', deep)).toBe('wrong-terrain');
+  expect(refusedFor(city, 'PH_Embark', lonely)).toBe('no-unit-beside');
+  expect(refusedFor(city, 'PH_Embark', coast, shallow)).toBe('wrong-terrain');
+  expect(refusedFor(city, 'PH_Embark', shore)).toBe('unit-spent');
+  expect(refusedFor(city, 'PH_Embark', coast)).toBeUndefined();
+
+  const stages = apply(CATALOGUE, city, aimedAt(coast));
+  const embarked = outcome(stages);
+
+  expect(namesOf(stages)).toEqual(['played', 'discarded', 'action-spent', 'move']);
+  expect(unitNamed(embarked, 1)).toEqual({
+    ...unitNamed(city, 1),
+    tile: coast,
+    embarked: true,
+    stats: { ...unitNamed(city, 1).stats, move: EMBARKED_MOVE },
+    action: 0,
+    movePoints: 0,
+  });
+  expect(refusedFor(embarked, 'PH_Embark', coast)).toBe('unit-standing');
+  expect(refusedFor(embarked, 'PH_Embark', onward)).toBe('no-unit-beside');
+});
+
+test('a card disembarks an embarked unit of the player’s beside a charted, free tile it stands on ashore, spending its action: refused for each of those in that order, and the unit’s move is its own again, its damage, range and health as they were', () => {
+  const coast = { q: 1, r: 0 };
+  const ashore = { q: 2, r: 0 };
+  const wet = { q: 2, r: -1 };
+  const held = { q: 1, r: -1 };
+  const peak = { q: 1, r: 1 };
+  const slinger = standing('enemy', { q: 3, r: 0 }, { move: 0, range: 2, damage: 1 });
+  const city = cityOf(['urban'], {
+    tiles: madeOf(field(6, [coast, wet]), 'mountain', [peak]),
+    hand: ['PH_Embark'],
+    drawPile: ['PH_Disembark'],
+    units: [standing('player', CITY), standing('player', held, {}, undefined, 0), slinger],
+  });
+  const before = unitNamed(city, 1);
+  const embarked = outcome(apply(CATALOGUE, city, aimedAt(coast)));
+  const ticked = outcome(apply(CATALOGUE, embarked, { type: 'end-turn' }));
+
+  expect(refusedFor(embarked, 'PH_Disembark', ashore)).toBe('unit-spent');
+  expect(refusedFor(ticked, 'PH_Disembark', { q: -6, r: 0 })).toBe('tile-uncharted');
+  expect(refusedFor(ticked, 'PH_Disembark', wet)).toBe('wrong-terrain');
+  expect(refusedFor(ticked, 'PH_Disembark', held)).toBe('unit-standing');
+  expect(refusedFor(ticked, 'PH_Disembark', { q: -1, r: 0 })).toBe('no-embarked-beside');
+  expect(refusedFor(ticked, 'PH_Disembark', peak)).toBe('wrong-terrain');
+  expect(refusedFor(ticked, 'PH_Disembark', ashore)).toBeUndefined();
+
+  const stages = apply(CATALOGUE, ticked, aimedAt(ashore));
+  const disembarked = unitNamed(outcome(stages), 1);
+
+  expect(namesOf(stages)).toEqual(['played', 'discarded', 'action-spent', 'move']);
+  expect(disembarked.tile).toEqual(ashore);
+  expect(disembarked.embarked).toBe(false);
+  expect(disembarked.stats).toEqual({
+    ...before.stats,
+    move: CATALOGUE.units.PH_Warrior.move,
+    health: before.stats.health - 1,
+  });
+  expect(disembarked.action).toBe(0);
+});
+
+test('a worker embarked plays a card through itself where the card’s own reasons admit its tile', () => {
+  const coast = { q: 1, r: 0 };
+  const city = cityOf(['urban'], {
+    tiles: field(2, [coast]),
+    hand: ['PH_Embark'],
+    drawPile: ['PH_Weir'],
+    units: [worker(CITY)],
+  });
+  const embarked = outcome(apply(CATALOGUE, city, aimedAt(coast)));
+  const ticked = outcome(apply(CATALOGUE, embarked, { type: 'end-turn' }));
+
+  const stages = apply(CATALOGUE, ticked, aimedAt(coast));
+
+  expect(namesOf(stages)).toEqual(['played', 'discarded', 'action-spent', 'retiled']);
+  expect(tileAt(outcome(stages).tiles, coast)?.improvements).toEqual(['PH_Weir']);
+});
+
+test('a tile several units could embark onto is lit and refused with no unit named, and played through the one of them named', () => {
+  const coast = { q: 1, r: 0 };
+  const other = { q: 1, r: -1 };
+  const away = { q: -1, r: 0 };
+  const city = cityOf(['urban'], {
+    tiles: field(2, [coast]),
+    hand: ['PH_Embark'],
+    units: [standing('player', CITY), standing('player', other), standing('player', away)],
+  });
+  const through = (tile: TileCoords): Command => ({
+    type: 'play',
+    index: 0,
+    aim: 'tile',
+    tile: coast,
+    through: tile,
+  });
+  const tile = tileAt(city.tiles, coast);
+  if (tile === undefined) throw new Error('the coast is no tile of the map');
+
+  expect(refusedFor(city, 'PH_Embark', coast)).toBeUndefined();
+  expect(playedThrough(CATALOGUE, city, aimedCard('PH_Embark'), tile).map(({ id }) => id)).toEqual([
+    1, 2,
+  ]);
+  expect(stagedBy(city, aimedAt(coast))).toEqual(['refused']);
+  expect(stagedBy(city, through(away))).toEqual(['refused']);
+
+  const played = outcome(apply(CATALOGUE, city, through(other)));
+
+  expect(unitNamed(played, 2)).toMatchObject({ tile: coast, embarked: true });
+  expect(unitNamed(played, 1)).toEqual(unitNamed(city, 1));
 });

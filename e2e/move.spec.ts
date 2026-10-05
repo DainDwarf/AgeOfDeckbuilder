@@ -20,7 +20,7 @@ import {
 
 /** What entering a tile of this chronicle costs; the search steps onto tiles a unit enters at all. */
 function costOf(chronicle: Chronicle, coord: TileCoords): number {
-  const cost = movementCost(CATALOGUE, tileAt(chronicle.tiles, coord));
+  const cost = movementCost(CATALOGUE, tileAt(chronicle.tiles, coord), false);
   if (cost === undefined) throw new Error(`nothing crosses onto ${tileKey(coord)}`);
   return cost;
 }

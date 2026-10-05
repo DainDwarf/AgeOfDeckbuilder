@@ -658,6 +658,7 @@ function unitOf(catalogue: Catalogue, slot: Slot): Unit {
       (points) => `has ${points} move points left`,
     ),
     action: count(catalogue, field('action'), slot, (action) => `has ${action} action left`),
+    embarked: flag(catalogue, field('embarked')),
   };
   const faction = factionOf(catalogue, field('faction'));
   switch (faction) {

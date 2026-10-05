@@ -7,6 +7,8 @@ import {
   builds,
   claimableTile,
   discarded,
+  disembarks,
+  embarks,
   enters,
   entersOn,
   featureAmong,
@@ -152,6 +154,9 @@ export const FIRE: Fire = { burns: 'forest', leaves: 'plain', fromCity: 3, aroun
 
 /** How far from the city the fixture's herd deals its feature. */
 export const HERD = 3;
+
+/** The move of a unit the fixture's embark card embarks: none of the fixture's units has it ashore. */
+export const EMBARKED_MOVE = 3 * MOVE_POINT;
 
 /** How many warriors the fixture's raid enters on this turn: one, and one more for every ten turns. */
 function raiders(turn: number): number {
@@ -456,6 +461,9 @@ const TABLES: Omit<Tables, 'technologies'> = {
     PH_Lodge: { kind: 'building', cost: { production: 3 }, ...builds('PH_Lodge') },
     PH_Smokehouse: { kind: 'building', cost: { production: 3 }, ...builds('PH_Smokehouse') },
     PH_Ditch: { kind: 'instant', cost: { production: 2 }, ...placesImprovement('PH_Ditch') },
+    PH_Weir: { kind: 'instant', cost: {}, ...placesImprovement('PH_Weir') },
+    PH_Embark: { kind: 'instant', cost: {}, ...embarks(EMBARKED_MOVE) },
+    PH_Disembark: { kind: 'instant', cost: {}, ...disembarks() },
     PH_Mill: { kind: 'building', cost: { production: 3 }, ...builds('PH_Mill') },
     PH_Urbanisation: {
       kind: 'instant',
@@ -598,7 +606,12 @@ const TABLES: Omit<Tables, 'technologies'> = {
       water: false,
       elevation: 3,
     },
-    coast: { yields: { food: 1, money: 1 }, water: true, elevation: 0 },
+    coast: {
+      yields: { food: 1, money: 1 },
+      embarkedMovementCost: MOVE_POINT,
+      water: true,
+      elevation: 0,
+    },
     deep: { yields: { food: 1 }, water: true, elevation: 0 },
     urban: {
       yields: { production: 1, military: 1, money: 1, science: 1, culture: 1 },
@@ -675,6 +688,7 @@ const TABLES: Omit<Tables, 'technologies'> = {
     PH_Rubble: { terrains: ['plain'], yields: {}, movementCost: 2 * MOVE_POINT },
     PH_Snare: { terrains: ['forest'], features: ['PH_Game'], yields: { food: 1 } },
     PH_Ditch: { terrains: ['plain', 'forest'], river: true, yields: { food: 1 } },
+    PH_Weir: { terrains: ['coast'], yields: { food: 1 } },
   },
 };
 

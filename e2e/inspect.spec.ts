@@ -171,7 +171,7 @@ function costBeside(): Found<number> & { readonly water: TileCoords } {
       const wet = chronicle.snapshots.find((snapshot) => water(CATALOGUE, snapshot.tile.terrain));
       if (wet === undefined) return undefined;
       const land = besideOn(chronicle, (tile) => {
-        const cost = movementCost(CATALOGUE, tile);
+        const cost = movementCost(CATALOGUE, tile, false);
         const bare =
           !chronicle.units.some((unit) => tileKey(unit.tile) === tileKey(tile)) &&
           tile.building === undefined &&

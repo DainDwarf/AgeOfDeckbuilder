@@ -39,14 +39,18 @@ function bridges(catalogue: MapContent, tile: Tile | undefined): boolean {
 }
 
 /**
- * What entering a tile spends of a unit's move points: the one answer every path over the map asks.
- * A terrain that names no movement cost is crossed by nothing, and neither is a tile off the map. A
- * layer that names the cost outright takes the tile to it, whatever the terrain's, the lowest named
- * of them winning; the terrain's cost is the tile's only where no layer names one.
+ * What entering a tile spends of a unit's move points, embarked or ashore: the one answer every path
+ * asks. A terrain naming no cost for that unit is not entered by it, and a tile off the map by none.
+ * A layer naming the cost outright takes the tile to it, whatever the terrain's, the lowest winning.
  */
-export function movementCost(catalogue: MapContent, tile: Tile | undefined): number | undefined {
+export function movementCost(
+  catalogue: MapContent,
+  tile: Tile | undefined,
+  embarked: boolean,
+): number | undefined {
   if (tile === undefined) return undefined;
-  const ground = terrainKind(catalogue, tile.terrain).movementCost;
+  const terrain = terrainKind(catalogue, tile.terrain);
+  const ground = embarked ? terrain.embarkedMovementCost : terrain.movementCost;
   if (ground === undefined) return undefined;
   const named = layersOf(catalogue, tile).flatMap((layer) =>
     layer.movementCost === undefined ? [] : [layer.movementCost],
@@ -135,13 +139,14 @@ export function tileKey({ q, r }: TileCoords): string {
 }
 
 /**
- * What bounds a walk over the map and what a step over a river edge costs it. `unit`: the move
- * points a unit has left, which a crossing spends every one of. `whole-map`: the walk a script reads
+ * Whether the walker is embarked, what bounds its walk and what a river edge costs it. `unit`: the
+ * move points it has left, which a crossing spends every one of. `whole-map`: the walk a script reads
  * the whole map by, which nothing bounds and a crossing is charged a whole move.
  */
-export type Walk =
+export type Walk = { readonly embarked: boolean } & (
   | { readonly kind: 'unit'; readonly points: number }
-  | { readonly kind: 'whole-map'; readonly move: number };
+  | { readonly kind: 'whole-map'; readonly move: number }
+);
 
 /**
  * What a step to a neighbouring tile leaves the walk having spent, and nothing where the walk does
@@ -160,11 +165,9 @@ function spentOn(walk: Walk, paid: number, cost: number, river: boolean): number
 }
 
 /**
- * What the cheapest route to each tile costs from a start, the start itself nothing: every step
- * spends what the walk says, and `shut` keeps a route off the tiles the mover may not cross for
- * reasons of its own. A river edge with a bridging layer on both banks is a bridge, stepped over as
- * if no river ran there. A tile no route reaches is absent from the answer, and so is every tile no
- * movement cost is named for.
+ * What the cheapest route to each tile costs from a start, the start nothing and a tile no route
+ * reaches absent: every step spends what the walk says, `shut` keeps a route off tiles for the
+ * mover's own reasons, and a river edge with a bridging layer on both banks is a bridge.
  */
 export function pathCosts(
   catalogue: MapContent,
@@ -188,7 +191,7 @@ export function pathCosts(
       for (const coord of neighbours(at)) {
         const key = tileKey(coord);
         const onto = ground.get(key);
-        const cost = movementCost(catalogue, onto);
+        const cost = movementCost(catalogue, onto, walk.embarked);
         if (cost === undefined || shut(coord)) continue;
         const bridged = nearBank && bridges(catalogue, onto);
         const total = spentOn(walk, paid, cost, crossings.has(edgeKey(at, coord)) && !bridged);
@@ -217,7 +220,7 @@ export function groundRunsTo(
     tiles,
     rivers,
     to,
-    { kind: 'whole-map', move: MOVE_POINT },
+    { kind: 'whole-map', move: MOVE_POINT, embarked: false },
     () => false,
   );
   return new Set(reached.keys());

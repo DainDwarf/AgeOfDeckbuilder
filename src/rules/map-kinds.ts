@@ -1,12 +1,13 @@
 import type { Resources } from './resources';
 
 /**
- * What a tile of a terrain is: what it yields at income, what entering it costs — none named, and
- * nothing crosses it — whether it is water, and its elevation.
+ * What a tile of a terrain is: what it yields at income, what entering it costs a unit ashore and an
+ * embarked one — none named, and none of them crosses it — whether it is water, and its elevation.
  */
 export type TerrainKind = {
   readonly yields: Partial<Resources>;
   readonly movementCost?: number;
+  readonly embarkedMovementCost?: number;
   readonly water: boolean;
   readonly elevation: number;
 };

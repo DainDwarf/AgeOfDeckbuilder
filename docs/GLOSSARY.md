@@ -101,7 +101,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **growth threshold** | The food the next population costs. | step, growth cost, food cap |
 | **biome** | A stretch of map the generator spreads or deals as one kind — land, sea, … — weighting the terrain of each tile in it. | patch, zone, area, ecosystem |
 | **terrain** | A tile's base layer: plain, forest, hills, …; one per tile, changed only by terraforming. | tile type |
-| **movement cost** | What entering a tile spends of a unit's move points; a tile that names none is entered by nothing. | move cost, terrain cost, travel cost, difficulty, impassable |
+| **movement cost** | What entering a tile spends of a unit's move points; a tile that names none for a unit is not entered by it. | move cost, terrain cost, travel cost, difficulty, impassable |
 | **terraform** | To change a tile's terrain into another. | transform, convert, reshape |
 | **feature** | An extra on a tile, dealt by the generator or by an event's answer: a fertile plain. | bonus |
 | **river** | A watercourse the generator runs along the edges between tiles, from a mountain range to the sea. | stream, creek, waterway |
@@ -119,6 +119,9 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **range** | The distance, in tiles, a unit attacks over; one for melee. | reach |
 | **move** | A unit's stat: the move points it refreshes to. | speed, mobility, movement points |
 | **move points** | What a unit spends to cross tiles, a tile's movement cost to enter it; refreshed to its move. | movement points, steps, stamina |
+| **embark** | To step a unit from the tile it stands on onto a tile beside it that embarked units enter. | board (for a unit), set sail, launch (for a unit) |
+| **disembark** | To step an embarked unit back onto a tile it stands on ashore; the reverse of embark. | land (for a unit), unload, go ashore |
+| **embarked** | A unit carried over water: it enters the tiles embarked units enter and no other, and attacks nothing. | aboard, afloat, at sea, on a raft |
 | **action** | A unit's stat and the pool it refreshes to: what it spends to attack, or, on a worker, on a card played through it. | action points, energy, attack pool |
 | **refresh** | To bring a unit's spendable stat — move points, action — back to its full value; health is healed, never refreshed. | restore, replenish, reset, recharge, recover, regain |
 | **military** | The resource that pays for military units, instants and fortifications. | — |

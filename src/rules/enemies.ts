@@ -31,7 +31,7 @@ function raidGround(catalogue: Catalogue, chronicle: Chronicle): Tile[] {
   const stats = unitKind(catalogue, ageOf(catalogue, chronicle.age).camp.unit);
   return chronicle.tiles.filter(
     (tile) =>
-      standsOn(catalogue, stats, tile) &&
+      standsOn(catalogue, stats, false, tile) &&
       reached.has(tileKey(tile)) &&
       tileKey(tile) !== tileKey(city),
   );

@@ -10,7 +10,7 @@ import {
 } from '../rules/map';
 import { nextRng } from '../rules/rng';
 import type { Chronicle } from '../rules/state';
-import { type Landing, leastHealth, reachable, type Unit, unitAt } from '../rules/units';
+import { canAttack, type Landing, leastHealth, reachable, type Unit, unitAt } from '../rules/units';
 
 export const RAIDER: EnemyScript = {
   moveTo(catalogue: Catalogue, chronicle: Chronicle, enemy: Unit) {
@@ -42,14 +42,13 @@ export function guarding(radius: number): EnemyScript {
       }
 
       const inside = landings.filter((landing) => distance(landing.tile, camp) <= radius);
-      const { range, worker } = enemy.stats;
-      const targets = worker
-        ? []
-        : chronicle.units.filter(
-            (unit) => unit.faction !== enemy.faction && distance(unit.tile, camp) <= radius + range,
-          );
+      // The tile inside the radius nearest a unit stands the unit's distance from the camp less the
+      // radius away from it, and none for a unit inside the radius.
+      const targets = chronicle.units.filter((unit) =>
+        canAttack(enemy, unit, Math.max(0, distance(unit.tile, camp) - radius)),
+      );
       const striking = inside.filter((landing) =>
-        targets.some((target) => distance(landing.tile, target.tile) <= range),
+        targets.some((target) => canAttack(enemy, target, distance(landing.tile, target.tile))),
       );
       if (striking.length > 0) return kept(nearestTo(chronicle, striking, camp));
       if (targets.length > 0) {
@@ -99,7 +98,7 @@ function raiding(catalogue: Catalogue, chronicle: Chronicle, enemy: Unit): Landi
   return cheapestToward(catalogue, chronicle, enemy, landings, city);
 }
 
-/** The unit of another faction within its range holding the least health, ties in tile order. */
+/** The unit it can attack holding the least health, ties in tile order. */
 function weakest(chronicle: Chronicle, enemy: Unit): Unit | undefined {
   return leastHealth(inTileOrder(chronicle.tiles, chronicle.units), enemy);
 }
@@ -134,7 +133,7 @@ function cheapestToward(
   let cheapest = Number.POSITIVE_INFINITY;
   for (const landing of inTileOrder(chronicle.tiles, landings)) {
     const reached = outward.get(tileKey(landing.tile));
-    const own = movementCost(catalogue, tileAt(chronicle.tiles, landing.tile));
+    const own = movementCost(catalogue, tileAt(chronicle.tiles, landing.tile), walker.embarked);
     if (reached === undefined || own === undefined) continue;
     // The walk out charges the landing's own cost and not the target's; crossing back charges
     // the other way about, and the target's cost is the same for every landing weighed here.
@@ -175,7 +174,7 @@ function costsFrom(
     chronicle.tiles,
     chronicle.rivers,
     from,
-    { kind: 'whole-map', move: walker.stats.move },
+    { kind: 'whole-map', move: walker.stats.move, embarked: walker.embarked },
     () => false,
   );
 }

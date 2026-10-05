@@ -1537,7 +1537,7 @@ export function campGround(chronicle: Chronicle, away: number): TileCoords[] {
     .filter(
       (tile) =>
         distance(tile, city) === away &&
-        standsOn(CATALOGUE, stats, tile) &&
+        standsOn(CATALOGUE, stats, false, tile) &&
         unitAt(chronicle.units, tile) === undefined,
     )
     .map(({ q, r }) => ({ q, r }));

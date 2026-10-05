@@ -67,7 +67,17 @@ export type Aim =
         chronicle: Chronicle,
         tile: Tile,
       ) => TileBlock | undefined;
-      readonly effect: (catalogue: Catalogue, paid: Chronicle, at: TileCoords) => Landed;
+      /**
+       * For a card played through a unit beside the tile, the units that can be the one; the play
+       * hands the effect the tile of the one it went through.
+       */
+      readonly through?: (catalogue: Catalogue, chronicle: Chronicle, tile: Tile) => Unit[];
+      readonly effect: (
+        catalogue: Catalogue,
+        paid: Chronicle,
+        at: TileCoords,
+        through?: TileCoords,
+      ) => Landed;
     }
   | {
       readonly aim: 'unit';
@@ -458,7 +468,7 @@ function ageHeld(
     refuse(content, `the age ${id}'s camp ${camp.building} names ${campNames}`);
   }
   for (const terrain of campKind.terrains) {
-    if (!standsOn(content, campUnit, { q: 0, r: 0, terrain, improvements: [] })) {
+    if (!standsOn(content, campUnit, false, { q: 0, r: 0, terrain, improvements: [] })) {
       refuse(content, `the age ${id}'s camp's unit ${camp.unit} cannot stand on ${terrain}`);
     }
   }
@@ -777,7 +787,7 @@ export type Entering = { readonly type: string; readonly tile: TileCoords } & (
 
 /**
  * The one way a unit enters the map: it takes the next number the chronicle deals a unit, carries
- * its own copy of its kind's stats, and stands with its move points and its action full.
+ * its own copy of its kind's stats, and stands ashore with its move points and its action full.
  */
 export function entered(catalogue: Catalogue, chronicle: Chronicle, entering: Entering): Landed {
   const stats = { ...unitKind(catalogue, entering.type) };
@@ -787,6 +797,7 @@ export function entered(catalogue: Catalogue, chronicle: Chronicle, entering: En
     tile: entering.tile,
     movePoints: stats.move,
     action: stats.action,
+    embarked: false,
   };
   const dealt = (unit: Unit): Landed =>
     landedAs(
