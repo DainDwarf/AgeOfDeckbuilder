@@ -90,9 +90,13 @@ export type Aim =
 /**
  * The noun a card names — the unit it puts on the map, the building it builds — is named by its
  * effect and nowhere else. A settle card aimed at a tile is asked its own reasons only of a tile
- * already charted.
+ * already charted. Of a pair under become, the card it becomes carries no `becomes` of its own.
  */
-export type Card = { readonly cost: Partial<Resources>; readonly counters?: Counters } & (
+export type Card = {
+  readonly cost: Partial<Resources>;
+  readonly counters?: Counters;
+  readonly becomes?: CardId;
+} & (
   | ({ readonly kind: 'settle' } & Aim)
   | ({
       readonly kind: 'unit' | 'building' | 'instant';
@@ -372,6 +376,7 @@ export function catalogued(content: Catalogue): Catalogue {
     ageOf(content, content.cardAges[id]);
   }
   for (const id of Object.keys(content.cardAges)) cardOf(content, id);
+  becomingHeld(content);
   for (const [id, civilization] of Object.entries(content.civilizations)) {
     const { city } = civilization;
     const cityNames = groundNamed(buildingKind(content, city.building));
@@ -604,6 +609,38 @@ function treeHeld(content: Catalogue): void {
   }
 }
 
+/** Every card that becomes another, checked against the card it names. */
+function becomingHeld(content: Catalogue): void {
+  const becomer = new Map<CardId, CardId>();
+  for (const [id, card] of Object.entries(content.cards)) {
+    const into = card.becomes;
+    if (into === undefined) continue;
+    const named = cardOf(content, into);
+    for (const [leaver, leaving] of [
+      [id, card],
+      [into, named],
+    ] as const) {
+      if (leavesChronicle(leaving)) {
+        refuse(
+          content,
+          `the card ${id} becomes ${into}, and ${leaver} leaves the chronicle played`,
+        );
+      }
+    }
+    if (named.becomes !== undefined) {
+      refuse(content, `the card ${id} becomes ${into}, which becomes ${named.becomes}`);
+    }
+    const other = becomer.get(into);
+    if (other !== undefined) refuse(content, `both ${other} and ${id} become ${into}`);
+    becomer.set(into, id);
+    for (const [age, { camp }] of Object.entries(content.ages)) {
+      if (camp.rewards.includes(into)) {
+        refuse(content, `the age ${age}'s camp deals the card ${into} that ${id} becomes`);
+      }
+    }
+  }
+}
+
 function freeWhateverTheChronicle(cost: Answer['cost']): boolean {
   switch (typeof cost) {
     case 'function':
@@ -698,15 +735,38 @@ function firstListed(
 export type CivilizationSection = keyof Civilization;
 
 /**
- * A card no deck holds, named as what it is — a hazard, an age's camp's reward — and nothing for a
- * card a deck may hold. A card the catalogue does not hold is refused.
+ * A card no deck holds, named as what it is — a hazard, an age's camp's reward, the card another
+ * card becomes — and nothing for a card a deck may hold. A card the catalogue does not hold is
+ * refused.
  */
 export function heldByNoDeck(catalogue: Catalogue, card: CardId): string | undefined {
   if (cardOf(catalogue, card).kind === 'hazard') return `the hazard ${card}`;
   for (const [age, { camp }] of Object.entries(catalogue.ages)) {
     if (camp.rewards.includes(card)) return `the age ${age}'s camp's reward ${card}`;
   }
-  return undefined;
+  const becomer = becomerOf(catalogue, card);
+  return becomer === undefined ? undefined : `the card ${card} that ${becomer} becomes`;
+}
+
+/** The card that becomes this one, and nothing where none does. */
+export function becomerOf(catalogue: Catalogue, card: CardId): CardId | undefined {
+  return Object.keys(catalogue.cards).find((id) => catalogue.cards[id].becomes === card);
+}
+
+/**
+ * Whether a card played leaves the chronicle instead of going to the discard pile: what single use
+ * says of the card carrying it, and what playing a settle card or paying a hazard is.
+ */
+export function leavesChronicle(card: Card): boolean {
+  switch (card.kind) {
+    case 'unit':
+    case 'building':
+    case 'instant':
+      return card.singleUse === true;
+    case 'settle':
+    case 'hazard':
+      return true;
+  }
 }
 
 /**

@@ -1,5 +1,5 @@
 import { available } from './campaign';
-import { aimOf, discarded, leavesChronicle, refuses, retiled, struck } from './cards';
+import { aimOf, discarded, lyingAs, refuses, retiled, struck } from './cards';
 import {
   type Achievement,
   type AimedCard,
@@ -814,10 +814,8 @@ function blocked(catalogue: Catalogue, chronicle: Chronicle, id: CardId): Block[
 
 /**
  * One card played: the aim is judged on the chronicle as it stands, the same one the map lit its
- * tiles from; then, in the one `played` group, the card leaves the hand for the discard pile — or
- * for nowhere at all, as a settle card, a single use card and a hazard do — its cost is paid, and
- * its effect lands. A play the hand, the city, the map or the discard pile refuses is `refused`,
- * nothing paid or discarded.
+ * tiles from; then, in the one `played` group, the card leaves the hand, its cost is paid, and its
+ * effect lands; a play refused is `refused`, nothing paid or discarded.
  */
 function play(catalogue: Catalogue, chronicle: Chronicle, command: PlayCommand): Sequence {
   const held = chronicle.hand[command.index];
@@ -828,13 +826,15 @@ function play(catalogue: Catalogue, chronicle: Chronicle, command: PlayCommand):
   if (effect === undefined) return refused(chronicle);
 
   const hand = chronicle.hand.filter((_, at) => at !== command.index);
-  const leaving = leavesChronicle(cardOf(catalogue, held.id))
-    ? changeFrom('left', [command.index], { ...chronicle, hand })
-    : changeFrom('discarded', [command.index], {
-        ...chronicle,
-        hand,
-        discardPile: [...chronicle.discardPile, held],
-      });
+  const lying = lyingAs(catalogue, held);
+  const leaving =
+    lying === undefined
+      ? changeFrom('left', [command.index], { ...chronicle, hand })
+      : changeFrom('discarded', [command.index], {
+          ...chronicle,
+          hand,
+          discardPile: [...chronicle.discardPile, lying],
+        });
   const costs = costOf(catalogue, held.id);
   const cost = (left: Chronicle): Landed =>
     costs.length === 0 ? unchanged(left) : landedAs(change('stock', paid(left, costs)));

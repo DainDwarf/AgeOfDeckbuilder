@@ -2,12 +2,15 @@ import {
   type Aim,
   type AimedCard,
   ageOf,
+  becomerOf,
   type Card,
   type Catalogue,
+  cardMade,
   cardOf,
   counterOf,
   entered,
   fullHealth,
+  leavesChronicle,
   unitKind,
 } from './catalogue';
 import { claimable, populationTaken } from './city';
@@ -33,7 +36,15 @@ import {
   type Sequence,
   unchanged,
 } from './stages';
-import { type Block, type Chronicle, costsOf, holds, idle, type TileBlock } from './state';
+import {
+  type Block,
+  type Chronicle,
+  type ChronicleCard,
+  costsOf,
+  holds,
+  idle,
+  type TileBlock,
+} from './state';
 import { refreshedMovePoints, spentAction, standsOn, unitAt } from './units';
 
 /** The declared order of the kinds, which is the order a sorted list of cards reads in. */
@@ -77,19 +88,14 @@ function charted(aim: Aim): Aim {
 }
 
 /**
- * Whether a card played leaves the chronicle instead of going to the discard pile: what single use
- * says of the card carrying it, and what playing a settle card or paying a hazard is.
+ * What a card played lies on the discard pile as: itself, or, of a pair under become, the other card
+ * made as its content makes it; nothing where it leaves the chronicle instead.
  */
-export function leavesChronicle(card: Card): boolean {
-  switch (card.kind) {
-    case 'unit':
-    case 'building':
-    case 'instant':
-      return card.singleUse === true;
-    case 'settle':
-    case 'hazard':
-      return true;
-  }
+export function lyingAs(catalogue: Catalogue, played: ChronicleCard): ChronicleCard | undefined {
+  const card = cardOf(catalogue, played.id);
+  if (leavesChronicle(card)) return undefined;
+  const other = card.becomes ?? becomerOf(catalogue, played.id);
+  return other === undefined ? played : cardMade(catalogue, other);
 }
 
 /**

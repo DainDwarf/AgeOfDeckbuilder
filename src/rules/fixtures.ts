@@ -504,6 +504,21 @@ const TABLES: Omit<Tables, 'technologies'> = {
       aim: 'none',
       effect: (_catalogue, paid) => gained(paid, { food: 5 }),
     },
+    PH_Flood: {
+      kind: 'instant',
+      cost: {},
+      counters: { tide: 1 },
+      becomes: 'PH_Ebb',
+      aim: 'none',
+      effect: (_catalogue, paid) => gained(paid, { food: 1 }),
+    },
+    PH_Ebb: {
+      kind: 'instant',
+      cost: {},
+      counters: { tide: 2 },
+      aim: 'none',
+      effect: (_catalogue, paid) => gained(paid, { production: 1 }),
+    },
     PH_Hunger: {
       kind: 'hazard',
       cost: { production: 3 },
