@@ -391,6 +391,16 @@ const TABLES: Omit<Tables, 'technologies'> = {
       action: 1,
       sight: 2,
     },
+    PH_Slinger: {
+      type: 'PH_Slinger',
+      worker: false,
+      health: 3,
+      damage: 1,
+      range: 2,
+      move: 2 * MOVE_POINT,
+      action: 1,
+      sight: 2,
+    },
   },
   scripts: { [SCRIPT]: BEELINE, PH_Sentry: SENTRY },
   cards: {

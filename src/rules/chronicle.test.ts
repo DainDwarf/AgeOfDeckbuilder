@@ -3,6 +3,7 @@ import { type Achievement, achievementOf, ageOf, type Catalogue, capstoneOf } fr
 import {
   apply,
   type Command,
+  enemiesKilledBy,
   launched,
   outcome,
   playsOn,
@@ -15,6 +16,7 @@ import {
   achievementIn,
   aimedAt,
   aimedAtUnit,
+  attackOn,
   builtOn,
   CATALOGUE,
   CITY,
@@ -55,7 +57,7 @@ import {
   victoryOf,
   worker,
 } from './fixtures';
-import { MOVE_POINT, type Tile, tileAt, tileKey } from './map';
+import { MOVE_POINT, type Tile, type TileCoords, tileAt, tileKey } from './map';
 import { RESOURCES } from './resources';
 import { seedRng } from './rng';
 import { inSight } from './sight';
@@ -1101,6 +1103,54 @@ test('an achievement counting a card’s plays on a feature counts one on a tile
     reached: false,
     tally: { plays: 1 },
   });
+});
+
+test('an achievement counting the enemies a kind of unit kills counts each enemy the attack of a unit of the player’s of that kind kills, and nothing for a kill by another kind, damaged by that kind first or not, nor for a unit of the player’s killed', () => {
+  const killing = achieved({
+    [HOARD]: {
+      ...achievementOf(CATALOGUE, AGE, HOARD),
+      ...enemiesKilledBy('PH_Slinger'),
+      need: 2,
+    },
+  });
+  const slinger = { type: 'PH_Slinger', damage: 2 };
+  const city = reaching([], {
+    tiles: field(3),
+    units: [
+      standing('player', { q: 1, r: 0 }, slinger),
+      standing('player', { q: -1, r: 0 }, { damage: 2 }),
+      standing('player', { q: 0, r: 1 }, { ...slinger, damage: 1 }),
+      standing('player', { q: 1, r: 1 }, { damage: 2 }),
+      standing('enemy', { q: 2, r: 0 }, { health: 2 }),
+      standing('enemy', { q: -2, r: 0 }, { health: 2 }),
+      standing('enemy', { q: 0, r: 2 }, { health: 2 }),
+    ],
+  });
+  const attacked = (chronicle: Chronicle, unit: number, at: TileCoords): Chronicle =>
+    outcome(apply(killing, chronicle, attackOn(unit, at)));
+
+  const killed = attacked(city, 1, { q: 2, r: 0 });
+  const byAnother = attacked(killed, 2, { q: -2, r: 0 });
+  const damaged = attacked(byAnother, 3, { q: 0, r: 2 });
+  const finished = attacked(damaged, 4, { q: 0, r: 2 });
+
+  expect(achievementIn(killed, HOARD).tally).toEqual({ killed: 1 });
+  expect([byAnother, damaged, finished].map((chronicle) => chronicle.units.length)).toEqual([
+    5, 5, 4,
+  ]);
+  expect(achievementIn(finished, HOARD).tally).toEqual({ killed: 1 });
+
+  const raided = reaching([], {
+    tiles: field(2),
+    units: [
+      standing('player', CITY, { ...slinger, health: 1 }),
+      standing('enemy', { q: 1, r: 0 }, slinger),
+    ],
+  });
+  const ended = endedTurn(raided, undefined, killing);
+
+  expect(ended.units.map(({ faction }) => faction)).toEqual(['enemy']);
+  expect(achievementIn(ended, HOARD).tally).toEqual({});
 });
 
 test('an achievement counting the turns on which that many cards were played counts a turn once, at the play that brings it to the number, a hazard paid for among them, and nothing played on the settle phase', () => {
