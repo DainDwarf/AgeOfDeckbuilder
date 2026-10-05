@@ -424,6 +424,26 @@ test('a catalogue whose layer names a movement cost of zero is refused', () => {
   expect(() => catalogued(content)).toThrow(/^fixture: /);
 });
 
+test('a catalogue whose layer names no terrain, or a feature list holding none, is refused', () => {
+  const { improvements, buildings } = CATALOGUE;
+  for (const content of [
+    changed({
+      improvements: { ...improvements, PH_Mine: { ...improvements.PH_Mine, terrains: [] } },
+    }),
+    changed({ buildings: { ...buildings, PH_Farm: { ...buildings.PH_Farm, terrains: [] } } }),
+  ]) {
+    expect(() => catalogued(content)).toThrow(/^fixture: .* names no terrain$/);
+  }
+  for (const content of [
+    changed({
+      improvements: { ...improvements, PH_Snare: { ...improvements.PH_Snare, features: [] } },
+    }),
+    changed({ buildings: { ...buildings, PH_Lodge: { ...buildings.PH_Lodge, features: [] } } }),
+  ]) {
+    expect(() => catalogued(content)).toThrow(/^fixture: .* names a feature list holding none$/);
+  }
+});
+
 test('a catalogue whose layer names a feature it does not hold, or one lying on a terrain the layer does not name, is refused', () => {
   const snare = CATALOGUE.improvements.PH_Snare;
   const lodge = CATALOGUE.buildings.PH_Lodge;

@@ -345,6 +345,10 @@ export function catalogued(content: Catalogue): Catalogue {
     ['improvement', content.improvements],
   ] as const) {
     for (const [id, layer] of Object.entries(table)) {
+      if (layer.terrains.length === 0) refuse(content, `the ${noun} ${id} names no terrain`);
+      if (layer.features?.length === 0) {
+        refuse(content, `the ${noun} ${id} names a feature list holding none`);
+      }
       if (layer.movementCost !== undefined && layer.movementCost < 1) {
         refuse(content, `the ${noun} ${id} names a movement cost of ${layer.movementCost}`);
       }
