@@ -424,6 +424,19 @@ test('a catalogue whose layer names a movement cost of zero is refused', () => {
   expect(() => catalogued(content)).toThrow(/^fixture: /);
 });
 
+test('a catalogue whose terrain names a movement cost of zero, ashore or embarked, is refused', () => {
+  const { terrains } = CATALOGUE;
+  const ashore = changed({
+    terrains: { ...terrains, plain: { ...terrains.plain, movementCost: 0 } },
+  });
+  const embarked = changed({
+    terrains: { ...terrains, coast: { ...terrains.coast, embarkedMovementCost: 0 } },
+  });
+
+  expect(() => catalogued(ashore)).toThrow(/^fixture: /);
+  expect(() => catalogued(embarked)).toThrow(/^fixture: /);
+});
+
 test('a catalogue whose layer names no terrain, or a feature list holding none, is refused', () => {
   const { improvements, buildings } = CATALOGUE;
   for (const content of [

@@ -326,6 +326,15 @@ export function catalogued(content: Catalogue): Catalogue {
       }
     }
   }
+  for (const [id, terrain] of Object.entries(content.terrains)) {
+    for (const [noun, cost] of [
+      ['a movement cost', terrain.movementCost],
+      ['an embarked movement cost', terrain.embarkedMovementCost],
+    ] as const) {
+      if (cost !== undefined && cost < 1)
+        refuse(content, `the terrain ${id} names ${noun} of ${cost}`);
+    }
+  }
   for (const [id, biome] of Object.entries(content.biomes)) {
     terrainKind(content, biome.origin);
     for (const terrain of Object.keys(biome.interior)) terrainKind(content, terrain);
