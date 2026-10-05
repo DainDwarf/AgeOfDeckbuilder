@@ -14,7 +14,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **Bow and arrow** — the technology Bow and arrow, its achievement, the unit Archer and its card stand in the Stone Age's content after Domestication's, a unit of the player's attacks only a unit on a tile in sight and a goal counts the enemies a kind of unit kills, each proven by one test on the fixture, `e2e/archer.spec.ts` passes, the catalogue's coherence test passes and `docs/CHRONICLE.md` and `docs/ages/STONE.md` say so. Doc-impact: `docs/CHRONICLE.md`, `docs/ages/STONE.md`. [board/bow-and-arrow.md](board/bow-and-arrow.md)
 - **Clothmaking** — the wild's technology that needs Domestication, with its achievement and every card it unlocks.
 - **Fishing** — the wild's technology that needs Bow and arrow, with its achievement and every card it unlocks.
 - **Raft** — the wild's technology that needs Fishing, with its achievement and every card it unlocks.

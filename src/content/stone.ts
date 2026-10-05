@@ -1,6 +1,7 @@
 import {
   builds,
   discarded,
+  enters,
   firstRefusal,
   gained,
   healed,
@@ -9,7 +10,7 @@ import {
   placesImprovement,
 } from '../rules/cards';
 import type { Age, Slice } from '../rules/catalogue';
-import { playsOn, terrainsPlayedOn, turnsPlaying } from '../rules/chronicle';
+import { enemiesKilledBy, playsOn, terrainsPlayedOn, turnsPlaying } from '../rules/chronicle';
 import { MOVE_POINT, tileAt } from '../rules/map';
 import { followed } from '../rules/stages';
 import { NOMADIC } from './nomadic';
@@ -100,9 +101,27 @@ export const STONE: Slice = {
         technology: 'domestication',
         influence: 1,
       },
+      'bow-and-arrow': {
+        ...enemiesKilledBy('scout'),
+        need: 3,
+        technology: 'bow-and-arrow',
+        influence: 1,
+      },
     },
   },
   brings: {
+    units: {
+      archer: {
+        type: 'archer',
+        worker: false,
+        health: 3,
+        damage: 2,
+        range: 2,
+        move: 2 * MOVE_POINT,
+        action: 1,
+        sight: 2,
+      },
+    },
     cards: {
       farm: {
         kind: 'building',
@@ -113,6 +132,7 @@ export const STONE: Slice = {
       trapping: { kind: 'instant', cost: { production: 2 }, ...placesImprovement('trapping') },
       irrigation: { kind: 'instant', cost: { production: 2 }, ...placesImprovement('irrigation') },
       pasture: { kind: 'instant', cost: { production: 2 }, ...placesImprovement('pasture') },
+      archer: { kind: 'unit', cost: { military: 2 }, ...enters('archer') },
       fire: {
         kind: 'instant',
         cost: {},
@@ -136,6 +156,7 @@ export const STONE: Slice = {
       fire: { needs: ['settlement'], unlocks: { cards: { fire: 1 } } },
       irrigation: { needs: ['agriculture', 'herbalism'], unlocks: { cards: { irrigation: 1 } } },
       domestication: { needs: ['trapping', 'agriculture'], unlocks: { cards: { pasture: 1 } } },
+      'bow-and-arrow': { needs: ['trapping'], unlocks: { cards: { archer: 1 } } },
     },
     terrains: {
       desert: {

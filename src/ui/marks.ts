@@ -4,14 +4,12 @@ const BLOCK: number[] = [-11, -11, 11, -11, 11, 11, -11, 11];
 
 const POINT: number[] = [0, -14, 13, 9, -13, 9];
 
-/**
- * Placeholder primitives until the art pass: the worker a block, the warrior a point, the scout an
- * arrowhead. Each is its corners about its own centre, raw.
- */
+/** Placeholder primitives until the art pass, each its corners about its own centre, raw. */
 const UNIT_MARKS: Readonly<Record<string, number[]>> = {
   worker: BLOCK,
   warrior: POINT,
   scout: [0, -14, 11, 12, 0, 5, -11, 12],
+  archer: [-13, -9, 13, -9, 0, 14],
 };
 
 /** The wall the city is drawn as, and the camp with it. */

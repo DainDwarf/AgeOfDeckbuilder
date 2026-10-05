@@ -1,6 +1,6 @@
 # The Stone Age
 
-> What the Stone Age is made of: its land, its technologies and its cards. A content page under [`DESIGN.md`](../DESIGN.md)'s legend. The rules it is played by are [`CHRONICLE.md`](../CHRONICLE.md)'s and its map [`MAP.md`](../MAP.md)'s, and this page repeats none of them; no number stands on it. The terrains, the features and the biomes it shares with the Nomadic Age are [`NOMADIC.md`](NOMADIC.md)'s.
+> What the Stone Age is made of: its land, its technologies, its units and its cards. A content page under [`DESIGN.md`](../DESIGN.md)'s legend. The rules it is played by are [`CHRONICLE.md`](../CHRONICLE.md)'s and its map [`MAP.md`](../MAP.md)'s, and this page repeats none of them; no number stands on it. The terrains, the features and the biomes it shares with the Nomadic Age are [`NOMADIC.md`](NOMADIC.md)'s.
 
 ## The land ✅
 
@@ -22,6 +22,11 @@ A goal is a focus themed on its technology: it is read from the technology's fic
 - **Fire** needs Settlement. Its goal counts a deed: the turns on which as many cards were played as a hand is drawn to, a hazard paid for among them, each turn once however many more are played, and the settle phase never. It unlocks the card **Fire** and pays influence. Turns ended on an empty hand was rejected: the deck has no floor, and an empty deck ends every turn on one.
 - **Irrigation** needs Agriculture and Herbalism. Its goal counts a deed: the times Farm is built on a tile a river runs along. It unlocks the card **Irrigation** and pays influence.
 - **Domestication** needs Trapping and Agriculture. Its goal counts a deed: the times Gather is played on a tile carrying cattle, the same tile as often as a worker gathers there. It unlocks the card **Pasture** and pays influence.
+- **Bow and arrow** needs Trapping. Its goal counts a deed: the enemies killed by a Scout's attack. It unlocks the card **Archer** and pays influence.
+
+## The units 🔧
+
+- **The archer** attacks over a range the warrior does not have and holds less health: it is the unit that attacks from behind another.
 
 ## The cards 🔧
 
@@ -31,3 +36,4 @@ A goal is a focus themed on its technology: it is read from the technology's fic
 - **Heal**, an instant costing food, aimed at a unit standing inside the border, the city's own tile included: the unit is healed to full health and keeps its move points and its action, and a unit at full health is refused. Nothing else in the age heals. A heal that spends the unit's action was rejected: the food and the walk home are its price.
 - **Irrigation**, an improvement giving food, placed through a worker for production on a plain or a desert tile a river runs along and nowhere else.
 - **Pasture**, an improvement giving food, placed through a worker for production on a tile carrying cattle and nowhere else. It goes with the cattle, so a Hunt played there removes both.
+- **Archer**, costing military: one population leaves the tiles to become a unit.

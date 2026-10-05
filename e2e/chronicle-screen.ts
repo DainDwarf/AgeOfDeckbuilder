@@ -1725,6 +1725,32 @@ export function marked(page: Page): Promise<{
   });
 }
 
+/** The tiles the map lights for the unit it is lighting for, by tile key, in key order. */
+export function litTiles(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const lit = window.named?.('lit')?.object as Phaser.GameObjects.Layer | undefined;
+    const faces = window.named?.('terrain')?.object as Phaser.GameObjects.Layer | undefined;
+    if (lit === undefined || faces === undefined) {
+      throw new Error('the map is not on the chronicle screen');
+    }
+    const tiles = new Map(
+      faces.list.map((face) => {
+        const { x, y, name } = face as Phaser.GameObjects.Polygon;
+        return [`${x},${y}`, name.slice('tile-'.length)];
+      }),
+    );
+    return lit.list
+      .map((glow) => {
+        const { x, y } = glow as Phaser.GameObjects.Polygon;
+        const key = tiles.get(`${x},${y}`);
+        if (key === undefined)
+          throw new Error(`a glow stands on no tile the map draws, at ${x},${y}`);
+        return key;
+      })
+      .sort();
+  });
+}
+
 export function offsetOf(page: Page): Promise<number> {
   return scrolled(page).then(({ offset }) => offset);
 }

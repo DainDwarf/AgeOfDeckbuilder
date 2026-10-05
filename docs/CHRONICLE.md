@@ -48,7 +48,7 @@ The map is hidden. The city and its units have **sight** over the tiles near the
 
 **On the settle phase the centre part of the map is in sight**, and it is the only sight there is: nothing sees on the settle phase — not the city once it stands, not a unit entered on it — so nothing is charted before turn 1 but the centre part, and the settle is chosen on what it shows. From turn 1 the city and its units see for themselves, and the centre part falls into fog wherever they do not.
 
-Melee needs no rule of its own: an adjacent tile is always in sight. The enemies read the whole map: their scripts ignore sight, and no tile is uncharted to them.
+**A unit of the player's attacks only a unit standing on a tile in sight**, whatever sees the tile: range says how far an attack goes, sight whether it has a target, and a unit the fog shows is none. An adjacent tile is always in sight, so melee never meets the rule. The enemies read the whole map: their scripts ignore sight, and no tile is uncharted to them.
 
 ## The city ✅
 
