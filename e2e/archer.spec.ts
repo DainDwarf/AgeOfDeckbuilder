@@ -35,8 +35,8 @@ function beyond(from: TileCoords, beside: TileCoords): TileCoords {
 
 /**
  * The first seed's turn 1 with an archer of the player's on the city's tile, a tile beside it made
- * hills, and a camp's raider two steps off on each of two tiles: one straight on behind the hills,
- * charted and seen by nothing, the other in sight.
+ * hills, and an enemy of a camp's, on the raider script, two steps off on each of two tiles: one
+ * straight on behind the hills, charted and seen by nothing, the other in sight.
  */
 function overTheHills(): { chronicle: Chronicle; archer: Unit; seen: Unit; hidden: Unit } {
   return firstSeed('stands an enemy in sight two tiles from its city', (seed) => {

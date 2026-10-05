@@ -457,7 +457,7 @@ function onGround(chronicle: Chronicle, at: TileCoords | undefined, ground: Play
 
 /**
  * An achievement's tally and count for the enemies the attacks of the player's units of a kind kill,
- * both units read as they stood when the attack began. A kind the catalogue does not hold is refused.
+ * the attacker read as it stood when the attack began. A kind the catalogue does not hold is refused.
  */
 export function enemiesKilledBy(kind: string): Required<Pick<Achievement, 'tallies' | 'count'>> {
   return {
@@ -468,16 +468,10 @@ export function enemiesKilledBy(kind: string): Required<Pick<Achievement, 'talli
       for (const stage of walked(stages)) {
         if (stage.kind === 'group' && stage.name === 'attack') {
           const attacker = unitAt(before.units, stage.attacker);
-          const target = unitAt(before.units, stage.target);
           const killed = stage.stages.some(
             (held) => held.kind === 'change' && held.name === 'killed',
           );
-          if (
-            killed &&
-            attacker?.faction === 'player' &&
-            attacker.stats.type === kind &&
-            target?.faction === 'enemy'
-          ) {
+          if (killed && attacker?.faction === 'player' && attacker.stats.type === kind) {
             counted += 1;
           }
         }
