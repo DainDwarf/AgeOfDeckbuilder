@@ -3,7 +3,6 @@ import { CATALOGUE } from '../src/content/catalogue';
 import { gained } from '../src/rules/cards';
 import { cardOf } from '../src/rules/catalogue';
 import { apply, outcome, refusalOf } from '../src/rules/chronicle';
-import { cultureThreshold } from '../src/rules/city';
 import { neighbours, type TileCoords, tileKey } from '../src/rules/map';
 import { type Chronicle, playable } from '../src/rules/state';
 import {
@@ -11,6 +10,7 @@ import {
   aimed,
   chronicleOf,
   cityTileOf,
+  claimedAt,
   click,
   dragOut,
   firstSeed,
@@ -39,10 +39,9 @@ function farmAdmitted(): { chronicle: Chronicle; tile: TileCoords; index: number
   return firstSeed('opens turn 1 on a farm to build beside the city', (seed) => {
     const opened = settledOn(seed, [], civilization);
     if (!idsOf(opened.hand).includes(FARM)) return undefined;
-    const cultured = gained(opened, { culture: cultureThreshold(opened) }).chronicle;
     for (const tile of neighbours(cityTileOf(opened))) {
-      const claimed = outcome(apply(CATALOGUE, cultured, { type: 'claim', tile }));
-      if (claimed === cultured) continue;
+      const claimed = claimedAt(opened, tile);
+      if (claimed === undefined) continue;
       const paid = gained(claimed, cost).chronicle;
       const chronicle = unitEntered(paid, { type: WORKER, faction: 'player', tile });
       if (!playable(refusalOf(CATALOGUE, chronicle, FARM))) continue;

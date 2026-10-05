@@ -23,6 +23,7 @@ A goal is a focus themed on its technology: it is read from the technology's fic
 - **Irrigation** needs Agriculture and Herbalism. Its goal counts a deed: the times Farm is built on a tile a river runs along. It unlocks the card **Irrigation** and pays influence.
 - **Domestication** needs Trapping and Agriculture. Its goal counts a deed: the times Gather is played on a tile carrying cattle, the same tile as often as a worker gathers there. It unlocks the card **Pasture** and pays influence.
 - **Bow and arrow** needs Trapping. Its goal counts a deed: the enemies killed by a Scout's attack. It unlocks the card **Archer** and pays influence.
+- **Tanning** needs Domestication. Its goal reads the chronicle as it stands: the tiles inside the border carrying a Pasture or a Trapping, the city's own tile counted when it carries one. It unlocks the card **Tannery** and pays influence.
 
 ## The units 🔧
 
@@ -37,3 +38,4 @@ A goal is a focus themed on its technology: it is read from the technology's fic
 - **Irrigation**, an improvement giving food, placed through a worker for production on a plain or a desert tile a river runs along and nowhere else.
 - **Pasture**, an improvement giving food, placed through a worker for production on a tile carrying cattle and nowhere else. It goes with the cattle, so a Hunt played there removes both.
 - **Archer**, costing military: one population leaves the tiles to become a unit.
+- **Tannery**, a building giving money, built through a worker for production on a tile carrying deer or cattle and nowhere else, single use. It goes with the feature, so a Hunt played there removes both. Money has its source here, and nothing in the age costs it.

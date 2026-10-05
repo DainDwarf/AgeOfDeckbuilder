@@ -24,6 +24,7 @@ const BUILDING_MARKS: Readonly<Record<string, number[]>> = {
   camp: WALL,
   shelter: [-16, 10, 0, -13, 16, 10, 5, 10, 0, 2, -5, 10],
   farm: [-16, -6, 16, -6, 16, 6, -16, 6],
+  tannery: [-16, 8, -6, -8, 16, -8, 6, 8],
 };
 
 /** Half the width of the fertile plain's hexagon, whose corners stand five from its centre. */

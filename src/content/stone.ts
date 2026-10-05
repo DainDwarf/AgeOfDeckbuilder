@@ -107,6 +107,17 @@ export const STONE: Slice = {
         technology: 'bow-and-arrow',
         influence: 1,
       },
+      tanning: {
+        count: (_catalogue, chronicle) =>
+          chronicle.held.filter((coord) =>
+            tileAt(chronicle.tiles, coord)?.improvements.some(
+              (improvement) => improvement === 'pasture' || improvement === 'trapping',
+            ),
+          ).length,
+        need: 2,
+        technology: 'tanning',
+        influence: 1,
+      },
     },
   },
   brings: {
@@ -133,6 +144,12 @@ export const STONE: Slice = {
       irrigation: { kind: 'instant', cost: { production: 2 }, ...placesImprovement('irrigation') },
       pasture: { kind: 'instant', cost: { production: 2 }, ...placesImprovement('pasture') },
       archer: { kind: 'unit', cost: { military: 2 }, ...enters('archer') },
+      tannery: {
+        kind: 'building',
+        cost: { production: 4 },
+        singleUse: true,
+        ...builds('tannery'),
+      },
       fire: {
         kind: 'instant',
         cost: {},
@@ -157,6 +174,7 @@ export const STONE: Slice = {
       irrigation: { needs: ['agriculture', 'herbalism'], unlocks: { cards: { irrigation: 1 } } },
       domestication: { needs: ['trapping', 'agriculture'], unlocks: { cards: { pasture: 1 } } },
       'bow-and-arrow': { needs: ['trapping'], unlocks: { cards: { archer: 1 } } },
+      tanning: { needs: ['domestication'], unlocks: { cards: { tannery: 1 } } },
     },
     terrains: {
       desert: {
@@ -171,6 +189,11 @@ export const STONE: Slice = {
     },
     buildings: {
       farm: { terrains: ['plain'], yields: { food: 2 } },
+      tannery: {
+        terrains: ['forest', 'plain'],
+        features: ['deer', 'cattle'],
+        yields: { money: 2 },
+      },
     },
     improvements: {
       trapping: { terrains: ['forest'], features: ['deer'], yields: { food: 1 } },

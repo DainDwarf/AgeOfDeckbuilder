@@ -1,10 +1,8 @@
 import { expect, type Page, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
 import { type Campaign, pinned, unpinnable } from '../src/rules/campaign';
-import { gained } from '../src/rules/cards';
 import { achievementOf } from '../src/rules/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
-import { cultureThreshold } from '../src/rules/city';
 import { campUnit } from '../src/rules/enemies';
 import { CENTRE, type TileCoords, tileKey } from '../src/rules/map';
 import { freshCampaign } from '../src/rules/save';
@@ -18,6 +16,7 @@ import {
   campGround,
   chronicleOf,
   cityTileOf,
+  claimedAt,
   dragBetween,
   dragOut,
   dragTiles,
@@ -135,9 +134,8 @@ function claimedEast(): { chronicle: Chronicle; claimed: TileCoords } {
   return firstSeed('claims the tile east of the city on its bare turn 1', (seed) => {
     const bare = settledOn(seed);
     const claimed = eastOf(cityTileOf(bare));
-    const paid = gained(bare, { culture: cultureThreshold(bare) }).chronicle;
-    const chronicle = outcome(apply(CATALOGUE, paid, { type: 'claim', tile: claimed }));
-    return chronicle === paid ? undefined : { chronicle, claimed };
+    const chronicle = claimedAt(bare, claimed);
+    return chronicle === undefined ? undefined : { chronicle, claimed };
   });
 }
 

@@ -14,7 +14,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **Tanning** — the technology Tanning, its achievement and the card Tannery stand in the Stone Age's content after Bow and arrow's, a building or an improvement names one feature or several, proven by one test on the fixture, `e2e/tannery.spec.ts` passes, the catalogue's coherence test passes and `docs/MAP.md` and `docs/ages/STONE.md` say so. Doc-impact: `docs/MAP.md`, `docs/ages/STONE.md`. [board/tanning.md](board/tanning.md)
 - **Fishing** — the wild's technology that needs Bow and arrow, with its achievement and every card it unlocks.
 - **Raft** — the wild's technology that needs Fishing, with its achievement and every card it unlocks.
 - **Bread** — the field's technology that needs Irrigation, with its achievement and every card it unlocks, if it is kept.

@@ -5,6 +5,7 @@ import { CATALOGUE } from '../src/content/catalogue';
 import { agesReached, type Campaign, civilizationIn, paidInto } from '../src/rules/campaign';
 import {
   aimOf,
+  built,
   type CardKind,
   featurePlaced,
   gained,
@@ -1439,6 +1440,32 @@ export function aimableAtHand(): { opened: Chronicle; card: number; other: numbe
 }
 
 /**
+ * The chronicle with the tile made the terrain the feature lies on, that feature, the improvements
+ * named and the building, where one is named, placed on it, and a worker entered there.
+ */
+export function onFeature(
+  chronicle: Chronicle,
+  tile: TileCoords,
+  feature: string,
+  improvements: readonly string[],
+  building?: string,
+): Chronicle {
+  const { terrain } = featureKind(CATALOGUE, feature);
+  let ground =
+    tileAt(chronicle.tiles, tile)?.terrain === terrain
+      ? unchanged(chronicle)
+      : terraformed(CATALOGUE, chronicle, tile, terrain);
+  ground = followed(ground, (left) => featurePlaced(CATALOGUE, left, tile, feature));
+  for (const improvement of improvements) {
+    ground = followed(ground, (left) => improvementPlaced(CATALOGUE, left, tile, improvement));
+  }
+  if (building !== undefined) {
+    ground = followed(ground, (left) => built(CATALOGUE, left, tile, building));
+  }
+  return unitEntered(ground.chronicle, { type: WORKER, faction: 'player', tile });
+}
+
+/**
  * The chronicle with the first tile beside the city made the terrain of the feature Trapping names,
  * that feature and the improvements named placed on it, and a worker entered there.
  */
@@ -1448,18 +1475,15 @@ export function onDeer(
 ): { chronicle: Chronicle; tile: TileCoords } {
   const [feature] = improvementKind(CATALOGUE, TRAPPING).features ?? [];
   if (feature === undefined) throw new Error(`${TRAPPING} names no feature`);
-  const { terrain } = featureKind(CATALOGUE, feature);
   const [tile] = neighbours(cityTileOf(chronicle));
-  let ground =
-    tileAt(chronicle.tiles, tile)?.terrain === terrain
-      ? unchanged(chronicle)
-      : terraformed(CATALOGUE, chronicle, tile, terrain);
-  ground = followed(ground, (left) => featurePlaced(CATALOGUE, left, tile, feature));
-  for (const improvement of improvements) {
-    ground = followed(ground, (left) => improvementPlaced(CATALOGUE, left, tile, improvement));
-  }
-  const worked = unitEntered(ground.chronicle, { type: WORKER, faction: 'player', tile });
-  return { chronicle: worked, tile };
+  return { chronicle: onFeature(chronicle, tile, feature, improvements), tile };
+}
+
+/** The chronicle with a claim's culture gained and the tile claimed, or nothing where it cannot be. */
+export function claimedAt(chronicle: Chronicle, tile: TileCoords): Chronicle | undefined {
+  const cultured = gained(chronicle, { culture: cultureThreshold(chronicle) }).chronicle;
+  const claimed = outcome(apply(CATALOGUE, cultured, { type: 'claim', tile }));
+  return claimed === cultured ? undefined : claimed;
 }
 
 /** A turn 1 whose worker stands on a tile beside the city, a card in the hand and paid for. */
@@ -1468,6 +1492,26 @@ export type Paid = {
   readonly tile: TileCoords;
   readonly index: number;
 };
+
+/**
+ * The first seed's turn 1, launched as `settledOn` launches it, with the card in hand, on the ground
+ * `made` makes of it, with the card paid for; a seed it makes none of is passed over.
+ */
+export function paidOnGround(
+  card: CardId,
+  made: (opened: Chronicle) => { chronicle: Chronicle; tile: TileCoords } | undefined,
+  civilization?: Civilization,
+  era = firstEra(),
+): Paid {
+  return firstSeed(`opens the ${era.age} age’s turn 1 on ${card} in hand`, (seed) => {
+    const opened = settledOn(seed, [], civilization, era);
+    if (!idsOf(opened.hand).includes(card)) return undefined;
+    const ground = made(opened);
+    if (ground === undefined) return undefined;
+    const chronicle = gained(ground.chronicle, cardOf(CATALOGUE, card).cost).chronicle;
+    return { chronicle, tile: ground.tile, index: idsOf(chronicle.hand).indexOf(card) };
+  });
+}
 
 /**
  * The first seed's turn 1, launched as `settledOn` launches it, with the card in hand, on the deer
@@ -1479,13 +1523,7 @@ export function paidOnDeer(
   civilization?: Civilization,
   era = firstEra(),
 ): Paid {
-  return firstSeed(`opens the ${era.age} age’s turn 1 on ${card} in hand`, (seed) => {
-    const opened = settledOn(seed, [], civilization, era);
-    if (!idsOf(opened.hand).includes(card)) return undefined;
-    const { chronicle: worked, tile } = onDeer(opened, improvements);
-    const chronicle = gained(worked, cardOf(CATALOGUE, card).cost).chronicle;
-    return { chronicle, tile, index: idsOf(chronicle.hand).indexOf(card) };
-  });
+  return paidOnGround(card, (opened) => onDeer(opened, improvements), civilization, era);
 }
 
 /**
