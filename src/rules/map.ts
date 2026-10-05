@@ -239,6 +239,36 @@ export function groundRunsTo(
 }
 
 /**
+ * Every tile a walk reaches the tile from over the tiles a unit enters ashore and the tiles an
+ * embarked one enters together, embarking where the ground ends and disembarking where it begins.
+ */
+export function groundAndWaterRunTo(
+  catalogue: MapContent,
+  tiles: readonly Tile[],
+  to: TileCoords,
+): ReadonlySet<string> {
+  const ground = new Map(tiles.map((tile) => [tileKey(tile), tile]));
+  const reached = new Set([tileKey(to)]);
+  const front = [to];
+  for (let at = 0; at < front.length; at++) {
+    for (const coord of neighbours(front[at])) {
+      const key = tileKey(coord);
+      const onto = ground.get(key);
+      if (reached.has(key)) continue;
+      if (
+        movementCost(catalogue, onto, false) === undefined &&
+        movementCost(catalogue, onto, true) === undefined
+      ) {
+        continue;
+      }
+      reached.add(key);
+      front.push(coord);
+    }
+  }
+  return reached;
+}
+
+/**
  * A point where three tiles meet, on a lattice of its own: a tile's middle is (2q + r, 3r) and each
  * of its six corners stands one step off that, so a corner has one identity however it is reached.
  * The line between two corners one step apart is an edge, the line two tiles share.
@@ -565,14 +595,12 @@ function flowRivers(
 }
 
 /**
- * Where the camps stand, one at a time: each is drawn uniformly from the tiles of the terrains the
- * camp's building lies on that the ground runs to the disc's centre from, far enough from the centre
- * and from every camp already placed, and the candidates are filtered again after each. When they
- * run out the placing stops, and `generateMap` deals the map again. Nothing else on the tile changes.
+ * The camps placed one at a time, one draw each among the tiles still left to it; where none is left
+ * the placing stops, and `generateMap` deals the map again.
  */
 function campsOn(
   catalogue: MapContent,
-  building: BuildingTypeId,
+  { building, acrossWater }: MapAge['camp'],
   region: Region,
   initial: Rng,
   tiles: readonly Tile[],
@@ -580,7 +608,10 @@ function campsOn(
 ): { rng: Rng; tiles: Tile[]; placed: number } {
   const { camps, campFromCentre, campsApart } = region;
   const ground = buildingKind(catalogue, building).terrains;
-  const reached = groundRunsTo(catalogue, tiles, rivers, CENTRE);
+  const reached =
+    acrossWater === true
+      ? groundAndWaterRunTo(catalogue, tiles, CENTRE)
+      : groundRunsTo(catalogue, tiles, rivers, CENTRE);
 
   let rng = initial;
   const placed: TileCoords[] = [];
@@ -608,15 +639,9 @@ function campsOn(
 }
 
 /**
- * The map a region deals: a hexagonal disc of tiles in axial coordinates around its centre,
- * generated in seven layers: biomes spread from their origins, the centre's among them, a rim marked
- * around every biome that touches a biome of another kind, a terrain scattered from each biome's
- * table — the rim one where the rim reaches — each feature dealt over a share of the terrain it lies
- * on, rivers walked down from the biome they rise in along the edges between tiles, the camps dealt
- * over the ground they name that the centre is walked to from, and the centre part: every tile
- * within the region's reach of the disc's centre, which draws nothing. A deal holding fewer camps
- * than the region asks is thrown away and another dealt from the generator state it leaves; a tenth
- * deal short of them throws.
+ * The map a region deals, a disc around `CENTRE` in the seven layers of `docs/MAP.md`. A deal short
+ * of the region's camps is thrown away and the next dealt from the generator state it leaves; a
+ * tenth one short throws.
  */
 export function generateMap(
   catalogue: MapContent,
@@ -625,20 +650,19 @@ export function generateMap(
   initial: Rng,
 ): HexMap & { readonly rng: Rng } {
   const region = regionOf(catalogue, age, regionId);
-  const { building } = age.camp;
-  let deal = dealMap(catalogue, building, region, initial);
+  let deal = dealMap(catalogue, age.camp, region, initial);
   for (let dealt = 1; deal.placed < region.camps; dealt++) {
     if (dealt === 10) {
       throw new Error(`this map was dealt 10 times and never held ${region.camps} camps`);
     }
-    deal = dealMap(catalogue, building, region, deal.rng);
+    deal = dealMap(catalogue, age.camp, region, deal.rng);
   }
   return { rng: deal.rng, tiles: deal.tiles, rivers: deal.rivers, centre: deal.centre };
 }
 
 function dealMap(
   catalogue: MapContent,
-  building: BuildingTypeId,
+  camp: MapAge['camp'],
   region: Region,
   initial: Rng,
 ): { rng: Rng; tiles: Tile[]; rivers: River[]; centre: TileCoords[]; placed: number } {
@@ -807,7 +831,7 @@ function dealMap(
 
   const camped = campsOn(
     catalogue,
-    building,
+    camp,
     region,
     rng,
     coords.map(({ q, r }, index) => ({

@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 import { ageOf } from './catalogue';
-import { AGE, CAMP, CATALOGUE, CLEARING, REGION } from './fixtures';
+import { AGE, agesOver, CAMP, CATALOGUE, CLEARING, REGION, REGIONS } from './fixtures';
 import {
   CENTRE,
   type Corner,
@@ -8,12 +8,14 @@ import {
   dealtBiomes,
   distance,
   generateMap,
+  type HexMap,
   MOVE_POINT,
   neighbours,
   pathCosts,
   type River,
   riversAlong,
   type Tile,
+  type TileCoords,
   tileAt,
   tileKey,
   tilesAtCorner,
@@ -423,19 +425,69 @@ test('every map is dealt its camps, each keeping its distance from the centre an
   }
 });
 
+/** Every tile a walk over the whole map from the tile reaches, ashore or embarked. */
+function walkedFrom(map: HexMap, from: TileCoords, embarked: boolean): Set<string> {
+  const walked = pathCosts(
+    CATALOGUE,
+    map.tiles,
+    map.rivers,
+    from,
+    { kind: 'whole-map', move: MOVE_POINT, embarked },
+    () => false,
+  );
+  return new Set(walked.keys());
+}
+
+/** Every tile a unit comes to from the centre walking ashore and embarked by turns. */
+function comesTo(map: HexMap): Set<string> {
+  const reached = new Set([tileKey(CENTRE)]);
+  const from: TileCoords[] = [CENTRE];
+  const walked = { ashore: new Set<string>(), embarked: new Set<string>() };
+  for (let at = 0; at < from.length; at++) {
+    for (const embarked of [false, true]) {
+      const done = embarked ? walked.embarked : walked.ashore;
+      if (done.has(tileKey(from[at]))) continue;
+      for (const key of walkedFrom(map, from[at], embarked)) {
+        done.add(key);
+        if (reached.has(key)) continue;
+        reached.add(key);
+        const [q, r] = key.split(',').map(Number);
+        from.push({ q, r });
+      }
+    }
+  }
+  return reached;
+}
+
 test('a camp stands where the ground runs to the centre, never across the water', () => {
   for (const seed of SEEDS) {
     const map = generateMap(CATALOGUE, OWNS, REGION, seedRng(seed));
-    const walked = pathCosts(
-      CATALOGUE,
-      map.tiles,
-      map.rivers,
-      CENTRE,
-      { kind: 'whole-map', move: MOVE_POINT, embarked: false },
-      () => false,
-    );
+    const walked = walkedFrom(map, CENTRE, false);
     for (const camp of campsOf(map.tiles)) expect(walked.has(tileKey(camp))).toBe(true);
   }
+});
+
+test('a camp across the water stands on any land a unit comes to from the centre, embarking where the ground ends, keeping its distances, and some stand where the ground does not run', () => {
+  const across = agesOver({ ...CAMP, acrossWater: true }, REGIONS)[AGE];
+  const { camps, campFromCentre, campsApart } = DISC;
+  let island = 0;
+  for (let seed = 0; seed < 30; seed++) {
+    const map = generateMap(CATALOGUE, across, REGION, seedRng(seed));
+    const reached = comesTo(map);
+    const ashore = walkedFrom(map, CENTRE, false);
+    const placed = campsOf(map.tiles);
+    expect(placed).toHaveLength(camps);
+    for (const camp of placed) {
+      expect(reached.has(tileKey(camp))).toBe(true);
+      expect(distance(camp, CENTRE)).toBeGreaterThanOrEqual(campFromCentre);
+      for (const other of placed) {
+        if (tileKey(other) === tileKey(camp)) continue;
+        expect(distance(camp, other)).toBeGreaterThanOrEqual(campsApart);
+      }
+      if (!ashore.has(tileKey(camp))) island++;
+    }
+  }
+  expect(island).toBeGreaterThan(0);
 });
 
 test('the generator fills a building slot with a camp and with nothing else', () => {

@@ -26,7 +26,7 @@ import {
   unitKind,
 } from './catalogue';
 import { assign, type CityCommand, claim, grow, income, reassign } from './city';
-import { campUnit, enteredAround } from './enemies';
+import { campUnit, guardEntered } from './enemies';
 import {
   type FeatureId,
   generateMap,
@@ -1102,9 +1102,8 @@ function enemyActs(catalogue: Catalogue, chronicle: Chronicle, id: number): Sequ
 
 /**
  * The camps rolling their own guards, in tile order: each camp draws once from the seeded generator
- * whatever its odds, and where the draw falls under them one guard enters around it as a raid enters
- * around its door — on the camp's tile where it is free. A draw that entered nothing raises no stage
- * and rides on the chronicle handed back.
+ * whatever its odds, and where the draw falls under them one guard enters around it. A draw that
+ * entered nothing raises no stage and rides on the chronicle handed back.
  */
 function campsRolled(catalogue: Catalogue, chronicle: Chronicle): Sequence {
   const { camp } = ageOf(catalogue, chronicle.age);
@@ -1115,7 +1114,7 @@ function campsRolled(catalogue: Catalogue, chronicle: Chronicle): Sequence {
       const step = nextRng(left.rng);
       const drawn = { ...left, rng: step.rng };
       if (step.value >= camp.odds) return unchanged(drawn);
-      return enteredAround(catalogue, drawn, { q, r }, 1, 'guard');
+      return guardEntered(catalogue, drawn, { q, r });
     });
   }
   return rolling;

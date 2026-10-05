@@ -195,6 +195,11 @@ export type Camp = {
   /** The script each warrior of the camp's carries, named by what enters it. */
   readonly scripts: Readonly<Record<CampScript, string>>;
   readonly building: string;
+  /**
+   * Whether the camps are dealt across the water: on any land the centre is reached from over the
+   * ground and the tiles embarked units enter together, and not only on ground the centre walks to.
+   */
+  readonly acrossWater?: boolean;
   /** What a capture deals, in the order dealt. */
   readonly rewards: readonly string[];
   /** The chance, at every enemy phase, that a camp standing enters a guard. */

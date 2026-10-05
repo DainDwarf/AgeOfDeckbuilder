@@ -24,10 +24,11 @@ export function campUnit(
   return { type: camp.unit, faction: 'enemy', tile, script: camp.scripts[script] };
 }
 
-function raidGround(catalogue: Catalogue, chronicle: Chronicle): Tile[] {
-  const { city } = chronicle;
-  if (city === undefined) refuse(catalogue, 'a raid landed while the city stands nowhere');
-  const reached = groundRunsTo(catalogue, chronicle.tiles, chronicle.rivers, city);
+/** The tiles the camp's unit stands on ashore that the ground runs to the tile from, never the city's. */
+function groundTo(catalogue: Catalogue, chronicle: Chronicle, to: TileCoords): Tile[] {
+  const city =
+    chronicle.city ?? refuse(catalogue, 'an enemy entered while the city stands nowhere');
+  const reached = groundRunsTo(catalogue, chronicle.tiles, chronicle.rivers, to);
   const stats = unitKind(catalogue, ageOf(catalogue, chronicle.age).camp.unit);
   return chronicle.tiles.filter(
     (tile) =>
@@ -37,11 +38,15 @@ function raidGround(catalogue: Catalogue, chronicle: Chronicle): Tile[] {
   );
 }
 
+function raidGround(catalogue: Catalogue, chronicle: Chronicle): Tile[] {
+  const city = chronicle.city ?? refuse(catalogue, 'a raid landed while the city stands nowhere');
+  return groundTo(catalogue, chronicle, city);
+}
+
 /**
  * That many of the camp's unit entering around the tile with the script named, each on the nearest
- * free tile of the raid's ground, ties drawn from the generator and nothing drawn where one tile is
- * nearest; where none is free, the ones left enter nowhere. A count of none or fewer draws nothing
- * and is a `runtime-error`.
+ * free tile of the raid's ground; where none is free, the ones left enter nowhere. A count of none or
+ * fewer draws nothing and is a `runtime-error`.
  */
 export function enteredAround(
   catalogue: Catalogue,
@@ -51,7 +56,29 @@ export function enteredAround(
   script: CampScript,
 ): Landed {
   if (enemies <= 0) return landedAs(change('runtime-error', chronicle));
-  const ground = raidGround(catalogue, chronicle);
+  return enteredOn(catalogue, chronicle, raidGround(catalogue, chronicle), entry, enemies, script);
+}
+
+/**
+ * One guard of the camp's entering around the camp, on the nearest free tile of the ground that runs
+ * to the camp, and nowhere where none is free.
+ */
+export function guardEntered(catalogue: Catalogue, chronicle: Chronicle, camp: TileCoords): Landed {
+  return enteredOn(catalogue, chronicle, groundTo(catalogue, chronicle, camp), camp, 1, 'guard');
+}
+
+/**
+ * That many of the camp's unit entering around the tile on the ground handed in, each on its nearest
+ * free tile, ties drawn from the generator and nothing drawn where one tile is nearest.
+ */
+function enteredOn(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  ground: readonly Tile[],
+  entry: TileCoords,
+  enemies: number,
+  script: CampScript,
+): Landed {
   let landing = unchanged(chronicle);
   for (let enemy = 0; enemy < enemies; enemy++) {
     const standing = landing.chronicle;

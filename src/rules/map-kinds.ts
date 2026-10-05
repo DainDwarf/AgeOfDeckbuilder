@@ -115,10 +115,13 @@ export type MapContent = {
   readonly improvements: Readonly<Record<string, LayerKind>>;
 };
 
-/** The part of an age a map is dealt from: its regions, and the building its camp is. */
+/**
+ * The part of an age a map is dealt from: its regions, the building its camp is, and whether its camp
+ * stands across the water.
+ */
 export type MapAge = {
   readonly regions: Readonly<Record<string, Region>>;
-  readonly camp: { readonly building: string };
+  readonly camp: { readonly building: string; readonly acrossWater?: boolean };
 };
 
 /** What a tile of that terrain is; a terrain the catalogue does not hold is refused. */

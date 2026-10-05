@@ -42,7 +42,15 @@ import {
   withUnits,
   worker,
 } from './fixtures';
-import { CENTRE, distance, MOVE_POINT, neighbours, type TileCoords, tileKey } from './map';
+import {
+  CENTRE,
+  distance,
+  MOVE_POINT,
+  neighbours,
+  type Tile,
+  type TileCoords,
+  tileKey,
+} from './map';
 import { terrainKind } from './map-kinds';
 import { RESOURCES } from './resources';
 import { nextRng, seedRng } from './rng';
@@ -377,6 +385,44 @@ test('at odds of one every camp enters a guard once the enemies have acted, a st
       .filter((unit) => unit.id >= city.nextUnit)
       .map((unit) => (unit.faction === 'enemy' ? unit.script : undefined)),
   ).toEqual(camps.map(() => CAMP.scripts.guard));
+});
+
+/** A camp across the water, on an island of two tiles at the edge of a disc of five, coast all around. */
+function island(): { camp: TileCoords; beside: TileCoords; tiles: Tile[] } {
+  const camp = { q: 4, r: 0 };
+  const beside = { q: 5, r: 0 };
+  const shore = new Set([camp, beside].map(tileKey));
+  const coast = [...neighbours(camp), ...neighbours(beside)].filter(
+    (coord) => !shore.has(tileKey(coord)),
+  );
+  return { camp, beside, tiles: camped(field(5, coast), [camp]) };
+}
+
+test('a camp across the water enters its guard on the nearest free tile of its island, never on the city’s ground, and nowhere where none of its island is free', () => {
+  const { camp, beside, tiles } = island();
+  const held = (...on: TileCoords[]): Chronicle =>
+    cityOf(['urban'], {
+      ...NO_GROWTH,
+      tiles,
+      drawPile: fullDraw(),
+      units: on.map((tile) => standing('enemy', tile, { move: 0 })),
+    });
+
+  expect(entriesOf(rolling(1), held(camp))).toEqual([tileKey(beside)]);
+  expect(entriesOf(rolling(1), held(camp, beside))).toEqual([]);
+});
+
+test('a raid through a camp across the water enters on the ground that runs to the city, nearest the camp', () => {
+  const { camp, tiles } = island();
+  const city = cityOf(['urban'], { tiles, ...RAID_ON_SECOND });
+
+  for (const seed of SEEDS) {
+    const seeded = { ...city, rng: seedRng(seed) };
+    const entered = enteredSince(seeded, endedTurn(seeded, 'PH_Raid'));
+
+    expect(entered).toHaveLength(1);
+    expect(distance(entered[0], camp)).toBe(2);
+  }
 });
 
 test('the chronicle opens with one guard on each camp the map was dealt, in tile order, ahead of every unit the settle enters', () => {
