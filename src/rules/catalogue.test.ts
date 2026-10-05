@@ -305,11 +305,10 @@ test('a catalogue whose biome names a terrain it does not hold is refused', () =
   expect(() => catalogued(content)).toThrow(/^fixture: /);
 });
 
-test('a catalogue whose biome grows at a growth weight of nought, a compactness below nought or to a size of nought is refused', () => {
+test('a catalogue whose biome grows at a growth weight of nought or to a size of nought is refused', () => {
   const { sea, clearing } = CATALOGUE.biomes;
   for (const biome of [
     { ...sea, growth: { kind: 'weight', weight: 0 } } as const,
-    { ...sea, compactness: -0.5 },
     { ...clearing, growth: { kind: 'size', size: 0 } } as const,
   ]) {
     const content = changed({ biomes: { ...CATALOGUE.biomes, sea: biome } });

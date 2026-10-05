@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
-import { ageOf } from './catalogue';
-import { AGE, agesOver, CAMP, CATALOGUE, CLEARING, REGION, REGIONS } from './fixtures';
+import { ageOf, catalogued } from './catalogue';
+import { AGE, agesOver, CAMP, CATALOGUE, CLEARING, changed, REGION, REGIONS } from './fixtures';
 import {
   CENTRE,
   type Corner,
@@ -79,6 +79,22 @@ function within(seed: number, steps: number): Set<string> {
       .filter((tile) => distance(CENTRE, tile) <= steps)
       .map(tileKey),
   );
+}
+
+/** The fixture's content as the catalogue builds it, its clearing grown at that compactness. */
+function compacted(compactness: number): MapContent {
+  const { clearing } = CATALOGUE.biomes;
+  return catalogued(
+    changed({ biomes: { ...CATALOGUE.biomes, clearing: { ...clearing, compactness } } }),
+  );
+}
+
+/** How far the glades of the clearing region's maps lie from the centre, the clearing's origin, on the mean. */
+function gladeReach(content: MapContent): number {
+  const glades = SEEDS.flatMap(
+    (seed) => generateMap(content, OWNS, CLEARING, seedRng(seed)).tiles,
+  ).filter((tile) => tile.terrain === 'glade');
+  return glades.reduce((total, glade) => total + distance(glade, CENTRE), 0) / glades.length;
 }
 
 /** Whether the run is a stretch of the river, corner for corner, exactly as the river runs it. */
@@ -207,18 +223,11 @@ test('a tile no biome reaches because a sized biome closed it off belongs to tha
 });
 
 test('a biome kind of a greater compactness grows rounder, its tiles nearer its origin', () => {
-  const compacted = (compactness: number): MapContent => ({
-    ...CATALOGUE,
-    biomes: { ...CATALOGUE.biomes, clearing: { ...CATALOGUE.biomes.clearing, compactness } },
-  });
-  const reachOf = (content: MapContent): number => {
-    const glades = SEEDS.flatMap(
-      (seed) => generateMap(content, OWNS, CLEARING, seedRng(seed)).tiles,
-    ).filter((tile) => tile.terrain === 'glade');
-    return glades.reduce((total, glade) => total + distance(glade, CENTRE), 0) / glades.length;
-  };
+  expect(gladeReach(compacted(4))).toBeLessThan(gladeReach(compacted(0)));
+});
 
-  expect(reachOf(compacted(4))).toBeLessThan(reachOf(compacted(0)));
+test('a biome kind of a compactness below nought grows in arms, its tiles further from its origin than at nought', () => {
+  expect(gladeReach(compacted(-3))).toBeGreaterThan(gladeReach(compacted(0)));
 });
 
 test('a biome kind of a greater growth weight grows larger', () => {

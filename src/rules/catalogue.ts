@@ -355,9 +355,6 @@ export function catalogued(content: Catalogue): Catalogue {
     for (const terrain of Object.keys(biome.interior)) terrainKind(content, terrain);
     for (const terrain of Object.keys(biome.rim)) terrainKind(content, terrain);
     if (biome.rimWidths.length === 0) refuse(content, `the biome ${id} rolls no rim width`);
-    if (biome.compactness < 0) {
-      refuse(content, `the biome ${id} grows at a compactness of ${biome.compactness}`);
-    }
     switch (biome.growth.kind) {
       case 'weight':
         if (biome.growth.weight <= 0) {
