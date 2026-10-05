@@ -173,9 +173,9 @@ export const STONE: Slice = {
       farm: { terrains: ['plain'], yields: { food: 2 } },
     },
     improvements: {
-      trapping: { terrains: ['forest'], feature: 'deer', yields: { food: 1 } },
+      trapping: { terrains: ['forest'], features: ['deer'], yields: { food: 1 } },
       irrigation: { terrains: ['plain', 'desert'], river: true, yields: { food: 1 } },
-      pasture: { terrains: ['plain'], feature: 'cattle', yields: { food: 1 } },
+      pasture: { terrains: ['plain'], features: ['cattle'], yields: { food: 1 } },
     },
     biomes: {
       desert: {

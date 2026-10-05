@@ -1446,7 +1446,7 @@ export function onDeer(
   chronicle: Chronicle,
   improvements: readonly string[],
 ): { chronicle: Chronicle; tile: TileCoords } {
-  const { feature } = improvementKind(CATALOGUE, TRAPPING);
+  const [feature] = improvementKind(CATALOGUE, TRAPPING).features ?? [];
   if (feature === undefined) throw new Error(`${TRAPPING} names no feature`);
   const { terrain } = featureKind(CATALOGUE, feature);
   const [tile] = neighbours(cityTileOf(chronicle));

@@ -454,6 +454,7 @@ const TABLES: Omit<Tables, 'technologies'> = {
     PH_Road: { kind: 'instant', cost: { production: 2 }, ...placesImprovement('PH_Road') },
     PH_Snare: { kind: 'instant', cost: { production: 2 }, ...placesImprovement('PH_Snare') },
     PH_Lodge: { kind: 'building', cost: { production: 3 }, ...builds('PH_Lodge') },
+    PH_Smokehouse: { kind: 'building', cost: { production: 3 }, ...builds('PH_Smokehouse') },
     PH_Ditch: { kind: 'instant', cost: { production: 2 }, ...placesImprovement('PH_Ditch') },
     PH_Mill: { kind: 'building', cost: { production: 3 }, ...builds('PH_Mill') },
     PH_Urbanisation: {
@@ -629,7 +630,12 @@ const TABLES: Omit<Tables, 'technologies'> = {
     PH_City: { terrains: ['urban'], yields: {} },
     PH_Farm: { terrains: ['plain'], yields: { food: 1 } },
     PH_Camp: { terrains: ['plain', 'forest', 'hills'], yields: {} },
-    PH_Lodge: { terrains: ['forest'], feature: 'PH_Game', yields: { food: 1 } },
+    PH_Lodge: { terrains: ['forest'], features: ['PH_Game'], yields: { food: 1 } },
+    PH_Smokehouse: {
+      terrains: ['forest', 'plain'],
+      features: ['PH_Game', 'PH_Fertile'],
+      yields: { money: 1 },
+    },
     PH_Mill: { terrains: ['plain'], river: true, yields: { production: 1 } },
   },
   features: {
@@ -651,7 +657,7 @@ const TABLES: Omit<Tables, 'technologies'> = {
       movementCost: (3 * MOVE_POINT) / 4,
     },
     PH_Rubble: { terrains: ['plain'], yields: {}, movementCost: 2 * MOVE_POINT },
-    PH_Snare: { terrains: ['forest'], feature: 'PH_Game', yields: { food: 1 } },
+    PH_Snare: { terrains: ['forest'], features: ['PH_Game'], yields: { food: 1 } },
     PH_Ditch: { terrains: ['plain', 'forest'], river: true, yields: { food: 1 } },
   },
 };

@@ -348,12 +348,12 @@ export function catalogued(content: Catalogue): Catalogue {
       if (layer.movementCost !== undefined && layer.movementCost < 1) {
         refuse(content, `the ${noun} ${id} names a movement cost of ${layer.movementCost}`);
       }
-      if (layer.feature !== undefined) {
-        const { terrain } = featureKind(content, layer.feature);
+      for (const feature of layer.features ?? []) {
+        const { terrain } = featureKind(content, feature);
         if (!layer.terrains.includes(terrain)) {
           refuse(
             content,
-            `the ${noun} ${id} names the feature ${layer.feature}, which lies on ${terrain}, a terrain it does not name`,
+            `the ${noun} ${id} names the feature ${feature}, which lies on ${terrain}, a terrain it does not name`,
           );
         }
       }
@@ -500,12 +500,12 @@ function ageHeld(
 }
 
 /**
- * The feature or the river a building names, in a refusal's words, and nothing where it names
+ * The features or the river a building names, in a refusal's words, and nothing where it names
  * neither: the settle and a camp's placing never ask the ground a layer goes on, so a city's or a
  * camp's building naming either is refused.
  */
-function groundNamed({ feature, river }: LayerKind): string | undefined {
-  if (feature !== undefined) return `the feature ${feature}`;
+function groundNamed({ features, river }: LayerKind): string | undefined {
+  if (features !== undefined) return `the features ${features.join(', ')}`;
   return river === true ? 'the river' : undefined;
 }
 

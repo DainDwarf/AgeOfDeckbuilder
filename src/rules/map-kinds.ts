@@ -40,8 +40,8 @@ export type BiomeKind = {
  */
 export type LayerKind = {
   readonly terrains: readonly string[];
-  /** The feature it goes on and goes with, for one that names one. */
-  readonly feature?: string;
+  /** The features it goes on, any one of them, and goes with, for one that names any. */
+  readonly features?: readonly string[];
   /** Whether it names the river: it goes only on a tile a river runs along. */
   readonly river?: boolean;
   readonly yields: Partial<Resources>;

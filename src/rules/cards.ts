@@ -240,7 +240,7 @@ export function featureAmong(
 
 /**
  * The ground a layer of that kind goes on: a river running along the tile, where it names the river,
- * then the feature it names, carried, then one of its terrains.
+ * then one of the features it names, carried, then one of its terrains.
  */
 function groundFor(
   catalogue: Catalogue,
@@ -250,7 +250,7 @@ function groundFor(
 ): TileBlock | undefined {
   return firstRefusal(
     layer.river === true && !runsAlong(chronicle.rivers, tile) ? 'no-river' : undefined,
-    layer.feature === undefined ? undefined : featureAmong(catalogue, tile, [layer.feature]),
+    layer.features === undefined ? undefined : featureAmong(catalogue, tile, layer.features),
     made(catalogue, tile, layer.terrains),
   );
 }
@@ -471,11 +471,12 @@ export function improvementPlaced(
 
 /**
  * A tile whose terrain or feature has just changed, keeping every layer whose kind names its terrain
- * and, where the kind names one, the feature it carries; every other layer is removed.
+ * and, where the kind names features, one of them it carries; every other layer is removed.
  */
 function relayered(catalogue: Catalogue, tile: Tile): Tile {
-  const keeps = ({ terrains, feature }: LayerKind): boolean =>
-    terrains.includes(tile.terrain) && (feature === undefined || feature === tile.feature);
+  const keeps = ({ terrains, features }: LayerKind): boolean =>
+    terrains.includes(tile.terrain) &&
+    (features === undefined || featureAmong(catalogue, tile, features) === undefined);
   return {
     ...tile,
     improvements: tile.improvements.filter((improvement) =>

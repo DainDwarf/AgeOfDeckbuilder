@@ -429,22 +429,30 @@ test('a catalogue whose layer names a feature it does not hold, or one lying on 
   const lodge = CATALOGUE.buildings.PH_Lodge;
   for (const content of [
     changed({
-      improvements: { ...CATALOGUE.improvements, PH_Snare: { ...snare, feature: 'PH_Ruins' } },
+      improvements: { ...CATALOGUE.improvements, PH_Snare: { ...snare, features: ['PH_Ruins'] } },
     }),
     changed({
       improvements: { ...CATALOGUE.improvements, PH_Snare: { ...snare, terrains: ['plain'] } },
     }),
-    changed({ buildings: { ...CATALOGUE.buildings, PH_Lodge: { ...lodge, feature: 'PH_Ruins' } } }),
+    changed({
+      buildings: { ...CATALOGUE.buildings, PH_Lodge: { ...lodge, features: ['PH_Ruins'] } },
+    }),
     changed({ buildings: { ...CATALOGUE.buildings, PH_Lodge: { ...lodge, terrains: ['plain'] } } }),
+    changed({
+      buildings: {
+        ...CATALOGUE.buildings,
+        PH_Lodge: { ...lodge, features: ['PH_Game', 'PH_Fertile'] },
+      },
+    }),
   ]) {
     expect(() => catalogued(content)).toThrow(/^fixture: /);
   }
 });
 
 test('a catalogue whose civilization’s city or whose camp is a building naming a feature or the river is refused, and the same building naming neither is not', () => {
-  const { feature, ...unnamed } = CATALOGUE.buildings.PH_Lodge;
+  const { features, ...unnamed } = CATALOGUE.buildings.PH_Lodge;
   const named: LayerKind[] = [
-    { ...unnamed, feature },
+    { ...unnamed, features },
     { ...unnamed, river: true },
   ];
   for (const lodge of [unnamed, ...named]) {

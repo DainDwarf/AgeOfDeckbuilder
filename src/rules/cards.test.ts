@@ -1557,6 +1557,45 @@ test('a building naming a feature names the first of its reasons: worker, action
   expect(refusedFor(worked(inside, 'forest', 'PH_Game'), 'PH_Lodge', inside)).toBeUndefined();
 });
 
+test('a building naming two features is built on a tile carrying either, refused on one carrying neither, and removed with the one it stands on', () => {
+  const at = { q: 1, r: 0 };
+  const carrying = (terrain: Terrain, hand: CardId[], feature?: FeatureId, building?: string) =>
+    withTile(workedTile(at, terrain, { hand, resources: production(3) }), {
+      ...at,
+      terrain,
+      feature,
+      improvements: [],
+      building,
+    });
+
+  expect(refusedFor(carrying('forest', ['PH_Smokehouse']), 'PH_Smokehouse', at)).toBe(
+    'wrong-feature',
+  );
+  expect(refusedFor(carrying('hills', ['PH_Smokehouse'], 'PH_Flint'), 'PH_Smokehouse', at)).toBe(
+    'wrong-feature',
+  );
+  for (const [terrain, feature] of [
+    ['forest', 'PH_Game'],
+    ['plain', 'PH_Fertile'],
+  ] as const) {
+    const city = carrying(terrain, ['PH_Smokehouse'], feature);
+    const smoked = carrying(terrain, ['PH_Hunt'], feature, 'PH_Smokehouse');
+
+    expect(tileAt(outcome(apply(CATALOGUE, city, aimedAt(at))).tiles, at)).toEqual({
+      ...at,
+      terrain,
+      feature,
+      improvements: [],
+      building: 'PH_Smokehouse',
+    });
+    expect(tileAt(outcome(apply(CATALOGUE, smoked, aimedAt(at))).tiles, at)).toEqual({
+      ...at,
+      terrain,
+      improvements: [],
+    });
+  }
+});
+
 test('an improvement naming the river names the first of its reasons: worker, action, the river whatever the terrain, terrain, then improvement', () => {
   const at = { q: 2, r: 0 };
   const along = [riverBetween(at, { q: 2, r: -1 })];
