@@ -25,9 +25,12 @@ export function campUnit(
 }
 
 /** The tiles the camp's unit stands on ashore that the ground runs to the tile from, never the city's. */
-function groundTo(catalogue: Catalogue, chronicle: Chronicle, to: TileCoords): Tile[] {
-  const city =
-    chronicle.city ?? refuse(catalogue, 'an enemy entered while the city stands nowhere');
+function groundTo(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  city: TileCoords,
+  to: TileCoords,
+): Tile[] {
   const reached = groundRunsTo(catalogue, chronicle.tiles, chronicle.rivers, to);
   const stats = unitKind(catalogue, ageOf(catalogue, chronicle.age).camp.unit);
   return chronicle.tiles.filter(
@@ -40,7 +43,7 @@ function groundTo(catalogue: Catalogue, chronicle: Chronicle, to: TileCoords): T
 
 function raidGround(catalogue: Catalogue, chronicle: Chronicle): Tile[] {
   const city = chronicle.city ?? refuse(catalogue, 'a raid landed while the city stands nowhere');
-  return groundTo(catalogue, chronicle, city);
+  return groundTo(catalogue, chronicle, city, city);
 }
 
 /**
@@ -64,7 +67,9 @@ export function enteredAround(
  * to the camp, and nowhere where none is free.
  */
 export function guardEntered(catalogue: Catalogue, chronicle: Chronicle, camp: TileCoords): Landed {
-  return enteredOn(catalogue, chronicle, groundTo(catalogue, chronicle, camp), camp, 1, 'guard');
+  const city = chronicle.city ?? refuse(catalogue, 'a guard entered while the city stands nowhere');
+  const ground = groundTo(catalogue, chronicle, city, camp);
+  return enteredOn(catalogue, chronicle, ground, camp, 1, 'guard');
 }
 
 /**
