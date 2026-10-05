@@ -20,18 +20,18 @@ The age in one sentence: the chronicle where the economy comes home — it opens
 
 - Column 1, the doors, one to a family: Herbalism (the sky); Agriculture (the field); Trapping (the wild); Fire (the hearth).
 - Column 2: Burial rites (needs Herbalism); Irrigation (needs Agriculture, Herbalism); Domestication (needs Trapping, Agriculture); Bow and arrow (needs Trapping); Pottery (needs Fire).
-- Column 3: Calendar (needs Irrigation, Burial rites); Bread (needs Irrigation); Tanning (needs Domestication); Fishing (needs Bow and arrow).
-- Column 4: Megalith (needs Calendar); Bartering (needs Tanning, Bread); Raft (needs Fishing).
+- Column 3: Calendar (needs Irrigation, Burial rites); Bread (needs Irrigation); Tanning (needs Domestication); Raft (needs Bow and arrow).
+- Column 4: Megalith (needs Calendar); Bartering (needs Tanning, Bread); Fishing (needs Raft).
 
-In that order no link crosses another. A column stands in the content's order, so a technology is declared where its column holds it, column by column, each column top to bottom: the sky's first, then the field's, the wild's and the hearth's, Raft excepted, which stands under Bartering.
+In that order no link crosses another. A column stands in the content's order, so a technology is declared where its column holds it, column by column, each column top to bottom: the sky's first, then the field's, the wild's and the hearth's, Fishing excepted, which stands under Bartering.
 
 Pottery, Burial rites, Bread and Megalith are maybes, each decided at its line's intake, and one of Pottery and Burial rites goes, the second column holding four; the others the user is rather sure of, though not always of what they unlock: Tanning's card was served as takes.
 
-The field is Agriculture, Irrigation and Bread; the wild is Trapping, Domestication, Bow and arrow, Tanning, Fishing and Raft; the hearth is Fire, Pottery and Bartering; the sky is Herbalism, Burial rites, Calendar and Megalith.
+The field is Agriculture, Irrigation and Bread; the wild is Trapping, Domestication, Bow and arrow, Tanning, Raft and Fishing; the hearth is Fire, Pottery and Bartering; the sky is Herbalism, Burial rites, Calendar and Megalith.
 
 **Taste**, the user's reasons, read before every serve:
 
-- This is only the first age with a tree to climb: difficulty and complexity do not scale fast. Goals may grow more feat-like in later ages.
+- This is only the first age with a tree to climb: difficulty and complexity do not scale fast. That is what the player faces, never how many rules or how much code a take adds. Goals may grow more feat-like in later ages.
 - A goal demands the player's focus: its need is high enough that playing as usual does not reach it. A deed counted is taken over a position struck.
 - A feature is what a family works: deer on forest for Trapping, cattle on plain for Domestication. One feature on two terrains was dropped for the two: a card then names its feature and nothing else, and the map shows which family a tile is for.
 - A goal is read from its technology's fiction: "herbalism comes from knowing the land".
@@ -62,6 +62,10 @@ The field is Agriculture, Irrigation and Bread; the wild is Trapping, Domesticat
 - A goal whose two steps come in either order reads the map as it stands, never the deed: an improvement placed and then claimed counts as one claimed and then improved.
 - A goal naming two things puts its count ahead of them, so that one of each reads as a way to reach it: "Place 2 [Pasture] or [Trapping]", never "[Pasture] or [Trapping] 2 times".
 - A sentence that fits its line by a pixel does not fit: the font is the machine's.
+- The copies of a card a deck holds may be the limit on what it does: the Embarks held are the units on the water, and the deck's cycle is the crossing's length.
+- A term is sized for the uses to come: "embarked" over "on a raft", a transport unit being likely later.
+- A fight on the water is out of the Stone Age's history: nothing attacks from it, and only range reaches onto it.
+- A goal that sends the scout along the map was taken on sight: "Chart 30 [Coast]".
 
 **Left out, and side notes:**
 
