@@ -219,7 +219,7 @@ test('a free card played raises no stock for its cost, and a single use card lea
   expect(gained.chronicle.resources.food).toBe(city.resources.food + 5);
 });
 
-test('a card that becomes another, played, lies on the discard pile as that card at its own counters and comes around as it, and that card played lies there as the first again', () => {
+test('a card that becomes another, played, lies on the discard pile as that card at its own counters and comes around as it', () => {
   const city = cityOf(['urban'], { hand: ['PH_Flood'] });
 
   const [moved] = playedOver(city, PLAYED);
@@ -233,7 +233,7 @@ test('a card that becomes another, played, lies on the discard pile as that card
   expect(ebbed.discardPile).toEqual([{ id: 'PH_Flood', counters: { tide: 1 } }]);
 });
 
-test('either card of a pair under become, discarded unplayed, comes around as it is', () => {
+test('a card that becomes another, discarded unplayed, comes around as it is', () => {
   const city = cityOf(['urban'], { hand: ['PH_Flood', 'PH_Ebb'] });
 
   expect(idsOf(endedTurn(city).hand).sort()).toEqual(['PH_Ebb', 'PH_Flood']);

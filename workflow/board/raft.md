@@ -26,14 +26,15 @@
 
 **Scope:**
 
-- In, content: the technology `raft` needing `bow-and-arrow`, declared after Tanning so it stands under it in the tree's third column; its achievement; the cards `embark` and `disembark`, a pair through the keyword becomes, Embark the front; coast's movement cost for embarked units. Ocean names none.
+- In, content: the technology `raft` needing `bow-and-arrow`, declared after Tanning so it stands under it in the tree's third column; its achievement; the cards `embark`, which becomes `disembark`, and `disembark`, which becomes `embark`; coast's movement cost for embarked units. Ocean names none.
 - **Numbers, all provisional, the user's and Claude's serve the user took:** Embark costs 1 production, Disembark nothing; the technology unlocks 1 Embark and its achievement pays 1 influence; the goal's need is 30; an embarked unit's move is one coast tile a turn (the user's, down from Claude's two). No test reads any of them.
 - **The goal** counts the tiles the chronicle has charted whose terrain is coast, as the chronicle's own record of what was seen holds them. Over 200 Stone Age maps the settle alone charts a median of 8 and at most 26, and every map holds at least 32 within two tiles of ground a unit walks: 30 is not reached with no play and is there to reach on every map measured.
 - **Embark and Disembark compose the rules' embark and disembark helpers as they stand**; each is aimed at a tile, and the tile's reasons are the helpers'. Neither card adds a reason of its own.
 - **On screen:** an embarked unit's mark is its kind's mark over a hull, a flat polygon of four corners in the faction's colour, following `DOGMAS.md`'s code-drawn placeholder and the precedent of the unit marks; its infopanel card is headed "Embarked Worker" and reads the move it has embarked and no damage or range; a coast tile's terrain card reads the cost an embarked unit pays where it read a dash; a selected embarked unit lights the coast tiles it reaches and glows nothing.
 - **The tie on screen** goes through the standing aim at a unit: same line, same refusal over a tile no unit of the player's stands on, the aim standing. The lit tile stays lit while the pick is made. The back key and a click on anything that is not a tile let the card go as they do any card being aimed.
 - **A unit killed while embarked** leaves its Disembark a Disembark; nothing reaches that state today, no enemy having a range above one, and the user keeps it so for now.
-- **Disembark is in no collection**: the collection screen, the launch screen's piles and the deck never show it; a browse of a chronicle's piles and the hand do.
+- **Disembark is in no collection** because no technology unlocks it: the collection screen, the launch screen's piles and the deck never show it; a browse of a chronicle's piles and the hand do.
+- **A card that becomes another, played, changes in the hand first**, into the card it becomes, and then flies to the discard pile as that card (`toDiscardPile` in `src/ui/hand.ts` flies the played card's own face today).
 - The reconcile's choices: the tie's pick goes through the standing aim at a unit as it is; the step plays on screen as the standing move's change does; the goal's count stays content, beside Agriculture's.
 - Out: the archipelago region, Fishing, any enemy on the water, any change to a script, any rule. A rule found missing is a deviation, never coded here.
 - Saves from before this line need no care.

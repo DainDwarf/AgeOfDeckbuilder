@@ -516,6 +516,7 @@ const TABLES: Omit<Tables, 'technologies'> = {
       kind: 'instant',
       cost: {},
       counters: { tide: 2 },
+      becomes: 'PH_Flood',
       aim: 'none',
       effect: (_catalogue, paid) => gained(paid, { production: 1 }),
     },

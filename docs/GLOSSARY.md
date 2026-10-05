@@ -77,7 +77,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **add** | To put a new card on a pile or into the collection, or a card of the collection into a deck. | lay (for a card), put (for a card on a pile), gain (for a card), give (for a card), insert, shuffle in |
 | **remove** | To take a card out of a deck, the reverse of add, or a layer off a tile. | destroy, sacrifice, trash, clear, strip |
 | **single use** | A keyword on a card: played, it leaves the chronicle instead of going to the discard pile. | one-use, gone once played, consumed, exhaust, exile |
-| **become** | A keyword on a card: played, it goes to the discard pile as the card it names, and that card played as the first again. | flip, transform (for a card), toggle |
+| **become** | A keyword on a card: played, it goes to the discard pile as the card it names. | flip, transform (for a card), toggle |
 | **counter** | A named number a card carries in a chronicle, declared by its content and set when the card is made. | token, charge, variable |
 | **draw pile** | The cards not yet drawn this cycle; refilled from the discard pile when empty. | library |
 | **discard pile** | The cards played or discarded this cycle, waiting to be shuffled back. | graveyard, trash, bin |

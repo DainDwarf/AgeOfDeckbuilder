@@ -2,7 +2,6 @@ import {
   type Aim,
   type AimedCard,
   ageOf,
-  becomerOf,
   type Card,
   type Catalogue,
   cardMade,
@@ -10,7 +9,6 @@ import {
   counterOf,
   entered,
   fullHealth,
-  leavesChronicle,
   unitKind,
 } from './catalogue';
 import { claimable, populationTaken } from './city';
@@ -88,14 +86,29 @@ function charted(aim: Aim): Aim {
 }
 
 /**
- * What a card played lies on the discard pile as: itself, or, of a pair under become, the other card
- * made as its content makes it; nothing where it leaves the chronicle instead.
+ * What a card played lies on the discard pile as: the card it becomes, made as its content makes it,
+ * or itself; nothing where it leaves the chronicle instead.
  */
 export function lyingAs(catalogue: Catalogue, played: ChronicleCard): ChronicleCard | undefined {
   const card = cardOf(catalogue, played.id);
   if (leavesChronicle(card)) return undefined;
-  const other = card.becomes ?? becomerOf(catalogue, played.id);
-  return other === undefined ? played : cardMade(catalogue, other);
+  return card.becomes === undefined ? played : cardMade(catalogue, card.becomes);
+}
+
+/**
+ * Whether a card played leaves the chronicle instead of going to the discard pile: what single use
+ * says of the card carrying it, and what playing a settle card or paying a hazard is.
+ */
+function leavesChronicle(card: Card): boolean {
+  switch (card.kind) {
+    case 'unit':
+    case 'building':
+    case 'instant':
+      return card.singleUse === true;
+    case 'settle':
+    case 'hazard':
+      return true;
+  }
 }
 
 /**

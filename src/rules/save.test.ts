@@ -653,16 +653,15 @@ test('a card in a section its kind does not fit is dropped from the deck and kep
   });
 });
 
-test('a copy of a hazard, of a camp’s reward or of the card another card becomes is dropped from the collection, and every number the deck names it by with it', () => {
+test('a copy of a hazard or of a camp’s reward is dropped from the collection, and every number the deck names it by with it', () => {
   const held = campaign();
   const owned = [
     { number: held.nextCard, id: 'PH_Hunger' },
     { number: held.nextCard + 1, id: 'PH_Spoils' },
-    { number: held.nextCard + 2, id: 'PH_Ebb' },
   ];
   const at = held.collection.length;
   const cardsAt = heldCivilization(held).cards.length;
-  const nextCard = held.nextCard + 3;
+  const nextCard = held.nextCard + 2;
 
   expect(
     campaignRead(
@@ -681,10 +680,8 @@ test('a copy of a hazard, of a camp’s reward or of the card another card becom
     dropped: [
       `fixture: the save's campaign.collection[${at}] names the hazard PH_Hunger`,
       `fixture: the save's campaign.collection[${at + 1}] names the age ${AGE}'s camp's reward PH_Spoils`,
-      `fixture: the save's campaign.collection[${at + 2}] names the card PH_Ebb that PH_Flood becomes`,
       `fixture: the save's ${CIVILIZATION_AT}.cards[${cardsAt}] names no card of the collection numbered ${held.nextCard}`,
       `fixture: the save's ${CIVILIZATION_AT}.cards[${cardsAt + 1}] names no card of the collection numbered ${held.nextCard + 1}`,
-      `fixture: the save's ${CIVILIZATION_AT}.cards[${cardsAt + 2}] names no card of the collection numbered ${held.nextCard + 2}`,
     ],
   });
 });

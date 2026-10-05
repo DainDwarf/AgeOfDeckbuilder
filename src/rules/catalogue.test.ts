@@ -560,66 +560,15 @@ test('a catalogue whose deck holds any of the camp’s rewards in either section
   }
 });
 
-/** The fixture's content with its cards laid over as the test lays them. */
-function carded(cards: Catalogue['cards']): Catalogue {
-  return changed({ cards: { ...CATALOGUE.cards, ...cards } });
-}
-
-/** The fixture's card of that id, made to become another. */
-function becoming(id: string, becomes: string): Catalogue['cards'] {
-  return { [id]: { ...cardOf(CATALOGUE, id), becomes } };
-}
-
-test('a catalogue whose card becomes one it does not hold, one that becomes another, or one another card becomes too, is refused', () => {
-  expect(() => catalogued(carded(becoming('PH_Flood', 'PH_Unheld')))).toThrow(
-    'fixture: no card is named PH_Unheld',
-  );
-  expect(() => catalogued(carded(becoming('PH_Ebb', 'PH_Mine')))).toThrow(
-    'fixture: the card PH_Flood becomes PH_Ebb, which becomes PH_Mine',
-  );
-  expect(() => catalogued(carded(becoming('PH_Mine', 'PH_Mine')))).toThrow(
-    'fixture: the card PH_Mine becomes PH_Mine, which becomes PH_Mine',
-  );
-  expect(() => catalogued(carded(becoming('PH_Road', 'PH_Ebb')))).toThrow(
-    'fixture: both PH_Road and PH_Flood become PH_Ebb',
-  );
-});
-
-test('a catalogue whose card becomes another while either of the two leaves the chronicle played is refused', () => {
-  for (const front of ['PH_Stores', 'PH_Cache', 'PH_Hunger']) {
-    expect(() => catalogued(carded(becoming(front, 'PH_Mine')))).toThrow(
-      `fixture: the card ${front} becomes PH_Mine, and ${front} leaves the chronicle played`,
-    );
-  }
-  for (const named of ['PH_Stores', 'PH_Cache', 'PH_Hunger']) {
-    expect(() => catalogued(carded(becoming('PH_Flood', named)))).toThrow(
-      `fixture: the card PH_Flood becomes ${named}, and ${named} leaves the chronicle played`,
-    );
-  }
-});
-
-test('a catalogue whose card another card becomes stands in any section of a deck, is unlocked by a technology or is dealt by a camp is refused', () => {
-  const sections: Partial<typeof CIVILIZATION>[] = [
-    { city: { ...CIVILIZATION.city, card: 'PH_Ebb' } },
-    { settle: [...CIVILIZATION.settle, 'PH_Ebb'] },
-    { cards: [...CIVILIZATION.cards, 'PH_Ebb'] },
-  ];
-  for (const section of sections) {
-    const content = changed({ civilizations: { civilization: { ...CIVILIZATION, ...section } } });
-
-    expect(() => catalogued(content)).toThrow(
-      'fixture: the civilization civilization holds the card PH_Ebb that PH_Flood becomes',
-    );
-  }
-  const unlocked = withTechnologies({
-    [GRANARY]: { ...GRANARY_DECLARED, unlocks: { cards: { PH_Ebb: 1 } } },
+test('a catalogue whose card becomes one it does not hold is refused', () => {
+  const content = changed({
+    cards: {
+      ...CATALOGUE.cards,
+      PH_Flood: { ...cardOf(CATALOGUE, 'PH_Flood'), becomes: 'PH_Unheld' },
+    },
   });
-  expect(() => catalogued(unlocked)).toThrow(
-    `fixture: the technology ${GRANARY} unlocks the card PH_Ebb that PH_Flood becomes`,
-  );
-  expect(() => catalogued(encamped({ rewards: [...CAMP.rewards, 'PH_Ebb'] }))).toThrow(
-    `fixture: the age ${AGE}'s camp deals the card PH_Ebb that PH_Flood becomes`,
-  );
+
+  expect(() => catalogued(content)).toThrow('fixture: no card is named PH_Unheld');
 });
 
 test('a catalogue whose deck’s settle section holds a card of another kind is refused', () => {
