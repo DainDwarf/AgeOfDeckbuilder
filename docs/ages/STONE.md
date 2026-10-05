@@ -4,6 +4,8 @@
 
 ## The land ✅
 
+The Stone Age's camps stand across the water, in every one of its regions: a camp may stand on an island, wherever a unit comes from the centre by embarking.
+
 The Stone Age's temperate region is the Nomadic one on a bigger disc, with a desert on it: the Nomadic terrains and features in the same shares, the Nomadic biomes cut as fine, more of each of them, and rivers rising in its ranges. The ground around the centre is the same biome of its own, and the centre part reaches as far, so the settle chooses among as many tiles. More camps stand on it, kept as far from the centre and from one another as the Nomadic ones, so the nearest is as near and the rest lie further out.
 
 The desert is a biome of its own, desert nearly throughout with hills among it, rolled rounder than the land and kept away from the seas. A desert tile gives nothing, lies flat and is walked as plain is. The city and a camp stand on it. The oasis, its feature, gives food and is dealt as rarely as the others. So the desert is ground to cross, and its oases and the river banks Irrigation goes on are what is worth the walk.

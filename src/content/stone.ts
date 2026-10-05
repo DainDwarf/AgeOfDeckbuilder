@@ -67,7 +67,7 @@ export const STONE: Slice = {
       capstone: { id: schedule.capstone.id, window: [26, 34] },
       entries: schedule.entries,
     },
-    camp,
+    camp: { ...camp, acrossWater: true },
     regions: REGIONS,
     achievements: {
       herbalism: {
