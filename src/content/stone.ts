@@ -14,10 +14,28 @@ import {
 import type { Age, Slice } from '../rules/catalogue';
 import { enemiesKilledBy, playsOn, terrainsPlayedOn, turnsPlaying } from '../rules/chronicle';
 import { MOVE_POINT, tileAt } from '../rules/map';
+import type { RiverFlow } from '../rules/map-kinds';
 import { followed } from '../rules/stages';
 import { NOMADIC } from './nomadic';
 
 const { basePrice, schedule, camp } = NOMADIC.owns;
+
+const NOMADIC_BIOMES = NOMADIC.brings.biomes;
+if (NOMADIC_BIOMES === undefined) throw new Error('the Nomadic Age brings no biome');
+const { land, sea } = NOMADIC_BIOMES;
+
+const RIVERS: RiverFlow = {
+  source: 'mountain',
+  relief: 1,
+  roughness: 0.5,
+  perRange: 2,
+  climb: 0.5,
+  meander: 1.5,
+  curl: 0.75,
+  edgesPerTile: 4,
+  leastEdges: 6,
+  draws: 60,
+};
 
 const REGIONS: Age['regions'] = {
   temperate: {
@@ -42,18 +60,28 @@ const REGIONS: Age['regions'] = {
     camps: 6,
     campFromCentre: 7,
     campsApart: 4,
-    rivers: {
-      source: 'mountain',
-      relief: 1,
-      roughness: 0.5,
-      perRange: 2,
-      climb: 0.5,
-      meander: 1.5,
-      curl: 0.75,
-      edgesPerTile: 4,
-      leastEdges: 6,
-      draws: 60,
-    },
+    rivers: RIVERS,
+  },
+  archipelago: {
+    radius: 12,
+    centre: 3,
+    tilesPerBiome: 25,
+    centreBiome: 'heartland',
+    biomeShares: [
+      { biome: 'island', share: 0.5 },
+      { biome: 'open-sea', share: 0.33 },
+      { biome: 'shallows', share: 0.17 },
+    ],
+    featureShares: [
+      { feature: 'fertile', share: 0.05 },
+      { feature: 'deer', share: 0.05 },
+      { feature: 'cattle', share: 0.05 },
+      { feature: 'flint', share: 0.1 },
+    ],
+    camps: 6,
+    campFromCentre: 7,
+    campsApart: 4,
+    rivers: RIVERS,
   },
 };
 
@@ -191,7 +219,10 @@ export const STONE: Slice = {
       domestication: { needs: ['trapping', 'agriculture'], unlocks: { cards: { pasture: 1 } } },
       'bow-and-arrow': { needs: ['trapping'], unlocks: { cards: { archer: 1 } } },
       tanning: { needs: ['domestication'], unlocks: { cards: { tannery: 1 } } },
-      raft: { needs: ['bow-and-arrow'], unlocks: { cards: { embark: 1 } } },
+      raft: {
+        needs: ['bow-and-arrow'],
+        unlocks: { cards: { embark: 1 }, region: 'archipelago' },
+      },
     },
     terrains: {
       desert: {
@@ -225,6 +256,30 @@ export const STONE: Slice = {
         rimWidths: [1],
         growth: { kind: 'weight', weight: 1 },
         compactness: 1,
+      },
+      island: {
+        origin: 'plain',
+        interior: land.interior,
+        rim: land.rim,
+        rimWidths: [1],
+        growth: { kind: 'size', size: 8 },
+        compactness: 2,
+      },
+      'open-sea': {
+        origin: 'ocean',
+        interior: { ocean: 1 },
+        rim: { coast: 1 },
+        rimWidths: sea.rimWidths,
+        growth: sea.growth,
+        compactness: 0,
+      },
+      shallows: {
+        origin: 'coast',
+        interior: { coast: 1 },
+        rim: { coast: 1 },
+        rimWidths: [1],
+        growth: { kind: 'weight', weight: 1 },
+        compactness: -3,
       },
     },
   },

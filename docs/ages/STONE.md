@@ -14,6 +14,8 @@ The desert is a biome of its own, desert nearly throughout with hills among it, 
 | ------- | ------- | --------- | ----- |
 | desert  | nothing | **oasis** | food  |
 
+The archipelago is the age's second region, the one Raft unlocks: a disc as big as the temperate one, of islands in a sea. The ground around the centre is the temperate region's own, the same biome dealt to the same size, an island here. The other islands are a biome of their own, the land's terrains dealt to a size and rolled rounder than the centre's, and two dealt side by side are one island. Between them lie the shallows, coast throughout and grown in arms, and the open sea, ocean throughout behind a coast rim as wide as the temperate sea's, with no island in it. No mountain range and no desert is dealt, so no river runs there and no oasis lies there; the other features lie in the temperate shares. The centre part reaches as far, and as many camps stand on it, kept as far from the centre and from one another.
+
 ## The technologies 🔧
 
 A goal is a focus themed on its technology: it is read from the technology's fiction and asks for more than a chronicle played as usual gives.
@@ -26,7 +28,7 @@ A goal is a focus themed on its technology: it is read from the technology's fic
 - **Domestication** needs Trapping and Agriculture. Its goal counts a deed: the times Gather is played on a tile carrying cattle, the same tile as often as a worker gathers there. It unlocks the card **Pasture** and pays influence.
 - **Bow and arrow** needs Trapping. Its goal counts a deed: the enemies killed by a Scout's attack. It unlocks the card **Archer** and pays influence.
 - **Tanning** needs Domestication. Its goal reads the chronicle as it stands: the tiles inside the border carrying a Pasture or a Trapping, the city's own tile counted when it carries one. It unlocks the card **Tannery** and pays influence.
-- **Raft** needs Bow and arrow. Its goal reads the chronicle as it stands: the coast tiles charted, the centre part's among them. It unlocks the card **Embark** and pays influence.
+- **Raft** needs Bow and arrow. Its goal reads the chronicle as it stands: the coast tiles charted, the centre part's among them. It unlocks the card **Embark** and the archipelago region and pays influence.
 
 ## The units 🔧
 

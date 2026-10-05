@@ -14,7 +14,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **Archipelago** — the archipelago region stands in the Stone Age's content, unlocked by Raft: a disc of islands in a sea of shallows and open sea, the centre's island among them, its camps on the islands; a biome may grow at a compactness below zero, in arms, held by one test on the fixture; the catalogue's coherence test passes, `e2e/archipelago.spec.ts` proves the launch row and Raft's plate before and after Raft is learned and the chronicle launched on the region, and `docs/ages/STONE.md` says so. Doc-impact: `docs/ages/STONE.md`, `docs/MAP.md`. [board/archipelago.md](board/archipelago.md)
 - **Fishing** — the wild's technology that needs Raft, with its achievement and every card it unlocks.
 - **Bread** — the field's technology that needs Irrigation, with its achievement and every card it unlocks, if it is kept.
 - **Bartering** — the hearth's technology that needs Tanning and Bread, with its achievement and every card it unlocks; the money the Tannery gives has no cost before it.

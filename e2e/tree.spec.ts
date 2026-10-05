@@ -6,23 +6,22 @@ import { ageOf, firstAge, technologyOf } from '../src/rules/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
 import { freshCampaign } from '../src/rules/save';
 import { DEFAULTS } from '../src/ui/bindings';
-import { achievementGoal, ageName, technologyName, text } from '../src/ui/text';
+import { achievementGoal, technologyName, text } from '../src/ui/text';
 import { WASH } from '../src/ui/tree-layout';
 import {
-  campaignShown,
   cardOnFace,
   idsOf,
   landed,
   namedIn,
   nameOnScreen,
   onScreen,
-  plantCampaign,
+  openCampaign,
+  plateReads,
   readings,
-  readNames,
   rested,
+  rewardOf,
   SHELTER,
   standing,
-  textOf,
   waitGameClock,
   watch,
 } from './chronicle-screen';
@@ -36,40 +35,6 @@ const PLATE = `plate-${TECHNOLOGY}`;
 /** The age the first age's technology unlocks, and the last age of the catalogue. */
 const NEXT = technologyOf(CATALOGUE, TECHNOLOGY).unlocks.age;
 const LAST = Object.keys(CATALOGUE.ages).at(-1);
-
-/** What the plate's reward reads, line by line: what the technology unlocks, and the influence. */
-function rewardOf(): string[] {
-  const { unlocks } = technologyOf(CATALOGUE, TECHNOLOGY);
-  return [
-    ...Object.entries(unlocks.cards).map(([card, copies]) => text('plate.cards', { copies, card })),
-    ...(unlocks.age === undefined ? [] : [text('plate.age', { age: ageName(unlocks.age) })]),
-    ...(EARNED.influence > 0 ? [String(EARNED.influence)] : []),
-  ];
-}
-
-/** What a plate stands as and reads: its state, its name, its goal, and its reward's lines. */
-async function plateReads(
-  page: Page,
-  plate: string,
-): Promise<{ state: string; name: string; goal: string; reward: string[] }> {
-  const state = await page.evaluate((named) => {
-    const face = window.named?.(named)?.object;
-    if (face === undefined) throw new Error(`there is no ${named}`);
-    return face.getData('state') as string;
-  }, plate);
-  const reward: string[] = [];
-  for (let at = 0; ; at++) {
-    const line = await textOf(page, `${plate}-reward-${at}`);
-    if (line === undefined) break;
-    reward.push(line);
-  }
-  return {
-    state,
-    name: (await textOf(page, `${plate}-name`)) ?? '',
-    goal: (await textOf(page, `${plate}-goal`)) ?? '',
-    reward,
-  };
-}
 
 /**
  * Where the tree's two ends stand, in design units: its left end, and its right end half a wash past
@@ -99,14 +64,6 @@ function roomEdges(page: Page): Promise<{ left: number; right: number }> {
   });
 }
 
-/** The campaign screen booted on the campaign, its tree standing. */
-async function openCampaign(page: Page, campaign = freshCampaign(CATALOGUE)) {
-  await readNames(page);
-  await plantCampaign(page, campaign);
-  await page.goto('/');
-  await campaignShown(page);
-}
-
 test('on a new campaign the first age’s technology stands available on the border between its age’s ground and the next age’s, reading its name, its goal and its reward, and the pointer resting on the name in its goal raises that card small', async ({
   page,
 }) => {
@@ -117,7 +74,7 @@ test('on a new campaign the first age’s technology stands available on the bor
     state: 'available',
     name: technologyName(TECHNOLOGY),
     goal: achievementGoal(ACHIEVEMENT, EARNED.need),
-    reward: rewardOf(),
+    reward: rewardOf(TECHNOLOGY),
   });
   const seen = await readings(page, [`ground-${AGE}`, `ground-${NEXT}`, PLATE]);
   const border = seen(`ground-${AGE}`).across.right;
@@ -179,7 +136,7 @@ test('on a campaign a won chronicle paid into, its technology stands learned, th
     state: 'learned',
     name: text('plate.learned', { technology: technologyName(TECHNOLOGY) }),
     goal: achievementGoal(ACHIEVEMENT, EARNED.need),
-    reward: rewardOf(),
+    reward: rewardOf(TECHNOLOGY),
   });
   expect(await page.evaluate((well) => window.named?.(well) !== undefined, `${PLATE}-well`)).toBe(
     true,

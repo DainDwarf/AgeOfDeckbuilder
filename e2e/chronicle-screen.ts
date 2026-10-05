@@ -13,6 +13,7 @@ import {
   terraformed,
 } from '../src/rules/cards';
 import {
+  type Achievement,
   type Aim,
   achievementOf,
   ageOf,
@@ -24,6 +25,7 @@ import {
   firstAge,
   firstCivilization,
   firstRegion,
+  technologyOf,
   unitKind,
 } from '../src/rules/catalogue';
 import { admitted, apply, countOn, launched, outcome, refusalOf } from '../src/rules/chronicle';
@@ -66,7 +68,7 @@ import type { ChronicleScene } from '../src/ui/chronicle-scene';
 import { type PileStack, pileStacksOf } from '../src/ui/collection-layout';
 import type { PileKind } from '../src/ui/overlay';
 import { type Choices, SAVE_ENTRY } from '../src/ui/save-entry';
-import { cardName, referenceName, text } from '../src/ui/text';
+import { ageName, cardName, referenceName, regionName, text } from '../src/ui/text';
 import { layOutRun, type Reference } from '../src/ui/text-run';
 
 /** What the page answers of a reading: its value, or what a read of it throws. */
@@ -621,6 +623,85 @@ export async function openLaunch(page: Page): Promise<void> {
   await page.goto('/');
   await campaignShown(page);
   await chronicleButton(page);
+}
+
+/** The campaign screen booted on the campaign, its tree standing. */
+export async function openCampaign(page: Page, campaign = freshCampaign(CATALOGUE)): Promise<void> {
+  await readNames(page);
+  await plantCampaign(page, campaign);
+  await page.goto('/');
+  await campaignShown(page);
+}
+
+/** Whether each option named stands selected, in one question to the page. */
+export async function optionsSelected(page: Page, options: readonly string[]): Promise<boolean[]> {
+  const seen = await readings(page, options);
+  return options.map((option) => seen(option).selected === true);
+}
+
+/** What each named container reads, the texts among its own parts line by line, in one question to the page. */
+export function readsOf(page: Page, names: readonly string[]): Promise<string[][]> {
+  return page.evaluate(
+    (named) =>
+      named.map((name) => {
+        const container = window.named?.(name)?.object as Phaser.GameObjects.Container | undefined;
+        if (container === undefined) throw new Error(`nothing named ${name} stands`);
+        return container.list
+          .filter((part) => part.type === 'Text')
+          .map((part) => (part as Phaser.GameObjects.Text).text);
+      }),
+    names,
+  );
+}
+
+/** The achievement that earns the technology, by its id, in whichever age holds it. */
+export function earningOf(technology: string): { id: string; achievement: Achievement } {
+  for (const { achievements } of Object.values(CATALOGUE.ages)) {
+    for (const [id, achievement] of Object.entries(achievements)) {
+      if (achievement.technology === technology) return { id, achievement };
+    }
+  }
+  throw new Error(`no achievement earns the technology ${technology}`);
+}
+
+/** What the technology's plate reads as its reward, line by line: what it unlocks, and the influence. */
+export function rewardOf(technology: string): string[] {
+  const { unlocks } = technologyOf(CATALOGUE, technology);
+  const { influence } = earningOf(technology).achievement;
+  return [
+    ...Object.entries(unlocks.cards).map(([card, copies]) => text('plate.cards', { copies, card })),
+    ...(unlocks.region === undefined
+      ? []
+      : [text('plate.region', { region: regionName(unlocks.region) })]),
+    ...(unlocks.age === undefined ? [] : [text('plate.age', { age: ageName(unlocks.age) })]),
+    ...(influence > 0 ? [String(influence)] : []),
+  ];
+}
+
+/**
+ * What a plate stands as and reads, in one question to the page: its state, its name, its goal, and
+ * its reward's lines.
+ */
+export function plateReads(
+  page: Page,
+  plate: string,
+): Promise<{ state: string; name: string; goal: string; reward: string[] }> {
+  return page.evaluate((named) => {
+    const face = window.named?.(named)?.object;
+    if (face === undefined) throw new Error(`there is no ${named}`);
+    const textOf = (name: string): string | undefined => window.readName?.(name).text;
+    const reward: string[] = [];
+    for (let line = textOf(`${named}-reward-0`); line !== undefined; ) {
+      reward.push(line);
+      line = textOf(`${named}-reward-${reward.length}`);
+    }
+    return {
+      state: face.getData('state') as string,
+      name: textOf(`${named}-name`) ?? '',
+      goal: textOf(`${named}-goal`) ?? '',
+      reward,
+    };
+  }, plate);
 }
 
 /** Opens the chronicle the save holds straight, as the address word `continue` does. */

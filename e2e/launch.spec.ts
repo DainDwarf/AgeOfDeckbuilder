@@ -1,5 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
-import type Phaser from 'phaser';
+import { expect, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
 import { ageOf, cardOf, firstAge, technologyOf } from '../src/rules/catalogue';
 import { freshCampaign } from '../src/rules/save';
@@ -16,11 +15,13 @@ import {
   namedOn,
   onScreen,
   openLaunch,
+  optionsSelected,
   plantCampaign,
   type Reading,
   reading,
   readings,
   readOrder,
+  readsOf,
   rested,
   standing,
   titleOf,
@@ -60,29 +61,6 @@ const { count: CARDS, stacks: STACKS } = browseOf(CATALOGUE, CAMPAIGN, CIVILIZAT
 /** What the first name a face draws names, and nothing where no face stands or it draws none. */
 function firstNamed(face: Reading): Reference | undefined {
   return face.standing ? face.references[0] : undefined;
-}
-
-/** What each age's segment on the time arrow reads, line by line, in one question to the page. */
-function arrowReads(page: Page, ages: readonly string[]): Promise<string[][]> {
-  return page.evaluate(
-    (named) =>
-      named.map((age) => {
-        const segment = window.named?.(`launch-age-${age}`)?.object as
-          | Phaser.GameObjects.Container
-          | undefined;
-        if (segment === undefined) throw new Error(`no segment stands for the age ${age}`);
-        return segment.list
-          .filter((part) => part.type === 'Text')
-          .map((part) => (part as Phaser.GameObjects.Text).text);
-      }),
-    ages,
-  );
-}
-
-/** Whether each option named stands selected, in one question to the page. */
-async function selection(page: Page, options: readonly string[]): Promise<boolean[]> {
-  const seen = await readings(page, options);
-  return options.map((option) => seen(option).selected === true);
 }
 
 test('on the launch screen the kind label on the civilization’s pile raises what the kind is; a right click on the pile raises its browse, the civilization’s name and count over a stack per card it holds, the city section’s card first, each reading its copies; a right click on a stack shows its card large, the back key takes it down onto the browse, then closes the browse and raises no menu; a right click on a name on the pile shows the named thing large and raises no browse', async ({
@@ -179,14 +157,14 @@ test('on a new campaign the age the first age’s technology unlocks stands on t
 }) => {
   const problems = watch(page);
   await openLaunch(page);
-  expect(await arrowReads(page, [FIRST, UNLOCKED])).toEqual([
+  expect(await readsOf(page, [FIRST_AGE, UNLOCKED_AGE])).toEqual([
     [ageName(FIRST)],
     [text('launch.unknown-age')],
   ]);
 
   await click(page, UNLOCKED_AGE);
   await rested(page);
-  expect(await selection(page, [FIRST_AGE, UNLOCKED_AGE])).toEqual([true, false]);
+  expect(await optionsSelected(page, [FIRST_AGE, UNLOCKED_AGE])).toEqual([true, false]);
 
   expect(problems).toEqual([]);
 });
@@ -204,14 +182,14 @@ test('on a campaign that has learned the first age’s technology the launch scr
   await plantCampaign(page, campaign);
   await openLaunch(page);
   const options = [FIRST_AGE, UNLOCKED_AGE, `launch-region-${region}`];
-  expect(await selection(page, options)).toEqual([false, true, true]);
+  expect(await optionsSelected(page, options)).toEqual([false, true, true]);
 
   await click(page, FIRST_AGE);
-  await expect.poll(() => selection(page, options)).toEqual([true, false, true]);
+  await expect.poll(() => optionsSelected(page, options)).toEqual([true, false, true]);
   await rested(page);
 
   await click(page, UNLOCKED_AGE);
-  await expect.poll(() => selection(page, options)).toEqual([false, true, true]);
+  await expect.poll(() => optionsSelected(page, options)).toEqual([false, true, true]);
 
   await launchedFromScreen(page);
   const chronicle = await chronicleOf(page);

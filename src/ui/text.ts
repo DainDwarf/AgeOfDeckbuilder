@@ -286,6 +286,7 @@ const TEXT = {
   'plate.age': 'The {age}',
   'plate.unknown': '???',
   'region.temperate': 'Temperate',
+  'region.archipelago': 'Archipelago',
   'civilization.nomadic': 'Nomadic',
   'launch.age': 'Age',
   'launch.unknown-age': '???',
