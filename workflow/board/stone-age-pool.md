@@ -10,7 +10,7 @@ The age in one sentence: the chronicle where the economy comes home — it opens
 
 **The frame:**
 
-- The tree is four columns deep, and no column holds more than five technologies: five of today's plates stand 638 of the room's 672 tall. A plate reads four lines under its name at most, the goal's and the reward's together: a fifth puts a column of five 56 over the room, and the tree's display is then a line of its own, ahead of the technology that needs it.
+- The tree is four columns deep, and no column holds more than four technologies: a plate reads five lines under its name, the goal's and the reward's together, Tanning's goal taking three, so four plates stand 578 of the room's 672 tall and five would stand 56 over. A sixth line still holds a column of four, at 650; a seventh does not, and the tree's display is then a line of its own, ahead of the technology that needs it.
 - A goal is a focus themed on its technology: it is read from the technology's fiction and asks for more than a chronicle played as usual gives. A feat, a goal that bends the whole chronicle, stands here and there. What a technology needs is the user's link and binds its goal to no card.
 - The technologies are grouped by way of life, four families: the field, the wild, the hearth, the sky. The families are not wholly separate: a technology may need one of another family.
 - The age opens every resource. Money and science may be under-represented, and are still there in some capacity.
@@ -20,14 +20,14 @@ The age in one sentence: the chronicle where the economy comes home — it opens
 
 - Column 1, the doors, one to a family: Herbalism (the sky); Agriculture (the field); Trapping (the wild); Fire (the hearth).
 - Column 2: Burial rites (needs Herbalism); Irrigation (needs Agriculture, Herbalism); Domestication (needs Trapping, Agriculture); Bow and arrow (needs Trapping); Pottery (needs Fire).
-- Column 3: Calendar (needs Irrigation, Burial rites); Bread (needs Irrigation); Clothmaking (needs Domestication); Fishing (needs Bow and arrow).
-- Column 4: Megalith (needs Calendar); Bartering (needs Clothmaking, Bread); Raft (needs Fishing).
+- Column 3: Calendar (needs Irrigation, Burial rites); Bread (needs Irrigation); Tanning (needs Domestication); Fishing (needs Bow and arrow).
+- Column 4: Megalith (needs Calendar); Bartering (needs Tanning, Bread); Raft (needs Fishing).
 
 In that order no link crosses another. A column stands in the content's order, so a technology is declared where its column holds it, column by column, each column top to bottom: the sky's first, then the field's, the wild's and the hearth's, Raft excepted, which stands under Bartering.
 
-Pottery, Burial rites, Bread and Megalith are maybes, each decided at its line's intake; the others the user is rather sure of, knowing what they unlock.
+Pottery, Burial rites, Bread and Megalith are maybes, each decided at its line's intake, and one of Pottery and Burial rites goes, the second column holding four; the others the user is rather sure of, though not always of what they unlock: Tanning's card was served as takes.
 
-The field is Agriculture, Irrigation and Bread; the wild is Trapping, Domestication, Bow and arrow, Clothmaking, Fishing and Raft; the hearth is Fire, Pottery and Bartering; the sky is Herbalism, Burial rites, Calendar and Megalith.
+The field is Agriculture, Irrigation and Bread; the wild is Trapping, Domestication, Bow and arrow, Tanning, Fishing and Raft; the hearth is Fire, Pottery and Bartering; the sky is Herbalism, Burial rites, Calendar and Megalith.
 
 **Taste**, the user's reasons, read before every serve:
 
@@ -54,12 +54,19 @@ The field is Agriculture, Irrigation and Bread; the wild is Trapping, Domesticat
 - A goal counting features claimed is chance, not focus: features are few by design.
 - A goal a parked worker reaches may stand for a trial, the balance pass making it a focus: Gather on cattle, the same tile reused.
 - Improvements of one price and one gain feel like one card: Pasture kept Trapping's and Irrigation's numbers, and the three are weighed at the balance pass.
+- A reward that needs a mechanic of a later age waits for that age and stands in the ideas: Tanning's armour is a card modification.
+- A resource may be given before anything costs it: the Tannery's money waits for the technology that spends it.
+- A goal counting the same card as another goal reads as that goal again: Hunt played three times in one turn was Trapping's goal in other clothes.
+- A goal that has the player remove what they placed is self-sabotage: Hunt played on a Pasture or a Trapping was dropped for it.
+- A goal that leans on the map is measured before it is dropped, and may stand for a trial on its numbers.
+- A goal whose two steps come in either order reads the map as it stands, never the deed: an improvement placed and then claimed counts as one claimed and then improved.
+- A goal naming two things puts its count ahead of them, so that one of each reads as a way to reach it: "Place 2 [Pasture] or [Trapping]", never "[Pasture] or [Trapping] 2 times".
+- A sentence that fits its line by a pixel does not fit: the font is the machine's.
 
 **Left out, and side notes:**
 
 - Sun stones and bead-making are off the tree, at least for now.
 - Grinding stone, Granary and Dyes are off the tree: nineteen technologies were too many.
-- Clothmaking may become tanning to sit better in the wild, a polish decision.
 - A technology whose card brings back a card that left the chronicle is wanted and stands nowhere on the skeleton yet; its place is the user's to say. The glossary's words are "left the chronicle": "remove" is a card taken out of a deck.
 
 **Single use, settled for a trial** at the doors' cut: the keyword stands on each building card, so Farm carries it and reads it on its face, and the Shelter, which ends the chronicle, does not. The rules do not change. If the trial holds, moving it to the kind is a line of its own.

@@ -10,17 +10,17 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 - **New enemies** — the enemy units the Stone Age adds, the scripts they follow and the camps they enter from; with them how an enemy's attack over a range reads sight, an enemy that attacks a unit it would not see being ruled out.
 - **Neutrals and sites** — the neutral faction, and the sites that belong to no faction and pay a reward once.
 - **The headless simulator** — a consumer of the rules that runs only when asked and reports numbers, not diagnoses, tuned across the two ages; the reachability cache and the end of turn's cost per `apply` are looked at when it is made.
-- **The balance pass** — the Stone Age's numbers, measured through the simulator and felt in play; Domestication's goal, which a worker standing on one herd reaches, made a focus, and Trapping, Irrigation and Pasture, three improvements of one price and one gain, weighed against one another.
+- **The balance pass** — the Stone Age's numbers, measured through the simulator and felt in play; Domestication's goal, which a worker standing on one herd reaches, made a focus, Tanning's need of two herds inside the border weighed, and Trapping, Irrigation and Pasture, three improvements of one price and one gain, weighed against one another; and a trial of where military and culture come from: both taken off the Nomadic city's yield, flint giving military in place of production, and sites that pay culture once.
 
 ## Lines
 
-- **Clothmaking** — the wild's technology that needs Domestication, with its achievement and every card it unlocks.
+- **Tanning** — the technology Tanning, its achievement and the card Tannery stand in the Stone Age's content after Bow and arrow's, a building or an improvement names one feature or several, proven by one test on the fixture, `e2e/tannery.spec.ts` passes, the catalogue's coherence test passes and `docs/MAP.md` and `docs/ages/STONE.md` say so. Doc-impact: `docs/MAP.md`, `docs/ages/STONE.md`. [board/tanning.md](board/tanning.md)
 - **Fishing** — the wild's technology that needs Bow and arrow, with its achievement and every card it unlocks.
 - **Raft** — the wild's technology that needs Fishing, with its achievement and every card it unlocks.
 - **Bread** — the field's technology that needs Irrigation, with its achievement and every card it unlocks, if it is kept.
-- **Bartering** — the hearth's technology that needs Clothmaking and Bread, with its achievement and every card it unlocks.
-- **Burial rites** — the sky's technology that needs Herbalism, with its achievement and every card it unlocks, if it is kept.
+- **Bartering** — the hearth's technology that needs Tanning and Bread, with its achievement and every card it unlocks; the money the Tannery gives has no cost before it.
+- **Burial rites** — the sky's technology that needs Herbalism, with its achievement and every card it unlocks, if it is kept: one of Burial rites and Pottery goes, a fifth plate in the tree's second column standing 56 over the room.
 - **Calendar** — the sky's technology that needs Irrigation and Burial rites, with its achievement and every card it unlocks.
-- **Pottery** — the hearth's technology that needs Fire, with its achievement and every card it unlocks, if it is kept.
+- **Pottery** — the hearth's technology that needs Fire, with its achievement and every card it unlocks, if it is kept: one of Pottery and Burial rites goes, a fifth plate in the tree's second column standing 56 over the room.
 - **Megalith** — the sky's technology that needs Calendar, with its achievement and every card it unlocks, if it is kept.
 - **The collection scrolls** — the spec that proves the collection scrolls, its cards being the first to fill the room, and a drag that runs on fired inside the page, since Playwright's own mouse moves come too far apart to set a panel running.
