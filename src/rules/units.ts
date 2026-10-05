@@ -162,8 +162,8 @@ export function leastHealth(units: readonly Unit[], attacker: Unit): Unit | unde
 }
 
 /**
- * What a unit can attack: every unit of another faction within its range, while it has the action an
- * attack spends. A worker, or a unit with none, attacks nothing.
+ * Every unit of another faction within a unit's range, while it has the action an attack spends; a
+ * worker, or a unit with none, reaches nothing. Range alone: sight is not read here.
  */
 export function attackable(units: readonly Unit[], attacker: Unit): Unit[] {
   if (attacker.stats.worker || attacker.action <= 0) return [];

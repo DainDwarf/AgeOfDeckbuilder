@@ -39,7 +39,7 @@ import {
   timelineOf,
   unitDamaged,
 } from './schedule';
-import { charted, chartedAt, unitsGone } from './sight';
+import { charted, chartedAt, inSight, unitsGone } from './sight';
 import {
   type Aimed,
   type Change,
@@ -893,9 +893,10 @@ export function byHand(
   unit: Unit,
 ): { readonly landings: Landing[]; readonly targets: Unit[] } {
   if (onSettlePhase(chronicle)) return { landings: [], targets: [] };
+  const seen = inSight(catalogue, chronicle);
   return {
     landings: reachable(catalogue, chronicle, unit),
-    targets: attackable(chronicle.units, unit),
+    targets: attackable(chronicle.units, unit).filter((target) => seen.has(tileKey(target.tile))),
   };
 }
 
@@ -937,8 +938,8 @@ function move(catalogue: Catalogue, chronicle: Chronicle, mover: number, to: Til
 /**
  * One unit of the player's attacking what stands on a tile its range reaches, as the one `attack`
  * group the enemy phase raises too. A unit that is not the player's, a worker, one with no action
- * left, an attack on the settle phase, and a tile no unit of another faction within range stands on
- * are `refused`.
+ * left, an attack on the settle phase, a tile no unit of another faction within range stands on, and
+ * a tile out of sight are `refused`.
  */
 function attack(
   catalogue: Catalogue,

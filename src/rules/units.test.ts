@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 import { improvementPlaced } from './cards';
-import { apply, type Command, outcome } from './chronicle';
+import { apply, byHand, type Command, outcome } from './chronicle';
 import {
   actionOf,
   attackOn,
@@ -243,6 +243,28 @@ test('an attack reaches its range and no further, and lands on a unit of another
   });
 
   expect(stagedBy(far, attackOn(1, { q: 2, r: 0 }))).toEqual(['attack', 'action-spent', 'damaged']);
+});
+
+test('an attack lands only on a unit standing on a tile in sight, whatever sees the tile', () => {
+  const hidden = { q: 2, r: 0 };
+  const seen = { q: 0, r: 2 };
+  const tiles = madeOf(field(3), 'hills', [{ q: 1, r: 0 }]);
+  const units = [
+    standing('player', CITY, { damage: 2, range: 2 }),
+    standing('enemy', hidden, { health: 5 }),
+    standing('enemy', seen, { health: 5 }),
+  ];
+  const city = cityOf(['urban'], { tiles, units });
+
+  expect(byHand(CATALOGUE, city, unitNamed(city, 1)).targets.map(({ tile }) => tile)).toEqual([
+    seen,
+  ]);
+  expect(stagedBy(city, attackOn(1, hidden))).toEqual(['refused']);
+  expect(stagedBy(city, attackOn(1, seen))).toEqual(['attack', 'action-spent', 'damaged']);
+
+  const watched = cityOf(['urban'], { tiles, units: [...units, worker({ q: 2, r: 1 })] });
+
+  expect(stagedBy(watched, attackOn(1, hidden))).toEqual(['attack', 'action-spent', 'damaged']);
 });
 
 test('an attack that takes the target’s last health kills it, and it leaves the map', () => {
