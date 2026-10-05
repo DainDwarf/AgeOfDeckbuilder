@@ -1,4 +1,4 @@
-import type Phaser from 'phaser';
+import Phaser from 'phaser';
 import { type Catalogue, fullHealth, unitKind } from '../rules/catalogue';
 import {
   type BuildingTypeId,
@@ -27,7 +27,7 @@ import {
   terrainMark,
   unitMark,
 } from './map';
-import { buildingName, featureName, improvementName, terrainName, text, unitName } from './text';
+import { buildingName, featureName, improvementName, terrainName, text, unitNameOf } from './text';
 import type { Reference } from './text-run';
 import type { Tooltip } from './tooltip';
 
@@ -40,7 +40,7 @@ type Row =
   | { readonly kind: 'river' };
 
 /** What a unit card reads: a unit on the map, or a unit kind read as a unit fresh of it. */
-type UnitReading = Pick<Unit, 'stats' | 'faction' | 'movePoints' | 'action'>;
+type UnitReading = Pick<Unit, 'stats' | 'faction' | 'movePoints' | 'action' | 'embarked'>;
 
 /** One card an inspection steps through, headed by the first of the rows it holds. */
 export type Card =
@@ -51,6 +51,11 @@ export type Card =
       readonly rows: readonly Row[];
       readonly movementCost: number | undefined;
     };
+
+/** What a card is headed by and its rows are drawn with: a mark of a layer, or a unit's mark. */
+type Mark = Phaser.GameObjects.Polygon | Phaser.GameObjects.Container;
+
+type Shape = Phaser.GameObjects.Polygon;
 
 /** What a card of the infopanel's look is drawn from: one an inspection steps through, or a feature alone. */
 type Drawing = Card | { readonly kind: 'feature'; readonly rows: readonly Row[] };
@@ -65,7 +70,7 @@ function drawingOf(catalogue: Catalogue, thing: Thing): Drawing {
       return {
         kind: 'terrain',
         rows: [{ kind: 'terrain', terrain: thing.id }],
-        movementCost: terrainKind(catalogue, thing.id).movementCost,
+        movementCost: costRead(catalogue, { q: 0, r: 0, terrain: thing.id, improvements: [] }),
       };
     case 'feature':
       return { kind: 'feature', rows: [{ kind: 'feature', feature: thing.id }] };
@@ -76,10 +81,24 @@ function drawingOf(catalogue: Catalogue, thing: Thing): Drawing {
     case 'player':
     case 'enemy': {
       const stats = unitKind(catalogue, thing.id);
-      const unit = { stats, faction: thing.kind, movePoints: stats.move, action: stats.action };
+      const unit = {
+        stats,
+        faction: thing.kind,
+        movePoints: stats.move,
+        action: stats.action,
+        embarked: false,
+      };
       return { kind: 'unit', unit };
     }
   }
+}
+
+/**
+ * What the terrain card reads in its corner of a tile: the cost a unit pays to enter it, or, where
+ * none does, the cost an embarked unit pays; nothing where nothing crosses it.
+ */
+function costRead(catalogue: Catalogue, tile: Tile): number | undefined {
+  return movementCost(catalogue, tile, false) ?? movementCost(catalogue, tile, true);
 }
 
 /**
@@ -121,7 +140,7 @@ export function cardsOf(
   const ground: Row[] = [{ kind: 'terrain', terrain: tile.terrain }];
   if (tile.feature !== undefined) ground.push({ kind: 'feature', feature: tile.feature });
   if (runsAlong(rivers, tile)) ground.push({ kind: 'river' });
-  cards.push({ kind: 'terrain', rows: ground, movementCost: movementCost(catalogue, tile, false) });
+  cards.push({ kind: 'terrain', rows: ground, movementCost: costRead(catalogue, tile) });
 
   return cards;
 }
@@ -169,8 +188,15 @@ function stylesOf(em: number) {
 
 const STATS = ['health', 'damage', 'range', 'move', 'action', 'sight'] as const;
 
+type Stat = (typeof STATS)[number];
+
+/** The stats a unit card reads: an embarked unit's reads no damage and no range. */
+function statsOf(unit: UnitReading): readonly Stat[] {
+  return unit.embarked ? STATS.filter((stat) => stat !== 'damage' && stat !== 'range') : STATS;
+}
+
 /** What a row of a card is named by: one `label.` and one `tooltip.` entry each. */
-type Term = (typeof STATS)[number] | Resource;
+type Term = Stat | Resource;
 
 /** A count of hundredths as the move points it is worth: what every card reads one by. */
 function inMovePoints(hundredths: number): string {
@@ -178,7 +204,7 @@ function inMovePoints(hundredths: number): string {
 }
 
 /** What a stat's row reads: what the unit has left over its own number, where it has two. */
-function readingOf(catalogue: Catalogue, unit: UnitReading, stat: (typeof STATS)[number]): string {
+function readingOf(catalogue: Catalogue, unit: UnitReading, stat: Stat): string {
   switch (stat) {
     case 'health':
       return `${unit.stats.health} / ${fullHealth(catalogue, unit.stats)}`;
@@ -392,7 +418,7 @@ function buildFace(
   let rowTop = ruleY + 1 + 0.55 * em;
 
   if (card.kind === 'unit') {
-    for (const stat of STATS) {
+    for (const stat of statsOf(card.unit)) {
       const label = addText(scene, left, 0, text(`label.${stat}`), style.label).setOrigin(0, 0.5);
       const reading = readingOf(catalogue, card.unit, stat);
       const value = addText(scene, right, 0, reading, style.value).setOrigin(1, 0.5);
@@ -481,14 +507,12 @@ function buildFace(
 }
 
 /** What the card is headed by: the unit it stands for, or the first row it holds. */
-function headOf(
-  scene: Phaser.Scene,
-  card: Drawing,
-): { mark: Phaser.GameObjects.Polygon; name: string } {
+function headOf(scene: Phaser.Scene, card: Drawing): { mark: Mark; name: string } {
   if (card.kind === 'unit') {
+    const { stats, faction, embarked } = card.unit;
     return {
-      mark: unitMark(scene, card.unit.stats.type, card.unit.faction),
-      name: unitName(card.unit.stats.type),
+      mark: unitMark(scene, stats.type, faction, embarked),
+      name: unitNameOf(stats.type, embarked),
     };
   }
   return { mark: markOf(scene, card.rows[0]), name: nameOf(card.rows[0]) };
@@ -581,7 +605,10 @@ function yieldsOf(catalogue: Catalogue, row: Row): { resource: Resource; amount:
 }
 
 /** A mark drawn at the size it has on the map, brought into a box; its outline keeps its weight. */
-function fitMark(mark: Phaser.GameObjects.Polygon, box: number): Phaser.GameObjects.Polygon {
-  const scale = box / Math.max(mark.width, mark.height);
-  return mark.setScale(scale).setStrokeStyle(mark.lineWidth / scale, mark.strokeColor);
+function fitMark(mark: Mark, box: number): Mark {
+  const shapes = mark instanceof Phaser.GameObjects.Container ? (mark.list as Shape[]) : [mark];
+  const { width, height } = mark.getBounds();
+  const scale = box / Math.max(width, height);
+  for (const shape of shapes) shape.setStrokeStyle(shape.lineWidth / scale, shape.strokeColor);
+  return mark.setScale(scale);
 }

@@ -24,6 +24,7 @@ A goal is a focus themed on its technology: it is read from the technology's fic
 - **Domestication** needs Trapping and Agriculture. Its goal counts a deed: the times Gather is played on a tile carrying cattle, the same tile as often as a worker gathers there. It unlocks the card **Pasture** and pays influence.
 - **Bow and arrow** needs Trapping. Its goal counts a deed: the enemies killed by a Scout's attack. It unlocks the card **Archer** and pays influence.
 - **Tanning** needs Domestication. Its goal reads the chronicle as it stands: the tiles inside the border carrying a Pasture or a Trapping, the city's own tile counted when it carries one. It unlocks the card **Tannery** and pays influence.
+- **Raft** needs Bow and arrow. Its goal reads the chronicle as it stands: the coast tiles charted, the centre part's among them. It unlocks the card **Embark** and pays influence.
 
 ## The units 🔧
 
@@ -39,3 +40,5 @@ A goal is a focus themed on its technology: it is read from the technology's fic
 - **Pasture**, an improvement giving food, placed through a worker for production on a tile carrying cattle and nowhere else. It goes with the cattle, so a Hunt played there removes both.
 - **Archer**, costing military: one population leaves the tiles to become a unit.
 - **Tannery**, a building giving money, built through a worker for production on a tile carrying deer or cattle and nowhere else, single use. It goes with the feature, so a Hunt played there removes both. Money has its source here, and nothing in the age costs it.
+- **Embark**, an instant costing production, aimed at a coast tile beside a unit: the unit embarks onto it, spending its action. It becomes Disembark. An embarked unit crosses the coast slowly, whatever it was ashore, so the copies a deck holds are how many units are on the water at once, and the deck's cycle is how long a crossing takes.
+- **Disembark**, the card Embark becomes, costing nothing, aimed at a tile beside an embarked unit that the unit stands on ashore: the unit disembarks onto it, spending its action. It becomes Embark. A raft that carries units as a unit of its own was rejected: it takes one population that only ferries.

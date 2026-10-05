@@ -13,6 +13,7 @@ import {
   refuses,
   terraformable,
   terraformed,
+  throughRefusal,
   throughWorker,
 } from './cards';
 import {
@@ -2202,7 +2203,7 @@ test('a worker embarked plays a card through itself where the card’s own reaso
   expect(tileAt(outcome(stages).tiles, coast)?.improvements).toEqual(['PH_Weir']);
 });
 
-test('a tile several units could embark onto is lit and refused with no unit named, and played through the one of them named', () => {
+test('a tile several units could embark onto is lit and refused with no unit named, refused through a unit of the player’s not among them as not beside it and through a tile no unit of the player’s stands on as holding none, and played through the one of them named', () => {
   const coast = { q: 1, r: 0 };
   const other = { q: 1, r: -1 };
   const away = { q: -1, r: 0 };
@@ -2227,6 +2228,11 @@ test('a tile several units could embark onto is lit and refused with no unit nam
   ]);
   expect(stagedBy(city, aimedAt(coast))).toEqual(['refused']);
   expect(stagedBy(city, through(away))).toEqual(['refused']);
+  expect(stagedBy(city, through(coast))).toEqual(['refused']);
+  const embark = aimedCard('PH_Embark');
+  expect(throughRefusal(CATALOGUE, city, embark, tile, away)).toBe('not-beside');
+  expect(throughRefusal(CATALOGUE, city, embark, tile, coast)).toBe('no-unit');
+  expect(throughRefusal(CATALOGUE, city, embark, tile, other)).toBeUndefined();
 
   const played = outcome(apply(CATALOGUE, city, through(other)));
 

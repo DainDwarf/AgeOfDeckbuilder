@@ -61,6 +61,12 @@ const TILE_SIZE = 24;
 
 const FACTION_COLOURS: Record<Faction, number> = { player: LOOK.civilization, enemy: LOOK.enemy };
 
+// No corner of the hull, shifted by half its size, lands on the corner before it: Phaser's stroke
+// would skip it and leave the outline open (the trap over `diamond`).
+/** Placeholder primitive until the art pass: the hull an embarked unit stands on, raw, and its drop. */
+const HULL: number[] = [-16, -4, 16, -4, 10, 4, -10, 4];
+const HULL_DROP = 12;
+
 /**
  * Placeholder primitives until the art pass: a river a line along its corners on the map, and a
  * bent band where it stands as a mark of its own, both in its own blue.
@@ -268,15 +274,31 @@ export function improvementMark(
     .setStrokeStyle(2, LOOK.mapOutline);
 }
 
-/** The one way a unit is drawn: its placeholder mark, in the colour of the faction it acts for. */
+/** The shapes a unit's mark is drawn from, bottom first, each its corners and its drop below the middle. */
+function unitShapes(type: string, embarked: boolean): { corners: number[]; drop: number }[] {
+  const kind = { corners: corners(unitMarkOf(type)), drop: 0 };
+  return embarked ? [{ corners: corners(HULL), drop: HULL_DROP }, kind] : [kind];
+}
+
+/**
+ * The one way a unit is drawn: its placeholder mark, over a hull while it is embarked, in the colour
+ * of the faction it acts for.
+ */
 export function unitMark(
   scene: Phaser.Scene,
   type: string,
   faction: Faction,
-): Phaser.GameObjects.Polygon {
-  return scene.add
-    .polygon(0, 0, corners(unitMarkOf(type)), FACTION_COLOURS[faction])
-    .setStrokeStyle(2, LOOK.mapOutline);
+  embarked: boolean,
+): Phaser.GameObjects.Container {
+  return scene.add.container(
+    0,
+    0,
+    unitShapes(type, embarked).map((shape) =>
+      scene.add
+        .polygon(0, shape.drop, shape.corners, FACTION_COLOURS[faction])
+        .setStrokeStyle(2, LOOK.mapOutline),
+    ),
+  );
 }
 
 /**
@@ -285,15 +307,15 @@ export function unitMark(
  */
 function unitMarker(scene: Phaser.Scene, unit: Unit): Phaser.GameObjects.Container {
   const { x, y } = positionOf(unit.tile);
+  const key = tileKey(unit.tile);
   const marker = scene.add
-    .container(x, y, [unitMark(scene, unit.stats.type, unit.faction)])
-    .setName(`unit-${tileKey(unit.tile)}`);
+    .container(x, y, [unitMark(scene, unit.stats.type, unit.faction, unit.embarked)])
+    .setName(`unit-${key}`);
   if (unit.faction === 'player' && unit.movePoints <= 0 && unit.action <= 0) {
-    marker.add(
-      scene.add
-        .polygon(0, 0, corners(unitMarkOf(unit.stats.type)), LOOK.mapOutline, LOOK.mapDim.strength)
-        .setName(`unit-dim-${tileKey(unit.tile)}`),
+    const scrims = unitShapes(unit.stats.type, unit.embarked).map((shape) =>
+      scene.add.polygon(0, shape.drop, shape.corners, LOOK.mapOutline, LOOK.mapDim.strength),
     );
+    marker.add(scene.add.container(0, 0, scrims).setName(`unit-dim-${key}`));
   }
   return marker;
 }
@@ -512,6 +534,9 @@ type Grab = { readonly from: { x: number; y: number }; dragging: boolean } & (
 
 /** The mark a press takes hold of: a unit's, or a population's. */
 type GrabMark = Phaser.GameObjects.Container | Phaser.GameObjects.Rectangle;
+
+/** What the map paints of a tile: a mark of a layer, or a unit's mark. */
+type Painted = Phaser.GameObjects.Polygon | Phaser.GameObjects.Container;
 
 /**
  * The map and everything standing on it, on a surface of its own that pans and zooms under the UI.
@@ -1038,17 +1063,13 @@ export function createMapView(
    * Every layer of one tile as the map draws it on a chronicle, and every object painted for it. The
    * units of a live tile are hung by the render; a tile out of sight carries its unit under its scrim.
    */
-  const paintTile = (
-    chronicle: Chronicle,
-    seen: Drawing,
-    tile: Tile,
-  ): Phaser.GameObjects.Polygon[] => {
+  const paintTile = (chronicle: Chronicle, seen: Drawing, tile: Tile): Painted[] => {
     const drawing = faceIn(seen, tile);
     if (drawing === undefined) return [];
     const face = drawing.tile;
     const key = tileKey(tile);
-    const painted: Phaser.GameObjects.Polygon[] = [];
-    const paint = (on: Phaser.GameObjects.Layer, object: Phaser.GameObjects.Polygon): void => {
+    const painted: Painted[] = [];
+    const paint = (on: Phaser.GameObjects.Layer, object: Painted): void => {
       on.add(object);
       painted.push(object);
     };
@@ -1081,12 +1102,18 @@ export function createMapView(
     if (drawing.asStands) {
       const standing = unitAt(chronicle.units, tile);
       if (standing !== undefined) {
-        paint(marks, unitMark(scene, standing.stats.type, standing.faction).setPosition(x, y));
+        paint(
+          marks,
+          unitMark(scene, standing.stats.type, standing.faction, standing.embarked).setPosition(
+            x,
+            y,
+          ),
+        );
       }
     } else {
       const kept = seen.charted.get(key)?.unit;
       if (kept !== undefined)
-        paint(marks, unitMark(scene, kept.type, kept.faction).setPosition(x, y));
+        paint(marks, unitMark(scene, kept.type, kept.faction, false).setPosition(x, y));
     }
     paint(fog, fogScrim(scene, tile));
     return painted;
@@ -1367,7 +1394,7 @@ export function createMapView(
   };
 
   /** Whatever is painted rising out of nothing: what a tile newly drawn fades in with. */
-  const fadeIn = (painted: readonly Phaser.GameObjects.Polygon[]): Promise<void> => {
+  const fadeIn = (painted: readonly Painted[]): Promise<void> => {
     for (const object of painted) object.setAlpha(0);
     return ended(scene.tweens.add({ targets: painted, alpha: 1, duration: 400, ease: EASE }));
   };

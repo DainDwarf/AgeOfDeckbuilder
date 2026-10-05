@@ -14,7 +14,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **Raft** — the technology Raft stands in the Stone Age's content: it needs Bow and arrow, its achievement counts the coast tiles charted, and it unlocks the card Embark, which becomes Disembark; coast names a movement cost for embarked units; an embarked unit reads as one on the map and in the infopanel, and a tile two units could embark onto asks which; the catalogue's coherence test passes, `e2e/embark.spec.ts` passes, and the age pages say so. Doc-impact: `docs/ages/STONE.md`, `docs/ages/NOMADIC.md`, `docs/CHRONICLE-SCREEN.md`. [board/raft.md](board/raft.md)
 - **Archipelago** — the archipelago region, added as a reward of the technology Raft.
 - **Fishing** — the wild's technology that needs Raft, with its achievement and every card it unlocks.
 - **Bread** — the field's technology that needs Irrigation, with its achievement and every card it unlocks, if it is kept.

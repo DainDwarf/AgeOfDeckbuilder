@@ -71,7 +71,7 @@ export function createPiles(
   const topOf = (card: ChronicleCard | undefined): Top => {
     if (card === undefined) return { card: createEmptySlot(scene) };
     const face = createCardFace(scene, cardFace(catalogue, card), NO_REFUSAL, { tone: worn });
-    return { card: face.root, face };
+    return { card: face.root.setData('card', card.id), face };
   };
 
   const render = (chronicle: Chronicle): void => {

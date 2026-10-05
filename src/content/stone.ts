@@ -1,6 +1,8 @@
 import {
   builds,
   discarded,
+  disembarks,
+  embarks,
   enters,
   firstRefusal,
   gained,
@@ -118,6 +120,13 @@ export const STONE: Slice = {
         technology: 'tanning',
         influence: 1,
       },
+      raft: {
+        count: (_catalogue, chronicle) =>
+          chronicle.snapshots.filter((snapshot) => snapshot.tile.terrain === 'coast').length,
+        need: 30,
+        technology: 'raft',
+        influence: 1,
+      },
     },
   },
   brings: {
@@ -165,6 +174,13 @@ export const STONE: Slice = {
           firstRefusal(inside(chronicle, tile), healthLost(catalogue, chronicle, tile)),
         effect: (catalogue, paid, at) => healed(catalogue, paid, at),
       },
+      embark: {
+        kind: 'instant',
+        cost: { production: 1 },
+        becomes: 'disembark',
+        ...embarks(MOVE_POINT),
+      },
+      disembark: { kind: 'instant', cost: {}, becomes: 'embark', ...disembarks() },
     },
     technologies: {
       herbalism: { needs: ['settlement'], unlocks: { cards: { heal: 1 } } },
@@ -175,6 +191,7 @@ export const STONE: Slice = {
       domestication: { needs: ['trapping', 'agriculture'], unlocks: { cards: { pasture: 1 } } },
       'bow-and-arrow': { needs: ['trapping'], unlocks: { cards: { archer: 1 } } },
       tanning: { needs: ['domestication'], unlocks: { cards: { tannery: 1 } } },
+      raft: { needs: ['bow-and-arrow'], unlocks: { cards: { embark: 1 } } },
     },
     terrains: {
       desert: {

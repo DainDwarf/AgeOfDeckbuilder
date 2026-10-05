@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { CATALOGUE } from '../content/catalogue';
 import { civilizationIn, type Payment } from '../rules/campaign';
-import { refuses } from '../rules/cards';
+import { playedThrough, refuses, throughRefusal } from '../rules/cards';
 import {
   admitted,
   apply,
@@ -13,11 +13,11 @@ import {
   type UnitCommand,
 } from '../rules/chronicle';
 import { cityCommand, type ReassignCommand, tileCost, tileRefusal } from '../rules/city';
-import { type TileCoords, tileAt, tileKey } from '../rules/map';
+import { type Tile, type TileCoords, tileAt, tileKey } from '../rules/map';
 import { RESOURCES, type Resource } from '../rules/resources';
 import { leaf, type Stage, walked } from '../rules/stages';
 import { type Chronicle, type Cost, onSettlePhase, playable } from '../rules/state';
-import { unitOf } from '../rules/units';
+import { type Unit, unitOf } from '../rules/units';
 import { createBand } from './band';
 import { boundTo, type Press, pressOf } from './bindings';
 import { CARD_BASELINE, CARD_HEIGHT, createKindBubble } from './card-face';
@@ -429,16 +429,49 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
         void playOut({ type: 'play', index, ...aimed });
       },
       dismiss,
-      aimTile: (index, card, released) => {
+      aimTile: (index, card, released, retargeted) => {
         // Nothing changes the chronicle while an aim stands, so the refusal it opens on is still the
         // rules' answer at the press that lands it, and no play is sent for one they would refuse.
         const { id } = this.current.hand[index];
         const refusal = refusalOf(CATALOGUE, this.current, id);
-        return view.aimTile(
+        /** Whether the aim at the tile is coming down for the aim at the unit it is played through. */
+        let picking = false;
+
+        /** The aim at a unit, among those the card at this tile could be played through. */
+        const throughOne = (played: TileCoords, at: Tile, units: readonly Unit[]): (() => void) =>
+          view.aimTile(
+            [played, ...units.map((unit) => unit.tile)],
+            (tile) => {
+              const block = throughRefusal(CATALOGUE, this.current, card, at, tile);
+              if (block !== undefined) {
+                note.overTile(refusedAim(block), view.faceOf(tile));
+                return;
+              }
+              hand.unselect();
+              void playOut({ type: 'play', index, aim: 'tile', tile: played, through: tile });
+            },
+            (found) => {
+              const block = throughRefusal(CATALOGUE, this.current, card, at, found.tile);
+              if (block === undefined) return;
+              note.overTile(refusedAim(block), found.at);
+            },
+            released,
+          );
+
+        let letGo = view.aimTile(
           admitted(CATALOGUE, this.current, card),
           (tile) => {
             if (!playable(refusal)) {
               note.overTile(refused(costOf(CATALOGUE, id), refusal), view.faceOf(tile));
+              return;
+            }
+            const at = tileAt(this.current.tiles, tile);
+            const units = at === undefined ? [] : playedThrough(CATALOGUE, this.current, card, at);
+            if (at !== undefined && units.length > 1) {
+              picking = true;
+              letGo();
+              letGo = throughOne(tile, at, units);
+              retargeted('unit');
               return;
             }
             hand.unselect();
@@ -451,8 +484,13 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
             if (block === undefined) return;
             note.overTile(refusedAim(block), found.at);
           },
-          released,
+          () => {
+            if (!picking) released();
+          },
         );
+        return () => {
+          letGo();
+        };
       },
       aimDiscardPile: (index, closed) => {
         return overlay.aimDiscardPile(

@@ -184,6 +184,26 @@ export function playedThrough(
   }
 }
 
+/**
+ * What a card aimed at this tile has against being played through the unit standing on `on`: a unit
+ * of the player's there first, then one of those the card could be played through.
+ */
+export function throughRefusal(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  card: AimedCard,
+  tile: Tile,
+  on: TileCoords,
+): TileBlock | undefined {
+  const at = tileKey(on);
+  return firstRefusal(
+    unitThere(chronicle, on),
+    playedThrough(catalogue, chronicle, card, tile).some((unit) => tileKey(unit.tile) === at)
+      ? undefined
+      : 'not-beside',
+  );
+}
+
 /** The first check that refuses, in the order the aim hands them over: the one reason it answers. */
 export function firstRefusal(...checks: readonly (TileBlock | undefined)[]): TileBlock | undefined {
   return checks.find((reason) => reason !== undefined);

@@ -82,6 +82,7 @@ const TEXT = {
   'unit.warrior': 'Warrior',
   'unit.scout': 'Scout',
   'unit.archer': 'Archer',
+  'embarked.unit': 'Embarked {unit}',
   'card.settle': 'Settlement', // glossary exception: settlement
   'rules.settle': 'Place the [building:city]',
   'card.first-worker': 'Worker',
@@ -125,6 +126,10 @@ const TEXT = {
   'rules.fire': 'Discard another card. Gain 1[science]',
   'card.heal': 'Heal',
   'rules.heal': 'Heal a unit inside your border',
+  'card.embark': 'Embark',
+  'rules.embark': 'Move a unit onto [terrain:coast].\nBecomes [card:disembark]',
+  'card.disembark': 'Disembark',
+  'rules.disembark': 'Move a unit off [terrain:coast].\nBecomes [card:embark]',
   'event.lean-season': 'Lean season',
   'answer.share': 'Share food',
   'answer-rules.share': 'Add [card:hunger] to the top of the draw pile. It takes {food} [food]',
@@ -183,6 +188,7 @@ const TEXT = {
   'refusal.no-unit-beside': 'Needs a unit beside it',
   'refusal.no-embarked-beside': 'Needs an embarked unit beside it',
   'refusal.unit-spent': 'The unit has no action left',
+  'refusal.not-beside': 'Not beside that tile',
   'refusal.unit-standing': 'A unit already stands here',
   'refusal.move-full': 'Unit move points are full',
   'refusal.health-full': 'Unit health is full',
@@ -258,6 +264,7 @@ const TEXT = {
   'technology.domestication': 'Domestication',
   'technology.bow-and-arrow': 'Bow and arrow',
   'technology.tanning': 'Tanning',
+  'technology.raft': 'Raft',
   'goal.first-shelter': 'Build [card:shelter]',
   'goal.agriculture': 'Have {need} [terrain:plain] inside your border',
   'goal.trapping': 'Play [card:hunt] {need} times',
@@ -267,6 +274,7 @@ const TEXT = {
   'goal.domestication': 'Play [card:gather] on [feature:cattle] {need} times',
   'goal.bow-and-arrow': 'Kill {need} enemies with a [player:scout]',
   'goal.tanning': 'Place {need} [improvement:pasture] or [improvement:trapping] inside your border',
+  'goal.raft': 'Chart {need} [terrain:coast]',
   'achievement.reached': '✓ {achievement}',
   'achievement.count': '{count}/{need}',
   'plate.learned': '✓ {technology}',
@@ -334,6 +342,11 @@ export function text(key: TextKey, values: Record<string, string | number> = {})
 /** What a unit kind is named on the screen; a kind no entry names is refused. */
 export function unitName(type: string): string {
   return named('unit', type, 'the unit kind');
+}
+
+/** What a unit standing on the map is named on the screen, by its kind, embarked or ashore. */
+export function unitNameOf(type: string, embarked: boolean): string {
+  return embarked ? text('embarked.unit', { unit: unitName(type) }) : unitName(type);
 }
 
 /** What a terrain is named on the screen; a terrain no entry names is refused. */

@@ -288,7 +288,7 @@ const TABLES: Tables = {
       water: false,
       elevation: 2,
     },
-    coast: { yields: { food: 1 }, water: true, elevation: 0 },
+    coast: { yields: { food: 1 }, embarkedMovementCost: MOVE_POINT, water: true, elevation: 0 },
     ocean: { yields: {}, water: true, elevation: 0 },
     mountain: { yields: {}, water: false, elevation: 3 },
   },

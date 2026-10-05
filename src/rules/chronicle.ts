@@ -1,5 +1,14 @@
 import { available } from './campaign';
-import { aimOf, discarded, lyingAs, playedThrough, refuses, retiled, struck } from './cards';
+import {
+  aimOf,
+  discarded,
+  lyingAs,
+  playedThrough,
+  refuses,
+  retiled,
+  struck,
+  throughRefusal,
+} from './cards';
 import {
   type Achievement,
   type AimedCard,
@@ -887,11 +896,13 @@ function aimedEffect(
       if (card.through === undefined) {
         return named === undefined ? (paid) => card.effect(catalogue, paid, tile) : undefined;
       }
+      if (named !== undefined) {
+        if (throughRefusal(catalogue, chronicle, card, at, named) !== undefined) return undefined;
+        return (paid) => card.effect(catalogue, paid, tile, named);
+      }
       const units = playedThrough(catalogue, chronicle, card, at);
-      const picked =
-        named === undefined ? units : units.filter((unit) => tileKey(unit.tile) === tileKey(named));
-      if (picked.length !== 1) return undefined;
-      const through = picked[0].tile;
+      if (units.length !== 1) return undefined;
+      const through = units[0].tile;
       return (paid) => card.effect(catalogue, paid, tile, through);
     }
     case 'unit': {

@@ -3,7 +3,13 @@ import { aimOf } from '../rules/cards';
 import { type AimedCard, type Catalogue, cardOf } from '../rules/catalogue';
 import { costOf, refusalOf } from '../rules/chronicle';
 import type { Aimed, Change, Group, Stage } from '../rules/stages';
-import { type Chronicle, type ChronicleCard, playable, type Refusal } from '../rules/state';
+import {
+  type Chronicle,
+  type ChronicleCard,
+  NO_REFUSAL,
+  playable,
+  type Refusal,
+} from '../rules/state';
 import { createAimLine, type PointedAim } from './aim-line';
 import { pressOf } from './bindings';
 import {
@@ -96,8 +102,16 @@ export type HandPresses = {
   play(index: number, aimed: Extract<Aimed, { readonly aim: 'none' | 'hand' }>): void;
   /** The hand has taken the selection: whatever else the screen selects or inspects goes. */
   dismiss(): void;
-  /** The map lit for the card's aim; `released` says the aim is off it and the card let go of. */
-  aimTile(index: number, card: AimedCard, released: () => void): () => void;
+  /**
+   * The map lit for the card's aim; `released` says the aim is off it and the card let go of, and
+   * `retargeted` that the card is being aimed at another kind of thing from then.
+   */
+  aimTile(
+    index: number,
+    card: AimedCard,
+    released: () => void,
+    retargeted: (aim: PointedAim) => void,
+  ): () => void;
   /** The aim window raised on the discard pile; `closed` says it came down with nothing paid. */
   aimDiscardPile(index: number, closed: () => void): () => void;
   inspect(card: ChronicleCard): void;
@@ -267,7 +281,9 @@ export function createHand(
         break;
       case 'tile':
       case 'unit':
-        standing.cancel = presses.aimTile(slot.index, card, releasing(slot));
+        standing.cancel = presses.aimTile(slot.index, card, releasing(slot), (aim) => {
+          if (selected?.slot === slot) aiming(slot, aim);
+        });
         aiming(slot, card.aim);
         break;
     }
@@ -488,28 +504,42 @@ export function createHand(
   };
 
   /**
-   * The cards at the places the change names leaving for the discard pile, in the order named: every
-   * one straightens as it goes, the last one landing a stagger behind the one before it, and the
-   * hand is laid out anew where they all land.
+   * The cards at the places the change names leaving for the discard pile, in the order named, each
+   * first turned over into the card it lies there as; the hand is laid out anew where they all land.
    */
   const toDiscardPile = async (places: readonly number[], chronicle: Chronicle): Promise<void> => {
-    const going: Slot[] = [];
-    for (const place of places) {
+    const lying = chronicle.discardPile.slice(chronicle.discardPile.length - places.length);
+    const going: { readonly slot: Slot; readonly lies: ChronicleCard }[] = [];
+    places.forEach((place, at) => {
       const slot = slots[place];
       if (slot === undefined) {
         console.error(`no card of the hand at place ${place}, the hand holding ${slots.length}`);
-        continue;
+        return;
       }
-      going.push(slot);
-    }
-    const leaving = going.map((slot) => slot.face.root);
+      going.push({ slot, lies: lying[at] });
+    });
+    const flights = going.map(({ slot, lies }, index) => {
+      const face = slot.face.root;
+      stopMotion(scene, face);
+      fly(face, index);
+      if (lies.id === slot.card.id) return { faces: [face], shown: face, turned: undefined };
+      const into = fly(
+        createCardFace(scene, cardFace(catalogue, lies), NO_REFUSAL)
+          .root.setPosition(face.x, face.y)
+          .setRotation(face.rotation)
+          .setVisible(false),
+        index,
+      );
+      return { faces: [face, into], shown: into, turned: turnOver(scene, face, into) };
+    });
+    const leaving = flights.flatMap(({ faces }) => faces);
     flying = leaving;
-    slots = slots.filter((slot) => !going.includes(slot));
+    slots = slots.filter((slot) => !going.some((one) => one.slot === slot));
     await Promise.all(
-      leaving.map((face, index) => {
-        stopMotion(scene, face);
+      flights.map(async ({ shown, turned }, index) => {
+        await turned;
         const to = { ...PILE_PLACE['discard-pile'], rotation: 0 };
-        return travel(scene, fly(face, index), to, index * STAGGER);
+        return travel(scene, shown, to, index * STAGGER);
       }),
     );
     // A render while these were in the air took them down and painted the hand it stands on.
