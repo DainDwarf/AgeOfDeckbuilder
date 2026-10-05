@@ -147,6 +147,7 @@ export type TileBlock =
   | 'no-unit-beside'
   | 'no-embarked-beside'
   | 'unit-spent'
+  | 'unit-embarked'
   | 'not-beside'
   | 'unit-standing'
   | 'move-full'

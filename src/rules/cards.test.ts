@@ -2203,15 +2203,24 @@ test('a worker embarked plays a card through itself where the card’s own reaso
   expect(tileAt(outcome(stages).tiles, coast)?.improvements).toEqual(['PH_Weir']);
 });
 
-test('a tile several units could embark onto is lit and refused with no unit named, refused through a unit of the player’s not among them as not beside it and through a tile no unit of the player’s stands on as holding none, and played through the one of them named', () => {
+test('a tile several units could embark onto is lit and refused with no unit named, refused through a unit of the player’s away from it as not beside it, through one beside it that cannot embark for what keeps it, and through a tile no unit of the player’s stands on as holding none, and played through the one of them named', () => {
   const coast = { q: 1, r: 0 };
   const other = { q: 1, r: -1 };
   const away = { q: -1, r: 0 };
-  const city = cityOf(['urban'], {
-    tiles: field(2, [coast]),
-    hand: ['PH_Embark'],
-    units: [standing('player', CITY), standing('player', other), standing('player', away)],
+  const spent = { q: 2, r: -1 };
+  const sea = { q: 2, r: 0 };
+  const ashore = cityOf(['urban'], {
+    tiles: field(2, [coast, sea]),
+    hand: ['PH_Embark', 'PH_Embark'],
+    units: [
+      standing('player', CITY),
+      standing('player', other),
+      standing('player', away),
+      standing('player', spent, {}, undefined, 0),
+      standing('player', { q: 1, r: 1 }),
+    ],
   });
+  const city = outcome(apply(CATALOGUE, ashore, aimedAt(sea)));
   const through = (tile: TileCoords): Command => ({
     type: 'play',
     index: 0,
@@ -2228,9 +2237,13 @@ test('a tile several units could embark onto is lit and refused with no unit nam
   ]);
   expect(stagedBy(city, aimedAt(coast))).toEqual(['refused']);
   expect(stagedBy(city, through(away))).toEqual(['refused']);
+  expect(stagedBy(city, through(spent))).toEqual(['refused']);
+  expect(stagedBy(city, through(sea))).toEqual(['refused']);
   expect(stagedBy(city, through(coast))).toEqual(['refused']);
   const embark = aimedCard('PH_Embark');
   expect(throughRefusal(CATALOGUE, city, embark, tile, away)).toBe('not-beside');
+  expect(throughRefusal(CATALOGUE, city, embark, tile, spent)).toBe('unit-spent');
+  expect(throughRefusal(CATALOGUE, city, embark, tile, sea)).toBe('unit-embarked');
   expect(throughRefusal(CATALOGUE, city, embark, tile, coast)).toBe('no-unit');
   expect(throughRefusal(CATALOGUE, city, embark, tile, other)).toBeUndefined();
 

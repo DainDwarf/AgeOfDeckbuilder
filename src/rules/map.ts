@@ -49,13 +49,25 @@ export function movementCost(
   embarked: boolean,
 ): number | undefined {
   if (tile === undefined) return undefined;
-  const terrain = terrainKind(catalogue, tile.terrain);
-  const ground = embarked ? terrain.embarkedMovementCost : terrain.movementCost;
+  const ground = groundCost(catalogue, tile.terrain, embarked);
   if (ground === undefined) return undefined;
   const named = layersOf(catalogue, tile).flatMap((layer) =>
     layer.movementCost === undefined ? [] : [layer.movementCost],
   );
   return named.length === 0 ? ground : Math.min(...named);
+}
+
+/**
+ * What entering a bare tile of the terrain spends of a unit's move points, embarked or ashore, and
+ * nothing where the terrain names no cost for that unit.
+ */
+export function groundCost(
+  catalogue: MapContent,
+  terrain: Terrain,
+  embarked: boolean,
+): number | undefined {
+  const kind = terrainKind(catalogue, terrain);
+  return embarked ? kind.embarkedMovementCost : kind.movementCost;
 }
 
 /** Whether a terrain is water: what a river runs to, and what height is measured from. */

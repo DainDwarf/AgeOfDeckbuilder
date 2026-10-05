@@ -11,7 +11,6 @@ import {
   tileAt,
   tileKey,
   tileYield,
-  water,
 } from '../src/rules/map';
 import { featureKind } from '../src/rules/map-kinds';
 import type { Resources } from '../src/rules/resources';
@@ -159,17 +158,21 @@ function bareBeside(): Found<string> {
 }
 
 /**
- * The first seed's bare turn 1 whose opening charts a water tile, and a tile beside the city costing
- * two move points, bare and with nobody on it so its terrain card is the whole of its cycle: that
- * tile, what entering it costs, and the water tile.
+ * The first seed's bare turn 1 whose opening charts a tile nothing crosses, a unit or an embarked
+ * one, and a tile beside the city costing two move points, bare and with nobody on it so its terrain
+ * card is the whole of its cycle: that tile, what entering it costs, and the tile nothing crosses.
  */
-function costBeside(): Found<number> & { readonly water: TileCoords } {
+function costBeside(): Found<number> & { readonly uncrossed: TileCoords } {
   return firstSeed(
-    'leaves a tile costing two move points beside the city, and water in sight',
+    'leaves a tile costing two move points beside the city, and a tile nothing crosses in sight',
     (seed) => {
       const chronicle = settledOn(seed);
-      const wet = chronicle.snapshots.find((snapshot) => water(CATALOGUE, snapshot.tile.terrain));
-      if (wet === undefined) return undefined;
+      const uncrossed = chronicle.snapshots.find(
+        ({ tile }) =>
+          movementCost(CATALOGUE, tile, false) === undefined &&
+          movementCost(CATALOGUE, tile, true) === undefined,
+      );
+      if (uncrossed === undefined) return undefined;
       const land = besideOn(chronicle, (tile) => {
         const cost = movementCost(CATALOGUE, tile, false);
         const bare =
@@ -178,7 +181,7 @@ function costBeside(): Found<number> & { readonly water: TileCoords } {
           tile.improvements.length === 0;
         return bare && cost === 2 * MOVE_POINT ? cost : undefined;
       });
-      return land === undefined ? undefined : { ...land, water: wet };
+      return land === undefined ? undefined : { ...land, uncrossed };
     },
   );
 }
@@ -245,7 +248,7 @@ test('the terrain card reads what entering the tile costs, and a dash on a tile 
   page,
 }) => {
   const problems = watch(page);
-  const { chronicle, tile, found: cost, water: wetTile } = costBeside();
+  const { chronicle, tile, found: cost, uncrossed } = costBeside();
 
   await openSaved(page, chronicle);
 
@@ -255,8 +258,11 @@ test('the terrain card reads what entering the tile costs, and a dash on a tile 
   await expect.poll(() => shownCard(page)).toBe('terrain');
   expect(await panelMovement(page)).toBe(text('panel.movement', { cost: cost / MOVE_POINT }));
 
-  const wet = await onScreen(page, `tile-${tileKey(wetTile)}`);
-  await page.mouse.click(wet.x, wet.y, { button: 'right' });
+  // The infopanel stands east of the tile it reads, over whatever tile the search found there.
+  await page.keyboard.press('Escape');
+  await expect.poll(() => shownCard(page)).toBeUndefined();
+  const across = await onScreen(page, `tile-${tileKey(uncrossed)}`);
+  await page.mouse.click(across.x, across.y, { button: 'right' });
   await expect.poll(() => panelMovement(page)).toBe(text('panel.no-movement'));
   expect(await shownCard(page)).toBe('terrain');
 

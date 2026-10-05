@@ -82,7 +82,7 @@ const TEXT = {
   'unit.warrior': 'Warrior',
   'unit.scout': 'Scout',
   'unit.archer': 'Archer',
-  'embarked.unit': 'Embarked {unit}',
+  'embarked.unit': 'Raft ({unit})',
   'card.settle': 'Settlement', // glossary exception: settlement
   'rules.settle': 'Place the [building:city]',
   'card.first-worker': 'Worker',
@@ -188,6 +188,7 @@ const TEXT = {
   'refusal.no-unit-beside': 'Needs a unit beside it',
   'refusal.no-embarked-beside': 'Needs an embarked unit beside it',
   'refusal.unit-spent': 'The unit has no action left',
+  'refusal.unit-embarked': 'The unit is already embarked',
   'refusal.not-beside': 'Not beside that tile',
   'refusal.unit-standing': 'A unit already stands here',
   'refusal.move-full': 'Unit move points are full',

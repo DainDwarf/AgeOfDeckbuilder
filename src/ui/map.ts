@@ -535,8 +535,8 @@ type Grab = { readonly from: { x: number; y: number }; dragging: boolean } & (
 /** The mark a press takes hold of: a unit's, or a population's. */
 type GrabMark = Phaser.GameObjects.Container | Phaser.GameObjects.Rectangle;
 
-/** What the map paints of a tile: a mark of a layer, or a unit's mark. */
-type Painted = Phaser.GameObjects.Polygon | Phaser.GameObjects.Container;
+/** What the map draws a tile's things as: one polygon, or a unit's mark, a container of them. */
+export type Mark = Phaser.GameObjects.Polygon | Phaser.GameObjects.Container;
 
 /**
  * The map and everything standing on it, on a surface of its own that pans and zooms under the UI.
@@ -1063,13 +1063,13 @@ export function createMapView(
    * Every layer of one tile as the map draws it on a chronicle, and every object painted for it. The
    * units of a live tile are hung by the render; a tile out of sight carries its unit under its scrim.
    */
-  const paintTile = (chronicle: Chronicle, seen: Drawing, tile: Tile): Painted[] => {
+  const paintTile = (chronicle: Chronicle, seen: Drawing, tile: Tile): Mark[] => {
     const drawing = faceIn(seen, tile);
     if (drawing === undefined) return [];
     const face = drawing.tile;
     const key = tileKey(tile);
-    const painted: Painted[] = [];
-    const paint = (on: Phaser.GameObjects.Layer, object: Painted): void => {
+    const painted: Mark[] = [];
+    const paint = (on: Phaser.GameObjects.Layer, object: Mark): void => {
       on.add(object);
       painted.push(object);
     };
@@ -1394,7 +1394,7 @@ export function createMapView(
   };
 
   /** Whatever is painted rising out of nothing: what a tile newly drawn fades in with. */
-  const fadeIn = (painted: readonly Painted[]): Promise<void> => {
+  const fadeIn = (painted: readonly Mark[]): Promise<void> => {
     for (const object of painted) object.setAlpha(0);
     return ended(scene.tweens.add({ targets: painted, alpha: 1, duration: 400, ease: EASE }));
   };

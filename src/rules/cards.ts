@@ -176,17 +176,15 @@ export function playedThrough(
   card: AimedCard,
   tile: Tile,
 ): Unit[] {
-  switch (card.aim) {
-    case 'tile':
-      return card.through?.(catalogue, chronicle, tile) ?? [];
-    case 'unit':
-      return [];
-  }
+  return chronicle.units.filter(
+    (unit) => throughRefusal(catalogue, chronicle, card, tile, unit.tile) === undefined,
+  );
 }
 
 /**
  * What a card aimed at this tile has against being played through the unit standing on `on`: a unit
- * of the player's there first, then one of those the card could be played through.
+ * of the player's there first, then one beside the tile, then the card's own reasons against it. A
+ * card played through no unit refuses every one as not beside.
  */
 export function throughRefusal(
   catalogue: Catalogue,
@@ -195,13 +193,11 @@ export function throughRefusal(
   tile: Tile,
   on: TileCoords,
 ): TileBlock | undefined {
-  const at = tileKey(on);
-  return firstRefusal(
-    unitThere(chronicle, on),
-    playedThrough(catalogue, chronicle, card, tile).some((unit) => tileKey(unit.tile) === at)
-      ? undefined
-      : 'not-beside',
-  );
+  const unit = unitAt(chronicle.units, on);
+  if (unit?.faction !== 'player') return 'no-unit';
+  const through = card.aim === 'tile' ? card.through : undefined;
+  if (through === undefined || distance(on, tile) !== 1) return 'not-beside';
+  return through(catalogue, chronicle, tile, unit);
 }
 
 /** The first check that refuses, in the order the aim hands them over: the one reason it answers. */
@@ -284,31 +280,48 @@ function stepped(
     embarked: embarking,
     stats: { ...unit.stats, move: move(catalogue, unit) },
   });
-  const beside = (chronicle: Chronicle, tile: TileCoords): Unit[] =>
-    chronicle.units.filter(
-      (unit) =>
-        unit.faction === 'player' && unit.embarked !== embarking && distance(unit.tile, tile) === 1,
-    );
-  const steppers = (catalogue: Catalogue, chronicle: Chronicle, tile: Tile): Unit[] =>
-    beside(chronicle, tile).filter((unit) =>
-      standsOn(catalogue, onto(catalogue, unit).stats, embarking, tile),
-    );
   const missing: TileBlock = embarking ? 'no-unit-beside' : 'no-embarked-beside';
+  /**
+   * What a unit beside the tile passes to step onto it, in order: the reason refusing a unit that
+   * fails it, and the tile's where no unit beside passes it, when that one differs.
+   */
+  const checks: readonly {
+    readonly passes: (catalogue: Catalogue, unit: Unit, tile: Tile) => boolean;
+    readonly unit: TileBlock;
+    readonly tile?: TileBlock;
+  }[] = [
+    {
+      passes: (_catalogue, unit) => unit.embarked !== embarking,
+      unit: embarking ? 'unit-embarked' : missing,
+      tile: missing,
+    },
+    {
+      passes: (catalogue, unit, tile) =>
+        standsOn(catalogue, onto(catalogue, unit).stats, embarking, tile),
+      unit: 'wrong-terrain',
+    },
+    { passes: (_catalogue, unit) => unit.action > 0, unit: 'unit-spent' },
+  ];
   return {
     aim: 'tile',
     refuses: (catalogue, chronicle, tile) => {
-      const able = steppers(catalogue, chronicle, tile);
-      return firstRefusal(
+      const reason = firstRefusal(
         chartedTile(chronicle, tile),
         movementCost(catalogue, tile, embarking) === undefined ? 'wrong-terrain' : undefined,
         unitAt(chronicle.units, tile) === undefined ? undefined : 'unit-standing',
-        beside(chronicle, tile).length > 0 ? undefined : missing,
-        able.length > 0 ? undefined : 'wrong-terrain',
-        able.some((unit) => unit.action > 0) ? undefined : 'unit-spent',
       );
+      if (reason !== undefined) return reason;
+      let able = chronicle.units.filter(
+        (unit) => unit.faction === 'player' && distance(unit.tile, tile) === 1,
+      );
+      for (const check of checks) {
+        able = able.filter((unit) => check.passes(catalogue, unit, tile));
+        if (able.length === 0) return check.tile ?? check.unit;
+      }
+      return undefined;
     },
-    through: (catalogue, chronicle, tile) =>
-      steppers(catalogue, chronicle, tile).filter((unit) => unit.action > 0),
+    through: (catalogue, _chronicle, tile, unit) =>
+      checks.find(({ passes }) => !passes(catalogue, unit, tile))?.unit,
     effect: (catalogue, paid, at, through) => {
       const stepping = through === undefined ? undefined : unitAt(paid.units, through);
       if (through === undefined || stepping === undefined) {

@@ -508,6 +508,7 @@ export function createHand(
    * first turned over into the card it lies there as; the hand is laid out anew where they all land.
    */
   const toDiscardPile = async (places: readonly number[], chronicle: Chronicle): Promise<void> => {
+    // The change carries no ids: its cards are the top of the pile, in its places' order (`Change`).
     const lying = chronicle.discardPile.slice(chronicle.discardPile.length - places.length);
     const going: { readonly slot: Slot; readonly lies: ChronicleCard }[] = [];
     places.forEach((place, at) => {

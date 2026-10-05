@@ -3,6 +3,7 @@ import { type Catalogue, fullHealth, unitKind } from '../rules/catalogue';
 import {
   type BuildingTypeId,
   type FeatureId,
+  groundCost,
   type ImprovementId,
   MOVE_POINT,
   movementCost,
@@ -22,6 +23,7 @@ import {
   buildingMark,
   featureMark,
   improvementMark,
+  type Mark,
   riverMark,
   type TileFace,
   terrainMark,
@@ -52,11 +54,6 @@ export type Card =
       readonly movementCost: number | undefined;
     };
 
-/** What a card is headed by and its rows are drawn with: a mark of a layer, or a unit's mark. */
-type Mark = Phaser.GameObjects.Polygon | Phaser.GameObjects.Container;
-
-type Shape = Phaser.GameObjects.Polygon;
-
 /** What a card of the infopanel's look is drawn from: one an inspection steps through, or a feature alone. */
 type Drawing = Card | { readonly kind: 'feature'; readonly rows: readonly Row[] };
 
@@ -70,7 +67,7 @@ function drawingOf(catalogue: Catalogue, thing: Thing): Drawing {
       return {
         kind: 'terrain',
         rows: [{ kind: 'terrain', terrain: thing.id }],
-        movementCost: costRead(catalogue, { q: 0, r: 0, terrain: thing.id, improvements: [] }),
+        movementCost: costRead((embarked) => groundCost(catalogue, thing.id, embarked)),
       };
     case 'feature':
       return { kind: 'feature', rows: [{ kind: 'feature', feature: thing.id }] };
@@ -94,11 +91,11 @@ function drawingOf(catalogue: Catalogue, thing: Thing): Drawing {
 }
 
 /**
- * What the terrain card reads in its corner of a tile: the cost a unit pays to enter it, or, where
- * none does, the cost an embarked unit pays; nothing where nothing crosses it.
+ * What the terrain card reads in its corner, out of what entering costs a unit embarked or ashore:
+ * the cost ashore, or, where none is, the cost embarked; nothing where nothing crosses it.
  */
-function costRead(catalogue: Catalogue, tile: Tile): number | undefined {
-  return movementCost(catalogue, tile, false) ?? movementCost(catalogue, tile, true);
+function costRead(cost: (embarked: boolean) => number | undefined): number | undefined {
+  return cost(false) ?? cost(true);
 }
 
 /**
@@ -140,7 +137,11 @@ export function cardsOf(
   const ground: Row[] = [{ kind: 'terrain', terrain: tile.terrain }];
   if (tile.feature !== undefined) ground.push({ kind: 'feature', feature: tile.feature });
   if (runsAlong(rivers, tile)) ground.push({ kind: 'river' });
-  cards.push({ kind: 'terrain', rows: ground, movementCost: costRead(catalogue, tile) });
+  cards.push({
+    kind: 'terrain',
+    rows: ground,
+    movementCost: costRead((embarked) => movementCost(catalogue, tile, embarked)),
+  });
 
   return cards;
 }
@@ -606,7 +607,10 @@ function yieldsOf(catalogue: Catalogue, row: Row): { resource: Resource; amount:
 
 /** A mark drawn at the size it has on the map, brought into a box; its outline keeps its weight. */
 function fitMark(mark: Mark, box: number): Mark {
-  const shapes = mark instanceof Phaser.GameObjects.Container ? (mark.list as Shape[]) : [mark];
+  const shapes =
+    mark instanceof Phaser.GameObjects.Container
+      ? (mark.list as Phaser.GameObjects.Polygon[])
+      : [mark];
   const { width, height } = mark.getBounds();
   const scale = box / Math.max(width, height);
   for (const shape of shapes) shape.setStrokeStyle(shape.lineWidth / scale, shape.strokeColor);

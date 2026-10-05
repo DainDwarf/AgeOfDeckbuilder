@@ -121,7 +121,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **move points** | What a unit spends to cross tiles, a tile's movement cost to enter it; refreshed to its move. | movement points, steps, stamina |
 | **embark** | To step a unit from the tile it stands on onto a tile beside it that embarked units enter. | board (for a unit), set sail, launch (for a unit) |
 | **disembark** | To step an embarked unit back onto a tile it stands on ashore; the reverse of embark. | land (for a unit), unload, go ashore |
-| **embarked** | A unit carried over water: it enters the tiles embarked units enter and no other, and attacks nothing. | aboard, afloat, at sea, on a raft |
+| **embarked** | A unit carried over water: it enters the tiles embarked units enter and no other, and attacks nothing. | aboard, afloat, at sea |
 | **action** | A unit's stat and the pool it refreshes to: what it spends to attack, or, on a worker, on a card played through it. | action points, energy, attack pool |
 | **refresh** | To bring a unit's spendable stat — move points, action — back to its full value; health is healed, never refreshed. | restore, replenish, reset, recharge, recover, regain |
 | **military** | The resource that pays for military units, instants and fortifications. | — |

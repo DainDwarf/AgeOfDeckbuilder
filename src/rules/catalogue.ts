@@ -68,10 +68,16 @@ export type Aim =
         tile: Tile,
       ) => TileBlock | undefined;
       /**
-       * For a card played through a unit beside the tile, the units that can be the one; the play
-       * hands the effect the tile of the one it went through.
+       * For a card played through a unit beside the tile, the one reason it refuses this unit of the
+       * player's beside it, and nothing for one that can be the one; the play hands the effect the
+       * tile of the one it went through.
        */
-      readonly through?: (catalogue: Catalogue, chronicle: Chronicle, tile: Tile) => Unit[];
+      readonly through?: (
+        catalogue: Catalogue,
+        chronicle: Chronicle,
+        tile: Tile,
+        unit: Unit,
+      ) => TileBlock | undefined;
       readonly effect: (
         catalogue: Catalogue,
         paid: Chronicle,
