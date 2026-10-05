@@ -12,6 +12,7 @@ import {
   paidInto,
   pinned,
   priceOf,
+  regionsReached,
   removedFrom,
   unpinned,
 } from './campaign';
@@ -23,6 +24,7 @@ import {
   CENSUS,
   CIVILIZATION,
   CIVILIZATION_ID,
+  CLEARING,
   cityOf,
   field,
   GRANARY,
@@ -30,7 +32,9 @@ import {
   HOARD_NEED,
   hoardedVictory,
   QUIET,
+  REGION,
   reaching,
+  regionsUnlocked,
   twoAges,
   victoryOf,
 } from './fixtures';
@@ -241,6 +245,18 @@ test('a campaign paid an age’s victory has reached the age its technology unlo
 
   expect(next).toBeDefined();
   expect(agesReached(CATALOGUE, campaign)).toEqual([AGE, next]);
+});
+
+test('a region a technology unlocks is reached once that technology is learned, in every age holding its name, and a region no technology unlocks is reached from the first chronicle', () => {
+  const catalogue = regionsUnlocked({ [GRANARY]: REGION });
+  const opened = newCampaign(catalogue, CIVILIZATION_ID);
+  const { campaign } = paidInto(catalogue, opened, hoardedVictory());
+
+  expect(campaign.technologies).toContain(GRANARY);
+  for (const age of [AGE, QUIET]) {
+    expect(regionsReached(catalogue, opened, age)).toEqual([CLEARING]);
+    expect(regionsReached(catalogue, campaign, age)).toEqual([REGION, CLEARING]);
+  }
 });
 
 test('a chronicle paid in a second time is refused: the technology its achievement earns is already learned', () => {

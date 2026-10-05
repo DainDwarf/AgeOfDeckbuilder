@@ -36,6 +36,7 @@ import {
   QUIET,
   REGION,
   REGIONS,
+  regionsUnlocked,
   SLICES,
   victoryOf,
   WARY,
@@ -186,6 +187,19 @@ test('a catalogue whose age but the first is unlocked by no technology or by two
   expect(() => catalogued(unlocking(AGE))).toThrow(
     `fixture: the first age ${AGE} is unlocked by ${GRANARY}`,
   );
+});
+
+test('a catalogue whose technology unlocks a region no age holds, whose region is unlocked by two technologies, or whose age holds no region reached from the first chronicle, is refused', () => {
+  expect(() => regionsUnlocked({ [GRANARY]: 'PH_Unheld' })).toThrow(
+    `fixture: the technology ${GRANARY} unlocks the region PH_Unheld, which no age holds`,
+  );
+  expect(() => regionsUnlocked({ [GRANARY]: REGION, [CENSUS]: REGION })).toThrow(
+    `fixture: the region ${REGION} is unlocked by both ${GRANARY} and ${CENSUS}`,
+  );
+  expect(() => regionsUnlocked({ [GRANARY]: REGION, [CENSUS]: CLEARING })).toThrow(
+    `fixture: the age ${AGE} holds no region reached from the first chronicle`,
+  );
+  expect(() => regionsUnlocked({ [GRANARY]: REGION })).not.toThrow();
 });
 
 test('a catalogue whose technology needs one earned in a later age is refused, and one needing a technology of an earlier age is not', () => {

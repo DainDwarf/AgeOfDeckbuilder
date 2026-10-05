@@ -31,7 +31,7 @@ import {
 import { createWell, placeWell, SUNK } from './resource-bar';
 import { PAN_SPEED } from './scroll';
 import { createSmallCards, type Raiser } from './small-card';
-import { achievementGoal, ageName, technologyName, text } from './text';
+import { achievementGoal, ageName, regionName, technologyName, text } from './text';
 import { layOutTree, PLATE_WIDTH, type Plate, stopped, WASH } from './tree-layout';
 
 const LABEL_STYLE = { fontFamily: UI_FONT, fontSize: '11px', color: css(LOOK.faintInk) };
@@ -91,6 +91,14 @@ function readingsOf(catalogue: Catalogue): Map<string, Reading> {
           entry: text('plate.cards', { copies, card }),
         }),
       ),
+      ...(unlocks.region === undefined
+        ? []
+        : [
+            {
+              kind: 'run',
+              entry: text('plate.region', { region: regionName(unlocks.region) }),
+            } as const,
+          ]),
       ...(unlocks.age === undefined
         ? []
         : [{ kind: 'run', entry: text('plate.age', { age: ageName(unlocks.age) }) } as const]),

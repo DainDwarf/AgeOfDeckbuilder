@@ -44,6 +44,7 @@ import {
   type Schedule,
   type Slice,
   type Tables,
+  type Technology,
 } from './catalogue';
 import {
   apply,
@@ -957,6 +958,22 @@ export const SLICES: readonly Slice[] = Object.entries(agesOver(CAMP, REGIONS)).
 
 /** The content every fixture is played on, its numbers the fixture's own. */
 export const CATALOGUE: Catalogue = merged('fixture', SLICES);
+
+/**
+ * The fixture's content, over the slices the test hands where it hands its own, with each technology
+ * named unlocking the region named beside it.
+ */
+export function regionsUnlocked(
+  unlocks: Readonly<Record<string, string>>,
+  slices: readonly Slice[] = SLICES,
+): Catalogue {
+  const technologies: Record<string, Technology> = { ...TECHNOLOGIES };
+  for (const [id, region] of Object.entries(unlocks)) {
+    technologies[id] = { ...TECHNOLOGIES[id], unlocks: { ...TECHNOLOGIES[id].unlocks, region } };
+  }
+  const [first, ...rest] = slices;
+  return merged('fixture', [{ ...first, brings: { ...first.brings, technologies } }, ...rest]);
+}
 
 /** The fixture's content with its stores and its worker cards brought by its second age. */
 export function twoAges(): Catalogue {

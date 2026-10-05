@@ -1,7 +1,7 @@
 /** What the launch screen computes before it draws: the choices it opens on and keeps, and each region's ring. */
 
-import { agesReached, type Campaign } from '../rules/campaign';
-import { ageOf, type Catalogue, firstRegion } from '../rules/catalogue';
+import { agesReached, type Campaign, regionsReached } from '../rules/campaign';
+import { ageOf, type Catalogue } from '../rules/catalogue';
 import type { Region } from '../rules/map-kinds';
 import type { Choices } from './save-entry';
 
@@ -10,7 +10,7 @@ export const RING = 6;
 
 /**
  * The choices the launch screen opens on: the furthest age the campaign has reached, that age's
- * first region, and the campaign's first civilization.
+ * first region the campaign has reached, and the campaign's first civilization.
  */
 export function openingChoices(catalogue: Catalogue, campaign: Campaign): Choices {
   const age = agesReached(catalogue, campaign).at(-1);
@@ -18,33 +18,46 @@ export function openingChoices(catalogue: Catalogue, campaign: Campaign): Choice
   if (age === undefined || civilization === undefined) {
     throw new Error('the campaign has reached no age or owns no civilization');
   }
-  return { age, region: firstRegion(catalogue, age), civilization };
+  const [region] = regionsReached(catalogue, campaign, age);
+  return { age, region, civilization };
 }
 
 /**
  * The choices with another age selected: the region kept where that age holds one of its name, and
- * the age's first region where it does not.
+ * the first region of that age the campaign has reached where it does not.
  */
-export function withAge(catalogue: Catalogue, choices: Choices, age: string): Choices {
+export function withAge(
+  catalogue: Catalogue,
+  campaign: Campaign,
+  choices: Choices,
+  age: string,
+): Choices {
   const region = Object.hasOwn(ageOf(catalogue, age).regions, choices.region)
     ? choices.region
-    : firstRegion(catalogue, age);
+    : regionsReached(catalogue, campaign, age)[0];
   return { ...choices, age, region };
 }
 
 /**
- * The age's regions in the row, each with the biomes of its cluster, the middle hexagon's first: read
- * from the region of its name in the first age, in the order of history, that holds one.
+ * The age's regions in the row, each with whether the campaign has reached it and the biomes of its
+ * cluster, the middle hexagon's first: read from the region of its name in the first age, in the order
+ * of history, that holds one.
  */
 export function clustersOf(
   catalogue: Catalogue,
+  campaign: Campaign,
   age: string,
-): { region: string; biomes: string[] }[] {
+): { region: string; reached: boolean; biomes: string[] }[] {
   const ages = Object.values(catalogue.ages);
+  const reached = regionsReached(catalogue, campaign, age);
   return Object.entries(ageOf(catalogue, age).regions).map(([region, own]) => {
     const first =
       ages.find(({ regions }) => Object.hasOwn(regions, region))?.regions[region] ?? own;
-    return { region, biomes: [first.centreBiome, ...ringOf(first)] };
+    return {
+      region,
+      reached: reached.includes(region),
+      biomes: [first.centreBiome, ...ringOf(first)],
+    };
   });
 }
 

@@ -75,7 +75,7 @@ test('Launch over a saved chronicle that has reached an achievement raises the w
   expect(reached).not.toEqual([]);
   const first = firstAge(CATALOGUE);
   expect(first).not.toBe(saved.age);
-  const choices = withAge(CATALOGUE, openingChoices(CATALOGUE, campaign), first);
+  const choices = withAge(CATALOGUE, campaign, openingChoices(CATALOGUE, campaign), first);
 
   await launchScreenOver(page, saved, campaign);
   await click(page, `launch-age-${first}`);

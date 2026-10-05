@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { CATALOGUE } from '../content/catalogue';
-import { agesReached, type CampaignCivilization } from '../rules/campaign';
+import { agesReached, type Campaign, type CampaignCivilization } from '../rules/campaign';
 import { achievementOf, type Catalogue } from '../rules/catalogue';
 import { biomeKind } from '../rules/map-kinds';
 import { type Chronicle, onSettlePhase } from '../rules/state';
@@ -169,41 +169,67 @@ function arrowOf(
   return { options, unknownAges };
 }
 
-/** The selected age's regions in a row, each a cluster of seven hexagons over its name. */
-function regionsOf({ scene, catalogue }: Laying, age: string, region: string): Option[] {
+/**
+ * The selected age's regions in a row, each a cluster of seven hexagons over its name, each region the
+ * campaign has not reached unknown.
+ */
+function regionsOf(
+  { scene, catalogue }: Laying,
+  campaign: Campaign,
+  age: string,
+  region: string,
+): { options: Option[]; unknownRegions: Phaser.GameObjects.Container[] } {
   const touching = Math.sqrt(3) * HEX_RADIUS;
   const colourOf = (biome: string): number => terrainColourOf(biomeKind(catalogue, biome).origin);
-  return clustersOf(catalogue, age).map(({ region: id, biomes }, at): Option => {
+  const options: Option[] = [];
+  const unknownRegions: Phaser.GameObjects.Container[] = [];
+  const clusters = clustersOf(catalogue, campaign, age);
+  for (const [at, { region: id, reached, biomes }] of clusters.entries()) {
     const selected = id === region;
     const x = CLUSTER_FIRST + at * CLUSTER_APART;
     const hexagons = biomes.map((biome, place) => {
       const angle = (Math.PI / 3) * (place - 1);
       const away = place === 0 ? 0 : touching;
-      return pressedOnShape(
-        scene.add
-          .polygon(
-            away * Math.cos(angle),
-            away * Math.sin(angle),
-            hexagon(HEX_RADIUS),
-            colourOf(biome),
-          )
-          .setStrokeStyle(selected ? EDGE : 1, selected ? LOOK.selected : LOOK.regionEdge),
+      return scene.add.polygon(
+        away * Math.cos(angle),
+        away * Math.sin(angle),
+        hexagon(HEX_RADIUS),
+        reached ? colourOf(biome) : LOOK.unknownFill,
       );
     });
+    if (!reached) {
+      for (const shape of hexagons) shape.setStrokeStyle(1, LOOK.regionEdge);
+      const label = addText(scene, 0, 0, text('launch.unknown-region'), UNKNOWN_STYLE).setOrigin(
+        0.5,
+      );
+      unknownRegions.push(
+        scene.add
+          .container(x, CLUSTER_Y, [...hexagons, label])
+          .setName(`launch-region-${id}`)
+          .setData('selected', false),
+      );
+      continue;
+    }
+    for (const shape of hexagons) {
+      pressedOnShape(
+        shape.setStrokeStyle(selected ? EDGE : 1, selected ? LOOK.selected : LOOK.regionEdge),
+      );
+    }
     const cluster = scene.add
       .container(x, CLUSTER_Y, hexagons)
       .setScale(selected ? CLUSTER_GROWTH : 1);
     const name = addText(scene, x, REGION_NAME_Y, regionName(id), PALE_STYLE)
       .setOrigin(0.5)
       .setInteractive();
-    return {
+    options.push({
       row: 'region',
       option: id,
       selected,
       parts: [cluster, name],
       hits: [...hexagons, name],
-    };
-  });
+    });
+  }
+  return { options, unknownRegions };
 }
 
 /** The campaign's civilizations in a row, each its pile, a right click on it raising its browse. */
@@ -282,7 +308,7 @@ export class LaunchScreen extends Phaser.Scene {
     const select = (row: Row, option: string): void => {
       switch (row) {
         case 'age':
-          chosen = withAge(CATALOGUE, chosen, option);
+          chosen = withAge(CATALOGUE, campaign, chosen, option);
           lay();
           return;
         case 'region':
@@ -326,6 +352,7 @@ export class LaunchScreen extends Phaser.Scene {
       content.add(root);
 
       const arrow = arrowOf(laying, reached, chosen.age);
+      const regions = regionsOf(laying, campaign, chosen.age, chosen.region);
       const lastSelected = (options: Option[]): Option[] => [
         ...options.filter(({ selected }) => !selected),
         ...options.filter(({ selected }) => selected),
@@ -335,7 +362,8 @@ export class LaunchScreen extends Phaser.Scene {
         ...arrow.unknownAges,
         ...lastSelected(arrow.options).map(drawn),
         word('launch.region', 222),
-        ...regionsOf(laying, chosen.age, chosen.region).map(drawn),
+        ...regions.unknownRegions,
+        ...regions.options.map(drawn),
         word('launch.civilization', 450),
         ...pilesOf(laying, campaign.civilizations, chosen.civilization, (civilization) => {
           browse(campaignHeld(), civilization);

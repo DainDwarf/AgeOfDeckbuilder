@@ -84,19 +84,41 @@ export function unpinned(campaign: Campaign): Campaign {
   return rest;
 }
 
+/** The ages or the regions those technologies unlock; a technology the catalogue does not hold is refused. */
+function unlockedBy(
+  catalogue: Catalogue,
+  technologies: readonly string[],
+  noun: 'age' | 'region',
+): Set<string> {
+  return new Set(
+    technologies.flatMap((technology) => {
+      const unlocked = technologyOf(catalogue, technology).unlocks[noun];
+      return unlocked === undefined ? [] : [unlocked];
+    }),
+  );
+}
+
 /**
  * The ages the campaign has reached, in the order of history: the first age, and every age a
  * technology it has learned unlocks. A technology the catalogue does not hold is refused.
  */
 export function agesReached(catalogue: Catalogue, campaign: Campaign): string[] {
-  const unlocked = new Set(
-    campaign.technologies.flatMap((technology) => {
-      const { age } = technologyOf(catalogue, technology).unlocks;
-      return age === undefined ? [] : [age];
-    }),
-  );
+  const unlocked = unlockedBy(catalogue, campaign.technologies, 'age');
   const first = firstAge(catalogue);
   return Object.keys(catalogue.ages).filter((age) => age === first || unlocked.has(age));
+}
+
+/**
+ * The regions of the age the campaign has reached, in the order the age lists them: every region no
+ * technology unlocks, and every region a technology it has learned unlocks by its name. An age the
+ * catalogue does not hold is refused.
+ */
+export function regionsReached(catalogue: Catalogue, campaign: Campaign, age: string): string[] {
+  const unlockable = unlockedBy(catalogue, Object.keys(catalogue.technologies), 'region');
+  const unlocked = unlockedBy(catalogue, campaign.technologies, 'region');
+  return Object.keys(ageOf(catalogue, age).regions).filter(
+    (region) => !unlockable.has(region) || unlocked.has(region),
+  );
 }
 
 /** The number a campaign's first card is dealt. */

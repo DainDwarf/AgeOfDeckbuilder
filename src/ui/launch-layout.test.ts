@@ -6,10 +6,12 @@ import {
   CATALOGUE,
   CIVILIZATION_ID,
   CLEARING,
+  GRANARY,
   hoardedVictory,
   QUIET,
   REGION,
   REGIONS,
+  regionsUnlocked,
   SLICES,
   victoryOf,
 } from '../rules/fixtures';
@@ -49,23 +51,59 @@ test('the launch screen opens on the furthest age the campaign has reached, and 
   });
 });
 
-test('selecting another age keeps the region where that age holds one of its name', () => {
-  const choices = { age: AGE, region: CLEARING, civilization: CIVILIZATION_ID };
+test('the launch screen opens on the first region of the age the campaign has reached, the first listed not reached passed over', () => {
+  const catalogue = regionsUnlocked({ [GRANARY]: REGION });
+  const opened = newCampaign(catalogue, CIVILIZATION_ID);
+  const { campaign } = paidInto(catalogue, opened, hoardedVictory());
 
-  expect(firstRegion(CATALOGUE, QUIET)).not.toBe(CLEARING);
-  expect(withAge(CATALOGUE, choices, QUIET)).toEqual({ ...choices, age: QUIET });
+  expect(firstRegion(catalogue, AGE)).toBe(REGION);
+  expect(openingChoices(catalogue, opened)).toEqual({
+    age: AGE,
+    region: CLEARING,
+    civilization: CIVILIZATION_ID,
+  });
+  expect(openingChoices(catalogue, campaign).region).toBe(REGION);
 });
 
-test('selecting another age takes its first region where it holds none of the selected one’s name', () => {
+test('selecting another age keeps the region where that age holds one of its name', () => {
+  const choices = { age: AGE, region: CLEARING, civilization: CIVILIZATION_ID };
+  const campaign = newCampaign(CATALOGUE, CIVILIZATION_ID);
+
+  expect(firstRegion(CATALOGUE, QUIET)).not.toBe(CLEARING);
+  expect(withAge(CATALOGUE, campaign, choices, QUIET)).toEqual({ ...choices, age: QUIET });
+});
+
+test('selecting another age takes the first region of it the campaign has reached where it holds none of the selected one’s name', () => {
   const [first, second] = SLICES;
-  const glen = merged('fixture', [
+  const slices = [
     first,
-    { ...second, owns: { ...second.owns, regions: { glen: REGIONS[CLEARING] } } },
+    {
+      ...second,
+      owns: { ...second.owns, regions: { glen: REGIONS[REGION], dell: REGIONS[CLEARING] } },
+    },
     ...SLICES.slice(2),
-  ]);
+  ];
+  const catalogue = regionsUnlocked({ [GRANARY]: 'glen' }, slices);
+  const campaign = newCampaign(catalogue, CIVILIZATION_ID);
   const choices = { age: AGE, region: CLEARING, civilization: CIVILIZATION_ID };
 
-  expect(withAge(glen, choices, second.id)).toEqual({ ...choices, age: second.id, region: 'glen' });
+  expect(withAge(catalogue, campaign, choices, second.id)).toEqual({
+    ...choices,
+    age: second.id,
+    region: 'dell',
+  });
+});
+
+test('the row stands every region of the age in the order listed, each read as reached or not', () => {
+  const catalogue = regionsUnlocked({ [GRANARY]: REGION });
+  const campaign = newCampaign(catalogue, CIVILIZATION_ID);
+
+  expect(
+    clustersOf(catalogue, campaign, AGE).map(({ region, reached }) => [region, reached]),
+  ).toEqual([
+    [REGION, false],
+    [CLEARING, true],
+  ]);
 });
 
 test('a region’s cluster is drawn from the region of its name in the first age holding one, whichever age is selected', () => {
@@ -81,12 +119,14 @@ test('a region’s cluster is drawn from the region of its name in the first age
   ]);
   const firstAges = Object.entries(REGIONS).map(([region, held]) => ({
     region,
+    reached: true,
     biomes: [held.centreBiome, ...ringOf(held)],
   }));
+  const campaign = newCampaign(later, CIVILIZATION_ID);
 
   expect(ringOf(reshared)).not.toEqual(ringOf(REGIONS[REGION]));
-  expect(clustersOf(later, first.id)).toEqual(firstAges);
-  expect(clustersOf(later, second.id)).toEqual(firstAges);
+  expect(clustersOf(later, campaign, first.id)).toEqual(firstAges);
+  expect(clustersOf(later, campaign, second.id)).toEqual(firstAges);
 });
 
 test('each biome a region’s shares name stands on one hexagon around the middle one, the rest go to the largest share, and one biome’s stand side by side in the order named', () => {

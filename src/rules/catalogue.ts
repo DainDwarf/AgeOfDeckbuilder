@@ -222,11 +222,15 @@ export type Achievement = {
 
 /**
  * A technology: the technologies it needs, and what it unlocks — cards, each with the copies added
- * to the collection, and at most one age.
+ * to the collection, at most one region, by its name in every age, and at most one age.
  */
 export type Technology = {
   readonly needs: readonly string[];
-  readonly unlocks: { readonly cards: Readonly<Record<string, number>>; readonly age?: string };
+  readonly unlocks: {
+    readonly cards: Readonly<Record<string, number>>;
+    readonly region?: string;
+    readonly age?: string;
+  };
 };
 
 /**
@@ -573,7 +577,21 @@ function treeHeld(content: Catalogue): void {
     }
   }
 
-  const unlockedBy = new Map<string, string>();
+  const ageUnlockedBy = new Map<string, string>();
+  const regionUnlockedBy = new Map<string, string>();
+  const unlockedOnce = (
+    unlockers: Map<string, string>,
+    noun: 'age' | 'region',
+    unlocked: string,
+    technology: string,
+  ): void => {
+    const other = unlockers.get(unlocked);
+    if (other !== undefined) {
+      refuse(content, `the ${noun} ${unlocked} is unlocked by both ${other} and ${technology}`);
+    }
+    unlockers.set(unlocked, technology);
+  };
+  const regionsHeld = new Set(ages.flatMap(([, { regions }]) => Object.keys(regions)));
   for (const [id, { needs, unlocks }] of Object.entries(content.technologies)) {
     if (!earnedBy.has(id)) refuse(content, `the technology ${id} is earned by no achievement`);
     for (const need of needs) technologyOf(content, need);
@@ -584,20 +602,28 @@ function treeHeld(content: Catalogue): void {
         refuse(content, `the technology ${id} unlocks ${copies} copies of ${card}`);
       }
     }
+    if (unlocks.region !== undefined) {
+      if (!regionsHeld.has(unlocks.region)) {
+        refuse(
+          content,
+          `the technology ${id} unlocks the region ${unlocks.region}, which no age holds`,
+        );
+      }
+      unlockedOnce(regionUnlockedBy, 'region', unlocks.region, id);
+    }
     if (unlocks.age === undefined) continue;
     ageOf(content, unlocks.age);
-    const other = unlockedBy.get(unlocks.age);
-    if (other !== undefined) {
-      refuse(content, `the age ${unlocks.age} is unlocked by both ${other} and ${id}`);
-    }
-    unlockedBy.set(unlocks.age, id);
+    unlockedOnce(ageUnlockedBy, 'age', unlocks.age, id);
   }
-  for (const [at, [age]] of ages.entries()) {
-    const unlocker = unlockedBy.get(age);
+  for (const [at, [age, { regions }]] of ages.entries()) {
+    const unlocker = ageUnlockedBy.get(age);
     if (at === 0 && unlocker !== undefined) {
       refuse(content, `the first age ${age} is unlocked by ${unlocker}`);
     }
     if (at > 0 && unlocker === undefined) refuse(content, `the age ${age} is unlocked by nothing`);
+    if (Object.keys(regions).every((region) => regionUnlockedBy.has(region))) {
+      refuse(content, `the age ${age} holds no region reached from the first chronicle`);
+    }
   }
 
   const settled = new Set<string>();

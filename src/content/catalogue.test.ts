@@ -306,8 +306,9 @@ test('every age of the catalogue has a name and a ground colour on the screen, e
 });
 
 test('every region of every age has a name on the screen, and a colour for its middle hexagon and each around it', () => {
+  const campaign = newCampaign(CATALOGUE, firstCivilization(CATALOGUE));
   for (const age of AGES) {
-    for (const { region, biomes } of clustersOf(CATALOGUE, age)) {
+    for (const { region, biomes } of clustersOf(CATALOGUE, campaign, age)) {
       expect(() => regionName(region)).not.toThrow();
       for (const biome of biomes) {
         expect(() => terrainColourOf(biomeKind(CATALOGUE, biome).origin)).not.toThrow();
