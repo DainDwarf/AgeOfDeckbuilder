@@ -143,6 +143,12 @@ export const STONE: Slice = {
         technology: 'bow-and-arrow',
         influence: 1,
       },
+      pottery: {
+        ...gainedFrom('production', 'hills'),
+        need: 50,
+        technology: 'pottery',
+        influence: 1,
+      },
       bread: {
         count: (_catalogue, chronicle) => chronicle.population,
         need: 12,
@@ -205,6 +211,7 @@ export const STONE: Slice = {
       irrigation: { kind: 'instant', cost: { production: 2 }, ...placesImprovement('irrigation') },
       pasture: { kind: 'instant', cost: { production: 2 }, ...placesImprovement('pasture') },
       archer: { kind: 'unit', cost: { military: 2 }, ...enters('archer') },
+      'clay-pit': { kind: 'instant', cost: { production: 2 }, ...placesImprovement('clay-pit') },
       bread: {
         kind: 'instant',
         cost: { food: 2 },
@@ -266,6 +273,7 @@ export const STONE: Slice = {
       irrigation: { needs: ['agriculture', 'herbalism'], unlocks: { cards: { irrigation: 1 } } },
       domestication: { needs: ['trapping', 'agriculture'], unlocks: { cards: { pasture: 1 } } },
       'bow-and-arrow': { needs: ['trapping'], unlocks: { cards: { archer: 1 } } },
+      pottery: { needs: ['fire'], unlocks: { cards: { 'clay-pit': 1 } } },
       bread: { needs: ['irrigation'], unlocks: { cards: { bread: 1 } } },
       tanning: { needs: ['domestication'], unlocks: { cards: { tannery: 1 } } },
       raft: {
@@ -306,6 +314,7 @@ export const STONE: Slice = {
       trapping: { terrains: ['forest'], features: ['deer'], yields: { food: 1 } },
       irrigation: { terrains: ['plain', 'desert'], river: true, yields: { food: 1 } },
       pasture: { terrains: ['plain'], features: ['cattle'], yields: { food: 1 } },
+      'clay-pit': { terrains: ['hills'], yields: { production: 1 } },
     },
     biomes: {
       desert: {

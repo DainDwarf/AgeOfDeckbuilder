@@ -27,6 +27,7 @@ A goal is a focus themed on its technology: it is read from the technology's fic
 - **Irrigation** needs Agriculture and Herbalism. Its goal counts a deed: the times Farm is built on a tile a river runs along. It unlocks the card **Irrigation** and pays influence.
 - **Domestication** needs Trapping and Agriculture. Its goal counts a deed: the times Gather is played on a tile carrying cattle, the same tile as often as a worker gathers there. It unlocks the card **Pasture** and pays influence.
 - **Bow and arrow** needs Trapping. Its goal counts a deed: the enemies killed by a Scout's attack. It unlocks the card **Archer** and pays influence.
+- **Pottery** needs Fire. Its goal counts a deed: the production gained from hills tiles, at income and through Gather alike. It unlocks the card **Clay pit** and pays influence.
 - **Bread** needs Irrigation. Its goal reads the chronicle as it stands: the city's population, idle and assigned alike, a unit never counted. It unlocks the card **Bread** and pays influence.
 - **Tanning** needs Domestication. Its goal reads the chronicle as it stands: the tiles inside the border carrying a Pasture or a Trapping, the city's own tile counted when it carries one. It unlocks the card **Tannery** and pays influence.
 - **Raft** needs Bow and arrow. Its goal reads the chronicle as it stands: the coast tiles charted, the centre part's among them. It unlocks the card **Embark** and the archipelago region and pays influence.
@@ -46,6 +47,7 @@ A goal is a focus themed on its technology: it is read from the technology's fic
 - **Irrigation**, an improvement giving food, placed through a worker for production on a plain or a desert tile a river runs along and nowhere else.
 - **Pasture**, an improvement giving food, placed through a worker for production on a tile carrying cattle and nowhere else. It goes with the cattle, so a Hunt played there removes both.
 - **Archer**, costing military: one population leaves the tiles to become a unit.
+- **Clay pit**, an improvement giving production, placed through a worker for production on hills and nowhere else. The ground along a river was rejected: not every map deals a river near the centre, and the archipelago deals none.
 - **Bread**, an instant costing food, aimed at nothing: the city gains culture. Culture has its second source here, after the city's own tile, so food is kept for the next population or paid toward the next claim.
 - **Tannery**, a building giving money, built through a worker for production on a tile carrying deer or cattle and nowhere else, single use. It goes with the feature, so a Hunt played there removes both. Money has its source here.
 - **Embark**, an instant costing production, aimed at a coast tile beside a unit: the unit embarks onto it, spending its action. It becomes Disembark. An embarked unit crosses the coast slowly, whatever it was ashore, so the copies a deck holds are how many units are on the water at once, and the deck's cycle is how long a crossing takes.

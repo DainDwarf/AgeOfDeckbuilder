@@ -62,6 +62,7 @@ const IMPROVEMENT_MARKS: Readonly<Record<string, number[]>> = {
   trapping: [-5, -4, 5, -4, 0, 5],
   irrigation: [-6, -2, 6, -2, 6, 2, -6, 2],
   pasture: [-4, -5, 5, 0, -4, 5],
+  'clay-pit': [-6, -4, 6, -4, 3, 4, -3, 4],
 };
 
 /** The corners a unit kind's mark is drawn from; a kind with no mark is refused. */
