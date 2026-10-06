@@ -14,6 +14,7 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
+- **A campaign planted at a given state** — `e2e/archipelago.spec.ts` builds both its campaigns through a helper that learns the technologies it names, their unmet needs first, with no deed search left in it; the rules door the helper goes through learns one technology into a campaign and has its one test on the fixture. Doc-impact: none. [board/campaign-planted.md](board/campaign-planted.md)
 - **Fishing** — the wild's technology that needs Raft, with its achievement and every card it unlocks.
 - **Bread** — the field's technology that needs Irrigation, with its achievement and every card it unlocks, if it is kept.
 - **Bartering** — the hearth's technology that needs Tanning and Bread, with its achievement and every card it unlocks; the money the Tannery gives has no cost before it.
@@ -21,4 +22,5 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 - **Calendar** — the sky's technology that needs Irrigation and Burial rites, with its achievement and every card it unlocks.
 - **Pottery** — the hearth's technology that needs Fire, with its achievement and every card it unlocks, if it is kept: one of Pottery and Burial rites goes, a fifth plate in the tree's second column standing 56 over the room.
 - **Megalith** — the sky's technology that needs Calendar, with its achievement and every card it unlocks, if it is kept.
+- **A save forged at a campaign state** — a CLI that writes a save file holding a campaign with the technologies it is given learned, so a state need not be played to from scratch.
 - **The collection scrolls** — the spec that proves the collection scrolls, its cards being the first to fill the room, and a drag that runs on fired inside the page, since Playwright's own mouse moves come too far apart to set a panel running.
