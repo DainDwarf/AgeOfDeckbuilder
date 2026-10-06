@@ -1,26 +1,26 @@
 # Bartering
 
-**Line:** **Bartering** — the technology Bartering, its achievement and the cards Food Trade and Material Trade stand in the Stone Age's content, the technology ahead of Fishing's; the catalogue's coherence test passes and `docs/ages/STONE.md` says so. Doc-impact: `docs/ages/STONE.md`.
+**Line:** **Bartering** — the technology Bartering, its achievement and the cards Food trade and Material trade stand in the Stone Age's content, the technology ahead of Fishing's; the catalogue's coherence test passes and `docs/ages/STONE.md` says so. Doc-impact: `docs/ages/STONE.md`.
 
 **Spec:** [`docs/ages/STONE.md`](../../docs/ages/STONE.md), _The technologies_ and _The cards_; the shared ground is [`stone-age-pool.md`](stone-age-pool.md), _For the technologies_. The sentences below were drafted at intake and the user has not read them: the hand-back quotes each.
 
-- `docs/ages/STONE.md`, _The technologies_, a bullet after Raft's and before Fishing's: "**Bartering** needs Tanning and Bread. Its goal reads the chronicle as it stands: the money in the city's stock. It unlocks the cards **Food Trade** and **Material Trade** and pays influence."
+- `docs/ages/STONE.md`, _The technologies_, a bullet after Raft's and before Fishing's: "**Bartering** needs Tanning and Bread. Its goal reads the chronicle as it stands: the money in the city's stock. It unlocks the cards **Food trade** and **Material trade** and pays influence."
 - `docs/ages/STONE.md`, _The cards_, Tannery's bullet: its last sentence, "Money has its source here, and nothing in the age costs it.", becomes "Money has its source here."
-- `docs/ages/STONE.md`, _The cards_, a bullet after Disembark's and before Fishery's: "**Food Trade**, an instant costing money, aimed at nothing: the city gains food."
-- `docs/ages/STONE.md`, _The cards_, a bullet after Food Trade's: "**Material Trade**, an instant costing money, aimed at nothing: the city gains production. Money is paid in the two trades, each for one good, so which good a deck's money goes to is chosen when the deck is built. A trade choosing its good when it is played was rejected: it leaves the deck's building nothing to choose."
+- `docs/ages/STONE.md`, _The cards_, a bullet after Disembark's and before Fishery's: "**Food trade**, an instant costing money, aimed at nothing: the city gains food."
+- `docs/ages/STONE.md`, _The cards_, a bullet after Food trade's: "**Material trade**, an instant costing money, aimed at nothing: the city gains production. Money is paid in the two trades, each for one good, so which good a deck's money goes to is chosen when the deck is built. A trade choosing its good when it is played was rejected: it leaves the deck's building nothing to choose."
 
 The player-facing entries, verbatim:
 
-- `card.food-trade`: `Food Trade`
+- `card.food-trade`: `Food trade`
 - `rules.food-trade`: `Gain 3[food]`
-- `card.material-trade`: `Material Trade`
+- `card.material-trade`: `Material trade`
 - `rules.material-trade`: `Gain 3[production]`
 - `technology.bartering`: `Bartering`
 - `goal.bartering`: `Have {need}[money]`
 
 Who wrote what: the instant was the user's pick among three shapes Claude served, and the user struck the good chosen when the card is played: "too flexible", it "defeats the purpose of strategical choice of deck building". Two cards under one technology, one for food and one for production, was one of three takes Claude served, the previous game's two Caravans, and the user picked it "to try". The goal, the money stocked, was one of three Claude served and the user picked it. The names were one of two pairs Claude served and the user picked them. The need of 30, the cost of 2 money, the gain of 3 and the cards' texts were served by Claude as riders and none was struck; the user called the need provisional.
 
-The content's numbers, provisional: Food Trade is an instant aimed at nothing, costing 2 money, and the city gains 3 food; Material Trade is an instant aimed at nothing, costing 2 money, and the city gains 3 production; the technology needs Tanning and Bread and unlocks one copy of each card; the achievement counts the money in the city's stock, needs 30 and pays 1 influence.
+The content's numbers, provisional: Food trade is an instant aimed at nothing, costing 2 money, and the city gains 3 food; Material trade is an instant aimed at nothing, costing 2 money, and the city gains 3 production; the technology needs Tanning and Bread and unlocks one copy of each card; the achievement counts the money in the city's stock, needs 30 and pays 1 influence.
 
 **Doc-impact:** `docs/ages/STONE.md`.
 
@@ -56,10 +56,10 @@ The content's numbers, provisional: Food Trade is an instant aimed at nothing, c
 
 **Plan:**
 
-1. `src/content/stone.ts`: the two cards, the technology and the achievement stand, the last two between Raft's and Fishing's, Food Trade ahead of Material Trade.
+1. `src/content/stone.ts`: the two cards, the technology and the achievement stand, the last two between Raft's and Fishing's, Food trade ahead of Material trade.
 2. `src/ui/text.ts`: the six entries stand, so the coherence test passes.
 3. `docs/ages/STONE.md`: the four edits. The board line and this file are deleted.
 
 One commit: the line carries no mechanism.
 
-**Verify:** `npm run check`, `npm test`, `npm run lint`. The proof spec is `e2e/tree.spec.ts`. CI proves on the push: `e2e/pin.spec.ts`, `e2e/launch.spec.ts`, `e2e/ending.spec.ts`, `e2e/collection.spec.ts`, `e2e/browse.spec.ts`, `e2e/deck-editing.spec.ts`, `e2e/reference.spec.ts`, `e2e/archipelago.spec.ts`. The visual check looks at Bartering's plate in the tree's fourth column above Fishing's, available on a campaign that has learned Tanning and Bread, its two card lines among its reward, and at the cards Food Trade and Material Trade shown large.
+**Verify:** `npm run check`, `npm test`, `npm run lint`. The proof spec is `e2e/tree.spec.ts`. CI proves on the push: `e2e/pin.spec.ts`, `e2e/launch.spec.ts`, `e2e/ending.spec.ts`, `e2e/collection.spec.ts`, `e2e/browse.spec.ts`, `e2e/deck-editing.spec.ts`, `e2e/reference.spec.ts`, `e2e/archipelago.spec.ts`. The visual check looks at Bartering's plate in the tree's fourth column above Fishing's, available on a campaign that has learned Tanning and Bread, its two card lines among its reward, and at the cards Food trade and Material trade shown large.
