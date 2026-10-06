@@ -1,6 +1,5 @@
 import { expect, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
-import { gained } from '../src/rules/cards';
 import { type Civilization, cardOf, unitKind } from '../src/rules/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
 import {
@@ -27,6 +26,7 @@ import {
   firstSeed,
   idsOf,
   openSaved,
+  paidFor,
   playedOn,
   playedOut,
   settledOn,
@@ -92,12 +92,6 @@ function manned(chronicle: Chronicle, tiles: readonly TileCoords[]): Chronicle {
     (standing, tile) => unitEntered(standing, { type: WARRIOR, faction: 'player', tile }),
     chronicle,
   );
-}
-
-/** The chronicle with the card's cost gained, and where the card lies in its hand. */
-function paidFor(chronicle: Chronicle, card: CardId): { chronicle: Chronicle; index: number } {
-  const paid = gained(chronicle, cardOf(CATALOGUE, card).cost).chronicle;
-  return { chronicle: paid, index: idsOf(paid.hand).indexOf(card) };
 }
 
 test('Embark played at a tile beside one unit embarks that unit onto it, its action spent, and the discard pile’s top card reads the card Embark becomes', async ({

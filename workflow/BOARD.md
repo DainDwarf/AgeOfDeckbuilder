@@ -14,7 +14,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **Fishing** — the technology Fishing, its achievement and the card Fishery stand in the Stone Age's content after Raft's; a building gives to the tiles beside it, and an achievement counts a resource gained from the tiles of a terrain, each proven by one test on the fixture; every number of a player-facing entry stands against its glyph; `e2e/fishery.spec.ts` passes, the catalogue's coherence test passes and `docs/MAP.md`, `docs/GLOSSARY.md`, `docs/CHRONICLE-SCREEN.md` and `docs/ages/STONE.md` say so. Doc-impact: `docs/MAP.md`, `docs/GLOSSARY.md`, `docs/CHRONICLE-SCREEN.md`, `docs/ages/STONE.md`. [board/fishing.md](board/fishing.md)
 - **Bread** — the field's technology that needs Irrigation, with its achievement and every card it unlocks, if it is kept.
 - **Bartering** — the hearth's technology that needs Tanning and Bread, with its achievement and every card it unlocks; the money the Tannery gives has no cost before it.
 - **Burial rites** — the sky's technology that needs Herbalism, with its achievement and every card it unlocks, if it is kept: one of Burial rites and Pottery goes, a fifth plate in the tree's second column standing 56 over the room.

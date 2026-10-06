@@ -12,7 +12,13 @@ import {
   placesImprovement,
 } from '../rules/cards';
 import type { Age, Slice } from '../rules/catalogue';
-import { enemiesKilledBy, playsOn, terrainsPlayedOn, turnsPlaying } from '../rules/chronicle';
+import {
+  enemiesKilledBy,
+  gainedFrom,
+  playsOn,
+  terrainsPlayedOn,
+  turnsPlaying,
+} from '../rules/chronicle';
 import { MOVE_POINT, tileAt } from '../rules/map';
 import type { RiverFlow } from '../rules/map-kinds';
 import { followed } from '../rules/stages';
@@ -155,6 +161,12 @@ export const STONE: Slice = {
         technology: 'raft',
         influence: 1,
       },
+      fishing: {
+        ...gainedFrom('food', 'coast'),
+        need: 50,
+        technology: 'fishing',
+        influence: 1,
+      },
     },
   },
   brings: {
@@ -209,6 +221,12 @@ export const STONE: Slice = {
         ...embarks(MOVE_POINT),
       },
       disembark: { kind: 'instant', cost: {}, becomes: 'embark', ...disembarks() },
+      fishery: {
+        kind: 'building',
+        cost: { production: 4 },
+        singleUse: true,
+        ...builds('fishery'),
+      },
     },
     technologies: {
       herbalism: { needs: ['settlement'], unlocks: { cards: { heal: 1 } } },
@@ -223,6 +241,7 @@ export const STONE: Slice = {
         needs: ['bow-and-arrow'],
         unlocks: { cards: { embark: 1 }, region: 'archipelago' },
       },
+      fishing: { needs: ['raft'], unlocks: { cards: { fishery: 1 } } },
     },
     terrains: {
       desert: {
@@ -241,6 +260,11 @@ export const STONE: Slice = {
         terrains: ['forest', 'plain'],
         features: ['deer', 'cattle'],
         yields: { money: 2 },
+      },
+      fishery: {
+        terrains: ['coast'],
+        yields: {},
+        givesBeside: { terrain: 'coast', yields: { food: 1 } },
       },
     },
     improvements: {

@@ -171,6 +171,7 @@ export const LOOK: Look = {
     shelter: 'built',
     farm: 'built',
     tannery: 'built',
+    fishery: 'built',
   },
   ground: {
     nomadic: 0x2a5a41,

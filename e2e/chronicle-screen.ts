@@ -1592,6 +1592,15 @@ export type Paid = {
   readonly index: number;
 };
 
+/** The chronicle with the card's cost gained, and where the card lies in its hand. */
+export function paidFor(
+  chronicle: Chronicle,
+  card: CardId,
+): { readonly chronicle: Chronicle; readonly index: number } {
+  const paid = gained(chronicle, cardOf(CATALOGUE, card).cost).chronicle;
+  return { chronicle: paid, index: idsOf(paid.hand).indexOf(card) };
+}
+
 /**
  * The first seed's turn 1, launched as `settledOn` launches it, with the card in hand, on the ground
  * `made` makes of it, with the card paid for; a seed it makes none of is passed over.
@@ -1607,8 +1616,7 @@ export function paidOnGround(
     if (!idsOf(opened.hand).includes(card)) return undefined;
     const ground = made(opened);
     if (ground === undefined) return undefined;
-    const chronicle = gained(ground.chronicle, cardOf(CATALOGUE, card).cost).chronicle;
-    return { chronicle, tile: ground.tile, index: idsOf(chronicle.hand).indexOf(card) };
+    return { ...paidFor(ground.chronicle, card), tile: ground.tile };
   });
 }
 
