@@ -526,6 +526,32 @@ export function gainedFrom(
   };
 }
 
+/**
+ * An achievement's tally and count for the times the draw pile is emptied: each draw that takes its
+ * last card, whether a shuffle follows it or not. A dry pile with nothing to draw counts nothing.
+ */
+export function drawPileEmptied(): Required<Pick<Achievement, 'tallies' | 'count'>> {
+  return {
+    tallies: (_catalogue, started, stages, tally) => {
+      let before = started;
+      let counted = 0;
+      for (const stage of walked(stages)) {
+        if (
+          stage.kind === 'change' &&
+          stage.name === 'drawn' &&
+          before.drawPile.length > 0 &&
+          stage.chronicle.drawPile.length === 0
+        ) {
+          counted += 1;
+        }
+        if (leaf(stage)) before = stage.chronicle;
+      }
+      return counted === 0 ? tally : { ...tally, emptied: (tally.emptied ?? 0) + counted };
+    },
+    count: (_catalogue, _chronicle, tally) => tally.emptied ?? 0,
+  };
+}
+
 /** The tile a play was aimed at, the one its unit stands on for a play aimed at a unit. */
 function tileAimed(aimed: Aimed): TileCoords | undefined {
   switch (aimed.aim) {

@@ -3,6 +3,7 @@ import { type Achievement, achievementOf, ageOf, type Catalogue, capstoneOf } fr
 import {
   apply,
   type Command,
+  drawPileEmptied,
   enemiesKilledBy,
   gainedFrom,
   launched,
@@ -20,6 +21,7 @@ import {
   attackOn,
   builtOn,
   CATALOGUE,
+  type Carrying,
   CITY,
   CIVILIZATION,
   CROWD,
@@ -65,7 +67,7 @@ import { RESOURCES } from './resources';
 import { seedRng } from './rng';
 import { inSight } from './sight';
 import { type Change, type Stage, walked } from './stages';
-import { type Chronicle, type ChronicleAchievement, idle } from './state';
+import { type CardId, type Chronicle, type ChronicleAchievement, idle } from './state';
 
 /** A disc of plain out to eight, with nothing on it but a fertile plain on its centre tile. */
 function plainDisc(): Tile[] {
@@ -1245,6 +1247,23 @@ test('an achievement counting a resource gained from the tiles of a terrain coun
   expect(outcome(harvested).resources.food).toBeGreaterThan(outcome(foraged).resources.food);
   expect(namesOf(harvested)).not.toContain('tallied');
   expect(achievementIn(ended, HOARD).tally).toEqual({ gained: 2 * food('plain') });
+});
+
+test('an achievement counting the times the draw pile is emptied counts each draw that takes its last card, a shuffle after it or not, and none for a draw that leaves a card or a dry pile with nothing to draw', () => {
+  const counting = achieved({
+    [HOARD]: { ...achievementOf(CATALOGUE, AGE, HOARD), ...drawPileEmptied() },
+  });
+  const { count } = achievementOf(counting, AGE, HOARD);
+  const countAfter = (piles: Carrying): number => {
+    const ended = endedTurn(reaching([], { ...NO_GROWTH, ...piles }), undefined, counting);
+    return count(counting, ended, achievementIn(ended, HOARD).tally);
+  };
+  const harvests = (cards: number): CardId[] => Array.from({ length: cards }, () => 'PH_Harvest');
+
+  expect(countAfter({ drawPile: harvests(6) })).toBe(0);
+  expect(countAfter({ drawPile: harvests(5) })).toBe(1);
+  expect(countAfter({ drawPile: harvests(1), discardPile: harvests(2) })).toBe(2);
+  expect(countAfter({})).toBe(0);
 });
 
 test('a chronicle that has ended takes no command at all', () => {
