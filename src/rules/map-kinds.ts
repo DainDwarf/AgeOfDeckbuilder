@@ -50,6 +50,14 @@ export type LayerKind = {
   readonly bridge?: boolean;
 };
 
+/**
+ * A layer that fills a tile's building slot, and, for one that gives to the tiles beside it, the one
+ * terrain it gives to and what it gives each tile of it beside it and its own.
+ */
+export type BuildingKind = LayerKind & {
+  readonly givesBeside?: { readonly terrain: string; readonly yields: Partial<Resources> };
+};
+
 /** The terrain a feature of a kind lies on, and what it yields at income on top of that terrain. */
 export type FeatureKind = {
   readonly terrain: string;
@@ -110,7 +118,7 @@ export type MapContent = {
   readonly version: string;
   readonly terrains: Readonly<Record<string, TerrainKind>>;
   readonly biomes: Readonly<Record<string, BiomeKind>>;
-  readonly buildings: Readonly<Record<string, LayerKind>>;
+  readonly buildings: Readonly<Record<string, BuildingKind>>;
   readonly features: Readonly<Record<string, FeatureKind>>;
   readonly improvements: Readonly<Record<string, LayerKind>>;
 };
@@ -135,7 +143,7 @@ export function biomeKind(catalogue: MapContent, id: string): BiomeKind {
 }
 
 /** What a building of that kind stands on and yields; a building the catalogue does not hold is refused. */
-export function buildingKind(catalogue: MapContent, id: string): LayerKind {
+export function buildingKind(catalogue: MapContent, id: string): BuildingKind {
   return entryOf(catalogue, catalogue.buildings, id, 'building');
 }
 

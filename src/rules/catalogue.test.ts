@@ -40,6 +40,7 @@ import {
   SLICES,
   victoryOf,
   WARY,
+  WELL,
 } from './fixtures';
 import { discTiles, generateMap, tileKey } from './map';
 import type { LayerKind, Region } from './map-kinds';
@@ -384,6 +385,18 @@ test('a catalogue whose feature lies on a terrain it does not hold is refused', 
   const content = changed({ features: { PH_Fertile: { terrain: 'marsh', yields: {} } } });
 
   expect(() => catalogued(content)).toThrow(/^fixture: /);
+});
+
+test('a catalogue whose building gives to a terrain it does not hold is refused', () => {
+  const well = CATALOGUE.buildings[WELL];
+  const content = changed({
+    buildings: {
+      ...CATALOGUE.buildings,
+      [WELL]: { ...well, givesBeside: { terrain: 'marsh', yields: {} } },
+    },
+  });
+
+  expect(() => catalogued(content)).toThrow('fixture: no terrain is named marsh');
 });
 
 test('a catalogue whose region names a biome or a feature it does not hold is refused', () => {

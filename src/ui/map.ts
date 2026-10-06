@@ -17,6 +17,7 @@ import {
   type TileCoords,
   tileAt,
   tileKey,
+  tilesBeside,
   tileYield,
 } from '../rules/map';
 import { RESOURCES, type Resource } from '../rules/resources';
@@ -989,12 +990,13 @@ export function createMapView(
     if (shown === undefined) return;
 
     const inside = new Set(marking ? shown.held.map(tileKey) : []);
+    const faces = tilesBeside(shown.tiles.flatMap((tile) => drawnOf(tile)?.tile ?? []));
     for (const tile of shown.tiles) {
       if (threshold !== undefined && same(tile, threshold.tile)) continue;
       const face = drawnOf(tile);
       if (face === undefined) continue;
       const asked = inside.has(tileKey(tile)) ? EVERY_RESOURCE : showing;
-      const yields = tileYield(catalogue, face.tile);
+      const yields = tileYield(catalogue, face.tile, faces);
       const owed: Resource[] = [];
       for (const resource of RESOURCES) {
         if (!asked.has(resource)) continue;

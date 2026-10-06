@@ -19,6 +19,7 @@ import {
   healthLost,
   made,
   movePointsSpent,
+  outside,
   placesImprovement,
   recalled,
   refreshed,
@@ -55,7 +56,7 @@ import {
   playsOn,
   terrainsPlayedOn,
 } from './chronicle';
-import { arrived, bordered, populationKilled, populationTaken } from './city';
+import { arrived, bordered, populationKilled, populationTaken, yielded } from './city';
 import { campUnit, enteredAround } from './enemies';
 import {
   type BuildingTypeId,
@@ -155,6 +156,12 @@ export const FIRE: Fire = { burns: 'forest', leaves: 'plain', fromCity: 3, aroun
 
 /** How far from the city the fixture's herd deals its feature. */
 export const HERD = 3;
+
+/** The fixture's building that gives to the tiles beside it. */
+export const WELL = 'PH_Well';
+
+/** What `WELL` gives each plain tile beside it, and its own. */
+export const WELL_GIVES = { terrain: 'plain', yields: { production: 2 } } as const;
 
 /** The move of a unit the fixture's embark card embarks: none of the fixture's units has it ashore. */
 export const EMBARKED_MOVE = 3 * MOVE_POINT;
@@ -486,6 +493,14 @@ const TABLES: Omit<Tables, 'technologies'> = {
         (catalogue, paid, at) => featureRemoved(catalogue, paid, at),
       ),
     },
+    PH_Forage: {
+      kind: 'instant',
+      cost: {},
+      ...throughWorker(
+        (_catalogue, chronicle, tile) => outside(chronicle, tile),
+        (catalogue, paid, at) => yielded(catalogue, paid, at),
+      ),
+    },
     PH_Recall: {
       kind: 'instant',
       cost: { science: 2 },
@@ -667,6 +682,7 @@ const TABLES: Omit<Tables, 'technologies'> = {
       yields: { money: 1 },
     },
     PH_Mill: { terrains: ['plain'], river: true, yields: { production: 1 } },
+    [WELL]: { terrains: ['plain'], yields: { money: 1 }, givesBeside: WELL_GIVES },
   },
   features: {
     PH_Fertile: { terrain: 'plain', yields: { food: 1 } },

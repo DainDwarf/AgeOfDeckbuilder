@@ -10,6 +10,7 @@ import {
   type TileCoords,
   tileAt,
   tileKey,
+  tilesBeside,
   tileYield,
 } from '../src/rules/map';
 import { featureKind } from '../src/rules/map-kinds';
@@ -20,6 +21,7 @@ import {
   besideTiles,
   cityTileOf,
   dragSlack,
+  drawnFaces,
   firstSeed,
   marked,
   onScreen,
@@ -140,7 +142,7 @@ function riverBeside(): Found<Partial<Resources>> {
     tile.building === undefined &&
     tile.improvements.length === 0 &&
     runsAlong(chronicle.rivers, tile)
-      ? tileYield(CATALOGUE, tile)
+      ? tileYield(CATALOGUE, tile, tilesBeside(drawnFaces(chronicle)))
       : undefined,
   );
 }

@@ -34,8 +34,8 @@ type ClaimCommand = { readonly type: 'claim'; readonly tile: TileCoords };
 export type CityCommand = AssignCommand | ReassignCommand | ClaimCommand;
 
 /**
- * Income: an assigned tile no enemy occupies yields what its layers give, the city's own tile no
- * exception, tile by tile in tile order.
+ * Income: an assigned tile no enemy occupies yields, the city's own tile no exception, tile by tile
+ * in tile order.
  */
 export function income(catalogue: Catalogue, chronicle: Chronicle): Landed {
   const assigned = new Set(chronicle.assigned.map(tileKey));
@@ -55,7 +55,7 @@ export function income(catalogue: Catalogue, chronicle: Chronicle): Landed {
 export function yielded(catalogue: Catalogue, chronicle: Chronicle, at: TileCoords): Landed {
   const tile = tileAt(chronicle.tiles, at);
   if (tile === undefined) refuse(catalogue, `no tile of the map yields at ${tileKey(at)}`);
-  const yields = tileYield(catalogue, tile);
+  const yields = tileYield(catalogue, tile, (coord) => tileAt(chronicle.tiles, coord));
   if (costsOf(yields).length === 0) return unchanged(chronicle);
   const resources = { ...chronicle.resources };
   for (const resource of RESOURCES) resources[resource] += yields[resource] ?? 0;

@@ -104,21 +104,79 @@ export type HexMap = {
 /** The middle of the disc the generator deals. */
 export const CENTRE: TileCoords = { q: 0, r: 0 };
 
-/**
- * What a tile's layers give at income, resource by resource: the one answer income and the yield
- * overlay both read. A resource left out is none of it.
- */
-export function tileYield(catalogue: MapContent, tile: Tile): Partial<Resources> {
-  const summed: Partial<Resources> = { ...terrainKind(catalogue, tile.terrain).yields };
-  const add = (yields: Partial<Resources>): void => {
+/** Where the tiles a tile's yield reads beside it are read from: a tile off the map is none. */
+export type TilesBeside = (coord: TileCoords) => Tile | undefined;
+
+/** What gives a tile part of its yield: one of its layers, or a kind of building standing beside it. */
+export type YieldSource =
+  | { readonly kind: 'terrain'; readonly terrain: Terrain }
+  | { readonly kind: 'feature'; readonly feature: FeatureId }
+  | { readonly kind: 'improvement'; readonly improvement: ImprovementId }
+  | { readonly kind: 'building'; readonly building: BuildingTypeId }
+  | { readonly kind: 'beside'; readonly building: BuildingTypeId };
+
+/** One part of what a tile gives at income, and what gives it. */
+export type YieldPart = YieldSource & { readonly yields: Partial<Resources> };
+
+/** Every resource the yields name, summed. A resource left out is none of it. */
+function summed(parts: readonly Partial<Resources>[]): Partial<Resources> {
+  const total: Partial<Resources> = {};
+  for (const yields of parts) {
     for (const [resource, amount] of Object.entries(yields) as [Resource, number][]) {
-      summed[resource] = (summed[resource] ?? 0) + amount;
+      total[resource] = (total[resource] ?? 0) + amount;
     }
-  };
-  if (tile.feature !== undefined) add(featureKind(catalogue, tile.feature).yields);
-  for (const improvement of tile.improvements) add(improvementKind(catalogue, improvement).yields);
-  if (tile.building !== undefined) add(buildingKind(catalogue, tile.building).yields);
-  return summed;
+  }
+  return total;
+}
+
+/** What a building of that kind gives the tile it stands on: its own yield and what it gives beside it. */
+export function builtYield(catalogue: MapContent, building: BuildingTypeId): Partial<Resources> {
+  const { yields, givesBeside } = buildingKind(catalogue, building);
+  return givesBeside === undefined ? yields : summed([yields, givesBeside.yields]);
+}
+
+/**
+ * What a tile gives at income, part by part: its terrain, its feature, its building and its
+ * improvements, then each kind of building beside it that gives to the tile's terrain, once however
+ * many of that kind stand around it, and not at all where the tile's own building is of that kind.
+ */
+export function yieldParts(catalogue: MapContent, tile: Tile, beside: TilesBeside): YieldPart[] {
+  const parts: YieldPart[] = [
+    { kind: 'terrain', terrain: tile.terrain, yields: terrainKind(catalogue, tile.terrain).yields },
+  ];
+  const { feature, building } = tile;
+  if (feature !== undefined) {
+    parts.push({ kind: 'feature', feature, yields: featureKind(catalogue, feature).yields });
+  }
+  if (building !== undefined) {
+    parts.push({ kind: 'building', building, yields: builtYield(catalogue, building) });
+  }
+  for (const improvement of tile.improvements) {
+    parts.push({
+      kind: 'improvement',
+      improvement,
+      yields: improvementKind(catalogue, improvement).yields,
+    });
+  }
+  const given = new Set(building === undefined ? [] : [building]);
+  for (const coord of neighbours(tile)) {
+    const around = beside(coord)?.building;
+    if (around === undefined || given.has(around)) continue;
+    const { givesBeside } = buildingKind(catalogue, around);
+    if (givesBeside?.terrain !== tile.terrain) continue;
+    given.add(around);
+    parts.push({ kind: 'beside', building: around, yields: givesBeside.yields });
+  }
+  return parts;
+}
+
+/** What a tile gives at income, resource by resource. A resource left out is none of it. */
+export function tileYield(
+  catalogue: MapContent,
+  tile: Tile,
+  beside: TilesBeside,
+): Partial<Resources> {
+  return summed(yieldParts(catalogue, tile, beside).map(({ yields }) => yields));
 }
 
 const DIRECTIONS: readonly TileCoords[] = [
@@ -148,6 +206,12 @@ export function tileAt(tiles: readonly Tile[], coord: TileCoords): Tile | undefi
 /** The one way a tile is named in a set or a map keyed by position. */
 export function tileKey({ q, r }: TileCoords): string {
   return `${q},${r}`;
+}
+
+/** The tiles beside any tile read out of these, keyed once, so no read searches them all. */
+export function tilesBeside(tiles: readonly Tile[]): TilesBeside {
+  const byKey = new Map(tiles.map((tile) => [tileKey(tile), tile]));
+  return (coord) => byKey.get(tileKey(coord));
 }
 
 /**

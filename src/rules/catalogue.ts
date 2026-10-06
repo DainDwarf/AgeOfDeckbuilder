@@ -375,6 +375,9 @@ export function catalogued(content: Catalogue): Catalogue {
   ]) {
     for (const terrain of layer.terrains) terrainKind(content, terrain);
   }
+  for (const { givesBeside } of Object.values(content.buildings)) {
+    if (givesBeside !== undefined) terrainKind(content, givesBeside.terrain);
+  }
   for (const [noun, table] of [
     ['building', content.buildings],
     ['improvement', content.improvements],

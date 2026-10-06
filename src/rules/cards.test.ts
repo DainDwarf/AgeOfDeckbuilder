@@ -8,7 +8,6 @@ import {
   featureRemoved,
   improvementPlaced,
   made,
-  outside,
   playedThrough,
   refuses,
   terraformable,
@@ -26,7 +25,6 @@ import {
   unitKind,
 } from './catalogue';
 import { admitted, apply, byHand, type Command, outcome, refusalOf } from './chronicle';
-import { yielded } from './city';
 import {
   AGE,
   actionOf,
@@ -1401,23 +1399,6 @@ test('the farm card names the first of its five reasons: worker, action, terrain
   expect(refusedFor(worked, 'PH_Farm', at)).toBeUndefined();
 });
 
-/** The fixture's content with a card that works the map: through a worker, outside the border. */
-const FORAGING: Catalogue = catalogued({
-  ...CATALOGUE,
-  cards: {
-    ...CATALOGUE.cards,
-    PH_Forage: {
-      kind: 'instant',
-      cost: {},
-      ...throughWorker(
-        (_catalogue, chronicle, tile) => outside(chronicle, tile),
-        (catalogue, paid, on) => yielded(catalogue, paid, on),
-      ),
-    },
-  },
-  cardAges: { ...CATALOGUE.cardAges, PH_Forage: AGE },
-});
-
 test('the forage card names the first of its three reasons: worker, action, then held', () => {
   const at = { q: 1, r: 0 };
   const out = { q: 2, r: 0 };
@@ -1425,20 +1406,20 @@ test('the forage card names the first of its three reasons: worker, action, then
   const held = withUnits(bare, [worker(at)]);
   const beyond = withUnits(bare, [worker(out)]);
 
-  expect(refusedFor(bare, 'PH_Forage', at, FORAGING)).toBe('no-worker');
-  expect(refusedFor(bare, 'PH_Forage', out, FORAGING)).toBe('no-worker');
-  expect(refusedFor(held, 'PH_Forage', at, FORAGING)).toBe('inside-border');
-  expect(
-    refusedFor(outcome(apply(FORAGING, beyond, aimedAt(out))), 'PH_Forage', out, FORAGING),
-  ).toBe('worker-spent');
-  expect(refusedFor(beyond, 'PH_Forage', out, FORAGING)).toBeUndefined();
+  expect(refusedFor(bare, 'PH_Forage', at)).toBe('no-worker');
+  expect(refusedFor(bare, 'PH_Forage', out)).toBe('no-worker');
+  expect(refusedFor(held, 'PH_Forage', at)).toBe('inside-border');
+  expect(refusedFor(outcome(apply(CATALOGUE, beyond, aimedAt(out))), 'PH_Forage', out)).toBe(
+    'worker-spent',
+  );
+  expect(refusedFor(beyond, 'PH_Forage', out)).toBeUndefined();
 });
 
 test('the forage card played on a tile that gives nothing spends the worker’s action and gains nothing', () => {
   const out = { q: 2, r: 0 };
   const barren = catalogued({
-    ...FORAGING,
-    terrains: { ...FORAGING.terrains, hills: { ...FORAGING.terrains.hills, yields: {} } },
+    ...CATALOGUE,
+    terrains: { ...CATALOGUE.terrains, hills: { ...CATALOGUE.terrains.hills, yields: {} } },
   });
   const city = workedTile(out, 'hills', { hand: ['PH_Forage'] }, barren);
 

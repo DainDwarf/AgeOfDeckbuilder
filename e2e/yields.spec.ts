@@ -46,8 +46,8 @@ async function withCityMode(page: Page, ...resources: Resource[]): Promise<Glyph
   const chronicle = await chronicleOf(page);
   const held = new Set(chronicle.held.map(tileKey));
   const faces = drawnFaces(chronicle);
-  const inside = glyphsOf(faces.filter((face) => held.has(tileKey(face))));
-  const outside = glyphsOf(faces.filter((face) => !held.has(tileKey(face))));
+  const inside = glyphsOf(faces, (face) => held.has(tileKey(face)));
+  const outside = glyphsOf(faces, (face) => !held.has(tileKey(face)));
   const shown = noGlyphs();
   for (const resource of RESOURCES) {
     shown[resource] = inside[resource] + (resources.includes(resource) ? outside[resource] : 0);

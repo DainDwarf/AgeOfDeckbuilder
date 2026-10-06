@@ -16,6 +16,7 @@ import {
   AGE,
   aimedAt,
   assignTo,
+  builtOn,
   CATALOGUE,
   type Carrying,
   CITY,
@@ -39,6 +40,8 @@ import {
   settledOn,
   stagedBy,
   standing,
+  WELL,
+  WELL_GIVES,
   withTile,
   worker,
 } from './fixtures';
@@ -52,7 +55,7 @@ import {
   tileKey,
 } from './map';
 import { buildingKind, featureKind, improvementKind, regionOf, terrainKind } from './map-kinds';
-import { RESOURCES } from './resources';
+import { RESOURCES, type Resources } from './resources';
 import { type Chronicle, idle } from './state';
 
 /** The command a drag in city mode sends: the population off one tile and onto another. */
@@ -268,6 +271,56 @@ test('an assigned tile yields what all four of its layers declare, summed', () =
         (buildingKind(CATALOGUE, 'PH_Farm').yields[resource] ?? 0),
     );
   }
+});
+
+/** What the stock rose by, resource by resource, from one chronicle to the next. */
+function gainedBetween(before: Chronicle, after: Chronicle): Resources {
+  return Object.fromEntries(
+    RESOURCES.map((resource) => [resource, after.resources[resource] - before.resources[resource]]),
+  ) as Resources;
+}
+
+/** What these yields come to together, every resource named. */
+function together(...yields: Partial<Resources>[]): Resources {
+  return Object.fromEntries(
+    RESOURCES.map((resource) => [
+      resource,
+      yields.reduce((total, part) => total + (part[resource] ?? 0), 0),
+    ]),
+  ) as Resources;
+}
+
+test('a building that gives beside it gives every tile of its terrain beside it, and its own, once from its kind, at income and through a card gaining a tile’s yield', () => {
+  const wells = [
+    { q: 1, r: 0 },
+    { q: 2, r: 0 },
+  ];
+  const out = { q: 1, r: 1 };
+  const city = cityOf(['urban', 'plain', 'plain', 'plain'], {
+    ...NO_GROWTH,
+    tiles: builtOn(field(4), WELL, wells),
+    units: [worker(out)],
+    hand: ['PH_Forage'],
+  });
+  const ground = (terrain: Terrain) => terrainKind(CATALOGUE, terrain).yields;
+  const own = buildingKind(CATALOGUE, WELL).yields;
+
+  const income = heldBy(apply(CATALOGUE, city, { type: 'end-turn' }), 'income');
+  const foraged = outcome(apply(CATALOGUE, city, aimedAt(out)));
+
+  // The city's urban tile stands beside a well, each well beside the other, and the tile foraged
+  // outside the border beside both.
+  expect(
+    income.map((stock, at) =>
+      gainedBetween(at === 0 ? city : income[at - 1].chronicle, stock.chronicle),
+    ),
+  ).toEqual([
+    together(ground('urban'), buildingKind(CATALOGUE, 'PH_City').yields),
+    together(ground('plain'), own, WELL_GIVES.yields),
+    together(ground('plain'), own, WELL_GIVES.yields),
+    together(ground('plain'), WELL_GIVES.yields),
+  ]);
+  expect(gainedBetween(city, foraged)).toEqual(together(ground('plain'), WELL_GIVES.yields));
 });
 
 test('resources accumulate over consecutive turns', () => {

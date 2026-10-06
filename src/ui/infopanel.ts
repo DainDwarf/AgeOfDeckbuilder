@@ -1,16 +1,16 @@
 import Phaser from 'phaser';
 import { type Catalogue, fullHealth, unitKind } from '../rules/catalogue';
 import {
-  type BuildingTypeId,
-  type FeatureId,
+  builtYield,
   groundCost,
-  type ImprovementId,
   MOVE_POINT,
   movementCost,
   type River,
   runsAlong,
-  type Terrain,
   type Tile,
+  type TilesBeside,
+  type YieldSource,
+  yieldParts,
 } from '../rules/map';
 import { buildingKind, featureKind, improvementKind, terrainKind } from '../rules/map-kinds';
 import { RESOURCES, type Resource, type Resources } from '../rules/resources';
@@ -34,12 +34,7 @@ import type { Reference } from './text-run';
 import type { Tooltip } from './tooltip';
 
 /** One line of a card's ledger: what it is drawn and named by, and what it gives at income. */
-type Row =
-  | { readonly kind: 'building'; readonly building: BuildingTypeId }
-  | { readonly kind: 'improvement'; readonly improvement: ImprovementId }
-  | { readonly kind: 'feature'; readonly feature: FeatureId }
-  | { readonly kind: 'terrain'; readonly terrain: Terrain }
-  | { readonly kind: 'river' };
+type Row = (YieldSource | { readonly kind: 'river' }) & { readonly yields: Partial<Resources> };
 
 /** What a unit card reads: a unit on the map, or a unit kind read as a unit fresh of it. */
 type UnitReading = Pick<Unit, 'stats' | 'faction' | 'movePoints' | 'action' | 'embarked'>;
@@ -66,15 +61,34 @@ function drawingOf(catalogue: Catalogue, thing: Thing): Drawing {
     case 'terrain':
       return {
         kind: 'terrain',
-        rows: [{ kind: 'terrain', terrain: thing.id }],
+        rows: [
+          { kind: 'terrain', terrain: thing.id, yields: terrainKind(catalogue, thing.id).yields },
+        ],
         movementCost: costRead((embarked) => groundCost(catalogue, thing.id, embarked)),
       };
     case 'feature':
-      return { kind: 'feature', rows: [{ kind: 'feature', feature: thing.id }] };
+      return {
+        kind: 'feature',
+        rows: [
+          { kind: 'feature', feature: thing.id, yields: featureKind(catalogue, thing.id).yields },
+        ],
+      };
     case 'improvement':
-      return { kind: 'building', rows: [{ kind: 'improvement', improvement: thing.id }] };
+      return {
+        kind: 'building',
+        rows: [
+          {
+            kind: 'improvement',
+            improvement: thing.id,
+            yields: improvementKind(catalogue, thing.id).yields,
+          },
+        ],
+      };
     case 'building':
-      return { kind: 'building', rows: [{ kind: 'building', building: thing.id }] };
+      return {
+        kind: 'building',
+        rows: [{ kind: 'building', building: thing.id, yields: builtYield(catalogue, thing.id) }],
+      };
     case 'player':
     case 'enemy': {
       const stats = unitKind(catalogue, thing.id);
@@ -114,32 +128,49 @@ export function createThingCard(
 }
 
 /**
- * What a tile is made of right now, as the cards an inspection steps: the unit, the building with
- * the tile's improvements, and the terrain with its feature and the river running along it. The
- * first two are left out when nothing fills them; the terrain card always stands.
+ * Where a part of a tile's yield stands in an inspection: on the building card, or on the terrain
+ * card ahead of the river's row or after it.
+ */
+function placeOf(source: YieldSource): 'building' | 'ground' | 'beside' {
+  switch (source.kind) {
+    case 'building':
+    case 'improvement':
+      return 'building';
+    case 'terrain':
+    case 'feature':
+      return 'ground';
+    case 'beside':
+      return 'beside';
+  }
+}
+
+/**
+ * What a tile is made of right now, as the cards an inspection steps, each row read off the tile's
+ * yield: the unit, the building card, and the terrain card, which always stands.
  */
 export function cardsOf(
   catalogue: Catalogue,
   tile: Tile,
   units: readonly Unit[],
   rivers: readonly River[],
+  beside: TilesBeside,
 ): Card[] {
   const cards: Card[] = [];
 
   const unit = unitAt(units, tile);
   if (unit !== undefined) cards.push({ kind: 'unit', unit });
 
-  const built: Row[] = [];
-  if (tile.building !== undefined) built.push({ kind: 'building', building: tile.building });
-  for (const improvement of tile.improvements) built.push({ kind: 'improvement', improvement });
+  const parts = yieldParts(catalogue, tile, beside);
+  const rows = (place: ReturnType<typeof placeOf>): Row[] =>
+    parts.filter((part) => placeOf(part) === place);
+
+  const built = rows('building');
   if (built.length > 0) cards.push({ kind: 'building', rows: built });
 
-  const ground: Row[] = [{ kind: 'terrain', terrain: tile.terrain }];
-  if (tile.feature !== undefined) ground.push({ kind: 'feature', feature: tile.feature });
-  if (runsAlong(rivers, tile)) ground.push({ kind: 'river' });
+  const river: Row[] = runsAlong(rivers, tile) ? [{ kind: 'river', yields: {} }] : [];
   cards.push({
     kind: 'terrain',
-    rows: ground,
+    rows: [...rows('ground'), ...river, ...rows('beside')],
     movementCost: costRead((embarked) => movementCost(catalogue, tile, embarked)),
   });
 
@@ -443,7 +474,7 @@ function buildFace(
     );
     contents.push(rowName);
 
-    const gives = yieldsOf(catalogue, row);
+    const gives = yieldsOf(row);
     if (gives.length === 0) {
       contents.push(
         addText(scene, right, rowTop + line / 2, text('panel.no-yield'), style.label).setOrigin(
@@ -497,7 +528,7 @@ function buildFace(
       }
     }
 
-    const note = noteOf(row);
+    const note = noteOf(catalogue, row);
     if (note !== undefined) {
       contents.push(addText(scene, left, rowTop + line / 2, note, style.label).setOrigin(0, 0.5));
       rowTop += line + 0.35 * em;
@@ -539,6 +570,7 @@ function movementOf(card: Drawing): string | undefined {
 function markOf(scene: Phaser.Scene, row: Row): Phaser.GameObjects.Polygon {
   switch (row.kind) {
     case 'building':
+    case 'beside':
       return buildingMark(scene, row.building);
     case 'improvement':
       return improvementMark(scene, row.improvement);
@@ -554,6 +586,7 @@ function markOf(scene: Phaser.Scene, row: Row): Phaser.GameObjects.Polygon {
 function nameOf(row: Row): string {
   switch (row.kind) {
     case 'building':
+    case 'beside':
       return buildingName(row.building);
     case 'improvement':
       return improvementName(row.improvement);
@@ -566,10 +599,19 @@ function nameOf(row: Row): string {
   }
 }
 
-/** What a row says under itself of what it does to a move, and nothing for a row that does none. */
-function noteOf(row: Row): string | undefined {
+/**
+ * What a row says under itself of what it does beyond its yield — to a move, to the tiles beside it
+ * — and nothing for a row that does neither.
+ */
+function noteOf(catalogue: Catalogue, row: Row): string | undefined {
   switch (row.kind) {
-    case 'building':
+    case 'building': {
+      const { givesBeside } = buildingKind(catalogue, row.building);
+      return givesBeside === undefined
+        ? undefined
+        : text('panel.beside', { terrain: terrainName(givesBeside.terrain) });
+    }
+    case 'beside':
     case 'improvement':
     case 'feature':
     case 'terrain':
@@ -579,27 +621,11 @@ function noteOf(row: Row): string | undefined {
   }
 }
 
-function yieldsIn(catalogue: Catalogue, row: Row): Partial<Resources> {
-  switch (row.kind) {
-    case 'building':
-      return buildingKind(catalogue, row.building).yields;
-    case 'improvement':
-      return improvementKind(catalogue, row.improvement).yields;
-    case 'feature':
-      return featureKind(catalogue, row.feature).yields;
-    case 'terrain':
-      return terrainKind(catalogue, row.terrain).yields;
-    case 'river':
-      return {};
-  }
-}
-
 /** What the row gives at income, in the order the resource bar reads. */
-function yieldsOf(catalogue: Catalogue, row: Row): { resource: Resource; amount: number }[] {
-  const yields = yieldsIn(catalogue, row);
+function yieldsOf(row: Row): { resource: Resource; amount: number }[] {
   const given: { resource: Resource; amount: number }[] = [];
   for (const resource of RESOURCES) {
-    const amount = yields[resource];
+    const amount = row.yields[resource];
     if (amount !== undefined) given.push({ resource, amount });
   }
   return given;

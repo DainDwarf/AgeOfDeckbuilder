@@ -46,6 +46,7 @@ import {
   type TileCoords,
   tileAt,
   tileKey,
+  tilesBeside,
   tileYield,
 } from '../src/rules/map';
 import { featureKind, improvementKind } from '../src/rules/map-kinds';
@@ -1192,13 +1193,17 @@ export function drawnFaces(chronicle: Chronicle): Tile[] {
 }
 
 /**
- * How many glyphs each resource is owed for these faces of the map: one for every point they yield
- * of it.
+ * How many glyphs each resource is owed for the faces of the map `counted` keeps, every face it draws
+ * read beside them: one for every point they yield of it.
  */
-export function glyphsOf(faces: readonly Tile[]): Glyphs {
+export function glyphsOf(
+  faces: readonly Tile[],
+  counted: (face: Tile) => boolean = () => true,
+): Glyphs {
   const owed = noGlyphs();
-  for (const face of faces) {
-    const yields = tileYield(CATALOGUE, face);
+  const beside = tilesBeside(faces);
+  for (const face of faces.filter(counted)) {
+    const yields = tileYield(CATALOGUE, face, beside);
     for (const resource of RESOURCES) owed[resource] += yields[resource] ?? 0;
   }
   return owed;

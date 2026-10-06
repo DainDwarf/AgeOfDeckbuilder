@@ -331,6 +331,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
         face.tile,
         face.asStands ? this.current.units : [],
         this.current.rivers,
+        (coord) => view.drawnAs(coord)?.tile,
       );
       const already =
         inspection !== undefined && tileKey(inspection.on.tile) === tileKey(on.tile)

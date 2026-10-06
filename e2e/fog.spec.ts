@@ -156,7 +156,7 @@ test('the overlay, the inspection and a press read what the map draws, and widen
 
   await openSaved(page, stood);
 
-  // The overlay glyphs the tiles the map draws, each from the face it draws of it.
+  // The overlay glyphs the tiles the map draws, each from the faces it draws.
   await page.keyboard.press('Tab');
   await expect.poll(() => shows(page, 'yield-dim')).toBe(true);
   const kept = stood.snapshots.find((snapshot) => tileKey(snapshot) === tileKey(fog));
