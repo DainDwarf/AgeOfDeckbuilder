@@ -14,7 +14,7 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **Pottery** — the hearth's technology that needs Fire, with its achievement and every card it unlocks.
+- **Pottery** — the technology Pottery, its achievement and the card Clay pit stand in the Stone Age's content, the technology after Bow and arrow's; the catalogue's coherence test passes and `docs/ages/STONE.md` says so. Doc-impact: `docs/ages/STONE.md`. [board/pottery.md](board/pottery.md)
 - **Calendar** — the sky's technology that needs Irrigation, with its achievement and every card it unlocks.
 - **Megalith** — the sky's technology that needs Calendar, with its achievement and every card it unlocks, if it is kept; a building giving culture, the user's idea for Burial rites, may be its card.
 - **A save forged at a campaign state** — a CLI that writes a save file holding a campaign with the technologies it is given learned, so a state need not be played to from scratch.
