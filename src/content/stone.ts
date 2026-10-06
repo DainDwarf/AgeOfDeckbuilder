@@ -167,6 +167,12 @@ export const STONE: Slice = {
         technology: 'raft',
         influence: 1,
       },
+      bartering: {
+        count: (_catalogue, chronicle) => chronicle.resources.money,
+        need: 30,
+        technology: 'bartering',
+        influence: 1,
+      },
       fishing: {
         ...gainedFrom('food', 'coast'),
         need: 50,
@@ -233,6 +239,18 @@ export const STONE: Slice = {
         ...embarks(MOVE_POINT),
       },
       disembark: { kind: 'instant', cost: {}, becomes: 'embark', ...disembarks() },
+      'food-trade': {
+        kind: 'instant',
+        cost: { money: 2 },
+        aim: 'none',
+        effect: (_catalogue, paid) => gained(paid, { food: 3 }),
+      },
+      'material-trade': {
+        kind: 'instant',
+        cost: { money: 2 },
+        aim: 'none',
+        effect: (_catalogue, paid) => gained(paid, { production: 3 }),
+      },
       fishery: {
         kind: 'building',
         cost: { production: 4 },
@@ -253,6 +271,10 @@ export const STONE: Slice = {
       raft: {
         needs: ['bow-and-arrow'],
         unlocks: { cards: { embark: 1 }, region: 'archipelago' },
+      },
+      bartering: {
+        needs: ['tanning', 'bread'],
+        unlocks: { cards: { 'food-trade': 1, 'material-trade': 1 } },
       },
       fishing: { needs: ['raft'], unlocks: { cards: { fishery: 1 } } },
     },
