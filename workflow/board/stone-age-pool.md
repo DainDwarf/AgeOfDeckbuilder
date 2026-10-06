@@ -1,6 +1,6 @@
 # The Stone Age's pool
 
-A pool of possibilities from the brainstorm that cut the Stone Age rung. Nothing here is decided, promised or linked to a mechanism; each section is read at the cut of the rung it names and deleted with it. The technologies' section is the exception: its rung is cut, what it holds is settled unless it says otherwise, it is the ground the technology lines share, and it is deleted with the last of them. The ideas tagged Stone Age in [`IDEAS.md`](../IDEAS.md) belong to the same pool and are not repeated here.
+A pool of possibilities from the brainstorm that cut the Stone Age rung. Nothing here is decided, promised or linked to a mechanism; each section is read at the cut of the rung it names and deleted with it. The technologies' section is the exception: its rung is cut, what it holds is settled unless it says otherwise, it is the ground the technology lines share, and it stands past the last of them until the user has gone through its taste list. The ideas tagged Stone Age in [`IDEAS.md`](../IDEAS.md) belong to the same pool and are not repeated here.
 
 The age in one sentence: the chronicle where the economy comes home — it opens as a band that still lives off the map and ends as a village that lives off its border.
 
