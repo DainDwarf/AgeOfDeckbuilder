@@ -66,6 +66,10 @@ The field is Agriculture, Irrigation and Bread; the wild is Trapping, Domesticat
 - A term is sized for the uses to come: "embarked" over "on a raft", a transport unit being likely later.
 - A fight on the water is out of the Stone Age's history: nothing attacks from it, and only range reaches onto it.
 - A goal that sends the scout along the map was taken on sight: "Chart 30 [Coast]".
+- A goal may count a resource gained from a ground, whichever way it is gained: "Gain 50 food from coast tiles" counts income and Gather both, the user's sentence over three takes that each counted one card or one position.
+- The age leaning on food is accepted: food is "the primary concern of stone age's humanity".
+- A region that makes a goal easier is the region doing its job, never a catch: "A naval playstyle on a naval map".
+- A gain spread over the tiles around a building, each needing a population to work it, was taken over one richer tile: more food overall, and a lot of worked tiles to get it. Two of the building beside a tile give once.
 
 **Left out, and side notes:**
 
