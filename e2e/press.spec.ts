@@ -1,6 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
-import { pinned, unpinnable } from '../src/rules/campaign';
+import { available, pinned } from '../src/rules/campaign';
 import { achievementOf } from '../src/rules/catalogue';
 import { apply, byHand, outcome } from '../src/rules/chronicle';
 import { CENTRE, type TileCoords, tileKey } from '../src/rules/map';
@@ -871,7 +871,7 @@ test('a click on the pinned achievement, a name in its goal included, lets the c
     .map(({ id }) => ({ id, ...achievementOf(CATALOGUE, opened.age, id) }))
     .find(
       ({ id, technology, need }) =>
-        unpinnable(CATALOGUE, technology, won.technologies) === undefined &&
+        available(CATALOGUE, technology, won.technologies) &&
         namedIn(achievementGoal(id, need)).length > 0,
     );
   if (pin === undefined)

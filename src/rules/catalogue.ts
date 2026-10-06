@@ -816,6 +816,22 @@ export function achievementOf(catalogue: Catalogue, age: string, id: string): Ac
   return entryOf(catalogue, ageOf(catalogue, age).achievements, id, 'achievement');
 }
 
+/**
+ * The achievement that earns the technology, by its id, in whichever age owns it; a technology no
+ * achievement earns is refused.
+ */
+export function earningOf(
+  catalogue: Catalogue,
+  technology: string,
+): { readonly id: string; readonly achievement: Achievement } {
+  for (const { achievements } of Object.values(catalogue.ages)) {
+    for (const [id, achievement] of Object.entries(achievements)) {
+      if (achievement.technology === technology) return { id, achievement };
+    }
+  }
+  refuse(catalogue, `the technology ${technology} is earned by no achievement`);
+}
+
 /** A chronicle begun on any other version of the content than this catalogue's is refused. */
 export function checkContent(catalogue: Catalogue, { content }: Pick<Chronicle, 'content'>): void {
   if (content === catalogue.version) return;

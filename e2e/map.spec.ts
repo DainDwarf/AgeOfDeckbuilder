@@ -1,6 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
-import { type Campaign, pinned, unpinnable } from '../src/rules/campaign';
+import { available, type Campaign, pinned } from '../src/rules/campaign';
 import { achievementOf } from '../src/rules/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
 import { campUnit } from '../src/rules/enemies';
@@ -144,7 +144,7 @@ function pinningRead(chronicle: Chronicle): Campaign {
   const fresh = freshCampaign(CATALOGUE);
   const technology = chronicle.achievements
     .map(({ id }) => achievementOf(CATALOGUE, chronicle.age, id).technology)
-    .find((read) => unpinnable(CATALOGUE, read, fresh.technologies) === undefined);
+    .find((read) => available(CATALOGUE, read, fresh.technologies));
   if (technology === undefined)
     throw new Error(`the ${chronicle.age} age reads no achievement a new campaign may pin`);
   return pinned(CATALOGUE, fresh, technology);

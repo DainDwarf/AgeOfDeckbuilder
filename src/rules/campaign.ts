@@ -7,6 +7,7 @@ import {
   cardOf,
   checkContent,
   civilizationOf,
+  earningOf,
   firstAge,
   technologyOf,
 } from './catalogue';
@@ -56,10 +57,10 @@ export function available(
 }
 
 /**
- * What keeps a technology from being pinned beside the technologies learned, named as what it is, and
- * nothing for an available technology.
+ * What keeps a technology from being available beside the technologies learned, named as what it is,
+ * and nothing for an available technology.
  */
-export function unpinnable(
+export function unavailable(
   catalogue: Catalogue,
   technology: string,
   learned: readonly string[],
@@ -73,7 +74,7 @@ export function unpinnable(
 
 /** The campaign pinning the technology, in place of any it pinned; one not available is refused. */
 export function pinned(catalogue: Catalogue, campaign: Campaign, technology: string): Campaign {
-  const misfit = unpinnable(catalogue, technology, campaign.technologies);
+  const misfit = unavailable(catalogue, technology, campaign.technologies);
   if (misfit !== undefined) refuse(catalogue, `the pin names ${misfit}`);
   return { ...campaign, pin: technology };
 }
@@ -306,6 +307,32 @@ export function removedFrom(
   });
 }
 
+/**
+ * The campaign with the technology learned: the cards it unlocks dealt into the collection with their
+ * copies, in no section of any civilization, the influence of the achievement that earns it added,
+ * and the pin taken off it. A technology that is not available is refused.
+ */
+export function learnedInto(
+  catalogue: Catalogue,
+  campaign: Campaign,
+  technology: string,
+): Campaign {
+  const misfit = unavailable(catalogue, technology, campaign.technologies);
+  if (misfit !== undefined) refuse(catalogue, `the campaign learns ${misfit}`);
+  const ids = Object.entries(technologyOf(catalogue, technology).unlocks.cards).flatMap(
+    ([card, copies]) => Array.from({ length: copies }, () => card),
+  );
+  const cards = dealt(campaign.nextCard, ids);
+  const learned: Campaign = {
+    ...campaign,
+    technologies: [...campaign.technologies, technology],
+    influence: campaign.influence + earningOf(catalogue, technology).achievement.influence,
+    nextCard: cards.nextCard,
+    collection: [...campaign.collection, ...cards.cards],
+  };
+  return learned.pin === technology ? unpinned(learned) : learned;
+}
+
 /** What an ended chronicle paid into the campaign, and the campaign it left. */
 export type Payment = {
   readonly campaign: Campaign;
@@ -316,51 +343,32 @@ export type Payment = {
 };
 
 /**
- * An ended chronicle paid into the campaign, achievement by achievement in the chronicle's order, and
- * the pin taken off a technology it learns. A chronicle that has not ended, and an achievement reached
- * whose technology is already learned, are refused.
+ * An ended chronicle paid into the campaign, the technology of each achievement it reached learned in
+ * the chronicle's order. A chronicle that has not ended, and an achievement reached whose technology
+ * is not available, are refused.
  */
 export function paidInto(catalogue: Catalogue, campaign: Campaign, chronicle: Chronicle): Payment {
   checkContent(catalogue, chronicle);
   if (chronicle.ending === undefined)
     refuse(catalogue, 'a chronicle that has not ended pays nothing');
-  let { technologies, influence, nextCard } = campaign;
+  let paid = campaign;
   const achievements: string[] = [];
   const learned: string[] = [];
-  const entered: CampaignCard[] = [];
   for (const { id, reached } of chronicle.achievements) {
     if (!reached) continue;
-    const achievement = achievementOf(catalogue, chronicle.age, id);
-    const { technology } = achievement;
-    if (technologies.includes(technology)) {
+    const { technology } = achievementOf(catalogue, chronicle.age, id);
+    if (paid.technologies.includes(technology)) {
       refuse(catalogue, `the achievement ${id} earns ${technology}, which is already learned`);
     }
-    const ids = Object.entries(technologyOf(catalogue, technology).unlocks.cards).flatMap(
-      ([card, copies]) => Array.from({ length: copies }, () => card),
-    );
-    const cards = dealt(nextCard, ids);
+    paid = learnedInto(catalogue, paid, technology);
     achievements.push(id);
     learned.push(technology);
-    entered.push(...cards.cards);
-    technologies = [...technologies, technology];
-    influence += achievement.influence;
-    nextCard = cards.nextCard;
   }
-  const paid: Campaign = {
-    ...campaign,
-    technologies,
-    influence,
-    nextCard,
-    collection: [...campaign.collection, ...entered],
-  };
   return {
-    campaign:
-      paid.pin === undefined || unpinnable(catalogue, paid.pin, technologies) === undefined
-        ? paid
-        : unpinned(paid),
-    influence: influence - campaign.influence,
+    campaign: paid,
+    influence: paid.influence - campaign.influence,
     achievements,
     technologies: learned,
-    entered,
+    entered: paid.collection.slice(campaign.collection.length),
   };
 }

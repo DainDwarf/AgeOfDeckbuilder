@@ -1,6 +1,6 @@
 import type Phaser from 'phaser';
 import type { Campaign } from '../rules/campaign';
-import { type Achievement, type Catalogue, technologyOf } from '../rules/catalogue';
+import { type Catalogue, earningOf, technologyOf } from '../rules/catalogue';
 import { type Control, type Press, pressOf } from './bindings';
 import { createKindBubble, type Name } from './card-face';
 import {
@@ -73,16 +73,9 @@ type Reading = {
 
 /** Every technology's reading, from the achievement that earns it. */
 function readingsOf(catalogue: Catalogue): Map<string, Reading> {
-  const earning = new Map<string, { id: string; achievement: Achievement }>();
-  for (const { achievements } of Object.values(catalogue.ages)) {
-    for (const [id, achievement] of Object.entries(achievements)) {
-      earning.set(achievement.technology, { id, achievement });
-    }
-  }
   const readings = new Map<string, Reading>();
   for (const technology of Object.keys(catalogue.technologies)) {
-    const earned = earning.get(technology);
-    if (earned === undefined) throw new Error(`no achievement earns the technology ${technology}`);
+    const earned = earningOf(catalogue, technology);
     const { unlocks } = technologyOf(catalogue, technology);
     const reward: RewardLine[] = [
       ...Object.entries(unlocks.cards).map(

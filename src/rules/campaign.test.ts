@@ -8,6 +8,7 @@ import {
   type CampaignCard,
   civilizationIn,
   dealt,
+  learnedInto,
   newCampaign,
   paidInto,
   pinned,
@@ -48,6 +49,13 @@ function numbersOf(cards: readonly CampaignCard[]): number[] {
 /** How many of the ids are this one. */
 function copiesIn(ids: readonly CardId[], card: CardId): number {
   return ids.filter((id) => id === card).length;
+}
+
+/** The cards the technology unlocks, a copy of each for every copy it names, in the order named. */
+function cardsUnlockedBy(technology: string): CardId[] {
+  return Object.entries(technologyOf(CATALOGUE, technology).unlocks.cards).flatMap(
+    ([card, copies]) => Array.from({ length: copies }, () => card),
+  );
 }
 
 /** The name the campaign's second civilization goes by in these tests. */
@@ -102,9 +110,7 @@ test('an ended chronicle pays into the campaign each achievement it reached, in 
   const opened = newCampaign(CATALOGUE, CIVILIZATION_ID);
   const hoard = achievementOf(CATALOGUE, AGE, HOARD);
   const victory = achievementOf(CATALOGUE, AGE, victoryOf(AGE));
-  const unlocks = Object.entries(technologyOf(CATALOGUE, hoard.technology).unlocks.cards).flatMap(
-    ([card, copies]) => Array.from({ length: copies }, () => card),
-  );
+  const unlocks = cardsUnlockedBy(hoard.technology);
 
   const { campaign, ...paid } = paidInto(CATALOGUE, opened, won);
 
@@ -266,6 +272,35 @@ test('a chronicle paid in a second time is refused: the technology its achieveme
 
   expect(() => paidInto(CATALOGUE, campaign, won)).toThrow(
     `fixture: the achievement ${HOARD} earns ${technology}, which is already learned`,
+  );
+});
+
+test('a technology learned into a campaign pays the influence of the achievement that earns it and deals the cards it unlocks as new cards in no section of the deck; one already learned and one that needs a technology not learned are refused', () => {
+  const opened = newCampaign(CATALOGUE, CIVILIZATION_ID);
+  const hoard = achievementOf(CATALOGUE, AGE, HOARD);
+  const unlocks = cardsUnlockedBy(GRANARY);
+
+  const campaign = learnedInto(CATALOGUE, opened, GRANARY);
+
+  expect(hoard.technology).toBe(GRANARY);
+  expect(hoard.influence).toBeGreaterThan(0);
+  expect(unlocks.length).toBeGreaterThan(0);
+  expect(campaign).toEqual({
+    ...opened,
+    technologies: [GRANARY],
+    influence: opened.influence + hoard.influence,
+    nextCard: opened.nextCard + unlocks.length,
+    collection: [
+      ...opened.collection,
+      ...unlocks.map((id, at) => ({ number: opened.nextCard + at, id })),
+    ],
+  });
+  expect(() => learnedInto(CATALOGUE, campaign, GRANARY)).toThrow(
+    `fixture: the campaign learns the learned technology ${GRANARY}`,
+  );
+  expect(technologyOf(CATALOGUE, CENSUS).needs).toContain(GRANARY);
+  expect(() => learnedInto(CATALOGUE, opened, CENSUS)).toThrow(
+    `fixture: the campaign learns the unknown technology ${CENSUS}`,
   );
 });
 

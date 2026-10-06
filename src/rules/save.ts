@@ -7,7 +7,7 @@ import {
   newCampaign,
   type Payment,
   paidInto,
-  unpinnable,
+  unavailable,
 } from './campaign';
 import {
   achievementOf,
@@ -287,10 +287,10 @@ function campaignOf(
     if (stands(item, misfit)) learned.push(technology);
   }
 
-  const unpinnableAs = pin === undefined ? undefined : unpinnable(catalogue, pin, learned);
+  const unavailableAs = pin === undefined ? undefined : unavailable(catalogue, pin, learned);
   const pinHeld =
     pin !== undefined &&
-    stands(pinSlot, unpinnableAs === undefined ? undefined : `names ${unpinnableAs}`)
+    stands(pinSlot, unavailableAs === undefined ? undefined : `names ${unavailableAs}`)
       ? { pin }
       : {};
 

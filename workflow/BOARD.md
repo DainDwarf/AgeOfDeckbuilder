@@ -14,7 +14,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **A campaign planted at a given state** — `e2e/archipelago.spec.ts` builds both its campaigns through a helper that learns the technologies it names, their unmet needs first, with no deed search left in it; the rules door the helper goes through learns one technology into a campaign and has its one test on the fixture. Doc-impact: none. [board/campaign-planted.md](board/campaign-planted.md)
 - **Fishing** — the wild's technology that needs Raft, with its achievement and every card it unlocks.
 - **Bread** — the field's technology that needs Irrigation, with its achievement and every card it unlocks, if it is kept.
 - **Bartering** — the hearth's technology that needs Tanning and Bread, with its achievement and every card it unlocks; the money the Tannery gives has no cost before it.
