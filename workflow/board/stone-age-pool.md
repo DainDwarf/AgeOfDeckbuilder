@@ -25,7 +25,7 @@ The age in one sentence: the chronicle where the economy comes home — it opens
 
 In that order no link crosses another. A column stands in the content's order, so a technology is declared where its column holds it, column by column, each column top to bottom: the sky's first, then the field's, the wild's and the hearth's, Fishing excepted, which stands under Bartering.
 
-Megalith is a maybe, decided at its line's intake; Pottery is kept, the second column's fourth; Bread is kept on a trial; the others the user is rather sure of, though not always of what they unlock: Tanning's card was served as takes.
+Megalith and Bread are kept on a trial; Pottery is kept, the second column's fourth; the others the user is rather sure of, though not always of what they unlock: Tanning's card was served as takes.
 
 The field is Agriculture, Irrigation and Bread; the wild is Trapping, Domestication, Bow and arrow, Tanning, Raft and Fishing; the hearth is Fire, Pottery and Bartering; the sky is Herbalism, Calendar and Megalith.
 
@@ -104,7 +104,7 @@ The user's frame: hard to impossible on the deck the age opens with, beatable on
 - It permits no idle play for twenty turns, and Agriculture's goal leans on that: five plain tiles inside the border come on turn 21 at the earliest for any deck, culture having the city as its one source. On the stand-in schedule, the Nomadic one, a city with no card and no unit that takes the answers costing no stock still stands on turn 60 on 125 of 200 seeds, and holds five plain tiles on turn 21 on 190.
 - The schedule could tell the transition: it opens on the Nomadic events, which weigh less as the turns pass, while settled problems weigh nothing early and take over.
 - Events: flood on river tiles; blight on farms; sickness in a dense city; a feud whose leavers place a camp next door; strangers asking to be taken in; drought; the game moving away, the deer gone from near the city; predators at the herds; a great herd passing and travellers arriving, both fortunate.
-- Capstone, unanswered. Claude's lean is a long winter: for a span the land outside the border gives nothing and hunger strikes every turn, which tests whether the economy came home; a capstone already may run a script every turn and pass on a span. The other option is raising the Megalith, which repeats the Shelter's shape and tests production alone.
+- Capstone, unanswered. Claude's lean is a long winter: for a span the land outside the border gives nothing and hunger strikes every turn, which tests whether the economy came home; a capstone already may run a script every turn and pass on a span. The other option is raising Göbekli Tepe, which repeats the Shelter's shape and tests production alone.
 
 ## For the new enemies
 
