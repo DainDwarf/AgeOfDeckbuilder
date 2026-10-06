@@ -19,15 +19,15 @@ The age in one sentence: the chronicle where the economy comes home — it opens
 **The skeleton, the user's tree** (names and links, each column in the order it stands, top to bottom):
 
 - Column 1, the doors, one to a family: Herbalism (the sky); Agriculture (the field); Trapping (the wild); Fire (the hearth).
-- Column 2: Burial rites (needs Herbalism); Irrigation (needs Agriculture, Herbalism); Domestication (needs Trapping, Agriculture); Bow and arrow (needs Trapping); Pottery (needs Fire).
-- Column 3: Calendar (needs Irrigation, Burial rites); Bread (needs Irrigation); Tanning (needs Domestication); Raft (needs Bow and arrow).
+- Column 2: Irrigation (needs Agriculture, Herbalism); Domestication (needs Trapping, Agriculture); Bow and arrow (needs Trapping); Pottery (needs Fire).
+- Column 3: Calendar (needs Irrigation); Bread (needs Irrigation); Tanning (needs Domestication); Raft (needs Bow and arrow).
 - Column 4: Megalith (needs Calendar); Bartering (needs Tanning, Bread); Fishing (needs Raft).
 
 In that order no link crosses another. A column stands in the content's order, so a technology is declared where its column holds it, column by column, each column top to bottom: the sky's first, then the field's, the wild's and the hearth's, Fishing excepted, which stands under Bartering.
 
-Pottery, Burial rites and Megalith are maybes, each decided at its line's intake, and one of Pottery and Burial rites goes, the second column holding four; Bread is kept on a trial; the others the user is rather sure of, though not always of what they unlock: Tanning's card was served as takes.
+Megalith is a maybe, decided at its line's intake; Pottery is kept, the second column's fourth; Bread is kept on a trial; the others the user is rather sure of, though not always of what they unlock: Tanning's card was served as takes.
 
-The field is Agriculture, Irrigation and Bread; the wild is Trapping, Domestication, Bow and arrow, Tanning, Raft and Fishing; the hearth is Fire, Pottery and Bartering; the sky is Herbalism, Burial rites, Calendar and Megalith.
+The field is Agriculture, Irrigation and Bread; the wild is Trapping, Domestication, Bow and arrow, Tanning, Raft and Fishing; the hearth is Fire, Pottery and Bartering; the sky is Herbalism, Calendar and Megalith.
 
 **Taste**, the user's reasons, read before every serve:
 
@@ -73,11 +73,14 @@ The field is Agriculture, Irrigation and Bread; the wild is Trapping, Domesticat
 - A maybe may be kept on a trial: the tree reads "a bit bloated", and a technology is taken out after play if needed.
 - A card of the previous game may come over under another name: Bread is its Beer, food paid for culture.
 - A card holds no choice among goods when it is played: that is "too flexible" and "defeats the purpose of strategical choice of deck building". The choice is the deck's, so a technology may unlock two cards, one a good: Bartering's two trades.
+- A deck is not thinned in play, on purpose: too much of a card bloats the deck and hampers the play, which is what makes the deck's building matter. A card that takes another out of the chronicle is "too practical, especially in first ages".
+- A shape a later age will want is left for it: a building giving production is the Bronze Age's smelter, so the Stone Age's production comes through an improvement.
 
 **Left out, and side notes:**
 
 - Sun stones and bead-making are off the tree, at least for now.
 - Grinding stone, Granary and Dyes are off the tree: nineteen technologies were too many.
+- Burial rites is off the tree, benched for now: the second column holds four, and Pottery has the seat.
 - A technology whose card brings back a card that left the chronicle is wanted and stands nowhere on the skeleton yet; its place is the user's to say. The glossary's words are "left the chronicle": "remove" is a card taken out of a deck.
 
 **Single use, settled for a trial** at the doors' cut: the keyword stands on each building card, so Farm carries it and reads it on its face, and the Shelter, which ends the chronicle, does not. The rules do not change. If the trial holds, moving it to the kind is a line of its own.

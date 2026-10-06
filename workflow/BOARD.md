@@ -14,9 +14,8 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **Burial rites** — the sky's technology that needs Herbalism, with its achievement and every card it unlocks, if it is kept: one of Burial rites and Pottery goes, a fifth plate in the tree's second column standing 56 over the room.
-- **Calendar** — the sky's technology that needs Irrigation and Burial rites, with its achievement and every card it unlocks.
-- **Pottery** — the hearth's technology that needs Fire, with its achievement and every card it unlocks, if it is kept: one of Pottery and Burial rites goes, a fifth plate in the tree's second column standing 56 over the room.
-- **Megalith** — the sky's technology that needs Calendar, with its achievement and every card it unlocks, if it is kept.
+- **Pottery** — the hearth's technology that needs Fire, with its achievement and every card it unlocks.
+- **Calendar** — the sky's technology that needs Irrigation, with its achievement and every card it unlocks.
+- **Megalith** — the sky's technology that needs Calendar, with its achievement and every card it unlocks, if it is kept; a building giving culture, the user's idea for Burial rites, may be its card.
 - **A save forged at a campaign state** — a CLI that writes a save file holding a campaign with the technologies it is given learned, so a state need not be played to from scratch.
 - **The collection scrolls** — the spec that proves the collection scrolls, its cards being the first to fill the room, and a drag that runs on fired inside the page, since Playwright's own mouse moves come too far apart to set a panel running.
