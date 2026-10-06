@@ -14,7 +14,7 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **Bread** — the field's technology that needs Irrigation, with its achievement and every card it unlocks, if it is kept.
+- **Bread** — the technology Bread, its achievement and the card Bread stand in the Stone Age's content, the technology ahead of Tanning's; the catalogue's coherence test passes and `docs/ages/STONE.md` says so. Doc-impact: `docs/ages/STONE.md`. [board/bread.md](board/bread.md)
 - **Bartering** — the hearth's technology that needs Tanning and Bread, with its achievement and every card it unlocks; the money the Tannery gives has no cost before it.
 - **Burial rites** — the sky's technology that needs Herbalism, with its achievement and every card it unlocks, if it is kept: one of Burial rites and Pottery goes, a fifth plate in the tree's second column standing 56 over the room.
 - **Calendar** — the sky's technology that needs Irrigation and Burial rites, with its achievement and every card it unlocks.

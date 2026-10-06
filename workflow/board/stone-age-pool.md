@@ -25,7 +25,7 @@ The age in one sentence: the chronicle where the economy comes home — it opens
 
 In that order no link crosses another. A column stands in the content's order, so a technology is declared where its column holds it, column by column, each column top to bottom: the sky's first, then the field's, the wild's and the hearth's, Fishing excepted, which stands under Bartering.
 
-Pottery, Burial rites, Bread and Megalith are maybes, each decided at its line's intake, and one of Pottery and Burial rites goes, the second column holding four; the others the user is rather sure of, though not always of what they unlock: Tanning's card was served as takes.
+Pottery, Burial rites and Megalith are maybes, each decided at its line's intake, and one of Pottery and Burial rites goes, the second column holding four; Bread is kept on a trial; the others the user is rather sure of, though not always of what they unlock: Tanning's card was served as takes.
 
 The field is Agriculture, Irrigation and Bread; the wild is Trapping, Domestication, Bow and arrow, Tanning, Raft and Fishing; the hearth is Fire, Pottery and Bartering; the sky is Herbalism, Burial rites, Calendar and Megalith.
 
@@ -70,6 +70,8 @@ The field is Agriculture, Irrigation and Bread; the wild is Trapping, Domesticat
 - The age leaning on food is accepted: food is "the primary concern of stone age's humanity".
 - A region that makes a goal easier is the region doing its job, never a catch: "A naval playstyle on a naval map".
 - A gain spread over the tiles around a building, each needing a population to work it, was taken over one richer tile: more food overall, and a lot of worked tiles to get it. Two of the building beside a tile give once.
+- A maybe may be kept on a trial: the tree reads "a bit bloated", and a technology is taken out after play if needed.
+- A card of the previous game may come over under another name: Bread is its Beer, food paid for culture.
 
 **Left out, and side notes:**
 
