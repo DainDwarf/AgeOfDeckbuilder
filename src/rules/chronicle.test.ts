@@ -4,6 +4,7 @@ import {
   apply,
   type Command,
   enemiesKilledBy,
+  gainedFrom,
   launched,
   outcome,
   playsOn,
@@ -36,6 +37,7 @@ import {
   HOARD_NEED,
   heldBy,
   idsOf,
+  madeOf,
   NO_DEALS,
   NO_GROWTH,
   namesOf,
@@ -58,6 +60,7 @@ import {
   worker,
 } from './fixtures';
 import { MOVE_POINT, type Tile, type TileCoords, tileAt, tileKey } from './map';
+import { terrainKind } from './map-kinds';
 import { RESOURCES } from './resources';
 import { seedRng } from './rng';
 import { inSight } from './sight';
@@ -1211,6 +1214,37 @@ test('an achievement counting the turns on which that many cards were played cou
   expect([once, twice].map(countOn)).toEqual([1, need]);
   expect(achievementIn(once, HOARD).reached).toBe(false);
   expect(achievementIn(twice, HOARD).reached).toBe(true);
+});
+
+test('an achievement counting a resource gained from the tiles of a terrain counts what they yield at income and through a card gaining a tile’s yield, and nothing gained from a tile of another terrain or from no tile', () => {
+  const [plain, forest, out] = [
+    { q: 1, r: 0 },
+    { q: -1, r: 0 },
+    { q: 3, r: 0 },
+  ];
+  const gathering = achieved({
+    [HOARD]: { ...achievementOf(CATALOGUE, AGE, HOARD), ...gainedFrom('food', 'plain') },
+  });
+  const city = reaching([], {
+    ...NO_GROWTH,
+    tiles: madeOf(field(3), 'forest', [forest]),
+    held: [CITY, plain, forest],
+    assigned: [CITY, plain, forest],
+    units: [worker(out)],
+    hand: ['PH_Forage', 'PH_Harvest'],
+    resources: { food: 0, production: 0, military: 0, money: 0, science: 1, culture: 0 },
+  });
+  const food = (terrain: string): number => terrainKind(CATALOGUE, terrain).yields.food ?? 0;
+
+  const foraged = apply(gathering, city, aimedAt(out));
+  const harvested = apply(gathering, outcome(foraged), { type: 'play', index: 0, aim: 'none' });
+  const ended = endedTurn(outcome(harvested), undefined, gathering);
+
+  expect(food('forest')).toBeGreaterThan(0);
+  expect(achievementIn(outcome(foraged), HOARD).tally).toEqual({ gained: food('plain') });
+  expect(outcome(harvested).resources.food).toBeGreaterThan(outcome(foraged).resources.food);
+  expect(namesOf(harvested)).not.toContain('tallied');
+  expect(achievementIn(ended, HOARD).tally).toEqual({ gained: 2 * food('plain') });
 });
 
 test('a chronicle that has ended takes no command at all', () => {

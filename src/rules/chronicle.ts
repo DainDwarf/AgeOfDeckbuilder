@@ -32,12 +32,14 @@ import {
   generateMap,
   type HexMap,
   runsAlong,
+  type Terrain,
   type Tile,
   type TileCoords,
   tileAt,
   tileKey,
 } from './map';
-import { featureKind, refuse } from './map-kinds';
+import { featureKind, refuse, terrainKind } from './map-kinds';
+import type { Resource } from './resources';
 import { nextRng, seedRng, shuffle as shuffleItems } from './rng';
 import {
   answered,
@@ -490,6 +492,37 @@ export function enemiesKilledBy(kind: string): Required<Pick<Achievement, 'talli
       return counted === 0 ? tally : { ...tally, killed: (tally.killed ?? 0) + counted };
     },
     count: (_catalogue, _chronicle, tally) => tally.killed ?? 0,
+  };
+}
+
+/**
+ * An achievement's tally and count for the amount of a resource gained from the tiles of a terrain:
+ * what each `stock` carrying a tile of it raised, the tile read as it stood when it gave. A terrain
+ * the catalogue does not hold is refused.
+ */
+export function gainedFrom(
+  resource: Resource,
+  terrain: Terrain,
+): Required<Pick<Achievement, 'tallies' | 'count'>> {
+  return {
+    tallies: (catalogue, started, stages, tally) => {
+      terrainKind(catalogue, terrain);
+      let before = started;
+      let gained = 0;
+      for (const stage of walked(stages)) {
+        if (
+          stage.kind === 'change' &&
+          stage.name === 'stock' &&
+          stage.tile !== undefined &&
+          tileAt(before.tiles, stage.tile)?.terrain === terrain
+        ) {
+          gained += stage.chronicle.resources[resource] - before.resources[resource];
+        }
+        if (leaf(stage)) before = stage.chronicle;
+      }
+      return gained === 0 ? tally : { ...tally, gained: (tally.gained ?? 0) + gained };
+    },
+    count: (_catalogue, _chronicle, tally) => tally.gained ?? 0,
   };
 }
 
