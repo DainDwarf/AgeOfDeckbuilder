@@ -74,7 +74,10 @@ The field is Agriculture, Irrigation and Bread; the wild is Trapping, Domesticat
 - A card of the previous game may come over under another name: Bread is its Beer, food paid for culture.
 - A card holds no choice among goods when it is played: that is "too flexible" and "defeats the purpose of strategical choice of deck building". The choice is the deck's, so a technology may unlock two cards, one a good: Bartering's two trades.
 - A deck is not thinned in play, on purpose: too much of a card bloats the deck and hampers the play, which is what makes the deck's building matter. A card that takes another out of the chronicle is "too practical, especially in first ages".
-- A shape a later age will want is left for it: a building giving production is the Bronze Age's smelter, so the Stone Age's production comes through an improvement.
+- A shape a later age will want is left for it: a building giving production is the Bronze Age's smelter, so the Stone Age's production comes through an improvement; a recall is the Bronze Age's writing.
+- A card that only shows is feared underwhelming: the previous game's Calendar showed the cards on top of the draw pile and felt so. Calendar's shown turn is tried with a fallback named, drawing one card out of the top of the draw pile, itself feared too strong.
+- A resource nothing in the age costs is a reason to make a free reward a card: the turn shown at no cost became an instant costing science, "nothing consumes science in the whole age".
+- A provisional number is a start and is not served twice: "it's pre-balance numbers". A correction to one is said in a line.
 
 **Left out, and side notes:**
 

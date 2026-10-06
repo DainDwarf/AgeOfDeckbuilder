@@ -14,7 +14,7 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **Calendar** — the sky's technology that needs Irrigation, with its achievement and every card it unlocks.
+- **Calendar** — the technology Calendar, its achievement and the card Calendar stand in the Stone Age's content, the technology after Pottery's; a card showing the turn of the next landing and a goal counting the draw pile emptied are each held by a rules test on the fixture; `e2e/calendar.spec.ts` and the catalogue's coherence test pass, and `docs/ages/STONE.md`, `docs/CHRONICLE.md` and `docs/CHRONICLE-SCREEN.md` say so. Doc-impact: `docs/ages/STONE.md`, `docs/CHRONICLE.md`, `docs/CHRONICLE-SCREEN.md`. [board/calendar.md](board/calendar.md)
 - **Megalith** — the sky's technology that needs Calendar, with its achievement and every card it unlocks, if it is kept; a building giving culture, the user's idea for Burial rites, may be its card.
 - **A save forged at a campaign state** — a CLI that writes a save file holding a campaign with the technologies it is given learned, so a state need not be played to from scratch.
 - **The collection scrolls** — the spec that proves the collection scrolls, its cards being the first to fill the room, and a drag that runs on fired inside the page, since Playwright's own mouse moves come too far apart to set a panel running.
