@@ -140,7 +140,7 @@ export function events(catalogue: Catalogue, chronicle: Chronicle): Sequence<Gro
  * The turn of the next landing, read off the timeline: the next due turn, or the capstone's where it
  * has not landed and lands on that turn or before it.
  */
-export function nextLanding(chronicle: Chronicle): number {
+function nextLanding(chronicle: Chronicle): number {
   const { next, capstone } = chronicle.timeline;
   return chronicle.turn < capstone.turn && capstone.turn <= next ? capstone.turn : next;
 }

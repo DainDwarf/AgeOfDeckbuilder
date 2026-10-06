@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 import { newCampaign } from '../rules/campaign';
-import { aimOf } from '../rules/cards';
+import { aimOf, playedThrough } from '../rules/cards';
 import {
   ageOf,
   capstoneOf,
@@ -16,10 +16,12 @@ import {
 } from '../rules/catalogue';
 import { admitted, apply, launched, refusalOf } from '../rules/chronicle';
 import { settledLaunch } from '../rules/fixtures';
+import { tileAt } from '../rules/map';
 import { biomeKind } from '../rules/map-kinds';
 import { seedRng } from '../rules/rng';
 import { writeSave } from '../rules/save';
 import { answerCost, timelineOf } from '../rules/schedule';
+import type { Landed } from '../rules/stages';
 import type { Chronicle } from '../rules/state';
 import { clustersOf } from '../ui/launch-layout';
 import { campLore, capstoneLore, eventLore } from '../ui/lore';
@@ -188,6 +190,56 @@ test('every card of the catalogue answers its refusal, and its admitted tiles, o
           case 'discard-pile':
           case 'hand':
             break;
+        }
+      }
+    }
+  }
+});
+
+/**
+ * What a card's effect lands on the chronicle at its cheapest answer: at nothing where nothing blocks
+ * it, at the first tile its aim admits, at the first card of the pile it is aimed at; and nothing at
+ * all where the rules leave it nothing to land on.
+ */
+function cheapestEffect(chronicle: Chronicle, id: string): Landed | undefined {
+  const card = aimOf(cardOf(CATALOGUE, id));
+  switch (card.aim) {
+    case 'none':
+      return refusalOf(CATALOGUE, chronicle, id).blocked.length === 0
+        ? card.effect(CATALOGUE, chronicle)
+        : undefined;
+    case 'tile':
+    case 'unit': {
+      const [at] = admitted(CATALOGUE, chronicle, card);
+      const tile = at === undefined ? undefined : tileAt(chronicle.tiles, at);
+      if (at === undefined || tile === undefined) return undefined;
+      if (card.aim === 'unit' || card.through === undefined) {
+        return card.effect(CATALOGUE, chronicle, at);
+      }
+      const [through] = playedThrough(CATALOGUE, chronicle, card, tile);
+      return through === undefined
+        ? undefined
+        : card.effect(CATALOGUE, chronicle, at, through.tile);
+    }
+    case 'discard-pile':
+      return chronicle.discardPile.length === 0 ? undefined : card.effect(CATALOGUE, chronicle, 0);
+    case 'hand':
+      return chronicle.hand.length <= 1 ? undefined : card.effect(CATALOGUE, chronicle, 0);
+  }
+}
+
+test('every card of the catalogue lands its effect at its cheapest answer, on a chronicle begun and on one settled in each age on each civilization', () => {
+  for (const age of AGES) {
+    for (const civilization of Object.keys(CATALOGUE.civilizations)) {
+      const region = firstRegion(CATALOGUE, age);
+      const civilized = civilizationOf(CATALOGUE, civilization);
+      const chronicles = [
+        launched(CATALOGUE, age, region, 1, civilized, []),
+        settledLaunch(CATALOGUE, age, region, 1, civilized, []),
+      ];
+      for (const chronicle of chronicles) {
+        for (const id of Object.keys(CATALOGUE.cards)) {
+          expect(() => cheapestEffect(chronicle, id)).not.toThrow();
         }
       }
     }

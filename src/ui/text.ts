@@ -74,6 +74,7 @@ const TEXT = {
   'button.settle-phase': 'Settle phase',
   'button.end-settle-phase': 'End settle phase',
   'button.city-mode': 'City mode',
+  'shown-event.turn': 'Event on turn {turn}',
   'kind.settle': 'Settle',
   'kind.unit': 'Unit',
   'kind.building': 'Building',
@@ -125,6 +126,8 @@ const TEXT = {
   'rules.archer': 'Place a [player:archer]',
   'card.clay-pit': 'Clay pit',
   'rules.clay-pit': 'Place [improvement:clay-pit] on [terrain:hills]',
+  'card.calendar': 'Calendar', // glossary exception: calendar
+  'rules.calendar': 'Show the turn of the next event', // glossary exception: calendar
   'card.bread': 'Bread',
   'rules.bread': 'Gain 2[culture]',
   'card.tannery': 'Tannery',
@@ -279,6 +282,7 @@ const TEXT = {
   'technology.domestication': 'Domestication',
   'technology.bow-and-arrow': 'Bow and arrow',
   'technology.pottery': 'Pottery',
+  'technology.calendar': 'Calendar', // glossary exception: calendar
   'technology.bread': 'Bread',
   'technology.tanning': 'Tanning',
   'technology.raft': 'Raft',
@@ -293,6 +297,7 @@ const TEXT = {
   'goal.domestication': 'Play [card:gather] on [feature:cattle] {need} times',
   'goal.bow-and-arrow': 'Kill {need} enemies with a [player:scout]',
   'goal.pottery': 'Gain {need}[production] from [terrain:hills]',
+  'goal.calendar': 'Empty the draw pile {need} times', // glossary exception: calendar
   'goal.bread': 'Have {need} population',
   'goal.tanning': 'Place {need} [improvement:pasture] or [improvement:trapping] inside your border',
   'goal.raft': 'Chart {need} [terrain:coast]',

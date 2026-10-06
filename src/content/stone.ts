@@ -13,6 +13,7 @@ import {
 } from '../rules/cards';
 import type { Age, Slice } from '../rules/catalogue';
 import {
+  drawPileEmptied,
   enemiesKilledBy,
   gainedFrom,
   playsOn,
@@ -21,6 +22,7 @@ import {
 } from '../rules/chronicle';
 import { MOVE_POINT, tileAt } from '../rules/map';
 import type { RiverFlow } from '../rules/map-kinds';
+import { showsNextLanding } from '../rules/schedule';
 import { followed } from '../rules/stages';
 import { NOMADIC } from './nomadic';
 
@@ -149,6 +151,7 @@ export const STONE: Slice = {
         technology: 'pottery',
         influence: 1,
       },
+      calendar: { ...drawPileEmptied(), need: 12, technology: 'calendar', influence: 1 },
       bread: {
         count: (_catalogue, chronicle) => chronicle.population,
         need: 12,
@@ -212,6 +215,7 @@ export const STONE: Slice = {
       pasture: { kind: 'instant', cost: { production: 2 }, ...placesImprovement('pasture') },
       archer: { kind: 'unit', cost: { military: 2 }, ...enters('archer') },
       'clay-pit': { kind: 'instant', cost: { production: 2 }, ...placesImprovement('clay-pit') },
+      calendar: { kind: 'instant', cost: { science: 2 }, ...showsNextLanding() },
       bread: {
         kind: 'instant',
         cost: { food: 2 },
@@ -274,6 +278,7 @@ export const STONE: Slice = {
       domestication: { needs: ['trapping', 'agriculture'], unlocks: { cards: { pasture: 1 } } },
       'bow-and-arrow': { needs: ['trapping'], unlocks: { cards: { archer: 1 } } },
       pottery: { needs: ['fire'], unlocks: { cards: { 'clay-pit': 1 } } },
+      calendar: { needs: ['irrigation'], unlocks: { cards: { calendar: 1 } } },
       bread: { needs: ['irrigation'], unlocks: { cards: { bread: 1 } } },
       tanning: { needs: ['domestication'], unlocks: { cards: { tannery: 1 } } },
       raft: {
