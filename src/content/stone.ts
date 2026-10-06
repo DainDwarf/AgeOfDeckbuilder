@@ -143,6 +143,12 @@ export const STONE: Slice = {
         technology: 'bow-and-arrow',
         influence: 1,
       },
+      bread: {
+        count: (_catalogue, chronicle) => chronicle.population,
+        need: 12,
+        technology: 'bread',
+        influence: 1,
+      },
       tanning: {
         count: (_catalogue, chronicle) =>
           chronicle.held.filter((coord) =>
@@ -193,6 +199,12 @@ export const STONE: Slice = {
       irrigation: { kind: 'instant', cost: { production: 2 }, ...placesImprovement('irrigation') },
       pasture: { kind: 'instant', cost: { production: 2 }, ...placesImprovement('pasture') },
       archer: { kind: 'unit', cost: { military: 2 }, ...enters('archer') },
+      bread: {
+        kind: 'instant',
+        cost: { food: 2 },
+        aim: 'none',
+        effect: (_catalogue, paid) => gained(paid, { culture: 2 }),
+      },
       tannery: {
         kind: 'building',
         cost: { production: 4 },
@@ -236,6 +248,7 @@ export const STONE: Slice = {
       irrigation: { needs: ['agriculture', 'herbalism'], unlocks: { cards: { irrigation: 1 } } },
       domestication: { needs: ['trapping', 'agriculture'], unlocks: { cards: { pasture: 1 } } },
       'bow-and-arrow': { needs: ['trapping'], unlocks: { cards: { archer: 1 } } },
+      bread: { needs: ['irrigation'], unlocks: { cards: { bread: 1 } } },
       tanning: { needs: ['domestication'], unlocks: { cards: { tannery: 1 } } },
       raft: {
         needs: ['bow-and-arrow'],
