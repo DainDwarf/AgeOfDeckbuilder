@@ -72,6 +72,7 @@ The field is Agriculture, Irrigation and Bread; the wild is Trapping, Domesticat
 - A gain spread over the tiles around a building, each needing a population to work it, was taken over one richer tile: more food overall, and a lot of worked tiles to get it. Two of the building beside a tile give once.
 - A maybe may be kept on a trial: the tree reads "a bit bloated", and a technology is taken out after play if needed.
 - A card of the previous game may come over under another name: Bread is its Beer, food paid for culture.
+- A card holds no choice among goods when it is played: that is "too flexible" and "defeats the purpose of strategical choice of deck building". The choice is the deck's, so a technology may unlock two cards, one a good: Bartering's two trades.
 
 **Left out, and side notes:**
 
