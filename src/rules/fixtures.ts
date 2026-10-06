@@ -88,6 +88,7 @@ import {
   offered,
   raided,
   reinforced,
+  showsNextLanding,
   spanEnded,
   tileCharted,
   unitDamaged,
@@ -513,6 +514,7 @@ const TABLES: Omit<Tables, 'technologies'> = {
       aim: 'hand',
       effect: (_catalogue, paid, at) => discarded(paid, [at]),
     },
+    PH_Almanac: { kind: 'instant', cost: {}, ...showsNextLanding() },
     PH_Spoils: {
       kind: 'instant',
       cost: {},

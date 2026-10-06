@@ -1,5 +1,6 @@
 import { built, featurePlaced, terraformed } from './cards';
 import {
+  type Aim,
   type Answer,
   ageOf,
   type CampScript,
@@ -38,6 +39,7 @@ import {
   paid,
   type Refusal,
   type Timeline,
+  turnShown,
   unaffordable,
 } from './state';
 import { damaged, unitAt } from './units';
@@ -132,6 +134,28 @@ export function events(catalogue: Catalogue, chronicle: Chronicle): Sequence<Gro
         : landedAs(change('dealt', { ...left, deals: [...left.deals, { of: 'event', event }] })),
     ),
   );
+}
+
+/**
+ * The turn of the next landing, read off the timeline: the next due turn, or the capstone's where it
+ * has not landed and lands on that turn or before it.
+ */
+export function nextLanding(chronicle: Chronicle): number {
+  const { next, capstone } = chronicle.timeline;
+  return chronicle.turn < capstone.turn && capstone.turn <= next ? capstone.turn : next;
+}
+
+/**
+ * How a card shows the turn of the next landing, the block and the effect as one pair so neither is
+ * written without the other: blocked while a turn is shown; then the chronicle shows the next one.
+ */
+export function showsNextLanding(): Aim & { readonly aim: 'none' } {
+  return {
+    aim: 'none',
+    blocked: (_catalogue, chronicle) => (turnShown(chronicle) === undefined ? [] : ['turn-shown']),
+    effect: (_catalogue, paid) =>
+      landedAs(change('shown', { ...paid, shownTurn: nextLanding(paid) })),
+  };
 }
 
 /** What a deal offers to be taken, by id, in the order dealt: its event's answers, or the camp's rewards. */

@@ -656,6 +656,7 @@ function chartedOn(stage: Change): TileCoords | undefined {
     case 'left':
     case 'turn':
     case 'rolled':
+    case 'shown':
     case 'dealt':
     case 'taken':
     case 'ended':

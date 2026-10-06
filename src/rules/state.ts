@@ -99,6 +99,11 @@ export type Chronicle = {
   /** The turn the events phase deals next on, and the capstone. */
   readonly timeline: Timeline;
   /**
+   * The turn of the next landing a card last showed, which stays once that turn has come: it is read
+   * through `turnShown`. Nothing at all where no card has shown one.
+   */
+  readonly shownTurn?: number;
+  /**
    * The deals waiting on the take, the one standing first, and none at all while no deal stands.
    * While one does the chronicle waits on the take: it has no hand, and every other command is
    * refused.
@@ -155,11 +160,17 @@ export type TileBlock =
   | 'no-claim';
 
 /**
- * What stands against a card or a claim the cost alone would let through: the city down to the last
- * population it keeps, no population idle, a unit already on the city tile, an empty discard pile, a
- * hand holding no other card, and every reason an aim turns a tile down.
+ * What stands against a card or a claim the cost alone would let through: what the city, the piles
+ * or a turn already shown hold against it, and every reason an aim turns a tile down.
  */
-export type Block = 'population' | 'idle' | 'city' | 'discard-pile' | 'hand' | TileBlock;
+export type Block =
+  | 'population'
+  | 'idle'
+  | 'city'
+  | 'discard-pile'
+  | 'hand'
+  | 'turn-shown'
+  | TileBlock;
 
 /** What one thing asks for of one resource: a card's cost line by line, a claim's culture. */
 export type Cost = { readonly resource: Resource; readonly amount: number };
@@ -207,6 +218,12 @@ export function unaffordable(chronicle: Chronicle, costs: readonly Cost[]): Reso
  */
 export function onSettlePhase(chronicle: Chronicle): boolean {
   return chronicle.turn === 0;
+}
+
+/** The turn of the next landing a card has shown, and nothing once that turn has come. */
+export function turnShown(chronicle: Chronicle): number | undefined {
+  const { shownTurn } = chronicle;
+  return shownTurn !== undefined && chronicle.turn < shownTurn ? shownTurn : undefined;
 }
 
 /** Whether the tile is inside the city's border: what a card's aim and a city-mode click both ask. */

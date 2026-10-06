@@ -208,6 +208,7 @@ const TEXT = {
   'refusal.health-full': 'Unit health is full',
   'refusal.discard-pile': 'The discard pile is empty',
   'refusal.hand': 'No other card in the hand',
+  'refusal.turn-shown': 'The next event is already shown',
   'refusal.no-claim': 'The city cannot claim that tile',
   'browse.draw-pile': 'Draw pile — {count}',
   'browse.discard-pile': 'Discard pile — {count}',

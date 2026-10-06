@@ -8,7 +8,7 @@ import {
   pinned,
 } from './campaign';
 import { catalogued } from './catalogue';
-import { apply, type Command, outcome } from './chronicle';
+import { apply, type Command, outcome, refusalOf } from './chronicle';
 import {
   AGE,
   achievementIn,
@@ -25,6 +25,7 @@ import {
   GRANARY,
   HOARD,
   hoardedVictory,
+  NO_DEALS,
   QUIET,
   REGION,
   SURVEY,
@@ -36,7 +37,7 @@ import {
 import { RESOURCES } from './resources';
 import { type ChronicleSave, keptAfter, readSave, writeSave } from './save';
 import { addedToDrawPileTop } from './schedule';
-import type { Chronicle, CitySection, Counters } from './state';
+import { type Chronicle, type CitySection, type Counters, turnShown } from './state';
 import { FIRST_UNIT_NUMBER, LEAST_STATS, type Unit } from './units';
 
 /** A campaign a won chronicle has paid into: technologies, influence, and cards in no section. */
@@ -130,6 +131,24 @@ test('a chronicle saved with a unit embarked reads back with it embarked', () =>
 
   expect(embarked.units[0].embarked).toBe(true);
   expect(read.chronicle).toEqual(save);
+});
+
+test('a chronicle saved with a turn shown reads back with it shown', () => {
+  const city = cityOf(['urban'], {
+    timeline: { ...NO_DEALS, next: 4 },
+    hand: ['PH_Almanac', 'PH_Almanac'],
+  });
+  const shown = outcome(apply(CATALOGUE, city, { type: 'play', index: 0, aim: 'none' }));
+  const save = { chronicle: shown, region: REGION, civilization: CIVILIZATION_ID };
+
+  const read = readSave(CATALOGUE, writeSave(CATALOGUE, campaign(), save));
+
+  expect(turnShown(shown)).toBe(city.timeline.next);
+  expect(read.chronicle).toEqual(save);
+  if (read.chronicle === undefined) throw new Error('the chronicle was dropped');
+  expect(refusalOf(CATALOGUE, read.chronicle.chronicle, 'PH_Almanac').blocked).toEqual([
+    'turn-shown',
+  ]);
 });
 
 test('a campaign saved with no chronicle in progress reads back alone', () => {
@@ -253,6 +272,11 @@ test.each<[string, (chronicle: Chronicle) => object, string]>([
     (chronicle) => ({ ...chronicle, resources: { ...chronicle.resources, [resource]: -1 } }),
     `chronicle.resources holds a stock of -1 ${resource}`,
   ]),
+  [
+    'a turn shown that is negative',
+    (chronicle) => ({ ...chronicle, shownTurn: -1 }),
+    'chronicle shows turn -1',
+  ],
   [
     'a negative population',
     (chronicle) => ({ ...chronicle, population: -1 }),

@@ -86,6 +86,7 @@ type PlainChange =
   | 'shuffled'
   | 'turn'
   | 'rolled'
+  | 'shown'
   | 'dealt'
   | 'taken'
   | 'ended'

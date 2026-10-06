@@ -505,6 +505,9 @@ function chronicleOf(catalogue: Catalogue, slot: Slot): Chronicle {
     held: list(catalogue, field('held'), coords),
     turn: count(catalogue, field('turn'), slot, (turn) => `stands on turn ${turn}`),
     timeline: timelineOf(catalogue, field('timeline')),
+    shownTurn: optional(field('shownTurn'), (item) =>
+      count(catalogue, item, slot, (turn) => `shows turn ${turn}`),
+    ),
     deals: list(catalogue, field('deals'), (item) => dealOf(catalogue, item)),
     resources: resourcesOf(catalogue, field('resources')),
     population: count(catalogue, field('population'), slot, (held) => `holds ${held} population`),
