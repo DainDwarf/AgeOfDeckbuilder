@@ -30,7 +30,7 @@ A goal is a focus themed on its technology: it is read from the technology's fic
 - **Bread** needs Irrigation. Its goal reads the chronicle as it stands: the city's population, idle and assigned alike, a unit never counted. It unlocks the card **Bread** and pays influence.
 - **Tanning** needs Domestication. Its goal reads the chronicle as it stands: the tiles inside the border carrying a Pasture or a Trapping, the city's own tile counted when it carries one. It unlocks the card **Tannery** and pays influence.
 - **Raft** needs Bow and arrow. Its goal reads the chronicle as it stands: the coast tiles charted, the centre part's among them. It unlocks the card **Embark** and the archipelago region and pays influence.
-- **Bartering** needs Tanning and Bread. Its goal reads the chronicle as it stands: the money in the city's stock. It unlocks the cards **Food trade** and **Material trade** and pays influence.
+- **Bartering** needs Tanning and Bread. Its goal reads the chronicle as it stands: the money in the city's stock. It unlocks the cards **Food trade** and **Goods trade** and pays influence.
 - **Fishing** needs Raft. Its goal counts a deed: the food gained from coast tiles, at income and through Gather alike. It unlocks the card **Fishery** and pays influence.
 
 ## The units 🔧
@@ -51,5 +51,5 @@ A goal is a focus themed on its technology: it is read from the technology's fic
 - **Embark**, an instant costing production, aimed at a coast tile beside a unit: the unit embarks onto it, spending its action. It becomes Disembark. An embarked unit crosses the coast slowly, whatever it was ashore, so the copies a deck holds are how many units are on the water at once, and the deck's cycle is how long a crossing takes.
 - **Disembark**, the card Embark becomes, costing nothing, aimed at a tile beside an embarked unit that the unit stands on ashore: the unit disembarks onto it, spending its action. It becomes Embark. A raft that carries units as a unit of its own was rejected: it takes one population that only ferries.
 - **Food trade**, an instant costing money, aimed at nothing: the city gains food.
-- **Material trade**, an instant costing money, aimed at nothing: the city gains production. Money is paid in the two trades, each for one good, so which good a deck's money goes to is chosen when the deck is built. A trade choosing its good when it is played was rejected: it leaves the deck's building nothing to choose.
+- **Goods trade**, an instant costing money, aimed at nothing: the city gains production. Money is paid in the two trades, each for one good, so which good a deck's money goes to is chosen when the deck is built. A trade choosing its good when it is played was rejected: it leaves the deck's building nothing to choose.
 - **Fishery**, a building built through an embarked worker for production on a coast tile, single use. It gives food to its own tile and to every coast tile beside it, once however many stand around a tile, so it pays by the coast the city works around it.

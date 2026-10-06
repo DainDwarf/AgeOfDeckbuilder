@@ -245,7 +245,7 @@ export const STONE: Slice = {
         aim: 'none',
         effect: (_catalogue, paid) => gained(paid, { food: 3 }),
       },
-      'material-trade': {
+      'goods-trade': {
         kind: 'instant',
         cost: { money: 2 },
         aim: 'none',
@@ -274,7 +274,7 @@ export const STONE: Slice = {
       },
       bartering: {
         needs: ['tanning', 'bread'],
-        unlocks: { cards: { 'food-trade': 1, 'material-trade': 1 } },
+        unlocks: { cards: { 'food-trade': 1, 'goods-trade': 1 } },
       },
       fishing: { needs: ['raft'], unlocks: { cards: { fishery: 1 } } },
     },
