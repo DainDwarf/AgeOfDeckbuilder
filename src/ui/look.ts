@@ -172,6 +172,7 @@ export const LOOK: Look = {
     farm: 'built',
     tannery: 'built',
     fishery: 'built',
+    megalith: 'built',
   },
   ground: {
     nomadic: 0x2a5a41,

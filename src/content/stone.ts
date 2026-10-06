@@ -20,7 +20,7 @@ import {
   terrainsPlayedOn,
   turnsPlaying,
 } from '../rules/chronicle';
-import { MOVE_POINT, tileAt } from '../rules/map';
+import { distance, MOVE_POINT, tileAt } from '../rules/map';
 import type { RiverFlow } from '../rules/map-kinds';
 import { showsNextLanding } from '../rules/schedule';
 import { followed } from '../rules/stages';
@@ -176,6 +176,16 @@ export const STONE: Slice = {
         technology: 'raft',
         influence: 1,
       },
+      megalith: {
+        count: (_catalogue, chronicle) => {
+          const { city } = chronicle;
+          if (city === undefined) return 0;
+          return Math.max(...chronicle.held.map((coord) => distance(coord, city)));
+        },
+        need: 5,
+        technology: 'megalith',
+        influence: 1,
+      },
       bartering: {
         count: (_catalogue, chronicle) => chronicle.resources.money,
         need: 30,
@@ -268,6 +278,12 @@ export const STONE: Slice = {
         singleUse: true,
         ...builds('fishery'),
       },
+      megalith: {
+        kind: 'building',
+        cost: { production: 4 },
+        singleUse: true,
+        ...builds('megalith'),
+      },
     },
     technologies: {
       herbalism: { needs: ['settlement'], unlocks: { cards: { heal: 1 } } },
@@ -285,6 +301,7 @@ export const STONE: Slice = {
         needs: ['bow-and-arrow'],
         unlocks: { cards: { embark: 1 }, region: 'archipelago' },
       },
+      megalith: { needs: ['calendar'], unlocks: { cards: { megalith: 1 } } },
       bartering: {
         needs: ['tanning', 'bread'],
         unlocks: { cards: { 'food-trade': 1, 'goods-trade': 1 } },
@@ -314,6 +331,7 @@ export const STONE: Slice = {
         yields: {},
         givesBeside: { terrain: 'coast', yields: { food: 1 } },
       },
+      megalith: { terrains: ['plain', 'hills', 'desert'], yields: { culture: 1 } },
     },
     improvements: {
       trapping: { terrains: ['forest'], features: ['deer'], yields: { food: 1 } },

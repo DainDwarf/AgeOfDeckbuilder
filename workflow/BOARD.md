@@ -14,6 +14,5 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **Megalith** — the technology Megalith, its achievement and the card Megalith stand in the Stone Age's content, the technology after Raft's; the catalogue's coherence test passes and `docs/ages/STONE.md` says so. Doc-impact: `docs/ages/STONE.md`. [board/megalith.md](board/megalith.md)
 - **A save forged at a campaign state** — a CLI that writes a save file holding a campaign with the technologies it is given learned, so a state need not be played to from scratch.
 - **The collection scrolls** — the spec that proves the collection scrolls, its cards being the first to fill the room, and a drag that runs on fired inside the page, since Playwright's own mouse moves come too far apart to set a panel running.
