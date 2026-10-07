@@ -136,7 +136,7 @@ test('a unit of the player’s standing on a camp when the turn ends captures it
   expect(taken.discardPile).toEqual([]);
 });
 
-test('a capture deals the camp’s rewards and stops the end of turn before the tick, and the take resumes it: the one taken is added to the discard pile, the other gone', () => {
+test('a capture deals the camp’s rewards and stops the end of turn before the tick, and the take resumes it: the one taken is added to the discard pile, the other added nowhere', () => {
   const camp = { q: 4, r: 0 };
   const besieging = cityOf(['urban'], {
     ...NO_GROWTH,
@@ -698,14 +698,14 @@ test('two camps captured the turn before an event is due deal two deals of rewar
   expect(outcome(apply(CATALOGUE, second, { type: 'take', at: 0 })).deals).toEqual([]);
 });
 
-test('the camp’s reward is single use: played, it gains and leaves the chronicle', () => {
+test('the camp’s reward carries banish: played, it gains and is banished', () => {
   const city = cityOf(['urban'], { hand: ['PH_Spoils'] });
 
   const played = outcome(apply(CATALOGUE, city, { type: 'play', index: 0, aim: 'none' }));
 
   expect(stagedBy(city, { type: 'play', index: 0, aim: 'none' })).toEqual([
     'played',
-    'left',
+    'banished',
     'stock',
   ]);
   expect(played.resources).toEqual({

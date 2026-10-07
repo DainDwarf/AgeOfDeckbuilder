@@ -602,6 +602,28 @@ test('a catalogue whose deck holds any of the camp’s rewards in either section
   }
 });
 
+test('a catalogue whose card no deck holds carries exhaust is refused, and one carrying banish is not', () => {
+  const [reward] = CAMP.rewards;
+  const carrying = (keyword: { exhaust: true } | { banish: true }): Catalogue =>
+    changed({
+      cards: {
+        ...CATALOGUE.cards,
+        [reward]: {
+          kind: 'instant',
+          cost: {},
+          ...keyword,
+          aim: 'none',
+          effect: (_c, paid) => unchanged(paid),
+        },
+      },
+    });
+
+  expect(() => catalogued(carrying({ exhaust: true }))).toThrow(
+    `fixture: the age ${AGE}'s camp's reward ${reward} carries exhaust`,
+  );
+  expect(() => catalogued(carrying({ banish: true }))).not.toThrow();
+});
+
 test('a catalogue whose card becomes one it does not hold is refused', () => {
   const content = changed({
     cards: {

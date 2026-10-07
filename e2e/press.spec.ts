@@ -910,7 +910,7 @@ test('a click on a pinned achievement, a name in its goal included, lets the car
   expect(problems).toEqual([]);
 });
 
-test('a left click on either pile lets the card being aimed go and raises no browse', async ({
+test('a left click on any pile, the exhaust pile’s tab included, lets the card being aimed go and raises no browse', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -919,7 +919,7 @@ test('a left click on either pile lets the card being aimed go and raises no bro
   await openSaved(page, opened);
   const home = await onScreen(page, `hand-${index}`);
 
-  for (const pile of ['draw-pile', 'discard-pile'] as const) {
+  for (const pile of ['draw-pile', 'discard-pile', 'exhaust-pile'] as const) {
     await page.mouse.click(home.x, home.y);
     await aimed(page);
     const top = await pileTop(page, pile);

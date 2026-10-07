@@ -520,7 +520,7 @@ test('a settle card entering a unit admits every charted tile the unit stands on
   }
 });
 
-test('a settle card entering a unit puts it on its tile full, takes no population and leaves the chronicle, before the settle and after it', () => {
+test('a settle card entering a unit puts it on its tile full, takes no population and is banished, before the settle and after it', () => {
   const at = { q: 1, r: 1 };
   const opened = opening(plains(3), { civilization: BANDS });
 
@@ -529,7 +529,7 @@ test('a settle card entering a unit puts it on its tile full, takes no populatio
   const settled = outcome(apply(CATALOGUE, before, aimedAt(CITY)));
   const after = outcome(apply(CATALOGUE, settled, aimedAt(CITY)));
 
-  expect(namesOf(stages)).toEqual(['played', 'left', 'enter']);
+  expect(namesOf(stages)).toEqual(['played', 'banished', 'enter']);
   expect(before.units).toHaveLength(1);
   const [band] = before.units;
   expect(band.faction).toBe('player');
@@ -651,7 +651,7 @@ test('a unit card is refused while a unit already stands on the city tile', () =
   );
 });
 
-test('a building card builds its building on a tile inside the border where a worker stands, and leaves the chronicle', () => {
+test('a building card builds its building on a tile inside the border where a worker stands, and is exhausted', () => {
   const city = cityOf(['urban', 'plain'], {
     tiles: field(2),
     hand: ['PH_Farm'],
@@ -665,6 +665,7 @@ test('a building card builds its building on a tile inside the border where a wo
   expect(after.resources.production).toBe(0);
   expect(after.hand).toEqual([]);
   expect(after.discardPile).toEqual([]);
+  expect(idsOf(after.exhaustPile)).toEqual(['PH_Farm']);
   expect(unitNamed(after, 1).tile).toEqual({ q: 1, r: 0 });
   expect(actionOf(after, 1)).toBe(actionOf(city, 1) - 1);
 });
@@ -1881,7 +1882,7 @@ test('a hazard discarded unplayed comes around and strikes again', () => {
   expect(again.resources.food).toBe(cycled.resources.food - HUNGER + yielded);
 });
 
-test('a hazard played for its cost leaves the chronicle, and strikes nothing that turn', () => {
+test('a hazard played for its cost is banished, and strikes nothing that turn', () => {
   const city = cityOf(['urban', 'plain'], {
     ...NO_GROWTH,
     hand: ['PH_Hunger'],
@@ -1895,7 +1896,7 @@ test('a hazard played for its cost leaves the chronicle, and strikes nothing tha
 
   expect(stagedBy(city, { type: 'play', index: 0, aim: 'none' })).toEqual([
     'played',
-    'left',
+    'banished',
     'stock',
   ]);
   expect(played.resources.production).toBe(0);

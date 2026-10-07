@@ -2,6 +2,7 @@ import { available } from './campaign';
 import {
   aimOf,
   discarded,
+  goesTo,
   lyingAs,
   playedThrough,
   refuses,
@@ -165,6 +166,7 @@ export function beginChronicle(
     drawPile: shuffled.items,
     hand: [civilization.city.card, ...civilization.settle].map(made),
     discardPile: [],
+    exhaustPile: [],
     achievements: achievementsOfAvailableTechnologies(catalogue, age, learned),
   };
   let guarded = begun;
@@ -651,9 +653,10 @@ function chartedOn(stage: Change): TileCoords | undefined {
     case 'added':
     case 'drawn':
     case 'discarded':
+    case 'exhausted':
     case 'recalled':
     case 'shuffled':
-    case 'left':
+    case 'banished':
     case 'turn':
     case 'rolled':
     case 'shown':
@@ -750,7 +753,7 @@ function ticked(chronicle: Chronicle): Sequence<Group> {
   let tick = landedAs(change('turn', { ...chronicle, turn: chronicle.turn + 1 }));
   if (onSettlePhase(chronicle) && chronicle.hand.length > 0) {
     tick = followed(tick, (left) =>
-      landedAs(changeFrom('left', everyPlace(left.hand), { ...left, hand: [] })),
+      landedAs(changeFrom('banished', everyPlace(left.hand), { ...left, hand: [] })),
     );
   }
   for (const unit of chronicle.units) {
@@ -777,7 +780,7 @@ function refreshedUnit(chronicle: Chronicle, unit: Unit): Landed {
 /**
  * One entry of the deal standing taken, by its place in the order dealt, and the deal popped: an
  * answer is the one `answer` group over the deal `taken`, its cost and its landing; a reward is the
- * one `reward` group over the deal `taken` and the card `discarded`, the rewards beside it gone.
+ * one `reward` group over the deal `taken` and the card `added`, the rewards beside it added nowhere.
  * While a deal still stands nothing more resolves; once none does, the last reward taken resumes the
  * end of turn at its opening, and the last answer taken draws the hand. A take made while no deal
  * stands, one at a place the deal does not offer, and one of an answer the city cannot pay for are
@@ -895,23 +898,35 @@ function play(catalogue: Catalogue, chronicle: Chronicle, command: PlayCommand):
   const effect = aimedEffect(catalogue, chronicle, held.id, command);
   if (effect === undefined) return refused(chronicle);
 
-  const hand = chronicle.hand.filter((_, at) => at !== command.index);
-  const lying = lyingAs(catalogue, held);
-  const leaving =
-    lying === undefined
-      ? changeFrom('left', [command.index], { ...chronicle, hand })
-      : changeFrom('discarded', [command.index], {
-          ...chronicle,
-          hand,
-          discardPile: [...chronicle.discardPile, lying],
-        });
   const costs = costOf(catalogue, held.id);
   const cost = (left: Chronicle): Landed =>
     costs.length === 0 ? unchanged(left) : landedAs(change('stock', paid(left, costs)));
   return grouped(
     { name: 'played', card: held.id, aimed: aimedBy(command) },
-    followed(followed(landedAs(leaving), cost), effect),
+    followed(followed(landedAs(playedAway(catalogue, chronicle, command.index)), cost), effect),
   );
+}
+
+/** The card at that place of the hand leaving it played, for where it goes and as the card it goes as. */
+function playedAway(catalogue: Catalogue, chronicle: Chronicle, index: number): Change {
+  const hand = chronicle.hand.filter((_, at) => at !== index);
+  const lying = lyingAs(catalogue, chronicle.hand[index]);
+  switch (goesTo(cardOf(catalogue, lying.id))) {
+    case 'discard-pile':
+      return changeFrom('discarded', [index], {
+        ...chronicle,
+        hand,
+        discardPile: [...chronicle.discardPile, lying],
+      });
+    case 'exhaust-pile':
+      return changeFrom('exhausted', [index], {
+        ...chronicle,
+        hand,
+        exhaustPile: [...chronicle.exhaustPile, lying],
+      });
+    case 'nowhere':
+      return changeFrom('banished', [index], { ...chronicle, hand });
+  }
 }
 
 /** What a play aimed its card at, the hand's place it played from aside. */

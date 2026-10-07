@@ -99,7 +99,7 @@ test('a chronicle opens on the settle phase with the city standing nowhere, and 
   expect(await shows(page, 'settle-phase-frame')).toBe(false);
   expect(await shows(page, 'settle-phase-chip')).toBe(false);
   expect(ticked.hand).toHaveLength(5);
-  for (const pile of [ticked.hand, ticked.drawPile, ticked.discardPile]) {
+  for (const pile of [ticked.hand, ticked.drawPile, ticked.discardPile, ticked.exhaustPile]) {
     for (const { id } of opened.hand) expect(idsOf(pile)).not.toContain(id);
   }
 

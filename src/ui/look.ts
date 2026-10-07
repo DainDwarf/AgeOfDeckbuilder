@@ -28,6 +28,9 @@ export type Look = {
   readonly civilization: number;
   readonly enemy: number;
   readonly pileCount: number;
+  readonly exhaustTab: number;
+  readonly exhaustTabEdge: number;
+  readonly exhaustTabInk: number;
   readonly selected: number;
   readonly selectedEdge: number;
   readonly pin: number;
@@ -99,6 +102,9 @@ export const LOOK: Look = {
   civilization: 0xd9a441,
   enemy: 0xb4453c,
   pileCount: 0xd9a441,
+  exhaustTab: 0xd4d7db,
+  exhaustTabEdge: 0x6f757d,
+  exhaustTabInk: 0x0d1014,
   selected: 0xf2f6ff,
   selectedEdge: 0x0d1014,
   pin: 0xf2f6ff,

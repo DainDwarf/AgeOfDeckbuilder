@@ -518,7 +518,7 @@ const TABLES: Omit<Tables, 'technologies'> = {
     PH_Spoils: {
       kind: 'instant',
       cost: {},
-      singleUse: true,
+      banish: true,
       aim: 'none',
       effect: (_catalogue, paid) =>
         gained(paid, { food: 10, production: 10, military: 10, money: 10, science: 10 }),
@@ -526,7 +526,7 @@ const TABLES: Omit<Tables, 'technologies'> = {
     PH_Cache: {
       kind: 'instant',
       cost: {},
-      singleUse: true,
+      banish: true,
       aim: 'none',
       effect: (_catalogue, paid) => gained(paid, { food: 5 }),
     },
@@ -545,6 +545,21 @@ const TABLES: Omit<Tables, 'technologies'> = {
       becomes: 'PH_Flood',
       aim: 'none',
       effect: (_catalogue, paid) => gained(paid, { production: 1 }),
+    },
+    PH_Sow: {
+      kind: 'instant',
+      cost: {},
+      becomes: 'PH_Sprout',
+      aim: 'none',
+      effect: (_catalogue, paid) => gained(paid, { food: 1 }),
+    },
+    PH_Sprout: {
+      kind: 'instant',
+      cost: {},
+      counters: { growth: 3 },
+      exhaust: true,
+      aim: 'none',
+      effect: (_catalogue, paid) => gained(paid, { food: 2 }),
     },
     PH_Hunger: {
       kind: 'hazard',
@@ -1074,7 +1089,7 @@ export function withUnits(chronicle: Chronicle, units: readonly Standing[]): Chr
   return charted(CATALOGUE, stood);
 }
 
-type Pile = 'drawPile' | 'hand' | 'discardPile';
+type Pile = 'drawPile' | 'hand' | 'discardPile' | 'exhaustPile';
 
 /**
  * What a fixture authors on the chronicle it asks for: its state, the units standing on it, and the
@@ -1095,7 +1110,14 @@ export function cityOf(
   catalogue: Catalogue = CATALOGUE,
 ): Chronicle {
   const held = inside.map((_, index) => ({ q: index, r: 0 }));
-  const { units = [], drawPile = [], hand = [], discardPile = [], ...state } = carrying;
+  const {
+    units = [],
+    drawPile = [],
+    hand = [],
+    discardPile = [],
+    exhaustPile = [],
+    ...state
+  } = carrying;
   const made = (id: CardId): ChronicleCard => cardMade(catalogue, id);
   const city: Chronicle = {
     content: catalogue.version,
@@ -1130,6 +1152,7 @@ export function cityOf(
     drawPile: drawPile.map(made),
     hand: hand.map(made),
     discardPile: discardPile.map(made),
+    exhaustPile: exhaustPile.map(made),
   };
   return withUnits(city, units);
 }
@@ -1466,7 +1489,12 @@ export function worker(tile: TileCoords): Standing {
 export const WORKER_STATS = worker(CITY).stats;
 
 export function everyCard(chronicle: Chronicle): CardId[] {
-  return idsOf([...chronicle.drawPile, ...chronicle.hand, ...chronicle.discardPile]).sort();
+  return idsOf([
+    ...chronicle.drawPile,
+    ...chronicle.hand,
+    ...chronicle.discardPile,
+    ...chronicle.exhaustPile,
+  ]).sort();
 }
 
 /** What the cards of a pile are, by id, in pile order. */

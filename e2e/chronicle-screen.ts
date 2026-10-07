@@ -67,7 +67,7 @@ import { type Bindings, DEFAULTS, STORED, serialiseControls, UPRIGHT } from '../
 import type { Name } from '../src/ui/card-face';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
 import { type PileStack, pileStacksOf } from '../src/ui/collection-layout';
-import type { PileKind } from '../src/ui/overlay';
+import type { PileKind } from '../src/ui/piles';
 import { type Choices, SAVE_ENTRY } from '../src/ui/save-entry';
 import { ageName, cardName, referenceName, regionName, text } from '../src/ui/text';
 import { layOutRun, type Reference } from '../src/ui/text-run';
@@ -1966,7 +1966,10 @@ export async function click(page: Page, name: string): Promise<void> {
   await page.mouse.click(at.x, at.y);
 }
 
-/** A point on the pile just under its top card's top edge, where neither a name nor the kind label lies. */
+/**
+ * A point on the pile just under its top card's top edge, where neither a name nor the kind label
+ * lies; on the exhaust pile's tab, as far under its top edge.
+ */
 export async function pileTop(page: Page, pile: PileKind): Promise<{ x: number; y: number }> {
   const zone = await onScreen(page, pile);
   const height = await page.evaluate((target) => {

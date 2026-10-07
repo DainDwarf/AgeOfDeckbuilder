@@ -26,16 +26,14 @@ import {
 import { ended, SLIDE_HOME, STAGGER, stopMotion, travel, turnOver } from './card-motion';
 import {
   answersPress,
-  DESIGN_WIDTH,
   type Hover,
-  MARGIN,
   onClick,
   onHover,
   onLetGoOffCanvas,
   type Stratum,
 } from './design-space';
 import { cardFace } from './face';
-import { PILE_PLACE } from './piles';
+import { PILE_PLACE, pileOf } from './piles';
 import { refused } from './refusal-lines';
 import { createRefusalNote } from './refusal-note';
 import type { Raiser, SmallCards } from './small-card';
@@ -120,12 +118,9 @@ export type HandPresses = {
 };
 
 /**
- * The hand between the two piles. Cards keep their fixed gap until the lane runs out, then
- * compress evenly onto one another; the one under the pointer comes to the front. A left click
- * takes a card as the selection, lifted out of the lane and ringed, and a second one on it is that
- * card's own act; a drag is the two clicks in one gesture. A right click on a card shows it large,
- * whatever else stands. While a card is aimed at the discard pile the hand lies under the window's
- * scrim.
+ * The hand in the lane between the draw pile and the discard pile, its cards compressing evenly onto
+ * one another once the lane runs out. While a card is aimed at the discard pile the hand lies under
+ * the window's scrim.
  */
 export function createHand(
   scene: Phaser.Scene,
@@ -140,8 +135,8 @@ export function createHand(
   catalogue: Catalogue,
   presses: HandPresses,
 ): Hand {
-  const laneLeft = MARGIN + CARD_WIDTH + LANE_PAD;
-  const laneWidth = DESIGN_WIDTH - 2 * laneLeft;
+  const laneLeft = PILE_PLACE['draw-pile'].x + CARD_WIDTH / 2 + LANE_PAD;
+  const laneWidth = PILE_PLACE['discard-pile'].x - CARD_WIDTH / 2 - LANE_PAD - laneLeft;
   const note = createRefusalNote(scene, on.note);
   const line = createAimLine(scene, on.aimLine);
 
@@ -504,12 +499,17 @@ export function createHand(
   };
 
   /**
-   * The cards at the places the change names leaving for the discard pile, in the order named, each
-   * first turned over into the card it lies there as; the hand is laid out anew where they all land.
+   * The cards at the places the change names leaving for the pile, in the order named, each first
+   * turned over into the card it lies there as; the hand is laid out anew where they all land.
    */
-  const toDiscardPile = async (places: readonly number[], chronicle: Chronicle): Promise<void> => {
+  const toPile = async (
+    pile: 'discard-pile' | 'exhaust-pile',
+    places: readonly number[],
+    chronicle: Chronicle,
+  ): Promise<void> => {
     // The change carries no ids: its cards are the top of the pile, in its places' order (`Change`).
-    const lying = chronicle.discardPile.slice(chronicle.discardPile.length - places.length);
+    const cards = pileOf(chronicle, pile);
+    const lying = cards.slice(cards.length - places.length);
     const going: { readonly slot: Slot; readonly lies: ChronicleCard }[] = [];
     places.forEach((place, at) => {
       const slot = slots[place];
@@ -539,7 +539,7 @@ export function createHand(
     await Promise.all(
       flights.map(async ({ shown, turned }, index) => {
         await turned;
-        const to = { ...PILE_PLACE['discard-pile'], rotation: 0 };
+        const to = { ...PILE_PLACE[pile], rotation: 0 };
         return travel(scene, shown, to, index * STAGGER);
       }),
     );
@@ -592,7 +592,9 @@ export function createHand(
   const changed = (stage: Change): Promise<void> | undefined => {
     switch (stage.name) {
       case 'discarded':
-        return toDiscardPile(stage.places, stage.chronicle);
+        return toPile('discard-pile', stage.places, stage.chronicle);
+      case 'exhausted':
+        return toPile('exhaust-pile', stage.places, stage.chronicle);
       case 'drawn':
         return fromDrawPile(stage.chronicle);
       case 'enter':
@@ -612,7 +614,7 @@ export function createHand(
       case 'added':
       case 'recalled':
       case 'shuffled':
-      case 'left':
+      case 'banished':
       case 'turn':
       case 'rolled':
       case 'shown':

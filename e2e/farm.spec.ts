@@ -5,9 +5,11 @@ import { cardOf } from '../src/rules/catalogue';
 import { apply, outcome, refusalOf } from '../src/rules/chronicle';
 import { neighbours, type TileCoords, tileKey } from '../src/rules/map';
 import { type Chronicle, playable } from '../src/rules/state';
+import { text } from '../src/ui/text';
 import {
   admits,
   aimed,
+  browse,
   chronicleOf,
   cityTileOf,
   claimedAt,
@@ -18,7 +20,10 @@ import {
   marksIn,
   openSaved,
   playedOut,
+  readings,
+  rested,
   settledOn,
+  textOf,
   unitEntered,
   WORKER,
   watch,
@@ -52,15 +57,18 @@ function farmAdmitted(): { chronicle: Chronicle; tile: TileCoords; index: number
   });
 }
 
-test('the farm played at the tile inside the border its worker stands on builds a farm there', async ({
+test('the farm played at the tile inside the border its worker stands on builds a farm there, and is exhausted: the tab counts it and its browse shows it', async ({
   page,
 }) => {
   const problems = watch(page);
   const { chronicle, tile, index } = farmAdmitted();
   const built = outcome(apply(CATALOGUE, chronicle, { type: 'play', index, aim: 'tile', tile }));
+  const label = (cards: readonly unknown[]): string =>
+    text('tab.exhaust-pile', { count: cards.length });
 
   await openSaved(page, chronicle);
   const before = await marksIn(page, 'buildings');
+  expect(await textOf(page, 'exhaust-pile-label')).toBe(label(chronicle.exhaustPile));
   await dragOut(page, index);
   await aimed(page);
   await click(page, `tile-${tileKey(tile)}`);
@@ -68,5 +76,15 @@ test('the farm played at the tile inside the border its worker stands on builds 
 
   await expect.poll(() => chronicleOf(page)).toEqual(built);
   expect(await marksIn(page, 'buildings')).toBe(before + 1);
+  expect(idsOf(built.exhaustPile)).toEqual([FARM]);
+  expect(await textOf(page, 'exhaust-pile-label')).toBe(label(built.exhaustPile));
+
+  await browse(page, 'exhaust-pile');
+  await rested(page);
+  const browsed = await readings(page, ['browse-title', 'browse-card-0']);
+  expect(browsed('browse-title').text).toBe(
+    text('browse.exhaust-pile', { count: built.exhaustPile.length }),
+  );
+  expect(browsed('browse-card-0').card).toBe(FARM);
   expect(problems).toEqual([]);
 });

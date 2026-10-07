@@ -33,7 +33,12 @@ import {
 
 /** Every card the chronicle holds, wherever it stands: the cards of the civilization it was begun on. */
 function cardsHeld(chronicle: Chronicle): string[] {
-  return idsOf([...chronicle.drawPile, ...chronicle.hand, ...chronicle.discardPile]).sort();
+  return idsOf([
+    ...chronicle.drawPile,
+    ...chronicle.hand,
+    ...chronicle.discardPile,
+    ...chronicle.exhaustPile,
+  ]).sort();
 }
 
 /**

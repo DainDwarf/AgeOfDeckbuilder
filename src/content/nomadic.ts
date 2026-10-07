@@ -142,14 +142,14 @@ const TABLES: Tables = {
     stores: {
       kind: 'instant',
       cost: {},
-      singleUse: true,
+      banish: true,
       aim: 'none',
       effect: (_catalogue, paid) => gained(paid, { food: 4, production: 4 }),
     },
     'band-joins': {
       kind: 'instant',
       cost: {},
-      singleUse: true,
+      banish: true,
       aim: 'none',
       effect: (_catalogue, paid) => arrived(paid),
     },

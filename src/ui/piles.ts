@@ -26,13 +26,36 @@ import {
 } from './design-space';
 import { cardFace } from './face';
 import { css, LOOK, worn } from './look';
-import type { PileKind } from './overlay';
 import { raiserOf, type SmallCards } from './small-card';
+import { text } from './text';
 
-/** Where each pile's top card lies, about its own bottom centre, as a card is drawn. */
+export type PileKind = 'draw-pile' | 'discard-pile' | 'exhaust-pile';
+
+/** The cards a pile holds, in pile order. */
+export function pileOf(chronicle: Chronicle, pile: PileKind): readonly ChronicleCard[] {
+  switch (pile) {
+    case 'draw-pile':
+      return chronicle.drawPile;
+    case 'discard-pile':
+      return chronicle.discardPile;
+    case 'exhaust-pile':
+      return chronicle.exhaustPile;
+  }
+}
+
+const TAB_WIDTH = 32;
+
+/** The exhaust pile's tab's left edge. */
+export const TAB_EDGE = DESIGN_WIDTH - TAB_WIDTH;
+
+/**
+ * Where each pile's top card lies, about its own bottom centre, as a card is drawn; the exhaust
+ * pile's is the tab's bottom centre, where a card flying to it lands.
+ */
 export const PILE_PLACE: Record<PileKind, { readonly x: number; readonly y: number }> = {
   'draw-pile': { x: MARGIN + CARD_WIDTH / 2, y: CARD_BASELINE },
-  'discard-pile': { x: DESIGN_WIDTH - MARGIN - CARD_WIDTH / 2, y: CARD_BASELINE },
+  'discard-pile': { x: TAB_EDGE - MARGIN - CARD_WIDTH / 2, y: CARD_BASELINE },
+  'exhaust-pile': { x: DESIGN_WIDTH - TAB_WIDTH / 2, y: CARD_BASELINE },
 };
 
 export type Piles = {
@@ -49,9 +72,8 @@ export type PilePresses = {
 };
 
 /**
- * The draw pile face down on the left, the discard pile face up and worn on the right. The discard
- * pile takes the hand's cards only once the last of them has landed, and the shuffle carries the
- * discard pile over as one card, so neither count ever reads ahead of what is on the way.
+ * The three piles. A pile takes the hand's cards only once the last of them has landed, and the
+ * shuffle carries the discard pile over as one card, so no count ever reads ahead of what is on the way.
  */
 export function createPiles(
   scene: Phaser.Scene,
@@ -63,6 +85,7 @@ export function createPiles(
   const answers = { small, kinds, presses };
   const drawn = createPile(scene, on.resting, 'draw-pile', answers);
   const discarded = createPile(scene, on.resting, 'discard-pile', answers);
+  const exhausted = createTab(scene, on.resting, presses);
 
   /** What the piles have in the air; a render owns both and takes them down. */
   let waiting: { readonly event: Phaser.Time.TimerEvent; readonly done: () => void } | undefined;
@@ -92,6 +115,7 @@ export function createPiles(
       topOf(chronicle.discardPile[chronicle.discardPile.length - 1]),
       chronicle.discardPile.length,
     );
+    exhausted.show(chronicle.exhaustPile.length);
   };
 
   /** The shuffle: the discard pile's top is carried to the draw pile's place, turning over on the way. */
@@ -126,8 +150,8 @@ export function createPiles(
   };
 
   /**
-   * The block of cards the hand no longer holds lands on the discard pile all at once, once the last
-   * card is down.
+   * The block of cards the hand no longer holds lands on its pile all at once, once the last card is
+   * down.
    */
   const landed = (cards: number, chronicle: Chronicle): Promise<void> =>
     new Promise((done) => {
@@ -142,6 +166,7 @@ export function createPiles(
   const changed = (stage: Change): Promise<void> | undefined => {
     switch (stage.name) {
       case 'discarded':
+      case 'exhausted':
         return landed(stage.places.length, stage.chronicle);
       case 'shuffled':
         return shuffle(stage.chronicle);
@@ -162,7 +187,7 @@ export function createPiles(
       case 'added':
       case 'drawn':
       case 'recalled':
-      case 'left':
+      case 'banished':
       case 'turn':
       case 'rolled':
       case 'shown':
@@ -332,6 +357,45 @@ function createPile(
       const lifted = shown?.card;
       shown = undefined;
       return lifted;
+    },
+  };
+}
+
+/** The exhaust pile's tab, its label reading its count upwards: a right click on it raises its browse. */
+function createTab(
+  scene: Phaser.Scene,
+  on: Stratum,
+  presses: PilePresses,
+): { show(count: number): void } {
+  const x = PILE_PLACE['exhaust-pile'].x;
+  const y = CARD_BASELINE - CARD_HEIGHT / 2;
+  const paper = scene.add
+    .rectangle(x, y, TAB_WIDTH, CARD_HEIGHT, LOOK.exhaustTab)
+    .setStrokeStyle(1, LOOK.exhaustTabEdge);
+  const label = addText(scene, x, y, '', {
+    fontFamily: UI_FONT,
+    fontSize: '15px',
+    fontStyle: 'bold',
+    color: css(LOOK.exhaustTabInk),
+  })
+    .setOrigin(0.5, 0.5)
+    .setRotation(-Math.PI / 2)
+    .setName('exhaust-pile-label');
+  const press = scene.add
+    .zone(x, y, TAB_WIDTH, CARD_HEIGHT)
+    .setName('exhaust-pile')
+    .setInteractive();
+  on.layer.add([paper, label, press]);
+  onClick(
+    press,
+    () => {
+      presses.browse('exhaust-pile');
+    },
+    'right',
+  );
+  return {
+    show(count: number): void {
+      label.setText(text('tab.exhaust-pile', { count }));
     },
   };
 }

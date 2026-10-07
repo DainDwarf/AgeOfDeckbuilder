@@ -9,6 +9,7 @@ import {
   counterOf,
   entered,
   fullHealth,
+  keywordOf,
   unitKind,
 } from './catalogue';
 import { claimable, populationTaken } from './city';
@@ -94,30 +95,31 @@ function charted(aim: Aim): Aim {
   }
 }
 
-/**
- * What a card played lies on the discard pile as: the card it becomes, made as its content makes it,
- * or itself; nothing where it leaves the chronicle instead.
- */
-export function lyingAs(catalogue: Catalogue, played: ChronicleCard): ChronicleCard | undefined {
-  const card = cardOf(catalogue, played.id);
-  if (leavesChronicle(card)) return undefined;
-  return card.becomes === undefined ? played : cardMade(catalogue, card.becomes);
+/** What a card played goes to its pile as: the card it becomes, made as its content makes it, or itself. */
+export function lyingAs(catalogue: Catalogue, played: ChronicleCard): ChronicleCard {
+  const { becomes } = cardOf(catalogue, played.id);
+  return becomes === undefined ? played : cardMade(catalogue, becomes);
 }
 
-/**
- * Whether a card played leaves the chronicle instead of going to the discard pile: what single use
- * says of the card carrying it, and what playing a settle or a building card or paying a hazard is.
- */
-function leavesChronicle(card: Card): boolean {
+/** Where a card goes as it leaves the hand played, read on the card it goes as. */
+export function goesTo(card: Card): 'discard-pile' | 'exhaust-pile' | 'nowhere' {
   switch (card.kind) {
+    case 'building':
+      return 'exhaust-pile';
+    case 'settle':
+    case 'hazard':
+      return 'nowhere';
     case 'unit':
     case 'action':
     case 'instant':
-      return card.singleUse === true;
-    case 'settle':
-    case 'building':
-    case 'hazard':
-      return true;
+      switch (keywordOf(card)) {
+        case 'exhaust':
+          return 'exhaust-pile';
+        case 'banish':
+          return 'nowhere';
+        case undefined:
+          return 'discard-pile';
+      }
   }
 }
 

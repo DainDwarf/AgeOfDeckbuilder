@@ -134,6 +134,17 @@ test('a chronicle saved with a unit embarked reads back with it embarked', () =>
   expect(read.chronicle).toEqual(save);
 });
 
+test('a chronicle saved with a card on its exhaust pile reads back with it there', () => {
+  const city = cityOf(['urban'], { hand: ['PH_Sow'] });
+  const sown = outcome(apply(CATALOGUE, city, { type: 'play', index: 0, aim: 'none' }));
+  const save = { chronicle: sown, region: REGION, civilization: CIVILIZATION_ID };
+
+  const read = readSave(CATALOGUE, writeSave(CATALOGUE, campaign(), save));
+
+  expect(sown.exhaustPile).toHaveLength(1);
+  expect(read.chronicle).toEqual(save);
+});
+
 test('a chronicle saved with a turn shown reads back with it shown', () => {
   const city = cityOf(['urban'], {
     timeline: { ...NO_DEALS, next: 4 },

@@ -171,7 +171,7 @@ test('a free claim holds the tile, brings one population that stands on it, and 
   const after = outcome(stages);
 
   expect(idsOf(settled.hand)).toEqual(['PH_Claim']);
-  expect(namesOf(stages)).toEqual(['played', 'left', 'population', 'held', 'assigned']);
+  expect(namesOf(stages)).toEqual(['played', 'banished', 'population', 'held', 'assigned']);
   expect(after.held.map(tileKey)).toEqual([tileKey(CITY), tileKey(tile)]);
   expect(after.assigned.map(tileKey)).toContain(tileKey(tile));
   expect(after.population).toBe(settled.population + 1);

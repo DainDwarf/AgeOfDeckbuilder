@@ -1573,9 +1573,10 @@ export function createMapView(
       case 'added':
       case 'drawn':
       case 'discarded':
+      case 'exhausted':
       case 'recalled':
       case 'shuffled':
-      case 'left':
+      case 'banished':
       case 'turn':
       case 'rolled':
       case 'shown':

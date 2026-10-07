@@ -14,5 +14,4 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **An exhaust pile** — a card exhausted goes to the exhaust pile, as the card it became where it becomes one, and a card banished is gone for good; the two keywords replace single use on the cards and in the glossary, a building card exhausting and a settle card played and a hazard paid banished by kind, and a card no deck holds carrying exhaust refused by the catalogue; on the chronicle screen the exhaust pile is an upright tab out of the screen's right edge beside the discard pile, reading its count, browsed by the right click, an exhausted card flying to it from the hand. Doc-impact: docs/CHRONICLE.md, docs/CHRONICLE-SCREEN.md, docs/GLOSSARY.md, docs/ages/NOMADIC.md. [board/exhaust-pile.md](board/exhaust-pile.md)
 - **The specs' play command is one helper** — eight specs build the same tile-aimed play command inline; with it the specs' glow-to-tile match reads a tile key set on each glow instead of a screen position, and "the player's unit beside the tile" is decided once in the cards' rules instead of twice.

@@ -524,6 +524,7 @@ function chronicleOf(catalogue: Catalogue, slot: Slot): Chronicle {
     drawPile: list(catalogue, field('drawPile'), card),
     hand: list(catalogue, field('hand'), card),
     discardPile: list(catalogue, field('discardPile'), card),
+    exhaustPile: list(catalogue, field('exhaustPile'), card),
     achievements: list(catalogue, field('achievements'), (item) => {
       const held = record(catalogue, item);
       return {

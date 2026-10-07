@@ -3,7 +3,7 @@ import { CATALOGUE } from '../src/content/catalogue';
 import type { Chronicle } from '../src/rules/state';
 import { DEFAULTS } from '../src/ui/bindings';
 import { cardFace, kindTooltip } from '../src/ui/face';
-import type { PileKind } from '../src/ui/overlay';
+import type { PileKind } from '../src/ui/piles';
 import { cardRules, text } from '../src/ui/text';
 import {
   besideTheCards,
@@ -51,7 +51,7 @@ const PAST_HANDOVER = 400;
 /** The cursor over something that answers a left click or a rest. */
 const HAND = 'pointer';
 
-const PILES: readonly PileKind[] = ['draw-pile', 'discard-pile'];
+const PILES: readonly PileKind[] = ['draw-pile', 'discard-pile', 'exhaust-pile'];
 
 /** The face whose spot on the page stands nearest the height `y`, and that spot; a tie goes to the first. */
 function nearest<At extends { y: number }>(

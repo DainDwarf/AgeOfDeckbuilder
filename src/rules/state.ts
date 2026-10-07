@@ -126,6 +126,7 @@ export type Chronicle = {
   readonly drawPile: ChronicleCard[];
   readonly hand: ChronicleCard[];
   readonly discardPile: ChronicleCard[];
+  readonly exhaustPile: ChronicleCard[];
   /**
    * The achievements the chronicle can reach, named at the launch in the order its age declares
    * them: no other is read on it.

@@ -32,6 +32,7 @@ import { campLore, capstoneLore, eventLore, type Raising } from './lore';
 import { raiseMenu } from './menu-scene';
 import type { OverlayScene } from './overlay-scene';
 import type { Held, Panel } from './panel';
+import { type PileKind, pileOf } from './piles';
 import { refused } from './refusal-lines';
 import { createRefusalNote } from './refusal-note';
 import { answersOf } from './stack';
@@ -39,8 +40,6 @@ import { buildingName, cardName, eventName, text } from './text';
 
 const GRID_WIDTH = 180;
 const GRID_GAP = 26;
-
-export type PileKind = 'draw-pile' | 'discard-pile';
 
 export type Overlay = {
   browse(pile: PileKind, chronicle: Chronicle): void;
@@ -557,14 +556,5 @@ function dealt(
         entries: ids.map((id, at) => offeredCard(cardFaceAtStart(catalogue, id), at)),
       };
     }
-  }
-}
-
-function pileOf(chronicle: Chronicle, pile: PileKind): readonly ChronicleCard[] {
-  switch (pile) {
-    case 'draw-pile':
-      return chronicle.drawPile;
-    case 'discard-pile':
-      return chronicle.discardPile;
   }
 }

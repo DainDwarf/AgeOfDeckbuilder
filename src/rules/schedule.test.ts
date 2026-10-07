@@ -1630,7 +1630,7 @@ test('a building that passes a capstone ends the chronicle in victory on the pla
     expect(chronicle.ending).toBeUndefined();
     expect(namesOf(stages)).toEqual([
       'played',
-      'left',
+      'exhausted',
       'stock',
       'action-spent',
       'retiled',
@@ -1654,7 +1654,7 @@ test('a capstone’s condition met partway through a play ends the chronicle the
   const landed = endedTurn(awaitingTillage(FARMING), undefined, spent);
   const stages = apply(spent, landed, tilling(landed));
 
-  expect(namesOf(stages)).toEqual(['played', 'left', 'stock', 'action-spent', 'ended']);
+  expect(namesOf(stages)).toEqual(['played', 'exhausted', 'stock', 'action-spent', 'ended']);
   expect(buildingAt(outcome(stages), TILLED)).toBeUndefined();
   expect(outcome(stages).ending).toEqual({ outcome: 'victory', turn: CAPSTONE });
 });

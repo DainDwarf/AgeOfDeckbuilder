@@ -119,15 +119,32 @@ export type Card = {
   readonly becomes?: CardId;
 } & (
   | ({ readonly kind: 'settle' | 'building' } & Aim)
-  | ({
-      readonly kind: 'unit' | 'action' | 'instant';
-      readonly singleUse?: true;
-    } & Aim)
+  | ({ readonly kind: 'unit' | 'action' | 'instant' } & Keyword & Aim)
   | {
       readonly kind: 'hazard';
       readonly strikes: (catalogue: Catalogue, chronicle: Chronicle, counter: Counter) => Landed;
     }
 );
+
+/** The keyword a card of the kinds that carry one declares, exhaust or banish, or neither. */
+type Keyword =
+  | { readonly exhaust?: true; readonly banish?: never }
+  | { readonly banish?: true; readonly exhaust?: never };
+
+/** The keyword a card carries, and nothing for one carrying neither or of a kind that carries none. */
+export function keywordOf(card: Card): 'exhaust' | 'banish' | undefined {
+  switch (card.kind) {
+    case 'unit':
+    case 'action':
+    case 'instant':
+      if (card.exhaust === true) return 'exhaust';
+      return card.banish === true ? 'banish' : undefined;
+    case 'settle':
+    case 'building':
+    case 'hazard':
+      return undefined;
+  }
+}
 
 /** A card's counters read by name. */
 export type Counter = (name: string) => number;
@@ -461,6 +478,10 @@ export function catalogued(content: Catalogue): Catalogue {
     ageOf(content, content.cardAges[id]);
     const misfit = kindMisfit(card);
     if (misfit !== undefined) refuse(content, `the card ${id} ${misfit}`);
+    if (keywordOf(card) === 'exhaust') {
+      const unheld = heldByNoDeck(content, id);
+      if (unheld !== undefined) refuse(content, `${unheld} carries exhaust`);
+    }
   }
   for (const id of Object.keys(content.cardAges)) cardOf(content, id);
   for (const { becomes } of Object.values(content.cards)) {

@@ -29,7 +29,6 @@ import {
   awayUnder,
   type Box,
   COVERED,
-  DESIGN_WIDTH,
   holdDesignSpace,
   MARGIN,
   onClick,
@@ -51,7 +50,7 @@ import { mapOf } from './map-scene';
 import { type LeavesChronicles, raiseMenu, resetMenu } from './menu-scene';
 import { createOverlay } from './overlay';
 import { overlayAhead, overlayOf } from './overlay-scene';
-import { createPiles } from './piles';
+import { createPiles, TAB_EDGE } from './piles';
 import { createPinnedAchievements } from './pinned-achievement';
 import { refused, refusedAim } from './refusal-lines';
 import { createRefusalNote } from './refusal-note';
@@ -781,7 +780,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
     }
     const width = widest + 56;
     const height = label.height + 24;
-    const x = DESIGN_WIDTH - MARGIN - width / 2;
+    const x = TAB_EDGE - MARGIN - width / 2;
     const y = CARD_BASELINE - CARD_HEIGHT - 14 - height / 2;
     // Interactive dead or live, so no press reaches the map under it.
     button.setPosition(x, y).setSize(width, height).setInteractive();

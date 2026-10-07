@@ -3,9 +3,10 @@ import type { CardId, Chronicle, DefeatCause } from './state';
 
 /**
  * One row of the chronicle moved, and the chronicle it leaves. `stock` carries the tile if one
- * yielded it; `discarded`, `recalled` and `left` carry where their cards came out of, indices into
- * the pile as it stood before — the hand, the discard pile for `recalled` — and a `discarded` card
- * lies on top of the discard pile it leaves, in the order of the places.
+ * yielded it; `discarded`, `exhausted`, `recalled` and `banished` carry where their cards came out
+ * of, indices into the pile as it stood before — the hand, the discard pile for `recalled` — and a
+ * `discarded` or an `exhausted` card lies on top of its pile in the chronicle the change leaves, in
+ * the order of the places.
  */
 export type Change = { readonly kind: 'change'; readonly chronicle: Chronicle } & (
   | { readonly name: PlainChange }
@@ -94,7 +95,7 @@ type PlainChange =
   | 'reached'
   | 'runtime-error';
 
-type PlacedChange = 'discarded' | 'recalled' | 'left';
+type PlacedChange = 'discarded' | 'exhausted' | 'recalled' | 'banished';
 
 /** The changes that carry the tile they moved a row on. */
 type TiledChange =
