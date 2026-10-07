@@ -14,4 +14,7 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
+- **Disembark refuses a unit that is not embarked in its own words** — today the unit picked in the tie reads the tile's sentence, "Needs an embarked unit beside it", over the unit itself; its own sentence, and a test for the per-unit wrong-terrain answer, which has none.
 - **Rethink the card kinds** — today's instants mix cards nobody's action is needed for, cards that spend a worker's action, and action-spending cards that change the terrain, building, improvement, terraform: each its own kind, or all of them one action kind, and whether the reward cards are a reward kind or stay instants.
+- **A removed pile** — the cards that left the chronicle kept in a pile of their own, and a card carrying both becomes and single use resolving in one order: the card's effect, then becomes, then the card it became goes to the removed pile.
+- **The specs' play command is one helper** — eight specs build the same tile-aimed play command inline; with it the specs' glow-to-tile match reads a tile key set on each glow instead of a screen position, and "the player's unit beside the tile" is decided once in the cards' rules instead of twice.
