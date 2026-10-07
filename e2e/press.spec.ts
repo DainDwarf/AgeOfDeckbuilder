@@ -43,6 +43,7 @@ import {
   openSaved,
   overflowingPiles,
   pileTop,
+  playedOn,
   playedOut,
   readings,
   rested,
@@ -92,6 +93,18 @@ function playableAtNothing(): { opened: Chronicle; unit: number; tile: number } 
       return undefined;
     },
   );
+}
+
+/**
+ * The first worker stepped onto a tile a card aimed at a tile the city can pay for admits; where
+ * that card lies in the hand, and the tile.
+ */
+function steppedOntoTheAim(): { moved: Chronicle; index: number; tile: TileCoords } {
+  const { stepped: moved, tile } = workerStepped(
+    'steps its first worker onto a tile a card aimed at a tile the city can pay for admits',
+    (stepped, at) => admits(stepped, inHand(stepped, tilePlayable), at),
+  );
+  return { moved, index: inHand(moved, tilePlayable), tile };
 }
 
 /** The chronicle the card at that place in the hand leaves, played at nothing. */
@@ -513,11 +526,7 @@ test('a right click while a press is held on the aim inspects the tile under it,
   page,
 }) => {
   const problems = watch(page);
-  const { stepped: moved, tile } = workerStepped(
-    'steps its first worker onto a tile a card aimed at a tile the city can pay for admits',
-    (stepped, at) => admits(stepped, inHand(stepped, tilePlayable), at),
-  );
-  const index = inHand(moved, tilePlayable);
+  const { moved, index, tile } = steppedOntoTheAim();
 
   await openSaved(page, moved);
   const home = await onScreen(page, `hand-${index}`);
@@ -535,9 +544,7 @@ test('a right click while a press is held on the aim inspects the tile under it,
 
   await page.mouse.up();
   await playedOut(page);
-  await expect
-    .poll(() => chronicleOf(page))
-    .toEqual(outcome(apply(CATALOGUE, moved, { type: 'play', index, aim: 'tile', tile })));
+  await expect.poll(() => chronicleOf(page)).toEqual(playedOn(moved, index, tile));
 
   expect(problems).toEqual([]);
 });
@@ -803,22 +810,23 @@ test('a click on the top of a card of the hand while the end of turn plays out s
   expect(problems).toEqual([]);
 });
 
-test('a click on the line naming the aim lets the card go and reaches no tile under it', async ({
+test('a click on the line naming the aim lands on the tile under it, and plays the card there', async ({
   page,
 }) => {
   const problems = watch(page);
-  const { chronicle: opened, index } = bareAimable();
+  const { moved, index, tile } = steppedOntoTheAim();
 
-  await openSaved(page, opened);
+  await openSaved(page, moved);
   const home = await onScreen(page, `hand-${index}`);
 
   await page.mouse.click(home.x, home.y);
   await aimed(page);
-  await carriedUnder(page, cityTileOf(opened), 'aim-line');
+  await carriedUnder(page, tile, 'aim-line');
   await click(page, 'aim-line');
-  await expect.poll(() => standing(page, 'aim')).toBe(false);
-  await expect.poll(() => selected(page, index, home)).toBe(false);
-  expect(await chronicleOf(page)).toEqual(opened);
+  await playedOut(page);
+  await expect.poll(() => chronicleOf(page)).toEqual(playedOn(moved, index, tile));
+  expect(await standing(page, 'aim')).toBe(false);
+  expect(await ringedTile(page)).toBeUndefined();
 
   expect(problems).toEqual([]);
 });

@@ -14,6 +14,5 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The aim's note lets the aim through** — the line naming what a card is aimed at is see-through: a left click on it lands on the tile under it, as on a refusal's note. Doc-impact: `docs/INTERFACE.md`. [board/aim-line-see-through.md](board/aim-line-see-through.md)
 - **The collection scrolls** — the spec that proves the collection scrolls, its cards being the first to fill the room, and a drag that runs on fired inside the page, since Playwright's own mouse moves come too far apart to set a panel running.
 - **Pin several achievements** — pin several achievements, and by default all newly reachable technologies are pinned.
