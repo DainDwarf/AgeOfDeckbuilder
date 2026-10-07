@@ -1,7 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
-import { cardOf } from '../src/rules/catalogue';
 import { type TileCoords, tileKey } from '../src/rules/map';
+import { cardFace, kindTooltip } from '../src/ui/face';
 import { text } from '../src/ui/text';
 import {
   bareTile,
@@ -337,9 +337,9 @@ test("a card's kind label in the hand raises the bubble reading what its kind is
   const opened = settledOn(1);
   await openSaved(page, opened);
 
-  const id = opened.hand[0]?.id;
-  if (id === undefined) throw new Error('the hand holds no card');
-  const { kind } = cardOf(CATALOGUE, id);
+  const held = opened.hand[0];
+  if (held === undefined) throw new Error('the hand holds no card');
+  const { id, kind } = cardFace(CATALOGUE, held);
   const card = await onScreen(page, 'hand-0');
   const lying = await kindLabelOnScreen(page, 'hand-0');
 
@@ -347,7 +347,7 @@ test("a card's kind label in the hand raises the bubble reading what its kind is
   const label = await liftedLabel(page, lying);
   await page.mouse.move(label.x, label.y, { steps: 5 });
   await expect.poll(() => tooltipUp(page, 'tooltip-ui')).toBe(true);
-  expect(await tooltipText(page, 'tooltip-ui')).toBe(text(`tooltip.${kind}`));
+  expect(await tooltipText(page, 'tooltip-ui')).toBe(kindTooltip(kind));
   expect(await cursorOverCanvas(page)).toBe(HAND);
 
   const beside = await besideTiles(page);
@@ -374,7 +374,7 @@ test("an answer's kind label on the deal window raises the overlay's bubble read
   const label = await kindLabelOnScreen(page, 'deal-card-0');
   await page.mouse.move(label.x, label.y, { steps: 5 });
   await expect.poll(() => tooltipUp(page, 'tooltip-overlay')).toBe(true);
-  expect(await tooltipText(page, 'tooltip-overlay')).toBe(text('tooltip.event'));
+  expect(await tooltipText(page, 'tooltip-overlay')).toBe(kindTooltip('event'));
 
   const beside = await besideTheDeal(page);
   await page.mouse.move(beside.x, beside.y, { steps: 5 });

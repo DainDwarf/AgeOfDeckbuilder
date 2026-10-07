@@ -217,14 +217,13 @@ export const STONE: Slice = {
       farm: {
         kind: 'building',
         cost: { production: 4 },
-        singleUse: true,
         ...builds('farm'),
       },
-      trapping: { kind: 'instant', cost: { production: 2 }, ...placesImprovement('trapping') },
-      irrigation: { kind: 'instant', cost: { production: 2 }, ...placesImprovement('irrigation') },
-      pasture: { kind: 'instant', cost: { production: 2 }, ...placesImprovement('pasture') },
+      trapping: { kind: 'action', cost: { production: 2 }, ...placesImprovement('trapping') },
+      irrigation: { kind: 'action', cost: { production: 2 }, ...placesImprovement('irrigation') },
+      pasture: { kind: 'action', cost: { production: 2 }, ...placesImprovement('pasture') },
       archer: { kind: 'unit', cost: { military: 2 }, ...enters('archer') },
-      'clay-pit': { kind: 'instant', cost: { production: 2 }, ...placesImprovement('clay-pit') },
+      'clay-pit': { kind: 'action', cost: { production: 2 }, ...placesImprovement('clay-pit') },
       calendar: { kind: 'instant', cost: { science: 2 }, ...showsNextLanding() },
       bread: {
         kind: 'instant',
@@ -235,7 +234,6 @@ export const STONE: Slice = {
       tannery: {
         kind: 'building',
         cost: { production: 4 },
-        singleUse: true,
         ...builds('tannery'),
       },
       fire: {
@@ -254,12 +252,12 @@ export const STONE: Slice = {
         effect: (catalogue, paid, at) => healed(catalogue, paid, at),
       },
       embark: {
-        kind: 'instant',
+        kind: 'action',
         cost: { production: 1 },
         becomes: 'disembark',
         ...embarks(MOVE_POINT),
       },
-      disembark: { kind: 'instant', cost: {}, becomes: 'embark', ...disembarks() },
+      disembark: { kind: 'action', cost: {}, becomes: 'embark', ...disembarks() },
       'food-trade': {
         kind: 'instant',
         cost: { money: 2 },
@@ -275,13 +273,11 @@ export const STONE: Slice = {
       fishery: {
         kind: 'building',
         cost: { production: 4 },
-        singleUse: true,
         ...builds('fishery'),
       },
       megalith: {
         kind: 'building',
         cost: { production: 4 },
-        singleUse: true,
         ...builds('megalith'),
       },
     },

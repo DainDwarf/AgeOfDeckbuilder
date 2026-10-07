@@ -55,7 +55,7 @@ import {
 import { refreshedMovePoints, spentAction, standsOn, type Unit, unitAt } from './units';
 
 /** The declared order of the kinds, which is the order a sorted list of cards reads in. */
-export const CARD_KINDS = ['settle', 'unit', 'building', 'instant', 'hazard'] as const;
+export const CARD_KINDS = ['settle', 'unit', 'building', 'action', 'instant', 'hazard'] as const;
 
 export type CardKind = (typeof CARD_KINDS)[number];
 
@@ -69,6 +69,7 @@ export function aimOf(card: Card): Aim {
       return charted(card);
     case 'unit':
     case 'building':
+    case 'action':
     case 'instant':
       return card;
     case 'hazard':
@@ -105,15 +106,16 @@ export function lyingAs(catalogue: Catalogue, played: ChronicleCard): ChronicleC
 
 /**
  * Whether a card played leaves the chronicle instead of going to the discard pile: what single use
- * says of the card carrying it, and what playing a settle card or paying a hazard is.
+ * says of the card carrying it, and what playing a settle or a building card or paying a hazard is.
  */
 function leavesChronicle(card: Card): boolean {
   switch (card.kind) {
     case 'unit':
-    case 'building':
+    case 'action':
     case 'instant':
       return card.singleUse === true;
     case 'settle':
+    case 'building':
     case 'hazard':
       return true;
   }
@@ -131,6 +133,7 @@ export function struck(catalogue: Catalogue, chronicle: Chronicle): Sequence<Gro
       case 'settle':
       case 'unit':
       case 'building':
+      case 'action':
       case 'instant':
         break;
       case 'hazard':
@@ -234,6 +237,7 @@ export function throughWorker(
 ): Aim & { readonly aim: 'tile' } {
   return {
     aim: 'tile',
+    worker: true,
     refuses: (catalogue, chronicle, tile) =>
       firstRefusal(worked(chronicle, tile), refusesTile(catalogue, chronicle, tile)),
     effect: (catalogue, paid, at) =>
@@ -606,7 +610,7 @@ export function built(
   return retiled(paid, at, (tile) => ({ ...tile, building }));
 }
 
-/** The improvement an instant places: the tile carries it from now on, and the worker stays put. */
+/** The improvement an action card places: the tile carries it from now on, and the worker stays put. */
 export function improvementPlaced(
   catalogue: Catalogue,
   paid: Chronicle,

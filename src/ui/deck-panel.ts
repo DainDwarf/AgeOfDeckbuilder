@@ -13,7 +13,7 @@ import {
   stackOf,
 } from './collection-stack';
 import { addText, type Box, ownBoxOf, UI_FONT } from './design-space';
-import { cardFaceAtStart, type Face } from './face';
+import { cardFaceAtStart, type Face, kindLabel } from './face';
 import { css, LOOK } from './look';
 import type { Filled, Held } from './panel';
 import { type Answers, answersOf, type Inspecting, type Laying } from './stack';
@@ -119,7 +119,7 @@ function rowOf(
     scene,
     width - ROW_PAD - COPIES_WIDTH - ROW_GAP,
     middle,
-    text(`kind.${face.kind}`).toUpperCase(),
+    kindLabel(face.kind).toUpperCase(),
     KIND_STYLE,
   ).setOrigin(1, 0.5);
   const counted =

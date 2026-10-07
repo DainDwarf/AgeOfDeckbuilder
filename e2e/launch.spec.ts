@@ -1,8 +1,9 @@
 import { expect, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
-import { ageOf, cardOf, firstAge, technologyOf } from '../src/rules/catalogue';
+import { ageOf, firstAge, technologyOf } from '../src/rules/catalogue';
 import { freshCampaign } from '../src/rules/save';
 import { browseOf } from '../src/ui/collection-layout';
+import { cardFaceAtStart, kindTooltip } from '../src/ui/face';
 import { openingChoices } from '../src/ui/launch-layout';
 import { ageName, cardName, civilizationName, text } from '../src/ui/text';
 import type { Reference } from '../src/ui/text-run';
@@ -75,7 +76,7 @@ test('on the launch screen the kind label on the civilization’s pile raises wh
   await page.mouse.move(label.x, label.y);
   await expect.poll(() => tooltipUp(page, 'tooltip-launch')).toBe(true);
   expect(await tooltipText(page, 'tooltip-launch')).toBe(
-    text(`tooltip.${cardOf(CATALOGUE, OWNED.city.card.id).kind}`),
+    kindTooltip(cardFaceAtStart(CATALOGUE, OWNED.city.card.id).kind),
   );
 
   const card = await onScreen(page, CITY_CARD);

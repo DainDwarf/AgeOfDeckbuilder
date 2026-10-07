@@ -591,14 +591,14 @@ test('a card whose effect names a building, an improvement or a terrain the cata
         ...throughWorker(onPlain, (catalogue, paid, on) => built(catalogue, paid, on, 'PH_Keep')),
       },
       PH_Well: {
-        kind: 'instant',
+        kind: 'action',
         cost: {},
         ...throughWorker(onPlain, (catalogue, paid, on) =>
           improvementPlaced(catalogue, paid, on, 'PH_Well'),
         ),
       },
       PH_Drain: {
-        kind: 'instant',
+        kind: 'action',
         cost: {},
         ...throughWorker(onPlain, (catalogue, paid, on) =>
           terraformed(catalogue, paid, on, 'marsh'),
@@ -651,7 +651,7 @@ test('a unit card is refused while a unit already stands on the city tile', () =
   );
 });
 
-test('a building card builds its building on a tile inside the border where a worker stands', () => {
+test('a building card builds its building on a tile inside the border where a worker stands, and leaves the chronicle', () => {
   const city = cityOf(['urban', 'plain'], {
     tiles: field(2),
     hand: ['PH_Farm'],
@@ -664,7 +664,7 @@ test('a building card builds its building on a tile inside the border where a wo
   expect(buildingAt(after, { q: 1, r: 0 })).toBe('PH_Farm');
   expect(after.resources.production).toBe(0);
   expect(after.hand).toEqual([]);
-  expect(idsOf(after.discardPile)).toEqual(['PH_Farm']);
+  expect(after.discardPile).toEqual([]);
   expect(unitNamed(after, 1).tile).toEqual({ q: 1, r: 0 });
   expect(actionOf(after, 1)).toBe(actionOf(city, 1) - 1);
 });
@@ -1001,7 +1001,7 @@ function reshaping(to: Terrain): Catalogue {
     cards: {
       ...CATALOGUE.cards,
       PH_Sink: {
-        kind: 'instant',
+        kind: 'action',
         cost: {},
         ...throughWorker(
           (catalogue, chronicle, tile) => terraformable(catalogue, chronicle, tile, to),
@@ -1299,7 +1299,7 @@ test('a card played through a worker spends one of that worker’s action, which
 
     const after = outcome(apply(CATALOGUE, city, aimedAt(at)));
 
-    expect(idsOf(after.discardPile)).toEqual([id]);
+    expect(after.hand).toEqual([]);
     expect(actionOf(after, 1)).toBe(actionOf(city, 1) - 1);
   }
 });
@@ -1715,7 +1715,7 @@ test('a feature placed over another removes every layer naming the one it replac
     cards: {
       ...CATALOGUE.cards,
       PH_Swarm: {
-        kind: 'instant',
+        kind: 'action',
         cost: {},
         ...throughWorker(
           () => undefined,
@@ -2106,7 +2106,7 @@ test('a card embarks a unit of the player’s ashore beside a charted, free tile
     units: [standing('player', CITY), standing('player', spent, {}, undefined, 0)],
   });
   const shallow = changed({
-    cards: { ...CATALOGUE.cards, PH_Embark: { kind: 'instant', cost: {}, ...embarks(0) } },
+    cards: { ...CATALOGUE.cards, PH_Embark: { kind: 'action', cost: {}, ...embarks(0) } },
   });
 
   expect(refusedFor(city, 'PH_Embark', far)).toBe('tile-uncharted');

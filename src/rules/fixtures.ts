@@ -464,18 +464,18 @@ const TABLES: Omit<Tables, 'technologies'> = {
       aim: 'none',
       effect: (_catalogue, paid) => gained(paid, { food: 2 }),
     },
-    PH_Mine: { kind: 'instant', cost: { production: 3 }, ...placesImprovement('PH_Mine') },
-    PH_Road: { kind: 'instant', cost: { production: 2 }, ...placesImprovement('PH_Road') },
-    PH_Snare: { kind: 'instant', cost: { production: 2 }, ...placesImprovement('PH_Snare') },
+    PH_Mine: { kind: 'action', cost: { production: 3 }, ...placesImprovement('PH_Mine') },
+    PH_Road: { kind: 'action', cost: { production: 2 }, ...placesImprovement('PH_Road') },
+    PH_Snare: { kind: 'action', cost: { production: 2 }, ...placesImprovement('PH_Snare') },
     PH_Lodge: { kind: 'building', cost: { production: 3 }, ...builds('PH_Lodge') },
     PH_Smokehouse: { kind: 'building', cost: { production: 3 }, ...builds('PH_Smokehouse') },
-    PH_Ditch: { kind: 'instant', cost: { production: 2 }, ...placesImprovement('PH_Ditch') },
-    PH_Weir: { kind: 'instant', cost: {}, ...placesImprovement('PH_Weir') },
-    PH_Embark: { kind: 'instant', cost: {}, ...embarks(EMBARKED_MOVE) },
-    PH_Disembark: { kind: 'instant', cost: {}, ...disembarks() },
+    PH_Ditch: { kind: 'action', cost: { production: 2 }, ...placesImprovement('PH_Ditch') },
+    PH_Weir: { kind: 'action', cost: {}, ...placesImprovement('PH_Weir') },
+    PH_Embark: { kind: 'action', cost: {}, ...embarks(EMBARKED_MOVE) },
+    PH_Disembark: { kind: 'action', cost: {}, ...disembarks() },
     PH_Mill: { kind: 'building', cost: { production: 3 }, ...builds('PH_Mill') },
     PH_Urbanisation: {
-      kind: 'instant',
+      kind: 'action',
       cost: { production: 5 },
       ...throughWorker(
         (catalogue, chronicle, tile) =>
@@ -487,7 +487,7 @@ const TABLES: Omit<Tables, 'technologies'> = {
       ),
     },
     PH_Hunt: {
-      kind: 'instant',
+      kind: 'action',
       cost: {},
       ...throughWorker(
         (catalogue, _chronicle, tile) => featureAmong(catalogue, tile, ['PH_Fertile', 'PH_Game']),
@@ -495,7 +495,7 @@ const TABLES: Omit<Tables, 'technologies'> = {
       ),
     },
     PH_Forage: {
-      kind: 'instant',
+      kind: 'action',
       cost: {},
       ...throughWorker(
         (_catalogue, chronicle, tile) => outside(chronicle, tile),

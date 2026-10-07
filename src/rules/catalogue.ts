@@ -62,6 +62,11 @@ export type Aim =
     }
   | {
       readonly aim: 'tile';
+      /**
+       * Played through the worker standing on the tile, whose action it spends: set by `throughWorker`
+       * alone, which is what checks and spends that worker.
+       */
+      readonly worker?: true;
       readonly refuses: (
         catalogue: Catalogue,
         chronicle: Chronicle,
@@ -113,9 +118,9 @@ export type Card = {
   readonly counters?: Counters;
   readonly becomes?: CardId;
 } & (
-  | ({ readonly kind: 'settle' } & Aim)
+  | ({ readonly kind: 'settle' | 'building' } & Aim)
   | ({
-      readonly kind: 'unit' | 'building' | 'instant';
+      readonly kind: 'unit' | 'action' | 'instant';
       readonly singleUse?: true;
     } & Aim)
   | {
@@ -129,6 +134,52 @@ export type Counter = (name: string) => number;
 
 /** How a card the player picks a tile for is played: what the hand aims and the map lights for. */
 export type AimedCard = Extract<Aim, { readonly aim: 'tile' | 'unit' }>;
+
+/**
+ * Whose action a card aimed so goes to: the worker standing on the tile it is aimed at, any unit of
+ * the player's beside that tile, or no unit's.
+ */
+export function actionGoesTo(aim: Aim): 'worker' | 'any' | 'none' {
+  switch (aim.aim) {
+    case 'tile':
+      if (aim.worker === true) return 'worker';
+      return aim.through === undefined ? 'none' : 'any';
+    case 'none':
+    case 'unit':
+    case 'discard-pile':
+    case 'hand':
+      return 'none';
+  }
+}
+
+/**
+ * What keeps a card out of the kind it declares, and nothing where it stands under it: an action is
+ * a card a unit's action goes to, and an instant one no unit's action goes to.
+ */
+function kindMisfit(card: Card): string | undefined {
+  switch (card.kind) {
+    case 'action':
+      return unitActs(card) ? undefined : "is an action no unit's action goes to";
+    case 'instant':
+      return unitActs(card) ? "is an instant a unit's action goes to" : undefined;
+    case 'settle':
+    case 'unit':
+    case 'building':
+    case 'hazard':
+      return undefined;
+  }
+}
+
+/** Whether a unit's action goes to a card aimed so, whichever unit's it is. */
+function unitActs(aim: Aim): boolean {
+  switch (actionGoesTo(aim)) {
+    case 'worker':
+    case 'any':
+      return true;
+    case 'none':
+      return false;
+  }
+}
 
 /**
  * One answer an event deals: its cost, flat or a reading of the chronicle it is asked on,
@@ -405,9 +456,11 @@ export function catalogued(content: Catalogue): Catalogue {
   if (ages.length === 0) refuse(content, 'no age is held');
   for (const [id, age] of ages) ageHeld(content, id, age);
   treeHeld(content);
-  for (const id of Object.keys(content.cards)) {
+  for (const [id, card] of Object.entries(content.cards)) {
     if (!Object.hasOwn(content.cardAges, id)) refuse(content, `the card ${id} is of no age`);
     ageOf(content, content.cardAges[id]);
+    const misfit = kindMisfit(card);
+    if (misfit !== undefined) refuse(content, `the card ${id} ${misfit}`);
   }
   for (const id of Object.keys(content.cardAges)) cardOf(content, id);
   for (const { becomes } of Object.values(content.cards)) {

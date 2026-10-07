@@ -1,8 +1,8 @@
 import { expect, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
-import { cardOf } from '../src/rules/catalogue';
 import type { Chronicle } from '../src/rules/state';
 import { DEFAULTS } from '../src/ui/bindings';
+import { cardFace, kindTooltip } from '../src/ui/face';
 import type { PileKind } from '../src/ui/overlay';
 import { cardRules, text } from '../src/ui/text';
 import {
@@ -389,9 +389,7 @@ test('on the discard pile’s top card a rest on a name raises the named thing s
   const label = await kindLabelOnScreen(page, face);
   expect(await cursorAt(page, label)).toBe(HAND);
   await expect.poll(() => tooltipUp(page, 'tooltip-ui')).toBe(true);
-  expect(await tooltipText(page, 'tooltip-ui')).toBe(
-    text(`tooltip.${cardOf(CATALOGUE, top.id).kind}`),
-  );
+  expect(await tooltipText(page, 'tooltip-ui')).toBe(kindTooltip(cardFace(CATALOGUE, top).kind));
 
   for (const pile of PILES) expect(await cursorAt(page, await pileTop(page, pile))).toBe('');
 

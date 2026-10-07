@@ -1,12 +1,62 @@
 import type { CardKind } from '../rules/cards';
-import { type Catalogue, cardMade, cardOf } from '../rules/catalogue';
+import {
+  type Aim,
+  actionGoesTo,
+  type Card,
+  type Catalogue,
+  cardMade,
+  cardOf,
+} from '../rules/catalogue';
 import { costOf } from '../rules/chronicle';
 import { answerOf } from '../rules/schedule';
 import type { CardId, Chronicle, ChronicleCard, Cost } from '../rules/state';
-import { answerName, answerRules, capstoneName, capstoneRules, cardName, cardRules } from './text';
+import {
+  answerName,
+  answerRules,
+  capstoneName,
+  capstoneRules,
+  cardName,
+  cardRules,
+  text,
+} from './text';
 
 /** What the label at a face's foot reads, and what its tooltip says. */
-export type FaceKind = CardKind | 'event' | 'capstone';
+export type FaceKind = CardKind | 'worker-action' | 'event' | 'capstone';
+
+/** What the label at a face's foot reads. */
+export function kindLabel(kind: FaceKind): string {
+  return text(`kind.${kind}`);
+}
+
+/** What the tooltip of a face's kind label says. */
+export function kindTooltip(kind: FaceKind): string {
+  return text(`kind-tooltip.${kind}`);
+}
+
+/** The kind a card's face is labelled by. */
+export function labelledKind(card: Card): FaceKind {
+  switch (card.kind) {
+    case 'action':
+      return actionLabelled(card);
+    case 'settle':
+    case 'unit':
+    case 'building':
+    case 'instant':
+    case 'hazard':
+      return card.kind;
+  }
+}
+
+/** The kind an action card's face is labelled by: naming the worker where it is played through one. */
+function actionLabelled(aim: Aim): FaceKind {
+  switch (actionGoesTo(aim)) {
+    case 'worker':
+      return 'worker-action';
+    case 'any':
+    case 'none':
+      return 'action';
+  }
+}
 
 /** The numbers an answer's rules entry reads of the chronicle it is dealt on, by name. */
 export type AnswerReading = Readonly<Record<string, number>>;
@@ -31,7 +81,7 @@ export function cardFace(catalogue: Catalogue, card: ChronicleCard): Face {
   return {
     id: card.id,
     name: cardName(card.id),
-    kind: cardOf(catalogue, card.id).kind,
+    kind: labelledKind(cardOf(catalogue, card.id)),
     rules: cardRules(card),
     costs: costOf(catalogue, card.id),
     reading: {},

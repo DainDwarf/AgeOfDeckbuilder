@@ -1,9 +1,11 @@
 import { expect, test } from 'vitest';
+import { embarks, placesImprovement } from './cards';
 import {
   type Answer,
   achievementOf,
   ageOf,
   type Camp,
+  type Card,
   type Catalogue,
   cardAge,
   cardOf,
@@ -46,6 +48,7 @@ import { discTiles, generateMap, tileKey } from './map';
 import type { LayerKind, Region } from './map-kinds';
 import { seedRng } from './rng';
 import { timelineOf } from './schedule';
+import { unchanged } from './stages';
 import { LEAST_STATS } from './units';
 
 /** The fixture's content with its first age's schedule changed as the test lays it over. */
@@ -608,6 +611,22 @@ test('a catalogue whose card becomes one it does not hold is refused', () => {
   });
 
   expect(() => catalogued(content)).toThrow('fixture: no card is named PH_Unheld');
+});
+
+test('a catalogue whose action no unit’s action goes to, or whose instant a worker’s or any unit’s action goes to, is refused', () => {
+  const misfits: Readonly<Record<string, Card>> = {
+    PH_Idle: { kind: 'action', cost: {}, aim: 'none', effect: (_c, paid) => unchanged(paid) },
+    PH_Dug: { kind: 'instant', cost: {}, ...placesImprovement('PH_Mine') },
+    PH_Rowed: { kind: 'instant', cost: {}, ...embarks(0) },
+  };
+  for (const [id, card] of Object.entries(misfits)) {
+    const content = changed({
+      cards: { ...CATALOGUE.cards, [id]: card },
+      cardAges: { ...CATALOGUE.cardAges, [id]: AGE },
+    });
+
+    expect(() => catalogued(content)).toThrow(new RegExp(`^fixture: the card ${id} is an `));
+  }
 });
 
 test('a catalogue whose deck’s settle section holds a card of another kind is refused', () => {

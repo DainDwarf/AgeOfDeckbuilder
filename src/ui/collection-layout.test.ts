@@ -31,7 +31,8 @@ const NAMES: Readonly<Record<CardId, string>> = {
   PH_Farm: 'Field',
   PH_March: 'Zeal',
   PH_Harvest: 'Bounty',
-  PH_Mine: 'Bounty',
+  PH_Almanac: 'Bounty',
+  PH_Mine: 'Dig',
   PH_Frost: 'Rime',
 };
 
@@ -68,14 +69,16 @@ function edited() {
   ]);
 }
 
-test('the collection stands each card once with its copies, by age in the order of history, then settle, unit, building and instant, then by name', () => {
+test('the collection stands each card once with its copies, by age in the order of history, then settle, unit, building, action and instant, then by name', () => {
   const collection = collectionOf(
     'PH_Worker',
     'PH_March',
     'PH_Farm',
     'PH_March',
+    'PH_Harvest',
     'PH_Claim',
     'PH_Stores',
+    'PH_Mine',
     'PH_Warrior',
     'PH_Band',
     'PH_Warrior',
@@ -87,6 +90,8 @@ test('the collection stands each card once with its copies, by age in the order 
     { id: 'PH_Claim', copies: 1 },
     { id: 'PH_Warrior', copies: 2 },
     { id: 'PH_Farm', copies: 1 },
+    { id: 'PH_Mine', copies: 1 },
+    { id: 'PH_Harvest', copies: 1 },
     { id: 'PH_March', copies: 3 },
     { id: 'PH_Stores', copies: 1 },
     { id: 'PH_Worker', copies: 1 },
@@ -94,11 +99,11 @@ test('the collection stands each card once with its copies, by age in the order 
 });
 
 test('cards of one age and kind read by the same name stand in the catalogue’s order, whatever order the collection holds them in', () => {
-  const collection = collectionOf('PH_Mine', 'PH_Harvest', 'PH_Mine');
+  const collection = collectionOf('PH_Almanac', 'PH_Harvest', 'PH_Almanac');
 
   expect(stacksOf(CATALOGUE, collection, nameOf)).toEqual([
     { id: 'PH_Harvest', copies: 1 },
-    { id: 'PH_Mine', copies: 2 },
+    { id: 'PH_Almanac', copies: 2 },
   ]);
 });
 

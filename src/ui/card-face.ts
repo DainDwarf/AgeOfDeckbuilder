@@ -12,9 +12,9 @@ import {
   ownBoxOf,
   UI_FONT,
 } from './design-space';
-import type { AnswerReading, Face } from './face';
+import { type AnswerReading, type Face, kindLabel, kindTooltip } from './face';
 import { css, LOOK, type Paper, worn } from './look';
-import { referenceName, text } from './text';
+import { referenceName } from './text';
 import { layOutRun, type Reference, type Run } from './text-run';
 import type { Tooltip } from './tooltip';
 
@@ -188,7 +188,7 @@ export function createCardFace(
     color: css(tone(palette.ink)),
   }).setOrigin(1, 0.5);
 
-  const kind = addText(scene, 0, -1 - pad, text(`kind.${face.kind}`).toUpperCase(), {
+  const kind = addText(scene, 0, -1 - pad, kindLabel(face.kind).toUpperCase(), {
     fontFamily: UI_FONT,
     fontSize: `${0.65 * em}px`,
     color: css(tone(LOOK.faintInk)),
@@ -344,7 +344,7 @@ export function createCardFace(
       return Math.abs(local.x) <= width / 2 && local.y <= 0 && local.y >= -height;
     },
     explainKind(tooltip: Tooltip): void {
-      tooltip.beside(text(`tooltip.${face.kind}`), () => {
+      tooltip.beside(kindTooltip(face.kind), () => {
         const ownKind = ownBoxOf(kind);
         return root.getWorldTransformMatrix().transformPoint(ownKind.x + ownKind.width, kindMiddle);
       });

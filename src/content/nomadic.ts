@@ -103,7 +103,7 @@ const TABLES: Tables = {
     warrior: { kind: 'unit', cost: { military: 2 }, ...enters('warrior') },
     scout: { kind: 'unit', cost: { military: 1 }, ...enters('scout') },
     gather: {
-      kind: 'instant',
+      kind: 'action',
       cost: {},
       ...throughWorker(
         (_catalogue, chronicle, tile) => outside(chronicle, tile),
@@ -111,7 +111,7 @@ const TABLES: Tables = {
       ),
     },
     hunt: {
-      kind: 'instant',
+      kind: 'action',
       cost: {},
       ...throughWorker(
         (catalogue, _chronicle, tile) => featureAmong(catalogue, tile, ['deer', 'cattle']),
