@@ -16,7 +16,8 @@ try {
   );
   forgeSave(process.argv.slice(2));
 } catch (error) {
-  console.error(error instanceof Error ? error.message : error);
+  // A refusal, the rules' or the tool's, is a plain `Error`; anything else is a defect.
+  console.error(error instanceof Error && error.constructor === Error ? error.message : error);
   process.exitCode = 1;
 } finally {
   await runner.close();
