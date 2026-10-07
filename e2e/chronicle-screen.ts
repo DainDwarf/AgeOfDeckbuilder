@@ -93,6 +93,7 @@ type PageReading = {
   kindLabelOnScreen: Answer<Spot>;
   boundsOnScreen: Answer<Frame>;
   across: Answer<Across>;
+  scrolled: Answer<Scrolled>;
 };
 
 declare global {
@@ -279,6 +280,9 @@ type DrawnName = { spot: Spot; reference: Reference };
 /** An object's left and right ends and its middle across, in design units. */
 type Across = { left: number; right: number; middle: number };
 
+/** How far a panel stands scrolled, and how far it can. */
+type Scrolled = { offset: number; overflow: number };
+
 /** Everything the run logged that it should not have; a clean run leaves it empty. */
 export function watch(page: Page): string[] {
   const problems: string[] = [];
@@ -447,6 +451,13 @@ export async function readNames(page: Page): Promise<void> {
         across: answer(() => {
           const box = bounds();
           return { left: box.left, right: box.right, middle: box.centerX };
+        }),
+        scrolled: answer(() => {
+          const panel = found().object as Phaser.GameObjects.Container;
+          const overflow = data('overflow');
+          if (typeof overflow !== 'number') throw new Error(`${name} is no panel`);
+          // A panel scrolls by its own y, and a y of 0 negated is -0, which `toBe(0)` refuses.
+          return { offset: -panel.y + 0, overflow };
         }),
       };
     };
@@ -1058,6 +1069,7 @@ export type Reading = {
   /** Where the object's bounds stand on the page. */
   readonly boundsOnScreen: Frame;
   readonly across: Across;
+  readonly scrolled: Scrolled;
 };
 
 /** The reading of what the page answered of a name; a page `readNames` never reached answers nothing. */
@@ -1105,6 +1117,9 @@ function readingOf(name: string, answered: PageReading | undefined): Reading {
     },
     get across() {
       return owed(name, answered?.across);
+    },
+    get scrolled() {
+      return owed(name, answered?.scrolled);
     },
   };
 }
@@ -1203,14 +1218,9 @@ export function glyphsOf(
   return owed;
 }
 
-/** How far the browse stands scrolled, and how far it can: its panel scrolls by its own `y`. */
-export function scrolled(page: Page): Promise<{ offset: number; overflow: number }> {
-  return page.evaluate(() => {
-    const grid = window.named?.('browse')?.object as Phaser.GameObjects.Container | undefined;
-    if (grid === undefined) throw new Error('no browse is open');
-    // A y of 0 negated is -0, which `toBe(0)` refuses: adding 0 reads it +0.
-    return { offset: -grid.y + 0, overflow: grid.getData('overflow') as number };
-  });
+/** How far the named panel stands scrolled, the browse unless another is named, and how far it can. */
+export async function scrolled(page: Page, panel = 'browse'): Promise<Scrolled> {
+  return (await reading(page, panel)).scrolled;
 }
 
 /** How many pieces of river the map draws on a chronicle: one for each run along a tile it charted. */
@@ -1873,8 +1883,25 @@ export function litTiles(page: Page): Promise<string[]> {
   });
 }
 
-export function offsetOf(page: Page): Promise<number> {
-  return scrolled(page).then(({ offset }) => offset);
+export function offsetOf(page: Page, panel = 'browse'): Promise<number> {
+  return scrolled(page, panel).then(({ offset }) => offset);
+}
+
+/**
+ * How far the named panel stands scrolled, the browse unless another is named, after the key has been
+ * held that long on the game's clock.
+ */
+export async function heldFor(
+  page: Page,
+  key: string,
+  span: number,
+  panel = 'browse',
+): Promise<number> {
+  await page.keyboard.down(key);
+  await waitGameClock(page, span);
+  await page.keyboard.up(key);
+  await rested(page);
+  return offsetOf(page, panel);
 }
 
 /** The key above Tab, pressed by its place: the console opens under it, and closes again. */
@@ -1914,10 +1941,10 @@ export async function browse(page: Page, pile: PileKind): Promise<void> {
   await expect.poll(() => standing(page, 'browse')).toBe(true);
 }
 
-/** Wheels over the browse's frame, from the middle of it. */
-export async function wheel(page: Page, by: number): Promise<void> {
-  const frame = await onScreen(page, 'browse-frame');
-  await page.mouse.move(frame.x, frame.y);
+/** Wheels over the named frame, the browse's unless another is named, from the middle of it. */
+export async function wheel(page: Page, by: number, frame = 'browse-frame'): Promise<void> {
+  const middle = await onScreen(page, frame);
+  await page.mouse.move(middle.x, middle.y);
   await page.mouse.wheel(0, by);
 }
 

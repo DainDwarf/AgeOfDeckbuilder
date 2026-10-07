@@ -1,13 +1,18 @@
 import { expect, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
-import { bought, priceOf, unaffordableIn } from '../src/rules/campaign';
+import { bought, type Campaign, priceOf, unaffordableIn } from '../src/rules/campaign';
 import { freshCampaign } from '../src/rules/save';
+import { DEFAULTS } from '../src/ui/bindings';
 import { browseOf, stacksOf } from '../src/ui/collection-layout';
 import { cardName, civilizationName, text } from '../src/ui/text';
+import { learnedWithNeeds, technologiesEarnedIn } from '../tools/learned-with-needs';
 import {
   cardOnFace,
   cursorOverCanvas,
+  dragBetween,
+  heldFor,
   heldSave,
+  offsetOf,
   onScreen,
   openCollection,
   plantCampaign,
@@ -17,7 +22,9 @@ import {
   standing,
   textOf,
   titleOf,
+  waitGameClock,
   watch,
+  wheel,
   wonCampaign,
 } from './chronicle-screen';
 
@@ -35,6 +42,19 @@ const STACKS = stacksOf(CATALOGUE, CAMPAIGN.collection, cardName);
 
 /** How many stacks a line holds. */
 const ACROSS = 6;
+
+/** The collection mode's two panels, and the frames they are cut at. */
+const COLLECTION_PANEL = 'collection-panel';
+const COLLECTION_FRAME = `${COLLECTION_PANEL}-frame`;
+const CIVILIZATIONS_PANEL = 'civilizations-panel';
+const CIVILIZATIONS_FRAME = `${CIVILIZATIONS_PANEL}-frame`;
+
+/** A new campaign that has learned every technology the Stone Age's achievements earn, each with its needs. */
+function stoneAgeLearned(): Campaign {
+  const [, stoneAge] = Object.keys(CATALOGUE.ages);
+  if (stoneAge === undefined) throw new Error('the catalogue lists no second age');
+  return learnedWithNeeds(CATALOGUE, CAMPAIGN, technologiesEarnedIn(CATALOGUE, stoneAge));
+}
 
 test('the navbar’s Collection opens the collection screen on a new campaign, Collection sunk: each card owned stands once reading its copies and its price, six to a line in the collection’s order, and each civilization’s pile reads its two counts, the city section’s card among its settle cards', async ({
   page,
@@ -200,6 +220,85 @@ test('on the collection screen the pointer on a stack is no hand, a right click 
   await expect.poll(() => standing(page, 'inspection')).toBe(false);
   await rested(page);
   expect(await standing(page, 'menu')).toBe(false);
+
+  expect(problems).toEqual([]);
+});
+
+test('on a campaign holding the Stone Age’s technologies the collection panel opens at its top holding more than its room; the wheel over it, a press held on it and the keys that pan up and down with the pointer on it move it and stop it at its first line and its last, and the wheel and those keys over the civilizations panel and the keys that pan left and right move it nothing', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const [down] = DEFAULTS['pan-down'];
+  const [up] = DEFAULTS['pan-up'];
+  if (down === undefined || up === undefined) throw new Error('a pan key stands on no key');
+  const offset = (): Promise<number> => offsetOf(page, COLLECTION_PANEL);
+
+  await plantCampaign(page, stoneAgeLearned());
+  await openCollection(page);
+  const opened = await readings(page, [
+    COLLECTION_PANEL,
+    CIVILIZATIONS_PANEL,
+    COLLECTION_FRAME,
+    CIVILIZATIONS_FRAME,
+  ]);
+  const { overflow } = opened(COLLECTION_PANEL).scrolled;
+  expect(opened(COLLECTION_PANEL).scrolled.offset).toBe(0);
+  expect(overflow).toBeGreaterThan(0);
+  expect(opened(CIVILIZATIONS_PANEL).scrolled).toEqual({ offset: 0, overflow: 0 });
+  const frame = opened(COLLECTION_FRAME).onScreen;
+  const beside = opened(CIVILIZATIONS_FRAME).onScreen;
+
+  await wheel(page, 120, COLLECTION_FRAME);
+  await expect.poll(offset).toBeGreaterThan(0);
+  expect(await offset()).toBeLessThan(overflow);
+  await wheel(page, 4000, COLLECTION_FRAME);
+  await expect.poll(offset).toBe(overflow);
+  await wheel(page, -4000, COLLECTION_FRAME);
+  await expect.poll(offset).toBe(0);
+  await wheel(page, 120, CIVILIZATIONS_FRAME);
+  await rested(page);
+  await rested(page);
+  expect(await offset()).toBe(0);
+
+  await dragBetween(page, frame, { x: frame.x, y: frame.y - 120 * frame.unit });
+  await expect.poll(offset).toBeGreaterThanOrEqual(120);
+  expect(await offset()).toBeLessThanOrEqual(overflow);
+  await wheel(page, -4000, COLLECTION_FRAME);
+  await expect.poll(offset).toBe(0);
+  await rested(page);
+
+  await page.keyboard.down(down.code);
+  await expect.poll(offset).toBe(overflow);
+  await waitGameClock(page, 200);
+  expect(await offset()).toBe(overflow);
+  await page.keyboard.up(down.code);
+
+  await page.keyboard.down(up.code);
+  await expect.poll(offset).toBe(0);
+  await page.keyboard.up(up.code);
+  await rested(page);
+
+  await page.keyboard.press(down.code);
+  await rested(page);
+  await rested(page);
+  const tapped = await offset();
+  expect(tapped).toBeGreaterThan(0);
+
+  for (const control of ['pan-left', 'pan-right'] as const) {
+    for (const slot of DEFAULTS[control]) {
+      if (slot === undefined) continue;
+      expect(await heldFor(page, slot.code, 200, COLLECTION_PANEL)).toBe(tapped);
+    }
+  }
+
+  expect(await heldFor(page, up.code, 200, COLLECTION_PANEL)).toBe(0);
+  expect(await heldFor(page, down.code, 200, COLLECTION_PANEL)).toBeGreaterThan(tapped);
+
+  await wheel(page, -4000, COLLECTION_FRAME);
+  await expect.poll(offset).toBe(0);
+  await page.mouse.move(beside.x, beside.y);
+  await rested(page);
+  expect(await heldFor(page, down.code, 200, COLLECTION_PANEL)).toBe(0);
 
   expect(problems).toEqual([]);
 });

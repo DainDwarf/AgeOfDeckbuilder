@@ -2,10 +2,9 @@ import { writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { CATALOGUE } from '../src/content/catalogue';
-import { ageOf } from '../src/rules/catalogue';
 import { freshCampaign } from '../src/rules/save';
 import { saveFileName, writeSaveFile } from '../src/rules/save-file';
-import { learnedWithNeeds } from './learned-with-needs';
+import { learnedWithNeeds, technologiesEarnedIn } from './learned-with-needs';
 
 const USAGE = [
   'usage: npm run forge -- [--influence <n>] [--out <path>] <technology>...',
@@ -71,12 +70,9 @@ function influenceOf(flag: string | boolean | undefined): number | undefined {
 function technologiesByAge(only: string | undefined): string {
   const ages = only === undefined ? Object.keys(CATALOGUE.ages) : [only];
   return ages
-    .flatMap((age) => {
-      const earned = new Set(
-        Object.values(ageOf(CATALOGUE, age).achievements).map(({ technology }) => technology),
-      );
-      const technologies = Object.keys(CATALOGUE.technologies).filter((id) => earned.has(id));
-      return [`${age}:`, ...technologies.map((technology) => `- ${technology}`)];
-    })
+    .flatMap((age) => [
+      `${age}:`,
+      ...technologiesEarnedIn(CATALOGUE, age).map((technology) => `- ${technology}`),
+    ])
     .join('\n');
 }

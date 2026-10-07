@@ -1,5 +1,13 @@
 import { type Campaign, learnedInto } from '../src/rules/campaign';
-import { type Catalogue, technologyOf } from '../src/rules/catalogue';
+import { ageOf, type Catalogue, technologyOf } from '../src/rules/catalogue';
+
+/** The technologies the age's achievements earn, in the order the catalogue's technologies table lists them. */
+export function technologiesEarnedIn(catalogue: Catalogue, age: string): string[] {
+  const earned = new Set(
+    Object.values(ageOf(catalogue, age).achievements).map(({ technology }) => technology),
+  );
+  return Object.keys(catalogue.technologies).filter((id) => earned.has(id));
+}
 
 /**
  * The campaign with each technology named learned, every need of it not learned learned before it,

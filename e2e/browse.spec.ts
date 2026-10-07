@@ -16,6 +16,7 @@ import {
   endedTurn,
   firstSeed,
   hazardsAdded,
+  heldFor,
   inside,
   kindLabelOnScreen,
   namedIn,
@@ -169,15 +170,6 @@ test('the two keys that pan the map up and down scroll a browse while they are h
   const [up] = DEFAULTS['pan-up'];
   if (down === undefined || up === undefined) throw new Error('a pan key stands on no key');
 
-  /** How far the browse stands scrolled after the key has been held that long on the game's clock. */
-  const heldFor = async (key: string, span: number): Promise<number> => {
-    await page.keyboard.down(key);
-    await waitGameClock(page, span);
-    await page.keyboard.up(key);
-    await rested(page);
-    return offsetOf(page);
-  };
-
   const opened = overflowingPiles();
   await openSaved(page, opened);
   await browse(page, 'draw-pile');
@@ -211,8 +203,8 @@ test('the two keys that pan the map up and down scroll a browse while they are h
   );
   await page.mouse.click(shown.x, shown.y, { button: 'right' });
   await expect.poll(() => standing(page, 'inspection')).toBe(true);
-  expect(await heldFor(down.code, 200)).toBe(tapped);
-  expect(await heldFor(up.code, 200)).toBe(tapped);
+  expect(await heldFor(page, down.code, 200)).toBe(tapped);
+  expect(await heldFor(page, up.code, 200)).toBe(tapped);
   await wheel(page, 120);
   const title = await onScreen(page, 'browse-title');
   await page.mouse.move(title.x, title.y);
@@ -226,12 +218,12 @@ test('the two keys that pan the map up and down scroll a browse while they are h
   for (const control of ['pan-left', 'pan-right'] as const) {
     for (const slot of DEFAULTS[control]) {
       if (slot === undefined) continue;
-      expect(await heldFor(slot.code, 200)).toBe(tapped);
+      expect(await heldFor(page, slot.code, 200)).toBe(tapped);
     }
   }
 
-  expect(await heldFor(up.code, 200)).toBe(0);
-  expect(await heldFor(down.code, 200)).toBeGreaterThan(tapped);
+  expect(await heldFor(page, up.code, 200)).toBe(0);
+  expect(await heldFor(page, down.code, 200)).toBeGreaterThan(tapped);
 
   expect(problems).toEqual([]);
 });
