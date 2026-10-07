@@ -14,5 +14,5 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The collection scrolls** — the spec that proves the collection scrolls, its cards being the first to fill the room, and a drag that runs on fired inside the page, since Playwright's own mouse moves come too far apart to set a panel running.
+- **The collection scrolls** — `e2e/collection.spec.ts` proves, on a campaign holding the Stone Age's technologies, that the collection panel opens at its top holding more than its room and moves under the wheel, a held press and the pan keys, over itself alone, stopping at its first line and its last. Doc-impact: `docs/PHASER.md`. [board/collection-scrolls.md](board/collection-scrolls.md)
 - **Pin several achievements** — pin several achievements, and by default all newly reachable technologies are pinned.
