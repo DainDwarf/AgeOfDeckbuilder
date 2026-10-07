@@ -124,7 +124,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **embarked** | A unit carried over water: it enters the tiles embarked units enter and no other, and attacks nothing. | aboard, afloat, at sea |
 | **action** | A unit's stat and the pool it refreshes to: what it spends to attack or on a card played through it; also the kind of card a unit's action goes to. | action points, energy, attack pool |
 | **refresh** | To bring a unit's spendable stat — move points, action — back to its full value; health is healed, never refreshed. | restore, replenish, reset, recharge, recover, regain |
-| **military** | The resource that pays for military units, instants and fortifications. | — |
+| **military** | The resource that pays for combat. | — |
 | **occupy** | What an enemy does to a tile it stands on: the tile yields nothing and is not claimable. | blockade |
 | **pillage** | What some enemies do to the tile they stand on: its building or improvement is removed. | raze, loot |
 | **capture** | To take the city or a camp by standing on its tile. | conquer, seize, sack |
