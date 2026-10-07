@@ -26,6 +26,8 @@ import {
   onScreen,
   openSaved,
   overflowingPiles,
+  panKeys,
+  pannedToEndsThenTapped,
   pileStacks,
   pileTop,
   readings,
@@ -166,9 +168,7 @@ test('the two keys that pan the map up and down scroll a browse while they are h
   page,
 }) => {
   const problems = watch(page);
-  const [down] = DEFAULTS['pan-down'];
-  const [up] = DEFAULTS['pan-up'];
-  if (down === undefined || up === undefined) throw new Error('a pan key stands on no key');
+  const { down, up } = panKeys();
 
   const opened = overflowingPiles();
   await openSaved(page, opened);
@@ -178,22 +178,7 @@ test('the two keys that pan the map up and down scroll a browse while they are h
   await page.mouse.move(away.x, away.y);
   await rested(page);
 
-  await page.keyboard.down(down.code);
-  await expect.poll(() => offsetOf(page)).toBe(overflow);
-  await waitGameClock(page, 200);
-  expect(await offsetOf(page)).toBe(overflow);
-  await page.keyboard.up(down.code);
-
-  await page.keyboard.down(up.code);
-  await expect.poll(() => offsetOf(page)).toBe(0);
-  await page.keyboard.up(up.code);
-  await rested(page);
-
-  await page.keyboard.press(down.code);
-  await rested(page);
-  await rested(page);
-  const tapped = await offsetOf(page);
-  expect(tapped).toBeGreaterThan(0);
+  const tapped = await pannedToEndsThenTapped(page, overflow);
 
   const faces = pileStacks(opened.drawPile).map((_, at) => `browse-card-${at}`);
   const seen = await readings(page, ['browse-frame', ...faces]);
@@ -203,8 +188,8 @@ test('the two keys that pan the map up and down scroll a browse while they are h
   );
   await page.mouse.click(shown.x, shown.y, { button: 'right' });
   await expect.poll(() => standing(page, 'inspection')).toBe(true);
-  expect(await heldFor(page, down.code, 200)).toBe(tapped);
-  expect(await heldFor(page, up.code, 200)).toBe(tapped);
+  expect(await heldFor(page, down, 200)).toBe(tapped);
+  expect(await heldFor(page, up, 200)).toBe(tapped);
   await wheel(page, 120);
   const title = await onScreen(page, 'browse-title');
   await page.mouse.move(title.x, title.y);
@@ -222,8 +207,8 @@ test('the two keys that pan the map up and down scroll a browse while they are h
     }
   }
 
-  expect(await heldFor(page, up.code, 200)).toBe(0);
-  expect(await heldFor(page, down.code, 200)).toBeGreaterThan(tapped);
+  expect(await heldFor(page, up, 200)).toBe(0);
+  expect(await heldFor(page, down, 200)).toBeGreaterThan(tapped);
 
   expect(problems).toEqual([]);
 });

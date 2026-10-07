@@ -15,6 +15,8 @@ import {
   offsetOf,
   onScreen,
   openCollection,
+  panKeys,
+  pannedToEndsThenTapped,
   plantCampaign,
   readings,
   readOrder,
@@ -22,7 +24,6 @@ import {
   standing,
   textOf,
   titleOf,
-  waitGameClock,
   watch,
   wheel,
   wonCampaign,
@@ -228,9 +229,7 @@ test('on a campaign holding the Stone Age’s technologies the collection panel 
   page,
 }) => {
   const problems = watch(page);
-  const [down] = DEFAULTS['pan-down'];
-  const [up] = DEFAULTS['pan-up'];
-  if (down === undefined || up === undefined) throw new Error('a pan key stands on no key');
+  const { down, up } = panKeys();
   const offset = (): Promise<number> => offsetOf(page, COLLECTION_PANEL);
 
   await plantCampaign(page, stoneAgeLearned());
@@ -267,22 +266,7 @@ test('on a campaign holding the Stone Age’s technologies the collection panel 
   await expect.poll(offset).toBe(0);
   await rested(page);
 
-  await page.keyboard.down(down.code);
-  await expect.poll(offset).toBe(overflow);
-  await waitGameClock(page, 200);
-  expect(await offset()).toBe(overflow);
-  await page.keyboard.up(down.code);
-
-  await page.keyboard.down(up.code);
-  await expect.poll(offset).toBe(0);
-  await page.keyboard.up(up.code);
-  await rested(page);
-
-  await page.keyboard.press(down.code);
-  await rested(page);
-  await rested(page);
-  const tapped = await offset();
-  expect(tapped).toBeGreaterThan(0);
+  const tapped = await pannedToEndsThenTapped(page, overflow, COLLECTION_PANEL);
 
   for (const control of ['pan-left', 'pan-right'] as const) {
     for (const slot of DEFAULTS[control]) {
@@ -291,14 +275,14 @@ test('on a campaign holding the Stone Age’s technologies the collection panel 
     }
   }
 
-  expect(await heldFor(page, up.code, 200, COLLECTION_PANEL)).toBe(0);
-  expect(await heldFor(page, down.code, 200, COLLECTION_PANEL)).toBeGreaterThan(tapped);
+  expect(await heldFor(page, up, 200, COLLECTION_PANEL)).toBe(0);
+  expect(await heldFor(page, down, 200, COLLECTION_PANEL)).toBeGreaterThan(tapped);
 
   await wheel(page, -4000, COLLECTION_FRAME);
   await expect.poll(offset).toBe(0);
   await page.mouse.move(beside.x, beside.y);
   await rested(page);
-  expect(await heldFor(page, down.code, 200, COLLECTION_PANEL)).toBe(0);
+  expect(await heldFor(page, down, 200, COLLECTION_PANEL)).toBe(0);
 
   expect(problems).toEqual([]);
 });

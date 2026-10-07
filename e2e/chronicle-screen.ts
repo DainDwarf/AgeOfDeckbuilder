@@ -63,7 +63,7 @@ import {
   playable,
 } from '../src/rules/state';
 import { standsOn, type Unit, unitAt } from '../src/rules/units';
-import { type Bindings, STORED, serialiseControls, UPRIGHT } from '../src/ui/bindings';
+import { type Bindings, DEFAULTS, STORED, serialiseControls, UPRIGHT } from '../src/ui/bindings';
 import type { Name } from '../src/ui/card-face';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
 import { type PileStack, pileStacksOf } from '../src/ui/collection-layout';
@@ -1902,6 +1902,44 @@ export async function heldFor(
   await page.keyboard.up(key);
   await rested(page);
   return offsetOf(page, panel);
+}
+
+/** The keys the pan-down and pan-up controls stand on first, by their codes. */
+export function panKeys(): { down: string; up: string } {
+  const [down] = DEFAULTS['pan-down'];
+  const [up] = DEFAULTS['pan-up'];
+  if (down === undefined || up === undefined) throw new Error('a pan key stands on no key');
+  return { down: down.code, up: up.code };
+}
+
+/**
+ * The pan-down key held until the named panel, the browse unless another is named, stands at its
+ * overflow and 200 ms of the game's clock more, standing there still; the pan-up key held until it
+ * stands at its top; then the pan-down key tapped, moving it down: how far it stands scrolled then.
+ */
+export async function pannedToEndsThenTapped(
+  page: Page,
+  overflow: number,
+  panel = 'browse',
+): Promise<number> {
+  const { down, up } = panKeys();
+  await page.keyboard.down(down);
+  await expect.poll(() => offsetOf(page, panel)).toBe(overflow);
+  await waitGameClock(page, 200);
+  expect(await offsetOf(page, panel)).toBe(overflow);
+  await page.keyboard.up(down);
+
+  await page.keyboard.down(up);
+  await expect.poll(() => offsetOf(page, panel)).toBe(0);
+  await page.keyboard.up(up);
+  await rested(page);
+
+  await page.keyboard.press(down);
+  await rested(page);
+  await rested(page);
+  const tapped = await offsetOf(page, panel);
+  expect(tapped).toBeGreaterThan(0);
+  return tapped;
 }
 
 /** The key above Tab, pressed by its place: the console opens under it, and closes again. */
