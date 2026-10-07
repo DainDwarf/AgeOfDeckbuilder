@@ -14,4 +14,4 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The specs' play command is one helper** — eight specs build the same tile-aimed play command inline; with it the specs' glow-to-tile match reads a tile key set on each glow instead of a screen position, and "the player's unit beside the tile" is decided once in the cards' rules instead of twice.
+- **The specs' play command is one helper** — no spec builds a play command inline: a search for `type: 'play'` under `e2e/` hits `e2e/chronicle-screen.ts` alone; the lit-tile reader matches each glow to its tile by a key the glow carries, never by a position; and the player's units beside a tile are gathered by one helper in `src/rules/cards.ts` that both the per-unit refusal and the step card's refusal read. Doc-impact: none. [board/specs-play-command.md](board/specs-play-command.md)
