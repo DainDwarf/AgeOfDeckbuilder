@@ -5,13 +5,13 @@ import { earningOf, technologyOf } from '../src/rules/catalogue';
 import { freshCampaign } from '../src/rules/save';
 import { openingChoices } from '../src/ui/launch-layout';
 import { achievementGoal, regionName, technologyName, text } from '../src/ui/text';
+import { learnedWithNeeds } from '../tools/learned-with-needs';
 import {
   chronicleButton,
   chronicleOf,
   click,
   launchedAs,
   launchedFromScreen,
-  learnedWithNeeds,
   openCampaign,
   optionsSelected,
   plateReads,
@@ -53,7 +53,11 @@ test('on a campaign Raft stands available to, its plate reads the region it unlo
   page,
 }) => {
   const problems = watch(page);
-  const campaign = learnedWithNeeds(freshCampaign(CATALOGUE), technologyOf(CATALOGUE, RAFT).needs);
+  const campaign = learnedWithNeeds(
+    CATALOGUE,
+    freshCampaign(CATALOGUE),
+    technologyOf(CATALOGUE, RAFT).needs,
+  );
   expect(available(CATALOGUE, RAFT, campaign.technologies)).toBe(true);
   const { age, region } = openingChoices(CATALOGUE, campaign);
   expect(age).toBe(AGE);
@@ -77,7 +81,7 @@ test('on a campaign that has learned Raft, its plate stands learned reading the 
   page,
 }) => {
   const problems = watch(page);
-  const campaign = learnedWithNeeds(freshCampaign(CATALOGUE), [RAFT]);
+  const campaign = learnedWithNeeds(CATALOGUE, freshCampaign(CATALOGUE), [RAFT]);
   expect(campaign.technologies).toContain(RAFT);
   const { age, region, civilization } = openingChoices(CATALOGUE, campaign);
   expect(age).toBe(AGE);

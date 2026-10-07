@@ -6,5 +6,5 @@ import { defineConfig } from 'vite';
 export default defineConfig(({ command }) => ({
   base: command === 'build' ? '/AgeOfDeckbuilder/' : '/',
   server: { port: 5173, strictPort: true },
-  test: { include: ['src/**/*.test.ts'] },
+  test: { include: ['src/**/*.test.ts', 'tools/**/*.test.ts'] },
 }));

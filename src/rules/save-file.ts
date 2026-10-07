@@ -9,6 +9,13 @@ import { type ChronicleSave, readSave, type Save, writeSave } from './save';
  */
 export type SaveFileRead = { readonly save?: Save; readonly dropped: readonly string[] };
 
+/** The save file's name, dated the player's own day. */
+export function saveFileName(day: Date): string {
+  const two = (count: number): string => String(count).padStart(2, '0');
+  const date = `${day.getFullYear()}-${two(day.getMonth() + 1)}-${two(day.getDate())}`;
+  return `age-of-deckbuilder-save-${date}.adbsave`;
+}
+
 /** A save as a save file's text: the save's own text, its UTF-8 bytes in base64. */
 export function writeSaveFile(
   catalogue: Catalogue,

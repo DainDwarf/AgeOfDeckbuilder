@@ -14,6 +14,5 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **A save forged at a campaign state** — `npm run forge -- <technology>...` writes a save file the game's Import reads whole, holding a campaign on the first civilization with the technologies named and every need of them learned through the rules' own door, its influence replaced where `--influence` is given; `--list` prints the technology ids by age; one Vitest test spawns the command and reads its file through the game's own reading. Doc-impact: none. [board/forged-save.md](board/forged-save.md)
 - **The collection scrolls** — the spec that proves the collection scrolls, its cards being the first to fill the room, and a drag that runs on fired inside the page, since Playwright's own mouse moves come too far apart to set a panel running.
 - **Pin several achievements** — pin several achievements, and by default all newly reachable technologies are pinned.

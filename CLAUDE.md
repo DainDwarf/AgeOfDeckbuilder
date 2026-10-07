@@ -63,3 +63,4 @@ Full rules in [`DOGMAS.md`](DOGMAS.md). The ones no session may miss:
 | `npm run fmt` | Fixes what `npm run lint` checks: Biome writes the code, Prettier unwraps the markdown. |
 | `npm run build` | Vite build into `dist/`. |
 | `npm run itch` | Relative-base build, then butler pushes `dist/` to the itch page as the version git describes. Butler must be logged in. |
+| `npm run forge -- <technology>...` | Writes a save file Import reads, a new campaign with the technologies named and their needs learned; `--influence <n>` sets its influence, `--out <path>` names the file, `--list [<age>]` prints the technology ids by age. |

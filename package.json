@@ -14,7 +14,8 @@
     "lint": "biome check . && prettier --check \"**/*.md\"",
     "fmt": "biome check --write . && prettier --write \"**/*.md\"",
     "build": "vite build",
-    "itch": "node tools/itch.ts"
+    "itch": "node tools/itch.ts",
+    "forge": "node tools/forge-save.ts"
   },
   "dependencies": {
     "phaser": "4.2.1"

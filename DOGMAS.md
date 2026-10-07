@@ -161,7 +161,7 @@ src/content/        the catalogue: one module per age, merged into the one the b
 src/ui/             Phaser scenes, and the design space they lay out in
 e2e/                Playwright specs
 .github/workflows/  the CI check
-tools/              the standing scripts: the itch push
+tools/              the standing scripts: the itch push, the save forge
 public/assets/      art, sound, music, each pack with its licence entry
 dist/               the build; what Pages deploys and the itch push sends
 ```

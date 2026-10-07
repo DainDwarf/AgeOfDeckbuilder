@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { saveFileName } from '../rules/save-file';
 import { type Bind, boundTo, keyPressed } from './bindings';
 import { createScrim, holdDesignSpace, stopsThePointer, whileUp } from './design-space';
 import { readsKeys, takesMouseKeys } from './keys';
@@ -222,13 +223,6 @@ export class MenuScene extends Phaser.Scene implements CoversOverlay {
     this.close = close;
     this.covered = () => covered;
   }
-}
-
-/** The save file's name, dated the player's own day. */
-function saveFileName(day: Date): string {
-  const two = (count: number): string => String(count).padStart(2, '0');
-  const date = `${day.getFullYear()}-${two(day.getMonth() + 1)}-${two(day.getDate())}`;
-  return `age-of-deckbuilder-save-${date}.adbsave`;
 }
 
 /** The text handed to the player as a file of that name, through the browser's own download. */

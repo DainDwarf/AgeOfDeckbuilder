@@ -2,13 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { expect, type Page } from '@playwright/test';
 import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
-import {
-  agesReached,
-  type Campaign,
-  civilizationIn,
-  learnedInto,
-  paidInto,
-} from '../src/rules/campaign';
+import { agesReached, type Campaign, civilizationIn, paidInto } from '../src/rules/campaign';
 import {
   aimOf,
   built,
@@ -1444,23 +1438,6 @@ export function wonCampaign(): Campaign {
   const index = idsOf(chronicle.hand).indexOf(SHELTER);
   const won = outcome(apply(CATALOGUE, chronicle, { type: 'play', index, aim: 'tile', tile }));
   return paidInto(CATALOGUE, freshCampaign(CATALOGUE), won).campaign;
-}
-
-/**
- * The campaign with each technology named learned, every need of it not learned learned before it,
- * the needs in the order the catalogue lists them.
- */
-export function learnedWithNeeds(campaign: Campaign, technologies: readonly string[]): Campaign {
-  let learning = campaign;
-  const learn = (technology: string): void => {
-    const { needs } = technologyOf(CATALOGUE, technology);
-    for (const need of Object.keys(CATALOGUE.technologies)) {
-      if (needs.includes(need) && !learning.technologies.includes(need)) learn(need);
-    }
-    learning = learnedInto(CATALOGUE, learning, technology);
-  };
-  for (const technology of technologies) learn(technology);
-  return learning;
 }
 
 /** A turn 1 with the first worker entered on the city's tile, and the neighbour it steps onto. */
