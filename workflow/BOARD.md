@@ -14,4 +14,4 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **Pin several achievements** — pin several achievements, and by default all newly reachable technologies are pinned.
+- **Pin several achievements** — the campaign pins any number of available technologies, every technology pinned as it becomes available; the tree toggles a pin per plate and marks a pinned plate with a dark-edged white line and a red disc; the chronicle screen stacks the pinned achievements it reads in the map's top-left corner, a reached one reading its name alone; the pins read and write with the save. Doc-impact: `docs/META.md`, `docs/META-SCREENS.md`, `docs/CHRONICLE-SCREEN.md`, `docs/INTERFACE.md`, `docs/GLOSSARY.md`. [board/pin-several.md](board/pin-several.md)
