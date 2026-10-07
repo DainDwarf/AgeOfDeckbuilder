@@ -38,7 +38,7 @@ The field is Agriculture, Irrigation and Bread; the wild is Trapping, Domesticat
 - A card the previous game had comes over as it was; ask before designing one, since Fire was served three takes for nothing.
 - An age left thin by a card moving out is answered after playtest, never filled ahead of it.
 - A doubt about how much control the player has over a goal sends it to playtest and does not drop it.
-- Buildings are tried as single use, the copies owned being the limit, until a technology brings back what left the chronicle.
+- Buildings are exhausted, the copies owned being the limit, until a technology brings one back from the exhaust pile.
 - A goal is never reached with no play: the deck has no floor, so a goal is tried on the empty deck before it is served. The try is read against the schedule the age will have, never the stand-in one: the real Stone Age schedule permits no idle play for twenty turns, so a goal the empty deck reaches only by standing that long is not reached with no play.
 - A card is never priced against one a line ahead will change: Trapping moves to deer and may cost more, so a number is tried as a start and played.
 - A goal that takes every claim is a focus: the culture goes to the tiles the goal counts and nowhere else, none kept for another tile or for an event's answer.
@@ -84,13 +84,13 @@ The field is Agriculture, Irrigation and Bread; the wild is Trapping, Domesticat
 - Sun stones and bead-making are off the tree, at least for now.
 - Grinding stone, Granary and Dyes are off the tree: nineteen technologies were too many.
 - Burial rites is off the tree, benched for now: the second column holds four, and Pottery has the seat.
-- A technology whose card brings back a card that left the chronicle is wanted and stands nowhere on the skeleton yet; its place is the user's to say. The glossary's words are "left the chronicle": "remove" is a card taken out of a deck.
+- A technology whose card brings back a card from the exhaust pile is wanted and stands nowhere on the skeleton yet; its place is the user's to say.
 
-**Single use, settled for a trial** at the doors' cut: the keyword stands on each building card, so Farm carries it and reads it on its face, and the Shelter, which ends the chronicle, does not. The rules do not change. If the trial holds, moving it to the kind is a line of its own.
+**Exhaust is the building kind's own:** a building card played is exhausted and carries no keyword for it.
 
 - Improvements and units cycle: a farm was the one wanted on many tiles and is a building now; units are killed and the schedule never ends.
-- A pillaged single-use building is gone for the chronicle, and its copies' price doubles per copy.
-- The technology that brings back what left needs one mechanism: a card that leaves the chronicle is dropped today, so a third pile would keep what left, and a card would be aimed at it as a recall is aimed at the discard pile.
+- A pillaged building is not built again this chronicle, its card being exhausted, and its copies' price doubles per copy.
+- The technology that brings back an exhausted card aims at the exhaust pile as a recall aims at the discard pile.
 
 **Open, unanswered:**
 
