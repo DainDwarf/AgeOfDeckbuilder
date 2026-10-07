@@ -1,6 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
-import { available, type Campaign, pinned } from '../src/rules/campaign';
 import { achievementOf } from '../src/rules/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
 import { campUnit } from '../src/rules/enemies';
@@ -28,6 +27,7 @@ import {
   mapFrame,
   onScreen,
   openSaved,
+  pinnedAchievement,
   playedOut,
   readings,
   rested,
@@ -139,15 +139,15 @@ function claimedEast(): { chronicle: Chronicle; claimed: TileCoords } {
   });
 }
 
-/** A new campaign pinning a technology whose achievement the chronicle reads. */
-function pinningRead(chronicle: Chronicle): Campaign {
-  const fresh = freshCampaign(CATALOGUE);
+/** The first pinned achievement a new campaign shows on the chronicle, by the name it stands under. */
+function pinnedRead(chronicle: Chronicle): string {
+  const { pins } = freshCampaign(CATALOGUE);
   const technology = chronicle.achievements
     .map(({ id }) => achievementOf(CATALOGUE, chronicle.age, id).technology)
-    .find((read) => available(CATALOGUE, read, fresh.technologies));
+    .find((read) => pins.includes(read));
   if (technology === undefined)
-    throw new Error(`the ${chronicle.age} age reads no achievement a new campaign may pin`);
-  return pinned(CATALOGUE, fresh, technology);
+    throw new Error(`the ${chronicle.age} age reads no achievement a new campaign pins`);
+  return pinnedAchievement(technology);
 }
 
 /** Whether the named object stands over the one tile and clear of the other, read in one question. */
@@ -382,18 +382,20 @@ test('a population carried in city mode onto a tile the infopanel stands over an
   expect(problems).toEqual([]);
 });
 
-test('a unit carried onto a lit tile the pinned achievement stands over and let go there comes home', async ({
+test('a unit carried onto a lit tile a pinned achievement stands over and let go there comes home', async ({
   page,
 }) => {
   const problems = watch(page);
   const step = workerStepsTo(westOf);
   const city = cityTileOf(step.entered);
 
-  await openSaved(page, step.entered, pinningRead(step.entered));
+  const pin = pinnedRead(step.entered);
+
+  await openSaved(page, step.entered);
 
   const tile = `tile-${tileKey(step.tile)}`;
-  const seen = await readings(page, ['pinned-achievement', tile, `tile-${tileKey(city)}`]);
-  const plate = seen('pinned-achievement').boundsOnScreen;
+  const seen = await readings(page, [pin, tile, `tile-${tileKey(city)}`]);
+  const plate = seen(pin).boundsOnScreen;
   const from = seen(tile).onScreen;
   // Half the step to the city: the tile lands inside the plate and the city as far outside it.
   const inset = (seen(`tile-${tileKey(city)}`).onScreen.x - from.x) / 2;
@@ -401,7 +403,7 @@ test('a unit carried onto a lit tile the pinned achievement stands over and let 
     x: plate.x + plate.width - inset - from.x,
     y: plate.y + plate.height / 2 - from.y,
   });
-  expect(await standsOver(page, 'pinned-achievement', step.tile, city)).toEqual([true, false]);
+  expect(await standsOver(page, pin, step.tile, city)).toEqual([true, false]);
   const mark = `unit-${tileKey(city)}`;
   const dragged = await readings(page, [`tile-${tileKey(city)}`, mark]);
   expect(inside(dragged(`tile-${tileKey(city)}`).onScreen, await mapFrame(page))).toBe(true);

@@ -31,6 +31,10 @@ export type Look = {
   readonly selected: number;
   readonly selectedEdge: number;
   readonly pin: number;
+  /** The dark line on each side of a pinned plate's edge. */
+  readonly pinEdge: number;
+  /** The disc a pinned plate wears on its corner. */
+  readonly pinMark: number;
   readonly thresholdInk: number;
   readonly settlePhase: number;
   readonly panelFill: number;
@@ -98,6 +102,8 @@ export const LOOK: Look = {
   selected: 0xf2f6ff,
   selectedEdge: 0x0d1014,
   pin: 0xf2f6ff,
+  pinEdge: 0x0d1014,
+  pinMark: 0xb4453c,
   thresholdInk: 0xf2f6ff,
   settlePhase: 0x9fbb3a,
   panelFill: 0xd4d7db,

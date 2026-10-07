@@ -265,8 +265,10 @@ function campaignOf(
     id: string(catalogue, item),
   }));
   const influence = count(catalogue, field('influence'), slot, (held) => `holds ${held} influence`);
-  const pinSlot = field('pin');
-  const pin = optional(pinSlot, (item) => string(catalogue, item));
+  const pinsRead =
+    optional(field('pins'), (pins) =>
+      list(catalogue, pins, (item) => ({ slot: item, id: string(catalogue, item) })),
+    ) ?? [];
 
   dealtOnce(
     catalogue,
@@ -287,12 +289,17 @@ function campaignOf(
     if (stands(item, misfit)) learned.push(technology);
   }
 
-  const unavailableAs = pin === undefined ? undefined : unavailable(catalogue, pin, learned);
-  const pinHeld =
-    pin !== undefined &&
-    stands(pinSlot, unavailableAs === undefined ? undefined : `names ${unavailableAs}`)
-      ? { pin }
-      : {};
+  const pins: string[] = [];
+  for (const { slot: item, id: technology } of pinsRead) {
+    const unavailableAs = unavailable(catalogue, technology, learned);
+    const misfit =
+      unavailableAs !== undefined
+        ? `names ${unavailableAs}`
+        : pins.includes(technology)
+          ? `names the technology ${technology} a second time`
+          : undefined;
+    if (stands(item, misfit)) pins.push(technology);
+  }
 
   const owned = new Map<number, CardId>();
   for (const { slot: item, card } of collection) {
@@ -353,7 +360,7 @@ function campaignOf(
       nextCard,
       collection: collection.flatMap(({ card }) => (owned.has(card.number) ? [card] : [])),
       civilizations: Object.fromEntries(held),
-      ...pinHeld,
+      pins,
     },
     dropped,
   };

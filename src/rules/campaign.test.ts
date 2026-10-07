@@ -126,6 +126,10 @@ test('an ended chronicle pays into the campaign each achievement it reached, in 
     nextCard: opened.nextCard + unlocks.length,
     collection: [...opened.collection, ...paid.entered],
     civilizations: opened.civilizations,
+    pins: [
+      ...opened.pins.filter((pin) => pin !== hoard.technology && pin !== victory.technology),
+      CENSUS,
+    ],
   });
 });
 
@@ -196,17 +200,27 @@ function besideGranary(campaign: Campaign): string {
   return technology;
 }
 
-test('a campaign pins an available technology, a second pin moves it, and the pin is taken off; a technology learned, one unknown and one the catalogue does not hold are pinned by nothing', () => {
+test('a new campaign pins every technology available at its opening, and nothing else', () => {
+  const opened = newCampaign(CATALOGUE, CIVILIZATION_ID);
+
+  expect(technologyOf(CATALOGUE, CENSUS).needs).toEqual([GRANARY]);
+  expect(opened.pins).toEqual(
+    Object.keys(CATALOGUE.technologies).filter((technology) => technology !== CENSUS),
+  );
+});
+
+test('a pin is taken off and put back, each pin standing beside the others; a technology learned, one unknown and one the catalogue does not hold are pinned by nothing', () => {
   const opened = newCampaign(CATALOGUE, CIVILIZATION_ID);
   const other = besideGranary(opened);
   const { campaign: paid } = paidInto(CATALOGUE, opened, hoardedVictory());
 
-  const first = pinned(CATALOGUE, opened, GRANARY);
-  const moved = pinned(CATALOGUE, first, other);
+  const off = unpinned(unpinned(opened, GRANARY), other);
+  const back = pinned(CATALOGUE, off, GRANARY);
 
-  expect(first).toEqual({ ...opened, pin: GRANARY });
-  expect(moved).toEqual({ ...opened, pin: other });
-  expect(unpinned(moved)).toStrictEqual(opened);
+  expect(opened.pins).toEqual(expect.arrayContaining([GRANARY, other]));
+  expect(off.pins).toEqual(opened.pins.filter((pin) => pin !== GRANARY && pin !== other));
+  expect(back.pins).toEqual([...off.pins, GRANARY]);
+  expect(pinned(CATALOGUE, back, GRANARY)).toStrictEqual(back);
   expect(paid.technologies).toContain(GRANARY);
   expect(() => pinned(CATALOGUE, paid, GRANARY)).toThrow(
     `fixture: the pin names the learned technology ${GRANARY}`,
@@ -219,21 +233,18 @@ test('a campaign pins an available technology, a second pin moves it, and the pi
   );
 });
 
-test('an ended chronicle that learns the pinned technology leaves nothing pinned, and one that learns another leaves the pin standing', () => {
+test('an ended chronicle takes the pin off each technology it learns and pins each technology a learning makes available, and a pin taken off stays off', () => {
   const opened = newCampaign(CATALOGUE, CIVILIZATION_ID);
   const other = besideGranary(opened);
-  const won = hoardedVictory();
-  const { campaign } = paidInto(CATALOGUE, opened, won);
+  const off = unpinned(opened, other);
+  const { campaign } = paidInto(CATALOGUE, off, hoardedVictory());
+  const learned = campaign.technologies;
 
-  expect(campaign.technologies).toContain(GRANARY);
-  expect(campaign.technologies).not.toContain(other);
-  expect(paidInto(CATALOGUE, pinned(CATALOGUE, opened, GRANARY), won).campaign).toStrictEqual(
-    campaign,
-  );
-  expect(paidInto(CATALOGUE, pinned(CATALOGUE, opened, other), won).campaign).toEqual({
-    ...campaign,
-    pin: other,
-  });
+  expect(learned).toContain(GRANARY);
+  expect(learned).not.toContain(other);
+  expect(technologyOf(CATALOGUE, CENSUS).needs).toEqual([GRANARY]);
+  expect(off.pins).not.toContain(CENSUS);
+  expect(campaign.pins).toEqual([...off.pins.filter((pin) => !learned.includes(pin)), CENSUS]);
 });
 
 test('a new campaign has reached the first age alone', () => {
@@ -287,6 +298,7 @@ test('a technology learned into a campaign pays the influence of the achievement
   expect(unlocks.length).toBeGreaterThan(0);
   expect(campaign).toEqual({
     ...opened,
+    pins: [...opened.pins.filter((pin) => pin !== GRANARY), CENSUS],
     technologies: [GRANARY],
     influence: opened.influence + hoard.influence,
     nextCard: opened.nextCard + unlocks.length,

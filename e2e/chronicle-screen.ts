@@ -146,6 +146,11 @@ export function secondEra(campaign: Campaign): Era {
 /** The technology whose achievement counts what the city holds, which claims alone reach. */
 export const HOLDING = 'agriculture';
 
+/** The name the technology's pinned achievement stands under on the chronicle screen. */
+export function pinnedAchievement(technology: string): string {
+  return `pinned-achievement-${technology}`;
+}
+
 /** The row of the chronicle's achievement that earns the technology; one it does not read throws. */
 export function rowOf(chronicle: Chronicle, technology: string): ChronicleAchievement {
   const row = chronicle.achievements.find(

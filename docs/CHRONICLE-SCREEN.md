@@ -20,13 +20,13 @@ The back key takes one step more here than the presses name: after the selection
 
 The menu opens over the chronicle screen as over any screen, and the screen waits under it: the selection, being aimed or not, and the inspection.
 
-### The pinned achievement
+### The pinned achievements
 
-While the campaign pins a technology whose achievement the chronicle reads, that achievement stands in the map's top left corner, as far from the map's top and left edges as a mode's chip stands from its top and right ones, on the panel's paper and as wide as a plate of the tree. It reads the technology's name; at the right end of the name's line, the achievement's count over its need, which a need of one does not read; and under the name the goal as the plate reads it, wrapped onto as many lines as it takes, the paper as tall as they stand. Once the achievement is reached it is sunk in a well, a check mark before the name, and reads no count. A name in the goal answers the rest and the right click as on a plate. It answers no press; the wheel over it zooms the map, as over the resource bar. It stands on the settle phase and in city mode as on any turn. A chronicle that does not read the pinned technology's achievement, and a campaign that pins nothing, show nothing there.
+While the campaign pins technologies whose achievements the chronicle reads, those achievements stand in the map's top left corner, one under the other in the order the chronicle reads them, 8 apart, the first as far from the map's top and left edges as a mode's chip stands from its top and right ones, each on the panel's paper and as wide as a plate of the tree. Each reads its technology's name; at the right end of the name's line, the achievement's count over its need, which a need of one does not read; and under the name the goal as the plate reads it, wrapped onto as many lines as it takes, the paper as tall as they stand. Once an achievement is reached it is sunk in a well and reads the check mark and the name alone, the paper as tall as that one line, and those under it close up. A name in a goal answers the rest and the right click as on a plate. They answer no press; the wheel over them zooms the map, as over the resource bar. They stand on the settle phase and in city mode as on any turn. A pinned technology whose achievement the chronicle does not read stands there as nothing, and a campaign pinning none the chronicle reads shows nothing there.
 
 ### The shown event
 
-While a card has shown the turn of the next landing, that turn stands in a strip just over the end-turn button, as wide as the button, on the panel's paper as the pinned achievement is: one line, centred, reading `Event on turn` and the turn, whatever is to land. It answers no press; the wheel over it zooms the map, as over the pinned achievement. It stands in city mode as on any turn, and goes as the turn it reads begins.
+While a card has shown the turn of the next landing, that turn stands in a strip just over the end-turn button, as wide as the button, as a pinned achievement is: one line, centred, reading `Event on turn` and the turn, whatever is to land. It answers no press; the wheel over it zooms the map, as over a pinned achievement. It stands in city mode as on any turn, and goes as the turn it reads begins.
 
 ### The resource bar
 

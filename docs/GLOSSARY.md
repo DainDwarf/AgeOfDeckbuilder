@@ -23,7 +23,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **learned technology** | A technology whose achievement has paid. | unlocked technology, researched |
 | **available technology** | A technology not learned whose every needed technology is learned. | within reach, reachable |
 | **unknown technology** | A technology that needs one not learned; the player is told only that it is there. | mystery, locked, secret |
-| **pin** | To hold one available technology in view: while a chronicle reads its achievement, the chronicle screen shows it. | track (for an achievement), follow (for an achievement), watch (for an achievement), bookmark |
+| **pin** | To hold an available technology in view: while a chronicle reads its achievement, the chronicle screen shows it. | track (for an achievement), follow (for an achievement), watch (for an achievement), bookmark |
 | **achievement** | A goal a chronicle can reach; its technology is learned by reaching it. | mission, objective, quest, milestone |
 | **influence** | The meta-currency every chronicle pays, scaled by how the city fared. | gold, XP |
 | **price** | The influence one more copy of a card is bought for. | fee, rate, value (for a card) |

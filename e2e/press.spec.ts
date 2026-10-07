@@ -1,6 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
-import { available, pinned } from '../src/rules/campaign';
 import { achievementOf } from '../src/rules/catalogue';
 import { apply, byHand, outcome } from '../src/rules/chronicle';
 import { CENTRE, type TileCoords, tileKey } from '../src/rules/map';
@@ -43,6 +42,7 @@ import {
   openSaved,
   overflowingPiles,
   pileTop,
+  pinnedAchievement,
   playedOn,
   playedOut,
   readings,
@@ -864,7 +864,7 @@ test('on the settle phase the chip and the dead end-turn button stop a press: ea
   expect(problems).toEqual([]);
 });
 
-test('a click on the pinned achievement, a name in its goal included, lets the card being aimed go and reaches no tile under it', async ({
+test('a click on a pinned achievement, a name in its goal included, lets the card being aimed go and reaches no tile under it', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -879,20 +879,20 @@ test('a click on the pinned achievement, a name in its goal included, lets the c
     .map(({ id }) => ({ id, ...achievementOf(CATALOGUE, opened.age, id) }))
     .find(
       ({ id, technology, need }) =>
-        available(CATALOGUE, technology, won.technologies) &&
-        namedIn(achievementGoal(id, need)).length > 0,
+        won.pins.includes(technology) && namedIn(achievementGoal(id, need)).length > 0,
     );
   if (pin === undefined)
     throw new Error(
-      `the ${era.age} age reads no achievement of a pinnable technology whose goal names a thing`,
+      `the ${era.age} age reads no achievement of a pinned technology whose goal names a thing`,
     );
+  const plate = pinnedAchievement(pin.technology);
 
-  await openSaved(page, opened, pinned(CATALOGUE, won, pin.technology));
+  await openSaved(page, opened, won);
   const home = await onScreen(page, `hand-${index}`);
 
   await page.mouse.click(home.x, home.y);
   await aimed(page);
-  await click(page, 'pinned-achievement-name');
+  await click(page, `${plate}-name`);
   await expect.poll(() => standing(page, 'aim')).toBe(false);
   expect(await ringedTile(page)).toBeUndefined();
   await expect.poll(() => selected(page, index, home)).toBe(false);
@@ -900,7 +900,7 @@ test('a click on the pinned achievement, a name in its goal included, lets the c
 
   await page.mouse.click(home.x, home.y);
   await aimed(page);
-  const name = await nameOnScreen(page, 'pinned-achievement-face');
+  const name = await nameOnScreen(page, `${plate}-face`);
   await page.mouse.click(name.x, name.y);
   await expect.poll(() => standing(page, 'aim')).toBe(false);
   expect(await standing(page, 'inspection')).toBe(false);

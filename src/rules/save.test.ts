@@ -6,6 +6,7 @@ import {
   newCampaign,
   paidInto,
   pinned,
+  unpinned,
 } from './campaign';
 import { catalogued } from './catalogue';
 import { apply, type Command, outcome, refusalOf } from './chronicle';
@@ -588,34 +589,57 @@ test('a technology the catalogue does not bring, or one named a second time, is 
   });
 });
 
-test('a campaign’s pin writes as a save and reads back', () => {
-  const held = pinned(CATALOGUE, campaign(), CENSUS);
+test('a campaign’s pins write as a save and read back', () => {
+  const held = campaign();
+  const [technology] = held.pins;
+  const moved = pinned(CATALOGUE, unpinned(held, technology), technology);
 
-  expect(readSave(CATALOGUE, writeSave(CATALOGUE, held))).toEqual({
-    campaign: held,
+  expect(held.pins.length).toBeGreaterThan(1);
+  expect(moved.pins).not.toEqual(held.pins);
+  expect(readSave(CATALOGUE, writeSave(CATALOGUE, moved))).toEqual({
+    campaign: moved,
     chronicle: undefined,
     dropped: [],
   });
 });
 
-test('a pin naming a technology the catalogue does not hold, one learned or one unknown is dropped with its reason, and the rest stands', () => {
+test('a pin naming a technology the catalogue does not hold, one learned, one unknown or one named a second time is dropped with its reason, and the rest stand', () => {
   const held = campaign();
-  const read = (change: object): ReturnType<typeof campaignRead> =>
-    campaignRead(campaignTampered((written) => ({ ...written, ...change })));
+  const [technology] = held.pins;
+  const at = held.pins.length;
+  const read = (change: (written: Campaign) => object): ReturnType<typeof campaignRead> =>
+    campaignRead(campaignTampered(change));
 
   expect(held.technologies).toContain(GRANARY);
-  expect(read({ pin: 'PH_Unheld' })).toEqual({
+  expect(held.pins).toContain(CENSUS);
+  expect(
+    read((written) => ({
+      ...written,
+      pins: [...written.pins, 'PH_Unheld', GRANARY, technology],
+    })),
+  ).toEqual({
     campaign: held,
-    dropped: ["fixture: the save's campaign.pin names no technology PH_Unheld"],
+    dropped: [
+      `fixture: the save's campaign.pins[${at}] names no technology PH_Unheld`,
+      `fixture: the save's campaign.pins[${at + 1}] names the learned technology ${GRANARY}`,
+      `fixture: the save's campaign.pins[${at + 2}] names the technology ${technology} a second time`,
+    ],
   });
-  expect(read({ pin: GRANARY })).toEqual({
-    campaign: held,
-    dropped: [`fixture: the save's campaign.pin names the learned technology ${GRANARY}`],
+  expect(read((written) => ({ ...written, technologies: [] }))).toEqual({
+    campaign: { ...held, technologies: [], pins: held.pins.filter((pin) => pin !== CENSUS) },
+    dropped: [
+      `fixture: the save's campaign.pins[${held.pins.indexOf(CENSUS)}] names the unknown technology ${CENSUS}`,
+    ],
   });
-  expect(read({ technologies: [], pin: CENSUS })).toEqual({
-    campaign: { ...held, technologies: [] },
-    dropped: [`fixture: the save's campaign.pin names the unknown technology ${CENSUS}`],
-  });
+});
+
+test('a campaign carrying no list of pins reads with nothing pinned, and a single pin beside it goes unread', () => {
+  const held = campaign();
+  const [technology] = held.pins;
+
+  expect(
+    campaignRead(campaignTampered(({ pins: _, ...written }) => ({ ...written, pin: technology }))),
+  ).toEqual({ campaign: { ...held, pins: [] }, dropped: [] });
 });
 
 test('a card of the collection the catalogue does not hold is dropped, and every number the deck names it by with it', () => {

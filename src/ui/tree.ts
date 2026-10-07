@@ -113,18 +113,32 @@ export type TreeView = {
   cover(under: boolean): void;
 };
 
+/** A pinned plate's marking: its edge on the plate's own edge, and a disc over its top-left corner. */
+function pinMarking(scene: Phaser.Scene, height: number): Phaser.GameObjects.Graphics {
+  const marking = scene.add.graphics();
+  marking.lineStyle(4, LOOK.pinEdge);
+  marking.strokeRect(0, 0, PLATE_WIDTH, height);
+  marking.lineStyle(2, LOOK.pin);
+  marking.strokeRect(0, 0, PLATE_WIDTH, height);
+  marking.fillStyle(LOOK.pinMark);
+  marking.fillCircle(0, 0, 7);
+  marking.lineStyle(1, LOOK.ink);
+  marking.strokeCircle(0, 0, 7);
+  return marking;
+}
+
 /**
  * The technology tree in the room the navbar and the bar leave, for the campaign; a right click on a
- * name of a plate hands `inspect` what it names, and a left click on an available plate hands `pinMoved`
- * the technology the pin moves to, nothing where it is taken off.
+ * name of a plate hands `inspect` what it names, and a left click on an available plate toggles its
+ * pin and hands `pinToggled` the technology and whether it is pinned now.
  */
 export function createTree(
   scene: Phaser.Scene,
   { bubbles, tooltip }: Worn,
   catalogue: Catalogue,
-  { technologies: learned, pin: pinnedAtOpening }: Pick<Campaign, 'technologies' | 'pin'>,
+  { technologies: learned, pins }: Pick<Campaign, 'technologies' | 'pins'>,
   inspect: (name: Name) => void,
-  pinMoved: (technology: string | undefined) => void,
+  pinToggled: (technology: string, on: boolean) => void,
 ): TreeView {
   const readings = readingsOf(catalogue);
   const labelColumn = (() => {
@@ -198,47 +212,41 @@ export function createTree(
     else small.over(hovered);
   };
 
-  /** The technology pinned, and the edge each available plate wears while its technology is. */
-  let pinnedTechnology = pinnedAtOpening;
-  const edges = new Map<string, Phaser.GameObjects.Rectangle>();
-  const edge = (technology: string | undefined, on: boolean): void => {
-    if (technology === undefined) return;
-    edges.get(technology)?.setVisible(on);
-  };
-  const press = (technology: string): void => {
-    const next = technology === pinnedTechnology ? undefined : technology;
-    edge(pinnedTechnology, false);
-    edge(next, true);
-    pinnedTechnology = next;
-    pinMoved(next);
-  };
-
-  /** The plate's backing: sunk in a well, or its paper, which an available plate's press lands on. */
-  const backingOf = (plate: Plate, id: string): Phaser.GameObjects.GameObject[] => {
+  /**
+   * The plate's backing: sunk in a well, or its paper, which an available plate's press lands on; an
+   * available plate's press toggles its pin and the marking it wears while pinned.
+   */
+  const backingOf = (
+    plate: Plate,
+    id: string,
+  ): {
+    parts: Phaser.GameObjects.GameObject[];
+    pin?: { marking: Phaser.GameObjects.Graphics; press: () => void };
+  } => {
     const { technology, state } = plate;
     switch (state) {
       case 'learned': {
         const { well } = createWell(scene, id);
         placeWell(well, { x: 0, y: 0, width: PLATE_WIDTH, height: plateHeight });
-        return [well];
+        return { parts: [well] };
       }
       case 'available': {
+        let on = pins.includes(technology);
+        const marking = pinMarking(scene, plateHeight).setName(`${id}-pin`).setVisible(on);
+        const press = (): void => {
+          on = !on;
+          marking.setVisible(on);
+          pinToggled(technology, on);
+        };
         const paper = answersPress(
           paperOf(scene, PLATE_WIDTH, plateHeight, LOOK.panelFill).setInteractive(),
         );
         // The tree's drag begins on the scene's own press: one that dragged it ends on a plate.
-        onClick(paper, () => press(technology), 'left', 'within slack');
-        const shown = scene.add
-          .rectangle(0, 0, PLATE_WIDTH, plateHeight)
-          .setOrigin(0, 0)
-          .setStrokeStyle(2, LOOK.pin)
-          .setName(`${id}-pin`)
-          .setVisible(false);
-        edges.set(technology, shown);
-        return [paper, shown];
+        onClick(paper, press, 'left', 'within slack');
+        return { parts: [paper], pin: { marking, press } };
       }
       case 'unknown':
-        return [paperOf(scene, PLATE_WIDTH, plateHeight, LOOK.unknownFill)];
+        return { parts: [paperOf(scene, PLATE_WIDTH, plateHeight, LOOK.unknownFill)] };
     }
   };
 
@@ -250,7 +258,8 @@ export function createTree(
     const names: Name[] = [];
     face.setData('names', names);
 
-    face.add(backingOf(plate, id));
+    const { parts, pin } = backingOf(plate, id);
+    face.add(parts);
     if (state === 'unknown') {
       face.add(
         addText(scene, PLATE_WIDTH / 2, plateHeight / 2, text('plate.unknown'), UNKNOWN_STYLE)
@@ -291,7 +300,7 @@ export function createTree(
         if (!carrying) small.over(on ? raiser : undefined);
       },
       inspect,
-      click: state === 'available' ? () => press(technology) : undefined,
+      click: pin?.press,
     };
     /** An entry drawn as a run from that line down, wrapped at that width; how many lines it took. */
     const run = (entry: string, line: number, named: string, width: number): number => {
@@ -325,9 +334,9 @@ export function createTree(
       throw new Error(`no reward line is ${JSON.stringify(unlisted)}`);
     };
     for (const [at, line] of reading.reward.entries()) rewardLine(line, at);
+    if (pin !== undefined) face.add(pin.marking);
   };
   for (const plate of tree.plates) drawPlate(plate);
-  edge(pinnedTechnology, true);
 
   let scroll = tree.opening;
   const place = (): void => {

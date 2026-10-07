@@ -42,8 +42,8 @@ export type Campaign = {
   readonly collection: readonly CampaignCard[];
   /** The civilizations the campaign owns, by name; it never holds none. */
   readonly civilizations: Readonly<Record<string, CampaignCivilization>>;
-  /** The technology the campaign pins, where it pins one. */
-  readonly pin?: string;
+  /** The technologies the campaign pins, each available. */
+  readonly pins: readonly string[];
 };
 
 /** A technology the catalogue does not hold is refused. */
@@ -54,6 +54,13 @@ export function available(
 ): boolean {
   if (learned.includes(technology)) return false;
   return technologyOf(catalogue, technology).needs.every((need) => learned.includes(need));
+}
+
+/** The technologies available beside the technologies learned, in the catalogue's order. */
+function availableTechnologies(catalogue: Catalogue, learned: readonly string[]): string[] {
+  return Object.keys(catalogue.technologies).filter((technology) =>
+    available(catalogue, technology, learned),
+  );
 }
 
 /**
@@ -72,17 +79,17 @@ export function unavailable(
     : `the unknown technology ${technology}`;
 }
 
-/** The campaign pinning the technology, in place of any it pinned; one not available is refused. */
+/** The campaign pinning the technology beside those it pins; one not available is refused. */
 export function pinned(catalogue: Catalogue, campaign: Campaign, technology: string): Campaign {
   const misfit = unavailable(catalogue, technology, campaign.technologies);
   if (misfit !== undefined) refuse(catalogue, `the pin names ${misfit}`);
-  return { ...campaign, pin: technology };
+  if (campaign.pins.includes(technology)) return campaign;
+  return { ...campaign, pins: [...campaign.pins, technology] };
 }
 
-/** The campaign pinning nothing. */
-export function unpinned(campaign: Campaign): Campaign {
-  const { pin: _, ...rest } = campaign;
-  return rest;
+/** The campaign with the technology's pin taken off. */
+export function unpinned(campaign: Campaign, technology: string): Campaign {
+  return { ...campaign, pins: campaign.pins.filter((pin) => pin !== technology) };
 }
 
 /** The ages or the regions those technologies unlock; a technology the catalogue does not hold is refused. */
@@ -137,9 +144,9 @@ export function dealt(
 }
 
 /**
- * A campaign opened on a civilization of the catalogue: nothing learned, no influence, and the one
- * civilization, named as the catalogue's, with a card of its own for each card the catalogue's lists,
- * naming each in the section it came from.
+ * A campaign opened on a civilization of the catalogue: nothing learned, no influence, every available
+ * technology pinned in the catalogue's order, and the one civilization, named as the catalogue's, with
+ * a card of its own for each card the catalogue's lists, naming each in the section it came from.
  */
 export function newCampaign(catalogue: Catalogue, civilization: string): Campaign {
   const { city, settle, cards } = civilizationOf(catalogue, civilization);
@@ -159,6 +166,7 @@ export function newCampaign(catalogue: Catalogue, civilization: string): Campaig
         cards: numbers(drawn.cards),
       },
     },
+    pins: availableTechnologies(catalogue, []),
   };
 }
 
@@ -308,9 +316,9 @@ export function removedFrom(
 }
 
 /**
- * The campaign with the technology learned: the cards it unlocks dealt into the collection with their
- * copies, in no section of any civilization, the influence of the achievement that earns it added,
- * and the pin taken off it. A technology that is not available is refused.
+ * The campaign with the technology learned: the cards it unlocks dealt in no section, its achievement's
+ * influence added, its pin taken off, and every technology it makes available pinned in the
+ * catalogue's order. A technology that is not available is refused.
  */
 export function learnedInto(
   catalogue: Catalogue,
@@ -323,14 +331,19 @@ export function learnedInto(
     ([card, copies]) => Array.from({ length: copies }, () => card),
   );
   const cards = dealt(campaign.nextCard, ids);
-  const learned: Campaign = {
+  const technologies = [...campaign.technologies, technology];
+  const before = availableTechnologies(catalogue, campaign.technologies);
+  const opened = availableTechnologies(catalogue, technologies).filter(
+    (held) => !before.includes(held),
+  );
+  return {
     ...campaign,
-    technologies: [...campaign.technologies, technology],
+    technologies,
     influence: campaign.influence + earningOf(catalogue, technology).achievement.influence,
     nextCard: cards.nextCard,
     collection: [...campaign.collection, ...cards.cards],
+    pins: [...unpinned(campaign, technology).pins, ...opened],
   };
-  return learned.pin === technology ? unpinned(learned) : learned;
 }
 
 /** What an ended chronicle paid into the campaign, and the campaign it left. */

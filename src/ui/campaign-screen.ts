@@ -25,12 +25,17 @@ export class CampaignScreen extends Phaser.Scene {
     const large = standLarge(overlay, CATALOGUE, (up) => {
       tree.cover(away('overlay', up));
     });
-    const tree = createTree(this, worn, CATALOGUE, campaignHeld(), large.named, (technology) => {
-      const campaign = campaignHeld();
-      keepCampaign(
-        technology === undefined ? unpinned(campaign) : pinned(CATALOGUE, campaign, technology),
-      );
-    });
+    const tree = createTree(
+      this,
+      worn,
+      CATALOGUE,
+      campaignHeld(),
+      large.named,
+      (technology, on) => {
+        const campaign = campaignHeld();
+        keepCampaign(on ? pinned(CATALOGUE, campaign, technology) : unpinned(campaign, technology));
+      },
+    );
     offerEntries(this, { seed: undefined, veiled: undefined });
     resetMenu(this, (under) => {
       tree.cover(away('menu', under));
