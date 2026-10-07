@@ -35,7 +35,7 @@ Code is the fourth lifespan, permanent, the source of truth for _how_. Nothing d
 Full rules in [`DOGMAS.md`](DOGMAS.md). The ones no session may miss:
 
 1. **Pitch before writing.** Orient freely; surface the plan before the first file changes.
-2. **One line per turn.** Ship a step, commit it, stop so the user can inspect. Claude owns commit granularity; a shipped line is pushed before its hand-back; any other commit waits for the user's say or rides the next ship.
+2. **One line per turn.** Ship a step, commit it, stop so the user can inspect. Claude owns commit granularity; a shipped line is pushed before its hand-back; any other commit's push waits for the user's say or rides the next ship.
 3. **Design is the spec.** Code that disagrees is wrong. A gap is reported as a deviation, never coded in silently, and a design page is never edited down to match an implementation.
 4. **Report corner cases.** Anything the agreed design did not foresee goes in the report.
 5. **One verb per concept.** Gameplay terms come from `GLOSSARY.md`; no synonyms, ever.

@@ -18,7 +18,7 @@ Licence shorthand: **CC0** needs nothing; **CC BY** needs the author credited in
 
 ## Music
 
-- [Incompetech](https://incompetech.com/music/royalty-free/) — Kevin MacLeod's catalogue, CC BY with a fixed attribution string.
+- [Incompetech](https://incompetech.com/music/royalty-free/) — Kevin MacLeod's catalogue, CC BY with the attribution string the site generates per title.
 - [OpenGameArt music](https://opengameart.org/art-search-advanced?field_art_type_tid%5B%5D=12) — many CC0 and CC BY loops.
 
 ## Fonts
