@@ -13,3 +13,5 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 - **The balance pass** — the Stone Age's numbers, measured through the simulator and felt in play; Domestication's goal, which a worker standing on one herd reaches, made a focus, Tanning's need of two herds inside the border weighed, Fishing's need of 50 food from coast and the Fishery's gain on the coast around it weighed, and Trapping, Irrigation, Pasture and Clay pit, four improvements of one price and one gain, weighed against one another; and a trial of where military and culture come from: both taken off the Nomadic city's yield, flint giving military in place of production, and sites that pay culture once.
 
 ## Lines
+
+- **Rethink the card kinds** — today's instants mix cards nobody's action is needed for, cards that spend a worker's action, and action-spending cards that change the terrain, building, improvement, terraform: each its own kind, or all of them one action kind, and whether the reward cards are a reward kind or stay instants.
