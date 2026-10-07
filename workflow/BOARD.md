@@ -14,7 +14,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **Disembark refuses a unit that is not embarked in its own words** — in a tie, a click on an ashore unit of the player's beside the tile is refused with the unit's own sentence, "The unit is not embarked", the tile's sentence standing over no unit; the rules test asserts that answer, and the per-unit wrong-terrain answer of a tie, which no test holds today. Doc-impact: none. [board/disembark-refuses-in-its-own-words.md](board/disembark-refuses-in-its-own-words.md)
 - **Rethink the card kinds** — today's instants mix cards nobody's action is needed for, cards that spend a worker's action, and action-spending cards that change the terrain, building, improvement, terraform: each its own kind, or all of them one action kind, and whether the reward cards are a reward kind or stay instants.
 - **A removed pile** — the cards that left the chronicle kept in a pile of their own, and a card carrying both becomes and single use resolving in one order: the card's effect, then becomes, then the card it became goes to the removed pile.
 - **The specs' play command is one helper** — eight specs build the same tile-aimed play command inline; with it the specs' glow-to-tile match reads a tile key set on each glow instead of a screen position, and "the player's unit beside the tile" is decided once in the cards' rules instead of twice.

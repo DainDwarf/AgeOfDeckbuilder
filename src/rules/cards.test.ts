@@ -96,6 +96,11 @@ function aimedAtPile(card: number): Command {
   return { type: 'play', index: 0, aim: 'discard-pile', card };
 }
 
+/** The first card of the hand aimed at a tile through the unit standing on `through`, ready to hand to `apply`. */
+function aimedThrough(tile: TileCoords, through: TileCoords): Command {
+  return { type: 'play', index: 0, aim: 'tile', tile, through };
+}
+
 /** The card at `index` of the hand aimed at where another card lies in it, ready to hand to `apply`. */
 function aimedAtHand(index: number, card: number): Command {
   return { type: 'play', index, aim: 'hand', card };
@@ -2202,13 +2207,7 @@ test('a tile several units could embark onto is lit and refused with no unit nam
     ],
   });
   const city = outcome(apply(CATALOGUE, ashore, aimedAt(sea)));
-  const through = (tile: TileCoords): Command => ({
-    type: 'play',
-    index: 0,
-    aim: 'tile',
-    tile: coast,
-    through: tile,
-  });
+  const through = (unit: TileCoords): Command => aimedThrough(coast, unit);
   const tile = tileAt(city.tiles, coast);
   if (tile === undefined) throw new Error('the coast is no tile of the map');
 
@@ -2232,4 +2231,58 @@ test('a tile several units could embark onto is lit and refused with no unit nam
 
   expect(unitNamed(played, 2)).toMatchObject({ tile: coast, embarked: true });
   expect(unitNamed(played, 1)).toEqual(unitNamed(city, 1));
+});
+
+test('a tile several embarked units could disembark onto is refused through a unit of the player’s ashore beside it as not embarked, through an embarked one whose kind’s move does not cover it for its terrain, through one away from it as not beside it, and through a tile no unit of the player’s stands on as holding none, and played through the one of them named', () => {
+  const bank = { q: 2, r: 0 };
+  const ashore = { q: 1, r: 0 };
+  const empty = { q: 2, r: 1 };
+  const first = { q: 3, r: -1 };
+  const second = { q: 2, r: -1 };
+  const slow = { q: 3, r: 0 };
+  const fromFirst = { q: 3, r: -2 };
+  const fromSecond = { q: 1, r: -1 };
+  const fromSlow = { q: 4, r: 0 };
+  const embarkings = [
+    [fromFirst, first],
+    [fromSecond, second],
+    [fromSlow, slow],
+  ] as const;
+  const catalogue = changed({
+    units: { ...CATALOGUE.units, PH_Slinger: { ...CATALOGUE.units.PH_Slinger, move: MOVE_POINT } },
+  });
+  let city = cityOf(
+    ['urban'],
+    {
+      tiles: madeOf(field(5, [first, second, slow]), 'hills', [bank]),
+      hand: ['PH_Embark', 'PH_Embark', 'PH_Embark'],
+      drawPile: ['PH_Disembark'],
+      units: [
+        standing('player', CITY),
+        standing('player', fromFirst),
+        standing('player', fromSecond),
+        standing('player', fromSlow, { type: 'PH_Slinger' }),
+        standing('player', ashore),
+      ],
+    },
+    catalogue,
+  );
+  for (const [from, to] of embarkings)
+    city = outcome(apply(catalogue, city, aimedThrough(to, from)));
+  const ticked = outcome(apply(catalogue, city, { type: 'end-turn' }));
+  const tile = tileAt(ticked.tiles, bank);
+  if (tile === undefined) throw new Error('the bank is no tile of the map');
+  const disembark = aimedCard('PH_Disembark', catalogue);
+
+  expect(playedThrough(catalogue, ticked, disembark, tile).map(({ id }) => id)).toEqual([2, 3]);
+  expect(throughRefusal(catalogue, ticked, disembark, tile, ashore)).toBe('unit-not-embarked');
+  expect(throughRefusal(catalogue, ticked, disembark, tile, slow)).toBe('wrong-terrain');
+  expect(throughRefusal(catalogue, ticked, disembark, tile, CITY)).toBe('not-beside');
+  expect(throughRefusal(catalogue, ticked, disembark, tile, empty)).toBe('no-unit');
+  expect(throughRefusal(catalogue, ticked, disembark, tile, first)).toBeUndefined();
+
+  const played = outcome(apply(catalogue, ticked, aimedThrough(bank, first)));
+
+  expect(unitNamed(played, 2)).toMatchObject({ tile: bank, embarked: false });
+  expect(unitNamed(played, 3)).toEqual(unitNamed(ticked, 3));
 });

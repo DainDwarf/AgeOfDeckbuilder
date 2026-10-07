@@ -280,7 +280,6 @@ function stepped(
     embarked: embarking,
     stats: { ...unit.stats, move: move(catalogue, unit) },
   });
-  const missing: TileBlock = embarking ? 'no-unit-beside' : 'no-embarked-beside';
   /**
    * What a unit beside the tile passes to step onto it, in order: the reason refusing a unit that
    * fails it, and the tile's where no unit beside passes it, when that one differs.
@@ -292,8 +291,8 @@ function stepped(
   }[] = [
     {
       passes: (_catalogue, unit) => unit.embarked !== embarking,
-      unit: embarking ? 'unit-embarked' : missing,
-      tile: missing,
+      unit: embarking ? 'unit-embarked' : 'unit-not-embarked',
+      tile: embarking ? 'no-unit-beside' : 'no-embarked-beside',
     },
     {
       passes: (catalogue, unit, tile) =>

@@ -209,6 +209,7 @@ const TEXT = {
   'refusal.no-embarked-beside': 'Needs an embarked unit beside it',
   'refusal.unit-spent': 'The unit has no action left',
   'refusal.unit-embarked': 'The unit is already embarked',
+  'refusal.unit-not-embarked': 'The unit is not embarked',
   'refusal.not-beside': 'Not beside that tile',
   'refusal.unit-standing': 'A unit already stands here',
   'refusal.move-full': 'Unit move points are full',
