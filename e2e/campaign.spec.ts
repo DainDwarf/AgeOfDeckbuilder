@@ -1,8 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
-import { paidInto } from '../src/rules/campaign';
-import { apply, outcome } from '../src/rules/chronicle';
 import { freshCampaign } from '../src/rules/save';
 import { LOOK } from '../src/ui/look';
 import { text } from '../src/ui/text';
@@ -12,20 +10,18 @@ import {
   chronicleOf,
   click,
   cursorOverCanvas,
-  idsOf,
-  landed,
   onScreen,
   openSaved,
   plantCampaign,
   readNames,
   rested,
-  SHELTER,
   settledOn,
   standing,
   textOf,
   tooltipText,
   tooltipUp,
   watch,
+  wonCampaign,
 } from './chronicle-screen';
 
 /** What the bar's influence reads. */
@@ -75,12 +71,8 @@ test('on a campaign a won chronicle paid into, the bar reads its influence, and 
   page,
 }) => {
   const problems = watch(page);
-  const { chronicle, tile } = landed();
-  const index = idsOf(chronicle.hand).indexOf(SHELTER);
-  const won = outcome(apply(CATALOGUE, chronicle, { type: 'play', index, aim: 'tile', tile }));
-  const opened = freshCampaign(CATALOGUE);
-  const { campaign } = paidInto(CATALOGUE, opened, won);
-  expect(campaign.influence).not.toBe(opened.influence);
+  const campaign = wonCampaign();
+  expect(campaign.influence).not.toBe(freshCampaign(CATALOGUE).influence);
 
   await readNames(page);
   await plantCampaign(page, campaign);

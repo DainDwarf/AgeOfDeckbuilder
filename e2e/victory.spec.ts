@@ -1,6 +1,4 @@
 import { expect, test } from '@playwright/test';
-import { CATALOGUE } from '../src/content/catalogue';
-import { apply, outcome } from '../src/rules/chronicle';
 import { tileAt, tileKey } from '../src/rules/map';
 import {
   aimed,
@@ -8,7 +6,6 @@ import {
   chronicleOf,
   click,
   dragOut,
-  idsOf,
   landed,
   openSaved,
   playedOut,
@@ -22,9 +19,7 @@ test('the play whose building passes the capstone wins on the play, and the vict
 }) => {
   const problems = watch(page);
   test.setTimeout(budget(1));
-  const { chronicle, tile } = landed();
-  const index = idsOf(chronicle.hand).indexOf(SHELTER);
-  const won = outcome(apply(CATALOGUE, chronicle, { type: 'play', index, aim: 'tile', tile }));
+  const { chronicle, index, tile, won } = landed();
 
   await openSaved(page, chronicle);
   expect(await victoryShown(page)).toBe(false);

@@ -1,7 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
 import { type Civilization, cardOf, unitKind } from '../src/rules/catalogue';
-import { apply, outcome } from '../src/rules/chronicle';
 import {
   distance,
   movementCost,
@@ -127,9 +126,7 @@ test('Embark played at a tile two units stand beside plays nothing and is aimed 
   });
   const { chronicle, index, water } = ground;
   const [, picked] = ground.banks;
-  const sent = outcome(
-    apply(CATALOGUE, chronicle, { type: 'play', index, aim: 'tile', tile: water, through: picked }),
-  );
+  const sent = playedOn(chronicle, index, water, picked);
 
   await openSaved(page, chronicle);
   await dragOut(page, index);

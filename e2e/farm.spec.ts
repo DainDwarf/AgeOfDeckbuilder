@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
 import { gained } from '../src/rules/cards';
 import { cardOf } from '../src/rules/catalogue';
-import { apply, outcome, refusalOf } from '../src/rules/chronicle';
+import { refusalOf } from '../src/rules/chronicle';
 import { neighbours, type TileCoords, tileKey } from '../src/rules/map';
 import { type Chronicle, playable } from '../src/rules/state';
 import { text } from '../src/ui/text';
@@ -19,6 +19,7 @@ import {
   idsOf,
   marksIn,
   openSaved,
+  playedOn,
   playedOut,
   readings,
   rested,
@@ -62,7 +63,7 @@ test('the farm played at the tile inside the border its worker stands on builds 
 }) => {
   const problems = watch(page);
   const { chronicle, tile, index } = farmAdmitted();
-  const built = outcome(apply(CATALOGUE, chronicle, { type: 'play', index, aim: 'tile', tile }));
+  const built = playedOn(chronicle, index, tile);
   const label = (cards: readonly unknown[]): string =>
     text('tab.exhaust-pile', { count: cards.length });
 

@@ -1,17 +1,12 @@
 import { expect, type Page, test } from '@playwright/test';
 import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
-import { paidInto } from '../src/rules/campaign';
 import { ageOf, firstAge, technologyOf } from '../src/rules/catalogue';
-import { apply, outcome } from '../src/rules/chronicle';
-import { freshCampaign } from '../src/rules/save';
 import { DEFAULTS } from '../src/ui/bindings';
 import { achievementGoal, technologyName, text } from '../src/ui/text';
 import { WASH } from '../src/ui/tree-layout';
 import {
   cardOnFace,
-  idsOf,
-  landed,
   namedIn,
   nameOnScreen,
   onScreen,
@@ -20,10 +15,10 @@ import {
   readings,
   rested,
   rewardOf,
-  SHELTER,
   standing,
   waitGameClock,
   watch,
+  wonCampaign,
 } from './chronicle-screen';
 
 /** The first age of the catalogue, its first achievement, and the technology that achievement earns. */
@@ -124,10 +119,7 @@ test('on a campaign a won chronicle paid into, its technology stands learned, th
   page,
 }) => {
   const problems = watch(page);
-  const { chronicle, tile } = landed();
-  const index = idsOf(chronicle.hand).indexOf(SHELTER);
-  const won = outcome(apply(CATALOGUE, chronicle, { type: 'play', index, aim: 'tile', tile }));
-  const { campaign } = paidInto(CATALOGUE, freshCampaign(CATALOGUE), won);
+  const campaign = wonCampaign();
   expect(campaign.technologies).toContain(TECHNOLOGY);
 
   await openCampaign(page, campaign);

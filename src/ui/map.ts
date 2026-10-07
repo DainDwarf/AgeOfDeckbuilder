@@ -480,7 +480,8 @@ function glowTile(
   const { x, y } = positionOf(coord);
   return scene.add
     .polygon(x, y, hexagon(TILE_SIZE - 2), colour, glow.fill)
-    .setStrokeStyle(2, colour, glow.stroke);
+    .setStrokeStyle(2, colour, glow.stroke)
+    .setData('tile', tileKey(coord));
 }
 
 /**

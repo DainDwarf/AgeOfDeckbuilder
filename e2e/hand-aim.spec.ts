@@ -1,6 +1,4 @@
 import { expect, test } from '@playwright/test';
-import { CATALOGUE } from '../src/content/catalogue';
-import { apply, outcome } from '../src/rules/chronicle';
 import { cardName, text } from '../src/ui/text';
 import {
   AIMED_AT_HAND,
@@ -9,6 +7,7 @@ import {
   chronicleOf,
   onScreen,
   openSaved,
+  playedAtCard,
   playedOut,
   rested,
   selected,
@@ -40,11 +39,7 @@ test('a card aimed at the hand is being aimed from its second click, says it is 
 
   await page.mouse.click(target.x, target.y);
   await playedOut(page);
-  await expect
-    .poll(() => chronicleOf(page))
-    .toEqual(
-      outcome(apply(CATALOGUE, opened, { type: 'play', index: card, aim: 'hand', card: other })),
-    );
+  await expect.poll(() => chronicleOf(page)).toEqual(playedAtCard(opened, card, other));
   expect(await aimLine(page)).toBeUndefined();
 
   expect(problems).toEqual([]);

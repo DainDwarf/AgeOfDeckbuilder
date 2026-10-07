@@ -3,7 +3,6 @@ import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
 import { paidInto } from '../src/rules/campaign';
 import { achievementOf } from '../src/rules/catalogue';
-import { apply, outcome } from '../src/rules/chronicle';
 import { type TileCoords, tileKey } from '../src/rules/map';
 import { freshCampaign } from '../src/rules/save';
 import type { Chronicle } from '../src/rules/state';
@@ -17,13 +16,11 @@ import {
   cursorOverCanvas,
   dragOut,
   heldSave,
-  idsOf,
   landed,
   onScreen,
   openSaved,
   playedOut,
   rested,
-  SHELTER,
   textOf,
   victoryShown,
   watch,
@@ -57,9 +54,7 @@ test('the play that ends the chronicle pays it into the campaign: the ending scr
 }) => {
   const problems = watch(page);
   test.setTimeout(budget(1));
-  const { chronicle, tile } = landed();
-  const index = idsOf(chronicle.hand).indexOf(SHELTER);
-  const won = outcome(apply(CATALOGUE, chronicle, { type: 'play', index, aim: 'tile', tile }));
+  const { chronicle, index, tile, won } = landed();
   const paid = paidInto(CATALOGUE, freshCampaign(CATALOGUE), won);
 
   await playTheWin(page, chronicle, index, tile);
@@ -104,8 +99,7 @@ test('End chronicle answers no press and reads an arrow while the ending screen 
 }) => {
   const problems = watch(page);
   test.setTimeout(budget(1));
-  const { chronicle, tile } = landed();
-  const index = idsOf(chronicle.hand).indexOf(SHELTER);
+  const { chronicle, index, tile } = landed();
 
   await playTheWin(page, chronicle, index, tile);
   // The rise is a tween on the overlay's clock, held in the first frame the screen shows at all, so

@@ -230,9 +230,30 @@ export function settledOn(
   return outcome(apply(CATALOGUE, settling, { type: 'end-turn' }));
 }
 
-/** The chronicle the card at that place in the hand leaves, played on the tile; a refusal throws. */
-export function playedOn(chronicle: Chronicle, index: number, tile: TileCoords): Chronicle {
-  return playedAs(chronicle, index, { aim: 'tile', tile });
+/**
+ * The chronicle the card at that place in the hand leaves, played on the tile, through the unit
+ * standing on `through` where one is named; a refusal throws.
+ */
+export function playedOn(
+  chronicle: Chronicle,
+  index: number,
+  tile: TileCoords,
+  through?: TileCoords,
+): Chronicle {
+  return playedAs(chronicle, index, { aim: 'tile', tile, through });
+}
+
+/** The chronicle the card at that place in the hand leaves, played at nothing; a refusal throws. */
+export function playedAtNothing(chronicle: Chronicle, index: number): Chronicle {
+  return playedAs(chronicle, index, { aim: 'none' });
+}
+
+/**
+ * The chronicle the card at that place in the hand leaves, played at the card lying at `card` in the
+ * hand; a refusal throws.
+ */
+export function playedAtCard(chronicle: Chronicle, index: number, card: number): Chronicle {
+  return playedAs(chronicle, index, { aim: 'hand', card });
 }
 
 /**
@@ -243,15 +264,11 @@ export function playedAtUnit(chronicle: Chronicle, index: number, tile: TileCoor
   return playedAs(chronicle, index, { aim: 'unit', tile });
 }
 
-function playedAs(
-  chronicle: Chronicle,
-  index: number,
-  aimed: Extract<Aimed, { readonly tile: TileCoords }>,
-): Chronicle {
+function playedAs(chronicle: Chronicle, index: number, aimed: Aimed): Chronicle {
   const played = outcome(apply(CATALOGUE, chronicle, { type: 'play', index, ...aimed }));
   if (played === chronicle) {
     const card = chronicle.hand[index]?.id ?? `no card at ${index}`;
-    throw new Error(`seed ${chronicle.seed} refuses ${card} on ${tileKey(aimed.tile)}`);
+    throw new Error(`seed ${chronicle.seed} refuses ${card} aimed as ${JSON.stringify(aimed)}`);
   }
   return played;
 }
@@ -1418,10 +1435,15 @@ export const SHELTER = 'shelter';
 
 /**
  * The first seed's capstone landing turn, the shelter in the hand, with a tile beside the city
- * claimed, the shelter's cost gained and a worker entered on that tile, and the tile: the shelter's
- * aim admits it.
+ * claimed, the shelter's cost gained and a worker entered on that tile; where the shelter lies, the
+ * tile, which its aim admits, and the chronicle the shelter played there wins.
  */
-export function landed(): { chronicle: Chronicle; tile: TileCoords } {
+export function landed(): {
+  chronicle: Chronicle;
+  index: number;
+  tile: TileCoords;
+  won: Chronicle;
+} {
   const card = cardOf(CATALOGUE, SHELTER);
   const aim = aimOf(card);
   if (aim.aim !== 'tile') throw new Error(`${SHELTER} is aimed at no tile`);
@@ -1440,7 +1462,8 @@ export function landed(): { chronicle: Chronicle; tile: TileCoords } {
       const chronicle = charted(CATALOGUE, worked);
       if (!playable(refusalOf(CATALOGUE, chronicle, SHELTER))) continue;
       if (admitted(CATALOGUE, chronicle, aim).some((coord) => tileKey(coord) === tileKey(tile))) {
-        return { chronicle, tile };
+        const index = idsOf(chronicle.hand).indexOf(SHELTER);
+        return { chronicle, index, tile, won: playedOn(chronicle, index, tile) };
       }
     }
     return undefined;
@@ -1449,10 +1472,7 @@ export function landed(): { chronicle: Chronicle; tile: TileCoords } {
 
 /** A new campaign the win on the first seed's capstone landing has paid into. */
 export function wonCampaign(): Campaign {
-  const { chronicle, tile } = landed();
-  const index = idsOf(chronicle.hand).indexOf(SHELTER);
-  const won = outcome(apply(CATALOGUE, chronicle, { type: 'play', index, aim: 'tile', tile }));
-  return paidInto(CATALOGUE, freshCampaign(CATALOGUE), won).campaign;
+  return paidInto(CATALOGUE, freshCampaign(CATALOGUE), landed().won).campaign;
 }
 
 /** A turn 1 with the first worker entered on the city's tile, and the neighbour it steps onto. */
@@ -1866,25 +1886,8 @@ export function marked(page: Page): Promise<{
 export function litTiles(page: Page): Promise<string[]> {
   return page.evaluate(() => {
     const lit = window.named?.('lit')?.object as Phaser.GameObjects.Layer | undefined;
-    const faces = window.named?.('terrain')?.object as Phaser.GameObjects.Layer | undefined;
-    if (lit === undefined || faces === undefined) {
-      throw new Error('the map is not on the chronicle screen');
-    }
-    const tiles = new Map(
-      faces.list.map((face) => {
-        const { x, y, name } = face as Phaser.GameObjects.Polygon;
-        return [`${x},${y}`, name.slice('tile-'.length)];
-      }),
-    );
-    return lit.list
-      .map((glow) => {
-        const { x, y } = glow as Phaser.GameObjects.Polygon;
-        const key = tiles.get(`${x},${y}`);
-        if (key === undefined)
-          throw new Error(`a glow stands on no tile the map draws, at ${x},${y}`);
-        return key;
-      })
-      .sort();
+    if (lit === undefined) throw new Error('the map is not on the chronicle screen');
+    return lit.list.map((glow) => glow.getData('tile') as string).sort();
   });
 }
 

@@ -28,6 +28,7 @@ import {
   onScreen,
   openSaved,
   pinnedAchievement,
+  playedOn,
   playedOut,
   readings,
   rested,
@@ -422,9 +423,7 @@ test('a drag during a tile aim pans the map, and the aim still plays after it', 
   const problems = watch(page);
   const step = gatherStep();
   const index = idsOf(step.stepped.hand).indexOf(GATHER);
-  const gathered = outcome(
-    apply(CATALOGUE, step.stepped, { type: 'play', index, aim: 'tile', tile: step.tile }),
-  );
+  const gathered = playedOn(step.stepped, index, step.tile);
 
   await openSaved(page, step.stepped);
   await dragOut(page, index);

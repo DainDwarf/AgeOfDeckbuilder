@@ -2,7 +2,6 @@ import { expect, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
 import { gained } from '../src/rules/cards';
 import { cardOf } from '../src/rules/catalogue';
-import { apply, outcome } from '../src/rules/chronicle';
 import { type Chronicle, turnShown } from '../src/rules/state';
 import { text } from '../src/ui/text';
 import {
@@ -11,6 +10,7 @@ import {
   firstSeed,
   idsOf,
   openSaved,
+  playedAtNothing,
   readings,
   refusalLines,
   settledOn,
@@ -47,7 +47,7 @@ test('the calendar played raises the strip over the end-turn button reading the 
 }) => {
   const problems = watch(page);
   const { opened, index } = twoInHand();
-  const shown = outcome(apply(CATALOGUE, opened, { type: 'play', index, aim: 'none' }));
+  const shown = playedAtNothing(opened, index);
   const turn = turnShown(shown);
   if (turn === undefined) throw new Error(`${CALENDAR} played shows no turn`);
   const other = idsOf(shown.hand).indexOf(CALENDAR);

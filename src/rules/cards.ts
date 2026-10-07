@@ -201,8 +201,15 @@ export function throughRefusal(
   const unit = unitAt(chronicle.units, on);
   if (unit?.faction !== 'player') return 'no-unit';
   const through = card.aim === 'tile' ? card.through : undefined;
-  if (through === undefined || distance(on, tile) !== 1) return 'not-beside';
+  if (through === undefined || !playersBeside(chronicle, tile).includes(unit)) return 'not-beside';
   return through(catalogue, chronicle, tile, unit);
+}
+
+/** The units of the player's standing beside the tile. */
+function playersBeside(chronicle: Chronicle, tile: TileCoords): Unit[] {
+  return chronicle.units.filter(
+    (unit) => unit.faction === 'player' && distance(unit.tile, tile) === 1,
+  );
 }
 
 /** The first check that refuses, in the order the aim hands them over: the one reason it answers. */
@@ -316,9 +323,7 @@ function stepped(
         unitAt(chronicle.units, tile) === undefined ? undefined : 'unit-standing',
       );
       if (reason !== undefined) return reason;
-      let able = chronicle.units.filter(
-        (unit) => unit.faction === 'player' && distance(unit.tile, tile) === 1,
-      );
+      let able = playersBeside(chronicle, tile);
       for (const check of checks) {
         able = able.filter((unit) => check.passes(catalogue, unit, tile));
         if (able.length === 0) return check.tile ?? check.unit;

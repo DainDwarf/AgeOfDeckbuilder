@@ -43,6 +43,7 @@ import {
   overflowingPiles,
   pileTop,
   pinnedAchievement,
+  playedAtNothing,
   playedOn,
   playedOut,
   readings,
@@ -105,11 +106,6 @@ function steppedOntoTheAim(): { moved: Chronicle; index: number; tile: TileCoord
     (stepped, at) => admits(stepped, inHand(stepped, tilePlayable), at),
   );
   return { moved, index: inHand(moved, tilePlayable), tile };
-}
-
-/** The chronicle the card at that place in the hand leaves, played at nothing. */
-function playedAtNothing(chronicle: Chronicle, index: number): Chronicle {
-  return outcome(apply(CATALOGUE, chronicle, { type: 'play', index, aim: 'none' }));
 }
 
 /**

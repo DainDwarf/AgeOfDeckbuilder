@@ -20,6 +20,7 @@ import {
   marksIn,
   onScreen,
   openSaved,
+  playedOn,
   playedOut,
   rested,
   shows,
@@ -68,9 +69,7 @@ test('a chronicle opens on the settle phase with the city standing nowhere, and 
   const lit = admitted(CATALOGUE, opened, card);
   const at = lit.find((coord) => tileKey(coord) !== tileKey(CENTRE));
   if (at === undefined) throw new Error('the settle admits no tile off the centre');
-  const settled = outcome(
-    apply(CATALOGUE, before, { type: 'play', index: 0, aim: 'tile', tile: at }),
-  );
+  const settled = playedOn(before, 0, at);
 
   await dragOut(page, 0);
   await aimed(page);
