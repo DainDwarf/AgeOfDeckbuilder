@@ -57,7 +57,7 @@ import {
 } from './marks';
 import { PAN_SPEED } from './scroll';
 import { text } from './text';
-import type { Veils } from './veils';
+import { VEILS_ON, type Veils } from './veils';
 
 const TILE_SIZE = 24;
 
@@ -551,7 +551,6 @@ export function createMapView(
   strata: MapStrata,
   catalogue: Catalogue,
   chronicle: Chronicle,
-  initialVeils: Veils,
 ): MapView {
   const map = strata.terrain;
   const camera = map.camera;
@@ -938,8 +937,8 @@ export function createMapView(
   let shown: Chronicle | undefined;
   /** What the map draws of that chronicle. */
   let { drawn, live, charted }: Drawing = { drawn: new Set(), live: new Set(), charted: new Map() };
-  /** The veils the map draws under. */
-  let veils = initialVeils;
+  /** The veils the map draws under; both stand until the console takes one off. */
+  let veils: Veils = VEILS_ON;
   /** What the map has in the air; a render owns it and takes it down. */
   let flight: symbol | undefined;
 

@@ -378,6 +378,8 @@ const TEXT = {
   'console.no-tile-selected': 'no tile selected',
   'console.no-unit-kind': 'no such unit kind: {kind}',
   'console.no-script': 'no such script: {script}',
+  'console.entered': 'entered: {kind}',
+  'console.entered-enemy': 'entered: {kind} ({script})',
 } as const;
 
 export type TextKey = keyof typeof TEXT;

@@ -7,6 +7,7 @@ import {
   admitted,
   apply,
   type Command,
+  chartedAndRead,
   costOf,
   launched,
   outcome,
@@ -16,15 +17,14 @@ import {
 import { cityCommand, type ReassignCommand, tileCost, tileRefusal } from '../rules/city';
 import { type Tile, type TileCoords, tileAt, tileKey } from '../rules/map';
 import { RESOURCES, type Resource } from '../rules/resources';
-import { charted } from '../rules/sight';
 import { leaf, type Stage, walked } from '../rules/stages';
 import { type Chronicle, type Cost, onSettlePhase, playable } from '../rules/state';
 import { type Unit, unitOf } from '../rules/units';
 import { createBand } from './band';
 import { boundTo, type Press, pressOf } from './bindings';
 import { CARD_BASELINE, CARD_HEIGHT, createKindBubble } from './card-face';
-import { EASE, ended, stopAllMotion, stopMotion } from './card-motion';
-import { closeConsole, offerEntries, resetConsole } from './debug-console';
+import { dropWaitedMotion, EASE, ended, stopAllMotion, stopMotion } from './card-motion';
+import { offerEntries, resetConsole } from './debug-console';
 import {
   addText,
   answersPress,
@@ -114,8 +114,6 @@ const LABEL_STYLE = {
 export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
   private choices!: Choices;
   private current!: Chronicle;
-  /** Whether the screen opened with the console standing as the screen before it left it. */
-  private consoleKept!: boolean;
   /** What the chronicle paid into the campaign as it ended, and nothing before it has. */
   private payment: Payment | undefined;
   /**
@@ -128,9 +126,8 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
     super('ui');
   }
 
-  init({ resumed, seed, consoleKept, ...choices }: ChronicleStart): void {
+  init({ resumed, seed, ...choices }: Opening): void {
     this.choices = choices;
-    this.consoleKept = consoleKept === true;
     this.payment = undefined;
     this.current = resumed ?? this.begin(seed);
   }
@@ -191,17 +188,6 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
     openChronicle(this.scene, { ...this.choices, seed });
   }
 
-  /**
-   * The unit entered on the chronicle the rules have left and what it sees charted, kept as the
-   * save, and the screen reopened on that chronicle with the console standing.
-   */
-  private enterUnit(entering: Entering): void {
-    const after = charted(CATALOGUE, entered(CATALOGUE, this.latest, entering).chronicle);
-    this.letGo();
-    keepChronicle(this.choices, after);
-    openChronicle(this.scene, { ...this.choices, resumed: after, consoleKept: true });
-  }
-
   create(): void {
     const map = mapOf(this);
     const camera = this.cameras.main;
@@ -245,8 +231,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
     };
 
     const parts: Part[] = [];
-    const veils = this.consoleKept ? closeConsole(this) : resetConsole(this);
-    const view = createMapView(map, map.strata, CATALOGUE, this.current, veils);
+    const view = createMapView(map, map.strata, CATALOGUE, this.current);
     const panel = createInfoPanel(map, map.strata.infopanel, CATALOGUE, tooltip.map);
     const note = createRefusalNote(map, map.strata.note);
     // The map's note hears only the presses this scene lets through to the map.
@@ -279,17 +264,31 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       for (const part of parts) part.render(this.current);
     };
 
+    /** The screen standing on the chronicle, every part painted on it, the hand and the button live. */
+    const stand = (on: Chronicle): void => {
+      this.current = on;
+      paint();
+      hand.live(true);
+      endTurn.live(true);
+      this.sequence = undefined;
+    };
+
+    /** The command played out, and whether its play-out ran to its end: none starts over another. */
+    const playOut = async (command: Command): Promise<boolean> => {
+      if (this.sequence !== undefined) return false;
+      return playStages(apply(CATALOGUE, this.current, command));
+    };
+
     // The button and the hand are dead for the whole play-out: a card played or hovered under it would
     // be animated, reverted, and kill the very tweens the stages wait on. A play-out the screen has let
-    // go of (the screen left for the campaign screen) commits nothing: the objects it was playing on are gone.
-    const playOut = async (command: Command): Promise<void> => {
-      if (this.sequence !== undefined) return;
-      const stages = apply(CATALOGUE, this.current, command);
+    // go of commits nothing from its tail, and answers that it did not run to its end.
+    const playStages = async (stages: readonly Stage[]): Promise<boolean> => {
       logRuntimeErrors(stages);
       const after = outcome(stages);
       if (after !== this.current) this.payment = keepChronicle(this.choices, after);
       const running = { leaves: after };
       this.sequence = running;
+      let held = false;
 
       try {
         endTurn.live(false);
@@ -297,7 +296,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
         dismiss();
 
         for (const stage of walked(stages)) {
-          if (this.sequence !== running) return;
+          if (this.sequence !== running) return false;
           const settles = leaf(stage);
           if (settles) this.current = stage.chronicle;
           const motions: Promise<void>[] = [];
@@ -309,14 +308,33 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
           await Promise.all(motions);
         }
       } finally {
-        if (this.sequence === running) {
-          this.current = outcome(stages);
-          paint();
-          hand.live(true);
-          endTurn.live(true);
-          this.sequence = undefined;
-        }
+        held = this.sequence === running;
+        if (held) stand(after);
       }
+      return held;
+    };
+
+    /**
+     * The play-out in flight let go of and the screen standing on the chronicle it leaves. Its
+     * motions are dropped, not stopped: a stop would run what each chains after it over that screen.
+     */
+    const jumpToEnd = (): void => {
+      const running = this.sequence;
+      if (running === undefined) return;
+      this.sequence = undefined;
+      dropWaitedMotion(this);
+      dropWaitedMotion(map);
+      stand(running.leaves);
+    };
+
+    /**
+     * A unit entered on the chronicle the rules have left, played as a card's entering plays, what it
+     * sees charted and what it meets read as a command's are.
+     */
+    const enterUnit = (entering: Entering): void => {
+      jumpToEnd();
+      const { stages } = entered(CATALOGUE, this.current, entering);
+      void playStages(chartedAndRead(CATALOGUE, this.current, stages));
     };
 
     /**
@@ -391,14 +409,12 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
         note.overTile(refused(tileCost(this.current, found.tile), refusal), found.at);
         return;
       }
-      await playOut(command);
-      if (this.playing) return;
+      if (!(await playOut(command))) return;
       select(view.pressedOn(found.tile));
     };
 
     const commandUnit = async (command: UnitCommand): Promise<void> => {
-      await playOut(command);
-      if (this.playing) return;
+      if (!(await playOut(command))) return;
       const on = unitOf(this.current.units, command.unit)?.tile;
       if (on !== undefined) select(view.pressedOn(on));
     };
@@ -409,8 +425,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
      * that landed while another command was playing out did nothing, and selects nothing either.
      */
     const reassign = async (command: ReassignCommand): Promise<void> => {
-      await playOut(command);
-      if (this.playing) return;
+      if (!(await playOut(command))) return;
       select(view.pressedOn(command.to));
     };
 
@@ -747,6 +762,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       if (!leaveCityMode()) raiseMenu(this);
     });
 
+    resetConsole(this);
     offerEntries(this, {
       seed: {
         reads: () => this.current.seed,
@@ -754,8 +770,8 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
           this.launchOn(seed);
         },
       },
-      veiled: (thrown) => {
-        view.showVeils(thrown);
+      veiled: (veils) => {
+        view.showVeils(veils);
       },
       unit: {
         reads: () => {
@@ -772,9 +788,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
             },
           };
         },
-        enter: (entering) => {
-          this.enterUnit(entering);
-        },
+        enter: enterUnit,
       },
     });
     resetMenu(this, (up) => {
@@ -920,16 +934,13 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
   }
 }
 
-/** What the chronicle screen starts on: the opening, and whether the console stands as it stood. */
-type ChronicleStart = Opening & { readonly consoleKept?: true };
-
 /**
  * The chronicle screen opened on the opening, in place of the screen calling or as the boot's first.
  * The overlay is put ahead and the map started before it: it reaches into both as it is created.
  */
 export function openChronicle(
   scenes: Phaser.Scenes.ScenePlugin | Phaser.Scenes.SceneManager,
-  opening: ChronicleStart,
+  opening: Opening,
 ): void {
   overlayAhead(scenes);
   // A scene's plugin queues the start, and its own `start` would stop the scene calling it.

@@ -225,8 +225,19 @@ export function launched(
  */
 export function apply(catalogue: Catalogue, chronicle: Chronicle, command: Command): Stage[] {
   checkContent(catalogue, chronicle);
-  const stages = charting(catalogue, chronicle, resolved(catalogue, chronicle, command));
-  return conditionsRead(catalogue, chronicle, stages);
+  return chartedAndRead(catalogue, chronicle, resolved(catalogue, chronicle, command));
+}
+
+/**
+ * Stages built off the chronicle they started on, charted of what they see and read for what they
+ * meet, as every command's are.
+ */
+export function chartedAndRead(
+  catalogue: Catalogue,
+  started: Chronicle,
+  stages: readonly Stage[],
+): Stage[] {
+  return conditionsRead(catalogue, started, charting(catalogue, started, stages));
 }
 
 /** The capstone is never read on a chronicle whose city falls on it. */

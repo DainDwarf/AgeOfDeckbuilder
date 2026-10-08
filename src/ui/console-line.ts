@@ -101,7 +101,7 @@ function seeded(after: string, veils: Veils, reads: number | undefined): Ran {
 
 /**
  * `unit` with what stood after it: the first refusal that holds, or the unit entered on the tile
- * selected, an enemy's on the script named and the player's where none is.
+ * selected, an enemy's on the script named and the player's where none is, and said so.
  */
 function unitRan(after: string, veils: Veils, reads: UnitReads): Ran {
   const refused = (answer: string): Ran => ({ veils, answer });
@@ -116,9 +116,18 @@ function unitRan(after: string, veils: Veils, reads: UnitReads): Ran {
     return refused(text('console.no-script', { script }));
   const block = reads.refusal(type, tile);
   if (block !== undefined) return refused(blockLine(block));
-  const entering: Entering =
-    script === undefined
-      ? { type, tile, faction: 'player' }
-      : { type, tile, faction: 'enemy', script };
-  return { veils, answer: undefined, next: { kind: 'enter', entering } };
+  if (script === undefined) {
+    const entering: Entering = { type, tile, faction: 'player' };
+    return {
+      veils,
+      answer: text('console.entered', { kind: type }),
+      next: { kind: 'enter', entering },
+    };
+  }
+  const entering: Entering = { type, tile, faction: 'enemy', script };
+  return {
+    veils,
+    answer: text('console.entered-enemy', { kind: type, script }),
+    next: { kind: 'enter', entering },
+  };
 }

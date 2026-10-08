@@ -196,22 +196,24 @@ describe('unit run at the console', () => {
     return ran.answer;
   }
 
-  it('enters a unit of the player kind named on the tile selected where no script is named, answering nothing', () => {
+  it('enters a unit of the player kind named on the tile selected where no script is named, and says the kind', () => {
     const veils = uncharted();
     const ran = runLine('unit scout', veils, unitScreen());
     expect(ran.next).toEqual({
       kind: 'enter',
       entering: { type: 'scout', tile: SELECTED, faction: 'player' },
     });
-    expect(ran.answer).toBeUndefined();
+    expect(ran.answer).toBe('entered: scout');
     expect(ran.veils).toBe(veils);
   });
 
-  it('enters an enemy on the script named, the spaces around the words trimmed', () => {
-    expect(runLine('  unit   scout   raider ', VEILS_ON, unitScreen()).next).toEqual({
+  it('enters an enemy on the script named, the spaces around the words trimmed, and says the kind and the script', () => {
+    const ran = runLine('  unit   scout   raider ', VEILS_ON, unitScreen());
+    expect(ran.next).toEqual({
       kind: 'enter',
       entering: { type: 'scout', tile: SELECTED, faction: 'enemy', script: 'raider' },
     });
+    expect(ran.answer).toBe('entered: scout (raider)');
   });
 
   it('refuses an ended chronicle before it reads anything else', () => {

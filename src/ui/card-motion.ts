@@ -20,14 +20,16 @@ export function blockLength(cards: number): number {
   return cards === 0 ? 0 : TRAVEL + (cards - 1) * STAGGER;
 }
 
+/** Every tween made a promise of by `ended`: the motions someone may be waiting on. */
+const waitedOn = new WeakSet<Phaser.Tweens.Tween>();
+
 /**
- * A tween as a promise, settling however the tween ended: at its own completion, or at the stop
- * that takes it off its target early. Those two are the only ends a tween announces — Phaser's
- * `killTweensOf` destroys one where it stands, listeners removed and nothing dispatched, so a
- * motion taken down that way would leave whoever waits here waiting for ever. `stopMotion` is the
- * one way this game takes a motion down.
+ * A tween as a promise, settling at its completion or at the stop that takes it off early, the only
+ * two ends a tween announces: one destroyed (`dropWaitedMotion`, Phaser's `killTweensOf`) leaves
+ * whoever waits here waiting for ever.
  */
 export function ended(tween: Phaser.Tweens.Tween): Promise<void> {
+  waitedOn.add(tween);
   return new Promise((done) => {
     const over = (): void => done();
     tween.once(Phaser.Tweens.Events.TWEEN_COMPLETE, over);
@@ -49,6 +51,14 @@ export function stopMotion(scene: Phaser.Scene, targets: object | object[]): voi
  */
 export function stopAllMotion(scene: Phaser.Scene): void {
   for (const tween of scene.tweens.getTweens()) tween.stop();
+}
+
+/**
+ * Every motion of the scene's made a promise of destroyed where it stands, announcing nothing: whoever
+ * waits on one waits for ever, so nothing chained after it runs. A motion nobody waits on runs on.
+ */
+export function dropWaitedMotion(scene: Phaser.Scene): void {
+  for (const tween of scene.tweens.getTweens()) if (waitedOn.has(tween)) tween.destroy();
 }
 
 /** A card carried to a place at an angle, resolving where it settles. */

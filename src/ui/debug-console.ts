@@ -66,11 +66,8 @@ export type Holding = {
  * interactive, which is what lets the pointer fall through to the screen beneath.
  */
 export class DebugConsole extends Phaser.Scene {
-  /** The console closed, the lines it ran cleared and both veils back on; the veils are answered. */
-  reset!: () => Veils;
-
-  /** The console closed, the lines it ran and the veils left as they stand; the veils are answered. */
-  close!: () => Veils;
+  /** The console closed, the lines it ran cleared, and both veils back on. */
+  reset!: () => void;
 
   /** The entries the screen standing holds, and nothing between one screen and the next. */
   holding: Holding | undefined;
@@ -188,32 +185,23 @@ export class DebugConsole extends Phaser.Scene {
       return true;
     });
 
-    this.close = (): Veils => {
-      show(false);
-      return veils;
-    };
-    this.reset = (): Veils => {
+    this.reset = (): void => {
       history.length = 0;
       typed = '';
       veils = VEILS_ON;
       paint();
-      return this.close();
+      show(false);
     };
     this.reset();
   }
 }
 
-/** The console put back where it began for a new chronicle; the veils its map opens under are answered. */
-export function resetConsole(scene: Phaser.Scene): Veils {
-  return scene.game.scene.getScene<DebugConsole>('console').reset();
-}
-
 /**
- * The console closed for the chronicle screen reopening, the lines it ran and the veils standing;
- * the veils its map opens under are answered.
+ * The console put back where it began for the chronicle screen now rising, which therefore opens
+ * under both veils.
  */
-export function closeConsole(scene: Phaser.Scene): Veils {
-  return scene.game.scene.getScene<DebugConsole>('console').close();
+export function resetConsole(scene: Phaser.Scene): void {
+  scene.game.scene.getScene<DebugConsole>('console').reset();
 }
 
 /** The entries the console answers, for as long as the screen now rising stands. */

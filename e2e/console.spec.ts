@@ -1,14 +1,16 @@
 import { expect, type Page, test } from '@playwright/test';
 import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
-import { ageOf, unitKind } from '../src/rules/catalogue';
-import { neighbours, tileAt, tileKey } from '../src/rules/map';
-import { freshCampaign } from '../src/rules/save';
+import { ageOf, type Entering, entered, unitKind } from '../src/rules/catalogue';
+import { apply, chartedAndRead, outcome } from '../src/rules/chronicle';
+import { neighbours, type TileCoords, tileAt, tileKey } from '../src/rules/map';
+import { freshCampaign, readSave } from '../src/rules/save';
 import { inSight } from '../src/rules/sight';
 import type { Chronicle } from '../src/rules/state';
 import { standsOn, unitAt } from '../src/rules/units';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
 import { openingChoices } from '../src/ui/launch-layout';
+import { SAVE_ENTRY } from '../src/ui/save-entry';
 import { text } from '../src/ui/text';
 import {
   besideTiles,
@@ -16,6 +18,7 @@ import {
   campaignShown,
   chronicleOf,
   cityTileOf,
+  click,
   consoleKey,
   enemiesOf,
   enter,
@@ -25,6 +28,7 @@ import {
   marksIn,
   openLaunch,
   openSaved,
+  playing,
   readNames,
   rested,
   ringedTile,
@@ -32,8 +36,8 @@ import {
   shows,
   standing,
   tileOnScreen,
-  unitEntered,
   WARRIOR,
+  waitGameClock,
   watch,
 } from './chronicle-screen';
 
@@ -92,9 +96,65 @@ async function standsOnSeed(page: Page, seed: number): Promise<void> {
   await rested(page);
 }
 
+/** The first tile beside the city a warrior stands on with nobody on it. */
+function warriorGround(chronicle: Chronicle): TileCoords {
+  const warrior = unitKind(CATALOGUE, WARRIOR);
+  const free = neighbours(cityTileOf(chronicle)).find(
+    (tile) =>
+      standsOn(CATALOGUE, warrior, false, tileAt(chronicle.tiles, tile)) &&
+      unitAt(chronicle.units, tile) === undefined,
+  );
+  if (free === undefined) throw new Error('no tile beside the city takes a warrior');
+  return free;
+}
+
 /** The chronicle the save holds, read as the game reads it. */
 async function heldChronicle(page: Page): Promise<Chronicle | undefined> {
   return (await heldSave(page)).chronicle?.chronicle;
+}
+
+/** The chronicle a unit entering leaves, charted and read as the rules chart and read a command's. */
+function enteredOn(chronicle: Chronicle, entering: Entering): Chronicle {
+  const { stages } = entered(CATALOGUE, chronicle, entering);
+  return outcome(chartedAndRead(CATALOGUE, chronicle, stages));
+}
+
+/**
+ * The chronicle screen once a unit has entered, in one question to the page: the chronicle on it
+ * and the one the save holds, the tile ringed, the console, the fog marks and the end-turn label.
+ */
+async function enteredScreen(page: Page): Promise<{
+  chronicle: Chronicle;
+  held: Chronicle | undefined;
+  ringed: string | undefined;
+  consoleOpen: boolean;
+  lines: string[];
+  fogMarks: number;
+  endTurn: string;
+}> {
+  const { save, ...read } = await page.evaluate((entry) => {
+    const named = (name: string): Phaser.GameObjects.GameObject => {
+      const found = window.named?.(name)?.object;
+      if (found === undefined) throw new Error(`nothing named ${name} stands on the screen`);
+      return found;
+    };
+    const root = named('console') as Phaser.GameObjects.Container;
+    const scene = window.game?.scene.getScene<ChronicleScene>('ui');
+    if (scene === undefined) throw new Error('the ui scene is not running');
+    return {
+      save: window.localStorage.getItem(entry),
+      chronicle: scene.chronicle,
+      ringed: named('selected').getData('tile') as string | undefined,
+      consoleOpen: root.visible,
+      lines: root.list
+        .filter((part) => part.type === 'Text')
+        .map((part) => (part as Phaser.GameObjects.Text).text),
+      fogMarks: (named('fog') as Phaser.GameObjects.Container).list.length,
+      endTurn: (named('end-turn-label') as Phaser.GameObjects.Text).text,
+    };
+  }, SAVE_ENTRY);
+  if (save === null) throw new Error('the game keeps no save');
+  return { ...read, held: readSave(CATALOGUE, save).chronicle?.chronicle };
 }
 
 /** How far the map moved down the screen under a key held for a dozen frames. */
@@ -278,26 +338,15 @@ test('seed on the chronicle screen answers the seed of the chronicle standing, a
   expect(problems).toEqual([]);
 });
 
-test('unit on the chronicle screen enters the unit on the tile selected as the rules enter and chart it, and reopens the screen on that chronicle with the lines and the veils standing', async ({
+test('unit on the chronicle screen enters the unit on the tile selected as the rules enter it and chart and read a command, says so, and play goes on with the console open, its lines and the veils standing', async ({
   page,
 }) => {
   const problems = watch(page);
   const stood = settledOn(1, ['first-worker']);
   const city = cityTileOf(stood);
-  const warrior = unitKind(CATALOGUE, WARRIOR);
-  const free = neighbours(city).find(
-    (tile) =>
-      standsOn(CATALOGUE, warrior, false, tileAt(stood.tiles, tile)) &&
-      unitAt(stood.units, tile) === undefined,
-  );
-  if (free === undefined) throw new Error('no tile beside the city takes a warrior');
+  const free = warriorGround(stood);
   const raider = ageOf(CATALOGUE, stood.age).camp.scripts.raider;
-  const oracle = unitEntered(stood, {
-    type: WARRIOR,
-    tile: free,
-    faction: 'enemy',
-    script: raider,
-  });
+  const oracle = enteredOn(stood, { type: WARRIOR, tile: free, faction: 'enemy', script: raider });
 
   await openSaved(page, stood);
   await consoleKey(page);
@@ -324,26 +373,62 @@ test('unit on the chronicle screen enters the unit on the tile selected as the r
   await expect.poll(() => ringedTile(page)).toBe(tileKey(free));
   await enter(page, `unit ${WARRIOR} ${raider}`);
 
-  await page.waitForFunction(
-    (count) =>
-      window.game?.scene.isActive('ui') === true &&
-      window.game.scene.getScene<ChronicleScene>('ui').chronicle.units.length === count,
-    oracle.units.length,
-  );
-  await rested(page);
-  expect(await chronicleOf(page)).toEqual(oracle);
-  expect(await heldChronicle(page)).toEqual(oracle);
-  expect(await shows(page, 'console')).toBe(false);
-  expect(await marksIn(page, 'fog')).toBe(0);
+  await expect.poll(() => playing(page)).toBe(false);
+  expect(await enteredScreen(page)).toEqual({
+    chronicle: oracle,
+    held: oracle,
+    ringed: undefined,
+    consoleOpen: true,
+    lines: [
+      '> fog',
+      text('console.fog-veil-off'),
+      `> unit ${WARRIOR} ${raider}`,
+      text('console.entered-enemy', { kind: WARRIOR, script: raider }),
+      '> ',
+    ],
+    fogMarks: 0,
+    endTurn: text('button.turn', { turn: oracle.turn }),
+  });
 
+  expect(problems).toEqual([]);
+});
+
+test('unit run while an end of turn plays out stands the screen on the chronicle the end of turn leaves, and enters the unit there', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  test.setTimeout(budget(1));
+  const stood = settledOn(1);
+  const turned = outcome(apply(CATALOGUE, stood, { type: 'end-turn' }));
+  const free = warriorGround(turned);
+  const oracle = enteredOn(turned, { type: WARRIOR, tile: free, faction: 'player' });
+  const seen = inSight(CATALOGUE, oracle);
+  const stands = {
+    chronicle: oracle,
+    held: oracle,
+    ringed: undefined,
+    consoleOpen: true,
+    lines: ['', '', `> unit ${WARRIOR}`, text('console.entered', { kind: WARRIOR }), '> '],
+    fogMarks: oracle.snapshots.filter((snapshot) => !seen.has(tileKey(snapshot))).length,
+    endTurn: text('button.turn', { turn: oracle.turn }),
+  };
+
+  await openSaved(page, stood);
   await consoleKey(page);
-  expect(await consoleLines(page)).toEqual([
-    `> unit ${WARRIOR}`,
-    text('console.no-tile-selected'),
-    '> fog',
-    text('console.fog-veil-off'),
-    '> ',
-  ]);
+  await page.keyboard.type(`unit ${WARRIOR}`);
+  await click(page, 'end-turn');
+  await expect.poll(() => playing(page)).toBe(true);
+  const freeAt = await tileOnScreen(page, free);
+  await page.mouse.click(freeAt.x, freeAt.y);
+  await expect.poll(() => ringedTile(page)).toBe(tileKey(free));
+  expect(await playing(page)).toBe(true);
+  await page.keyboard.press('Enter');
+
+  await expect.poll(() => playing(page)).toBe(false);
+  expect(await enteredScreen(page)).toEqual(stands);
+  // Past what was left of the end of turn: nothing of it comes back over the screen.
+  await waitGameClock(page, 3000);
+  expect(await enteredScreen(page)).toEqual(stands);
 
   expect(problems).toEqual([]);
 });
