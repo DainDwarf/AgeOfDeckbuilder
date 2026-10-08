@@ -13,6 +13,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **Camps that prepare** — a camp whose guards have gathered to the number its content names sends some of them off together as raiders or pillagers, so a raid out of a camp comes as a group and not one warrior at a time.
+- **A camp's wave** — a camp whose guards ashore within the distance its content names are as many as it names sends as many as it names off together under one of its other scripts, drawn seeded by weight, at the enemy phase's start, the camp's holder leaving last; the Stone camp names a wave and the Nomadic one none, the rules hold it on a fixture test, and the chronicle, Stone and Nomadic pages say so. Doc-impact: `docs/CHRONICLE.md`, `docs/ages/STONE.md`, `docs/ages/NOMADIC.md`. [board/a-camps-wave.md](board/a-camps-wave.md)
 - **A console line enters a unit** — a debug console entry that reopens the chronicle screen on the chronicle with a unit entered through the rules' own helper, kind, tile, faction and script named, the way the seed entry relaunches; the specs keep planting their own.
 - **The siege and the second script** — the capstone's second-script hook, which no content carries, leaves the rules and the chronicle page, and the siege fixture goes with it.
