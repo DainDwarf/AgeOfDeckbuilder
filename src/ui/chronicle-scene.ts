@@ -72,6 +72,19 @@ type Part = {
   play?(stage: Stage): Promise<void> | undefined;
 };
 
+/**
+ * Every `runtime-error` a command raised, on the console with the group holding it. Content only
+ * runs inside a group, so no change outside one is a `runtime-error`.
+ */
+function logRuntimeErrors(stages: readonly Stage[]): void {
+  for (const stage of walked(stages)) {
+    if (stage.kind !== 'group') continue;
+    for (const held of stage.stages) {
+      if (held.name === 'runtime-error') console.error(`runtime-error during ${stage.name}`);
+    }
+  }
+}
+
 /** Where a press landed or was let go: on a thing, on a drawn tile, or beside the things. */
 type Place =
   | { readonly kind: 'thing'; readonly on: Phaser.GameObjects.GameObject }
@@ -247,6 +260,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
     const playOut = async (command: Command): Promise<void> => {
       if (this.sequence !== undefined) return;
       const stages = apply(CATALOGUE, this.current, command);
+      logRuntimeErrors(stages);
       const after = outcome(stages);
       if (after !== this.current) this.payment = keepChronicle(this.choices, after);
       const running = Symbol('play-out');

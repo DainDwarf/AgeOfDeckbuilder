@@ -29,6 +29,7 @@ import {
 import { assign, type CityCommand, claim, grow, income, reassign } from './city';
 import { campUnit, guardEntered } from './enemies';
 import {
+  distance,
   type FeatureId,
   generateMap,
   type HexMap,
@@ -1167,7 +1168,10 @@ function enemyActs(catalogue: Catalogue, chronicle: Chronicle, id: number): Sequ
     if (acting === undefined || acting.action <= 0) return unchanged(standing);
     const target = script.attacks(catalogue, standing, acting);
     if (target === undefined) return unchanged(standing);
-    if (!inOwnSight(catalogue, standing.tiles, acting, target.tile)) {
+    if (
+      distance(acting.tile, target.tile) > acting.stats.range ||
+      !inOwnSight(catalogue, standing.tiles, acting, target.tile)
+    ) {
       return landedAs(change('runtime-error', standing));
     }
     return followed<Stage>(blow(standing, acting, target), attacks);

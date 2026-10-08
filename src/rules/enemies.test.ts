@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { type Catalogue, catalogued, unitKind } from './catalogue';
+import { type Catalogue, catalogued, type EnemyScript, unitKind } from './catalogue';
 import { apply, outcome } from './chronicle';
 import { cityCommand, claimable } from './city';
 import {
@@ -811,8 +811,9 @@ test('an enemy its move leaves out of range attacks nothing', () => {
   expect(after.units[0].stats.health).toBe(city.units[0].stats.health);
 });
 
-test('an enemy attacks only a unit its own sight reaches: one its script names behind a forest from the plain is a runtime-error and no attack, and from the hills the attack lands', () => {
-  const blind: Catalogue = catalogued({
+/** The fixture's content, its enemies staying where they stand and attacking what `attacks` names. */
+function naming(attacks: EnemyScript['attacks']): Catalogue {
+  return catalogued({
     ...CATALOGUE,
     scripts: {
       ...CATALOGUE.scripts,
@@ -821,20 +822,41 @@ test('an enemy attacks only a unit its own sight reaches: one its script names b
           landing: { tile: enemy.tile, cost: 0 },
           rng: chronicle.rng,
         }),
-        attacks: (_catalogue, chronicle, enemy) => attackable(chronicle.units, enemy)[0],
+        attacks,
       },
     },
   });
+}
+
+/** The names of the stages the enemy phase of the end of turn holds. */
+function enemyPhaseOf(chronicle: Chronicle, catalogue: Catalogue): string[] {
+  return namesOf(heldBy(apply(catalogue, chronicle, { type: 'end-turn' }), 'enemy-phase'));
+}
+
+test('an enemy attacks only a unit its own sight reaches: one its script names behind a forest from the plain is a runtime-error and no attack, and from the hills the attack lands', () => {
+  const blind = naming((_catalogue, chronicle, enemy) => attackable(chronicle.units, enemy)[0]);
   const archerOn = (terrain: Terrain): Chronicle =>
     cityOf(['urban'], {
       tiles: madeOf(madeOf(field(3), 'forest', [{ q: 2, r: 0 }]), terrain, [{ q: 3, r: 0 }]),
       units: [worker({ q: 1, r: 0 }), standing('enemy', { q: 3, r: 0 }, { move: 0, range: 2 })],
     });
-  const phase = (terrain: Terrain): string[] =>
-    namesOf(heldBy(apply(blind, archerOn(terrain), { type: 'end-turn' }), 'enemy-phase'));
 
-  expect(phase('plain')).toEqual(['runtime-error']);
+  expect(enemyPhaseOf(archerOn('plain'), blind)).toEqual(['runtime-error']);
   expect(attacksOf(archerOn('hills'), blind)).toEqual([['3,0', '1,0']]);
+});
+
+test('an enemy attacks only a unit within its range: one its script names beyond it is a runtime-error and no attack, and within it the attack lands', () => {
+  const reckless = naming((_catalogue, chronicle) =>
+    chronicle.units.find((unit) => unit.faction === 'player'),
+  );
+  const ranging = (range: number): Chronicle =>
+    cityOf(['urban'], {
+      tiles: field(3),
+      units: [worker({ q: 1, r: 0 }), standing('enemy', { q: 3, r: 0 }, { move: 0, range })],
+    });
+
+  expect(enemyPhaseOf(ranging(1), reckless)).toEqual(['runtime-error']);
+  expect(attacksOf(ranging(2), reckless)).toEqual([['3,0', '1,0']]);
 });
 
 test('an enemy attacks once for each of its action, and one with none attacks nothing', () => {
