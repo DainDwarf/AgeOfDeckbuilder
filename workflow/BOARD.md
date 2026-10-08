@@ -8,9 +8,8 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 - **Neutrals and sites** — the neutral faction, and the sites that belong to no faction and pay a reward once.
 - **The Stone Age's schedule** — the age's own events, its capstone and its victory with the technology it earns, on a chronicle longer than the Nomadic one, hard to impossible on the deck the age opens with and beatable once its tree is climbed; with it the ending's scaled pay, a Nomadic chronicle replayed paying no influence, the Nomadic Age being the tutorial.
+- **The stand-ins' doors** — the fixture content that opens a door no real content walks through — the recall, the road, the siege capstone with its second script and its span, and whatever else the search finds — reassessed one by one: the door kept for content the design foresees, or the mechanism and its fixture cut together.
 - **The headless simulator** — a consumer of the rules that runs only when asked and reports numbers, not diagnoses, tuned across the two ages; the reachability cache and the end of turn's cost per `apply` are looked at when it is made.
 - **The balance pass** — the Stone Age's numbers, measured through the simulator and felt in play; Domestication's goal, which a worker standing on one herd reaches, made a focus, Tanning's need of two herds inside the border weighed, Fishing's need of 50 food from coast and the Fishery's gain on the coast around it weighed, and Trapping, Irrigation, Pasture and Clay pit, four improvements of one price and one gain, weighed against one another; and a trial of where military and culture come from: both taken off the Nomadic city's yield, flint giving military in place of production, and sites that pay culture once.
 
 ## Lines
-
-- **The siege and the second script** — the capstone's second-script hook, which no content carries, leaves the rules and the chronicle page, and the siege fixture goes with it.
