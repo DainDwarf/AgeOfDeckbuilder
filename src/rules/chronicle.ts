@@ -1170,6 +1170,7 @@ function enemyActs(catalogue: Catalogue, chronicle: Chronicle, id: number): Sequ
     if (target === undefined) return unchanged(standing);
     if (
       distance(acting.tile, target.tile) > acting.stats.range ||
+      (target.embarked && acting.stats.range <= 1) ||
       !inOwnSight(catalogue, standing.tiles, acting, target.tile)
     ) {
       return landedAs(change('runtime-error', standing));

@@ -828,6 +828,11 @@ function naming(attacks: EnemyScript['attacks']): Catalogue {
   });
 }
 
+/** The fixture's content, its enemies staying where they stand and attacking the player's first unit. */
+const RECKLESS = naming((_catalogue, chronicle) =>
+  chronicle.units.find((unit) => unit.faction === 'player'),
+);
+
 /** The names of the stages the enemy phase of the end of turn holds. */
 function enemyPhaseOf(chronicle: Chronicle, catalogue: Catalogue): string[] {
   return namesOf(heldBy(apply(catalogue, chronicle, { type: 'end-turn' }), 'enemy-phase'));
@@ -846,17 +851,37 @@ test('an enemy attacks only a unit its own sight reaches: one its script names b
 });
 
 test('an enemy attacks only a unit within its range: one its script names beyond it is a runtime-error and no attack, and within it the attack lands', () => {
-  const reckless = naming((_catalogue, chronicle) =>
-    chronicle.units.find((unit) => unit.faction === 'player'),
-  );
   const ranging = (range: number): Chronicle =>
     cityOf(['urban'], {
       tiles: field(3),
       units: [worker({ q: 1, r: 0 }), standing('enemy', { q: 3, r: 0 }, { move: 0, range })],
     });
 
-  expect(enemyPhaseOf(ranging(1), reckless)).toEqual(['runtime-error']);
-  expect(attacksOf(ranging(2), reckless)).toEqual([['3,0', '1,0']]);
+  expect(enemyPhaseOf(ranging(1), RECKLESS)).toEqual(['runtime-error']);
+  expect(attacksOf(ranging(2), RECKLESS)).toEqual([['3,0', '1,0']]);
+});
+
+test('an enemy whose range is one attacks no embarked unit: one its script names beside it is a runtime-error and no attack, and ashore the attack lands', () => {
+  const coast = { q: 1, r: 0 };
+  const enemy = standing('enemy', { q: 2, r: 0 }, { move: 0, range: 1 });
+  const afloat = outcome(
+    apply(
+      CATALOGUE,
+      cityOf(['urban'], {
+        tiles: field(3, [coast]),
+        hand: ['PH_Embark'],
+        units: [standing('player', CITY), enemy],
+      }),
+      aimedAt(coast),
+    ),
+  );
+  const ashore = cityOf(['urban'], {
+    tiles: field(3),
+    units: [standing('player', coast), enemy],
+  });
+
+  expect(enemyPhaseOf(afloat, RECKLESS)).toEqual(['runtime-error']);
+  expect(attacksOf(ashore, RECKLESS)).toEqual([['2,0', '1,0']]);
 });
 
 test('an enemy attacks once for each of its action, and one with none attacks nothing', () => {
