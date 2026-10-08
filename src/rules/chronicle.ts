@@ -28,7 +28,7 @@ import {
   unitKind,
 } from './catalogue';
 import { assign, type CityCommand, claim, grow, income, reassign } from './city';
-import { enteredAround, enteredOnCamp, pillaged, preparedAs, stepMove } from './enemies';
+import { enteredAround, enteredOnCamp, pillaged, preparedAs, stepMove, wavesSent } from './enemies';
 import {
   distance,
   type FeatureId,
@@ -641,6 +641,7 @@ function chartedOn(stage: Change): TileCoords | undefined {
     case 'refreshed':
     case 'action-spent':
     case 'prepare':
+    case 'wave-sent':
     case 'retiled':
     case 'held':
     case 'settled':
@@ -1123,11 +1124,13 @@ function everyPlace(pile: readonly ChronicleCard[]): number[] {
 
 /**
  * The enemies' half of the turn, the one `enemy-phase` group: the prepares carried through the
- * player's turn land first, a capture's `ended` alone in the group; then every enemy acts in unit
- * order, then the camps roll their warriors.
+ * player's turn land first, a capture's `ended` alone in the group; then the camps send their waves,
+ * then every enemy acts in unit order, then the camps roll their warriors.
  */
 function enemyPhase(catalogue: Catalogue, chronicle: Chronicle): Sequence<Group> {
-  let phase: Sequence = preparesLanded(catalogue, chronicle);
+  let phase: Sequence = followed(preparesLanded(catalogue, chronicle), (left) =>
+    wavesSent(catalogue, left),
+  );
   for (const { id } of chronicle.units) {
     phase = followed(phase, (left) => enemyActs(catalogue, left, id));
   }

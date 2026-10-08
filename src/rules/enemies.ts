@@ -7,6 +7,7 @@ import {
   type EveryCampScript,
   entered,
   unitKind,
+  waveScripts,
 } from './catalogue';
 import {
   CENTRE,
@@ -21,7 +22,7 @@ import {
 import { type MapContent, refuse } from './map-kinds';
 import { nextRng, pickWeighted } from './rng';
 import { inOwnSight } from './sight';
-import { change, followed, type Landed, landedAs, unchanged } from './stages';
+import { change, changeOn, followed, type Landed, landedAs, unchanged } from './stages';
 import type { Chronicle } from './state';
 import { canAttack, standsOn, type Unit, type UnitStats, unitAt } from './units';
 
@@ -87,6 +88,72 @@ export function preparedAs(
   if (unit.faction !== 'enemy' || !unit.prepared) return undefined;
   const { city } = chronicle;
   return city !== undefined && tileKey(unit.tile) === tileKey(city) ? 'capture' : 'pillage';
+}
+
+/**
+ * The camp nearest the unit of those standing within that distance of it, ties in tile order, and
+ * none while it stands embarked.
+ */
+export function nearestCamp(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  unit: Pick<Unit, 'tile' | 'embarked'>,
+  within: number,
+): TileCoords | undefined {
+  if (unit.embarked) return undefined;
+  const { building } = ageOf(catalogue, chronicle.age).camp;
+  let nearest: TileCoords | undefined;
+  let least = within + 1;
+  for (const tile of chronicle.tiles) {
+    const away = distance(tile, unit.tile);
+    if (tile.building !== building || away >= least) continue;
+    least = away;
+    nearest = { q: tile.q, r: tile.r };
+  }
+  return nearest;
+}
+
+/**
+ * The camps sending their waves, in tile order, each one `wave-sent` on its tile: where the guards
+ * counted for a camp are as many as its wave names, as many as it names leave under one script drawn
+ * among the wave's, those off the camp's tile first in unit order and the one on it last.
+ */
+export function wavesSent(catalogue: Catalogue, chronicle: Chronicle): Landed {
+  const { camp } = ageOf(catalogue, chronicle.age);
+  const { wave } = camp;
+  if (wave === undefined) return unchanged(chronicle);
+  let sending = unchanged(chronicle);
+  for (const { q, r, building } of chronicle.tiles) {
+    if (building !== camp.building) continue;
+    const at = { q, r };
+    sending = followed(sending, (left) => {
+      const counted = left.units.filter((unit) => {
+        if (unit.faction !== 'enemy' || unit.script !== camp.scripts.guard) return false;
+        const kept = nearestCamp(catalogue, left, unit, wave.within);
+        return kept !== undefined && tileKey(kept) === tileKey(at);
+      });
+      if (counted.length < wave.gathered) return unchanged(left);
+      const onCamp = (unit: Unit): boolean => tileKey(unit.tile) === tileKey(at);
+      const leaving = new Set(
+        [...counted.filter((unit) => !onCamp(unit)), ...counted.filter(onCamp)]
+          .slice(0, wave.sent)
+          .map((unit) => unit.id),
+      );
+      const drawn = drawnByWeight(left, waveScripts(wave));
+      const script =
+        camp.scripts[drawn.picked] ??
+        refuse(catalogue, `a wave left as ${drawn.picked}, a script its camp names none of`);
+      return landedAs(
+        changeOn('wave-sent', at, {
+          ...drawn.chronicle,
+          units: drawn.chronicle.units.map((unit) =>
+            leaving.has(unit.id) ? { ...unit, script } : unit,
+          ),
+        }),
+      );
+    });
+  }
+  return sending;
 }
 
 /** An enemy entered or not yet: its stats, and whether it stands embarked. */
@@ -173,14 +240,14 @@ function entrantOf(catalogue: Catalogue, chronicle: Chronicle, kind: string): En
   return { stats, moves: enemyMoves(catalogue, chronicle, { stats, embarked: false }) };
 }
 
-/** A kind drawn among these by their weights from the chronicle's generator; one alone draws nothing. */
-function kindDrawn(
+/** One drawn among these by their weights from the chronicle's generator; one alone draws nothing. */
+function drawnByWeight<T>(
   chronicle: Chronicle,
-  kinds: readonly (readonly [string, number])[],
-): { readonly kind: string; readonly chronicle: Chronicle } {
-  if (kinds.length === 1) return { kind: kinds[0][0], chronicle };
-  const { picked, rng } = pickWeighted(chronicle.rng, kinds);
-  return { kind: picked, chronicle: { ...chronicle, rng } };
+  entries: readonly (readonly [T, number])[],
+): { readonly picked: T; readonly chronicle: Chronicle } {
+  if (entries.length === 1) return { picked: entries[0][0], chronicle };
+  const { picked, rng } = pickWeighted(chronicle.rng, entries);
+  return { picked, chronicle: { ...chronicle, rng } };
 }
 
 /** The kinds of that many enemies of the chronicle's age's camp, drawn one after another. */
@@ -193,8 +260,8 @@ function kindsDrawn(
   const kinds: string[] = [];
   let drawing = chronicle;
   for (let enemy = 0; enemy < enemies; enemy++) {
-    const drawn = kindDrawn(drawing, weighed);
-    kinds.push(drawn.kind);
+    const drawn = drawnByWeight(drawing, weighed);
+    kinds.push(drawn.picked);
     drawing = drawn.chronicle;
   }
   return { kinds, chronicle: drawing };
@@ -216,8 +283,8 @@ export function enteredOnCamp(
     standsOn(catalogue, unitKind(catalogue, kind), false, tile),
   );
   if (standing.length === 0) return unchanged(chronicle);
-  const drawn = kindDrawn(chronicle, standing);
-  const entering = campUnit(catalogue, drawn.chronicle, drawn.kind, camp, script);
+  const drawn = drawnByWeight(chronicle, standing);
+  const entering = campUnit(catalogue, drawn.chronicle, drawn.picked, camp, script);
   if (entering === undefined) return landedAs(change('runtime-error', chronicle));
   return entered(catalogue, drawn.chronicle, entering);
 }

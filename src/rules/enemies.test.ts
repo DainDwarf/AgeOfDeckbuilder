@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 import { chartedTile } from './cards';
-import { type Catalogue, catalogued, type EnemyScript, unitKind } from './catalogue';
+import { type Catalogue, catalogued, type EnemyScript, unitKind, type Wave } from './catalogue';
 import { apply, outcome } from './chronicle';
 import { cityCommand, claimable } from './city';
 import { attackOrNone, enteredAround, enteredOnCamp } from './enemies';
@@ -65,18 +65,26 @@ import {
 import { terrainKind } from './map-kinds';
 import { RESOURCES } from './resources';
 import { nextRng, seedRng } from './rng';
-import { walked } from './stages';
+import { type Stage, walked } from './stages';
 import type { Chronicle } from './state';
 import { attackable, type Unit, unitAt } from './units';
 
 /** An age and a timeline dealing the raid on the second turn, and no other deal. */
 const RAID_ON_SECOND = dealing({ turn: 2, event: 'PH_Hardship' });
 
-/** Every camp the end of turn stages a capture of, as the tile each stood on. */
-function capturesOf(chronicle: Chronicle): string[] {
-  return [...walked(apply(CATALOGUE, chronicle, { type: 'end-turn' }))].flatMap((stage) =>
-    stage.name === 'camp-capture' ? [tileKey(stage.tile)] : [],
-  );
+/** A stage carrying the one tile it happened on. */
+type Tiled = Extract<Stage, { readonly tile: TileCoords }>;
+
+/** Every stage of that name the end of turn stages, as the tile each carries. */
+function tilesStaged(
+  name: Tiled['name'],
+  chronicle: Chronicle,
+  catalogue: Catalogue = CATALOGUE,
+): string[] {
+  const named = (stage: Stage): stage is Tiled => stage.name === name;
+  return [...walked(apply(catalogue, chronicle, { type: 'end-turn' }))]
+    .filter(named)
+    .map((stage) => tileKey(stage.tile));
 }
 
 test('a capture ends the end of turn on its own stage, with the ending set', () => {
@@ -113,7 +121,7 @@ test('a camp captured at the end of the turn leaves its tile claimed like any ot
 
   const taken = endedTurn(besieging);
 
-  expect(capturesOf(besieging)).toEqual([tileKey(camp)]);
+  expect(tilesStaged('camp-capture', besieging)).toEqual([tileKey(camp)]);
   expect(claimable(CATALOGUE, taken).map(tileKey)).toContain(tileKey(camp));
   expect(cityCommand(CATALOGUE, taken, camp)).toEqual(claimOf(camp));
   expect(stagedBy(taken, claimOf(camp))).toEqual(['claim', 'stock', 'held', 'assigned']);
@@ -142,7 +150,7 @@ test('a unit of the player’s standing on a camp when the turn ends captures it
     'retiled',
     'dealt',
   ]);
-  expect(capturesOf(besieging)).toEqual([tileKey(camp)]);
+  expect(tilesStaged('camp-capture', besieging)).toEqual([tileKey(camp)]);
   expect(buildingAt(taken, camp)).toBeUndefined();
   expect(taken.discardPile).toEqual([]);
 });
@@ -336,13 +344,6 @@ test('a raid never enters on the city’s tile, and one larger than the tiles le
   }
 });
 
-/** Every camp the end of turn stages a warrior entering on, as the tile each stood on. */
-function entriesOf(catalogue: Catalogue, chronicle: Chronicle): string[] {
-  return [...walked(apply(catalogue, chronicle, { type: 'end-turn' }))].flatMap((stage) =>
-    stage.name === 'enter' ? [tileKey(stage.tile)] : [],
-  );
-}
-
 /** The fixture's camps in the order the map lists their tiles. */
 function campsInTileOrder(chronicle: Chronicle): string[] {
   return chronicle.tiles.filter((tile) => tile.building === CAMP.building).map(tileKey);
@@ -413,8 +414,8 @@ test('a camp across the water enters its guard on the nearest free tile of its i
       units: on.map((tile) => standing('enemy', tile, { move: 0 })),
     });
 
-  expect(entriesOf(camping({ odds: 1 }), held(camp))).toEqual([tileKey(beside)]);
-  expect(entriesOf(camping({ odds: 1 }), held(camp, beside))).toEqual([]);
+  expect(tilesStaged('enter', held(camp), camping({ odds: 1 }))).toEqual([tileKey(beside)]);
+  expect(tilesStaged('enter', held(camp, beside), camping({ odds: 1 }))).toEqual([]);
 });
 
 test('a raid through a camp across the water enters on the camp’s island, never on the city’s ground, and the ones its island has no free tile for enter nowhere', () => {
@@ -711,7 +712,7 @@ test('a camp its warrior walked off in the enemy phase rolls at the same phase',
 
   const after = outcome(apply(camping({ odds: 1 }), city, { type: 'end-turn' }));
 
-  expect(entriesOf(camping({ odds: 1 }), city)).toEqual([tileKey(camp)]);
+  expect(tilesStaged('enter', city, camping({ odds: 1 }))).toEqual([tileKey(camp)]);
   expect(enemiesOf(after).filter((unit) => tileKey(unit.tile) === tileKey(camp))).toHaveLength(1);
   expect(enemiesOf(after)).toHaveLength(2);
 });
@@ -774,6 +775,121 @@ test('the enemy phase holds each enemy’s move and attacks, then the warriors t
   expect(entered).toMatchObject({ tile: camp });
 });
 
+/** A guard of the fixture camp's standing on a tile, embarked on the move named where one is. */
+function sentry(tile: TileCoords, embarkedMove?: number): Standing {
+  const enemy = standing('enemy', tile);
+  const { type } = enemy.stats;
+  return {
+    ...enemy,
+    entering: { type, tile, faction: 'enemy', script: CAMP.scripts.guard, embarkedMove },
+  };
+}
+
+/** The fixture's wave: three guards within two tiles of their camp send two off as raiders. */
+const WAVE: Wave = { within: 2, gathered: 3, sent: 2, scripts: { raider: 1 } };
+
+const WAVING = camping({ wave: WAVE });
+
+/** The camp the wave tests gather their guards around. */
+const GATHERING = { q: 4, r: 0 };
+
+/** The guards around `GATHERING` the wave tests count: three, the one on the camp entered first. */
+const GATHERED = [sentry(GATHERING), sentry({ q: 4, r: -1 }), sentry({ q: 3, r: 0 })];
+
+/** A city on a disc out to four, the camps named and the units standing on it. */
+function gatheredAround(units: readonly Standing[], camps = [GATHERING]): Chronicle {
+  return cityOf(['urban'], {
+    ...NO_GROWTH,
+    tiles: camped(field(4, [{ q: 3, r: 1 }]), camps),
+    drawPile: fullDraw(),
+    units,
+  });
+}
+
+/** The scripts the enemies carry, in unit order. */
+function scriptsOf(chronicle: Chronicle): string[] {
+  return chronicle.units.flatMap((unit) => (unit.faction === 'enemy' ? [unit.script] : []));
+}
+
+test('a camp whose guards counted are as many as its wave names sends as many as it names off under the wave’s script before any enemy acts, the one on its tile last, and they act under it on that phase', () => {
+  const city = gatheredAround(GATHERED);
+
+  const phase = heldBy(apply(WAVING, city, { type: 'end-turn' }), 'enemy-phase');
+  const [sent] = phase;
+  const moves = phase.flatMap((stage) =>
+    stage.kind === 'change' && stage.name === 'move' ? [stage] : [],
+  );
+
+  expect(sent).toMatchObject({ name: 'wave-sent', tile: GATHERING });
+  expect(scriptsOf(city)).toEqual(GATHERED.map(() => CAMP.scripts.guard));
+  expect(sent.chronicle.units).toEqual(
+    city.units.map((unit, at) => (at === 0 ? unit : { ...unit, script: SCRIPT })),
+  );
+  expect(moves.map(({ from }) => from)).toEqual([
+    { q: 4, r: -1 },
+    { q: 3, r: 0 },
+  ]);
+  for (const { from, to } of moves) expect(distance(to, CITY)).toBeLessThan(distance(from, CITY));
+});
+
+test('a camp whose guards counted fall short of its wave sends none and raises no stage', () => {
+  const city = gatheredAround(GATHERED.slice(0, 2));
+
+  const stages = apply(WAVING, city, { type: 'end-turn' });
+
+  expect(heldBy(stages, 'enemy-phase')).toEqual([]);
+  expect(scriptsOf(outcome(stages))).toEqual(scriptsOf(city));
+});
+
+test('a camp’s wave counts no guard beyond its distance, none embarked, none nearer another camp, no enemy under another script and no unit of the player’s', () => {
+  const nearer = { q: 4, r: -3 };
+  const [onCamp, beside] = GATHERED;
+  const third = (unit: Standing): string[] =>
+    tilesStaged('wave-sent', gatheredAround([onCamp, beside, unit], [GATHERING, nearer]), WAVING);
+
+  expect(third(sentry({ q: 3, r: 0 }))).toEqual([tileKey(GATHERING)]);
+  expect(third(sentry({ q: 1, r: 0 }))).toEqual([]);
+  expect(third(sentry({ q: 3, r: 1 }, EMBARKED_MOVE))).toEqual([]);
+  expect(third(sentry({ q: 4, r: -2 }))).toEqual([]);
+  expect(third(standing('enemy', { q: 3, r: 0 }))).toEqual([]);
+  expect(third(standing('player', { q: 3, r: 0 }))).toEqual([]);
+});
+
+test('a wave draws its script by weight from the seeded generator, every guard of it taking the one drawn: the same seed draws the same, and seeds differ where two scripts weigh alike', () => {
+  const idle = 'PH_Idle';
+  const content = camping(
+    {
+      scripts: { ...CAMP.scripts, pillager: idle },
+      wave: { ...WAVE, scripts: { raider: 1, pillager: 1 } },
+    },
+    catalogued({
+      ...CATALOGUE,
+      scripts: { ...CATALOGUE.scripts, [idle]: CATALOGUE.scripts[CAMP.scripts.guard] },
+    }),
+  );
+  const drawn = (seed: number): string[] => {
+    const city = { ...gatheredAround(GATHERED), rng: seedRng(seed) };
+    const [sent] = heldBy(apply(content, city, { type: 'end-turn' }), 'enemy-phase');
+    return scriptsOf(sent.chronicle).slice(1);
+  };
+
+  for (const seed of SEEDS) {
+    const [first] = drawn(seed);
+    expect(drawn(seed)).toEqual([first, first]);
+  }
+  expect(new Set(SEEDS.map((seed) => drawn(seed)[0]))).toEqual(new Set([SCRIPT, idle]));
+});
+
+test('a guard the player’s warrior killed on its turn leaves the count short, and no wave goes', () => {
+  const city = gatheredAround([standing('player', { q: 2, r: 0 }, { damage: 4 }), ...GATHERED]);
+
+  const killed = outcome(apply(WAVING, city, attackOn(1, { q: 3, r: 0 })));
+
+  expect(tilesStaged('wave-sent', city, WAVING)).toEqual([tileKey(GATHERING)]);
+  expect(enemiesOf(killed)).toHaveLength(GATHERED.length - 1);
+  expect(tilesStaged('wave-sent', killed, WAVING)).toEqual([]);
+});
+
 test('a camp captured is one camp-capture carrying its tile, over the camp leaving the tile and its rewards dealt', () => {
   const camp = { q: 4, r: 0 };
   const besieging = cityOf(['urban'], {
@@ -801,14 +917,15 @@ test('a camp captured is one camp-capture carrying its tile, over the camp leavi
 
 test('at odds of a half a seed enters on the same camps every time, and seeds differ in the camps they enter on', () => {
   const rolledOn = (seed: number): string =>
-    entriesOf(
-      camping({ odds: 0.5 }),
+    tilesStaged(
+      'enter',
       cityOf(['urban'], {
         ...NO_GROWTH,
         rng: seedRng(seed),
         tiles: camped(field(4), CAMPS),
         drawPile: fullDraw(),
       }),
+      camping({ odds: 0.5 }),
     ).join(' ');
   const seeds = [1, 2, 3, 4, 5, 6, 7, 8];
 
@@ -824,7 +941,7 @@ test('a city fallen in the enemy phase rolls no camp', () => {
 
   const fallen = outcome(apply(camping({ odds: 1 }), overrun, { type: 'end-turn' }));
 
-  expect(entriesOf(camping({ odds: 1 }), overrun)).toEqual([]);
+  expect(tilesStaged('enter', overrun, camping({ odds: 1 }))).toEqual([]);
   expect(enemiesOf(fallen)).toHaveLength(1);
   expect(fallen.rng).toEqual(overrun.rng);
 });
@@ -834,7 +951,7 @@ test('the settle phase’s end rolls no camp', () => {
 
   const opened = outcome(apply(camping({ odds: 1 }), opening, { type: 'end-turn' }));
 
-  expect(entriesOf(camping({ odds: 1 }), opening)).toEqual([]);
+  expect(tilesStaged('enter', opening, camping({ odds: 1 }))).toEqual([]);
   expect(enemiesOf(opened)).toEqual([]);
 });
 
@@ -856,7 +973,7 @@ test('two camps captured the turn before an event is due deal two deals of rewar
   const first = outcome(apply(CATALOGUE, dealt, { type: 'take', at: 0 }));
   const second = outcome(apply(CATALOGUE, first, { type: 'take', at: 1 }));
 
-  expect(capturesOf(besieging)).toEqual(
+  expect(tilesStaged('camp-capture', besieging)).toEqual(
     besieging.tiles
       .filter((tile) => camps.some((camp) => tileKey(camp) === tileKey(tile)))
       .map(tileKey),

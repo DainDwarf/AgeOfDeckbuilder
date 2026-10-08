@@ -50,6 +50,9 @@ const HERD = { feature: 'deer', fromCity: 4 } as const;
 
 const RIVAL_CAMP = { fromCity: [3, 4], apart: 3 } as const;
 
+/** How far from its camp the guard keeps. */
+export const GUARD_RADIUS = 2;
+
 const TABLES: Tables = {
   units: {
     worker: {
@@ -83,7 +86,7 @@ const TABLES: Tables = {
       sight: 3,
     },
   },
-  scripts: { guard: guarding(2), raider: RAIDER },
+  scripts: { guard: guarding(GUARD_RADIUS), raider: RAIDER },
   cards: {
     settle: {
       kind: 'settle',

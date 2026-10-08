@@ -3,6 +3,7 @@ import {
   attackOrNone,
   enemyMoves,
   leastHealth,
+  nearestCamp,
   pillaged,
   standsAs,
   stepMove,
@@ -66,7 +67,7 @@ export const PILLAGER: EnemyScript = {
 export function guarding(radius: number): EnemyScript {
   return {
     moveTo(catalogue: Catalogue, chronicle: Chronicle, enemy: Unit) {
-      const camp = campKept(catalogue, chronicle, enemy, radius);
+      const camp = nearestCamp(catalogue, chronicle, enemy, radius);
       if (camp === undefined) return RAIDER.moveTo(catalogue, chronicle, enemy);
       const kept = (landing: Landing) => ({ landing, rng: chronicle.rng });
       const stay: Landing = { tile: enemy.tile, cost: 0 };
@@ -96,7 +97,7 @@ export function guarding(radius: number): EnemyScript {
     },
 
     acts(catalogue: Catalogue, chronicle: Chronicle, enemy: Unit): EnemyAct {
-      if (campKept(catalogue, chronicle, enemy, radius) === undefined) {
+      if (nearestCamp(catalogue, chronicle, enemy, radius) === undefined) {
         return RAIDER.acts(catalogue, chronicle, enemy);
       }
       return weakest(catalogue, chronicle, enemy);
@@ -107,24 +108,6 @@ export function guarding(radius: number): EnemyScript {
 /** Whether the tile is the city's. */
 function onCity(chronicle: Chronicle, tile: TileCoords): boolean {
   return chronicle.city !== undefined && tileKey(tile) === tileKey(chronicle.city);
-}
-
-/**
- * The camp a guard keeps: the nearest one standing within `radius` of it, and none while it stands
- * embarked.
- */
-function campKept(
-  catalogue: Catalogue,
-  chronicle: Chronicle,
-  guard: Unit,
-  radius: number,
-): TileCoords | undefined {
-  if (guard.embarked) return undefined;
-  const { building } = ageOf(catalogue, chronicle.age).camp;
-  const camps = chronicle.tiles
-    .filter((tile) => tile.building === building && distance(tile, guard.tile) <= radius)
-    .map(({ q, r }) => ({ tile: { q, r } }));
-  return camps.length === 0 ? undefined : nearestTo(chronicle, camps, guard.tile).tile;
 }
 
 /**

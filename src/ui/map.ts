@@ -1619,6 +1619,7 @@ export function createMapView(
         return staged([stage.tile], stage.chronicle, () => preparedOn(stage.tile, stage.chronicle));
       case 'refreshed':
       case 'action-spent':
+      case 'wave-sent':
       case 'held':
       case 'settled':
       case 'stock':

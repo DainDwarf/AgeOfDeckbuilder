@@ -17,6 +17,7 @@ import {
   type Slice,
   type Technology,
   technologyOf,
+  type Wave,
 } from './catalogue';
 import { apply, beginChronicle, launched } from './chronicle';
 import {
@@ -296,6 +297,26 @@ test('a catalogue whose camp is dealt across the water and names no embarked mov
   expect(() => catalogued(ashore)).toThrow(/^fixture: /);
   expect(() => catalogued(stuck)).toThrow(/^fixture: /);
   expect(() => catalogued(encamped({ acrossWater: true, embarkedMove: 1 }))).not.toThrow();
+});
+
+test('a catalogue whose camp’s wave names a script the camp names none of, a weight not above nought, no script, a count gathered or sent below one, more sent than gathered, or a distance below nought is refused', () => {
+  const wave: Wave = { within: 2, gathered: 3, sent: 2, scripts: { raider: 1 } };
+  const waving = (laid: Partial<Wave>): Catalogue => encamped({ wave: { ...wave, ...laid } });
+  const refusals: [Catalogue, string][] = [
+    [waving({ scripts: { pillager: 1 } }), 'sends a wave as pillager, a script it names none of'],
+    [waving({ scripts: { raider: 0 } }), 'sends a wave as raider at a weight of 0'],
+    [waving({ scripts: { raider: -1 } }), 'sends a wave as raider at a weight of -1'],
+    [waving({ scripts: {} }), 'sends a wave under no script'],
+    [waving({ gathered: 0, sent: 0 }), 'sends a wave once 0 have gathered'],
+    [waving({ sent: 0 }), 'sends 0 of 3 gathered'],
+    [waving({ sent: 4 }), 'sends 4 of 3 gathered'],
+    [waving({ within: -1 }), 'counts its wave within -1'],
+  ];
+
+  for (const [content, refusal] of refusals) {
+    expect(() => catalogued(content)).toThrow(`fixture: the age ${AGE}'s camp ${refusal}`);
+  }
+  expect(() => catalogued(waving({ within: 0, sent: 3 }))).not.toThrow();
 });
 
 test('a catalogue whose camp lies on a terrain none of its unit kinds stands on is refused, and one that one of them stands on is not', () => {

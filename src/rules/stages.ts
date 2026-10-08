@@ -106,6 +106,7 @@ type TiledChange =
   | 'refreshed'
   | 'action-spent'
   | 'prepare'
+  | 'wave-sent'
   | 'retiled'
   | 'charted'
   | 'held'

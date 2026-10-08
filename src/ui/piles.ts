@@ -178,6 +178,7 @@ export function createPiles(
       case 'refreshed':
       case 'action-spent':
       case 'prepare':
+      case 'wave-sent':
       case 'retiled':
       case 'charted':
       case 'held':

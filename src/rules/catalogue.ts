@@ -243,6 +243,26 @@ export type EveryCampScript = 'guard' | 'raider';
 /** The scripts a camp's enemies carry: every camp's, and one going for what the player built. */
 export type CampScript = EveryCampScript | 'pillager';
 
+/** The scripts a wave sends a camp's guards off under: the camp's others. */
+export type WaveScript = Exclude<CampScript, 'guard'>;
+
+/** The guards a camp sends off together, once enough have gathered around it. */
+export type Wave = {
+  /** How far from the camp a guard ashore is counted, for the nearest camp alone. */
+  readonly within: number;
+  /** How many guards counted send it. */
+  readonly gathered: number;
+  /** How many of them leave. */
+  readonly sent: number;
+  /** The scripts it may leave under, each with its weight in the one draw a wave makes. */
+  readonly scripts: Readonly<Partial<Record<WaveScript, number>>>;
+};
+
+/** The scripts a wave names, each with its weight. */
+export function waveScripts(wave: Wave): (readonly [WaveScript, number])[] {
+  return Object.entries(wave.scripts) as [WaveScript, number][];
+}
+
 /** The least and the most a span of turns rolls, both ends included. */
 export type Span = readonly [number, number];
 
@@ -286,6 +306,8 @@ export type Camp = {
   /** The chance, at every enemy phase, that a camp standing enters a guard. */
   readonly odds: number;
   readonly raidCampOdds: number;
+  /** The wave it sends: a camp naming none sends none. */
+  readonly wave?: Wave;
 };
 
 /**
@@ -587,6 +609,31 @@ function ageHeld(
     }
   } else if (!Number.isInteger(embarkedMove) || embarkedMove < 1) {
     refuse(content, `the age ${id}'s camp names an embarked move of ${embarkedMove}`);
+  }
+  if (camp.wave !== undefined) {
+    const { within, gathered, sent } = camp.wave;
+    const scripts = waveScripts(camp.wave);
+    if (scripts.length === 0) refuse(content, `the age ${id}'s camp sends a wave under no script`);
+    for (const [script, weight] of scripts) {
+      if (camp.scripts[script] === undefined) {
+        refuse(
+          content,
+          `the age ${id}'s camp sends a wave as ${script}, a script it names none of`,
+        );
+      }
+      if (!(weight > 0)) {
+        refuse(content, `the age ${id}'s camp sends a wave as ${script} at a weight of ${weight}`);
+      }
+    }
+    if (!Number.isInteger(within) || within < 0) {
+      refuse(content, `the age ${id}'s camp counts its wave within ${within}`);
+    }
+    if (!Number.isInteger(gathered) || gathered < 1) {
+      refuse(content, `the age ${id}'s camp sends a wave once ${gathered} have gathered`);
+    }
+    if (!Number.isInteger(sent) || sent < 1 || sent > gathered) {
+      refuse(content, `the age ${id}'s camp sends ${sent} of ${gathered} gathered`);
+    }
   }
   const campKind = buildingKind(content, camp.building);
   const campNames = groundNamed(campKind);

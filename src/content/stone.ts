@@ -24,7 +24,7 @@ import { distance, MOVE_POINT, tileAt } from '../rules/map';
 import type { RiverFlow } from '../rules/map-kinds';
 import { showsNextLanding } from '../rules/schedule';
 import { followed } from '../rules/stages';
-import { NOMADIC } from './nomadic';
+import { GUARD_RADIUS, NOMADIC } from './nomadic';
 import { PILLAGER } from './scripts';
 
 const { basePrice, schedule, camp } = NOMADIC.owns;
@@ -114,6 +114,7 @@ export const STONE: Slice = {
       odds: 0.08,
       acrossWater: true,
       embarkedMove: EMBARKED_MOVE,
+      wave: { within: GUARD_RADIUS, gathered: 3, sent: 2, scripts: { raider: 1, pillager: 1 } },
     },
     regions: REGIONS,
     achievements: {
