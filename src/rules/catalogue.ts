@@ -925,25 +925,31 @@ export function checkContent(catalogue: Catalogue, { content }: Pick<Chronicle, 
   refuse(catalogue, `a chronicle begun on ${content} is played on no other content`);
 }
 
-/** What a unit entering the map is: its kind, the tile it stands on, and who it acts for. */
-export type Entering = { readonly type: string; readonly tile: TileCoords } & (
-  | { readonly faction: 'player' }
-  | { readonly faction: 'enemy'; readonly script: string }
-);
+/**
+ * What a unit entering the map is: its kind, the tile it stands on, who it acts for, and, for one
+ * entering embarked, the move it has embarked.
+ */
+export type Entering = {
+  readonly type: string;
+  readonly tile: TileCoords;
+  readonly embarkedMove?: number;
+} & ({ readonly faction: 'player' } | { readonly faction: 'enemy'; readonly script: string });
 
 /**
  * The one way a unit enters the map: it takes the next number the chronicle deals a unit, carries
- * its own copy of its kind's stats, and stands ashore with its move points and its action full.
+ * its own copy of its kind's stats, and stands ashore, or embarked on the move it enters with, its
+ * move points and its action full.
  */
 export function entered(catalogue: Catalogue, chronicle: Chronicle, entering: Entering): Landed {
-  const stats = { ...unitKind(catalogue, entering.type) };
+  const kind = unitKind(catalogue, entering.type);
+  const stats = { ...kind, move: entering.embarkedMove ?? kind.move };
   const carried = {
     id: chronicle.nextUnit,
     stats,
     tile: entering.tile,
     movePoints: stats.move,
     action: stats.action,
-    embarked: false,
+    embarked: entering.embarkedMove !== undefined,
   };
   const dealt = (unit: Unit): Landed =>
     landedAs(

@@ -9,8 +9,8 @@ import {
 import {
   CENTRE,
   distance,
-  groundRunsTo,
   type Moves,
+  routesFrom,
   type Tile,
   type TileCoords,
   tileAt,
@@ -21,7 +21,7 @@ import { nextRng } from './rng';
 import { inOwnSight } from './sight';
 import { change, followed, type Landed, landedAs, unchanged } from './stages';
 import type { Chronicle } from './state';
-import { canAttack, standsOn, type Unit, unitAt } from './units';
+import { canAttack, standsOn, type Unit, type UnitStats, unitAt } from './units';
 
 /**
  * Of the units handed in, every one a unit can attack from the tile it stands on, action aside: one
@@ -108,103 +108,161 @@ export function campUnit(
   return { type: camp.unit, faction: 'enemy', tile, script: camp.scripts[script] };
 }
 
-/** The tiles the camp's unit stands on ashore that the ground runs to the tile from, never the city's. */
-function groundTo(
-  catalogue: Catalogue,
-  chronicle: Chronicle,
-  city: TileCoords,
-  to: TileCoords,
-): Tile[] {
-  const reached = groundRunsTo(catalogue, chronicle.tiles, chronicle.rivers, to);
-  const stats = unitKind(catalogue, ageOf(catalogue, chronicle.age).camp.unit);
-  return chronicle.tiles.filter(
-    (tile) =>
-      standsOn(catalogue, stats, false, tile) &&
-      reached.has(tileKey(tile)) &&
-      tileKey(tile) !== tileKey(city),
-  );
+/** The chronicle's age's camp's unit: its kind's stats, and its moves ashore and embarked. */
+type Walker = { readonly stats: UnitStats; readonly moves: Moves };
+
+function campWalker(catalogue: Catalogue, chronicle: Chronicle): Walker {
+  const { camp } = ageOf(catalogue, chronicle.age);
+  const stats = unitKind(catalogue, camp.unit);
+  return { stats, moves: { ashore: stats.move, embarked: camp.embarkedMove } };
 }
 
-function raidGround(catalogue: Catalogue, chronicle: Chronicle): Tile[] {
-  const city = chronicle.city ?? refuse(catalogue, 'a raid landed while the city stands nowhere');
-  return groundTo(catalogue, chronicle, city, city);
+/** Whether the walker stands on the tile, embarked or ashore as named, on the move its moves name. */
+function standsAs(
+  catalogue: Catalogue,
+  { stats, moves }: Walker,
+  tile: Tile | undefined,
+  embarked: boolean,
+): boolean {
+  const move = embarked ? moves.embarked : moves.ashore;
+  return move !== undefined && standsOn(catalogue, { ...stats, move }, embarked, tile);
 }
 
 /**
- * That many of the camp's unit entering around the tile with the script named, each on the nearest
- * free tile of the raid's ground; where none is free, the ones left enter nowhere. A count of none or
- * fewer draws nothing and is a `runtime-error`.
+ * The tiles the walker stands on the way a walk over the whole map on its moves reaches them from
+ * the tile, standing on it embarked or ashore as named, never the city's.
+ */
+function reached(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  walker: Walker,
+  from: TileCoords,
+  embarked: boolean,
+): Tile[] {
+  const city =
+    chronicle.city ?? refuse(catalogue, 'an enemy entered while the city stands nowhere');
+  const { tiles, rivers } = chronicle;
+  const routes = routesFrom(catalogue, tiles, rivers, from, embarked, walker.moves);
+  return tiles.filter(
+    (tile) =>
+      tileKey(tile) !== tileKey(city) &&
+      [false, true].some(
+        (standsEmbarked) =>
+          (standsEmbarked ? routes.embarked : routes.ashore).has(tileKey(tile)) &&
+          standsAs(catalogue, walker, tile, standsEmbarked),
+      ),
+  );
+}
+
+/** Whether the walker stands on the tile embarked and not ashore. */
+function afloat(catalogue: Catalogue, walker: Walker, tile: Tile | undefined): boolean {
+  return !standsAs(catalogue, walker, tile, false) && standsAs(catalogue, walker, tile, true);
+}
+
+/**
+ * The tiles the camp's unit enters on around a door: those the door's own ground runs to, or, where
+ * the unit stands on the door embarked only, those its own water runs to, entered on that move.
+ */
+function aroundDoor(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  walker: Walker,
+  door: TileCoords,
+): { readonly reach: Tile[]; readonly embarkedMove: number | undefined } {
+  const { ashore, embarked } = walker.moves;
+  return afloat(catalogue, walker, tileAt(chronicle.tiles, door))
+    ? {
+        reach: reached(catalogue, chronicle, { ...walker, moves: { embarked } }, door, true),
+        embarkedMove: embarked,
+      }
+    : {
+        reach: reached(catalogue, chronicle, { ...walker, moves: { ashore } }, door, false),
+        embarkedMove: undefined,
+      };
+}
+
+/**
+ * That many of the camp's unit entering with the script named, each on the nearest free tile around
+ * the tile as a door; the ones no free tile is left for enter nowhere, and a count below one is a
+ * `runtime-error`.
  */
 export function enteredAround(
   catalogue: Catalogue,
   chronicle: Chronicle,
-  entry: TileCoords,
+  around: TileCoords,
   enemies: number,
   script: CampScript,
 ): Landed {
   if (enemies <= 0) return landedAs(change('runtime-error', chronicle));
-  return enteredOn(catalogue, chronicle, raidGround(catalogue, chronicle), entry, enemies, script);
-}
+  const walker = campWalker(catalogue, chronicle);
+  const { reach, embarkedMove } = aroundDoor(catalogue, chronicle, walker, around);
 
-/**
- * One guard of the camp's entering around the camp, on the nearest free tile of the ground that runs
- * to the camp, and nowhere where none is free.
- */
-export function guardEntered(catalogue: Catalogue, chronicle: Chronicle, camp: TileCoords): Landed {
-  const city = chronicle.city ?? refuse(catalogue, 'a guard entered while the city stands nowhere');
-  const ground = groundTo(catalogue, chronicle, city, camp);
-  return enteredOn(catalogue, chronicle, ground, camp, 1, 'guard');
-}
-
-/**
- * That many of the camp's unit entering around the tile on the ground handed in, each on its nearest
- * free tile, ties drawn from the generator and nothing drawn where one tile is nearest.
- */
-function enteredOn(
-  catalogue: Catalogue,
-  chronicle: Chronicle,
-  ground: readonly Tile[],
-  entry: TileCoords,
-  enemies: number,
-  script: CampScript,
-): Landed {
   let landing = unchanged(chronicle);
   for (let enemy = 0; enemy < enemies; enemy++) {
     const standing = landing.chronicle;
-    const free = ground.filter((tile) => unitAt(standing.units, tile) === undefined);
+    const free = reach.filter((stood) => unitAt(standing.units, stood) === undefined);
     if (free.length === 0) break;
-    const nearest = Math.min(...free.map((tile) => distance(tile, entry)));
-    const equal = free.filter((tile) => distance(tile, entry) === nearest);
+    const nearest = Math.min(...free.map((stood) => distance(stood, around)));
+    const equal = free.filter((stood) => distance(stood, around) === nearest);
 
     const drawn = equal.length === 1 ? undefined : nextRng(standing.rng);
     const { q, r } = drawn === undefined ? equal[0] : equal[Math.floor(drawn.value * equal.length)];
     landing = followed(landing, (left) =>
-      entered(
-        catalogue,
-        drawn === undefined ? left : { ...left, rng: drawn.rng },
-        campUnit(catalogue, left, { q, r }, script),
-      ),
+      entered(catalogue, drawn === undefined ? left : { ...left, rng: drawn.rng }, {
+        ...campUnit(catalogue, left, { q, r }, script),
+        embarkedMove,
+      }),
     );
   }
   return landing;
 }
 
 /**
- * The tile a raid enters around, drawn from the generator: nothing drawn at all where no tile of the
- * raid's ground is free for a warrior to enter on.
+ * Whether a free tile stands around a door, each reach walked once for every door on one medium it
+ * holds: a walk reaches back every tile it reaches.
+ */
+function roomyDoors(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  walker: Walker,
+): (door: TileCoords) => boolean {
+  const walked: {
+    readonly embarked: boolean;
+    readonly keys: Set<string>;
+    readonly roomy: boolean;
+  }[] = [];
+  return (door) => {
+    const embarked = afloat(catalogue, walker, tileAt(chronicle.tiles, door));
+    const known = walked.find(
+      (reach) => reach.embarked === embarked && reach.keys.has(tileKey(door)),
+    );
+    if (known !== undefined) return known.roomy;
+    const { reach } = aroundDoor(catalogue, chronicle, walker, door);
+    const roomy = reach.some((tile) => unitAt(chronicle.units, tile) === undefined);
+    walked.push({ embarked, keys: new Set(reach.map(tileKey)), roomy });
+    return roomy;
+  };
+}
+
+/**
+ * The tile a raid enters around, drawn from the generator among the doors with a free tile around
+ * them, a side holding none dropping out of the draw; nothing drawn at all where no door has one.
  */
 export function raidEntry(
   catalogue: Catalogue,
   chronicle: Chronicle,
 ): { readonly entry: TileCoords; readonly chronicle: Chronicle } | undefined {
-  const ground = raidGround(catalogue, chronicle);
-  if (ground.every((tile) => unitAt(chronicle.units, tile) !== undefined)) return undefined;
+  const city = chronicle.city ?? refuse(catalogue, 'a raid landed while the city stands nowhere');
   const { camp } = ageOf(catalogue, chronicle.age);
-  const camps = chronicle.tiles.filter((tile) => tile.building === camp.building);
+  const walker = campWalker(catalogue, chronicle);
+  const roomy = roomyDoors(catalogue, chronicle, walker);
+  const camps = chronicle.tiles.filter((tile) => tile.building === camp.building && roomy(tile));
   // The chronicle holds no radius: the disc's edge is read off its tiles, which the generator deals
   // around `CENTRE`.
   const edge = Math.max(...chronicle.tiles.map((tile) => distance(tile, CENTRE)));
-  const ring = ground.filter((tile) => distance(tile, CENTRE) === edge);
+  const ring = reached(catalogue, chronicle, walker, city, false).filter(
+    (tile) => distance(tile, CENTRE) === edge && roomy(tile),
+  );
   if (camps.length === 0 && ring.length === 0) return undefined;
 
   const side = nextRng(chronicle.rng);

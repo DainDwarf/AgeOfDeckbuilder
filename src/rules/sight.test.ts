@@ -1,19 +1,17 @@
 import { expect, test } from 'vitest';
-import { catalogued, entered } from './catalogue';
+import { entered } from './catalogue';
 import { apply, outcome } from './chronicle';
 import {
-  agesOver,
   aimedAt,
-  CAMP,
   CATALOGUE,
   CIVILIZATION,
+  camping,
   EMBARKED_MOVE,
   NO_DEALS,
   namesOf,
   opening,
   plains,
   QUIET,
-  REGIONS,
   SCRIPT,
   settledOn,
 } from './fixtures';
@@ -355,21 +353,23 @@ test('when the turn ticks a unit kept in fog leaves the snapshot, and its tile s
 
 test('an enemy seen embarking is kept in the snapshot embarked, in fog as in sight', () => {
   const coast = off(2, -1);
-  const rowing = catalogued({
-    ...CATALOGUE,
-    ages: agesOver({ ...CAMP, embarkedMove: EMBARKED_MOVE }, REGIONS),
-    scripts: {
-      ...CATALOGUE.scripts,
-      [SCRIPT]: {
-        moveTo: (_catalogue, chronicle, enemy) => ({
-          landing: { tile: enemy.tile, cost: 0 },
-          step: coast,
-          rng: chronicle.rng,
-        }),
-        attacks: () => undefined,
+  const rowing = camping(
+    { embarkedMove: EMBARKED_MOVE },
+    {
+      ...CATALOGUE,
+      scripts: {
+        ...CATALOGUE.scripts,
+        [SCRIPT]: {
+          moveTo: (_catalogue, chronicle, enemy) => ({
+            landing: { tile: enemy.tile, cost: 0 },
+            step: coast,
+            rng: chronicle.rng,
+          }),
+          attacks: () => undefined,
+        },
       },
     },
-  });
+  );
   const raided = raiding(
     watching(cityOn(ground(['coast', [coast]])), WATCHER, { sight: SIGHT }),
     off(2, 0),

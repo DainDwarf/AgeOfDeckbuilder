@@ -2,13 +2,12 @@ import { expect, test } from 'vitest';
 import { type Catalogue, catalogued } from '../rules/catalogue';
 import { apply, outcome } from '../rules/chronicle';
 import {
-  agesOver,
   aimedAt,
   attacksOf,
-  CAMP,
   CATALOGUE,
   CITY,
   camped,
+  camping,
   cityOf,
   deepBut,
   EMBARKED_MOVE,
@@ -17,7 +16,6 @@ import {
   madeOf,
   movesOf,
   only,
-  REGIONS,
   SCRIPT,
   type Standing,
   standing,
@@ -301,11 +299,6 @@ test('a guard with no camp within its radius raids', () => {
   expect(attacksOf(city, GUARDING)).toEqual([]);
 });
 
-/** The fixture's content as the scripts above lay it, its camp naming an embarked move. */
-function withEmbarkedMove(content: Catalogue, embarkedMove: number = EMBARKED_MOVE): Catalogue {
-  return catalogued({ ...content, ages: agesOver({ ...CAMP, embarkedMove }, REGIONS) });
-}
-
 /** A disc of deep water out to four but for the city’s tile, the land and the coast named, and the forest named on the land. */
 function strait(land: TileCoords[], coast: TileCoords[], forest: TileCoords[] = []): Tile[] {
   return madeOf(deepBut(field(4, coast), [CITY, ...land, ...coast]), 'forest', forest);
@@ -331,7 +324,7 @@ function islanded(units: readonly Standing[] = [standing('enemy', { q: 4, r: 0 }
 test('a raider whose cheapest route to the city embarks walks to where the ground ends and embarks there, and one whose camp names no embarked move stays on its island', () => {
   const city = islanded();
 
-  expect(movesOf(city, withEmbarkedMove(RAIDING))).toEqual([
+  expect(movesOf(city, camping({ embarkedMove: EMBARKED_MOVE }, RAIDING))).toEqual([
     ['4,0', '3,0'],
     ['3,0', '2,0'],
   ]);
@@ -339,7 +332,7 @@ test('a raider whose cheapest route to the city embarks walks to where the groun
 });
 
 test('an embarked raider moves over the water toward the city and disembarks where its cheapest route reaches the ground, onto the city’s tile itself', () => {
-  const content = withEmbarkedMove(RAIDING);
+  const content = camping({ embarkedMove: EMBARKED_MOVE }, RAIDING);
   const embarked = endedTurn(islanded(), undefined, content);
 
   expect(movesOf(embarked, content)).toEqual([
@@ -368,8 +361,10 @@ test('a raider weighs the water against the ground in moves: with an embarked mo
     units: [standing('enemy', { q: 3, r: 1 })],
   });
 
-  expect(movesOf(city, withEmbarkedMove(RAIDING, EMBARKED_MOVE))).toEqual([['3,1', '3,0']]);
-  expect(movesOf(city, withEmbarkedMove(RAIDING, MOVE_POINT))).toEqual([['3,1', '2,2']]);
+  expect(movesOf(city, camping({ embarkedMove: EMBARKED_MOVE }, RAIDING))).toEqual([
+    ['3,1', '3,0'],
+  ]);
+  expect(movesOf(city, camping({ embarkedMove: MOVE_POINT }, RAIDING))).toEqual([['3,1', '2,2']]);
 });
 
 test('a raider whose embark is held embarks onto another free tile on a route as cheap, and with none free it does not embark', () => {
@@ -384,7 +379,7 @@ test('a raider whose embark is held embarks onto another free tile on a route as
   });
   const one = outcome(apply(CATALOGUE, free, aimedAt(north)));
   const both = outcome(apply(CATALOGUE, one, aimedAt(east)));
-  const content = withEmbarkedMove(RAIDING);
+  const content = camping({ embarkedMove: EMBARKED_MOVE }, RAIDING);
 
   expect(movesOf(free, content)).toEqual([[tileKey(shore), tileKey(north)]]);
   expect(movesOf(one, content)).toEqual([[tileKey(shore), tileKey(east)]]);
@@ -398,7 +393,7 @@ test('a guard keeps the ground while a camp stands within its radius, and with n
     tiles: camped(islanded().tiles, [camp]),
     units: [standing('enemy', camp, { move: 0 }), guard],
   });
-  const content = withEmbarkedMove(GUARDING);
+  const content = camping({ embarkedMove: EMBARKED_MOVE }, GUARDING);
 
   expect(movesOf(kept, content)).toEqual([]);
   expect(movesOf(islanded([guard]), content)).toEqual([['3,0', '2,0']]);
@@ -419,7 +414,7 @@ test('an embarked guard within a standing camp’s radius moves and steps as the
     ),
     units: [standing('enemy', { q: 3, r: 0 })],
   });
-  const content = withEmbarkedMove(GUARDING);
+  const content = camping({ embarkedMove: EMBARKED_MOVE }, GUARDING);
   const embarked = endedTurn(city, undefined, content);
 
   expect(movesOf(city, content)).toEqual([['3,0', '2,0']]);

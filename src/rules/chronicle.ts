@@ -28,7 +28,7 @@ import {
   unitKind,
 } from './catalogue';
 import { assign, type CityCommand, claim, grow, income, reassign } from './city';
-import { campUnit, guardEntered, stepMove } from './enemies';
+import { campUnit, enteredAround, stepMove } from './enemies';
 import {
   distance,
   type FeatureId,
@@ -1216,7 +1216,7 @@ function campsRolled(catalogue: Catalogue, chronicle: Chronicle): Sequence {
       const step = nextRng(left.rng);
       const drawn = { ...left, rng: step.rng };
       if (step.value >= camp.odds) return unchanged(drawn);
-      return guardEntered(catalogue, drawn, { q, r });
+      return enteredAround(catalogue, drawn, { q, r }, 1, 'guard');
     });
   }
   return rolling;

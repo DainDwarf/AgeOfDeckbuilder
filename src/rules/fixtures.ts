@@ -37,6 +37,7 @@ import {
   type Catalogue,
   type Civilization,
   cardMade,
+  catalogued,
   civilizationOf,
   type EnemyScript,
   type Entering,
@@ -261,9 +262,8 @@ const EVENTS: Catalogue['events'] = {
           const placing = campsPlaced(catalogue, chronicle, 1, RIVALS.fromCity, RIVALS.apart);
           const [camp] = placing.placed;
           if (camp === undefined) return placing;
-          // The first warrior lands on the camp only because `campsPlaced` asks the ground to run to
-          // the city and no unit to stand there, and the catalogue refuses a camp on a terrain its
-          // unit cannot stand on.
+          // The first warrior lands on the camp only because `campsPlaced` asks no unit to stand
+          // there, and the catalogue refuses a camp on a terrain its unit cannot stand on.
           return followed(placing, (left) =>
             enteredAround(catalogue, left, camp, ENCAMPED, 'guard'),
           );
@@ -992,6 +992,11 @@ export const SLICES: readonly Slice[] = Object.entries(agesOver(CAMP, REGIONS)).
 
 /** The content every fixture is played on, its numbers the fixture's own. */
 export const CATALOGUE: Catalogue = merged('fixture', SLICES);
+
+/** The content handed in, the fixture's unless named, its camp naming these over the fixture camp's own. */
+export function camping(named: Partial<Camp>, content: Catalogue = CATALOGUE): Catalogue {
+  return catalogued({ ...content, ages: agesOver({ ...CAMP, ...named }, REGIONS) });
+}
 
 /**
  * The fixture's content, over the slices the test hands where it hands its own, with each technology

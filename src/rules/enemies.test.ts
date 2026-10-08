@@ -4,7 +4,6 @@ import { type Catalogue, catalogued, type EnemyScript, unitKind } from './catalo
 import { apply, outcome } from './chronicle';
 import { cityCommand, claimable } from './city';
 import {
-  agesOver,
   aimedAt,
   attackOn,
   attacksOf,
@@ -15,6 +14,7 @@ import {
   CITY,
   CIVILIZATION,
   camped,
+  camping,
   cityOf,
   claimOf,
   culture,
@@ -54,6 +54,7 @@ import {
   type Terrain,
   type Tile,
   type TileCoords,
+  tileAt,
   tileKey,
 } from './map';
 import { terrainKind } from './map-kinds';
@@ -242,10 +243,6 @@ const RAID_OF_THREE = dealing({ turn: 20, event: 'PH_Hardship' });
 
 const SEEDS = [1, 2, 3, 4, 5, 6, 7, 8];
 
-function raidingAt(raidCampOdds: number): Catalogue {
-  return catalogued({ ...CATALOGUE, ages: agesOver({ ...CAMP, raidCampOdds }, REGIONS) });
-}
-
 function enteredSince(before: Chronicle, after: Chronicle): TileCoords[] {
   return enemiesOf(after)
     .filter((unit) => unit.id >= before.nextUnit)
@@ -292,7 +289,10 @@ test('a raid drawn through the outer ring enters on a tile of the disc farthest 
 
   for (const seed of SEEDS) {
     const seeded = { ...city, rng: seedRng(seed) };
-    const entered = enteredSince(seeded, endedTurn(seeded, 'PH_Raid', raidingAt(0)));
+    const entered = enteredSince(
+      seeded,
+      endedTurn(seeded, 'PH_Raid', camping({ raidCampOdds: 0 })),
+    );
 
     expect(entered).toHaveLength(1);
     expect(distance(entered[0], CENTRE)).toBe(5);
@@ -331,11 +331,6 @@ test('a raid never enters on the city’s tile, and one larger than the tiles le
   }
 });
 
-/** The fixture's content with its camp rolling at these odds. */
-function rolling(odds: number): Catalogue {
-  return catalogued({ ...CATALOGUE, ages: agesOver({ ...CAMP, odds }, REGIONS) });
-}
-
 /** Every camp the end of turn stages a warrior entering on, as the tile each stood on. */
 function entriesOf(catalogue: Catalogue, chronicle: Chronicle): string[] {
   return [...walked(apply(catalogue, chronicle, { type: 'end-turn' }))].flatMap((stage) =>
@@ -362,7 +357,7 @@ test('at odds of one every camp enters a guard once the enemies have acted, a st
     ],
   });
   const camps = campsInTileOrder(city);
-  const stages = apply(rolling(1), city, { type: 'end-turn' });
+  const stages = apply(camping({ odds: 1 }), city, { type: 'end-turn' });
   const entries = [...walked(stages)].flatMap((stage) =>
     stage.name === 'enter' ? [stage.tile] : [],
   );
@@ -413,20 +408,100 @@ test('a camp across the water enters its guard on the nearest free tile of its i
       units: on.map((tile) => standing('enemy', tile, { move: 0 })),
     });
 
-  expect(entriesOf(rolling(1), held(camp))).toEqual([tileKey(beside)]);
-  expect(entriesOf(rolling(1), held(camp, beside))).toEqual([]);
+  expect(entriesOf(camping({ odds: 1 }), held(camp))).toEqual([tileKey(beside)]);
+  expect(entriesOf(camping({ odds: 1 }), held(camp, beside))).toEqual([]);
 });
 
-test('a raid through a camp across the water enters on the ground that runs to the city, nearest the camp', () => {
-  const { camp, tiles } = island();
-  const city = cityOf(['urban'], { tiles, ...RAID_ON_SECOND });
+test('a raid through a camp across the water enters on the camp’s island, never on the city’s ground, and the ones its island has no free tile for enter nowhere', () => {
+  const { camp, beside, tiles } = island();
+  const city = cityOf(['urban'], { tiles, turn: 19, ...RAID_OF_THREE });
+
+  for (const seed of SEEDS) {
+    const seeded = { ...city, rng: seedRng(seed) };
+
+    expect(enteredSince(seeded, endedTurn(seeded, 'PH_Raid'))).toEqual([camp, beside]);
+  }
+});
+
+test('a raid never draws a camp whose island has no free tile: it enters through the outer ring', () => {
+  const { camp, beside, tiles } = island();
+  const city = cityOf(['urban'], {
+    tiles,
+    units: [camp, beside].map((tile) => standing('enemy', tile, { move: 0 })),
+    ...RAID_ON_SECOND,
+  });
 
   for (const seed of SEEDS) {
     const seeded = { ...city, rng: seedRng(seed) };
     const entered = enteredSince(seeded, endedTurn(seeded, 'PH_Raid'));
 
     expect(entered).toHaveLength(1);
-    expect(distance(entered[0], camp)).toBe(2);
+    expect(distance(entered[0], CENTRE)).toBe(5);
+  }
+});
+
+test('a raid never draws a ring door whose ground has no free tile: it enters through the camp, however its odds lean to the ring', () => {
+  const corridor = [1, 2, 3, 4, 5].map((q) => ({ q, r: 0 }));
+  const camp = { q: -4, r: 0 };
+  const city = cityOf(['urban'], {
+    tiles: camped(only(5, [CITY, ...corridor, camp, { q: -5, r: 0 }]), [camp]),
+    units: corridor.map((tile) => standing('enemy', tile, { move: 0 })),
+    ...RAID_ON_SECOND,
+  });
+
+  for (const seed of SEEDS) {
+    const seeded = { ...city, rng: seedRng(seed) };
+    const raided = endedTurn(seeded, 'PH_Raid', camping({ raidCampOdds: 0 }));
+
+    expect(enteredSince(seeded, raided)).toEqual([camp]);
+  }
+});
+
+/** A city on an island of two tiles, coast to the disc's edge all around it, no camp standing. */
+const MAROONED = only(5, [CITY, { q: 1, r: 0 }]);
+
+test('a raid with no camp standing whose city no ground of the outer ring is reached from has no door where the enemies do not embark: it enters nobody and is a runtime-error', () => {
+  const city = cityOf(['urban'], { tiles: MAROONED, ...RAID_ON_SECOND });
+  const dealt = outcome(apply(CATALOGUE, city, { type: 'end-turn' }));
+
+  expect(stagedBy(dealt, { type: 'take', at: 0 })).toEqual(['answer', 'taken', 'runtime-error']);
+});
+
+test('where the enemies embark, a raid finds a door on the coast of the outer ring and enters embarked there, on the camp’s embarked move, its move points and its action full', () => {
+  const rowing = camping({ embarkedMove: EMBARKED_MOVE });
+  const city = cityOf(['urban'], { tiles: MAROONED, ...RAID_ON_SECOND });
+
+  for (const seed of SEEDS) {
+    const seeded = { ...city, rng: seedRng(seed) };
+    const [raider, ...more] = enemiesOf(endedTurn(seeded, 'PH_Raid', rowing));
+
+    expect(more).toEqual([]);
+    expect(distance(raider.tile, CENTRE)).toBe(5);
+    expect(raider).toMatchObject({
+      embarked: true,
+      stats: { move: EMBARKED_MOVE },
+      movePoints: EMBARKED_MOVE,
+      action: unitKind(rowing, CAMP.unit).action,
+    });
+  }
+});
+
+test('a raid of three through a coast door enters every enemy embarked, on the water around the door, ring by ring', () => {
+  const rowing = camping({ embarkedMove: EMBARKED_MOVE });
+  const city = cityOf(['urban'], { tiles: MAROONED, turn: 19, ...RAID_OF_THREE });
+
+  for (const seed of SEEDS) {
+    const seeded = { ...city, rng: seedRng(seed) };
+    const raided = endedTurn(seeded, 'PH_Raid', rowing);
+    const [door, ...after] = enemiesOf(raided);
+
+    expect(after).toHaveLength(2);
+    expect(distance(door.tile, CENTRE)).toBe(5);
+    for (const enemy of after) expect(distance(enemy.tile, door.tile)).toBe(1);
+    for (const enemy of [door, ...after]) {
+      expect(enemy.embarked).toBe(true);
+      expect(tileAt(raided.tiles, enemy.tile)?.terrain).toBe('coast');
+    }
   }
 });
 
@@ -450,7 +525,7 @@ test('the chronicle opens with one guard on each camp the map was dealt, in tile
 test('a raid enters raiders, whatever door it comes through', () => {
   const city = cityOf(['urban'], { tiles: camped(field(5), CAMPS), ...RAID_ON_SECOND });
 
-  for (const catalogue of [raidingAt(0), raidingAt(1)]) {
+  for (const catalogue of [camping({ raidCampOdds: 0 }), camping({ raidCampOdds: 1 })]) {
     const raided = endedTurn(city, 'PH_Raid', catalogue);
     const entered = enemiesOf(raided).filter((unit) => unit.id >= city.nextUnit);
 
@@ -502,7 +577,7 @@ test('a warrior a camp rolls stands on the camp with the camp’s unit’s stats
   });
   const stats = unitKind(CATALOGUE, CAMP.unit);
 
-  const after = outcome(apply(rolling(1), city, { type: 'end-turn' }));
+  const after = outcome(apply(camping({ odds: 1 }), city, { type: 'end-turn' }));
 
   expect(after.turn).toBe(city.turn + 1);
   expect(
@@ -533,9 +608,9 @@ test('a camp its warrior walked off in the enemy phase rolls at the same phase',
     units: [standing('enemy', camp)],
   });
 
-  const after = outcome(apply(rolling(1), city, { type: 'end-turn' }));
+  const after = outcome(apply(camping({ odds: 1 }), city, { type: 'end-turn' }));
 
-  expect(entriesOf(rolling(1), city)).toEqual([tileKey(camp)]);
+  expect(entriesOf(camping({ odds: 1 }), city)).toEqual([tileKey(camp)]);
   expect(enemiesOf(after).filter((unit) => tileKey(unit.tile) === tileKey(camp))).toHaveLength(1);
   expect(enemiesOf(after)).toHaveLength(2);
 });
@@ -545,15 +620,17 @@ test('at odds of nought no camp enters a warrior and no stage is raised, and eve
   const city = cityOf(['urban'], { ...carrying, tiles: camped(field(4), CAMPS) });
   const empty = cityOf(['urban'], { ...carrying, tiles: field(4) });
   const rngAt = (odds: number): Chronicle['rng'] =>
-    outcome(apply(rolling(odds), city, { type: 'end-turn' })).rng;
+    outcome(apply(camping({ odds }), city, { type: 'end-turn' })).rng;
 
-  const after = outcome(apply(rolling(0), city, { type: 'end-turn' }));
+  const after = outcome(apply(camping({ odds: 0 }), city, { type: 'end-turn' }));
 
   expect(stagedBy(city, { type: 'end-turn' })).toEqual(stagedBy(empty, { type: 'end-turn' }));
   expect(enemiesOf(after)).toEqual([]);
   expect(rngAt(0)).toEqual(rngAt(0.5));
   expect(rngAt(0)).toEqual(rngAt(1));
-  expect(rngAt(0)).not.toEqual(outcome(apply(rolling(0), empty, { type: 'end-turn' })).rng);
+  expect(rngAt(0)).not.toEqual(
+    outcome(apply(camping({ odds: 0 }), empty, { type: 'end-turn' })).rng,
+  );
 });
 
 test('the enemy phase holds nothing at odds of nought, and its chronicle carries the draws every camp made', () => {
@@ -563,14 +640,16 @@ test('the enemy phase holds nothing at odds of nought, and its chronicle carries
     drawPile: fullDraw(),
   });
 
-  const stages = apply(rolling(0), city, { type: 'end-turn' });
+  const stages = apply(camping({ odds: 0 }), city, { type: 'end-turn' });
   const phase = stages.find((stage) => stage.name === 'enemy-phase');
   const grow = stages.find((stage) => stage.name === 'grow');
   if (phase === undefined || grow === undefined) throw new Error('the end of turn staged no phase');
 
   expect(heldBy(stages, 'enemy-phase')).toEqual([]);
   expect(phase.chronicle.rng).not.toEqual(grow.chronicle.rng);
-  expect(outcome(stages).rng).toEqual(outcome(apply(rolling(0.5), city, { type: 'end-turn' })).rng);
+  expect(outcome(stages).rng).toEqual(
+    outcome(apply(camping({ odds: 0.5 }), city, { type: 'end-turn' })).rng,
+  );
 });
 
 test('the enemy phase holds each enemy’s move and attacks, then the warriors the camps roll, each entering on its camp', () => {
@@ -582,7 +661,7 @@ test('the enemy phase holds each enemy’s move and attacks, then the warriors t
     units: [worker({ q: 2, r: 0 }), standing('enemy', { q: 3, r: -1 }, { move: MOVE_POINT })],
   });
 
-  const held = heldBy(apply(rolling(1), city, { type: 'end-turn' }), 'enemy-phase');
+  const held = heldBy(apply(camping({ odds: 1 }), city, { type: 'end-turn' }), 'enemy-phase');
 
   expect(held.map(({ name }) => name)).toEqual(['move', 'attack', 'enter']);
   const [crossed, attack, entered] = held;
@@ -622,7 +701,7 @@ test('a camp captured is one camp-capture carrying its tile, over the camp leavi
 test('at odds of a half a seed enters on the same camps every time, and seeds differ in the camps they enter on', () => {
   const rolledOn = (seed: number): string =>
     entriesOf(
-      rolling(0.5),
+      camping({ odds: 0.5 }),
       cityOf(['urban'], {
         ...NO_GROWTH,
         rng: seedRng(seed),
@@ -642,9 +721,9 @@ test('a city fallen in the enemy phase rolls no camp', () => {
     units: [standing('enemy', CITY)],
   });
 
-  const fallen = outcome(apply(rolling(1), overrun, { type: 'end-turn' }));
+  const fallen = outcome(apply(camping({ odds: 1 }), overrun, { type: 'end-turn' }));
 
-  expect(entriesOf(rolling(1), overrun)).toEqual([]);
+  expect(entriesOf(camping({ odds: 1 }), overrun)).toEqual([]);
   expect(enemiesOf(fallen)).toHaveLength(1);
   expect(fallen.rng).toEqual(overrun.rng);
 });
@@ -652,9 +731,9 @@ test('a city fallen in the enemy phase rolls no camp', () => {
 test('the settle phase’s end rolls no camp', () => {
   const opening = cityOf(['urban'], { turn: 0, tiles: camped(field(4), CAMPS) });
 
-  const opened = outcome(apply(rolling(1), opening, { type: 'end-turn' }));
+  const opened = outcome(apply(camping({ odds: 1 }), opening, { type: 'end-turn' }));
 
-  expect(entriesOf(rolling(1), opening)).toEqual([]);
+  expect(entriesOf(camping({ odds: 1 }), opening)).toEqual([]);
   expect(enemiesOf(opened)).toEqual([]);
 });
 
@@ -892,22 +971,24 @@ test('an enemy whose range is one attacks no embarked unit: one its script names
  * stepping onto the tile `step` names them, and asked an attack, the player's first unit.
  */
 function stepping(step: (enemy: Unit) => TileCoords, embarkedMove?: number): Catalogue {
-  return catalogued({
-    ...CATALOGUE,
-    ages: agesOver({ ...CAMP, embarkedMove }, REGIONS),
-    scripts: {
-      ...CATALOGUE.scripts,
-      [SCRIPT]: {
-        moveTo: (_catalogue, chronicle, enemy) => ({
-          landing: { tile: enemy.tile, cost: 0 },
-          step: step(enemy),
-          rng: chronicle.rng,
-        }),
-        attacks: (_catalogue, chronicle) =>
-          chronicle.units.find((unit) => unit.faction === 'player'),
+  return camping(
+    { embarkedMove },
+    {
+      ...CATALOGUE,
+      scripts: {
+        ...CATALOGUE.scripts,
+        [SCRIPT]: {
+          moveTo: (_catalogue, chronicle, enemy) => ({
+            landing: { tile: enemy.tile, cost: 0 },
+            step: step(enemy),
+            rng: chronicle.rng,
+          }),
+          attacks: (_catalogue, chronicle) =>
+            chronicle.units.find((unit) => unit.faction === 'player'),
+        },
       },
     },
-  });
+  );
 }
 
 /** What the enemy phase of the end of turn leaves. */

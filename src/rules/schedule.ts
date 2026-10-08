@@ -236,7 +236,7 @@ function runtimeError(chronicle: Chronicle): Landed {
 
 /**
  * The warriors entering around a door drawn for them, raiders all; a raid of no warrior, or one with
- * no door or no free tile to enter on, draws nothing and is a `runtime-error`.
+ * no door with a free tile around it, draws nothing and is a `runtime-error`.
  */
 export function raided(catalogue: Catalogue, chronicle: Chronicle, warriors: number): Landed {
   if (warriors <= 0) return runtimeError(chronicle);

@@ -209,9 +209,8 @@ const TABLES: Tables = {
             );
             const [camp] = placing.placed;
             if (camp === undefined) return placing;
-            // The first warrior lands on the camp only because `campsPlaced` asks the ground to run
-            // to the city and no unit to stand there, and the catalogue refuses a camp on a terrain
-            // its unit cannot stand on.
+            // The first warrior lands on the camp only because `campsPlaced` asks no unit to stand
+            // there, and the catalogue refuses a camp on a terrain its unit cannot stand on.
             return followed(placing, (left) =>
               enteredAround(catalogue, left, camp, raiders(chronicle.turn), 'guard'),
             );
