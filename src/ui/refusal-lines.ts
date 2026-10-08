@@ -3,7 +3,8 @@ import { text } from './text';
 
 export type Said = readonly string[];
 
-function blocking(block: Block): string {
+/** The one line a block is said in, wherever it is raised. */
+export function blockLine(block: Block): string {
   return text(`refusal.${block}`);
 }
 
@@ -12,10 +13,10 @@ export function refused(costs: readonly Cost[], refusal: Refusal): Said {
     ...costs
       .filter(({ resource }) => refusal.unaffordable.includes(resource))
       .map(({ resource, amount }) => text(`refusal.${resource}`, { cost: amount })),
-    ...refusal.blocked.map(blocking),
+    ...refusal.blocked.map(blockLine),
   ];
 }
 
 export function refusedAim(block: Block): Said {
-  return [blocking(block)];
+  return [blockLine(block)];
 }

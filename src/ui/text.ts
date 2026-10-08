@@ -373,6 +373,11 @@ const TEXT = {
   'console.uncharted-veil-off': 'uncharted veil: off',
   'console.fog-veil-on': 'fog veil: on',
   'console.fog-veil-off': 'fog veil: off',
+  'console.unit-takes': 'unit: <kind> [<script>]',
+  'console.ended': 'the chronicle has ended',
+  'console.no-tile-selected': 'no tile selected',
+  'console.no-unit-kind': 'no such unit kind: {kind}',
+  'console.no-script': 'no such script: {script}',
 } as const;
 
 export type TextKey = keyof typeof TEXT;

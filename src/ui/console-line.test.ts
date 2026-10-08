@@ -1,15 +1,37 @@
 import { describe, expect, it } from 'vitest';
-import { runLine, type Screen } from './console-line';
+import { runLine, type Screen, type UnitReads } from './console-line';
 import { VEILS_ON, type Veils } from './veils';
 
-/** A screen holding every entry: `seed`, reading a chronicle's seed, and the two switches. */
-const LAUNCHING: Screen = { seed: { reads: -42 }, switches: true };
+/** A screen holding `seed`, reading a chronicle's seed, the two switches, and no `unit`. */
+const LAUNCHING: Screen = { seed: { reads: -42 }, switches: true, unit: undefined };
 
 /** A screen holding `seed` alone, reading a chronicle's seed, and no switch. */
-const SEEDING: Screen = { seed: { reads: 42 }, switches: false };
+const SEEDING: Screen = { seed: { reads: 42 }, switches: false, unit: undefined };
 
 /** A screen holding no entry. */
-const BARE: Screen = { seed: undefined, switches: false };
+const BARE: Screen = { seed: undefined, switches: false, unit: undefined };
+
+/** The tile the screen holding `unit` has selected. */
+const SELECTED = { q: 2, r: -1 };
+
+/**
+ * A screen holding `unit` alone, on a chronicle running, `SELECTED` selected: its content holds the
+ * kinds `scout` and `boat` and the script `raider`, and every tile refuses a `boat` for its terrain.
+ */
+function unitScreen(reads: Partial<UnitReads> = {}): Screen {
+  return {
+    seed: undefined,
+    switches: false,
+    unit: {
+      ended: false,
+      selected: SELECTED,
+      holdsKind: (kind) => kind === 'scout' || kind === 'boat',
+      holdsScript: (script) => script === 'raider',
+      refusal: (kind) => (kind === 'boat' ? 'wrong-terrain' : undefined),
+      ...reads,
+    },
+  };
+}
 
 /** The veils a switch already thrown once leaves: the uncharted veil off, the fog standing. */
 function uncharted(): Veils {
@@ -40,7 +62,7 @@ describe('a line run at the console', () => {
     const ran = runLine('sight', veils, LAUNCHING);
     expect(ran.answer).toBe('no such entry: sight');
     expect(ran.veils).toBe(veils);
-    expect(ran.launch).toBeUndefined();
+    expect(ran.next).toBeUndefined();
   });
 
   it('answers nothing at all for an empty line', () => {
@@ -48,7 +70,7 @@ describe('a line run at the console', () => {
       const ran = runLine(line, VEILS_ON, LAUNCHING);
       expect(ran.answer).toBeUndefined();
       expect(ran.veils).toEqual(VEILS_ON);
-      expect(ran.launch).toBeUndefined();
+      expect(ran.next).toBeUndefined();
     }
   });
 
@@ -77,32 +99,31 @@ describe('seed run at the console', () => {
   it('answers the seed the screen reads, the minus included, and launches nothing', () => {
     const ran = runLine('seed', VEILS_ON, LAUNCHING);
     expect(ran.answer).toBe('seed: -42');
-    expect(ran.launch).toBeUndefined();
+    expect(ran.next).toBeUndefined();
     expect(ran.veils).toBe(VEILS_ON);
   });
 
   it('answers that there is no chronicle where the screen reads no seed', () => {
-    expect(runLine('seed', VEILS_ON, { seed: { reads: undefined }, switches: false }).answer).toBe(
-      'no chronicle',
-    );
+    const screen: Screen = { seed: { reads: undefined }, switches: false, unit: undefined };
+    expect(runLine('seed', VEILS_ON, screen).answer).toBe('no chronicle');
   });
 
   it('launches on the seed typed after it, answering nothing and leaving the veils standing', () => {
     const veils = uncharted();
     const ran = runLine('  seed   1234  ', veils, LAUNCHING);
-    expect(ran.launch).toBe(1234);
+    expect(ran.next).toEqual({ kind: 'launch', seed: 1234 });
     expect(ran.answer).toBeUndefined();
     expect(ran.veils).toBe(veils);
   });
 
   it('launches on a seed at either end of what a seed holds, and on one with a minus', () => {
-    expect(runLine('seed -2147483648', VEILS_ON, LAUNCHING).launch).toBe(-2147483648);
-    expect(runLine('seed 2147483647', VEILS_ON, LAUNCHING).launch).toBe(2147483647);
-    expect(runLine('seed -17', VEILS_ON, LAUNCHING).launch).toBe(-17);
+    for (const seed of [-2147483648, 2147483647, -17]) {
+      expect(runLine(`seed ${seed}`, VEILS_ON, LAUNCHING).next).toEqual({ kind: 'launch', seed });
+    }
   });
 
   it('launches on zero where zero is typed with a minus', () => {
-    expect(runLine('seed -0', VEILS_ON, LAUNCHING).launch).toBe(0);
+    expect(runLine('seed -0', VEILS_ON, LAUNCHING).next).toEqual({ kind: 'launch', seed: 0 });
   });
 
   it('refuses what is not a seed with what stood after the word, and launches nothing', () => {
@@ -120,7 +141,7 @@ describe('seed run at the console', () => {
     ]) {
       const ran = runLine(`seed ${typed}`, VEILS_ON, LAUNCHING);
       expect(ran.answer).toBe(`not a seed: ${typed}`);
-      expect(ran.launch).toBeUndefined();
+      expect(ran.next).toBeUndefined();
       expect(ran.veils).toBe(VEILS_ON);
     }
   });
@@ -138,21 +159,91 @@ describe('a line run on a screen holding some entries', () => {
 
   it('reads the seed and launches on one where the screen holds seed and no switch', () => {
     expect(runLine('seed', VEILS_ON, SEEDING).answer).toBe('seed: 42');
-    expect(runLine('seed 5', VEILS_ON, SEEDING).launch).toBe(5);
+    expect(runLine('seed 5', VEILS_ON, SEEDING).next).toEqual({ kind: 'launch', seed: 5 });
   });
 
   it('still refuses what is not a seed where the screen holds seed and no switch', () => {
     const ran = runLine('seed abc', VEILS_ON, SEEDING);
     expect(ran.answer).toBe('not a seed: abc');
-    expect(ran.launch).toBeUndefined();
+    expect(ran.next).toBeUndefined();
   });
 
-  it('answers every line as no entry on a screen holding none, and launches nothing', () => {
-    for (const line of ['seed', 'seed 3', '  seed abc ', 'fog', 'uncharted']) {
+  it('answers every line as no entry on a screen holding none, and launches and enters nothing', () => {
+    for (const line of [
+      'seed',
+      'seed 3',
+      '  seed abc ',
+      'fog',
+      'uncharted',
+      'unit',
+      'unit scout',
+    ]) {
       const ran = runLine(line, VEILS_ON, BARE);
       expect(ran.answer).toBe(`no such entry: ${line.trim()}`);
-      expect(ran.launch).toBeUndefined();
+      expect(ran.next).toBeUndefined();
       expect(ran.veils).toBe(VEILS_ON);
     }
+  });
+});
+
+describe('unit run at the console', () => {
+  /** What the line answers, having entered nothing and left the veils as they were. */
+  function refusal(line: string, screen: Screen): string | undefined {
+    const veils = uncharted();
+    const ran = runLine(line, veils, screen);
+    expect(ran.next).toBeUndefined();
+    expect(ran.veils).toBe(veils);
+    return ran.answer;
+  }
+
+  it('enters a unit of the player kind named on the tile selected where no script is named, answering nothing', () => {
+    const veils = uncharted();
+    const ran = runLine('unit scout', veils, unitScreen());
+    expect(ran.next).toEqual({
+      kind: 'enter',
+      entering: { type: 'scout', tile: SELECTED, faction: 'player' },
+    });
+    expect(ran.answer).toBeUndefined();
+    expect(ran.veils).toBe(veils);
+  });
+
+  it('enters an enemy on the script named, the spaces around the words trimmed', () => {
+    expect(runLine('  unit   scout   raider ', VEILS_ON, unitScreen()).next).toEqual({
+      kind: 'enter',
+      entering: { type: 'scout', tile: SELECTED, faction: 'enemy', script: 'raider' },
+    });
+  });
+
+  it('refuses an ended chronicle before it reads anything else', () => {
+    const ended = unitScreen({ ended: true, selected: undefined });
+    for (const line of ['unit', 'unit dragon', 'unit scout raider', 'unit a b c']) {
+      expect(refusal(line, ended)).toBe('the chronicle has ended');
+    }
+  });
+
+  it('says what it takes where nothing or more than a kind and a script stands after the word', () => {
+    const unselected = unitScreen({ selected: undefined });
+    expect(refusal('unit', unselected)).toBe('unit: <kind> [<script>]');
+    expect(refusal('unit scout raider raider', unselected)).toBe('unit: <kind> [<script>]');
+  });
+
+  it('refuses where no tile is selected before it reads the kind', () => {
+    expect(refusal('unit dragon', unitScreen({ selected: undefined }))).toBe('no tile selected');
+  });
+
+  it('refuses a kind the content does not hold before it reads the script', () => {
+    expect(refusal('unit dragon nobody', unitScreen())).toBe('no such unit kind: dragon');
+  });
+
+  it('refuses a script the content does not hold before it asks the tile', () => {
+    expect(refusal('unit boat nobody', unitScreen())).toBe('no such script: nobody');
+  });
+
+  it('refuses where the tile refuses the kind, in the refusal the tile raises', () => {
+    expect(refusal('unit boat raider', unitScreen())).toBe('Wrong terrain');
+    const standing = unitScreen({
+      refusal: (_kind, tile) => (tile === SELECTED ? 'unit-standing' : undefined),
+    });
+    expect(refusal('unit scout', standing)).toBe('A unit already stands here');
   });
 });

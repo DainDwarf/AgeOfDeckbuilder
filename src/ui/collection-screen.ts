@@ -577,7 +577,7 @@ export class CollectionScreen extends Phaser.Scene {
       away('menu', under);
       if (under) overlay.input.emit(COVERED);
     });
-    offerEntries(this, { seed: undefined, veiled: undefined });
+    offerEntries(this, { seed: undefined, veiled: undefined, unit: undefined });
     let laid: Laid | undefined;
     const laying = layingOf(this, CATALOGUE, {
       on: bubbles,

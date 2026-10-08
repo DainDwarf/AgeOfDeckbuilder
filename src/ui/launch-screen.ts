@@ -303,6 +303,7 @@ export class LaunchScreen extends Phaser.Scene {
         },
       },
       veiled: undefined,
+      unit: undefined,
     });
 
     const select = (row: Row, option: string): void => {

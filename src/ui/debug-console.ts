@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
-import { runLine } from './console-line';
+import type { Entering } from '../rules/catalogue';
+import { runLine, type UnitReads } from './console-line';
 import {
   addText,
   BAR_HEIGHT,
@@ -45,14 +46,18 @@ const CONSOLE_STYLE = {
 type Line = { readonly line: string; readonly answer: boolean };
 
 /**
- * The entries the screen standing holds: `seed`, with the seed it reads now and its launch, and the two
- * switches, with the map that draws the veils they leave.
+ * The entries the screen standing holds: `seed`, with the seed it reads now and its launch, the two
+ * switches, with the map that draws the veils they leave, and `unit`, with what it reads now and its
+ * enter.
  */
 export type Holding = {
   readonly seed:
     | { readonly reads: () => number | undefined; readonly launch: (seed: number) => void }
     | undefined;
   readonly veiled: ((veils: Veils) => void) | undefined;
+  readonly unit:
+    | { readonly reads: () => UnitReads; readonly enter: (entering: Entering) => void }
+    | undefined;
 };
 
 /**
@@ -61,8 +66,11 @@ export type Holding = {
  * interactive, which is what lets the pointer fall through to the screen beneath.
  */
 export class DebugConsole extends Phaser.Scene {
-  /** The console closed, the lines it ran cleared, and both veils back on. */
-  reset!: () => void;
+  /** The console closed, the lines it ran cleared and both veils back on; the veils are answered. */
+  reset!: () => Veils;
+
+  /** The console closed, the lines it ran and the veils left as they stand; the veils are answered. */
+  close!: () => Veils;
 
   /** The entries the screen standing holds, and nothing between one screen and the next. */
   holding: Holding | undefined;
@@ -128,10 +136,11 @@ export class DebugConsole extends Phaser.Scene {
       typed = '';
       const holding = this.holding;
       if (holding === undefined) throw new Error('no screen stands under the console');
-      const { seed, veiled } = holding;
+      const { seed, veiled, unit } = holding;
       const ran = runLine(line, veils, {
         seed: seed === undefined ? undefined : { reads: seed.reads() },
         switches: veiled !== undefined,
+        unit: unit?.reads(),
       });
       if (ran.answer !== undefined) {
         keep(text('console.line', { line }), false);
@@ -142,7 +151,18 @@ export class DebugConsole extends Phaser.Scene {
         veiled?.(veils);
       }
       paint();
-      if (ran.launch !== undefined) seed?.launch(ran.launch);
+      const { next } = ran;
+      if (next === undefined) return;
+      switch (next.kind) {
+        case 'launch':
+          seed?.launch(next.seed);
+          return;
+        case 'enter':
+          unit?.enter(next.entering);
+          return;
+      }
+      const unlisted: never = next;
+      throw new Error(`no next is ${JSON.stringify(unlisted)}`);
     };
 
     const show = (on: boolean): void => {
@@ -168,23 +188,32 @@ export class DebugConsole extends Phaser.Scene {
       return true;
     });
 
-    this.reset = (): void => {
+    this.close = (): Veils => {
+      show(false);
+      return veils;
+    };
+    this.reset = (): Veils => {
       history.length = 0;
       typed = '';
       veils = VEILS_ON;
       paint();
-      show(false);
+      return this.close();
     };
     this.reset();
   }
 }
 
+/** The console put back where it began for a new chronicle; the veils its map opens under are answered. */
+export function resetConsole(scene: Phaser.Scene): Veils {
+  return scene.game.scene.getScene<DebugConsole>('console').reset();
+}
+
 /**
- * The console put back where it began for the chronicle screen now rising, which therefore opens
- * under both veils.
+ * The console closed for the chronicle screen reopening, the lines it ran and the veils standing;
+ * the veils its map opens under are answered.
  */
-export function resetConsole(scene: Phaser.Scene): void {
-  scene.game.scene.getScene<DebugConsole>('console').reset();
+export function closeConsole(scene: Phaser.Scene): Veils {
+  return scene.game.scene.getScene<DebugConsole>('console').close();
 }
 
 /** The entries the console answers, for as long as the screen now rising stands. */

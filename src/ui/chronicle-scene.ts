@@ -1,7 +1,8 @@
 import Phaser from 'phaser';
 import { CATALOGUE } from '../content/catalogue';
 import { civilizationIn, type Payment } from '../rules/campaign';
-import { playedThrough, refuses, throughRefusal } from '../rules/cards';
+import { entersOn, playedThrough, refuses, throughRefusal } from '../rules/cards';
+import { type Entering, entered } from '../rules/catalogue';
 import {
   admitted,
   apply,
@@ -15,6 +16,7 @@ import {
 import { cityCommand, type ReassignCommand, tileCost, tileRefusal } from '../rules/city';
 import { type Tile, type TileCoords, tileAt, tileKey } from '../rules/map';
 import { RESOURCES, type Resource } from '../rules/resources';
+import { charted } from '../rules/sight';
 import { leaf, type Stage, walked } from '../rules/stages';
 import { type Chronicle, type Cost, onSettlePhase, playable } from '../rules/state';
 import { type Unit, unitOf } from '../rules/units';
@@ -22,7 +24,7 @@ import { createBand } from './band';
 import { boundTo, type Press, pressOf } from './bindings';
 import { CARD_BASELINE, CARD_HEIGHT, createKindBubble } from './card-face';
 import { EASE, ended, stopAllMotion, stopMotion } from './card-motion';
-import { offerEntries, resetConsole } from './debug-console';
+import { closeConsole, offerEntries, resetConsole } from './debug-console';
 import {
   addText,
   answersPress,
@@ -112,17 +114,23 @@ const LABEL_STYLE = {
 export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
   private choices!: Choices;
   private current!: Chronicle;
+  /** Whether the screen opened with the console standing as the screen before it left it. */
+  private consoleKept!: boolean;
   /** What the chronicle paid into the campaign as it ended, and nothing before it has. */
   private payment: Payment | undefined;
-  /** The play-out running on the chronicle screen as it stands, and nothing while none is. */
-  private sequence: symbol | undefined;
+  /**
+   * The play-out running on the chronicle screen as it stands, with the chronicle its command
+   * leaves, and nothing while none is.
+   */
+  private sequence: { readonly leaves: Chronicle } | undefined;
 
   constructor() {
     super('ui');
   }
 
-  init({ resumed, seed, ...choices }: Opening): void {
+  init({ resumed, seed, consoleKept, ...choices }: ChronicleStart): void {
     this.choices = choices;
+    this.consoleKept = consoleKept === true;
     this.payment = undefined;
     this.current = resumed ?? this.begin(seed);
   }
@@ -130,6 +138,11 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
   /** The chronicle as it stands, for whoever holds the game through `window.game`. */
   get chronicle(): Chronicle {
     return this.current;
+  }
+
+  /** The chronicle the rules have left, ahead of the screen while a play-out is still showing it. */
+  private get latest(): Chronicle {
+    return this.sequence?.leaves ?? this.current;
   }
 
   /** Whether a command is still playing out its stages: the chronicle moves on under it. */
@@ -178,6 +191,17 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
     openChronicle(this.scene, { ...this.choices, seed });
   }
 
+  /**
+   * The unit entered on the chronicle the rules have left and what it sees charted, kept as the
+   * save, and the screen reopened on that chronicle with the console standing.
+   */
+  private enterUnit(entering: Entering): void {
+    const after = charted(CATALOGUE, entered(CATALOGUE, this.latest, entering).chronicle);
+    this.letGo();
+    keepChronicle(this.choices, after);
+    openChronicle(this.scene, { ...this.choices, resumed: after, consoleKept: true });
+  }
+
   create(): void {
     const map = mapOf(this);
     const camera = this.cameras.main;
@@ -221,7 +245,8 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
     };
 
     const parts: Part[] = [];
-    const view = createMapView(map, map.strata, CATALOGUE, this.current);
+    const veils = this.consoleKept ? closeConsole(this) : resetConsole(this);
+    const view = createMapView(map, map.strata, CATALOGUE, this.current, veils);
     const panel = createInfoPanel(map, map.strata.infopanel, CATALOGUE, tooltip.map);
     const note = createRefusalNote(map, map.strata.note);
     // The map's note hears only the presses this scene lets through to the map.
@@ -263,7 +288,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       logRuntimeErrors(stages);
       const after = outcome(stages);
       if (after !== this.current) this.payment = keepChronicle(this.choices, after);
-      const running = Symbol('play-out');
+      const running = { leaves: after };
       this.sequence = running;
 
       try {
@@ -722,7 +747,6 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       if (!leaveCityMode()) raiseMenu(this);
     });
 
-    resetConsole(this);
     offerEntries(this, {
       seed: {
         reads: () => this.current.seed,
@@ -730,8 +754,27 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
           this.launchOn(seed);
         },
       },
-      veiled: (veils) => {
-        view.showVeils(veils);
+      veiled: (thrown) => {
+        view.showVeils(thrown);
+      },
+      unit: {
+        reads: () => {
+          const chronicle = this.latest;
+          return {
+            ended: chronicle.ending !== undefined,
+            selected: selection?.tile,
+            holdsKind: (kind) => Object.hasOwn(CATALOGUE.units, kind),
+            holdsScript: (script) => Object.hasOwn(CATALOGUE.scripts, script),
+            refusal: (kind, tile) => {
+              const at = tileAt(chronicle.tiles, tile);
+              if (at === undefined) throw new Error(`no tile of the map is ${tileKey(tile)}`);
+              return entersOn(kind).refuses(CATALOGUE, chronicle, at);
+            },
+          };
+        },
+        enter: (entering) => {
+          this.enterUnit(entering);
+        },
       },
     });
     resetMenu(this, (up) => {
@@ -877,13 +920,16 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
   }
 }
 
+/** What the chronicle screen starts on: the opening, and whether the console stands as it stood. */
+type ChronicleStart = Opening & { readonly consoleKept?: true };
+
 /**
  * The chronicle screen opened on the opening, in place of the screen calling or as the boot's first.
  * The overlay is put ahead and the map started before it: it reaches into both as it is created.
  */
 export function openChronicle(
   scenes: Phaser.Scenes.ScenePlugin | Phaser.Scenes.SceneManager,
-  opening: Opening,
+  opening: ChronicleStart,
 ): void {
   overlayAhead(scenes);
   // A scene's plugin queues the start, and its own `start` would stop the scene calling it.

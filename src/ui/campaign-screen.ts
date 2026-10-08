@@ -36,7 +36,7 @@ export class CampaignScreen extends Phaser.Scene {
         keepCampaign(on ? pinned(CATALOGUE, campaign, technology) : unpinned(campaign, technology));
       },
     );
-    offerEntries(this, { seed: undefined, veiled: undefined });
+    offerEntries(this, { seed: undefined, veiled: undefined, unit: undefined });
     resetMenu(this, (under) => {
       tree.cover(away('menu', under));
       if (under) overlay.input.emit(COVERED);

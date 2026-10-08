@@ -1,3 +1,7 @@
+import type { Entering } from '../rules/catalogue';
+import type { TileCoords } from '../rules/map';
+import type { TileBlock } from '../rules/state';
+import { blockLine } from './refusal-lines';
 import { type TextKey, text } from './text';
 import type { Veil, Veils } from './veils';
 
@@ -24,22 +28,40 @@ function seedOf(typed: string): number | undefined {
 }
 
 /**
+ * What `unit` reads on the screen under the console: whether its chronicle has ended, the tile
+ * selected, whether the content holds a unit kind and a script, and why a tile refuses a kind.
+ */
+export type UnitReads = {
+  readonly ended: boolean;
+  readonly selected: TileCoords | undefined;
+  readonly holdsKind: (kind: string) => boolean;
+  readonly holdsScript: (script: string) => boolean;
+  readonly refusal: (kind: string, tile: TileCoords) => TileBlock | undefined;
+};
+
+/**
  * The entries the screen under the console holds: `seed`, with the seed it reads there, where it holds
- * it, and whether it holds the two switches.
+ * it, whether it holds the two switches, and `unit`, with what it reads there, where it holds it.
  */
 export type Screen = {
   readonly seed: { readonly reads: number | undefined } | undefined;
   readonly switches: boolean;
+  readonly unit: UnitReads | undefined;
 };
 
+/** What the screen does once a line has run: a chronicle launched on a seed, or a unit entered. */
+export type Next =
+  | { readonly kind: 'launch'; readonly seed: number }
+  | { readonly kind: 'enter'; readonly entering: Entering };
+
 /**
- * What a line left behind: the veils the map draws under, the one line the console answers, and the
- * seed a chronicle is launched on, where the line launches one.
+ * What a line left behind: the veils the map draws under, the one line the console answers, and
+ * what the screen does next, where the line launches a chronicle or enters a unit.
  */
 export type Ran = {
   readonly veils: Veils;
   readonly answer: string | undefined;
-  readonly launch?: number;
+  readonly next?: Next;
 };
 
 /**
@@ -55,6 +77,8 @@ export function runLine(line: string, veils: Veils, screen: Screen): Ran {
   const unheld: Ran = { veils, answer: text('console.no-entry', { line: trimmed }) };
   if (word === 'seed')
     return screen.seed === undefined ? unheld : seeded(after, veils, screen.seed.reads);
+  if (word === 'unit')
+    return screen.unit === undefined ? unheld : unitRan(after, veils, screen.unit);
 
   const entry = SWITCHES.find((each) => each === word);
   if (entry === undefined || after.length > 0 || !screen.switches) return unheld;
@@ -72,5 +96,29 @@ function seeded(after: string, veils: Veils, reads: number | undefined): Ran {
   }
   const seed = seedOf(after);
   if (seed === undefined) return { veils, answer: text('console.not-a-seed', { typed: after }) };
-  return { veils, answer: undefined, launch: seed };
+  return { veils, answer: undefined, next: { kind: 'launch', seed } };
+}
+
+/**
+ * `unit` with what stood after it: the first refusal that holds, or the unit entered on the tile
+ * selected, an enemy's on the script named and the player's where none is.
+ */
+function unitRan(after: string, veils: Veils, reads: UnitReads): Ran {
+  const refused = (answer: string): Ran => ({ veils, answer });
+  if (reads.ended) return refused(text('console.ended'));
+  const words = after.length === 0 ? [] : after.split(/\s+/);
+  if (words.length === 0 || words.length > 2) return refused(text('console.unit-takes'));
+  const tile = reads.selected;
+  if (tile === undefined) return refused(text('console.no-tile-selected'));
+  const [type, script] = words;
+  if (!reads.holdsKind(type)) return refused(text('console.no-unit-kind', { kind: type }));
+  if (script !== undefined && !reads.holdsScript(script))
+    return refused(text('console.no-script', { script }));
+  const block = reads.refusal(type, tile);
+  if (block !== undefined) return refused(blockLine(block));
+  const entering: Entering =
+    script === undefined
+      ? { type, tile, faction: 'player' }
+      : { type, tile, faction: 'enemy', script };
+  return { veils, answer: undefined, next: { kind: 'enter', entering } };
 }

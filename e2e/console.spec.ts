@@ -1,17 +1,21 @@
 import { expect, type Page, test } from '@playwright/test';
 import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
-import { tileKey } from '../src/rules/map';
+import { ageOf, unitKind } from '../src/rules/catalogue';
+import { neighbours, tileAt, tileKey } from '../src/rules/map';
 import { freshCampaign } from '../src/rules/save';
 import { inSight } from '../src/rules/sight';
 import type { Chronicle } from '../src/rules/state';
+import { standsOn, unitAt } from '../src/rules/units';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
 import { openingChoices } from '../src/ui/launch-layout';
 import { text } from '../src/ui/text';
 import {
+  besideTiles,
   budget,
   campaignShown,
   chronicleOf,
+  cityTileOf,
   consoleKey,
   enemiesOf,
   enter,
@@ -23,10 +27,13 @@ import {
   openSaved,
   readNames,
   rested,
+  ringedTile,
   settledOn,
   shows,
   standing,
   tileOnScreen,
+  unitEntered,
+  WARRIOR,
   watch,
 } from './chronicle-screen';
 
@@ -267,6 +274,76 @@ test('seed on the chronicle screen answers the seed of the chronicle standing, a
   await consoleKey(page);
   await enter(page, 'seed');
   expect((await consoleLines(page))[3]).toBe(text('console.seed', { seed: other }));
+
+  expect(problems).toEqual([]);
+});
+
+test('unit on the chronicle screen enters the unit on the tile selected as the rules enter and chart it, and reopens the screen on that chronicle with the lines and the veils standing', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const stood = settledOn(1, ['first-worker']);
+  const city = cityTileOf(stood);
+  const warrior = unitKind(CATALOGUE, WARRIOR);
+  const free = neighbours(city).find(
+    (tile) =>
+      standsOn(CATALOGUE, warrior, false, tileAt(stood.tiles, tile)) &&
+      unitAt(stood.units, tile) === undefined,
+  );
+  if (free === undefined) throw new Error('no tile beside the city takes a warrior');
+  const raider = ageOf(CATALOGUE, stood.age).camp.scripts.raider;
+  const oracle = unitEntered(stood, {
+    type: WARRIOR,
+    tile: free,
+    faction: 'enemy',
+    script: raider,
+  });
+
+  await openSaved(page, stood);
+  await consoleKey(page);
+  await enter(page, 'unit');
+  expect((await consoleLines(page))[3]).toBe(text('console.unit-takes'));
+
+  // The worker stands on the city's tile, and selected it lights the tiles it steps to: the press
+  // beside the tiles lets it go before any of them is pressed.
+  const cityAt = await tileOnScreen(page, city);
+  await page.mouse.click(cityAt.x, cityAt.y);
+  await expect.poll(() => ringedTile(page)).toBe(tileKey(city));
+  await enter(page, `unit ${WARRIOR}`);
+  expect((await consoleLines(page))[3]).toBe(text('refusal.unit-standing'));
+
+  const beside = await besideTiles(page);
+  await page.mouse.click(beside.x, beside.y);
+  await expect.poll(() => ringedTile(page)).toBeUndefined();
+  await enter(page, `unit ${WARRIOR}`);
+  expect((await consoleLines(page))[3]).toBe(text('console.no-tile-selected'));
+
+  await enter(page, 'fog');
+  const freeAt = await tileOnScreen(page, free);
+  await page.mouse.click(freeAt.x, freeAt.y);
+  await expect.poll(() => ringedTile(page)).toBe(tileKey(free));
+  await enter(page, `unit ${WARRIOR} ${raider}`);
+
+  await page.waitForFunction(
+    (count) =>
+      window.game?.scene.isActive('ui') === true &&
+      window.game.scene.getScene<ChronicleScene>('ui').chronicle.units.length === count,
+    oracle.units.length,
+  );
+  await rested(page);
+  expect(await chronicleOf(page)).toEqual(oracle);
+  expect(await heldChronicle(page)).toEqual(oracle);
+  expect(await shows(page, 'console')).toBe(false);
+  expect(await marksIn(page, 'fog')).toBe(0);
+
+  await consoleKey(page);
+  expect(await consoleLines(page)).toEqual([
+    `> unit ${WARRIOR}`,
+    text('console.no-tile-selected'),
+    '> fog',
+    text('console.fog-veil-off'),
+    '> ',
+  ]);
 
   expect(problems).toEqual([]);
 });
