@@ -13,5 +13,5 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **A console line enters a unit** — a debug console entry that reopens the chronicle screen on the chronicle with a unit entered through the rules' own helper, kind, tile, faction and script named, the way the seed entry relaunches; the specs keep planting their own.
+- **A console line enters a unit** — the chronicle screen's console holds `unit <kind> [<script>]`, which enters that unit on the selected tile through the rules' own enter and chart and reopens the screen on the chronicle that leaves, kept as the save, the veils and the lines standing; the line's reading is proven in Vitest and the screen by `e2e/console.spec.ts`. Doc-impact: `docs/INTERFACE.md`. [board/console-unit.md](board/console-unit.md)
 - **The siege and the second script** — the capstone's second-script hook, which no content carries, leaves the rules and the chronicle page, and the siege fixture goes with it.
