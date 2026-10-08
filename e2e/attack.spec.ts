@@ -1,8 +1,8 @@
 import { expect, type Page, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
-import { entered, unitKind } from '../src/rules/catalogue';
+import { ageOf, entered, unitKind } from '../src/rules/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
-import { campUnit } from '../src/rules/enemies';
+import { enemyEntering } from '../src/rules/enemies';
 import { neighbours, type TileCoords, tileAt, tileKey } from '../src/rules/map';
 import { charted } from '../src/rules/sight';
 import type { Chronicle } from '../src/rules/state';
@@ -25,7 +25,7 @@ import {
 
 /**
  * The first seed's turn 1 with a warrior of the player's entered on the city's tile and one enemy of
- * the camp's first unit kind entered with the raider script on a tile beside it, and the two units.
+ * the camp's kind entered with the raider script on a tile beside it, and the two units.
  */
 function besieged(): { chronicle: Chronicle; warrior: Unit; enemy: Unit } {
   return firstSeed('stands an enemy beside its city', (seed) => {
@@ -40,11 +40,8 @@ function besieged(): { chronicle: Chronicle; warrior: Unit; enemy: Unit } {
         unitAt(guarded.chronicle.units, tile) === undefined,
     );
     if (beside === undefined) return undefined;
-    const beset = entered(
-      CATALOGUE,
-      guarded.chronicle,
-      campUnit(CATALOGUE, guarded.chronicle, kind, beside, 'raider'),
-    );
+    const { raider } = ageOf(CATALOGUE, settled.age).camp.scripts;
+    const beset = entered(CATALOGUE, guarded.chronicle, enemyEntering(kind, raider, beside));
     const chronicle = charted(CATALOGUE, beset.chronicle);
     const [warrior] = playersOf(chronicle);
     const enemy = unitAt(chronicle.units, beside);

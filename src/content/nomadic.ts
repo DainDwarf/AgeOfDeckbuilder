@@ -184,7 +184,10 @@ const TABLES: Tables = {
         ration: {
           cost: {},
           reads: (_catalogue, chronicle) => ({ warriors: raiders(chronicle.turn) }),
-          lands: (catalogue, chronicle) => raided(catalogue, chronicle, raiders(chronicle.turn)),
+          lands: (catalogue, chronicle) =>
+            raided(catalogue, chronicle, raiders(chronicle.turn), [
+              { kind: 'warrior', script: 'raider', weight: 1 },
+            ]),
         },
       },
     },
@@ -196,7 +199,9 @@ const TABLES: Tables = {
           cost: {},
           reads: (_catalogue, chronicle) => ({ warriors: raiders(chronicle.turn) + 1 }),
           lands: (catalogue, chronicle) =>
-            raided(catalogue, chronicle, raiders(chronicle.turn) + 1),
+            raided(catalogue, chronicle, raiders(chronicle.turn) + 1, [
+              { kind: 'warrior', script: 'raider', weight: 1 },
+            ]),
         },
         'make-room': {
           cost: {},
@@ -214,7 +219,9 @@ const TABLES: Tables = {
             // The first enemy lands on the camp, where its kind stands on it, only because
             // `campsPlaced` asks no unit to stand there.
             return followed(placing, (left) =>
-              enteredAround(catalogue, left, camp, raiders(chronicle.turn), 'guard'),
+              enteredAround(catalogue, left, camp, raiders(chronicle.turn), [
+                { kind: 'warrior', script: 'guard', weight: 1 },
+              ]),
             );
           },
         },
@@ -405,7 +412,8 @@ export const NOMADIC: Slice = {
       },
     },
     camp: {
-      unitKinds: { warrior: 1 },
+      opening: [{ kind: 'warrior', script: 'guard', weight: 1 }],
+      roll: [{ kind: 'warrior', script: 'guard', weight: 1 }],
       scripts: { guard: 'guard', raider: 'raider' },
       building: 'camp',
       rewards: ['stores', 'band-joins'],

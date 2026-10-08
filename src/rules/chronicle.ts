@@ -172,7 +172,7 @@ export function beginChronicle(
   let guarded = begun;
   for (const { q, r, building } of map.tiles) {
     if (building !== camp.building) continue;
-    guarded = enteredOnCamp(catalogue, guarded, { q, r }, 'guard').chronicle;
+    guarded = enteredOnCamp(catalogue, guarded, { q, r }, camp.opening).chronicle;
   }
   const seen = charted(catalogue, guarded);
   const raised = reachedOn(catalogue, seen, () => true);
@@ -1136,7 +1136,7 @@ function everyPlace(pile: readonly ChronicleCard[]): number[] {
 /**
  * The enemies' half of the turn, the one `enemy-phase` group: the prepares carried through the
  * player's turn land first, a capture's `ended` alone in the group; then the camps send their waves,
- * then every enemy acts in unit order, then the camps roll their warriors.
+ * then every enemy acts in unit order, then the camps roll their enemies.
  */
 function enemyPhase(catalogue: Catalogue, chronicle: Chronicle): Sequence<Group> {
   let phase: Sequence = followed(preparesLanded(catalogue, chronicle), (left) =>
@@ -1266,9 +1266,9 @@ function enemyStepped(
 }
 
 /**
- * The camps rolling their own guards, in tile order: each camp draws once from the seeded generator
- * whatever its odds, and where the draw falls under them one guard enters around it. A draw that
- * entered nothing raises no stage and rides on the chronicle handed back.
+ * The camps rolling their own enemies, in tile order: each camp draws once from the seeded generator
+ * whatever its odds, and where the draw falls under them one enemy of its roll's table enters around
+ * it. A draw that entered nothing raises no stage and rides on the chronicle handed back.
  */
 function campsRolled(catalogue: Catalogue, chronicle: Chronicle): Sequence {
   const { camp } = ageOf(catalogue, chronicle.age);
@@ -1279,7 +1279,7 @@ function campsRolled(catalogue: Catalogue, chronicle: Chronicle): Sequence {
       const step = nextRng(left.rng);
       const drawn = { ...left, rng: step.rng };
       if (step.value >= camp.odds) return unchanged(drawn);
-      return enteredAround(catalogue, drawn, { q, r }, 1, 'guard');
+      return enteredAround(catalogue, drawn, { q, r }, 1, camp.roll);
     });
   }
   return rolling;

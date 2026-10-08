@@ -32,6 +32,7 @@ import {
 } from './cards';
 import {
   type Age,
+  type Answer,
   ageOf,
   type Camp,
   type Catalogue,
@@ -48,6 +49,8 @@ import {
   type Slice,
   type Tables,
   type Technology,
+  type UnitEntryRow,
+  type UnitEntryTable,
 } from './catalogue';
 import {
   apply,
@@ -59,7 +62,14 @@ import {
   terrainsPlayedOn,
 } from './chronicle';
 import { arrived, bordered, populationKilled, populationTaken, yielded } from './city';
-import { attackOrNone, enteredAround, enteredOnCamp, leastHealth, raided } from './enemies';
+import {
+  attackOrNone,
+  enemyEntering,
+  enteredAround,
+  enteredOnCamp,
+  leastHealth,
+  raided,
+} from './enemies';
 import {
   type BuildingTypeId,
   cornerKey,
@@ -115,6 +125,21 @@ import {
 } from './units';
 
 const SIEGE_CAMPS = 5;
+
+/** The one unit kind the fixture camp enters. */
+export const CAMP_KIND = 'PH_Warrior';
+
+/** The script the fixture's enemies enter with, and the one its camp's raiders carry. */
+export const SCRIPT = 'PH_Beeline';
+
+/** The id of the script the fixture camp's guards carry, `SENTRY`. */
+const GUARD_SCRIPT = 'PH_Sentry';
+
+/** The fixture camp's kind, as a raider. */
+export const RAIDER_ROW: UnitEntryRow = { kind: CAMP_KIND, script: SCRIPT, weight: 1 };
+
+/** The fixture camp's kind, as a guard. */
+const GUARD_ROW: UnitEntryRow = { kind: CAMP_KIND, script: GUARD_SCRIPT, weight: 1 };
 
 /** A turn past any a test ends. */
 const FAR = 1000;
@@ -175,20 +200,25 @@ function besieged(catalogue: Catalogue, chronicle: Chronicle): Landed {
   const placing = campsPlaced(catalogue, chronicle, SIEGE_CAMPS, [3, 5], 3);
   let landing: Landed = placing;
   for (const camp of placing.placed) {
-    landing = followed(landing, (left) => enteredOnCamp(catalogue, left, camp, 'raider'));
+    landing = followed(landing, (left) => enteredOnCamp(catalogue, left, camp, [RAIDER_ROW]));
   }
   return landing;
+}
+
+/** The fixture's raid, its enemies drawn out of the table. */
+function raidOf(table: UnitEntryTable): Answer {
+  return {
+    cost: {},
+    reads: (_catalogue, chronicle) => ({ warriors: raiders(chronicle.turn) }),
+    lands: (catalogue, chronicle) => raided(catalogue, chronicle, raiders(chronicle.turn), table),
+  };
 }
 
 /** The events every fixture age's schedule deals from, each one also an age of its own through `dealing`. */
 const EVENTS: Catalogue['events'] = {
   PH_Hardship: {
     answers: {
-      PH_Raid: {
-        cost: {},
-        reads: (_catalogue, chronicle) => ({ warriors: raiders(chronicle.turn) }),
-        lands: (catalogue, chronicle) => raided(catalogue, chronicle, raiders(chronicle.turn)),
-      },
+      PH_Raid: raidOf([RAIDER_ROW]),
       PH_Famine: {
         cost: {},
         reads: () => ({}),
@@ -262,7 +292,7 @@ const EVENTS: Catalogue['events'] = {
           // The first enemy lands on the camp, where its kind stands on it, only because
           // `campsPlaced` asks no unit to stand there.
           return followed(placing, (left) =>
-            enteredAround(catalogue, left, camp, ENCAMPED, 'guard'),
+            enteredAround(catalogue, left, camp, ENCAMPED, [GUARD_ROW]),
           );
         },
       },
@@ -345,9 +375,6 @@ const EVENTS: Catalogue['events'] = {
   },
 };
 
-/** The script the fixture's enemies enter with, and the one its camp's raiders carry. */
-export const SCRIPT = 'PH_Beeline';
-
 /** What the fixture's scripts do with an action: attack the unit of the least health they can. */
 function struckAt(catalogue: Catalogue, chronicle: Chronicle, enemy: Unit): EnemyAct {
   return attackOrNone(leastHealth(catalogue, chronicle.tiles, chronicle.units, enemy));
@@ -425,7 +452,7 @@ const TABLES: Omit<Tables, 'technologies'> = {
       sight: 2,
     },
   },
-  scripts: { [SCRIPT]: BEELINE, PH_Sentry: SENTRY },
+  scripts: { [SCRIPT]: BEELINE, [GUARD_SCRIPT]: SENTRY },
   cards: {
     PH_Settle: {
       kind: 'settle',
@@ -791,13 +818,11 @@ export const REGIONS: Readonly<Record<string, Region>> = {
   },
 };
 
-/** The one unit kind the fixture camp enters. */
-export const CAMP_KIND = 'PH_Warrior';
-
 /** The camp every fixture age holds. */
 export const CAMP: Camp = {
-  unitKinds: { [CAMP_KIND]: 1 },
-  scripts: { guard: 'PH_Sentry', raider: SCRIPT },
+  opening: [GUARD_ROW],
+  roll: [GUARD_ROW],
+  scripts: { guard: GUARD_SCRIPT, raider: SCRIPT },
   building: 'PH_Camp',
   rewards: ['PH_Spoils', 'PH_Cache'],
   odds: 0,
@@ -1006,6 +1031,14 @@ export const CATALOGUE: Catalogue = merged('fixture', SLICES);
 /** The content handed in, the fixture's unless named, its camp naming these over the fixture camp's own. */
 export function camping(named: Partial<Camp>, content: Catalogue = CATALOGUE): Catalogue {
   return catalogued({ ...content, ages: agesOver({ ...CAMP, ...named }, REGIONS) });
+}
+
+/** The content handed in, the fixture's unless named, its raid drawing out of the table handed in. */
+export function raidingFrom(table: UnitEntryTable, content: Catalogue = CATALOGUE): Catalogue {
+  const hardship = content.events.PH_Hardship;
+  const answers = { ...hardship.answers, PH_Raid: raidOf(table) };
+  const events = { ...content.events, PH_Hardship: { ...hardship, answers } };
+  return catalogued({ ...content, events });
 }
 
 /**
@@ -1435,7 +1468,7 @@ export function standing(
     case 'player':
       return { ...state, entering: { type: carried.type, tile, faction } };
     case 'enemy':
-      return { ...state, entering: { type: carried.type, tile, faction, script: SCRIPT } };
+      return { ...state, entering: enemyEntering(carried.type, SCRIPT, tile) };
   }
 }
 

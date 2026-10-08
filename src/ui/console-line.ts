@@ -1,4 +1,5 @@
 import type { Entering } from '../rules/catalogue';
+import { enemyEntering } from '../rules/enemies';
 import type { TileCoords } from '../rules/map';
 import type { TileBlock } from '../rules/state';
 import { blockLine } from './refusal-lines';
@@ -124,7 +125,7 @@ function unitRan(after: string, veils: Veils, reads: UnitReads): Ran {
       next: { kind: 'enter', entering },
     };
   }
-  const entering: Entering = { type, tile, faction: 'enemy', script };
+  const entering = enemyEntering(type, script, tile);
   return {
     veils,
     answer: text('console.entered-enemy', { kind: type, script }),

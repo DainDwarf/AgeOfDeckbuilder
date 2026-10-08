@@ -3,6 +3,7 @@ import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
 import { ageOf, type Entering, entered, unitKind } from '../src/rules/catalogue';
 import { apply, chartedAndRead, outcome } from '../src/rules/chronicle';
+import { enemyEntering } from '../src/rules/enemies';
 import { neighbours, type TileCoords, tileAt, tileKey } from '../src/rules/map';
 import { freshCampaign, readSave } from '../src/rules/save';
 import { inSight } from '../src/rules/sight';
@@ -346,7 +347,7 @@ test('unit on the chronicle screen enters the unit on the tile selected as the r
   const city = cityTileOf(stood);
   const free = warriorGround(stood);
   const raider = ageOf(CATALOGUE, stood.age).camp.scripts.raider;
-  const oracle = enteredOn(stood, { type: WARRIOR, tile: free, faction: 'enemy', script: raider });
+  const oracle = enteredOn(stood, enemyEntering(WARRIOR, raider, free));
 
   await openSaved(page, stood);
   await consoleKey(page);

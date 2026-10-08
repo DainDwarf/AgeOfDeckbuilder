@@ -1,7 +1,8 @@
 import { expect, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
+import { ageOf } from '../src/rules/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
-import { campUnit } from '../src/rules/enemies';
+import { enemyEntering } from '../src/rules/enemies';
 import { neighbours, type TileCoords, tileKey } from '../src/rules/map';
 import { charted, chartedAt, inSight } from '../src/rules/sight';
 import type { Chronicle } from '../src/rules/state';
@@ -90,7 +91,8 @@ function enemyInFog(): { chronicle: Chronicle; fog: TileCoords } {
   const bare = settledOn(1);
   const [fog] = campGround(bare, 4);
   if (fog === undefined) throw new Error('seed 1 leaves no ground four tiles from its city');
-  const guarded = unitEntered(bare, campUnit(CATALOGUE, bare, campKind(bare), fog, 'guard'));
+  const { guard } = ageOf(CATALOGUE, bare.age).camp.scripts;
+  const guarded = unitEntered(bare, enemyEntering(campKind(bare), guard, fog));
   return { chronicle: charted(CATALOGUE, chartedAt(CATALOGUE, guarded, fog)), fog };
 }
 

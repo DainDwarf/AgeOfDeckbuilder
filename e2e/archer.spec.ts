@@ -1,9 +1,9 @@
 import { expect, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
 import { terraformed } from '../src/rules/cards';
-import { unitKind } from '../src/rules/catalogue';
+import { ageOf, unitKind } from '../src/rules/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
-import { campUnit } from '../src/rules/enemies';
+import { enemyEntering } from '../src/rules/enemies';
 import { neighbours, type TileCoords, tileAt, tileKey } from '../src/rules/map';
 import { charted, inSight } from '../src/rules/sight';
 import type { Chronicle } from '../src/rules/state';
@@ -48,10 +48,11 @@ function overTheHills(): { chronicle: Chronicle; archer: Unit; seen: Unit; hidde
     const [archer] = playersOf(armed);
     const kind = campKind(armed);
     const stats = unitKind(CATALOGUE, kind);
+    const { raider } = ageOf(CATALOGUE, armed.age).camp.scripts;
     const enemyOn = (chronicle: Chronicle, tile: TileCoords): Chronicle | undefined =>
       standsOn(CATALOGUE, stats, false, tileAt(chronicle.tiles, tile)) &&
       unitAt(chronicle.units, tile) === undefined
-        ? unitEntered(chronicle, campUnit(CATALOGUE, chronicle, kind, tile, 'raider'))
+        ? unitEntered(chronicle, enemyEntering(kind, raider, tile))
         : undefined;
 
     for (const ridge of neighbours(city)) {

@@ -1645,15 +1645,15 @@ export function paidOnDeer(
   return paidOnGround(card, (opened) => onDeer(opened, improvements), civilization, era);
 }
 
-/** The first unit kind the chronicle's age's camp enters. */
+/** The kind of the first row of the table the chronicle's age's camp opens with. */
 export function campKind(chronicle: Chronicle): string {
-  const [first] = Object.keys(ageOf(CATALOGUE, chronicle.age).camp.unitKinds);
-  return first;
+  const [first] = ageOf(CATALOGUE, chronicle.age).camp.opening;
+  return first.kind;
 }
 
 /**
- * The tiles that far from the city the camp's first unit kind can stand on with nobody on them, in
- * the order the map lists them.
+ * The tiles that far from the city the camp's kind can stand on with nobody on them, in the order the
+ * map lists them.
  */
 export function campGround(chronicle: Chronicle, away: number): TileCoords[] {
   const stats = unitKind(CATALOGUE, campKind(chronicle));

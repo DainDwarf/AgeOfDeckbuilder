@@ -1,13 +1,13 @@
 import {
   ageOf,
-  type CampScript,
   type Catalogue,
   type EnemyAct,
   type Entering,
-  type EveryCampScript,
   entered,
+  type UnitEntryRow,
+  type UnitEntryTable,
+  unitEntryTableHeld,
   unitKind,
-  waveScripts,
 } from './catalogue';
 import {
   CENTRE,
@@ -115,13 +115,14 @@ export function nearestCamp(
 
 /**
  * The camps sending their waves, in tile order, each one `wave-sent` on its tile: where the guards
- * counted for a camp are as many as its wave names, as many as it names leave under one script drawn
- * among the wave's, those off the camp's tile first in unit order and the one on it last.
+ * counted for a camp are as many as its wave names, as many as it names leave as its raiders, those
+ * off the camp's tile first in unit order and the one on it last.
  */
 export function wavesSent(catalogue: Catalogue, chronicle: Chronicle): Landed {
   const { camp } = ageOf(catalogue, chronicle.age);
   const { wave } = camp;
   if (wave === undefined) return unchanged(chronicle);
+  const script = camp.scripts.raider;
   let sending = unchanged(chronicle);
   for (const { q, r, building } of chronicle.tiles) {
     if (building !== camp.building) continue;
@@ -139,16 +140,10 @@ export function wavesSent(catalogue: Catalogue, chronicle: Chronicle): Landed {
           .slice(0, wave.sent)
           .map((unit) => unit.id),
       );
-      const drawn = drawnByWeight(left, waveScripts(wave));
-      const script =
-        camp.scripts[drawn.picked] ??
-        refuse(catalogue, `a wave left as ${drawn.picked}, a script its camp names none of`);
       return landedAs(
         changeOn('wave-sent', at, {
-          ...drawn.chronicle,
-          units: drawn.chronicle.units.map((unit) =>
-            leaving.has(unit.id) ? { ...unit, script } : unit,
-          ),
+          ...left,
+          units: left.units.map((unit) => (leaving.has(unit.id) ? { ...unit, script } : unit)),
         }),
       );
     });
@@ -203,33 +198,9 @@ export function enemyMoves(catalogue: Catalogue, chronicle: Chronicle, enemy: Wa
     : { ashore: enemy.stats.move, embarked: stepped };
 }
 
-/**
- * An enemy of the kind, of the chronicle's age's camp, entering on the tile with the script the camp
- * names for it, and nothing where the camp names no such script.
- */
-export function campUnit(
-  catalogue: Catalogue,
-  chronicle: Chronicle,
-  kind: string,
-  tile: TileCoords,
-  script: EveryCampScript,
-): Entering;
-export function campUnit(
-  catalogue: Catalogue,
-  chronicle: Chronicle,
-  kind: string,
-  tile: TileCoords,
-  script: CampScript,
-): Entering | undefined;
-export function campUnit(
-  catalogue: Catalogue,
-  chronicle: Chronicle,
-  kind: string,
-  tile: TileCoords,
-  script: CampScript,
-): Entering | undefined {
-  const named = ageOf(catalogue, chronicle.age).camp.scripts[script];
-  return named === undefined ? undefined : { type: kind, faction: 'enemy', tile, script: named };
+/** An enemy of the kind entering on the tile with the script. */
+export function enemyEntering(kind: string, script: string, tile: TileCoords): Entering {
+  return { type: kind, faction: 'enemy', tile, script };
 }
 
 /** An enemy entered or not yet: its kind's stats, and its moves ashore and embarked. */
@@ -240,53 +211,53 @@ function entrantOf(catalogue: Catalogue, chronicle: Chronicle, kind: string): En
   return { stats, moves: enemyMoves(catalogue, chronicle, { stats, embarked: false }) };
 }
 
-/** One drawn among these by their weights from the chronicle's generator; one alone draws nothing. */
-function drawnByWeight<T>(
+/** One row drawn among these by their weights from the chronicle's generator; one alone draws nothing. */
+function rowDrawn(
   chronicle: Chronicle,
-  entries: readonly (readonly [T, number])[],
-): { readonly picked: T; readonly chronicle: Chronicle } {
-  if (entries.length === 1) return { picked: entries[0][0], chronicle };
-  const { picked, rng } = pickWeighted(chronicle.rng, entries);
+  rows: UnitEntryTable,
+): { readonly picked: UnitEntryRow; readonly chronicle: Chronicle } {
+  if (rows.length === 1) return { picked: rows[0], chronicle };
+  const weighed = rows.map((row) => [row, row.weight] as const);
+  const { picked, rng } = pickWeighted(chronicle.rng, weighed);
   return { picked, chronicle: { ...chronicle, rng } };
 }
 
-/** The kinds of that many enemies of the chronicle's age's camp, drawn one after another. */
-function kindsDrawn(
+/** The rows of that many enemies, drawn out of the table one after another. */
+function rowsDrawn(
   catalogue: Catalogue,
   chronicle: Chronicle,
+  table: UnitEntryTable,
   enemies: number,
-): { readonly kinds: readonly string[]; readonly chronicle: Chronicle } {
-  const weighed = Object.entries(ageOf(catalogue, chronicle.age).camp.unitKinds);
-  const kinds: string[] = [];
+): { readonly rows: readonly UnitEntryRow[]; readonly chronicle: Chronicle } {
+  unitEntryTableHeld(catalogue, table, "a unit entry's table");
+  const rows: UnitEntryRow[] = [];
   let drawing = chronicle;
   for (let enemy = 0; enemy < enemies; enemy++) {
-    const drawn = drawnByWeight(drawing, weighed);
-    kinds.push(drawn.picked);
+    const drawn = rowDrawn(drawing, table);
+    rows.push(drawn.picked);
     drawing = drawn.chronicle;
   }
-  return { kinds, chronicle: drawing };
+  return { rows, chronicle: drawing };
 }
 
 /**
- * An enemy of the chronicle's age's camp entering on the camp's tile with the script named, its kind
- * drawn among the camp's kinds that stand on that tile ashore; none enters where none of them does,
- * and a script the camp names none of is a `runtime-error`.
+ * An enemy entering on the camp's tile, its row drawn out of the table among the rows whose kind
+ * stands on that tile ashore; none enters where none of them does.
  */
 export function enteredOnCamp(
   catalogue: Catalogue,
   chronicle: Chronicle,
   camp: TileCoords,
-  script: CampScript,
+  table: UnitEntryTable,
 ): Landed {
+  unitEntryTableHeld(catalogue, table, "a unit entry's table");
   const tile = tileAt(chronicle.tiles, camp);
-  const standing = Object.entries(ageOf(catalogue, chronicle.age).camp.unitKinds).filter(([kind]) =>
+  const standing = table.filter(({ kind }) =>
     standsOn(catalogue, unitKind(catalogue, kind), false, tile),
   );
   if (standing.length === 0) return unchanged(chronicle);
-  const drawn = drawnByWeight(chronicle, standing);
-  const entering = campUnit(catalogue, drawn.chronicle, drawn.picked, camp, script);
-  if (entering === undefined) return landedAs(change('runtime-error', chronicle));
-  return entered(catalogue, drawn.chronicle, entering);
+  const { picked, chronicle: drawing } = rowDrawn(chronicle, standing);
+  return entered(catalogue, drawing, enemyEntering(picked.kind, picked.script, camp));
 }
 
 /** Whether the entrant stands on the tile, embarked or ashore as named, on the move its moves name. */
@@ -354,16 +325,14 @@ function aroundDoor(
 }
 
 /**
- * Enemies of these kinds, in order, entering with the script named, each on the nearest free tile
- * its kind enters on around the tile as a door; the ones no free tile is left for enter nowhere, and
- * each a script the camp names none of is a `runtime-error`.
+ * Enemies of these rows, in order, each on the nearest free tile its kind enters on around the tile
+ * as a door; the ones no free tile is left for enter nowhere.
  */
 function enteredAs(
   catalogue: Catalogue,
   chronicle: Chronicle,
   around: TileCoords,
-  kinds: readonly string[],
-  script: CampScript,
+  rows: readonly UnitEntryRow[],
 ): Landed {
   const doors = new Map<string, ReturnType<typeof aroundDoor>>();
   const doorOf = (kind: string): ReturnType<typeof aroundDoor> => {
@@ -375,8 +344,8 @@ function enteredAs(
   };
 
   let landing = unchanged(chronicle);
-  for (const kind of kinds) {
-    const { reach, embarkedMove } = doorOf(kind);
+  for (const row of rows) {
+    const { reach, embarkedMove } = doorOf(row.kind);
     const standing = landing.chronicle;
     const free = reach.filter((stood) => unitAt(standing.units, stood) === undefined);
     if (free.length === 0) continue;
@@ -385,32 +354,30 @@ function enteredAs(
 
     const drawn = equal.length === 1 ? undefined : nextRng(standing.rng);
     const { q, r } = drawn === undefined ? equal[0] : equal[Math.floor(drawn.value * equal.length)];
-    landing = followed(landing, (left) => {
-      const entering = campUnit(catalogue, left, kind, { q, r }, script);
-      if (entering === undefined) return landedAs(change('runtime-error', left));
-      return entered(catalogue, drawn === undefined ? left : { ...left, rng: drawn.rng }, {
-        ...entering,
+    landing = followed(landing, (left) =>
+      entered(catalogue, drawn === undefined ? left : { ...left, rng: drawn.rng }, {
+        ...enemyEntering(row.kind, row.script, { q, r }),
         embarkedMove,
-      });
-    });
+      }),
+    );
   }
   return landing;
 }
 
 /**
- * That many enemies of the chronicle's age's camp entering with the script named around the tile as
- * a door, every one's kind drawn before any enters; a count below one is a `runtime-error`.
+ * That many enemies entering around the tile as a door, every one's row drawn out of the table before
+ * any enters; a count below one is a `runtime-error`.
  */
 export function enteredAround(
   catalogue: Catalogue,
   chronicle: Chronicle,
   around: TileCoords,
   enemies: number,
-  script: CampScript,
+  table: UnitEntryTable,
 ): Landed {
   if (enemies <= 0) return landedAs(change('runtime-error', chronicle));
-  const drawn = kindsDrawn(catalogue, chronicle, enemies);
-  return enteredAs(catalogue, drawn.chronicle, around, drawn.kinds, script);
+  const drawn = rowsDrawn(catalogue, chronicle, table, enemies);
+  return enteredAs(catalogue, drawn.chronicle, around, drawn.rows);
 }
 
 /**
@@ -472,14 +439,19 @@ function raidEntry(
 }
 
 /**
- * A raid of that many enemies of the chronicle's age's camp, raiders all: every one's kind drawn,
- * then its door drawn for the first, and every one entering around it. A raid of none, or one with
- * no door with a free tile around it for its first, draws nothing and is a `runtime-error`.
+ * A raid of that many enemies: every one's row drawn out of the table, then its door drawn for the
+ * first, and every one entering around it. A raid of none, or one with no door with a free tile
+ * around it for its first, draws nothing and is a `runtime-error`.
  */
-export function raided(catalogue: Catalogue, chronicle: Chronicle, enemies: number): Landed {
+export function raided(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  enemies: number,
+  table: UnitEntryTable,
+): Landed {
   if (enemies <= 0) return landedAs(change('runtime-error', chronicle));
-  const drawn = kindsDrawn(catalogue, chronicle, enemies);
-  const door = raidEntry(catalogue, drawn.chronicle, drawn.kinds[0]);
+  const drawn = rowsDrawn(catalogue, chronicle, table, enemies);
+  const door = raidEntry(catalogue, drawn.chronicle, drawn.rows[0].kind);
   if (door === undefined) return landedAs(change('runtime-error', chronicle));
-  return enteredAs(catalogue, door.chronicle, door.entry, drawn.kinds, 'raider');
+  return enteredAs(catalogue, door.chronicle, door.entry, drawn.rows);
 }

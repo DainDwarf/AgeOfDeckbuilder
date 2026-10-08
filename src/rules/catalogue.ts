@@ -237,16 +237,20 @@ export type Capstone = {
   readonly passes: (catalogue: Catalogue, chronicle: Chronicle) => boolean;
 };
 
-/** The scripts every camp names, the rules entering both: one keeps its camp, one goes for the city. */
-export type EveryCampScript = 'guard' | 'raider';
+/** The scripts every camp names, the rules reading both: the one its wave counts, and the one it sends. */
+export type CampScript = 'guard' | 'raider';
 
-/** The scripts a camp's enemies carry: every camp's, and one going for what the player built. */
-export type CampScript = EveryCampScript | 'pillager';
+/** One row of a unit entry's table: a kind of unit, the script it enters with, and its weight. */
+export type UnitEntryRow = {
+  readonly kind: string;
+  readonly script: string;
+  readonly weight: number;
+};
 
-/** The scripts a wave sends a camp's guards off under: the camp's others. */
-export type WaveScript = Exclude<CampScript, 'guard'>;
+/** What a unit entry draws each enemy's row from, by the rows' weights. */
+export type UnitEntryTable = readonly UnitEntryRow[];
 
-/** The guards a camp sends off together, once enough have gathered around it. */
+/** The guards a camp sends off together as raiders, once enough have gathered around it. */
 export type Wave = {
   /** How far from the camp a guard ashore is counted, for the nearest camp alone. */
   readonly within: number;
@@ -254,14 +258,7 @@ export type Wave = {
   readonly gathered: number;
   /** How many of them leave. */
   readonly sent: number;
-  /** The scripts it may leave under, each with its weight in the one draw a wave makes. */
-  readonly scripts: Readonly<Partial<Record<WaveScript, number>>>;
 };
-
-/** The scripts a wave names, each with its weight. */
-export function waveScripts(wave: Wave): (readonly [WaveScript, number])[] {
-  return Object.entries(wave.scripts) as [WaveScript, number][];
-}
 
 /** The least and the most a span of turns rolls, both ends included. */
 export type Span = readonly [number, number];
@@ -289,10 +286,11 @@ export type Civilization = {
 
 /** What a camp is, what it enters, and what its capture gives. */
 export type Camp = {
-  /** The kinds of unit it enters, each with its weight in the draw every entry out of it makes. */
-  readonly unitKinds: Readonly<Record<string, number>>;
-  /** The script each enemy of the camp's carries, named by what enters it, of those the camp names. */
-  readonly scripts: Readonly<Record<EveryCampScript, string> & Partial<Record<CampScript, string>>>;
+  /** The table the opening draws the enemy on each camp from. */
+  readonly opening: UnitEntryTable;
+  /** The table its roll draws from. */
+  readonly roll: UnitEntryTable;
+  readonly scripts: Readonly<Record<CampScript, string>>;
   readonly building: string;
   /**
    * Whether the camps are dealt across the water: on any land the centre is reached from over the
@@ -303,7 +301,7 @@ export type Camp = {
   readonly embarkedMove?: number;
   /** What a capture deals, in the order dealt. */
   readonly rewards: readonly string[];
-  /** The chance, at every enemy phase, that a camp standing enters a guard. */
+  /** The chance, at every enemy phase, that a camp standing enters one enemy of its roll. */
   readonly odds: number;
   readonly raidCampOdds: number;
   /** The wave it sends: a camp naming none sends none. */
@@ -560,6 +558,22 @@ export function catalogued(content: Catalogue): Catalogue {
   return content;
 }
 
+/**
+ * A unit entry's table, checked against the tables of the catalogue holding it, its owner named in
+ * the refusal: a table holding no row, a kind or a script the catalogue does not hold, and a weight
+ * not above nought are refused.
+ */
+export function unitEntryTableHeld(content: Catalogue, table: UnitEntryTable, owner: string): void {
+  if (table.length === 0) refuse(content, `${owner} holds no row`);
+  for (const { kind, script, weight } of table) {
+    unitKind(content, kind);
+    enemyScript(content, script);
+    if (!(weight > 0)) {
+      refuse(content, `${owner} enters ${kind} as ${script} at a weight of ${weight}`);
+    }
+  }
+}
+
 /** What one age owns, checked against the tables of the catalogue holding it. */
 function ageHeld(
   content: Catalogue,
@@ -585,17 +599,9 @@ function ageHeld(
     }
   }
 
-  const kinds = Object.entries(camp.unitKinds);
-  if (kinds.length === 0) refuse(content, `the age ${id}'s camp enters no unit kind`);
-  for (const [kind, weight] of kinds) {
-    unitKind(content, kind);
-    if (!(weight > 0)) {
-      refuse(content, `the age ${id}'s camp enters ${kind} at a weight of ${weight}`);
-    }
-  }
-  for (const script of Object.values(camp.scripts)) {
-    if (script !== undefined) enemyScript(content, script);
-  }
+  unitEntryTableHeld(content, camp.opening, `the age ${id}'s camp's opening`);
+  unitEntryTableHeld(content, camp.roll, `the age ${id}'s camp's roll`);
+  for (const script of Object.values(camp.scripts)) enemyScript(content, script);
   if (camp.rewards.length === 0) refuse(content, `the age ${id}'s camp deals no reward`);
   for (const reward of camp.rewards) cardOf(content, reward);
   const { odds, raidCampOdds, embarkedMove } = camp;
@@ -612,19 +618,6 @@ function ageHeld(
   }
   if (camp.wave !== undefined) {
     const { within, gathered, sent } = camp.wave;
-    const scripts = waveScripts(camp.wave);
-    if (scripts.length === 0) refuse(content, `the age ${id}'s camp sends a wave under no script`);
-    for (const [script, weight] of scripts) {
-      if (camp.scripts[script] === undefined) {
-        refuse(
-          content,
-          `the age ${id}'s camp sends a wave as ${script}, a script it names none of`,
-        );
-      }
-      if (!(weight > 0)) {
-        refuse(content, `the age ${id}'s camp sends a wave as ${script} at a weight of ${weight}`);
-      }
-    }
     if (!Number.isInteger(within) || within < 0) {
       refuse(content, `the age ${id}'s camp counts its wave within ${within}`);
     }
@@ -642,8 +635,8 @@ function ageHeld(
   }
   for (const terrain of campKind.terrains) {
     const tile = { q: 0, r: 0, terrain, improvements: [] };
-    if (!kinds.some(([kind]) => standsOn(content, unitKind(content, kind), false, tile))) {
-      refuse(content, `none of the age ${id}'s camp's unit kinds stands on ${terrain}`);
+    if (!camp.opening.some(({ kind }) => standsOn(content, unitKind(content, kind), false, tile))) {
+      refuse(content, `none of the kinds of the age ${id}'s camp's opening stands on ${terrain}`);
     }
   }
 

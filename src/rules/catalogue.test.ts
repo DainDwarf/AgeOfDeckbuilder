@@ -17,6 +17,7 @@ import {
   type Slice,
   type Technology,
   technologyOf,
+  type UnitEntryTable,
   type Wave,
 } from './catalogue';
 import { apply, beginChronicle, launched } from './chronicle';
@@ -238,40 +239,34 @@ test('a catalogue whose technology unlocks an age other than the one right after
   );
 });
 
-test('a catalogue whose camp enters no unit kind is refused', () => {
-  expect(() => catalogued(encamped({ unitKinds: {} }))).toThrow(
-    `fixture: the age ${AGE}'s camp enters no unit kind`,
-  );
-});
+test('a catalogue whose camp’s opening or roll holds no row, a row of a kind or a script it does not hold, or a row at a weight not above nought is refused', () => {
+  const [row] = CAMP.roll;
+  const refusals = (owner: string): [UnitEntryTable, string][] => [
+    [[], `${owner} holds no row`],
+    [[row, { ...row, kind: 'PH_Scout' }], 'no unit kind is named PH_Scout'],
+    [[row, { ...row, script: 'retreat' }], 'no enemy script is named retreat'],
+    [[row, { ...row, weight: 0 }], `${owner} enters ${row.kind} as ${row.script} at a weight of 0`],
+    [
+      [row, { ...row, weight: -1 }],
+      `${owner} enters ${row.kind} as ${row.script} at a weight of -1`,
+    ],
+  ];
 
-test('a catalogue whose camp enters a unit kind it does not hold is refused', () => {
-  const content = encamped({ unitKinds: { ...CAMP.unitKinds, PH_Scout: 1 } });
-
-  expect(() => catalogued(content)).toThrow('fixture: no unit kind is named PH_Scout');
-});
-
-test('a catalogue whose camp enters a unit kind at a weight of nought or below is refused', () => {
-  for (const weight of [0, -1]) {
-    const content = encamped({ unitKinds: { ...CAMP.unitKinds, PH_Slinger: weight } });
-
-    expect(() => catalogued(content)).toThrow(
-      `fixture: the age ${AGE}'s camp enters PH_Slinger at a weight of ${weight}`,
-    );
+  for (const table of ['opening', 'roll'] as const) {
+    for (const [rows, refusal] of refusals(`the age ${AGE}'s camp's ${table}`)) {
+      expect(() => catalogued(encamped({ [table]: rows }))).toThrow(`fixture: ${refusal}`);
+    }
+    expect(() => catalogued(encamped({ [table]: [row, { ...row, weight: 0.5 }] }))).not.toThrow();
   }
-  expect(() =>
-    catalogued(encamped({ unitKinds: { ...CAMP.unitKinds, PH_Slinger: 0.5 } })),
-  ).not.toThrow();
 });
 
-test('a catalogue whose camp names a guard’s, a raider’s or a pillager’s script it does not hold is refused', () => {
+test('a catalogue whose camp names a guard’s or a raider’s script it does not hold is refused', () => {
   const { scripts } = CAMP;
   const guard = encamped({ scripts: { ...scripts, guard: 'retreat' } });
   const raider = encamped({ scripts: { ...scripts, raider: 'retreat' } });
-  const pillager = encamped({ scripts: { ...scripts, pillager: 'retreat' } });
 
   expect(() => catalogued(guard)).toThrow(/^fixture: /);
   expect(() => catalogued(raider)).toThrow(/^fixture: /);
-  expect(() => catalogued(pillager)).toThrow(/^fixture: /);
 });
 
 test('a catalogue whose camp rolls at odds below nought or above one is refused', () => {
@@ -299,14 +294,10 @@ test('a catalogue whose camp is dealt across the water and names no embarked mov
   expect(() => catalogued(encamped({ acrossWater: true, embarkedMove: 1 }))).not.toThrow();
 });
 
-test('a catalogue whose camp’s wave names a script the camp names none of, a weight not above nought, no script, a count gathered or sent below one, more sent than gathered, or a distance below nought is refused', () => {
-  const wave: Wave = { within: 2, gathered: 3, sent: 2, scripts: { raider: 1 } };
+test('a catalogue whose camp’s wave names a count gathered or sent below one, more sent than gathered, or a distance below nought is refused', () => {
+  const wave: Wave = { within: 2, gathered: 3, sent: 2 };
   const waving = (laid: Partial<Wave>): Catalogue => encamped({ wave: { ...wave, ...laid } });
   const refusals: [Catalogue, string][] = [
-    [waving({ scripts: { pillager: 1 } }), 'sends a wave as pillager, a script it names none of'],
-    [waving({ scripts: { raider: 0 } }), 'sends a wave as raider at a weight of 0'],
-    [waving({ scripts: { raider: -1 } }), 'sends a wave as raider at a weight of -1'],
-    [waving({ scripts: {} }), 'sends a wave under no script'],
     [waving({ gathered: 0, sent: 0 }), 'sends a wave once 0 have gathered'],
     [waving({ sent: 0 }), 'sends 0 of 3 gathered'],
     [waving({ sent: 4 }), 'sends 4 of 3 gathered'],
@@ -319,14 +310,14 @@ test('a catalogue whose camp’s wave names a script the camp names none of, a w
   expect(() => catalogued(waving({ within: 0, sent: 3 }))).not.toThrow();
 });
 
-test('a catalogue whose camp lies on a terrain none of its unit kinds stands on is refused, and one that one of them stands on is not', () => {
+test('a catalogue whose camp lies on a terrain none of its opening’s kinds stands on is refused, and one that one of them stands on is not, whatever its roll’s kinds', () => {
+  const [row] = CAMP.opening;
+  const slinger = { ...row, kind: 'PH_Slinger' };
   expect(buildingKind(CATALOGUE, CAMP.building).terrains).toContain('forest');
-  expect(() => camping({ unitKinds: { PH_Slinger: 1 } }, SLOW_SLINGER)).toThrow(
-    `fixture: none of the age ${AGE}'s camp's unit kinds stands on forest`,
+  expect(() => camping({ opening: [slinger], roll: [row] }, SLOW_SLINGER)).toThrow(
+    `fixture: none of the kinds of the age ${AGE}'s camp's opening stands on forest`,
   );
-  expect(() =>
-    camping({ unitKinds: { ...CAMP.unitKinds, PH_Slinger: 1 } }, SLOW_SLINGER),
-  ).not.toThrow();
+  expect(() => camping({ opening: [row, slinger], roll: [slinger] }, SLOW_SLINGER)).not.toThrow();
 });
 
 test('a catalogue whose unit kind names itself by another key is refused', () => {

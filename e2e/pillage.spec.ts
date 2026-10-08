@@ -2,7 +2,8 @@ import { expect, type Page, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
 import type { Campaign } from '../src/rules/campaign';
 import { built, terraformed } from '../src/rules/cards';
-import { campUnit } from '../src/rules/enemies';
+import { ageOf } from '../src/rules/catalogue';
+import { enemyEntering } from '../src/rules/enemies';
 import { neighbours, type TileCoords, tileAt, tileKey } from '../src/rules/map';
 import { buildingKind } from '../src/rules/map-kinds';
 import { followed } from '../src/rules/stages';
@@ -33,17 +34,19 @@ import {
 /** The building the farm card builds. */
 const FARM = 'farm';
 
+/** The script a pillager carries. */
+const PILLAGER = 'pillager';
+
 /**
  * Seed 1's turn 1 in the Stone Age, its city settled bare, with the first tile beside the city
- * terraformed into the first terrain the farm names, a farm built there, and a pillager of the
- * camp's entered on it.
+ * terraformed into the first terrain the farm names, a farm built there, and an enemy of the camp's
+ * kind entered on it as a pillager.
  */
 function farmBeset(campaign: Campaign): { chronicle: Chronicle; farm: TileCoords } {
   const settled = settledOn(1, [], undefined, secondEra(campaign));
   const [farm] = neighbours(cityTileOf(settled));
   const [terrain] = buildingKind(CATALOGUE, FARM).terrains;
-  const pillager = campUnit(CATALOGUE, settled, campKind(settled), farm, 'pillager');
-  if (pillager === undefined) throw new Error(`the ${settled.age} camp names no pillager`);
+  const pillager = enemyEntering(campKind(settled), PILLAGER, farm);
   const farmed = followed(terraformed(CATALOGUE, settled, farm, terrain), (left) =>
     built(CATALOGUE, left, farm, FARM),
   ).chronicle;
@@ -101,10 +104,8 @@ test('an enemy on the city’s tile prepares the capture: the city’s tile wear
   test.setTimeout(budget(1));
   const settled = settledOn(1);
   const city = cityTileOf(settled);
-  const chronicle = unitEntered(
-    settled,
-    campUnit(CATALOGUE, settled, campKind(settled), city, 'raider'),
-  );
+  const { raider } = ageOf(CATALOGUE, settled.age).camp.scripts;
+  const chronicle = unitEntered(settled, enemyEntering(campKind(settled), raider, city));
   const key = tileKey(city);
 
   await openSaved(page, chronicle);

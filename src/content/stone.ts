@@ -109,12 +109,16 @@ export const STONE: Slice = {
     },
     camp: {
       ...camp,
-      scripts: { ...camp.scripts, pillager: 'pillager' },
-      unitKinds: { warrior: 2, archer: 1 },
+      opening: [{ kind: 'warrior', script: 'guard', weight: 1 }],
+      roll: [
+        { kind: 'archer', script: 'guard', weight: 2 },
+        { kind: 'warrior', script: 'guard', weight: 3 },
+        { kind: 'warrior', script: 'pillager', weight: 1 },
+      ],
       odds: 0.08,
       acrossWater: true,
       embarkedMove: EMBARKED_MOVE,
-      wave: { within: GUARD_RADIUS, gathered: 3, sent: 2, scripts: { raider: 1, pillager: 1 } },
+      wave: { within: GUARD_RADIUS, gathered: 3, sent: 2 },
     },
     regions: REGIONS,
     achievements: {

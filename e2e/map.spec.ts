@@ -1,8 +1,8 @@
 import { expect, type Page, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
-import { achievementOf } from '../src/rules/catalogue';
+import { achievementOf, ageOf } from '../src/rules/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
-import { campUnit } from '../src/rules/enemies';
+import { enemyEntering } from '../src/rules/enemies';
 import { CENTRE, type TileCoords, tileKey } from '../src/rules/map';
 import { freshCampaign } from '../src/rules/save';
 import { inSight } from '../src/rules/sight';
@@ -171,10 +171,8 @@ async function standsOver(
  */
 function raiderThreeOff(): { chronicle: Chronicle; from: TileCoords; to: TileCoords } {
   for (const tile of campGround(OPENED, 3)) {
-    const chronicle = unitEntered(
-      OPENED,
-      campUnit(CATALOGUE, OPENED, campKind(OPENED), tile, 'raider'),
-    );
+    const { raider } = ageOf(CATALOGUE, OPENED.age).camp.scripts;
+    const chronicle = unitEntered(OPENED, enemyEntering(campKind(OPENED), raider, tile));
     const stages = [...walked(apply(CATALOGUE, chronicle, { type: 'end-turn' }))];
     const moves = stages.flatMap((stage) =>
       stage.name === 'move'
