@@ -13,7 +13,7 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **A raid's door across the water** — a raid through a camp the ground does not link to the city enters on the camp's island and crosses from there, and the outer-ring door is the edge of any land the city is reached from over ground and water, so a raid finds a door with every camp captured on an inland island.
+- **A raid's door across the water** — a raid through a camp the ground does not link to the city enters on the camp's island and crosses from there; the outer-ring door is any tile of the disc's outer ring the city is reached from over ground and, where the age's enemies embark, water, a coast tile among them, a raid through a coast door entering embarked on the camp's embarked move through the one way a unit enters; a raid's enemies enter around their door on the door's own medium; a raid with no door is a runtime-error; each held by a test on the fixture. Doc-impact: `docs/CHRONICLE.md`, `docs/ages/STONE.md`. [board/raid-door-across-water.md](board/raid-door-across-water.md)
 - **Archers at the camps** — the Stone camp names the kinds it enters with their weights, the archer among them, and its own odds, so the opening, the camp's roll and a raid draw among them.
 - **The pillager** — a third script, a warrior that goes for the player's workers and for the improvements and the buildings, pillaging what it stands on; the pillage the chronicle page designs and the rules do not hold yet rides inside as its inert commit.
 - **Camps that prepare** — a camp whose guards have gathered to the number its content names sends some of them off together as raiders or pillagers, so a raid out of a camp comes as a group and not one warrior at a time.
