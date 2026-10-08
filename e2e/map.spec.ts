@@ -13,6 +13,7 @@ import {
   aimed,
   budget,
   campGround,
+  campKind,
   chronicleOf,
   cityTileOf,
   claimedAt,
@@ -170,7 +171,10 @@ async function standsOver(
  */
 function raiderThreeOff(): { chronicle: Chronicle; from: TileCoords; to: TileCoords } {
   for (const tile of campGround(OPENED, 3)) {
-    const chronicle = unitEntered(OPENED, campUnit(CATALOGUE, OPENED, tile, 'raider'));
+    const chronicle = unitEntered(
+      OPENED,
+      campUnit(CATALOGUE, OPENED, campKind(OPENED), tile, 'raider'),
+    );
     const stages = [...walked(apply(CATALOGUE, chronicle, { type: 'end-turn' }))];
     const moves = stages.flatMap((stage) =>
       stage.name === 'move'

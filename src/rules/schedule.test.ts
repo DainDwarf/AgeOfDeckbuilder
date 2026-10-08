@@ -1139,7 +1139,7 @@ test('an event needing a tile near the city to deal a feature onto is dealt with
 const CAPSTONE = 30;
 
 /** How many turns follow the siege's landing up to its last: the tick past that one passes the fixture's siege. */
-const REINFORCED = 5;
+const AFTER_LANDING = 5;
 
 /** This timeline, dealing nothing unless the test names one, with the siege landing on its turn. */
 function besieging(timeline: Timeline = NO_DEALS): Timeline {
@@ -1196,18 +1196,16 @@ function corridor(carrying: Carrying = {}): Chronicle {
  */
 const MOATED = field(6, neighbours(CITY));
 
-/** A camp of the generator's out on that disc. */
-const STANDING_CAMP: TileCoords = { q: 6, r: 0 };
-
-/** The moated city with the siege landed on it, a camp of the generator's standing out of its reach. */
+/** The moated city with the siege landed on it. */
 function moated(carrying: Carrying = {}): Chronicle {
-  return siegeLanded({ tiles: camped(MOATED, [STANDING_CAMP]), ...carrying });
+  return siegeLanded({ tiles: MOATED, ...carrying });
 }
 
 /** That city ending turn after turn until the tick past the siege's last turn passes it: the chronicle it left. */
 function stoodOut(): Chronicle {
   let standingOut = moated();
-  for (let turn = 0; turn <= REINFORCED; turn++) standingOut = endedTurn(standingOut, 'PH_Famine');
+  for (let turn = 0; turn <= AFTER_LANDING; turn++)
+    standingOut = endedTurn(standingOut, 'PH_Famine');
   return standingOut;
 }
 
@@ -1247,7 +1245,7 @@ test('the capstone’s turn drops a deal due past it, and the next deal is due t
   expect(next).toBeLessThanOrEqual(CAPSTONE + 7);
 });
 
-test('the capstone’s turn is one landing group over the next due turn rolled and the landing, and each turn after it one second-script group over the second script', () => {
+test('the capstone’s turn is one landing group over the next due turn rolled and the landing', () => {
   const awaited = awaitingCapstone({ drawPile: fullDraw() });
 
   const landing = heldBy(apply(CATALOGUE, awaited, { type: 'end-turn' }), 'capstone-landing');
@@ -1260,12 +1258,6 @@ test('the capstone’s turn is one landing group over the next due turn rolled a
     ...Array<string>(5).fill('retiled'),
     ...Array<string>(5).fill('enter'),
   ]);
-
-  const after = moated();
-  const continued = heldBy(apply(CATALOGUE, after, { type: 'end-turn' }), 'capstone-continued');
-
-  expect(continued.map(({ name }) => name)).toEqual(['enter']);
-  expect(continued).toMatchObject([{ tile: STANDING_CAMP }]);
 });
 
 test('a capstone carrying no second script stages no second-script group on the turns after its own', () => {
@@ -1337,7 +1329,7 @@ test('a camp captured on the siege’s last turn holds the victory back until it
     ...NO_GROWTH,
     tiles: camped(field(6), [camp]),
     units: [worker(camp)],
-    turn: CAPSTONE + REINFORCED,
+    turn: CAPSTONE + AFTER_LANDING,
     timeline: besieging(),
   });
   const dealt = outcome(apply(CATALOGUE, last, { type: 'end-turn' }));
@@ -1355,7 +1347,7 @@ test('a camp captured on the siege’s last turn holds the victory back until it
   ]);
   expect(outcome(apply(CATALOGUE, dealt, { type: 'take', at: 0 })).ending).toEqual({
     outcome: 'victory',
-    turn: CAPSTONE + REINFORCED + 1,
+    turn: CAPSTONE + AFTER_LANDING + 1,
   });
 });
 
@@ -1480,86 +1472,22 @@ test('the siege places no camp on ground a camp does not lie on, or the city is 
   }
 });
 
-test('each of the five turns after the landing enters a warrior on the camp standing, and no turn more', () => {
-  let reinforcing = moated();
-  expect(enemiesOf(reinforcing)).toEqual([]);
-
-  for (let turn = 1; turn <= REINFORCED; turn++) {
-    reinforcing = endedTurn(reinforcing, 'PH_Famine');
-
-    expect(reinforcing.turn).toBe(CAPSTONE + turn);
-    expect(enemiesOf(reinforcing)).toHaveLength(turn);
-    expect(unitAt(reinforcing.units, STANDING_CAMP)?.faction).toBe('enemy');
-  }
-  expect(enemiesOf(stoodOut())).toHaveLength(REINFORCED);
-});
-
-test('the warrior the reinforcement enters is a stage of its own, raised after the tick and ahead of the deal', () => {
-  const due = CAPSTONE + 3;
-  const landed = moated();
-  const deal = dueOn(due);
-  let reinforcing: Chronicle = {
-    ...landed,
-    age: deal.age,
-    timeline: { ...deal.timeline, capstone: landed.timeline.capstone },
-  };
-
-  const opened = (stages: readonly Stage[]): string[] => {
-    const names = stages.map(({ name }) => name);
-    return names.slice(names.indexOf('turn'));
-  };
-
-  while (reinforcing.turn < due - 1) {
-    const stages = apply(CATALOGUE, reinforcing, { type: 'end-turn' });
-    expect(opened(stages)).toEqual(['turn', 'capstone-continued']);
-    expect(heldBy(stages, 'capstone-continued').map(({ name }) => name)).toEqual(['enter']);
-    reinforcing = endedTurn(reinforcing, 'PH_Famine');
-  }
-  const dealt = apply(CATALOGUE, reinforcing, { type: 'end-turn' });
-
-  expect(opened(dealt)).toEqual(['turn', 'capstone-continued', 'deal']);
-  expect(heldBy(dealt, 'capstone-continued').map(({ name }) => name)).toEqual(['enter']);
-  expect(heldBy(dealt, 'deal').map(({ name }) => name)).toEqual(['rolled', 'dealt']);
-});
-
-test('the siege’s own camps are reinforced as the camps standing are', () => {
-  const landed = siegeLanded();
-  const camps = campsOf(landed);
-  const after = endedTurn(landed, 'PH_Famine');
-
-  expect(enemiesOf(landed)).toHaveLength(camps.length);
-  expect(enemiesOf(after)).toHaveLength(2 * camps.length);
-  for (const camp of camps) expect(unitAt(after.units, camp)?.faction).toBe('enemy');
-});
-
-test('the reinforcement enters no warrior on a camp a unit stands on', () => {
-  let reinforcing = moated({ units: [standing('enemy', STANDING_CAMP, { move: 0 })] });
-  const entered = unitAt(reinforcing.units, STANDING_CAMP)?.id;
-
-  for (let turn = 1; turn <= REINFORCED; turn++) {
-    reinforcing = endedTurn(reinforcing, 'PH_Famine');
-
-    expect(enemiesOf(reinforcing)).toHaveLength(1);
-    expect(unitAt(reinforcing.units, STANDING_CAMP)?.id).toBe(entered);
-  }
-});
-
 test('the turn ticking past the siege’s sixth with the city standing ends the chronicle in victory on the tick', () => {
-  let reinforcing = moated();
+  let besieged = moated();
 
-  for (let turn = 1; turn <= REINFORCED; turn++) {
-    reinforcing = endedTurn(reinforcing, 'PH_Famine');
-    expect(reinforcing.turn).toBe(CAPSTONE + turn);
-    expect(reinforcing.ending).toBeUndefined();
+  for (let turn = 1; turn <= AFTER_LANDING; turn++) {
+    besieged = endedTurn(besieged, 'PH_Famine');
+    expect(besieged.turn).toBe(CAPSTONE + turn);
+    expect(besieged.ending).toBeUndefined();
   }
-  const stages = apply(CATALOGUE, reinforcing, { type: 'end-turn' });
+  const stages = apply(CATALOGUE, besieged, { type: 'end-turn' });
   const staged = namesOf(stages);
   const survived = stoodOut();
 
   expect(staged.slice(staged.indexOf('turn'))).toEqual(['turn', 'turn', 'ended']);
   expect(heldBy(stages, 'turn').map(({ name }) => name)).toEqual(['turn', 'ended']);
-  expect(survived.turn).toBe(CAPSTONE + REINFORCED + 1);
-  expect(survived.ending).toEqual({ outcome: 'victory', turn: CAPSTONE + REINFORCED + 1 });
+  expect(survived.turn).toBe(CAPSTONE + AFTER_LANDING + 1);
+  expect(survived.ending).toEqual({ outcome: 'victory', turn: CAPSTONE + AFTER_LANDING + 1 });
 });
 
 test('a chronicle that ended in victory takes no command at all', () => {

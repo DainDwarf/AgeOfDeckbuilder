@@ -64,6 +64,7 @@ import {
   REGION,
   ringed,
   riverBetween,
+  SLOW_SLINGER,
   settledLaunch,
   stagedBy,
   standing,
@@ -2249,9 +2250,6 @@ test('a tile several embarked units could disembark onto is refused through a un
     [fromSecond, second],
     [fromSlow, slow],
   ] as const;
-  const catalogue = changed({
-    units: { ...CATALOGUE.units, PH_Slinger: { ...CATALOGUE.units.PH_Slinger, move: MOVE_POINT } },
-  });
   let city = cityOf(
     ['urban'],
     {
@@ -2266,23 +2264,23 @@ test('a tile several embarked units could disembark onto is refused through a un
         standing('player', ashore),
       ],
     },
-    catalogue,
+    SLOW_SLINGER,
   );
   for (const [from, to] of embarkings)
-    city = outcome(apply(catalogue, city, aimedThrough(to, from)));
-  const ticked = outcome(apply(catalogue, city, { type: 'end-turn' }));
+    city = outcome(apply(SLOW_SLINGER, city, aimedThrough(to, from)));
+  const ticked = outcome(apply(SLOW_SLINGER, city, { type: 'end-turn' }));
   const tile = tileAt(ticked.tiles, bank);
   if (tile === undefined) throw new Error('the bank is no tile of the map');
-  const disembark = aimedCard('PH_Disembark', catalogue);
+  const disembark = aimedCard('PH_Disembark', SLOW_SLINGER);
 
-  expect(playedThrough(catalogue, ticked, disembark, tile).map(({ id }) => id)).toEqual([2, 3]);
-  expect(throughRefusal(catalogue, ticked, disembark, tile, ashore)).toBe('unit-not-embarked');
-  expect(throughRefusal(catalogue, ticked, disembark, tile, slow)).toBe('wrong-terrain');
-  expect(throughRefusal(catalogue, ticked, disembark, tile, CITY)).toBe('not-beside');
-  expect(throughRefusal(catalogue, ticked, disembark, tile, empty)).toBe('no-unit');
-  expect(throughRefusal(catalogue, ticked, disembark, tile, first)).toBeUndefined();
+  expect(playedThrough(SLOW_SLINGER, ticked, disembark, tile).map(({ id }) => id)).toEqual([2, 3]);
+  expect(throughRefusal(SLOW_SLINGER, ticked, disembark, tile, ashore)).toBe('unit-not-embarked');
+  expect(throughRefusal(SLOW_SLINGER, ticked, disembark, tile, slow)).toBe('wrong-terrain');
+  expect(throughRefusal(SLOW_SLINGER, ticked, disembark, tile, CITY)).toBe('not-beside');
+  expect(throughRefusal(SLOW_SLINGER, ticked, disembark, tile, empty)).toBe('no-unit');
+  expect(throughRefusal(SLOW_SLINGER, ticked, disembark, tile, first)).toBeUndefined();
 
-  const played = outcome(apply(catalogue, ticked, aimedThrough(bank, first)));
+  const played = outcome(apply(SLOW_SLINGER, ticked, aimedThrough(bank, first)));
 
   expect(unitNamed(played, 2)).toMatchObject({ tile: bank, embarked: false });
   expect(unitNamed(played, 3)).toEqual(unitNamed(ticked, 3));

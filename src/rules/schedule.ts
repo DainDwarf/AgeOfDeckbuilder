@@ -3,17 +3,14 @@ import {
   type Aim,
   type Answer,
   ageOf,
-  type CampScript,
   type Catalogue,
   capstoneOf,
   cardMade,
-  entered,
   eventOf,
   type Schedule,
   type Span,
 } from './catalogue';
 import { populationKilled } from './city';
-import { campUnit, enteredAround, raidEntry } from './enemies';
 import { distance, type FeatureId, groundRunsTo, type Tile, type TileCoords, tileKey } from './map';
 import { buildingKind, entryOf, featureKind, refuse } from './map-kinds';
 import { nextRng, pickWeighted, type Rng } from './rng';
@@ -235,17 +232,6 @@ function runtimeError(chronicle: Chronicle): Landed {
 }
 
 /**
- * The warriors entering around a door drawn for them, raiders all; a raid of no warrior, or one with
- * no door with a free tile around it, draws nothing and is a `runtime-error`.
- */
-export function raided(catalogue: Catalogue, chronicle: Chronicle, warriors: number): Landed {
-  if (warriors <= 0) return runtimeError(chronicle);
-  const drawn = raidEntry(catalogue, chronicle);
-  if (drawn === undefined) return runtimeError(chronicle);
-  return enteredAround(catalogue, drawn.chronicle, drawn.entry, warriors, 'raider');
-}
-
-/**
  * The unit standing on the tile, whatever its faction, losing health by the amount and killed at
  * nought, and nothing where no unit stands there.
  */
@@ -399,23 +385,6 @@ export function addedToDrawPileTop(
 ): Landed {
   const made = cardMade(catalogue, card, set);
   return landedAs(change('added', { ...chronicle, drawPile: [made, ...chronicle.drawPile] }));
-}
-
-/**
- * The camp's unit entering with the script named on every camp whose tile is free, in tile order,
- * and on none a unit stands on. It draws nothing.
- */
-export function reinforced(catalogue: Catalogue, chronicle: Chronicle, script: CampScript): Landed {
-  const { building } = ageOf(catalogue, chronicle.age).camp;
-  let landing = unchanged(chronicle);
-  for (const { q, r, building: slot } of chronicle.tiles) {
-    if (slot !== building) continue;
-    if (unitAt(landing.chronicle.units, { q, r }) !== undefined) continue;
-    landing = followed(landing, (left) =>
-      entered(catalogue, left, campUnit(catalogue, left, { q, r }, script)),
-    );
-  }
-  return landing;
 }
 
 /**

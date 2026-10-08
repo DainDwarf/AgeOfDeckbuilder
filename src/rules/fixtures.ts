@@ -58,7 +58,7 @@ import {
   terrainsPlayedOn,
 } from './chronicle';
 import { arrived, bordered, populationKilled, populationTaken, yielded } from './city';
-import { campUnit, enteredAround, leastHealth } from './enemies';
+import { enteredAround, enteredOnCamp, leastHealth, raided } from './enemies';
 import {
   type BuildingTypeId,
   cornerKey,
@@ -87,8 +87,6 @@ import {
   fireRead,
   fireStartable,
   offered,
-  raided,
-  reinforced,
   showsNextLanding,
   spanEnded,
   tileCharted,
@@ -176,9 +174,7 @@ function besieged(catalogue: Catalogue, chronicle: Chronicle): Landed {
   const placing = campsPlaced(catalogue, chronicle, SIEGE_CAMPS, [3, 5], 3);
   let landing: Landed = placing;
   for (const camp of placing.placed) {
-    landing = followed(landing, (left) =>
-      entered(catalogue, left, campUnit(catalogue, left, camp, 'raider')),
-    );
+    landing = followed(landing, (left) => enteredOnCamp(catalogue, left, camp, 'raider'));
   }
   return landing;
 }
@@ -262,8 +258,8 @@ const EVENTS: Catalogue['events'] = {
           const placing = campsPlaced(catalogue, chronicle, 1, RIVALS.fromCity, RIVALS.apart);
           const [camp] = placing.placed;
           if (camp === undefined) return placing;
-          // The first warrior lands on the camp only because `campsPlaced` asks no unit to stand
-          // there, and the catalogue refuses a camp on a terrain its unit cannot stand on.
+          // The first enemy lands on the camp, where its kind stands on it, only because
+          // `campsPlaced` asks no unit to stand there.
           return followed(placing, (left) =>
             enteredAround(catalogue, left, camp, ENCAMPED, 'guard'),
           );
@@ -611,7 +607,6 @@ const TABLES: Omit<Tables, 'technologies'> = {
   capstones: {
     PH_Siege: {
       lands: besieged,
-      continues: (catalogue, chronicle) => reinforced(catalogue, chronicle, 'raider'),
       passes: (_catalogue, chronicle) => spanEnded(chronicle, 6),
     },
     PH_Tillage: {
@@ -784,9 +779,12 @@ export const REGIONS: Readonly<Record<string, Region>> = {
   },
 };
 
+/** The one unit kind the fixture camp enters. */
+export const CAMP_KIND = 'PH_Warrior';
+
 /** The camp every fixture age holds. */
 export const CAMP: Camp = {
-  unit: 'PH_Warrior',
+  unitKinds: { [CAMP_KIND]: 1 },
   scripts: { guard: 'PH_Sentry', raider: SCRIPT },
   building: 'PH_Camp',
   rewards: ['PH_Spoils', 'PH_Cache'],
@@ -1030,6 +1028,11 @@ export function changed(content: Partial<Catalogue>): Catalogue {
   return { ...CATALOGUE, ...content };
 }
 
+/** The fixture's content with its slinger's move one move point: it stands on no forest and no hills. */
+export const SLOW_SLINGER: Catalogue = changed({
+  units: { ...CATALOGUE.units, PH_Slinger: { ...CATALOGUE.units.PH_Slinger, move: MOVE_POINT } },
+});
+
 /** The fixture's content with what its first age owns changed as the test lays it over. */
 export function aged(owns: Partial<Age>): Catalogue {
   return changed({ ages: { ...CATALOGUE.ages, [AGE]: { ...ageOf(CATALOGUE, AGE), ...owns } } });
@@ -1192,8 +1195,12 @@ export function plains(radius: number): Tile[] {
   return field(radius).map(({ q, r }): Tile => ({ q, r, terrain: 'plain', improvements: [] }));
 }
 
-/** What a fixture opening names: the civilization, the age and the timeline, and how far the centre part reaches. */
+/**
+ * What a fixture opening names: the content, the civilization, the age and the timeline, and how far
+ * the centre part reaches.
+ */
 type Opening = {
+  readonly catalogue?: Catalogue;
   readonly civilization?: Civilization;
   readonly age?: string;
   readonly timeline?: Timeline;
@@ -1203,17 +1210,23 @@ type Opening = {
 /**
  * The chronicle opened on these tiles through the rules, on the settle phase with the city nowhere:
  * its centre part every tile within `reach` of the centre, two unless named, on the fixture's
- * civilization in the quiet age on a timeline dealing nothing, unless the fixture names others.
+ * content and civilization in the quiet age dealing nothing, unless the fixture names others.
  */
 export function opening(
   tiles: Tile[],
-  { civilization = CIVILIZATION, age = QUIET, timeline = NO_DEALS, reach = 2 }: Opening = {},
+  {
+    catalogue = CATALOGUE,
+    civilization = CIVILIZATION,
+    age = QUIET,
+    timeline = NO_DEALS,
+    reach = 2,
+  }: Opening = {},
 ): Chronicle {
   const centre = tiles
     .filter((tile) => distance(tile, CITY) <= reach)
     .map(({ q, r }) => ({ q, r }));
   return beginChronicle(
-    CATALOGUE,
+    catalogue,
     age,
     7,
     civilization,

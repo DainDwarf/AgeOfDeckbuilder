@@ -231,7 +231,7 @@ export type Capstone = {
   readonly passes: (catalogue: Catalogue, chronicle: Chronicle) => boolean;
 };
 
-/** The two scripts a camp's warriors carry: one keeps its camp, one goes for the city. */
+/** The two scripts a camp's enemies carry: one keeps its camp, one goes for the city. */
 export type CampScript = 'guard' | 'raider';
 
 /** The least and the most a span of turns rolls, both ends included. */
@@ -260,8 +260,9 @@ export type Civilization = {
 
 /** What a camp is, what it enters, and what its capture gives. */
 export type Camp = {
-  readonly unit: string;
-  /** The script each warrior of the camp's carries, named by what enters it. */
+  /** The kinds of unit it enters, each with its weight in the draw every entry out of it makes. */
+  readonly unitKinds: Readonly<Record<string, number>>;
+  /** The script each enemy of the camp's carries, named by what enters it. */
   readonly scripts: Readonly<Record<CampScript, string>>;
   readonly building: string;
   /**
@@ -553,7 +554,14 @@ function ageHeld(
     }
   }
 
-  const campUnit = unitKind(content, camp.unit);
+  const kinds = Object.entries(camp.unitKinds);
+  if (kinds.length === 0) refuse(content, `the age ${id}'s camp enters no unit kind`);
+  for (const [kind, weight] of kinds) {
+    unitKind(content, kind);
+    if (!(weight > 0)) {
+      refuse(content, `the age ${id}'s camp enters ${kind} at a weight of ${weight}`);
+    }
+  }
   enemyScript(content, camp.scripts.guard);
   enemyScript(content, camp.scripts.raider);
   if (camp.rewards.length === 0) refuse(content, `the age ${id}'s camp deals no reward`);
@@ -576,8 +584,9 @@ function ageHeld(
     refuse(content, `the age ${id}'s camp ${camp.building} names ${campNames}`);
   }
   for (const terrain of campKind.terrains) {
-    if (!standsOn(content, campUnit, false, { q: 0, r: 0, terrain, improvements: [] })) {
-      refuse(content, `the age ${id}'s camp's unit ${camp.unit} cannot stand on ${terrain}`);
+    const tile = { q: 0, r: 0, terrain, improvements: [] };
+    if (!kinds.some(([kind]) => standsOn(content, unitKind(content, kind), false, tile))) {
+      refuse(content, `none of the age ${id}'s camp's unit kinds stands on ${terrain}`);
     }
   }
 

@@ -23,12 +23,11 @@ import {
   cardOf,
   checkContent,
   enemyScript,
-  entered,
   technologyOf,
   unitKind,
 } from './catalogue';
 import { assign, type CityCommand, claim, grow, income, reassign } from './city';
-import { campUnit, enteredAround, stepMove } from './enemies';
+import { enteredAround, enteredOnCamp, stepMove } from './enemies';
 import {
   distance,
   type FeatureId,
@@ -174,11 +173,7 @@ export function beginChronicle(
   let guarded = begun;
   for (const { q, r, building } of map.tiles) {
     if (building !== camp.building) continue;
-    guarded = entered(
-      catalogue,
-      guarded,
-      campUnit(catalogue, guarded, { q, r }, 'guard'),
-    ).chronicle;
+    guarded = enteredOnCamp(catalogue, guarded, { q, r }, 'guard').chronicle;
   }
   const seen = charted(catalogue, guarded);
   const raised = reachedOn(catalogue, seen, () => true);

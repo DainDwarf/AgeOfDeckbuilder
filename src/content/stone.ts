@@ -106,7 +106,13 @@ export const STONE: Slice = {
       capstone: { id: schedule.capstone.id, window: [26, 34] },
       entries: schedule.entries,
     },
-    camp: { ...camp, acrossWater: true, embarkedMove: EMBARKED_MOVE },
+    camp: {
+      ...camp,
+      unitKinds: { warrior: 2, archer: 1 },
+      odds: 0.08,
+      acrossWater: true,
+      embarkedMove: EMBARKED_MOVE,
+    },
     regions: REGIONS,
     achievements: {
       herbalism: {

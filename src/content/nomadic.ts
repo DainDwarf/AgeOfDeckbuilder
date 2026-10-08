@@ -17,7 +17,7 @@ import {
 } from '../rules/cards';
 import type { Age, Slice, Tables } from '../rules/catalogue';
 import { arrived, populationTaken, yielded } from '../rules/city';
-import { enteredAround } from '../rules/enemies';
+import { enteredAround, raided } from '../rules/enemies';
 import { MOVE_POINT } from '../rules/map';
 import { buildingKind } from '../rules/map-kinds';
 import {
@@ -30,13 +30,12 @@ import {
   featureDealt,
   fireRead,
   fireStartable,
-  raided,
   tileCharted,
 } from '../rules/schedule';
 import { followed, unchanged } from '../rules/stages';
 import { guarding, RAIDER } from './scripts';
 
-/** How many warriors a raid enters on this turn: one, and one more for every ten turns. */
+/** How many enemies a raid enters on this turn: one, and one more for every ten turns. */
 function raiders(turn: number): number {
   return 1 + Math.floor(turn / 10);
 }
@@ -209,8 +208,8 @@ const TABLES: Tables = {
             );
             const [camp] = placing.placed;
             if (camp === undefined) return placing;
-            // The first warrior lands on the camp only because `campsPlaced` asks no unit to stand
-            // there, and the catalogue refuses a camp on a terrain its unit cannot stand on.
+            // The first enemy lands on the camp, where its kind stands on it, only because
+            // `campsPlaced` asks no unit to stand there.
             return followed(placing, (left) =>
               enteredAround(catalogue, left, camp, raiders(chronicle.turn), 'guard'),
             );
@@ -403,7 +402,7 @@ export const NOMADIC: Slice = {
       },
     },
     camp: {
-      unit: 'warrior',
+      unitKinds: { warrior: 1 },
       scripts: { guard: 'guard', raider: 'raider' },
       building: 'camp',
       rewards: ['stores', 'band-joins'],

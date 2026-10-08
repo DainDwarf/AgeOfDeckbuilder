@@ -29,6 +29,7 @@ import {
   CITY,
   CIVILIZATION,
   CLEARING,
+  camping,
   changed,
   cityOf,
   field,
@@ -40,12 +41,13 @@ import {
   REGIONS,
   regionsUnlocked,
   SLICES,
+  SLOW_SLINGER,
   victoryOf,
   WARY,
   WELL,
 } from './fixtures';
 import { discTiles, generateMap, tileKey } from './map';
-import type { LayerKind, Region } from './map-kinds';
+import { buildingKind, type LayerKind, type Region } from './map-kinds';
 import { seedRng } from './rng';
 import { timelineOf } from './schedule';
 import { unchanged } from './stages';
@@ -235,10 +237,29 @@ test('a catalogue whose technology unlocks an age other than the one right after
   );
 });
 
-test('a catalogue whose camp enters a unit kind it does not hold is refused', () => {
-  const content = encamped({ unit: 'PH_Scout' });
+test('a catalogue whose camp enters no unit kind is refused', () => {
+  expect(() => catalogued(encamped({ unitKinds: {} }))).toThrow(
+    `fixture: the age ${AGE}'s camp enters no unit kind`,
+  );
+});
 
-  expect(() => catalogued(content)).toThrow(/^fixture: /);
+test('a catalogue whose camp enters a unit kind it does not hold is refused', () => {
+  const content = encamped({ unitKinds: { ...CAMP.unitKinds, PH_Scout: 1 } });
+
+  expect(() => catalogued(content)).toThrow('fixture: no unit kind is named PH_Scout');
+});
+
+test('a catalogue whose camp enters a unit kind at a weight of nought or below is refused', () => {
+  for (const weight of [0, -1]) {
+    const content = encamped({ unitKinds: { ...CAMP.unitKinds, PH_Slinger: weight } });
+
+    expect(() => catalogued(content)).toThrow(
+      `fixture: the age ${AGE}'s camp enters PH_Slinger at a weight of ${weight}`,
+    );
+  }
+  expect(() =>
+    catalogued(encamped({ unitKinds: { ...CAMP.unitKinds, PH_Slinger: 0.5 } })),
+  ).not.toThrow();
 });
 
 test('a catalogue whose camp names a guard’s or a raider’s script it does not hold is refused', () => {
@@ -275,11 +296,14 @@ test('a catalogue whose camp is dealt across the water and names no embarked mov
   expect(() => catalogued(encamped({ acrossWater: true, embarkedMove: 1 }))).not.toThrow();
 });
 
-test('a catalogue whose camp enters a unit that cannot stand on a camp’s terrain is refused', () => {
-  const stuck = { ...CATALOGUE.units.PH_Warrior, move: 0 };
-  const content = changed({ units: { ...CATALOGUE.units, PH_Warrior: stuck } });
-
-  expect(() => catalogued(content)).toThrow(/^fixture: /);
+test('a catalogue whose camp lies on a terrain none of its unit kinds stands on is refused, and one that one of them stands on is not', () => {
+  expect(buildingKind(CATALOGUE, CAMP.building).terrains).toContain('forest');
+  expect(() => camping({ unitKinds: { PH_Slinger: 1 } }, SLOW_SLINGER)).toThrow(
+    `fixture: none of the age ${AGE}'s camp's unit kinds stands on forest`,
+  );
+  expect(() =>
+    camping({ unitKinds: { ...CAMP.unitKinds, PH_Slinger: 1 } }, SLOW_SLINGER),
+  ).not.toThrow();
 });
 
 test('a catalogue whose unit kind names itself by another key is refused', () => {

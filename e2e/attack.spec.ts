@@ -1,13 +1,15 @@
 import { expect, type Page, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
-import { ageOf, entered, unitKind } from '../src/rules/catalogue';
+import { entered, unitKind } from '../src/rules/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
+import { campUnit } from '../src/rules/enemies';
 import { neighbours, type TileCoords, tileAt, tileKey } from '../src/rules/map';
 import { charted } from '../src/rules/sight';
 import type { Chronicle } from '../src/rules/state';
 import { standsOn, type Unit, unitAt } from '../src/rules/units';
 import {
   budget,
+  campKind,
   chronicleOf,
   cityTileOf,
   dragTiles,
@@ -23,27 +25,26 @@ import {
 
 /**
  * The first seed's turn 1 with a warrior of the player's entered on the city's tile and one enemy of
- * the camp's unit kind entered with the raider script on a tile beside it, and the two units.
+ * the camp's first unit kind entered with the raider script on a tile beside it, and the two units.
  */
 function besieged(): { chronicle: Chronicle; warrior: Unit; enemy: Unit } {
   return firstSeed('stands an enemy beside its city', (seed) => {
     const settled = settledOn(seed);
     const city = cityTileOf(settled);
     const guarded = entered(CATALOGUE, settled, { type: WARRIOR, faction: 'player', tile: city });
-    const { camp } = ageOf(CATALOGUE, settled.age);
-    const kind = unitKind(CATALOGUE, camp.unit);
+    const kind = campKind(settled);
+    const stats = unitKind(CATALOGUE, kind);
     const beside = neighbours(city).find(
       (tile) =>
-        standsOn(CATALOGUE, kind, false, tileAt(guarded.chronicle.tiles, tile)) &&
+        standsOn(CATALOGUE, stats, false, tileAt(guarded.chronicle.tiles, tile)) &&
         unitAt(guarded.chronicle.units, tile) === undefined,
     );
     if (beside === undefined) return undefined;
-    const beset = entered(CATALOGUE, guarded.chronicle, {
-      type: camp.unit,
-      faction: 'enemy',
-      tile: beside,
-      script: camp.scripts.raider,
-    });
+    const beset = entered(
+      CATALOGUE,
+      guarded.chronicle,
+      campUnit(CATALOGUE, guarded.chronicle, kind, beside, 'raider'),
+    );
     const chronicle = charted(CATALOGUE, beset.chronicle);
     const [warrior] = playersOf(chronicle);
     const enemy = unitAt(chronicle.units, beside);

@@ -1,14 +1,16 @@
 import { expect, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
 import { terraformed } from '../src/rules/cards';
-import { ageOf, unitKind } from '../src/rules/catalogue';
+import { unitKind } from '../src/rules/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
+import { campUnit } from '../src/rules/enemies';
 import { neighbours, type TileCoords, tileAt, tileKey } from '../src/rules/map';
 import { charted, inSight } from '../src/rules/sight';
 import type { Chronicle } from '../src/rules/state';
 import { standsOn, type Unit, unitAt } from '../src/rules/units';
 import {
   budget,
+  campKind,
   chronicleOf,
   cityTileOf,
   click,
@@ -44,17 +46,12 @@ function overTheHills(): { chronicle: Chronicle; archer: Unit; seen: Unit; hidde
     const city = cityTileOf(settled);
     const armed = unitEntered(settled, { type: ARCHER, faction: 'player', tile: city });
     const [archer] = playersOf(armed);
-    const { camp } = ageOf(CATALOGUE, armed.age);
-    const kind = unitKind(CATALOGUE, camp.unit);
+    const kind = campKind(armed);
+    const stats = unitKind(CATALOGUE, kind);
     const enemyOn = (chronicle: Chronicle, tile: TileCoords): Chronicle | undefined =>
-      standsOn(CATALOGUE, kind, false, tileAt(chronicle.tiles, tile)) &&
+      standsOn(CATALOGUE, stats, false, tileAt(chronicle.tiles, tile)) &&
       unitAt(chronicle.units, tile) === undefined
-        ? unitEntered(chronicle, {
-            type: camp.unit,
-            faction: 'enemy',
-            tile,
-            script: camp.scripts.raider,
-          })
+        ? unitEntered(chronicle, campUnit(CATALOGUE, chronicle, kind, tile, 'raider'))
         : undefined;
 
     for (const ridge of neighbours(city)) {

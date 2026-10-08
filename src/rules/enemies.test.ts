@@ -9,6 +9,7 @@ import {
   attacksOf,
   buildingAt,
   CAMP,
+  CAMP_KIND,
   CAMPS,
   CATALOGUE,
   CITY,
@@ -39,6 +40,7 @@ import {
   REGIONS,
   ringed,
   SCRIPT,
+  SLOW_SLINGER,
   stagedBy,
   standing,
   unitNamed,
@@ -481,7 +483,7 @@ test('where the enemies embark, a raid finds a door on the coast of the outer ri
       embarked: true,
       stats: { move: EMBARKED_MOVE },
       movePoints: EMBARKED_MOVE,
-      action: unitKind(rowing, CAMP.unit).action,
+      action: unitKind(rowing, CAMP_KIND).action,
     });
   }
 });
@@ -520,6 +522,102 @@ test('the chronicle opens with one guard on each camp the map was dealt, in tile
     })),
   ).toEqual(camps.map((tile, at) => ({ id: at + 1, tile, script: CAMP.scripts.guard })));
   expect(unitAt(banded.units, CITY)?.id).toBe(camps.length + 1);
+});
+
+/** The kinds of the enemies standing on the chronicle, in the order they entered. */
+function kindsOf(chronicle: Chronicle): string[] {
+  return enemiesOf(chronicle).map((unit) => unit.stats.type);
+}
+
+test('a camp naming two unit kinds draws each enemy’s kind by their weights from the seeded generator, the heavier the likelier, and a raid of several comes as a mix', () => {
+  const kinds = { [CAMP_KIND]: 2, PH_Slinger: 1 };
+  const city = cityOf(['urban'], {
+    ...NO_GROWTH,
+    tiles: camped(field(4), CAMPS),
+    drawPile: fullDraw(),
+  });
+  const rolledOn = (seed: number): string[] =>
+    kindsOf(
+      endedTurn({ ...city, rng: seedRng(seed) }, undefined, camping({ unitKinds: kinds, odds: 1 })),
+    );
+  const rolled = SEEDS.flatMap(rolledOn);
+  const count = (kind: string): number => rolled.filter((type) => type === kind).length;
+
+  expect(rolled).toHaveLength(SEEDS.length * CAMPS.length);
+  expect(count('PH_Slinger')).toBeGreaterThan(0);
+  expect(count(CAMP_KIND)).toBeGreaterThan(count('PH_Slinger'));
+  expect(count(CAMP_KIND) + count('PH_Slinger')).toBe(rolled.length);
+  expect(new Set(SEEDS.map((seed) => rolledOn(seed).join(' '))).size).toBeGreaterThan(1);
+
+  const raiding = cityOf(['urban'], {
+    tiles: camped(field(5), [{ q: 3, r: 0 }]),
+    turn: 19,
+    ...RAID_OF_THREE,
+  });
+  const raids = SEEDS.map((seed) =>
+    kindsOf(
+      endedTurn({ ...raiding, rng: seedRng(seed) }, 'PH_Raid', camping({ unitKinds: kinds })),
+    ),
+  );
+  expect(raids.some((raid) => new Set(raid).size === 2)).toBe(true);
+});
+
+test('a camp naming one unit kind draws nothing for an enemy’s kind, and one naming two draws once for each enemy', () => {
+  const city = cityOf(['urban'], {
+    tiles: camped(field(5), [{ q: 3, r: 0 }]),
+    turn: 19,
+    ...RAID_OF_THREE,
+  });
+  const raidedOn = (
+    catalogue: Catalogue,
+  ): { dealt: Chronicle['rng']; entered: Chronicle['rng'][] } => {
+    const dealt = outcome(apply(catalogue, city, { type: 'end-turn' }));
+    const entries = [...walked(apply(catalogue, dealt, { type: 'take', at: 0 }))].filter(
+      (stage) => stage.name === 'enter',
+    );
+    return { dealt: dealt.rng, entered: entries.map((entry) => entry.chronicle.rng) };
+  };
+  const stepped = (rng: Chronicle['rng'], steps: number): Chronicle['rng'] =>
+    steps === 0 ? rng : stepped(nextRng(rng).rng, steps - 1);
+
+  const one = raidedOn(CATALOGUE);
+  const two = raidedOn(camping({ unitKinds: { [CAMP_KIND]: 1, PH_Slinger: 1 } }));
+
+  // The side and the door, then the camp's own tile drawing nothing and one draw for each enemy
+  // entering beside it.
+  expect(one.entered).toEqual([2, 3, 4].map((steps) => stepped(one.dealt, steps)));
+  expect(two.entered).toEqual([5, 6, 7].map((steps) => stepped(two.dealt, steps)));
+});
+
+test('the opening draws each camp’s guard among the unit kinds standing on its tile: where one kind alone stands, that kind, drawn from nothing', () => {
+  const mixed = camping({ unitKinds: { [CAMP_KIND]: 1, PH_Slinger: 1 } }, SLOW_SLINGER);
+  const forests = camped(madeOf(plains(5), 'forest', CAMPS), CAMPS);
+  const plain = camped(plains(5), CAMPS);
+
+  expect(kindsOf(opening(forests, { catalogue: mixed }))).toEqual(CAMPS.map(() => CAMP_KIND));
+  expect(opening(forests, { catalogue: mixed })).toEqual(opening(forests));
+  expect(opening(plain, { catalogue: mixed }).rng).not.toEqual(opening(plain).rng);
+});
+
+test('a raid’s door is read on its first enemy’s kind: a camp no tile around which that kind stands on is no door for it, and it enters on the outer ring', () => {
+  const { camp, beside, tiles } = island();
+  const city = cityOf(['urban'], {
+    tiles: madeOf(tiles, 'forest', [camp, beside]),
+    turn: 19,
+    ...RAID_OF_THREE,
+  });
+  const mixed = camping({ unitKinds: { [CAMP_KIND]: 1, PH_Slinger: 1 } }, SLOW_SLINGER);
+  const firsts = SEEDS.map((seed) => {
+    const seeded = { ...city, rng: seedRng(seed) };
+    const [first] = enemiesOf(endedTurn(seeded, 'PH_Raid', mixed));
+    return first;
+  });
+
+  for (const first of firsts) {
+    if (first.stats.type === CAMP_KIND) expect(first.tile).toEqual(camp);
+    else expect(distance(first.tile, CENTRE)).toBe(5);
+  }
+  expect(new Set(firsts.map((first) => first.stats.type)).size).toBe(2);
 });
 
 test('a raid enters raiders, whatever door it comes through', () => {
@@ -569,13 +667,13 @@ test('an enemy’s move draws from the seeded generator where its script draws, 
   expect(outcome(apply(drawing, city, { type: 'end-turn' })).rng).toEqual(phaseOf(drawing).rng);
 });
 
-test('a warrior a camp rolls stands on the camp with the camp’s unit’s stats, its move points and its action full when the turn ends', () => {
+test('a warrior a camp rolls stands on the camp with its kind’s stats, its move points and its action full when the turn ends', () => {
   const city = cityOf(['urban'], {
     ...NO_GROWTH,
     tiles: camped(field(4), CAMPS),
     drawPile: fullDraw(),
   });
-  const stats = unitKind(CATALOGUE, CAMP.unit);
+  const stats = unitKind(CATALOGUE, CAMP_KIND);
 
   const after = outcome(apply(camping({ odds: 1 }), city, { type: 'end-turn' }));
 
