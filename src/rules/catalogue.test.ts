@@ -266,6 +266,15 @@ test('a catalogue whose raids enter through a camp at odds below nought or above
   expect(() => catalogued(above)).toThrow(/^fixture: /);
 });
 
+test('a catalogue whose camp is dealt across the water and names no embarked move, or names one below one, is refused', () => {
+  const ashore = encamped({ acrossWater: true });
+  const stuck = encamped({ acrossWater: true, embarkedMove: 0 });
+
+  expect(() => catalogued(ashore)).toThrow(/^fixture: /);
+  expect(() => catalogued(stuck)).toThrow(/^fixture: /);
+  expect(() => catalogued(encamped({ acrossWater: true, embarkedMove: 1 }))).not.toThrow();
+});
+
 test('a catalogue whose camp enters a unit that cannot stand on a camp’s terrain is refused', () => {
   const stuck = { ...CATALOGUE.units.PH_Warrior, move: 0 };
   const content = changed({ units: { ...CATALOGUE.units, PH_Warrior: stuck } });

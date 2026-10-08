@@ -153,10 +153,10 @@ test('Disembark played at a tile beside an embarked unit puts it ashore there as
     const paid = paidFor(manned(opened, [bank]), EMBARK);
     if (!admits(paid.chronicle, paid.index, water)) return undefined;
     // The deck cycles back to the card Embark lay as well within as many turns as it holds cards.
-    let afloat = playedOn(paid.chronicle, paid.index, water);
-    for (let turn = 0; turn < civilization.cards.length && afloat.ending === undefined; turn++) {
-      afloat = endedTurn(afloat);
-      const { chronicle, index } = paidFor(afloat, DISEMBARK);
+    let embarked = playedOn(paid.chronicle, paid.index, water);
+    for (let turn = 0; turn < civilization.cards.length && embarked.ending === undefined; turn++) {
+      embarked = endedTurn(embarked);
+      const { chronicle, index } = paidFor(embarked, DISEMBARK);
       if (admits(chronicle, index, bank)) return { chronicle, index, bank };
     }
     return undefined;

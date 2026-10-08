@@ -93,6 +93,9 @@ const REGIONS: Age['regions'] = {
   },
 };
 
+/** The move a unit has embarked: the Embark card's and the camp's enemies' alike. */
+const EMBARKED_MOVE = MOVE_POINT;
+
 /** The Stone Age: what it owns, and what it brings to the tables every age shares. */
 export const STONE: Slice = {
   id: 'stone',
@@ -103,7 +106,7 @@ export const STONE: Slice = {
       capstone: { id: schedule.capstone.id, window: [26, 34] },
       entries: schedule.entries,
     },
-    camp: { ...camp, acrossWater: true },
+    camp: { ...camp, acrossWater: true, embarkedMove: EMBARKED_MOVE },
     regions: REGIONS,
     achievements: {
       herbalism: {
@@ -255,7 +258,7 @@ export const STONE: Slice = {
         kind: 'action',
         cost: { production: 1 },
         becomes: 'disembark',
-        ...embarks(MOVE_POINT),
+        ...embarks(EMBARKED_MOVE),
       },
       disembark: { kind: 'action', cost: {}, becomes: 'embark', ...disembarks() },
       'food-trade': {

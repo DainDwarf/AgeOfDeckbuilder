@@ -7,6 +7,7 @@ import {
   playedThrough,
   refuses,
   retiled,
+  steppedOnto,
   struck,
   throughRefusal,
 } from './cards';
@@ -27,7 +28,7 @@ import {
   unitKind,
 } from './catalogue';
 import { assign, type CityCommand, claim, grow, income, reassign } from './city';
-import { campUnit, guardEntered } from './enemies';
+import { campUnit, guardEntered, stepMove } from './enemies';
 import {
   distance,
   type FeatureId,
@@ -1149,19 +1150,22 @@ function enemyPhase(catalogue: Catalogue, chronicle: Chronicle): Sequence<Group>
 }
 
 /**
- * One enemy acting on the chronicle the one before it left. The draws its script made ride on the
- * chronicle even where it raised no stage.
+ * One enemy acting on the chronicle the one before it left: an enemy that steps attacks nothing
+ * after it. The draws its script made ride on the chronicle even where it raised no stage.
  */
 function enemyActs(catalogue: Catalogue, chronicle: Chronicle, id: number): Sequence {
   const found = unitOf(chronicle.units, id);
   if (found?.faction !== 'enemy') return unchanged(chronicle);
   const script = enemyScript(catalogue, found.script);
-  const { landing, rng } = script.moveTo(catalogue, chronicle, found);
+  const { landing, step, rng } = script.moveTo(catalogue, chronicle, found);
   const drawn = rng === chronicle.rng ? chronicle : { ...chronicle, rng };
   const moving =
     tileKey(landing.tile) === tileKey(found.tile)
       ? unchanged(drawn)
       : crossed(drawn, found, landing);
+  if (step !== undefined) {
+    return followed<Stage>(moving, (left) => enemyStepped(catalogue, left, id, step));
+  }
 
   const attacks = (standing: Chronicle): Sequence => {
     const acting = unitOf(standing.units, id);
@@ -1178,6 +1182,24 @@ function enemyActs(catalogue: Catalogue, chronicle: Chronicle, id: number): Sequ
     return followed<Stage>(blow(standing, acting, target), attacks);
   };
   return followed<Stage>(moving, attacks);
+}
+
+/**
+ * An enemy embarking or disembarking onto the tile its script names, through the step the cards
+ * take; a step the rules cannot take is a `runtime-error` and no step.
+ */
+function enemyStepped(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  id: number,
+  to: TileCoords,
+): Landed {
+  const stepping = unitOf(chronicle.units, id);
+  const move = stepping === undefined ? undefined : stepMove(catalogue, chronicle, stepping, to);
+  if (stepping === undefined || move === undefined) {
+    return landedAs(change('runtime-error', chronicle));
+  }
+  return steppedOnto(chronicle, stepping, to, !stepping.embarked, move);
 }
 
 /**

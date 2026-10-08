@@ -1,15 +1,19 @@
 import { expect, test } from 'vitest';
-import { entered } from './catalogue';
+import { catalogued, entered } from './catalogue';
 import { apply, outcome } from './chronicle';
 import {
+  agesOver,
   aimedAt,
+  CAMP,
   CATALOGUE,
   CIVILIZATION,
+  EMBARKED_MOVE,
   NO_DEALS,
   namesOf,
   opening,
   plains,
   QUIET,
+  REGIONS,
   SCRIPT,
   settledOn,
 } from './fixtures';
@@ -322,7 +326,7 @@ function leftInFog(): { readonly seen: Chronicle; readonly left: Chronicle[] } {
   return { seen, left: [once, twice] };
 }
 
-const ENEMY = { type: 'PH_Warrior', faction: 'enemy' } as const;
+const ENEMY = { type: 'PH_Warrior', faction: 'enemy', embarked: false } as const;
 
 test('a unit kept in fog stays in the snapshot through the commands of the turn', () => {
   const { seen, left } = leftInFog();
@@ -347,6 +351,36 @@ test('when the turn ticks a unit kept in fog leaves the snapshot, and its tile s
   expect(after?.unit).toBeUndefined();
   expect(after?.tile).toBe(before?.tile);
   expect(after?.tile.terrain).toBe('hills');
+});
+
+test('an enemy seen embarking is kept in the snapshot embarked, in fog as in sight', () => {
+  const coast = off(2, -1);
+  const rowing = catalogued({
+    ...CATALOGUE,
+    ages: agesOver({ ...CAMP, embarkedMove: EMBARKED_MOVE }, REGIONS),
+    scripts: {
+      ...CATALOGUE.scripts,
+      [SCRIPT]: {
+        moveTo: (_catalogue, chronicle, enemy) => ({
+          landing: { tile: enemy.tile, cost: 0 },
+          step: coast,
+          rng: chronicle.rng,
+        }),
+        attacks: () => undefined,
+      },
+    },
+  });
+  const raided = raiding(
+    watching(cityOn(ground(['coast', [coast]])), WATCHER, { sight: SIGHT }),
+    off(2, 0),
+  );
+
+  const ticked = outcome(apply(rowing, raided, { type: 'end-turn' }));
+  const left = outcome(apply(rowing, ticked, { type: 'move', unit: 1, tile: off(0, -2) }));
+
+  expect(snapshotOf(ticked, coast)?.unit).toEqual({ ...ENEMY, embarked: true });
+  expect(sees(left, coast)).toBe(false);
+  expect(snapshotOf(left, coast)?.unit).toEqual({ ...ENEMY, embarked: true });
 });
 
 test('a unit standing in sight when the turn ticks is still recorded', () => {

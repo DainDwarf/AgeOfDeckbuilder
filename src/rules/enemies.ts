@@ -6,7 +6,16 @@ import {
   entered,
   unitKind,
 } from './catalogue';
-import { CENTRE, distance, groundRunsTo, type Tile, type TileCoords, tileKey } from './map';
+import {
+  CENTRE,
+  distance,
+  groundRunsTo,
+  type Moves,
+  type Tile,
+  type TileCoords,
+  tileAt,
+  tileKey,
+} from './map';
 import { type MapContent, refuse } from './map-kinds';
 import { nextRng } from './rng';
 import { inOwnSight } from './sight';
@@ -46,6 +55,46 @@ export function leastHealth(
     if (target === undefined || other.stats.health < target.stats.health) target = other;
   }
   return target;
+}
+
+/**
+ * The move an enemy has once it embarks or disembarks: embarking, its age's camp's embarked move, and
+ * none where the camp names none; disembarking, its kind's own.
+ */
+function steppedMove(catalogue: Catalogue, chronicle: Chronicle, enemy: Unit): number | undefined {
+  return enemy.embarked
+    ? unitKind(catalogue, enemy.stats.type).move
+    : ageOf(catalogue, chronicle.age).camp.embarkedMove;
+}
+
+/**
+ * The move an enemy embarks or disembarks onto the tile with, through no card, and nothing where it
+ * cannot: the tile beside where the enemy stands, no other unit on it, one it stands on once stepped,
+ * and the enemy holding action.
+ */
+export function stepMove(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  enemy: Unit,
+  to: TileCoords,
+): number | undefined {
+  const move = steppedMove(catalogue, chronicle, enemy);
+  if (move === undefined || enemy.action <= 0 || distance(enemy.tile, to) !== 1) return undefined;
+  const there = unitAt(chronicle.units, to);
+  if (there !== undefined && there.id !== enemy.id) return undefined;
+  const tile = tileAt(chronicle.tiles, to);
+  return standsOn(catalogue, { ...enemy.stats, move }, !enemy.embarked, tile) ? move : undefined;
+}
+
+/**
+ * The moves an enemy's walk over the whole map weighs its steps against: its own, embarked or
+ * ashore as it stands, and the one an embark or a disembark would give it.
+ */
+export function enemyMoves(catalogue: Catalogue, chronicle: Chronicle, enemy: Unit): Moves {
+  const stepped = steppedMove(catalogue, chronicle, enemy);
+  return enemy.embarked
+    ? { embarked: enemy.stats.move, ashore: stepped }
+    : { ashore: enemy.stats.move, embarked: stepped };
 }
 
 /** The unit of the chronicle's age's camp, entering on the tile with the script the camp names for it. */

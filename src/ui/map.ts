@@ -1116,7 +1116,7 @@ export function createMapView(
     } else {
       const kept = seen.charted.get(key)?.unit;
       if (kept !== undefined)
-        paint(marks, unitMark(scene, kept.type, kept.faction, false).setPosition(x, y));
+        paint(marks, unitMark(scene, kept.type, kept.faction, kept.embarked).setPosition(x, y));
     }
     paint(fog, fogScrim(scene, tile));
     return painted;

@@ -1333,6 +1333,16 @@ export function madeOf(tiles: Tile[], terrain: Terrain, coords: TileCoords[]): T
   return tiles.map((tile) => (named.has(tileKey(tile)) ? { ...tile, terrain } : tile));
 }
 
+/** The same tiles with every one but the named ones made deep, which nothing crosses. */
+export function deepBut(tiles: Tile[], kept: TileCoords[]): Tile[] {
+  const named = new Set(kept.map(tileKey));
+  return madeOf(
+    tiles,
+    'deep',
+    tiles.filter((tile) => !named.has(tileKey(tile))),
+  );
+}
+
 /** The camps a fixture deals over a disc out to four: one on each of the six directions. */
 export const CAMPS: TileCoords[] = [
   { q: 4, r: 0 },

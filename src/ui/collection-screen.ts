@@ -125,7 +125,7 @@ type Screen = Laying &
 type Laid = { readonly head: Phaser.GameObjects.Container; readonly panels: readonly Panel[] };
 
 /** What a stack of the collection answers a left click with, and the box a press held on it lands in. */
-type Moves = {
+type StackMoves = {
   readonly pressOf: (stack: CollectionStack) => (() => void) | undefined;
   readonly lands: Box;
 };
@@ -140,7 +140,7 @@ function collectionOf(
   campaign: Campaign,
   { top, right, across }: { top: number; right: number; across: number },
   readingOf: (stack: CollectionStack) => Reading,
-  moves: Moves | undefined,
+  moves: StackMoves | undefined,
   buy: (card: CardId) => void,
 ): Filled {
   const { scene, catalogue } = laying;

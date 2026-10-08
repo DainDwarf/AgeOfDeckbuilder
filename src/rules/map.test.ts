@@ -1,6 +1,19 @@
 import { expect, test } from 'vitest';
 import { ageOf, catalogued } from './catalogue';
-import { AGE, agesOver, CAMP, CATALOGUE, CLEARING, changed, REGION, REGIONS } from './fixtures';
+import {
+  AGE,
+  agesOver,
+  CAMP,
+  CATALOGUE,
+  CLEARING,
+  changed,
+  deepBut,
+  madeOf,
+  only,
+  REGION,
+  REGIONS,
+  riverBetween,
+} from './fixtures';
 import {
   CENTRE,
   type Corner,
@@ -11,9 +24,10 @@ import {
   type HexMap,
   MOVE_POINT,
   neighbours,
-  pathCosts,
   type River,
   riversAlong,
+  routesFrom,
+  routesToward,
   type Tile,
   type TileCoords,
   tileAt,
@@ -21,6 +35,7 @@ import {
   tilesAtCorner,
   tilesOfEdge,
   water,
+  wholeMove,
 } from './map';
 import {
   type BiomeShare,
@@ -436,15 +451,9 @@ test('every map is dealt its camps, each keeping its distance from the centre an
 
 /** Every tile a walk over the whole map from the tile reaches, ashore or embarked. */
 function walkedFrom(map: HexMap, from: TileCoords, embarked: boolean): Set<string> {
-  const walked = pathCosts(
-    CATALOGUE,
-    map.tiles,
-    map.rivers,
-    from,
-    { kind: 'whole-map', move: MOVE_POINT, embarked },
-    () => false,
-  );
-  return new Set(walked.keys());
+  const moves = embarked ? { embarked: MOVE_POINT } : { ashore: MOVE_POINT };
+  const walked = routesFrom(CATALOGUE, map.tiles, map.rivers, from, embarked, moves);
+  return new Set((embarked ? walked.embarked : walked.ashore).keys());
 }
 
 /** Every tile a unit comes to from the centre walking ashore and embarked by turns. */
@@ -497,6 +506,40 @@ test('a camp across the water stands on any land a unit comes to from the centre
     }
   }
   expect(island).toBeGreaterThan(0);
+});
+
+test('a walk over the whole map toward a tile weighs each step in moves: the movement cost of the tile it enters against the move it has there, ashore or embarked, and an embark, a disembark or a river crossing one whole move; a side whose move is none it never stands on', () => {
+  const beyond = { q: -1, r: 0 };
+  const shore = { q: 0, r: 1 };
+  const island = { q: 3, r: 0 };
+  const coast = [
+    { q: 1, r: 0 },
+    { q: 2, r: 0 },
+  ];
+  const land = [CENTRE, beyond, shore, island];
+  const tiles = madeOf(deepBut(only(3, land), [...land, ...coast]), 'forest', [shore]);
+  const rivers = [riverBetween(CENTRE, beyond)];
+  const moves = { ashore: 2 * MOVE_POINT, embarked: 3 * MOVE_POINT };
+  const move = wholeMove(moves);
+
+  const toward = routesToward(CATALOGUE, tiles, rivers, CENTRE, false, moves);
+  const ashoreOnly = routesToward(CATALOGUE, tiles, rivers, CENTRE, false, {
+    ashore: moves.ashore,
+    embarked: 0,
+  });
+
+  expect(Object.fromEntries(toward.ashore)).toEqual({
+    '0,0': 0,
+    '-1,0': move,
+    '0,1': move / 2,
+    '3,0': move + move / 3 + move,
+  });
+  expect(Object.fromEntries(toward.embarked)).toEqual({ '1,0': move, '2,0': move / 3 + move });
+  expect(toward.next(island, false)).toEqual([{ tile: coast[1], embarked: true }]);
+  expect(toward.next(coast[1], true)).toEqual([{ tile: coast[0], embarked: true }]);
+  expect(toward.next(coast[0], true)).toEqual([{ tile: CENTRE, embarked: false }]);
+  expect([...ashoreOnly.ashore.keys()].sort()).toEqual(['-1,0', '0,0', '0,1']);
+  expect(ashoreOnly.embarked.size).toBe(0);
 });
 
 test('the generator fills a building slot with a camp and with nothing else', () => {

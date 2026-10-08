@@ -90,8 +90,8 @@ function fisheryAdmitted(): Paid & { readonly beside: TileCoords } {
         const manned = unitEntered(claimed, { type: WORKER, faction: 'player', tile: city });
         const embarking = paidFor(manned, EMBARK);
         if (!admits(embarking.chronicle, embarking.index, tile)) continue;
-        const afloat = playedOn(embarking.chronicle, embarking.index, tile);
-        const next = endedTurn(addedToDrawPileTop(CATALOGUE, afloat, FISHERY).chronicle);
+        const embarked = playedOn(embarking.chronicle, embarking.index, tile);
+        const next = endedTurn(addedToDrawPileTop(CATALOGUE, embarked, FISHERY).chronicle);
         if (next.ending !== undefined) continue;
         const paid = paidFor(next, FISHERY);
         if (admits(paid.chronicle, paid.index, tile)) return { ...paid, tile, beside };

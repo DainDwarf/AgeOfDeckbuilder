@@ -214,36 +214,160 @@ export function tilesBeside(tiles: readonly Tile[]): TilesBeside {
   return (coord) => byKey.get(tileKey(coord));
 }
 
-/**
- * Whether the walker is embarked, what bounds its walk and what a river edge costs it. `unit`: the
- * move points it has left, which a crossing spends every one of. `whole-map`: the walk a script reads
- * the whole map by, which nothing bounds and a crossing is charged a whole move.
- */
-export type Walk = { readonly embarked: boolean } & (
-  | { readonly kind: 'unit'; readonly points: number }
-  | { readonly kind: 'whole-map'; readonly move: number }
-);
+/** Whether the walker is embarked, and the move points it has left, which a crossing spends every one of. */
+export type Walk = { readonly embarked: boolean; readonly points: number };
 
 /**
- * What a step to a neighbouring tile leaves the walk having spent, and nothing where the walk does
- * not take that step: entering a tile spends its movement cost, and a step over an edge a river runs
- * along spends every move point the unit has left, taken only where those cover the tile entered in
- * full. A walk over the whole map has no points to drain, so a crossing is charged a whole move.
+ * The moves a walk over the whole map weighs its steps against, ashore and embarked: a walk stands
+ * on no tile the way its moves name no move above nought for.
  */
-function spentOn(walk: Walk, paid: number, cost: number, river: boolean): number | undefined {
-  switch (walk.kind) {
-    case 'unit':
-      if (river) return walk.points - paid >= cost ? walk.points : undefined;
-      return paid + cost <= walk.points ? paid + cost : undefined;
-    case 'whole-map':
-      return paid + (river ? walk.move : cost);
-  }
+export type Moves = { readonly ashore?: number; readonly embarked?: number };
+
+/** What a walk has spent reaching each tile, ashore and embarked apart; a tile it never reached that way is absent. */
+export type Routes = {
+  readonly ashore: ReadonlyMap<string, number>;
+  readonly embarked: ReadonlyMap<string, number>;
+};
+
+/** A tile beside another, and whether the walker stands on it embarked. */
+export type Stood = { readonly tile: TileCoords; readonly embarked: boolean };
+
+/**
+ * A walk over the whole map toward a tile: what the cheapest route to it weighs from every tile,
+ * and `next`, the tiles a cheapest route from a tile, standing embarked or ashore, steps onto first.
+ */
+export type Toward = Routes & {
+  readonly next: (tile: TileCoords, embarked: boolean) => Stood[];
+};
+
+/**
+ * One step between two tiles beside each other, in the order the walk goes: the tile it is at and
+ * the one it goes on to, each with whether the walker stands on it embarked, and whether a river edge
+ * no bridge spans lies between them.
+ */
+type Step = {
+  readonly at: Tile | undefined;
+  readonly atEmbarked: boolean;
+  readonly onto: Tile | undefined;
+  readonly embarked: boolean;
+  readonly river: boolean;
+};
+
+/** What a step leaves the walk having spent, and nothing where the walk does not take it. */
+type Spends = (paid: number, step: Step) => number | undefined;
+
+/** The map a walk goes over: its tiles by position, and whether a river edge no bridge spans lies between two of them. */
+type Ground = {
+  readonly at: (coord: TileCoords) => Tile | undefined;
+  readonly river: (a: TileCoords, b: TileCoords) => boolean;
+};
+
+function groundOf(catalogue: MapContent, tiles: readonly Tile[], rivers: readonly River[]): Ground {
+  const byKey = new Map(tiles.map((tile) => [tileKey(tile), tile]));
+  const crossings = riverEdges(rivers);
+  const at = (coord: TileCoords): Tile | undefined => byKey.get(tileKey(coord));
+  return {
+    at,
+    river: (a, b) =>
+      crossings.has(edgeKey(a, b)) && !(bridges(catalogue, at(a)) && bridges(catalogue, at(b))),
+  };
+}
+
+/** The move the moves name a walker embarked or ashore, and nothing where they name none above nought. */
+function moveOf(moves: Moves, embarked: boolean): number | undefined {
+  const move = embarked ? moves.embarked : moves.ashore;
+  return move !== undefined && move > 0 ? move : undefined;
 }
 
 /**
- * What the cheapest route to each tile costs from a start, the start nothing and a tile no route
- * reaches absent: every step spends what the walk says, `shut` keeps a route off tiles for the
- * mover's own reasons, and a river edge with a bridging layer on both banks is a bridge.
+ * What one whole move weighs on a walk over the whole map: every move the walk names divides it, so
+ * no step weighs a fraction and two routes of equal moves weigh the same.
+ */
+export function wholeMove(moves: Moves): number {
+  return (moveOf(moves, false) ?? 1) * (moveOf(moves, true) ?? 1);
+}
+
+/**
+ * How a unit's walk spends: entering a tile its movement cost, and a step over a river edge every
+ * move point it has left, taken only where those cover the tile entered in full.
+ */
+function spends(catalogue: MapContent, walk: Walk): Spends {
+  return (paid, { onto, embarked, river }) => {
+    const cost = movementCost(catalogue, onto, embarked);
+    if (cost === undefined) return undefined;
+    if (river) return walk.points - paid >= cost ? walk.points : undefined;
+    return paid + cost <= walk.points ? paid + cost : undefined;
+  };
+}
+
+/**
+ * How a walk over the whole map weighs a step in moves, charging the tile the walker enters: `onto`
+ * walking from the start, `at` walking toward it, where the walker steps from `onto` onto `at`. A
+ * step onto a side the moves name no move for is refused.
+ */
+function weighs(catalogue: MapContent, moves: Moves, toward: boolean): Spends {
+  const whole = wholeMove(moves);
+  return (paid, { at, atEmbarked, onto, embarked, river }) => {
+    if (moveOf(moves, atEmbarked) === undefined || moveOf(moves, embarked) === undefined) {
+      return undefined;
+    }
+    const stands = movementCost(catalogue, onto, embarked);
+    const entered = toward ? movementCost(catalogue, at, atEmbarked) : stands;
+    if (stands === undefined || entered === undefined) return undefined;
+    if (river || atEmbarked !== embarked) return paid + whole;
+    return paid + entered * (moveOf(moves, !embarked) ?? 1);
+  };
+}
+
+/**
+ * What the cheapest route to each tile costs from a start, ashore and embarked apart: `embarks` lets
+ * a step embark or disembark.
+ */
+function cheapestRoutes(
+  ground: Ground,
+  from: TileCoords,
+  embarked: boolean,
+  embarks: boolean,
+  spending: Spends,
+  shut: (coord: TileCoords) => boolean,
+): Routes {
+  const spent = { ashore: new Map<string, number>(), embarked: new Map<string, number>() };
+  const reachedBy = (standsEmbarked: boolean): Map<string, number> =>
+    standsEmbarked ? spent.embarked : spent.ashore;
+  reachedBy(embarked).set(tileKey(from), 0);
+
+  let front: [TileCoords, boolean, number][] = [[from, embarked, 0]];
+  while (front.length > 0) {
+    const next: [TileCoords, boolean, number][] = [];
+    for (const [at, atEmbarked, paid] of front) {
+      // A tile the walk reached again for less stands on the front twice; the dearer one is dropped.
+      if (reachedBy(atEmbarked).get(tileKey(at)) !== paid) continue;
+      const here = ground.at(at);
+      for (const coord of neighbours(at)) {
+        if (shut(coord)) continue;
+        const key = tileKey(coord);
+        const onto = ground.at(coord);
+        const river = ground.river(at, coord);
+        for (const embarked of embarks ? [atEmbarked, !atEmbarked] : [atEmbarked]) {
+          const total = spending(paid, { at: here, atEmbarked, onto, embarked, river });
+          if (total === undefined) continue;
+          const reached = reachedBy(embarked);
+          const before = reached.get(key);
+          if (before !== undefined && before <= total) continue;
+          reached.set(key, total);
+          next.push([coord, embarked, total]);
+        }
+      }
+    }
+    front = next;
+  }
+  return spent;
+}
+
+/**
+ * What the cheapest route to each tile costs a unit from a start, on the move points it has left,
+ * the start nothing and a tile no route reaches absent: `shut` keeps a route off tiles for the
+ * mover's own reasons.
  */
 export function pathCosts(
   catalogue: MapContent,
@@ -252,35 +376,65 @@ export function pathCosts(
   from: TileCoords,
   walk: Walk,
   shut: (coord: TileCoords) => boolean,
-): Map<string, number> {
-  const ground = new Map(tiles.map((tile) => [tileKey(tile), tile]));
-  const crossings = riverEdges(rivers);
-  const spent = new Map([[tileKey(from), 0]]);
+): ReadonlyMap<string, number> {
+  const ground = groundOf(catalogue, tiles, rivers);
+  const routes = cheapestRoutes(ground, from, walk.embarked, false, spends(catalogue, walk), shut);
+  return walk.embarked ? routes.embarked : routes.ashore;
+}
 
-  let front: [TileCoords, number][] = [[from, 0]];
-  while (front.length > 0) {
-    const next: [TileCoords, number][] = [];
-    for (const [at, paid] of front) {
-      // A tile the walk reached again for less stands on the front twice; the dearer one is dropped.
-      if (spent.get(tileKey(at)) !== paid) continue;
-      const nearBank = bridges(catalogue, ground.get(tileKey(at)));
-      for (const coord of neighbours(at)) {
-        const key = tileKey(coord);
-        const onto = ground.get(key);
-        const cost = movementCost(catalogue, onto, walk.embarked);
-        if (cost === undefined || shut(coord)) continue;
-        const bridged = nearBank && bridges(catalogue, onto);
-        const total = spentOn(walk, paid, cost, crossings.has(edgeKey(at, coord)) && !bridged);
-        if (total === undefined) continue;
-        const before = spent.get(key);
-        if (before !== undefined && before <= total) continue;
-        spent.set(key, total);
-        next.push([coord, total]);
-      }
-    }
-    front = next;
-  }
-  return spent;
+/**
+ * What the cheapest route to each tile weighs from a start, ashore and embarked apart, on a walk over
+ * the whole map with these moves: it embarks where the ground ends and disembarks where it begins,
+ * wherever the moves name both.
+ */
+export function routesFrom(
+  catalogue: MapContent,
+  tiles: readonly Tile[],
+  rivers: readonly River[],
+  from: TileCoords,
+  embarked: boolean,
+  moves: Moves,
+): Routes {
+  const ground = groundOf(catalogue, tiles, rivers);
+  return cheapestRoutes(ground, from, embarked, true, weighs(catalogue, moves, false), () => false);
+}
+
+/**
+ * What the cheapest route from each tile to a tile reached embarked or ashore weighs, on a walk over
+ * the whole map with these moves, and the steps a cheapest route takes first.
+ */
+export function routesToward(
+  catalogue: MapContent,
+  tiles: readonly Tile[],
+  rivers: readonly River[],
+  to: TileCoords,
+  embarked: boolean,
+  moves: Moves,
+): Toward {
+  const ground = groundOf(catalogue, tiles, rivers);
+  const spending = weighs(catalogue, moves, true);
+  const routes = cheapestRoutes(ground, to, embarked, true, spending, () => false);
+  const reachedBy = (standsEmbarked: boolean): ReadonlyMap<string, number> =>
+    standsEmbarked ? routes.embarked : routes.ashore;
+  const next = (tile: TileCoords, standsEmbarked: boolean): Stood[] => {
+    const weight = reachedBy(standsEmbarked).get(tileKey(tile));
+    if (weight === undefined) return [];
+    return neighbours(tile).flatMap((coord) =>
+      [false, true].flatMap((atEmbarked): Stood[] => {
+        const there = reachedBy(atEmbarked).get(tileKey(coord));
+        if (there === undefined) return [];
+        const step = {
+          at: ground.at(coord),
+          atEmbarked,
+          onto: ground.at(tile),
+          embarked: standsEmbarked,
+          river: ground.river(coord, tile),
+        };
+        return spending(there, step) === weight ? [{ tile: coord, embarked: atEmbarked }] : [];
+      }),
+    );
+  };
+  return { ...routes, next };
 }
 
 export function groundRunsTo(
@@ -289,47 +443,22 @@ export function groundRunsTo(
   rivers: readonly River[],
   to: TileCoords,
 ): ReadonlySet<string> {
-  // Only which tiles the walk reached is read, never what reaching them cost, so the move a crossing
-  // is charged against shows nowhere.
-  const reached = pathCosts(
-    catalogue,
-    tiles,
-    rivers,
-    to,
-    { kind: 'whole-map', move: MOVE_POINT, embarked: false },
-    () => false,
-  );
-  return new Set(reached.keys());
+  // Only which tiles the walk reached is read, never what reaching them weighed, so the move it is
+  // weighed against shows nowhere.
+  const reached = routesFrom(catalogue, tiles, rivers, to, false, { ashore: MOVE_POINT });
+  return new Set(reached.ashore.keys());
 }
 
-/**
- * Every tile a walk reaches the tile from over the tiles a unit enters ashore and the tiles an
- * embarked one enters together, embarking where the ground ends and disembarking where it begins.
- */
+/** Every tile a walk over the whole map reaches the tile from, ashore or embarked. */
 export function groundAndWaterRunTo(
   catalogue: MapContent,
   tiles: readonly Tile[],
+  rivers: readonly River[],
   to: TileCoords,
 ): ReadonlySet<string> {
-  const ground = new Map(tiles.map((tile) => [tileKey(tile), tile]));
-  const reached = new Set([tileKey(to)]);
-  const front = [to];
-  for (let at = 0; at < front.length; at++) {
-    for (const coord of neighbours(front[at])) {
-      const key = tileKey(coord);
-      const onto = ground.get(key);
-      if (reached.has(key)) continue;
-      if (
-        movementCost(catalogue, onto, false) === undefined &&
-        movementCost(catalogue, onto, true) === undefined
-      ) {
-        continue;
-      }
-      reached.add(key);
-      front.push(coord);
-    }
-  }
-  return reached;
+  const moves = { ashore: MOVE_POINT, embarked: MOVE_POINT };
+  const reached = routesFrom(catalogue, tiles, rivers, to, false, moves);
+  return new Set([...reached.ashore.keys(), ...reached.embarked.keys()]);
 }
 
 /**
@@ -674,7 +803,7 @@ function campsOn(
   const ground = buildingKind(catalogue, building).terrains;
   const reached =
     acrossWater === true
-      ? groundAndWaterRunTo(catalogue, tiles, CENTRE)
+      ? groundAndWaterRunTo(catalogue, tiles, rivers, CENTRE)
       : groundRunsTo(catalogue, tiles, rivers, CENTRE);
 
   let rng = initial;

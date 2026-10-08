@@ -28,19 +28,20 @@ import { type Landing, LEAST_STATS, standsOn, type Unit, type UnitStats } from '
 
 /**
  * What an enemy does in the enemy phase, asked of the enemy itself as the phase stands it. The phase
- * takes one enemy at a time — its move, then an attack for each of its action — and asks again on
- * the chronicle the last answer left; how either is chosen is the script's own business.
+ * takes one enemy at a time — its move, then its step or an attack for each of its action — and asks
+ * again on the chronicle the last answer left; how either is chosen is the script's own business.
  */
 export type EnemyScript = {
   /**
    * The landing it moves to, out of the tiles its move points reach and the one it already stands
-   * on, which costs it nothing, and the chronicle's generator as its draws leave it.
+   * on, which costs it nothing; the tile beside the landing it then embarks or disembarks onto, if
+   * any; and the chronicle's generator as its draws leave it.
    */
   moveTo(
     catalogue: Catalogue,
     chronicle: Chronicle,
     enemy: Unit,
-  ): { readonly landing: Landing; readonly rng: Rng };
+  ): { readonly landing: Landing; readonly step?: TileCoords; readonly rng: Rng };
   /** The unit it attacks now, and nothing when it attacks none. */
   attacks(catalogue: Catalogue, chronicle: Chronicle, enemy: Unit): Unit | undefined;
 };
@@ -268,6 +269,8 @@ export type Camp = {
    * ground and the tiles embarked units enter together, and not only on ground the centre walks to.
    */
   readonly acrossWater?: boolean;
+  /** The move its enemies have embarked: a camp naming none keeps its enemies ashore. */
+  readonly embarkedMove?: number;
   /** What a capture deals, in the order dealt. */
   readonly rewards: readonly string[];
   /** The chance, at every enemy phase, that a camp standing enters a guard. */
@@ -555,10 +558,17 @@ function ageHeld(
   enemyScript(content, camp.scripts.raider);
   if (camp.rewards.length === 0) refuse(content, `the age ${id}'s camp deals no reward`);
   for (const reward of camp.rewards) cardOf(content, reward);
-  const { odds, raidCampOdds } = camp;
+  const { odds, raidCampOdds, embarkedMove } = camp;
   if (!(odds >= 0 && odds <= 1)) refuse(content, `the age ${id}'s camp rolls at odds of ${odds}`);
   if (!(raidCampOdds >= 0 && raidCampOdds <= 1)) {
     refuse(content, `a raid of the age ${id} enters through a camp at odds of ${raidCampOdds}`);
+  }
+  if (embarkedMove === undefined) {
+    if (camp.acrossWater === true) {
+      refuse(content, `the age ${id}'s camp is dealt across the water and names no embarked move`);
+    }
+  } else if (!Number.isInteger(embarkedMove) || embarkedMove < 1) {
+    refuse(content, `the age ${id}'s camp names an embarked move of ${embarkedMove}`);
   }
   const campKind = buildingKind(content, camp.building);
   const campNames = groundNamed(campKind);

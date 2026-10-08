@@ -133,7 +133,7 @@ export function reachable(catalogue: MapContent, chronicle: Crossed, unit: Unit)
     chronicle.tiles,
     chronicle.rivers,
     unit.tile,
-    { kind: 'unit', points: unit.movePoints, embarked: unit.embarked },
+    { points: unit.movePoints, embarked: unit.embarked },
     (coord) => {
       const at = tileKey(coord);
       if (chartedTiles !== undefined && !chartedTiles.has(at)) return true;

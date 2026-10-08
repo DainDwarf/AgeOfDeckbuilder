@@ -127,7 +127,8 @@ function records(kept: Snapshot | undefined, snapshot: Snapshot): boolean {
     kept !== undefined &&
     kept.tile === snapshot.tile &&
     kept.unit?.type === snapshot.unit?.type &&
-    kept.unit?.faction === snapshot.unit?.faction
+    kept.unit?.faction === snapshot.unit?.faction &&
+    kept.unit?.embarked === snapshot.unit?.embarked
   );
 }
 
@@ -139,7 +140,8 @@ function taken(chronicle: Chronicle, tile: Tile): Snapshot {
   const standing = unitAt(chronicle.units, tile);
   const at: Snapshot = { q: tile.q, r: tile.r, tile };
   if (standing === undefined || standing.faction === 'player') return at;
-  return { ...at, unit: { type: standing.stats.type, faction: standing.faction } };
+  const { stats, faction, embarked } = standing;
+  return { ...at, unit: { type: stats.type, faction, embarked } };
 }
 
 /**

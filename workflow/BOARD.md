@@ -13,7 +13,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **Enemies cross the water** — the rules step an enemy embarking or disembarking through the same step the Embark card takes, on the embarked move its age's camp names, a camp naming none keeping its enemies ashore; the raider's walk over the whole map runs over ground and water weighed in moves, held by a test on the fixture beside the script; the guard keeps the ground while it guards; the camp generator's reach across the water is that walk's reach; a snapshot keeps the embarked flag of the enemy it remembers and the map draws it on its hull; the Stone camp names the raft's move. Doc-impact: `docs/CHRONICLE.md`, `docs/ages/STONE.md`. [board/enemies-cross-water.md](board/enemies-cross-water.md)
 - **A raid's door across the water** — a raid through a camp the ground does not link to the city enters on the camp's island and crosses from there, and the outer-ring door is the edge of any land the city is reached from over ground and water, so a raid finds a door with every camp captured on an inland island.
 - **Archers at the camps** — the Stone camp names the kinds it enters with their weights, the archer among them, and its own odds, so the opening, the camp's roll and a raid draw among them.
 - **The pillager** — a third script, a warrior that goes for the player's workers and for the improvements and the buildings, pillaging what it stands on; the pillage the chronicle page designs and the rules do not hold yet rides inside as its inert commit.

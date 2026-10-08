@@ -64,7 +64,11 @@ export type ChronicleAchievement = {
 };
 
 /** What a snapshot keeps of the unit that stood on the tile: what its mark is drawn from. */
-export type SnapshotUnit = { readonly type: string; readonly faction: Faction };
+export type SnapshotUnit = {
+  readonly type: string;
+  readonly faction: Faction;
+  readonly embarked: boolean;
+};
 
 /**
  * One tile as it was last in sight, and the unit standing on it then. The player's own units carry

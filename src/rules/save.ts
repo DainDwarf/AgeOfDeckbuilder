@@ -585,6 +585,7 @@ function snapshotOf(catalogue: Catalogue, slot: Slot): Snapshot {
       return {
         type: id(catalogue, standing('type'), unitKind),
         faction: factionOf(catalogue, standing('faction')),
+        embarked: flag(catalogue, standing('embarked')),
       };
     }),
   };

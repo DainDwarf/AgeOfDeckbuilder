@@ -259,7 +259,7 @@ export function holdDesignSpace(scene: Phaser.Scene, camera: Phaser.Cameras.Scen
 }
 
 /** Which moves landing on an interactive object of a scene it keeps from the scenes beneath. */
-type Moves = 'every' | 'no button held';
+type PointerMoves = 'every' | 'no button held';
 
 /**
  * Every press on an interactive object here kept from the scenes beneath, a wheel and a move as
@@ -268,7 +268,7 @@ type Moves = 'every' | 'no button held';
  */
 export function stopsThePointer(
   scene: Phaser.Scene,
-  moves: () => Moves,
+  moves: () => PointerMoves,
   wheels: () => boolean,
 ): void {
   const stop = (): void => {

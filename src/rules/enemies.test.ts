@@ -1,4 +1,5 @@
 import { expect, test } from 'vitest';
+import { chartedTile } from './cards';
 import { type Catalogue, catalogued, type EnemyScript, unitKind } from './catalogue';
 import { apply, outcome } from './chronicle';
 import { cityCommand, claimable } from './city';
@@ -18,6 +19,7 @@ import {
   claimOf,
   culture,
   dealing,
+  EMBARKED_MOVE,
   endedTurn,
   enemiesOf,
   everyCard,
@@ -39,6 +41,7 @@ import {
   SCRIPT,
   stagedBy,
   standing,
+  unitNamed,
   WORKER_STATS,
   withUnits,
   worker,
@@ -58,7 +61,7 @@ import { RESOURCES } from './resources';
 import { nextRng, seedRng } from './rng';
 import { walked } from './stages';
 import type { Chronicle } from './state';
-import { attackable, unitAt } from './units';
+import { attackable, type Unit, unitAt } from './units';
 
 /** An age and a timeline dealing the raid on the second turn, and no other deal. */
 const RAID_ON_SECOND = dealing({ turn: 2, event: 'PH_Hardship' });
@@ -864,7 +867,7 @@ test('an enemy attacks only a unit within its range: one its script names beyond
 test('an enemy whose range is one attacks no embarked unit: one its script names beside it is a runtime-error and no attack, and ashore the attack lands', () => {
   const coast = { q: 1, r: 0 };
   const enemy = standing('enemy', { q: 2, r: 0 }, { move: 0, range: 1 });
-  const afloat = outcome(
+  const embarked = outcome(
     apply(
       CATALOGUE,
       cityOf(['urban'], {
@@ -880,8 +883,102 @@ test('an enemy whose range is one attacks no embarked unit: one its script names
     units: [standing('player', coast), enemy],
   });
 
-  expect(enemyPhaseOf(afloat, RECKLESS)).toEqual(['runtime-error']);
+  expect(enemyPhaseOf(embarked, RECKLESS)).toEqual(['runtime-error']);
   expect(attacksOf(ashore, RECKLESS)).toEqual([['2,0', '1,0']]);
+});
+
+/**
+ * The fixture's content, its camp naming `embarkedMove`, its enemies staying where they stand and
+ * stepping onto the tile `step` names them, and asked an attack, the player's first unit.
+ */
+function stepping(step: (enemy: Unit) => TileCoords, embarkedMove?: number): Catalogue {
+  return catalogued({
+    ...CATALOGUE,
+    ages: agesOver({ ...CAMP, embarkedMove }, REGIONS),
+    scripts: {
+      ...CATALOGUE.scripts,
+      [SCRIPT]: {
+        moveTo: (_catalogue, chronicle, enemy) => ({
+          landing: { tile: enemy.tile, cost: 0 },
+          step: step(enemy),
+          rng: chronicle.rng,
+        }),
+        attacks: (_catalogue, chronicle) =>
+          chronicle.units.find((unit) => unit.faction === 'player'),
+      },
+    },
+  });
+}
+
+/** What the enemy phase of the end of turn leaves. */
+function afterEnemyPhase(chronicle: Chronicle, catalogue: Catalogue): Chronicle {
+  const phase = heldBy(apply(catalogue, chronicle, { type: 'end-turn' }), 'enemy-phase');
+  return phase[phase.length - 1].chronicle;
+}
+
+test('an enemy embarks onto a free tile beside it that embarked units enter, charted or not, through the step the card takes, on its camp’s embarked move: a step its camp names no embarked move for, onto a tile it cannot stand on embarked or onto one not beside it, is a runtime-error and no step', () => {
+  const shore = { q: 4, r: 0 };
+  const coast = { q: 4, r: -1 };
+  const far = { q: 4, r: -2 };
+  const deep = { q: 3, r: 1 };
+  const city = cityOf(['urban'], {
+    tiles: madeOf(field(4, [coast, far]), 'deep', [deep]),
+    units: [standing('enemy', shore, { action: 2 })],
+  });
+  const rowing = stepping(() => coast, EMBARKED_MOVE);
+
+  expect(chartedTile(city, coast)).toBe('tile-uncharted');
+  expect(enemyPhaseOf(city, rowing)).toEqual(['action-spent', 'move']);
+  expect(unitNamed(afterEnemyPhase(city, rowing), 1)).toMatchObject({
+    tile: coast,
+    embarked: true,
+    stats: { move: EMBARKED_MOVE },
+    action: 1,
+    movePoints: 0,
+  });
+  expect(
+    enemyPhaseOf(
+      city,
+      stepping(() => coast),
+    ),
+  ).toEqual(['runtime-error']);
+  expect(
+    enemyPhaseOf(
+      city,
+      stepping(() => deep, EMBARKED_MOVE),
+    ),
+  ).toEqual(['runtime-error']);
+  expect(
+    enemyPhaseOf(
+      city,
+      stepping(() => far, EMBARKED_MOVE),
+    ),
+  ).toEqual(['runtime-error']);
+});
+
+test('an embarked enemy disembarks onto a free tile beside it that it stands on ashore, its move its kind’s own again, and attacks nothing after it though it holds action and a unit stands within its range; onto a tile a unit holds it is a runtime-error and no step', () => {
+  const shore = { q: 4, r: 0 };
+  const coast = { q: 4, r: -1 };
+  const rowing = stepping((enemy) => (enemy.embarked ? shore : coast), EMBARKED_MOVE);
+  const embarked = endedTurn(
+    cityOf(['urban'], {
+      tiles: field(4, [coast]),
+      units: [worker({ q: 3, r: 0 }), standing('enemy', shore, { move: MOVE_POINT, action: 2 })],
+    }),
+    undefined,
+    rowing,
+  );
+  const held = outcome(apply(rowing, embarked, { type: 'move', unit: 1, tile: shore }));
+
+  expect(unitNamed(embarked, 2)).toMatchObject({ tile: coast, embarked: true });
+  expect(enemyPhaseOf(embarked, rowing)).toEqual(['action-spent', 'move']);
+  expect(unitNamed(afterEnemyPhase(embarked, rowing), 2)).toMatchObject({
+    tile: shore,
+    embarked: false,
+    stats: { move: unitKind(CATALOGUE, 'PH_Warrior').move },
+    action: 1,
+  });
+  expect(enemyPhaseOf(held, rowing)).toEqual(['runtime-error']);
 });
 
 test('an enemy attacks once for each of its action, and one with none attacks nothing', () => {

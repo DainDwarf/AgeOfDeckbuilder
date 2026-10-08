@@ -1031,7 +1031,7 @@ test('a tile an answer charts is charted where it was not, its snapshot holding 
   expect(chartedTile(landed, at)).toBeUndefined();
   expect(inSight(CATALOGUE, landed).has(tileKey(at))).toBe(false);
   expect(snapshot?.tile.feature).toBe('PH_Fertile');
-  expect(snapshot?.unit).toEqual({ type: 'PH_Warrior', faction: 'enemy' });
+  expect(snapshot?.unit).toEqual({ type: 'PH_Warrior', faction: 'enemy', embarked: false });
 });
 
 test('a tile an answer charts that was charted before holds what the answer dealt onto it and whoever stands on it, over the snapshot it had', () => {
@@ -1043,7 +1043,11 @@ test('a tile an answer charts that was charted before holds what the answer deal
   expect(snapshotOf(dealt, at)?.tile.feature).toBeUndefined();
   expect(snapshotOf(dealt, at)?.unit).toBeUndefined();
   expect(snapshotOf(landed, at)?.tile.feature).toBe('PH_Fertile');
-  expect(snapshotOf(landed, at)?.unit).toEqual({ type: 'PH_Warrior', faction: 'enemy' });
+  expect(snapshotOf(landed, at)?.unit).toEqual({
+    type: 'PH_Warrior',
+    faction: 'enemy',
+    embarked: false,
+  });
   expect(snapshotOf(taken, at)?.tile.feature).toBe('PH_Fertile');
   expect(inSight(CATALOGUE, landed).has(tileKey(at))).toBe(false);
 });
@@ -1112,7 +1116,11 @@ test('a tile a landing charts is charted as the stage charting it stands, and st
   expect(snapshotOf(retiled.chronicle, at)).toBeUndefined();
   for (const stage of [charting, ...after]) {
     expect(snapshotOf(stage.chronicle, at)?.tile.feature).toBe('PH_Fertile');
-    expect(snapshotOf(stage.chronicle, at)?.unit).toEqual({ type: 'PH_Warrior', faction: 'enemy' });
+    expect(snapshotOf(stage.chronicle, at)?.unit).toEqual({
+      type: 'PH_Warrior',
+      faction: 'enemy',
+      embarked: false,
+    });
     expect(inSight(CATALOGUE, stage.chronicle).has(tileKey(at))).toBe(false);
   }
 });

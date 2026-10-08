@@ -288,11 +288,6 @@ function stepped(
   embarking: boolean,
   move: (catalogue: Catalogue, unit: Unit) => number,
 ): Aim & { readonly aim: 'tile' } {
-  const onto = (catalogue: Catalogue, unit: Unit): Unit => ({
-    ...unit,
-    embarked: embarking,
-    stats: { ...unit.stats, move: move(catalogue, unit) },
-  });
   /**
    * What a unit beside the tile passes to step onto it, in order: the reason refusing a unit that
    * fails it, and the tile's where no unit beside passes it, when that one differs.
@@ -309,7 +304,7 @@ function stepped(
     },
     {
       passes: (catalogue, unit, tile) =>
-        standsOn(catalogue, onto(catalogue, unit).stats, embarking, tile),
+        standsOn(catalogue, { ...unit.stats, move: move(catalogue, unit) }, embarking, tile),
       unit: 'wrong-terrain',
     },
     { passes: (_catalogue, unit) => unit.action > 0, unit: 'unit-spent' },
@@ -337,23 +332,39 @@ function stepped(
       if (through === undefined || stepping === undefined) {
         return landedAs(change('runtime-error', paid));
       }
-      const tile = { q: at.q, r: at.r };
-      return followed(acted(paid, through), (left) =>
-        landedAs({
-          kind: 'change',
-          name: 'move',
-          from: through,
-          to: tile,
-          chronicle: {
-            ...left,
-            units: left.units.map((unit) =>
-              unit.id === stepping.id ? { ...onto(catalogue, unit), tile } : unit,
-            ),
-          },
-        }),
-      );
+      return steppedOnto(paid, stepping, at, embarking, move(catalogue, stepping));
     },
   };
+}
+
+/**
+ * A unit embarking or disembarking onto a tile beside it, whatever took it there: one of its action
+ * spent, then the `move` change, after which it stands there embarked or ashore and moves on `move`.
+ */
+export function steppedOnto(
+  paid: Chronicle,
+  stepping: Unit,
+  to: TileCoords,
+  embarking: boolean,
+  move: number,
+): Landed {
+  const tile = { q: to.q, r: to.r };
+  return followed(acted(paid, stepping.tile), (left) =>
+    landedAs({
+      kind: 'change',
+      name: 'move',
+      from: stepping.tile,
+      to: tile,
+      chronicle: {
+        ...left,
+        units: left.units.map((unit) =>
+          unit.id === stepping.id
+            ? { ...unit, embarked: embarking, stats: { ...unit.stats, move }, tile }
+            : unit,
+        ),
+      },
+    }),
+  );
 }
 
 /** The tile inside the city's border. */

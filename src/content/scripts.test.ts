@@ -2,17 +2,24 @@ import { expect, test } from 'vitest';
 import { type Catalogue, catalogued } from '../rules/catalogue';
 import { apply, outcome } from '../rules/chronicle';
 import {
+  agesOver,
   aimedAt,
   attacksOf,
+  CAMP,
   CATALOGUE,
   CITY,
   camped,
   cityOf,
+  deepBut,
+  EMBARKED_MOVE,
+  endedTurn,
   field,
   madeOf,
   movesOf,
   only,
+  REGIONS,
   SCRIPT,
+  type Standing,
   standing,
   worker,
 } from '../rules/fixtures';
@@ -292,6 +299,134 @@ test('a guard with no camp within its radius raids', () => {
 
   expect(movesOf(city, GUARDING)).toEqual([['2,0', '0,0']]);
   expect(attacksOf(city, GUARDING)).toEqual([]);
+});
+
+/** The fixture's content as the scripts above lay it, its camp naming an embarked move. */
+function withEmbarkedMove(content: Catalogue, embarkedMove: number = EMBARKED_MOVE): Catalogue {
+  return catalogued({ ...content, ages: agesOver({ ...CAMP, embarkedMove }, REGIONS) });
+}
+
+/** A disc of deep water out to four but for the city’s tile, the land and the coast named, and the forest named on the land. */
+function strait(land: TileCoords[], coast: TileCoords[], forest: TileCoords[] = []): Tile[] {
+  return madeOf(deepBut(field(4, coast), [CITY, ...land, ...coast]), 'forest', forest);
+}
+
+/** A city two tiles of coast off an island, a raider on the island's far tile unless the test names its units. */
+function islanded(units: readonly Standing[] = [standing('enemy', { q: 4, r: 0 })]): Chronicle {
+  return cityOf(['urban'], {
+    tiles: strait(
+      [
+        { q: 3, r: 0 },
+        { q: 4, r: 0 },
+      ],
+      [
+        { q: 1, r: 0 },
+        { q: 2, r: 0 },
+      ],
+    ),
+    units,
+  });
+}
+
+test('a raider whose cheapest route to the city embarks walks to where the ground ends and embarks there, and one whose camp names no embarked move stays on its island', () => {
+  const city = islanded();
+
+  expect(movesOf(city, withEmbarkedMove(RAIDING))).toEqual([
+    ['4,0', '3,0'],
+    ['3,0', '2,0'],
+  ]);
+  expect(movesOf(city, RAIDING)).toEqual([]);
+});
+
+test('an embarked raider moves over the water toward the city and disembarks where its cheapest route reaches the ground, onto the city’s tile itself', () => {
+  const content = withEmbarkedMove(RAIDING);
+  const embarked = endedTurn(islanded(), undefined, content);
+
+  expect(movesOf(embarked, content)).toEqual([
+    ['2,0', '1,0'],
+    ['1,0', '0,0'],
+  ]);
+});
+
+test('a raider weighs the water against the ground in moves: with an embarked move fast enough it embarks at once, and with a slow one it walks the long way round', () => {
+  const corridor = [
+    { q: 2, r: 2 },
+    { q: 1, r: 2 },
+    { q: 0, r: 2 },
+    { q: 0, r: 1 },
+  ];
+  const city = cityOf(['urban'], {
+    tiles: strait(
+      [{ q: 3, r: 1 }, ...corridor],
+      [
+        { q: 1, r: 0 },
+        { q: 2, r: 0 },
+        { q: 3, r: 0 },
+      ],
+      corridor,
+    ),
+    units: [standing('enemy', { q: 3, r: 1 })],
+  });
+
+  expect(movesOf(city, withEmbarkedMove(RAIDING, EMBARKED_MOVE))).toEqual([['3,1', '3,0']]);
+  expect(movesOf(city, withEmbarkedMove(RAIDING, MOVE_POINT))).toEqual([['3,1', '2,2']]);
+});
+
+test('a raider whose embark is held embarks onto another free tile on a route as cheap, and with none free it does not embark', () => {
+  const shore = { q: 2, r: -1 };
+  const north = { q: 1, r: -1 };
+  const east = { q: 1, r: 0 };
+  const beside = { q: 0, r: 1 };
+  const free = cityOf(['urban'], {
+    tiles: strait([shore, beside], [north, east]),
+    hand: ['PH_Embark', 'PH_Embark'],
+    units: [standing('player', CITY), standing('player', beside), standing('enemy', shore)],
+  });
+  const one = outcome(apply(CATALOGUE, free, aimedAt(north)));
+  const both = outcome(apply(CATALOGUE, one, aimedAt(east)));
+  const content = withEmbarkedMove(RAIDING);
+
+  expect(movesOf(free, content)).toEqual([[tileKey(shore), tileKey(north)]]);
+  expect(movesOf(one, content)).toEqual([[tileKey(shore), tileKey(east)]]);
+  expect(movesOf(both, content)).toEqual([]);
+});
+
+test('a guard keeps the ground while a camp stands within its radius, and with none it embarks as the raider does', () => {
+  const camp = { q: 4, r: 0 };
+  const guard = standing('enemy', { q: 3, r: 0 });
+  const kept = cityOf(['urban'], {
+    tiles: camped(islanded().tiles, [camp]),
+    units: [standing('enemy', camp, { move: 0 }), guard],
+  });
+  const content = withEmbarkedMove(GUARDING);
+
+  expect(movesOf(kept, content)).toEqual([]);
+  expect(movesOf(islanded([guard]), content)).toEqual([['3,0', '2,0']]);
+});
+
+test('an embarked guard within a standing camp’s radius moves and steps as the raider does', () => {
+  const camp = { q: 0, r: -1 };
+  const city = cityOf(['urban'], {
+    tiles: camped(
+      strait(
+        [{ q: 3, r: 0 }, camp],
+        [
+          { q: 1, r: 0 },
+          { q: 2, r: 0 },
+        ],
+      ),
+      [camp],
+    ),
+    units: [standing('enemy', { q: 3, r: 0 })],
+  });
+  const content = withEmbarkedMove(GUARDING);
+  const embarked = endedTurn(city, undefined, content);
+
+  expect(movesOf(city, content)).toEqual([['3,0', '2,0']]);
+  expect(movesOf(embarked, content)).toEqual([
+    ['2,0', '1,0'],
+    ['1,0', '0,0'],
+  ]);
 });
 
 test('a guard attacks the unit of the least health within its range', () => {
