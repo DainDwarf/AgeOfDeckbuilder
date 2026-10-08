@@ -53,7 +53,7 @@ import {
   timelineOf,
   unitDamaged,
 } from './schedule';
-import { charted, chartedAt, inSight, unitsGone } from './sight';
+import { charted, chartedAt, inOwnSight, inSight, unitsGone } from './sight';
 import {
   type Aimed,
   type Change,
@@ -1148,11 +1148,8 @@ function enemyPhase(catalogue: Catalogue, chronicle: Chronicle): Sequence<Group>
 }
 
 /**
- * One enemy acting on the chronicle the one before it left, as it stands there; one killed before
- * its turn acts no more. It moves by its script on the move points it holds, spending what the tiles
- * it crosses cost, and then attacks the unit its script names while it holds action, one attack a
- * point. Nothing for a move it did not make or an attack aimed at nobody; the draws its script made
- * ride on the chronicle all the same.
+ * One enemy acting on the chronicle the one before it left. The draws its script made ride on the
+ * chronicle even where it raised no stage.
  */
 function enemyActs(catalogue: Catalogue, chronicle: Chronicle, id: number): Sequence {
   const found = unitOf(chronicle.units, id);
@@ -1170,6 +1167,9 @@ function enemyActs(catalogue: Catalogue, chronicle: Chronicle, id: number): Sequ
     if (acting === undefined || acting.action <= 0) return unchanged(standing);
     const target = script.attacks(catalogue, standing, acting);
     if (target === undefined) return unchanged(standing);
+    if (!inOwnSight(catalogue, standing.tiles, acting, target.tile)) {
+      return landedAs(change('runtime-error', standing));
+    }
     return followed<Stage>(blow(standing, acting, target), attacks);
   };
   return followed<Stage>(moving, attacks);

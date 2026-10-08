@@ -13,7 +13,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **A ranged enemy attacks only what it sees** — the rules refuse an enemy's attack on a unit outside its own sight, the line over the ground from its tile, held by one test on the fixture; the guard and the raider choose their striking landings and their target on that sight, each decision tested beside the script. Doc-impact: none. [board/ranged-enemy-sight.md](board/ranged-enemy-sight.md)
 - **Enemies cross the water** — a script's walk runs over ground and water, the enemy embarking where the ground ends and disembarking where it begins, each the last thing it does that turn, on the embarked move its age's camp names; with it the fog snapshot keeps the embarked flag, so a remembered embarked enemy is drawn on its hull.
 - **A raid's door across the water** — a raid through a camp the ground does not link to the city enters on the camp's island and crosses from there, and the outer-ring door is the edge of any land the city is reached from over ground and water, so a raid finds a door with every camp captured on an inland island.
 - **Archers at the camps** — the Stone camp names the kinds it enters with their weights, the archer among them, and its own odds, so the opening, the camp's roll and a raid draw among them.

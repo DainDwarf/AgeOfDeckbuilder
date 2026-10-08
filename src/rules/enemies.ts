@@ -7,11 +7,46 @@ import {
   unitKind,
 } from './catalogue';
 import { CENTRE, distance, groundRunsTo, type Tile, type TileCoords, tileKey } from './map';
-import { refuse } from './map-kinds';
+import { type MapContent, refuse } from './map-kinds';
 import { nextRng } from './rng';
+import { inOwnSight } from './sight';
 import { change, followed, type Landed, landedAs, unchanged } from './stages';
 import type { Chronicle } from './state';
-import { standsOn, unitAt } from './units';
+import { canAttack, standsOn, type Unit, unitAt } from './units';
+
+/**
+ * Of the units handed in, every one a unit can attack from the tile it stands on, action aside: one
+ * within its range that its own sight reaches, whatever else sees it.
+ */
+export function targetsInOwnSight(
+  catalogue: MapContent,
+  tiles: readonly Tile[],
+  units: readonly Unit[],
+  attacker: Unit,
+): Unit[] {
+  return units.filter(
+    (other) =>
+      canAttack(attacker, other, distance(other.tile, attacker.tile)) &&
+      inOwnSight(catalogue, tiles, attacker, other.tile),
+  );
+}
+
+/**
+ * What a unit an enemy script attacks: of the units handed in, the one it can attack from where it
+ * stands holding the least health, the first of equals, and nothing when it can attack none.
+ */
+export function leastHealth(
+  catalogue: MapContent,
+  tiles: readonly Tile[],
+  units: readonly Unit[],
+  attacker: Unit,
+): Unit | undefined {
+  let target: Unit | undefined;
+  for (const other of targetsInOwnSight(catalogue, tiles, units, attacker)) {
+    if (target === undefined || other.stats.health < target.stats.health) target = other;
+  }
+  return target;
+}
 
 /** The unit of the chronicle's age's camp, entering on the tile with the script the camp names for it. */
 export function campUnit(

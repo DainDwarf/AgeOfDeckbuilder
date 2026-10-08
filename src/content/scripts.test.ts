@@ -16,7 +16,7 @@ import {
   standing,
   worker,
 } from '../rules/fixtures';
-import { distance, MOVE_POINT, type TileCoords, tileKey } from '../rules/map';
+import { distance, MOVE_POINT, type Tile, type TileCoords, tileKey } from '../rules/map';
 import { seedRng } from '../rules/rng';
 import type { Chronicle } from '../rules/state';
 import { guarding, RAIDER } from './scripts';
@@ -102,6 +102,75 @@ test('a raider attacks the unit of the least health within its range', () => {
   });
 
   expect(attacksOf(city, RAIDING)).toEqual([['4,0', '4,-1']]);
+});
+
+/** Where a unit stands two tiles off `SCREENED` and `OPEN`, a forest between it and `SCREENED` alone. */
+const BEYOND: TileCoords = { q: 1, r: 0 };
+
+/** Two tiles off `BEYOND` and nearer the city and the camp than `OPEN`. */
+const SCREENED: TileCoords = { q: 1, r: -2 };
+
+const OPEN: TileCoords = { q: 3, r: -2 };
+
+/** Out of range of `BEYOND`, a step from `SCREENED` and two from `OPEN`. */
+const AFIELD: TileCoords = { q: 2, r: -3 };
+
+/** Out of range of `BEYOND`, a step from `AFIELD` and from `OPEN`. */
+const FLANK: TileCoords = { q: 3, r: -3 };
+
+/** The ground of the tiles named above, and water everywhere else. */
+function screened(camps: TileCoords[] = []): Tile[] {
+  const forest = { q: 1, r: -1 };
+  const land = [CITY, BEYOND, forest, SCREENED, OPEN, AFIELD, FLANK];
+  return camped(madeOf(only(3, land), 'forest', [forest]), camps);
+}
+
+test('a raider that can attack a unit from several landings lands on one it sees the unit from', () => {
+  const city = cityOf(['urban'], {
+    tiles: screened(),
+    units: [worker(BEYOND), standing('enemy', AFIELD, { move: 2 * MOVE_POINT, range: 2 })],
+  });
+
+  expect(movesOf(city, RAIDING)).toEqual([[tileKey(AFIELD), tileKey(OPEN)]]);
+});
+
+test('a raider attacks the unit of the least health among those it sees', () => {
+  const city = cityOf(['urban'], {
+    tiles: screened(),
+    units: [
+      standing('player', BEYOND, { health: 1 }),
+      standing('player', OPEN, { health: 4 }),
+      standing('enemy', SCREENED, { move: 0, range: 2 }),
+    ],
+  });
+
+  expect(attacksOf(city, RAIDING)).toEqual([[tileKey(SCREENED), tileKey(OPEN)]]);
+});
+
+test('a guard whose camp a fellow holds lands on a landing inside its radius it sees the unit from', () => {
+  const city = cityOf(['urban'], {
+    tiles: screened([AFIELD]),
+    units: [
+      worker(BEYOND),
+      standing('enemy', AFIELD, { move: 0 }),
+      standing('enemy', FLANK, { move: 2 * MOVE_POINT, range: 2 }),
+    ],
+  });
+
+  expect(movesOf(city, GUARDING)).toEqual([[tileKey(FLANK), tileKey(OPEN)]]);
+});
+
+test('a guard attacks the unit of the least health among those it sees', () => {
+  const city = cityOf(['urban'], {
+    tiles: screened([SCREENED]),
+    units: [
+      standing('player', BEYOND, { health: 1 }),
+      standing('player', OPEN, { health: 4 }),
+      standing('enemy', SCREENED, { move: 0, range: 2 }),
+    ],
+  });
+
+  expect(attacksOf(city, GUARDING)).toEqual([[tileKey(SCREENED), tileKey(OPEN)]]);
 });
 
 test('a guard keeps the nearest camp standing within its radius, ties in tile order', () => {

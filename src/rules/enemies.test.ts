@@ -25,6 +25,7 @@ import {
   fullDraw,
   heldBy,
   idsOf,
+  madeOf,
   movesOf,
   NO_GROWTH,
   namesOf,
@@ -47,6 +48,7 @@ import {
   distance,
   MOVE_POINT,
   neighbours,
+  type Terrain,
   type Tile,
   type TileCoords,
   tileKey,
@@ -56,7 +58,7 @@ import { RESOURCES } from './resources';
 import { nextRng, seedRng } from './rng';
 import { walked } from './stages';
 import type { Chronicle } from './state';
-import { unitAt } from './units';
+import { attackable, unitAt } from './units';
 
 /** An age and a timeline dealing the raid on the second turn, and no other deal. */
 const RAID_ON_SECOND = dealing({ turn: 2, event: 'PH_Hardship' });
@@ -807,6 +809,32 @@ test('an enemy its move leaves out of range attacks nothing', () => {
     'refreshed',
   ]);
   expect(after.units[0].stats.health).toBe(city.units[0].stats.health);
+});
+
+test('an enemy attacks only a unit its own sight reaches: one its script names behind a forest from the plain is a runtime-error and no attack, and from the hills the attack lands', () => {
+  const blind: Catalogue = catalogued({
+    ...CATALOGUE,
+    scripts: {
+      ...CATALOGUE.scripts,
+      [SCRIPT]: {
+        moveTo: (_catalogue, chronicle, enemy) => ({
+          landing: { tile: enemy.tile, cost: 0 },
+          rng: chronicle.rng,
+        }),
+        attacks: (_catalogue, chronicle, enemy) => attackable(chronicle.units, enemy)[0],
+      },
+    },
+  });
+  const archerOn = (terrain: Terrain): Chronicle =>
+    cityOf(['urban'], {
+      tiles: madeOf(madeOf(field(3), 'forest', [{ q: 2, r: 0 }]), terrain, [{ q: 3, r: 0 }]),
+      units: [worker({ q: 1, r: 0 }), standing('enemy', { q: 3, r: 0 }, { move: 0, range: 2 })],
+    });
+  const phase = (terrain: Terrain): string[] =>
+    namesOf(heldBy(apply(blind, archerOn(terrain), { type: 'end-turn' }), 'enemy-phase'));
+
+  expect(phase('plain')).toEqual(['runtime-error']);
+  expect(attacksOf(archerOn('hills'), blind)).toEqual([['3,0', '1,0']]);
 });
 
 test('an enemy attacks once for each of its action, and one with none attacks nothing', () => {

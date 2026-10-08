@@ -8,9 +8,9 @@ import {
   tileAt,
   tileKey,
 } from './map';
-import { refuse } from './map-kinds';
+import { type MapContent, refuse } from './map-kinds';
 import { type Chronicle, onSettlePhase, type Snapshot } from './state';
-import { unitAt } from './units';
+import { type Unit, unitAt } from './units';
 
 /** A tile in the cube coordinates a line is drawn in: `x` is its q, `z` its r, and the three sum to nought. */
 type Cube = { readonly x: number; readonly y: number; readonly z: number };
@@ -64,23 +64,38 @@ function between(from: TileCoords, to: TileCoords, way: 1 | -1): TileCoords[] {
  * share has two ways to go, and either one clear is enough.
  */
 function seenFrom(
-  catalogue: Catalogue,
-  terrains: ReadonlyMap<string, Terrain>,
+  catalogue: MapContent,
+  terrainAt: (coord: TileCoords) => Terrain | undefined,
   from: TileCoords,
   to: TileCoords,
 ): boolean {
-  const standing = elevation(catalogue, terrains.get(tileKey(from)));
+  const standing = elevation(catalogue, terrainAt(from));
   const clear = (way: 1 | -1): boolean =>
     between(from, to, way).every((coord) => {
-      const crossed = elevation(catalogue, terrains.get(tileKey(coord)));
+      const crossed = elevation(catalogue, terrainAt(coord));
       return crossed === 0 || crossed < standing;
     });
   return clear(1) || clear(-1);
 }
 
+/**
+ * Whether a unit sees a tile with its own eyes from the tile it stands on, whatever else sees it: the
+ * tile within its sight, and the line over the ground clear.
+ */
+export function inOwnSight(
+  catalogue: MapContent,
+  tiles: readonly Tile[],
+  watcher: Unit,
+  at: TileCoords,
+): boolean {
+  if (distance(watcher.tile, at) > watcher.stats.sight) return false;
+  return seenFrom(catalogue, (coord) => tileAt(tiles, coord)?.terrain, watcher.tile, at);
+}
+
 export function inSight(catalogue: Catalogue, chronicle: Chronicle): ReadonlySet<string> {
   if (onSettlePhase(chronicle)) return new Set(chronicle.centre.map(tileKey));
   const terrains = new Map(chronicle.tiles.map((tile) => [tileKey(tile), tile.terrain]));
+  const terrainAt = (at: TileCoords): Terrain | undefined => terrains.get(tileKey(at));
   const seen = new Set(chronicle.held.map(tileKey));
 
   const watching =
@@ -95,7 +110,7 @@ export function inSight(catalogue: Catalogue, chronicle: Chronicle): ReadonlySet
     for (const { q, r } of chronicle.tiles) {
       const coord = { q, r };
       if (seen.has(tileKey(coord)) || distance(from, coord) > sight) continue;
-      if (seenFrom(catalogue, terrains, from, coord)) seen.add(tileKey(coord));
+      if (seenFrom(catalogue, terrainAt, from, coord)) seen.add(tileKey(coord));
     }
   }
 

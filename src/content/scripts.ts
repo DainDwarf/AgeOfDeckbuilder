@@ -1,4 +1,5 @@
 import { ageOf, type Catalogue, type EnemyScript } from '../rules/catalogue';
+import { leastHealth, targetsInOwnSight } from '../rules/enemies';
 import {
   distance,
   movementCost,
@@ -10,18 +11,18 @@ import {
 } from '../rules/map';
 import { nextRng } from '../rules/rng';
 import type { Chronicle } from '../rules/state';
-import { canAttack, type Landing, leastHealth, reachable, type Unit, unitAt } from '../rules/units';
+import { canAttack, type Landing, reachable, type Unit, unitAt } from '../rules/units';
 
 export const RAIDER: EnemyScript = {
   moveTo(catalogue: Catalogue, chronicle: Chronicle, enemy: Unit) {
     return { landing: raiding(catalogue, chronicle, enemy), rng: chronicle.rng };
   },
 
-  attacks(_catalogue: Catalogue, chronicle: Chronicle, enemy: Unit): Unit | undefined {
+  attacks(catalogue: Catalogue, chronicle: Chronicle, enemy: Unit): Unit | undefined {
     if (chronicle.city !== undefined && tileKey(enemy.tile) === tileKey(chronicle.city)) {
       return undefined;
     }
-    return weakest(chronicle, enemy);
+    return weakest(catalogue, chronicle, enemy);
   },
 };
 
@@ -47,9 +48,7 @@ export function guarding(radius: number): EnemyScript {
       const targets = chronicle.units.filter((unit) =>
         canAttack(enemy, unit, Math.max(0, distance(unit.tile, camp) - radius)),
       );
-      const striking = inside.filter((landing) =>
-        targets.some((target) => canAttack(enemy, target, distance(landing.tile, target.tile))),
-      );
+      const striking = landingsWithTarget(catalogue, chronicle, enemy, inside, targets);
       if (striking.length > 0) return kept(nearestTo(chronicle, striking, camp));
       if (targets.length > 0) {
         return kept(nearestTo(chronicle, inside, nearestTo(chronicle, targets, enemy.tile).tile));
@@ -64,7 +63,7 @@ export function guarding(radius: number): EnemyScript {
       if (campOf(catalogue, chronicle, enemy.tile, radius) === undefined) {
         return RAIDER.attacks(catalogue, chronicle, enemy);
       }
-      return weakest(chronicle, enemy);
+      return weakest(catalogue, chronicle, enemy);
     },
   };
 }
@@ -91,16 +90,34 @@ function raiding(catalogue: Catalogue, chronicle: Chronicle, enemy: Unit): Landi
 
   const onCity = landings.find((landing) => tileKey(landing.tile) === tileKey(city));
   if (onCity !== undefined) return onCity;
-  const striking = landings.filter(
-    (landing) => leastHealth(chronicle.units, { ...enemy, tile: landing.tile }) !== undefined,
-  );
+  const striking = landingsWithTarget(catalogue, chronicle, enemy, landings, chronicle.units);
   if (striking.length > 0) return nearestTo(chronicle, striking, city);
   return cheapestToward(catalogue, chronicle, enemy, landings, city);
 }
 
+/** The landings it could attack one of the units from. */
+function landingsWithTarget(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  enemy: Unit,
+  landings: readonly Landing[],
+  units: readonly Unit[],
+): Landing[] {
+  return landings.filter(
+    (landing) =>
+      targetsInOwnSight(catalogue, chronicle.tiles, units, { ...enemy, tile: landing.tile })
+        .length > 0,
+  );
+}
+
 /** The unit it can attack holding the least health, ties in tile order. */
-function weakest(chronicle: Chronicle, enemy: Unit): Unit | undefined {
-  return leastHealth(inTileOrder(chronicle.tiles, chronicle.units), enemy);
+function weakest(catalogue: Catalogue, chronicle: Chronicle, enemy: Unit): Unit | undefined {
+  return leastHealth(
+    catalogue,
+    chronicle.tiles,
+    inTileOrder(chronicle.tiles, chronicle.units),
+    enemy,
+  );
 }
 
 /** The one of them standing the fewest tiles from the target, ties in tile order. */

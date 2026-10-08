@@ -57,7 +57,7 @@ import {
   terrainsPlayedOn,
 } from './chronicle';
 import { arrived, bordered, populationKilled, populationTaken, yielded } from './city';
-import { campUnit, enteredAround } from './enemies';
+import { campUnit, enteredAround, leastHealth } from './enemies';
 import {
   type BuildingTypeId,
   cornerKey,
@@ -109,7 +109,6 @@ import {
   type Faction,
   FIRST_UNIT_NUMBER,
   type Landing,
-  leastHealth,
   reachable,
   type Unit,
   type UnitStats,
@@ -352,13 +351,14 @@ const EVENTS: Catalogue['events'] = {
 /** The script the fixture's enemies enter with, and the one its camp's raiders carry. */
 export const SCRIPT = 'PH_Beeline';
 
-/** The script the fixture camp's guards carry: it stays where it stands and attacks within range. */
+/** The script the fixture camp's guards carry: it stays where it stands and attacks what it can. */
 const SENTRY: EnemyScript = {
   moveTo: (_catalogue, chronicle, enemy) => ({
     landing: { tile: enemy.tile, cost: 0 },
     rng: chronicle.rng,
   }),
-  attacks: (_catalogue, chronicle, enemy) => leastHealth(chronicle.units, enemy),
+  attacks: (catalogue, chronicle, enemy) =>
+    leastHealth(catalogue, chronicle.tiles, chronicle.units, enemy),
 };
 
 /** The fixture's script. Unlike the raider, it attacks from the city's tile too. */
@@ -373,7 +373,8 @@ const BEELINE: EnemyScript = {
     }
     return { landing: chosen, rng: chronicle.rng };
   },
-  attacks: (_catalogue, chronicle, enemy) => leastHealth(chronicle.units, enemy),
+  attacks: (catalogue, chronicle, enemy) =>
+    leastHealth(catalogue, chronicle.tiles, chronicle.units, enemy),
 };
 
 /** The id the fixture catalogue lists its one civilization under. */

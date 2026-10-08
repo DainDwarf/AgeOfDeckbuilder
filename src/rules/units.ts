@@ -163,19 +163,6 @@ export function canAttack(attacker: Unit, target: Unit, away: number): boolean {
 }
 
 /**
- * What a unit an enemy script attacks: the unit it can attack from where it stands holding the least
- * health, and nothing when it can attack none.
- */
-export function leastHealth(units: readonly Unit[], attacker: Unit): Unit | undefined {
-  let target: Unit | undefined;
-  for (const other of units) {
-    if (!canAttack(attacker, other, distance(other.tile, attacker.tile))) continue;
-    if (target === undefined || other.stats.health < target.stats.health) target = other;
-  }
-  return target;
-}
-
-/**
  * Every unit a unit can attack from where it stands, while it has the action an attack spends.
  * Range alone: sight is not read here.
  */
