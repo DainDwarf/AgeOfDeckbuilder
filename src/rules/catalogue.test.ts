@@ -262,13 +262,15 @@ test('a catalogue whose camp enters a unit kind at a weight of nought or below i
   ).not.toThrow();
 });
 
-test('a catalogue whose camp names a guard’s or a raider’s script it does not hold is refused', () => {
+test('a catalogue whose camp names a guard’s, a raider’s or a pillager’s script it does not hold is refused', () => {
   const { scripts } = CAMP;
   const guard = encamped({ scripts: { ...scripts, guard: 'retreat' } });
   const raider = encamped({ scripts: { ...scripts, raider: 'retreat' } });
+  const pillager = encamped({ scripts: { ...scripts, pillager: 'retreat' } });
 
   expect(() => catalogued(guard)).toThrow(/^fixture: /);
   expect(() => catalogued(raider)).toThrow(/^fixture: /);
+  expect(() => catalogued(pillager)).toThrow(/^fixture: /);
 });
 
 test('a catalogue whose camp rolls at odds below nought or above one is refused', () => {

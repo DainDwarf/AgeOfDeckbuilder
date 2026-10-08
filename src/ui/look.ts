@@ -85,6 +85,7 @@ export type Look = {
   readonly consolePanel: Wash;
   readonly litGlow: Glow;
   readonly targetGlow: Glow;
+  readonly preparedGlow: Glow;
   readonly reading: Readonly<Record<Resource, number>>;
   readonly terrain: Readonly<Record<string, number>>;
   readonly feature: Readonly<Record<string, number>>;
@@ -153,6 +154,7 @@ export const LOOK: Look = {
   consolePanel: { colour: 0x0d1014, strength: 0.9 },
   litGlow: { fill: 0.4, stroke: 0.9 },
   targetGlow: { fill: 0.4, stroke: 0.9 },
+  preparedGlow: { fill: 0.4, stroke: 0.9 },
   reading: {
     food: 0x7d9c55,
     production: 0xb0834a,

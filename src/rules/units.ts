@@ -29,9 +29,9 @@ export type UnitStats = {
 };
 
 /**
- * A unit standing on the map, with the move points and the action it has left. An enemy carries the
- * script the enemy phase asks where it moves and what it attacks. `id` is the number dealt it as it
- * entered: what every command names it by, whoever else enters or is killed around it.
+ * A unit standing on the map, with the move points and the action it has left; an enemy carries its
+ * script, and whether it has prepared. `id` is the number dealt it as it entered: what every command
+ * names it by, whoever else enters or is killed around it.
  */
 export type Unit = {
   readonly id: number;
@@ -40,7 +40,10 @@ export type Unit = {
   readonly movePoints: number;
   readonly action: number;
   readonly embarked: boolean;
-} & ({ readonly faction: 'player' } | { readonly faction: 'enemy'; readonly script: string });
+} & (
+  | { readonly faction: 'player' }
+  | { readonly faction: 'enemy'; readonly script: string; readonly prepared: boolean }
+);
 
 /** The least each number of a unit's stats may stand at. */
 export const LEAST_STATS: Readonly<Record<Exclude<keyof UnitStats, 'type' | 'worker'>, number>> = {

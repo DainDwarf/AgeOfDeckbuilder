@@ -28,7 +28,7 @@ import { type Landing, LEAST_STATS, standsOn, type Unit, type UnitStats } from '
 
 /**
  * What an enemy does in the enemy phase, asked of the enemy itself as the phase stands it. The phase
- * takes one enemy at a time — its move, then its step or an attack for each of its action — and asks
+ * takes one enemy at a time — its move, then its step or an act for each of its action — and asks
  * again on the chronicle the last answer left; how either is chosen is the script's own business.
  */
 export type EnemyScript = {
@@ -42,9 +42,15 @@ export type EnemyScript = {
     chronicle: Chronicle,
     enemy: Unit,
   ): { readonly landing: Landing; readonly step?: TileCoords; readonly rng: Rng };
-  /** The unit it attacks now, and nothing when it attacks none. */
-  attacks(catalogue: Catalogue, chronicle: Chronicle, enemy: Unit): Unit | undefined;
+  /** What it does with one of its action now. */
+  acts(catalogue: Catalogue, chronicle: Chronicle, enemy: Unit): EnemyAct;
 };
+
+/** What an enemy spends one of its action on: an attack on a unit, a prepare on its tile, or nothing. */
+export type EnemyAct =
+  | { readonly act: 'attack'; readonly target: Unit }
+  | { readonly act: 'prepare' }
+  | { readonly act: 'none' };
 
 /**
  * What a card is played at, and what it does with what it was played at. An aim of `none` lands
@@ -231,8 +237,11 @@ export type Capstone = {
   readonly passes: (catalogue: Catalogue, chronicle: Chronicle) => boolean;
 };
 
-/** The two scripts a camp's enemies carry: one keeps its camp, one goes for the city. */
-export type CampScript = 'guard' | 'raider';
+/** The scripts every camp names, the rules entering both: one keeps its camp, one goes for the city. */
+export type EveryCampScript = 'guard' | 'raider';
+
+/** The scripts a camp's enemies carry: every camp's, and one going for what the player built. */
+export type CampScript = EveryCampScript | 'pillager';
 
 /** The least and the most a span of turns rolls, both ends included. */
 export type Span = readonly [number, number];
@@ -262,8 +271,8 @@ export type Civilization = {
 export type Camp = {
   /** The kinds of unit it enters, each with its weight in the draw every entry out of it makes. */
   readonly unitKinds: Readonly<Record<string, number>>;
-  /** The script each enemy of the camp's carries, named by what enters it. */
-  readonly scripts: Readonly<Record<CampScript, string>>;
+  /** The script each enemy of the camp's carries, named by what enters it, of those the camp names. */
+  readonly scripts: Readonly<Record<EveryCampScript, string> & Partial<Record<CampScript, string>>>;
   readonly building: string;
   /**
    * Whether the camps are dealt across the water: on any land the centre is reached from over the
@@ -562,8 +571,9 @@ function ageHeld(
       refuse(content, `the age ${id}'s camp enters ${kind} at a weight of ${weight}`);
     }
   }
-  enemyScript(content, camp.scripts.guard);
-  enemyScript(content, camp.scripts.raider);
+  for (const script of Object.values(camp.scripts)) {
+    if (script !== undefined) enemyScript(content, script);
+  }
   if (camp.rewards.length === 0) refuse(content, `the age ${id}'s camp deals no reward`);
   for (const reward of camp.rewards) cardOf(content, reward);
   const { odds, raidCampOdds, embarkedMove } = camp;
@@ -973,6 +983,6 @@ export function entered(catalogue: Catalogue, chronicle: Chronicle, entering: En
     case 'player':
       return dealt({ ...carried, faction: 'player' });
     case 'enemy':
-      return dealt({ ...carried, faction: 'enemy', script: entering.script });
+      return dealt({ ...carried, faction: 'enemy', script: entering.script, prepared: false });
   }
 }

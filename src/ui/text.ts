@@ -91,7 +91,10 @@ const TEXT = {
   'unit.warrior': 'Warrior',
   'unit.scout': 'Scout',
   'unit.archer': 'Archer',
-  'embarked.unit': 'Raft ({unit})',
+  'unit-state.raft': 'Raft',
+  'unit-state.pillaging': 'Pillaging',
+  'unit-state.capturing': 'Capturing',
+  'unit-state.joined': '{one} · {other}',
   'card.settle': 'Settlement', // glossary exception: settlement
   'rules.settle': 'Place the [building:city]',
   'card.first-worker': 'Worker',
@@ -386,11 +389,6 @@ export function text(key: TextKey, values: Record<string, string | number> = {})
 /** What a unit kind is named on the screen; a kind no entry names is refused. */
 export function unitName(type: string): string {
   return named('unit', type, 'the unit kind');
-}
-
-/** What a unit standing on the map is named on the screen, by its kind, embarked or ashore. */
-export function unitNameOf(type: string, embarked: boolean): string {
-  return embarked ? text('embarked.unit', { unit: unitName(type) }) : unitName(type);
 }
 
 /** What a terrain is named on the screen; a terrain no entry names is refused. */

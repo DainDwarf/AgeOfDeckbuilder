@@ -25,6 +25,7 @@ import type { RiverFlow } from '../rules/map-kinds';
 import { showsNextLanding } from '../rules/schedule';
 import { followed } from '../rules/stages';
 import { NOMADIC } from './nomadic';
+import { PILLAGER } from './scripts';
 
 const { basePrice, schedule, camp } = NOMADIC.owns;
 
@@ -108,6 +109,7 @@ export const STONE: Slice = {
     },
     camp: {
       ...camp,
+      scripts: { ...camp.scripts, pillager: 'pillager' },
       unitKinds: { warrior: 2, archer: 1 },
       odds: 0.08,
       acrossWater: true,
@@ -222,6 +224,7 @@ export const STONE: Slice = {
         sight: 2,
       },
     },
+    scripts: { pillager: PILLAGER },
     cards: {
       farm: {
         kind: 'building',

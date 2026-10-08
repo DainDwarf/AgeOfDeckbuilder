@@ -677,7 +677,12 @@ function unitOf(catalogue: Catalogue, slot: Slot): Unit {
     case 'player':
       return { ...standing, faction };
     case 'enemy':
-      return { ...standing, faction, script: id(catalogue, field('script'), enemyScript) };
+      return {
+        ...standing,
+        faction,
+        script: id(catalogue, field('script'), enemyScript),
+        prepared: flag(catalogue, field('prepared')),
+      };
   }
 }
 

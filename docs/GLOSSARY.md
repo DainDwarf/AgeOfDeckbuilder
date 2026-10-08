@@ -128,6 +128,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **refresh** | To bring a unit's spendable stat — move points, action — back to its full value; health is healed, never refreshed. | restore, replenish, reset, recharge, recover, regain |
 | **military** | The resource that pays for combat. | — |
 | **occupy** | What an enemy does to a tile it stands on: the tile yields nothing and is not claimable. | blockade |
-| **pillage** | What some enemies do to the tile they stand on: its building or improvement is removed. | raze, loot |
+| **prepare** | What an enemy does when it spends its action on the tile it stands on for an effect at the next enemy phase. | hold, besiege, ready, entrench |
+| **pillage** | What an enemy that prepared on a tile does to it at the next enemy phase: everything the player built on it is removed. | raze, loot, sack |
 | **capture** | To take the city or a camp by standing on its tile. | conquer, seize, sack |
 | **reward** | What a capture deals: cards, of which the player chooses one. | gift, prize, bounty |

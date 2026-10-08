@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import type { Catalogue } from '../rules/catalogue';
 import { byHand, type UnitCommand } from '../rules/chronicle';
 import { cityDrag, claimable, type ReassignCommand } from '../rules/city';
+import { preparedAs } from '../rules/enemies';
 import {
   type BuildingTypeId,
   CENTRE,
@@ -567,6 +568,7 @@ export function createMapView(
   const features = group(strata.terrain, 'features');
   const rings = group(strata.terrain, 'border');
   const lighted = group(strata.lit, 'lit');
+  const hues = group(strata.lit, 'prepared');
   const improvements = group(strata.buildings, 'improvements');
   const built = group(strata.buildings, 'buildings');
   const marks = group(strata.units, 'units');
@@ -596,6 +598,8 @@ export function createMapView(
 
   /** The mark drawn for each unit the map shows, by the number that unit is named by. */
   let markers = new Map<number, Phaser.GameObjects.Container>();
+  /** The hue drawn under each enemy the map shows that has prepared, by the number it is named by. */
+  let hued = new Map<number, Phaser.GameObjects.Polygon>();
   /** The mark drawn on each tile the population stands on while city mode is on, by its tile's key. */
   let assignedMarks = new Map<string, Phaser.GameObjects.Rectangle>();
 
@@ -1206,12 +1210,24 @@ export function createMapView(
     }
   };
 
+  /** The tile an enemy has prepared on wearing the enemy's colour, as the target glow wears it. */
+  const paintHue = (unit: Unit): Phaser.GameObjects.Polygon => {
+    const hue = glowTile(scene, unit.tile, FACTION_COLOURS.enemy, LOOK.preparedGlow).setName(
+      `prepared-${tileKey(unit.tile)}`,
+    );
+    hues.add(hue);
+    hued.set(unit.id, hue);
+    return hue;
+  };
+
   const render = (current: Chronicle): void => {
     flight = undefined;
     shown = current;
     ({ drawn, live, charted } = drawing(current));
 
     wipe(marks);
+    wipe(hues);
+    hued = new Map();
 
     paintTiles();
     paintRivers();
@@ -1222,6 +1238,7 @@ export function createMapView(
         if (!live.has(tileKey(unit.tile))) return [];
         const marker = unitMarker(scene, unit);
         marks.add(marker);
+        if (preparedAs(current, unit) !== undefined) paintHue(unit);
         return [[unit.id, marker]];
       }),
     );
@@ -1263,18 +1280,36 @@ export function createMapView(
     );
 
   /** Whatever the map drew shrinking to nothing where it stands. */
-  const shrink = (target: Phaser.GameObjects.GameObject, duration: number): Promise<void> =>
-    ended(scene.tweens.add({ targets: target, scale: 0, duration, ease: EASE }));
+  const shrink = (
+    target: Phaser.GameObjects.GameObject | Phaser.GameObjects.GameObject[],
+    duration: number,
+  ): Promise<void> => ended(scene.tweens.add({ targets: target, scale: 0, duration, ease: EASE }));
+
+  /** The hue a tile wears for the enemy standing on it, and nothing where the map shows none. */
+  const hueOn = (coord: TileCoords): Phaser.GameObjects.Polygon | undefined => {
+    const standing = shown === undefined ? undefined : unitAt(shown.units, coord);
+    return standing === undefined ? undefined : hued.get(standing.id);
+  };
+
+  /** A unit's marker and the hue its tile wears for it: what goes with the unit. */
+  const withHue = (
+    coord: TileCoords,
+    marker: Phaser.GameObjects.Container,
+  ): Phaser.GameObjects.GameObject[] => {
+    const hue = hueOn(coord);
+    return hue === undefined ? [marker] : [marker, hue];
+  };
 
   /** What a target does: a bump where it was attacked, and a shrink off the map if it was killed. */
   const bumped = async (
+    coord: TileCoords,
     marker: Phaser.GameObjects.Container,
     killed: boolean,
     token: symbol,
   ): Promise<void> => {
     await bump(marker, 150);
     if (!killed || flight !== token) return;
-    await shrink(marker, 200);
+    await shrink(withHue(coord, marker), 200);
   };
 
   /** One attack: the attacker lunges halfway at the tile it aimed at, and what stands there takes it. */
@@ -1303,7 +1338,7 @@ export function createMapView(
     const taken =
       hit === undefined
         ? Promise.resolve()
-        : bumped(hit, unitAt(chronicle.units, target) === undefined, token);
+        : bumped(target, hit, unitAt(chronicle.units, target) === undefined, token);
 
     return Promise.all([lunge, taken]).then(() => settle(token, chronicle));
   };
@@ -1382,7 +1417,23 @@ export function createMapView(
     const marker = markerOn(coord);
     if (marker === undefined) return undefined;
     const token = takeOff();
-    return shrink(marker, 200).then(() => settle(token, chronicle));
+    return shrink(withHue(coord, marker), 200).then(() => settle(token, chronicle));
+  };
+
+  /** A tile's hue coming as the enemy on it prepares, and going as what it prepared lands. */
+  const preparedOn = (coord: TileCoords, chronicle: Chronicle): Promise<void> | undefined => {
+    const standing = unitAt(chronicle.units, coord);
+    const worn = hueOn(coord);
+    if (standing !== undefined && preparedAs(chronicle, standing) !== undefined) {
+      if (worn !== undefined) return undefined;
+      const token = takeOff();
+      return fadeIn([paintHue(standing)]).then(() => settle(token, chronicle));
+    }
+    if (worn === undefined) return undefined;
+    const token = takeOff();
+    return ended(scene.tweens.add({ targets: worn, alpha: 0, duration: 250, ease: EASE })).then(
+      () => settle(token, chronicle),
+    );
   };
 
   /** A mark raised onto a layer from nothing, where it stands on the face a change leaves. */
@@ -1564,6 +1615,8 @@ export function createMapView(
       case 'retiled':
       case 'charted':
         return tileChanged(stage.tile, stage.chronicle);
+      case 'prepare':
+        return staged([stage.tile], stage.chronicle, () => preparedOn(stage.tile, stage.chronicle));
       case 'refreshed':
       case 'action-spent':
       case 'held':

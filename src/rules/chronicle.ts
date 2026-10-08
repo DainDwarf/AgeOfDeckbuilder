@@ -1,5 +1,6 @@
 import { available } from './campaign';
 import {
+  actionSpent,
   aimOf,
   discarded,
   goesTo,
@@ -27,7 +28,7 @@ import {
   unitKind,
 } from './catalogue';
 import { assign, type CityCommand, claim, grow, income, reassign } from './city';
-import { enteredAround, enteredOnCamp, stepMove } from './enemies';
+import { enteredAround, enteredOnCamp, pillaged, preparedAs, stepMove } from './enemies';
 import {
   distance,
   type FeatureId,
@@ -95,11 +96,9 @@ import {
   attackable,
   FIRST_UNIT_NUMBER,
   type Landing,
-  occupied,
   reachable,
   refreshedAction,
   refreshedMovePoints,
-  spentAction,
   type Unit,
   unitAt,
   unitOf,
@@ -641,6 +640,7 @@ function chartedOn(stage: Change): TileCoords | undefined {
     case 'killed':
     case 'refreshed':
     case 'action-spent':
+    case 'prepare':
     case 'retiled':
     case 'held':
     case 'settled':
@@ -1088,15 +1088,11 @@ function attack(
  * spent and then the target losing the attacker's damage or killed by it. Nobody moves.
  */
 function blow(chronicle: Chronicle, attacker: Unit, target: Unit): Sequence<Group> {
-  const spent = landedAs(
-    changeOn('action-spent', attacker.tile, {
-      ...chronicle,
-      units: chronicle.units.map((unit) => (unit.id === attacker.id ? spentAction(unit) : unit)),
-    }),
-  );
   return grouped(
     { name: 'attack', attacker: attacker.tile, target: target.tile },
-    followed(spent, (left) => unitDamaged(left, target.tile, attacker.stats.damage)),
+    followed(actionSpent(chronicle, attacker.tile), (left) =>
+      unitDamaged(left, target.tile, attacker.stats.damage),
+    ),
   );
 }
 
@@ -1126,15 +1122,12 @@ function everyPlace(pile: readonly ChronicleCard[]): number[] {
 }
 
 /**
- * The enemies' half of the turn, the one `enemy-phase` group: an enemy that stood on the city's tile
- * through the whole turn captures it, the capture's `ended` alone in the group; otherwise every
- * enemy acts in unit order, then the camps roll their warriors.
+ * The enemies' half of the turn, the one `enemy-phase` group: the prepares carried through the
+ * player's turn land first, a capture's `ended` alone in the group; then every enemy acts in unit
+ * order, then the camps roll their warriors.
  */
 function enemyPhase(catalogue: Catalogue, chronicle: Chronicle): Sequence<Group> {
-  if (chronicle.city !== undefined && occupied(chronicle.units, chronicle.city)) {
-    return grouped({ name: 'enemy-phase' }, landedAs(change('ended', fall(chronicle, 'capture'))));
-  }
-  let phase: Sequence = unchanged(chronicle);
+  let phase: Sequence = preparesLanded(catalogue, chronicle);
   for (const { id } of chronicle.units) {
     phase = followed(phase, (left) => enemyActs(catalogue, left, id));
   }
@@ -1145,8 +1138,42 @@ function enemyPhase(catalogue: Catalogue, chronicle: Chronicle): Sequence<Group>
 }
 
 /**
- * One enemy acting on the chronicle the one before it left: an enemy that steps attacks nothing
- * after it. The draws its script made ride on the chronicle even where it raised no stage.
+ * Every enemy still carrying a prepare landing it: an enemy prepared on the city's tile captures the
+ * city ahead of every pillage, and otherwise each pillages its tile in unit order, its prepare gone.
+ */
+function preparesLanded(catalogue: Catalogue, chronicle: Chronicle): Landed {
+  const preparing = chronicle.units.filter((unit) => preparedAs(chronicle, unit) !== undefined);
+  if (preparing.some((unit) => preparedAs(chronicle, unit) === 'capture')) {
+    return landedAs(change('ended', fall(chronicle, 'capture')));
+  }
+  let landing = unchanged(chronicle);
+  for (const unit of preparing) {
+    landing = followed(landing, (left) => {
+      const tile = tileAt(left.tiles, unit.tile);
+      const bare = tile === undefined ? undefined : pillaged(catalogue, left, tile);
+      const taken = bare === undefined ? unchanged(left) : retiled(left, unit.tile, () => bare);
+      return followed(taken, (after) => carriedPrepare(after, unit, false));
+    });
+  }
+  return landing;
+}
+
+/** Whether the enemy carries a prepare, set as named: the one `prepare` change. */
+function carriedPrepare(chronicle: Chronicle, enemy: Unit, prepared: boolean): Landed {
+  return landedAs(
+    changeOn('prepare', enemy.tile, {
+      ...chronicle,
+      units: chronicle.units.map((unit) =>
+        unit.id === enemy.id && unit.faction === 'enemy' ? { ...unit, prepared } : unit,
+      ),
+    }),
+  );
+}
+
+/**
+ * One enemy acting on the chronicle the one before it left: an enemy that steps acts no more after
+ * it, nor one that prepares. The draws its script made ride on the chronicle even where it raised no
+ * stage.
  */
 function enemyActs(catalogue: Catalogue, chronicle: Chronicle, id: number): Sequence {
   const found = unitOf(chronicle.units, id);
@@ -1162,21 +1189,48 @@ function enemyActs(catalogue: Catalogue, chronicle: Chronicle, id: number): Sequ
     return followed<Stage>(moving, (left) => enemyStepped(catalogue, left, id, step));
   }
 
-  const attacks = (standing: Chronicle): Sequence => {
+  const acts = (standing: Chronicle): Sequence => {
     const acting = unitOf(standing.units, id);
     if (acting === undefined || acting.action <= 0) return unchanged(standing);
-    const target = script.attacks(catalogue, standing, acting);
-    if (target === undefined) return unchanged(standing);
-    if (
-      distance(acting.tile, target.tile) > acting.stats.range ||
-      (target.embarked && acting.stats.range <= 1) ||
-      !inOwnSight(catalogue, standing.tiles, acting, target.tile)
-    ) {
-      return landedAs(change('runtime-error', standing));
+    const act = script.acts(catalogue, standing, acting);
+    switch (act.act) {
+      case 'none':
+        return unchanged(standing);
+      case 'prepare':
+        return prepared(catalogue, standing, acting);
+      case 'attack': {
+        const { target } = act;
+        if (
+          distance(acting.tile, target.tile) > acting.stats.range ||
+          (target.embarked && acting.stats.range <= 1) ||
+          !inOwnSight(catalogue, standing.tiles, acting, target.tile)
+        ) {
+          return landedAs(change('runtime-error', standing));
+        }
+        return followed<Stage>(blow(standing, acting, target), acts);
+      }
     }
-    return followed<Stage>(blow(standing, acting, target), attacks);
   };
-  return followed<Stage>(moving, attacks);
+  return followed<Stage>(moving, acts);
+}
+
+/**
+ * An enemy preparing on the tile it stands on, its action spent as an attack spends it and then its
+ * prepare carried; one embarked, or on a tile with neither the city nor anything built on it, is a
+ * `runtime-error` and no prepare.
+ */
+function prepared(catalogue: Catalogue, chronicle: Chronicle, enemy: Unit): Landed {
+  const tile = tileAt(chronicle.tiles, enemy.tile);
+  const { city } = chronicle;
+  const onCity = city !== undefined && tileKey(city) === tileKey(enemy.tile);
+  if (
+    enemy.embarked ||
+    tile === undefined ||
+    !(onCity || pillaged(catalogue, chronicle, tile) !== undefined)
+  ) {
+    return landedAs(change('runtime-error', chronicle));
+  }
+  return followed(actionSpent(chronicle, enemy.tile), (left) => carriedPrepare(left, enemy, true));
 }
 
 /**

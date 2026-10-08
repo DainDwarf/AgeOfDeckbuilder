@@ -1,9 +1,10 @@
 import { expect, test } from 'vitest';
-import { type Catalogue, catalogued } from '../rules/catalogue';
+import { type Catalogue, catalogued, type EnemyAct } from '../rules/catalogue';
 import { apply, outcome } from '../rules/chronicle';
 import {
   aimedAt,
   attacksOf,
+  builtOn,
   CATALOGUE,
   CITY,
   camped,
@@ -24,12 +25,18 @@ import {
 import { distance, MOVE_POINT, type Tile, type TileCoords, tileKey } from '../rules/map';
 import { seedRng } from '../rules/rng';
 import type { Chronicle } from '../rules/state';
-import { guarding, RAIDER } from './scripts';
+import { guarding, PILLAGER, RAIDER } from './scripts';
 
 /** The fixture's content, its enemies entering as raiders in place of its own script. */
 const RAIDING: Catalogue = catalogued({
   ...CATALOGUE,
   scripts: { ...CATALOGUE.scripts, [SCRIPT]: RAIDER },
+});
+
+/** The fixture's content, its enemies entering as pillagers in place of its own script. */
+const PILLAGING: Catalogue = catalogued({
+  ...CATALOGUE,
+  scripts: { ...CATALOGUE.scripts, [SCRIPT]: PILLAGER },
 });
 
 /** How far from its camp the fixture's guards keep. */
@@ -41,25 +48,39 @@ const GUARDING: Catalogue = catalogued({
   scripts: { ...CATALOGUE.scripts, [SCRIPT]: guarding(RADIUS) },
 });
 
-/** The last enemy of the chronicle, asked its move and its attack straight from the script. */
-function asked(script: Catalogue, chronicle: Chronicle): { to: string; attacks?: string } {
+/**
+ * The last enemy of the chronicle, asked its move and its act straight from the script: the tile it
+ * attacks, `prepare`, or nothing.
+ */
+function asked(script: Catalogue, chronicle: Chronicle): { to: string; acts?: string } {
   const enemy = chronicle.units.filter((unit) => unit.faction === 'enemy').at(-1);
   if (enemy === undefined) throw new Error('no enemy stands on the chronicle');
   const closure = script.scripts[SCRIPT];
-  const target = closure.attacks(script, chronicle, enemy);
+  const act = closure.acts(script, chronicle, enemy);
   return {
     to: tileKey(closure.moveTo(script, chronicle, enemy).landing.tile),
-    attacks: target === undefined ? undefined : tileKey(target.tile),
+    acts: readOf(act),
   };
 }
 
-test('a raider on the city’s tile stays there and attacks nothing', () => {
+function readOf(act: EnemyAct): string | undefined {
+  switch (act.act) {
+    case 'attack':
+      return tileKey(act.target.tile);
+    case 'prepare':
+      return 'prepare';
+    case 'none':
+      return undefined;
+  }
+}
+
+test('a raider on the city’s tile stays there, prepares the capture and attacks nothing', () => {
   const city = cityOf(['urban'], {
     tiles: field(2),
     units: [worker({ q: 1, r: 0 }), standing('enemy', CITY, { move: 2 * MOVE_POINT })],
   });
 
-  expect(asked(RAIDING, city)).toEqual({ to: tileKey(CITY), attacks: undefined });
+  expect(asked(RAIDING, city)).toEqual({ to: tileKey(CITY), acts: 'prepare' });
 });
 
 test('a raider with the city’s tile free and in reach steps onto it ahead of any attack', () => {
@@ -107,6 +128,56 @@ test('a raider attacks the unit of the least health within its range', () => {
   });
 
   expect(attacksOf(city, RAIDING)).toEqual([['4,0', '4,-1']]);
+});
+
+test('a pillager goes for what its own walk weighs the least to: past a farm two tiles off through the forest, toward one three tiles off over the plain', () => {
+  const forested = { q: 2, r: 2 };
+  const plain = { q: 4, r: -3 };
+  const land = [CITY, { q: 2, r: 0 }, { q: 2, r: 1 }, forested, { q: 3, r: -1 }, { q: 4, r: -2 }];
+  const city = cityOf(['urban'], {
+    tiles: builtOn(
+      madeOf(only(4, [...land, plain]), 'forest', [{ q: 2, r: 1 }, forested]),
+      'PH_Farm',
+      [forested, plain],
+    ),
+    units: [standing('enemy', { q: 2, r: 0 }, { move: 2 * MOVE_POINT })],
+  });
+
+  expect(distance({ q: 2, r: 0 }, forested)).toBeLessThan(distance({ q: 2, r: 0 }, plain));
+  expect(movesOf(city, PILLAGING)).toEqual([['2,0', '4,-2']]);
+});
+
+test('a pillager with nothing built to go for walks toward a worker of the player’s out of its reach, where a raider walks toward the city', () => {
+  const city = cityOf(['urban'], {
+    tiles: field(4),
+    units: [worker({ q: 4, r: -3 }), standing('enemy', { q: 2, r: 0 }, { move: MOVE_POINT })],
+  });
+
+  expect(movesOf(city, PILLAGING)).toEqual([['2,0', '2,-1']]);
+  expect(attacksOf(city, PILLAGING)).toEqual([]);
+  expect(movesOf(city, RAIDING)).toEqual([['2,0', '1,0']]);
+});
+
+test('a pillager standing on a farm attacks a unit it can reach ahead of preparing, and prepares the pillage with nothing to attack', () => {
+  const farm = { q: 2, r: 0 };
+  const ground = builtOn(field(3), 'PH_Farm', [farm]);
+  const pillager = standing('enemy', farm, { move: 2 * MOVE_POINT });
+  const beset = cityOf(['urban'], { tiles: ground, units: [worker({ q: 3, r: 0 }), pillager] });
+  const alone = cityOf(['urban'], { tiles: ground, units: [pillager] });
+
+  expect(asked(PILLAGING, beset)).toEqual({ to: tileKey(farm), acts: '3,0' });
+  expect(asked(PILLAGING, alone)).toEqual({ to: tileKey(farm), acts: 'prepare' });
+});
+
+test('a pillager with nothing built and no worker to go for raids: it walks to the city and prepares the capture there', () => {
+  const raiding = cityOf(['urban'], {
+    tiles: field(2),
+    units: [standing('enemy', { q: 2, r: 0 }, { move: 2 * MOVE_POINT })],
+  });
+  const arrived = cityOf(['urban'], { tiles: field(2), units: [standing('enemy', CITY)] });
+
+  expect(movesOf(raiding, PILLAGING)).toEqual([['2,0', '0,0']]);
+  expect(asked(PILLAGING, arrived)).toEqual({ to: tileKey(CITY), acts: 'prepare' });
 });
 
 /** Where a unit stands two tiles off `SCREENED` and `OPEN`, a forest between it and `SCREENED` alone. */

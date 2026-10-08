@@ -54,7 +54,6 @@ import {
   technologyName,
   terrainName,
   unitName,
-  unitNameOf,
   victoryLine,
 } from '../ui/text';
 import { layOutRun, type Reference, type ReferenceKind } from '../ui/text-run';
@@ -98,10 +97,9 @@ test('the catalogue holds together', () => {
   expect(catalogued(CATALOGUE)).toBe(CATALOGUE);
 });
 
-test('every unit kind of the catalogue has a name, ashore and embarked, and a mark on the screen', () => {
+test('every unit kind of the catalogue has a name and a mark on the screen', () => {
   for (const id of Object.keys(CATALOGUE.units)) {
     expect(() => unitName(id)).not.toThrow();
-    expect(() => unitNameOf(id, true)).not.toThrow();
     expect(() => unitMarkOf(id)).not.toThrow();
   }
 });
@@ -305,7 +303,7 @@ test('every capstone of the catalogue has a name, a rules entry, a lore at each 
   }
 });
 
-test('every enemy script of the catalogue answers its move and its attack for an enemy standing on a chronicle launched and settled in each age', () => {
+test('every enemy script of the catalogue answers its move and its act for an enemy standing on a chronicle launched and settled in each age', () => {
   for (const age of AGES) {
     const chronicle = settledIn(age);
     const enemy = chronicle.units.find((unit) => unit.faction === 'enemy');
@@ -313,7 +311,7 @@ test('every enemy script of the catalogue answers its move and its attack for an
     for (const id of Object.keys(CATALOGUE.scripts)) {
       const script = enemyScript(CATALOGUE, id);
       expect(() => script.moveTo(CATALOGUE, chronicle, enemy)).not.toThrow();
-      expect(() => script.attacks(CATALOGUE, chronicle, enemy)).not.toThrow();
+      expect(() => script.acts(CATALOGUE, chronicle, enemy)).not.toThrow();
     }
   }
 });

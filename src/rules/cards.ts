@@ -250,7 +250,7 @@ export function throughWorker(
     refuses: (catalogue, chronicle, tile) =>
       firstRefusal(worked(chronicle, tile), refusesTile(catalogue, chronicle, tile)),
     effect: (catalogue, paid, at) =>
-      followed(acted(paid, at), (left) => effect(catalogue, left, at)),
+      followed(actionSpent(paid, at), (left) => effect(catalogue, left, at)),
   };
 }
 
@@ -258,7 +258,7 @@ export function throughWorker(
  * The unit standing on the tile with one of its action spent; a `runtime-error` where none stands
  * there.
  */
-function acted(paid: Chronicle, at: TileCoords): Landed {
+export function actionSpent(paid: Chronicle, at: TileCoords): Landed {
   const acting = unitAt(paid.units, at);
   if (acting === undefined) return landedAs(change('runtime-error', paid));
   return landedAs(
@@ -349,7 +349,7 @@ export function steppedOnto(
   move: number,
 ): Landed {
   const tile = { q: to.q, r: to.r };
-  return followed(acted(paid, stepping.tile), (left) =>
+  return followed(actionSpent(paid, stepping.tile), (left) =>
     landedAs({
       kind: 'change',
       name: 'move',

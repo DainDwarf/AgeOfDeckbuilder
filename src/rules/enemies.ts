@@ -2,7 +2,9 @@ import {
   ageOf,
   type CampScript,
   type Catalogue,
+  type EnemyAct,
   type Entering,
+  type EveryCampScript,
   entered,
   unitKind,
 } from './catalogue';
@@ -57,6 +59,36 @@ export function leastHealth(
   return target;
 }
 
+/** An attack on the unit, and nothing where there is none to attack. */
+export function attackOrNone(target: Unit | undefined): EnemyAct {
+  return target === undefined ? { act: 'none' } : { act: 'attack', target };
+}
+
+/**
+ * The tile as a pillage leaves it, everything the player built on it removed — every improvement, and
+ * a building that is neither the city nor a camp — and nothing where it would take nothing.
+ */
+export function pillaged(catalogue: Catalogue, chronicle: Chronicle, tile: Tile): Tile | undefined {
+  if (chronicle.city !== undefined && tileKey(tile) === tileKey(chronicle.city)) return undefined;
+  const camp = ageOf(catalogue, chronicle.age).camp.building;
+  const building = tile.building === camp ? camp : undefined;
+  if (tile.improvements.length === 0 && building === tile.building) return undefined;
+  return { ...tile, improvements: [], building };
+}
+
+/**
+ * What an enemy's prepare lands as at the next enemy phase: the city's capture on the city's tile, a
+ * pillage on any other; nothing for a unit that has prepared nothing.
+ */
+export function preparedAs(
+  chronicle: Pick<Chronicle, 'city'>,
+  unit: Unit,
+): 'capture' | 'pillage' | undefined {
+  if (unit.faction !== 'enemy' || !unit.prepared) return undefined;
+  const { city } = chronicle;
+  return city !== undefined && tileKey(unit.tile) === tileKey(city) ? 'capture' : 'pillage';
+}
+
 /** An enemy entered or not yet: its stats, and whether it stands embarked. */
 type Walking = Pick<Unit, 'stats' | 'embarked'>;
 
@@ -106,20 +138,34 @@ export function enemyMoves(catalogue: Catalogue, chronicle: Chronicle, enemy: Wa
 
 /**
  * An enemy of the kind, of the chronicle's age's camp, entering on the tile with the script the camp
- * names for it.
+ * names for it, and nothing where the camp names no such script.
  */
 export function campUnit(
   catalogue: Catalogue,
   chronicle: Chronicle,
   kind: string,
   tile: TileCoords,
+  script: EveryCampScript,
+): Entering;
+export function campUnit(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  kind: string,
+  tile: TileCoords,
   script: CampScript,
-): Entering {
-  const { camp } = ageOf(catalogue, chronicle.age);
-  return { type: kind, faction: 'enemy', tile, script: camp.scripts[script] };
+): Entering | undefined;
+export function campUnit(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  kind: string,
+  tile: TileCoords,
+  script: CampScript,
+): Entering | undefined {
+  const named = ageOf(catalogue, chronicle.age).camp.scripts[script];
+  return named === undefined ? undefined : { type: kind, faction: 'enemy', tile, script: named };
 }
 
-/** An enemy not yet entered: its kind's stats, and its moves ashore and embarked. */
+/** An enemy entered or not yet: its kind's stats, and its moves ashore and embarked. */
 type Entrant = { readonly stats: UnitStats; readonly moves: Moves };
 
 function entrantOf(catalogue: Catalogue, chronicle: Chronicle, kind: string): Entrant {
@@ -156,7 +202,8 @@ function kindsDrawn(
 
 /**
  * An enemy of the chronicle's age's camp entering on the camp's tile with the script named, its kind
- * drawn among the camp's kinds that stand on that tile ashore; none enters where none of them does.
+ * drawn among the camp's kinds that stand on that tile ashore; none enters where none of them does,
+ * and a script the camp names none of is a `runtime-error`.
  */
 export function enteredOnCamp(
   catalogue: Catalogue,
@@ -170,15 +217,13 @@ export function enteredOnCamp(
   );
   if (standing.length === 0) return unchanged(chronicle);
   const drawn = kindDrawn(chronicle, standing);
-  return entered(
-    catalogue,
-    drawn.chronicle,
-    campUnit(catalogue, drawn.chronicle, drawn.kind, camp, script),
-  );
+  const entering = campUnit(catalogue, drawn.chronicle, drawn.kind, camp, script);
+  if (entering === undefined) return landedAs(change('runtime-error', chronicle));
+  return entered(catalogue, drawn.chronicle, entering);
 }
 
 /** Whether the entrant stands on the tile, embarked or ashore as named, on the move its moves name. */
-function standsAs(
+export function standsAs(
   catalogue: Catalogue,
   { stats, moves }: Entrant,
   tile: Tile | undefined,
@@ -243,7 +288,8 @@ function aroundDoor(
 
 /**
  * Enemies of these kinds, in order, entering with the script named, each on the nearest free tile
- * its kind enters on around the tile as a door; the ones no free tile is left for enter nowhere.
+ * its kind enters on around the tile as a door; the ones no free tile is left for enter nowhere, and
+ * each a script the camp names none of is a `runtime-error`.
  */
 function enteredAs(
   catalogue: Catalogue,
@@ -272,12 +318,14 @@ function enteredAs(
 
     const drawn = equal.length === 1 ? undefined : nextRng(standing.rng);
     const { q, r } = drawn === undefined ? equal[0] : equal[Math.floor(drawn.value * equal.length)];
-    landing = followed(landing, (left) =>
-      entered(catalogue, drawn === undefined ? left : { ...left, rng: drawn.rng }, {
-        ...campUnit(catalogue, left, kind, { q, r }, script),
+    landing = followed(landing, (left) => {
+      const entering = campUnit(catalogue, left, kind, { q, r }, script);
+      if (entering === undefined) return landedAs(change('runtime-error', left));
+      return entered(catalogue, drawn === undefined ? left : { ...left, rng: drawn.rng }, {
+        ...entering,
         embarkedMove,
-      }),
-    );
+      });
+    });
   }
   return landing;
 }

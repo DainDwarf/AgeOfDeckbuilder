@@ -134,6 +134,17 @@ test('a chronicle saved with a unit embarked reads back with it embarked', () =>
   expect(read.chronicle).toEqual(save);
 });
 
+test('a chronicle saved with an enemy prepared reads back with it prepared', () => {
+  const city = cityOf(['urban'], { tiles: field(2), units: [standing('enemy', CITY)] });
+  const prepared = outcome(apply(CATALOGUE, city, { type: 'end-turn' }));
+  const save = { chronicle: prepared, region: REGION, civilization: CIVILIZATION_ID };
+
+  const read = readSave(CATALOGUE, writeSave(CATALOGUE, campaign(), save));
+
+  expect(prepared.units[0]).toMatchObject({ faction: 'enemy', prepared: true });
+  expect(read.chronicle).toEqual(save);
+});
+
 test('a chronicle saved with a card on its exhaust pile reads back with it there', () => {
   const city = cityOf(['urban'], { hand: ['PH_Sow'] });
   const sown = outcome(apply(CATALOGUE, city, { type: 'play', index: 0, aim: 'none' }));

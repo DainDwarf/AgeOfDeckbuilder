@@ -3,6 +3,7 @@ import { chartedTile } from './cards';
 import { type Catalogue, catalogued, type EnemyScript, unitKind } from './catalogue';
 import { apply, outcome } from './chronicle';
 import { cityCommand, claimable } from './city';
+import { attackOrNone, enteredAround, enteredOnCamp } from './enemies';
 import {
   aimedAt,
   attackOn,
@@ -36,11 +37,13 @@ import {
   opening,
   plains,
   pointsOf,
+  preparing,
   REGION,
   REGIONS,
   ringed,
   SCRIPT,
   SLOW_SLINGER,
+  type Standing,
   stagedBy,
   standing,
   unitNamed,
@@ -81,7 +84,7 @@ test('a capture ends the end of turn on its own stage, with the ending set', () 
     tiles: field(2),
     hand: ['PH_Harvest'],
     drawPile: ['PH_Worker', 'PH_Warrior'],
-    units: [standing('enemy', CITY)],
+    units: [preparing(standing('enemy', CITY))],
   });
 
   const stages = apply(CATALOGUE, overrun, { type: 'end-turn' });
@@ -210,7 +213,7 @@ test('a chronicle that fell in the enemy phase captures no camp', () => {
   const camp = { q: 4, r: 0 };
   const overrun = cityOf(['urban'], {
     tiles: camped(field(4), [camp]),
-    units: [standing('player', camp), standing('enemy', CITY)],
+    units: [standing('player', camp), preparing(standing('enemy', CITY))],
   });
 
   const fallen = outcome(apply(CATALOGUE, overrun, { type: 'end-turn' }));
@@ -644,7 +647,7 @@ test('an enemy’s move draws from the seeded generator where its script draws, 
           landing: { tile: enemy.tile, cost: 0 },
           rng: nextRng(chronicle.rng).rng,
         }),
-        attacks: () => undefined,
+        acts: () => ({ act: 'none' }),
       },
     },
   });
@@ -816,7 +819,7 @@ test('at odds of a half a seed enters on the same camps every time, and seeds di
 test('a city fallen in the enemy phase rolls no camp', () => {
   const overrun = cityOf(['urban'], {
     tiles: camped(field(4), CAMPS),
-    units: [standing('enemy', CITY)],
+    units: [preparing(standing('enemy', CITY))],
   });
 
   const fallen = outcome(apply(camping({ odds: 1 }), overrun, { type: 'end-turn' }));
@@ -991,8 +994,8 @@ test('an enemy its move leaves out of range attacks nothing', () => {
   expect(after.units[0].stats.health).toBe(city.units[0].stats.health);
 });
 
-/** The fixture's content, its enemies staying where they stand and attacking what `attacks` names. */
-function naming(attacks: EnemyScript['attacks']): Catalogue {
+/** The fixture's content, its enemies staying where they stand and doing what `acts` names. */
+function naming(acts: EnemyScript['acts']): Catalogue {
   return catalogued({
     ...CATALOGUE,
     scripts: {
@@ -1002,7 +1005,7 @@ function naming(attacks: EnemyScript['attacks']): Catalogue {
           landing: { tile: enemy.tile, cost: 0 },
           rng: chronicle.rng,
         }),
-        attacks,
+        acts,
       },
     },
   });
@@ -1010,7 +1013,7 @@ function naming(attacks: EnemyScript['attacks']): Catalogue {
 
 /** The fixture's content, its enemies staying where they stand and attacking the player's first unit. */
 const RECKLESS = naming((_catalogue, chronicle) =>
-  chronicle.units.find((unit) => unit.faction === 'player'),
+  attackOrNone(chronicle.units.find((unit) => unit.faction === 'player')),
 );
 
 /** The names of the stages the enemy phase of the end of turn holds. */
@@ -1019,7 +1022,9 @@ function enemyPhaseOf(chronicle: Chronicle, catalogue: Catalogue): string[] {
 }
 
 test('an enemy attacks only a unit its own sight reaches: one its script names behind a forest from the plain is a runtime-error and no attack, and from the hills the attack lands', () => {
-  const blind = naming((_catalogue, chronicle, enemy) => attackable(chronicle.units, enemy)[0]);
+  const blind = naming((_catalogue, chronicle, enemy) =>
+    attackOrNone(attackable(chronicle.units, enemy)[0]),
+  );
   const archerOn = (terrain: Terrain): Chronicle =>
     cityOf(['urban'], {
       tiles: madeOf(madeOf(field(3), 'forest', [{ q: 2, r: 0 }]), terrain, [{ q: 3, r: 0 }]),
@@ -1081,8 +1086,8 @@ function stepping(step: (enemy: Unit) => TileCoords, embarkedMove?: number): Cat
             step: step(enemy),
             rng: chronicle.rng,
           }),
-          attacks: (_catalogue, chronicle) =>
-            chronicle.units.find((unit) => unit.faction === 'player'),
+          acts: (_catalogue, chronicle) =>
+            attackOrNone(chronicle.units.find((unit) => unit.faction === 'player')),
         },
       },
     },
@@ -1315,6 +1320,114 @@ test('an enemy that reaches the city’s tile stands there, and captures the cit
   const fallen = outcome(apply(CATALOGUE, stood, { type: 'end-turn' }));
   expect(fallen.ending).toEqual({ outcome: 'defeat', cause: 'capture', turn: stood.turn });
   expect(fallen.turn).toBe(stood.turn);
+});
+
+test('an enemy that prepares spends its action as an attack does, and carries the prepare through the end of turn', () => {
+  const city = cityOf(['urban'], { tiles: field(2), units: [standing('enemy', CITY)] });
+
+  const stages = apply(CATALOGUE, city, { type: 'end-turn' });
+  const phase = heldBy(stages, 'enemy-phase');
+  const after = outcome(stages);
+
+  expect(namesOf(phase)).toEqual(['action-spent', 'prepare']);
+  expect(phase).toMatchObject([{ tile: CITY }, { tile: CITY }]);
+  expect(phase[1].chronicle.units[0]).toMatchObject({ prepared: true, action: 0 });
+  expect(after.units[0]).toMatchObject({ prepared: true, action: city.units[0].action });
+  expect(after.ending).toBeUndefined();
+});
+
+/** A plain two tiles off the city with a farm built on it and a road and a trail placed on it. */
+const FARMED: TileCoords = { q: 2, r: 0 };
+
+/** A city on a disc of plain with `FARMED` built on, and these units standing. */
+function farmed(units: readonly Standing[]): Chronicle {
+  const built = field(3).map((tile) =>
+    tileKey(tile) === tileKey(FARMED)
+      ? { ...tile, building: 'PH_Farm', improvements: ['PH_Road', 'PH_Trail'] }
+      : tile,
+  );
+  return cityOf(['urban'], { tiles: built, units });
+}
+
+test('a prepare off the city’s tile lands at the next enemy phase ahead of every act: the enemy pillages its tile, the building and every improvement removed at once, and its prepare is gone', () => {
+  const pillaging = farmed([
+    preparing(standing('enemy', FARMED, { move: 0 })),
+    standing('enemy', { q: -2, r: 0 }, { move: MOVE_POINT }),
+  ]);
+
+  const phase = heldBy(apply(CATALOGUE, pillaging, { type: 'end-turn' }), 'enemy-phase');
+  const [retiled, carried] = phase;
+
+  expect(namesOf(phase)).toEqual(['retiled', 'prepare', 'move']);
+  expect(retiled).toMatchObject({ tile: FARMED });
+  expect(tileAt(retiled.chronicle.tiles, FARMED)).toMatchObject({
+    building: undefined,
+    improvements: [],
+  });
+  expect(carried).toMatchObject({ tile: FARMED });
+  expect(carried.chronicle.units[0]).toMatchObject({ prepared: false });
+});
+
+test('an enemy prepared on the city’s tile captures the city ahead of every pillage', () => {
+  const overrun = farmed([
+    preparing(standing('enemy', FARMED)),
+    preparing(standing('enemy', CITY)),
+  ]);
+
+  const stages = apply(CATALOGUE, overrun, { type: 'end-turn' });
+
+  expect(namesOf(heldBy(stages, 'enemy-phase'))).toEqual(['ended']);
+  expect(outcome(stages).ending).toEqual({ outcome: 'defeat', cause: 'capture', turn: 1 });
+  expect(buildingAt(outcome(stages), FARMED)).toBe('PH_Farm');
+});
+
+test('a prepared enemy killed in the player’s turn takes nothing at the next enemy phase', () => {
+  const beset = farmed([
+    standing('player', { q: 1, r: 0 }, { damage: 4 }),
+    preparing(standing('enemy', FARMED, { health: 4 })),
+  ]);
+
+  const killed = outcome(apply(CATALOGUE, beset, attackOn(1, FARMED)));
+  const after = outcome(apply(CATALOGUE, killed, { type: 'end-turn' }));
+
+  expect(enemiesOf(killed)).toEqual([]);
+  expect(tileAt(after.tiles, FARMED)).toEqual(tileAt(beset.tiles, FARMED));
+});
+
+/** The fixture's content, its enemies staying where they stand and preparing there whatever the tile. */
+const PREPARING = naming(() => ({ act: 'prepare' }));
+
+test('a prepare on a tile with neither the city nor anything built on it, and one by an embarked enemy, are each a runtime-error and no prepare', () => {
+  const coast = { q: 2, r: 0 };
+  const weir = field(3, [coast]).map((tile) =>
+    tileKey(tile) === tileKey(coast) ? { ...tile, improvements: ['PH_Weir'] } : tile,
+  );
+  const afloat = standing('enemy', coast);
+  const bare = cityOf(['urban'], { tiles: field(3), units: [standing('enemy', { q: 2, r: 0 })] });
+  const embarked = cityOf(['urban'], {
+    tiles: weir,
+    units: [{ ...afloat, entering: { ...afloat.entering, embarkedMove: EMBARKED_MOVE } }],
+  });
+
+  for (const city of [bare, embarked]) {
+    const phase = heldBy(apply(PREPARING, city, { type: 'end-turn' }), 'enemy-phase');
+    expect(namesOf(phase)).toEqual(['runtime-error']);
+    expect(phase[0].chronicle.units).toEqual(city.units);
+  }
+  expect(embarked.units[0].embarked).toBe(true);
+});
+
+test('an entry asking for a script its camp names none of is a runtime-error and enters nothing', () => {
+  const camp = { q: 4, r: 0 };
+  const city = cityOf(['urban'], { tiles: camped(field(4), [camp]) });
+
+  for (const landing of [
+    enteredOnCamp(CATALOGUE, city, camp, 'pillager'),
+    enteredAround(CATALOGUE, city, camp, 1, 'pillager'),
+  ]) {
+    expect(landing.stages.map(({ name }) => name)).toEqual(['runtime-error']);
+    expect(landing.chronicle.units).toEqual([]);
+  }
 });
 
 test('the enemy that moves in from its camp reaches the city and captures it', () => {

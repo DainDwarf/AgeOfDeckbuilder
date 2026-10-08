@@ -365,7 +365,7 @@ test('an enemy seen embarking is kept in the snapshot embarked, in fog as in sig
             step: coast,
             rng: chronicle.rng,
           }),
-          attacks: () => undefined,
+          acts: () => ({ act: 'none' }),
         },
       },
     },

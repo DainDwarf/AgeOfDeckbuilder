@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { type Catalogue, fullHealth, unitKind } from '../rules/catalogue';
+import { preparedAs } from '../rules/enemies';
 import {
   builtYield,
   groundCost,
@@ -8,6 +9,7 @@ import {
   type River,
   runsAlong,
   type Tile,
+  type TileCoords,
   type TilesBeside,
   type YieldSource,
   yieldParts,
@@ -29,15 +31,20 @@ import {
   terrainMark,
   unitMark,
 } from './map';
-import { buildingName, featureName, improvementName, terrainName, text, unitNameOf } from './text';
+import { buildingName, featureName, improvementName, terrainName, text, unitName } from './text';
 import type { Reference } from './text-run';
 import type { Tooltip } from './tooltip';
 
 /** One line of a card's ledger: what it is drawn and named by, and what it gives at income. */
 type Row = (YieldSource | { readonly kind: 'river' }) & { readonly yields: Partial<Resources> };
 
-/** What a unit card reads: a unit on the map, or a unit kind read as a unit fresh of it. */
-type UnitReading = Pick<Unit, 'stats' | 'faction' | 'movePoints' | 'action' | 'embarked'>;
+/**
+ * What a unit card reads: a unit on the map, or a unit kind read as a unit fresh of it, and what its
+ * prepare lands as, if it has prepared.
+ */
+type UnitReading = Pick<Unit, 'stats' | 'faction' | 'movePoints' | 'action' | 'embarked'> & {
+  readonly prepares?: 'capture' | 'pillage';
+};
 
 /** One card an inspection steps through, headed by the first of the rows it holds. */
 export type Card =
@@ -152,13 +159,16 @@ export function cardsOf(
   catalogue: Catalogue,
   tile: Tile,
   units: readonly Unit[],
+  city: TileCoords | undefined,
   rivers: readonly River[],
   beside: TilesBeside,
 ): Card[] {
   const cards: Card[] = [];
 
   const unit = unitAt(units, tile);
-  if (unit !== undefined) cards.push({ kind: 'unit', unit });
+  if (unit !== undefined) {
+    cards.push({ kind: 'unit', unit: { ...unit, prepares: preparedAs({ city }, unit) } });
+  }
 
   const parts = yieldParts(catalogue, tile, beside);
   const rows = (place: ReturnType<typeof placeOf>): Row[] =>
@@ -414,11 +424,20 @@ function buildFace(
   const name = addText(scene, left + markBox + 0.5 * em, middle, head.name, style.title)
     .setOrigin(0, 0.5)
     .setName('panel-name');
+  const contents: Phaser.GameObjects.GameObject[] = [paper, mark, name];
 
-  const ruleY = Math.round(middle + 1.15 * em);
+  let ruleY = Math.round(middle + 1.15 * em);
+  const state = card.kind === 'unit' ? stateOf(card.unit) : undefined;
+  if (state !== undefined) {
+    const line = addText(scene, name.x, 0, state, style.label)
+      .setOrigin(0, 0.5)
+      .setName('panel-state');
+    line.setY(middle + name.height / 2 + line.height / 2);
+    contents.push(line);
+    ruleY = Math.round(line.y + line.height / 2 + 0.35 * em);
+  }
   const rule = scene.add.rectangle(left, ruleY, right - left, 1, LOOK.cardEdge).setOrigin(0, 0);
-
-  const contents: Phaser.GameObjects.GameObject[] = [paper, mark, name, rule];
+  contents.push(rule);
   const hovers: Phaser.GameObjects.Zone[] = [];
 
   const movement = movementOf(card);
@@ -542,12 +561,26 @@ function buildFace(
 function headOf(scene: Phaser.Scene, card: Drawing): { mark: Mark; name: string } {
   if (card.kind === 'unit') {
     const { stats, faction, embarked } = card.unit;
-    return {
-      mark: unitMark(scene, stats.type, faction, embarked),
-      name: unitNameOf(stats.type, embarked),
-    };
+    return { mark: unitMark(scene, stats.type, faction, embarked), name: unitName(stats.type) };
   }
   return { mark: markOf(scene, card.rows[0]), name: nameOf(card.rows[0]) };
+}
+
+/** What the line under a unit card's name reads: the unit's states joined, and nothing for none. */
+function stateOf(unit: UnitReading): string | undefined {
+  const states = unit.embarked ? [text('unit-state.raft')] : [];
+  switch (unit.prepares) {
+    case 'capture':
+      states.push(text('unit-state.capturing'));
+      break;
+    case 'pillage':
+      states.push(text('unit-state.pillaging'));
+      break;
+    case undefined:
+      break;
+  }
+  if (states.length === 0) return undefined;
+  return states.reduce((one, other) => text('unit-state.joined', { one, other }));
 }
 
 /**

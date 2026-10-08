@@ -105,6 +105,7 @@ type TiledChange =
   | 'killed'
   | 'refreshed'
   | 'action-spent'
+  | 'prepare'
   | 'retiled'
   | 'charted'
   | 'held'

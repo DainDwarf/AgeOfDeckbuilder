@@ -345,6 +345,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
         CATALOGUE,
         face.tile,
         face.asStands ? this.current.units : [],
+        this.current.city,
         this.current.rivers,
         (coord) => view.drawnAs(coord)?.tile,
       );

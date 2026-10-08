@@ -39,6 +39,7 @@ import {
   cardMade,
   catalogued,
   civilizationOf,
+  type EnemyAct,
   type EnemyScript,
   type Entering,
   entered,
@@ -58,7 +59,7 @@ import {
   terrainsPlayedOn,
 } from './chronicle';
 import { arrived, bordered, populationKilled, populationTaken, yielded } from './city';
-import { enteredAround, enteredOnCamp, leastHealth, raided } from './enemies';
+import { attackOrNone, enteredAround, enteredOnCamp, leastHealth, raided } from './enemies';
 import {
   type BuildingTypeId,
   cornerKey,
@@ -347,17 +348,24 @@ const EVENTS: Catalogue['events'] = {
 /** The script the fixture's enemies enter with, and the one its camp's raiders carry. */
 export const SCRIPT = 'PH_Beeline';
 
+/** What the fixture's scripts do with an action: attack the unit of the least health they can. */
+function struckAt(catalogue: Catalogue, chronicle: Chronicle, enemy: Unit): EnemyAct {
+  return attackOrNone(leastHealth(catalogue, chronicle.tiles, chronicle.units, enemy));
+}
+
 /** The script the fixture camp's guards carry: it stays where it stands and attacks what it can. */
 const SENTRY: EnemyScript = {
   moveTo: (_catalogue, chronicle, enemy) => ({
     landing: { tile: enemy.tile, cost: 0 },
     rng: chronicle.rng,
   }),
-  attacks: (catalogue, chronicle, enemy) =>
-    leastHealth(catalogue, chronicle.tiles, chronicle.units, enemy),
+  acts: struckAt,
 };
 
-/** The fixture's script. Unlike the raider, it attacks from the city's tile too. */
+/**
+ * The fixture's script. Unlike the raider, it attacks from the city's tile too, and prepares the
+ * capture there only where it finds nothing to attack.
+ */
 const BEELINE: EnemyScript = {
   moveTo(catalogue, chronicle, enemy) {
     const stay: Landing = { tile: enemy.tile, cost: 0 };
@@ -369,8 +377,12 @@ const BEELINE: EnemyScript = {
     }
     return { landing: chosen, rng: chronicle.rng };
   },
-  attacks: (catalogue, chronicle, enemy) =>
-    leastHealth(catalogue, chronicle.tiles, chronicle.units, enemy),
+  acts(catalogue, chronicle, enemy) {
+    const struck = struckAt(catalogue, chronicle, enemy);
+    const { city } = chronicle;
+    const onCity = city !== undefined && tileKey(city) === tileKey(enemy.tile);
+    return struck.act === 'none' && onCity ? { act: 'prepare' } : struck;
+  },
 };
 
 /** The id the fixture catalogue lists its one civilization under. */
@@ -1076,6 +1088,8 @@ export type Standing = {
   readonly stats: UnitStats;
   readonly movePoints: number;
   readonly action: number;
+  /** Whether an enemy has prepared on the tile it stands on. */
+  readonly prepared?: true;
 };
 
 /**
@@ -1087,15 +1101,19 @@ export function withUnits(chronicle: Chronicle, units: readonly Standing[]): Chr
   for (const unit of units) {
     const dealt = entered(CATALOGUE, stood, unit.entering).chronicle;
     const last = dealt.units[dealt.units.length - 1];
-    const authored: Unit = {
-      ...last,
-      stats: unit.stats,
-      movePoints: unit.movePoints,
-      action: unit.action,
-    };
+    const state = { stats: unit.stats, movePoints: unit.movePoints, action: unit.action };
+    const authored: Unit =
+      last.faction === 'enemy'
+        ? { ...last, ...state, prepared: unit.prepared === true }
+        : { ...last, ...state };
     stood = { ...dealt, units: [...dealt.units.slice(0, -1), authored] };
   }
   return charted(CATALOGUE, stood);
+}
+
+/** An enemy standing as `standing` stands it, having prepared on its tile. */
+export function preparing(enemy: Standing): Standing {
+  return { ...enemy, prepared: true };
 }
 
 type Pile = 'drawPile' | 'hand' | 'discardPile' | 'exhaustPile';
