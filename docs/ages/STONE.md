@@ -59,3 +59,7 @@ A goal is a focus themed on its technology: it is read from the technology's fic
 - **Food trade**, an instant costing money, aimed at nothing: the city gains food.
 - **Goods trade**, an instant costing money, aimed at nothing: the city gains production. Money is paid in the two trades, each for one good, so which good a deck's money goes to is chosen when the deck is built. A trade choosing its good when it is played was rejected: it leaves the deck's building nothing to choose.
 - **Fishery**, a building built through an embarked worker for production on a coast tile. It gives food to its own tile and to every coast tile beside it, once however many stand around a tile, so it pays by the coast the city works around it.
+
+## The camps 🔧
+
+A camp is a rival band's, and it enters warriors and archers: the opening, the camp's roll and a raid each draw which. They follow one of three scripts. **Guard** and **raider** are the Nomadic Age's, the raider crossing the water on its way, embarking where the ground ends and disembarking where it begins. **Pillager** goes for the player's workers and for what they built: the improvements and the buildings, which it pillages where it stands. A camp prepares: once enough guards have gathered around it, some leave together as raiders or pillagers, so a raid out of a camp arrives as a band and not one warrior at a time.
