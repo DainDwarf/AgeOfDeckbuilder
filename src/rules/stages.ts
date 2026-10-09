@@ -33,7 +33,7 @@ type GroupHead =
   | { readonly name: 'played'; readonly card: CardId; readonly aimed: Aimed }
   | { readonly name: 'strike'; readonly card: CardId }
   | { readonly name: 'attack'; readonly attacker: TileCoords; readonly target: TileCoords }
-  | { readonly name: 'camp-capture'; readonly tile: TileCoords };
+  | { readonly name: 'capture'; readonly tile: TileCoords };
 
 /** The one step a command resolves as, a change or a group, each carrying the chronicle it leaves. */
 export type Stage = Change | Group;

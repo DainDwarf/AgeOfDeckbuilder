@@ -19,6 +19,7 @@ import {
   movesOf,
   only,
   SCRIPT,
+  SITE,
   type Standing,
   standing,
   worker,
@@ -168,6 +169,25 @@ test('a pillager standing on a farm attacks a unit it can reach ahead of prepari
 
   expect(asked(PILLAGING, beset)).toEqual({ to: tileKey(farm), acts: '3,0' });
   expect(asked(PILLAGING, alone)).toEqual({ to: tileKey(farm), acts: 'prepare' });
+});
+
+test('a pillager goes for no site and prepares nothing on one: with a site beside it it raids, where a farm there draws it', () => {
+  const beside = { q: 3, r: -1 };
+  const ground = madeOf(field(3), 'hills', [beside]);
+  const pillager = standing('enemy', { q: 2, r: 0 }, { move: 2 * MOVE_POINT });
+  const sited = cityOf(['urban'], { tiles: builtOn(ground, SITE, [beside]), units: [pillager] });
+  const farmed = cityOf(['urban'], {
+    tiles: builtOn(ground, 'PH_Farm', [beside]),
+    units: [pillager],
+  });
+  const onSite = cityOf(['urban'], {
+    tiles: builtOn(ground, SITE, [beside]),
+    units: [standing('enemy', beside, { move: 2 * MOVE_POINT })],
+  });
+
+  expect(movesOf(farmed, PILLAGING)).toEqual([['2,0', '3,-1']]);
+  expect(movesOf(sited, PILLAGING)).toEqual([['2,0', '0,0']]);
+  expect(asked(PILLAGING, onSite).acts).toBeUndefined();
 });
 
 test('a pillager with nothing built and no worker to go for raids: it walks to the city and prepares the capture there', () => {

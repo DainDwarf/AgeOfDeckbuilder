@@ -1,5 +1,5 @@
 import type Phaser from 'phaser';
-import { ageOf, type Catalogue } from '../rules/catalogue';
+import type { Catalogue } from '../rules/catalogue';
 import { answerCost, answerOf, answerRefusal, offered } from '../rules/schedule';
 import type { Group, Stage } from '../rules/stages';
 import {
@@ -28,7 +28,7 @@ import {
 } from './design-space';
 import { type EndingOf, standEnding } from './ending-screen';
 import { answerFace, capstoneFace, cardFace, cardFaceAtStart, type Face } from './face';
-import { campLore, capstoneLore, eventLore, type Raising } from './lore';
+import { capstoneLore, captureLore, eventLore, type Raising } from './lore';
 import { raiseMenu } from './menu-scene';
 import type { OverlayScene } from './overlay-scene';
 import type { Held, Panel } from './panel';
@@ -464,7 +464,7 @@ export function createOverlay({
       case 'answer':
       case 'reward':
       case 'attack':
-      case 'camp-capture':
+      case 'capture':
         return undefined;
     }
   };
@@ -516,17 +516,17 @@ export function createOverlay({
       }
       const { ending, deals } = stage.chronicle;
       if (ending !== undefined && !endingScreen.raised) return raiseEnding(stage.chronicle, ending);
-      // Every camp captured deals before the camps after it are captured: the window waits for the
-      // render the play-out ends on, which a render of this stage would pre-empt.
+      // Every capture deals before the captures after it resolve: the window waits for the render
+      // the play-out ends on, which a render of this stage would pre-empt.
       return deals.length > 0 ? Promise.resolve() : undefined;
     },
   };
 }
 
 /**
- * What the deal window reads of a deal: the event's name and lore or the camp's over it, and its
- * entries in the order dealt — an answer drawn unaffordable where the chronicle cannot pay it, a
- * reward as the card of the deck it is.
+ * What the deal window reads of a deal: the name and lore of the event or of the building captured
+ * over it, and its entries in the order dealt — an answer drawn unaffordable where the chronicle
+ * cannot pay it, a reward as the card of the deck it is.
  */
 function dealt(
   catalogue: Catalogue,
@@ -548,13 +548,11 @@ function dealt(
           }),
         ),
       };
-    case 'camp': {
-      const { building } = ageOf(catalogue, chronicle.age).camp;
+    case 'capture':
       return {
-        heading: buildingName(building),
-        lore: campLore(building),
+        heading: buildingName(deal.building),
+        lore: captureLore(deal.building),
         entries: ids.map((id, at) => offeredCard(cardFaceAtStart(catalogue, id), at)),
       };
-    }
   }
 }

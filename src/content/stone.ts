@@ -69,6 +69,9 @@ const REGIONS: Age['regions'] = {
     camps: 6,
     campFromCentre: 7,
     campsApart: 4,
+    sites: [],
+    siteFromCentre: 7,
+    sitesApart: 4,
     rivers: RIVERS,
   },
   archipelago: {
@@ -90,6 +93,9 @@ const REGIONS: Age['regions'] = {
     camps: 6,
     campFromCentre: 7,
     campsApart: 4,
+    sites: [],
+    siteFromCentre: 7,
+    sitesApart: 4,
     rivers: RIVERS,
   },
 };
@@ -120,6 +126,7 @@ export const STONE: Slice = {
       embarkedMove: EMBARKED_MOVE,
       wave: { gathered: 3, sent: 2 },
     },
+    sites: {},
     regions: REGIONS,
     achievements: {
       herbalism: {

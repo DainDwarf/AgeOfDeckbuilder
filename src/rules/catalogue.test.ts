@@ -1,6 +1,7 @@
 import { expect, test } from 'vitest';
 import { embarks, placesImprovement } from './cards';
 import {
+  type Age,
   type Answer,
   achievementOf,
   ageOf,
@@ -42,6 +43,8 @@ import {
   REGION,
   REGIONS,
   regionsUnlocked,
+  SITE,
+  SITES,
   SLICES,
   SLOW_SLINGER,
   victoryOf,
@@ -63,6 +66,11 @@ function rescheduled(schedule: Partial<Schedule>): Catalogue {
 /** The fixture's content with its first age's camp changed as the test lays it over. */
 function encamped(camp: Partial<Camp>): Catalogue {
   return aged({ camp: { ...CAMP, ...camp } });
+}
+
+/** The fixture's content with its first age's sites replaced by the ones the test names. */
+function sited(sites: Age['sites']): Catalogue {
+  return aged({ sites });
 }
 
 /** The fixture's content with its first age's regions replaced by the ones the test names. */
@@ -584,6 +592,74 @@ test('a catalogue whose camp is a building it does not hold is refused', () => {
   const content = encamped({ building: 'PH_Fort' });
 
   expect(() => catalogued(content)).toThrow(/^fixture: /);
+});
+
+test('a catalogue whose site is a building it does not hold, or one naming a feature or the river, is refused, and the same building naming neither is not', () => {
+  const { features, ...unnamed } = CATALOGUE.buildings.PH_Lodge;
+  const lodged = (lodge: LayerKind): Catalogue =>
+    changed({
+      ...sited({ [SITE]: { ...SITES[SITE], building: 'PH_Lodge' } }),
+      buildings: { ...CATALOGUE.buildings, PH_Lodge: lodge },
+    });
+
+  expect(() => catalogued(sited({ [SITE]: { ...SITES[SITE], building: 'PH_Fort' } }))).toThrow(
+    'fixture: no building is named PH_Fort',
+  );
+  expect(() => catalogued(lodged({ ...unnamed, features }))).toThrow(
+    `fixture: the age ${AGE}'s site ${SITE} PH_Lodge names the features ${features?.join(', ')}`,
+  );
+  expect(() => catalogued(lodged({ ...unnamed, river: true }))).toThrow(
+    `fixture: the age ${AGE}'s site ${SITE} PH_Lodge names the river`,
+  );
+  expect(catalogued(lodged(unnamed)).version).toBe('fixture');
+});
+
+test('a catalogue whose site is its camp’s building or another site’s is refused', () => {
+  const site = SITES[SITE];
+
+  expect(() => catalogued(sited({ [SITE]: { ...site, building: CAMP.building } }))).toThrow(
+    `fixture: the age ${AGE}'s camp and site ${SITE} are both the building ${CAMP.building}`,
+  );
+  expect(() => catalogued(sited({ ...SITES, PH_Twin: site }))).toThrow(
+    `fixture: the age ${AGE}'s site ${SITE} and site PH_Twin are both the building ${site.building}`,
+  );
+});
+
+test('a catalogue whose site deals a reward it does not hold, or no reward at all, is refused', () => {
+  const site = SITES[SITE];
+
+  expect(() =>
+    catalogued(sited({ [SITE]: { ...site, rewards: [...site.rewards, 'PH_Loot'] } })),
+  ).toThrow('fixture: no card is named PH_Loot');
+  expect(() => catalogued(sited({ [SITE]: { ...site, rewards: [] } }))).toThrow(
+    `fixture: the age ${AGE}'s site ${SITE} deals no reward`,
+  );
+});
+
+test('a catalogue whose region deals a site its age does not own is refused', () => {
+  const disc = REGIONS[REGION];
+  const content = changed(regioned({ [REGION]: { ...disc, sites: [...disc.sites, 'PH_Barrow'] } }));
+
+  expect(() => catalogued(content)).toThrow(
+    `fixture: no site of the age ${AGE} is named PH_Barrow`,
+  );
+});
+
+test('a catalogue whose deck holds a site’s reward, or whose technology unlocks one, is refused', () => {
+  const [reward] = SITES[SITE].rewards;
+  const decked = changed({
+    civilizations: { civilization: { ...CIVILIZATION, cards: [...CIVILIZATION.cards, reward] } },
+  });
+  const unlocked = withTechnologies({
+    [GRANARY]: { ...GRANARY_DECLARED, unlocks: { cards: { [reward]: 1 } } },
+  });
+
+  expect(() => catalogued(decked)).toThrow(
+    `fixture: the civilization civilization holds the age ${AGE}'s site ${SITE}'s reward ${reward}`,
+  );
+  expect(() => catalogued(unlocked)).toThrow(
+    `fixture: the technology ${GRANARY} unlocks the age ${AGE}'s site ${SITE}'s reward ${reward}`,
+  );
 });
 
 test('a catalogue whose civilization’s city section names a building it does not hold, or a city that sees or opens with idle population below nought, is refused', () => {

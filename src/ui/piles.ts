@@ -220,7 +220,7 @@ export function createPiles(
       case 'answer':
       case 'reward':
       case 'attack':
-      case 'camp-capture':
+      case 'capture':
         return undefined;
     }
   };

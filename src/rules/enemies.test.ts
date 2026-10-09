@@ -9,6 +9,7 @@ import {
   attackOn,
   attacksOf,
   buildingAt,
+  builtOn,
   CAMP,
   CAMP_KIND,
   CAMPS,
@@ -45,6 +46,8 @@ import {
   raidingFrom,
   ringed,
   SCRIPT,
+  SITE,
+  SITES,
   SLOW_SLINGER,
   type Standing,
   stagedBy,
@@ -124,13 +127,34 @@ test('a camp captured at the end of the turn leaves its tile claimed like any ot
 
   const taken = endedTurn(besieging);
 
-  expect(tilesStaged('camp-capture', besieging)).toEqual([tileKey(camp)]);
+  expect(tilesStaged('capture', besieging)).toEqual([tileKey(camp)]);
   expect(claimable(CATALOGUE, taken).map(tileKey)).toContain(tileKey(camp));
   expect(cityCommand(CATALOGUE, taken, camp)).toEqual(claimOf(camp));
   expect(stagedBy(taken, claimOf(camp))).toEqual(['claim', 'stock', 'held', 'assigned']);
   expect(outcome(apply(CATALOGUE, taken, claimOf(camp))).held.map(tileKey)).toContain(
     tileKey(camp),
   );
+});
+
+test('a site’s tile is claimed like any other, and a unit of the player’s standing on it when the turn ends captures it as a camp: its slot emptied and its rewards dealt under its building, the one taken added to the discard pile', () => {
+  const site = { q: 2, r: 0 };
+  const sited = ringed(3, {
+    ...NO_GROWTH,
+    tiles: builtOn(madeOf(field(3), 'hills', [site]), SITE, [site]),
+    resources: culture(20),
+    drawPile: fullDraw(),
+    units: [standing('player', site)],
+  });
+  const { rewards } = SITES[SITE];
+
+  const dealt = outcome(apply(CATALOGUE, sited, { type: 'end-turn' }));
+  const taken = outcome(apply(CATALOGUE, dealt, { type: 'take', at: 0 }));
+
+  expect(cityCommand(CATALOGUE, sited, site)).toEqual(claimOf(site));
+  expect(tilesStaged('capture', sited)).toEqual([tileKey(site)]);
+  expect(buildingAt(dealt, site)).toBeUndefined();
+  expect(dealt.deals).toEqual([{ of: 'capture', building: SITE, rewards }]);
+  expect(idsOf(taken.discardPile)).toEqual([rewards[0]]);
 });
 
 test('a unit of the player’s standing on a camp when the turn ends captures it', () => {
@@ -149,11 +173,11 @@ test('a unit of the player’s standing on a camp when the turn ends captures it
     'income',
     'stock',
     'enemy-phase',
-    'camp-capture',
+    'capture',
     'retiled',
     'dealt',
   ]);
-  expect(tilesStaged('camp-capture', besieging)).toEqual([tileKey(camp)]);
+  expect(tilesStaged('capture', besieging)).toEqual([tileKey(camp)]);
   expect(buildingAt(taken, camp)).toBeUndefined();
   expect(taken.discardPile).toEqual([]);
 });
@@ -169,7 +193,9 @@ test('a capture deals the camp’s rewards and stops the end of turn before the 
   const dealt = outcome(apply(CATALOGUE, besieging, { type: 'end-turn' }));
   const cache = outcome(apply(CATALOGUE, dealt, { type: 'take', at: 1 }));
 
-  expect(dealt.deals).toEqual([{ of: 'camp', rewards: ['PH_Spoils', 'PH_Cache'] }]);
+  expect(dealt.deals).toEqual([
+    { of: 'capture', building: CAMP.building, rewards: ['PH_Spoils', 'PH_Cache'] },
+  ]);
   expect(dealt.turn).toBe(besieging.turn);
   expect(dealt.hand).toEqual([]);
   expect(stagedBy(dealt, { type: 'take', at: 1 })).toEqual([
@@ -382,7 +408,7 @@ test('at odds of one every camp enters a guard of its own once the enemies have 
     'action-spent',
     'damaged',
     ...camps.map(() => 'enter'),
-    'camp-capture',
+    'capture',
     'retiled',
     'dealt',
   ]);
@@ -914,7 +940,7 @@ test('a guard the player’s warrior killed on its turn leaves the count short, 
   expect(tilesStaged('wave-sent', killed, WAVING)).toEqual([]);
 });
 
-test('a camp captured is one camp-capture carrying its tile, over the camp leaving the tile, its enemies no camp’s with it, and its rewards dealt', () => {
+test('a camp captured is one capture carrying its tile, over the camp leaving the tile, its enemies no camp’s with it, and its rewards dealt', () => {
   const camp = { q: 4, r: 0 };
   const other = { q: -4, r: 0 };
   const besieging = cityOf(['urban'], {
@@ -929,8 +955,8 @@ test('a camp captured is one camp-capture carrying its tile, over the camp leavi
   });
 
   const stages = apply(CATALOGUE, besieging, { type: 'end-turn' });
-  const capture = stages.find((stage) => stage.name === 'camp-capture');
-  if (capture?.kind !== 'group' || capture.name !== 'camp-capture') {
+  const capture = stages.find((stage) => stage.name === 'capture');
+  if (capture?.kind !== 'group' || capture.name !== 'capture') {
     throw new Error('no camp was captured');
   }
   const [retiled, dealt] = capture.stages;
@@ -941,7 +967,9 @@ test('a camp captured is one camp-capture carrying its tile, over the camp leavi
   expect(campsNamed(retiled.chronicle)).toEqual([undefined, tileKey(other)]);
   expect(retiled.chronicle.deals).toEqual([]);
   expect(dealt.name).toBe('dealt');
-  expect(dealt.chronicle.deals).toEqual([{ of: 'camp', rewards: CAMP.rewards }]);
+  expect(dealt.chronicle.deals).toEqual([
+    { of: 'capture', building: CAMP.building, rewards: CAMP.rewards },
+  ]);
   expect(outcome(stages)).toBe(capture.chronicle);
 });
 
@@ -990,13 +1018,13 @@ test('two camps captured the turn before an event is due deal two deals of rewar
     units: camps.map((camp) => standing('player', camp)),
     ...RAID_ON_SECOND,
   });
-  const rewards = { of: 'camp', rewards: CAMP.rewards };
+  const rewards = { of: 'capture', building: CAMP.building, rewards: CAMP.rewards };
 
   const dealt = outcome(apply(CATALOGUE, besieging, { type: 'end-turn' }));
   const first = outcome(apply(CATALOGUE, dealt, { type: 'take', at: 0 }));
   const second = outcome(apply(CATALOGUE, first, { type: 'take', at: 1 }));
 
-  expect(tilesStaged('camp-capture', besieging)).toEqual(
+  expect(tilesStaged('capture', besieging)).toEqual(
     besieging.tiles
       .filter((tile) => camps.some((camp) => tileKey(camp) === tileKey(tile)))
       .map(tileKey),

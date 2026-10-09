@@ -377,6 +377,9 @@ const REGIONS: Age['regions'] = {
     camps: 4,
     campFromCentre: 7,
     campsApart: 4,
+    sites: [],
+    siteFromCentre: 7,
+    sitesApart: 4,
     rivers: {
       source: 'mountain',
       relief: 1,
@@ -417,6 +420,7 @@ export const NOMADIC: Slice = {
       odds: 0.08,
       raidCampOdds: 0.8,
     },
+    sites: {},
     regions: REGIONS,
     achievements: {
       'first-shelter': {

@@ -612,9 +612,10 @@ function dealOf(catalogue: Catalogue, slot: Slot): Deal {
   switch (of) {
     case 'event':
       return { of, event: id(catalogue, field('event'), eventOf) };
-    case 'camp':
+    case 'capture':
       return {
         of,
+        building: id(catalogue, field('building'), buildingKind),
         rewards: list(catalogue, field('rewards'), (item) => id(catalogue, item, cardOf)),
       };
   }

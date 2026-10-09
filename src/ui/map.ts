@@ -1668,7 +1668,7 @@ export function createMapView(
       case 'enemy-phase':
       case 'deal':
       case 'reward':
-      case 'camp-capture':
+      case 'capture':
         return undefined;
     }
   };

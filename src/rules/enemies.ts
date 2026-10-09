@@ -4,6 +4,7 @@ import {
   type EnemyAct,
   type Entering,
   entered,
+  rewardsOf,
   type UnitEntryRow,
   type UnitEntryTable,
   unitEntryTableHeld,
@@ -67,12 +68,13 @@ export function attackOrNone(target: Unit | undefined): EnemyAct {
 
 /**
  * The tile as a pillage leaves it, everything the player built on it removed — every improvement, and
- * a building that is neither the city nor a camp — and nothing where it would take nothing.
+ * a building that is neither the city, a camp nor a site — and nothing where it would take nothing.
  */
 export function pillaged(catalogue: Catalogue, chronicle: Chronicle, tile: Tile): Tile | undefined {
   if (chronicle.city !== undefined && tileKey(tile) === tileKey(chronicle.city)) return undefined;
-  const camp = ageOf(catalogue, chronicle.age).camp.building;
-  const building = tile.building === camp ? camp : undefined;
+  const nobodys =
+    tile.building !== undefined && rewardsOf(catalogue, chronicle.age, tile.building) !== undefined;
+  const building = nobodys ? tile.building : undefined;
   if (tile.improvements.length === 0 && building === tile.building) return undefined;
   return { ...tile, improvements: [], building };
 }

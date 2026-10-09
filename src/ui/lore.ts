@@ -10,7 +10,7 @@ const LORE = {
     'Some of the tribe have grown unhappy here. They talk of leaving, and they mean it.',
   'event.herd':
     'One of the hunters came back with news: a new herd, not far from here. The tribe has been arguing all evening about what to do.',
-  'camp.camp':
+  'capture.camp':
     'The camp has fallen. Its stores lie open and its people wait to hear their fate: what do you take?',
   'capstone-opening.first-shelter':
     'The tribe has wandered long enough. When the time comes, build the first shelter, and the Nomadic Age is won.',
@@ -26,9 +26,9 @@ export function eventLore(event: string): string {
   return lore('event', event, 'the event');
 }
 
-/** The lore a capture's window reads, keyed on the camp's building; a building no entry holds is refused. */
-export function campLore(building: string): string {
-  return lore('camp', building, 'the building');
+/** The lore a capture's window reads, keyed on the building captured; a building no entry holds is refused. */
+export function captureLore(building: string): string {
+  return lore('capture', building, 'the building');
 }
 
 /** The lore the capstone's window reads at that raising; a capstone no entry holds is refused. */

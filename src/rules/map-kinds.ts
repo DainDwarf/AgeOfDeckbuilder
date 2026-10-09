@@ -90,9 +90,9 @@ export type BiomeShare = {
 
 /**
  * One composition of the map: the disc's radius, how many biomes it is cut into and which kinds are
- * dealt in what shares, the share of each feature, how many camps and how far each keeps from the
- * disc's centre and from every camp already placed, how far the centre part reaches from the disc's
- * centre, and how the river layer runs.
+ * dealt in what shares, the share of each feature, how many camps and sites and how far each keeps
+ * from the disc's centre and from every one of its kind already placed, how far the centre part
+ * reaches from the disc's centre, and how the river layer runs.
  */
 export type Region = {
   readonly radius: number;
@@ -104,6 +104,10 @@ export type Region = {
   readonly camps: number;
   readonly campFromCentre: number;
   readonly campsApart: number;
+  /** The sites of its age it deals, by key, one each. */
+  readonly sites: readonly string[];
+  readonly siteFromCentre: number;
+  readonly sitesApart: number;
   readonly rivers: RiverFlow;
 };
 
@@ -124,12 +128,13 @@ export type MapContent = {
 };
 
 /**
- * The part of an age a map is dealt from: its regions, the building its camp is, and whether its camp
- * stands across the water.
+ * The part of an age a map is dealt from: its regions, the building its camp is, whether its camp
+ * stands across the water, and the building each of its sites is, by the site's key.
  */
 export type MapAge = {
   readonly regions: Readonly<Record<string, Region>>;
   readonly camp: { readonly building: string; readonly acrossWater?: boolean };
+  readonly sites: Readonly<Record<string, { readonly building: string }>>;
 };
 
 /** What a tile of that terrain is; a terrain the catalogue does not hold is refused. */

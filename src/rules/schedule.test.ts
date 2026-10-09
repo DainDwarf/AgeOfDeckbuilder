@@ -1303,7 +1303,7 @@ test('a camp captured the turn before the capstone’s deals its rewards, and th
   );
   const taken = outcome(apply(CATALOGUE, dealt, { type: 'take', at: 0 }));
 
-  expect(dealt.deals).toEqual([{ of: 'camp', rewards: CAMP.rewards }]);
+  expect(dealt.deals).toEqual([{ of: 'capture', building: CAMP.building, rewards: CAMP.rewards }]);
   expect(dealt.turn).toBe(CAPSTONE - 1);
   expect(stagedBy(dealt, { type: 'take', at: 0 })).toEqual([
     'reward',
@@ -1336,7 +1336,7 @@ test('a camp captured on the siege’s last turn holds the victory back until it
 
   expect(stagedBy(last, { type: 'end-turn' })).not.toContain('ended');
   expect(dealt.ending).toBeUndefined();
-  expect(dealt.deals).toEqual([{ of: 'camp', rewards: CAMP.rewards }]);
+  expect(dealt.deals).toEqual([{ of: 'capture', building: CAMP.building, rewards: CAMP.rewards }]);
   expect(stagedBy(dealt, { type: 'take', at: 0 })).toEqual([
     'reward',
     'taken',
@@ -1374,8 +1374,8 @@ test('a capture that meets a capstone’s condition ends the chronicle on the ca
   });
   const stages = apply(campsRemoved, last, { type: 'end-turn' });
 
-  expect(heldBy(stages, 'camp-capture').map(({ name }) => name)).toEqual(['retiled', 'ended']);
-  expect(namesOf(stages).slice(-3)).toEqual(['camp-capture', 'retiled', 'ended']);
+  expect(heldBy(stages, 'capture').map(({ name }) => name)).toEqual(['retiled', 'ended']);
+  expect(namesOf(stages).slice(-3)).toEqual(['capture', 'retiled', 'ended']);
   expect(outcome(stages).deals).toEqual([]);
   expect(outcome(stages).ending).toEqual({ outcome: 'victory', turn: CAPSTONE });
 });

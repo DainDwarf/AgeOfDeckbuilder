@@ -2,6 +2,7 @@ import {
   type BiomeShare,
   biomeKind,
   buildingKind,
+  entryOf,
   featureKind,
   improvementKind,
   type LayerKind,
@@ -788,53 +789,49 @@ function flowRivers(
 }
 
 /**
- * The camps placed one at a time, one draw each among the tiles still left to it; where none is left
+ * The buildings placed in order, one draw each among the bare tiles reached of a terrain it names,
+ * as far from the centre and from every one placed before it as `keeps` names; where none is left
  * the placing stops, and `generateMap` deals the map again.
  */
-function campsOn(
+function placedOn(
   catalogue: MapContent,
-  { building, acrossWater }: MapAge['camp'],
-  region: Region,
+  buildings: readonly string[],
+  keeps: { readonly fromCentre: number; readonly apart: number },
+  reached: ReadonlySet<string>,
   initial: Rng,
   tiles: readonly Tile[],
-  rivers: readonly River[],
 ): { rng: Rng; tiles: Tile[]; placed: number } {
-  const { camps, campFromCentre, campsApart } = region;
-  const ground = buildingKind(catalogue, building).terrains;
-  const reached =
-    acrossWater === true
-      ? groundAndWaterRunTo(catalogue, tiles, rivers, CENTRE)
-      : groundRunsTo(catalogue, tiles, rivers, CENTRE);
-
   let rng = initial;
-  const placed: TileCoords[] = [];
-  for (let drawn = 0; drawn < camps; drawn++) {
+  const placed: Tile[] = [];
+  for (const building of buildings) {
+    const ground = buildingKind(catalogue, building).terrains;
     const candidates = tiles.filter(
       (tile) =>
+        tile.building === undefined &&
         ground.includes(tile.terrain) &&
         reached.has(tileKey(tile)) &&
-        distance(tile, CENTRE) >= campFromCentre &&
-        placed.every((other) => distance(tile, other) >= campsApart),
+        distance(tile, CENTRE) >= keeps.fromCentre &&
+        placed.every((other) => distance(tile, other) >= keeps.apart),
     );
     if (candidates.length === 0) break;
 
     const step = nextRng(rng);
     rng = step.rng;
-    placed.push(candidates[Math.floor(step.value * candidates.length)]);
+    placed.push({ ...candidates[Math.floor(step.value * candidates.length)], building });
   }
 
-  const camped = new Set(placed.map(tileKey));
+  const built = new Map(placed.map((tile) => [tileKey(tile), tile]));
   return {
     rng,
-    tiles: tiles.map((tile) => (camped.has(tileKey(tile)) ? { ...tile, building } : tile)),
+    tiles: tiles.map((tile) => built.get(tileKey(tile)) ?? tile),
     placed: placed.length,
   };
 }
 
 /**
  * The map a region deals, a disc around `CENTRE` in the seven layers of `docs/MAP.md`. A deal short
- * of the region's camps is thrown away and the next dealt from the generator state it leaves; a
- * tenth one short throws.
+ * of the region's camps or sites is thrown away and the next dealt from the generator state it
+ * leaves; a tenth one short throws.
  */
 export function generateMap(
   catalogue: MapContent,
@@ -843,19 +840,22 @@ export function generateMap(
   initial: Rng,
 ): HexMap & { readonly rng: Rng } {
   const region = regionOf(catalogue, age, regionId);
-  let deal = dealMap(catalogue, age.camp, region, initial);
-  for (let dealt = 1; deal.placed < region.camps; dealt++) {
+  const wanted = region.camps + region.sites.length;
+  let deal = dealMap(catalogue, age, region, initial);
+  for (let dealt = 1; deal.placed < wanted; dealt++) {
     if (dealt === 10) {
-      throw new Error(`this map was dealt 10 times and never held ${region.camps} camps`);
+      throw new Error(
+        `this map was dealt 10 times and never held ${region.camps} camps and ${region.sites.length} sites`,
+      );
     }
-    deal = dealMap(catalogue, age.camp, region, deal.rng);
+    deal = dealMap(catalogue, age, region, deal.rng);
   }
   return { rng: deal.rng, tiles: deal.tiles, rivers: deal.rivers, centre: deal.centre };
 }
 
 function dealMap(
   catalogue: MapContent,
-  camp: MapAge['camp'],
+  age: MapAge,
   region: Region,
   initial: Rng,
 ): { rng: Rng; tiles: Tile[]; rivers: River[]; centre: TileCoords[]; placed: number } {
@@ -1022,26 +1022,39 @@ function dealMap(
   );
   rng = flowed.rng;
 
-  const camped = campsOn(
+  const ground = coords.map(({ q, r }, index) => ({
+    q,
+    r,
+    terrain: terrains[index],
+    feature: features[index],
+    improvements: [],
+  }));
+  const reached =
+    age.camp.acrossWater === true
+      ? groundAndWaterRunTo(catalogue, ground, flowed.rivers, CENTRE)
+      : groundRunsTo(catalogue, ground, flowed.rivers, CENTRE);
+  const camped = placedOn(
     catalogue,
-    camp,
-    region,
+    Array(region.camps).fill(age.camp.building),
+    { fromCentre: region.campFromCentre, apart: region.campsApart },
+    reached,
     rng,
-    coords.map(({ q, r }, index) => ({
-      q,
-      r,
-      terrain: terrains[index],
-      feature: features[index],
-      improvements: [],
-    })),
-    flowed.rivers,
+    ground,
+  );
+  const sited = placedOn(
+    catalogue,
+    region.sites.map((site) => entryOf(catalogue, age.sites, site, 'site').building),
+    { fromCentre: region.siteFromCentre, apart: region.sitesApart },
+    reached,
+    camped.rng,
+    camped.tiles,
   );
 
   return {
-    rng: camped.rng,
+    rng: sited.rng,
     rivers: flowed.rivers,
-    tiles: camped.tiles,
+    tiles: sited.tiles,
     centre: coords.filter((coord) => distance(coord, CENTRE) <= region.centre),
-    placed: camped.placed,
+    placed: camped.placed + sited.placed,
   };
 }

@@ -306,6 +306,12 @@ export type Camp = {
   readonly wave?: Wave;
 };
 
+/** What a site is, and what its capture gives, in the order dealt. */
+export type Site = {
+  readonly building: string;
+  readonly rewards: readonly string[];
+};
+
 /**
  * An achievement: its count on the chronicle and its tally, read toward its need, the technology it
  * earns, the influence it pays, and, for one that keeps a tally, the tally a command leaves it, read
@@ -338,13 +344,14 @@ export type Technology = {
 };
 
 /**
- * What an age owns: its schedule, its camp, its regions by key, its achievements by key in order, and
- * the base price of its cards.
+ * What an age owns: its schedule, its camp, its sites by key, its regions by key, its achievements by
+ * key in order, and the base price of its cards.
  */
 export type Age = {
   readonly basePrice: number;
   readonly schedule: Schedule;
   readonly camp: Camp;
+  readonly sites: Readonly<Record<string, Site>>;
   readonly regions: Readonly<Record<string, Region>>;
   readonly achievements: Readonly<Record<string, Achievement>>;
 };
@@ -576,7 +583,7 @@ export function unitEntryTableHeld(content: Catalogue, table: UnitEntryTable, ow
 function ageHeld(
   content: Catalogue,
   id: string,
-  { basePrice, schedule, camp, regions }: Age,
+  { basePrice, schedule, camp, sites, regions }: Age,
 ): void {
   if (!Number.isInteger(basePrice) || basePrice < 1) {
     refuse(content, `the age ${id} sets a base price of ${basePrice}`);
@@ -635,6 +642,24 @@ function ageHeld(
     }
   }
 
+  const sitedBy = new Map<string, string>([[camp.building, 'camp']]);
+  for (const [site, { building, rewards }] of Object.entries(sites)) {
+    const siteNames = groundNamed(buildingKind(content, building));
+    if (siteNames !== undefined) {
+      refuse(content, `the age ${id}'s site ${site} ${building} names ${siteNames}`);
+    }
+    const other = sitedBy.get(building);
+    if (other !== undefined) {
+      refuse(
+        content,
+        `the age ${id}'s ${other} and site ${site} are both the building ${building}`,
+      );
+    }
+    sitedBy.set(building, `site ${site}`);
+    if (rewards.length === 0) refuse(content, `the age ${id}'s site ${site} deals no reward`);
+    for (const reward of rewards) cardOf(content, reward);
+  }
+
   const held = Object.entries(regions);
   if (held.length === 0) refuse(content, `the age ${id} holds no region`);
   for (const [name, region] of held) {
@@ -648,6 +673,7 @@ function ageHeld(
       }
     }
     for (const { feature } of region.featureShares) featureKind(content, feature);
+    for (const site of region.sites) entryOf(content, sites, site, `site of the age ${id}`);
     const shared = sharedBiomes(region).map(({ biome }) => biome);
     for (const { biome } of region.biomeShares) {
       if (!shared.includes(biome))
@@ -684,8 +710,8 @@ function ageHeld(
 
 /**
  * The features or the river a building names, in a refusal's words, and nothing where it names
- * neither: the settle and a camp's placing never ask the ground a layer goes on, so a city's or a
- * camp's building naming either is refused.
+ * neither: the settle and the generator's placing never ask the ground a layer goes on, so a city's,
+ * a camp's or a site's building naming either is refused.
  */
 function groundNamed({ features, river }: LayerKind): string | undefined {
   if (features !== undefined) return `the features ${features.join(', ')}`;
@@ -899,15 +925,32 @@ function firstListed(
 export type CivilizationSection = keyof Civilization;
 
 /**
- * A card no deck holds, named as what it is — a hazard, an age's camp's reward — and nothing for a
- * card a deck may hold. A card the catalogue does not hold is refused.
+ * A card no deck holds, named as what it is — a hazard, an age's camp's or site's reward — and
+ * nothing for a card a deck may hold. A card the catalogue does not hold is refused.
  */
 export function heldByNoDeck(catalogue: Catalogue, card: CardId): string | undefined {
   if (cardOf(catalogue, card).kind === 'hazard') return `the hazard ${card}`;
-  for (const [age, { camp }] of Object.entries(catalogue.ages)) {
+  for (const [age, { camp, sites }] of Object.entries(catalogue.ages)) {
     if (camp.rewards.includes(card)) return `the age ${age}'s camp's reward ${card}`;
+    for (const [site, { rewards }] of Object.entries(sites)) {
+      if (rewards.includes(card)) return `the age ${age}'s site ${site}'s reward ${card}`;
+    }
   }
   return undefined;
+}
+
+/**
+ * What a capture of the building deals in the age, in the order dealt: its camp's rewards or a
+ * site's, and nothing for a building that is neither.
+ */
+export function rewardsOf(
+  catalogue: Catalogue,
+  age: string,
+  building: string,
+): readonly CardId[] | undefined {
+  const { camp, sites } = ageOf(catalogue, age);
+  if (building === camp.building) return camp.rewards;
+  return Object.values(sites).find((site) => site.building === building)?.rewards;
 }
 
 /**

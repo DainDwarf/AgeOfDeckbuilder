@@ -542,13 +542,43 @@ test('a walk over the whole map toward a tile weighs each step in moves: the mov
   expect(ashoreOnly.embarked.size).toBe(0);
 });
 
-test('the generator fills a building slot with a camp and with nothing else', () => {
-  const ground = buildingKind(CATALOGUE, CAMP.building).terrains;
+test('the generator fills a building slot with a camp or a site and with nothing else, on ground its building names', () => {
+  const placed = [CAMP.building, ...DISC.sites.map((site) => OWNS.sites[site].building)];
   for (const seed of SEEDS) {
     for (const tile of mapOf(seed)) {
       if (tile.building === undefined) continue;
-      expect(tile.building).toBe(CAMP.building);
-      expect(ground).toContain(tile.terrain);
+      expect(placed).toContain(tile.building);
+      expect(buildingKind(CATALOGUE, tile.building).terrains).toContain(tile.terrain);
     }
   }
+});
+
+test('every map is dealt each of its sites once, where the ground runs to the centre, each keeping its distance from the centre and from the other sites, never on a camp and some beside one', () => {
+  const sited: MapAge = {
+    ...OWNS,
+    sites: { ...OWNS.sites, PH_Field: { building: 'PH_Farm' } },
+    regions: { [REGION]: { ...DISC, sites: [...DISC.sites, 'PH_Field'] } },
+  };
+  const { campsApart, siteFromCentre, sitesApart } = DISC;
+  const buildings = Object.values(sited.sites).map(({ building }) => building);
+  let beside = 0;
+  for (let seed = 0; seed < 30; seed++) {
+    const map = generateMap(CATALOGUE, sited, REGION, seedRng(seed));
+    const walked = walkedFrom(map, CENTRE, false);
+    const sites = map.tiles.filter((tile) => buildings.includes(tile.building ?? ''));
+    const camps = campsOf(map.tiles);
+
+    expect(sites.map((site) => site.building).sort()).toEqual([...buildings].sort());
+    expect(camps).toHaveLength(DISC.camps);
+    for (const site of sites) {
+      expect(walked.has(tileKey(site))).toBe(true);
+      expect(distance(site, CENTRE)).toBeGreaterThanOrEqual(siteFromCentre);
+      for (const other of sites) {
+        if (tileKey(other) === tileKey(site)) continue;
+        expect(distance(site, other)).toBeGreaterThanOrEqual(sitesApart);
+      }
+      if (camps.some((camp) => distance(site, camp) < campsApart)) beside++;
+    }
+  }
+  expect(beside).toBeGreaterThan(0);
 });

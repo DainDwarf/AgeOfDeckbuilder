@@ -45,10 +45,13 @@ export type Timeline = {
   readonly capstone: { readonly id: string; readonly turn: number };
 };
 
-/** One deal waiting on the take: an event, which deals its answers, or a captured camp's rewards. */
+/**
+ * One deal waiting on the take: an event, which deals its answers, or a capture's rewards, under the
+ * building captured.
+ */
 export type Deal =
   | { readonly of: 'event'; readonly event: string }
-  | { readonly of: 'camp'; readonly rewards: readonly CardId[] };
+  | { readonly of: 'capture'; readonly building: string; readonly rewards: readonly CardId[] };
 
 /** An achievement's tally: named numbers of its own, by name. */
 export type Tally = Readonly<Record<string, number>>;

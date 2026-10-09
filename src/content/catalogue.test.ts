@@ -24,7 +24,7 @@ import { answerCost, timelineOf } from '../rules/schedule';
 import type { Landed } from '../rules/stages';
 import type { Chronicle } from '../rules/state';
 import { clustersOf } from '../ui/launch-layout';
-import { campLore, capstoneLore, eventLore } from '../ui/lore';
+import { capstoneLore, captureLore, eventLore } from '../ui/lore';
 import {
   buildingColourOf,
   buildingMarkOf,
@@ -278,17 +278,27 @@ test('every event of the catalogue has a name and a lore on the screen, and ever
   }
 });
 
-test('every age’s camp has a lore on the screen, keyed on its building', () => {
+/** What an age's captures take: its camp and its sites, each a building and its rewards. */
+function capturedIn(age: string): { building: string; rewards: readonly string[] }[] {
+  const { camp, sites } = ageOf(CATALOGUE, age);
+  return [camp, ...Object.values(sites)];
+}
+
+test('every age’s camp and site has a lore on the screen, keyed on its building', () => {
   for (const age of AGES) {
-    expect(() => campLore(ageOf(CATALOGUE, age).camp.building)).not.toThrow();
+    for (const { building } of capturedIn(age)) {
+      expect(() => captureLore(building)).not.toThrow();
+    }
   }
 });
 
-test('every reward of every age’s camp has a name, and a rules entry read at the counters it starts with, on the screen', () => {
+test('every reward of every age’s camp and site has a name, and a rules entry read at the counters it starts with, on the screen', () => {
   for (const age of AGES) {
-    for (const id of ageOf(CATALOGUE, age).camp.rewards) {
-      expect(() => cardName(id)).not.toThrow();
-      expect(() => cardRules(cardMade(CATALOGUE, id))).not.toThrow();
+    for (const { rewards } of capturedIn(age)) {
+      for (const id of rewards) {
+        expect(() => cardName(id)).not.toThrow();
+        expect(() => cardRules(cardMade(CATALOGUE, id))).not.toThrow();
+      }
     }
   }
 });

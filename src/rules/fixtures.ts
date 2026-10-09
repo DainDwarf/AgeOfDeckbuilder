@@ -566,6 +566,13 @@ const TABLES: Omit<Tables, 'technologies'> = {
       aim: 'none',
       effect: (_catalogue, paid) => gained(paid, { food: 5 }),
     },
+    PH_Relic: {
+      kind: 'instant',
+      cost: {},
+      banish: true,
+      aim: 'none',
+      effect: (_catalogue, paid) => gained(paid, { culture: 3 }),
+    },
     PH_Flood: {
       kind: 'instant',
       cost: {},
@@ -727,6 +734,7 @@ const TABLES: Omit<Tables, 'technologies'> = {
     PH_City: { terrains: ['urban'], yields: {} },
     PH_Farm: { terrains: ['plain'], yields: { food: 1 } },
     PH_Camp: { terrains: ['plain', 'forest', 'hills'], yields: {} },
+    PH_Cairn: { terrains: ['hills'], yields: {} },
     PH_Lodge: { terrains: ['forest'], features: ['PH_Game'], yields: { food: 1 } },
     PH_Smokehouse: {
       terrains: ['forest', 'plain'],
@@ -761,6 +769,12 @@ const TABLES: Omit<Tables, 'technologies'> = {
   },
 };
 
+/** The one site every fixture age owns, by its key, and the building it is. */
+export const SITE = 'PH_Cairn';
+
+/** The site every fixture age owns. */
+export const SITES: Age['sites'] = { [SITE]: { building: SITE, rewards: ['PH_Relic'] } };
+
 /** The regions table every fixture age holds. */
 export const REGIONS: Readonly<Record<string, Region>> = {
   disc: {
@@ -776,6 +790,9 @@ export const REGIONS: Readonly<Record<string, Region>> = {
     camps: 3,
     campFromCentre: 6,
     campsApart: 3,
+    sites: [SITE],
+    siteFromCentre: 5,
+    sitesApart: 3,
     rivers: {
       source: 'mountain',
       relief: 1,
@@ -803,6 +820,9 @@ export const REGIONS: Readonly<Record<string, Region>> = {
     camps: 2,
     campFromCentre: 6,
     campsApart: 4,
+    sites: [],
+    siteFromCentre: 6,
+    sitesApart: 4,
     rivers: {
       source: 'mountain',
       relief: 1,
@@ -1003,7 +1023,10 @@ const TECHNOLOGIES: Tables['technologies'] = {
   ),
 };
 
-/** Every fixture age, each owning its own schedule and achievements over the camp and the regions handed in. */
+/**
+ * Every fixture age, each owning its own schedule and achievements over the camp and the regions
+ * handed in, and the fixture's site.
+ */
 export function agesOver(
   camp: Camp,
   regions: Readonly<Record<string, Region>>,
@@ -1011,7 +1034,14 @@ export function agesOver(
   return Object.fromEntries(
     Object.entries(SCHEDULES).map(([id, schedule], at) => [
       id,
-      { basePrice: 3 + at, schedule, camp, regions, achievements: achievementsOf(id) },
+      {
+        basePrice: 3 + at,
+        schedule,
+        camp,
+        sites: SITES,
+        regions,
+        achievements: achievementsOf(id),
+      },
     ]),
   );
 }

@@ -14,6 +14,7 @@ import {
   AGE,
   achievementIn,
   aimedAt,
+  builtOn,
   CATALOGUE,
   CENSUS,
   CITY,
@@ -29,6 +30,7 @@ import {
   NO_DEALS,
   QUIET,
   REGION,
+  SITE,
   SURVEY,
   SURVEYED,
   standing,
@@ -172,6 +174,26 @@ test('a chronicle saved with a turn shown reads back with it shown', () => {
   expect(refusalOf(CATALOGUE, read.chronicle.chronicle, 'PH_Almanac').blocked).toEqual([
     'turn-shown',
   ]);
+});
+
+test('a chronicle saved waiting on a capture’s rewards reads back with the deal standing, and takes as it would have', () => {
+  const site = { q: 2, r: 0 };
+  const city = cityOf(['urban'], {
+    tiles: builtOn(field(2), SITE, [site]),
+    units: [standing('player', site)],
+  });
+  const dealt = outcome(apply(CATALOGUE, city, { type: 'end-turn' }));
+  const save = { chronicle: dealt, region: REGION, civilization: CIVILIZATION_ID };
+  const take: Command = { type: 'take', at: 0 };
+
+  const read = readSave(CATALOGUE, writeSave(CATALOGUE, campaign(), save));
+
+  expect(dealt.deals).toMatchObject([{ of: 'capture', building: SITE }]);
+  expect(read.chronicle).toEqual(save);
+  if (read.chronicle === undefined) throw new Error('the chronicle was dropped');
+  expect(outcome(apply(CATALOGUE, read.chronicle.chronicle, take))).toEqual(
+    outcome(apply(CATALOGUE, dealt, take)),
+  );
 });
 
 test('a campaign saved with no chronicle in progress reads back alone', () => {

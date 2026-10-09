@@ -155,12 +155,12 @@ export function showsNextLanding(): Aim & { readonly aim: 'none' } {
   };
 }
 
-/** What a deal offers to be taken, by id, in the order dealt: its event's answers, or the camp's rewards. */
+/** What a deal offers to be taken, by id, in the order dealt: its event's answers, or a capture's rewards. */
 export function offered(catalogue: Catalogue, deal: Deal): readonly string[] {
   switch (deal.of) {
     case 'event':
       return Object.keys(eventOf(catalogue, deal.event).answers);
-    case 'camp':
+    case 'capture':
       return deal.rewards;
   }
 }

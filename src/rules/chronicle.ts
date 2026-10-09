@@ -24,6 +24,7 @@ import {
   cardOf,
   checkContent,
   enemyScript,
+  rewardsOf,
   technologyOf,
   unitKind,
 } from './catalogue';
@@ -322,7 +323,7 @@ function conditionsRead(
             case 'answer':
             case 'reward':
             case 'attack':
-            case 'camp-capture':
+            case 'capture':
               break;
           }
           break;
@@ -814,7 +815,7 @@ function take(catalogue: Catalogue, chronicle: Chronicle, at: number): Sequence 
       );
       return followed<Stage>(answering, (left) => resumed(left, drawn));
     }
-    case 'camp': {
+    case 'capture': {
       const rewarding = grouped(
         { name: 'reward' },
         followed(taken, (left) => rewarded(catalogue, left, id)),
@@ -1286,42 +1287,44 @@ function campsRolled(catalogue: Catalogue, chronicle: Chronicle): Sequence {
 }
 
 /**
- * The camps captured, in tile order: a camp a unit of the player's is still standing on once the
- * enemy phase is over is one `camp-capture` group carrying its tile, over the camp leaving the tile's
- * building slot, its enemies no camp's with it, and its rewards dealt behind the deals standing.
+ * The camps and sites a unit of the player's still stands on once the enemy phase is over, each one
+ * `capture` group carrying its tile in tile order, over its building leaving the slot, a camp's
+ * enemies no camp's with it, and its rewards dealt behind the deals standing.
  */
 function captures(catalogue: Catalogue, chronicle: Chronicle): Sequence {
-  const { building } = ageOf(catalogue, chronicle.age).camp;
   let capturing: Sequence = unchanged(chronicle);
-  for (const { q, r, building: slot } of chronicle.tiles) {
-    if (slot !== building) continue;
+  for (const { q, r, building } of chronicle.tiles) {
+    if (building === undefined) continue;
+    const rewards = rewardsOf(catalogue, chronicle.age, building);
+    if (rewards === undefined) continue;
     if (unitAt(chronicle.units, { q, r })?.faction !== 'player') continue;
-    capturing = followed(capturing, (left) => campCaptured(catalogue, left, { q, r }));
+    capturing = followed(capturing, (left) => captured(left, { q, r }, building, rewards));
   }
   return capturing;
 }
 
-function campCaptured(
-  catalogue: Catalogue,
+function captured(
   chronicle: Chronicle,
   tile: TileCoords,
+  building: string,
+  rewards: readonly CardId[],
 ): Sequence<Group> {
   const units = chronicle.units.map((unit) =>
     unit.faction === 'enemy' && unit.camp !== undefined && tileKey(unit.camp) === tileKey(tile)
       ? { ...unit, camp: undefined }
       : unit,
   );
-  const removed = retiled({ ...chronicle, units }, tile, (camp) => ({
-    ...camp,
+  const removed = retiled({ ...chronicle, units }, tile, (slot) => ({
+    ...slot,
     building: undefined,
   }));
   return grouped(
-    { name: 'camp-capture', tile },
+    { name: 'capture', tile },
     followed(removed, (left) =>
       landedAs(
         change('dealt', {
           ...left,
-          deals: [...left.deals, { of: 'camp', rewards: ageOf(catalogue, left.age).camp.rewards }],
+          deals: [...left.deals, { of: 'capture', building, rewards }],
         }),
       ),
     ),

@@ -6,7 +6,7 @@ import { type TileCoords, tileAt, tileKey } from '../src/rules/map';
 import { campsPlaced } from '../src/rules/schedule';
 import { charted } from '../src/rules/sight';
 import type { Chronicle } from '../src/rules/state';
-import { campLore } from '../src/ui/lore';
+import { captureLore } from '../src/ui/lore';
 import { buildingName } from '../src/ui/text';
 import {
   budget,
@@ -86,9 +86,9 @@ test('a warrior standing on a camp through the enemy phase captures it, and the 
 
   expect(await chronicleOf(page)).toEqual(captured);
   expect(tileAt(captured.tiles, camp)?.building).toBeUndefined();
-  expect(captured.deals[0]?.of).toBe('camp');
   const { building } = ageOf(CATALOGUE, captured.age).camp;
+  expect(captured.deals[0]).toMatchObject({ of: 'capture', building });
   expect(await titleOf(page, 'deal')).toBe(buildingName(building));
-  expect(await loreOf(page, 'deal')).toBe(campLore(building));
+  expect(await loreOf(page, 'deal')).toBe(captureLore(building));
   expect(problems).toEqual([]);
 });
