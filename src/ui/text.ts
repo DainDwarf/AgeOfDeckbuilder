@@ -160,7 +160,7 @@ const TEXT = {
   'card.stone-cave-paintings': 'Cave paintings',
   'rules.stone-cave-paintings': 'Banish.\n4[culture]',
   'card.old-stories': 'Old stories',
-  'rules.old-stories': '1[culture]',
+  'rules.old-stories': 'Gain 1[culture]',
   'card.megalith': 'Megalith',
   'rules.megalith':
     'Build [building:megalith] on [terrain:plain], [terrain:hills] or [terrain:desert]',
