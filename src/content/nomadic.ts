@@ -19,7 +19,7 @@ import type { Age, Slice, Tables } from '../rules/catalogue';
 import { arrived, populationTaken, yielded } from '../rules/city';
 import { enteredAround, raided } from '../rules/enemies';
 import { MOVE_POINT } from '../rules/map';
-import { type BuildingKind, buildingKind } from '../rules/map-kinds';
+import { buildingKind } from '../rules/map-kinds';
 import {
   addedToDrawPileTop,
   burned,
@@ -49,12 +49,6 @@ const WILDFIRE: Fire = { burns: 'forest', leaves: 'plain', fromCity: 4, around: 
 const HERD = { feature: 'deer', fromCity: 4 } as const;
 
 const RIVAL_CAMP = { fromCity: [3, 4], apart: 3 } as const;
-
-const CITY_TERRAINS: readonly string[] = ['plain', 'forest', 'hills', 'desert'];
-
-export const PAINTED_CAVE: BuildingKind = { terrains: ['hills'], yields: {} };
-
-export const OLD_CAIRN: BuildingKind = { terrains: CITY_TERRAINS, yields: {} };
 
 const TABLES: Tables = {
   units: {
@@ -360,11 +354,14 @@ const TABLES: Tables = {
     },
   },
   buildings: {
-    city: { terrains: CITY_TERRAINS, yields: { military: 1, culture: 1 } },
+    city: {
+      terrains: ['plain', 'forest', 'hills', 'desert'],
+      yields: { military: 1, culture: 1 },
+    },
     camp: { terrains: ['plain', 'forest', 'hills', 'desert'], yields: {} },
     shelter: { terrains: ['plain', 'forest', 'hills'], yields: {} },
-    'painted-cave': PAINTED_CAVE,
-    'old-cairn': OLD_CAIRN,
+    'painted-cave': { terrains: ['hills'], yields: {} },
+    'old-cairn': { terrains: ['plain', 'forest', 'hills', 'desert'], yields: {} },
   },
   features: {
     fertile: { terrain: 'plain', yields: { food: 1 } },
