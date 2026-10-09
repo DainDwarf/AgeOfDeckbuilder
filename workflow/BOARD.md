@@ -13,9 +13,10 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The painted cave** — the first site, the mechanism riding inside it: placed as a camp is, taken by a unit of the player's standing on it through the enemy phase, its rewards dealt in the capture's window, and gone once taken.
+- **The painted cave** — the first site, the site mechanism riding inside it: the cave stands on hills in every region of both ages, placed after the camps and kept from the centre and from the other sites as the camps keep from the camps; a unit of the player's standing on it through the enemy phase captures it, its rewards dealt in the capture's window under its name and lore — one card in the Nomadic Age, two in the Stone Age — and its slot empty after; its tile is claimed and terraformed like any other, and no enemy goes for it. Done when the cave stands in both ages' content on every region, the coherence test passes, `e2e/sites.spec.ts` captures it on screen, and the pages say so. Doc-impact: `docs/CHRONICLE.md`, `docs/CHRONICLE-SCREEN.md`, `docs/MAP.md`, `docs/ages/NOMADIC.md`, `docs/ages/STONE.md`. [board/painted-cave.md](board/painted-cave.md)
 - **The old cairn** — the second site, its rewards and its lore.
 - **The bones of a great beast** — the third site, its rewards and its lore.
+- **The Nomadic city yields no culture** — the Nomadic city's building gives military alone, culture coming from the sites; the Stone Age's city keeps its culture.
 - **The neutral's city** — a second city, a third faction's, placed as a camp is and standing from the deal with its tile held and one population on it, yielding into its stocks and growing at the growth threshold, its tiles no claim of the player's.
 - **The neutral's claims** — the neutral claims a tile when its culture reaches the threshold, its script choosing which, the player's border stopping it as it stops the player's.
 - **The neutral's units** — the faction's units, entered on its city out of its population and stocks by its script, moving by their script where the neutral acts and attacking nothing at peace; whether a camp's guard attacks them on sight is this line's question.
