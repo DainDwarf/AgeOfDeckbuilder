@@ -13,6 +13,7 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
+- **The Stone Age's borrowed values** — what the Stone content takes from the Nomadic content with no design sentence asking for it, the camp's building, rewards, raid odds and scripts, the base price and the open sea's growth, written out as the Stone Age's own, and a dogma for it: content is different from code on single source of truth, an age's value being its own unless the design says it is another's.
 - **The bones of a great beast** — the third site, its rewards and its lore.
 - **The Nomadic city yields no culture** — the Nomadic city's building gives military alone, culture coming from the sites; the Stone Age's city keeps its culture.
 - **The neutral's city** — a second city, a third faction's, placed as a camp is and standing from the deal with its tile held and one population on it, yielding into its stocks and growing at the growth threshold, its tiles no claim of the player's.
