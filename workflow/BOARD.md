@@ -13,7 +13,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The old cairn** — a grave under a heap of stones standing on the city's ground in every region of both ages, each age's building its own under one name, dealing Honour the dead in the Nomadic Age and Honour the dead against Dig the graves in the Stone Age, each age's lore its own; the painted cave's building split the same way, one per age, the Nomadic cave's lore closing on no question. Done when the cairn stands in both ages' content on every region, the cave's building is one per age with a lore each, the coherence test passes, `e2e/sites.spec.ts` captures a site on screen, and the pages say so. Doc-impact: `docs/ages/NOMADIC.md`, `docs/ages/STONE.md`. [board/old-cairn.md](board/old-cairn.md)
 - **The bones of a great beast** — the third site, its rewards and its lore.
 - **The Nomadic city yields no culture** — the Nomadic city's building gives military alone, culture coming from the sites; the Stone Age's city keeps its culture.
 - **The neutral's city** — a second city, a third faction's, placed as a camp is and standing from the deal with its tile held and one population on it, yielding into its stocks and growing at the growth threshold, its tiles no claim of the player's.

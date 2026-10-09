@@ -24,7 +24,7 @@ import { distance, MOVE_POINT, tileAt } from '../rules/map';
 import type { RiverFlow } from '../rules/map-kinds';
 import { showsNextLanding } from '../rules/schedule';
 import { followed } from '../rules/stages';
-import { NOMADIC, PAINTED_CAVE } from './nomadic';
+import { NOMADIC, OLD_CAIRN, PAINTED_CAVE } from './nomadic';
 import { PILLAGER } from './scripts';
 
 const { basePrice, schedule, camp } = NOMADIC.owns;
@@ -69,7 +69,7 @@ const REGIONS: Age['regions'] = {
     camps: 6,
     campFromCentre: 7,
     campsApart: 4,
-    sites: ['painted-cave'],
+    sites: ['painted-cave', 'old-cairn'],
     siteFromCentre: 7,
     sitesApart: 4,
     rivers: RIVERS,
@@ -93,7 +93,7 @@ const REGIONS: Age['regions'] = {
     camps: 6,
     campFromCentre: 7,
     campsApart: 4,
-    sites: ['painted-cave'],
+    sites: ['painted-cave', 'old-cairn'],
     siteFromCentre: 7,
     sitesApart: 4,
     rivers: RIVERS,
@@ -130,6 +130,10 @@ export const STONE: Slice = {
       'painted-cave': {
         building: 'stone-painted-cave',
         rewards: ['stone-cave-paintings', 'old-stories'],
+      },
+      'old-cairn': {
+        building: 'stone-old-cairn',
+        rewards: ['stone-honour-the-dead', 'dig-the-graves'],
       },
     },
     regions: REGIONS,
@@ -322,6 +326,20 @@ export const STONE: Slice = {
         aim: 'none',
         effect: (_catalogue, paid) => gained(paid, { culture: 1 }),
       },
+      'stone-honour-the-dead': {
+        kind: 'instant',
+        cost: {},
+        banish: true,
+        aim: 'none',
+        effect: (_catalogue, paid) => gained(paid, { culture: 4 }),
+      },
+      'dig-the-graves': {
+        kind: 'instant',
+        cost: {},
+        banish: true,
+        aim: 'none',
+        effect: (_catalogue, paid) => gained(paid, { money: 4 }),
+      },
     },
     technologies: {
       herbalism: { needs: ['settlement'], unlocks: { cards: { heal: 1 } } },
@@ -371,6 +389,7 @@ export const STONE: Slice = {
       },
       megalith: { terrains: ['plain', 'hills', 'desert'], yields: { culture: 1 } },
       'stone-painted-cave': PAINTED_CAVE,
+      'stone-old-cairn': OLD_CAIRN,
     },
     improvements: {
       trapping: { terrains: ['forest'], features: ['deer'], yields: { food: 1 } },

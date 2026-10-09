@@ -60,6 +60,8 @@ const TEXT = {
   'building.shelter': 'Shelter',
   'building.painted-cave': 'Painted cave',
   'building.stone-painted-cave': 'Painted cave',
+  'building.old-cairn': 'Old cairn',
+  'building.stone-old-cairn': 'Old cairn',
   'building.farm': 'Farm',
   'building.tannery': 'Tannery',
   'building.fishery': 'Fishery',
@@ -125,6 +127,8 @@ const TEXT = {
   'rules.band-joins': 'Banish.\nGain one population',
   'card.cave-paintings': 'Cave paintings',
   'rules.cave-paintings': 'Banish.\n2[culture]',
+  'card.honour-the-dead': 'Honour the dead', // glossary exception: dead
+  'rules.honour-the-dead': 'Banish.\n2[culture]',
   'card.farm': 'Farm',
   'rules.farm': 'Build [building:farm] on [terrain:plain]',
   'card.trapping': 'Trapping',
@@ -162,6 +166,10 @@ const TEXT = {
   'rules.stone-cave-paintings': 'Banish.\n4[culture]',
   'card.old-stories': 'Old stories',
   'rules.old-stories': 'Gain 1[culture]',
+  'card.stone-honour-the-dead': 'Honour the dead', // glossary exception: dead
+  'rules.stone-honour-the-dead': 'Banish.\n4[culture]',
+  'card.dig-the-graves': 'Dig the graves',
+  'rules.dig-the-graves': 'Banish.\n4[money]',
   'card.megalith': 'Megalith',
   'rules.megalith':
     'Build [building:megalith] on [terrain:plain], [terrain:hills] or [terrain:desert]',

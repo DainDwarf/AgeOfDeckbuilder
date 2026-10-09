@@ -18,7 +18,7 @@ The archipelago is the age's second region, the one Raft unlocks: a disc as big 
 
 ## The sites 🔧
 
-The sites are the Nomadic Age's, and in this age each deals two rewards of the age's own, so a site found is a choice. The **painted cave** deals **Cave paintings**, culture once and banished, more than the Nomadic card gives, and **Old stories**, culture each time it is played, cycling with the deck for the rest of the chronicle: the find kept against the find spent.
+The sites are the Nomadic Age's, and in this age each deals two rewards of the age's own, so a site found is a choice. The **painted cave** deals **Cave paintings**, culture once and banished, more than the Nomadic card gives, and **Old stories**, culture each time it is played, cycling with the deck for the rest of the chronicle: the find kept against the find spent. The **old cairn** deals **Honour the dead**, culture once and banished, more than the Nomadic card gives, and **Dig the graves**, money once and banished, worth something to a deck that trades and nothing to one that does not: the dead honoured against the dead robbed.
 
 ## The neutral 🔧
 

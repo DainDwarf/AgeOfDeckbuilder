@@ -16,6 +16,10 @@ const LORE = {
     'Deep in the hill, by torchlight, the walls are alive with painted herds and hunters long gone. The band stands in silence a long while, and carries the pictures away in their heads.',
   'capture.stone-painted-cave':
     'Deep in the hill, by torchlight, the walls are alive with painted herds and hunters long gone. The band stands in silence: what do you take from this place?',
+  'capture.old-cairn':
+    'A heap of old stones in the open, and under it the dead of a band nobody remembers, laid down with their tools and their beads. The band sits with them a while before moving on.',
+  'capture.stone-old-cairn':
+    'A heap of old stones in the open, and under it the dead of a band nobody remembers, laid down with their tools and their beads. Do you leave them in peace, or take what they no longer need?',
   'capstone-opening.first-shelter':
     'The tribe has wandered long enough. When the time comes, build the first shelter, and the Nomadic Age is won.',
   'capstone-landing.first-shelter':

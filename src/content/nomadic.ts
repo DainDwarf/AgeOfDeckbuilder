@@ -50,7 +50,11 @@ const HERD = { feature: 'deer', fromCity: 4 } as const;
 
 const RIVAL_CAMP = { fromCity: [3, 4], apart: 3 } as const;
 
+const CITY_TERRAINS: readonly string[] = ['plain', 'forest', 'hills', 'desert'];
+
 export const PAINTED_CAVE: BuildingKind = { terrains: ['hills'], yields: {} };
+
+export const OLD_CAIRN: BuildingKind = { terrains: CITY_TERRAINS, yields: {} };
 
 const TABLES: Tables = {
   units: {
@@ -155,6 +159,13 @@ const TABLES: Tables = {
       effect: (_catalogue, paid) => arrived(paid),
     },
     'cave-paintings': {
+      kind: 'instant',
+      cost: {},
+      banish: true,
+      aim: 'none',
+      effect: (_catalogue, paid) => gained(paid, { culture: 2 }),
+    },
+    'honour-the-dead': {
       kind: 'instant',
       cost: {},
       banish: true,
@@ -349,13 +360,11 @@ const TABLES: Tables = {
     },
   },
   buildings: {
-    city: {
-      terrains: ['plain', 'forest', 'hills', 'desert'],
-      yields: { military: 1, culture: 1 },
-    },
+    city: { terrains: CITY_TERRAINS, yields: { military: 1, culture: 1 } },
     camp: { terrains: ['plain', 'forest', 'hills', 'desert'], yields: {} },
     shelter: { terrains: ['plain', 'forest', 'hills'], yields: {} },
     'painted-cave': PAINTED_CAVE,
+    'old-cairn': OLD_CAIRN,
   },
   features: {
     fertile: { terrain: 'plain', yields: { food: 1 } },
@@ -387,7 +396,7 @@ const REGIONS: Age['regions'] = {
     camps: 4,
     campFromCentre: 7,
     campsApart: 4,
-    sites: ['painted-cave'],
+    sites: ['painted-cave', 'old-cairn'],
     siteFromCentre: 7,
     sitesApart: 4,
     rivers: {
@@ -430,7 +439,10 @@ export const NOMADIC: Slice = {
       odds: 0.08,
       raidCampOdds: 0.8,
     },
-    sites: { 'painted-cave': { building: 'painted-cave', rewards: ['cave-paintings'] } },
+    sites: {
+      'painted-cave': { building: 'painted-cave', rewards: ['cave-paintings'] },
+      'old-cairn': { building: 'old-cairn', rewards: ['honour-the-dead'] },
+    },
     regions: REGIONS,
     achievements: {
       'first-shelter': {

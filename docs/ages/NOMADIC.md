@@ -29,7 +29,7 @@ Forest and hills give the same at income and cost the same to walk, and differ i
 
 Three sites, each captured once for what it deals: the **painted cave**, the **old cairn** and the **bones of a great beast**. They stand in every region of the age, and the Stone Age's regions deal them too.
 
-In this age a site deals one card, culture once, banished once played: a site is where the band's culture is found. The **painted cave** stands on hills and deals **Cave paintings**.
+In this age a site deals one card, culture once, banished once played: a site is where the band's culture is found. The **painted cave** stands on hills and deals **Cave paintings**. The **old cairn**, a grave under a heap of stones, stands wherever the city stands and deals **Honour the dead**.
 
 ## The units ✅
 

@@ -191,6 +191,8 @@ export const LOOK: Look = {
     megalith: 'built',
     'painted-cave': 'site',
     'stone-painted-cave': 'site',
+    'old-cairn': 'site',
+    'stone-old-cairn': 'site',
   },
   ground: {
     nomadic: 0x2a5a41,
