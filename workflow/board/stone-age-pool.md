@@ -103,7 +103,7 @@ The user's frame: hard to impossible on the deck the age opens with, beatable on
 
 - It permits no idle play for twenty turns, and Agriculture's goal leans on that: five plain tiles inside the border come on turn 21 at the earliest for any deck, culture having the city as its one source. On the stand-in schedule, the Nomadic one, a city with no card and no unit that takes the answers costing no stock still stands on turn 60 on 125 of 200 seeds, and holds five plain tiles on turn 21 on 190.
 - The schedule could tell the transition: it opens on the Nomadic events, which weigh less as the turns pass, while settled problems weigh nothing early and take over.
-- Events: flood on river tiles; blight on farms; sickness in a dense city; a feud whose leavers place a camp next door; strangers asking to be taken in; drought; the game moving away, the deer gone from near the city; predators at the herds; a great herd passing and travellers arriving, both fortunate.
+- Events: flood on river tiles; blight on farms; sickness in a dense city; a feud whose leavers place a camp next door; strangers asking to be taken in; drought; the game moving away, the deer gone from near the city; predators at the herds; a great herd passing and travellers arriving, both fortunate; a diplomatic incident with the neutral, reparations paid or the neutral turned hostile.
 - Capstone, unanswered. Claude's lean is a long winter: for a span the land outside the border gives nothing and hunger strikes every turn, which tests whether the economy came home; a capstone already may run a script every turn and pass on a span. The other option is raising Göbekli Tepe, which repeats the Shelter's shape and tests production alone.
 
 ## For the new enemies
@@ -112,10 +112,3 @@ The user's frame: hard to impossible on the deck the age opens with, beatable on
 - An archer that outranges warriors.
 - Beasts, wolves from a den, that go for the weakest unit outside the border instead of walking to the city.
 - An age owns one camp with one unit kind today, so that shape widens.
-
-## For neutrals and sites
-
-- A herd as a neutral unit that wanders: attacked for food now, or domesticated into a pasture for good.
-- A neighbouring village: bartered with, and turned into a camp by an event's answer or by the player's own attack.
-- Sites that pay a reward once to a unit standing on them, as a capture does, and are what the bigger map is for: a painted cave, an abandoned camp, an old cairn, the bones of a great beast, a hot spring. Ruins are early for this age.
-- The rules know two factions today, the player and the enemies.

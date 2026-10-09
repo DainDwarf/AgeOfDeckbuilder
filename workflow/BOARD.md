@@ -6,10 +6,19 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Rungs
 
-- **Neutrals and sites** — the neutral faction, and the sites that belong to no faction and pay a reward once.
 - **The Stone Age's schedule** — the age's own events, its capstone and its victory with the technology it earns, on a chronicle longer than the Nomadic one, hard to impossible on the deck the age opens with and beatable once its tree is climbed; with it the ending's scaled pay, a Nomadic chronicle replayed paying no influence, the Nomadic Age being the tutorial.
 - **The stand-ins' doors** — the fixture content that opens a door no real content walks through — the recall, the road, the siege capstone with its second script and its span, and whatever else the search finds — reassessed one by one: the door kept for content the design foresees, or the mechanism and its fixture cut together.
 - **The headless simulator** — a consumer of the rules that runs only when asked and reports numbers, not diagnoses, tuned across the two ages; the reachability cache and the end of turn's cost per `apply` are looked at when it is made.
 - **The balance pass** — the Stone Age's numbers, measured through the simulator and felt in play; Domestication's goal, which a worker standing on one herd reaches, made a focus, Tanning's need of two herds inside the border weighed, Fishing's need of 50 food from coast and the Fishery's gain on the coast around it weighed, and Trapping, Irrigation, Pasture and Clay pit, four improvements of one price and one gain, weighed against one another; and a trial of where military and culture come from: both taken off the Nomadic city's yield, flint giving military in place of production, and sites that pay culture once.
 
 ## Lines
+
+- **The painted cave** — the first site, the mechanism riding inside it: placed as a camp is, taken by a unit of the player's standing on it through the enemy phase, its rewards dealt in the capture's window, and gone once taken.
+- **The old cairn** — the second site, its rewards and its lore.
+- **The bones of a great beast** — the third site, its rewards and its lore.
+- **The neutral's city** — a second city, a third faction's, placed as a camp is and standing from the deal with its tile held and one population on it, yielding into its stocks and growing at the growth threshold, its tiles no claim of the player's.
+- **The neutral's claims** — the neutral claims a tile when its culture reaches the threshold, its script choosing which, the player's border stopping it as it stops the player's.
+- **The neutral's units** — the faction's units, entered on its city out of its population and stocks by its script, moving by their script where the neutral acts and attacking nothing at peace; whether a camp's guard attacks them on sight is this line's question.
+- **The neutral at the camps** — its warriors go for the camps and kill the guards, and one standing on a camp through the enemy phase captures it, the camp leaving the map dealing nothing; whether the neutral takes sites too is this line's question.
+- **The neutral's stance** — at peace or hostile: the player's attack on its unit or its city turns it hostile, and hostile its units attack the player's and go for the city; whether peace ever returns is this line's question.
+- **The neutral's fall** — the player destroys it: its city captured by standing on it through the enemy phase, its tiles nobody's from then on and its units of no city; what the capture deals is this line's question.

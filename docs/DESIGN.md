@@ -14,7 +14,7 @@ A single-player **roguelite deckbuilder** that retraces humanity's history throu
 
 A **chronicle** is one city's story, told once — the roguelite's unit of play, named with the fiction's own word.
 
-- You settle **one city** on a generated **hexagonal map** of varied terrain. Over the chronicle you extend it over tiles, work and terraform them, build buildings, field units that move, attack and protect, and deal with the neutrals and enemies on the map.
+- You settle **one city** on a generated **hexagonal map** of varied terrain. Over the chronicle you extend it over tiles, work and terraform them, build buildings, field units that move, attack and protect, and deal with the neutral and the enemies on the map.
 - A chronicle spans **one age**, from its dawn to the threshold of the next. Its history is an **escalating schedule of events** — enemies, natural disasters, inner turmoil, plus neutral and fortunate ones — and it ends with the age's **capstone**, one authored trial per age. Reaching the next age is victory; the city's fall is defeat. A chronicle spanning every age was rejected: in 30–60 minutes each age is a few minutes and every chronicle opens the same way.
 - **The ages** are humanity's, in order: the Nomadic Age, the Stone Age, the Bronze Age, the Iron Age, and on through history. The **Nomadic Age** is where humanity stops wandering — the settle is the act it is named for — and it is the age of the fewest verbs: units, actions and instants, one building, the shortest chronicle. A campaign begins there, and its capstone is the threshold of the Stone Age, where buildings begin; what it is made of is [`ages/NOMADIC.md`](ages/NOMADIC.md). 🔧 It later serves a second time, as the first chronicle a new player plays, on a fixed map and schedule with a tutorial.
 - **The schedule tests every resource and the map**, never one axis, and no two chronicles deal it in the same order. That is the only rule against a narrow deck: a deck with no answer to famine dies to the famine. A deck has a specialty; it never has an omission.
@@ -22,7 +22,7 @@ A **chronicle** is one city's story, told once — the roguelite's unit of play,
 - Five core resources: **food, production, military, money, science**. 🔧 Their jobs: food grows the population; production builds buildings and units and shapes tiles; military pays for combat; money trades for other goods and accumulates; science pays for manipulating the cards — drawing, discarding and the like. **Culture pushes the border out**, and the tiles inside it are the city's; population is the city's inhabitants, assigned to its tiles.
 - **Deterministic.** Every random draw comes from a seeded generator carried in the state, so a chronicle replays from its seed.
 - A chronicle lasts **30–60 minutes**, shorter in the earlier ages where the verbs are fewer. 🔧
-- **The map is the draft.** 🔧 What the map holds can yield a card added to the deck for this chronicle only: a camp's capture deals its rewards. The deck built in the meta is who you are; the map is what you found.
+- **The map is the draft.** 🔧 What the map holds can yield a card added to the deck for this chronicle only: a camp's capture and a site's deal their rewards. The deck built in the meta is who you are; the map is what you found.
 
 ## Launching a chronicle ✅
 

@@ -1,6 +1,6 @@
 # The Stone Age
 
-> What the Stone Age is made of: its land, its technologies, its units and its cards. A content page under [`DESIGN.md`](../DESIGN.md)'s legend. The rules it is played by are [`CHRONICLE.md`](../CHRONICLE.md)'s and its map [`MAP.md`](../MAP.md)'s, and this page repeats none of them; no number stands on it. The terrains, the features and the biomes it shares with the Nomadic Age are [`NOMADIC.md`](NOMADIC.md)'s.
+> What the Stone Age is made of: its land, its sites, its neutral, its technologies, its units and its cards. A content page under [`DESIGN.md`](../DESIGN.md)'s legend. The rules it is played by are [`CHRONICLE.md`](../CHRONICLE.md)'s and its map [`MAP.md`](../MAP.md)'s, and this page repeats none of them; no number stands on it. The terrains, the features and the biomes it shares with the Nomadic Age are [`NOMADIC.md`](NOMADIC.md)'s.
 
 ## The land ✅
 
@@ -15,6 +15,14 @@ The desert is a biome of its own, desert nearly throughout with hills among it, 
 | desert  | nothing | **oasis** | food  |
 
 The archipelago is the age's second region, the one Raft unlocks: a disc as big as the temperate one, of islands in a sea. The ground around the centre is the temperate region's own, the same biome dealt to the same size, an island here. The other islands are a biome of their own, the land's terrains dealt to a size and rolled rounder than the centre's, and two dealt side by side are one island. Between them lie the shallows, coast throughout and grown in arms, and the open sea, ocean throughout behind a coast rim as wide as the temperate sea's, with no island in it. No mountain range and no desert is dealt, so no river runs there and no oasis lies there; the other features lie in the temperate shares. The centre part reaches as far, and as many camps stand on it, kept as far from the centre and from one another.
+
+## The sites 🔧
+
+The age's sites, each captured once for what it deals: the **painted cave**, the **old cairn** and the **bones of a great beast**. They stand in every one of its regions.
+
+## The neutral 🔧
+
+The neutral is another band that settled: a city of the age's own in every one of its regions, its units from the age's own, and a script that keeps it growing and sends its warriors at the camps.
 
 ## The technologies 🔧
 

@@ -31,7 +31,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **buy** | To pay a card's price in influence and add one more copy of it to the collection. | purchase, acquire |
 | **save** | The chronicle in progress and the meta, kept on the player's machine. | savegame, save slot, checkpoint, autosave |
 | **chronicle** | One city's story through one age, from its opening to victory or defeat — what a roguelite calls a run. | run, playthrough, attempt, session |
-| **city** | A settlement on the map; the player owns exactly one — _the_ city, what a chronicle is about. | town, capital, base, settlement |
+| **city** | A settlement on the map; the player owns exactly one — _the_ city, what a chronicle is about — and the neutral one of its own. | town, capital, base, settlement |
 | **settle** | To put the city on a tile, on the settle phase; also the kind of card played on the settle phase alone. | found, founding, establish |
 | **map** | The hexagonal grid a chronicle is played on. | board, world, grid |
 | **chronicle screen** | The surface a chronicle is played on — the map, the hand, the piles, the resource bar, the infopanel; what a window opens over and closes back to. | table, playfield, play area |
@@ -42,14 +42,15 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **select** | To make one thing the selection: the one held, among those offered with it. | pick, highlight, focus, arm, target (for a tile or a card) |
 | **inspect** | To show a tile's cards in the infopanel, one at a time, to show a card large, or to open a pile's browse. | read (a tile), examine, view, look at, zoom (for a card) |
 | **tile** | One hexagon of the map, of one terrain. | hex, cell, square, territory |
-| **region** | The launch choice that biases map generation; the difficulty dial. | site, location, start |
+| **region** | The launch choice that biases map generation; the difficulty dial. | location, start |
 | **unit** | A mobile piece on the map, the player's or not. | army, troop, piece, token |
-| **faction** | Who a unit acts for: the player, the enemies, or — when they exist — the neutrals. | side, team, owner, allegiance |
+| **faction** | Who a unit acts for: the player, the enemies, or the neutral. | side, team, owner, allegiance |
 | **building** | A standing structure on a tile; one slot per tile. | structure |
 | **place** | To put a thing onto a tile: a unit, a building, an improvement, a camp. | deploy, drop, spawn (for a thing on a tile), improve, lay, install |
 | **build** | To put a building on a tile; what a building card does. | raise, construct, erect |
-| **neutral** | A non-player unit that does not attack. | NPC, city-state, friendly |
-| **enemy** | A non-player unit that attacks. | barbarian, raider, hostile, invader, foe |
+| **neutral** | The third faction: the other city on the map, with its border, its population and its units. | NPC, city-state, friendly, neighbour, AI |
+| **hostile** | What the neutral is once turned against the player: its units attack the player's and go for the city. | at war, aggressive, enemy (for the neutral) |
+| **enemy** | A unit of the faction that enters from camps and in raids, and attacks. | barbarian, raider, invader, foe |
 | **killed** | What befalls a unit or a population: the unit leaves the map, the population the city. | destroyed, slain, dead, lost |
 | **event** | One entry of the age's schedule: a problem the chronicle throws at the city, dealt with its answers. | disaster, threat, crisis, encounter |
 | **answer** | One of the cards an event deals: a way out of its problem with a cost of its own, of which the player chooses one. | option, response, reply, solution |
@@ -57,6 +58,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **schedule** | An age's events and capstone, with their odds and tempo; what a timeline is rolled from. | calendar |
 | **timeline** | One chronicle's roll of its schedule: the turns its events and its capstone land on. | forecast, agenda, itinerary |
 | **camp** | Where enemies enter the map from. | lair, nest, spawn point, spawner |
+| **site** | A place on the map that is nobody's and pays once, taken as a camp is captured. | ruin, landmark, point of interest, goody hut, location (for a site) |
 | **victory** | The end of a chronicle by passing the capstone; the age is won by it, and win is the verb. | success, triumph |
 | **defeat** | The end of a chronicle by the city's fall. | collapse, game over, loss, death |
 | **border** | The edge of the tiles the city holds; pushed out by culture. | frontier, territory |
@@ -130,5 +132,5 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **occupy** | What an enemy does to a tile it stands on: the tile yields nothing and is not claimable. | blockade |
 | **prepare** | What an enemy does when it spends its action on the tile it stands on for an effect at the next enemy phase. | hold, besiege, ready, entrench |
 | **pillage** | What an enemy that prepared on a tile does to it at the next enemy phase: everything the player built on it is removed. | raze, loot, sack |
-| **capture** | To take the city or a camp by standing on its tile. | conquer, seize, sack |
+| **capture** | To take a city, a camp or a site by standing on its tile. | conquer, seize, sack |
 | **reward** | What a capture deals: cards, of which the player chooses one. | gift, prize, bounty |
