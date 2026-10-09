@@ -1,6 +1,6 @@
 # The Nomadic Age
 
-> What the Nomadic Age is made of: its settle, its land, its units, its cards, its events, its capstone and its camps. A content page under [`DESIGN.md`](../DESIGN.md)'s legend. The rules it is played by are [`CHRONICLE.md`](../CHRONICLE.md)'s and its map [`MAP.md`](../MAP.md)'s, and this page repeats none of them; no number stands on it: the page says which resource a thing costs or gives, never how much.
+> What the Nomadic Age is made of: its settle, its land, its sites, its units, its cards, its events, its capstone and its camps. A content page under [`DESIGN.md`](../DESIGN.md)'s legend. The rules it is played by are [`CHRONICLE.md`](../CHRONICLE.md)'s and its map [`MAP.md`](../MAP.md)'s, and this page repeats none of them; no number stands on it: the page says which resource a thing costs or gives, never how much.
 
 ## The age ✅
 
@@ -24,6 +24,10 @@ A terrain gives one point of one resource, and a feature gives the second. So a 
 | mountain | nothing; beyond every unit | — | — |
 
 Forest and hills give the same at income and cost the same to walk, and differ in what they see over and which feature they carry: a new player learns that hills are the lookout. Forest is raised, hills higher and mountain highest, and the rest lies flat; ocean and mountain are crossed by nothing, and coast by embarked units alone. Features are dealt rarely enough to be sought after, fertile, deer and cattle rarer than flint, so going for more of any of them is a journey; their shares are tuning. Forest is scattered over the land and also gathers in woodlands, biomes of their own that are forest nearly throughout.
+
+## The sites 🔧
+
+Three sites, each captured once for what it deals: the **painted cave**, the **old cairn** and the **bones of a great beast**. They stand in every region of the age, and the Stone Age's regions deal them too.
 
 ## The units ✅
 
