@@ -1288,7 +1288,7 @@ function campsRolled(catalogue: Catalogue, chronicle: Chronicle): Sequence {
 /**
  * The camps captured, in tile order: a camp a unit of the player's is still standing on once the
  * enemy phase is over is one `camp-capture` group carrying its tile, over the camp leaving the tile's
- * building slot and its rewards dealt behind the deals already standing.
+ * building slot, its enemies no camp's with it, and its rewards dealt behind the deals standing.
  */
 function captures(catalogue: Catalogue, chronicle: Chronicle): Sequence {
   const { building } = ageOf(catalogue, chronicle.age).camp;
@@ -1306,7 +1306,15 @@ function campCaptured(
   chronicle: Chronicle,
   tile: TileCoords,
 ): Sequence<Group> {
-  const removed = retiled(chronicle, tile, (camp) => ({ ...camp, building: undefined }));
+  const units = chronicle.units.map((unit) =>
+    unit.faction === 'enemy' && unit.camp !== undefined && tileKey(unit.camp) === tileKey(tile)
+      ? { ...unit, camp: undefined }
+      : unit,
+  );
+  const removed = retiled({ ...chronicle, units }, tile, (camp) => ({
+    ...camp,
+    building: undefined,
+  }));
   return grouped(
     { name: 'camp-capture', tile },
     followed(removed, (left) =>

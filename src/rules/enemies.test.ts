@@ -3,7 +3,7 @@ import { chartedTile } from './cards';
 import { type Catalogue, catalogued, type EnemyScript, unitKind, type Wave } from './catalogue';
 import { apply, outcome } from './chronicle';
 import { cityCommand, claimable } from './city';
-import { attackOrNone, enemyEntering, enteredAround, enteredOnCamp, raided } from './enemies';
+import { attackOrNone, enteredAround, enteredOnCamp, raided } from './enemies';
 import {
   aimedAt,
   attackOn,
@@ -24,6 +24,7 @@ import {
   EMBARKED_MOVE,
   endedTurn,
   enemiesOf,
+  enemyStanding,
   everyCard,
   field,
   fullDraw,
@@ -351,7 +352,7 @@ function campsInTileOrder(chronicle: Chronicle): string[] {
   return chronicle.tiles.filter((tile) => tile.building === CAMP.building).map(tileKey);
 }
 
-test('at odds of one every camp enters a guard once the enemies have acted, a stage each in tile order ahead of the captures: on the camp where its tile is free, and beside it where a unit stands on it', () => {
+test('at odds of one every camp enters a guard of its own once the enemies have acted, a stage each in tile order ahead of the captures: on the camp where its tile is free, and beside it where a unit stands on it', () => {
   const held = { q: 4, r: 0 };
   const guarded = { q: 0, r: -4 };
   const city = cityOf(['urban'], {
@@ -369,6 +370,8 @@ test('at odds of one every camp enters a guard once the enemies have acted, a st
   const entries = [...walked(stages)].flatMap((stage) =>
     stage.name === 'enter' ? [stage.tile] : [],
   );
+  const rolled = heldBy(stages, 'enemy-phase').at(-1)?.chronicle;
+  if (rolled === undefined) throw new Error('the enemy phase staged nothing');
 
   expect(namesOf(stages)).toEqual([
     'grow',
@@ -393,6 +396,7 @@ test('at odds of one every camp enters a guard once the enemies have acted, a st
       .filter((unit) => unit.id >= city.nextUnit)
       .map((unit) => (unit.faction === 'enemy' ? unit.script : undefined)),
   ).toEqual(camps.map(() => CAMP.roll[0].script));
+  expect(campsNamed(rolled).slice(-camps.length)).toEqual(camps);
 });
 
 /** A camp across the water, on an island of two tiles at the edge of a disc of five, coast all around. */
@@ -513,7 +517,7 @@ test('a raid of three through a coast door enters every enemy embarked, on the w
   }
 });
 
-test('the chronicle opens with one guard on each camp the map was dealt, in tile order, ahead of every unit the settle enters', () => {
+test('the chronicle opens with one guard of each camp the map was dealt standing on it, in tile order, ahead of every unit the settle enters', () => {
   const opened = opening(camped(plains(5), CAMPS), {
     civilization: { ...CIVILIZATION, cards: [], settle: ['PH_Band'] },
   });
@@ -527,6 +531,7 @@ test('the chronicle opens with one guard on each camp the map was dealt, in tile
       script: unit.faction === 'enemy' ? unit.script : undefined,
     })),
   ).toEqual(camps.map((tile, at) => ({ id: at + 1, tile, script: CAMP.opening[0].script })));
+  expect(campsNamed(opened)).toEqual(camps);
   expect(unitAt(banded.units, CITY)?.id).toBe(camps.length + 1);
 });
 
@@ -666,7 +671,7 @@ test('a raid’s door is read on its first enemy’s kind: a camp no tile around
   expect(new Set(firsts.map((first) => first.stats.type)).size).toBe(2);
 });
 
-test('a raid enters each enemy under its row’s script, whatever door it comes through', () => {
+test('a raid enters each enemy under its row’s script and of no camp, whatever door it comes through', () => {
   const city = cityOf(['urban'], { tiles: camped(field(5), CAMPS), ...RAID_ON_SECOND });
   const [guard] = CAMP.roll;
 
@@ -679,6 +684,7 @@ test('a raid enters each enemy under its row’s script, whatever door it comes 
     expect(entered.map((unit) => (unit.faction === 'enemy' ? unit.script : undefined))).toEqual([
       guard.script,
     ]);
+    expect(campsNamed(raided)).toEqual([undefined]);
   }
 });
 
@@ -810,26 +816,30 @@ test('the enemy phase holds each enemy’s move and attacks, then the warriors t
   expect(entered).toMatchObject({ tile: camp });
 });
 
-/** A guard of the fixture camp's standing on a tile, embarked on the move named where one is. */
-function sentry(tile: TileCoords, embarkedMove?: number): Standing {
-  const enemy = standing('enemy', tile);
-  const { type } = enemy.stats;
-  return {
-    ...enemy,
-    entering: { ...enemyEntering(type, CAMP.scripts.guard, tile), embarkedMove },
-  };
+/** `enemyStanding`'s options for a guard of the fixture camp's. */
+const GUARD = { script: CAMP.scripts.guard };
+
+/** The camp each enemy names, in unit order, and nothing for one of no camp. */
+function campsNamed(chronicle: Chronicle): (string | undefined)[] {
+  return chronicle.units.flatMap((unit) =>
+    unit.faction === 'enemy' ? [unit.camp === undefined ? undefined : tileKey(unit.camp)] : [],
+  );
 }
 
-/** The fixture's wave: three guards within two tiles of their camp send two off as raiders. */
-const WAVE: Wave = { within: 2, gathered: 3, sent: 2 };
+/** The fixture's wave: three guards of their camp send two off as raiders. */
+const WAVE: Wave = { gathered: 3, sent: 2 };
 
 const WAVING = camping({ wave: WAVE });
 
 /** The camp the wave tests gather their guards around. */
 const GATHERING = { q: 4, r: 0 };
 
-/** The guards around `GATHERING` the wave tests count: three, the one on the camp entered first. */
-const GATHERED = [sentry(GATHERING), sentry({ q: 4, r: -1 }), sentry({ q: 3, r: 0 })];
+/** The guards of `GATHERING` the wave tests count: three, the one on the camp entered first. */
+const GATHERED = [
+  enemyStanding(GATHERING, GATHERING, GUARD),
+  enemyStanding({ q: 4, r: -1 }, GATHERING, GUARD),
+  enemyStanding({ q: 3, r: 0 }, GATHERING, GUARD),
+];
 
 /** A city on a disc out to four, the camps named and the units standing on it. */
 function gatheredAround(units: readonly Standing[], camps = [GATHERING]): Chronicle {
@@ -876,17 +886,21 @@ test('a camp whose guards counted fall short of its wave sends none and raises n
   expect(scriptsOf(outcome(stages))).toEqual(scriptsOf(city));
 });
 
-test('a camp’s wave counts no guard beyond its distance, none embarked, none nearer another camp, no enemy under another script and no unit of the player’s', () => {
-  const nearer = { q: 4, r: -3 };
+test('a camp’s wave counts its own guards standing ashore wherever they stand, and none embarked, none another camp’s, none of no camp, no enemy under another script and no unit of the player’s', () => {
+  const other = { q: 4, r: -3 };
   const [onCamp, beside] = GATHERED;
   const third = (unit: Standing): string[] =>
-    tilesStaged('wave-sent', gatheredAround([onCamp, beside, unit], [GATHERING, nearer]), WAVING);
+    tilesStaged('wave-sent', gatheredAround([onCamp, beside, unit], [GATHERING, other]), WAVING);
+  const sent = [tileKey(GATHERING)];
 
-  expect(third(sentry({ q: 3, r: 0 }))).toEqual([tileKey(GATHERING)]);
-  expect(third(sentry({ q: 1, r: 0 }))).toEqual([]);
-  expect(third(sentry({ q: 3, r: 1 }, EMBARKED_MOVE))).toEqual([]);
-  expect(third(sentry({ q: 4, r: -2 }))).toEqual([]);
-  expect(third(standing('enemy', { q: 3, r: 0 }))).toEqual([]);
+  const embarked = { ...GUARD, embarkedMove: EMBARKED_MOVE };
+
+  expect(third(enemyStanding({ q: 3, r: 0 }, GATHERING, GUARD))).toEqual(sent);
+  expect(third(enemyStanding({ q: -3, r: 0 }, GATHERING, GUARD))).toEqual(sent);
+  expect(third(enemyStanding({ q: 3, r: 1 }, GATHERING, embarked))).toEqual([]);
+  expect(third(enemyStanding({ q: 3, r: 0 }, other, GUARD))).toEqual([]);
+  expect(third(enemyStanding({ q: 3, r: 0 }, undefined, GUARD))).toEqual([]);
+  expect(third(enemyStanding({ q: 3, r: 0 }, GATHERING))).toEqual([]);
   expect(third(standing('player', { q: 3, r: 0 }))).toEqual([]);
 });
 
@@ -900,13 +914,18 @@ test('a guard the player’s warrior killed on its turn leaves the count short, 
   expect(tilesStaged('wave-sent', killed, WAVING)).toEqual([]);
 });
 
-test('a camp captured is one camp-capture carrying its tile, over the camp leaving the tile and its rewards dealt', () => {
+test('a camp captured is one camp-capture carrying its tile, over the camp leaving the tile, its enemies no camp’s with it, and its rewards dealt', () => {
   const camp = { q: 4, r: 0 };
+  const other = { q: -4, r: 0 };
   const besieging = cityOf(['urban'], {
     ...NO_GROWTH,
-    tiles: camped(field(4), [camp]),
+    tiles: camped(field(4), [camp, other]),
     drawPile: fullDraw(),
-    units: [standing('player', camp)],
+    units: [
+      standing('player', camp),
+      enemyStanding({ q: 0, r: 4 }, camp, GUARD),
+      enemyStanding(other, other, GUARD),
+    ],
   });
 
   const stages = apply(CATALOGUE, besieging, { type: 'end-turn' });
@@ -919,6 +938,7 @@ test('a camp captured is one camp-capture carrying its tile, over the camp leavi
   expect(capture.tile).toEqual(camp);
   expect(retiled).toMatchObject({ name: 'retiled', tile: camp });
   expect(buildingAt(retiled.chronicle, camp)).toBeUndefined();
+  expect(campsNamed(retiled.chronicle)).toEqual([undefined, tileKey(other)]);
   expect(retiled.chronicle.deals).toEqual([]);
   expect(dealt.name).toBe('dealt');
   expect(dealt.chronicle.deals).toEqual([{ of: 'camp', rewards: CAMP.rewards }]);
@@ -1522,11 +1542,10 @@ test('a prepare on a tile with neither the city nor anything built on it, and on
   const weir = field(3, [coast]).map((tile) =>
     tileKey(tile) === tileKey(coast) ? { ...tile, improvements: ['PH_Weir'] } : tile,
   );
-  const afloat = standing('enemy', coast);
   const bare = cityOf(['urban'], { tiles: field(3), units: [standing('enemy', { q: 2, r: 0 })] });
   const embarked = cityOf(['urban'], {
     tiles: weir,
-    units: [{ ...afloat, entering: { ...afloat.entering, embarkedMove: EMBARKED_MOVE } }],
+    units: [enemyStanding(coast, undefined, { embarkedMove: EMBARKED_MOVE })],
   });
 
   for (const city of [bare, embarked]) {
@@ -1569,10 +1588,11 @@ test('the enemy that moves in from its camp reaches the city and captures it', (
   });
 });
 
-test('a chronicle with enemies on the map survives JSON', () => {
+test('a chronicle with enemies on the map, a camp’s among them, survives JSON', () => {
+  const camp = { q: -3, r: 0 };
   const city = cityOf(['urban'], {
-    tiles: field(3),
-    units: [worker({ q: 1, r: 0 }), standing('enemy', { q: 2, r: 0 })],
+    tiles: camped(field(3), [camp]),
+    units: [worker({ q: 1, r: 0 }), standing('enemy', { q: 2, r: 0 }), enemyStanding(camp, camp)],
   });
 
   expect(JSON.parse(JSON.stringify(city))).toEqual(city);

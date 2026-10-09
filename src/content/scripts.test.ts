@@ -13,6 +13,7 @@ import {
   deepBut,
   EMBARKED_MOVE,
   endedTurn,
+  enemyStanding,
   field,
   madeOf,
   movesOf,
@@ -39,7 +40,7 @@ const PILLAGING: Catalogue = catalogued({
   scripts: { ...CATALOGUE.scripts, [SCRIPT]: PILLAGER },
 });
 
-/** How far from its camp the fixture's guards keep. */
+/** How far around a held camp the fixture's guards roam. */
 const RADIUS = 2;
 
 /** The fixture's content, its enemies entering as guards in place of its own script. */
@@ -228,8 +229,8 @@ test('a guard whose camp a fellow holds lands on a landing inside its radius it 
     tiles: screened([AFIELD]),
     units: [
       worker(BEYOND),
-      standing('enemy', AFIELD, { move: 0 }),
-      standing('enemy', FLANK, { move: 2 * MOVE_POINT, range: 2 }),
+      enemyStanding(AFIELD, AFIELD, { stats: { move: 0 } }),
+      enemyStanding(FLANK, AFIELD, { stats: { move: 2 * MOVE_POINT, range: 2 } }),
     ],
   });
 
@@ -242,33 +243,31 @@ test('a guard attacks the unit of the least health among those it sees', () => {
     units: [
       standing('player', BEYOND, { health: 1 }),
       standing('player', OPEN, { health: 4 }),
-      standing('enemy', SCREENED, { move: 0, range: 2 }),
+      enemyStanding(SCREENED, SCREENED, { stats: { move: 0, range: 2 } }),
     ],
   });
 
   expect(attacksOf(city, GUARDING)).toEqual([[tileKey(SCREENED), tileKey(OPEN)]]);
 });
 
-test('a guard keeps the nearest camp standing within its radius, ties in tile order', () => {
-  const camps = [
-    { q: 4, r: 0 },
-    { q: 4, r: -3 },
-  ];
-  const guardAt = (tile: TileCoords): Chronicle =>
+test('a guard keeps its own camp, though another stands nearer', () => {
+  const near = { q: 4, r: 0 };
+  const own = { q: 4, r: -3 };
+  const guardAt = (camp: TileCoords, tile: TileCoords): Chronicle =>
     cityOf(['urban'], {
-      tiles: camped(field(4), camps),
-      units: [standing('enemy', tile, { move: 2 * MOVE_POINT })],
+      tiles: camped(field(4), [near, own]),
+      units: [enemyStanding(tile, camp, { stats: { move: 2 * MOVE_POINT } })],
     });
 
-  expect(movesOf(guardAt({ q: 4, r: -1 }), GUARDING)).toEqual([['4,-1', '4,0']]);
-  expect(movesOf(guardAt({ q: 3, r: -1 }), GUARDING)).toEqual([['3,-1', '4,-3']]);
+  expect(movesOf(guardAt(own, { q: 4, r: -1 }), GUARDING)).toEqual([['4,-1', '4,-3']]);
+  expect(movesOf(guardAt(near, { q: 4, r: -2 }), GUARDING)).toEqual([['4,-2', '4,0']]);
 });
 
 test('a guard on its camp stays there', () => {
   const camp = { q: 4, r: 0 };
   const city = cityOf(['urban'], {
     tiles: camped(field(4), [camp]),
-    units: [worker({ q: 2, r: 0 }), standing('enemy', camp, { move: 2 * MOVE_POINT })],
+    units: [worker({ q: 2, r: 0 }), enemyStanding(camp, camp, { stats: { move: 2 * MOVE_POINT } })],
   });
 
   expect(movesOf(city, GUARDING)).toEqual([]);
@@ -279,7 +278,7 @@ test('a guard off its camp, the camp’s tile free, lands on the camp, or as nea
   const guard = (move: number): Chronicle =>
     cityOf(['urban'], {
       tiles: camped(field(4), [camp]),
-      units: [standing('enemy', { q: 4, r: -2 }, { move })],
+      units: [enemyStanding({ q: 4, r: -2 }, camp, { stats: { move } })],
     });
 
   expect(movesOf(guard(2 * MOVE_POINT), GUARDING)).toEqual([['4,-2', '4,0']]);
@@ -293,8 +292,8 @@ test('a guard whose camp a fellow holds lands in range of a unit it could strike
       tiles: camped(field(4), [camp]),
       units: [
         worker(target),
-        standing('enemy', camp, { move: 0 }),
-        standing('enemy', { q: 4, r: -2 }, { move }),
+        enemyStanding(camp, camp, { stats: { move: 0 } }),
+        enemyStanding({ q: 4, r: -2 }, camp, { stats: { move } }),
       ],
     });
 
@@ -313,8 +312,8 @@ test('a guard whose range is one passes over an embarked unit as over one out of
       hand: ['PH_Embark'],
       units: [
         standing('player', { q: 0, r: 1 }),
-        standing('enemy', camp, { move: 0 }),
-        standing('enemy', { q: 4, r: -2 }, { move: 2 * MOVE_POINT, range }),
+        enemyStanding(camp, camp, { stats: { move: 0 } }),
+        enemyStanding({ q: 4, r: -2 }, camp, { stats: { move: 2 * MOVE_POINT, range } }),
       ],
     });
   const embarked = (range: number): Chronicle =>
@@ -329,7 +328,10 @@ test('a guard whose camp a unit of another faction stands on closes on that unit
   const camp = { q: 4, r: 0 };
   const city = cityOf(['urban'], {
     tiles: camped(field(4), [camp]),
-    units: [worker(camp), standing('enemy', { q: 4, r: -2 }, { move: 2 * MOVE_POINT })],
+    units: [
+      worker(camp),
+      enemyStanding({ q: 4, r: -2 }, camp, { stats: { move: 2 * MOVE_POINT } }),
+    ],
   });
 
   expect(movesOf(city, GUARDING)).toEqual([['4,-2', '3,0']]);
@@ -343,7 +345,10 @@ test('a guard whose camp a fellow holds, with nothing to strike, wanders to a la
     const city = cityOf(['urban'], {
       rng: seedRng(seed),
       tiles: camped(field(4), [camp]),
-      units: [standing('enemy', camp, { move: 0 }), standing('enemy', from, { move: MOVE_POINT })],
+      units: [
+        enemyStanding(camp, camp, { stats: { move: 0 } }),
+        enemyStanding(from, camp, { stats: { move: MOVE_POINT } }),
+      ],
     });
     return asked(GUARDING, city).to;
   };
@@ -360,14 +365,45 @@ test('a guard whose camp a fellow holds, with nothing to strike, wanders to a la
   expect(landed).toContain(tileKey(from));
 });
 
-test('a guard with no camp within its radius raids', () => {
+test('a guard of no camp raids, though a camp stands beside it', () => {
   const city = cityOf(['urban'], {
-    tiles: camped(field(4), [{ q: -4, r: 0 }]),
+    tiles: camped(field(4), [{ q: 3, r: 0 }]),
     units: [worker({ q: 1, r: 1 }), standing('enemy', { q: 2, r: 0 }, { move: 2 * MOVE_POINT })],
   });
 
   expect(movesOf(city, GUARDING)).toEqual([['2,0', '0,0']]);
   expect(attacksOf(city, GUARDING)).toEqual([]);
+});
+
+test('a guard off its camp beyond its radius walks toward the camp, whether a fellow holds it or not, where a guard of no camp raids', () => {
+  const camp = { q: 4, r: 0 };
+  const far = { q: 4, r: -4 };
+  const guarded = (units: Standing[]): Chronicle =>
+    cityOf(['urban'], { tiles: camped(field(4), [camp]), units });
+  const walker = enemyStanding(far, camp, { stats: { move: MOVE_POINT } });
+  const holder = enemyStanding(camp, camp, { stats: { move: 0 } });
+
+  expect(movesOf(guarded([walker]), GUARDING)).toEqual([['4,-4', '4,-3']]);
+  expect(movesOf(guarded([holder, walker]), GUARDING)).toEqual([['4,-4', '4,-3']]);
+  expect(movesOf(guarded([standing('enemy', far, { move: MOVE_POINT })]), GUARDING)).toEqual([
+    ['4,-4', '3,-3'],
+  ]);
+});
+
+test('a guard whose camp is captured raids from the next enemy phase on', () => {
+  const camp = { q: 4, r: 0 };
+  const city = cityOf(['urban'], {
+    tiles: camped(field(4), [camp]),
+    units: [
+      standing('player', camp),
+      enemyStanding({ q: 4, r: -4 }, camp, { stats: { move: MOVE_POINT } }),
+    ],
+  });
+  const captured = endedTurn(city, undefined, GUARDING);
+
+  expect(movesOf(city, GUARDING)).toEqual([['4,-4', '4,-3']]);
+  expect(movesOf(captured, GUARDING)).toEqual(movesOf(captured, RAIDING));
+  expect(movesOf(captured, GUARDING)).not.toEqual([]);
 });
 
 /** A disc of deep water out to four but for the city’s tile, the land and the coast named, and the forest named on the land. */
@@ -457,20 +493,20 @@ test('a raider whose embark is held embarks onto another free tile on a route as
   expect(movesOf(both, content)).toEqual([]);
 });
 
-test('a guard keeps the ground while a camp stands within its radius, and with none it embarks as the raider does', () => {
+test('a guard of a camp keeps the ground, and one of no camp embarks as the raider does', () => {
   const camp = { q: 4, r: 0 };
-  const guard = standing('enemy', { q: 3, r: 0 });
+  const beside = { q: 3, r: 0 };
   const kept = cityOf(['urban'], {
     tiles: camped(islanded().tiles, [camp]),
-    units: [standing('enemy', camp, { move: 0 }), guard],
+    units: [enemyStanding(camp, camp, { stats: { move: 0 } }), enemyStanding(beside, camp)],
   });
   const content = camping({ embarkedMove: EMBARKED_MOVE }, GUARDING);
 
   expect(movesOf(kept, content)).toEqual([]);
-  expect(movesOf(islanded([guard]), content)).toEqual([['3,0', '2,0']]);
+  expect(movesOf(islanded([standing('enemy', beside)]), content)).toEqual([['3,0', '2,0']]);
 });
 
-test('an embarked guard within a standing camp’s radius moves and steps as the raider does', () => {
+test('an embarked guard moves and steps as the raider does, however near its camp', () => {
   const camp = { q: 0, r: -1 };
   const city = cityOf(['urban'], {
     tiles: camped(
@@ -483,13 +519,11 @@ test('an embarked guard within a standing camp’s radius moves and steps as the
       ),
       [camp],
     ),
-    units: [standing('enemy', { q: 3, r: 0 })],
+    units: [enemyStanding({ q: 2, r: 0 }, camp, { embarkedMove: EMBARKED_MOVE })],
   });
   const content = camping({ embarkedMove: EMBARKED_MOVE }, GUARDING);
-  const embarked = endedTurn(city, undefined, content);
 
-  expect(movesOf(city, content)).toEqual([['3,0', '2,0']]);
-  expect(movesOf(embarked, content)).toEqual([
+  expect(movesOf(city, content)).toEqual([
     ['2,0', '1,0'],
     ['1,0', '0,0'],
   ]);
@@ -502,7 +536,7 @@ test('a guard attacks the unit of the least health within its range', () => {
     units: [
       standing('player', { q: 3, r: 0 }, { health: 4 }),
       standing('player', { q: 4, r: -1 }, { health: 2 }),
-      standing('enemy', camp, { move: 0 }),
+      enemyStanding(camp, camp, { stats: { move: 0 } }),
     ],
   });
 

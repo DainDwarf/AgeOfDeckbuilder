@@ -250,10 +250,8 @@ export type UnitEntryRow = {
 /** What a unit entry draws each enemy's row from, by the rows' weights. */
 export type UnitEntryTable = readonly UnitEntryRow[];
 
-/** The guards a camp sends off together as raiders, once enough have gathered around it. */
+/** The guards a camp sends off together as raiders, once enough of its own stand ashore. */
 export type Wave = {
-  /** How far from the camp a guard ashore is counted, for the nearest camp alone. */
-  readonly within: number;
   /** How many guards counted send it. */
   readonly gathered: number;
   /** How many of them leave. */
@@ -617,10 +615,7 @@ function ageHeld(
     refuse(content, `the age ${id}'s camp names an embarked move of ${embarkedMove}`);
   }
   if (camp.wave !== undefined) {
-    const { within, gathered, sent } = camp.wave;
-    if (!Number.isInteger(within) || within < 0) {
-      refuse(content, `the age ${id}'s camp counts its wave within ${within}`);
-    }
+    const { gathered, sent } = camp.wave;
     if (!Number.isInteger(gathered) || gathered < 1) {
       refuse(content, `the age ${id}'s camp sends a wave once ${gathered} have gathered`);
     }
@@ -985,14 +980,17 @@ export function checkContent(catalogue: Catalogue, { content }: Pick<Chronicle, 
 }
 
 /**
- * What a unit entering the map is: its kind, the tile it stands on, who it acts for, and, for one
- * entering embarked, the move it has embarked.
+ * What a unit entering the map is: its kind, the tile it stands on, who it acts for, for one
+ * entering embarked, the move it has embarked, and, for an enemy a camp enters, the camp's tile.
  */
 export type Entering = {
   readonly type: string;
   readonly tile: TileCoords;
   readonly embarkedMove?: number;
-} & ({ readonly faction: 'player' } | { readonly faction: 'enemy'; readonly script: string });
+} & (
+  | { readonly faction: 'player' }
+  | { readonly faction: 'enemy'; readonly script: string; readonly camp?: TileCoords }
+);
 
 /**
  * The one way a unit enters the map: it takes the next number the chronicle deals a unit, carries
@@ -1023,6 +1021,12 @@ export function entered(catalogue: Catalogue, chronicle: Chronicle, entering: En
     case 'player':
       return dealt({ ...carried, faction: 'player' });
     case 'enemy':
-      return dealt({ ...carried, faction: 'enemy', script: entering.script, prepared: false });
+      return dealt({
+        ...carried,
+        faction: 'enemy',
+        script: entering.script,
+        prepared: false,
+        camp: entering.camp,
+      });
   }
 }

@@ -84,8 +84,8 @@ function roundTrip(): {
 }
 
 /**
- * Seed 1's bare turn 1 with a guard of the camp's entered four tiles from the city and that tile
- * charted, so the enemy's mark stands in fog there; and the tile.
+ * Seed 1's bare turn 1 with an enemy of the camp's kind entered four tiles from the city and that
+ * tile charted, so the enemy's mark stands in fog there; and the tile.
  */
 function enemyInFog(): { chronicle: Chronicle; fog: TileCoords } {
   const bare = settledOn(1);

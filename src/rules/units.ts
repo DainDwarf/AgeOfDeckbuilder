@@ -30,8 +30,8 @@ export type UnitStats = {
 
 /**
  * A unit standing on the map, with the move points and the action it has left; an enemy carries its
- * script, and whether it has prepared. `id` is the number dealt it as it entered: what every command
- * names it by, whoever else enters or is killed around it.
+ * script, whether it has prepared, and its camp's tile, if any. `id` is the number dealt it as it
+ * entered: what every command names it by, whoever else enters or is killed around it.
  */
 export type Unit = {
   readonly id: number;
@@ -42,7 +42,12 @@ export type Unit = {
   readonly embarked: boolean;
 } & (
   | { readonly faction: 'player' }
-  | { readonly faction: 'enemy'; readonly script: string; readonly prepared: boolean }
+  | {
+      readonly faction: 'enemy';
+      readonly script: string;
+      readonly prepared: boolean;
+      readonly camp?: TileCoords;
+    }
 );
 
 /** The least each number of a unit's stats may stand at. */

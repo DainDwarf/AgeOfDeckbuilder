@@ -1,9 +1,9 @@
 import { ageOf, type Catalogue, type EnemyAct, type EnemyScript } from '../rules/catalogue';
 import {
   attackOrNone,
+  campAshore,
   enemyMoves,
   leastHealth,
-  nearestCamp,
   pillaged,
   standsAs,
   stepMove,
@@ -61,13 +61,13 @@ export const PILLAGER: EnemyScript = {
 };
 
 /**
- * The guard, keeping the nearest camp standing within `radius` of it while it stands ashore, and
- * raiding without one or embarked.
+ * The guard, keeping its own camp while it stands ashore, inside `radius` of it while the camp is
+ * held, and raiding embarked or with no camp.
  */
 export function guarding(radius: number): EnemyScript {
   return {
     moveTo(catalogue: Catalogue, chronicle: Chronicle, enemy: Unit) {
-      const camp = nearestCamp(catalogue, chronicle, enemy, radius);
+      const camp = campAshore(enemy);
       if (camp === undefined) return RAIDER.moveTo(catalogue, chronicle, enemy);
       const kept = (landing: Landing) => ({ landing, rng: chronicle.rng });
       const stay: Landing = { tile: enemy.tile, cost: 0 };
@@ -80,6 +80,7 @@ export function guarding(radius: number): EnemyScript {
       }
 
       const inside = landings.filter((landing) => distance(landing.tile, camp) <= radius);
+      if (inside.length === 0) return kept(nearestTo(chronicle, landings, camp));
       // The tile inside the radius nearest a unit stands the unit's distance from the camp less the
       // radius away from it, and none for a unit inside the radius.
       const targets = chronicle.units.filter((unit) =>
@@ -97,7 +98,7 @@ export function guarding(radius: number): EnemyScript {
     },
 
     acts(catalogue: Catalogue, chronicle: Chronicle, enemy: Unit): EnemyAct {
-      if (nearestCamp(catalogue, chronicle, enemy, radius) === undefined) {
+      if (campAshore(enemy) === undefined) {
         return RAIDER.acts(catalogue, chronicle, enemy);
       }
       return weakest(catalogue, chronicle, enemy);

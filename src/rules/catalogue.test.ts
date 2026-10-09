@@ -294,20 +294,19 @@ test('a catalogue whose camp is dealt across the water and names no embarked mov
   expect(() => catalogued(encamped({ acrossWater: true, embarkedMove: 1 }))).not.toThrow();
 });
 
-test('a catalogue whose camp’s wave names a count gathered or sent below one, more sent than gathered, or a distance below nought is refused', () => {
-  const wave: Wave = { within: 2, gathered: 3, sent: 2 };
+test('a catalogue whose camp’s wave names a count gathered or sent below one, or more sent than gathered, is refused', () => {
+  const wave: Wave = { gathered: 3, sent: 2 };
   const waving = (laid: Partial<Wave>): Catalogue => encamped({ wave: { ...wave, ...laid } });
   const refusals: [Catalogue, string][] = [
     [waving({ gathered: 0, sent: 0 }), 'sends a wave once 0 have gathered'],
     [waving({ sent: 0 }), 'sends 0 of 3 gathered'],
     [waving({ sent: 4 }), 'sends 4 of 3 gathered'],
-    [waving({ within: -1 }), 'counts its wave within -1'],
   ];
 
   for (const [content, refusal] of refusals) {
     expect(() => catalogued(content)).toThrow(`fixture: the age ${AGE}'s camp ${refusal}`);
   }
-  expect(() => catalogued(waving({ within: 0, sent: 3 }))).not.toThrow();
+  expect(() => catalogued(waving({ sent: 3 }))).not.toThrow();
 });
 
 test('a catalogue whose camp lies on a terrain none of its opening’s kinds stands on is refused, and one that one of them stands on is not, whatever its roll’s kinds', () => {

@@ -1472,6 +1472,25 @@ export function standing(
   }
 }
 
+/**
+ * An enemy standing as `standing` stands it, the named camp's where one is, under `SCRIPT` unless
+ * another is named, and embarked where a move is named, that move its move and its move points.
+ */
+export function enemyStanding(
+  tile: TileCoords,
+  camp: TileCoords | undefined,
+  {
+    script = SCRIPT,
+    stats = {},
+    embarkedMove,
+  }: { script?: string; stats?: Partial<UnitStats>; embarkedMove?: number } = {},
+): Standing {
+  const afloat = embarkedMove === undefined ? stats : { ...stats, move: embarkedMove };
+  const enemy = standing('enemy', tile, afloat);
+  const entering = { ...enemyEntering(enemy.stats.type, script, tile), embarkedMove, camp };
+  return { ...enemy, entering };
+}
+
 /** The unit a number names, for a fixture that expects it to be standing. */
 export function unitNamed(chronicle: Chronicle, unit: number): Unit {
   const named = chronicle.units.find((other) => other.id === unit);

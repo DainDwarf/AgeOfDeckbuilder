@@ -682,6 +682,7 @@ function unitOf(catalogue: Catalogue, slot: Slot): Unit {
         faction,
         script: id(catalogue, field('script'), enemyScript),
         prepared: flag(catalogue, field('prepared')),
+        camp: optional(field('camp'), (item) => coordsIn(catalogue, record(catalogue, item))),
       };
   }
 }
