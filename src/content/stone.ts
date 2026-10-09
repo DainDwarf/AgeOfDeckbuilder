@@ -24,7 +24,7 @@ import { distance, MOVE_POINT, tileAt } from '../rules/map';
 import type { RiverFlow } from '../rules/map-kinds';
 import { showsNextLanding } from '../rules/schedule';
 import { followed } from '../rules/stages';
-import { NOMADIC } from './nomadic';
+import { NOMADIC, PAINTED_CAVE } from './nomadic';
 import { PILLAGER } from './scripts';
 
 const { basePrice, schedule, camp } = NOMADIC.owns;
@@ -128,7 +128,7 @@ export const STONE: Slice = {
     },
     sites: {
       'painted-cave': {
-        building: 'painted-cave',
+        building: 'stone-painted-cave',
         rewards: ['stone-cave-paintings', 'old-stories'],
       },
     },
@@ -370,6 +370,7 @@ export const STONE: Slice = {
         givesBeside: { terrain: 'coast', yields: { food: 1 } },
       },
       megalith: { terrains: ['plain', 'hills', 'desert'], yields: { culture: 1 } },
+      'stone-painted-cave': PAINTED_CAVE,
     },
     improvements: {
       trapping: { terrains: ['forest'], features: ['deer'], yields: { food: 1 } },

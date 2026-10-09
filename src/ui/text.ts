@@ -59,6 +59,7 @@ const TEXT = {
   'building.camp': 'Camp',
   'building.shelter': 'Shelter',
   'building.painted-cave': 'Painted cave',
+  'building.stone-painted-cave': 'Painted cave',
   'building.farm': 'Farm',
   'building.tannery': 'Tannery',
   'building.fishery': 'Fishery',

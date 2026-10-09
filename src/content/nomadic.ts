@@ -19,7 +19,7 @@ import type { Age, Slice, Tables } from '../rules/catalogue';
 import { arrived, populationTaken, yielded } from '../rules/city';
 import { enteredAround, raided } from '../rules/enemies';
 import { MOVE_POINT } from '../rules/map';
-import { buildingKind } from '../rules/map-kinds';
+import { type BuildingKind, buildingKind } from '../rules/map-kinds';
 import {
   addedToDrawPileTop,
   burned,
@@ -49,6 +49,8 @@ const WILDFIRE: Fire = { burns: 'forest', leaves: 'plain', fromCity: 4, around: 
 const HERD = { feature: 'deer', fromCity: 4 } as const;
 
 const RIVAL_CAMP = { fromCity: [3, 4], apart: 3 } as const;
+
+export const PAINTED_CAVE: BuildingKind = { terrains: ['hills'], yields: {} };
 
 const TABLES: Tables = {
   units: {
@@ -353,7 +355,7 @@ const TABLES: Tables = {
     },
     camp: { terrains: ['plain', 'forest', 'hills', 'desert'], yields: {} },
     shelter: { terrains: ['plain', 'forest', 'hills'], yields: {} },
-    'painted-cave': { terrains: ['hills'], yields: {} },
+    'painted-cave': PAINTED_CAVE,
   },
   features: {
     fertile: { terrain: 'plain', yields: { food: 1 } },

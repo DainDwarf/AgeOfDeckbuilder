@@ -190,6 +190,7 @@ export const LOOK: Look = {
     fishery: 'built',
     megalith: 'built',
     'painted-cave': 'site',
+    'stone-painted-cave': 'site',
   },
   ground: {
     nomadic: 0x2a5a41,

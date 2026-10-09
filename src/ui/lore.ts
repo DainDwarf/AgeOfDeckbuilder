@@ -13,6 +13,8 @@ const LORE = {
   'capture.camp':
     'The camp has fallen. Its stores lie open and its people wait to hear their fate: what do you take?',
   'capture.painted-cave':
+    'Deep in the hill, by torchlight, the walls are alive with painted herds and hunters long gone. The band stands in silence a long while, and carries the pictures away in their heads.',
+  'capture.stone-painted-cave':
     'Deep in the hill, by torchlight, the walls are alive with painted herds and hunters long gone. The band stands in silence: what do you take from this place?',
   'capstone-opening.first-shelter':
     'The tribe has wandered long enough. When the time comes, build the first shelter, and the Nomadic Age is won.',

@@ -18,6 +18,8 @@ const WALL: number[] = [
   10,
 ];
 
+const CAVE: number[] = [-16, 10, -12, -4, 0, -10, 12, -4, 16, 10];
+
 /** Each wide enough to show under the unit standing on its tile. */
 const BUILDING_MARKS: Readonly<Record<string, number[]>> = {
   city: WALL,
@@ -27,7 +29,8 @@ const BUILDING_MARKS: Readonly<Record<string, number[]>> = {
   tannery: [-16, 8, -6, -8, 16, -8, 6, 8],
   fishery: [-10, -8, 10, -8, 16, 8, -16, 8],
   megalith: [-16, -8, 16, -8, 10, 8, -10, 8],
-  'painted-cave': [-16, 10, -12, -4, 0, -10, 12, -4, 16, 10],
+  'painted-cave': CAVE,
+  'stone-painted-cave': CAVE,
 };
 
 /** Half the width of the fertile plain's hexagon, whose corners stand five from its centre. */
