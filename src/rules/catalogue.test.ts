@@ -645,6 +645,15 @@ test('a catalogue whose region deals a site its age does not own is refused', ()
   );
 });
 
+test('a catalogue whose region deals one site twice is refused', () => {
+  const disc = REGIONS[REGION];
+  const content = changed(regioned({ [REGION]: { ...disc, sites: [SITE, SITE] } }));
+
+  expect(() => catalogued(content)).toThrow(
+    `fixture: the region ${REGION} deals the site ${SITE} twice`,
+  );
+});
+
 test('a catalogue whose deck holds a site’s reward, or whose technology unlocks one, is refused', () => {
   const [reward] = SITES[SITE].rewards;
   const decked = changed({

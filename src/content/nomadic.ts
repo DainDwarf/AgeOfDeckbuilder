@@ -152,6 +152,13 @@ const TABLES: Tables = {
       aim: 'none',
       effect: (_catalogue, paid) => arrived(paid),
     },
+    'cave-paintings': {
+      kind: 'instant',
+      cost: {},
+      banish: true,
+      aim: 'none',
+      effect: (_catalogue, paid) => gained(paid, { culture: 2 }),
+    },
   },
   civilizations: {
     nomadic: {
@@ -346,6 +353,7 @@ const TABLES: Tables = {
     },
     camp: { terrains: ['plain', 'forest', 'hills', 'desert'], yields: {} },
     shelter: { terrains: ['plain', 'forest', 'hills'], yields: {} },
+    'painted-cave': { terrains: ['hills'], yields: {} },
   },
   features: {
     fertile: { terrain: 'plain', yields: { food: 1 } },
@@ -377,7 +385,7 @@ const REGIONS: Age['regions'] = {
     camps: 4,
     campFromCentre: 7,
     campsApart: 4,
-    sites: [],
+    sites: ['painted-cave'],
     siteFromCentre: 7,
     sitesApart: 4,
     rivers: {
@@ -420,7 +428,7 @@ export const NOMADIC: Slice = {
       odds: 0.08,
       raidCampOdds: 0.8,
     },
-    sites: {},
+    sites: { 'painted-cave': { building: 'painted-cave', rewards: ['cave-paintings'] } },
     regions: REGIONS,
     achievements: {
       'first-shelter': {

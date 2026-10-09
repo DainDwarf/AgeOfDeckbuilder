@@ -18,6 +18,7 @@ import {
   openSaved,
   rested,
   settledOn,
+  sitesOf,
   standing,
   stoppedTurn,
   titleOf,
@@ -66,8 +67,10 @@ test('the map draws the camps it was dealt once the uncharted veil is off', asyn
   for (const camp of camps) {
     expect(await standing(page, `building-${tileKey(camp)}`)).toBe(true);
   }
-  // The whole disc drawn, the buildings on it are the camps and the city's own.
-  expect(await marksIn(page, 'buildings')).toBe(camps.length + 1);
+  // The whole disc drawn, the buildings on it are the camps, the sites and the city's own.
+  const sites = sitesOf(opened);
+  expect(sites.length).toBeGreaterThan(0);
+  expect(await marksIn(page, 'buildings')).toBe(camps.length + sites.length + 1);
   expect(problems).toEqual([]);
 });
 

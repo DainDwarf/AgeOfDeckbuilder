@@ -1503,6 +1503,16 @@ export function workerStepped(
   });
 }
 
+/** The tiles a site of the chronicle's age stands on, in the order the map lists them, each with its building. */
+export function sitesOf(chronicle: Chronicle): (TileCoords & { readonly building: string })[] {
+  const buildings = Object.values(ageOf(CATALOGUE, chronicle.age).sites).map(
+    ({ building }) => building,
+  );
+  return chronicle.tiles.flatMap(({ q, r, building }) =>
+    building !== undefined && buildings.includes(building) ? [{ q, r, building }] : [],
+  );
+}
+
 /** The chronicle with the unit entered as every unit card enters one, and charted as a command is. */
 export function unitEntered(chronicle: Chronicle, entering: Entering): Chronicle {
   return charted(CATALOGUE, entered(CATALOGUE, chronicle, entering).chronicle);

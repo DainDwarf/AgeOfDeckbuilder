@@ -27,6 +27,7 @@ const BUILDING_MARKS: Readonly<Record<string, number[]>> = {
   tannery: [-16, 8, -6, -8, 16, -8, 6, 8],
   fishery: [-10, -8, 10, -8, 16, 8, -16, 8],
   megalith: [-16, -8, 16, -8, 10, 8, -10, 8],
+  'painted-cave': [-16, 10, -12, -4, 0, -10, 12, -4, 16, 10],
 };
 
 /** Half the width of the fertile plain's hexagon, whose corners stand five from its centre. */

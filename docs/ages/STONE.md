@@ -1,6 +1,6 @@
 # The Stone Age
 
-> What the Stone Age is made of: its land, its neutral, its technologies, its units and its cards. A content page under [`DESIGN.md`](../DESIGN.md)'s legend. The rules it is played by are [`CHRONICLE.md`](../CHRONICLE.md)'s and its map [`MAP.md`](../MAP.md)'s, and this page repeats none of them; no number stands on it. The terrains, the features, the biomes and the sites it shares with the Nomadic Age are [`NOMADIC.md`](NOMADIC.md)'s.
+> What the Stone Age is made of: its land, its neutral, its technologies, its units and its cards. A content page under [`DESIGN.md`](../DESIGN.md)'s legend. The rules it is played by are [`CHRONICLE.md`](../CHRONICLE.md)'s and its map [`MAP.md`](../MAP.md)'s, and this page repeats none of them; no number stands on it. The terrains, the features, the biomes and the sites it shares with the Nomadic Age are [`NOMADIC.md`](NOMADIC.md)'s; what its sites deal here is this page's.
 
 ## The land ✅
 
@@ -15,6 +15,10 @@ The desert is a biome of its own, desert nearly throughout with hills among it, 
 | desert  | nothing | **oasis** | food  |
 
 The archipelago is the age's second region, the one Raft unlocks: a disc as big as the temperate one, of islands in a sea. The ground around the centre is the temperate region's own, the same biome dealt to the same size, an island here. The other islands are a biome of their own, the land's terrains dealt to a size and rolled rounder than the centre's, and two dealt side by side are one island. Between them lie the shallows, coast throughout and grown in arms, and the open sea, ocean throughout behind a coast rim as wide as the temperate sea's, with no island in it. No mountain range and no desert is dealt, so no river runs there and no oasis lies there; the other features lie in the temperate shares. The centre part reaches as far, and as many camps stand on it, kept as far from the centre and from one another.
+
+## The sites 🔧
+
+The sites are the Nomadic Age's, and in this age each deals two rewards of the age's own, so a site found is a choice. The **painted cave** deals **Cave paintings**, culture once and banished, more than the Nomadic card gives, and **Old stories**, culture each time it is played, cycling with the deck for the rest of the chronicle: the find kept against the find spent.
 
 ## The neutral 🔧
 

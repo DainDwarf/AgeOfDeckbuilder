@@ -673,7 +673,12 @@ function ageHeld(
       }
     }
     for (const { feature } of region.featureShares) featureKind(content, feature);
-    for (const site of region.sites) entryOf(content, sites, site, `site of the age ${id}`);
+    for (const [at, site] of region.sites.entries()) {
+      entryOf(content, sites, site, `site of the age ${id}`);
+      if (region.sites.indexOf(site) !== at) {
+        refuse(content, `the region ${name} deals the site ${site} twice`);
+      }
+    }
     const shared = sharedBiomes(region).map(({ biome }) => biome);
     for (const { biome } of region.biomeShares) {
       if (!shared.includes(biome))

@@ -69,7 +69,7 @@ const REGIONS: Age['regions'] = {
     camps: 6,
     campFromCentre: 7,
     campsApart: 4,
-    sites: [],
+    sites: ['painted-cave'],
     siteFromCentre: 7,
     sitesApart: 4,
     rivers: RIVERS,
@@ -93,7 +93,7 @@ const REGIONS: Age['regions'] = {
     camps: 6,
     campFromCentre: 7,
     campsApart: 4,
-    sites: [],
+    sites: ['painted-cave'],
     siteFromCentre: 7,
     sitesApart: 4,
     rivers: RIVERS,
@@ -126,7 +126,12 @@ export const STONE: Slice = {
       embarkedMove: EMBARKED_MOVE,
       wave: { gathered: 3, sent: 2 },
     },
-    sites: {},
+    sites: {
+      'painted-cave': {
+        building: 'painted-cave',
+        rewards: ['stone-cave-paintings', 'old-stories'],
+      },
+    },
     regions: REGIONS,
     achievements: {
       herbalism: {
@@ -303,6 +308,19 @@ export const STONE: Slice = {
         kind: 'building',
         cost: { production: 4 },
         ...builds('megalith'),
+      },
+      'stone-cave-paintings': {
+        kind: 'instant',
+        cost: {},
+        banish: true,
+        aim: 'none',
+        effect: (_catalogue, paid) => gained(paid, { culture: 4 }),
+      },
+      'old-stories': {
+        kind: 'instant',
+        cost: {},
+        aim: 'none',
+        effect: (_catalogue, paid) => gained(paid, { culture: 1 }),
       },
     },
     technologies: {
